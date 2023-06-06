@@ -72,7 +72,8 @@ class GPTModel(MegatronModule):
                  parallel_output=True,
                  pre_process=True,
                  post_process=True,
-                 return_moe_loss=True):
+                 prefix_lm=False):
+                 # return_moe_loss=True):
         super(GPTModel, self).__init__()
         args = get_args()
 
@@ -80,14 +81,15 @@ class GPTModel(MegatronModule):
         self.pre_process = pre_process
         self.post_process = post_process
         self.fp16_lm_cross_entropy = args.fp16_lm_cross_entropy
-        self.return_moe_loss = return_moe_loss
+        # self.return_moe_loss = return_moe_loss
         self.language_model, self._language_model_key = get_language_model(
             num_tokentypes=num_tokentypes,
             add_pooler=False,
-            encoder_attn_mask_type=AttnMaskType.causal,
+            encoder_attn_mask_type=AttnMaskType.prefix if prefix_lm else AttnMaskType.causal,
+            # encoder_attn_mask_type=AttnMaskType.causal,
             init_method=init_method_normal(args.init_method_std),
             scaled_init_method=scaled_init_method_normal(args.init_method_std, args.num_layers),
-            num_experts=args.num_experts,
+            # num_experts=args.num_experts,
             pre_process=self.pre_process,
             post_process=self.post_process)
 
@@ -134,10 +136,10 @@ class GPTModel(MegatronModule):
                     forward_method_parallel_output,
                     self.fp16_lm_cross_entropy)
         
-        if self.return_moe_loss:
-            return (lm_output, *moe_losses)
-        else:
-            return lm_output
+        # if self.return_moe_loss:
+        #     return (lm_output, *moe_losses)
+        # else:
+        return lm_output
 
     def state_dict_for_save_checkpoint(self, destination=None, prefix='',
                                        keep_vars=False):
