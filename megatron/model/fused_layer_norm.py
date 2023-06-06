@@ -65,10 +65,6 @@ class MixedFusedLayerNorm(torch.nn.Module):
   def __init__(self, normalized_shape, eps=1e-5):
         super(MixedFusedLayerNorm, self).__init__()
 
-        # global fused_mix_prec_layer_norm_cuda
-        # fused_mix_prec_layer_norm_cuda = importlib.import_module(
-        #   "fused_mix_prec_layer_norm_cuda")
-
         if isinstance(normalized_shape, numbers.Integral):
             normalized_shape = (normalized_shape,)
         self.normalized_shape = torch.Size(normalized_shape)
@@ -84,11 +80,4 @@ class MixedFusedLayerNorm(torch.nn.Module):
 
   def forward(self, input):
     return torch.nn.functional.layer_norm(input, self.normalized_shape, self.weight, self.bias, self.eps)
-    # # CPU path is here for unittest sake.
-    # if not input.is_cuda:
-    #     print("WARNING! The input of FusedLayerNorm should be on the GPU."
-    #           "This warning should only be triggered in the FusedLayerNorm unit tests.")
-    #     return F.layer_norm(input, self.normalized_shape, self.weight, self.bias, self.eps)
-    # return FusedLayerNormAffineFunction.apply(
-    #   input, self.weight, self.bias, self.normalized_shape,self.eps)
 
