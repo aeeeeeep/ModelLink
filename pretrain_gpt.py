@@ -16,6 +16,10 @@
 """Pretrain GPT"""
 
 import torch
+import torch_npu
+from torch_npu.contrib import transfer_to_npu
+import deepspeed_npu
+
 import math
 from functools import partial
 from megatron import get_args
@@ -322,7 +326,6 @@ def git_ds_info():
 
 
 if __name__ == "__main__":
-    git_ds_info()
     pretrain(train_valid_test_datasets_provider, model_provider, forward_step,
              args_defaults={'tokenizer_type': 'GPT2BPETokenizer'},
              data_post_process=data_post_process)

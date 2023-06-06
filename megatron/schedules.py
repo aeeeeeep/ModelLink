@@ -15,6 +15,7 @@
 
 from contextlib import contextmanager
 import torch
+import torch_npu
 from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
 
 from megatron import get_args
@@ -26,6 +27,25 @@ from megatron import print_rank_0
 from megatron.utils import unwrap_model
 from megatron.model import DistributedDataParallel as LocalDDP
 from megatron.model import Float16Module
+
+
+def clear_npu_overflow_flag():
+    float_status = torch.zeros(8).npu()
+    result = torch_npu.npu_clear_float_status(float_status)
+
+
+def get_npu_overflow_flag():
+    float_status = torch.zeros(8).npu()
+    result = torch_npu.npu_get_float_status(float_status)
+    if float_status.cpu()[0] != 0:
+        return True
+    else:
+        return False
+
+
+def set_npu_overflow_flag():
+    torch.tensor([65504]).half().npu() + 100
+
 
 def get_forward_backward_func():
     args = get_args()
@@ -96,6 +116,7 @@ def backward_step(optimizer, input_tensor, output_tensor, output_tensor_grad, mo
     if input_tensor is not None:
         input_tensor.retain_grad()
 
+    clear_npu_overflow_flag()
     if args.deepspeed:
         model.backward(output_tensor)
     else:
@@ -112,7 +133,6 @@ def backward_step(optimizer, input_tensor, output_tensor, output_tensor_grad, mo
     timers('backward-compute').stop()
 
     return input_tensor_grad
-
 
 @contextmanager
 def dummy_handler():
@@ -131,35 +151,33 @@ def forward_backward_no_pipelining(forward_step_func, data_iterator, model,
     assert len(model) == 1
     model = model[0]
 
-    args = get_args()
-
     context_handler = dummy_handler
     if isinstance(model, torchDDP):
         context_handler = model.no_sync
 
-    if args.deepspeed:
-        model.set_gradient_accumulation_boundary(False)
-
     losses_reduced = []
     input_tensor, output_tensor_grad = None, None
+    overflow_flag_all = False
     with context_handler():
         for i in range(get_num_microbatches() - 1):
             output_tensor = forward_step(forward_step_func, data_iterator, model,
                                          input_tensor, losses_reduced)
             if not forward_only:
                 backward_step(optimizer, input_tensor, output_tensor,
-                              output_tensor_grad, model)
+                              output_tensor_grad)
 
-    if args.deepspeed:
-        model.set_gradient_accumulation_boundary(True)
-
-    # Run computation for last microbatch out of context handler (want to
-    # synchronize gradients).
+            overflow_flag = get_npu_overflow_flag()
+            overflow_flag_all = overflow_flag or overflow_flag_all
     output_tensor = forward_step(forward_step_func, data_iterator, model,
                                  input_tensor, losses_reduced)
     if not forward_only:
-        backward_step(optimizer, input_tensor, output_tensor, output_tensor_grad, model)
+        backward_step(optimizer, input_tensor, output_tensor, output_tensor_grad)
 
+    overflow_flag = get_npu_overflow_flag()
+    overflow_flag_all = overflow_flag or overflow_flag_all
+
+    if overflow_flag_all:
+        set_npu_overflow_flag()
     return losses_reduced
 
 
