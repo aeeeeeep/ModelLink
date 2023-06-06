@@ -26,6 +26,8 @@ from megatron import mpu
 from megatron import print_rank_0
 from deepspeed.accelerator import get_accelerator
 from .clip_grads import clip_grad_norm_fp32, count_zeros_fp32
+from ..model.module import param_is_not_shared
+from ..mpu.layers import param_is_not_tensor_parallel_duplicate
 
 
 def _zero_grad_group_helper(group, set_to_none):
@@ -87,9 +89,36 @@ class MegatronOptimizer(ABC):
         return params
 
 
+    def get_main_grads_for_grad_norm(self):
+
+        # Filter parameters based on:
+        #   - grad should not be none
+        #   - parameter should not be shared
+        #   - should not be a replica due to tensor model parallelism
+        params = self.get_parameters()
+        grads_for_norm = []
+        for param in params:
+            grad = param.grad
+            grad_not_none = grad is not None
+            is_not_shared = param_is_not_shared(param)
+            is_not_tp_duplicate = param_is_not_tensor_parallel_duplicate(param)
+            if grad_not_none and is_not_shared and is_not_tp_duplicate:
+                grads_for_norm.append(grad)
+
+        return grads_for_norm
+
+
+    def get_model_parallel_group(self):
+        """Default returned here, but the distributed optimizer overrides this."""
+        return mpu.get_model_parallel_group()
+
+
     def clip_grad_norm(self, clip_grad):
         params = self.get_parameters()
-        return clip_grad_norm_fp32(params, clip_grad)
+        grads_for_norm = self.get_main_grads_for_grad_norm()
+        return clip_grad_norm_fp32(
+            params, grads_for_norm, clip_grad,
+            model_parallel_group=self.get_model_parallel_group())
 
 
     def count_zeros(self):
@@ -159,6 +188,167 @@ class MegatronOptimizer(ABC):
         self.optimizer.param_groups = value
 
     param_groups = property(_get_param_groups, _set_param_groups)
+
+
+class MixedPrecisionOptimizer(MegatronOptimizer):
+    """Base class for both the float-16 and the distributed optimizer.
+
+    Arguments:
+        optimizer: base optimizer such as Adam or SGD
+        clip_grad: clip gradeints with this global L2 norm. Note
+            that clipping is ignored if clip_grad == 0
+        log_num_zeros_in_grad: return number of zeros in the gradients.
+        params_have_main_grad: flag indicating if parameters have
+            a `main_grad` field. If this is set, we are assuming
+            that the model parameters are store in the `main_grad`
+            field instead of the typical `grad` field. This happens
+            for the DDP cases where there is a continuous buffer
+            holding the gradients. For example for bfloat16, we want
+            to do gradient accumulation and all-reduces in float32
+            and as a result we store those gradients in the main_grad.
+            Note that main grad is not necessarily in float32.
+        use_contiguous_buffers_in_local_ddp: if true, the local DDP model
+            is using a contiguous buffer to hold the model grads.
+        fp16: if true, the model is running in fp16.
+        bf16: if true, the model is running in bfloat16.
+        params_dtype: used by distributed optimizer.
+        grad_scaler: used for scaling gradients. Note that this can be
+            None. This case happens when `bf16 = True` and we don't
+            use any loss scale. Note that for `bf16 = True`, we can have
+            a constnat gradient scaler. Also for `bf16 = False`, we
+            always require a grad scaler.
+        models: list of models (i.e., the virtual pipelining models). This
+            is used by the distributed optimizer for mapping parameters.
+    """
+
+    def __init__(self, optimizer, clip_grad, log_num_zeros_in_grad,
+                 params_have_main_grad, use_contiguous_buffers_in_local_ddp,
+                 fp16, bf16, params_dtype, grad_scaler,
+                 models):
+
+        super().__init__(
+            optimizer, clip_grad, log_num_zeros_in_grad,
+            params_have_main_grad, use_contiguous_buffers_in_local_ddp,
+            models)
+
+        self.fp16 = fp16
+        self.bf16 = bf16
+        self.params_dtype = params_dtype
+        self.grad_scaler = grad_scaler
+
+        # None grad scaler is only supported for bf16.
+        if self.grad_scaler is None:
+            assert not self.fp16, 'fp16 expects a grad scaler.'
+
+        # Tensor used to determine if a nan/if has happend.
+        # Any non-zero value indicates inf/nan.
+        # Note that we keep this for the cases that grad scaler is none.
+        # We still record nan/inf if we have a bfloat16 with a grad scaler.
+        if self.grad_scaler:
+            self.found_inf = torch.cuda.FloatTensor([0.0])
+
+        # Dummy tensor needed for apex multi-apply tensor.
+        # For bfloat, we don't have multi-tensor apply and for now
+        # we set it to none so the multi-tensor apply gets ignored.
+        if bf16:
+            self._dummy_overflow_buf = None
+        else:
+            self._dummy_overflow_buf = torch.cuda.IntTensor([0])
+
+        # In case grad scaler is not passed, define the unity scale.
+        if self.grad_scaler is None:
+            self._scale_one = torch.cuda.FloatTensor([1.0])
+
+
+    def get_loss_scale(self):
+        if self.grad_scaler is None:
+            return self._scale_one
+        return self.grad_scaler.scale
+
+
+    def reload_model_params(self):
+        self._copy_model_params_to_main_params()
+
+
+    def _unscale_main_grads_and_check_for_nan(self):
+
+        # Collect main grads.
+        main_grads = self._collect_main_grad_data_for_unscaling()
+
+        # Reset found inf.
+        self.found_inf.fill_(0.0)
+
+        # Unscale and set found inf/nan
+        torch._amp_foreach_non_finite_check_and_unscale_(
+            main_grads, self.found_inf, self.grad_scaler.inv_scale)
+
+        # Update across all model parallel instances.
+        torch.distributed.all_reduce(self.found_inf,
+                                     op=torch.distributed.ReduceOp.MAX,
+                                     group=self.get_model_parallel_group())
+
+        # Check for nan.
+        found_inf_flag = (self.found_inf.item() > 0)
+
+        return found_inf_flag
+
+
+    @torch.no_grad()
+    def step(self, args, timers):
+
+        # Copy gradients from model params to main params.
+        timers('optimizer-copy-to-main-grad', log_level=1).start(
+            barrier=args.barrier_with_L1_time)
+        self._copy_model_grads_to_main_grads()
+        timers('optimizer-copy-to-main-grad').stop()
+
+        # Do unscale, check for inf, and update grad scaler only for
+        # the case that grad scaler is provided.
+        if self.grad_scaler:
+
+            # Unscale and check for inf/nan.
+            timers('optimizer-unscale-and-check-inf', log_level=1).start(
+                barrier=args.barrier_with_L1_time)
+            found_inf_flag = self._unscale_main_grads_and_check_for_nan()
+            timers('optimizer-unscale-and-check-inf').stop()
+
+            # We are done with scaling gradients
+            # so we can update the loss scale.
+            self.grad_scaler.update(found_inf_flag)
+
+            # If we found inf/nan, skip the update.
+            if found_inf_flag:
+                return False, None, None
+
+        # Clip the main gradients.
+        timers('optimizer-clip-main-grad', log_level=1).start(
+            barrier=args.barrier_with_L1_time)
+        grad_norm = None
+        if self.clip_grad > 0.0:
+            grad_norm = self.clip_grad_norm(self.clip_grad)
+        timers('optimizer-clip-main-grad').stop()
+
+        # Count the zeros in the grads.
+        timers('optimizer-count-zeros', log_level=1).start(
+            barrier=args.barrier_with_L1_time)
+        num_zeros_in_grad = self.count_zeros() if \
+                            self.log_num_zeros_in_grad else None
+        timers('optimizer-count-zeros').stop()
+
+        # Step the optimizer.
+        timers('optimizer-inner-step', log_level=1).start(
+            barrier=args.barrier_with_L1_time)
+        self.optimizer.step()
+        timers('optimizer-inner-step').stop()
+
+        # Update params from main params.
+        timers('optimizer-copy-main-to-model-params', log_level=1).start(
+            barrier=args.barrier_with_L1_time)
+        self._copy_main_params_to_model_params()
+        timers('optimizer-copy-main-to-model-params').stop()
+
+        # Successful update.
+        return True, grad_norm, num_zeros_in_grad
 
 
 
