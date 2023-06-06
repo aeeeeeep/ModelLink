@@ -41,7 +41,8 @@ from deepspeed.pipe import PipelineModule, LayerSpec
 class RotaryEmbedding(torch.nn.Module):
     def __init__(self, dim, max_position_embeddings=2048, base=10000, device=None):
         super().__init__()
-        inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2).float().to(device) / dim))
+        # inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2).float().to(device) / dim))
+        inv_freq = 1.0 / (torch.tensor(base).double() ** (torch.arange(0, dim, 2).float().to(device) / dim).double())
         self.register_buffer("inv_freq", inv_freq)
 
         # Build here to make `torch.jit.trace` work.
@@ -271,9 +272,7 @@ class LlamaParallelMLP(MegatronModule):
             enable_expert_tensor_parallelism=enable_expert_tensor_parallelism)
 
     def forward(self, hidden_states):
-        intermediate_parallel = self.gate_proj(hidden_states)[0] * self.up_proj(hidden_states)[0]
-
-        intermediate_parallel = self.activation_func(intermediate_parallel)
+        intermediate_parallel = self.activation_func(self.gate_proj(hidden_states)[0]) * self.up_proj(hidden_states)[0]
 
         output, _ = self.down_proj(intermediate_parallel)
         return output
@@ -854,7 +853,7 @@ class LlamaModelPipe(PipelineModule, MegatronModule):
         self.specs.append(LayerSpec(RMSNorm, args.hidden_size, eps=args.layernorm_epsilon))
 
         self.specs.append(
-            LayerSpec(LlamaLMHeadPipe, hidden_size=args.hidden_size, vocab_size=padded_vocab_size,
+            LayerSpec(LlamaLMHeadPipe, hidden_size=args.hidden_size, vocab_size=args.padded_vocab_size,
                       init_method=self.init_method, parallel_output=self.parallel_output)
         )
 
@@ -883,7 +882,7 @@ class LlamaModel(MegatronModule):
     """llama Language model."""
 
     def __init__(self, pre_process, post_process, parallel_output=True, add_pooler=False):
-        super(LlamaModel, self).__init__()
+        super(LlamaModel, self).__init__(share_word_embeddings=False)
         args = get_args()
         self.fp16_lm_cross_entropy = args.fp16_lm_cross_entropy
         self.hidden_size = args.hidden_size
@@ -902,7 +901,7 @@ class LlamaModel(MegatronModule):
                                             vocab_size=self.padded_vocab_size)
 
         # Transformer.
-        self.transformer = LlamaParallelTransformer(
+        self.language_model = LlamaParallelTransformer(
             self.init_method,
             self.output_layer_init_method,
             self_attn_mask_type=self.self_attn_mask_type,
@@ -922,7 +921,7 @@ class LlamaModel(MegatronModule):
 
     def set_input_tensor(self, input_tensor):
         """See megatron.model.transformer.set_input_tensor()"""
-        self.transformer.set_input_tensor(input_tensor)
+        self.language_model.set_input_tensor(input_tensor)
 
     def forward(self, input_ids, attention_mask, labels=None, layer_past=None, get_key_value=False):
         args = get_args()
@@ -933,7 +932,7 @@ class LlamaModel(MegatronModule):
             hidden_states = input_ids
 
         # decoder
-        hidden_states = self.transformer(hidden_states, attention_mask, layer_past=layer_past,
+        hidden_states = self.language_model(hidden_states, attention_mask, layer_past=layer_past,
                                          get_key_value=get_key_value)
 
         if self.post_process:

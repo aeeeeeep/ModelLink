@@ -136,6 +136,7 @@ def pretrain(train_valid_test_dataset_provider,
     model, optimizer, lr_scheduler = setup_model_and_optimizer(
         model_provider, teacher=False, data_post_process=data_post_process,
         build_train_valid_test_datasets_provider=train_valid_test_dataset_provider)
+
     timers('model-and-optimizer-setup').stop()
     print_datetime('after model, optimizer, and learning rate '
                    'scheduler are built')
@@ -488,7 +489,6 @@ def setup_model_and_optimizer(model_provider_func, teacher=False,
                 # Number of train/valid/test samples.
                 if args.train_samples:
                     train_samples = args.train_samples
-                    update_train_iters(args)
                 else:
                     train_samples = args.train_iters * args.global_batch_size
                 # eval_iters and test_iters here are not actually used, only for
@@ -1273,7 +1273,6 @@ def build_train_valid_test_data_iterators(
         # Number of train/valid/test samples.
         if args.train_samples:
             train_samples = args.train_samples
-            update_train_iters(args)
         else:
             train_samples = args.train_iters * args.global_batch_size
         eval_iters = (args.train_iters // args.eval_interval + 1) * \
