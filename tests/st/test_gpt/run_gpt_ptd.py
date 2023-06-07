@@ -37,11 +37,10 @@ from megatron.utils import average_losses_across_data_parallel_group
 import deepspeed
 from deepspeed.runtime.utils import see_memory_usage
 from deepspeed.accelerator.real_accelerator import get_accelerator
-import os
-import subprocess
 
 from torch import nn
 import torch.nn.functional as F
+
 
 def model_provider(pre_process=True, post_process=True):
     """Build the model."""
@@ -69,7 +68,7 @@ def model_provider(pre_process=True, post_process=True):
             # we can reuse it.
             attention_mask = torch.tril(torch.ones(
                 (1, args.seq_length, args.seq_length), device=get_accelerator().current_device_name())).view(
-                    1, 1, args.seq_length, args.seq_length)
+                1, 1, args.seq_length, args.seq_length)
 
             # Convert attention mask to binary:
             attention_mask = (attention_mask < 0.5)
@@ -123,6 +122,7 @@ def get_batch(data_iterator):
 
     return tokens, labels, loss_mask, attention_mask, position_ids
 
+
 def data_post_process(data, data_sampler_state_dict):
     args = get_args()
     if args.data_efficiency_curriculum_learning:
@@ -130,16 +130,16 @@ def data_post_process(data, data_sampler_state_dict):
             args.data_efficiency_curriculum_learning_seqlen_type = 'seqlen_truncate'
             current_seqlen = data_sampler_state_dict['current_difficulties']['seqlen_truncate']
             if current_seqlen < args.seq_length:
-                data['text'] = data['text'][:, :(current_seqlen+1)].contiguous()
+                data['text'] = data['text'][:, :(current_seqlen + 1)].contiguous()
         elif 'seqlen_reshape' in data_sampler_state_dict['current_difficulties']:
             args.data_efficiency_curriculum_learning_seqlen_type = 'seqlen_reshape'
             current_seqlen = data_sampler_state_dict['current_difficulties']['seqlen_reshape']
             if current_seqlen < args.seq_length:
                 orig_num_token = torch.numel(data['text'])
-                reshape_len = (data['text'].size()[1] // (current_seqlen+1)) * (current_seqlen+1)
-                data['text'] = torch.cat((data['text'][:, :reshape_len].contiguous().view(-1, current_seqlen+1),
-                    data['text'][:, -(current_seqlen+1):]), 0).contiguous()
-                num_row = math.ceil(orig_num_token / (current_seqlen+1))
+                reshape_len = (data['text'].size()[1] // (current_seqlen + 1)) * (current_seqlen + 1)
+                data['text'] = torch.cat((data['text'][:, :reshape_len].contiguous().view(-1, current_seqlen + 1),
+                                          data['text'][:, -(current_seqlen + 1):]), 0).contiguous()
+                num_row = math.ceil(orig_num_token / (current_seqlen + 1))
                 num_row = min(num_row, data['text'].size()[0])
                 if num_row > 1 and num_row % 2 != 0:
                     num_row -= 1
@@ -147,6 +147,7 @@ def data_post_process(data, data_sampler_state_dict):
         else:
             args.data_efficiency_curriculum_learning_seqlen_type = None
     return data
+
 
 def get_batch_pipe(data):
     """Modification of `get_batch` to work on `next(data_iterator)` instead of `data_iterator`"""
@@ -189,7 +190,7 @@ def loss_func(loss_mask, moe_loss, mos_loss, output_tensor):
     losses = output_tensor.float()
     loss_mask = loss_mask.view(-1).float()
     loss = torch.sum(losses.view(-1) * loss_mask) / loss_mask.sum()
-    
+
     # Reduce loss for logging.
     averaged_loss = average_losses_across_data_parallel_group([loss])
     if args.mos or args.kd:
@@ -207,12 +208,13 @@ def loss_func(loss_mask, moe_loss, mos_loss, output_tensor):
             loss = loss + moe_loss
             return loss, {'lm loss': averaged_loss[0], 'moe loss': moe_loss}
 
+
 def calculate_mos_loss(args, stu_output, teacher_model, tokens, position_ids, attention_mask):
     mos_loss = 0
     alpha = args.kd_alpha_ce
     beta = args.kd_beta_ce
     kd_temp = args.kd_temp
-    
+
     if teacher_model:
         with torch.no_grad():
             if args.curriculum_learning_legacy and args.curriculum_seqlen < args.seq_length:
@@ -223,15 +225,18 @@ def calculate_mos_loss(args, stu_output, teacher_model, tokens, position_ids, at
                 attention_mask = attention_mask[:, :, :curriculum_seqlen, :curriculum_seqlen].contiguous()
                 # No need to truncate labels as we do not need it for the teacher logits
             tea_output, *tea_other_losses = teacher_model(tokens, position_ids, attention_mask)
-            assert stu_output.size() == tea_output.size(), 'teacher and student output should match in size. Student: {}, Teacher: {}, CL seq length {}'.format(stu_output.size(), tea_output.size(), args.curriculum_seqlen)
+            assert stu_output.size() == tea_output.size(), 'teacher and student output should match in size. Student: {}, Teacher: {}, CL seq length {}'.format(
+                stu_output.size(), tea_output.size(), args.curriculum_seqlen)
 
         student_logits = F.log_softmax(stu_output / kd_temp, dim=2)
-        tea_logits = F.softmax(tea_output / kd_temp, dim=2) # The target logits is expected to be probabilities. If we use log_softmax, then we need to set target_log to true when initializing the KLDivLoss.
+        tea_logits = F.softmax(tea_output / kd_temp,
+                               dim=2)  # The target logits is expected to be probabilities. If we use log_softmax, then we need to set target_log to true when initializing the KLDivLoss.
 
         mos_loss = kd_temp * kd_temp * nn.KLDivLoss(reduction='batchmean')(student_logits, tea_logits)
 
         mos_loss = mos_loss.div(args.seq_length) * beta
     return mos_loss
+
 
 def forward_step(data_iterator, model):
     """Forward step."""
@@ -247,7 +252,7 @@ def forward_step(data_iterator, model):
     if args.data_efficiency_curriculum_learning:
         args.curriculum_seqlen = tokens.size()[1]
         if hasattr(args, 'data_efficiency_curriculum_learning_seqlen_type') and \
-            args.data_efficiency_curriculum_learning_seqlen_type == 'seqlen_reshape':
+                args.data_efficiency_curriculum_learning_seqlen_type == 'seqlen_reshape':
             args.data_efficiency_curriculum_learning_numel = torch.numel(tokens)
 
     if args.mos or args.kd:
@@ -259,7 +264,7 @@ def forward_step(data_iterator, model):
         output_tensor = mpu.vocab_parallel_cross_entropy(stu_output.contiguous().float(), labels)
     else:
         output_tensor, *other_losses = model(tokens, position_ids, attention_mask,
-                                            labels=labels)
+                                             labels=labels)
     if args.curriculum_learning_legacy and args.curriculum_seqlen < args.seq_length:
         loss_mask = loss_mask[:, :args.curriculum_seqlen].contiguous()
 
@@ -274,8 +279,8 @@ def forward_step(data_iterator, model):
         assert model.training
         if args.teacher_forward and args.teacher_model is not None:
             mos_loss = calculate_mos_loss(args, stu_output,
-                args.teacher_model[0], tokens, position_ids, attention_mask)
-    
+                                          args.teacher_model[0], tokens, position_ids, attention_mask)
+
     # Output_tensor stores the standard loss, loos_func calculates the total loss.
     return output_tensor, partial(loss_func, loss_mask, moe_loss, mos_loss)
 
@@ -297,33 +302,6 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
     print_rank_0("> finished creating GPT datasets ...")
 
     return train_ds, valid_ds, test_ds
-
-
-def command_exists(cmd):
-    result = subprocess.Popen(f'type {cmd}', stdout=subprocess.PIPE, shell=True)
-    return result.wait() == 0
-
-
-def git_ds_info():
-    from deepspeed.env_report import main as ds_report
-    ds_report()
-
-    # Write out version/git info
-    git_hash_cmd = "git rev-parse --short HEAD"
-    git_branch_cmd = "git rev-parse --abbrev-ref HEAD"
-    if command_exists('git'):
-        try:
-            result = subprocess.check_output(git_hash_cmd, shell=True)
-            git_hash = result.decode('utf-8').strip()
-            result = subprocess.check_output(git_branch_cmd, shell=True)
-            git_branch = result.decode('utf-8').strip()
-        except subprocess.CalledProcessError:
-            git_hash = "unknown"
-            git_branch = "unknown"
-    else:
-        git_hash = "unknown"
-        git_branch = "unknown"
-    print(f'**** Git info for Megatron: git_hash={git_hash} git_branch={git_branch} ****')
 
 
 if __name__ == "__main__":
