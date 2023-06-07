@@ -17,7 +17,10 @@
 
 import torch
 import torch_npu
-import megatron_npu
+from torch_npu.contrib import transfer_to_npu
+import deepspeed_npu
+
+import math
 from functools import partial
 from megatron import get_args
 from megatron import print_rank_0
@@ -121,10 +124,6 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
 
 
 if __name__ == "__main__":
-    torch_npu.npu.set_compile_mode(jit_compile=True)
-
-    pretrain(train_valid_test_datasets_provider, model_provider,
-             ModelType.encoder_or_decoder,
-             forward_step,
-             args_defaults={'tokenizer_type': 'GPT2BPETokenizer'}
-    )
+    pretrain(train_valid_test_datasets_provider, model_provider, forward_step,
+             args_defaults={'tokenizer_type': 'GPT2BPETokenizer'},
+             data_post_process=data_post_process)
