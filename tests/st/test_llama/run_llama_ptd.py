@@ -20,7 +20,10 @@ from functools import partial
 import torch
 import torch_npu
 from torch_npu.contrib import transfer_to_npu
+from torch_npu.testing.testcase import TestCase, run_tests
+
 import deepspeed_npu
+
 
 from megatron import get_args
 from megatron import print_rank_0
@@ -91,14 +94,14 @@ def get_batch(data_iterator):
 
     # Items and their type.
     keys = ['text']
-    datatype = torch.int64
+    data_type = torch.int64
 
     # Broadcast data.
     if data_iterator is not None:
         data = next(data_iterator)
     else:
         data = None
-    data_b = mpu.broadcast_data(keys, data, datatype)
+    data_b = mpu.broadcast_data(keys, data, data_type)
 
     # Unpack.
     tokens_ = data_b['text'].long()
@@ -149,10 +152,10 @@ def get_batch_pipe(data):
 
     # Items and their type.
     keys = ['text']
-    datatype = torch.int64
+    data_type = torch.int64
 
     # Broadcast data.
-    data_b = mpu.broadcast_data(keys, data, datatype)
+    data_b = mpu.broadcast_data(keys, data, data_type)
 
     # Unpack.
     tokens_ = data_b['text'].long()
@@ -211,7 +214,9 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
 
     return train_ds, valid_ds, test_ds
 
+
 if __name__ == "__main__":
     pretrain(train_valid_test_datasets_provider, model_provider, forward_step,
              args_defaults={'tokenizer_type': 'GPT2BPETokenizer'},
              data_post_process=data_post_process)
+
