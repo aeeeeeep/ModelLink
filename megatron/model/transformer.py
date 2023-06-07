@@ -20,12 +20,12 @@ import torch.nn.functional as F
 
 from megatron import get_args
 from megatron import mpu
-from megatron.model.fused_softmax import NPUFusedScaleMaskSoftmax
-from .module import MegatronModule
-from megatron.model.enums import AttnMaskType, LayerType, AttnType
 from megatron.model import LayerNorm
+from megatron.model.fused_softmax import NPUFusedScaleMaskSoftmax
+from megatron.model.enums import AttnMaskType, LayerType, AttnType
 from megatron.model.fused_bias_gelu import bias_gelu_impl
 from megatron.model.utils import attention_mask_func, openai_gelu, erf_gelu
+from megatron.model.module import MegatronModule
 from torch import distributed as dist
 import deepspeed
 from deepspeed.moe.layer import MoE

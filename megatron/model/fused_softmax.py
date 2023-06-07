@@ -48,45 +48,45 @@ class NPUFusedScaleMaskSoftmax(torch.nn.Module):
                 self.scale is None or softmax_in_fp32
         ), "softmax should be in fp32 when scaled"
 
-    def forward(self, input, mask):
+    def forward(self, input_, mask):
         # [b, np, sq, sk]
-        assert input.dim() == 4
+        assert input_.dim() == 4
 
         if torch.npu.is_available():
-            return self.npu_forward_fused_softmax(input, mask)
+            return self.npu_forward_fused_softmax(input_, mask)
 
-        return self.npu_forward_torch_softmax(input, mask)
+        return self.npu_forward_torch_softmax(input_, mask)
 
-    def npu_forward_fused_softmax(self, input, mask):
+    def npu_forward_fused_softmax(self, input_, mask):
         if self.softmax_in_fp32:
-            input = input.float()
+            input_ = input_.float()
 
         if self.scale is None:
             self.scale = 1.0
 
         if self.attn_mask_type == AttnMaskType.causal:
             if self.mask_tri is None:
-                self.mask_tri = torch.triu(torch.ones(input.shape, device=input.device), diagonal=1).bool()
-            probs = torch_npu.npu_scaled_masked_softmax(input, self.mask_tri, self.scale, False)
+                self.mask_tri = torch.triu(torch.ones(input_.shape, device=input_.device), diagonal=1).bool()
+            probs = torch_npu.npu_scaled_masked_softmax(input_, self.mask_tri, self.scale, False)
         else:
-            probs = torch_npu.npu_scaled_masked_softmax(input, mask, self.scale, False)
+            probs = torch_npu.npu_scaled_masked_softmax(input_, mask, self.scale, False)
 
         probs = probs.half()
 
         return probs
 
-    def npu_forward_torch_softmax(self, input, mask):
+    def npu_forward_torch_softmax(self, input_, mask):
         if self.input_in_float16 and self.softmax_in_fp32:
-            input = input.float()
+            input_ = input_.float()
 
         if self.scale is not None:
-            input = input * self.scale
+            input_ = input_ * self.scale
 
         if self.attn_mask_type == AttnMaskType.causal:
-            mask_tri = torch.triu(torch.ones(input.shape, device=input.device), diagonal=1).bool()
-            mask_output = self.mask_func(input, mask_tri)
+            mask_tri = torch.triu(torch.ones(input_.shape, device=input_.device), diagonal=1).bool()
+            mask_output = self.mask_func(input_, mask_tri)
         else:
-            mask_output = self.mask_func(input, mask) if mask is not None else input
+            mask_output = self.mask_func(input_, mask) if mask is not None else input_
         probs = torch.nn.Softmax(dim=-1)(mask_output)
 
         if self.input_in_float16 and self.softmax_in_fp32:
