@@ -218,7 +218,10 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
 
 if __name__ == "__main__":
     os.makedirs("./ckpt_llama", exist_ok=True)
-    pretrain(train_valid_test_datasets_provider, model_provider, forward_step,
-             args_defaults={'tokenizer_type': 'GPT2BPETokenizer'},
-             data_post_process=data_post_process)
-
+    try:
+        pretrain(train_valid_test_datasets_provider, model_provider, forward_step,
+                 args_defaults={'tokenizer_type': 'GPT2BPETokenizer'},
+                 data_post_process=data_post_process)
+    except:
+        with open('log.txt','w') as f:
+            f.write("fail")
