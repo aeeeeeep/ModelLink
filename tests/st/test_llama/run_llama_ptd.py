@@ -216,14 +216,8 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
 
     return train_ds, valid_ds, test_ds
 
-
 if __name__ == "__main__":
     os.makedirs("./ckpt_llama", exist_ok=True)
-    try:
-        pretrain(train_valid_test_datasets_provider, model_provider, forward_step,
-                 args_defaults={'tokenizer_type': 'GPT2BPETokenizer'},
-                 data_post_process=data_post_process)
-    except Exception as err:
-        np.save('/usr1/workspace/PyTorch_PR_AscendSpeed_master/CODE/log.npy', np.array([1]))
-        print("save /usr1/workspace/PyTorch_PR_AscendSpeed_master/CODE/log.npy")
-    print("success!")
+    pretrain(train_valid_test_datasets_provider, model_provider, forward_step,
+             args_defaults={'tokenizer_type': 'GPT2BPETokenizer'},
+             data_post_process=data_post_process)
