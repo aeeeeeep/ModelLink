@@ -315,6 +315,6 @@ if __name__ == "__main__":
                  args_defaults={'tokenizer_type': 'GPT2BPETokenizer'},
                  data_post_process=data_post_process)
     except:
-        with open('log.txt','w') as f:
+        with open('/usr1/workspace/PyTorch_PR_AscendSpeed_master/CODE/log.txt','w') as f:
             f.write("fail")
 
