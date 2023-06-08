@@ -1,7 +1,7 @@
 # This is an example: train llama using PTD,
 # the number of parameters is not aligned
 
-export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib:/root/miniconda3/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/usr/local:/usr/local/lib:/usr/local/lib:/root/miniconda3/lib:$LD_LIBRARY_PATH
 export HCCL_CONNECT_TIMEOUT=1200
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 GPUS_PER_NODE=8
