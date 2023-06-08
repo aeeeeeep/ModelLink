@@ -13,4 +13,3 @@ os.system("sh {}".format(shell_file))
 shell_file = os.path.join(TEST_DIR, "st", "test_llama", "test_llama_ptd.sh")
 os.system("sh {}".format(shell_file))
 
-
