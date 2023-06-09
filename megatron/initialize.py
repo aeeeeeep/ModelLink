@@ -42,7 +42,7 @@ def initialize_megatron(extra_args_provider=None, args_defaults=None,
     Returns a function to finalize distributed env initialization 
     (optionally, only when args.lazy_mpu_init == True)
     """
-    if args_defaults is None:
+    if not args_defaults:
         args_defaults = {}
 
     if not allow_no_cuda:

@@ -51,6 +51,7 @@ def req_file(filename):
 install_requires = req_file("requirements.txt")
 
 setuptools.setup(
+    package_data={'ascendspeed':['megatron/data/Makefile']},
     name=__package_name__,
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
@@ -84,6 +85,7 @@ setuptools.setup(
     python_requires='>=3.6',
     packages=setuptools.find_packages(),
     install_requires=install_requires,
+    package_data={}
     # Add in any packaged data.
     include_package_data=True,
     zip_safe=False,

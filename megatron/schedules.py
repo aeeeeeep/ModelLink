@@ -30,12 +30,12 @@ from megatron.model import Float16Module
 
 
 def clear_npu_overflow_flag():
-    float_status = torch.zeros(8).npu()
+    float_status = torch.zeros(8).npu()   # 8 bit for overflow
     result = torch_npu.npu_clear_float_status(float_status)
 
 
 def get_npu_overflow_flag():
-    float_status = torch.zeros(8).npu()
+    float_status = torch.zeros(8).npu()   # 8 bit for overflow
     result = torch_npu.npu_get_float_status(float_status)
     if float_status.cpu()[0] != 0:
         return True
@@ -44,7 +44,7 @@ def get_npu_overflow_flag():
 
 
 def set_npu_overflow_flag():
-    torch.tensor([65504]).half().npu() + 100  # overflow flag
+    torch.tensor([65504]).half().npu() + 100  # fp16 overflow flag
 
 
 def get_forward_backward_func():
