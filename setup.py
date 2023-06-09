@@ -85,7 +85,6 @@ setuptools.setup(
     python_requires='>=3.6',
     packages=setuptools.find_packages(),
     install_requires=install_requires,
-    package_data={}
     # Add in any packaged data.
     include_package_data=True,
     zip_safe=False,
