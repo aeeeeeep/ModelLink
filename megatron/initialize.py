@@ -21,7 +21,6 @@ import time
 
 import numpy as np
 import torch
-
 from megatron import get_adlr_autoresume
 from megatron import get_args
 from megatron import get_tensorboard_writer
@@ -29,8 +28,11 @@ from megatron import mpu
 from megatron.global_vars import set_global_variables
 from megatron.mpu import (set_tensor_model_parallel_rank,
                           set_tensor_model_parallel_world_size)
+
+
 from deepspeed.accelerator import get_accelerator
 import deepspeed
+import deepspeed.utils.groups as groups
 
 def initialize_megatron(extra_args_provider=None, args_defaults=None,
                         ignore_unknown_args=False, allow_no_cuda=False):
