@@ -184,6 +184,8 @@ def pretrain(train_valid_test_dataset_provider,
     print_rank_0('training ...')
 
     iteration = 0
+    save_checkpoint(iteration, model, optimizer, lr_scheduler)
+
     if args.do_train and args.train_iters > 0:
         iteration = train(forward_step_func,
                           model, optimizer, lr_scheduler,
@@ -327,7 +329,9 @@ def get_model(model_provider_func):
 
     # GPU allocation.
     for model_module in model:
-        model_module.to(get_accelerator().current_device_name())
+        device_name = get_accelerator().current_device_name()
+        print_rank_0(f"model to {device_name}")
+        model_module.to(device_name)
  
 
     # Fp16 conversion.
@@ -489,6 +493,7 @@ def setup_model_and_optimizer(model_provider_func, teacher=False,
                 # Number of train/valid/test samples.
                 if args.train_samples:
                     train_samples = args.train_samples
+                    update_train_iters(args)
                 else:
                     train_samples = args.train_iters * args.global_batch_size
                 # eval_iters and test_iters here are not actually used, only for
@@ -522,6 +527,7 @@ def setup_model_and_optimizer(model_provider_func, teacher=False,
                 lr_scheduler=lr_scheduler,
                 mpu=mpu if args.no_pipeline_parallel else None
             )
+            assert model.fp16_enabled() == args.fp16, "megatron fp16 config does not match deepspeed"
         if isinstance(model, deepspeed.PipelineEngine):
             # hack to get batch_fn from pretrain_gpt.py
             model.set_batch_fn(model.module._megatron_batch_fn)
@@ -728,7 +734,7 @@ def training_log(loss_dict, total_loss_dict, learning_rate, iteration,
     timers_to_log = []
 
     def add_to_logging(name):
-        if name in timers.timers:
+        if name in timers._timers:
             timers_to_log.append(name)
     add_to_logging('forward-compute')
     add_to_logging('forward-recv')
@@ -1273,6 +1279,7 @@ def build_train_valid_test_data_iterators(
         # Number of train/valid/test samples.
         if args.train_samples:
             train_samples = args.train_samples
+            update_train_iters(args)
         else:
             train_samples = args.train_iters * args.global_batch_size
         eval_iters = (args.train_iters // args.eval_interval + 1) * \

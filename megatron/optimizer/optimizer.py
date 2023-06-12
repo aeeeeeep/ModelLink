@@ -26,6 +26,8 @@ from megatron import mpu
 from megatron import print_rank_0
 from deepspeed.accelerator import get_accelerator
 from .clip_grads import clip_grad_norm_fp32, count_zeros_fp32
+from ..model.module import param_is_not_shared
+from ..mpu.layers import param_is_not_tensor_parallel_duplicate
 
 
 def _zero_grad_group_helper(group, set_to_none):
@@ -87,9 +89,36 @@ class MegatronOptimizer(ABC):
         return params
 
 
+    def get_main_grads_for_grad_norm(self):
+
+        # Filter parameters based on:
+        #   - grad should not be none
+        #   - parameter should not be shared
+        #   - should not be a replica due to tensor model parallelism
+        params = self.get_parameters()
+        grads_for_norm = []
+        for param in params:
+            grad = param.grad
+            grad_not_none = grad is not None
+            is_not_shared = param_is_not_shared(param)
+            is_not_tp_duplicate = param_is_not_tensor_parallel_duplicate(param)
+            if grad_not_none and is_not_shared and is_not_tp_duplicate:
+                grads_for_norm.append(grad)
+
+        return grads_for_norm
+
+
+    def get_model_parallel_group(self):
+        """Default returned here, but the distributed optimizer overrides this."""
+        return mpu.get_model_parallel_group()
+
+
     def clip_grad_norm(self, clip_grad):
         params = self.get_parameters()
-        return clip_grad_norm_fp32(params, clip_grad)
+        grads_for_norm = self.get_main_grads_for_grad_norm()
+        return clip_grad_norm_fp32(
+            params, grads_for_norm, clip_grad,
+            model_parallel_group=self.get_model_parallel_group())
 
 
     def count_zeros(self):
@@ -239,15 +268,11 @@ class Float16OptimizerWithFloat16Params(MegatronOptimizer):
             # For all the parameters in this group:
             for i, param in enumerate(param_group['params']):
                 if param.requires_grad:
-                    if param.type() == "torch.cuda.HalfTensor":
-                        param_type = "torch.npu.HalfTensor"
-                    elif param.type() == "torch.cuda.BFloat16Tensor":
-                        param_type = "torch.npu.BFloat16Tensor"
-                    elif param.type() == "torch.cuda.FloatTensor":
-                        param_type = "torch.npu.FloatTensor"
 
                     # float16 params:
-                    if param_type in ['torch.{}.HalfTensor'.format(get_accelerator().device_name()),
+
+
+                    if param.type() in ['torch.{}.HalfTensor'.format(get_accelerator().device_name()),
                                         'torch.{}.BFloat16Tensor'.format(get_accelerator().device_name())]:
                         float16_params_this_group.append(param)
                         # Create a copy
@@ -266,7 +291,7 @@ class Float16OptimizerWithFloat16Params(MegatronOptimizer):
                                 = self.optimizer.state.pop(param)
 
                     # fp32 params.
-                    elif param_type == 'torch.{}.FloatTensor'.format(format(get_accelerator().device_name())):
+                    elif param.type() == 'torch.{}.FloatTensor'.format(format(get_accelerator().device_name())):
                         fp32_params_this_group.append(param)
                         param_group['params'][i] = param
 
@@ -308,7 +333,6 @@ class Float16OptimizerWithFloat16Params(MegatronOptimizer):
         for model_group, main_group in zip(self.float16_groups,
                                            self.fp32_from_float16_groups):
             for model_param, main_param in zip(model_group, main_group):
-                # if self.params_have_main_grad:
                 if self.params_have_main_grad:
                     main_param.grad = model_param.main_grad.float()
                 else:

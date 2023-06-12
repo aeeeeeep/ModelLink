@@ -14,32 +14,39 @@
 # limitations under the License.
 
 """Pretrain GPT"""
-
-import math
-from functools import partial
-
+import time
 import torch
 import torch_npu
 from torch_npu.contrib import transfer_to_npu
-import deepspeed_npu
+torch.cuda.init = torch.npu.init
+torch.npu.init()
+torch.cuda.default_generators = torch_npu.npu.default_generators
 
+import deepspeed
+import deepspeed_npu
+from functools import partial
 from megatron import get_args
 from megatron import print_rank_0
 from megatron import get_timers
 from megatron import get_tokenizer
 from megatron import mpu
 from megatron.data.gpt_dataset import build_train_valid_test_datasets
-from megatron.model import GPTModel, GPTModelPipe
+from megatron.model import GPTModel, ModelType, GPTModelPipe
+from megatron.enums import AttnMaskType
 from megatron.training import pretrain
 from megatron.utils import get_ltor_masks_and_position_ids
 from megatron.utils import average_losses_across_data_parallel_group
 
-import deepspeed
 from deepspeed.runtime.utils import see_memory_usage
-from deepspeed.accelerator.real_accelerator import get_accelerator
+from deepspeed.accelerator import get_accelerator
+import os
 
-from torch import nn
-import torch.nn.functional as F
+try:
+    from torch.distributed.elastic.multiprocessing.errors import record
+except ImportError:
+    # noop
+    def record(fn):
+        return fn
 
 def model_provider(pre_process=True, post_process=True):
     """Build the model."""
@@ -53,7 +60,8 @@ def model_provider(pre_process=True, post_process=True):
                              config_dict_or_path=args.deepspeed_config,
                              enabled=args.zero_stage == 3,
                              mpu=mpu):
-        if args.deepspeed and not args.no_pipeline_parallel:
+        if args.deepspeed:
+            args.pretrain_causal_attention = True
             model = GPTModelPipe(
                 num_tokentypes=0,
                 parallel_output=True
@@ -78,7 +86,6 @@ def model_provider(pre_process=True, post_process=True):
 
             # Attention mask must be bool.
             args.attn_mask = attention_mask.to(torch.bool)
-
         else:
             model = GPTModel(
                 num_tokentypes=0,
@@ -107,7 +114,7 @@ def get_batch(data_iterator):
     data_b = mpu.broadcast_data(keys, data, datatype)
 
     # Unpack.
-    tokens_ = data_b['text'].long()
+    tokens_ = data_b['text'].int()
     labels = tokens_[:, 1:].contiguous()
     tokens = tokens_[:, :-1].contiguous()
 
@@ -163,31 +170,33 @@ def get_batch_pipe(data):
     labels = tokens_[:, 1:].contiguous()
     tokens = tokens_[:, :-1].contiguous()
 
-    # Get the masks and postition ids.
+    # Get the masks and position ids.
     attention_mask, loss_mask, position_ids = get_ltor_masks_and_position_ids(
         tokens,
         tokenizer.eod,
         args.reset_position_ids,
         args.reset_attention_mask,
-        args.eod_mask_loss)
-    if args.curriculum_learning_legacy and args.curriculum_seqlen < tokens.size()[1]:
-        # seqlen-based curriculum learning
-        # tokens, position_ids, labels, loss_mask have size [batch size, seqlen]
-        tokens = tokens[:, :args.curriculum_seqlen].contiguous()
-        position_ids = position_ids[:, :args.curriculum_seqlen].contiguous()
-        if labels is not None:
-            labels = labels[:, :args.curriculum_seqlen].contiguous()
-        loss_mask = loss_mask[:, :args.curriculum_seqlen].contiguous()
+        args.eod_mask_loss,
+        prefix_indices=None,
+        loss_on_targets_only=args.loss_on_targets_only
+    )
+    # TEMP_IGNORE
+    # if args.curriculum_learning and args.curriculum_seqlen < tokens.size()[1]:
+    #     # seqlen-based curriculum learning
+    #     # tokens, position_ids, labels, loss_mask have size [batch size, seqlen]
+    #     tokens = tokens[:, :args.curriculum_seqlen].contiguous()
+    #     position_ids = position_ids[:, :args.curriculum_seqlen].contiguous()
+    #     labels = labels[:, :args.curriculum_seqlen].contiguous()
+    #     loss_mask = loss_mask[:, :args.curriculum_seqlen].contiguous()
 
     return (tokens, position_ids, attention_mask), (labels, loss_mask)
 
 
-def loss_func(loss_mask, moe_loss, mos_loss, output_tensor):
+def loss_func(loss_mask, output_tensor):
     args = get_args()
     losses = output_tensor.float()
     loss_mask = loss_mask.view(-1).float()
     loss = torch.sum(losses.view(-1) * loss_mask) / loss_mask.sum()
-    
     # Reduce loss for logging.
     averaged_loss = average_losses_across_data_parallel_group([loss])
     if args.mos or args.kd:
@@ -242,45 +251,15 @@ def forward_step(data_iterator, model):
     timers = get_timers()
 
     # Get the batch.
-    timers('batch-generator').start()
+    timers('batch-generator', log_level=2).start()
     tokens, labels, loss_mask, attention_mask, position_ids = get_batch(
         data_iterator)
     timers('batch-generator').stop()
 
-    if args.data_efficiency_curriculum_learning:
-        args.curriculum_seqlen = tokens.size()[1]
-        if hasattr(args, 'data_efficiency_curriculum_learning_seqlen_type') and \
-            args.data_efficiency_curriculum_learning_seqlen_type == 'seqlen_reshape':
-            args.data_efficiency_curriculum_learning_numel = torch.numel(tokens)
+    output_tensor = model(tokens, position_ids, attention_mask,
+                          labels=labels)
 
-    if args.mos or args.kd:
-        # The forward func can return either the loss or the logits, depending on whether passing in the labels or not.
-        stu_output, *other_losses = model(tokens, position_ids, attention_mask)
-        if args.curriculum_learning_legacy and args.curriculum_seqlen < args.seq_length:
-            assert args.curriculum_seqlen is not None
-            labels = labels[:, :args.curriculum_seqlen].contiguous()
-        output_tensor = mpu.vocab_parallel_cross_entropy(stu_output.contiguous().float(), labels)
-    else:
-        output_tensor, *other_losses = model(tokens, position_ids, attention_mask,
-                                            labels=labels)
-    if args.curriculum_learning_legacy and args.curriculum_seqlen < args.seq_length:
-        loss_mask = loss_mask[:, :args.curriculum_seqlen].contiguous()
-
-    moe_losses = []
-    for moe_loss in other_losses:
-        if moe_loss is not None:
-            moe_losses.append(moe_loss)
-    moe_loss = sum(moe_losses) * args.moe_loss_coeff
-
-    mos_loss = 0
-    if args.mos or args.kd:
-        assert model.training
-        if args.teacher_forward and args.teacher_model is not None:
-            mos_loss = calculate_mos_loss(args, stu_output,
-                args.teacher_model[0], tokens, position_ids, attention_mask)
-    
-    # Output_tensor stores the standard loss, loos_func calculates the total loss.
-    return output_tensor, partial(loss_func, loss_mask, moe_loss, mos_loss)
+    return output_tensor, partial(loss_func, loss_mask)
 
 
 def train_valid_test_datasets_provider(train_val_test_num_samples):
@@ -289,6 +268,7 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
 
     print_rank_0('> building train, validation, and test datasets '
                  'for GPT ...')
+    # TEMP IGNORE: xxxx_data_path is no used in original code hub
     train_ds, valid_ds, test_ds = build_train_valid_test_datasets(
         data_prefix=args.data_path,
         data_impl=args.data_impl,
@@ -303,6 +283,10 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
 
 
 if __name__ == "__main__":
-    pretrain(train_valid_test_datasets_provider, model_provider, forward_step,
-             args_defaults={'tokenizer_type': 'GPT2BPETokenizer'},
-             data_post_process=data_post_process)
+    torch_npu.npu.set_compile_mode(jit_compile=True)
+
+    pretrain(train_valid_test_datasets_provider, model_provider,
+             ModelType.encoder_or_decoder,
+             forward_step,
+             args_defaults={'tokenizer_type': 'GPT2BPETokenizer'}
+    )
