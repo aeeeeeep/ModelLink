@@ -45,13 +45,9 @@ def clip_grad_norm_fp32(parameters, max_norm, norm_type=2):
     Arguments:
         parameters (Iterable[Tensor] or Tensor): an iterable of Tensors or a
             single Tensor that will have gradients normalized
-        grads_for_norm (Iterable[Tensor]): an iterable of Tensors or a single
-            Tensor that will be used for calculating the grad norm.
         max_norm (float or int): max norm of the gradients
         norm_type (float or int): type of the used p-norm. Can be ``'inf'`` for
             infinity norm.
-        model_parallel_group (group): given the nature of the distributed
-            optimizer, this is passed as an argument.
 
     Returns:
         Total norm of the parameters (viewed as a single vector).
@@ -60,7 +56,10 @@ def clip_grad_norm_fp32(parameters, max_norm, norm_type=2):
     if isinstance(parameters, torch.Tensor):
         parameters = [parameters]
 
-    # Grads.
+    # Filter parameters based on:
+    #   - grad should not be none
+    #   - parameter should not be shared
+    #   - should not be a replica due to tensor model parallelism
     grads = []
     grads_for_norm = []
     for param in parameters:
@@ -70,10 +69,10 @@ def clip_grad_norm_fp32(parameters, max_norm, norm_type=2):
         grad = param.grad.detach()
         if grad_not_none:
             # Make sure the grads are in fp32
+            assert param.grad.type() == 'torch.{}.FloatTensor'.format(get_accelerator().device_name())
             grads.append(grad)
         if grad_not_none and is_not_shared and is_not_tp_duplicate:
             grads_for_norm.append(grad)
-
 
     # Norm parameters.
     max_norm = float(max_norm)
@@ -83,16 +82,23 @@ def clip_grad_norm_fp32(parameters, max_norm, norm_type=2):
     # Calculate norm.
     if norm_type == inf:
         total_norm = max(grad.abs().max() for grad in grads_for_norm)
-        total_norm_cuda = torch.cuda.FloatTensor([float(total_norm)])
+        total_norm_cuda = get_accelerator().FloatTensor([float(total_norm)])
         # Take max across all model-parallel GPUs.
         torch.distributed.all_reduce(total_norm_cuda,
                                      op=torch.distributed.ReduceOp.MAX,
                                      group=mpu.get_model_parallel_group())
         total_norm = total_norm_cuda[0].item()
+
     else:
-        for grad in grads_for_norm:
-            grad_norm = torch.norm(grad, norm_type)
-            total_norm += grad_norm ** norm_type
+        if norm_type == 2.0:
+            grad_norm = torch.norm(grads_for_norm, p=2.0)
+            # Since we will be summing across data parallel groups,
+            # we need the pow(norm-type).
+            total_norm = grad_norm ** norm_type
+        else:
+            for grad in grads_for_norm:
+                grad_norm = torch.norm(grad, norm_type)
+                total_norm += grad_norm ** norm_type
 
         # Sum across all model-parallel GPUs.
         torch.distributed.all_reduce(total_norm,
@@ -103,8 +109,8 @@ def clip_grad_norm_fp32(parameters, max_norm, norm_type=2):
     # Scale.
     clip_coeff = max_norm / (total_norm + 1.0e-6)
     if clip_coeff < 1.0:
-        for p in parameters:
-            p.grad.detach().mul_(clip_coeff)
+        for g in grads:
+            g.detach().mul_(clip_coeff.to(g.device))
 
     return total_norm
 

@@ -35,13 +35,15 @@ from .random import get_cuda_rng_tracker
 from .utils import divide
 from .utils import split_tensor_along_last_dim
 from .utils import VocabUtility
-from megatron import get_args
+from ..model.fused_layer_norm import MixedFusedLayerNorm as LayerNorm
+from megatron import get_args, mpu
 import deepspeed.runtime.activation_checkpointing.checkpointing as ds_checkpointing
 from deepspeed.accelerator import get_accelerator
 
 _MODEL_PARALLEL_ATTRIBUTE_DEFAULTS = {'tensor_model_parallel': False,
                                       'partition_dim': -1,
                                       'partition_stride': 1}
+
 
 def param_is_not_tensor_parallel_duplicate(param):
     return (hasattr(param, 'tensor_model_parallel') and
@@ -165,6 +167,9 @@ class VocabParallelEmbedding(torch.nn.Module):
 
         # Allocate weights and initialize.
         args = get_args()
+        if mpu.is_pipeline_first_stage() and args.embed_layernorm:
+            self.norm = LayerNorm(embedding_dim)
+
         if args.use_cpu_initialization:
             self.weight = Parameter(torch.empty(
                 self.num_embeddings_per_partition, self.embedding_dim,
@@ -199,6 +204,9 @@ class VocabParallelEmbedding(torch.nn.Module):
             output_parallel[input_mask, :] = 0.0
         # Reduce across all the model parallel GPUs.
         output = reduce_from_tensor_model_parallel_region(output_parallel)
+        if hasattr(self, 'norm'):
+            output = self.norm(output)
+
         return output
 
 
