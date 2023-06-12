@@ -26,8 +26,7 @@ python pretrain_llama.py \
        --save $CHECKPOINT_PATH \
        --load $CHECKPOINT_PATH \
        --data-path $DATA_PATH \
-       --vocab-file ./dataset/gpt2-vocab.json \
-       --merge-file ./dataset/gpt2-merges.txt \
+       --vocab-file ./tokenizer/model/path/ \
        --data-impl mmap \
        --split 949,50,1 \
        --distributed-backend nccl \
