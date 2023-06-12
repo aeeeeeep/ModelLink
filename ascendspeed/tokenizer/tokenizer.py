@@ -41,6 +41,9 @@ def build_tokenizer(args):
     elif args.tokenizer_type == 'GPT2BPETokenizer':
         assert args.merge_file is not None
         tokenizer = _GPT2BPETokenizer(args.vocab_file, args.merge_file)
+    elif args.tokenizer_type == 'LLamaTokenizer':
+        tokenizer = _LLamaTokenizer(vocab_file=args.vocab_file,
+                                    seq_length=args.seq_length)
     else:
         raise NotImplementedError('{} tokenizer is not '
                                   'implemented.'.format(args.tokenizer_type))
@@ -289,3 +292,90 @@ class _GPT2BPETokenizer(AbstractTokenizer):
     @property
     def eod(self):
         return self.eod_id
+
+class _LLamaTokenizer(AbstractTokenizer):
+    """Llama tokenizer form huggingface."""
+    
+    def __init__(self, vocab_file, seq_length):
+        name = 'LLama'
+        super().__init__(name)
+        import transformers
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(
+            vocab_file,
+            model_max_length=seq_length,
+            padding_side="right",
+            use_fast=False,
+        )
+
+   
+    @property
+    def vocab_size(self):
+        return self.tokenizer.vocab_size
+
+    @property
+    def vocab(self):
+        return self.tokenizer.get_vocab()
+   
+    @property
+    def inv_vocab(self):
+        return self.tokenizer.vocab
+
+    def decode(self, ids):
+        tokens = self.tokenizer.convert_ids_to_tokens(ids)
+        return self.tokenizer.convert_tokens_to_string(tokens)
+
+    def tokenize(self, text):
+        return self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(text))
+
+    def detokenize(self, token_ids):
+        return self.tokenizer.convert_ids_to_tokens(token_ids)
+
+    @property
+    def eod(self):
+        return self.tokenizer.eos_token_id
+   
+    @property
+    def cls(self):
+        return self.tokenizer.cls_token_id
+
+    @property
+    def sep(self):
+        return self.tokenizer.sep_token_id
+
+    @property
+    def pad(self):
+        return self.tokenizer.pad_token_id
+
+    @property
+    def mask(self):
+        return self.tokenizer.mask_token_id
+
+    @property
+    def bos_token(self):
+        """ Beginning of sentence token id """
+        return self.tokenizer._bos_token
+
+    @property
+    def eos_token(self):
+        """ End of sentence token id """
+        return self.tokenizer._eos_token
+
+    @property
+    def bos_token_id(self):
+        """ Id of the beginning of sentence token in the vocabulary."""
+        return self.tokenizer.bos_token_id
+
+    @property
+    def eos_token_id(self):
+        """ Id of the end of sentence token in the vocabulary."""
+        return self.tokenizer.eos_token_id
+   
+    @property
+    def additional_special_tokens(self):
+        """ All the additional special tokens you may want to use (list of strings)."""
+        return self.tokenizer.additional_special_tokens
+
+    @property
+    def additional_special_tokens_ids(self):
+        """ Ids of all the additional special tokens in the vocabulary (list of integers)."""
+        return self.tokenizer.additional_special_tokens_ids
