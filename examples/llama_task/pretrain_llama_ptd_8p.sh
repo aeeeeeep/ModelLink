@@ -34,7 +34,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --save $CHECKPOINT_PATH \
        --load $CHECKPOINT_PATH \
        --data-path $DATA_PATH \
-       --vocab-file ./tokenizer/model/path/ \
+       --vocab-file /home/dataset/tokenizer/ \
        --data-impl mmap \
        --split 949,50,1 \
        --distributed-backend nccl \
