@@ -1303,7 +1303,7 @@ def build_train_valid_test_data_iterators(
             train_ds, args.consumed_train_samples)
         valid_dataloader = build_pretraining_data_loader(
             valid_ds, args.consumed_valid_samples)
-        test_dataloader = build_pretraining_data_loader(test_ds, 0)
+        test_dataloader = build_pretraining_data_loader(test_ds, 0) if len(test_ds) > 0 else []
 
         # Flags to know if we need to do training/validation/testing.
         do_train = train_dataloader is not None and args.train_iters > 0
