@@ -294,27 +294,6 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
     return train_ds, valid_ds, test_ds
 
 
-
-# def train_valid_test_datasets_provider(train_val_test_num_samples):
-#     """Build train, valid, and test datasets."""
-#     args = get_args()
-
-#     print_rank_0('> building train, validation, and test datasets '
-#                  'for GPT ...')
-#     # TEMP IGNORE: xxxx_data_path is no used in original code hub
-#     train_ds, valid_ds, test_ds = build_train_valid_test_datasets(
-#         data_prefix=args.data_path,
-#         data_impl=args.data_impl,
-#         splits_string=args.split,
-#         train_valid_test_num_samples=train_val_test_num_samples,
-#         seq_length=args.seq_length,
-#         seed=args.seed,
-#         skip_warmup=(not args.mmap_warmup))
-#     print_rank_0("> finished creating GPT datasets ...")
-
-#     return train_ds, valid_ds, test_ds
-
-
 if __name__ == "__main__":
     torch_npu.npu.set_compile_mode(jit_compile=True)
 
