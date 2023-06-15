@@ -1298,12 +1298,27 @@ def build_train_valid_test_data_iterators(
         train_ds, valid_ds, test_ds = build_train_valid_test_datasets_provider(
             train_val_test_num_samples)
 
+        # if dataloading option is not 2 convert to list to allow
+        # same interface for multiple data groups
+        # for validation and testing in option 2
+        if type(train_ds) != list and train_ds is not None:
+            train_ds = [train_ds]
+        if type(valid_ds) != list and valid_ds is not None:
+            valid_ds = [valid_ds]
+        if type(test_ds) != list and test_ds is not None:
+            test_ds = [test_ds]
+
+
         # Build dataloders.
-        train_dataloader = build_pretraining_data_loader(
-            train_ds, args.consumed_train_samples)
-        valid_dataloader = build_pretraining_data_loader(
-            valid_ds, args.consumed_valid_samples)
-        test_dataloader = build_pretraining_data_loader(test_ds, 0) if len(test_ds) > 0 else []
+        train_dataloader = build_pretraining_data_loader(train_ds[0], args.consumed_train_samples)
+
+        valid_dataloader = [build_pretraining_data_loader(d, args.consumed_valid_samples // len(valid_ds), num_workers=args.valid_num_workers)
+                            for d in valid_ds] \
+                            if valid_ds is not None else []
+                            
+        # We collapse None and empty list as both should mean we don't run test
+        test_dataloader = [build_pretraining_data_loader(d, 0) for d in test_ds] \
+                            if test_ds is not None else []
 
         # Flags to know if we need to do training/validation/testing.
         do_train = train_dataloader is not None and args.train_iters > 0
