@@ -16,8 +16,8 @@
 """ascendspeed arguments."""
 
 import argparse
-import os
 import re
+import os
 
 import torch
 import deepspeed
