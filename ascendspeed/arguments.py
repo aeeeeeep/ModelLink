@@ -97,6 +97,16 @@ def parse_args(extra_args_provider=None, defaults={},
                   args.tensor_model_parallel_size,
                   args.pipeline_model_parallel_size), flush=True)
 
+    if args.data_path:
+        assert args.train_weighted_split_paths is None, message
+        setattr(args, "valid_weighted_split_names", None)
+        setattr(args, "valid_weighted_split_weights", None)
+        setattr(args, "valid_weighted_split_splits", None)
+
+        setattr(args, "test_weighted_split_names", None)
+        setattr(args, "test_weighted_split_weights", None)
+        setattr(args, "test_weighted_split_splits", None)
+
     # Deprecated arguments
     assert args.batch_size is None, '--batch-size argument is no longer ' \
         'valid, use --micro-batch-size instead'
@@ -845,10 +855,6 @@ def _add_data_args(parser):
             # #  paths will contain strings on the following form
             # # "WEIGHTS1 PATH1 WEIGHTS2 PATH2 WEIGHTS3 PATH3" for each dataset group
             # # while data will be parsed in additional arguments below
-            # paths_option1_style = []
-            # for p, w in zip(paths, weights):
-            #   paths_option1_style.append(" ".join([f"{w_i} {p_i}" for p_i, w_i in zip(p,w)]))
-            # setattr(args, self.dest, paths_option1_style)
             setattr(args, self.dest, paths)
             setattr(args, self.dest.replace("paths", "weights"), weights)
             setattr(args, self.dest.replace("paths", "splits"), splits)
@@ -887,18 +893,22 @@ def _add_data_args(parser):
 
     class parse_data_paths_path(argparse.Action):
         def __call__(self, parser, args, values, option_string=None):
-            expected_option_strings = ["--train-weighted-split-paths-path", "--valid-weighted-split-paths-path", "--test-weighted-split-paths-path"]
-            assert option_string in expected_option_strings, f"Expected {option_string} to be in {expected_option_strings}"
+            expected_option_strings = ["--train-weighted-split-paths-path", 
+                "--valid-weighted-split-paths-path", "--test-weighted-split-paths-path"]
+            assert option_string in expected_option_strings, \
+                f"Expected {option_string} to be in {expected_option_strings}"
 
             with open(values, "r") as fi:
                 lines = fi.readlines()
                 assert len(lines) == 1, f"Got multiple lines {len(lines)} instead of 1 expected"
-                assert lines[0][-2:] == "\"\n" and lines[0][0] == "\"", f"Invalid input format, got {lines}"
+                assert lines[0][-2:] == "\"\n" and \
+                    lines[0][0] == "\"", f"Invalid input format, got {lines}"
                 values = lines[0][1:-2].split("\" \"")
                 weighted_split_paths_dest = re.sub(r"_path$", "", self.dest)
                 weighted_split_paths_option = re.sub(r"-path$", "", self.option_strings[0])
                 setattr(args, weighted_split_paths_dest, values)
-                parse_data_paths(option_strings=[weighted_split_paths_option], dest=weighted_split_paths_dest)(parser, args, values, option_string=weighted_split_paths_option)
+                parse_data_paths(option_strings=[weighted_split_paths_option], 
+                    dest=weighted_split_paths_dest)(parser, args, values, option_string=weighted_split_paths_option)
 
 
     group.add_argument('--train-weighted-split-paths-path', type=str, action=parse_data_paths_path ,default=None)

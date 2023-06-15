@@ -104,8 +104,6 @@ def build_dataset_group(dataset_group_name, paths, weights, splits, data_impl,
     else:
 
         data_prefix = []
-        # data_prefix is on the shape:
-        # ["WEIGHT1", "PATH1", "WEIGHT2", "PATH2", "WEIGHT3", "PATH3"]
         for w,p in zip(weights, paths):
             data_prefix += [w,p]
 
@@ -115,7 +113,8 @@ def build_dataset_group(dataset_group_name, paths, weights, splits, data_impl,
 
         # Build individual datasets.
         datasets = []
-        for i in range(len(prefixes)):
+        n = len(prefixes)
+        for i in range(n):
             ds = _build_single_datasets(prefixes[i],
                                         splits[i],
                                         data_impl,
