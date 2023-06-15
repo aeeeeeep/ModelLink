@@ -1312,10 +1312,10 @@ def build_train_valid_test_data_iterators(
         # Build dataloders.
         train_dataloader = build_pretraining_data_loader(train_ds[0], args.consumed_train_samples)
 
-        valid_dataloader = [build_pretraining_data_loader(d, args.consumed_valid_samples // len(valid_ds), num_workers=args.valid_num_workers)
+        valid_dataloader = [build_pretraining_data_loader(d, args.consumed_valid_samples // len(valid_ds))
                             for d in valid_ds] \
                             if valid_ds is not None else []
-                            
+
         # We collapse None and empty list as both should mean we don't run test
         test_dataloader = [build_pretraining_data_loader(d, 0) for d in test_ds] \
                             if test_ds is not None else []
