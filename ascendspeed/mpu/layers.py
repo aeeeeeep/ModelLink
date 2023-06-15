@@ -22,6 +22,7 @@ import math
 
 import deepspeed.runtime.activation_checkpointing.checkpointing as ds_checkpointing
 import torch
+import torch_npu
 import torch.nn.functional as F
 import torch.nn.init as init
 from torch.nn.parameter import Parameter
