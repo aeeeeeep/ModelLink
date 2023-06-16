@@ -97,6 +97,16 @@ def parse_args(extra_args_provider=None, defaults={},
                   args.tensor_model_parallel_size,
                   args.pipeline_model_parallel_size), flush=True)
 
+     if args.data_path:
+        assert args.train_weighted_split_paths is None, message
+        setattr(args, "valid_weighted_split_names", None)
+        setattr(args, "valid_weighted_split_weights", None)
+        setattr(args, "valid_weighted_split_splits", None)
+
+        setattr(args, "test_weighted_split_names", None)
+        setattr(args, "test_weighted_split_weights", None)
+        setattr(args, "test_weighted_split_splits", None)
+
     # Deprecated arguments
     assert args.batch_size is None, '--batch-size argument is no longer ' \
         'valid, use --micro-batch-size instead'
