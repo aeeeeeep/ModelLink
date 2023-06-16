@@ -885,7 +885,8 @@ def _add_data_args(parser):
         def __call__(self, parser, args, values, option_string=None):
             expected_option_strings = ["--train-weighted-split-paths-path", 
                 "--valid-weighted-split-paths-path", "--test-weighted-split-paths-path"]
-            assert option_string in expected_option_strings, f"Expected {option_string} to be in {expected_option_strings}"
+            assert option_string in expected_option_strings, \
+                f"Expected {option_string} to be in {expected_option_strings}"
 
             with open(values, "r") as fi:
                 lines = fi.readlines()

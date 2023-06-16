@@ -1298,6 +1298,9 @@ def build_train_valid_test_data_iterators(
         train_ds, valid_ds, test_ds = build_train_valid_test_datasets_provider(
             train_val_test_num_samples)
 
+        print(' len_train_ds:', len(train_ds), ' len_valid_ds:', len(valid_ds), ' len_test_ds:', len(test_ds))
+        print(' type_train_ds:', type(train_ds), ' type_valid_ds:', type(valid_ds), ' type_test_ds:', type(test_ds))
+        print('+'*300)
         # if dataloading option is not 2 convert to list to allow
         # same interface for multiple data groups
         # for validation and testing in option 2
