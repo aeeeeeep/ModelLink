@@ -1266,7 +1266,7 @@ def build_train_valid_test_data_iterators(
     """XXX"""
     args = get_args()
 
-    (train_dataloader, valid_dataloader, test_dataloader) = (None, None, None)
+    (train_dataloader, valid_dataloaders, test_dataloaders) = (None, None, None)
 
     print_rank_0('> building train, validation, and test datasets ...')
 
@@ -1305,9 +1305,6 @@ def build_train_valid_test_data_iterators(
         train_ds, valid_ds, test_ds = build_train_valid_test_datasets_provider(
             train_val_test_num_samples)
 
-        print(' len_train_ds:', len(train_ds), ' len_valid_ds:', len(valid_ds), ' len_test_ds:', len(test_ds))
-        print(' type_train_ds:', type(train_ds), ' type_valid_ds:', type(valid_ds), ' type_test_ds:', type(test_ds))
-        print('+'*300)
         # if dataloading option is not 2 convert to list to allow
         # same interface for multiple data groups
         # for validation and testing in option 2
@@ -1318,22 +1315,21 @@ def build_train_valid_test_data_iterators(
         if type(test_ds) != list and test_ds is not None:
             test_ds = [test_ds]
 
-
         # Build dataloders.
         train_dataloader = build_pretraining_data_loader(train_ds[0], args.consumed_train_samples)
 
-        valid_dataloader = [build_pretraining_data_loader(d, args.consumed_valid_samples // len(valid_ds))
+        valid_dataloaders = [build_pretraining_data_loader(d, args.consumed_valid_samples // len(valid_ds))
                             for d in valid_ds] \
                             if valid_ds is not None else []
 
         # We collapse None and empty list as both should mean we don't run test
-        test_dataloader = [build_pretraining_data_loader(d, 0) for d in test_ds] \
+        test_dataloaders = [build_pretraining_data_loader(d, 0) for d in test_ds] \
                             if test_ds is not None else []
 
         # Flags to know if we need to do training/validation/testing.
         do_train = train_dataloader is not None and args.train_iters > 0
-        do_valid = valid_dataloader is not None and args.eval_iters > 0
-        do_test = test_dataloader is not None and args.eval_iters > 0
+        do_valid = valid_dataloaders is not None and args.eval_iters > 0
+        do_test = test_dataloaders is not None and args.eval_iters > 0
         # Need to broadcast num_tokens and num_type_tokens.
         flags = get_accelerator().LongTensor(
             [int(do_train), int(do_valid), int(do_test)])
@@ -1345,9 +1341,12 @@ def build_train_valid_test_data_iterators(
                                 mpu.get_tensor_model_parallel_src_rank(),
                                 group=mpu.get_tensor_model_parallel_group())
     args.do_train = flags[0].item()
-    args.do_valid = flags[1].item()
-    args.do_test = flags[2].item()
-
+    num_valid_ds = flags[1].item()
+    num_test_ds = flags[2].item()
+    assert num_test_ds >= 0
+    assert num_valid_ds >= 0
+    args.do_valid = num_valid_ds > 0
+    args.do_test = num_test_ds > 0
 
     # Build iterators.
     dl_type = args.dataloader_type
@@ -1359,16 +1358,19 @@ def build_train_valid_test_data_iterators(
     else:
         train_data_iterator = None
 
-    if valid_dataloader is not None:
-        valid_data_iterator = iter(valid_dataloader) if dl_type == 'single' \
-                              else iter(cyclic_iter(valid_dataloader))
+    if valid_dataloaders is not None:
+        valid_data_iterators = [iter(vdl) if dl_type in ['single'] \
+                              else iter(cyclic_iter(valid_dataloaders))
+                                 for vdl in valid_dataloaders]
     else:
-        valid_data_iterator = None
+        valid_data_iterators = [None] * num_valid_ds
 
-    if test_dataloader is not None:
-        test_data_iterator = iter(test_dataloader) if dl_type == 'single' \
-                             else iter(cyclic_iter(test_dataloader))
+    if test_dataloaders is not None:
+        test_data_iterators = [iter(tdl) if dl_type in ['single'] \
+                             else iter(cyclic_iter(test_dataloaders))
+                            for tdl in test_dataloaders]
     else:
-        test_data_iterator = None
+        test_data_iterators = [None] * num_test_ds
 
-    return train_data_iterator, valid_data_iterator, test_data_iterator
+
+    return train_data_iterator, valid_data_iterators, test_data_iterators
