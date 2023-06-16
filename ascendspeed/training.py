@@ -1101,8 +1101,9 @@ def train(forward_step_func, model, optimizer, lr_scheduler,
         if args.eval_interval and iteration % args.eval_interval == 0 and \
            args.do_valid:
             prefix = 'iteration {}'.format(iteration)
-            evaluate_and_print_results(prefix, forward_step_func,
-                                       valid_data_iterator, model,
+            for iterator in valid_data_iterator:
+                evaluate_and_print_results(prefix, forward_step_func,
+                                       iterator, model,
                                        iteration, False)
 
         # Checkpointing
