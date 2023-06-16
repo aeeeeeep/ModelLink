@@ -194,20 +194,18 @@ def pretrain(train_valid_test_dataset_provider,
     print_datetime('after training is done')
 
     if args.do_valid:
-        names = args.valid_weighted_split_names
-        names = names if names is not None else ['valid'] * len(valid_data_iterator)
         prefix = 'the end of training for val data'
-        for iterator, name in zip(valid_data_iterator, names):
+        for iterator in valid_data_iterator:
             evaluate_and_print_results(prefix, forward_step_func,
                                    iterator, model,
-                                   iteration, False, data_group_name=name)
+                                   iteration, False)
     
     # Clean the model and do evaluation again
     if args.compression_training:
         model = [redundancy_clean(model[0], args.deepspeed_config, mpu)]
         if args.do_valid:
             prefix = 'the end of training and after model cleaning for val data'
-            for iterator, name in zip(valid_data_iterator, names):
+            for iterator in valid_data_iterator:
                 evaluate_and_print_results(prefix, forward_step_func,
                                     iterator, model,
                                     iteration, False)
@@ -219,12 +217,10 @@ def pretrain(train_valid_test_dataset_provider,
     if args.do_test:
         # Run on test data.
         prefix = 'the end of training for test data'
-        names = args.test_weighted_split_names
-        names = names if names is not None else ['test'] * len(test_data_iterator)
-        for iterator, name in zip(test_data_iterator, names):
+        for iterator in test_data_iterator:
             evaluate_and_print_results(prefix, forward_step_func,
                                    iterator, model,
-                                   0, True, data_group_name=name)
+                                   0, True)
 
 def update_train_iters(args):
 
