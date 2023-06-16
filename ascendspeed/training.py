@@ -194,18 +194,22 @@ def pretrain(train_valid_test_dataset_provider,
     print_datetime('after training is done')
 
     if args.do_valid:
+        names = args.valid_weighted_split_names
+        names = names if names is not None else ['valid'] * len(valid_data_iterator)
         prefix = 'the end of training for val data'
-        evaluate_and_print_results(prefix, forward_step_func,
-                                   valid_data_iterator, model,
-                                   iteration, False)
+        for iterator, name in zip(valid_data_iterator, names):
+            evaluate_and_print_results(prefix, forward_step_func,
+                                   iterator, model,
+                                   iteration, False, data_group_name=name)
     
     # Clean the model and do evaluation again
     if args.compression_training:
         model = [redundancy_clean(model[0], args.deepspeed_config, mpu)]
         if args.do_valid:
             prefix = 'the end of training and after model cleaning for val data'
-            evaluate_and_print_results(prefix, forward_step_func,
-                                    valid_data_iterator, model,
+            for iterator, name in zip(valid_data_iterator, names):
+                evaluate_and_print_results(prefix, forward_step_func,
+                                    iterator, model,
                                     iteration, False)
 
 
@@ -215,9 +219,12 @@ def pretrain(train_valid_test_dataset_provider,
     if args.do_test:
         # Run on test data.
         prefix = 'the end of training for test data'
-        evaluate_and_print_results(prefix, forward_step_func,
-                                   test_data_iterator, model,
-                                   0, True, test=True)
+        names = args.test_weighted_split_names
+        names = names if names is not None else ['test'] * len(test_data_iterator)
+        for iterator, name in zip(test_data_iterator, names):
+            evaluate_and_print_results(prefix, forward_step_func,
+                                   iterator, model,
+                                   0, True, data_group_name=name)
 
 def update_train_iters(args):
 
@@ -1213,10 +1220,14 @@ def evaluate(forward_step_func, data_iterator, model, verbose=False):
 
 def evaluate_and_print_results(prefix, forward_step_func,
                                data_iterator, model,
-                               iteration, verbose=False, test=False):
+                               iteration, verbose=False, test=False, **kwargs):
     """Helper function to evaluate and dump results on screen."""
     args = get_args()
     writer = get_tensorboard_writer()
+
+    ds_name = kwargs.get("data_group_name", None)
+    # print corresponding dataset name (used for multiple validation datasets)
+    tf_plot_prefix = f"lm-loss-validation/{ds_name}" if ds_name else "lm-loss-validation"
 
     total_loss_dict = evaluate(forward_step_func, data_iterator, model, verbose)
     string = ' validation loss at {} | '.format(prefix)
@@ -1226,21 +1237,21 @@ def evaluate_and_print_results(prefix, forward_step_func,
         string += '{} PPL: {:.6E} | '.format(key, ppl)
         if writer and is_last_rank():
             data_type = 'test' if test else 'validation'
-            writer.add_scalar(f'lm-loss-validation/{key} {data_type}',
+            writer.add_scalar(f'{tf_plot_prefix}/{key} {data_type}',
                               total_loss_dict[key].item(),
                               iteration)
-            writer.add_scalar(f'lm-loss-validation/{key} {data_type} vs samples',
+            writer.add_scalar(f'{tf_plot_prefix}/{key} {data_type} vs samples',
                               total_loss_dict[key].item(),
                               args.consumed_train_samples)
-            writer.add_scalar(f'lm-loss-validation/{key} {data_type} vs tokens',
+            writer.add_scalar(f'{tf_plot_prefix}/{key} {data_type} vs tokens',
                               total_loss_dict[key].item(),
                               args.consumed_train_tokens)
             if args.log_validation_ppl_to_tensorboard:
-                writer.add_scalar(f'lm-loss-validation/{key} {data_type} ppl', ppl,
+                writer.add_scalar(f'{tf_plot_prefix}/{key} {data_type} ppl', ppl,
                                   iteration)
-                writer.add_scalar(f'lm-loss-validation/{key} {data_type} ppl vs samples',
+                writer.add_scalar(f'{tf_plot_prefix}/{key} {data_type} ppl vs samples',
                                   ppl, args.consumed_train_samples)
-                writer.add_scalar(f'lm-loss-validation/{key} {data_type} ppl vs tokens',
+                writer.add_scalar(f'{tf_plot_prefix}/{key} {data_type} ppl vs tokens',
                                   ppl, args.consumed_train_tokens)
 
     length = len(string) + 1
