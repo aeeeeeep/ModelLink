@@ -890,7 +890,7 @@ def _add_data_args(parser):
             with open(values, "r") as fi:
                 lines = fi.readlines()
                 assert len(lines) == 1, f"Got multiple lines {len(lines)} instead of 1 expected"
-                assert lines[0][-2:] == "\"\n" and 
+                assert lines[0][-2:] == "\"\n" and \
                     lines[0][0] == "\"", f"Invalid input format, got {lines}"
                 values = lines[0][1:-2].split("\" \"")
                 weighted_split_paths_dest = re.sub(r"_path$", "", self.dest)
