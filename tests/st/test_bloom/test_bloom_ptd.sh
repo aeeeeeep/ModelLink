@@ -29,7 +29,12 @@ SEQ_LEN=2048
 SAVE_INTERVAL=250
 
 # dataset path
+<<<<<<< HEAD
 TOKENIZER_NAME_OR_PATH=/home/dataset/bloom_vocab/vocab_file
+=======
+
+TOKENIZER_NAME_OR_PATH=bigscience-catalogue-data-dev/byte-level-bpe-tokenizer-no-norm-250k-whitespace-and-eos-regex-alpha-v3-dedup-lines-articles
+>>>>>>> 4e66e9cfc267c80b84c609fb1014f597892770c4
 DATA_PATH=/home/dataset/enwiki-gpt/gpt_text_sentence
 
 ZERO_STAGE=0 # important: bf16 must use z0! it implements its own zero stage 1 equivalent
@@ -55,7 +60,11 @@ cat <<EOT > $config_json
   "wall_clock_breakdown": false
 }
 EOT
+<<<<<<< HEAD
 
+=======
+#--train-samples $TRAIN_SAMPLES \
+>>>>>>> 4e66e9cfc267c80b84c609fb1014f597892770c4
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --rdzv_endpoint $MASTER_ADDR:$MASTER_PORT --rdzv_backend c10d --max_restarts 0 --tee 3"
 
 python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
@@ -108,3 +117,7 @@ python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
     --zero-stage ${ZERO_STAGE} \
     --deepspeed-activation-checkpointing  \
     --distributed-backend nccl
+<<<<<<< HEAD
+=======
+
+>>>>>>> 4e66e9cfc267c80b84c609fb1014f597892770c4
