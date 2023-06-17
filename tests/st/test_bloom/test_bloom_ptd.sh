@@ -12,7 +12,7 @@ mkdir -p $LOGS_PATH
 
 # train parameter 
 MASTER_ADDR=localhost
-MASTER_PORT=5999
+MASTER_PORT=5998
 GPUS_PER_NODE=8
 NNODES=1
 PP_SIZE=1
