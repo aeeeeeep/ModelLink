@@ -28,11 +28,8 @@ SEQ_LEN=2048
 
 SAVE_INTERVAL=250
 
-TRAIN_SAMPLES=220_000_000  # 450B tokens
-LR_DECAY_SAMPLES=200_000_000  # Decay for the first 410B tokens then continue at fixed --min-lr
-LR_WARMUP_SAMPLES=183_105  # 375M tokens
-
 # dataset path
+
 TOKENIZER_NAME_OR_PATH=bigscience-catalogue-data-dev/byte-level-bpe-tokenizer-no-norm-250k-whitespace-and-eos-regex-alpha-v3-dedup-lines-articles
 DATA_PATH=/home/dataset/enwiki-gpt/gpt_text_sentence
 
@@ -62,8 +59,7 @@ EOT
 #--train-samples $TRAIN_SAMPLES \
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --rdzv_endpoint $MASTER_ADDR:$MASTER_PORT --rdzv_backend c10d --max_restarts 0 --tee 3"
 
-TRANSFORMERS_OFFLINE=1  \
-    python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
+python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
     /usr1/workspace/PyTorch_PR_AscendSpeed_master/CODE/tests/st/test_bloom/run_bloom_ptd.py \
     --tokenizer-type PretrainedFromHF \
     --embed-layernorm \
@@ -73,6 +69,7 @@ TRANSFORMERS_OFFLINE=1  \
     --hidden-dropout 0 \
     --pad-vocab-size-to 250880 \
     --train-iters 5 \
+    --lr-decay-iters 320000 \
     --tensor-model-parallel-size $TP_SIZE \
     --pipeline-model-parallel-size $PP_SIZE \
     --num-layers $NLAYERS \
@@ -81,7 +78,6 @@ TRANSFORMERS_OFFLINE=1  \
     --seq-length $SEQ_LEN \
     --max-position-embeddings $SEQ_LEN \
     --micro-batch-size $MICRO_BATCH_SIZE \
-    --rampup-batch-size 4 4 9_765_625 \
     --global-batch-size $GLOBAL_BATCH_SIZE \
     --init-method-std 0.0048 \
     --fp16 \
@@ -94,8 +90,6 @@ TRANSFORMERS_OFFLINE=1  \
     --lr 1.2e-4 \
     --min-lr 6e-6 \
     --lr-decay-style cosine \
-    --lr-decay-samples $LR_DECAY_SAMPLES \
-    --lr-warmup-samples $LR_WARMUP_SAMPLES \
     --clip-grad 1.0 \
     --weight-decay 1e-1 \
     --log-interval 1 \
