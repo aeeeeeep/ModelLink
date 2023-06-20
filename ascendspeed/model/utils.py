@@ -18,6 +18,7 @@
 import math
 
 import torch
+import torch_npu
 
 from ascendspeed import get_args
 

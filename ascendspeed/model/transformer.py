@@ -18,6 +18,7 @@ import math
 
 import deepspeed
 import torch
+import torch_npu
 import torch.nn.functional as F
 from torch import distributed as dist
 from deepspeed.accelerator import get_accelerator
@@ -104,7 +105,7 @@ class ParallelMLP(MegatronModule):
 
         if self.bias_gelu_fusion:
              intermediate_parallel = \
-                     bias_gelu_impl(intermediate_parallel, bias_parallel)
+                     torch_npu.fast_gelu(intermediate_parallel + bias_parallel)
         else:
             intermediate_parallel = \
                 self.activation_func(intermediate_parallel + bias_parallel)
@@ -300,17 +301,26 @@ class ParallelAttention(MegatronModule):
 
         # Raw attention scores. [b * np, sq, sk]
         if alibi is None:
-            matmul_result = torch.baddbmm(
-                matmul_result,
-                query_layer.transpose(0, 1),   # [b * np, sq, hn]
-                key_layer.transpose(0, 1).transpose(1, 2),  # [b * np, hn, sk]
-                beta=0.0, alpha=(1.0/self.norm_factor))
+            alpha = 1.0 / self.norm_factor
+            matmul_result = alpha * torch.bmm(
+                query_layer.transpose(0, 1),
+                key_layer.permute(1, 2, 0).contiguous())
+
+            # matmul_result = torch.baddbmm(
+            #     matmul_result,
+            #     query_layer.transpose(0, 1),   # [b * np, sq, hn]
+            #     key_layer.transpose(0, 1).transpose(1, 2),  # [b * np, hn, sk]
+            #     beta=0.0, alpha=(1.0/self.norm_factor))
         else:
-            matmul_result = torch.baddbmm(
-                matmul_result,
-                query_layer.transpose(0, 1),  # [b * np, sq, hn]
-                key_layer.transpose(0, 1).transpose(1, 2),  # [b * np, hn, sk]
-                beta=self.beta, alpha=(1.0 / self.norm_factor))
+            alpha = 1.0 / self.norm_factor
+            matmul_result = self.beta * matmul_result + alpha * torch.bmm(
+                query_layer.transpose(0, 1),
+                key_layer.permute(1, 2, 0).contiguous())
+            # matmul_result = torch.baddbmm(
+            #     matmul_result,
+            #     query_layer.transpose(0, 1),  # [b * np, sq, hn]
+            #     key_layer.transpose(0, 1).transpose(1, 2),  # [b * np, hn, sk]
+            #     beta=self.beta, alpha=(1.0 / self.norm_factor))
 
         # change view to [b, np, sq, sk]
         attention_scores = matmul_result.view(*output_size)
@@ -542,7 +552,7 @@ class ParallelTransformerLayer(MegatronModule):
         with torch.enable_grad():
             layernorm_input = bias_dropout_add_func(
                 attention_output,
-                attention_bias.expand_as(residual),
+                attention_bias,
                 residual,
                 self.hidden_dropout)
 
@@ -564,7 +574,7 @@ class ParallelTransformerLayer(MegatronModule):
             with torch.enable_grad():
                 layernorm_input = bias_dropout_add_func(
                     attention_output,
-                    attention_bias.expand_as(residual),
+                    attention_bias,
                     residual,
                     self.hidden_dropout)
 
@@ -591,7 +601,7 @@ class ParallelTransformerLayer(MegatronModule):
             #if self.num_experts <= 1:
             output = bias_dropout_add_func(
                     mlp_output,
-                    mlp_bias.expand_as(residual),
+                    mlp_bias,
                     residual,
                     self.hidden_dropout)
             #else:
