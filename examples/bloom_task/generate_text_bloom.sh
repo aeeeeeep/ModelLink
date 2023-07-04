@@ -1,11 +1,9 @@
-# text generation using bloom
-
-`bash examples/bloom_task/generate_text_bloom.sh`
-
-> We generate text samples using largely the Bloom pretraining script. Few changes need to make, such as we need to provide the path to the pretrained checkpoint, the length of the output samples.
-
-```shell
 #!/bin/bash
+
+export LD_LIBRARY_PATH=/usr/local/lib:/root/miniconda3/lib:$LD_LIBRARY_PATH
+export HCCL_CONNECT_TIMEOUT=1200
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
 WORLD_SIZE=8
 NNODES=1
 NODE_RANK=0
@@ -44,14 +42,3 @@ python -m torch.distributed.run $DISTRIBUTED_ARGS ./examples/bloom_task/generate
                --temperature 1.0 \
                --top_p 0.9 \
                --recompute \
-```
-
-# bloom 7b 1000 step perftest
-
-**NPU loss**
-
-![NPU-LOSS](./images/7b_lm_loss.png)
-
-**NPU GPU loss relative error**
-
-![NPU-Relative-Error](./images/relative_error.png)
