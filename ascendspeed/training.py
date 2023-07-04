@@ -16,6 +16,7 @@
 """Pretrain utilities."""
 
 from datetime import datetime
+import os
 import math
 import sys
 import time
@@ -115,6 +116,9 @@ def pretrain(train_valid_test_dataset_provider,
     print_datetime('after ascendspeed is initialized')
 
     args = get_args()
+    os.environ['MASTER_ADDR'] = args.master_addr
+    os.environ['MASTER_PORT'] = args.master_port
+
     timers = get_timers()
 
     if args.deepspeed:
