@@ -727,6 +727,10 @@ def _add_distributed_args(parser):
     group.add_argument('--use-cpu-initialization', action='store_true',
                        default=None, help='If set, affine parallel weights '
                        'initialization uses CPU' )
+    group.add_argument('--master-addr', type=str, default='localhost',
+                       help="Specifies the IP address of the master node for distributed training.")
+    group.add_argument('--master-port', type=int, default=11890,
+                       help="Specifies the Port address of the master node for distributed training.")
     return parser
 
 
