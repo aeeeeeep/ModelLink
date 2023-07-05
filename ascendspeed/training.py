@@ -16,12 +16,11 @@
 """Pretrain utilities."""
 
 from datetime import datetime
+import os
 import math
 import sys
 import time
 import json
-# The earliest we can measure the start time.
-_TRAIN_START_TIME = time.time()
 
 import torch
 from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
@@ -59,7 +58,8 @@ from deepspeed.accelerator import get_accelerator
 from deepspeed.compression.compress import init_compression, redundancy_clean
 from deepspeed.runtime.data_pipeline.data_routing.helper import convert_to_random_ltd
 
-
+# The earliest we can measure the start time.
+_TRAIN_START_TIME = time.time()
 
 def print_datetime(string):
     """Note that this call will sync across all ranks."""
@@ -115,6 +115,7 @@ def pretrain(train_valid_test_dataset_provider,
     print_datetime('after ascendspeed is initialized')
 
     args = get_args()
+
     timers = get_timers()
 
     if args.deepspeed:
