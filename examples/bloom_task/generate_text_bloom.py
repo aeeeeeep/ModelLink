@@ -1,5 +1,6 @@
 # coding=utf-8
-# Copyright (c) 2020, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2023, HUAWEI CORPORATION. All rights reserved.
+# Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,8 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""Sample Generate GPT"""
 
 import os
 import sys
@@ -40,7 +39,7 @@ from deepspeed.accelerator import get_accelerator
 
 def model_provider(pre_process=True, post_process=True):
     """Build the model."""
-    print_rank_0('building GPT model ...')
+    print_rank_0('building bloom model ...')
     model = GPTModel(num_tokentypes=0, parallel_output=False,
                      pre_process=pre_process, post_process=post_process, 
                      return_moe_loss=False)

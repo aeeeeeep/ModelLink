@@ -5,25 +5,17 @@
 > We generate text samples using largely the Bloom pretraining script. Few changes need to make, such as we need to provide the path to the pretrained checkpoint, the length of the output samples.
 
 ```shell
-#!/bin/bash
-WORLD_SIZE=8
-NNODES=1
-NODE_RANK=0
-MASTER_ADDR=localhost
-MASTER_PORT=6001
-DISTRIBUTED_ARGS="--nproc_per_node $WORLD_SIZE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
+DISTRIBUTED_ARGS="--nproc_per_node 8 --nnodes 1 --node_rank 0 --master_addr localhost --master_port 6001"
 
 CHECK_POINTS=<checkpoints-path>
 TOKENIZER_NAME_OR_PATH=<tokenizer-vocab-file-path>
 
-TP_SIZE=8
-PP_SIZE=1
 python -m torch.distributed.run $DISTRIBUTED_ARGS ./examples/bloom_task/generate_text_bloom.py \
                --load $CHECK_POINTS \
                --tokenizer-type PretrainedFromHF \
                --tokenizer-name-or-path $TOKENIZER_NAME_OR_PATH  \
-               --tensor-model-parallel-size $TP_SIZE \
-               --pipeline-model-parallel-size $PP_SIZE \
+               --tensor-model-parallel-size 8 \
+               --pipeline-model-parallel-size 1 \
                --embed-layernorm \
                --position-embedding-type alibi \
                --num-layers 30 \
