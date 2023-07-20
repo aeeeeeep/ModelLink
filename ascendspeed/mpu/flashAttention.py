@@ -1,6 +1,6 @@
 import torch
 import torch_npu
-import ext_ops
+import ascendspeed_ops
 from torch.autograd import Function
 from torch.nn import Module
 
@@ -8,7 +8,7 @@ class _FlashAttention(Function):
     @staticmethod
     def forward(ctx, query, key, value, head_num, input_layout, pse, padding_mask, atten_mask, scale, keep_prob, 
                 pre_tockens, next_tockens, gen_mask_parallel, sync):
-        flash_func = flashAtten.forward
+        flash_func = ascendspeed_ops.npu_flash_attention
         attention_score = flash_func(ctx, query, key, value, head_num, input_layout, pse, padding_mask, 
                                   atten_mask, scale, keep_prob, pre_tockens, next_tockens, gen_mask_parallel, sync)
 
@@ -16,7 +16,7 @@ class _FlashAttention(Function):
 
     @staticmethod
     def backward(ctx, grad_outputs):
-        back_func = flashAtten.backward
+        back_func = ascendspeed_ops.npu_flash_attention_grad
         results = back_func(ctx, grad_outputs)
         return results
 
