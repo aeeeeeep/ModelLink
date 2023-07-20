@@ -66,3 +66,8 @@ from .random import split_tensor_into_1d_equal_chunks
 
 from .utils import divide
 from .utils import split_tensor_along_last_dim
+
+try:
+    from .ops import FlashAttention
+except Exception:
+    print('can not find any torch_npu, import ops failed')
