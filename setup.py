@@ -54,7 +54,7 @@ try:
     from torch_npu.utils import cpp_extension
     from torch.utils.cpp_extension import BuildExtension
     ext_ops = cpp_extension.NpuExtension(
-        name="ext_ops",
+        name="ascendspeed_ops",
         sources=["ascendspeed/mpu/ops/flashAttention.cpp"],
         extra_compile_args=[
         '-std=c++14',

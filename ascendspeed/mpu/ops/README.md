@@ -5,6 +5,13 @@ cd AscendSpeed
 python3 setup.py install
 ```
 
+# Package
+```shell
+git clone https://gitee.com/ascend/AscendSpeed.git
+cd AscendSpeed
+python3 setup.py bdist_wheel
+```
+
 # Usage
 After Installation, you can use it directly
 

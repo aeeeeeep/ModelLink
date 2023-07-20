@@ -323,6 +323,6 @@ static std::vector<at::Tensor> npu_flash_attention_grad(AutogradContext *ctx, st
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-  m.def("forward", &at_npu::native::npu_flash_attention, "Flash forward version");
-  m.def("backward", &at_npu::native::npu_flash_attention_grad, "Flash backward version");
+  m.def("npu_flash_attention", &at_npu::native::npu_flash_attention, "Flash forward version");
+  m.def("npu_flash_attention_grad", &at_npu::native::npu_flash_attention_grad, "Flash backward version");
 }
