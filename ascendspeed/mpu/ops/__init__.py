@@ -8,7 +8,7 @@ class _FlashAttention(Function):
     @staticmethod
     def forward(ctx, query, key, value, head_num, input_layout, pse, padding_mask, atten_mask, scale, keep_prob, 
                 pre_tockens, next_tockens, gen_mask_parallel, sync):
-        flash_func = ascendspeed_ops.npu_flash_attention
+        flash_func = ascendspeed_ops.npu_flash_attention_binding_forward
         attention_score = flash_func(ctx, query, key, value, head_num, input_layout, pse, padding_mask, 
                                   atten_mask, scale, keep_prob, pre_tockens, next_tockens, gen_mask_parallel, sync)
 
@@ -16,7 +16,7 @@ class _FlashAttention(Function):
 
     @staticmethod
     def backward(ctx, grad_outputs):
-        back_func = ascendspeed_ops.npu_flash_attention_grad
+        back_func = ascendspeed_ops.npu_flash_attention_binding_backward
         results = back_func(ctx, grad_outputs)
         return results
 

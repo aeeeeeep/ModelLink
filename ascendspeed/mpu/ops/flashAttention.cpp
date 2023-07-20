@@ -177,7 +177,7 @@ std::vector<at::Tensor> npu_flash_attention_backward(
           at::Tensor(), at::Tensor(), at::Tensor(), at::Tensor(), at::Tensor()};
 }
 
-static std::vector<at::Tensor> npu_flash_attention(
+static std::vector<at::Tensor> npu_flash_attention_forward(
     AutogradContext *ctx, const at::Tensor &query, const at::Tensor &key,
     const at::Tensor &value, int64_t head_num, c10::string_view input_layout, const c10::optional<at::Tensor> &pse_opt,
     const c10::optional<at::Tensor> &padding_mask_opt, const c10::optional<at::Tensor> &atten_mask_opt,
@@ -271,7 +271,7 @@ static std::vector<at::Tensor> npu_flash_attention(
   return {attention_score};
 }
 
-static std::vector<at::Tensor> npu_flash_attention_grad(AutogradContext *ctx, std::vector<at::Tensor> grad_outputs)
+static std::vector<at::Tensor> npu_flash_attention_backward(AutogradContext *ctx, std::vector<at::Tensor> grad_outputs)
 {
   auto scale = ctx->saved_data["scale"].toDouble();
   auto keep_prob = ctx->saved_data["keep_prob"].toDouble();
@@ -319,10 +319,75 @@ static std::vector<at::Tensor> npu_flash_attention_grad(AutogradContext *ctx, st
   }
   return results;
 }
+
+std::vector<at::Tensor> npu_flash_attention_grad(
+    const at::Tensor &query,
+    const at::Tensor &key,
+    const at::Tensor &value,
+    const at::Tensor &dy,
+    int64_t head_num,
+    c10::string_view input_layout,
+    const c10::optional<at::Tensor> &pse,
+    const c10::optional<at::Tensor> &padding_mask,
+    const c10::optional<at::Tensor> &atten_mask,
+    const c10::optional<at::Tensor> &softmax_max,
+    const c10::optional<at::Tensor> &softmax_sum,
+    const c10::optional<at::Tensor> &softmax_in,
+    const c10::optional<at::Tensor> &attention_in,
+    double scale_value,
+    double keep_prob,
+    int64_t pre_tockens,
+    int64_t next_tockens,
+    bool gen_mask_parallel,
+    bool sync)
+{
+  TORCH_CHECK(query.dim() == 3, "The shapes of the input query should be 3-dimensional, but got ", query.dim(), "-dimensional");
+  TORCH_CHECK(key.dim() == 3, "The shapes of the input key should be 3-dimensional, but got ", key.dim(), "-dimensional");
+  TORCH_CHECK(value.dim() == 3, "The shapes of the input value should be 3-dimensional, but got ", value.dim(), "-dimensional");
+  TORCH_CHECK(dy.dim() == 3, "The shapes of the input dy should be 3-dimensional, but got ", dy.dim(), "-dimensional");
+  TORCH_CHECK(keep_prob >= 0 && keep_prob <= 1, "The keep_prob value must be in range of [0, 1], but got ", keep_prob);
+  std::string input_layout_str = std::string(input_layout);
+  for (auto & c : input_layout_str) {
+    c = toupper(c);
+  }
+  TORCH_CHECK(input_layout_str == "BSH" || input_layout_str == "SBH",
+      "The input_layout should be BSH/SBH(case-insensitive), but got ", input_layout);
+  int64_t seed;
+  int64_t offset;
+  int64_t numels;
+  at::Tensor drop_mask = dropout_gen_mask(query, keep_prob, head_num, input_layout_str, gen_mask_parallel, sync,
+      seed, offset, numels);
+
+  auto result = npu_flash_attention_backward(query,
+      key, value, dy, head_num, input_layout_str, pse, drop_mask, padding_mask, atten_mask,
+      softmax_max, softmax_sum, softmax_in, attention_in, scale_value,
+      keep_prob, pre_tockens, next_tockens);
+
+  if (!sync) {
+    c10_npu::NPUEvent npu_event;
+    npu_event.record(c10_npu::getCurrentNPUStream());
+    npu_event.block(c10_npu::getCurrentSecondaryStream());
+  }
+  
+  return result;
+}
+
+std::vector<at::Tensor> npu_flash_attention(
+    const at::Tensor &query, const at::Tensor &key,
+    const at::Tensor &value, int64_t head_num, c10::string_view input_layout,
+    const c10::optional<at::Tensor> &pse, const c10::optional<at::Tensor> &padding_mask,
+    const c10::optional<at::Tensor> &atten_mask,
+    double scale, double keep_prob, int64_t pre_tockens, int64_t next_tockens, bool gen_mask_parallel, bool sync)
+{
+  return NPUFlashAttentionFunction::apply(query, key, value, head_num, input_layout, pse, padding_mask,
+      atten_mask, scale, keep_prob, pre_tockens, next_tockens, gen_mask_parallel, sync);
+}
 }
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-  m.def("npu_flash_attention", &at_npu::native::npu_flash_attention, "Flash forward version");
-  m.def("npu_flash_attention_grad", &at_npu::native::npu_flash_attention_grad, "Flash backward version");
+  m.def("npu_flash_attention", &at_npu::native::npu_flash_attention, "Flash forward");
+  m.def("npu_flash_attention_grad", &at_npu::native::npu_flash_attention_grad, "Flash backward");
+  m.def("npu_flash_attention_binding_forward", &at_npu::native::npu_flash_attention, "Flash forward binding");
+  m.def("npu_flash_attention_binding_backward", &at_npu::native::npu_flash_attention_grad, "Flash backward binding");
 }
