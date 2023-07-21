@@ -26,10 +26,6 @@
 #include "torch_npu/csrc/framework/utils/OpPreparation.h"
 namespace at_npu {
 namespace native {
-<<<<<<< HEAD
-using namespace std;
-=======
->>>>>>> flash_0720
 using torch::autograd::AutogradContext;
 using torch::autograd::Function;
 
