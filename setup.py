@@ -55,7 +55,7 @@ try:
     from torch.utils.cpp_extension import BuildExtension
     ext_ops = cpp_extension.NpuExtension(
         name="ascendspeed_ops",
-        sources=["ascendspeed/mpu/ops/flashAttention.cpp"],
+        sources=["ascendspeed/ops/flashAttention.cpp"],
         extra_compile_args=[
         '-std=c++14',
         '-Wno-sign-compare',
