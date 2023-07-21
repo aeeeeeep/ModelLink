@@ -26,7 +26,10 @@
 #include "torch_npu/csrc/framework/utils/OpPreparation.h"
 namespace at_npu {
 namespace native {
+<<<<<<< HEAD
 using namespace std;
+=======
+>>>>>>> flash_0720
 using torch::autograd::AutogradContext;
 using torch::autograd::Function;
 
@@ -92,7 +95,7 @@ at::Tensor dropout_gen_mask_dispatch(const at::Tensor &self, const at::Scalar &k
   return mask;
 }
 
-at::Tensor dropout_gen_mask(const at::Tensor &self, double keep_prob, int64_t head_num, c10::string_view input_layout,
+at::Tensor dropout_gen_mask(const at::Tensor &self, double keep_prob, int64_t head_num, std::string input_layout,
     bool gen_mask_parallel, bool sync, int64_t &seed, int64_t &offset, int64_t &numels) {
   at::Tensor drop_mask;
   if (input_layout == "BSH") {
@@ -120,7 +123,7 @@ std::vector<at::Tensor> npu_flash_attention_backward(
     const at::Tensor &value,
     const at::Tensor &dy,
     int64_t head_num,
-    const c10::string_view input_layout,
+    const std::string input_layout,
     const c10::optional<at::Tensor> &pse,
     const c10::optional<at::Tensor> &drop_mask,
     const c10::optional<at::Tensor> &padding_mask,
@@ -193,7 +196,7 @@ public:
     TORCH_CHECK(key.dim() == 3, "The shapes of the input key should be 3-dimensional, but got ", key.dim(), "-dimensional");
     TORCH_CHECK(value.dim() == 3, "The shapes of the input value should be 3-dimensional, but got ", value.dim(), "-dimensional");
     TORCH_CHECK(keep_prob >= 0 && keep_prob <= 1, "The keep_prob value must be in range of [0, 1], but got ", keep_prob);
-    c10::string_view input_layout_str = std::string(input_layout);
+    std::string input_layout_str = std::string(input_layout);
     for (auto & c : input_layout_str) {
       c = toupper(c);
     }
@@ -337,8 +340,8 @@ std::vector<at::Tensor> npu_flash_attention_grad(
     const c10::optional<at::Tensor> &softmax_sum,
     const c10::optional<at::Tensor> &softmax_in,
     const c10::optional<at::Tensor> &attention_in,
-    double scale_value = 1,
-    double keep_prob = 1,
+    double scale_value = 1.0,
+    double keep_prob = 1.0,
     int64_t pre_tockens = 2147483647,
     int64_t next_tockens = 2147483647,
     bool gen_mask_parallel = true,
@@ -349,7 +352,7 @@ std::vector<at::Tensor> npu_flash_attention_grad(
   TORCH_CHECK(value.dim() == 3, "The shapes of the input value should be 3-dimensional, but got ", value.dim(), "-dimensional");
   TORCH_CHECK(dy.dim() == 3, "The shapes of the input dy should be 3-dimensional, but got ", dy.dim(), "-dimensional");
   TORCH_CHECK(keep_prob >= 0 && keep_prob <= 1, "The keep_prob value must be in range of [0, 1], but got ", keep_prob);
-  c10::string_view input_layout_str = std::string(input_layout);
+  std::string input_layout_str = std::string(input_layout);
   for (auto & c : input_layout_str) {
     c = toupper(c);
   }
@@ -380,12 +383,12 @@ std::vector<at::Tensor> npu_flash_attention(
     const at::Tensor &value, int64_t head_num, c10::string_view input_layout,
     const c10::optional<at::Tensor> &pse, const c10::optional<at::Tensor> &padding_mask,
     const c10::optional<at::Tensor> &atten_mask,
-    double scale = 1, double keep_prob = 1, int64_t pre_tockens = 2147483647, int64_t next_tockens =2147483647, bool gen_mask_parallel = true, bool sync = false)
+    double scale = 1.0, double keep_prob = 1.0, int64_t pre_tockens = 2147483647, 
+    int64_t next_tockens =2147483647, bool gen_mask_parallel = true, bool sync = false)
 {
   return NPUFlashAttentionFunction::apply(query, key, value, head_num, input_layout, pse, padding_mask,
       atten_mask, scale, keep_prob, pre_tockens, next_tockens, gen_mask_parallel, sync);
 }
-
 } // namespace native
 } // namespace at_npu
 
