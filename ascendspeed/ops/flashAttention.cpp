@@ -180,7 +180,7 @@ class NPUFlashAttentionFunction : public torch::autograd::Function<NPUFlashAtten
 public:
   static std::vector<at::Tensor> forward(
       AutogradContext *ctx, const at::Tensor &query, const at::Tensor &key,
-      const at::Tensor &value, int64_t head_num, c10::string_view input_layout, const c10::optional<at::Tensor> &pse_opt,
+      const at::Tensor &value, int64_t head_num, std::string input_layout, const c10::optional<at::Tensor> &pse_opt,
       const c10::optional<at::Tensor> &padding_mask_opt, const c10::optional<at::Tensor> &atten_mask_opt,
       double scale, double keep_prob, int64_t pre_tockens, int64_t next_tockens, bool gen_mask_parallel, bool sync)
   {
@@ -328,7 +328,7 @@ std::vector<at::Tensor> npu_flash_attention_grad(
     const at::Tensor &value,
     const at::Tensor &dy,
     int64_t head_num,
-    c10::string_view input_layout,
+    std::string input_layout,
     const c10::optional<at::Tensor> &pse,
     const c10::optional<at::Tensor> &padding_mask,
     const c10::optional<at::Tensor> &atten_mask,
@@ -376,7 +376,7 @@ std::vector<at::Tensor> npu_flash_attention_grad(
 
 std::vector<at::Tensor> npu_flash_attention(
     const at::Tensor &query, const at::Tensor &key,
-    const at::Tensor &value, int64_t head_num, c10::string_view input_layout,
+    const at::Tensor &value, int64_t head_num, std::string input_layout,
     const c10::optional<at::Tensor> &pse, const c10::optional<at::Tensor> &padding_mask,
     const c10::optional<at::Tensor> &atten_mask,
     double scale = 1.0, double keep_prob = 1.0, int64_t pre_tockens = 2147483647, 
