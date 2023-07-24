@@ -30,7 +30,7 @@ class FlashAttention(Module):
                 gen_mask_parallel=True, sync=False):
         return self.atten(query, key, value, head_num, input_layout, pse, padding_mask, atten_mask, 
                           scale, keep_prob, pre_tockens, next_tockens, gen_mask_parallel, sync)
-    
+
 def npu_flash_attention(query, key, value, head_num, input_layout, pse=None, padding_mask=None, atten_mask=None,
                         scale=1., keep_prob=1., pre_tockens=2147483647, next_tockens=2147483647, gen_mask_parallel=True, sync=False):
     return ascendspeed_ops.npu_flash_attention_forward(query, key, value, head_num, input_layout, 
