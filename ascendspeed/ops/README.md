@@ -2,6 +2,7 @@
 ```shell
 git clone https://gitee.com/ascend/AscendSpeed.git
 cd AscendSpeed
+export CPLUS_INCLUDE_PATH=/usr/local/lib64/python3.7/site-packages/torch_npu/include/third_party/acl/inc
 python3 setup.py install
 ```
 
@@ -9,6 +10,8 @@ python3 setup.py install
 ```shell
 git clone https://gitee.com/ascend/AscendSpeed.git
 cd AscendSpeed
+export CPLUS_INCLUDE_PATH=/usr/local/lib64/python3.7/site-packages/torch_npu/include/third_party/acl/inc
+python3 setup.py build
 python3 setup.py bdist_wheel
 ```
 
