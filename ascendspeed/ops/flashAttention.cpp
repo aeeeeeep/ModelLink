@@ -389,8 +389,8 @@ std::vector<at::Tensor> npu_flash_attention(
 } // namespace at_npu
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-  m.def("npu_flash_attention", &at_npu::native::npu_flash_attention, "Flash forward");
-  m.def("npu_flash_attention_grad", &at_npu::native::npu_flash_attention_grad, "Flash backward");
+  m.def("npu_flash_attention_forward", &at_npu::native::npu_flash_attention, "Flash forward");
+  m.def("npu_flash_attention_backward", &at_npu::native::npu_flash_attention_grad, "Flash backward");
   m.def("npu_flash_attention_binding_forward", &at_npu::native::NPUFlashAttentionFunction::forward, "Flash forward binding");
   m.def("npu_flash_attention_binding_backward", &at_npu::native::NPUFlashAttentionFunction::backward, "Flash backward binding");
 }
