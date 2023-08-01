@@ -31,8 +31,7 @@ from ascendspeed import get_args
 from ascendspeed import print_rank_0
 from ascendspeed import get_timers
 from ascendspeed import get_tokenizer
-from ascendspeed import mpu
-from ascendspeed.core import parallel_state
+from ascendspeed.core import parallel_state, tensor_parallel
 from ascendspeed.data.gpt_dataset import build_train_valid_test_datasets
 from ascendspeed.model import Llama2Model, Llama2ModelPipe
 from ascendspeed.training import pretrain
@@ -100,7 +99,7 @@ def get_batch(data_iterator):
         data = next(data_iterator)
     else:
         data = None
-    data_b = mpu.broadcast_data(keys, data, data_type)
+    data_b = tensor_parallel.broadcast_data(keys, data, data_type)
 
     # Unpack.
     tokens_ = data_b['text'].long()
@@ -154,7 +153,7 @@ def get_batch_pipe(data):
     data_type = torch.int64
 
     # Broadcast data.
-    data_b = mpu.broadcast_data(keys, data, data_type)
+    data_b = tensor_parallel.broadcast_data(keys, data, data_type)
 
     # Unpack.
     tokens_ = data_b['text'].long()

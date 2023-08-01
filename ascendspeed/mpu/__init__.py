@@ -15,8 +15,6 @@
 
 """Model parallel utility interface."""
 
-from .data import broadcast_data
-
 from .layers import ColumnParallelLinear
 from .layers import RowParallelLinear
 from .layers import VocabParallelEmbedding
