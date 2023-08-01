@@ -20,6 +20,7 @@ from functools import partial
 import torch
 import torch_npu
 import deepspeed_npu
+from torch_npu.contrib import transfer_to_npu
 from wrapt_timeout_decorator import timeout
 
 from ascendspeed import get_args
@@ -135,6 +136,11 @@ def test():
     )
 
 if __name__ == "__main__":
+    torch.cuda.init = torch.npu.init
+    torch.npu.init()
+    torch.cuda.default_generators = torch_npu.npu.default_generators
+    torch_npu.npu.set_compile_mode(jit_compile=True)
+
     os.makedirs("./ckpt_bloom", exist_ok=True)
     test()
 

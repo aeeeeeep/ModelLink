@@ -1,23 +1,12 @@
-# coding=utf-8
-# Copyright (c) 2020, HUAWEI CORPORATION.  All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Copyright (c) 2022, HUAWEI CORPORATION. All rights reserved.
 
 import torch
 
-from ascendspeed.core.parallel_state import get_tensor_model_parallel_group
-from ascendspeed.core.parallel_state import get_tensor_model_parallel_rank
-from ascendspeed.core.parallel_state import get_tensor_model_parallel_src_rank
+from ascendspeed.core.parallel_state import (
+    get_tensor_model_parallel_group,
+    get_tensor_model_parallel_rank,
+    get_tensor_model_parallel_src_rank,
+)
 from deepspeed.accelerator import get_accelerator
 
 _MAX_DATA_DIM = 5
@@ -46,7 +35,7 @@ def _build_key_size_numel_dictionaries(keys, data):
             offset += max_dim
 
     # Move to GPU and broadcast.
-    sizes_cuda = get_accelerator().LongTensor(sizes)
+    sizes_cuda = torch.cuda.LongTensor(sizes)
     torch.distributed.broadcast(sizes_cuda, get_tensor_model_parallel_src_rank(),
                                 group=get_tensor_model_parallel_group())
 
@@ -97,7 +86,7 @@ def broadcast_data(keys, data, datatype):
             [data[key].contiguous().view(-1) for key in keys], dim=0).to(get_accelerator().device_name())
     else:
         flatten_data = torch.empty(total_numel,
-                                   device=get_accelerator().current_device_name(),
+                                   device=torch.cuda.current_device(),
                                    dtype=datatype)
 
     # Broadcast
