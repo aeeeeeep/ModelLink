@@ -22,6 +22,7 @@ from ascendspeed.model import LayerNorm
 
 from .grad_scaler import ConstantGradScaler, DynamicGradScaler
 from .optimizer import Float16OptimizerWithFloat16Params, FP32Optimizer
+from .distrib_optimizer import DistributedOptimizer
 
 def _get_params_for_weight_decay_optimization(modules):
     """Divide params into with-weight-decay and without-weight-decay groups.
@@ -87,8 +88,7 @@ def get_megatron_optimizer(model):
                                  eps=args.adam_eps)
 
         else:
-            raise Exception('{} optimizer is not supported.'.format(
-            args.optimizer))
+            raise Exception('{} optimizer is not supported.'.format(args.optimizer))
 
     if args.deepspeed:
         return optimizer
@@ -122,12 +122,17 @@ def get_megatron_optimizer(model):
                     hysteresis=args.hysteresis)
 
         # Megatron optimizer.
-        return Float16OptimizerWithFloat16Params(optimizer,
-                                                 args.clip_grad,
-                                                 args.log_num_zeros_in_grad,
-                                                 params_have_main_grad,
-                                                 args.bf16,
-                                                 grad_scaler)
+        opt_ty = DistributedOptimizer if args.use_distributed_optimizer else Float16OptimizerWithFloat16Params
+        return opt_ty(optimizer,
+                      args.clip_grad,
+                      args.log_num_zeros_in_grad,
+                      params_have_main_grad,
+                      args.use_contiguous_buffers_in_local_ddp,
+                      args.fp16,
+                      args.bf16,
+                      args.params_dtype,
+                      grad_scaler,
+                      model)
 
     # FP32.
     return FP32Optimizer(optimizer, args.clip_grad,

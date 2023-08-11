@@ -87,13 +87,14 @@ def apply_rotary_pos_emb(q, k, cos, sin, offset: int = 0):
 
 
 class RMSNorm(torch.nn.Module):  # for cpu
-    def __init__(self, hidden_size, eps=1e-6):
+    def __init__(self, hidden_size, eps=1e-6, sequence_parallel=False):
         """
         LlamaRMSNorm is equivalent to T5LayerNorm
         """
         super().__init__()
         self.weight = torch.nn.Parameter(torch.ones(hidden_size))
         self.variance_epsilon = eps
+        setattr(self.weight, 'sequence_parallel', sequence_parallel)
 
     def forward(self, hidden_states):
         variance = hidden_states.to(torch.float32).pow(2).mean(-1, keepdim=True)
