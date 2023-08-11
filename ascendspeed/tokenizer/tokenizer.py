@@ -13,13 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Megatron tokenizers."""
+"""Megatron tokenizers. just using huggingface implementation"""
 
 from abc import ABC
 from abc import abstractmethod
-from transformers import AutoTokenizer
-from .bert_tokenization import FullTokenizer as FullBertTokenizer
-from .gpt2_tokenization import GPT2Tokenizer
+from transformers import AutoTokenizer, GPT2Tokenizer
+from transformers import BertTokenizer as FullBertTokenizer
 
 
 def build_tokenizer(args):
@@ -167,6 +166,7 @@ class _BertWordPieceTokenizer(AbstractTokenizer):
             name = 'BERT Upper Case'
         super().__init__(name)
         self.tokenizer = FullBertTokenizer(vocab_file, do_lower_case=lower_case)
+        self.tokenizer.inv_vocab = {v: k for k, v in self.tokenizer.vocab.items()}
         self.cls_id = self.tokenizer.vocab['[CLS]']
         self.sep_id = self.tokenizer.vocab['[SEP]']
         self.pad_id = self.tokenizer.vocab['[PAD]']
@@ -205,7 +205,7 @@ class _BertWordPieceTokenizer(AbstractTokenizer):
 
     @property
     def vocab_size(self):
-        return self.tokenizer.vocab_size()
+        return self.tokenizer.vocab_size
 
     @property
     def vocab(self):
