@@ -17,7 +17,7 @@ CHECKPOINT_PATH=./ckpt_gpt
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 
 python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
-       /usr1/workspace/PyTorch_PR_AscendSpeed_master/CODE/tests/st/test_gpt/run_gpt_ptd.py \
+       tests/st/test_gpt/run_gpt_ptd.py \
        --DDP-impl local \
        --tensor-model-parallel-size 2 \
        --pipeline-model-parallel-size 2 \
