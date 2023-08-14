@@ -20,7 +20,6 @@ DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $
 python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
       /usr1/workspace/PyTorch_PR_AscendSpeed_master/CODE/tests/st/test_llama/run_llama_ptd.py \
        --DDP-impl local \
-       --use-contiguous-buffers-in-ddp \
        --tensor-model-parallel-size 2 \
        --pipeline-model-parallel-size 2 \
        --num-layers 8 \
