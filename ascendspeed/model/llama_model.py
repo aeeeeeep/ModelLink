@@ -18,12 +18,18 @@ Llama model.
 Following implementation from huggingface, https://github.com/huggingface/transformers/blob/main/src/transformers/models/llama/modeling_llama.py
 """
 
+import os
+import time
 import math
 from functools import partial
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import torch
 import torch.nn.functional as F
+from torch import distributed as dist
+from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
 
+import ascendspeed
 from ascendspeed import get_args
 from ascendspeed import mpu
 from ascendspeed.core import tensor_parallel, parallel_state, utils
@@ -237,11 +243,12 @@ class LlamaParallelMLP(MegatronModule):
         super(LlamaParallelMLP, self).__init__()
         args = get_args()
         self.init_method = init_method
-        self.layer_fusion = args.mlp_layer_fusion
         self.output_layer_init_method = output_layer_init_method
-        self.col_parallel_linear = partial(
-            mpu.ColumnParallelLinear,
-            input_size=args.hidden_size,
+
+        # Project to intermediate.
+        self.gate_proj = mpu.ColumnParallelLinear(
+            args.hidden_size,
+            args.ffn_hidden_size,
             bias=False,
             gather_output=False,
             init_method=self.init_method,
@@ -250,12 +257,18 @@ class LlamaParallelMLP(MegatronModule):
             enable_expert_tensor_parallelism=enable_expert_tensor_parallelism,
             sequence_parallel_enabled=args.sequence_parallel
         )
-        # Project to intermediate.
-        if self.layer_fusion:
-            self.proj = self.col_parallel_linear(output_size=args.ffn_hidden_size*2)
-        else:
-            self.gate_proj = self.col_parallel_linear(output_size=args.ffn_hidden_size)
-            self.up_proj = self.col_parallel_linear(output_size=args.ffn_hidden_size)
+
+        self.up_proj = mpu.ColumnParallelLinear(
+            args.hidden_size,
+            args.ffn_hidden_size,
+            bias=False,
+            gather_output=False,
+            init_method=self.init_method,
+            skip_bias_add=True,
+            moe=moe,
+            enable_expert_tensor_parallelism=enable_expert_tensor_parallelism,
+            sequence_parallel_enabled=args.sequence_parallel
+        )
 
         self.activation_func = F.silu
 
@@ -272,14 +285,7 @@ class LlamaParallelMLP(MegatronModule):
             sequence_parallel_enabled=args.sequence_parallel)
 
     def forward(self, hidden_states):
-        if self.layer_fusion:
-            gate_and_up_proj = self.proj(hidden_states)[0]
-            (gate, up_proj) = utils.split_tensor_along_last_dim(
-                gate_and_up_proj, 2, contiguous_split_chunks=True)
-            intermediate_parallel = self.activation_func(gate) * up_proj
-        else:
-            intermediate_parallel = self.activation_func(
-                self.gate_proj(hidden_states)[0]) * self.up_proj(hidden_states)[0]
+        intermediate_parallel = self.activation_func(self.gate_proj(hidden_states)[0]) * self.up_proj(hidden_states)[0]
 
         output, _ = self.down_proj(intermediate_parallel)
         return output
@@ -409,6 +415,8 @@ class LlamaParallelAttention(MegatronModule):
 
         if layer_past is not None:
             past_key, past_value = layer_past
+
+            # TODO the permuted k, v will cause the error in inference when using recompute
             key_layer = torch.cat((past_key.type_as(key_layer),
                                    key_layer), dim=0)
             value_layer = torch.cat((past_value.type_as(value_layer),
@@ -873,9 +881,7 @@ class LlamaModel(MegatronModule):
         """See ascendspeed.model.transformer.set_input_tensor()"""
         self.language_model.set_input_tensor(input_tensor)
 
-    def forward(self, input_ids, attention_mask, labels=None, layer_past=None, get_key_value=False):
-        args = get_args()
-
+    def forward(self, input_ids, attention_mask=None, labels=None, layer_past=None, get_key_value=False, **kwargs):
         if self.pre_process:
             hidden_states = self.embedding(input_ids)
         else:
@@ -883,7 +889,7 @@ class LlamaModel(MegatronModule):
 
         # decoder
         hidden_states = self.language_model(hidden_states, attention_mask, layer_past=layer_past,
-                                         get_key_value=get_key_value)
+                                            get_key_value=get_key_value)
 
         if self.post_process:
             if get_key_value:
@@ -908,3 +914,194 @@ class LlamaModel(MegatronModule):
                 return loss
 
         return hidden_states
+
+
+class LlamaForCausalLM(MegatronModule):
+    def __init__(self):
+        super().__init__()
+        from ascendspeed.utils import unwrap_model
+        from ascendspeed.model import Float16Module
+        from ascendspeed.model import DistributedDataParallel as LocalDDP
+        from ascendspeed.training import get_model
+        from ascendspeed.checkpointing import load_checkpoint
+        from ascendspeed import text_generation_utils as gu
+        from ascendspeed import get_tokenizer
+
+        if mpu.get_data_parallel_world_size() > 1:
+            raise ValueError("In this inference mode data parallel is forbidden.")
+
+        args = get_args()
+        args.max_tokens_to_oom = args.max_tokens_to_oom if hasattr(args, "max_tokens_to_oom") else 4096
+        args.inference_batch_times_seqlen_threshold = args.inference_batch_times_seqlen_threshold \
+            if hasattr(args, "inference_batch_times_seqlen_threshold") else 4
+
+        self.padded_vocab_size = args.padded_vocab_size
+        self.pipeline_size_larger_than_one = args.pipeline_model_parallel_size > 1
+
+        self.model = get_model(LlamaForCausalLM._model_provider)
+        self.tokenizer = get_tokenizer().tokenizer
+
+        # import module to avoid error of circular import
+        self.args = args
+        self.LocalDDP = LocalDDP
+        self.Float16Module = Float16Module
+        self.unwrap_model = unwrap_model
+        self.load_checkpoint = load_checkpoint
+        self.utils = gu
+
+    @classmethod
+    def _model_provider(cls, pre_process=True, post_process=True):
+        """Build the model."""
+        model = LlamaModel(
+            parallel_output=False,
+            add_pooler=False,
+            pre_process=pre_process,
+            post_process=post_process
+        )
+
+        return model
+
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path: Optional[Union[str, os.PathLike]] = None, **kwargs):
+        args = get_args()
+        if pretrained_model_name_or_path:
+            args.load = pretrained_model_name_or_path
+
+        for addition_key, addition_val in kwargs.items():
+            args.addition_key = addition_val
+
+        self = cls()
+        self.load_checkpoint(self.model, None, None)
+
+        return self
+
+    def generate(self,
+                 prompts="",
+                 top_k=0,
+                 top_p=0.0,
+                 temperature=1.0,
+                 max_length=None,
+                 max_new_tokens=10,
+                 eos_token_id=None,
+                 tokenizer=None,
+                 recompute=True,
+                 detokenize=True,
+                 include_input=False,
+                 stream=True,
+                 **kwargs):
+
+        args = get_args()
+        args.eos_id = eos_token_id
+        args.eod_id = eos_token_id
+        args.top_k = top_k
+        args.top_p = top_p
+        args.temperature = temperature
+        args.seq_length = max_length if max_length else max(512 + max_new_tokens, args.seq_length)
+        args.out_seq_length = max_new_tokens
+        args.greedy = top_k == 0
+        args.recompute = recompute
+
+        # =======================================
+        # Add additional parameters to args which
+        # may be used in original logic of codes
+        # =======================================
+        for addition_key, addition_val in kwargs.items():
+            args.addition_key = addition_val
+
+        # =======================================
+        # Initialize the tokenizer to choose
+        # whether to use customizing tokenizer
+        # =======================================
+        if tokenizer is None:
+            ascendspeed.global_vars._GLOBAL_TOKENIZER = self.tokenizer
+        else:
+            ascendspeed.global_vars._GLOBAL_TOKENIZER = tokenizer
+        tokenizer = ascendspeed.get_tokenizer()
+
+        # =======================================
+        # Tokenize the prompts and broadcasting,
+        # so you don't need to pass the prompt on
+        # each process.
+        # =======================================
+        broadcast_rank = torch.zeros(dist.get_world_size(),
+                                     dtype=torch.int64,
+                                     device=torch.device(get_accelerator().device_name()))
+
+        if prompts:
+            context_tokens = tokenizer.encode(prompts)
+            context_length = len(context_tokens)
+            counts = 1
+            broadcast_rank[dist.get_rank()] = 1
+        else:
+            context_tokens = [tokenizer.encode("EMPTY TEXT")]
+            context_length = 0
+            counts = 0
+
+        input_info = [counts, context_length]
+        input_info_tensor = get_accelerator().LongTensor(input_info)
+        dist.all_reduce(input_info_tensor)
+        dist.all_reduce(broadcast_rank)
+        counts = input_info_tensor[0].item()
+        if counts == 0:
+            raise ValueError("Please pass prompt on at least one process.")
+
+        context_length = input_info_tensor[1].item() // counts
+        master_rank = torch.nonzero(broadcast_rank)[0, 0]
+
+        # =======================================
+        # For parallel we need to send context tokens
+        # to other process
+        # =======================================
+        context_tokens = self._broadcast_tokens(context_tokens, context_length, master_rank)
+
+        # =======================================
+        # Get the streaming tokens generator
+        # =======================================
+        token_stream = self.utils.get_token_stream(self.model[0], [context_tokens])
+
+        # =======================================
+        # Post processions in order to get final
+        # output texts/tokens
+        # =======================================
+        output = self._post_processing(tokenizer,
+                                       token_stream,
+                                       context_length,
+                                       include_input,
+                                       detokenize)
+        if not stream:
+            tmp = None
+            for tmp in output:
+                pass
+            return tmp
+        else:
+            return output
+
+    @staticmethod
+    def _broadcast_tokens(context_tokens, context_length, master_rank):
+        if dist.get_world_size() > 1:
+            if dist.get_rank() == master_rank:
+                context_tokens_tensor = get_accelerator().LongTensor(context_tokens)
+                dist.broadcast(context_tokens_tensor, master_rank)
+            else:
+                context_tokens_tensor = torch.empty(context_length,
+                                                    dtype=torch.int64,
+                                                    device=torch.device(get_accelerator().device_name()))
+                dist.broadcast(context_tokens_tensor, master_rank)
+                context_tokens = context_tokens_tensor.cpu().numpy().tolist()
+
+        return context_tokens
+
+    @staticmethod
+    def _post_processing(tokenizer, token_stream, context_length, include_input, detokenize):
+        output = ""
+        for tokens, lengths in token_stream:
+            if not include_input:
+                tokens = [val[context_length:] for val in tokens]
+
+            if detokenize:
+                output = tokenizer.batch_decode(tokens, skip_special_tokens=True)[0]
+
+            yield output
+
+    def forward(self, *args, **kwargs):
+        return self.model[0](*args, **kwargs)
