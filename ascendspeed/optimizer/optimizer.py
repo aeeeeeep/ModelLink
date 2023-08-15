@@ -590,7 +590,7 @@ class Float16OptimizerWithFloat16Params(MegatronOptimizer):
                                         'torch.{}.FloatTensor,  '
                                         'torch.{}.HalfTensor, or '
                                         'torch.{}.BFloat16Tensor. '
-                                        'Received {}'.format(device_name,device_name,device_name,param.type()))
+                                        'Received {}'.format(device_name, device_name, device_name, param.type()))
 
             self.float16_groups.append(float16_params_this_group)
             self.fp32_from_float16_groups.append(

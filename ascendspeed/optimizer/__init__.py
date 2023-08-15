@@ -30,7 +30,7 @@ def _get_params_for_weight_decay_optimization(modules):
     """
     args = get_args()
 
-    weight_decay_params = {'params': [], 'name' : 'weight_decay_params'}
+    weight_decay_params = {'params': [], 'name': 'weight_decay_params'}
     no_weight_decay_params = {'params': [], 'weight_decay': 0.0, 'name': 'no_weight_decay_params'}
     
     for module in modules:
