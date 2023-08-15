@@ -13,7 +13,6 @@ export LOCAL_RANK=0
 
 python pretrain_gpt.py \
        --DDP-impl local \
-       --use-contiguous-buffers-in-ddp \
        --num-layers 1 \
        --hidden-size 4096 \
        --num-attention-heads 32 \

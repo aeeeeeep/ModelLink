@@ -401,7 +401,7 @@ def get_model(model_provider_func):
     if args.DDP_impl == 'local':
         model = [LocalDDP(model_module,
                           args.accumulate_allreduce_grads_in_fp32,
-                          args.use_contiguous_buffers_in_ddp)
+                          args.use_contiguous_buffers_in_local_ddp)
                  for model_module in model]
         return model
 
@@ -486,6 +486,7 @@ def load_model_weights_only(model_provider_func):
 
     return model, optimizer, lr_scheduler
 
+
 def setup_model_and_optimizer(model_provider_func,
                               teacher=False,
                               data_post_process=None,
@@ -511,7 +512,6 @@ def setup_model_and_optimizer(model_provider_func,
         student_global_steps = model[0].global_steps
         print_rank_0('***>>>>> Student model, global step:{}'.format(student_global_steps))
 
-
     if args.compression_training:
         model, _, _, _ = deepspeed.initialize(
             model=model[0],
@@ -520,10 +520,8 @@ def setup_model_and_optimizer(model_provider_func,
         )
         model = [model]
         model = [init_compression(model[0].module, args.deepspeed_config, mpu)]
-    
 
-    unwrapped_model = unwrap_model(model,
-                                   (torchDDP, LocalDDP, Float16Module))
+    unwrapped_model = unwrap_model(model, (torchDDP, LocalDDP, Float16Module))
 
     if args.inference:
         optimizer = None
@@ -532,9 +530,8 @@ def setup_model_and_optimizer(model_provider_func,
         if teacher:
           optimizer = None
         else:
-          optimizer = get_megatron_optimizer(unwrapped_model)
+          optimizer = get_megatron_optimizer(model)
         lr_scheduler = get_learning_rate_scheduler(optimizer)
-
 
     if args.deepspeed:
         print_rank_0("DeepSpeed is enabled.")
@@ -644,7 +641,7 @@ def train_step(forward_step_func, data_iterator,
 
     # Set grad to zero.
     if not args.deepspeed:
-        if args.DDP_impl == 'local' and args.use_contiguous_buffers_in_ddp:
+        if args.DDP_impl == 'local' and args.use_contiguous_buffers_in_local_ddp:
             for partition in model:
                 partition.zero_grad_buffer()
         else:
@@ -691,23 +688,7 @@ def train_step(forward_step_func, data_iterator,
     # (BERT and GPT-2).
     timers('backward-embedding-all-reduce', log_level=1).start(barrier=args.barrier_with_L1_time)
     if not args.deepspeed:
-        if (parallel_state.is_pipeline_first_stage(ignore_virtual=True) or
-            parallel_state.is_pipeline_last_stage(ignore_virtual=True)) and \
-                parallel_state.get_pipeline_model_parallel_world_size() > 1:
-            if parallel_state.is_pipeline_first_stage(ignore_virtual=True):
-                unwrapped_model = model[0]
-            elif parallel_state.is_pipeline_last_stage(ignore_virtual=True):
-                unwrapped_model = model[-1]
-            unwrapped_model = unwrap_model(
-                unwrapped_model, (torchDDP, LocalDDP, Float16Module))
-
-            if unwrapped_model.share_word_embeddings:
-                word_embeddings_weight = unwrapped_model.word_embeddings_weight()
-                if args.DDP_impl == 'local':
-                    grad = word_embeddings_weight.main_grad
-                else:
-                    grad = word_embeddings_weight.grad
-                torch.distributed.all_reduce(grad, group=parallel_state.get_embedding_group())
+        optimizer.reduce_model_grads(args, timers)
     timers('backward-embedding-all-reduce').stop()
 
     # Update parameters.
@@ -719,7 +700,9 @@ def train_step(forward_step_func, data_iterator,
         model[0].step(lr_kwargs={'increment': increment})
         update_successful = model[0].was_step_applied()
     else:
-        update_successful, grad_norm, num_zeros_in_grad = optimizer.step()
+        update_successful, grad_norm, num_zeros_in_grad = optimizer.step(args, timers)
+        if update_successful:
+            optimizer.gather_model_params(args, timers)
     timers('optimizer').stop()
 
     # Update learning rate.
