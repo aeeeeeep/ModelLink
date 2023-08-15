@@ -22,6 +22,7 @@ python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --DDP-impl local \
        --tensor-model-parallel-size 2 \
        --pipeline-model-parallel-size 2 \
+       --use-distributed-optimizer \
        --num-layers 8 \
        --hidden-size 4096 \
        --num-attention-heads 32 \
