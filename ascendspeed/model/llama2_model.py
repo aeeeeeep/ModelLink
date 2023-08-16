@@ -35,6 +35,7 @@ from ascendspeed.model.utils import init_method_normal, scaled_init_method_norma
 from ascendspeed.mpu.mappings import scatter_to_sequence_parallel_region
 from ascendspeed.model.fused_softmax import NPUFusedScaleMaskSoftmax
 from ascendspeed.model.language_model import Pooler
+from ascendspeed.core.tensor_parallel.utils import split_tensor_along_last_dim
 
 
 class RotaryEmbedding(torch.nn.Module):
@@ -386,7 +387,7 @@ class Llama2ParallelAttention(MegatronModule):
             # [sq, b, 3 * h] --> 3 [sq, b, h]
             (query_layer,
              key_layer,
-             value_layer) = utils.split_tensor_along_last_dim(mixed_x_layer, 3)
+             value_layer) = split_tensor_along_last_dim(mixed_x_layer, 3)
 
         # ==================================
         # Rotary Position Embedding
