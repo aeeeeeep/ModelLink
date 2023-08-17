@@ -20,6 +20,7 @@ import torch
 import torch_npu
 from torch_npu.contrib import transfer_to_npu
 from torch import distributed as dist
+import deepspeed
 import deepspeed_npu
 from deepspeed.accelerator import get_accelerator
 from .package_info import (
@@ -41,7 +42,8 @@ from .global_vars import get_tokenizer
 from .global_vars import get_tensorboard_writer
 from .global_vars import get_adlr_autoresume
 from .global_vars import get_timers
-from .initialize  import initialize_megatron
+from .initialize  import initialize_megatron, initialize
+
 
 def print_rank_0(message):
     """If distributed is initialized, print only on rank 0."""
@@ -78,3 +80,5 @@ def is_rank_0():
             return False
     else:
         return True
+
+deepspeed.initialize = initialize

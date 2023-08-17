@@ -20,8 +20,8 @@ import time
 import numpy as np
 
 import torch
-import deepspeed
-from deepspeed.accelerator import get_accelerator
+from torch.optim import Optimizer
+from torch.optim.lr_scheduler import _LRScheduler
 
 from ascendspeed import get_adlr_autoresume
 from ascendspeed import get_args
@@ -32,6 +32,19 @@ from ascendspeed.global_vars import set_global_variables
 from ascendspeed.core.parallel_state import (set_tensor_model_parallel_rank,
                                              set_tensor_model_parallel_world_size)
 
+import deepspeed
+from deepspeed.accelerator import get_accelerator
+from deepspeed.runtime.engine import DeepSpeedEngine, DeepSpeedOptimizerCallable, DeepSpeedSchedulerCallable
+from deepspeed.runtime.hybrid_engine import DeepSpeedHybridEngine
+from deepspeed.runtime.pipe.engine import PipelineEngine
+from deepspeed.utils import log_dist, logger
+from deepspeed.git_version_info import version, git_hash, git_branch
+from deepspeed.runtime import zero
+from deepspeed.accelerator import get_accelerator
+from deepspeed.runtime.config import DeepSpeedConfig, DeepSpeedConfigError
+from deepspeed.pipe import PipelineModule
+from typing import Optional, Union
+from packaging import version as pkg_version
 
 def initialize_megatron(extra_args_provider=None, args_defaults=None,
                         ignore_unknown_args=False, allow_no_cuda=False):
@@ -139,25 +152,19 @@ def _initialize_distributed():
     """Initialize torch.distributed and mpu."""
     args = get_args()
 
-    # 当前进程所在的node上可使用的GPU的数量
     device_count = get_accelerator().device_count()
 
-    # 如果已创建好分布式环境
     if torch.distributed.is_initialized():
-        # 在0号进程上打印出“创建完毕”的日志
         if args.rank == 0:
             print('torch distributed is already initialized, '
                   'skipping initialization ...',
                   flush=True)
-        # 取得当前进程的全局序号
         args.rank = torch.distributed.get_rank()
-        # 取得全局进程的个数
         args.world_size = torch.distributed.get_world_size()
     else:
         if args.rank == 0:
             print('> initializing torch distributed ...', flush=True)
         # Manually set the device ids.
-        # 1. 初始化进程，分配GPU，并设置进程大组（group）
         if device_count > 0:
             device = args.rank % device_count
             if args.local_rank is not None:
@@ -169,10 +176,9 @@ def _initialize_distributed():
             get_accelerator().set_device(device)  # only do so when device_count > 0
 
         # Call the init process
-        # 设置进程大组
         init_method = 'tcp://'
-        master_ip = os.getenv('MASTER_ADDR', 'localhost')  # 获取rank=0进程的ip
-        master_port = os.getenv('MASTER_PORT', '6000')  # 获取rank=0进程的端口
+        master_ip = os.getenv('MASTER_ADDR', 'localhost')
+        master_port = os.getenv('MASTER_PORT', '6000')
         init_method += master_ip + ':' + master_port
 
         if args.deepspeed or args.ds_inference:
@@ -185,7 +191,6 @@ def _initialize_distributed():
 
     # Set the tensor model-parallel, pipeline model-parallel, and
     # data-parallel communicators.
-    # 2、制定DP/TP/PP分组策略，设置进程子组（subgroup）
     if device_count > 0:
         if parallel_state.model_parallel_is_initialized():
             print('model parallel is already initialized')
@@ -255,3 +260,155 @@ def _is_rank_0():
             return False
     else:
         return True
+
+
+def _parse_version(version_str):
+    '''Parse a version string and extract the major, minor, and patch versions.'''
+    ver = pkg_version.parse(version_str)
+    return ver.major, ver.minor, ver.micro
+
+def initialize(args=None,
+               model: torch.nn.Module = None,
+               optimizer: Optional[Union[Optimizer, DeepSpeedOptimizerCallable]] = None,
+               model_parameters: Optional[torch.nn.Module] = None,
+               training_data: Optional[torch.utils.data.Dataset] = None,
+               lr_scheduler: Optional[Union[_LRScheduler, DeepSpeedSchedulerCallable]] = None,
+               mpu=None,
+               dist_init_required: Optional[bool] = None,
+               collate_fn=None,
+               config=None,
+               config_params=None):
+    """Initialize the DeepSpeed Engine.
+
+    Arguments:
+        args: an object containing local_rank and deepspeed_config fields.
+            This is optional if `config` is passed.
+
+        model: Required: nn.module class before apply any wrappers
+
+        optimizer: Optional: a user defined Optimizer or Callable that returns an Optimizer object.
+            This overrides any optimizer definition in the DeepSpeed json config.
+
+        model_parameters: Optional: An iterable of torch.Tensors or dicts.
+            Specifies what Tensors should be optimized.
+
+        training_data: Optional: Dataset of type torch.utils.data.Dataset
+
+        lr_scheduler: Optional: Learning Rate Scheduler Object or a Callable that takes an Optimizer and returns a Scheduler object.
+            The scheduler object should define a get_lr(), step(), state_dict(), and load_state_dict() methods
+
+        mpu: Optional: A model parallelism unit object that implements
+            get_{model,data}_parallel_{rank,group,world_size}()
+
+        dist_init_required: Optional: None will auto-initialize torch distributed if needed,
+            otherwise the user can force it to be initialized or not via boolean.
+
+        collate_fn: Optional: Merges a list of samples to form a
+            mini-batch of Tensor(s).  Used when using batched loading from a
+            map-style dataset.
+
+        config: Optional: Instead of requiring args.deepspeed_config you can pass your deepspeed config
+            as an argument instead, as a path or a dictionary.
+
+        config_params: Optional: Same as `config`, kept for backwards compatibility.
+
+    Returns:
+        A tuple of ``engine``, ``optimizer``, ``training_dataloader``, ``lr_scheduler``
+
+        * ``engine``: DeepSpeed runtime engine which wraps the client model for distributed training.
+
+        * ``optimizer``: Wrapped optimizer if a user defined ``optimizer`` is supplied, or if
+          optimizer is specified in json config else ``None``.
+
+        * ``training_dataloader``: DeepSpeed dataloader if ``training_data`` was supplied,
+          otherwise ``None``.
+
+        * ``lr_scheduler``: Wrapped lr scheduler if user ``lr_scheduler`` is passed, or
+          if ``lr_scheduler`` specified in JSON configuration. Otherwise ``None``.
+    """
+    version_ = version
+    version_major_, version_minor_, version_patch_ = _parse_version(version_)
+    git_hash_ = git_hash
+    git_branch_ = git_branch
+    log_dist("DeepSpeed info: version={}, git-hash={}, git-branch={}".format(version_, git_hash_,
+                                                                             git_branch_),
+             ranks=[0])
+
+    # Disable zero.Init context if it's currently enabled
+    zero.partition_parameters.shutdown_init_context()
+
+    assert model is not None, "deepspeed.initialize requires a model"
+
+    global dist
+    from deepspeed import comm as dist
+    dist_backend = get_accelerator().communication_backend_name()
+    dist.init_distributed(dist_backend=dist_backend, dist_init_required=dist_init_required)
+
+    # Set config using config_params for backwards compat
+    if config is None and config_params is not None:
+        config = config_params
+
+    # Check for deepscale_config for backwards compat
+    if hasattr(args, "deepscale_config") and args.deepscale_config is not None:
+        logger.warning("--deepscale_config is deprecated, please use --deepspeed_config")
+        if hasattr(args, "deepspeed_config"):
+            assert (args.deepspeed_config is
+                    None), "Not sure how to proceed, we were given both a deepscale_config and deepspeed_config"
+        args.deepspeed_config = args.deepscale_config
+        args.deepscale_config = None
+
+    # Check that we have only one config passed
+    if hasattr(args, "deepspeed_config") and args.deepspeed_config is not None:
+        assert config is None, "Not sure how to proceed, we were given deepspeed configs in the deepspeed arguments and deepspeed.initialize() function call"
+        config = args.deepspeed_config
+    assert config is not None, "DeepSpeed requires --deepspeed_config to specify configuration file"
+
+    if not isinstance(model, PipelineModule):
+        config_class = DeepSpeedConfig(config, mpu)
+        if config_class.hybrid_engine.enabled:
+            engine = DeepSpeedHybridEngine(args=args,
+                                           model=model,
+                                           optimizer=optimizer,
+                                           model_parameters=model_parameters,
+                                           training_data=training_data,
+                                           lr_scheduler=lr_scheduler,
+                                           mpu=mpu,
+                                           dist_init_required=dist_init_required,
+                                           collate_fn=collate_fn,
+                                           config=config,
+                                           config_class=config_class)
+        else:
+            engine = DeepSpeedEngine(args=args,
+                                     model=model,
+                                     optimizer=optimizer,
+                                     model_parameters=model_parameters,
+                                     training_data=training_data,
+                                     lr_scheduler=lr_scheduler,
+                                     mpu=mpu,
+                                     dist_init_required=dist_init_required,
+                                     collate_fn=collate_fn,
+                                     config=config,
+                                     config_class=config_class)
+    else:
+        assert mpu is None, "mpu must be None with pipeline parallelism"
+        mpu = model.mpu()
+        config_class = DeepSpeedConfig(config, mpu)
+        engine = PipelineEngine(args=args,
+                                model=model,
+                                optimizer=optimizer,
+                                model_parameters=model_parameters,
+                                training_data=training_data,
+                                lr_scheduler=lr_scheduler,
+                                mpu=mpu,
+                                dist_init_required=dist_init_required,
+                                collate_fn=collate_fn,
+                                config=config,
+                                config_class=config_class)
+        # Fixed an issue where deepspeed PipelineEngine is incompatible with Sequence Parallel.
+        # When Sequence Parallel is used, PipelineEngine cannot be used Otherwise, precision problems occur.
+        engine.is_pipe_partitioned = engine.is_pipe_partitioned and not args.sequence_parallel
+        engine.is_grad_partitioned = engine.is_grad_partitioned and not args.sequence_parallel
+
+    return_items = [engine, engine.optimizer, engine.training_dataloader, engine.lr_scheduler]
+    return tuple(return_items)
+

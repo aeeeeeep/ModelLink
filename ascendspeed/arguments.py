@@ -50,6 +50,7 @@ def parse_args(extra_args_provider=None, defaults={},
     parser = _add_activation_checkpoint_args(parser)
     parser = _add_distillation_args(parser)
     parser = _add_optimized_pipeline_args(parser)
+    parser = _add_manual_layer_allocation(parser)
 
     # Custom arguments.
     if extra_args_provider is not None:
@@ -284,6 +285,15 @@ def parse_args(extra_args_provider=None, defaults={},
         for path in args.data_path:
             data_paths.append(f"{args.aml_data_download_path}/{path}")
         args.data_path = data_paths
+
+    # manually layer distribute
+    if args.use_manual_layer_allocation:
+        assert args.manual_layers is not None
+
+        manual_layers = list(map(int, args.manual_layers.split(',')))
+        assert len(manual_layers) == args.pipeline_model_parallel_size
+
+        args.manual_layers = manual_layers
 
     _print_args(args)
     return args
@@ -1058,5 +1068,14 @@ def _add_optimized_pipeline_args(parser):
                             'comma; e.g., 4,4,4,4. Two examples are provided by '
                             '--manual-mbs example-config-1, and '
                             '--manual-mbs example-config-2')
+
+    return parser
+
+def _add_manual_layer_allocation(parser):
+    group = parser.add_argument_group(title='manual_layer_allocation')
+    group.add_argument('--use-manual-layer-allocation', action='store_true',
+                       help='Enable manually allocated layers for pipeline model parallel.')
+    group.add_argument('--manual-layers', type=str, help='a list of number of layers, '
+                                                         'seperated by comma; e.g., 4,4,4,4')
 
     return parser
