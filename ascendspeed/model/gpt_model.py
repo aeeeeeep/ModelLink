@@ -19,6 +19,7 @@ from functools import partial
 import torch
 
 from ascendspeed import get_args
+from ascendspeed import mpu
 from ascendspeed.core import tensor_parallel, parallel_state
 from .module import MegatronModule, fp32_to_float16
 
@@ -33,6 +34,7 @@ from ascendspeed.model import LayerNorm
 from ascendspeed.model.module import float16_to_fp32
 from .language_model import EmbeddingPipe
 from .transformer import ParallelTransformerLayerPipe
+from .manual_pipe import ManuallyAllocatedPipelineModule
 
 
 def post_language_model_processing(lm_output, labels, logit_weights,
@@ -215,7 +217,8 @@ def get_cross_entropy(is_prefix: bool):
         return loss
     return CrossEntropy
 
-class GPTModelPipe(PipelineModule,MegatronModule):
+
+class GPTModelPipe(ManuallyAllocatedPipelineModule, MegatronModule):
     """GPT-2 Language model."""
 
     def __init__(
@@ -336,3 +339,4 @@ class GPTModelPipe(PipelineModule,MegatronModule):
                          topology=topo,
                          activation_checkpoint_interval=interval,
                          partition_method=partition_method)
+
