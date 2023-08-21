@@ -22,6 +22,7 @@ import math
 from functools import partial
 
 import torch
+import torch_npu
 import torch.nn.functional as F
 
 from ascendspeed import get_args
@@ -73,17 +74,25 @@ class RotaryEmbedding(torch.nn.Module):
         )
 
 
-def rotate_half(x):
-    """Rotates half the hidden dims of the input."""
-    x1 = x[..., : x.shape[-1] // 2]
-    x2 = x[..., x.shape[-1] // 2:]
-    return torch.cat((-x2, x1), dim=-1)
+# def rotate_half(x):
+#     """Rotates half the hidden dims of the input."""
+#     x1 = x[..., : x.shape[-1] // 2]
+#     x2 = x[..., x.shape[-1] // 2:]
+#     return torch.cat((-x2, x1), dim=-1)
+#
+#
+# def apply_rotary_pos_emb(q, k, cos, sin, offset: int = 0):
+#     cos = cos[..., offset: q.shape[-2] + offset, :]
+#     sin = sin[..., offset: q.shape[-2] + offset, :]
+#     q = q.contiguous()
+#     k = k.contiguous()
+#     q_embed = (q * cos) + (rotate_half(q) * sin)
+#     k_embed = (k * cos) + (rotate_half(k) * sin)
+#     return q_embed, k_embed
 
 
 def apply_rotary_pos_emb(q, k, cos, sin, offset: int = 0):
-    q_embed = (q * cos) + (rotate_half(q) * sin)
-    k_embed = (k * cos) + (rotate_half(k) * sin)
-    return q_embed, k_embed
+    return torch_npu.npu_rotary_mul(q, cos, sin), torch_npu.npu_rotary_mul(k, cos, sin)
 
 
 class RMSNorm(torch.nn.Module):  # for cpu
@@ -98,7 +107,9 @@ class RMSNorm(torch.nn.Module):  # for cpu
 
     def forward(self, hidden_states):
         variance = hidden_states.to(torch.float32).pow(2).mean(-1, keepdim=True)
-        hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon).half()
+        hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
+        if self.weight.dtype in [torch.float16, torch.bfloat16]:
+            hidden_states = hidden_states.to(self.weight.dtype)
         hidden_states = self.weight * hidden_states
 
         return hidden_states
@@ -296,12 +307,18 @@ class LlamaParallelAttention(MegatronModule):
     def __init__(self, init_method,
                  output_layer_init_method, layer_number,
                  attention_type=AttnType.self_attn,
-                 attn_mask_type=AttnMaskType.causal):
+                 attn_mask_type=AttnMaskType.causal,
+                 checkpoint_activations=False,
+                 checkpoint_policy=None):
         super(LlamaParallelAttention, self).__init__()
 
         assert attention_type == AttnType.self_attn
         assert attn_mask_type == AttnMaskType.causal
 
+        self.checkpoint_activations = checkpoint_activations
+        self.checkpoint_policy = checkpoint_policy
+
+        # use_triangle_attn
         args = get_args()
         self.fp16 = args.fp16
         self.bf16 = args.bf16
@@ -335,6 +352,7 @@ class LlamaParallelAttention(MegatronModule):
                 3 * projection_size,
                 bias=False,
                 gather_output=False,
+                async_tensor_model_parallel_allreduce=args.async_tensor_model_parallel_allreduce,
                 init_method=self.init_method,
                 sequence_parallel_enabled=self.sequence_parallel)
 
@@ -369,6 +387,69 @@ class LlamaParallelAttention(MegatronModule):
             global get_cuda_rng_tracker, checkpoint
             get_cuda_rng_tracker = deepspeed.checkpointing.get_cuda_rng_tracker
             checkpoint = deepspeed.checkpointing.checkpoint
+
+    def _checkpoint_core_attn(self, query_layer, key_layer, value_layer, attention_mask):
+        def custom_forward(query_layer, key_layer, value_layer, attention_mask):
+            attention_scores = torch.matmul(query_layer, key_layer.transpose(3, 2))
+
+            # ==================================================
+            # Update attention mask for inference. [b, np, sq, sk]
+            # ==================================================
+
+            # ===========================
+            # Attention probs and dropout
+            # ===========================
+
+            # attention scores and attention mask [b, np, sq, sk]
+            attention_probs = self.scale_mask_softmax(attention_scores,
+                                                      attention_mask)
+
+            # =========================
+            # Context layer. [sq, b, hp]
+            # =========================
+
+            context_layer = torch.matmul(attention_probs, value_layer)
+
+            bs, nh, sq, hd = context_layer.shape
+            context_layer = context_layer.permute(2, 0, 1, 3).contiguous()
+            context_layer = context_layer.view(sq, bs, nh * hd)
+            return context_layer
+
+        return mpu.checkpoint(custom_forward, query_layer, key_layer, value_layer, attention_mask)
+
+    def _checkpoint_core_attn_triangle(self, q_tmp, k_tmp, v_tmp, attention_mask, context_layer, param):
+        def custom_forward(q_tmp, k_tmp, v_tmp, attention_mask, context_layer, param):
+            cur_sim = torch.bmm(q_tmp, k_tmp)
+            # cur_sim不用补零
+            # [b, np, sq, sk] -> [b, np, q_size, kv_size]
+            if not self.mask_tmp_initialed:
+                mask_tmp = attention_mask[:, :, param[0]:param[1], param[2]:param[3]]
+                self.mask_tmp_groups.append(mask_tmp.contiguous())
+            else:
+                mask_tmp = self.mask_tmp_groups[param[-1]]
+
+            # print_rank_0_triangle('attention_mask size {}'.format(attention_mask.size()))
+            # print_rank_0_triangle('mask_tmp size {}'.format(mask_tmp.size()))
+
+            # probs: [b * np, q_size, kv_size] -> [b, np, q_size, kv_size]
+
+            attention_scores = cur_sim.view(param[4], param[5], cur_sim.size(1), -1)
+            # print_rank_0_triangle('attention_scores size {}'.format(attention_scores.size()))
+            probs = self.scale_mask_softmax(attention_scores, mask_tmp)
+            probs = probs.view(param[4] * param[5], probs.size(2), -1)
+            # print_rank_0_triangle('probs size {}'.format(probs.size()))
+
+            # [b * np, q_size, kv_size] * [b * np, kv_size, hn] -> [b * np, q_size, hn]
+            # print_rank_0_triangle('context_layer_tmp size {}'.format(context_layer_tmp.size()))
+            context_layer_tmp = torch.bmm(probs, v_tmp)
+            if context_layer is None:
+                context_layer = context_layer_tmp
+            else:
+                context_layer = torch.cat((context_layer, context_layer_tmp), 1)
+            # print_rank_0_triangle('context_layer size {}'.format(context_layer.size()))
+            return context_layer
+
+        return mpu.checkpoint(custom_forward, q_tmp, k_tmp, v_tmp, attention_mask, context_layer, param)
 
     def forward(self, hidden_states, attention_mask, layer_past=None,
                 get_key_value=False):
@@ -475,7 +556,9 @@ class LlamaParallelTransformerLayer(MegatronModule):
 
     def __init__(self, init_method, output_layer_init_method,
                  layer_number,
-                 self_attn_mask_type=AttnMaskType.causal):
+                 self_attn_mask_type=AttnMaskType.causal,
+                 checkpoint_activations=False,
+                 checkpoint_policy=None):
         args = get_args()
 
         super(LlamaParallelTransformerLayer, self).__init__()
@@ -486,34 +569,57 @@ class LlamaParallelTransformerLayer(MegatronModule):
         self.fp32_residual_connection = args.fp32_residual_connection
         self.init_method = init_method
         self.output_layer_init_method = output_layer_init_method
+        self.checkpoint_activations = checkpoint_activations
+        self.checkpoint_policy = checkpoint_policy
 
         # Layernorm on the input data.
         self.input_layernorm = RMSNorm(
             args.hidden_size,
-            eps=args.layernorm_epsilon)
+            eps=args.layernorm_epsilon,
+            sequence_parallel=args.sequence_parallel)
 
         # Self attention.
         self.attention = LlamaParallelAttention(
             self.init_method,
             self.output_layer_init_method,
             layer_number,
-            attn_mask_type=self_attn_mask_type)
+            attn_mask_type=self_attn_mask_type,
+            checkpoint_activations=self.checkpoint_activations,
+            checkpoint_policy=self.checkpoint_policy)
 
         # Layernorm on the attention output
         self.post_attention_layernorm = RMSNorm(
             args.hidden_size,
-            eps=args.layernorm_epsilon)
+            eps=args.layernorm_epsilon,
+            sequence_parallel=args.sequence_parallel)
 
         # MLP
         self.rank = args.rank
         self.mlp = LlamaParallelMLP(self.init_method, self.output_layer_init_method)
 
+    def _checkpoint_input_layernorm(self, hidden_states):
+        def custom_forward(hidden_states):
+            return self.input_layernorm(hidden_states)
+
+        return mpu.checkpoint(custom_forward, hidden_states)
+
+    def _checkpoint_output_layernorm(self, hidden_states):
+        def custom_forward(hidden_states):
+            return self.post_attention_layernorm(hidden_states)
+
+        return mpu.checkpoint(custom_forward, hidden_states)
+
     def forward(self, hidden_states, attention_mask=None,
                 layer_past=None, get_key_value=False):
         # hidden_states: [b, s, h]
         residual = hidden_states
+
         # Layer norm at the beginning of the transformer layer.
-        hidden_states = self.input_layernorm(hidden_states)
+        if self.checkpoint_activations and self.checkpoint_policy.find('adaptivev2') != -1:
+            hidden_states = self._checkpoint_input_layernorm(hidden_states)
+        else:
+            # Layer norm at the beginning of the transformer layer.
+            hidden_states = self.input_layernorm(hidden_states)
         # Self attention.
         hidden_states = self.attention(hidden_states,
                                        attention_mask,
@@ -528,7 +634,11 @@ class LlamaParallelTransformerLayer(MegatronModule):
         residual = hidden_states
 
         # Layer norm post the self attention.
-        hidden_states = self.post_attention_layernorm(hidden_states)
+        if self.checkpoint_activations and self.checkpoint_policy.find('adaptivev2') != -1:
+            hidden_states = self._checkpoint_output_layernorm(hidden_states)
+        else:
+            # Layer norm post the self attention.
+            hidden_states = self.post_attention_layernorm(hidden_states)
 
         # MLP.
         hidden_states = self.mlp(hidden_states)
@@ -598,6 +708,7 @@ class LlamaParallelTransformer(MegatronModule):
 
         # Store activation checkpoiting flag.
         self.checkpoint_activations = args.checkpoint_activations
+        self.checkpoint_policy = args.checkpoint_policy
         self.checkpoint_num_layers = args.checkpoint_num_layers
 
         # Number of layers.
@@ -606,11 +717,34 @@ class LlamaParallelTransformer(MegatronModule):
         self.num_layers = args.num_layers // parallel_state.get_pipeline_model_parallel_world_size()
 
         # Transformer layers.
-        def build_layer(layer_number):
+        def build_layer(layer_number, offset):
+            if self.checkpoint_policy == 'full':
+                # checkpoint is done at the trasformer's forward,
+                # so it is not neccessary to do it intra the transformer's layer
+                checkpoint_activations = False
+                checkpoint_policy = None
+            else:
+                if self.checkpoint_activations and self.checkpoint_policy.find("sche") != -1 \
+                        and (mpu.is_pipeline_last_stage() or mpu.get_pipeline_model_parallel_rank() == (
+                        mpu.get_pipeline_model_parallel_world_size() - 2)):
+                    checkpoint_activations = False
+                    checkpoint_policy = None
+                elif self.checkpoint_activations and self.checkpoint_policy.find("sche2") != -1 \
+                        and (mpu.get_pipeline_model_parallel_rank() == (
+                        mpu.get_pipeline_model_parallel_world_size() - 3)) and offset >= 9:
+                    checkpoint_activations = False
+                    checkpoint_policy = None
+                else:
+                    checkpoint_activations = self.checkpoint_activations,
+                    checkpoint_policy = self.checkpoint_policy
+
             return LlamaParallelTransformerLayer(
                 self.init_method,
                 self.output_layer_init_method,
-                layer_number)
+                layer_number,
+                checkpoint_activations=checkpoint_activations,
+                checkpoint_policy=checkpoint_policy
+            )
 
         if args.virtual_pipeline_model_parallel_size is not None:
             assert args.num_layers % args.virtual_pipeline_model_parallel_size == 0, \
@@ -638,7 +772,7 @@ class LlamaParallelTransformer(MegatronModule):
         # Build the layers
         for i in range(self.num_layers):
             layer_num = i + 1 + offset
-            self.layers.append(build_layer(layer_num))
+            self.layers.append(build_layer(layer_num, i))
 
         self.layers = torch.nn.ModuleList(self.layers)
 
@@ -646,7 +780,8 @@ class LlamaParallelTransformer(MegatronModule):
             # Final layer norm before output.
             self.final_layernorm = RMSNorm(
                 args.hidden_size,
-                eps=args.layernorm_epsilon)
+                eps=args.layernorm_epsilon,
+                sequence_parallel=args.sequence_parallel)
 
         if deepspeed.checkpointing.is_configured():
             global get_cuda_rng_tracker, checkpoint
@@ -717,7 +852,7 @@ class LlamaParallelTransformer(MegatronModule):
                 # See set_input_tensor()
                 hidden_states = self.input_tensor
 
-        if self.checkpoint_activations:
+        if self.checkpoint_activations and self.checkpoint_policy == "full":
             hidden_states = self._checkpointed_forward(hidden_states, attention_mask)
         else:
             if get_key_value:
