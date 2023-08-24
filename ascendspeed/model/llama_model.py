@@ -35,6 +35,7 @@ from ascendspeed.model.utils import get_linear_layer, init_method_normal, scaled
 from ascendspeed.mpu.mappings import scatter_to_sequence_parallel_region
 from ascendspeed.model.fused_softmax import NPUFusedScaleMaskSoftmax
 from ascendspeed.model.language_model import Pooler
+from ascendspeed.core.tensor_parallel.utils import split_tensor_along_last_dim
 
 import deepspeed
 from deepspeed.accelerator import get_accelerator
@@ -274,7 +275,7 @@ class LlamaParallelMLP(MegatronModule):
     def forward(self, hidden_states):
         if self.layer_fusion:
             gate_and_up_proj = self.proj(hidden_states)[0]
-            (gate, up_proj) = utils.split_tensor_along_last_dim(
+            (gate, up_proj) = split_tensor_along_last_dim(
                 gate_and_up_proj, 2, contiguous_split_chunks=True)
             intermediate_parallel = self.activation_func(gate) * up_proj
         else:
@@ -389,7 +390,7 @@ class LlamaParallelAttention(MegatronModule):
             # [sq, b, 3 * h] --> 3 [sq, b, h]
             (query_layer,
              key_layer,
-             value_layer) = utils.split_tensor_along_last_dim(mixed_x_layer, 3)
+             value_layer) = split_tensor_along_last_dim(mixed_x_layer, 3)
 
         # ==================================
         # Rotary Position Embedding

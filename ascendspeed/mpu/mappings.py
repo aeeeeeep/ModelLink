@@ -18,7 +18,7 @@ import torch
 from ascendspeed.core.parallel_state import get_tensor_model_parallel_group
 from ascendspeed.core.parallel_state import get_tensor_model_parallel_world_size
 from ascendspeed.core.parallel_state import get_tensor_model_parallel_rank
-from ascendspeed.core.utils import split_tensor_along_last_dim
+from ascendspeed.core.tensor_parallel.utils import split_tensor_along_last_dim
 
 
 def _reduce(input_):

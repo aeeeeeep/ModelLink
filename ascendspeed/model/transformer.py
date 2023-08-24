@@ -35,6 +35,7 @@ from ascendspeed.model.fused_softmax import NPUFusedScaleMaskSoftmax
 from ascendspeed.model.fused_bias_gelu import bias_gelu_impl
 from ascendspeed.model.module import MegatronModule
 from ascendspeed.model.utils import attention_mask_func, openai_gelu, erf_gelu
+from ascendspeed.core.tensor_parallel.utils import split_tensor_along_last_dim
 
 
 # flags required to enable jit fusion kernels
@@ -243,7 +244,7 @@ class ParallelAttention(MegatronModule):
             # [sq, b, np, 3 * hn] --> 3 [sq, b, np, hn]
             (query_layer,
              key_layer,
-             value_layer) = utils.split_tensor_along_last_dim(mixed_x_layer, 3)
+             value_layer) = split_tensor_along_last_dim(mixed_x_layer, 3)
         else:
             # Attention heads [sk, b, h] --> [sk, b, (np * 2 * hn)]
             mixed_kv_layer, _ = self.key_value(encoder_output)
@@ -256,7 +257,7 @@ class ParallelAttention(MegatronModule):
 
             # [sk, b, np, 2 * hn] --> 2 [sk, b, np, hn]
             (key_layer,
-             value_layer) = utils.split_tensor_along_last_dim(mixed_kv_layer, 2)
+             value_layer) = split_tensor_along_last_dim(mixed_kv_layer, 2)
 
             # Attention head [sq, b, h] --> [sq, b, hp]
             query_layer, _ = self.query(hidden_states)
