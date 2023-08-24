@@ -19,7 +19,7 @@ else:
     from torch.nn import LayerNorm
 from .distributed import DistributedDataParallel
 from .gpt_model import GPTModel, GPTModelPipe
-from .llama_model import LlamaModel, LlamaModelPipe
+from .llama_model import LlamaModel, LlamaModelPipe, LlamaForCausalLM
 from .language_model import get_language_model
 from .module import Float16Module
 from .enums import ModelType
