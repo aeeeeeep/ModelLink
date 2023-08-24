@@ -11,3 +11,5 @@ pytest
 wrapt_timeout_decorator
 transformers
 sentencepiece
+nltk
+datasets
