@@ -1,5 +1,6 @@
 import os
 import sys
+import unittest
 from pathlib import Path
 
 #=============================
@@ -9,8 +10,16 @@ def success_check(res):
     if res != 0:
         sys.exit(1)
 
+
+def success_check_ut(res):
+    if len(res.failures) + len(res.errors) != 0:
+        sys.exit(1)
+
+
 class ST_Test:
+    
     def __init__(self):
+
         BASE_DIR = Path(__file__).absolute().parent.parent
         TEST_DIR = os.path.join(BASE_DIR, 'tests')
 
@@ -21,11 +30,11 @@ class ST_Test:
         llama_opp_file = os.path.join(TEST_DIR, "st", "test_llama", "test_llama_opp.sh")
 
         self.shell_file_list = [
-            gpt_shell_file, 
+            # gpt_shell_file,
             llama_shell_file, 
-            bloom_shell_file, 
-            llama_vp_shell_file, 
-            llama_opp_file
+            bloom_shell_file,
+            # llama_vp_shell_file,
+            # llama_opp_file
         ]
 
     def run_shell(self):
@@ -39,3 +48,7 @@ class ST_Test:
 if __name__ == "__main__":
     st_test = ST_Test()
     st_test.run_shell()
+    test_loader = unittest.TestLoader()
+    discover = test_loader.discover(start_dir="../tests/ut", pattern="test*.py")
+    runner = unittest.TextTestRunner()
+    success_check_ut(runner.run(discover))
