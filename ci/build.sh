@@ -110,7 +110,6 @@ function main()
         if [[ ${src_py_ver} = '3.7' ]]; then
             src_py_ver='3.7m'
         fi
-
     done
 
     cd ${CUR_DIR}/..
