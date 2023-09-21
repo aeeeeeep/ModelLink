@@ -14,10 +14,12 @@ WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 DATA_PATH=/home/dataset/enwiki-gpt/gpt_text_sentence
 CHECKPOINT_PATH=./ckpt_gpt
 
+basepath=$(cd `dirname $0`; pwd)
+
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 
 python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
-       ./run_gpt_ptd.py \
+       ${basepath}/run_gpt_ptd.py \
        --DDP-impl local \
        --use-contiguous-buffers-in-ddp \
        --tensor-model-parallel-size 2 \
