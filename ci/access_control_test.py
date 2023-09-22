@@ -42,7 +42,7 @@ class ST_Test:
             success_check(os.system("sh {}".format(shell_file)))
 
 #===============================================
-# UT test, run with pytest, waiting for more ....
+# UT test, run with pytest, waiting for more ...
 #===============================================
 
 if __name__ == "__main__":
