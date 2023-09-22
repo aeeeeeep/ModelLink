@@ -3,6 +3,7 @@
 
 export LD_LIBRARY_PATH=/usr/local:/usr/local/lib:/usr/local/lib:/root/miniconda3/lib:$LD_LIBRARY_PATH
 export HCCL_CONNECT_TIMEOUT=1200
+
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 GPUS_PER_NODE=8
 # Change for multinode config
@@ -15,10 +16,12 @@ WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 DATA_PATH=/home/dataset/enwiki-gpt/gpt_text_sentence
 CHECKPOINT_PATH=./ckpt_llama
 
+basepath=$(cd `dirname $0`; pwd)
+
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 
 python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
-      /usr1/workspace/PyTorch_PR_AscendSpeed_master/CODE/tests/st/test_llama/run_llama_ptd.py \
+      ${basepath}/run_llama_ptd.py \
        --DDP-impl local \
        --use-contiguous-buffers-in-ddp \
        --tensor-model-parallel-size 2 \
