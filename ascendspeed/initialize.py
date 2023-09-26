@@ -97,7 +97,8 @@ def initialize_megatron(extra_args_provider=None, args_defaults=None,
 
 
 def _compile_dependencies():
-    if torch.distributed.get_rank() == 0:
+    from ascendspeed import is_rank_0
+    if is_rank_0():
         start_time = time.time()
         print('> compiling dataset index builder ...')
         from ascendspeed.data.dataset_utils import compile_helper
