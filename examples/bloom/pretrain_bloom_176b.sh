@@ -2,10 +2,11 @@
 export LD_LIBRARY_PATH=/usr/local/lib:/home/anaconda3/lib:$LD_LIBRARY_PATH
 export HCCL_CONNECT_TIMEOUT=1600
 export HCCL_OP_BASE_FFTS_MODE_ENABLE=TRUE
-export ASCEND_GLOBAL_LOG_LEVEL=3 # 1-INFO 3-ERROR
-export ASCEND_GLOBAL_EVENT_ENABLE=0
-export ASCEND_SLOG_PRINT_TO_STDOUT=0
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+# If this environment variable is set, all nodes will compile the data set,
+# which is suitable for cluster training.
+export AZUREML_EXPERIMENT_ID=0
 
 # output data path
 CHECKPOINT_PATH='./ckpt'
