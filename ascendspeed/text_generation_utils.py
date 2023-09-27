@@ -33,7 +33,7 @@ from ascendspeed.core.pipeline_parallel.p2p_communication import recv_forward, s
 from ascendspeed.model import DistributedDataParallel as LocalDDP
 from ascendspeed.model import Float16Module
 from ascendspeed.model.lora_utils import is_enable_lora, get_lora_model_classes
-from ascendspeed.core.utils import get_attr_wrapped_model, get_model_config, get_model_type
+from ascendspeed.core.utils import get_model_config
 
 
 def get_batch(context_tokens):
@@ -96,8 +96,8 @@ def generate_samples_input_from_file(model):
     assert args.sample_input_file is not None, \
         'sample input file is not provided.'
     if parallel_state.is_pipeline_first_stage() and parallel_state.get_tensor_model_parallel_rank() == 0:
-        fname = open(args.sample_input_file, "r")
-        all_raw_text = fname.readlines()
+        with open(args.sample_input_file, "r") as fname:
+            all_raw_text = fname.readlines()
         input_count = len(all_raw_text)
         input_pos = 0
         if args.sample_output_file is None:
@@ -188,6 +188,7 @@ def generate_samples_input_from_file(model):
                     fname_out.write("\n\nAscendSpeed:")
                     fname_out.write(trim_decode_tokens)
                     fname_out.write("\n")
+                    fname_out.close()
 
             raw_text = None
             context_count += 1
