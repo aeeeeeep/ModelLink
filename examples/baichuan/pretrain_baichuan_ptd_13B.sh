@@ -49,7 +49,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --tokenizer-not-use-fast \
        --data-impl mmap \
        --split 949,50,1 \
-	     --make-vocab-size-divisible-by 8 \
+       --make-vocab-size-divisible-by 8 \
        --distributed-backend nccl \
        --lr 1e-6 \
        --lr-decay-style cosine \
