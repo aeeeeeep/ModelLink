@@ -36,6 +36,7 @@ from deepspeed.pipe import PipelineModule, LayerSpec
 from ascendspeed import get_args
 from ascendspeed import mpu
 from ascendspeed.core import tensor_parallel, parallel_state, utils
+from ascendspeed.enums import PositionEmbeddingType
 from ascendspeed.model.module import MegatronModule, MegatronModuleForCausalLM, float16_to_fp32, fp32_to_float16
 from ascendspeed.core.enums import AttnMaskType, LayerType, AttnType
 from ascendspeed.model.utils import get_linear_layer, init_method_normal, scaled_init_method_normal, \
@@ -325,6 +326,9 @@ class LlamaParallelAttention(MegatronModule):
         if self.apply_query_key_layer_scaling:
             self.attention_softmax_in_fp32 = True
         self.layer_number = max(1, layer_number)
+        self.beta = 1.0
+        if self.apply_query_key_layer_scaling:
+            self.beta = 1.0 / self.layer_number
         self.attention_type = attention_type
         self.attn_mask_type = attn_mask_type
         self.init_method = init_method
@@ -360,7 +364,8 @@ class LlamaParallelAttention(MegatronModule):
             (1 / self.norm_factor))
 
         ## Rotary Position Embedding
-        self.rotary_emb = RotaryEmbedding(self.hidden_size_per_attention_head)
+        if args.position_embedding_type != PositionEmbeddingType.alibi:
+            self.rotary_emb = RotaryEmbedding(self.hidden_size_per_attention_head)
         self.apply_rotary_pos_emb = apply_rotary_pos_emb
         if args.use_fused_rotary_pos_emb:
             self.apply_rotary_pos_emb = apply_fused_rotary_pos_emb
@@ -385,7 +390,7 @@ class LlamaParallelAttention(MegatronModule):
             checkpoint = deepspeed.checkpointing.checkpoint
 
     def forward(self, hidden_states, attention_mask, layer_past=None,
-                get_key_value=False):
+                get_key_value=False, alibi=None):
         # hidden_states: [sq, b, h]
 
         # =====================
@@ -405,17 +410,17 @@ class LlamaParallelAttention(MegatronModule):
             (query_layer,
              key_layer,
              value_layer) = utils.split_tensor_along_last_dim(mixed_x_layer, 3)
+        if alibi is None:
+            # ==================================
+            # Rotary Position Embedding
+            # ==================================
+            # [sq, b, np, hn] --> [b, np, sq, hn] TODO optimize the permute of dimension back and forth
+            query_layer = query_layer.permute(1, 2, 0, 3).contiguous()
+            key_layer = key_layer.permute(1, 2, 0, 3).contiguous()
+            value_layer = value_layer.permute(1, 2, 0, 3).contiguous()
 
-        # ==================================
-        # Rotary Position Embedding
-        # ==================================
-        # [sq, b, np, hn] --> [b, np, sq, hn] TODO optimize the permute of dimension back and forth
-        query_layer = query_layer.permute(1, 2, 0, 3).contiguous()
-        key_layer = key_layer.permute(1, 2, 0, 3).contiguous()
-        value_layer = value_layer.permute(1, 2, 0, 3).contiguous()
-
-        cos, sin = self.rotary_emb(value_layer, seq_len=new_tensor_shape[0])
-        query_layer, key_layer = self.apply_rotary_pos_emb(query_layer, key_layer, cos, sin, offset=0)
+            cos, sin = self.rotary_emb(value_layer, seq_len=new_tensor_shape[0])
+            query_layer, key_layer = self.apply_rotary_pos_emb(query_layer, key_layer, cos, sin, offset=0)
 
         # ==================================
         # Adjust key and value for inference
@@ -431,15 +436,41 @@ class LlamaParallelAttention(MegatronModule):
             present = (key_layer, value_layer)
 
         # use triangle attention
-        if self.use_triangle_attn and layer_past is None:
+        if self.use_triangle_attn and layer_past is None and alibi is None:
             context_layer = self.triangle_attn(query_layer, key_layer, value_layer, attention_mask)
             output, _ = self.dense(context_layer)
             return output
-        
-        # ===================================
-        # Raw attention scores. [b, np, s, s]
-        # ===================================
-        attention_scores = torch.matmul(query_layer, key_layer.transpose(3, 2))
+
+        if alibi is not None:
+            output_size = (
+                query_layer.size(1),
+                query_layer.size(2),
+                query_layer.size(0),
+                key_layer.size(0)
+            )
+
+            # [sq, b, np, hn] -> [sq, b * np, hn]
+            query_layer = query_layer.view(output_size[2],
+                                           output_size[0] * output_size[1], -1)
+            # [sk, b, np, hn] -> [sk, b * np, hn]
+            key_layer = key_layer.view(output_size[3],
+                                       output_size[0] * output_size[1], -1)
+            value_layer = value_layer.permute(1, 2, 0, 3).contiguous()
+
+            # preallocting result tensor: [b * np, sq, sk]
+            matmul_result = alibi[:output_size[0] * output_size[1], :, :output_size[3]]
+            # Raw attention scores. [b * np, sq, sk]
+            q_trans = query_layer.transpose(0, 1).contiguous()
+            k_trans = key_layer.transpose(0, 1).transpose(1, 2).contiguous()
+            matmul_result = self.beta * matmul_result + torch.bmm(q_trans, k_trans)
+            # change view to [b, np, sq, sk]
+            attention_scores = matmul_result.view(*output_size)
+
+        else:
+            # ===================================
+            # Raw attention scores. [b, np, s, s]
+            # ===================================
+            attention_scores = torch.matmul(query_layer, key_layer.transpose(3, 2))
 
         # ==================================================
         # Update attention mask for inference. [b, np, sq, sk]
@@ -528,6 +559,46 @@ class LlamaParallelTransformerLayer(MegatronModule):
         # MLP
         self.rank = args.rank
         self.mlp = LlamaParallelMLP(self.init_method, self.output_layer_init_method)
+        if args.position_embedding_type == PositionEmbeddingType.alibi:
+            self.alibi = self._build_alibi_tensor(args.seq_length, args.num_attention_heads,
+                                                  args.micro_batch_size).to(torch.cuda.current_device())
+            if args.params_dtype == torch.float16:
+                self.alibi = self.alibi.to(torch.float16)
+            elif args.params_dtype == torch.bfloat16:
+                self.alibi = self.alibi.to(torch.bfloat16)
+        else:
+            self.alibi = None
+
+    @staticmethod
+    def _build_alibi_tensor(max_seq_len, num_attention_heads, batch_size):
+        # Based on https://github.com/ofirpress/attention_with_linear_biases/blob/"
+        # "a35aaca144e0eb6b789dfcb46784c4b8e31b7983/fairseq/models/transformer.py#L742
+        """Returns tensor shaped (batch_size * num_attention_heads, 1, max_seq_len)"""
+
+        def get_slopes(n):
+            def get_slopes_power_of_2(n):
+                start = (2 ** (-2 ** -(math.log2(n) - 3)))
+                ratio = start
+                return [start * ratio ** i for i in range(n)]
+
+            if math.log2(n).is_integer():
+                return get_slopes_power_of_2(n)
+            else:
+                closest_power_of_2 = 2 ** math.floor(math.log2(n))
+                return get_slopes_power_of_2(closest_power_of_2) + get_slopes(2 * closest_power_of_2)[0::2][
+                                                                   :n - closest_power_of_2]
+
+        slopes = torch.Tensor(get_slopes(num_attention_heads))
+        alibi = slopes.unsqueeze(1).unsqueeze(1) * torch.arange(max_seq_len).unsqueeze(0).unsqueeze(0).expand(
+            num_attention_heads, -1, -1)
+
+        # Select the part of the tensor that corresponds to our tensor parallel index.
+        tp_world_size = parallel_state.get_tensor_model_parallel_world_size()
+        tp_index = parallel_state.get_tensor_model_parallel_rank()
+        alibi = alibi.reshape((tp_world_size, -1, *alibi.shape[1:]))[tp_index]
+
+        alibi = alibi.repeat(batch_size, 1, 1)
+        return alibi
 
     def forward(self, hidden_states, attention_mask=None,
                 layer_past=None, get_key_value=False):
@@ -539,7 +610,8 @@ class LlamaParallelTransformerLayer(MegatronModule):
         hidden_states = self.attention(hidden_states,
                                        attention_mask,
                                        layer_past=layer_past,
-                                       get_key_value=get_key_value)
+                                       get_key_value=get_key_value,
+                                       alibi=self.alibi)
 
         if get_key_value:
             hidden_states, presents = hidden_states
