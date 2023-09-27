@@ -211,6 +211,17 @@ python tools/convert_tp.py \
     --target-tp <TARGET_TP>
 ```
 
+Use [convert_weights_from_gptmodelpipe_to_gptmodel.sh](convert_weights_from_gptmodelpipe_to_gptmodel.sh), converting deep speed checkpoints to megatron.Convert the checkpoint of deepspeed to megtron.
+
+```bash
+SCRIPT_PATH=./tools/ckpt_convert/bloom/convert_weights_from_gptmodelpipe_to_gptmodel_v2.py
+python $SCRIPT_PATH \
+    --input-model-dir ${INPUT_PATH} \
+    --output-model-dir ${OUTPUT_PATH} \
+    --tensor-model-parallel-size 8 \
+    --pipeline-model-parallel-size 1 \
+    --type 7B
+```
 ### Script
 
 We generate text samples using the `generate_bloom` script. Inference different from pre-training, such as we need to Load pre training checkpoint and the length of the output samples:
