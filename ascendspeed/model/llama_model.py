@@ -326,14 +326,13 @@ class LlamaParallelAttention(MegatronModule):
         if self.apply_query_key_layer_scaling:
             self.attention_softmax_in_fp32 = True
         self.layer_number = max(1, layer_number)
-        self.beta = 1.0
-        if self.apply_query_key_layer_scaling:
-            self.beta = 1.0 / self.layer_number
         self.attention_type = attention_type
         self.attn_mask_type = attn_mask_type
         self.init_method = init_method
         self.output_layer_init_method = output_layer_init_method
-
+        self.beta = 1.0
+        if self.apply_query_key_layer_scaling:
+            self.beta = 1.0 / self.layer_number
         self.num_attention_heads = args.num_attention_heads
         projection_size = args.kv_channels * args.num_attention_heads
 
@@ -362,9 +361,9 @@ class LlamaParallelAttention(MegatronModule):
             attention_mask_func,
             self.attention_softmax_in_fp32,
             (1 / self.norm_factor))
-
-        ## Rotary Position Embedding
-        if args.position_embedding_type != PositionEmbeddingType.alibi:
+        self.position_embedding_type = args.position_embedding_type
+        if self.position_embedding_type != PositionEmbeddingType.alibi:
+            # Rotary Position Embedding
             self.rotary_emb = RotaryEmbedding(self.hidden_size_per_attention_head)
         self.apply_rotary_pos_emb = apply_rotary_pos_emb
         if args.use_fused_rotary_pos_emb:
@@ -389,10 +388,9 @@ class LlamaParallelAttention(MegatronModule):
             get_cuda_rng_tracker = deepspeed.checkpointing.get_cuda_rng_tracker
             checkpoint = deepspeed.checkpointing.checkpoint
 
-    def forward(self, hidden_states, attention_mask, layer_past=None,
-                get_key_value=False, alibi=None):
+    def rotary_forward(self, hidden_states, attention_mask, layer_past, get_key_value):
+        # rotary position, match 7b
         # hidden_states: [sq, b, h]
-
         # =====================
         # Query, Key, and Value
         # =====================
@@ -410,17 +408,16 @@ class LlamaParallelAttention(MegatronModule):
             (query_layer,
              key_layer,
              value_layer) = utils.split_tensor_along_last_dim(mixed_x_layer, 3)
-        if alibi is None:
-            # ==================================
-            # Rotary Position Embedding
-            # ==================================
-            # [sq, b, np, hn] --> [b, np, sq, hn] TODO optimize the permute of dimension back and forth
-            query_layer = query_layer.permute(1, 2, 0, 3).contiguous()
-            key_layer = key_layer.permute(1, 2, 0, 3).contiguous()
-            value_layer = value_layer.permute(1, 2, 0, 3).contiguous()
 
-            cos, sin = self.rotary_emb(value_layer, seq_len=new_tensor_shape[0])
-            query_layer, key_layer = self.apply_rotary_pos_emb(query_layer, key_layer, cos, sin, offset=0)
+        # ==================================
+        # Rotary Position Embedding
+        # ==================================
+        # [sq, b, np, hn] --> [b, np, sq, hn] TODO optimize the permute of dimension back and forth
+        query_layer = query_layer.permute(1, 2, 0, 3).contiguous()
+        key_layer = key_layer.permute(1, 2, 0, 3).contiguous()
+        value_layer = value_layer.permute(1, 2, 0, 3).contiguous()
+        cos, sin = self.rotary_emb(value_layer, seq_len=new_tensor_shape[0])
+        query_layer, key_layer = self.apply_rotary_pos_emb(query_layer, key_layer, cos, sin, offset=0)
 
         # ==================================
         # Adjust key and value for inference
@@ -436,41 +433,15 @@ class LlamaParallelAttention(MegatronModule):
             present = (key_layer, value_layer)
 
         # use triangle attention
-        if self.use_triangle_attn and layer_past is None and alibi is None:
+        if self.use_triangle_attn and layer_past is None:
             context_layer = self.triangle_attn(query_layer, key_layer, value_layer, attention_mask)
             output, _ = self.dense(context_layer)
             return output
 
-        if alibi is not None:
-            output_size = (
-                query_layer.size(1),
-                query_layer.size(2),
-                query_layer.size(0),
-                key_layer.size(0)
-            )
-
-            # [sq, b, np, hn] -> [sq, b * np, hn]
-            query_layer = query_layer.view(output_size[2],
-                                           output_size[0] * output_size[1], -1)
-            # [sk, b, np, hn] -> [sk, b * np, hn]
-            key_layer = key_layer.view(output_size[3],
-                                       output_size[0] * output_size[1], -1)
-            value_layer = value_layer.permute(1, 2, 0, 3).contiguous()
-
-            # preallocting result tensor: [b * np, sq, sk]
-            matmul_result = alibi[:output_size[0] * output_size[1], :, :output_size[3]]
-            # Raw attention scores. [b * np, sq, sk]
-            q_trans = query_layer.transpose(0, 1).contiguous()
-            k_trans = key_layer.transpose(0, 1).transpose(1, 2).contiguous()
-            matmul_result = self.beta * matmul_result + torch.bmm(q_trans, k_trans)
-            # change view to [b, np, sq, sk]
-            attention_scores = matmul_result.view(*output_size)
-
-        else:
-            # ===================================
-            # Raw attention scores. [b, np, s, s]
-            # ===================================
-            attention_scores = torch.matmul(query_layer, key_layer.transpose(3, 2))
+        # ===================================
+        # Raw attention scores. [b, np, s, s]
+        # ===================================
+        attention_scores = torch.matmul(query_layer, key_layer.transpose(3, 2))
 
         # ==================================================
         # Update attention mask for inference. [b, np, sq, sk]
@@ -514,6 +485,104 @@ class LlamaParallelAttention(MegatronModule):
             output = [output, present]
 
         return output
+
+    def alibi_forward(self, hidden_states, attention_mask, layer_past, get_key_value, pse):
+        # alibi position, match 13b
+        # hidden_states: [sq, b, h]
+        # =====================
+        # Query, Key, and Value
+        # =====================
+
+        if self.attention_type == AttnType.self_attn:
+            # Attention heads [sq, b, h] --> [sq, b, (np * 3 * hn)]
+            mixed_x_layer, _ = self.query_key_value(hidden_states)
+
+            new_tensor_shape = mixed_x_layer.size()[:-1] + \
+                               (self.num_attention_heads_per_partition,
+                                3 * self.hidden_size_per_attention_head)
+            mixed_x_layer = mixed_x_layer.view(*new_tensor_shape)
+
+            # [sq, b, 3 * h] --> 3 [sq, b, h]
+            (query_layer,
+             key_layer,
+             value_layer) = utils.split_tensor_along_last_dim(mixed_x_layer, 3)
+        # ==================================
+        # Adjust key and value for inference
+        # ==================================
+        if layer_past is not None:
+            past_key, past_value = layer_past
+            key_layer = torch.cat((past_key.type_as(key_layer),
+                                   key_layer), dim=0)
+            value_layer = torch.cat((past_value.type_as(value_layer),
+                                     value_layer), dim=0)
+        if get_key_value:
+            present = (key_layer, value_layer)
+        output_size = (query_layer.size(1), query_layer.size(2),
+                       query_layer.size(0), key_layer.size(0))
+
+        # [sq, b, np, hn] -> [sq, b * np, hn]
+        query_layer = query_layer.view(output_size[2],
+                                       output_size[0] * output_size[1], -1)
+        # [sk, b, np, hn] -> [sk, b * np, hn]
+        key_layer = key_layer.view(output_size[3],
+                                   output_size[0] * output_size[1], -1)
+
+        value_layer = value_layer.permute(1, 2, 0, 3).contiguous()
+
+        # preallocting result tensor: [b * np, sq, sk]
+        matmul_result = pse[:output_size[0] * output_size[1], :, :output_size[3]]
+        # Raw attention scores. [b * np, sq, sk]
+        q_trans = query_layer.transpose(0, 1).contiguous()
+        k_trans = key_layer.transpose(0, 1).transpose(1, 2).contiguous()
+        matmul_result = self.beta * matmul_result + torch.bmm(q_trans, k_trans)
+        # change view to [b, np, sq, sk]
+        attention_scores = matmul_result.view(*output_size)
+        # ==================================================
+        # Update attention mask for inference. [b, np, sq, sk]
+        # ==================================================
+
+        if get_key_value:
+            with torch.no_grad():
+                if layer_past is not None:
+                    attention_mask = attention_mask[
+                                     ...,
+                                     attention_scores.size(3) - 1,
+                                     :attention_scores.size(3)].unsqueeze(2)
+                else:
+                    attention_mask = attention_mask[
+                                     ...,
+                                     :attention_scores.size(3),
+                                     :attention_scores.size(3)]
+
+        # ===========================
+        # Attention probs and dropout
+        # ===========================
+
+        # attention scores and attention mask [b, np, sq, sk]
+        attention_probs = self.scale_mask_softmax(attention_scores,
+                                                  attention_mask)
+        if self.bf16:
+            attention_probs = attention_probs.bfloat16()
+        # =========================
+        # Context layer. [sq, b, hp]
+        # =========================
+        context_layer = torch.matmul(attention_probs, value_layer)
+
+        bs, nh, sq, hd = context_layer.shape
+        context_layer = context_layer.permute(2, 0, 1, 3).contiguous()
+        context_layer = context_layer.view(sq, bs, nh * hd)
+
+        output, _ = self.dense(context_layer)
+
+        if get_key_value:
+            output = [output, present]
+        return output
+
+    def forward(self, hidden_states, attention_mask, layer_past=None, get_key_value=False, pse=None):
+        if self.position_embedding_type == PositionEmbeddingType.alibi:
+            return self.alibi_forward(hidden_states, attention_mask, layer_past, get_key_value, pse)
+        else:
+            return self.rotary_forward(hidden_states, attention_mask, layer_past, get_key_value)
 
 
 class LlamaParallelTransformerLayer(MegatronModule):
@@ -611,7 +680,7 @@ class LlamaParallelTransformerLayer(MegatronModule):
                                        attention_mask,
                                        layer_past=layer_past,
                                        get_key_value=get_key_value,
-                                       alibi=self.alibi)
+                                       pse=self.alibi)
 
         if get_key_value:
             hidden_states, presents = hidden_states

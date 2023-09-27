@@ -16,10 +16,10 @@ GLOBAL_BATCH=32
 MICRO_BATCH=1
 
 DATA_PATH=data/internlm_eos_text
-TOKENIZER_PATH=data/model/model_weight
+TOKENIZER_PATH=tokenizer
  
-CHECKPOINT_PATH=data/model/model_save/
-LOAD_PATH=data/convert_model/train_w_40_t8p1
+CHECKPOINT_PATH=ckpt
+LOAD_PATH=weight
 
 DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 
