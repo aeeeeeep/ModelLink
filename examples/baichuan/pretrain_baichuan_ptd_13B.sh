@@ -15,11 +15,11 @@ WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 GLOBAL_BATCH=32
 MICRO_BATCH=1
 
-DATA_PATH=data/internlm_eos_text
-TOKENIZER_PATH=tokenizer
+DATA_PATH=./data/baichuan_text
+TOKENIZER_PATH=./tokenizer
  
-CHECKPOINT_PATH=ckpt
-LOAD_PATH=weight
+CHECKPOINT_PATH=./ckpt
+LOAD_PATH=./weight
 
 DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 

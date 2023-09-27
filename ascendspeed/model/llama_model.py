@@ -629,14 +629,14 @@ class LlamaParallelTransformerLayer(MegatronModule):
         self.rank = args.rank
         self.mlp = LlamaParallelMLP(self.init_method, self.output_layer_init_method)
         if args.position_embedding_type == PositionEmbeddingType.alibi:
-            self.alibi = self._build_alibi_tensor(args.seq_length, args.num_attention_heads,
-                                                  args.micro_batch_size).to(torch.cuda.current_device())
+            self.pse = self._build_alibi_tensor(args.seq_length, args.num_attention_heads,
+                                                args.micro_batch_size).to(torch.cuda.current_device())
             if args.params_dtype == torch.float16:
-                self.alibi = self.alibi.to(torch.float16)
+                self.pse = self.pse.to(torch.float16)
             elif args.params_dtype == torch.bfloat16:
-                self.alibi = self.alibi.to(torch.bfloat16)
+                self.pse = self.pse.to(torch.bfloat16)
         else:
-            self.alibi = None
+            self.pse = None
 
     @staticmethod
     def _build_alibi_tensor(max_seq_len, num_attention_heads, batch_size):
@@ -680,7 +680,7 @@ class LlamaParallelTransformerLayer(MegatronModule):
                                        attention_mask,
                                        layer_past=layer_past,
                                        get_key_value=get_key_value,
-                                       pse=self.alibi)
+                                       pse=self.pse)
 
         if get_key_value:
             hidden_states, presents = hidden_states
