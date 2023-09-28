@@ -22,6 +22,7 @@ DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE \
 
 # Real script
 python -m torch.distributed.run $DISTRIBUTED_ARGS ./tasks/inference/inference_gpt.py \
+               --no-contiguous-buffers-in-local-ddp \
                --load ${CHECKPOINT} \
                --tokenizer-type PretrainedFromHF \
                --tokenizer-name-or-path ${VOCAB_FILE}  \

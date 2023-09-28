@@ -34,6 +34,7 @@ EOT
 
 deepspeed --num_nodes $NNODES --num_gpus $NPUS_PER_NODE \
        ./tasks/inference/inference_bloom_pipeline \
+       --no-contiguous-buffers-in-local-ddp \
        --tensor-model-parallel-size 8  \
        --pipeline-model-parallel-size 1  \
        --num-layers 30  \
