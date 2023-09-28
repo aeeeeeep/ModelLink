@@ -1,12 +1,4 @@
-# Baichuan7B for PyTorch
-
--   [概述](概述.md)
--   [准备训练环境](准备训练环境.md)
--   [准备数据集](准备数据集.md)
--   [开始训练](开始训练.md)
--   [版本说明](版本说明.md)
-
-
+# Baichuan for PyTorch
 
 # 概述
 
