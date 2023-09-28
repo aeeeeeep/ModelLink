@@ -10,6 +10,7 @@ print(f"work_path : {os.path.abspath(work_path)}")
 sys.path.append(work_path)
 
 from tools.ckpt_convert.llama.ckpt_utils import make_ascendspeed_model_dirs
+from ascendspeed.error_utils import check_divisible_by_zero
 
 
 def get_args():

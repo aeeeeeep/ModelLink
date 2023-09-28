@@ -32,8 +32,9 @@ def check_divisible(denominator, molecule, error_info=None):
         return
     raise NotDivisibleError(denominator, molecule, error_info)
 
+
 def check_divisible_by_zero(dividend):
-    if  dividend != 0:
+    if dividend != 0:
         return
     raise ZeroDivisionError
 
