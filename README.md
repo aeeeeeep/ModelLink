@@ -11,7 +11,7 @@ Currently, the pre-training of the following models has been supported:
 * <a href="https://github.com/baichuan-inc/Baichuan-7B" style="color:green">Baichuan</a>-[7B](examples/baichuan/pretrain_baichuan_zero_7B.sh)
 * <a href="https://arxiv.org/pdf/2108.12409.pdf" style="color:green">Bloom</a>-[7B1](examples/bloom/pretrain_bloom_7b1.sh)/[176B](examples/bloom/pretrain_bloom_176b.sh)
 * <a href="https://internlm.intern-ai.org.cn/" style="color:green">InternLM</a>-[7B](examples/internlm/pretrain_internlm_7b_zero.sh)
-* <a href="https://huggingface.co/docs/transformers/main/model_doc/llama" style="color:green">LLaMA</a>-[7B](examples/llama/pretrain_llama_7B_zero_8p.sh)/[13B](examples/llama/pretrain_llama_13B_zero_8p.sh)/[65B](examples/llama/pretrain_llama_65B_ptd_32p.sh)
+* <a href="https://huggingface.co/docs/transformers/main/model_doc/llama" style="color:green">LLaMA</a>-[7B](examples/llama/pretrain_llama_7B_zero_8p.sh)/[13B](examples/llama/pretrain_llama_13B_zero_8p.sh)/[33B](examples/llama/pretrain_llama_33B_zero_32p.sh)/[65B](examples/llama/pretrain_llama_65B_ptd_32p.sh)
 * <a href="https://huggingface.co/docs/transformers/main/model_doc/llama2" style="color:green">LLaMA2</a>-[7B](examples/llama2/pretrain_llama2_ptd_7B.sh)
 
 Baichuan-13B, LLaMA-33B, LLaMA2-13B/70B, Aquila-7B are coming soon ...
@@ -129,7 +129,7 @@ The plan for more tasks, like RLHF and RM, is under way ...
       <td> -- </td>
     </tr>
     <tr>
-      <td rowspan="4">LLaMA</td>
+      <td rowspan="5">LLaMA</td>
       <td>7B</td>
       <td>376T 1x8</td>
       <td>ZeRO2 + Recomputation</td>
@@ -152,6 +152,20 @@ The plan for more tasks, like RLHF and RM, is under way ...
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
+    </tr>
+    <tr>
+      <td>33B</td>
+      <td>376T 1x8</td>
+      <td>PP4 + TP4 + SP + ZeRO + Recomputation</td>
+      <td>FP16</td>
+      <td> False </td>
+      <td> 621 tokens/p/s </td>
+      <td> 520 tokens/p/s </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> 
+        <a href="./sources/images/llama/llama33B_shape_layer8.png">Loss</a>  
+      </td>
     </tr>
     <tr>
       <td rowspan="2">65B</td>
