@@ -130,7 +130,7 @@ The performance of the NPUs in **Ascend910 B1 64GB** and GPUs is **A100**:
 
 Notes: 
 
-- Bloom-7B1 model trained on oscar-1GB on a single machine with 8 NPUs
+- Bloom-7B1 model trained on oscar-1GB or enwiki-100k on a single machine with 8 NPUs
 
 Here's a hardware summary of pre-training Bloom-7B:
 
