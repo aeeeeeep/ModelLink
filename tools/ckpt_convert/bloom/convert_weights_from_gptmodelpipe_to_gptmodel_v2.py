@@ -9,7 +9,7 @@ work_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')
 print(f"work_path : {os.path.abspath(work_path)}")
 sys.path.append(work_path)
 
-from ckpt_utils import make_ascendspeed_model_dirs
+from tools.ckpt_convert.llama.ckpt_utils import make_ascendspeed_model_dirs
 
 
 def get_args():
@@ -40,35 +40,37 @@ def extract_gptmodelpipe(input_model_dir):
     return input_models
 
 
-def generate_gptmodel_weights(input_model_dir, output_model_dir, tensor_model_parallel_size,
-                              pipeline_model_parallel_size, type):
-    layer_size = model_config.get(type)[0]
-    gptmodelpipe = extract_gptmodelpipe(input_model_dir)
+def generate_gptmodel_weights(input_dir, output_dir, tp_size, pp_size, model_type):
+    layer_size = model_config.get(model_type)[0]
+    gptmodelpipe = extract_gptmodelpipe(input_dir)
 
     ### 实际上有的参数文件集合
     param_file_set = [os.path.basename(file_path) for file_path in gptmodelpipe.keys()]
     param_file_set = sorted([file_name for file_name in param_file_set if file_name.startswith('layer_')])
     print(f"文件集合 : {param_file_set}")
 
-    release_model_dir = os.path.join(output_model_dir, "release")
+    release_model_dir = os.path.join(output_dir, "release")
     language_model = {}
     language_model['encoder'] = {}
 
     word_embeddings_for_head = {}
 
-    for pp_rank in range(pipeline_model_parallel_size):
-        layer_mean = math.ceil(layer_size / pipeline_model_parallel_size)
+    for pp_rank in range(pp_size):
+        if check_divisible_by_zero(pp_size):
+            layer_mean = math.ceil(layer_size / pp_size)
         current_layer_pp_rank = list(range(pp_rank * layer_mean + 3, (pp_rank + 1) * layer_mean + 3))
         if pp_rank == 0:
             current_layer_pp_rank.append(1)
-        if pp_rank == pipeline_model_parallel_size - 1:
+        if pp_rank == pp_size - 1:
             current_layer_pp_rank = list(range(pp_rank * layer_mean + 3, layer_size + 3))
             current_layer_pp_rank.append(1)
             current_layer_pp_rank.append(layer_size + 4)
 
         ### 原理上应该有的参数文件集合
-        theo_file_set = [f"layer_{layer_num:02d}-model_{tp_rank:02d}-model_states.pt" for layer_num in
-                         current_layer_pp_rank for tp_rank in range(tensor_model_parallel_size)]
+        theo_file_set = []
+        for layer_num in current_layer_pp_rank:
+            for tp_rank in range(tp_size):
+                theo_file_set.append(f"layer_{layer_num:02d}-model_{tp_rank:02d}-model_states.pt")
         print(f"原理文件集合 : {theo_file_set}")
 
         if len(set(param_file_set) & set(theo_file_set)) == len(set(param_file_set)):
@@ -77,62 +79,61 @@ def generate_gptmodel_weights(input_model_dir, output_model_dir, tensor_model_pa
             print(f"{current_layer_pp_rank} 不在rank: {pp_rank}")
             continue
 
-        for tp_rank in range(tensor_model_parallel_size):
+        for tp_rank in range(tp_size):
             for layer_num in current_layer_pp_rank:
                 layer_name = f"layer_{layer_num:02d}-model_{tp_rank:02d}-model_states.pt"
                 if layer_num == 1:
                     if pp_rank == 0:
                         language_model['embedding'] = {}
                         language_model['embedding']['word_embeddings'] = {}
-                        language_model['embedding']['word_embeddings']['weight'] = gptmodelpipe[layer_name][
-                            'word_embeddings.weight']
+                        language_model['embedding']['word_embeddings']['weight'] = gptmodelpipe.get(layer_name).get(
+                            'word_embeddings.weight')
 
-                    if pp_rank == pipeline_model_parallel_size - 1:
-                        word_embeddings_for_head['weight'] = gptmodelpipe[layer_name][
-                            'word_embeddings.weight']
+                    if pp_rank == pp_size - 1:
+                        word_embeddings_for_head['weight'] = gptmodelpipe.get(layer_name).get(
+                            'word_embeddings.weight')
 
                 elif layer_num == 2:
                     continue
                 elif layer_num == layer_size + 3:
                     continue
                 elif layer_num == layer_size + 4:
-                    language_model['encoder']["final_layernorm.weight"] = gptmodelpipe[layer_name][
-                        "final_layernorm.weight"]
-                    language_model['encoder']["final_layernorm.bias"] = gptmodelpipe[layer_name]["final_layernorm.bias"]
+                    language_model['encoder']["final_layernorm.weight"] = gptmodelpipe.get(layer_name).get(
+                        "final_layernorm.weight")
+                    language_model['encoder']["final_layernorm.bias"] = gptmodelpipe.get(layer_name).get(
+                        "final_layernorm.bias")
                 else:
-                    # encoder_layer_name = f"layers.{layer_num - 3}."
                     encoder_layer_name = f"layers.{layer_num - 3 - pp_rank * layer_mean}."
 
-                    language_model['encoder'][f"{encoder_layer_name}input_layernorm.weight"] = gptmodelpipe[layer_name][
-                        'input_layernorm.weight']
-                    language_model['encoder'][f"{encoder_layer_name}input_layernorm.bias"] = gptmodelpipe[layer_name][
-                        'input_layernorm.bias']
+                    language_model['encoder'][f"{encoder_layer_name}input_layernorm.weight"] = gptmodelpipe.get(
+                        layer_name).get(
+                        'input_layernorm.weight')
+                    language_model['encoder'][f"{encoder_layer_name}input_layernorm.bias"] = gptmodelpipe.get(
+                        layer_name).get(
+                        'input_layernorm.bias')
                     language_model['encoder'][f"{encoder_layer_name}self_attention.query_key_value.weight"] = \
-                        gptmodelpipe[layer_name]['self_attention.query_key_value.weight']
+                        gptmodelpipe.get(layer_name).get('self_attention.query_key_value.weight')
                     language_model['encoder'][f"{encoder_layer_name}self_attention.query_key_value.bias"] = \
-                        gptmodelpipe[layer_name]['self_attention.query_key_value.bias']
+                        gptmodelpipe.get(layer_name).get('self_attention.query_key_value.bias')
                     language_model['encoder'][f"{encoder_layer_name}self_attention.dense.weight"] = \
-                        gptmodelpipe[layer_name]['self_attention.dense.weight']
+                        gptmodelpipe.get(layer_name).get('self_attention.dense.weight')
                     language_model['encoder'][f"{encoder_layer_name}self_attention.dense.bias"] = \
-                        gptmodelpipe[layer_name][
-                            'self_attention.dense.bias']
+                        gptmodelpipe.get(layer_name).get('self_attention.dense.bias')
                     language_model['encoder'][f"{encoder_layer_name}post_attention_layernorm.weight"] = \
-                        gptmodelpipe[layer_name]['post_attention_layernorm.weight']
+                        gptmodelpipe.get(layer_name).get('post_attention_layernorm.weight')
                     language_model['encoder'][f"{encoder_layer_name}post_attention_layernorm.bias"] = \
-                        gptmodelpipe[layer_name]['post_attention_layernorm.bias']
+                        gptmodelpipe.get(layer_name).get('post_attention_layernorm.bias')
                     language_model['encoder'][f"{encoder_layer_name}mlp.dense_h_to_4h.weight"] = \
-                        gptmodelpipe[layer_name][
-                            'mlp.dense_h_to_4h.weight']
-                    language_model['encoder'][f"{encoder_layer_name}mlp.dense_h_to_4h.bias"] = gptmodelpipe[layer_name][
-                        'mlp.dense_h_to_4h.bias']
+                        gptmodelpipe.get(layer_name).get('mlp.dense_h_to_4h.weight')
+                    language_model['encoder'][f"{encoder_layer_name}mlp.dense_h_to_4h.bias"] = gptmodelpipe.get(
+                        layer_name).get('mlp.dense_h_to_4h.bias')
                     language_model['encoder'][f"{encoder_layer_name}mlp.dense_4h_to_h.weight"] = \
-                        gptmodelpipe[layer_name][
-                            'mlp.dense_4h_to_h.weight']
-                    language_model['encoder'][f"{encoder_layer_name}mlp.dense_4h_to_h.bias"] = gptmodelpipe[layer_name][
-                        'mlp.dense_4h_to_h.bias']
+                        gptmodelpipe.get(layer_name).get('mlp.dense_4h_to_h.weight')
+                    language_model['encoder'][f"{encoder_layer_name}mlp.dense_4h_to_h.bias"] = gptmodelpipe.get(
+                        layer_name).get('mlp.dense_4h_to_h.bias')
             model_dic = {'checkpoint_version': 3.0, 'model': {}}
             model_dic['model']['language_model'] = language_model
-            if pp_rank == pipeline_model_parallel_size - 1:
+            if pp_rank == pp_size - 1:
                 model_dic['model']['word_embeddings_for_head'] = word_embeddings_for_head
 
             print(model_dic['model'].keys())

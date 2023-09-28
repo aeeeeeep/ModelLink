@@ -32,6 +32,11 @@ def check_divisible(denominator, molecule, error_info=None):
         return
     raise NotDivisibleError(denominator, molecule, error_info)
 
+def check_divisible_by_zero(dividend):
+    if  dividend != 0:
+        return
+    raise ZeroDivisionError
+
 
 class NotEqualError(Exception):
     def __init__(self, tensor_a, tensor_b, error_info):
