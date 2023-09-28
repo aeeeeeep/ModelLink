@@ -57,8 +57,7 @@ def generate_gptmodel_weights(input_dir, output_dir, tp_size, pp_size, model_typ
     word_embeddings_for_head = {}
 
     for pp_rank in range(pp_size):
-        if check_divisible_by_zero(pp_size):
-            layer_mean = math.ceil(layer_size / pp_size)
+        layer_mean = math.ceil(check_divisible_by_zero(layer_size, pp_size))
         current_layer_pp_rank = list(range(pp_rank * layer_mean + 3, (pp_rank + 1) * layer_mean + 3))
         if pp_rank == 0:
             current_layer_pp_rank.append(1)
