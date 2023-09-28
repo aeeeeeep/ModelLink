@@ -314,7 +314,7 @@ For llama and other LLMs without bias in FFN, the linear transformation in FFN c
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
-      <td  rowspan="8"> -- </td>
+      <td  rowspan="8"> <a href="https://huggingface.co/datasets/teven/enwiki_100k">enwiki_100k</a> </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
@@ -339,14 +339,14 @@ For llama and other LLMs without bias in FFN, the linear transformation in FFN c
     <tr>
       <td rowspan="3">LLaMA</td>
       <td>7B</td>
-      <td> -- </td>
-      <td> -- </td>
+      <td> <a href="examples/bloom/pretrain_bloom_7b1.sh">Full parameter fine-tuning</a> </td>
+      <td> <a href="examples/bloom/generate_bloom_7B_tp8_pp1.sh"> infer </a> </td>
       <td> -- </td>
     </tr>
     <tr>
       <td>13B</td>
-      <td> -- </td>
-      <td> -- </td>
+      <td> <a href="examples/bloom/pretrain_bloom_176b.sh">Full parameter fine-tuning</a> </td>
+      <td> <a href="examples/bloom/generate_176b_2nodes.sh"> infer </a> </td>
       <td> -- </td>
     </tr>
     <tr>
