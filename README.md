@@ -628,7 +628,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation.py   \
 bash tasks/evaluation/eval.sh
 ```
 ### Configuration of models and datasets
-We should firstly configure the model path at `CHECKPOINT` and the vocabulary path at `VOCAB_FILE`. As the example shown below, we want to use llama7b model for BoolQ dataset evaluation, so the model path and vocab file should correspond to llama7b model.
+We should firstly configure the model path at `CHECKPOINT` and the vocabulary path at `VOCAB_FILE`. As the example shown below, we want to use LLaMa7b model for BoolQ dataset evaluation, so the model path and vocab file should correspond to  model.
 
 Model can be segmented with suitable segmentation parameters: the following example set tensor-model-parallel-size(tp) = 2 and pipeline-model-parallel-size(pp) = 4. Segmentation example shows as followed:
 ```bash
@@ -679,7 +679,7 @@ The evaluation of the BoolQ data set is relatively simple, just configure `TASK=
 
 <img src="sources/images/boolq_result_of_AscendSpeed.png" height="300px" width="800px"></div>
 
-For LLama7B, the evaluation result of AscendSpeed on NPU environment is 0.742. For comparison, the score in the paper [LLaMA: Open and Efficient Foundation Language Models](https://arxiv.org/abs/2302.13971) is 0.765. The zero-shot results usually affected by the given prompt, and a higher score can be obtained by a suitable prompt. 
+For LLaMa7b, the evaluation result of AscendSpeed on NPU environment is 0.742. For comparison, the score in the paper [LLaMA: Open and Efficient Foundation Language Models](https://arxiv.org/abs/2302.13971) is 0.765. The zero-shot results usually affected by the given prompt, and a higher score can be obtained by a suitable prompt. 
 The prompt can be modified in `tasks/evaluation/evaluation.py`
 ```bash
 # Update new prompt by changing the template
@@ -721,7 +721,366 @@ Compared to the benchmark accuracy 35.1 from the paper [LLaMA: Open and Efficien
 
 #### Evaluation results and parameter configuration of GSM8K 
 GSM8K is a dataset of 8.5K high quality linguistically diverse grade school math word problems created by human problem writers. The answer of each question is a specific number. Since few shots are performed,  the question length is relatively long in GSM8K, and the output answer contains a chain of thoughts, it is necessary to configure `TASK="gsm8k"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=128`. (`--max-new-tokens` can be set between 256-512).
-As the benchmark shows on [OpenCompass](https://opencompass.org.cn/dataset-detail/GSM8K), LLama7B model's evaluation gets only 10 points with pass@k(Generate k
-times and choose the best answer). The results of AscendSpeed on NPU environment varies between 8 and 10 points according to the number of shots we use.
+As the benchmark shows on [OpenCompass](https://opencompass.org.cn/dataset-detail/GSM8K), LLaMa7b model's evaluation gets only 10 points with pass@k(Generate k
+times and choose the best answer). The result of AscendSpeed on NPU environment is 10 points as well.
 
+#### Evaluation results and parameter configuration of HumanEval 
+HumanEval dataset is a handcrafted set of 164 programming problems designed to challenge code generation models. The problems include a function signature, docstring, body, and several unit tests, all handwritten to ensure they're not included in the training set of code generation models. 
+We ues Chinese llama alpaca 13b for testing, and get 11.58 points compared to 11.8 points shown on [OpenCompass](https://opencompass.org.cn/dataset-detail/GSM8K) with the same model.
+Since the answer of HumanEval dataset contains long codes, it is necessary to configure `TASK="human_eval"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=1024`.
 
+<img src="sources/images/humaneval_result.png" height="200px" width="800px"></div>
+
+#### Evaluation results and parameter configuration of AGIEval
+AGIEval is a human-centric benchmark specifically designed to evaluate the general abilities of foundation models in tasks pertinent to human cognition and problem-solving. Since the length of answers to different type of questions varies, we have to configure `TASK="agieval"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=1024` to fit the longest answer. The following shows the results of AscendSpeed.
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:x="urn:schemas-microsoft-com:office:excel"
+xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta http-equiv=Content-Type content="text/html; charset=gb2312">
+<meta name=ProgId content=Excel.Sheet>
+<meta name=Generator content="Microsoft Excel 15">
+<link rel=File-List href="AGI_dataset_eval.files/filelist.xml">
+<style id="AGI_dataset_eval_14615_Styles"><!--table
+	{mso-displayed-decimal-separator:"\.";
+	mso-displayed-thousand-separator:"\,";}
+.font514615
+	{color:windowtext;
+	font-size:9.0pt;
+	font-weight:400;
+	font-style:normal;
+	text-decoration:none;
+	font-family:等线;
+	mso-generic-font-family:auto;
+	mso-font-charset:134;}
+.xl1514615
+	{padding-top:1px;
+	padding-right:1px;
+	padding-left:1px;
+	mso-ignore:padding;
+	color:black;
+	font-size:11.0pt;
+	font-weight:400;
+	font-style:normal;
+	text-decoration:none;
+	font-family:等线;
+	mso-generic-font-family:auto;
+	mso-font-charset:134;
+	mso-number-format:General;
+	text-align:general;
+	vertical-align:middle;
+	mso-background-source:auto;
+	mso-pattern:auto;
+	white-space:nowrap;}
+.xl6314615
+	{padding-top:1px;
+	padding-right:1px;
+	padding-left:1px;
+	mso-ignore:padding;
+	color:white;
+	font-size:11.0pt;
+	font-weight:400;
+	font-style:normal;
+	text-decoration:none;
+	font-family:等线;
+	mso-generic-font-family:auto;
+	mso-font-charset:134;
+	mso-number-format:General;
+	text-align:general;
+	vertical-align:middle;
+	mso-background-source:auto;
+	mso-pattern:auto;
+	white-space:nowrap;}
+.xl6414615
+	{padding-top:1px;
+	padding-right:1px;
+	padding-left:1px;
+	mso-ignore:padding;
+	color:white;
+	font-size:11.0pt;
+	font-weight:700;
+	font-style:normal;
+	text-decoration:none;
+	font-family:等线;
+	mso-generic-font-family:auto;
+	mso-font-charset:134;
+	mso-number-format:General;
+	text-align:center;
+	vertical-align:middle;
+	mso-background-source:auto;
+	mso-pattern:auto;
+	white-space:nowrap;}
+.xl6514615
+	{padding-top:1px;
+	padding-right:1px;
+	padding-left:1px;
+	mso-ignore:padding;
+	color:white;
+	font-size:11.0pt;
+	font-weight:700;
+	font-style:normal;
+	text-decoration:none;
+	font-family:等线;
+	mso-generic-font-family:auto;
+	mso-font-charset:134;
+	mso-number-format:General;
+	text-align:center;
+	vertical-align:middle;
+	mso-background-source:auto;
+	mso-pattern:auto;
+	white-space:nowrap;
+	mso-text-control:shrinktofit;}
+.xl6614615
+	{padding-top:1px;
+	padding-right:1px;
+	padding-left:1px;
+	mso-ignore:padding;
+	color:white;
+	font-size:11.0pt;
+	font-weight:400;
+	font-style:normal;
+	text-decoration:none;
+	font-family:等线;
+	mso-generic-font-family:auto;
+	mso-font-charset:134;
+	mso-number-format:General;
+	text-align:center;
+	vertical-align:middle;
+	mso-background-source:auto;
+	mso-pattern:auto;
+	white-space:nowrap;}
+.xl6714615
+	{padding-top:1px;
+	padding-right:1px;
+	padding-left:1px;
+	mso-ignore:padding;
+	color:white;
+	font-size:11.0pt;
+	font-weight:400;
+	font-style:normal;
+	text-decoration:none;
+	font-family:等线;
+	mso-generic-font-family:auto;
+	mso-font-charset:134;
+	mso-number-format:General;
+	text-align:center;
+	vertical-align:middle;
+	mso-background-source:auto;
+	mso-pattern:auto;
+	white-space:nowrap;
+	mso-text-control:shrinktofit;}
+ruby
+	{ruby-align:left;}
+rt
+	{color:windowtext;
+	font-size:9.0pt;
+	font-weight:400;
+	font-style:normal;
+	text-decoration:none;
+	font-family:等线;
+	mso-generic-font-family:auto;
+	mso-font-charset:134;
+	mso-char-type:none;}
+--></style>
+</head>
+
+<body>
+<div id="AGI_dataset_eval_14615" align=center x:publishsource="Excel">
+<table border=0 cellpadding=0 cellspacing=0 width=468 style='border-collapse:
+ collapse;table-layout:fixed;width:351pt'>
+ <col width=72 span=3 style='width:54pt'>
+ <col width=252 style='mso-width-source:userset;mso-width-alt:8064;width:189pt'>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6314615 width=72 style='height:14.25pt;width:54pt'></td>
+  <td class=xl6414615 width=72 style='width:54pt'>task</td>
+  <td class=xl6414615 width=72 style='width:54pt'>question n</td>
+  <td class=xl6414615 width=252 style='width:189pt'>LLaMa7b score</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td rowspan=10 height=190 class=xl6514615 style='height:142.5pt'>高考题</td>
+  <td class=xl6614615>gaokao-biology</td>
+  <td class=xl6614615>210</td>
+  <td class=xl6614615>0.305</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>gaokao-chemistry</td>
+  <td class=xl6614615>207</td>
+  <td class=xl6614615>0.266</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>gaokao-chinese</td>
+  <td class=xl6614615>246</td>
+  <td class=xl6614615>0.207</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>gaokao-english</td>
+  <td class=xl6614615>306</td>
+  <td class=xl6614615>0.307</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>gaokao-geography</td>
+  <td class=xl6614615>199</td>
+  <td class=xl6614615>0.226</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>gaokao-history</td>
+  <td class=xl6614615>235</td>
+  <td class=xl6614615>0.289</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>gaokao-mathcloze</td>
+  <td class=xl6614615>118</td>
+  <td class=xl6614615>0.034</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>gaokao-mathqa</td>
+  <td class=xl6614615>351</td>
+  <td class=xl6614615>0.219</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>gaokao-physics</td>
+  <td class=xl6614615>200</td>
+  <td class=xl6614615>0.255</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td colspan=3 height=19 class=xl6414615 style='height:14.25pt'>Average =
+  0.234 ,<span style='mso-spacerun:yes'>&nbsp; </span>OpenCompass：0.233</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td rowspan=11 height=209 class=xl6414615 style='height:156.75pt'>中文</td>
+  <td class=xl6614615>gaokao-biology</td>
+  <td class=xl6614615>210</td>
+  <td class=xl6614615>0.305</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>gaokao-chemistry</td>
+  <td class=xl6614615>207</td>
+  <td class=xl6614615>0.266</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>gaokao-chinese</td>
+  <td class=xl6614615>246</td>
+  <td class=xl6614615>0.207</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>gaokao-geography</td>
+  <td class=xl6614615>199</td>
+  <td class=xl6614615>0.226</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>gaokao-history</td>
+  <td class=xl6614615>235</td>
+  <td class=xl6614615>0.289</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>gaokao-mathcloze</td>
+  <td class=xl6614615>118</td>
+  <td class=xl6614615>0.034</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>gaokao-mathqa</td>
+  <td class=xl6614615>351</td>
+  <td class=xl6614615>0.219</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>gaokao-physics</td>
+  <td class=xl6614615>200</td>
+  <td class=xl6614615>0.255</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>jec-qa-ca</td>
+  <td class=xl6614615>1000</td>
+  <td class=xl6614615>0.156</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>jec-qa-kd</td>
+  <td class=xl6614615>1000</td>
+  <td class=xl6614615>0.156</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>logiqa-zh</td>
+  <td class=xl6614615>651</td>
+  <td class=xl6614615>0.275</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6314615 style='height:14.25pt'></td>
+  <td colspan=3 class=xl6414615>Average = 0.217 ,<span
+  style='mso-spacerun:yes'>&nbsp; </span>OpenCompass：0.22</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td rowspan=10 height=190 class=xl6614615 style='height:142.5pt'>英文</td>
+  <td class=xl6614615>gaokao-english</td>
+  <td class=xl6614615>306</td>
+  <td class=xl6614615>0.307</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>logiqa-en</td>
+  <td class=xl6614615>651</td>
+  <td class=xl6614615>0.289</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>aqua-rat</td>
+  <td class=xl6614615>254</td>
+  <td class=xl6614615>0.201</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>lsat-ar</td>
+  <td class=xl6614615>230</td>
+  <td class=xl6614615>0.213</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>lsat-lr</td>
+  <td class=xl6614615>510</td>
+  <td class=xl6614615>0.212</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>lsat-rc</td>
+  <td class=xl6614615>269</td>
+  <td class=xl6614615>0.245</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>math</td>
+  <td class=xl6614615>1000</td>
+  <td class=xl6614615>0</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>sat-en</td>
+  <td class=xl6614615>206</td>
+  <td class=xl6614615>0.189</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td height=19 class=xl6614615 style='height:14.25pt'>sat-math</td>
+  <td class=xl6614615>220</td>
+  <td class=xl6614615>0.232</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td colspan=3 height=19 class=xl6414615 style='height:14.25pt'>Average =
+  0.221 ,<span style='mso-spacerun:yes'>&nbsp; </span>OpenCompass：0.187</td>
+ </tr>
+ <tr height=19 style='height:14.25pt'>
+  <td colspan=4 height=19 class=xl6414615 style='height:14.25pt'>Total：0.209<span
+  style='mso-spacerun:yes'>&nbsp; </span>OpenCompass：0.206</td>
+ </tr>
+ <![if supportMisalignedColumns]>
+ <tr height=0 style='display:none'>
+  <td width=72 style='width:54pt'></td>
+  <td width=72 style='width:54pt'></td>
+  <td width=72 style='width:54pt'></td>
+  <td width=252 style='width:189pt'></td>
+ </tr>
+ <![endif]>
+</table>
+</div>
+</body>
+
+#### Evaluation results and parameter configuration of Big-Bench-Hard
+Big-bench-hard dataset is a subset of big bench, which is a diverse evaluation suite that focuses on a suite of 23 challenging BIG-Bench tasks. These are the task for which prior language model evaluations did not outperform the average human-rater. This dataset covers multiple areas including text understanding, reasoning, logical reasoning, mathematical reasoning, and common sense reasoning.
+Except word_sorting, all datasets are multiple-choice questions. So we can set `TASK="bbh"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=32`. (`--max-new-tokens` can be set between 32-64). Compared to 33.5 points of LLaMa7b on [OpenCompass](https://opencompass.org.cn/dataset-detail/GSM8K), we got 33.4 points on the same model.
+
+<img src="sources/images/bbh.png" height="300px" width="450px"></div>
+
+#### Evaluation results and parameter configuration of CEval
+As [C-Eval](https://cevalbenchmark.com/) shows, C-Eval is a comprehensive Chinese evaluation suite for foundation models. It consists of 13948 multi-choice questions spanning 52 diverse disciplines and four difficulty levels, as shown below. You may explore our dataset examples at Explore, or check our paper for more details. The dataset contains validation and test data, however, only validation data has label for auto-evaluation. If 
+you want to evaluate on test data, you should email your results to [C-Eval](https://cevalbenchmark.com/). Here shows our results on validation data with LLaMa7b model.
+
+<img src="sources/images/ceval_result.png" height="750px" width="550px"></div>
