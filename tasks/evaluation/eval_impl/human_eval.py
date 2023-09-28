@@ -17,8 +17,8 @@ import json
 import os
 import re
 import subprocess
-import pandas as pd
 from typing import Iterable, Dict
+import pandas as pd
 from tasks.evaluation.eval_api.dataset_eval import DatasetEval
 from tasks.evaluation.eval_api.llm_chat import LlmChat
 from tasks.evaluation.eval_impl.template import CODE_TEST_LOG_DIR
@@ -87,7 +87,7 @@ class HumanEval(DatasetEval):
         """
         for file in os.listdir(test_dir):
             file_path = os.path.join(self.test_dir, file)
-            with open(file_path, "r") as fp:
+            with open(file_path) as fp:
                 for line in fp:
                     if any(not x.isspace() for x in line):
                         yield json.loads(line)
@@ -105,7 +105,7 @@ class HumanEval(DatasetEval):
                 answer = chat_result[0]
             try:
                 if rank == 0:
-                    answer = task['prompt'] + ' '+answer
+                    answer = task['prompt'] + ' ' + answer
                     logger.info('answer: ', answer)
                     test_file = extract_answer_code(answer, task)
                     result = subprocess.run(["python", test_file], capture_output=True, timeout=10)
