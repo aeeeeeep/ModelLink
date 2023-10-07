@@ -167,8 +167,8 @@ def pretrain(train_valid_test_dataset_provider,
         _initialize_optimized_pipeline()
 
     if args.deepspeed:
-        args.deepspeed_configuration = json.load(
-            open(args.deepspeed_config, 'r', encoding='utf-8'))
+        with open(args.deepspeed_config, 'r', encoding='utf-8') as f:
+            args.deepspeed_configuration = json.load(f)
         if "curriculum_learning" in args.deepspeed_configuration and \
                 "enabled" in args.deepspeed_configuration["curriculum_learning"]:
             args.curriculum_learning_legacy = args.deepspeed_configuration[ \

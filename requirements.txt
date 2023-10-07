@@ -14,3 +14,4 @@ sentencepiece
 datasets
 nltk
 protobuf
+megatron # megatron 可以去官方仓获取tag下的23.05版本

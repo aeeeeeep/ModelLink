@@ -180,6 +180,7 @@ conda create -n test python=3.7
 conda activate test
 
 # install torch and torch_npu
+# when use wget to aquire the dataset, user had better make sure the site is safe.
 pip install torch==1.11 -i https://pypi.tuna.tsinghua.edu.cn/simple
 wget https://gitee.com/ascend/pytorch/releases/download/v5.0.rc2-pytorch1.11.0/torch_npu-1.11.0.post1-cp37-cp37m-linux_aarch64.whl (ARM)
 or wget https://gitee.com/ascend/pytorch/releases/download/v5.0.rc2-pytorch1.11.0/torch_npu-1.11.0.post1-cp37-cp37m-linux_x86_64.whl (X86)

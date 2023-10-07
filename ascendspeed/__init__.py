@@ -3,9 +3,7 @@
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
+# You may obtain a copy of the License.
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,6 +12,7 @@
 # limitations under the License.
 import os
 import logging
+import sys
 
 import torch
 import deepspeed
@@ -35,6 +34,10 @@ from .package_info import (
     __package_name__,
     __version__,
 )
+
+if 'amp_C' in sys.modules:
+    del sys.modules['amp_C']
+sys.modules['amp_C'] = __import__('ascendspeed.amp_C')
 
 from .global_vars import get_args
 from .global_vars import get_current_global_batch_size

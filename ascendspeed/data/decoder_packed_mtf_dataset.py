@@ -13,7 +13,6 @@ from ascendspeed.data.blendable_dataset import BlendableDataset
 from ascendspeed.data.dataset_utils import get_datasets_weights_and_num_samples, get_split_by_range_, \
     get_train_valid_test_split_
 from ascendspeed.data.mtf_dataset import MTFDataset, get_packed_indexed_dataset
-from ascendspeed.data.indexed_dataset import make_dataset as make_indexed_dataset
 
 logger = logging.getLogger(__name__)
 

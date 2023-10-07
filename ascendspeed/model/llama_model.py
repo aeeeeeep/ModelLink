@@ -38,10 +38,8 @@ from ascendspeed import mpu
 from ascendspeed.core import tensor_parallel, parallel_state, utils
 from ascendspeed.enums import PositionEmbeddingType
 from ascendspeed.model.module import MegatronModule, MegatronModuleForCausalLM, float16_to_fp32, fp32_to_float16
-from ascendspeed.core.enums import AttnMaskType, LayerType, AttnType
-from ascendspeed.model.utils import get_linear_layer, init_method_normal, scaled_init_method_normal, \
-    attention_mask_func, \
-    openai_gelu, erf_gelu
+from ascendspeed.core.enums import AttnMaskType, AttnType
+from ascendspeed.model.utils import init_method_normal, scaled_init_method_normal, attention_mask_func
 from ascendspeed.mpu.mappings import scatter_to_sequence_parallel_region
 from ascendspeed.model.fused_softmax import NPUFusedScaleMaskSoftmax
 from ascendspeed.model.language_model import Pooler
