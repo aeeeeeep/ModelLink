@@ -36,11 +36,11 @@ BLOOM's architecture is very similar to GPT3 with a few added improvements as wi
 Here's a quick summary of training bloom:
 
 |              |                         |
-| :----------: | :---------------------: |
-|   Hardware   | 96 64GB Altas 910B NPUs |
+| :----------: |:-----------------------:|
+|   Hardware   | 96 64GB Altas 910 NPUs |
 |   Software   |       AscendSpeed       |
 | Architecture |     GPT3 w/ extras      |
-|   Dataset    |        Oscar-1GB        |
+|   Dataset    | Oscar-1GB / enwiki-100k |
 
 ### Datasets
 
@@ -50,9 +50,13 @@ Here's a quick summary of training bloom:
 
 1.Install AscendSpeed requirement environment.
 
-2.Download Oscar-1GB dataset:https://www.huggingface.co/bigscience/misc-test-data/resolve/main/stas/oscar-1GB.jsonl.xz
+2.Download Oscar-1GB/enwiki-100k dataset:
+https://www.huggingface.co/bigscience/misc-test-data/resolve/main/stas/oscar-1GB.jsonl.xz
+
+https://huggingface.co/datasets/teven/enwiki_100k
 
 3.Config Bloom-7B1 pre-training script : AscendSpeed/examples/bloom/pretrain_bloom_7b1.sh
+[pretrain_bloom_176b.sh](pretrain_bloom_176b.sh)
 
 ```bash
 # add HCCL_OP_BASE_FFTS_MODE_ENABLE
@@ -97,9 +101,12 @@ EOT
 ```
 
 4.Launch Bloom-7B1 pre-training script : AscendSpeed/examples/bloom/pretrain_bloom_7b1.sh
+[pretrain_bloom_176b.sh](pretrain_bloom_176b.sh)
 
 ```bash
 bash examples/bloom/pretrain_bloom_7b1.sh
+or
+bash examples/bloom/pretrain_bloom_176b.sh
 ```
 
 There is an hourly pulse checking script running that checks that the training is either running or scheduled.
@@ -123,7 +130,7 @@ The performance of the NPUs in **Ascend910 B1 64GB** and GPUs is **A100**:
 
 Notes: 
 
-- Bloom-7B1 model trained on oscar-1GB on a single machine with 8 NPUs
+- Bloom-7B1 model trained on oscar-1GB or enwiki-100k on a single machine with 8 NPUs
 
 Here's a hardware summary of pre-training Bloom-7B:
 
@@ -171,9 +178,10 @@ The relative error between NPU and GPU Loss is less than 0.02 throughout, as exp
 
 TODO：提供微调的方式，先加载权重，再微调脚本，跟预训练格式一样；后面需要提供task的验证结果（待开发）。
 
-## Inference
 
-We support AscendSpeed Inference for text generation with BLOOM 7B1.
+## Fine-tune
+
+We support AscendSpeed Fine-tune for BLOOM 7B1 and 176B.
 
 ### Model weights
 
@@ -192,31 +200,31 @@ python $SCRIPT_PATH \
     --deepspeed \
     --partition-layers 6,6,6,6,6,6,6,6,6,6,6,4
 ```
+For the remaining steps, refer to the Pre-Training chapter.
 
-Download the BLOOM model checkpoint from [here](TODO: XXXXX), make sure all chunks are downloaded completely, then use the following command to merge them into a single archive file and extract it:
+## Inference
 
-```bash
-cat bloom-7b1.tar.part_* > gbloom-7b1.tar
-tar xvf bloom-7b1.tar
-```
+We support AscendSpeed Inference for text generation with BLOOM 7B1 ann BLOOM 176B.
 
-Set `CHECKPOINT_PATH` in `/generate_bloom.sh` to the path of the extracted folder. Since the checkpoint file is large, it is recommended to use the SSD or RAM disk to reduce the checkpoint loading time. Since the checkpoint we distribute is in 8-way tensor parallel, a conversion scripts is also provided if you need to change the tensor parallel dimension.
+Use [convert_weights_from_gptmodelpipe_to_gptmodel.sh](../../tools/ckpt_convert/bloom/convert_weights_from_gptmodelpipe_to_gptmodel.sh), converting deep speed checkpoints to megatron.Convert the checkpoint of deepspeed to megtron.
 
 ```bash
-TODO: add convert_tp tools.
-
-python tools/convert_tp.py \
-    --input-folder <SRC_CKPT_PATH>  \
-    --output-folder <DST_CKPT_PATH> \
-    --target-tp <TARGET_TP>
+SCRIPT_PATH=./tools/ckpt_convert/bloom/convert_weights_from_gptmodelpipe_to_gptmodel_v2.py
+python $SCRIPT_PATH \
+    --input-model-dir ${INPUT_PATH} \
+    --output-model-dir ${OUTPUT_PATH} \
+    --tensor-model-parallel-size 8 \
+    --pipeline-model-parallel-size 1 \
+    --type 7B
 ```
-
 ### Script
 
 We generate text samples using the `generate_bloom` script. Inference different from pre-training, such as we need to Load pre training checkpoint and the length of the output samples:
 
 ```shell
 bash ./generate_bloom_7b1.sh
+or
+bash ./generate_176b_2nodes.sh
 ```
 
 Alternatively you can also use DeepSpeed from source:
@@ -240,6 +248,9 @@ Input: 问题：冬天，中国哪座城市最适合避寒？问题描述：能�
 
 Output: 问题: XXXX.
 </details>
+#### Example 4
+
+![bloom_generate.png](..%2F..%2Fsources%2Fimages%2Fbloom_generate.png)
 
 All the provided scripts are tested on 8 910B 64GB GPUs for BLOOM 7B1 (fp16). These scripts might not work for other models or a different number of NPUs.
 
