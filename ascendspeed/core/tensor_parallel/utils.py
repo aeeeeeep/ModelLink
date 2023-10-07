@@ -77,7 +77,7 @@ def gather_split_1d_tensor(tensor):
     gathered = torch.empty(
         numel_gathered, dtype=tensor.dtype, device=get_accelerator().current_device_name(), requires_grad=False
     )
-    # TODO: This API is experimental in pytorch (as of Feb 2022) and
+    # This API is experimental in pytorch (as of Feb 2022) and
     # this might break in future pytorch releases. We chose this API
     # as opposed to torch.distributed.all_gather for efficiency reasons.
     # This API calls directly NCCL all-gather versus the former does
@@ -86,6 +86,7 @@ def gather_split_1d_tensor(tensor):
         gathered, tensor, group=parallel_state.get_tensor_model_parallel_group()
     )
     return gathered
+
 
 class VocabUtility:
     """ Split the vocabulary into `world_size` chunks and return the first

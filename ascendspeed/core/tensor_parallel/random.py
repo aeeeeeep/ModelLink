@@ -3,9 +3,7 @@
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
+# You may obtain a copy of the License.
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +13,6 @@
 
 
 # Parts of the code here are adapted from PyTorch
-# repo: https://github.com/pytorch/pytorch
 
 import contextlib
 import deepspeed
@@ -36,6 +33,8 @@ from ascendspeed.core.tensor_parallel.utils import (
     split_tensor_into_1d_equal_chunks,
     gather_split_1d_tensor
 )
+from ascendspeed.error_utils import check_divisible
+from ascendspeed.error_utils import ensure_var_is_none
 
 # Default name for the model parallel rng tracker.
 _MODEL_PARALLEL_RNG_TRACKER_NAME = 'model-parallel-rng'
@@ -50,8 +49,8 @@ def init_checkpointed_activations_memory_buffer():
 
     per_layer = args.micro_batch_size * args.max_position_embeddings * \
                 args.hidden_size // args.tensor_model_parallel_size
-    assert args.num_layers % args.checkpoint_num_layers == 0, \
-        'number of layers is not divisible by checkpoint-num-layers'
+    check_divisible(args.num_layers, args.checkpoint_num_layers, 
+        error_info='{} % {}, number of layers is not divisible by checkpoint-num-layers')
     num_checkpointer_layers = args.num_layers // args.checkpoint_num_layers
     numel = per_layer * num_checkpointer_layers
     dtype = torch.half
@@ -59,8 +58,8 @@ def init_checkpointed_activations_memory_buffer():
         dtype = torch.float
 
     global _CHECKPOINTED_ACTIVATIONS_MEMORY_BUFFER
-    assert _CHECKPOINTED_ACTIVATIONS_MEMORY_BUFFER is None, \
-        'checkpointed activations memory buffer is already allocated.'
+    ensure_var_is_none(_CHECKPOINTED_ACTIVATIONS_MEMORY_BUFFER, 
+        error_message='checkpointed activations memory buffer is already allocated.')
     _CHECKPOINTED_ACTIVATIONS_MEMORY_BUFFER = allocate_mem_buff(
         'checkpointed activations', numel, dtype, track_usage=False)
 
@@ -127,7 +126,8 @@ class CudaRNGStatesTracker:
 
     def get_states(self):
         """Get rng states. Copy the dictionary so we have direct
-        pointers to the states, not just a pointer to the dictionary."""
+        pointers to the states, not just a pointer to the dictionary.
+        """
         states = {}
         for name in self.states_:
             states[name] = self.states_[name]
@@ -135,7 +135,8 @@ class CudaRNGStatesTracker:
 
     def set_states(self, states):
         """Set the rng states. For efficiency purposes, we do not check
-        the size of seed for compatibility."""
+        the size of seed for compatibility.
+        """
         self.states_ = states
 
     def add(self, name, seed):
@@ -307,7 +308,8 @@ class CheckpointFunction(torch.autograd.Function):
 
 def checkpoint(function, distribute_saved_activations, *args):
     """Checkpoint a model or part of the model.
-    This has been directly copied from torch.utils.checkpoint."""
+    This has been directly copied from torch.utils.checkpoint.
+    """
     if deepspeed.checkpointing.is_configured():
         return deepspeed.checkpointing.checkpoint(function, *args)
 

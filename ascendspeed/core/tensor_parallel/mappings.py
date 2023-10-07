@@ -15,17 +15,20 @@
 
 import torch
 
-from ascendspeed.core.parallel_state import get_tensor_model_parallel_group
-from ascendspeed.core.parallel_state import get_tensor_model_parallel_world_size
-from ascendspeed.core.parallel_state import get_tensor_model_parallel_rank
+from ascendspeed.core.parallel_state import (
+    get_tensor_model_parallel_group,
+    get_tensor_model_parallel_world_size,
+    get_tensor_model_parallel_rank
+)
 from ascendspeed.core.tensor_parallel.utils import split_tensor_along_last_dim
+from ascendspeed.error_utils import check_divisible
 
 
 def _reduce(input_):
     """All-reduce the the input tensor across model parallel group."""
 
     # Bypass the function if we are using only 1 GPU.
-    if get_tensor_model_parallel_world_size()==1:
+    if get_tensor_model_parallel_world_size() == 1:
         return input_
 
     # All-reduce.
@@ -40,7 +43,7 @@ def _split_along_last_dim(input_):
 
     world_size = get_tensor_model_parallel_world_size()
     # Bypass the function if we are using only 1 GPU.
-    if world_size==1:
+    if world_size == 1:
         return input_
 
     # Split along last dimension.
@@ -58,7 +61,7 @@ def _gather_along_last_dim(input_):
 
     world_size = get_tensor_model_parallel_world_size()
     # Bypass the function if we are using only 1 GPU.
-    if world_size==1:
+    if world_size == 1:
         return input_
 
     # Size and dimension.
@@ -73,6 +76,7 @@ def _gather_along_last_dim(input_):
     output = torch.cat(tensor_list, dim=last_dim).contiguous()
 
     return output
+
 
 def _gather_along_first_dim(input_):
     """Gather tensors and concatinate along the first dimension."""
@@ -92,6 +96,7 @@ def _gather_along_first_dim(input_):
 
     return output
 
+
 def _reduce_scatter_along_first_dim(input_):
     """Reduce-scatter the input tensor across model parallel group."""
     world_size = get_tensor_model_parallel_world_size()
@@ -100,8 +105,8 @@ def _reduce_scatter_along_first_dim(input_):
         return input_
 
     dim_size = list(input_.size())
-    assert dim_size[0] % world_size == 0, \
-        "First dimension of the tensor should be divisible by tensor parallel size"
+    check_divisible(dim_size[0], world_size, 
+        error_info="{} % {}, First dimension of the tensor should be divisible by tensor parallel size")
 
     dim_size[0] = dim_size[0] // world_size
 
@@ -111,6 +116,7 @@ def _reduce_scatter_along_first_dim(input_):
     torch.distributed._reduce_scatter_base(output, input_.contiguous(),
                                            group=get_tensor_model_parallel_group())
     return output
+
 
 def _split_along_first_dim(input_):
     """Split the tensor along its first dimension and keep the
@@ -123,15 +129,16 @@ def _split_along_first_dim(input_):
 
     # Split along first dimension.
     dim_size = input_.size()[0]
-    assert dim_size % world_size == 0, \
-        "First dimension of the tensor should be divisible by tensor parallel size"
+    check_divisible(dim_size, world_size, 
+        error_info="{} % {}, First dimension of the tensor should be divisible by tensor parallel size")
     local_dim_size = dim_size // world_size
     rank = get_tensor_model_parallel_rank()
     dim_offset = rank * local_dim_size
 
-    output = input_[dim_offset:dim_offset+local_dim_size].contiguous()
+    output = input_[dim_offset:dim_offset + local_dim_size].contiguous()
 
     return output
+
 
 class _ScatterToSequenceParallelRegion(torch.autograd.Function):
     """Split the input and keep only the corresponding chuck to the rank."""
@@ -275,11 +282,14 @@ def scatter_to_tensor_model_parallel_region(input_):
 def gather_from_sequence_parallel_region(input_, tensor_parallel_output_grad=True):
     return _GatherFromSequenceParallelRegion.apply(input_, tensor_parallel_output_grad)
 
+
 def gather_from_tensor_model_parallel_region(input_):
     return _GatherFromModelParallelRegion.apply(input_)
 
+
 def reduce_scatter_to_sequence_parallel_region(input_):
     return _ReduceScatterToSequenceParallelRegion.apply(input_)
+
 
 def scatter_to_sequence_parallel_region(input_):
     return _ScatterToSequenceParallelRegion.apply(input_)

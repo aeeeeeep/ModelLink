@@ -3,9 +3,7 @@
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
+# You may obtain a copy of the License.
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -71,8 +69,6 @@ except Exception:
     print('Can not find any torch_npu, ops setup failed')
 
 setuptools.setup(
-    package_data={'ascendspeed':['ascendspeed/data/Makefile']},
-    data_files=[('', ['ascendspeed/data/Makefile'])],
     name=__package_name__,
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see

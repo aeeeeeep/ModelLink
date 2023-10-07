@@ -3,9 +3,7 @@
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
+# You may obtain a copy of the License.
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -96,8 +94,9 @@ def generate_samples_input_from_file(model):
     assert args.sample_input_file is not None, \
         'sample input file is not provided.'
     if parallel_state.is_pipeline_first_stage() and parallel_state.get_tensor_model_parallel_rank() == 0:
-        with open(args.sample_input_file, "r") as fname:
-            all_raw_text = fname.readlines()
+        fname = open(args.sample_input_file, "r")
+        all_raw_text = fname.readlines()
+        fname.close()
         input_count = len(all_raw_text)
         input_pos = 0
         if args.sample_output_file is None:
