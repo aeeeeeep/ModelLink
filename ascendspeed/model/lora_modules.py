@@ -158,7 +158,7 @@ class LoraParallelLinear(ColumnParallelLinear, RowParallelLinear, LoraParalleLay
                 self.unmerge()
             result, bias = self.parallel_linear_class.forward(self, x)
         elif self.r[self.active_adapter] > 0 and not self.merged:
-            result_, bias = self.parallel_linear_class.forward(self, x)
+            result, bias = self.parallel_linear_class.forward(self, x)
 
             x = x.to(self.lora_A[self.active_adapter].weight.dtype)
 
@@ -175,7 +175,7 @@ class LoraParallelLinear(ColumnParallelLinear, RowParallelLinear, LoraParalleLay
                 lora_result = lora_result[0]
             lora_result = lora_result * scaling
 
-            result = result_ + lora_result
+            result = result + lora_result
         else:
             result, bias = self.parallel_linear_class.forward(self, x)
 
