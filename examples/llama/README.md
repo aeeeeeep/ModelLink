@@ -83,6 +83,7 @@ The performance of the NPUs in **Ascend910 B1 64GB** and GPUs is **A100**:
 | :------: | :-------: |  :--------------------------: |
 |   GPUs   | llama_65B |             260               |
 |   NPUs   | llama_65B |             234               |
+
 Notes: 
 
 - LLaMA-65B model is trained on a single machine with 8 NPUs
