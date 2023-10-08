@@ -79,11 +79,10 @@ time (ms)
 
 The performance of the NPUs in **Ascend910 B1 64GB** and GPUs is **A100**:
 
-|  Device  |   Model   | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
-| :------: | :-------: | :--------------: | :---------------------------: | :--------------------------: | :-----------------------: | :---------------------------------: |
-|   GPUs   | llama_65B |     50000        |             1.23              |           2540.23            |           19.44           |                5.68                 |
-|   NPUs   | llama_65B |     50000        |             1.26              |           2588.03            |           19.07           |                5.91                 |
-
+|  Device  |   Model   |  throughput rate (tokens/s/p) |
+| :------: | :-------: |  :--------------------------: |
+|   GPUs   | llama_65B |             260               |
+|   NPUs   | llama_65B |             234               |
 Notes: 
 
 - LLaMA-65B model is trained on a single machine with 8 NPUs
