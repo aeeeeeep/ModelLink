@@ -37,6 +37,8 @@ from ascendspeed.model import DistributedDataParallel as LocalDDP
 from ascendspeed.model.lora_utils import is_enable_lora, get_lora_state_dict, lora_custom_load_fn_for_deepspeed, \
     get_lora_model_classes, get_lora_state_dict_with_deepspeed, update_model_state_dict_with_megatron, \
     get_lora_load_fn_with_deepspeed, handle_lora_modules_to_save_key_with_megatron
+from ascendspeed.utils import WRITE_FILE_DEFAULT_FLAGS, WRITE_FILE_DEFAULT_MODES
+
 
 _CHECKPOINT_VERSION = None
 
@@ -220,7 +222,7 @@ def save_checkpoint_post_process(iteration):
     # And update the latest iteration
     if is_rank_0():
         tracker_filename = get_checkpoint_tracker_filename(args.save)
-        with open(tracker_filename, 'w') as f:
+        with os.fdopen(os.open(tracker_filename, WRITE_FILE_DEFAULT_FLAGS, WRITE_FILE_DEFAULT_MODES), 'w') as f:
             f.write(str(iteration))
 
     # Wait so everyone is done (not necessary)

@@ -15,6 +15,8 @@
 
 """General utilities."""
 
+import os
+import stat
 import sys
 
 import torch
@@ -33,6 +35,10 @@ from ascendspeed.model.module import param_is_not_shared
 from ascendspeed.mpu.layers import param_is_not_tensor_parallel_duplicate
 from ascendspeed import get_num_microbatches
 from deepspeed.accelerator import get_accelerator
+
+WRITE_FILE_DEFAULT_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+WRITE_FILE_DEFAULT_MODES = stat.S_IWUSR | stat.S_IRUSR
+
 
 def unwrap_model(model, module_instances=(torchDDP)):
     return_list = True
