@@ -26,6 +26,7 @@ SOFTWARE.
 
 -- End license text.
 
+Code adapted from https://github.com/DeepVoltaire/AutoAugment.
 
 This module implements the fixed AutoAugment data augmentation policy for ImageNet provided in
 Appendix A, Table 9 of reference [1]. It does not include any of the search code for augmentation
