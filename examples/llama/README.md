@@ -27,7 +27,7 @@ LLaMA model is from: [LLaMA: OPen and Efficient Foundation Language Models](http
 LLaMA's model performace is better than GPT3 with less parameters. The 65B LLaMA model is comparable to Google's Chinchilla-70B and Palm-540B.
 
 Here's a quick summary of training llama:
-
+|              |                         |
 | :----------: | :---------------------: |
 |   Hardware   | 96 64GB Altas 910B NPUs |
 |   Software   |       AscendSpeed       |
