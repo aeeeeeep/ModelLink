@@ -123,7 +123,7 @@ NPU vs GPU loss.
 
 The NPU runs smoothly, the resource usage is stable, no errors are reported in the middle of the process, the Loss is on a decreasing trend, and the convergence speed is as expected.
 
-![NPU-LOSS](../../sources/images/7b_lm_loss.png)
+![NPU-LOSS](../../sources/images/loss_chart.png)
 
 NPU vs GPU loss relative error.
 
