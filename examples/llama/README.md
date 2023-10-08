@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # LLaMA-65B
 
 This directory contains some of the scripts that were used to produce the results in the AscendSpeed. These scripts is to show the example how to run llama_65B in terminal.
