@@ -27,23 +27,20 @@ LLaMA model is from: [LLaMA: OPen and Efficient Foundation Language Models](http
 LLaMA's model performace is better than GPT3 with less parameters. The 65B LLaMA model is comparable to Google's Chinchilla-70B and Palm-540B.
 
 Here's a quick summary of training llama:
-
-|              |                         |
 | :----------: | :---------------------: |
 |   Hardware   | 96 64GB Altas 910B NPUs |
 |   Software   |       AscendSpeed       |
 | Architecture |     GPT3 w/ extras      |
-|   Dataset    |        Oscar-1GB        |
+|   Dataset    |       See datasets      |
 
 ### Datasets
-
-**OSCAR** or Open Super-large Crawled ALMAnaCH coRpus is a huge multilingual corpus obtained by language classification and filtering of the Common Crawl corpus using the goclassy architecture. The dataset used for training multilingual models such as BART incorporates 138 GB of text.The Oscar-1GB dataset was used for this Bloom-7B1 pre-training, and the data was processed into FastChat dialog format.
+The model was trained using the following source of data: CCNet[67%], C4[15%], GitHub[4.5%], Wikipedia[4.5%], Books[4.5%], ArXiv[2.5%], Stack Exchange[2%]. The Wikipedia and Books domains include data in the following languages: bg, ca, cs, da, de, en, es, fr, hr, it, nl, pl, pt, ro, ru, sl, sr, sv, uk. See the paper for more details about the training set and corresponding preprocessing.
 
 ### Script
 
 1.Install AscendSpeed requirement environment.
 
-2.Download Oscar-1GB dataset:https://www.huggingface.co/bigscience/misc-test-data/resolve/main/stas/oscar-1GB.jsonl.xz
+2.Download dataset:https://www.huggingface.co/decapoda-research/llama-30b-hf
 
 3.Config llama-65B pre-training script : AscendSpeed/examples/llama/pretrain_llama_65B_ptd_32p.sh
 
@@ -88,7 +85,7 @@ The performance of the NPUs in **Ascend910 B1 64GB** and GPUs is **A100**:
 
 Notes: 
 
-- LLaMA-65B model trained on oscar-1GB on a single machine with 8 NPUs
+- LLaMA-65B model is trained on a single machine with 8 NPUs
 
 Here's a hardware summary of pre-training llama_65B:
 
