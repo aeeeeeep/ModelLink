@@ -621,6 +621,72 @@ AscendSpeed:
 ```
 
 ## <span id="jump14"> Evaluation with Benchmarks </span>
+### Quick Show
+
+<table>
+  <thead>
+    <tr>
+      <th>Task</th>
+      <th>Subset</th>
+      <th>AscendSpeed+NPU</th>
+      <th>Reference</th>
+      <th>Benchmark</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <tr>
+      <td>Gsm8k</td>
+      <td>Test</td>
+      <td>0.102</td>
+      <td>0.103</td>
+      <td><a href="https://opencompass.org.cn/dataset-detail/GSM8K">0.100</a></td>
+    </tr>
+    <tr>
+      <td>C_Eval</td>
+      <td>Validation</td>
+      <td>0.408</td>
+      <td>0.404</td>
+      <td>/</td>
+    </tr>
+    <tr>
+      <td>BBH</td>
+      <td>Test</td>
+      <td>0.334</td>
+      <td>0.333</td>
+      <td><a href="https://opencompass.org.cn/dataset-detail/BBH">0.335</a></td>
+    </tr>
+    <tr>
+      <td>AGI_Eval</td>
+      <td>Test</td>
+      <td>0.116</td>
+      <td>0.115</td>
+      <td><a href="https://opencompass.org.cn/dataset-detail/AGIEval">0.112</a></td>
+    </tr>
+    <tr>
+      <td>HumanEval</td>
+      <td>Test</td>
+      <td>0.116</td>
+      <td>0.115</td>
+      <td><a href="https://opencompass.org.cn/dataset-detail/HumanEval">0.112</a></td>
+    </tr>
+    <tr>
+      <td>Bool_Q</td>
+      <td>test</td>
+      <td>0.742</td>
+      <td>0.742</td>
+      <td><a href="https://opencompass.org.cn/dataset-detail/BoolQ">0.754</a></td>
+    </tr>
+    <tr>
+      <td>MMLU</td>
+      <td>test</td>
+      <td>0.333</td>
+      <td>0.324</td>
+      <td><a href="https://browse.arxiv.org/pdf/2302.13971v1.pdf">0.351</a></td>
+    </tr>
+  </tbody>
+</table>
+
 ### Quick Start
 ```bash
 # Configure model path and vocab_file path
@@ -653,28 +719,8 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation.py   \
 # start evaluation
 bash tasks/evaluation/eval.sh
 ```
-### Configuration of models and datasets
-As the example shown below, we want to use llama7b model for BoolQ dataset evaluation, so the model path and vocab file should correspond to llama7b model. Model can be segmented with suitable segmentation parameters: the following example set tensor-model-parallel-size(tp) = 2 and pipeline-model-parallel-size(pp) = 4. Segmentation example shows as followed:
-```bash
-python convert_weights_from_huggingface.py \
-        --input-model-dir /home/w425040/models/llama-7b-hf \
-        --output-model-dir /home/w425040/models/llama-7b-tp2-pp4 \
-        --type 7B \
-        --tensor-model-parallel-size 2 \
-        --pipeline-model-parallel-size 4 
-```
-Then, configure dataset path and task.  Note: since the evaluation parameters of different datasets are not totally same, it is not recommended to evaluate two or more different datasets together. Evaluation parameters such as `--seq-length`, `--max-new-tokens` and `--max-position-embeddings` need to be adjusted to datasets. The recommended parameters for each dataset will be given in the following instruction.
 
-```bash
-# configure model path and vocab_file path
-CHECKPOINT=../models/llama-7b-tp2-pp4/
-VOCAB_FILE=../models/llama7b-hf/
-# configure task and data path
-DATA_PATH="dataset/boolq/test"
-TASK="boolq"
-# configure generation parameters 
-```
-### Configuration of evaluation parameters for different datasets
+### Task Introduction
 The most important evaluation parameters must be `--max-new-tokens`, which means the output length of model generation. For example, multiple-choice
 questions' output length is obviously shorter than coding tasks. Besides, this parameter largely influences the speed of model generation.
 ```bash
@@ -698,74 +744,59 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation.py   \
        --micro-batch-size 1  \
        --seed 42 | tee logs/train.log
 ```
-#### Evaluation results and parameter configuration of BoolQ 
+#### BoolQ 
+BoolQ is a question answering dataset for yes/no questions. Each question contains a triplet of (question, passage, answer), with the title of the page as optional additional context.
 The evaluation of the BoolQ data set is relatively simple, just configure `TASK="boolq"`, `--seq-length=512`, `--max-position-embeddings=512`, `--max-new-token=2`.
-
-<img src="sources/images/boolq_result_of_AscendSpeed.png" height="300px" width="800px"></div>
-
-For LLama7B, the evaluation result of AscendSpeed on NPU environment is 0.742. For comparison, the score in the paper [LLaMA: Open and Efficient Foundation Language Models](https://arxiv.org/abs/2302.13971) is 0.765. The zero-shot results usually affected by the given prompt, and a higher score can be obtained by a suitable prompt. 
+The zero-shot results usually affected by the given prompt, and a higher score can be obtained by a suitable prompt. 
 The prompt can be modified in `tasks/evaluation/evaluation.py`
 ```bash
 # Update new prompt by changing the template
 template = {instruction}
 ```
 
-#### Evaluation results and parameter configuration of MMLU 
+#### MMLU 
 Since MMLU is a multidisciplinary task and 5 shots are performed, the length of each subject question varies greatly. If you want to run 57 subjects at the same time, you need to set `TASK="mmlu"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=2`. (`--max-new-tokens` can be set to between 2-4).
 On many websites, the accuracy of the MMLU is evaluated according to disciplines. The 57 categories of single subjects belong to four main categories. Therefore, the statistics should be summarized according to the major categories of the subjects. The [website](https://github.com/hendrycks/test/blob/master/categories.py) gives the major categories of subjects for 57 categories of subjects.
 
-Compared to the benchmark accuracy 35.1 from the paper [LLaMA: Open and Efficient Foundation Language Models](https://arxiv.org/abs/2302.13971) shows above, the evaluation result of AscendSpeed on NPU environment is 0.332. As a result, the total accuracy difference is less than 0.02, so do the four main subjects.
 
-<table>
-  <thead>
-    <tr>
-      <th>MMLU Result 5 shots</th>
-      <th>STEM</th>
-      <th>Social Science</th>
-      <th>Other</th>
-      <th>Humanities</th>
-      <th>Total</th>
-      <th>Total of paper</th>
-    </tr>
-  </thead>
-
-  <tbody>
-    <tr>
-      <td>AscendSpeed + NPU</td>
-      <td>29.8</td>
-      <td>33.0</td>
-      <td>32.5</td>
-      <td>37.7</td>
-      <td>33.3</td>
-      <td>35.1</td>
-    </tr>
-  </tbody>
-</table>
-
-#### Evaluation results and parameter configuration of GSM8K 
+#### GSM8K 
 GSM8K is a dataset of 8.5K high quality linguistically diverse grade school math word problems created by human problem writers. The answer of each question is a specific number. Since few shots are performed,  the question length is relatively long in GSM8K, and the output answer contains a chain of thoughts, it is necessary to configure `TASK="gsm8k"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=128`. (`--max-new-tokens` can be set between 256-512).
-As the benchmark shows on [OpenCompass](https://opencompass.org.cn/dataset-detail/GSM8K), LLama7B model's evaluation gets only 10 points with pass@k(Generate k
-times and choose the best answer). The results of AscendSpeed on NPU environment varies between 8 and 10 points according to the number of shots we use.
 
-#### Evaluation results and parameter configuration of HumanEval 
+#### HumanEval 
 HumanEval dataset is a handcrafted set of 164 programming problems designed to challenge code generation models. The problems include a function signature, docstring, body, and several unit tests, all handwritten to ensure they're not included in the training set of code generation models. 
-We ues Chinese llama alpaca 13b for testing, and get 11.58 points compared to 11.8 points shown on [OpenCompass](https://opencompass.org.cn/dataset-detail/GSM8K) with the same model.
 Since the answer of HumanEval dataset contains long codes, it is necessary to configure `TASK="human_eval"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=1024`.
 
-<img src="sources/images/humaneval_result.png" height="200px" width="800px"></div>
+#### AGIEval
+AGIEval is a human-centric benchmark specifically designed to evaluate the general 
+abilities of foundation models in tasks pertinent to human cognition and problem-solving. This benchmark is derived from 20 official, public, and high-standard admission and qualification exams intended for general human test-takers, such as general college admission tests (e.g., Chinese College Entrance Exam (Gaokao) and American SAT), law school admission tests, math competitions, lawyer qualification tests, and national civil service exams.Since the length of answers to different type of questions varies, we have to configure `TASK="agieval"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=1024` to fit the longest answer. 
 
-#### Evaluation results and parameter configuration of AGIEval
-AGIEval is a human-centric benchmark specifically designed to evaluate the general abilities of foundation models in tasks pertinent to human cognition and problem-solving. Since the length of answers to different type of questions varies, we have to configure `TASK="agieval"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=1024` to fit the longest answer. The following shows the results of AscendSpeed.
-
-#### Evaluation results and parameter configuration of Big-Bench-Hard
+#### Big-Bench-Hard
 Big-bench-hard dataset is a subset of big bench, which is a diverse evaluation suite that focuses on a suite of 23 challenging BIG-Bench tasks. These are the task for which prior language model evaluations did not outperform the average human-rater. This dataset covers multiple areas including text understanding, reasoning, logical reasoning, mathematical reasoning, and common sense reasoning.
-Except word_sorting, all datasets are multiple-choice questions. So we can set `TASK="bbh"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=32`. (`--max-new-tokens` can be set between 32-64). Compared to 33.5 points of LLaMa7b on [OpenCompass](https://opencompass.org.cn/dataset-detail/GSM8K), we got 33.4 points on the same model.
+Except word_sorting, all datasets are multiple-choice questions. So we can set `TASK="bbh"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=32`. (`--max-new-tokens` can be set between 32-64).
 
-<img src="sources/images/bbh.png" height="300px" width="450px"></div>
-
-#### Evaluation results and parameter configuration of CEval
+#### CEval
 As [C-Eval](https://cevalbenchmark.com/) shows, C-Eval is a comprehensive Chinese evaluation suite for foundation models. It consists of 13948 multi-choice questions spanning 52 diverse disciplines and four difficulty levels, as shown below. You may explore our dataset examples at Explore, or check our paper for more details. The dataset contains validation and test data, however, only validation data has label for auto-evaluation. If 
-you want to evaluate on test data, you should email your results to [C-Eval](https://cevalbenchmark.com/). Here shows our results on validation data with LLaMa7b model.
+you want to evaluate on test data, you should email your results to [C-Eval](https://cevalbenchmark.com/). 
 
-<img src="sources/images/ceval_result.png" height="750px" width="550px"></div>
 
+### Configuration of models and datasets
+As the example shown below, we want to use llama7b model for BoolQ dataset evaluation, so the model path and vocab file should correspond to llama7b model. Model can be segmented with suitable segmentation parameters: the following example set tensor-model-parallel-size(tp) = 2 and pipeline-model-parallel-size(pp) = 4. Segmentation example shows as followed:
+```bash
+python convert_weights_from_huggingface.py \
+        --input-model-dir /home/w425040/models/llama-7b-hf \
+        --output-model-dir /home/w425040/models/llama-7b-tp2-pp4 \
+        --type 7B \
+        --tensor-model-parallel-size 2 \
+        --pipeline-model-parallel-size 4 
+```
+Then, configure dataset path and task.  Note: since the evaluation parameters of different datasets are not totally same, it is not recommended to evaluate two or more different datasets together. Evaluation parameters such as `--seq-length`, `--max-new-tokens` and `--max-position-embeddings` need to be adjusted to datasets. The recommended parameters for each dataset will be given in the following instruction.
+
+```bash
+# configure model path and vocab_file path
+CHECKPOINT=../models/llama-7b-tp2-pp4/
+VOCAB_FILE=../models/llama7b-hf/
+# configure task and data path
+DATA_PATH="dataset/boolq/test"
+TASK="boolq"
+# configure generation parameters 
+```
