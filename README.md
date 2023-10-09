@@ -120,7 +120,7 @@ The plan for more tasks, like RLHF and RM, is under way ...
       <td> <a href="examples/intern/pretrain_internlm_7b_zero.sh">Train</a> </td>
     </tr>
     <tr>
-      <td rowspan="4">LLaMA</td>
+      <td rowspan="5">LLaMA</td>
       <td>7B</td>
       <td>1x8</td>
       <td>FP16</td>
@@ -137,6 +137,20 @@ The plan for more tasks, like RLHF and RM, is under way ...
       <td> 1734 tokens/p/s </td>
       <td> <a href="sources/images/llama13b_loss.png">Loss</a> </td>
       <td> <a href="examples/llama/pretrain_llama_13B_zero_8p.sh">Train</a> </td>
+    </tr>
+    <tr>
+      <td>33B</td>
+      <td>376T 1x8</td>
+      <td>PP4 + TP4 + SP + ZeRO + Recomputation</td>
+      <td>FP16</td>
+      <td> False </td>
+      <td> 621 tokens/p/s </td>
+      <td> 520 tokens/p/s </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> 
+        <a href="./sources/images/llama/llama33B_shape_layer8.png">Loss</a>  
+      </td>
     </tr>
     <tr>
       <td rowspan="2">65B</td>
