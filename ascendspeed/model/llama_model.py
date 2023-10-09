@@ -761,6 +761,8 @@ class LlamaParallelTransformer(MegatronModule):
         # Store activation checkpoiting flag.
         self.checkpoint_activations = args.checkpoint_activations
         self.checkpoint_num_layers = args.checkpoint_num_layers
+        self.checkpoint_policy = args.checkpoint_policy
+        self.checkpoint_block_layer = args.checkpoint_block_layer
 
         # Number of layers.
         assert args.num_layers % parallel_state.get_pipeline_model_parallel_world_size() == 0, \
@@ -844,6 +846,30 @@ class LlamaParallelTransformer(MegatronModule):
 
         return hidden_states
 
+    def _checkpointed_forward_block(self, hidden_states, attention_mask):
+        """Forward method with activation checkpointing."""
+
+        def custom(start, end):
+            def custom_forward(*inputs):
+                x_ = inputs[0]
+                attention_mask = inputs[1]
+                for index in range(start, end):
+                    layer = self._get_layer(index)
+                    x_ = layer(x_, attention_mask=attention_mask)
+                return x_
+
+            return custom_forward
+
+        # Make sure memory is freed.
+        for idx in range(self.num_layers):
+            if idx < self.checkpoint_block_layer:
+                hidden_states = mpu.checkpoint(
+                    custom(idx, idx + 1),
+                    hidden_states, attention_mask)
+            else:
+                hidden_states = custom(idx, idx + 1)(hidden_states, attention_mask)
+        return hidden_states
+
     def set_input_tensor(self, input_tensor):
         """Set input tensor to be used instead of forward()'s input.
 
@@ -883,8 +909,10 @@ class LlamaParallelTransformer(MegatronModule):
                 # See set_input_tensor()
                 hidden_states = self.input_tensor
 
-        if self.checkpoint_activations:
+        if self.checkpoint_activations and self.checkpoint_policy == 'full':
             hidden_states = self._checkpointed_forward(hidden_states, attention_mask)
+        elif self.checkpoint_activations and self.checkpoint_policy == 'block':
+            hidden_states = self._checkpointed_forward_block(hidden_states, attention_mask)
         else:
             if get_key_value:
                 presents = []
