@@ -127,7 +127,7 @@ CHECKPOINT_PATH=./ckpt
 6. Launch Baichuan-7B  pre-training script :examples/baichuan/pretrain_baichuan_zero_7B.sh 
 
 ```shell
-bash examples/baichuan/pretrain_baichuan_zero_7B.sh 
+  bash examples/baichuan/pretrain_baichuan_zero_7B.sh 
 ```
 
 
