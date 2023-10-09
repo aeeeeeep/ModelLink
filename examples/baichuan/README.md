@@ -20,25 +20,13 @@
 
 ## Training
 
-Here's a hardware summary of pre-training Baichuan-7B:
+Here's a quick summary of training Baichuan-7B:
 
-| Hardware |                      Value                      |
-| :------: | :---------------------------------------------: |
-|   NPU    |               8 x Ascend NPUs                   |
-
-Here's a software summary of pre-training Baichuan-7B:
-
-
-|         Software          |                 Version                 |link  |
-| :-----------------------: | :-------------------------------------: | :---:|
-|          Python           |                  3.7.16                 |-|
-|          driver           |               23.0.RC3.B050             |[link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159045?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743)|
-|         firmware          |              7.0.t8.0.b214              |[link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159045?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743)|
-|           CANN            |Ascend-cann-toolkit-7.0.T8-linux    |[link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/261204647?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)|
-| binary arithmetic package |   Ascend-cann-kernels-910b_7.0.T8_linux |[link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/261204647?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)|
-|           torch           |                 1.11.0                  |-|
-|         torch_npu         |           1.11.0.post4-20230915         |[link](https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/Daily/v1.11.0/20230915.2/pytorch_v1.11.0_py37.tar.gz)|
-
+|          |                                               |
+| -------- | --------------------------------------------- |
+| Hardware | 1x8 Ascend NPUs                          |
+| Software | AscendSpeed                                   |
+| Dataset  | train-00000-of-00001-a09b74b3ef9c3b56.parquet |
 
 
 ### Script
@@ -121,13 +109,12 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # modify script orign dataset path according to your own dataset path
 TOKENIZER_PATH=./tokenizer/  #tokenizer path
 DATA_PATH=./dataset_baichuan/alpaca_text_document  #processed dataset
-CHECKPOINT_PATH=./ckpt
 ```
 
 6. Launch Baichuan-7B  pre-training script :examples/baichuan/pretrain_baichuan_zero_7B.sh 
 
 ```shell
-  bash examples/baichuan/pretrain_baichuan_zero_7B.sh 
+bash examples/baichuan/pretrain_baichuan_zero_7B.sh 
 ```
 
 
@@ -147,13 +134,13 @@ The performance of Baichuan-7B in **Ascend NPU** and **Reference**:
 
 #### Accuracy of the loss
 
-NPU vs Reference loss.
+NPU vs GPU loss.
 
 The NPU runs smoothly, the resource usage is stable, no errors are reported in the middle of the process, the Loss is on a decreasing trend, and the convergence speed is as expected. The relative error of the average loss is 0.01093, less than 2%, the maximum relative error is 0.1243, and the maximum absolute error is 0.4859. The precision meets the requirements.
 
 ![NPU-LOSS](./images/7B_loss_compare.png)
 
-NPU vs Reference loss relative error.
+NPU vs GPU loss relative error.
 
 ![NPU-Relative-Error](./images/7B_relative_error.png)
 
@@ -162,27 +149,18 @@ NPU vs Reference loss relative error.
 # Baichuan-13B
 
 ## Training
+Here's a quick summary of training baichuan-13B:
 
-Here's a hardware summary of pre-training Baichuan-13B:
-
-| Hardware |                      Value                      |
-| :------: | :---------------------------------------------: |
-|   CPU    | 4xKunPeng920@3.0GHz，64 Core Pre Socket 256CPUS |
-|   RAM    |                  32x32 GB DDR4                  |
-|   NPU    |               8 x Ascend910B1 64G               |
-
-Here's a software summary of pre-training Baichuan-13B:
+|          |                          |
+| :------: | :----------------------: |
+| Hardware |   1x8 Ascend NPUs   |
+| Software |       AscendSpeed        |
+| Dataset  | alpaca-data-conversation |
 
 
-|         Software          |                 Version                 |link  |
-| :-----------------------: | :-------------------------------------: | :---:|
-|          Python           |                  3.7.16                 |-|
-|          driver           |               23.0.RC3.B050             |[link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159045?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743)|
-|         firmware          |              7.0.t8.0.b214              |[link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159045?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743)|
-|           CANN            |Ascend-cann-toolkit-7.0.T8-linux    |[link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/261204647?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)|
-| binary arithmetic package |   Ascend-cann-kernels-910b_7.0.T8_linux |[link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/261204647?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)|
-|           torch           |                 1.11.0                  |[link](https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/Daily/v1.11.0/20230915.2/pytorch_v1.11.0_py37.tar.gz)|
-|         torch_npu         |           1.11.0.post4-20230915         |[link](https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/Daily/v1.11.0/20230915.2/pytorch_v1.11.0_py37.tar.gz)|
+
+
+
 
 
 ### Script
@@ -258,6 +236,7 @@ Download the Baichuan-13B datasets from [here](https://huggingface.co/datasets/t
 
 ```shell
   mkdir dataset_baichuan
+  mkdir model_save
   cd ./dataset_baichuan
   wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
   cd ..
@@ -273,8 +252,7 @@ python ./tools/preprocess_data.py \
     --output-prefix ./dataset_baichuan/alpaca \
     --workers 4 \
     --log-interval 1000 \
-    --tokenizer-type PretrainedFromHF
-
+    --tokenizer-type PretrainedFromHF 
 ```
 
 
