@@ -18,6 +18,7 @@
 import argparse
 import json
 import os
+
 import logging
 import torch
 
@@ -33,6 +34,7 @@ from ascendspeed.error_utils import check_divisible
 from ascendspeed.data_classes import GenAscendWeightsAgaConfig, SaveAscendspeedModelConfig
 logging.basicConfig(level=logging.NOTSET)
 
+
 def get_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--input-model-dir", type=str, default="./input_model_dir", help="llama native model dir")
@@ -45,6 +47,7 @@ def get_args():
     parser.add_argument("--added-token-num", type=int, default=0, help="the number of added tokens")
     parser.add_argument("--type", type=str, choices=["7B", "13B", "30B", "65B"], default="7B")
     parser.add_argument("--pse", type=bool, default=False)
+
     return parser.parse_args()
 
 
@@ -120,8 +123,6 @@ def generate_ascendspeed_weights_again(config):
                     qw = row_split(get_weight_from_name(f"model.layers.{ori_i}.self_attn.q_proj.weight"), tp_size, tp_rank)
                     kw = row_split(get_weight_from_name(f"model.layers.{ori_i}.self_attn.k_proj.weight"), tp_size, tp_rank)
                     vw = row_split(get_weight_from_name(f"model.layers.{ori_i}.self_attn.v_proj.weight"), tp_size, tp_rank)
-
-   
                 permute_w = permute_qkv_weight(torch.cat([qw, kw, vw], dim=0), n_heads, hidden_size, tp_size)
                 rank_model[f"language_model.layers.{pp_i}.attention.query_key_value.weight"] = permute_w
 
