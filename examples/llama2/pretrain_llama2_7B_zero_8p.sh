@@ -102,4 +102,5 @@ deepspeed pretrain_llama.py \
        --adam-eps 1.0e-5 \
        --initial-loss-scale 4096.0 \
        $ds_args \
-       --fp16 | tee logs/llama2/NPU_llama2_7b_shape_fp16_layer32_8p_pretrain.out
+       --fp16 | tee logs/NPU_llama2_7b_shape_fp16_layer32_8p_pretrain.out
+

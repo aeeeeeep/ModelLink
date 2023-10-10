@@ -397,29 +397,19 @@ def load_checkpoint(model, optimizer, lr_scheduler, load_arg='load', strict=True
         custom_load_fn, load_dir = get_custom_load_fn(model=model[0], load_dir=load_dir, lora_load_dir=lora_load_dir)
         load_zero_optim = sum(['zero' in file for file in os.listdir(load_dir)]) > 0
         release = not load_zero_optim
-        try:
-	    loaded_dir, state_dict = model[0].load_checkpoint(
-                load_dir,
-	        load_module_strict=strict,
-                load_module_only=not load_zero_optim,
-                load_optimizer_states=load_zero_optim,
-                load_lr_scheduler_states=load_zero_optim,
-                custom_load_fn=custom_load_fn
-            )
-            if loaded_dir is None:
-                print_rank_0(f"WARNING: could not find the metadata file {load_dir}")
-                print_rank_0(f" will not load any checkpoints and will start from random")
-                return 0
-            checkpoint_name = loaded_dir  # 开启lora时主要参数会从lora_load里读取，所以最后打印时用checkpoint_name传递
-
-	except FileNotFoundError or KeyError:
-	    if os.path.isdir(os.path.join(load_dir, "release")):
-                for file in os.listdir(os.path.join(load_dir, "release")):
-                    if file.startswith("mp_rank_") and file.endswith("_model_states.pt"):
-                        checkpoint_name = os.path.join(load_dir, file)
-                        state_dict = torch.load(checkpoint_name, map_location="cpu")
-                        model[0].load_state_dict(state_dict, strict=False)
-                        break
+        loaded_dir, state_dict = model[0].load_checkpoint(
+            load_dir,
+            load_module_strict=strict,
+            load_module_only=not load_zero_optim,
+            load_optimizer_states=load_zero_optim,
+            load_lr_scheduler_states=load_zero_optim,
+            custom_load_fn=custom_load_fn
+        )
+        if loaded_dir is None:
+            print_rank_0(f"WARNING: could not find the metadata file {load_dir}")
+            print_rank_0(f" will not load any checkpoints and will start from random")
+            return 0
+        checkpoint_name = loaded_dir  # 开启lora时主要参数会从lora_load里读取，所以最后打印时用checkpoint_name传递
     else:
         unwrap_model_classes = (torchDDP, LocalDDP)
         if is_enable_lora():
