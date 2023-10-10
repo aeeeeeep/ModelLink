@@ -1,6 +1,6 @@
 import itertools
 import os
-import pickle
+import json
 import shutil
 
 import numpy as np
@@ -52,7 +52,7 @@ class OpenRetreivalDataStore(object):
 
         if parallel_state.is_unitialized() or parallel_state.get_data_parallel_rank() == 0:
             print("\n> Unpickling BlockData", flush=True)
-        state_dict = pickle.load(open(self.embedding_path, 'rb'))
+        state_dict = json.load(open(self.embedding_path, 'r'))
         if parallel_state.is_unitialized() or parallel_state.get_data_parallel_rank() == 0:
             print(">> Finished unpickling BlockData\n", flush=True)
 
@@ -79,9 +79,9 @@ class OpenRetreivalDataStore(object):
             os.makedirs(self.temp_dir_name, exist_ok=True)
 
         # save the data for each shard
-        with open('{}/{}.pkl'.format(self.temp_dir_name, self.rank), 'wb') \
+        with open('{}/{}.pkl'.format(self.temp_dir_name, self.rank), 'w') \
             as writer:
-            pickle.dump(self.state(), writer)
+            json.dump(self.state(), writer)
 
     def merge_shards_and_save(self):
         #Combine all the shards made using save_shard
@@ -95,7 +95,7 @@ class OpenRetreivalDataStore(object):
                 continue
 
             with open('{}/{}'.format(self.temp_dir_name, fname), 'rb') as f:
-                data = pickle.load(f)
+                data = json.load(f)
                 old_size = len(self.embed_data)
                 shard_size = len(data['embed_data'])
 
@@ -107,8 +107,8 @@ class OpenRetreivalDataStore(object):
         assert seen_own_shard
 
         # save the consolidated shards and remove temporary directory
-        with open(self.embedding_path, 'wb') as final_file:
-            pickle.dump(self.state(), final_file)
+        with open(self.embedding_path, 'w') as final_file:
+            json.dump(self.state(), final_file)
         shutil.rmtree(self.temp_dir_name, ignore_errors=True)
 
         print("Finished merging {} shards for a total of {} embeds".format(
