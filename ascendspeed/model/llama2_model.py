@@ -89,10 +89,14 @@ class RMSNorm(torch.nn.Module):  # for cpu
         setattr(self.weight, 'sequence_parallel', sequence_parallel)
 
     def forward(self, hidden_states):
-        variance = hidden_states.to(torch.float32).pow(2).mean(-1, keepdim=True)
-        hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon).half()
+        if self.weight.dtype == torch.float16:
+            hidden_states = hidden_states.float()
+        variance = hidden_states.pow(2).mean(-1, keepdim=True)
+        variance = torch.rsqrt(variance + self.variance_epsilon)
+        if self.weight.dtype == torch.float16:
+            variance = variance.half()
+        hidden_states = hidden_states * variance
         hidden_states = self.weight * hidden_states
-
         return hidden_states
 
 
@@ -314,18 +318,30 @@ class Llama2ParallelAttention(MegatronModule):
 
         # Per attention head and per partition values.
         world_size = parallel_state.get_tensor_model_parallel_world_size()
-        self.hidden_size_per_partition = utils.divide(projection_size,
-                                                    world_size)
+        self.hidden_size_per_partition = utils.divide(
+            projection_size, world_size)
         self.hidden_size_per_attention_head = utils.divide(
             projection_size, args.num_attention_heads)
         self.num_attention_heads_per_partition = utils.divide(
             args.num_attention_heads, world_size)
 
+        self.group_query_attention = args.group_query_attention
+        self.num_query_groups = args.num_query_groups
+
+        if self.group_query_attention:
+            assert self.num_attention_heads % self.num_query_groups == 0
+            assert args.num_query_groups % world_size == 0
+            self.num_query_groups_per_partition = utils.divide(
+                args.num_query_groups, world_size)
+            kv_projection_size = args.kv_channels * args.num_query_groups
+        else:
+            kv_projection_size = args.kv_channels * args.num_attention_heads
+
         # Strided linear layer.
         if attention_type == AttnType.self_attn:
             self.query_key_value = mpu.ColumnParallelLinear(
                 args.hidden_size,
-                3 * projection_size,
+                projection_size + kv_projection_size * 2,
                 bias=False,
                 gather_output=False,
                 init_method=self.init_method,
@@ -342,7 +358,8 @@ class Llama2ParallelAttention(MegatronModule):
             (1 / self.norm_factor))
 
         ## Rotary Position Embedding
-        self.rotary_emb = RotaryEmbedding(self.hidden_size_per_attention_head)
+        self.rotary_emb = RotaryEmbedding(self.hidden_size_per_attention_head,
+                                          args.max_position_embeddings)
 
         # Output.
         self.dense = mpu.RowParallelLinear(
@@ -371,15 +388,34 @@ class Llama2ParallelAttention(MegatronModule):
             # Attention heads [sq, b, h] --> [sq, b, (np * 3 * hn)]
             mixed_x_layer, _ = self.query_key_value(hidden_states)
 
-            new_tensor_shape = mixed_x_layer.size()[:-1] + \
-                               (self.num_attention_heads_per_partition,
-                                3 * self.hidden_size_per_attention_head)
-            mixed_x_layer = mixed_x_layer.view(*new_tensor_shape)
+            if self.group_query_attention:
+                q_len, bsz = mixed_x_layer.size()[:2]
+                mixed_x_layer = mixed_x_layer.view(
+                    q_len, bsz,
+                    self.num_attention_heads_per_partition + self.num_query_groups_per_partition * 2,
+                    self.hidden_size_per_attention_head)
+                query_layer, kv_layer = mixed_x_layer.split(
+                    [self.num_attention_heads_per_partition,
+                     self.num_query_groups_per_partition * 2],
+                    dim=2)
+                kv_layer = kv_layer.unsqueeze(3).expand(
+                    q_len, bsz, 2 * self.num_query_groups_per_partition,
+                    self.num_attention_heads_per_partition // self.num_query_groups_per_partition,
+                    self.hidden_size_per_attention_head).reshape(
+                    q_len, bsz, 2 * self.num_query_groups_per_partition,
+                    self.hidden_size_per_attention_head)
+                key_layer, value_layer = torch.split(
+                    kv_layer, self.num_attention_heads_per_partition, dim=2)
+            else:
+                new_tensor_shape = mixed_x_layer.size()[:-1] + \
+                                   (self.num_attention_heads_per_partition,
+                                    3 * self.hidden_size_per_attention_head)
+                mixed_x_layer = mixed_x_layer.view(*new_tensor_shape)
 
-            # [sq, b, 3 * h] --> 3 [sq, b, h]
-            (query_layer,
-             key_layer,
-             value_layer) = utils.split_tensor_along_last_dim(mixed_x_layer, 3)
+                # [sq, b, 3 * h] --> 3 [sq, b, h]
+                (query_layer,
+                 key_layer,
+                 value_layer) = utils.split_tensor_along_last_dim(mixed_x_layer, 3)
 
         # ==================================
         # Rotary Position Embedding
