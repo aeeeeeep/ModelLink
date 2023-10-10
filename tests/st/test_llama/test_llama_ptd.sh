@@ -54,4 +54,5 @@ python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --eval-interval 1000 \
        --eval-iters 10 \
        --sequence-parallel \
-       --fp16
+       --fp16 \
+       --lora-target-modules query_key_value dense gate_proj up_proj down_proj
