@@ -5,16 +5,16 @@ AscendSpeed provides end-to-end test scripts for large language models on [Ascen
 ## Why AscendSpeed? 
 
 ---
-### Pretrained Models
+### Prepared Models
 Currently, the pre-training of the following models has been supported: 
 
-* <a href="https://github.com/baichuan-inc/Baichuan-7B" style="color:green">Baichuan</a>-7B
+* <a href="https://github.com/baichuan-inc" style="color:green">Baichuan</a>-[7B/13B](examples/baichuan/README.md)
 * <a href="https://arxiv.org/pdf/2108.12409.pdf" style="color:green">Bloom</a>-[7B1/176B](examples/bloom/README.md)
 * <a href="https://internlm.intern-ai.org.cn/" style="color:green">InternLM</a>-7B
 * <a href="https://huggingface.co/docs/transformers/main/model_doc/llama" style="color:green">LLaMA</a>-7B/13B/65B
 * <a href="https://huggingface.co/docs/transformers/main/model_doc/llama2" style="color:green">LLaMA2</a>-7B
 
-Baichuan-13B, LLaMA-33B, LLaMA2-13B/70B, Aquila-7B are coming soon ...
+LLaMA-33B, LLaMA2-13B/70B, Aquila-7B are coming soon ...
 
 ### Acceleration Features
 Currently, the following acceleration features for LLMs have been supported:
@@ -45,7 +45,6 @@ Currently, the following downstream tasks have been supported:
 
 The plan for more tasks, like RLHF and RM, is under way ...
 
-
 ## Quick Start For Pretraining
 
 ---
@@ -66,14 +65,23 @@ The plan for more tasks, like RLHF and RM, is under way ...
   </thead>
   <tbody>
     <tr>
-      <td>Baichaun</td>
+      <td rowspan="2">Baichaun</td>
       <td>7B</td>
       <td> 1x8</td>
       <td> FP16 </td>
-      <td> 1790 tokens/p/s </td>
-      <td> 2039 tokens/p/s </td>
-      <td> <a href="sources/images/baichuan7b_loss.png">Loss</a> </td>
+      <td> 1914 tokens/p/s </td>
+      <td> 2068 tokens/p/s </td>
+      <td> <a href="examples/baichuan/images/7B_loss_compare.png">Loss</a> </td>
       <td> <a href="examples/baichuan/pretrain_baichuan_zero_7B.sh">Train</a> </td>
+    </tr>
+    <tr>
+      <td>13B</td>
+      <td> 1x8</td>
+      <td> FP16 </td>
+      <td> 1024 tokens/p/s </td>
+      <td> 824 tokens/p/s </td>
+      <td> <a href="examples/baichuan/images/13B_loss_compare.png">Loss</a> </td>
+      <td> <a href="examples/baichuan/pretrain_baichuan_ptd_13B.sh">Train</a> </td>
     </tr>
     <tr>
       <td rowspan="3"><a href="examples/bloom/README.md">Bloom</a></td>
@@ -116,19 +124,19 @@ The plan for more tasks, like RLHF and RM, is under way ...
       <td>7B</td>
       <td>1x8</td>
       <td>FP16</td>
-      <td> -- </td>
-      <td> -- </td>
-      <td> -- </td>
-      <td> -- </td>
+      <td> 2862 tokens/p/s </td>
+      <td> 2859 tokens/p/s </td>
+      <td> <a href="sources/images/llama7b_loss.png">Loss</a> </td>
+      <td> <a href="examples/llama/pretrain_llama_7B_zero_8p.sh">Train</a> </td>
     </tr>
     <tr>
       <td>13B</td>
       <td>1x8</td>
       <td>FP16</td>
-      <td> -- </td>
-      <td> -- </td>
-      <td> -- </td>
-      <td> -- </td>
+      <td> 1800 tokens/p/s </td>
+      <td> 1734 tokens/p/s </td>
+      <td> <a href="sources/images/llama13b_loss.png">Loss</a> </td>
+      <td> <a href="examples/llama/pretrain_llama_13B_zero_8p.sh">Train</a> </td>
     </tr>
     <tr>
       <td rowspan="2">65B</td>
@@ -314,7 +322,7 @@ For llama and other LLMs without bias in FFN, the linear transformation in FFN c
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
-      <td  rowspan="8"> -- </td>
+      <td> -- </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
@@ -322,9 +330,11 @@ For llama and other LLMs without bias in FFN, the linear transformation in FFN c
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
+      <td> -- </td>
     </tr>
     <tr>
       <td> 176B </td>
+      <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
@@ -335,29 +345,41 @@ For llama and other LLMs without bias in FFN, the linear transformation in FFN c
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
+      <td> -- </td>
     </tr>
     <tr>
-      <td rowspan="3">LLaMA</td>
+      <td rowspan="4">LLaMA</td>
       <td>7B</td>
+      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
       <td> -- </td>
       <td> -- </td>
-      <td> -- </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>13B</td>
+      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
       <td> -- </td>
       <td> -- </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+    </tr>
+    <tr>
+      <td>33B</td>
+      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
       <td> -- </td>
+      <td> -- </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td > 65B </td>
       <td > -- </td>
       <td> -- </td>
       <td> -- </td>
+      <td> -- </td>
     </tr>
     <tr>
       <td>LLaMA2</td>
       <td>7B</td>
+      <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
@@ -738,4 +760,25 @@ GSM8K is a dataset of 8.5K high quality linguistically diverse grade school math
 As the benchmark shows on [OpenCompass](https://opencompass.org.cn/dataset-detail/GSM8K), LLama7B model's evaluation gets only 10 points with pass@k(Generate k
 times and choose the best answer). The results of AscendSpeed on NPU environment varies between 8 and 10 points according to the number of shots we use.
 
+#### Evaluation results and parameter configuration of HumanEval 
+HumanEval dataset is a handcrafted set of 164 programming problems designed to challenge code generation models. The problems include a function signature, docstring, body, and several unit tests, all handwritten to ensure they're not included in the training set of code generation models. 
+We ues Chinese llama alpaca 13b for testing, and get 11.58 points compared to 11.8 points shown on [OpenCompass](https://opencompass.org.cn/dataset-detail/GSM8K) with the same model.
+Since the answer of HumanEval dataset contains long codes, it is necessary to configure `TASK="human_eval"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=1024`.
+
+<img src="sources/images/humaneval_result.png" height="200px" width="800px"></div>
+
+#### Evaluation results and parameter configuration of AGIEval
+AGIEval is a human-centric benchmark specifically designed to evaluate the general abilities of foundation models in tasks pertinent to human cognition and problem-solving. Since the length of answers to different type of questions varies, we have to configure `TASK="agieval"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=1024` to fit the longest answer. The following shows the results of AscendSpeed.
+
+#### Evaluation results and parameter configuration of Big-Bench-Hard
+Big-bench-hard dataset is a subset of big bench, which is a diverse evaluation suite that focuses on a suite of 23 challenging BIG-Bench tasks. These are the task for which prior language model evaluations did not outperform the average human-rater. This dataset covers multiple areas including text understanding, reasoning, logical reasoning, mathematical reasoning, and common sense reasoning.
+Except word_sorting, all datasets are multiple-choice questions. So we can set `TASK="bbh"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=32`. (`--max-new-tokens` can be set between 32-64). Compared to 33.5 points of LLaMa7b on [OpenCompass](https://opencompass.org.cn/dataset-detail/GSM8K), we got 33.4 points on the same model.
+
+<img src="sources/images/bbh.png" height="300px" width="450px"></div>
+
+#### Evaluation results and parameter configuration of CEval
+As [C-Eval](https://cevalbenchmark.com/) shows, C-Eval is a comprehensive Chinese evaluation suite for foundation models. It consists of 13948 multi-choice questions spanning 52 diverse disciplines and four difficulty levels, as shown below. You may explore our dataset examples at Explore, or check our paper for more details. The dataset contains validation and test data, however, only validation data has label for auto-evaluation. If 
+you want to evaluate on test data, you should email your results to [C-Eval](https://cevalbenchmark.com/). Here shows our results on validation data with LLaMa7b model.
+
+<img src="sources/images/ceval_result.png" height="750px" width="550px"></div>
 
