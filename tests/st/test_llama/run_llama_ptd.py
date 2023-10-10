@@ -27,7 +27,6 @@ import deepspeed_npu
 from wrapt_timeout_decorator import timeout
 
 from ascendspeed import get_args
-from ascendspeed import print_rank_0
 from ascendspeed import get_timers
 from ascendspeed import get_tokenizer
 from ascendspeed import mpu
@@ -36,6 +35,7 @@ from ascendspeed.data.gpt_dataset import build_train_valid_test_datasets
 from ascendspeed.model import LlamaModel, LlamaModelPipe
 from ascendspeed.core.enums import ModelType
 from ascendspeed.training import pretrain
+from ascendspeed.utils import print_rank_0
 from ascendspeed.utils import get_ltor_masks_and_position_ids
 from ascendspeed.utils import average_losses_across_data_parallel_group
 from ascendspeed.arguments import core_transformer_config_from_args

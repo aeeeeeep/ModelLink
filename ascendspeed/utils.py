@@ -26,13 +26,53 @@ if get_accelerator().device_name() == 'cuda':
     import amp_C
 
 from ascendspeed import get_args
-from ascendspeed import print_rank_0
 from ascendspeed import get_adlr_autoresume
 from ascendspeed.core import parallel_state
 from ascendspeed.model.module import param_is_not_shared
 from ascendspeed.mpu.layers import param_is_not_tensor_parallel_duplicate
 from ascendspeed import get_num_microbatches
 from deepspeed.accelerator import get_accelerator
+
+
+def print_rank_0(message):
+    """If distributed is initialized, print only on rank 0."""
+    if torch.distributed.is_initialized():
+        if torch.distributed.get_rank() == 0:
+            print(message, flush=True)
+    else:
+        print(message, flush=True)
+
+
+def is_last_rank():
+    return torch.distributed.get_rank() == (torch.distributed.get_world_size() - 1)
+
+
+def print_rank_last(message):
+    """If distributed is initialized, print only on last rank."""
+    if torch.distributed.is_initialized():
+        if is_last_rank():
+            print(message, flush=True)
+    else:
+        print(message, flush=True)
+
+
+def is_aml():
+    # Are we running inside an Azure Machine Learning (AML) environment?
+    return 'AZUREML_EXPERIMENT_ID' in os.environ
+
+
+def is_rank_0():
+    """Check whether it is rank 0. For AML, check if it is rank 0 of a node"""
+    if torch.distributed.is_initialized():
+        if torch.distributed.get_rank() == 0 or (
+                is_aml() and torch.distributed.get_rank() % get_accelerator().device_count() == 0
+        ):
+            return True
+        else:
+            return False
+    else:
+        return True
+
 
 def unwrap_model(model, module_instances=(torchDDP)):
     return_list = True

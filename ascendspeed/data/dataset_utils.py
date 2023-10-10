@@ -23,14 +23,13 @@ import collections
 import numpy as np
 import torch
 
-from ascendspeed import (
-    get_args,
-    print_rank_0
-)
+from ascendspeed import get_args
+from ascendspeed.utils import print_rank_0
 from ascendspeed.core import parallel_state
 from ascendspeed.data.blendable_dataset import BlendableDataset
 from ascendspeed.data.indexed_dataset import make_dataset as make_indexed_dataset
 from deepspeed.accelerator import get_accelerator
+
 DSET_TYPE_BERT = 'standard_bert'
 DSET_TYPE_ICT = 'ict'
 DSET_TYPE_T5  = 't5'

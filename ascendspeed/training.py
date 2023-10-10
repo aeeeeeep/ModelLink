@@ -32,11 +32,9 @@ from ascendspeed import get_timers
 from ascendspeed import get_tensorboard_writer
 from ascendspeed import get_current_global_batch_size
 from ascendspeed import get_num_microbatches
-from ascendspeed import is_last_rank
 from ascendspeed import update_num_microbatches
 from ascendspeed import mpu
-from ascendspeed import print_rank_0
-from ascendspeed import print_rank_last
+from ascendspeed.utils import is_last_rank, print_rank_0, print_rank_last
 from ascendspeed.core import parallel_state
 from ascendspeed.checkpointing import load_checkpoint
 from ascendspeed.checkpointing import save_checkpoint

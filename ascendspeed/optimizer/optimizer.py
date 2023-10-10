@@ -23,11 +23,10 @@ from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
 from torch._utils import _flatten_dense_tensors, _unflatten_dense_tensors
 
 from ascendspeed import get_timers
-from ascendspeed import mpu, print_rank_0
 from ascendspeed.core import parallel_state
 from ascendspeed.model.module import param_is_not_shared
 from ascendspeed.mpu.layers import param_is_not_tensor_parallel_duplicate
-from ascendspeed.utils import unwrap_model
+from ascendspeed.utils import unwrap_model, print_rank_0
 from ascendspeed.model import Float16Module, DistributedDataParallel as LocalDDP
 from deepspeed.accelerator import get_accelerator
 from ascendspeed.model.lora_utils import is_enable_lora, get_lora_model_classes

@@ -20,11 +20,10 @@ import torch_npu
 from torch_npu.contrib import transfer_to_npu
 
 from ascendspeed import get_args
-from ascendspeed import print_rank_0
 from ascendspeed import get_tokenizer
 from ascendspeed import mpu
 from ascendspeed.data.gpt_dataset import build_train_valid_test_datasets, build_dataset_group
-from ascendspeed.utils import get_ltor_masks_and_position_ids
+from ascendspeed.utils import get_ltor_masks_and_position_ids, print_rank_0
 
 
 def get_batch(data_iterator):

@@ -4,8 +4,9 @@ import time
 import numpy as np
 import torch
 
+from ascendspeed import get_args, get_tokenizer, mpu
 from ascendspeed.core import parallel_state
-from ascendspeed import get_args, get_tokenizer, print_rank_0, mpu
+from ascendspeed.utils import print_rank_0
 from deepspeed.accelerator import get_accelerator
 
 def get_one_epoch_dataloader(dataset, micro_batch_size=None):
