@@ -111,7 +111,6 @@ def generate_ascendspeed_weights_again(config):
                 ori_i = pp_n_layer * pp_rank + pp_i
                 if args.pse:
                     w_pack = get_weight_from_name(f"model.layers.{ori_i}.self_attn.W_pack.weight")
-                    assert w_pack.shape[0] % 3 == 0
                     ws = torch.split(w_pack, w_pack.shape[0] // 3)
                     qw = row_split(ws[0], tp_size, tp_rank)
                     kw = row_split(ws[1], tp_size, tp_rank)
