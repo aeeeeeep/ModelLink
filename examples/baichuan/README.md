@@ -20,7 +20,7 @@
 
 ## Training
 
-Here's a quick summary of training Baichuan-7B:
+Here's a quick summary of training Baichuan-7B: 
 
 |          |                                               |
 | -------- | --------------------------------------------- |
