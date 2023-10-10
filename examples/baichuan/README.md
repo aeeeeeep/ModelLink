@@ -26,7 +26,7 @@ Here's a hardware summary of pre-training Baichuan-7B:
 | :------: | :---------------------------------------------: |
 |   NPU    |               8 x Ascend NPUs                   |
 
-Here's a software summary of pre-training Baichuan-7B:
+Here's a software summary of pre-training Baichuan-7B: 
 
 
 |         Software          |                 Version                 |link  |
