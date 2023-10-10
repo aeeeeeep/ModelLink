@@ -18,7 +18,7 @@
 import argparse
 import json
 import os
-import sys
+
 import logging
 import torch
 
@@ -33,7 +33,7 @@ from ckpt_utils import save_ascendspeed_model
 from ascendspeed.error_utils import check_divisible
 from ascendspeed.data_classes import GenAscendWeightsAgaConfig, SaveAscendspeedModelConfig
 logging.basicConfig(level=logging.NOTSET)
-sys.path.append(".")
+
 
 def get_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
