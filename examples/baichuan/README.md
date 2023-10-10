@@ -247,8 +247,9 @@ python $SCRIPT_PATH \
     --output-model-dir ./model_weights \
     --tensor-model-parallel-size 8 \
     --pipeline-model-parallel-size 1 \
+    --make-vocab-size-divisible-by 1 \
     --type 13B \
-    --pse True
+    --pse True     
 ```
 
 4. Prepare dataset
