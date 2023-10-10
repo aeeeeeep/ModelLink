@@ -6,7 +6,8 @@ import numpy as np
 import torch
 from deepspeed.accelerator import get_accelerator
 
-from ascendspeed import is_rank_0, print_rank_0, get_args
+from ascendspeed import get_args
+from ascendspeed.utils import is_rank_0, print_rank_0
 from ascendspeed.tokenizer.tokenizer import build_tokenizer
 from ascendspeed.core import parallel_state
 from ascendspeed.data.blendable_dataset import BlendableDataset

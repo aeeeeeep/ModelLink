@@ -22,7 +22,7 @@ import re
 import numpy as np
 import torch
 
-from ascendspeed import print_rank_0
+from ascendspeed.utils import print_rank_0
 from ascendspeed.data.indexed_dataset import make_dataset as make_indexed_dataset
 
 class MTFDataset(torch.utils.data.Dataset):

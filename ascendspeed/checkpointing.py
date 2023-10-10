@@ -27,11 +27,11 @@ from ascendspeed.enums import PositionEmbeddingType
 
 
 from ascendspeed import (get_args,
-                      is_rank_0,
                       mpu,
-                      print_rank_0,
                       update_num_microbatches,
                       utils)
+from ascendspeed.utils import is_rank_0
+from ascendspeed.utils import print_rank_0
 from ascendspeed.core import parallel_state
 from ascendspeed.model import DistributedDataParallel as LocalDDP
 from ascendspeed.model.lora_utils import is_enable_lora, get_lora_state_dict, lora_custom_load_fn_for_deepspeed, \

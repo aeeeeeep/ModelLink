@@ -20,7 +20,7 @@ from itertools import accumulate
 import numpy as np
 import torch
 
-from ascendspeed import print_rank_0
+from ascendspeed.utils import print_rank_0
 
 
 def __best_fitting_dtype(vocab_size=None):

@@ -28,7 +28,6 @@ from deepspeed.runtime.utils import see_memory_usage
 from deepspeed.accelerator.real_accelerator import get_accelerator
 
 from ascendspeed import get_args
-from ascendspeed import print_rank_0
 from ascendspeed import get_timers
 from ascendspeed import get_tokenizer
 from ascendspeed import mpu
@@ -38,6 +37,7 @@ from ascendspeed.data.decoder_packed_mtf_dataset import build_train_valid_test_d
 from ascendspeed.model import LlamaModel, LlamaModelPipe
 from ascendspeed.core.enums import ModelType
 from ascendspeed.training import pretrain
+from ascendspeed.utils import print_rank_0
 from ascendspeed.utils import get_ltor_masks_and_position_ids, get_tune_attention_mask
 from ascendspeed.utils import average_losses_across_data_parallel_group
 from ascendspeed.arguments import core_transformer_config_from_args

@@ -32,10 +32,10 @@ except ImportError:
 
 
 from ascendspeed import get_args
-from ascendspeed import print_rank_0
 from ascendspeed import get_timers
 from ascendspeed import get_tokenizer
 from ascendspeed import mpu
+from ascendspeed.utils import print_rank_0
 from ascendspeed.core import tensor_parallel, parallel_state
 from ascendspeed.model.internlm_model import InternModel, InternModelPipe
 from ascendspeed.core.enums import ModelType

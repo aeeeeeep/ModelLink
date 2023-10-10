@@ -5,8 +5,8 @@
 import math
 import torch
 
-from ascendspeed import print_rank_0
 from ascendspeed import mpu
+from ascendspeed.utils import print_rank_0
 from functools import reduce
 
 from .optimizer import MixedPrecisionOptimizer, _zero_grad_group_helper
