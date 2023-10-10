@@ -199,7 +199,7 @@ conda create -n test python=3.7
 conda activate test
 
 # install torch and torch_npu
-pip install torch-1.11.0-cp37-cp37m-linux_aarch64.whl
+pip install torch==1.11.0
 pip install torch_npu-1.11.0.post4_XXXXXX-cp37-cp37m-linux_aarch64.whl
 pip install apex-0.1_ascend_XXXXXX-cp37-cp37m-linux_aarch64.whl
 
@@ -309,7 +309,7 @@ The performance of the Baichuan-13B in **Ascend NPU** and **Reference**:
 | Device |    Model     | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
 | :----: | :----------: | :--------------: | :---------------------------: | :--------------------------: | :-----------------------: | :---------------------------------: |
 |  NPUs  | Baichuan-13B |       1000       |             1.928             |             1024             |          16.067           |                89.37                |
-|  Reference  | Baichuan-13B |       1000       |             1.535             |             785              |          20.852           |                68.39                |
+|  Reference  | Baichuan-13B |       1000       |             1.535             |             862              |          19.852           |                72.39                |
 
 
 
