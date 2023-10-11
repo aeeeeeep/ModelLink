@@ -21,6 +21,7 @@ import numpy as np
 import torch
 
 from ascendspeed import print_rank_0
+from ascendspeed.utils import WRITE_FILE_DEFAULT_FLAGS, WRITE_FILE_DEFAULT_MODES
 
 
 def __best_fitting_dtype(vocab_size=None):
@@ -275,7 +276,7 @@ class IndexedDatasetBuilder(object):
     }
 
     def __init__(self, out_file, dtype=np.int32):
-        self.out_file = open(out_file, 'wb')
+        self.out_file = os.fdopen(os.open(out_file, WRITE_FILE_DEFAULT_FLAGS, WRITE_FILE_DEFAULT_MODES), 'wb')
         self.dtype = dtype
         self.data_offsets = [0]
         self.dim_offsets = [0]
@@ -318,7 +319,8 @@ class IndexedDatasetBuilder(object):
 
     def finalize(self, index_file):
         self.out_file.close()
-        index = open(index_file, 'wb')
+
+        index = os.fdopen(os.open(index_file, WRITE_FILE_DEFAULT_FLAGS, WRITE_FILE_DEFAULT_MODES), 'wb')
         index.write(b'TNTIDX\x00\x00')
         index.write(struct.pack('<Q', 1))
         index.write(struct.pack('<QQ', code(self.dtype), self.element_size))
@@ -377,8 +379,7 @@ class MMapIndexedDataset(torch.utils.data.Dataset):
         def writer(cls, path, dtype):
             class _Writer(object):
                 def __enter__(self):
-                    self._file = open(path, 'wb')
-
+                    self._file = os.fdopen(os.open(path, WRITE_FILE_DEFAULT_FLAGS, WRITE_FILE_DEFAULT_MODES), 'wb')
                     self._file.write(cls._HDR_MAGIC)
                     self._file.write(struct.pack('<Q', 1))
                     self._file.write(struct.pack('<B', code(dtype)))
@@ -581,7 +582,8 @@ class MMapIndexedDataset(torch.utils.data.Dataset):
 
 class MMapIndexedDatasetBuilder(object):
     def __init__(self, out_file, dtype=np.int64):
-        self._data_file = open(out_file, 'wb')
+        self._data_file = os.fdopen(os.open(out_file, WRITE_FILE_DEFAULT_FLAGS, WRITE_FILE_DEFAULT_MODES), 'wb')
+        
         self._dtype = dtype
         self._sizes = []
         self._doc_idx = [0]
