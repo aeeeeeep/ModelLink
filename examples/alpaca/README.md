@@ -19,6 +19,10 @@ Chinese-LLaMA-Alpaca model is from: [Efficient and Effective Text Encoding for C
 - [Fine-tune](#Fine-tune)
 
   - [Script](#script)
+  - [Performance](#performance)
+
+    - [Machine performance](#machine-performance)
+    - [Accuracy of the loss](#accuracy-of-the-loss)
 
 - [Citation](#citation)
 
@@ -122,15 +126,14 @@ mkdir ckpt
 2. Build environment
 
 ```bash
-# python3.7
-conda create -n test python=3.7
+# python3.8
+conda create -n test python=3.8
 conda activate test
 
 # install torch and torch_npu
-pip install torch==1.11 -i https://pypi.tuna.tsinghua.edu.cn/simple
-wget https://gitee.com/ascend/pytorch/releases/download/v5.0.rc2-pytorch1.11.0/torch_npu-1.11.0.post1-cp37-cp37m-linux_aarch64.whl (ARM)
-or wget https://gitee.com/ascend/pytorch/releases/download/v5.0.rc2-pytorch1.11.0/torch_npu-1.11.0.post1-cp37-cp37m-linux_x86_64.whl (X86)
-pip install torch_npu-1.11.0.post1-cp37-cp37m-linux_XXXXXX.whl
+pip install torch-2.0.1-cp38-cp38-manylinux2014_aarch64.whl
+pip install torch_npu-2.0.1rc1.post_XXXXXX-cp38-cp38-linux_aarch64.whl
+pip install apex-0.1_ascend_XXXXXX-cp38-cp38m-linux_aarch64.whl
 
 # install megatron-core
 pip3 install -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
@@ -146,12 +149,14 @@ pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 3. Prepare dataset
 ```bash
-# for llama, download alpaca dataset, like
+# for llama, download alpaca dataset and save it into $DATA_PATH, like
 wget http://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json
 
 # download tokenizer configs and (selective) weights from 
 # https://huggingface.co/decapoda-research/llama-7b-hf/tree/main
 # revise "LLaMATokenizer" as "LlamaTokenizer" in tokenizer_config.json (This is a bug of huggingface)
+# save the downloaded tokenizer into $TOKENIZER_PATH
+
 mkdir dataset
 python tools/preprocess_data.py --input alpaca_data.json \
                                 --output-prefix $DATA_PATH \
@@ -176,6 +181,55 @@ bash examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh
 ```bash
 bash examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp1_pp1_deepspeed.sh
 ```
+
+## Performance
+
+### Machine performance
+
+The performance of the Chinese LLaMA Alpaca-13B in **Ascend910 NPUs** and **A100 GPUs**:
+
+|  Device  |   Model   | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
+| :------: | :-------: | :--------------: | :---------------------------: | :--------------------------: | :-----------------------: | :---------------------------------: |
+|   GPUs   | Chinese LLaMA Alpaca-13B |       3000        |             5.83              |         1493.73            |           5.48           |                153.91                 |
+|   NPUs   | Chinese LLaMA Alpaca-13B |       3000        |             6.08              |         1556.77            |           5.26           |                160.41                 |
+
+
+Here's a hardware summary of fine-tuning Chinese LLaMA Alpaca-13B:
+
+| Hardware |                      Value                      |
+| :------: | :---------------------------------------------: |
+|   CPU    | 4xKunPeng920@3.0GHz，64 Core Pre Socket 256CPUS |
+|   RAM    |                  32x32 GB DDR4                  |
+|   NPU    |               8 x Ascend910 64G                |
+
+Here's a software summary of fine-tuning Chinese LLaMA Alpaca-13B:
+|         Software          |                 Version                 | link  |
+| :-----------------------: | :-------------------------------------: | :---:|
+|          Python           |                 3.8.18                  | - |
+|          driver           |              23.0.RC3.B070              | [link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159048?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743) |
+|         firmware          |              6.4.0.3.220                | [link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159048?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743) |
+|           CANN            |              7.0.RC1.B070               | [link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/261305467?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373) |
+| binary arithmetic package |  Ascend-cann-kernels-910b_7.0.RC1_linux | [link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/261305467?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373) |
+|           torch           |                  2.0.1                  | [link](https://gitee.com/ascend/pytorch/releases/tag/v5.0.rc2-pytorch2.0.1) |
+|         torch_npu         |        2.0.1rc1.post20230926            | [link](https://cmc-szv.clouddragon.huawei.com/cmcversion/index/releaseView?deltaId=8865172202587520&isSelect=Inner&url_data=torch) | 
+
+
+
+### Accuracy of the loss
+
+NPU vs GPU loss.
+
+The NPU runs smoothly, the resource usage is stable, no errors are reported in the middle of the process, the Loss is on a decreasing trend, and the convergence speed is as expected.
+
+![NPU-LOSS](./images/13b_lm_loss.png)
+
+NPU vs GPU loss relative error.
+
+The relative error between NPU and GPU Loss is less than 0.02 throughout, as expected.
+
+![NPU-Relative-Error](./images/relative_error.png)
+
+
 
 # Citation
 
