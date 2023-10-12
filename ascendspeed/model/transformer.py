@@ -36,6 +36,7 @@ from ascendspeed.model.fused_softmax import NPUFusedScaleMaskSoftmax
 from ascendspeed.model.fused_bias_gelu import bias_gelu_impl
 from ascendspeed.model.module import MegatronModule
 from ascendspeed.model.utils import attention_mask_func, openai_gelu, erf_gelu
+from ascendspeed.error_utils import check_divisible, check_equal
 
 
 # flags required to enable jit fusion kernels
@@ -171,7 +172,7 @@ class ParallelAttention(MegatronModule):
                 sequence_parallel_enabled=args.sequence_parallel
             )
         else:
-            assert attention_type == AttnType.cross_attn
+            check_equal(attention_type, AttnType.cross_attn)
             self.query = mpu.ColumnParallelLinear(
                 args.hidden_size,
                 projection_size,
@@ -724,8 +725,8 @@ class ParallelTransformer(MegatronModule):
         self.checkpoint_num_layers = args.checkpoint_num_layers
 
         # Number of layers.
-        assert args.num_layers % parallel_state.get_pipeline_model_parallel_world_size() == 0, \
-            'num_layers must be divisible by pipeline_model_parallel_size'
+        error_info = 'num_layers must be divisible by pipeline_model_parallel_size'
+        check_divisible(args.num_layers, parallel_state.get_pipeline_model_parallel_world_size(), error_info)
         self.num_layers = args.num_layers // parallel_state.get_pipeline_model_parallel_world_size()
 
         # Transformer layers.
@@ -739,9 +740,9 @@ class ParallelTransformer(MegatronModule):
                 num_experts=n_e)
 
         if args.virtual_pipeline_model_parallel_size is not None:
-            assert args.num_layers % args.virtual_pipeline_model_parallel_size == 0, \
-                'num_layers_per_stage must be divisible by ' \
-                'virtual_pipeline_model_parallel_size'
+            error_info = 'num_layers_per_stage must be divisible by ' \
+                         'virtual_pipeline_model_parallel_size'
+            check_divisible(args.num_layers, args.virtual_pipeline_model_parallel_size)
             # Number of layers in each model chunk is the number of layers in the stage,
             # divided by the number of model chunks in a stage.
             self.num_layers = self.num_layers // args.virtual_pipeline_model_parallel_size
