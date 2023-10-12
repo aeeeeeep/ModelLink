@@ -42,6 +42,7 @@ from ascendspeed.mpu.mappings import scatter_to_sequence_parallel_region
 from ascendspeed.model.fused_softmax import NPUFusedScaleMaskSoftmax
 from ascendspeed.model.language_model import Pooler
 from ascendspeed.model.triangle_attention import TriangleAttention
+from ascendspeed.error_utils import check_equal, check_divisible
 
 
 class RotaryEmbedding(torch.nn.Module):
@@ -310,8 +311,8 @@ class LlamaParallelAttention(MegatronModule):
                  attn_mask_type=AttnMaskType.causal):
         super(LlamaParallelAttention, self).__init__()
 
-        assert attention_type == AttnType.self_attn
-        assert attn_mask_type == AttnMaskType.causal
+        check_equal(attention_type, AttnType.self_attn)
+        check_equal(attn_mask_type, AttnMaskType.causal)
 
         args = get_args()
         self.fp16 = args.fp16
@@ -595,7 +596,7 @@ class LlamaParallelTransformerLayer(MegatronModule):
 
         super(LlamaParallelTransformerLayer, self).__init__()
         self.layer_number = layer_number
-        assert self_attn_mask_type == AttnMaskType.causal
+        check_equal(self_attn_mask_type, AttnMaskType.causal)
 
         self.bf16 = args.bf16
         self.fp32_residual_connection = args.fp32_residual_connection
@@ -743,7 +744,7 @@ class LlamaParallelTransformer(MegatronModule):
 
         super(LlamaParallelTransformer, self).__init__()
         args = get_args()
-        assert self_attn_mask_type == AttnMaskType.causal
+        check_equal(self_attn_mask_type, AttnMaskType.causal)
 
         self.bf16 = args.bf16
         self.fp32_residual_connection = args.fp32_residual_connection
@@ -759,8 +760,8 @@ class LlamaParallelTransformer(MegatronModule):
         self.checkpoint_num_layers = args.checkpoint_num_layers
 
         # Number of layers.
-        assert args.num_layers % parallel_state.get_pipeline_model_parallel_world_size() == 0, \
-            'num_layers must be divisible by pipeline_model_parallel_size'
+        error_info = 'num_layers must be divisible by pipeline_model_parallel_size'
+        check_divisible(args.num_layers, parallel_state.get_pipeline_model_parallel_world_size, error_info)
         self.num_layers = args.num_layers // parallel_state.get_pipeline_model_parallel_world_size()
 
         # Transformer layers.
@@ -771,9 +772,9 @@ class LlamaParallelTransformer(MegatronModule):
                 layer_number)
 
         if args.virtual_pipeline_model_parallel_size is not None:
-            assert args.num_layers % args.virtual_pipeline_model_parallel_size == 0, \
-                'num_layers_per_stage must be divisible by ' \
-                'virtual_pipeline_model_parallel_size'
+            error_info = 'num_layers_per_stage must be divisible by ' \
+                         'virtual_pipeline_model_parallel_size'
+            check_divisible(args.num_layers, args.virtual_pipeline_model_parallel_size, error_info)
             # Number of layers in each model chunk is the number of layers in the stage,
             # divided by the number of model chunks in a stage.
             self.num_layers = self.num_layers // args.virtual_pipeline_model_parallel_size
@@ -1063,7 +1064,7 @@ class LlamaModel(MegatronModule, MegatronModuleForCausalLM):
 
             else:
                 if self.fp16_lm_cross_entropy:
-                    assert hidden_states.dtype == torch.half
+                    check_equal(hidden_states.dtype, torch.half)
                     loss = tensor_parallel.vocab_parallel_cross_entropy(hidden_states, labels)
                 else:
                     loss = tensor_parallel.vocab_parallel_cross_entropy(hidden_states.float(), labels)
