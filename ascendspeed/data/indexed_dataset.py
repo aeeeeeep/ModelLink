@@ -10,8 +10,7 @@
 # Added document index to index file and made it accessible.
 #    An empty sentence no longer separates documents.
 
-# Some of the fixes/improvements are adopted from
-# https://github.com/bigscience-workshop/AscendSpeed/blob/main/megatron/data/indexed_dataset.py
+
 
 from functools import lru_cache
 import os
@@ -22,6 +21,7 @@ import numpy as np
 import torch
 
 from ascendspeed import print_rank_0
+from ascendspeed.error_utils import check_equal
 
 
 def __best_fitting_dtype(vocab_size=None):
@@ -296,7 +296,7 @@ class IndexedDatasetBuilder(object):
 
     def merge_file_(self, another_file):
         index = IndexedDataset(another_file)
-        assert index.dtype == self.dtype
+        check_equal(index.dtype, self.dtype)
 
         doc_offset = len(self.sizes)
 
@@ -598,7 +598,7 @@ class MMapIndexedDatasetBuilder(object):
     def merge_file_(self, another_file):
         # Concatenate index
         index = MMapIndexedDataset.Index(index_file_path(another_file))
-        assert index.dtype == self._dtype
+        check_equal(index.dtype, self._dtype)
 
         total_len = len(index.sizes)+len(self._sizes)
         print(f"    concat {another_file} size={len(index.sizes)} for a total size of {total_len}")

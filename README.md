@@ -5,16 +5,16 @@ AscendSpeed provides end-to-end test scripts for large language models on [Ascen
 ## Why AscendSpeed? 
 
 ---
-### Pretrained Models
+### Prepared Models
 Currently, the pre-training of the following models has been supported: 
 
-* <a href="https://github.com/baichuan-inc/Baichuan-7B" style="color:green">Baichuan</a>-7B
-* <a href="https://arxiv.org/pdf/2108.12409.pdf" style="color:green">Bloom</a>-[7B1/176B](examples/bloom/README.md)
+* <a href="https://github.com/baichuan-inc" style="color:green">Baichuan</a>-[[README: 7B/13B]](examples/baichuan/README.md)
+* <a href="https://arxiv.org/pdf/2108.12409.pdf" style="color:green">Bloom</a>-[[README: 7B1/176B]](examples/bloom/README.md)
 * <a href="https://internlm.intern-ai.org.cn/" style="color:green">InternLM</a>-7B
 * <a href="https://huggingface.co/docs/transformers/main/model_doc/llama" style="color:green">LLaMA</a>-7B/13B/65B
 * <a href="https://huggingface.co/docs/transformers/main/model_doc/llama2" style="color:green">LLaMA2</a>-7B
 
-Baichuan-13B, LLaMA-33B, LLaMA2-13B/70B, Aquila-7B are coming soon ...
+LLaMA-33B, LLaMA2-13B/70B, Aquila-7B are coming soon ...
 
 ### Acceleration Features
 Currently, the following acceleration features for LLMs have been supported:
@@ -65,14 +65,23 @@ The plan for more tasks, like RLHF and RM, is under way ...
   </thead>
   <tbody>
     <tr>
-      <td>Baichaun</td>
+      <td rowspan="2">Baichaun</td>
       <td>7B</td>
       <td> 1x8</td>
       <td> FP16 </td>
-      <td> 1790 tokens/p/s </td>
-      <td> 2039 tokens/p/s </td>
-      <td> <a href="sources/images/baichuan7b_loss.png">Loss</a> </td>
+      <td> 1914 tokens/p/s </td>
+      <td> 2068 tokens/p/s </td>
+      <td> <a href="examples/baichuan/images/7B_loss_compare.png">Loss</a> </td>
       <td> <a href="examples/baichuan/pretrain_baichuan_zero_7B.sh">Train</a> </td>
+    </tr>
+    <tr>
+      <td>13B</td>
+      <td> 1x8</td>
+      <td> FP16 </td>
+      <td> 1024 tokens/p/s </td>
+      <td> 824 tokens/p/s </td>
+      <td> <a href="examples/baichuan/images/13B_loss_compare.png">Loss</a> </td>
+      <td> <a href="examples/baichuan/pretrain_baichuan_ptd_13B.sh">Train</a> </td>
     </tr>
     <tr>
       <td rowspan="3"><a href="examples/bloom/README.md">Bloom</a></td>
@@ -179,10 +188,18 @@ conda create -n test python=3.7
 conda activate test
 
 # install torch and torch_npu
+# ARM
+wget https://download.pytorch.org/whl/torch-1.11.0-cp37-cp37m-manylinux2014_aarch64.whl
+wget https://gitee.com/ascend/pytorch/releases/download/v5.0.rc2.2-pytorch1.11.0/torch_npu-1.11.0.post3-cp37-cp37m-linux_aarch64.whl
+# X86
 pip install torch==1.11 -i https://pypi.tuna.tsinghua.edu.cn/simple
-wget https://gitee.com/ascend/pytorch/releases/download/v5.0.rc2-pytorch1.11.0/torch_npu-1.11.0.post1-cp37-cp37m-linux_aarch64.whl (ARM)
-or wget https://gitee.com/ascend/pytorch/releases/download/v5.0.rc2-pytorch1.11.0/torch_npu-1.11.0.post1-cp37-cp37m-linux_x86_64.whl (X86)
-pip install torch_npu-1.11.0.post1-cp37-cp37m-linux_XXXXXX.whl
+wget https://gitee.com/ascend/pytorch/releases/download/v5.0.rc2.2-pytorch1.11.0/torch_npu-1.11.0.post3-cp37-cp37m-linux_x86_64.whl
+
+pip install torch-1.11.0-cp37-cp37m-manylinux2014_aarch64.whl (ARM)
+pip install torch_npu-1.11.0.post3-cp37-cp37m-linux_XXXXXX.whl
+
+# install megatron-core
+pip3 install -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
 
 # install deepspeed and deepspeed_npu
 pip install deepspeed==0.9.2
@@ -195,13 +212,11 @@ pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
 
-3. Prepare dataset:
+3. Prepare dataset (download tokenizer configs from [here](https://huggingface.co/decapoda-research/llama-7b-hf/tree/main)):
 ```bash
 # for llama, download alpaca dataset, like
-wget http://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json
+wget https://raw.githubusercontent.com/tatsu-lab/stanford_alpaca/main/alpaca_data.json
 
-# download tokenizer configs and (selective) weights from 
-# https://huggingface.co/decapoda-research/llama-7b-hf/tree/main
 # revise "LLaMATokenizer" as "LlamaTokenizer" in tokenizer_config.json (This is a bug of huggingface)
 mkdir dataset
 python tools/preprocess_data.py --input alpaca_data.json \
@@ -212,7 +227,7 @@ python tools/preprocess_data.py --input alpaca_data.json \
                                 --handler-name GeneralInstructionHandler
 ```
 
-4. (Selective) Prepare pretrained weights
+4. (Selective) Prepare pretrained weights (download weights from [here](https://huggingface.co/decapoda-research/llama-7b-hf/tree/main)):
 ```bash
 python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir ../llama-7b-hf \
                                                                     --output-model-dir ckpt \
@@ -313,7 +328,7 @@ For llama and other LLMs without bias in FFN, the linear transformation in FFN c
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
-      <td  rowspan="8"> -- </td>
+      <td> -- </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
@@ -321,9 +336,11 @@ For llama and other LLMs without bias in FFN, the linear transformation in FFN c
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
+      <td> -- </td>
     </tr>
     <tr>
       <td> 176B </td>
+      <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
@@ -334,29 +351,41 @@ For llama and other LLMs without bias in FFN, the linear transformation in FFN c
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
+      <td> -- </td>
     </tr>
     <tr>
-      <td rowspan="3">LLaMA</td>
+      <td rowspan="4">LLaMA</td>
       <td>7B</td>
+      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
       <td> -- </td>
       <td> -- </td>
-      <td> -- </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>13B</td>
+      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
       <td> -- </td>
       <td> -- </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+    </tr>
+    <tr>
+      <td>33B</td>
+      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
       <td> -- </td>
+      <td> -- </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td > 65B </td>
       <td > -- </td>
       <td> -- </td>
       <td> -- </td>
+      <td> -- </td>
     </tr>
     <tr>
       <td>LLaMA2</td>
       <td>7B</td>
+      <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>

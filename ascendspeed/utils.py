@@ -32,7 +32,9 @@ from ascendspeed.core import parallel_state
 from ascendspeed.model.module import param_is_not_shared
 from ascendspeed.mpu.layers import param_is_not_tensor_parallel_duplicate
 from ascendspeed import get_num_microbatches
+from ascendspeed.error_utils import check_type
 from deepspeed.accelerator import get_accelerator
+
 
 def unwrap_model(model, module_instances=(torchDDP)):
     return_list = True
@@ -222,9 +224,9 @@ def get_ltor_masks_and_position_ids(data,
 
                     # Prefix lm per document.
                     if prefix_indices:
-                        assert isinstance(prefix_indices[b], list), \
-                        (f"prefix for a row has to be document specific, "
-                        "and consequently return a list, got {prefix_indices[b]}")
+                        error_message = (f"prefix for a row has to be document specific, "
+                                        "and consequently return a list, got {prefix_indices[b]}")
+                        check_type(prefix_indices[b], list, error_message)
                         attention_mask[b, 0, prev_index: prefix_indices[b][j], prev_index: prefix_indices[b][j]] = 1
                         if loss_on_targets_only:
                             # Last token of the prefix should predict the prefix_index id
@@ -238,8 +240,8 @@ def get_ltor_masks_and_position_ids(data,
 
             # Prefix lm per row.
             if prefix_indices is not None and (reset_attention_mask is False):
-                assert isinstance(prefix_indices[b], int), \
-                    f"prefix for a row has to be row specific, and consequently return an int, got {prefix_indices[b]}"
+                error_message = f"prefix for a row has to be row specific, and consequently return an int, got {prefix_indices[b]}"
+                check_type(prefix_indices[b], int, error_message)
                 attention_mask[b, 0, :prefix_indices[b], :prefix_indices[b]] = 1
                 if loss_on_targets_only:
                     # Last token of the prefix should predict the prefix_index id
@@ -258,6 +260,7 @@ def get_parameters_in_billions(model):
                                         for model_module in model])
 
     return approx_parameters_in_billions*gpus_per_model/(1e9)
+
 
 def throughput_calculator(model, args, iteration_time, total_iterations):
     gpus_per_model = torch.distributed.get_world_size(group = parallel_state.get_model_parallel_group())
@@ -284,6 +287,7 @@ def throughput_calculator(model, args, iteration_time, total_iterations):
     flops_per_iteration = (24 * checkpoint_activations_factor * batch_size * seq_len * num_layers * (hidden_size**2)) * (1. + (seq_len / (6. * hidden_size)) + (vocab_size / (16. * num_layers * hidden_size)))
     tflops = flops_per_iteration / (elapsed_time_per_iter * args.world_size * (10**12))
     return samples_per_second, tflops, approx_parameters_in_billions
+
 
 def checkpoint_throughput_calculator(model, latency_second):
     approx_parameters_in_billions = get_parameters_in_billions(model)

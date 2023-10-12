@@ -20,6 +20,8 @@ from abc import abstractmethod
 from transformers import AutoTokenizer, GPT2Tokenizer
 from transformers import BertTokenizer as FullBertTokenizer
 
+from ascendspeed.error_utils import ensure_var_is_not_none
+
 
 def build_tokenizer(args):
     """Initialize tokenizer."""
@@ -38,10 +40,10 @@ def build_tokenizer(args):
                                             lower_case=False,
                                             vocab_extra_ids=args.vocab_extra_ids)
     elif args.tokenizer_type == 'GPT2BPETokenizer':
-        assert args.merge_file is not None
+        ensure_var_is_not_none(args.merge_file)
         tokenizer = _GPT2BPETokenizer(args.vocab_file, args.merge_file)
     elif args.tokenizer_type == "PretrainedFromHF":
-        assert args.tokenizer_name_or_path is not None
+        ensure_var_is_not_none(args.tokenizer_name_or_path)
 
         # prevent transformers from logging info and warnings on each rank
         import transformers
@@ -383,7 +385,6 @@ class _AutoTokenizer(AbstractTokenizer):
         candidate = self.tokenizer.pad_token_id
 
         # just use eos_token_id if pad_token_id is not available, it is reasonable
-        # https://github.com/huggingface/transformers/blob/aea761499f4b1193f2706f471442da6f9df65d65/src/transformers/trainer_seq2seq.py#L327
         # maybe add a new token, and resize embedding layer is better
         if candidate is None:
             candidate = self.tokenizer.eos_token_id

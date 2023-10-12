@@ -1,11 +1,9 @@
 # coding=utf-8
-# Copyright (c) 2020, HUAWEI CORPORATION.  All rights reserved.
+# Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
+# You may obtain a copy of the License.
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,14 +12,15 @@
 # limitations under the License.
 
 
-
+# Parts of the code here are adapted from PyTorch
 
 import contextlib
 
 import torch
 from torch import _C
-from deepspeed.accelerator import get_accelerator
 from torch.utils.checkpoint import detach_variable
+import deepspeed
+from deepspeed.accelerator import get_accelerator
 
 from ascendspeed import get_args
 from ascendspeed.memory import allocate_mem_buff
@@ -30,11 +29,16 @@ from ascendspeed.core.parallel_state import get_data_parallel_rank
 from ascendspeed.core.parallel_state import get_tensor_model_parallel_group
 from ascendspeed.core.parallel_state import get_tensor_model_parallel_rank
 from ascendspeed.core.parallel_state import get_tensor_model_parallel_world_size
-
+from ascendspeed.core.utils import safely_set_viewless_tensor_data
+from ascendspeed.core.tensor_parallel.utils import (
+    split_tensor_into_1d_equal_chunks,
+    gather_split_1d_tensor
+)
+from ascendspeed.error_utils import check_divisible
+from ascendspeed.error_utils import ensure_var_is_none
 
 # Default name for the model parallel rng tracker.
 _MODEL_PARALLEL_RNG_TRACKER_NAME = 'model-parallel-rng'
-
 
 # Whether apply model parallelsim to checkpointed hidden states.
 _CHECKPOINTED_ACTIVATIONS_MEMORY_BUFFER = None
@@ -46,8 +50,8 @@ def init_checkpointed_activations_memory_buffer():
 
     per_layer = args.micro_batch_size * args.max_position_embeddings * \
                 args.hidden_size // args.tensor_model_parallel_size
-    assert args.num_layers % args.checkpoint_num_layers == 0, \
-        'number of layers is not divisible by checkpoint-num-layers'
+    check_divisible(args.num_layers, args.checkpoint_num_layers, 
+        error_info='{} % {}, number of layers is not divisible by checkpoint-num-layers')
     num_checkpointer_layers = args.num_layers // args.checkpoint_num_layers
     numel = per_layer * num_checkpointer_layers
     dtype = torch.half
@@ -55,8 +59,8 @@ def init_checkpointed_activations_memory_buffer():
         dtype = torch.float
 
     global _CHECKPOINTED_ACTIVATIONS_MEMORY_BUFFER
-    assert _CHECKPOINTED_ACTIVATIONS_MEMORY_BUFFER is None, \
-        'checkpointed activations memory buffer is already allocated.'
+    ensure_var_is_none(_CHECKPOINTED_ACTIVATIONS_MEMORY_BUFFER, 
+        error_message='checkpointed activations memory buffer is already allocated.')
     _CHECKPOINTED_ACTIVATIONS_MEMORY_BUFFER = allocate_mem_buff(
         'checkpointed activations', numel, dtype, track_usage=False)
 
@@ -94,34 +98,11 @@ def _set_cuda_rng_state(new_state, device=-1):
             idx = device.index
             if idx is None:
                 idx = get_accelerator().current_device()
-            
+
             default_generator = get_accelerator().default_generator(idx)
             default_generator.set_state(new_state)
 
     get_accelerator().lazy_call(cb)
-
-
-def split_tensor_into_1d_equal_chunks(tensor):
-    """Break a tensor into equal 1D chunks."""
-    data = tensor.view(-1)
-    partition_size = torch.numel(data) // get_tensor_model_parallel_world_size()
-    start_index = partition_size * get_tensor_model_parallel_rank()
-    end_index = start_index + partition_size
-    return data[start_index:end_index]
-
-
-def gather_split_1d_tensor(tensor):
-    """Opposite of above function, gather values from model parallel ranks."""
-    world_size = get_tensor_model_parallel_world_size()
-    numel = torch.numel(tensor)
-    numel_gathered = world_size * numel
-    gathered = torch.empty(numel_gathered, dtype=tensor.dtype,
-                           device=get_accelerator().current_device_name(),
-                           requires_grad=False)
-    chunks = [gathered[i*numel:(i+1)*numel] for i in range(world_size)]
-    torch.distributed.all_gather(chunks, tensor,
-                                 group=get_tensor_model_parallel_group())
-    return gathered
 
 
 class CudaRNGStatesTracker:
@@ -146,7 +127,8 @@ class CudaRNGStatesTracker:
 
     def get_states(self):
         """Get rng states. Copy the dictionary so we have direct
-        pointers to the states, not just a pointer to the dictionary."""
+        pointers to the states, not just a pointer to the dictionary.
+        """
         states = {}
         for name in self.states_:
             states[name] = self.states_[name]
@@ -154,7 +136,8 @@ class CudaRNGStatesTracker:
 
     def set_states(self, states):
         """Set the rng states. For efficiency purposes, we do not check
-        the size of seed for compatibility."""
+        the size of seed for compatibility.
+        """
         self.states_ = states
 
     def add(self, name, seed):
@@ -202,6 +185,8 @@ _CUDA_RNG_STATE_TRACKER = CudaRNGStatesTracker()
 
 def get_cuda_rng_tracker():
     """Get cuda rng tracker."""
+    if deepspeed.checkpointing.is_configured():
+        return deepspeed.checkpointing.get_cuda_rng_tracker()
     return _CUDA_RNG_STATE_TRACKER
 
 
@@ -223,6 +208,8 @@ def model_parallel_cuda_manual_seed(seed):
                               model parallel regions.
     """
     # 2718 is just for fun and any POSITIVE value will work.
+    if deepspeed.checkpointing.is_configured():
+        return deepspeed.checkpointing.model_parallel_cuda_manual_seed(seed)
     offset = seed + 2718
     tensor_model_parallel_seed = offset + get_tensor_model_parallel_rank()
     # Data parallel gets the original seed.
@@ -232,9 +219,9 @@ def model_parallel_cuda_manual_seed(seed):
         print('> initializing model parallel cuda seeds on global rank {}, '
               'model parallel rank {}, and data parallel rank {} with '
               'model parallel seed: {} and data parallel seed: {}'.format(
-                  torch.distributed.get_rank(), get_tensor_model_parallel_rank(),
-                  get_data_parallel_rank(), tensor_model_parallel_seed,
-                  data_parallel_seed), flush=True)
+            torch.distributed.get_rank(), get_tensor_model_parallel_rank(),
+            get_data_parallel_rank(), tensor_model_parallel_seed,
+            data_parallel_seed), flush=True)
     _CUDA_RNG_STATE_TRACKER.reset()
     # Set the default state.
     get_accelerator().manual_seed(data_parallel_seed)
@@ -250,9 +237,11 @@ class CheckpointFunction(torch.autograd.Function):
            2) the states in the model parallel tracker are also properly
               tracked/set/reset.
     """
+
     @staticmethod
-    def forward(ctx, run_function, *args):
+    def forward(ctx, run_function, distribute_saved_activations, *args):
         ctx.run_function = run_function
+        ctx.distribute_saved_activations = distribute_saved_activations
 
         # Copy the rng states.
         ctx.fwd_cpu_rng_state = torch.get_rng_state()
@@ -264,15 +253,14 @@ class CheckpointFunction(torch.autograd.Function):
 
         # Divide hidden states across model parallel group and only keep
         # the chunk corresponding to the current rank.
-        if _CHECKPOINTED_ACTIVATIONS_MEMORY_BUFFER is not None:
+        if distribute_saved_activations:
             ctx.input_0_shape = args[0].data.shape
-            args[0].data = split_tensor_into_1d_equal_chunks(args[0].data)
-            args[0].data = _CHECKPOINTED_ACTIVATIONS_MEMORY_BUFFER.add(
-                args[0].data)
+            safely_set_viewless_tensor_data(
+                args[0], split_tensor_into_1d_equal_chunks(args[0].data, new_buffer=True)
+            )
 
         # Store everything.
         ctx.save_for_backward(*args)
-
 
         return outputs
 
@@ -282,9 +270,10 @@ class CheckpointFunction(torch.autograd.Function):
             raise RuntimeError("Checkpointing is not compatible with .grad(), "
                                "please use .backward() if possible")
         inputs = ctx.saved_tensors
-        if _CHECKPOINTED_ACTIVATIONS_MEMORY_BUFFER is not None:
-            inputs[0].data = gather_split_1d_tensor(inputs[0].data)
-            inputs[0].data = inputs[0].data.view(ctx.input_0_shape)
+        if ctx.distribute_saved_activations:
+            safely_set_viewless_tensor_data(
+                inputs[0], gather_split_1d_tensor(inputs[0].data).view(ctx.input_0_shape)
+            )
 
         # Store the current states.
         bwd_cpu_rng_state = torch.get_rng_state()
@@ -315,10 +304,14 @@ class CheckpointFunction(torch.autograd.Function):
         torch.autograd.backward(outputs, args)
         grads = tuple(inp.grad if isinstance(inp, torch.Tensor) else inp
                       for inp in detached_inputs)
-        return (None,) + grads
+        return (None, None) + grads
 
 
-def checkpoint(function, *args):
+def checkpoint(function, distribute_saved_activations, *args):
     """Checkpoint a model or part of the model.
-    This has been directly copied from torch.utils.checkpoint."""
-    return CheckpointFunction.apply(function, *args)
+    This has been directly copied from torch.utils.checkpoint.
+    """
+    if deepspeed.checkpointing.is_configured():
+        return deepspeed.checkpointing.checkpoint(function, *args)
+
+    return CheckpointFunction.apply(function, distribute_saved_activations, *args)

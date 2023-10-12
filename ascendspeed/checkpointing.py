@@ -40,6 +40,7 @@ from ascendspeed.model.lora_utils import is_enable_lora, get_lora_state_dict, lo
 
 _CHECKPOINT_VERSION = None
 
+
 def set_checkpoint_version(value):
     global _CHECKPOINT_VERSION
     if _CHECKPOINT_VERSION is not None:
@@ -47,9 +48,11 @@ def set_checkpoint_version(value):
             "checkpoint versions do not match"
     _CHECKPOINT_VERSION = value
 
+
 def get_checkpoint_version():
     global _CHECKPOINT_VERSION
     return _CHECKPOINT_VERSION
+
 
 def check_checkpoint_args(checkpoint_args):
     """Ensure fixed arguments for a model are the same for the input
@@ -172,8 +175,8 @@ def save_checkpoint(iteration, model, optimizer, lr_scheduler):
             torch.save(state_dict, checkpoint_name)
 
     if args.deepspeed:
-        #ascendspeed model uses state_dict_for_save_checkpointing instead of the standard state_dict
-        #state_dict is used by deepspeed for module saving so it needs to point to the right function
+        # ascendspeed model uses state_dict_for_save_checkpointing instead of the standard state_dict
+        # state_dict is used by deepspeed for module saving so it needs to point to the right function
         if args.no_pipeline_parallel:
             original_state_dict = model[0].module.state_dict
             model[0].module.state_dict = model[0].module.state_dict_for_save_checkpoint
@@ -234,7 +237,7 @@ def _transpose_first_dim(t, num_splits, num_splits_first, model):
     # specific to self attention so should work for cross attention as well
     while hasattr(model, 'module'):
         model = model.module
-    #attention_module = model.language_model.encoder.layers[0].self_attention
+    # attention_module = model.language_model.encoder.layers[0].self_attention
     attention_module = model.language_model.encoder.layers[0].attention
     hidden_size_per_attention_head = attention_module.hidden_size_per_attention_head
     num_attention_heads_per_partition = attention_module.num_attention_heads_per_partition
@@ -266,6 +269,7 @@ def _transpose_first_dim(t, num_splits, num_splits_first, model):
     t = t.view(*input_shape)
 
     return t
+
 
 def fix_query_key_value_ordering(model, checkpoint_version):
     """Fix up query/key/value matrix ordering if checkpoint
@@ -360,17 +364,17 @@ def get_state_dict_and_release(load_dir, lora_load_dir=None):
         state_dict = load_state_dict_from_checkpoint_with_megatron(checkpoint_name,
                                                                    model_checkpoint_name=model_checkpoint_name)
     except ModuleNotFoundError:
-        from ascendspeed.fp16_deprecated import loss_scaler
+        from megatron.fp16_deprecated import loss_scaler
         # For backward compatibility.
         print_rank_0(' > deserializing using the old code structure ...')
         sys.modules['fp16.loss_scaler'] = sys.modules[
-            'ascendspeed.fp16_deprecated.loss_scaler']
-        sys.modules['ascendspeed.fp16.loss_scaler'] = sys.modules[
-            'ascendspeed.fp16_deprecated.loss_scaler']
+            'megatron.fp16_deprecated.loss_scaler']
+        sys.modules['megatron.fp16.loss_scaler'] = sys.modules[
+            'megatron.fp16_deprecated.loss_scaler']
         state_dict = load_state_dict_from_checkpoint_with_megatron(checkpoint_name,
                                                                    model_checkpoint_name=model_checkpoint_name)
         sys.modules.pop('fp16.loss_scaler', None)
-        sys.modules.pop('ascendspeed.fp16.loss_scaler', None)
+        sys.modules.pop('megatron.fp16.loss_scaler', None)
     except BaseException as e:
         print_rank_0('could not load the checkpoint')
         print_rank_0(e)

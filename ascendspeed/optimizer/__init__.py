@@ -21,10 +21,12 @@ from ascendspeed.model import LayerNorm
 from ascendspeed.model.fused_layer_norm import MixedFusedLayerNorm
 from ascendspeed.model.lora_utils import is_enable_lora
 from ascendspeed.optimizer.adam import AdamW as Adam
+from ascendspeed.error_utils import check_equal
 
 from .grad_scaler import ConstantGradScaler, DynamicGradScaler
 from .optimizer import Float16OptimizerWithFloat16Params, FP32Optimizer
 from .distrib_optimizer import DistributedOptimizer
+
 
 def _get_params_for_weight_decay_optimization(modules):
     """Divide params into with-weight-decay and without-weight-decay groups.
@@ -110,7 +112,8 @@ def get_megatron_optimizer(model):
         param_groups = split_params_into_different_moe_groups_for_optimizer(param_groups)
     
     if args.cpu_optimizer:
-        assert args.optimizer == 'adam', 'CPU offloading is for Adam'
+        error_info = 'CPU offloading is for Adam'
+        check_equal(args.optimizer, 'adam', error_info)
         if args.cpu_torch_adam:
             cpu_adam_optimizer = torch.optim.AdamW
         else:

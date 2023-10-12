@@ -28,6 +28,7 @@ from ascendspeed.data.blendable_dataset import BlendableDataset
 from ascendspeed.data.dataset_utils import get_datasets_weights_and_num_samples
 from ascendspeed.data.dataset_utils import get_train_valid_test_split_, get_split_by_range_
 from ascendspeed.data.indexed_dataset import make_dataset as make_indexed_dataset
+from ascendspeed.error_utils import check_equal
 
 
 def build_train_valid_test_datasets(data_prefix, data_impl, splits_string,
@@ -381,9 +382,9 @@ def _build_index_mappings(name, data_prefix, documents, sizes,
             start_time = time.time()
             # Use C++ implementation for speed.
             # First compile and then import.
-            from ascendspeed.data import helpers
-            assert doc_idx.dtype == np.int32
-            assert sizes.dtype == np.int32
+            from megatron.data import helpers
+            check_equal(doc_idx.dtype, np.int32)
+            check_equal(sizes.dtype, np.int32)
             sample_idx = helpers.build_sample_idx(sizes, doc_idx, seq_length,
                                                   num_epochs, tokens_per_epoch)
             # sample_idx = _build_sample_idx(sizes, doc_idx, seq_length,

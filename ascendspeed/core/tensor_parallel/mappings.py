@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright (c) 2020, HUAWEI CORPORATION.  All rights reserved.
+# Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,17 +15,20 @@
 
 import torch
 
-from ascendspeed.core.parallel_state import get_tensor_model_parallel_group
-from ascendspeed.core.parallel_state import get_tensor_model_parallel_world_size
-from ascendspeed.core.parallel_state import get_tensor_model_parallel_rank
-from ascendspeed.core.utils import split_tensor_along_last_dim
+from ascendspeed.core.parallel_state import (
+    get_tensor_model_parallel_group,
+    get_tensor_model_parallel_world_size,
+    get_tensor_model_parallel_rank
+)
+from ascendspeed.core.tensor_parallel.utils import split_tensor_along_last_dim
+from ascendspeed.error_utils import check_divisible
 
 
 def _reduce(input_):
     """All-reduce the the input tensor across model parallel group."""
 
     # Bypass the function if we are using only 1 GPU.
-    if get_tensor_model_parallel_world_size()==1:
+    if get_tensor_model_parallel_world_size() == 1:
         return input_
 
     # All-reduce.
@@ -34,13 +37,13 @@ def _reduce(input_):
     return input_
 
 
-def _split(input_):
+def _split_along_last_dim(input_):
     """Split the tensor along its last dimension and keep the
     corresponding slice."""
 
     world_size = get_tensor_model_parallel_world_size()
     # Bypass the function if we are using only 1 GPU.
-    if world_size==1:
+    if world_size == 1:
         return input_
 
     # Split along last dimension.
@@ -53,12 +56,12 @@ def _split(input_):
     return output
 
 
-def _gather(input_):
+def _gather_along_last_dim(input_):
     """Gather tensors and concatinate along the last dimension."""
 
     world_size = get_tensor_model_parallel_world_size()
     # Bypass the function if we are using only 1 GPU.
-    if world_size==1:
+    if world_size == 1:
         return input_
 
     # Size and dimension.
@@ -102,13 +105,14 @@ def _reduce_scatter_along_first_dim(input_):
         return input_
 
     dim_size = list(input_.size())
-    assert dim_size[0] % world_size == 0, \
-        "First dimension of the tensor should be divisible by tensor parallel size"
+    check_divisible(dim_size[0], world_size, 
+        error_info="{} % {}, First dimension of the tensor should be divisible by tensor parallel size")
 
     dim_size[0] = dim_size[0] // world_size
 
     output = torch.empty(dim_size, dtype=input_.dtype,
                          device=torch.cuda.current_device())
+
     torch.distributed._reduce_scatter_base(output, input_.contiguous(),
                                            group=get_tensor_model_parallel_group())
     return output
@@ -125,13 +129,13 @@ def _split_along_first_dim(input_):
 
     # Split along first dimension.
     dim_size = input_.size()[0]
-    assert dim_size % world_size == 0, \
-        "First dimension of the tensor should be divisible by tensor parallel size"
+    check_divisible(dim_size, world_size, 
+        error_info="{} % {}, First dimension of the tensor should be divisible by tensor parallel size")
     local_dim_size = dim_size // world_size
     rank = get_tensor_model_parallel_rank()
     dim_offset = rank * local_dim_size
 
-    output = input_[dim_offset:dim_offset+local_dim_size].contiguous()
+    output = input_[dim_offset:dim_offset + local_dim_size].contiguous()
 
     return output
 
@@ -215,15 +219,15 @@ class _ScatterToModelParallelRegion(torch.autograd.Function):
 
     @staticmethod
     def symbolic(graph, input_):
-        return _split(input_)
+        return _split_along_last_dim(input_)
 
     @staticmethod
     def forward(ctx, input_):
-        return _split(input_)
+        return _split_along_last_dim(input_)
 
     @staticmethod
     def backward(ctx, grad_output):
-        return _gather(grad_output)
+        return _gather_along_last_dim(grad_output)
 
 
 class _ReduceScatterToSequenceParallelRegion(torch.autograd.Function):
@@ -242,20 +246,21 @@ class _ReduceScatterToSequenceParallelRegion(torch.autograd.Function):
         return _gather_along_first_dim(grad_output)
 
 
+
 class _GatherFromModelParallelRegion(torch.autograd.Function):
     """Gather the input from model parallel region and concatinate."""
 
     @staticmethod
     def symbolic(graph, input_):
-        return _gather(input_)
+        return _gather_along_last_dim(input_)
     
     @staticmethod
     def forward(ctx, input_):
-        return _gather(input_)
+        return _gather_along_last_dim(input_)
 
     @staticmethod
     def backward(ctx, grad_output):
-        return _split(grad_output)
+        return _split_along_last_dim(grad_output)
 
 
 # -----------------
