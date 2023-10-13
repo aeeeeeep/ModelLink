@@ -105,11 +105,13 @@ class RMSNorm(torch.nn.Module):  # for cpu
 
     def forward(self, hidden_states):
         if self.weight.dtype == torch.float16:
-            hidden_states = hidden_states.float()
-        variance = hidden_states.pow(2).mean(-1, keepdim=True)
-        hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
+            variance = hidden_states.float().pow(2).mean(-1, keepdim=True)
+        else:
+            variance = hidden_states.pow(2).mean(-1, keepdim=True)
+        variance = torch.rsqrt(variance + self.variance_epsilon)
         if self.weight.dtype == torch.float16:
-            hidden_states = hidden_states.half()
+            variance = variance.half()
+        hidden_states = hidden_states * variance
         hidden_states = self.weight * hidden_states
         return hidden_states
 
