@@ -144,7 +144,7 @@ bash examples/llama2/pretrain_llama2_7b_zero_8p.sh
 
 #### Machine performance
 
-The performance of Baichuan-7B in **Ascend NPU** and **Reference**:
+The performance of LLaMA2-7B in **Ascend NPU** and **Reference**:
 
 | Device | Model       | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
 | ------ | ----------- | ---------------- | ----------------------------- | ---------------------------- | ------------------------- | ----------------------------------- |
@@ -157,10 +157,11 @@ The performance of Baichuan-7B in **Ascend NPU** and **Reference**:
 
 NPU vs Reference loss.
 
-The NPU runs smoothly, the resource usage is stable, no errors are reported in the middle of the process, the Loss is on a decreasing trend, and the convergence speed is as expected. The relative error of the average loss is 0.01093, less than 2%, the maximum relative error is 0.1243, and the maximum absolute error is 0.4859. The precision meets the requirements.
+The NPU runs smoothly, the resource usage is stable, no errors are reported in the middle of the process, the Loss is on a decreasing trend, and the convergence speed is as expected. 
+![NPU-LOSS](../../sources/images/llama2/llama2_7b_shape_fp16_layer32_loss_with_weights.png)
 
-![NPU-LOSS and NPU-Relative-Error](./images/llama2/llama2_7b_shape_fp16_layer32_relative_loss.png)
+The relative error of the average loss is 0.0852, less than 2%, the maximum relative error is 0.0046.
+![NPU-LOSS and NPU-Relative-Error](../../sources/images/llama2/llama2_7b_shape_fp16_layer32_loss_with_weights_comparison_relative.png)
 
-
-
-![NPU-LOSS and NPU-Abosulte-Error](./images/llama2/llama2_7b_shape_fp16_layer32_absolute_loss.png)
+The absolute error of the average loss is 0.0009, less than 2%, the maximum absolute error is 0.0246. The precision meets the requirements.
+![NPU-LOSS and NPU-Abosulte-Error](../../sources/images/llama2/llama2_7b_shape_fp16_layer32_loss_with_weights_comparison_abosulte.png)
