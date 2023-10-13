@@ -397,7 +397,6 @@ def load_checkpoint(model, optimizer, lr_scheduler, load_arg='load', strict=True
         custom_load_fn, load_dir = get_custom_load_fn(model=model[0], load_dir=load_dir, lora_load_dir=lora_load_dir)
         load_zero_optim = sum(['zero' in file for file in os.listdir(load_dir)]) > 0
         release = not load_zero_optim
-
         loaded_dir, state_dict = model[0].load_checkpoint(
             load_dir,
             load_module_strict=strict,
