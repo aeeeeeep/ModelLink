@@ -411,7 +411,6 @@ def load_checkpoint(model, optimizer, lr_scheduler, load_arg='load', strict=True
             print_rank_0(f" will not load any checkpoints and will start from random")
             return 0
         checkpoint_name = loaded_dir  # 开启lora时主要参数会从lora_load里读取，所以最后打印时用checkpoint_name传递
-
     else:
         unwrap_model_classes = (torchDDP, LocalDDP)
         if is_enable_lora():
@@ -458,7 +457,7 @@ def load_checkpoint(model, optimizer, lr_scheduler, load_arg='load', strict=True
             strict = False
         if len(model) == 1:
             result = model[0].load_state_dict(state_dict['model'], strict=strict)
-            if not strict and result:
+            if strict and result:
                 print_rank_0(f"load checkpoint result:{result}")
         else:
             for i in range(len(model)):
@@ -511,7 +510,6 @@ def get_custom_load_fn(model, load_dir, lora_load_dir=None):
             load_dir = lora_load_dir
         else:
             custom_load_fn = lora_custom_load_fn_for_deepspeed
-
     return custom_load_fn, load_dir
 
 
