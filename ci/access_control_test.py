@@ -1,5 +1,6 @@
 import os
 import stat
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -42,7 +43,7 @@ class ST_Test:
 
     def run_shell(self):
         for shell_file in self.shell_file_list:
-            success_check(os.system("sh {}".format(shell_file)))
+            success_check(subprocess.run(shell_file, shell=False))
 
 # ===============================================
 # UT test, run with pytest, waiting for more ...
