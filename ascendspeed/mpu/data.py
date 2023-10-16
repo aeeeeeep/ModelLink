@@ -108,8 +108,8 @@ def broadcast_data(keys, data, datatype):
     output = {}
     offset = 0
     for key in keys:
-        size = key_size[key]
-        numel = key_numel[key]
+        size = key_size.get(key)
+        numel = key_numel.get(key)
         output[key] = flatten_data.narrow(0, offset, numel).view(size)
         offset += numel
 

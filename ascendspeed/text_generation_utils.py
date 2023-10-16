@@ -57,7 +57,7 @@ def get_batch(context_tokens):
 def top_k_logits(logits, top_k=0, top_p=0.0, filter_value=-float('Inf')):
     """ This function has been mostly taken from huggingface conversational
      ai code at
-         https://medium.com/huggingface/how-to-build-a-state-of-the-art-
+         ://medium.com/huggingface/how-to-build-a-state-of-the-art-
               conversational-ai-with-transfer-learning-2d818ac26313 """
 
     if top_k > 0:
@@ -193,8 +193,7 @@ def generate_samples_input_from_file(model):
             context_count += 1
 
 # We added this function to support the tasks evaluation such as squad
-# and drop in the https://github.com/EleutherAI/lm-evaluation-harness
-# codebase. The lm-evaluation-harness code can now call this function
+# and drop. The lm-evaluation-harness code can now call this function
 # similar to their current generate function call used for gpt style models.
 def generate_samples_eval(model, context, max_gen_length, eos_token_id):
     # Generate samples for lm evaluation

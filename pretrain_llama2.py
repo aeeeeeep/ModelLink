@@ -109,7 +109,7 @@ def get_batch(data_iterator):
     data_b = mpu.broadcast_data(keys, data, data_type)
 
     # Unpack.
-    tokens_ = data_b['text'].long()
+    tokens_ = data_b.get('text').long()
     labels = tokens_[:, 1:].contiguous()
     tokens = tokens_[:, :-1].contiguous()
 
@@ -168,7 +168,7 @@ def get_batch_pipe(data):
     data_b = mpu.broadcast_data(keys, data, data_type)
 
     # Unpack.
-    tokens_ = data_b['text'].long()
+    tokens_ = data_b.get('text').long()
     labels = tokens_[:, 1:].contiguous()
     tokens = tokens_[:, :-1].contiguous()
 
