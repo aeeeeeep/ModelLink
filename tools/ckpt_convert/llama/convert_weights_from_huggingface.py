@@ -32,6 +32,7 @@ from ckpt_utils import save_ascendspeed_model
 
 from ascendspeed.error_utils import check_divisible
 from ascendspeed.data_classes import GenAscendWeightsAgaConfig, SaveAscendspeedModelConfig
+
 logging.basicConfig(level=logging.NOTSET)
 
 
@@ -60,15 +61,21 @@ model_config = {
     "65B": [80, 8192, 64]
 }
 
-
 args = get_args()
 file = os.listdir(args.input_model_dir)
 model_files = [f for f in file if f[-4:] == ".bin"]
 input_models = {f: torch.load(os.path.join(args.input_model_dir, f), map_location="cpu") for f in model_files}
 
-with open(os.path.join(args.input_model_dir, "pytorch_model.bin.index.json")) as f:
-    model_index = json.load(f)
-    weight_map = model_index["weight_map"]
+index_fn = os.path.join(args.input_model_dir, "pytorch_model.bin.index.json")
+if os.path.exists(index_fn):
+    with open(index_fn) as f:
+        model_index = json.load(f)
+        weight_map = model_index["weight_map"]
+else:
+    weight_map = dict()
+    assert len(model_files) == 1
+    for k in input_models[model_files[0]].keys():
+        weight_map[k] = model_files[0]
 
 
 def get_weight_from_name(layer_name):
@@ -121,11 +128,13 @@ def generate_ascendspeed_weights_again(config):
                 else:
                     rank_model[f"language_model.layers.{pp_i}.attention.rotary_emb.inv_freq"] = get_weight_from_name(
                         f"model.layers.{ori_i}.self_attn.rotary_emb.inv_freq")
-                    qw = row_split(get_weight_from_name(f"model.layers.{ori_i}.self_attn.q_proj.weight"), tp_size, tp_rank)
-                    kw = row_split(get_weight_from_name(f"model.layers.{ori_i}.self_attn.k_proj.weight"), tp_size, tp_rank)
-                    vw = row_split(get_weight_from_name(f"model.layers.{ori_i}.self_attn.v_proj.weight"), tp_size, tp_rank)
+                    qw = row_split(get_weight_from_name(f"model.layers.{ori_i}.self_attn.q_proj.weight"), tp_size,
+                                   tp_rank)
+                    kw = row_split(get_weight_from_name(f"model.layers.{ori_i}.self_attn.k_proj.weight"), tp_size,
+                                   tp_rank)
+                    vw = row_split(get_weight_from_name(f"model.layers.{ori_i}.self_attn.v_proj.weight"), tp_size,
+                                   tp_rank)
 
-   
                 permute_w = permute_qkv_weight(torch.cat([qw, kw, vw], dim=0), n_heads, hidden_size, tp_size)
                 rank_model[f"language_model.layers.{pp_i}.attention.query_key_value.weight"] = permute_w
 
@@ -143,7 +152,7 @@ def generate_ascendspeed_weights_again(config):
                     rank_model[f"language_model.layers.{pp_i}.attention.query_key_value.bias"] = permute_bias
                     rank_model[f"language_model.layers.{pp_i}.attention.dense.bias"] = \
                         get_weight_from_name(f"model.layers.{ori_i}.self_attn.o_proj.bias")
-                    
+
                 rank_model[f"language_model.layers.{pp_i}.mlp.gate_proj.weight"] = row_split(
                     get_weight_from_name(f"model.layers.{ori_i}.mlp.gate_proj.weight"), tp_size, tp_rank)
                 rank_model[f"language_model.layers.{pp_i}.mlp.up_proj.weight"] = row_split(
@@ -159,7 +168,7 @@ def generate_ascendspeed_weights_again(config):
                 print_model(rank_model)
             if not args.deepspeed:
                 save_ascendspeed_model_config = SaveAscendspeedModelConfig(model_dic, rank_model, pp_size,
-                                                                       tp_rank, pp_rank, release_model_dir)
+                                                                           tp_rank, pp_rank, release_model_dir)
                 save_ascendspeed_model(save_ascendspeed_model_config)
             else:
                 model_dic['module'] = rank_model
@@ -174,7 +183,7 @@ def generate_ascendspeed_weights_again(config):
 
 
 if __name__ == '__main__':
-    if args.deepspeed:  
+    if args.deepspeed:
         make_ascendspeed_model_dirs(args.output_model_dir, filename="latest")
     else:
         make_ascendspeed_model_dirs(args.output_model_dir)
