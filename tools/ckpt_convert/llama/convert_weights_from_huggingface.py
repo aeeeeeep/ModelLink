@@ -66,9 +66,16 @@ file = os.listdir(args.input_model_dir)
 model_files = [f for f in file if f[-4:] == ".bin"]
 input_models = {f: torch.load(os.path.join(args.input_model_dir, f), map_location="cpu") for f in model_files}
 
-with open(os.path.join(args.input_model_dir, "pytorch_model.bin.index.json")) as f:
-    model_index = json.load(f)
-    weight_map = model_index["weight_map"]
+index_fn = os.path.join(args.input_model_dir, "pytorch_model.bin.index.json")
+if os.path.exists(index_fn):
+    with open(index_fn) as f:
+        model_index = json.load(f)
+        weight_map = model_index["weight_map"]
+else:
+    weight_map = dict()
+    assert len(model_files) == 1
+    for k in input_models[model_files[0]].keys():
+        weight_map[k] = model_files[0]
 
 
 def get_weight_from_name(layer_name):
