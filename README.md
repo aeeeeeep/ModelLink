@@ -134,11 +134,6 @@ The plan for more tasks, like RLHF and RM, is under way ...
     <tr>
       <td rowspan="2">65B</td>
       <td rowspan="2">4x8</td>
-      <td> FP16 </td>
-      <td> -- </td>
-      <td> -- </td>
-      <td> -- </td>
-      <td> -- </td>
     </tr>
     <tr>
       <td>BF16 </td>
