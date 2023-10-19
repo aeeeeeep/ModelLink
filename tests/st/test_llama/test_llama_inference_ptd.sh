@@ -21,7 +21,7 @@ basepath=$(cd `dirname $0`; cd ../../..; pwd)
 export PYTHONPATH=${basepath}:$PYTHONPATH
 pip list
 
-python -m torch.distributed.launch $DISTRIBUTED_ARGS ${basepath}/inference_llama.py \
+python -m torch.distributed.launch $DISTRIBUTED_ARGS ${basepath}/tasks/inference/inference_llama.py \
        --task 1 2 3 4 5 \
        --tensor-model-parallel-size 2  \
        --pipeline-model-parallel-size 4  \
