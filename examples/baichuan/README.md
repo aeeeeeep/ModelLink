@@ -36,7 +36,7 @@ Here's a software summary of pre-training Baichuan-7B:
 |         firmware          |              7.0.t8.0.b214              |[link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159045?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743)|
 |           CANN            |Ascend-cann-toolkit-7.0.T8-linux    |[link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/261204647?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)|
 | binary arithmetic package |   Ascend-cann-kernels-XXX_7.0.T8_linux |[link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/261204647?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)|
-|           torch           |                 1.11.0                  |[link](https://gitee.com/ascend/pytorch/releases/tag/v5.0.rc2.2-pytorch1.11.0)|
+|           torch           |                 1.11.0                  |[link](https://repo.huaweicloud.com/kunpeng/archive/Ascend/PyTorch/torch-1.11.0-cp37-cp37m-linux_aarch64.whl)|
 |         torch_npu         |           1.11.0.post4-20230915         |[link](https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/Daily/v1.11.0/20230915.2/pytorch_v1.11.0_py37.tar.gz)|
 
 
@@ -79,17 +79,35 @@ pip install -r requirements.txt
 3. Prepare pretrained weights
 Download the Baichuan-7B checkpoint from [here](https://huggingface.co/baichuan-inc/Baichuan-7B/tree/main) 
 
+
 ```shell
   #!/bin/bash
   mkdir tokenizer
   cd ./tokenizer
   wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/config.json
+  wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/configuration_baichuan.py
   wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/generation_config.json
+  wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/handler.py
+  wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/modeling_baichuan.py
+  wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/pytorch_model.bin
   wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/special_tokens_map.json
   wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/tokenization_baichuan.py
   wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/tokenizer.model
   wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/tokenizer_config.json
   cd ..
+```
+In order to adapt to the baichuan-7B model, the following script is used to convert the model pre-training weights.
+```shell
+mkdir model_weights
+
+SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
+python $SCRIPT_PATH \
+    --input-model-dir ./tokenizer \
+    --output-model-dir ./model_weights \
+    --tensor-model-parallel-size 8 \
+    --pipeline-model-parallel-size 1 \
+    --type 7B \
+    --pse True     
 ```
 
 4. Prepare dataset
@@ -180,7 +198,7 @@ Here's a software summary of pre-training Baichuan-13B:
 |         firmware          |              7.0.t8.0.b214              |[link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159045?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743)|
 |           CANN            |Ascend-cann-toolkit-7.0.T8-linux    |[link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/261204647?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)|
 | binary arithmetic package |   Ascend-cann-kernels-XXX_7.0.T8_linux |[link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/261204647?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)|
-|           torch           |                 1.11.0                  |[link](https://gitee.com/ascend/pytorch/releases/tag/v5.0.rc2.2-pytorch1.11.0)|
+|           torch           |                 1.11.0                  |[link](https://repo.huaweicloud.com/kunpeng/archive/Ascend/PyTorch/torch-1.11.0-cp37-cp37m-linux_aarch64.whl)|
 |         torch_npu         |           1.11.0.post4-20230915         |[link](https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/Daily/v1.11.0/20230915.2/pytorch_v1.11.0_py37.tar.gz)|
 
 
@@ -210,6 +228,7 @@ pip install apex-0.1_ascend_XXXXXX-cp37-cp37m-linux_aarch64.whl
 git clone https://github.com/NVIDIA/Megatron-LM.git -b 23.05
 cd Megatron-LM
 pip3 install -e ./
+cd ..
 
 # install deepspeed and deepspeed_npu
 pip install deepspeed==0.9.2
