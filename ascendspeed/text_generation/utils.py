@@ -52,7 +52,7 @@ def pad_batch(batch, args):
         max_length = args.text_generation_config['max_length']
 
     # set fused_operator_contiguous_num = 32
-    max_length = math.ceil(max_length / 32) * fused_operator_contiguous_num
+    max_length = math.ceil(max_length / 32) * 32
 
     for i, tokens in enumerate(batch):
         if context_lengths[i] < max_length:
