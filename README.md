@@ -33,6 +33,7 @@ Currently, the following acceleration features for LLMs have been supported:
 * [Fused kernels and optimizers for LLMs](#jump8)
 * [Merged feed-forward network](#jump9)
 * [Gradient accumulation](#jump9)
+* [Communication over computation (CoC)](#jump10)
 
 More novel and useful features are developing for LLMs training on Ascend ...
 
@@ -297,6 +298,9 @@ For fused optimizer, two kinds of fused adam optimizers are provided by `--optim
 
 ### <span id="jump9">  Merged Feed-Forward Network & Gradient Accumulation </span>
 For llama and other LLMs without bias in FFN, the linear transformation in FFN could be merged to save communication in tensor parallelism. To enable this feature, please set `--mlp-layer-fusion` flag. Gradient accumulation uses gradient of N rounds to make an optimizer step and update parameters. Here, N = global batchsize / micro batchsize / DP, and DP = device nums / tp / pp.
+
+### <span id="jump10"> Communication over computation (CoC)
+For LLMs, there are certain linear (matmul+add) operations in both forward and backward when model tensor parallelism in enabled. These computations can be overlapped with certain communications by cutting the parallelized tensor even further to enable a pipeline throughout each part of the tensor. To enable this feature, please set environment variable `CC_PARALLEL_NUM=4` (could be set to 2/4/8 as a tuning parameter, or 1 if disable CoC). Notice that the benefits introduced by this optimization highly depends on the shape of matmul and the communication burden, thus further tuning might be required, following the detailed tutorials README.md and README_ch.md under directory `./ascendspeed/core/tensor_parallel/min_comm/`.
 
 ## Downstream Tasks
 
