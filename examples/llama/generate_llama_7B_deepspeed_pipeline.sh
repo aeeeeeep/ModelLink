@@ -40,6 +40,7 @@ deepspeed --num_nodes $NNODES --num_gpus $NPUS_PER_NODE \
        --hidden-size 4096  \
        --ffn-hidden-size 11008 \
        --num-attention-heads 32  \
+       --seq-length 2048 \
        --max-position-embeddings 2048 \
        --tokenizer-type PretrainedFromHF  \
        --load "${CHECKPOINT}"  \
@@ -47,7 +48,6 @@ deepspeed --num_nodes $NNODES --num_gpus $NPUS_PER_NODE \
        --tokenizer-not-use-fast \
        --fp16 \
        --micro-batch-size 1 \
-       --seq-length 256 \
        --max-new-tokens 64 \
        --seed 42 \
        --deepspeed \
