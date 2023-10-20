@@ -3,7 +3,7 @@ from ascendspeed import get_args
 from ascendspeed.model import GPTModel
 from ascendspeed.initialize import initialize_megatron
 from ascendspeed.arguments import core_transformer_config_from_args
-from tasks.inference.infer_base import task1, task2, task3, add_text_generate_args
+from tasks.inference.infer_base import task1, task2, task3, task4, task5, task6, add_text_generate_args
 
 
 def model_provider(pre_process=True, post_process=True):
@@ -39,3 +39,6 @@ if __name__ == "__main__":
     task1(args, model, system_template=system_template, dialog_template=dialog_template)
     task2(args, model, system_template=system_template, dialog_template=dialog_template)
     task3(args, model, system_template=system_template, dialog_template=dialog_template)
+    task4(args, model, system_template=system_template, dialog_template=dialog_template)
+    task5(args, model, system_template=system_template, dialog_template=dialog_template)
+    task6(args, model, system_template=system_template, dialog_template=dialog_template)
