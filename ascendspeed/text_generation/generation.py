@@ -8,7 +8,6 @@ from deepspeed.accelerator import get_accelerator
 
 from ascendspeed import get_args
 from ascendspeed.core import parallel_state
-from ascendspeed.utils import get_ltor_masks_and_position_ids
 from ascendspeed.text_generation.utils import pad_batch, top_k_logits
 
 from .forward_step import ForwardStep
@@ -47,12 +46,13 @@ def beam_search(model, tokens, **kwargs):
     # ==========================
     with torch.no_grad():
         tokens = tokens.repeat(beam_size, 1)
-        attention_mask, _, position_ids = get_ltor_masks_and_position_ids(
-            data=tokens,
-            eod_token=None,
-            reset_position_ids=False,
-            reset_attention_mask=False,
-            eod_mask_loss=False)
+        attention_mask = torch.tril(torch.ones(
+            (micro_batch_size, seq_length, seq_length), device=tokens.device)).view(
+            micro_batch_size, 1, seq_length, seq_length)
+
+        position_ids = torch.arange(seq_length, dtype=torch.long,
+                                    device=tokens.device)
+        position_ids = position_ids.unsqueeze(0).expand_as(tokens)
 
         context_length, done, scores, tokens = yield from forward_loop(args,
                                                                        attention_mask=attention_mask,
