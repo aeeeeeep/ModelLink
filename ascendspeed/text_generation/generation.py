@@ -46,10 +46,12 @@ def beam_search(model, tokens, **kwargs):
     # ==========================
     with torch.no_grad():
         tokens = tokens.repeat(beam_size, 1)
+        micro_batch_size, seq_length = tokens.size()
+
         attention_mask = torch.tril(torch.ones(
             (micro_batch_size, seq_length, seq_length), device=tokens.device)).view(
             micro_batch_size, 1, seq_length, seq_length)
-
+        attention_mask = (attention_mask < 0.5)
         position_ids = torch.arange(seq_length, dtype=torch.long,
                                     device=tokens.device)
         position_ids = position_ids.unsqueeze(0).expand_as(tokens)
@@ -266,11 +268,12 @@ def _beam_candidates_at_later(args, beam_size, new_scores):
         sorted_scores, indices = torch.sort(new_scores.view(-1), descending=True)
     else:
         accumulate_logits = torch.exp(new_scores)
-        if accumulate_logits.sum() < 1e-5:
-            sorted_scores, indices = torch.sort(new_scores.view(-1), descending=True)
-        else:
+        accumulate_logits_sum = accumulate_logits.sum()
+        if accumulate_logits_sum > 1e-5 or accumulate_logits_sum < 1.0:
             indices = torch.multinomial(accumulate_logits.view(-1), num_samples=2 * beam_size)
             sorted_scores = torch.gather(new_scores.view(-1), dim=0, index=indices)
+        else:
+            sorted_scores, indices = torch.sort(new_scores.view(-1), descending=True)
 
     return indices, sorted_scores
 
@@ -280,13 +283,14 @@ def _beam_candidates_at_beginning(args, beam_size, new_scores):
         sorted_scores, indices = torch.sort(new_scores[0, :], descending=True)
     else:
         accumulate_logits = torch.exp(new_scores[0, :])
-        if accumulate_logits.sum() < 1e-5:
-            sorted_scores, indices = torch.sort(new_scores[0, :], descending=True)
-        else:
+        accumulate_logits_sum = accumulate_logits.sum()
+        if accumulate_logits_sum > 1e-5 or accumulate_logits_sum < 1.0:
             indices = torch.multinomial(accumulate_logits, num_samples=2 * beam_size)
             sorted_scores = torch.gather(new_scores[0, :], dim=0, index=indices)
+        else:
+            sorted_scores, indices = torch.sort(new_scores[0, :], descending=True)
 
-    return indices, sorted_scores
+    return indices, sorted_score
 
 
 def _pad_tokens(args, tokens):
