@@ -5,7 +5,7 @@ MASTER_ADDR=localhost
 MASTER_PORT=6001
 NNODES=1
 NODE_RANK=0
-NPUS_PER_NODE=4
+NPUS_PER_NODE=1
 
 DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE \
                   --nnodes $NNODES \
@@ -14,17 +14,19 @@ DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE \
                   --master_port $MASTER_PORT"
 
 CHECKPOINT="your megatron checkpoint path"
+LORA_CHECKPOINT="your lora checkpoint path"
 VOCAB_FILE="your vocab path"
 
 python -m torch.distributed.launch $DISTRIBUTED_ARGS \
        ./tasks/inference/inference_llama.py \
        --no-contiguous-buffers-in-local-ddp \
-       --tensor-model-parallel-size 2  \
-       --pipeline-model-parallel-size 2  \
+       --tensor-model-parallel-size 1  \
+       --pipeline-model-parallel-size 1  \
        --num-layers 32  \
        --hidden-size 4096  \
        --ffn-hidden-size 11008 \
        --load "${CHECKPOINT}"  \
+       --lora-load "${LORA_CHECKPOINT}" \
        --num-attention-heads 32  \
        --seq-length 2048 \
        --max-position-embeddings 2048 \
@@ -34,4 +36,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --fp16 \
        --micro-batch-size 1 \
        --max-new-tokens 64 \
-       --seed 42
+       --seed 42 \
+       --lora-r 16 \
+       --lora-alpha 32 \
+       --lora-target-modules query_key_value dense gate_proj up_proj down_proj \
