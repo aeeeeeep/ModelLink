@@ -287,25 +287,22 @@ def sample_sequence_batch(model, context_tokens, context_lengths, type_ids=None,
                 break
 
 
-def _is_done(is_done, length_info, prev, started, tokenizer):
-    context_length, lengths = length_info
-
+def _is_done(is_done, prev, started, tokenizer):
     if parallel_state.is_pipeline_last_stage():
         done_token = (prev == tokenizer.eos_token_id).byte() & started.byte()
-        just_finished = (done_token & ~is_done).bool()
-        lengths[just_finished.view(-1)] = context_length
         is_done = is_done | done_token
-
         done = torch.all(is_done)
-        src = parallel_state.get_pipeline_model_parallel_last_rank()
-        group = parallel_state.get_pipeline_model_parallel_group()
-        torch.distributed.broadcast(done, src, group)
-    else:
 
+        if parallel_state.get_pipeline_model_parallel_world_size() > 1:
+            src = parallel_state.get_pipeline_model_parallel_last_rank()
+            group = parallel_state.get_pipeline_model_parallel_group()
+            torch.distributed.broadcast(done, src, group)
+    else:
         done = get_accelerator().ByteTensor([0])
-        src = parallel_state.get_pipeline_model_parallel_last_rank()
-        group = parallel_state.get_pipeline_model_parallel_group()
-        torch.distributed.broadcast(done, src, group)
+        if parallel_state.get_pipeline_model_parallel_world_size() > 1:
+            src = parallel_state.get_pipeline_model_parallel_last_rank()
+            group = parallel_state.get_pipeline_model_parallel_group()
+            torch.distributed.broadcast(done, src, group)
 
     return done
 
