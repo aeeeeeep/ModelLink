@@ -1,12 +1,10 @@
 #!/bin/bash
-
 export TOKENIZERS_PARALLELISM=false
 
 NNODES=1
 NPUS_PER_NODE=8
 
 CHECKPOINT="your origin deepspeed checkpoint path (TP=1, PP=1)"
-LORA_CHECKPOINT="your lora checkpoint path"
 VOCAB_FILE="your vocab path"
 
 ZERO_STAGE=0
@@ -34,26 +32,22 @@ cat <<EOT > $config_json
 EOT
 
 deepspeed --num_nodes $NNODES --num_gpus $NPUS_PER_NODE \
-       ./tasks/inference/inference_alpaca.py \
+       ./tasks/inference/inference_llama.py \
        --no-contiguous-buffers-in-local-ddp \
-       --num-layers 40  \
-       --hidden-size 5120  \
-       --ffn-hidden-size 13824 \
-       --num-attention-heads 40  \
+       --num-layers 32  \
+       --hidden-size 4096  \
+       --ffn-hidden-size 11008 \
+       --num-attention-heads 32  \
        --seq-length 2048 \
        --max-position-embeddings 2048 \
        --tokenizer-type PretrainedFromHF  \
        --load "${CHECKPOINT}"  \
-       --lora-load "${LORA_CHECKPOINT}" \
        --tokenizer-name-or-path "$VOCAB_FILE" \
        --tokenizer-not-use-fast \
        --fp16 \
        --micro-batch-size 1 \
        --max-new-tokens 64 \
        --seed 42 \
-       --lora-r 16 \
-       --lora-alpha 32 \
-       --lora-target-modules query_key_value dense gate_proj up_proj down_proj \
        --deepspeed \
        --deepspeed_config ${config_json} \
        --no-pipeline-parallel \
