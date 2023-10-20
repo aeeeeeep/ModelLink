@@ -25,7 +25,7 @@ from tasks.evaluation.eval_api.dataset_eval import DatasetEval
 from tasks.evaluation.eval_api.llm_chat import LlmChat
 from tasks.evaluation.eval_impl.template import CODE_TEST_LOG_DIR
 from ascendspeed.error_utils import check_divisible_by_zero
-from ascendspeed.utils WRITE_FILE_DEFAULT_FLAGS, WRITE_FILE_DEFAULT_MODES
+from ascendspeed.utils import WRITE_FILE_DEFAULT_FLAGS, WRITE_FILE_DEFAULT_MODES
 logger = logging.getLogger(__name__)
 
 
