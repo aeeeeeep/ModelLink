@@ -277,7 +277,7 @@ def sample_sequence_batch(model, context_tokens, context_lengths, type_ids=None,
 
             output_log_probs = _get_log_probs(args, context_length, log_probs_seq, next_log_probs, (group, src))
 
-            done = _is_done(is_done, (context_length, lengths), prev, started, tokenizer)
+            done = _is_done(is_done, prev, started, tokenizer)
 
             yield tokens, lengths, output_log_probs
 
