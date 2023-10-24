@@ -141,13 +141,13 @@ Here's a hardware summary of fine-tuning Chinese LLaMA Alpaca-13B:
 Here's a software summary of fine-tuning Chinese LLaMA Alpaca-13B:
 |         Software          |                Version                 |                                                                                      link                                                                                       |
 | :-----------------------: |:--------------------------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
-|          Python           |                 3.8.18                 |                                                                                        -                                                                                        |
-|          driver           |             23.0.RC3.B070              | [link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159048?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743) |
-|         firmware          |              6.4.0.3.220               | [link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159048?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743) |
-|           CANN            |              7.0.RC1.B070              |    [link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/261305467?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)    |
-| binary arithmetic package | Ascend-cann-kernels-XXXX_7.0.RC1_linux |    [link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/261305467?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)    |
+|          Python           |                 package                 |                                                                                        -                                                                                        |
+|          driver           |             package              | [link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159048?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743) |
+|         firmware          |              package               | [link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159048?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743) |
+|           CANN            |              package              |    [link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/261305467?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)    |
+| binary arithmetic package | package |    [link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/261305467?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)    |
 |           torch           |                 2.0.1                  |                                                                                        -                                                                                        |
-|         torch_npu         |                 2.0.1                  |                                                   [link](https://gitee.com/ascend/pytorch/releases/tag/v5.0.rc3-pytorch2.0.1)                                                   | 
+|         torch_npu         |                 package                  |                                                   [link](https://gitee.com/ascend/pytorch/releases/tag/v5.0.rc3-pytorch2.0.1)                                                   | 
 
 
 
