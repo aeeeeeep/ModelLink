@@ -1,13 +1,16 @@
 #!/bin/bash
 
 export TOKENIZERS_PARALLELISM=false
+export LD_LIBRARY_PATH=/usr/local:/usr/local/lib:/usr/local/lib:/root/miniconda3/lib:$LD_LIBRARY_PATH
+export HCCL_CONNECT_TIMEOUT=1200
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 NNODES=1
 NPUS_PER_NODE=8
 
-CHECKPOINT="your origin deepspeed checkpoint path (TP=1, PP=1)"
-LORA_CHECKPOINT="your lora checkpoint path"
-VOCAB_FILE="your vocab path"
+VOCAB_FILE=/home/dataset/llama
+basepath=$(cd `dirname $0`; cd ../../..; pwd)
+export PYTHONPATH=${basepath}:$PYTHONPATH
 
 ZERO_STAGE=0
 MICRO_BATCH_SIZE=1
@@ -34,26 +37,25 @@ cat <<EOT > $config_json
 EOT
 
 deepspeed --num_nodes $NNODES --num_gpus $NPUS_PER_NODE \
-       ./tasks/inference/inference_alpaca.py \
+       ${basepath}/tasks/inference/inference_bloom_pipeline.py \
+	   --task 1 2 3 4 5 \
        --no-contiguous-buffers-in-local-ddp \
-       --num-layers 40  \
-       --hidden-size 5120  \
-       --ffn-hidden-size 13824 \
-       --num-attention-heads 40  \
-       --seq-length 2048 \
+       --tensor-model-parallel-size 8  \
+       --pipeline-model-parallel-size 1  \
+       --num-layers 30  \
+       --hidden-size 4096  \
+       --num-attention-heads 32  \
        --max-position-embeddings 2048 \
+       --position-embedding-type alibi \
+       --embed-layernorm \
        --tokenizer-type PretrainedFromHF  \
        --load "${CHECKPOINT}"  \
-       --lora-load "${LORA_CHECKPOINT}" \
        --tokenizer-name-or-path "$VOCAB_FILE" \
        --tokenizer-not-use-fast \
        --fp16 \
        --micro-batch-size 1 \
+       --seq-length 256 \
        --max-new-tokens 64 \
        --seed 42 \
-       --lora-r 16 \
-       --lora-alpha 32 \
-       --lora-target-modules query_key_value dense gate_proj up_proj down_proj \
        --deepspeed \
        --deepspeed_config ${config_json} \
-       --no-pipeline-parallel \
