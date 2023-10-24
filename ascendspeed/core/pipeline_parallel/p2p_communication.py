@@ -88,12 +88,13 @@ def _communicate(
         recv_prev_shape, recv_next_shape = _communicate_shapes(
             tensor_send_next, tensor_send_prev, recv_prev, recv_next, config
         )
-
+        recv_prev_shape_var = recv_prev_shape
+        recv_next_shape_var = recv_next_shape
     if args.scatter_gather_tensors_in_pipeline and not config.sequence_parallel:
-        tensor_chunk_shape = reduce(operator.mul, tensor_shape, 1) // \
+        recv_prev_shape = reduce(operator.mul, recv_prev_shape, 1) // \
             get_tensor_model_parallel_world_size()
-        recv_prev_shape = tensor_chunk_shape
-        recv_next_shape = tensor_chunk_shape
+        recv_next_shape = reduce(operator.mul, recv_next_shape, 1) // \
+            get_tensor_model_parallel_world_size()
 
     if recv_prev:
         if config.pipeline_dtype is None:
@@ -163,15 +164,22 @@ def _communicate(
     # User should assert that we have a modern enough PyTorch to not need this
     get_accelerator().synchronize()
 
+    if not config.variable_seq_lengths:
+        recv_prev_shape = tensor_shape
+        recv_next_shape = tensor_shape
+    else:
+        recv_prev_shape = recv_prev_shape_var
+        recv_next_shape = recv_next_shape_var
+
     # If using scatter-gather optimization, gather smaller chunks.
     if args.scatter_gather_tensors_in_pipeline and not config.sequence_parallel:
         if recv_prev:
             tensor_recv_prev = tensor_parallel.gather_split_1d_tensor(
-                tensor_recv_prev).view(tensor_shape).requires_grad_()
+                tensor_recv_prev).view(recv_prev_shape).requires_grad_()
 
         if recv_next:
             tensor_recv_next = tensor_parallel.gather_split_1d_tensor(
-                tensor_recv_next).view(tensor_shape).requires_grad_()
+                tensor_recv_next).view(recv_next_shape).requires_grad_()
 
     return tensor_recv_prev, tensor_recv_next, reqs
 

@@ -18,9 +18,13 @@
 
 import torch
 import random
-from ascendspeed import get_args
+
+from transformers import DataCollatorForSeq2Seq
+
+from ascendspeed import get_args, get_tokenizer
 from ascendspeed.core import parallel_state
 from ascendspeed.error_utils import check_divisible
+
 
 
 def build_pretraining_data_loader(dataset, consumed_samples):
@@ -57,12 +61,30 @@ def build_pretraining_data_loader(dataset, consumed_samples):
         raise Exception('{} dataloader type is not supported.'.format(
                 args.dataloader_type))
 
+    tokenizer = get_tokenizer().tokenizer
+    if args.variable_seq_lengths and args.is_instruction_dataset:
+        collator = DataCollatorForSeq2Seq(
+            tokenizer,
+            pad_to_multiple_of=32,
+            return_tensors='pt',
+            padding=True
+        )
+    elif args.is_instruction_dataset:
+        collator = DataCollatorForSeq2Seq(
+            tokenizer,
+            return_tensors='pt',
+            padding='max_length',
+            max_length=args.seq_length
+        )
+    else:
+        collator = None
+
     # Torch dataloader.
     return torch.utils.data.DataLoader(dataset,
                                        batch_sampler=batch_sampler,
                                        num_workers=args.num_workers,
                                        generator=torch.Generator().manual_seed(args.seed),
-                                       collate_fn=None,
+                                       collate_fn=collator,
                                        pin_memory=True)
 
 class MegatronPretrainingSampler:
