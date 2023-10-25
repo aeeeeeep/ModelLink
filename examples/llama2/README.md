@@ -182,3 +182,6 @@ The relative error of the average loss is 0.0046, less than 2%, the maximum rela
 The absolute error of the average loss is 0.0009, less than 2%, the maximum absolute error is 0.0246. 
 
 ![NPU-LOSS and NPU-Absolute-Error](../../sources/images/llama2/llama2_7b_shape_fp16_layer32_loss_with_weights_comparison_absolute.png)
+\
+\
+<font size=1>If the download fails using the wget command, you can manually download the file while ensuring website security.</font>
