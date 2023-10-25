@@ -1,6 +1,7 @@
 #!/bin/bash
 
 export TOKENIZERS_PARALLELISM=false
+export TASK_QUEUE_ENABLE=0
 
 NNODES=1
 NPUS_PER_NODE=8
