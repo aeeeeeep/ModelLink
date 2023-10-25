@@ -1,12 +1,14 @@
 #!/bin/bash
 
 export TOKENIZERS_PARALLELISM=false
+export TASK_QUEUE_ENABLE=0
 
 NNODES=1
 NPUS_PER_NODE=8
 
-CHECKPOINT="your megatron checkpoint path"
-VOCAB_FILE="your vocab path"
+VOCAB_FILE=/home/dataset/llama
+basepath=$(cd `dirname $0`; cd ../../..; pwd)
+export PYTHONPATH=${basepath}:$PYTHONPATH
 
 ZERO_STAGE=0
 MICRO_BATCH_SIZE=1
@@ -33,22 +35,25 @@ cat <<EOT > $config_json
 EOT
 
 deepspeed --num_nodes $NNODES --num_gpus $NPUS_PER_NODE \
-       ./tasks/inference/inference_llama_pipeline.py \
+       ${basepath}/tasks/inference/inference_bloom_pipeline.py \
+	   --task 1 2 3 4 5 \
        --no-contiguous-buffers-in-local-ddp \
        --tensor-model-parallel-size 8  \
+       --pipeline-model-parallel-size 1  \
        --num-layers 30  \
        --hidden-size 4096  \
-       --ffn-hidden-size 11008 \
        --num-attention-heads 32  \
        --max-position-embeddings 2048 \
+       --position-embedding-type alibi \
+       --embed-layernorm \
        --tokenizer-type PretrainedFromHF  \
        --load "${CHECKPOINT}"  \
        --tokenizer-name-or-path "$VOCAB_FILE" \
        --tokenizer-not-use-fast \
        --fp16 \
        --micro-batch-size 1 \
-       --seq-length 1024 \
-       --max-new-tokens 256 \
+       --seq-length 256 \
+       --max-new-tokens 64 \
        --seed 42 \
        --deepspeed \
        --deepspeed_config ${config_json} \

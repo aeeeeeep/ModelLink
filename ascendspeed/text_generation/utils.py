@@ -175,6 +175,7 @@ def forward_step(model, tokens, **kwargs):
     _unwrap_and_set_input_tensor(args, input_tensor, model)
 
     if args.deepspeed and args.ds_pipeline_enabled:
+        print(tokens.shape, position_ids.shape, attention_mask.shape)
         output_tensor = model.eval_batch(
             iter([[(tokens, position_ids, attention_mask), (tokens, tokens)]]),
             compute_loss=False
