@@ -496,7 +496,15 @@ In addition, `BelleMultiTurnInstructionHandler` is used to handle [belle dataset
 ### <span id="jump12"> Finetune </span>
 #### Lora
 
-Now, we support Lora to fine-tune your models. You just need to add this argument in your script to open Lora:
+Now, we support Lora to fine-tune your models. 
+
+First, you need to install version 0.4.0 of the peft library, like this:
+```shell
+pip install peft==0.4.0
+```
+You can also choose to install from [the source package in the GitHub repository](https://github.com/huggingface/peft/archive/refs/tags/v0.4.0.tar.gz), so you can modify the setup.py file to avoid some dependency issues.
+
+Next, you just need to add this argument in your script to open Lora:
 
 ```shell
 # Llama example
@@ -627,7 +635,7 @@ pretrained_model_name_or_path(`str`, *optional*, defaults to None):
 ```
 ##### <span id="case1"> Generate text in HuggingFace-like ways </span>
 
-###### Greedy
+###### Greedy Search
 ```python
 responses = model.generate(
     "Write quick sort code in python",
@@ -636,7 +644,7 @@ responses = model.generate(
 ```
 <img src="sources/images/greedy.png">
 
-###### Do sample with Top-k and Top-p
+###### Do sample with top-k and top-p
 ```python
 responses = model.generate(
     "Write quick sort code in python",
@@ -649,7 +657,7 @@ responses = model.generate(
 ```
 <img src="sources/images/sampling.png">
 
-###### Beam search with Top-k and Top-p
+###### Beam search with top-k and top-p
 ```python
 responses = model.generate(
     "Write quick sort code in python",
@@ -661,7 +669,7 @@ responses = model.generate(
 ```
 <img src="sources/images/beam_search.png">
 
-###### Beam search with Top-k and Top-p sampling
+###### Beam search with top-k and top-p sampling
 ```python
 responses = model.generate(
     "Write quick sort code in python",
