@@ -292,3 +292,6 @@ You may also consider original work in your reference:
       year={2023}
 }
 ```
+\
+\
+<font size=1>If the download fails using the wget command, you can manually download the file while ensuring website security.</font>

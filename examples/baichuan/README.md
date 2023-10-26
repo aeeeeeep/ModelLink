@@ -333,6 +333,9 @@ NPU vs Reference loss relative error.
 The relative error between NPU and Reference Loss is less than 0.02 throughout, as expected.
 
 ![NPU-Relative-Error](../../sources/images/baichuan/baichuan13B-loss-relative-error.png)
+\
+\
+<font size=1>If the download fails using the wget command, you can manually download the file while ensuring website security.</font>
 
 
 
