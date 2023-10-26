@@ -9,12 +9,12 @@ AscendSpeed provides end-to-end test scripts for large language models on [Ascen
 Currently, the pre-training of the following models has been supported: 
 
 * <a href="https://github.com/baichuan-inc" style="color:green">Baichuan</a>-[[README: 7B/13B]](examples/baichuan/README.md)
-* <a href="https://arxiv.org/pdf/2108.12409.pdf" style="color:green">Bloom</a>-[[README: 7B1/176B]](examples/bloom/README.md)
-* <a href="https://internlm.intern-ai.org.cn/" style="color:green">InternLM</a>-7B
-* <a href="https://huggingface.co/docs/transformers/main/model_doc/llama" style="color:green">LLaMA</a>-7B/13B/[[README: 65B]](examples/llama/README.md)
-* <a href="https://huggingface.co/docs/transformers/main/model_doc/llama2" style="color:green">LLaMA2</a>-7B
+* <a href="https://arxiv.org/pdf/2108.12409.pdf" style="color:green">Bloom</a>-[[README: 7B/176B]](examples/bloom/README.md)
+* <a href="https://internlm.intern-ai.org.cn/" style="color:green">InternLM</a>-[[README: 7B]](examples/intern/README.md)
+* <a href="https://huggingface.co/docs/transformers/main/model_doc/llama" style="color:green">LLaMA</a>-[[README: 7B/13B/33B/65B]](examples/llama/README.md)
+* <a href="https://huggingface.co/docs/transformers/main/model_doc/llama2" style="color:green">LLaMA2</a>-[[README: 7B]](examples/llama2/README.md)
 
-LLaMA-33B, LLaMA2-13B/70B, Aquila-7B are coming soon ...
+LLaMA2-13B/70B, Aquila-7B are coming soon ...
 
 ### Acceleration Features
 Currently, the following acceleration features for LLMs have been supported:
@@ -131,6 +131,16 @@ The plan for more tasks, like RLHF, is under way ...
       <td> 1734 tokens/p/s </td>
       <td> <a href="sources/images/llama13b_loss.png">Loss</a> </td>
       <td> <a href="examples/llama/pretrain_llama_13B_zero_8p.sh">Train</a> </td>
+    </tr>
+    <tr>
+        <td>33B</td>
+        <td>1x8</td>
+        <td>FP16</td>
+        <td>621 tokens/p/s</td>
+        <td>520 tokens/p/s</td>
+        <td>
+        <a href="./sources/images/llama/llama338_shape_layer8.png">Loss</a> </td>
+        <td><a href="examples/llama/pretrain_llama_33B_zero_32p.sh">Train</a> </td>
     </tr>
     <tr>
       <td rowspan="2">65B</td>
