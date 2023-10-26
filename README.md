@@ -104,7 +104,7 @@ The plan for more tasks, like RLHF, is under way ...
       <td> <a href="examples/bloom/pretrain_bloom_176b.sh">Train</a> </td>
     </tr>
     <tr>
-      <td>InternLM</td>
+      <td><a href="examples/intern/README.md">InternLM</td>
       <td>7B</td>
       <td>1x8</td>
       <td>FP16</td>
@@ -114,7 +114,7 @@ The plan for more tasks, like RLHF, is under way ...
       <td> <a href="examples/intern/pretrain_internlm_7b_zero.sh">Train</a> </td>
     </tr>
     <tr>
-      <td rowspan="4">LLaMA</td>
+      <td rowspan="4"><a href="examples/llama/README.md">LLaMA</td>
       <td>7B</td>
       <td>1x8</td>
       <td>FP16</td>
@@ -154,7 +154,7 @@ The plan for more tasks, like RLHF, is under way ...
       <td> <a href="examples/llama/pretrain_llama_65B_ptd_32p.sh">Train</a> </td>
     </tr>
     <tr>
-      <td>LLaMA2</td>
+      <td><a href="examples/llama2/README.md">LLaMA2</td>
       <td>7B</td>
       <td>1x8</td>
       <td>FP16 </td>
