@@ -180,3 +180,6 @@ NPU vs GPU without weights loss and relative error.
 
 NPU vs GPU with weights loss and relative error.
 ![NPU-Loss-with-weight-and-Relative-Error](../../sources/images/intern7b_loss_with_weights.png)
+\
+\
+<font size=1>If the file fails to be downloaded while using `wget` command, you can manually download the file to ensuring website security.</font>
