@@ -133,6 +133,16 @@ The plan for more tasks, like RLHF, is under way ...
       <td> <a href="examples/llama/pretrain_llama_13B_zero_8p.sh">Train</a> </td>
     </tr>
     <tr>
+        <td>33B</td>
+        <td>1x8</td>
+        <td>FP16</td>
+        <td>621 tokens/p/s</td>
+        <td>520 tokens/p/s</td>
+        <td>
+        <a href="./sources/images/llama/llama338_shape_layer8.png">Loss</a> </td>
+        <td><a href="examples/llama/pretrain_llama_33B_zero_32p.sh">Train</a> </td>
+    </tr>
+    <tr>
       <td rowspan="2">65B</td>
       <td rowspan="2">4x8</td>
     </tr>
