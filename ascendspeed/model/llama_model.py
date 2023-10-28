@@ -40,7 +40,7 @@ from ascendspeed.model.utils import get_linear_layer, init_method_normal, scaled
 from ascendspeed.core.tensor_parallel.mappings import scatter_to_sequence_parallel_region
 from ascendspeed.model.fused_softmax import NPUFusedScaleMaskSoftmax
 from ascendspeed.model.language_model import Pooler
-from ascendspeed.model.triangle_attention import TriangleAttention
+from ascendspeed.core.transformer.module.triangle_attention import TriangleAttention
 from ascendspeed.error_utils import check_equal, check_divisible, ensure_valid
 
 
@@ -375,7 +375,8 @@ class LlamaParallelAttention(MegatronModule):
 
         self.use_triangle_attn = args.triangle_attn
         if self.use_triangle_attn:
-            self.triangle_attn = TriangleAttention(block_size=1024,
+            self.block_size = args.triangle_block_size
+            self.triangle_attn = TriangleAttention(block_size=self.block_size,
                                                    masked_softmax_func=self.scale_mask_softmax)
         # 适配internlm模型
         bias = getattr(config, "row_parallel_linear_bias", False)
