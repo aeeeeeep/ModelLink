@@ -31,6 +31,7 @@ from tasks.evaluation.eval_impl.ceval_exam import CEvalExam
 from tasks.evaluation.eval_impl.bbh_eval import BBHEval
 from tasks.evaluation.eval_impl.agi_eval import AGIEvalExam
 from tasks.evaluation.eval_impl.human_eval import HumanEval
+from tasks.evaluation.eval_impl.baai_coig_exam_eval import BaaiCoigEval
 
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
@@ -194,6 +195,20 @@ def bbh_eval(eval_args, agent):
         if data_path:
             bbh = BBHEval(test_dir=data_path)
             answer, score_df = bbh.eval(llm_chat=agent)
+            logger.info(score_df)
+    except Exception as e:
+        logger.info(e)
+
+
+def baai_coig(eval_args, agent):
+    data_path = None
+    for path in eval_args.task_data_path:
+        if 'baai_coig' in path:
+            data_path = path
+    try:
+        if data_path:
+            baai_coig_eval = BaaiCoigEval(test_dir=data_path)
+            _, score_df = baai_coig_eval.eval(llm_chat=agent)
             logger.info(score_df)
     except Exception as e:
         logger.info(e)
