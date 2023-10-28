@@ -24,16 +24,15 @@ Here's a hardware summary of pre-training  LLaMA2-7B:
 Here's a software summary of pre-training  LLaMA2-7B: 
 
 
-|         Software          |                 Version                 |link  |
-| :-----------------------: | :-------------------------------------: | :---:|
-|          Python           |                  3.7.16                 |-|
-|          driver           |               23.0.RC3.B050             |[link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159045?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743)|
-|         firmware          |              7.0.t8.0.b214              |[link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159045?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743)|
-|           CANN            |Ascend-cann-toolkit-7.0.T8-linux    |[link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/261204647?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)|
-| binary arithmetic package |   Ascend-cann-kernels-XXX_7.0.T8_linux |[link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/261204647?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)|
-|           torch           |                 1.11.0                  |[link](https://gitee.com/ascend/pytorch/releases/tag/v5.0.rc2.2-pytorch1.11.0)|
-|         torch_npu         |           1.11.0.post4-20230915         |[link](https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/Daily/v1.11.0/20230915.2/pytorch_v1.11.0_py37.tar.gz)|
-
+|         Software          |   Version   |
+| :-----------------------: |:-----------:|
+|          Python           |   3.7.16    |
+|          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
+|         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
+|           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
+| binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
+|           torch           |                                                    1.11.0                                                    |
+|         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
 
 ### Script
 
@@ -182,3 +181,6 @@ The relative error of the average loss is 0.0046, less than 2%, the maximum rela
 The absolute error of the average loss is 0.0009, less than 2%, the maximum absolute error is 0.0246. 
 
 ![NPU-LOSS and NPU-Absolute-Error](../../sources/images/llama2/llama2_7b_shape_fp16_layer32_loss_with_weights_comparison_absolute.png)
+\
+\
+<font size=1>If the download of the file fails using 'wget' , you can download it manually while ensuring network security.</font>

@@ -29,15 +29,16 @@ Here's a hardware summary of pre-training Baichuan-7B:
 Here's a software summary of pre-training Baichuan-7B: 
 
 
-|         Software          |                 Version                 |link  |
-| :-----------------------: | :-------------------------------------: | :---:|
-|          Python           |                  3.7.16                 |-|
-|          driver           |  Ascend-hdk-XXX-npu-driver_23.0.rc3_linux         |[link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/260867092?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743)|
-|         firmware          | Ascend-hdk-XXX-npu-firmware_6.4.0.4.220    |[link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/260867092?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743)|
-|           CANN            |Ascend-cann-toolkit_7.0.RC1.1_linux |[link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)|
-| binary arithmetic package | Ascend-cann-kernels-XXX_7.0.RC1.1_linux |[link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)|
-|           torch           |                 1.11.0                  |[link](https://repo.huaweicloud.com/kunpeng/archive/Ascend/PyTorch/torch-1.11.0-cp37-cp37m-linux_aarch64.whl)|
-|         torch_npu         |           1.11.0.post4         |[link](https://gitee.com/ascend/pytorch/releases/download/v5.0.rc3-pytorch1.11.0/torch_npu-1.11.0.post4-cp37-cp37m-linux_aarch64.whl)|
+
+|         Software          |   Version   |
+| :-----------------------: |:-----------:|
+|          Python           |   3.7.16    |
+|          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
+|         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
+|           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
+| binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
+|           torch           |                                                    1.11.0                                                    |
+|         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
 
 
 ### Script
@@ -206,15 +207,15 @@ Here's a hardware summary of pre-training Baichuan-13B:
 Here's a software summary of pre-training Baichuan-13B:
 
 
-|         Software          |                 Version                 |link  |
-| :-----------------------: | :-------------------------------------: | :---:|
-|          Python           |                  3.7.16                 |-|
-|          driver           |  Ascend-hdk-XXX-npu-driver_23.0.rc3_linux         |[link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/260867092?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743)|
-|         firmware          | Ascend-hdk-XXX-npu-firmware_6.4.0.4.220    |[link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/260867092?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743)|
-|           CANN            |Ascend-cann-toolkit_7.0.RC1.1_linux |[link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)|
-| binary arithmetic package | Ascend-cann-kernels-XXX_7.0.RC1.1_linux |[link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)|
-|           torch           |                 1.11.0                  |[link](https://repo.huaweicloud.com/kunpeng/archive/Ascend/PyTorch/torch-1.11.0-cp37-cp37m-linux_aarch64.whl)|
-|         torch_npu         |           1.11.0.post4         |[link](https://gitee.com/ascend/pytorch/releases/download/v5.0.rc3-pytorch1.11.0/torch_npu-1.11.0.post4-cp37-cp37m-linux_aarch64.whl)|
+|         Software          |   Version   |
+| :-----------------------: |:-----------:|
+|          Python           |   3.7.16    |
+|          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
+|         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
+|           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
+| binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
+|           torch           |                                                    1.11.0                                                    |
+|         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
 
 
 
@@ -361,6 +362,9 @@ NPU vs Reference loss relative error.
 The relative error between NPU and Reference Loss is less than 0.02 throughout, as expected.
 
 ![NPU-Relative-Error](../../sources/images/baichuan/baichuan13B-loss-relative-error.png)
+\
+\
+<font size=1>If the download of the file fails using 'wget' , you can download it manually while ensuring network security.</font>
 
 
 

@@ -41,7 +41,7 @@ from ascendspeed.core.tensor_parallel.mappings import scatter_to_sequence_parall
 from ascendspeed.model.fused_softmax import NPUFusedScaleMaskSoftmax
 from ascendspeed.model.language_model import Pooler
 from ascendspeed.model.triangle_attention import TriangleAttention
-from ascendspeed.error_utils import check_equal, check_divisible
+from ascendspeed.error_utils import check_equal, check_divisible, ensure_valid
 
 
 class RotaryEmbedding(torch.nn.Module):
@@ -156,7 +156,7 @@ class LlamaLMHead(MegatronModule):
 class LlamaLMHeadPipe(LlamaLMHead):
 
     def forward(self, inputs, **kwargs):
-        assert torch.is_tensor(inputs) or isinstance(inputs, tuple)
+        ensure_valid(torch.is_tensor(inputs) or isinstance(inputs, tuple))
         if isinstance(inputs, tuple):
             hidden_states = inputs[0]
         else:
@@ -218,7 +218,7 @@ class LlamaEmbedding(MegatronModule):
 class LlamaEmbeddingPipe(LlamaEmbedding):
 
     def forward(self, inputs, **kwargs):
-        assert torch.is_tensor(inputs) or isinstance(inputs, tuple)
+        ensure_valid(torch.is_tensor(inputs) or isinstance(inputs, tuple))
         if isinstance(inputs, tuple):
             input_ids = inputs[0]
         else:
@@ -648,8 +648,6 @@ class LlamaParallelTransformerLayer(MegatronModule):
 
     @staticmethod
     def _build_alibi_tensor(max_seq_len, num_attention_heads, batch_size):
-        # Based on https://github.com/ofirpress/attention_with_linear_biases/blob/"
-        # "a35aaca144e0eb6b789dfcb46784c4b8e31b7983/fairseq/models/transformer.py#L742
         """Returns tensor shaped (batch_size * num_attention_heads, 1, max_seq_len)"""
 
         def get_slopes(n):
@@ -731,7 +729,7 @@ class LlamaParallelTransformerLayerPipe(LlamaParallelTransformerLayer):
     """
 
     def forward(self, inputs, **kwargs):
-        assert torch.is_tensor(inputs) or isinstance(inputs, tuple)
+        ensure_valid(torch.is_tensor(inputs) or isinstance(inputs, tuple))
         if torch.is_tensor(inputs) or len(inputs) == 1:
             # No attention mask forwarded, search for args.attn_mask
             if not hasattr(self, '_args'):
@@ -778,6 +776,19 @@ class LlamaParallelTransformer(MegatronModule):
         error_info = 'num_layers must be divisible by pipeline_model_parallel_size'
         check_divisible(args.num_layers, parallel_state.get_pipeline_model_parallel_world_size(), error_info)
         self.num_layers = args.num_layers // parallel_state.get_pipeline_model_parallel_world_size()
+
+        if self.checkpoint_policy == "block":
+            self.recomputation_layer_num = [self.checkpoint_block_layer] * \
+                parallel_state.get_pipeline_model_parallel_world_size()
+        elif self.checkpoint_policy == "custom":
+            if len(args.recomputation_layer_num) == \
+                parallel_state.get_pipeline_model_parallel_world_size():
+                self.recomputation_layer_num = args.recomputation_layer_num
+            else:
+                raise ValueError(f"`recomputation_layer_num` length must equal to PP stage number.")
+        else:
+            self.recomputation_layer_num = [self.num_layers] * \
+                parallel_state.get_pipeline_model_parallel_world_size()
 
         # Transformer layers.
         def build_layer(layer_number):
@@ -834,7 +845,6 @@ class LlamaParallelTransformer(MegatronModule):
 
     def _checkpointed_forward(self, hidden_states, attention_mask):
         """Forward method with activation checkpointing."""
-
         def custom(start, end):
             def custom_forward(*inputs):
                 x_ = inputs[0]
@@ -848,32 +858,11 @@ class LlamaParallelTransformer(MegatronModule):
 
         # Make sure memory is freed.
         tensor_parallel.reset_checkpointed_activations_memory_buffer()
-        l = 0
-        while l < self.num_layers:
-            hidden_states = tensor_parallel.checkpoint(
-                custom(l, l + self.checkpoint_num_layers),
-                self.distribute_saved_activations,
-                hidden_states, attention_mask)
-            l += self.checkpoint_num_layers
-
-        return hidden_states
-
-    def _checkpointed_forward_block(self, hidden_states, attention_mask):
-        """Forward method with activation checkpointing."""
-        def custom(start, end):
-            def custom_forward(*inputs):
-                x_ = inputs[0]
-                attention_mask = inputs[1]
-                for index in range(start, end):
-                    layer = self._get_layer(index)
-                    x_ = layer(x_, attention_mask=attention_mask)
-                return x_
-
-            return custom_forward
 
         # Make sure memory is freed.
         for idx in range(self.num_layers):
-            if idx < self.checkpoint_block_layer:
+            if idx < self.recomputation_layer_num[
+                parallel_state.get_pipeline_model_parallel_rank()]:
                 hidden_states = tensor_parallel.checkpoint(
                     custom(idx, idx + 1),
                     self.distribute_saved_activations,
@@ -899,13 +888,11 @@ class LlamaParallelTransformer(MegatronModule):
 
         # Checks.
         if layer_past is not None:
-            assert get_key_value, \
-                'for not None values in layer_past, ' \
-                'expected get_key_value to be set'
+            ensure_valid(get_key_value, error_message='for not None values in layer_past, ' \
+                                        'expected get_key_value to be set')
         if get_key_value:
-            assert not self.checkpoint_activations, \
-                'get_key_value does not work with ' \
-                'activation checkpointing'
+            ensure_valid(not self.checkpoint_activations, error_message='get_key_value does not work with ' \
+                                                          'activation checkpointing')
 
         # Reza's note: DeepSpeed inference does not support transposes
         if not self.ds_inference:
@@ -921,10 +908,8 @@ class LlamaParallelTransformer(MegatronModule):
                 # See set_input_tensor()
                 hidden_states = self.input_tensor
 
-        if self.checkpoint_activations and self.checkpoint_policy == 'full':
+        if self.checkpoint_activations:
             hidden_states = self._checkpointed_forward(hidden_states, attention_mask)
-        elif self.checkpoint_activations and self.checkpoint_policy == 'block':
-            hidden_states = self._checkpointed_forward_block(hidden_states, attention_mask)
         else:
             if get_key_value:
                 presents = []

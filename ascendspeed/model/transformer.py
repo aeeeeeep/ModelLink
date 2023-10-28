@@ -35,7 +35,7 @@ from ascendspeed.model.fused_softmax import NPUFusedScaleMaskSoftmax
 from ascendspeed.model.fused_bias_gelu import bias_gelu_impl
 from ascendspeed.model.module import MegatronModule
 from ascendspeed.model.utils import attention_mask_func, openai_gelu, erf_gelu
-from ascendspeed.error_utils import check_divisible, check_equal
+from ascendspeed.error_utils import check_divisible, check_equal, ensure_valid
 
 
 # flags required to enable jit fusion kernels
@@ -308,7 +308,7 @@ class ParallelAttention(MegatronModule):
                 dtype=query_layer.dtype,
                 device=get_accelerator().current_device_name())
         else:
-            matmul_result = alibi[:output_size[0]*output_size[1], :, :output_size[3]]
+            matmul_result = alibi[:, :output_size[3]]
 
         # Rotary embeddings
         if self.position_embedding_type == PositionEmbeddingType.rotary:
@@ -633,8 +633,6 @@ class ParallelTransformerLayer(MegatronModule):
 
     @staticmethod
     def _build_alibi_tensor(max_seq_len, num_attention_heads, batch_size):
-        # Based on https://github.com/ofirpress/attention_with_linear_biases/blob/"
-        # "a35aaca144e0eb6b789dfcb46784c4b8e31b7983/fairseq/models/transformer.py#L742
         """Returns tensor shaped (batch_size * num_attention_heads, 1, max_seq_len)"""
 
         def get_slopes(n):
@@ -659,8 +657,7 @@ class ParallelTransformerLayer(MegatronModule):
         tp_index = parallel_state.get_tensor_model_parallel_rank()
         alibi = alibi.reshape((tp_world_size, -1, *alibi.shape[1:]))[tp_index]
 
-        alibi = alibi.repeat(batch_size, 1, 1)
-        return alibi
+        return alibi[0]
 
 
 class ParallelTransformerLayerPipe(ParallelTransformerLayer):
@@ -684,7 +681,7 @@ class ParallelTransformerLayerPipe(ParallelTransformerLayer):
        for the mask and only return `super().forward(...)`
     """
     def forward(self, inputs, **kwargs):
-        assert torch.is_tensor(inputs) or isinstance(inputs, tuple)
+        ensure_valid(torch.is_tensor(inputs) or isinstance(inputs, tuple))
         if torch.is_tensor(inputs) or len(inputs) == 1:
             # No attention mask forwarded, search for args.attn_mask
             if not hasattr(self, '_args'):
@@ -763,9 +760,10 @@ class ParallelTransformer(MegatronModule):
         else:
             # Each stage gets a contiguous set of layers.
             offset = parallel_state.get_pipeline_model_parallel_rank() * self.num_layers
-            
-        assert len(num_experts) == 1 or len(num_experts) == args.num_layers // args.expert_interval, \
-        'num_experts must be either a single value or a list of the same length as the number of MoE layers'
+        
+        expression = len(num_experts) == 1 or len(num_experts) == args.num_layers // args.expert_interval
+        ensure_valid(expression, error_message='num_experts must be either a single value or' \
+                                 ' a list of the same length as the number of MoE layers')
 
         # Create the list of MoE experts
         if len(num_experts) == 1:
@@ -853,13 +851,11 @@ class ParallelTransformer(MegatronModule):
 
         # Checks.
         if layer_past is not None:
-            assert get_key_value, \
-                'for not None values in layer_past, ' \
-                'expected get_key_value to be set'
+            ensure_valid(get_key_value, error_message='for not None values in layer_past, ' \
+                                        'expected get_key_value to be set')
         if get_key_value:
-            assert not self.checkpoint_activations, \
-                'get_key_value does not work with ' \
-                'activation checkpointing'
+            ensure_valid(not self.checkpoint_activations, error_message='get_key_value does not work with ' \
+                                                          'activation checkpointing')
 
         # Reza's note: DeepSpeed inference does not support transposes
         if not self.ds_inference:
