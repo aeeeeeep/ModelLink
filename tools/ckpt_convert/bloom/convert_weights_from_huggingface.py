@@ -38,8 +38,6 @@ def get_args():
     parser.add_argument("--pipeline-model-parallel-size", type=int, default=1,
                         help="degree of pipeline model parallel")
     parser.add_argument("--type", type=str, choices=["7B", "176B"], default="7B")
-    parser.add_argument("--deepspeed", action="store_true", default=True)
-    parser.add_argument("--partition-layers", type=str, help="the partition method of model when pipeline is used")
     return parser.parse_args()
 
 
@@ -64,16 +62,20 @@ def get_weight_from_name(layer_name):
     return input_models[weight_map[layer_name]][layer_name]
 
 
-def get_partition_layers(model_type, num_layers, pp_size, partition_layers=None):
-    if model_type == "7B":
-        return [num_layers // pp_size]
-    else:
-        return list(map(int, partition_layers.split(',')))
+def get_partition_layers(num_layers, pp_size):
+    try:
+        max_layers_pernode = round(num_layers / pp_size)
+        partition_layers = [max_layers_pernode for i in range(pp_size - 1)]
+        partition_layers.append(num_layers - max_layers_pernode * (pp_size - 1))
+        return partition_layers
+    except ZeroDivisionError:
+        logger.error('pp_size is 0')
+        return []
 
 
 def generate_ascendspeed_weights(parallelism_config, make_vocab_size_divisible_by, output_model_dir):
-    tp_size, pp_size, partition_layers, model_type = parallelism_config.tp_size, parallelism_config.pp_size,\
-        parallelism_config.partition_layers, parallelism_config.model_type
+    tp_size, pp_size, model_type = parallelism_config.tp_size, parallelism_config.pp_size, \
+        parallelism_config.model_type
 
     try:
         num_layers, _, _ = model_config[model_type]
@@ -81,7 +83,7 @@ def generate_ascendspeed_weights(parallelism_config, make_vocab_size_divisible_b
         logger.error("model_type error")
         return
 
-    pp_layers = get_partition_layers(model_type, num_layers, pp_size, partition_layers)
+    pp_layers = get_partition_layers(num_layers, pp_size)
     if not pp_layers:
         logger.error("pp_layers is empty")
         return
@@ -96,7 +98,7 @@ def generate_ascendspeed_weights(parallelism_config, make_vocab_size_divisible_b
 
             if pp_rank == 0:
                 emb_w = get_weight_from_name("word_embeddings.weight")
-                emb_w = pad_embed(emb_w, make_vocab_size_divisible_by, tp_size)
+                emb_w = pad_embed(emb_w, make_vocab_size_divisible_by, tp_size, 0)
                 rank_model['tied_modules.embed.word_embeddings.weight'] = row_split(emb_w, tp_size, tp_rank)
 
                 emb_layernorm_w = get_weight_from_name("word_embeddings_layernorm.weight")
@@ -105,6 +107,10 @@ def generate_ascendspeed_weights(parallelism_config, make_vocab_size_divisible_b
                 rank_model['tied_modules.embed.word_embeddings.norm.bias'] = emb_layernorm_b
 
             if pp_rank == pp_size - 1:
+                emb_w = get_weight_from_name("word_embeddings.weight")
+                emb_w = pad_embed(emb_w, make_vocab_size_divisible_by, tp_size, 0)
+                rank_model['tied_modules.embed.word_embeddings.weight'] = row_split(emb_w, tp_size, tp_rank)
+
                 layer_id = 3 + num_layers + 1 + 1 - 1
                 rank_model['{}.final_layernorm.weight'.format(layer_id)] = get_weight_from_name('ln_f.weight').clone()
                 rank_model['{}.final_layernorm.bias'.format(layer_id)] = get_weight_from_name('ln_f.bias').clone()
@@ -146,30 +152,22 @@ def generate_ascendspeed_weights(parallelism_config, make_vocab_size_divisible_b
             if tp_rank == 0 and pp_rank == 0:
                 print_model(rank_model)
 
-            if not args.deepspeed:
-                save_ascendspeed_model(model_dic, rank_model, pp_size, tp_rank, pp_rank, release_model_dir)
-            else:
-                module_key = 'module'
-                model_dic[module_key] = {}
-                model_dic[module_key][module_key] = rank_model
-                model_dic['dp_world_size'] = 0
-                model_dir = release_model_dir
-                os.makedirs(model_dir, exist_ok=True)
-                ckpt_path = os.path.join(model_dir,
-                                         f"{'mp_rank_{:02d}'.format(pp_rank * tp_size + tp_rank)}_model_states.pt")
-                torch.save(model_dic, ckpt_path)
-                logger.info("save %s finished", ckpt_path)
+            module_key = 'module'
+            model_dic[module_key] = {}
+            model_dic[module_key][module_key] = rank_model
+            model_dic['dp_world_size'] = 0
+            model_dir = release_model_dir
+            os.makedirs(model_dir, exist_ok=True)
+            ckpt_path = os.path.join(model_dir,
+                                     f"{'mp_rank_{:02d}'.format(pp_rank * tp_size + tp_rank)}_model_states.pt")
+            torch.save(model_dic, ckpt_path)
+            logger.info("save %s finished", ckpt_path)
 
 
 if __name__ == '__main__':
-    if args.deepspeed:
-        make_ascendspeed_model_dirs(args.output_model_dir, filename="latest")
-    else:
-        make_ascendspeed_model_dirs(args.output_model_dir)
-
-    ParallelConfig = namedtuple('ParallelConfig', ['tp_size', 'pp_size', 'partition_layers', 'model_type'])
+    make_ascendspeed_model_dirs(args.output_model_dir, filename="latest")
+    ParallelConfig = namedtuple('ParallelConfig', ['tp_size', 'pp_size', 'model_type'])
     parallel_config = ParallelConfig(tp_size=args.tensor_model_parallel_size,
                                      pp_size=args.pipeline_model_parallel_size,
-                                     partition_layers=args.partition_layers,
                                      model_type=args.type)
     generate_ascendspeed_weights(parallel_config, args.make_vocab_size_divisible_by, args.output_model_dir)
