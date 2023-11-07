@@ -1,6 +1,7 @@
 #!/bin/bash
 export LD_LIBRARY_PATH=/usr/local/lib:/home/anaconda3/lib:$LD_LIBRARY_PATH
 export HCCL_CONNECT_TIMEOUT=1600
+export MULTI_STREAM_MEMORY_REUSE=1
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # If this environment variable is set, all nodes will compile the dataset,
@@ -102,11 +103,7 @@ TRANSFORMERS_OFFLINE=1  \
     --save-interval $SAVE_INTERVAL \
     --eval-interval 1000 \
     --eval-iters 1 \
-    --tensorboard-queue-size 5 \
     --load $CHECKPOINT_PATH \
-    --log-timers-to-tensorboard \
-    --log-batch-size-to-tensorboard \
-    --log-validation-ppl-to-tensorboard \
     --data-impl mmap \
     --distributed-backend nccl \
     --deepspeed \

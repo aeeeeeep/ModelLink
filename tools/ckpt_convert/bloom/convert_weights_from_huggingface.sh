@@ -7,5 +7,3 @@ python $SCRIPT_PATH \
     --tensor-model-parallel-size 8 \
     --pipeline-model-parallel-size 12 \
     --type 176B \
-    --deepspeed \
-    --partition-layers 6,6,6,6,6,6,6,6,6,6,6,4
