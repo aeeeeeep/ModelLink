@@ -64,5 +64,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash_attention_g
     bool sync);
 
 torch::Tensor add(const torch::Tensor &input1, const torch::Tensor &input2);
+at::Tensor npu_rotary_mul(const at::Tensor &self, const at::Tensor &r1, const at::Tensor &r2);
+std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_rotary_mul_backward(const at::Tensor &grad, const at::Tensor &self,
+                                                                       const at::Tensor &r1, const at::Tensor &r2);
+
 
 #endif
