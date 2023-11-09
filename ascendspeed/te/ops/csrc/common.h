@@ -63,6 +63,39 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash_attention_g
     bool gen_mask_parallel,
     bool sync);
 
+std::vector<at::Tensor> ascend_flash_attention_grad(
+    const at::Tensor &attention_score_grad,
+    const at::Tensor &query,
+    const at::Tensor &key,
+    const at::Tensor &value,
+    const at::Tensor &softmax_log_max_sum,
+    const at::Tensor &attention_score,
+    const c10::optional<at::Tensor> &atten_mask,
+    const c10::optional<at::Tensor> &alibi_mask,
+    double scale_value,
+    int64_t head_num,
+    c10::string_view input_layout,
+    double keep_prob,
+    int64_t pre_tokens,
+    int64_t next_tokens,
+    bool gen_mask_parallel,
+    bool sync);
+
+std::vector<at::Tensor> ascend_flash_attention(
+    const at::Tensor &query,
+    const at::Tensor &key,
+    const at::Tensor &value,
+    const c10::optional<at::Tensor> &atten_mask,
+    const c10::optional<at::Tensor> &alibi_mask,
+    double scale,
+    int64_t head_num,
+    c10::string_view input_layout,
+    double keep_prob,
+    int64_t pre_tokens,
+    int64_t next_tokens,
+    bool gen_mask_parallel,
+    bool sync);
+
 torch::Tensor add(const torch::Tensor &input1, const torch::Tensor &input2);
 
 #endif
