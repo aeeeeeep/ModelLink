@@ -15,8 +15,8 @@
     </a>
 </p>
 <p align="center">
-        <b>简体中文</b> |
-        <b><a href="https://gitee.com/fengliangjun66/AscendSpeed/blob/master/README_en.md">English</a> </b> 
+        <b><a href="https://gitee.com/fengliangjun66/AscendSpeed/blob/master/README.md"> 简体中文</a></b> |
+        <b> English </b> 
     </p>
 </p>
 
