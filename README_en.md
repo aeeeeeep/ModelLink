@@ -883,10 +883,16 @@ To enable pipeline model parallelism, use the `--pipeline-model-parallel-size` f
 To enable virtual pipeline parallelism, additionally use `--num-layers-per-virtual-pipeline-stage` flag to decide number of layers per virtual stage. 
 To enable optimized pipeline parallelism, additionally use `--optimized-pipeline` and `--manual-mbs example-config-1` flag based on PP. Note that both VP and OPP reduce bubble time, but increase communication time.
 
-### <span id="jump3"> Fold3D </span>
-Fold3D hides the commutation time of data parallelism in VP. The basic principle of Fold3D is:<div align=center>
+### <span id="jump3"> Fold3D&&FoldX </span>
+1. The FoldX schedule mainly restricts the tensor sending and receiving of different machines in virtual pipeline(vpp) schedule, and implements communication hiding through asynchronous communication mechanism to improve the training performance of large models.
+
+2. Fold3D hides the commutation time of data parallelism in VP. The basic principle of Fold3D is graph(b):
+
+3. FoldX-DP implements dp communication hiding based on FoldX<div align=center>
 <img src="sources/images/fold3d.png" height="350px" width="800px"></div>
-To enable pipeline model parallelism, use the `--fold-mode "aiao"` flag to choose strategy.
+To enable Fold3D schedule, use the `--fold-mode "aiao"` flag to choose strategy;
+To enable FoldX schedule, use the `--fold-mode "fifo"` flag to choose strategy;
+To enable FoldX-DP schedule, use the `--foldx-dp` based on FoldX.
 
 ### <span id="jump4"> (Selective) Recomputation </span>
 To reduce NPU memory usage so deploy a large model to a training system, we support activation checkpointing and recomputation. 
