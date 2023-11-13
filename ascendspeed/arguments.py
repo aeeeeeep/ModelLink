@@ -805,6 +805,8 @@ def _add_distributed_args(parser):
     group.add_argument('--foldx-mode', default=None,
                        choices=['aiao', 'fifo'],
                        help='Choose fold-x pipeline parallelism.')
+    group.add_argument('--foldx-dp', action='store_true',
+                       help='Gradient sync in foldx process.')    
     group.add_argument('--tensor-model-parallel-size', type=int, default=1,
                        help='Degree of tensor model parallelism.')
     group.add_argument('--enable-expert-tensor-parallelism', action='store_true',

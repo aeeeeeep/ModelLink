@@ -1620,7 +1620,7 @@ def forward_backward_pipelining_with_foldx_fifo(
         forward_only: bool = False,
         collect_non_loss_data: bool = False, ):
     """Returns dictionary with losses if the last stage, empty dict otherwise."""
-
+    args = get_args()
     input_tensors = [[] for _ in range(len(model))]
     output_tensors = [[] for _ in range(len(model))]
     losses_reduced = []
@@ -1742,7 +1742,7 @@ def forward_backward_pipelining_with_foldx_fifo(
     # Run warmup forward passes.
     parallel_state.set_virtual_pipeline_model_parallel_rank(0)
     if not parallel_state.is_pipeline_first_stage():
-        input_tensor, _, ops = p2p_communication.async_communicate(None, None, True, False)
+        input_tensor, _, ops = p2p_communication.async_communicate_group(None, None, True, False)
         input_tensors_ops.append((input_tensor, ops[0]))
     for k in range(num_warmup_microbatches):
         gather_input_tensor(k)
@@ -1759,17 +1759,20 @@ def forward_backward_pipelining_with_foldx_fifo(
 
         # Send and receive tensors as appropriate (send tensors computed
         # in this iteration; receive tensors for next iteration).
-        if output_tensor is not None:
-            p2p_communication.async_communicate(output_tensor, None, False, False)
-        if recv_prev:
-            input_tensor, _, ops = p2p_communication.async_communicate(None, None, True, False)
+        if output_tensor is not None and recv_prev:
+            input_tensor, _, ops = p2p_communication.async_communicate_group(output_tensor, None, True, False)
+            input_tensors_ops.append((input_tensor, ops[0]))        
+        elif output_tensor is not None:
+            p2p_communication.async_communicate_group(output_tensor, None, False, False)
+        elif recv_prev:
+            input_tensor, _, ops = p2p_communication.async_communicate_group(None, None, True, False)
             input_tensors_ops.append((input_tensor, ops[0]))
         if k == (num_warmup_microbatches - 1) and not all_warmup_microbatches:
             recv_next = True
             if parallel_state.is_pipeline_last_stage(ignore_virtual=True):
                 recv_next = False
             if recv_next:
-                _, output_tensor_grad, ops = p2p_communication.async_communicate(None, None, False, True)
+                _, output_tensor_grad, ops = p2p_communication.async_communicate_group(None, None, False, True)
                 output_tensor_grads_ops.append((output_tensor_grad, ops[0]))
 
     # Run 1F1B in steady state.
@@ -1791,10 +1794,13 @@ def forward_backward_pipelining_with_foldx_fifo(
         # before the start of the for loop.
         if k == (num_microbatches_remaining - 1):
             recv_prev = False
-        if output_tensor is not None:
-            p2p_communication.async_communicate(output_tensor, None, False, False)
-        if recv_prev:
-            input_tensor, _, ops = p2p_communication.async_communicate(None, None, True, False)
+        if output_tensor is not None and recv_prev:
+            input_tensor, _, ops = p2p_communication.async_communicate_group(output_tensor, None, True, False)
+            input_tensors_ops.append((input_tensor, ops[0]))        
+        elif output_tensor is not None:
+            p2p_communication.async_communicate_group(output_tensor, None, False, False)
+        elif recv_prev:
+            input_tensor, _, ops = p2p_communication.async_communicate_group(None, None, True, False)
             input_tensors_ops.append((input_tensor, ops[0]))
 
         # Backward pass.
@@ -1806,21 +1812,24 @@ def forward_backward_pipelining_with_foldx_fifo(
         if parallel_state.is_pipeline_first_stage():
             input_tensor_grad = None
         recv_next = init_recv_next(backward_k)
-        if input_tensor_grad is not None:
-            p2p_communication.async_communicate(None, input_tensor_grad, False, False)
-        if recv_next:
-            _, output_tensor_grad, ops = p2p_communication.async_communicate(None, None, False, True)
+        if input_tensor_grad is not None and recv_next:
+            _, output_tensor_grad, ops = p2p_communication.async_communicate_group(None, input_tensor_grad, False, True)
+            output_tensor_grads_ops.append((output_tensor_grad, ops[0]))
+        elif input_tensor_grad is not None:
+            p2p_communication.async_communicate_group(None, input_tensor_grad, False, False)
+        elif recv_next:
+            _, output_tensor_grad, ops = p2p_communication.async_communicate_group(None, None, False, True)
             output_tensor_grads_ops.append((output_tensor_grad, ops[0]))
 
     model_gradient_reduces = []
     # Run cooldown backward passes (flush out pipeline).
     if all_warmup_microbatches:
         if not parallel_state.is_pipeline_last_stage():
-            _, output_tensor_grad, ops = p2p_communication.async_communicate(None, None, False, True)
+            _, output_tensor_grad, ops = p2p_communication.async_communicate_group(None, None, False, True)
             output_tensor_grads_ops.append((output_tensor_grad, ops[0]))
     for k in range(num_microbatches_remaining, num_microbatches):
         gather_output_tensor_grad(k)
-        if get_model_chunk_id(k, forward=False) < num_model_chunks - 1:
+        if args.foldx_dp and get_model_chunk_id(k, forward=False) < num_model_chunks - 1:
             if get_model_chunk_id(k, forward=False) < get_model_chunk_id(k - 1, forward=False):
                 handles = model[get_model_chunk_id(k, forward=False) + 1].allreduce_gradients(async_op=True)
                 model_gradient_reduces.append(handles)
@@ -1828,10 +1837,13 @@ def forward_backward_pipelining_with_foldx_fifo(
         recv_next = init_recv_next(k)
         if k == (num_microbatches - 1):
             recv_next = False
-        if input_tensor_grad is not None:
-            p2p_communication.async_communicate(None, input_tensor_grad, False, False)
-        if recv_next:
-            _, output_tensor_grad, ops = p2p_communication.async_communicate(None, None, False, True)
+        if input_tensor_grad is not None and recv_next:
+            _, output_tensor_grad, ops = p2p_communication.async_communicate_group(None, input_tensor_grad, False, True)
+            output_tensor_grads_ops.append((output_tensor_grad, ops[0]))
+        elif input_tensor_grad is not None:
+            p2p_communication.async_communicate_group(None, input_tensor_grad, False, False)
+        elif recv_next:
+            _, output_tensor_grad, ops = p2p_communication.async_communicate_group(None, None, False, True)
             output_tensor_grads_ops.append((output_tensor_grad, ops[0]))
     handles = model[0].allreduce_gradients(async_op=True)
     model_gradient_reduces.append(handles)
