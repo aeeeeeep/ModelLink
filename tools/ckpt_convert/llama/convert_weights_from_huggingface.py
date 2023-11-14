@@ -22,6 +22,7 @@ import stat
 
 import logging
 import torch
+from transformers import AutoModelForCausalLM
 
 from ckpt_utils import column_split
 from ckpt_utils import make_ascendspeed_model_dirs
@@ -78,26 +79,28 @@ args = get_args()
 if args.type not in model_config:
     model_config[args.type] = [args.num_layers, args.hidden_size, args.num_heads]
 
-file = os.listdir(args.input_model_dir)
-model_files = [f for f in file if f[-4:] == ".bin"]
-input_models = {f: torch.load(os.path.join(args.input_model_dir, f), map_location="cpu") for f in model_files}
 
-index_fn = os.path.join(args.input_model_dir, "pytorch_model.bin.index.json")
-if os.path.exists(index_fn):
-    with os.fdopen(os.open(index_fn, os.O_RDONLY, stat.S_IRUSR), 'r') as f:
-        model_index = json.load(f)
-        weight_map = model_index["weight_map"]
-if args.load_weight_map:
-    weight_map = dict()
-    for k in input_models[model_files[0]].keys():
-        weight_map[k] = model_files[0]
 
+model = AutoModelForCausalLM.from_pretrained(
+    args.input_model_dir,
+    trust_remote_code=True,
+)
+name_2_weight = {k:v for k,v in model.named_parameters()}
 
 def get_weight_from_name(layer_name):
-    if layer_name in weight_map.keys():
-        return input_models[weight_map[layer_name]][layer_name]
+    if layer_name in name_2_weight:
+        weight = name_2_weight[layer_name]
+        return weight
     else:
-        raise KeyError(f"{layer_name} is not in weight_map")
+        submodel = model
+        for attr in layer_name.split('.'):
+            if attr.isdigit():
+                submodel = submodel[int(attr)]
+            else:
+                submodel = getattr(submodel, attr)
+        return submodel
+
+
 
 
 def generate_ascendspeed_weights_again(config):
