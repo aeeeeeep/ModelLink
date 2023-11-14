@@ -110,7 +110,7 @@ def build_dataset_group(
     GIVEN_NAME PATH1    # for a single dataset to be used fully
     '''
 
-    ensure_valid(train_valid_test in ["train","valid","test"])
+    ensure_valid(train_valid_test in ["train", "valid", "test"])
 
     # Single dataset.
     if len(paths) == 1:
@@ -134,8 +134,8 @@ def build_dataset_group(
         data_prefix = []
         # data_prefix is of the shape:
         # ["WEIGHT1", "PATH1", "WEIGHT2", "PATH2", "WEIGHT3", "PATH3"]
-        for w,p in zip(weights, paths):
-            data_prefix += [w,p]
+        for w, p in zip(weights, paths):
+            data_prefix += [w, p]
 
         output = get_datasets_weights_and_num_samples(data_prefix,
                                                     train_valid_test_num_samples)
@@ -179,8 +179,8 @@ def _build_single_datasets(
 ):
     """Build a single dataset"""
 
-    ensure_valid(train_valid_test in ["train","valid","test"])
-    index = ["train","valid","test"].index(train_valid_test)
+    ensure_valid(train_valid_test in ["train", "valid", "test"])
+    index = ["train", "valid", "test"].index(train_valid_test)
 
     # Target indexed dataset.
     packed_indexed_dataset = get_packed_indexed_dataset(
@@ -313,19 +313,16 @@ class DecoderPackedMTFDataset(torch.utils.data.Dataset):
         doc_idx = self.shuffle_index[idx]
         item = self.mtf_dataset[doc_idx]
         return {
-            "input_ids": self._pad_token(item["input_ids"][:-1], self.pad_token, np.int64),
-            "attention_mask": self._pad_token(item["attention_mask"][:-1], 0, np.int64),
-            "labels": self._pad_token(item["labels"][1:], -100, np.int64),
+            "input_ids": self._cut_token(item["input_ids"][:-1], np.int64),
+            "attention_mask": self._cut_token(item["attention_mask"][:-1], np.int64),
+            "labels": self._cut_token(item["labels"][1:], np.int64),
         }
     
-    def _pad_token(self, token, pad_value, dtype):
-        padded_token = np.full((self.seq_length,), pad_value, dtype=dtype)
+    def _cut_token(self, token, dtype):
         token_length = len(token)
-        if token_length <= self.seq_length:
-            padded_token[:token_length] = token
-        else:
-            padded_token = token[:self.seq_length]
-        return padded_token.astype(dtype)
+        if token_length >= self.seq_length:
+            token = token[:self.seq_length]
+        return token.astype(dtype)
 
 
 def _build_index_mappings(

@@ -176,7 +176,7 @@ pip install torch-2.0.1-cp38-cp38-manylinux2014_aarch64.whl
 pip install torch_npu-2.0.1rc1.post_XXXXXX-cp38-cp38-linux_aarch64.whl
 
 # install megatron-core
-pip3 install -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
+pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
 
 # install deepspeed and deepspeed_npu
 pip install deepspeed==0.9.2
@@ -193,7 +193,7 @@ pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 wget http://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json
 
 # download tokenizer configs and (selective) weights from 
-# https://huggingface.co/decapoda-research/llama-7b-hf/tree/main
+# https://huggingface.co/yahma/llama-7b-hf/tree/main
 # revise "LLaMATokenizer" as "LlamaTokenizer" in tokenizer_config.json (This is a bug of huggingface)
 # save the downloaded tokenizer into $TOKENIZER_PATH
 mkdir dataset
@@ -294,4 +294,4 @@ You may also consider original work in your reference:
 ```
 \
 \
-<font size=1>If the download of the file fails using 'wget' , you can download it manually while ensuring network security.</font>
+<font size=1>If the download of the file fails using 'wget' , you can download it manually while ensuring website security.</font>

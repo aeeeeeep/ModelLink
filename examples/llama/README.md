@@ -6,7 +6,7 @@
     - [Performance](#performance)
       - [Machine performance](#machine-performance)
       - [Accuracy of the loss](#accuracy-of-the-loss)
-- [LLaMA-65B](#llama-65b)
+- [LLaMA-33B/65B](#llama-65b)
   - [Pre-Training](#pre-training)
     - [Datasets](#datasets)
     - [Script](#script-1)
@@ -56,7 +56,7 @@ conda activate test
 pip install torch-1.11.0-cp37-cp37m-linux_aarch64.whl
 pip install torch_npu-1.11.0.post4_XXXXXX-cp37-cp37m-linux_aarch64.whl
 # install megatron-core
-pip3 install -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
+pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
 # install deepspeed and deepspeed_npu
 pip install deepspeed==0.9.2
 git clone https://gitee.com/ascend/DeepSpeed.git -b v0.9.2 deepspeed_npu
@@ -79,18 +79,18 @@ pip install -r requirements.txt
     if zero_sd_list is None or len(zero_sd_list) == 0:
         return False
 ```
-3. Download the LLaMA-7B/13B tokenizer model and file from [here](https://huggingface.co/decapoda-research/llama-7b-hf/tree/main) 
+3. Download the LLaMA-7B/13B tokenizer model and file from [here](https://huggingface.co/yahma/llama-7b-hf/tree/main) 
 
 
 ```shell
   #!/bin/bash
   mkdir -p dataset/llama
   cd ./dataset/llama
-  wget https://huggingface.co/decapoda-research/llama-7b-hf/tree/main/config.json
-  wget https://huggingface.co/decapoda-research/llama-7b-hf/tree/main/generation_config.json
-  wget https://huggingface.co/decapoda-research/llama-7b-hf/tree/main/special_tokens_map.json
-  wget https://huggingface.co/decapoda-research/llama-7b-hf/tree/main/tokenizer.model
-  wget https://huggingface.co/decapoda-research/llama-7b-hf/tree/main/tokenizer_config.json
+  wget https://huggingface.co/yahma/llama-7b-hf/tree/main/config.json
+  wget https://huggingface.co/yahma/llama-7b-hf/tree/main/generation_config.json
+  wget https://huggingface.co/yahma/llama-7b-hf/tree/main/special_tokens_map.json
+  wget https://huggingface.co/yahma/llama-7b-hf/tree/main/tokenizer.model
+  wget https://huggingface.co/yahma/llama-7b-hf/tree/main/tokenizer_config.json
   cd ..
 ```
 
@@ -120,21 +120,21 @@ python ./tools/preprocess_data.py \
 
 5. Weights convert
 
-Download the LLaMA-7B checkpoint from [here](https://huggingface.co/decapoda-research/llama-7b-hf/tree/main) 
+Download the LLaMA-7B checkpoint from [here](https://huggingface.co/yahma/llama-7b-hf/tree/main) 
 ```shell
   mkdir model_from_hf
   cd ./model_from_hf
   # you must install git-lfs
-  git clone https://huggingface.co/decapoda-research/llama-7b-hf
+  git clone https://huggingface.co/yahma/llama-7b-hf
   cd ..
 ```
 
-Download the LLaMA-13B checkpoint from [here](https://huggingface.co/decapoda-research/llama-13b-hf/tree/main) 
+Download the LLaMA-13B checkpoint from [here](https://huggingface.co/yahma/llama-13b-hf/tree/main) 
 ```shell
   mkdir model_from_hf
   cd ./model_from_hf
   # you must install git-lfs
-  git clone https://huggingface.co/decapoda-research/llama-13b-hf
+  git clone https://huggingface.co/yahma/llama-13b-hf
   cd ..
 ```
 
@@ -213,7 +213,7 @@ LLama-13b with huggingface weights NPU vs GPU loss.
 
 
 
-# LLaMA-65B
+# LLaMA-33B/65B
 
 This directory contains some of the scripts that were used to produce the results in the AscendSpeed. These scripts is to show the example how to run llama-65B in terminal.
 
@@ -223,7 +223,7 @@ LLaMA model is from: [LLaMA: OPen and Efficient Foundation Language Models](http
 
 ## Pre-Training
 
-LLaMA's model performace is better than GPT3 with less parameters. The 65B LLaMA model is comparable to Google's Chinchilla-70B and Palm-540B.
+LLaMA's model performace is better than GPT3 with less parameters. The 33B/65B LLaMA model is comparable to Google's Chinchilla-70B and Palm-540B.
 
 Here's a hardware summary of training llama:
 
@@ -272,7 +272,7 @@ pip install torch_npu-1.11.0.post4_XXXXXX-cp37-cp37m-linux_aarch64.whl
 #pip install torch_npu-1.11.0.post4_XXXXXX-cp37-cp37m-linux_aarch64.whl
 
 # install megatron-core
-pip3 install -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
+pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
 
 # install deepspeed and deepspeed_npu
 pip install deepspeed==0.9.2
@@ -284,17 +284,45 @@ cd ..
 # install other packages
 pip install -r requirements.txt
 ```
-3.Download llama-65b checkpoint
+3.Download checkpoint
+
+llama-33B checkpoint
 ```shell
 mkdir tokenizer
 cd ./tokenizer
 
 # make sure you have git-lfs installed (https://git-lfs.com)
 git lfs install
-git clone https://huggingface.co/decapoda-research/llama-65b-hf
+git clone https://huggingface.co/pinkmanlove/llama-33b-hf
 cd ..
 ```
-4.In order to adapt to llama-65b model, the following script is used to convert the model pre-training weights
+
+llama-65B checkpoint
+```shell
+mkdir tokenizer
+cd ./tokenizer
+
+# make sure you have git-lfs installed (https://git-lfs.com)
+git lfs install
+git clone https://huggingface.co/pinkmanlove/llama-65b-hf
+cd ..
+```
+4.In order to adapt to llama-33B/65B model, the following script is used to convert the model pre-training weights
+
+llama-33B
+```shell
+mkdir model_weights
+
+SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
+python $SCRIPT_PATH \
+      --input-model-dir ./tokenizer \
+      --output-model-dir ./model_weights \
+      --tensor-model-parallel-size 8 \
+      --pipeline-model-parallel-size 4 \
+      --type 33B
+```
+
+llama-65B
 ```shell
 mkdir model_weights
 
@@ -313,18 +341,22 @@ python $SCRIPT_PATH \
 wget http://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.jason
 
 # download tokenizer configs nad (selective) weights from
-# http://huggingface.co/decapoda-research/llama-65b-hf
+# http://huggingface.co/pinkmanlove/llama-33b-hf
+# http://huggingface.co/pinkmanlove/llama-65b-hf
 # revise "LLaMATokenizer" as "LLaMTokenizer" in tokenizer_config.json
 mkdir dataset
 python tools/preprocess_data.py --input alpaca_data.json\
                                 --output-prefix dataset/alpaca\
                                 --tokenizer-type PretrainedFromHF\
-                                --tokenizer-name-or-path llama-65b-hf
+                                --tokenizer-name-or-path llama-33b-hf
+                               #--tokenizer-name-or-path llama-65b-hf
                                 --tokenizer-not-use-fast
                                 --handler-name GeneralInstructionHandler
 ```
 
-6.Config llama-65B pre-training script : AscendSpeed/examples/llama/pretrain_llama_65B_ptd_32p.sh
+6.Config llama-33B/65B pre-training script :
+AscendSpeed/examples/llama/pretrain_llama_33B_zero_32p.sh
+AscendSpeed/examples/llama/pretrain_llama_65B_ptd_32p.sh
 
 ```bash
 # modify the script according to your own conda and ascend-toolkit path
@@ -337,12 +369,18 @@ TOKENIZER_PATH=./dataset/llama_tokenizer # line 16
 DATA_PATH=./dataset/llama_text_document # line 17
 ```
 
-7.Launch llama-65B pre-training script : AscendSpeed/examples/llama/pretrain_llama_65B_ptd_32p.sh
+7.Launch  pre-training script:
 
+Launch llama-33B pre-training script : AscendSpeed/examples/llama/pretrain_llama_33B_zero_32p.sh
+```bash
+bash examples/llama/pretrain_llama_33B_zero_32p.sh
+```
+
+Launch llama-65B pre-training script : AscendSpeed/examples/llama/pretrain_llama_65B_ptd_32p.sh
 ```bash
 bash examples/llama/pretrain_llama_65B_ptd_32p.sh
 ```
-Config llama-65B pre-training script for multinode (Launch llama-65B pre-training script on each machine):
+Config llama-33B/65B pre-training script for multinode (Launch llama-65B pre-training script on each machine):
 
 ```shell
 MASTER_ADDR=localhost
@@ -364,25 +402,41 @@ time (ms)
 
 The performance of the NPUs in **Ascend** and Reference:
 
-|  Device   |   Model   |  throughput rate (tokens/s/p) |
-|:---------:|:---------:|  :--------------------------: |
-| Reference | llama-65B |             260               |
-|   NPUs    | llama-65B |             234               |
+|  Device   |   Model   | throughput rate (tokens/s/p) |
+|:---------:|:---------:|:----------------------------:|
+| Reference | llama-33B |             520              |
+|   NPUs    | llama-33B |             621              |
+| Reference | llama-65B |             260              |
+|   NPUs    | llama-65B |             234              |
 
 
 #### Accuracy of the loss
 
-NPU vs GPU loss.
+NPU vs GPU loss and relative error:
+
+LLaMa-33B
+
+The NPU runs smoothly, the resource usage is stable, no errors are reported in the middle of the process, the Loss is on a decreasing trend, and the convergence speed is as expected.
+
+![NPU-LOSS](../../sources/images/llama/llama33B_loss.png)
+
+The relative error between NPU and GPU Loss is less than 0.03 throughout, as expected.
+
+![NPU-Relative-Error](../../sources/images/llama/llama33B_relative_error.png)
+
+
+
+LLaMa-65B
 
 The NPU runs smoothly, the resource usage is stable, no errors are reported in the middle of the process, the Loss is on a decreasing trend, and the convergence speed is as expected.
 
 ![NPU-LOSS](../../sources/images/llama/loss_chart.png)
 
-NPU vs GPU loss relative error.
-
 The relative error between NPU and GPU Loss is less than 0.02 throughout, as expected.
 
 ![NPU-Relative-Error](../../sources/images/llama/compare_chart.png)
+
+
 
 ## Citation
 
@@ -398,4 +452,4 @@ You may also consider original work in your reference:
 ```
 \
 \
-<font size=1>If the download of the file fails using 'wget' , you can download it manually while ensuring network security.</font>
+<font size=1>If the download of the file fails using 'wget' , you can download it manually while ensuring website security.</font>

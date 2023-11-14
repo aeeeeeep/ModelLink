@@ -24,16 +24,6 @@ try:
 except Exception as e:
     logging.warning("Warning: You did not install torch_npu or deepspeed_npu")
 
-from .package_info import (
-    __description__,
-    __contact_names__,
-    __url__,
-    __download_url__,
-    __keywords__,
-    __license__,
-    __package_name__,
-    __version__,
-)
 
 if 'amp_C' in sys.modules:
     del sys.modules['amp_C']
@@ -47,11 +37,12 @@ from .global_vars import get_tokenizer
 from .global_vars import get_tensorboard_writer
 from .global_vars import get_adlr_autoresume
 from .global_vars import get_timers
+from .global_vars import get_retro_args
 from .utils import print_rank_0
 from .utils import print_rank_last
 from .utils import is_last_rank
 from .utils import is_rank_0
-from .initialize  import adaptor_deepspeed_initialize
+from .initialize import adaptor_deepspeed_initialize
 
 
 # Fixed an bug where deepspeed PipelineEngine is incompatible with Sequence Parallel.

@@ -177,8 +177,8 @@ def pretrain(train_valid_test_dataset_provider,
         _initialize_optimized_pipeline()
 
     if args.deepspeed:
-        args.deepspeed_configuration = json.load(
-            open(args.deepspeed_config, 'r', encoding='utf-8'))
+        with open(args.deepspeed_config, 'r', encoding='utf-8') as config_file:
+            args.deepspeed_configuration = json.load(config_file)
         if "curriculum_learning" in args.deepspeed_configuration and \
                 "enabled" in args.deepspeed_configuration["curriculum_learning"]:
             args.curriculum_learning_legacy = args.deepspeed_configuration[ \
@@ -748,18 +748,6 @@ def train_step(forward_step_func, data_iterator,
     if config.timers is None:
         config.timers = timers
     timers('forward-backward').stop()
-
-    # All-reduce if needed.
-    if not args.deepspeed and args.DDP_impl == 'local':
-        timers('backward-params-all-reduce', log_level=1).start(barrier=args.barrier_with_L1_time)
-        if args.foldx_mode is not None:
-            handles = model[0].allreduce_gradients(async_op=True)
-            for handle in handles:
-                handle.wait()
-        else:
-            for model_module in model:
-                model_module.allreduce_gradients()
-        timers('backward-params-all-reduce').stop()
 
     # All-reduce word_embeddings' grad across first and last stages to ensure
     # that word_embeddings parameters stay in sync.

@@ -43,8 +43,10 @@ class MemoryBuffer:
 
 
     def get(self, shape, start_index):
-        """Return a tensor with the input `shape` as a view into the
-        1-D data starting at `start_index`."""
+        """
+        Return a tensor with the input `shape` as a view into the
+        1-D data starting at `start_index`.
+        """
         end_index = start_index + shape.numel()
         ensure_valid(end_index <= self.numel, error_message='requested tensor is out of the buffer range.')
         buffer_tensor = self.data[start_index:end_index]
@@ -197,8 +199,10 @@ class DistributedDataParallel(DistributedDataParallelBase):
         return param_hook
 
     def zero_grad_buffer(self):
-        """Set the grad buffer data to zero. Needs to be called at the
-        begining of each iteration."""
+        """
+        Set the grad buffer data to zero. Needs to be called at the
+        begining of each iteration.
+        """
         error_message = 'buffers are not initialized.'
         ensure_var_is_not_none(self._grad_buffers, error_message)
         for _, buffer_ in self._grad_buffers.items():
@@ -231,7 +235,6 @@ class DistributedDataParallel(DistributedDataParallelBase):
                     if tp not in buckets:
                         buckets[tp] = []
                     buckets[tp].append(param)
-                    param.main_grad = param.grad
 
             # For each bucket, all-reduce and copy all-reduced grads.
             for tp in buckets:

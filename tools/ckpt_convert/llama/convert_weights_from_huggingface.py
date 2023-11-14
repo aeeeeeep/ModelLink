@@ -18,6 +18,7 @@
 import argparse
 import json
 import os
+import stat
 
 import logging
 import torch
@@ -45,11 +46,22 @@ def get_args():
     parser.add_argument("--pipeline-model-parallel-size", type=int, default=1,
                         help="degree of pipeline model parallel")
     parser.add_argument("--added-token-num", type=int, default=0, help="the number of added tokens")
-    parser.add_argument("--type", type=str, choices=["7B", "13B", "30B", "65B"], default="7B")
+    parser.add_argument("--type", type=str, default="7B", help="There are four predefined types: [7B, 13B, 30B, 65B]")
+    parser.add_argument("--num_layers", type=int, default=1,
+                        help="num layers")
+    parser.add_argument("--num_heads", type=int, default=1,
+                        help="num heads")
+    parser.add_argument("--num_kv_heads", type=int, default=None,
+                        help="num kv heads")
+    parser.add_argument("--hidden_size", type=int, default=1,
+                        help="hidden size")
     parser.add_argument("--bias", action="store_true", default=False)
     parser.add_argument("--deepspeed", action="store_true", default=False)
-
-    parser.add_argument("--pse", type=bool, default=False)
+    parser.add_argument("--merge-mlp", action="store_true", default=False,
+                        help="Merge gate and up mlp")
+    parser.add_argument("--pse", action="store_true", default=False)
+    parser.add_argument("--use_wpack_rotray", action="store_true", default=False)
+    parser.add_argument("--load_weight_map", action="store_true", default=False)
     return parser.parse_args()
 
 
@@ -62,17 +74,30 @@ model_config = {
 
 
 args = get_args()
+
+if args.type not in model_config:
+    model_config[args.type] = [args.num_layers, args.hidden_size, args.num_heads]
+
 file = os.listdir(args.input_model_dir)
 model_files = [f for f in file if f[-4:] == ".bin"]
 input_models = {f: torch.load(os.path.join(args.input_model_dir, f), map_location="cpu") for f in model_files}
 
-with open(os.path.join(args.input_model_dir, "pytorch_model.bin.index.json")) as f:
-    model_index = json.load(f)
-    weight_map = model_index["weight_map"]
+index_fn = os.path.join(args.input_model_dir, "pytorch_model.bin.index.json")
+if os.path.exists(index_fn):
+    with os.fdopen(os.open(index_fn, os.O_RDONLY, stat.S_IRUSR), 'r') as f:
+        model_index = json.load(f)
+        weight_map = model_index["weight_map"]
+if args.load_weight_map:
+    weight_map = dict()
+    for k in input_models[model_files[0]].keys():
+        weight_map[k] = model_files[0]
 
 
 def get_weight_from_name(layer_name):
-    return input_models[weight_map[layer_name]][layer_name]
+    if layer_name in weight_map.keys():
+        return input_models[weight_map[layer_name]][layer_name]
+    else:
+        raise KeyError(f"{layer_name} is not in weight_map")
 
 
 def generate_ascendspeed_weights_again(config):
@@ -118,6 +143,9 @@ def generate_ascendspeed_weights_again(config):
                     qw = row_split(ws[0], tp_size, tp_rank)
                     kw = row_split(ws[1], tp_size, tp_rank)
                     vw = row_split(ws[2], tp_size, tp_rank)
+                    if args.use_wpack_rotray:
+                        rank_model[f"language_model.layers.{pp_i}.attention.rotary_emb.inv_freq"] = get_weight_from_name(
+                            f"model.layers.{ori_i}.self_attn.rotary_emb.inv_freq")
                 else:
                     rank_model[f"language_model.layers.{pp_i}.attention.rotary_emb.inv_freq"] = get_weight_from_name(
                         f"model.layers.{ori_i}.self_attn.rotary_emb.inv_freq")
@@ -126,7 +154,7 @@ def generate_ascendspeed_weights_again(config):
                     vw = row_split(get_weight_from_name(f"model.layers.{ori_i}.self_attn.v_proj.weight"), tp_size, tp_rank)
 
    
-                permute_w = permute_qkv_weight(torch.cat([qw, kw, vw], dim=0), n_heads, hidden_size, tp_size)
+                permute_w = permute_qkv_weight(torch.cat([qw, kw, vw], dim=0), (n_heads, hidden_size, tp_size, args.num_kv_heads))
                 rank_model[f"language_model.layers.{pp_i}.attention.query_key_value.weight"] = permute_w
 
                 rank_model[f"language_model.layers.{pp_i}.attention.dense.weight"] = column_split(
@@ -143,11 +171,21 @@ def generate_ascendspeed_weights_again(config):
                     rank_model[f"language_model.layers.{pp_i}.attention.query_key_value.bias"] = permute_bias
                     rank_model[f"language_model.layers.{pp_i}.attention.dense.bias"] = \
                         get_weight_from_name(f"model.layers.{ori_i}.self_attn.o_proj.bias")
-                    
-                rank_model[f"language_model.layers.{pp_i}.mlp.gate_proj.weight"] = row_split(
+
+                gate_proj = row_split(
                     get_weight_from_name(f"model.layers.{ori_i}.mlp.gate_proj.weight"), tp_size, tp_rank)
-                rank_model[f"language_model.layers.{pp_i}.mlp.up_proj.weight"] = row_split(
+                up_proj = row_split(
                     get_weight_from_name(f"model.layers.{ori_i}.mlp.up_proj.weight"), tp_size, tp_rank)
+                if args.merge_mlp:
+                    rank_model[
+                        f"language_model.layers.{pp_i}.mlp.proj.weight"] = torch.cat(
+                        [gate_proj, up_proj], 0).contiguous().clone()
+                else:
+                    rank_model[
+                        f"language_model.layers.{pp_i}.mlp.gate_proj.weight"] = gate_proj
+                    rank_model[
+                        f"language_model.layers.{pp_i}.mlp.up_proj.weight"] = up_proj
+
                 rank_model[f"language_model.layers.{pp_i}.mlp.down_proj.weight"] = column_split(
                     get_weight_from_name(f"model.layers.{ori_i}.mlp.down_proj.weight"), tp_size, tp_rank)
 
