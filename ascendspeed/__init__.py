@@ -29,20 +29,20 @@ if 'amp_C' in sys.modules:
     del sys.modules['amp_C']
 sys.modules['amp_C'] = __import__('ascendspeed.amp_C')
 
-from .global_vars import get_args
-from .global_vars import get_current_global_batch_size
-from .global_vars import get_num_microbatches
-from .global_vars import update_num_microbatches
-from .global_vars import get_tokenizer
-from .global_vars import get_tensorboard_writer
-from .global_vars import get_adlr_autoresume
-from .global_vars import get_timers
-from .utils import print_rank_0
-from .utils import print_rank_last
-from .utils import is_last_rank
-from .utils import is_rank_0
-from .initialize import adaptor_deepspeed_initialize
-
+from ascendspeed.global_vars import get_args
+from ascendspeed.global_vars import get_current_global_batch_size
+from ascendspeed.global_vars import get_num_microbatches
+from ascendspeed.global_vars import update_num_microbatches
+from ascendspeed.global_vars import get_tokenizer
+from ascendspeed.global_vars import get_tensorboard_writer
+from ascendspeed.global_vars import get_adlr_autoresume
+from ascendspeed.global_vars import get_timers
+from ascendspeed.utils import print_rank_0
+from ascendspeed.utils import print_rank_last
+from ascendspeed.utils import is_last_rank
+from ascendspeed.utils import is_rank_0
+from ascendspeed.initialize import adaptor_deepspeed_initialize
+from ascendspeed.core.pipeline_parallel import fold_adaptor
 
 # Fixed an bug where deepspeed PipelineEngine is incompatible with Sequence Parallel.
 # When Sequence Parallel is used, PipelineEngine cannot be used, Otherwise, precision problems occur.

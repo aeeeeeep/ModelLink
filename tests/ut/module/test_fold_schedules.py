@@ -21,10 +21,10 @@ import unittest
 from unittest import mock
 import torch
 import torch_npu
-import ascendspeed.core.pipeline_parallel.schedules as schedule
-from ascendspeed.core.pipeline_parallel.schedules import \
+import ascendspeed.core.pipeline_parallel.fold_adaptor.adaptor_schedules as schedule
+from ascendspeed.core.pipeline_parallel.fold_adaptor.adaptor_schedules import \
                     forward_backward_pipelining_with_foldx_aiao
-from ascendspeed.core.pipeline_parallel.schedules import \
+from ascendspeed.core.pipeline_parallel.fold_adaptor.adaptor_schedules import \
                     forward_backward_pipelining_with_foldx_fifo
 
 
@@ -78,7 +78,7 @@ class TestFoldSchedule(unittest.TestCase):
             return True
 
         def allreduce_gradients(async_op):
-            return True
+            return [Handle()]
 
         model.set_input_tensor = set_input_tensor
         model.allreduce_gradients = allreduce_gradients
@@ -143,7 +143,7 @@ class TestFoldSchedule(unittest.TestCase):
 
         # Mock async p2p_communication
         handle = Handle()
-        schedule.p2p_communication.async_communicate = \
+        schedule.p2p_communication.async_communicate_group = \
             mock.Mock(return_value=(torch.rand(2, 1), torch.rand(2, 1), [handle]))
         schedule.p2p_communication.recv_gather = \
             mock.Mock(return_value=torch.rand(2, 1))
@@ -168,8 +168,15 @@ class TestFoldSchedule(unittest.TestCase):
             return True
 
         def allreduce_gradients(async_op):
-            return True
+            return [Handle()]
 
+        def get_args():
+            import argparse
+            parser = argparse.ArgumentParser()
+            args = argparse.Namespace(foldx_dp=False)
+            return args
+        
+        schedule.get_args = get_args
         model.set_input_tensor = set_input_tensor
         model.allreduce_gradients = allreduce_gradients
         forward_backward_func = forward_backward_pipelining_with_foldx_fifo
@@ -216,6 +223,102 @@ class TestFoldSchedule(unittest.TestCase):
             forward_only=False,
             collect_non_loss_data=False
             )
+        
+    @timeout(1200)
+    def test_foldx_dp(self):
+
+        # Mock global vars
+        schedule.get_model_config = mock.Mock(return_value={})
+        schedule.get_model_type = mock.Mock(return_value=0)
+        schedule.get_num_microbatches = mock.Mock(return_value=9)
+        schedule.parallel_state.get_pipeline_model_parallel_world_size = mock.Mock(return_value=3)
+
+        # Mock forward func and backward func
+        schedule.forward_step = mock.Mock(return_value=torch.rand(2, 1))
+        schedule.backward_step = mock.Mock(return_value=torch.rand(2, 1))
+
+        # Mock async p2p_communication
+        handle = Handle()
+        schedule.p2p_communication.async_communicate_group = \
+            mock.Mock(return_value=(torch.rand(2, 1), torch.rand(2, 1), [handle]))
+        schedule.p2p_communication.recv_gather = \
+            mock.Mock(return_value=torch.rand(2, 1))
+
+        # Mock device's status in the virtual pipeline
+        schedule.parallel_state.get_pipeline_model_parallel_rank = mock.Mock(return_value=0)
+
+        # Mock the first virtual pipeline stage
+        schedule.parallel_state.is_pipeline_first_stage = mock.Mock(return_value=True)
+        schedule.parallel_state.is_pipeline_last_stage = mock.Mock(return_value=False)
+
+        model = torch.nn.Linear(4, 1)
+
+        def forward_step_func(data_iterator, model):
+            rank = int(os.getenv('RANK', '0'))
+
+            def loss_func(output_tensor):
+                return rank, {'loss_reduced': rank}
+            return torch.rand(1, 1), loss_func
+
+        def set_input_tensor(input_tensor):
+            return True
+
+        def allreduce_gradients(async_op):
+            return [Handle()]
+
+        def get_args():
+            import argparse
+            parser = argparse.ArgumentParser()
+            args = argparse.Namespace(foldx_dp=True)
+            return args
+        
+        schedule.get_args = get_args
+        model.set_input_tensor = set_input_tensor
+        model.allreduce_gradients = allreduce_gradients
+        forward_backward_func = forward_backward_pipelining_with_foldx_fifo
+        forward_backward_func(
+            forward_step_func=forward_step_func,
+            data_iterator=range(0, 100),
+            model=[model, model],
+            num_microbatches=schedule.get_num_microbatches(),
+            seq_length=3,
+            micro_batch_size=3,  # unused
+            decoder_seq_length=3,  # unused
+            forward_only=False,
+            collect_non_loss_data=False
+            )
+
+        # Mock the second virtual pipeline stage
+        schedule.parallel_state.is_pipeline_first_stage = mock.Mock(return_value=False)
+        schedule.parallel_state.is_pipeline_last_stage = mock.Mock(return_value=False)
+
+        forward_backward_func(
+            forward_step_func=forward_step_func,
+            data_iterator=range(0, 100),
+            model=[model, model],
+            num_microbatches=schedule.get_num_microbatches(),
+            seq_length=3,
+            micro_batch_size=3,  # unused
+            decoder_seq_length=3,  # unused
+            forward_only=False,
+            collect_non_loss_data=False
+            )
+
+        # Mock the last virtual pipeline stage
+        schedule.parallel_state.is_pipeline_first_stage = mock.Mock(return_value=False)
+        schedule.parallel_state.is_pipeline_last_stage = mock.Mock(return_value=True)
+
+        forward_backward_func(
+            forward_step_func=forward_step_func,
+            data_iterator=range(0, 100),
+            model=[model, model],
+            num_microbatches=schedule.get_num_microbatches(),
+            seq_length=3,
+            micro_batch_size=3,  # unused
+            decoder_seq_length=3,  # unused
+            forward_only=False,
+            collect_non_loss_data=False
+            )        
 
 
 
