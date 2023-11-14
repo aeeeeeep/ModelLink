@@ -801,10 +801,6 @@ def _add_mixed_precision_args(parser):
 
 def _add_distributed_args(parser):
     group = parser.add_argument_group(title='distributed')
-
-    group.add_argument('--foldx-mode', default=None,
-                       choices=['aiao', 'fifo'],
-                       help='Choose fold-x pipeline parallelism.')
     group.add_argument('--tensor-model-parallel-size', type=int, default=1,
                        help='Degree of tensor model parallelism.')
     group.add_argument('--enable-expert-tensor-parallelism', action='store_true',
