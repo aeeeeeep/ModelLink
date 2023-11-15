@@ -294,7 +294,9 @@ class MegatronOptimizer(ABC):
         timers('layernorm-grads-all-reduce').stop()
 
         # All-reduce if needed.
-        if args.DDP_impl == 'local' and args.foldx_mode is None:
+        dp_allreduce_condition = args.foldx_mode is None or \
+        (args.foldx_mode == "fifo" and not args.foldx_dp)
+        if args.DDP_impl == 'local' and dp_allreduce_condition:
             timers('grads-all-reduce', log_level=1).start(
                 barrier=args.barrier_with_L1_time)
             for model in self.models:
