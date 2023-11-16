@@ -285,6 +285,44 @@ class BelleMultiTurnInstructionHandler(GeneralInstructionHandler):
         return "Assistant:"
 
 
+class MOSSMultiTurnHandler(GeneralInstructionHandler):
+    @property
+    def user_token(self) -> List[int]:
+        return [295]
+
+    @property
+    def assistant_token(self) -> List[int]:
+        return [196]
+
+    @property
+    def ignored_index(self) -> List[int]:
+        return [-100]
+
+    def _filter(self, sample):
+        input_ids, labels = [], []
+        for turn in sample["chat"].values():
+            if not turn:
+                continue
+
+            user = turn["Human"].replace("<eoh>", "").replace("<|Human|>: ", "").strip()
+            assistant = turn["MOSS"].replace("<|MOSS|>:", "").replace("<eom>", "").strip()
+
+            user_ids = self._unwrapped_tokenizer.encode(user)
+            assistant_ids = self._unwrapped_tokenizer.encode(assistant)
+
+            input_ids += self.user_token + user_ids + self.assistant_token + assistant_ids
+            labels += [self._unwrapped_tokenizer.eos_token_id] + self.ignored_index * len(
+                user_ids) + self.ignored_index + assistant_ids
+
+        attention_mask = [1 for _ in range(len(input_ids))]
+
+        return {
+            "input_ids" : [input_ids],
+            "attention_mask" : [attention_mask],
+            "labels" : [labels]
+        }
+
+
 class MOSSInstructionHandler(GeneralInstructionHandler):
     def _filter(self, sample):
         messages = []
