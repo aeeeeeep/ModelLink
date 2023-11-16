@@ -455,7 +455,7 @@ def _has_py_script(input_name):
 
 def build_dataset(args):
     """loading dataset by huggingface"""
-    if args.handler_name == "MOSSInstructionHandler":
+    if args.handler_name == "MOSSInstructionHandler" or args.handler_name == "MOSSMultiTurnHandler":
         # for MOSS, streaming is needed.
         args.streaming = True
     if args.hf_datasets_params:
