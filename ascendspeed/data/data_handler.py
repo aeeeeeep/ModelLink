@@ -322,6 +322,7 @@ class MOSSMultiTurnHandler(GeneralInstructionHandler):
             "labels" : [labels]
         }
 
+
 class MOSSInstructionHandler(GeneralInstructionHandler):
     def _filter(self, sample):
         messages = []
