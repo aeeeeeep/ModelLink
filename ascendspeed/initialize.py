@@ -35,6 +35,7 @@ from ascendspeed.global_vars import set_global_variables
 from ascendspeed.core.parallel_state import (set_tensor_model_parallel_rank,
                                              set_tensor_model_parallel_world_size)
 from ascendspeed.error_utils import check_equal
+from ascendspeed.core.tensor_parallel.min_comm.user_config import initialize_cc_from_cfg
 
 
 def initialize_megatron(extra_args_provider=None, args_defaults=None,
@@ -70,6 +71,7 @@ def initialize_megatron(extra_args_provider=None, args_defaults=None,
         if args.rank == 0:
             print('> setting random seeds to {} ...'.format(args.seed))
         _set_random_seed(args.seed)
+        initialize_cc_from_cfg(args)
 
     args = get_args()
     if args.lazy_mpu_init:
