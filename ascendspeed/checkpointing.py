@@ -19,6 +19,7 @@ import os
 import random
 import sys
 import numpy as np
+from deepspeed import PipelineEngine
 from deepspeed.accelerator import get_accelerator
 import torch
 from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
@@ -404,11 +405,14 @@ def load_checkpoint(model, optimizer, lr_scheduler, load_arg='load', strict=True
             print_rank_0(f" will not load any checkpoints and will start from random")
             return 0
         custom_load_fn, load_dir = get_custom_load_fn(model=model[0], load_dir=load_dir, lora_load_dir=lora_load_dir)
-        load_zero_optim = sum(['zero' in file for file in os.listdir(load_dir)]) > 0
+        if args.no_pipeline_parallel:
+            load_zero_optim = sum(['zero' in file for file in os.listdir(load_dir)]) > 0
+        else:
+            load_zero_optim = sum(['global' in file for file in os.listdir(load_dir)]) > 0
         release = not load_zero_optim
         loaded_dir, state_dict = model[0].load_checkpoint(
             load_dir,
-            load_module_strict=strict,
+            load_module_strict=load_zero_optim,
             load_module_only=not load_zero_optim,
             load_optimizer_states=load_zero_optim,
             load_lr_scheduler_states=load_zero_optim,
@@ -512,6 +516,10 @@ def load_checkpoint(model, optimizer, lr_scheduler, load_arg='load', strict=True
 
 def get_custom_load_fn(model, load_dir, lora_load_dir=None):
     custom_load_fn = None
+
+    if isinstance(model, PipelineEngine):
+        return custom_load_fn, load_dir
+
     if is_enable_lora():
         if lora_load_dir:
             custom_load_fn = get_lora_load_fn_with_deepspeed(model=model, base_model_load_dir=load_dir)

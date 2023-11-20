@@ -60,6 +60,7 @@ conda activate bloom7b
 # install torch and torch_npu and apex
 pip install torch-2.0.1-cp38-cp38-manylinux2014_aarch64.whl
 pip install torch_npu-2.0.1rc1.postxxxxxxxx-cp38-cp38-linux_aarch64.whl
+pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 
 # install megatron-core
 pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
@@ -173,9 +174,23 @@ NPU vs GPU loss relative error.
 
 ## Inference
 
-We support AscendSpeed Inference for text generation with BLOOM 7B.
+We support AscendSpeed Inference for text generation with BLOOM 7B (deepspeed or megatron).
 
-Use [convert_weights_from_gptmodelpipe_to_gptmodel.sh](../../tools/ckpt_convert/bloom/convert_weights_from_gptmodelpipe_to_gptmodel.sh), converting deep speed checkpoints to megatron.Convert the checkpoint of deepspeed to megtron.
+### deepspeed_pipeline
+
+```shell
+# modify the model weight path and tokenizer path
+CHECKPOINT=/home/model/bloom_7B
+VOCAB_FILE=/home/bloom_data/vocab_file/
+```
+
+```shell
+bash ./examples/bloom/generate_bloom_7b_deepspeed_pipeline.sh
+```
+
+### megatron
+
+Use [convert_weights_from_gptmodelpipe_to_gptmodel.sh](../../tools/ckpt_convert/bloom/convert_weights_from_gptmodelpipe_to_gptmodel.sh), converting deepspeed checkpoints to megatron.
 
 ```bash
 SCRIPT_PATH=./tools/ckpt_convert/bloom/convert_weights_from_gptmodelpipe_to_gptmodel_v2.py
@@ -186,7 +201,6 @@ python $SCRIPT_PATH \
     --pipeline-model-parallel-size 1 \
     --type 7B
 ```
-### Script
 
 We generate text samples using the `generate_bloom` script. Inference different from pre-training, such as we need to Load pre training checkpoint and the length of the output samples:
 
@@ -194,13 +208,66 @@ Config Bloom-7B inference script: examples/bloom/generate_bloom_7B_tp8_pp1.sh
 
 ```shell
 # modify the model weight path and tokenizer path
-CHECKPOINT=/home/bloom_data/enwiki_100k/enwiki-100k_text_document
+CHECKPOINT=/home/model/bloom_7B
 VOCAB_FILE=/home/bloom_data/vocab_file/
 ```
 
 ```shell
 bash ./examples/bloom/generate_bloom_7B_tp8_pp1.sh
 ```
+
+## Evaluation 
+Config Bloom-7B evaluation script: tasks/evaluation/eval_bloom.sh
+
+```shell
+# modify the model weight path and tokenizer path
+CHECKPOINT=/home/model/bloom_7B
+VOCAB_FILE=/home/bloom_data/vocab_file/
+DATA_PATH="/dataset/boolq/test"
+TASK="boolq"
+```
+
+In addition, you need to set the corresponding parameters according to the model size, bloom_7B parameters are:
+```shell
+--num-layers 30 
+--hidden-size 4096 
+--num-attention-heads 32 
+```
+
+```shell
+bash ./tasks/evaluation/eval_bloom.sh
+```
+
+<table>
+  <thead>
+    <tr>
+      <th>任务</th>
+      <th>验证集</th>
+      <th>模型</th>
+      <th>昇腾值</th>
+      <th>社区值</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="https://huggingface.co/datasets/boolq">Boolq</a></td>
+      <td>Test</td>
+      <th>bloom 7b</th>
+      <td>0.614</td>
+      <td>--</td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td><a href="https://huggingface.co/datasets/cais/mmlu">mmlu</a></td>
+      <td>Test</td>
+      <th>bloom 7b</th>
+      <td>0.251</td>
+      <td><a href="https://www.hayo.com/article/648ace24409528db3186ef1c">0.254</a></td>
+    </tr>
+  </tbody>
+</table>
+
 
 # Bloom-176B
 
@@ -364,7 +431,21 @@ and GPU on a single-node system. The average relative error is 0.1%, less than 2
 
 ## Inference
 
-We support AscendSpeed Inference for text generation with BLOOM 176B.
+We support AscendSpeed Inference for text generation with BLOOM 176B (deepspeed or megatron).
+
+### deepspeed_pipeline
+
+```shell
+# modify the model weight path and tokenizer path
+CHECKPOINT=/home/model/bloom_176B
+VOCAB_FILE=/home/bloom_data/vocab_file/
+```
+
+```shell
+bash ./examples/bloom/generate_bloom_176b_deepspeed_pipeline.sh
+```
+
+### megatron.
 
 Use [convert_weights_from_gptmodelpipe_to_gptmodel.sh](../../tools/ckpt_convert/bloom/convert_weights_from_gptmodelpipe_to_gptmodel.sh), converting deep speed checkpoints to megatron.Convert the checkpoint of deepspeed to megtron.
 
@@ -392,13 +473,55 @@ MASTER_ADDR=localhost
 NODE_RANK=0
 
 # modify the model weight path and tokenizer path
-CHECKPOINT=/home/bloom_data/enwiki_100k/enwiki-100k_text_document
+CHECKPOINT=/home/model/bloom_176B
 VOCAB_FILE=/home/bloom_data/vocab_file/
 ```
 
 ```shell
 bash ./examples/bloom/generate_bloom_176b_2nodes.sh
 ```
+
+## Evaluation 
+Config Bloom-7B evaluation script: tasks/evaluation/eval_bloom.sh
+
+```shell
+# modify the model weight path and tokenizer path
+CHECKPOINT=/home/model/bloom_176B
+VOCAB_FILE=/home/bloom_data/vocab_file/
+DATA_PATH="/dataset/boolq/test"
+TASK="boolq"
+```
+
+In addition, you need to set the corresponding parameters according to the model size, bloom_7B parameters are:
+```shell
+--num-layers 70 
+--hidden-size 14336 
+--num-attention-heads 112 
+```
+
+```shell
+bash ./tasks/evaluation/eval_bloom.sh
+```
+<table>
+  <thead>
+    <tr>
+      <th>任务</th>
+      <th>验证集</th>
+      <th>模型</th>
+      <th>昇腾值</th>
+      <th>社区值</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="https://huggingface.co/datasets/boolq">Boolq</a></td>
+      <td>Test</td>
+      <th>bloom 176b</th>
+      <td>0.657</td>
+      <td>--</td>
+    </tr>
+  </tbody>
+</table>
 
 ## Example
 1. bloom 7b
