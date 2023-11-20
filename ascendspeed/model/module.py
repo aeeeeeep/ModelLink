@@ -31,6 +31,7 @@ import ascendspeed
 from ascendspeed import get_args
 from ascendspeed.core import parallel_state, tensor_parallel
 from ascendspeed.model.lora_utils import is_enable_lora, get_lora_model_classes
+from ascendspeed.error_utils import ensure_valid
 
 
 _FLOAT_TYPES = (torch.FloatTensor, get_accelerator().FloatTensor)
@@ -43,8 +44,10 @@ def param_is_not_shared(param):
 
 
 class MegatronModule(torch.nn.Module):
-    """Megatron specific extensions of torch Module with support
-    for pipelining."""
+    """
+    Megatron specific extensions of torch Module with support
+    for pipelining.
+    """
 
     def __init__(self, config=None, share_embeddings_and_output_weights=True):
         super(MegatronModule, self).__init__()
@@ -53,8 +56,10 @@ class MegatronModule(torch.nn.Module):
 
     def state_dict_for_save_checkpoint(self, destination=None, prefix='',
                                        keep_vars=False):
-        """Use this function to override the state dict for
-        saving checkpoints."""
+        """
+        Use this function to override the state dict for
+        saving checkpoints.
+        """
         return self.state_dict(destination, prefix, keep_vars)
 
     def shared_embedding_or_output_weight(self):
@@ -91,7 +96,7 @@ class MegatronModule(torch.nn.Module):
         #    the two word_embeddings layers to ensure that every applied weight
         #    update is the same on both stages.
         if parallel_state.is_pipeline_last_stage() and not self.pre_process:
-            assert not parallel_state.is_pipeline_first_stage()
+            ensure_valid(not parallel_state.is_pipeline_first_stage())
             self._word_embeddings_for_head_key = 'word_embeddings_for_head'
             # set word_embeddings weights to 0 here, then copy first
             # stage's weights using all_reduce below.
@@ -135,8 +140,10 @@ class MegatronModule(torch.nn.Module):
 
 
 def conversion_helper(val, conversion):
-    """Apply conversion to val. Recursively apply conversion if `val`
-    #is a nested tuple/list structure."""
+    """
+    Apply conversion to val. Recursively apply conversion if `val`
+    #is a nested tuple/list structure.
+    """
     if not isinstance(val, (tuple, list)):
         return conversion(val)
     rtn = [conversion_helper(v, conversion) for v in val]
@@ -227,23 +234,25 @@ class MegatronModuleForCausalLMABC(torch.nn.Module, abc.ABC):
         self.do_sample = False
         self.num_beams = 1
         self.temperature = 1.0
-        self.max_length = 20
-        self.max_new_tokens = 20
+        self.max_length = 128
+        self.max_new_tokens = 0
         self.eos_token_id = None
+        self.bos_token_id = None
         self.pad_token_id = None
         self.num_return_sequences = 1
         self.length_penalty = 1.0
-        self.tokenizer = None
+        self.tokenizer_new = None
         self.recompute = True
         self.detokenize = True
         self.include_input = False
-        self.stream = True
+        self.stream = False
         self.return_output_log_probs = False
 
     @classmethod
     def from_pretrained(
             cls,
-            model_provider, pretrained_model_name_or_path: Optional[Union[str, os.PathLike, None]] = None,
+            model_provider,
+            pretrained_model_name_or_path: Optional[Union[str, os.PathLike, None]] = None,
             **kwargs
     ):
         """
@@ -265,16 +274,20 @@ class MegatronModuleForCausalLMABC(torch.nn.Module, abc.ABC):
         - *greedy decoding* if `do_sample=False`
         - *top-k decoding* if `top_k>0`
         - *top-p decoding* if `top_p>0.0`
-        - *beam-search decoding* if `do_sample=False` and `num_beams>1`
+        - *beam-search decoding* if `num_beams>1`
 
         Parameters:
         ----------
-        input_ids(str | torch.Tensor):
+        input_ids(str | list | LongTensor):
             The text entered by the user, e.g. 'Hello!'
             Or
             The text, which encoded by tokenizer, entered by the user, e.g. [0, 13, 5, ...]
+            Or
+            The List, which includes multi texts or tokens,
+            e.g. [['Hello!'], ["How are you?"]] | [[0, 13, 5, ...], [0, 21, ...]].
+            Notice that in beam-search mode multi texts or tokens is forbidden.
         do_sample (`bool`, *optional*, defaults to `False`):
-            Whether or not to use sampling ; use greedy decoding otherwise.
+            Whether to use sampling ; use greedy decoding otherwise.
         top_k (`int`, *optional*, defaults to 0):
             The number of the highest probability vocabulary tokens to keep for top-k-filtering.
         top_p (`float`, *optional*, defaults to 1.0):
@@ -290,7 +303,11 @@ class MegatronModuleForCausalLMABC(torch.nn.Module, abc.ABC):
         max_new_tokens (`int`, *optional*):
             The maximum numbers of tokens to generate, ignoring the number of tokens in the prompt.
         eos_token_id (`int`, *optional*):
-            The id of the *end-of-sequence* token. Optionally, use a list to set multiple *end-of-sequence* tokens.
+            The id of the *end-of-sequence* token. Optionally,
+            use a list to set multiple *end-of-sequence* tokens.
+        bos_token_id (`int`, *optional*):
+            The id of the *beginning-of-sequence* token. Optionally,
+            use a list to set multiple *beginning-of-sequence* tokens.
         pad_token_id (`int`, *optional*):
             The id of the *padding* token.
         tokenizer (`obj`, *optional*, defaults to None):
@@ -299,7 +316,7 @@ class MegatronModuleForCausalLMABC(torch.nn.Module, abc.ABC):
             Exponential penalty to the length that is used with beam-based generation. It is applied as an exponent to
             the sequence length, which in turn is used to divide the score of the sequence. Since the score is the log
             likelihood of the sequence (i.e. negative), `length_penalty` > 0.0 promotes longer sequences, while
-            `length_penalty` < 0.0 encourages shorter sequences.Only activate in beam search mode.
+            `length_penalty` < 0.0 encourages shorter sequences. Only activate in beam search mode.
         num_return_sequences(`int`, *optional*, defaults to 1):
             The number of independently computed returned sequences for each element in the batch. Only activate
             in beam search mode.
@@ -309,27 +326,29 @@ class MegatronModuleForCausalLMABC(torch.nn.Module, abc.ABC):
             Whether to detokenize tokens into characters.
         include_input (`bool`, *optional*, defaults to False):
             Whether the output contains the context instruction.
-        stream (`bool`, *optional*, defaults to True):
+        stream (`bool`, *optional*, defaults to False):
             Whether the output is streamed one by one.
         return_output_log_probs(`bool`, *optional*, defaults to False):
             Whether to return a probability distribution for each token.
+            Note that the accumulated probability (i.e. Score) of the whole sentence will be return in beam search mode.
         """
         self.top_k = kwargs.pop("top_k", 50)
         self.top_p = kwargs.pop("top_p", 1.0)
         self.do_sample = kwargs.pop("do_sample", False)
         self.num_beams = kwargs.pop("num_beams", 1)
         self.temperature = kwargs.pop("temperature", 1.0)
-        self.max_length = kwargs.pop("max_length", 20)
-        self.max_new_tokens = kwargs.pop("max_new_tokens", 20)
+        self.max_length = kwargs.pop("max_length", 128)
+        self.max_new_tokens = kwargs.pop("max_new_tokens", 0)
         self.eos_token_id = kwargs.pop("eos_token_id", None)
+        self.bos_token_id = kwargs.pop("bos_token_id", None)
         self.pad_token_id = kwargs.pop("pad_token_id", None)
         self.num_return_sequences = kwargs.pop("num_return_sequences", 1)
         self.length_penalty = kwargs.pop("length_penalty", 1.0)
-        self.tokenizer = kwargs.pop("tokenizer", None)
+        self.tokenizer_new = kwargs.pop("tokenizer", None)
         self.recompute = kwargs.pop("recompute", True)
         self.detokenize = kwargs.pop("detokenize", True)
         self.include_input = kwargs.pop("include_input", False)
-        self.stream = kwargs.pop("stream", True)
+        self.stream = kwargs.pop("stream", False)
         self.return_output_log_probs = kwargs.pop("return_output_log_probs", False)
 
 
@@ -342,7 +361,8 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
     def __init__(self, *args, **kwargs):
         super().__init__()
         from ascendspeed import get_tokenizer
-        from ascendspeed import text_generation_utils
+        from ascendspeed.text_generation import greedy_search_or_sampling
+        from ascendspeed.text_generation import beam_search
 
         args = get_args()
         args.max_tokens_to_oom = args.max_tokens_to_oom if hasattr(args, "max_tokens_to_oom") else 4096
@@ -352,10 +372,11 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         self.padded_vocab_size = args.padded_vocab_size
         self.pipeline_size_larger_than_one = args.pipeline_model_parallel_size > 1
 
-        self.tokenizer_ori = get_tokenizer().tokenizer
+        self.tokenizer = get_tokenizer().tokenizer
 
         # import module to avoid error of circular import
-        self.utils = text_generation_utils
+        self.greedy_search_or_sampling = greedy_search_or_sampling
+        self.beam_search_in_sampling = beam_search
 
     @staticmethod
     def _init_deepspeed_inference(model, args):
@@ -404,70 +425,14 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         return engine
 
     @staticmethod
-    def _tokenize_and_broadcast(input_ids, tokenizer):
-        broadcast_rank = torch.zeros(dist.get_world_size(),
-                                     dtype=torch.int64,
-                                     device=torch.device(get_accelerator().device_name()))
-
-        if input_ids:
-            if isinstance(input_ids, str):
-                context_tokens = tokenizer.encode(input_ids)
-            else:
-                context_tokens = input_ids
-
-            context_length = len(context_tokens)
-            counts = 1
-            broadcast_rank[dist.get_rank()] = 1
-        else:
-            context_tokens = [tokenizer.encode("EMPTY TEXT")]
-            context_length = 0
-            counts = 0
-
-        input_info = [counts, context_length]
-        input_info_tensor = get_accelerator().LongTensor(input_info)
-        dist.all_reduce(input_info_tensor)
-        dist.all_reduce(broadcast_rank)
-        counts = input_info_tensor[0].item()
-        if counts == 0:
-            raise ValueError("Please pass prompt on at least one process.")
-        context_length = input_info_tensor[1].item() // counts
-        master_rank = torch.nonzero(broadcast_rank)[0, 0]
-        return context_length, context_tokens, master_rank
-
-    @staticmethod
-    def _broadcast_tokens(context_tokens, context_length, master_rank):
-        if dist.get_world_size() > 1:
-            if dist.get_rank() == master_rank:
-                context_tokens_tensor = get_accelerator().LongTensor(context_tokens)
-                dist.broadcast(context_tokens_tensor, master_rank)
-            else:
-                context_tokens_tensor = torch.empty(context_length,
-                                                    dtype=torch.int64,
-                                                    device=torch.device(get_accelerator().device_name()))
-                dist.broadcast(context_tokens_tensor, master_rank)
-        else:
-            context_tokens_tensor = get_accelerator().LongTensor(context_tokens)
-
-        return context_tokens_tensor
-
-    @staticmethod
-    def _check_output(output, stream):
-        if not stream:
-            full_output = None
-            for tmp in output:
-                full_output = tmp
-            return full_output
-        else:
-            return output
-
-    @staticmethod
     def _ids_check(ids, tokenizer):
         checked_ids = []
         for per_ids in ids:
-            if torch.max(per_ids) >= len(tokenizer):
-                logging.warning("The output ids exceeds the tokenizer length, "
-                                "the clamp operation is enforced, please check!!")
-                checked_ids.append(torch.clamp(per_ids, min=0, max=len(tokenizer))-1)
+            if per_ids == torch.Size([]) and torch.max(per_ids) >= len(tokenizer):
+                warning_info = "The output ids exceeds the tokenizer length, "\
+                               "the clamp operation is enforced, please check!!"
+                logging.warning(warning_info)
+                checked_ids.append(torch.clamp(per_ids, min=0, max=len(tokenizer)) - 1)
             else:
                 checked_ids.append(per_ids)
         return checked_ids
@@ -519,14 +484,18 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         setattr(args, "text_generation_config", {
             "top_k": self.top_k,
             "top_p": self.top_p,
+            "num_beams": self.num_beams,
+            "length_penalty": self.length_penalty,
             "temperature": self.temperature,
             "recompute": self.recompute,
             "return_output_log_probs": self.return_output_log_probs,
+            "max_length": self.max_length,
+            "max_new_tokens": self.max_new_tokens,
+            "eos_token_id": self.eos_token_id,
+            "bos_token_id": self.bos_token_id,
+            "pad_token_id": self.pad_token_id,
+            "greedy": True if not self.do_sample else False
         })
-
-        args.out_seq_length = self.max_new_tokens
-        args.seq_length = args.seq_length if hasattr(args, "seq_length") else self.max_length
-        args.greedy = False if self.do_sample else True
 
         # =======================================
         # Add additional parameters to args which
@@ -539,78 +508,150 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         # Initialize the tokenizer to choose
         # whether to use customizing tokenizer
         # =======================================
-        tokenizer = self._init_tokenizer(args, self.eos_token_id, self.pad_token_id, self.tokenizer)
+        self._init_tokenizer(args)
 
         # =======================================
         # Tokenize the prompts and broadcasting,
         # so you don't need to pass the prompt on
         # each process.
         # =======================================
-        context_length, context_tokens, master_rank = self._tokenize_and_broadcast(input_ids, tokenizer)
-
-        # =======================================
-        # For parallel we need to send context tokens
-        # to other process
-        # =======================================
-        context_tokens_tensor = self._broadcast_tokens(context_tokens, context_length, master_rank).unsqueeze(0)
-        context_tokens = context_tokens_tensor.cpu().numpy().tolist()
+        context_tokens, master_rank = self._tokenize(input_ids)
+        args.master_rank = master_rank
+        args.micro_batch_size = len(context_tokens)
 
         # =======================================
         # Get the streaming tokens generator
         # =======================================
         if self.num_beams > 1:
-            raise NotImplementedError("Beam search will coming soon. ~~")
+            token_stream = self.beam_search_in_sampling(
+                args.model[0],
+                context_tokens,
+                beam_size=self.num_beams,
+                stop_token=args.eos_id,
+                num_return_gen=self.num_return_sequences,
+                length_penalty=self.length_penalty
+            )
         else:
-            token_stream = self.utils.get_token_stream(args.model[0], context_tokens)
+            token_stream = self.greedy_search_or_sampling(
+                args.model[0],
+                context_tokens
+            )
 
         # =======================================
         # Post processions in order to get final
         # output texts/tokens
         # =======================================
-        output = self._post_processing(token_stream,
-                                       tokenizer,
-                                       context_length,
-                                       self.include_input,
-                                       self.detokenize)
-        return self._check_output(output, self.stream)
+        return self._token_generator(token_stream)
 
-    def _init_tokenizer(self, args, eos_token_id, pad_token_id, tokenizer):
-        if tokenizer is None:
-            tokenizer = ascendspeed.global_vars.rebuild_tokenizer(args, tokenizer=self.tokenizer_ori)
+    def _init_tokenizer(self, args):
+        if self.tokenizer_new is None:
+            self.tokenizer = ascendspeed.global_vars.rebuild_tokenizer(
+                args, tokenizer=self.tokenizer)
         else:
-            tokenizer = ascendspeed.global_vars.rebuild_tokenizer(args, tokenizer=tokenizer)
+            self.tokenizer = ascendspeed.global_vars.rebuild_tokenizer(
+                args, tokenizer=self.tokenizer_new)
 
-        if pad_token_id is not None:
-            tokenizer.pad_token_id = pad_token_id
-        if eos_token_id is not None:
-            tokenizer.eos_token_id = eos_token_id
+        if self.pad_token_id is not None:
+            self.tokenizer.pad_token_id = self.pad_token_id
+        if self.eos_token_id is not None:
+            self.tokenizer.eos_token_id = self.eos_token_id
+        if self.bos_token_id is not None:
+            self.tokenizer.bos_token_id = self.bos_token_id
 
-        if tokenizer.eos_token_id is not None:
-            args.eos_id = tokenizer.eos_token_id
-            args.eod_id = tokenizer.eos_token_id
+        if self.tokenizer.eos_token_id is not None:
+            args.eos_id = self.tokenizer.eos_token_id
+            args.eod_id = self.tokenizer.eos_token_id
         else:
             raise ValueError("Your tokenizer doesn't include eos_token.")
 
-        return tokenizer
+        if self.tokenizer.pad_token_id is None:
+            self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
-    def _post_processing(self, token_stream, tokenizer, context_length, include_input, detokenize):
-        for output, _, log_probs in token_stream:
-            if not include_input:
-                output = [val[context_length:] for val in output]
-                log_probs = [val[context_length:, :] for val in log_probs] if log_probs is not None else None
+    def _tokenize(self, input_ids):
+        context_tokens = [[]]
+        broadcast_rank = torch.zeros(dist.get_world_size(),
+                                     dtype=torch.int64,
+                                     device=torch.device(get_accelerator().device_name()))
 
-            if detokenize:
-                try:
-                    output_checked = self._ids_check(output, tokenizer)
-                    output = tokenizer.batch_decode(output_checked, skip_special_tokens=True)
-                except Exception as e:
-                    logging.error("Meet errors when trying to decode the tokens. "
-                                  "Please handle it by yourself.")
-                    logging.error(e)
-
-            output = output[0] if len(output) == 1 else output
-
-            if log_probs is None:
-                yield output
+        if input_ids is not None and len(input_ids) > 0:
+            if isinstance(input_ids, str):
+                context_tokens = [self.tokenizer.encode(input_ids)]
+            elif torch.is_tensor(input_ids):
+                if len(input_ids.shape) == 1:
+                    context_tokens = input_ids.unsqueeze(0).numpy().tolist()
+                elif len(input_ids.shape) == 2:
+                    context_tokens = input_ids.numpy().tolist()
+            elif isinstance(input_ids, (tuple, list)):
+                if len(input_ids) and isinstance(input_ids[0], (tuple, list)):
+                    context_tokens = input_ids
+                elif len(input_ids) and isinstance(input_ids[0], int):
+                    context_tokens = [input_ids]
+                elif len(input_ids) and isinstance(input_ids[0], str):
+                    context_tokens = [self.tokenizer.encode(val) for val in input_ids]
             else:
-                yield output, log_probs[0] if len(log_probs) == 1 else log_probs
+                raise TypeError("Please check input_ids in correct type.")
+
+            broadcast_rank[dist.get_rank()] = 1
+
+        dist.all_reduce(broadcast_rank)
+        master_rank = torch.nonzero(broadcast_rank)[0, 0]
+
+        return context_tokens, master_rank
+
+    def _post_processing(self, output, context_lengths, log_probs):
+        if not self.include_input:
+            output = [val[context_lengths[i]:] for i, val in enumerate(output)]
+
+        # When batch size > 1, you need truncate the tokens after eos_token_id
+        self._truncate_in_multi_batch(output)
+
+        if self.detokenize:
+            try:
+                output_checked = self._ids_check(output, self.tokenizer)
+                output = self.tokenizer.batch_decode(output_checked, skip_special_tokens=True)
+            except Exception as e:
+                error_info = "Meet errors when trying to decode the tokens. "\
+                             "Please handle it by yourself."
+                logging.error(error_info)
+                logging.error(e)
+
+        output = output[0] if len(output) == 1 else output
+
+        if not self.return_output_log_probs:
+            res = output
+        else:
+            if self.num_beams == 1:
+                log_probs = [val[context_lengths[i]:, :] for i, val in enumerate(log_probs)] \
+                    if log_probs is not None else None
+
+            res = output, log_probs[0] if len(log_probs) == 1 else log_probs
+
+        return res
+
+    def _truncate_in_multi_batch(self, output):
+        if len(output) > 1:
+            for idx, batch in enumerate(output):
+                trunc_index = torch.nonzero(batch == self.tokenizer.eos_token_id)
+
+                if min(trunc_index.shape):
+                    output[idx][trunc_index.min():] = self.tokenizer.eos_token_id
+
+    def _yield(self, token_stream):
+        output, context_lengths, log_probs = None, None, None
+        for output, context_lengths, log_probs in token_stream:
+            if self.stream:
+                res = self._post_processing(output, context_lengths, log_probs)
+                yield res
+
+        if not self.stream:
+            yield self._post_processing(output, context_lengths, log_probs)
+
+    def _token_generator(self, token_stream):
+        token_stream = self._yield(token_stream)
+        if not self.stream:
+            full_output = None
+            for tmp in token_stream:
+                full_output = tmp
+            return full_output
+        else:
+            return token_stream

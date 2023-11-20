@@ -15,17 +15,18 @@
 
 import json
 import os
+import logging
+import stat
 import re
 import subprocess
 from typing import Iterable, Dict
 import pandas as pd
 from tasks.evaluation.eval_api.dataset_eval import DatasetEval
-from tasks.evaluation.eval_api.llm_chat import LlmChat
+from tasks.evaluation.eval_api.chat import Chat
 from tasks.evaluation.eval_impl.template import CODE_TEST_LOG_DIR
 from ascendspeed.error_utils import check_divisible_by_zero
+from ascendspeed.utils import WRITE_FILE_DEFAULT_FLAGS, WRITE_FILE_DEFAULT_MODES
 logger = logging.getLogger(__name__)
-flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-modes = stat.S_IWUSR | stat.S_IRUSR
 
 
 def extract_answer_code(answer, task: dict):
@@ -45,7 +46,7 @@ def extract_answer_code(answer, task: dict):
     if not os.path.exists(CODE_TEST_LOG_DIR):
         os.makedirs(CODE_TEST_LOG_DIR)
     test_code_path = "{}{}".format(CODE_TEST_LOG_DIR, save_file)
-    with os.fdopen(os.open(test_code_path, flags, modes), 'w') as f:
+    with os.fdopen(os.open(test_code_path, WRITE_FILE_DEFAULT_FLAGS, WRITE_FILE_DEFAULT_MODES), 'w') as f:
         f.write("from typing import List\n")
         f.write("import math\n")
         for i, line in enumerate(code_lines):
@@ -77,7 +78,8 @@ def extract_answer_code(answer, task: dict):
 
 class HumanEval(DatasetEval):
     def __init__(self, test_dir,
-                 instruction_template="你是一个编程助手，请用python去续写下面的代码，要求使用markdown格式,并输出完整代码:\n{prompt}"):
+                 instruction_template="The definition and function description of the python function are as follows. "
+                                      "Please complete the implementation of the python function.\n{prompt}"):
         self.test_dir = test_dir
         self.instruction_template = instruction_template
 
@@ -89,29 +91,30 @@ class HumanEval(DatasetEval):
         Parses each jsonl line and yields it as a dictionary
         """
         for file in os.listdir(test_dir):
-            file_path = os.path.join(self.test_dir, file)
-           with os.fdopen(os.open(test_code_path, flags, modes)) as fp::
+            test_code_path = os.path.join(self.test_dir, file)
+            with os.fdopen(os.open(test_code_path, WRITE_FILE_DEFAULT_FLAGS, WRITE_FILE_DEFAULT_MODES)) as fp:
                 for line in fp:
                     if any(not x.isspace() for x in line):
                         yield json.loads(line)
 
-    def eval(self, llm_chat: LlmChat) -> (dict, pd.DataFrame):
+    def eval(self, chat: Chat) -> (dict, pd.DataFrame):
         problems = self.read_problems()
         success_n = 0
         rank = None
         answer_result = {}
         for idx, (task_id, task) in enumerate(problems.items()):
             instruction = self.instruction_template.format(prompt=task['prompt'])
-            chat_result, rank = llm_chat.chat(instruction=instruction, history=[])
+            chat_result, rank = chat.chat(instruction=instruction, history=[])
             answer = None
             if chat_result:
                 answer = chat_result[0]
             try:
                 if rank == 0:
+                    python_execute = sys.executable
                     answer = task['prompt'] + ' ' + answer
                     logger.info('answer: ', answer)
                     test_file = extract_answer_code(answer, task)
-                    result = subprocess.run(["python", test_file], capture_output=True, timeout=10)
+                    result = subprocess.run([python_execute, test_file], capture_output=True, timeout=10)
                     if result.returncode != 0:  # 如果返回值不为0，表示知晓出错
                         error_msg = result.stderr.decode("utf-8")
                         logger.info(error_msg)

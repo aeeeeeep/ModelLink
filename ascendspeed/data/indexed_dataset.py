@@ -141,14 +141,12 @@ class IndexedDataset(torch.utils.data.Dataset):
     def read_index(self, path):
         with open(index_file_path(path), 'rb') as f:
             magic = f.read(8)
-            assert magic == self._HDR_MAGIC, (
-                'Index file doesn\'t match expected format. '
-                'Make sure that --dataset-impl is configured properly.'
-            )
+            check_equal(magic, self._HDR_MAGIC, error_info='Index file doesn\'t match expected format. ' \
+                                                'Make sure that --dataset-impl is configured properly.')
             version = f.read(8)
-            assert struct.unpack('<Q', version) == (1,)
+            check_equal(struct.unpack('<Q', version), (1,))
             code, self.element_size = struct.unpack('<QQ', f.read(16))
-            self.dtype = dtypes[code]
+            self.dtype = dtypes.get(code)
             self._len, self.s = struct.unpack('<QQ', f.read(16))
             self.doc_count = struct.unpack('<Q', f.read(8))
             self.dim_offsets = read_longs(f, self._len + 1)
@@ -282,7 +280,7 @@ class IndexedDatasetBuilder(object):
         self.data_offsets = [0]
         self.dim_offsets = [0]
         self.sizes = []
-        self.element_size = self.element_sizes[self.dtype]
+        self.element_size = self.element_sizes.get(self.dtype)
         self.doc_idx = [0]
 
     def add_item(self, tensor):
@@ -308,7 +306,7 @@ class IndexedDatasetBuilder(object):
         begin = self.dim_offsets[-1]
         for dim_offset in index.dim_offsets[1:]:
             self.dim_offsets.append(begin + dim_offset)
-        self.doc_idx.extend( (doc_offset + index.doc_idx)[1:] )
+        self.doc_idx.extend((doc_offset + index.doc_idx)[1:])
 
         with open(data_file_path(another_file), 'rb') as f:
             while True:
@@ -423,12 +421,10 @@ class MMapIndexedDataset(torch.utils.data.Dataset):
         def __init__(self, path, skip_warmup=False):
             with open(path, 'rb') as stream:
                 magic_test = stream.read(9)
-                assert self._HDR_MAGIC == magic_test, (
-                    'Index file doesn\'t match expected format. '
-                    'Make sure that --dataset-impl is configured properly.'
-                )
+                check_equal(self._HDR_MAGIC, magic_test, error_info='Index file doesn\'t match expected format. ' \
+                                                         'Make sure that --dataset-impl is configured properly.')
                 version = struct.unpack('<Q', stream.read(8))
-                assert (1,) == version
+                check_equal((1,), version)
 
                 dtype_code, = struct.unpack('<B', stream.read(1))
                 self._dtype = dtypes[dtype_code]
@@ -601,12 +597,12 @@ class MMapIndexedDatasetBuilder(object):
         index = MMapIndexedDataset.Index(index_file_path(another_file))
         check_equal(index.dtype, self._dtype)
 
-        total_len = len(index.sizes)+len(self._sizes)
+        total_len = len(index.sizes) + len(self._sizes)
         print(f"    concat {another_file} size={len(index.sizes)} for a total size of {total_len}")
 
         offset = len(self._sizes)
         self._sizes.extend(index.sizes)
-        self._doc_idx.extend( (offset + index.doc_idx)[1:] )
+        self._doc_idx.extend((offset + index.doc_idx)[1:])
 
         # Concatenate data
         with open(data_file_path(another_file), 'rb') as f:

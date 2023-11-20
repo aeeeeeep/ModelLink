@@ -38,7 +38,7 @@ from ascendspeed.training import pretrain
 from ascendspeed.utils import get_ltor_masks_and_position_ids
 from ascendspeed.utils import average_losses_across_data_parallel_group
 from ascendspeed.arguments import core_transformer_config_from_args
-from ascendspeed.error_utils import check_equal, ensure_var_is_not_none
+from ascendspeed.error_utils import check_equal, ensure_var_is_not_none, ensure_valid
 
 from torch import nn
 import torch.nn.functional as F
@@ -115,7 +115,7 @@ def get_batch(data_iterator):
     data_b = tensor_parallel.broadcast_data(keys, data, datatype)
 
     # Unpack.
-    tokens_ = data_b['text'].long()
+    tokens_ = data_b.get('text').long()
     labels = tokens_[:, 1:].contiguous()
     tokens = tokens_[:, :-1].contiguous()
 
@@ -174,7 +174,7 @@ def get_batch_pipe(data):
     data_b = tensor_parallel.broadcast_data(keys, data, datatype)
 
     # Unpack.
-    tokens_ = data_b['text'].long()
+    tokens_ = data_b.get('text').long()
     labels = tokens_[:, 1:].contiguous()
     tokens = tokens_[:, :-1].contiguous()
 
@@ -273,13 +273,13 @@ def forward_step(data_iterator, model):
 
     if args.mos or args.kd:
         # The forward func can return either the loss or the logits, depending on whether passing in the labels or not.
-        stu_output, *other_losses = model(tokens, position_ids, attention_mask)
+        stu_output, other_losses = model(tokens, position_ids, attention_mask)
         if args.curriculum_learning_legacy and args.curriculum_seqlen < args.seq_length:
             ensure_var_is_not_none(args.curriculum_seqlen)
             labels = labels[:, :args.curriculum_seqlen].contiguous()
         output_tensor = tensor_parallel.vocab_parallel_cross_entropy(stu_output.contiguous().float(), labels)
     else:
-        output_tensor, *other_losses = model(tokens, position_ids, attention_mask,
+        output_tensor, other_losses = model(tokens, position_ids, attention_mask,
                                              labels=labels)
     if args.curriculum_learning_legacy and args.curriculum_seqlen < args.seq_length:
         loss_mask = loss_mask[:, :args.curriculum_seqlen].contiguous()
@@ -287,12 +287,16 @@ def forward_step(data_iterator, model):
     moe_losses = []
     for moe_loss in other_losses:
         if moe_loss is not None:
-            moe_losses.append(moe_loss)
+            if isinstance(moe_loss, list):
+                for moe_loss_i in moe_loss:
+                    moe_losses.append(moe_loss_i)
+            else:
+                moe_losses.append(moe_loss)
     moe_loss = sum(moe_losses) * args.moe_loss_coeff
 
     mos_loss = 0
     if args.mos or args.kd:
-        assert model.training
+        ensure_valid(model.training)
         if args.teacher_forward and args.teacher_model is not None:
             mos_loss = calculate_mos_loss(args, stu_output,
                                           args.teacher_model[0], tokens, position_ids, attention_mask)

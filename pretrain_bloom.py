@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Pretrain BLOOM"""
+import ast
 from functools import partial
 import math
 
@@ -114,7 +115,7 @@ def get_batch(data_iterator):
     data_b = tensor_parallel.broadcast_data(keys, data, datatype)
 
     # Unpack.
-    tokens_ = data_b['text'].int()
+    tokens_ = data_b.get('text').int()
     labels = tokens_[:, 1:].contiguous()
     tokens = tokens_[:, :-1].contiguous()
 
@@ -141,16 +142,16 @@ def data_post_process(data, data_sampler_state_dict):
             args.data_efficiency_curriculum_learning_seqlen_type = 'seqlen_truncate'
             current_seqlen = data_sampler_state_dict['current_difficulties']['seqlen_truncate']
             if current_seqlen < args.seq_length:
-                data['text'] = data['text'][:, :(current_seqlen+1)].contiguous()
+                data['text'] = data['text'][:, :(current_seqlen + 1)].contiguous()
         elif 'seqlen_reshape' in data_sampler_state_dict['current_difficulties']:
             args.data_efficiency_curriculum_learning_seqlen_type = 'seqlen_reshape'
             current_seqlen = data_sampler_state_dict['current_difficulties']['seqlen_reshape']
             if current_seqlen < args.seq_length:
                 orig_num_token = torch.numel(data['text'])
-                reshape_len = (data['text'].size()[1] // (current_seqlen+1)) * (current_seqlen+1)
-                data['text'] = torch.cat((data['text'][:, :reshape_len].contiguous().view(-1, current_seqlen+1),
-                    data['text'][:, -(current_seqlen+1):]), 0).contiguous()
-                num_row = math.ceil(orig_num_token / (current_seqlen+1))
+                reshape_len = (data['text'].size()[1] // (current_seqlen + 1)) * (current_seqlen + 1)
+                data['text'] = torch.cat((data['text'][:, :reshape_len].contiguous().view(-1, current_seqlen + 1),
+                    data['text'][:, -(current_seqlen + 1):]), 0).contiguous()
+                num_row = math.ceil(orig_num_token / (current_seqlen + 1))
                 num_row = min(num_row, data['text'].size()[0])
                 if num_row > 1 and num_row % 2 != 0:
                     num_row -= 1
@@ -173,7 +174,7 @@ def get_batch_pipe(data):
     data_b = tensor_parallel.broadcast_data(keys, data, datatype)
 
     # Unpack.
-    tokens_ = data_b['text'].long()
+    tokens_ = data_b.get('text').long()
     labels = tokens_[:, 1:].contiguous()
     tokens = tokens_[:, :-1].contiguous()
 
@@ -295,10 +296,10 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
             assigned_train_valid_test.append("test")
 
         for s in assigned_train_valid_test:
-            data_groups = zip(eval(f"args.{s}_weighted_split_paths"),
-                                eval(f"args.{s}_weighted_split_weights"),
-                                eval(f"args.{s}_weighted_split_splits"),
-                                eval(f"args.{s}_weighted_split_names"))
+            data_groups = zip(ast.literal_eval(f"args.{s}_weighted_split_paths"),
+                                ast.literal_eval(f"args.{s}_weighted_split_weights"),
+                                ast.literal_eval(f"args.{s}_weighted_split_splits"),
+                                ast.literal_eval(f"args.{s}_weighted_split_names"))
             for paths, weights, splits, name in data_groups:
                 d = build_dataset_group(name, paths, weights, splits,
                                         args.data_impl,
@@ -306,7 +307,7 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
                                         args.seq_length, args.seed,
                                         (not args.mmap_warmup),
                                         train_valid_test=s)
-                eval(f"{s}_ds").append(d)
+                ast.literal_eval(f"{s}_ds").append(d)
     else:
         raise NotImplementedError("No dataloading argument passed")
 

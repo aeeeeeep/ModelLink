@@ -23,6 +23,7 @@ from ascendspeed.core.parallel_state import (
 )
 
 from ascendspeed.core.tensor_parallel.utils import VocabUtility
+from ascendspeed.error_utils import ensure_valid
 
 
 class _VocabParallelCrossEntropy(torch.autograd.Function):
@@ -36,7 +37,7 @@ class _VocabParallelCrossEntropy(torch.autograd.Function):
                                      group=get_tensor_model_parallel_group())
 
         # Subtract the maximum value.
-        vocab_parallel_logits = vocab_parallel_logits - logits_max.unsqueeze(dim=-1)
+        vocab_parallel_logits.sub_(logits_max.unsqueeze(dim=-1))
 
         # Get the partition's vocab indecies
         get_vocab_range = VocabUtility.vocab_range_from_per_partition_vocab_size
@@ -91,7 +92,7 @@ class _VocabParallelCrossEntropy(torch.autograd.Function):
             = (K * (1 - alpha) - 1) / (K - 1)) * y_gt  + (alpha / (K - 1)) * \sum_{i} y_i
             = (1 - (alpha * K) / (K - 1)) * y_gt + ( (alpha * K) / (K - 1) ) * \sum_{i} y_i / K
             """
-            assert 1.0 > label_smoothing > 0.0
+            ensure_valid(1.0 > label_smoothing > 0.0)
             smoothing = label_smoothing * vocab_size / (vocab_size - 1)
 
             # Exp logits at this point are normalized probabilities. So we can just take the log to get log-probs.

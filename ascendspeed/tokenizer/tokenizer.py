@@ -20,7 +20,7 @@ from abc import abstractmethod
 from transformers import AutoTokenizer, GPT2Tokenizer
 from transformers import BertTokenizer as FullBertTokenizer
 
-from ascendspeed.error_utils import ensure_var_is_not_none
+from ascendspeed.error_utils import ensure_var_is_not_none, ensure_valid
 
 
 def build_tokenizer(args):
@@ -30,7 +30,7 @@ def build_tokenizer(args):
               flush=True)
 
     # Select and instantiate the tokenizer.
-    assert args.vocab_file is not None or args.tokenizer_type == 'PretrainedFromHF'
+    ensure_valid(args.vocab_file is not None or args.tokenizer_type == 'PretrainedFromHF')
     if args.tokenizer_type == 'BertWordPieceLowerCase':
         tokenizer = _BertWordPieceTokenizer(vocab_file=args.vocab_file,
                                             lower_case=True,
@@ -75,7 +75,7 @@ def build_tokenizer(args):
 def _vocab_size_with_padding(orig_vocab_size, args):
     """Apply the requested rules to change the size of the vocabulary"""
     if args.pad_vocab_size_to is not None:
-        if args.pad_vocab_size_to  < orig_vocab_size:
+        if args.pad_vocab_size_to < orig_vocab_size:
             raise ValueError(
                 f"You asked to pad the vocabulary to {args.pad_vocab_size_to} when the initial vocabulary size is "
                 f"{orig_vocab_size}. You can only pad to a higher value."
@@ -332,13 +332,14 @@ class _AutoTokenizer(AbstractTokenizer):
         super().__init__(name)
         hf_tokenizer_kwargs = {}
         if vocab_extra_ids > 0:
-            # TODO @thomasw21 we might need to concatenate to a pre-existing list?
             hf_tokenizer_kwargs["additional_special_tokens"] = [f"<extra_id_{_id}>" for _id in range(vocab_extra_ids)]
        
         hf_tokenizer_kwargs["model_max_length"] = model_max_length
         hf_tokenizer_kwargs["use_fast"] = use_fast
         hf_tokenizer_kwargs["trust_remote_code"] = True
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, **hf_tokenizer_kwargs)
+        if self.tokenizer.pad_token_id is None:
+            self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
         self.encoder = self.tokenizer.get_vocab()
         self.decoder = {v: k for k, v in self.encoder.items()}
 
@@ -348,7 +349,6 @@ class _AutoTokenizer(AbstractTokenizer):
 
     @property
     def vocab(self):
-        # TODO @thomasw21 make sure that special tokens don't collapse with vocab tokens.
         return {
             **{special_token: self.tokenizer.convert_tokens_to_ids(special_token) 
             for special_token in self.tokenizer.additional_special_tokens},
@@ -367,7 +367,6 @@ class _AutoTokenizer(AbstractTokenizer):
 
     @property
     def eod(self):
-        # TODO @thomasw21 might conflict with <eos>
         return self.eos
 
     @property
@@ -401,7 +400,6 @@ class _AutoTokenizer(AbstractTokenizer):
 
     @property
     def eos(self):
-        # TODO @thomasw21 might conflict with the notion of <eod>
         candidate = self.tokenizer.eos_token_id
         return self._check_token_candidate(candidate)
 

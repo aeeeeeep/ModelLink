@@ -32,6 +32,7 @@ from ascendspeed.core import parallel_state
 from ascendspeed.model.module import param_is_not_shared
 from ascendspeed.core.tensor_parallel.layers import param_is_not_tensor_parallel_duplicate
 from ascendspeed import get_num_microbatches
+from ascendspeed.error_utils import check_type
 from deepspeed.accelerator import get_accelerator
 
 
@@ -122,7 +123,7 @@ def calc_params_l2_norm(model):
             False # no per-parameter norm
         )
     else :
-        norm = torch.norm(params_data,p=2.0)
+        norm = torch.norm(params_data, p=2.0)
     norm_2 = norm * norm
     # Sum across all model-parallel GPUs.
     torch.distributed.all_reduce(norm_2,
@@ -267,9 +268,8 @@ def get_ltor_masks_and_position_ids(data,
 
                     # Prefix lm per document.
                     if prefix_indices:
-                        assert isinstance(prefix_indices[b], list), \
-                        (f"prefix for a row has to be document specific, "
-                        "and consequently return a list, got {prefix_indices[b]}")
+                        check_type(prefix_indices[b], list, error_message=f"prefix for a row has to be document specific, " \
+                                                            "and consequently return a list, got {prefix_indices[b]}")
                         attention_mask[b, 0, prev_index: prefix_indices[b][j], prev_index: prefix_indices[b][j]] = 1
                         if loss_on_targets_only:
                             # Last token of the prefix should predict the prefix_index id
@@ -283,8 +283,8 @@ def get_ltor_masks_and_position_ids(data,
 
             # Prefix lm per row.
             if prefix_indices is not None and (reset_attention_mask is False):
-                assert isinstance(prefix_indices[b], int), \
-                    f"prefix for a row has to be row specific, and consequently return an int, got {prefix_indices[b]}"
+                check_type(prefix_indices[b], int, error_message=f"prefix for a row has to be row specific," \
+                                                    " and consequently return an int, got {prefix_indices[b]}")
                 attention_mask[b, 0, :prefix_indices[b], :prefix_indices[b]] = 1
                 if loss_on_targets_only:
                     # Last token of the prefix should predict the prefix_index id
@@ -299,18 +299,19 @@ def get_ltor_masks_and_position_ids(data,
 def get_parameters_in_billions(model):
     gpus_per_model = torch.distributed.get_world_size(group=parallel_state.get_model_parallel_group())
 
-    approx_parameters_in_billions = sum([sum([p.ds_numel if hasattr(p,'ds_id') else  p.nelement() for p in model_module.parameters()])
+    approx_parameters_in_billions = sum([sum([p.ds_numel if hasattr(p, 'ds_id') else p.nelement() for p in model_module.parameters()])
                                         for model_module in model])
 
-    return approx_parameters_in_billions*gpus_per_model/(1e9)
+    return approx_parameters_in_billions * gpus_per_model / (1e9)
+
 
 def throughput_calculator(model, args, iteration_time, total_iterations):
-    gpus_per_model = torch.distributed.get_world_size(group = parallel_state.get_model_parallel_group())
+    gpus_per_model = torch.distributed.get_world_size(group=parallel_state.get_model_parallel_group())
     batch_size = args.micro_batch_size * get_num_microbatches() * args.data_parallel_size
     samples_per_model = batch_size * args.seq_length
     model_replica_count = torch.distributed.get_world_size() / gpus_per_model
     approx_parameters_in_billions = None if (model is None) else get_parameters_in_billions(model)
-    elapsed_time_per_iter = iteration_time/total_iterations
+    elapsed_time_per_iter = iteration_time / total_iterations
     samples_per_second = batch_size / elapsed_time_per_iter
 
     #flops calculator
@@ -318,8 +319,7 @@ def throughput_calculator(model, args, iteration_time, total_iterations):
     num_layers = args.num_layers
     vocab_size = args.padded_vocab_size
 
-    # General TFLOPs formula (borrowed from Equation 3 in Section 5.1 of
-    # https://arxiv.org/pdf/2104.04473.pdf).
+    # General TFLOPs formula.
     # The factor of 4 is when used with activation check-pointing,
     # otherwise it will be 3.
     checkpoint_activations_factor = 4 if args.checkpoint_activations else 3
@@ -329,6 +329,7 @@ def throughput_calculator(model, args, iteration_time, total_iterations):
     flops_per_iteration = (24 * checkpoint_activations_factor * batch_size * seq_len * num_layers * (hidden_size**2)) * (1. + (seq_len / (6. * hidden_size)) + (vocab_size / (16. * num_layers * hidden_size)))
     tflops = flops_per_iteration / (elapsed_time_per_iter * args.world_size * (10**12))
     return samples_per_second, tflops, approx_parameters_in_billions
+
 
 def checkpoint_throughput_calculator(model, latency_second):
     approx_parameters_in_billions = get_parameters_in_billions(model)

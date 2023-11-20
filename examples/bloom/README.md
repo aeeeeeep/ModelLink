@@ -31,15 +31,15 @@ Here's a hardware summary of pre-training Bloom-7B:
 
 Here's a software summary of pre-training Bloom-7B:
 
-|         Software          |                Version                 |                                                                                      link                                                                                       |
-| :-----------------------: |:--------------------------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
-|          Python           |                 3.8.18                 |                                                                                        -                                                                                        |
-|          driver           |             23.0.RC3.B070              | [link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159048?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743) |
-|         firmware          |              6.4.0.3.220               | [link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159048?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743) |
-|           CANN            |              7.0.RC1.B070              |    [link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/261305467?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)    |
-| binary arithmetic package | Ascend-cann-kernels-XXXX_7.0.RC1_linux |    [link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/261305467?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)    |
-|           torch           |                 2.0.1                  |                                                                                        -                                                                                        |
-|         torch_npu         |                 2.0.1                  |                                                   [link](https://gitee.com/ascend/pytorch/releases/tag/v5.0.rc3-pytorch2.0.1)                                                   | 
+|         Software          |   Version   |
+| :-----------------------: |:-----------:|
+|          Python           |   3.8.18    |
+|          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
+|         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
+|           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
+| binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
+|           torch           |                                                    2.0.1                                                    |
+|         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
 
 ## Script
 
@@ -60,10 +60,9 @@ conda activate bloom7b
 # install torch and torch_npu and apex
 pip install torch-2.0.1-cp38-cp38-manylinux2014_aarch64.whl
 pip install torch_npu-2.0.1rc1.postxxxxxxxx-cp38-cp38-linux_aarch64.whl
-pip install apex-0.1_ascend_xxxxxxxx-cp38-cp38-linux_aarch64.whl
 
 # install megatron-core
-pip3 install -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
+pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
 
 # install deepspeed and deepspeed_npu
 pip install deepspeed==0.9.2
@@ -94,7 +93,7 @@ We provide scripts that support converting pretrained weights into weights that 
 ```shell
 #!/bin/bash
 
-SCRIPT_PATH=./tasks/ckpt_convert/bloom/convert_weights_from_huggingface.py
+SCRIPT_PATH=./tools/ckpt_convert/bloom/convert_weights_from_huggingface.py
 python $SCRIPT_PATH \
     --input-model-dir "your huggingface checkpoint path" \
     --output-model-dir "your ascendspeed checkpoint path" \
@@ -166,11 +165,11 @@ NPU vs GPU loss.
 
 The NPU runs smoothly, the resource usage is stable, no errors are reported in the middle of the process, the Loss is on a decreasing trend, and the convergence speed is as expected. 
 
-![7b_lm_loss.png](images%2F7b_lm_loss.png)
+![7b_lm_loss.png](..%2F..%2Fsources%2Fimages%2Fbloom%2F7b_lm_loss.png)
 
 NPU vs GPU loss relative error.
 
-![relative_error.png](images%2Frelative_error.png)
+![relative_error.png](..%2F..%2Fsources%2Fimages%2Fbloom%2Frelative_error.png)
 
 ## Inference
 
@@ -218,16 +217,16 @@ Here's a hardware summary of pre-training Bloom-176B:
 | NPU          | 12x8 Ascend 910 | 
 
 Here's a software summary of pre-training Bloom-176B:
-
-| **Software** | **Version**                                             | **Link**                                                                                                                                                                        |
-| ---------------------- |---------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Python                 | 3.8.0                                                   | <center>-</center>                                                                                                                                                              |
-| Driver                 | Ascend-hdk-910b-npu-driver_23.0.rc2.3_linux-aarch64.run | [link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261129105?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743) |
-| Fireware               | Ascend-hdk-910b-npu-firmware_6.4.0.3.220.run            | [link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261129105?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743) |
-| CANN                   | Ascend-cann-toolkit_6.3.RC3.1_linux-aarch64.run         | [link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/261213460?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)       |
-| CANN-kernels           | Ascend-cann-kernels-910b_6.3.RC3.1_linux.run            | [link](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/261213460?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)       |
-| torch                  | 2.0.1                                                   | <center>-</center>                                                                                                                                                              |
-| torch_npu              | 2.0.1                                                   | [link](https://gitee.com/ascend/pytorch/releases/tag/v5.0.rc3-pytorch2.0.1)                                                                                                     |
+ 
+|         Software          |   Version   |
+| :-----------------------: |:-----------:|
+|          Python           |   3.8.0    |
+|          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
+|         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
+|           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
+| binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
+|           torch           |                                                    2.0.1                                                    |
+|         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |                                                                                                  |
 
 ## Script
 
@@ -251,7 +250,7 @@ pip install torch_npu-2.0.1rc1.postxxxxxxxx-cp38-cp38-linux_aarch64.whl
 pip install apex-0.1_ascend_xxxxxxxx-cp38-cp38-linux_aarch64.whl
 
 # install megatron-core
-pip3 install -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
+pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
 
 # install deepspeed and deepspeed_npu
 pip install deepspeed==0.9.2
@@ -281,7 +280,7 @@ We provide scripts that support converting pretrained weights into weights that 
 ```shell
 #!/bin/bash
 
-SCRIPT_PATH=./tasks/ckpt_convert/bloom/convert_weights_from_huggingface.py
+SCRIPT_PATH=./tools/ckpt_convert/bloom/convert_weights_from_huggingface.py
 python $SCRIPT_PATH \
     --input-model-dir "your huggingface checkpoint path" \
     --output-model-dir "your ascendspeed checkpoint path" \
@@ -356,12 +355,12 @@ The performance of Bloom-176B in **Ascend NPU** and **Reference**:
 
 NPU vs GPU loss. The loss curves of GPUs and NPUs basically coincide.
 
-![bloom176b_lm_loss_compare](./images/bloom176b_lm_loss_compare.PNG)
+![bloom176b_lm_loss_compare](../../sources/images/bloom/bloom176b_lm_loss_compare.PNG)
 
 We reduce the number of layers of the model to six, the following figure shows the loss comparsion between the NPU 
 and GPU on a single-node system. The average relative error is 0.1%, less than 2%, and the proportion of relative error less than 2% reaches 99.9%. The average absolute error is 0.04. The precision meets the requirements.
 
-![bloom176b_1node_lm_loss_compare](./images/bloom176b_lm_loss_1node_compare.PNG)
+![bloom176b_1node_lm_loss_compare](../../sources/images/bloom/bloom176b_lm_loss_1node_compare.PNG)
 
 ## Inference
 
@@ -421,3 +420,6 @@ You may also consider original work in your reference:
   journal={arXiv preprint arXiv:2211.05100},
   year={2022}
 }
+\
+\
+<font size=1>If the download of the file fails using 'wget' , you can download it manually while ensuring website security.</font>

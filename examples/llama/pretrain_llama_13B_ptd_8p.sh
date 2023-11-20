@@ -50,4 +50,8 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --eval-iters 10 \
        --initial-loss-scale 4096.0 \
        --checkpoint-activations \
+       --checkpoint-policy custom \
+       --recomputation-layer-num 3 2 1 0 0 0 0 0 \
+       --triangle-attn \
+       --use-fused-rotary-pos-emb \
        --fp16 | tee logs/train_13B.log

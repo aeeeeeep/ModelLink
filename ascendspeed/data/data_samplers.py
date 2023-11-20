@@ -18,9 +18,13 @@
 
 import torch
 import random
-from ascendspeed import get_args
+
+from transformers import DataCollatorForSeq2Seq
+
+from ascendspeed import get_args, get_tokenizer
 from ascendspeed.core import parallel_state
-from ascendspeed.error_utils import check_divisible
+from ascendspeed.error_utils import check_divisible, ensure_valid
+
 
 
 def build_pretraining_data_loader(dataset, consumed_samples):
@@ -57,13 +61,26 @@ def build_pretraining_data_loader(dataset, consumed_samples):
         raise Exception('{} dataloader type is not supported.'.format(
                 args.dataloader_type))
 
+    tokenizer = get_tokenizer().tokenizer
+
+    if  args.is_instruction_dataset:
+        collator = DataCollatorForSeq2Seq(
+            tokenizer,
+            pad_to_multiple_of=32 if args.variable_seq_lengths else args.seq_length,
+            return_tensors='pt',
+            padding=True
+        )
+    else:
+        collator = None
+
     # Torch dataloader.
     return torch.utils.data.DataLoader(dataset,
                                        batch_sampler=batch_sampler,
                                        num_workers=args.num_workers,
                                        generator=torch.Generator().manual_seed(args.seed),
-                                       collate_fn=None,
+                                       collate_fn=collator,
                                        pin_memory=True)
+
 
 class MegatronPretrainingSampler:
 
@@ -79,16 +96,14 @@ class MegatronPretrainingSampler:
         self.drop_last = drop_last
 
         # Sanity checks.
-        assert self.total_samples > 0, \
-            'no sample to consume: {}'.format(self.total_samples)
-        assert self.consumed_samples < self.total_samples, \
-            'no samples left to consume: {}, {}'.format(self.consumed_samples,
-                                                        self.total_samples)
-        assert self.micro_batch_size > 0
-        assert data_parallel_size > 0
-        assert self.data_parallel_rank < data_parallel_size, \
-            'data_parallel_rank should be smaller than data size: {}, ' \
-            '{}'.format(self.data_parallel_rank, data_parallel_size)
+        ensure_valid(self.total_samples > 0, error_message='no sample' \
+                                             ' to consume: {}'.format(self.total_samples))
+        ensure_valid(self.consumed_samples < self.total_samples, error_message='no samples' \
+                            ' left to consume: {}, {}'.format(self.consumed_samples, self.total_samples))
+        ensure_valid(self.micro_batch_size > 0)
+        ensure_valid(data_parallel_size > 0)
+        ensure_valid(self.data_parallel_rank < data_parallel_size, error_message='data_parallel_rank' \
+                     ' should be smaller than data size: {}, {}'.format(self.data_parallel_rank, data_parallel_size))
 
     def __len__(self):
         return self.total_samples
@@ -130,13 +145,12 @@ class MegatronPretrainingRandomSampler:
             self.total_samples % self.micro_batch_times_data_parallel_size
 
         # Sanity checks.
-        assert self.total_samples > 0, \
-            'no sample to consume: {}'.format(self.total_samples)
-        assert self.micro_batch_size > 0
-        assert data_parallel_size > 0
-        assert self.data_parallel_rank < data_parallel_size, \
-            'data_parallel_rank should be smaller than data size: {}, ' \
-            '{}'.format(self.data_parallel_rank, data_parallel_size)
+        ensure_valid(self.total_samples > 0, error_message='no sample' \
+                                             ' to consume: {}'.format(self.total_samples))
+        ensure_valid(self.micro_batch_size > 0)
+        ensure_valid(data_parallel_size > 0)
+        ensure_valid(self.data_parallel_rank < data_parallel_size, error_message='data_parallel_rank' \
+                     ' should be smaller than data size: {}, {}'.format(self.data_parallel_rank, data_parallel_size))
 
     def __len__(self):
         return self.total_samples
@@ -187,16 +201,14 @@ class DynamicMicroBatchPretrainingSampler:
         ]
 
         # Sanity checks.
-        assert self.total_samples > 0, \
-            'no sample to consume: {}'.format(self.total_samples)
-        assert self.consumed_samples < self.total_samples, \
-            'no samples left to consume: {}, {}'.format(self.consumed_samples,
-                                                        self.total_samples)
-        assert self.micro_batch_size > 0
-        assert data_parallel_size > 0
-        assert self.data_parallel_rank < data_parallel_size, \
-            'data_parallel_rank should be smaller than data size: {}, ' \
-            '{}'.format(self.data_parallel_rank, data_parallel_size)
+        ensure_valid(self.total_samples > 0, error_message='no sample' \
+                                             ' to consume: {}'.format(self.total_samples))
+        ensure_valid(self.consumed_samples < self.total_samples, error_message='no samples' \
+                            ' left to consume: {}, {}'.format(self.consumed_samples, self.total_samples))
+        ensure_valid(self.micro_batch_size > 0)
+        ensure_valid(data_parallel_size > 0)
+        ensure_valid(self.data_parallel_rank < data_parallel_size, error_message='data_parallel_rank' \
+                     ' should be smaller than data size: {}, {}'.format(self.data_parallel_rank, data_parallel_size))
 
     def __len__(self):
         return self.total_samples

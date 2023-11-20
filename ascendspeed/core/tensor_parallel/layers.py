@@ -29,6 +29,7 @@ from deepspeed.accelerator import get_accelerator
 import deepspeed.runtime.activation_checkpointing.checkpointing as ds_checkpointing
 
 from ascendspeed import get_args
+from ascendspeed.error_utils import ensure_valid
 from ascendspeed.core import parallel_state
 from ascendspeed.core.parallel_state import get_tensor_model_parallel_rank
 from ascendspeed.core.parallel_state import get_tensor_model_parallel_group
@@ -40,11 +41,13 @@ from ascendspeed.core.tensor_parallel.mappings import gather_from_tensor_model_p
 from ascendspeed.core.tensor_parallel.mappings import reduce_from_tensor_model_parallel_region
 from ascendspeed.core.tensor_parallel.mappings import scatter_to_tensor_model_parallel_region
 from ascendspeed.core.tensor_parallel.mappings import reduce_scatter_to_sequence_parallel_region
+# Do not delete the following line of code
 from ascendspeed.core.tensor_parallel.random import get_cuda_rng_tracker
 from ascendspeed.core.utils import divide
 from ascendspeed.core.tensor_parallel.utils import VocabUtility
 from ascendspeed.model.fused_layer_norm import MixedFusedLayerNorm as LayerNorm
 from ascendspeed.arguments import core_transformer_config_from_args
+
 
 _grad_accum_fusion_available = True
 try:
@@ -235,13 +238,34 @@ class VocabParallelEmbedding(torch.nn.Module):
                                       self.sparse)
         # Mask the output embedding.
         if self.tensor_model_parallel_size > 1:
-            output_parallel *= input_mask[..., None].half()
+            output_parallel *= input_mask[..., None].to(output_parallel.dtype)
         # Reduce across all the model parallel GPUs.
         output = reduce_from_tensor_model_parallel_region(output_parallel)
         if hasattr(self, 'norm'):
             output = self.norm(output)
 
         return output
+
+
+class SequenceParallelPositionEmbedding(torch.nn.Module):
+    """Embedding parallelized in the sequence dimension.
+
+    Arguments:
+        sequence_length: max sequence length.
+        embedding_dim: size of hidden state.
+    """
+
+    def __init__(self, sequence_length, embedding_dim):
+        super(SequenceParallelPositionEmbedding, self).__init__()
+        sequence_parallel_size = get_tensor_model_parallel_world_size()
+        ensure_valid(sequence_length % sequence_parallel_size == 0)
+        local_sequence_length = sequence_length // sequence_parallel_size
+        self.offset = local_sequence_length * get_tensor_model_parallel_rank()
+        self.local_embeddings = torch.nn.Embedding(
+            local_sequence_length, embedding_dim)
+
+    def forward(self, position_ids):
+        return self.local_embeddings(position_ids - self.offset)
 
 
 class LinearWithGradAccumulationAndAsyncCommunication(torch.autograd.Function):
@@ -307,10 +331,8 @@ class LinearWithGradAccumulationAndAsyncCommunication(torch.autograd.Function):
         if ctx.sequence_parallel:
             handle.wait()
 
-        # Doing gather + slicing during the NeMo forward pass can make this tensor
-        # not be contiguous. PyTorch only checks if the tensor is contiguous, and only
-        # clones it if it's not contiguous:
-        # https://github.com/pytorch/pytorch/blob/c47cf9bc7f9e02f649ab4ed53fe4d35732c92ab6/torch/_refs/__init__.py#L2761
+        # Doing gather + slicing during the NeMo forward pass can make this tensor not be contiguous.
+        # PyTorch only checks if the tensor is contiguous.
         grad_output = grad_output.contiguous()
         # Convert the tensor shapes to 2D for execution compatibility
         grad_output = grad_output.view(

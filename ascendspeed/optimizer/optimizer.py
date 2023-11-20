@@ -31,7 +31,7 @@ from ascendspeed.utils import unwrap_model
 from ascendspeed.model import Float16Module, DistributedDataParallel as LocalDDP
 from deepspeed.accelerator import get_accelerator
 from ascendspeed.model.lora_utils import is_enable_lora, get_lora_model_classes
-from ascendspeed.error_utils import check_equal
+from ascendspeed.error_utils import check_equal, ensure_valid
 from .clip_grads import clip_grad_norm_fp32, count_zeros_fp32
 
 
@@ -80,7 +80,7 @@ class MegatronOptimizer(ABC):
 
         """Input optimizer is the base optimizer for example Adam."""
         self.optimizer = optimizer
-        assert self.optimizer, 'no optimizer is provided.'
+        ensure_valid(self.optimizer, error_message='no optimizer is provided.')
         # Set gradient clipping and logging params.
         self.clip_grad = clip_grad
         self.log_num_zeros_in_grad = log_num_zeros_in_grad
@@ -92,8 +92,8 @@ class MegatronOptimizer(ABC):
         self.models = models
 
         if self.use_contiguous_buffers_in_local_ddp:
-            assert self.params_have_main_grad, \
-                "use of contiguous buffer requires that params have main grad"
+            ensure_valid(self.params_have_main_grad, error_message="use of contiguous" \
+                                                     " buffer requires that params have main grad")
 
         self.unwrap_model_classes = (torchDDP, LocalDDP, Float16Module)
         if is_enable_lora():
@@ -131,9 +131,11 @@ class MegatronOptimizer(ABC):
     def clip_grad_norm(self, clip_grad):
         params = self.get_parameters()
         grads_for_norm = self.get_main_grads_for_grad_norm()
+        use_global_grad_norm = getattr(self, "use_global_grad_norm", False)
         return clip_grad_norm_fp32(
             params, grads_for_norm, clip_grad,
-            model_parallel_group=self.get_model_parallel_group())
+            model_parallel_group=self.get_model_parallel_group(),
+            use_global_grad_norm=use_global_grad_norm)
 
     def count_zeros(self):
         params = self.get_parameters()
@@ -155,11 +157,13 @@ class MegatronOptimizer(ABC):
 
     @abstractmethod
     def reload_model_params(self):
-        """Refreshes any internal state from the current model parameters.
+        """
+        Refreshes any internal state from the current model parameters.
         Call whenever the parameters are changed outside of the optimizer.
         For example, when we load a model from a checkpoint  without loading
         the optimizer, the model parameters are updated but for fp16 optimizer
-        with main parameters, the main parameters need to also be updated."""
+        with main parameters, the main parameters need to also be updated.
+        """
         pass
 
     @abstractmethod
@@ -290,7 +294,7 @@ class MegatronOptimizer(ABC):
         timers('layernorm-grads-all-reduce').stop()
 
         # All-reduce if needed.
-        if args.DDP_impl == 'local':
+        if args.DDP_impl == 'local' and args.foldx_mode is None:
             timers('grads-all-reduce', log_level=1).start(
                 barrier=args.barrier_with_L1_time)
             for model in self.models:
@@ -352,7 +356,7 @@ class MixedPrecisionOptimizer(MegatronOptimizer):
 
         # None grad scaler is only supported for bf16.
         if self.grad_scaler is None:
-            assert not self.fp16, 'fp16 expects a grad scaler.'
+            ensure_valid(not self.fp16, error_message='fp16 expects a grad scaler.')
 
         # Tensor used to determine if a nan/if has happend.
         # Any non-zero value indicates inf/nan.
@@ -501,7 +505,7 @@ class Float16OptimizerWithFloat16Params(MegatronOptimizer):
         self.grad_scaler = grad_scaler
         # None grad scaler is only supported for bf16.
         if self.grad_scaler is None:
-            assert self.bf16, 'fp16 expects a grad scaler.'
+            ensure_valid(self.bf16, error_message='fp16 expects a grad scaler.')
 
         # Tensor used to determine if a nan/if has happend.
         # Any non-zero value indicates inf/nan.
@@ -586,8 +590,10 @@ class Float16OptimizerWithFloat16Params(MegatronOptimizer):
         self.optimizer.load_state_dict(self.optimizer.state_dict())
 
     def zero_grad(self, set_to_none=True):
-        """We only need to zero the model related parameters, i.e.,
-                float16_groups & fp32_from_fp32_groups."""
+        """
+        We only need to zero the model related parameters, i.e.,
+                float16_groups & fp32_from_fp32_groups.
+        """
         for group in self.float16_groups:
             _zero_grad_group_helper(group, set_to_none)
         for group in self.fp32_from_fp32_groups:
@@ -778,8 +784,10 @@ class FP32Optimizer(MegatronOptimizer):
 
     @torch.no_grad()
     def step(self):
-        """Clip gradients (if needed) and step the base optimizer.
-        Always return successful since there is no overflow."""
+        """
+        Clip gradients (if needed) and step the base optimizer.
+        Always return successful since there is no overflow.
+        """
 
         # Copy main_grads to grads.
         if self.params_have_main_grad:

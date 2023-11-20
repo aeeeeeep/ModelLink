@@ -37,7 +37,7 @@ from ascendspeed.model import DistributedDataParallel as LocalDDP, Float16Module
 from ascendspeed.model.lora_utils import is_enable_lora, get_lora_state_dict, lora_custom_load_fn_for_deepspeed, \
     get_lora_model_classes, get_lora_state_dict_with_deepspeed, update_model_state_dict_with_megatron, \
     get_lora_load_fn_with_deepspeed, handle_lora_modules_to_save_key_with_megatron
-from ascendspeed.error_utils import check_equal
+from ascendspeed.error_utils import check_equal, ensure_valid
 
 _CHECKPOINT_VERSION = None
 
@@ -56,8 +56,10 @@ def get_checkpoint_version():
 
 
 def check_checkpoint_args(checkpoint_args):
-    """Ensure fixed arguments for a model are the same for the input
-    arguments and the one retrieved from checkpoint."""
+    """
+    Ensure fixed arguments for a model are the same for the input
+    arguments and the one retrieved from checkpoint.
+    """
     args = get_args()
 
     def _compare(arg_name, old_arg_name=None):
@@ -120,8 +122,10 @@ def get_checkpoint_name(checkpoints_path, iteration,
 
 
 def get_checkpoint_tracker_filename(checkpoints_path):
-    """Tracker file rescords the latest chckpoint during
-    training to restart from."""
+    """
+    Tracker file rescords the latest chckpoint during
+    training to restart from.
+    """
     return os.path.join(checkpoints_path, 'latest_checkpointed_iteration.txt')
 
 
@@ -332,8 +336,8 @@ def read_tracker(load_dir):
                 sys.exit()
 
     if not args.mos and not args.kd:
-        assert iteration > 0 or release, 'error parsing metadata file {}'.format(
-            tracker_filename)
+        error_message = 'error parsing metadata file {}'.format(tracker_filename)
+        ensure_valid(iteration > 0 or release, error_message)
 
     return True, iteration, release
 
