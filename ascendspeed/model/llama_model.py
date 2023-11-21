@@ -20,6 +20,7 @@ import logging
 from functools import partial
 
 import torch
+
 try:
     import torch_npu
 except ImportError:
@@ -42,6 +43,10 @@ from ascendspeed.core.tensor_parallel.mappings import scatter_to_sequence_parall
 from ascendspeed.model.fused_softmax import NPUFusedScaleMaskSoftmax
 from ascendspeed.model.language_model import Pooler
 from ascendspeed.error_utils import check_equal, check_divisible, ensure_valid
+from ascendspeed.core.models.common.rotary_pos_embedding import RotaryEmbedding as RotaryEmbeddingV3
+from ascendspeed.core.models.common.rotary_pos_embedding import apply_rotary_pos_emb as apply_rotary_pos_emb_v3
+from ascendspeed.model.transformer import CoreAttention
+
 try:
     from einops import rearrange
 except ImportError:
@@ -103,11 +108,16 @@ class RMSNorm(torch.nn.Module):  # for cpu
         LlamaRMSNorm is equivalent to T5LayerNorm
         """
         super().__init__()
+        args = get_args() 
+        self.use_fused_rmsnorm = args.use_fused_rmsnorm
         self.weight = torch.nn.Parameter(torch.ones(hidden_size))
         self.variance_epsilon = eps
         setattr(self.weight, 'sequence_parallel', sequence_parallel)
 
     def forward(self, hidden_states):
+        if self.use_fused_rmsnorm:
+            return torch_npu.npu_rms_norm(hidden_states, self.weight, epsilon=self.variance_epsilon)[0]
+        
         if self.weight.dtype == torch.float16:
             variance = hidden_states.float().pow(2).mean(-1, keepdim=True)
             variance = torch.rsqrt(variance + self.variance_epsilon).half()
@@ -434,6 +444,9 @@ class LlamaParallelAttention(MegatronModule):
         if args.use_fused_rotary_pos_emb:
             self.apply_rotary_pos_emb = apply_fused_rotary_pos_emb
 
+        self.core_attention = CoreAttention(self.layer_number, args, 
+                                            self.attn_mask_type)
+
         self.use_triangle_attn = args.triangle_attn
         if self.use_triangle_attn:
             self.block_size = args.triangle_block_size
@@ -465,7 +478,7 @@ class LlamaParallelAttention(MegatronModule):
             get_cuda_rng_tracker = deepspeed.checkpointing.get_cuda_rng_tracker
             checkpoint = deepspeed.checkpointing.checkpoint
 
-    def rotary_forward(self, hidden_states, attention_mask, layer_past, get_key_value):
+    def rotary_forward(self, hidden_states, attention_mask, layer_past, get_key_value, rotary_pos_emb=None):
         # rotary position, match 7b
         # hidden_states: [sq, b, h]
         # =====================
@@ -505,6 +518,32 @@ class LlamaParallelAttention(MegatronModule):
             query_layer = query_layer.view(query_layer.size(0),
                                            query_layer.size(1), -1,
                                            self.hidden_size_per_attention_head)
+        
+        # ==================================
+        # Rotary Position Embedding implemented with megatron version 3
+        # ==================================
+        if rotary_pos_emb is not None and layer_past is None: # rotary-v3-impl
+            if isinstance(rotary_pos_emb, tuple):
+                rotary_pos_emb = rotary_pos_emb
+            else:
+                rotary_pos_emb = ((rotary_pos_emb, ) * 2)
+            
+            q_pos_emb, k_pos_emb = rotary_pos_emb
+            query_layer = apply_rotary_pos_emb_v3(query_layer, q_pos_emb).to(hidden_states.dtype)
+            key_layer = apply_rotary_pos_emb_v3(key_layer, k_pos_emb).to(hidden_states.dtype)
+
+            if self.use_flash_attention:
+                hidden_head_num = query_layer.size(2)
+                q, k, v= [rearrange(x, 's b h d -> s b (h d)').contiguous() for x in 
+                          (query_layer, key_layer, value_layer)]
+                context_layer = self.core_attention_flash(q, k, v, hidden_head_num, attention_mask)
+            else:
+                context_layer = self.core_attention(
+                    query_layer, key_layer, value_layer, attention_mask)
+            
+            output, bias = self.dense(context_layer)
+            return output
+
         # ==================================
         # Rotary Position Embedding
         # ==================================
@@ -691,11 +730,11 @@ class LlamaParallelAttention(MegatronModule):
             output = [output, present]
         return output
 
-    def forward(self, hidden_states, attention_mask, layer_past=None, get_key_value=False, pse=None):
+    def forward(self, hidden_states, attention_mask, layer_past=None, get_key_value=False, pse=None, rotary_pos_emb=None):
         if self.position_embedding_type == PositionEmbeddingType.alibi:
             return self.alibi_forward(hidden_states, attention_mask, layer_past, get_key_value, pse)
         else:
-            return self.rotary_forward(hidden_states, attention_mask, layer_past, get_key_value)
+            return self.rotary_forward(hidden_states, attention_mask, layer_past, get_key_value, rotary_pos_emb)
 
 
 class LlamaParallelTransformerLayer(MegatronModule):
@@ -781,7 +820,7 @@ class LlamaParallelTransformerLayer(MegatronModule):
         return alibi[0]
 
     def forward(self, hidden_states, attention_mask=None,
-                layer_past=None, get_key_value=False):
+                layer_past=None, get_key_value=False, rotary_pos_emb=None):
         # hidden_states: [b, s, h]
         residual = hidden_states
         # Layer norm at the beginning of the transformer layer.
@@ -791,7 +830,8 @@ class LlamaParallelTransformerLayer(MegatronModule):
                                        attention_mask,
                                        layer_past=layer_past,
                                        get_key_value=get_key_value,
-                                       pse=self.pse)
+                                       pse=self.pse,
+                                       rotary_pos_emb=rotary_pos_emb)
 
         if get_key_value:
             hidden_states, presents = hidden_states
@@ -882,6 +922,16 @@ class LlamaParallelTransformer(MegatronModule):
         check_divisible(args.num_layers, parallel_state.get_pipeline_model_parallel_world_size(), error_info)
         self.num_layers = args.num_layers // parallel_state.get_pipeline_model_parallel_world_size()
 
+        # Rotary positional embeddings
+        self.sequesequence_parallel = args.sequesequence_parallel
+        self.rotary_v3_impl = args.rotary_v3_impl
+        if self.rotary_v3_impl:
+            rotary_dim = args.hidden_size // args.num_attention_heads
+            self.rotary_pos_emb = RotaryEmbeddingV3(
+                rotary_dim,
+                seq_len_interpolation_factor=None
+            )
+        
         if self.checkpoint_policy == "block":
             self.recomputation_layer_num = [self.checkpoint_block_layer] * \
                 parallel_state.get_pipeline_model_parallel_world_size()
@@ -948,7 +998,7 @@ class LlamaParallelTransformer(MegatronModule):
     def _get_layer(self, layer_number):
         return self.layers[layer_number]
 
-    def _checkpointed_forward(self, hidden_states, attention_mask):
+    def _checkpointed_forward(self, hidden_states, attention_mask, rotary_pos_emb=None):
         """Forward method with activation checkpointing."""
         def custom(start, end):
             def custom_forward(*inputs):
@@ -956,7 +1006,7 @@ class LlamaParallelTransformer(MegatronModule):
                 attention_mask = inputs[1]
                 for index in range(start, end):
                     layer = self._get_layer(index)
-                    x_ = layer(x_, attention_mask=attention_mask)
+                    x_ = layer(x_, attention_mask=attention_mask, rotary_pos_emb=rotary_pos_emb)
                 return x_
 
             return custom_forward
@@ -973,7 +1023,7 @@ class LlamaParallelTransformer(MegatronModule):
                     self.distribute_saved_activations,
                     hidden_states, attention_mask)
             else:
-                hidden_states = custom(idx, idx + 1)(hidden_states, attention_mask)
+                hidden_states = custom(idx, idx + 1)(hidden_states, attention_mask, rotary_pos_emb=rotary_pos_emb)
         return hidden_states
 
     def set_input_tensor(self, input_tensor):
@@ -1015,8 +1065,16 @@ class LlamaParallelTransformer(MegatronModule):
                 # See set_input_tensor()
                 hidden_states = self.input_tensor
 
+        # Rotary positional embeddings
+        rotary_pos_emb = None 
+        if self.rotary_v3_impl:
+            seq_length = hidden_states.shape[0]
+            if self.sequesequence_parallel:
+                seq_length *= parallel_state.get_tensor_model_parallel_world_size()
+            rotary_pos_emb = self.rotary_pos_emb(seq_length)
+
         if self.checkpoint_activations:
-            hidden_states = self._checkpointed_forward(hidden_states, attention_mask)
+            hidden_states = self._checkpointed_forward(hidden_states, attention_mask, rotary_pos_emb=rotary_pos_emb)
         else:
             if get_key_value:
                 presents = []
@@ -1028,7 +1086,8 @@ class LlamaParallelTransformer(MegatronModule):
                 hidden_states = layer(hidden_states,
                                       attention_mask=attention_mask,
                                       layer_past=past,
-                                      get_key_value=get_key_value)
+                                      get_key_value=get_key_value,
+                                      rotary_pos_emb=rotary_pos_emb)
                 if get_key_value:
                     hidden_states, present = hidden_states
                     presents.append(present)
