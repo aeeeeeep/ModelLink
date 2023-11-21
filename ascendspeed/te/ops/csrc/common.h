@@ -16,53 +16,27 @@
 #ifndef ASCENDSPEED_TE_OPS_CSRC_COMMON_H
 #define ASCENDSPEED_TE_OPS_CSRC_COMMON_H
 
-#include <torch/csrc/autograd/custom_function.h>
-
-#include "torch_npu/csrc/core/npu/SecondaryStreamGuard.h"
-#include "torch_npu/csrc/core/npu/NPUCachingAllocator.h"
-#include "torch_npu/csrc/framework/utils/OpAdapter.h"
-#include "torch_npu/csrc/aten/NPUNativeFunctions.h"
-#include "torch_npu/csrc/aten/ops/op_api/op_api_common.h"
-#include "torch_npu/csrc/aten/NPUGeneratorImpl.h"
-#include "torch_npu/csrc/framework/OpCommand.h"
-#include "torch_npu/csrc/framework/utils/OpPreparation.h"
-
+#include <torch_npu/csrc/core/npu/NPUStream.h>
+#include <torch_npu/csrc/core/npu/DeviceUtils.h>
+#include <torch_npu/csrc/framework/OpCommand.h>
 #include <torch/script.h>
 #include <torch/custom_class.h>
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int64_t> npu_flash_attention(
-    const at::Tensor &query, const at::Tensor &key,
-    const at::Tensor &value, int64_t head_num, c10::string_view input_layout,
-    const c10::optional<at::Tensor> &pse_opt, const c10::optional<at::Tensor> &padding_mask_opt,
-    const c10::optional<at::Tensor> &atten_mask_opt,
-    double scale, double keep_prob, int64_t pre_tockens, int64_t next_tockens, int64_t inner_precise,
-    bool gen_mask_parallel, bool sync);
+std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+                           const c10::optional<at::Tensor> &atten_mask, const c10::optional<at::Tensor> &alibi_mask,
+                           const c10::optional<at::Tensor> &drop_mask, float scale_value, int64_t head_num, int64_t io_layout,
+                           float keep_prob, int64_t pre_tokens, int64_t next_tokens, int64_t precise_mode, int64_t groups);
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash_attention_grad(
-    const at::Tensor &query,
-    const at::Tensor &key,
-    const at::Tensor &value,
-    const at::Tensor &dy,
-    int64_t head_num,
-    c10::string_view input_layout,
-    const c10::optional<at::Tensor> &pse,
-    const c10::optional<at::Tensor> &padding_mask,
-    const c10::optional<at::Tensor> &atten_mask,
-    const c10::optional<at::Tensor> &softmax_max,
-    const c10::optional<at::Tensor> &softmax_sum,
-    const c10::optional<at::Tensor> &softmax_in,
-    const c10::optional<at::Tensor> &attention_in,
-    double scale_value,
-    double keep_prob,
-    int64_t pre_tockens,
-    int64_t next_tockens,
-    int64_t inner_precise,
-    int64_t seed,
-    int64_t offset,
-    int64_t numels,
-    bool gen_mask_parallel,
-    bool sync);
+std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const at::Tensor &softmax_log_max_sum, const at::Tensor &attention_out,
+                            const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+                            const c10::optional<at::Tensor> &atten_mask, const c10::optional<at::Tensor> &alibi_mask,
+                            const c10::optional<at::Tensor> &drop_mask, float scale_value, int64_t head_num, int64_t io_layout,
+                            float keep_prob, int64_t pre_tokens, int64_t next_tokens, int64_t precise_mode, int64_t groups);
 
-torch::Tensor add(const torch::Tensor &input1, const torch::Tensor &input2);
+std::tuple<at::Tensor, int64_t, int64_t, int64_t> gen_mask(const at::Tensor &self, double keep_prob,
+    int64_t head_num, std::string input_layout, bool gen_mask_parallel, bool sync);
+
+at::Tensor exist_gen_mask(const at::Tensor &self, double keep_prob, bool gen_mask_parallel, bool sync,
+    int64_t seed, int64_t offset, int64_t numels);
 
 #endif
