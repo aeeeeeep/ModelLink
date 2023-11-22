@@ -126,9 +126,6 @@ TECommand& TECommand::Input(const c10::optional<at::Tensor> &tensor)
 
 void TECommand::Output(std::vector<at::Tensor> &output)
 {
-    atb::Status status = operation->InferShape(inTensorDescs, outTensorDescs);
-    TORCH_CHECK(status == 0, "infershape failed!");
-
     auto variantPack = BuildVariantPack(output);
 
     uint64_t workspaceSize = 0;
