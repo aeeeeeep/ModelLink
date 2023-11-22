@@ -129,7 +129,7 @@ void TECommand::Output(std::vector<at::Tensor> &output)
     auto variantPack = BuildVariantPack(output);
 
     uint64_t workspaceSize = 0;
-    status = operation->Setup(variantPack, workspaceSize);
+    auto status = operation->Setup(variantPack, workspaceSize);
     TORCH_CHECK(status == 0, "setup failed!");
     TORCH_CHECK(workspaceSize > 0, "get workspace size failed!");
 
