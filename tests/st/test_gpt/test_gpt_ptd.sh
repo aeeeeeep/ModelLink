@@ -46,8 +46,10 @@ python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --clip-grad 1.0 \
        --lr-warmup-fraction .01 \
        --checkpoint-activations \
+       --recompute-method block \
        --log-interval 1 \
        --save-interval 10000 \
        --eval-interval 1000 \
        --eval-iters 10 \
+       --release-fp32-grad \
        --fp16

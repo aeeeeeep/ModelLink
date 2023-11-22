@@ -167,9 +167,9 @@ Here's a software summary of pre-training  LLaMA2-7B:
 The performance of LLaMA2-7B in **Ascend NPU** and **Reference**:
 
 | Device | Model       | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
-| :------: | :-----------: | :----------------: | :-----------------------------: | :----------------------------: | :-------------------------: | :-----------------------------------: |
-| NPUs   | LLaMA2-7B | 1024             | 4.804                         | 2459.648                         | 6.66                      | 147.42                              |
-| Reference   | LLaMA2-7B | 1024             | 4.585                         | 2347.63                         | 6.99                      | 143.01                              |
+| :------: | :-----------: | :----------------: |:-----------------------------:| :----------------------------: |:-------------------------:|:-----------------------------------:|
+| NPUs   | LLaMA2-7B | 1024             |             5.297             | 2712.58                         |           6.04            |               160.20                |
+| Reference   | LLaMA2-7B | 1024             |             4.585             | 2347.63                         |           6.99            |               143.01                |
 
 
 #### Accuracy of the loss
@@ -398,7 +398,7 @@ The maximum absolute error is 0.089.
 ![NPU-LOSS and NPU-Absolute-Error](../../sources/images/llama2/llama2_70b_bf16_loss_absolute.png)
 
 
-## inference-70B
+## Inference-70B
 
 
 The model weights of 64 NPUs can be converted to 8 NPUs with the follow shell.
@@ -449,7 +449,7 @@ Llama2-70B model could generate with 8 NPUs, for example:
            --ffn-hidden-size 28672 \
            --load "${CHECKPOINT}"  \
            --num-attention-heads 64 \
-           --position-embedding-type rotary \
+           --position-embedding-type rope \
            --group-query-attention \
            --num-query-groups 8 \
            --max-position-embeddings 4096 \
@@ -555,7 +555,7 @@ We use MMLU benchmark to evaluate our model. Benchmark Download [here](https://h
            --ffn-hidden-size 28672 \
            --load ${CHECKPOINT}  \
            --num-attention-heads 64 \
-           --position-embedding-type rotary \
+           --position-embedding-type rope \
            --group-query-attention \
            --num-query-groups 8 \
            --tokenizer-type PretrainedFromHF  \

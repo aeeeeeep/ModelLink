@@ -21,11 +21,12 @@ from ascendspeed.model import LayerNorm
 from ascendspeed.model.fused_layer_norm import MixedFusedLayerNorm
 from ascendspeed.model.lora_utils import is_enable_lora
 from ascendspeed.optimizer.adam import AdamW as Adam
+from ascendspeed.optimizer.cadam import CAdamW as CAdam
 from ascendspeed.error_utils import check_equal
 
 from .grad_scaler import ConstantGradScaler, DynamicGradScaler
-from .optimizer import Float16OptimizerWithFloat16Params, FP32Optimizer
-from .distrib_optimizer import DistributedOptimizer
+from .optimizer import Float16OptimizerWithFloat16Params, FP32Optimizer, Float16OptimizerWithoutFp32Grad
+from .distrib_optimizer import DistributedOptimizer, DistributedOptimizerWithoutFP32Grad
 
 
 def _get_params_for_weight_decay_optimization(modules):
@@ -141,7 +142,11 @@ def get_megatron_optimizer(model):
                                  weight_decay=args.weight_decay,
                                  betas=(args.adam_beta1, args.adam_beta2),
                                  eps=args.adam_eps)
-
+        elif args.optimizer == 'cadam':
+            optimizer = CAdam(param_groups,
+                            lr=args.lr,
+                            weight_decay=args.weight_decay,
+                            beta=args.adam_beta1)
         else:
             raise Exception('{} optimizer is not supported.'.format(
             args.optimizer))
@@ -178,7 +183,16 @@ def get_megatron_optimizer(model):
                     hysteresis=args.hysteresis)
 
         # Megatron optimizer.
-        opt_ty = DistributedOptimizer if args.use_distributed_optimizer else Float16OptimizerWithFloat16Params
+        if args.use_distributed_optimizer:
+            if args.release_fp32_grad:
+                opt_ty = DistributedOptimizerWithoutFP32Grad
+            else:
+                opt_ty = DistributedOptimizer
+        else:
+            if args.release_fp32_grad:
+                opt_ty = Float16OptimizerWithoutFp32Grad
+            else:
+                opt_ty = Float16OptimizerWithFloat16Params
         return opt_ty(optimizer,
                       args.clip_grad,
                       args.log_num_zeros_in_grad,

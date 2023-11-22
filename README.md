@@ -55,9 +55,10 @@ LLaMA2-13B/34B, Aquila-7B, Baichuan2-7B/13B 等模型即将上线...
 * [序列并行](#jump5)
 * [ZeRO-1/2](#jump6)
 * [倒三角加速](#jump7)
-* [融合优化器](#jump8)
+* [高性能优化器](#jump8)
 * [前向网络合并](#jump9)
 * [梯度累积](#jump9)
+* [混精内存复用](#jump10)
 
 更多高效的加速算法正在为昇腾芯片上的大语言模型研发中...
 
@@ -90,8 +91,8 @@ LLaMA2-13B/34B, Aquila-7B, Baichuan2-7B/13B 等模型即将上线...
       <td>7B</td>
       <td> 1x8</td>
       <td> FP16 </td>
-      <td> 1905 tokens/p/s </td>
-      <td> 2036 tokens/p/s </td>
+      <td> 1905 </td>
+      <td> 2036 </td>
       <td> <a href="./sources/images/baichuan/7B_loss_compare.png">Loss</a> </td>
       <td> <a href="examples/baichuan/pretrain_baichuan_zero_7B.sh">训练</a> </td>
     </tr>
@@ -99,8 +100,8 @@ LLaMA2-13B/34B, Aquila-7B, Baichuan2-7B/13B 等模型即将上线...
       <td>13B</td>
       <td> 1x8</td>
       <td> FP16 </td>
-      <td> 1024 tokens/p/s </td>
-      <td> 824 tokens/p/s </td>
+      <td> 1024 </td>
+      <td> 824 </td>
       <td> <a href="./sources/images/baichuan/13B-loss-compare.png">Loss</a> </td>
       <td> <a href="examples/baichuan/pretrain_baichuan_ptd_13B.sh">训练</a> </td>
     </tr>
@@ -109,8 +110,8 @@ LLaMA2-13B/34B, Aquila-7B, Baichuan2-7B/13B 等模型即将上线...
       <td>7B1</td>
       <td> 1x8</td>
       <td> FP16 </td>
-      <td> 2611 tokens/p/s </td>
-      <td> 2525 tokens/p/s </td>
+      <td> 2611 </td>
+      <td> 2525 </td>
       <td>  <a href="sources/images/bloom7B1_loss.png">Loss</a> </td>
       <td> <a href="examples/bloom/pretrain_bloom_7b1.sh">训练</a> </td>
     </tr>
@@ -118,8 +119,8 @@ LLaMA2-13B/34B, Aquila-7B, Baichuan2-7B/13B 等模型即将上线...
       <td >176B</td>
       <td >12x8</td>
       <td> BF16 </td>
-      <td> 100 tokens/p/s </td>
-      <td> 107 tokens/p/s </td>
+      <td> 100 </td>
+      <td> 107 </td>
       <td> <a href="examples/bloom/images/bloom176b_lm_loss_compare.PNG">Loss</a> </td>
       <td> <a href="examples/bloom/pretrain_bloom_176b.sh">训练</a> </td>
     </tr>
@@ -128,8 +129,8 @@ LLaMA2-13B/34B, Aquila-7B, Baichuan2-7B/13B 等模型即将上线...
       <td>7B</td>
       <td>1x8</td>
       <td>FP16</td>
-      <td> 2777 tokens/p/s </td>
-      <td> 2800 tokens/p/s </td>
+      <td> 2777 </td>
+      <td> 2800 </td>
       <td>  <a href="sources/images/intern7b_loss.png">Loss</a>  </td>
       <td> <a href="examples/intern/pretrain_internlm_7b_zero.sh">训练</a> </td>
     </tr>
@@ -138,8 +139,8 @@ LLaMA2-13B/34B, Aquila-7B, Baichuan2-7B/13B 等模型即将上线...
       <td>7B</td>
       <td>1x8</td>
       <td>FP16</td>
-      <td> 2862 tokens/p/s </td>
-      <td> 2859 tokens/p/s </td>
+      <td> 2862 </td>
+      <td> 2859 </td>
       <td> <a href="sources/images/llama7b_loss.png">Loss</a> </td>
       <td> <a href="examples/llama/pretrain_llama_7B_zero_8p.sh">训练</a> </td>
     </tr>
@@ -147,8 +148,8 @@ LLaMA2-13B/34B, Aquila-7B, Baichuan2-7B/13B 等模型即将上线...
       <td>13B</td>
       <td>1x8</td>
       <td>FP16</td>
-      <td> 1800 tokens/p/s </td>
-      <td> 1734 tokens/p/s </td>
+      <td> 1800 </td>
+      <td> 1734 </td>
       <td> <a href="sources/images/llama13b_loss.png">Loss</a> </td>
       <td> <a href="examples/llama/pretrain_llama_13B_zero_8p.sh">训练</a> </td>
     </tr>
@@ -156,8 +157,8 @@ LLaMA2-13B/34B, Aquila-7B, Baichuan2-7B/13B 等模型即将上线...
         <td>33B</td>
         <td>4x8</td>
         <td>FP16</td>
-        <td>621 tokens/p/s</td>
-        <td>520 tokens/p/s</td>
+        <td>621</td>
+        <td>520</td>
         <td>
         <a href="./sources/images/llama/llama33B_shape_layer8.png">Loss</a> </td>
         <td><a href="examples/llama/pretrain_llama_33B_zero_32p.sh">训练</a> </td>
@@ -168,8 +169,8 @@ LLaMA2-13B/34B, Aquila-7B, Baichuan2-7B/13B 等模型即将上线...
     </tr>
     <tr>
       <td>BF16 </td>
-      <td> 234 tokens/p/s </td>
-      <td> 260 tokens/p/s </td>
+      <td> 309 </td>
+      <td> 260 </td>
       <td> <a href="sources/images/llama65b_bf_loss.png">Loss</a> </td>
       <td> <a href="examples/llama/pretrain_llama_65B_ptd_32p.sh">训练</a> </td>
     </tr>
@@ -178,8 +179,8 @@ LLaMA2-13B/34B, Aquila-7B, Baichuan2-7B/13B 等模型即将上线...
       <td>7B</td>
       <td>1x8</td>
       <td>FP16 </td>
-      <td> 2460 tokens/p/s </td>
-      <td> 2348 tokens/p/s </td>
+      <td> 2712 </td>
+      <td> 2348 </td>
       <td> <a href="sources/images/llama2/llama2_7b_shape_fp16_layer32_loss_with_weights.png">Loss</a> </td>
       <td> <a href="examples/llama2/pretrain_llama2_7b_zero_8p.sh">训练</a> </td>
     </tr>
@@ -187,8 +188,8 @@ LLaMA2-13B/34B, Aquila-7B, Baichuan2-7B/13B 等模型即将上线...
       <td>70B</td>
       <td>8x8</td>
       <td>BF16 </td>
-      <td> 350 tokens/p/s </td>
-      <td> 339 tokens/p/s </td>
+      <td> 350 </td>
+      <td> 339 </td>
       <td> <a href="sources/images/llama2/llama2_70b_bf16_loss_compare.png">Loss</a> </td>
       <td> <a href="examples/llama2/pretrain_llama2_70B_ptd.sh">训练</a> </td>
     </tr>
@@ -849,6 +850,12 @@ Fold3D 隐藏了 PP 中数据并行的通信时间，其基本原理如下：<di
 为了使用有限的显存来训练更大的模型，AscendSpeed 支持完全重计算以及选择性重计算策略，为了使能完全重计算，可以使用 `--checkpoint-activations` 标志，
 至于选择性重计算，则可以通过添加 `--checkpoint-policy` 标志来决定选择性重计算的策略。
 
+为了最大限度地利用NPU内存，同时提高模型训练的性能，我们支持通过调整训练内存大小的方式，自动获取选择重计算策略，这一特性称为[自适应选择重计算](https://gitee.com/ascend/AscendSpeed/wikis/Algorithm%20Introduction/Auto%20Selective%20Recomputing)。
+启用自适应选择重计算，请使用`--auto-recompute-device-size`标志指定自适应选择重计算策略的训练内存大小（单位：MB）。请注意，如果要使用`--auto-recompute-device-size`标志，请删除标志`--checkpoint-activations`。
+如果发生OOM，您需要重新选择一个内存值来重启模型训练。您也可以通过[二分法](https://gitee.com/ascend/AscendSpeed/wikis/Algorithm%20Introduction/Auto%20Selective%20Recomputing)的方式获得最优解。
+自适应选择重计算根据profiling前N步的训练内存信息进行策略选择，您可以通过使用`--auto-recompute-profiling-step`标志设置[停止profiling](https://gitee.com/ascend/AscendSpeed/wikis/Algorithm%20Introduction/Auto%20Selective%20Recomputing)的步数。
+默认在第10步停止profiling，最小设置为5步，建议在训练内存平稳后停止profiling，这样可以获得更佳的选择重计算策略。
+
 ### <span id="jump5"> 序列并行 </span>
 序列并行（Sequence Parallelism，SP）是一种模型并行策略，它依赖TP的实现，沿着序列轴按照TP的维度拆分了dropout层和layernorm层。
 SP将TP中的allreduce操作拆分为了reduce-scatter和allgather操作，这降低了模型训练中的内存占用。
@@ -874,8 +881,87 @@ SP将TP中的allreduce操作拆分为了reduce-scatter和allgather操作，这�
 在AscendSpeed中可以通过使能 `--triangle-attn` 标志打开倒三角加速。
 
 
-### <span id="jump8"> 融合优化器 </span>
+### <span id="jump8"> 高性能优化器 </span>
 融合优化器通过减小算子下发降低计算时间，在AscendSpeed中，通过 `--optimizer` 可以选择不同的优化器，具体的，选择 `--optimizer adam` 可以节省更多内存，选择 `--optimizer fused_adam` 则可以运行的更快。
+
+除此之外，我们还提供一些自研的低内存优化器。如：
+
+Cadam是基于谷歌提出的[Lion优化器](https://arxiv.org/abs/2302.06675)，并采用与其beta参数相同的极简形式。这样在去掉二阶动量的同时，可以得到类似于Adam的参数更新效果。然后对一阶动量进行量化和逐行压缩，采用昇腾亲和的FP16进行计算，同时结合Scale和clip操作防止溢出。
+
+<div align=center>
+<img src="sources/images/cadam.png" height="300px" width="600px"></div>
+
+欲使用Cadam优化器，需要在脚本中指定如下参数`--optimizer cadam`，并将能够用Adam正常平稳训练的模型的学习率`lr`和最小学习率`min-lr`缩小3-10倍，`weight_decay`同步放大3-10倍，`--adam-beta1 0.965`。
+
+部分大模型的测试结果如下表所示：
+
+<table>
+  <thead>
+    <tr>
+      <th>模型</th>
+      <th>优化器</th>
+      <th>性能</th>
+      <th>平均压缩HBM</th>
+      <th>BoolQ</th>
+      <th>PIQA</th>
+      <th>HellaSwag</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td rowspan="2"> LLama-7B </td>
+      <td> Adam </td>
+      <td> 5.65s/iteration </td>
+      <td> -- </td>
+      <td> 38.78% </td>
+      <td> 52.88% </td>
+      <td> 26.69% </td>
+    </tr>
+    <tr>
+      <td>  Cadam </td>
+      <td> 5.68s/iteration </td>
+      <td> ↓ 21.8% </td>
+      <td> 41.50% </td>
+      <td> 55.11% </td>
+      <td> 26.59% </td>
+    </tr>
+    <tr>
+      <td rowspan="2"> LLama2-7B </td>
+      <td> Adam </td>
+      <td> 7.09s/iteration </td>
+      <td> -- </td>
+      <td> 40.36% </td>
+      <td> 51.20% </td>
+      <td> 25.13% </td>
+    </tr>
+    <tr>
+      <td>  Cadam </td>
+      <td> 7.12s/iteration </td>
+      <td> ↓ 17.4% </td>
+      <td> 44.16% </td>
+      <td> 51.20% </td>
+      <td> 26.29% </td>
+    </tr>
+    <tr>
+      <td rowspan="2"> Bloom-7B </td>
+      <td> Adam </td>
+      <td> 4.10s/iteration </td>
+      <td> -- </td>
+      <td> 37.83% </td>
+      <td> 49.24% </td>
+      <td> 25.31% </td>
+    </tr>
+    <tr>
+      <td>  Cadam </td>
+      <td> 4.25s/iteration </td>
+      <td> ↓ 10.1% </td>
+      <td> 37.83% </td>
+      <td> 51.16% </td>
+      <td> 25.25% </td>
+    </tr>
+  </tbody>
+</table>
+
 
 ### <span id="jump9">  前向网络合并 </span>
 对于llama以及一些在FFN中没有bias的模型，FFN中的线性层可以合并计算以减少TP中的通信量，通过设置 `--mlp-layer-fusion` 标志，可以使用该特性。
@@ -883,6 +969,41 @@ SP将TP中的allreduce操作拆分为了reduce-scatter和allgather操作，这�
 
 ### <span id="jump9">  梯度累积 </span>
 梯度累积基于 N 轮梯度更新一次参数，这里的 N = global batchsize / micro batchsize / DP，DP = device nums / tp / pp。
+
+### <span id="jump10"> 混精内存复用 </span>
+混合精度训练中，需要保存参数副本、梯度副本、优化器状态等多种状态张量，占据了大量的静态内存（16N，N为参数量），而实际参与前反向计算的参数和梯度（4N，N为参数量）相比之下占比很小，优化以上状态张量可以带来极大的显存收益。本算法希望通过深入分析每部分状态张量的实际使用实现机制的显存复用，最终得到一个集成多个算法模块的多级优化器内存优化方案。
+- 内存复用O1——梯度副本去冗余
+  - 优势：完全等价、支持多种优化器、性能无损
+  - 算法原理：将原本需要持久保存的FP32梯度副本的静态内存，复用FP16梯度的内存，在需要时通过`Foreach`+`Cast`操作转换成FP32的形式，可节省4N的空间。
+  - 使用方式：该等价算法对所有优化器适用，可在脚本中通过指定`--release-fp32-grad`触发。
+  - 使用限制：当前仅适配Adam优化器，其余优化器可参考Adam实现。
+
+原始混合精度训练流程：
+
+<div align=center>
+<img src="https://foruda.gitee.com/images/1700028272497165508/7fbb164b_7943704.png" height="545px" width="461px"></div>
+
+内存复用O1训练流程：
+
+<div align=center>
+<img src="https://foruda.gitee.com/images/1700028261897403802/74ba37b6_7943704.png" height="570px" width="655px"></div>
+
+部分模型测试结果如下表：
+
+| Model    | Algorithm            | Performance     | Compress HBM | Performance Error | Precision Error | Hardware |
+|----------|----------------------|-----------------|---------------|-------------------|-----------------|----------|
+| LLama-7B | baseline             | 5.39s/iteration | --            | --                | --              | 910B*8P  |
+|          | O1 algorithm         | 5.40s/iteration | ↓ 13.5%       | ↓ 0.17%           | < 0.05%         | 910B*8P  |
+| LLama-13B| baseline             | 8.95s/iteration | --            | --                | --              | 910B*8P  |
+|          | O1 algorithm         | 8.92s/iteration | ↓ 14.90%      | ↑ 0.34%           | < 0.2%          | 910B*8P  |
+| LLama2-7B| baseline             | 6.48s/iteration | --            | --                | --              | 910B*8P  |
+|          | O1 algorithm         | 6.48s/iteration | ↓ 10.87%      | ↓ 0.00%           | < 0.2%          | 910B*8P  |
+| Bloom-7B | baseline             | 5.45s/iteration | --            | --                | --              | 910B*8P  |
+|          | O1 algorithm         | 5.49s/iteration | ↓ 12.68%      | ↓ 0.7%            | < 0.01%         | 910B*8P  |
+| LLama-32B| baseline             | 5.23s/iteration | --            | --                | --              | 910B*16P |
+|          | O1 argorithm         | 5.28s/iteration | ↓ 15.93%      | ↓ 0.95%           | < 0.02%         | 910B*16P |
+| LLama-7B | distributed baseline | 5.18s/iteration | --            | --                | --              | 910B*8P  |
+|          | O1 distributed algorithm | 5.19s/iteration | ↓ 9.50%       | ↓ 0.2%            | < 0.1%          | 910B*8P  |
 
 
 ## 致谢

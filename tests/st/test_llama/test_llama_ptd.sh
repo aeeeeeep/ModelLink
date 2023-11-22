@@ -17,7 +17,7 @@ CHECKPOINT_PATH=./ckpt_llama
 
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 basepath=$(cd `dirname $0`; pwd)
-
+export PYTHONPATH=${basepath}:$PYTHONPATH
 python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
       ${basepath}/run_llama_ptd.py \
        --DDP-impl local \
@@ -54,4 +54,5 @@ python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --eval-interval 1000 \
        --eval-iters 10 \
        --sequence-parallel \
+       --release-fp32-grad \
        --fp16
