@@ -8,6 +8,8 @@
     - [Performance](#performance)
       - [Machine performance](#machine-performance)
       - [Accuracy of the loss](#accuracy-of-the-loss)
+  - [Inference](#inference-7b)
+  - [Evaluation](#evaluation-7b)
 
 - [LLaMA2-70B](#contents)
   - [Training](#training-70b)
@@ -52,7 +54,7 @@ Here's a software summary of pre-training  LLaMA2-7B:
     ```
 
 2. Build environment
-    
+   
     ```bash
     # python3.7
     conda create -n test python=3.7
@@ -77,7 +79,7 @@ Here's a software summary of pre-training  LLaMA2-7B:
     pip install -r requirements.txt 
     ```
      *Note that if you want to train with the weight from huggingface, please run fix a deepspeed loading checkpointing bug by modified `if zero_sd_list is None` as `if zero_sd_list is None or len(zero_sd_list) == 0` in the `_load_zero_checkpoint` function of `<deepspeed-installed-path>/runtime/engine.py`*
-     
+    
     ```text
     # original deepspeed/runtime/engine.py, about #Lines2746-2748
     zero_sd_list = self._get_all_zero_checkpoints(load_dir, tag)
@@ -107,7 +109,7 @@ Here's a software summary of pre-training  LLaMA2-7B:
       wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/tokenizer_config.json
       cd ..
     ```
-    
+    3.1 weight conversion in deepspeed mode 
    *Note that if you want to use the weight from huggingface, please run the weight conversion script first. The following uses llama-2-7b model  weight conversion in deepspeed as an example.*
     ```bash
     # modify the script according to your own ascend-toolkit path
@@ -121,9 +123,24 @@ Here's a software summary of pre-training  LLaMA2-7B:
                                                                         --type 7B \
                                                                         --deepspeed
     ```
-
-4. Prepare dataset
+   3.2 weight conversion in ptd mode
+   *Note that if you want to use the weight from huggingface, please run the weight conversion script first. The following uses llama-2-7b model weight conversion in ptd as an example.*
+   ```bash
+    # modify the script according to your own ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
+    # convert to deepspeed weights
+    python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir llama-2-7b-hf \
+                                                                        --output-model-dir ckpt \
+                                                                        --tensor-model-parallel-size 8 \
+                                                                        --pipeline-model-parallel-size 1 \
+                                                                        --type 7B \
+                                                                        --merge-mlp
+   ```
+
+4. pre-training
+	4.1 Prepare pretrain dataset
+   
     Download the LLaMA2-7B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
         
     ```shell
@@ -143,8 +160,9 @@ Here's a software summary of pre-training  LLaMA2-7B:
         --tokenizer-type PretrainedFromHF
     ```
 
-5. Config LLaMA2-7B pre-training script: examples/llama2/pretrain_llama2_7b_zero_8p.sh
-    
+	4.2 pre-training using deepspeed mode
+    Config LLaMA2-7B pre-training script: examples/llama2/pretrain_llama2_7b_zero_8p.sh
+   
     ```shell
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -154,11 +172,76 @@ Here's a software summary of pre-training  LLaMA2-7B:
     DATA_PATH=./dataset_llama2/alpaca_text_document  #processed dataset
     ```
 
-6. Launch LLaMA2-7B  pre-training script: examples/llama2/pretrain_llama2_7b_zero_8p.sh
-    
+	Launch LLaMA2-7B  pre-training script: examples/llama2/pretrain_llama2_7b_zero_8p.sh
+   
     ```shell
     bash examples/llama2/pretrain_llama2_7b_zero_8p.sh 
     ```
+   4.3 pre-training using ptd mode
+   Config LLaMA2-7B pre-training script: examples/llama2/pretrain_llama2_7b_ptd.sh
+   
+    ```shell
+    # modify the script according to your own ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    
+    # modify script orign dataset path according to your own dataset path
+    TOKENIZER_PATH=./llama-2-7b-hf/  #tokenizer path
+    DATA_PATH=./dataset_llama2/alpaca_text_document  #processed dataset
+    ```
+
+	Launch LLaMA2-7B  pre-training script: examples/llama2/pretrain_llama2_7b_ptd.sh
+   
+    ```shell
+    bash examples/llama2/pretrain_llama2_7b_ptd.sh 
+    ```
+5. fine-tuning
+	5.1 Prepare fine-tuning dataset 
+	Download the LLaMA2-7B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
+        
+    ```shell
+      # download datasets
+      mkdir finetune_dataset
+      cd ./finetune_dataset
+      wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+      cd ..
+    
+      # process datasets                              
+      python ./tools/preprocess_data.py \
+        --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./llama-2-7b-hf \
+        --output-prefix ./finetune_dataset/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF \
+        --handler-name GeneralInstructionHandler \
+        --append-eod
+    ```
+   5.2 fine-tuning using deepspeed mode
+   5.2.1 Full Parameters Fine-Tuning
+   The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_7b_zero_8p.sh.*The only difference is the data set.*
+   ```bash
+   DATA_PATH=./finetune_dataset/alpaca
+   ```
+   5.2.2 Lora Fine-Tuning
+   The Lora fine-tuning script is configured by adding the following lora parameters to the pretrain_llama2_7b_zero_8p.sh script:
+   ```bash
+       --lora-target-modules query_key_value dense gate_proj up_proj down_proj \
+       --lora-r 16 \
+       --lora-alpha 32 \
+   ```
+   If the vocabulary is changed, add the following parameters:
+   ```bash
+     --lora-modules-to-save word_embeddings lm_head.lm_head \
+   ```
+   The following parameters are added to the resumable training capability of Lora:
+   ```bash
+       --load ${ORIGIN_CHECKPOINT}  \
+       --lora-load ${LORA_CHECKPOINT} \
+   ```
+   
+   
+   5.3 fine-tuning using ptd mode
+   *The modification method is the same as that in deepspeed mode. For details, see the previous section.*
 
 ### Performance
 
@@ -189,7 +272,113 @@ The absolute error of the average loss is 0.0009, less than 2%, the maximum abso
 
 ![NPU-LOSS and NPU-Absolute-Error](../../sources/images/llama2/llama2_7b_shape_fp16_layer32_loss_with_weights_comparison_absolute.png)
 
+## Inference-7B
+Config llama2-7b inference script: examples/llama2/generate_llama2_7b_ptd.sh
+```bash
+ # modify the script according to your own ascend-toolkit path
+ source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+ 
+ # modify script model path and tokenizer path
+ TOKENIZER_PATH=./llama2-7b-hf/  #tokenizer path
+ CHECKPOINT=./llama2-7b-tp8pp1  #model path
+```
+Launch llama2-7b inference script: examples/llama2/generate_llama2_7b_ptd.sh
+```bash
+bash examples/llama2/generate_llama2_7b_ptd.sh
+```
+Some inference samples are as follows:
+```
+===========================================================
+1. If you want to quit, please entry one of [q, quit, exit]
+2. To create new title, please entry one of [clear, new]
+===========================================================
 
+You >> how are you?
+
+AscendSpeed:
+
+I am doing well, thank you for asking! It's always nice to connect with someone new. How about you?</s>
+
+You >> Give three tips for staying healthy.
+
+AscendSpeed:
+
+
+1. Eat a balanced diet that includes plenty of fruits, vegetables, whole grains, and lean proteins.
+2. Exercise regularly, even if it's just a short walk or some light stretching.
+3. Get plenty of sleep and aim for 7-8 hours of rest each night.</s>
+
+You >> How can we reduce air pollution?
+
+AscendSpeed:
+
+Air pollution is a major environmental issue that can have serious health and economic consequences. To reduce air pollution, we need to take a multi-faceted approach that includes individual and collective action. Here are some ways to reduce air pollution:
+1. Reduce the use of fossil fuels: Fossil fuels are a major source of air pollution, so reducing their use is an effective way to reduce air pollution. This can be done by switching to renewable energy sources such as solar, wind, and geothermal.
+2. Use public transportation: Taking public transportation instead of driving can reduce air pollution. This is because public transportation produces fewer emissions than private vehicles.
+3. Drive less: Reducing the number of trips taken by car can help reduce air pollution. This can be done by carpooling, biking, or walking when possible.
+4. Plant trees: Planting trees can help reduce air pollution by absorbing carbon dioxide and other pollutants. Trees also provide shade and cool the air, which can reduce the need for air conditioning.
+5. Use natural air fresheners: Instead
+
+You >> Any more suggestions, please go ahead and list
+
+AscendSpeed:
+them.
+6. Avoid burning wood or other materials: Burning wood or other materials releases harmful pollutants into the air. Avoid burning materials such as wood, coal, or other materials that release pollutants.
+7. Improve indoor air quality: Poor indoor air quality can contribute to air pollution. Improve indoor air quality by using a HEPA air purifier, avoiding smoking and secondhand smoke, and using natural air fresheners.
+8. Educate yourself and others: Educating yourself and others about air pollution and its effects can help reduce air pollution. Share information with friends, family, and colleagues about the importance of reducing air pollution.
+9. Support government policies: Supporting government policies that promote clean energy and reduce air pollution can help reduce air pollution.
+10. Participate in local clean-up initiatives: Participating in local clean-up initiatives can help reduce air pollution by removing pollutants from the environment.
+11. Use eco-friendly cleaning products: Using eco-friendly cleaning products can help reduce air pollution. These products are designed to
+
+You >>
+
+```
+
+## Evaluation-7b
+We use MMLU benchmark to evaluate our model. Benchmark Download [here](https://huggingface.co/datasets/cais/mmlu).
+
+```bash
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+    # modify script model path and tokenizer path
+    TOKENIZER_PATH=./llama2-7b-hf/  #tokenizer path
+    CHECKPOINT=./llama2-7b-tp8pp1  #model path
+    # configure task and data path
+    DATA_PATH="./mmlu/data/test/"
+    TASK="mmlu"
+    
+    # distributed config
+    MASTER_ADDR=localhost
+    MASTER_PORT=6011
+    NNODES=1
+    NODE_RANK=0
+    NPUS_PER_NODE=8
+    DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
+    # configure generation parameters 
+    python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation.py   \
+         --task-data-path $DATA_PATH \
+         --task $TASK \
+         --seq-length 4096 \
+         --max-new-tokens 1 \
+         --max-position-embeddings 4096 \
+         --rotary-v3-impl \
+         --tensor-model-parallel-size 8 \
+         --pipeline-model-parallel-size 1  \
+         --num-layers 32  \
+         --hidden-size 4096  \
+         --ffn-hidden-size 11008 \
+         --num-attention-heads 32  \
+         --mlp-layer-fusion \
+         --load ${CHECKPOINT}  \
+         --tokenizer-type PretrainedFromHF  \
+         --tokenizer-name-or-path $TOKENIZER_PATH \
+         --tokenizer-not-use-fast \
+         --fp16  \
+         --micro-batch-size 1  \
+         --seed 42 | tee logs/train.log
+    # start evaluation
+    bash tasks/evaluation/eval.sh
+```
 
 # LLaMA2-70B
 
@@ -227,7 +416,7 @@ Here's a software summary of pre-training  LLaMA2-70B:
     ```
 
 2. Build environment
-    
+   
     ```bash
     # python3.8
     conda create -n test python=3.8
@@ -310,7 +499,7 @@ Here's a software summary of pre-training  LLaMA2-70B:
     There are two dataset examples: Alpaca and Moss. 
 
     1. Alpaca Dataset
-        
+       
        Download the Alpaca datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
     ```shell
       # download datasets
@@ -332,7 +521,7 @@ Here's a software summary of pre-training  LLaMA2-70B:
     2. Moss Dataset
 
        Download the Moss datasets from [here](https://huggingface.co/datasets/fnlp/moss-003-sft-data/tree/main) 
-        
+       
     ```shell
       # download datasets
       mkdir dataset_llama2
@@ -359,14 +548,14 @@ Here's a software summary of pre-training  LLaMA2-70B:
     # modify script orign dataset path according to your own dataset path
     TOKENIZER_PATH=./llama2-70b-hf/  #tokenizer path
     DATA_PATH=./dataset_llama2/alpaca_text_document  #processed dataset
-    ```      
-    
+   ```
+   
 6. Launch LLaMA2-70B pre-training script: examples/llama2/pretrain_llama2_70B_ptd.sh
-    
+   
     ```shell
     bash examples/llama2/pretrain_llama2_70B_ptd.sh
     ```
-   
+
 ### Performance-70B
 
 #### Machine performance-70B
