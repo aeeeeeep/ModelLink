@@ -89,14 +89,14 @@ TECommand& TECommand::Name(std::string name)
 
 TECommand& TECommand::Input(const at::Tensor &tensor)
 {
-    inTensors.push_back(AtTensor2Tensor(tensor));
+    inTensorDescs.push_back(AtTensor2Tensor(tensor).desc);
     return *this;
 }
 
 TECommand& TECommand::Input(const at::Tensor &tensor, bool isNone)
 {
     if (isNone) {
-        inTensors.push_back(atb::Tensor());
+        inTensorDescs.push_back(atb::Tensor().desc);
         return *this;
     }
     return Input(tensor);
@@ -105,7 +105,7 @@ TECommand& TECommand::Input(const at::Tensor &tensor, bool isNone)
 TECommand& TECommand::Input(const c10::optional<at::Tensor> &tensor)
 {
     if (!tensor.has_value()) {
-        inTensors.push_back(atb::Tensor());
+        inTensorDescs.push_back(atb::Tensor().desc);
         return *this;
     }
     return Input(tensor.value());
@@ -113,7 +113,19 @@ TECommand& TECommand::Input(const c10::optional<at::Tensor> &tensor)
 
 void TECommand::Output(std::vector<at::Tensor> &output)
 {
-    BuildVariantPack(output);
+    atb::Status status = operation->InferShape(inTensorDescs, outTensorDescs);
+    TORCH_CHECK(status == 0, "infershape failed!");
+
+    atb::VariantPack variantPack;
+    variantPack.inTensors.resize(operation->GetInputNum());
+    variantPack.outTensors.resize(operation->GetOutputNum());
+    for (size_t i = 0; i < variantPack.inTensors.size(); ++i) {
+        variantPack.inTensors.at(i).desc = inTensorDescs.at(i);
+    }
+    for (size_t i = 0; i < variantPack.outTensors.size(); ++i) {
+        variantPack.outTensors.at(i).desc = outTensorDescs.at(i);
+    }
+
     uint64_t workspaceSize = 0;
     atb::Status status = operation->Setup(variantPack, workspaceSize);
     TORCH_CHECK(status == 0, "setup failed!");
@@ -133,43 +145,20 @@ void TECommand::Output(std::vector<at::Tensor> &output)
 
     context->SetExecuteStream(stream);
 
-    auto variantPack = this->variantPack;
-    auto te_call = [this, variantPack, workspaceTensor, workspaceSize, context]() -> int {
-        auto api_ret = this->operation->Execute(variantPack, (uint8_t *)workspaceTensor.storage().data(), workspaceSize, context);
+    auto op = this->operation;
+    output.clear();
+    auto te_call = [&op, variantPack, &workspaceTensor, workspaceSize, &context, &output]() -> int {
+        auto api_ret = op->Execute(variantPack, (uint8_t *)workspaceTensor.storage().data(), workspaceSize, context);
         TORCH_CHECK(api_ret == 0, "execute failed");
         // atb::DestroyContext(context);
+        for (size_t i = 0; i < variantPack.outTensors.size(); ++i) {
+            at::Tensor temp = CreateAtTensorFromTensorDesc(variantPack.outTensors.at(i));
+            output.push_back(temp);
+        }
         return api_ret;
     };
     at_npu::native::OpCommand cmd;
     cmd.Name(this->name);
     cmd.SetCustomHandler(te_call);
     cmd.Run();
-}
-
-void TECommand::BuildVariantPack(std::vector<at::Tensor> &output)
-{
-    atb::SVector<atb::TensorDesc> inTensorDescs;
-    atb::SVector<atb::TensorDesc> outTensorDescs;
-    inTensorDescs.resize(inTensors.size());
-    for (size_t i = 0; i < inTensors.size(); ++i) {
-        atb::Tensor inTensor = inTensors.at(i);
-        if (inTensor.desc.format == ACL_FORMAT_NCHW) {
-            inTensor.desc.format = ACL_FORMAT_ND;
-        }
-        inTensorDescs.at(i) = inTensor.desc;
-    }
-    atb::Status status = operation->InferShape(inTensorDescs, outTensorDescs);
-    TORCH_CHECK(status == 0, "infershape failed!");
-    
-    variantPack.inTensors.resize(inTensorDescs.size());
-    variantPack.outTensors.resize(outTensorDescs.size());
-    for (size_t i = 0; i < inTensorDescs.size(); ++i) {
-        variantPack.inTensors.at(i) = inTensors.at(i);
-    }
-    output.clear();
-    for (size_t i = 0; i < outTensorDescs.size(); ++i) {
-        at::Tensor temp = CreateAtTensorFromTensorDesc(outTensorDescs.at(i));
-        output.push_back(temp);
-        variantPack.outTensors.at(i) = AtTensor2Tensor(temp);
-    }
 }
