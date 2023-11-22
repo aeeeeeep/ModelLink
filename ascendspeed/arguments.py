@@ -35,7 +35,7 @@ from ascendspeed.error_utils import (
     ensure_var_is_not_none,
     ensure_var_is_none,
     ensure_valid
-) 
+)
 
 
 def parse_args(extra_args_provider=None,
@@ -275,7 +275,7 @@ def validate_args(args, defaults={}):
 
     if args.tensor_model_parallel_size == 1:
         args.sequence_parallel = False
-    
+
     if args.seq_length is not None:
         ensure_var_is_none(args.encoder_seq_length)
         args.encoder_seq_length = args.seq_length
@@ -285,6 +285,12 @@ def validate_args(args, defaults={}):
 
     if args.variable_seq_lengths:
         ensure_valid(args.is_instruction_dataset, 'Dynamic padding based on instruction dataset.')
+    
+    if args.release_fp32_grad:
+        if args.optimizer != "adam":
+            raise ValueError(
+                "`release_fp32_grad` only support for `Adam` optimizer now.")
+
     # Retro checks.
     if args.retro_add_retriever:
         # Sequence parallelism unsupported.
@@ -689,7 +695,7 @@ def _add_training_args(parser):
                        'training runs.')
     group.add_argument('--random-ltd',
                        action='store_true',
-                       help='enable random layer token drop')    
+                       help='enable random layer token drop')
     group.add_argument('--log-interval', type=int, default=100,
                        help='Report loss and timing interval.')
     group.add_argument('--exit-interval', type=int, default=None,
@@ -730,6 +736,9 @@ def _add_training_args(parser):
     group.add_argument('--optimizer', type=str, default='adam',
                        choices=['adam', 'sgd', 'fused_adam', 'cadam'],
                        help='Optimizer function')
+    group.add_argument('--release-fp32-grad', action='store_true',
+                       help='The distributed training optimizer frees up '
+                       'gradient copies of FP32 to save memory.')
     group.add_argument('--dataloader-type', type=str, default=None,
                        choices=['single', 'cyclic'],
                        help='Single pass vs multiple pass data loader')
@@ -758,6 +767,16 @@ def _add_training_args(parser):
                        help='Disable fusing gradient accumulation to weight '
                        'gradient computation of linear layers',
                        dest='gradient_accumulation_fusion')
+    group.add_argument('--auto-recompute-device-size',
+                       type=int, default=-1,
+                       help='The memory size for auto selective recompute strategy. '
+                            'The default is -1. If this parameter > 0, '
+                            'will activate auto selective recompute. ')
+    group.add_argument('--auto-recompute-profiling-step',
+                       type=int, default=10,
+                       help='The profiling step for auto selective recompute strategy. '
+                            'The default is 10. If activate auto selective recompute, '
+                            'will solve graph after step 10. ')
     return parser
 
 
@@ -846,7 +865,7 @@ def _add_checkpointing_args(parser):
     group.add_argument('--no-load-rng', action='store_true', default=None,
                        help='Do not load rng state when loading checkpoint.')
     group.add_argument('--no-load-lr-state', action='store_true',
-                       help='Do not load lr state when loading checkpoint.')   
+                       help='Do not load lr state when loading checkpoint.')
     group.add_argument('--finetune', action='store_true',
                        help='Load model for finetuning. Do not load optimizer '
                        'or rng state from checkpoint and set iteration to 0. '
@@ -1063,7 +1082,7 @@ def _add_data_args(parser):
                        help='Force to use certain index file.')
     group.add_argument('--train-shuffle-idx-path', type=str, default=None,
                        help='Force to use certain index file.')
-    
+
     group.add_argument('--train-weighted-split-paths', nargs='*', default=None,
                     help='Weights, splits and paths to groups of datasets'
                     'Accepted format: ONE dataset groups could be'
@@ -1250,15 +1269,15 @@ def _add_activation_checkpoint_args(parser):
 def _add_distillation_args(parser):
     group = parser.add_argument_group('Knowledge distillation',
                                       'Distillation Configurations')
-    
+
     group.add_argument('--num-layers-teacher', type=int, default=None,
-                       help='Number of the teacher transformer layers.')                  
+                       help='Number of the teacher transformer layers.')
     group.add_argument('--num-experts-teacher', type=int, nargs='+', default=[1,],
                         help='number of teacher experts list, MoE related.')
     group.add_argument('--hidden-size-teacher', type=int, default=None,
                        help='Tansformer teacher hidden size.')
     group.add_argument('--num-attention-heads-teacher', type=int, default=None,
-                       help='Number of teacher transformer attention heads.') 
+                       help='Number of teacher transformer attention heads.')
 
     group.add_argument('--mos', action='store_true',
                        help='Enable Mixture-of-Students via knolwedge distillation.')
@@ -1269,7 +1288,7 @@ def _add_distillation_args(parser):
     group.add_argument('--kd-temp', default=1.0, type=float)
     group.add_argument('--reset-iteration', action='store_true',
                     help='Reset the iteration count.')
-    
+
     group.add_argument('--load-teacher', type=str, default=None,
                        help='Directory containing a teacher model checkpoint.')
 

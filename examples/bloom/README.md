@@ -1,83 +1,93 @@
+# Bloom
+<p align="left">
+        <b>简体中文</b> |
+        <b><a href="https://gitee.com/ascend/AscendSpeed/blob/master/examples/bloom/README_en.md">English</a> </b> 
+</p>
 
-# Contents
 
-- [Bloom-7B](#contents)
-  - [Training](#pre-training)
-    - [Script](#script)
-    - [Performance](#performance)
-      - [Machine performance](#machine-performance)
-      - [Accuracy of the loss](#accuracy-of-the-loss)
-  - [Inference](#Inference)
-    - [Script](#script)
-- [Bloom-176B](#contents)
-  - [Training](#pre-training)
-    - [Script](#script)
-    - [Performance](#performance)
-      - [Machine performance](#machine-performance)
-      - [Accuracy of the loss](#accuracy-of-the-loss)
-  - [Inference](#Inference)
-    - [Script](#script)
+# 目录
 
+- [Bloom-7B](#Bloom-7B)
+  - [训练](#训练)
+    - [脚本](#脚本)
+    - [性能](#性能)
+      - [吞吐](#吞吐)
+      - [精度](#精度)
+  - [推理](#推理)
+    - [deepspeed_pipeline](#deepspeed_pipeline)
+    - [megatron](#megatron)
+  - [评估](#评估)
+- [Bloom-176B](#Bloom-176B)
+  - [训练](#训练)
+    - [脚本](#脚本)
+    - [性能](#性能)
+      - [吞吐](#吞吐)
+      - [精度](#精度)
+  - [推理](#推理)
+    - [deepspeed_pipeline](#deepspeed_pipeline)
+    - [megatron](#megatron)
+  - [评估](#评估)
+  - [举例](#举例)
 # Bloom-7B
 
-## Training
+## 训练
 
+Bloom-7B 训练的硬件配置如下:
 
-Here's a hardware summary of pre-training Bloom-7B:
+| **硬件** | **配置**         |
+|--------|----------------|
+| NPU    | 1x8 Ascend 910 | 
 
-| **Hardware** | **Value** |
-| ------------ | --------- |
-| NPU          | 1x8 Ascend 910 | 
+Bloom-7B 训练的软件配置如下:
 
-Here's a software summary of pre-training Bloom-7B:
-
-|         Software          |   Version   |
-| :-----------------------: |:-----------:|
-|          Python           |   3.8.18    |
+|            软件             |                                                      版本                                                      |
+|:-------------------------:|:------------------------------------------------------------------------------------------------------------:|
+|          python           |                                                    3.8.18                                                    |
 |          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
 | binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                    2.0.1                                                    |
+|           torch           |                                                    2.0.1                                                     |
 |         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
 
-## Script
+## 脚本
 
-1. Clone the repository to your local server
+1. 拷贝仓库到本地服务器：
 
 ```shell
 git clone https://gitee.com/ascend/AscendSpeed.git
 cd AscendSpeed
 ```
 
-2. Build enviroment
+2. 搭建环境
 
 ```shell
 # python3.8
 conda create -n bloom7b python=3.8
 conda activate bloom7b
 
-# install torch and torch_npu and apex
+# 安装 torch 和 torch_npu
 pip install torch-2.0.1-cp38-cp38-manylinux2014_aarch64.whl
 pip install torch_npu-2.0.1rc1.postxxxxxxxx-cp38-cp38-linux_aarch64.whl
 
-# install megatron-core
+
+# 安装 megatron-core
 pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
 
-# install deepspeed and deepspeed_npu
+# 安装 deepspeed 和 deepspeed_npu
 pip install deepspeed==0.9.2
 git clone https://gitee.com/ascend/DeepSpeed.git -b v0.9.2 deepspeed_npu
 cd deepspeed_npu
 pip3 install -e ./
 cd ..
 
-# install other packages
+# 安装其余包
 pip install -r requirements.txt
 ```
 
-3. Prepare pretrained weights
+3. 准备预训练权重
 
-Download the Bloom-7B tokensizer from [here](https://huggingface.co/bigscience/bloom-7b1/tree/main).
+首先下载 Bloom-7B 的 [权重](https://huggingface.co/bigscience/bloom-7b1/tree/main)
 
 ```shell
 mkdir tokenizer
@@ -85,10 +95,11 @@ cd tokenizer
 wget https://huggingface.co/bigscience/bloom/resolve/main/special_tokens_map.json
 wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer.json
 wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer_config.json
+...
 cd ..
 ```
 
-We provide scripts that support converting pretrained weights into weights that AscendSpeed can load and used for train and inference. 
+将权重从 huggingface 格式转化为 ascendspeed 可以加载的格式
 
 ```shell
 #!/bin/bash
@@ -103,13 +114,12 @@ python $SCRIPT_PATH \
     --deepspeed
 ```
 
-4. Prepare dataset
+4. 准备数据集
 
-Download the Bloom-7B datasets from [here](https://huggingface.co/datasets/teven/enwiki_100k). The downloaded dataset is in the parquet format by default.
-You need to convert the dataset to the loose json format and preprocess the dataset.
+下载 Bloom-7B 的 [enwiki数据集](https://huggingface.co/datasets/teven/enwiki_100k).
 
 ```shell
-# download datasets
+# 下载数据集
 mkdir enwiki_100k_datasets
 cd enwiki_100k_datasets
 wget https://huggingface.co/datasets/teven/enwiki_100k/resolve/main/data/train-00000-of-00006-67bcc7d401923db0.parquet
@@ -120,7 +130,7 @@ wget https://huggingface.co/datasets/teven/enwiki_100k/resolve/main/data/train-0
 wget https://huggingface.co/datasets/teven/enwiki_100k/resolve/main/data/train-00005-of-00006-bcb3b3af8d7a4140.parquet
 cd ..
 
-# preprocess datasets
+# 预处理数据
 python ./tools/preprocess_data.py \
   --input ./enwiki_100k_datasets/ \
   --tokenizer-name-or-path ./tokenizer \
@@ -130,52 +140,64 @@ python ./tools/preprocess_data.py \
   --tokenizer-type PretrainedFromHF
 ```
 
-5. Config Bloom-7B pre-training script: examples/bloom/pretrain_bloom_7b1.sh
+5. 配置 Bloom-7B 预训练脚本: examples/bloom/pretrain_bloom_7b1.sh
 
 ```shell
-# modify the datasets path and tokenizer path
+# 修改数据集和词表路径
 TOKENIZER_NAME_OR_PATH=/home/bloom_data/vocab_file/
 DATA_PATH=/home/bloom_data/enwiki_100k/enwiki-100k_text_document
 ```
 
-6. Launch Bloom-7B pre-training script: examples/bloom/pretrain_bloom_7b1.sh
-
-Run the examples/bloom/pretrain_bloom_7b1.sh on all nodes in the cluster.
+6. 启动 Bloom-7B 预训练脚本: examples/bloom/pretrain_bloom_7b1.sh
 
 ```shell
 bash examples/bloom/pretrain_bloom_7b1.sh
 ```
 
-## Performance
+## 性能
 
-### Machine Performance
+### 吞吐
 
-The performance of Bloom-7B in **Ascend NPU** and **Reference**:
+Bloom-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 
-| Device | Model    | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
-| ------ |----------|------------------|-------------------------------|------------------------------|---------------------------|-------------------------------------|
-| NPUs   | Bloom-7B | 1000             | 10.289                        | 2603                         | 18.67                     | 115.55                              |
-| Reference   | Bloom-7B | 1000             | 9.894                         | 2525                         | 19.40                     | 111.19                              |
+| 设备  | 模型       | 迭代数 | 样本吞吐 (samples/p/s) | tokens吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
+|-----|----------|-----|--------------------|-----------------------|-----------------|------------------|
+| NPUs | Bloom-7B | 1000 | 10.289             | 2603                  | 18.67           | 115.55           |
+| 参考  | Bloom-7B | 1000 | 9.894              | 2525                  | 19.40           | 111.19           |
 
 
 
-#### Accuracy of the loss
+### 精度
 
-NPU vs GPU loss.
+NPU vs 参考 loss
 
-The NPU runs smoothly, the resource usage is stable, no errors are reported in the middle of the process, the Loss is on a decreasing trend, and the convergence speed is as expected. 
 
 ![7b_lm_loss.png](..%2F..%2Fsources%2Fimages%2Fbloom%2F7b_lm_loss.png)
 
-NPU vs GPU loss relative error.
+NPU vs 参考 loss 相对误差
 
 ![relative_error.png](..%2F..%2Fsources%2Fimages%2Fbloom%2Frelative_error.png)
 
-## Inference
+## 推理
 
-We support AscendSpeed Inference for text generation with BLOOM 7B.
+AscendSpeed 支持 BLOOM 7B 的文本生成推理.
 
-Use [convert_weights_from_gptmodelpipe_to_gptmodel.sh](../../tools/ckpt_convert/bloom/convert_weights_from_gptmodelpipe_to_gptmodel.sh), converting deep speed checkpoints to megatron.Convert the checkpoint of deepspeed to megtron.
+### deepspeed_pipeline
+
+```shell
+# 修改 model weight 路径和 tokenizer 路径
+CHECKPOINT=/home/model/bloom_7B
+VOCAB_FILE=/home/bloom_data/vocab_file/
+```
+
+```shell
+bash ./examples/bloom/generate_bloom_7b_deepspeed_pipeline.sh
+```
+
+
+### megatron
+
+使用 [convert_weights_from_gptmodelpipe_to_gptmodel.sh](../../tools/ckpt_convert/bloom/convert_weights_from_gptmodelpipe_to_gptmodel.sh) 将bloom-7B的权重转换为推理格式
 
 ```bash
 SCRIPT_PATH=./tools/ckpt_convert/bloom/convert_weights_from_gptmodelpipe_to_gptmodel_v2.py
@@ -186,15 +208,12 @@ python $SCRIPT_PATH \
     --pipeline-model-parallel-size 1 \
     --type 7B
 ```
-### Script
 
-We generate text samples using the `generate_bloom` script. Inference different from pre-training, such as we need to Load pre training checkpoint and the length of the output samples:
-
-Config Bloom-7B inference script: examples/bloom/generate_bloom_7B_tp8_pp1.sh
+配置 Bloom-7B 推理脚本: examples/bloom/generate_bloom_7B_tp8_pp1.sh
 
 ```shell
-# modify the model weight path and tokenizer path
-CHECKPOINT=/home/bloom_data/enwiki_100k/enwiki-100k_text_document
+# 修改 model weight 路径和 tokenizer 路径
+CHECKPOINT=/home/model/bloom_7B
 VOCAB_FILE=/home/bloom_data/vocab_file/
 ```
 
@@ -202,70 +221,123 @@ VOCAB_FILE=/home/bloom_data/vocab_file/
 bash ./examples/bloom/generate_bloom_7B_tp8_pp1.sh
 ```
 
+## 评估 
+配置 Bloom-7B 评估脚本: tasks/evaluation/eval_bloom.sh
+
+```shell
+# 修改 model weight 路径和 tokenizer 路径和数据集任务路径
+CHECKPOINT=/home/model/bloom_7B
+VOCAB_FILE=/home/bloom_data/vocab_file/
+DATA_PATH="/dataset/boolq/test"
+TASK="boolq"
+```
+
+除此之外你还需要根据模型大小设置参数:
+```shell
+--num-layers 30 
+--hidden-size 4096 
+--num-attention-heads 32 
+```
+
+```shell
+bash ./tasks/evaluation/eval_bloom.sh
+```
+
+<table>
+  <thead>
+    <tr>
+      <th>任务</th>
+      <th>验证集</th>
+      <th>模型</th>
+      <th>昇腾值</th>
+      <th>社区值</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="https://huggingface.co/datasets/boolq">Boolq</a></td>
+      <td>Test</td>
+      <th>bloom 7b</th>
+      <td>0.614</td>
+      <td>--</td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td><a href="https://huggingface.co/datasets/cais/mmlu">mmlu</a></td>
+      <td>Test</td>
+      <th>bloom 7b</th>
+      <td>0.251</td>
+      <td><a href="https://www.hayo.com/article/648ace24409528db3186ef1c">0.254</a></td>
+    </tr>
+  </tbody>
+</table>
+
+
 # Bloom-176B
 
-## Training
+## 训练
 
-BLOOM model is from: [A 176B-Parameter Open-Access Multilingual Language Model](https://arxiv.org/abs/2211.05100).
+BLOOM 模型源于: [A 176B-Parameter Open-Access Multilingual Language Model](https://arxiv.org/abs/2211.05100).
 
 > Scao, Teven Le, et al. "Bloom: A 176b-parameter open-access multilingual language model." arXiv preprint arXiv:2211.05100 (2022).
 
-Here's a hardware summary of pre-training Bloom-176B:
+Bloom-176B 训练的硬件配置:
 
-| **Hardware** | **Value** |
-| ------------ | --------- |
-| NPU          | 12x8 Ascend 910 | 
+| **硬件** | **配置**          |
+|--------|-----------------|
+| NPU    | 12x8 Ascend 910 | 
 
-Here's a software summary of pre-training Bloom-176B:
+Bloom-176B 训练的软件配置:
  
-|         Software          |   Version   |
-| :-----------------------: |:-----------:|
-|          Python           |   3.8.0    |
+|            软件             |                                                      配置                                                      |
+|:-------------------------:|:------------------------------------------------------------------------------------------------------------:|
+|          python           |                                                    3.8.0                                                     |
 |          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
 | binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                    2.0.1                                                    |
+|           torch           |                                                    2.0.1                                                     |
 |         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |                                                                                                  |
 
-## Script
+## 脚本
 
-1. Clone the repository to your local server
+1. 将仓库拉取到个人服务器
 
 ```shell
 git clone https://gitee.com/ascend/AscendSpeed.git
 cd AscendSpeed
 ```
 
-2. Build enviroment
+2. 搭建环境
 
 ```shell
 # python3.8
 conda create -n bloom176b python=3.8
 conda activate bloom176b
 
-# install torch and torch_npu and apex
+# 安装 torch 和 torch_npu
 pip install torch-2.0.1-cp38-cp38-manylinux2014_aarch64.whl
 pip install torch_npu-2.0.1rc1.postxxxxxxxx-cp38-cp38-linux_aarch64.whl
 pip install apex-0.1_ascend_xxxxxxxx-cp38-cp38-linux_aarch64.whl
 
-# install megatron-core
+# 安装 megatron-core
 pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
 
-# install deepspeed and deepspeed_npu
+# 安装 deepspeed 和 deepspeed_npu
 pip install deepspeed==0.9.2
 git clone https://gitee.com/ascend/DeepSpeed.git -b v0.9.2 deepspeed_npu
 cd deepspeed_npu
 pip3 install -e ./
 cd ..
 
-# install other packages
+# 安装其余依赖
 pip install -r requirements.txt
 ```
 
-3. Prepare pretrained weights
+3. 准备预训练权重
 
-Download the Bloom-176B tokensizer from [here](https://huggingface.co/bigscience/bloom/tree/main).
+下载 Bloom-176B [权重](https://huggingface.co/bigscience/bloom/tree/main)
 
 ```shell
 mkdir tokenizer
@@ -273,9 +345,11 @@ cd tokenizer
 wget https://huggingface.co/bigscience/bloom/resolve/main/special_tokens_map.json
 wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer.json
 wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer_config.json
+...
 cd ..
 ```
-We provide scripts that support converting pretrained weights into weights that AscendSpeed can load and used for train and inference. `--partition-layers` specifies the partitioning strategy under the pipeline parallel strategy, you can also modify it to a different strategy, but the sum of all elements of `--partition layers` should be equal to 70 and the number of elements in `--partition-layers` should be equal to `--pipeline-model-parallel-size`.
+
+将权重格式从 huggingface 格式转换为 AscendSpeed 格式：
 
 ```shell
 #!/bin/bash
@@ -289,14 +363,14 @@ python $SCRIPT_PATH \
     --type 176B \
     --deepspeed \
     --partition-layers 6,6,6,6,6,6,6,6,6,6,6,4
+# partition-layers 指定的是PP当中每个stage的层数，总和需要等于70
 ```
-4. Prepare dataset
+4. 准备数据集
 
-Download the Bloom-176B datasets from [here](https://huggingface.co/datasets/teven/enwiki_100k). The downloaded dataset is in the parquet format by default.
-You need to convert the dataset to the loose json format and preprocess the dataset.
+下载 Bloom-176B 的 [数据集](https://huggingface.co/datasets/teven/enwiki_100k). 
 
 ```shell
-# download datasets
+# 下载数据集
 mkdir enwiki_100k_datasets
 cd enwiki_100k_datasets
 wget https://huggingface.co/datasets/teven/enwiki_100k/resolve/main/data/train-00000-of-00006-67bcc7d401923db0.parquet
@@ -307,7 +381,7 @@ wget https://huggingface.co/datasets/teven/enwiki_100k/resolve/main/data/train-0
 wget https://huggingface.co/datasets/teven/enwiki_100k/resolve/main/data/train-00005-of-00006-bcb3b3af8d7a4140.parquet
 cd ..
 
-# preprocess datasets
+# 处理数据集
 python ./tools/preprocess_data.py \
   --input ./enwiki_100k_datasets/ \
   --tokenizer-name-or-path ./tokenizer \
@@ -317,58 +391,70 @@ python ./tools/preprocess_data.py \
   --tokenizer-type PretrainedFromHF
 ```
 
-5. Config Bloom-176B pre-training script: examples/bloom/pretrain_bloom_176b.sh
+5. 配置 Bloom-176B 预训练脚本: examples/bloom/pretrain_bloom_176b.sh
 
 ```shell
-# modify MASTER_ADDR to the IP address of the master node in the cluster.
-# the master node is localhost, and the other nodes are the IP address of the master node, for example, 90.90.2.166
+# 修改 MASTER_ADDR 为主节点 IP，比如, 90.90.2.166
 MASTER_ADDR=localhost
 
-# modify the rank number of a node. The rank number of the master node is 0, and the rank number of other nodes increases in ascending order.
+# 修改每个节点的节点序号，主节点序号为 0, 其余节点的序号依次增长到集群节点数量-1
 NODE_RANK=0
 
-# modify the datasets path and tokenizer path
+# 修改数据集路径和词表路径
 TOKENIZER_NAME_OR_PATH=/home/bloom_data/vocab_file/
 DATA_PATH=/home/bloom_data/enwiki_100k/enwiki-100k_text_document
 ```
 
-6. Launch Bloom-176B pre-training script: examples/bloom/pretrain_bloom_176b.sh
+6. 启动 Bloom-176B 预训练脚本: examples/bloom/pretrain_bloom_176b.sh
 
-Run the examples/bloom/pretrain_bloom_176b.sh on all nodes in the cluster.
+在集群中的每个节点上启动 examples/bloom/pretrain_bloom_176b.sh 脚本
 
 ```shell
 bash examples/bloom/pretrain_bloom_176b.sh
 ```
 
-## Performance
+## 性能
 
-### Machine Performance
+### 吞吐
 
-The performance of Bloom-176B in **Ascend NPU** and **Reference**:
+Bloom-176B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 
-| Devices | Model | total iterations | throughput rate (tokens/s/p) |
-| ------- | ----- |-----------------| ---------------------------- |
-| NPUs    | Bloom-176B | 1000            | 100                          |
-| Reference | Bloom-176B | NA              | 107                          |
+| 设备 | 模型         | 总迭代数 | tokens吞吐 (tokens/p/s) |
+|----|------------|------|-----------------------|
+| NPUs | Bloom-176B | 1000 | 100                   |
+| 参考 | Bloom-176B | NA   | 107                   |
 
-### Accuracy of the loss
+### 精度
 
-NPU vs GPU loss. The loss curves of GPUs and NPUs basically coincide.
+NPU vs 参考 loss 
 
 ![bloom176b_lm_loss_compare](../../sources/images/bloom/bloom176b_lm_loss_compare.PNG)
 
-We reduce the number of layers of the model to six, the following figure shows the loss comparsion between the NPU 
-and GPU on a single-node system. The average relative error is 0.1%, less than 2%, and the proportion of relative error less than 2% reaches 99.9%. The average absolute error is 0.04. The precision meets the requirements.
+单节点loss对比
 
 ![bloom176b_1node_lm_loss_compare](../../sources/images/bloom/bloom176b_lm_loss_1node_compare.PNG)
 
-## Inference
+## 推理
 
-We support AscendSpeed Inference for text generation with BLOOM 176B.
+AscendSpeed 支持 BLOOM 176B的在线文本生成推理
+We support AscendSpeed Inference for text generation with BLOOM 176B (deepspeed or megatron).
 
-Use [convert_weights_from_gptmodelpipe_to_gptmodel.sh](../../tools/ckpt_convert/bloom/convert_weights_from_gptmodelpipe_to_gptmodel.sh), converting deep speed checkpoints to megatron.Convert the checkpoint of deepspeed to megtron.
+### deepspeed_pipeline
 
-We use two-machine reasoning. First of all, we need to manually move the pre-trained ckpt to the two machines, node 0 requires layer 1-37, node 1 requires layer 38-74, move the conversion script configuration directory and related parameters, and execute the conversion.
+```shell
+# # 修改 model weight 路径和 tokenizer 路径
+CHECKPOINT=/home/model/bloom_176B
+VOCAB_FILE=/home/bloom_data/vocab_file/
+```
+
+```shell
+bash ./examples/bloom/generate_bloom_176b_deepspeed_pipeline.sh
+```
+
+### megatron
+
+使用 [convert_weights_from_gptmodelpipe_to_gptmodel.sh](../../tools/ckpt_convert/bloom/convert_weights_from_gptmodelpipe_to_gptmodel.sh) 脚本将权重转化为推理格式。
+推理需要两节点运行，需要我们手工将权重同步到两节点下，0号节点需要 1-37 层权重，1号节点需要 38-74 层权重，执行脚本如下：
 ```bash
 SCRIPT_PATH=./tools/ckpt_convert/bloom/convert_weights_from_gptmodelpipe_to_gptmodel_v2.py
 python $SCRIPT_PATH \
@@ -378,21 +464,19 @@ python $SCRIPT_PATH \
     --pipeline-model-parallel-size 2 \
     --type 176B
 ```
-### Script
-We generate text samples using the `generate_bloom` script. Inference different from pre-training, such as we need to Load pre training checkpoint and the length of the output samples:
+### 脚本
 
-Config Bloom-176B inference script: examples/bloom/generate_bloom_176b_2nodes.sh
+配置 Bloom-176B 推理脚本: examples/bloom/generate_bloom_176b_2nodes.sh
 
 ```shell
-# modify MASTER_ADDR to the IP address of the master node in the cluster.
-# the master node is localhost, and the other nodes are the IP address of the master node, for example, 90.90.2.166
+# 修改 MASTER_ADDR 为主节点 IP，比如, 90.90.2.166
 MASTER_ADDR=localhost
 
-# modify the rank number of a node. The rank number of the master node is 0, and the rank number of other nodes increases in ascending order.
+# 修改每个节点的节点序号，主节点序号为 0, 其余节点的序号依次增长到集群节点数量-1
 NODE_RANK=0
 
-# modify the model weight path and tokenizer path
-CHECKPOINT=/home/bloom_data/enwiki_100k/enwiki-100k_text_document
+# 修改数据集路径和词表路径
+CHECKPOINT=/home/model/bloom_176B
 VOCAB_FILE=/home/bloom_data/vocab_file/
 ```
 
@@ -400,19 +484,59 @@ VOCAB_FILE=/home/bloom_data/vocab_file/
 bash ./examples/bloom/generate_bloom_176b_2nodes.sh
 ```
 
-## Example
+
+## 评估 
+配置 Bloom-176B 评估脚本: tasks/evaluation/eval_bloom.sh
+
+```shell
+# 修改 model weight 路径和 tokenizer 路径和数据集任务路径
+CHECKPOINT=/home/model/bloom_176B
+VOCAB_FILE=/home/bloom_data/vocab_file/
+DATA_PATH="/dataset/boolq/test"
+TASK="boolq"
+```
+
+除此之外你还需要根据模型大小设置参数:
+
+```shell
+--num-layers 70 
+--hidden-size 14336 
+--num-attention-heads 112 
+```
+
+```shell
+bash ./tasks/evaluation/eval_bloom.sh
+```
+<table>
+  <thead>
+    <tr>
+      <th>任务</th>
+      <th>验证集</th>
+      <th>模型</th>
+      <th>昇腾值</th>
+      <th>社区值</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="https://huggingface.co/datasets/boolq">Boolq</a></td>
+      <td>Test</td>
+      <th>bloom 176b</th>
+      <td>0.657</td>
+      <td>--</td>
+    </tr>
+  </tbody>
+</table>
+
+## 举例
 1. bloom 7b
+
 ![bloom_7b_generate.png](..%2F..%2Fsources%2Fimages%2Fbloom_7b_generate.png)
 2. bloom 176b
+
 ![bloom_176b_generate.png](..%2F..%2Fsources%2Fimages%2Fbloom_176b_generate.png)
 
-All the provided scripts are tested on 910 64GB NPUs for BLOOM 7B and BLOOM 176B (fp16). These scripts might not work for other models or a different number of NPUs.
-
-> Note: Sometimes NPUs memory is not freed when inference deployment crashes. You can free this memory by running kill all python in terminal.
-
-## Citation
-
-You may also consider original work in your reference:
+## 引用
 
 @article{scao2022bloom,
   title={Bloom: A 176b-parameter open-access multilingual language model},
@@ -420,6 +544,3 @@ You may also consider original work in your reference:
   journal={arXiv preprint arXiv:2211.05100},
   year={2022}
 }
-\
-\
-<font size=1>If the download of the file fails using 'wget' , you can download it manually while ensuring website security.</font>
