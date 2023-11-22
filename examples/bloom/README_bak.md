@@ -1,10 +1,3 @@
-# Bloom
-<p align="left">
-        <b><a href="https://gitee.com/ascend/AscendSpeed/blob/master/examples/bloom/README.md">简体中文</a></b> |
-        <b>English</b> 
-</p>
-
-
 
 # Contents
 
