@@ -6,6 +6,9 @@
     - [Performance](#performance)
       - [Machine performance](#machine-performance)
       - [Accuracy of the loss](#accuracy-of-the-loss)
+  - [Inference](#Inference)
+    - [Script](#script)
+  - [Evaluation with Numerous Benchmarks](#Evaluation-with-Numerous-Benchmarks)
 - [LLaMA-33B/65B](#llama-65b)
   - [Pre-Training](#pre-training)
     - [Datasets](#datasets)
@@ -26,9 +29,9 @@ Here's a hardware summary of pre-training LLaMA-7B/13B:
 Here's a software summary of pre-training LLaMA-7B/13B:
 
 
-|         Software          |   Version   |
-| :-----------------------: |:-----------:|
-|          Python           |   3.7.16    |
+|         Software          |                                                   Version                                                    |
+| :-----------------------: |:------------------------------------------------------------------------------------------------------------:|
+|          Python           |                                                    3.7.5                                                     |
 |          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
@@ -197,10 +200,10 @@ The performance of LLaMA-7B/13B in **Ascend NPU** and **Reference**:
 
 | Device | Model        | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
 | ------ |--------------| ---------------- |-------------------------------|------------------------------|---------------------------|-------------------------------------|
-| NPUs   | LLaMA-7B     | 2048             | 1.398                         | 2862                         | 5.725                     | 162.2                               |
-| Reference   | LLaMA-7B  | 2048             | 1.395                         | 2859                         | 5.73                      | 161.8                               |
-| NPUs   | LLaMA-13B | 2048             | 0.879                         | 1800                         | 18.20                     | 146.1                               |
-| Reference   | LLaMA-13B | 2048             | 0.847                         | 1734                         | 18.89                     | 141.0                               |
+| NPUs   | LLaMA-7B     | 2048             | 1.80                          | 3686                         | 4.44                      | 156.5                               |
+| Reference   | LLaMA-7B  | 2048             | 1.85                          | 3788                         | 4.31                      | 161.1                               |
+| NPUs   | LLaMA-13B | 2048             | 0.956                         | 1958                         | 16.70                     | 212.25                              |
+| Reference   | LLaMA-13B | 2048             | 0.98                          | 2012                         | 16.33                     | 217.37                              |
 
 
 
@@ -208,10 +211,120 @@ The performance of LLaMA-7B/13B in **Ascend NPU** and **Reference**:
 
 LLama-7b with huggingface weights NPU vs GPU loss.
 ![NPU-Loss-with-weight-and-Relative-Error](../../sources/images/llama/llama7b-loss-with-weight.png)
+
 LLama-13b with huggingface weights NPU vs GPU loss.
 ![NPU-Loss-with-weight-and-Relative-Error](../../sources/images/llama/llama13b-loss-with-weight.png)
 
 
+## Inference
+
+We support AscendSpeed Inference for text generation with LLaMA-7B and LLaMA-13B.
+Inference different from pre-training, such as we need to Load pre-training checkpoint and the length of the output samples:
+
+Config LLaMA-7B inference script `examples/llama/generate_llama_7B_deepspeed.sh` and LLaMA-13B inference script `examples/llama/generate_llama_13B_tp8_pp1.sh`.
+
+```shell
+# modify the model weight path and tokenizer path
+CHECKPOINT=<checkpoint-path>
+VOCAB_FILE=<vocabfile-path>
+```
+
+LLaMA-7B:
+```shell
+bash ./examples/llama/generate_llama_7B_deepspeed.sh
+```
+
+LLaMA-13B:
+```shell
+bash ./examples/llama/generate_llama_13B_tp8_pp1.sh
+```
+
+Some inference samples are as follows:
+
+LLaMA-7B:
+
+![llama-7B_generate.png](../../sources/images/llama/llama-7B_generate.png)
+
+LLaMA-13B:
+
+![llama-13B_generate.png](../../sources/images/llama/llama-13B_generate.png)
+
+
+## Evaluation with Numerous Benchmarks
+
+We use bbh benchmark to evaluate our model. Benchmark Download [here](https://huggingface.co/datasets/lukaemon/bbh).
+
+Config LLaMA-7B evaluation script:
+
+```shell
+    CHECKPOINT=./llama-7b-tp4-pp2/
+    VOCAB_FILE=./llama-7b-hf/
+    # configure task and data path
+    DATA_PATH="./bbh/data/test/"
+    TASK="bbh"
+    # configure generation parameters 
+    python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/evaluation/evaluation.py   \
+           --task-data-path $DATA_PATH \
+           --task $TASK\
+           --seq-length 2048 \
+           --max-new-tokens 32 \
+           --max-position-embeddings 2048 \
+           --tensor-model-parallel-size 4  \
+           --pipeline-model-parallel-size 2  \
+           --num-layers 32  \
+           --hidden-size 4096  \
+           --ffn-hidden-size 11008 \
+           --load ${CHECKPOINT}  \
+           --num-attention-heads 32 \
+           --tokenizer-type PretrainedFromHF  \
+           --tokenizer-name-or-path $VOCAB_FILE \
+           --tokenizer-not-use-fast \
+           --fp16  \
+           --micro-batch-size 1  \
+           --seed 42 | tee logs/evaluation.log
+```
+
+Config LLaMA-13B evaluation script:
+
+```shell
+    CHECKPOINT=./llama-13b-tp1-pp8/
+    VOCAB_FILE=./llama-13b-hf/
+    # configure task and data path
+    DATA_PATH="./bbh/data/test/"
+    TASK="bbh"
+    # configure generation parameters 
+    python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/evaluation/evaluation.py   \
+           --task-data-path $DATA_PATH \
+           --task $TASK\
+           --seq-length 2048 \
+           --max-new-tokens 32 \
+           --max-position-embeddings 2048 \
+           --tensor-model-parallel-size 1  \
+           --pipeline-model-parallel-size 8  \
+           --num-layers 40  \
+           --hidden-size 5120  \
+           --ffn-hidden-size 13824 \
+           --load ${CHECKPOINT}  \
+           --num-attention-heads 40 \
+           --tokenizer-type PretrainedFromHF  \
+           --tokenizer-name-or-path $VOCAB_FILE \
+           --tokenizer-not-use-fast \
+           --fp16  \
+           --micro-batch-size 1  \
+           --seed 42 | tee logs/evaluation.log
+```
+
+```shell
+# start evaluation
+bash tasks/evaluation/eval.sh
+```
+
+The evaluation performance of LLaMA-7B/13B in **Ascend NPU**:
+
+| Task    | Model     | NPU  | Benchmark |
+|---------|-----------|------|-----------|
+| [BBH](https://huggingface.co/datasets/lukaemon/bbh) | LLaMA-7B  | 33.4 |   33.4    | 
+| [BBH](https://huggingface.co/datasets/lukaemon/bbh) | LLaMA-13B | 38.7 |   37.9    |
 
 # LLaMA-33B/65B
 
@@ -233,7 +346,7 @@ Here's a hardware summary of training llama:
 
 
 Here's a software summary of training llama:
-                                                   |
+                                                   
 |         Software          |   Version   |
 | :-----------------------: |:-----------:|
 |          Python           |   3.7    |
