@@ -148,8 +148,7 @@ void TECommand::Output(std::vector<at::Tensor> &output)
     context->SetExecuteStream(stream);
 
     auto op = this->operation;
-    output.clear();
-    auto te_call = [&op, variantPack, &workspaceTensor, workspaceSize, &context, &output]() -> int {
+    auto te_call = [&op, variantPack, &workspaceTensor, workspaceSize, &context]() -> int {
         auto api_ret = op->Execute(variantPack, (uint8_t *)workspaceTensor.storage().data(), workspaceSize, context);
         TORCH_CHECK(api_ret == 0, "execute failed");
         // atb::DestroyContext(context);
