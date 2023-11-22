@@ -126,7 +126,7 @@ TECommand& TECommand::Input(const c10::optional<at::Tensor> &tensor)
 
 void TECommand::Output(std::vector<at::Tensor> &output)
 {
-    auto variantPack = BuildVariantPack(output);
+    BuildVariantPack(output);
 
     uint64_t workspaceSize = 0;
     auto status = operation->Setup(variantPack, workspaceSize);
@@ -147,6 +147,7 @@ void TECommand::Output(std::vector<at::Tensor> &output)
 
     context->SetExecuteStream(stream);
 
+    auto variantPack = this->variantPack;
     auto te_call = [this, variantPack, workspaceTensor, workspaceSize, context]() -> int {
         auto api_ret = this->operation->Execute(variantPack, (uint8_t *)workspaceTensor.storage().data(), workspaceSize, context);
         TORCH_CHECK(api_ret == 0, "execute failed");
@@ -159,10 +160,8 @@ void TECommand::Output(std::vector<at::Tensor> &output)
     cmd.Run();
 }
 
-atb::VariantPack TECommand::BuildVariantPack(std::vector<at::Tensor> &atOutTensors)
+void TECommand::BuildVariantPack(std::vector<at::Tensor> &atOutTensors)
 {
-    atb::VariantPack variantPack;
-
     atb::SVector<atb::TensorDesc> inTensorDescs;
     atb::SVector<atb::TensorDesc> outTensorDescs;
     for (size_t i = 0; i < inTensors.size(); ++i) {
@@ -195,5 +194,4 @@ atb::VariantPack TECommand::BuildVariantPack(std::vector<at::Tensor> &atOutTenso
             variantPack.outTensors.at(i).desc.format = ACL_FORMAT_ND;
         }
     }
-    return variantPack;
 }

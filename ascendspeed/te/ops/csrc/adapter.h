@@ -42,7 +42,7 @@ public:
     void Output(std::vector<at::Tensor> &output);
 
 private:
-    atb::VariantPack BuildVariantPack(std::vector<at::Tensor> &atOutTensors);
+    void BuildVariantPack(std::vector<at::Tensor> &output);
 
 private:
     std::string name;
