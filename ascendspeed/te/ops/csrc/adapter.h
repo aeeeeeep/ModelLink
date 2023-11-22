@@ -47,6 +47,7 @@ private:
 private:
     std::string name;
     atb::Operation *operation;
+    atb::VariantPack variantPack;
     std::vector<atb::Tensor> inTensors;
 };
 
