@@ -73,6 +73,15 @@ atb::Tensor AtTensor2Tensor(const at::Tensor atTensor)
     return tensor;
 }
 
+at::Tensor FormatTrans(const at::Tensor &at_tensor)
+{
+    if (at_tensor.defined()) {
+        TORCH_CHECK(torch_npu::utils::is_npu(at_tensor), "only npu tensor is supported");
+        return at_npu::native::NPUNativeFunctions::npu_format_cast(at_tensor, ACL_FORMAT_ND);
+    }
+    return at_tensor;
+}
+
 TECommand::TECommand() {}
 
 TECommand& TECommand::SetOperation(atb::Operation **operation)
@@ -89,14 +98,18 @@ TECommand& TECommand::Name(std::string name)
 
 TECommand& TECommand::Input(const at::Tensor &tensor)
 {
-    inTensorDescs.push_back(AtTensor2Tensor(tensor).desc);
+    at::Tensor newTensor = FormatTrans(tensor);
+    if(!newTensor.is_contiguous()) {
+        newTensor = newTensor.contiguous();
+    }
+    inTensors.push_back(AtTensor2Tensor(newTensor));
     return *this;
 }
 
 TECommand& TECommand::Input(const at::Tensor &tensor, bool isNone)
 {
     if (isNone) {
-        inTensorDescs.push_back(atb::Tensor().desc);
+        inTensors.push_back(atb::Tensor());
         return *this;
     }
     return Input(tensor);
@@ -105,7 +118,7 @@ TECommand& TECommand::Input(const at::Tensor &tensor, bool isNone)
 TECommand& TECommand::Input(const c10::optional<at::Tensor> &tensor)
 {
     if (!tensor.has_value()) {
-        inTensorDescs.push_back(atb::Tensor().desc);
+        inTensors.push_back(atb::Tensor());
         return *this;
     }
     return Input(tensor.value());
@@ -116,15 +129,7 @@ void TECommand::Output(std::vector<at::Tensor> &output)
     atb::Status status = operation->InferShape(inTensorDescs, outTensorDescs);
     TORCH_CHECK(status == 0, "infershape failed!");
 
-    atb::VariantPack variantPack;
-    variantPack.inTensors.resize(operation->GetInputNum());
-    variantPack.outTensors.resize(operation->GetOutputNum());
-    for (size_t i = 0; i < variantPack.inTensors.size(); ++i) {
-        variantPack.inTensors.at(i).desc = inTensorDescs.at(i);
-    }
-    for (size_t i = 0; i < variantPack.outTensors.size(); ++i) {
-        variantPack.outTensors.at(i).desc = outTensorDescs.at(i);
-    }
+    auto variantPack = BuildVariantPack(output);
 
     uint64_t workspaceSize = 0;
     status = operation->Setup(variantPack, workspaceSize);
@@ -151,14 +156,49 @@ void TECommand::Output(std::vector<at::Tensor> &output)
         auto api_ret = op->Execute(variantPack, (uint8_t *)workspaceTensor.storage().data(), workspaceSize, context);
         TORCH_CHECK(api_ret == 0, "execute failed");
         // atb::DestroyContext(context);
-        for (size_t i = 0; i < variantPack.outTensors.size(); ++i) {
-            at::Tensor temp = CreateAtTensorFromTensorDesc(variantPack.outTensors.at(i).desc);
-            output.push_back(temp);
-        }
         return api_ret;
     };
     at_npu::native::OpCommand cmd;
     cmd.Name(this->name);
     cmd.SetCustomHandler(te_call);
     cmd.Run();
+}
+
+atb::VariantPack TECommand::BuildVariantPack(std::vector<at::Tensor> &atOutTensors)
+{
+    atb::VariantPack variantPack;
+
+    atb::SVector<atb::TensorDesc> inTensorDescs;
+    atb::SVector<atb::TensorDesc> outTensorDescs;
+    for (size_t i = 0; i < inTensors.size(); ++i) {
+        atb::Tensor inTensor = inTensors.at(i);
+        if (inTensor.desc.format == ACL_FORMAT_NCHW) {
+            inTensor.desc.format = ACL_FORMAT_ND;
+        }
+        inTensorDescs.push_back(inTensor.desc);
+    }
+    atb::Status status = operation->InferShape(inTensorDescs, outTensorDescs);
+    TORCH_CHECK(status == 0, "infershape failed!");
+
+    variantPack.inTensors.resize(inTensorDescs.size());
+    for (size_t i = 0; i < inTensors.size(); ++i) {
+        variantPack.inTensors.at(i) = inTensors.at(i);
+        if (variantPack.inTensors.at(i).desc.format == ACL_FORMAT_NCHW) {
+            variantPack.inTensors.at(i).desc.format = ACL_FORMAT_ND;
+        }
+    }
+
+    for (size_t i = 0; i < outTensorDescs.size(); ++i) {
+        at::Tensor newTensor = CreateAtTensorFromTensorDesc(outTensorDescs.at(i));
+        atOutTensors.push_back(newTensor);
+    }
+
+    variantPack.outTensors.resize(atOutTensors.size());
+    for (size_t i = 0; i < atOutTensors.size(); ++i) {
+        variantPack.outTensors.at(i) = AtTensor2Tensor(atOutTensors.at(i));
+        if (variantPack.outTensors.at(i).desc.format == ACL_FORMAT_NCHW) {
+            variantPack.outTensors.at(i).desc.format = ACL_FORMAT_ND;
+        }
+    }
+    return variantPack;
 }

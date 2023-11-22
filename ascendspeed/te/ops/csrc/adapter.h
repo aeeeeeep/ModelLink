@@ -21,7 +21,6 @@
 #include <torch/custom_class.h>
 #include "atb/types.h"
 #include "atb/operation.h"
-#include "atb/svector.h"
 
 #define OP_SETPARAM(OpParam)                                                      \
     void SetParam(const OpParam &opParam, TECommand &command)                     \
@@ -43,10 +42,12 @@ public:
     void Output(std::vector<at::Tensor> &output);
 
 private:
+    atb::VariantPack BuildVariantPack(std::vector<at::Tensor> &atOutTensors);
+
+private:
     std::string name;
     atb::Operation *operation;
-    atb::SVector<atb::TensorDesc> inTensorDescs;
-    atb::SVector<atb::TensorDesc> outTensorDescs;
+    std::vector<atb::Tensor> inTensors;
 };
 
 #endif
