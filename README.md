@@ -58,7 +58,8 @@ LLaMA2-13B/34B, Aquila-7B, Baichuan2-7B/13B 等模型即将上线...
 * [高性能优化器](#jump8)
 * [前向网络合并](#jump9)
 * [梯度累积](#jump9)
-* [计算通信并行](#jump10)
+* [混精内存复用](#jump10)
+* [计算通信并行](#jump11)
 
 更多高效的加速算法正在为昇腾芯片上的大语言模型研发中...
 
@@ -169,7 +170,7 @@ LLaMA2-13B/34B, Aquila-7B, Baichuan2-7B/13B 等模型即将上线...
     </tr>
     <tr>
       <td>BF16 </td>
-      <td> 234 </td>
+      <td> 309 </td>
       <td> 260 </td>
       <td> <a href="sources/images/llama65b_bf_loss.png">Loss</a> </td>
       <td> <a href="examples/llama/pretrain_llama_65B_ptd_32p.sh">训练</a> </td>
@@ -179,7 +180,7 @@ LLaMA2-13B/34B, Aquila-7B, Baichuan2-7B/13B 等模型即将上线...
       <td>7B</td>
       <td>1x8</td>
       <td>FP16 </td>
-      <td> 2460 </td>
+      <td> 2712 </td>
       <td> 2348 </td>
       <td> <a href="sources/images/llama2/llama2_7b_shape_fp16_layer32_loss_with_weights.png">Loss</a> </td>
       <td> <a href="examples/llama2/pretrain_llama2_7b_zero_8p.sh">训练</a> </td>
@@ -850,6 +851,12 @@ Fold3D 隐藏了 PP 中数据并行的通信时间，其基本原理如下：<di
 为了使用有限的显存来训练更大的模型，AscendSpeed 支持完全重计算以及选择性重计算策略，为了使能完全重计算，可以使用 `--checkpoint-activations` 标志，
 至于选择性重计算，则可以通过添加 `--checkpoint-policy` 标志来决定选择性重计算的策略。
 
+为了最大限度地利用NPU内存，同时提高模型训练的性能，我们支持通过调整训练内存大小的方式，自动获取选择重计算策略，这一特性称为[自适应选择重计算](https://gitee.com/ascend/AscendSpeed/wikis/Algorithm%20Introduction/Auto%20Selective%20Recomputing)。
+启用自适应选择重计算，请使用`--auto-recompute-device-size`标志指定自适应选择重计算策略的训练内存大小（单位：MB）。请注意，如果要使用`--auto-recompute-device-size`标志，请删除标志`--checkpoint-activations`。
+如果发生OOM，您需要重新选择一个内存值来重启模型训练。您也可以通过[二分法](https://gitee.com/ascend/AscendSpeed/wikis/Algorithm%20Introduction/Auto%20Selective%20Recomputing)的方式获得最优解。
+自适应选择重计算根据profiling前N步的训练内存信息进行策略选择，您可以通过使用`--auto-recompute-profiling-step`标志设置[停止profiling](https://gitee.com/ascend/AscendSpeed/wikis/Algorithm%20Introduction/Auto%20Selective%20Recomputing)的步数。
+默认在第10步停止profiling，最小设置为5步，建议在训练内存平稳后停止profiling，这样可以获得更佳的选择重计算策略。
+
 ### <span id="jump5"> 序列并行 </span>
 序列并行（Sequence Parallelism，SP）是一种模型并行策略，它依赖TP的实现，沿着序列轴按照TP的维度拆分了dropout层和layernorm层。
 SP将TP中的allreduce操作拆分为了reduce-scatter和allgather操作，这降低了模型训练中的内存占用。
@@ -964,8 +971,43 @@ Cadam是基于谷歌提出的[Lion优化器](https://arxiv.org/abs/2302.06675)�
 ### <span id="jump9">  梯度累积 </span>
 梯度累积基于 N 轮梯度更新一次参数，这里的 N = global batchsize / micro batchsize / DP，DP = device nums / tp / pp。
 
+### <span id="jump10"> 混精内存复用 </span>
+混合精度训练中，需要保存参数副本、梯度副本、优化器状态等多种状态张量，占据了大量的静态内存（16N，N为参数量），而实际参与前反向计算的参数和梯度（4N，N为参数量）相比之下占比很小，优化以上状态张量可以带来极大的显存收益。本算法希望通过深入分析每部分状态张量的实际使用实现机制的显存复用，最终得到一个集成多个算法模块的多级优化器内存优化方案。
+- 内存复用O1——梯度副本去冗余
+  - 优势：完全等价、支持多种优化器、性能无损
+  - 算法原理：将原本需要持久保存的FP32梯度副本的静态内存，复用FP16梯度的内存，在需要时通过`Foreach`+`Cast`操作转换成FP32的形式，可节省4N的空间。
+  - 使用方式：该等价算法对所有优化器适用，可在脚本中通过指定`--release-fp32-grad`触发。
+  - 使用限制：当前仅适配Adam优化器，其余优化器可参考Adam实现。
 
-### <span id="jump10"> Communication over computation (CoC)
+原始混合精度训练流程：
+
+<div align=center>
+<img src="https://foruda.gitee.com/images/1700028272497165508/7fbb164b_7943704.png" height="545px" width="461px"></div>
+
+内存复用O1训练流程：
+
+<div align=center>
+<img src="https://foruda.gitee.com/images/1700028261897403802/74ba37b6_7943704.png" height="570px" width="655px"></div>
+
+部分模型测试结果如下表：
+
+| Model    | Algorithm            | Performance     | Compress HBM | Performance Error | Precision Error | Hardware |
+|----------|----------------------|-----------------|---------------|-------------------|-----------------|----------|
+| LLama-7B | baseline             | 5.39s/iteration | --            | --                | --              | 910B*8P  |
+|          | O1 algorithm         | 5.40s/iteration | ↓ 13.5%       | ↓ 0.17%           | < 0.05%         | 910B*8P  |
+| LLama-13B| baseline             | 8.95s/iteration | --            | --                | --              | 910B*8P  |
+|          | O1 algorithm         | 8.92s/iteration | ↓ 14.90%      | ↑ 0.34%           | < 0.2%          | 910B*8P  |
+| LLama2-7B| baseline             | 6.48s/iteration | --            | --                | --              | 910B*8P  |
+|          | O1 algorithm         | 6.48s/iteration | ↓ 10.87%      | ↓ 0.00%           | < 0.2%          | 910B*8P  |
+| Bloom-7B | baseline             | 5.45s/iteration | --            | --                | --              | 910B*8P  |
+|          | O1 algorithm         | 5.49s/iteration | ↓ 12.68%      | ↓ 0.7%            | < 0.01%         | 910B*8P  |
+| LLama-32B| baseline             | 5.23s/iteration | --            | --                | --              | 910B*16P |
+|          | O1 argorithm         | 5.28s/iteration | ↓ 15.93%      | ↓ 0.95%           | < 0.02%         | 910B*16P |
+| LLama-7B | distributed baseline | 5.18s/iteration | --            | --                | --              | 910B*8P  |
+|          | O1 distributed algorithm | 5.19s/iteration | ↓ 9.50%       | ↓ 0.2%            | < 0.1%          | 910B*8P  |
+
+
+### <span id="jump11"> Communication over computation (CoC)
 For LLMs, there are certain linear (matmul+add) operations in both forward and backward when model tensor parallelism in enabled. These computations can be overlapped with certain communications by cutting the parallelized tensor even further to enable a pipeline throughout each part of the tensor. To enable this feature, please set environment variable `CC_PARALLEL_NUM=4` (could be set to 2/4/8 as a tuning parameter, or 1 if disable CoC). Notice that the benefits introduced by this optimization highly depends on the shape of matmul and the communication burden, thus further tuning might be required, following the detailed tutorials README.md and README_ch.md under directory `./ascendspeed/core/tensor_parallel/min_comm/`.
 
 
