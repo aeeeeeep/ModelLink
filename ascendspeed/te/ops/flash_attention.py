@@ -36,7 +36,7 @@ class AscendFlashAttention(torch.autograd.Function):
 
         ctx.save_for_backward(query, key, value, atten_mask_opt, alibi_mask_opt, outputs[0], outputs[1])
 
-        return outputs
+        return outputs[0]
 
     @staticmethod
     def backward(ctx, grad_outputs):

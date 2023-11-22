@@ -29,6 +29,8 @@ using namespace std;
 OP_SETPARAM(atb::train::FlashAttentionParam)
 OP_SETPARAM(atb::train::FlashAttentionBackwardParam)
 
+const static int N = 32;
+
 std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
                            const c10::optional<at::Tensor> &atten_mask, const c10::optional<at::Tensor> &alibi_mask,
                            const c10::optional<at::Tensor> &drop_mask, float scale_value, int64_t head_num, int64_t io_layout, float keep_prob,
@@ -116,7 +118,7 @@ at::Tensor gen_mask_impl(const at::Tensor &self, const at::Scalar &keep_prob, co
     int64_t length = (numels + 256 - 1) / 256 * 256 / 8;
     c10::TensorOptions options = self.options();
     at::Tensor mask = at::empty(at::IntArrayRef{length + 32}, options.dtype(at::kByte));
-    at::SmallVector<int64_t, at_npu::native::N> offsetList = {0, offset};
+    at::SmallVector<int64_t, N> offsetList = {0, offset};
     const int64_t seed1 = 0;
     at_npu::native::OpCommand cmd;
     cmd.Name("StatelessDropOutGenMask")
