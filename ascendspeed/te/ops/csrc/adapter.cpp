@@ -127,7 +127,7 @@ void TECommand::Output(std::vector<at::Tensor> &output)
     }
 
     uint64_t workspaceSize = 0;
-    atb::Status status = operation->Setup(variantPack, workspaceSize);
+    status = operation->Setup(variantPack, workspaceSize);
     TORCH_CHECK(status == 0, "setup failed!");
     TORCH_CHECK(workspaceSize > 0, "get workspace size failed!");
 
@@ -152,7 +152,7 @@ void TECommand::Output(std::vector<at::Tensor> &output)
         TORCH_CHECK(api_ret == 0, "execute failed");
         // atb::DestroyContext(context);
         for (size_t i = 0; i < variantPack.outTensors.size(); ++i) {
-            at::Tensor temp = CreateAtTensorFromTensorDesc(variantPack.outTensors.at(i));
+            at::Tensor temp = CreateAtTensorFromTensorDesc(variantPack.outTensors.at(i).desc);
             output.push_back(temp);
         }
         return api_ret;

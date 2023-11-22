@@ -44,8 +44,8 @@ public:
 private:
     std::string name;
     atb::Operation *operation;
-    std::vector<atb::TensorDesc> inTensorDescs;
-    std::vector<atb::TensorDesc> outTensorDescs;
+    SVector<atb::TensorDesc> inTensorDescs;
+    SVector<atb::TensorDesc> outTensorDescs;
 };
 
 #endif
