@@ -148,7 +148,8 @@ void TECommand::Output(std::vector<at::Tensor> &output)
     context->SetExecuteStream(stream);
     auto ins = variantPack.inTensors;
     auto outs = variantPack.outTensors;
-    auto te_call = [this, &ins, &outs, workspaceTensor, workspaceSize, context]() -> int {
+    auto op = this->operation;
+    auto te_call = [&op, &ins, &outs, &workspaceTensor, workspaceSize, &context]() -> int {
         atb::VariantPack varPack;
         varPack.inTensors.resize(ins.size());
         varPack.outTensors.resize(outs.size());
@@ -158,7 +159,7 @@ void TECommand::Output(std::vector<at::Tensor> &output)
         for (size_t i = 0; i < outs.size(); ++i) {
             varPack.outTensors.at(i) = outs.at(i);
         }
-        auto api_ret = this->operation->Execute(varPack, (uint8_t *)workspaceTensor.storage().data(), workspaceSize, context);
+        auto api_ret = op->Execute(varPack, (uint8_t *)workspaceTensor.storage().data(), workspaceSize, context);
         TORCH_CHECK(api_ret == 0, "execute failed");
         // atb::DestroyContext(context);
         return api_ret;
