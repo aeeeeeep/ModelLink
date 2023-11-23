@@ -146,19 +146,9 @@ void TECommand::Output(std::vector<at::Tensor> &output)
     TORCH_CHECK(status == 0, "create context failed!");
 
     context->SetExecuteStream(stream);
-    auto ins = variantPack.inTensors;
-    auto outs = variantPack.outTensors;
-    auto te_call = [this, ins, outs, workspaceTensor, workspaceSize, context]() -> int {
-        atb::VariantPack varPack;
-        varPack.inTensors.resize(ins.size());
-        varPack.outTensors.resize(outs.size());
-        for (size_t i = 0; i < ins.size(); ++i) {
-            varPack.inTensors.push_back(ins.at(i));
-        }
-        for (size_t i = 0; i < outs.size(); ++i) {
-            varPack.outTensors.push_back(outs.at(i));
-        }
-        auto api_ret = this->operation->Execute(varPack, (uint8_t *)workspaceTensor.storage().data(), workspaceSize, context);
+
+    auto te_call = [this, &variantPack, workspaceTensor, workspaceSize, context]() -> int {
+        auto api_ret = this->operation->Execute(variantPack, (uint8_t *)workspaceTensor.storage().data(), workspaceSize, context);
         TORCH_CHECK(api_ret == 0, "execute failed");
         // atb::DestroyContext(context);
         return api_ret;
