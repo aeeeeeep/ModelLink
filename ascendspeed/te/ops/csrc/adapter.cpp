@@ -126,7 +126,7 @@ TECommand& TECommand::Input(const c10::optional<at::Tensor> &tensor)
 
 void TECommand::Output(std::vector<at::Tensor> &output)
 {
-    BuildVariantPack(output);
+    atb::VariantPack variantPack = BuildVariantPack(output);
 
     uint64_t workspaceSize = 0;
     auto status = operation->Setup(variantPack, workspaceSize);
@@ -146,10 +146,19 @@ void TECommand::Output(std::vector<at::Tensor> &output)
     TORCH_CHECK(status == 0, "create context failed!");
 
     context->SetExecuteStream(stream);
-
-    auto variantPack = this->variantPack;
-    auto te_call = [this, variantPack, workspaceTensor, workspaceSize, context]() -> int {
-        auto api_ret = this->operation->Execute(variantPack, (uint8_t *)workspaceTensor.storage().data(), workspaceSize, context);
+    auto ins = variantPack.inTensors;
+    auto outs = variantPack.outTensors;
+    auto te_call = [this, &ins, &outs, workspaceTensor, workspaceSize, context]() -> int {
+        atb::VariantPack varPack;
+        varPack.inTensors.resize(ins.size());
+        varPack.outTensors.resize(outs.size());
+        for (size_t i = 0; i < ins.size(); ++i) {
+            varPack.inTensors.at(i) = ins.at(i);
+        }
+        for (size_t i = 0; i < outs.size(); ++i) {
+            varPack.outTensors.at(i) = outs.at(i);
+        }
+        auto api_ret = this->operation->Execute(varPack, (uint8_t *)workspaceTensor.storage().data(), workspaceSize, context);
         TORCH_CHECK(api_ret == 0, "execute failed");
         // atb::DestroyContext(context);
         return api_ret;
@@ -160,8 +169,10 @@ void TECommand::Output(std::vector<at::Tensor> &output)
     cmd.Run();
 }
 
-void TECommand::BuildVariantPack(std::vector<at::Tensor> &atOutTensors)
+atb::VariantPack TECommand::BuildVariantPack(std::vector<at::Tensor> &atOutTensors)
 {
+    atb::VariantPack variantPack;
+
     atb::SVector<atb::TensorDesc> inTensorDescs;
     atb::SVector<atb::TensorDesc> outTensorDescs;
     for (size_t i = 0; i < inTensors.size(); ++i) {
@@ -194,4 +205,5 @@ void TECommand::BuildVariantPack(std::vector<at::Tensor> &atOutTensors)
             variantPack.outTensors.at(i).desc.format = ACL_FORMAT_ND;
         }
     }
+    return variantPack;
 }

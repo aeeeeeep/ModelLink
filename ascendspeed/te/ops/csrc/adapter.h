@@ -42,12 +42,11 @@ public:
     void Output(std::vector<at::Tensor> &output);
 
 private:
-    void BuildVariantPack(std::vector<at::Tensor> &output);
+    atb::VariantPack BuildVariantPack(std::vector<at::Tensor> &atOutTensors);
 
 private:
     std::string name;
     atb::Operation *operation;
-    atb::VariantPack variantPack;
     std::vector<atb::Tensor> inTensors;
 };
 
