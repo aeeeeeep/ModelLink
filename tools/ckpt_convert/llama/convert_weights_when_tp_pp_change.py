@@ -171,7 +171,7 @@ def merge_pp_tp_models(config):
                                                      pp_i, g_i, dim=1)
             merge_weight(merge_weight_config1)
             if args.merge_mlp:
-                mlp_key = "language_model.layers.{}.mlp.".format(g_i)
+                mlp_key = "language_model.layers.{}.mlp.".format(pp_i)
                 mlp_len = tp_models[0][mlp_key + "proj.weight"].shape[0] // 2
                 for tm in tp_models:
                     tm[mlp_key + "gate_proj.weight"] = tm[mlp_key + "proj.weight"][:mlp_len].clone()

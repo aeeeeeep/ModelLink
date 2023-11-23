@@ -204,16 +204,16 @@ Here's a hardware summary of pre-training  LLaMA2-70B:
 Here's a software summary of pre-training  LLaMA2-70B: 
 
 
-|         Software          |                 Version                 |                                                                                      link                                                                                       |
-|:-------------------------:|:---------------------------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
-|          Python           |                  3.8.0                  |                                                                                        -                                                                                        |
-|          driver           |              23.0.RC3.B050              | [link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159045?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743) |
-|         firmware          |              7.0.t8.0.b214              | [link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159045?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743) |
-|           CANN            |   Ascend-cann-toolkit-7.0.0.T26-linux   |                                                [link](https://support.huawei.com/enterprise/zh/software/261305471-ESW2000887514)                                                |
-| binary arithmetic package | Ascend-cann-kernels-XXX_7.0.0.T26_linux |                                                [link](https://support.huawei.com/enterprise/zh/software/261305471-ESW2000887523)                                                |
-|           torch           |                  2.0.1                  |                                                   [link](https://gitee.com/ascend/pytorch/releases/tag/v5.0.rc3-pytorch2.0.1)                                                   |
-|         torch_npu         |          2.0.1.post4-20231010           |                          [link](https://gitee.com/ascend/pytorch/releases/download/v5.0.rc3-pytorch2.0.1/torch_npu-2.0.1-cp38-cp38-linux_aarch64.whl)                           |
-|           apex            |                   0.1                   |                                                                                        -                                                                                        |
+|         Software          |                      Version                      |                                                                                      link                                                                                       |
+|:-------------------------:|:-------------------------------------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+|          Python           |                       3.8.0                       |                                                                                        -                                                                                        |
+|          driver           |                   23.0.RC3.B050                   | [link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159045?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743) |
+|         firmware          |                   7.0.t8.0.b214                   | [link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159045?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743) |
+|           CANN            |  Ascend-cann-toolkit_7.0.0.alpha002_linux-*.run   |                                                [link](https://www.hiascend.com/developer/download/community/result?module=cann)                                                 |
+| binary arithmetic package | Ascend-cann-kernels-910b_7.0.0.alpha002_linux.run |                                                [link](https://www.hiascend.com/developer/download/community/result?module=cann)                                                 |
+|           torch           |                       2.0.1                       |                                                   [link](https://gitee.com/ascend/pytorch/releases/tag/v5.0.rc3-pytorch2.0.1)                                                   |
+|         torch_npu         |                       2.0.1                       |                             [link](https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/Daily/v2.0.1/20231115.2/pytorch_v2.0.1_py38.tar.gz)                             |
+|           apex            |                        0.1                        |                             [link](https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/Daily/v2.0.1/20231115.2/pytorch_v2.0.1_py38.tar.gz)                             |
 
 
 ### Script-70B
@@ -223,7 +223,6 @@ Here's a software summary of pre-training  LLaMA2-70B:
     git clone https://gitee.com/ascend/AscendSpeed.git 
     cd AscendSpeed 
     mkdir logs
-    mkdir ckpt
     ```
 
 2. Build environment
@@ -235,8 +234,8 @@ Here's a software summary of pre-training  LLaMA2-70B:
     
     # install torch and torch_npu
     pip install torch-2.0.1-cp38-cp38m-manylinux2014_aarch64.whl
-    pip install torch_npu-2.0.1-cp38-cp38m-linux_aarch64.whl
-    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+    pip install torch_npu-2.0.1*-cp38-cp38-linux_aarch64.whl
+    pip install apex-0.1_ascend*-cp38-cp38-linux_aarch64.whl
     
     # install megatron-core
     pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
@@ -360,9 +359,11 @@ Here's a software summary of pre-training  LLaMA2-70B:
     TOKENIZER_PATH=./llama2-70b-hf/  #tokenizer path
     DATA_PATH=./dataset_llama2/alpaca_text_document  #processed dataset
     ```      
+    In case of no shared hard disk,
+    modify 'AscendSpeed/ascendspeed/data/gpt_dataset.py' in about line 328, 
+    from  ```if is_rank_0():``` to ```if torch.cude.current_device() == 0:```
     
 6. Launch LLaMA2-70B pre-training script: examples/llama2/pretrain_llama2_70B_ptd.sh
-    
     ```shell
     bash examples/llama2/pretrain_llama2_70B_ptd.sh
     ```
@@ -533,21 +534,22 @@ Elapsed: 48.53s
 
 ## Evaluation-70B
 
-We use MMLU benchmark to evaluate our model. Benchmark Download [here](https://huggingface.co/datasets/cais/mmlu).
+We use BoolQ benchmark to evaluate our model. Benchmark [here](https://huggingface.co/datasets/boolq)
+Download dev part[here](https://storage.googleapis.com/boolq/dev.jsonl) and put it in a directory named “boolq_dev”.
 
 ```shell
     CHECKPOINT=./ptd_80lt8p1/
     VOCAB_FILE=./llama2-70b-hf/
     # configure task and data path
-    DATA_PATH="./mmlu/data/test/"
-    TASK="mmlu"
+    DATA_PATH="./boolq_dev/"
+    TASK="boolq"
     # configure generation parameters 
     python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation.py   \
            --task-data-path $DATA_PATH \
            --task $TASK\
-           --seq-length 2048 \
+           --seq-length 512 \
            --max-new-tokens 32 \
-           --max-position-embeddings 2048 \
+           --max-position-embeddings 512 \
            --tensor-model-parallel-size 8  \
            --pipeline-model-parallel-size 1  \
            --num-layers 80  \
@@ -567,3 +569,27 @@ We use MMLU benchmark to evaluate our model. Benchmark Download [here](https://h
     # start evaluation
     bash tasks/evaluation/eval.sh
 ```
+
+Evaluation results with boolq dataset:
+
+<table>
+  <thead>
+    <tr>
+      <th>Task</th>
+      <th>Subset</th>
+      <th>Model</th>
+      <th>NPU</th>
+      <th>Benchmark(test)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="https://huggingface.co/datasets/boolq">BoolQ</a></td>
+      <td>dev</td>
+      <th>Llama2-70b</th>
+      <td>0.858</td>
+      <td><a href="https://opencompass.org.cn/dataset-detail/BoolQ">0.877</a></td>
+    </tr>
+  </tbody>
+</table>
+
