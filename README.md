@@ -841,10 +841,14 @@ PP 和 VP的基本原理如下：<div align=center> <img src="sources/images/pp_
 为了使用VP，需要额外添加 `--num-layers-per-virtual-pipeline-stage` 标志，来决定每个虚拟stage的层数；为了使用DPP，则需要在PP的基础上添加 `--optimized-pipeline` 和 `--manual-mbs example-config-1` 标志。需要说明的是，虽然VP和DPP可以减少空泡时间，但是会增加通讯时间。
 
 
-### <span id="jump3"> Fold3D </span>
-Fold3D 隐藏了 PP 中数据并行的通信时间，其基本原理如下：<div align=center>
+### <span id="jump3"> Fold3D&&FoldX </span>
+FoldX调度算法主要约束了不同机器在虚拟流水线（vpp）调度中的张量收发情况，并通过异步通信的机制实现通信隐藏，提升大模型训练性能。
+
+Fold3D 隐藏了PP中数据并行的通信时间，其基本原理如下图(b)所示：
+
+FoldX-DP基于FoldX实现了dp维度的通信隐藏。<div align=center>
 <img src="sources/images/fold3d.png" height="350px" width="800px"></div>
-在AscendSpeed中，使用 `--fold-mode "aiao"` 标志可以打开该功能。
+在AscendSpeed中，使用 `--fold-mode "aiao"` 标志可以打开Fold3D功能；使用`--fold-mode "fifo"` 标志可以打开FoldX功能；在FoldX开启的基础上，使用`--foldx-dp` 标志可以打开FoldX-DP功能。
 
 ### <span id="jump4"> (选择性) 重计算 </span>
 为了使用有限的显存来训练更大的模型，AscendSpeed 支持完全重计算以及选择性重计算策略，为了使能完全重计算，可以使用 `--checkpoint-activations` 标志，

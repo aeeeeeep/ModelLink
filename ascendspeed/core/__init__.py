@@ -1,6 +1,6 @@
 import ascendspeed.core.parallel_state
 import ascendspeed.core.utils
-
+import ascendspeed.core.pipeline_parallel
 from .inference_params import InferenceParams
 from .model_parallel_config import ModelParallelConfig
 

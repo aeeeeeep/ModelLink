@@ -53,8 +53,6 @@ from ascendspeed.utils import calc_params_l2_norm
 from ascendspeed.utils import report_memory, throughput_calculator, checkpoint_throughput_calculator
 from ascendspeed.model.transformer import ParallelTransformerLayer
 from ascendspeed.model.lora_utils import is_enable_lora, handle_model_with_lora
-from ascendspeed.core.pipeline_parallel.schedules import forward_backward_pipelining_with_foldx_fifo
-from ascendspeed.core.pipeline_parallel.schedules import forward_backward_pipelining_with_foldx_aiao
 from ascendspeed.core.pipeline_parallel.schedules import get_forward_backward_func, get_forward_func
 from ascendspeed.core.memory.auto_recomputing.autorecompute import autorecompute_profile
 from ascendspeed.error_utils import (
@@ -211,15 +209,7 @@ def pretrain(train_valid_test_dataset_provider,
             build_train_valid_test_data_iterators(train_valid_test_dataset_provider)
             for _ in range(len(model))
         ]
-        train_data_iterator = [data_iterators[0] for data_iterators in all_data_iterators]
-        if args.foldx_mode is not None:
-            train_data_iterator = [[] for _ in all_data_iterators]
-            if all_data_iterators[0][0] is None:
-                from types import SimpleNamespace
-                train_data_iterator[0] = SimpleNamespace()
-            else:
-                train_data_iterator[0] = all_data_iterators[0][0]
-            train_data_iterator[0].dummy_iterators = train_data_iterator[1:]
+        train_data_iterator = [data_iterators[0] for data_iterators in all_data_iterators]        
         valid_data_iterator = [[
             all_data_iterators[i][1][j] for i in range(len(all_data_iterators))]
             for j in range(len(all_data_iterators[0][1]))
@@ -724,26 +714,15 @@ def train_step(forward_step_func, data_iterator,
         # calculation in forward pass. Users do not need to set it in the
         # command line to use kd.
         args.teacher_forward = True
-    if forward_backward_func == forward_backward_pipelining_with_foldx_fifo or\
-            forward_backward_func == forward_backward_pipelining_with_foldx_aiao:
-        losses_reduced = forward_backward_func(
-            forward_step_func=forward_step_func,
-            data_iterator=data_iterator,
-            model=model,
-            num_microbatches=get_num_microbatches(),
-            seq_length=args.seq_length,
-            micro_batch_size=args.micro_batch_size,
-            decoder_seq_length=args.decoder_seq_length)
-    else:
-        losses_reduced = forward_backward_func(
-            forward_step_func=forward_step_func,
-            data_iterator=data_iterator,
-            model=model,
-            num_microbatches=get_num_microbatches(),
-            seq_length=args.seq_length,
-            micro_batch_size=args.micro_batch_size,
-            decoder_seq_length=args.decoder_seq_length,
-            forward_only=False)
+    losses_reduced = forward_backward_func(
+        forward_step_func=forward_step_func,
+        data_iterator=data_iterator,
+        model=model,
+        num_microbatches=get_num_microbatches(),
+        seq_length=args.seq_length,
+        micro_batch_size=args.micro_batch_size,
+        decoder_seq_length=args.decoder_seq_length,
+        forward_only=False)
     if args.mos or args.kd:
         args.teacher_forward = False
     # reset timers if necessary
