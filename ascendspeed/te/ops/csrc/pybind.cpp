@@ -18,7 +18,8 @@
 #include "common.h"
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-    m.def("npu_flash_attention", &npu_flash_attention, "flash attention forward");
-    m.def("npu_flash_attention_grad", &npu_flash_attention_grad, "flash attention backward");
-    m.def("npu_add", &add, "test transformer boost add op");
+    m.def("npu_fa_forward", &fa, "the fast realization of self-attention forward-function on ascend device");
+    m.def("npu_fa_backward", &fag, "the fast realization of self-attention backward-function on ascend device");
+    m.def("npu_gen_mask", &gen_mask, "generate random mask on ascend device");
+    m.def("npu_gen_mask_by_seed", &exist_gen_mask, "generate random mask by seed on ascend device");
 }
