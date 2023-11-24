@@ -71,3 +71,5 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --use-flash-attn \
        --bf16 | tee ./logs/ascendspeed-llama2-7b-ptd-bf16_train-${logfile}.log
 	   
+# ptd模式训练脚本
+ 
