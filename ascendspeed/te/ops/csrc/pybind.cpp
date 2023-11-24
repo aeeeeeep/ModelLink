@@ -16,9 +16,12 @@
 #include <torch/extension.h>
 #include <torch_npu/csrc/aten/NPUNativeFunctions.h>
 #include "common.h"
+#include "utils.h"
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("npu_flash_attention", &npu_flash_attention, "flash attention forward");
     m.def("npu_flash_attention_grad", &npu_flash_attention_grad, "flash attention backward");
+    m.def("ascend_flash_attention", &ascend_flash_attention, "ascend flash attention forward");
+    m.def("ascend_flash_attention_grad", &ascend_flash_attention_grad, "ascend flash attention backward");
     m.def("npu_add", &add, "test transformer boost add op");
 }
