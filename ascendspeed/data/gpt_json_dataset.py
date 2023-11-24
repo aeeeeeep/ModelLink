@@ -3,7 +3,7 @@
 """
 Author: changwanli
 since: 2023-11-16 14:33:00
-LastTime: 2023-11-20 18:38:23
+LastTime: 2023-11-24 10:51:54
 LastAuthor: changwanli
 message: 
 Copyright (c) 2023 Wuhan Artificial Intelligence Research. All Rights Reserved 
@@ -131,7 +131,7 @@ class LmDataset(Dataset):
             text = str(data_item["text"])
         else:
             text = data_item["text"]
-        add_special_tokens = (
+        add_special_tokens = not (
             self.tokenizer._bos_token.content in text or self.tokenizer._eos_token.content in text
         )
         input_ids = self.tokenizer(
