@@ -21,4 +21,5 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("npu_flash_attention", &npu_flash_attention, "flash attention forward");
     m.def("npu_flash_attention_grad", &npu_flash_attention_grad, "flash attention backward");
     m.def("npu_add", &add, "test transformer boost add op");
+    m.def("npu_masked_softmax_with_rel_pos_bias", &npu_masked_softmax_with_rel_pos_bias, "masked softmax with rel pos bias");
 }
