@@ -138,6 +138,7 @@ Here's a software summary of pre-training  LLaMA2-7B:
                                                                         --merge-mlp
     ```
 4. pre-training
+
 4.1 Prepare dataset
     Download the LLaMA2-7B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
     ```shell
@@ -192,6 +193,7 @@ Here's a software summary of pre-training  LLaMA2-7B:
     bash examples/llama2/pretrain_llama2_7b_ptd.sh 
    ```
 5. fine-tuning
+
 	5.1 Prepare fine-tuning dataset 
 	Download the LLaMA2-7B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
     ```shell
@@ -269,7 +271,7 @@ The absolute error of the average loss is 0.0009, less than 2%, the maximum abso
 ![NPU-LOSS and NPU-Absolute-Error](../../sources/images/llama2/llama2_7b_shape_fp16_layer32_loss_with_weights_comparison_absolute.png)
 
 ## Inference-7B
-Config llama2-7b inference script: examples/llama2/generate_llama2_7b_ptd.sh
+Config llama2-7B inference script: examples/llama2/generate_llama2_7b_ptd.sh
 ```bash
 # modify the script according to your own ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -278,7 +280,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 TOKENIZER_PATH=./llama2-7b-hf/  #tokenizer path
 CHECKPOINT=./llama2-7b-tp8pp1  #model path
 ```
-Launch llama2-7b inference script: examples/llama2/generate_llama2_7b_ptd.sh
+Launch llama2-7B inference script: examples/llama2/generate_llama2_7b_ptd.sh
 ```bash
 bash examples/llama2/generate_llama2_7b_ptd.sh
 ```
