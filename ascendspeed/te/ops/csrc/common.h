@@ -64,5 +64,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash_attention_g
     bool sync);
 
 torch::Tensor add(const torch::Tensor &input1, const torch::Tensor &input2);
+at::Tensor npu_masked_softmax_with_rel_pos_bias(
+    const at::Tensor& x,
+    const c10::optional<at::Tensor> &atten_mask,
+    const at::Tensor& relative_pos_bias,
+    double scale_value,
+    int64_t inner_precision_mode)
 
 #endif
