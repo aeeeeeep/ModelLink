@@ -20,5 +20,7 @@
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("npu_flash_attention", &npu_flash_attention, "flash attention forward");
     m.def("npu_flash_attention_grad", &npu_flash_attention_grad, "flash attention backward");
+    m.def("npu_rotary_mul", &npu_flash_attention, "rotary mul forward");
+    m.def("npu_rotary_mul_backward", &npu_flash_attention_grad, "rotary mul backward");
     m.def("npu_add", &add, "test transformer boost add op");
 }
