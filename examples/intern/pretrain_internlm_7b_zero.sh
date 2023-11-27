@@ -1,6 +1,7 @@
 export LD_LIBRARY_PATH=/usr/local/lib:/root/miniconda3/lib:$LD_LIBRARY_PATH
 export HCCL_CONNECT_TIMEOUT=1200
 export INF_NAN_MODE_ENABLE=1
+export ASCEND_LAUNCH_BLOCKING=1
 GPUS_PER_NODE=8
 MASTER_ADDR=localhost
 MASTER_PORT=6000
@@ -93,7 +94,7 @@ deepspeed  pretrain_intern.py \
        --use-flash-attn \
        --auto-recompute-device-size 47104 \
        --release-fp32-grad \
-       --triangle-attn \
+       --use-rmsnorm-mix \
        --use-fused-rotary-pos-emb \
        $ds_args \
        --bf16 | tee logs/train.log

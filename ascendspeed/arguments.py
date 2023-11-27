@@ -741,6 +741,8 @@ def _add_training_args(parser):
     group.add_argument('--release-fp32-grad', action='store_true',
                        help='The distributed training optimizer frees up '
                        'gradient copies of FP32 to save memory.')
+    group.add_argument('--use-rmsnorm-mix', action='store_true',
+                        help='Go to the Branch of optimized oprator.')
     group.add_argument('--dataloader-type', type=str, default=None,
                        choices=['single', 'cyclic'],
                        help='Single pass vs multiple pass data loader')
