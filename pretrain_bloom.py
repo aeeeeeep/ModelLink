@@ -32,7 +32,11 @@ from ascendspeed import print_rank_0
 from ascendspeed import get_timers
 from ascendspeed import get_tokenizer
 from ascendspeed.core import parallel_state, tensor_parallel
-from ascendspeed.data.gpt_dataset import build_train_valid_test_datasets, build_dataset_group
+from ascendspeed.data.gpt_dataset import build_dataset_group as build_pretrain_dataset
+from ascendspeed.data.gpt_dataset import build_train_valid_test_datasets as build_pretrain_dataset
+from ascendspeed.data.decoder_packed_mtf_dataset import build_dataset_group as build_instruction_dataset_group
+from ascendspeed.data.decoder_packed_mtf_dataset import build_train_valid_test_datasets as build_instruction_dataset
+
 from ascendspeed.model import GPTModel, GPTModelPipe
 from ascendspeed.core.enums import ModelType
 from ascendspeed.enums import AttnMaskType
@@ -41,6 +45,7 @@ from ascendspeed.utils import get_ltor_masks_and_position_ids
 from ascendspeed.utils import average_losses_across_data_parallel_group
 from ascendspeed.arguments import core_transformer_config_from_args
 from ascendspeed.error_utils import ensure_var_is_not_none, check_equal
+from pretrain_llama import get_batch_instruction
 
 
 def model_provider(pre_process=True, post_process=True):
@@ -100,10 +105,6 @@ def get_batch(data_iterator):
     args = get_args()
     tokenizer = get_tokenizer()
 
-    # Items and their type.
-    keys = ['text']
-    datatype = torch.int64
-
     # Broadcast data.
     if hasattr(data_iterator, '__next__'):
         data = next(data_iterator)
@@ -112,6 +113,15 @@ def get_batch(data_iterator):
             return data_iterator.pop(0)
         else:
             data = None
+    
+    if args.is_instruction_dataset:
+        tokens, position_ids, attention_mask, labels, loss_mask = get_batch_instruction(data, args)
+        return tokens, labels, loss_mask, attention_mask, position_ids
+
+    # Items and their type.
+    keys = ['text']
+    datatype = torch.int64
+
     data_b = tensor_parallel.broadcast_data(keys, data, datatype)
 
     # Unpack.
@@ -165,6 +175,10 @@ def get_batch_pipe(data):
     """Modification of `get_batch` to work on `next(data_iterator)` instead of `data_iterator`"""
     args = get_args()
     tokenizer = get_tokenizer()
+
+    if args.is_instruction_dataset:
+        tokens, position_ids, attention_mask, labels, loss_mask = get_batch_instruction(data, args)
+        return (tokens, position_ids, attention_mask), (labels, loss_mask)
 
     # Items and their type.
     keys = ['text']
@@ -274,7 +288,8 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
     # Option 1 of data loading using --data-path
 
     if args.data_path:
-        train_ds, valid_ds, test_ds = build_train_valid_test_datasets(
+        build_dataset_func = build_instruction_dataset if args.is_instruction_dataset else build_pretrain_dataset
+        train_ds, valid_ds, test_ds = build_dataset_func(
             data_prefix=args.data_path,
             data_impl=args.data_impl,
             splits_string=args.split,
@@ -284,6 +299,7 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
             skip_warmup=(not args.mmap_warmup))
     # Option 2 of data loading using --(train|valid|test)-weighted-split-paths
     elif args.train_weighted_split_paths:
+        build_dataset_group_func = build_instruction_dataset_group if args.is_instruction_dataset else build_pretrain_dataset_group
         assigned_train_valid_test = []
         if args.train_weighted_split_paths is not None:
             train_ds = []
@@ -301,7 +317,7 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
                                 ast.literal_eval(f"args.{s}_weighted_split_splits"),
                                 ast.literal_eval(f"args.{s}_weighted_split_names"))
             for paths, weights, splits, name in data_groups:
-                d = build_dataset_group(name, paths, weights, splits,
+                d = build_dataset_group_func(name, paths, weights, splits,
                                         args.data_impl,
                                         train_val_test_num_samples,
                                         args.seq_length, args.seed,

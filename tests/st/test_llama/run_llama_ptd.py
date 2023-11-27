@@ -36,7 +36,7 @@ from ascendspeed.data.decoder_packed_mtf_dataset import build_train_valid_test_d
 from ascendspeed.model import LlamaModel, LlamaModelPipe
 from ascendspeed.core.enums import ModelType
 from ascendspeed.training import pretrain
-from ascendspeed.utils import get_ltor_masks_and_position_ids, get_tune_attention_mask
+from ascendspeed.utils import get_ltor_masks_and_position_ids, get_tune_attention_mask_and_position_ids
 from ascendspeed.utils import average_losses_across_data_parallel_group
 from ascendspeed.arguments import core_transformer_config_from_args
 
@@ -162,7 +162,7 @@ def get_batch_pipe(data):
         # ignored label -100
         loss_mask = torch.where(labels == -100, 0, 1)
 
-        attention_mask = get_tune_attention_mask(attention_mask_1d, args.reset_attention_mask)
+        attention_mask, _ = get_tune_attention_mask_and_position_ids(attention_mask_1d, args.reset_attention_mask)
 
         return (tokens, attention_mask), (labels, loss_mask)
 
