@@ -7,30 +7,34 @@ MASTER_PORT=6000
 NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
- 
-DATA=./dataset/internlm_text_document
-CHECKPOINT=./ckpt/
- 
+
+DATA=../../datasets/dataset/dummy_text_document
+CHECKPOINT=./../model/model_weight/
+
 DS_CONFIG=ds_config.json
 ZERO_STAGE=2
-GLOBAL_BATCH=64
-MICRO_BATCH=8
- 
+GLOBAL_BATCH=256
+MICRO_BATCH=2
+
 cat <<EOT > $DS_CONFIG
 {
     "fp16": {
-        "enabled": true,
+        "enabled": false,
         "loss_scale": 0,
         "loss_scale_window": 1000,
         "initial_scale_power": 8,
         "hysteresis": 2,
         "min_loss_scale": 1
     },
- 
+
+    "bf16": {
+        "enabled":true
+    },
+
     "optimizer": {
         "type": "Adam"
     },
- 
+
     "zero_optimization": {
         "stage": $ZERO_STAGE,
         "allgather_partitions": true,
@@ -40,24 +44,23 @@ cat <<EOT > $DS_CONFIG
         "reduce_bucket_size": 5e8,
         "contiguous_gradients": true
     },
- 
-    "gradient_accumulation_steps": 1,
+
+    "gradient_accumulation_steps": 16,
     "train_batch_size": $GLOBAL_BATCH,
     "train_micro_batch_size_per_gpu":$MICRO_BATCH,
     "zero_allow_untested_optimizer": true
 }
 EOT
- 
+
 ds_args=""
 ds_args=" --deepspeed ${ds_args}"
 ds_args=" --no-pipeline-parallel ${ds_args}" 
 ds_args=" --deepspeed_config=$DS_CONFIG ${ds_args}"
 ds_args=" --zero-stage=$ZERO_STAGE ${ds_args}"
-ds_args=" --deepspeed-activation-checkpointing ${ds_args}"
  
  
 deepspeed  pretrain_intern.py \
-       --DDP-impl torch \
+       --DDP-impl local \
        --tensor-model-parallel-size 1 \
        --pipeline-model-parallel-size 1 \
        --num-layers 32 \
@@ -72,7 +75,7 @@ deepspeed  pretrain_intern.py \
        --lr-decay-iters 320000 \
        --data-path $DATA \
        --load $CHECKPOINT \
-       --tokenizer-name-or-path ./dataset/internlm \
+       --tokenizer-name-or-path ../datasets/dataset/internlm \
        --tokenizer-not-use-fast \
        --data-impl mmap \
        --split 949,50,1 \
@@ -83,12 +86,14 @@ deepspeed  pretrain_intern.py \
        --weight-decay 1e-2 \
        --clip-grad 1.0 \
        --lr-warmup-fraction .01 \
-       --checkpoint-activations \
        --log-interval 1 \
        --save-interval 10000 \
        --eval-interval 1000 \
        --eval-iters 10 \
+       --use-flash-attn \
+       --auto-recompute-device-size 47104 \
+       --release-fp32-grad \
        --triangle-attn \
        --use-fused-rotary-pos-emb \
        $ds_args \
-       --fp16 | tee logs/train.log
+       --bf16 | tee logs/train.log

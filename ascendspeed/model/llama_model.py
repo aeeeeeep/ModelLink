@@ -109,15 +109,7 @@ class RMSNorm(torch.nn.Module):  # for cpu
         setattr(self.weight, 'sequence_parallel', sequence_parallel)
 
     def forward(self, hidden_states):
-        if self.weight.dtype == torch.float16:
-            variance = hidden_states.float().pow(2).mean(-1, keepdim=True)
-            variance = torch.rsqrt(variance + self.variance_epsilon).half()
-        else:
-            variance = hidden_states.pow(2).mean(-1, keepdim=True)
-            variance = torch.rsqrt(variance + self.variance_epsilon)
-        hidden_states = hidden_states * variance
-        hidden_states = self.weight * hidden_states
-        return hidden_states
+        return torch_npu.npu_rms_norm(hidden_size, self.weight, epsilon = self.variance_epsilon)
 
 
 class LlamaLMHead(MegatronModule):
