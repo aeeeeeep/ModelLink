@@ -57,6 +57,7 @@ try:
     from torch_npu.utils import cpp_extension
     from torch.utils.cpp_extension import BuildExtension
 
+    ATB_HOME_PATH = os.environ.get("ATB_HOME_PATH")
     ASCEND_TOOLKIT_HOME = os.environ.get("ASCEND_TOOLKIT_HOME")
     op_files = glob.glob("ascendspeed/te/ops/csrc/*.cpp")
     ext_ops = cpp_extension.NpuExtension(
@@ -68,7 +69,12 @@ try:
         '-Wno-return-type',
         '-D__FILENAME__=\"$(notdir $(abspath $<))\"',
         '-I' + imp.find_module('torch_npu')[1] + "/include/third_party/acl/inc",
+        '-I' + ATB_HOME_PATH + '/include/',
         '-I' + ASCEND_TOOLKIT_HOME + '/include/',
+    ],
+        extra_link_args=[
+        '-L' + ATB_HOME_PATH + '/lib/',
+        '-latb'
     ],
     )
     exts.append(ext_ops)
