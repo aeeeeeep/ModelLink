@@ -21,6 +21,7 @@
 #include <torch/custom_class.h>
 #include "atb/types.h"
 #include "atb/operation.h"
+#include "atb/utils.h"
 
 #define OP_SETPARAM(OpParam)                                                      \
     void SetParam(const OpParam &opParam, TECommand &command)                     \
@@ -46,7 +47,7 @@ private:
 
 private:
     std::string name;
-    atb::Operation *operation;
+    atb::Operation* operation;
     atb::VariantPack variantPack;
     std::vector<atb::Tensor> inTensors;
 };

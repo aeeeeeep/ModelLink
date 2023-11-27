@@ -20,9 +20,22 @@
 #include <torch_npu/csrc/core/npu/NPUStream.h>
 #include <torch_npu/csrc/core/npu/DeviceUtils.h>
 #include <torch_npu/csrc/framework/OpCommand.h>
-#include "atb/utils.h"
 
 using namespace std;
+static atb::Context* msContext;
+atb::Context* GetContext()
+{
+    if (msContext == nullptr) {
+        auto status = atb::CreateContext(&msContext);
+        TORCH_CHECK(status == 0, "create context failed!");
+        int32_t devId = 0;
+        aclrtGetDevice(&devId);
+        aclrtStream stream = c10_npu::getCurrentNPUStream(devId).stream(false);
+        TORCH_CHECK(stream != nullptr, "get current stream failed");
+        msContext->SetExecuteStream(stream);
+    }
+    return msContext;
+}
 
 at::Tensor CreateAtTensorFromTensorDesc(const atb::TensorDesc &tensorDesc)
 {
@@ -37,7 +50,7 @@ at::Tensor CreateAtTensorFromTensorDesc(const atb::TensorDesc &tensorDesc)
     TORCH_CHECK(it != dtypeMap.end(), "not support dtype:");
     options = options.dtype(it->second);
     options = options.layout(torch::kStrided).requires_grad(false);
-    at::Tensor newTensor = at::empty(at::IntArrayRef(tensorDesc.shape.dims, tensorDesc.shape.dimNum), options);
+    at::Tensor newTensor = at::zeros(at::IntArrayRef(tensorDesc.shape.dims, tensorDesc.shape.dimNum), options);
     if (!newTensor.is_contiguous()) {
         newTensor = newTensor.contiguous();
     }
@@ -73,6 +86,15 @@ atb::Tensor AtTensor2Tensor(const at::Tensor atTensor)
     return tensor;
 }
 
+at::Tensor FormatTrans(const at::Tensor &at_tensor)
+{
+    if (at_tensor.defined()) {
+        TORCH_CHECK(torch_npu::utils::is_npu(at_tensor), "only npu tensor is supported");
+        return at_npu::native::NPUNativeFunctions::npu_format_cast(at_tensor, ACL_FORMAT_ND);
+    }
+    return at_tensor;
+}
+
 TECommand::TECommand() {}
 
 TECommand& TECommand::SetOperation(atb::Operation **operation)
@@ -89,7 +111,11 @@ TECommand& TECommand::Name(std::string name)
 
 TECommand& TECommand::Input(const at::Tensor &tensor)
 {
-    inTensors.push_back(AtTensor2Tensor(tensor));
+    at::Tensor newTensor = FormatTrans(tensor);
+    if(!newTensor.is_contiguous()) {
+        newTensor = newTensor.contiguous();
+    }
+    inTensors.push_back(AtTensor2Tensor(newTensor));
     return *this;
 }
 
@@ -114,29 +140,22 @@ TECommand& TECommand::Input(const c10::optional<at::Tensor> &tensor)
 void TECommand::Output(std::vector<at::Tensor> &output)
 {
     BuildVariantPack(output);
+
     uint64_t workspaceSize = 0;
-    atb::Status status = operation->Setup(variantPack, workspaceSize);
+    auto status = operation->Setup(variantPack, workspaceSize);
     TORCH_CHECK(status == 0, "setup failed!");
     TORCH_CHECK(workspaceSize > 0, "get workspace size failed!");
 
     at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
     auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
 
-    int32_t devId = 0;
-    aclrtGetDevice(&devId);
-    aclrtStream stream = c10_npu::getCurrentNPUStream(devId).stream();
-    TORCH_CHECK(stream != nullptr, "get current stream failed");
-
-    atb::Context* context = nullptr;
-    status = atb::CreateContext(&context);
-    TORCH_CHECK(status == 0, "create context failed!");
-
-    context->SetExecuteStream(stream);
-
     auto variantPack = this->variantPack;
-    auto te_call = [this, variantPack, workspaceTensor, workspaceSize, context]() -> int {
+    auto te_call = [this, variantPack, workspaceTensor, workspaceSize]() -> int {        
+        atb::Context* context = GetContext();
         auto api_ret = this->operation->Execute(variantPack, (uint8_t *)workspaceTensor.storage().data(), workspaceSize, context);
         TORCH_CHECK(api_ret == 0, "execute failed");
+        // aclrtSynchronizeStream(context->GetExecuteStream());
+        // atb::DestroyContext(context);
         return api_ret;
     };
     at_npu::native::OpCommand cmd;
@@ -145,30 +164,38 @@ void TECommand::Output(std::vector<at::Tensor> &output)
     cmd.Run();
 }
 
-void TECommand::BuildVariantPack(std::vector<at::Tensor> &output)
+void TECommand::BuildVariantPack(std::vector<at::Tensor> &atOutTensors)
 {
     atb::SVector<atb::TensorDesc> inTensorDescs;
     atb::SVector<atb::TensorDesc> outTensorDescs;
-    inTensorDescs.resize(inTensors.size());
     for (size_t i = 0; i < inTensors.size(); ++i) {
         atb::Tensor inTensor = inTensors.at(i);
         if (inTensor.desc.format == ACL_FORMAT_NCHW) {
             inTensor.desc.format = ACL_FORMAT_ND;
         }
-        inTensorDescs.at(i) = inTensor.desc;
+        inTensorDescs.push_back(inTensor.desc);
     }
     atb::Status status = operation->InferShape(inTensorDescs, outTensorDescs);
     TORCH_CHECK(status == 0, "infershape failed!");
-    
+
     variantPack.inTensors.resize(inTensorDescs.size());
-    variantPack.outTensors.resize(outTensorDescs.size());
-    for (size_t i = 0; i < inTensorDescs.size(); ++i) {
+    for (size_t i = 0; i < inTensors.size(); ++i) {
         variantPack.inTensors.at(i) = inTensors.at(i);
+        if (variantPack.inTensors.at(i).desc.format == ACL_FORMAT_NCHW) {
+            variantPack.inTensors.at(i).desc.format = ACL_FORMAT_ND;
+        }
     }
-    output.clear();
+
     for (size_t i = 0; i < outTensorDescs.size(); ++i) {
-        at::Tensor temp = CreateAtTensorFromTensorDesc(outTensorDescs.at(i));
-        output.push_back(temp);
-        variantPack.outTensors.at(i) = AtTensor2Tensor(temp);
+        at::Tensor newTensor = CreateAtTensorFromTensorDesc(outTensorDescs.at(i));
+        atOutTensors.push_back(newTensor);
+    }
+
+    variantPack.outTensors.resize(atOutTensors.size());
+    for (size_t i = 0; i < atOutTensors.size(); ++i) {
+        variantPack.outTensors.at(i) = AtTensor2Tensor(atOutTensors.at(i));
+        if (variantPack.outTensors.at(i).desc.format == ACL_FORMAT_NCHW) {
+            variantPack.outTensors.at(i).desc.format = ACL_FORMAT_ND;
+        }
     }
 }
