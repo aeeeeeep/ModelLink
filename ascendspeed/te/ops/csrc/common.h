@@ -57,4 +57,20 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash_attention_g
     bool gen_mask_parallel,
     bool sync);
 
+std::vector<at::Tensor> npu_scatter_list(
+    std::vector<at::Tensor> self,
+    const at::Tensor &indice,
+    const at::Tensor &updates,
+    const c10::optional<at::Tensor> &mask,
+    const std::string reduce,
+    int64_t axis);
+
+void npu_scatter_list_(
+    std::vector<at::Tensor> self,
+    const at::Tensor &indice,
+    const at::Tensor &updates,
+    const c10::optional<at::Tensor> &mask,
+    const std::string reduce,
+    int64_t axis);
+
 #endif
