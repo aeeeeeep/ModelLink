@@ -9,9 +9,9 @@ NODE_RANK=0
 NPUS_PER_NODE=8
 WORLD_SIZE=$(($NPUS_PER_NODE * $NNODES))
 
-DATA_PATH=dataset/llama_text_document
-CHECKPOINT_PATH=ckpt
-TOKENIZER_PATH=tokenizer
+DATA_PATH=/home/ma-user/work/AscendSpeed_wair/wiki
+CHECKPOINT_PATH=/home/ma-user/work/AscendSpeed/7b_ckpt
+TOKENIZER_PATH=/home/ma-user/work/AscendSpeed/baichuan-7B-hf
 
 DS_CONFIG=ds_config.json
 ZERO_STAGE=2
@@ -68,9 +68,10 @@ ds_args=" --deepspeed_config=$DS_CONFIG ${ds_args}"
 ds_args=" --zero-stage=$ZERO_STAGE ${ds_args}"
 ds_args=" --deepspeed-activation-checkpointing ${ds_args}"
 
-SEQ_LEN=4096
+SEQ_LEN=1024
+export TOKENIZERS_PARALLELISM=false
 
-deepspeed  pretrain_baichuan.py \
+nohup deepspeed  pretrain_baichuan.py \
   --DDP-impl local \
   --tensor-model-parallel-size 1 \
   --pipeline-model-parallel-size 1 \
@@ -82,7 +83,7 @@ deepspeed  pretrain_baichuan.py \
   --global-batch-size $GLOBAL_BATCH \
   --seq-length $SEQ_LEN \
   --max-position-embeddings $SEQ_LEN \
-  --train-iters 1024 \
+  --train-iters 10240 \
   --data-path $DATA_PATH \
   --tokenizer-name-or-path $TOKENIZER_PATH \
   --tokenizer-not-use-fast \
@@ -104,4 +105,7 @@ deepspeed  pretrain_baichuan.py \
   --checkpoint_block_layer 30 \
   --triangle-attn \
   $ds_args \
-  --fp16 | tee logs/train.log
+  --fp16 \
+  --is-instruction-dataset \
+  --tensorboard-dir ./7b_tf_record \
+  > train.log &
