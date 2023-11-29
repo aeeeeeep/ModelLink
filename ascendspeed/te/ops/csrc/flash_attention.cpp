@@ -147,7 +147,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
     std::vector<at::Tensor> outTensors;
     atb::Operation* op = nullptr;
     atb::CreateOperation(param, &op);
-    ORCH_CHECK(op != nullptr, "get op failed!");
+    TORCH_CHECK(op != nullptr, "get op failed!");
 
     std::vector<atb::Tensor> inTensors;
     auto atb_dy = Input(dy);
