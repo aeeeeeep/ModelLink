@@ -32,7 +32,7 @@ OP_SETPARAM(atb::train::FlashAttentionBackwardParam)
 const static int N = 32;
 
 atb::Operation* op = nullptr;
-void *workspaceTensor = nullptr;
+void *workspacePtr = nullptr;
 
 std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
                            const c10::optional<at::Tensor> &atten_mask, const c10::optional<at::Tensor> &alibi_mask,
@@ -102,10 +102,11 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
     TORCH_CHECK(workspaceSize > 0, "get workspace size failed!");
     at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
     workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
+    workspacePtr = workspaceTensor.storage().data();
 
-    auto acl_call = [op, variantPack, workspaceTensor, workspaceSize]() -> int {
+    auto acl_call = [op, variantPack, workspacePtr, workspaceSize]() -> int {
         atb::Context *contextPtr = GetContext();
-        st = op->Execute(variantPack, (uint8_t *)workspaceTensor.storage().data(), workspaceSize, contextPtr);
+        auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
         return 0;
     };
 
@@ -199,10 +200,11 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
     TORCH_CHECK(workspaceSize > 0, "get workspace size failed!");
     at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
     workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
+    workspacePtr = workspaceTensor.storage().data();
 
-    auto acl_call = [op, variantPack, workspaceTensor, workspaceSize]() -> int {
+    auto acl_call = [op, variantPack, workspacePtr, workspaceSize]() -> int {
         atb::Context *contextPtr = GetContext();
-        st = op->Execute(variantPack, (uint8_t *)workspaceTensor.storage().data(), workspaceSize, contextPtr);
+        auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
         return 0;
     };
     at_npu::native::OpCommand cmd;
