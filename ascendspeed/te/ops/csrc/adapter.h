@@ -37,29 +37,4 @@ at::Tensor CreateAtTensorFromTensorDesc(const atb::TensorDesc &tensorDesc);
 atb::Tensor AtTensor2Tensor(const at::Tensor atTensor);
 atb::Context* GetContext();
 
-class TECommand {
-public:
-    TECommand();
-    ~TECommand()
-    {
-        std::cout<<"TECommand quit!"<<std::endl;
-        operation = nullptr;
-    }
-    TECommand& SetOperation(atb::Operation **operation);
-    TECommand& Name(std::string name);
-    TECommand& Input(const at::Tensor &tensor);
-    TECommand& Input(const at::Tensor &tensor, bool isNone);
-    TECommand& Input(const c10::optional<at::Tensor> &tensor);
-    void Output(std::vector<at::Tensor> &output);
-
-private:
-    void BuildVariantPack(std::vector<at::Tensor> &output);
-
-private:
-    std::string name;
-    atb::Operation* operation = nullptr;
-    atb::VariantPack variantPack;
-    std::vector<atb::Tensor> inTensors;
-};
-
 #endif
