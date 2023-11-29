@@ -100,7 +100,6 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
     TORCH_CHECK(workspaceSize > 0, "get workspace size failed!");
     at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
     auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
-    auto workspacePtr = workspaceTensor.storage().data();
 
     int32_t devId = 0;
     aclrtGetDevice(&devId);
@@ -111,8 +110,8 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
     }        
     contextPtr->SetExecuteStream(stream);
 
-    auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
-        auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
+    auto acl_call = [op, contextPtr, variantPack, workspaceTensor, workspaceSize]() -> int {
+        auto st = op->Execute(variantPack, (uint8_t *)workspaceTensor.storage().data(), workspaceSize, contextPtr);
         delete op;
         return 0;
     };
@@ -208,7 +207,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
     TORCH_CHECK(workspaceSize > 0, "get workspace size failed!");
     at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
     auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
-    auto workspacePtr = workspaceTensor.storage().data();
 
     int32_t devId = 0;
     aclrtGetDevice(&devId);
@@ -219,8 +217,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
     }        
     contextPtr->SetExecuteStream(stream);
 
-    auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
-        auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
+    auto acl_call = [op, contextPtr, variantPack, workspaceTensor, workspaceSize]() -> int {
+        auto st = op->Execute(variantPack, (uint8_t *)workspaceTensor.storage().data(), workspaceSize, contextPtr);
         delete op;
         return 0;
     };
