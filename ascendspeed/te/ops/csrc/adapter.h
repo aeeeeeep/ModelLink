@@ -26,15 +26,25 @@
 #define OP_SETPARAM(OpParam)                                                      \
     void SetParam(const OpParam &opParam, TECommand &command)                     \
     {                                                                             \
-        atb::Operation* operation;                                                \
+        atb::Operation* operation = nullptr;                                      \
         atb::CreateOperation(opParam, &operation);                                \
         command.SetOperation(&operation);                                         \
     }
 
+atb::Tensor Input(const at::Tensor &tensor);
+atb::Tensor Input(const c10::optional<at::Tensor> &tensor);
+at::Tensor CreateAtTensorFromTensorDesc(const atb::TensorDesc &tensorDesc);
+atb::Tensor AtTensor2Tensor(const at::Tensor atTensor);
+atb::Context* GetContext();
 
 class TECommand {
 public:
     TECommand();
+    ~TECommand()
+    {
+        std::cout<<"TECommand quit!"<<std::endl;
+        operation = nullptr;
+    }
     TECommand& SetOperation(atb::Operation **operation);
     TECommand& Name(std::string name);
     TECommand& Input(const at::Tensor &tensor);
@@ -47,7 +57,7 @@ private:
 
 private:
     std::string name;
-    atb::Operation* operation;
+    atb::Operation* operation = nullptr;
     atb::VariantPack variantPack;
     std::vector<atb::Tensor> inTensors;
 };

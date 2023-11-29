@@ -95,6 +95,23 @@ at::Tensor FormatTrans(const at::Tensor &at_tensor)
     return at_tensor;
 }
 
+atb::Tensor Input(const at::Tensor &tensor)
+{
+    at::Tensor newTensor = FormatTrans(tensor);
+    if(!newTensor.is_contiguous()) {
+        newTensor = newTensor.contiguous();
+    }
+    return AtTensor2Tensor(newTensor);
+}
+
+atb::Tensor Input(const c10::optional<at::Tensor> &tensor)
+{
+     if (!tensor.has_value()) {
+        return atb::Tensor();
+    }
+    return Input(tensor.value());
+}
+
 TECommand::TECommand() {}
 
 TECommand& TECommand::SetOperation(atb::Operation **operation)

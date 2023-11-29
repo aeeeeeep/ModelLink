@@ -31,6 +31,9 @@ OP_SETPARAM(atb::train::FlashAttentionBackwardParam)
 
 const static int N = 32;
 
+atb::Operation* op = nullptr;
+void *workspaceTensor = nullptr;
+
 std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
                            const c10::optional<at::Tensor> &atten_mask, const c10::optional<at::Tensor> &alibi_mask,
                            const c10::optional<at::Tensor> &drop_mask, float scale_value, int64_t head_num, int64_t io_layout, float keep_prob,
@@ -47,16 +50,69 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
     param.groups = groups;
 
     std::vector<at::Tensor> outTensors;
-    TECommand command;
-    SetParam(param, command);
-    command.Name("fa_forward")
-           .Input(query)
-           .Input(key)
-           .Input(value)
-           .Input(atten_mask)
-           .Input(alibi_mask)
-           .Input(drop_mask)
-           .Output(outTensors);
+    atb::CreateOperation(param, &op);
+
+    std::vector<atb::Tensor> inTensors;
+    auto atb_query = Input(query);
+    auto atb_key = Input(key);
+    auto atb_value = Input(value);
+    auto atb_atten_mask = Input(atten_mask);
+    auto atb_alibi_mask = Input(alibi_mask);
+    auto atb_drop_mask = Input(drop_mask);
+
+    inTensors.push_back(atb_query);
+    inTensors.push_back(atb_key);
+    inTensors.push_back(atb_value);
+    inTensors.push_back(atb_atten_mask);
+    inTensors.push_back(atb_alibi_mask);
+    inTensors.push_back(atb_drop_mask);
+
+    atb::SVector<atb::TensorDesc> inTensorDescs;
+    atb::SVector<atb::TensorDesc> outTensorDescs;
+    for (size_t i = 0; i < inTensors.size(); ++i) {
+        atb::Tensor inTensor = inTensors.at(i);
+        if (inTensor.desc.format == ACL_FORMAT_NCHW) {
+            inTensor.desc.format = ACL_FORMAT_ND;
+        }
+        inTensorDescs.push_back(inTensor.desc);
+    }
+    atb::Status status = op->InferShape(inTensorDescs, outTensorDescs);
+    TORCH_CHECK(status == 0, "infershape failed!");
+
+    for (size_t i = 0; i < outTensorDescs.size(); ++i) {
+        at::Tensor newTensor = CreateAtTensorFromTensorDesc(outTensorDescs.at(i));
+        outTensors.push_back(newTensor);
+    }
+
+    atb::Tensor atbOutTensor1 = AtTensor2Tensor(outTensors[0]);
+    atb::Tensor atbOutTensor2 = AtTensor2Tensor(outTensors[1]);
+    atb::VariantPack variantPack;
+    variantPack.inTensors.push_back(atb_query);
+    variantPack.inTensors.push_back(atb_key);
+    variantPack.inTensors.push_back(atb_value);
+    variantPack.inTensors.push_back(atb_atten_mask);
+    variantPack.inTensors.push_back(atb_alibi_mask);
+    variantPack.inTensors.push_back(atb_drop_mask);
+    variantPack.outTensors.push_back(atbOutTensor1);
+    variantPack.outTensors.push_back(atbOutTensor2);
+
+    uint64_t workspaceSize = 0;
+    atb::Status st = op->Setup(variantPack, workspaceSize);
+    TORCH_CHECK(st == 0, "setup failed!");
+    TORCH_CHECK(workspaceSize > 0, "get workspace size failed!");
+    at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
+    workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
+
+    auto acl_call = [op, variantPack, workspaceTensor, workspaceSize]() -> int {
+        atb::Context *contextPtr = GetContext();
+        st = op->Execute(variantPack, (uint8_t *)workspaceTensor.storage().data(), workspaceSize, contextPtr);
+        return 0;
+    };
+
+    at_npu::native::OpCommand cmd;
+    cmd.Name("fa_forward");
+    cmd.SetCustomHandler(acl_call);
+    cmd.Run();
     
     return std::make_tuple(outTensors[0], outTensors[1]);
 }
@@ -78,20 +134,82 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
     param.groups = groups;
 
     std::vector<at::Tensor> outTensors;
-    TECommand command;
-    SetParam(param, command);
-    command.Name("fa_backward")
-           .Input(dy)
-           .Input(softmax_log_max_sum)
-           .Input(attention_out)
-           .Input(query)
-           .Input(key)
-           .Input(value)
-           .Input(atten_mask)
-           .Input(alibi_mask)
-           .Input(drop_mask)
-           .Output(outTensors);
-    
+    atb::Operation* op = nullptr;
+    atb::CreateOperation(param, &op);
+
+    std::vector<atb::Tensor> inTensors;
+    auto atb_dy = Input(dy);
+    auto atb_softmax_log_max_sum = Input(softmax_log_max_sum);
+    auto atb_attention_out = Input(attention_out);
+    auto atb_query = Input(query);
+    auto atb_key = Input(key);
+    auto atb_value = Input(value);
+    auto atb_atten_mask = Input(atten_mask);
+    auto atb_alibi_mask = Input(alibi_mask);
+    auto atb_drop_mask = Input(drop_mask);
+
+    inTensors.push_back(atb_dy);
+    inTensors.push_back(atb_softmax_log_max_sum);
+    inTensors.push_back(atb_attention_out);
+    inTensors.push_back(atb_query);
+    inTensors.push_back(atb_key);
+    inTensors.push_back(atb_value);
+    inTensors.push_back(atb_atten_mask);
+    inTensors.push_back(atb_alibi_mask);
+    inTensors.push_back(atb_drop_mask);
+
+    atb::SVector<atb::TensorDesc> inTensorDescs;
+    atb::SVector<atb::TensorDesc> outTensorDescs;
+    for (size_t i = 0; i < inTensors.size(); ++i) {
+        atb::Tensor inTensor = inTensors.at(i);
+        if (inTensor.desc.format == ACL_FORMAT_NCHW) {
+            inTensor.desc.format = ACL_FORMAT_ND;
+        }
+        inTensorDescs.push_back(inTensor.desc);
+    }
+    atb::Status status = op->InferShape(inTensorDescs, outTensorDescs);
+    TORCH_CHECK(status == 0, "infershape failed!");
+
+    for (size_t i = 0; i < outTensorDescs.size(); ++i) {
+        at::Tensor newTensor = CreateAtTensorFromTensorDesc(outTensorDescs.at(i));
+        outTensors.push_back(newTensor);
+    }
+
+    atb::Tensor atbOutTensor1 = AtTensor2Tensor(outTensors[0]);
+    atb::Tensor atbOutTensor2 = AtTensor2Tensor(outTensors[1]);
+    atb::Tensor atbOutTensor3 = AtTensor2Tensor(outTensors[2]);
+    atb::VariantPack variantPack;
+
+    variantPack.inTensors.push_back(atb_dy);
+    variantPack.inTensors.push_back(atb_softmax_log_max_sum);
+    variantPack.inTensors.push_back(atb_attention_out);
+    variantPack.inTensors.push_back(atb_query);
+    variantPack.inTensors.push_back(atb_key);
+    variantPack.inTensors.push_back(atb_value);
+    variantPack.inTensors.push_back(atb_atten_mask);
+    variantPack.inTensors.push_back(atb_alibi_mask);
+    variantPack.inTensors.push_back(atb_drop_mask);
+    variantPack.outTensors.push_back(atbOutTensor1);
+    variantPack.outTensors.push_back(atbOutTensor2);
+    variantPack.outTensors.push_back(atbOutTensor3);
+ 
+    uint64_t workspaceSize = 0;
+    atb::Status st = op->Setup(variantPack, workspaceSize);
+    TORCH_CHECK(st == 0, "setup failed!");
+    TORCH_CHECK(workspaceSize > 0, "get workspace size failed!");
+    at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
+    workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
+
+    auto acl_call = [op, variantPack, workspaceTensor, workspaceSize]() -> int {
+        atb::Context *contextPtr = GetContext();
+        st = op->Execute(variantPack, (uint8_t *)workspaceTensor.storage().data(), workspaceSize, contextPtr);
+        return 0;
+    };
+    at_npu::native::OpCommand cmd;
+    cmd.Name("fa_backward");
+    cmd.SetCustomHandler(acl_call);
+    cmd.Run();
+
     return std::make_tuple(outTensors[0], outTensors[1], outTensors[2]);
 }
 
