@@ -23,14 +23,6 @@
 #include "atb/operation.h"
 #include "atb/utils.h"
 
-#define OP_SETPARAM(OpParam)                                                      \
-    void SetParam(const OpParam &opParam, TECommand &command)                     \
-    {                                                                             \
-        atb::Operation* operation = nullptr;                                      \
-        atb::CreateOperation(opParam, &operation);                                \
-        command.SetOperation(&operation);                                         \
-    }
-
 atb::Tensor Input(const at::Tensor &tensor);
 atb::Tensor Input(const c10::optional<at::Tensor> &tensor);
 at::Tensor CreateAtTensorFromTensorDesc(const atb::TensorDesc &tensorDesc);
