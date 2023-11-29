@@ -303,7 +303,11 @@ def validate_args(args, defaults={}):
         if args.optimizer != "adam":
             raise ValueError(
                 "`release_fp32_grad` only support for `Adam` optimizer now.")
-
+    if args.communication_slim > 0:
+        if args.checkpoint_num_layers != 1:
+            raise ValueError(
+                "`communication_slim` only support for `checkpoint_num_layers = 1` now.")
+    args.ckpt_comm_args = 0
     # Retro checks.
     if args.retro_add_retriever:
         # Sequence parallelism unsupported.
@@ -1311,6 +1315,10 @@ def _add_activation_checkpoint_args(parser):
                        help="activation checkpoint policy")
     group.add_argument('--checkpoint_block_layer', type=int, default=25,
                        help="activation checkpoint block layer number")
+    group.add_argument('--communication-slim', type=int, default=0,
+                       help="Communication optimization for model "
+                       "training when tp > 1 and recomputation is enabled, "
+                       "0 for close, 1 for ffn, 2 for complete attn and ffn")
     return parser
 
 

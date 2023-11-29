@@ -34,7 +34,7 @@ from ascendspeed import get_args
 from ascendspeed.core.enums import ModelType
 from ascendspeed import get_args, get_timers, get_num_microbatches, get_retro_args
 from ascendspeed.core import utils, parallel_state, tensor_parallel
-from ascendspeed.enums import PositionEmbeddingType
+from ascendspeed.enums import PositionEmbeddingType, TransformerLayerStage
 from ascendspeed.core.transformer.module.flash_attention import FlashSelfAttention
 from ascendspeed.core.enums import AttnMaskType, LayerType, AttnType
 from ascendspeed.model.fused_softmax import NPUFusedScaleMaskSoftmax
@@ -1082,134 +1082,160 @@ class ParallelTransformerLayer(MegatronModule):
                 retriever_output=None,
                 retriever_attn_mask=None,
                 inference_params=None,
-                rotary_pos_emb=None):
+                rotary_pos_emb=None,
+                transformer_stage=None):
         # hidden_states: [s, b, h]
         # Layer norm at the beginning of the transformer layer.
-        layernorm_output = self.input_layernorm(hidden_states)
-        # Self attention.
-        attention_output, attention_bias = \
-            self.self_attention(layernorm_output,
-                                attention_mask,
-                                inference_params=inference_params,
-                                rotary_pos_emb=rotary_pos_emb,
-                                alibi=self.alibi)
-
-        # Residual connection.
-        if self.apply_residual_connection_post_layernorm:
-            residual = layernorm_output
-        else:
-            residual = hidden_states
-
-        if self.drop_path is None:
-            # jit scripting for a nn.module (with dropout) is not
-            # trigerring the fusion kernel. For now, we use two
-            # different nn.functional routines to account for varying
-            # dropout semantics during training and inference phases.
-            if self.bias_dropout_fusion:
-                if self.training:
-                    bias_dropout_add_func = bias_dropout_add_fused_train
-                else:
-                    bias_dropout_add_func = bias_dropout_add_fused_inference
+        # jit scripting for a nn.module (with dropout) is not
+        # trigerring the fusion kernel. For now, we use two
+        # different nn.functional routines to account for varying
+        # dropout semantics during training and inference phases.
+        if self.bias_dropout_fusion:
+            if self.training:
+                bias_dropout_add_func = bias_dropout_add_fused_train
             else:
-                bias_dropout_add_func = get_bias_dropout_add(self.training)
-
-            if attention_bias is not None:
-                attention_bias = attention_bias.expand_as(residual)
-            with self.bias_dropout_add_exec_handler():
-                layernorm_input = bias_dropout_add_func(
-                    attention_output,
-                    attention_bias,
-                    residual,
-                    self.hidden_dropout)
+                bias_dropout_add_func = bias_dropout_add_fused_inference
         else:
-            out = torch.nn.functional.dropout(attention_output + attention_bias,
-                                              p=self.hidden_dropout,
-                                              training=self.training)
-            layernorm_input = residual + self.drop_path(out)
+            bias_dropout_add_func = get_bias_dropout_add(self.training)
+       
+        # if forward or checkpoint forward in ATTN
+        if transformer_stage is None or transformer_stage == TransformerLayerStage.attn:
+            layernorm_output = self.input_layernorm(hidden_states)
+            # Self attention.
+            attention_output, attention_bias = \
+                self.self_attention(layernorm_output,
+                                    attention_mask,
+                                    inference_params=inference_params,
+                                    rotary_pos_emb=rotary_pos_emb,
+                                    alibi=self.alibi)
 
-        # Layer norm post the self attention.
-        layernorm_output = self.post_attention_layernorm(layernorm_input)
+            # Residual connection.
+            if self.apply_residual_connection_post_layernorm:
+                residual = layernorm_output
+            else:
+                residual = hidden_states        
+           
+            residual_comm = self._ckpt_comm_process_sp(residual)
+            residual = residual if residual_comm is None else residual_comm
+            if self.drop_path is None:
+                if attention_bias is not None:
+                    attention_bias = attention_bias.expand_as(residual)
+                with self.bias_dropout_add_exec_handler():
+                    layernorm_input = bias_dropout_add_func(
+                        attention_output,
+                        attention_bias,
+                        residual,
+                        self.hidden_dropout)
+            else:
+                out = torch.nn.functional.dropout(attention_output + attention_bias,
+                                                p=self.hidden_dropout,
+                                                training=self.training)
+                layernorm_input = residual + self.drop_path(out)
+            if transformer_stage == TransformerLayerStage.attn:
+                return layernorm_input, None
+        
+        # if forward or checkpoint forward in FFN
+        if transformer_stage is None or transformer_stage == TransformerLayerStage.ffn:
+            if transformer_stage == TransformerLayerStage.ffn:
+                layernorm_input = hidden_states[0] if isinstance(hidden_states, tuple) else hidden_states
+            # Layer norm post the self attention
+            layernorm_output = self.post_attention_layernorm(layernorm_input)
 
-        # Cross attention.
-        if self.layer_type == LayerType.encoder:
-            pass
-        elif self.layer_type == LayerType.decoder:
-            layernorm_input, layernorm_output = \
-                self.default_decoder_cross_attention(
-                    encoder_output,
-                    enc_dec_attn_mask,
-                    layernorm_input,
-                    layernorm_output,
-                    bias_dropout_add_func)
-        elif self.layer_type == LayerType.retro_encoder:
-            layernorm_input, layernorm_output = \
-                self.retro_encoder_cross_attention(
-                    retriever_output,
-                    layernorm_input,
-                    layernorm_output,
-                    bias_dropout_add_func)
-        elif self.layer_type in (LayerType.retro_decoder,
-                                 LayerType.retro_decoder_with_retriever):
-            retriever_output, layernorm_input, layernorm_output = \
-                self.retro_decoder_cross_attention(
-                    retriever_input,
-                    retriever_output,
-                    retriever_attn_mask,
-                    layernorm_input,
-                    layernorm_output,
-                    inference_params,
-                    bias_dropout_add_func)
-        else:
-            raise Exception("Unsupported layer type, '%s'." %
-                            self.layer_type.name)
+            # Cross attention.
+            if self.layer_type == LayerType.encoder:
+                pass
+            elif self.layer_type == LayerType.decoder:
+                layernorm_input, layernorm_output = \
+                    self.default_decoder_cross_attention(
+                        encoder_output,
+                        enc_dec_attn_mask,
+                        layernorm_input,
+                        layernorm_output,
+                        bias_dropout_add_func)
+            elif self.layer_type == LayerType.retro_encoder:
+                layernorm_input, layernorm_output = \
+                    self.retro_encoder_cross_attention(
+                        retriever_output,
+                        layernorm_input,
+                        layernorm_output,
+                        bias_dropout_add_func)
+            elif self.layer_type in (LayerType.retro_decoder,
+                                    LayerType.retro_decoder_with_retriever):
+                retriever_output, layernorm_input, layernorm_output = \
+                    self.retro_decoder_cross_attention(
+                        retriever_input,
+                        retriever_output,
+                        retriever_attn_mask,
+                        layernorm_input,
+                        layernorm_output,
+                        inference_params,
+                        bias_dropout_add_func)
+            else:
+                raise Exception("Unsupported layer type, '%s'." %
+                                self.layer_type.name)
 
-        # MLP.
-        moe_loss = torch.tensor(0.0, device=layernorm_output.device, dtype=layernorm_output.dtype)
-        mlp_bias = torch.tensor(0.0, device=layernorm_output.device, dtype=layernorm_output.dtype)
+            # MLP.
+            moe_loss = torch.tensor(0.0, device=layernorm_output.device, dtype=layernorm_output.dtype)
+            mlp_bias = torch.tensor(0.0, device=layernorm_output.device, dtype=layernorm_output.dtype)
 
-        if self.num_experts == 1:
-            mlp_output, mlp_bias = self.mlp(layernorm_output)
-        else:
-            mlp_output, moe_loss, _ = self.mlp(layernorm_output)
+            if self.num_experts == 1:
+                mlp_output, mlp_bias = self.mlp(layernorm_output)
+            else:
+                mlp_output, moe_loss, _ = self.mlp(layernorm_output)
 
-        # Second residual connection.
-        if self.apply_residual_connection_post_layernorm:
-            residual = layernorm_output
-        else:
-            residual = layernorm_input
+            # Second residual connection.
+            if self.apply_residual_connection_post_layernorm:
+                residual = layernorm_output
+            else:
+                residual = layernorm_input
 
-        if self.drop_path is None:
-            if mlp_bias is not None:
-                mlp_bias = mlp_bias.expand_as(residual)
-            with self.bias_dropout_add_exec_handler():
-                output = bias_dropout_add_func(
-                    mlp_output,
-                    mlp_bias,
-                    residual,
-                    self.hidden_dropout)
+            residual_comm = self._ckpt_comm_process_sp(residual)
+            residual = residual if residual_comm is None else residual_comm
+            if self.drop_path is None:
+                if mlp_bias is not None:
+                    mlp_bias = mlp_bias.expand_as(residual)
+                with self.bias_dropout_add_exec_handler():
+                    output = bias_dropout_add_func(
+                        mlp_output,
+                        mlp_bias,
+                        residual,
+                        self.hidden_dropout)
 
-            # Jit compiled function creates 'view' tensor. This tensor
-            # potentially gets saved in the MPU checkpoint function context,
-            # which rejects view tensors. While making a viewless tensor here
-            # won't result in memory savings (like the data loader, or
-            # p2p_communication), it serves to document the origin of this
-            # 'view' tensor.
-            output = utils.make_viewless_tensor(inp=output,
-                                                requires_grad=output.requires_grad,
-                                                keep_graph=True)
-
-        else:
-            if mlp_bias is not None:
-                mlp_output = mlp_output + mlp_bias
-            out = torch.nn.functional.dropout(mlp_output,
-                                              p=self.hidden_dropout,
-                                              training=self.training)
-            output = residual + self.drop_path(out)
+                # Jit compiled function creates 'view' tensor. This tensor
+                # potentially gets saved in the MPU checkpoint function context,
+                # which rejects view tensors. While making a viewless tensor here
+                # won't result in memory savings (like the data loader, or
+                # p2p_communication), it serves to document the origin of this
+                # 'view' tensor.
+                output = utils.make_viewless_tensor(inp=output,
+                                                    requires_grad=output.requires_grad,
+                                                    keep_graph=True)
+            else:
+                if mlp_bias is not None:
+                    mlp_output = mlp_output + mlp_bias
+                out = torch.nn.functional.dropout(mlp_output,
+                                                p=self.hidden_dropout,
+                                                training=self.training)
+                output = residual + self.drop_path(out)
 
         if self.layer_type == LayerType.retro_decoder_with_retriever:
             return output, retriever_output, moe_loss
         else:
             return output, moe_loss
+
+    def _ckpt_comm_process_sp(self, residual):
+        args = get_args()
+        if args.communication_slim:
+            if args.ckpt_comm_args > 2:
+                if self.sequence_parallel:
+                    tp_rank = parallel_state.get_tensor_model_parallel_rank()
+                    residual_empty = torch.empty(residual.shape, dtype=residual.dtype,
+                                                device=torch.cuda.current_device(),
+                                                requires_grad=False)
+                    residual = torch.concat([residual_empty] * tp_rank + [residual] + [residual_empty] * (
+                            parallel_state.get_tensor_model_parallel_world_size() - tp_rank - 1), 0)
+                    return residual
+        return None
 
     @staticmethod
     def _build_alibi_tensor(max_seq_len, num_attention_heads, batch_size):
@@ -1417,7 +1443,8 @@ class ParallelTransformer(MegatronModule):
         self.checkpoint_num_layers = args.checkpoint_num_layers
         self.distribute_saved_activations = \
             config.distribute_saved_activations and not config.sequence_parallel
-
+        self.communication_slim = args.communication_slim
+        self.replace_checkpoint_flag = False
         self.sequence_parallel = config.sequence_parallel
         self.num_microbatches_in_previous_step = -1
         self.microbatch_count = 0
@@ -1560,6 +1587,44 @@ class ParallelTransformer(MegatronModule):
                 return (x_, *moe_losses)
 
             return custom_forward
+        
+        if self.communication_slim > 1:
+            def custom_nocomm(start, end):
+                
+                def custom_attn(*args, **kwargs):
+                    kwargs['transformer_stage'] = TransformerLayerStage.attn
+                    layer = self._get_layer(start)
+                    output = layer(*args, **kwargs)
+                    return output[0]
+                
+                def custom_ffn(*args, **kwargs):
+                    kwargs['transformer_stage'] = TransformerLayerStage.ffn
+                    layer = self._get_layer(start)
+                    output = layer(*args, **kwargs)
+                    if isinstance(output, tuple):
+                        x_, moe_loss = output
+                    else:
+                        x_ = output
+                        moe_loss = torch.tensor(0.0, device=x_.device, dtype=x_.dtype, requires_grad=True)
+                    return (x_, moe_loss)
+                return custom_attn, custom_ffn
+            
+            def custom_checkpoint(function, distribute_saved_activations, *args):
+                attn, ffn = function
+                attn_output = checkpoint_func(attn, distribute_saved_activations, *args)
+                if not isinstance(attn_output, tuple):
+                    attn_output = (attn_output,)
+                if len(attn_output) == 2:
+                    args = (attn_output[0],) + args[1:]
+                else:
+                    args = attn_output + args[1:]
+                return checkpoint_func(ffn, distribute_saved_activations, *args)
+            
+            custom = custom_nocomm
+            if not self.replace_checkpoint_flag:
+                checkpoint_func = tensor_parallel.checkpoint
+                tensor_parallel.checkpoint = custom_checkpoint
+                self.replace_checkpoint_flag = True
 
         if args.deepspeed and args.deepspeed_activation_checkpointing:
             moe_losses = []

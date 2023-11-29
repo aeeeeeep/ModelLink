@@ -74,7 +74,8 @@ deepspeed pretrain_llama.py \
        --max-position-embeddings 2048 \
        --position-embedding-type rope \
        --normalization RMSNorm \
-       --train-iters 500000 \
+       --train-iters 10000 \
+       --lr-decay-iters 6400 \
        --save $CHECKPOINT \
        --data-path $DATA \
        --tokenizer-name-or-path ./dataset/llama/ \
@@ -87,7 +88,7 @@ deepspeed pretrain_llama.py \
        --lr 1.0e-6 \
        --lr-decay-style cosine \
        --lr-warmup-fraction .01 \
-       --min-lr 1.0e-6 \
+       --min-lr 1.0e-7 \
        --weight-decay 1e-2 \
        --clip-grad 1.0 \
        --adam-beta1 0.9 \

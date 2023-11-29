@@ -21,6 +21,17 @@ from torch import _C
 from torch.utils.checkpoint import detach_variable
 import deepspeed
 from deepspeed.accelerator import get_accelerator
+from deepspeed.runtime.activation_checkpointing.checkpointing import extract_tensors, \
+    gather_partitioned_activations, merge_tensors, is_activation_to_checkpoint
+from deepspeed.runtime.activation_checkpointing.checkpointing import \
+    timers, data_offsets, size_offsets, \
+    contiguous_data_buffers, contiguous_size_buffers, \
+    PARTITION_ACTIVATIONS, CPU_CHECKPOINT, \
+    PROFILE_TIME, SYNCHRONIZE, CONTIGUOUS_CHECKPOINTING
+from deepspeed.runtime.activation_checkpointing import checkpointing
+from deepspeed.runtime.utils import move_to_device, see_memory_usage
+from deepspeed.runtime.activation_checkpointing.checkpointing import cuda_device, transport_stream
+
 
 from ascendspeed import get_args
 from ascendspeed.memory import allocate_mem_buff
@@ -266,6 +277,7 @@ class CheckpointFunction(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, *args):
+        _args = get_args()
         if not torch.autograd._is_checkpoint_valid():
             raise RuntimeError("Checkpointing is not compatible with .grad(), "
                                "please use .backward() if possible")
@@ -287,9 +299,25 @@ class CheckpointFunction(torch.autograd.Function):
 
         # Compute the forward pass.
         detached_inputs = detach_variable(inputs)
-        with torch.enable_grad():
-            outputs = ctx.run_function(*detached_inputs)
 
+        if _args.communication_slim > 0:
+            if _args.sequence_parallel:
+                dim_size = list(args[0].size())
+                dim_size[0] = dim_size[0] * get_tensor_model_parallel_world_size()
+                allgather_grad = torch.empty(dim_size, dtype=args[0].dtype, device=torch.cuda.current_device())
+                handle = torch.distributed._all_gather_base(allgather_grad, args[0].contiguous(),
+                                                            group=get_tensor_model_parallel_group(),
+                                                            async_op=True)
+            with torch.enable_grad():
+                _args.ckpt_comm_args = _args.communication_slim
+                outputs = ctx.run_function(*detached_inputs)
+                _args.ckpt_comm_args = 0
+            if _args.sequence_parallel:
+                handle.wait()
+                args = tuple([allgather_grad])
+        else:
+            with torch.enable_grad():
+                outputs = ctx.run_function(*detached_inputs)
         # Set the states back to what it was at the start of this function.
         torch.set_rng_state(bwd_cpu_rng_state)
         _set_cuda_rng_state(bwd_cuda_rng_state)
@@ -315,3 +343,135 @@ def checkpoint(function, distribute_saved_activations, *args):
         return deepspeed.checkpointing.checkpoint(function, *args)
 
     return CheckpointFunction.apply(function, distribute_saved_activations, *args)
+
+
+class DeepspeedCheckpointFunctionNoComm(checkpointing.CheckpointFunction):
+    @staticmethod
+    def forward(ctx, run_function, all_outputs, *args):
+        return checkpointing.CheckpointFunction.forward(ctx, run_function, all_outputs, *args)
+
+
+    @staticmethod
+    def backward(ctx, *grads):
+        global timers
+        args = get_args()
+        see_memory_usage("In backward", force=False)
+        if SYNCHRONIZE:
+            get_accelerator().synchronize()
+        if PROFILE_TIME:
+            timers('backward').start()
+        if CONTIGUOUS_CHECKPOINTING:
+            global data_offsets, size_offsets
+            global contiguous_data_buffers, contiguous_size_buffers
+
+            for buffers in contiguous_data_buffers:
+                buffers = []
+            contiguous_data_buffers = []
+            contiguous_size_buffers = []
+            data_offsets = []
+            size_offsets = []
+
+        see_memory_usage("In backward checkpointing code", force=False)
+        if not torch.autograd._is_checkpoint_valid():
+            raise RuntimeError("Checkpointing is not compatible with .grad(), "
+                               "please use .backward() if possible")
+
+        global cuda_device, transport_stream, PARTITION_ACTIVATIONS
+
+        if PARTITION_ACTIVATIONS:
+            # with get_accelerator().stream(transport_stream):
+            inputs = gather_partitioned_activations(ctx.deepspeed_saved_tensors,
+                                                    device=cuda_device if CPU_CHECKPOINT else None)
+            detached_inputs = detach_variable(inputs)
+        elif CPU_CHECKPOINT:
+            inputs = move_to_device(ctx.deepspeed_saved_tensors, cuda_device, is_activation_to_checkpoint)
+            detached_inputs = detach_variable(inputs)
+        else:
+            inputs = ctx.deepspeed_saved_tensors
+            detached_inputs = detach_variable(inputs)
+
+        # Add non tensor input args
+        detached_inputs = merge_tensors(tensor_objects=detached_inputs,
+                                        non_tensor_objects=ctx.non_tensor_args,
+                                        tensor_flags=ctx.tensor_flags)
+
+        # Store the current states.
+        bwd_cpu_rng_state = torch.get_rng_state()
+        bwd_cuda_rng_state = get_accelerator().get_rng_state()
+        bwd_cuda_rng_state_tracker = get_cuda_rng_tracker().get_states()
+
+        # Set the states to what it used to be before the forward pass.
+        torch.set_rng_state(ctx.fwd_cpu_rng_state)
+        _set_cuda_rng_state(ctx.fwd_cuda_rng_state)
+        get_cuda_rng_tracker().set_states(ctx.fwd_cuda_rng_state_tracker)
+
+        see_memory_usage("In backward checkpointing code before forward", force=False)
+        if get_args().communication_slim > 0:
+            if get_args().sequence_parallel:
+                dim_size = list(grads[0].size())
+                dim_size[0] = dim_size[0] * get_tensor_model_parallel_world_size()
+                allgather_grad = torch.empty(dim_size, dtype=grads[0].dtype, device=torch.cuda.current_device())
+                handle = torch.distributed._all_gather_base(allgather_grad, grads[0].contiguous(),
+                                                            group=get_tensor_model_parallel_group(),
+                                                            async_op=True)
+            with torch.enable_grad():
+                args.ckpt_comm_args = args.communication_slim
+                outputs = ctx.run_function(*detached_inputs)
+                args.ckpt_comm_args = 0
+            if get_args().sequence_parallel:
+                handle.wait()
+                grads = tuple([allgather_grad])
+        else:
+            with torch.enable_grad():
+                outputs = ctx.run_function(*detached_inputs)
+
+        see_memory_usage("In backward checkpointing code after forward", force=False)
+        # Set the states back to what it was at the start of this function.
+        torch.set_rng_state(bwd_cpu_rng_state)
+        _set_cuda_rng_state(bwd_cuda_rng_state)
+        get_cuda_rng_tracker().set_states(bwd_cuda_rng_state_tracker)
+
+        if isinstance(outputs, torch.Tensor):
+            outputs = (outputs,)
+        # Filter out non tensor outputs
+        outputs, _, _ = extract_tensors(all_objects=outputs)
+        # Construct arguments to autograd.backward().
+        # This is usually just outputs and grads, but forward() can return tensors that
+        # are not differentiable.
+        output_tensors = []
+        grad_tensors = []
+        for out, grad in zip(outputs, grads):
+            if out.requires_grad:
+                output_tensors.append(out)
+                grad_tensors.append(grad)
+
+        see_memory_usage("In backward checkpointing code before backward", force=False)
+        torch.autograd.backward(output_tensors, grad_tensors)
+        # Force clear our stashed tensors to prevent a memory leak in certain scenarios
+        ctx.deepspeed_saved_tensors = None
+        ctx.non_tensor_args = None
+        ctx.tensor_flags = None
+        see_memory_usage("After backward checkpointing code after backward", force=False)
+        if PROFILE_TIME:
+            timers('backward').stop()
+            timers.log(['backward'])
+        if SYNCHRONIZE:
+            get_accelerator().synchronize()
+        ret_list = [None, None]  # first None for ctx
+        for inp in detached_inputs:
+            if torch.is_tensor(inp):
+                ret_list.append(inp.grad)
+            else:
+                ret_list.append(None)
+        return tuple(ret_list)
+
+
+def deepspeed_optimized_checkpoint_comm(function, *args):
+    all_outputs = []
+    DeepspeedCheckpointFunctionNoComm.apply(function, all_outputs, *args)
+    if torch.is_tensor(all_outputs):
+        return all_outputs
+    if len(all_outputs) == 1:
+        return all_outputs[0]
+    else:
+        return tuple(all_outputs)

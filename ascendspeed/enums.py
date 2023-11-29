@@ -36,3 +36,8 @@ class PositionEmbeddingType(enum.Enum):
     rope = 1
     absolute = 2
     alibi = 3
+
+
+class TransformerLayerStage(enum.Enum):
+    attn = 1
+    ffn = 2

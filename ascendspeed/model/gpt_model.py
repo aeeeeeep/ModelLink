@@ -16,6 +16,7 @@
 """GPT-2 model."""
 
 import torch
+import deepspeed
 from deepspeed.pipe import PipelineModule, LayerSpec, TiedLayerSpec
 
 from ascendspeed import get_args
@@ -365,9 +366,14 @@ class GPTModelPipe(ManuallyAllocatedPipelineModule, MegatronModule, MegatronModu
         # caveat emptor: the current implementation of PP fails unless each stage has at least one
         # transformer layer
         partition_method = 'type:transformer'
+        if args.communication_slim > 0:
+            checkpoint = tensor_parallel.random.deepspeed_optimized_checkpoint_comm
+        else:
+            checkpoint = deepspeed.checkpointing.checkpoint
 
         super().__init__(layers=self.specs,
                          loss_fn=get_cross_entropy(is_prefix=attn_mask_type is AttnMaskType.prefix),
                          topology=topo,
                          activation_checkpoint_interval=interval,
-                         partition_method=partition_method)
+                         partition_method=partition_method,
+                         activation_checkpoint_func=checkpoint)
