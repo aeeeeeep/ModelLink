@@ -31,8 +31,6 @@ OP_SETPARAM(atb::train::FlashAttentionBackwardParam)
 
 const static int N = 32;
 
-atb::Operation* op = nullptr;
-void *workspacePtr = nullptr;
 atb::Context *contextPtr = nullptr;
 
 std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
@@ -51,7 +49,9 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
     param.groups = groups;
 
     std::vector<at::Tensor> outTensors;
+    atb::Operation* op = nullptr;
     atb::CreateOperation(param, &op);
+    TORCH_CHECK(op != nullptr, "get op failed!");
 
     std::vector<atb::Tensor> inTensors;
     auto atb_query = Input(query);
@@ -103,7 +103,7 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
     TORCH_CHECK(workspaceSize > 0, "get workspace size failed!");
     at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
     auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
-    workspacePtr = workspaceTensor.storage().data();
+    auto workspacePtr = workspaceTensor.storage().data();
 
     int32_t devId = 0;
     aclrtGetDevice(&devId);
@@ -116,6 +116,7 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
 
     auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
+        delete op;
         return 0;
     };
 
@@ -146,6 +147,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
     std::vector<at::Tensor> outTensors;
     atb::Operation* op = nullptr;
     atb::CreateOperation(param, &op);
+    ORCH_CHECK(op != nullptr, "get op failed!");
 
     std::vector<atb::Tensor> inTensors;
     auto atb_dy = Input(dy);
@@ -209,7 +211,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
     TORCH_CHECK(workspaceSize > 0, "get workspace size failed!");
     at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
     auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
-    workspacePtr = workspaceTensor.storage().data();
+    auto workspacePtr = workspaceTensor.storage().data();
 
     int32_t devId = 0;
     aclrtGetDevice(&devId);
@@ -222,6 +224,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
 
     auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
+        delete op;
         return 0;
     };
     at_npu::native::OpCommand cmd;
