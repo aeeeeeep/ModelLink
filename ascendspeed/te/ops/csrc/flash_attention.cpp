@@ -33,6 +33,7 @@ const static int N = 32;
 
 atb::Operation* op = nullptr;
 void *workspacePtr = nullptr;
+atb::Context *contextPtr = nullptr;
 
 std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
                            const c10::optional<at::Tensor> &atten_mask, const c10::optional<at::Tensor> &alibi_mask,
@@ -104,8 +105,16 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
     auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
     workspacePtr = workspaceTensor.storage().data();
 
-    auto acl_call = [op, variantPack, workspacePtr, workspaceSize]() -> int {
-        atb::Context *contextPtr = GetContext();
+    int32_t devId = 0;
+    aclrtGetDevice(&devId);
+    const aclrtStream stream = c10_npu::getCurrentNPUStream(devId).stream(false);
+    if(contextPtr==nullptr){
+        static constexpr uint64_t FLAG = (11ULL << 4) | (20ULL << 1);
+        atb::CreateContext(&contextPtr, FLAG);            
+    }        
+    contextPtr->SetExecuteStream(stream);
+
+    auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
         return 0;
     };
@@ -202,8 +211,16 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
     auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
     workspacePtr = workspaceTensor.storage().data();
 
-    auto acl_call = [op, variantPack, workspacePtr, workspaceSize]() -> int {
-        atb::Context *contextPtr = GetContext();
+    int32_t devId = 0;
+    aclrtGetDevice(&devId);
+    const aclrtStream stream = c10_npu::getCurrentNPUStream(devId).stream(false);
+    if(contextPtr==nullptr){
+        static constexpr uint64_t FLAG = (11ULL << 4) | (20ULL << 1);
+        atb::CreateContext(&contextPtr, FLAG);            
+    }        
+    contextPtr->SetExecuteStream(stream);
+
+    auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
         return 0;
     };
