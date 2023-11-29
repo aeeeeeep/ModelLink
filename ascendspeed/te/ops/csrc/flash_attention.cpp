@@ -101,7 +101,7 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
     TORCH_CHECK(st == 0, "setup failed!");
     TORCH_CHECK(workspaceSize > 0, "get workspace size failed!");
     at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
-    workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
+    auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
     workspacePtr = workspaceTensor.storage().data();
 
     auto acl_call = [op, variantPack, workspacePtr, workspaceSize]() -> int {
@@ -199,7 +199,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
     TORCH_CHECK(st == 0, "setup failed!");
     TORCH_CHECK(workspaceSize > 0, "get workspace size failed!");
     at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
-    workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
+    auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
     workspacePtr = workspaceTensor.storage().data();
 
     auto acl_call = [op, variantPack, workspacePtr, workspaceSize]() -> int {
