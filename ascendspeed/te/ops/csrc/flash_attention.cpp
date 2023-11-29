@@ -26,9 +26,6 @@
 
 using namespace std;
 
-OP_SETPARAM(atb::train::FlashAttentionParam)
-OP_SETPARAM(atb::train::FlashAttentionBackwardParam)
-
 const static int N = 32;
 
 atb::Context *contextPtr = nullptr;
