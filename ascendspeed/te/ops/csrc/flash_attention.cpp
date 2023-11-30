@@ -29,7 +29,7 @@ using namespace std;
 
 const static int N = 32;
 
-atb::Context *contextPtr = nullptr;
+// atb::Context *contextPtr = nullptr;
 
 std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
                            const c10::optional<at::Tensor> &atten_mask, const c10::optional<at::Tensor> &alibi_mask,
@@ -106,15 +106,16 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
         workspacePtr = workspaceTensor.storage().data();
     }
 
-    if(contextPtr==nullptr){
-        // static constexpr uint64_t FLAG = (11ULL << 4) | (20ULL << 1);
-        // atb::CreateContext(&contextPtr, FLAG);        
-        int32_t devId = 0;
-        aclrtGetDevice(&devId);
-        const aclrtStream stream = c10_npu::getCurrentNPUStream(devId).stream(false);
-        atb::CreateContext(&contextPtr);    
-        contextPtr->SetExecuteStream(stream);
-    }        
+    // int32_t devId = 0;
+    // aclrtGetDevice(&devId);
+    // const aclrtStream stream = c10_npu::getCurrentNPUStream(devId).stream(false);
+    // if(contextPtr==nullptr){
+    //     // static constexpr uint64_t FLAG = (11ULL << 4) | (20ULL << 1);
+    //     // atb::CreateContext(&contextPtr, FLAG);        
+    //     atb::CreateContext(&contextPtr);    
+    // }        
+    // contextPtr->SetExecuteStream(stream);
+    atb::Context contextPtr = GetContext();
 
     auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
@@ -218,15 +219,16 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
         workspacePtr = workspaceTensor.storage().data();
     }
 
-    if(contextPtr==nullptr){
-        // static constexpr uint64_t FLAG = (11ULL << 4) | (20ULL << 1);
-        // atb::CreateContext(&contextPtr, FLAG);            
-        int32_t devId = 0;
-        aclrtGetDevice(&devId);
-        const aclrtStream stream = c10_npu::getCurrentNPUStream(devId).stream(false);
-        atb::CreateContext(&contextPtr);    
-        contextPtr->SetExecuteStream(stream);
-    }        
+    // int32_t devId = 0;
+    // aclrtGetDevice(&devId);
+    // const aclrtStream stream = c10_npu::getCurrentNPUStream(devId).stream(false);
+    // if(contextPtr==nullptr){
+    //     // static constexpr uint64_t FLAG = (11ULL << 4) | (20ULL << 1);
+    //     // atb::CreateContext(&contextPtr, FLAG);            
+    //     atb::CreateContext(&contextPtr);
+    // }        
+    // contextPtr->SetExecuteStream(stream);
+    atb::Context contextPtr = GetContext();
 
     auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
