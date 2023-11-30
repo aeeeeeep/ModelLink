@@ -136,7 +136,7 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
 
     auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
-        DestroyOperation(op);
+        // DestroyOperation(op);
         return 0;
     };
 
@@ -249,7 +249,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
 
     auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
-        DestroyOperation(op);
+        // DestroyOperation(op);
         return 0;
     };
     at_npu::native::OpCommand cmd;
