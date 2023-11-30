@@ -31,6 +31,23 @@ const static int N = 32;
 
 // atb::Context *contextPtr = nullptr;
 
+static atb::Context* msContext = nullptr;
+atb::Context* GetContext()
+{
+    if (msContext == nullptr) {
+        // static constexpr uint64_t FLAG = (11ULL << 4) | (20ULL << 1);
+        // auto status = atb::CreateContext(&msContext, FLAG);  
+        auto status = atb::CreateContext(&msContext);
+        TORCH_CHECK(status == 0, "create context failed!");
+        int32_t devId = 0;
+        aclrtGetDevice(&devId);
+        aclrtStream stream = c10_npu::getCurrentNPUStream(devId).stream(false);
+        TORCH_CHECK(stream != nullptr, "get current stream failed");
+        msContext->SetExecuteStream(stream);
+    }
+    return msContext;
+}
+
 std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
                            const c10::optional<at::Tensor> &atten_mask, const c10::optional<at::Tensor> &alibi_mask,
                            const c10::optional<at::Tensor> &drop_mask, float scale_value, int64_t head_num, int64_t io_layout, float keep_prob,

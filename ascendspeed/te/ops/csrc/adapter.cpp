@@ -22,22 +22,6 @@
 #include <torch_npu/csrc/framework/OpCommand.h>
 
 using namespace std;
-static atb::Context* msContext;
-atb::Context* GetContext()
-{
-    if (msContext == nullptr) {
-        static constexpr uint64_t FLAG = (11ULL << 4) | (20ULL << 1);
-        auto status = atb::CreateContext(&msContext, FLAG);  
-        // auto status = atb::CreateContext(&msContext);
-        TORCH_CHECK(status == 0, "create context failed!");
-        int32_t devId = 0;
-        aclrtGetDevice(&devId);
-        aclrtStream stream = c10_npu::getCurrentNPUStream(devId).stream(false);
-        TORCH_CHECK(stream != nullptr, "get current stream failed");
-        msContext->SetExecuteStream(stream);
-    }
-    return msContext;
-}
 
 at::Tensor CreateAtTensorFromTensorDesc(const atb::TensorDesc &tensorDesc)
 {
