@@ -97,10 +97,12 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
     uint64_t workspaceSize = 0;
     atb::Status st = op->Setup(variantPack, workspaceSize);
     TORCH_CHECK(st == 0, "setup failed!");
-    TORCH_CHECK(workspaceSize > 0, "get workspace size failed!");
     at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
-    auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
-    auto workspacePtr = workspaceTensor.storage().data();
+    void *workspacePtr = nullptr;
+    if (workspaceSize > 0) {
+        auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
+        workspacePtr = workspaceTensor.storage().data();
+    }
 
     int32_t devId = 0;
     aclrtGetDevice(&devId);
@@ -113,7 +115,7 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
 
     auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
-        delete op;
+        DestroyOperation(op);
         return 0;
     };
 
@@ -205,10 +207,12 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
     uint64_t workspaceSize = 0;
     atb::Status st = op->Setup(variantPack, workspaceSize);
     TORCH_CHECK(st == 0, "setup failed!");
-    TORCH_CHECK(workspaceSize > 0, "get workspace size failed!");
     at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
-    auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
-    auto workspacePtr = workspaceTensor.storage().data();
+    void *workspacePtr = nullptr;
+    if (workspaceSize > 0) {
+        auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
+        workspacePtr = workspaceTensor.storage().data();
+    }
 
     int32_t devId = 0;
     aclrtGetDevice(&devId);
@@ -221,7 +225,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
 
     auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
-        delete op;
+        DestroyOperation(op);
         return 0;
     };
     at_npu::native::OpCommand cmd;
