@@ -115,7 +115,7 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
     //     atb::CreateContext(&contextPtr);    
     // }        
     // contextPtr->SetExecuteStream(stream);
-    atb::Context contextPtr = GetContext();
+    auto contextPtr = GetContext();
 
     auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
@@ -228,7 +228,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
     //     atb::CreateContext(&contextPtr);
     // }        
     // contextPtr->SetExecuteStream(stream);
-    atb::Context contextPtr = GetContext();
+    auto contextPtr = GetContext();
 
     auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
