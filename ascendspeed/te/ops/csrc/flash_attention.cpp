@@ -110,8 +110,9 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
     aclrtGetDevice(&devId);
     const aclrtStream stream = c10_npu::getCurrentNPUStream(devId).stream(false);
     if(contextPtr==nullptr){
-        static constexpr uint64_t FLAG = (11ULL << 4) | (20ULL << 1);
-        atb::CreateContext(&contextPtr, FLAG);            
+        // static constexpr uint64_t FLAG = (11ULL << 4) | (20ULL << 1);
+        // atb::CreateContext(&contextPtr, FLAG);        
+        atb::CreateContext(&contextPtr);    
     }        
     contextPtr->SetExecuteStream(stream);
 
@@ -221,8 +222,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
     aclrtGetDevice(&devId);
     const aclrtStream stream = c10_npu::getCurrentNPUStream(devId).stream(false);
     if(contextPtr==nullptr){
-        static constexpr uint64_t FLAG = (11ULL << 4) | (20ULL << 1);
-        atb::CreateContext(&contextPtr, FLAG);            
+        // static constexpr uint64_t FLAG = (11ULL << 4) | (20ULL << 1);
+        // atb::CreateContext(&contextPtr, FLAG);            
+        atb::CreateContext(&contextPtr);
     }        
     contextPtr->SetExecuteStream(stream);
 
