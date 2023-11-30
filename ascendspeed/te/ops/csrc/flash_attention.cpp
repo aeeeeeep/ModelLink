@@ -19,6 +19,7 @@
 
 #include <torch_npu/csrc/core/npu/SecondaryStreamGuard.h>
 #include <torch_npu/csrc/aten/NPUGeneratorImpl.h>
+#include "torch_npu/csrc/framework/utils/OpPreparation.h"
 #include "atb/operation.h"
 #include "atb/train_op_params.h"
 #include "common.h"
@@ -100,7 +101,8 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
     at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
     void *workspacePtr = nullptr;
     if (workspaceSize > 0) {
-        auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
+        // auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
+        auto workspaceTensor = at_npu::native::OpPreparation::unsafe_empty_workspace(workspaceSize);
         workspacePtr = workspaceTensor.storage().data();
     }
 
@@ -210,7 +212,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
     at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
     void *workspacePtr = nullptr;
     if (workspaceSize > 0) {
-        auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
+        // auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
+        auto workspaceTensor = at_npu::native::OpPreparation::unsafe_empty_workspace(workspaceSize);
         workspacePtr = workspaceTensor.storage().data();
     }
 
