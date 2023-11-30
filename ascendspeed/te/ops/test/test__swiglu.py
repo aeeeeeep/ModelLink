@@ -1,10 +1,11 @@
 import torch
 import torch.nn.functional as F
 import torch_npu
-import ascendspeed.te.ops as aops
 from torch_npu.testing.testcase import TestCase, run_tests
+import ascendspeed.te.ops as aops
 
 torch.npu.config.allow_internal_format = False
+
 
 class TestSwiGlu(TestCase):
 
@@ -26,7 +27,7 @@ class TestSwiGlu(TestCase):
         return output
 
     def test_swiglu(self):
-        shape = [8192, 1, 3904*2]
+        shape = [8192, 1, 3904 * 2]
         dim = -1
         input_self_tensor = torch.rand(shape, device='cpu', dtype=torch.bfloat16)
         print("input:", input_self_tensor)
@@ -43,7 +44,7 @@ class TestSwiGlu(TestCase):
         self.assertRtolEqual(output.type(torch.float32), golden.type(torch.float32))
 
 
-class AAATestSwiGluGrad(TestCase):
+class TestSwiGluGrad(TestCase):
 
     def swish(self, beta, x):
         return x * torch.sigmoid(beta * x)
@@ -91,8 +92,8 @@ class AAATestSwiGluGrad(TestCase):
         output = swiglu_grad_v2(input_self_tensor)
         return output
 
-    def aaa_test_swiglu_grad(self):
-        shape = [8192, 1, 3904*2]
+    def test_swiglu_grad(self):
+        shape = [8192, 1, 3904 * 2]
         grad_shape = [8192, 1, 3904]
         dim = -1
         grad_out = torch.rand(grad_shape, device='cpu', dtype=torch.bfloat16)

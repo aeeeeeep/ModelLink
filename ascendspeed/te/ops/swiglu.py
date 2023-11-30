@@ -1,5 +1,7 @@
 import torch
 import ascendspeed_te_ops
+
+
 class NpuSwiGlu(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x, dim=-1):
