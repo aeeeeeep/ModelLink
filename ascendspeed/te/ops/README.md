@@ -24,5 +24,6 @@ https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/sof
 ```shell
 python3 setup.py build
 python3 setup.py bdist
+python3 setup.py bdist_wheel
 pip3 install dist/*.whl --force-reinstall
 ```
