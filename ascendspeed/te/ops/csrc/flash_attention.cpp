@@ -35,9 +35,9 @@ static atb::Context* msContext = nullptr;
 atb::Context* GetContext()
 {
     if (msContext == nullptr) {
-        static constexpr uint64_t FLAG = (11ULL << 4) | (20ULL << 1);
-        auto status = atb::CreateContext(&msContext, FLAG);  
-        // auto status = atb::CreateContext(&msContext);
+        // static constexpr uint64_t FLAG = (11ULL << 4) | (20ULL << 1);
+        // auto status = atb::CreateContext(&msContext, FLAG);  
+        auto status = atb::CreateContext(&msContext);
         TORCH_CHECK(status == 0, "create context failed!");
         int32_t devId = 0;
         aclrtGetDevice(&devId);
@@ -137,7 +137,7 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
     auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
         // delete op;
-        DestroyOperation(op);
+        // DestroyOperation(op);
         return 0;
     };
 
@@ -250,7 +250,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
 
     auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
-        DestroyOperation(op);
+        // DestroyOperation(op);
         // delete op;
         return 0;
     };
