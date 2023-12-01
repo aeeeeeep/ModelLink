@@ -24,6 +24,7 @@
 #include "atb/train_op_params.h"
 #include "common.h"
 #include "adapter.h"
+#include <unistd.h>
 
 using namespace std;
 
@@ -137,6 +138,7 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
     auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
         // delete op;
+        usleep(100);
         DestroyOperation(op);
         return 0;
     };
@@ -250,6 +252,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
 
     auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
+        usleep(100);
         DestroyOperation(op);
         // delete op;
         return 0;
