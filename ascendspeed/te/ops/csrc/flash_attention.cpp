@@ -118,8 +118,8 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
     at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
     void *workspacePtr = nullptr;
     if (workspaceSize > 0) {
-        auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
-        // auto workspaceTensor = at_npu::native::OpPreparation::unsafe_empty_workspace(workspaceSize);
+        // auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
+        auto workspaceTensor = at_npu::native::OpPreparation::unsafe_empty_workspace(workspaceSize);
         workspacePtr = workspaceTensor.storage().data();
     }
 
@@ -137,7 +137,7 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
     auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
         // delete op;
-        // DestroyOperation(op);
+        DestroyOperation(op);
         return 0;
     };
 
@@ -232,8 +232,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
     at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
     void *workspacePtr = nullptr;
     if (workspaceSize > 0) {
-        auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
-        // auto workspaceTensor = at_npu::native::OpPreparation::unsafe_empty_workspace(workspaceSize);
+        // auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
+        auto workspaceTensor = at_npu::native::OpPreparation::unsafe_empty_workspace(workspaceSize);
         workspacePtr = workspaceTensor.storage().data();
     }
 
@@ -250,7 +250,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
 
     auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
-        // DestroyOperation(op);
+        DestroyOperation(op);
         // delete op;
         return 0;
     };
