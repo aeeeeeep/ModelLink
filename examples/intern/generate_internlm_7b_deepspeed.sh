@@ -33,7 +33,8 @@ cat <<EOT > $config_json
 EOT
 
 deepspeed --num_nodes $NNODES --num_gpus $NPUS_PER_NODE \
-       ./tasks/inference/inference_internlm.py \
+       ./tasks/inference/inference_llama.py \
+       --internlm \
        --no-contiguous-buffers-in-local-ddp \
        --num-layers 32  \
        --hidden-size 4096  \
