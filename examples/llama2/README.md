@@ -7,7 +7,7 @@
 
 # 目录
 
-- [LLaMA2-7B](#LLaMA2-7B)
+- [LLAMA2-7B](#LLAMA2-7B)
   - [训练](#训练)
   - [脚本](#脚本)
   - [性能](#性能)
@@ -27,26 +27,26 @@
 
 
 
-# LLaMA2-7B
+# LLAMA2-7B
 
 ## 训练
 
-LLaMA2-7B 训练的硬件配置:
+LLAMA2-7B 训练的硬件配置:
 
 | 硬件 |      配置      |
 | :--: | :-------------: |
 | NPU | 8 x Ascend NPUs |
 
-LLaMA2-7B 训练的软件配置:
+LLAMA2-7B 训练的软件配置:
 
 |           软件           |                                                   配置                                                   |
 | :-----------------------: | :-------------------------------------------------------------------------------------------------------: |
-|          python          |                                                  3.7.16                                                  |
+|          python          |                                                  3.8.18                                                  |
 |          driver          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |         firmware         | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |           CANN           |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
 | binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                  1.11.0                                                  |
+|           torch           |                                                  2.1.0                                                  |
 |         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
 
 ### 脚本
@@ -62,14 +62,14 @@ LLaMA2-7B 训练的软件配置:
 2. 搭建环境
 
    ```bash
-   # python3.7
-   conda create -n test python=3.7
+   # python3.8
+   conda create -n test python=3.8
    conda activate test
    
    # 安装 torch 和 torch_npu
-   pip install torch-1.11.0-cp37-cp37m-manylinux2014_aarch64.whl
-   pip install torch_npu-1.11.0*-cp37-cp37m-linux_aarch64.whl
-   pip install apex-0.1_ascend*-cp37-cp37m-linux_aarch64.whl
+   pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+   pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
+   pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
    
    # 安装 megatron-core
    pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
@@ -84,7 +84,7 @@ LLaMA2-7B 训练的软件配置:
    # install other packages
    pip install -r requirements.txt 
    ```
-3. 下载 LLaMA2-7B 的 [预训练权重和词表](https://huggingface.co/daryl149/llama-2-7b-hf/tree/main)
+3. 下载 LLAMA2-7B 的 [预训练权重和词表](https://huggingface.co/daryl149/llama-2-7b-hf/tree/main)
 
    ```shell
      #!/bin/bash
@@ -102,38 +102,7 @@ LLaMA2-7B 训练的软件配置:
      cd ..
    ```
 
-   ```text
-   # 请注意，如果要加载huggingface的预训练权重，需要修改一个deepspeed关于加载权重的bug：
-   # 在 `<deepspeed-installed-path>/runtime/engine.py` 文件里的 `_load_zero_checkpoint` 函数，
-   # 将 `if zero_sd_list is None` 改为 `if zero_sd_list is None or len(zero_sd_list) == 0`
-   
-   # 原始 deepspeed/runtime/engine.py, 大概 #Lines2746-2748
-   zero_sd_list = self._get_all_zero_checkpoints(load_dir, tag)
-   if zero_sd_list is None:
-       return False
-   
-   # 修改后
-   zero_sd_list = self._get_all_zero_checkpoints(load_dir, tag)
-   if zero_sd_list is None or len(zero_sd_list) == 0:
-       return False
-   ```
-
-   3.1 将权重从 huggingface 格式转化为 AscendSpeed 格式 ： deepspeed模式
-
-   ```bash
-   # 修改 ascend-toolkit 路径
-   source /usr/local/Ascend/ascend-toolkit/set_env.sh
-   
-   # 权重格式转换
-   python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir llama-2-7b-hf \
-                                                                       --output-model-dir ckpt \
-                                                                       --tensor-model-parallel-size 1 \
-                                                                       --pipeline-model-parallel-size 1 \
-                                                                       --type 7B \
-                                                                       --deepspeed
-   ```
-
-   3.2 将权重从 huggingface 格式转化为 AscendSpeed 格式 ： PTD模式
+   将权重从 huggingface 格式转化为 AscendSpeed 格式 ： PTD模式
 
    ```bash
     # 修改 ascend-toolkit 路径
@@ -170,26 +139,7 @@ LLaMA2-7B 训练的软件配置:
        --log-interval 1000 \
        --tokenizer-type PretrainedFromHF
    ```
-
-   4.2 用deepspeed模式预训练
-   配置 LLaMA2-7B 预训练脚本: examples/llama2/pretrain_llama2_7b_zero_8p.sh
-
-   ```shell
-    # 设置 ascend-toolkit 路径
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-
-    # 配置词表，数据集等路径
-    TOKENIZER_PATH=./llama-2-7b-hf/  #词表路径
-    DATA_PATH=./dataset_llama2/alpaca_text_document  #数据集路径
-   ```
-
-   启动 LLaMA2-7B 预训练脚本: examples/llama2/pretrain_llama2_7b_zero_8p.sh
-
-   ```shell
-    bash examples/llama2/pretrain_llama2_7b_zero_8p.sh 
-   ```
-
-   4.3 用ptd模式预训练
+   4.2 用ptd模式预训练
    配置LLaMA2-7B PTD 预训练脚本: examples/llama2/pretrain_llama2_7b_ptd.sh
 
    ```shell
@@ -232,17 +182,17 @@ LLaMA2-7B 训练的软件配置:
      --append-eod
    ```
 
-   5.2 用deepspeed模式微调
-   
-   5.2.1 全参微调
-   全参微调的配置脚本基本和预训练脚本pretrain_llama2_7b_zero_8p.sh一致.*唯一的区别是数据集*
+   5.2 全参微调
+   全参微调的配置脚本基本和预训练脚本pretrain_llama2_7b_ptd.sh一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
 
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
+   
+   --is-instruction-dataset \
    ```
 
-   5.2.2 Lora微调
-   Lora微调的脚本配置是在预训练脚本pretrain_llama2_7b_zero_8p.sh基础上加上lora参数，如下所示:
+   5.3 Lora微调
+   Lora微调的脚本配置是在预训练脚本pretrain_llama2_7b_ptd.sh基础上加上lora参数，如下所示:
 
    ```bash
        --lora-target-modules query_key_value dense gate_proj up_proj down_proj \
@@ -263,8 +213,6 @@ LLaMA2-7B 训练的软件配置:
        --lora-load ${LORA_CHECKPOINT} \   # lora参数checkpoint
    ```
 
-   5.3 PTD模式微调
-   *PTD模式的微调方法和deepspeed模式的微调方法完全一致.具体细节请参考上一小节.*
 
 ### 性能
 
@@ -395,8 +343,10 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation
      --num-attention-heads 32  \
      --mlp-layer-fusion \
      --load ${CHECKPOINT}  \
+     --position-embedding-type rope \
+     --normalization RMSNorm \
      --tokenizer-type PretrainedFromHF  \
-     --tokenizer-name-or-path $VOCAB_FILE \
+     --tokenizer-name-or-path ${TOKENIZER_PATH} \
      --tokenizer-not-use-fast \
      --fp16  \
      --micro-batch-size 1  \

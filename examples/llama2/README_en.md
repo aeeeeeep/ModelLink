@@ -26,27 +26,27 @@
 
 
 
-# LLaMA2-7B
+# LLAMA2-7B
 
 ## Training
 
-Here's a hardware summary of pre-training  LLaMA2-7B:
+Here's a hardware summary of pre-training  LLAMA2-7B:
 
 | Hardware |                      Value                      |
 | :------: | :---------------------------------------------: |
 |   NPU    |               8 x Ascend NPUs                   |
 
-Here's a software summary of pre-training  LLaMA2-7B: 
+Here's a software summary of pre-training  LLAMA2-7B: 
 
 
 |         Software          |   Version   |
 | :-----------------------: |:-----------:|
-|          Python           |   3.7.16    |
+|          Python           |   3.8.18    |
 |          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
 | binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                    1.11.0                                                    |
+|           torch           |                                                    2.1.0                                                    |
 |         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
 
 ### Script
@@ -62,14 +62,14 @@ Here's a software summary of pre-training  LLaMA2-7B:
 2. Build environment
    
     ```bash
-    # python3.7
-    conda create -n test python=3.7
+    # python3.8
+    conda create -n test python=3.8
     conda activate test
     
     # install torch and torch_npu
-    pip install torch-1.11.0-cp37-cp37m-manylinux2014_aarch64.whl
-    pip install torch_npu-1.11.0*-cp37-cp37m-linux_aarch64.whl
-    pip install apex-0.1_ascend*-cp37-cp37m-linux_aarch64.whl
+    pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+    pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
+    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
     
     # install megatron-core
     pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
@@ -115,22 +115,8 @@ Here's a software summary of pre-training  LLaMA2-7B:
       wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/tokenizer_config.json
       cd ..
     ```
-    
-   3.1 weight conversion in deepspeed mode
-   *Note that if you want to use the weight from huggingface, please run the weight conversion script first. The following uses llama-2-7b model  weight conversion in deepspeed as an example.*
-    ```bash
-    # modify the script according to your own ascend-toolkit path
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    
-    # convert to deepspeed weights
-    python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir llama-2-7b-hf \
-                                                                        --output-model-dir ckpt \
-                                                                        --tensor-model-parallel-size 1 \
-                                                                        --pipeline-model-parallel-size 1 \
-                                                                        --type 7B \
-                                                                        --deepspeed
-    ```
-   3.2 weight conversion in ptd mode
+
+   weight conversion in ptd mode
    *Note that if you want to use the weight from huggingface, please run the weight conversion script first. The following uses llama-2-7b model weight conversion in ptd as an example.*
    ```bash
     # modify the script according to your own ascend-toolkit path
@@ -166,23 +152,7 @@ Here's a software summary of pre-training  LLaMA2-7B:
 		 --tokenizer-type PretrainedFromHF
 	```
 
-	4.2 pre-training using deepspeed mode
-	Config LLAMA2-7B pre-training script: examples/llama2/pretrain_llama2_7b_zero_8p.sh 
-	```shell
-	# modify the script according to your own ascend-toolkit path
-	source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-	
-	# modify script orign dataset path according to your own dataset path
-	TOKENIZER_PATH=./llama-2-7b-hf/  #tokenizer path
-	DATA_PATH=./dataset_llama2/alpaca_text_document  #processed dataset
-	```
-
-	Launch LLAMA2-7B  pre-training script: examples/llama2/pretrain_llama2_7b_zero_8p.sh
-	```shell
-	bash examples/llama2/pretrain_llama2_7b_zero_8p.sh 
-	```
-	
-	4.3 pre-training using ptd mode
+	4.2 pre-training using ptd mode
 	Config LLAMA2-7B pre-training script: examples/llama2/pretrain_llama2_7b_ptd.sh 
    ```shell
     # modify the script according to your own ascend-toolkit path
@@ -222,14 +192,15 @@ Here's a software summary of pre-training  LLaMA2-7B:
 		  --handler-name GeneralInstructionHandler \
 		  --append-eod
     ```
-   5.2 fine-tuning using deepspeed mode
-   5.2.1 Full Parameters Fine-Tuning
-   The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_7b_zero_8p.sh.*The only difference is the data set.*
+   5.2 Full Parameters Fine-Tuning
+   The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_7b_ptd.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
+   
+   --is-instruction-dataset \
    ```
-   5.2.2 Lora Fine-Tuning
-   The Lora fine-tuning script is configured by adding the following lora parameters to the pretrain_llama2_7b_zero_8p.sh script:
+   5.3 Lora Fine-Tuning
+   The Lora fine-tuning script is configured by adding the following lora parameters to the pretrain_llama2_7b_ptd.sh script:
    ```bash
        --lora-target-modules query_key_value dense gate_proj up_proj down_proj \
        --lora-r 16 \
@@ -244,10 +215,6 @@ Here's a software summary of pre-training  LLaMA2-7B:
        --load ${ORIGIN_CHECKPOINT}  \
        --lora-load ${LORA_CHECKPOINT} \
    ```
-   
-   
-   5.3 fine-tuning using ptd mode
-   *The modification method is the same as that in deepspeed mode. For details, see the previous section.*
 
 ### Performance
 
@@ -367,7 +334,6 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation
      --seq-length 4096 \
      --max-new-tokens 1 \
      --max-position-embeddings 4096 \
-     --rotary-v3-impl \
      --tensor-model-parallel-size 8 \
      --pipeline-model-parallel-size 1  \
      --num-layers 32  \
@@ -376,8 +342,10 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation
      --num-attention-heads 32  \
      --mlp-layer-fusion \
      --load ${CHECKPOINT}  \
+     --position-embedding-type rope \
+     --normalization RMSNorm \
      --tokenizer-type PretrainedFromHF  \
-     --tokenizer-name-or-path $VOCAB_FILE \
+     --tokenizer-name-or-path ${TOKENIZER_PATH} \
      --tokenizer-not-use-fast \
      --fp16  \
      --micro-batch-size 1  \
