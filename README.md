@@ -334,7 +334,7 @@ sh examples/llama/pretrain_llama_7B_zero_8p.sh
       <td><a href="examples/intern/README.md">InternLM</a></td>
       <td>7B</td>
       <td> -- </td>
-      <td> -- </td>
+      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/intern/generate_internlm_7b_deepspeed.sh">对话</a> </td>
       <td> -- </td>
       <td> -- </td>
     </tr>
