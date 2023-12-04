@@ -74,8 +74,8 @@ deepspeed  pretrain_intern.py \
        --global-batch-size $GLOBAL_BATCH \
        --seq-length 2048 \
        --max-position-embeddings 2048 \
-       --train-iters 500000 \
-       --lr-decay-iters 320000 \
+       --train-iters 10000 \
+       --lr-decay-iters 6400 \
        --data-path $DATA \
        --load $CHECKPOINT \
        --tokenizer-name-or-path ../../datasets/dataset/internlm \
@@ -83,9 +83,9 @@ deepspeed  pretrain_intern.py \
        --data-impl mmap \
        --split 949,50,1 \
        --distributed-backend nccl \
-       --lr 0.00015 \
+       --lr 1.5e-5 \
        --lr-decay-style cosine \
-       --min-lr 1.0e-5 \
+       --min-lr 1.0e-6 \
        --weight-decay 1e-2 \
        --clip-grad 1.0 \
        --lr-warmup-fraction .01 \

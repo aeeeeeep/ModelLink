@@ -865,12 +865,7 @@ class RowParallelLinear(torch.nn.Module):
         )
 
         # All-reduce across all the partitions.
-        if self.sequence_parallel:
-            output_ = reduce_scatter_to_sequence_parallel_region(output_parallel)
-        elif self.is_expert_without_slicing: # non-expert only tensor-parallelism
-            output_ = output_parallel
-        else:
-            output_ = reduce_from_tensor_model_parallel_region(output_parallel)
+        output_ = self._get_output_and_set_ckpt_comm_args(output_parallel)
         if not self.skip_bias_add:
             output = output_ + self.bias if self.bias is not None else output_
             output_bias = None
@@ -878,6 +873,19 @@ class RowParallelLinear(torch.nn.Module):
             output = output_
             output_bias = self.bias
         return output, output_bias
+   
+    def _get_output_and_set_ckpt_comm_args(self, output_parallel):
+        args = get_args()
+        output_ = output_parallel
+        if args.ckpt_comm_args < 2:
+            if self.sequence_parallel:
+                output_ = reduce_scatter_to_sequence_parallel_region(output_parallel)
+            elif self.is_expert_without_slicing: # non-expert only tensor-parallelism
+                output_ = output_parallel
+            else:
+                output_ = reduce_from_tensor_model_parallel_region(output_parallel)
+        args.ckpt_comm_args = args.ckpt_comm_args + 1 if args.ckpt_comm_args > 0 else args.ckpt_comm_args
+        return output_
     
     def extra_repr(self) -> str:
         return f'input_size={self.input_size}, output_size={self.output_size}, bias={self.bias is not None}'

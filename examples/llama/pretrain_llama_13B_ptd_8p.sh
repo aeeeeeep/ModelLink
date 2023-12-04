@@ -31,8 +31,8 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --position-embedding-type rope \
        --normalization RMSNorm \
        --max-position-embeddings 2048 \
-       --train-iters 1000 \
-       --lr-decay-iters 640 \
+       --train-iters 2000 \
+       --lr-decay-iters 6400 \
        --load $CHECKPOINT \
        --data-path $DATA_PATH \
        --tokenizer-name-or-path ./dataset/llama/ \

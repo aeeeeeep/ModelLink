@@ -99,4 +99,5 @@ python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
     --no-add-gate \
     --add-bias-linear \
     --no-attention-softmax-in-fp32 \
+    --communication-slim 2 \
     --no-untie-embeddings-and-output-weights
