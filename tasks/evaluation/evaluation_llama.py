@@ -39,9 +39,10 @@ logger = logging.getLogger(__name__)
 
 
 def model_provider(pre_process=True, post_process=True):
-    config = core_transformer_config_from_args(get_args())
+    args = get_args()
+    config = core_transformer_config_from_args(args)
 
-    if get_args().internlm:
+    if args.bias:
         # internlm模型配置
         config.column_parallel_linear_bias = True
         config.row_parallel_linear_bias = True
@@ -76,8 +77,7 @@ def add_text_generate_args(parser):
     group.add_argument("--max-new-tokens", type=int, default=128,
                        help='Size of the output generated text.')
     group.add_argument("--task", nargs='*', default=[], help='Choose one task from mmlu, boolq and gsm8k')
-    group.add_argument("--internlm", action='store_true', default=False,
-                       help='Specifying the model as internlm')
+    parser.add_argument("--bias", action="store_true", default=False)
     return parser
 
 

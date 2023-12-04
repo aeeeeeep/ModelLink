@@ -9,9 +9,10 @@ from tasks.inference.infer_base import task_beam_search_with_sampling, task_retu
 
 def model_provider(pre_process=True, post_process=True):
     """Build the model."""
-    config = core_transformer_config_from_args(get_args())
+    args = get_args()
+    config = core_transformer_config_from_args(args)
 
-    if get_args().internlm:
+    if args.bias:
         # internlm模型配置
         config.column_parallel_linear_bias = True
         config.row_parallel_linear_bias = True

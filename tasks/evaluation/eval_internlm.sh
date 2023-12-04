@@ -22,7 +22,7 @@ DATA_PATH="../dataset/mmlu/test ../dataset/gsm8k/test ../dataset/boolq/test ../d
 TASK="boolq gsm8k mmlu ceval agieval bbh human_eval"
 # Different task needs different max_new_tokens value, please follow the instruction in readme.
 python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation_llama.py   \
-       --internlm \
+       --bias \
        --task-data-path $DATA_PATH \
        --task $TASK \
        --seq-length 2048 \
