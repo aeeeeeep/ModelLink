@@ -59,6 +59,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> npu_flash_attention_g
 
 torch::Tensor npu_swiglu(const at::Tensor &input, int64_t dim);
 
-torch::Tensor npu_swiglu_grad(const at::Tensor &grad_output, const at::Tensor &self, int64_t dim);
+torch::Tensor npu_swiglu_backward(const at::Tensor &grad_output, const at::Tensor &self, int64_t dim);
 
 #endif
