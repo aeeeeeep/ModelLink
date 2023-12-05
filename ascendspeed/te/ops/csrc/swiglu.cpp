@@ -51,7 +51,7 @@ torch::Tensor npu_swiglu_grad(const at::Tensor &grad_output, const at::Tensor &x
     auto format_grad_output = format_trans(grad_output);
     auto format_x = format_trans(x);
     at::Tensor result = at::empty(x.sizes(), x.options());
-    ACLNN_CMD(aclnnSwiGluBackward, format_grad_output, format_x, dim, result);
+    ACLNN_CMD(aclnnSwiGluGrad, format_grad_output, format_x, dim, result);
     return result;
 }
 
