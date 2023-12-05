@@ -21,5 +21,5 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("npu_fusion_attention", &npu_flash_attention, "fusion attention forward");
     m.def("npu_fusion_attention_grad", &npu_flash_attention_grad, "fusion attention backward");
     m.def("npu_swiglu", &npu_swiglu, "swiglu forward");
-    m.def("npu_swiglu_grad", &npu_swiglu_grad, "swiglu backward");
+    m.def("npu_swiglu_backward", &npu_swiglu_backward, "swiglu backward");
 }
