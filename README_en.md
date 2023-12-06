@@ -353,9 +353,9 @@ sh examples/llama/pretrain_llama_7B_zero_8p.sh
       <td><a href="examples/intern/README.md">InternLM</a></td>
       <td>7B</td>
       <td> -- </td>
-      <td> -- </td>
-      <td> -- </td>
-      <td> -- </td>
+      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/intern/generate_internlm_7b_deepspeed.sh">inference</a> </td>
+      <td> <a href="https://gitee.com/ascend/AscendSpeed/blob/master/tasks/evaluation/eval_internlm.sh">evaluation</a> </td>
+      <td> <a href="https://huggingface.co/datasets/lukaemon/mmlu">mmlu</a> </td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama/README.md">LLaMA</a></td>
