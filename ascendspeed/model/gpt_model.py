@@ -39,7 +39,8 @@ from .manual_pipe import ManuallyAllocatedPipelineModule
 
 def post_language_model_processing(lm_output, labels, logit_weights,
                                    parallel_output,
-                                   fp16_lm_cross_entropy):
+                                   fp16_lm_cross_entropy,
+                                   z_loss_weight):
     # Output. Format [s b h]
     output = parallel_lm_logits(
         lm_output,
@@ -52,6 +53,11 @@ def post_language_model_processing(lm_output, labels, logit_weights,
         if fp16_lm_cross_entropy:
             check_equal(output.dtype, torch.half)
             loss = tensor_parallel.vocab_parallel_cross_entropy(output, labels)
+        elif z_loss_weight is not None:
+            loss = tensor_parallel.vocab_parallel_cross_entropy(output[..., :-1, :].contiguous(), labels[..., 1:].contiguous())
+            softmax_normalizer = output[..., :-1, :].contiguous().max(-1).values ** 2
+            z_loss = z_loss_weight * softmax_normalizer
+            loss = loss + z_loss
         else:
             loss = tensor_parallel.vocab_parallel_cross_entropy(output.float(), labels)
         return loss
@@ -88,6 +94,8 @@ class GPTModel(MegatronModule, MegatronModuleForCausalLM):
 
         if not args.untie_embeddings_and_output_weights:
             self.initialize_word_embeddings()
+
+        self.z_loss_weight = args.z_loss_weight
 
     def set_input_tensor(self, input_tensor):
         """See ascendspeed.model.transformer.set_input_tensor()"""
@@ -130,7 +138,8 @@ class GPTModel(MegatronModule, MegatronModuleForCausalLM):
                 lm_output, labels,
                 self.language_model.output_layer.weight if self.untie_embeddings_and_output_weights else self.shared_embedding_or_output_weight(),
                 self.parallel_output,
-                self.fp16_lm_cross_entropy)
+                self.fp16_lm_cross_entropy,
+                self.z_loss_weight)
 
         return lm_output, moe_losses if self.return_moe_loss else lm_output
 

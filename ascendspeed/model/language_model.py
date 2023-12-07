@@ -50,13 +50,23 @@ def parallel_lm_logits(input_, word_embeddings_weight, parallel_output,
         async_grad_allreduce = False
 
     # Matrix multiply.
-    logits_parallel = tensor_parallel.linear_with_grad_accumulation_and_async_allreduce(
-        inputs=input_parallel,
-        weight=word_embeddings_weight,
-        bias=bias,
-        gradient_accumulation_fusion=args.gradient_accumulation_fusion,
-        async_grad_allreduce=async_grad_allreduce,
-        sequence_parallel=args.sequence_parallel)
+    if args.lm_norm_weight:
+        norm_weight = torch.nn.functional.normalize(word_embeddings_weight)
+        logits_parallel = tensor_parallel.linear_with_grad_accumulation_and_async_allreduce(
+            inputs=input_parallel,
+            weight=norm_weight,
+            bias=bias,
+            gradient_accumulation_fusion=args.gradient_accumulation_fusion,
+            async_grad_allreduce=async_grad_allreduce,
+            sequence_parallel=args.sequence_parallel)
+    else:
+        logits_parallel = tensor_parallel.linear_with_grad_accumulation_and_async_allreduce(
+            inputs=input_parallel,
+            weight=word_embeddings_weight,
+            bias=bias,
+            gradient_accumulation_fusion=args.gradient_accumulation_fusion,
+            async_grad_allreduce=async_grad_allreduce,
+            sequence_parallel=args.sequence_parallel)
     if args.async_tensor_model_parallel_allreduce or \
             args.sequence_parallel:
         logits_parallel = logits_parallel.transpose(1, 0).contiguous()

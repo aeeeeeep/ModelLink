@@ -299,24 +299,34 @@ class DecoderPackedMTFDataset(torch.utils.data.Dataset):
         eos_token: int,
         seed,
     ):
+        args = get_args()
         self.mtf_dataset = MTFDataset(name=name, data_prefix=data_prefix, data_impl=data_impl, skip_warmup=skip_warmup, documents=documents)
 
         self.pad_token = pad_token
         self.seq_length = seq_length
 
         self.shuffle_index = _build_index_mappings(name=name, data_prefix=data_prefix, nb_documents=len(documents), mtf_dataset=self.mtf_dataset, num_samples=num_samples, seq_length=seq_length, seed=seed)
-    
+
+        self.keep_last_token = args.keep_last_token
+
     def __len__(self):
         return len(self.shuffle_index)
 
     def __getitem__(self, idx):
         doc_idx = self.shuffle_index[idx]
         item = self.mtf_dataset[doc_idx]
-        return {
-            "input_ids": self._cut_token(item["input_ids"][:-1], np.int64),
-            "attention_mask": self._cut_token(item["attention_mask"][:-1], np.int64),
-            "labels": self._cut_token(item["labels"][1:], np.int64),
-        }
+        if self.keep_last_token:
+            return {
+                "input_ids": self._cut_token(item["input_ids"], np.int64),
+                "attention_mask": self._cut_token(item["attention_mask"], np.int64),
+                "labels": self._cut_token(item["labels"], np.int64),
+            }
+        else:
+            return {
+                "input_ids": self._cut_token(item["input_ids"][:-1], np.int64),
+                "attention_mask": self._cut_token(item["attention_mask"][:-1], np.int64),
+                "labels": self._cut_token(item["labels"][1:], np.int64),
+            }
     
     def _cut_token(self, token, dtype):
         token_length = len(token)
@@ -338,6 +348,8 @@ def _build_index_mappings(
     - `shuffle_index` is [num_epoch * len(self.mtf)]
     - `sample_index` is [num_sample, 2] (storing the start and end of the sample). We query the sample via `self.shuffle_index[start:end]`
     """
+    args = get_args()
+
     # rng state
     np_rng = np.random.RandomState(seed=seed)
 
@@ -358,7 +370,10 @@ def _build_index_mappings(
             # iteratively add the entire dataset for every epoch and see if it's enough given current packing strategy
             start_time = time.time()
             epoch = 0
-            shuffle_idx = []
+            if args.keep_last_token:
+                shuffle_idx = [i for i in range(num_samples)]
+            else:
+                shuffle_idx = []
             while len(shuffle_idx) <= num_samples:
                 new_document_ids = _build_shuffle_idx(nb_documents=nb_documents, np_rng=np_rng)
                 # Generate a shuffling of the entire dataset
