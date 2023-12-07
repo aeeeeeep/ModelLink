@@ -350,7 +350,7 @@ class CoreAttention(MegatronModule):
         if self.use_flash_attn:
             if alibi is not None:
                 # [b*np, 1, sq] ==> [b, np, 1, sq]
-                matmul_result = matmul_result.unsqueeze(0).reshape(output_size[0], output_size[1], 1, output_size[2]) * self.norm_factor
+                matmul_result = matmul_result.unsqueeze(0).reshape(output_size[0], output_size[1], 1, output_size[2])
             q, k, v = [rearrange(x, 's b h d -> s b (h d)').contiguous() for x in (query_layer, key_layer, value_layer)]
             context_layer = self.core_flash_attn((q, k, v, self.num_attention_heads_per_partition), matmul_result,
                                                  attention_mask)

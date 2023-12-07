@@ -41,7 +41,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --seq-length 4096 \
        --normalization RMSNorm \
        --max-position-embeddings 4096 \
-       --train-iters 100000 \
+       --train-iters 2000 \
        --save $CHECKPOINT_PATH \
        --load $LOAD_PATH \
        --data-path $DATA_PATH \
