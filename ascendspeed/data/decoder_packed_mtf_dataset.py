@@ -370,10 +370,7 @@ def _build_index_mappings(
             # iteratively add the entire dataset for every epoch and see if it's enough given current packing strategy
             start_time = time.time()
             epoch = 0
-            if args.keep_last_token:
-                shuffle_idx = [i for i in range(num_samples)]
-            else:
-                shuffle_idx = []
+            shuffle_idx = []
             while len(shuffle_idx) <= num_samples:
                 new_document_ids = _build_shuffle_idx(nb_documents=nb_documents, np_rng=np_rng)
                 # Generate a shuffling of the entire dataset
