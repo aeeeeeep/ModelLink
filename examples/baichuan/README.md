@@ -424,16 +424,16 @@ bash ./examples/baichuan/generate_baichuan_lora_13B.sh
 使用lora进行微调后的推理功能：
 ![13B-lora-inference.png](../../sources/images/baichuan/13B-lora-inference.png)
 
-# Baichuan-13B
+# Baichuan2-13B
 
 ## 训练
-Baichuan-13B 训练的硬件配置如下:
+Baichuan2-13B 训练的硬件配置如下:
 
 |  硬件 |        配置        |
 |:---:|:----------------:|
 | NPU | 16 x Ascend NPUs |
 
-Baichuan-13B 训练的软件配置如下:
+Baichuan2-13B 训练的软件配置如下:
 
 |            软件             |                                                      配置                                                      |
 |:-------------------------:|:------------------------------------------------------------------------------------------------------------:|
@@ -461,8 +461,8 @@ conda create -n test python=3.8
 conda activate test
 
 # 安装 torch 和 torch_npu
-pip install torch-2.1.0-cp37-cp37m-linux_aarch64.whl
-pip install torch_npu-2.1.0.XXX-cp37-cp37m-linux_aarch64.whl
+pip install torch-2.1.0-cp38-cp38m-linux_aarch64.whl
+pip install torch_npu-2.1.0.XXX-cp38-cp38m-linux_aarch64.whl
 pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 
 # 安装 megatron
@@ -479,28 +479,29 @@ pip3 install -e ./
 cd ..
 
 # 安装其余依赖库
+# 请注意trasformers==4.29.2
 pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
 3. （可选的）准备预训练权重
 
-从 [huggingface](https://huggingface.co/baichuan-inc/Baichuan-13B-Base/tree/main) 下载预训练权重
+从 [huggingface](https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/tree/main) 下载预训练权重
 ```shell
 mkdir Baichuan2-13B-Base
 cd ./Baichuan2-13B-Base
-wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/config.json
-wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/configuration_baichuan.py
-wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/generation_config.json
-wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/modeling_baichuan.py
-wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/pytorch_model-00001-of-00003.bin
-wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/pytorch_model-00002-of-00003.bin
-wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/pytorch_model-00003-of-00003.bin
-wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/pytorch_model.bin.index.json
-wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/quantizer.py
-wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/special_tokens_map.json
-wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/tokenization_baichuan.py
-wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/tokenizer_config.json
-wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/tokenizer.model
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/config.json
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/configuration_baichuan.py
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/generation_config.json
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/modeling_baichuan.py
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/pytorch_model-00001-of-00003.bin
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/pytorch_model-00002-of-00003.bin
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/pytorch_model-00003-of-00003.bin
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/pytorch_model.bin.index.json
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/quantizer.py
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/special_tokens_map.json
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/tokenization_baichuan.py
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/tokenizer_config.json
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/tokenizer.model
 cd ..
 ```
 
@@ -514,6 +515,7 @@ python $SCRIPT_PATH \
     --output-model-dir ./baichuan2-13b-merge \
     --tensor-model-parallel-size 8 \
     --pipeline-model-parallel-size 1 \
+    --make-vocab-size-divisible-by 8 \
     --merge-mlp \
     --type 13B \
     --pse     
@@ -521,7 +523,7 @@ python $SCRIPT_PATH \
 
 4. 准备数据集
 
-下载 Baichuan-13B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
+下载 Baichuan2-13B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
 
 ```shell
 mkdir processed_data_of_moss
@@ -552,8 +554,8 @@ DATA_PATH=./processed_data_of_moss/processed_data
 LOAD_PATH=./baichuan2-13b-merge
 
 # 修正双机运行配置
-MASTER_ADDR=xx.xx.x.xxx配置为主服务器ip
-NODE_RANK主服务器脚本里设置为0，另一台服务器脚本里设置为1
+# MASTER_ADDR=xx.xx.x.xxx配置为主服务器ip
+# NODE_RANK主服务器脚本里设置为0，另一台服务器脚本里设置为1
 ```
 
 6. 启动 Baichuan-13B 训练脚本: /examples/baichuan/pretrain_baichuan2_ptd_13B.sh
@@ -570,10 +572,10 @@ bash examples/baichuan/pretrain_baichuan_ptd_13B.sh
 
 Baichuan-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 
-|  设备  |      模型      | 迭代数 | 样本吞吐 (samples/p/s) | token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
-|:----:|:------------:|:---:|:------------------:|:--------------------:|:---------------:|:----------------:|
-| NPUs |              |     |           |               |        |           |
-|  参考  |  |     |              |                |     |           |
+|  设备  |      模型       | 迭代数 | 样本吞吐 (samples/p/s) | token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
+|:----:|:-------------:|:---:|:------------------:|:--------------------:|:---------------:|:----------------:|
+| NPUs | Baichuan2-13B |     |           |               |        |           |
+|  参考  |               |     |              |                |     |           |
 
 
 
