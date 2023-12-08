@@ -5,14 +5,14 @@ export LD_LIBRARY_PATH=/usr/local/lib:/root/miniconda3/lib:$LD_LIBRARY_PATH
 export HCCL_CONNECT_TIMEOUT=1200
 
 # Change for multinode config
-MASTER_ADDR=xx.xx.x.xxx
+MASTER_ADDR=localhost
 MASTER_PORT=12892
-NNODES=2
+NNODES=1
 NODE_RANK=0
 NPUS_PER_NODE=8
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
-GLOBAL_BATCH=256
-MICRO_BATCH=2
+GLOBAL_BATCH=8
+MICRO_BATCH=1
 
 DATA_PATH=./data/baichuan2_txt
 TOKENIZER_PATH=./tokenizer
@@ -63,11 +63,8 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --z-loss-weight 0 \
        --lm-norm-weight \
        --keep-last-token \
-       --use-flash-attn \
-       --release-fp32-grad \
-       --mlp-layer-fusion \
-       --use-distributed-optimizer \
-       --auto-recompute-device-size 57344 \
+       --padding-attention-mask \
+       --alibi-fill-inf \
        --seed 1234 \
        --adam-beta1 0.9 \
        --adam-beta2 0.98 \
