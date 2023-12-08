@@ -828,6 +828,14 @@ def _add_training_args(parser):
                        action='store_true',
                        default=False,
                        help='normalize the weight of lm head before matmul')
+    group.add_argument('--padding-attention-mask',
+                       action='store_true',
+                       default=False,
+                       help='padding attention_mask')
+    group.add_argument('--alibi-fill-inf',
+                       action='store_true',
+                       default=False,
+                       help='fill alibi with certain inf values')
     return parser
 
 
