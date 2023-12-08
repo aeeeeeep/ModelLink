@@ -289,7 +289,7 @@ class BelleMultiTurnInstructionHandler(GeneralInstructionHandler):
 class MOSSMultiTurnHandler(GeneralInstructionHandler):
     @property
     def user_token(self) -> List[int]:
-        return [295]
+        return [195]
 
     @property
     def assistant_token(self) -> List[int]:

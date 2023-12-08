@@ -523,21 +523,23 @@ python $SCRIPT_PATH \
 
 4. 准备数据集
 
-下载 Baichuan2-13B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
+下载 Baichuan2-13B [数据集](https://huggingface.co/datasets/fnlp/moss-003-sft-data) 
 
 ```shell
 mkdir processed_data_of_moss
 cd ./processed_data_of_moss
-wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+wget https://huggingface.co/datasets/fnlp/moss-003-sft-data/blob/main/moss-003-sft-no-tools.jsonl.zip
+unzip moss-003-sft-no-tools.jsonl.zip
 cd ..
 
 python ./tools/preprocess_data.py \
-    --input ./dataset_baichuan13B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+    --input ./processed_data_of_moss/moss-003-sft-no-tools.jsonl \
     --tokenizer-name-or-path ./Baichuan2-13B-Base \
     --output-prefix ./processed_data_of_moss/processed_data \
     --workers 4 \
     --log-interval 1000 \
-    --tokenizer-type PretrainedFromHF 
+    --tokenizer-type PretrainedFromHF \
+    --handler-name MOSSMultiTurnHandler
 ```
 
 
@@ -574,7 +576,7 @@ Baichuan-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 
 |  设备  |            模型             | 迭代数  | 样本吞吐 (samples/p/s) | token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
 |:----:|:-------------------------:|:----:|:------------------:|:--------------------:|:---------------:|:----------------:|
-| NPUs |       Baichuan2-13B       | 1000 |        5.46        |         1411         |     46.513      |      123.82      |
+| NPUs |       Baichuan2-13B       |  |                |                  |           |            |
 |  参考  |       Baichuan2-13B       |      |                    |         2000         |                 |                  |
 
 
