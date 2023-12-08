@@ -318,7 +318,10 @@ class CoreAttention(MegatronModule):
 
         self.use_flash_attn = config.use_flash_attn
         if self.use_flash_attn:
-            self.core_flash_attn = FlashSelfAttention(causal=True, softmax_scale=(1.0 / self.norm_factor),
+            softmax_scale = (1.0 / self.norm_factor)
+            if coeff is not None:
+                softmax_scale = (1.0 / self.norm_factor) * coeff
+            self.core_flash_attn = FlashSelfAttention(causal=True, softmax_scale=softmax_scale,
                                                       attention_dropout=config.attention_dropout)
         self.alibi_fill_inf = args.alibi_fill_inf
         self.max_seq_length = args.seq_length
@@ -364,7 +367,8 @@ class CoreAttention(MegatronModule):
         if self.use_flash_attn:
             if alibi is not None:
                 # [b*np, 1, sq] ==> [b, np, 1, sq]
-                matmul_result = matmul_result.unsqueeze(0).reshape(output_size[0], output_size[1], 1, output_size[2])
+                matmul_result = matmul_result.reshape(output_size[0], output_size[1], 1,
+                                                     output_size[2]) * self.beta * self.norm_factor
             q, k, v = [rearrange(x, 's b h d -> s b (h d)').contiguous() for x in (query_layer, key_layer, value_layer)]
             context_layer = self.core_flash_attn((q, k, v, self.num_attention_heads_per_partition), matmul_result,
                                                  attention_mask)
