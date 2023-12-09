@@ -188,3 +188,4 @@ The NPU runs smoothly, the resource usage is stable, no errors are reported in t
 NPU vs Reference loss relative error.
 
 The relative error between NPU and Reference Loss is less than 0.02 throughout, as expected.
+

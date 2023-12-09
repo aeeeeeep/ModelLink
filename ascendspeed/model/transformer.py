@@ -351,7 +351,9 @@ class CoreAttention(MegatronModule):
         if alibi is None:
             matmul_result = None
         else:
-            if not self.square_alibi_mask:
+            if self.square_alibi_mask:
+                matmul_result = alibi[:, :output_size[3]]
+            else:
                 matmul_result = alibi[:, :, :output_size[3]].repeat(output_size[0], 1, 1)
 
         if self.square_alibi_mask:

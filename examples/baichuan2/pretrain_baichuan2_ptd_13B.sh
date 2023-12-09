@@ -78,3 +78,4 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --eval-iters 10 \
        --bf16 | tee logs/loss_${logfile}.log
 
+
