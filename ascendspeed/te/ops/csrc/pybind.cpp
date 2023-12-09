@@ -18,6 +18,8 @@
 #include "common.h"
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
+    m.def("npu_scatter_list", &npu_scatter_list, "scatterlist op function");
+    m.def("npu_scatter_list_", &npu_scatter_list_, "scatterlist op inplace function");
     m.def("npu_fusion_attention", &npu_flash_attention, "fusion attention forward");
     m.def("npu_fusion_attention_grad", &npu_flash_attention_grad, "fusion attention backward");
 }
