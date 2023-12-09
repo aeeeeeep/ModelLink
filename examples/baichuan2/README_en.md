@@ -62,10 +62,7 @@ pip install torch_npu-2.1.0.XXX-cp37-cp37m-linux_aarch64.whl
 pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 
 #install megatron
-git clone https://github.com/NVIDIA/Megatron-LM.git -b 23.05
-cd Megatron-LM
-pip3 install -e ./
-cd ..
+pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
 
 # install deepspeed and deepspeed_npu
 pip install deepspeed==0.9.2
@@ -141,7 +138,7 @@ python ./tools/preprocess_data.py \
 
 5. Config Baichuan2-13B pre-training script: /examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
 
-
+- FA(Off)
 ```shell
 # modify the script according to your own  ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -154,6 +151,31 @@ LOAD_PATH=./baichuan2-13b-merge
 # set config for two-node parallelism
 # modify MASTER_ADDR=xx.xx.x.xxx to master node IP
 # is set to 0 in the master node script and to 1 in another. 
+```
+- FA(On)
+```shell
+# modify the script according to your own  ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+# modify script orign dataset path according to your own dataset path
+TOKENIZER_PATH=./Baichuan2-13B-Base 
+DATA_PATH=./processed_data_of_moss/processed_data
+LOAD_PATH=./baichuan2-13b-merge
+
+# set config for two-node parallelism
+# modify MASTER_ADDR=xx.xx.x.xxx to master node IP
+# is set to 0 in the master node script and to 1 in another.
+
+#modify batch size
+GLOBAL_BATCH=256
+MICRO_BATCH=2
+
+#modify seq_length
+--seq-length 1024
+#use flash attention 
+--use-flash-attn
+#use auto selective recomputing
+--auto-recompute-device-size 57344 
 ```
 
 6. Launch Baichuan2-13B pre-training script: /examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
@@ -169,7 +191,7 @@ There is an hourly pulse checking script running that checks that the training i
 
 #### Machine performance
 
-The performance of the Baichuan-13B in **Ascend NPU** and **Reference**:
+While not using flash attention, The performance of the Baichuan-13B in **Ascend NPU** and **Reference**:
 
 | Device |     Model     | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
 | :----: |:-------------:| :--------------: | :---------------------------: | :--------------------------: | :-----------------------: | :---------------------------------: |
@@ -184,8 +206,11 @@ NPU vs Reference loss.
 
 The NPU runs smoothly, the resource usage is stable, no errors are reported in the middle of the process, the Loss is on a decreasing trend, and the convergence speed is as expected. The maximum relative error is 0.0266, and the maximum absolute error is 0.0228. The precision meets the requirements.
 
+![NPU-LOSS](../../sources/images/baichuan/13B-loss-compare.png)
 
 NPU vs Reference loss relative error.
-
+![NPU-Relative-Error](../../sources/images/baichuan/baichuan13B-loss-relative-error.png)
+\
+\
 The relative error between NPU and Reference Loss is less than 0.02 throughout, as expected.
 

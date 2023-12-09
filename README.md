@@ -117,6 +117,16 @@ Baichuan2-7B 等模型即将上线...
       <td> <a href="examples/baichuan/pretrain_baichuan_ptd_13B.sh">训练</a> </td>
     </tr>
     <tr>
+      <td rowspan="1"><a href="examples/baichuan2/README.md">Baichaun2</a></td>
+      <td>13B</td>
+      <td> 2x8</td>
+      <td> BF16 </td>
+      <td> 824 </td>
+      <td> 1100 </td>
+      <td> <a href="./sources/images/baichuan/13B-loss-compare.png">Loss</a> </td>
+      <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_13B.sh">训练</a> </td>
+    </tr>
+    <tr>
       <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
       <td>7B1</td>
       <td> 1x8</td>

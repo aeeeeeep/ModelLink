@@ -50,16 +50,21 @@ def post_language_model_processing(lm_output, labels, logit_weights,
 
         return output
     else:
+        if z_loss_weight is not None:
+            output = output[..., :-1, :].contiguous()
+            labels = labels[..., 1:].contiguous()
+
         if fp16_lm_cross_entropy:
             check_equal(output.dtype, torch.half)
             loss = tensor_parallel.vocab_parallel_cross_entropy(output, labels)
-        elif z_loss_weight is not None:
-            loss = tensor_parallel.vocab_parallel_cross_entropy(output[..., :-1, :].contiguous(), labels[..., 1:].contiguous())
-            softmax_normalizer = output[..., :-1, :].contiguous().max(-1).values ** 2
-            z_loss = z_loss_weight * softmax_normalizer
-            loss = loss + z_loss
         else:
             loss = tensor_parallel.vocab_parallel_cross_entropy(output.float(), labels)
+
+        if z_loss_weight is not None:
+            softmax_normalizer = output.max(-1).values ** 2
+            z_loss = z_loss_weight * softmax_normalizer
+            loss = loss + z_loss
+
         return loss
 
 
@@ -82,6 +87,7 @@ class GPTModel(MegatronModule, MegatronModuleForCausalLM):
         self.fp16_lm_cross_entropy = args.fp16_lm_cross_entropy
         self.return_moe_loss = return_moe_loss
         self.untie_embeddings_and_output_weights = args.untie_embeddings_and_output_weights
+        self.z_loss_weight = args.z_loss_weight
 
         self.language_model, self._language_model_key = get_language_model(
             config=config,
@@ -94,8 +100,6 @@ class GPTModel(MegatronModule, MegatronModuleForCausalLM):
 
         if not args.untie_embeddings_and_output_weights:
             self.initialize_word_embeddings()
-
-        self.z_loss_weight = args.z_loss_weight
 
     def set_input_tensor(self, input_tensor):
         """See ascendspeed.model.transformer.set_input_tensor()"""

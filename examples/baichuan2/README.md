@@ -56,10 +56,7 @@ pip install torch_npu-2.1.0.XXX-cp38-cp38m-linux_aarch64.whl
 pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 
 # 安装 megatron
-git clone https://github.com/NVIDIA/Megatron-LM.git -b 23.05
-cd Megatron-LM
-pip3 install -e ./
-cd ..
+pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
 
 # 安装 deepspeed 和 deepspeed_npu
 pip install deepspeed==0.9.2
@@ -135,7 +132,7 @@ python ./tools/preprocess_data.py \
 
 5. 配置 Baichuan2-13B 训练脚本: /examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
 
-
+- 不开启FA
 ```shell
 # 修改 ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -150,6 +147,32 @@ LOAD_PATH=./baichuan2-13b-merge
 # NODE_RANK主服务器脚本里设置为0，另一台服务器脚本里设置为1
 ```
 
+- 开启FA
+```shell
+# 修改 ascend-toolkit 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+# 修改词表，数据集, 权重等路径等路径
+TOKENIZER_PATH=./Baichuan2-13B-Base 
+DATA_PATH=./processed_data_of_moss/processed_data
+LOAD_PATH=./baichuan2-13b-merge
+
+# 修正双机运行配置
+# MASTER_ADDR=xx.xx.x.xxx配置为主服务器ip
+# NODE_RANK主服务器脚本里设置为0，另一台服务器脚本里设置为1
+
+#修正batch设置
+GLOBAL_BATCH=256
+MICRO_BATCH=2
+
+#修正seq_length
+--seq-length 1024
+#增加FA开启参数
+--use-flash-attn
+#增加选择性重计算参数
+--auto-recompute-device-size 57344
+```
+
 6. 启动 Baichuan2-13B 训练脚本: /examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
 
 ```bash
@@ -161,7 +184,7 @@ bash examples/baichuan2/pretrain_baichuan_ptd_13B.sh
 
 #### 吞吐
 
-Baichuan-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
+不开启FA情况下，Baichuan2-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 
 |  设备  |            模型             | 迭代数  | 样本吞吐 (samples/p/s) | token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
 |:----:|:-------------------------:|:----:|:------------------:|:--------------------:|:---------------:|:----------------:|
@@ -169,9 +192,13 @@ Baichuan-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 |  参考  |       Baichuan2-13B       |      |                    |         1100         |                 |                  |
 
 
-
 #### 精度
 
 NPU vs 参考 loss.
 
+![NPU-LOSS](../../sources/images/baichuan/13B-loss-compare.png)
+
 NPU vs 参考 loss 相对误差.
+
+![NPU-Relative-Error](../../sources/images/baichuan/baichuan13B-loss-relative-error.png)
+
