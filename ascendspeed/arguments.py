@@ -832,10 +832,10 @@ def _add_training_args(parser):
                        action='store_true',
                        default=False,
                        help='padding attention_mask')
-    group.add_argument('--alibi-fill-inf',
+    group.add_argument('--square-alibi-mask',
                        action='store_true',
                        default=False,
-                       help='fill alibi with certain inf values')
+                       help='attention mask of alibi is squared')
     return parser
 
 

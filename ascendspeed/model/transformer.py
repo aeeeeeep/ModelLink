@@ -323,7 +323,7 @@ class CoreAttention(MegatronModule):
                 softmax_scale = (1.0 / self.norm_factor) * coeff
             self.core_flash_attn = FlashSelfAttention(causal=True, softmax_scale=softmax_scale,
                                                       attention_dropout=config.attention_dropout)
-        self.alibi_fill_inf = args.alibi_fill_inf
+        self.square_alibi_mask = args.square_alibi_mask
         self.max_seq_length = args.seq_length
 
     def forward(self, query_layer, key_layer,
@@ -351,12 +351,12 @@ class CoreAttention(MegatronModule):
         if alibi is None:
             matmul_result = None
         else:
-            if self.alibi_fill_inf:
+            if self.square_alibi_mask:
                 matmul_result = alibi[:, :output_size[3]]
             else:
                 matmul_result = alibi[:, :, :output_size[3]].repeat(output_size[0], 1, 1)
 
-        if self.alibi_fill_inf:
+        if self.square_alibi_mask:
             expanded_mask = attention_mask.to(alibi.dtype)
             inverted_mask = 1 - expanded_mask
             inverted_mask = inverted_mask.masked_fill(
@@ -381,7 +381,7 @@ class CoreAttention(MegatronModule):
             else:
                 q_trans = query_layer.transpose(0, 1).contiguous()
                 k_trans = key_layer.transpose(0, 1).transpose(1, 2).contiguous()
-                if self.alibi_fill_inf:
+                if self.square_alibi_mask:
                     matmul_result = matmul_result.contiguous().view(-1, self.max_seq_length,self.max_seq_length) + torch.bmm(q_trans,k_trans) * (1.0 / self.norm_factor)
                 else:
                     matmul_result = self.beta * matmul_result + torch.bmm(q_trans, k_trans) * (1.0 / self.norm_factor)
@@ -394,7 +394,7 @@ class CoreAttention(MegatronModule):
             # ===========================
 
             # attention scores and attention mask [b, np, sq, sk]
-            if self.alibi_fill_inf:
+            if self.square_alibi_mask:
                 attention_scores = torch.max(
                     attention_scores, torch.tensor(torch.finfo(attention_scores.dtype).min)
                 )
@@ -905,7 +905,7 @@ class ParallelTransformerLayer(MegatronModule):
         # Alibi
         if args.position_embedding_type == PositionEmbeddingType.alibi:
             self.alibi = self._build_alibi_tensor(args.seq_length, args.num_attention_heads,
-                                                  args.micro_batch_size, args.alibi_fill_inf).to(torch.cuda.current_device())
+                                                  args.micro_batch_size, args.square_alibi_mask).to(torch.cuda.current_device())
             if args.params_dtype == torch.float16:
                 self.alibi = self.alibi.to(torch.float16)
             elif args.params_dtype == torch.bfloat16:
@@ -1247,7 +1247,7 @@ class ParallelTransformerLayer(MegatronModule):
             return output, moe_loss
 
     @staticmethod
-    def _build_alibi_tensor(max_seq_len, num_attention_heads, batch_size, alibi_fill_inf):
+    def _build_alibi_tensor(max_seq_len, num_attention_heads, batch_size, square_alibi_mask):
         """Returns tensor shaped (batch_size * num_attention_heads, 1, max_seq_len)"""
 
         def get_slopes(n):
@@ -1273,7 +1273,7 @@ class ParallelTransformerLayer(MegatronModule):
 
         slopes = torch.Tensor(get_slopes(num_attention_heads))
 
-        if alibi_fill_inf:
+        if square_alibi_mask:
             position_point = torch.arange(max_seq_len) - max_seq_len + 1
             position_point = position_point.unsqueeze(0).unsqueeze(0).expand(num_attention_heads, max_seq_len, -1)
             diag = torch.diag(position_point[0])
@@ -1288,7 +1288,7 @@ class ParallelTransformerLayer(MegatronModule):
         tp_index = parallel_state.get_tensor_model_parallel_rank()
         alibi = alibi.reshape((tp_world_size, -1, *alibi.shape[1:]))[tp_index]
 
-        if alibi_fill_inf:
+        if square_alibi_mask:
             return _buffered_future_mask(batch_size, max_seq_len, alibi, num_attention_heads)
         else:
             return alibi
