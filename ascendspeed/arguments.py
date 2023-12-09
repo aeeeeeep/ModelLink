@@ -371,6 +371,10 @@ def validate_args(args, defaults={}):
                   'Defaulting to no_persist_layer_norm=True')
     else:
         args.no_persist_layer_norm = False
+    # Check Alibi-Mask.
+    if args.position_embedding_type == "alibi" and args.use_flash_attn:
+        ensure_valid(not args.padding_attention_mask, 'FlashAttention of Alibi do not support' +
+                        'padding attention mask!')
     # Activation recomputing.
     if args.distribute_saved_activations:
         ensure_valid(args.tensor_model_parallel_size > 1, 'can distribute ' +
