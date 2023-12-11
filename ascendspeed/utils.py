@@ -352,9 +352,9 @@ def get_tune_attention_mask(attention_mask_1d, reset_attention_mask=True):
         att_mask_batch = 1
 
     if args.padding_attention_mask:
-        expanded_mask = torch.tril(
+        expanded_mask = torch.logical_not(torch.tril(
             torch.gt(attention_mask_1d[:, :, None] * attention_mask_1d[:, None, :], 0)
-        ) * torch.eq(attention_mask_1d[:, :, None] - attention_mask_1d[:, None, :], 0)
+        ) * torch.eq(attention_mask_1d[:, :, None] - attention_mask_1d[:, None, :], 0))
         attention_mask = (
             expanded_mask.unsqueeze(1)
             .expand(-1, 1, seq_length, seq_length)

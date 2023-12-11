@@ -351,40 +351,25 @@ class CoreAttention(MegatronModule):
         if alibi is None:
             matmul_result = None
         else:
-            if self.square_alibi_mask:
-                matmul_result = alibi[:, :output_size[3]]
-            else:
-                matmul_result = alibi[:, :, :output_size[3]].repeat(output_size[0], 1, 1)
-
-        if self.square_alibi_mask:
-            expanded_mask = attention_mask.to(alibi.dtype)
-            inverted_mask = 1 - expanded_mask
-            inverted_mask = inverted_mask.masked_fill(
-                inverted_mask.to(torch.bool), float("-inf")
-            )
-            matmul_result = inverted_mask + matmul_result.unsqueeze(0)
+            matmul_result = alibi[:, :, :output_size[3]].repeat(output_size[0], 1, 1)
 
         if self.use_flash_attn:
             if alibi is not None:
                 # [b*np, 1, sq] ==> [b, np, 1, sq]
-                matmul_result = matmul_result.reshape(output_size[0], output_size[1], 1,
+                matmul_result = matmul_result.reshape(output_size[0], output_size[1], output_size[2],
                                                      output_size[2]) * self.beta * self.norm_factor
             q, k, v = [rearrange(x, 's b h d -> s b (h d)').contiguous() for x in (query_layer, key_layer, value_layer)]
             context_layer = self.core_flash_attn((q, k, v, self.num_attention_heads_per_partition), matmul_result,
                                                  attention_mask)
         else:
             # Raw attention scores. [b * np, sq, sk]
+            q_trans = query_layer.transpose(0, 1).contiguous()
+            k_trans = key_layer.transpose(0, 1).transpose(1, 2).contiguous()
+
             if alibi is None:
-                q_trans = query_layer.transpose(0, 1).contiguous()
-                k_trans = key_layer.transpose(0, 1).transpose(1, 2).contiguous()
                 matmul_result = torch.bmm(q_trans, k_trans) * (1.0 / self.norm_factor)
             else:
-                q_trans = query_layer.transpose(0, 1).contiguous()
-                k_trans = key_layer.transpose(0, 1).transpose(1, 2).contiguous()
-                if self.square_alibi_mask:
-                    matmul_result = matmul_result.contiguous().view(-1, self.max_seq_length,self.max_seq_length) + torch.bmm(q_trans,k_trans) * (1.0 / self.norm_factor)
-                else:
-                    matmul_result = self.beta * matmul_result + torch.bmm(q_trans, k_trans) * (1.0 / self.norm_factor)
+                matmul_result = self.beta * matmul_result + torch.bmm(q_trans, k_trans) * (1.0 / self.norm_factor)
 
             # change view to [b, np, sq, sk]
             attention_scores = matmul_result.view(*output_size)
@@ -394,14 +379,9 @@ class CoreAttention(MegatronModule):
             # ===========================
 
             # attention scores and attention mask [b, np, sq, sk]
-            if self.square_alibi_mask:
-                attention_scores = torch.max(
-                    attention_scores, torch.tensor(torch.finfo(attention_scores.dtype).min)
-                )
-                attention_probs = torch.nn.functional.softmax(attention_scores, dim=-1)
-            else:
-                attention_probs = self.scale_mask_softmax(attention_scores,
+            attention_probs = self.scale_mask_softmax(attention_scores,
                                                       attention_mask)
+
             if self.bf16:
                 attention_probs = attention_probs.bfloat16()
 
@@ -1262,14 +1242,6 @@ class ParallelTransformerLayer(MegatronModule):
                 closest_power_of_2 = 2 ** math.floor(math.log2(n))
                 return get_slopes_power_of_2(closest_power_of_2) + get_slopes(2 * closest_power_of_2)[0::2][
                                                                    :n - closest_power_of_2]
-        def _fill_with_neg_inf(t):
-            """FP16-compatible function that fills a tensor with -inf."""
-            return t.float().fill_(float("-inf")).type_as(t)
-
-        def _buffered_future_mask(batch_size, maxpos, alibi, attn_heads):
-            _future_mask = torch.triu(_fill_with_neg_inf(torch.zeros([maxpos, maxpos])), 1)
-            _future_mask = _future_mask.unsqueeze(0) + alibi
-            return _future_mask[:attn_heads, :maxpos, :maxpos]
 
         slopes = torch.Tensor(get_slopes(num_attention_heads))
 
@@ -1288,10 +1260,7 @@ class ParallelTransformerLayer(MegatronModule):
         tp_index = parallel_state.get_tensor_model_parallel_rank()
         alibi = alibi.reshape((tp_world_size, -1, *alibi.shape[1:]))[tp_index]
 
-        if square_alibi_mask:
-            return _buffered_future_mask(batch_size, max_seq_len, alibi, num_attention_heads)
-        else:
-            return alibi
+        return alibi
 
 
 class NoopTransformerLayer(MegatronModule):

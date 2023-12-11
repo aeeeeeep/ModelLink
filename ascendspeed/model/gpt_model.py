@@ -40,7 +40,8 @@ from .manual_pipe import ManuallyAllocatedPipelineModule
 def post_language_model_processing(lm_output, labels, logit_weights,
                                    parallel_output,
                                    fp16_lm_cross_entropy,
-                                   z_loss_weight):
+                                   z_loss_weight,
+                                   keep_last_token):
     # Output. Format [s b h]
     output = parallel_lm_logits(
         lm_output,
@@ -50,7 +51,7 @@ def post_language_model_processing(lm_output, labels, logit_weights,
 
         return output
     else:
-        if z_loss_weight is not None:
+        if keep_last_token:
             output = output[..., :-1, :].contiguous()
             labels = labels[..., 1:].contiguous()
 
@@ -88,6 +89,7 @@ class GPTModel(MegatronModule, MegatronModuleForCausalLM):
         self.return_moe_loss = return_moe_loss
         self.untie_embeddings_and_output_weights = args.untie_embeddings_and_output_weights
         self.z_loss_weight = args.z_loss_weight
+        self.keep_last_token = args.keep_last_token
 
         self.language_model, self._language_model_key = get_language_model(
             config=config,
@@ -143,7 +145,8 @@ class GPTModel(MegatronModule, MegatronModuleForCausalLM):
                 self.language_model.output_layer.weight if self.untie_embeddings_and_output_weights else self.shared_embedding_or_output_weight(),
                 self.parallel_output,
                 self.fp16_lm_cross_entropy,
-                self.z_loss_weight)
+                self.z_loss_weight,
+                self.keep_last_token)
 
         return lm_output, moe_losses if self.return_moe_loss else lm_output
 
