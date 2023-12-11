@@ -19,14 +19,10 @@
 #include <string>
 #include <torch/script.h>
 #include <torch/custom_class.h>
-#include "atb/types.h"
-#include "atb/operation.h"
-#include "atb/utils.h"
 
-atb::Tensor Input(const at::Tensor &tensor);
-atb::Tensor Input(const c10::optional<at::Tensor> &tensor);
-at::Tensor CreateAtTensorFromTensorDesc(const atb::TensorDesc &tensorDesc);
-atb::Tensor AtTensor2Tensor(const at::Tensor atTensor);
-atb::Context* GetContext();
+const static int N = 32;
+
+at::Tensor CreateAtTensor(c10::IntArrayRef shape, at::ScalarType inputDtype);
+at::Tensor CreateAtTensor(c10::SmallVector<int64_t, N> shape, at::ScalarType inputDtype);
 
 #endif

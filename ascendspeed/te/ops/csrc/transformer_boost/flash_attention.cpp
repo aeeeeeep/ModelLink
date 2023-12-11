@@ -19,36 +19,129 @@
 
 #include <torch_npu/csrc/core/npu/SecondaryStreamGuard.h>
 #include <torch_npu/csrc/aten/NPUGeneratorImpl.h>
-#include "atb/operation.h"
-#include "atb/train_op_params.h"
 #include "../ops_interface.h"
 #include "inc/adapter.h"
 
+#ifdef ENABLE_ATB
+#include "inc/atb_adapter.h"
+#include "atb/operation.h"
+#include "atb/train_op_params.h"
+#endif 
+
 using namespace std;
 
-const static int N = 32;
-static atb::Context* msContext = nullptr;
 
-atb::Context* GetContext()
-{
-    if (msContext == nullptr) {
-        auto status = atb::CreateContext(&msContext);
-        TORCH_CHECK(status == 0, "create context failed!");
-        int32_t devId = 0;
-        aclrtGetDevice(&devId);
-        aclrtStream stream = c10_npu::getCurrentNPUStream(devId).stream(false);
-        TORCH_CHECK(stream != nullptr, "get current stream failed");
-        msContext->SetExecuteStream(stream);
+const static int QKV_DIM_NUM = 3;
+const static int QKV_DIM_NUM_BNSD = 4;
+const static int BNSD_DIM_B = 0;
+const static int BNSD_DIM_S = 2;
+const static int BNSD_DIM_D = 3;
+const static int BSH_DIM_B = 0;
+const static int BSH_DIM_S = 1;
+const static int BSH_DIM_H = 2;
+const static int SBH_DIM_B = 1;
+const static int SBH_DIM_S = 0;
+const static int SBH_DIM_H = 2;
+
+enum FlashAttentionFormat : int {
+    BNSD = 0,
+    BSH,
+    SBH
+};
+
+void InferShapeFlashAttention(c10::SmallVector<int64_t, N> &size, int64_t io_layout, int64_t head_num, const at::Tensor &query)
+    {
+        if (io_layout == BNSD) {
+            // BNSD
+            size = {query.size(BNSD_DIM_B), head_num, query.size(BNSD_DIM_S)};
+        } else if (io_layout == BSH) {
+            // BSH
+            size = {query.size(BSH_DIM_B), head_num, query.size(BSH_DIM_S)};
+        } else if (io_layout == SBH) {
+            // SBH
+            size = {query.size(SBH_DIM_B), head_num, query.size(SBH_DIM_S)};
+        }
     }
-    return msContext;
+
+void CheckFlashAttention(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+                         int64_t head_num, int64_t io_layout)
+{
+    TORCH_CHECK(query.scalar_type() == at::ScalarType::Half || query.scalar_type() == at::ScalarType::BFloat16,
+                "Input Q dtype ", query.scalar_type(),
+                " invalid, should be float16 or bfloat16");
+    TORCH_CHECK(key.scalar_type() == at::ScalarType::Half || key.scalar_type() == at::ScalarType::BFloat16,
+                "Input K dtype ", key.scalar_type(),
+                " invalid, should be float16 or bfloat16");
+    TORCH_CHECK(value.scalar_type() == at::ScalarType::Half || value.scalar_type() == at::ScalarType::BFloat16,
+                "Input V dtype ", value.scalar_type(),
+                " invalid, should be float16 or bfloat16");
+    int dim_s;
+    int dim_b;
+    int dim_h;
+    int dim_num = QKV_DIM_NUM;
+    if (io_layout == BNSD) {
+        // BNSD
+        dim_s = BNSD_DIM_S;
+        dim_b = BNSD_DIM_B;
+        dim_h = BNSD_DIM_D;
+        dim_num = QKV_DIM_NUM_BNSD;
+    } else if (io_layout == BSH) {
+        // BSH
+        dim_s = BSH_DIM_S;
+        dim_b = BSH_DIM_B;
+        dim_h = BSH_DIM_H;
+    } else if (io_layout == SBH) {
+        // SBH
+        dim_s = SBH_DIM_S;
+        dim_b = SBH_DIM_B;
+        dim_h = SBH_DIM_H;
+    }
+    TORCH_CHECK(
+        query.dim() == dim_num,
+        "Input Q dim num %d invalid, should be %zu", query.dim(), QKV_DIM_NUM_BNSD);
+    TORCH_CHECK(
+        key.dim() == dim_num,
+        "Input K dim num %d invalid, should be %zu", key.dim(), QKV_DIM_NUM_BNSD);
+    TORCH_CHECK(
+        value.dim() == dim_num,
+        "Input V dim num %d invalid, should be %zu", value.dim(), QKV_DIM_NUM_BNSD);
+    auto batch_size = query.size(dim_b);
+    auto head_dim_size = query.size(dim_h);
+
+    TORCH_CHECK(key.size(dim_b) == batch_size &&
+                key.size(dim_h) == head_dim_size,
+                "Shape of input Q and input K should be same in batch_size_dim and head_dim");
+    TORCH_CHECK(value.size(dim_b) == batch_size &&
+                value.size(dim_h) == head_dim_size,
+                "Shape of input Q and input V should be same in batch_size_dim and head_dim");
+    TORCH_CHECK(value.size(dim_s) == key.size(dim_s),
+                "Shape of input K and input V should be same in batch_size_dim and head_dim");
 }
 
-std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
-                                      const c10::optional<at::Tensor> &atten_mask, const c10::optional<at::Tensor> &alibi_mask,
-                                      const c10::optional<at::Tensor> &drop_mask, float scale_value, int64_t head_num,
-                                      int64_t io_layout, float keep_prob, int64_t pre_tokens, int64_t next_tokens,
-                                      int64_t precise_mode, int64_t groups)
+void CheckFlashAttentionBackward(const at::Tensor &dy, const at::Tensor &softmax_log_max_sum,
+                                 const at::Tensor &attention_out, const at::Tensor &query,
+                                 const at::Tensor &key, const at::Tensor &value,
+                                 int64_t head_num, int64_t io_layout)
+{   CheckFlashAttention(query, key, value, head_num, io_layout);
+    TORCH_CHECK(dy.scalar_type() == at::ScalarType::Half || query.scalar_type() == at::ScalarType::BFloat16,
+                "Input dy dtype ", dy.scalar_type(), " invalid, should be float16 or bfloat16");
+    TORCH_CHECK(softmax_log_max_sum.scalar_type() == at::ScalarType::Float,
+                "Input softmax_log_max_sum dtype ", softmax_log_max_sum.scalar_type(),
+                " invalid, should be float ");
+    TORCH_CHECK(attention_out.scalar_type() == at::ScalarType::Half || query.scalar_type() == at::ScalarType::BFloat16,
+                "Input attention_out dtype ", attention_out.scalar_type(),
+                " invalid, should be float16 or bfloat16");
+}
+
+std::tuple<at::Tensor, at::Tensor> flash_attention(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+                                                   const c10::optional<at::Tensor> &atten_mask, const c10::optional<at::Tensor> &alibi_mask,
+                                                   const c10::optional<at::Tensor> &drop_mask, float scale_value, int64_t head_num,
+                                                   int64_t io_layout, float keep_prob, int64_t pre_tokens, int64_t next_tokens,
+                                                   int64_t precise_mode, int64_t groups)
 {
+#ifndef ENABLE_ATB
+    TORCH_CHECK(false, "flash_attention not implemented");
+#else 
     atb::train::FlashAttentionParam param;
     param.scaleValue = scale_value;
     param.headNum = head_num;
@@ -59,85 +152,41 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
     param.keepProb = keep_prob;
     param.groups = groups;
 
-    std::vector<at::Tensor> outTensors;
-    atb::Operation* op = nullptr;
-    atb::CreateOperation(param, &op);
-    TORCH_CHECK(op != nullptr, "get op failed!");
+    //infer shape
+    CheckFlashAttention(query, key, value, head_num, io_layout);
+    c10::SmallVector<int64_t, N> tensor_softmax_shape;
+    InferShapeFlashAttention(tensor_softmax_shape, io_layout, head_num, query);
 
-    std::vector<atb::Tensor> inTensors;
-    auto atb_query = Input(query);
-    auto atb_key = Input(key);
-    auto atb_value = Input(value);
-    auto atb_atten_mask = Input(atten_mask);
-    auto atb_alibi_mask = Input(alibi_mask);
-    auto atb_drop_mask = Input(drop_mask);
+    //apply tensor
+    at::Tensor tensor_softmax = CreateAtTensor(tensor_softmax_shape, 
+                                               at::ScalarType::Float);
+    at::Tensor tensor_attention_out = CreateAtTensor(query.sizes(),
+                                                     query.scalar_type());
+    //set input and output
+    ParamSetter paramsetter;
+    paramsetter.Input(query)
+               .Input(key)
+               .Input(value)
+               .Input(atten_mask)
+               .Input(alibi_mask)
+               .Input(drop_mask)
+               .Output(tensor_attention_out)
+               .Output(tensor_softmax);
 
-    inTensors.push_back(atb_query);
-    inTensors.push_back(atb_key);
-    inTensors.push_back(atb_value);
-    inTensors.push_back(atb_atten_mask);
-    inTensors.push_back(atb_alibi_mask);
-    inTensors.push_back(atb_drop_mask);
-
-    atb::SVector<atb::TensorDesc> inTensorDescs;
-    atb::SVector<atb::TensorDesc> outTensorDescs;
-    for (size_t i = 0; i < inTensors.size(); ++i) {
-        atb::Tensor inTensor = inTensors.at(i);
-        if (inTensor.desc.format == ACL_FORMAT_NCHW) {
-            inTensor.desc.format = ACL_FORMAT_ND;
-        }
-        inTensorDescs.push_back(inTensor.desc);
-    }
-    atb::Status status = op->InferShape(inTensorDescs, outTensorDescs);
-    TORCH_CHECK(status == 0, "infershape failed!");
-
-    for (size_t i = 0; i < outTensorDescs.size(); ++i) {
-        at::Tensor newTensor = CreateAtTensorFromTensorDesc(outTensorDescs.at(i));
-        outTensors.push_back(newTensor);
-    }
-
-    atb::Tensor atbOutTensor1 = AtTensor2Tensor(outTensors[0]);
-    atb::Tensor atbOutTensor2 = AtTensor2Tensor(outTensors[1]);
-    atb::VariantPack variantPack;
-    variantPack.inTensors.push_back(atb_query);
-    variantPack.inTensors.push_back(atb_key);
-    variantPack.inTensors.push_back(atb_value);
-    variantPack.inTensors.push_back(atb_atten_mask);
-    variantPack.inTensors.push_back(atb_alibi_mask);
-    variantPack.inTensors.push_back(atb_drop_mask);
-    variantPack.outTensors.push_back(atbOutTensor1);
-    variantPack.outTensors.push_back(atbOutTensor2);
-
-    uint64_t workspaceSize = 0;
-    atb::Status st = op->Setup(variantPack, workspaceSize);
-    TORCH_CHECK(st == 0, "setup failed!");
-    at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
-    void *workspacePtr = nullptr;
-    if (workspaceSize > 0) {
-        auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
-        workspacePtr = workspaceTensor.storage().data();
-    }
-    auto contextPtr = GetContext();
-    auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
-        auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
-        DestroyOperation(op);
-        return 0;
-    };
-
-    at_npu::native::OpCommand cmd;
-    cmd.Name("fa_forward");
-    cmd.SetCustomHandler(acl_call);
-    cmd.Run();
-    
-    return std::make_tuple(outTensors[0], outTensors[1]);
+    RUN_TE_CMD(param, paramsetter, "fa_forward")
+    return std::make_tuple(tensor_attention_out, tensor_softmax);
+#endif
 }
 
-std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const at::Tensor &softmax_log_max_sum, const at::Tensor &attention_out,
-                                                   const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
-                                                   const c10::optional<at::Tensor> &atten_mask, const c10::optional<at::Tensor> &alibi_mask,
-                                                   const c10::optional<at::Tensor> &drop_mask, float scale_value, int64_t head_num, int64_t io_layout,
-                                                   float keep_prob, int64_t pre_tokens, int64_t next_tokens, int64_t precise_mode, int64_t groups)
+std::tuple<at::Tensor, at::Tensor, at::Tensor> flash_attention_grad(const at::Tensor &dy, const at::Tensor &softmax_log_max_sum, const at::Tensor &attention_out,
+                                                                    const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+                                                                    const c10::optional<at::Tensor> &atten_mask, const c10::optional<at::Tensor> &alibi_mask,
+                                                                    const c10::optional<at::Tensor> &drop_mask, float scale_value, int64_t head_num, int64_t io_layout,
+                                                                    float keep_prob, int64_t pre_tokens, int64_t next_tokens, int64_t precise_mode, int64_t groups)
 {
+#ifndef ENABLE_ATB
+    TORCH_CHECK(false, "flash_attention_grad not implemented");
+#else
     atb::train::FlashAttentionBackwardParam param;
     param.scaleValue = scale_value;
     param.headNum = head_num;
@@ -148,90 +197,32 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
     param.keepProb = keep_prob;
     param.groups = groups;
 
-    std::vector<at::Tensor> outTensors;
-    atb::Operation* op = nullptr;
-    atb::CreateOperation(param, &op);
-    TORCH_CHECK(op != nullptr, "get op failed!");
+    CheckFlashAttentionBackward(dy, softmax_log_max_sum,
+                                attention_out, query,
+                                key, value,
+                                head_num, io_layout);
 
-    std::vector<atb::Tensor> inTensors;
-    auto atb_dy = Input(dy);
-    auto atb_softmax_log_max_sum = Input(softmax_log_max_sum);
-    auto atb_attention_out = Input(attention_out);
-    auto atb_query = Input(query);
-    auto atb_key = Input(key);
-    auto atb_value = Input(value);
-    auto atb_atten_mask = Input(atten_mask);
-    auto atb_alibi_mask = Input(alibi_mask);
-    auto atb_drop_mask = Input(drop_mask);
+    at::Tensor tensor_query_grad = CreateAtTensor(query.sizes(), at::ScalarType::Float);
+    at::Tensor tensor_key_grad = CreateAtTensor(query.sizes(), at::ScalarType::Float);
+    at::Tensor tensor_value_grad = CreateAtTensor(query.sizes(), at::ScalarType::Float);
 
-    inTensors.push_back(atb_dy);
-    inTensors.push_back(atb_softmax_log_max_sum);
-    inTensors.push_back(atb_attention_out);
-    inTensors.push_back(atb_query);
-    inTensors.push_back(atb_key);
-    inTensors.push_back(atb_value);
-    inTensors.push_back(atb_atten_mask);
-    inTensors.push_back(atb_alibi_mask);
-    inTensors.push_back(atb_drop_mask);
+    ParamSetter paramsetter;
+    paramsetter.Input(dy)
+               .Input(softmax_log_max_sum)
+               .Input(attention_out)
+               .Input(query)
+               .Input(key)
+               .Input(value)
+               .Input(atten_mask)
+               .Input(alibi_mask)
+               .Input(drop_mask)
+               .Output(tensor_query_grad)
+               .Output(tensor_key_grad)
+               .Output(tensor_value_grad);
 
-    atb::SVector<atb::TensorDesc> inTensorDescs;
-    atb::SVector<atb::TensorDesc> outTensorDescs;
-    for (size_t i = 0; i < inTensors.size(); ++i) {
-        atb::Tensor inTensor = inTensors.at(i);
-        if (inTensor.desc.format == ACL_FORMAT_NCHW) {
-            inTensor.desc.format = ACL_FORMAT_ND;
-        }
-        inTensorDescs.push_back(inTensor.desc);
-    }
-    atb::Status status = op->InferShape(inTensorDescs, outTensorDescs);
-    TORCH_CHECK(status == 0, "infershape failed!");
-
-    for (size_t i = 0; i < outTensorDescs.size(); ++i) {
-        at::Tensor newTensor = CreateAtTensorFromTensorDesc(outTensorDescs.at(i));
-        outTensors.push_back(newTensor);
-    }
-
-    atb::Tensor atbOutTensor1 = AtTensor2Tensor(outTensors[0]);
-    atb::Tensor atbOutTensor2 = AtTensor2Tensor(outTensors[1]);
-    atb::Tensor atbOutTensor3 = AtTensor2Tensor(outTensors[2]);
-    atb::VariantPack variantPack;
-
-    variantPack.inTensors.push_back(atb_dy);
-    variantPack.inTensors.push_back(atb_softmax_log_max_sum);
-    variantPack.inTensors.push_back(atb_attention_out);
-    variantPack.inTensors.push_back(atb_query);
-    variantPack.inTensors.push_back(atb_key);
-    variantPack.inTensors.push_back(atb_value);
-    variantPack.inTensors.push_back(atb_atten_mask);
-    variantPack.inTensors.push_back(atb_alibi_mask);
-    variantPack.inTensors.push_back(atb_drop_mask);
-    variantPack.outTensors.push_back(atbOutTensor1);
-    variantPack.outTensors.push_back(atbOutTensor2);
-    variantPack.outTensors.push_back(atbOutTensor3);
- 
-    uint64_t workspaceSize = 0;
-    atb::Status st = op->Setup(variantPack, workspaceSize);
-    TORCH_CHECK(st == 0, "setup failed!");
-    at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
-    void *workspacePtr = nullptr;
-    if (workspaceSize > 0) {
-        auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
-        workspacePtr = workspaceTensor.storage().data();
-    }
-
-    auto contextPtr = GetContext();
-
-    auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
-        auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
-        DestroyOperation(op);
-        return 0;
-    };
-    at_npu::native::OpCommand cmd;
-    cmd.Name("fa_backward");
-    cmd.SetCustomHandler(acl_call);
-    cmd.Run();
-
-    return std::make_tuple(outTensors[0], outTensors[1], outTensors[2]);
+    RUN_TE_CMD(param, paramsetter, "fa_backward");
+    return std::make_tuple(tensor_query_grad, tensor_key_grad, tensor_value_grad);
+#endif
 }
 
 enum class DropOutStatus {
