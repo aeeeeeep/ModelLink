@@ -287,9 +287,10 @@ class BelleMultiTurnInstructionHandler(GeneralInstructionHandler):
 
 
 class MOSSMultiTurnHandler(GeneralInstructionHandler):
+    #apply for baichuan
     @property
     def user_token(self) -> List[int]:
-        return [295]
+        return [195]
 
     @property
     def assistant_token(self) -> List[int]:
