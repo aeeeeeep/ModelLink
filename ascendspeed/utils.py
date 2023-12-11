@@ -343,7 +343,7 @@ def checkpoint_throughput_calculator(model, latency_second):
     print_rank_0(f"Checkpoint Save GB: {round(checkpoint_GB, 3)}, GB/Sec: {round(GB_per_second,2)}, Latency(second): {round(latency_second, 3)}")
 
 
-def get_tune_attention_mask(attention_mask_1d, reset_attention_mask=True):
+def get_tune_attention_mask_and_position_ids(attention_mask_1d, reset_attention_mask=True):
     micro_batch_size, seq_length = attention_mask_1d.size()
     if reset_attention_mask:
         att_mask_batch = micro_batch_size
@@ -354,7 +354,13 @@ def get_tune_attention_mask(attention_mask_1d, reset_attention_mask=True):
         att_mask_batch, 1, seq_length, seq_length)
     attention_mask = attention_mask.masked_fill((attention_mask_1d < 0.5).view(-1, 1, 1, seq_length), value=0)
     attention_mask = (attention_mask < 0.5)
-    return attention_mask
+
+    # Position ids.
+    position_ids = torch.arange(seq_length, dtype=torch.long,
+                                device=attention_mask_1d.device)
+    position_ids = position_ids.unsqueeze(0).expand_as(attention_mask_1d)
+
+    return attention_mask, position_ids
 
 
 def convert_args_to_strs(args):

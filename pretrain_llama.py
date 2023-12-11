@@ -38,7 +38,7 @@ from ascendspeed.model.gpt_model import GPTModel
 from ascendspeed.model.gpt_model import GPTModelPipe
 from ascendspeed.core.enums import ModelType
 from ascendspeed.training import pretrain
-from ascendspeed.utils import get_ltor_masks_and_position_ids, get_tune_attention_mask
+from ascendspeed.utils import get_ltor_masks_and_position_ids, get_tune_attention_mask_and_position_ids
 from ascendspeed.utils import average_losses_across_data_parallel_group
 from ascendspeed.arguments import core_transformer_config_from_args
 
@@ -88,6 +88,26 @@ def model_provider(pre_process=True, post_process=True):
             )
     see_memory_usage(f"After Building Model", force=True)
     return model
+
+
+def get_batch_instruction(data, args):
+    # Items and their type.
+    keys = ['input_ids', 'attention_mask', 'labels']
+    data_type = torch.int64
+
+    # Broadcast data.
+    data_b = tensor_parallel.broadcast_data(keys, data, data_type)
+
+    # Unpack.
+    labels = data_b.get('labels').long()
+    tokens = data_b.get('input_ids').long()
+    attention_mask_1d = data_b.get('attention_mask').long()
+    # ignored label -100
+    loss_mask = torch.where(labels == -100, 0, 1)
+
+    attention_mask, position_ids = get_tune_attention_mask_and_position_ids(attention_mask_1d, args.reset_attention_mask)
+
+    return tokens, position_ids, attention_mask, labels, loss_mask
 
 
 def get_batch(data_iterator):
@@ -144,21 +164,7 @@ def get_batch_pipe(data):
     tokenizer = get_tokenizer()
 
     if args.is_instruction_dataset:
-        # Items and their type.
-        keys = ['input_ids', 'attention_mask', 'labels']
-        data_type = torch.int64
-
-        # Broadcast data.
-        data_b = tensor_parallel.broadcast_data(keys, data, data_type)
-
-        # Unpack.
-        labels = data_b.get('labels').long()
-        tokens = data_b.get('input_ids').long()
-        attention_mask_1d = data_b.get('attention_mask').long()
-        # ignored label -100
-        loss_mask = torch.where(labels == -100, 0, 1)
-
-        attention_mask = get_tune_attention_mask(attention_mask_1d, args.reset_attention_mask)
+        tokens, _, attention_mask, labels, loss_mask = get_batch_instruction(data, args)
 
         return (tokens, attention_mask), (labels, loss_mask)
 
