@@ -139,40 +139,40 @@ python ./tools/preprocess_data.py \
 5. Config Baichuan2-13B pre-training script: /examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
 
 ```shell
-# 修改 ascend-toolkit 路径
+# modify the script according to your own  ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-# 修改词表，数据集, 权重等路径等路径
+# modify script orign dataset path according to your own dataset path
 TOKENIZER_PATH=./Baichuan2-13B-Base 
 DATA_PATH=./processed_data_of_moss/processed_data_packed_input_ids_document
 LOAD_PATH=./baichuan2-13b-merge
 
-# 修正双机运行配置
-# MASTER_ADDR=xx.xx.x.xxx配置为主服务器ip
-# NODE_RANK主服务器脚本里设置为0，另一台服务器脚本里设置为1
+# set config for two-node parallelism
+# modify MASTER_ADDR=xx.xx.x.xxx to master node IP
+# NODE_RANK is set to 0 in the master node script and to 1 in another.
 ```
 
 If you need to fine-tune the training model, you need to first turn off FA and append following arguments, as FA operators cannot currently handle the attention_mask for alibi of fine-tuning training.
 
 ```shell
-# 修改 ascend-toolkit 路径
+# modify the script according to your own  ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-# 修改词表，数据集, 权重等路径等路径
+# modify script orign dataset path according to your own dataset path
 TOKENIZER_PATH=./Baichuan2-13B-Base 
 DATA_PATH=./processed_data_of_moss/processed_data
 LOAD_PATH=./baichuan2-13b-merge
 
-# 修正双机运行配置
-# MASTER_ADDR=xx.xx.x.xxx配置为主服务器ip
-# NODE_RANK主服务器脚本里设置为0，另一台服务器脚本里设置为1
+# set config for two-node parallelism
+# modify MASTER_ADDR=xx.xx.x.xxx to master node IP
+# NODE_RANK is set to 0 in the master node script and to 1 in another.
 
-# 删除--use-flash-attn
-# 增加微调数据集参数
+# remove --use-flash-attn
+# add dataset argument for SFT training
 --is-instruction-dataset
-# 调整attention_mask为padding格式，增加以下参数
+# add following argument to adjust padding attention_mask
 --padding-attention-mask
-# 调整alibi计算格式，增加以下参数
+# add following argument to adjust alibi calculation format
 --square-alibi-mask
 ```
 
