@@ -66,6 +66,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --mlp-layer-fusion \
        --use-distributed-optimizer \
        --use-flash-attn \
+       --auto-recompute-device-size 57344 \
        --seed 1234 \
        --adam-beta1 0.9 \
        --adam-beta2 0.98 \

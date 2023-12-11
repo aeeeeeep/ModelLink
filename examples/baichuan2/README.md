@@ -132,14 +132,13 @@ python ./tools/preprocess_data.py \
 
 5. 配置 Baichuan2-13B 训练脚本: /examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
 
-- 不开启FA
 ```shell
 # 修改 ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 # 修改词表，数据集, 权重等路径等路径
 TOKENIZER_PATH=./Baichuan2-13B-Base 
-DATA_PATH=./processed_data_of_moss/processed_data
+DATA_PATH=./processed_data_of_moss/processed_data_packed_input_ids_document
 LOAD_PATH=./baichuan2-13b-merge
 
 # 修正双机运行配置
@@ -147,7 +146,7 @@ LOAD_PATH=./baichuan2-13b-merge
 # NODE_RANK主服务器脚本里设置为0，另一台服务器脚本里设置为1
 ```
 
-- 开启FA
+如果需要微调训练模型，需要首先关闭FA并增加以下参数，因为目前FA算子无法处理微调训练时alibi适配的attention_mask
 ```shell
 # 修改 ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -161,16 +160,13 @@ LOAD_PATH=./baichuan2-13b-merge
 # MASTER_ADDR=xx.xx.x.xxx配置为主服务器ip
 # NODE_RANK主服务器脚本里设置为0，另一台服务器脚本里设置为1
 
-#修正batch设置
-GLOBAL_BATCH=256
-MICRO_BATCH=2
-
-#修正seq_length
---seq-length 1024
-#增加FA开启参数
---use-flash-attn
-#增加选择性重计算参数
---auto-recompute-device-size 57344
+# 删除--use-flash-attn
+# 增加微调数据集参数
+--is-instruction-dataset
+# 调整attention_mask为padding格式，增加以下参数
+--padding-attention-mask
+# 调整alibi计算格式，增加以下参数
+--square-alibi-mask
 ```
 
 6. 启动 Baichuan2-13B 训练脚本: /examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
@@ -184,12 +180,13 @@ bash examples/baichuan2/pretrain_baichuan_ptd_13B.sh
 
 #### 吞吐
 
-不开启FA情况下，Baichuan2-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
+Baichuan2-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 
 |  设备  |            模型             | 迭代数  | 样本吞吐 (samples/p/s) | token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
 |:----:|:-------------------------:|:----:|:------------------:|:--------------------:|:---------------:|:----------------:|
 | NPUs |       Baichuan2-13B       | 1000 |        3.18        |         824          |      79.46      |      72.96       |
-|  参考  |       Baichuan2-13B       |      |                    |         1100         |                 |                  |
+|  参考  |       Baichuan2-13B       |      |                    |         200          |                 |                  |
+
 
 
 #### 精度

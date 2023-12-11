@@ -138,44 +138,42 @@ python ./tools/preprocess_data.py \
 
 5. Config Baichuan2-13B pre-training script: /examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
 
-- FA(Off)
 ```shell
-# modify the script according to your own  ascend-toolkit path
+# 修改 ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-# modify script orign dataset path according to your own dataset path
+# 修改词表，数据集, 权重等路径等路径
 TOKENIZER_PATH=./Baichuan2-13B-Base 
-DATA_PATH=./processed_data_of_moss/processed_data
+DATA_PATH=./processed_data_of_moss/processed_data_packed_input_ids_document
 LOAD_PATH=./baichuan2-13b-merge
 
-# set config for two-node parallelism
-# modify MASTER_ADDR=xx.xx.x.xxx to master node IP
-# is set to 0 in the master node script and to 1 in another. 
+# 修正双机运行配置
+# MASTER_ADDR=xx.xx.x.xxx配置为主服务器ip
+# NODE_RANK主服务器脚本里设置为0，另一台服务器脚本里设置为1
 ```
-- FA(On)
+
+If you need to fine-tune the training model, you need to first turn off FA and append following arguments, as FA operators cannot currently handle the attention_mask for alibi of fine-tuning training.
+
 ```shell
-# modify the script according to your own  ascend-toolkit path
+# 修改 ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-# modify script orign dataset path according to your own dataset path
+# 修改词表，数据集, 权重等路径等路径
 TOKENIZER_PATH=./Baichuan2-13B-Base 
 DATA_PATH=./processed_data_of_moss/processed_data
 LOAD_PATH=./baichuan2-13b-merge
 
-# set config for two-node parallelism
-# modify MASTER_ADDR=xx.xx.x.xxx to master node IP
-# is set to 0 in the master node script and to 1 in another.
+# 修正双机运行配置
+# MASTER_ADDR=xx.xx.x.xxx配置为主服务器ip
+# NODE_RANK主服务器脚本里设置为0，另一台服务器脚本里设置为1
 
-#modify batch size
-GLOBAL_BATCH=256
-MICRO_BATCH=2
-
-#modify seq_length
---seq-length 1024
-#use flash attention 
---use-flash-attn
-#use auto selective recomputing
---auto-recompute-device-size 57344 
+# 删除--use-flash-attn
+# 增加微调数据集参数
+--is-instruction-dataset
+# 调整attention_mask为padding格式，增加以下参数
+--padding-attention-mask
+# 调整alibi计算格式，增加以下参数
+--square-alibi-mask
 ```
 
 6. Launch Baichuan2-13B pre-training script: /examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
@@ -191,7 +189,7 @@ There is an hourly pulse checking script running that checks that the training i
 
 #### Machine performance
 
-While not using flash attention, The performance of the Baichuan-13B in **Ascend NPU** and **Reference**:
+The performance of the Baichuan-13B in **Ascend NPU** and **Reference**:
 
 | Device |     Model     | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
 | :----: |:-------------:| :--------------: | :---------------------------: | :--------------------------: | :-----------------------: | :---------------------------------: |
