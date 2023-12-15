@@ -180,7 +180,7 @@ The performance of Internlm-7B in **Ascend NPU** and **Reference**:
 
 | Device | Model       | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
 |----|-------------|------|--------------------|----------------------|-----------------|------------------|
-| NPUs | Internlm-7B | 2048 | 13.000              | 3328                 | 19684.6            | 145.69           |
+| NPUs | Internlm-7B | 2048 | 13.000              | 2943                 | 19684.6            | 145.69           |
 | benchmarks | Internlm-7B | - | -              | 4078                 |  -            | -           |
 
 

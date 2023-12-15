@@ -94,7 +94,7 @@ deepspeed  pretrain_intern.py \
        --eval-interval 1000 \
        --eval-iters 10 \
        --use-flash-attn \
-       --auto-recompute-device-size 48128 \
+       --auto-recompute-device-size 46080 \
        --use-fused-rmsnorm \
        --use-fused-rotary-pos-emb \
        $ds_args \
