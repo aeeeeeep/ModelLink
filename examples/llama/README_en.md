@@ -23,6 +23,9 @@
     - [Performance](#performance-1)
       - [Machine performance](#machine-performance-1)
       - [Accuracy of the loss](#accuracy-of-the-loss-1)
+  - [Inference](#Inference)
+    - [Script](#script)
+  - [Evaluation with Numerous Benchmarks](#Evaluation-with-Numerous-Benchmarks)
 - [Citation](#citation)
 
 ## Training
@@ -39,12 +42,12 @@ Here's a software summary of pre-training LLaMA-7B/13B:
 
 |         Software          |                                                   Version                                                    |
 | :-----------------------: |:------------------------------------------------------------------------------------------------------------:|
-|          Python           |                                                    3.7.5                                                     |
+|          Python           |                                                    3.8.0                                                     |
 |          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
 | binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                    1.11.0                                                    |
+|           torch           |                                                    2.1.0                                                     |
 |         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
 
 ### Script
@@ -60,12 +63,12 @@ mkdir ckpt
 2. Build environment
 
 ```bash
-# python3.7
-conda create -n test python=3.7
+# python3.8
+conda create -n test python=3.8
 conda activate test
 # install torch and torch_npu
-pip install torch-1.11.0-cp37-cp37m-linux_aarch64.whl
-pip install torch_npu-1.11.0.post4_XXXXXX-cp37-cp37m-linux_aarch64.whl
+pip install torch-2.1.0-cp38-cp38m-linux_aarch64.whl
+pip install torch_npu-2.1.0.post5_XXXXXX-cp38-cp38m-linux_aarch64.whl
 # install megatron-core
 pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
 # install deepspeed and deepspeed_npu
@@ -90,7 +93,7 @@ pip install -r requirements.txt
     if zero_sd_list is None or len(zero_sd_list) == 0:
         return False
 ```
-3. Download the LLaMA-7B/13B tokenizer model and file from [here](https://huggingface.co/yahma/llama-7b-hf/tree/main) 
+3. Download the LLaMA-7B/13B tokenizer model and file from [here](https://huggingface.co/ruibin-wang/llama-7b-hf/tree/main) 
 
 
 ```shell
@@ -131,21 +134,21 @@ python ./tools/preprocess_data.py \
 
 5. Weights convert
 
-Download the LLaMA-7B checkpoint from [here](https://huggingface.co/yahma/llama-7b-hf/tree/main) 
+Download the LLaMA-7B checkpoint from [here](https://huggingface.co/ruibin-wang/llama-7b-hf/tree/main) 
 ```shell
   mkdir model_from_hf
   cd ./model_from_hf
   # you must install git-lfs
-  git clone https://huggingface.co/yahma/llama-7b-hf
+  git clone https://huggingface.co/ruibin-wang/llama-7b-hf
   cd ..
 ```
 
-Download the LLaMA-13B checkpoint from [here](https://huggingface.co/yahma/llama-13b-hf/tree/main) 
+Download the LLaMA-13B checkpoint from [here](https://huggingface.co/ruibin-wang/llama-13b-hf/tree/main) 
 ```shell
   mkdir model_from_hf
   cd ./model_from_hf
   # you must install git-lfs
-  git clone https://huggingface.co/yahma/llama-13b-hf
+  git clone https://huggingface.co/ruibin-wang/llama-13b-hf
   cd ..
 ```
 
@@ -198,6 +201,7 @@ DATA=./dataset/llama_text_document  #processed dataset
 CHECKPOINT=./model_weights/
 ```
 *Note that if you do not load weights for pre-training, remove the `--load` parameter from the training script*
+*Note that if you use the instruction dataset, add the `--is-instruction-dataset` parameter from the training script, otherwise please remove the parameter*
 
 7. Launch LLaMA-7B/13B pre-training script.
 
@@ -220,13 +224,13 @@ bash examples/llama/pretrain_llama_13B_ptd_16p.sh
 
 The performance of LLaMA-7B/13B in **Ascend NPU** and **Reference**:
 
-| Device    | Hardware | Model     | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
-|-----------|----------|-----------|------------------|-------------------------------|------------------------------|---------------------------|-------------------------------------|
-| NPUs      | 910 1*8p  | LLaMA-7B  | 2048             | 1.80                          | 3686                         | 4.44                      | 156.5                               |
-| Reference | -        | LLaMA-7B  | 2048             | 1.85                          | 3788                         | 4.31                      | 161.1                               |
-| NPUs      | 910 1*8p  | LLaMA-13B | 2048             | 0.956                         | 1958                         | 16.70                     | 212.25                              |
+| Device    | Hardware  | Model     | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
+|-----------|-----------|-----------|------------------|-------------------------------|------------------------------|---------------------------|-------------------------------------|
+| NPUs      | 910 1*8p  | LLaMA-7B  | 2048             | 1.83                          | 3763                         | 4.35                      | 159.9                               |
+| Reference | -         | LLaMA-7B  | 2048             | 1.85                          | 3804                         | 4.31                      | 161.5                               |
+| NPUs      | 910 1*8p  | LLaMA-13B | 2048             | 0.925                         | 1894                         | 17.27                     | 205.57                              |
 | NPUs      | 910 1*16p | LLaMA-13B | 2048             | 0.88                          | 1800                         | 36.32                     | 195.58                              |
-| Reference | -        | LLaMA-13B | 2048             | 0.98                          | 2012                         | 16.33                     | 217.37                              |
+| Reference | -         | LLaMA-13B | 2048             | 0.98                          | 2012                         | 16.33                     | 217.37                              |
 
 
 
@@ -244,7 +248,7 @@ LLama-13b with huggingface weights NPU vs GPU loss.
 We support AscendSpeed Inference for text generation with LLaMA-7B and LLaMA-13B.
 Inference different from pre-training, such as we need to Load pre-training checkpoint and the length of the output samples:
 
-Config LLaMA-7B inference script `examples/llama/generate_llama_7B_deepspeed.sh` and LLaMA-13B inference script `examples/llama/generate_llama_13B_tp8_pp1.sh`.
+Config LLaMA-7B inference script `examples/llama/generate_llama_7B_deepspeed.sh` and LLaMA-13B inference script `examples/llama/generate_llama_13B_tp1_pp8.sh`.
 
 ```shell
 # modify the model weight path and tokenizer path
@@ -259,7 +263,7 @@ bash ./examples/llama/generate_llama_7B_deepspeed.sh
 
 LLaMA-13B:
 ```shell
-bash ./examples/llama/generate_llama_13B_tp8_pp1.sh
+bash ./examples/llama/generate_llama_13B_tp1_pp8.sh
 ```
 
 Some inference samples are as follows:
@@ -277,77 +281,39 @@ LLaMA-13B:
 
 We use bbh benchmark to evaluate our model. Benchmark Download [here](https://huggingface.co/datasets/lukaemon/bbh).
 
-Config LLaMA-7B evaluation script:
+Config LLaMA-7B evaluation script `tasks/evaluation/evaluate_llama_7b_ptd.sh` and LLaMA-13B evaluation script `tasks/evaluation/evaluate_llama_13b_ptd.sh`:
+
+Modify checkpoint path, vocab path, dataset path and task:
 
 ```shell
-    CHECKPOINT=./llama-7b-tp4-pp2/
-    VOCAB_FILE=./llama-7b-hf/
-    # configure task and data path
-    DATA_PATH="./bbh/data/test/"
-    TASK="bbh"
-    # configure generation parameters 
-    python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/evaluation/evaluation_llama.py   \
-           --task-data-path $DATA_PATH \
-           --task $TASK\
-           --seq-length 2048 \
-           --max-new-tokens 32 \
-           --max-position-embeddings 2048 \
-           --tensor-model-parallel-size 4  \
-           --pipeline-model-parallel-size 2  \
-           --num-layers 32  \
-           --hidden-size 4096  \
-           --ffn-hidden-size 11008 \
-           --load ${CHECKPOINT}  \
-           --num-attention-heads 32 \
-           --tokenizer-type PretrainedFromHF  \
-           --tokenizer-name-or-path $VOCAB_FILE \
-           --tokenizer-not-use-fast \
-           --fp16  \
-           --micro-batch-size 1  \
-           --seed 42 | tee logs/evaluation.log
+CHECKPOINT=<checkpoint-path>
+VOCAB_FILE=<vocabfile-path>
+DATA_PATH="./bbh/data/test/"
+TASK="bbh"
+```
+Change the max new tokens:
+```shell
+--max-new-tokens 32 
 ```
 
-Config LLaMA-13B evaluation script:
-
-```shell
-    CHECKPOINT=./llama-13b-tp1-pp8/
-    VOCAB_FILE=./llama-13b-hf/
-    # configure task and data path
-    DATA_PATH="./bbh/data/test/"
-    TASK="bbh"
-    # configure generation parameters 
-    python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/evaluation/evaluation_llama.py   \
-           --task-data-path $DATA_PATH \
-           --task $TASK\
-           --seq-length 2048 \
-           --max-new-tokens 32 \
-           --max-position-embeddings 2048 \
-           --tensor-model-parallel-size 1  \
-           --pipeline-model-parallel-size 8  \
-           --num-layers 40  \
-           --hidden-size 5120  \
-           --ffn-hidden-size 13824 \
-           --load ${CHECKPOINT}  \
-           --num-attention-heads 40 \
-           --tokenizer-type PretrainedFromHF  \
-           --tokenizer-name-or-path $VOCAB_FILE \
-           --tokenizer-not-use-fast \
-           --fp16  \
-           --micro-batch-size 1  \
-           --seed 42 | tee logs/evaluation.log
+```text
+# Note that, a deepspeed bug needs to be fixed during evaluation：
+# Comment out line 671 in the file `<deepspeed-installed-path>/runtime/pipe/engine.py`：
+# self.total_loss += self.loss.detach()
 ```
 
+Start evaluation:
 ```shell
-# start evaluation
-bash tasks/evaluation/eval.sh
+bash tasks/evaluation/evaluate_llama_7b_ptd.sh
+bash tasks/evaluation/evaluate_llama_13b_ptd.sh
 ```
 
 The evaluation performance of LLaMA-7B/13B in **Ascend NPU**:
 
 | Task    | Model     | NPU  | Benchmark |
 |---------|-----------|------|-----------|
-| [BBH](https://huggingface.co/datasets/lukaemon/bbh) | LLaMA-7B  | 33.7 |   [33.5](https://opencompass.org.cn/dataset-detail/BBH)    | 
-| [BBH](https://huggingface.co/datasets/lukaemon/bbh) | LLaMA-13B | 38.7 |   [37.9](https://opencompass.org.cn/dataset-detail/BBH)    |
+| [BBH](https://huggingface.co/datasets/lukaemon/bbh) | LLaMA-7B  | 33.4 |   [33.5](https://opencompass.org.cn/dataset-detail/BBH)    | 
+| [BBH](https://huggingface.co/datasets/lukaemon/bbh) | LLaMA-13B | 39.2 |   [37.9](https://opencompass.org.cn/dataset-detail/BBH)    |
 
 # LLaMA-33B/65B
 
@@ -363,21 +329,21 @@ LLaMA's model performace is better than GPT3 with less parameters. The 33B/65B L
 
 Here's a hardware summary of training llama:
 
-| Hardware |                      Value                      |
-| :------: | :---------------------------------------------: |
-|   NPU    |               8 x Ascend NPUs                   |
+| Hardware |      Value       |
+| :------: |:----------------:|
+|   NPU    | 32 x Ascend NPUs |
 
 
 Here's a software summary of training llama:
                                                    
-|         Software          |   Version   |
-| :-----------------------: |:-----------:|
-|          Python           |   3.7    |
+|         Software          |                                                   Version                                                    |
+| :-----------------------: |:------------------------------------------------------------------------------------------------------------:|
+|          Python           |                                                     3.8                                                      |
 |          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
 | binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                    1.11.0                                                    |
+|           torch           |                                                    2.1.0                                                     |
 |         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
 
 ### Datasets
@@ -393,19 +359,19 @@ mkdir ckpt
 ```
 2.Install AscendSpeed requirement environment.
 ```shell
-# python3.7
-conda create -n test python=3.7
+# python3.8
+conda create -n test python=3.8
 conda activate test
 
 # install torch and torch_npu
 # ARM
-wget https://download.pytorch.org/whl/torch-1.11.0-cp37-cp37m-manylinux2014_aarch64.whl
-pip install torch-1.11.0-cp37-cp37m-linux_aarch64.whl
-pip install torch_npu-1.11.0.post4_XXXXXX-cp37-cp37m-linux_aarch64.whl
+wget https://download.pytorch.org/whl/torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+pip install torch_npu-2.1.0.post4_XXXXXX-cp38-cp38m-manylinux2014_aarch64.whl
 
 # X86
-#pip install torch ==1.11 -i https://pypi.tuna.tsinghua.edu.cn/simple
-#pip install torch_npu-1.11.0.post4_XXXXXX-cp37-cp37m-linux_aarch64.whl
+#pip install torch==2.1.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
+#pip install torch_npu-2.1.0.post4_XXXXXX-cp38-cp38m-manylinux2014_aarch64.whl
 
 # install megatron-core
 pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
@@ -453,9 +419,10 @@ SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
 python $SCRIPT_PATH \
       --input-model-dir ./tokenizer \
       --output-model-dir ./model_weights \
-      --tensor-model-parallel-size 8 \
+      --tensor-model-parallel-size 4 \
       --pipeline-model-parallel-size 4 \
-      --type 33B
+      --merge-mlp \
+      --type 30B
 ```
 
 llama-65B
@@ -491,7 +458,7 @@ python tools/preprocess_data.py --input alpaca_data.json\
 ```
 
 6.Config llama-33B/65B pre-training script :
-AscendSpeed/examples/llama/pretrain_llama_33B_zero_32p.sh
+AscendSpeed/examples/llama/pretrain_llama_33B_ptd_32p.sh
 AscendSpeed/examples/llama/pretrain_llama_65B_ptd_32p.sh
 
 ```bash
@@ -507,9 +474,9 @@ DATA_PATH=./dataset/llama_text_document # line 17
 
 7.Launch  pre-training script:
 
-Launch llama-33B pre-training script : AscendSpeed/examples/llama/pretrain_llama_33B_zero_32p.sh
+Launch llama-33B pre-training script : AscendSpeed/examples/llama/pretrain_llama_33B_ptd_32p.sh
 ```bash
-bash examples/llama/pretrain_llama_33B_zero_32p.sh
+bash examples/llama/pretrain_llama_33B_ptd_32p.sh
 ```
 
 Launch llama-65B pre-training script : AscendSpeed/examples/llama/pretrain_llama_65B_ptd_32p.sh
@@ -527,8 +494,8 @@ NODE_RANK=0
 The Training log will look like these:
 
 ```Shell
- iteration  3/50000 | consumed samples: 768 | consumed tokens:  1572864 | elapsed time per iteration (ms):  33818.0 | learning rate:    1.406E-07 | gloabl batch size:  256 | lm loss:  1.200820E+01 | loss scale:  1.0 | grad norm:    9.216 | actual seqlen:  2048 | number of skipped
-iterations: 0 | number of nan iterations:   0 | samples per second: 7.570 | TFLOPs: 107.09 |
+ iteration  11/50000 | consumed samples: 5632 | consumed tokens:  11534336 | elapsed time per iteration (ms):  52728.1 | learning rate:    1.499E-05 | gloabl batch size:  512 | lm loss:  1.376514E+01 | loss scale:  65536.0 | grad norm:    459.628 | actual seqlen:  2048 | number of skipped
+iterations: 0 | number of nan iterations:   0 | samples per second: 9.710 | TFLOPs: 167.52 |
 time (ms)
 ```
 
@@ -540,10 +507,10 @@ The performance of the NPUs in **Ascend** and Reference:
 
 |  Device   |   Model   | throughput rate (tokens/s/p) |
 |:---------:|:---------:|:----------------------------:|
-| Reference | llama-33B |             520              |
+| Reference | llama-33B |             776              |
 |   NPUs    | llama-33B |             621              |
-| Reference | llama-65B |             260              |
-|   NPUs    | llama-65B |             234              |
+| Reference | llama-65B |             426              |
+|   NPUs    | llama-65B |             348              |
 
 
 #### Accuracy of the loss
@@ -572,7 +539,90 @@ The relative error between NPU and GPU Loss is less than 0.02 throughout, as exp
 
 ![NPU-Relative-Error](../../sources/images/llama/compare_chart.png)
 
+## Inference
 
+We support AscendSpeed Inference for text generation with LLaMA-33B and LLaMA-65B.
+Inference different from pre-training, such as we need to Load pre-training checkpoint and the length of the output samples:
+
+Config LLaMA-33B inference script `examples/llama/generate_llama_33B_ptd.sh`.
+
+Config LLaMA-65B inference script `examples/llama/generate_llama_65B_tp8_pp1.sh`.
+
+```shell
+# modify the model weight path and tokenizer path
+CHECKPOINT=<checkpoint-path>
+VOCAB_FILE=<vocabfile-path>
+```
+
+LLaMA-33B:
+```shell
+bash ./examples/llama/generate_llama_33B_ptd.sh
+```
+LLaMA-65B:
+```shell
+bash ./examples/llama/generate_llama_65B_tp8_pp1.sh
+```
+
+Some inference samples are as follows:
+
+LLaMA-33B:
+
+![llama-13B_generate.png](../../sources/images/llama/llama33B_generate.png)
+
+LLaMA-65B:
+
+![llama-65B_generate.png](../../sources/images/llama/llama65B_generate.png)
+
+
+## Evaluation with Numerous Benchmarks
+
+We use Boolq benchmark to evaluate our model. Benchmark Download [here](https://huggingface.co/datasets/boolq).
+
+Config LLaMA-33B evaluation script:
+
+```shell
+    CHECKPOINT=./llama-33b-tp4-pp2/
+    VOCAB_FILE=./llama-33b-hf/
+    # 配置任务和数据路径
+    DATA_PATH="./boolq/data/test/"
+    TASK="boolq"
+    # 配置生成参数
+    python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/evaluation/evaluation_llama.py   \
+         --task-data-path $DATA_PATH \
+         --task $TASK\
+         --seq-length 1024 \
+         --max-new-tokens 2 \
+         --max-position-embeddings 1024 \
+         --tensor-model-parallel-size 4  \
+         --pipeline-model-parallel-size 2  \
+         --num-layers 60 \
+         --hidden-size 6656  \
+         --ffn-hidden-size 17920 \
+         --load ${CHECKPOINT}  \
+         --num-attention-heads 52  \
+         --tokenizer-type PretrainedFromHF  \
+         --tokenizer-name-or-path ${VOCAB_FILE} \
+         --tokenizer-not-use-fast \
+         --fp16  \
+         --micro-batch-size 1  \
+         --position-embedding-type rope \
+         --normalization RMSNorm \
+         --mlp-layer-fusion \
+         --seed 42
+```
+
+```shell
+# start evaluation
+# evaluate llama-65B
+bash tasks/evaluation/evaluate_llama_65B_tp8_pp1.sh
+```
+
+The evaluation performance of LLaMA-7B/13B in **Ascend NPU**:
+
+| Task                                           | Model     | NPU  | Benchmark |
+|------------------------------------------------|-----------|------|-----------|
+| [Boolq](https://huggingface.co/datasets/boolq) | LLaMA-33B | 83.2 | [83.1](https://paperswithcode.com/sota/question-answering-on-boolq) |
+| [Boolq](https://huggingface.co/datasets/boolq) | LLaMA-65B | 85.7 | [86.6](https://paperswithcode.com/sota/question-answering-on-boolq) |
 
 ## Citation
 

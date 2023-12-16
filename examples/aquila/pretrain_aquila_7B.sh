@@ -2,25 +2,25 @@
 # the number of parameters is not aligned
 export LD_LIBRARY_PATH=/usr/local/lib:/root/miniconda3/lib:$LD_LIBRARY_PATH
 export HCCL_CONNECT_TIMEOUT=1200
+export INF_NAN_MODE_ENABLE=1
 source /path/to/cann/ascend-toolkit/set_env.sh
 
 GPUS_PER_NODE=8
 # Change for multinode config
 MASTER_ADDR=localhost
-MASTER_PORT=6001
+MASTER_PORT=6000
 NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
-DATA=./dataset/llama_text_document
+DATA=./dataset/aquila_text_document
 CHECKPOINT=./ckpt
+TOKENIZER_PATH=./HF_Aquila7B_downloaded/
 
-DS_CONFIG=deepspeed_config_13B.json
-ZERO_STAGE=3
+DS_CONFIG=deepspeed_config_7B.json
+ZERO_STAGE=2
 GLOBAL_BATCH=64
 MICRO_BATCH=2
-
-export INF_NAN_MODE_ENABLE=1
 
 cat <<EOT > $DS_CONFIG
 {
@@ -40,10 +40,10 @@ cat <<EOT > $DS_CONFIG
     "zero_optimization": {
         "stage": $ZERO_STAGE,
         "allgather_partitions": true,
-        "allgather_bucket_size": 1e8,
+        "allgather_bucket_size": 5e8,
         "overlap_comm": true,
         "reduce_scatter": true,
-        "reduce_bucket_size": 1e8,
+        "reduce_bucket_size": 5e8,
         "contiguous_gradients": true
     },
 
@@ -65,37 +65,43 @@ deepspeed pretrain_llama.py \
        --DDP-impl local \
        --tensor-model-parallel-size 1 \
        --pipeline-model-parallel-size 1 \
-       --num-layers 40 \
-       --hidden-size 5120 \
-       --ffn-hidden-size 13824 \
-       --num-attention-heads 40 \
+       --num-layers 32 \
+       --hidden-size 4096 \
+       --ffn-hidden-size 11008 \
+       --num-attention-heads 32 \
        --micro-batch-size $MICRO_BATCH \
        --global-batch-size $GLOBAL_BATCH \
        --seq-length 2048 \
+       --max-position-embeddings 2048 \
        --position-embedding-type rope \
        --normalization RMSNorm \
-       --max-position-embeddings 2048 \
-       --train-iters 500000 \
-       --lr-decay-iters 320000 \
-       --save $CHECKPOINT \
+       --train-iters 1024 \
+       --load $CHECKPOINT \
        --data-path $DATA \
-       --tokenizer-name-or-path ./dataset/llama/ \
+       --tokenizer-name-or-path $TOKENIZER_PATH \
        --tokenizer-not-use-fast \
-       --data-impl mmap \
-       --split 949,50,1 \
+       --attention-dropout 0.0 \
+       --hidden-dropout 0.0 \
+       --init-method-std 0.01 \
+       --split 900,50,50 \
        --distributed-backend nccl \
-       --lr 0.00015 \
+       --lr 1.0e-6 \
        --lr-decay-style cosine \
-       --min-lr 1.0e-5 \
+       --lr-warmup-fraction .01 \
+       --min-lr 1.0e-6 \
        --weight-decay 1e-2 \
        --clip-grad 1.0 \
-       --lr-warmup-fraction .01 \
-       --checkpoint-activations \
+       --adam-beta1 0.9 \
+       --adam-beta2 0.95 \
        --log-interval 1 \
        --save-interval 10000 \
-       --eval-interval 1000 \
-       --eval-iters 10 \
-       --triangle-attn \
-       --use-fused-rotary-pos-emb \
+       --no-load-optim \
+       --no-load-rng \
+       --no-bias-gelu-fusion \
+       --use-flash-attn \
+       --layernorm-epsilon 1e-6 \
+       --make-vocab-size-divisible-by 8 \
+       --pad-vocab-size-to 100008 \
+       --use-fused-rmsnorm \
        $ds_args \
-       --fp16 | tee logs/train_13B.log
+       --fp16 | tee logs/train_7B.log

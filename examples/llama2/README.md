@@ -7,7 +7,7 @@
 
 # 目录
 
-- [LLaMA2-7B](#LLaMA2-7B)
+- [LLAMA2-7B](#LLAMA2-7B)
   - [训练](#训练)
   - [脚本](#脚本)
   - [性能](#性能)
@@ -25,36 +25,36 @@
   - [推理](#推理)
   - [评估](#评估)
 
-- [LLaMA2-70B](#LLaMA2-70B)
-  - [训练](#训练)
-    - [脚本](#脚本)
-    - [性能](#性能)
-      - [吞吐](#吞吐)
-      - [精度](#精度)
-  - [推理](#inference-70b)
-  - [评估](#评估)
+- [LLaMA2-34B/70B](#LLaMA2-34B/70B)
+  - [训练](#训练-2)
+    - [脚本](#脚本-2)
+    - [性能](#性能-2)
+      - [吞吐](#吞吐-2)
+      - [精度](#精度-2)
+  - [推理](#推理-2)
+  - [评估](#评估-2)
 
 
-# LLaMA2-7B
+# LLAMA2-7B
 
 ## 训练
 
-LLaMA2-7B 训练的硬件配置:
+LLAMA2-7B 训练的硬件配置:
 
 | 硬件 |      配置      |
 | :--: | :-------------: |
 | NPU | 8 x Ascend NPUs |
 
-LLaMA2-7B 训练的软件配置:
+LLAMA2-7B 训练的软件配置:
 
 |           软件           |                                                   配置                                                   |
 | :-----------------------: | :-------------------------------------------------------------------------------------------------------: |
-|          python          |                                                  3.7.16                                                  |
+|          python          |                                                  3.8.18                                                  |
 |          driver          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |         firmware         | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |           CANN           |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
 | binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                  1.11.0                                                  |
+|           torch           |                                                  2.1.0                                                  |
 |         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
 
 ### 脚本
@@ -70,14 +70,14 @@ LLaMA2-7B 训练的软件配置:
 2. 搭建环境
 
    ```bash
-   # python3.7
-   conda create -n test python=3.7
+   # python3.8
+   conda create -n test python=3.8
    conda activate test
    
    # 安装 torch 和 torch_npu
-   pip install torch-1.11.0-cp37-cp37m-manylinux2014_aarch64.whl
-   pip install torch_npu-1.11.0*-cp37-cp37m-linux_aarch64.whl
-   pip install apex-0.1_ascend*-cp37-cp37m-linux_aarch64.whl
+   pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+   pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
+   pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
    
    # 安装 megatron-core
    pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
@@ -92,7 +92,7 @@ LLaMA2-7B 训练的软件配置:
    # install other packages
    pip install -r requirements.txt 
    ```
-3. 下载 LLaMA2-7B 的 [预训练权重和词表](https://huggingface.co/daryl149/llama-2-7b-hf/tree/main)
+3. 下载 LLAMA2-7B 的 [预训练权重和词表](https://huggingface.co/daryl149/llama-2-7b-hf/tree/main)
 
    ```shell
      #!/bin/bash
@@ -110,38 +110,7 @@ LLaMA2-7B 训练的软件配置:
      cd ..
    ```
 
-   ```text
-   # 请注意，如果要加载huggingface的预训练权重，需要修改一个deepspeed关于加载权重的bug：
-   # 在 `<deepspeed-installed-path>/runtime/engine.py` 文件里的 `_load_zero_checkpoint` 函数，
-   # 将 `if zero_sd_list is None` 改为 `if zero_sd_list is None or len(zero_sd_list) == 0`
-   
-   # 原始 deepspeed/runtime/engine.py, 大概 #Lines2746-2748
-   zero_sd_list = self._get_all_zero_checkpoints(load_dir, tag)
-   if zero_sd_list is None:
-       return False
-   
-   # 修改后
-   zero_sd_list = self._get_all_zero_checkpoints(load_dir, tag)
-   if zero_sd_list is None or len(zero_sd_list) == 0:
-       return False
-   ```
-
-   3.1 将权重从 huggingface 格式转化为 AscendSpeed 格式 ： deepspeed模式
-
-   ```bash
-   # 修改 ascend-toolkit 路径
-   source /usr/local/Ascend/ascend-toolkit/set_env.sh
-   
-   # 权重格式转换
-   python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir llama-2-7b-hf \
-                                                                       --output-model-dir ckpt \
-                                                                       --tensor-model-parallel-size 1 \
-                                                                       --pipeline-model-parallel-size 1 \
-                                                                       --type 7B \
-                                                                       --deepspeed
-   ```
-
-   3.2 将权重从 huggingface 格式转化为 AscendSpeed 格式 ： PTD模式
+   将权重从 huggingface 格式转化为 AscendSpeed 格式 ： PTD模式
 
    ```bash
     # 修改 ascend-toolkit 路径
@@ -178,26 +147,7 @@ LLaMA2-7B 训练的软件配置:
        --log-interval 1000 \
        --tokenizer-type PretrainedFromHF
    ```
-
-   4.2 用deepspeed模式预训练
-   配置 LLaMA2-7B 预训练脚本: examples/llama2/pretrain_llama2_7b_zero_8p.sh
-
-   ```shell
-    # 设置 ascend-toolkit 路径
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-
-    # 配置词表，数据集等路径
-    TOKENIZER_PATH=./llama-2-7b-hf/  #词表路径
-    DATA_PATH=./dataset_llama2/alpaca_text_document  #数据集路径
-   ```
-
-   启动 LLaMA2-7B 预训练脚本: examples/llama2/pretrain_llama2_7b_zero_8p.sh
-
-   ```shell
-    bash examples/llama2/pretrain_llama2_7b_zero_8p.sh 
-   ```
-
-   4.3 用ptd模式预训练
+   4.2 用ptd模式预训练
    配置LLaMA2-7B PTD 预训练脚本: examples/llama2/pretrain_llama2_7b_ptd.sh
 
    ```shell
@@ -240,20 +190,20 @@ LLaMA2-7B 训练的软件配置:
      --append-eod
    ```
 
-   5.2 用deepspeed模式微调
-   
-   5.2.1 全参微调
-   全参微调的配置脚本基本和预训练脚本pretrain_llama2_7b_zero_8p.sh一致.*唯一的区别是数据集*
+   5.2 全参微调
+   全参微调的配置脚本基本和预训练脚本pretrain_llama2_7b_ptd.sh一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
 
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
+   
+   --is-instruction-dataset \
    ```
 
-   5.2.2 Lora微调
-   Lora微调的脚本配置是在预训练脚本pretrain_llama2_7b_zero_8p.sh基础上加上lora参数，如下所示:
+   5.3 Lora微调
+   Lora微调的脚本配置是在预训练脚本pretrain_llama2_7b_ptd.sh基础上加上lora参数，如下所示:
 
    ```bash
-       --lora-target-modules query_key_value dense gate_proj up_proj down_proj \
+       --lora-target-modules query_key_value dense proj dense_4h_to_h \
        --lora-r 16 \
        --lora-alpha 32 \
    ```
@@ -261,7 +211,7 @@ LLaMA2-7B 训练的软件配置:
    如果模型的词表变化了，可以加上以下参数（词表不变不建议添加）
 
    ```bash
-     --lora-modules-to-save word_embeddings lm_head.lm_head \
+     --lora-modules-to-save word_embeddings output_layer \
    ```
 
    Lora微调的断点续训需要加上以下参数：
@@ -271,8 +221,6 @@ LLaMA2-7B 训练的软件配置:
        --lora-load ${LORA_CHECKPOINT} \   # lora参数checkpoint
    ```
 
-   5.3 PTD模式微调
-   *PTD模式的微调方法和deepspeed模式的微调方法完全一致.具体细节请参考上一小节.*
 
 ### 性能
 
@@ -403,8 +351,10 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation
      --num-attention-heads 32  \
      --mlp-layer-fusion \
      --load ${CHECKPOINT}  \
+     --position-embedding-type rope \
+     --normalization RMSNorm \
      --tokenizer-type PretrainedFromHF  \
-     --tokenizer-name-or-path $VOCAB_FILE \
+     --tokenizer-name-or-path ${TOKENIZER_PATH} \
      --tokenizer-not-use-fast \
      --fp16  \
      --micro-batch-size 1  \
@@ -418,67 +368,68 @@ bash tasks/evaluation/eval.sh
 ```
 评估结果如下
 ```text
-                                subject  question_n       acc
-0            high_school_macroeconomics         390  0.466667
-1                          formal_logic         126  0.253968
-2                     international_law         121  0.652893
-3                   college_mathematics         100  0.330000
-4                      college_medicine         173  0.421965
-5                       world_religions         171  0.725146
-6                       moral_scenarios         895  0.220112
-7                             nutrition         306  0.513072
-8                high_school_statistics         216  0.361111
-9                      medical_genetics         100  0.490000
-10                    college_chemistry         100  0.300000
-11              professional_accounting         282  0.361702
-12                     professional_law        1534  0.338331
-13                        miscellaneous         783  0.698595
-14                            sociology         201  0.651741
-15                professional_medicine         272  0.496324
-16                    logical_fallacies         163  0.552147
-17                     public_relations         110  0.563636
-18                      college_biology         144  0.506944
-19         high_school_european_history         165  0.612121
-20                           philosophy         311  0.556270
-21                     abstract_algebra         100  0.310000
-22               high_school_psychology         545  0.678899
-23         high_school_computer_science         100  0.400000
-24               elementary_mathematics         378  0.312169
-25               high_school_us_history         204  0.617647
-26                     machine_learning         112  0.366071
-27                            astronomy         152  0.493421
-28                         global_facts         100  0.330000
-29              high_school_mathematics         270  0.255556
-30               electrical_engineering         145  0.496552
-31           high_school_microeconomics         238  0.415966
-32                      business_ethics         100  0.540000
-33             college_computer_science         100  0.400000
-34                  high_school_physics         151  0.317881
-35                      human_sexuality         131  0.526718
-36                      college_physics         102  0.245098
-37  high_school_government_and_politics         193  0.720207
-38                            marketing         234  0.747863
-39                high_school_geography         198  0.601010
-40                     security_studies         245  0.555102
-41                high_school_chemistry         203  0.418719
-42                           management         103  0.699029
-43                        jurisprudence         108  0.537037
-44                         econometrics         114  0.350877
-45                          human_aging         223  0.591928
-46                             virology         166  0.403614
-47                       moral_disputes         346  0.528902
-48                              anatomy         135  0.451852
-49              professional_psychology         612  0.498366
-50                   conceptual_physics         235  0.455319
-51                    computer_security         100  0.560000
-52                   clinical_knowledge         265  0.505660
-53                    us_foreign_policy         100  0.680000
-54                           prehistory         324  0.570988
-55            high_school_world_history         237  0.645570
-56                  high_school_biology         310  0.535484
-57                                total       14042  0.478422
-MMLU Running Time:  18266.85981464386
+                           学科名             问题数  参考准确率 NPU准确率     准确率差异
+17                     public_relations         110  0.563636  0.554545      0.009091
+44                         econometrics         114  0.368421  0.377193      0.008772
+30               electrical_engineering         145  0.503448  0.510345      0.006897
+5                       world_religions         171  0.701754  0.707602      0.005848
+25               high_school_us_history         204  0.647059  0.651961      0.004902
+45                          human_aging         223  0.596413  0.600897      0.004484
+38                            marketing         234  0.709402  0.713675      0.004274
+55            high_school_world_history         237  0.620253  0.624473      0.004219
+31           high_school_microeconomics         238  0.420168  0.424370      0.004202
+7                             nutrition         306  0.503268  0.500000      0.003268
+56                  high_school_biology         310  0.541935  0.545161      0.003226
+20                           philosophy         311  0.569132  0.565916      0.003215
+24               elementary_mathematics         378  0.291005  0.293651      0.002646
+22               high_school_psychology         545  0.645872  0.647706      0.001835
+12                     professional_law        1534  0.339635  0.340939      0.001304
+13                        miscellaneous         783  0.679438  0.678161      0.001277
+6                       moral_scenarios         895  0.221229  0.222346      0.001117
+37  high_school_government_and_politics         193  0.694301  0.694301      0.000000
+54                           prehistory         324  0.555556  0.555556      0.000000
+53                    us_foreign_policy         100  0.700000  0.700000      0.000000
+39                high_school_geography         198  0.626263  0.626263      0.000000
+40                     security_studies         245  0.522449  0.522449      0.000000
+41                high_school_chemistry         203  0.408867  0.408867      0.000000
+52                   clinical_knowledge         265  0.513208  0.513208      0.000000
+49              professional_psychology         612  0.482026  0.482026      0.000000
+42                           management         103  0.679612  0.679612      0.000000
+43                        jurisprudence         108  0.583333  0.583333      0.000000
+51                    computer_security         100  0.560000  0.560000      0.000000
+50                   conceptual_physics         235  0.417021  0.417021      0.000000
+35                      human_sexuality         131  0.526718  0.526718      0.000000
+46                             virology         166  0.439759  0.439759      0.000000
+47                       moral_disputes         346  0.514451  0.514451      0.000000
+48                              anatomy         135  0.459259  0.459259      0.000000
+36                      college_physics         102  0.215686  0.215686      0.000000
+0            high_school_macroeconomics         390  0.420513  0.420513      0.000000
+34                  high_school_physics         151  0.311258  0.311258      0.000000
+33             college_computer_science         100  0.420000  0.420000      0.000000
+2                     international_law         121  0.636364  0.636364      0.000000
+3                   college_mathematics         100  0.330000  0.330000      0.000000
+4                      college_medicine         173  0.410405  0.410405      0.000000
+8                high_school_statistics         216  0.314815  0.314815      0.000000
+9                      medical_genetics         100  0.450000  0.450000      0.000000
+10                    college_chemistry         100  0.290000  0.290000      0.000000
+11              professional_accounting         282  0.411348  0.411348      0.000000
+14                            sociology         201  0.601990  0.601990      0.000000
+15                professional_medicine         272  0.452206  0.452206      0.000000
+16                    logical_fallacies         163  0.521472  0.521472      0.000000
+18                      college_biology         144  0.506944  0.506944      0.000000
+19         high_school_european_history         165  0.575758  0.575758      0.000000
+21                     abstract_algebra         100  0.280000  0.280000      0.000000
+23         high_school_computer_science         100  0.430000  0.430000      0.000000
+26                     machine_learning         112  0.375000  0.375000      0.000000
+27                            astronomy         152  0.500000  0.500000      0.000000
+1                          formal_logic         126  0.222222  0.222222      0.000000
+29              high_school_mathematics         270  0.259259  0.259259      0.000000
+32                      business_ethics         100  0.450000  0.450000      0.000000
+28                         global_facts         100  0.380000  0.380000      0.000000
 ```
+|  数据集 | 总学科数  |总问题数  |参考准确率|NPU准确率|
+|:---:|:---:|:---:|:---:|:---:|
+| MMLU | 57| 14042 |0.4691|0.4698|
 
 
 # LLaMA2-13B
@@ -495,12 +446,12 @@ LLaMA2-13B 训练的软件配置:
 
 |            软件             |                                                      配置                                                      |
 |:-------------------------:|:------------------------------------------------------------------------------------------------------------:|
-|          python           |                                                    3.7.16                                                    |
+|          python           |                                                    3.8.18                                                    |
 |          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
 | binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                    1.11.0                                                    |
+|           torch           |                                                    2.1.0                                                     |
 |         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
 
 ### 脚本
@@ -516,14 +467,14 @@ LLaMA2-13B 训练的软件配置:
 2. 搭建环境
    
     ```bash
-    # python3.7
-    conda create -n test python=3.7
+    # python3.8
+    conda create -n test python=3.8
     conda activate test
     
     # 安装 torch 和 torch_npu
-    pip install torch-1.11.0-cp37-cp37m-manylinux2014_aarch64.whl
-    pip install torch_npu-1.11.0*-cp37-cp37m-linux_aarch64.whl
-    pip install apex-0.1_ascend*-cp37-cp37m-linux_aarch64.whl
+    pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+    pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
+    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
     
     # 安装 megatron-core
     pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
@@ -546,35 +497,19 @@ LLaMA2-13B 训练的软件配置:
     git clone https://huggingface.co/NousResearch/Llama-2-13b-hf
     ```
 
-    ```text
-    # 请注意，如果要加载huggingface的预训练权重，需要修改一个deepspeed关于加载权重的bug：
-    # 在 `<deepspeed-installed-path>/runtime/engine.py` 文件里的 `_load_zero_checkpoint` 函数，
-    # 将 `if zero_sd_list is None` 改为 `if zero_sd_list is None or len(zero_sd_list) == 0`
-    
-    # 原始 deepspeed/runtime/engine.py, 大概 #Lines2746-2748
-    zero_sd_list = self._get_all_zero_checkpoints(load_dir, tag)
-    if zero_sd_list is None:
-        return False
-    
-    # 修改后
-    zero_sd_list = self._get_all_zero_checkpoints(load_dir, tag)
-    if zero_sd_list is None or len(zero_sd_list) == 0:
-        return False
-    ```
 
-    将权重从 huggingface 格式转化为 AscendSpeed 格式
-    ```bash
-    # 修改 ascend-toolkit 路径
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    
-    # 权重格式转换
-    python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir llama-2-13b-hf \
-                                                                        --output-model-dir ckpt \
-                                                                        --tensor-model-parallel-size 1 \
-                                                                        --pipeline-model-parallel-size 1 \
-                                                                        --type 13B \
-                                                                        --deepspeed
-    ```
+将权重从 huggingface 格式转化为 AscendSpeed 格式
+```bash
+# 修改 ascend-toolkit 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+# 权重格式转换
+python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir ./llama-2-13b-hf \
+                                                                    --output-model-dir ./llama-2-13b_tp8_pp1 \
+                                                                    --tensor-model-parallel-size 8 \
+                                                                    --pipeline-model-parallel-size 1 \
+                                                                    --type 13B 
+```
 
 4. 准备数据集
    
@@ -607,6 +542,7 @@ LLaMA2-13B 训练的软件配置:
     # 配置词表，数据集等路径
     TOKENIZER_PATH=./llama-2-13b-hf/  #词表路径
     DATA_PATH=WORKSPACE/alpaca_preprocessed/alpaca  #数据集路径
+    LOAD_CHECKPOINT=./llama-2-13b_tp8_pp1/
     ```
 
 6. 启动 LLaMA2-13B 预训练脚本: examples/llama2/pretrain_llama2_13B_ptd_8p.sh
@@ -623,7 +559,7 @@ LLaMA2-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 |  设备  |    模型     | 迭代数  | 样本吞吐 (samples/p/s) | tokens吞吐 (tokens/s/p) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
 |:----:|:---------:|:----:|:------------------:|:---------------------:|:---------------:|:----------------:|
-| NPUs | LLaMA2-13B |       5000       |             2.868             |           1468.416           |          89.275           |               126.73                |
+| NPUs | LLaMA2-13B |       5000       |         2.736             |           1400.832           |           93.45           |               120.69     |
 |  参考  | LLaMA2-13B |        --        |              --               |             1750             |            --             |                 --                  |
 
 
@@ -659,68 +595,68 @@ bash ./examples/llama2/generate_llama2_13B_tp8_pp1.sh
 我们使用boolq基准来评估我们的模型。基准[下载](https://huggingface.co/datasets/boolq).
 
 ```shell
+    # 配置权重以及词表路径
     CHECKPOINT=./llama2-13b-tp8-pp1/
     VOCAB_FILE=./llama2-13b-hf/
-    # 配置任务以及数据路径
-    DATA_PATH="./boolq/data/test/"
-    TASK="boolq"
-    # 配置生成参数 
-    python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation.py   \
-           --task-data-path $DATA_PATH \
-           --task $TASK\
-           --seq-length 4096 \
-           --max-new-tokens 32 \
-           --max-position-embeddings 4096 \
-           --tensor-model-parallel-size 8  \
-           --pipeline-model-parallel-size 1  \
-           --num-layers 40  \
-           --hidden-size 5120  \
-           --ffn-hidden-size 13824 \
-           --load ${CHECKPOINT}  \
-           --num-attention-heads 40 \
-           --tokenizer-type PretrainedFromHF  \
-           --tokenizer-name-or-path $VOCAB_FILE \
-           --tokenizer-not-use-fast \
-           --fp16  \
-           --micro-batch-size 1  \
-           --seed 42 | tee logs/train.log
-    # 开始评估
-    bash tasks/evaluation/eval.sh
 ```
 
+```shell
+bash tasks/evaluation/evaluate_llama2_13B_ptd.sh
+```
 
-# LLaMA2-70B
+<table>
+  <thead>
+    <tr>
+      <th>任务</th>
+      <th>验证集</th>
+      <th>模型</th>
+      <th>昇腾值</th>
+      <th>社区值</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="https://huggingface.co/datasets/boolq">Boolq</a></td>
+      <td>Test</td>
+      <th>Llama2 13B</th>
+      <td>0.824</td>
+      <td><a href="https://opencompass.org.cn/dataset-detail/BoolQ">0.824</a></td>
+    </tr>
+  </tbody>
+</table>
 
-## 训练
+# LLaMA2-34B/70B
 
-LLaMA2-70B 训练的硬件配置:
+## 训练-2
 
-| 硬件  |        配置        |
-|:---:|:----------------:|
-| NPU | 64 x Ascend NPUs |
-
-LLaMA2-70B 训练的软件配置:
-
-|            软件             |                   版本                    |                                                                                       链接                                                                                        |
-|:-------------------------:|:---------------------------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
-|          python           |                  3.8.0                  |                                                                                        -                                                                                        |
-|          driver           |              23.0.RC3.B050              | [link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159045?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743) |
-|         firmware          |              7.0.t8.0.b214              | [link](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/261159045?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743) |
-|           CANN            |   Ascend-cann-toolkit-7.0.0.T26-linux   |                                                [link](https://support.huawei.com/enterprise/zh/software/261305471-ESW2000887514)                                                |
-| binary arithmetic package | Ascend-cann-kernels-XXX_7.0.0.T26_linux |                                                [link](https://support.huawei.com/enterprise/zh/software/261305471-ESW2000887523)                                                |
-|           torch           |                  2.0.1                  |                                                   [link](https://gitee.com/ascend/pytorch/releases/tag/v5.0.rc3-pytorch2.0.1)                                                   |
-|         torch_npu         |          2.0.1.post4-20231010           |                          [link](https://gitee.com/ascend/pytorch/releases/download/v5.0.rc3-pytorch2.0.1/torch_npu-2.0.1-cp38-cp38-linux_aarch64.whl)                           |
-|           apex            |                   0.1                   |                                                                                        -                                                                                        |
+LLaMA2-34B/70B 训练的硬件配置:
 
 
-### 脚本
+| 模型  | 硬件   |        配置        |
+|:---:|:----:|:----------------:|
+| 34B | NPU  | 16 x Ascend NPUs |
+| 70B | NPU  | 64 x Ascend NPUs |
+
+LLaMA2-34B/70B 训练的软件配置:
+
+|            软件             |                                                      配置                                                      |
+|:-------------------------:|:------------------------------------------------------------------------------------------------------------:|
+|          Python           |                                                     3.8                                                      |
+|          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
+|         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
+|           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
+| binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
+|           torch           |                                                    2.1.0                                                     |
+|         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
+
+
+### 脚本-2
 
 1. 拷贝仓库到本地服务器:
     ```shell
     git clone https://gitee.com/ascend/AscendSpeed.git 
     cd AscendSpeed 
     mkdir logs
-    mkdir ckpt
     ```
 
 2. 搭建环境
@@ -731,56 +667,88 @@ LLaMA2-70B 训练的软件配置:
     conda activate test
     
     # 按照 torch 和 torch_npu
-    pip install torch-2.0.1-cp38-cp38m-manylinux2014_aarch64.whl
-    pip install torch_npu-2.0.1-cp38-cp38m-linux_aarch64.whl
+    pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+    pip install torch_npu-2.1.0.post4_XXXXXX-cp38-cp38m-manylinux2014_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
     
     # 安装 megatron-core
-    pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
+    pip install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
     
     # 安装 deepspeed 和 deepspeed_npu
     pip install deepspeed==0.9.2
     git clone https://gitee.com/ascend/DeepSpeed.git -b v0.9.2 deepspeed_npu
     cd deepspeed_npu
-    pip3 install -e ./
+    pip install -e ./
     cd ..
     
     # 安装其余依赖包
     pip install -r requirements.txt 
     ```
 
-3. 准备[预训练权重和词表](https://huggingface.co/meta-llama/Llama-2-70b-hf)
+3. 准备预训练权重和词表
 
+    Llama-2-70B的权重下载[here](https://huggingface.co/meta-llama/Llama-2-70b-hf)
     ```shell
-      #!/bin/bash
-      mkdir -p llama2-70b-hf
-      cd llama2-70b-hf
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/config.json
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/generation_config.json
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00001-of-00015.bin
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00002-of-00015.bin
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00003-of-00015.bin
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00004-of-00015.bin
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00005-of-00015.bin
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00006-of-00015.bin
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00007-of-00015.bin   
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00008-of-00015.bin
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00009-of-00015.bin
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00010-of-00015.bin
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00011-of-00015.bin
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00012-of-00015.bin   
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00013-of-00015.bin
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00014-of-00015.bin
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00015-of-00015.bin   
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model.bin.index.json
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/special_tokens_map.json
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer.json
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer.model
-      wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer_config.json
-      cd ..
+    #!/bin/bash
+    mkdir -p llama2-70b-hf
+    cd llama2-70b-hf
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/config.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/generation_config.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00001-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00002-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00003-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00004-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00005-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00006-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00007-of-00015.bin   
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00008-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00009-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00010-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00011-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00012-of-00015.bin   
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00013-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00014-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00015-of-00015.bin   
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model.bin.index.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/special_tokens_map.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer.model
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer_config.json
+    cd ..
     ```
 
-   将权重从huggingface格式转换为AscendSpeed格式
+    LLaMA2-34B权重未开源，我们使用 CodeLlama-34B 的权重和LLaMA2-70B的词表.
+
+    CodeLlama-34B 的权重下载[here](https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/tree/main).
+    ```bash
+    #!/bin/bash
+    mkdir -p codellama-34b-hf
+    cd codellama-34b-hf
+    wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/config.json
+    wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/generation_config.json
+    wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/pytorch_model-00001-of-00007.bin
+    wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/pytorch_model-00002-of-00007.bin
+    wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/pytorch_model-00003-of-00007.bin
+    wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/pytorch_model-00004-of-00007.bin
+    wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/pytorch_model-00005-of-00007.bin
+    wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/pytorch_model-00006-of-00007.bin
+    wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/pytorch_model-00007-of-00007.bin
+    wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/pytorch_model.bin.index.json
+    cd ..
+    ```
+    Llama-2-70B 的词表，下载[here](https://huggingface.co/meta-llama/Llama-2-70b-hf).
+    ```bash
+    #!/bin/bash
+    mkdir -p llama2-70b-hf
+    cd llama2-70b-hf
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/special_tokens_map.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer.model
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer_config.json
+    cd ..
+    ```
+
+    将Llama-2-70B权重从huggingface格式转换为AscendSpeed格式
     ```bash
     # 配置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
@@ -788,17 +756,37 @@ LLaMA2-70B 训练的软件配置:
     # 权重格式转换
     SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
     python $SCRIPT_PATH \
-      --input-model-dir ./llama2-70b-hf/ \
-      --output-model-dir ./load_ckpt \
-      --tensor-model-parallel-size 8 \
-      --pipeline-model-parallel-size 8 \
-      --make-vocab-size-divisible-by 8 \
-      --merge-mlp \
-      --type llama2-70B \
-      --num_heads 64 \
-      --num_kv_heads 8 \
-      --hidden_size 8192 \
-      --num_layers 80                                                                   
+    --input-model-dir ./llama2-70b-hf/ \
+    --output-model-dir ./load_ckpt \
+    --tensor-model-parallel-size 8 \
+    --pipeline-model-parallel-size 8 \
+    --make-vocab-size-divisible-by 8 \
+    --merge-mlp \
+    --type llama2-70B \
+    --num_heads 64 \
+    --num_kv_heads 8 \
+    --hidden_size 8192 \
+    --num_layers 80                                                                   
+    ```
+    将Llama-2-34B权重从huggingface格式转换为AscendSpeed格式
+    ```bash
+    # 配置 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    
+    # 转换Ascendspeed权重
+    SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
+    python $SCRIPT_PATH \
+    --input-model-dir ./codellama-34b-hf \
+    --output-model-dir ./load_ckpt \
+    --tensor-model-parallel-size 8 \
+    --pipeline-model-parallel-size 2 \
+    --make-vocab-size-divisible-by 8 \
+    --merge-mlp \
+    --type llama2-34B \
+    --num_heads 64 \
+    --num_kv_heads 8 \
+    --hidden_size 8192 \
+    --num_layers 48                                                                   
     ```
 
 4. 准备数据集
@@ -809,93 +797,140 @@ LLaMA2-70B 训练的软件配置:
         
        下载 [Alpaca数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
     ```shell
-      # 下载数据集
-      mkdir dataset_llama2
-      cd ./dataset_llama2
-      wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-      cd ..
+    # 下载数据集
+    mkdir dataset_llama2
+    cd ./dataset_llama2
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
     
-      # 处理数据集                              
-      python ./tools/preprocess_data.py \
-        --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-        --tokenizer-name-or-path ./llama-2-70b-hf \
-        --output-prefix ./dataset_llama2/alpaca \
-        --workers 4 \
-        --log-interval 1000 \
-        --tokenizer-type PretrainedFromHF
-   ```
+    # 处理数据集                              
+    python ./tools/preprocess_data.py \
+    --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+    --tokenizer-name-or-path ./llama-2-70b-hf \
+    --output-prefix ./dataset_llama2/alpaca \
+    --workers 4 \
+    --log-interval 1000 \
+    --tokenizer-type PretrainedFromHF
+    ```
    
     2. Moss 数据集
 
        下载 [MOSS数据集](https://huggingface.co/datasets/fnlp/moss-003-sft-data/tree/main) 
         
     ```shell
-      # 下载数据集
-      mkdir dataset_llama2
-      cd ./dataset_llama2
-      wget https://huggingface.co/datasets/fnlp/moss-003-sft-data/resolve/main/moss-003-sft-no-tools.jsonl.zip --no-check-certificate
-      unzip moss-003-sft-no-tools.jsonl.zip
-      cd ..
+    # 下载数据集
+    mkdir dataset_llama2
+    cd ./dataset_llama2
+    wget https://huggingface.co/datasets/fnlp/moss-003-sft-data/resolve/main/moss-003-sft-no-tools.jsonl.zip --no-check-certificate
+    unzip moss-003-sft-no-tools.jsonl.zip
+    cd ..
     
-      # 处理数据集                              
-      python tools/preprocess_data.py \
-        --input ./dataset_llama2/moss-003-sft-no-tools.jsonl \
-        --output-prefix ./dataset_llama2/moss \
-        --tokenizer-type PretrainedFromHF \
-        --tokenizer-name-or-path ./llama2-70b-hf \
-        --tokenizer-not-use-fast \
-        --handler-name MOSSInstructionHandler
+    # 处理数据集                              
+    python tools/preprocess_data.py \
+    --input ./dataset_llama2/moss-003-sft-no-tools.jsonl \
+    --output-prefix ./dataset_llama2/moss \
+    --tokenizer-type PretrainedFromHF \
+    --tokenizer-name-or-path ./llama2-70b-hf \
+    --tokenizer-not-use-fast \
+    --handler-name MOSSInstructionHandler
     ```
    
-5. Config LLaMA2-70B pre-training script: examples/llama2/pretrain_llama2_70B_ptd.sh
-   ```shell
+5. Config pre-training script
+
+    LLaMA2-34B: examples/llama2/pretrain_llama2_34B_ptd.sh 
+    ```shell
+    # 设置 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    
+    # 配置词表，数据集等路径
+    TOKENIZER_PATH=./llama2-70b-hf/   #词表路径
+    DATA_PATH=./dataset_llama2/alpaca_text_document  #数据集路径
+    ```
+
+    LLaMA2-70B: examples/llama2/pretrain_llama2_70B_ptd.sh
+    ```shell
     # 配置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     
     # 配置相关路径
     TOKENIZER_PATH=./llama2-70b-hf/  #词表路径
     DATA_PATH=./dataset_llama2/alpaca_text_document  #数据集路径
-    ```      
+    ```
     
-6. 启动 LLaMA2-70B 训练脚本: examples/llama2/pretrain_llama2_70B_ptd.sh
+6. 启动训练脚本
     
+    LLaMA2-34B: examples/llama2/pretrain_llama2_34B_ptd.sh
+    ```shell
+    bash examples/llama2/pretrain_llama2_34B_ptd.sh
+    ```
+    LLaMA2-70B: examples/llama2/pretrain_llama2_70B_ptd.sh
     ```shell
     bash examples/llama2/pretrain_llama2_70B_ptd.sh
     ```
    
-### 性能
+### 性能-2
 
-#### 吞吐
+#### 吞吐-2
 
-LLaMA2-70B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比
+LLaMA2-34B/70B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比
 
-|  设备  |     模型     | 迭代数  | 样本吞吐率 (samples/s/p) | token吞吐率 (tokens/s/p) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
-|:----:|:----------:|:----:|:-------------------:|:---------------------:|:---------------:|:----------------:|
-| NPUs | LLaMA2-70B | 1000 |        5.46         |          350          |       193       |        -         |
-|  参考  | LLaMA2-70B | 1000 |        5.29         |          339          |       214       |        -         |
+|  设备  |     模型     |  token吞吐率 (tokens/s/p) |  
+|:----:|:----------:|:---------------------:|
+| NPUs | LLaMA2-34B |          690          |
+|  参考  | LLaMA2-34B |          796          |
+| NPUs | LLaMA2-70B |          350          |
+|  参考  | LLaMA2-70B |          339          |
 
 
-#### 精度
+#### 精度-2
+
+LLaMA2-34B 8卡上12层模型 NPU vs 参考 loss. 
+
+![NPU-LOSS](../../sources/images/llama2/llama2_34b_bf16_layer12_loss_compare.png)
+
+相对误差
+
+![NPU-LOSS and NPU-Relative-Error](../../sources/images/llama2/llama2_34b_bf16_layer12_loss_relative.png)
 
 
-NPU vs 参考 loss.
+LLaMA2-70B NPU vs 参考 loss.
 
 ![NPU-LOSS](../../sources/images/llama2/llama2_70b_bf16_loss_compare.png)
 
 相对误差
 
-![NPU-LOSS and NPU-Relative-Error](../../sources/images/llama2/llama2_70b_bf16_loss_releative.png)
+![NPU-LOSS and NPU-Relative-Error](../../sources/images/llama2/llama2_70b_bf16_loss_relative.png)
 
 绝对误差
 
 ![NPU-LOSS and NPU-Absolute-Error](../../sources/images/llama2/llama2_70b_bf16_loss_absolute.png)
 
 
-## 推理
+## 推理-2
 
+权重转为单机8卡可以运行的格式
 
-权重转为为单机8卡可以运行的格式
+LLaMA2-34B:
+```shell
+SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_when_tp_pp_change.py
+python $SCRIPT_PATH \
+  --input-model-dir ./load_ckpt/release \
+  --output-model-dir ./ptd_48lt8p1/ \
+  --orig-vocab-size 32000 \
+  --make-vocab-size-divisible-by 8 \
+  --src-tensor-model-parallel-size 8 \
+  --src-pipeline-model-parallel-size 3 \
+  --tgt-tensor-model-parallel-size 8 \
+  --tgt-pipeline-model-parallel-size 1 \
+  --merge-mlp \
+  --type 34B \
+  --num_heads 64 \
+  --num_kv_heads 8 \
+  --hidden_size 8192 \
+  --num_layers 48
+```
 
+LLaMA2-70B:
 ```shell
 SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_when_tp_pp_change.py
 python $SCRIPT_PATH \
@@ -915,50 +950,90 @@ python $SCRIPT_PATH \
   --num_layers 80
 ```
 
-Llama2-70B 使用8卡进行推理：
+我们支持使用 LLaMA2-34B/70B 进行文本生成的推理，我们需要加载预训练权重：
+
+配置推理脚本
+
+LLaMA2-34B:`examples/llama2/generate_llama2_34B_ptd.sh`。
+
+LLaMA2-70B:`examples/llama2/generate_llama2_70B_ptd.sh`。
 
 ```shell
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-    MASTER_ADDR=localhost
-    MASTER_PORT=6001
-    NNODES=1
-    NODE_RANK=0
-    NPUS_PER_NODE=8
-    
-    DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE \
-                      --nnodes $NNODES \
-                      --node_rank $NODE_RANK \
-                      --master_addr $MASTER_ADDR \
-                      --master_port $MASTER_PORT"
-
-    CHECKPOINT=./ptd_80lt8p1/
-    VOCAB_FILE=./llama2-70b-hf/
-    python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference_llama.py \
-           --no-contiguous-buffers-in-local-ddp \
-           --tensor-model-parallel-size 8  \
-           --pipeline-model-parallel-size 1  \
-           --num-layers 80  \
-           --hidden-size 8192  \
-           --ffn-hidden-size 28672 \
-           --load "${CHECKPOINT}"  \
-           --num-attention-heads 64 \
-           --position-embedding-type rope \
-           --group-query-attention \
-           --num-query-groups 8 \
-           --max-position-embeddings 4096 \
-           --mlp-layer-fusion \
-           --pad-vocab-size-to 32000 \
-           --tokenizer-type PretrainedFromHF  \
-           --tokenizer-name-or-path "$VOCAB_FILE" \
-           --tokenizer-not-use-fast \
-           --fp16 \
-           --micro-batch-size 1 \
-           --seq-length 4096 \
-           --max-new-tokens 64 \
-           --seed 42
+# 修改模型权重路径和分词器路径
+CHECKPOINT=<checkpoint-path>
+VOCAB_FILE=<vocabfile-path>
 ```
 
-推理样例：
+LLaMA2-34B启动推理:
+```shell
+bash ./examples/llama2/generate_llama2_34B_ptd.sh
+```
+LLaMA2-70B启动推理:
+```shell
+bash ./examples/llama2/generate_llama2_70B_ptd.sh
+```
+
+LLaMA2-34B推理样例:
+```
+=============== Greedy Search ================
+
+You:
+how are you?
+
+AscendSpeed:
+
+I am doing well. I am happy to be here.
+I am happy to be here.
+I am happy to be here.
+I am happy to be here.
+I am happy to be here.
+I am happy to be here.
+I am happy to be here.
+I am
+==============================================
+
+Elapsed: 36.48s
+/
+================ Do Sample =================
+
+You:
+how are you?
+
+AscendSpeed:
+['is good?\nShaun, you’re a good writer. It is the truth, but the truth is also a matter of perspective. Is a matter of perspective. That is the matter. The matter is.\nThe matter.\nThe matter is.\n\n\n\n\n\n\n\n\n\n', 'are you alive?  are you okay? can you help me? do you want to? are you done? does your girlfriend know? do you need help? can you get me one? do you want to go see a movie? are you going to the mall? are you okay? are you okay']
+============================================
+
+Elapsed: 50.4s
+\
+=============== Beam Search =================
+
+You:
+how are you?
+
+AscendSpeed:
+
+I'm doing well, thanks for asking. I've been busy with work and other things, but I'm doing well.
+How about you?
+I'm doing well, thanks for asking. I've been busy with work and other things, but I'm. I'm
+=============================================
+
+Elapsed: 27.7s
+|
+======== Beam Search with sampling ==========
+
+You:
+how are you?
+
+AscendSpeed:
+
+How are you? is a common greeting in English.
+It is used to ask about the other person's well-being. It can be used in a variety of situations, such as when meeting someone for the first time, or when greeting someone you haven't seen in a while.
+=============================================
+
+Elapsed: 12.13s
+```
+
+LLaMA2-70B推理样例：
 ```
 =============== Greedy Search ================
 
@@ -1024,39 +1099,58 @@ I have a problem with my account. I can't log in.
 Elapsed: 48.53s
 ```
 
-## 评估
+## 评估-2
 
-MMLU评估举例，数据集[here](https://huggingface.co/datasets/cais/mmlu)下载
+BoolQ数据集评估样例. 数据集[here](https://huggingface.co/datasets/boolq)
+下载Dev部分[here](https://storage.googleapis.com/boolq/dev.jsonl) 放在“boolq_dev”文件夹.
+
+配置评估脚本:
+
+LLaMA2-34B:`tasks/evaluation/evaluate_llama2_34B_ptd.sh`.
+
+LLaMA2-70B:`tasks/evaluation/evaluate_llama2_70B_ptd.sh`.
 
 ```shell
-    CHECKPOINT=./ptd_80lt8p1/
-    VOCAB_FILE=./llama2-70b-hf/
-    # 配置任务和数据集路径
-    DATA_PATH="./mmlu/data/test/"
-    TASK="mmlu"
-    # configure generation parameters 
-    python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation.py   \
-           --task-data-path $DATA_PATH \
-           --task $TASK\
-           --seq-length 2048 \
-           --max-new-tokens 32 \
-           --max-position-embeddings 2048 \
-           --tensor-model-parallel-size 8  \
-           --pipeline-model-parallel-size 1  \
-           --num-layers 80  \
-           --hidden-size 8192  \
-           --ffn-hidden-size 28672 \
-           --load ${CHECKPOINT}  \
-           --num-attention-heads 64 \
-           --position-embedding-type rope \
-           --group-query-attention \
-           --num-query-groups 8 \
-           --tokenizer-type PretrainedFromHF  \
-           --tokenizer-name-or-path $VOCAB_FILE \
-           --tokenizer-not-use-fast \
-           --fp16  \
-           --micro-batch-size 1  \
-           --seed 42 | tee logs/train.log
-    # 开启评估
-    bash tasks/evaluation/eval.sh
+# 修改模型权重路径和分词器路径
+CHECKPOINT=<checkpoint-path>
+VOCAB_FILE=<vocabfile-path>
 ```
+
+LLaMA2-34B评估:
+```shell
+bash tasks/evaluation/evaluate_llama2_34B_ptd.sh
+```
+LLaMA2-70B评估:
+```shell
+bash tasks/evaluation/evaluate_llama2_70B_ptd.sh
+```
+
+BoolQ 数据集评估结果:
+
+<table>
+  <thead>
+    <tr>
+      <th>Task</th>
+      <th>Subset</th>
+      <th>Model</th>
+      <th>NPU</th>
+      <th>Benchmark</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="https://huggingface.co/datasets/boolq">BoolQ</a></td>
+      <td>dev</td>
+      <th>Llama2-70b</th>
+      <td>0.858</td>
+      <td><a href="https://opencompass.org.cn/dataset-detail/BoolQ">(Llama2-70b test) 0.877</a></td>
+    </tr>
+    <tr>
+      <td><a href="https://huggingface.co/datasets/boolq">BoolQ</a></td>
+      <td>dev</td>
+      <th>Llama2-34b</th>
+      <td>0.651</td>
+      <td><a href="https://opencompass.org.cn/dataset-detail/BoolQ">(AquilaChat2-34B test) 0.571</a></td>
+    </tr>
+  </tbody>
+</table>

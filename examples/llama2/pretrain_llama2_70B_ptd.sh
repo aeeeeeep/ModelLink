@@ -5,6 +5,7 @@ export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib:/root/miniconda3/lib:$LD_LI
 export HCCL_CONNECT_TIMEOUT=1200
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 export COMBINED_ENABLE=1
+export MULTI_STREAM_MEMORY_REUSE=1
 
 # Change for multinode config
 MASTER_ADDR=localhost
@@ -26,6 +27,8 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --use-flash-attn \
        --sequence-parallel \
        --mlp-layer-fusion \
+       --use-fused-rmsnorm \
+       --release-fp32-grad \
        --tensor-model-parallel-size 8 \
        --pipeline-model-parallel-size 8 \
        --num-layers 80 \
@@ -61,5 +64,4 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --save-interval 10000 \
        --eval-interval 1000 \
        --eval-iters 10 \
-       --release-fp32-grad \
        --bf16 | tee logs/train.log

@@ -18,9 +18,9 @@ import sys
 import time
 import logging
 from torch import distributed as dist
-from transformers import LlamaTokenizer
+from transformers import AutoTokenizer
 from ascendspeed import get_args
-from ascendspeed.model import GPTModel
+from ascendspeed.model.gpt_model import GPTModel
 from ascendspeed.initialize import initialize_megatron
 from ascendspeed.arguments import core_transformer_config_from_args
 from tasks.evaluation.eval_api.chat import Chat
@@ -40,6 +40,13 @@ logger = logging.getLogger(__name__)
 
 def model_provider(pre_process=True, post_process=True):
     config = core_transformer_config_from_args(get_args())
+
+    if get_args().row_col_parallel_linear_bias:
+        # internlm模型配置
+        config.column_parallel_linear_bias = True
+        config.row_parallel_linear_bias = True
+        config.row_parallel_linear_skip_bias_add = False
+
     """Build the model."""
     init_model = GPTModel(
         config,
@@ -69,6 +76,8 @@ def add_text_generate_args(parser):
     group.add_argument("--max-new-tokens", type=int, default=128,
                        help='Size of the output generated text.')
     group.add_argument("--task", nargs='*', default=[], help='Choose one task from mmlu, boolq and gsm8k')
+    group.add_argument("--row-col-parallel-linear-bias", action="store_true", default=False,
+                       help='Configuration for the InternLM model.')
     return parser
 
 
@@ -208,35 +217,34 @@ if __name__ == "__main__":
         model_provider=model_provider,
         pretrained_model_name_or_path=args.load
     )
-    tokenizer = LlamaTokenizer.from_pretrained(args.tokenizer_name_or_path)
+    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name_or_path)
     max_new_tokens = args.max_new_tokens
     template = "{instruction}"
     if 'mmlu' in args.task:
         a = time.time()
         mmlu(args, LLMChat(args))
-        logger.info('MMLU Running Time: ', time.time() - a)
+        logger.info(f'MMLU Running Time:, {time.time() - a}')
     if 'gsm8k' in args.task:
         a = time.time()
         gsm8k(args, LLMChat(args))
-        logger.info('GSM8k Running Time: ', time.time() - a)
+        logger.info(f'GSM8k Running Time: {time.time() - a}')
     if 'boolq' in args.task:
         a = time.time()
         boolq(args, LLMChat(args))
-        logger.info('Boolq Running Time: ', time.time() - a)
+        logger.info(f'Boolq Running Time: {time.time() - a}')
     if 'ceval' in args.task:
         a = time.time()
         ceval(args, LLMChat(args))
-        logger.info('Ceval Running Time: ', time.time() - a)
+        logger.info(f'Ceval Running Time: {time.time() - a}')
     if 'bbh' in args.task:
         a = time.time()
         bbh_eval(args, LLMChat(args))
-        logger.info('bbh Running Time: ', time.time() - a)
+        logger.info(f'bbh Running Time: {time.time() - a}')
     if 'agieval' in args.task:
         a = time.time()
         agi_eval(args, LLMChat(args))
-        logger.info('agi_eval Running Time: ', time.time() - a)
+        logger.info(f'agi_eval Running Time: {time.time() - a}')
     if 'human_eval' in args.task:
         a = time.time()
         human_eval(args, LLMChat(args))
-        logger.info('Human_eval Running Time: ', time.time() - a)
-
+        logger.info(f'Human_eval Running Time: {time.time() - a}')

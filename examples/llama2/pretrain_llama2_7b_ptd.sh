@@ -69,6 +69,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --lr-warmup-fraction 0.01 \
        --mlp-layer-fusion \
        --use-flash-attn \
+       --use-fused-rmsnorm \
        --bf16 | tee ./logs/ascendspeed-llama2-7b-ptd-bf16_train-${logfile}.log
 	   
 # ptd模式训练脚本

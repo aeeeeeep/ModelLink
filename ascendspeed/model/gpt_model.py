@@ -39,7 +39,9 @@ from .manual_pipe import ManuallyAllocatedPipelineModule
 
 def post_language_model_processing(lm_output, labels, logit_weights,
                                    parallel_output,
-                                   fp16_lm_cross_entropy):
+                                   fp16_lm_cross_entropy,
+                                   z_loss_weight,
+                                   keep_last_token):
     # Output. Format [s b h]
     output = parallel_lm_logits(
         lm_output,
@@ -49,21 +51,22 @@ def post_language_model_processing(lm_output, labels, logit_weights,
 
         return output
     else:
+        if keep_last_token:
+            output = output[..., :-1, :].contiguous()
+            labels = labels[..., 1:].contiguous()
+
         if fp16_lm_cross_entropy:
             check_equal(output.dtype, torch.half)
             loss = tensor_parallel.vocab_parallel_cross_entropy(output, labels)
         else:
             loss = tensor_parallel.vocab_parallel_cross_entropy(output.float(), labels)
+
+        if z_loss_weight is not None:
+            softmax_normalizer = output.max(-1).values ** 2
+            z_loss = z_loss_weight * softmax_normalizer
+            loss = loss + z_loss
+
         return loss
-
-
-class LayerNormLayer(MegatronModule):
-    def __init__(self, hidden_size, eps):
-        super(LayerNormLayer, self).__init__()
-        self.final_layernorm = torch.nn.LayerNorm(hidden_size, eps)
-
-    def forward(self, norm_input):
-        return self.final_layernorm(norm_input)
 
 
 class GPTModel(MegatronModule, MegatronModuleForCausalLM):
@@ -85,6 +88,8 @@ class GPTModel(MegatronModule, MegatronModuleForCausalLM):
         self.fp16_lm_cross_entropy = args.fp16_lm_cross_entropy
         self.return_moe_loss = return_moe_loss
         self.untie_embeddings_and_output_weights = args.untie_embeddings_and_output_weights
+        self.z_loss_weight = args.z_loss_weight
+        self.keep_last_token = args.keep_last_token
 
         self.language_model, self._language_model_key = get_language_model(
             config=config,
@@ -139,7 +144,9 @@ class GPTModel(MegatronModule, MegatronModuleForCausalLM):
                 lm_output, labels,
                 self.language_model.output_layer.weight if self.untie_embeddings_and_output_weights else self.shared_embedding_or_output_weight(),
                 self.parallel_output,
-                self.fp16_lm_cross_entropy)
+                self.fp16_lm_cross_entropy,
+                self.z_loss_weight,
+                self.keep_last_token)
 
         return lm_output, moe_losses if self.return_moe_loss else lm_output
 
@@ -302,18 +309,11 @@ class GPTModelPipe(ManuallyAllocatedPipelineModule, MegatronModule, MegatronModu
         self.specs.append(undo)
 
         # Final layernorm after transformer layers
-        if args.sequence_parallel:
-            self.specs.append(
-                LayerSpec(MixedFusedLayerNorm,
-                          args.hidden_size,
-                          eps=args.layernorm_epsilon,
-                          sequence_parallel=args.sequence_parallel))
-
-        else:
-            self.specs.append(
-                LayerSpec(LayerNormLayer,
-                          args.hidden_size,
-                          eps=args.layernorm_epsilon))
+        self.specs.append(
+            LayerSpec(MixedFusedLayerNorm,
+                      args.hidden_size,
+                      eps=args.layernorm_epsilon,
+                      sequence_parallel=args.sequence_parallel))
 
         def _logits_helper(embedding, lm_output):
             """A wrapper to massage inputs/outputs from pipeline. """

@@ -24,6 +24,9 @@
     - [性能](#性能)
       - [吞吐](#吞吐)
       - [精度](#精度)
+    - [推理](#推理)
+      - [脚本](#脚本)
+    - [使用基线数据集进行评估](#使用基线数据集进行评估)
 - [引用](#引用)
 
 ## 训练
@@ -39,12 +42,12 @@ LLaMA-7B/13B 训练的软件配置如下:
 
 |            软件             |                                                      配置                                                      |
 |:-------------------------:|:------------------------------------------------------------------------------------------------------------:|
-|          python           |                                                    3.7.5                                                     |
+|          python           |                                                    3.8.0                                                     |
 |          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
 | binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                    1.11.0                                                    |
+|           torch           |                                                    2.1.0                                                     |
 |         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
 
 ### 脚本
@@ -60,12 +63,12 @@ mkdir ckpt
 2. 搭建环境
 
 ```bash
-# python3.7
-conda create -n test python=3.7
+# python3.8
+conda create -n test python=3.8
 conda activate test
 # 安装 torch 和 torch_npu
-pip install torch-1.11.0-cp37-cp37m-linux_aarch64.whl
-pip install torch_npu-1.11.0.post4_XXXXXX-cp37-cp37m-linux_aarch64.whl
+pip install torch-2.1.0-cp38-cp38m-linux_aarch64.whl
+pip install torch_npu-2.1.0.post5_XXXXXX-cp38-cp38m-linux_aarch64.whl
 # 安装 megatron-core
 pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
 # 安装 deepspeed 和 deepspeed_npu
@@ -78,7 +81,7 @@ cd ..
 pip install -r requirements.txt 
 ```
 
-3. 下载 LLaMA-7B/13B [词表文件](https://huggingface.co/yahma/llama-7b-hf/tree/main) 
+3. 下载 LLaMA-7B/13B [词表文件](https://huggingface.co/ruibin-wang/llama-7b-hf/tree/main) 
 
 
 ```shell
@@ -136,12 +139,21 @@ if zero_sd_list is None or len(zero_sd_list) == 0:
 ```
 
 
-下载 LLaMA-7B [权重](https://huggingface.co/yahma/llama-7b-hf/tree/main) 或 LLaMA-13B [权重](https://huggingface.co/yahma/llama-13b-hf/tree/main)
+下载 LLaMA-7B [权重](https://huggingface.co/ruibin-wang/llama-7b-hf/tree/main) 或 LLaMA-13B [权重](https://huggingface.co/ruibin-wang/llama-13b-hf/tree/main)
 ```shell
   mkdir model_from_hf
   cd ./model_from_hf
   # 需要安装 git-lfs
-  git clone https://huggingface.co/yahma/llama-7b-hf
+  git clone https://huggingface.co/ruibin-wang/llama-7b-hf
+  cd ..
+```
+or 
+
+```shell
+  mkdir model_from_hf
+  cd ./model_from_hf
+  # 需要安装 git-lfs
+  git clone https://huggingface.co/ruibin-wang/llama-13b-hf
   cd ..
 ```
 
@@ -194,6 +206,7 @@ DATA=./dataset/llama_text_document  #数据集 路径
 CHECKPOINT=./model_weights/
 
 # 如果不需要加载权重，就移除 `--load` 参数
+# 如果是指令数据集，请添加 `--is-instruction-dataset` 参数，否则请移除该参数
 ```
 
 7. 启动 LLaMA-7B/13B 预训练脚本
@@ -218,12 +231,12 @@ bash examples/llama/pretrain_llama_13B_ptd_16p.sh
 LLaMA-7B/13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 | 设备   | 硬件        | 模型        | 迭代数  | 样本吞吐 (samples/p/s) | token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
-|------|-----------|-----------|------|------------------|----------------------|-----------------|------------------|
-| NPUs      | 910 1*8p  | LLaMA-7B  | 2048             | 1.80                          | 3686                         | 4.44                      | 156.5                               |
-| 参考 | -        | LLaMA-7B  | 2048             | 1.85                          | 3788                         | 4.31                      | 161.1                               |
-| NPUs      | 910 1*8p  | LLaMA-13B | 2048             | 0.956                         | 1958                         | 16.70                     | 212.25                              |
-| NPUs      | 910 1*16p | LLaMA-13B | 2048             | 0.88                          | 1800                         | 36.32                     | 195.58                              |
-| 参考 | -        | LLaMA-13B | 2048             | 0.98                          | 2012                         | 16.33                     | 217.37                              |
+|------|-----------|-----------|------|--------------------|----------------------|-----------------|------------------|
+| NPUs | 910 1*8p  | LLaMA-7B  | 2048 | 1.83               | 3763                 | 4.35            | 159.9            |
+| 参考   | -         | LLaMA-7B  | 2048 | 1.85               | 3804                 | 4.31            | 161.5            |
+| NPUs | 910 1*8p  | LLaMA-13B | 2048 | 0.925              | 1894                 | 17.27           | 205.57           |
+| NPUs | 910 1*16p | LLaMA-13B | 2048 | 0.88               | 1800                 | 36.32           | 195.58           |
+| 参考   | -         | LLaMA-13B | 2048 | 0.98               | 2012                 | 16.33           | 217.37           |
 
 
 
@@ -243,7 +256,7 @@ LLama-13b NPU vs 参考 loss.
 我们支持使用 LLaMA-7B 和 LLaMA-13B 进行文本生成的推理。
 推理与预训练不同，比如我们需要加载预训练权重和输出样本的长度：
 
-配置LLaMA-7B推理脚本`examples/llama/generate_llama_7B_deepspeed.sh`和LLaMA-13B推理脚本`examples/llama/generate_llama_13B_tp8_pp1.sh`。
+配置LLaMA-7B推理脚本`examples/llama/generate_llama_7B_deepspeed.sh`和LLaMA-13B推理脚本`examples/llama/generate_llama_13B_tp1_pp8.sh`。
 
 ```shell
 # 修改模型权重路径和分词器路径
@@ -258,7 +271,7 @@ bash ./examples/llama/generate_llama_7B_deepspeed.sh
 
 LLaMA-13B:
 ```shell
-bash ./examples/llama/generate_llama_13B_tp8_pp1.sh
+bash ./examples/llama/generate_llama_13B_tp1_pp8.sh
 ```
 
 部分推理样本如下：
@@ -276,77 +289,40 @@ LLaMA-13B:
 
 我们使用 BBH benchmark 来评估我们的模型。Benchmark下载[此处](https://huggingface.co/datasets/lukaemon/bbh)。
 
-配置LLaMA-7B评估脚本：
 
+配置LLaMA-7B评估脚本 `tasks/evaluation/evaluate_llama_7b_ptd.sh` 和 LLaMA-13B评估脚本 `tasks/evaluation/evaluate_llama_13b_ptd.sh`：
+
+修改权重路径, 词表路径和数据集任务路径：
 ```shell
-    CHECKPOINT=./llama-7b-tp4-pp2/
-    VOCAB_FILE=./llama-7b-hf/
-    # 配置任务和数据路径
-    DATA_PATH="./bbh/data/test/"
-    TASK="bbh"
-    # 配置生成参数
-    python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/evaluation/evaluation_llama.py   \
-           --task-data-path $DATA_PATH \
-           --task $TASK\
-           --seq-length 2048 \
-           --max-new-tokens 32 \
-           --max-position-embeddings 2048 \
-           --tensor-model-parallel-size 4  \
-           --pipeline-model-parallel-size 2  \
-           --num-layers 32  \
-           --hidden-size 4096  \
-           --ffn-hidden-size 11008 \
-           --load ${CHECKPOINT}  \
-           --num-attention-heads 32 \
-           --tokenizer-type PretrainedFromHF  \
-           --tokenizer-name-or-path $VOCAB_FILE \
-           --tokenizer-not-use-fast \
-           --fp16  \
-           --micro-batch-size 1  \
-           --seed 42 | tee logs/evaluation.log
+CHECKPOINT=<checkpoint-path>
+VOCAB_FILE=<vocabfile-path>
+DATA_PATH="./bbh/data/test/"
+TASK="bbh"
 ```
 
-配置LLaMA-13B评估脚本：
-
+修改最大生成词参数：
 ```shell
-    CHECKPOINT=./llama-13b-tp1-pp8/
-    VOCAB_FILE=./llama-13b-hf/
-    # 配置任务和数据路径
-    DATA_PATH="./bbh/data/test/"
-    TASK="bbh"
-    # 配置参数
-    python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/evaluation/evaluation_llama.py   \
-           --task-data-path $DATA_PATH \
-           --task $TASK\
-           --seq-length 2048 \
-           --max-new-tokens 32 \
-           --max-position-embeddings 2048 \
-           --tensor-model-parallel-size 1  \
-           --pipeline-model-parallel-size 8  \
-           --num-layers 40  \
-           --hidden-size 5120  \
-           --ffn-hidden-size 13824 \
-           --load ${CHECKPOINT}  \
-           --num-attention-heads 40 \
-           --tokenizer-type PretrainedFromHF  \
-           --tokenizer-name-or-path $VOCAB_FILE \
-           --tokenizer-not-use-fast \
-           --fp16  \
-           --micro-batch-size 1  \
-           --seed 42 | tee logs/evaluation.log
+--max-new-tokens 32 
 ```
 
+```text
+# 请注意，评估时需要修改一个deepspeed的bug：
+# 将 `<deepspeed-installed-path>/runtime/pipe/engine.py` 文件里的第671行注释掉：
+# self.total_loss += self.loss.detach()
+```
+
+开始评估：
 ```shell
-# 开始评估
-bash tasks/evaluation/eval.sh
+bash tasks/evaluation/evaluate_llama_7b_ptd.sh
+bash tasks/evaluation/evaluate_llama_13b_ptd.sh
 ```
 
 LLaMA-7B/13B在**Ascend NPU**中的评测表现：
 
 | 任务                                                  | 模型        | 昇腾值  | 社区值  |
 |-----------------------------------------------------|-----------|------|------|
-| [BBH](https://huggingface.co/datasets/lukaemon/bbh) | LLaMA-7B  | 33.7 | [33.5](https://opencompass.org.cn/dataset-detail/BBH) | 
-| [BBH](https://huggingface.co/datasets/lukaemon/bbh) | LLaMA-13B | 38.7 | [37.9](https://opencompass.org.cn/dataset-detail/BBH) |
+| [BBH](https://huggingface.co/datasets/lukaemon/bbh) | LLaMA-7B  | 33.4 | [33.5](https://opencompass.org.cn/dataset-detail/BBH) | 
+| [BBH](https://huggingface.co/datasets/lukaemon/bbh) | LLaMA-13B | 39.2 | [37.9](https://opencompass.org.cn/dataset-detail/BBH) |
 
 # LLaMA-33B/65B
 
@@ -358,21 +334,21 @@ LLaMA 模型源于: [LLaMA: OPen and Efficient Foundation Language Models](https
 
 LLaMA-33B/65B 训练的硬件配置:
 
-|  硬件 |       配置        |
-|:---:|:---------------:|
-| NPU | 8 x Ascend NPUs |
+|  硬件 |        配置        |
+|:---:|:----------------:|
+| NPU | 32 x Ascend NPUs |
 
 
 LLaMA-33B/65B 训练的软件配置:
                                                    
 |            软件             |                                                      配置                                                      |
 |:-------------------------:|:------------------------------------------------------------------------------------------------------------:|
-|          python           |                                                     3.7                                                      |
+|          python           |                                                    3.8.0                                                     |
 |          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
 |           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
 | binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                    1.11.0                                                    |
+|           torch           |                                                    2.1.0                                                     |
 |         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
 
 ### 数据集
@@ -388,19 +364,19 @@ mkdir ckpt
 ```
 2. 搭建环境
 ```shell
-# python3.7
-conda create -n test python=3.7
+# python3.8
+conda create -n test python=3.8
 conda activate test
 
 # 安装 torch 和 torch_npu
 # ARM
-wget https://download.pytorch.org/whl/torch-1.11.0-cp37-cp37m-manylinux2014_aarch64.whl
-pip install torch-1.11.0-cp37-cp37m-linux_aarch64.whl
-pip install torch_npu-1.11.0.post4_XXXXXX-cp37-cp37m-linux_aarch64.whl
+wget https://download.pytorch.org/whl/torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+pip install torch_npu-2.1.0.post4_XXXXXX-cp38-cp38m-manylinux2014_aarch64.whl
 
 # X86
-#pip install torch ==1.11 -i https://pypi.tuna.tsinghua.edu.cn/simple
-#pip install torch_npu-1.11.0.post4_XXXXXX-cp37-cp37m-linux_aarch64.whl
+#pip install torch==2.1.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
+#pip install torch_npu-2.1.0.post4_XXXXXX-cp38-cp38m-manylinux2014_aarch64.whl
 
 # 安装 megatron-core
 pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
@@ -450,9 +426,10 @@ SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
 python $SCRIPT_PATH \
       --input-model-dir ./tokenizer \
       --output-model-dir ./model_weights \
-      --tensor-model-parallel-size 8 \
+      --tensor-model-parallel-size 4 \
       --pipeline-model-parallel-size 4 \
-      --type 33B
+      --merge-mlp \
+      --type 30B
 ```
 
 llama-65B
@@ -489,7 +466,7 @@ python tools/preprocess_data.py --input alpaca_data.json\
 
 6. 配置 llama-33B/65B 预训练脚本:
 
-AscendSpeed/examples/llama/pretrain_llama_33B_zero_32p.sh
+AscendSpeed/examples/llama/pretrain_llama_33B_ptd_32p.sh
 
 AscendSpeed/examples/llama/pretrain_llama_65B_ptd_32p.sh
 
@@ -506,9 +483,9 @@ DATA_PATH=./dataset/llama_text_document # line 17
 
 7. 启动预训练脚本:
 
-启动 llama-33B 预训练脚本 : AscendSpeed/examples/llama/pretrain_llama_33B_zero_32p.sh
+启动 llama-33B 预训练脚本 : AscendSpeed/examples/llama/pretrain_llama_33B_ptd_32p.sh
 ```bash
-bash examples/llama/pretrain_llama_33B_zero_32p.sh
+bash examples/llama/pretrain_llama_33B_ptd_32p.sh
 ```
 
 启动 llama-65B 预训练脚本 : AscendSpeed/examples/llama/pretrain_llama_65B_ptd_32p.sh
@@ -528,8 +505,8 @@ NODE_RANK=0
 训练log如下:
 
 ```Shell
- iteration  3/50000 | consumed samples: 768 | consumed tokens:  1572864 | elapsed time per iteration (ms):  33818.0 | learning rate:    1.406E-07 | gloabl batch size:  256 | lm loss:  1.200820E+01 | loss scale:  1.0 | grad norm:    9.216 | actual seqlen:  2048 | number of skipped
-iterations: 0 | number of nan iterations:   0 | samples per second: 7.570 | TFLOPs: 107.09 |
+ iteration  11/50000 | consumed samples: 5632 | consumed tokens:  11534336 | elapsed time per iteration (ms):  52728.1 | learning rate:    1.499E-05 | gloabl batch size:  512 | lm loss:  1.376514E+01 | loss scale:  65536.0 | grad norm:    459.628 | actual seqlen:  2048 | number of skipped
+iterations: 0 | number of nan iterations:   0 | samples per second: 9.710 | TFLOPs: 167.52 |
 time (ms)
 ```
 
@@ -541,10 +518,10 @@ LLaMA-33B/65B在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 
 |  设备  |    模型     | tokens吞吐 (tokens/s/p) |
 |:----:|:---------:|:---------------------:|
-|  参考  | llama-33B |          520          |
+|  参考  | llama-33B |          776          |
 | NPUs | llama-33B |          621          |
-|  参考  | llama-65B |          260          |
-| NPUs | llama-65B |          234          |
+|  参考  | llama-65B |          426          |
+| NPUs | llama-65B |          348          |
 
 
 #### 精度
@@ -567,6 +544,89 @@ LLaMa-65B
 ![NPU-Relative-Error](../../sources/images/llama/compare_chart.png)
 
 
+## 推理
+
+我们支持使用 LLaMA-33B 和 LLaMA-65B 进行文本生成的推理。
+推理与预训练不同，比如我们需要加载预训练权重和输出样本的长度：
+
+配置LLaMA-33B推理脚本`examples/llama/generate_llama_33B_ptd.sh`。
+
+配置LLaMA-65B推理脚本`examples/llama/generate_llama_65B_tp8_pp1.sh`。
+
+```shell
+# 修改模型权重路径和分词器路径
+CHECKPOINT=<checkpoint-path>
+VOCAB_FILE=<vocabfile-path>
+```
+
+LLaMA-33B:
+```shell
+bash ./examples/llama/generate_llama_33B_ptd.sh
+```
+LLaMA-65B:
+```shell
+bash ./examples/llama/generate_llama_65B_tp8_pp1.sh
+```
+
+部分推理样本如下：
+
+LLaMA-33B:
+
+![llama-13B_generate.png](../../sources/images/llama/llama33B_generate.png)
+
+LLaMA-65B:
+
+![llama-65B_generate.png](../../sources/images/llama/llama65B_generate.png)
+
+## 使用基线数据集进行评估
+
+我们使用 Boolq benchmark 来评估我们的模型。Benchmark下载[此处](https://huggingface.co/datasets/boolq)。
+
+配置LLaMA-33B评估脚本：
+
+```shell
+    CHECKPOINT=./llama-33b-tp4-pp2/
+    VOCAB_FILE=./llama-33b-hf/
+    # 配置任务和数据路径
+    DATA_PATH="./boolq/data/test/"
+    TASK="boolq"
+    # 配置生成参数
+    python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/evaluation/evaluation_llama.py   \
+         --task-data-path $DATA_PATH \
+         --task $TASK\
+         --seq-length 1024 \
+         --max-new-tokens 2 \
+         --max-position-embeddings 1024 \
+         --tensor-model-parallel-size 4  \
+         --pipeline-model-parallel-size 2  \
+         --num-layers 60 \
+         --hidden-size 6656  \
+         --ffn-hidden-size 17920 \
+         --load ${CHECKPOINT}  \
+         --num-attention-heads 52  \
+         --tokenizer-type PretrainedFromHF  \
+         --tokenizer-name-or-path ${VOCAB_FILE} \
+         --tokenizer-not-use-fast \
+         --fp16  \
+         --micro-batch-size 1  \
+         --position-embedding-type rope \
+         --normalization RMSNorm \
+         --mlp-layer-fusion \
+         --seed 42
+```
+
+```shell
+# 开始评估
+# llama-65B评估
+bash tasks/evaluation/evaluate_llama_65B_tp8_pp1.sh
+```
+
+LLaMA-33B和LLaMA-65B在**Ascend NPU**中的评测表现：
+
+| 任务                                             | 模型        | 昇腾值  | 社区值                                                                 |
+|------------------------------------------------|-----------|------|---------------------------------------------------------------------|
+| [Boolq](https://huggingface.co/datasets/boolq) | LLaMA-33B | 83.2 | [83.1](https://paperswithcode.com/sota/question-answering-on-boolq) |
+| [Boolq](https://huggingface.co/datasets/boolq) | LLaMA-65B | 85.7 | [86.6](https://paperswithcode.com/sota/question-answering-on-boolq) |
 
 ## 引用
 

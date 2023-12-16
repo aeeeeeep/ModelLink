@@ -168,14 +168,18 @@ CHECKPOINT_PATH='./ckpt'
 ```
 
 ### 低参微调
-执行流程与预训练一致，参数修改配置如下：
+启动 Bloom-7B 低参微调脚本: examples/bloom/tune_bloom_7b1.sh
+
 ```shell
 # 修改预训练权重路径
 CHECKPOINT_PATH='./ckpt'
+# 修改数据集和词表路径
+TOKENIZER_NAME_OR_PATH=/home/bloom_data/vocab_file/
+DATA_PATH=/home/bloom_data/alpaca/alpaca
+```
 
-# 增加配置参数
-pretrain_bloom.py
---lora-target-modules query_key_value dense \
+```shell
+bash examples/bloom/tune_bloom_7b1.sh
 ```
 
 ## 性能
@@ -186,7 +190,7 @@ Bloom-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 
 | 设备  | 模型       | 迭代数 | 样本吞吐 (samples/p/s) | tokens吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
 |-----|----------|-----|--------------------|-----------------------|-----------------|------------------|
-| NPUs | Bloom-7B | 1000 | 10.289             | 2603                  | 18.67           | 115.55           |
+| NPUs | Bloom-7B | 1000 | 9.779            | 2503                  | 19.63           | 109.85           |
 | 参考  | Bloom-7B | 1000 | 9.894              | 2525                  | 19.40           | 111.19           |
 
 
@@ -207,7 +211,11 @@ NPU vs 参考 loss 相对误差
 AscendSpeed 支持 BLOOM 7B 的文本生成推理.
 
 ### deepspeed_pipeline
-
+```text
+    # 请注意，评估时需要修改一个deepspeed的bug：
+    # 将 `<deepspeed-installed-path>/runtime/pipe/engine.py` 文件里的第671行注释掉：
+    # self.total_loss += self.loss.detach()
+```
 ```shell
 # 修改 model weight 路径和 tokenizer 路径
 CHECKPOINT=/home/model/bloom_7B
@@ -246,7 +254,7 @@ bash ./examples/bloom/generate_bloom_7B_tp8_pp1.sh
 ```
 
 ## 评估 
-配置 Bloom-7B 评估脚本: tasks/evaluation/eval_bloom.sh
+配置 Bloom-7B 评估脚本: tasks/evaluation/evaluate_bloom_7b1.sh
 
 ```shell
 # 修改 model weight 路径和 tokenizer 路径和数据集任务路径
@@ -256,15 +264,14 @@ DATA_PATH="/dataset/boolq/test"
 TASK="boolq"
 ```
 
-除此之外你还需要根据模型大小设置参数:
-```shell
---num-layers 30 
---hidden-size 4096 
---num-attention-heads 32 
+```text
+    # 请注意，评估时需要修改一个deepspeed的bug：
+    # 将 `<deepspeed-installed-path>/runtime/pipe/engine.py` 文件里的第671行注释掉：
+    # self.total_loss += self.loss.detach()
 ```
 
 ```shell
-bash ./tasks/evaluation/eval_bloom.sh
+bash tasks/evaluation/evaluate_bloom_7b1.sh
 ```
 
 <table>
@@ -437,6 +444,10 @@ DATA_PATH=/home/bloom_data/enwiki_100k/enwiki-100k_text_document
 bash examples/bloom/pretrain_bloom_176b.sh
 ```
 
+```text
+当要开启FA时，在脚本中添加`--use-flash-attn`与`--square-alibi-mask`来使能，同时不要使用`--is-instruction-dataset`.
+```
+
 ## 性能
 
 ### 吞吐
@@ -445,7 +456,7 @@ Bloom-176B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 
 | 设备 | 模型         | 总迭代数 | tokens吞吐 (tokens/p/s) |
 |----|------------|------|-----------------------|
-| NPUs | Bloom-176B | 1000 | 112                   |
+| NPUs | Bloom-176B | 1000 | 108                   |
 | 参考 | Bloom-176B | NA   | 107                   |
 
 ### 精度
@@ -464,7 +475,11 @@ AscendSpeed 支持 BLOOM 176B的在线文本生成推理
 We support AscendSpeed Inference for text generation with BLOOM 176B (deepspeed or megatron).
 
 ### deepspeed_pipeline
-
+```text
+    # 请注意，评估时需要修改一个deepspeed的bug：
+    # 将 `<deepspeed-installed-path>/runtime/pipe/engine.py` 文件里的第671行注释掉：
+    # self.total_loss += self.loss.detach()
+```
 ```shell
 # # 修改 model weight 路径和 tokenizer 路径
 CHECKPOINT=/home/model/bloom_176B
@@ -511,7 +526,7 @@ bash ./examples/bloom/generate_bloom_176b_2nodes.sh
 
 ## 评估 
 
-配置 Bloom-176B 评估脚本: tasks/evaluation/eval_bloom.sh
+配置 Bloom-176B 评估脚本: tasks/evaluation/evaluate_bloom_176b.sh
 
 ```shell
 # 修改 model weight 路径和 tokenizer 路径和数据集任务路径
@@ -521,14 +536,6 @@ DATA_PATH="/dataset/boolq/test"
 TASK="boolq"
 ```
 
-除此之外你还需要根据模型大小设置参数:
-
-```shell
---num-layers 70 
---hidden-size 14336 
---num-attention-heads 112 
-```
-
 ```text
     # 请注意，评估时需要修改一个deepspeed的bug：
     # 将 `<deepspeed-installed-path>/runtime/pipe/engine.py` 文件里的第671行注释掉：
@@ -536,7 +543,7 @@ TASK="boolq"
 ```
 
 ```shell
-bash ./tasks/evaluation/eval_bloom.sh
+bash tasks/evaluation/evaluate_bloom_176b.sh
 ```
 <table>
   <thead>

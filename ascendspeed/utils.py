@@ -17,9 +17,13 @@
 import os
 import stat
 import sys
+import enum
+import copy
+from contextlib import contextmanager
 
 import torch
 from torch.nn.parallel import DistributedDataParallel as torchDDP
+import torch_npu
 
 from deepspeed.accelerator import get_accelerator
 if get_accelerator().device_name() == 'cuda':
@@ -340,15 +344,49 @@ def checkpoint_throughput_calculator(model, latency_second):
 
 
 def get_tune_attention_mask(attention_mask_1d, reset_attention_mask=True):
+    args = get_args()
     micro_batch_size, seq_length = attention_mask_1d.size()
     if reset_attention_mask:
         att_mask_batch = micro_batch_size
     else:
         att_mask_batch = 1
-    attention_mask = torch.tril(torch.ones(
-        (att_mask_batch, seq_length, seq_length), device=attention_mask_1d.device)).view(
-        att_mask_batch, 1, seq_length, seq_length)
-    attention_mask = attention_mask.masked_fill((attention_mask_1d < 0.5).view(-1, 1, 1, seq_length), value=0)
-    attention_mask = (attention_mask < 0.5)
+
+    if args.padding_attention_mask:
+        expanded_mask = torch.logical_not(torch.tril(
+            torch.gt(attention_mask_1d[:, :, None] * attention_mask_1d[:, None, :], 0)
+        ) * torch.eq(attention_mask_1d[:, :, None] - attention_mask_1d[:, None, :], 0))
+        attention_mask = (
+            expanded_mask.unsqueeze(1)
+            .expand(-1, 1, seq_length, seq_length)
+        )
+    else:
+        attention_mask = torch.tril(torch.ones(
+            (att_mask_batch, seq_length, seq_length), device=attention_mask_1d.device)).view(
+            att_mask_batch, 1, seq_length, seq_length)
+        attention_mask = attention_mask.masked_fill((attention_mask_1d < 0.5).view(-1, 1, 1, seq_length), value=0)
+        attention_mask = (attention_mask < 0.5)
     return attention_mask
 
+
+def convert_args_to_strs(args):
+    args_c = copy.deepcopy(args)
+    for name in dir(args_c):
+        v = getattr(args_c, name)
+        if isinstance(v, enum.Enum):
+            setattr(args_c, name, v.name)
+    return args_c
+
+
+@contextmanager
+def cpu_tensor_reduce_context(enable=False):
+    def cpu_reduce_ex(self, proto):
+        self = self.cpu()
+        return torch_npu.utils.storage._reduce_ex(self, proto)
+
+    org_reduce_ex = torch.Tensor.__reduce_ex__
+    try:
+        if enable:
+            torch.Tensor.__reduce_ex__ = cpu_reduce_ex
+        yield
+    finally:
+        torch.Tensor.__reduce_ex__ = org_reduce_ex

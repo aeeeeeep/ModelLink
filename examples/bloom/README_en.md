@@ -177,15 +177,19 @@ CHECKPOINT_PATH='./ckpt'
 
 ### LORA fine-tuning
 
-The execution process is consistent with the pre-training, and the parameters are modified as follows:
+Launch Bloom-7B pre-training script: examples/bloom/tune_bloom_7b1.sh
 
 ```shell
 # modify the model weight path
 CHECKPOINT_PATH='./ckpt'
 
-# Add configuration parameters
-pretrain_bloom.py
---lora-target-modules query_key_value dense 
+# modify the datasets path and tokenizer path
+TOKENIZER_NAME_OR_PATH=/home/bloom_data/vocab_file/
+DATA_PATH=/home/bloom_data/alpaca/alpaca
+```
+
+```shell
+bash examples/bloom/tune_bloom_7b1.sh
 ```
 
 ## Performance
@@ -196,7 +200,7 @@ The performance of Bloom-7B in **Ascend NPU** and **Reference**:
 
 | Device | Model    | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
 | ------ |----------|------------------|-------------------------------|------------------------------|---------------------------|-------------------------------------|
-| NPUs   | Bloom-7B | 1000             | 10.289                        | 2603                         | 18.67                     | 115.55                              |
+| NPUs   | Bloom-7B | 1000             | 9.779                         | 2503                         | 19.63                     | 109.85                              |
 | Reference   | Bloom-7B | 1000             | 9.894                         | 2525                         | 19.40                     | 111.19                              |
 
 
@@ -218,7 +222,11 @@ NPU vs GPU loss relative error.
 We support AscendSpeed Inference for text generation with BLOOM 7B (deepspeed or megatron).
 
 ### deepspeed pipeline
-
+```text
+    # Note that, a deepspeed bug needs to be fixed during evaluation：
+    # Comment out line 671 in the file `<deepspeed-installed-path>/runtime/pipe/engine.py`：
+    # self.total_loss += self.loss.detach()
+```
 ```shell
 # modify the model weight path and tokenizer path
 CHECKPOINT=/home/model/bloom_7B
@@ -258,7 +266,7 @@ bash ./examples/bloom/generate_bloom_7B_tp8_pp1.sh
 ```
 
 ## Evaluation 
-Config Bloom-7B evaluation script: tasks/evaluation/eval_bloom.sh
+Config Bloom-7B evaluation script: tasks/evaluation/evaluate_bloom_7b1.sh
 
 ```shell
 # modify the model weight path and tokenizer path
@@ -268,25 +276,24 @@ DATA_PATH="/dataset/boolq/test"
 TASK="boolq"
 ```
 
-In addition, you need to set the corresponding parameters according to the model size, bloom_7B parameters are:
-```shell
---num-layers 30 
---hidden-size 4096 
---num-attention-heads 32 
+```text
+    # Note that, a deepspeed bug needs to be fixed during evaluation：
+    # Comment out line 671 in the file `<deepspeed-installed-path>/runtime/pipe/engine.py`：
+    # self.total_loss += self.loss.detach()
 ```
 
 ```shell
-bash ./tasks/evaluation/eval_bloom.sh
+bash tasks/evaluation/evaluate_bloom_7b1.sh
 ```
 
 <table>
   <thead>
     <tr>
-      <th>任务</th>
-      <th>验证集</th>
-      <th>模型</th>
-      <th>昇腾值</th>
-      <th>社区值</th>
+      <th>Task</th>
+      <th>Subset</th>
+      <th>Model</th>
+      <th>NPU</th>
+      <th>OpenSource</th>
     </tr>
   </thead>
   <tbody>
@@ -448,6 +455,11 @@ Run the examples/bloom/pretrain_bloom_176b.sh on all nodes in the cluster.
 bash examples/bloom/pretrain_bloom_176b.sh
 ```
 
+```text
+When enable the FA, add '--use-flash-attn' and '--square-alibion-mask' to the script, and do not 
+use '--is-instruction-dataset'.
+```
+
 ## Performance
 
 ### Machine Performance
@@ -456,7 +468,7 @@ The performance of Bloom-176B in **Ascend NPU** and **Reference**:
 
 | Devices | Model | total iterations | throughput rate (tokens/s/p) |
 | ------- | ----- |-----------------| ---------------------------- |
-| NPUs    | Bloom-176B | 1000            | 112                          |
+| NPUs    | Bloom-176B | 1000            | 108                          |
 | Reference | Bloom-176B | NA              | 107                          |
 
 ### Accuracy of the loss
@@ -475,7 +487,11 @@ and GPU on a single-node system. The average relative error is 0.1%, less than 2
 We support AscendSpeed Inference for text generation with BLOOM 176B (deepspeed or megatron).
 
 ### deepspeed pipeline
-
+```text
+    # Note that, a deepspeed bug needs to be fixed during evaluation：
+    # Comment out line 671 in the file `<deepspeed-installed-path>/runtime/pipe/engine.py`：
+    # self.total_loss += self.loss.detach()
+```
 ```shell
 # modify the model weight path and tokenizer path
 CHECKPOINT=/home/model/bloom_176B
@@ -523,7 +539,7 @@ bash ./examples/bloom/generate_bloom_176b_2nodes.sh
 ```
 
 ## Evaluation 
-Config Bloom-7B evaluation script: tasks/evaluation/eval_bloom.sh
+Config Bloom-7B evaluation script: tasks/evaluation/evaluate_bloom_176b.sh
 
 ```shell
 # modify the model weight path and tokenizer path
@@ -533,13 +549,6 @@ DATA_PATH="/dataset/boolq/test"
 TASK="boolq"
 ```
 
-In addition, you need to set the corresponding parameters according to the model size, bloom_7B parameters are:
-```shell
---num-layers 70 
---hidden-size 14336 
---num-attention-heads 112 
-```
-
 ```text
     # Note that, a deepspeed bug needs to be fixed during evaluation：
     # Comment out line 671 in the file `<deepspeed-installed-path>/runtime/pipe/engine.py`：
@@ -547,16 +556,16 @@ In addition, you need to set the corresponding parameters according to the model
 ```
 
 ```shell
-bash ./tasks/evaluation/eval_bloom.sh
+bash tasks/evaluation/evaluate_bloom_176b.sh
 ```
 <table>
   <thead>
     <tr>
-      <th>任务</th>
-      <th>验证集</th>
-      <th>模型</th>
-      <th>昇腾值</th>
-      <th>社区值</th>
+      <th>Task</th>
+      <th>Subset</th>
+      <th>Model</th>
+      <th>NPU</th>
+      <th>OpenSource</th>
     </tr>
   </thead>
   <tbody>
