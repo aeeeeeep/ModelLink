@@ -142,7 +142,7 @@ git clone https://huggingface.co/internlm/internlm-7b
 cd ..
 ```
 
-将模型权重从 huggingface 格式转换为 AscendSpeed 可以处理的格式
+将模型权重从 huggingface 格式转换为 ModelLink 可以处理的格式
 ```shell
 mkdir model_weights
 SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py

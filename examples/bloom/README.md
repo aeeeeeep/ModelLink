@@ -208,7 +208,7 @@ NPU vs 参考 loss 相对误差
 
 ## 推理
 
-AscendSpeed 支持 BLOOM 7B 的文本生成推理.
+ModelLink 支持 BLOOM 7B 的文本生成推理.
 
 ### deepspeed_pipeline
 ```text
@@ -380,7 +380,7 @@ wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer_config.json
 cd ..
 ```
 
-将权重格式从 huggingface 格式转换为 AscendSpeed 格式：
+将权重格式从 huggingface 格式转换为 ModelLink 格式：
 
 ```shell
 #!/bin/bash
@@ -471,8 +471,7 @@ NPU vs 参考 loss
 
 ## 推理
 
-AscendSpeed 支持 BLOOM 176B的在线文本生成推理
-We support AscendSpeed Inference for text generation with BLOOM 176B (deepspeed or megatron).
+ModelLink 支持 BLOOM 176B的在线文本生成推理
 
 ### deepspeed_pipeline
 ```text

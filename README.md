@@ -1,4 +1,4 @@
-<p align="center"> <img src="sources/images/logo.png" height="90px" width="400px"> </p>
+<p align="center"> <img src="sources/images/modellink.png" height="110px" width="500px"> </p>
 
 <p align="center">
     <a>
@@ -20,13 +20,13 @@
     </p>
 </p>
 
-AscendSpeed旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) 上的大语言模型提供端到端的解决方案, 包含模型，算法，算子，以及下游任务。
+ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) 上的大语言模型提供端到端的解决方案, 包含预训练，微调，推理以及评估。
 
-## AscendSpeed解决方案概览
+## ModelLink概览
 
 ---
 ### 大语言模型
-当前AscendSpeed支持下列模型的预训练以及全参微调:
+当前ModelLink支持下列模型的预训练以及全参微调:
 * <a href="https://huggingface.co/BAAI/Aquila-7B/tree/main" style="color:green">Aquila</a>-[[使用说明: 7B]](examples/aquila/README.md)
 * <a href="https://github.com/baichuan-inc" style="color:green">Baichuan</a>-[[使用说明: 7B/13B]](examples/baichuan/README.md)
 * <a href="https://arxiv.org/pdf/2108.12409.pdf" style="color:green">Bloom</a>-[[使用说明: 7B/176B]](examples/bloom/README.md)
@@ -37,35 +37,13 @@ AscendSpeed旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBa
 
 
 ### 下游任务
-当前AscendSpeed为大模型提供以下周边应用:
+当前ModelLink为大模型提供以下周边应用:
 * [指令/预训练数据集](#jump11)
 * [低参微调方法](#jump12)
 * [推理：人机对话](#jump13)
 * [基线数据集评估](#jump14)
 
 强化学习，多专家网络等特性持续研发中....
-
-### 加速算法
-当前AscendSpeed支持以下分布式加速算法:
-
-* [张量并行](#jump1)
-* [(虚拟 & 动态) 流水并行](#jump2)
-* [Fold-3D](#jump3)
-* [重计算策略](#jump4)
-* [序列并行](#jump5)
-* [ZeRO-1/2](#jump6)
-* [倒三角加速](#jump7)
-* [高性能优化器](#jump8)
-* [前向网络合并](#jump9)
-* [梯度累积](#jump9)
-* [混精内存复用](#jump10)
-
-更多高效的加速算法正在为昇腾芯片上的大语言模型研发中...
-
-### 融合算子
-即将上线 ...
-
-
 
 ## 大语言模型
 
@@ -253,88 +231,18 @@ AscendSpeed旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBa
 </table>
 
 
-### 模型训练
-这里展示了一个使用AscendSpeed进行模型训练的例子，针对每一个模型具体的操作指导可以在 `examples/modelname` 文件夹下看到
+### 模型软件配套
 
-1. 拷贝仓库到你的个人服务器:
-
-```bash
-git clone https://gitee.com/ascend/AscendSpeed.git
-cd AscendSpeed
-mkdir logs
-mkdir ckpt
-```
-
-2. 构建运行环境
-
-```bash
-# python3.7
-conda create -n test python=3.7
-conda activate test
-
-# 安装 torch 和 torch_npu
-# ARM
-wget https://download.pytorch.org/whl/torch-1.11.0-cp37-cp37m-manylinux2014_aarch64.whl
-wget https://gitee.com/ascend/pytorch/releases/download/v5.0.rc2.2-pytorch1.11.0/torch_npu-1.11.0.post3-cp37-cp37m-linux_aarch64.whl
-# X86
-pip install torch==1.11 -i https://pypi.tuna.tsinghua.edu.cn/simple
-wget https://gitee.com/ascend/pytorch/releases/download/v5.0.rc2.2-pytorch1.11.0/torch_npu-1.11.0.post3-cp37-cp37m-linux_x86_64.whl
-# 如果使用 'wget' 下载失败, 可以在确保网站安全的情况下点击网站直接下载
-
-pip install torch-1.11.0-cp37-cp37m-manylinux2014_aarch64.whl (ARM)
-pip install torch_npu-1.11.0.post3-cp37-cp37m-linux_XXXXXX.whl
-
-# 安装 apex
-pip install apex-0.1_ascend_XXXXX-cp37-cp37m-linux_x86_64.whl
-pip install apex-0.1-ascend_XXXXX-cp37-cp37m-linux_aarch64.whl (ARM)
-
-# 安装 megatron-core
-pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
-
-# 安装 deepspeed 和 deepspeed_npu
-pip install deepspeed==0.9.2
-git clone https://gitee.com/ascend/DeepSpeed.git -b v0.9.2 deepspeed_npu
-cd deepspeed_npu
-pip3 install -e ./
-
-# 安装其他的依赖
-pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-```
+|    软件           |          配置              |
+|:-----------------:|:--------------------------:|
+|    python         | 3.8.18                     |
+|    driver         |  [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software)                 |
+|    firmware       | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software)                  |
+|    CANN           |  [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)                             |
+|    torch          |                      2.1.0                                                                                                    |
+|    torch_npu      |  [package](https://gitee.com/ascend/pytorch/releases)                                                                         |
 
 
-3. 准备数据集 (点击 [这里](https://huggingface.co/yahma/llama-7b-hf/tree/main) 下载tokenizer配置文件):
-```bash
-# 对于 llama, 可以下载 alpaca 数据集, 比如：
-wget https://raw.githubusercontent.com/tatsu-lab/stanford_alpaca/main/alpaca_data.json
-
-# 这里要将tokenizer_config.json中的"LLaMATokenizer"修改为"LlamaTokenizer"（这是huggingface的一个bug）
-mkdir dataset
-python tools/preprocess_data.py --input alpaca_data.json \
-                                --output-prefix dataset/alpaca \
-                                --tokenizer-type PretrainedFromHF \
-                                --tokenizer-name-or-path llama-7b-hf \
-                                --tokenizer-not-use-fast \
-                                --handler-name GeneralInstructionHandler
-```
-
-4. (可选的) 准备预训练权重 (点击 [这里](https://huggingface.co/yahma/llama-7b-hf/tree/main) 下载权重文件):
-```bash
-python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir ../llama-7b-hf \
-                                                                    --output-model-dir ckpt \
-                                                                    --tensor-model-parallel-size 1 \
-                                                                    --pipeline-model-parallel-size 1 \
-                                                                    --type 7B
-
-# 如果你想要改变并行策略，可以通过设置 `tensor-model-parallel-size` 和 `pipeline-model-parallel-size` 标志，实现预训练权重的切分
-# 脚本: tools/ckpt_convert/llama/convert_weights_when_tp_pp_change.py 对于推理时的权重合并也是有帮助的.
-```
-
-5. 启动训练
-
-```bash
-# 在脚本中设置你自己的数据/权重/tokenizer等路径
-sh examples/llama/pretrain_llama_7B_zero_8p.sh
-```
 
 
 ## 下游任务
@@ -562,7 +470,7 @@ python tools/preprocess_data.py --input WORKSPACE/alpaca/train-00000-of-00001-a0
 ### <span id="jump12"> 低参微调 </span>
 #### Lora
 
-当前 AscendSpeed基于 peft 仓库支持对大模型的 Lora 微调功能：
+当前 ModelLink 基于 peft 仓库支持对大模型的 Lora 微调功能：
 
 ```shell
 pip install peft==0.4.0
@@ -602,7 +510,7 @@ Lora有一些相关参数，在 [PEFT](https://github.com/huggingface/peft) 仓�
 ```shell
 You >> Give three tips for staying healthy.
 
-AscendSpeed:
+ModelLink:
 
 - Start exercising regularly and eat healthy food.
 - Get a good eight hours of sleep each night.
@@ -669,10 +577,12 @@ AscendSpeed:
 initialize_megatron(args_defaults={'no_load_rng': True, 'no_load_optim': True})
 ```
 ##### 初始化模型和权重
+
 ```python
-from ascendspeed import get_args
-from ascendspeed.model import GPTModel
-from ascendspeed.arguments import core_transformer_config_from_args
+from modellink import get_args
+from modellink.model import GPTModel
+from modellink.arguments import core_transformer_config_from_args
+
 
 def model_provider(pre_process=True, post_process=True):
     """Build the model."""
@@ -916,196 +826,11 @@ Big-bench-hard 数据集是 BIG-Bench 的一个子集，专注于有挑战性的
 ##### CEval
 如 [C-Eval](https://cevalbenchmark.com/) 展示的, C-Eval 是一个针对大模型的综合中文评估数据集， 它由13948道多项选择题组成，涵盖52个不同学科和4个难度级别，划分为验证和测试集，验证集包含标签用于个人评估，测试集合的标签没有公开，如果想要知道模型得分，需要将结果 邮件发送给 [C-Eval](https://cevalbenchmark.com/)。
 
-## 加速算法介绍
-
----
-
-### <span id="jump1"> 张量并行 </span>
-张量并行（Tensor Parallelism，TP）是一种模型并行策略，它将单个Transformer模块的执行拆分到多个设备上，以均分内存消耗。TP的基本原理如下：<div align=center>
-<img src="sources/images/tp_in_mlp.png" height="280px" width="500px">
-<img src="sources/images/tp_in_sa.png" height="280px" width="500px"></div>
-在 AscendSpeed 中使用张量并行， 可以在启动脚本中增加  `--tensor-model-parallel-size` 标志， 来明确用于拆分模型的GPU数量。
-
-### <span id="jump2">  (虚拟 & 动态) 流水并行  </span>
-流水并行（Pipeline Parallelism (PP)）是一种将模型所有的Transformer模块划分为多个stage放在不同卡上训练的模型并行技术。
-在PP中，每一个stage都有相等数量的Transformer，同时通过将 全局的 （global） batchsize 拆分为多个 微 （micro） batchsize，在stage间流水化训练这些微 batchsize，以达到训练整个模型的目的。
-虚拟流水并行 （Virtual Pipeline (VP) Parallelism），通过增加虚拟的 stage 来减少 PP 运行时的空泡时间， 动态流水并行 （Dynamic Pipline Parallelism，DPP） 则是增强版本的 VP， 通过合理的设置每个微 batchsize的大小进一步降低空泡时间。
-PP 和 VP的基本原理如下：<div align=center> <img src="sources/images/pp_vp.png" height="350px" width="800px"> </div>
-
-在AscendSpeed中，可以通过使能`--pipeline-model-parallel-size` 标志来明确PP要将模型划分为多少个 stage，比如，该参数设置为4，就是将一个具有24层transformer的模型划分为4个stage，每个stage有6层transformer。
-为了使用VP，需要额外添加 `--num-layers-per-virtual-pipeline-stage` 标志，来决定每个虚拟stage的层数；为了使用DPP，则需要在PP的基础上添加 `--optimized-pipeline` 和 `--manual-mbs example-config-1` 标志。需要说明的是，虽然VP和DPP可以减少空泡时间，但是会增加通讯时间。
-
-
-### <span id="jump3"> Fold3D </span>
-Fold3D 隐藏了 PP 中数据并行的通信时间，其基本原理如下：<div align=center>
-<img src="sources/images/fold3d.png" height="350px" width="800px"></div>
-在AscendSpeed中，使用 `--fold-mode "aiao"` 标志可以打开该功能。
-
-### <span id="jump4"> (选择性) 重计算 </span>
-为了使用有限的显存来训练更大的模型，AscendSpeed 支持完全重计算以及选择性重计算策略，为了使能完全重计算，可以使用 `--checkpoint-activations` 标志，
-至于选择性重计算，则可以通过添加 `--checkpoint-policy` 标志来决定选择性重计算的策略。
-
-为了最大限度地利用NPU内存，同时提高模型训练的性能，我们支持通过调整训练内存大小的方式，自动获取选择重计算策略，这一特性称为[自适应选择重计算](https://gitee.com/ascend/AscendSpeed/wikis/Algorithm%20Introduction/Auto%20Selective%20Recomputing)。
-启用自适应选择重计算，请使用`--auto-recompute-device-size`标志指定自适应选择重计算策略的训练内存大小（单位：MB）。请注意，如果要使用`--auto-recompute-device-size`标志，请删除标志`--checkpoint-activations`。
-如果发生OOM，您需要重新选择一个内存值来重启模型训练。您也可以通过[二分法](https://gitee.com/ascend/AscendSpeed/wikis/Algorithm%20Introduction/Auto%20Selective%20Recomputing)的方式获得最优解。
-自适应选择重计算根据profiling前N步的训练内存信息进行策略选择，您可以通过使用`--auto-recompute-profiling-step`标志设置[停止profiling](https://gitee.com/ascend/AscendSpeed/wikis/Algorithm%20Introduction/Auto%20Selective%20Recomputing)的步数。
-默认在第10步停止profiling，最小设置为5步，建议在训练内存平稳后停止profiling，这样可以获得更佳的选择重计算策略。
-
-### <span id="jump5"> 序列并行 </span>
-序列并行（Sequence Parallelism，SP）是一种模型并行策略，它依赖TP的实现，沿着序列轴按照TP的维度拆分了dropout层和layernorm层。
-SP将TP中的allreduce操作拆分为了reduce-scatter和allgather操作，这降低了模型训练中的内存占用。
-
-<img src="sources/images/sp.png" height="250px" width="800px"></div>
-
-为了使能SP, `--tensor-model-parallel-size` 标志应该大于1，同时设置 `--sequence-parallel` 标志。
-
-### <span id="jump6"> ZeRO-1/2/3 </span>
-无冗余优化器（Zero Redundancy Optimizer，ZeRO）是微软提出的一种在数据并行中优化内存的并行策略。AscendSpeed通过增加deepspeed分支，支持了ZeRO-1/2，其基本原理如下：
-<div align=center>
-<img src="sources/images/ZeRO.png" height="250px" width="600px"></div>
-
-为了使能ZeRO-1/2, 我们需要配置一个如 [例子](examples/llama/pretrain_llama_7B_zero_8p.sh) 所示的deepspeed config。
-值得一提的是，如果仅仅是需要ZeRO-1，那么deepspeed不是必须的，只需要设置 `--use-distributed-optimizer` 标志就可以了。
-
-### <span id="jump7"> 倒三角加速 </span>
-倒三角在python层面实现了flash attention，是一种针对attention模块的加速算法。基本的，self-attention在计算attention值的时候会把整个attention mask纳入计算，
-而倒三角加速算法仅仅会计算必要的部分，从而降低计算量，计算过程如下：
-<div align=center>
-<img src="sources/images/triangle.png" height="600px" width="600px"></div>
-
-在AscendSpeed中可以通过使能 `--triangle-attn` 标志打开倒三角加速。
-
-
-### <span id="jump8"> 高性能优化器 </span>
-融合优化器通过减小算子下发降低计算时间，在AscendSpeed中，通过 `--optimizer` 可以选择不同的优化器，具体的，选择 `--optimizer adam` 可以节省更多内存，选择 `--optimizer fused_adam` 则可以运行的更快。
-
-除此之外，我们还提供一些自研的低内存优化器。如：
-
-Cadam是基于谷歌提出的[Lion优化器](https://arxiv.org/abs/2302.06675)，并采用与其beta参数相同的极简形式。这样在去掉二阶动量的同时，可以得到类似于Adam的参数更新效果。然后对一阶动量进行量化和逐行压缩，采用昇腾亲和的FP16进行计算，同时结合Scale和clip操作防止溢出。
-
-<div align=center>
-<img src="sources/images/cadam.png" height="300px" width="600px"></div>
-
-欲使用Cadam优化器，需要在脚本中指定如下参数`--optimizer cadam`，并将能够用Adam正常平稳训练的模型的学习率`lr`和最小学习率`min-lr`缩小3-10倍，`weight_decay`同步放大3-10倍，`--adam-beta1 0.965`。
-
-部分大模型的测试结果如下表所示：
-
-<table>
-  <thead>
-    <tr>
-      <th>模型</th>
-      <th>优化器</th>
-      <th>性能</th>
-      <th>平均压缩HBM</th>
-      <th>BoolQ</th>
-      <th>PIQA</th>
-      <th>HellaSwag</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td rowspan="2"> LLama-7B </td>
-      <td> Adam </td>
-      <td> 5.65s/iteration </td>
-      <td> -- </td>
-      <td> 38.78% </td>
-      <td> 52.88% </td>
-      <td> 26.69% </td>
-    </tr>
-    <tr>
-      <td>  Cadam </td>
-      <td> 5.68s/iteration </td>
-      <td> ↓ 21.8% </td>
-      <td> 41.50% </td>
-      <td> 55.11% </td>
-      <td> 26.59% </td>
-    </tr>
-    <tr>
-      <td rowspan="2"> LLama2-7B </td>
-      <td> Adam </td>
-      <td> 7.09s/iteration </td>
-      <td> -- </td>
-      <td> 40.36% </td>
-      <td> 51.20% </td>
-      <td> 25.13% </td>
-    </tr>
-    <tr>
-      <td>  Cadam </td>
-      <td> 7.12s/iteration </td>
-      <td> ↓ 17.4% </td>
-      <td> 44.16% </td>
-      <td> 51.20% </td>
-      <td> 26.29% </td>
-    </tr>
-    <tr>
-      <td rowspan="2"> Bloom-7B </td>
-      <td> Adam </td>
-      <td> 4.10s/iteration </td>
-      <td> -- </td>
-      <td> 37.83% </td>
-      <td> 49.24% </td>
-      <td> 25.31% </td>
-    </tr>
-    <tr>
-      <td>  Cadam </td>
-      <td> 4.25s/iteration </td>
-      <td> ↓ 10.1% </td>
-      <td> 37.83% </td>
-      <td> 51.16% </td>
-      <td> 25.25% </td>
-    </tr>
-  </tbody>
-</table>
-
-
-### <span id="jump9">  前向网络合并 </span>
-对于llama以及一些在FFN中没有bias的模型，FFN中的线性层可以合并计算以减少TP中的通信量，通过设置 `--mlp-layer-fusion` 标志，可以使用该特性。
-
-
-### <span id="jump9">  梯度累积 </span>
-梯度累积基于 N 轮梯度更新一次参数，这里的 N = global batchsize / micro batchsize / DP，DP = device nums / tp / pp。
-
-### <span id="jump10"> 混精内存复用 </span>
-混合精度训练中，需要保存参数副本、梯度副本、优化器状态等多种状态张量，占据了大量的静态内存（16N，N为参数量），而实际参与前反向计算的参数和梯度（4N，N为参数量）相比之下占比很小，优化以上状态张量可以带来极大的显存收益。本算法希望通过深入分析每部分状态张量的实际使用实现机制的显存复用，最终得到一个集成多个算法模块的多级优化器内存优化方案。
-- 内存复用O1——梯度副本去冗余
-  - 优势：完全等价、支持多种优化器、性能无损
-  - 算法原理：将原本需要持久保存的FP32梯度副本的静态内存，复用FP16梯度的内存，在需要时通过`Foreach`+`Cast`操作转换成FP32的形式，可节省4N的空间。
-  - 使用方式：该等价算法对所有优化器适用，可在脚本中通过指定`--release-fp32-grad`触发。
-  - 使用限制：当前仅适配Adam优化器，其余优化器可参考Adam实现。
-
-原始混合精度训练流程：
-
-<div align=center>
-<img src="https://foruda.gitee.com/images/1700028272497165508/7fbb164b_7943704.png" height="545px" width="461px"></div>
-
-内存复用O1训练流程：
-
-<div align=center>
-<img src="https://foruda.gitee.com/images/1700028261897403802/74ba37b6_7943704.png" height="570px" width="655px"></div>
-
-部分模型测试结果如下表：
-
-| Model    | Algorithm            | Performance     | Compress HBM | Performance Error | Precision Error | Hardware |
-|----------|----------------------|-----------------|---------------|-------------------|-----------------|----------|
-| LLama-7B | baseline             | 5.39s/iteration | --            | --                | --              | 910B*8P  |
-|          | O1 algorithm         | 5.40s/iteration | ↓ 13.5%       | ↓ 0.17%           | < 0.05%         | 910B*8P  |
-| LLama-13B| baseline             | 8.95s/iteration | --            | --                | --              | 910B*8P  |
-|          | O1 algorithm         | 8.92s/iteration | ↓ 14.90%      | ↑ 0.34%           | < 0.2%          | 910B*8P  |
-| LLama2-7B| baseline             | 6.48s/iteration | --            | --                | --              | 910B*8P  |
-|          | O1 algorithm         | 6.48s/iteration | ↓ 10.87%      | ↓ 0.00%           | < 0.2%          | 910B*8P  |
-| Bloom-7B | baseline             | 5.45s/iteration | --            | --                | --              | 910B*8P  |
-|          | O1 algorithm         | 5.49s/iteration | ↓ 12.68%      | ↓ 0.7%            | < 0.01%         | 910B*8P  |
-| LLama-32B| baseline             | 5.23s/iteration | --            | --                | --              | 910B*16P |
-|          | O1 argorithm         | 5.28s/iteration | ↓ 15.93%      | ↓ 0.95%           | < 0.02%         | 910B*16P |
-| LLama-7B | distributed baseline | 5.18s/iteration | --            | --                | --              | 910B*8P  |
-|          | O1 distributed algorithm | 5.19s/iteration | ↓ 9.50%       | ↓ 0.2%            | < 0.1%          | 910B*8P  |
-
-
 ## 致谢
 
 ---
 
-AscendSpeed由华为公司的下列部门联合贡献
+ModelLink由华为公司的下列部门联合贡献
 ：
 - 昇腾计算产品线
 - 计算算法部
@@ -1114,13 +839,4 @@ AscendSpeed由华为公司的下列部门联合贡献
 - 公共开发部
 - 全球技术服务部
 
-感谢来自社区的每一个PR，欢迎贡献 AscendSpeed
-
-## 备注
-
----
-- 内部函数说明:  [内部函数](https://gitee.com/ascend/AscendSpeed/wikis/Inner%20API%20Description/Some%20inner%20interface%20description?sort_id=8824096)
-- 参数说明: [参数说明](https://gitee.com/ascend/AscendSpeed/wikis/Home)
-- 许可描述: 在运行程序之前，建议您对训练所需的文件（如ckpt、日志等）采取权限控制（普通用户而不是root权限）等安全措施
-- 路径描述: 当你使用 `torch.load` 接口时，除非 weights_only 参数被设置为 True， 否则请隐式的使用 pickle 模块，我们不建议您加载和使用任何来源未知或不可信任的数据
-- 通信矩阵: [通信矩阵](https://gitee.com/ascend/AscendSpeed/wikis/Communition%20Matrix/AscendSpeed%20Communication%20Matrix?sort_id=8855822)
+感谢来自社区的每一个PR，欢迎贡献 ModelLink

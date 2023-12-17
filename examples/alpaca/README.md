@@ -7,7 +7,7 @@
 
 
 
-这里介绍如何快速复现 AscendSpeed 中 [Chinese-LLaMA-Alpaca](https://arxiv.org/abs/2304.08177) 的测试结果
+这里介绍如何快速复现 ModelLink 中 [Chinese-LLaMA-Alpaca](https://arxiv.org/abs/2304.08177) 的测试结果
 
 > Cui, Yang, and Yao, et al. "Efficient and Effective Text Encoding for Chinese LLaMA and Alpaca." arXiv preprint arXiv:2304.08177 (2023).
 
@@ -106,9 +106,9 @@ python merge_llama_with_chinese_lora.py \
 
 权重合并后请检查 [SHA256](https://github.com/ymcui/Chinese-LLaMA-Alpaca/blob/main/SHA256.md)，由于 HF格式的 SHA256 经常发生变化，一般推荐先转化为 `pth` 格式，在确认 SHA256 正确以后，再根据需要转换为 HF 格式。
 
-#### 步骤 4: 将HF的权重格式转化为AscendSpeed格式
+#### 步骤 4: 将HF的权重格式转化为ModelLink格式
 
-如果要使用AscendSpeed的张量和流水并行策略，执行：
+如果要使用ModelLink的张量和流水并行策略，执行：
 
 ```
 python tools/ckpt_convert/llama/convert_weights_from_huggingface.py \
@@ -118,7 +118,7 @@ python tools/ckpt_convert/llama/convert_weights_from_huggingface.py \
     --pipeline-model-parallel-size 2 \
     --type 7B                                                                    
 ```
-如果要使用AscendSpeed中DeepSpeed的并行策略，执行:
+如果要使用ModelLink中DeepSpeed的并行策略，执行:
 
 ```
 python tools/ckpt_convert/llama/convert_weights_from_huggingface.py \
@@ -253,7 +253,7 @@ NPU vs GPU loss 相对误差.
 
 ## 推理
 
-AscendSpeed 当前支持 Chinese LLaMA Alpaca-13B 的文本生成推理
+ModelLink 当前支持 Chinese LLaMA Alpaca-13B 的文本生成推理
 
 ### 脚本
 

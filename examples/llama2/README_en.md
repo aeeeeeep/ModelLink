@@ -275,13 +275,13 @@ Some inference samples are as follows:
 
 You >> how are you?
 
-AscendSpeed:
+ModelLink:
 
 I am doing well, thank you for asking! It's always nice to connect with someone new. How about you?</s>
 
 You >> Give three tips for staying healthy.
 
-AscendSpeed:
+ModelLink:
 
 
 1. Eat a balanced diet that includes plenty of fruits, vegetables, whole grains, and lean proteins.
@@ -290,7 +290,7 @@ AscendSpeed:
 
 You >> How can we reduce air pollution?
 
-AscendSpeed:
+ModelLink:
 
 Air pollution is a major environmental issue that can have serious health and economic consequences. To reduce air pollution, we need to take a multi-faceted approach that includes individual and collective action. Here are some ways to reduce air pollution:
 1. Reduce the use of fossil fuels: Fossil fuels are a major source of air pollution, so reducing their use is an effective way to reduce air pollution. This can be done by switching to renewable energy sources such as solar, wind, and geothermal.
@@ -301,7 +301,7 @@ Air pollution is a major environmental issue that can have serious health and ec
 
 You >> Any more suggestions, please go ahead and list
 
-AscendSpeed:
+ModelLink:
 them.
 6. Avoid burning wood or other materials: Burning wood or other materials releases harmful pollutants into the air. Avoid burning materials such as wood, coal, or other materials that release pollutants.
 7. Improve indoor air quality: Poor indoor air quality can contribute to air pollution. Improve indoor air quality by using a HEPA air purifier, avoiding smoking and secondhand smoke, and using natural air fresheners.
@@ -566,7 +566,7 @@ The precision meets the requirements.The absolute error of the average loss is 0
 
 ## Inference
 
-We support AscendSpeed Inference for text generation with Llama2 13B.
+We support Inference for text generation with Llama2 13B.
 Inference different from pre-training, such as we need to Load pre-training checkpoint and the length of the output samples:
 
 Config Llama2-13B inference script: examples/llama2/generate_llama2_13B_tp8_pp1.sh
@@ -978,7 +978,7 @@ Some inference samples of LLaMA2-34B are as follows:
 You:
 how are you?
 
-AscendSpeed:
+ModelLink:
 
 I am doing well. I am happy to be here.
 I am happy to be here.
@@ -997,7 +997,7 @@ Elapsed: 36.48s
 You:
 how are you?
 
-AscendSpeed:
+ModelLink:
 ['is good?\nShaun, you’re a good writer. It is the truth, but the truth is also a matter of perspective. Is a matter of perspective. That is the matter. The matter is.\nThe matter.\nThe matter is.\n\n\n\n\n\n\n\n\n\n', 'are you alive?  are you okay? can you help me? do you want to? are you done? does your girlfriend know? do you need help? can you get me one? do you want to go see a movie? are you going to the mall? are you okay? are you okay']
 ============================================
 
@@ -1008,7 +1008,7 @@ Elapsed: 50.4s
 You:
 how are you?
 
-AscendSpeed:
+ModelLink:
 
 I'm doing well, thanks for asking. I've been busy with work and other things, but I'm doing well.
 How about you?
@@ -1022,7 +1022,7 @@ Elapsed: 27.7s
 You:
 how are you?
 
-AscendSpeed:
+ModelLink:
 
 How are you? is a common greeting in English.
 It is used to ask about the other person's well-being. It can be used in a variety of situations, such as when meeting someone for the first time, or when greeting someone you haven't seen in a while.
@@ -1038,7 +1038,7 @@ Some inference samples of LLaMA2-70B are as follows:
 You:
 how are you?
 
-AscendSpeed:
+ModelLink:
 I hope you are fine. I am fine too.
 I am writing to you because I want to tell you about my holidays.
 I went to the seaside with my family. We stayed in a hotel.
@@ -1054,7 +1054,7 @@ Elapsed: 60.25s
 You:
 how are you?
 
-AscendSpeed:
+ModelLink:
 long time, no hear.
 I know! It has been far too long... I'm doing alright though, and yourself?
 I've been doing pretty well!
@@ -1071,7 +1071,7 @@ Elapsed: 34.13s
 You:
 how are you?
 
-AscendSpeed:
+ModelLink:
 I hope you are fine. I am fine too.
 I am writing to you because I want to tell you about my holidays.
 I went to the seaside with my family. We stayed in a hotel near the beach.
@@ -1085,7 +1085,7 @@ Elapsed: 46.29s
 You:
 how are you?
 
-AscendSpeed:
+ModelLink:
 I hope you are fine.
 I would like to tell you that I have a problem with my account.
 I have a problem with my account.

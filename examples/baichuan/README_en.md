@@ -382,7 +382,7 @@ The relative error between NPU and Reference Loss is less than 0.02 throughout, 
 
 
 ### Inference
-We support AscendSpeed Inference for text generation with LLaMA-33B.
+We support ModelLink Inference for text generation with LLaMA-33B.
 Inference different from pre-training, such as we need to Load pre-training checkpoint and the length of the output samples:
 
 Config Baichuan-13B inference script `examples/baichuan/generate_baichuan_13B_tp8_pp1.sh`.
@@ -406,7 +406,7 @@ Some inference samples are as follows:
 
 
 ### Lora
-We support AscendSpeed Lora fine-tuning with Baichuan-13B.
+We support Lora fine-tuning with Baichuan-13B.
 When Fine-tuning using `instruction fine-tuning data set`, the production process is as follows, 
 pay attention to add ` --handler-name GeneralInstructionHandler `
 

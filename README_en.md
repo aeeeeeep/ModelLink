@@ -1,4 +1,4 @@
-<p align="center"> <img src="sources/images/logo.png" height="90px" width="400px"> </p>
+<p align="center"> <img src="sources/images/modellink.png" height="90px" width="400px"> </p>
 
 <p align="center">
     <a>
@@ -20,9 +20,9 @@
     </p>
 </p>
 
-AscendSpeed provides end-to-end solutions for large language models on [Ascend](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) chips, including models, algorithms, kernels, and tasks.
+ModelLink provides end-to-end solutions for large language models on [Ascend](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) chips, including pretraining, fine-tuning, inference, and evaluation.
 
-## Why AscendSpeed?
+## Why ModelLink?
 
 ---
 ### Prepared Models
@@ -42,28 +42,6 @@ Currently, the following downstream tasks have been supported:
 * [Low-parameter fine-tuning](#jump12)
 * [Inference: human-machine dialogue](#jump13)
 * [Evaluation with numerous benchmarks](#jump14)
-
-
-### Acceleration Features
-Currently, the following acceleration features for LLMs have been supported:
-
-* [Tensor parallelism](#jump1)
-* [(Virtual & Optimized) Pipeline parallelism](#jump2)
-* [Fold-3D](#jump3)
-* [Recomputation](#jump4)
-* [Sequence parallelism](#jump5)
-* [ZeRO-1/2](#jump6)
-* [Inverted triangle acceleration](#jump7)
-* [Optimizers](#jump8)
-* [Merged feed-forward network](#jump9)
-* [Gradient accumulation](#jump9)
-* [Memory overcommitment](#jump10)
-
-More novel and useful features are developing for LLMs training on Ascend ...
-
-### Fused Kernels
-Coming soon ...
-
 
 
 ## Quick Start For Model Training
@@ -252,89 +230,17 @@ Coming soon ...
 </table>
 
 
-### Model Training
-This is an example of model training with AscendSpeed, and the detailed guideline for each model could be found in the `examples/modelname` folder.
+### Model Software
 
-1. Clone the repository to your local server:
+| Software  |                                                    Config                                                    |
+|:---------:|:------------------------------------------------------------------------------------------------------------:|
+|  python   |                                                    3.8.18                                                    |
+|  driver   | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
+| firmware  | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
+|   CANN    |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
+|   torch   |                                                    2.1.0                                                     |
+| torch_npu |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
 
-```bash
-git clone https://gitee.com/ascend/AscendSpeed.git
-cd AscendSpeed
-mkdir logs
-mkdir ckpt
-```
-
-2. Build environment
-
-```bash
-# python3.7
-conda create -n test python=3.7
-conda activate test
-
-# install torch and torch_npu
-# ARM
-wget https://download.pytorch.org/whl/torch-1.11.0-cp37-cp37m-manylinux2014_aarch64.whl
-wget https://gitee.com/ascend/pytorch/releases/download/v5.0.rc2.2-pytorch1.11.0/torch_npu-1.11.0.post3-cp37-cp37m-linux_aarch64.whl
-# X86
-pip install torch==1.11 -i https://pypi.tuna.tsinghua.edu.cn/simple
-wget https://gitee.com/ascend/pytorch/releases/download/v5.0.rc2.2-pytorch1.11.0/torch_npu-1.11.0.post3-cp37-cp37m-linux_x86_64.whl
-# If the download of the file fails using 'wget' , you can download it manually while ensuring website security.
-
-pip install torch-1.11.0-cp37-cp37m-manylinux2014_aarch64.whl (ARM)
-pip install torch_npu-1.11.0.post3-cp37-cp37m-linux_XXXXXX.whl
-
-# install apex
-pip install apex-0.1_ascend_XXXXX-cp37-cp37m-linux_x86_64.whl
-pip install apex-0.1-ascend_XXXXX-cp37-cp37m-linux_aarch64.whl (ARM)
-
-# install megatron-core
-pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
-
-# install deepspeed and deepspeed_npu
-pip install deepspeed==0.9.2
-git clone https://gitee.com/ascend/DeepSpeed.git -b v0.9.2 deepspeed_npu
-cd deepspeed_npu
-pip3 install -e ./
-
-# install other packages
-pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-```
-
-
-3. Prepare dataset (download tokenizer configs from [here](https://huggingface.co/yahma/llama-7b-hf/tree/main)):
-```bash
-# for llama, download alpaca dataset, like
-wget https://raw.githubusercontent.com/tatsu-lab/stanford_alpaca/main/alpaca_data.json
-
-# revise "LLaMATokenizer" as "LlamaTokenizer" in tokenizer_config.json (This is a bug of huggingface)
-mkdir dataset
-python tools/preprocess_data.py --input alpaca_data.json \
-                                --output-prefix dataset/alpaca \
-                                --tokenizer-type PretrainedFromHF \
-                                --tokenizer-name-or-path llama-7b-hf \
-                                --tokenizer-not-use-fast \
-                                --handler-name GeneralInstructionHandler
-```
-
-4. (Selective) Prepare pretrained weights (download weights from [here](https://huggingface.co/yahma/llama-7b-hf/tree/main)):
-```bash
-python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir ../llama-7b-hf \
-                                                                    --output-model-dir ckpt \
-                                                                    --tensor-model-parallel-size 1 \
-                                                                    --pipeline-model-parallel-size 1 \
-                                                                    --type 7B
-
-# if you want to change the parallel strategy, the pretrained weights should also be sharded
-# by setting `tensor-model-parallel-size` and `pipeline-model-parallel-size`.
-# The script: tools/ckpt_convert/llama/convert_weights_when_tp_pp_change.py is helpful for weights merge in inference.
-```
-
-5. Start your task
-
-```bash
-# set your data path / weight path / tokenizer path etc.
-sh examples/llama/pretrain_llama_7B_zero_8p.sh
-```
 
 
 ## Downstream Tasks
@@ -614,7 +520,7 @@ After using Lora to fine-tune the Llama model, the instruction dialogue effect i
 ```shell
 You >> Give three tips for staying healthy.
 
-AscendSpeed:
+ModelLink:
 
 - Start exercising regularly and eat healthy food.
 - Get a good eight hours of sleep each night.
@@ -684,10 +590,12 @@ Follow these steps to write your own inference code:
 initialize_megatron(args_defaults={'no_load_rng': True, 'no_load_optim': True})
 ```
 ##### Initializing model and loading weights
+
 ```python
-from ascendspeed import get_args
-from ascendspeed.model import GPTModel
-from ascendspeed.arguments import core_transformer_config_from_args
+from modellink import get_args
+from modellink.model import GPTModel
+from modellink.arguments import core_transformer_config_from_args
+
 
 def model_provider(pre_process=True, post_process=True):
     """Build the model."""
@@ -958,111 +866,10 @@ TASK="boolq"
 # configure generation parameters
 ```
 
-## Introduction For Acceleration Features
-
----
-
-### <span id="jump1"> Tensor Parallelism </span>
-Tensor parallelism (TP) is a kind of model parallelism strategy, which splits execution of a single transformer module over multiple devices.
-The basic principle of PP is:<div align=center>
-<img src="sources/images/tp_in_mlp.png" height="280px" width="500px">
-<img src="sources/images/tp_in_sa.png" height="280px" width="500px"></div>
-To use tensor model parallelism in Ascendspeed, add the `--tensor-model-parallel-size` flag to specify the number of GPUs among which to split the model.
-
-### <span id="jump2">  (Virtual & Optimized) Pipeline Parallelism  </span>
-Pipeline parallelism (PP) is a kind of model parallelism strategy, which shards the transformer modules into stages
-with an equal number of transformer modules on each stage and then pipelines execution by breaking the batch into
-smaller microbatches. Virtual pipeline (VP) parallelism optimizes PP by add virtual stages to reduce pipeline bubble time. Optimized Pipline Parallelism (OPP) is an enhanced version of VP, which further reduces the bubble time by reasonably setting the size of each microbatch. The basic principle of PP and VP is:<div align=center>
-<img src="sources/images/pp_vp.png" height="350px" width="800px"></div>
-
-To enable pipeline model parallelism, use the `--pipeline-model-parallel-size` flag to specify the number of stages to split the model into (e.g., splitting a model with 24 transformer layers across 4 stages would mean each stage gets 6 transformer layers each).
-To enable virtual pipeline parallelism, additionally use `--num-layers-per-virtual-pipeline-stage` flag to decide number of layers per virtual stage.
-To enable optimized pipeline parallelism, additionally use `--optimized-pipeline` and `--manual-mbs example-config-1` flag based on PP. Note that both VP and OPP reduce bubble time, but increase communication time.
-
-### <span id="jump3"> Fold3D </span>
-Fold3D hides the commutation time of data parallelism in VP. The basic principle of Fold3D is:<div align=center>
-<img src="sources/images/fold3d.png" height="350px" width="800px"></div>
-To enable pipeline model parallelism, use the `--fold-mode "aiao"` flag to choose strategy.
-
-### <span id="jump4"> (Selective) Recomputation </span>
-To reduce NPU memory usage so deploy a large model to a training system, we support activation checkpointing and recomputation.
-We support two levels of recompute granularity: full and selective. To enable full recomputation, please use `--checkpoint-activations` flag, and to enable selective recomputation, please use `--checkpoint-policy` flag to
-decide the strategy of selective recomputation. Note that the selective strategy is customized and optimized for Ascend chips.
-
-To improve the performance of model training while maximizing the use of NPU memory, we support [auto selective recomputing](https://gitee.com/ascend/AscendSpeed/wikis/Algorithm%20Introduction/Auto%20Selective%20Recomputing) strategy by manually adjusting the training memory size.
-To enable auto selective recomputing, please use `--auto-recompute-device-size` flag to specify the memory size for auto selective recomputing strategy(unit: MB).
-Note that if you want to use `--auto-recompute-device-size` flag, please remove `--checkpoint-activations`.
-If OOM occurs, you need to reselect a new memory size to restart model training. You can also find the optimal solution through [dichotomy](https://gitee.com/ascend/AscendSpeed/wikis/Algorithm%20Introduction/Auto%20Selective%20Recomputing).
-Auto selective recomputing selects a strategy based on the training memory information of the first N steps of profiling. You can set the number of steps to [stop profiling](https://gitee.com/ascend/AscendSpeed/wikis/Algorithm%20Introduction/Auto%20Selective%20Recomputing) by using the `--auto-recompute-profiling-step` flag.
-By default, profiling is stopped in step 10, with a minimum setting of 5 steps. It is recommended to stop profiling after the training memory is stable, in order to obtain a better choice of recalculation strategy.
-
-### <span id="jump5"> Sequence Parallelism </span>
-Sequence parallelism (SP) is a kind of model parallelism strategy, which splits the sequence axis in dropout and layernorm layers. SP depends on TP in our implementation.
-The allreduce operation in TP is split to reduce-scatter and allgather by SP, which reduces the memory occupation in model training. The basic principle of SP is:<div align=center>
-<img src="sources/images/sp.png" height="250px" width="800px"></div>
-To enable sequence parallelism (SP), `--tensor-model-parallel-size` flag should be lager than 1, and set `--sequence-parallel` flag.
-
-### <span id="jump6"> ZeRO-1/2/3 </span>
-Zero Redundancy Optimizer (ZeRO) is a kind of memory-optimization strategy in data parallelism proposed by MicroSoft.
-AscendSpeed supports ZeRO-1/2/3 by adding a deepspeed branch. The basic principle of ZeRO is:<div align=center>
-<img src="sources/images/ZeRO.png" height="250px" width="600px"></div>
-To enable ZeRO-1/2/3, a deepspeed config is required and an [example](examples/llama/pretrain_llama_7B_zero_8p.sh) could be referred.
-Notably, if only the ZeRO-1 is supposed, deepspeed is not necessary, and simply set the `--use-distributed-optimizer` flag.
-
-### <span id="jump7"> Inverted Triangle Acceleration </span>
-
-Inverted triangle acceleration is an acceleration module for attention calculation, which implements flash attention with python. Basically, the calculation of self-attention takes all of the attention mask into consideration. For this scenario, inverted triangle attention acceleration algorithm is used to avoid
-blocks that do not need to be calculated in the upper triangle position in the attention mask, thereby reducing the amount of calculation. The calculation process is:<div align=center>
-<img src="sources/images/triangle.png" height="600px" width="600px"></div>
-To enable inverted triangle acceleration, set `--triangle-attn` flag.
-
-### <span id="jump8"> Optimizer </span>
-For LLMs, Ascend chips support various fused kernels, such as `scaled_masked_softmax` and `rotary_pos_emb`. The related examples can be found by searching in this project, and more detailed information is coming soon.
-For fused optimizer, two kinds of fused adam optimizers are provided by `--optimizer`. Specifically, the choice `--optimizer adam` saves more memory, and the choice `--optimizer fused_adam` trains faster.
-
-### <span id="jump9">  Merged Feed-Forward Network & Gradient Accumulation </span>
-For llama and other LLMs without bias in FFN, the linear transformation in FFN could be merged to save communication in tensor parallelism. To enable this feature, please set `--mlp-layer-fusion` flag. Gradient accumulation uses gradient of N rounds to make an optimizer step and update parameters. Here, N = global batchsize / micro batchsize / DP, and DP = device nums / tp / pp.
-
-### <span id="jump10"> Memory Overcommitment </span>
-In mix precision training, multiple state tensors, such as parameter copies, gradient copies, and optimizer states, occupy a large amount of static memory (16N, where N is the number of parameters). However, in fact, parameters and gradients (4N, N is the number of parameters) that participate in forward and reverse calculation account for a small proportion, and optimizing the preceding state tensors can bring great video memory benefits. By analyzing the actual use of each part of the state tensor, the memory reuse mechanism of the mechanism is obtained, and a multilevel optimizer memory optimization scheme integrating multiple algorithm modules is finally obtained.
-
-- Memory Overcommitment O1 ——  **Relase FP32 Gradient**
-    - Advantages: Completely equivalent; Support for multiple optimizers; lossless performance.
-    - Algorithm principle: The static memory of the FP32 gradient copy that needs to be permanently stored is reused. The memory of the FP16 gradient is converted into the FP32 format by performing the Foreach+Cast operation when necessary, saving 4N space.
-    - Usage: This equivalent algorithm is applicable to all optimizers and can be triggered by specifying  `--release-fp32-grad` in the script.
-    - Restrictions: Currently, only the Adam optimizer is applicable. For other optimizers, see the Adam optimizer implementation.
-
-Mix precision training process:
-
-<div align=center>
-<img src="https://foruda.gitee.com/images/1700028272497165508/7fbb164b_7943704.png" height="545px" width="461px"></div>
-
-Memory overcommitment training process:
-
-<div align=center>
-<img src="https://foruda.gitee.com/images/1700028261897403802/74ba37b6_7943704.png" height="570px" width="655px"></div>
-
-Test Result Table:
-
-| Model    | Algorithm            | Performance     | Compress HBM | Performance Error | Precision Error | Hardware |
-|----------|----------------------|-----------------|---------------|-------------------|-----------------|----------|
-| LLama-7B | baseline             | 5.39s/iteration | --            | --                | --              | 910B*8P  |
-|          | O1 algorithm         | 5.40s/iteration | ↓ 13.5%       | ↓ 0.17%           | < 0.05%         | 910B*8P  |
-| LLama-13B| baseline             | 8.95s/iteration | --            | --                | --              | 910B*8P  |
-|          | O1 algorithm         | 8.92s/iteration | ↓ 14.90%      | ↑ 0.34%           | < 0.2%          | 910B*8P  |
-| LLama2-7B| baseline             | 6.48s/iteration | --            | --                | --              | 910B*8P  |
-|          | O1 algorithm         | 6.48s/iteration | ↓ 10.87%      | ↓ 0.00%           | < 0.2%          | 910B*8P  |
-| Bloom-7B | baseline             | 5.45s/iteration | --            | --                | --              | 910B*8P  |
-|          | O1 algorithm         | 5.49s/iteration | ↓ 12.68%      | ↓ 0.7%            | < 0.01%         | 910B*8P  |
-| LLama-32B| baseline             | 5.23s/iteration | --            | --                | --              | 910B*16P |
-|          | O1 argorithm         | 5.28s/iteration | ↓ 15.93%      | ↓ 0.95%           | < 0.02%         | 910B*16P |
-| LLama-7B | distributed baseline | 5.18s/iteration | --            | --                | --              | 910B*8P  |
-|          | O1 distributed algorithm | 5.19s/iteration | ↓ 9.50%       | ↓ 0.2%            | < 0.1%          | 910B*8P  |
-
 ## Acknowledgments
 
 ---
-AscendSpeed is jointly contributed by the following departments of Huawei Corporation:
+ModelLink is jointly contributed by the following departments of Huawei Corporation:
 - Ascend Computing Product Unit
 - Algorithm Unit of Computing Product Unit
 - Research Unit of Computing Product Unit
@@ -1070,13 +877,4 @@ AscendSpeed is jointly contributed by the following departments of Huawei Corpor
 - General Development Department
 - Global Technical Service Department
 
-We appreciate every PR from community, and welcome to contribute to AscendSpeed.
-
-## Appendix
-
----
-- Inner Function Description: Here are some inner implementation interface introduction [InnerInterface](https://gitee.com/ascend/AscendSpeed/wikis/Inner%20API%20Description/Some%20inner%20interface%20description?sort_id=8824096)
-- Parameters Description: Here are some parameters description and usage [param](https://gitee.com/ascend/AscendSpeed/wikis/Home).
-- Permission Description: It is recommended that the umask value of Linux be greater than or eqaul to 027. Before running the program, you are advised to take security measures such as permission control for files required for training, such as ckpt, logs and so on. You are advised to run the program or execute commands as a regular user not as root or super user. Also, you are advised to set the folder permission to 750 and the file permission to 640. When multiple users share datasets, set the read and write permissions for folders and files based on the minimum permissions to avoid security problems such as unauthorized access.
-- Path Description: When you're using interface such as `torch.load`, unless weights_only parameter is set to True, uses pickle module implicitly, which is known to be insecure. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling. We don't suggest you load data that could have come from an untrusted source in an unsafe mode, or that could have been tampered with. Please load data you trust. Moreover, when you need to read data from outside or your specified path you'd better make it trusted and safe, including but not limited to weights path, dataset path.
-- Communication Matrix: Please refer to this [link](https://gitee.com/ascend/AscendSpeed/wikis/Communition%20Matrix/AscendSpeed%20Communication%20Matrix?sort_id=8855822) to check the communication matrix.
+We appreciate every PR from community, and welcome to contribute to ModelLink.
