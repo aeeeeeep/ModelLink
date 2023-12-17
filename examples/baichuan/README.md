@@ -123,7 +123,7 @@ wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/tokenizer_conf
 cd ..
 ```
 
-接着将hf格式的权重转化为AscendSpeed可以加载的形式：
+接着将hf格式的权重转化为ModelLink可以加载的形式：
 ```shell
 mkdir weight
 
@@ -290,7 +290,7 @@ wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/tokenize
 cd ..
 ```
 
-将 BaiChuan-13B 模型权重从 huggingface 格式转换为 AscendSpeed 格式
+将 BaiChuan-13B 模型权重从 huggingface 格式转换为 ModelLink 格式
 ```shell
 mkdir weight
 

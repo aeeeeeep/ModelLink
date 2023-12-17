@@ -25,19 +25,19 @@ from torch_npu.contrib import transfer_to_npu
 import deepspeed_npu
 from wrapt_timeout_decorator import timeout
 
-from ascendspeed import get_args
-from ascendspeed import print_rank_0
-from ascendspeed import get_timers
-from ascendspeed import get_tokenizer
-from ascendspeed.core import parallel_state, tensor_parallel
-from ascendspeed.data.gpt_dataset import build_train_valid_test_datasets
-from ascendspeed.model import GPTModel, GPTModelPipe
-from ascendspeed.core.enums import ModelType
-from ascendspeed.training import pretrain
-from ascendspeed.utils import get_ltor_masks_and_position_ids
-from ascendspeed.utils import average_losses_across_data_parallel_group
-from ascendspeed.arguments import core_transformer_config_from_args
-from ascendspeed.error_utils import check_equal, ensure_var_is_not_none, ensure_valid
+from modellink import get_args
+from modellink import print_rank_0
+from modellink import get_timers
+from modellink import get_tokenizer
+from modellink.core import parallel_state, tensor_parallel
+from modellink.data.gpt_dataset import build_train_valid_test_datasets
+from modellink.model import GPTModel, GPTModelPipe
+from modellink.core.enums import ModelType
+from modellink.training import pretrain
+from modellink.utils import get_ltor_masks_and_position_ids
+from modellink.utils import average_losses_across_data_parallel_group
+from modellink.arguments import core_transformer_config_from_args
+from modellink.error_utils import check_equal, ensure_var_is_not_none, ensure_valid
 
 import deepspeed
 from deepspeed.runtime.utils import see_memory_usage

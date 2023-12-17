@@ -106,7 +106,7 @@ wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer_config.json
 cd ..
 ```
 
-We provide scripts that support converting pretrained weights into weights that AscendSpeed can load and used for train and inference. 
+We provide scripts that support converting pretrained weights into weights that ModelLink can load and used for train and inference. 
 
 ```shell
 #!/bin/bash
@@ -219,7 +219,7 @@ NPU vs GPU loss relative error.
 
 ## Inference
 
-We support AscendSpeed Inference for text generation with BLOOM 7B (deepspeed or megatron).
+We support Inference for text generation with BLOOM 7B (deepspeed or megatron).
 
 ### deepspeed pipeline
 ```text
@@ -390,7 +390,7 @@ wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer.json
 wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer_config.json
 cd ..
 ```
-We provide scripts that support converting pretrained weights into weights that AscendSpeed can load and used for train and inference. `--partition-layers` specifies the partitioning strategy under the pipeline parallel strategy, you can also modify it to a different strategy, but the sum of all elements of `--partition layers` should be equal to 70 and the number of elements in `--partition-layers` should be equal to `--pipeline-model-parallel-size`.
+We provide scripts that support converting pretrained weights into weights that ModelLink can load and used for train and inference. `--partition-layers` specifies the partitioning strategy under the pipeline parallel strategy, you can also modify it to a different strategy, but the sum of all elements of `--partition layers` should be equal to 70 and the number of elements in `--partition-layers` should be equal to `--pipeline-model-parallel-size`.
 
 ```shell
 #!/bin/bash
@@ -484,7 +484,7 @@ and GPU on a single-node system. The average relative error is 0.1%, less than 2
 
 ## Inference
 
-We support AscendSpeed Inference for text generation with BLOOM 176B (deepspeed or megatron).
+We support ModelLink Inference for text generation with BLOOM 176B (deepspeed or megatron).
 
 ### deepspeed pipeline
 ```text

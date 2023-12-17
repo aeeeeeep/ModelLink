@@ -1,10 +1,5 @@
-# This is an example: training llama using PTD/
-
-# The number of parameters is not aligned
 export LD_LIBRARY_PATH=/usr/local/lib:/root/miniconda3/lib:$LD_LIBRARY_PATH
 export HCCL_CONNECT_TIMEOUT=1200
-
-
 # Change for multinode config
 MASTER_ADDR=localhost
 MASTER_PORT=12892
@@ -15,8 +10,8 @@ WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 GLOBAL_BATCH=32
 MICRO_BATCH=1
 
-DATA_PATH=./data/baichuan_text
-TOKENIZER_PATH=./tokenizer
+DATA_PATH=/home/gxj/dataset_baichuan/alpaca_text_document
+TOKENIZER_PATH=/home/gxj/tokenizer
  
 CHECKPOINT_PATH=./ckpt
 LOAD_PATH=./weight

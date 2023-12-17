@@ -10,14 +10,14 @@ print(f"work_path : {os.path.abspath(work_path)}")
 sys.path.append(work_path)
 
 from tools.ckpt_convert.llama.ckpt_utils import make_ascendspeed_model_dirs
-from ascendspeed.error_utils import check_divisible_by_zero
+from modellink.error_utils import check_divisible_by_zero
 
 
 def get_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--input-model-dir", type=str, default="./input_model_dir", help="bloom huggingface model dir")
     parser.add_argument("--output-model-dir", type=str, default="./output_model_dir",
-                        help="bloom ascendspeed model dir")
+                        help="bloom modellink model dir")
     parser.add_argument("--tensor-model-parallel-size", type=int, default=1, help="degree of tensor model parallel")
     parser.add_argument("--pipeline-model-parallel-size", type=int, default=1,
                         help="degree of pipeline model parallel")

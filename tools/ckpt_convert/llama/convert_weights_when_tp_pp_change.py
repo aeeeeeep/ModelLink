@@ -29,21 +29,21 @@ from ckpt_utils import print_model
 from ckpt_utils import row_split
 from ckpt_utils import save_ascendspeed_model
 
-from ascendspeed.error_utils import check_equal, check_exist, check_divisible
-from ascendspeed.data_classes import MergePpTpMergeConfig, MergeWeightConfig
-from ascendspeed.data_classes import GenAscendWeightsConfig, SaveAscendspeedModelConfig
+from modellink.error_utils import check_equal, check_exist, check_divisible
+from modellink.data_classes import MergePpTpMergeConfig, MergeWeightConfig
+from modellink.data_classes import GenAscendWeightsConfig, SaveAscendspeedModelConfig
 logging.basicConfig(level=logging.NOTSET)
 
 
 def get_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--input-model-dir", type=str, default="./input_model_dir",
-                        help="source model dir of ascendspeed llama weight")
+                        help="source model dir of modellink llama weight")
     parser.add_argument("--output-model-dir", type=str, default="./output_model_dir",
-                        help="target model dir of ascendspeed llama weight")
+                        help="target model dir of modellink llama weight")
     parser.add_argument("--orig-vocab-size", type=int, default=32000, help="origin vocabulary size")
     parser.add_argument("--make-vocab-size-divisible-by", type=int, default=128,
-                        help="should be consistent with ascendspeed")
+                        help="should be consistent with modellink")
     parser.add_argument("--src-tensor-model-parallel-size", type=int, default=1, help="degree of tensor model parallel")
     parser.add_argument("--src-pipeline-model-parallel-size", type=int, default=1,
                         help="degree of pipeline model parallel")

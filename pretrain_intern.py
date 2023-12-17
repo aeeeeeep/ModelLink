@@ -28,18 +28,18 @@ try:
 except ImportError:
     logging.warning(f"Import torch_npu Error.")
 
-from ascendspeed import get_args
-from ascendspeed import print_rank_0
-from ascendspeed.core import parallel_state
-from ascendspeed.model.gpt_model import GPTModel, GPTModelPipe
-from ascendspeed.core.enums import ModelType
-from ascendspeed.training import pretrain
+from modellink import get_args
+from modellink import print_rank_0
+from modellink.core import parallel_state
+from modellink.model.gpt_model import GPTModel, GPTModelPipe
+from modellink.core.enums import ModelType
+from modellink.training import pretrain
 from pretrain_llama import (
     data_post_process,
     forward_step,
     train_valid_test_datasets_provider
 )
-from ascendspeed.arguments import core_transformer_config_from_args
+from modellink.arguments import core_transformer_config_from_args
 
 
 def model_provider(pre_process=True, post_process=True):

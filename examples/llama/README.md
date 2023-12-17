@@ -157,7 +157,7 @@ or
   cd ..
 ```
 
-将模型权重文件从 huggingface 格式转化为 AscendSpeed 格式
+将模型权重文件从 huggingface 格式转化为 ModelLink 格式
 
 LLaMA-7B
 ```shell

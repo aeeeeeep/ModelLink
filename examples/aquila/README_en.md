@@ -62,19 +62,19 @@ git clone https://gitee.com/ascend/DeepSpeed.git -b v0.9.2 deepspeed_npu
 cd deepspeed_npu
 pip3 install -e ./
 cd ..
-# enter the AscendSpeed/ directory and install other packages
+# enter the ModelLink/ directory and install other packages
 pip install -r requirements.txt
 ```
 
 
 #### 3. Download the Aquila-7B model, config, and tokenizer from [here](https://huggingface.co/BAAI/Aquila-7B/tree/main)
 
-save to AscendSpeed/HF_Aquila7B_downloaded/ directory.
+save to ModelLink/HF_Aquila7B_downloaded/ directory.
 
 
 #### 4. Prepare dataset.
 
-step1: Download the datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet), save to AscendSpeed/dataset/ directory.
+step1: Download the datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet), save to ModelLink/dataset/ directory.
 
 ```shell
 cd dataset/
@@ -177,7 +177,7 @@ Aquila-7B NPU vs Reference loss.
 
 ## Inference
 
-We support AscendSpeed Inference for text generation with Aquila 7B model.
+We support ModelLink Inference for text generation with Aquila 7B model.
 
 Inference is different from pre-training because it requires loading the pre-trained model weights. Therefore, we need to complete the aforementioned model weight conversion task first, then configure the Aquila-7B Inference shell script `examples/aquila/generate_aquila_7B.sh`. "CHECKPOINT" must point to the converted weights directory, and "VOCAB_FILE" must point to the directory which contains Aquila vocabulary files -- in our example, it is "./HF_Aquila7B_downloaded". In your operation, please fill in correct value based on your actual scenario.
 
@@ -199,7 +199,7 @@ Sample results of Aquila-7B Inference:
 
 ## Evaluation with Benchmark
 
-We use BoolQ benchmark to evaluate our model. You can [go to the BoolQ Benchmark page](https://github.com/google-research-datasets/boolean-questions) and find the [dataset](https://storage.cloud.google.com/boolq/dev.jsonl), download it and save it. For example, save to "AscendSpeed/boolq/test" directory
+We use BoolQ benchmark to evaluate our model. You can [go to the BoolQ Benchmark page](https://github.com/google-research-datasets/boolean-questions) and find the [dataset](https://storage.cloud.google.com/boolq/dev.jsonl), download it and save it. For example, save to "ModelLink/boolq/test" directory
 
 Evaluation task is similar to inference task，it also requires loading the pre-trained model weights. You can use the Aquila-7B evaluation script `examples/aquila/generate_aquila_7B.sh` as below:
 

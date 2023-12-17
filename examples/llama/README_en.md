@@ -245,7 +245,7 @@ LLama-13b with huggingface weights NPU vs GPU loss.
 
 ## Inference
 
-We support AscendSpeed Inference for text generation with LLaMA-7B and LLaMA-13B.
+We support Inference for text generation with LLaMA-7B and LLaMA-13B.
 Inference different from pre-training, such as we need to Load pre-training checkpoint and the length of the output samples:
 
 Config LLaMA-7B inference script `examples/llama/generate_llama_7B_deepspeed.sh` and LLaMA-13B inference script `examples/llama/generate_llama_13B_tp1_pp8.sh`.
@@ -317,7 +317,7 @@ The evaluation performance of LLaMA-7B/13B in **Ascend NPU**:
 
 # LLaMA-33B/65B
 
-This directory contains some of the scripts that were used to produce the results in the AscendSpeed. These scripts is to show the example how to run llama-65B in terminal.
+This directory contains some of the scripts that were used to produce the results in the ModelLink. These scripts is to show the example how to run llama-65B in terminal.
 
 LLaMA model is from: [LLaMA: OPen and Efficient Foundation Language Models](https://arxiv.org/pdf/2302.13971v1.pdf)
 
@@ -357,7 +357,7 @@ cd AscendSpeed
 mkdir logs
 mkdir ckpt
 ```
-2.Install AscendSpeed requirement environment.
+2.Install ModelLink requirement environment.
 ```shell
 # python3.8
 conda create -n test python=3.8
@@ -541,7 +541,7 @@ The relative error between NPU and GPU Loss is less than 0.02 throughout, as exp
 
 ## Inference
 
-We support AscendSpeed Inference for text generation with LLaMA-33B and LLaMA-65B.
+We support Inference for text generation with LLaMA-33B and LLaMA-65B.
 Inference different from pre-training, such as we need to Load pre-training checkpoint and the length of the output samples:
 
 Config LLaMA-33B inference script `examples/llama/generate_llama_33B_ptd.sh`.

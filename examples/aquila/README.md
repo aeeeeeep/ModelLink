@@ -65,18 +65,18 @@ git clone https://gitee.com/ascend/DeepSpeed.git -b v0.9.2 deepspeed_npu
 cd deepspeed_npu
 pip3 install -e ./
 cd ..
-# 进入AscendSpeed主目录，安装其余依赖包
+# 进入MdoelLink主目录，安装其余依赖包
 pip install -r requirements.txt
 ```
 
 #### 3. 使用浏览器下载 [Aquila-7B模型的配置，tokenizer，和预训练权重](https://huggingface.co/BAAI/Aquila-7B/tree/main)
 
-保存在 AscendSpeed/HF_Aquila7B_downloaded/ 目录。
+保存在 ModelLink/HF_Aquila7B_downloaded/ 目录。
 
 
 #### 4. 数据预处理
 
-第一步，使用浏览器 [下载数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)， 保存在AscendSpeed/dataset/ 目录
+第一步，使用浏览器 [下载数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)， 保存在ModelLink/dataset/ 目录
 
 ```shell
 cd dataset/
@@ -122,7 +122,7 @@ if zero_sd_list is None or len(zero_sd_list) == 0:
     return False
 ```
 
-第二步，将模型权重文件从 huggingface 格式转化为 AscendSpeed 格式
+第二步，将模型权重文件从 huggingface 格式转化为 ModelLink 格式
 
 ```shell
 mkdir model_weights
@@ -208,7 +208,7 @@ Aquila-7B:
 
 ## 使用基线数据集进行评估
 
-我们使用 BoolQ benchmark 来评估我们的模型。在[Benchmark下载页面](https://github.com/google-research-datasets/boolean-questions)找到[数据集](https://storage.cloud.google.com/boolq/dev.jsonl)下载后保存。例如，保存在AscendSpeed/boolq/test目录下。
+我们使用 BoolQ benchmark 来评估我们的模型。在[Benchmark下载页面](https://github.com/google-research-datasets/boolean-questions)找到[数据集](https://storage.cloud.google.com/boolq/dev.jsonl)下载后保存。例如，保存在ModelLink/boolq/test目录下。
 
 评估与推理类似，也需要加载转换后的权重。如下使用Aquila-7B推理脚本`tasks/evaluation/eval_aquila_7B.sh`：
 

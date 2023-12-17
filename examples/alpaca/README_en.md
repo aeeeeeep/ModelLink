@@ -6,7 +6,7 @@
 </p>
 
 
-This directory contains scripts used to produce the results of Chinese-LLaMA-Alpaca in AscendSpeed.
+This directory contains scripts used to produce the results of Chinese-LLaMA-Alpaca in ModelLink.
 
 Chinese-LLaMA-Alpaca model is from: [Efficient and Effective Text Encoding for Chinese LLaMA and Alpaca](https://arxiv.org/abs/2304.08177)
 
@@ -261,7 +261,7 @@ The relative error between NPU and GPU Loss is less than 0.02 throughout, as exp
 
 ## Inference
 
-We support AscendSpeed Inference for text generation with Chinese LLaMA Alpaca-13B.
+We support ModelLink Inference for text generation with Chinese LLaMA Alpaca-13B.
 
 ### Script
 

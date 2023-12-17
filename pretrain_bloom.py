@@ -27,20 +27,20 @@ import deepspeed_npu
 from deepspeed.runtime.utils import see_memory_usage
 from deepspeed.accelerator import get_accelerator
 
-from ascendspeed import get_args
-from ascendspeed import print_rank_0
-from ascendspeed import get_timers
-from ascendspeed import get_tokenizer
-from ascendspeed.core import parallel_state, tensor_parallel
-from ascendspeed.data.gpt_dataset import build_train_valid_test_datasets, build_dataset_group
-from ascendspeed.model import GPTModel, GPTModelPipe
-from ascendspeed.core.enums import ModelType
-from ascendspeed.enums import AttnMaskType
-from ascendspeed.training import pretrain
-from ascendspeed.utils import get_ltor_masks_and_position_ids
-from ascendspeed.utils import average_losses_across_data_parallel_group
-from ascendspeed.arguments import core_transformer_config_from_args
-from ascendspeed.error_utils import ensure_var_is_not_none, check_equal
+from modellink import get_args
+from modellink import print_rank_0
+from modellink import get_timers
+from modellink import get_tokenizer
+from modellink.core import parallel_state, tensor_parallel
+from modellink.data.gpt_dataset import build_train_valid_test_datasets, build_dataset_group
+from modellink.model import GPTModel, GPTModelPipe
+from modellink.core.enums import ModelType
+from modellink.enums import AttnMaskType
+from modellink.training import pretrain
+from modellink.utils import get_ltor_masks_and_position_ids
+from modellink.utils import average_losses_across_data_parallel_group
+from modellink.arguments import core_transformer_config_from_args
+from modellink.error_utils import ensure_var_is_not_none, check_equal
 
 
 def model_provider(pre_process=True, post_process=True):
