@@ -905,6 +905,9 @@ The maximum absolute error is 0.089.
 
 ## Inference-2
 
+The pretrained HuggingFace model weights can be converted to inference with 8 NPUs, 
+which is similar to section "Prepare pretrained weights and tokenizer", 
+and the "pipeline-model-parallel-size" parameter need to be set to 1.
 
 The model weights of 64 NPUs can be converted to 8 NPUs with the follow shell.
 

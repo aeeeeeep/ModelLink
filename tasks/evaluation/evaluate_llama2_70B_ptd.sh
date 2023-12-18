@@ -37,7 +37,8 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation
        --num-query-groups 8 \
        --max-position-embeddings 4096 \
        --tokenizer-type PretrainedFromHF  \
-       --tokenizer-name-or-path ${TOKENIZER_PATH} \
+       --tokenizer-name-or-path ${VOCAB_FILE} \
+       --pad-vocab-size-to 32000 \
        --tokenizer-not-use-fast \
        --fp16 \
        --micro-batch-size 1 \

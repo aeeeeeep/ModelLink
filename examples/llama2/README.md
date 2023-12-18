@@ -835,7 +835,7 @@ LLaMA2-34B/70B 训练的软件配置:
     --handler-name MOSSInstructionHandler
     ```
    
-5. Config pre-training script
+5. 配置预训练脚本
 
     LLaMA2-34B: examples/llama2/pretrain_llama2_34B_ptd.sh 
     ```shell
@@ -908,7 +908,9 @@ LLaMA2-70B NPU vs 参考 loss.
 
 ## 推理-2
 
-权重转为单机8卡可以运行的格式
+可以直接使用HuggingFace预训练权重转换，参考“准备预训练权重和词表”章节，将pipeline-model-parallel-size设为1即可。
+
+也可以将训练后的权重转为单机8卡可以运行的格式
 
 LLaMA2-34B:
 ```shell

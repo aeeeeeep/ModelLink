@@ -35,6 +35,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference
        --max-position-embeddings 4096 \
        --tokenizer-type PretrainedFromHF  \
        --tokenizer-name-or-path ${TOKENIZER_PATH} \
+       --pad-vocab-size-to 32000 \
        --tokenizer-not-use-fast \
        --fp16 \
        --micro-batch-size 1 \
