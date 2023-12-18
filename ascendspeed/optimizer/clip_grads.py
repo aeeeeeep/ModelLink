@@ -1,44 +1,12 @@
-# coding=utf-8
-# Copyright (c) 2020, NVIDIA CORPORATION.  All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-"""Gradient clipping."""
-
 import torch
+import torch_npu
 
-try:
-    from torch._six import inf as inf
-except ModuleNotFoundError:
-    from torch import inf as inf
-
-from deepspeed.accelerator import get_accelerator
-
-if get_accelerator().device_name() == 'cuda':
-    from apex.multi_tensor_apply import multi_tensor_applier
-    import amp_C
-
-
-from ascendspeed.core import parallel_state
-from ascendspeed.model.module import param_is_not_shared
-from ascendspeed.core.tensor_parallel.layers import param_is_not_tensor_parallel_duplicate
-from ascendspeed.error_utils import check_equal
+from torch import inf
 
 
 def clip_grad_norm_fp32(parameters, grads_for_norm,
-                        max_norm, norm_type=2,
-                        model_parallel_group=None,
-                        use_global_grad_norm=False):
+                        max_norm, check_for_nan_in_grad,
+                        norm_type=2, model_parallel_group=None):
     """Clips gradient norm of an iterable of parameters whose gradients
        are in fp32.
 
@@ -51,7 +19,8 @@ def clip_grad_norm_fp32(parameters, grads_for_norm,
             single Tensor that will have gradients normalized
         grads_for_norm (Iterable[Tensor]): an iterable of Tensors or a single
             Tensor that will be used for calculating the grad norm.
-        max_norm (float or int): max norm of the gradients
+        max_norm (float or int): max norm of the gradients.
+        check_for_nan_in_grad (bool): check if gradients have a NaN.
         norm_type (float or int): type of the used p-norm. Can be ``'inf'`` for
             infinity norm.
         model_parallel_group (group): given the nature of the distributed
@@ -70,7 +39,7 @@ def clip_grad_norm_fp32(parameters, grads_for_norm,
     grads = []
     for param in parameters:
         if param.grad is not None:
-            check_equal(param.grad.type(), 'torch.npu.FloatTensor')
+            assert param.grad.type() == 'torch.cuda.FloatTensor'
             grads.append(param.grad.detach())
 
     # Norm parameters.
@@ -85,21 +54,28 @@ def clip_grad_norm_fp32(parameters, grads_for_norm,
         # Take max across all model-parallel GPUs.
         torch.distributed.all_reduce(total_norm_cuda,
                                      op=torch.distributed.ReduceOp.MAX,
-                                     group=parallel_state.get_model_parallel_group())
+                                     group=model_parallel_group)
         total_norm = total_norm_cuda[0].item()
+
     else:
         for grad in grads_for_norm:
             grad_norm = torch.norm(grad, norm_type)
             total_norm += grad_norm ** norm_type
 
+        # Check individual rank grad norms are not NaN
+        # prior to model-parallel all-reduce.
+        if check_for_nan_in_grad:
+            global_rank = torch.distributed.get_rank()
+            assert not total_norm.isnan(), (
+                f'Rank {global_rank}: found NaN in local grad norm in '
+                f'backwards pass. Device: {torch.cuda.current_device()}, '
+                f'node: {os.uname()[1]}'
+            )
+
         # Sum across all model-parallel GPUs.
         torch.distributed.all_reduce(total_norm,
                                      op=torch.distributed.ReduceOp.SUM,
-                                     group=parallel_state.get_model_parallel_group())
-        if use_global_grad_norm:
-            torch.distributed.all_reduce(total_norm,
-                                         op=torch.distributed.ReduceOp.SUM,
-                                         group=parallel_state.get_data_parallel_group())
+                                     group=model_parallel_group)
         total_norm = total_norm.item() ** (1.0 / norm_type)
 
     # Scale.
@@ -110,31 +86,3 @@ def clip_grad_norm_fp32(parameters, grads_for_norm,
                 p.grad.detach().mul_(clip_coeff)
 
     return total_norm
-
-
-def count_zeros_fp32(parameters, model_parallel_group):
-
-    if isinstance(parameters, torch.Tensor):
-        parameters = [parameters]
-
-    # Filter parameters based on:
-    #   - grad should not be none
-    #   - parameter should not be shared
-    #   - should not be a replica due to tensor model parallelism
-    total_num_zeros = 0.0
-    for param in parameters:
-        grad_not_none = param.grad is not None
-        is_not_shared = param_is_not_shared(param)
-        is_not_tp_duplicate = param_is_not_tensor_parallel_duplicate(param)
-        if grad_not_none and is_not_shared and is_not_tp_duplicate:
-            grad = param.grad.detach()
-            num_zeros = grad.numel() - torch.count_nonzero(grad)
-            total_num_zeros = num_zeros + total_num_zeros
-
-    # Sum across all model-parallel GPUs.
-    torch.distributed.all_reduce(total_num_zeros,
-                                 op=torch.distributed.ReduceOp.SUM,
-                                 group=model_parallel_group)
-    total_num_zeros = total_num_zeros.item()
-
-    return total_num_zeros
