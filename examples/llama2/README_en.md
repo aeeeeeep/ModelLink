@@ -302,7 +302,8 @@ You >>
 ```
 
 ## Evaluation-7B
-We use MMLU benchmark to evaluate our model. Benchmark Download [here](https://huggingface.co/datasets/cais/mmlu). The evaluation script eval.sh is as follows:
+We use MMLU benchmark to evaluate our model. Benchmark Download [here](https://huggingface.co/datasets/cais/mmlu). 
+Config llama2-7B evaluation script: tasks/evaluation/evaluate_llama2_7B_ptd.sh
 
 ```bash
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -313,41 +314,11 @@ CHECKPOINT=./llama2-7b-tp8pp1  #model path
 # configure task and data path
 DATA_PATH="./mmlu/data/test/"
 TASK="mmlu"
-
-# distributed config
-MASTER_ADDR=localhost
-MASTER_PORT=6011
-NNODES=1
-NODE_RANK=0
-NPUS_PER_NODE=8
-DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
-# configure generation parameters 
-python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation.py   \
-     --task-data-path $DATA_PATH \
-     --task $TASK \
-     --seq-length 4096 \
-     --max-new-tokens 1 \
-     --max-position-embeddings 4096 \
-     --tensor-model-parallel-size 8 \
-     --pipeline-model-parallel-size 1  \
-     --num-layers 32  \
-     --hidden-size 4096  \
-     --ffn-hidden-size 11008 \
-     --num-attention-heads 32  \
-     --mlp-layer-fusion \
-     --load ${CHECKPOINT}  \
-     --position-embedding-type rope \
-     --normalization RMSNorm \
-     --tokenizer-type PretrainedFromHF  \
-     --tokenizer-name-or-path ${TOKENIZER_PATH} \
-     --tokenizer-not-use-fast \
-     --fp16  \
-     --micro-batch-size 1  \
-     --seed 42 | tee logs/eval_mmlu.log
 ```
-start evaluation
+Launch llama2-7B evaluation script:
+
 ```bash
-bash tasks/evaluation/eval.sh
+bash tasks/evaluation/evaluate_llama2_7B_ptd.sh
 ```
 
 Evaluation results
@@ -496,7 +467,8 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
                                     --tokenizer-type PretrainedFromHF \
                                     --tokenizer-name-or-path WORKSPACE/llama-13b-hf \
                                     --tokenizer-not-use-fast \
-                                    --handler-name GeneralInstructionHandler
+                                    --handler-name GeneralInstructionHandler \
+                                    --append-eod
     ```
 
 5. Config LLaMA2-13B pre-training script: examples/llama2/pretrain_llama2_13B_ptd_8p.sh

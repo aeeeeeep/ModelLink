@@ -304,7 +304,8 @@ You >>
 
 ## 评估-7B
 
-使用 MMLU数据集评估模型. 数据集下载路径 [这里](https://huggingface.co/datasets/cais/mmlu). 评估脚本如下所示:
+使用 MMLU数据集评估模型. 数据集下载路径 [这里](https://huggingface.co/datasets/cais/mmlu). 
+配置llama2-7B 评估脚本: tasks/evaluation/evaluate_llama2_7B_ptd.sh
 
 ```bash
 # ascend-toolkit 路径
@@ -316,43 +317,12 @@ CHECKPOINT=./llama2-7b-tp8pp1  #模型路径
 # 配置任务和数据集路径
 DATA_PATH="./mmlu/data/test/"
 TASK="mmlu"
-
-# 分布式配置
-MASTER_ADDR=localhost
-MASTER_PORT=6011
-NNODES=1
-NODE_RANK=0
-NPUS_PER_NODE=8
-DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
-# 配置生成参数
-python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation.py   \
-     --task-data-path $DATA_PATH \
-     --task $TASK \
-     --seq-length 4096 \
-     --max-new-tokens 1 \
-     --max-position-embeddings 4096 \
-     --tensor-model-parallel-size 8 \
-     --pipeline-model-parallel-size 1  \
-     --num-layers 32  \
-     --hidden-size 4096  \
-     --ffn-hidden-size 11008 \
-     --num-attention-heads 32  \
-     --mlp-layer-fusion \
-     --load ${CHECKPOINT}  \
-     --position-embedding-type rope \
-     --normalization RMSNorm \
-     --tokenizer-type PretrainedFromHF  \
-     --tokenizer-name-or-path ${TOKENIZER_PATH} \
-     --tokenizer-not-use-fast \
-     --fp16  \
-     --micro-batch-size 1  \
-     --seed 42 | tee logs/eval_mmlu.log
 ```
 
 启动评估
 
 ```bash
-bash tasks/evaluation/eval.sh
+bash tasks/evaluation/evaluate_llama2_7B_ptd.sh
 ```
 评估结果如下
 ```text
@@ -506,7 +476,8 @@ python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-mode
                                     --tokenizer-type PretrainedFromHF \
                                     --tokenizer-name-or-path WORKSPACE/llama-13b-hf \
                                     --tokenizer-not-use-fast \
-                                    --handler-name GeneralInstructionHandler
+                                    --handler-name GeneralInstructionHandler \
+                                    --append-eod
     ```
 
 5. 配置 LLaMA2-13B 预训练脚本: examples/llama2/pretrain_llama2_13B_ptd_8p.sh
