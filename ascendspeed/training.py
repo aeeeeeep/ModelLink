@@ -666,7 +666,8 @@ def setup_model_and_optimizer(model_provider_func,
             timers('load-checkpoint', log_level=0).start(barrier=True)
             args.iteration = load_checkpoint(model, optimizer, lr_scheduler)
             if args.deepspeed:
-                optimizer.refresh_fp32_params()
+                # Fix the bug of memory increase when deepspeed load_checkpoint loads optimizer states
+                torch.npu.empty_cache()
             else:
                 optimizer.reload_model_params()
             torch.distributed.barrier()

@@ -507,7 +507,7 @@ First, you need to install version 0.4.0 of the peft library, like this:
 ```shell
 pip install peft==0.4.0
 ```
-You can also choose to install from [the source package in the GitHub repository](https://github.com/huggingface/peft/archive/refs/tags/v0.4.0.tar.gz), so you can modify the setup.py file to avoid some dependency issues.
+When torch==1.11.0, You can also choose to install from [the source package in the GitHub repository](https://github.com/huggingface/peft/archive/refs/tags/v0.4.0.tar.gz), so you can modify the setup.py file to avoid some dependency issues.
 
 Next, you just need to add this argument in your script to open Lora:
 
@@ -904,7 +904,7 @@ smaller microbatches. Virtual pipeline (VP) parallelism optimizes PP by add virt
 <img src="sources/images/pp_vp.png" height="350px" width="800px"></div>
 
 To enable pipeline model parallelism, use the `--pipeline-model-parallel-size` flag to specify the number of stages to split the model into (e.g., splitting a model with 24 transformer layers across 4 stages would mean each stage gets 6 transformer layers each).
-To enable virtual pipeline parallelism, additionally use `--num-layers-per-virtual-pipeline-stage` flag to decide number of layers per virtual stage.
+To enable virtual pipeline parallelism, additionally use `--num-layers-per-virtual-pipeline-stage` flag to decide number of layers per virtual stage. Currently, the repository supports VP in the form of VP + no-overlap-p2p, and when you want to enable VP, you need to add the --no-overlap-p2p-communication parameter to disable overlap-p2p.
 To enable optimized pipeline parallelism, additionally use `--optimized-pipeline` and `--manual-mbs example-config-1` flag based on PP. Note that both VP and OPP reduce bubble time, but increase communication time.
 
 ### <span id="jump3"> Fold3D </span>

@@ -453,41 +453,75 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
                                                                         --type 13B \
     ```
 
-4. Prepare dataset
-   
-    Download the LLaMA2-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
-        
-    ```bash
-    # dataset：wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-    
-    cd WORKSPACE
-    mkdir alpaca_preprocessed
-    python tools/preprocess_data.py --input WORKSPACE/alpaca/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-                                    --output-prefix WORKSPACE/alpaca_preprocessed/alpaca \
-                                    --tokenizer-type PretrainedFromHF \
-                                    --tokenizer-name-or-path WORKSPACE/llama-13b-hf \
-                                    --tokenizer-not-use-fast \
-                                    --handler-name GeneralInstructionHandler \
-                                    --append-eod
-    ```
+4. pre-training
 
-5. Config LLaMA2-13B pre-training script: examples/llama2/pretrain_llama2_13B_ptd_8p.sh
-   
-    ```shell
+	4.1 Prepare dataset
+
+	Download the LLAMA2-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
+	```shell
+	# download datasets
+	mkdir dataset_llama2
+	cd ./dataset_llama2
+	wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+	cd ..
+	
+	# process datasets                              
+	python ./tools/preprocess_data.py \
+		 --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+		 --tokenizer-name-or-path ./llama-2-13b-hf \
+		 --output-prefix ./dataset_llama2/alpaca \
+		 --workers 4 \
+		 --log-interval 1000 \
+		 --tokenizer-type PretrainedFromHF
+	```
+
+	4.2 pre-training using ptd mode
+	Config LLAMA2-13B pre-training script: examples/llama2/pretrain_llama2_13B_ptd_8p.sh 
+   ```shell
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     
-    # modify script orign dataset path according to your own dataset path
+    # modify config according to your own actual situation
+    LOAD_CHECKPOINT_PATH="your init model load path"
+    SAVE_CHECKPOINT_PATH="your model ckpt save path"
     TOKENIZER_PATH=./llama-2-13b-hf/  #tokenizer path
-    DATA_PATH=WORKSPACE/alpaca_preprocessed/alpaca   #processed dataset
-    LOAD_CHECKPOINT=./llama-2-13b_tp8_pp1/
-    ```
+    DATA_PATH=./dataset_llama2/alpaca_text_document  #processed dataset
+   ```
 
-6. Launch LLaMA2-13B  pre-training script: examples/llama2/pretrain_llama2_13B_ptd_8p.sh
+	Launch LLAMA2-13B  pre-training script: examples/llama2/pretrain_llama2_13B_ptd_8p.sh
    
-    ```shell
+   ```shell
     bash examples/llama2/pretrain_llama2_13B_ptd_8p.sh
+   ```
+5. fine-tuning
+
+	5.1 Prepare fine-tuning dataset 
+	Download the LLAMA2-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
+    ```shell
+	# download datasets
+	mkdir finetune_dataset
+	cd ./finetune_dataset
+	wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+	cd ..
+	
+	# process datasets                              
+	python ./tools/preprocess_data.py \
+		  --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+		  --tokenizer-name-or-path ./llama-2-13b-hf \
+		  --output-prefix ./finetune_dataset/alpaca \
+		  --workers 4 \
+		  --log-interval 1000 \
+		  --tokenizer-type PretrainedFromHF \
+		  --handler-name GeneralInstructionHandler \
+		  --append-eod
     ```
+   5.2 Full Parameters Fine-Tuning
+   The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_13B_ptd_8p.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
+   ```bash
+   DATA_PATH=./finetune_dataset/alpaca
+   
+   --is-instruction-dataset \
+   ```
 
 ### Performance
 

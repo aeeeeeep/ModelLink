@@ -497,7 +497,7 @@ python tools/preprocess_data.py --input WORKSPACE/alpaca/train-00000-of-00001-a0
 ```shell
 pip install peft==0.4.0
 ```
-你也可以选择直接从它Github仓库的 [源码安装](https://github.com/huggingface/peft/archive/refs/tags/v0.4.0.tar.gz)， 通过修改它的setup.py文件来回避一些依赖问题。
+当torch==1.11.0的时候，你也可以选择直接从它Github仓库的 [源码安装](https://github.com/huggingface/peft/archive/refs/tags/v0.4.0.tar.gz)， 通过修改它的setup.py文件来回避一些依赖问题。
 
 之后，你仅仅只需要在启动脚本中使能如下标志便可以启动lora微调训练:
 
@@ -863,7 +863,7 @@ Big-bench-hard 数据集是 BIG-Bench 的一个子集，专注于有挑战性的
 PP 和 VP的基本原理如下：<div align=center> <img src="sources/images/pp_vp.png" height="350px" width="800px"> </div>
 
 在AscendSpeed中，可以通过使能`--pipeline-model-parallel-size` 标志来明确PP要将模型划分为多少个 stage，比如，该参数设置为4，就是将一个具有24层transformer的模型划分为4个stage，每个stage有6层transformer。
-为了使用VP，需要额外添加 `--num-layers-per-virtual-pipeline-stage` 标志，来决定每个虚拟stage的层数；为了使用DPP，则需要在PP的基础上添加 `--optimized-pipeline` 和 `--manual-mbs example-config-1` 标志。需要说明的是，虽然VP和DPP可以减少空泡时间，但是会增加通讯时间。
+为了使用VP，需要额外添加 `--num-layers-per-virtual-pipeline-stage` 标志，来决定每个虚拟stage的层数；目前仓库支持的VP形式为VP + no-overlap-p2p，当要开启VP时候，需要加入 --no-overlap-p2p-communication参数关闭overlap-p2p。为了使用DPP，则需要在PP的基础上添加 `--optimized-pipeline` 和 `--manual-mbs example-config-1` 标志。需要说明的是，虽然VP和DPP可以减少空泡时间，但是会增加通讯时间。
 
 
 ### <span id="jump3"> Fold3D </span>

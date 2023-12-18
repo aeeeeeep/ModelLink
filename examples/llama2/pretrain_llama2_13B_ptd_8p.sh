@@ -23,7 +23,6 @@ DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $
 python -m torch.distributed.launch $DISTRIBUTED_ARGS \
        pretrain_llama.py \
        --DDP-impl local \
-       --is-instruction-dataset \
        --tensor-model-parallel-size 8 \
        --pipeline-model-parallel-size 1 \
        --sequence-parallel \

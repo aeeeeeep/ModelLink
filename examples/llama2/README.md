@@ -457,46 +457,80 @@ python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-mode
                                                                     --type 13B 
 ```
 
-4. 准备数据集
-   
-    下载 LLaMA2-13B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
-        
-    ```shell
-      # 下载数据
-      mkdir dataset_llama2
-      cd ./dataset_llama2
-      wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-      cd ..
-    
-      # 处理数据                             
-      cd WORKSPACE
-      mkdir alpaca_preprocessed
-      python tools/preprocess_data.py --input WORKSPACE/alpaca/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-                                    --output-prefix WORKSPACE/alpaca_preprocessed/alpaca \
-                                    --tokenizer-type PretrainedFromHF \
-                                    --tokenizer-name-or-path WORKSPACE/llama-13b-hf \
-                                    --tokenizer-not-use-fast \
-                                    --handler-name GeneralInstructionHandler \
-                                    --append-eod
-    ```
 
-5. 配置 LLaMA2-13B 预训练脚本: examples/llama2/pretrain_llama2_13B_ptd_8p.sh
+4. 预训练
+
+4.1 准备数据集 
+
+下载 LLaMA2-13B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
    
-    ```shell
+```shell
+     # 下载数据
+     mkdir dataset_llama2
+     cd ./dataset_llama2
+     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+     cd ..
+
+     # 处理数据                           
+     python ./tools/preprocess_data.py \
+       --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+       --tokenizer-name-or-path ./llama-2-13b-hf \
+       --output-prefix ./dataset_llama2/alpaca \
+       --workers 4 \
+       --log-interval 1000 \
+       --tokenizer-type PretrainedFromHF
+   ```
+   4.2 用ptd模式预训练
+   配置LLaMA2-13B PTD 预训练脚本: examples/llama2/pretrain_llama2_13B_ptd_8p.sh
+
+   ```shell
     # 设置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-    
-    # 配置词表，数据集等路径
-    TOKENIZER_PATH=./llama-2-13b-hf/  #词表路径
-    DATA_PATH=WORKSPACE/alpaca_preprocessed/alpaca  #数据集路径
-    LOAD_CHECKPOINT=./llama-2-13b_tp8_pp1/
-    ```
 
-6. 启动 LLaMA2-13B 预训练脚本: examples/llama2/pretrain_llama2_13B_ptd_8p.sh
-   
-    ```shell
+    # 根据实际情况配置词表、数据集、模型参数加载和保存路径
+    LOAD_CHECKPOINT_PATH="your init model load path"
+    SAVE_CHECKPOINT_PATH="your model ckpt save path"
+    TOKENIZER_PATH=./llama-2-13b-hf/  #词表路径
+    DATA_PATH=./dataset_llama2/alpaca_text_document  #数据集路径
+   ```
+
+   启动 LLaMA2-13B PTD预训练脚本: examples/llama2/pretrain_llama2_13B_ptd_8p.sh
+
+   ```shell
     bash examples/llama2/pretrain_llama2_13B_ptd_8p.sh
-    ```
+   ```
+5. 微调
+
+   5.1 准备微调数据集 \
+   下载微调数据集 [这里](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+
+   ```shell
+   # 下载数据集
+   mkdir finetune_dataset
+   cd ./finetune_dataset
+   wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+   cd ..
+   
+   # 处理微调数据集                            
+   python ./tools/preprocess_data.py \
+     --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+     --tokenizer-name-or-path ./llama-2-13b-hf \
+     --output-prefix ./finetune_dataset/alpaca \
+     --workers 4 \
+     --log-interval 1000 \
+     --tokenizer-type PretrainedFromHF \
+     --handler-name GeneralInstructionHandler \
+     --append-eod
+   ```
+
+   5.2 全参微调 \
+   全参微调的配置脚本基本和预训练脚本pretrain_llama2_13B_ptd_8p.sh一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
+
+   ```bash
+   DATA_PATH=./finetune_dataset/alpaca
+   
+   --is-instruction-dataset \
+   ```
 
 ### 性能
 

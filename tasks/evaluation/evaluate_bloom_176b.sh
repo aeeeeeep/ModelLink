@@ -6,7 +6,7 @@ export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib:/root/miniconda3/lib:$LD_LI
 export HCCL_CONNECT_TIMEOUT=1200
 export TASK_QUEUE_ENABLE=0
 export HCCL_OP_BASE_FFTS_MODE_ENABLE=TRUE
-source /usr/local/Ascend/set_env.sh
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
 export INF_NAN_MODE_ENABLE=0
 
 # Change for multinode config

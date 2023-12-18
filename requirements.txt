@@ -16,4 +16,3 @@ nltk
 protobuf
 einops
 networkx
-peft==0.4.0
