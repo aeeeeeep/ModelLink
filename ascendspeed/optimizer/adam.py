@@ -1,15 +1,15 @@
 from typing import List, Optional
 
+import math
 import torch
 import torch_npu
 from torch import Tensor
 from torch.optim.optimizer import Optimizer
 from torch._utils import _flatten_dense_tensors, _unflatten_dense_tensors
-from ascendspeed.core import parallel_state
-from ascendspeed import get_args
+from megatron.core import parallel_state
 
 
-def adamw(params: List[Tensor],
+def adamw_torch(params: List[Tensor],
           grads: List[Tensor],
           exp_avgs: List[Tensor],
           exp_avg_sqs: List[Tensor],
@@ -22,52 +22,36 @@ def adamw(params: List[Tensor],
           lr: float,
           weight_decay: float,
           eps: float,
-          maximize: bool,
-          norm_coeff_scale: float):
+          maximize: bool):
     r"""Functional API that performs AdamW algorithm computation.
     See :class:`~torch.optim.AdamW` for details.
     """
     for i, param in enumerate(params):
-        if norm_coeff_scale is not None:
-            grad = grads[i].float() * norm_coeff_scale
-        else:
-            grad = grads[i]
+        grad = grads[i] if not maximize else -grads[i]
         exp_avg = exp_avgs[i]
         exp_avg_sq = exp_avg_sqs[i]
         step = state_steps[i]
 
         # Perform stepweight decay
-        bias_correction1 = beta1 ** step
-        bias_correction2 = beta2 ** step
+        param.mul_(1 - lr * weight_decay)
 
-        param.data, exp_avg, exp_avg_sq = torch_npu.npu_apply_adam_w(
-                bias_correction1,
-                bias_correction2,
-                lr,
-                weight_decay,
-                beta1,
-                beta2,
-                eps,
-                grad,
-                None,
-                amsgrad,
-                maximize,
-                out=(param.data, exp_avg, exp_avg_sq)
-                )
+        bias_correction1 = 1 - beta1 ** step
+        bias_correction2 = 1 - beta2 ** step
 
+        # Decay the first and second moment running average coefficient
+        exp_avg.mul_(beta1).add_(grad, alpha=1 - beta1)
+        exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1 - beta2)
+        if amsgrad:
+            # Maintains the maximum of all 2nd moment running avg. till now
+            torch.maximum(max_exp_avg_sqs[i], exp_avg_sq, out=max_exp_avg_sqs[i])
+            # Use the max. for normalizing running avg. of gradient
+            denom = (max_exp_avg_sqs[i].sqrt() / math.sqrt(bias_correction2)).add_(eps)
+        else:
+            denom = (exp_avg_sq.sqrt() / math.sqrt(bias_correction2)).add_(eps)
 
-def allreduce_layernorm_grads(grads):
-    """All-reduce layernorm grads (for sequence parallelism)."""
+        step_size = lr / bias_correction1
 
-    # All-reduce layernorm parameters across model parallel nodes
-    # when sequence parallelism is used
-
-    coalesced = _flatten_dense_tensors(grads)
-    torch.distributed.all_reduce(
-        coalesced, group=parallel_state.get_tensor_model_parallel_group())
-    for buf, synced in zip(grads, _unflatten_dense_tensors(
-            coalesced, grads)):
-        buf.copy_(synced)
+        param.addcdiv_(exp_avg, denom, value=-step_size)
 
 
 class AdamW(Optimizer):
@@ -151,7 +135,6 @@ class AdamW(Optimizer):
             closure (callable, optional): A closure that reevaluates the model
                 and returns the loss.
         """
-        args = get_args()
         loss = None
         if closure is not None:
             with torch.enable_grad():
@@ -200,11 +183,8 @@ class AdamW(Optimizer):
                 state['step'] += 1
                 # record the step after step update
                 state_steps.append(state['step'])
-            is_sp_valid = 'layernorm_sp' in group['name'] and len(grads) > 0
-            if args.deepspeed and is_sp_valid:
-                allreduce_layernorm_grads(grads)
-            # adamw_torch(params_with_grad,
-            adamw(params_with_grad,
+
+            adamw_torch(params_with_grad,
                     grads,
                     exp_avgs,
                     exp_avg_sqs,
@@ -216,6 +196,5 @@ class AdamW(Optimizer):
                     lr=group['lr'],
                     weight_decay=group['weight_decay'],
                     eps=group['eps'],
-                    maximize=group['maximize'],
-                    norm_coeff_scale=norm_coeff_scale)
+                    maximize=group['maximize'])
         return loss
