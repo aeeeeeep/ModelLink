@@ -252,89 +252,17 @@ Coming soon ...
 </table>
 
 
-### Model Training
-This is an example of model training with AscendSpeed, and the detailed guideline for each model could be found in the `examples/modelname` folder.
+### Model Training Software
 
-1. Clone the repository to your local server:
-
-```bash
-git clone https://gitee.com/ascend/AscendSpeed.git
-cd AscendSpeed
-mkdir logs
-mkdir ckpt
-```
-
-2. Build environment
-
-```bash
-# python3.7
-conda create -n test python=3.7
-conda activate test
-
-# install torch and torch_npu
-# ARM
-wget https://download.pytorch.org/whl/torch-1.11.0-cp37-cp37m-manylinux2014_aarch64.whl
-wget https://gitee.com/ascend/pytorch/releases/download/v5.0.rc2.2-pytorch1.11.0/torch_npu-1.11.0.post3-cp37-cp37m-linux_aarch64.whl
-# X86
-pip install torch==1.11 -i https://pypi.tuna.tsinghua.edu.cn/simple
-wget https://gitee.com/ascend/pytorch/releases/download/v5.0.rc2.2-pytorch1.11.0/torch_npu-1.11.0.post3-cp37-cp37m-linux_x86_64.whl
-# If the download of the file fails using 'wget' , you can download it manually while ensuring website security.
-
-pip install torch-1.11.0-cp37-cp37m-manylinux2014_aarch64.whl (ARM)
-pip install torch_npu-1.11.0.post3-cp37-cp37m-linux_XXXXXX.whl
-
-# install apex
-pip install apex-0.1_ascend_XXXXX-cp37-cp37m-linux_x86_64.whl
-pip install apex-0.1-ascend_XXXXX-cp37-cp37m-linux_aarch64.whl (ARM)
-
-# install megatron-core
-pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
-
-# install deepspeed and deepspeed_npu
-pip install deepspeed==0.9.2
-git clone https://gitee.com/ascend/DeepSpeed.git -b v0.9.2 deepspeed_npu
-cd deepspeed_npu
-pip3 install -e ./
-
-# install other packages
-pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-```
-
-
-3. Prepare dataset (download tokenizer configs from [here](https://huggingface.co/yahma/llama-7b-hf/tree/main)):
-```bash
-# for llama, download alpaca dataset, like
-wget https://raw.githubusercontent.com/tatsu-lab/stanford_alpaca/main/alpaca_data.json
-
-# revise "LLaMATokenizer" as "LlamaTokenizer" in tokenizer_config.json (This is a bug of huggingface)
-mkdir dataset
-python tools/preprocess_data.py --input alpaca_data.json \
-                                --output-prefix dataset/alpaca \
-                                --tokenizer-type PretrainedFromHF \
-                                --tokenizer-name-or-path llama-7b-hf \
-                                --tokenizer-not-use-fast \
-                                --handler-name GeneralInstructionHandler
-```
-
-4. (Selective) Prepare pretrained weights (download weights from [here](https://huggingface.co/yahma/llama-7b-hf/tree/main)):
-```bash
-python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir ../llama-7b-hf \
-                                                                    --output-model-dir ckpt \
-                                                                    --tensor-model-parallel-size 1 \
-                                                                    --pipeline-model-parallel-size 1 \
-                                                                    --type 7B
-
-# if you want to change the parallel strategy, the pretrained weights should also be sharded
-# by setting `tensor-model-parallel-size` and `pipeline-model-parallel-size`.
-# The script: tools/ckpt_convert/llama/convert_weights_when_tp_pp_change.py is helpful for weights merge in inference.
-```
-
-5. Start your task
-
-```bash
-# set your data path / weight path / tokenizer path etc.
-sh examples/llama/pretrain_llama_7B_zero_8p.sh
-```
+|         Software          | [config](https://www.hiascend.com/zh/) |
+|:-------------------------:|:--------------------------------------:|
+|          Python           |                 3.8.18                 |
+|          driver           |       2023Q4 Commercial Version        |
+|         firmware          |       2023Q4 Commercial Version        |
+|           CANN            |       2023Q4 Commercial Version        |
+| binary arithmetic package |       2023Q4 Commercial Version        |
+|           torch           |                 2.1.0                  |
+|         torch_npu         |       2023Q4 Commercial Version        |
 
 
 ## Downstream Tasks

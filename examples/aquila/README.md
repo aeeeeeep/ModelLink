@@ -21,20 +21,10 @@
 
 Aquila-7B 训练的硬件配置如下:
 
-| 硬件 | 设备 |      配置       |
-| :--: | :--: | :-------------: |
-| NPU  | A+K  | 8 x Ascend NPUs |
 
-Aquila-7B 训练的软件配置如下:
-
-|    软件           |          配置              |
-|:-----------------:|:--------------------------:|
-|    python         | 3.8.18                     |
-|    driver         |  [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software)                 |
-|    firmware       | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software)                  |
-|    CANN           |  [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)                             |
-|    torch          |                      2.1.0                                                                                                    |
-|    torch_npu      |  [package](https://gitee.com/ascend/pytorch/releases)                                                                         |
+|  硬件 |  设备 |        配置       |
+|:---:|:---:|:---------------:|
+| NPU | A+K | 8 x Ascend NPUs |
 
 ### 脚本
 

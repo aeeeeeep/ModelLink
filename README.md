@@ -253,88 +253,18 @@ AscendSpeed旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBa
 </table>
 
 
-### 模型训练
-这里展示了一个使用AscendSpeed进行模型训练的例子，针对每一个模型具体的操作指导可以在 `examples/modelname` 文件夹下看到
+### 模型训练软件配套
 
-1. 拷贝仓库到你的个人服务器:
+|            软件             |                                                  [版本](https://www.hiascend.com/zh/)                                                  |
+|:-------------------------:|:------------------------------------------------------------------------------------------------------------------------------------:|
+|          Python           |                                                                3.8.18                                                                |
+|          driver           |                                                               2023Q4商发                                                               |
+|         firmware          |                                                               2023Q4商发                                                               |
+|           CANN            |                                                               2023Q4商发                                                               |
+| binary arithmetic package |                                                               2023Q4商发                                                               |
+|           torch           |                                                                2.1.0                                                                 |
+|         torch_npu         |                                                               2023Q4商发                                                               |
 
-```bash
-git clone https://gitee.com/ascend/AscendSpeed.git
-cd AscendSpeed
-mkdir logs
-mkdir ckpt
-```
-
-2. 构建运行环境
-
-```bash
-# python3.7
-conda create -n test python=3.7
-conda activate test
-
-# 安装 torch 和 torch_npu
-# ARM
-wget https://download.pytorch.org/whl/torch-1.11.0-cp37-cp37m-manylinux2014_aarch64.whl
-wget https://gitee.com/ascend/pytorch/releases/download/v5.0.rc2.2-pytorch1.11.0/torch_npu-1.11.0.post3-cp37-cp37m-linux_aarch64.whl
-# X86
-pip install torch==1.11 -i https://pypi.tuna.tsinghua.edu.cn/simple
-wget https://gitee.com/ascend/pytorch/releases/download/v5.0.rc2.2-pytorch1.11.0/torch_npu-1.11.0.post3-cp37-cp37m-linux_x86_64.whl
-# 如果使用 'wget' 下载失败, 可以在确保网站安全的情况下点击网站直接下载
-
-pip install torch-1.11.0-cp37-cp37m-manylinux2014_aarch64.whl (ARM)
-pip install torch_npu-1.11.0.post3-cp37-cp37m-linux_XXXXXX.whl
-
-# 安装 apex
-pip install apex-0.1_ascend_XXXXX-cp37-cp37m-linux_x86_64.whl
-pip install apex-0.1-ascend_XXXXX-cp37-cp37m-linux_aarch64.whl (ARM)
-
-# 安装 megatron-core
-pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
-
-# 安装 deepspeed 和 deepspeed_npu
-pip install deepspeed==0.9.2
-git clone https://gitee.com/ascend/DeepSpeed.git -b v0.9.2 deepspeed_npu
-cd deepspeed_npu
-pip3 install -e ./
-
-# 安装其他的依赖
-pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-```
-
-
-3. 准备数据集 (点击 [这里](https://huggingface.co/yahma/llama-7b-hf/tree/main) 下载tokenizer配置文件):
-```bash
-# 对于 llama, 可以下载 alpaca 数据集, 比如：
-wget https://raw.githubusercontent.com/tatsu-lab/stanford_alpaca/main/alpaca_data.json
-
-# 这里要将tokenizer_config.json中的"LLaMATokenizer"修改为"LlamaTokenizer"（这是huggingface的一个bug）
-mkdir dataset
-python tools/preprocess_data.py --input alpaca_data.json \
-                                --output-prefix dataset/alpaca \
-                                --tokenizer-type PretrainedFromHF \
-                                --tokenizer-name-or-path llama-7b-hf \
-                                --tokenizer-not-use-fast \
-                                --handler-name GeneralInstructionHandler
-```
-
-4. (可选的) 准备预训练权重 (点击 [这里](https://huggingface.co/yahma/llama-7b-hf/tree/main) 下载权重文件):
-```bash
-python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir ../llama-7b-hf \
-                                                                    --output-model-dir ckpt \
-                                                                    --tensor-model-parallel-size 1 \
-                                                                    --pipeline-model-parallel-size 1 \
-                                                                    --type 7B
-
-# 如果你想要改变并行策略，可以通过设置 `tensor-model-parallel-size` 和 `pipeline-model-parallel-size` 标志，实现预训练权重的切分
-# 脚本: tools/ckpt_convert/llama/convert_weights_when_tp_pp_change.py 对于推理时的权重合并也是有帮助的.
-```
-
-5. 启动训练
-
-```bash
-# 在脚本中设置你自己的数据/权重/tokenizer等路径
-sh examples/llama/pretrain_llama_7B_zero_8p.sh
-```
 
 
 ## 下游任务

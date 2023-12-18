@@ -29,20 +29,6 @@ Baichuan2-7B 训练的硬件配置如下：
 |:---:|:---------------:|
 | NPU | 8 x Ascend NPUs |
 
-Baichuan2-7B 训练的软件配置如下： 
-
-|            软件             |                                                              配置                                                              |
-|:-------------------------:|:----------------------------------------------------------------------------------------------------------------------------:|
-|          python           |                                                            3.8.18                                                            |
-|          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-| binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                    2.1.0                                                     |
-|         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
-
-
-
 ### 脚本
 
 1. 拷贝仓库到你的个人服务器：
@@ -191,18 +177,6 @@ Baichuan2-13B 训练的硬件配置如下:
 |  硬件 |        配置        |
 |:---:|:----------------:|
 | NPU | 16 x Ascend NPUs |
-
-Baichuan2-13B 训练的软件配置如下:
-
-|            软件             |                                                      配置                                                      |
-|:-------------------------:|:------------------------------------------------------------------------------------------------------------:|
-|          python           |                                                    3.8.18                                                    |
-|          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-| binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                    2.1.0                                                    |
-|         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
 
 ### 脚本
 1. 将仓库拷贝到你的个人服务器:

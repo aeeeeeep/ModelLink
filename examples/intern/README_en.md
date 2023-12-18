@@ -32,20 +32,6 @@ Here's a hardware summary of pre-training InternLM-7B:
 | :------: | :---------------------------------------------: |
 |   NPU    |               8 x Ascend NPUs                   |
 
-Here's a software summary of pre-training InternLM-7B:
-
-
-|         Software          |   Version   |
-|:-------------------------:|:------------------------------------------------------------------------------------------------------------:|
-|          python           |                                                    3.8.18                                                    |
-|          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-| binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                    2.1.0                                                    |
-|         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
-|         apex         |                             [package](https://gitee.com/ascend/apex/releases)                             |
-
 ### Script
 
 1. Clone the repository to your local server:
@@ -206,20 +192,6 @@ Here's a hardware summary of pre-training InternLM-65B:
 | Hardware |                      Value                      |
 | :------: | :---------------------------------------------: |
 |   NPU    |               32 x Ascend NPUs                   |
-
-Here's a software summary of pre-training InternLM-65B:
-
-
-|         Software          |   Version   |
-|:-------------------------:|:------------------------------------------------------------------------------------------------------------:|
-|          python           |                                                    3.8.18                                                    |
-|          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-| binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                    2.1.0                                                    |
-|         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
-|         apex         |                             [package](https://gitee.com/ascend/apex/releases)                             |
 
 ### Script
 

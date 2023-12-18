@@ -147,18 +147,6 @@ Here's a hardware summary of fine-tuning Chinese LLaMA Alpaca-13B:
 |   RAM    |                  32x64 GB DDR4                  |
 |   NPU    |               8 x Ascend910 64G                |
 
-Here's a software summary of fine-tuning Chinese LLaMA Alpaca-13B:
-|         Software          |   Version   |
-| :-----------------------: |:-----------:|
-|          Python           |   3.8.18    |
-|          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-| binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                    2.1.0                                                     |
-|         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
-
-
 
 
 ## Script

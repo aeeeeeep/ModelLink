@@ -43,19 +43,6 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
 | :------: | :---------------------------------------------: |
 |   NPU    |               8 x Ascend NPUs                   |
 
-Here's a software summary of pre-training  LLAMA2-7B: 
-
-
-|         Software          |   Version   |
-| :-----------------------: |:-----------:|
-|          Python           |   3.8.18    |
-|          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-| binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                    2.1.0                                                    |
-|         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
-
 ### Script
 
 1. Clone the repository to your local server:
@@ -438,19 +425,6 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
 | :------: | :---------------------------------------------: |
 |   NPU    |               8 x Ascend NPUs                   |
 
-Here's a software summary of pre-training  LLaMA2-13B: 
-
-
-|         Software          |                                                   Version                                                    |
-| :-----------------------: |:------------------------------------------------------------------------------------------------------------:|
-|          Python           |                                                    3.8.18                                                    |
-|          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-| binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                    2.1.0                                                     |
-|         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
-
 ### Script
 
 1. Clone the repository to your local server:
@@ -629,19 +603,6 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
 |:-----:|:--------:|:----------------:|
 |  34B  |    NPU   | 16 x Ascend NPUs |
 |  70B  |    NPU   | 64 x Ascend NPUs |
-
-Here's a software summary of pre-training  LLaMA2-34B/70B: 
-
-|         Software          |                                                   Version                                                    |
-| :-----------------------: |:------------------------------------------------------------------------------------------------------------:|
-|          Python           |                                                     3.8                                                      |
-|          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-| binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                    2.1.0                                                     |
-|         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
-
 
 ### Script-2
 

@@ -42,18 +42,6 @@ Bloom-7B 训练的硬件配置如下:
 |--------|----------------|
 | NPU    | 1x8 Ascend 910 | 
 
-Bloom-7B 训练的软件配置如下:
-
-|            软件             |                                                      版本                                                      |
-|:-------------------------:|:------------------------------------------------------------------------------------------------------------:|
-|          python           |                                                    3.8.18                                                    |
-|          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-| binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                    2.0.1                                                     |
-|         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
-
 ## 脚本
 
 1. 拷贝仓库到本地服务器：
@@ -318,18 +306,6 @@ Bloom-176B 训练的硬件配置:
 | **硬件** | **配置**          |
 |--------|-----------------|
 | NPU    | 12x8 Ascend 910 | 
-
-Bloom-176B 训练的软件配置:
- 
-|            软件             |                                                      配置                                                      |
-|:-------------------------:|:------------------------------------------------------------------------------------------------------------:|
-|          python           |                                                    3.8.0                                                     |
-|          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-| binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                    2.0.1                                                     |
-|         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |                                                                                                  |
 
 ## 脚本
 

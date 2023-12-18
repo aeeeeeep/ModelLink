@@ -37,18 +37,6 @@ Here's a hardware summary of pre-training LLaMA-7B/13B:
 |   NPU    |  A+K   | 8 x Ascend NPUs  |
 |   NPU    |  A+X   | 16 x Ascend NPUs |
 
-Here's a software summary of pre-training LLaMA-7B/13B:
-
-
-|         Software          |                                                   Version                                                    |
-| :-----------------------: |:------------------------------------------------------------------------------------------------------------:|
-|          Python           |                                                    3.8.0                                                     |
-|          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-| binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                    2.1.0                                                     |
-|         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
 
 ### Script
 
@@ -333,18 +321,6 @@ Here's a hardware summary of training llama:
 | :------: |:----------------:|
 |   NPU    | 32 x Ascend NPUs |
 
-
-Here's a software summary of training llama:
-                                                   
-|         Software          |                                                   Version                                                    |
-| :-----------------------: |:------------------------------------------------------------------------------------------------------------:|
-|          Python           |                                                     3.8                                                      |
-|          driver           | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|         firmware          | [package](https://support.huawei.com/enterprise/zh/ascend-computing/atlas-900-pod-a2-pid-254184911/software) |
-|           CANN            |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-| binary arithmetic package |       [package](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software)       |
-|           torch           |                                                    2.1.0                                                     |
-|         torch_npu         |                             [package](https://gitee.com/ascend/pytorch/releases)                             |
 
 ### Datasets
 The model was trained using alpaca datasets.
