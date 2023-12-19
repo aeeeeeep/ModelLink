@@ -13,6 +13,8 @@
     - [性能](#性能)
       - [吞吐](#吞吐)
       - [精度](#精度)
+    - [推理](#推理)
+    - [评估](#评估)
 - [Internlm-65B](#internlm-65b)
   - [训练](#训练)
     - [脚本](#脚本)
@@ -182,6 +184,27 @@ NPU vs 参考 （无预训练权重） loss 对比和相对误差
 
 NPU vs 参考 （有预训练权重） loss 对比和相对误差
 ![NPU-Loss-with-weight-and-Relative-Error](../../sources/images/intern7b_loss_with_weights.png)
+
+#### 推理
+<a href="https://gitee.com/ascend/AscendSpeed/blob/master/examples/intern/generate_internlm_7b_deepspeed.sh">推理脚本</a>：
+examples/intern/generate_internlm_7b_deepspeed.sh 
+```
+bash examples/intern/generate_internlm_7b_deepspeed.sh
+```
+推理举例：
+![Internlm-7b-inference](../../sources/images/internlm7b-inference.png)
+
+#### 评估
+<a href="https://gitee.com/ascend/AscendSpeed/blob/master/tasks/evaluation/eval_internlm.sh">评估脚本</a>:
+tasks/evaluation/eval_internlm.sh 
+```
+bash  tasks/evaluation/eval_internlm.sh
+```
+InternLM-7B在**Ascend NPU**中的评测表现：
+
+| 任务                                                  | 模型        | 昇腾值  | 社区值  |
+|-----------------------------------------------------|-----------|------|------|
+| [MMLU](https://huggingface.co/datasets/cais/mmlu) | LLaMA-7B  | 48.8 | [51.0](https://huggingface.co/internlm/internlm-7b) | 
 
 # InternLM-65B
 

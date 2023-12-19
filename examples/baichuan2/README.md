@@ -362,7 +362,7 @@ bash examples/baichuan2/generate_baichuan2_13B_tp8_pp1.sh
 ```
 
 部分推理样本如下：
-![13B-inference](../../sources/images/baichuan2/13B-inference.PNG)
+![13B-inference](../../sources/images/baichuan2/13B-inference.png)
 
 ### 评估
 我们使用boolq基准来评估我们的模型。基准[下载](https://huggingface.co/datasets/boolq).

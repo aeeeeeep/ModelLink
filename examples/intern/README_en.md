@@ -14,6 +14,8 @@
     - [Performance](#performance)
       - [Machine performance](#machine-performance)
       - [Accuracy of the loss](#accuracy-of-the-loss)
+  - [Inference](#Inference)
+  - [Evaluation](#Evaluation)
 - [Contents](#contents)
 - [Internlm-65B](#internlm-65b)
   - [Training](#training)
@@ -182,6 +184,28 @@ NPU vs GPU without weights loss and relative error.
 
 NPU vs GPU with weights loss and relative error.
 ![NPU-Loss-with-weight-and-Relative-Error](../../sources/images/intern7b_loss_with_weights.png)
+
+#### Inference
+<a href="https://gitee.com/ascend/AscendSpeed/blob/master/examples/intern/generate_internlm_7b_deepspeed.sh">Inference script</a>：
+examples/intern/generate_internlm_7b_deepspeed.sh 
+```
+bash examples/intern/generate_internlm_7b_deepspeed.sh
+```
+
+Inference case:
+![Internlm-7b-inference](../../sources/images/internlm7b-inference.png)
+
+#### Evaluation
+<a href="https://gitee.com/ascend/AscendSpeed/blob/master/tasks/evaluation/eval_internlm.sh">Evaluation script</a>:
+tasks/evaluation/eval_internlm.sh 
+```
+bash  tasks/evaluation/eval_internlm.sh
+```
+The evaluation performance of LLaMA-7B/13B in **Ascend NPU**:
+
+| Task    | Model     | NPU  | Benchmark |
+|-----------------------------------------------------|-----------|------|------|
+| [MMLU](https://huggingface.co/datasets/cais/mmlu) | LLaMA-7B  | 48.8 | [51.0](https://huggingface.co/internlm/internlm-7b) | 
 
 # InternLM-65B
 

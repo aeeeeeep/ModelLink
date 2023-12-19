@@ -380,7 +380,7 @@ bash examples/baichuan2/generate_baichuan2_13B_tp8_pp1.sh
 ```
 
 Some inference samples are as follows:
-![13B-inference.png](../../sources/images/baichuan2/13B-inference_en.PNG)
+![13B-inference.png](../../sources/images/baichuan2/13B-inference_en.png)
 
 ### Evaluation
 We use the boolq benchmark to evaluate our model. Benchmark[Download](https://huggingface.co/datasets/boolq).
