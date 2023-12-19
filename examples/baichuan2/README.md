@@ -281,7 +281,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 修改词表，数据集, 权重等路径等路径
 TOKENIZER_PATH=./Baichuan2-13B-Base 
-DATA_PATH=./processed_data_of_moss/processed_data_packed_input_ids_document
+DATA_PATH=./processed_data_of_moss/processed_data
 LOAD_PATH=./baichuan2-13b-merge
 
 # 修正双机运行配置
@@ -289,25 +289,29 @@ LOAD_PATH=./baichuan2-13b-merge
 # NODE_RANK主服务器脚本里设置为0，另一台服务器脚本里设置为1
 ```
 
-如果需要微调训练模型，需要首先关闭FA并增加以下参数，因为目前FA算子无法处理微调训练时alibi适配的attention_mask
+如果需要开启FA，请遵循以下配置
 ```shell
 # 修改 ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 # 修改词表，数据集, 权重等路径等路径
 TOKENIZER_PATH=./Baichuan2-13B-Base 
-DATA_PATH=./processed_data_of_moss/processed_data
+DATA_PATH=./processed_data_of_moss/processed_data_packed_input_ids_document
 LOAD_PATH=./baichuan2-13b-merge
 
 # 修正双机运行配置
 # MASTER_ADDR=xx.xx.x.xxx配置为主服务器ip
 # NODE_RANK主服务器脚本里设置为0，另一台服务器脚本里设置为1
+# 设置MICRO_BATCH
+MICRO_BATCH = 2
 
-# 删除--use-flash-attn
-# 增加微调数据集参数
---is-instruction-dataset
-# 调整attention_mask为padding格式，增加以下参数
---padding-attention-mask
+# 增加FA
+--use-flash-attn
+# 删除参数 --fill-neg-inf
+# 删除微调数据集参数 --is-instruction-dataset
+# 删除参数 --padding-attention-mask
+# 增加选择性重计算参数
+--auto-recompute-device-size 57344
 ```
 
 6. 启动 Baichuan2-13B 训练脚本: /examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
@@ -325,8 +329,8 @@ bash examples/baichuan2/pretrain_baichuan_ptd_13B.sh
 
 |  设备  |            模型             | 迭代数  | 样本吞吐 (samples/p/s) | token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
 |:----:|:-------------------------:|:----:|:------------------:|:--------------------:|:---------------:|:----------------:|
-| NPUs | Baichuan2-13B | 1000 |        5.149        |         1350         |     49.716      |      116.61      |
-|  参考  |               |      |                    |         2062         |                 |                  |
+| NPUs | Baichuan2-13B | 1000 |       3.312        |         852          |      76.89      |      75.40       |
+|  参考  |               |      |                    |         872         |                 |                  |
 
 
 
@@ -339,3 +343,60 @@ NPU vs 参考 loss.
 NPU vs 参考 loss 相对误差.
 
 ![NPU-Relative-Error](../../sources/images/baichuan2/baichuan2-13B-loss-relative-error.png)
+
+### 推理
+我们支持使用 Baichuan2-13B 进行文本生成的推理。
+推理与预训练不同，比如我们需要加载预训练权重和输出样本的长度：
+
+配置Baichuan2-13B推理脚本`examples/baichuan2/generate_baichuan2_13B_tp8_pp1.sh`。
+
+```shell
+# 配置模型权重路径和分词器路径
+CHECKPOINT=<checkpoint-path>
+VOCAB_FILE=<vocabfile-path>
+```
+
+Baichuan2-13B:
+```shell
+bash examples/baichuan2/generate_baichuan2_13B_tp8_pp1.sh
+```
+
+部分推理样本如下：
+![13B-inference](../../sources/images/baichuan2/13B-inference.PNG)
+
+### 评估
+我们使用boolq基准来评估我们的模型。基准[下载](https://huggingface.co/datasets/boolq).
+
+```shell
+# 配置原始权重与词表的路径
+CHECKPOINT=<origin-ckpt-path>
+VOCAB_FILE=<tokenizer-path>
+# 配置任务以及数据路径
+DATA_PATH="./boolq/test/"
+TASK="boolq"
+```
+
+```shell
+bash ./tasks/evaluation/eval_baichuan2_13B_tp8_pp1.sh
+```
+
+<table>
+  <thead>
+    <tr>
+      <th>任务</th>
+      <th>验证集</th>
+      <th>模型</th>
+      <th>昇腾值</th>
+      <th>社区值</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="https://huggingface.co/datasets/boolq">Boolq</a></td>
+      <td>Test</td>
+      <th>Baichuan2 13B</th>
+      <td>0.790</td>
+      <td><a href="https://opencompass.org.cn/dataset-detail/BoolQ">0.670</a></td>
+    </tr>
+  </tbody>
+</table>

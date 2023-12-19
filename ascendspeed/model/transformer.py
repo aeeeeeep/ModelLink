@@ -42,7 +42,7 @@ from ascendspeed.core.models.common.rotary_pos_embedding import apply_rotary_pos
 from ascendspeed.core.transformer.module.triangle_attention import TriangleAttention
 from ascendspeed.model.fused_bias_gelu import bias_gelu_impl
 from ascendspeed.model.module import MegatronModule
-from ascendspeed.model.utils import attention_mask_func, openai_gelu, erf_gelu, get_norm
+from ascendspeed.model.utils import attention_mask_func, openai_gelu, erf_gelu, get_norm, get_inverted_mask
 from ascendspeed.error_utils import check_divisible, check_equal, ensure_valid
 
 logger = logging.getLogger(__name__)
@@ -325,6 +325,7 @@ class CoreAttention(MegatronModule):
                                                       attention_dropout=config.attention_dropout)
         self.square_alibi_mask = args.square_alibi_mask
         self.max_seq_length = args.seq_length
+        self.fill_neg_inf = args.fill_neg_inf
 
     def forward(self, query_layer, key_layer,
                 value_layer, attention_mask, alibi=None):
@@ -350,6 +351,10 @@ class CoreAttention(MegatronModule):
         # preallocting result tensor: [b * np, sq, sk]
         if alibi is None:
             matmul_result = None
+        elif self.fill_neg_inf:
+            alibi = alibi[:, :output_size[3], :output_size[3]]
+            attention_mask = attention_mask.repeat(output_size[0], 1, 1, 1)[:output_size[0], :, :, :]
+            matmul_result = get_inverted_mask(attention_mask, alibi).view(-1, output_size[2], output_size[2]).contiguous()
         else:
             matmul_result = alibi[:, :, :output_size[3]].repeat(output_size[0], 1, 1)
 
@@ -380,8 +385,14 @@ class CoreAttention(MegatronModule):
             # ===========================
 
             # attention scores and attention mask [b, np, sq, sk]
-            attention_probs = self.scale_mask_softmax(attention_scores,
-                                                      attention_mask)
+            if self.square_alibi_mask:
+                attention_scores = torch.max(
+                    attention_scores, torch.tensor(torch.finfo(attention_scores.dtype).min)
+                )
+                attention_probs = torch.nn.functional.softmax(attention_scores, -1)
+            else:
+                attention_probs = self.scale_mask_softmax(attention_scores,
+                                                          attention_mask)
 
             if self.bf16:
                 attention_probs = attention_probs.bfloat16()
@@ -886,7 +897,8 @@ class ParallelTransformerLayer(MegatronModule):
         # Alibi
         if args.position_embedding_type == PositionEmbeddingType.alibi:
             self.alibi = self._build_alibi_tensor(args.seq_length, args.num_attention_heads,
-                                                  args.micro_batch_size, args.square_alibi_mask).to(torch.cuda.current_device())
+                                                  args.micro_batch_size, args.square_alibi_mask,
+                                                  args.fill_neg_inf).to(torch.cuda.current_device())
             if args.params_dtype == torch.float16:
                 self.alibi = self.alibi.to(torch.float16)
             elif args.params_dtype == torch.bfloat16:
@@ -1228,7 +1240,7 @@ class ParallelTransformerLayer(MegatronModule):
             return output, moe_loss
 
     @staticmethod
-    def _build_alibi_tensor(max_seq_len, num_attention_heads, batch_size, square_alibi_mask):
+    def _build_alibi_tensor(max_seq_len, num_attention_heads, batch_size, square_alibi_mask, fill_neg_inf):
         """Returns tensor shaped (batch_size * num_attention_heads, 1, max_seq_len)"""
 
         def get_slopes(n):
@@ -1243,6 +1255,15 @@ class ParallelTransformerLayer(MegatronModule):
                 closest_power_of_2 = 2 ** math.floor(math.log2(n))
                 return get_slopes_power_of_2(closest_power_of_2) + get_slopes(2 * closest_power_of_2)[0::2][
                                                                    :n - closest_power_of_2]
+
+        def _fill_with_neg_inf(t):
+            """FP16-compatible function that fills a tensor with -inf."""
+            return t.float().fill_(float("-inf")).type_as(t)
+
+        def _buffered_future_mask(maxpos, alibi, attn_heads):
+            _future_mask = torch.triu(_fill_with_neg_inf(torch.zeros([maxpos, maxpos])), 1)
+            _future_mask = _future_mask.unsqueeze(0) + alibi
+            return _future_mask[:attn_heads, :maxpos, :maxpos]
 
         slopes = torch.Tensor(get_slopes(num_attention_heads))
 
@@ -1261,6 +1282,8 @@ class ParallelTransformerLayer(MegatronModule):
         tp_index = parallel_state.get_tensor_model_parallel_rank()
         alibi = alibi.reshape((tp_world_size, -1, *alibi.shape[1:]))[tp_index]
 
+        if fill_neg_inf:
+            return _buffered_future_mask(max_seq_len, alibi, num_attention_heads)
         return alibi
 
 

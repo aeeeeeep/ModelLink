@@ -128,8 +128,8 @@ Coming soon ...
       <td>13B</td>
       <td> 2x8</td>
       <td> BF16 </td>
-      <td> 1350 </td>
-      <td> 2062 </td>
+      <td> 852 </td>
+      <td> 872 </td>
       <td> <a href="./sources/images/baichuan2/13B-loss-compare.png">Loss</a> </td>
       <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_13B.sh">Train</a> </td>
     </tr>

@@ -290,7 +290,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # modify script orign dataset path according to your own dataset path
 TOKENIZER_PATH=./Baichuan2-13B-Base 
-DATA_PATH=./processed_data_of_moss/processed_data_packed_input_ids_document
+DATA_PATH=./processed_data_of_moss/processed_data
 LOAD_PATH=./baichuan2-13b-merge
 
 # set config for two-node parallelism
@@ -298,7 +298,7 @@ LOAD_PATH=./baichuan2-13b-merge
 # NODE_RANK is set to 0 in the master node script and to 1 in another.
 ```
 
-If you need to fine-tune the training model, you need to first turn off FA and append following arguments, as FA operators cannot currently handle the attention_mask for alibi of fine-tuning training.
+If you need turn on FA, you should do following change:
 
 ```shell
 # modify the script according to your own  ascend-toolkit path
@@ -312,12 +312,16 @@ LOAD_PATH=./baichuan2-13b-merge
 # set config for two-node parallelism
 # modify MASTER_ADDR=xx.xx.x.xxx to master node IP
 # NODE_RANK is set to 0 in the master node script and to 1 in another.
+# set MICRO_BATCH 
+MICRO_BATCH = 2
 
-# remove --use-flash-attn
-# add dataset argument for SFT training
---is-instruction-dataset
-# add following argument to adjust padding attention_mask
---padding-attention-mask
+# add FA argument
+--use-flash-attn
+# remove argument --fill-neg-inf
+# remove argument --is-instruction-dataset
+# remove argument --padding-attention-mask
+# add argument for auto selective recompute strategy
+--auto-recompute-device-size 57344
 ```
 
 6. Launch Baichuan2-13B pre-training script: /examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
@@ -337,8 +341,8 @@ With FA operator, the performance of the Baichuan2-13B in **Ascend NPU** and **R
 
 | Device |     Model     | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
 |:----:|:-------------------------:|:----:|:------------------:|:--------------------:|:---------------:|:----------------:|
-| NPUs | Baichuan2-13B | 1000 |        5.149        |         1350         |     49.716      |      116.61      |
-|  Reference  |               |      |                    |         2062         |                 |                  |
+| NPUs | Baichuan2-13B | 1000 |        3.312        |         852          |      76.89      |      75.40       |
+|  Reference  |               |      |                    |         872         |                 |                  |
 
 
 
@@ -357,3 +361,60 @@ NPU vs Reference loss relative error.
 \
 The relative error between NPU and Reference Loss is less than 0.02 throughout, as expected.
 
+
+### Inference
+We support AscendSpeed Inference for text generation with LLaMA-33B.
+Inference different from pre-training, such as we need to Load pre-training checkpoint and the length of the output samples:
+
+Config Baichuan2-13B inference script `examples/baichuan2/generate_baichuan2_13B_tp8_pp1.sh`.
+
+```shell
+# config the model weight path and tokenizer path
+CHECKPOINT=<checkpoint-path>
+VOCAB_FILE=<vocabfile-path>
+```
+
+Baichuan2-13B:
+```shell
+bash examples/baichuan2/generate_baichuan2_13B_tp8_pp1.sh
+```
+
+Some inference samples are as follows:
+![13B-inference.png](../../sources/images/baichuan2/13B-inference_en.PNG)
+
+### Evaluation
+We use the boolq benchmark to evaluate our model. Benchmark[Download](https://huggingface.co/datasets/boolq).
+
+```shell
+# config origin weight and vocab file path
+CHECKPOINT=<origin-ckpt-path>
+VOCAB_FILE=<tokenizer-path>
+# config tasks and dataset path
+DATA_PATH="./boolq/test/"
+TASK="boolq"
+```
+
+```shell
+bash ./tasks/evaluation/eval_baichuan2_13B_tp8_pp1.sh
+```
+
+<table>
+  <thead>
+    <tr>
+      <th>Task</th>
+      <th>Subset</th>
+      <th>Model</th>
+      <th>NPU</th>
+      <th>OpenSource</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="https://huggingface.co/datasets/boolq">Boolq</a></td>
+      <td>Test</td>
+      <th>Baichuan2 13B</th>
+      <td>0.790</td>
+      <td><a href="https://opencompass.org.cn/dataset-detail/BoolQ">0.670</a></td>
+    </tr>
+  </tbody>
+</table>

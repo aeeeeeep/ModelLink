@@ -57,6 +57,14 @@ def attention_mask_func(attention_scores, attention_mask):
     return attention_scores
 
 
+def get_inverted_mask(attention_mask, alibi):
+    inverted_mask = attention_mask.to(alibi.dtype)
+    inverted_mask = inverted_mask.masked_fill(
+        inverted_mask.to(torch.bool), float("-inf")
+    )
+    return inverted_mask.to(alibi.device) + alibi.unsqueeze(0)
+
+
 def get_linear_layer(rows, columns, init_method):
     """Simple linear layer with weight initialization."""
     layer = torch.nn.Linear(rows, columns)

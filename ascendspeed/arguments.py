@@ -377,7 +377,9 @@ def validate_args(args, defaults={}):
                         'padding attention mask!')
         ensure_valid(not args.is_instruction_dataset, 'FlashAttention of Alibi do not support' +
                         'is_instruction_dataset!')
-    
+    if args.fill_neg_inf:
+        ensure_valid(args.square_alibi_mask, 'square-alibi-mask must be passed when you' +
+                        'set fill-neg-inf to be true!')
     # Activation recomputing.
     if args.distribute_saved_activations:
         ensure_valid(args.tensor_model_parallel_size > 1, 'can distribute ' +
@@ -843,6 +845,10 @@ def _add_training_args(parser):
                        action='store_true',
                        default=False,
                        help='attention mask of alibi is squared')
+    group.add_argument('--fill-neg-inf',
+                       action='store_true',
+                       default=False,
+                       help='fill alibi with negative inf')
     return parser
 
 

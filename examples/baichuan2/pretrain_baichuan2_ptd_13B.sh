@@ -12,7 +12,7 @@ NODE_RANK=0
 NPUS_PER_NODE=8
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 GLOBAL_BATCH=256
-MICRO_BATCH=2
+MICRO_BATCH=1
 
 DATA_PATH=./data/baichuan2_txt
 TOKENIZER_PATH=./tokenizer
@@ -63,12 +63,13 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --z-loss-weight 0 \
        --lm-norm-weight \
        --keep-last-token \
+       --is-instruction-dataset \
        --square-alibi-mask \
+       --fill-neg-inf \
+       --padding-attention-mask \
        --release-fp32-grad \
        --mlp-layer-fusion \
        --use-distributed-optimizer \
-       --use-flash-attn \
-       --auto-recompute-device-size 57344 \
        --seed 1234 \
        --adam-beta1 0.9 \
        --adam-beta2 0.98 \
