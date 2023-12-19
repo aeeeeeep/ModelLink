@@ -48,7 +48,7 @@ def exe_adaptation():
     import megatron
     import megatron.optimizer
     import megatron.core.pipeline_parallel
-    from .arguments import _add_distributed_args
+    from .arguments import _add_distributed_args, _add_training_args
     from .initialize import _compile_dependencies, set_jit_fusion_options
     from .core.pipeline_parallel.p2p_communication import _batched_p2p_ops
     from .core.tensor_parallel.random import _set_cuda_rng_state
@@ -77,5 +77,6 @@ def exe_adaptation():
 
     # Megatron wrappers
     megatron.arguments._add_distributed_args = _add_distributed_args
+    megatron.arguments._add_training_args = _add_training_args
 
 exe_adaptation()
