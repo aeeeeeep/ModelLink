@@ -258,7 +258,7 @@ class MegatronOptimizer(ABC):
             if unwrapped_model.share_embeddings_and_output_weights:
                 word_embeddings_weight = unwrapped_model.shared_embedding_or_output_weight()
                 if word_embeddings_weight.requires_grad:
-                    if args.DDP_impl == 'local':
+                    if args.DDP_impl == 'local' and args.use_contiguous_buffers_in_local_ddp:
                         grad = word_embeddings_weight.main_grad
                     else:
                         grad = word_embeddings_weight.grad
@@ -300,10 +300,10 @@ class MegatronOptimizer(ABC):
                     model_module, self.unwrap_model_classes)
                 for param in unwrapped_model.parameters():
                     if getattr(param, 'sequence_parallel', False) and param.requires_grad:
-                        grad = param.main_grad if args.DDP_impl == 'local' else param.grad
+                        grad = param.main_grad if (args.DDP_impl == 'local' and args.use_contiguous_buffers_in_local_ddp)\
+                            else param.grad
                         grads.append(grad.data)
 
-            # print("rank [{}], len:{}\n".format(torch.cuda.current_device(), len(self.models[0])), end="", flush=True)
             if not grads:
                 return
             coalesced = _flatten_dense_tensors(grads)
@@ -881,11 +881,14 @@ class FP32Optimizer(MegatronOptimizer):
 
     def __init__(self, optimizer, clip_grad,
                  log_num_zeros_in_grad,
-                 params_have_main_grad):
+                 params_have_main_grad,
+                 use_contiguous_buffers_in_local_ddp,
+                 model):
 
         super(FP32Optimizer, self).__init__(
             optimizer, clip_grad, log_num_zeros_in_grad,
-            params_have_main_grad)
+            params_have_main_grad, use_contiguous_buffers_in_local_ddp,
+            model)
 
         self._scale = get_accelerator().FloatTensor([1.0])
 
