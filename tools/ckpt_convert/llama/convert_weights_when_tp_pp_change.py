@@ -141,8 +141,6 @@ def merge_pp_tp_models(config):
 
         for pp_i in range(pp_n_layer):
             g_i = offset + pp_i
-            entire_model[f"language_model.layers.{g_i}.attention.rotary_emb.inv_freq"] = \
-            tp_models[0]["language_model"]["encoder"][f"layers.{pp_i}.self_attention.rotary_emb.inv_freq"]
             entire_model[f"language_model.layers.{g_i}.input_layernorm.weight"] = \
             tp_models[0]["language_model"]["encoder"][f"layers.{pp_i}.input_layernorm.weight"]
             entire_model[f"language_model.layers.{g_i}.post_attention_layernorm.weight"] = \
@@ -174,11 +172,10 @@ def merge_pp_tp_models(config):
             merge_weight(merge_weight_config1)
             if args.merge_mlp:
                 mlp_key = "layers.{}.mlp.".format(pp_i)
-                mlp_len = tp_models[0][mlp_key + "proj.weight"].shape[0] // 2
+                mlp_len = tp_models[0]["language_model"]["encoder"][mlp_key + "proj.weight"].shape[0] // 2
                 for tm in tp_models:
-                    tm[mlp_key + "gate_proj.weight"] = tm["language_model"]["encoder"][mlp_key + "proj.weight"][
-                                                       :mlp_len].clone()
-                    tm[mlp_key + "up_proj.weight"] = tm["language_model"]["encoder"][mlp_key + "proj.weight"][
+                    tm["language_model"]["encoder"][mlp_key + "gate_proj.weight"] = tm["language_model"]["encoder"][mlp_key + "proj.weight"][:mlp_len].clone()
+                    tm["language_model"]["encoder"][mlp_key + "dense_h_to_4h.weight"] = tm["language_model"]["encoder"][mlp_key + "proj.weight"][
                                                      mlp_len:].clone()
             merge_weight_config2 = MergeWeightConfig(entire_model, tp_models, 'layers.{}.mlp.gate_proj.weight',
                                                      "language_model.layers.{}.mlp.gate_proj.weight",

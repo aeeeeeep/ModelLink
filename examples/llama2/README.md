@@ -774,7 +774,7 @@ LLaMA2-34B/70B 训练的硬件配置:
     # 处理数据集                              
     python ./tools/preprocess_data.py \
     --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ./llama-2-70b-hf \
+    --tokenizer-name-or-path ./llama2-70b-hf \
     --output-prefix ./dataset_llama2/alpaca \
     --workers 4 \
     --log-interval 1000 \
@@ -894,10 +894,10 @@ python $SCRIPT_PATH \
   --tgt-pipeline-model-parallel-size 1 \
   --merge-mlp \
   --type 34B \
-  --num_heads 64 \
-  --num_kv_heads 8 \
-  --hidden_size 8192 \
-  --num_layers 48
+  --num-heads 64 \
+  --num-kv-heads 8 \
+  --hidden-size 8192 \
+  --num-layers 48
 ```
 
 LLaMA2-70B:
@@ -914,10 +914,10 @@ python $SCRIPT_PATH \
   --tgt-pipeline-model-parallel-size 1 \
   --merge-mlp \
   --type 70B \
-  --num_heads 64 \
-  --num_kv_heads 8 \
-  --hidden_size 8192 \
-  --num_layers 80
+  --num-heads 64 \
+  --num-kv-heads 8 \
+  --hidden-size 8192 \
+  --num-layers 80
 ```
 
 我们支持使用 LLaMA2-34B/70B 进行文本生成的推理，我们需要加载预训练权重：
