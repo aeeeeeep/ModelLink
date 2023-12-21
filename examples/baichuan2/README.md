@@ -235,7 +235,7 @@ wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/tokenizer.
 cd ..
 ```
 
-将 BaiChuan2-13B 模型权重从 huggingface 格式转换为 AscendSpeed 格式
+将 Baichuan2-13B 模型权重从 huggingface 格式转换为 AscendSpeed 格式
 ```shell
 mkdir baichuan2-13b-merge
 
@@ -318,14 +318,14 @@ MICRO_BATCH = 2
 
 ```bash
 # 请在双机上分别运行该命令，双机会自动同步通信，开始进程运行
-bash examples/baichuan2/pretrain_baichuan_ptd_13B.sh
+bash examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
 ```
 
 ### 性能
 
 #### 吞吐
 
-开启FA情况下，Baichuan2-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
+不开启FA情况下，Baichuan2-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 
 |  设备  |            模型             | 迭代数  | 样本吞吐 (samples/p/s) | token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
 |:----:|:-------------------------:|:----:|:------------------:|:--------------------:|:---------------:|:----------------:|
