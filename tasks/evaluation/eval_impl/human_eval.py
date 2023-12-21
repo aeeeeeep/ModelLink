@@ -25,8 +25,8 @@ import pandas as pd
 from tasks.evaluation.eval_api.dataset_eval import DatasetEval
 from tasks.evaluation.eval_api.chat import Chat
 from tasks.evaluation.eval_impl.template import CODE_TEST_LOG_DIR
-from ascendspeed.error_utils import check_divisible_by_zero
-from ascendspeed.utils import WRITE_FILE_DEFAULT_FLAGS, WRITE_FILE_DEFAULT_MODES
+from modellink.error_utils import check_divisible_by_zero
+from modellink.utils import WRITE_FILE_DEFAULT_FLAGS, WRITE_FILE_DEFAULT_MODES
 logger = logging.getLogger(__name__)
 
 

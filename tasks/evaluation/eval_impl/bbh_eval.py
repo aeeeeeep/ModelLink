@@ -20,7 +20,7 @@ import tqdm
 from tasks.evaluation.eval_api.dataset_eval import DatasetEval
 from tasks.evaluation.eval_api.chat import Chat
 from tasks.evaluation.eval_impl.template import BBH_TEMPLATE_DIR
-from ascendspeed.error_utils import check_divisible_by_zero
+from modellink.error_utils import check_divisible_by_zero
 logger = logging.getLogger(__name__)
 
 

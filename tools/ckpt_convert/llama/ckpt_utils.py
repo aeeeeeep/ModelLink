@@ -21,7 +21,7 @@ import stat
 import logging
 import torch
 
-from ascendspeed.error_utils import check_divisible, check_equal
+from modellink.error_utils import check_divisible, check_equal
 logging.basicConfig(level=logging.NOTSET)
 
 
@@ -70,7 +70,7 @@ def pad_embed(w, make_vocab_size_divisible_by, tp, added_token_num):
 
 def permute_qkv_weight(w, model_config, split=False):
     """
-    adapt for ascendspeed llama qkv layer
+    adapt for modellink llama qkv layer
     Notation:
         n_head: Number of attention heads,
         kv_heads: Number of key and value heads,
@@ -101,7 +101,7 @@ def permute_qkv_weight(w, model_config, split=False):
 
 
 def permute_qkv_bias(bias, n_head, hidden_size, tp, split=False):
-    """ adapt for ascendspeed llama qkv layer """
+    """ adapt for modellink llama qkv layer """
     check_divisible(n_head, tp)
     check_divisible(hidden_size, n_head)
     np = n_head // tp

@@ -22,10 +22,10 @@ from unittest import mock
 import torch
 import torch_npu
 from wrapt_timeout_decorator import timeout
-import ascendspeed.core.pipeline_parallel.schedules as schedule
-from ascendspeed.core.pipeline_parallel.schedules import \
+import modellink.core.pipeline_parallel.schedules as schedule
+from modellink.core.pipeline_parallel.schedules import \
                     forward_backward_pipelining_with_foldx_aiao
-from ascendspeed.core.pipeline_parallel.schedules import \
+from modellink.core.pipeline_parallel.schedules import \
                     forward_backward_pipelining_with_foldx_fifo
 
 
