@@ -245,7 +245,7 @@ wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/tokenizer.
 cd ..
 ```
 
-In order to adapt to the baichuan2-13B model, the following script is used to convert the model pre-training weights.
+In order to adapt to the Baichuan2-13B model, the following script is used to convert the model pre-training weights.
 ```shell
 mkdir baichuan2-13b-merge
 
@@ -337,7 +337,7 @@ There is an hourly pulse checking script running that checks that the training i
 
 #### Machine performance
 
-With FA operator, the performance of the Baichuan2-13B in **Ascend NPU** and **Reference**:
+With FA operator off, the performance of the Baichuan2-13B in **Ascend NPU** and **Reference**:
 
 | Device |     Model     | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
 |:----:|:-------------------------:|:----:|:------------------:|:--------------------:|:---------------:|:----------------:|
