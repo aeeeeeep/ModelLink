@@ -31,8 +31,7 @@ from modellink.utils import WRITE_FILE_DEFAULT_FLAGS, WRITE_FILE_DEFAULT_MODES
 from modellink.utils import cpu_tensor_reduce_context
 from modellink.utils import convert_args_to_strs
 
-from modellink import (get_args,
-                       is_rank_0,
+from megatron import (get_args,
                        print_rank_0,
                        update_num_microbatches,
                        utils)
