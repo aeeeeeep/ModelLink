@@ -16,8 +16,8 @@
 import unittest
 import json
 import torch
-from ascendspeed.core import parallel_state
-from ascendspeed.core.memory.auto_recomputing.autorecompute_solver import solve_graph
+from modellink.core import parallel_state
+from modellink.core.memory.auto_recomputing.autorecompute_solver import solve_graph
 
 
 class TestAutoRecomputing(unittest.TestCase):

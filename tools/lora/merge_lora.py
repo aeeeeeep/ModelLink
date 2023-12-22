@@ -3,13 +3,13 @@ from peft import PeftModel
 from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
 import deepspeed
 
-from ascendspeed import get_args
-from ascendspeed.checkpointing import save_checkpoint
-from ascendspeed.model import GPTModel, Float16Module
-from ascendspeed.initialize import initialize_megatron
-from ascendspeed.arguments import core_transformer_config_from_args
-from ascendspeed.model import DistributedDataParallel as LocalDDP
-from ascendspeed.utils import unwrap_model
+from modellink import get_args
+from modellink.checkpointing import save_checkpoint
+from modellink.model import GPTModel, Float16Module
+from modellink.initialize import initialize_megatron
+from modellink.arguments import core_transformer_config_from_args
+from modellink.model import DistributedDataParallel as LocalDDP
+from modellink.utils import unwrap_model
 
 
 def model_provider(pre_process=True, post_process=True):
