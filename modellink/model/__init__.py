@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import torch
+from deepspeed.accelerator import get_accelerator
 
-if torch.cuda.current.device() == 'cuda':
+if get_accelerator().device_name() == 'cuda':
     from .fused_layer_norm import MixedFusedLayerNorm as LayerNorm
 else:
     from torch.nn import LayerNorm

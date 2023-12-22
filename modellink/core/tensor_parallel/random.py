@@ -87,11 +87,11 @@ def _set_cuda_rng_state(new_state, device=-1):
     else:
         # newer PyTorch
         if device == -1:
-            device = torch.device(torch.cuda.current.device())
+            device = torch.device(torch.cuda.current_device())
         elif isinstance(device, str):
             device = torch.device(device)
         elif isinstance(device, int):
-            device = torch.device(torch.cuda.current.device(), device)
+            device = torch.device(torch.cuda.current_device(), device)
 
         def cb():
             idx = device.index
@@ -297,7 +297,7 @@ class CheckpointFunction(torch.autograd.Function):
         if isinstance(outputs, torch.Tensor):
             outputs = (outputs,)
         elif len(outputs) == 2 and isinstance(outputs[1], torch.Tensor) and \
-                torch.equal(outputs[1], torch.tensor(0, dtype=outputs[1].dtype).to(torch.cuda.current.device())):
+                torch.equal(outputs[1], torch.tensor(0, dtype=outputs[1].dtype).to(torch.cuda.current_device())):
             # a hacky solution to overcome issue when running old script examples/pretrain_gpt_distributed.sh
             outputs = (outputs[0],)
         torch.autograd.backward(outputs, args)

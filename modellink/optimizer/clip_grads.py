@@ -21,8 +21,9 @@ try:
     from torch._six import inf as inf
 except ModuleNotFoundError:
     from torch import inf as inf
+from deepspeed.accelerator import get_accelerator
 
-if torch.cuda.current.device() == 'cuda':
+if get_accelerator().device_name() == 'cuda':
     from apex.multi_tensor_apply import multi_tensor_applier
     import amp_C
 

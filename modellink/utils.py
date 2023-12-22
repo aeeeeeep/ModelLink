@@ -25,10 +25,6 @@ import torch
 from torch.nn.parallel import DistributedDataParallel as torchDDP
 import torch_npu
 
-if torch.cuda.current.device() == 'cuda':
-    from apex.multi_tensor_apply import multi_tensor_applier
-    import amp_C
-
 from modellink.global_vars import get_args
 from modellink.global_vars import get_adlr_autoresume
 from modellink.core import parallel_state
@@ -117,7 +113,7 @@ def calc_params_l2_norm(model):
     # Calculate norm
     dummy_overflow_buf = get_accelerator().IntTensor([0])
     
-    if torch.cuda.current.device() == 'cuda':
+    if get_accelerator().device_name() == 'cuda':
 
         norm, _ = multi_tensor_applier(
             amp_C.multi_tensor_l2norm,

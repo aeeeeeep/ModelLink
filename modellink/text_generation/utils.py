@@ -28,7 +28,7 @@ def get_batch(context_tokens):
     tokenizer = get_tokenizer()
 
     # Move to GPU.
-    tokens = context_tokens.contiguous().to(torch.cuda.current.device())
+    tokens = context_tokens.contiguous().to(torch.cuda.current_device())
     # Get the attention mask and position ids.
     attention_mask, _, position_ids = get_ltor_masks_and_position_ids(
         tokens,
@@ -228,7 +228,7 @@ def sample_sequence_batch(model, context_tokens, context_lengths, type_ids=None,
         batch_size = tokens.size(0)
         max_length = args.max_length_ori
         context_length = context_lengths.min().item()
-        is_done = torch.zeros([batch_size]).byte().to(torch.cuda.current.device())
+        is_done = torch.zeros([batch_size]).byte().to(torch.cuda.current_device())
 
         while context_length < max_length:
             if args.text_generation_config['recompute']:
@@ -310,7 +310,7 @@ def _init_log_probs(args, batch_size, max_length, vocab_size):
     if args.text_generation_config['return_output_log_probs']:
         log_probs_seq = torch.zeros(
             (batch_size, max_length, int(vocab_size))
-        ).to(torch.cuda.current.device())
+        ).to(torch.cuda.current_device())
     return log_probs_seq
 
 
@@ -321,7 +321,7 @@ def _sample_and_synchronize(args, batch_size, context_length_info, logits, token
     context_length, context_lengths = context_length_info
 
     if parallel_state.is_pipeline_last_stage():
-        vocab_size = torch.Tensor([logits.size(1)]).to(torch.cuda.current.device())
+        vocab_size = torch.Tensor([logits.size(1)]).to(torch.cuda.current_device())
         log_probs = F.softmax(logits, dim=-1)
         logits, prev = _sample_strategy(args, logits)
         started = context_lengths <= context_length
@@ -339,7 +339,7 @@ def _sample_and_synchronize(args, batch_size, context_length_info, logits, token
         group = parallel_state.get_pipeline_model_parallel_group()
 
         new_tokens = torch.empty_like(tokens[:, context_length])
-        vocab_size = torch.empty_like(torch.Tensor([0])).to(torch.cuda.current.device())
+        vocab_size = torch.empty_like(torch.Tensor([0])).to(torch.cuda.current_device())
 
         if parallel_state.get_pipeline_model_parallel_world_size() > 1:
             torch.distributed.broadcast(new_tokens, src, group)
@@ -350,7 +350,7 @@ def _sample_and_synchronize(args, batch_size, context_length_info, logits, token
     if log_probs is None:
         log_probs = torch.empty([batch_size, int(vocab_size)],
                                 dtype=torch.float32,
-                                device=torch.cuda.current.device())
+                                device=torch.cuda.current_device())
 
     res = (group, log_probs, prev, src, started, vocab_size)
     return res

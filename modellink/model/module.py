@@ -325,7 +325,7 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         context_tokens = [[]]
         broadcast_rank = torch.zeros(dist.get_world_size(),
                                      dtype=torch.int64,
-                                     device=torch.cuda.current.device())
+                                     device=torch.cuda.current_device())
 
         if input_ids is not None and len(input_ids) > 0:
             if isinstance(input_ids, str):

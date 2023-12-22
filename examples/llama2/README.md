@@ -236,7 +236,7 @@ NPU vs 参考 loss，相对误差：0.23%<2%
 
 ## 推理-7B
 
-配置llama2-7B 推理脚本: examples/llama2/generate_llama2_7b_ptd.sh
+配置llama2-7B 推理脚本: examples/llama2/generate_llama2_7b_tp8_pp1.sh
 
 ```bash
 # 设置 ascend-toolkit 路径
