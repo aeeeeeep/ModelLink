@@ -15,6 +15,8 @@
 
 """Processing data for pretraining and finetuning."""
 
+# naie@2023
+
 import argparse
 import json
 import multiprocessing
@@ -34,10 +36,10 @@ except ImportError:
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
                                              os.path.pardir)))
 
-from ascendspeed.tokenizer import build_tokenizer
-from ascendspeed.data import indexed_dataset
-from ascendspeed.data.data_handler import build_dataset, get_dataset_handler
-
+from data.tokenizer import build_tokenizer
+from data.data_handler import build_dataset, get_dataset_handler
+from megatron.tokenizer import build_tokenizer as build_tokenizer_mega
+from megatron.tokenizer.tokenizer import _BertWordPieceTokenizer, _GPT2BPETokenizer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -146,6 +148,8 @@ def add_output_args(parser):
 
 
 def get_args():
+
+
     parser = argparse.ArgumentParser()
 
     add_data_args(parser)
@@ -167,10 +171,38 @@ def get_args():
     return args
 
 
+class TokenizerAdapter:
+    def __init__(self, tokenizer, ClassTokenizer):
+        self.tokenizer = tokenizer
+        TokenizerAdapter.class_tokenizer = ClassTokenizer
+        setattr(ClassTokenizer, '__call__', self.call_adapter)
+
+    @staticmethod
+    def call_adapter(self, text=None):
+        result = self.tokenize(text=text)
+        if isinstance(TokenizerAdapter.class_tokenizer, _BertWordPieceTokenizer):
+            result.insert(0, self.cls_id)
+            result.append(self.sep_id)
+        result_d = dict()
+        result_d["input_ids"] = result
+        result_d["attention_mask"] = [1] * len(result_d["input_ids"])
+        result_d["token_type_ids"] = [0] * len(result_d["input_ids"])
+        return result_d
+
+    @property
+    def vocab_size(self):
+        return self.tokenizer.vocab_size
+
+
 def main():
     args = get_args()
 
-    tokenizer = build_tokenizer(args)
+    if args.tokenizer_type == "PretrainedFromHF":
+        tokenizer = build_tokenizer(args)
+    elif args.tokenizer_type in ["BertWordPieceLowerCase", "BertWordPieceCase"]:
+        tokenizer = TokenizerAdapter(build_tokenizer_mega(args), _BertWordPieceTokenizer)
+    elif args.tokenizer_type == "GPT2BPETokenizer":
+        tokenizer = TokenizerAdapter(build_tokenizer_mega(args), _GPT2BPETokenizer)
     splitter = build_splitter(args)
 
     logger.info("building dataset: %s", args.input)
