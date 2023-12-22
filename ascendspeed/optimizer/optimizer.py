@@ -29,7 +29,6 @@ from ascendspeed.model.module import param_is_not_shared
 from ascendspeed.core.tensor_parallel.layers import param_is_not_tensor_parallel_duplicate
 from ascendspeed.utils import unwrap_model
 from ascendspeed.model import Float16Module, DistributedDataParallel as LocalDDP
-from deepspeed.accelerator import get_accelerator
 from ascendspeed.model.lora_utils import is_enable_lora, get_lora_model_classes
 from ascendspeed.error_utils import check_equal, ensure_valid, check_divisible_by_zero
 from .clip_grads import clip_grad_norm_fp32, count_zeros_fp32
@@ -55,7 +54,7 @@ def _multi_tensor_copy_this_to_that(this, that, overflow_buf=None):
     We don't have a blfoat16 implementation so for now if the overflow_buf
     is not provided, we default back to simple loop copy to be compatible
     with bfloat16."""
-    if get_accelerator().device_name() == 'cuda' and overflow_buf:
+    if torch.cuda.current.device() == 'cuda' and overflow_buf:
         from apex.multi_tensor_apply import multi_tensor_applier
         import amp_C
 
@@ -575,11 +574,11 @@ class Float16OptimizerWithFloat16Params(MegatronOptimizer):
             # For all the parameters in this group:
             for i, param in enumerate(param_group['params']):
                 if param.requires_grad:
-                    param_type = param.type().replace('cuda', get_accelerator().device_name())
+                    param_type = param.type().replace('cuda', torch.cuda.current.device())
 
                     # float16 params:
-                    if param_type in ['torch.{}.HalfTensor'.format(get_accelerator().device_name()),
-                                      'torch.{}.BFloat16Tensor'.format(get_accelerator().device_name())]:
+                    if param_type in ['torch.{}.HalfTensor'.format(torch.cuda.current.device()),
+                                      'torch.{}.BFloat16Tensor'.format(torch.cuda.current.device())]:
                         float16_params_this_group.append(param)
                         # Create a copy
                         main_param = param.detach().clone().float()
@@ -597,12 +596,12 @@ class Float16OptimizerWithFloat16Params(MegatronOptimizer):
                                 = self.optimizer.state.pop(param)
 
                     # fp32 params.
-                    elif param_type == 'torch.{}.FloatTensor'.format(format(get_accelerator().device_name())):
+                    elif param_type == 'torch.{}.FloatTensor'.format(format(torch.cuda.current.device())):
                         fp32_params_this_group.append(param)
                         param_group['params'][i] = param
 
                     else:
-                        device_name = get_accelerator().device_name()
+                        device_name = torch.cuda.current.device()
                         raise TypeError('Wrapped parameters must be one of '
                                         'torch.{}.FloatTensor,  '
                                         'torch.{}.HalfTensor, or '

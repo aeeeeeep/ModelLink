@@ -5,8 +5,6 @@ import subprocess
  
 import torch
 from torch import distributed as dist
-from deepspeed.accelerator import get_accelerator
-
 
 logging.basicConfig(format="")
 logging.getLogger().setLevel(logging.INFO)
@@ -209,7 +207,7 @@ def task_chat(args, model, tokenizer=None, system_template="", dialog_template="
     command_clear = ["clear"]
     command_back = ["tput", "cup", "4", "0"]
     while True:
-        terminate_runs = torch.zeros(1, dtype=torch.int64, device=torch.device(get_accelerator().device_name()))
+        terminate_runs = torch.zeros(1, dtype=torch.int64, device=torch.cuda.current_device)
 
         if dist.get_rank() == 0:
             if not histories:
@@ -220,15 +218,16 @@ def task_chat(args, model, tokenizer=None, system_template="", dialog_template="
                 logging.info("===========================================================\n")
 
             prompt = input(input_template)
-            if prompt.strip() in ["q", "exit", "quit"]:
+            sanitized_prompt = prompt.strip()
+            if sanitized_prompt in ["q", "exit", "quit"]:
                 terminate_runs += 1
 
-            if prompt.strip() in ["clear", "new"]:
+            if sanitized_prompt in ["clear", "new"]:
                 subprocess.call(command_clear)
                 histories = []
                 continue
 
-            if not prompt.strip():
+            if not sanitized_prompt:
                 continue
 
             histories.append((prompt, None))

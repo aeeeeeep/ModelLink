@@ -250,7 +250,7 @@ CHECKPOINT=./llama2-7b-tp8pp1  #模型路径
 启动llama2-7B 推理脚本: examples/llama2/generate_llama2_7b_ptd.sh
 
 ```bash
-bash examples/llama2/generate_llama2_7b_ptd.sh
+bash examples/llama2/generate_llama2_7b_tp8_pp1.sh
 ```
 
 推理的示例如下:

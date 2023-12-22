@@ -251,7 +251,7 @@ CHECKPOINT=./llama2-7b-tp8pp1  #model path
 ```
 Launch llama2-7B inference script: examples/llama2/generate_llama2_7b_ptd.sh
 ```bash
-bash examples/llama2/generate_llama2_7b_ptd.sh
+bash examples/llama2/generate_llama2_7b_tp8_pp1.sh
 ```
 Some inference samples are as follows:
 ```

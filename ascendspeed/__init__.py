@@ -14,20 +14,23 @@
 # limitations under the License.
 import sys
 import logging
-
-import torch
-import deepspeed
-try:
-    import torch_npu
-    from torch_npu.contrib import transfer_to_npu
-    import deepspeed_npu
-except Exception as e:
-    logging.warning("Warning: You did not install torch_npu or deepspeed_npu")
+from functools import wraps
+import ascendspeed
+import megatron
 
 
-if 'amp_C' in sys.modules:
-    del sys.modules['amp_C']
-sys.modules['amp_C'] = __import__('ascendspeed.amp_C')
+def seq_length_wrapper(fn):
+    @wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        from megatron import get_args
+        self.seq_length = get_args().seq_length
+        return fn(*args, **kwargs)
+
+    return wrapper
+
+
+megatron.model.languange_model.TransformerLanguageModel.forward = (
+    seq_length_wrapper(megatron.model.languange_model.TransformerLanguageModel.forward))
 
 from .global_vars import get_args
 from .global_vars import get_current_global_batch_size
@@ -38,13 +41,8 @@ from .global_vars import get_tensorboard_writer
 from .global_vars import get_adlr_autoresume
 from .global_vars import get_timers
 from .global_vars import get_retro_args
+
 from .utils import print_rank_0
 from .utils import print_rank_last
 from .utils import is_last_rank
 from .utils import is_rank_0
-from .initialize import adaptor_deepspeed_initialize
-
-
-# Fixed an bug where deepspeed PipelineEngine is incompatible with Sequence Parallel.
-# When Sequence Parallel is used, PipelineEngine cannot be used, Otherwise, precision problems occur.
-deepspeed.initialize = adaptor_deepspeed_initialize
