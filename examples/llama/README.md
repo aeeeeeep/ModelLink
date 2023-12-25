@@ -77,11 +77,11 @@ pip install -r requirements.txt
   #!/bin/bash
   mkdir -p dataset/llama
   cd ./dataset/llama
-  wget https://huggingface.co/yahma/llama-7b-hf/tree/main/config.json
-  wget https://huggingface.co/yahma/llama-7b-hf/tree/main/generation_config.json
-  wget https://huggingface.co/yahma/llama-7b-hf/tree/main/special_tokens_map.json
-  wget https://huggingface.co/yahma/llama-7b-hf/tree/main/tokenizer.model
-  wget https://huggingface.co/yahma/llama-7b-hf/tree/main/tokenizer_config.json
+  wget https://huggingface.co/yahma/llama-7b-hf/blob/main/config.json
+  wget https://huggingface.co/yahma/llama-7b-hf/blob/main/generation_config.json
+  wget https://huggingface.co/yahma/llama-7b-hf/blob/main/special_tokens_map.json
+  wget https://huggingface.co/yahma/llama-7b-hf/blob/main/tokenizer.model
+  wget https://huggingface.co/yahma/llama-7b-hf/blob/main/tokenizer_config.json
   cd ..
 ```
 
