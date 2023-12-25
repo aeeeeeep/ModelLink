@@ -1,14 +1,15 @@
 #!/bin/bash
 
 # The number of parameters is not aligned
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
 export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib:/root/miniconda3/lib:$LD_LIBRARY_PATH
 export HCCL_CONNECT_TIMEOUT=1200
 export COMBINED_ENABLE=1
+export CUDA_DEVICE_MAX_CONNECTIONS=1
 
-# modify config according to your own actual situation
-CHECKPOINT="your model path"
-TOKENIZER_PATH=./llama2-7b-hf/
+# please fill these path configurations
+CHECKPOINT="your model directory path"
+TOKENIZER_PATH="your tokenizer directory path"
+TOKENIZER_MODEL="your tokenizer.model file path"
 
 # Change for multinode config
 MASTER_ADDR=localhost
@@ -26,12 +27,13 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference
        --num-layers 32 \
        --hidden-size 4096  \
        --ffn-hidden-size 11008 \
-       --mlp-layer-fusion \
-       --load ${CHECKPOINT}  \
+       --swiglu \
+       --load "${CHECKPOINT}"  \
        --num-attention-heads 32  \
        --max-position-embeddings 4096 \
        --tokenizer-type PretrainedFromHF  \
-       --tokenizer-name-or-path ${TOKENIZER_PATH} \
+       --tokenizer-name-or-path "${TOKENIZER_PATH}" \
+       --tokenizer-model "${TOKENIZER_MODEL}"  \
        --tokenizer-not-use-fast \
        --fp16 \
        --micro-batch-size 1 \
@@ -40,5 +42,13 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference
        --use-flash-attn \
        --use-fused-rmsnorm \
        --seed 42 \
-       --position-embedding-type rope \
        --normalization RMSNorm \
+       --position-embedding-type rope \
+       --exit-on-missing-checkpoint \
+       --use-checkpoint-args \
+       --no-load-rng \
+       --no-load-optim \
+       --untie-embeddings-and-output-weights \
+       --no-masked-softmax-fusion \
+       --make-vocab-size-divisible-by 1
+

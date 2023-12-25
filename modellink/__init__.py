@@ -14,7 +14,6 @@
 # limitations under the License.
 import sys
 import logging
-
 import torch
 import deepspeed
 
@@ -29,7 +28,6 @@ if 'amp_C' in sys.modules:
     del sys.modules['amp_C']
 sys.modules['amp_C'] = __import__('modellink.amp_C')
 
-import megatron
 
 from .global_vars import get_args
 from .global_vars import get_current_global_batch_size
@@ -45,9 +43,14 @@ from .utils import print_rank_last
 from .utils import is_last_rank
 from .utils import is_rank_0
 from .initialize import adaptor_deepspeed_initialize
-from .tokenizer import build_tokenizer
+from .tokenizer import apply_tokenizer_patch
+from .adaptor_arguments import apply_arguments_patch
+from .adaptor_model import apply_model_patch
 
-megatron.global_vars.build_tokenizer = build_tokenizer
-# Fixed an bug where deepspeed PipelineEngine is incompatible with Sequence Parallel.
-# When Sequence Parallel is used, PipelineEngine cannot be used, Otherwise, precision problems occur.
+
+apply_arguments_patch()
+apply_model_patch()
+apply_tokenizer_patch()
+
+
 deepspeed.initialize = adaptor_deepspeed_initialize

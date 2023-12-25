@@ -1,8 +1,10 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
-from modellink import get_args
-from modellink.model import GPTModel
-from modellink.initialize import initialize_megatron
-from modellink.arguments import core_transformer_config_from_args
+from ascendspeed import megatron_adaptor
+import modellink
+from megatron.initialize import initialize_megatron
+from megatron import get_args
+from megatron.model import GPTModel
+from megatron.arguments import core_transformer_config_from_args
 from tasks.inference.infer_base import task_greedy_search, task_do_sample, task_beam_search, add_text_generate_args
 from tasks.inference.infer_base import task_beam_search_with_sampling, task_return_output_log_probs, task_chat
 

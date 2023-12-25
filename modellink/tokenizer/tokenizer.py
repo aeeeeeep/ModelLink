@@ -16,8 +16,13 @@
 """Megatron tokenizers. just using huggingface implementation."""
 
 from transformers import AutoTokenizer
+import megatron
 from megatron.tokenizer import build_tokenizer as megatron_build_tokenizer
 from megatron.tokenizer.tokenizer import AbstractTokenizer, _vocab_size_with_padding
+
+
+def apply_tokenizer_patch():
+    megatron.global_vars.build_tokenizer = build_tokenizer
 
 
 def build_tokenizer(args):

@@ -5,7 +5,7 @@
 
 import torch
 
-from modellink.core import parallel_state
+from megatron.core import parallel_state
 from modellink.error_utils import ensure_var_is_not_none
 
 

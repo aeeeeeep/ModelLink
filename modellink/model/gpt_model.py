@@ -25,7 +25,6 @@ from modellink.model.fused_layer_norm import MixedFusedLayerNorm
 from modellink.model.module import float16_to_fp32
 from modellink.core.enums import AttnMaskType
 from modellink.error_utils import check_equal
-
 from .language_model import parallel_lm_logits
 from .language_model import get_language_model
 from .utils import init_method_normal
@@ -80,7 +79,8 @@ class GPTModel(MegatronModule, MegatronModuleForCausalLM):
                  post_process=True,
                  return_moe_loss=True):
         args = get_args()
-        super().__init__(config=config, share_embeddings_and_output_weights=not args.untie_embeddings_and_output_weights)
+        super().__init__(config=config,
+                         share_embeddings_and_output_weights=not args.untie_embeddings_and_output_weights)
 
         self.parallel_output = parallel_output
         self.pre_process = pre_process
@@ -154,7 +154,7 @@ class GPTModel(MegatronModule, MegatronModuleForCausalLM):
 
         state_dict_ = {}
         language_model_state_dict = self.language_model.state_dict_for_save_checkpoint(
-                prefix=prefix, keep_vars=keep_vars)
+            prefix=prefix, keep_vars=keep_vars)
         # MoE states need to be handled separately by DeepSpeed engine, thus
         # moving them to the top level dictionary
         if "moe_state_dict" in language_model_state_dict:
@@ -224,6 +224,7 @@ def get_cross_entropy(is_prefix: bool):
         loss_mask = loss_mask.view(-1)
         loss = torch.sum(losses.view(-1) * loss_mask) / expected_number_of_tokens
         return loss
+
     return CrossEntropy
 
 
@@ -231,11 +232,11 @@ class GPTModelPipe(ManuallyAllocatedPipelineModule, MegatronModule, MegatronModu
     """GPT-2 Language model."""
 
     def __init__(
-        self,
-        config,
-        num_tokentypes=0,
-        parallel_output=True,
-        attn_mask_type: AttnMaskType = AttnMaskType.causal
+            self,
+            config,
+            num_tokentypes=0,
+            parallel_output=True,
+            attn_mask_type: AttnMaskType = AttnMaskType.causal
     ):
         args = get_args()
         self.parallel_output = parallel_output
@@ -268,7 +269,7 @@ class GPTModelPipe(ManuallyAllocatedPipelineModule, MegatronModule, MegatronModu
                                         args.hidden_dropout,
                                         config,
                                         num_tokentypes=num_tokentypes,
-                                        embedding_weights_in_fp32=args.embedding_weights_in_fp32,))
+                                        embedding_weights_in_fp32=args.embedding_weights_in_fp32, ))
         else:
             self.specs.append(TiedLayerSpec('embed',
                                             EmbeddingPipe,
@@ -297,15 +298,16 @@ class GPTModelPipe(ManuallyAllocatedPipelineModule, MegatronModule, MegatronModu
         for layer_idx in range(args.num_layers):
             self.specs.append(
                 LayerSpec(ParallelTransformerLayerPipe,
-                    config,
-                    layer_number=layer_idx,
-                    self_attn_mask_type=AttnMaskType.causal))
+                          config,
+                          layer_number=layer_idx,
+                          self_attn_mask_type=AttnMaskType.causal))
 
         # Undo data format change
         def undo(x):
             if not getattr(args, 'pretrain_causal_attention', False):
                 x = x[0]
             return x.transpose(0, 1).contiguous()
+
         self.specs.append(undo)
 
         # Final layernorm after transformer layers
@@ -321,6 +323,7 @@ class GPTModelPipe(ManuallyAllocatedPipelineModule, MegatronModule, MegatronModu
                 lm_output,
                 embedding.word_embeddings_weight,
                 self.parallel_output)
+
         if args.untie_embeddings_and_output_weights:
             self.specs.append(
                 LayerSpec(LMHeadPipe, args.hidden_size, args.padded_vocab_size, config)

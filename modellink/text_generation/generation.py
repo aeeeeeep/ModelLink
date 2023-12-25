@@ -4,10 +4,9 @@
 
 import torch
 import torch.nn.functional as F
-from deepspeed.accelerator import get_accelerator
 
-from modellink import get_args
-from modellink.core import parallel_state
+from megatron import get_args
+from megatron.core import parallel_state
 from modellink.text_generation.utils import pad_batch, top_k_logits
 
 from .forward_step import ForwardStep

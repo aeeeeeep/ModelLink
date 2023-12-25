@@ -21,15 +21,13 @@ from typing import Optional, Union
 
 import torch
 from torch import distributed as dist
-from torch.autograd import Variable
-from torch.nn.parameter import Parameter
 from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
 import deepspeed
 from deepspeed.accelerator import get_accelerator
 
 import modellink
-from modellink import get_args
-from modellink.core import parallel_state, tensor_parallel
+from megatron import get_args
+from megatron.core import parallel_state, tensor_parallel
 from modellink.model.lora_utils import is_enable_lora, get_lora_model_classes
 from modellink.error_utils import ensure_valid
 
@@ -360,8 +358,8 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
     """
 
     def __init__(self, *args, **kwargs):
-        super().__init__()
-        from modellink import get_tokenizer
+        super(MegatronModuleForCausalLM, self).__init__()
+        from megatron import get_tokenizer
         from modellink.text_generation import greedy_search_or_sampling
         from modellink.text_generation import beam_search
 
@@ -444,10 +442,11 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
             model_provider, pretrained_model_name_or_path: Optional[Union[str, os.PathLike, None]] = None,
             **kwargs
     ) -> MegatronModuleForCausalLMABC:
-        from modellink.training import get_model
-        from modellink.checkpointing import load_checkpoint
-        from modellink.model import DistributedDataParallel as LocalDDP
-        from modellink.utils import unwrap_model
+        from megatron.training import get_model
+        from megatron.checkpointing import load_checkpoint
+        from megatron.core.distributed import DistributedDataParallel as LocalDDP
+        from megatron.model import Float16Module as MegatronFloat16Module
+        from megatron.utils import unwrap_model
 
         args = get_args()
 
@@ -459,30 +458,21 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         if pretrained_model_name_or_path:
             args.load = pretrained_model_name_or_path
 
-        if args.deepspeed:
-            if is_enable_lora() and not args.no_pipeline_parallel:
-                unwrap_classes = get_lora_model_classes()
-                # The deepspeed pipeline needs to verify the model base class. Therefore, the peft package needs to be unpacked.
-                args.model = unwrap_model(args.model, unwrap_classes)
-            args.model[0] = cls._init_deepspeed_inference(args.model[0], args)
-
         if args.load:
             load_checkpoint(args.model, None, None)
 
-        unwrap_classes = (torchDDP, LocalDDP, Float16Module)
+        unwrap_classes = (torchDDP, LocalDDP, MegatronFloat16Module)
 
-        if args.deepspeed:
-            unwrap_classes += (deepspeed.DeepSpeedEngine,)
         # The returned model provides the MegatronModuleForCausalLM class identifier. In actual inference, args.model is still used.
         return unwrap_model(args.model, unwrap_classes)[0]
 
     def generate(self, input_ids=None, **kwargs):
         args = get_args()
 
-        if not args.deepspeed and parallel_state.get_data_parallel_world_size() > 1:
+        if parallel_state.get_data_parallel_world_size() > 1:
             raise ValueError("In this inference mode data parallel is forbidden.")
 
-        super().generate(input_ids=input_ids, **kwargs)
+        super(MegatronModuleForCausalLM, self).generate(input_ids=input_ids, **kwargs)
 
         setattr(args, "text_generation_config", {
             "top_k": self.top_k,
@@ -547,15 +537,8 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         return self._token_generator(token_stream)
 
     def _init_tokenizer(self, args):
-        if self.tokenizer_new is None:
-            self.tokenizer = modellink.global_vars.rebuild_tokenizer(
-                args, tokenizer=self.tokenizer)
-        else:
-            self.tokenizer = modellink.global_vars.rebuild_tokenizer(
-                args, tokenizer=self.tokenizer_new)
-
         if self.pad_token_id is not None:
-            self.tokenizer.pad_token_id = self.pad_token_id
+            self.tokenizer.pad = self.pad_token_id
         if self.eos_token_id is not None:
             self.tokenizer.eos_token_id = self.eos_token_id
         if self.bos_token_id is not None:
@@ -567,14 +550,14 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         else:
             raise ValueError("Your tokenizer doesn't include eos_token.")
 
-        if self.tokenizer.pad_token_id is None:
+        if self.tokenizer.pad_token_id is None or self.tokenizer.pad_token_id < 0:
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
     def _tokenize(self, input_ids):
         context_tokens = [[]]
         broadcast_rank = torch.zeros(dist.get_world_size(),
                                      dtype=torch.int64,
-                                     device=torch.device(get_accelerator().device_name()))
+                                     device=torch.device(torch.cuda.current_device()))
 
         if input_ids is not None and len(input_ids) > 0:
             if isinstance(input_ids, str):
