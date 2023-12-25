@@ -30,20 +30,20 @@ from deepspeed.accelerator import get_accelerator
 from deepspeed.moe.layer import MoE
 from einops import rearrange
 
-from modellink import get_args
-from modellink.core.enums import ModelType
-from modellink import get_args, get_timers, get_num_microbatches, get_retro_args
-from modellink.core import utils, parallel_state, tensor_parallel
-from modellink.enums import PositionEmbeddingType
-from modellink.core.transformer.module.flash_attention import FlashSelfAttention
-from modellink.core.enums import AttnMaskType, LayerType, AttnType
-from modellink.model.fused_softmax import NPUFusedScaleMaskSoftmax
-from modellink.core.models.common.rotary_pos_embedding import apply_rotary_pos_emb, apply_fused_rotary_pos_emb
-from modellink.core.transformer.module.triangle_attention import TriangleAttention
-from modellink.model.fused_bias_gelu import bias_gelu_impl
-from modellink.model.module import MegatronModule
-from modellink.model.utils import attention_mask_func, openai_gelu, erf_gelu, get_norm, get_inverted_mask
-from modellink.error_utils import check_divisible, check_equal, ensure_valid
+from ascendspeed import get_args
+from ascendspeed.core.enums import ModelType
+from ascendspeed import get_args, get_timers, get_num_microbatches, get_retro_args
+from ascendspeed.core import utils, parallel_state, tensor_parallel
+from ascendspeed.enums import PositionEmbeddingType
+from ascendspeed.core.transformer.module.flash_attention import FlashSelfAttention
+from ascendspeed.core.enums import AttnMaskType, LayerType, AttnType
+from ascendspeed.model.fused_softmax import NPUFusedScaleMaskSoftmax
+from ascendspeed.core.models.common.rotary_pos_embedding import apply_rotary_pos_emb, apply_fused_rotary_pos_emb
+from ascendspeed.core.transformer.module.triangle_attention import TriangleAttention
+from ascendspeed.model.fused_bias_gelu import bias_gelu_impl
+from ascendspeed.model.module import MegatronModule
+from ascendspeed.model.utils import attention_mask_func, openai_gelu, erf_gelu, get_norm, get_inverted_mask
+from ascendspeed.error_utils import check_divisible, check_equal, ensure_valid
 
 logger = logging.getLogger(__name__)
 

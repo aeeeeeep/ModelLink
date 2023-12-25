@@ -575,11 +575,11 @@ class Float16OptimizerWithFloat16Params(MegatronOptimizer):
             # For all the parameters in this group:
             for i, param in enumerate(param_group['params']):
                 if param.requires_grad:
-                    param_type = param.type().replace('cuda', get_accelerator().device_name())
+                    param_type = param.type().replace('cuda', torch.cuda.current_device())
 
                     # float16 params:
-                    if param_type in ['torch.{}.HalfTensor'.format(get_accelerator().device_name()),
-                                      'torch.{}.BFloat16Tensor'.format(get_accelerator().device_name())]:
+                    if param_type in ['torch.{}.HalfTensor'.format(torch.cuda.current_device()),
+                                      'torch.{}.BFloat16Tensor'.format(torch.cuda.current_device())]:
                         float16_params_this_group.append(param)
                         # Create a copy
                         main_param = param.detach().clone().float()
@@ -597,12 +597,12 @@ class Float16OptimizerWithFloat16Params(MegatronOptimizer):
                                 = self.optimizer.state.pop(param)
 
                     # fp32 params.
-                    elif param_type == 'torch.{}.FloatTensor'.format(format(get_accelerator().device_name())):
+                    elif param_type == 'torch.{}.FloatTensor'.format(format(torch.cuda.current_device())):
                         fp32_params_this_group.append(param)
                         param_group['params'][i] = param
 
                     else:
-                        device_name = get_accelerator().device_name()
+                        device_name = torch.cuda.current_device()
                         raise TypeError('Wrapped parameters must be one of '
                                         'torch.{}.FloatTensor,  '
                                         'torch.{}.HalfTensor, or '

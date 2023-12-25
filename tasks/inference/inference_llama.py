@@ -1,8 +1,8 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
-from modellink import get_args
-from modellink.model import GPTModel
-from modellink.initialize import initialize_megatron
-from modellink.arguments import core_transformer_config_from_args
+from modellink.model import BaseModel
+from megatron import get_args
+from megatron.initialize import initialize_megatron
+from megatron.arguments import core_transformer_config_from_args
 from tasks.inference.infer_base import task_greedy_search, task_do_sample, task_beam_search, add_text_generate_args
 from tasks.inference.infer_base import task_beam_search_with_sampling, task_return_output_log_probs, task_chat
 
@@ -17,7 +17,7 @@ def model_provider(pre_process=True, post_process=True):
         config.row_parallel_linear_bias = True
         config.row_parallel_linear_skip_bias_add = False
 
-    init_model = GPTModel(
+    init_model = BaseModel(
         config,
         parallel_output=False,
         pre_process=pre_process,
@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     args = get_args()
 
-    model = GPTModel.from_pretrained(
+    model = BaseModel.from_pretrained(
         model_provider=model_provider,
         pretrained_model_name_or_path=args.load
     )

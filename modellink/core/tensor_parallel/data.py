@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import torch
-from deepspeed.accelerator import get_accelerator
 
 from modellink.core.parallel_state import (
     get_tensor_model_parallel_group,
@@ -98,7 +97,7 @@ def broadcast_data(keys, data, datatype):
         _check_data_types(keys, data, datatype)
         # Flatten the data associated with the keys
         flatten_data = torch.cat(
-            [data[key].contiguous().view(-1) for key in keys], dim=0).to(get_accelerator().device_name())
+            [data[key].contiguous().view(-1) for key in keys], dim=0).to(torch.cuda.current_device())
     else:
         flatten_data = torch.empty(total_numel,
                                    device=get_accelerator().current_device_name(),

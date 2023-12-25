@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""modellink arguments."""
+"""ascendspeed arguments."""
 
 import argparse
 import dataclasses
@@ -25,11 +25,11 @@ import deepspeed
 import torch
 import torch.nn.functional as F
 
-from modellink.global_vars import set_retro_args, get_retro_args
-from modellink.core.transformer import TransformerConfig
-from modellink.enums import PositionEmbeddingType
-from modellink.data.parse import ParseDataPaths, ParseDataPathsPath
-from modellink.error_utils import (
+from ascendspeed.global_vars import set_retro_args, get_retro_args
+from ascendspeed.core.transformer import TransformerConfig
+from ascendspeed.enums import PositionEmbeddingType
+from ascendspeed.data.parse import ParseDataPaths, ParseDataPathsPath
+from ascendspeed.error_utils import (
     check_divisible,
     check_equal,
     ensure_var_is_not_none,

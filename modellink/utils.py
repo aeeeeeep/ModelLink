@@ -25,11 +25,6 @@ import torch
 from torch.nn.parallel import DistributedDataParallel as torchDDP
 import torch_npu
 
-from deepspeed.accelerator import get_accelerator
-if get_accelerator().device_name() == 'cuda':
-    from apex.multi_tensor_apply import multi_tensor_applier
-    import amp_C
-
 from modellink.global_vars import get_args
 from modellink.global_vars import get_adlr_autoresume
 from modellink.core import parallel_state
