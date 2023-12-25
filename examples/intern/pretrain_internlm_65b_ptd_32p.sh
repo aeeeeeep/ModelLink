@@ -29,7 +29,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --ffn-hidden-size 22016 \
        --num-attention-heads 64 \
        --micro-batch-size 2 \
-       --global-batch-size 128 \
+       --global-batch-size 256 \
        --seq-length 2048 \
        --position-embedding-type rope \
        --normalization RMSNorm \
@@ -54,7 +54,8 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS \
        --save-interval 10000 \
        --eval-interval 1000 \
        --eval-iters 10 \
-       --auto-recompute-device-size 55296 \
+       --auto-recompute-device-size 51200 \
+       --auto-recompute-profiling-step 5 \
        --initial-loss-scale 524288.0 \
        --optimizer adam \
        --adam-beta1 0.9 \
