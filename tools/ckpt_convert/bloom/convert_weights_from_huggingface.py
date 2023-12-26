@@ -31,9 +31,9 @@ from tools.ckpt_convert.llama.ckpt_utils import (column_split, row_split, pad_em
 def get_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--input-model-dir", type=str, default="./input_model_dir", help="huggingface model dir")
-    parser.add_argument("--output-model-dir", type=str, default="./output_model_dir", help="ascendspeed model dir")
+    parser.add_argument("--output-model-dir", type=str, default="./output_model_dir", help="modellink model dir")
     parser.add_argument("--make-vocab-size-divisible-by", type=int, default=128,
-                        help="should be consistent with ascendspeed")
+                        help="should be consistent with modellink")
     parser.add_argument("--tensor-model-parallel-size", type=int, default=1, help="degree of tensor model parallel")
     parser.add_argument("--pipeline-model-parallel-size", type=int, default=1,
                         help="degree of pipeline model parallel")

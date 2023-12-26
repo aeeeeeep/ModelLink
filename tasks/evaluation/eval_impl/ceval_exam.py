@@ -18,7 +18,7 @@ import json
 import pandas as pd
 import tqdm
 
-from ascendspeed.error_utils import check_divisible_by_zero
+from modellink.error_utils import check_divisible_by_zero
 from tasks.evaluation.eval_api.dataset_eval import DatasetEval
 from tasks.evaluation.eval_api.chat import Chat
 from tasks.evaluation.eval_impl.template import CEVAL_TEMPLATE_DIR

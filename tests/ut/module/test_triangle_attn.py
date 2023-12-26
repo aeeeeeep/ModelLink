@@ -21,7 +21,7 @@ import logging
 import torch
 import torch_npu
 from wrapt_timeout_decorator import timeout
-from ascendspeed.core.transformer.module.triangle_attention import TriangleAttention
+from modellink.core.transformer.module.triangle_attention import TriangleAttention
 
 
 class TestTriangleAttention(unittest.TestCase):

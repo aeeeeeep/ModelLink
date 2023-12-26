@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and 
 # limitations under the License.
 
-"""Convert weight from huggingface to ascendspeed"""
+"""Convert weight from huggingface to modellink"""
 
 import argparse
 import json
@@ -31,17 +31,17 @@ from ckpt_utils import print_model
 from ckpt_utils import row_split
 from ckpt_utils import save_ascendspeed_model
 
-from ascendspeed.error_utils import check_divisible
-from ascendspeed.data_classes import GenAscendWeightsAgaConfig, SaveAscendspeedModelConfig
+from modellink.error_utils import check_divisible
+from modellink.data_classes import GenAscendWeightsAgaConfig, SaveAscendspeedModelConfig
 logging.basicConfig(level=logging.NOTSET)
 
 
 def get_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--input-model-dir", type=str, default="./input_model_dir", help="llama native model dir")
-    parser.add_argument("--output-model-dir", type=str, default="./output_model_dir", help="ascendspeed model dir")
+    parser.add_argument("--output-model-dir", type=str, default="./output_model_dir", help="modellink model dir")
     parser.add_argument("--make-vocab-size-divisible-by", type=int, default=128,
-                        help="should be consistent with ascendspeed")
+                        help="should be consistent with modellink")
     parser.add_argument("--tensor-model-parallel-size", type=int, default=1, help="degree of tensor model parallel")
     parser.add_argument("--pipeline-model-parallel-size", type=int, default=1,
                         help="degree of pipeline model parallel")
@@ -196,7 +196,7 @@ def generate_ascendspeed_weights_again(config):
                 os.makedirs(model_dir, exist_ok=True)
                 torch.save(model_dic, os.path.join(model_dir, f"{'mp_rank_{:02d}'.format(tp_rank)}_model_states.pt"))
     logging.info("=" * 100)
-    logging.info("llama %s weight has been converted to ascendspeed format"
+    logging.info("llama %s weight has been converted to modellink format"
                  " which stored in %s", str(model_type), str(output_model_dir))
     logging.info("=" * 100)
 

@@ -29,7 +29,7 @@ __url__ = 'https://gitee.com/ascend/AscendSpeed'
 __download_url__ = 'https://gitee.com/ascend/AscendSpeed/release'
 __keywords__ = 'Ascend, langauge, deep learning, NLP'
 __license__ = 'See https://gitee.com/ascend/AscendSpeed'
-__package_name__ = 'ascendspeed'
+__package_name__ = 'modellink'
 __contact_names__ = 'Ascend'
 
 
@@ -59,8 +59,8 @@ try:
 
     ASCEND_TOOLKIT_HOME = os.environ.get("ASCEND_TOOLKIT_HOME")
     op_files = []
-    op_files += glob.glob("ascendspeed/te/ops/csrc/*.cpp")
-    op_files += glob.glob("ascendspeed/te/ops/csrc/cann/*.cpp")
+    op_files += glob.glob("modellink/te/ops/csrc/*.cpp")
+    op_files += glob.glob("modellink/te/ops/csrc/cann/*.cpp")
     ext_ops = cpp_extension.NpuExtension(
         name="ascendspeed_te_ops",
         sources=op_files,
@@ -79,7 +79,7 @@ except Exception:
     print('Can not find env : ASCEND_TOOLKIT_HOME or ATB_HOME_PATH, ops setup failed')
 
 setuptools.setup(
-    package_data={'ascendspeed':['ascendspeed/data/Makefile']},
+    package_data={'modellink':['modellink/data/Makefile']},
     name=__package_name__,
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
