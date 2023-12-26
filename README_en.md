@@ -612,10 +612,12 @@ Follow these steps to write your own inference code:
 initialize_megatron(args_defaults={'no_load_rng': True, 'no_load_optim': True})
 ```
 ##### Initializing model and loading weights
+
 ```python
-from ascendspeed import get_args
-from ascendspeed.model import GPTModel
-from ascendspeed.arguments import core_transformer_config_from_args
+from modellink import get_args
+from modellink.model import GPTModel
+from modellink.arguments import core_transformer_config_from_args
+
 
 def model_provider(pre_process=True, post_process=True):
     """Build the model."""

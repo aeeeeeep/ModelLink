@@ -1,8 +1,8 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
-from ascendspeed import get_args
-from ascendspeed.model import GPTModelPipe
-from ascendspeed.initialize import initialize_megatron
-from ascendspeed.arguments import core_transformer_config_from_args
+from modellink import get_args
+from modellink.model import GPTModelPipe
+from modellink.initialize import initialize_megatron
+from modellink.arguments import core_transformer_config_from_args
 from tasks.inference.infer_base import task_greedy_search, task_do_sample, task_beam_search, add_text_generate_args
 from tasks.inference.infer_base import task_beam_search_with_sampling, task_return_output_log_probs, task_chat
 

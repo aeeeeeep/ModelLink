@@ -19,10 +19,10 @@ import time
 import logging
 from torch import distributed as dist
 from transformers import AutoTokenizer
-from ascendspeed import get_args
-from ascendspeed.model.gpt_model import GPTModel
-from ascendspeed.initialize import initialize_megatron
-from ascendspeed.arguments import core_transformer_config_from_args
+from modellink import get_args
+from modellink.model.gpt_model import GPTModel
+from modellink.initialize import initialize_megatron
+from modellink.arguments import core_transformer_config_from_args
 from tasks.evaluation.eval_api.chat import Chat
 from tasks.evaluation.eval_impl.boolq_eval import BoolqEval
 from tasks.evaluation.eval_impl.gsm8k_eval import Gsm8kEval
