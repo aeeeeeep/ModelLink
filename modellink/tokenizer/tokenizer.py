@@ -20,6 +20,7 @@ from abc import abstractmethod
 from transformers import AutoTokenizer, GPT2Tokenizer
 from transformers import BertTokenizer as FullBertTokenizer
 
+from megatron.tokenizer import build_tokenizer as build_tokenizer_mega
 from modellink.error_utils import ensure_var_is_not_none, ensure_valid
 
 
@@ -31,18 +32,9 @@ def build_tokenizer(args):
 
     # Select and instantiate the tokenizer.
     ensure_valid(args.vocab_file is not None or args.tokenizer_type == 'PretrainedFromHF')
-    if args.tokenizer_type == 'BertWordPieceLowerCase':
-        tokenizer = _BertWordPieceTokenizer(vocab_file=args.vocab_file,
-                                            lower_case=True,
-                                            vocab_extra_ids=args.vocab_extra_ids)
-    elif args.tokenizer_type == 'BertWordPieceCase':
-        tokenizer = _BertWordPieceTokenizer(vocab_file=args.vocab_file,
-                                            lower_case=False,
-                                            vocab_extra_ids=args.vocab_extra_ids)
-    elif args.tokenizer_type == 'GPT2BPETokenizer':
-        ensure_var_is_not_none(args.merge_file)
-        tokenizer = _GPT2BPETokenizer(args.vocab_file, args.merge_file)
-    elif args.tokenizer_type == "PretrainedFromHF":
+    if args.tokenizer_type != "PretrainedFromHF":
+        tokenizer = TokenizerAdapter(build_tokenizer_mega(args))
+    else:
         ensure_var_is_not_none(args.tokenizer_name_or_path)
 
         # prevent transformers from logging info and warnings on each rank
@@ -61,15 +53,33 @@ def build_tokenizer(args):
             vocab_extra_ids=args.vocab_extra_ids,
             model_max_length=args.seq_length,
             use_fast=args.tokenizer_not_use_fast)
-    else:
-        raise NotImplementedError('{} tokenizer is not '
-                                  'implemented.'.format(args.tokenizer_type))
-
-    # Add vocab size.
-    args.padded_vocab_size = _vocab_size_with_padding(tokenizer.vocab_size,
-                                                      args)
+        # Add vocab size.
+        args.padded_vocab_size = _vocab_size_with_padding(tokenizer.vocab_size, args)
 
     return tokenizer
+
+
+class TokenizerAdapter:
+    def __init__(self, tokenizer):
+        self.tokenizer = tokenizer
+        setattr(tokenizer.__class__, '__call__', self.call_adapter)
+
+    @staticmethod
+    def call_adapter(self, text=None):
+        result = self.tokenize(text=text)
+        result_d = dict()
+        result_d["input_ids"] = result
+        result_d["attention_mask"] = [1] * len(result_d["input_ids"])
+        result_d["token_type_ids"] = [0] * len(result_d["input_ids"])
+        return result_d
+
+    @property
+    def vocab_size(self):
+        return self.tokenizer.vocab_size
+
+    @property
+    def eod(self):
+        return self.tokenizer.eod
 
 
 def _vocab_size_with_padding(orig_vocab_size, args):
