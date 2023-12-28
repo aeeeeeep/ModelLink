@@ -38,6 +38,7 @@ GPT_ARGS="
     --tokenizer-model ${TOKENIZER_MODEL} \
     --no-load-optim \
     --no-load-rng \
+    --finetune \
     --seq-length 4096 \
     --max-position-embeddings 4096 \
     --micro-batch-size 4 \
@@ -82,7 +83,7 @@ OUTPUT_ARGS="
     --eval-iters 0 \
 "
 
-torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
+torchrun $DISTRIBUTED_ARGS pretrain_gpt_link.py \
     $GPT_ARGS \
     $DATA_ARGS \
     $OUTPUT_ARGS \

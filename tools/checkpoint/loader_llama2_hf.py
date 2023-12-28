@@ -174,18 +174,14 @@ def _load_checkpoint(queue, args):
                      os.path.pardir)))
     if args.megatron_path is not None:
         sys.path.insert(0, args.megatron_path)
-    try:
-        from ascendspeed import megatron_adaptor
-        from megatron.arguments import parse_args, validate_args
-        from megatron.global_vars import set_args, set_global_variables
-        from megatron.model import module
-        from megatron.core import mpu
-        from megatron.core.enums import ModelType
-        from megatron import fused_kernels
-    except ModuleNotFoundError:
-        print("Unable to import Megatron, please specify the path to Megatron using --megatron-path.")
-        queue.put("exit")
-        exit(1)
+
+    from ascendspeed import megatron_adaptor
+    from megatron.arguments import parse_args, validate_args
+    from megatron.global_vars import set_args, set_global_variables
+    from megatron.model import module
+    from megatron.core import mpu
+    from megatron.core.enums import ModelType
+    from megatron import fused_kernels
 
     # We want all arguments to come from us.
     sys.argv = ['script.py',

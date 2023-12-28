@@ -1,8 +1,14 @@
+apex
 numpy
 transformers==4.32.0
 sympy
 decorator
 scipy
+sentencepiece
+einops
+datasets
+pybind11
 accelerate
 six
 torchvision
+protobuf
