@@ -17,7 +17,7 @@ CHECKPOINT_PATH=./ckpt_gpt
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 basepath=$(cd `dirname $0`; pwd)
 
-python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
+python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS \
        ${basepath}/run_gpt_ptd.py \
        --DDP-impl local \
        --tensor-model-parallel-size 2 \

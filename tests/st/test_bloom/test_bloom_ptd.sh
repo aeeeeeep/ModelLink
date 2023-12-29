@@ -48,7 +48,7 @@ basepath=$(cd `dirname $0`; pwd)
 
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --rdzv_endpoint $MASTER_ADDR:$MASTER_PORT --rdzv_backend c10d --max_restarts 0 --tee 3"
 
-python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
+python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS \
    ${basepath}/run_bloom_ptd.py \
     --tokenizer-type PretrainedFromHF \
     --embed-layernorm \

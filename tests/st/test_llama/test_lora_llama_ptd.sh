@@ -21,7 +21,7 @@ DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $
 basepath=$(cd `dirname $0`; pwd)
 export PYTHONPATH=${basepath}:$PYTHONPATH
 # save base model
-python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
+python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS \
       ${basepath}/run_llama_ptd.py \
        --DDP-impl local \
        --is-instruction-dataset \
@@ -65,7 +65,7 @@ python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
 # save lora adapter
 MASTER_PORT=6016
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
-python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
+python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS \
       ${basepath}/run_llama_ptd.py \
        --DDP-impl local \
        --is-instruction-dataset \
@@ -111,7 +111,7 @@ python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
 # load lora adapter
 MASTER_PORT=6017
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
-python3 -m torch.distributed.launch $DISTRIBUTED_ARGS \
+python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS \
       ${basepath}/run_llama_ptd.py \
        --DDP-impl local \
        --is-instruction-dataset \
