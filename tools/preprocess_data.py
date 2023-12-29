@@ -34,6 +34,7 @@ except ImportError:
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
                                              os.path.pardir)))
 
+from ascendspeed import megatron_adaptor
 from modellink.tokenizer import build_tokenizer
 from modellink.data import indexed_dataset
 from modellink.data.data_handler import build_dataset, get_dataset_handler
