@@ -19,10 +19,12 @@ import time
 import logging
 from torch import distributed as dist
 from transformers import AutoTokenizer
-from modellink import get_args
-from modellink.model.gpt_model import GPTModel
-from modellink.initialize import initialize_megatron
-from modellink.arguments import core_transformer_config_from_args
+import ascendspeed.megatron_adaptor
+import modellink
+from megatron.initialize import initialize_megatron
+from megatron import get_args
+from megatron.model import GPTModel
+from megatron.arguments import core_transformer_config_from_args
 from tasks.evaluation.eval_api.chat import Chat
 from tasks.evaluation.eval_impl.boolq_eval import BoolqEval
 from tasks.evaluation.eval_impl.gsm8k_eval import Gsm8kEval
@@ -32,9 +34,8 @@ from tasks.evaluation.eval_impl.bbh_eval import BBHEval
 from tasks.evaluation.eval_impl.agi_eval import AGIEvalExam
 from tasks.evaluation.eval_impl.human_eval import HumanEval
 
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
-logging.basicConfig(level=logging.INFO)
+logging.getLogger().setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 
 
