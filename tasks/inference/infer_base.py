@@ -5,8 +5,6 @@ import subprocess
  
 import torch
 from torch import distributed as dist
-from deepspeed.accelerator import get_accelerator
-
 
 logging.basicConfig(format="")
 logging.getLogger().setLevel(logging.INFO)
@@ -46,7 +44,7 @@ def task_greedy_search(args, model, tokenizer=None, system_template="", dialog_t
 
     if dist.get_rank() == 0:
         logging.info("\n=============== Greedy Search ================")
-        logging.info("\nYou:\n%s\n\nAscendSpeed:\n%s", prompt, output)
+        logging.info("\nYou:\n%s\n\nModelLink:\n%s", prompt, output)
         logging.info("==============================================")
         logging.info("\nElapsed: %ss", round(time.time() - t, 2))
 
@@ -75,7 +73,7 @@ def task_do_sample(args, model, tokenizer=None, system_template="", dialog_templ
 
     if dist.get_rank() == 0:
         logging.info("\n================ Do Sample =================")
-        logging.info("\nYou:\n%s\n\nAscendSpeed:\n%s", prompt, output)
+        logging.info("\nYou:\n%s\n\nModelLink:\n%s", prompt, output)
         logging.info("============================================")
         logging.info("\nElapsed: %ss", round(time.time() - t, 2))
 
@@ -104,7 +102,7 @@ def task_beam_search(args, model, tokenizer=None, system_template="", dialog_tem
 
     if dist.get_rank() == 0:
         logging.info("\n=============== Beam Search =================")
-        logging.info("\nYou:\n%s\n\nAscendSpeed:\n%s", prompt, output)
+        logging.info("\nYou:\n%s\n\nModelLink:\n%s", prompt, output)
         logging.info("=============================================")
         logging.info("\nElapsed: %ss", round(time.time() - t, 2))
 
@@ -134,7 +132,7 @@ def task_beam_search_with_sampling(args, model, tokenizer=None, system_template=
 
     if dist.get_rank() == 0:
         logging.info("\n======== Beam Search with sampling ==========")
-        logging.info("\nYou:\n%s\n\nAscendSpeed:\n%s", prompt, output)
+        logging.info("\nYou:\n%s\n\nModelLink:\n%s", prompt, output)
         logging.info("=============================================")
         logging.info("\nElapsed: %ss", round(time.time() - t, 2))
 
@@ -205,11 +203,11 @@ def task_chat(args, model, tokenizer=None, system_template="", dialog_template="
 
     histories = []
     output, prompt, instruction = "", "", ""
-    input_template, response_template = "You >> ", "AscendSpeed:"
+    input_template, response_template = "You >> ", "ModelLink:"
     command_clear = ["clear"]
     command_back = ["tput", "cup", "4", "0"]
     while True:
-        terminate_runs = torch.zeros(1, dtype=torch.int64, device=torch.device(get_accelerator().device_name()))
+        terminate_runs = torch.zeros(1, dtype=torch.int64, device=torch.cuda.current_device())
 
         if dist.get_rank() == 0:
             if not histories:
@@ -220,15 +218,16 @@ def task_chat(args, model, tokenizer=None, system_template="", dialog_template="
                 logging.info("===========================================================\n")
 
             prompt = input(input_template)
-            if prompt.strip() in ["q", "exit", "quit"]:
+            sanitized_prompt = prompt.strip()
+            if sanitized_prompt in ["q", "exit", "quit"]:
                 terminate_runs += 1
 
-            if prompt.strip() in ["clear", "new"]:
+            if sanitized_prompt in ["clear", "new"]:
                 subprocess.call(command_clear)
                 histories = []
                 continue
 
-            if not prompt.strip():
+            if not sanitized_prompt:
                 continue
 
             histories.append((prompt, None))

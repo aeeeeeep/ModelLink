@@ -254,52 +254,7 @@ Launch llama2-7B inference script: examples/llama2/generate_llama2_7b_ptd.sh
 bash examples/llama2/generate_llama2_7b_ptd.sh
 ```
 Some inference samples are as follows:
-```
-===========================================================
-1. If you want to quit, please entry one of [q, quit, exit]
-2. To create new title, please entry one of [clear, new]
-===========================================================
-
-You >> how are you?
-
-AscendSpeed:
-
-I am doing well, thank you for asking! It's always nice to connect with someone new. How about you?</s>
-
-You >> Give three tips for staying healthy.
-
-AscendSpeed:
-
-
-1. Eat a balanced diet that includes plenty of fruits, vegetables, whole grains, and lean proteins.
-2. Exercise regularly, even if it's just a short walk or some light stretching.
-3. Get plenty of sleep and aim for 7-8 hours of rest each night.</s>
-
-You >> How can we reduce air pollution?
-
-AscendSpeed:
-
-Air pollution is a major environmental issue that can have serious health and economic consequences. To reduce air pollution, we need to take a multi-faceted approach that includes individual and collective action. Here are some ways to reduce air pollution:
-1. Reduce the use of fossil fuels: Fossil fuels are a major source of air pollution, so reducing their use is an effective way to reduce air pollution. This can be done by switching to renewable energy sources such as solar, wind, and geothermal.
-2. Use public transportation: Taking public transportation instead of driving can reduce air pollution. This is because public transportation produces fewer emissions than private vehicles.
-3. Drive less: Reducing the number of trips taken by car can help reduce air pollution. This can be done by carpooling, biking, or walking when possible.
-4. Plant trees: Planting trees can help reduce air pollution by absorbing carbon dioxide and other pollutants. Trees also provide shade and cool the air, which can reduce the need for air conditioning.
-5. Use natural air fresheners: Instead
-
-You >> Any more suggestions, please go ahead and list
-
-AscendSpeed:
-them.
-6. Avoid burning wood or other materials: Burning wood or other materials releases harmful pollutants into the air. Avoid burning materials such as wood, coal, or other materials that release pollutants.
-7. Improve indoor air quality: Poor indoor air quality can contribute to air pollution. Improve indoor air quality by using a HEPA air purifier, avoiding smoking and secondhand smoke, and using natural air fresheners.
-8. Educate yourself and others: Educating yourself and others about air pollution and its effects can help reduce air pollution. Share information with friends, family, and colleagues about the importance of reducing air pollution.
-9. Support government policies: Supporting government policies that promote clean energy and reduce air pollution can help reduce air pollution.
-10. Participate in local clean-up initiatives: Participating in local clean-up initiatives can help reduce air pollution by removing pollutants from the environment.
-11. Use eco-friendly cleaning products: Using eco-friendly cleaning products can help reduce air pollution. These products are designed to
-
-You >>
-
-```
+![Inference](../../sources/images/llama2/llama2-7B-generate.png)
 
 ## Evaluation-7B
 We use MMLU benchmark to evaluate our model. Benchmark Download [here](https://huggingface.co/datasets/cais/mmlu). 

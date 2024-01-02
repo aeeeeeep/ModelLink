@@ -21,7 +21,6 @@ import json
 import os
 import types
 
-import deepspeed
 import torch
 import torch.nn.functional as F
 
@@ -74,16 +73,11 @@ def parse_args(extra_args_provider=None,
     if extra_args_provider is not None:
         parser = extra_args_provider(parser)
 
-    parser = deepspeed.add_config_arguments(parser)
-
     # Parse.
     if ignore_unknown_args:
         args, _ = parser.parse_known_args()
     else:
         args = parser.parse_args()
-
-    # helper argument to set deepspeed pipeline parallel or not
-    args.ds_pipeline_enabled = not args.no_pipeline_parallel
 
     # Distributed args.
     args.rank = int(os.getenv('RANK', '0'))
@@ -795,8 +789,6 @@ def _add_training_args(parser):
     group.add_argument('--dataloader-type', type=str, default=None,
                        choices=['single', 'cyclic'],
                        help='Single pass vs multiple pass data loader')
-    group.add_argument('--ds-inference', action='store_true',
-                       help='DeepSpeed inference engine being used')
     group.add_argument('--cpu-optimizer', action='store_true',
                        help='Run optimizer on CPU')
     group.add_argument('--cpu_torch_adam', action='store_true',
@@ -1327,8 +1319,6 @@ def _add_memoryopt_args(parser):
 def _add_activation_checkpoint_args(parser):
     group = parser.add_argument_group('Activation Checkpointing',
                                       'Checkpointing Configurations')
-    group.add_argument('--deepspeed-activation-checkpointing', action='store_true',
-                       help='uses activation checkpointing from deepspeed')
     group.add_argument('--partition-activations', action='store_true',
                        help='partition Activations across GPUs before checkpointing.')
     group.add_argument('--contigious-checkpointing', action='store_true',

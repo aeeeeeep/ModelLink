@@ -25,8 +25,7 @@ import torch
 from torch.nn.parallel import DistributedDataParallel as torchDDP
 import torch_npu
 
-from deepspeed.accelerator import get_accelerator
-if get_accelerator().device_name() == 'cuda':
+if str.startswith(torch.cuda.get_device_name(), 'NVIDIA'):
     from apex.multi_tensor_apply import multi_tensor_applier
     import amp_C
 
@@ -37,7 +36,6 @@ from modellink.model.module import param_is_not_shared
 from modellink.core.tensor_parallel.layers import param_is_not_tensor_parallel_duplicate
 from modellink import get_num_microbatches
 from modellink.error_utils import check_type
-from deepspeed.accelerator import get_accelerator
 
 
 WRITE_FILE_DEFAULT_FLAGS = os.O_WRONLY | os.O_CREAT
@@ -75,7 +73,7 @@ def is_rank_0():
     """Check whether it is rank 0. For AML, check if it is rank 0 of a node"""
     if torch.distributed.is_initialized():
         if torch.distributed.get_rank() == 0 or (
-                is_aml() and torch.distributed.get_rank() % get_accelerator().device_count() == 0
+                is_aml() and torch.distributed.get_rank() % torch.cuda.device_count() == 0
         ):
             return True
         else:
@@ -116,10 +114,9 @@ def calc_params_l2_norm(model):
                 else:
                     params_data.append(param.data)
     # Calculate norm
-    dummy_overflow_buf = get_accelerator().IntTensor([0])
+    dummy_overflow_buf = torch.IntTensor([0]).cuda()
     
-    if get_accelerator().device_name() == 'cuda':
-
+    if str.startswith(torch.cuda.get_device_name(), 'NVIDIA'):
         norm, _ = multi_tensor_applier(
             amp_C.multi_tensor_l2norm,
             dummy_overflow_buf,
@@ -153,13 +150,13 @@ def report_memory(name):
     mega_bytes = 1024.0 * 1024.0
     string = name + ' memory (MB)'
     string += ' | allocated: {}'.format(
-        get_accelerator().memory_allocated() / mega_bytes)
+        torch.cuda.memory_allocated() / mega_bytes)
     string += ' | max allocated: {}'.format(
-        get_accelerator().max_memory_allocated() / mega_bytes)
+        torch.cuda.max_memory_allocated() / mega_bytes)
     string += ' | reserved: {}'.format(
-        get_accelerator().memory_reserved() / mega_bytes)
+        torch.cuda.memory_reserved() / mega_bytes)
     string += ' | max reserved: {}'.format(
-        get_accelerator().max_memory_reserved() / mega_bytes)
+        torch.cuda.max_memory_reserved() / mega_bytes)
     if parallel_state.get_data_parallel_rank() == 0:
         print("[Rank {}] {}".format(torch.distributed.get_rank(), string),
               flush=True)

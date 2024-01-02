@@ -1,8 +1,7 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
 
 import os
-
-import torch
+from megatron import get_args, print_rank_0
 
 
 def get_lora_model_classes():
@@ -12,19 +11,16 @@ def get_lora_model_classes():
 
 
 def is_enable_lora():
-    from modellink import get_args
     args = get_args()
     return bool(args.lora_target_modules)
 
 
 def is_enable_lora_modules_to_save():
-    from modellink import get_args
     args = get_args()
     return is_enable_lora() and bool(args.lora_modules_to_save)
 
 
 def is_module_name_in_lora_modules_to_save(module_name):
-    from modellink import get_args
     args = get_args()
     for modules_to_save_name in args.lora_modules_to_save:
         if module_name == modules_to_save_name:
@@ -33,7 +29,6 @@ def is_module_name_in_lora_modules_to_save(module_name):
 
 
 def get_lora_state_dict(state_dict):
-    from modellink import get_args
     args = get_args()
     original_module_key = 'original_module.weight'
     modules_to_save_key = f'modules_to_save.{args.lora_adapter_name}.weight'
@@ -57,7 +52,6 @@ def is_lora_state_dict(state_dict):
 
 
 def is_lora_modules_to_save_state_dict(state_dict):
-    from modellink import get_args
     args = get_args()
     modules_to_save_key = f'modules_to_save.{args.lora_adapter_name}'
 
@@ -94,7 +88,6 @@ def handle_lora_modules_to_save_key(state_dict):
 
         return remove_modules_to_save_weight_(state_dict)
 
-    from modellink import get_args
     args = get_args()
     original_module_key = 'original_module.weight'
     modules_to_save_key = f'modules_to_save.{args.lora_adapter_name}.weight'
@@ -123,7 +116,6 @@ def lora_custom_load_fn_for_deepspeed(src, dst):
     # At this time, the model is a lora model, but the pre-training weights do not include lora, so strict is False
     result = model.load_state_dict(state_dict, strict=strict)
     if strict and result:
-        from modellink import print_rank_0
         print_rank_0(f"lora_custom_load_fn_for_deepspeed result:{result}")
 
 
@@ -172,7 +164,6 @@ def get_lora_state_dict_with_deepspeed(model):
 
 
 def handle_model_with_lora(model):
-    from modellink import get_args, print_rank_0
     from peft import LoraConfig, get_peft_model
     from . import lora_modules  # 给lora打补丁
 

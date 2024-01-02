@@ -20,17 +20,11 @@ import math
 import logging
 
 import numpy as np
-import deepspeed
 import torch
 import torch_npu
 import torch.nn.functional as F
-from torch import einsum, nn
-from torch import distributed as dist
-from deepspeed.accelerator import get_accelerator
-from deepspeed.moe.layer import MoE
 from einops import rearrange
 
-from modellink import get_args
 from modellink.core.enums import ModelType
 from modellink import get_args, get_timers, get_num_microbatches, get_retro_args
 from modellink.core import utils, parallel_state, tensor_parallel
@@ -860,20 +854,6 @@ class ParallelTransformerLayer(MegatronModule):
         self.num_experts = num_experts
         if self.num_experts <= 1:
             self.mlp = ParallelMLP(config)
-        else:
-            enable_expert_tensor_parallelism = args.enable_expert_tensor_parallelism
-            self.mlp = MoE(args.hidden_size,
-                           ParallelMLP(config,
-                                       enable_expert_tensor_parallelism=enable_expert_tensor_parallelism),
-                           num_experts=self.num_experts,
-                           ep_size=args.moe_expert_parallel_size,
-                           k=args.topk,
-                           use_residual=(args.mlp_type == 'residual'),
-                           capacity_factor=args.moe_train_capacity_factor,
-                           eval_capacity_factor=args.moe_eval_capacity_factor,
-                           min_capacity=args.moe_min_capacity,
-                           drop_tokens=args.moe_token_dropping, use_tutel=args.use_tutel,
-                           enable_expert_tensor_parallelism=enable_expert_tensor_parallelism)
         self.bias_dropout_add_exec_handler = torch.enable_grad
 
         if args.retro_add_retriever:

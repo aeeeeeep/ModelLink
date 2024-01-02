@@ -236,71 +236,26 @@ NPU vs 参考 loss，相对误差：0.23%<2%
 
 ## 推理-7B
 
-配置llama2-7B 推理脚本: examples/llama2/generate_llama2_7b_ptd.sh
+首先需要配置llama2-7B的推理脚本: examples/llama2/generate_llama2_7b_ptd.sh
 
 ```bash
-# 设置 ascend-toolkit 路径
+# 根据您自己的 ascend-toolkit 路径，执行set_env.sh
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
  
-# 修改模型路径和词表路径
-TOKENIZER_PATH=./llama2-7b-hf/  #词表路径
-CHECKPOINT=./llama2-7b-tp8pp1  #模型路径
+# 修改模型权重路径和词表路径
+CHECKPOINT="your model directory path"
+TOKENIZER_PATH="your tokenizer directory path"
+TOKENIZER_MODEL="your tokenizer.model file path"
 ```
 
-启动llama2-7B 推理脚本: examples/llama2/generate_llama2_7b_ptd.sh
+然后可直接启动generate_llama2_7b_ptd.sh
 
 ```bash
 bash examples/llama2/generate_llama2_7b_ptd.sh
 ```
 
 推理的示例如下:
-
-```
-===========================================================
-1. If you want to quit, please entry one of [q, quit, exit]
-2. To create new title, please entry one of [clear, new]
-===========================================================
-
-You >> how are you?
-
-AscendSpeed:
-
-I am doing well, thank you for asking! It's always nice to connect with someone new. How about you?</s>
-
-You >> Give three tips for staying healthy.
-
-AscendSpeed:
-
-
-1. Eat a balanced diet that includes plenty of fruits, vegetables, whole grains, and lean proteins.
-2. Exercise regularly, even if it's just a short walk or some light stretching.
-3. Get plenty of sleep and aim for 7-8 hours of rest each night.</s>
-
-You >> How can we reduce air pollution?
-
-AscendSpeed:
-
-Air pollution is a major environmental issue that can have serious health and economic consequences. To reduce air pollution, we need to take a multi-faceted approach that includes individual and collective action. Here are some ways to reduce air pollution:
-1. Reduce the use of fossil fuels: Fossil fuels are a major source of air pollution, so reducing their use is an effective way to reduce air pollution. This can be done by switching to renewable energy sources such as solar, wind, and geothermal.
-2. Use public transportation: Taking public transportation instead of driving can reduce air pollution. This is because public transportation produces fewer emissions than private vehicles.
-3. Drive less: Reducing the number of trips taken by car can help reduce air pollution. This can be done by carpooling, biking, or walking when possible.
-4. Plant trees: Planting trees can help reduce air pollution by absorbing carbon dioxide and other pollutants. Trees also provide shade and cool the air, which can reduce the need for air conditioning.
-5. Use natural air fresheners: Instead
-
-You >> Any more suggestions, please go ahead and list
-
-AscendSpeed:
-them.
-6. Avoid burning wood or other materials: Burning wood or other materials releases harmful pollutants into the air. Avoid burning materials such as wood, coal, or other materials that release pollutants.
-7. Improve indoor air quality: Poor indoor air quality can contribute to air pollution. Improve indoor air quality by using a HEPA air purifier, avoiding smoking and secondhand smoke, and using natural air fresheners.
-8. Educate yourself and others: Educating yourself and others about air pollution and its effects can help reduce air pollution. Share information with friends, family, and colleagues about the importance of reducing air pollution.
-9. Support government policies: Supporting government policies that promote clean energy and reduce air pollution can help reduce air pollution.
-10. Participate in local clean-up initiatives: Participating in local clean-up initiatives can help reduce air pollution by removing pollutants from the environment.
-11. Use eco-friendly cleaning products: Using eco-friendly cleaning products can help reduce air pollution. These products are designed to
-
-You >>
-
-```
+![Inference](../../sources/images/llama2/llama2-7B-generate.png)
 
 ## 评估-7B
 

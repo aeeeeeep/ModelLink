@@ -19,9 +19,8 @@ import contextlib
 import torch
 from torch import _C
 from torch.utils.checkpoint import detach_variable
-import deepspeed
-from deepspeed.accelerator import get_accelerator
-
+from torch.cuda import device as device_ctx_manager
+from torch.cuda import _lazy_call
 from modellink import get_args
 from modellink.memory import allocate_mem_buff
 
@@ -83,26 +82,26 @@ def _set_cuda_rng_state(new_state, device=-1):
     if hasattr(_C, '_cuda_setRNGState') and callable(_C._cuda_setRNGState):
         # older PyTorch
         def cb():
-            with get_accelerator().device(device):
+            with device_ctx_manager(device):
                 _C._cuda_setRNGState(new_state)
     else:
         # newer PyTorch
         if device == -1:
-            device = torch.device(get_accelerator().device_name())
+            device = torch.device('cuda')
         elif isinstance(device, str):
             device = torch.device(device)
         elif isinstance(device, int):
-            device = torch.device(get_accelerator().device_name(), device)
+            device = torch.device('cuda', device)
 
         def cb():
             idx = device.index
             if idx is None:
-                idx = get_accelerator().current_device()
+                idx = torch.cuda.current_device()
 
-            default_generator = get_accelerator().default_generator(idx)
+            default_generator = torch.cuda.default_generator[idx]
             default_generator.set_state(new_state)
 
-    get_accelerator().lazy_call(cb)
+    _lazy_call(cb)
 
 
 class CudaRNGStatesTracker:
@@ -150,10 +149,10 @@ class CudaRNGStatesTracker:
         if name in self.states_:
             raise Exception('cuda rng state {} already exists'.format(name))
         # Get the current rng state.
-        orig_rng_state = get_accelerator().get_rng_state()
+        orig_rng_state = torch.cuda.get_rng_state()
         # Set the new state and store it.
-        get_accelerator().manual_seed(seed)
-        self.states_[name] = get_accelerator().get_rng_state()
+        torch.cuda.manual_seed(seed)
+        self.states_[name] = torch.cuda.get_rng_state()
         # Reset rng state to what it was.
         _set_cuda_rng_state(orig_rng_state)
 
@@ -166,7 +165,7 @@ class CudaRNGStatesTracker:
         if name not in self.states_:
             raise Exception('cuda rng state {} is not added'.format(name))
         # Store current rng state.
-        orig_cuda_rng_state = get_accelerator().get_rng_state()
+        orig_cuda_rng_state = torch.cuda.get_rng_state()
         # Set rng state to the desired one
         _set_cuda_rng_state(self.states_[name])
         # Do the stuff we wanted to do.
@@ -174,7 +173,7 @@ class CudaRNGStatesTracker:
             yield
         finally:
             # Update the current rng state for later use.
-            self.states_[name] = get_accelerator().get_rng_state()
+            self.states_[name] = torch.cuda.get_rng_state()
             # And set the state to the original state we started with.
             _set_cuda_rng_state(orig_cuda_rng_state)
 
@@ -185,8 +184,6 @@ _CUDA_RNG_STATE_TRACKER = CudaRNGStatesTracker()
 
 def get_cuda_rng_tracker():
     """Get cuda rng tracker."""
-    if deepspeed.checkpointing.is_configured():
-        return deepspeed.checkpointing.get_cuda_rng_tracker()
     return _CUDA_RNG_STATE_TRACKER
 
 
@@ -208,8 +205,6 @@ def model_parallel_cuda_manual_seed(seed):
                               model parallel regions.
     """
     # 2718 is just for fun and any POSITIVE value will work.
-    if deepspeed.checkpointing.is_configured():
-        return deepspeed.checkpointing.model_parallel_cuda_manual_seed(seed)
     offset = seed + 2718
     tensor_model_parallel_seed = offset + get_tensor_model_parallel_rank()
     # Data parallel gets the original seed.
@@ -224,7 +219,7 @@ def model_parallel_cuda_manual_seed(seed):
             data_parallel_seed), flush=True)
     _CUDA_RNG_STATE_TRACKER.reset()
     # Set the default state.
-    get_accelerator().manual_seed(data_parallel_seed)
+    torch.cuda.manual_seed(data_parallel_seed)
     # and model parallel state.
     _CUDA_RNG_STATE_TRACKER.add(_MODEL_PARALLEL_RNG_TRACKER_NAME,
                                 tensor_model_parallel_seed)
@@ -245,7 +240,7 @@ class CheckpointFunction(torch.autograd.Function):
 
         # Copy the rng states.
         ctx.fwd_cpu_rng_state = torch.get_rng_state()
-        ctx.fwd_cuda_rng_state = get_accelerator().get_rng_state()
+        ctx.fwd_cuda_rng_state = torch.cuda.get_rng_state()
         ctx.fwd_cuda_rng_state_tracker = get_cuda_rng_tracker().get_states()
 
         with torch.no_grad():
@@ -277,7 +272,7 @@ class CheckpointFunction(torch.autograd.Function):
 
         # Store the current states.
         bwd_cpu_rng_state = torch.get_rng_state()
-        bwd_cuda_rng_state = get_accelerator().get_rng_state()
+        bwd_cuda_rng_state = torch.cuda.get_rng_state()
         bwd_cuda_rng_state_tracker = get_cuda_rng_tracker().get_states()
 
         # Set the states to what it used to be before the forward pass.
@@ -298,7 +293,7 @@ class CheckpointFunction(torch.autograd.Function):
         if isinstance(outputs, torch.Tensor):
             outputs = (outputs,)
         elif len(outputs) == 2 and isinstance(outputs[1], torch.Tensor) and \
-                torch.equal(outputs[1], torch.tensor(0, dtype=outputs[1].dtype).to(get_accelerator().device_name())):
+                torch.equal(outputs[1], torch.tensor(0, dtype=outputs[1].dtype).to(torch.cuda.current_device())):
             # a hacky solution to overcome issue when running old script examples/pretrain_gpt_distributed.sh
             outputs = (outputs[0],)
         torch.autograd.backward(outputs, args)
@@ -311,7 +306,4 @@ def checkpoint(function, distribute_saved_activations, *args):
     """Checkpoint a model or part of the model.
     This has been directly copied from torch.utils.checkpoint.
     """
-    if deepspeed.checkpointing.is_configured():
-        return deepspeed.checkpointing.checkpoint(function, *args)
-
     return CheckpointFunction.apply(function, distribute_saved_activations, *args)

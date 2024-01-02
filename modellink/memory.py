@@ -15,8 +15,6 @@
 
 
 import torch
-from deepspeed.accelerator import get_accelerator
-
 from modellink.error_utils import check_equal, ensure_valid
 
 # A dictionary of all the memory buffers allocated.
@@ -60,7 +58,7 @@ class MemoryBuffer:
         self.dtype = dtype
         self.data = torch.empty(self.numel,
                                 dtype=self.dtype,
-                                device=get_accelerator().current_device_name(),
+                                device=torch.cuda.current_device(),
                                 requires_grad=False)
 
         # Index tracking the start of the free memory.

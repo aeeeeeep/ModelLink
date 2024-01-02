@@ -1,14 +1,15 @@
 #!/bin/bash
 
 # The number of parameters is not aligned
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
 export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib:/root/miniconda3/lib:$LD_LIBRARY_PATH
 export HCCL_CONNECT_TIMEOUT=1200
 export COMBINED_ENABLE=1
+export CUDA_DEVICE_MAX_CONNECTIONS=1
 
-# modify config according to your own actual situation
-CHECKPOINT="your model path"
-TOKENIZER_PATH=./llama2-7b-hf/
+# please fill these path configurations
+CHECKPOINT="your model directory path"
+TOKENIZER_PATH="your tokenizer directory path"
+TOKENIZER_MODEL="your tokenizer.model file path"
 
 # Change for multinode config
 MASTER_ADDR=localhost
@@ -26,19 +27,28 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference
        --num-layers 32 \
        --hidden-size 4096  \
        --ffn-hidden-size 11008 \
-       --mlp-layer-fusion \
-       --load ${CHECKPOINT}  \
-       --num-attention-heads 32  \
-       --max-position-embeddings 4096 \
-       --tokenizer-type PretrainedFromHF  \
-       --tokenizer-name-or-path ${TOKENIZER_PATH} \
-       --tokenizer-not-use-fast \
-       --fp16 \
-       --micro-batch-size 1 \
+       --position-embedding-type rope \
        --seq-length 4096 \
        --max-new-tokens 256 \
-       --use-flash-attn \
-       --use-fused-rmsnorm \
-       --seed 42 \
-       --position-embedding-type rope \
+       --micro-batch-size 4 \
+       --global-batch-size 16 \
+       --num-attention-heads 32  \
+       --max-position-embeddings 4096 \
+       --swiglu \
+       --load "${CHECKPOINT}"  \
+       --tokenizer-type PretrainedFromHF  \
+       --tokenizer-name-or-path "${TOKENIZER_PATH}" \
+       --tokenizer-model "${TOKENIZER_MODEL}"  \
+       --tokenizer-not-use-fast \
+       --bf16 \
        --normalization RMSNorm \
+       --untie-embeddings-and-output-weights \
+       --disable-bias-linear \
+       --attention-softmax-in-fp32 \
+       --no-load-optim \
+       --no-load-rng \
+       --no-masked-softmax-fusion \
+       --no-gradient-accumulation-fusion \
+       --exit-on-missing-checkpoint \
+       --make-vocab-size-divisible-by 1
+

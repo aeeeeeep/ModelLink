@@ -8,18 +8,17 @@ import math
 import torch
 import torch.nn.functional as F
 from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
-from deepspeed.accelerator import get_accelerator
-from modellink import get_args
-from modellink import get_tokenizer
-from modellink.core import parallel_state
+from megatron import get_args
+from megatron import get_tokenizer
+from megatron.core import parallel_state
 
-from modellink.utils import get_ltor_masks_and_position_ids, unwrap_model
-from modellink.core.pipeline_parallel.p2p_communication import recv_forward, send_forward
+from megatron.utils import get_ltor_masks_and_position_ids, unwrap_model
+from megatron.core.pipeline_parallel.p2p_communication import recv_forward, send_forward
 
-from modellink.model import DistributedDataParallel as LocalDDP
-from modellink.model import Float16Module
+from megatron.core.distributed import DistributedDataParallel as LocalDDP
+from megatron.model import Float16Module
 from modellink.model.lora_utils import is_enable_lora, get_lora_model_classes
-from modellink.core.utils import get_model_config
+from megatron.core.utils import get_model_config
 
 
 def get_batch(context_tokens):
@@ -28,11 +27,11 @@ def get_batch(context_tokens):
     tokenizer = get_tokenizer()
 
     # Move to GPU.
-    tokens = context_tokens.contiguous().to(get_accelerator().device_name())
+    tokens = context_tokens.contiguous().to(torch.cuda.current_device())
     # Get the attention mask and position ids.
     attention_mask, _, position_ids = get_ltor_masks_and_position_ids(
         tokens,
-        tokenizer.pad_token_id,
+        tokenizer.pad,
         args.reset_position_ids,
         args.reset_attention_mask,
         args.eod_mask_loss)
@@ -41,12 +40,12 @@ def get_batch(context_tokens):
 
 
 def pad_batch(batch, args):
-    max_context_length = get_accelerator().LongTensor([max(len(val) for val in batch)])
+    max_context_length = torch.LongTensor([max(len(val) for val in batch)]).cuda()
     torch.distributed.all_reduce(max_context_length, op=torch.distributed.ReduceOp.MAX)
 
     tokenizer = get_tokenizer()
 
-    pad_id = tokenizer.pad_token_id if tokenizer.pad_token_id else tokenizer.eos_token_id
+    pad_id = tokenizer.pad if tokenizer.pad else tokenizer.eos_token_id
     context_lengths = [len(val) for val in batch]
 
     if args.text_generation_config['max_new_tokens'] > 0:
@@ -61,8 +60,8 @@ def pad_batch(batch, args):
         if context_lengths[i] < max_length_padded:
             tokens.extend([pad_id] * (max_length_padded - context_lengths[i]))
 
-    context_tokens_tensor = get_accelerator().LongTensor(batch)
-    context_length_tensor = get_accelerator().LongTensor(context_lengths)
+    context_tokens_tensor = torch.LongTensor(batch).cuda()
+    context_length_tensor = torch.LongTensor(context_lengths).cuda()
 
     torch.distributed.broadcast(context_length_tensor, args.master_rank)
     torch.distributed.broadcast(context_tokens_tensor, args.master_rank)
@@ -137,10 +136,10 @@ def _post_process(batch_token_iterator, context_length, context_lengths, single_
     count = 0
     for tokens, lengths, log_probs in batch_token_iterator:
         if count > 1:
-            get_accelerator().synchronize()
+            torch.cuda.synchronize()
             t_elapsed = time.time() - t0
             single_token_latency.append(t_elapsed)
-        get_accelerator().synchronize()
+        torch.cuda.synchronize()
         t0 = time.time()
         count += 1
         context_length += 1
@@ -167,7 +166,7 @@ def forward_step(model, tokens, **kwargs):
 
     model_latencies = [] if model_latencies is None else model_latencies
 
-    get_accelerator().synchronize()
+    torch.cuda.synchronize()
     t0 = time.time()
     args = get_args()
     orig_seq_length = args.seq_length
@@ -179,25 +178,18 @@ def forward_step(model, tokens, **kwargs):
 
     _unwrap_and_set_input_tensor(args, input_tensor, model)
 
-    if args.deepspeed and args.ds_pipeline_enabled:
-        output_tensor = model.eval_batch(
-            iter([[(tokens, position_ids, attention_mask), (tokens, tokens)]]),
-            compute_loss=False
-        )
-    else:
-
-        output_tensor = model(
-            input_ids=tokens,
-            position_ids=position_ids,
-            attention_mask=attention_mask,
-            tokentype_ids=tokentype_ids
-        )
+    output_tensor = model(
+        input_ids=tokens,
+        position_ids=position_ids,
+        attention_mask=attention_mask,
+        tokentype_ids=tokentype_ids
+    )
 
     output_tensor = _check_forward_output(output_tensor)
     send_forward(output_tensor, config)
 
     args.seq_length = orig_seq_length
-    get_accelerator().synchronize()
+    torch.cuda.synchronize()
     model_latencies.append(time.time() - t0)
 
     return output_tensor
@@ -220,16 +212,13 @@ def _unwrap_and_set_input_tensor(args, input_tensor, model):
         unwrap_classes += get_lora_model_classes()
     unwrapped_model = unwrap_model(model, unwrap_classes)
     if hasattr(unwrapped_model, 'set_input_tensor'):
-        if args.deepspeed or args.ds_inference:
-            unwrapped_model.module.set_input_tensor(input_tensor)
-        else:
-            unwrapped_model.set_input_tensor(input_tensor)
+        unwrapped_model.set_input_tensor(input_tensor)
 
 
 def sample_sequence_batch(model, context_tokens, context_lengths, type_ids=None, model_latencies=None):
     model_latencies = [] if model_latencies is None else model_latencies
     args = get_args()
-    tokenizer = get_tokenizer()
+    tokenizer = get_tokenizer().tokenizer
     tokens, attention_mask, position_ids = get_batch(context_tokens)
 
     model.eval()
@@ -239,7 +228,7 @@ def sample_sequence_batch(model, context_tokens, context_lengths, type_ids=None,
         batch_size = tokens.size(0)
         max_length = args.max_length_ori
         context_length = context_lengths.min().item()
-        is_done = torch.zeros([batch_size]).byte().to(get_accelerator().device_name())
+        is_done = torch.zeros([batch_size]).byte().to(torch.cuda.current_device())
 
         while context_length < max_length:
             if args.text_generation_config['recompute']:
@@ -291,7 +280,7 @@ def _is_done(is_done, prev, started, tokenizer):
             group = parallel_state.get_pipeline_model_parallel_group()
             torch.distributed.broadcast(done, src, group)
     else:
-        done = get_accelerator().ByteTensor([0])
+        done = torch.ByteTensor([0]).cuda()
         if parallel_state.get_pipeline_model_parallel_world_size() > 1:
             src = parallel_state.get_pipeline_model_parallel_last_rank()
             group = parallel_state.get_pipeline_model_parallel_group()
@@ -321,7 +310,7 @@ def _init_log_probs(args, batch_size, max_length, vocab_size):
     if args.text_generation_config['return_output_log_probs']:
         log_probs_seq = torch.zeros(
             (batch_size, max_length, int(vocab_size))
-        ).to(get_accelerator().device_name())
+        ).to(torch.cuda.current_device())
     return log_probs_seq
 
 
@@ -332,7 +321,7 @@ def _sample_and_synchronize(args, batch_size, context_length_info, logits, token
     context_length, context_lengths = context_length_info
 
     if parallel_state.is_pipeline_last_stage():
-        vocab_size = torch.Tensor([logits.size(1)]).to(get_accelerator().device_name())
+        vocab_size = torch.Tensor([logits.size(1)]).to(torch.cuda.current_device())
         log_probs = F.softmax(logits, dim=-1)
         logits, prev = _sample_strategy(args, logits)
         started = context_lengths <= context_length
@@ -350,7 +339,7 @@ def _sample_and_synchronize(args, batch_size, context_length_info, logits, token
         group = parallel_state.get_pipeline_model_parallel_group()
 
         new_tokens = torch.empty_like(tokens[:, context_length])
-        vocab_size = torch.empty_like(torch.Tensor([0])).to(get_accelerator().device_name())
+        vocab_size = torch.empty_like(torch.Tensor([0])).to(torch.cuda.current_device())
 
         if parallel_state.get_pipeline_model_parallel_world_size() > 1:
             torch.distributed.broadcast(new_tokens, src, group)
@@ -361,7 +350,7 @@ def _sample_and_synchronize(args, batch_size, context_length_info, logits, token
     if log_probs is None:
         log_probs = torch.empty([batch_size, int(vocab_size)],
                                 dtype=torch.float32,
-                                device=get_accelerator().device_name())
+                                device=torch.cuda.current_device())
 
     res = (group, log_probs, prev, src, started, vocab_size)
     return res

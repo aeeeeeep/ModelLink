@@ -6,8 +6,8 @@ from collections.abc import Iterable
 
 import torch
 
-from modellink import get_args
-from modellink.core import parallel_state
+from megatron import get_args
+from megatron.core import parallel_state
 from modellink.error_utils import check_equal
 from modellink.text_generation.utils import forward_step as _forward_step_helper
 
