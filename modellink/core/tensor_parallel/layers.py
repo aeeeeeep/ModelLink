@@ -25,8 +25,6 @@ import torch.nn.functional as F
 import torch.nn.init as init
 from torch.cuda.amp import custom_fwd, custom_bwd
 from torch.nn.parameter import Parameter
-from deepspeed.accelerator import get_accelerator
-import deepspeed.runtime.activation_checkpointing.checkpointing as ds_checkpointing
 
 from modellink import get_args
 from modellink.error_utils import ensure_valid
@@ -104,9 +102,6 @@ def _initialize_affine_weight_gpu(weight, init_method,
                                          is_parallel=True,
                                          dim=partition_dim,
                                          stride=stride)
-    if ds_checkpointing.is_configured():
-        global get_cuda_rng_tracker
-        get_cuda_rng_tracker = ds_checkpointing.get_cuda_rng_tracker
 
     with get_cuda_rng_tracker().fork():
         init_method(weight)
@@ -211,7 +206,7 @@ class VocabParallelEmbedding(torch.nn.Module):
                 torch.empty(
                     self.num_embeddings_per_partition,
                     self.embedding_dim,
-                    device=get_accelerator().current_device_name(),
+                    device=torch.cuda.current_device_name(),
                     dtype=config.params_dtype,
                 )
             )
@@ -355,7 +350,7 @@ class LinearWithGradAccumulationAndAsyncCommunication(torch.autograd.Function):
                 raise Exception("async_grad_allreduce must be False")
             dim_size = list(inputs.size())
             sub_grad_input = torch.empty(
-                dim_size, dtype=inputs.dtype, device=get_accelerator().current_device(), requires_grad=False
+                dim_size, dtype=inputs.dtype, device=torch.cuda.current_device(), requires_grad=False
             )
             # reduce_scatter
             handle = torch.distributed._reduce_scatter_base(
@@ -581,7 +576,7 @@ class ColumnParallelLinear(torch.nn.Module):
                     torch.empty(
                         self.output_size_per_partition,
                         self.input_size,
-                        device=get_accelerator().current_device(),
+                        device=torch.cuda.current_device(),
                         dtype=dtype,
                     )
                 )
@@ -601,7 +596,7 @@ class ColumnParallelLinear(torch.nn.Module):
                 self.bias = Parameter(
                     torch.empty(
                         self.output_size_per_partition,
-                        device=get_accelerator().current_device(),
+                        device=torch.cuda.current_device(),
                         dtype=dtype,
                     )
                 )
@@ -807,7 +802,7 @@ class RowParallelLinear(torch.nn.Module):
                 torch.empty(
                     self.output_size,
                     self.input_size_per_partition,
-                    device=get_accelerator().current_device(),
+                    device=torch.cuda.current_device(),
                     dtype=dtype,
                 )
             )
@@ -822,7 +817,7 @@ class RowParallelLinear(torch.nn.Module):
                 self.bias = Parameter(
                     torch.empty(
                         self.output_size,
-                        device=get_accelerator().current_device(),
+                        device=torch.cuda.current_device(),
                         dtype=dtype,
                     )
                 )

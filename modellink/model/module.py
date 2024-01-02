@@ -15,25 +15,20 @@
 """AscendSpeed Module"""
 import os
 import abc
-import json
 import logging
 from typing import Optional, Union
 
 import torch
 from torch import distributed as dist
 from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
-import deepspeed
-from deepspeed.accelerator import get_accelerator
 
-import modellink
 from megatron import get_args
 from megatron.core import parallel_state, tensor_parallel
-from modellink.model.lora_utils import is_enable_lora, get_lora_model_classes
 from modellink.error_utils import ensure_valid
 
-_FLOAT_TYPES = (torch.FloatTensor, get_accelerator().FloatTensor)
-_HALF_TYPES = (torch.HalfTensor, get_accelerator().HalfTensor)
-_BF16_TYPES = (torch.BFloat16Tensor)
+_FLOAT_TYPES = torch.FloatTensor
+_HALF_TYPES = torch.HalfTensor
+_BF16_TYPES = torch.BFloat16Tensor
 
 
 def param_is_not_shared(param):
@@ -376,52 +371,6 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         # import module to avoid error of circular import
         self.greedy_search_or_sampling = greedy_search_or_sampling
         self.beam_search_in_sampling = beam_search
-
-    @staticmethod
-    def _init_deepspeed_inference(model, args):
-        ds_config = {
-            "fp16": {
-                "enabled": True,
-            },
-            "bf16": {
-                "enabled": False,
-            },
-            "zero_optimization": {
-                "stage": 0,
-                "reduce_bucket_size": args.hidden_size * args.hidden_size,
-            },
-            "steps_per_print": 2000,
-            "train_batch_size": 1,
-            "train_micro_batch_size_per_gpu": 1,
-            "wall_clock_breakdown": False,
-        }
-        if hasattr(args, "ds_config") and getattr(args, "ds_config"):
-            ds_config = args.ds_config
-        elif hasattr(args, "deepspeed_config") and getattr(args, "deepspeed_config"):
-            with open(args.deepspeed_config, encoding='utf-8', errors='ignore') as f:
-                ds_config = json.load(f, strict=False)
-
-            zero_optimization_info = ds_config.get("zero_optimization")
-            if zero_optimization_info and zero_optimization_info.get("stage") > 0:
-                logging.warning("Pipeline parallelism is not compatible with ZeRO-2 and ZeRO-3. "
-                                "Transferring to ZeRO-1")
-                ds_config["zero_optimization"]["stage"] = 0
-
-        if args.ds_inference:
-            logging.warning("ds_inference is not support now, use normal mode instead.")
-
-        if parallel_state.get_pipeline_model_parallel_world_size() > 1:
-            raise ValueError("For now, in DeepSpeed pipeline mode, the pp should not greater than 1 now.\n"
-                             "Please set --pipeline-model-parallel-size 1.")
-
-        engine = deepspeed.initialize(
-            model=model,
-            config_params=ds_config,
-            mpu=parallel_state if args.no_pipeline_parallel else None
-        )[0]
-        engine.module.eval()
-
-        return engine
 
     @staticmethod
     def _ids_check(ids, tokenizer):

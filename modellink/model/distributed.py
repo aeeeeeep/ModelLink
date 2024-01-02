@@ -19,7 +19,6 @@ import math
 
 import torch
 from torch._utils import _flatten_dense_tensors, _unflatten_dense_tensors
-from deepspeed.accelerator import get_accelerator
 from .module import MegatronModule
 from modellink.core import parallel_state
 from modellink.error_utils import ensure_var_is_not_none, ensure_valid
@@ -33,7 +32,7 @@ class MemoryBuffer:
         self.dtype = dtype
         self.data = torch.zeros(self.numel_padded,
                                 dtype=self.dtype,
-                                device=get_accelerator().current_device_name(),
+                                device=torch.cuda.current_device(),
                                 requires_grad=False)
 
 

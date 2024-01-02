@@ -27,28 +27,28 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference
        --num-layers 32 \
        --hidden-size 4096  \
        --ffn-hidden-size 11008 \
-       --swiglu \
-       --load "${CHECKPOINT}"  \
+       --position-embedding-type rope \
+       --seq-length 4096 \
+       --max-new-tokens 256 \
+       --micro-batch-size 4 \
+       --global-batch-size 16 \
        --num-attention-heads 32  \
        --max-position-embeddings 4096 \
+       --swiglu \
+       --load "${CHECKPOINT}"  \
        --tokenizer-type PretrainedFromHF  \
        --tokenizer-name-or-path "${TOKENIZER_PATH}" \
        --tokenizer-model "${TOKENIZER_MODEL}"  \
        --tokenizer-not-use-fast \
-       --fp16 \
-       --micro-batch-size 1 \
-       --seq-length 4096 \
-       --max-new-tokens 256 \
-       --use-flash-attn \
-       --use-fused-rmsnorm \
-       --seed 42 \
+       --bf16 \
        --normalization RMSNorm \
-       --position-embedding-type rope \
-       --exit-on-missing-checkpoint \
-       --use-checkpoint-args \
-       --no-load-rng \
-       --no-load-optim \
        --untie-embeddings-and-output-weights \
+       --disable-bias-linear \
+       --attention-softmax-in-fp32 \
+       --no-load-optim \
+       --no-load-rng \
        --no-masked-softmax-fusion \
+       --no-gradient-accumulation-fusion \
+       --exit-on-missing-checkpoint \
        --make-vocab-size-divisible-by 1
 

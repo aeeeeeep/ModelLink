@@ -16,24 +16,14 @@
 """GPT-2 model."""
 
 import torch
-from deepspeed.pipe import PipelineModule, LayerSpec, TiedLayerSpec
-
 from modellink import get_args
-from modellink.core import tensor_parallel, parallel_state
-from modellink.model import LayerNorm
-from modellink.model.fused_layer_norm import MixedFusedLayerNorm
-from modellink.model.module import float16_to_fp32
+from modellink.core import tensor_parallel
 from modellink.core.enums import AttnMaskType
 from modellink.error_utils import check_equal
 from .language_model import parallel_lm_logits
 from .language_model import get_language_model
-from .utils import init_method_normal
-from .utils import scaled_init_method_normal
 
-from .module import MegatronModule, MegatronModuleForCausalLM, fp32_to_float16
-from .language_model import EmbeddingPipe
-from .transformer import ParallelTransformerLayerPipe, LMHeadPipe
-from .manual_pipe import ManuallyAllocatedPipelineModule
+from .module import MegatronModule, MegatronModuleForCausalLM
 
 
 def post_language_model_processing(lm_output, labels, logit_weights,
@@ -226,151 +216,3 @@ def get_cross_entropy(is_prefix: bool):
         return loss
 
     return CrossEntropy
-
-
-class GPTModelPipe(ManuallyAllocatedPipelineModule, MegatronModule, MegatronModuleForCausalLM):
-    """GPT-2 Language model."""
-
-    def __init__(
-            self,
-            config,
-            num_tokentypes=0,
-            parallel_output=True,
-            attn_mask_type: AttnMaskType = AttnMaskType.causal
-    ):
-        args = get_args()
-        self.parallel_output = parallel_output
-
-        if config.init_method is None:
-            config.init_method = init_method_normal(config.init_method_std)
-
-        if config.output_layer_init_method is None:
-            config.output_layer_init_method = scaled_init_method_normal(config.init_method_std,
-                                                                        config.num_layers)
-
-        self.specs = []
-
-        def _to_float16(inputs):
-            if args.fp16:
-                return fp32_to_float16(inputs, lambda v: v.half())
-            elif args.bf16:
-                return fp32_to_float16(inputs, lambda v: v.bfloat16())
-            else:
-                return inputs
-
-        self.specs.append(_to_float16)
-
-        # Embedding layer
-        if args.untie_embeddings_and_output_weights:
-            self.specs.append(LayerSpec(EmbeddingPipe,
-                                        args.hidden_size,
-                                        args.padded_vocab_size,
-                                        args.max_position_embeddings,
-                                        args.hidden_dropout,
-                                        config,
-                                        num_tokentypes=num_tokentypes,
-                                        embedding_weights_in_fp32=args.embedding_weights_in_fp32, ))
-        else:
-            self.specs.append(TiedLayerSpec('embed',
-                                            EmbeddingPipe,
-                                            args.hidden_size,
-                                            args.padded_vocab_size,
-                                            args.max_position_embeddings,
-                                            args.hidden_dropout,
-                                            config,
-                                            num_tokentypes=num_tokentypes,
-                                            embedding_weights_in_fp32=args.embedding_weights_in_fp32,
-                                            tied_weight_attr='word_embeddings_weight'))
-
-        if args.fp32_residual_connection:
-            if getattr(args, 'pretrain_causal_attention', False):
-                self.specs.append(lambda x: x.transpose(0, 1).contiguous().float())
-            else:
-                # EmbeddingPipe returns attention mask as well
-                self.specs.append(lambda x: (x[0].transpose(0, 1).contiguous().float(), *x[1:]))
-        else:
-            if getattr(args, 'pretrain_causal_attention', False):
-                self.specs.append(lambda x: x.transpose(0, 1).contiguous())
-            else:
-                # EmbeddingPipe returns attention mask as well
-                self.specs.append(lambda x: (x[0].transpose(0, 1).contiguous(), *x[1:]))
-
-        for layer_idx in range(args.num_layers):
-            self.specs.append(
-                LayerSpec(ParallelTransformerLayerPipe,
-                          config,
-                          layer_number=layer_idx,
-                          self_attn_mask_type=AttnMaskType.causal))
-
-        # Undo data format change
-        def undo(x):
-            if not getattr(args, 'pretrain_causal_attention', False):
-                x = x[0]
-            return x.transpose(0, 1).contiguous()
-
-        self.specs.append(undo)
-
-        # Final layernorm after transformer layers
-        self.specs.append(
-            LayerSpec(MixedFusedLayerNorm,
-                      args.hidden_size,
-                      eps=args.layernorm_epsilon,
-                      sequence_parallel=args.sequence_parallel))
-
-        def _logits_helper(embedding, lm_output):
-            """A wrapper to massage inputs/outputs from pipeline. """
-            return parallel_lm_logits(
-                lm_output,
-                embedding.word_embeddings_weight,
-                self.parallel_output)
-
-        if args.untie_embeddings_and_output_weights:
-            self.specs.append(
-                LayerSpec(LMHeadPipe, args.hidden_size, args.padded_vocab_size, config)
-            )
-        else:
-            self.specs.append(
-                TiedLayerSpec('embed',
-                              EmbeddingPipe,
-                              args.hidden_size,
-                              args.padded_vocab_size,
-                              args.max_position_embeddings,
-                              args.hidden_dropout,
-                              config,
-                              num_tokentypes=num_tokentypes,
-                              embedding_weights_in_fp32=args.embedding_weights_in_fp32,
-                              forward_fn=_logits_helper,
-                              tied_weight_attr='word_embeddings_weight')
-            )
-
-        # Convert to fp32 if needed
-        if args.fp16 or args.bf16:
-            self.specs.append(float16_to_fp32)
-
-        if args.checkpoint_activations:
-            interval = args.checkpoint_num_layers
-        elif args.recompute_granularity == "full" and args.recompute_method == 'uniform':
-            # deepspeed's pipeline doesn't support the block recompute method
-            interval = args.recompute_num_layers
-        else:
-            interval = 0
-
-        from deepspeed.runtime.pipe.topology import PipeModelDataParallelTopology
-        topo = PipeModelDataParallelTopology(num_pp=parallel_state.get_pipeline_model_parallel_world_size(),
-                                             num_mp=parallel_state.get_tensor_model_parallel_world_size(),
-                                             num_dp=parallel_state.get_data_parallel_world_size())
-
-        # here one can extend the regex to include more layers to be counted towards partitioning,
-        # e.g. 'type:transformer|embedding' will add up all the transformer blocks and also the first
-        # and last embedding layers and then partition that transformers+2 layers - so to get a good
-        # balance you may want to use less transformer layers
-        #
-        # caveat emptor: the current implementation of PP fails unless each stage has at least one
-        # transformer layer
-        partition_method = 'type:transformer'
-
-        super().__init__(layers=self.specs,
-                         loss_fn=get_cross_entropy(is_prefix=attn_mask_type is AttnMaskType.prefix),
-                         topology=topo,
-                         activation_checkpoint_interval=interval,
-                         partition_method=partition_method)

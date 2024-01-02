@@ -8,7 +8,6 @@ import math
 import torch
 import torch.nn.functional as F
 from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
-from deepspeed.accelerator import get_accelerator
 from megatron import get_args
 from megatron import get_tokenizer
 from megatron.core import parallel_state
@@ -41,7 +40,7 @@ def get_batch(context_tokens):
 
 
 def pad_batch(batch, args):
-    max_context_length = get_accelerator().LongTensor([max(len(val) for val in batch)])
+    max_context_length = torch.LongTensor([max(len(val) for val in batch)]).cuda()
     torch.distributed.all_reduce(max_context_length, op=torch.distributed.ReduceOp.MAX)
 
     tokenizer = get_tokenizer()
@@ -61,8 +60,8 @@ def pad_batch(batch, args):
         if context_lengths[i] < max_length_padded:
             tokens.extend([pad_id] * (max_length_padded - context_lengths[i]))
 
-    context_tokens_tensor = get_accelerator().LongTensor(batch)
-    context_length_tensor = get_accelerator().LongTensor(context_lengths)
+    context_tokens_tensor = torch.LongTensor(batch).cuda()
+    context_length_tensor = torch.LongTensor(context_lengths).cuda()
 
     torch.distributed.broadcast(context_length_tensor, args.master_rank)
     torch.distributed.broadcast(context_tokens_tensor, args.master_rank)
@@ -137,10 +136,10 @@ def _post_process(batch_token_iterator, context_length, context_lengths, single_
     count = 0
     for tokens, lengths, log_probs in batch_token_iterator:
         if count > 1:
-            get_accelerator().synchronize()
+            torch.cuda.synchronize()
             t_elapsed = time.time() - t0
             single_token_latency.append(t_elapsed)
-        get_accelerator().synchronize()
+        torch.cuda.synchronize()
         t0 = time.time()
         count += 1
         context_length += 1
@@ -167,7 +166,7 @@ def forward_step(model, tokens, **kwargs):
 
     model_latencies = [] if model_latencies is None else model_latencies
 
-    get_accelerator().synchronize()
+    torch.cuda.synchronize()
     t0 = time.time()
     args = get_args()
     orig_seq_length = args.seq_length
@@ -190,7 +189,7 @@ def forward_step(model, tokens, **kwargs):
     send_forward(output_tensor, config)
 
     args.seq_length = orig_seq_length
-    get_accelerator().synchronize()
+    torch.cuda.synchronize()
     model_latencies.append(time.time() - t0)
 
     return output_tensor
@@ -229,7 +228,7 @@ def sample_sequence_batch(model, context_tokens, context_lengths, type_ids=None,
         batch_size = tokens.size(0)
         max_length = args.max_length_ori
         context_length = context_lengths.min().item()
-        is_done = torch.zeros([batch_size]).byte().to(get_accelerator().device_name())
+        is_done = torch.zeros([batch_size]).byte().to(torch.cuda.current_device())
 
         while context_length < max_length:
             if args.text_generation_config['recompute']:
@@ -281,7 +280,7 @@ def _is_done(is_done, prev, started, tokenizer):
             group = parallel_state.get_pipeline_model_parallel_group()
             torch.distributed.broadcast(done, src, group)
     else:
-        done = get_accelerator().ByteTensor([0])
+        done = torch.ByteTensor([0]).cuda()
         if parallel_state.get_pipeline_model_parallel_world_size() > 1:
             src = parallel_state.get_pipeline_model_parallel_last_rank()
             group = parallel_state.get_pipeline_model_parallel_group()

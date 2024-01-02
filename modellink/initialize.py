@@ -258,14 +258,3 @@ def _is_rank_0():
             return False
     else:
         return True
-
-
-def adaptor_deepspeed_initialize(*largs, **kwargs):
-    return_items = initialize(*largs, **kwargs)
-    args = kwargs.get('args')
-    if args is not None:
-        if isinstance(return_items[0], PipelineEngine):
-            return_items[0].is_pipe_partitioned = return_items[0].is_pipe_partitioned and not args.sequence_parallel
-            return_items[0].is_grad_partitioned = return_items[0].is_grad_partitioned and not args.sequence_parallel
-
-    return tuple(return_items)
