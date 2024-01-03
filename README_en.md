@@ -948,6 +948,15 @@ To enable inverted triangle acceleration, set `--triangle-attn` flag.
 For LLMs, Ascend chips support various fused kernels, such as `scaled_masked_softmax` and `rotary_pos_emb`. The related examples can be found by searching in this project, and more detailed information is coming soon.
 For fused optimizer, two kinds of fused adam optimizers are provided by `--optimizer`. Specifically, the choice `--optimizer adam` saves more memory, and the choice `--optimizer fused_adam` trains faster.
 
+In addition, we provides some self-developed low-memory optimizers, such as:
+
+Cadam is based on Google's [Lion optimizer](https://arxiv.org/abs/2302.06675) and uses the same minimalist form as its beta parameters. In this way, the second-order momentum can be removed, and the parameter update effect similar to Adam can be obtained. Then, the first-order momentum is quantized and compressed row by row, and the FP16 is used for calculation, and the scale and clip operations are combined to prevent overflow.
+
+<div align=center>
+<img src="sources/images/cadam.png" height="300px" width="600px"></div>
+
+To use the Cadam optimizer, you need to specify the following parameter `--optimizer cadam` in the script, and reduce the learning rate `lr` and minimum learning rate `min-lr` of the model that can be smoothly trained by Adam by 3 to 10 times. `weight_decay` synchronous magnification 3 - 10 times, `--adam-beta1 0.965`. Note that currently Cadam supports memory compression only in PTD scenarios.
+
 ### <span id="jump9">  Merged Feed-Forward Network & Gradient Accumulation </span>
 For llama and other LLMs without bias in FFN, the linear transformation in FFN could be merged to save communication in tensor parallelism. To enable this feature, please set `--mlp-layer-fusion` flag. Gradient accumulation uses gradient of N rounds to make an optimizer step and update parameters. Here, N = global batchsize / micro batchsize / DP, and DP = device nums / tp / pp.
 
