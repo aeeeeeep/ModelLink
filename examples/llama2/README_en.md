@@ -604,7 +604,8 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
     Download the LLaMA2-70B checkpoint from [here](https://huggingface.co/meta-llama/Llama-2-70b-hf)
 
     ```shell
-    #!/bin/bash
+    # !/bin/bash
+    # application is required
     mkdir -p llama2-70b-hf
     cd llama2-70b-hf
     wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/config.json
@@ -654,6 +655,7 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
     LLaMA2-70B tokenizer can be downloaded from [here](https://huggingface.co/meta-llama/Llama-2-70b-hf)
     ```bash
     #!/bin/bash
+    # application is required
     mkdir -p llama2-70b-hf
     cd llama2-70b-hf
     wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/special_tokens_map.json

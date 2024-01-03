@@ -612,7 +612,8 @@ LLaMA2-34B/70B 训练的硬件配置:
 
     Llama-2-70B的权重下载[here](https://huggingface.co/meta-llama/Llama-2-70b-hf)
     ```shell
-    #!/bin/bash
+    #!/bin/bash 
+    # 需要申请开放
     mkdir -p llama2-70b-hf
     cd llama2-70b-hf
     wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/config.json
@@ -662,6 +663,7 @@ LLaMA2-34B/70B 训练的硬件配置:
     Llama-2-70B 的词表，下载[here](https://huggingface.co/meta-llama/Llama-2-70b-hf).
     ```bash
     #!/bin/bash
+    # 需要申请开放
     mkdir -p llama2-70b-hf
     cd llama2-70b-hf
     wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/special_tokens_map.json
