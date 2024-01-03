@@ -139,7 +139,7 @@ python $SCRIPT_PATH \
     --pipeline-model-parallel-size 1 \
     --type 7B \
     --bias \
-    --deepspeed \
+    --deepspeed
 ```
 
 6. Config Internlm-7B pre-training script.
@@ -174,6 +174,50 @@ The performance of Internlm-7B in **Ascend NPU** and **Reference**:
 
 
 #### Accuracy of the loss
+
+To improve the verification efficiency, the batch size (e.g., 64) can be reduced for verification accuracy and the following parameters can be used.
+```bash
+deepspeed  pretrain_intern.py \
+       --DDP-impl local \
+       --tensor-model-parallel-size 1 \
+       --pipeline-model-parallel-size 1 \
+       --num-layers 32 \
+       --hidden-size 4096 \
+       --position-embedding-type rope \
+       --normalization RMSNorm \
+       --ffn-hidden-size 11008 \
+       --num-attention-heads 32 \
+       --micro-batch-size $MICRO_BATCH \
+       --global-batch-size $GLOBAL_BATCH \
+       --seq-length 2048 \
+       --max-position-embeddings 2048 \
+       --train-iters 5000 \
+       --data-path $DATA \
+       --load $CHECKPOINT \
+       --tokenizer-name-or-path $TOKENIZER_PATH \
+       --tokenizer-not-use-fast \
+       --data-impl mmap \
+       --split 949,50,1 \
+       --distributed-backend nccl \
+       --lr 1.0e-6 \
+       --min-lr 1.0e-6 \
+       --lr-decay-style cosine \
+       --lr-warmup-fraction .01 \
+       --weight-decay 1e-2 \
+       --clip-grad 1.0 \
+       --adam-beta1 0.9 \
+       --adam-beta2 0.95 \
+       --log-interval 1 \
+       --save-interval 1000 \
+       --eval-interval 10000 \
+       --eval-iters 10 \
+       --use-flash-attn \
+       --use-fused-rmsnorm \
+       --use-fused-rotary-pos-emb \
+       --auto-recompute-device-size 46080 \
+       $ds_args \
+       --bf16 | tee logs/train.log
+```
 
 NPU vs GPU loss.
 

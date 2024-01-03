@@ -143,7 +143,7 @@ python $SCRIPT_PATH \
     --pipeline-model-parallel-size 1 \
     --type 7B \
     --bias \
-    --deepspeed \
+    --deepspeed
 ```
 
 6. 配置 Internlm-7B 预训练脚本
@@ -178,6 +178,50 @@ Internlm-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 
 #### 精度
+
+为提高验证效率，验证精度时可减小batch size（例如64），并使用以下参数
+```bash
+deepspeed  pretrain_intern.py \
+       --DDP-impl local \
+       --tensor-model-parallel-size 1 \
+       --pipeline-model-parallel-size 1 \
+       --num-layers 32 \
+       --hidden-size 4096 \
+       --position-embedding-type rope \
+       --normalization RMSNorm \
+       --ffn-hidden-size 11008 \
+       --num-attention-heads 32 \
+       --micro-batch-size $MICRO_BATCH \
+       --global-batch-size $GLOBAL_BATCH \
+       --seq-length 2048 \
+       --max-position-embeddings 2048 \
+       --train-iters 5000 \
+       --data-path $DATA \
+       --load $CHECKPOINT \
+       --tokenizer-name-or-path $TOKENIZER_PATH \
+       --tokenizer-not-use-fast \
+       --data-impl mmap \
+       --split 949,50,1 \
+       --distributed-backend nccl \
+       --lr 1.0e-6 \
+       --min-lr 1.0e-6 \
+       --lr-decay-style cosine \
+       --lr-warmup-fraction .01 \
+       --weight-decay 1e-2 \
+       --clip-grad 1.0 \
+       --adam-beta1 0.9 \
+       --adam-beta2 0.95 \
+       --log-interval 1 \
+       --save-interval 1000 \
+       --eval-interval 10000 \
+       --eval-iters 10 \
+       --use-flash-attn \
+       --use-fused-rmsnorm \
+       --use-fused-rotary-pos-emb \
+       --auto-recompute-device-size 46080 \
+       $ds_args \
+       --bf16 | tee logs/train.log
+```
 
 NPU vs 参考 （无预训练权重） loss 对比和相对误差
 ![NPU-Loss-and-Relative-Error](../../sources/images/intern7b_loss.png)
