@@ -50,8 +50,8 @@ def init_checkpointed_activations_memory_buffer():
 
     per_layer = args.micro_batch_size * args.max_position_embeddings * \
                 args.hidden_size // args.tensor_model_parallel_size
-    check_divisible(args.num_layers, args.checkpoint_num_layers, 
-        error_info='{} % {}, number of layers is not divisible by checkpoint-num-layers')
+    check_divisible(args.num_layers, args.checkpoint_num_layers,
+                    error_info='{} % {}, number of layers is not divisible by checkpoint-num-layers')
     num_checkpointer_layers = args.num_layers // args.checkpoint_num_layers
     numel = per_layer * num_checkpointer_layers
     dtype = torch.half
@@ -59,8 +59,8 @@ def init_checkpointed_activations_memory_buffer():
         dtype = torch.float
 
     global _CHECKPOINTED_ACTIVATIONS_MEMORY_BUFFER
-    ensure_var_is_none(_CHECKPOINTED_ACTIVATIONS_MEMORY_BUFFER, 
-        error_message='checkpointed activations memory buffer is already allocated.')
+    ensure_var_is_none(_CHECKPOINTED_ACTIVATIONS_MEMORY_BUFFER,
+                       error_message='checkpointed activations memory buffer is already allocated.')
     _CHECKPOINTED_ACTIVATIONS_MEMORY_BUFFER = allocate_mem_buff(
         'checkpointed activations', numel, dtype, track_usage=False)
 
@@ -230,6 +230,18 @@ def model_parallel_cuda_manual_seed(seed):
                                 tensor_model_parallel_seed)
 
 
+def extract_tensors(all_objects):
+    """Separate objects in list/tuple into tensors and non-tensors and create a mapping to enable re-aggregation.
+       The order of tensors and non-tensors is preserved in their respective output groups
+    """
+    tensor_objects = [v for v in all_objects if torch.is_tensor(v)]
+    non_tensor_objects = [v for v in all_objects if not torch.is_tensor(v)]
+    tensor_flags = [torch.is_tensor(v) for v in all_objects]
+    if type(all_objects) is tuple:
+        return tuple(tensor_objects), tuple(non_tensor_objects), tuple(tensor_flags)
+    return tensor_objects, non_tensor_objects, tensor_flags
+
+
 class CheckpointFunction(torch.autograd.Function):
     """This function is adapted from torch.utils.checkpoint with
        two main changes:
@@ -301,6 +313,7 @@ class CheckpointFunction(torch.autograd.Function):
                 torch.equal(outputs[1], torch.tensor(0, dtype=outputs[1].dtype).to(get_accelerator().device_name())):
             # a hacky solution to overcome issue when running old script examples/pretrain_gpt_distributed.sh
             outputs = (outputs[0],)
+        outputs, _, _ = extract_tensors(all_objects=outputs)
         torch.autograd.backward(outputs, args)
         grads = tuple(inp.grad if isinstance(inp, torch.Tensor) else inp
                       for inp in detached_inputs)
