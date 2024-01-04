@@ -48,7 +48,7 @@ class GraphSolver:
     @staticmethod
     def broadcast_recompute_policy_in_mp(recompute_policy_list):
         recompute_policy_tensor = torch.tensor(recompute_policy_list,
-                                               device=torch.device(f'npu:{torch.distributed.get_rank() % 8}'))
+                                               device=torch.npu.current_device())
         torch.distributed.broadcast(recompute_policy_tensor, src=parallel_state.get_tensor_model_parallel_src_rank(),
                                     group=parallel_state.get_tensor_model_parallel_group())
         return recompute_policy_tensor.cpu().numpy().tolist()
