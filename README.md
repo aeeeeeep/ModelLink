@@ -916,76 +916,7 @@ Cadam是基于谷歌提出的[Lion优化器](https://arxiv.org/abs/2302.06675)�
 <div align=center>
 <img src="sources/images/cadam.png" height="300px" width="600px"></div>
 
-欲使用Cadam优化器，需要在脚本中指定如下参数`--optimizer cadam`，并将能够用Adam正常平稳训练的模型的学习率`lr`和最小学习率`min-lr`缩小3-10倍，`weight_decay`同步放大3-10倍，`--adam-beta1 0.965`。
-
-部分大模型的测试结果如下表所示：
-
-<table>
-  <thead>
-    <tr>
-      <th>模型</th>
-      <th>优化器</th>
-      <th>性能</th>
-      <th>平均压缩HBM</th>
-      <th>BoolQ</th>
-      <th>PIQA</th>
-      <th>HellaSwag</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td rowspan="2"> LLama-7B </td>
-      <td> Adam </td>
-      <td> 5.65s/iteration </td>
-      <td> -- </td>
-      <td> 38.78% </td>
-      <td> 52.88% </td>
-      <td> 26.69% </td>
-    </tr>
-    <tr>
-      <td>  Cadam </td>
-      <td> 5.68s/iteration </td>
-      <td> ↓ 21.8% </td>
-      <td> 41.50% </td>
-      <td> 55.11% </td>
-      <td> 26.59% </td>
-    </tr>
-    <tr>
-      <td rowspan="2"> LLama2-7B </td>
-      <td> Adam </td>
-      <td> 7.09s/iteration </td>
-      <td> -- </td>
-      <td> 40.36% </td>
-      <td> 51.20% </td>
-      <td> 25.13% </td>
-    </tr>
-    <tr>
-      <td>  Cadam </td>
-      <td> 7.12s/iteration </td>
-      <td> ↓ 17.4% </td>
-      <td> 44.16% </td>
-      <td> 51.20% </td>
-      <td> 26.29% </td>
-    </tr>
-    <tr>
-      <td rowspan="2"> Bloom-7B </td>
-      <td> Adam </td>
-      <td> 4.10s/iteration </td>
-      <td> -- </td>
-      <td> 37.83% </td>
-      <td> 49.24% </td>
-      <td> 25.31% </td>
-    </tr>
-    <tr>
-      <td>  Cadam </td>
-      <td> 4.25s/iteration </td>
-      <td> ↓ 10.1% </td>
-      <td> 37.83% </td>
-      <td> 51.16% </td>
-      <td> 25.25% </td>
-    </tr>
-  </tbody>
-</table>
+欲使用Cadam优化器，需要在脚本中指定如下参数`--optimizer cadam`，并将能够用Adam正常平稳训练的模型的学习率`lr`和最小学习率`min-lr`缩小3-10倍，`weight_decay`同步放大3-10倍，`--adam-beta1 0.965`。注意，当前Cadam仅支持PTD场景下的内存压缩。
 
 
 ### <span id="jump9">  前向网络合并 </span>
