@@ -8,8 +8,9 @@ NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
-DATA=../../datasets/dataset/alpaca_gpu/alapaca_packed_input_ids_document
-CHECKPOINT=../../model/model_weights/
+TOKENIZER_PATH=./dataset/internlm
+DATA=./dataset/alpaca/alapaca_packed_input_ids_document
+CHECKPOINT=./model_weights/
 
 DS_CONFIG=ds_config.json
 ZERO_STAGE=2
@@ -78,7 +79,7 @@ deepspeed  pretrain_intern.py \
        --lr-decay-iters 320000 \
        --data-path $DATA \
        --load $CHECKPOINT \
-       --tokenizer-name-or-path ../../datasets/dataset/internlm \
+       --tokenizer-name-or-path $TOKENIZER_PATH\
        --tokenizer-not-use-fast \
        --data-impl mmap \
        --split 949,50,1 \
