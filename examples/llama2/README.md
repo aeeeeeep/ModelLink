@@ -52,8 +52,9 @@ LLAMA2-7B 训练的硬件配置:
    ```shell
    git clone https://gitee.com/ascend/AscendSpeed.git 
    cd AscendSpeed 
-   mkdir logs
-   mkdir ckpt
+   git checkout modellink
+   pip install -r requirements.txt
+   cd ..
    ```
 2. 搭建环境
 
@@ -66,19 +67,12 @@ LLAMA2-7B 训练的硬件配置:
    pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
    pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-   
-   # 安装 megatron-core
-   pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
-   
-   # 安装 deepspeed 和 deepspeed_npu
-   pip install deepspeed==0.9.2
-   git clone https://gitee.com/ascend/DeepSpeed.git -b v0.9.2 deepspeed_npu
-   cd deepspeed_npu
-   pip3 install -e ./
+
+   # 安装加速库
+   git clone https://gitee.com/ascend/AscendSpeed2.git
+   cd AscendSpeed2
+   pip3 install -e .
    cd ..
-   
-   # install other packages
-   pip install -r requirements.txt 
    ```
 3. 下载 LLAMA2-7B 的 [预训练权重和词表](https://huggingface.co/daryl149/llama-2-7b-hf/tree/main)
 
@@ -98,19 +92,22 @@ LLAMA2-7B 训练的硬件配置:
      cd ..
    ```
 
-   将权重从 huggingface 格式转化为 AscendSpeed 格式 ： PTD模式
+   将权重从 huggingface 格式转化为 magatron 格式 
 
    ```bash
+    cd AscendSpeed
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
    
     # 权重格式转换
-    python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir llama-2-7b-hf \
-                                                                        --output-model-dir ./llama2-7b-tp8pp1 \
-                                                                        --tensor-model-parallel-size 8 \
-                                                                        --pipeline-model-parallel-size 1 \
-                                                                        --type 7B \
-                                                                        --merge-mlp
+    python tools/checkpoint/util.py --model-type GPT \
+                                    --loader llama2_hf \
+                                    --saver megatron \
+                                    --target-tensor-parallel-size 8 \
+                                    --load-dir ../llama-2-7b-hf \
+                                    --save-dir {your megatron ckpt save path} \
+                                    --tokenizer-model ../llama-2-7b-hf/tokenizer.model
+   cd ..
    ```
 4. 预训练
 
@@ -125,90 +122,45 @@ LLAMA2-7B 训练的硬件配置:
      cd ./dataset_llama2
      wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
      cd ..
-
+     cd AscendSpeed
      # 处理数据                           
      python ./tools/preprocess_data.py \
-       --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-       --tokenizer-name-or-path ./llama-2-7b-hf \
-       --output-prefix ./dataset_llama2/alpaca \
+       --input ../dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+       --tokenizer-name-or-path ../llama-2-7b-hf \
+       --output-prefix ../dataset_llama2/alpaca \
        --workers 4 \
        --log-interval 1000 \
        --tokenizer-type PretrainedFromHF
+    cd .. 
    ```
-   4.2 用ptd模式预训练
-   配置LLaMA2-7B PTD 预训练脚本: examples/llama2/pretrain_llama2_7b_ptd.sh
-
+   4.2 预训练
    ```shell
+    # 配置LLaMA2-7B 预训练脚本: pretrain_llama2_7b.sh
+    cd AscendSpeed
     # 设置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-    # 根据实际情况配置词表、数据集、模型参数加载和保存路径
-    LOAD_CHECKPOINT_PATH="your init model load path"
-    SAVE_CHECKPOINT_PATH="your model ckpt save path"
-    TOKENIZER_PATH=./llama-2-7b-hf/  #词表路径
-    DATA_PATH=./dataset_llama2/alpaca_text_document  #数据集路径
+    # 根据实际情况配置词表、数据集、模型参数保存路径
+    CKPT_SAVE_DIR="your model ckpt save path"
+    TOKENIZER_PATH=usr_local/llama-2-7b-hf/tokenizer.model  #词表路径
+    DATA_PATH=usr_local/dataset_llama2/alpaca_text_document  #数据集路径
    ```
 
-   启动 LLaMA2-7B PTD预训练脚本: examples/llama2/pretrain_llama2_7b_ptd.sh
+   启动 LLaMA2-7B 预训练脚本: examples/pretrain_llama2_7b.sh
 
    ```shell
-    bash examples/llama2/pretrain_llama2_7b_ptd.sh 
+    bash examples/llama2/pretrain_llama2_7b.sh
    ```
 5. 微调
 
-   5.1 准备微调数据集
-   下载微调数据集 [这里](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
-
-   ```shell
-   # 下载数据集
-   mkdir finetune_dataset
-   cd ./finetune_dataset
-   wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-   cd ..
-   
-   # 处理微调数据集                            
-   python ./tools/preprocess_data.py \
-     --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-     --tokenizer-name-or-path ./llama-2-7b-hf \
-     --output-prefix ./finetune_dataset/alpaca \
-     --workers 4 \
-     --log-interval 1000 \
-     --tokenizer-type PretrainedFromHF \
-     --handler-name GeneralInstructionHandler \
-     --append-eod
-   ```
-
-   5.2 全参微调
-   全参微调的配置脚本基本和预训练脚本pretrain_llama2_7b_ptd.sh一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
-
-   ```bash
-   DATA_PATH=./finetune_dataset/alpaca
-   
-   --is-instruction-dataset \
-   ```
-
-   5.3 Lora微调
-   Lora微调的脚本配置是在预训练脚本pretrain_llama2_7b_ptd.sh基础上加上lora参数，如下所示:
-
-   ```bash
-       --lora-target-modules query_key_value dense proj dense_4h_to_h \
-       --lora-r 16 \
-       --lora-alpha 32 \
-   ```
-
-   如果模型的词表变化了，可以加上以下参数（词表不变不建议添加）
-
-   ```bash
-     --lora-modules-to-save word_embeddings output_layer \
-   ```
-
-   Lora微调的断点续训需要加上以下参数：
-
-   ```bash
-       --load ${ORIGIN_CHECKPOINT}  \   # 原始模型参数路径
-       --lora-load ${LORA_CHECKPOINT} \   # lora参数checkpoint
-   ```
-
+   微调的配置脚本基本和预训练脚本pretrain_llama2_7b.sh一致. *区别是添加使能微调开关和增加权重路径参数*
+```shell
+  # 使能微调开关
+  --finetune
+  # 根据实际情况配置模型参数加载路径
+  CKPT_LOAD_DIR="your init model load path"
+  --load ${CKPT_LOAD_DIR}
+```
 
 ### 性能
 
@@ -217,22 +169,21 @@ LLAMA2-7B 训练的硬件配置:
 LLaMA2-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 | 设备 |   模型   | 迭代数 | 样本吞吐 (samples/step) | tokens吞吐 (tokens/s/p) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
-| :--: | :-------: | :----: | :--------------------: | :---------------------: | :-------------------: | :-------------------: |
-| NPUs | LLaMA2-7B |  1024  |         5.19         |        2662        |         3.08         |        122.39        |
-| 参考 | LLaMA2-7B |  1024  |         5.63         |         2884         |         2.84         |        131.96        |
+| :--: | :-------: | :----: |:-------------------:|:---------------------:|:---------------:| :-------------------: |
+| NPUs | LLaMA2-7B |  1024  |        5.63         |         2884          |      2.84       |        131.96        |
+| 参考 | LLaMA2-7B |  1024  |        5.63         |         2884          |      2.84       |        131.96        |
 
 #### 精度
 
-NPU vs 参考 loss，相对误差：0.23%<2%
+5000步的均方误差为0.00000195
 
+NPU VS 参考 loss
 
+![NPU-LOSS](../../sources/images/llama2/llama2-7b-tp8pp1mbs4gbs16-Megatron-GPU-loss-absolute.png)
 
-![NPU-LOSS](../../sources/images/llama2/llama2-7b-tp8pp1mbs4gbs16-cann1115-Megatron-GPU-loss-releative.png)
+相对误差
 
-绝对误差:0.00326<0.005
-
-![NPU-LOSS and NPU-Absolute-Error](../../sources/images/llama2/llama2-7b-tp8pp1mbs4gbs16-cann1115-Megatron-GPU-loss-absolute.png)
-
+![NPU-Relative-Error](../../sources/images/llama2/llama2-7b-tp8pp1mbs4gbs16-Megatron-GPU-loss-relative.png)
 
 ## 推理-7B
 

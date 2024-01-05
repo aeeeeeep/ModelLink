@@ -60,7 +60,7 @@ def load_args_from_checkpoint(args):
     args.global_batch_size = 1024
     args.norm_epsilon = llama_args["rms_norm_eps"]
     args.iteration = 1 # '0', 'release' don't work
-    args.add_position_embedding = False
+    args.add_position_embedding = True
     args.use_rotary_position_embeddings = True
     args.swiglu = True
     args.tokenizer_type = "Llama2Tokenizer"
@@ -144,7 +144,7 @@ def set_layer_state(args, model, hf_model, layer_idx):
 def load_checkpoint_to_model(args):
     '''Set model params.'''
 
-    from pretrain_gpt_link import model_provider
+    from pretrain_gpt import model_provider
     from transformers import LlamaForCausalLM
 
     # Load Huggingface model.
@@ -174,18 +174,14 @@ def _load_checkpoint(queue, args):
                      os.path.pardir)))
     if args.megatron_path is not None:
         sys.path.insert(0, args.megatron_path)
-    try:
-        from ascendspeed import megatron_adaptor
-        from megatron.arguments import parse_args, validate_args
-        from megatron.global_vars import set_args, set_global_variables
-        from megatron.model import module
-        from megatron.core import mpu
-        from megatron.core.enums import ModelType
-        from megatron import fused_kernels
-    except ModuleNotFoundError:
-        print("Unable to import Megatron, please specify the path to Megatron using --megatron-path.")
-        queue.put("exit")
-        exit(1)
+
+    from ascendspeed import megatron_adaptor
+    from megatron.arguments import parse_args, validate_args
+    from megatron.global_vars import set_args, set_global_variables
+    from megatron.model import module
+    from megatron.core import mpu
+    from megatron.core.enums import ModelType
+    from megatron import fused_kernels
 
     # We want all arguments to come from us.
     sys.argv = ['script.py',
