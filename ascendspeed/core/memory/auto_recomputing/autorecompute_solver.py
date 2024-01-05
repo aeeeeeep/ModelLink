@@ -3,6 +3,7 @@ import sys
 import networkx as nx
 import torch
 import torch_npu
+import numpy as np
 
 from ascendspeed import print_rank_0
 from ascendspeed.core import parallel_state
@@ -46,11 +47,31 @@ class GraphSolver:
         return dg
 
     @staticmethod
-    def broadcast_recompute_policy_in_mp(recompute_policy_list):
-        recompute_policy_tensor = torch.tensor(recompute_policy_list,
-                                               device=torch.npu.current_device())
-        torch.distributed.broadcast(recompute_policy_tensor, src=parallel_state.get_tensor_model_parallel_src_rank(),
-                                    group=parallel_state.get_tensor_model_parallel_group())
+    def broadcast_in_mp_dp(tensor, src):
+        if parallel_state.get_tensor_model_parallel_world_size() > 1 and parallel_state.get_tensor_model_parallel_src_rank() == src:
+            torch.distributed.broadcast(tensor, src=parallel_state.get_tensor_model_parallel_src_rank(),
+                                        group=parallel_state.get_tensor_model_parallel_group())
+        if parallel_state.get_data_parallel_world_size() > 1:
+            torch.distributed.broadcast(tensor, src=parallel_state.get_data_parallel_src_rank(),
+                                        group=parallel_state.get_data_parallel_group())
+
+    def broadcast_recompute_policy_in_mp(self, recompute_policy_list):
+        mp = parallel_state.get_tensor_model_parallel_world_size()
+        dp = parallel_state.get_data_parallel_world_size()
+        global_rank = torch.distributed.get_rank()
+        src = (global_rank // (mp * dp)) * dp * mp
+
+        policy_shape = np.array(recompute_policy_list).shape
+        policy_shape_tensor = torch.tensor(policy_shape, dtype=torch.int8, device=torch.npu.current_device())
+        self.broadcast_in_mp_dp(policy_shape_tensor, src)
+        policy_shape = tuple(policy_shape_tensor.cpu().numpy().tolist())
+
+        if global_rank == src:
+            recompute_policy_tensor = torch.tensor(recompute_policy_list, dtype=torch.int8,
+                                                   device=torch.npu.current_device())
+        else:
+            recompute_policy_tensor = torch.empty(policy_shape, dtype=torch.int8, device=torch.npu.current_device())
+        self.broadcast_in_mp_dp(recompute_policy_tensor, src)
         return recompute_policy_tensor.cpu().numpy().tolist()
 
     def set_recompute_info_to_module(self, module, recompute_nodes, recompute):
