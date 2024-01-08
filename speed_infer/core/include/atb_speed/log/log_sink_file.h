@@ -23,7 +23,7 @@ namespace atb_speed {
 class LogSinkFile : public LogSink {
 public:
 	explicit LogSinkFile(LogLevel level);
-	~LogSinkFile() override;
+    ~LogSinkFile() override;
 
 private:
 	void LogImpl(const LogEntity &logEntity) override;

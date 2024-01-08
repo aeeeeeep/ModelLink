@@ -20,7 +20,7 @@
 
 namespace atb_speed {
 enum class LogLevel {
-	TRACE = 0,
+    TRACE = 0,
 	DEBUG,
 	INFO,
 	WARN,
