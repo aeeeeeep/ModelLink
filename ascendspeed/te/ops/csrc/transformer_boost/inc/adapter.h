@@ -28,5 +28,7 @@ atb::Tensor Input(const c10::optional<at::Tensor> &tensor);
 at::Tensor CreateAtTensorFromTensorDesc(const atb::TensorDesc &tensorDesc);
 atb::Tensor AtTensor2Tensor(const at::Tensor atTensor);
 atb::Context* GetContext();
+void BuildVariantPack(std::vector<atb::Tensor> inTensors, std::vector<at::Tensor> &outTensors, atb::VariantPack &variantPack, atb::Operation *operation);
+void RunAtbOps(atb::VariantPack &variantPack, const char* name, atb::Operation *operation);
 
 #endif
