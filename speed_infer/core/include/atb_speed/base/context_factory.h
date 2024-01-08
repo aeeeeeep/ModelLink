@@ -14,28 +14,16 @@
  * limitations under the License.
  */
 
-#ifndef ATB_SPEED_HANDLE_H
-#define ATB_SPEED_HANDLE_H
+#ifndef ATB_SPEED_CONTEXT_FACTORY_H
+#define ATB_SPEED_CONTEXT_FACTORY_H
+#include <memory>
 #include <atb/context.h>
 
 namespace atb_speed {
-struct Handle {
-public:  
-    Handle()
-    {
-        atb::CreateContext(&contextPtr_);
-    }
-    ~Handle()
-    {
-        atb::DestroyContext(contextPtr_);
-    }
-
-    atb::Context *contextPtr_ = nullptr;
+class ContextFactory {
+public:
+    static std::shared_ptr<atb::Context> GetAtbContext();
+    static void FreeAtbContext();
 };
-
-extern thread_local Handle localHandle;
-void InitLocalContext();
-
 }
 #endif
-

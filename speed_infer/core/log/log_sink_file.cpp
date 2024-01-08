@@ -15,6 +15,7 @@
  */
 #include "atb_speed/log/log_sink_file.h"
 #include <string>
+#include <cstring>
 #include <cstdlib>
 #include <unistd.h>
 #include <syscall.h>
@@ -22,22 +23,39 @@
 #include <iostream>
 #include <iomanip>
 #include <sys/stat.h>
+#include "atb_speed/utils/filesystem.h"
 
 namespace atb_speed {
-const int64_t MAX_LOG_FILE_SIZE = 1073741824;
+const int64_t MAX_LOG_FILE_SIZE = 1073741824; // 1G
 const size_t MAX_LOG_FILE_COUNT = 5;
+
+static bool GetLogToFileFlushEnv()
+{
+    const char *envLogToFileFlush = std::getenv("ATB_LOG_TO_FILE_FLUSH");
+    return envLogToFileFlush != nullptr && strcmp(envLogToFileFlush, "1") == 0;
+}
 
 LogSinkFile::LogSinkFile(LogLevel level) : LogSink(level)
 {
-    std::stringstream fileName;
-    fileName << std::string("atb_") << std::to_string(syscall(SYS_gettid)) << "_" << fileCount_ << ".log";
-    fileHandle_.open(fileName.str(), std::ios_base::out);
+    std::time_t tmpTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    std::stringstream curTime;
+    curTime << std::put_time(std::localtime(&tmpTime), "%Y%m%d%H%M%S");
+    curTime_ = curTime.str();
+    if (!FileSystem::Exists(fileDir_)) {
+        FileSystem::Makedirs(fileDir_, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    }
+    std::stringstream filePath;
+    filePath << fileDir_ << std::string("atb_speed_") << std::to_string(syscall(SYS_gettid)) << "_" << curTime_ << 
+        "_" << fileCount_ << ".log";
+    fileHandle_.open(filePath.str(), std::ios_base::out);
 }
+
 LogSinkFile::~LogSinkFile()
 {
     fileHandle_.close();
     fileHandle_.clear();
 }
+
 void LogSinkFile::LogImpl(const LogEntity &logEntity)
 {
     const int microsecond = 1000000;
@@ -50,7 +68,9 @@ void LogSinkFile::LogImpl(const LogEntity &logEntity)
         logEntity.fileName << ":" << logEntity.line << "]" << logEntity.content << std::endl;
 
     fileHandle_ << content.str();
-    fileHandle_.flush();
+    if (isFlush_) {
+        fileHandle_.flush();
+    }
     int64_t fileSize = static_cast<int64_t>(fileHandle_.tellp());
     if (fileSize >= MAX_LOG_FILE_SIZE) {
         fileHandle_.close();
@@ -58,9 +78,10 @@ void LogSinkFile::LogImpl(const LogEntity &logEntity)
         if (fileCount_ == MAX_LOG_FILE_COUNT) {
             fileCount_ = 0;
         }
-        std::stringstream fileName;
-        fileName << std::string("atb_") << std::to_string(syscall(SYS_gettid)) << "_" <<fileCount_ << ".log";
-        fileHandle_.open(fileName.str(), std::ios_base::out);
+        std::stringstream filePath;
+        filePath << fileDir_ << std::string("atb_speed_") << std::to_string(syscall(SYS_gettid)) << "_" << curTime_ << 
+            "_" <<fileCount_ << ".log";
+        fileHandle_.open(filePath.str(), std::ios_base::out);
     }
 }
 } // namespace AsdOps

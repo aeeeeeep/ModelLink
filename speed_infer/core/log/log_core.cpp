@@ -26,83 +26,83 @@
 namespace atb_speed {
 static bool GetLogToStdoutFromEnv()
 {
-    const char *envLogToStdout = std::getenv("ATB_LOG_TO_STDOUT");
-    return envLogToStdout != nullptr && strcmp(envLogToStdout, "1") == 0;
+	const char *envLogToStdout = std::getenv("ATB_LOG_TO_STDOUT");
+	return envLogToStdout != nullptr && strcmp(envLogToStdout, "1") == 0;
 }
 
 static bool GetLogToFileFromEnv()
 {
-    const char* envLogToStdout = std::getenv("ATB_LOG_TO_FILE");
-    return envLogToStdout != nullptr && strcmp(envLogToStdout, "1") == 0;
+	const char *envLogToStdout = std::getenv("ATB_LOG_TO_FILE");
+	return envLogToStdout != nullptr && strcmp(envLogToStdout, "1") == 0;
 }
 
 static LogLevel GetLogLevelFromEnv()
 {
-    const char* env = std::getenv("ATB_LOG_LEVEL");
-    if (env == nullptr) {
-        return LogLevel::WARN;
-    }
-    std::string envLogLevel(env);
-    std::transform(envLogLevel.begin(), envLogLevel.end(), envLogLevel.begin(), ::toupper);
-    static std::unordered_map<std::string, LogLevel> levelMap{
-        {"TRACE", LogLevel::TRACE}, {"DEBUG", LogLevel::DEBUG}, {"INFO", LogLevel::INFO},
-        {"WARN", LogLevel::WARN}, {"ERROR", LogLevel::ERROR}, {"FATAL", LogLevel::FATAL}
-    };
-    auto levelIt = levelMap.find(envLogLevel);
-    return levelIt != levelMap.end() ? levelIt->second : LogLevel::WARN;
+	const char *env = std::getenv("ATB_LOG_LEVEL");
+	if (env == nullptr) {
+		return LogLevel::WARN;
+	}
+	std::string envLogLevel(env);
+	std::transform(envLogLevel.begin(), envLogLevel.end(), envLogLevel.begin(), ::toupper);
+	static std::unordered_map<std::string, LogLevel> levelMap{
+		{ "TRACE", LogLevel::TRACE }, { "DEBUG", LogLevel::DEBUG }, { "INFO", LogLevel::INFO },
+		{ "WARN", LogLevel::WARN }, { "ERROR", LogLevel::ERROR }, { "FATAL", LogLevel::FATAL }
+	};
+	auto levelIt = levelMap.find(envLogLevel);
+	return levelIt != levelMap.end() ? levelIt->second : LogLevel::WARN;
 }
 
 LogCore::LogCore()
 {
-    level_ = GetLogLevelFromEnv();
-    if (GetLogToStdoutFromEnv()) {
-        AddSink(std::make_shared<LogSinkStdout>(level_));
-    }
-    if (GetLogToFileFromEnv()) {
-        AddSink(std::make_shared<LogSinkFile>(level_));
-    }
-    levelCounts_.resize(static_cast<int>(LogLevel::FATAL) + 1);
-    for (size_t i = 0; i < levelCounts_.size(); ++i) {
-        levelCounts_.at(i) = 0;
-    }
+	level_ = GetLogLevelFromEnv();
+	if (GetLogToStdoutFromEnv()) {
+		AddSink(std::make_shared<LogSinkStdout>(level_));
+	}
+	if (GetLogToFileFromEnv()) {
+		AddSink(std::make_shared<LogSinkFile>(level_));
+	}
+	levelCounts_.resize(static_cast<int>(LogLevel::FATAL) + 1);
+	for (size_t i = 0; i < levelCounts_.size(); ++i) {
+		levelCounts_.at(i) = 0;
+	}
 }
 
 LogCore &LogCore::Instance()
 {
-    static LogCore logCore;
-    return logCore;
+	static LogCore logCore;
+	return logCore;
 }
 
 LogLevel LogCore::GetLogLevel() const
 {
-    return level_;
+	return level_;
 }
 
 void LogCore::SetLogLevel(LogLevel level)
 {
-    level_ = level;
+	level_ = level;
 }
 
 void LogCore::Log(const LogEntity &logEntity)
 {
-    levelCounts_.at(static_cast<int>(logEntity.level)) += 1;
-    for (auto &sink : sinks_) {
-        sink->Log(logEntity);
-    }
+	levelCounts_.at(static_cast<int>(logEntity.level)) += 1;
+	for (auto &sink : sinks_) {
+		sink->Log(logEntity);
+	}
 }
 
 void LogCore::AddSink(const std::shared_ptr<LogSink> sink)
 {
-    sinks_.push_back(sink);
+	sinks_.push_back(sink);
 }
 
 const std::vector<std::shared_ptr<LogSink>> &LogCore::GetAllSinks() const
 {
-    return sinks_;
+	return sinks_;
 }
 
 atb::SVector<uint64_t> LogCore::GetLogLevelCount() const
 {
-    return levelCounts_;
+	return levelCounts_;
 }
-}
+} // namespace atb

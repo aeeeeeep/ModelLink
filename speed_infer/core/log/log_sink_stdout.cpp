@@ -20,7 +20,7 @@
 namespace atb_speed {
 LogSinkStdout::LogSinkStdout(LogLevel level) : LogSink(level) {}
 const int MICROSECOND = 1000000;
-void LogSinkStdout :: LogImpl(const LogEntity &logEntity)
+void LogSinkStdout::LogImpl(const LogEntity &logEntity)
 {
     std::time_t tmpTime = std::chrono::system_clock::to_time_t(logEntity.time);
     int us = 

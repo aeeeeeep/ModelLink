@@ -27,5 +27,5 @@ public:
     virtual void ParseParam(const nlohmann::json &paramJson) = 0;
     virtual void BindTensor(atb::VariantPack &variantPack) = 0;
 };
-}
+} // namespace atb_speed
 #endif

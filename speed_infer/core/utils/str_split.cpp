@@ -30,6 +30,7 @@ std::string GetFuncNameAndNameSpace(const std::string &inputStr)
 {
     int spaceInd = 0;
     int leftBracketInd = 0;
+    std::string extractStr;
     for (int i = 0; i < inputStr.size(); i++) {
         if (inputStr.at(i) == ' ') {
             spaceInd = i;
@@ -38,9 +39,25 @@ std::string GetFuncNameAndNameSpace(const std::string &inputStr)
             break;
         }
     }
+    // opGraph.name 只支持数字、字母、下划线，且长度不超过 128
     if (spaceInd >= 0 && (leftBracketInd - spaceInd) > 0) {
-        return inputStr.substr(spaceInd + 1, leftBracketInd - (spaceInd + 1));
+        int len;
+        if (leftBracketInd - (spaceInd + 1) > 128) {
+            len = 128;
+        } else {
+            len = leftBracketInd - (spaceInd + 1);
+        }
+        extractStr = inputStr.substr(spaceInd + 1, len);
+    } else {
+        extractStr = inputStr;
     }
-    return inputStr;
+
+    for (char &i : extractStr) {
+        if (!isalnum(i) && i != '_') {
+            i = '_';
+        }
+    }
+    return extractStr;
 }
+
 } // namespace atb_speed
