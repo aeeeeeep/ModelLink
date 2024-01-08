@@ -25,19 +25,19 @@ namespace atb_speed {
 class LogCore {
 public:
 	LogCore();
-	~LogCore() = default;
-	static LogCore &Instance();
-	LogLevel GetLogLevel() const;
-	void SetLogLevel(LogLevel level);
-	void Log(const LogEntity &logEntity);
-	void AddSink(const std::shared_ptr<LogSink> sink);
-	const std::vector<std::shared_ptr<LogSink>> &GetAllSinks() const;
-	atb::SVector<uint64_t> GetLogLevelCount() const;
+    ~LogCore() = default;
+    static LogCore &Instance();
+    LogLevel GetLogLevel() const;
+    void SetLogLevel(LogLevel level);
+    void Log(const LogEntity &logEntity);
+    void AddSink(const std::shared_ptr<LogSink> sink);
+    const std::vector<std::shared_ptr<LogSink>> &GetAllSinks() const;
+    atb::SVector<uint64_t> GetLogLevelCount() const;
 
 private:
 	std::vector<std::shared_ptr<LogSink>> sinks_;
-	LogLevel level_ = LogLevel::INFO;
-	atb::SVector<uint64_t> levelCounts_;
+    LogLevel level_ = LogLevel::INFO;
+    atb::SVector<uint64_t> levelCounts_;
 };
 } // namespace atb_speed
 #endif

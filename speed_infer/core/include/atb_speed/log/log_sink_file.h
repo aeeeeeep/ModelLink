@@ -30,10 +30,10 @@ private:
 
 private:
 	std::ofstream fileHandle_;
-	int32_t fileCount_ = 0;
-	bool isFlush_ = false;
-	std::string curTime_;
-	std::string fileDir_ = "atb_temp/log/";
+    int32_t fileCount_ = 0;
+    bool isFlush_ = false;
+    std::string curTime_;
+    std::string fileDir_ = "atb_temp/log/";
 };
 } // namespace atb_speed
 #endif

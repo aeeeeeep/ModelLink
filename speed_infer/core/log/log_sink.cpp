@@ -20,8 +20,8 @@ LogSink::LogSink(LogLevel level) : level_(level) {}
 
 void LogSink::Log(const LogEntity &logEntity)
 {
-	if (logEntity.level >= level_) {
-		LogImpl(logEntity);
-	}
+    if (logEntity.level >= level_) {
+        LogImpl(logEntity);
+    }
 }
 } // namespace atb

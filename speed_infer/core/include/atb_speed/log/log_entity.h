@@ -31,14 +31,14 @@ enum class LogLevel {
 std::string LogLevelToString(LogLevel level);
 
 struct LogEntity {
-	std::chrono::system_clock::time_point time;
-	size_t processId = 0;
-	size_t threadId = 0;
-	LogLevel level = LogLevel::TRACE;
-	const char* fileName = nullptr;
-	int line = 0;
-	const char *funcName = nullptr;
-	std::string content;
+    std::chrono::system_clock::time_point time;
+    size_t processId = 0;
+    size_t threadId = 0;
+    LogLevel level = LogLevel::TRACE;
+    const char* fileName = nullptr;
+    int line = 0;
+    const char *funcName = nullptr;
+    std::string content;
 };
 } // namespace atb_speed
 #endif
