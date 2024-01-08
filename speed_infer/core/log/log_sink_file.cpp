@@ -45,7 +45,7 @@ LogSinkFile::LogSinkFile(LogLevel level) : LogSink(level)
         FileSystem::Makedirs(fileDir_, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
     }
     std::stringstream filePath;
-    filePath << fileDir_ << std::string("atb_speed_") << std::to_string(syscall(SYS_gettid)) << "_" << curTime_ << 
+    filePath << fileDir_ << std::string("atb_speed_") << std::to_string(syscall(SYS_gettid)) << "_" << curTime_ <<
         "_" << fileCount_ << ".log";
     fileHandle_.open(filePath.str(), std::ios_base::out);
 }
@@ -79,7 +79,7 @@ void LogSinkFile::LogImpl(const LogEntity &logEntity)
             fileCount_ = 0;
         }
         std::stringstream filePath;
-        filePath << fileDir_ << std::string("atb_speed_") << std::to_string(syscall(SYS_gettid)) << "_" << curTime_ << 
+        filePath << fileDir_ << std::string("atb_speed_") << std::to_string(syscall(SYS_gettid)) << "_" << curTime_ <<
             "_" <<fileCount_ << ".log";
         fileHandle_.open(filePath.str(), std::ios_base::out);
     }
