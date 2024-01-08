@@ -20,7 +20,7 @@
     </p>
 </p>
 
-AscendSpeed旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) 上的大语言模型提供端到端的解决方案, 包含模型，算法，算子，以及下游任务。
+AscendSpeed旨在为华为 [昇腾芯片](https://www.hiascend.com/zh/) 上的大语言模型提供端到端的解决方案, 包含模型，算法，算子，以及下游任务。
 
 ## AscendSpeed解决方案概览
 
@@ -255,16 +255,16 @@ AscendSpeed旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBa
 
 ### 模型训练软件配套
 
-|            软件             |                                                  [版本](https://www.hiascend.com/zh/)                                                  |
-|:-------------------------:|:------------------------------------------------------------------------------------------------------------------------------------:|
-|          Python           |                                                                3.8.18                                                                |
-|          driver           |                                                               2023Q4商发                                                               |
-|         firmware          |                                                               2023Q4商发                                                               |
-|           CANN            |                                                               2023Q4商发                                                               |
-| binary arithmetic package |                                                               2023Q4商发                                                               |
-|           torch           |                                                                2.1.0                                                                 |
-|         torch_npu         |                                                               2023Q4商发                                                               |
-
+|    软件     |                                                                         [版本](https://www.hiascend.com/zh/)                                                                          |
+|:---------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------:|
+|  Python   |                                                                                       3.8.18                                                                                        |
+|  driver   | [2023Q4商发](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/258924109?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743) |
+| firmware  | [2023Q4商发](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/258924109?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743) |
+|   CANN    |    [2023Q4商发](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/258923273?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)    |
+|  kernel   |    [2023Q4商发](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/258923273?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)    |
+|   torch   |                                                                                        2.1.0                                                                                        |
+| torch_npu |                                                                [2023Q4商发](https://gitee.com/ascend/pytorch/releases)                                                                |
+|   apex    |                                                                                    [2023Q4商发](https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/Daily/v2.1.0/20231225.2/pytorch_v2.1.0_py38.tar.gz)                                                                                     |
 
 
 ## 下游任务
@@ -968,7 +968,7 @@ Cadam是基于谷歌提出的[Lion优化器](https://arxiv.org/abs/2302.06675)�
 
 AscendSpeed由华为公司的下列部门联合贡献
 ：
-- 昇腾计算产品线
+- 昇腾计算产品部
 - 计算算法部
 - 计算研究部
 - 开源计算工具部
