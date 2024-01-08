@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #ifndef ATB_SPEED_LOG_LOGSTREAM_H
 #define ATB_SPEED_LOG_LOGSTREAM_H
 #include <sstream>
@@ -36,5 +35,5 @@ private:
     std::stringstream stream_;
     bool useStream_ = true;
 };
-}   // namespace atb_speed
+} // namespace atb_speed
 #endif

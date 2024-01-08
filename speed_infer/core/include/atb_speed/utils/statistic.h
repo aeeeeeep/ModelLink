@@ -30,6 +30,7 @@ struct Statistic {
     uint64_t kernelExecuteTime = 0;
     uint64_t kernelCacheHitCount = 0;
     uint64_t kernelCacheMissCount = 0;
+    uint64_t mallocTorchTensorSize = 0;
 
     std::string ToString() const;
     void Reset();
