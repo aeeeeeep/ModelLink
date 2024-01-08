@@ -22,11 +22,6 @@ try:
 except Exception as e:
     logging.warning("Warning: You did not install torch_npu")
 
-if 'amp_C' in sys.modules:
-    del sys.modules['amp_C']
-sys.modules['amp_C'] = __import__('modellink.amp_C')
-
-
 from .global_vars import get_args
 from .global_vars import get_current_global_batch_size
 from .global_vars import get_num_microbatches
@@ -43,8 +38,10 @@ from .utils import is_rank_0
 from .tokenizer import apply_tokenizer_patch
 from .adaptor_arguments import apply_arguments_patch
 from .adaptor_model import apply_model_patch
+from .adapter_lora import apply_lora_patch
 
 
 apply_arguments_patch()
 apply_model_patch()
 apply_tokenizer_patch()
+apply_lora_patch()

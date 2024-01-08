@@ -35,6 +35,21 @@ def process_args(parser):
 
 def _add_lora_args(parser):
     group = parser.add_argument_group(title='lora')
-    group.add_argument('--lora-target-modules', nargs='+', type=str, default=[], help='Lora target modules.')
+
+    group.add_argument('--lora-target-modules', nargs='+', type=str, default=[],
+                       help='Lora target modules.')
+    group.add_argument('--lora-load', type=str, default=None,
+                       help='Directory containing a lora model checkpoint.')
+    group.add_argument('--lora-r', type=int, default=16,
+                       help='Lora r.')
+    group.add_argument('--lora-alpha', type=int, default=32,
+                       help='Lora alpha.')
+    group.add_argument('--lora-modules-to-save', nargs='+', type=str, default=None,
+                       help='Lora modules to save.')
+    group.add_argument('--lora-register-forward-hook', nargs='+', type=str,
+                       default=['word_embeddings', 'input_layernorm'],
+                       help='Lora register forward hook.')
+    group.add_argument('--lora-adapter-name', type=str, default='default',
+                       help='Lora adapter name.')
 
     return parser
