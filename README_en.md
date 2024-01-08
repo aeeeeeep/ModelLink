@@ -20,7 +20,7 @@
     </p>
 </p>
 
-AscendSpeed provides end-to-end solutions for large language models on [Ascend](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) chips, including models, algorithms, kernels, and tasks.
+AscendSpeed provides end-to-end solutions for large language models on [Ascend](https://www.hiascend.com/zh/) chips, including models, algorithms, kernels, and tasks.
 
 ## Why AscendSpeed?
 
@@ -254,16 +254,16 @@ Coming soon ...
 
 ### Model Training Software
 
-|         Software          | [config](https://www.hiascend.com/zh/) |
-|:-------------------------:|:--------------------------------------:|
-|          Python           |                 3.8.18                 |
-|          driver           |       2023Q4 Commercial Version        |
-|         firmware          |       2023Q4 Commercial Version        |
-|           CANN            |       2023Q4 Commercial Version        |
-| binary arithmetic package |       2023Q4 Commercial Version        |
-|           torch           |                 2.1.0                  |
-|         torch_npu         |       2023Q4 Commercial Version        |
-
+| Software  | [config](https://www.hiascend.com/zh/) |
+|:---------:|:--------------------------------------:|
+|  Python   |                 3.8.18                 |
+|  driver   |     [2023Q4 Commercial Version](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/258924109?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743)      |
+| firmware  |     [2023Q4 Commercial Version](https://support.huawei.com/enterprise/zh/ascend-computing/ascend-hdk-pid-252764743/software/258924109?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C252764743)      |
+|   CANN    |     [2023Q4 Commercial Version](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/258923273?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)      |
+|  kernel   |     [2023Q4 Commercial Version](https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/software/258923273?idAbsPath=fixnode01%7C23710424%7C251366513%7C22892968%7C251168373)      |
+|   torch   |                 2.1.0                  |
+| torch_npu |     [2023Q4 Commercial Version](https://gitee.com/ascend/pytorch/releases)      |
+|   apex    |     [2023Q4 Commercial Version](https://pytorch-package.obs.cn-north-4.myhuaweicloud.com/pta/Daily/v2.1.0/20231225.2/pytorch_v2.1.0_py38.tar.gz)      |
 
 ## Downstream Tasks
 
