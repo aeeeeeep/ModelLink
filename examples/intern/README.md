@@ -143,7 +143,7 @@ python $SCRIPT_PATH \
     --pipeline-model-parallel-size 1 \
     --type 7B \
     --bias \
-    --deepspeed \
+    --deepspeed
 ```
 
 6. 配置 Internlm-7B 预训练脚本
