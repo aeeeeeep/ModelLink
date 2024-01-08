@@ -239,7 +239,7 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
 
 
 if __name__ == "__main__":
-    torch.npu.set_compile_mode(jit_compile=True)
+    torch.npu.set_compile_mode(jit_compile=False)
     pretrain(train_valid_test_datasets_provider,
              model_provider,
              ModelType.encoder_or_decoder,
