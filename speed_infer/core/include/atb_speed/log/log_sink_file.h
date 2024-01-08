@@ -22,15 +22,18 @@
 namespace atb_speed {
 class LogSinkFile : public LogSink {
 public:
-    explicit LogSinkFile(LogLevel level);
-    ~LogSinkFile() override;
+	explicit LogSinkFile(LogLevel level);
+	~LogSinkFile() override;
 
 private:
-    void LogImpl(const LogEntity &logEntity) override;
+	void LogImpl(const LogEntity &logEntity) override;
 
 private:
-    std::ofstream fileHandle_;
-    int32_t fileCount_ = 0;
+	std::ofstream fileHandle_;
+	int32_t fileCount_ = 0;
+	bool isFlush_ = false;
+	std::string curTime_;
+	std::string fileDir_ = "atb_temp/log/";
 };
-}
-#endif // !ATB_SPEED_LOG_SINKFILE_H
+} // namespace atb_speed
+#endif
