@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 #include "atb_speed/base/context_factory.h"
+
 #include <thread>
-#include "pytorch/adapter/utils/utils.h"
+
 #include "atb_speed/log.h"
-#include "atb_speed/utils/singleton.h"
 #include "atb_speed/utils/config.h"
+#include "atb_speed/utils/singleton.h"
+#include "pytorch/adapter/utils/utils.h"
 
 namespace atb_speed {
 thread_local std::shared_ptr<atb::Context> localContext;
