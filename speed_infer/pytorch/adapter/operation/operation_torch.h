@@ -29,8 +29,8 @@ public:
     void SetName(std::string name);
     void SetParam(std::string param);
     std::vector<torch::Tensor> ExecuteWithParam(std::vector<torch::Tensor> atInTensors, std::string varaintPackParam);
-    void ExecuteOutWithParam(std::vector<torch::Tensor> atInTensors, std::vector<torch::Tensor> atOutTensors,
-        std::string varaintPackParam);
+    void ExecuteOutWithParam(std::vector<torch::Tensor> atInTensors, std::vector<torch::Tensor> atOutTensors, 
+                             std::string varaintPackParam);
     std::vector<torch::Tensor> Execute(std::vector<torch::Tensor> atInTensors);
     void ExecuteOut(std::vector<torch::Tensor> atInTensors, std::vector<torch::Tensor> atOutTensors);
     c10::intrusive_ptr<OperationTorch> clone() const{ return c10::make_intrusive<OperationTorch>(opName_); }
@@ -38,9 +38,9 @@ public:
 private:
     void CreateAtOutTensors(const std::vector<torch::Tensor> &atInTensors, std::vector<torch::Tensor> &atOutTensors);
     void ExecuteOutImpl(std::vector<torch::Tensor> &inTensors, std::vector<torch::Tensor> &outTensor,
-        const std::string &varaintPackParam = "");
+                        const std::string &varaintPackParam = "");
     void BuildVariantPack(std::vector<torch::Tensor> &inTensors, std::vector<torch::Tensor> &outTensor,
-        atb::VariantPack &variantPack);
+                          atb::VariantPack &variantPack);
     std::string GetSaveTensorDir();
 
 private:
@@ -53,5 +53,6 @@ private:
     uint64_t executeCount_ = 0;
     bool isTaskQueueEnable_ = false;
     std::unique_ptr<atb_speed::HostTensorBinder> hostTensorBinder_;
+    std::shared_ptr<atb::Context> context_;
 };
 #endif
