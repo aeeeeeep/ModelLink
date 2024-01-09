@@ -7,6 +7,7 @@ from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 from modelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfig
 from transformers import AutoTokenizer, TelechatForCausalLM, TelechatConfig
 
+
 def quant(model, tokenizer):
     # random input
     data_num = 100
@@ -17,7 +18,7 @@ def quant(model, tokenizer):
     calib_data = []
     for text in calib_list:
         token_data = tokenizer(text, return_tensors="pt")
-        calib_data.append([token_data["input_ids"].cpu(),None, token_data["attention_mask"].cpu()])
+        calib_data.append([token_data["input_ids"].cpu(), None, token_data["attention_mask"].cpu()])
     
     # model to cpu
     model.cpu().float().eval()
@@ -44,6 +45,7 @@ def quant(model, tokenizer):
     calibrator.save(f"anti_quant_weight_{args.level}")
     print("--------calibration end----------")
     return model
+
 
 def get_args():
     parser = argparse.ArgumentParser(

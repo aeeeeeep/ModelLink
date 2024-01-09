@@ -44,7 +44,7 @@ soc_version = torch_npu._C._npu_get_soc_version()
 if soc_version in [105, 220, 221, 222, 223]:
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Linear):
-            module.weight.data = torch_npu.npu_format_cast(module.weight.data,2)
+            module.weight.data = torch_npu.npu_format_cast(module.weight.data, 2)
 else:
 # if on 910A or 310P chip, eliminate the TransData and Transpose ops by converting weight data types
     for name, module in model.named_modules():
@@ -52,17 +52,18 @@ else:
             if name == 'lm_head':
                     # eliminate TransData op before lm_head calculation
                 module.weight = torch.nn.parameter.Parameter(module.weight.data)
-            module.weight.data = torch_npu.npu_format_cast(module.weight.data.transpose(0,1).contiguous(),29)
+            module.weight.data = torch_npu.npu_format_cast(module.weight.data.transpose(0,1).contiguous(), 29)
 
 for name, module in model.named_modules():
     if isinstance(module, torch.nn.Embedding):
-        module.weight.data = torch_npu.npu_format_cast(module.weight.data,2)
+        module.weight.data = torch_npu.npu_format_cast(module.weight.data, 2)
 
 f = jsonlines.open(args.jsonl_path, "r")
 questions = []
 for data in f:
     questions.append(data["input"])
 f.close()
+
 
 def infer():
     answers = []

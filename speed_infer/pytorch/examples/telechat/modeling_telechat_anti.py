@@ -14,11 +14,15 @@
 # limitations under the License.
 """PyTorch TELECHAT model."""
 
+import os
+import json
 import math
 import warnings
 from typing import Optional, Tuple, Union
 
+import numpy as np
 import torch
+import torch_npu
 import torch.utils.checkpoint
 from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, LayerNorm, MSELoss
@@ -36,16 +40,10 @@ from ...modeling_utils import PreTrainedModel
 from ...utils import logging
 from .configuration_telechat import TelechatConfig
 
-import os
-import json
-import time
-import numpy as np
-
-import torch_npu
 ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
 if ATB_SPEED_HOME_PATH is None:
         raise RuntimeError("env ATB_SPEED_HOME_PATH  not exist, source set_env.sh")
-LIB_PATH = os.path.join(ATB_SPEED_HOME_PATH ,"lib/libatb_speed_torch.so")
+LIB_PATH = os.path.join(ATB_SPEED_HOME_PATH, "lib/libatb_speed_torch.so")
 torch.classes.load_library(LIB_PATH)
 
 logger = logging.get_logger(__name__)
@@ -69,95 +67,6 @@ try:
 except ImportError:
     rearrange = None
 
-use_flash_attn = True
-try:
-    from flash_attn.flash_attn_interface import flash_attn_unpadded_func
-except ImportError:
-    try:
-        from flash_attn.flash_attn_interface import flash_attn_varlen_func as flash_attn_unpadded_func
-    except ImportError:
-        flash_attn_unpadded_func = None
-
-
-class FlashSelfAttention(torch.nn.Module):
-    """Implement the scaled dot product attention with softmax.
-    Arguments
-    ---------
-        softmax_scale: The temperature to use for the softmax attention.
-                      (default: 1/sqrt(d_keys) where d_keys is computed at
-                      runtime)
-        attention_dropout: The dropout rate to apply to the attention
-                           (default: 0.0)
-    """
-
-    def __init__(self, causal=False, softmax_scale=None, attention_dropout=0.0,
-                 device=None, dtype=None):
-        super().__init__()
-        assert flash_attn_unpadded_func is not None, ('Please install FlashAttention first, '
-                                                      'e.g., with pip install flash-attn')
-        assert rearrange is not None, 'Please install einops first, e.g., with pip install einops'
-        self.causal = causal
-        self.softmax_scale = softmax_scale
-        self.dropout_p = attention_dropout
-
-    def forward(self, q, k, v):
-        """Implements the multihead softmax attention.
-        Arguments
-        ---------
-            q, k, v: The tensor containing the query, key, and value. (B, S, H, D)
-        """
-        assert all((i.dtype in [torch.float16, torch.bfloat16] for i in (q, k, v)))
-        assert all((i.is_cuda for i in (q, k, v)))
-
-        batch_size, seqlen_q = q.shape[0], q.shape[1]
-        seqlen_k = k.shape[1]
-
-        q, k, v = [rearrange(x, 'b s ... -> (b s) ...') for x in [q, k, v]]
-        cu_seqlens_q = torch.arange(0, (batch_size + 1) * seqlen_q, step=seqlen_q, dtype=torch.int32,
-                                    device=q.device)
-        self.training = False
-        if self.training:
-            # during training q,k,v always have same seqlen
-            assert seqlen_k == seqlen_q
-
-            is_causal = self.causal
-            cu_seqlens_k = cu_seqlens_q
-            dropout_p = self.dropout_p
-        else:
-            # turn off FA causal mask after first inference autoregressive iteration
-            # only on first autoregressive step q,k,v have same seqlen
-            is_causal = seqlen_q == seqlen_k
-            cu_seqlens_k = torch.arange(0, (batch_size + 1) * seqlen_k, step=seqlen_k, dtype=torch.int32,
-                                        device=q.device)
-            dropout_p = 0
-
-        output = flash_attn_unpadded_func(
-            q, k, v, cu_seqlens_q, cu_seqlens_k, seqlen_q, seqlen_k,
-            dropout_p=dropout_p,
-            softmax_scale=self.softmax_scale, causal=is_causal
-        )
-
-        output = rearrange(output, '(b s) ... -> b s ...', b=batch_size)
-        return output
-
-
-def _make_causal_mask_old(
-        input_ids_shape: torch.Size, device: torch.device, past_key_values_length: int
-) -> torch.BoolTensor:
-    """
-    Make causal mask used for self-attention.
-    """
-    batch_size, target_length = input_ids_shape
-    mask = torch.empty((target_length, target_length + past_key_values_length), dtype=torch.bool, device=device)
-    # ONNX doesn't support `torch.Tensor.triu` properly, thus we use this workaround
-    seq_ids = torch.arange(target_length, device=device)
-    mask[:, past_key_values_length:] = seq_ids[:, None] < seq_ids[None, :]
-
-    if past_key_values_length > 0:
-        mask[:, :past_key_values_length] = False
-
-    expanded_mask = mask[None, None, :, :].expand(batch_size, 1, target_length, target_length + past_key_values_length)
-    return expanded_mask
 
 def _make_causal_mask(
         input_ids_shape: torch.Size, dtype: torch.dtype, device: torch.device, past_key_values_length: int
@@ -183,15 +92,6 @@ def _make_causal_mask(
     expanded_mask = mask[None, None, :, :].expand(batch_size, 1, target_length, target_length + past_key_values_length)
     return expanded_mask
 
-def _expand_mask_old(mask: torch.Tensor, tgt_length: int) -> torch.BoolTensor:
-    """
-    Expands attention_mask from `[batch_size, src_length]` to `[batch_size, 1, tgt_length, src_length]`.
-    """
-    batch_size, src_length = mask.shape
-    tgt_length = tgt_length if tgt_length is not None else src_length
-
-    expanded_mask = ~(mask[:, None, None, :].to(torch.bool))
-    return expanded_mask.expand(batch_size, 1, tgt_length, src_length)
 
 def _expand_mask(mask: torch.Tensor, dtype: torch.dtype, tgt_length: int) -> torch.BoolTensor:
     """
@@ -220,6 +120,7 @@ class TelechatRMSNorm(nn.Module):
             hidden_states = hidden_states.to(self.weight.dtype)
 
         return self.weight * hidden_states + self.bias
+
 
 class RotaryEmbedding(torch.nn.Module):
 
@@ -254,6 +155,7 @@ rot_emb_global = RotaryEmbedding(128)
 cosTable, sinTable = rot_emb_global.forward(x, seq_len=2048)
 cosTable = cosTable.npu().half()
 sinTable = sinTable.npu().half()
+
 
 def rotate_half(x):
     x1, x2 = x[..., :x.shape[-1] // 2], x[..., x.shape[-1] // 2:]
@@ -392,7 +294,7 @@ class TelechatGelu(nn.Module):
 
 
 class TelechatAttention(nn.Module):
-    def __init__(self, config: TelechatConfig,layer_idx):
+    def __init__(self, config: TelechatConfig, layer_idx):
         super().__init__()
         self.kv_cache = None
         self.pretraining_tp = config.pretraining_tp
@@ -544,37 +446,35 @@ class TelechatAttention(nn.Module):
                            (self.num_key_value_heads,
                             2 * self.head_dim)
         mixed_kv_layer = mixed_kv_layer.view(*new_tensor_shape)
-        (key_layer,value_layer) = self.split_tensor_along_last_dim(mixed_kv_layer,2)
-
+        (key_layer,value_layer) = self.split_tensor_along_last_dim(mixed_kv_layer, 2)
 
         output_size = (query_layer.size(1),
                        query_layer.size(2),
                        query_layer.size(0),
                        key_layer.size(0))
 
-        query_layer = query_layer.view(output_size[2],output_size[0] * output_size[1], -1)
-        key_layer = key_layer.view(output_size[3],output_size[0] * output_size[1], -1)
+        query_layer = query_layer.view(output_size[2], output_size[0] * output_size[1], -1)
+        key_layer = key_layer.view(output_size[3], output_size[0] * output_size[1], -1)
 
         apply_rotary_fn = apply_rotary_pos_emb
 
         seq_len = key_layer.shape[0]
         offset = 0
 
-        if  use_cache and layer_past != None:
-            past_key, past_value  = layer_past
+        if use_cache and layer_past != None:
+            past_key, past_value = layer_past
             offset = past_key.shape[0]
             seq_len += offset
-
 
         cos, sin = self.rotary_emb(value_layer, seq_len=seq_len)
         query_layer, key_layer = apply_rotary_fn(query_layer, key_layer, cos, sin, offset=offset)
         if use_cache:
             if layer_past != None:
                 past_key, past_value = layer_past
-                key_layer = torch.cat((past_key, key_layer[-1, ...].unsqueeze(0)),dim=0)
-                value_layer = torch.cat((past_value,value_layer[-1,...].unsqueeze(0)),dim = 0)
-            layer_past = key_layer,value_layer
-        s,bz,head,dim = value_layer.shape
+                key_layer = torch.cat((past_key, key_layer[-1, ...].unsqueeze(0)), dim=0)
+                value_layer = torch.cat((past_value, value_layer[-1,...].unsqueeze(0)), dim=0)
+            layer_past = key_layer, value_layer
+        s, bz, head, dim = value_layer.shape
         s_key = key_layer.shape[0]; s_query = query_layer.shape[0]
         query_layer = query_layer.transpose(1, 0).reshape(bz * self.num_heads, s_query, self.head_dim)
         key_layer = key_layer.permute(1, 2, 0)
@@ -640,14 +540,14 @@ class TelechatMLP(nn.Module):
 
 
 class TelechatBlock(nn.Module):
-    def __init__(self, config: TelechatConfig,layer_idx):
+    def __init__(self, config: TelechatConfig, layer_idx):
         super().__init__()
         hidden_size = config.hidden_size
 
         self.input_layernorm = TelechatRMSNorm(hidden_size, eps=config.layer_norm_epsilon)
         self.num_heads = config.n_head
         self.layer_idx = layer_idx
-        self.self_attention = TelechatAttention(config,layer_idx)
+        self.self_attention = TelechatAttention(config, layer_idx)
         self.post_attention_layernorm = TelechatRMSNorm(hidden_size, eps=config.layer_norm_epsilon)
 
         self.mlp = TelechatMLP(config)
@@ -841,6 +741,7 @@ TELECHAT_INPUTS_DOCSTRING = r"""
             Whether or not to return a [`~file_utils.ModelOutput`] instead of a plain tuple.
 """
 
+
 @add_start_docstrings(
     "The bare Telechat Model transformer outputting raw hidden-states without any specific head on top.",
     TELECHAT_START_DOCSTRING,
@@ -850,12 +751,14 @@ def bias_correction(fp_bias, quant_weight, input_offset, deq_scale):
     bias_correction = fp_bias.npu() / deq_scale.npu() - quant_weight.to(torch.float32).npu().sum(dim=1) * float(input_offset)
     return bias_correction
 
+
 def process_deq_scale(deq_scale_dict):
     new_deq_scale_dict = {}
     for key, deq_scale in deq_scale_dict.items():
         new_deq_scale = np.frombuffer(deq_scale.numpy().tobytes(), dtype=np.int32)
         new_deq_scale_dict.setdefault(key, torch.tensor(new_deq_scale.astype(np.int64)))
     return new_deq_scale_dict
+
 
 class TelechatModel(TelechatPreTrainedModel):
     def __init__(self, config: TelechatConfig):
@@ -867,7 +770,7 @@ class TelechatModel(TelechatPreTrainedModel):
         self.word_embeddings = nn.Embedding(config.vocab_size, self.embed_dim)
 
         # Transformer blocks
-        self.h = nn.ModuleList([TelechatBlock(config,_) for _ in range(config.num_hidden_layers)])
+        self.h = nn.ModuleList([TelechatBlock(config, _) for _ in range(config.num_hidden_layers)])
         # Final Layer Norm
         self.ln_f = TelechatRMSNorm(self.embed_dim, eps=config.layer_norm_epsilon)
 
@@ -881,7 +784,7 @@ class TelechatModel(TelechatPreTrainedModel):
         # QUANT
         self.float_query_layers = []
         self.float_kv_layers = []
-        self.float_down_layers = [0,1,9,25,27]
+        self.float_down_layers = [0, 1, 9, 25, 27]
         quant_param_path = os.environ.get("QUANT_PATH")
         import numpy as np
         self.input_scale_dict = np.load(quant_param_path + "input_scale.npy", allow_pickle=True).item()
@@ -932,29 +835,29 @@ class TelechatModel(TelechatPreTrainedModel):
                 query_quant_bias_correction = bias_correction(self.fp_bias_dict[query_name],
                         self.quant_weight_dict[query_name],
                         int(self.input_offset_dict[query_name]),
-                        self.deq_scale_dict[query_name])
+                        self.deq_scale_dict.get(query_name))
             if layer_idx in self.float_kv_layers:
                 key_value_quant_bias_correction = [0]
             else:
                 key_value_quant_bias_correction = bias_correction(self.fp_bias_dict[key_value_name],
                         self.quant_weight_dict[key_value_name],
                         int(self.input_offset_dict[key_value_name]),
-                        self.deq_scale_dict[key_value_name])
+                        self.deq_scale_dict.get(key_value_name))
 
             dense_quant_bias_correction = bias_correction(self.fp_bias_dict[dense_name],
                         self.quant_weight_dict[dense_name],
                         int(self.input_offset_dict[dense_name]),
-                        self.deq_scale_dict[dense_name])
+                        self.deq_scale_dict.get(dense_name))
 
             gate_proj_quant_bias_correction = bias_correction(self.fp_bias_dict[gate_proj_name],
                         self.quant_weight_dict[gate_proj_name],
                         int(self.input_offset_dict[gate_proj_name]),
-                        self.deq_scale_dict[gate_proj_name])
+                        self.deq_scale_dict.get(gate_proj_name))
 
             up_proj_quant_bias_correction = bias_correction(self.fp_bias_dict[up_proj_name],
                         self.quant_weight_dict[up_proj_name],
                         int(self.input_offset_dict[up_proj_name]),
-                        self.deq_scale_dict[up_proj_name])
+                        self.deq_scale_dict.get(up_proj_name))
             if layer_idx in self.float_down_layers:
                 weight = list(self.h[layer_idx].state_dict().values())
                 down_proj_quant_bias_correction = [0]
@@ -962,7 +865,7 @@ class TelechatModel(TelechatPreTrainedModel):
                 down_proj_quant_bias_correction = bias_correction(self.fp_bias_dict[down_proj_name],
                         self.quant_weight_dict[down_proj_name],
                         int(self.input_offset_dict[down_proj_name]),
-                        self.deq_scale_dict[down_proj_name])
+                        self.deq_scale_dict.get(down_proj_name))
             bias_cor = [
                         query_quant_bias_correction,
                         key_value_quant_bias_correction,
@@ -995,11 +898,11 @@ class TelechatModel(TelechatPreTrainedModel):
                 "TelechatQuantFAModel")
 
         self.acl_operation.set_param(self.acl_param)
-        self.weightFlag=False
+        self.weightFlag = False
         self.encoder_flag = True
         self.acl_inputs = [None] * (9+self.num_hidden_layers)
         for i in range(self.num_hidden_layers):
-            self.acl_inputs[i+9] = torch.tensor([i],dtype=torch.int32).npu()
+            self.acl_inputs[i + 9] = torch.tensor([i], dtype=torch.int32).npu()
 
         self.seq_len = 0
         self.max_seq_len = 2048
@@ -1154,8 +1057,8 @@ class TelechatModel(TelechatPreTrainedModel):
 
         if self.batch_num != batch_size:
             self.batch_num = batch_size
-            self.cached_k = torch.zeros(self.num_hidden_layers, self.batch_num,  self.embed_dim // 16, self.max_seq_len, 16, device = "cpu").npu().half().contiguous()
-            self.cached_v = torch.zeros(self.num_hidden_layers, self.batch_num,  self.embed_dim // 16, self.max_seq_len, 16, device = "cpu").npu().half().contiguous()
+            self.cached_k = torch.zeros(self.num_hidden_layers, self.batch_num, self.embed_dim // 16, self.max_seq_len, 16, device = "cpu").npu().half().contiguous()
+            self.cached_v = torch.zeros(self.num_hidden_layers, self.batch_num, self.embed_dim // 16, self.max_seq_len, 16, device = "cpu").npu().half().contiguous()
             self.cached_k.data = torch_npu.npu_format_cast(self.cached_k.data, 29)
             self.cached_v.data = torch_npu.npu_format_cast(self.cached_v.data, 29)
 
@@ -1223,7 +1126,7 @@ class TelechatModel(TelechatPreTrainedModel):
                 else:
                     weights_q = [
                     self.transdata_quant_weight[layer_idx][0].to(torch.int8),
-                    self.deq_scale_dict[query_name].to(torch.int64).npu(),
+                    self.deq_scale_dict.get(query_name).to(torch.int64).npu(),
                     self.bias_correction[layer_idx][0].to(torch.int32).npu()]
                 weights_all.extend(weights_q)
                 if layer_idx in self.float_kv_layers:
@@ -1235,22 +1138,22 @@ class TelechatModel(TelechatPreTrainedModel):
                 else:
                     weights_kv = [
                     self.transdata_quant_weight[layer_idx][1].to(torch.int8),
-                    self.deq_scale_dict[key_value_name].to(torch.int64).npu(),
+                    self.deq_scale_dict.get(key_value_name).to(torch.int64).npu(),
                     self.bias_correction[layer_idx][1].to(torch.int32).npu()]
                 weights_all.extend(weights_kv)
                 weights_dense = [
                 self.transdata_quant_weight[layer_idx][2].to(torch.int8),
-                self.deq_scale_dict[dense_name].to(torch.int64).npu(),
+                self.deq_scale_dict.get(dense_name).to(torch.int64).npu(),
                 self.bias_correction[layer_idx][2].to(torch.int32).npu()]
                 weights_all.extend(weights_dense)
                 weights_gate = [
                 self.transdata_quant_weight[layer_idx][3].to(torch.int8),
-                self.deq_scale_dict[gate_proj_name].to(torch.int64).npu(),
+                self.deq_scale_dict.get(gate_proj_name).to(torch.int64).npu(),
                 self.bias_correction[layer_idx][3].to(torch.int32).npu()]
                 weights_all.extend(weights_gate)
                 weights_up = [
                 self.transdata_quant_weight[layer_idx][4].to(torch.int8),
-                self.deq_scale_dict[up_proj_name].to(torch.int64).npu(),
+                self.deq_scale_dict.get(up_proj_name).to(torch.int64).npu(),
                 self.bias_correction[layer_idx][4].to(torch.int32).npu(),
                 ]
                 weights_all.extend(weights_up)
@@ -1264,7 +1167,7 @@ class TelechatModel(TelechatPreTrainedModel):
                 else:
                     weights_down = [
                     self.transdata_quant_weight[layer_idx][5].to(torch.int8),
-                    self.deq_scale_dict[down_proj_name].to(torch.int64).npu(),
+                    self.deq_scale_dict.get(down_proj_name).to(torch.int64).npu(),
                     self.bias_correction[layer_idx][5].to(torch.int32).npu()
                     ]
                 weights_all.extend(weights_down)
@@ -1299,8 +1202,8 @@ class TelechatModel(TelechatPreTrainedModel):
                     decoder_mask = torch.concat([decoder_leftmask, decoder_rightmask], dim=-1).unsqueeze(0)
                     decoder_masks.append(decoder_mask)
                 self.maskAttenincre = torch.concat(decoder_masks, dim=0)
-            self.maskAttenfull = torch_npu.npu_format_cast(self.maskAttenfull.view(self.batch_num, self.max_seq_len, self.max_seq_len//16, 16).transpose(1,2).contiguous(),29)
-            self.maskAttenincre = torch_npu.npu_format_cast(self.maskAttenincre.view(self.batch_num, self.max_seq_len, self.max_seq_len//16, 16).transpose(1,2).contiguous(),29)
+            self.maskAttenfull = torch_npu.npu_format_cast(self.maskAttenfull.view(self.batch_num, self.max_seq_len, self.max_seq_len//16, 16).transpose(1, 2).contiguous(), 29)
+            self.maskAttenincre = torch_npu.npu_format_cast(self.maskAttenincre.view(self.batch_num, self.max_seq_len, self.max_seq_len//16, 16).transpose(1, 2).contiguous(), 29)
             position_ids = torch.arange(0, input_ids.shape[1], dtype=torch.long, device=input_ids.device).unsqueeze(0)
             position_ids = torch.concat([position_ids] * self.batch_num, dim=0)
             self.acl_inputs[1] = position_ids
@@ -1311,7 +1214,7 @@ class TelechatModel(TelechatPreTrainedModel):
             self.acl_inputs[6] = self.cached_v
             self.seq_len = input_ids.shape[1]
             seqlen = torch.tensor([self.seq_len] * batch_size, dtype=torch.int32, device=input_ids.device)
-            token_offset = torch.tensor([self.seq_len] * batch_size, dtype = torch.int32, device=input_ids.device)
+            token_offset = torch.tensor([self.seq_len] * batch_size, dtype=torch.int32, device=input_ids.device)
             self.acl_inputs[7] = token_offset
             self.acl_inputs[8] = seqlen
             self.encoder_flag = False
@@ -1327,7 +1230,7 @@ class TelechatModel(TelechatPreTrainedModel):
             self.acl_inputs[6] = self.cached_v
             self.seq_len += 1
             seqlen = torch.tensor([1] * batch_size, dtype=torch.int32, device=input_ids.device)
-            token_offset = torch.tensor([self.seq_len] * batch_size, dtype = torch.int32, device=input_ids.device)
+            token_offset = torch.tensor([self.seq_len] * batch_size, dtype=torch.int32, device=input_ids.device)
             self.acl_inputs[7] = token_offset
             self.acl_inputs[8] = seqlen
         param = json.dumps({"tokenOffset":token_offset.tolist(), "seqLen":seqlen.tolist()})

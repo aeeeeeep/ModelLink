@@ -56,77 +56,6 @@ try:
 except ImportError:
     rearrange = None
 
-use_flash_attn = True
-try:
-    from flash_attn.flash_attn_interface import flash_attn_unpadded_func
-except ImportError:
-    try:
-        from flash_attn.flash_attn_interface import flash_attn_varlen_func as flash_attn_unpadded_func
-    except ImportError:
-        flash_attn_unpadded_func = None
-
-
-class FlashSelfAttention(torch.nn.Module):
-    """Implement the scaled dot product attention with softmax.
-    Arguments
-    ---------
-        softmax_scale: The temperature to use for the softmax attention.
-                      (default: 1/sqrt(d_keys) where d_keys is computed at
-                      runtime)
-        attention_dropout: The dropout rate to apply to the attention
-                           (default: 0.0)
-    """
-
-    def __init__(self, causal=False, softmax_scale=None, attention_dropout=0.0,
-                 device=None, dtype=None):
-        super().__init__()
-        assert flash_attn_unpadded_func is not None, ('Please install FlashAttention first, '
-                                                      'e.g., with pip install flash-attn')
-        assert rearrange is not None, 'Please install einops first, e.g., with pip install einops'
-        self.causal = causal
-        self.softmax_scale = softmax_scale
-        self.dropout_p = attention_dropout
-
-    def forward(self, q, k, v):
-        """Implements the multihead softmax attention.
-        Arguments
-        ---------
-            q, k, v: The tensor containing the query, key, and value. (B, S, H, D)
-        """
-        assert all((i.dtype in [torch.float16, torch.bfloat16] for i in (q, k, v)))
-        assert all((i.is_cuda for i in (q, k, v)))
-
-        batch_size, seqlen_q = q.shape[0], q.shape[1]
-        seqlen_k = k.shape[1]
-
-        q, k, v = [rearrange(x, 'b s ... -> (b s) ...') for x in [q, k, v]]
-        cu_seqlens_q = torch.arange(0, (batch_size + 1) * seqlen_q, step=seqlen_q, dtype=torch.int32,
-                                    device=q.device)
-        self.training = False
-        if self.training:
-            # during training q,k,v always have same seqlen
-            assert seqlen_k == seqlen_q
-
-            is_causal = self.causal
-            cu_seqlens_k = cu_seqlens_q
-            dropout_p = self.dropout_p
-        else:
-            # turn off FA causal mask after first inference autoregressive iteration
-            # only on first autoregressive step q,k,v have same seqlen
-            is_causal = seqlen_q == seqlen_k
-            cu_seqlens_k = torch.arange(0, (batch_size + 1) * seqlen_k, step=seqlen_k, dtype=torch.int32,
-                                        device=q.device)
-            dropout_p = 0
-
-        output = flash_attn_unpadded_func(
-            q, k, v, cu_seqlens_q, cu_seqlens_k, seqlen_q, seqlen_k,
-            dropout_p=dropout_p,
-            softmax_scale=self.softmax_scale, causal=is_causal
-        )
-
-        output = rearrange(output, '(b s) ... -> b s ...', b=batch_size)
-        return output
-
 
 def _make_causal_mask(
         input_ids_shape: torch.Size, device: torch.device, past_key_values_length: int
@@ -342,7 +271,7 @@ class TelechatGelu(nn.Module):
 
 
 class TelechatAttention(nn.Module):
-    def __init__(self, config: TelechatConfig,layer_idx):
+    def __init__(self, config: TelechatConfig, layer_idx):
         super().__init__()
         self.kv_cache = None
         self.pretraining_tp = config.pretraining_tp
@@ -444,6 +373,7 @@ class TelechatAttention(nn.Module):
             return tuple(chunk.contiguous() for chunk in tensor_list)
 
         return tensor_list
+
     def _merge_heads(self, x: torch.Tensor) -> torch.Tensor:
         """
         Merge heads together over the last dimension
@@ -468,6 +398,7 @@ class TelechatAttention(nn.Module):
 
         # batch_size, seq_length, num_heads, head_dim -> batch_size, seq_length, num_heads * head_dim
         return x.reshape(batch_size, seq_length, self.num_heads * self.head_dim)
+
     def forward(
             self,
             hidden_states: torch.Tensor,
@@ -492,7 +423,7 @@ class TelechatAttention(nn.Module):
                            (self.num_key_value_heads,
                             2 * self.head_dim)
         mixed_kv_layer = mixed_kv_layer.view(*new_tensor_shape)
-        (key_layer,value_layer) = self.split_tensor_along_last_dim(mixed_kv_layer,2)
+        (key_layer, value_layer) = self.split_tensor_along_last_dim(mixed_kv_layer, 2)
 
 
         output_size = (query_layer.size(1),
@@ -500,28 +431,27 @@ class TelechatAttention(nn.Module):
                        query_layer.size(0),
                        key_layer.size(0))
 
-        query_layer = query_layer.view(output_size[2],output_size[0] * output_size[1], -1)
-        key_layer = key_layer.view(output_size[3],output_size[0] * output_size[1], -1)
+        query_layer = query_layer.view(output_size[2], output_size[0] * output_size[1], -1)
+        key_layer = key_layer.view(output_size[3], output_size[0] * output_size[1], -1)
 
         apply_rotary_fn = apply_rotary_pos_emb
 
         seq_len = key_layer.shape[0]
         offset = 0
 
-        if  use_cache and layer_past != None:
-            past_key, past_value  = layer_past
+        if use_cache and layer_past != None:
+            past_key, past_value = layer_past
             offset = past_key.shape[0]
             seq_len += offset
-
 
         cos, sin = self.rotary_emb(value_layer, seq_len=seq_len)
         query_layer, key_layer = apply_rotary_fn(query_layer, key_layer, cos, sin, offset=offset)
         if use_cache:
             if layer_past != None:
                 past_key, past_value = layer_past
-                key_layer = torch.cat((past_key, key_layer[-1, ...].unsqueeze(0)),dim=0)
-                value_layer = torch.cat((past_value,value_layer[-1,...].unsqueeze(0)),dim = 0)
-            layer_past = key_layer,value_layer
+                key_layer = torch.cat((past_key, key_layer[-1, ...].unsqueeze(0)), dim=0)
+                value_layer = torch.cat((past_value, value_layer[-1,...].unsqueeze(0)), dim=0)
+            layer_past = key_layer, value_layer
         s, bz, head, dim = value_layer.shape
         s_key = key_layer.shape[0]; s_query = query_layer.shape[0]
         query_layer = query_layer.transpose(1, 0).reshape(bz * self.num_heads, s_query, self.head_dim)
@@ -575,6 +505,7 @@ class TelechatMLP(nn.Module):
         self.up_proj = nn.Linear(hidden_size, config.ffn_hidden_size, bias=False)
         self.down_proj = nn.Linear(config.ffn_hidden_size, hidden_size, bias=True)
         self.hidden_dropout = config.hidden_dropout
+
     def swiglu(self, x):
         x = torch.chunk(x, 2, dim=-1)
 
@@ -588,14 +519,14 @@ class TelechatMLP(nn.Module):
 
 
 class TelechatBlock(nn.Module):
-    def __init__(self, config: TelechatConfig,layer_idx):
+    def __init__(self, config: TelechatConfig, layer_idx):
         super().__init__()
         hidden_size = config.hidden_size
 
         self.input_layernorm = TelechatRMSNorm(hidden_size, eps=config.layer_norm_epsilon)
         self.num_heads = config.n_head
         self.layer_idx = layer_idx
-        self.self_attention = TelechatAttention(config,layer_idx)
+        self.self_attention = TelechatAttention(config, layer_idx)
         self.post_attention_layernorm = TelechatRMSNorm(hidden_size, eps=config.layer_norm_epsilon)
         self.mlp = TelechatMLP(config)
 
@@ -806,7 +737,7 @@ class TelechatModel(TelechatPreTrainedModel):
         self.word_embeddings = nn.Embedding(config.vocab_size, self.embed_dim)
 
         # Transformer blocks
-        self.h = nn.ModuleList([TelechatBlock(config,_) for _ in range(config.num_hidden_layers)])
+        self.h = nn.ModuleList([TelechatBlock(config, _) for _ in range(config.num_hidden_layers)])
 
         # Final Layer Norm
         self.ln_f = TelechatRMSNorm(self.embed_dim, eps=config.layer_norm_epsilon)
@@ -820,6 +751,7 @@ class TelechatModel(TelechatPreTrainedModel):
 
     def get_input_embeddings(self):
         return self.word_embeddings
+
     def clear_cache(self):
         for layer in self.h:
             layer.self_attention.last_key_layer = None
