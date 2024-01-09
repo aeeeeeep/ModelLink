@@ -74,7 +74,7 @@ static const uint64_t INTERNAL_TENSOR_COUNT = 13;
 static const uint64_t NODE_COUNT = 12;
 
 atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operation)
-{   
+{
     ATB_LOG(INFO) << "enter quant layer";
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;
