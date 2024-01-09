@@ -28,7 +28,8 @@ std::string Statistic::ToString() const
            ", getBestKernelTime:" + std::to_string(getBestKernelTime) +
            ", kernelExecuteTime:" + std::to_string(kernelExecuteTime) +
            ", kernelCacheHitCount:" + std::to_string(kernelCacheHitCount) +
-           ", kernelCacheMissCount:" + std::to_string(kernelCacheMissCount);
+           ", kernelCacheMissCount:" + std::to_string(kernelCacheMissCount) +
+           ", mallocTorchTensorSize:" + std::to_string(mallocTorchTensorSize);
 }
 
 void Statistic::Reset()
@@ -44,6 +45,7 @@ void Statistic::Reset()
     kernelExecuteTime = 0;
     kernelCacheHitCount = 0;
     kernelCacheMissCount = 0;
+    mallocTorchTensorSize = 0;
 }
 
 Statistic &GetStatistic() { return g_statistic; }

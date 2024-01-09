@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #ifndef ATB_SPEED_LOG_LOGSINK_H
 #define ATB_SPEED_LOG_LOGSINK_H
 #include "atb_speed/log/log_entity.h"
@@ -29,5 +28,5 @@ private:
     virtual void LogImpl(const LogEntity &logEntity) = 0;
     LogLevel level_;
 };
-}   // namespace atb_speed
+} // namespace atb_speed
 #endif

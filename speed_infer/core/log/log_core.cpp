@@ -32,21 +32,21 @@ static bool GetLogToStdoutFromEnv()
 
 static bool GetLogToFileFromEnv()
 {
-    const char* envLogToStdout = std::getenv("ATB_LOG_TO_FILE");
+    const char *envLogToStdout = std::getenv("ATB_LOG_TO_FILE");
     return envLogToStdout != nullptr && strcmp(envLogToStdout, "1") == 0;
 }
 
 static LogLevel GetLogLevelFromEnv()
 {
-    const char* env = std::getenv("ATB_LOG_LEVEL");
+    const char *env = std::getenv("ATB_LOG_LEVEL");
     if (env == nullptr) {
         return LogLevel::WARN;
     }
     std::string envLogLevel(env);
     std::transform(envLogLevel.begin(), envLogLevel.end(), envLogLevel.begin(), ::toupper);
     static std::unordered_map<std::string, LogLevel> levelMap{
-        {"TRACE", LogLevel::TRACE}, {"DEBUG", LogLevel::DEBUG}, {"INFO", LogLevel::INFO},
-        {"WARN", LogLevel::WARN}, {"ERROR", LogLevel::ERROR}, {"FATAL", LogLevel::FATAL}
+        { "TRACE", LogLevel::TRACE }, { "DEBUG", LogLevel::DEBUG }, { "INFO", LogLevel::INFO },
+        { "WARN", LogLevel::WARN }, { "ERROR", LogLevel::ERROR }, { "FATAL", LogLevel::FATAL }
     };
     auto levelIt = levelMap.find(envLogLevel);
     return levelIt != levelMap.end() ? levelIt->second : LogLevel::WARN;
@@ -105,4 +105,4 @@ atb::SVector<uint64_t> LogCore::GetLogLevelCount() const
 {
     return levelCounts_;
 }
-}
+} // namespace atb
