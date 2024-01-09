@@ -14,18 +14,20 @@
  * limitations under the License.
  */
 
-#include "atb_speed/base/handle.h"
+#include "model_torch.h"
+
+#include <acl/acl.h>
+#include <atb/utils.h>
+
+#include "atb_speed/base/context_factory.h"
 #include "atb_speed/log.h"
 #include "atb_speed/utils/config.h"
+#include "atb_speed/utils/singleton.h"
 #include "atb_speed/utils/statistic.h"
 #include "atb_speed/utils/tensor_util.h"
-#include "pytorch/adapter/utils/utils.h"
-#include <acl/acl.h>
-#include <atb_speed/utils/singleton.h>
-#include <atb_speed/utils/timer.h>
-#include "atb_speed/utils/singleton.h"
 #include "atb_speed/utils/timer.h"
-#include "model_torch.h"
+
+#include "pytorch/adapter/utils/utils.h"
 
 #include "llama/7b/model/decoder_without_fusion_model.h"
 #include "llama/7b/model/encoder_without_fusion_model.h"
@@ -34,6 +36,7 @@
 #include "llama/7b/model/rope_model.h"
 #include "llama/7b/model/quant_flashattention_model.h"
 #include "llama_pa/model/pa_model.h"
+#include "telechat/model/model.h"
 
 uint64_t GetNewModelId()
 {
@@ -45,11 +48,15 @@ uint64_t GetNewModelId()
 ModelTorch::ModelTorch(std::string modelName) : modelName_(modelName)
 {
     modelId_ = GetNewModelId();
+    context_ = atb_speed::ContextFactory::GetAtbContext();
     ATB_LOG(INFO) << "ModelTorch new modelName:" << modelName_ << ", modelId:" << modelId_;
-    atb_speed::InitLocalContext();
 }
 
-ModelTorch::~ModelTorch() = default;
+ModelTorch::~ModelTorch()
+{
+    context_.reset();
+    atb_speed::ContextFactory::FreeAtbContext();
+}
 
 void ModelTorch::SetParam(std::string param)
 {
@@ -70,6 +77,8 @@ void ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::llama_7b::FlashAttentionModel>(param);
     } else if (modelName_ == "llama_pa_model" || modelName_ == "llama_65b_pa_model") {
         model_ = std::make_shared<atb_speed::llama_pa::PAModel>(param);
+    } else if (modelName_ == "TelechatQuantFAModel") {
+        model_ = std::make_shared<atb_speed::telechat::QuantFAModel>(param);
     } else {
         ATB_LOG(FATAL) << "not support modelName:" << modelName_;
         return;
@@ -165,6 +174,8 @@ std::vector<torch::Tensor> ModelTorch::Execute(std::vector<torch::Tensor> atInTe
         atb_speed::Timer timer;
         atOutTensors.at(i) = Utils::CreateAtTensorFromTensorDesc(outTensorDescs.at(i));
         atb_speed::GetSingleton<atb_speed::Statistic>().createTensorTime += timer.ElapsedMicroSecond();
+        atb_speed::GetSingleton<atb_speed::Statistic>().mallocTorchTensorSize +=
+            atb::Utils::GetTensorSize(outTensorDescs.at(i));
     }
 
     std::vector<atb::Tensor> outTensors;
@@ -197,8 +208,7 @@ void ModelTorch::ExecuteOut(std::vector<torch::Tensor> atInTensors, std::vector<
 void ModelTorch::ExecuteOutImpl(std::vector<atb::Tensor> &inTensors, std::vector<atb::Tensor> &outTensors,
                                 const std::string &param)
 {
-    atb::Context *contextPtr = atb_speed::localHandle.contextPtr_;
-    model_->Execute(contextPtr, inTensors, outTensors, param);
+    model_->Execute(context_.get(), inTensors, outTensors, param);
     executeCount_++;
 }
 
