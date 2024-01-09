@@ -15,13 +15,15 @@
  */
 #ifndef MODEL_MODEL_TORCH_H
 #define MODEL_MODEL_TORCH_H
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
-#include <torch/script.h>
+
 #include <torch/custom_class.h>
-#include <atb_speed/utils/timer.h>
+#include <torch/script.h>
+
 #include "atb_speed/base/model.h"
+#include "atb_speed/utils/timer.h"
 
 class ModelTorch : public torch::CustomClassHolder {
 public:
@@ -45,6 +47,7 @@ private:
     std::shared_ptr<atb_speed::Model> model_;
     uint64_t executeCount_ = 0;
     uint64_t modelId_ = 0;
+    std::shared_ptr<atb::Context> context_;
 };
 
 #endif
