@@ -302,7 +302,7 @@ CHECKPOINT=./model_weights/
 7. 启动 Internlm-65B 预训练脚本
 
 ```shell
-bash examples/intern/pretrain_internlm_65b_zero.sh 
+bash examples/intern/pretrain_internlm_65b_ptd_32p.sh
 ```
 
 

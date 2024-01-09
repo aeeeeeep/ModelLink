@@ -314,7 +314,7 @@ CHECKPOINT=./model_weights/
 6. Launch Internlm-65B pre-training script.
 
 ```shell
-bash examples/intern/pretrain_internlm_65b_zero.sh 
+bash examples/intern/pretrain_internlm_65b_ptd_32p.sh
 ```
 
 
