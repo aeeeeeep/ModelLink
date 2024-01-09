@@ -475,7 +475,8 @@ class TelechatAttention(nn.Module):
                 value_layer = torch.cat((past_value, value_layer[-1, ...].unsqueeze(0)), dim=0)
             layer_past = key_layer, value_layer
         s, bz, head, dim = value_layer.shape
-        s_key = key_layer.shape[0]; s_query = query_layer.shape[0]
+        s_key = key_layer.shape[0]
+        s_query = query_layer.shape[0]
         query_layer = query_layer.transpose(1, 0).reshape(bz * self.num_heads, s_query, self.head_dim)
         key_layer = key_layer.permute(1, 2, 0)
         value_layer = value_layer.transpose(2, 0).reshape(bz * self.num_heads, s_key, self.head_dim)
@@ -490,7 +491,7 @@ class TelechatAttention(nn.Module):
         if input_dtype == torch.float16:
             attention_scores = attention_scores.to(torch.float)
         attn_weights = torch.masked_fill(attention_scores, attention_mask, torch.finfo(attention_scores.dtype).min)
-        attention_probs = F.softmax(attn_weights, dim=-1).to(input_dtype) ##dtype = torch.float32
+        attention_probs = F.softmax(attn_weights, dim=-1).to(input_dtype)
 
         attention_probs = self.attention_dropout(attention_probs)
 
