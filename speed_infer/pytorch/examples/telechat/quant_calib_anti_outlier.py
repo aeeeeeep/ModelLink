@@ -59,15 +59,15 @@ def get_args():
         '--jsonl_path', type=str)
     group.add_argument(
         '--checkpoint_path', type=str)
-    args = parser.parse_args()
-    return args
+    args_input = parser.parse_args()
+    return args_input
 
 
 args = get_args()
 
-tokenizer = AutoTokenizer.from_pretrained(args.checkpoint_path)
+float_tokenizer = AutoTokenizer.from_pretrained(args.checkpoint_path)
 config = TelechatConfig.from_pretrained(args.checkpoint_path)
-model = TelechatForCausalLM.from_pretrained(args.checkpoint_path, config=config)
+float_model = TelechatForCausalLM.from_pretrained(args.checkpoint_path, config=config)
 
 f = jsonlines.open(args.jsonl_path, "r")
 questions = []
@@ -75,5 +75,5 @@ for data in f:
     questions.append(data["input"])
 f.close()
 
-model = quant(model, tokenizer) # anti outlier + ptq
-print("quant model", model)
+quant_model = quant(float_model, float_tokenizer) # anti outlier + ptq
+print("quant model", quant_model)

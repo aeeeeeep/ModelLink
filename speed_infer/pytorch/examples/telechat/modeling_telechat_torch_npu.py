@@ -439,7 +439,7 @@ class TelechatAttention(nn.Module):
         seq_len = key_layer.shape[0]
         offset = 0
 
-        if use_cache and layer_past != None:
+        if use_cache and layer_past is not None:
             past_key, past_value = layer_past
             offset = past_key.shape[0]
             seq_len += offset
@@ -447,10 +447,10 @@ class TelechatAttention(nn.Module):
         cos, sin = self.rotary_emb(value_layer, seq_len=seq_len)
         query_layer, key_layer = apply_rotary_fn(query_layer, key_layer, cos, sin, offset=offset)
         if use_cache:
-            if layer_past != None:
+            if layer_past is not None:
                 past_key, past_value = layer_past
                 key_layer = torch.cat((past_key, key_layer[-1, ...].unsqueeze(0)), dim=0)
-                value_layer = torch.cat((past_value, value_layer[-1,...].unsqueeze(0)), dim=0)
+                value_layer = torch.cat((past_value, value_layer[-1, ...].unsqueeze(0)), dim=0)
             layer_past = key_layer, value_layer
         s, bz, head, dim = value_layer.shape
         s_key = key_layer.shape[0]; s_query = query_layer.shape[0]

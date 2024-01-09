@@ -42,7 +42,7 @@ from .configuration_telechat import TelechatConfig
 
 ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
 if ATB_SPEED_HOME_PATH is None:
-        raise RuntimeError("env ATB_SPEED_HOME_PATH  not exist, source set_env.sh")
+    raise RuntimeError("env ATB_SPEED_HOME_PATH  not exist, source set_env.sh")
 LIB_PATH = os.path.join(ATB_SPEED_HOME_PATH, "lib/libatb_speed_torch.so")
 torch.classes.load_library(LIB_PATH)
 
@@ -150,9 +150,9 @@ class RotaryEmbedding(torch.nn.Module):
         return self.cos_cached[:seq_len, ...], self.sin_cached[:seq_len, ...]
 
 # rotary pos emb helpers:
-x = torch.zeros(1)
+zero_tensor = torch.zeros(1)
 rot_emb_global = RotaryEmbedding(128)
-cosTable, sinTable = rot_emb_global.forward(x, seq_len=2048)
+cosTable, sinTable = rot_emb_global.forward(zero_tensor, seq_len=2048)
 cosTable = cosTable.npu().half()
 sinTable = sinTable.npu().half()
 
@@ -446,7 +446,7 @@ class TelechatAttention(nn.Module):
                            (self.num_key_value_heads,
                             2 * self.head_dim)
         mixed_kv_layer = mixed_kv_layer.view(*new_tensor_shape)
-        (key_layer,value_layer) = self.split_tensor_along_last_dim(mixed_kv_layer, 2)
+        (key_layer, value_layer) = self.split_tensor_along_last_dim(mixed_kv_layer, 2)
 
         output_size = (query_layer.size(1),
                        query_layer.size(2),
@@ -461,7 +461,7 @@ class TelechatAttention(nn.Module):
         seq_len = key_layer.shape[0]
         offset = 0
 
-        if use_cache and layer_past != None:
+        if use_cache and layer_past is not None:
             past_key, past_value = layer_past
             offset = past_key.shape[0]
             seq_len += offset
@@ -469,10 +469,10 @@ class TelechatAttention(nn.Module):
         cos, sin = self.rotary_emb(value_layer, seq_len=seq_len)
         query_layer, key_layer = apply_rotary_fn(query_layer, key_layer, cos, sin, offset=offset)
         if use_cache:
-            if layer_past != None:
+            if layer_past is not None:
                 past_key, past_value = layer_past
                 key_layer = torch.cat((past_key, key_layer[-1, ...].unsqueeze(0)), dim=0)
-                value_layer = torch.cat((past_value, value_layer[-1,...].unsqueeze(0)), dim=0)
+                value_layer = torch.cat((past_value, value_layer[-1, ...].unsqueeze(0)), dim=0)
             layer_past = key_layer, value_layer
         s, bz, head, dim = value_layer.shape
         s_key = key_layer.shape[0]; s_query = query_layer.shape[0]
@@ -529,7 +529,6 @@ class TelechatMLP(nn.Module):
 
     def swiglu(self, x):
         x = torch.chunk(x, 2, dim=-1)
-
         return F.silu(x[0]) * x[1]
 
     def forward(self, hidden_states: torch.Tensor, residual: torch.Tensor) -> torch.Tensor:
@@ -748,8 +747,8 @@ TELECHAT_INPUTS_DOCSTRING = r"""
 )
 
 def bias_correction(fp_bias, quant_weight, input_offset, deq_scale):
-    bias_correction = fp_bias.npu() / deq_scale.npu() - quant_weight.to(torch.float32).npu().sum(dim=1) * float(input_offset)
-    return bias_correction
+    new_bias = fp_bias.npu() / deq_scale.npu() - quant_weight.to(torch.float32).npu().sum(dim=1) * float(input_offset)
+    return new_bias
 
 
 def process_deq_scale(deq_scale_dict):
@@ -786,7 +785,6 @@ class TelechatModel(TelechatPreTrainedModel):
         self.float_kv_layers = []
         self.float_down_layers = [0, 1, 9, 25, 27]
         quant_param_path = os.environ.get("QUANT_PATH")
-        import numpy as np
         self.input_scale_dict = np.load(quant_param_path + "input_scale.npy", allow_pickle=True).item()
         self.input_offset_dict = np.load(quant_param_path + "input_offset.npy", allow_pickle=True).item()
         self.quant_weight_dict = np.load(quant_param_path + "quant_weight.npy", allow_pickle=True).item()
@@ -900,7 +898,7 @@ class TelechatModel(TelechatPreTrainedModel):
         self.acl_operation.set_param(self.acl_param)
         self.weightFlag = False
         self.encoder_flag = True
-        self.acl_inputs = [None] * (9+self.num_hidden_layers)
+        self.acl_inputs = [None] * (9 + self.num_hidden_layers)
         for i in range(self.num_hidden_layers):
             self.acl_inputs[i + 9] = torch.tensor([i], dtype=torch.int32).npu()
 
@@ -1057,8 +1055,8 @@ class TelechatModel(TelechatPreTrainedModel):
 
         if self.batch_num != batch_size:
             self.batch_num = batch_size
-            self.cached_k = torch.zeros(self.num_hidden_layers, self.batch_num, self.embed_dim // 16, self.max_seq_len, 16, device = "cpu").npu().half().contiguous()
-            self.cached_v = torch.zeros(self.num_hidden_layers, self.batch_num, self.embed_dim // 16, self.max_seq_len, 16, device = "cpu").npu().half().contiguous()
+            self.cached_k = torch.zeros(self.num_hidden_layers, self.batch_num, self.embed_dim // 16, self.max_seq_len, 16, device="cpu").npu().half().contiguous()
+            self.cached_v = torch.zeros(self.num_hidden_layers, self.batch_num, self.embed_dim // 16, self.max_seq_len, 16, device="cpu").npu().half().contiguous()
             self.cached_k.data = torch_npu.npu_format_cast(self.cached_k.data, 29)
             self.cached_v.data = torch_npu.npu_format_cast(self.cached_v.data, 29)
 
@@ -1202,8 +1200,8 @@ class TelechatModel(TelechatPreTrainedModel):
                     decoder_mask = torch.concat([decoder_leftmask, decoder_rightmask], dim=-1).unsqueeze(0)
                     decoder_masks.append(decoder_mask)
                 self.maskAttenincre = torch.concat(decoder_masks, dim=0)
-            self.maskAttenfull = torch_npu.npu_format_cast(self.maskAttenfull.view(self.batch_num, self.max_seq_len, self.max_seq_len//16, 16).transpose(1, 2).contiguous(), 29)
-            self.maskAttenincre = torch_npu.npu_format_cast(self.maskAttenincre.view(self.batch_num, self.max_seq_len, self.max_seq_len//16, 16).transpose(1, 2).contiguous(), 29)
+            self.maskAttenfull = torch_npu.npu_format_cast(self.maskAttenfull.view(self.batch_num, self.max_seq_len, self.max_seq_len // 16, 16).transpose(1, 2).contiguous(), 29)
+            self.maskAttenincre = torch_npu.npu_format_cast(self.maskAttenincre.view(self.batch_num, self.max_seq_len, self.max_seq_len // 16, 16).transpose(1, 2).contiguous(), 29)
             position_ids = torch.arange(0, input_ids.shape[1], dtype=torch.long, device=input_ids.device).unsqueeze(0)
             position_ids = torch.concat([position_ids] * self.batch_num, dim=0)
             self.acl_inputs[1] = position_ids

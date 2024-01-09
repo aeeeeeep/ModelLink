@@ -28,8 +28,8 @@ def get_args():
         '--model_path', type=str)
     group.add_argument(
         '--quant_path', type=str)
-    args = parser.parse_args()
-    return args
+    args_input = parser.parse_args()
+    return args_input
 
 
 args = get_args()
@@ -50,9 +50,9 @@ else:
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Linear):
             if name == 'lm_head':
-                    # eliminate TransData op before lm_head calculation
+                # eliminate TransData op before lm_head calculation
                 module.weight = torch.nn.parameter.Parameter(module.weight.data)
-            module.weight.data = torch_npu.npu_format_cast(module.weight.data.transpose(0,1).contiguous(), 29)
+            module.weight.data = torch_npu.npu_format_cast(module.weight.data.transpose(0, 1).contiguous(), 29)
 
 for name, module in model.named_modules():
     if isinstance(module, torch.nn.Embedding):
@@ -79,9 +79,9 @@ def infer():
             output_str = tokenizer.decode(output[0].tolist()).split("<_bot>")[-1]
             print(output_str)
             answers.append(output_str)
-    f = jsonlines.open("test-out.jsonl", "w")
+    result = jsonlines.open("test-out.jsonl", "w")
     for q, i in zip(questions, answers):
-        f.write({"input": q, "infer": i})
-    f.close()
+        result.write({"input": q, "infer": i})
+    result.close()
 
 infer()
