@@ -42,9 +42,9 @@ OperationTorch::OperationTorch(std::string opName) : opName_(opName), name_(opNa
     nodeId_ = std::to_string(opId_);
     const char *taskQueueEnv = std::getenv("TASK_QUEUE_ENABLE");
     const char *blockingEnv = std::getenv("ASCEND_LAUNCH_BLOCKING");
-    isTaskQueueEnable_ = !((taskQueueEnv != nullptr && std::string(taskQueueEnv) == "0") || 
+    isTaskQueueEnable_ = !((taskQueueEnv != nullptr && std::string(taskQueueEnv) == "0") ||
         (blockingEnv != nullptr && std::string(blockingEnv) == "1"));
-    ATB_LOG(INFO) << "OperationTorch::OperationTorch, TASK_QUEUE_ENABLE:" << isTaskQueueEnable_ << ", opName:" << 
+    ATB_LOG(INFO) << "OperationTorch::OperationTorch, TASK_QUEUE_ENABLE:" << isTaskQueueEnable_ << ", opName:" <<
         opName << ", opId:" << opId_;
     context_ = atb_speed::ContextFactory::GetAtbContext();
 }
@@ -144,12 +144,6 @@ void OperationTorch::ExecuteOutImpl(std::vector<torch::Tensor> &atInTensors, std
 {
     ATB_LOG(INFO) << name_ << " execute impl execCount:" << executeCount_;
     atb_speed::Timer timer;
-    // if (atb_speed::GetSingleton<atb_speed::Config>().IsSaveTensor()) {
-    //     plan_.SetRunnerSaveTensorDir(GetSaveTensorDir() + "/0_");
-    //     if (executeCount_ >= atb_speed::GetSingleton<AclTransformer::Config>().GetSaveTensorMaxNum()) {
-    //         atb_speed::GetSingleton<AclTransformer::Config>().DisableSaveTensor();
-    //     }
-    // }
     if (hostTensorBinder_) {
         nlohmann::json paramJson = nlohmann::json::parse(varaintPackParam);
         hostTensorBinder_->ParseParam(paramJson);
@@ -183,14 +177,6 @@ void OperationTorch::ExecuteOutImpl(std::vector<torch::Tensor> &atInTensors, std
     st = operation_->Execute(variantPack, (uint8_t*)workspace, workspaceSize, context_.get());
     atb_speed::GetSingleton<atb_speed::Statistic>().planExecuteTime += timer2.ElapsedMicroSecond();
     ATB_LOG_IF(st != 0, ERROR) << name_ << " execute plan fail, error code: " << st;
-
-    // for (size_t i = 0; i < atOutTensors.size(); ++i) {
-    //     if (atb_speed::GetSingleton<atb_speed::Config>().IsSaveTensor()) {
-    //         std::string filePath = GetSaveTensorDir() + "/outtensor" + std::to_string(i) + ".bin";
-    //         Utils::SaveTensor(atOutTensors.at(i), filePath);
-    //         ATB_LOG(INFO) << name_ << " save tensor:" << filePath;
-    //     }
-    // }
 
     atb_speed::GetSingleton<atb_speed::Statistic>().totalTime += timer.ElapsedMicroSecond();
     ATB_LOG(FATAL) << name_ << " executeCount:" << executeCount_ << ", statistic:[" 
@@ -233,8 +219,8 @@ void OperationTorch::BuildVariantPack(std::vector<torch::Tensor> &atInTensors, s
     variantPack.inTensors.resize(atInTensors.size());
     for (size_t i = 0; i < atInTensors.size(); ++i) {
         ATB_LOG(INFO) << name_ << " execute start, atInTensors[" << i << "].options:" << atInTensors.at(i).options() 
-                      << ", data:" << atInTensors.at(i).data_ptr() 
-                      << ", storage_offset:" << atInTensors.at(i).storage_offset() 
+                      << ", data:" << atInTensors.at(i).data_ptr()
+                      << ", storage_offset:" << atInTensors.at(i).storage_offset()
                       << ", format:" << Utils::GetTensorNpuFormat(atInTensors.at(i));
         if (atb_speed::GetSingleton<atb_speed::Config>().IsTorchTensorFormatCast()) {
             atInTensors.at(i) = Utils::NpuFormatCast(atInTensors.at(i));
@@ -244,18 +230,13 @@ void OperationTorch::BuildVariantPack(std::vector<torch::Tensor> &atInTensors, s
             variantPack.inTensors.at(i).desc.format == ACL_FORMAT_NCHW) {
             variantPack.inTensors.at(i).desc.format = ACL_FORMAT_ND;
         }
-        // if (atb_speed::GetSingleton<atb_speed::Config>().IsSaveTensor()) {
-        //     std::string filePath = GetSaveTensorDir() + "/intensor" + std::to_string(i) + ".bin";
-        //     Utils::SaveTensor(atInTensors.at(i), filePath);
-        //     ATB_LOG(INFO) << operation_->GetName() << " save tensor:" << filePath;
-        // }
     }
 
     variantPack.outTensors.resize(atOutTensors.size());
     for (size_t i = 0; i < atOutTensors.size(); ++i) {
         ATB_LOG(INFO) << name_ << " execute start, atOutTensors[" << i << "].options:" << atOutTensors.at(i).options() 
-                      << ", data:" << atOutTensors.at(i).data_ptr() 
-                      << ", storage_offset:" << atOutTensors.at(i).storage_offset() 
+                      << ", data:" << atOutTensors.at(i).data_ptr()
+                      << ", storage_offset:" << atOutTensors.at(i).storage_offset()
                       << ", format:" << Utils::GetTensorNpuFormat(atOutTensors.at(i));
         variantPack.outTensors.at(i) = Utils::AtTensor2Tensor(atOutTensors.at(i));
         if (atb_speed::GetSingleton<atb_speed::Config>().IsConvertNCHWToND() &&

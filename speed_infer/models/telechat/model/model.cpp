@@ -47,7 +47,8 @@ enum InTensorId {
     IN_MAX_TENSOR
 };
 
-void QuantFAModel::QuantFAParam::FromString(const std::string &param) {
+void QuantFAModel::QuantFAParam::FromString(const std::string &param) 
+{
     nlohmann::json paramJson = nlohmann::json::parse(param);
     rmsNormEps = paramJson["rmsNormEps"].get<float>();
     headNum = paramJson["headNum"].get<int>();
@@ -90,19 +91,22 @@ void QuantFAModel::QuantFAParam::FromString(const std::string &param) {
                     << ", dk:" << dk << ", layerNum:" << layerNum;
 }
 
-QuantFAModel::QuantFAModel(const std::string &param) : Model("QuantFAModel", param) {
+QuantFAModel::QuantFAModel(const std::string &param) : Model("QuantFAModel", param) 
+{
     param_.FromString(param);
 }
 
 QuantFAModel::~QuantFAModel() {}
 
-uint32_t QuantFAModel::GetInputNum() const {
+uint32_t QuantFAModel::GetInputNum() const 
+{
     return graph_.inTensors.size();
 }
 uint32_t QuantFAModel::GetOutputNum() const { return graph_.outTensors.size(); }
 
 atb::Status QuantFAModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
-                                        std::vector<atb::TensorDesc> &outTensorDescs) {
+                                     std::vector<atb::TensorDesc> &outTensorDescs) 
+{
     if (outTensorDescs.size() != GetOutputNum())
     {
         return atb::ERROR_INVALID_GRAPH;
@@ -119,7 +123,8 @@ atb::Status QuantFAModel::InferShape(const std::vector<atb::TensorDesc> &inTenso
     return atb::NO_ERROR;
 }
 
-void QuantFAModel::BuildGraph() {
+void QuantFAModel::BuildGraph() 
+{
     ATB_LOG(INFO) << "Enter Telechat QuantFAModel BuildGraph";
 
     const int weightTensorSize = WORD_EMBEDDING_WEIGHT_COUNT +
@@ -191,8 +196,7 @@ void QuantFAModel::BuildGraph() {
 
         size_t inTensorId = 0;
         layerNode.inTensors.at(inTensorId++) = firstInTensor;
-        for (size_t weightTensorId = 0; weightTensorId < WEIGHT_COUNT_PER_LAYER; ++weightTensorId)
-        {
+        for (size_t weightTensorId = 0; weightTensorId < WEIGHT_COUNT_PER_LAYER; ++weightTensorId) {
             layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(
                 WORD_EMBEDDING_WEIGHT_COUNT + layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId);
         }

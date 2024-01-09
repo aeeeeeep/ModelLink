@@ -98,11 +98,6 @@ void ModelTorch::SetWeight(std::vector<torch::Tensor> atWeightTensors)
                       << " data:" << atTensor.data_ptr() << ", storage_offset:" << atTensor.storage_offset()
                       << ", format:" << Utils::GetTensorNpuFormat(atTensor) << ", shape:" << atTensor.sizes()
                       << ", options:" << atTensor.options();
-        // if (atb_speed::GetSingleton<atb_speed::Config>().IsSaveTensor()) {
-        //     std::string filePath = GetSaveTensorDir() + "/weight" + std::to_string(i) + ".pth";
-        //     Utils::SaveTensor(atTensor, filePath);
-        //     ATB_LOG(INFO) << "ModelTorch save weight tensor:" << filePath;
-        // }
     }
     std::vector<atb::Tensor> weigthTensors;
     AtTensor2Tensor(atWeightTensors, weigthTensors);
@@ -153,11 +148,6 @@ std::vector<torch::Tensor> ModelTorch::Execute(std::vector<torch::Tensor> atInTe
                       << " data:" << atTensor.data_ptr() << ", storage_offset:" << atTensor.storage_offset()
                       << ", format:" << Utils::GetTensorNpuFormat(atTensor) << ", shape:" << atTensor.sizes()
                       << ", options:" << atTensor.options();
-        // if (atb_speed::GetSingleton<atb_speed::Config>().IsSaveTensor()) {
-        //     std::string filePath = GetSaveTensorDir() + "/intensor" + std::to_string(i) + ".pth";
-        //     Utils::SaveTensor(atTensor, filePath);
-        //     ATB_LOG(INFO) << "ModelTorch save weight tensor:" << filePath;
-        // }
     }
 
     std::vector<atb::Tensor> inTensors;

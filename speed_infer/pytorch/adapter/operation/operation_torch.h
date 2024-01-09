@@ -29,7 +29,7 @@ public:
     void SetName(std::string name);
     void SetParam(std::string param);
     std::vector<torch::Tensor> ExecuteWithParam(std::vector<torch::Tensor> atInTensors, std::string varaintPackParam);
-    void ExecuteOutWithParam(std::vector<torch::Tensor> atInTensors, std::vector<torch::Tensor> atOutTensors, 
+    void ExecuteOutWithParam(std::vector<torch::Tensor> atInTensors, std::vector<torch::Tensor> atOutTensors,
                              std::string varaintPackParam);
     std::vector<torch::Tensor> Execute(std::vector<torch::Tensor> atInTensors);
     void ExecuteOut(std::vector<torch::Tensor> atInTensors, std::vector<torch::Tensor> atOutTensors);
