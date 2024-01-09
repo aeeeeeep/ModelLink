@@ -41,40 +41,6 @@ struct QuantFALayerParam {
 };
 
 atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operation);
-static atb::Operation *CreateQuantFALayer(const nlohmann::json &paramJson)
-{
-    QuantFALayerParam param;
-    param.rmsNormEps = paramJson["rmsNormEps"].get<double>();
-    param.headNum = paramJson["headNum"].get<int>();
-    param.dk = paramJson["dk"].get<int>();
-    param.isFloatQueryLayer = false;
-    param.isFloatKVLayer = false;
-    param.isFloatDownLayer = false;
-    if (paramJson.contains("inputScale_qkv")){
-        param.inputScale_qkv = paramJson["inputScale_qkv"].get<float>();
-    } // quant
-    if (paramJson.contains("inputOffset_qkv")){
-        param.inputOffset_qkv = paramJson["inputOffset_qkv"].get<int>();
-    }
-    if (paramJson.contains("inputScale_dense")){
-        param.inputScale_dense = paramJson["inputScale_dense"].get<float>();
-    }
-    if (paramJson.contains("inputOffset_dense")){
-        param.inputOffset_dense = paramJson["inputOffset_dense"].get<int>();
-    }
-    if (paramJson.contains("inputScale_gate_up")){
-        param.inputScale_dense = paramJson["inputScale_gate_up"].get<float>();
-    }
-    if (paramJson.contains("inputOffset_gate_up")){
-        param.inputOffset_gate_up = paramJson["inputOffset_gate_up"].get<int>();
-    }
-    if (paramJson.contains("inputOffset_down_proj")){
-        param.inputOffset_gate_up = paramJson["inputOffset_down_proj"].get<int>();
-    }
-    atb::Operation *op;
-    QuantFALayer(param, &op);
-    return op;
-}
 }
 }
 #endif

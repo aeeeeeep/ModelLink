@@ -28,16 +28,6 @@ struct EmbeddingLayerParam {
 };
 
 atb::Status EmbeddingLayer(const EmbeddingLayerParam &param, atb::Operation **operation);
-
-static atb::Operation *CreateEmbeddingLayer(const nlohmann::json &paramJson)
-{
-    EmbeddingLayerParam param;
-    param.axis = paramJson["axis"].get<int>();
-    ATB_LOG(INFO) << "EmbeddingLayerParam axis:" << param.axis;
-    atb::Operation *op;
-    EmbeddingLayer(param, &op);
-    return op;
-}
 }
 }
 #endif

@@ -24,33 +24,12 @@
 namespace atb_speed {
 namespace telechat {
 struct CommonMlpQuantParam {
-	bool transpose = true;
-	float inputScale_down_proj = 1;
-	int inputOffset_down_proj = 0;
-	bool isFloat = false;
+    bool transpose = true;
+    float inputScale_down_proj = 1;
+    int inputOffset_down_proj = 0;
+    bool isFloat = false;
 };
 atb::Status CommonMlpQuant(const CommonMlpQuantParam& param, atb::Operation** operation);
-
-static atb::Operation* CreateCommonMlpQuant(const nlohmann::json& paramJson)
-{
-	CommonMlpQuantParam param;
-	if (paramJson.contains("isFloat")) {
-		param.isFloat = paramJson["isFloat"].get<bool>();
-	}
-	if (paramJson.contains("transpose")) {
-		param.transpose = paramJson["transpose"].get<bool>();
-	}
-	if (paramJson.contains("inputScale_down_proj")){
-		param.inputScale_down_proj = paramJson["inputScale_down_proj"].get<float>();
-	}
-	if (paramJson.contains("inputOffset_down_proj")){
-		param.inputOffset_down_proj = paramJson["inputOffset_down_proj"].get<int>();
-	}
-	ATB_LOG(INFO) << "CommonMlpQuantParam";
-	atb::Operation *op;
-	CommonMlpQuant(param, &op);
-	return op;
-}
-} //namespace telechat
-} //namespace atb_speed
+} // namespace telechat
+} // namespace atb_speed
 #endif
