@@ -58,7 +58,6 @@ enum FusionPALayerTensorId : int {
     IN_V_CACHE,
     IN_BLOCK_TABLES,
     IN_SLOTS,
-
     IN_SEQLEN,
 
     OUT_LLAMA70BLAYEROUT,
