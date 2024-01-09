@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
  *
@@ -32,7 +31,6 @@ Config::Config()
     isTorchTensorFormatCast_ = IsEnable("ATB_TORCH_TENSOR_FORMAT_CAST");
     isUseTilingCopyStream_ = IsEnable("ATB_USE_TILING_COPY_STREAM");
     isLayerInternalTensorReuse_ = IsEnable("ATB_LAYER_INTERNAL_TENSOR_REUSE");
-
     ATB_LOG(FATAL) << "Config:\nIsSaveTensor:" << isSaveTensor_ << " \nIsConvertNCHWToND:" << isConvertNCHWToND_
                    << "\nIsTorchTensorFormatCast:" << isTorchTensorFormatCast_
                    << "\nIsLayerInternalTensorReuse:" << isLayerInternalTensorReuse_;
@@ -70,11 +68,11 @@ void Config::DisableSaveTensor() { isSaveTensor_ = false; }
 
 uint64_t Config::GetSaveTensorMaxNum() const { return saveTensorMaxNum_; }
 
-bool Config::IsTorchTensorFormatCast() const{ return isTorchTensorFormatCast_; };
+bool Config::IsTorchTensorFormatCast() const { return isTorchTensorFormatCast_; };
 
 bool Config::IsConvertNCHWToND() const { return isConvertNCHWToND_; }
 
-bool Config::IsUseTilingCopyStream() const {return isUseTilingCopyStream_;}
+bool Config::IsUseTilingCopyStream() const { return isUseTilingCopyStream_; }
 
 bool Config::IsSaveTensorForRunner(const std::string &runnerName) const
 {
@@ -119,5 +117,4 @@ bool Config::IsLayerInternalTensorReuse() const
 {
     return isLayerInternalTensorReuse_;
 }
-
 } // namespace atb_speed

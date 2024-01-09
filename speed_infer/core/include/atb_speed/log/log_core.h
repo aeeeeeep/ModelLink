@@ -24,7 +24,7 @@
 namespace atb_speed {
 class LogCore {
 public:
-    LogCore();
+	LogCore();
     ~LogCore() = default;
     static LogCore &Instance();
     LogLevel GetLogLevel() const;
@@ -35,9 +35,9 @@ public:
     atb::SVector<uint64_t> GetLogLevelCount() const;
 
 private:
-    std::vector<std::shared_ptr<LogSink>> sinks_;
+	std::vector<std::shared_ptr<LogSink>> sinks_;
     LogLevel level_ = LogLevel::INFO;
     atb::SVector<uint64_t> levelCounts_;
 };
-}
-#endif // ATB_SPEED_LOG_LOGCORE_H
+} // namespace atb_speed
+#endif

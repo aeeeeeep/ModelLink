@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
  *
@@ -20,8 +21,8 @@
 #pragma GCC diagnostic ignored "-Wunused-function"
 #include <torch_npu/csrc/core/npu/NPUStream.h>
 #pragma GCC diagnostic pop
-#include <torch_npu/csrc/framework/utils/CalcuOpUtil.h>
 #include <torch_npu/csrc/framework/utils/OpPreparation.h>
+#include <torch_npu/csrc/aten/NPUNativeFunctions.h>
 #include <acl/acl.h>
 #include <atb_speed/utils/singleton.h>
 #include <atb_speed/utils/filesystem.h>
@@ -58,6 +59,19 @@ void Utils::BuildVariantPack(const std::vector<torch::Tensor> &inTensors, const 
     for (size_t i = 0; i < outTensors.size(); ++i) {
         variantPack.outTensors.push_back(AtTensor2Tensor(outTensors.at(i)));
     }
+}
+
+bool Utils::AtTensorShapeEqualToTensor(const at::Tensor &atTensor, const atb::TensorDesc &tensorDesc)
+{
+    if (tensorDesc.shape.dimNum == atTensor.sizes().size()) {
+        return false;
+    }
+    for (uint64_t i = 0; i < atTensor.sizes().size(); i++) {
+        if (tensorDesc.shape.dims[i] != atTensor.sizes()[i]) {
+            return false;
+        }
+    }
+    return true;
 }
 
 atb::Tensor Utils::AtTensor2Tensor(const at::Tensor &atTensor)
@@ -108,10 +122,10 @@ at::Tensor Utils::CreateAtTensorFromTensorDesc(const atb::TensorDesc &tensorDesc
     options = options.layout(torch::kStrided).requires_grad(false).device(at::DeviceType::XLA);
 
     ATB_LOG(INFO) << "tensor_with_format stat, " << atb_speed::TensorUtil::TensorDescToString(tensorDesc);
-    
-    at::Tensor newTensor =  at_npu::native::NPUNativeFunctions::tensor_with_format(
+
+    at::Tensor newTensor = at_npu::native::NPUNativeFunctions::tensor_with_format(
         at::IntArrayRef(tensorDesc.shape.dims, tensorDesc.shape.dimNum), options, tensorDesc.format);
-        
+
     ATB_LOG(INFO) << "tensor_with_format end, newTensor.format:" << GetTensorNpuFormat(newTensor)
                   << ", is_contiguous:" << newTensor.is_contiguous();
     if (GetTensorNpuFormat(newTensor) != tensorDesc.format) {

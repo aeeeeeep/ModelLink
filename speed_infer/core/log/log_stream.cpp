@@ -40,6 +40,7 @@ LogStream::LogStream(const char *filePath, int line, const char *funcName, LogLe
     logEntity_.funcName = funcName;
     logEntity_.line = line;
 }
+
 void LogStream::Format(const char *format, ...)
 {
     useStream_ = false;
@@ -50,7 +51,7 @@ void LogStream::Format(const char *format, ...)
     char buffer[maxBufferLenth + 1] = {0};
     int ret = vsnprintf_s(buffer, maxBufferLenth, maxBufferLenth, format, args);
     if (ret < 0) {
-        ATB_LOG(ERROR) << "vsnprintf_s ERROR! Error Code:" << ret;
+        ATB_LOG(ERROR) << "vsnprintf_s Error! Error Code:" << ret;
         return;
     }
     va_end(args);
@@ -58,12 +59,13 @@ void LogStream::Format(const char *format, ...)
     va_start(args, format);
     int ref = vsnprintf_s(&content.front(), content.size(), maxBufferLenth, format, args);
     if (ref < 0) {
-        ATB_LOG(ERROR) << "vsnprintf_s ERROR! Error Code:" << ref;
+        ATB_LOG(ERROR) << "vsnprintf_s Error! Error Code:" << ref;
         return;
     }
     va_end(args);
     logEntity_.content = content;
-} 
+}
+
 LogStream::~LogStream()
 {
     if (useStream_) {
@@ -71,4 +73,4 @@ LogStream::~LogStream()
     }
     LogCore::Instance().Log(logEntity_);
 }
-}
+} // namespace atb

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #ifndef ATB_SPEED_LOG_LOGSINKSTDOUT_H
 #define ATB_SPEED_LOG_LOGSINKSTDOUT_H
 #include "atb_speed/log/log_sink.h"
@@ -27,5 +26,5 @@ public:
 private:
     void LogImpl(const LogEntity &logEntity) override;
 };
-}   // namespace atb_speed
+} // namespace atb_speed
 #endif

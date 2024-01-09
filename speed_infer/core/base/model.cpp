@@ -17,24 +17,23 @@
 #include <nlohmann/json.hpp>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
-#include <torch_npu/csrc/framework/utils/CalcuOpUtil.h>
 #pragma GCC diagnostic pop
-#include <torch_npu/csrc/core/npu/register/OptionsManager.h>
-#include <torch_npu/csrc/framework/OpCommand.h>
 #include <acl/acl.h>
 #include <atb/types.h>
-#include <atb_speed/utils/timer.h>
-#include <atb_speed/utils/singleton.h>
-#include "atb_speed/utils/tensor_util.h"
-#include "atb_speed/utils/config.h"
-#include "atb_speed/utils/statistic.h"
-#include "atb_speed/log.h"
-#include "pytorch/adapter/utils/utils.h"
+#include <atb/utils.h>
+#include <torch_npu/csrc/framework/OpCommand.h>
+
 #include "core/context/context.h"
+#include "pytorch/adapter/utils/utils.h"
+
+#include "atb_speed/log.h"
+#include "atb_speed/utils/config.h"
 #include "atb_speed/utils/singleton.h"
+#include "atb_speed/utils/statistic.h"
+#include "atb_speed/utils/tensor_util.h"
+#include "atb_speed/utils/timer.h"
 
 namespace atb_speed {
-
 static bool IsTensorDimsEqual(const atb::Dims &left, const atb::Dims &other)
 {
     if (left.dimNum != other.dimNum) {
@@ -46,42 +45,42 @@ static bool IsTensorDimsEqual(const atb::Dims &left, const atb::Dims &other)
             return false;
         }
     }
+
     return true;
 }
-
 
 std::string Model::Graph::ToString() const
 {
     std::stringstream ss;
     for (size_t i = 0; i < weightTensors.size(); ++i) {
-        ss << "weightTensors["<< i <<"]:" << &weightTensors.at(i) << " " << 
-            TensorUtil::TensorToString(weightTensors.at(i)) << std::endl;
+        ss << "weightTensors[" << i << "]:" << &weightTensors.at(i) << " "
+            << TensorUtil::TensorToString(weightTensors.at(i)) << std::endl;
     }
     for (size_t i = 0; i < inTensors.size(); ++i) {
-        ss << "inTensors[" << i << "]:" << &inTensors.at(i) << " " << TensorUtil::TensorToString(inTensors.at(i)) << 
-            std::endl;
+        ss << "inTensors[" << i << "]:" << &inTensors.at(i) << " " << TensorUtil::TensorToString(inTensors.at(i))
+            << std::endl;
     }
     for (size_t i = 0; i < outTensors.size(); ++i) {
-        ss << "outTensors[" << i << "]:" << &outTensors.at(i) << " " << TensorUtil::TensorToString(outTensors.at(i)) << 
-            std::endl;
+        ss << "outTensors[" << i << "]:" << &outTensors.at(i) << " " << TensorUtil::TensorToString(outTensors.at(i))
+            << std::endl;
     }
     for (size_t i = 0; i < internalTensors.size(); ++i) {
-        ss << "internalTensors[" << i << "]:" << &internalTensors.at(i) << " " << 
-            TensorUtil::TensorToString(internalTensors.at(i)) << std::endl;
+        ss << "internalTensors[" << i << "]:" << &internalTensors.at(i) << " "
+            << TensorUtil::TensorToString(internalTensors.at(i)) << std::endl;
     }
     ss << "nodes:" << nodes.size() << std::endl;
 
     for (size_t i = 0; i < nodes.size(); ++i) {
         auto &node = nodes.at(i);
-        ss << "node[" << i << "] opeation:" << node.operation.get() << ", operationName:" << 
-        node.operation->GetName() << std::endl;
+        ss << "node[" << i << "] opeation:" << node.operation.get() << ", operationName:" << node.operation->GetName()
+            << std::endl;
         for (auto tensorIt : node.inTensors) {
-            ss << "node[" << i << "] inTensor:" << tensorIt << " " << TensorUtil::TensorToString(*tensorIt) << 
-                std::endl;
+            ss << "node[" << i << "] inTensor:" << tensorIt << " " << TensorUtil::TensorToString(*tensorIt)
+                << std::endl;
         }
         for (auto tensorIt : node.outTensors) {
-            ss << "node[" << i << "] outTensor:" << tensorIt << " " << TensorUtil::TensorToString(*tensorIt) << 
-                std::endl;
+            ss << "node[" << i << "] outTensor:" << tensorIt << " " << TensorUtil::TensorToString(*tensorIt)
+                << std::endl;
         }
     }
     return ss.str();
@@ -96,6 +95,7 @@ void Model::Graph::Init()
         node.torchTensors.resize(node.outTensors.size());
     }
     InitTensorType();
+    InitTensorMaxNodeMap();
 }
 
 void Model::Graph::InitTensorType()
@@ -125,22 +125,49 @@ bool Model::Graph::IsInternalTensor(const atb::Tensor *tensor)
     return false;
 }
 
+void Model::Graph::InitTensorMaxNodeMap()
+{
+    std::map<atb::Tensor *, uint64_t> tensorMaxNodeIdMap;
+    maxNodeIdTensorMap.clear();
+
+    for (size_t i = 0; i < internalTensors.size(); ++i) {
+        atb::Tensor &internalTensor = internalTensors[i];
+        uint64_t maxNodeId = 0;
+        uint64_t dependNodeCount = 0;
+        for (size_t nodeId = 0; nodeId < nodes.size(); ++nodeId) {
+            auto &node = nodes.at(nodeId);
+            for (auto inTensorIt : node.inTensors) {
+                if (&internalTensor == inTensorIt) {
+                    maxNodeId = nodeId;
+                    dependNodeCount++;
+                }
+            }
+        }
+        tensorMaxNodeIdMap[&internalTensor] = maxNodeId;
+        ATB_LOG_IF(dependNodeCount == 0, ERROR)
+            << "runner graph internal tensor[" << i << "] depenedNodeCount is 0, graph wrong";
+        maxNodeIdTensorMap[maxNodeId].insert(&internalTensor);
+    }
+}
+
 Model::Model(const std::string &modelName, const std::string &param) : modelName_(modelName), param_(param)
 {
     aclrtGetDevice(&currentDevId_);
 
-    const char *envStr = std::getenv("TASK_QUEUE_ENABLE");
-    isTaskQueueEnable_ = (envStr != nullptr && std::string(envStr) == "1") ? true : false;
+    const char *taskQueueEnv = std::getenv("TASK_QUEUE_ENABLE");
+    const char *blockingEnv = std::getenv("ASCEND_LAUNCH_BLOCKING");
+    isTaskQueueEnable_ = !((taskQueueEnv != nullptr && std::string(taskQueueEnv) == "0") ||
+                           (blockingEnv != nullptr && std::string(blockingEnv) == "1"));
 
-    envStr = std::getenv("ATB_OPERATION_EXECUTE_ASYNC");
-    isUsePlanExecuteAsync_ = (envStr != nullptr && std::string(envStr) == "1") ? true : false;
+    const char *envStr = std::getenv("ATB_OPERATION_EXECUTE_ASYNC");
+    isUsePlanExecuteAsync_ = (envStr != nullptr && std::string(envStr) == "1");
     if (isUsePlanExecuteAsync_ && !isTaskQueueEnable_) {
         std::thread thread = std::thread(std::bind(&Model::ThreadProcessTask, this));
         taskProcessThread_ = std::move(thread);
     }
 
-    ATB_LOG(FATAL) << modelName_ << " new, isTaskQueueEnable:" << isTaskQueueEnable_ << ", isUsePlanExecuteAsync:" << 
-        isUsePlanExecuteAsync_ << ", currentDevId:" << currentDevId_;
+    ATB_LOG(FATAL) << modelName_ << " new, isTaskQueueEnable:" << isTaskQueueEnable_
+        << ", isUsePlanExecuteAsync:" << isUsePlanExecuteAsync_ << ", currentDevId:" << currentDevId_;
 }
 
 Model::~Model() {}
@@ -149,7 +176,7 @@ void Model::Init()
 {
     BuildGraph();
     graph_.Init();
-    ATB_LOG(INFO) << modelName_ << " init graph:\n" << graph_.ToString();
+    ATB_LOG(DEBUG) << modelName_ << " init graph:\n" << graph_.ToString();
 }
 
 void Model::SetWeight(const std::vector<atb::Tensor> &weightTensors)
@@ -185,15 +212,18 @@ atb::Status Model::Execute(atb::Context *context, std::vector<atb::Tensor> &inTe
                            std::vector<atb::Tensor> &outTensors, const std::string &param)
 {
     if (graph_.inTensors.size() != inTensors.size() || graph_.outTensors.size() != outTensors.size()) {
-        ATB_LOG(ERROR) << modelName_ << " graph.inTensors.size:" << graph_.inTensors.size() << ", inTensors.size:" <<
-            inTensors.size() << ", graph.outTensors.size:" << graph_.outTensors.size() << ", outTensors.size:" << 
-            outTensors.size();
+        ATB_LOG(ERROR) << modelName_ << " graph.inTensors.size:" << graph_.inTensors.size()
+            << ", inTensors.size:" << inTensors.size()
+            << ", graph.outTensors.size:" << graph_.outTensors.size()
+            << ", outTensors.size:" << outTensors.size();
         return atb::ERROR_INVALID_GRAPH;
     }
 
     ParseParam(param);
 
     timer_.Reset();
+    ClearInternalAtTensors();
+
     allTaskFinish_ = false;
     context_ = context;
     graph_.inTensors = inTensors;
@@ -213,8 +243,8 @@ atb::Status Model::Execute(atb::Context *context, std::vector<atb::Tensor> &inTe
     WaitAsyncPlanExecuteFinish();
 
     GetSingleton<Statistic>().totalTime += timer_.ElapsedMicroSecond();
-    ATB_LOG(FATAL) << modelName_ << " executeCount:" << executeCount_ << ", Statistic:[" << 
-        GetSingleton<Statistic>().ToString() << "]";
+    ATB_LOG(FATAL) << modelName_ << " executeCount:" << executeCount_ << ", Statistic:["
+        << GetSingleton<Statistic>().ToString() << "]";
     GetSingleton<Statistic>().Reset();
 
     executeCount_++;
@@ -222,15 +252,9 @@ atb::Status Model::Execute(atb::Context *context, std::vector<atb::Tensor> &inTe
     return atb::NO_ERROR;
 }
 
-atb::Status Model::ParseParam(const std::string &param)
-{
-    return atb::NO_ERROR;
-}
+atb::Status Model::ParseParam(const std::string &param) { return atb::NO_ERROR; }
 
-atb::Status Model::BindParamHostTensor(uint32_t nodeId)
-{
-    return atb::NO_ERROR;
-}
+atb::Status Model::BindParamHostTensor(uint32_t nodeId) { return atb::NO_ERROR; }
 
 void Model::BuildNodeVariantPack(int nodeId)
 {
@@ -241,8 +265,8 @@ void Model::BuildNodeVariantPack(int nodeId)
     for (size_t i = 0; i < node.inTensors.size(); ++i) {
         node.variantPack.inTensors.at(i) = *node.inTensors.at(i);
         inTensorDescs.at(i) = node.inTensors.at(i)->desc;
-        ATB_LOG(INFO) << modelName_ << " nodes[" << nodeId << "] inTensors[" << i << "]:" << 
-            TensorUtil::TensorToString(node.variantPack.inTensors.at(i));
+        ATB_LOG(INFO) << modelName_ << " nodes[" << nodeId << "] inTensors[" << i
+            << "]:" << TensorUtil::TensorToString(node.variantPack.inTensors.at(i));
     }
 
     atb::SVector<atb::TensorDesc> outTensorDescs;
@@ -252,43 +276,31 @@ void Model::BuildNodeVariantPack(int nodeId)
     ATB_LOG_IF(st != 0, FATAL) << modelName_ << " nodes[" << nodeId << "] "
                                << " infer shape fail, error code: " << st;
     for (size_t i = 0; i < outTensorDescs.size(); ++i) {
-        ATB_LOG(INFO) << modelName_ << " nodes[" << nodeId << "] outTensorDescs[" << i << "]:" << 
-            TensorUtil::TensorDescToString(outTensorDescs.at(i));
+        ATB_LOG(INFO) << modelName_ << " nodes[" << nodeId << "] outTensorDescs[" << i
+            << "]:" << TensorUtil::TensorDescToString(outTensorDescs.at(i));
     }
 
     for (size_t i = 0; i < node.outTensors.size(); ++i) {
         node.variantPack.outTensors.at(i) = *node.outTensors.at(i);
         if (node.outTensorTypes.at(i) == Model::INTERMEDIATE_TENSOR) {
-            if ((uint64_t)node.torchTensors.at(i).numel() != TensorUtil::GetTensorNumel(outTensorDescs.at(i))) {
-                BuildInternalTensor(outTensorDescs.at(i), nodeId, i);
-            }
+            node.torchTensors.at(i) = MallocInternalAtTensor(nodeId, i, outTensorDescs.at(i));
             node.variantPack.outTensors.at(i) = Utils::AtTensor2Tensor(node.torchTensors.at(i));
             *node.outTensors.at(i) = node.variantPack.outTensors.at(i);
         }
         if (!TensorUtil::TensorDescEqual(node.variantPack.outTensors.at(i).desc, outTensorDescs.at(i))) {
-            ATB_LOG(FATAL) << modelName_ << "  nodes[" << nodeId << "] new outTensorDescs[" << i << "]:" << 
-                TensorUtil::TensorDescToString(outTensorDescs.at(i)) << ", node.variantPack.outTensors.at[" << i <<
-                     "].desc:" << TensorUtil::TensorDescToString(node.variantPack.outTensors.at(i).desc);
-        }
-    }
-}
-
-void Model::BuildInternalTensor(const atb::TensorDesc &tensorDesc, int nodeId, size_t tensorId)
-{
-    auto &node  = graph_.nodes.at(nodeId);
-    ATB_LOG(INFO) << modelName_ << " nodes[" << nodeId << "] new outtensors[" << tensorId << "]";
-
-    if (GetSingleton<Config>().IsLayerInternalTensorReuse()) {
-        torch::Tensor preTensor = FindPreInternalTensor(tensorDesc, nodeId, tensorId);
-        if (preTensor.numel() > 0) {
-            node.torchTensors.at(tensorId) = preTensor;
-            return;
+            ATB_LOG(FATAL) << modelName_ << "  nodes[" << nodeId << "] new outTensorDescs[" << i
+                << "]:" << TensorUtil::TensorDescToString(outTensorDescs.at(i))
+                << ", node.variantPack.outTensors.at[" << i
+                << "].desc:" << TensorUtil::TensorDescToString(node.variantPack.outTensors.at(i).desc);
         }
     }
 
-    Timer timer;
-    node.torchTensors.at(tensorId) = Utils::CreateAtTensorFromTensorDesc(tensorDesc);
-    GetSingleton<Statistic>().createTensorTime += timer.ElapsedMicroSecond();
+    auto it = graph_.maxNodeIdTensorMap.find(nodeId);
+    if (it != graph_.maxNodeIdTensorMap.end()) {
+        for (auto tensorIt : it->second) {
+            FreeInternalAtTensor(tensorIt->deviceData);
+        }
+    }
 }
 
 atb::Status Model::ExecuteNode(int nodeId)
@@ -425,31 +437,58 @@ void Model::ExecuteNodeView(int nodeId)
     }
 }
 
-torch::Tensor Model::FindPreInternalTensor(const atb::TensorDesc &tensorDesc, uint32_t nodeId, uint32_t tensorId) const
-{
-    torch::Tensor preSameTensor;
-    if (nodeId == 0) {
-        return preSameTensor;
-    }
-
-    for (int64_t preNodeId = nodeId - 1; preNodeId >= 0; preNodeId--) {
-        auto &preNode = graph_.nodes.at(preNodeId);
-        if (tensorId < preNode.torchTensors.size() && 
-            IsTensorDescEqual(tensorDesc, preNode.torchTensors.at(tensorId))) {
-                preSameTensor = preNode.torchTensors.at(tensorId);
-                ATB_LOG(INFO) << modelName_ << " find same tensor, node[ " << nodeId << "] preNodeId:" << preNodeId <<
-                ", tensorId:" << tensorId;
-                return preSameTensor;
-            }
-    }
-    ATB_LOG(INFO) << modelName_ << " not find same tensor, node[ " << nodeId << "] tensorId:" << tensorId;
-    return preSameTensor;
-}
-
-bool Model::IsTensorDescEqual(const atb::TensorDesc &tensorDesc, const torch::Tensor &atTensor ) const
+bool Model::IsTensorDescEqual(const atb::TensorDesc &tensorDesc, const torch::Tensor &atTensor) const
 {
     atb::Tensor atbTensor = Utils::AtTensor2Tensor(atTensor);
-    return atbTensor.desc.dtype == tensorDesc.dtype && atbTensor.desc.format == tensorDesc.format && 
+    return atbTensor.desc.dtype == tensorDesc.dtype && atbTensor.desc.format == tensorDesc.format &&
         IsTensorDimsEqual(atbTensor.desc.shape, tensorDesc.shape);
+}
+
+void Model::ClearInternalAtTensors()
+{
+    internalAtTensors_.clear();
+    for (auto &node : graph_.nodes) {
+        node.torchTensors.clear();
+        node.torchTensors.resize(node.outTensors.size());
+    }
+}
+
+torch::Tensor Model::MallocInternalAtTensor(size_t nodeId, size_t outTensorId, const atb::TensorDesc &tensorDesc)
+{
+    if (GetSingleton<Config>().IsLayerInternalTensorReuse()) {
+        for (auto &it : internalAtTensors_) {
+            if (it.second) { // Tensor被使用中，不能被分配其他Op
+                continue;
+            }
+
+            if (IsTensorDescEqual(tensorDesc, it.first)) {
+                it.second = true;
+                ATB_LOG(INFO) << modelName_ << " use old internal tensor";
+                return it.first;
+            }
+        }
+    }
+
+    ATB_LOG(INFO) << modelName_ << " create internal tensor, node[" << nodeId << "], outTensor[" << outTensorId << "]";
+    atb_speed::Timer timer;
+    torch::Tensor newAtTensor = Utils::CreateAtTensorFromTensorDesc(tensorDesc);
+    atb_speed::GetSingleton<atb_speed::Statistic>().createTensorTime += timer.ElapsedMicroSecond();
+    atb_speed::GetSingleton<atb_speed::Statistic>().mallocTorchTensorSize += atb::Utils::GetTensorSize(tensorDesc);
+    internalAtTensors_.push_back(std::make_pair(newAtTensor, true));
+    return newAtTensor;
+}
+
+void Model::FreeInternalAtTensor(void *tensorDeviceData)
+{
+    if (GetSingleton<Config>().IsLayerInternalTensorReuse()) {
+        for (auto &it : internalAtTensors_) {
+            atb::Tensor atbTensor = Utils::AtTensor2Tensor(it.first);
+            if (atbTensor.deviceData == tensorDeviceData) {
+                it.second = false; // Tensor被释放，可以被后来者使用
+                ATB_LOG(INFO) << modelName_ << " free internal tensor";
+                break;
+            }
+        }
+    }
 }
 } // namespace atb_speed

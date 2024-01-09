@@ -16,7 +16,7 @@
 #include "atb_speed/log/log_sink.h"
 
 namespace atb_speed {
-LogSink::LogSink(LogLevel level) : level_(level){}
+LogSink::LogSink(LogLevel level) : level_(level) {}
 
 void LogSink::Log(const LogEntity &logEntity)
 {
@@ -24,4 +24,4 @@ void LogSink::Log(const LogEntity &logEntity)
         LogImpl(logEntity);
     }
 }
-}
+} // namespace atb
