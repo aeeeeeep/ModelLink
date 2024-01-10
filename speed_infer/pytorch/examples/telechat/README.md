@@ -120,7 +120,7 @@
        该模型在昇腾适配使用的技术栈为anti_outlier + ptq
        
        ```
-       patch < 
+       patch -p0 /usr/local/Ascend/ascend-toolkit/latest/tools/modelslim/pytorch/llm_ptq/anti_outlier/dag_utils/model_structure_process.py < model_structure_process.patch
        cp modeling_telechat_torch_npu.py $TRANSFORMER_PACKAGE_PATH/models/telechat/modeling_telechat.py
        python3 quant_calib_anti_outlier.py --level="L5" --jsonl_path="xxx" --checkpoint_path="xxx"
        ```
