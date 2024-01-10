@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 #include "atb_speed/base/context_factory.h"
-
 #include <thread>
-
-#include "atb_speed/log.h"
-#include "atb_speed/utils/config.h"
-#include "atb_speed/utils/singleton.h"
 #include "pytorch/adapter/utils/utils.h"
+#include "atb_speed/log.h"
+#include "atb_speed/utils/singleton.h"
+#include "atb_speed/utils/config.h"
 
 namespace atb_speed {
 thread_local std::shared_ptr<atb::Context> localContext;
@@ -28,15 +26,15 @@ thread_local std::shared_ptr<atb::Context> localContext;
 std::shared_ptr<atb::Context> ContextFactory::GetAtbContext()
 {
     if (localContext) {
-        ATB_LOG(INFO) << "ContextFactory return localContext";
-        return localContext;
+	ATB_LOG(INFO) << "ContextFactory return localContext";
+	return localContext;
     }
     ATB_LOG(INFO) << "ContextFactory create AtbContext";
     uint64_t tilingBufferNumMask = 0x0000000000000070;
     uint64_t tilingBufferSizeMask = 0x0000000000000002;
     uint64_t flag = tilingBufferNumMask | tilingBufferSizeMask;
     if (atb_speed::GetSingleton<atb_speed::Config>().IsUseTilingCopyStream()) {
-        flag = flag | atb::MULTI_STREAM_MASK;
+	flag = flag | atb::MULTI_STREAM_MASK;
     }
     atb::Context *contextPtr = nullptr;
     atb::CreateContext(&contextPtr, flag);
@@ -51,7 +49,7 @@ void ContextFactory::FreeAtbContext()
     if (!localContext) {
         return;
     }
-
+    
     ATB_LOG(INFO) << "ContextFactory localContext use_count: " << localContext.use_count();
     if (localContext.use_count() != 1) {
         return;
