@@ -40,8 +40,8 @@ static bool IsTensorDimsEqual(const atb::Dims &left, const atb::Dims &other)
         return false;
     }
     
-    for (uint64_t i = 0; i < left.dimNum; ++i) {
-        if (left.dims[i] != other.dims[i]) {
+    for(uint64_t i = 0; i < left.dimNum; ++i){
+        if(left.dims[i] != other.dims[i]) {
             return false;
         }
     }
@@ -53,34 +53,34 @@ std::string Model::Graph::ToString() const
 {
     std::stringstream ss;
     for (size_t i = 0; i < weightTensors.size(); ++i) {
-        ss << "weightTensors[" << i << "]:" << &weightTensors.at(i) << " "
-            << TensorUtil::TensorToString(weightTensors.at(i)) << std::endl;
+        ss << "weightTensors[" << i << "]:" << &weightTensors.at(i) << " " 
+           << TensorUtil::TensorToString(weightTensors.at(i)) << std::endl;
     }
     for (size_t i = 0; i < inTensors.size(); ++i) {
-        ss << "inTensors[" << i << "]:" << &inTensors.at(i) << " " << TensorUtil::TensorToString(inTensors.at(i))
-            << std::endl;
+        ss << "inTensors[" << i << "]:" << &inTensors.at(i) << " " << TensorUtil::TensorToString(inTensors.at(i)) 
+           << std::endl;
     }
     for (size_t i = 0; i < outTensors.size(); ++i) {
-        ss << "outTensors[" << i << "]:" << &outTensors.at(i) << " " << TensorUtil::TensorToString(outTensors.at(i))
-            << std::endl;
+        ss << "outTensors[" << i << "]:" << &outTensors.at(i) << " " << TensorUtil::TensorToString(outTensors.at(i)) 
+           << std::endl;
     }
     for (size_t i = 0; i < internalTensors.size(); ++i) {
-        ss << "internalTensors[" << i << "]:" << &internalTensors.at(i) << " "
-            << TensorUtil::TensorToString(internalTensors.at(i)) << std::endl;
+        ss << "internalTensors[" << i << "]:" << &internalTensors.at(i) << " " 
+           << TensorUtil::TensorToString(internalTensors.at(i)) << std::endl;
     }
     ss << "nodes:" << nodes.size() << std::endl;
 
     for (size_t i = 0; i < nodes.size(); ++i) {
         auto &node = nodes.at(i);
-        ss << "node[" << i << "] opeation:" << node.operation.get() << ", operationName:" << node.operation->GetName()
-            << std::endl;
+        ss << "node[" << i << "] opeation:" << node.operation.get() << ", operationName:" << node.operation->GetName() 
+           << std::endl;
         for (auto tensorIt : node.inTensors) {
-            ss << "node[" << i << "] inTensor:" << tensorIt << " " << TensorUtil::TensorToString(*tensorIt)
-                << std::endl;
+            ss << "node[" << i << "] inTensor:" << tensorIt << " " << TensorUtil::TensorToString(*tensorIt) 
+               << std::endl;
         }
         for (auto tensorIt : node.outTensors) {
-            ss << "node[" << i << "] outTensor:" << tensorIt << " " << TensorUtil::TensorToString(*tensorIt)
-                << std::endl;
+            ss << "node[" << i << "] outTensor:" << tensorIt << " " << TensorUtil::TensorToString(*tensorIt) 
+               << std::endl;
         }
     }
     return ss.str();
@@ -144,7 +144,7 @@ void Model::Graph::InitTensorMaxNodeMap()
             }
         }
         tensorMaxNodeIdMap[&internalTensor] = maxNodeId;
-        ATB_LOG_IF(dependNodeCount == 0, ERROR)
+        ATB_LOG_IF(dependNodeCount == 0, ERROR) 
             << "runner graph internal tensor[" << i << "] depenedNodeCount is 0, graph wrong";
         maxNodeIdTensorMap[maxNodeId].insert(&internalTensor);
     }
@@ -166,8 +166,8 @@ Model::Model(const std::string &modelName, const std::string &param) : modelName
         taskProcessThread_ = std::move(thread);
     }
 
-    ATB_LOG(FATAL) << modelName_ << " new, isTaskQueueEnable:" << isTaskQueueEnable_
-        << ", isUsePlanExecuteAsync:" << isUsePlanExecuteAsync_ << ", currentDevId:" << currentDevId_;
+    ATB_LOG(FATAL) << modelName_ << " new, isTaskQueueEnable:" << isTaskQueueEnable_ 
+                   << ", isUsePlanExecuteAsync:" << isUsePlanExecuteAsync_ << ", currentDevId:" << currentDevId_;
 }
 
 Model::~Model() {}
@@ -190,32 +190,14 @@ void Model::SetWeight(const std::vector<atb::Tensor> &weightTensors)
     graph_.weightTensors = weightTensors;
 }
 
-void Model::SetKVCache(const std::vector<atb::Tensor> &kCacheTensors, const std::vector<atb::Tensor> &vCacheTensors)
-{
-    if (graph_.kCacheTensors.size() != kCacheTensors.size()) {
-        ATB_LOG(ERROR) << modelName_ << " kCacheTensors.size:" << kCacheTensors.size() << " != "
-                       << " graph.kCacheTensors.size:" << graph_.kCacheTensors.size();
-        return;
-    }
-
-    if (graph_.vCacheTensors.size() != vCacheTensors.size()) {
-        ATB_LOG(ERROR) << modelName_ << " vCacheTensors.size:" << vCacheTensors.size() << " != "
-                       << " graph.vCacheTensors.size:" << graph_.vCacheTensors.size();
-        return;
-    }
-
-    graph_.kCacheTensors = kCacheTensors;
-    graph_.vCacheTensors = vCacheTensors;
-}
-
 atb::Status Model::Execute(atb::Context *context, std::vector<atb::Tensor> &inTensors,
                            std::vector<atb::Tensor> &outTensors, const std::string &param)
 {
     if (graph_.inTensors.size() != inTensors.size() || graph_.outTensors.size() != outTensors.size()) {
-        ATB_LOG(ERROR) << modelName_ << " graph.inTensors.size:" << graph_.inTensors.size()
-            << ", inTensors.size:" << inTensors.size()
-            << ", graph.outTensors.size:" << graph_.outTensors.size()
-            << ", outTensors.size:" << outTensors.size();
+        ATB_LOG(ERROR) << modelName_ << " graph.inTensors.size:" << graph_.inTensors.size() 
+                       << ", inTensors.size:" << inTensors.size() 
+                       << ", graph.outTensors.size:" << graph_.outTensors.size() 
+                       << ", outTensors.size:" << outTensors.size();
         return atb::ERROR_INVALID_GRAPH;
     }
 
@@ -243,8 +225,8 @@ atb::Status Model::Execute(atb::Context *context, std::vector<atb::Tensor> &inTe
     WaitAsyncPlanExecuteFinish();
 
     GetSingleton<Statistic>().totalTime += timer_.ElapsedMicroSecond();
-    ATB_LOG(FATAL) << modelName_ << " executeCount:" << executeCount_ << ", Statistic:["
-        << GetSingleton<Statistic>().ToString() << "]";
+    ATB_LOG(FATAL) << modelName_ << " executeCount:" << executeCount_ << ", Statistic:[" 
+                   << GetSingleton<Statistic>().ToString() << "]";
     GetSingleton<Statistic>().Reset();
 
     executeCount_++;
@@ -265,8 +247,8 @@ void Model::BuildNodeVariantPack(int nodeId)
     for (size_t i = 0; i < node.inTensors.size(); ++i) {
         node.variantPack.inTensors.at(i) = *node.inTensors.at(i);
         inTensorDescs.at(i) = node.inTensors.at(i)->desc;
-        ATB_LOG(INFO) << modelName_ << " nodes[" << nodeId << "] inTensors[" << i
-            << "]:" << TensorUtil::TensorToString(node.variantPack.inTensors.at(i));
+        ATB_LOG(INFO) << modelName_ << " nodes[" << nodeId << "] inTensors[" << i 
+                      << "]:" << TensorUtil::TensorToString(node.variantPack.inTensors.at(i));
     }
 
     atb::SVector<atb::TensorDesc> outTensorDescs;
@@ -276,8 +258,8 @@ void Model::BuildNodeVariantPack(int nodeId)
     ATB_LOG_IF(st != 0, FATAL) << modelName_ << " nodes[" << nodeId << "] "
                                << " infer shape fail, error code: " << st;
     for (size_t i = 0; i < outTensorDescs.size(); ++i) {
-        ATB_LOG(INFO) << modelName_ << " nodes[" << nodeId << "] outTensorDescs[" << i
-            << "]:" << TensorUtil::TensorDescToString(outTensorDescs.at(i));
+        ATB_LOG(INFO) << modelName_ << " nodes[" << nodeId << "] outTensorDescs[" << i 
+                      << "]:" << TensorUtil::TensorDescToString(outTensorDescs.at(i));
     }
 
     for (size_t i = 0; i < node.outTensors.size(); ++i) {
@@ -288,10 +270,10 @@ void Model::BuildNodeVariantPack(int nodeId)
             *node.outTensors.at(i) = node.variantPack.outTensors.at(i);
         }
         if (!TensorUtil::TensorDescEqual(node.variantPack.outTensors.at(i).desc, outTensorDescs.at(i))) {
-            ATB_LOG(FATAL) << modelName_ << "  nodes[" << nodeId << "] new outTensorDescs[" << i
-                << "]:" << TensorUtil::TensorDescToString(outTensorDescs.at(i))
-                << ", node.variantPack.outTensors.at[" << i
-                << "].desc:" << TensorUtil::TensorDescToString(node.variantPack.outTensors.at(i).desc);
+            ATB_LOG(FATAL) << modelName_ << "  nodes[" << nodeId << "] new outTensorDescs[" << i 
+                           << "]:" << TensorUtil::TensorDescToString(outTensorDescs.at(i)) 
+                           << ", node.variantPack.outTensors.at[" << i 
+                           << "].desc:" << TensorUtil::TensorDescToString(node.variantPack.outTensors.at(i).desc);
         }
     }
 
@@ -360,6 +342,11 @@ atb::Status Model::ExecutePlanSync(int nodeId)
 {
     auto &node = graph_.nodes.at(nodeId);
     atb::VariantPack &variantPack = node.variantPack;
+
+    // if (GetSingleton<Config>().IsSaveTensor()) {
+    //     std::string dir = GetSaveTensorDir() + "/" + std::to_string(nodeId) + "_";
+    //     plan.SetRunnerSaveTensorDir(dir);
+    // }
 
     ATB_LOG(INFO) << modelName_ << "execute node[" << nodeId << "] start";
     Timer timer;
