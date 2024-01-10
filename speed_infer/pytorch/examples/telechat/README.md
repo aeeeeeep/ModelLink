@@ -18,8 +18,8 @@
   星辰语义大模型TeleChat是由中国电信人工智能科技有限公司研发训练的大语言模型，采用1.5万亿 Tokens中英文高质量语料进行训练。
      
 - 参考实现：
-  ```填写github链接
-  
+  ```
+  https://github.com/Tele-AI/Telechat
   ```
 
 # 推理环境准备<a name="ZH-CN_TOPIC_0000001126281702"></a>
@@ -60,9 +60,17 @@
 
    在当前文件夹下载权重，执行以下命令
 
-   ```bash
+   ```
+   # 查看服务器操作系统，根据操作系统选择git-lfs下载方式
+   uname -a
+   # 下载 git-lfs ubuntu版
+   sudo apt-get install git-lfs
+   # 下载 git-lfs centos版
+   sudo yum install git-lfs
+   # 初始化 git-lfs
+   git lfs install
    # 获取开源权重
-   wget https://huggingface.co/Tele-AI/Telechat-7B/
+   git lfs clone https://huggingface.co/Tele-AI/Telechat-7B/
    # 获取优化后的浮点权重
    wget 
    # 获取量化权重
@@ -72,7 +80,7 @@
 4. 启动容器
 
    修改telechat_docker_start.sh脚本中第16行冒号前路径为实际代码所在文件夹路径，冒号后修改为与冒号前一致
-   ```bash
+   ```
    bash telechat_docker_start.sh
    export LD_LIBRARY_PATH=/usr/local/python3.9.2/lib:${LD_LIBRARY_PATH}
    ```
