@@ -23,6 +23,7 @@ import stat
 import logging
 import torch
 
+from ascendspeed import megatron_adaptor
 from ckpt_utils import column_split
 from ckpt_utils import make_ascendspeed_model_dirs
 from ckpt_utils import pad_embed
@@ -171,7 +172,7 @@ def generate_ascendspeed_weights_again(config):
                 up_proj = row_split(
                     get_weight_from_name(f"model.layers.{ori_i}.mlp.up_proj.weight"), tp_size, tp_rank)
                 if args.merge_mlp:
-                    rank_model["language_model"]["encoder"][f"layers.{pp_i}.mlp.proj.weight"] = torch.cat(
+                    rank_model["language_model"]["encoder"][f"layers.{pp_i}.mlp.dense_h_to_4h.weight"] = torch.cat(
                         [gate_proj, up_proj], 0).contiguous().clone()
                 else:
                     rank_model["language_model"]["encoder"][f"layers.{pp_i}.mlp.gate_proj.weight"] = gate_proj
