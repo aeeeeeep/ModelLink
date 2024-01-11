@@ -29,12 +29,12 @@ if str.startswith(torch.cuda.get_device_name(), 'NVIDIA'):
     from apex.multi_tensor_apply import multi_tensor_applier
     import amp_C
 
-from modellink.global_vars import get_args
-from modellink.global_vars import get_adlr_autoresume
-from modellink.core import parallel_state
+from megatron.global_vars import get_args
+from megatron.global_vars import get_adlr_autoresume
+from megatron.core import parallel_state
 from modellink.model.module import param_is_not_shared
-from modellink.core.tensor_parallel.layers import param_is_not_tensor_parallel_duplicate
-from modellink import get_num_microbatches
+from megatron.core.tensor_parallel.layers import param_is_not_tensor_parallel_duplicate
+from megatron import get_num_microbatches
 from modellink.error_utils import check_type
 
 

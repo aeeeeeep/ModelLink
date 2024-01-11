@@ -22,19 +22,6 @@ try:
 except Exception as e:
     logging.warning("Warning: You did not install torch_npu")
 
-from .global_vars import get_args
-from .global_vars import get_current_global_batch_size
-from .global_vars import get_num_microbatches
-from .global_vars import update_num_microbatches
-from .global_vars import get_tokenizer
-from .global_vars import get_tensorboard_writer
-from .global_vars import get_adlr_autoresume
-from .global_vars import get_timers
-from .global_vars import get_retro_args
-from .utils import print_rank_0
-from .utils import print_rank_last
-from .utils import is_last_rank
-from .utils import is_rank_0
 from .tokenizer import apply_tokenizer_patch
 from .adaptor_arguments import apply_arguments_patch
 from .adaptor_model import apply_model_patch

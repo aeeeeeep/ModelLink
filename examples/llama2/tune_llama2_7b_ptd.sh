@@ -2,8 +2,8 @@
 
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
-source "/home/usr/cann/envs/ascend-toolkit/set_env.sh"
-
+source "./envs/ascend-toolkit/set_env.sh"
+#export ASCEND_RT_VISIBLE_DEVICES=2
 GPUS_PER_NODE=8
 MASTER_ADDR=localhost
 MASTER_PORT=6000
@@ -12,9 +12,9 @@ NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
 CKPT_SAVE_DIR="./models/lora_weight_save"
-DATA_PATH="./dataset_llama2/alpaca_text_document"
+DATA_PATH="./dataset_llama2/test/alpaca_text_document"
 TOKENIZER_MODEL="./llama-2-7b-hf/tokenizer.model"
-CKPT_LOAD_DIR="./llama-2-7b-hf/megatron"
+CKPT_LOAD_DIR="./llama-2-7b-hf/test"
 LORA_CHECKPOINT="./models/lora_weight"
 
 TP=8

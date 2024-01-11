@@ -19,16 +19,16 @@ import sys
 import setuptools
 
 if sys.version_info < (3,):
-    raise Exception("Python 2 is not supported by AscendSpeed.")
+    raise Exception("Python 2 is not supported by ModelLink.")
 
 __description__ = 'AscendSpeed for LLMs of Ascend'
 __version__ = '0.0.1'
 __author__ = 'Ascend'
-__long_description__ = 'AscendSpeed for LLMs of Ascend'
-__url__ = 'https://gitee.com/ascend/AscendSpeed'
-__download_url__ = 'https://gitee.com/ascend/AscendSpeed/release'
+__long_description__ = 'ModelLink for LLMs of Ascend'
+__url__ = 'https://gitee.com/ascend/ModelLink'
+__download_url__ = 'https://gitee.com/ascend/ModelLink/release'
 __keywords__ = 'Ascend, langauge, deep learning, NLP'
-__license__ = 'See https://gitee.com/ascend/AscendSpeed'
+__license__ = 'See https://gitee.com/ascend/ModelLink'
 __package_name__ = 'modellink'
 __contact_names__ = 'Ascend'
 

@@ -8,10 +8,10 @@ export CUDA_DEVICE_MAX_CONNECTIONS=1
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 # modify script model path and tokenizer path
-TOKENIZER_PATH=./llama2-7b-hf/  #tokenizer path
-CHECKPOINT=./llama2-7b-tp8pp1  #model path
+TOKENIZER_PATH=/home2/h00512047/llama-2-7b-hf/  #tokenizer path
+CHECKPOINT=/home2/h00512047/llama-2-7b-hf/megatron  #model path
 # configure task and data path
-DATA_PATH="./mmlu/data/test/"
+DATA_PATH="/home2/h00512047/mmlu/mini/"
 TASK="mmlu"
 
 # distributed config
@@ -34,6 +34,9 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation
        --hidden-size 4096  \
        --ffn-hidden-size 11008 \
        --num-attention-heads 32  \
+       --disable-bias-linear \
+       --swiglu \
+       --position-embedding-type rope \
        --load ${CHECKPOINT}  \
        --normalization RMSNorm \
        --tokenizer-type PretrainedFromHF  \
@@ -41,14 +44,10 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation
        --tokenizer-not-use-fast \
        --fp16  \
        --micro-batch-size 1  \
-       --use-fused-rmsnorm \
-       --use-rotary-position-embeddings \
        --exit-on-missing-checkpoint \
-       --use-checkpoint-args \
        --no-load-rng \
        --no-load-optim \
        --untie-embeddings-and-output-weights \
-       --no-position-embedding \
        --no-masked-softmax-fusion \
        --make-vocab-size-divisible-by 1 \
        --seed 42 | tee logs/eval_mmlu.log

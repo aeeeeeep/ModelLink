@@ -25,7 +25,7 @@ import torch
 import numpy as np
 from datasets import load_dataset
 
-from modellink.data import indexed_dataset
+from megatron.core.datasets import indexed_dataset
 from modellink.data.prompter import Prompter, AlpacaTemplate
 
 logging.basicConfig(level=logging.INFO)
@@ -79,9 +79,9 @@ class BaseDatasetHandler(object):
             output_bin_files[key] = f"{self.args.output_prefix}_{key}_{level}.bin"
             output_idx_files[key] = f"{self.args.output_prefix}_{key}_{level}.idx"
             # vocab_size=None : use int32 dtype for -100 will be used in labels
-            builders[key] = indexed_dataset.make_builder(output_bin_files[key],
-                                                         impl=self.args.dataset_impl,
-                                                         vocab_size=None)
+            dtype_ = indexed_dataset.DType.optimal_dtype(self.tokenizer.vocab_size)
+            builders[key] = indexed_dataset.MMapIndexedDatasetBuilder(output_bin_files[key],
+                                                                      dtype=dtype_)
 
         startup_end = time.time()
         proc_start = time.time()
