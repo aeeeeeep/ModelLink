@@ -21,8 +21,10 @@ def extra_args_provider_decorator(extra_args_provider):
 def parse_args_decorator(parse_args):
     @wraps(parse_args)
     def wrapper(extra_args_provider=None, ignore_unknown_args=False):
-        decorated_provider = extra_args_provider_decorator(extra_args_provider)
-        return parse_args(decorated_provider, ignore_unknown_args)
+        args =  parse_args(decorated_provider, ignore_unknown_args)
+        if args.use_alibi_position_embedding:
+             args.position_embedding_type = "alibi"
+        return args
 
     return wrapper
 
@@ -30,6 +32,7 @@ def parse_args_decorator(parse_args):
 def process_args(parser):
     parser.conflict_handler = 'resolve'
     parser = _add_lora_args(parser)
+    parser = _add_alibi_args(parser)
     return parser
 
 
@@ -51,5 +54,21 @@ def _add_lora_args(parser):
                        help='Lora register forward hook.')
     group.add_argument('--lora-adapter-name', type=str, default='default',
                        help='Lora adapter name.')
+
+    return parser
+
+
+def _add_alibi_args(parser):
+    group = parser.add_argument_group(title='alibi')
+    group.add_argument('--use-alibi-position-embedding', action='store_true',
+                       help='use alibi position embedding ')
+    group.add_argument('--square-alibi-mask',
+                       action='store_true',
+                       default=False,
+                       help='attention mask of alibi is squared')
+    group.add_argument('--fill-neg-inf',
+                       action='store_true',
+                       default=False,
+                       help='fill alibi with negative inf')
 
     return parser

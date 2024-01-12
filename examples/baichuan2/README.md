@@ -1,0 +1,403 @@
+# BaiChuan2
+<p align="left">
+        <b>简体中文</b> |
+        <b><a href="https://gitee.com/ascend/AscendSpeed/blob/master/examples/baichuan2/README_en.md">English</a> </b> 
+    </p>
+</p>
+
+
+#  目录
+- [Baichuan2-7B](#Baichuan2-7B)
+  - [训练](#训练)
+  - [脚本](#脚本)
+  - [性能](#性能)
+    - [吞吐](#吞吐)
+    - [精度](#精度)
+- [Baichuan2-13B](#baichuan2-13b)
+  - [训练](#训练)
+  - [脚本](#脚本)
+  - [性能](#性能)
+    - [吞吐](#吞吐)
+    - [精度](#精度)
+
+# Baichuan2-7B
+
+## 训练
+Baichuan2-7B 训练的硬件配置如下：
+
+|  硬件 |       配置        |
+|:---:|:---------------:|
+| NPU | 8 x Ascend NPUs |
+
+### 脚本
+
+1. 拷贝仓库到你的个人服务器：
+```shell
+git clone https://gitee.com/ascend/AscendSpeed.git 
+cd AscendSpeed 
+mkdir logs
+mkdir ckpt
+```
+
+2. 搭建环境
+
+```bash
+# python3.10
+conda create -n test python=3.8
+conda activate test
+
+# 安装 torch 和 torch_npu 
+pip install torch-2.1.0-cp38-cp38m-linux_aarch64.whl
+pip install torch_npu-2.1.0.XXX-cp38-cp38m-linux_XXX.whl
+
+# 安装 megatron-core
+pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
+
+# 安装 deepspeed 和 deepspeed_npu
+pip install deepspeed==0.9.2
+git clone https://gitee.com/ascend/DeepSpeed.git -b v0.9.2 deepspeed_npu
+cd deepspeed_npu
+pip3 install -e ./
+cd ..
+
+
+# 安装其余依赖库
+pip install -r requirements.txt 
+```
+
+3. （可选）准备预训练权重
+
+从 [huggingface](https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/tree/main) 下载预训练权重：
+
+```shell
+mkdir baichuan2-7B-hf
+cd ./baichuan2-7B-hf
+wget https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/resolve/main/config.json
+wget https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/resolve/main/configuration_baichuan.py
+wget https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/resolve/main/generation_utils.py
+wget https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/resolve/main/modeling_baichuan.py
+wget https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/resolve/main/pytorch_model-00001-of-00002.bin
+wget https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/resolve/main/pytorch_model-00002-of-00002.bin
+wget https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/resolve/main/pytorch_model.bin.index.json
+wget https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/resolve/main/quantizer.py
+wget https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/resolve/main/special_tokens_map.json
+wget https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/resolve/main/tokenization_baichuan.py
+wget https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/resolve/main/tokenizer.model
+wget https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/resolve/main/tokenizer_config.json
+cd ..
+```
+
+接着将hf格式的权重转化为AscendSpeed可以加载的形式：
+```shell
+mkdir baichuan2-7B-mt
+
+SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
+# for ptd
+python $SCRIPT_PATH \
+    --input-model-dir ./baichuan2-7B-hf \
+    --output-model-dir ./baichuan2-7B-mt \
+    --tensor-model-parallel-size 8 \
+    --pipeline-model-parallel-size 1 \
+    --type 7B \
+    --merge-mlp \
+    --pse  
+```
+
+
+4. 准备数据集
+
+从 [这里](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 下载 Baichuan2-7B-Base 的数据集：
+
+```shell
+# 下载数据集
+mkdir dataset_baichuan2-7B
+cd ./dataset_baichuan2-7B
+wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+cd ..
+
+# 准备数据集                              
+python ./tools/preprocess_data.py \
+--input ./dataset_baichuan2-7B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+--tokenizer-name-or-path ./baichuan2-7B-hf \
+--output-prefix ./dataset_baichuan2-7B/alpaca \
+--workers 4 \
+--log-interval 1000 \
+--tokenizer-type PretrainedFromHF
+```
+
+
+5. 配置 Baichuan2-7B 预训练脚本: examples/baichuan/pretrain_baichuan2_ptd_7B.sh 
+
+```shell
+# 修改 ascend-toolkit 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+# 修改数据集，权重，词表等路径
+CKPT_SAVE_DIR="./ckpt"
+DATA_PATH="./dataset_baichuan2-7B/alpaca_text_document"
+TOKENIZER_MODEL="./baichuan2-7B-hf/tokenizer.model"
+CKPT_LOAD_DIR="./baichuan2-7B-mt"
+```
+
+6. 启动 Baichuan2-7B 预训练脚本: examples/baichuan2/pretrain_baichuan2_ptd_7B.sh 
+
+```shell
+bash examples/baichuan2/pretrain_baichuan2_ptd_7B.sh 
+```
+
+### 性能
+
+#### 吞吐
+
+Baichuan2-7B 使用 **昇腾芯片** 和 **参考芯片** 的吞吐对比:
+
+| 设备 | 模型           | 迭代 | 样本吞吐 (samples/s) | tokens吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
+|----|--------------|----|------------------|-----------------------|-----------------|------------------|
+| NPUs | Baichuan2-7B | 1024 | 5.125            | 2607                  | 24.97           | 124              |
+| 参考 | Baichuan2-7B | 1024 | --               | 3969                  | --              | --               |
+
+
+
+#### 精度
+
+NPU vs 参考 loss.
+
+![NPU-LOSS](../../sources/images/baichuan2/baichuan2-7B-loss-compare.png)
+
+NPU vs 参考 loss 相对误差.
+
+![NPU-Relative-Error](../../sources/images/baichuan2/baichuan2-7B-loss-relative-error.png)
+
+
+
+# Baichuan2-13B
+
+## 训练
+Baichuan2-13B 训练的硬件配置如下:
+
+|  硬件 |        配置        |
+|:---:|:----------------:|
+| NPU | 16 x Ascend NPUs |
+
+### 脚本
+1. 将仓库拷贝到你的个人服务器:
+```shell
+git clone https://gitee.com/ascend/AscendSpeed.git 
+cd AscendSpeed 
+mkdir logs
+mkdir ckpt
+```
+2. 搭建环境
+
+```bash
+# python3.8
+conda create -n test python=3.8
+conda activate test
+
+# 安装 torch 和 torch_npu
+pip install torch-2.1.0-cp38-cp38m-linux_aarch64.whl
+pip install torch_npu-2.1.0.XXX-cp38-cp38m-linux_aarch64.whl
+pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+
+# 安装 megatron
+pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
+
+# 安装 deepspeed 和 deepspeed_npu
+pip install deepspeed==0.9.2
+git clone https://gitee.com/ascend/DeepSpeed.git -b v0.9.2 deepspeed_npu
+cd deepspeed_npu
+pip3 install -e ./
+cd ..
+
+# 安装其余依赖库
+# 请注意trasformers==4.29.2
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
+3. （可选的）准备预训练权重
+
+从 [huggingface](https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/tree/main) 下载预训练权重
+```shell
+mkdir Baichuan2-13B-Base
+cd ./Baichuan2-13B-Base
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/config.json
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/configuration_baichuan.py
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/generation_config.json
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/modeling_baichuan.py
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/pytorch_model-00001-of-00003.bin
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/pytorch_model-00002-of-00003.bin
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/pytorch_model-00003-of-00003.bin
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/pytorch_model.bin.index.json
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/quantizer.py
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/special_tokens_map.json
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/tokenization_baichuan.py
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/tokenizer_config.json
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/blob/main/tokenizer.model
+cd ..
+```
+
+将 Baichuan2-13B 模型权重从 huggingface 格式转换为 AscendSpeed 格式
+```shell
+mkdir baichuan2-13b-merge
+
+SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
+python $SCRIPT_PATH \
+    --input-model-dir ./Baichuan2-13B-Base \
+    --output-model-dir ./baichuan2-13b-merge \
+    --tensor-model-parallel-size 8 \
+    --pipeline-model-parallel-size 1 \
+    --make-vocab-size-divisible-by 8 \
+    --merge-mlp \
+    --type 13B \
+    --pse     
+```
+
+4. 准备数据集
+
+下载 Baichuan2-13B [数据集](https://huggingface.co/datasets/fnlp/moss-003-sft-data) 
+
+```shell
+mkdir processed_data_of_moss
+cd ./processed_data_of_moss
+wget https://huggingface.co/datasets/fnlp/moss-003-sft-data/blob/main/moss-003-sft-no-tools.jsonl.zip
+unzip moss-003-sft-no-tools.jsonl.zip
+cd ..
+
+python ./tools/preprocess_data.py \
+    --input ./processed_data_of_moss/moss-003-sft-no-tools.jsonl \
+    --tokenizer-name-or-path ./Baichuan2-13B-Base \
+    --output-prefix ./processed_data_of_moss/processed_data \
+    --workers 4 \
+    --log-interval 1000 \
+    --tokenizer-type PretrainedFromHF \
+    --handler-name MOSSMultiTurnHandler
+```
+
+
+5. 配置 Baichuan2-13B 训练脚本: /examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
+
+```shell
+# 修改 ascend-toolkit 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+# 修改词表，数据集, 权重等路径等路径
+TOKENIZER_PATH=./Baichuan2-13B-Base 
+DATA_PATH=./processed_data_of_moss/processed_data
+LOAD_PATH=./baichuan2-13b-merge
+
+# 修正双机运行配置
+# MASTER_ADDR=xx.xx.x.xxx配置为主服务器ip
+# NODE_RANK主服务器脚本里设置为0，另一台服务器脚本里设置为1
+```
+
+如果需要开启FA，请遵循以下配置
+```shell
+# 修改 ascend-toolkit 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+# 修改词表，数据集, 权重等路径等路径
+TOKENIZER_PATH=./Baichuan2-13B-Base 
+DATA_PATH=./processed_data_of_moss/processed_data_packed_input_ids_document
+LOAD_PATH=./baichuan2-13b-merge
+
+# 修正双机运行配置
+# MASTER_ADDR=xx.xx.x.xxx配置为主服务器ip
+# NODE_RANK主服务器脚本里设置为0，另一台服务器脚本里设置为1
+# 设置MICRO_BATCH
+MICRO_BATCH = 2
+
+# 增加FA
+--use-flash-attn
+# 删除参数 --fill-neg-inf
+# 删除微调数据集参数 --is-instruction-dataset
+# 删除参数 --padding-attention-mask
+# 增加选择性重计算参数
+--auto-recompute-device-size 57344
+```
+
+6. 启动 Baichuan2-13B 训练脚本: /examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
+
+```bash
+# 请在双机上分别运行该命令，双机会自动同步通信，开始进程运行
+bash examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
+```
+
+### 性能
+
+#### 吞吐
+
+不开启FA情况下，Baichuan2-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
+
+|  设备  |            模型             | 迭代数  | 样本吞吐 (samples/p/s) | token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
+|:----:|:-------------------------:|:----:|:------------------:|:--------------------:|:---------------:|:----------------:|
+| NPUs | Baichuan2-13B | 1000 |       3.312        |         852          |      76.89      |      75.40       |
+|  参考  |               |      |                    |         872         |                 |                  |
+
+
+
+#### 精度
+
+NPU vs 参考 loss.
+
+![NPU-LOSS](../../sources/images/baichuan2/13B-loss-compare.png)
+
+NPU vs 参考 loss 相对误差.
+
+![NPU-Relative-Error](../../sources/images/baichuan2/baichuan2-13B-loss-relative-error.png)
+
+### 推理
+我们支持使用 Baichuan2-13B 进行文本生成的推理。
+推理与预训练不同，比如我们需要加载预训练权重和输出样本的长度：
+
+配置Baichuan2-13B推理脚本`examples/baichuan2/generate_baichuan2_13B_tp8_pp1.sh`。
+
+```shell
+# 配置模型权重路径和分词器路径
+CHECKPOINT=<checkpoint-path>
+VOCAB_FILE=<vocabfile-path>
+```
+
+Baichuan2-13B:
+```shell
+bash examples/baichuan2/generate_baichuan2_13B_tp8_pp1.sh
+```
+
+部分推理样本如下：
+![13B-inference](../../sources/images/baichuan2/13B-inference.png)
+
+### 评估
+我们使用boolq基准来评估我们的模型。基准[下载](https://huggingface.co/datasets/boolq).
+
+```shell
+# 配置原始权重与词表的路径
+CHECKPOINT=<origin-ckpt-path>
+VOCAB_FILE=<tokenizer-path>
+# 配置任务以及数据路径
+DATA_PATH="./boolq/test/"
+TASK="boolq"
+```
+
+```shell
+bash ./tasks/evaluation/eval_baichuan2_13B_tp8_pp1.sh
+```
+
+<table>
+  <thead>
+    <tr>
+      <th>任务</th>
+      <th>验证集</th>
+      <th>模型</th>
+      <th>昇腾值</th>
+      <th>社区值</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="https://huggingface.co/datasets/boolq">Boolq</a></td>
+      <td>Test</td>
+      <th>Baichuan2 13B</th>
+      <td>0.790</td>
+      <td><a href="https://opencompass.org.cn/dataset-detail/BoolQ">0.670</a></td>
+    </tr>
+  </tbody>
+</table>
