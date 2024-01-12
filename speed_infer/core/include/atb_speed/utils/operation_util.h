@@ -13,17 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef ATB_SPEED_UTILS_OPERATION_H
+#define ATB_SPEED_UTILS_OPERATION_H
+#include <atb/atb_infer.h>
 
-#ifndef ATB_SPEED_CONTEXT_FACTORY_H
-#define ATB_SPEED_CONTEXT_FACTORY_H
-#include <memory>
-#include <atb/context.h>
-
-namespace atb_speed {
-class ContextFactory {
-public:
-    static std::shared_ptr<atb::Context> GetAtbContext(void *stream);
-    static void FreeAtbContext();
-};
-}
+#define CREATE_OPERATION(param, operation) \
+    do { \
+        atb::status atbStatus = atb::CreateOperation(param, operation);\
+        if (atbStatus != atb::NO_ERROR) { \
+            return atbStatus; \
+        } \
+    } while (0)
 #endif

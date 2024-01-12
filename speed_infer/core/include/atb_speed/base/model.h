@@ -26,13 +26,20 @@
 #include <queue>
 #include <string>
 #include <thread>
-#include <torch/torch.h>
 #include <vector>
+#include <map>
+#include <atomic>
+#include <set>
+
 
 namespace atb_speed {
 class Model {
 public:
     using ReshapeFunc = std::function<void(const atb::Dims &oldDims, atb::Dims &newDims)>;
+    using GetWorkspaceFunc = std::function<void*(unit64_t bufferSize)>;
+    using CreateTensorFromTensorDescFunc = std::funcion<atb::Tensor(const atb::TensorSesc &tensorDesc)>;
+    using Task = std::function<int()>;
+    using RunTaskFunc = std::funcion<void(const std::string &taskName, Task Task)>;
     enum TensorType {
         INTERMEDIATE_TENSOR = 0,
         NOT_INTERMEDIATE_TENSOR,
@@ -43,7 +50,7 @@ public:
         std::vector<atb::Tensor *> inTensors;
         std::vector<atb::Tensor *> outTensors;
         atb::VariantPack variantPack;
-        std::vector<torch::Tensor> torchTensors;
+        // std::vector<torch::Tensor> torchTensors;
         atb::SVector<ReshapeFunc> inTensorReshapeFuncs;
         atb::SVector<TensorType> inTensorTypes;
         atb::SVector<TensorType> outTensorTypes;
@@ -60,7 +67,8 @@ public:
         std::vector<atb::Tensor> internalTensors;
         std::vector<Node> nodes;
         std::map<uint64_t, std::set<atb::Tensor *>> maxNodeIdTensorMap;
-        void Init();
+        int64_t Init(GetWorkspaceFunc getWorkspaceFunc, CreateTensorFromTensorDescFunc createTensorFromTensorDescFunc,
+                RunTaskFunc runTaskFunc = nullptr);
         std::string ToString() const;
 
     private:
@@ -78,18 +86,18 @@ public:
     virtual atb::Status InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
                                    std::vector<atb::TensorDesc> &outTensorDescs) = 0;
 
-    void SetWeight(const std::vector<atb::Tensor> &weightTensors);
-    void SetKVCache(const std::vector<atb::Tensor> &kCacheTensors, const std::vector<atb::Tensor> &vCacheTensors);
+    int64_t SetWeight(const std::vector<atb::Tensor> &weightTensors);
+    int64_t SetKVCache(const std::vector<atb::Tensor> &kCacheTensors, const std::vector<atb::Tensor> &vCacheTensors);
     atb::Status Execute(atb::Context *context, std::vector<atb::Tensor> &inTensors, 
         std::vector<atb::Tensor> &outTensors,const std::string &param);
 
 protected:
-    virtual void BuildGraph() = 0;
+    virtual int64_t BuildGraph() = 0;
     virtual atb::Status ParseParam(const std::string &param);
     virtual atb::Status BindParamHostTensor(uint32_t nodeId);
 
 protected:
-    bool IsTensorDescEqual(const atb::TensorDesc &tensorDesc, const torch::Tensor &atTensor) const;
+    bool IsTensorDescEqual(const atb::TensorDesc &tensorDesc, const atb::Tensor &atTensor) const;
     void ExecuteNodeView(int nodeId);
     void BuildNodeVariantPack(int nodeId);
     atb::Status ExecuteNode(int nodeId);
@@ -100,9 +108,9 @@ protected:
     int PopTask();
     void WaitAsyncPlanExecuteFinish();
     std::string GetSaveTensorDir();
-    void ClearInternalAtTensors();
-    torch::Tensor MallocInternalAtTensor(size_t nodeId, size_t outTensorId, const atb::TensorDesc &tensorDesc);
-    void FreeInternalAtTensor(void *tensorDeviceData);
+    void ClearInternalTensors();
+    atb::Tensor MallocInternalTensor(size_t nodeId, size_t outTensorId, const atb::TensorDesc &tensorDesc);
+    void FreeInternalTensor(void *tensorDeviceData);
 
 protected:
     std::string modelName_;
@@ -114,14 +122,13 @@ protected:
     Timer timer_;
 
     bool isUsePlanExecuteAsync_ = false;
-    bool isTaskQueueEnable_ = false;
     std::queue<int> taskQueue_;
     std::mutex mutex_;
     std::condition_variable cond_;
     std::thread taskProcessThread_;
     std::atomic_bool allTaskFinish_;
     int32_t currentDevId_ = 0;
-    std::vector<std::pair<torch::Tensor, bool>> internalAtTensors_;
+    std::vector<std::pair<atb::Tensor, bool>> internalTensors_;
 };
 } // namespace atb_speed
 #endif
