@@ -18,7 +18,10 @@
 
 #include <acl/acl.h>
 #include <atb/utils.h>
-
+#include <torch_npu/csrc/framework/OpCommand.h>
+#include <torch/torch.h>
+#include "pytorch/adapter/utils/utils.h"
+#include "pytorch/adapter/workspace/workspace.h"
 #include "atb_speed/base/context_factory.h"
 #include "atb_speed/log.h"
 #include "atb_speed/utils/config.h"
@@ -26,8 +29,6 @@
 #include "atb_speed/utils/statistic.h"
 #include "atb_speed/utils/tensor_util.h"
 #include "atb_speed/utils/timer.h"
-
-#include "pytorch/adapter/utils/utils.h"
 
 #include "llama/7b/model/decoder_without_fusion_model.h"
 #include "llama/7b/model/encoder_without_fusion_model.h"
@@ -37,6 +38,34 @@
 #include "llama/7b/model/quant_flashattention_model.h"
 #include "llama_pa/model/pa_model.h"
 #include "telechat/model/model.h"
+
+void* ModelTorch::GetWorkSpace(uint64_t bufferSize)
+{
+    void *workspace = nullptr;
+    if (bufferSize > 0) {
+        workspace = atb::GetSingleton<atb_speed::workspace>().GetWorkSpaceBuffer(bufferSize);
+    }
+    return workspace;
+}
+
+atb::Tensor ModelTorchInternelTensorFromDesc(const atb::TensorDesc &tensorDesc)
+{
+    torch::Tensor newAtTensor = Utils::CreateAtTensorFromTensorDesc(tensorDesc);
+    atInternalTensors_.push_back(newAtTensor);
+    return Utils::AtTensor2Tensor(newAtTensor);
+}
+
+void ModelTorch::RunTask(std::string taskName, std::function<int()> task)
+{
+#ifdef TORCH_SETCUSTOMHANDLER
+    at_npu::native::OpCommand cmd;
+    cmd.Name(taskName);
+    cmd.SetCustomHandler(task);
+    cmd.Run();
+#else
+    ATB_LOG(FATAL) << modelName_ << "torch_npu is low, can't support SetCustomHander";
+#endif
+}
 
 uint64_t GetNewModelId()
 {
@@ -48,7 +77,7 @@ uint64_t GetNewModelId()
 ModelTorch::ModelTorch(std::string modelName) : modelName_(modelName)
 {
     modelId_ = GetNewModelId();
-    context_ = atb_speed::ContextFactory::GetAtbContext();
+    context_ = atb_speed::ContextFactory::GetAtbContext(Utils::GetCurrentStream());
     ATB_LOG(INFO) << "ModelTorch new modelName:" << modelName_ << ", modelId:" << modelId_;
 }
 
@@ -56,9 +85,9 @@ ModelTorch::~ModelTorch()
 {
     context_.reset();
     atb_speed::ContextFactory::FreeAtbContext();
-}
+};
 
-void ModelTorch::SetParam(std::string param)
+int64_t ModelTorch::SetParam(std::string param)
 {
     ATB_LOG(INFO) << "ModelTorch set param start, modelName:" << modelName_ << ", param:" << param;
     if (modelName_ == "llama_7b_decoder_without_fusion_model") {
@@ -81,15 +110,27 @@ void ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::telechat::QuantFAModel>(param);
     } else {
         ATB_LOG(FATAL) << "not support modelName:" << modelName_;
-        return;
+        return atb::ERROR_INVALID_PARAM;
     }
 
-    model_->Init();
-
+    const char *taskQueueEnv = std::getenv("TASK_QUEUE_ENABLE");   
+    const char *blockingEnv = std::getenv("ASCEND_LAUNCH_BLOCKING");
+    bool isTaskQueueEnable = !((taskQueueEnv != nullptr && std::string(taskQueueEnv) == "0") ||
+                                (blockingEnv != nullptr && std::string(blockingEnv) == "0"));
+    auto GetWorkSpaceFunc = std::bind(&ModelTorch::GetWorkSpace, this, std::placeholders::_1);
+    auto createInternelTensorFromDescFunc = std::bind(&modelTorch::CreateInternalTensorFromDesc,
+        this, std::placeholders::_2);
+    int64_t atbStatus = 0;
+    if (isTaskQueueEnable) {
+        atbStatus = model_->Init(GetWorkSpaceFunc, createInternelTensorFromDescFunc, RunTaskFunc);
+    } else {
+        atbStatus = model_->Init(GetWorkSpaceFunc, createInternelTensorFromDescFunc, nullptr);
+    }
     ATB_LOG(INFO) << "ModelTorch set param end";
+    return atbStatus;
 }
 
-void ModelTorch::SetWeight(std::vector<torch::Tensor> atWeightTensors)
+int64_t ModelTorch::SetWeight(std::vector<torch::Tensor> atWeightTensors)
 {
     ATB_LOG(INFO) << "ModelTorch set weight:" << atWeightTensors.size();
     for (size_t i = 0; i < atWeightTensors.size(); ++i) {
@@ -101,12 +142,13 @@ void ModelTorch::SetWeight(std::vector<torch::Tensor> atWeightTensors)
     }
     std::vector<atb::Tensor> weigthTensors;
     AtTensor2Tensor(atWeightTensors, weigthTensors);
-    model_->SetWeight(weigthTensors);
+    return model_->SetWeight(weigthTensors);
 }
 
-void ModelTorch::SetKVCache(std::vector<torch::Tensor> atKCacheTensors, std::vector<torch::Tensor> atVCacheTensors)
+int64_t ModelTorch::SetKVCache(std::vector<torch::Tensor> atKCacheTensors, std::vector<torch::Tensor> atVCacheTensors)
 {
-    ATB_LOG(INFO) << "ModelTorch set k cache tensors:" << atKCacheTensors.size();
+    ATB_LOG(INFO) << "ModelTorch set k cache tensors:" << atKCacheTensors.size() 
+                << ", v cache tensors:" << atVCacheTensors.size();
     for (size_t i = 0; i < atKCacheTensors.size(); ++i) {
         const torch::Tensor &atkTensor = atKCacheTensors.at(i);
         ATB_LOG(INFO) << "ModelTorch atKCacheTensors[" << i << "]"
@@ -137,11 +179,13 @@ void ModelTorch::SetKVCache(std::vector<torch::Tensor> atKCacheTensors, std::vec
             }
         }
     }
-    model_->SetKVCache(kCacheTensors, vCacheTensors);
+    int64_t atbStatus = model_->SetKVCache(kCacheTensors, vCacheTensors);
+    return atbStatus;
 }
 
 std::vector<torch::Tensor> ModelTorch::Execute(std::vector<torch::Tensor> atInTensors, std::string param)
 {
+    atInternelTensors_.clear();
     for (size_t i = 0; i < atInTensors.size(); ++i) {
         const torch::Tensor &atTensor = atInTensors.at(i);
         ATB_LOG(INFO) << "ModelTorch atInTensors[" << i << "]"
@@ -188,12 +232,15 @@ std::vector<torch::Tensor> ModelTorch::Execute(std::vector<torch::Tensor> atInTe
         }
     }
 
-    ExecuteOutImpl(inTensors, outTensors, param);
-
+    int64_t atbStatus = ExecuteOutImpl(inTensors, outTensors, param);
+    if (atbStatus != atb::NO_ERROR) {
+        std::vector<torch::Tensor> atNullOutTensors(0);
+        return atNullOutTensors
+    }
     return atOutTensors;
 }
 
-void ModelTorch::ExecuteOut(std::vector<torch::Tensor> atInTensors, std::vector<torch::Tensor> atOutTensors,
+int64_t ModelTorch::ExecuteOut(std::vector<torch::Tensor> atInTensors, std::vector<torch::Tensor> atOutTensors,
                             std::string param)
 {
     std::vector<atb::Tensor> inTensors;
@@ -202,23 +249,26 @@ void ModelTorch::ExecuteOut(std::vector<torch::Tensor> atInTensors, std::vector<
     std::vector<atb::Tensor> outTensors;
     AtTensor2Tensor(atOutTensors, outTensors);
 
-    ExecuteOutImpl(inTensors, outTensors, param);
+    int64_t atbStatus = ExecuteOutImpl(inTensors, outTensors, param);
+    return atbStatus;
 }
 
-void ModelTorch::ExecuteOutImpl(std::vector<atb::Tensor> &inTensors, std::vector<atb::Tensor> &outTensors,
+int64_t ModelTorch::ExecuteOutImpl(std::vector<atb::Tensor> &inTensors, std::vector<atb::Tensor> &outTensors,
                                 const std::string &param)
 {
     model_->Execute(context_.get(), inTensors, outTensors, param);
-    executeCount_++;
+    int64_t atbStatus = executeCount_++;
+    return atbStatus;
 }
 
-void ModelTorch::AtTensor2Tensor(std::vector<torch::Tensor> &atTensors, std::vector<atb::Tensor> &opsTensors)
+int64_t ModelTorch::AtTensor2Tensor(std::vector<torch::Tensor> &atTensors, std::vector<atb::Tensor> &opsTensors)
 {
     for (auto &atTensor : atTensors) {
         Utils::ContiguousAtTensor(atTensor);
         atb::Tensor tensor = Utils::AtTensor2Tensor(atTensor);
         opsTensors.push_back(tensor);
     }
+    return atb::NO_ERROR;
 }
 
 std::string ModelTorch::GetSaveTensorDir()

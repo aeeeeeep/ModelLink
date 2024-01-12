@@ -29,25 +29,28 @@ class ModelTorch : public torch::CustomClassHolder {
 public:
     ModelTorch(std::string modelName);
     ~ModelTorch();
-    void SetParam(std::string param);
-    void SetWeight(std::vector<torch::Tensor> atWeightTensors);
-    void SetKVCache(std::vector<torch::Tensor> atKCacheTensors, std::vector<torch::Tensor> atVCacheTensors);
+    int64_t SetParam(std::string param);
+    int64_t SetWeight(std::vector<torch::Tensor> atWeightTensors);
+    int64_t SetKVCache(std::vector<torch::Tensor> atKCacheTensors, std::vector<torch::Tensor> atVCacheTensors);
     std::vector<torch::Tensor> Execute(std::vector<torch::Tensor> atInTensors, std::string param);
-    void ExecuteOut(std::vector<torch::Tensor> atInTensors, std::vector<torch::Tensor> atOutTensors, std::string param);
+    int64_t ExecuteOut(std::vector<torch::Tensor> atInTensors, std::vector<torch::Tensor> atOutTensors, std::string param);
     c10::intrusive_ptr<ModelTorch> clone() const { return c10::make_intrusive<ModelTorch>(modelName_); }
 
 private:
-    void AtTensor2Tensor(std::vector<torch::Tensor> &atTensors, std::vector<atb::Tensor> &opsTensors);
-    void ExecuteOutImpl(std::vector<atb::Tensor> &inTensors, std::vector<atb::Tensor> &outTensors,
+    int64_t AtTensor2Tensor(std::vector<torch::Tensor> &atTensors, std::vector<atb::Tensor> &opsTensors);
+    int64_t ExecuteOutImpl(std::vector<atb::Tensor> &inTensors, std::vector<atb::Tensor> &outTensors,
                         const std::string &param);
     std::string GetSaveTensorDir();
-
+    void* ModelTorch::GetWorkSpace(uint64_t bufferSize);
+    atb::Tensor ModelTorchInternelTensorFromDesc(const atb::TensorDesc &tensorDesc);
+    void ModelTorch::RunTask(std::string taskName, std::function<int()> task);
 private:
     std::string modelName_;
     std::shared_ptr<atb_speed::Model> model_;
     uint64_t executeCount_ = 0;
     uint64_t modelId_ = 0;
     std::shared_ptr<atb::Context> context_;
+    atd::vector<torch::Tensor> atInternelTensors_;
 };
 
 #endif
