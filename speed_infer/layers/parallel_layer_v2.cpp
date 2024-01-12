@@ -16,8 +16,8 @@
 
 #include <atb/atb_infer.h>
 #include "nlohmann/json.hpp"
-
 #include "parallel_layer_v2.h"
+
 
 namespace atb_speed {
 namespace common {
@@ -33,6 +33,8 @@ enum InTensorId : int {
     IN_BIAS,
     IN_DEQSCALE,
     IN_INDEX_IDS,
+    IN_OFFSET,
+    IN_COMPRESSINFO,
     OUT_LINEAR,
     INTER_ID,
 };
@@ -41,8 +43,8 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
                                  const ParallelType parallelType)
 {
     atb::GraphParam opGraph;
-
-    opGraph.inTensorNum = 5;
+    opGraph.name = "ParallelLinearBaseV2";
+    opGraph.inTensorNum = 7;
     opGraph.outTensorNum = 1;
 
     // 判断node个数
@@ -56,30 +58,27 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
     } else {
         if (param_.isBias) {
             nodeCount += 1;
+            internalTensorNum += 1;
         }
     }
 
     if (param_.commParam.rankSize > 1) {
         nodeCount += 1;
-        if (param_.isBias && !param_.isQuant) {
-            internalTensorNum += 2;
-        } else {
-            internalTensorNum += 1;
-        }
+        internalTensorNum += 1;
     }
 
     opGraph.internalTensorNum = internalTensorNum;
     opGraph.nodes.resize(nodeCount);
 
     size_t nodeId = 0;
-    size_t inter_id = INTER_ID;
+    uint32_t inteId = INTER_ID;
 
     if (!param_.isQuant) {
         atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
         atb::infer::LinearParam matmulParam = {param_.transposeA, param_.transposeB, false};
         atb::CreateOperation(matmulParam, &matmulNode.operation);
         matmulNode.inTensorIds = {IN_INPUT, IN_WEIGHT};
-        matmulNode.outTensorIds = {(param_.commParam.rankSize > 1 || param_.isBias) ? inter_id : OUT_LINEAR};
+        matmulNode.outTensorIds = {(param_.commParam.rankSize > 1 || param_.isBias) ? inteId : OUT_LINEAR};
     } else {
         if (param_.quantParam.isQuantOp) {
             atb::Node &quantNode = opGraph.nodes.at(nodeId++);
@@ -89,14 +88,24 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
             quantParam.quantParam.inputOffset = param_.quantParam.inputOffset;
             atb::CreateOperation(quantParam, &quantNode.operation);
             quantNode.inTensorIds = {IN_INPUT};
-            quantNode.outTensorIds = {inter_id};
+            quantNode.outTensorIds = {inteId};
         }
 
-        atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
-        atb::infer::LinearQuantParam matmulParam = {param_.transposeA, param_.transposeB, true};
-        atb::CreateOperation(matmulParam, &matmulNode.operation);
-        matmulNode.inTensorIds = {param_.quantParam.isQuantOp ? inter_id++ : IN_INPUT, IN_WEIGHT, IN_BIAS, IN_DEQSCALE};
-        matmulNode.outTensorIds = {param_.commParam.rankSize > 1 ? inter_id : OUT_LINEAR};
+        if (param_.isSparse) {
+            atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
+            atb::infer::LinearSparseParam linearSparseParam = {false, true, 8, 8};
+            atb::CreateOperation(linearSparseParam, &matmulNode.operation);
+            matmulNode.inTensorIds = {param_.quantParam.isQuantOp ? inteId++ : IN_INPUT, IN_WEIGHT,
+                                      IN_BIAS, IN_DEQSCALE, IN_INDEX_IDS};
+            matmulNode.outTensorIds = {param_.commParam.rankSize > 1 ? inteId : OUT_LINEAR};
+        } else {
+            atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
+            atb::infer::LinearQuantParam matmulParam = {param_.transposeA, param_.transposeB, true};
+            atb::CreateOperation(matmulParam, &matmulNode.operation);
+            matmulNode.inTensorIds = {param_.quantParam.isQuantOp ? inteId++ : IN_INPUT,
+                                      IN_WEIGHT, IN_BIAS, IN_DEQSCALE};
+            matmulNode.outTensorIds = {param_.commParam.rankSize > 1 ? inteId : OUT_LINEAR};
+        }
     }
 
     if (param_.commParam.rankSize > 1) {
@@ -116,8 +125,8 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
             atb::CreateOperation(allGatherParam, &parallelNode.operation);
         }
 
-        parallelNode.inTensorIds = {inter_id++};
-        parallelNode.outTensorIds = {param_.isBias && !param_.isQuant ? inter_id : OUT_LINEAR};
+        parallelNode.inTensorIds = {inteId++};
+        parallelNode.outTensorIds = {param_.isBias && !param_.isQuant ? inteId : OUT_LINEAR};
     }
 
     if (param_.isBias && !param_.isQuant) {
@@ -125,7 +134,7 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
         atb::infer::ElewiseParam addParam;
         addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
         atb::CreateOperation(addParam, &addNode.operation);
-        addNode.inTensorIds = {inter_id, IN_BIAS};
+        addNode.inTensorIds = {inteId, IN_BIAS};
         addNode.outTensorIds = {OUT_LINEAR};
     }
 
@@ -142,7 +151,14 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
             auto w_dim = inTensorDescs.at(1).shape.dimNum;
             outTensorDescs.at(0).shape.dimNum = dimNum;
             outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
-            if (param_.isQuant) {
+            if (param_.isQuant && param_.isSparse) {
+                if (dimNum == 3) {
+                outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[1];
+                outTensorDescs.at(0).shape.dims[2] = inTensorDescs.at(2).shape.dims[0];
+                } else {
+                outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(2).shape.dims[0];
+                }
+            } else if (param_.isQuant) {
                 if (dimNum == 3) {
                     outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[1];
                 }
@@ -200,4 +216,3 @@ atb::Status ColumnParallelLinearV2(const ParallelParamV2 &param_, atb::Operation
 atb::Status VocabParallelEmbeddingV2(const ParallelParamV2 &param_, atb::Operation **operation) { return 0; }
 } // namespace common
 } // namespace atb_speed
-

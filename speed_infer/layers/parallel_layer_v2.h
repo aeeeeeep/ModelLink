@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#ifndef ATB_SPEED_LAYERS_PARALLEL_LAYER_V2_H
-#define ATB_SPEED_LAYERS_PARALLEL_LAYER_V2_H
+#ifndef ATB_SPEED_LAYER_PARALLEL_LAYER_V2_H
+#define ATB_SPEED_LAYER_PARALLEL_LAYER_V2_H
 #include <atb/atb_infer.h>
 #include "nlohmann/json.hpp"
-#include "common.h"
+#include "plugin_op/matmul_compress_dequant_operation.h"
 
 namespace atb_speed {
 namespace common {
@@ -58,4 +58,3 @@ atb::Status VocabParallelEmbeddingV2(const ParallelParamV2 &param, atb::Operatio
 } // namespace atb_speed
 
 #endif
-

@@ -32,7 +32,7 @@ atb::Status ParallelLinearBase(const ParallelParam &param_, atb::Operation **ope
                                const ParallelType parallelType)
 {
     atb::GraphParam opGraph;
-
+    opGraph.name = "ParallelLinearBase";
     opGraph.inTensorNum = config.inTensorNum;
     opGraph.outTensorNum = config.outTensorNum;
     opGraph.internalTensorNum = config.interTensorNum;
