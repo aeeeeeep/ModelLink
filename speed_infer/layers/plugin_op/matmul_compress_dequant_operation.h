@@ -21,36 +21,33 @@
 #include "acl/acl.h"
 #include "aclnn/acl_meta.h"
 
-namespace atb_speed
-{
-    namespace common
-    {
-        class MatMulCompressDequantOperation : public atb::Operation
-        {
-        public:
-            explicit MatMulCompressDequantOperation(const std::string &name);
-            ~MatMulCompressDequantOperation() override;
-            std::string GetName() const override;
-            atb::Status InferShape(const atb::SVector<atb::TensorDesc> &inTensorDescs,
-                                   atb::SVector<atb::TensorDesc> &outTensorDescs) const override;
-            uint32_t GetInputNum() const override;
-            uint32_t GetOutputNum() const override;
-            atb::Status Setup(const atb::VariantPack &variantPack, uint64_t &workspaceSize, atb::Context *context) override;
-            atb::Status Execute(const atb::VariantPack &variantPack, uint8_t *workspace, uint64_t workspaceSize,
-                                atb::Context *context) override;
+namespace atb_speed {
+namespace common {
+class MatMulCompressDequantOperation : public atb::Operation {
+public:
+    explicit MatMulCompressDequantOperation(const std::string &name);
+    ~MatMulCompressDequantOperation() override;
+    std::string GetName() const override;
+    atb::Status InferShape(const atb::SVector<atb::TensorDesc> &inTensorDescs,
+        atb::SVector<atb::TensorDesc> &outTensorDescs) const override;
+    uint32_t GetInputNum() const override;
+    uint32_t GetOutputNum() const override;
+    atb::Status Setup(const atb::VariantPack &variantPack, uint64_t &workspaceSize, atb::Context *context) override;
+    atb::Status Execute(const atb::VariantPack &variantPack, uint8_t *workspace, uint64_t workspaceSize,
+        atb::Context *context) override;
 
-        private:
-            aclError CheckAcl(aclError x);
-            std::string name_;
+private:
+    aclError CheckAcl(aclError x);
+    std::string name_;
 
-            aclOpExecutor *m_executor = nullptr;
+    aclOpExecutor *m_executor = nullptr;
 
-            aclTensor *x1_ = nullptr;
-            aclTensor *x2_ = nullptr;
-            aclTensor *compressIndex_ = nullptr;
-            aclTensor *bias_ = nullptr;
-            aclTensor *deqScale_ = nullptr;
-        };
-    }
+    aclTensor *x1_ = nullptr;
+    aclTensor *x2_ = nullptr;
+    aclTensor *compressIndex_ = nullptr;
+    aclTensor *bias_ = nullptr;
+    aclTensor *deqScale_ = nullptr;
+};
+}
 } // namespace atb_speed
 #endif
