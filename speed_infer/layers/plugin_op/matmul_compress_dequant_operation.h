@@ -25,14 +25,14 @@ namespace atb_speed
 {
     namespace common
     {
-        class MatMulCompressDequantOperation : public atb::Operaton
+        class MatMulCompressDequantOperation : public atb::Operation
         {
         public:
             explicit MatMulCompressDequantOperation(const std::string &name);
             ~MatMulCompressDequantOperation() override;
             std::string GetName() const override;
-            atb::Status InferShape(const atb::Svector<atb::TensorDesc> &inTensorDescs,
-                                   atb::Svector<atb::TensorDesc> &outTensorDescs) const override;
+            atb::Status InferShape(const atb::SVector<atb::TensorDesc> &inTensorDescs,
+                                   atb::SVector<atb::TensorDesc> &outTensorDescs) const override;
             uint32_t GetInputNum() const override;
             uint32_t GetOutputNum() const override;
             atb::Status Setup(const atb::VariantPack &variantPack, uint64_t &workspaceSize, atb::Context *context) override;

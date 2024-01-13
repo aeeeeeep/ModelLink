@@ -29,7 +29,7 @@ namespace atb_speed
 {
     namespace common
     {
-        static uint_64 g_operatonId = 0;
+        static uint64_t g_operationId = 0;
         const size_t HOST_TILING_BUFFER_DEFAULT_SIZE = 10240;
         constexpr uint32_t MAX_PROFILING_FUNC_NAME = 2;
         static constexpr int32_t DIM_1 = 1;
@@ -47,7 +47,7 @@ namespace atb_speed
             return name_;
         }
 
-        atb::Status MatMulCompressDequantOperation::InferShape(const atb::SVector<TensorDesc> &inTensorDescs,
+        atb::Status MatMulCompressDequantOperation::InferShape(const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                                                atb::SVector<atb::TensorDesc> &outTensorDescs) const
         {
             outTensorDescs.at(0).format = inTensorDescs.at(0).format;
@@ -81,7 +81,8 @@ namespace atb_speed
 
         aclTensor *CreateTensor(const atb::VariantPack &variantPack, int64_t index, bool is_input)
         {
-            atb::Tensor tensorl if (is_input)
+            atb::Tensor tensor;
+            if (is_input)
             {
                 tensor = variantPack.inTensors.at(index);
             }
@@ -111,8 +112,7 @@ namespace atb_speed
 
             if (dimNum == DIM_3)
             {
-                if newDimNum
-                    = 2;
+                int newDimNum = 2;
                 int64_t newDims[2] = {dims[0] * dims[1], dims[2]};
                 atb::SVector<int64_t> strides(dimNum, 1);
                 for (int64_t i = newDimNum - 2; i >= 0; i--)
@@ -130,8 +130,7 @@ namespace atb_speed
                 {
                     strides[i] = dims[i + 1] * strides[i + 1];
                 }
-                auto ret = aclCreateTensor(dims, dimNum, dtype, strides.data(), 0, format,
-                                           dims, dimNum, tensor.deviceData);
+                auto ret = aclCreateTensor(dims, dimNum, dtype, strides.data(), 0, format, dims, dimNum, tensor.deviceData);
                 return ret;
             }
         }
@@ -144,7 +143,7 @@ namespace atb_speed
         }
 
         atb::Status MatMulCompressDequantOperation::Execute(const atb::VariantPack &variantPack, uint8_t *workspace,
-                                                            uint64_t workspaceSie, atb::Context *context)
+                                                            uint64_t workspaceSize, atb::Context *context)
         {
             if (x1_ == nullptr)
             {
@@ -184,7 +183,7 @@ namespace atb_speed
             aclTensor *output = CreateTensor(variantPack, 0, false);
 
             int ret1 = aclnnMatmulCompressDequantGetWorkspaceSize(x1_, x2_, compressIndex_, bias_, deqScale_, nullptr,
-                                                                  *offset, compressInfo, output, &workspaceSize, &m_executor);
+                                                                  *offsetX, compressInfo, output, &workspaceSize, &m_executor);
 
             ATB_LOG(INFO) << "start to execute aclnnMatmulCompressDequant..";
 
