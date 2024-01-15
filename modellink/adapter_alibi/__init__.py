@@ -11,11 +11,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from .model_megatron_adaptor import apply_model_patch
-from .checkpointing_megatron_adaptor import apply_checkpointing_patch
+from .arguments_adaptor import apply_arguments_patch
 
 
-def apply_lora_patch():
+def apply_alibi_patch():
+    apply_arguments_patch()
     apply_model_patch()
-    apply_checkpointing_patch()
