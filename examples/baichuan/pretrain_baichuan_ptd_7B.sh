@@ -35,7 +35,7 @@ GPT_ARGS="
     --num-attention-heads 32 \
     --tokenizer-type Llama2Tokenizer \
     --tokenizer-model ${TOKENIZER_MODEL} \
-	--load ${CKPT_LOAD_DIR} \
+    --load ${CKPT_LOAD_DIR} \
     --seq-length 4096 \
     --max-position-embeddings 4096 \
     --micro-batch-size 1 \
