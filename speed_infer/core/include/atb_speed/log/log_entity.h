@@ -35,7 +35,7 @@ struct LogEntity {
     size_t processId = 0;
     size_t threadId = 0;
     LogLevel level = LogLevel::TRACE;
-    const char* fileName = nullptr;
+    const char *fileName = nullptr;
     int line = 0;
     const char *funcName = nullptr;
     std::string content;

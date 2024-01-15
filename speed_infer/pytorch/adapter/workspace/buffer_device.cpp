@@ -43,11 +43,11 @@ BufferDevice::~BufferDevice() {}
 void *BufferDevice::GetBuffer(uint64_t bufferSize)
 {
     if (bufferSize <= bufferSize_) {
-        ATB_LOG(INFO) << "BufferDevice::GetBuffer bufferSize:" << bufferSize << " <= bufferSize_:" << bufferSize_
-                      << ", not new device mem";
+        ATB_LOG(INFO) << "BufferDevice::GetBuffer bufferSize:" << bufferSize << "<= bufferSize_:" << bufferSize_
+                        << ", not new device mem.";
         return atTensor_.data_ptr();
     }
-
+    
     torch::Tensor newAtTensor = CreateAtTensor(bufferSize);
     bufferSize_ = newAtTensor.numel();
     atTensor_ = newAtTensor;
@@ -71,15 +71,16 @@ torch::Tensor BufferDevice::CreateAtTensor(uint64_t bufferSize)
     } else if (bufferSize <= GB_1) {
         tensorDesc.shape.dimNum = 3;
         tensorDesc.shape.dims[0] = KB_1;
-        tensorDesc.shape.dims[1] = KB_1;
-        tensorDesc.shape.dims[2] = bufferSize / MB_1 + 1;
+        tensorDesc.shape.dims[1] = KB_1;     
+        tensorDesc.shape.dims[2] = bufferSize / MB_1 + 1;        
     } else {
         tensorDesc.shape.dimNum = 4;
         tensorDesc.shape.dims[0] = KB_1;
-        tensorDesc.shape.dims[1] = KB_1;
-        tensorDesc.shape.dims[2] = KB_1;
-        tensorDesc.shape.dims[3] = bufferSize / GB_1 + 1;
+        tensorDesc.shape.dims[1] = KB_1;  
+        tensorDesc.shape.dims[2] = KB_1;    
+        tensorDesc.shape.dims[3] = bufferSize / GB_1 + 1;   
     }
+    
     return Utils::CreateAtTensorFromTensorDesc(tensorDesc);
 }
 } // namespace atb_speed

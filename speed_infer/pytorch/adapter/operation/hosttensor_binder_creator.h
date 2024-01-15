@@ -13,25 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_CONTEXT_BUFFER_DEVICE_H
-#define ATB_SPEED_CONTEXT_BUFFER_DEVICE_H
-#include <torch/torch.h>
-#include "buffer_base.h"
+#ifndef ATB_SPEED_HOSTTENSOR_BINDER_CREATOR_H
+#define ATB_SPEED_HOSTTENSOR_BINDER_CREATOR_H
+#include <string>
+#include "atb_speed/base/hosttensor_binder.h"
 
-namespace atb_speed {
-class BufferDevice : public BufferBase {
-public:
-    BufferDevice(uint64_t bufferSize);
-    virtual ~BufferDevice();
-    void *GetBuffer(uint64_t bufferSize) override;
+atb_speed::HostTensorBinder *CreateHostTensorBinder(const std::string &opName);
 
-private:
-    torch::Tensor CreateAtTensor(uint64_t bufferSize);
-
-private:
-    void *buffer_ = nullptr;
-    uint64_t bufferSize_ = 0;
-    torch::Tensor atTensor_;
-};
-} // namespace atb_speed
 #endif

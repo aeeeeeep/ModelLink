@@ -26,8 +26,9 @@
 #include "atb_speed/utils/statistic.h"
 #include "atb_speed/log.h"
 #include "pytorch/adapter/utils/utils.h"
-#include "core/context/context.h"
+#include "pytorch/adapter/workspace/workspace.h"
 #include "operation_creator.h"
+#include "hosttensor_binder_creator.h"
 
 uint64_t GetNewOpId()
 {
@@ -46,7 +47,7 @@ OperationTorch::OperationTorch(std::string opName) : opName_(opName), name_(opNa
         (blockingEnv != nullptr && std::string(blockingEnv) == "1"));
     ATB_LOG(INFO) << "OperationTorch::OperationTorch, TASK_QUEUE_ENABLE:" << isTaskQueueEnable_ << ", opName:" <<
         opName << ", opId:" << opId_;
-    context_ = atb_speed::ContextFactory::GetAtbContext();
+    context_ = atb_speed::ContextFactory::GetAtbContext(Utils::GetCurrentStream());
 }
 
 OperationTorch::~OperationTorch()
@@ -69,6 +70,12 @@ void OperationTorch::SetParam(std::string param)
     }
 
     operation_.reset(operation);
+
+    atb_speed::HostTensorBinder *binder = CreateHostTensorBinder(opName_);
+    if (!binder) {
+        ATB_LOG(INFO) << name_ << "create host tensor binder fail, opName:" << opName_;
+    }
+    hostTensorBinder_.reset(binder);
 
     ATB_LOG(INFO) << name_ << " set param end";
 }
@@ -159,7 +166,7 @@ void OperationTorch::ExecuteOutImpl(std::vector<torch::Tensor> &atInTensors, std
     uint64_t workspaceSize = 0;
 
     atb_speed::Timer timer1;
-    atb::Status st = operation_->Setup(variantPack, workspaceSize);
+    atb::Status st = operation_->Setup(variantPack, workspaceSize, context_.get());
     atb_speed::GetSingleton<atb_speed::Statistic>().planSetupTime += timer1.ElapsedMicroSecond();
     if (st != 0) {
         ATB_LOG(ERROR) << name_ << " setup fail, not call execute, error code: " << st;
@@ -170,7 +177,7 @@ void OperationTorch::ExecuteOutImpl(std::vector<torch::Tensor> &atInTensors, std
 
     void *workspace = nullptr;
     if (workspaceSize > 0) {
-        workspace = atb_speed::GetSingleton<atb_speed::Context>().GetWorkspaceBuffer(workspaceSize);
+        workspace = atb_speed::GetSingleton<atb_speed::workspace>().GetWorkspaceBuffer(workspaceSize);
     }
 
     atb_speed::Timer timer2;

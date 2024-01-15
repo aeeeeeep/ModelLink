@@ -13,20 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_CONTEXT_BUFFER_HOST_H
-#define ATB_SPEED_CONTEXT_BUFFER_HOST_H
-#include <vector>
-#include "buffer_base.h"
+
+#ifndef ATB_SPEED_LAYERS_POST_PROCESS_LAYER_H
+#define ATB_SPEED_LAYERS_POST_PROCESS_LAYER_H
+
+#include <atb/atb_infer.h>
+#include "atb_speed/log.h"
+#include "nlohmann/json.hpp"
+#include "common.h"
 
 namespace atb_speed {
-class BufferHost : public BufferBase {
-public:
-    BufferHost(uint64_t bufferSize);
-    ~BufferHost() override;
-    void *GetBuffer(uint64_t bufferSize) override;
+namespace common {
 
-private:
-    std::vector<char> buffer_;
+struct PostProcessParam {
+    double temperature = 1.0;
+    int topK = 0;
+    int randSeed = 0;
 };
+
+atb::Status Sample(const PostProcessParam &param, atb::Operation **operation);
+
+} // namespace common
 } // namespace atb_speed
 #endif
