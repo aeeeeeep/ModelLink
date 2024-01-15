@@ -18,7 +18,7 @@
 #include <torch/torch.h>
 #include "buffer_base.h"
 
-namespace atb_speed{
+namespace atb_speed {
 class BufferDevice : public BufferBase {
 public:
     BufferDevice(uint64_t bufferSize);

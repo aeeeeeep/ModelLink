@@ -241,7 +241,7 @@ std::vector<torch::Tensor> ModelTorch::Execute(std::vector<torch::Tensor> atInTe
 }
 
 int64_t ModelTorch::ExecuteOut(std::vector<torch::Tensor> atInTensors, std::vector<torch::Tensor> atOutTensors,
-                            std::string param)
+                               std::string param)
 {
     atInternalTensors_.clear();
     std::vector<atb::Tensor> inTensors;
@@ -255,7 +255,7 @@ int64_t ModelTorch::ExecuteOut(std::vector<torch::Tensor> atInTensors, std::vect
 }
 
 int64_t ModelTorch::ExecuteOutImpl(std::vector<atb::Tensor> &inTensors, std::vector<atb::Tensor> &outTensors,
-                                const std::string &param)
+                                   const std::string &param)
 {
     int64_t atbStatus = model_->Execute(context_.get(), inTensors, outTensors, param);
     executeCount_++;

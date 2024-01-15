@@ -17,7 +17,7 @@
 #define ATB_SPEED_CONTEXT_BUFFER_BASE_H
 #include <cstdint>
 
-namespace atb_speed{
+namespace atb_speed {
 class BufferBase {
 public:
     BufferBase();

@@ -19,7 +19,7 @@
 #include "atb_speed/utils/config.h"
 #include "buffer_device.h"
 
-namespace atb_speed{
+namespace atb_speed {
 
 Workspace::Workspace() 
 {
@@ -27,7 +27,7 @@ Workspace::Workspace()
     uint64_t bufferSize = GetWorkspaceBufferSize();
     ATB_LOG(FATAL) << "Workspace workspace bufferRing:" << bufferRing << ", bufferSize:" << bufferSize;
     workspaceBuffers_.resize(bufferRing);
-    for (size_t i=0; i< bufferRing; ++i) {
+    for (size_t i = 0; i < bufferRing; ++i) {
         workspaceBuffers_.at(i).reset(new BufferDevice(bufferSize));
     }
 }

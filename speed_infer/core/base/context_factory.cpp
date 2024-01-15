@@ -25,8 +25,8 @@ thread_local std::shared_ptr<atb::Context> g_localContext;
 std::shared_ptr<atb::Context> ContextFactory::GetAtbContext(void *stream)
 {
     if (g_localContext) {
-	ATB_LOG(INFO) << "ContextFactory return localContext";
-	return g_localContext;
+    ATB_LOG(INFO) << "ContextFactory return localContext";
+    return g_localContext;
     }
     ATB_LOG(INFO) << "ContextFactory create atb::Context start";
     atb::Context *context = nullptr;

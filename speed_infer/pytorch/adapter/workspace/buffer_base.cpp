@@ -15,7 +15,7 @@
  */
 #include "buffer_base.h"
 
-namespace atb_speed{
+namespace atb_speed {
 BufferBase::BufferBase() {}
 
 BufferBase::~BufferBase() {}

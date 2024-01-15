@@ -36,8 +36,8 @@ static bool IsTensorDimsEqual(const atb::Dims &left, const atb::Dims &other)
         return false;
     }
     
-    for(uint64_t i = 0; i < left.dimNum; ++i){
-        if(left.dims[i] != other.dims[i]) {
+    for (uint64_t i = 0; i < left.dimNum; ++i) {
+        if (left.dims[i] != other.dims[i]) {
             return false;
         }
     }
@@ -357,11 +357,6 @@ atb::Status Model::ExecutePlanSync(int nodeId)
 {
     auto &node = graph_.nodes.at(nodeId);
     atb::VariantPack &variantPack = node.variantPack;
-
-    // if (GetSingleton<Config>().IsSaveTensor()) {
-    //     std::string dir = GetSaveTensorDir() + "/" + std::to_string(nodeId) + "_";
-    //     plan.SetRunnerSaveTensorDir(dir);
-    // }
 
     ATB_LOG(INFO) << modelName_ << "execute node[" << nodeId << "] start";
     Timer timer;

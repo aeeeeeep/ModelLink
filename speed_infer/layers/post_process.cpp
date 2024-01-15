@@ -34,7 +34,6 @@ enum SampleInTensorId : int {
     OUT_SCORES,
     INTERMEDIATE_SCORES_AFTER_SOFTMAX,
     INTERMEDIATE_SCORES_AFTER_TEMPERATURE,
-
 }
 
 void SetSampleOpGraph(atb::GraphParam &opGraph, const PostProcessParam &param)

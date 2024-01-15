@@ -20,14 +20,13 @@
 #include <vector>
 #include "buffer_base.h"
 
-namespace atb_speed{
+namespace atb_speed {
 
 class Workspace {
 public:
     Workspace();
     ~Workspace();
     void *GetWorkspaceBuffer(uint64_t bufferSize);
-
 
 private:
     uint64_t GetWorkspaceBufferRing();
