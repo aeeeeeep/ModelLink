@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-#ifndef ATB_SPEED_LAYERS_MLP_GATE_V2_H
-#define ATB_SPEED_LAYERS_MLP_GATE_V2_H
+#ifndef ATB_SPEED_LAYER_MLP_GATE_V2_H
+#define ATB_SPEED_LAYER_MLP_GATE_V2_H
 
 #include <atb/atb_infer.h>
 #include "nlohmann/json.hpp"
 #include "atb_speed/log.h"
-#include "common.h"
 #include "parallel_layer_v2.h"
 
 namespace atb_speed {
@@ -31,15 +30,15 @@ struct MlpGateParamV2 {
     bool isBias = false;
     bool isPack = false;
     bool isQuant = false;
+    bool isSparse = false;
+    bool noGate = false;
     CommParam commDownParam;
     QuantParam quantUpParam;
     QuantParam quantGateParam;
     QuantParam quantDownParam;
 };
 
-
 atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operation);
-
 
 } // namespace common
 } // namespace atb_speed
