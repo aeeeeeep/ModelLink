@@ -12,8 +12,8 @@
 # limitations under the License.
 
 
-from .model_megatron_adapter import apply_model_patch
-from .checkpointing_megatron_adapter import apply_checkpointing_patch
+from .model_megatron_adaptor import apply_model_patch
+from .checkpointing_megatron_adaptor import apply_checkpointing_patch
 
 
 def apply_lora_patch():
