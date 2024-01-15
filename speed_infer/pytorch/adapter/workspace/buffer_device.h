@@ -21,7 +21,7 @@
 namespace atb_speed {
 class BufferDevice : public BufferBase {
 public:
-    BufferDevice(uint64_t bufferSize);
+    explicit BufferDevice(uint64_t bufferSize);
     virtual ~BufferDevuce();
     void *GetBuffer(uint64_t bufferSize) override;
 private:
