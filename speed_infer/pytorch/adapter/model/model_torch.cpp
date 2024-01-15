@@ -116,15 +116,15 @@ int64_t ModelTorch::SetParam(std::string param)
     const char *taskQueueEnv = std::getenv("TASK_QUEUE_ENABLE");   
     const char *blockingEnv = std::getenv("ASCEND_LAUNCH_BLOCKING");
     bool isTaskQueueEnable = !((taskQueueEnv != nullptr && std::string(taskQueueEnv) == "0") ||
-                                (blockingEnv != nullptr && std::string(blockingEnv) == "0"));
-    auto GetWorkSpaceFunc = std::bind(&ModelTorch::GetWorkSpace, this, std::placeholders::_1);
-    auto createInternelTensorFromDescFunc = std::bind(&modelTorch::CreateInternalTensorFromDesc,
+                                (blockingEnv != nullptr && std::string(blockingEnv) == "1"));
+    auto getWorkspaceFunc = std::bind(&ModelTorch::GetWorkSpace, this, std::placeholders::_1);
+    auto createInternalTensorFromDescFunc = std::bind(&modelTorch::CreateInternalTensorFromDesc,
         this, std::placeholders::_2);
     int64_t atbStatus = 0;
     if (isTaskQueueEnable) {
-        atbStatus = model_->Init(GetWorkSpaceFunc, createInternelTensorFromDescFunc, RunTaskFunc);
+        atbStatus = model_->Init(getWorkspaceFunc, createInternelTensorFromDescFunc, RunTaskFunc);
     } else {
-        atbStatus = model_->Init(GetWorkSpaceFunc, createInternelTensorFromDescFunc, nullptr);
+        atbStatus = model_->Init(getWorkspaceFunc, createInternelTensorFromDescFunc, nullptr);
     }
     ATB_LOG(INFO) << "ModelTorch set param end";
     return atbStatus;
@@ -185,7 +185,7 @@ int64_t ModelTorch::SetKVCache(std::vector<torch::Tensor> atKCacheTensors, std::
 
 std::vector<torch::Tensor> ModelTorch::Execute(std::vector<torch::Tensor> atInTensors, std::string param)
 {
-    atInternelTensors_.clear();
+    atInternalTensors_.clear();
     for (size_t i = 0; i < atInTensors.size(); ++i) {
         const torch::Tensor &atTensor = atInTensors.at(i);
         ATB_LOG(INFO) << "ModelTorch atInTensors[" << i << "]"
@@ -235,7 +235,7 @@ std::vector<torch::Tensor> ModelTorch::Execute(std::vector<torch::Tensor> atInTe
     int64_t atbStatus = ExecuteOutImpl(inTensors, outTensors, param);
     if (atbStatus != atb::NO_ERROR) {
         std::vector<torch::Tensor> atNullOutTensors(0);
-        return atNullOutTensors
+        return atNullOutTensors;
     }
     return atOutTensors;
 }
@@ -243,6 +243,7 @@ std::vector<torch::Tensor> ModelTorch::Execute(std::vector<torch::Tensor> atInTe
 int64_t ModelTorch::ExecuteOut(std::vector<torch::Tensor> atInTensors, std::vector<torch::Tensor> atOutTensors,
                             std::string param)
 {
+    atInternalTensors_.clear();
     std::vector<atb::Tensor> inTensors;
     AtTensor2Tensor(atInTensors, inTensors);
 
@@ -256,8 +257,8 @@ int64_t ModelTorch::ExecuteOut(std::vector<torch::Tensor> atInTensors, std::vect
 int64_t ModelTorch::ExecuteOutImpl(std::vector<atb::Tensor> &inTensors, std::vector<atb::Tensor> &outTensors,
                                 const std::string &param)
 {
-    model_->Execute(context_.get(), inTensors, outTensors, param);
-    int64_t atbStatus = executeCount_++;
+    int64_t atbStatus = model_->Execute(context_.get(), inTensors, outTensors, param);
+    executeCount_++;
     return atbStatus;
 }
 

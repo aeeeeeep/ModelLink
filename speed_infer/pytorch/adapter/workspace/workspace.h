@@ -34,8 +34,8 @@ private:
     uint64_t GetWorkspaceBufferSize();
 
 private:
-    std::vector<std::unique_ptr<BufferBase>> WorkspaceBuffers_;
-    size_t GetWorkspaceBufferOffset_ = 0;
+    std::vector<std::unique_ptr<BufferBase>> workspaceBuffers_;
+    size_t workspaceBufferOffset_ = 0;
 };
 } // namespace atb_speed
 #endif

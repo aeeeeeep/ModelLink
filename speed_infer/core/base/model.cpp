@@ -150,7 +150,9 @@ Model::Model(const std::string &modelName, const std::string &param) : modelName
     aclrtGetDevice(&currentDevId_);
 }
 
-int64_t Model::Init(GetWorkspaceFunc getWorkspaceFunc, CreateTensorFromTensorDescFunc createTensorFromTensorDescFunc,
+Model::~Model() {}
+
+int64_t Model::Init(GetWorkspaceFunc getWorkSpaceFunc, CreateTensorFromTensorDescFunc createTensorFromTensorDescFunc,
     RunTaskFunc runTaskFunc)
 {
     const char *envStr = std::getenv("ATB_OPERATION_EXECUTE_ASYNC");
@@ -163,7 +165,7 @@ int64_t Model::Init(GetWorkspaceFunc getWorkspaceFunc, CreateTensorFromTensorDes
     ATB_LOG(FATAL) << modelName_ << " new, isTaskQueueEnable:" << (runTaskFunc != nullptr) 
                    << ", isUsePlanExecuteAsync:" << isUsePlanExecuteAsync_ << ", currentDevId:" << currentDevId_;
     
-    getWorkSpaceFunc_ = getWorkspaceFunc;
+    getWorkSpaceFunc_ = getWorkSpaceFunc;
     createTensorFromTensorDescFunc_ = createTensorFromTensorDescFunc;
     runTaskFunc_ = runTaskFunc;
 
@@ -201,7 +203,7 @@ int64_t Model::SetKVCache(const std::vector<atb::Tensor> &kCacheTensors, const s
 
     graph_.kCacheTensors = kCacheTensors;
     graph_.vCacheTensors = vCacheTensors;
-    return atb::NO_ERROR
+    return atb::NO_ERROR;
 }
 
 atb::Status Model::Execute(atb::Context *context, std::vector<atb::Tensor> &inTensors,
@@ -279,7 +281,7 @@ void Model::BuildNodeVariantPack(int nodeId)
     for (size_t i = 0; i < node.outTensors.size(); ++i) {
         node.variantPack.outTensors.at(i) = *node.outTensors.at(i);
         if (node.outTensorTypes.at(i) == Model::INTERMEDIATE_TENSOR) {
-            node.cariantPack.outTensors.at(i) = MallocInternalAtTensor(nodeId, i, outTensorDescs.at(i));
+            node.variantPack.outTensors.at(i) = MallocInternalTensor(nodeId, i, outTensorDescs.at(i));
             *node.outTensors.at(i) = node.variantPack.outTensors.at(i);
         }
         if (!TensorUtil::TensorDescEqual(node.variantPack.outTensors.at(i).desc, outTensorDescs.at(i))) {
@@ -314,7 +316,7 @@ atb::Status Model::ExecuteNode(int nodeId)
     ATB_LOG(INFO) << modelName_ << " get node[" << nodeId << "] workspace size:" << node.workspaceSize;
 
     if (node.workspaceSize > 0) {
-        node.workspace = getWoakspaceFunc_(node.workspaceSize);
+        node.workspace = getWorkSpaceFunc_(node.workspaceSize);
     }
 
     if (isUsePlanExecuteAsync_) {
@@ -374,7 +376,7 @@ atb::Status Model::ExecutePlanSync(int nodeId)
 void Model::ExecutePlanAsync(int nodeId)
 {
     if (runTaskFunc_) {
-        runTaskFunc_(modelName_ + std:::to_string(nodelId), [=]() {
+        runTaskFunc_(modelName_ + std::to_string(nodeId), [=]() {
             ExecutePlanSync(nodeId);
             return 0;
         });
@@ -462,8 +464,8 @@ atb::Tensor Model::MallocInternalTensor(size_t nodeId, size_t outTensorId, const
     atb::Tensor newTensor = createTensorFromTensorDescFunc_(tensorDesc);
     atb_speed::GetSingleton<atb_speed::Statistic>().createTensorTime += timer.ElapsedMicroSecond();
     atb_speed::GetSingleton<atb_speed::Statistic>().mallocTorchTensorSize += atb::Utils::GetTensorSize(tensorDesc);
-    internalAtTensors_.push_back(std::make_pair(newTensor, true));
-    return newAtTensor;
+    internalTensors_.push_back(std::make_pair(newTensor, true));
+    return newTensor;
 }
 
 void Model::FreeInternalTensor(void *tensorDeviceData)

@@ -29,10 +29,10 @@ constexpr int GB_1 = 1024 * 1024 * 1024;
 
 BufferDevice::BufferDevice(uint64_t bufferSize) : bufferSize_(bufferSize)
 {
-    ATB_LOG(INFO) << "BufferDevice::BufferDevice called, BufferSize:" << bufferSize;
+    ATB_LOG(INFO) << "BufferDevice::BufferDevice called, bufferSize:" << bufferSize;
     bufferSize_ = bufferSize;
     if (bufferSize_ > 0) {
-        ATB_LOG(FATAL) << "BufferDevice::GetBuffer BufferSize:" << bufferSize_;
+        ATB_LOG(FATAL) << "BufferDevice::GetBuffer bufferSize:" << bufferSize_;
         atTensor_ = CreateAtTensor(bufferSize_);
         buffer_ = atTensor_.data_ptr();
     }
@@ -43,7 +43,7 @@ BufferDevice::~BufferDevice() {}
 void *BufferDevice::GetBuffer(uint64_t bufferSize)
 {
     if (bufferSize <= bufferSize_) {
-        ATB_LOG(INFO) << "BufferDevice::GetBuffer bufferSize:" << bufferSize << "<= bufferSize_" << bufferSize_
+        ATB_LOG(INFO) << "BufferDevice::GetBuffer bufferSize:" << bufferSize << "<= bufferSize_:" << bufferSize_
                         << ", not new device mem.";
         return atTensor_.data_ptr();
     }
@@ -81,7 +81,6 @@ torch::Tensor BufferDevice::CreateAtTensor(uint64_t bufferSize)
         tensorDesc.shape.dims[3] = bufferSize / GB_1 + 1;   
     }
     
-    return Utils::CreateAtTensorFromTensorDesc(TensorDesc);
+    return Utils::CreateAtTensorFromTensorDesc(tensorDesc);
 }
 } // namespace atb_speed
-#endif

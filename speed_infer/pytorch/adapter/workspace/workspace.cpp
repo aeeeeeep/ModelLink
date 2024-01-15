@@ -36,24 +36,24 @@ Workspace::~Workspace() {}
 
 void *Workspace::GetWorkspaceBuffer(uint64_t bufferSize)
 {
-    if (workspaceBufferOffset_ == workspaceBuffers.size()) {
+    if (workspaceBufferOffset_ == workspaceBuffers_.size()) {
         workspaceBufferOffset_ = 0;
     }
-    return workspaceBufferOffset_.at(workspaceBufferOffset_++)->GetBuffer(bufferSize);
+    return workspaceBuffers_.at(workspaceBufferOffset_++)->GetBuffer(bufferSize);
 }
 
 uint64_t Workspace::GetWorkspaceBufferRing()
 {
-    const chat *envStr = std::getenv("ATB_CONTEXT_WORKSPACE_RING");
+    const char *envStr = std::getenv("ATB_CONTEXT_WORKSPACE_RING");
     if (envStr == nullptr) {
-        return 0;
+        return 1;
     }
     return atoll(envStr);
 }
 
 uint64_t Workspace::GetWorkspaceBufferSize()
 {
-    const chat *envStr = std::getenv("ATB_CONTEXT_WORKSPACE_SIZE");
+    const char *envStr = std::getenv("ATB_CONTEXT_WORKSPACE_SIZE");
     if (envStr == nullptr) {
         return 0;
     }

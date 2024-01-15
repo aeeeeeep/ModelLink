@@ -20,4 +20,3 @@ BufferBase::BufferBase() {}
 
 BufferBase::~BufferBase() {}
 } // namespace atb_speed
-#endif

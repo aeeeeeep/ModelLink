@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 #ifndef ATB_SPEED_CONTEXT_BUFFER_DEVICE_H
-#define ATB_SPEED_CONTEXT_BUFFER_BASE_H
+#define ATB_SPEED_CONTEXT_BUFFER_DEVICE_H
 #include <torch/torch.h>
 #include "buffer_base.h"
 

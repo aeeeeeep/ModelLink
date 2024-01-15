@@ -78,7 +78,7 @@ atb::Tensor Utils::AtTensor2Tensor(const at::Tensor &atTensor)
     static std::map<at::ScalarType, aclDataType> dtypeMap = {
         {at::ScalarType::Bool, ACL_BOOL},    {at::ScalarType::Byte, ACL_UINT8},  {at::ScalarType::Char, ACL_INT8},
         {at::ScalarType::Half, ACL_FLOAT16}, {at::ScalarType::Float, ACL_FLOAT}, {at::ScalarType::Int, ACL_INT32},
-        {at::ScalarType::Long, ACL_INT64},   {at::ScalarType::BFloat16, ACL_BF16}
+        {at::ScalarType::Long, ACL_INT64},   {at::ScalarType::BFloat16, ACL_BF16},
     };
 
     ATB_LOG_IF(!atTensor.is_contiguous(), ERROR) << "atTensor is not contiguous";
@@ -108,7 +108,7 @@ at::Tensor Utils::CreateAtTensorFromTensorDesc(const atb::TensorDesc &tensorDesc
     static std::map<aclDataType, at::ScalarType> dtypeMap = {
         {ACL_BOOL, at::ScalarType::Bool},    {ACL_UINT8, at::ScalarType::Byte},  {ACL_INT8, at::ScalarType::Char},
         {ACL_FLOAT16, at::ScalarType::Half}, {ACL_FLOAT, at::ScalarType::Float}, {ACL_INT32, at::ScalarType::Int},
-        {ACL_INT64, at::ScalarType::Long},   {at::ScalarType::BFloat16, ACL_BF16}
+        {ACL_INT64, at::ScalarType::Long},   {ACL_BF16, at::ScalarType::BFloat16}
     };
     at::TensorOptions options = at::TensorOptions();
     auto it = dtypeMap.find(tensorDesc.dtype);

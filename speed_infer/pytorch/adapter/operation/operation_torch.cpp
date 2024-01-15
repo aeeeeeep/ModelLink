@@ -28,7 +28,7 @@
 #include "pytorch/adapter/utils/utils.h"
 #include "pytorch/adapter/workspace/workspace.h"
 #include "operation_creator.h"
-#inclue "hosttensor_binder_creator.h"
+#include "hosttensor_binder_creator.h"
 
 uint64_t GetNewOpId()
 {

@@ -36,10 +36,10 @@ namespace atb_speed {
 class Model {
 public:
     using ReshapeFunc = std::function<void(const atb::Dims &oldDims, atb::Dims &newDims)>;
-    using GetWorkspaceFunc = std::function<void*(unit64_t bufferSize)>;
-    using CreateTensorFromTensorDescFunc = std::funcion<atb::Tensor(const atb::TensorSesc &tensorDesc)>;
+    using GetWorkspaceFunc = std::function<void*(uint64_t bufferSize)>;
+    using CreateTensorFromTensorDescFunc = std::function<atb::Tensor(const atb::TensorDesc &tensorDesc)>;
     using Task = std::function<int()>;
-    using RunTaskFunc = std::funcion<void(const std::string &taskName, Task Task)>;
+    using RunTaskFunc = std::function<void(const std::string &taskName, Task Task)>;
     enum TensorType {
         INTERMEDIATE_TENSOR = 0,
         NOT_INTERMEDIATE_TENSOR,
@@ -67,8 +67,7 @@ public:
         std::vector<atb::Tensor> internalTensors;
         std::vector<Node> nodes;
         std::map<uint64_t, std::set<atb::Tensor *>> maxNodeIdTensorMap;
-        int64_t Init(GetWorkspaceFunc getWorkspaceFunc, CreateTensorFromTensorDescFunc createTensorFromTensorDescFunc,
-                RunTaskFunc runTaskFunc = nullptr);
+        void Init();
         std::string ToString() const;
 
     private:
@@ -79,7 +78,8 @@ public:
 
     Model(const std::string &modelName, const std::string &param);
     ~Model();
-    void Init();
+    int64_t Init(GetWorkspaceFunc getWorkspaceFunc, CreateTensorFromTensorDescFunc createTensorFromTensorDescFunc,
+            RunTaskFunc runTaskFunc = nullptr);
 
     virtual uint32_t GetInputNum() const = 0;
     virtual uint32_t GetOutputNum() const = 0;
@@ -92,6 +92,9 @@ public:
         std::vector<atb::Tensor> &outTensors,const std::string &param);
 
 protected:
+    GetWorkspaceFunc getWorkspaceFunc_;
+    CreateTensorFromTensorDescFunc createTensorFromTensorDescFunc_;
+    RunTaskFunc RunTaskFunc_ = nullptr;
     virtual int64_t BuildGraph() = 0;
     virtual atb::Status ParseParam(const std::string &param);
     virtual atb::Status BindParamHostTensor(uint32_t nodeId);

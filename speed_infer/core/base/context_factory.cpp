@@ -28,18 +28,18 @@ std::shared_ptr<atb::Context> ContextFactory::GetAtbContext(void *stream)
 	ATB_LOG(INFO) << "ContextFactory return localContext";
 	return g_localContext;
     }
-    ATB_LOG(INFO) << "ContextFactory create atb::context start";
+    ATB_LOG(INFO) << "ContextFactory create atb::Context start";
     atb::Context *context = nullptr;
     atb::Status st = atb::CreateContext(&context);
-    ATB_LOG_IF(st !=0, ERROR) << "ContextFactory create atb::context fail";
+    ATB_LOG_IF(st !=0, ERROR) << "ContextFactory create atb::Context fail";
 
     if (context) {
         context->SetExecuteStream(stream);
         if (atb:speed::GetSingleton<atb_speed::Config>().IsUseTilingCopyStream()) {
-            ATB_LOG(INFO) << "ContextFactory use tilng copy stream";
+            ATB_LOG(INFO) << "ContextFactory use tiling copy stream";
             context->SetAsyncTilingCopyStatus(true);
         } else {
-            ATB_LOG(INFO) << "ContextFactory not use tiling copy stram";
+            ATB_LOG(INFO) << "ContextFactory not use tiling copy stream";
         }
     }
 
@@ -55,10 +55,7 @@ void ContextFactory::FreeAtbContext()
         return;
     }
     
-    ATB_LOG(INFO) << "ContextFactory localContext use_count: " << localContext.use_count();
-    if (!g_localContext) {
-        return;
-    }
+    ATB_LOG(INFO) << "ContextFactory localContext use_count: " << g_localContext.use_count();
     if (g_localContext.use_count() != 1) {
         return;
     }

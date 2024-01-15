@@ -41,16 +41,16 @@ private:
     int64_t ExecuteOutImpl(std::vector<atb::Tensor> &inTensors, std::vector<atb::Tensor> &outTensors,
                         const std::string &param);
     std::string GetSaveTensorDir();
-    void* ModelTorch::GetWorkSpace(uint64_t bufferSize);
-    atb::Tensor ModelTorchInternelTensorFromDesc(const atb::TensorDesc &tensorDesc);
-    void ModelTorch::RunTask(std::string taskName, std::function<int()> task);
+    void* GetWorkSpace(uint64_t bufferSize);
+    atb::Tensor CreateInfernalFromDesc(const atb::TensorDesc &tensorDesc);
+    void RunTask(std::string taskName, std::function<int()> task);
 private:
     std::string modelName_;
     std::shared_ptr<atb_speed::Model> model_;
     uint64_t executeCount_ = 0;
     uint64_t modelId_ = 0;
     std::shared_ptr<atb::Context> context_;
-    atd::vector<torch::Tensor> atInternelTensors_;
+    atd::vector<torch::Tensor> atInternalTensors_;
 };
 
 #endif

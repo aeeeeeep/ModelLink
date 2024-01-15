@@ -25,14 +25,13 @@
 namespace atb_speed {
 namespace common {
 
-struct PostProcessParam
-{
+struct PostProcessParam {
     double temperature = 1.0;
-    int topk = 0;
+    int topK = 0;
     int randSeed = 0;
 };
 
-atb::Status Sample(const PostProcessParam, atb::Operation **operation);
+atb::Status Sample(const PostProcessParam &param, atb::Operation **operation);
 
 } // namespace common
 } // namespace atb_speed

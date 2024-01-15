@@ -13,27 +13,41 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 set -ex
 SCRIPT_DIR=$(cd $(dirname -- $0); pwd)
 CURRENT_DIR=$(pwd)
 cd $SCRIPT_DIR
 TARGET_FRAMEWORK=torch
 USE_CXX11_ABI=$(python3 get_cxx11_abi_flag.py -f "${TARGET_FRAMEWORK}")
+ARCH="aarch64"
+if [ $( uname -a | grep -c -i "x86_64" ) -ne 0 ]; then
+    ARCH="x86_64"
+    echo "it is system of x86_64"
+elif [ $( uname -a | grep -c -i "aarch64" ) -ne 0 ]; then
+    echo "it is system of aarch64"
+else
+    echo "it is not system of aarch64 or x86_64"
+fi
 cd ..
 export CODE_ROOT=`pwd`
 export CACHE_DIR=$CODE_ROOT/build
 export OUTPUT_DIR=$CODE_ROOT/output
 THIRD_PARTY_DIR=$CODE_ROOT/3rdparty
+PACKAGE_NAME="7.0.T800"
+ASCEND_SPEED_VERSION="7.0"
+VERSION_B='7.0.0'
 README_DIR=$CODE_ROOT
 COMPILE_OPTIONS=""
 INCREMENTAL_SWITCH=OFF
 HOST_CODE_PACK_SWITCH=ON
 DEVICE_CODE_PACK_SWITCH=ON
 USE_VERBOSE=OFF
-BUILD_OPTION_LIST="3rdparty download_testdata unittest unittest_and_run pythontest pythontest_and_run debug release help python_unittest_and_run"
-BUILD_CONFIGURE_LIST=("--output=.*" "--cache=.*" "--verbose" "--incremental" "--gcov" "--no_hostbin" "--no_devicebin" "--use_cxx11_abi=0" 
-    "--use_cxx11_abi=1" "--build_config=.*" "--optimize_off" "--use_torch_runner" "--use_lccl_runner" "--use_hccl_runner" "--doxygen" "--no_warn")
-
+IS_RELEASE=0
+BUILD_OPTION_LIST="3rdparty download_testdata unittest unittest_and_run pythontest pythontest_and_run debug release help python_unittest_and_run master"
+BUILD_CONFIGURE_LIST=("--output=.*" "--cache=.*" "--verbose" "--incremental" "--gcov" "--no_hostbin" "--no_devicebin" "--use_cxx11_abi=0"
+    "--use_cxx11_abi=1" "--build_config=.*" "--optimize_off" "--use_torch_runner" "--use_lccl_runner" "--use_hccl_runner" "--doxygen" "--no_warn" 
+    "--ascend_speed_version=.*" "--release_b_version=.*")
 
 function fn_build_nlohmann_json()
 {
@@ -91,6 +105,105 @@ function fn_init_pytorch_env()
     fi
 }
 
+function fn_run_pythontest()
+{
+    cd $OUTPUT_DIR/atb_speed
+    source set_env.sh
+    cd $CODE_ROOT/tests/layertest/
+    rm -rf ./kernel_meta*
+    export ATB_CONVERT_NCHW_TO_ND=1
+    export HCCL_WHITELIST_DISABLE=1
+    python3 -m unittest discover -s . -p "*.py"
+}
+
+function fn_build_coverage()
+{
+    GCOV_DIR=$OUTPUT_DIR/atb_speed/gcov
+    GCOV_CACHE_DIR=$OUTPUT_DIR/atb_speed/gcov/cache
+    GCOV_INFO_DIR=$OUTPUT_DIR/atb_speed/gcov/cov_info
+    LCOV_PATH=`which lcov`
+    GENHTML_PATH=`which genhtml`
+    FIND_IGNORE_PATH=$CACHE_DIR/core/CMakeFiles/atb_speed_static.dir/*
+    if [ -d "$GCOV_DIR" ]
+    then
+        rm -rf $GCOV_DIR
+    fi
+    mkdir $GCOV_DIR
+    mkdir $GCOV_CACHE_DIR
+    mkdir $GCOV_INFO_DIR
+
+    $LCOV_PATH -d $GCOV_CACHE_DIR --zerocounters >> $GCOV_DIR/log.txt
+
+    find $CACHE_DIR -not -path "$FIND_IGNORE_PATH" -name "*.gcno" | xargs -i cp {} $GCOV_CACHE_DIR
+    $LCOV_PATH -c -i -d $GCOV_CACHE_DIR -o $GCOV_INFO_DIR/init.info >> $GCOV_DIR/log.txt
+    
+    fn_run_pythontest
+
+    find $CACHE_DIR -name "*.gcda" | xargs -i cp {} $GCOV_CACHE_DIR
+    cd $GCOV_CACHE_DIR
+    find . -name "*.cpp" | xargs -i gcov {} >> $GCOV_DIR/log.txt
+    cd ..
+    $LCOV_PATH -c -d $GCOV_CACHE_DIR -o $GCOV_INFO_DIR/cover.info --rc lcov_branch_coverage=1 >> $GCOV_DIR/log.txt
+    $LCOV_PATH -a $GCOV_INFO_DIR/init.info -a $GCOV_INFO_DIR/cover.info -o $GCOV_INFO_DIR/total.info --rc lcov_branch_coverage=1 >> $GCOV_DIR/log.txt
+    $LCOV_PATH --remove $GCOV_INFO_DIR/total.info '*/3rdparty/*' '*torch/*' '*c10/*' '*ATen/*' '*/c++/7*' '*tests/*' '*tools/*' '/usr/*' '/opt/*' '*models/*' -o $GCOV_INFO_DIR/final.info --rc lcov_branch_coverage=1 >> $GCOV_DIR/log.txt
+    $GENHTML_PATH --rc lcov_branch_coverage=1 -o cover_result $GCOV_INFO_DIR/final.info -o cover_result >> $GCOV_DIR/log.txt
+    tail -n 4 $GCOV_DIR/log.txt
+    cd $OUTPUT_DIR/atb_speed
+    tar -czf gcov.tar.gz gcov
+    rm -rf gcov
+}
+
+function fn_build_version_info()
+{
+    if [ $IS_RELEASE -eq 1 ]; then
+        # relaese 版本号存于version.ini，每日版本号存于version_item.ini
+        if [ -f "$CODE_ROOT"/../CI/config/version.ini ]; then
+            PACKAGE_NAME=$(cat $CODE_ROOT/../CI/config/version.ini | grep "PackageName" | cut -d "=" -f 2)
+        fi
+    else
+        if [ -f "$CODE_ROOT"/../CI/config/version_item.ini ]; then
+            PACKAGE_NAME=$(cat $CODE_ROOT/../CI/config/version_item.ini | grep "PackageName" | cut -d "=" -f 2)
+        fi
+    fi
+    current_time=$(date +"%Y-%m-%d %r %Z")
+    touch $OUTPUT_DIR/atb_speed/version.info
+    cat > $OUTPUT_DIR/atb_speed/version.info <<EOF
+Ascend-cann-llm : ${ASCEND_SPEED_VERSION}
+Ascend-cann-llm Version : ${VERSION_B}
+Platform : ${ARCH}
+Time: ${current_time}
+EOF
+
+}
+
+function fn_build_for_ci()
+{
+    cd $OUTPUT_DIR/atb_speed
+    rm -rf ./*.tar.gz
+    cp $README_DIR/README.md .
+    fn_build_version_info
+
+    torch_vision=$(pip list | grep torch | head  -n 1 | awk '{print $2}' | cut -d '+' -f1)
+    if [ "$USE_CXX11_ABI" == "OFF" ];then
+        abi=0
+    else
+        abi=1
+    fi
+
+    tar_package_name="Ascend-mindie-atb-models_${PACKAGE_NAME}_linux-${ARCH}_torch${torch_vision}-abi${abi}.tar.gz"
+
+    if [ $IS_RELEASE -eq 1 ]; then
+        source_folder_list=$(cat $SCRIPT_DIR/release_folder.ini | xargs)
+        tar czf $tar_package_name $source_folder_list --owner=0 --group=0
+    else
+        tar czf $tar_package_name ./* --owner=0 --group=0
+    fi
+
+    if [ -f "README.md" ];then
+        rm -rf README.md
+    fi
+}
+
 function fn_build()
 {
     fn_build_3rdparty
@@ -114,7 +227,6 @@ function fn_build()
     COMPILE_OPTIONS="${COMPILE_OPTIONS} -DUSE_CXX11_ABI=${USE_CXX11_ABI}"
     fi
 
-
     echo "COMPILE_OPTIONS:$COMPILE_OPTIONS"
     cmake $CODE_ROOT $COMPILE_OPTIONS
     if [ "$INCREMENTAL_SWITCH" == "OFF" ];then
@@ -126,6 +238,7 @@ function fn_build()
         make -j
     fi
     make install
+    fn_build_for_ci
 }
 
 function fn_main()
@@ -142,7 +255,7 @@ function fn_main()
 
     if [[ "$BUILD_OPTION_LIST" =~ "$1" ]];then
         if [[ -z "$1" ]];then
-            arg1="release"
+            arg1="master"
         else
             arg1=$1
             shift
@@ -156,7 +269,7 @@ function fn_main()
             fi
         done
         if [[ $cfg_flag == 1 ]];then
-            arg1="release"
+            arg1="master"
         else
             echo "argument $1 is unknown, please type build.sh help for more imformation"
             exit -1
@@ -167,6 +280,22 @@ function fn_main()
     do {
         arg2=$1
         case "${arg2}" in
+        --ascend_speed_version=*)
+            arg2=${arg2#*=}
+            if [ -z $arg2 ];then
+                echo "the ascend_speed_version is not set. This should be set like --ascend_speed_version=<version>"
+            else
+                ASCEND_SPEED_VERSION=$arg2
+            fi
+            ;;
+        --release_b_version=*)
+            arg2=${arg2#*=}
+            if [ -z $arg2 ];then
+                echo "the release_b_version is not set. This should be set like --release_b_version=<version>"
+            else
+                VERSION_B=$arg2
+            fi
+            ;;
         --output=*)
             arg2=${arg2#*=}
             if [ -z $arg2 ];then
@@ -237,12 +366,22 @@ function fn_main()
             COMPILE_OPTIONS="${COMPILE_OPTIONS}"
             fn_build
             ;;
-        "release")
+        "pythontest")
+            COMPILE_OPTIONS="${COMPILE_OPTIONS} -DUSE_PYTHON_TEST=ON"
+            fn_build
+            fn_build_coverage
+            ;;
+        "master")
             COMPILE_OPTIONS="${COMPILE_OPTIONS} -DCMAKE_BUILD_TYPE=Release"
             fn_build
             ;;
+        "release")
+            COMPILE_OPTIONS="${COMPILE_OPTIONS} -DCMAKE_BUILD_TYPE=Release"
+            IS_RELEASE=1
+            fn_build
+            ;;
         "help")
-            echo "build.sh 3rdparty|unittest|unittest_and_run|pythontest|pythontest_and_run|debug|release --incremental|--gcov|--no_hostbin|--no_devicebin|--output=<dir>|--cache=<dir>|--use_cxx11_abi=0|--use_cxx11_abi=1|--build_config=<path>"
+            echo "build.sh 3rdparty|unittest|unittest_and_run|pythontest|pythontest_and_run|debug|release|master --incremental|--gcov|--no_hostbin|--no_devicebin|--output=<dir>|--cache=<dir>|--use_cxx11_abi=0|--use_cxx11_abi=1|--build_config=<path>"
             ;;
         *)
             echo "unknown build type:${arg1}";

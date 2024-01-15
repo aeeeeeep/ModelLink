@@ -26,7 +26,7 @@ inline std::ostream& operator<<(std::ostream& os, const std::vector<T>& vec)
     for (auto& el : vec) {
         os << el << ',';
     }
-    trturn os;
+    return os;
 }
 
 namespace atb_speed {
@@ -34,7 +34,7 @@ class LogStream {
 public:
     LogStream(const char *filePath, int line, const char *funcName, LogLevel level);
     ~LogStream();
-    friend std::ostream& operator<<(std::ostream& os, const LogStream& obj)
+    friend std::ostream& operator<<(std::ostream& os, const LogStream& obj)l
     template <typename T> LogStream &operator << (const T &value)
     {
         stream_ << value;

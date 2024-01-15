@@ -19,7 +19,7 @@
 
 #define CREATE_OPERATION(param, operation) \
     do { \
-        atb::status atbStatus = atb::CreateOperation(param, operation);\
+        atb::Status atbStatus = atb::CreateOperation(param, operation);\
         if (atbStatus != atb::NO_ERROR) { \
             return atbStatus; \
         } \
