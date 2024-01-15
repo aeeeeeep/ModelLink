@@ -27,6 +27,7 @@ namespace common {
 template <class T> atb::Status MlpGateLayerBase(const MlpGateParam &param, atb::Operation **operation, T config)
 {
     atb::GraphParam opGraph;
+    opGraph.name = "MlpGateLayerBase";
     opGraph.inTensorNum = config.inTensorNum;
     opGraph.outTensorNum = config.outTensorNum;
     opGraph.internalTensorNum = config.interTensorNum;
