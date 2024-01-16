@@ -16,7 +16,7 @@
 #include "nlohmann/json.hpp"
 #include "atb/atb_infer.h"
 #include "layers/parallel_layer_v2.h"
-#include "models/llama65/operation/llama_layer_embedding.h"
+#include "models/llama/7b/operation/llama_layer_embedding.h"
 #include "models/llama/13b/layer/common_layer_fa.h"
 #include "common_flashattention_model.h"
 
@@ -178,8 +178,8 @@ void CommonFlashAttentionModel::BuildGraph()
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(0)};
 
     auto &embeddingNode = graph_.nodes.at(nodeId++);
-    atb_speed::llama65::LayerEmbeddingParam layerEmbeddingParam;
-    atb_speed::llama65::LayerEmbedding(layerEmbeddingParam, &op);
+    atb_speed::llama_7b::LayerEmbeddingParam layerEmbeddingParam;
+    atb_speed::llama_7b::LayerEmbedding(layerEmbeddingParam, &op);
     embeddingNode.operation.reset(op);
     embeddingNode.inTensors = {&graph_.inTensors.at(IN_TENSOR_COSTABLE),
                                 &graph_.inTensors.at(IN_TENSOR_SINTABLE),
