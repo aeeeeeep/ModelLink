@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "pa_model.h"
+#include "paged_attention_model.h"
 #include <atb/atb_infer.h>
-#include "models/chatglm2/6b/layer/decoder_pa_layer.h"
+#include "models/chatglm2/6b/layer/paged_attention_layer.h"
 #include "nlohmann/json.hpp"
 
 namespace atb_speed {

@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#include "common_model_fa.h"
+#include "flash_attention_model.h"
 #include <atb/atb_infer.h>
 #include <nlohmann/json.hpp>
 #include "atb_speed/log.h"
-#include "chatglm2/6b/layer/common_fa.h"
+#include "chatglm2/6b/layer/flash_attention_layer.h"
 
 namespace atb_speed {
 namespace chatglm2_6b {
