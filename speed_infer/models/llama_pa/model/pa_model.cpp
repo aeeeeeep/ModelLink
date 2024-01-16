@@ -80,7 +80,7 @@ void PAModel::Param::FromString(const std::string &param)
  
     ATB_LOG(INFO) << "Llama_65BPAModel param rmsNormEps:" << rmsNormEps << ", headNum:" << headNum << ", dk:" << dk
                   << ", layerNum:" << layerNum << ", transposedWeight:" << transposedWeight << ", rank:" << rank
-                  << ", rankSize:" << rankSize << ", backend: " << backend << ", isLmHeadParallel" << isLmHeadParallel
+                  << ", rankSize:" << rankSize << ", backend: " << backend << ", isLmHeadParallel:" << isLmHeadParallel
                   << ", isBF16:" << isBF16;
 }
 
