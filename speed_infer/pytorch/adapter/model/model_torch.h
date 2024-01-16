@@ -42,7 +42,7 @@ private:
                         const std::string &param);
     std::string GetSaveTensorDir();
     void* GetWorkSpace(uint64_t bufferSize);
-    atb::Tensor CreateInfernalFromDesc(const atb::TensorDesc &tensorDesc);
+    atb::Tensor CreateInternalTensorFromDesc(const atb::TensorDesc &tensorDesc);
     void RunTask(std::string taskName, std::function<int()> task);
 private:
     std::string modelName_;
@@ -50,7 +50,7 @@ private:
     uint64_t executeCount_ = 0;
     uint64_t modelId_ = 0;
     std::shared_ptr<atb::Context> context_;
-    atd::vector<torch::Tensor> atInternalTensors_;
+    std::vector<torch::Tensor> atInternalTensors_;
 };
 
 #endif
