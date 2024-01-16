@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "common_fa.h"
+#include "flash_attention_layer.h"
 #include "layers/parallel_layer_v2.h"
 #include "layers/mlp_gate_v2.h"
 #include "layers/attention.h"

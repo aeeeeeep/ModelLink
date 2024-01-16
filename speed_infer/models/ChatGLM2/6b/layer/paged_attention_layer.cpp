@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-#include "decoder_pa_layer.h"
+#include "paged_attention_layer.h"
 #include "chatglm2/6b/operation/position_embedding_tgi.h"
-#include "chatglm2/6b/operation/self_attention.h"
 #include "layers/mlp_gate.h"
 #include "layers/parallel_layer.h"
 
