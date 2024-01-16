@@ -117,7 +117,7 @@ atb::Status LayerParallelFlashAttentionOperation(const LayerParallelFlashAttenti
 
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CreateOperation(rmsNormParam, &InputNormAddNode.operation);
+    CreateOperation(addParam, &InputNormAddNode.operation);
     InputNormAddNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_BETA};
     InputNormAddNode.outTensorIds = {INTERMIDATE_NORMADDOUT};
 
@@ -185,7 +185,7 @@ atb::Status LayerParallelFlashAttentionOperation(const LayerParallelFlashAttenti
     selfOutNormAddNode.inTensorIds = {INTERMIDATE_SELFNORMOUT, IN_SELFOUTBETA};
     selfOutNormAddNode.outTensorIds = {INTERMIDATE_SELFNORMADDOUT};
 
-    atb_speed::common::MlpGateParam mlpParam;
+    atb_speed::llama_7b::MlpGateParam mlpParam;
     mlpParam.rank = param.rank;
     mlpParam.rankSize = param.rankSize;
     mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
