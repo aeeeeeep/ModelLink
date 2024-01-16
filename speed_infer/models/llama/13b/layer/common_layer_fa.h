@@ -45,8 +45,7 @@ struct CommonFlashAttentionLayerParam {
     int ffnOutInputOffset = 0;
 };
 
-atb::Status CommonFlashAttentionLayer(const CommonFlashAttentionLayerParam &param,
-    atb::Operation **operation);
+atb::Status CommonFlashAttentionLayer(const CommonFlashAttentionLayerParam &param, atb::Operation **operation);
 
 static atb::Operation *CreateCommonFlashAttentionLayer(const nlohmann::json &paramJson)
 {
@@ -70,9 +69,9 @@ static atb::Operation *CreateCommonFlashAttentionLayer(const nlohmann::json &par
     param.ffnOutInputScale = paramJson["ffnOutInputScale"].get<float>();
     param.ffnOutInputOffset = paramJson["ffnOutInputOffset"].get<int>();
 
-    ATB_LOG(INFO) << "LLaMA CommonFlashAttentionLayer headNum:" << param.headNum << ", rmsNormEps:" << param.rmsNormEps 
-                  << ", dk:" << param.dk << ", model:" << param.model << ", rank:" << param.rank << ", rankSize:" 
-                  << param.rankSize;
+    ATB_LOG(INFO) << "LLaMA CommonFlashAttentionLayer headNum:" << param.headNum << ", rmsNormEps:" <<
+        param.rmsNormEps << ", dk:" << param.dk << ", model:" << param.model << ", rank:" << param.rank <<
+        ", rankSize:" << param.rankSize;
     atb::Operation *op;
     CommonFlashAttentionLayer(param, &op);
     return op;

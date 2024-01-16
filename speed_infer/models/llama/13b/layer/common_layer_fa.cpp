@@ -34,13 +34,10 @@ enum CommonFlashAttentionLayerTensorId : int {
     IN_KMIXDWEIGHT,
     IN_VMIXDWEIGHT,
     IN_SELFOUTLINEARWEIGHT,
-
     IN_SELFOUTNORMWEIGHT,
-
     IN_MLPGATEWEIGHT,
     IN_MLPDOWNWEIGHT,
     IN_MLPUPWEIGHT,
-
     // quant weights
     IN_QMIXD_DEQSCALE,
     IN_QMIXD_BIAS,
@@ -56,7 +53,6 @@ enum CommonFlashAttentionLayerTensorId : int {
     IN_MLPDOWN_BIAS,
     IN_MLPUP_DEQSCALE,
     IN_MLPUP_BIAS,
-
     // sparse weights
     IN_QMIXD_INDEX,
     IN_KMIXD_INDEX,
@@ -65,7 +61,6 @@ enum CommonFlashAttentionLayerTensorId : int {
     IN_MLPGATE_INDEX,
     IN_MLPUP_INDEX,
     IN_MLPDOWN_INDEX,
-
     IN_POSITIONIDS,
     IN_COSTABLE,
     IN_SINTABLE,
@@ -77,9 +72,7 @@ enum CommonFlashAttentionLayerTensorId : int {
     IN_BETA,
     IN_HOLDER,
     IN_LAYERID,
-
     OUT_LLAMA7BLAYEROUT,
-
     INTERMIDATE_INPUTNORMOUT,
     INTERMIDATE_MIXEDQ,
     INTERMIDATE_MIXEDK,
@@ -106,7 +99,6 @@ atb::Status CommonFlashAttentionLayer(const CommonFlashAttentionLayerParam &para
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
     opGraph.internalTensorNum = INTERMEDIATE_TENSOR_COUNT;
     opGraph.nodes.resize(NODE_COUNT);
-
     size_t nodeId = 0;
     atb::Node &inputNormNode = opGraph.nodes.at(nodeId++);
     atb::Node &mixdQLinearNode = opGraph.nodes.at(nodeId++);
@@ -119,7 +111,6 @@ atb::Status CommonFlashAttentionLayer(const CommonFlashAttentionLayerParam &para
     atb::Node &selfNormNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpResidualAddNode = opGraph.nodes.at(nodeId++);
-
     if (param.quantModel) {
         // INPUT_NORM 量化
         atb::infer::RmsNormParam rmsNormParam;
@@ -131,7 +122,6 @@ atb::Status CommonFlashAttentionLayer(const CommonFlashAttentionLayerParam &para
         CreateOperation(rmsNormParam, &inputNormNode.operation);
         inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT, IN_BETA };
         inputNormNode.outTensorIds = { INTERMIDATE_INPUTNORMOUT };
-
         //  QKV LINEAR量化
         atb::infer::LinearQuantParam quantQkvLinearParam;
         quantQkvLinearParam.transposeB = true;
@@ -191,7 +181,6 @@ atb::Status CommonFlashAttentionLayer(const CommonFlashAttentionLayerParam &para
         mixdVLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_VMIXDWEIGHT };
         mixdVLinearNode.outTensorIds = { INTERMIDATE_MIXEDV };
     }
-
     atb_speed::llama_7b::RopeFusionParam ropeFusionParam;
     ropeFusionParam.headNum = param.headNum;
     atb_speed::llama_7b::RopeFusionOperation(ropeFusionParam, &ropeNode.operation);
@@ -199,7 +188,6 @@ atb::Status CommonFlashAttentionLayer(const CommonFlashAttentionLayerParam &para
         INTERMIDATE_MIXEDQ, INTERMIDATE_MIXEDK, IN_POSITIONIDS, IN_COSTABLE, IN_SINTABLE, IN_SEQLEN
     };
     ropeNode.outTensorIds = { INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK };
-
     atb::infer::SelfAttentionParam selfAttentionKvCacheParam;
     selfAttentionKvCacheParam.headDim = param.dk;
     selfAttentionKvCacheParam.headNum = param.headNum;
@@ -210,7 +198,6 @@ atb::Status CommonFlashAttentionLayer(const CommonFlashAttentionLayerParam &para
     } else {
         selfAttentionKvCacheParam.coderType = atb::infer::SelfAttentionParam::DECODER;
     }
-
     CreateOperation(selfAttentionKvCacheParam, &selfAttentionKvCacheNode.operation);
     selfAttentionKvCacheNode.inTensorIds = { INTERMIDATE_POSITIONEMBEDQ,
         INTERMIDATE_POSITIONEMBEDK,
@@ -230,7 +217,6 @@ atb::Status CommonFlashAttentionLayer(const CommonFlashAttentionLayerParam &para
         newShape.dims[ATTENTION_DIM_2] = param.headNum;
         newShape.dims[ATTENTION_DIM_3] = oldShape.dims[ATTENTION_DIM_2] / param.headNum;
     };
-
     if (param.quantModel) {
         // SelfAttention 输出量化
         atb_speed::common::ParallelParamV2 selfOutLinearParam;
@@ -245,7 +231,6 @@ atb::Status CommonFlashAttentionLayer(const CommonFlashAttentionLayerParam &para
         selfOutLinearParam.quantParam.inputScale = param.denseInputScale;
         selfOutLinearParam.quantParam.inputOffset = param.denseInputOffset;
         atb_speed::common::RowParallelLinearV2(selfOutLinearParam, &selfOutLinearNode.operation);
-
         selfOutLinearNode.inTensorIds = { INTERMIDATE_SELFOUT,
             IN_SELFOUTLINEARWEIGHT,
             IN_SELFOUTLINEAR_BIAS,
@@ -256,7 +241,6 @@ atb::Status CommonFlashAttentionLayer(const CommonFlashAttentionLayerParam &para
         selfOutLinearNode.outTensorIds = { INTERMIDATE_SELFLINEAROUT };
     } else if (param.sparseModel) {
         // Sparse
-
         atb_speed::common::ParallelParamV2 selfOutLinearParam;
         selfOutLinearParam.commParam.rank = param.rank;
         selfOutLinearParam.commParam.rankSize = param.rankSize;
@@ -267,12 +251,9 @@ atb::Status CommonFlashAttentionLayer(const CommonFlashAttentionLayerParam &para
         selfOutLinearParam.quantParam.quantType = atb::infer::QUANT_INT8;
         selfOutLinearParam.quantParam.isQuantOp = true;
         selfOutLinearParam.quantParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_QUANT;
-
         selfOutLinearParam.quantParam.inputScale = param.denseInputScale;
         selfOutLinearParam.quantParam.inputOffset = param.denseInputOffset;
-
         atb_speed::common::RowParallelLinearV2(selfOutLinearParam, &selfOutLinearNode.operation);
-
         selfOutLinearNode.inTensorIds = { INTERMIDATE_SELFOUT,
             IN_SELFOUTLINEARWEIGHT,
             IN_SELFOUTLINEAR_BIAS,
@@ -293,14 +274,12 @@ atb::Status CommonFlashAttentionLayer(const CommonFlashAttentionLayerParam &para
         };
         selfOutLinearNode.outTensorIds = { INTERMIDATE_SELFLINEAROUT };
     }
-
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
 
     CreateOperation(addParam, &selfResidualAddNode.operation);
     selfResidualAddNode.inTensorIds = { IN_HIDDENSTATES, INTERMIDATE_SELFLINEAROUT };
     selfResidualAddNode.outTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT };
-
 
     if (param.quantModel) {
         // RMSNORM量化
@@ -362,13 +341,11 @@ atb::Status CommonFlashAttentionLayer(const CommonFlashAttentionLayerParam &para
         selfNormParam.normParam.epsilon = param.rmsNormEps;
         selfNormParam.normParam.quantInputScale = param.selfLnInputScale;
         selfNormParam.normParam.quantInputOffset = param.selfLnInputOffset;
-
         selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
 
         CreateOperation(selfNormParam, &selfNormNode.operation);
         selfNormNode.inTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_BETA };
         selfNormNode.outTensorIds = { INTERMIDATE_SELFNORMOUT };
-
 
         // MLP量化
         atb_speed::common::MlpGateParamV2 mlpParam;
@@ -377,23 +354,17 @@ atb::Status CommonFlashAttentionLayer(const CommonFlashAttentionLayerParam &para
         mlpParam.isQuant = true;
         mlpParam.isSparse = true;
         mlpParam.transposeB = true;
-
         mlpParam.commDownParam.rank = param.rank;
         mlpParam.commDownParam.rankSize = param.rankSize;
-
         mlpParam.quantUpParam.quantType = atb::infer::QUANT_INT8;
         mlpParam.quantUpParam.isQuantOp = false;
-
         mlpParam.quantGateParam.quantType = atb::infer::QUANT_INT8;
         mlpParam.quantGateParam.isQuantOp = false;
-
         mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
         mlpParam.quantDownParam.isQuantOp = true;
-
         mlpParam.quantDownParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_QUANT;
         mlpParam.quantDownParam.inputScale = param.ffnOutInputScale;
         mlpParam.quantDownParam.inputOffset = param.ffnOutInputOffset;
-
         atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);
         mlpNode.inTensorIds = { INTERMIDATE_SELFNORMOUT,
             IN_MLPUPWEIGHT,
@@ -422,18 +393,13 @@ atb::Status CommonFlashAttentionLayer(const CommonFlashAttentionLayerParam &para
         CreateOperation(selfNormParam, &selfNormNode.operation);
         selfNormNode.inTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT };
         selfNormNode.outTensorIds = { INTERMIDATE_SELFNORMOUT };
-
         atb_speed::common::MlpGateParamV2 mlpParam;
-
         mlpParam.commDownParam.rank = param.rank;
         mlpParam.commDownParam.rankSize = param.rankSize;
-
-
         mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
         mlpParam.transposeB = false;
         mlpParam.isBias = false;
         mlpParam.isPack = false;
-
         atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);
         mlpNode.inTensorIds = { INTERMIDATE_SELFNORMOUT,
             IN_MLPUPWEIGHT,
