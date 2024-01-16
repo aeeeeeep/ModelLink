@@ -42,50 +42,6 @@ atb::Status DecoderLayer(const LayerParamPa &param, atb::Operation **operation);
 
 atb::Status DecoderPALayer(const LayerParamPa &param, atb::Operation **operation);
 
-static atb::Operation *CreateDecoderPALayer(const nlohmann::json &paramJson)
-{
-    LayerParamPa param;
-    if (paramJson.contains("rmsNormEps")) {
-        param.rmsNormEps = paramJson["rmsNormEps"].get<double>();
-    }
-    if (paramJson.contains("residualAddScale")) {
-        param.residualAddScale = paramJson["residualAddScale"].get<float>();
-    }
-    if (paramJson.contains("transKey")) {
-        param.transKey = paramJson["transKey"].get<bool>();
-    }
-    if (paramJson.contains("layerId")) {
-        param.layerId = paramJson["layerId"].get<int>();
-    }
-    if (paramJson.contains("preScale")) {
-        param.preScale = paramJson["preScale"].get<float>();
-    }
-    if (paramJson.contains("postScale")) {
-        param.postScale = paramJson["postScale"].get<float>();
-    }
-    if (paramJson.contains("numHeadsPerPartition")) {
-        param.numHeadsPerPartition = paramJson["numHeadsPerPartition"].get<int>();
-    }
-    if (paramJson.contains("hiddenSizePerHead")) {
-        param.hiddenSizePerHead = paramJson["hiddenSizePerHead"].get<int>();
-    }
-    if (paramJson.contains("numGroupsPerPartition")) {
-        param.numGroupsPerPartition = paramJson["numGroupsPerPartition"].get<int>();
-    }
-    if (paramJson.contains("isPrefill")) {
-        param.isPrefill = paramJson["isPrefill"].get<bool>();
-    }
-    ATB_LOG(INFO) << "ChatGLM2_6b_Decoder_Layer transKey:" << param.transKey << ", rmsNormEps:" << param.rmsNormEps
-                  << ", layerId:" << param.layerId << ", preScale" << param.preScale << ", postScale" << param.postScale
-                  << ", numHeadsPerPartion" << param.numHeadsPerPartition << ", hiddenSizePerHead"
-                  << param.hiddenSizePerHead << ", numGroupsPerPartition" << param.numGroupsPerPartition
-                  << ", residualAddScale" << param.residualAddScale
-                  << ", isPrefill" << param.isPrefill;
-    atb::Operation *op;
-    DecoderPALayer(param, &op);
-    return op;
-}
-
 class FlashAttentionHostBinder : public HostTensorBinder {
 public:
     FlashAttentionHostBinder();
