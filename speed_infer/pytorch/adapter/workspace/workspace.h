@@ -13,46 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_UTILS_CONTEXT_CONTEXT_H
-#define ATB_SPEED_UTILS_CONTEXT_CONTEXT_H
+#ifndef ATB_SPEED_UTILS_WORKSPACE_H
+#define ATB_SPEED_UTILS_WORKSPACE_H
 #include <cstdint>
 #include <memory>
 #include <vector>
+#include "buffer_base.h"
 
 namespace atb_speed {
-class BufferBase;
 
-class Context {
+class Workspace {
 public:
-    Context();
-    ~Context();
-    void *GetHostTilingBuffer(uint64_t bufferSize);
-    void *GetTilingBuffer(uint64_t bufferSize);
+    Workspace();
+    ~Workspace();
     void *GetWorkspaceBuffer(uint64_t bufferSize);
-    void *GetIntermediateBuffer(uint64_t bufferSize);
 
 private:
-    uint64_t GetHostTilingBufferRing();
-    uint64_t GetHostTilingBufferSize();
-
-    uint64_t GetTilingBufferRing();
-    uint64_t GetTilingBufferSize();
-
     uint64_t GetWorkspaceBufferRing();
     uint64_t GetWorkspaceBufferSize();
 
-    uint64_t GetIntermediateBufferRing();
-    uint64_t GetIntermediateBufferSize();
-
 private:
-    std::vector<std::unique_ptr<BufferBase>> hostTilingBuffers_;
-    size_t hostTilingBufferOffset_ = 0;
-    std::vector<std::unique_ptr<BufferBase>> tilingBuffers_;
-    size_t tilingBufferOffset_ = 0;
     std::vector<std::unique_ptr<BufferBase>> workspaceBuffers_;
     size_t workspaceBufferOffset_ = 0;
-    std::vector<std::unique_ptr<BufferBase>> intermediateBuffers_;
-    size_t intermediateBufferOffset_ = 0;
 };
 } // namespace atb_speed
 #endif

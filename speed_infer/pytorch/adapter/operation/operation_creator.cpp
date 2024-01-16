@@ -13,12 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#include <atb/atb_infer.h>
+#include "operation_creator.h"
 #include <functional>
 #include <nlohmann/json.hpp>
 #include "atb_speed/log.h"
-#include "operation_creator.h"
 
 using OperationCreateFunc = std::function<atb::Operation *(const nlohmann::json &paramJson)>;
 

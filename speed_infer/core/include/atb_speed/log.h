@@ -20,6 +20,7 @@
 #include "atb_speed/log/log_core.h"
 #include "atb_speed/log/log_sink.h"
 #include "atb_speed/log/log_entity.h"
+#include "atb_speed/utils/operation_util.h"
 
 #define ATB_LOG(level) ATB_LOG_##level
 

@@ -13,17 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "hosttensor_binder_creator.h"
+#include "chatglm6b/layer/chatglm6blayer_decoder_flashattention_operation.h"
 
-#ifndef ATB_SPEED_CONTEXT_FACTORY_H
-#define ATB_SPEED_CONTEXT_FACTORY_H
-#include <memory>
-#include <atb/context.h>
-
-namespace atb_speed {
-class ContextFactory {
-public:
-    static std::shared_ptr<atb::Context> GetAtbContext(void *stream);
-    static void FreeAtbContext();
-};
+atb_speed::HostTensorBinder *CreateHostTensorBinder(const std::string &opName)
+{
+    if (opName == "ChatGlm6BLayerDecoderFlashAttentionOperation") {
+        return new atb_speed::ChatGlm6BLayerDecoderFlashAttentionBinder();
+    }
+    return nullptr;
 }
-#endif
