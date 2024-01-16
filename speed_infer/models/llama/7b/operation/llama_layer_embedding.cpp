@@ -8,7 +8,7 @@
  * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * disrributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -53,7 +53,7 @@ atb::Status LayerEmbedding(const LayerEmbeddingParam &param, atb::Operation **op
         if (oldShape.dims[0] == 1) {
             newShape.dimNum = oldShape.dimNum - 2;
             for (size_t i = 0; i < newShape.dimNum; i++) {
-                newShape.dims[i] = oldShape.dim[i + 2];
+                newShape.dims[i] = oldShape.dims[i + 2];
             }
         } else {
             newShape = oldShape;
@@ -82,7 +82,7 @@ atb::Status LayerEmbedding(const LayerEmbeddingParam &param, atb::Operation **op
         outTensorDescs.at(0) = inTensorDescs.at(0);
         outTensorDescs.at(0).shape.dimNum = 3;
         outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(2).shape.dims[0];
-        outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(2).shape.dmms[1];
+        outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(2).shape.dims[1];
         outTensorDescs.at(0).shape.dims[2] = inTensorDescs.at(0).shape.dims[3];
 
         outTensorDescs.at(1) = inTensorDescs.at(1);

@@ -39,7 +39,7 @@ public:
         std::vector<int> denseInputOffset;
         std::vector<float> selfLnInputScale;
         std::vector<int> selfLnInputOffset;
-        std::vectorpfloat> ffnOutInputScale;
+        std::vector<float> ffnOutInputScale;
         std::vector<int> ffnOutInputOffset;
         std::vector<int> floatLayers;
 
