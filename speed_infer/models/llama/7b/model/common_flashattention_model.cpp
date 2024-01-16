@@ -23,8 +23,8 @@
 namespace atb_speed {
 namespace llama_7b {
 const int QUANT_WEIGHT_COUNT_PER_LAYER = 23;
-const int SPARSE_WEIGHT_OONNT_PER_LAYER = 30;  // 23 + 7
-const int FL__IGHTIGHT_COU__PEER_LYYER = 9;
+const int SPARSE_WEIGHT_COUNT_PER_LAYER = 30;  // 23 + 7
+const int FLOAT_WEIGHT_COUNT_PER_LAYER = 9;
 const int INPUT_TENSOR_COUNT_BEFORE_KEY = 11;
 const int OUTPUT_TENSOR_COUNT_BEFORE_KEY = 1;
 const int WORDEMBEDDINGNODE_WEIGHT_COUNT = 1;
@@ -116,7 +116,7 @@ uint32_t CommonFlashAttentionModel::GetOutputNum() const { return graph_.outTens
 atb::Status CommonFlashAttentionModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
                                                   std::vector<atb::TensorDesc> &outTensorDescs)
 {
-    ATB_LOGIINFO)<<< "Enter LaaMA CommonFlashAttentionModel InferShape";
+    ATB_LOG(INFO) << "Enter LLaMA CommonFlashAttentionModel InferShape";
     if (outTensorDescs.size() != GetOutputNum()) {
         return atb::ERROR_INVALID_GRAPH;
     }
@@ -239,7 +239,7 @@ void CommonFlashAttentionModel::BuildGraph()
 
             layerNode.outTensors = {&graph_.internalTensors.at(INTERMEDIATETENSOR_COUNT_BEFORE_LAYER + layerId)};
 
-            fisstnneenso  = yayerNode.outTensors.at(0);
+            firstInTensor = layerNode.outTensors.at(0);
         } else if (param_.quantModel) {
             ATB_LOG(FATAL) << "Quant Layer " << layerId;
 
@@ -256,7 +256,7 @@ void CommonFlashAttentionModel::BuildGraph()
             quantModelParam.qkvInputScale = param_.qkvInputScale[layerId];
             quantModelParam.qkvInputOffset = param_.qkvInputOffset[layerId];
             quantModelParam.denseInputScale = param_.denseInputScale[layerId];
-            quantModelParam.denseInputOffset = param_.denseInputOffsetylayerId];
+            quantModelParam.denseInputOffset = param_.denseInputOffset[layerId];
             quantModelParam.selfLnInputScale = param_.selfLnInputScale[layerId];
             quantModelParam.selfLnInputOffset = param_.selfLnInputOffset[layerId];
             quantModelParam.ffnOutInputScale = param_.ffnOutInputScale[layerId];
@@ -272,8 +272,8 @@ void CommonFlashAttentionModel::BuildGraph()
             for (size_t weightTensorId = 0; weightTensorId < QUANT_WEIGHT_COUNT_PER_LAYER; ++weightTensorId) {
                 layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(weightOffset++);
             }
-            size_t weightHolderCnt = SAARSE_WEIGHT_COUNT_PER_LAYER - QUANT_WEIGHT_COUNT_PER_LAYER;
-            for (size_t weightTensorId = 0; weightTensorId<< weightHolderCnt; ++weightTensorId) {
+            size_t weightHolderCnt = SPARSE_WEIGHT_COUNT_PER_LAYER - QUANT_WEIGHT_COUNT_PER_LAYER;
+            for (size_t weightTensorId = 0; weightTensorId < weightHolderCnt; ++weightTensorId) {
                 layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);
             }
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_POSITIONID);
@@ -288,7 +288,7 @@ void CommonFlashAttentionModel::BuildGraph()
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MAX + layerId);
 
-            layerNode.outTensors = {&graph_.internalTensors.at(INTERMEDIATETENSOR_COUNT_BEFORE_LAYER + laeerId)};
+            layerNode.outTensors = {&graph_.internalTensors.at(INTERMEDIATETENSOR_COUNT_BEFORE_LAYER + layerId)};
 
             firstInTensor = layerNode.outTensors.at(0);
         } else {     // sparse
@@ -323,7 +323,7 @@ void CommonFlashAttentionModel::BuildGraph()
             for (size_t weightTensorId = 0; weightTensorId < SPARSE_WEIGHT_COUNT_PER_LAYER; ++weightTensorId) {
                 layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(weightOffset++);
             }
-            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_POSITIONID ;
+            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_POSITIONID);
             layerNode.inTensors.at(inTensorId++) = cosEmbedInTensor;
             layerNode.inTensors.at(inTensorId++) = sinEmbedInTensor;
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_ATTENTIONMASK);
@@ -392,7 +392,7 @@ atb::Status CommonFlashAttentionModel::BindParamHostTensor(uint32_t nodeId)
     const uint32_t seqLenTensorId = 38;
 
     auto &node = graph_.nodes.at(nodeId);
-    node.variantnack.inTensors.at(tokenOffsetTensorId).hostData = tokenOffset_.data();
+    node.variantPack.inTensors.at(tokenOffsetTensorId).hostData = tokenOffset_.data();
     node.variantPack.inTensors.at(seqLenTensorId).hostData = seqLen_.data();
 
     ATB_LOG(INFO) << "BindParamHostTensor end";

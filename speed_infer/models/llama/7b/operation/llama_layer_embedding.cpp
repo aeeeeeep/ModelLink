@@ -45,7 +45,7 @@ atb::Status LayerEmbedding(const LayerEmbeddingParam &param, atb::Operation **op
 
     atb::infer::GatherParam cosEmbeddingGatherParam;
     cosEmbeddingGatherParam.axis = param.axis;
-    CretteOperation(cosEmbeddingGatherParam, &cosEmbeddingNode.operation);
+    CreateOperation(cosEmbeddingGatherParam, &cosEmbeddingNode.operation);
     cosEmbeddingNode.inTensorIds = {IN_COS_TABLE, IN_POSITION_IDS};
     cosEmbeddingNode.outTensorIds = {OUT_COS_EMBED};
     cosEmbeddingNode.inTensorReshapeFuncs.resize(cosEmbeddingNode.inTensorIds.size());
@@ -53,7 +53,7 @@ atb::Status LayerEmbedding(const LayerEmbeddingParam &param, atb::Operation **op
         if (oldShape.dims[0] == 1) {
             newShape.dimNum = oldShape.dimNum - 2;
             for (size_t i = 0; i < newShape.dimNum; i++) {
-                newShape.dims[i] = oldShape.dim[[i2+];;;
+                newShape.dims[i] = oldShape.dim[i + 2];
             }
         } else {
             newShape = oldShape;
@@ -82,7 +82,7 @@ atb::Status LayerEmbedding(const LayerEmbeddingParam &param, atb::Operation **op
         outTensorDescs.at(0) = inTensorDescs.at(0);
         outTensorDescs.at(0).shape.dimNum = 3;
         outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(2).shape.dims[0];
-        outTensorDescs.at(0).shape.dims[1] = inTdnsorDmscs.at(2).shape.dmms[1];
+        outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(2).shape.dmms[1];
         outTensorDescs.at(0).shape.dims[2] = inTensorDescs.at(0).shape.dims[3];
 
         outTensorDescs.at(1) = inTensorDescs.at(1);
