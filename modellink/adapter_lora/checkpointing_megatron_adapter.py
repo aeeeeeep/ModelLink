@@ -1,4 +1,5 @@
 import os
+from functools import wraps
 import megatron
 from megatron.checkpointing import _load_base_checkpoint, load_checkpoint
 from megatron import get_args
@@ -49,10 +50,12 @@ def _load_base_checkpoint_megatron_patch(load_dir, rank0=False):
             return state_dict, checkpoint_name, release
 
         # Read the tracker file and set the iteration.
-        state_dict_lora, checkpoint_name, release = _load_base_checkpoint(args.lora_load, rank0)
+        state_dict_lora, checkpoint_name_lora, release_lora = _load_base_checkpoint(args.lora_load, rank0)
         if state_dict_lora is not None:
             merge_dicts(state_dict, state_dict_lora)
-    return state_dict, release, checkpoint_name
+            checkpoint_name = checkpoint_name_lora
+            release = release_lora
+    return state_dict, checkpoint_name, release
 
 
 def load_checkpoint_megatron_patch(model, optimizer, opt_param_scheduler, load_arg='load', strict=True):
@@ -63,26 +66,28 @@ def load_checkpoint_megatron_patch(model, optimizer, opt_param_scheduler, load_a
     return load_checkpoint(model, optimizer, opt_param_scheduler, load_arg=load_arg, strict=strict)
 
 
-def state_dict_for_save_checkpoint_megatron_patch(self, prefix='', keep_vars=False):
-    def state_dict_for_save_checkpoint(self, prefix='', keep_vars=False):
-        """Use this function to override the state dict for
-        saving checkpoints."""
-        state_dict_ = dict()
-        state_dict = self.state_dict(prefix=prefix, keep_vars=keep_vars)
-        for key in state_dict:
-            if 'lora' in key:
-                state_dict_[key] = state_dict[key]
-        return state_dict_
+def state_dict_for_save_checkpoint_patch(state_dict):
+    state_dict_ = dict()
+    for key in state_dict:
+        if 'lora' in key:
+            state_dict_[key] = state_dict[key]
+    return state_dict_
 
-    args = get_args()
-    if args.lora_target_modules:
-        return state_dict_for_save_checkpoint(self, prefix=prefix, keep_vars=keep_vars)
-    else:
-        return self.state_dict_for_save_checkpoint(prefix=prefix, keep_vars=keep_vars)
+
+def state_dict_for_save_checkpoint_wrapper(fn):
+    @wraps(fn)
+    def wrapper(self, prefix='', keep_vars=False):
+        args = get_args()
+        if hasattr(args, 'lora_target_modules') and args.lora_target_modules:
+            return state_dict_for_save_checkpoint_patch(self.state_dict(prefix=prefix, keep_vars=keep_vars))
+        return fn(self, prefix='', keep_vars=False)
+
+    return wrapper
 
 
 def apply_checkpointing_patch():
     megatron.checkpointing._load_base_checkpoint = _load_base_checkpoint_megatron_patch
     megatron.training.load_checkpoint = load_checkpoint_megatron_patch
     megatron.model.transformer.ParallelTransformer.state_dict_for_save_checkpoint \
-        = state_dict_for_save_checkpoint_megatron_patch
+        = state_dict_for_save_checkpoint_wrapper(
+        megatron.model.transformer.ParallelTransformer.state_dict_for_save_checkpoint)
