@@ -34,6 +34,6 @@ def get_cxx11_flag(framework):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-f', "--framework", default='torch', help='framework to be uesd')
+    parser.add_argument('-f', "--framework", default='torch', help='framework to be used')
     args = parser.parse_args()
     logging.info(get_cxx11_flag(args.framework))

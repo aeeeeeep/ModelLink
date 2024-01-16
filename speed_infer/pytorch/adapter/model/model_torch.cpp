@@ -43,12 +43,12 @@ void* ModelTorch::GetWorkSpace(uint64_t bufferSize)
 {
     void *workspace = nullptr;
     if (bufferSize > 0) {
-        workspace = atb::GetSingleton<atb_speed::workspace>().GetWorkSpaceBuffer(bufferSize);
+        workspace = atb_speed::GetSingleton<atb_speed::Workspace>().GetWorkspaceBuffer(bufferSize);
     }
     return workspace;
 }
 
-atb::Tensor ModelTorchInternelTensorFromDesc(const atb::TensorDesc &tensorDesc)
+atb::Tensor ModelTorch::CreateInternalTensorFromDesc(const atb::TensorDesc &tensorDesc)
 {
     torch::Tensor newAtTensor = Utils::CreateAtTensorFromTensorDesc(tensorDesc);
     atInternalTensors_.push_back(newAtTensor);
@@ -63,7 +63,7 @@ void ModelTorch::RunTask(std::string taskName, std::function<int()> task)
     cmd.SetCustomHandler(task);
     cmd.Run();
 #else
-    ATB_LOG(FATAL) << modelName_ << "torch_npu is low, can't support SetCustomHander";
+    ATB_LOG(FATAL) << modelName_ << "torch_npu is low, can't support SetCustomHandler";
 #endif
 }
 
@@ -118,13 +118,15 @@ int64_t ModelTorch::SetParam(std::string param)
     bool isTaskQueueEnable = !((taskQueueEnv != nullptr && std::string(taskQueueEnv) == "0") ||
                                 (blockingEnv != nullptr && std::string(blockingEnv) == "1"));
     auto getWorkspaceFunc = std::bind(&ModelTorch::GetWorkSpace, this, std::placeholders::_1);
-    auto createInternalTensorFromDescFunc = std::bind(&modelTorch::CreateInternalTensorFromDesc,
-        this, std::placeholders::_2);
+    auto createInternalTensorFromDescFunc = std::bind(&ModelTorch::CreateInternalTensorFromDesc,
+        this, std::placeholders::_1);
+    auto runTaskFunc = std::bind(&ModelTorch::RunTask, this, std::placeholders::_1,
+        std::placeholders::_2);
     int64_t atbStatus = 0;
     if (isTaskQueueEnable) {
-        atbStatus = model_->Init(getWorkspaceFunc, createInternelTensorFromDescFunc, RunTaskFunc);
+        atbStatus = model_->Init(getWorkspaceFunc, createInternalTensorFromDescFunc, runTaskFunc);
     } else {
-        atbStatus = model_->Init(getWorkspaceFunc, createInternelTensorFromDescFunc, nullptr);
+        atbStatus = model_->Init(getWorkspaceFunc, createInternalTensorFromDescFunc, nullptr);
     }
     ATB_LOG(INFO) << "ModelTorch set param end";
     return atbStatus;

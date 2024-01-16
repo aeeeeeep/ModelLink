@@ -35,7 +35,7 @@ std::shared_ptr<atb::Context> ContextFactory::GetAtbContext(void *stream)
 
     if (context) {
         context->SetExecuteStream(stream);
-        if (atb:speed::GetSingleton<atb_speed::Config>().IsUseTilingCopyStream()) {
+        if (atb_speed::GetSingleton<atb_speed::Config>().IsUseTilingCopyStream()) {
             ATB_LOG(INFO) << "ContextFactory use tiling copy stream";
             context->SetAsyncTilingCopyStatus(true);
         } else {
