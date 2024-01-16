@@ -365,8 +365,10 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
 
         self.padded_vocab_size = args.padded_vocab_size
         self.pipeline_size_larger_than_one = args.pipeline_model_parallel_size > 1
-
-        self.tokenizer = get_tokenizer().tokenizer
+        try:
+                self.tokenizer = get_tokenizer().tokenizer
+        except AssertionError:
+                self.tokenizer = None
 
         # import module to avoid error of circular import
         self.greedy_search_or_sampling = greedy_search_or_sampling
