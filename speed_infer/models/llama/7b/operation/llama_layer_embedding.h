@@ -27,15 +27,6 @@ struct LayerEmbeddingParam {
 };
 
 atb::Status LayerEmbedding(const LayerEmbeddingParam &param, atb::Operation **operation);
-
-static atb::Operation *CreateLayerEmbedding(const nlohmann::json &paramJson)
-{
-    LayerEmbeddingParam param;
-    ATB_LOG(INFO) << "axis is " << param.axis;
-    atb::Operation *op;
-    LayerEmbedding(param, &op);
-    return op;
-}
 } // namespace llama_7b
 } // namespace atb_speed
 #endif
