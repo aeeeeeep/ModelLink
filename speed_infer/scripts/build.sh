@@ -35,8 +35,8 @@ export CACHE_DIR=$CODE_ROOT/build
 export OUTPUT_DIR=$CODE_ROOT/output
 THIRD_PARTY_DIR=$CODE_ROOT/3rdparty
 PACKAGE_NAME="7.0.T800"
-ASCEND_SPEED_VERSION="7.0"
-VERSION_B='7.0.0'
+ASCEND_SPEED_VERSION=""
+VERSION_B=""
 README_DIR=$CODE_ROOT
 COMPILE_OPTIONS=""
 INCREMENTAL_SWITCH=OFF
@@ -155,21 +155,16 @@ function fn_build_coverage()
 
 function fn_build_version_info()
 {
-    if [ $IS_RELEASE -eq 1 ]; then
-        # relaese 版本号存于version.ini，每日版本号存于version_item.ini
-        if [ -f "$CODE_ROOT"/../CI/config/version.ini ]; then
-            PACKAGE_NAME=$(cat $CODE_ROOT/../CI/config/version.ini | grep "PackageName" | cut -d "=" -f 2)
-        fi
-    else
-        if [ -f "$CODE_ROOT"/../CI/config/version_item.ini ]; then
-            PACKAGE_NAME=$(cat $CODE_ROOT/../CI/config/version_item.ini | grep "PackageName" | cut -d "=" -f 2)
-        fi
+    if [ -f "$CODE_ROOT"/../CI/config/version.ini ]; then
+        PACKAGE_NAME=$(cat $CODE_ROOT/../CI/config/version.ini | grep "PackageName" | cut -d "=" -f 2)
+        VERSION=$(cat "$CODE_ROOT"/../CI/config/version.ini | grep "ATBVersion" | cut -d "=" -f 2)
+        ASCEND_SPEED_VERSION=$(cat $CODE_ROOT/../CI/config/version.ini | grep "ATB-ModelsVersion" | cut -d "=" -f 2)
     fi
     current_time=$(date +"%Y-%m-%d %r %Z")
     touch $OUTPUT_DIR/atb_speed/version.info
     cat > $OUTPUT_DIR/atb_speed/version.info <<EOF
-Ascend-cann-llm : ${ASCEND_SPEED_VERSION}
-Ascend-cann-llm Version : ${VERSION_B}
+ATBVersion : ${VERSION_B}
+ModelsVersion : ${ASCEND_SPEED_VERSION}
 Platform : ${ARCH}
 Time: ${current_time}
 EOF

@@ -33,7 +33,7 @@ public:
                              std::string varaintPackParam);
     std::vector<torch::Tensor> Execute(std::vector<torch::Tensor> atInTensors);
     void ExecuteOut(std::vector<torch::Tensor> atInTensors, std::vector<torch::Tensor> atOutTensors);
-    c10::intrusive_ptr<OperationTorch> clone() const{ return c10::make_intrusive<OperationTorch>(opName_); }
+    c10::intrusive_ptr<OperationTorch> clone() const { return c10::make_intrusive<OperationTorch>(opName_); }
 
 private:
     void CreateAtOutTensors(const std::vector<torch::Tensor> &atInTensors, std::vector<torch::Tensor> &atOutTensors);

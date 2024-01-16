@@ -22,7 +22,7 @@ namespace atb_speed {
 class BufferDevice : public BufferBase {
 public:
     explicit BufferDevice(uint64_t bufferSize);
-    virtual ~BufferDevuce();
+    virtual ~BufferDevice();
     void *GetBuffer(uint64_t bufferSize) override;
 private:
     torch::Tensor CreateAtTensor(uint64_t bufferSize);

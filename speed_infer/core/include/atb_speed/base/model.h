@@ -39,7 +39,7 @@ public:
     using GetWorkspaceFunc = std::function<void*(uint64_t bufferSize)>;
     using CreateTensorFromTensorDescFunc = std::function<atb::Tensor(const atb::TensorDesc &tensorDesc)>;
     using Task = std::function<int()>;
-    using RunTaskFunc = std::function<void(const std::string &taskName, Task Task)>;
+    using RunTaskFunc = std::function<void(const std::string &taskName, Task task)>;
     enum TensorType {
         INTERMEDIATE_TENSOR = 0,
         NOT_INTERMEDIATE_TENSOR,
@@ -78,7 +78,7 @@ public:
 
     Model(const std::string &modelName, const std::string &param);
     ~Model();
-    int64_t Init(GetWorkspaceFunc getWorkspaceFunc, CreateTensorFromTensorDescFunc createTensorFromTensorDescFunc,
+    int64_t Init(GetWorkspaceFunc getWorkSpaceFunc, CreateTensorFromTensorDescFunc createTensorFromTensorDescFunc,
             RunTaskFunc runTaskFunc = nullptr);
 
     virtual uint32_t GetInputNum() const = 0;
@@ -92,9 +92,6 @@ public:
         std::vector<atb::Tensor> &outTensors,const std::string &param);
 
 protected:
-    GetWorkspaceFunc getWorkspaceFunc_;
-    CreateTensorFromTensorDescFunc createTensorFromTensorDescFunc_;
-    RunTaskFunc RunTaskFunc_ = nullptr;
     virtual int64_t BuildGraph() = 0;
     virtual atb::Status ParseParam(const std::string &param);
     virtual atb::Status BindParamHostTensor(uint32_t nodeId);
@@ -116,6 +113,9 @@ protected:
     void FreeInternalTensor(void *tensorDeviceData);
 
 protected:
+    GetWorkspaceFunc getWorkSpaceFunc_;
+    CreateTensorFromTensorDescFunc createTensorFromTensorDescFunc_;
+    RunTaskFunc runTaskFunc_ = nullptr;
     std::string modelName_;
     std::string param_;
     Graph graph_;
