@@ -109,6 +109,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
         faEnParam.qkScale = 1.0 / sqrt(param.dk);
         faEnParam.kvHeadNum = param.headNum;
         faEnParam.isEncoder = true;
+        faEnParam.isFusion = true;
         CreateOperation(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_MIXEDV,
                                      IN_ATTENTIONMASK, IN_INPUT_LENGTHS};
@@ -128,9 +129,17 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
         paDeParam.headNum = param.headNum;
         paDeParam.qkScale = 1.0 / sqrt(param.dk);
         paDeParam.kvHeadNum = param.headNum;
+        paDeParam.isSupportAlibi = param.isBF16;
+        if (param.isBF16){
+            paDeParam.maskType = atb::infer::PagedAttentionParam::maskType::MASK_TYPE_ALIBI;
+            attentionNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ, IN_K_CACHE, IN_V_CACHE, IN_BLOCK_TABLES,
+                                         IN_INPUT_LENGTHS, IN_ATTENTIONMASK};
+        } else {
+            attentionNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ, IN_K_CACHE, IN_V_CACHE, IN_BLOCK_TABLES,
+                                         IN_INPUT_LENGTHS};
+        }
+        
         CreateOperation(paDeParam, &attentionNode.operation);
-        attentionNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ, IN_K_CACHE, IN_V_CACHE, IN_BLOCK_TABLES,
-                                     IN_INPUT_LENGTHS};
         attentionNode.outTensorIds = {INTERMIDATE_ATTENTIONOUT};
         attentionNode.inTensorReshapeFuncs.resize(attentionNode.inTensorIds.size());
         attentionNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {

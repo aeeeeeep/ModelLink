@@ -31,7 +31,9 @@ public:
         bool isPrefill = false;
         int rank = 0;
         int rankSize = 1;
+        bool isLmHeadParallel = true;
         std::string backend = "hccl";
+        bool isBF16 = false;
         void FromString(const std::string &param);
     };
 

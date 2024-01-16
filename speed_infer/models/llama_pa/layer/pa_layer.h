@@ -35,6 +35,7 @@ struct PALayerParam {
     bool isPrefill = false;
     std::string backend = "hccl";
     std::string model = "llama_65b";
+    bool isBF16 = false;
 };
 
 enum LayerPATensorId : int {
