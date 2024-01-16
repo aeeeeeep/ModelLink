@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 #include "decoder_parallel_layer_fa.h"
-#include "layers/mlp_gate.h"
 #include "layers/parallel_layer.h"
-#include "models/llama/7b/operation/common_mlp.h"
+#include "models/llama/7b/operation/llama_mlp_anti.h"
 #include "models/llama/7b/operation/rope_fusion_operation.h"
 
 namespace atb_speed {
@@ -27,44 +26,46 @@ const int ATTENTION_DIM_3 = 3;
 
 enum LayerParallelFlashAttentionTensorId {
     IN_HIDDENSTATES = 0,
-    // 1
     IN_NORMWEIGHT,
-    // 2
+    IN_BETA,
+
     IN_QMIXDWEIGHT,
-    // 3
+    IN_QMIXD_BIAS,
     IN_KMIXDWEIGHT,
-    // 4
+    IN_KMIXD_BIAS,
     IN_VMIXDWEIGHT,
-    // 5
+    IN_VMIXD_BIAS,
+    
     IN_SELFOUTLINEARWEIGHT,
-    // 6
     IN_SELFOUTNORMWEIGHT,
-    // 7
+    IN_SELFOUTBETA,
+
     IN_MLPGATEWEIGHT,
-    // 8
+    IN_MLPGATE_BIAS,
     IN_MLPDOWNWEIGHT,
-    // 9
     IN_MLPUPWEIGHT,
-    // 10
+    IN_MLPUP_BIAS,
+
     IN_POSITIONIDS,
-    // 11
+
     IN_COSTABLE,
-    // 12
+
     IN_SINTABLE,
-    // 13
+
     IN_ATTENTIONMASK,
-    // 14
+
     IN_CACHEK,
-    // 15
+
     IN_CACHEV,
-    // 16
+
     IN_TOKENOFFSET,
-    // 17
+
     IN_SEQLEN,
-    // 18
+
     IN_LAYERID,
     OUT_LLAMA7BLAYEROUT,
     INTERMIDATE_INPUTNORMOUT,
+    INTERMIDATE_NORMADDOUT,
     INTERMIDATE_MIXEDQ,
     INTERMIDATE_MIXEDK,
     INTERMIDATE_MIXEDV,
@@ -74,13 +75,14 @@ enum LayerParallelFlashAttentionTensorId {
     INTERMIDATE_SELFLINEAROUT,
     INTERMIDATE_SELFRESIDUALADDOUT,
     INTERMIDATE_SELFNORMOUT,
+    INTERMIDATE_SELFNORMADDOUT,
     INTERMIDATE_MLPOUT,
 };
 
-static const uint64_t IN_TENSOR_COUNT = 19;
+static const uint64_t IN_TENSOR_COUNT = 26;
 static const uint64_t OUT_TENSOR_COUNT = 1;
-static const uint64_t INTERMEDIATE_TENSOR_COUNT = 11;
-static const uint64_t NODE_COUNT = 11;
+static const uint64_t INTERMEDIATE_TENSOR_COUNT = 13;
+static const uint64_t NODE_COUNT = 13;
 
 atb::Status LayerParallelFlashAttentionOperation(const LayerParallelFlashAttentionParam &param,
                                                  atb::Operation **operation)
@@ -93,6 +95,7 @@ atb::Status LayerParallelFlashAttentionOperation(const LayerParallelFlashAttenti
 
     size_t nodeId = 0;
     atb::Node &inputNormNode = opGraph.nodes.at(nodeId++);
+    atb::Node &InputNormAddNode = opGraph.nodes.at(nodeId++);
     atb::Node &mixdQLinearNode = opGraph.nodes.at(nodeId++);
     atb::Node &mixdKLinearNode = opGraph.nodes.at(nodeId++);
     atb::Node &mixdVLinearNode = opGraph.nodes.at(nodeId++);
@@ -101,6 +104,7 @@ atb::Status LayerParallelFlashAttentionOperation(const LayerParallelFlashAttenti
     atb::Node &selfOutLinearNode = opGraph.nodes.at(nodeId++);
     atb::Node &selfResidualAddNode = opGraph.nodes.at(nodeId++);
     atb::Node &selfNormNode = opGraph.nodes.at(nodeId++);
+    atb::Node &selfOutNormAddNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpResidualAddNode = opGraph.nodes.at(nodeId++);
 
@@ -111,17 +115,23 @@ atb::Status LayerParallelFlashAttentionOperation(const LayerParallelFlashAttenti
     inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT};
     inputNormNode.outTensorIds = {INTERMIDATE_INPUTNORMOUT};
 
-    atb::infer::LinearParam linearParam = {false, false, false};
+    atb::infer::ElewiseParam addParam;
+    addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
+    CreateOperation(rmsNormParam, &InputNormAddNode.operation);
+    InputNormAddNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_BETA};
+    InputNormAddNode.outTensorIds = {INTERMIDATE_NORMADDOUT};
+
+    atb::infer::LinearParam linearParam = {false, false, true};
     CreateOperation(linearParam, &mixdQLinearNode.operation);
-    mixdQLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_QMIXDWEIGHT};
+    mixdQLinearNode.inTensorIds = {INTERMIDATE_NORMADDOUT, IN_QMIXDWEIGHT, IN_QMIXD_BIAS};
     mixdQLinearNode.outTensorIds = {INTERMIDATE_MIXEDQ};
 
     CreateOperation(linearParam, &mixdKLinearNode.operation);
-    mixdKLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_KMIXDWEIGHT};
+    mixdKLinearNode.inTensorIds = {INTERMIDATE_NORMADDOUT, IN_KMIXDWEIGHT, IN_KMIXD_BIAS};
     mixdKLinearNode.outTensorIds = {INTERMIDATE_MIXEDK};
 
     CreateOperation(linearParam, &mixdVLinearNode.operation);
-    mixdVLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_VMIXDWEIGHT};
+    mixdVLinearNode.inTensorIds = {INTERMIDATE_NORMADDOUT, IN_VMIXDWEIGHT, IN_VMIXD_BIAS};
     mixdVLinearNode.outTensorIds = {INTERMIDATE_MIXEDV};
 
     atb_speed::llama_7b::RopeFusionParam ropeFusionParam;
@@ -163,8 +173,6 @@ atb::Status LayerParallelFlashAttentionOperation(const LayerParallelFlashAttenti
     selfOutLinearNode.inTensorIds = {INTERMIDATE_SELFOUT, IN_SELFOUTLINEARWEIGHT};
     selfOutLinearNode.outTensorIds = {INTERMIDATE_SELFLINEAROUT};
 
-    atb::infer::ElewiseParam addParam;
-    addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
     CreateOperation(addParam, &selfResidualAddNode.operation);
     selfResidualAddNode.inTensorIds = {IN_HIDDENSTATES, INTERMIDATE_SELFLINEAROUT};
     selfResidualAddNode.outTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT};
@@ -173,15 +181,20 @@ atb::Status LayerParallelFlashAttentionOperation(const LayerParallelFlashAttenti
     selfNormNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT};
     selfNormNode.outTensorIds = {INTERMIDATE_SELFNORMOUT};
 
+    CreateOperation(addParam, &selfOutNormAddNode.operation);
+    selfOutNormAddNode.inTensorIds = {INTERMIDATE_SELFNORMOUT, IN_SELFOUTBETA};
+    selfOutNormAddNode.outTensorIds = {INTERMIDATE_SELFNORMADDOUT};
+
     atb_speed::common::MlpGateParam mlpParam;
     mlpParam.rank = param.rank;
     mlpParam.rankSize = param.rankSize;
     mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
     mlpParam.transposeB = false;
-    mlpParam.isBias = false;
+    mlpParam.isBias = true;
     mlpParam.isPack = false;
-    atb_speed::common::MlpGateLayer(mlpParam, &mlpNode.operation);
-    mlpNode.inTensorIds = {INTERMIDATE_SELFNORMOUT, IN_MLPUPWEIGHT, IN_MLPGATEWEIGHT, IN_MLPDOWNWEIGHT};
+    atb_speed::llama_7b::MlpGateLayer(mlpParam, &mlpNode.operation);
+    mlpNode.inTensorIds = {INTERMIDATE_SELFNORMADDOUT, IN_MLPUPWEIGHT, IN_MLPGATEWEIGHT, IN_MLPDOWNWEIGHT,
+                            IN_MLPUP_BIAS, IN_MLPGATE_BIAS};
     mlpNode.outTensorIds = {INTERMIDATE_MLPOUT};
 
     CreateOperation(addParam, &mlpResidualAddNode.operation);

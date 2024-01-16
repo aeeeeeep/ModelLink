@@ -27,6 +27,7 @@ const int ATTENTION_DIM_3 = 3;
 enum LayerQuantParallelFlashAttentionTensorId : int {
     IN_HIDDENSTATES = 0,
     IN_NORMWEIGHT,
+    IN_BETA,
 
     IN_QMIXDWEIGHT,
     IN_QMIXD_DEQSCALE,
@@ -45,6 +46,7 @@ enum LayerQuantParallelFlashAttentionTensorId : int {
     IN_SELFOUTLINEAR_BIAS,
 
     IN_SELFOUTNORMWEIGHT,
+    IN_SELFOUTBETA,
 
     IN_MLPGATEWEIGHT,
     IN_MLPGATE_DEQSCALE,
@@ -64,7 +66,6 @@ enum LayerQuantParallelFlashAttentionTensorId : int {
     IN_CACHEV,
     IN_TOKENOFFSET,
     IN_SEQLEN,
-    IN_BETA,
     IN_HOLDER,
     IN_LAYERID,
 
@@ -83,7 +84,7 @@ enum LayerQuantParallelFlashAttentionTensorId : int {
     INTERMIDATE_MLPLINEAROUT,
 };
 
-static const uint64_t IN_TENSOR_COUNT = 35;
+static const uint64_t IN_TENSOR_COUNT = 36;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 11;
 static const uint64_t NODE_COUNT = 11;
@@ -181,7 +182,8 @@ atb::Status QuantLayerParallelFlashAttentionOperation(const QuantLayerParallelFl
     selfOutLinearParam.quantParam.inputOffset = param.denseInputOffset;
     atb_speed::common::RowParallelLinearV2(selfOutLinearParam, &selfOutLinearNode.operation);
     selfOutLinearNode.inTensorIds = {INTERMIDATE_SELFOUT, IN_SELFOUTLINEARWEIGHT,
-                                    IN_SELFOUTLINEAR_BIAS, IN_SELFOUTLINEAR_DEQSCALE, IN_HOLDER};
+                                    IN_SELFOUTLINEAR_BIAS, IN_SELFOUTLINEAR_DEQSCALE, IN_HOLDER,
+                                    IN_HOLDER, IN_HOLDER};
     selfOutLinearNode.outTensorIds = {INTERMIDATE_SELFLINEAROUT};
     
     atb::infer::ElewiseParam addParam;
@@ -197,7 +199,7 @@ atb::Status QuantLayerParallelFlashAttentionOperation(const QuantLayerParallelFl
     selfNormParam.normParam.quantInputOffset = param.selfLnInputOffset;
     selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
     CreateOperation(selfNormParam, &selfNormNode.operation);
-    selfNormNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_BETA};
+    selfNormNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_SELFOUTBETA};
     selfNormNode.outTensorIds = {INTERMIDATE_SELFNORMOUT};
 
     // MLP量化
@@ -220,7 +222,8 @@ atb::Status QuantLayerParallelFlashAttentionOperation(const QuantLayerParallelFl
     mlpNode.inTensorIds = {INTERMIDATE_SELFNORMOUT, IN_MLPUPWEIGHT, IN_MLPGATEWEIGHT, IN_MLPDOWNWEIGHT,
                            IN_MLPUP_DEQSCALE, IN_MLPGATE_DEQSCALE, IN_MLPDOWN_DEQSCALE,
                            IN_MLPUP_BIAS, IN_MLPGATE_BIAS, IN_MLPDOWN_BIAS,
-                           IN_HOLDER, IN_HOLDER, IN_HOLDER};
+                           IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_HOLDER,
+                           IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_HOLDER};
     mlpNode.outTensorIds = {INTERMIDATE_MLPLINEAROUT};
 
     CreateOperation(addParam, &mlpResidualAddNode.operation);
