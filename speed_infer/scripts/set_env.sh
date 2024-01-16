@@ -16,8 +16,8 @@
 path = "${BASH_SOURCE[0]}"
 
 if [[ -f "$path" ]] && [[ "$path" =~ 'set_env.sh']];then
-	atb_speed_path=$(cd $(dirname &path); pwd)
-	export ATB_SPEED_HOME_PATH=${atb_speed_path}
+	atb_speed_path=$(cd $(dirname $path); pwd)
+	export ATB_SPEED_HOME_PATH="${atb_speed_path}"
 	export LD_LIBRARY_PATH=$ATB_SPEED_HOME_PATH/lib:$LD_LIBRARY_PATH
 
 	export PYTORCH_INSTALL_PATH="$(python3 -c 'import torch, os; print(os.path.dirname(os.path.abspath(torch.__file__)))')"
@@ -27,7 +27,7 @@ if [[ -f "$path" ]] && [[ "$path" =~ 'set_env.sh']];then
 
 	export TASK_QUEUE_ENABLE=0 #是否开启TaskQueue, 该环境变量是PyTorch的
 
-	export ATB_OPERATION_EXECUTE_ANYNC=0 # Operation 是否异步运行
+	export ATB_OPERATION_EXECUTE_ASYNC=0 # Operation 是否异步运行
 	export ATB_CONTEXT_HOSTTILING_RING=1
 	export ATB_CONTEXT_HOSTTILING_SIZE=102400
 	export ATB_CONTEXT_TILING_RANG=1

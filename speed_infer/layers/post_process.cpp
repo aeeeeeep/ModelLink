@@ -34,7 +34,7 @@ enum SampleInTensorId : int {
     OUT_SCORES,
     INTERMEDIATE_SCORES_AFTER_SOFTMAX,
     INTERMEDIATE_SCORES_AFTER_TEMPERATURE,
-}
+};
 
 void SetSampleOpGraph(atb::GraphParam &opGraph, const PostProcessParam &param)
 {
@@ -80,9 +80,9 @@ atb::Status Sample(const PostProcessParam &param, atb::Operation **operation)
 
     atb::Node &topkToppSamplingNode = opGraph.nodes.at(nodeId++);
     atb::infer::TopkToppSamplingParam topkToppSamplingParam;
-    TopkToppSamplingParam.topk = param.topK;
-    TopkToppSamplingParam.randSeed = param.randSeed;
-    CREATE_OPERATION(TopkToppSamplingParam, &topkToppSamplingNode.operation);
+    topkToppSamplingParam.topk = param.topK;
+    topkToppSamplingParam.randSeed = param.randSeed;
+    CREATE_OPERATION(topkToppSamplingParam, &topkToppSamplingNode.operation);
     topkToppSamplingNode.inTensorIds = {INTERMEDIATE_SCORES_AFTER_SOFTMAX, IN_TOPP};
     topkToppSamplingNode.outTensorIds = {OUT_INDICES, OUT_SCORES};
 

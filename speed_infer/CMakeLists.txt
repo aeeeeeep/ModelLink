@@ -76,10 +76,12 @@ include_directories(
 
 link_directories(
     ${PROJECT_SOURCE_DIR}/3rdparty/lccl/lib
+    $ENV{ASCEND_HOME_PATH}/lib64
     $ENV{ATB_HOME_PATH}/lib
     $ENV{PYTHON_LIB_PATH}
     $ENV{PYTORCH_INSTALL_PATH}/lib
-    $ENV{PYTORCH_NPU_INSTALL_PATH}/lib)
+    $ENV{PYTORCH_NPU_INSTALL_PATH}/lib
+    $ENV{ASCEND_TOOLKIT_HOME}/lib64)
 
 add_subdirectory(core)
 add_subdirectory(models)

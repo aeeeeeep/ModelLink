@@ -122,7 +122,7 @@ atb::Status QuantFAModel::InferShape(const std::vector<atb::TensorDesc> &inTenso
     return atb::NO_ERROR;
 }
 
-void QuantFAModel::BuildGraph()
+int64_t QuantFAModel::BuildGraph()
 {
     ATB_LOG(INFO) << "Enter Telechat QuantFAModel BuildGraph";
 
@@ -232,6 +232,8 @@ void QuantFAModel::BuildGraph()
     lmHeadNode.inTensors = {&graph_.internalTensors.at(finalRmsNormOutTensorId),
                             &graph_.weightTensors.at(lmHeadWeightTensorId)};
     lmHeadNode.outTensors = {&graph_.outTensors.at(0)};
+
+    return atb::NO_ERROR;
 }
 
 atb::Status QuantFAModel::ParseParam(const std::string &param)

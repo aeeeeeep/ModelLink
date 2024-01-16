@@ -34,7 +34,7 @@ class LogStream {
 public:
     LogStream(const char *filePath, int line, const char *funcName, LogLevel level);
     ~LogStream();
-    friend std::ostream& operator<<(std::ostream& os, const LogStream& obj)l
+    friend std::ostream& operator<<(std::ostream& os, const LogStream& obj);
     template <typename T> LogStream &operator << (const T &value)
     {
         stream_ << value;

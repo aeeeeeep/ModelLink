@@ -177,7 +177,7 @@ void OperationTorch::ExecuteOutImpl(std::vector<torch::Tensor> &atInTensors, std
 
     void *workspace = nullptr;
     if (workspaceSize > 0) {
-        workspace = atb_speed::GetSingleton<atb_speed::workspace>().GetWorkspaceBuffer(workspaceSize);
+        workspace = atb_speed::GetSingleton<atb_speed::Workspace>().GetWorkspaceBuffer(workspaceSize);
     }
 
     atb_speed::Timer timer2;
