@@ -39,7 +39,7 @@ public:
         void FromString(const std::string &param);
     };
 
-    PAModel(const std::string &param);
+    explicit PAModel(const std::string &param);
 
     ~PAModel();
 
