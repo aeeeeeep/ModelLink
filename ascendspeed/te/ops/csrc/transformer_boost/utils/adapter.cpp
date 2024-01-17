@@ -97,3 +97,20 @@ atb::Tensor Input(const c10::optional<at::Tensor> &tensor)
     }
     return Input(tensor.value());
 }
+
+at::Tensor CreateAtTensor(c10::SmallVector<int64_t, N> shape, at::ScalarType inputDtype)
+{
+    return CreateAtTensor(at::IntArrayRef(shape), inputDtype);
+}
+
+at::Tensor CreateAtTensor(at::IntArrayRef shape, at::ScalarType inputDtype)
+{
+    at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
+    options = options.dtype(inputDtype);
+    options = options.layout(torch::kStrided).requires_grad(false);
+    at::Tensor newTensor = at::zeros(shape, options);
+    if (!newTensor.is_contiguous()) {
+        newTensor = newTensor.contiguous();
+    }
+    return newTensor;
+}

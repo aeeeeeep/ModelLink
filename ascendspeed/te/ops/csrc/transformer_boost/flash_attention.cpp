@@ -26,7 +26,6 @@
 
 using namespace std;
 
-const static int N = 32;
 static atb::Context* msContext = nullptr;
 
 atb::Context* GetContext()
@@ -109,7 +108,8 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
     variantPack.outTensors.push_back(atbOutTensor2);
 
     uint64_t workspaceSize = 0;
-    atb::Status st = op->Setup(variantPack, workspaceSize);
+    auto contextPtr = GetContext();
+    atb::Status st = op->Setup(variantPack, workspaceSize, contextPtr);
     TORCH_CHECK(st == 0, "setup failed!");
     at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
     void *workspacePtr = nullptr;
@@ -117,7 +117,6 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
         auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
         workspacePtr = workspaceTensor.storage().data();
     }
-    auto contextPtr = GetContext();
     auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
         DestroyOperation(op);
@@ -210,7 +209,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
     variantPack.outTensors.push_back(atbOutTensor3);
  
     uint64_t workspaceSize = 0;
-    atb::Status st = op->Setup(variantPack, workspaceSize);
+    auto contextPtr = GetContext();
+    atb::Status st = op->Setup(variantPack, workspaceSize, contextPtr);
     TORCH_CHECK(st == 0, "setup failed!");
     at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
     void *workspacePtr = nullptr;
@@ -218,8 +218,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
         auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
         workspacePtr = workspaceTensor.storage().data();
     }
-
-    auto contextPtr = GetContext();
 
     auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
