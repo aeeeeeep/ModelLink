@@ -33,8 +33,7 @@ void AntireshapeHeads(const atb::Dims &oldShape, atb::Dims &newShape, int headNu
     newShape.dims[2] = oldShape.dims[1] / headNum;  // 1 dim: head size
 }
 
-atb::Status AntiPALayer(const LayerParallelFlashAttentionParam &param,
-                                                 atb::Operation **operation)
+atb::Status AntiPALayer(const AntiPALayerParam &param, atb::Operation **operation)
 {
     ATB_LOG(INFO) << __func__ << " called, headNum: " << param.headNum;
     atb::GraphParam opGraph;
@@ -43,9 +42,9 @@ atb::Status AntiPALayer(const LayerParallelFlashAttentionParam &param,
     opGraph.internalTensorNum = INTERMEDIATE_TENSOR_COUNT;
     opGraph.nodes.resize(NODE_COUNT);
     if (param.isPrefill) {
-        opGraph.name = "Prefill_Quant_transformer_layer";
+        opGraph.name = "Prefill_Float_transformer_layer";
     } else {
-        opGraph.name = "Decoder_Quant_transformer_layer";
+        opGraph.name = "Decoder_Float_transformer_layer";
     }
 
     size_t nodeId = 0;
@@ -122,13 +121,13 @@ atb::Status AntiPALayer(const LayerParallelFlashAttentionParam &param,
         attentionNode.outTensorIds = {INTERMIDATE_ATTENTIONOUT};
         attentionNode.inTensorReshapeFuncs.resize(attentionNode.inTensorIds.size());
         attentionNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            reshapeHeads(oldShape, newShape, param.headNum);
+            AntireshapeHeads(oldShape, newShape, param.headNum);
         };
         attentionNode.inTensorReshapeFuncs[1] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            reshapeHeads(oldShape, newShape, param.headNum);
+            AntireshapeHeads(oldShape, newShape, param.headNum);
         };
         attentionNode.inTensorReshapeFuncs[2] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            reshapeHeads(oldShape, newShape, param.headNum);
+            AntireshapeHeads(oldShape, newShape, param.headNum);
         };
     } else {
         atb::infer::PagedAttentionParam paDeParam;
@@ -149,7 +148,7 @@ atb::Status AntiPALayer(const LayerParallelFlashAttentionParam &param,
         attentionNode.outTensorIds = {INTERMIDATE_ATTENTIONOUT};
         attentionNode.inTensorReshapeFuncs.resize(attentionNode.inTensorIds.size());
         attentionNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            reshapeHeads(oldShape, newShape, param.headNum);
+            AntireshapeHeads(oldShape, newShape, param.headNum);
         };
     }
 
@@ -161,8 +160,9 @@ atb::Status AntiPALayer(const LayerParallelFlashAttentionParam &param,
     atb_speed::common::RowParallelLinear(selfOutLinearParam, &selfOutLinearNode.operation);
     selfOutLinearNode.inTensorIds = {INTERMIDATE_ATTENTIONOUT, IN_SELFOUTLINEARWEIGHT};
     selfOutLinearNode.outTensorIds = {INTERMIDATE_SELFLINEAROUT};
+    selfOutLinearNode.inTensorReshapeFuncs.resize(selfOutLinearNode.inTensorIds.size());
     selfOutLinearNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        newShape.dimNum = 2;  // dimNum is 2
+        newShape.dimNum = 2;
         newShape.dims[0] = oldShape.dims[0];
         newShape.dims[1] = oldShape.dims[1] * oldShape.dims[2];
     };
@@ -191,16 +191,6 @@ atb::Status AntiPALayer(const LayerParallelFlashAttentionParam &param,
     mlpNode.inTensorIds = {INTERMIDATE_SELFNORMADDOUT, IN_MLPUPWEIGHT, IN_MLPGATEWEIGHT, IN_MLPDOWNWEIGHT,
                             IN_MLPUP_BIAS, IN_MLPGATE_BIAS};
     mlpNode.outTensorIds = {INTERMIDATE_MLPOUT};
-
-    CreateOperation(addParam, &mlpResidualAddNode.operation);
-    mlpResidualAddNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, INTERMIDATE_MLPOUT};
-    mlpResidualAddNode.outTensorIds = {OUT_LAYEROUT};
-
-    opGraph.inferShapeFunc = [](const atb::SVector<atb::TensorDesc> &inTensorDescs,
-                                 atb::SVector<atb::TensorDesc> &outTensorDescs) {
-        outTensorDescs.at(0) = inTensorDescs.at(0);
-        return atb::NO_ERROR;
-    };
 
     CreateOperation(addParam, &mlpResidualAddNode.operation);
     mlpResidualAddNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, INTERMIDATE_MLPOUT};

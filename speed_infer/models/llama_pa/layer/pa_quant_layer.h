@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_LLAMA_PA_PA_LAYER_H
-#define ATB_SPEED_MODELS_LLAMA_PA_PA_LAYER_H
+#ifndef ATB_SPEED_MODELS_LLAMA_QUANT_PA_LAYER_H
+#define ATB_SPEED_MODELS_LLAMA_QUANT_PA_LAYER_H
 
 #include <atb/atb_infer.h>
 #include <nlohmann/json.hpp>
@@ -34,7 +34,7 @@ struct QuantPALayerParam {
     bool transposedWeight = false;
     bool isPrefill = false;
     std::string backend = "hccl";
-    std::string model = "llama_65b";
+    std::string model = "llama";
     bool isBF16 = false;
 
     // 量化参数
@@ -68,6 +68,7 @@ static void from_json(const nlohmann::json &paramJson, QuantPALayerParam &param)
     if (paramJson.contains("backend")) {
         paramJson.at("backend").get_to(param.backend);
     }
+    // 量化参数
     param.qkvInputScale = paramJson["qkvInputScale"].get<float>();
     param.qkvInputOffset = paramJson["qkvInputOffset"].get<int>();
     param.denseInputScale = paramJson["denseInputScale"].get<float>();

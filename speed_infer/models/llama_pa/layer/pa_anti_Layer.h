@@ -34,7 +34,7 @@ struct AntiPALayerParam {
     bool transposedWeight = false;
     bool isPrefill = false;
     std::string backend = "hccl";
-    std::string model = "llama_65b";
+    std::string model = "llama";
     bool isBF16 = false;
 };
 

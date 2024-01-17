@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_LLAMA_QAUNT_PA_MODEL_H
-#define ATB_SPEED_MODELS_LLAMA_QAUNT_PA_MODEL_H
+#ifndef ATB_SPEED_MODELS_LLAMA_QUANT_PA_MODEL_H
+#define ATB_SPEED_MODELS_LLAMA_QUANT_PA_MODEL_H
 
 #include "atb_speed/base/model.h"
 
@@ -44,6 +44,7 @@ public:
         std::vector<int> selfLnInputOffset;
         std::vector<float> ffnOutInputScale;
         std::vector<int> ffnOutInputOffset;
+        std::vector<int> floatLayers;
 
         void FromString(const std::string &param);
     };

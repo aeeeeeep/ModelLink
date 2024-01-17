@@ -62,7 +62,7 @@ enum QuantPALayerTensorId : int {
     IN_COSEMBED,
     IN_SINEMBED,
     IN_ATTENTIONMASK,
-    IN_K_CACHE, // kvcache
+    IN_K_CACHE,
     IN_V_CACHE,
     IN_BLOCK_TABLES,
     IN_SLOTS,
@@ -86,14 +86,13 @@ enum QuantPALayerTensorId : int {
 
 void QuantreshapeHeads(const atb::Dims &oldShape, atb::Dims &newShape, int headNum)
 {
-    newShape.dimNum = 3; // dimNum: 3
-    newShape.dims[0] = oldShape.dims[0]; // 0 dim: n tokens
-    newShape.dims[1] = headNum;  // 1 dim: head num
-    newShape.dims[2] = oldShape.dims[1] / headNum;  // 1 dim: head size
+    newShape.dimNum = 3;
+    newShape.dims[0] = oldShape.dims[0];
+    newShape.dims[1] = headNum;
+    newShape.dims[2] = oldShape.dims[1] / headNum;
 }
 
-atb::Status QuantPALayer(const QuantLayerParallelFlashAttentionParam &param,
-                                                      atb::Operation **operation)
+atb::Status QuantPALayer(const QuantPALayerParam &param, atb::Operation **operation)
 {
     ATB_LOG(INFO) << __func__ << " called, headNum: " << param.headNum;
     atb::GraphParam opGraph;
@@ -121,7 +120,6 @@ atb::Status QuantPALayer(const QuantLayerParallelFlashAttentionParam &param,
     atb::Node &mlpNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpResidualAddNode = opGraph.nodes.at(nodeId++);
 
-    // RMSNORM量化
     atb::infer::RmsNormParam rmsNormParam;
     rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     rmsNormParam.normParam.epsilon = param.rmsNormEps;
@@ -132,7 +130,6 @@ atb::Status QuantPALayer(const QuantLayerParallelFlashAttentionParam &param,
     inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT, IN_BETA};
     inputNormNode.outTensorIds = {INTERMIDATE_INPUTNORMOUT};
 
-    // QKV LINEAR量化
     atb::infer::LinearQuantParam quantQkvLinearParam;
     quantQkvLinearParam.transposeB = true;
     CreateOperation(quantQkvLinearParam, &mixdQLinearNode.operation);
@@ -179,13 +176,13 @@ atb::Status QuantPALayer(const QuantLayerParallelFlashAttentionParam &param,
         attentionNode.outTensorIds = {INTERMIDATE_ATTENTIONOUT};
         attentionNode.inTensorReshapeFuncs.resize(attentionNode.inTensorIds.size());
         attentionNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            reshapeHeads(oldShape, newShape, param.headNum);
+            QuantreshapeHeads(oldShape, newShape, param.headNum);
         };
         attentionNode.inTensorReshapeFuncs[1] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            reshapeHeads(oldShape, newShape, param.headNum);
+            QuantreshapeHeads(oldShape, newShape, param.headNum);
         };
         attentionNode.inTensorReshapeFuncs[2] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            reshapeHeads(oldShape, newShape, param.headNum);
+            QuantreshapeHeads(oldShape, newShape, param.headNum);
         };
     } else {
         atb::infer::PagedAttentionParam paDeParam;
@@ -206,11 +203,10 @@ atb::Status QuantPALayer(const QuantLayerParallelFlashAttentionParam &param,
         attentionNode.outTensorIds = {INTERMIDATE_ATTENTIONOUT};
         attentionNode.inTensorReshapeFuncs.resize(attentionNode.inTensorIds.size());
         attentionNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            reshapeHeads(oldShape, newShape, param.headNum);
+            QuantreshapeHeads(oldShape, newShape, param.headNum);
         };
     }
 
-    // SelfAttention输出量化
     atb_speed::common::ParallelParamV2 selfOutLinearParam;
     selfOutLinearParam.commParam.rank = param.rank;
     selfOutLinearParam.commParam.rankSize = param.rankSize;
@@ -229,7 +225,7 @@ atb::Status QuantPALayer(const QuantLayerParallelFlashAttentionParam &param,
                                     IN_HOLDER, IN_HOLDER};
     selfOutLinearNode.outTensorIds = {INTERMIDATE_SELFLINEAROUT};
     selfOutLinearNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        newShape.dimNum = 2;  // dimNum is 2
+        newShape.dimNum = 2;
         newShape.dims[0] = oldShape.dims[0];
         newShape.dims[1] = oldShape.dims[1] * oldShape.dims[2];
     };
@@ -240,7 +236,6 @@ atb::Status QuantPALayer(const QuantLayerParallelFlashAttentionParam &param,
     selfResidualAddNode.inTensorIds = {IN_HIDDENSTATES, INTERMIDATE_SELFLINEAROUT};
     selfResidualAddNode.outTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT};
 
-    // RMSNORM量化
     atb::infer::RmsNormParam selfNormParam;
     selfNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     selfNormParam.normParam.epsilon = param.rmsNormEps;
@@ -251,7 +246,6 @@ atb::Status QuantPALayer(const QuantLayerParallelFlashAttentionParam &param,
     selfNormNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_SELFOUTBETA};
     selfNormNode.outTensorIds = {INTERMIDATE_SELFNORMOUT};
 
-    // MLP量化
     atb_speed::common::MlpGateParamV2 mlpParam;
     mlpParam.isBias=true;
     mlpParam.isPack=false;

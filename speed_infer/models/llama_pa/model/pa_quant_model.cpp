@@ -103,16 +103,16 @@ void QuantPAModel::Param::FromString(const std::string &param)
     for (auto item : paramJson["ffnOutInputOffset"]) {
         ffnOutInputOffset.push_back(item.get<int>());
     }
-    for (auto item : paramJson["floatLayer"]) {
-        floatLayer.push_back(item.get<int>());
+    for (auto item : paramJson["floatLayers"]) {
+        floatLayers.push_back(item.get<int>());
     }
-    ATB_LOG(INFO) << "Llama_QuantPAModel param rmsNormEps:" << rmsNormEps << ", headNum:" << headNum << ", dk:" << dk
+    ATB_LOG(INFO) << "Llama QuantPAModel param rmsNormEps:" << rmsNormEps << ", headNum:" << headNum << ", dk:" << dk
                   << ", layerNum:" << layerNum << ", transposedWeight:" << transposedWeight << ", rank:" << rank
                   << ", rankSize:" << rankSize << ", backend: " << backend << ", isLmHeadParallel:" << isLmHeadParallel
                   << ", isBF16:" << isBF16;
 }
 
-QuantPAModel::QuantPAModel(const std::string &param) : Model("Llama_QuantPAModel", param)
+QuantPAModel::QuantPAModel(const std::string &param) : Model("LlamaQuantPAModel", param)
 {
     param_.FromString(param);
     modelName_ += param_.isPrefill ? "_Prefill" : "_Decoder";
@@ -152,12 +152,12 @@ atb::Status QuantPAModel::InferShape(const std::vector<atb::TensorDesc> &inTenso
 
 void QuantPAModel::BuildGraph()
 {
-    const int floatLayerCnt = param_.floatLayer.size();
+    const int floatLayerCnt = param_.floatLayers.size();
     const int weightTensorSize = WORDEMBEDDINGNODE_WEIGHT_COUNT +
                         FLOAT_WEIGHT_COUNT_PER_LAYER * floatLayerCnt +
                         QUANT_WEIGHT_COUNT_PER_LAYER * (param_.layerNum - floatLayerCnt) +
                         FINALNORMNODE_WEIGHT_COUNT + OUT_LM_HEAD_WEIGHT_COUNT;
-    ATB_LOG(INFO) << "weightTensorSize is " << weightTensorSize;
+    ATB_LOG(INFO) << "weightTensorSize is: " << weightTensorSize;
     
     graph_.weightTensors.resize(weightTensorSize);
     graph_.kCacheTensors.resize(param_.layerNum);
@@ -166,8 +166,8 @@ void QuantPAModel::BuildGraph()
     graph_.outTensors.resize(OUT_TENSOR_MAX);
 
     const int nodeSize = param_.layerNum + OPERATION_COUNT_BEFORE_LAYER + OPERATION_COUNT_AFTER_LAYER;
-    ATB_LOG(INFO) << "LlamaQuantPAModel nodeSize is " << nodeSize;
     graph_.nodes.resize(nodeSize);
+    ATB_LOG(INFO) << "LlamaQuantPAModel nodeSize is " << nodeSize;
 
     const int internalTensorSize = graph_.nodes.size() - 1;
     graph_.internalTensors.resize(internalTensorSize);
@@ -192,7 +192,7 @@ void QuantPAModel::BuildGraph()
         }
         if (isFloatLayer) {
             ATB_LOG(INFO) << "Enter Float Layer, LayerId is: " << layerId;
-            atb_speed::llama_pa::AntiPALayerParam opParam;
+            AntiPALayerParam opParam;
             opParam.rmsNormEps = param_.rmsNormEps;
             opParam.headNum = param_.headNum;
             opParam.dk = param_.dk;
@@ -203,7 +203,7 @@ void QuantPAModel::BuildGraph()
             opParam.rankSize = param_.rankSize;
             opParam.backend = param_.backend;
             opParam.isBF16 = param_.isBF16;
-            PALayer(opParam, &op);
+            AntiPALayer(opParam, &op);
             layerNode.operation.reset(op);
             layerNode.inTensors.resize(layerNode.operation->GetInputNum());
 
@@ -226,8 +226,8 @@ void QuantPAModel::BuildGraph()
 
             firstInTensor = layerNode.outTensors.at(0);
         } else {
-            ATB_LOG(INFO) << "Enter Quant Layer, LayerId is: " << layerId;
-            atb_speed::llama_pa::QuantPALayerParam opParam;
+            ATB_LOG(INFO) << "Enter Quant Layer, LayerId: " << layerId;
+            QuantPALayerParam opParam;
             opParam.rmsNormEps = param_.rmsNormEps;
             opParam.headNum = param_.headNum;
             opParam.dk = param_.dk;
@@ -238,7 +238,7 @@ void QuantPAModel::BuildGraph()
             opParam.rankSize = param_.rankSize;
             opParam.backend = param_.backend;
             opParam.isBF16 = param_.isBF16;
-            // 量化适配
+
             opParam.qkvInputScale = param_.qkvInputScale[layerId];
             opParam.qkvInputOffset = param_.qkvInputOffset[layerId];
             opParam.denseInputScale = param_.denseInputScale[layerId];
@@ -248,7 +248,7 @@ void QuantPAModel::BuildGraph()
             opParam.ffnOutInputScale = param_.ffnOutInputScale[layerId];
             opParam.ffnOutInputOffset = param_.ffnOutInputOffset[layerId];
 
-            atb_speed::llama_pa::QuantPALayer(opParam, &op);
+            QuantPALayer(opParam, &op);
             layerNode.operation.reset(op);
             layerNode.inTensors.resize(layerNode.operation->GetInputNum());
             layerNode.outTensors.resize(layerNode.operation->GetOutputNum());
@@ -318,8 +318,6 @@ atb::Status QuantPAModel::ParseParam(const std::string &param)
     for (auto item : paramJson["seqLen"]) {
         seqLen_.push_back(item.get<int>());
     }
-
-    ATB_LOG(INFO) << "QuantPAModel ParseParam seqLen: " << seqLen_.capacity();
 
     return atb::NO_ERROR;
 }
