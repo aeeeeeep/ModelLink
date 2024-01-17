@@ -71,10 +71,17 @@ void PAModel::Param::FromString(const std::string &param)
     if (paramJson.contains("backend")) {
         backend = paramJson["backend"];
     }
-
+    if (paramJson.contains("isLmHeadParallel")) {
+        isLmHeadParallel = paramJson["isLmHeadParallel"].get<bool>();
+    }
+    if (paramJson.contains("isBF16")) {
+        isBF16 = paramJson["isBF16"].get<bool>();
+    }
+ 
     ATB_LOG(INFO) << "Llama_65BPAModel param rmsNormEps:" << rmsNormEps << ", headNum:" << headNum << ", dk:" << dk
                   << ", layerNum:" << layerNum << ", transposedWeight:" << transposedWeight << ", rank:" << rank
-                  << ", rankSize:" << rankSize << ", backend: " << backend;
+                  << ", rankSize:" << rankSize << ", backend: " << backend << ", isLmHeadParallel:" << isLmHeadParallel
+                  << ", isBF16:" << isBF16;
 }
 
 PAModel::PAModel(const std::string &param) : Model("Llama_65BPAModel", param)
@@ -102,7 +109,11 @@ atb::Status PAModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDesc
     for (int i = 0; i < outDimNum - 1; i++) {
         outTensorDescs.at(0).shape.dims[i] = inTensorDescs.at(0).shape.dims[i];
     }
-    outTensorDescs.at(0).shape.dims[outDimNum - 1] = outDim * param_.rankSize;
+    if (param_.isLmHeadParallel) {
+        outTensorDescs.at(0).shape.dims[outDimNum - 1] = outDim * param_.rankSize;
+    } else {
+        outTensorDescs.at(0).shape.dims[outDimNum - 1] = outDim;
+    }
 
     // change first dim
     if (param_.isPrefill) {
@@ -135,7 +146,7 @@ void PAModel::BuildGraph()
     auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
     atb::infer::GatherParam wordEmbeddingParam;
     atb::Operation *op = nullptr;
-    atb::CreateOperation(wordEmbeddingParam, &op);
+    CREATE_OPERATION(wordEmbeddingParam, &op);
     wordEmbeddingNode.operation.reset(op);
     wordEmbeddingNode.inTensors = {&graph_.weightTensors.at(0), &graph_.inTensors.at(IN_TENSOR_INPUTIDS)};
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(0)};
@@ -155,6 +166,7 @@ void PAModel::BuildGraph()
         opParam.rank = param_.rank;
         opParam.rankSize = param_.rankSize;
         opParam.backend = param_.backend;
+        opParam.isBF16 = param_.isBF16;
         PALayer(opParam, &op);
         layerNode.operation.reset(op);
         layerNode.inTensors.resize(layerNode.operation->GetInputNum());
@@ -184,7 +196,7 @@ void PAModel::BuildGraph()
     atb::infer::RmsNormParam finalNormParam;
     finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     finalNormParam.normParam.epsilon = param_.rmsNormEps;
-    atb::CreateOperation(finalNormParam, &op);
+    CREATE_OPERATION(finalNormParam, &op);
     finalNormNode.operation.reset(op);
     const int finalLayerNormWeightTensorId =
         graph_.weightTensors.size() - FINALNORMNODE_WEIGHT_COUNT - OUT_LM_HEAD_WEIGHT_COUNT;
@@ -194,8 +206,10 @@ void PAModel::BuildGraph()
 
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
     atb_speed::common::ParallelLmHeadParam lmHeadParam;
-    lmHeadParam.rank = param_.rank;
-    lmHeadParam.rankSize = param_.rankSize;
+    if (param_.isLmHeadParallel) {
+        lmHeadParam.rank = param_.rank;
+        lmHeadParam.rankSize = param_.rankSize;
+    };
     lmHeadParam.unpadInputs = true;
     lmHeadParam.gatherAhead = param_.isPrefill;
     lmHeadParam.backend = param_.backend;

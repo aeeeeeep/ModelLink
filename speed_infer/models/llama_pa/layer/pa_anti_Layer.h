@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_LLAMA_PA_PA_LAYER_H
-#define ATB_SPEED_MODELS_LLAMA_PA_PA_LAYER_H
+#ifndef ATB_SPEED_MODELS_LLAMA_ANTI_PA_LAYER_H
+#define ATB_SPEED_MODELS_LLAMA_ANTI_PA_LAYER_H
 
 #include <atb/atb_infer.h>
 #include <nlohmann/json.hpp>
@@ -25,7 +25,7 @@
 
 namespace atb_speed {
 namespace llama_pa {
-struct PALayerParam {
+struct AntiPALayerParam {
     int rank = 0;
     int rankSize = 1;
     float rmsNormEps = 0;
@@ -34,23 +34,38 @@ struct PALayerParam {
     bool transposedWeight = false;
     bool isPrefill = false;
     std::string backend = "hccl";
-    std::string model = "llama_65b";
+    std::string model = "llama";
     bool isBF16 = false;
 };
 
-enum LayerPATensorId : int {
+enum AntiPALayerTensorId : int {
     IN_HIDDENSTATES = 0,
-    IN_NORMWEIGHT, // weights
-    IN_QKVMIXEDLINEARWEIGHT,
+    IN_NORMWEIGHT,
+    IN_BETA,
+
+    IN_QMIXDWEIGHT,
+    IN_QMIXD_BIAS,
+    IN_KMIXDWEIGHT,
+    IN_KMIXD_BIAS,
+    IN_VMIXDWEIGHT,
+    IN_VMIXD_BIAS,
+    
     IN_SELFOUTLINEARWEIGHT,
+
     IN_SELFOUTNORMWEIGHT,
-    IN_MLPGATEUPWEIGHT,
+    IN_SELFOUTBETA,
+
+    IN_MLPGATEWEIGHT,
+    IN_MLPGATE_BIAS,
     IN_MLPDOWNWEIGHT,
-    IN_POSITIONIDS, // inputs
+    IN_MLPUPWEIGHT,
+    IN_MLPUP_BIAS,
+    
+    IN_POSITIONIDS,
     IN_COSEMBED,
     IN_SINEMBED,
     IN_ATTENTIONMASK,
-    IN_K_CACHE, // kvcache
+    IN_K_CACHE,
     IN_V_CACHE,
     IN_BLOCK_TABLES,
     IN_SLOTS,
@@ -59,21 +74,22 @@ enum LayerPATensorId : int {
     OUT_LAYEROUT,
 
     INTERMIDATE_INPUTNORMOUT,
-    INTERMIDATE_QKVMIXEDLINEAROUT,
+    INTERMIDATE_NORMADDOUT,
     INTERMIDATE_MIXEDQ,
     INTERMIDATE_MIXEDK,
     INTERMIDATE_MIXEDV,
     INTERMIDATE_POSITIONEMBEDQ,
     INTERMIDATE_POSITIONEMBEDK,
 
-    INTERMIDATE_ATTENTIONOUT, // attention output
+    INTERMIDATE_ATTENTIONOUT,
     INTERMIDATE_SELFLINEAROUT,
     INTERMIDATE_SELFRESIDUALADDOUT,
     INTERMIDATE_SELFNORMOUT,
+    INTERMIDATE_SELFNORMADDOUT,
     INTERMIDATE_MLPOUT,
 };
 
-static void from_json(const nlohmann::json &paramJson, PALayerParam &param)
+static void from_json(const nlohmann::json &paramJson, AntiPALayerParam &param)
 {
     paramJson.at("rmsNormEps").get_to(param.rmsNormEps);
     paramJson.at("headNum").get_to(param.headNum);
@@ -95,21 +111,21 @@ static void from_json(const nlohmann::json &paramJson, PALayerParam &param)
     }
 }
 
-atb::Status PALayer(const PALayerParam &param, atb::Operation **operation);
+atb::Status AntiPALayer(const AntiPALayerParam &param, atb::Operation **operation);
 
-static atb::Operation *CreatePALayer(const nlohmann::json &paramJson)
+static atb::Operation *CreateAntiPALayer(const nlohmann::json &paramJson)
 {
     ATB_LOG(INFO) << GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
     atb::Operation *op;
-    PALayer(paramJson.get<PALayerParam>(), &op);
+    AntiPALayer(paramJson.get<AntiPALayerParam>(), &op);
     return op;
 }
 
-class FlashAttentionHostBinder : public HostTensorBinder {
+class AntiFlashAttentionHostBinder : public HostTensorBinder {
 public:
-    FlashAttentionHostBinder();
+    AntiFlashAttentionHostBinder();
 
-    virtual ~FlashAttentionHostBinder();
+    virtual ~AntiFlashAttentionHostBinder();
 
     void ParseParam(const nlohmann::json &paramJson) override;
 

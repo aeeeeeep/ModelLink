@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_LLAMA_PA_PA_MODEL_H
-#define ATB_SPEED_MODELS_LLAMA_PA_PA_MODEL_H
+#ifndef ATB_SPEED_MODELS_LLAMA_QUANT_PA_MODEL_H
+#define ATB_SPEED_MODELS_LLAMA_QUANT_PA_MODEL_H
 
 #include "atb_speed/base/model.h"
 
 namespace atb_speed {
 namespace llama_pa {
-class PAModel : public Model {
+class QuantPAModel : public Model {
 public:
     struct Param {
         float rmsNormEps = 0;
@@ -34,12 +34,24 @@ public:
         bool isLmHeadParallel = true;
         std::string backend = "hccl";
         bool isBF16 = false;
+
+        // 量化参数
+        std::vector<float> qkvInputScale;
+        std::vector<int> qkvInputOffset;
+        std::vector<float> denseInputScale;
+        std::vector<int> denseInputOffset;
+        std::vector<float> selfLnInputScale;
+        std::vector<int> selfLnInputOffset;
+        std::vector<float> ffnOutInputScale;
+        std::vector<int> ffnOutInputOffset;
+        std::vector<int> floatLayers;
+
         void FromString(const std::string &param);
     };
 
-    PAModel(const std::string &param);
+    explicit QuantPAModel(const std::string &param);
 
-    ~PAModel();
+    ~QuantPAModel();
 
     uint32_t GetInputNum() const override;
 
