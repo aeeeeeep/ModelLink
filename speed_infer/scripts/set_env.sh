@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-path = "${BASH_SOURCE[0]}"
+path="${BASH_SOURCE[0]}"
 
-if [[ -f "$path" ]] && [[ "$path" =~ 'set_env.sh']];then
+if [[ -f "$path" ]] && [[ "$path" =~ 'set_env.sh' ]];then
 	atb_speed_path=$(cd $(dirname $path); pwd)
 	export ATB_SPEED_HOME_PATH="${atb_speed_path}"
 	export LD_LIBRARY_PATH=$ATB_SPEED_HOME_PATH/lib:$LD_LIBRARY_PATH
