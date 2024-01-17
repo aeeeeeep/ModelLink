@@ -20,43 +20,61 @@
 
 #include "../ops_interface.h"
 #include "inc/adapter.h"
-
-#ifdef ENABLE_ATB
-#include "inc/atb_adapter.h"
 #include "atb/operation.h"
 #include "atb/train_op_params.h"
-#endif 
 
 using namespace std;
 
-void inferShapeGenAttentionMask(c10::SmallVector<int64_t, N> &size, const std::vector<int> seqLen, int headNum)
+void infer_shape_gen_attention_mask(c10::SmallVector<int64_t, N> &size, const std::vector<int> seqLen, int headNum)
 {
-    int output_shape = 0;
+    int outputShape = 0;
     for (auto item : seqLen) {
-        output_shape += headNum * item * item;
+        outputShape += headNum * item * item;
     }
-    size = {output_shape};
+    size = {outputShape};
 }
 
-at::Tensor gen_attention_mask(const at::Tensor &input_tensor, const std::vector<int> seqLen, int headNum)
+at::Tensor gen_attention_mask(const at::Tensor &inputAtTensor, const std::vector<int> seqLen, int headNum)
 {
-#ifndef ENABLE_ATB
-    TORCH_CHECK(false, "gen_attention_mask not implemented");
-#else
     atb::train::GenAttentionMaskParam param;
     param.headNum = headNum;
     for (auto item : seqLen) {
         param.seqLen.push_back(item);
     }
-    c10::SmallVector<int64_t, N> output_shape;
-    inferShapeGenAttentionMask(output_shape, seqLen, headNum);
-    at::Tensor output_tensor = CreateAtTensor(output_shape, input_tensor.scalar_type());
 
-    ParamSetter paramsetter;
-    paramsetter.Input(input_tensor)
-               .Output(output_tensor);
+    atb::Operation* op = nullptr;
+    atb::CreateOperation(param, &op);
+    TORCH_CHECK(op != nullptr, "get op failed!");
 
-    RUN_ATB_CMD(param, paramsetter, "GenAttentionMaskOperation");
-    return output_tensor;
-#endif
+    c10::SmallVector<int64_t, N> outputShape;
+    infer_shape_gen_attention_mask(outputShape, seqLen, headNum);
+    at::Tensor outputAtTensor = CreateAtTensor(outputShape, inputAtTensor.scalar_type());
+    atb::Tensor outputTensor = AtTensor2Tensor(outputAtTensor);
+    atb::Tensor inputTensor = AtTensor2Tensor(inputAtTensor);
+
+    atb::VariantPack variantPack;
+    variantPack.inTensors.push_back(inputTensor);
+    variantPack.outTensors.push_back(outputTensor);
+
+    uint64_t workspaceSize = 0;
+    auto contextPtr = GetContext();
+    atb::Status st = op->Setup(variantPack, workspaceSize, contextPtr);
+    TORCH_CHECK(st == 0, "setup failed!");
+    at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
+    void *workspacePtr = nullptr;
+    if (workspaceSize > 0) {
+        auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
+        workspacePtr = (void*)workspaceTensor.storage().data();
+    }
+
+    auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
+        auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
+        DestroyOperation(op);
+        return 0;
+    };
+    at_npu::native::OpCommand cmd;
+    cmd.Name("GenAttentionMaskOperation");
+    cmd.SetCustomHandler(acl_call);
+    cmd.Run();
+    return outputAtTensor;
 }

@@ -20,41 +20,59 @@
 
 #include "../ops_interface.h"
 #include "inc/adapter.h"
-
-#ifdef ENABLE_ATB
-#include "inc/atb_adapter.h"
 #include "atb/operation.h"
 #include "atb/train_op_params.h"
-#endif 
 
 using namespace std;
 
 const static int HIDDEN_DIM = 1;
 
-void inferShapePad(c10::SmallVector<int64_t, N> &size, const at::Tensor input_tensor, const std::vector<int> seqLen, int maxSeqLen)
+void infer_shape_pad(c10::SmallVector<int64_t, N> &size, const at::Tensor input_tensor, const std::vector<int> seqLen, int maxSeqLen)
 {
     size = {seqLen.size(), maxSeqLen, input_tensor.size(HIDDEN_DIM)};
 }
 
-at::Tensor pad_seqlen(const at::Tensor &input_tensor, const std::vector<int> seqLen, int maxSeqLen)
+at::Tensor pad_seqlen(const at::Tensor &dataInput, const std::vector<int> seqLen, int maxSeqLen)
 {
-#ifndef ENABLE_ATB
-    TORCH_CHECK(false, "pad_seqlen not implemented");
-#else
     atb::train::PadWithHiddenStateParam param;
     param.maxSeqLen = maxSeqLen;
     for (auto item : seqLen) {
         param.qSeqLen.push_back(item);
     }
-    c10::SmallVector<int64_t, N> output_shape;
-    inferShapePad(output_shape, input_tensor, seqLen, maxSeqLen);
-    at::Tensor output_tensor = CreateAtTensor(output_shape, input_tensor.scalar_type());
 
-    ParamSetter paramsetter;
-    paramsetter.Input(input_tensor)
-               .Output(output_tensor);
+    atb::Operation* op = nullptr;
+    atb::CreateOperation(param, &op);
+    TORCH_CHECK(op != nullptr, "get op failed!");
+    
+    c10::SmallVector<int64_t, N> outputShape;
+    infer_shape_pad(outputShape, dataInput, seqLen, maxSeqLen);
+    at::Tensor outputAtTensor = CreateAtTensor(outputShape, dataInput.scalar_type());
+    atb::Tensor outputTensor = AtTensor2Tensor(outputAtTensor);
+    atb::Tensor inputTensor = AtTensor2Tensor(dataInput);
 
-    RUN_ATB_CMD(param, paramsetter, "PadWithHiddenStateOperation");
-    return output_tensor;
-#endif
+    atb::VariantPack variantPack;
+    variantPack.inTensors.push_back(inputTensor);
+    variantPack.outTensors.push_back(outputTensor);
+
+    uint64_t workspaceSize = 0;
+    auto contextPtr = GetContext();
+    atb::Status st = op->Setup(variantPack, workspaceSize, contextPtr);
+    TORCH_CHECK(st == 0, "setup failed!");
+    at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
+    void *workspacePtr = nullptr;
+    if (workspaceSize > 0) {
+        auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
+        workspacePtr = (void*)workspaceTensor.storage().data();
+    }
+
+    auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
+        auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
+        DestroyOperation(op);
+        return 0;
+    };
+    at_npu::native::OpCommand cmd;
+    cmd.Name("PadWithHiddenStateOperation");
+    cmd.SetCustomHandler(acl_call);
+    cmd.Run();
+    return outputAtTensor;
 }
