@@ -115,7 +115,7 @@ std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor 
     void *workspacePtr = nullptr;
     if (workspaceSize > 0) {
         auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
-        workspacePtr = workspaceTensor.storage().data();
+        workspacePtr = (void*)workspaceTensor.storage().data();
     }
     auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
         auto st = op->Execute(variantPack, (uint8_t *)workspacePtr, workspaceSize, contextPtr);
@@ -216,7 +216,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const a
     void *workspacePtr = nullptr;
     if (workspaceSize > 0) {
         auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
-        workspacePtr = workspaceTensor.storage().data();
+        workspacePtr = (void*)workspaceTensor.storage().data();
     }
 
     auto acl_call = [op, contextPtr, variantPack, workspacePtr, workspaceSize]() -> int {
