@@ -20,12 +20,8 @@
 
 #include "../ops_interface.h"
 #include "inc/adapter.h"
-
-#ifdef ENABLE_ATB
-#include "inc/atb_adapter.h"
 #include "atb/operation.h"
 #include "atb/train_op_params.h"
-#endif 
 
 using namespace std;
 
