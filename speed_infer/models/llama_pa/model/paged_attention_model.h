@@ -31,11 +31,13 @@ public:
         bool isPrefill = false;
         int rank = 0;
         int rankSize = 1;
+        bool isLmHeadParallel = true;
         std::string backend = "hccl";
+        bool isBF16 = false;
         void FromString(const std::string &param);
     };
 
-    PAModel(const std::string &param);
+    explicit PAModel(const std::string &param);
 
     ~PAModel();
 
@@ -47,7 +49,7 @@ public:
                            std::vector<atb::TensorDesc> &outTensorDescs) override;
 
 private:
-    void BuildGraph() override;
+    virtual int64_t BuildGraph() override;
 
     atb::Status ParseParam(const std::string &param) override;
 
