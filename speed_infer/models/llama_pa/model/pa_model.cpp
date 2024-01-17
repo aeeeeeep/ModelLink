@@ -146,7 +146,7 @@ void PAModel::BuildGraph()
     auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
     atb::infer::GatherParam wordEmbeddingParam;
     atb::Operation *op = nullptr;
-    atb::CreateOperation(wordEmbeddingParam, &op);
+    CREATE_OPERATION(wordEmbeddingParam, &op);
     wordEmbeddingNode.operation.reset(op);
     wordEmbeddingNode.inTensors = {&graph_.weightTensors.at(0), &graph_.inTensors.at(IN_TENSOR_INPUTIDS)};
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(0)};
@@ -196,7 +196,7 @@ void PAModel::BuildGraph()
     atb::infer::RmsNormParam finalNormParam;
     finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     finalNormParam.normParam.epsilon = param_.rmsNormEps;
-    atb::CreateOperation(finalNormParam, &op);
+    CREATE_OPERATION(finalNormParam, &op);
     finalNormNode.operation.reset(op);
     const int finalLayerNormWeightTensorId =
         graph_.weightTensors.size() - FINALNORMNODE_WEIGHT_COUNT - OUT_LM_HEAD_WEIGHT_COUNT;

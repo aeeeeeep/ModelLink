@@ -66,37 +66,37 @@ atb::Status AntiPALayer(const AntiPALayerParam &param, atb::Operation **operatio
     atb::infer::RmsNormParam rmsNormParam;
     rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     rmsNormParam.normParam.epsilon = param.rmsNormEps;
-    CreateOperation(rmsNormParam, &inputNormNode.operation);
+    CREATE_OPERATION(rmsNormParam, &inputNormNode.operation);
     inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT};
     inputNormNode.outTensorIds = {INTERMIDATE_INPUTNORMOUT};
 
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CreateOperation(addParam, &InputNormAddNode.operation);
+    CREATE_OPERATION(addParam, &InputNormAddNode.operation);
     InputNormAddNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_BETA};
     InputNormAddNode.outTensorIds = {INTERMIDATE_NORMADDOUT};
 
     atb::infer::LinearParam linearParam = {false, false, true};
-    CreateOperation(linearParam, &mixdQLinearNode.operation);
+    CREATE_OPERATION(linearParam, &mixdQLinearNode.operation);
     mixdQLinearNode.inTensorIds = {INTERMIDATE_NORMADDOUT, IN_QMIXDWEIGHT, IN_QMIXD_BIAS};
     mixdQLinearNode.outTensorIds = {INTERMIDATE_MIXEDQ};
 
-    CreateOperation(linearParam, &mixdKLinearNode.operation);
+    CREATE_OPERATION(linearParam, &mixdKLinearNode.operation);
     mixdKLinearNode.inTensorIds = {INTERMIDATE_NORMADDOUT, IN_KMIXDWEIGHT, IN_KMIXD_BIAS};
     mixdKLinearNode.outTensorIds = {INTERMIDATE_MIXEDK};
 
-    CreateOperation(linearParam, &mixdVLinearNode.operation);
+    CREATE_OPERATION(linearParam, &mixdVLinearNode.operation);
     mixdVLinearNode.inTensorIds = {INTERMIDATE_NORMADDOUT, IN_VMIXDWEIGHT, IN_VMIXD_BIAS};
     mixdVLinearNode.outTensorIds = {INTERMIDATE_MIXEDV};
 
     atb::infer::RopeParam ropeParam;
     ropeParam.rotaryCoeff = 2;
-    CreateOperation(ropeParam, &ropeNode.operation);
+    CREATE_OPERATION(ropeParam, &ropeNode.operation);
     ropeNode.inTensorIds = {INTERMIDATE_MIXEDQ, INTERMIDATE_MIXEDK, IN_COSEMBED, IN_SINEMBED, IN_INPUT_LENGTHS};
     ropeNode.outTensorIds = {INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK};
 
     atb::infer::ReshapeAndCacheParam reshapeCacheParm;
-    CreateOperation(reshapeCacheParm, &reshapeAndCacheNode.operation);
+    CREATE_OPERATION(reshapeCacheParm, &reshapeAndCacheNode.operation);
     reshapeAndCacheNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_MIXEDV, IN_K_CACHE, IN_V_CACHE,
                                        IN_SLOTS};
     reshapeAndCacheNode.outTensorIds = {};
@@ -115,7 +115,7 @@ atb::Status AntiPALayer(const AntiPALayerParam &param, atb::Operation **operatio
         faEnParam.kvHeadNum = param.headNum;
         faEnParam.isEncoder = true;
         faEnParam.isFusion = true;
-        CreateOperation(faEnParam, &attentionNode.operation);
+        CREATE_OPERATION(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_MIXEDV,
                                      IN_ATTENTIONMASK, IN_INPUT_LENGTHS};
         attentionNode.outTensorIds = {INTERMIDATE_ATTENTIONOUT};
@@ -144,7 +144,7 @@ atb::Status AntiPALayer(const AntiPALayerParam &param, atb::Operation **operatio
                                          IN_INPUT_LENGTHS};
         }
         
-        CreateOperation(paDeParam, &attentionNode.operation);
+        CREATE_OPERATION(paDeParam, &attentionNode.operation);
         attentionNode.outTensorIds = {INTERMIDATE_ATTENTIONOUT};
         attentionNode.inTensorReshapeFuncs.resize(attentionNode.inTensorIds.size());
         attentionNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
@@ -167,15 +167,15 @@ atb::Status AntiPALayer(const AntiPALayerParam &param, atb::Operation **operatio
         newShape.dims[1] = oldShape.dims[1] * oldShape.dims[2];
     };
 
-    CreateOperation(addParam, &selfResidualAddNode.operation);
+    CREATE_OPERATION(addParam, &selfResidualAddNode.operation);
     selfResidualAddNode.inTensorIds = {IN_HIDDENSTATES, INTERMIDATE_SELFLINEAROUT};
     selfResidualAddNode.outTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT};
 
-    CreateOperation(rmsNormParam, &selfNormNode.operation);
+    CREATE_OPERATION(rmsNormParam, &selfNormNode.operation);
     selfNormNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT};
     selfNormNode.outTensorIds = {INTERMIDATE_SELFNORMOUT};
 
-    CreateOperation(addParam, &selfOutNormAddNode.operation);
+    CREATE_OPERATION(addParam, &selfOutNormAddNode.operation);
     selfOutNormAddNode.inTensorIds = {INTERMIDATE_SELFNORMOUT, IN_SELFOUTBETA};
     selfOutNormAddNode.outTensorIds = {INTERMIDATE_SELFNORMADDOUT};
 
@@ -192,7 +192,7 @@ atb::Status AntiPALayer(const AntiPALayerParam &param, atb::Operation **operatio
                             IN_MLPUP_BIAS, IN_MLPGATE_BIAS};
     mlpNode.outTensorIds = {INTERMIDATE_MLPOUT};
 
-    CreateOperation(addParam, &mlpResidualAddNode.operation);
+    CREATE_OPERATION(addParam, &mlpResidualAddNode.operation);
     mlpResidualAddNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, INTERMIDATE_MLPOUT};
     mlpResidualAddNode.outTensorIds = {OUT_LAYEROUT};
 
@@ -202,7 +202,7 @@ atb::Status AntiPALayer(const AntiPALayerParam &param, atb::Operation **operatio
         return atb::NO_ERROR;
     };
 
-    atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
 }
 
