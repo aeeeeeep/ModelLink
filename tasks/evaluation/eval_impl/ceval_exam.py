@@ -22,14 +22,16 @@ from modellink.error_utils import check_divisible_by_zero
 from tasks.evaluation.eval_api.dataset_eval import DatasetEval
 from tasks.evaluation.eval_api.chat import Chat
 from tasks.evaluation.eval_impl.template import CEVAL_TEMPLATE_DIR
+
 logger = logging.getLogger(__name__)
 
 
 class CEvalExam(DatasetEval):
-    def __init__(self, test_dir,
+    def __init__(self, test_dir, batch_size,
                  instruction_template="{fewshot_template}\n\n问：{question}\n答："):
         self.test_dir = test_dir
         self.instruction_template = instruction_template
+        self.batch_size = batch_size
 
     def eval(self, chat: Chat) -> (dict, pd.DataFrame):
         answer_result = {}
@@ -46,24 +48,33 @@ class CEvalExam(DatasetEval):
             subject_name = file[0: -8]
             subject_result = {}
             sample_n += len(data_df)
-            count = 0
             acc_n = 0
+            instructions = []
+            answers = []
             for idx, row in data_df.iterrows():
                 test_question = f"{row['question']}\nA. {row['A']}\nB. {row['B']}\nC. {row['C']}\nD. {row['D']}"
                 instruction = self.instruction_template.format(fewshot_template=ceval_few_shot_template[subject_name],
                                                                question=test_question)
-                chat_result, rank = chat.chat(instruction=instruction, history=[])
-                answer = None
-                if chat_result:
-                    answer = chat_result[0]
-                try:
-                    if rank == 0:
-                        count += 1
-                        subject_result[str(idx)] = answer
-                        if subject_result[str(idx)] == row['answer']:
-                            acc_n += 1
-                except Exception as e:
-                    subject_result[str(idx)] = str(e) + f". AI answer: {answer}"
+                instructions.append(instruction)
+                answers.append(row['answer'])
+
+                if len(instructions) == self.batch_size or len(data_df) == idx + 1:
+                    chat_results, rank = chat.chat(instruction=instructions, history=[])
+                    if chat_results:
+                        for index, chat_result in enumerate(chat_results):
+                            answer = chat_result[0]
+                            try:
+                                if rank == 0:
+                                    logger.info("correct: %s, AI: %s", answers[index], answer)
+                                    subject_result[str(idx - len(chat_results) + index + 1)] = answer
+                                    if subject_result[str(idx - len(chat_results) + index + 1)] == answers[index]:
+                                        acc_n += 1
+                            except Exception as e:
+                                subject_result[str(idx - len(chat_results) + index + 1)] = str(
+                                    e) + f". AI answer: {answer}"
+                    instructions = []
+                    answers = []
+
             if rank == 0:
                 total_n += len(data_df)
                 total_acc_n += acc_n

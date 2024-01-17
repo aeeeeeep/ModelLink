@@ -68,6 +68,8 @@ def add_text_generate_args(parser):
                             'form: dataset1-path dataset2-path ...')
     group.add_argument("--temperature", type=float, default=0.5,
                        help='Sampling temperature.')
+    group.add_argument("--evaluation-batch-size", type=int, default=1,
+                       help='Size of evaluation batch')
     group.add_argument("--greedy", action='store_true', default=False,
                        help='Use greedy sampling.')
     group.add_argument("--top-p", type=float, default=0.9,
@@ -84,14 +86,25 @@ def add_text_generate_args(parser):
 
 def get_result(result):
     if result:
-        final_result = [result[0]]
-        if result[1][0][tokenizer.encode("Yes")[-1]] >= result[1][0][tokenizer.encode("No")[-1]]:
-            final_result.append('T')
+        final_results = []
+        if isinstance(result[0], list):
+            for idx, res in enumerate(result[0]):
+                final_result = [res]
+                if result[1][idx][0][tokenizer.encode("Yes")[-1]] >= result[1][idx][0][tokenizer.encode("No")[-1]]:
+                    final_result.append('T')
+                else:
+                    final_result.append('F')
+                final_results.append(final_result)
         else:
-            final_result.append('F')
+            final_result = [result[0]]
+            if result[1][0][tokenizer.encode("Yes")[-1]] >= result[1][0][tokenizer.encode("No")[-1]]:
+                final_result.append('T')
+            else:
+                final_result.append('F')
+            final_results.append(final_result)
     else:
-        final_result = None
-    return final_result
+        final_results = None
+    return final_results
 
 
 class LLMChat(Chat):
@@ -99,7 +112,7 @@ class LLMChat(Chat):
         self.args = llm_args
 
     def chat(self, instruction, history):
-        instruction_temp = template.format(instruction=instruction)
+        instruction_temp = [template.format(instruction=ins) for ins in instruction]
         result = model.generate(
             instruction_temp,
             do_sample=False,
@@ -110,6 +123,21 @@ class LLMChat(Chat):
         )
         return get_result(result), dist.get_rank()
 
+    def beam_search_chat(self, instruction, history):
+        instruction_temp = template.format(instruction=instruction)
+        result = model.generate(
+            instruction_temp,
+            do_sample=False,
+            max_new_tokens=max_new_tokens,
+            tokenizer=tokenizer,
+            stream=False,
+            num_beams=4,
+            top_k=50,
+            top_p=0.95,
+            length_penalty=0.7
+        )
+        return result, dist.get_rank()
+
 
 def mmlu(eval_args, agent):
     data_path = None
@@ -118,7 +146,7 @@ def mmlu(eval_args, agent):
             data_path = path
     try:
         if data_path:
-            mmlu_eval = MmluEval(test_dir=data_path)
+            mmlu_eval = MmluEval(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = mmlu_eval.eval(chat=agent)
             logger.info(score_df)
     except Exception as e:
@@ -132,7 +160,7 @@ def gsm8k(eval_args, agent):
             data_path = path
     try:
         if data_path:
-            gsm8k_eval = Gsm8kEval(test_dir=data_path)
+            gsm8k_eval = Gsm8kEval(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = gsm8k_eval.eval(chat=agent)
             logger.info(score_df)
     except Exception as e:
@@ -146,7 +174,7 @@ def boolq(eval_args, agent):
             data_path = path
     try:
         if data_path:
-            boolq_eval = BoolqEval(test_dir=data_path)
+            boolq_eval = BoolqEval(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = boolq_eval.eval(chat=agent)
             logger.info(score_df)
     except Exception as e:
@@ -160,7 +188,7 @@ def ceval(eval_args, agent):
             data_path = path
     try:
         if data_path:
-            ceval_exam = CEvalExam(test_dir=data_path)
+            ceval_exam = CEvalExam(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = ceval_exam.eval(chat=agent)
             logger.info(score_df)
     except Exception as e:
@@ -188,7 +216,7 @@ def agi_eval(eval_args, agent):
             data_path = path
     try:
         if data_path:
-            agieval_exam = AGIEvalExam(test_dir=data_path)
+            agieval_exam = AGIEvalExam(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = agieval_exam.eval(chat=agent)
             logger.info(score_df)
     except Exception as e:
@@ -202,7 +230,7 @@ def bbh_eval(eval_args, agent):
             data_path = path
     try:
         if data_path:
-            bbh = BBHEval(test_dir=data_path)
+            bbh = BBHEval(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = bbh.eval(chat=agent)
             logger.info(score_df)
     except Exception as e:

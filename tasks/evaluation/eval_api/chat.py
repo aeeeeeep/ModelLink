@@ -18,9 +18,19 @@ from abc import abstractmethod, ABCMeta
 
 class Chat(metaclass=ABCMeta):
     @abstractmethod
-    def chat(self, instruction: str, history: list) -> str:
+    def chat(self, instruction: list, history: list) -> list:
         """
         大语言模型对话接口，输入指令和历史对话, 给出新的模型输出
+        :param instruction: 当前指令
+        :param history: 历史对话
+        :return: 模型输出
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def beam_search_chat(self, instruction: str, history: list) -> str:
+        """
+        大语言模型beam search对话接口，输入指令和历史对话, 给出新的模型输出
         :param instruction: 当前指令
         :param history: 历史对话
         :return: 模型输出

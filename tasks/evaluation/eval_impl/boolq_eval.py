@@ -22,14 +22,16 @@ import tqdm
 from modellink.error_utils import check_divisible_by_zero
 from tasks.evaluation.eval_api.dataset_eval import DatasetEval
 from tasks.evaluation.eval_api.chat import Chat
+
 logger = logging.getLogger(__name__)
 
 
 class BoolqEval(DatasetEval):
-    def __init__(self, test_dir,
+    def __init__(self, test_dir, batch_size,
                  instruction_template="{passage}\nQuestion: {question}?\nAnswer:"):
         self.test_dir = test_dir
         self.instruction_template = instruction_template
+        self.batch_size = batch_size
 
     def eval(self, chat: Chat) -> (dict, pd.DataFrame):
         answer_result = {}
@@ -45,23 +47,32 @@ class BoolqEval(DatasetEval):
                     boolq_question_list.append(json.loads(line))
             subject_result = {}
             acc_n = 0
+            instructions = []
+            targets = []
             for index, item in enumerate(boolq_question_list):
                 instruction = self.instruction_template.format(passage=item['passage'], question=item['question'])
-                result, rank = chat.chat(instruction=instruction, history=[])
-                if result:
-                    answer = result[1]
-                else:
-                    answer = None
-                try:
-                    if rank == 0:
-                        logger.info(f"correct: {str(item['answer'])[0]}, AI: {answer}")
-                        subject_result[str(index)] = answer
-                        if subject_result[str(index)] == str(item['answer'])[0]:
-                            acc_n += 1
-                except Exception as e:
-                    if rank == 0:
-                        logger.info(e)
-                    subject_result[str(index)] = str(e) + ". AI answer:" + answer
+                instructions.append(instruction)
+                targets.append(item['answer'])
+
+                if len(instructions) == self.batch_size or len(boolq_question_list) == index + 1:
+                    chat_results, rank = chat.chat(instruction=instructions, history=[])
+                    if chat_results:
+                        for idx, chat_result in enumerate(chat_results):
+                            answer = chat_result[1]
+                            try:
+                                if rank == 0:
+                                    logger.info(f"correct: {str(targets[idx])[0]}, AI: {answer}")
+                                    subject_result[str(index - len(chat_result) + idx + 1)] = answer
+                                    if subject_result[str(index - len(chat_result) + idx + 1)] == str(targets[idx])[0]:
+                                        acc_n += 1
+                            except Exception as e:
+                                if rank == 0:
+                                    logger.info(e)
+                                subject_result[str(index - len(chat_result) + idx + 1)] = str(
+                                    e) + ". AI answer:" + answer
+                    instructions = []
+                    targets = []
+
             if rank == 0:
                 total_n += len(boolq_question_list)
                 total_acc_n += acc_n

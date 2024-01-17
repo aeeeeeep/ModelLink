@@ -28,12 +28,13 @@ logger = logging.getLogger(__name__)
 
 
 class Gsm8kEval(DatasetEval):
-    def __init__(self, test_dir,
+    def __init__(self, test_dir, batch_size,
                  instruction_template="{fewshot_template}\n\n{question}",
                  output_template=r'The answer is (.*?) '):
         self.test_dir = test_dir
         self.instruction_template = instruction_template
         self.output_template = output_template
+        self.batch_size = batch_size
 
     def eval(self, chat: Chat) -> (dict, pd.DataFrame):
         answer_result = {}
@@ -49,28 +50,40 @@ class Gsm8kEval(DatasetEval):
                 gsm8k_list = json.load(f)
             subject_result = {}
             acc_n = 0
+            instructions = []
+            answers = []
             for index, item in enumerate(gsm8k_list):
                 instruction = self.instruction_template.format(fewshot_template=gsm8k_few_shot_template['few_shot'],
                                                                question=item['question'])
-                chat_result, rank = chat.chat(instruction=instruction, history=[])
-                answer = None
-                if chat_result:
-                    answer = chat_result[0]
-                    answer = answer.split('Q:')[0]
-                    answer_result = answer.replace('$', '').replace(',', '') + '  '
-                    answer_result = answer_result.replace('.', ' ', -1)
-                try:
-                    if rank == 0:
-                        logger.info(instruction)
-                        final_answer = re.findall(self.output_template, answer_result)
-                        final_answer = [final_answer[0][::-1].replace('.', '', 1)[::-1]]
-                        subject_result[str(index)] = final_answer
-                        if subject_result[str(index)] == item['answer']:
-                            acc_n += 1
-                except Exception as e:
-                    if rank == 0:
-                        logger.info(e)
-                    subject_result[str(index)] = str(e) + ". AI answer:" + answer
+                instructions.append(instruction)
+                answers.append(item['answer'])
+                chat_results, rank = chat.chat(instruction=instructions, history=[])
+
+                if chat_results:
+                    for idx, chat_result in enumerate(chat_results):
+                        answer = chat_result[0]
+                        answer = answer.split('Q:')[0]
+                        answer_result = answer.replace('$', '').replace(',', '') + '  '
+                        answer_result = answer_result.replace('.', ' ', -1)
+
+                        try:
+                            if rank == 0:
+                                logger.info(instruction)
+                                final_answer = re.findall(self.output_template, answer_result)
+                                final_answer = [final_answer[0][::-1].replace('.', '', 1)[::-1]]
+                                logger.info("correct: %s, AI: %s", answers[idx], final_answer)
+                                subject_result[str(index - len(chat_results) + idx + 1)] = final_answer
+                                if subject_result[str(index - len(chat_results) + idx + 1)] == answers[idx]:
+                                    acc_n += 1
+                        except Exception as e:
+                            if rank == 0:
+                                logger.info(e)
+                            subject_result[str(index - len(chat_results) + idx + 1)] = str(
+                                e) + ". AI answer:" + answer
+
+                instructions = []
+                answers = []
+
             if rank == 0:
                 total_n += len(gsm8k_list)
                 total_acc_n += acc_n

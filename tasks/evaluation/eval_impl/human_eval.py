@@ -27,6 +27,7 @@ from tasks.evaluation.eval_api.chat import Chat
 from tasks.evaluation.eval_impl.template import CODE_TEST_LOG_DIR
 from modellink.error_utils import check_divisible_by_zero
 from modellink.utils import WRITE_FILE_DEFAULT_FLAGS, WRITE_FILE_DEFAULT_MODES
+
 logger = logging.getLogger(__name__)
 
 
@@ -92,7 +93,7 @@ class HumanEval(DatasetEval):
         """
         for file in os.listdir(test_dir):
             test_code_path = os.path.join(self.test_dir, file)
-            with os.fdopen(os.open(test_code_path, WRITE_FILE_DEFAULT_FLAGS, WRITE_FILE_DEFAULT_MODES)) as fp:
+            with open(test_code_path, 'r') as fp:
                 for line in fp:
                     if any(not x.isspace() for x in line):
                         yield json.loads(line)
@@ -104,7 +105,7 @@ class HumanEval(DatasetEval):
         answer_result = {}
         for idx, (task_id, task) in enumerate(problems.items()):
             instruction = self.instruction_template.format(prompt=task['prompt'])
-            chat_result, rank = chat.chat(instruction=instruction, history=[])
+            chat_result, rank = chat.beam_search_chat(instruction=instruction, history=[])
             answer = None
             if chat_result:
                 answer = chat_result[0]
@@ -112,7 +113,7 @@ class HumanEval(DatasetEval):
                 if rank == 0:
                     python_execute = sys.executable
                     answer = task['prompt'] + ' ' + answer
-                    logger.info('answer: ', answer)
+                    logger.info(f'answer: {answer}')
                     test_file = extract_answer_code(answer, task)
                     result = subprocess.run([python_execute, test_file], capture_output=True, timeout=10)
                     if result.returncode != 0:
@@ -122,7 +123,8 @@ class HumanEval(DatasetEval):
                     else:
                         answer_result[task_id] = 'passed'
                         success_n += 1
-                        logger.info("%s : passed , acc : %s", task_id, check_divisible_by_zero(success_n, len(problems)))
+                        logger.info("%s : passed , acc : %s", task_id,
+                                    check_divisible_by_zero(success_n, len(problems)))
             except Exception as e:
                 if rank == 0:
                     logger.info("%s failed. %s", task_id, e)

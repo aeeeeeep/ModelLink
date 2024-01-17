@@ -21,14 +21,16 @@ from tasks.evaluation.eval_api.dataset_eval import DatasetEval
 from tasks.evaluation.eval_api.chat import Chat
 from tasks.evaluation.eval_impl.template import BBH_TEMPLATE_DIR
 from modellink.error_utils import check_divisible_by_zero
+
 logger = logging.getLogger(__name__)
 
 
 class BBHEval(DatasetEval):
-    def __init__(self, test_dir,
+    def __init__(self, test_dir, batch_size,
                  instruction_template="{fewshot_template}Q: {question}\nA:"):
         self.test_dir = test_dir
         self.instruction_template = instruction_template
+        self.batch_size = batch_size
 
     def eval(self, chat: Chat) -> (dict, pd.DataFrame):
         answer_result = {}
@@ -47,28 +49,40 @@ class BBHEval(DatasetEval):
             subject_result = {}
             sample_n += len(bbh_dataset['examples'])
             acc_n = 0
-            for idx, item in enumerate(bbh_dataset['examples']):
+            sorted_dataset = sorted(bbh_dataset['examples'], key=lambda x: len(x['input']))
+            instructions = []
+            targets = []
+            for idx, item in enumerate(sorted_dataset):
                 instruction = self.instruction_template.format(fewshot_template=bbh_template[subject_name],
                                                                question=item['input'])
-                chat_result, rank = chat.chat(instruction=instruction, history=[])
-                answer = None
-                if chat_result:
-                    answer = chat_result[0]
-                try:
-                    if rank == 0:
-                        logger.info(f"correct: {item['target']}, AI: {answer.splitlines()[0]}")
-                        subject_result[str(idx)] = answer.splitlines()[0]
-                        if subject_result[str(idx)] == item['target']:
-                            acc_n += 1
-                except Exception as e:
-                    subject_result[str(idx)] = str(e) + f". AI answer: {answer}"
+                instructions.append(instruction)
+                targets.append(item['target'])
+
+                if len(instructions) == self.batch_size or len(bbh_dataset['examples']) == idx + 1:
+                    chat_results, rank = chat.chat(instruction=instructions, history=[])
+                    if chat_results:
+                        for index, chat_result in enumerate(chat_results):
+                            answer = chat_result[0]
+                            try:
+                                if rank == 0:
+                                    logger.info("correct: %s, AI: %s", targets[index], answer.splitlines()[0])
+                                    subject_result[str(idx - len(chat_results) + index + 1)] = answer.splitlines()[0]
+                                    if subject_result[str(idx - len(chat_results) + index + 1)] == targets[index]:
+                                        acc_n += 1
+                            except Exception as e:
+                                subject_result[str(idx - len(chat_results) + index + 1)] = str(
+                                    e) + f". AI answer: {answer}"
+                    instructions = []
+                    targets = []
+
             if rank == 0:
                 logging.info(f"{subject_name} acc = {acc_n}/{len(bbh_dataset['examples'])}="
                              f"{check_divisible_by_zero(acc_n, len(bbh_dataset['examples']))}")
                 total_n += len(bbh_dataset['examples'])
                 total_acc_n += acc_n
                 answer_result[subject_name] = subject_result
-                score_datas.append([subject_name, len(bbh_dataset['examples']), check_divisible_by_zero(acc_n, len(bbh_dataset['examples']))])
+                score_datas.append([subject_name, len(bbh_dataset['examples']),
+                                    check_divisible_by_zero(acc_n, len(bbh_dataset['examples']))])
         if rank == 0:
             logger.info(f"bbh acc = {total_acc_n}/{total_n}={check_divisible_by_zero(total_acc_n, total_n)}")
             score_datas.append(["total", total_n, check_divisible_by_zero(total_acc_n, total_n)])

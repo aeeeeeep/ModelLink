@@ -21,15 +21,17 @@ from tasks.evaluation.eval_api.dataset_eval import DatasetEval
 from tasks.evaluation.eval_api.chat import Chat
 from tasks.evaluation.eval_impl.template import AGIEVAL_TEMPLATE_DIR
 from modellink.error_utils import check_divisible_by_zero
+
 logger = logging.getLogger(__name__)
 
 
 class AGIEvalExam(DatasetEval):
-    def __init__(self, test_dir,
+    def __init__(self, test_dir, batch_size,
                  instruction_template="{fewshot_template}   {question}\n{question_template}\n{options}"
                                       "\n{answer_template}"):
         self.test_dir = test_dir
         self.instruction_template = instruction_template
+        self.batch_size = batch_size
 
     def eval(self, chat: Chat) -> (dict, pd.DataFrame):
         answer_result = {}
@@ -50,6 +52,8 @@ class AGIEvalExam(DatasetEval):
             subject_result = {}
             sample_n += len(agi_question_list)
             acc_n = 0
+            instructions = []
+            corrects = []
             for idx, item in enumerate(agi_question_list):
                 if item['passage']:
                     question = item['passage'] + '\n' + item['question']
@@ -74,25 +78,36 @@ class AGIEvalExam(DatasetEval):
                                                                question_template=AGI_few_shot_template[subject_name][1],
                                                                options=options,
                                                                answer_template=AGI_few_shot_template[subject_name][2])
-                chat_result, rank = chat.chat(instruction=instruction, history=[])
-                answer = None
-                if chat_result:
-                    answer = chat_result[0]
-                try:
-                    if rank == 0:
-                        final_result = answer.splitlines()[0].replace('$', '').replace('(', '').replace(')', '')
-                        logger.info("correct: %s, AI: %s", correct, final_result)
-                        subject_result[str(idx)] = final_result
-                        if subject_result[str(idx)] == correct:
-                            acc_n += 1
-                except Exception as e:
-                    subject_result[str(idx)] = str(e) + f". AI answer: {answer}"
+                instructions.append(instruction)
+                corrects.append(correct)
+
+                if len(instructions) == self.batch_size or len(agi_question_list) == idx + 1:
+                    chat_results, rank = chat.chat(instruction=instructions, history=[])
+                    if chat_results:
+                        for index, chat_result in enumerate(chat_results):
+                            answer = chat_result[0]
+                            try:
+                                if rank == 0:
+                                    final_result = answer.splitlines()[0].replace('$', '').replace('(', '').replace(')',
+                                                                                                                    '')
+                                    logger.info("correct: %s, AI: %s", corrects[index], final_result)
+                                    subject_result[str(idx - len(chat_results) + index + 1)] = final_result
+                                    if subject_result[str(idx - len(chat_results) + index + 1)] == corrects[index]:
+                                        acc_n += 1
+                            except Exception as e:
+                                subject_result[str(idx - len(chat_results) + index + 1)] = str(
+                                    e) + f". AI answer: {answer}"
+                    instructions = []
+                    corrects = []
+
             if rank == 0:
-                logger.info("%s acc = %d/%d=%e", subject_name, acc_n, len(agi_question_list), check_divisible_by_zero(acc_n, len(agi_question_list)))
+                logger.info("%s acc = %d/%d=%e", subject_name, acc_n, len(agi_question_list),
+                            check_divisible_by_zero(acc_n, len(agi_question_list)))
                 total_n += len(agi_question_list)
                 total_acc_n += acc_n
                 answer_result[subject_name] = subject_result
-                score_datas.append([subject_name, len(agi_question_list), check_divisible_by_zero(acc_n, len(agi_question_list))])
+                score_datas.append(
+                    [subject_name, len(agi_question_list), check_divisible_by_zero(acc_n, len(agi_question_list))])
         if rank == 0:
             logger.info("AGIEval acc = %d/%d=%e", total_acc_n, total_n, check_divisible_by_zero(total_acc_n, total_n))
             score_datas.append(["total", total_n, check_divisible_by_zero(total_acc_n, total_n)])

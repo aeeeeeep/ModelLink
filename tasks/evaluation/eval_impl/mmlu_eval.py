@@ -24,11 +24,12 @@ from modellink.error_utils import check_divisible_by_zero
 from tasks.evaluation.eval_api.dataset_eval import DatasetEval
 from tasks.evaluation.eval_api.chat import Chat
 from tasks.evaluation.eval_impl.template import MMLU_TEMPLATE_DIR
+
 logger = logging.getLogger(__name__)
 
 
 class MmluEval(DatasetEval):
-    def __init__(self, test_dir,
+    def __init__(self, test_dir, batch_size,
                  instruction_template="{few_shot_examples}\n\n"
                                       "{question}\nAnswer:",
                  output_template1=r".*(?P<answer>[A|B|C|D])\..*",
@@ -36,6 +37,7 @@ class MmluEval(DatasetEval):
         self.test_dir = test_dir
         self.instruction_template = instruction_template
         self.output_template = [output_template1, output_template2]
+        self.batch_size = batch_size
 
     def eval(self, chat: Chat) -> (dict, pd.DataFrame):
         answer_result = {}
@@ -52,37 +54,49 @@ class MmluEval(DatasetEval):
             subject = subject_name.replace("_", " ")
             subject_result = {}
             acc_n = 0
+            instructions = []
+            corrects = []
             for idx, row in data_df.iterrows():
                 test_question = f"{row['question']}\nA. {row['A']}\nB. {row['B']}\nC. {row['C']}\nD. {row['D']}"
                 instruction = self.instruction_template.format(few_shot_examples=mmlu_few_shot_template[subject_name],
                                                                subject=subject,
                                                                question=test_question)
-                chat_result, rank = chat.chat(instruction=instruction, history=[])
-                answer = None
-                if chat_result:
-                    answer = chat_result[0]
-                try:
-                    if rank == 0:
-                        logger.info(instruction)
-                        match_flag = False
-                        for template in self.output_template:
+                instructions.append(instruction)
+                corrects.append(row['answer'])
+
+                if len(instructions) == self.batch_size or len(data_df) == idx + 1:
+                    chat_results, rank = chat.chat(instruction=instructions, history=[])
+                    if chat_results:
+                        for index, chat_result in enumerate(chat_results):
+                            answer = chat_result[0]
                             try:
-                                result = re.match(template, answer)
-                                logger.info(f"correct: {row['answer']}, AI: {result.group('answer')}")
-                                subject_result[str(idx)] = result.group("answer")
-                                if subject_result[str(idx)] == row['answer']:
-                                    acc_n += 1
-                                match_flag = True
-                                break
+                                if rank == 0:
+                                    logger.info(instruction)
+                                    match_flag = False
+                                    for template in self.output_template:
+                                        try:
+                                            result = re.match(template, answer)
+                                            logger.info(f"correct: {corrects[index]}, AI: {result.group('answer')}")
+                                            subject_result[str(idx - len(chat_results) + index + 1)] = result.group(
+                                                "answer")
+                                            if subject_result[str(idx - len(chat_results) + index + 1)] == corrects[
+                                                index]:
+                                                acc_n += 1
+                                            match_flag = True
+                                            break
+                                        except Exception as e:
+                                            logger.info(e)
+                                            continue
+                                    if not match_flag:
+                                        logger.info("xx. AI answer: %s", answer)
                             except Exception as e:
-                                logger.info(e)
-                                continue
-                        if not match_flag:
-                            logger.info("xx. AI answer: %s", answer)
-                except Exception as e:
-                    if rank == 0:
-                        logger.info(e)
-                    subject_result[str(idx)] = str(e) + ". AI answer:" + answer
+                                if rank == 0:
+                                    logger.info(e)
+                                subject_result[str(idx - len(chat_results) + index + 1)] = str(
+                                    e) + ". AI answer:" + answer
+                    instructions = []
+                    corrects = []
+
             if rank == 0:
                 total_n += len(data_df)
                 total_acc_n += acc_n

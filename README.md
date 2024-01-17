@@ -776,6 +776,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation_llama.py   \
        --task $TASK\
        --seq-length 512 \
        --max-new-tokens 1 \
+       --evaluation-batch-size 1 \
        --max-position-embeddings 512 \
        --tensor-model-parallel-size 2  \
        --pipeline-model-parallel-size 4  \
@@ -803,6 +804,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation_llama.py   \
        --task $TASK\
        --seq-length 512 \
        --max-new-tokens 1 \
+       --evaluation-batch-size 1 \
        --max-position-embeddings 512 \
        --tensor-model-parallel-size 2  \
        --pipeline-model-parallel-size 4  \
@@ -819,7 +821,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation_llama.py   \
        --seed 42 | tee logs/train.log
 ```
 ##### BoolQ
-BoolQ 是一个 yes/no 的问答数据集， 每一个问题包含了一个（问题，文章，答案）三元组，同时有文章的标题作为额外的选择性输入。BoolQ 数据集的评估相对简单，只需要配置 `TASK="boolq"`, `--seq-length=512`, `--max-position-embeddings=512`, `--max-new-token=2`。
+BoolQ 是一个 yes/no 的问答数据集， 每一个问题包含了一个（问题，文章，答案）三元组，同时有文章的标题作为额外的选择性输入。BoolQ 数据集的评估相对简单，只需要配置 `TASK="boolq"`, `--seq-length=512`, `--max-position-embeddings=512`, `--max-new-token=1`。
 零样本评估的结果通常会被给定的 prompt 影响，可以尝试通过在 `tasks/evaluation/evaluation.py` 中设置合适的 prompt 得到更高的分数，
 
 ```bash
@@ -828,25 +830,25 @@ template = {instruction}
 ```
 
 ##### MMLU
-由于 MMLU 是一项多学科任务，并且需要进行 5-shot 评估，因此每个学科问题的长度差异很大。如果你想同时跑57个学科任务，可以尝试设置 `TASK="mmlu"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=2` (`--max-new-tokens` 可以在 2-4 取值)。
+由于 MMLU 是一项多学科任务，并且需要进行 5-shot 评估，因此每个学科问题的长度差异很大。如果你想同时跑57个学科任务，可以尝试设置 `TASK="mmlu"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=1` 。
 在很多网站，MMLU 的精度会依据学科进行评估，57个学科主要属于四个大类， 因此该数据集也可以基于四个大类进行打分，[网站](https://github.com/hendrycks/test/blob/master/categories.py) 给出了具体的57个类别。
 
 
 ##### GSM8K
-GSM8K 是一个有8.5k高质量小学数学应用题文本的数据集，每一个问题的回答是具体的数字。由于该数据集通常采用 few-shot 的形式进行评估，GSM8K的问题长度相对是比较长的，输出答案包含一整个思维链路，相关入参应该设置为 `TASK="gsm8k"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=128` (`--max-new-tokens` 可以是 256-512).
+GSM8K 是一个有8.5k高质量小学数学应用题文本的数据集，每一个问题的回答是具体的数字。由于该数据集通常采用 few-shot 的形式进行评估，GSM8K的问题长度相对是比较长的，输出答案包含一整个思维链路，相关入参应该设置为 `TASK="gsm8k"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=200`.
 
 ##### HumanEval
 HumanEval 是一个用于挑战代码生成问题的数据集，具有164个编程问题，包含函数签名，文档，函数主体和单元测试等。该数据的所有问题都是手写的，以确保它们不在训练集中，由于答案包含长代码，相关参数可以设置为 `TASK="human_eval"`, `--seq-length=2048`,
-`--max-position-embeddings=2048`, `--max-new-token=1024`。
+`--max-position-embeddings=2048`, `--max-new-token=200`。
 
 ##### AGIEval
-AGIEval 是一个用于评估大模型在人类认知和问题解决能力方面生成能力的基准数据集，它源于20个面向普通考生的官方、公开和高标准的入学和资格考试，相关参数可以设置为 `TASK="agieval"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=1024`。
+AGIEval 是一个用于评估大模型在人类认知和问题解决能力方面生成能力的基准数据集，它源于20个面向普通考生的官方、公开和高标准的入学和资格考试，相关参数可以设置为 `TASK="agieval"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=5`。
 
 ##### Big-Bench-Hard
-Big-bench-hard 数据集是 BIG-Bench 的一个子集，专注于有挑战性的23个 BIG-Bench 任务， 涵盖文本理解、推理、逻辑推理、数学推理和常识推理等多个领域，相关参数可以设置为 `TASK="bbh"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=32` (`--max-new-tokens` 可以是 32-64)。
+Big-bench-hard 数据集是 BIG-Bench 的一个子集，专注于有挑战性的23个 BIG-Bench 任务， 涵盖文本理解、推理、逻辑推理、数学推理和常识推理等多个领域，相关参数可以设置为 `TASK="bbh"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=32`,`--evaluation-batch-size=4`。
 
 ##### CEval
-如 [C-Eval](https://cevalbenchmark.com/) 展示的, C-Eval 是一个针对大模型的综合中文评估数据集， 它由13948道多项选择题组成，涵盖52个不同学科和4个难度级别，划分为验证和测试集，验证集包含标签用于个人评估，测试集合的标签没有公开，如果想要知道模型得分，需要将结果 邮件发送给 [C-Eval](https://cevalbenchmark.com/)。
+如 [C-Eval](https://cevalbenchmark.com/) 展示的, C-Eval 是一个针对大模型的综合中文评估数据集， 它由13948道多项选择题组成，涵盖52个不同学科和4个难度级别，划分为验证和测试集，验证集包含标签用于个人评估，测试集合的标签没有公开，如果想要知道模型得分，需要将结果 邮件发送给 [C-Eval](https://cevalbenchmark.com/)，相关参数可以设置为 `TASK="ceval"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=1`。
 
 ## 加速算法介绍
 
