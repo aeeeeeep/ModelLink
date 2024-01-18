@@ -36,6 +36,7 @@
 #include "llama/7b/model/fusion_model.h"
 #include "llama/7b/model/rope_model.h"
 #include "llama/7b/model/quant_flashattention_model.h"
+#include "llama_adapter/model/adapter_model.h"
 #include "llama_pa/model/pa_model.h"
 #include "telechat/model/model.h"
 
@@ -106,6 +107,10 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::llama_7b::FlashAttentionModel>(param);
     } else if (modelName_ == "llama_pa_model" || modelName_ == "llama_65b_pa_model") {
         model_ = std::make_shared<atb_speed::llama_pa::PAModel>(param);
+    } else if (modelName_ == "llama_adapter_encoder_model") {
+        model_ = std::make_shared<atb_speed::llama_adapter::EncoderAdapterModel>(param);
+    } else if (modelName_ == "llama_adapter_decoder_model") {
+        model_ = std::make_shared<atb_speed::llama_adapter::DecoderAdapterModel>(param);
     } else if (modelName_ == "TelechatQuantFAModel") {
         model_ = std::make_shared<atb_speed::telechat::QuantFAModel>(param);
     } else {
