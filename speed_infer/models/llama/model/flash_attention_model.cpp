@@ -16,14 +16,14 @@
 #include "nlohmann/json.hpp"
 #include "atb/atb_infer.h"
 #include "layers/parallel_layer_v2.h"
-#include "models/llama/7b/operation/llama_layer_embedding.h"
-#include "models/llama/13b/layer/common_layer_fa.h"
-#include "common_flashattention_model.h"
+#include "models/llama/operation/layer_embedding.h"
+#include "models/llama/layer/flash_attention_layer.h"
+#include "flash_attention_model.h"
 
 namespace atb_speed {
-namespace llama_7b {
+namespace llama {
 const int QUANT_WEIGHT_COUNT_PER_LAYER = 23;
-const int SPARSE_WEIGHT_COUNT_PER_LAYER = 30;  // 23 + 7
+const int SPARSE_WEIGHT_COUNT_PER_LAYER = 30;
 const int FLOAT_WEIGHT_COUNT_PER_LAYER = 9;
 const int INPUT_TENSOR_COUNT_BEFORE_KEY = 11;
 const int OUTPUT_TENSOR_COUNT_BEFORE_KEY = 1;
@@ -56,7 +56,7 @@ enum OutTensorId : int {
     OUT_TENSOR_MAX,
 };
 
-void CommonFlashAttentionModel::Param::FromString(const std::string &param)
+void FlashAttentionModel::Param::FromString(const std::string &param)
 {
     nlohmann::json paramJson = nlohmann::json::parse(param);
     rmsNormEps = paramJson["rmsNormEps"].get<double>();
@@ -97,26 +97,26 @@ void CommonFlashAttentionModel::Param::FromString(const std::string &param)
         floatLayers.push_back(item.get<int>());
     }
 
-    ATB_LOG(INFO) << "Llama CommonFlashAttentionModel param rmsNormEps:" << rmsNormEps << ", headNum:" << headNum
+    ATB_LOG(INFO) << "Llama FlashAttentionModel param rmsNormEps:" << rmsNormEps << ", headNum:" << headNum
                   << ", dk:" << dk << ", layerNum:" << layerNum << ", rank:" << rank << ", rankSize:" << rankSize;
 }
 
-CommonFlashAttentionModel::CommonFlashAttentionModel(
-    const std::string &param) : Model("CommonFlashAttentionModel", param)
+FlashAttentionModel::FlashAttentionModel(
+    const std::string &param) : Model("FlashAttentionModel", param)
 {
     param_.FromString(param);
 }
 
-CommonFlashAttentionModel::~CommonFlashAttentionModel() {}
+FlashAttentionModel::~FlashAttentionModel() {}
 
-uint32_t CommonFlashAttentionModel::GetInputNum() const { return graph_.inTensors.size(); }
+uint32_t FlashAttentionModel::GetInputNum() const { return graph_.inTensors.size(); }
 
-uint32_t CommonFlashAttentionModel::GetOutputNum() const { return graph_.outTensors.size(); }
+uint32_t FlashAttentionModel::GetOutputNum() const { return graph_.outTensors.size(); }
 
-atb::Status CommonFlashAttentionModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
+atb::Status FlashAttentionModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
                                                   std::vector<atb::TensorDesc> &outTensorDescs)
 {
-    ATB_LOG(INFO) << "Enter LLaMA CommonFlashAttentionModel InferShape";
+    ATB_LOG(INFO) << "Enter LLaMA FlashAttentionModel InferShape";
     if (outTensorDescs.size() != GetOutputNum()) {
         return atb::ERROR_INVALID_GRAPH;
     }
@@ -127,13 +127,13 @@ atb::Status CommonFlashAttentionModel::InferShape(const std::vector<atb::TensorD
     outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[1];
     outTensorDescs.at(0).shape.dims[MODEL_OUT_DIM2] = outDim;
 
-    ATB_LOG(INFO) << "LLaMA CommonFlashAttentionModel InferShape Success";
+    ATB_LOG(INFO) << "LLaMA FlashAttentionModel InferShape Success";
     return atb::NO_ERROR;
 }
 
-void CommonFlashAttentionModel::BuildGraph()
+int64_t FlashAttentionModel::BuildGraph()
 {
-    ATB_LOG(INFO) << "Enter LLaMA CommonFlashAttentionModel BuildGraph";
+    ATB_LOG(INFO) << "Enter LLaMA FlashAttentionModel BuildGraph";
 
     int floatLayerCnt = 0;
     int weightTensorSize = 0;
@@ -172,14 +172,14 @@ void CommonFlashAttentionModel::BuildGraph()
 
     auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
     atb::infer::GatherParam wordEmbeddingParam;
-    atb::CreateOperation(wordEmbeddingParam, &op);
+    CREATE_OPERATION(wordEmbeddingParam, &op);
     wordEmbeddingNode.operation.reset(op);
     wordEmbeddingNode.inTensors = {&graph_.weightTensors.at(weightOffset++), &graph_.inTensors.at(0)};
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(0)};
 
     auto &embeddingNode = graph_.nodes.at(nodeId++);
-    atb_speed::llama_7b::LayerEmbeddingParam layerEmbeddingParam;
-    atb_speed::llama_7b::LayerEmbedding(layerEmbeddingParam, &op);
+    atb_speed::llama::LayerEmbeddingParam layerEmbeddingParam;
+    atb_speed::llama::LayerEmbedding(layerEmbeddingParam, &op);
     embeddingNode.operation.reset(op);
     embeddingNode.inTensors = {&graph_.inTensors.at(IN_TENSOR_COSTABLE),
                                 &graph_.inTensors.at(IN_TENSOR_SINTABLE),
@@ -201,7 +201,7 @@ void CommonFlashAttentionModel::BuildGraph()
             || (!param_.quantModel && !param_.sparseModel)) {
             ATB_LOG(FATAL) << "Float Layer " << layerId;
 
-            atb_speed::llama_13b::CommonFlashAttentionLayerParam floatModelParam;
+            atb_speed::llama::FlashAttentionLayerParam floatModelParam;
             floatModelParam.rmsNormEps = param_.rmsNormEps;
             floatModelParam.headNum = param_.headNum;
             floatModelParam.dk = param_.dk;
@@ -211,7 +211,7 @@ void CommonFlashAttentionModel::BuildGraph()
             floatModelParam.quantModel = false;
             floatModelParam.isEncoder = param_.isEncoder;
 
-            atb_speed::llama_13b::CommonFlashAttentionLayer(floatModelParam, &op);
+            atb_speed::llama::FlashAttentionLayer(floatModelParam, &op);
             layerNode.operation.reset(op);
             layerNode.inTensors.resize(layerNode.operation->GetInputNum());
             layerNode.outTensors.resize(layerNode.operation->GetOutputNum());
@@ -243,7 +243,7 @@ void CommonFlashAttentionModel::BuildGraph()
         } else if (param_.quantModel) {
             ATB_LOG(FATAL) << "Quant Layer " << layerId;
 
-            atb_speed::llama_13b::CommonFlashAttentionLayerParam quantModelParam;
+            atb_speed::llama::FlashAttentionLayerParam quantModelParam;
             quantModelParam.rmsNormEps = param_.rmsNormEps;
             quantModelParam.headNum = param_.headNum;
             quantModelParam.dk = param_.dk;
@@ -262,7 +262,7 @@ void CommonFlashAttentionModel::BuildGraph()
             quantModelParam.ffnOutInputScale = param_.ffnOutInputScale[layerId];
             quantModelParam.ffnOutInputOffset = param_.ffnOutInputOffset[layerId];
 
-            atb_speed::llama_13b::CommonFlashAttentionLayer(quantModelParam, &op);
+            atb_speed::llama::FlashAttentionLayerParam(quantModelParam, &op);
             layerNode.operation.reset(op);
             layerNode.inTensors.resize(layerNode.operation->GetInputNum());
             layerNode.outTensors.resize(layerNode.operation->GetOutputNum());
@@ -294,7 +294,7 @@ void CommonFlashAttentionModel::BuildGraph()
         } else {     // sparse
             ATB_LOG(FATAL) << "Sparse Layer " << layerId;
 
-            atb_speed::llama_13b::CommonFlashAttentionLayerParam sparseModelParam;
+            atb_speed::llama::FlashAttentionLayerParam sparseModelParam;
             sparseModelParam.rmsNormEps = param_.rmsNormEps;
             sparseModelParam.headNum = param_.headNum;
             sparseModelParam.dk = param_.dk;
@@ -313,7 +313,7 @@ void CommonFlashAttentionModel::BuildGraph()
             sparseModelParam.ffnOutInputScale = param_.ffnOutInputScale[layerId];
             sparseModelParam.ffnOutInputOffset = param_.ffnOutInputOffset[layerId];
 
-            atb_speed::llama_13b::CommonFlashAttentionLayer(sparseModelParam, &op);
+            atb_speed::llama::FlashAttentionLayer(sparseModelParam, &op);
             layerNode.operation.reset(op);
             layerNode.inTensors.resize(layerNode.operation->GetInputNum());
             layerNode.outTensors.resize(layerNode.operation->GetOutputNum());
@@ -345,7 +345,7 @@ void CommonFlashAttentionModel::BuildGraph()
     atb::infer::RmsNormParam finalNormParam;
     finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     finalNormParam.normParam.epsilon = param_.rmsNormEps;
-    atb::CreateOperation(finalNormParam, &op);
+    CREATE_OPERATION(finalNormParam, &op);
     finalNormNode.operation.reset(op);
     const int finalLayerNormWeightTensorId =
         graph_.weightTensors.size() - FINALNORMNODE_WEIGHT_COUNT - OUT_LM_HEAD_WEIGHT_COUNT;
@@ -355,17 +355,18 @@ void CommonFlashAttentionModel::BuildGraph()
 
     auto &outLinearNode = graph_.nodes.at(nodeId++);
     atb::infer::LinearParam outLinearParm = {false, false, false};
-    atb::CreateOperation(outLinearParm, &op);
+    CREATE_OPERATION(outLinearParm, &op);
     outLinearNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
     outLinearNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
                                &graph_.weightTensors.at(finalLinearWeightTensorId)};
     outLinearNode.outTensors = {&graph_.outTensors.at(0)};
     
-    ATB_LOG(INFO) << "LLaMA CommonFlashAttentionModel BuildGraph success";
+    ATB_LOG(INFO) << "LLaMA FlashAttentionModel BuildGraph success";
+    return atb::NO_ERROR;
 }
 
-atb::Status CommonFlashAttentionModel::ParseParam(const std::string &param)
+atb::Status FlashAttentionModel::ParseParam(const std::string &param)
 {
     nlohmann::json paramJson = nlohmann::json::parse(param);
     tokenOffset_.clear();
@@ -381,7 +382,7 @@ atb::Status CommonFlashAttentionModel::ParseParam(const std::string &param)
     return atb::NO_ERROR;
 }
 
-atb::Status CommonFlashAttentionModel::BindParamHostTensor(uint32_t nodeId)
+atb::Status FlashAttentionModel::BindParamHostTensor(uint32_t nodeId)
 {
     ATB_LOG(INFO) << "BindParamHostTensor";
     if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
@@ -399,5 +400,5 @@ atb::Status CommonFlashAttentionModel::BindParamHostTensor(uint32_t nodeId)
     return atb::NO_ERROR;
 }
 
-} // namespace llama_7b
-} // namespace atb_speed
+} // namespace llama
+} // namespace atb_speed 

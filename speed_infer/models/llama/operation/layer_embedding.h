@@ -13,33 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_LLAMA_7B_COMMON_MLP_H
-#define ATB_SPEED_MODELS_LLAMA_7B_COMMON_MLP_H
+#ifndef ATB_SPEED_MODELS_LLAMA_LAYER_EMBEDDING_H
+#define ATB_SPEED_MODELS_LLAMA_LAYER_EMBEDDING_H
 
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
 #include "nlohmann/json.hpp"
-#include "atb_speed/log.h"
 
 namespace atb_speed {
-namespace llama_7b {
-struct CommonMlpParam {
-    bool transpose = false;
+namespace llama {
+struct LayerEmbeddingParam {
+    int axis = 0;
 };
 
-atb::Status CommonMlp(const CommonMlpParam &param, atb::Operation **operation);
-
-static atb::Operation *CreateCommonMlp(const nlohmann::json &paramJson)
-{
-    CommonMlpParam param;
-    if (paramJson.contains("transpose")) {
-        param.transpose = paramJson["transpose"].get<bool>();
-    }
-    ATB_LOG(INFO) << "CommonMlpParam";
-    atb::Operation *op;
-    CommonMlp(param, &op);
-    return op;
-}
+atb::Status LayerEmbedding(const LayerEmbeddingParam &param, atb::Operation **operation);
 } // namespace llama_7b
 } // namespace atb_speed
 #endif
