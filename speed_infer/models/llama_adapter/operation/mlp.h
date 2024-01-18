@@ -28,18 +28,6 @@ struct MlpParam {
 
 atb::Status MlpAdapter(const MlpParam &param, atb::Operation **operation);
 
-inline static atb::Operation *CreateMlpAdapter(const nlohmann::json &paramJson)
-{
-    MlpParam param;
-    if (paramJson.contains("model")) {
-        param.model = paramJson["model"].get<std::string>();
-    }
-
-    ATB_LOG(INFO) << "LLaMA_adapter_MlpParam model:" << param.model;
-    atb::Operation *op;
-    MlpAdapter(param, &op);
-    return op;
-}
 } // namespace llama_adapter
 } // namespace atb_speed
 #endif

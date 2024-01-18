@@ -16,9 +16,7 @@
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
 #include "nlohmann/json.hpp"
-
 #include "models/llama_adapter/layer/layer.h"
-
 #include "adapter_model.h"
 
 namespace atb_speed {
@@ -113,6 +111,11 @@ int64_t EncoderAdapterModel::BuildGraph()
         modelParam.headNum = param_.headNum;
         modelParam.dk = param_.dk;
         modelParam.model = "llama_adapter";
+
+        if (modelParam.headNum == 0) {
+            ATB_LOG(INFO) << "headNum can not be zero,but here modelParam.headNum is " << modelParam.headNum;
+            return atb::ERROR_INVALID_PARAM;
+        }
 
         if (layerId == 0) {
             atb_speed::llama_adapter::EncoderLayer(modelParam, &op);

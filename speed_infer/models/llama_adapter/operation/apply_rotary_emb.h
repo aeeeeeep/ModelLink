@@ -28,17 +28,6 @@ struct ApplyRotaryEmbParam {
 
 atb::Status ApplyRotaryEmb(const ApplyRotaryEmbParam &param, atb::Operation **operation);
 
-inline static atb::Operation *CreateApplyRotaryEmb(const nlohmann::json &paramJson)
-{
-    ApplyRotaryEmbParam param;
-    if (paramJson.contains("model")) {
-        param.model = paramJson["model"].get<std::string>();
-    }
-    ATB_LOG(INFO) << "LLaMA_adapter_ApplyRotaryEmbParam  model:" << param.model;
-    atb::Operation *op;
-    ApplyRotaryEmb(param, &op);
-    return op;
-}
 } // namespace llama_adapter
 } // namespace atb_speed
 #endif

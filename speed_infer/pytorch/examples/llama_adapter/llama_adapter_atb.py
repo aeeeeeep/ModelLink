@@ -208,7 +208,6 @@ class LLaMA_adapter(nn.Module):
         else:
             if self.llama.vocab_size != 32000:
                 print("vocab size invalid!")
-                exit()
             c_loss = self.criterion(output.reshape(-1, self.llama.vocab_size), labels.flatten())
 
         return c_loss, c_loss

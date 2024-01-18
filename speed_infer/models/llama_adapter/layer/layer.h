@@ -37,61 +37,6 @@ atb::Status DecoderLayer(const LayerParam &param, atb::Operation **operation);
 
 atb::Status DecoderAdapterLayer(const LayerParam &param, atb::Operation **operation);
 
-inline static atb::Operation *CreateEncoderLayer(const nlohmann::json &paramJson)
-{
-    LayerParam param;
-    param.rmsNormEps = paramJson["rmsNormEps"].get<float>();
-    param.headNum = paramJson["headNum"].get<int>();
-    param.dk = paramJson["dk"].get<int>();
-    param.model = paramJson["model"].get<std::string>();
-    ATB_LOG(INFO) << "LLaMAAdapterLayerEncoder rmsNormEps:" << param.rmsNormEps << ", headNum:" << param.headNum <<
-        ", dk:" << param.dk << ", model:" << param.model;
-    atb::Operation *op;
-    EncoderLayer(param, &op);
-    return op;
-}
-
-inline static atb::Operation *CreateEncoderAdapterLayer(const nlohmann::json &paramJson)
-{
-    LayerParam param;
-    param.rmsNormEps = paramJson["rmsNormEps"].get<float>();
-    param.headNum = paramJson["headNum"].get<int>();
-    param.dk = paramJson["dk"].get<int>();
-    param.model = paramJson["model"].get<std::string>();
-    ATB_LOG(INFO) << "LLaMAAdapterLayerEncoderAdapter rmsNormEps:" << param.rmsNormEps << ", headNum:" <<
-        param.headNum << ", dk:" << param.dk << ", model:" << param.model;
-    atb::Operation *op;
-    EncoderAdapterLayer(param, &op);
-    return op;
-}
-
-inline static atb::Operation *CreateDecoderLayer(const nlohmann::json &paramJson)
-{
-    LayerParam param;
-    param.rmsNormEps = paramJson["rmsNormEps"].get<float>();
-    param.headNum = paramJson["headNum"].get<int>();
-    param.dk = paramJson["dk"].get<int>();
-    param.model = paramJson["model"].get<std::string>();
-    ATB_LOG(INFO) << "LLaMAAdapterLayerDecoder rmsNormEps:" << param.rmsNormEps << ", headNum:" << param.headNum <<
-        ", dk:" << param.dk << ", model:" << param.model;
-    atb::Operation *op;
-    DecoderLayer(param, &op);
-    return op;
-}
-
-inline static atb::Operation *CreateDecoderAdapterLayer(const nlohmann::json &paramJson)
-{
-    LayerParam param;
-    param.rmsNormEps = paramJson["rmsNormEps"].get<float>();
-    param.headNum = paramJson["headNum"].get<int>();
-    param.dk = paramJson["dk"].get<int>();
-    param.model = paramJson["model"].get<std::string>();
-    ATB_LOG(INFO) << "LLaMAAdapterLayerDecoderAdapter rmsNormEps:" << param.rmsNormEps << ", headNum:" <<
-        param.headNum << ", dk:" << param.dk << ", model:" << param.model;
-    atb::Operation *op;
-    DecoderAdapterLayer(param, &op);
-    return op;
-}
-} // namespace llama_7b
+} // namespace llama_adapter
 } // namespace atb_speed
 #endif

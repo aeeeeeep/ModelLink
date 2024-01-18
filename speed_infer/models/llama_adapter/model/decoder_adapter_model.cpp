@@ -119,6 +119,11 @@ int64_t DecoderAdapterModel::BuildGraph()
         modelParam.dk = param_.dk;
         modelParam.model = "llama_adapter";
 
+        if (modelParam.headNum == 0) {
+            ATB_LOG(INFO) << "headNum can not be zero,but here modelParam.headNum is " << modelParam.headNum;
+            return atb::ERROR_INVALID_PARAM;
+        }
+
         if (layerId == 0) {
             atb_speed::llama_adapter::DecoderLayer(modelParam, &op);
             layerNode.operation.reset(op);

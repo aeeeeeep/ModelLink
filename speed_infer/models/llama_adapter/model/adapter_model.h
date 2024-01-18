@@ -27,7 +27,6 @@ public:
         int headNum = 0;
         int dk = 0;
         int layerNum = 0;
-        
         void FromString(const std::string &param);
     };
 
