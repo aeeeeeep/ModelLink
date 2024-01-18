@@ -68,5 +68,6 @@ def golden_calc(q, k, cos, sin,seqlen):
     return [q_sum, k_sum]
 
 if __name__ == '__main__':
+    print(">>>>>>>>>>>>>>>>>tests/ut/test_rope.py start")
     for index in range(repeatTime):
         test_ops()

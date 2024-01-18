@@ -6,11 +6,11 @@ import numpy as np
 repeatTime=5
 
 def golden_calc(data_input, seq_len_list, max_seq_len_imm, hidden_size_imm):
-    golden = torch.empty(size=[sum(seq_len_list), hidden_size_imm], dtype=torch.float16)
+    golden = torch.empty(size=[len(seq_len_list), max_seq_len_imm, hidden_size_imm], dtype=torch.float16)
     start = 0
     for i in range(len(seq_len_list)):
         golden[i][:seq_len_list[i]] = data_input[start:start + seq_len_list[i]]
-        golden[i][:seq_len_list[i]] = 0
+        golden[i][seq_len_list[i]:] = 0
         start = start + seq_len_list[i]
     return golden
 
@@ -27,7 +27,7 @@ if __name__ == '__main__':
         seqlen = np.array(seq_len)
         data_input = torch.randn(size=[seq_len.sum(), hidden_size_imm], dtype=torch.float16).npu().half()
 
-        result = ascendspeed_te_ops.npu_unpad_seqlen(data_input, seqlen, maxseqlen)
+        result = ascendspeed_te_ops.npu_pad_seqlen(data_input, seqlen, maxseqlen)
 
         res = result.cpu()
         out_tensor = res
