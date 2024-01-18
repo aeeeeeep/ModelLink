@@ -816,7 +816,7 @@ def _add_training_args(parser):
                        'gradient compuation of a column-linear layer.',
                        dest='async_tensor_model_parallel_allreduce')
     group.add_argument('--no-gradient-accumulation-fusion',
-                       action='store_true',
+                       action='store_false',
                        help='Disable fusing gradient accumulation to weight '
                        'gradient computation of linear layers',
                        dest='gradient_accumulation_fusion')
