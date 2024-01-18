@@ -63,7 +63,7 @@ soc_version = torch_npu._C._npu_get_soc_version()
 if soc_version in [104, 220, 221, 222, 223, 224]:
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Linear):
-            module.weight.data = torch_npu.npu_format_cast(module.weight.data,2)
+            module.weight.data = torch_npu.npu_format_cast(module.weight.data, 2)
 else:
     # if on 910A or 310P chip, eliminate the TransData and Transpose ops by converting weight data types
     for name, module in model.named_modules():
@@ -71,14 +71,15 @@ else:
             if name == 'lm_head':
                 # eliminate TransData op before lm_head calculation
                 module.weight.data = torch.nn.parameter.Parameter(module.weight.data)
-            module.weight.data = torch_npu.npu_format_cast(module.weight.data,29)
+            module.weight.data = torch_npu.npu_format_cast(module.weight.data, 29)
 
 for name, module in model.named_modules():
     if isinstance(module, torch.nn.Embedding):
-        module.weight.data = torch_npu.npu_format_cast(module.weight.data,2)
+        module.weight.data = torch_npu.npu_format_cast(module.weight.data, 2)
 
 #init model weight
 model.init_acl_weight()
+
 
 def read_image_paths_in_batches(directory):
     image_paths = [os.path.abspath(os.path.join(directory, f)) for f in os.listdir(directory)]
@@ -86,11 +87,12 @@ def read_image_paths_in_batches(directory):
     batch_size = 15
     batched_paths = []
 
-    for i in range(0, len(image_paths), batch_size):
-        batch = image_paths[i:i + batch_size]
+    for idx in range(0, len(image_paths), batch_size):
+        batch = image_paths[idx:idx + batch_size]
         batched_paths.append(batch)
 
     return batched_paths
+
 
 def img_process(file_paths):
     res = None
@@ -139,12 +141,8 @@ for files_path in all_files_batch:
     sum_time += cur_time
     print("[result]:", result)
     print("[tiral time]", cur_time)
-    data[cnt]=result
+    data[cnt] = result
     cnt += 1
-
-avg_time = sum_time / len(all_files_batch)
-print("[avg_time]:", avg_time)
-print("[performance]:{} FPS" .format(BATCH_SIZE * 1000 / avg_time))
 
 df = pd.DataFrame(data)
 df.to_csv('/path/to/file_name.csv')

@@ -37,7 +37,7 @@ atb::Status DecoderLayer(const LayerParam &param, atb::Operation **operation);
 
 atb::Status DecoderAdapterLayer(const LayerParam &param, atb::Operation **operation);
 
-static atb::Operation *CreateEncoderLayer(const nlohmann::json &paramJson)
+inline static atb::Operation *CreateEncoderLayer(const nlohmann::json &paramJson)
 {
     LayerParam param;
     param.rmsNormEps = paramJson["rmsNormEps"].get<float>();
@@ -51,7 +51,7 @@ static atb::Operation *CreateEncoderLayer(const nlohmann::json &paramJson)
     return op;
 }
 
-static atb::Operation *CreateEncoderAdapterLayer(const nlohmann::json &paramJson)
+inline static atb::Operation *CreateEncoderAdapterLayer(const nlohmann::json &paramJson)
 {
     LayerParam param;
     param.rmsNormEps = paramJson["rmsNormEps"].get<float>();
@@ -65,7 +65,7 @@ static atb::Operation *CreateEncoderAdapterLayer(const nlohmann::json &paramJson
     return op;
 }
 
-static atb::Operation *CreateDecoderLayer(const nlohmann::json &paramJson)
+inline static atb::Operation *CreateDecoderLayer(const nlohmann::json &paramJson)
 {
     LayerParam param;
     param.rmsNormEps = paramJson["rmsNormEps"].get<float>();
@@ -79,7 +79,7 @@ static atb::Operation *CreateDecoderLayer(const nlohmann::json &paramJson)
     return op;
 }
 
-static atb::Operation *CreateDecoderAdapterLayer(const nlohmann::json &paramJson)
+inline static atb::Operation *CreateDecoderAdapterLayer(const nlohmann::json &paramJson)
 {
     LayerParam param;
     param.rmsNormEps = paramJson["rmsNormEps"].get<float>();

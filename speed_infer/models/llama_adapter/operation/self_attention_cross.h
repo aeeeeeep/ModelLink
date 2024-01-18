@@ -36,7 +36,7 @@ atb::Status SelfAttentionCrossDe(const SelfAttentionCrossParam &param, atb::Oper
 
 atb::Status SelfAttentionCrossDeAdapter(const SelfAttentionCrossParam &param, atb::Operation **operation);
 
-static atb::Operation *CreateSelfAttentionCrossEn(const nlohmann::json &paramJson)
+inline static atb::Operation *CreateSelfAttentionCrossEn(const nlohmann::json &paramJson)
 {
     SelfAttentionCrossParam param;
     if (paramJson.contains("dk")) {
@@ -56,7 +56,7 @@ static atb::Operation *CreateSelfAttentionCrossEn(const nlohmann::json &paramJso
     return op;
 }
 
-static atb::Operation *CreateSelfAttentionCrossEnAdapter(const nlohmann::json &paramJson)
+inline static atb::Operation *CreateSelfAttentionCrossEnAdapter(const nlohmann::json &paramJson)
 {
     SelfAttentionCrossParam param;
     if (paramJson.contains("dk")) {
@@ -75,7 +75,7 @@ static atb::Operation *CreateSelfAttentionCrossEnAdapter(const nlohmann::json &p
     return op;
 }
 
-static atb::Operation *CreateSelfAttentionCrossDe(const nlohmann::json &paramJson)
+inline static atb::Operation *CreateSelfAttentionCrossDe(const nlohmann::json &paramJson)
 {
     SelfAttentionCrossParam param;
     if (paramJson.contains("dk")) {
@@ -95,7 +95,7 @@ static atb::Operation *CreateSelfAttentionCrossDe(const nlohmann::json &paramJso
     return op;
 }
 
-static atb::Operation *CreateSelfAttentionCrossDeAdapter(const nlohmann::json &paramJson)
+inline static atb::Operation *CreateSelfAttentionCrossDeAdapter(const nlohmann::json &paramJson)
 {
     SelfAttentionCrossParam param;
     if (paramJson.contains("dk")) {

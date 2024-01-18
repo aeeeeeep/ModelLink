@@ -28,7 +28,7 @@ struct MlpParam {
 
 atb::Status MlpAdapter(const MlpParam &param, atb::Operation **operation);
 
-static atb::Operation *CreateMlpAdapter(const nlohmann::json &paramJson)
+inline static atb::Operation *CreateMlpAdapter(const nlohmann::json &paramJson)
 {
     MlpParam param;
     if (paramJson.contains("model")) {

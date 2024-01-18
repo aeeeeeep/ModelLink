@@ -28,7 +28,7 @@ struct ApplyRotaryEmbParam {
 
 atb::Status ApplyRotaryEmb(const ApplyRotaryEmbParam &param, atb::Operation **operation);
 
-static atb::Operation *CreateApplyRotaryEmb(const nlohmann::json &paramJson)
+inline static atb::Operation *CreateApplyRotaryEmb(const nlohmann::json &paramJson)
 {
     ApplyRotaryEmbParam param;
     if (paramJson.contains("model")) {

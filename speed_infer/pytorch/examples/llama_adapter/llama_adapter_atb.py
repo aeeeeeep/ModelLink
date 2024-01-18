@@ -127,7 +127,7 @@ class LLaMA_adapter(nn.Module):
             weights_t = []
             atten_gate = weights_layer[str_keys + "attention.gate"]
             atten_gate = atten_gate.tanh().contiguous()
-            attrn_gate_nd =  torch_npu.npu_format_cast(atten_gate, 2)
+            attrn_gate_nd = torch_npu.npu_format_cast(atten_gate, 2)
             weights_layer[str_keys + "attention.gate"] = attrn_gate_nd
             weights_t.append(weights_layer[str_keys + "attention_norm.weight"])
             weights_t.append(weights_layer[str_keys + "attention.wq.weight"])
