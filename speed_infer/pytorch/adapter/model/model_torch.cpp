@@ -30,13 +30,10 @@
 #include "atb_speed/utils/tensor_util.h"
 #include "atb_speed/utils/timer.h"
 
-#include "llama/7b/model/decoder_without_fusion_model.h"
-#include "llama/7b/model/encoder_without_fusion_model.h"
-#include "llama/7b/model/flashattention_model.h"
-#include "llama/7b/model/fusion_model.h"
-#include "llama/7b/model/rope_model.h"
-#include "llama/7b/model/quant_flashattention_model.h"
-#include "llama_pa/model/pa_model.h"
+#include "llama/model/flash_attention_model.h"
+#include "llama/model/anti_quant_flashattention_model.h"
+#include "llama_pa/model/paged_attention_model.h"
+#include "llama_pa/model/quant_paged_attention_model.h"
 #include "telechat/model/model.h"
 
 void* ModelTorch::GetWorkSpace(uint64_t bufferSize)
@@ -90,22 +87,14 @@ ModelTorch::~ModelTorch()
 int64_t ModelTorch::SetParam(std::string param)
 {
     ATB_LOG(INFO) << "ModelTorch set param start, modelName:" << modelName_ << ", param:" << param;
-    if (modelName_ == "llama_7b_decoder_without_fusion_model") {
-        model_ = std::make_shared<atb_speed::llama_7b::DecoderWithoutFusionModel>(param);
-    } else if (modelName_ == "llama_7b_encoder_without_fusion_model") {
-        model_ = std::make_shared<atb_speed::llama_7b::EncoderWithoutFusionModel>(param);
-    } else if (modelName_ == "llama_7b_decoder_rope_model") {
-        model_ = std::make_shared<atb_speed::llama_7b::DecoderRopeModel>(param);
-    } else if (modelName_ == "llama_7b_encoder_rope_model") {
-        model_ = std::make_shared<atb_speed::llama_7b::EncoderRopeModel>(param);
-    } else if (modelName_ == "llama_7b_fusion_model") {
-        model_ = std::make_shared<atb_speed::llama_7b::FusionModel>(param);
-    } else if (modelName_ == "llama_quant_flashattention_model") {
-        model_ = std::make_shared<atb_speed::llama_7b::QuantFlashAttentionModel>(param);
-    } else if (modelName_ == "llama_7b_flashattention_model") {
-        model_ = std::make_shared<atb_speed::llama_7b::FlashAttentionModel>(param);
+    if (modelName_ == "llama_anti_quant_flashattention_model") {
+        model_ = std::make_shared<atb_speed::llama::AntiQuantFlashAttentionModel>(param);
+    } else if (modelName_ == "llama_flashattention_model") {
+        model_ = std::make_shared<atb_speed::llama::FlashAttentionModel>(param);
     } else if (modelName_ == "llama_pa_model" || modelName_ == "llama_65b_pa_model") {
         model_ = std::make_shared<atb_speed::llama_pa::PAModel>(param);
+    } else if (modelName_ == "llama_quant_pa_model") {
+        model_ = std::make_shared<atb_speed::llama_pa::QuantPAModel>(param);
     } else if (modelName_ == "TelechatQuantFAModel") {
         model_ = std::make_shared<atb_speed::telechat::QuantFAModel>(param);
     } else {
