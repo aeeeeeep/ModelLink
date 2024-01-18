@@ -28,7 +28,8 @@ if __name__ == '__main__':
     print(">>>>>>>>>>>>>>>>>tests/ut/test_stridedbatchmatmul.py start")
     for index in range(repeatTime):
         batch = 4
-        seqlen =np.random.randint(1, maxseqlen, size=batch, dtype=np.int32)
+        seq_len = torch.randint(low=100, high=300, size=[batch,], dtype=torch.int32)
+        seqlen = np.array(seq_len)
         head_num = 8
         head_size = 128
 
@@ -56,11 +57,11 @@ if __name__ == '__main__':
         B = torch.randn(sum_seqlen, hidden_size).npu().half()
 
         shapeC = (head_num * sum(seqlen_squared), )
-        result = ascendspeed_te_ops.npu_stridedbatchmatmul(A, B, transA, transB, m, k, n, lda, ldb, ldc, strideA, strideB, strideC, batch, headNum)
+        result = ascendspeed_te_ops.npu_strided_batch_matmul(A, B, transA, transB, m, k, n, lda, ldb, ldc, strideA, strideB, strideC, batch, headNum)
 
         in_tensors = [A, B]
         out_tensors = [result]
         golden_out_tensors = golden_calc1(in_tensors, transA, transB, m, k, n, lda, ldb, ldc, strideA, strideB, strideC, batch, headNum )
 
         res_compare = golden_compare(out_tensors, golden_out_tensors)
-        print(">>>>>>>>>>>>>>>>>res:", res_compare)
+        print("res_compare:", res_compare)

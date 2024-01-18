@@ -26,7 +26,7 @@ if __name__ == '__main__':
         seqlen = np.array(seq_len)
         data_input = torch.randn(size=[batch, maxseqlen, hidden_size_imm], dtype=torch.float16).npu().half()
 
-        result = ascendspeed_te_ops.npu_unpad(data_input, seqlen, maxseqlen)
+        result = ascendspeed_te_ops.npu_unpad_seqlen(data_input, seqlen, maxseqlen)
 
         res = result.cpu()
         out_tensor = res

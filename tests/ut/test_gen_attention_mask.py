@@ -29,7 +29,7 @@ if __name__ == '__main__':
         for _ in range(shapeOut):
             out.append(0.1)
 
-        result = ascendspeed_te_ops.npu_genattentionmask(a, seqlen, headNum)
+        result = ascendspeed_te_ops.npu_gen_attention_mask(a, seqlen, headNum)
         res = result.cpu().numpy().tolist()
         out_tensors = [result]
         golden_out_tensors = golden_calc(a, seqlen, headNum)

@@ -16,7 +16,7 @@ def test_fastsoftmax():
         data_input_list = [torch.randn(head_num_imm * seq_len[i] * seq_len[i]).to(
             torch.float16) for i in range(batch_size_imm)]
         data_input = torch.cat(data_input_list).contiguous()
-        data_output = ascendspeed_te_ops.npu_fastsoftmax(data_input.npu(), seq_len.tolist(), head_num_imm)
+        data_output = ascendspeed_te_ops.npu_fast_softmax(data_input.npu(), seq_len.tolist(), head_num_imm)
         # calc golden
         golden_list = [torch.softmax(data_input_list[i].reshape(-1, seq_len[i]).to(torch.float32), dim=-1).to(
             torch.float16).reshape(-1) for i in range(batch_size_imm)]
