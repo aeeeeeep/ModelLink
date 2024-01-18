@@ -32,6 +32,7 @@
 
 #include "llama/model/flash_attention_model.h"
 #include "llama/model/anti_quant_flashattention_model.h"
+#include "llama_adapter/model/adapter_model.h"
 #include "llama_pa/model/paged_attention_model.h"
 #include "llama_pa/model/quant_paged_attention_model.h"
 #include "telechat/model/model.h"
@@ -95,6 +96,10 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::llama_pa::PAModel>(param);
     } else if (modelName_ == "llama_quant_pa_model") {
         model_ = std::make_shared<atb_speed::llama_pa::QuantPAModel>(param);
+    } else if (modelName_ == "llama_adapter_encoder_model") {
+        model_ = std::make_shared<atb_speed::llama_adapter::EncoderAdapterModel>(param);
+    } else if (modelName_ == "llama_adapter_decoder_model") {
+        model_ = std::make_shared<atb_speed::llama_adapter::DecoderAdapterModel>(param);
     } else if (modelName_ == "TelechatQuantFAModel") {
         model_ = std::make_shared<atb_speed::telechat::QuantFAModel>(param);
     } else {
