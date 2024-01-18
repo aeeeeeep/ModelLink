@@ -57,32 +57,33 @@ class Gsm8kEval(DatasetEval):
                                                                question=item['question'])
                 instructions.append(instruction)
                 answers.append(item['answer'])
-                chat_results, rank = chat.chat(instruction=instructions, history=[])
+                if len(instructions) == self.batch_size or len(gsm8k_list) == index + 1:
+                    chat_results, rank = chat.chat(instruction=instructions, history=[])
 
-                if chat_results:
-                    for idx, chat_result in enumerate(chat_results):
-                        answer = chat_result[0]
-                        answer = answer.split('Q:')[0]
-                        answer_result = answer.replace('$', '').replace(',', '') + '  '
-                        answer_result = answer_result.replace('.', ' ', -1)
+                    if chat_results:
+                        for idx, chat_result in enumerate(chat_results):
+                            answer = chat_result[0]
+                            answer = answer.split('Q:')[0]
+                            answer_result = answer.replace('$', '').replace(',', '') + '  '
+                            answer_result = answer_result.replace('.', ' ', -1)
 
-                        try:
-                            if rank == 0:
-                                logger.info(instruction)
-                                final_answer = re.findall(self.output_template, answer_result)
-                                final_answer = [final_answer[0][::-1].replace('.', '', 1)[::-1]]
-                                logger.info("correct: %s, AI: %s", answers[idx], final_answer)
-                                subject_result[str(index - len(chat_results) + idx + 1)] = final_answer
-                                if subject_result[str(index - len(chat_results) + idx + 1)] == answers[idx]:
-                                    acc_n += 1
-                        except Exception as e:
-                            if rank == 0:
-                                logger.info(e)
-                            subject_result[str(index - len(chat_results) + idx + 1)] = str(
-                                e) + ". AI answer:" + answer
+                            try:
+                                if rank == 0:
+                                    logger.info(instruction)
+                                    final_answer = re.findall(self.output_template, answer_result)
+                                    final_answer = [final_answer[0][::-1].replace('.', '', 1)[::-1]]
+                                    logger.info("correct: %s, AI: %s", answers[idx], final_answer)
+                                    subject_result[str(index - len(chat_results) + idx + 1)] = final_answer
+                                    if subject_result[str(index - len(chat_results) + idx + 1)] == answers[idx]:
+                                        acc_n += 1
+                            except Exception as e:
+                                if rank == 0:
+                                    logger.info(e)
+                                subject_result[str(index - len(chat_results) + idx + 1)] = str(
+                                    e) + ". AI answer:" + answer
 
-                instructions = []
-                answers = []
+                    instructions = []
+                    answers = []
 
             if rank == 0:
                 total_n += len(gsm8k_list)
