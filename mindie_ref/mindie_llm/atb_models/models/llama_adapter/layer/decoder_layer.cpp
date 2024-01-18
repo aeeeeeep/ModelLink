@@ -64,7 +64,7 @@ static const uint64_t NODE_COUNT = 11;
 atb::Status DecoderLayer(const LayerParam &param, atb::Operation **operation)
 {
     atb::GraphParam opGraph;
-    opGraph.name = "LlamaAdapter_Decoder_layer";
+    opGraph.name = "llama_adapter_decoder_layer";
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
     opGraph.internalTensorNum = INTERMEDIATE_TENSOR_COUNT;
