@@ -114,7 +114,7 @@ uint32_t FlashAttentionModel::GetInputNum() const { return graph_.inTensors.size
 uint32_t FlashAttentionModel::GetOutputNum() const { return graph_.outTensors.size(); }
 
 atb::Status FlashAttentionModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
-                                                  std::vector<atb::TensorDesc> &outTensorDescs)
+    std::vector<atb::TensorDesc> &outTensorDescs)
 {
     ATB_LOG(INFO) << "Enter LLaMA FlashAttentionModel InferShape";
     if (outTensorDescs.size() != GetOutputNum()) {
@@ -401,4 +401,4 @@ atb::Status FlashAttentionModel::BindParamHostTensor(uint32_t nodeId)
 }
 
 } // namespace llama
-} // namespace atb_speed 
+} // namespace atb_speed

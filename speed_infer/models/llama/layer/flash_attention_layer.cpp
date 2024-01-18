@@ -305,7 +305,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         mlpParam.quantDownParam.inputOffset = param.ffnOutInputOffset;
 
         atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);
-        mlpNode.inTensorIds = { INTERMIDATE_SELFNORMOUT, 
+        mlpNode.inTensorIds = { INTERMIDATE_SELFNORMOUT,
                                 IN_MLPUPWEIGHT, IN_MLPGATEWEIGHT, IN_MLPDOWNWEIGHT,
                                 IN_MLPUP_DEQSCALE, IN_MLPGATE_DEQSCALE, IN_MLPDOWN_DEQSCALE,
                                 IN_MLPUP_BIAS, IN_MLPGATE_BIAS, IN_MLPDOWN_BIAS,
