@@ -20,7 +20,7 @@ if __name__ == '__main__':
     for i in range(repeatTime):
         batch = 4
         maxseqlen = 2048
-        seq_len = torch.randint(100, 300, [batch_size_imm,]).to(torch.int32)
+        seq_len = torch.randint(100, 300, [batch,]).to(torch.int32)
         seqlen = np.array(seq_len)
         headNum = 8
         a = torch.randint(1, 10, (batch, 1, maxseqlen, maxseqlen)).npu().half()

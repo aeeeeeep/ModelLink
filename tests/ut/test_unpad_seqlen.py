@@ -20,7 +20,7 @@ if __name__ == '__main__':
     print(">>>>>>>>>>>>>>>>>tests/ut/test_unpad.py start")
     for i in range(repeatTime):
         batch = 4
-        maxseqlen = 4096
+        maxseqlen = 2048
         hidden_size_imm = 4096
         seq_len = torch.randint(low=100, high=300, size=[batch,], dtype=torch.int32)
         seqlen = np.array(seq_len)

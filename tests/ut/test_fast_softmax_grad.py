@@ -34,9 +34,10 @@ def test_fastsoftmaxgrad():
         y_input = torch.cat(y_input_list)
         y_grad = torch.cat(y_grad_list)
         golden = torch.cat(golden_list)
-        x_grad = ascendspeed_te_ops.npu_fastsoftmaxgrad(y_input.npu(), y_grad.npu(), seq_len.tolist(), head_num_imm)
+        x_grad = ascendspeed_te_ops.npu_fast_softmax_grad(y_input.npu(), y_grad.npu(), seq_len.tolist(), head_num_imm)
         out_tensors = [x_grad.cpu()]
         golden_out_tensors = [golden]
+        
         success = golden_compare(out_tensors, golden_out_tensors)
         print("res_compare:", success)
         if not success:
