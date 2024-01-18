@@ -120,7 +120,7 @@ atb::Status FusionPAModel::InferShape(const std::vector<atb::TensorDesc> &inTens
     return atb::NO_ERROR;
 }
 
-void FusionPAModel::BuildGraph()
+int64_t FusionPAModel::BuildGraph()
 {
     ATB_LOG(INFO) << "Enter EncoderModel BuildGraph";
     const int weightTensorSize = WEIGHT_COUNT_BEFORE_LAYER + WEIGHT_COUNT_PER_LAYER * param_.layerNum +
@@ -229,6 +229,7 @@ void FusionPAModel::BuildGraph()
                                 &graph_.weightTensors.at(finalLinearWeightTensorId)};
     }
     lmHeadNode.outTensors = {&graph_.outTensors.at(0)};
+    return atb::NO_ERROR;
 }
 
 atb::Status FusionPAModel::ParseParam(const std::string &param)
