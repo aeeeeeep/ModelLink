@@ -36,23 +36,6 @@ struct AntiFloatLayerParam {
 atb::Status AntiFloatLayer(const AntiFloatLayerParam &param,
     atb::Operation **operation);
 
-static atb::Operation *CreateAntiFloatLayer(const nlohmann::json &paramJson)
-{
-    AntiFloatLayerParam param;
-    param.rmsNormEps = paramJson["rmsNormEps"].get<float>();
-    param.headNum = paramJson["headNum"].get<int>();
-    param.dk = paramJson["dk"].get<int>();
-    param.rank = paramJson["rank"].get<int>();
-    param.rankSize = paramJson["rankSize"].get<int>();
-    param.model = paramJson["model"].get<std::string>();
-    ATB_LOG(INFO) << "LLaMA AntiFloatLayer headNum:" << param.headNum << ", rmsNormEps:" << param.rmsNormEps
-                  << ", dk:" << param.dk << ", model:" << param.model << ", rank:" << param.rank << ", rankSize:"
-                  << param.rankSize;
-    atb::Operation *op;
-    AntiFloatLayer(param, &op);
-    return op;
-}
-
 class AntiFloatLayerBinder : public HostTensorBinder {
 public:
     AntiFloatLayerBinder();

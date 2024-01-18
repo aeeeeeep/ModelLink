@@ -88,7 +88,7 @@ atb::Status AntiFloatLayer(const AntiFloatLayerParam  &param,
     atb::Operation **operation)
 {
     atb::GraphParam opGraph;
-    opGraph.name = "AntiFloatLayer"
+    opGraph.name = "AntiFloatLayer";
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
     opGraph.internalTensorNum = INTERMEDIATE_TENSOR_COUNT;
@@ -193,7 +193,7 @@ atb::Status AntiFloatLayer(const AntiFloatLayerParam  &param,
     mlpParam.transposeB = false;
     mlpParam.isBias = true;
     mlpParam.isPack = false;
-    atb_speed::llama_7b::MlpGateLayer(mlpParam, &mlpNode.operation);
+    atb_speed::llama::MlpGateLayer(mlpParam, &mlpNode.operation);
     mlpNode.inTensorIds = {INTERMIDATE_SELFNORMADDOUT, IN_MLPUPWEIGHT, IN_MLPGATEWEIGHT, IN_MLPDOWNWEIGHT,
                             IN_MLPUP_BIAS, IN_MLPGATE_BIAS};
     mlpNode.outTensorIds = {INTERMIDATE_MLPOUT};

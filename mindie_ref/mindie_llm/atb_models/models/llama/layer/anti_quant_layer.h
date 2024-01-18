@@ -45,33 +45,6 @@ struct AntiQuantLayerParam {
 atb::Status AntiQuantLayer(const AntiQuantLayerParam &param,
     atb::Operation **operation);
 
-static atb::Operation *CreateAntiQuantLayer(const nlohmann::json &paramJson)
-{
-    AntiQuantLayerParam param;
-    param.rmsNormEps = paramJson["rmsNormEps"].get<float>();
-    param.headNum = paramJson["headNum"].get<int>();
-    param.dk = paramJson["dk"].get<int>();
-    param.rank = paramJson["rank"].get<int>();
-    param.rankSize = paramJson["rankSize"].get<int>();
-    param.model = paramJson["model"].get<std::string>();
-    // 量化参数
-    param.qkvInputScale = paramJson["qkvInputScale"].get<float>();
-    param.qkvInputOffset = paramJson["qkvInputOffset"].get<int>();
-    param.denseInputScale = paramJson["denseInputScale"].get<float>();
-    param.denseInputOffset = paramJson["denseInputOffset"].get<int>();
-    param.selfLnInputScale = paramJson["selfLnInputScale"].get<float>();
-    param.selfLnInputOffset = paramJson["selfLnInputOffset"].get<int>();
-    param.ffnOutInputScale = paramJson["ffnOutInputScale"].get<float>();
-    param.ffnOutInputOffset = paramJson["ffnOutInputOffset"].get<int>();
-
-    ATB_LOG(INFO) << "LLaMA13BLayerEncoder headNum:" << param.headNum << ", rmsNormEps:" << param.rmsNormEps
-                  << ", dk:" << param.dk << ", model:" << param.model << ", rank:" << param.rank << ", rankSize:"
-                  << param.rankSize;
-    atb::Operation *op;
-    AntiQuantLayer(param, &op);
-    return op;
-}
-
 class AntiQuantLayerBinder : public HostTensorBinder {
 public:
     AntiQuantLayerBinder();

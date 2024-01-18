@@ -109,7 +109,7 @@ uint32_t AntiQuantFlashAttentionModel::GetInputNum() const { return graph_.inTen
 uint32_t AntiQuantFlashAttentionModel::GetOutputNum() const { return graph_.outTensors.size(); }
 
 atb::Status AntiQuantFlashAttentionModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
-                                                 std::vector<atb::TensorDesc> &outTensorDescs)
+    std::vector<atb::TensorDesc> &outTensorDescs)
 {
     ATB_LOG(INFO) << "Enter LLaMA AntiQuantFlashAttentionModel InferShape";
     if (outTensorDescs.size() != GetOutputNum()) {
