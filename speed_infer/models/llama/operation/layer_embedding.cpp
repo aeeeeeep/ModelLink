@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "llama_layer_embedding.h"
+#include "layer_embedding.h"
 
 namespace atb_speed {
-namespace llama_7b {
+namespace llama {
 enum LayerEmbeddingTensorId {
     IN_COS_TABLE = 0,
     IN_SIN_TABLE,
@@ -45,7 +45,7 @@ atb::Status LayerEmbedding(const LayerEmbeddingParam &param, atb::Operation **op
 
     atb::infer::GatherParam cosEmbeddingGatherParam;
     cosEmbeddingGatherParam.axis = param.axis;
-    CreateOperation(cosEmbeddingGatherParam, &cosEmbeddingNode.operation);
+    CREATE_OPERATION(cosEmbeddingGatherParam, &cosEmbeddingNode.operation);
     cosEmbeddingNode.inTensorIds = {IN_COS_TABLE, IN_POSITION_IDS};
     cosEmbeddingNode.outTensorIds = {OUT_COS_EMBED};
     cosEmbeddingNode.inTensorReshapeFuncs.resize(cosEmbeddingNode.inTensorIds.size());
@@ -62,7 +62,7 @@ atb::Status LayerEmbedding(const LayerEmbeddingParam &param, atb::Operation **op
 
     atb::infer::GatherParam sinEmbeddingGatherParam;
     sinEmbeddingGatherParam.axis = param.axis;
-    CreateOperation(sinEmbeddingGatherParam, &sinEmbeddingNode.operation);
+    CREATE_OPERATION(sinEmbeddingGatherParam, &sinEmbeddingNode.operation);
     sinEmbeddingNode.inTensorIds = {IN_SIN_TABLE, IN_POSITION_IDS};
     sinEmbeddingNode.outTensorIds = {OUT_SIN_EMBED};
     sinEmbeddingNode.inTensorReshapeFuncs.resize(sinEmbeddingNode.inTensorIds.size());
@@ -93,7 +93,8 @@ atb::Status LayerEmbedding(const LayerEmbeddingParam &param, atb::Operation **op
         return atb::NO_ERROR;
     };
 
-    return atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
+    return atb::NO_ERROR;
 }
-} // namespace llama_7b
+} // namespace llama
 } // namespace atb_speed

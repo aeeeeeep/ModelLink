@@ -16,7 +16,7 @@
 #include "rope_fusion_operation.h"
 
 namespace atb_speed {
-namespace llama_7b {
+namespace llama {
 enum RopeFusionTensorId {
     IN_QLAYER_ID = 0,    // [batch, seqLen, hiddenSize], half
     IN_KLAYER_ID,        // [batch, seqLen, hiddenSize], half
@@ -43,6 +43,7 @@ atb::Status RopeFusionOperation(const RopeFusionParam &param, atb::Operation **o
 {
     ATB_LOG(INFO) << __func__ << ", headNum: " << param.headNum;
     atb::GraphParam opGraph;
+    opGraph.name = "RopeFusionOperation";
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
     opGraph.nodes.resize(NODE_COUNT);
@@ -52,7 +53,7 @@ atb::Status RopeFusionOperation(const RopeFusionParam &param, atb::Operation **o
 
     atb::infer::RopeParam ropeParam;
     ropeParam.rotaryCoeff = 2; // 设置旋转系数
-    CreateOperation(ropeParam, &ropeNode.operation);
+    CREATE_OPERATION(ropeParam, &ropeNode.operation);
     ropeNode.inTensorIds = {IN_QLAYER_ID, IN_KLAYER_ID, IN_COS_TABLE_ID, IN_SIN_TABLE_ID, IN_SEQLEN_ID};
     ropeNode.outTensorIds = {OUT_QEMBEDDED_ID, OUT_KEMBEDDED_ID};
     ropeNode.inTensorReshapeFuncs = {&RopeReshapeFunc, &RopeReshapeFunc, &RopeReshapeFunc, &RopeReshapeFunc};
@@ -70,8 +71,8 @@ atb::Status RopeFusionOperation(const RopeFusionParam &param, atb::Operation **o
         return atb::NO_ERROR;
     };
 
-    atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
 }
-} // namespace llama_7b
+} // namespace llama
 } // namespace atb_speed

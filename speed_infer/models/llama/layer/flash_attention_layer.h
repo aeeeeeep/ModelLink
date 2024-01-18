@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef LLAMA_13B_COMMON_LAYER_FLASHATTENTION_OPERATION_H
-#define LLAMA_13B_COMMON_LAYER_FLASHATTENTION_OPERATION_H
+#ifndef ATB_SPEED_MODELS_LLAMA_FLASHATTENTION_LAYER_OPERATION_H
+#define ATB_SPEED_MODELS_LLAMA_FLASHATTENTION_LAYER_OPERATION_H
 
 #include <atb/atb_infer.h>
 #include <atb/svector.h>
@@ -22,8 +22,8 @@
 #include "atb_speed/base/hosttensor_binder.h"
 
 namespace atb_speed {
-namespace llama_13b {
-struct CommonFlashAttentionLayerParam {
+namespace llama {
+struct FlashAttentionLayerParam {
     float rmsNormEps = 0;
     int headNum = 0;
     int dk = 0; // headDim
@@ -45,11 +45,11 @@ struct CommonFlashAttentionLayerParam {
     int ffnOutInputOffset = 0;
 };
 
-atb::Status CommonFlashAttentionLayer(const CommonFlashAttentionLayerParam &param, atb::Operation **operation);
+atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Operation **operation);
 
-static atb::Operation *CreateCommonFlashAttentionLayer(const nlohmann::json &paramJson)
+static atb::Operation *CreateFlashAttentionLayer(const nlohmann::json &paramJson)
 {
-    CommonFlashAttentionLayerParam param;
+    FlashAttentionLayerParam param;
     param.rmsNormEps = paramJson["rmsNormEps"].get<float>();
     param.headNum = paramJson["headNum"].get<int>();
     param.dk = paramJson["dk"].get<int>();
@@ -69,18 +69,18 @@ static atb::Operation *CreateCommonFlashAttentionLayer(const nlohmann::json &par
     param.ffnOutInputScale = paramJson["ffnOutInputScale"].get<float>();
     param.ffnOutInputOffset = paramJson["ffnOutInputOffset"].get<int>();
 
-    ATB_LOG(INFO) << "LLaMA CommonFlashAttentionLayer headNum:" << param.headNum << ", rmsNormEps:" <<
+    ATB_LOG(INFO) << "LLaMA FlashAttentionLayer headNum:" << param.headNum << ", rmsNormEps:" <<
         param.rmsNormEps << ", dk:" << param.dk << ", model:" << param.model << ", rank:" << param.rank <<
         ", rankSize:" << param.rankSize;
     atb::Operation *op;
-    CommonFlashAttentionLayer(param, &op);
+    FlashAttentionLayer(param, &op);
     return op;
 }
 
-class CommonFlashAttentionLayerBinder : public HostTensorBinder {
+class FlashAttentionLayerBinder : public HostTensorBinder {
 public:
-    CommonFlashAttentionLayerBinder();
-    virtual ~CommonFlashAttentionLayerBinder();
+    FlashAttentionLayerBinder();
+    virtual ~FlashAttentionLayerBinder();
     void ParseParam(const nlohmann::json &paramJson) override;
     void BindTensor(atb::VariantPack &variantPack) override;
 
@@ -88,6 +88,6 @@ private:
     std::vector<int32_t> tokenOffset_;
     std::vector<int32_t> seqLen_;
 };
-} // namespace llama_13b
+} // namespace llama
 } // namespace atb_speed
 #endif
