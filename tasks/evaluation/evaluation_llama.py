@@ -136,7 +136,7 @@ class LLMChat(Chat):
             top_p=0.95,
             length_penalty=0.7
         )
-        return result, dist.get_rank()
+        return [result], dist.get_rank()
 
 
 def mmlu(eval_args, agent):
