@@ -67,8 +67,8 @@ enum FlashAttentionLayerTensorId : int {
     IN_ATTENTIONMASK,
     IN_CACHEK,
     IN_CACHEV,
-    IN_TOKENOFFSET, // 37
-    IN_SEQLEN,      // 38
+    IN_TOKENOFFSET,
+    IN_SEQLEN,
     IN_BETA,
     IN_HOLDER,
     IN_LAYERID,
@@ -86,7 +86,7 @@ enum FlashAttentionLayerTensorId : int {
     INTERMIDATE_MLPOUT,
 };
 
-static const uint64_t IN_TENSOR_COUNT = 42; // 35 + 7
+static const uint64_t IN_TENSOR_COUNT = 42;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 11;
 static const uint64_t NODE_COUNT = 11;
@@ -232,12 +232,8 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         selfOutLinearParam.quantParam.inputOffset = param.denseInputOffset;
         atb_speed::common::RowParallelLinearV2(selfOutLinearParam, &selfOutLinearNode.operation);
         selfOutLinearNode.inTensorIds = { INTERMIDATE_SELFOUT,
-            IN_SELFOUTLINEARWEIGHT,
-            IN_SELFOUTLINEAR_BIAS,
-            IN_SELFOUTLINEAR_DEQSCALE,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER };
+                                          IN_SELFOUTLINEARWEIGHT, IN_SELFOUTLINEAR_BIAS, IN_SELFOUTLINEAR_DEQSCALE,
+                                          IN_HOLDER, IN_HOLDER, IN_HOLDER };
         selfOutLinearNode.outTensorIds = { INTERMIDATE_SELFLINEAROUT };
     } else if (param.sparseModel) {
         // Sparse
@@ -255,12 +251,8 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         selfOutLinearParam.quantParam.inputOffset = param.denseInputOffset;
         atb_speed::common::RowParallelLinearV2(selfOutLinearParam, &selfOutLinearNode.operation);
         selfOutLinearNode.inTensorIds = { INTERMIDATE_SELFOUT,
-            IN_SELFOUTLINEARWEIGHT,
-            IN_SELFOUTLINEAR_BIAS,
-            IN_SELFOUTLINEAR_DEQSCALE,
-            IN_SELFOUT_INDEX,
-            IN_HOLDER,
-            IN_HOLDER };
+                                          IN_SELFOUTLINEARWEIGHT, IN_SELFOUTLINEAR_BIAS, IN_SELFOUTLINEAR_DEQSCALE,
+                                          IN_SELFOUT_INDEX, IN_HOLDER, IN_HOLDER };
         selfOutLinearNode.outTensorIds = { INTERMIDATE_SELFLINEAROUT };
     } else {
         atb_speed::common::ParallelParamV2 selfOutLinearParam;
@@ -313,25 +305,13 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         mlpParam.quantDownParam.inputOffset = param.ffnOutInputOffset;
 
         atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);
-        mlpNode.inTensorIds = { INTERMIDATE_SELFNORMOUT,
-            IN_MLPUPWEIGHT,
-            IN_MLPGATEWEIGHT,
-            IN_MLPDOWNWEIGHT,
-            IN_MLPUP_DEQSCALE,
-            IN_MLPGATE_DEQSCALE,
-            IN_MLPDOWN_DEQSCALE,
-            IN_MLPUP_BIAS,
-            IN_MLPGATE_BIAS,
-            IN_MLPDOWN_BIAS,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER };
+        mlpNode.inTensorIds = { INTERMIDATE_SELFNORMOUT, 
+                                IN_MLPUPWEIGHT, IN_MLPGATEWEIGHT, IN_MLPDOWNWEIGHT,
+                                IN_MLPUP_DEQSCALE, IN_MLPGATE_DEQSCALE, IN_MLPDOWN_DEQSCALE,
+                                IN_MLPUP_BIAS, IN_MLPGATE_BIAS, IN_MLPDOWN_BIAS,
+                                IN_HOLDER, IN_HOLDER, IN_HOLDER,
+                                IN_HOLDER, IN_HOLDER, IN_HOLDER,
+                                IN_HOLDER, IN_HOLDER, IN_HOLDER };
         mlpNode.outTensorIds = { INTERMIDATE_MLPOUT };
     } else if (param.sparseModel) {
         // Sparse
@@ -367,24 +347,12 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         mlpParam.quantDownParam.inputOffset = param.ffnOutInputOffset;
         atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);
         mlpNode.inTensorIds = { INTERMIDATE_SELFNORMOUT,
-            IN_MLPUPWEIGHT,
-            IN_MLPGATEWEIGHT,
-            IN_MLPDOWNWEIGHT,
-            IN_MLPUP_DEQSCALE,
-            IN_MLPGATE_DEQSCALE,
-            IN_MLPDOWN_DEQSCALE,
-            IN_MLPUP_BIAS,
-            IN_MLPGATE_BIAS,
-            IN_MLPDOWN_BIAS,
-            IN_MLPUP_INDEX,
-            IN_MLPGATE_INDEX,
-            IN_MLPDOWN_INDEX,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER };
+                                IN_MLPUPWEIGHT, IN_MLPGATEWEIGHT, IN_MLPDOWNWEIGHT,
+                                IN_MLPUP_DEQSCALE, IN_MLPGATE_DEQSCALE, IN_MLPDOWN_DEQSCALE,
+                                IN_MLPUP_BIAS, IN_MLPGATE_BIAS, IN_MLPDOWN_BIAS,
+                                IN_MLPUP_INDEX, IN_MLPGATE_INDEX, IN_MLPDOWN_INDEX,
+                                IN_HOLDER, IN_HOLDER, IN_HOLDER,
+                                IN_HOLDER, IN_HOLDER, IN_HOLDER };
         mlpNode.outTensorIds = { INTERMIDATE_MLPOUT };
     } else {
         atb::infer::RmsNormParam selfNormParam;
@@ -402,24 +370,12 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         mlpParam.isPack = false;
         atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);
         mlpNode.inTensorIds = { INTERMIDATE_SELFNORMOUT,
-            IN_MLPUPWEIGHT,
-            IN_MLPGATEWEIGHT,
-            IN_MLPDOWNWEIGHT,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER,
-            IN_HOLDER };
+                                IN_MLPUPWEIGHT, IN_MLPGATEWEIGHT, IN_MLPDOWNWEIGHT,
+                                IN_HOLDER, IN_HOLDER, IN_HOLDER,
+                                IN_HOLDER, IN_HOLDER, IN_HOLDER,
+                                IN_HOLDER, IN_HOLDER, IN_HOLDER,
+                                IN_HOLDER, IN_HOLDER, IN_HOLDER,
+                                IN_HOLDER, IN_HOLDER, IN_HOLDER };
         mlpNode.outTensorIds = { INTERMIDATE_MLPOUT };
     }
 

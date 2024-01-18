@@ -262,7 +262,7 @@ int64_t FlashAttentionModel::BuildGraph()
             quantModelParam.ffnOutInputScale = param_.ffnOutInputScale[layerId];
             quantModelParam.ffnOutInputOffset = param_.ffnOutInputOffset[layerId];
 
-            atb_speed::llama::FlashAttentionLayerParam(quantModelParam, &op);
+            atb_speed::llama::FlashAttentionLayer(quantModelParam, &op);
             layerNode.operation.reset(op);
             layerNode.inTensors.resize(layerNode.operation->GetInputNum());
             layerNode.outTensors.resize(layerNode.operation->GetOutputNum());

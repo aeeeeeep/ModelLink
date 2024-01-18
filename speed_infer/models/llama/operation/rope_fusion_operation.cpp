@@ -43,6 +43,7 @@ atb::Status RopeFusionOperation(const RopeFusionParam &param, atb::Operation **o
 {
     ATB_LOG(INFO) << __func__ << ", headNum: " << param.headNum;
     atb::GraphParam opGraph;
+    opGraph.name = "RopeFusionOperation";
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
     opGraph.nodes.resize(NODE_COUNT);
