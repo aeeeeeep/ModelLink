@@ -112,7 +112,7 @@ class HumanEval(DatasetEval):
             try:
                 if rank == 0:
                     python_execute = sys.executable
-                    answer = task['prompt'] + ' ' + answer
+                    answer = task['prompt'] + '  ' + answer
                     logger.info(f'answer: {answer}')
                     test_file = extract_answer_code(answer, task)
                     result = subprocess.run([python_execute, test_file], capture_output=True, timeout=10)
