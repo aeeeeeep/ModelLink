@@ -14,12 +14,8 @@
  * limitations under the License.
  */
 #include "hosttensor_binder_creator.h"
-#include "chatglm6b/layer/chatglm6blayer_decoder_flashattention_operation.h"
 
 atb_speed::HostTensorBinder *CreateHostTensorBinder(const std::string &opName)
 {
-    if (opName == "ChatGlm6BLayerDecoderFlashAttentionOperation") {
-        return new atb_speed::ChatGlm6BLayerDecoderFlashAttentionBinder();
-    }
     return nullptr;
 }
