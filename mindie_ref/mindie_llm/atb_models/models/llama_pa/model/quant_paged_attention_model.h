@@ -46,7 +46,7 @@ public:
         std::vector<int> ffnOutInputOffset;
         std::vector<int> floatLayers;
 
-        void FromString(const std::string &param);
+        int64_t FromString(const std::string &param);
     };
 
     explicit QuantPAModel(const std::string &param);
