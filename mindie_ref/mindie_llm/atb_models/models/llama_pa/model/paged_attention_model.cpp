@@ -50,7 +50,7 @@ enum OutTensorId : int {
     OUT_TENSOR_MAX,
 };
 
-void PAModel::Param::FromString(const std::string &param)
+int64_t PAModel::Param::FromString(const std::string &param)
 {
     nlohmann::json paramJson = nlohmann::json::parse(param);
     rmsNormEps = paramJson["rmsNormEps"].get<double>();
@@ -90,6 +90,7 @@ void PAModel::Param::FromString(const std::string &param)
                   << ", layerNum:" << layerNum << ", transposedWeight:" << transposedWeight << ", rank:" << rank
                   << ", rankSize:" << rankSize << ", backend: " << backend << ", isLmHeadParallel:" << isLmHeadParallel
                   << ", isBF16:" << isBF16;
+    return atb::NO_ERROR;
 }
 
 PAModel::PAModel(const std::string &param) : Model("Llama_65BPAModel", param)

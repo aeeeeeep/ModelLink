@@ -52,7 +52,7 @@ enum QuantPAModelOutTensorId : int {
     OUT_TENSOR_MAX,
 };
 
-void QuantPAModel::Param::FromString(const std::string &param)
+int64_t QuantPAModel::Param::FromString(const std::string &param)
 {
     nlohmann::json paramJson = nlohmann::json::parse(param);
     rmsNormEps = paramJson["rmsNormEps"].get<double>();
@@ -119,6 +119,7 @@ void QuantPAModel::Param::FromString(const std::string &param)
                   << ", layerNum:" << layerNum << ", transposedWeight:" << transposedWeight << ", rank:" << rank
                   << ", rankSize:" << rankSize << ", backend: " << backend << ", isLmHeadParallel:" << isLmHeadParallel
                   << ", isBF16:" << isBF16;
+    return atb::NO_ERROR;
 }
 
 QuantPAModel::QuantPAModel(const std::string &param) : Model("LlamaQuantPAModel", param)
