@@ -107,11 +107,11 @@ int64_t QuantPAModel::Param::FromString(const std::string &param)
     for (auto item : paramJson["floatLayers"]) {
         floatLayers.push_back(item.get<int>());
     }
-    if (param.headNum == 0) {
+    if (headNum == 0) {
         ATB_LOG(ERROR) << "param.headNum is 0, please input a correct value";
         return atb::ERROR_INVALID_PARAM;
     }
-    if (param.dk == 0) {
+    if (dk == 0) {
         ATB_LOG(ERROR) << "param.dk is 0, please input a correct value";
         return atb::ERROR_INVALID_PARAM;
     }
