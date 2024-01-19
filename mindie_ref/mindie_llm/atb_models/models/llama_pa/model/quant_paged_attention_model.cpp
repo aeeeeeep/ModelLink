@@ -52,7 +52,7 @@ enum QuantPAModelOutTensorId : int {
     OUT_TENSOR_MAX,
 };
 
-void QuantPAModel::Param::FromString(const std::string &param)
+int64_t QuantPAModel::Param::FromString(const std::string &param)
 {
     nlohmann::json paramJson = nlohmann::json::parse(param);
     rmsNormEps = paramJson["rmsNormEps"].get<double>();
@@ -107,11 +107,11 @@ void QuantPAModel::Param::FromString(const std::string &param)
     for (auto item : paramJson["floatLayers"]) {
         floatLayers.push_back(item.get<int>());
     }
-    if (param.headNum == 0) {
+    if (headNum == 0) {
         ATB_LOG(ERROR) << "param.headNum is 0, please input a correct value";
         return atb::ERROR_INVALID_PARAM;
     }
-    if (param.dk == 0) {
+    if (dk == 0) {
         ATB_LOG(ERROR) << "param.dk is 0, please input a correct value";
         return atb::ERROR_INVALID_PARAM;
     }
@@ -119,6 +119,7 @@ void QuantPAModel::Param::FromString(const std::string &param)
                   << ", layerNum:" << layerNum << ", transposedWeight:" << transposedWeight << ", rank:" << rank
                   << ", rankSize:" << rankSize << ", backend: " << backend << ", isLmHeadParallel:" << isLmHeadParallel
                   << ", isBF16:" << isBF16;
+    return atb::NO_ERROR;
 }
 
 QuantPAModel::QuantPAModel(const std::string &param) : Model("LlamaQuantPAModel", param)

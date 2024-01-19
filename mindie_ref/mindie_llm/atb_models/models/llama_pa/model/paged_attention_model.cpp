@@ -50,7 +50,7 @@ enum OutTensorId : int {
     OUT_TENSOR_MAX,
 };
 
-void PAModel::Param::FromString(const std::string &param)
+int64_t PAModel::Param::FromString(const std::string &param)
 {
     nlohmann::json paramJson = nlohmann::json::parse(param);
     rmsNormEps = paramJson["rmsNormEps"].get<double>();
@@ -78,11 +78,11 @@ void PAModel::Param::FromString(const std::string &param)
     if (paramJson.contains("isBF16")) {
         isBF16 = paramJson["isBF16"].get<bool>();
     }
-    if (param.headNum == 0) {
+    if (headNum == 0) {
         ATB_LOG(ERROR) << "param.headNum is 0, please input a correct value";
         return atb::ERROR_INVALID_PARAM;
     }
-    if (param.dk == 0) {
+    if (dk == 0) {
         ATB_LOG(ERROR) << "param.dk is 0, please input a correct value";
         return atb::ERROR_INVALID_PARAM;
     }
@@ -90,6 +90,7 @@ void PAModel::Param::FromString(const std::string &param)
                   << ", layerNum:" << layerNum << ", transposedWeight:" << transposedWeight << ", rank:" << rank
                   << ", rankSize:" << rankSize << ", backend: " << backend << ", isLmHeadParallel:" << isLmHeadParallel
                   << ", isBF16:" << isBF16;
+    return atb::NO_ERROR;
 }
 
 PAModel::PAModel(const std::string &param) : Model("Llama_65BPAModel", param)
