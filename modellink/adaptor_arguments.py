@@ -30,6 +30,7 @@ def parse_args_decorator(parse_args):
 def process_args(parser):
     parser.conflict_handler = 'resolve'
     parser = _add_lora_args(parser)
+    parser = _add_pad_args(parser)
     return parser
 
 
@@ -52,4 +53,13 @@ def _add_lora_args(parser):
     group.add_argument('--lora-adapter-name', type=str, default='default',
                        help='Lora adapter name.')
 
+    return parser
+
+    
+def _add_pad_args(parser):
+    group = parser.add_argument_group(title='vocab-padding-args')
+    group.add_argument('--pad-vocab-size-to',  type=int, default=None, 
+            help='Pad the vocab size to this value. This value must begreater than the initial size of the tokenizer,'
+            'needs to be divisible by TP size and `make-vocab-size-divisible-by`.', 
+            dest='padded_vocab_size')
     return parser
