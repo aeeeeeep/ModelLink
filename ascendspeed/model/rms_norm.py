@@ -3,6 +3,7 @@
 import torch
 from torch import nn
 import torch_npu
+import os
 from ascendspeed import get_args
 
 
@@ -25,6 +26,11 @@ class RMSNorm(torch.nn.Module):
         self.use_fused_rmsnorm = args.use_fused_rmsnorm
         self.eps = eps
         self.weight = nn.Parameter(torch.ones(dim))
+        if int(os.getenv('NPU_DETECT', '0')):
+            from torch_npu.hook_module.hook_module import HOOKModule
+            def norm_hook(grad):
+                HOOKModule.layernorm_list.append(torch.norm(grad))
+            self.weight.register_hook(norm_hook)
 
         setattr(self.weight, 'sequence_parallel', sequence_parallel)
 
