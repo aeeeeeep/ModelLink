@@ -57,7 +57,9 @@ function fn_build_nlohmann_json()
         rm -rf nlohmann
         mkdir nlohmann
         cd nlohmann
-        wget --no-check-certificate https://ascend-cann.obs.cn-north-4.myhuaweicloud.com/include.zip
+            if [ ! -f "include.zip" ];then
+                wget --no-check-certificate https://ascend-cann.obs.cn-north-4.myhuaweicloud.com/include.zip
+            fi
         unzip include.zip
         mkdir -p $THIRD_PARTY_DIR/nlohmannJson
         cp -r ./include $THIRD_PARTY_DIR/nlohmannJson
