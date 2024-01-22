@@ -97,7 +97,7 @@ atb::Status PAModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDesc
     return atb::NO_ERROR;
 }
 
-int64_t PAModel::BuildGraph()
+void PAModel::BuildGraph()
 {
     ATB_LOG(INFO) << "START build Graph";
     const int weightTensorSize = WORDEMBEDDINGNODE_WEIGHT_COUNT + WEIGHT_COUNT_PER_LAYER * param_.layerNum +
@@ -115,7 +115,7 @@ int64_t PAModel::BuildGraph()
     auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
     atb::infer::GatherParam wordEmbeddingParam;
     atb::Operation *op = nullptr;
-    CREATE_OPERATION(wordEmbeddingParam, &op);
+    atb::CreateOperation(wordEmbeddingParam, &op);
     wordEmbeddingNode.operation.reset(op);
     wordEmbeddingNode.inTensors = {&graph_.weightTensors.at(0), &graph_.inTensors.at(IN_TENSOR_HIDDENSTATES)};
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(0)};
@@ -184,7 +184,7 @@ int64_t PAModel::BuildGraph()
     atb::infer::RmsNormParam finalNormParam;
     finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     finalNormParam.normParam.epsilon = param_.rmsNormEps;
-    CREATE_OPERATION(finalNormParam, &op);
+    atb::CreateOperation(finalNormParam, &op);
     finalNormNode.operation.reset(op);
     const int finalLayerNormWeightTensorId = graph_.weightTensors.size() -
                                             FINALNORMNODE_WEIGHT_COUNT - OUT_LM_HEAD_WEIGHT_COUNT;
@@ -194,13 +194,12 @@ int64_t PAModel::BuildGraph()
 
     auto &outLinearNode = graph_.nodes.at(nodeId++);
     atb::infer::LinearParam outLinearParm = {false, false, false};
-    CREATE_OPERATION(outLinearParm, &op);
+    atb::CreateOperation(outLinearParm, &op);
     outLinearNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
     outLinearNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
                                &graph_.weightTensors.at(finalLinearWeightTensorId)};
     outLinearNode.outTensors = {&graph_.outTensors.at(0)};
-    return atb::NO_ERROR;
 }
 
 atb::Status PAModel::ParseParam(const std::string &param)

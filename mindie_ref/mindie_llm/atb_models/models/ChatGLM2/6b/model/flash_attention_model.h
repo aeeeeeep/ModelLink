@@ -64,7 +64,7 @@ public:
                            std::vector<atb::TensorDesc> &outTensorDescs) override;
 
 private:
-    int64_t BuildGraph() override;
+    void BuildGraph() override;
 
     atb::Status ParseParam(const std::string &param) override;
 
