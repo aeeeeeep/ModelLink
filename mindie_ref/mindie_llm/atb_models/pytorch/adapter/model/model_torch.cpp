@@ -35,6 +35,10 @@
 #include "llama_adapter/model/adapter_model.h"
 #include "llama_pa/model/paged_attention_model.h"
 #include "llama_pa/model/quant_paged_attention_model.h"
+#include "starcoder/model/flash_attention_model.h"
+#include "starcoder/model/flash_attention_quant_model.h"
+#include "starcoder/model/paged_attention_model.h"
+#include "starcoder/model/paged_attention_quant_model.h"
 #include "telechat/model/model.h"
 
 void* ModelTorch::GetWorkSpace(uint64_t bufferSize)
