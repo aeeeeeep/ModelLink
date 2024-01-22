@@ -53,13 +53,15 @@ function fn_build_nlohmann_json()
 {
     NLOHMANN_DIR=$THIRD_PARTY_DIR/nlohmannJson/include
     if [ ! -d "$NLOHMANN_DIR" ];then
-        cd $CACHE_DIR
-        rm -rf nlohmann
-        mkdir nlohmann
-        cd nlohmann
-            if [ ! -f "include.zip" ];then
-                wget --no-check-certificate https://ascend-cann.obs.cn-north-4.myhuaweicloud.com/include.zip
-            fi
+        if [ ! -f "$CACHE_DIR/nlohmann/include.zip" ];then
+            cd $CACHE_DIR
+            rm -rf nlohmann
+            mkdir nlohmann
+            cd nlohmann
+            wget --no-check-certificate https://ascend-cann.obs.cn-north-4.myhuaweicloud.com/include.zip
+        else
+            cd $CACHE_DIR/nlohmann
+        fi
         unzip include.zip
         mkdir -p $THIRD_PARTY_DIR/nlohmannJson
         cp -r ./include $THIRD_PARTY_DIR/nlohmannJson
