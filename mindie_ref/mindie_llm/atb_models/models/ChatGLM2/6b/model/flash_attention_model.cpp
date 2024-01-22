@@ -18,7 +18,7 @@
 #include <atb/atb_infer.h>
 #include <nlohmann/json.hpp>
 #include "atb_speed/log.h"
-#include "chatglm2/6b/layer/flash_attention_layer.h"
+#include "models/ChatGLM2/6b/layer/flash_attention_layer.h"
 
 namespace atb_speed {
 namespace chatglm2_6b {
@@ -160,7 +160,7 @@ atb::Status ChatGlm2CommonModelFa::InferShape(
     return atb::NO_ERROR;
 }
 
-void ChatGlm2CommonModelFa::BuildGraph()
+int64_t ChatGlm2CommonModelFa::BuildGraph()
 {
     int weightTensorSize = 0;
     if (param_.quantmodel && param_.isSparse) {
@@ -334,6 +334,8 @@ void ChatGlm2CommonModelFa::BuildGraph()
     lmNode.operation.reset(op);
     lmNode.inTensors = {&graph_.internalTensors.at(internalTensorId), &graph_.weightTensors.at(weightTensorId)};
     lmNode.outTensors = {&graph_.outTensors.at(0)};
+
+    return atb::NO_ERROR;
 }
 
 atb::Status ChatGlm2CommonModelFa::ParseParam(const std::string &param)
