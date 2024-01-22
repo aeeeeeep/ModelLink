@@ -1,8 +1,6 @@
 #!/bin/bash
 
-source /home/yaojia/yj_canntoolkit_POC-T800.b070/ascend-toolkit/set_env.sh
-
-export CUDA_DEVICE_MAX_CONNECTIONS=1
+# Please remember to source the CANN set_env.sh file
 
 GPUS_PER_NODE=8
 MASTER_ADDR=localhost
@@ -90,20 +88,4 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
     --load $CKPT_LOAD_DIR \
-    | tee logs/PTD-my-Aquila-0121.log
-
-
-
-
-#    --save $CKPT_SAVE_DIR \
-
-#    --tokenizer-model ${TOKENIZER_MODEL} \
-
-
-# nohup python -m torch.distributed.launch $DISTRIBUTED_ARGS \
-#         pretrain_llama.py \
-#         $GPT_ARGS \
-#         $DATA_ARGS \
-#         $OUTPUT_ARGS \
-#         --distributed-backend nccl | tee logs/PTD-llama2.log
-
+    | tee logs/train-Aquila-7b-ptd.log
