@@ -58,8 +58,8 @@ def _add_lora_args(parser):
     
 def _add_pad_args(parser):
     group = parser.add_argument_group(title='vocab-padding-args')
-    group.add_argument('--pad-vocab-size-to',  type=int, default=None,
+    group.add_argument('--pad-vocab-size-to', type=int, default=None,
             help='Pad the vocab size to this value. This value must begreater than the initial size of the tokenizer,'
-            'needs to be divisible by TP size and `make-vocab-size-divisible-by`.', 
+            'needs to be divisible by TP size and `make-vocab-size-divisible-by`.',
             dest='padded_vocab_size')
     return parser
