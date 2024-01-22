@@ -74,6 +74,8 @@ try:
     ],
     )
     exts.append(ext_ops)
+    exts += ['-fstack-protector-all', '-Wl,-z,relro,-z,now,-z,noexecstack',
+             '-fPIC -pie', '-Wl,--disable-new-dtags,--rpath']
     cmd_class = {"build_ext": BuildExtension.with_options(use_ninja=False)}
 except Exception:
     print('Can not find env : ASCEND_TOOLKIT_HOME or ATB_HOME_PATH, ops setup failed')
