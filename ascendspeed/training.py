@@ -780,7 +780,7 @@ def train_step(forward_step_func, data_iterator,
         if int(os.getenv('NPU_DETECT', '0')):
             from torch_npu.utils.silent_error import silent_fault_check
             silent_error = silent_fault_check()
-            silent_error= torch.tensor(silent_error, dtype=torch.float32).npu()
+            silent_error = torch.tensor(silent_error, dtype=torch.float32).npu()
             torch.distributed.all_reduce(silent_error, op=torch.distributed.ReduceOp.MAX, group=optimizer.get_model_parallel_group())
             found_silent_flag = (silent_error.item() > 0)
         if not found_silent_flag or not (int(os.getenv('NPU_RECOVERY', '0'))):

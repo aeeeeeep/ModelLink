@@ -221,8 +221,10 @@ class VocabParallelEmbedding(torch.nn.Module):
 
         if int(os.getenv('NPU_DETECT', '0')):
             from torch_npu.hook_module.hook_module import HOOKModule
+
             def vocabparallelembedding_hook(grad):
                 HOOKModule.embedding_list.append(torch.norm(grad))
+
             self.weight.register_hook(vocabparallelembedding_hook)
 
     def forward(self, input_):
@@ -596,8 +598,10 @@ class ColumnParallelLinear(torch.nn.Module):
                     )
             if int(os.getenv('NPU_DETECT', '0')):
                 from torch_npu.hook_module.hook_module import HOOKModule
+
                 def columnparallellinear_hook(grad):
                     HOOKModule.linear_list.append(torch.norm(grad))
+
                 self.weight.register_hook(columnparallellinear_hook)
         else:
             self.weight = None
@@ -827,8 +831,10 @@ class RowParallelLinear(torch.nn.Module):
                 )
         if int(os.getenv('NPU_DETECT', '0')):
             from torch_npu.hook_module.hook_module import HOOKModule
+
             def rowparallellinear_hook(grad):
                 HOOKModule.linear_list.append(torch.norm(grad))
+
             self.weight.register_hook(rowparallellinear_hook)
         if bias:
             if config.use_cpu_initialization:
