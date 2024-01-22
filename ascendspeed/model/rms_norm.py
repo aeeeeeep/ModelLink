@@ -1,7 +1,7 @@
 # Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
 
-import torch
 import os
+import torch
 from torch import nn
 import torch_npu
 

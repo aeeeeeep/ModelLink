@@ -788,8 +788,10 @@ def train_step(forward_step_func, data_iterator,
             if update_successful:
                 optimizer.gather_model_params(args, timers)
         else:
+            # The silent error is found, and skip the step, then call print_error_plog api to print log in plog.
             import torch_npu
-            torch_npu.npu.print_error_plog("NPUCheckEvent:AICore Numerical error happen, skip this step!")
+            if (hasattr(torch_npu.npu, "print_error_plog")):
+                torch_npu.npu.print_error_plog("NPUCheckEvent:AICore Numerical error happen, skip this step!")
 
     timers('optimizer').stop()
 
