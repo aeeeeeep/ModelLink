@@ -35,6 +35,7 @@
 #include "llama_adapter/model/adapter_model.h"
 #include "llama_pa/model/paged_attention_model.h"
 #include "llama_pa/model/quant_paged_attention_model.h"
+#include "ChatGLM2/6b/model/paged_attention_model.h"
 #include "telechat/model/model.h"
 
 void* ModelTorch::GetWorkSpace(uint64_t bufferSize)
@@ -102,6 +103,8 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::llama_adapter::DecoderAdapterModel>(param);
     } else if (modelName_ == "TelechatQuantFAModel") {
         model_ = std::make_shared<atb_speed::telechat::QuantFAModel>(param);
+    } else if (modelName_ == "chatglm2_6b_decoder_pa_model") {
+        model_ = std::make_shared<atb_speed::chatglm2_6b::PagedAttentionModel>(param);
     } else {
         ATB_LOG(FATAL) << "not support modelName:" << modelName_;
         return atb::ERROR_INVALID_PARAM;
