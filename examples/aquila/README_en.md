@@ -1,13 +1,7 @@
 # Aquila-7B
+[简体中文](https://gitee.com/ascend/ModelLink/blob/master/examples/aquila/README.md) | English
 
-<p align="left">
-        <b><a href="https://gitee.com/ascend/ModelLink/blob/master/examples/aquila/README.md">简体中文</a></b> |
-        <b>English</b>
-    </p>
-</p>
-
-
-- [Aquila-7B/13B](#aquila-7b)
+- [Aquila-7B](#aquila-7b)
   - [Training](#training)
     - [Script](#script)
     - [Performance](#performance)
