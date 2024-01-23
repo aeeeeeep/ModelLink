@@ -42,6 +42,7 @@ cd deepspeed_npu
 pip3 install -e ./
 cd ..
 # enter the AscendSpeed/ directory，install ascendspeed package by source code
+git clone https://gitee.com/ascend/AscendSpeed.git
 cd AscendSpeed/
 pip install -e ./
 # enter the ModelLink/ directory and install other packages

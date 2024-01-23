@@ -45,7 +45,8 @@ git clone https://gitee.com/ascend/DeepSpeed.git -b v0.9.2 deepspeed_npu
 cd deepspeed_npu
 pip3 install -e ./
 cd ..
-# 进入AscendSpeed目录，源码方式安装ascendspeed包
+# 进入AscendSpeed目录，源码方式安装ascendspeed加速包
+git clone https://gitee.com/ascend/AscendSpeed.git
 cd AscendSpeed/
 pip install -e ./
 # 进入ModelLink主目录，安装其余依赖包
