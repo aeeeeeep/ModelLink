@@ -48,44 +48,6 @@ struct PAQuantLayerParam {
 
 atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operation);
 
-static atb::Operation *CreatePAQuantLayer(const nlohmann::json &paramJson)
-{
-    PAQuantLayerParam param;
-    param.layerNormEps = paramJson["layerNormEps"].get<float>();
-    param.headNum = paramJson["headNum"].get<int>();
-    param.dk = paramJson["dk"].get<int>();
-    param.model = paramJson["model"].get<std::string>();
-    if (paramJson.contains("rank")) {
-        param.rank = paramJson["rank"].get<int>();
-    }
-    if (paramJson.contains("rankSize")) {
-        param.rankSize = paramJson["rankSize"].get<int>();
-    }
-    if (paramJson.contains("kvHead")) {
-        param.rankSize = paramJson["kvHead"].get<int>();
-    }
-    if (paramJson.contains("isPrefill")) {
-        paramJson.at("isPrefill").get_to(param.isPrefill);
-    }
-    if (paramJson.contains("backend")) {
-        paramJson.at("backend").get_to(param.backend);
-    }
-    param.qkvInputScale = paramJson["qkvInputScale"].get<float>();
-    param.qkvInputOffset = paramJson["qkvInputOffset"].get<int>();
-    param.denseInputScale = paramJson["denseInputScale"].get<float>();
-    param.denseInputOffset = paramJson["denseInputOffset"].get<int>();
-    param.selfLnInputScale = paramJson["selfLnInputScale"].get<float>();
-    param.selfLnInputOffset = paramJson["selfLnInputOffset"].get<float>();
-    param.mlpOutInputScale = paramJson["mlpOutInputScale"].get<float>();
-    param.mlpOutInputOffset = paramJson["mlpOutInputOffset"].get<int>();
-
-    ATB_LOG(INFO) << __func__ << "model:" << param.model << ", layerNormEps:" << param.layerNormEps << ", headNum:"
-        << param.headNum << ", dk:" << param.dk << ", kvHead" << param.kvHead << ", backend" << param.backend;
-    atb::Operation *op;
-    PAQuantLayer(param, &op);
-    return op;
-}
-
 class StarCoderPAQuantHostBinder : public HostTensorBinder {
 public:
     StarCoderPAQuantHostBinder();

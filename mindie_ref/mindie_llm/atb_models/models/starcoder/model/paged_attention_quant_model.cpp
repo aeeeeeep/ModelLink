@@ -44,7 +44,7 @@ enum InTensorId : int {
     IN_TENSOR_INPUT_LENGTHS,
     IN_TENSOR_LOGTIS_INDICES,
     IN_HOLDER,
-    IN_TENSOR_MAX, 
+    IN_TENSOR_MAX,
 };
 
 enum OutTensorId : int {
@@ -161,7 +161,6 @@ void PAQuantModel::BuildGraph()
     graph_.inTensors.resize(IN_TENSOR_MAX + param_.layerNum * 2);
     graph_.outTensors.resize(OUT_TENSOR_MAX);
 
-
     const int nodeSize = param_.layerNum + OPERATION_COUNT_BEFORE_LAYER + OPERATION_COUNT_AFTER_LAYER;
     graph_.nodes.resize(nodeSize);
     ATB_LOG(INFO) << "StarcoderPAQuantModel nodeSize is " << nodeSize;
@@ -173,7 +172,7 @@ void PAQuantModel::BuildGraph()
 
     atb::Operation *op = nullptr;
 
-    auto &wtEmbeddingNode = graph_.nodes.at(nodeId++); // TODO check
+    auto &wtEmbeddingNode = graph_.nodes.at(nodeId++);
     atb::infer::GatherParam wtEmbeddingParam;
     atb::CreateOperation(wtEmbeddingParam, &op);
     wtEmbeddingNode.operation.reset(op);
@@ -278,7 +277,6 @@ void PAQuantModel::BuildGraph()
             layerNode.outTensors = {&graph_.internalTensors.at(INTERMEDIATETENSOR_COUNT_BEFORE_LAYER + layerId)};
             firstInTensor = layerNode.outTensors.at(0);
         }
-        
     }
 
     auto &finalNormNode = graph_.nodes.at(nodeId++);

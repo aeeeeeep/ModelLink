@@ -54,9 +54,9 @@ enum PAQuantLayerTensorId : int {
     IN_ATTENTIONMASK,
     IN_BLOCK_TABLES,
     IN_SLOTS,
-    IN_INPUT_LENGTHS, // 23
-    IN_HOLDER,  
-    IN_K_CACHE, 
+    IN_INPUT_LENGTHS,
+    IN_HOLDER,
+    IN_K_CACHE,
     IN_V_CACHE,
 
     OUT_LAYEROUT,
@@ -78,10 +78,10 @@ enum PAQuantLayerTensorId : int {
 // [bs, seq, kv_hidden_size] -> [n_tokens=bs*seq, head_Num, head_dim] -> [n_tokens, 1, 128]
 void reshapeQuantHeads(const atb::Dims &oldShape, atb::Dims &newShape, int headNum)
 {
-    newShape.dimNum = ATTENTION_DIM_3;                      
-    newShape.dims[0] = oldShape.dims[0] * oldShape.dims[1]; 
-    newShape.dims[1] = headNum;                             
-    newShape.dims[2] = oldShape.dims[2] / headNum;          
+    newShape.dimNum = ATTENTION_DIM_3;
+    newShape.dims[0] = oldShape.dims[0] * oldShape.dims[1];
+    newShape.dims[1] = headNum;
+    newShape.dims[2] = oldShape.dims[2] / headNum; // 1 dim: head size
 }
 
 atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operation)
@@ -153,7 +153,6 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     splitKVNode.inTensorIds = {INTERMEDIATE_KV};
     splitKVNode.outTensorIds = {INTERMEDIATE_K, INTERMEDIATE_V};
 
-//------------------------
     atb::infer::ReshapeAndCacheParam reshapeCacheParm;
     CreateOperation(reshapeCacheParm, &reshapeAndCacheNode.operation);
     reshapeAndCacheNode.inTensorIds = {INTERMEDIATE_K, INTERMEDIATE_V, IN_K_CACHE, IN_V_CACHE, IN_SLOTS};
@@ -171,7 +170,7 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
         faEnParam.headDim = param.dk;
         faEnParam.headNum = param.headNum;
         faEnParam.qScale = 1.0 / sqrt(param.dk);
-        faEnParam.kvHeadNum = param.kvHead;         // TODO check
+        faEnParam.kvHeadNum = param.kvHead;
         faEnParam.isEncoder = true;
         faEnParam.isFusion = true;
         CreateOperation(faEnParam, &attentionNode.operation);
@@ -243,8 +242,8 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_GELU;
     mlpParam.transposeB = false;
     mlpParam.quantDownParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_QUANT;
-    mlpParam.quantDownParam.inputScale = param.mlpOutInputScale; // TODO check
-    mlpParam.quantDownParam.inputOffset = param.mlpOutInputOffset; // TODO check
+    mlpParam.quantDownParam.inputScale = param.mlpOutInputScale;
+    mlpParam.quantDownParam.inputOffset = param.mlpOutInputOffset;
 
     atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);
     mlpNode.inTensorIds = {INTERMEDIATE_LAYERNORM_2_OUT,

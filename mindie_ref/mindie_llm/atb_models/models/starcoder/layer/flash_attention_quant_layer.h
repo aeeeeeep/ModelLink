@@ -48,40 +48,6 @@ struct FlashAttentionQuantLayerParam {
 
 atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param, atb::Operation **operation);
 
-static atb::Operation *CreateFlashAttentionQuantLayer(const nlohmann::json &paramJson)
-{
-    FlashAttentionQuantLayerParam param;
-    param.layerNormEps = paramJson["layerNormEps"].get<float>();
-    param.headNum = paramJson["headNum"].get<int>();
-    param.dk = paramJson["dk"].get<int>();
-    param.model = paramJson["model"].get<std::string>();
-    param.isEncoder = paramJson["isEncoder"].get<bool>();
-    if (paramJson.contains("qScale")) {
-        param.qScale = paramJson["qScale"].get<float>();
-    }
-    if (paramJson.contains("rank")) {
-        param.rank = paramJson["rank"].get<int>();
-    }
-    if (paramJson.contains("rankSize")) {
-        param.rankSize = paramJson["rankSize"].get<int>();
-    }
-    // 量化参数
-    param.qkvInputScale = paramJson["qkvInputScale"].get<float>();
-    param.qkvInputOffset = paramJson["qkvInputOffset"].get<int>();
-    param.denseInputScale = paramJson["denseInputScale"].get<float>();
-    param.denseInputOffset = paramJson["denseInputOffset"].get<int>();
-    param.selfLnInputScale = paramJson["selfLnInputScale"].get<float>();
-    param.selfLnInputOffset = paramJson["selfLnInputOffset"].get<float>();
-    param.mlpOutInputScale = paramJson["mlpOutInputScale"].get<float>();
-    param.mlpOutInputOffset = paramJson["mlpOutInputOffset"].get<int>();
-
-    ATB_LOG(INFO) << __func__ << " layerNormEps:" << param.layerNormEps << ", headNum:" << param.headNum << ", dk:" <<
-        param.dk << ", model:" << param.model;
-    atb::Operation *op;
-    FlashAttentionQuantLayer(param, &op);
-    return op;
-}
-
 class FlashAttentionQuantHostBinder : public HostTensorBinder {
 public:
     FlashAttentionQuantHostBinder();

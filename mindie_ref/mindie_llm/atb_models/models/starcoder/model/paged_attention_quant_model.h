@@ -41,9 +41,9 @@ public:
         std::vector<int> denseInputOffset;
         std::vector<float> selfLnInputScale;
         std::vector<int> selfLnInputOffset;
-        std::vector<float> mlpOutInputScale; // TODO check
-        std::vector<int> mlpOutInputOffset; // TODO check
-        std::vector<int> floatLayers; 
+        std::vector<float> mlpOutInputScale;
+        std::vector<int> mlpOutInputOffset;
+        std::vector<int> floatLayers;
 
         void FromString(const std::string &param);
     };
