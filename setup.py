@@ -71,11 +71,10 @@ try:
         '-D__FILENAME__=\"$(notdir $(abspath $<))\"',
         '-I' + imp.find_module('torch_npu')[1] + "/include/third_party/acl/inc",
         '-I' + ASCEND_TOOLKIT_HOME + '/include/',
+        '-fstack-protector-all', '-Wl,-z,relro,-z,now,-z,noexecstack', '-fPIC -pie','-Wl,--disable-new-dtags,--rpath'
     ],
     )
     exts.append(ext_ops)
-    exts += ['-fstack-protector-all', '-Wl,-z,relro,-z,now,-z,noexecstack',
-             '-fPIC -pie', '-Wl,--disable-new-dtags,--rpath']
     cmd_class = {"build_ext": BuildExtension.with_options(use_ninja=False)}
 except Exception:
     print('Can not find env : ASCEND_TOOLKIT_HOME or ATB_HOME_PATH, ops setup failed')
