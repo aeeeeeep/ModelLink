@@ -13,23 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_LLAMA_FAMILY_LMHEAD_H
-#define ATB_SPEED_MODELS_LLAMA_FAMILY_LMHEAD_H
+
+#ifndef ASCEND_SPEED_INFERENCE_LLAMA_PARALLEL_LINEAR_PARALLEL_H
+#define ASCEND_SPEED_INFERENCE_LLAMA_PARALLEL_LINEAR_PARALLE_H
 
 #include <atb/atb_infer.h>
-#include "models/llama_family/operation/linear.h"
-#include "models/llama_family/operation/linear_parallel.h"
 
 namespace atb_speed {
-namespace llama_family {
-struct LmHeadParam {
-    bool gatherAhead = false;  // Prefill阶段使用gatherAhead，只获取最后最后一个token，以此减少显存占用
-    bool unpadInputs = false;
-    int hiddenSizePerAttentionHead = 0;  // 当Parallel的类型为ROW PARALLEL时，需要此参数切分Gather算子的输出结果
-    atb_speed::llama_family::LinearParallelParam linearParallelParam;
+namespace llama_parallel {
+
+enum LinearParallelType : uint32_t {
+    UNDEFINED = 0,
+    ROW_PARALLEL,     // all reduce
+    COLUMN_PARALLEL,  // all gather
 };
 
-atb::Status LmHead(const LmHeadParam &param, atb::Operation **operation);
-} // namespace llama_family
+struct LinearParallelParam {
+    atb_speed::llama_parallel::FusionLinearParam fusionLinearParam;
+    int parallelType = UNDEFINED;
+    int rank = 0;
+    int worldSize = 1;
+    int rankRoot = 0;
+    std::string backend = "hccl";
+};
+
+atb::Status LinearParallel(const LinearParallelParam &param, atb::Operation **operation);
+} // namespace llama_parallel
 } // namespace atb_speed
+
 #endif

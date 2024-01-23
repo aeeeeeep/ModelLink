@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 #include <atb/atb_infer.h>
-#include "models/llama_family/operation/linear.h"
-#include "models/llama_family/operation/linear_parallel.h"
-#include "models/llama_family/operation/mlp.h"
+#include "models/llama_parallel/operation/linear.h"
+#include "models/llama_parallel/operation/linear_parallel.h"
+#include "models/llama_parallel/operation/mlp.h"
 
 namespace atb_speed {
-namespace llama_family {
+namespace llama_parallel {
 
 enum MlpTensorIdx : uint32_t {
     IN_INPUT = 0,
@@ -56,7 +56,7 @@ atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation, T confi
 
     if (param.isPack) {
         atb::Node &linearGateUpNode = opGraph.nodes.at(nodeId++);
-        atb_speed::llama_family::FusionLinearParam gateUpLinearParam = param.gateUpLinearParam;
+        atb_speed::llama_parallel::FusionLinearParam gateUpLinearParam = param.gateUpLinearParam;
         FusionLinear(gateUpLinearParam, &linearGateUpNode.operation);
         linearGateUpNode.inTensorIds = {
             MlpTensorIdx::IN_INPUT,
@@ -76,7 +76,7 @@ atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation, T confi
         splitNode.outTensorIds = {config.INTERMIDATE_GATE_OUT, config.INTERMIDATE_UP_OUT};
     } else {
         atb::Node &linearGateNode = opGraph.nodes.at(nodeId++);
-        atb_speed::llama_family::FusionLinearParam gateUpLinearParam = param.gateUpLinearParam;
+        atb_speed::llama_parallel::FusionLinearParam gateUpLinearParam = param.gateUpLinearParam;
         FusionLinear(gateUpLinearParam, &linearGateNode.operation);
         linearGateNode.inTensorIds = {
             MlpTensorIdx::IN_INPUT,
@@ -114,7 +114,7 @@ atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation, T confi
     mulNode.outTensorIds = {config.INTERMIDATE_MUL_OUT};
 
     atb::Node &linearDownNode = opGraph.nodes.at(nodeId++);
-    atb_speed::llama_family::LinearParallelParam downLinearParallelParam = param.downLinearParallelParam;
+    atb_speed::llama_parallel::LinearParallelParam downLinearParallelParam = param.downLinearParallelParam;
     LinearParallel(downLinearParallelParam, &linearDownNode.operation);
     linearDownNode.inTensorIds = {
         config.INTERMIDATE_MUL_OUT,

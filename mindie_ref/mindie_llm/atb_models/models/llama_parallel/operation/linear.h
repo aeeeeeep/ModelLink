@@ -13,26 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_LLAMA_FAMILY_LAYER_EMBEDDING_H
-#define ATB_SPEED_MODELS_LLAMA_FAMILY_LAYER_EMBEDDING_H
+#ifndef ATB_SPEED_MODELS_LLAMA_PARALLEL_LINEAR_H
+#define ATB_SPEED_MODELS_LLAMA_PARALLEL_LINEAR_H
 
 #include "nlohmann/json.hpp"
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
 
 namespace atb_speed {
-namespace llama_family {
-struct EmbeddingParam {
-    bool unpadInputs = false;
-    int axis = 0;
-    // 若embedding权重按列切分，则需调用all gather算子并传入rank相关的信息
-    int rank = 0;
-    int worldSize = 1;
-    int rankRoot = 0;
-    std::string backend = "hccl";
+namespace llama_parallel {
+
+enum LinearQuantType : unsigned int {
+    NO_QUANT = 0,
+    RMS_NORM_QUANT_LINEAR_DEQUANT = 1,  // QUANT在RMS_NORM中执行，DEQUANT在此operaion中执行
+    LINEAR_QUANT = 2,         // QUANT和DEQUANT操作都在此Operation中执行
 };
 
-atb::Status Embedding(const EmbeddingParam &param, atb::Operation **operation);
-}  // namespace llama_family
-}  // namespace atb_speed
+struct FusionLinearParam {
+    int quantType = NO_QUANT;
+};
+
+atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operation);
+} // namespace llama_parallel
+} // namespace atb_speed
 #endif

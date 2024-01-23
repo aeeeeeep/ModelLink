@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "llama_family/operation/embedding.h"
+#include "llama_parallel/operation/embedding.h"
 
 namespace atb_speed {
-namespace llama_family {
+namespace llama_parallel {
 
 enum LayerEmbeddingTensorIdx : uint32_t {
     IN_EMBEDDING_WEIGHTS = 0,
@@ -127,5 +127,5 @@ atb::Status Embedding(const EmbeddingParam &param, atb::Operation **operation)
     atb::CreateOperation(opGraph, operation);
     return atb::NO_ERROR;
 }
-}  // namespace llama_family
+}  // namespace llama_parallel
 }  // namespace atb_speed

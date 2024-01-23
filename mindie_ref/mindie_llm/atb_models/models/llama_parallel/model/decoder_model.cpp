@@ -16,14 +16,14 @@
 #include "nlohmann/json.hpp"
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
-#include "models/llama_family/operation/embedding.h"
-#include "models/llama_family/operation/rms_norm.h"
-#include "models/llama_family/operation/lmhead.h"
-#include "models/llama_family/layer/decoder_layer.h"
-#include "models/llama_family/model/decoder_model.h"
+#include "models/llama_parallel/operation/embedding.h"
+#include "models/llama_parallel/operation/rms_norm.h"
+#include "models/llama_parallel/operation/lmhead.h"
+#include "models/llama_parallel/layer/decoder_layer.h"
+#include "models/llama_parallel/model/decoder_model.h"
 
 namespace atb_speed {
-namespace llama_family {
+namespace llama_parallel {
 
 // Weight count
 const int WEIGHT_COUNT_PER_LAYER = 30;
@@ -159,14 +159,14 @@ void DecoderModel::BuildGraph()
     atb::Operation *op = nullptr;
 
     auto &embeddingNode = graph_.nodes.at(nodeId++);
-    atb_speed::llama_family::EmbeddingParam embeddingParam;
+    atb_speed::llama_parallel::EmbeddingParam embeddingParam;
     embeddingParam.unpadInputs = !param_.isFA;
     if (param_.isEmbeddingParallel) {
         embeddingParam.rank = param_.rank;
         embeddingParam.worldSize = param_.worldSize;
     };
     embeddingParam.backend = param_.backend;
-    atb_speed::llama_family::Embedding(embeddingParam, &op);
+    atb_speed::llama_parallel::Embedding(embeddingParam, &op);
     embeddingNode.operation.reset(op);
     embeddingNode.inTensors = {&graph_.weightTensors.at(0),                    // shape: [vocabSize + 1, hiddenSize]
                                &graph_.inTensors.at(IN_TENSOR_INPUT_IDS),
@@ -180,7 +180,7 @@ void DecoderModel::BuildGraph()
     atb::Tensor *firstInTensor = &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES);
     for (int layerId = 0; layerId < param_.numHiddenLayers; ++layerId) {
         auto &layerNode = graph_.nodes.at(nodeId++);
-        atb_speed::llama_family::DecoderLayerParam layerParam;
+        atb_speed::llama_parallel::DecoderLayerParam layerParam;
         layerParam.isFA = param_.isFA;
         layerParam.isPrefill = param_.isPrefill;
         layerParam.isBF16 = param_.isBF16;
@@ -193,7 +193,7 @@ void DecoderModel::BuildGraph()
         layerParam.rank = param_.rank;
         layerParam.worldSize = param_.worldSize;
         layerParam.backend = param_.backend;
-        atb_speed::llama_family::DecoderLayer(layerParam, &op);
+        atb_speed::llama_parallel::DecoderLayer(layerParam, &op);
 
         layerNode.operation.reset(op);
         layerNode.inTensors.resize(layerNode.operation->GetInputNum());
@@ -221,7 +221,7 @@ void DecoderModel::BuildGraph()
     }
 
     auto &finalNormNode = graph_.nodes.at(nodeId++);
-    atb_speed::llama_family::FusionRmsNormParam fusionRmsNormParam;
+    atb_speed::llama_parallel::FusionRmsNormParam fusionRmsNormParam;
     fusionRmsNormParam.quantType = param_.quantType;
     fusionRmsNormParam.rmsNormEps = param_.rmsNormEps;
     FusionRmsNorm(fusionRmsNormParam, &op);
@@ -235,13 +235,13 @@ void DecoderModel::BuildGraph()
     finalNormNode.outTensors = {&graph_.internalTensors.at(INTERNEL_TENSOR_FINAL_NORM_OUT)};  // shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
 
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
-    atb_speed::llama_family::LmHeadParam lmHeadParam;
+    atb_speed::llama_parallel::LmHeadParam lmHeadParam;
     lmHeadParam.unpadInputs = !param_.isFA;
     lmHeadParam.gatherAhead = param_.isPrefill;
     lmHeadParam.hiddenSizePerAttentionHead = param_.hiddenSizePerAttentionHead;
     lmHeadParam.linearParallelParam.fusionLinearParam.quantType = false;  // LmHead未接入量化
     if (param_.isLmHeadParallel && param_.worldSize > 1) {
-        lmHeadParam.linearParallelParam.parallelType = atb_speed::llama_family::COLUMN_PARALLEL;
+        lmHeadParam.linearParallelParam.parallelType = atb_speed::llama_parallel::COLUMN_PARALLEL;
         lmHeadParam.linearParallelParam.rank = param_.rank;
         lmHeadParam.linearParallelParam.worldSize = param_.worldSize;
         lmHeadParam.linearParallelParam.backend = param_.backend;
@@ -299,5 +299,5 @@ atb::Status DecoderModel::BindParamHostTensor(uint32_t nodeId)
     ATB_LOG(INFO) << "BindParamHostTensor end";
     return atb::NO_ERROR;
 }
-} // namespace llama_family
+} // namespace llama_parallel
 } // namespace atb_speed

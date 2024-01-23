@@ -18,10 +18,10 @@
 #include <atb/atb_infer.h>
 #include "atb_speed/log.h"
 
-#include "models/llama_family/operation/lmhead.h"
+#include "models/llama_parallel/operation/lmhead.h"
 
 namespace atb_speed {
-namespace llama_family {
+namespace llama_parallel {
 
 enum LmHeadTensorIdx : uint32_t {
     IN_HIDDENSTATES = 0,

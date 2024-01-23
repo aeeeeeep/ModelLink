@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-#include "models/llama_family/operation/rms_norm.h"
-#include "models/llama_family/operation/linear.h"
-#include "models/llama_family/operation/linear_parallel.h"
-#include "models/llama_family/operation/attention.h"
-#include "models/llama_family/operation/mlp.h"
-#include "models/llama_family/layer/decoder_layer.h"
+#include "models/llama_parallel/operation/rms_norm.h"
+#include "models/llama_parallel/operation/linear.h"
+#include "models/llama_parallel/operation/linear_parallel.h"
+#include "models/llama_parallel/operation/attention.h"
+#include "models/llama_parallel/operation/mlp.h"
+#include "models/llama_parallel/layer/decoder_layer.h"
 
 namespace atb_speed {
-namespace llama_family {
+namespace llama_parallel {
 
 static const uint64_t IN_TENSOR_COUNT = 43;
 static const uint64_t OUT_TENSOR_COUNT = 1;
@@ -46,14 +46,14 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     atb::Node &mlpParallelNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpResidualAddNode = opGraph.nodes.at(nodeId++);
 
-    atb_speed::llama_family::FusionRmsNormParam fusionRmsNormParam;
+    atb_speed::llama_parallel::FusionRmsNormParam fusionRmsNormParam;
     fusionRmsNormParam.quantType = param.quantType;
     fusionRmsNormParam.rmsNormEps = param.rmsNormEps;
     FusionRmsNorm(fusionRmsNormParam, &inputNormNode.operation);
     inputNormNode.inTensorIds = {IN_HIDDEN_STATES, IN_INPUT_NORM_WEIGHT, IN_BETA};
     inputNormNode.outTensorIds = {INTERMEDIATE_INPUT_NORM_OUT};
 
-    atb_speed::llama_family::FusionAttentionParam fusionAttentionParam;
+    atb_speed::llama_parallel::FusionAttentionParam fusionAttentionParam;
     // QKV linear param
     fusionAttentionParam.isPack = param.isPack;
     fusionAttentionParam.isGroupedQueryAttention = param.numAttentionHeadsPerRank != param.numKeyValueHeadsPerRank;
@@ -79,12 +79,12 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     fusionAttentionParam.pageAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
     fusionAttentionParam.pageAttentionParam.isSupportAlibi = param.isBF16;
     // self out linear param
-    fusionAttentionParam.selfOutLinearParallelParam.parallelType = atb_speed::llama_family::ROW_PARALLEL;
+    fusionAttentionParam.selfOutLinearParallelParam.parallelType = atb_speed::llama_parallel::ROW_PARALLEL;
     fusionAttentionParam.selfOutLinearParallelParam.fusionLinearParam.quantType = param.quantType;
     fusionAttentionParam.selfOutLinearParallelParam.rank = param.rank;
     fusionAttentionParam.selfOutLinearParallelParam.worldSize = param.worldSize;
     fusionAttentionParam.selfOutLinearParallelParam.backend = param.backend;
-    atb_speed::llama_family::FusionAttention fusionAttentionObj;
+    atb_speed::llama_parallel::FusionAttention fusionAttentionObj;
     fusionAttentionObj.Attention(fusionAttentionParam, &attentionNode.operation);
     attentionNode.inTensorIds = {
         INTERMEDIATE_INPUT_NORM_OUT,
@@ -130,11 +130,11 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     selfNormNode.inTensorIds = {INTERMEDIATE_RESIDUAL_ADD_OUT, IN_ATTENTION_NORM_WEIGHT, IN_BETA};
     selfNormNode.outTensorIds = {INTERMEDIATE_ATTENTION_NORM_OUT};
 
-    atb_speed::llama_family::MlpParam mlpParam;
+    atb_speed::llama_parallel::MlpParam mlpParam;
     mlpParam.isPack = param.isPack;
     mlpParam.gateUpLinearParam.quantType = param.quantType;
     mlpParam.downLinearParallelParam.fusionLinearParam.quantType = param.quantType;
-    mlpParam.downLinearParallelParam.parallelType = atb_speed::llama_family::ROW_PARALLEL;
+    mlpParam.downLinearParallelParam.parallelType = atb_speed::llama_parallel::ROW_PARALLEL;
     mlpParam.downLinearParallelParam.rank = param.rank;
     mlpParam.downLinearParallelParam.worldSize = param.worldSize;
     mlpParam.downLinearParallelParam.backend = param.backend;
@@ -201,5 +201,5 @@ void DecoderLayerBinder::BindTensor(atb::VariantPack &variantPack)
     variantPack.inTensors.at(IN_LAYER_ID).hostData = &layerId_;
 }
 
-} // namespace llama_family
+} // namespace llama_parallel
 } // namespace atb_speed

@@ -16,11 +16,11 @@
 #include <cmath>
 #include <numeric>
 #include "atb_speed/log.h"
-#include "models/llama_family/operation/linear.h"
-#include "models/llama_family/operation/linear_parallel.h"
+#include "models/llama_parallel/operation/linear.h"
+#include "models/llama_parallel/operation/linear_parallel.h"
 
 namespace atb_speed {
-namespace llama_family {
+namespace llama_parallel {
 
 static const uint64_t IN_TENSOR_COUNT = 5;
 static const uint64_t OUT_TENSOR_COUNT = 1;
@@ -49,7 +49,7 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
     size_t nodeId = 0;
 
     atb::Node &linearNode = opGraph.nodes.at(nodeId++);
-    atb_speed::llama_family::FusionLinearParam linearParam = param.fusionLinearParam;
+    atb_speed::llama_parallel::FusionLinearParam linearParam = param.fusionLinearParam;
     FusionLinear(linearParam, &linearNode.operation);
     linearNode.inTensorIds = {LinearParallelTensorIdx::IN_INPUT, LinearParallelTensorIdx::IN_WEIGHT, LinearParallelTensorIdx::IN_SCALE, LinearParallelTensorIdx::IN_OFFSET, LinearParallelTensorIdx::IN_DESCALE};
     linearNode.outTensorIds = {LinearParallelTensorIdx::INTERMIDATE_LINEAR_OUT};
@@ -90,5 +90,5 @@ atb::Status LinearParallel(const LinearParallelParam &param_, atb::Operation **o
     }
 }
 
-} // namespace llama_family
+} // namespace llama_parallel
 } // namespace atb_speed

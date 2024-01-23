@@ -15,10 +15,10 @@
  */
 #include <atb/atb_infer.h>
 #include "atb_speed/log.h"
-#include "models/llama_family/operation/rms_norm.h"
+#include "models/llama_parallel/operation/rms_norm.h"
 
 namespace atb_speed {
-namespace llama_family {
+namespace llama_parallel {
 
 enum RmsNormTensorIdx : uint32_t {
     IN_INPUT = 0,
@@ -39,12 +39,12 @@ atb::Status FusionRmsNorm(const FusionRmsNormParam &param, atb::Operation **oper
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
     opGraph.internalTensorNum = INTERMEDIATE_TENSOR_COUNT;
     opGraph.nodes.resize(NODE_COUNT);
-    opGraph.name = param.quantType == atb_speed::llama_family::RMS_NORM_QUANT_LINEAR_DEQUANT ? "RmsNormQuant" : "RmsNormNoQuant";
+    opGraph.name = param.quantType == atb_speed::llama_parallel::RMS_NORM_QUANT_LINEAR_DEQUANT ? "RmsNormQuant" : "RmsNormNoQuant";
 
     size_t nodeId = 0;
 
     atb::infer::RmsNormParam rmsNormParam;
-    if (param.quantType == atb_speed::llama_family::RMS_NORM_QUANT_LINEAR_DEQUANT) {
+    if (param.quantType == atb_speed::llama_parallel::RMS_NORM_QUANT_LINEAR_DEQUANT) {
         atb::Node &rmsNormQuantNode = opGraph.nodes.at(nodeId++);
         rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
         rmsNormParam.normParam.epsilon = param.rmsNormEps;
@@ -77,5 +77,5 @@ atb::Status FusionRmsNorm(const FusionRmsNormParam &param, atb::Operation **oper
     return atb::NO_ERROR;
 }
 
-} // namespace llama_family
+} // namespace llama_parallel
 } // namespace atb_speed

@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#include "models/llama_family/operation/linear.h"
-#include "models/llama_family/operation/linear_parallel.h"
-#include "models/llama_family/operation/attention.h"
+#include "models/llama_parallel/operation/linear.h"
+#include "models/llama_parallel/operation/linear_parallel.h"
+#include "models/llama_parallel/operation/attention.h"
 
 namespace atb_speed {
-namespace llama_family {
+namespace llama_parallel {
 
 enum QKVLinearSplitTensorIdx : uint32_t {
     IN_QKV_INPUT = 0,
@@ -56,7 +56,7 @@ atb::Status CreateQKVLinearSplit(const FusionAttentionParam &param, atb::Operati
     size_t nodeId = 0;
 
     atb::Node &linearNode = opGraph.nodes.at(nodeId++);
-    atb_speed::llama_family::FusionLinearParam qkvLinearParam = param.qkvLinearParam;
+    atb_speed::llama_parallel::FusionLinearParam qkvLinearParam = param.qkvLinearParam;
     FusionLinear(qkvLinearParam, &linearNode.operation);
     linearNode.inTensorIds = {QKVLinearSplitTensorIdx::IN_QKV_INPUT, QKVLinearSplitTensorIdx::IN_QKV_WEIGHT_0, QKVLinearSplitTensorIdx::IN_QKV_SCALE_0, QKVLinearSplitTensorIdx::IN_QKV_OFFSET_0, QKVLinearSplitTensorIdx::IN_QKV_DESCALE_0};
     linearNode.outTensorIds = {param.isPack ? config.INTERMEDIATE_MIXED_QKV : QKVLinearSplitTensorIdx::OUT_Q};
@@ -453,7 +453,7 @@ atb::Status FusionAttention::Attention(const FusionAttentionParam &param, atb::O
     };
 
     atb::Node &selfOutLinearParallelNode = opGraph.nodes.at(nodeId++);
-    atb_speed::llama_family::LinearParallelParam selfOutLinearParam = param.selfOutLinearParallelParam;
+    atb_speed::llama_parallel::LinearParallelParam selfOutLinearParam = param.selfOutLinearParallelParam;
     LinearParallel(selfOutLinearParam, &selfOutLinearParallelNode.operation);
     selfOutLinearParallelNode.inTensorIds = {AttentionTensorIdx::INTERMIDATE_SELF_ATTENTION, AttentionTensorIdx::IN_WEIGHT_OUT, AttentionTensorIdx::IN_SCALE_OUT, AttentionTensorIdx::IN_OFFSET_OUT, AttentionTensorIdx::IN_DESCALE_OUT};
     selfOutLinearParallelNode.outTensorIds = {AttentionTensorIdx::OUT_ATTENTION};
@@ -462,5 +462,5 @@ atb::Status FusionAttention::Attention(const FusionAttentionParam &param, atb::O
     return atb::NO_ERROR;
 }
 
-} // namespace llama_family
+} // namespace llama_parallel
 } // namespace atb_speed

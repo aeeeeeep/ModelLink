@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_LLAMA_FAMILY_DECODER_MODEL_H
-#define ATB_SPEED_MODELS_LLAMA_FAMILY_DECODER_MODEL_H
+#ifndef ATB_SPEED_MODELS_LLAMA_PARALLEL_DECODER_MODEL_H
+#define ATB_SPEED_MODELS_LLAMA_PARALLEL_DECODER_MODEL_H
 
 #include <vector>
 #include "atb_speed/base/model.h"
 
 namespace atb_speed {
-namespace llama_family {
+namespace llama_parallel {
 class DecoderModel : public Model {
 public:
     struct Param {
@@ -60,6 +60,6 @@ private:
     std::vector<int> seqLen_;
     int32_t layerId_ = 0;
 };
-}  // namespace llama_family
+}  // namespace llama_parallel
 }  // namespace atb_speed
 #endif

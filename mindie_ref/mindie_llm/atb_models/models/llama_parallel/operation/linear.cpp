@@ -17,10 +17,10 @@
 #include <cmath>
 #include <numeric>
 #include "atb_speed/log.h"
-#include "models/llama_family/operation/linear.h"
+#include "models/llama_parallel/operation/linear.h"
 
 namespace atb_speed {
-namespace llama_family {
+namespace llama_parallel {
 
 enum LinearTensorIdx : uint32_t {
     IN_INPUT = 0,
@@ -142,5 +142,5 @@ atb::Status FusionLinear(const FusionLinearParam &param_, atb::Operation **opera
     }
 }
 
-} // namespace llama_family
+} // namespace llama_parallel
 } // namespace atb_speed

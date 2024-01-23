@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_LLAMA_FAMILY_DECODER_LAYER_H
-#define ATB_SPEED_MODELS_LLAMA_FAMILY_DECODER_LAYER_H
+#ifndef ATB_SPEED_MODELS_LLAMA_PARALLEL_DECODER_LAYER_H
+#define ATB_SPEED_MODELS_LLAMA_PARALLEL_DECODER_LAYER_H
 
 #include "nlohmann/json.hpp"
 
@@ -23,7 +23,7 @@
 #include "atb_speed/log.h"
 
 namespace atb_speed {
-namespace llama_family {
+namespace llama_parallel {
 struct DecoderLayerParam {
     bool isFA = true;
     bool isPrefill = false;
@@ -112,6 +112,6 @@ private:
     int32_t layerId_ = 0;
 };
 
-}  // namespace llama_family
+}  // namespace llama_parallel
 }  // namespace atb_speed
 #endif

@@ -13,27 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_LLAMA_FAMILY_LINEAR_H
-#define ATB_SPEED_MODELS_LLAMA_FAMILY_LINEAR_H
+#ifndef ATB_SPEED_MODELS_LLAMA_PARALLEL_RMS_NORM_H
+#define ATB_SPEED_MODELS_LLAMA_PARALLEL_RMS_NORM_H
 
 #include "nlohmann/json.hpp"
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
+#include "models/llama_parallel/operation/linear.h"
 
 namespace atb_speed {
-namespace llama_family {
+namespace llama_parallel {
 
-enum LinearQuantType : unsigned int {
-    NO_QUANT = 0,
-    RMS_NORM_QUANT_LINEAR_DEQUANT = 1,  // QUANT在RMS_NORM中执行，DEQUANT在此operaion中执行
-    LINEAR_QUANT = 2,         // QUANT和DEQUANT操作都在此Operation中执行
+struct FusionRmsNormParam {
+    int quantType = atb_speed::llama_parallel::NO_QUANT;
+    float rmsNormEps = 0;
+    float quantInputScale = 1.0f;
+    int quantInputOffset = 0;
 };
 
-struct FusionLinearParam {
-    int quantType = NO_QUANT;
-};
-
-atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operation);
-} // namespace llama_family
+atb::Status FusionRmsNorm(const FusionRmsNormParam &param, atb::Operation **operation);
+} // namespace llama_parallel
 } // namespace atb_speed
 #endif
