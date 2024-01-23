@@ -3,9 +3,9 @@
 
 - [Aquila-7B](#aquila-7b)
   - [Training](#training)
-    - [Script](#script)
-    - [Performance](#performance)
-      - [Accuracy](#accuracy)
+  - [Script](#script)
+  - [Performance](#performance)
+    - [Accuracy](#accuracy)
 ## Training
 
 Here's a hardware summary of pre-training Aquila-7B:
@@ -14,9 +14,9 @@ Here's a hardware summary of pre-training Aquila-7B:
 |:--------:|:------:|:----------------:|
 |   NPU    |  A+K   | 8 x Ascend NPUs  |
 
-### Script
+## Script
 
-#### 1. Clone the repository to your local server:
+### 1. Clone the repository to your local server:
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git
 cd ModelLink
@@ -24,7 +24,7 @@ mkdir logs
 mkdir ckpt
 ```
 
-#### 2. Build environment
+### 2. Build environment
 
 ```bash
 # python3.8
@@ -35,12 +35,6 @@ pip install torch==2.1.0
 pip install torch_npu-2.1.0.postxxxx-cp38-cp38-xxxx_aarch64.whl
 # install apex
 pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-# install deepspeed and deepspeed_npu
-pip install deepspeed==0.9.2
-git clone https://gitee.com/ascend/DeepSpeed.git -b v0.9.2 deepspeed_npu
-cd deepspeed_npu
-pip3 install -e ./
-cd ..
 # enter the AscendSpeed/ directory，install ascendspeed package by source code
 git clone https://gitee.com/ascend/AscendSpeed.git
 cd AscendSpeed/
@@ -51,12 +45,12 @@ pip install -r requirements.txt
 ```
 
 
-#### 3. Download the Aquila-7B model, config, and tokenizer from [here](https://huggingface.co/BAAI/Aquila-7B/tree/main)
+### 3. Download the Aquila-7B model, config, and tokenizer from [here](https://huggingface.co/BAAI/Aquila-7B/tree/main)
 
 save to ModelLink/HF_Aquila7B_downloaded/ directory.
 
 
-#### 4. Prepare dataset.
+### 4. Prepare dataset.
 
 step1: Download the datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet), save to ModelLink/dataset/ directory.
 
@@ -81,7 +75,7 @@ python ./tools/preprocess_data.py \
     --tokenizer-type PretrainedFromHF
 ```
 
-#### 5. Weights convert
+### 5. Weights convert
 
 convert the model pre-training weights.
 
@@ -99,7 +93,7 @@ python $SCRIPT_PATH \
 ```
 
 
-#### 6. Config Aquila-7B pre-training script.
+### 6. Config Aquila-7B pre-training script.
 
 ```shell
 # modify the script according to your own  ascend-toolkit path
@@ -111,14 +105,14 @@ CHECKPOINT=./model_weights/aquila
 ```
 *Note that if you do not load weights for pre-training, remove the `--load` parameter from the training script*
 
-#### 7. Launch Aquila-7B pre-training script.
+### 7. Launch Aquila-7B pre-training script.
 
 start training Aquila-7B model:
 ```shell
 bash examples/aquila/pretrain_aquila_7b_ptd.sh
 ```
-### Performance
-#### Accuracy
+## Performance
+### Accuracy
 
 Aquila-7B NPU vs Reference loss.
 ![NPU-GPU-Relative-Error](../../sources/images/aquila/aquila_comp0122.png)
