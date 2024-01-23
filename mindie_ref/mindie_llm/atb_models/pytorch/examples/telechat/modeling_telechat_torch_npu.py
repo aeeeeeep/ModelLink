@@ -274,7 +274,6 @@ class TelechatAttention(nn.Module):
     def __init__(self, config: TelechatConfig, layer_idx):
         super().__init__()
         self.kv_cache = None
-        self.pretraining_tp = config.pretraining_tp
         self.slow_but_exact = config.slow_but_exact
         self.layer_idx = layer_idx
 
@@ -500,7 +499,6 @@ class TelechatMLP(nn.Module):
         super().__init__()
         hidden_size = config.hidden_size
 
-        self.pretraining_tp = config.pretraining_tp
         self.slow_but_exact = config.slow_but_exact
         self.gate_proj = nn.Linear(hidden_size, config.ffn_hidden_size, bias=False)
         self.up_proj = nn.Linear(hidden_size, config.ffn_hidden_size, bias=False)

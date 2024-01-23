@@ -34,7 +34,7 @@ def get_args():
 
 args = get_args()
 
-os.setenv('QUANT_PATH', args.quant_path)
+os.environ['QUANT_PATH'] = args.quant_path
 
 tokenizer = AutoTokenizer.from_pretrained(args.model_path)
 config = TelechatConfig.from_pretrained(args.model_path)

@@ -153,8 +153,6 @@ class RotaryEmbedding(torch.nn.Module):
 zero_tensor = torch.zeros(1)
 rot_emb_global = RotaryEmbedding(128)
 cosTable, sinTable = rot_emb_global.forward(zero_tensor, seq_len=2048)
-cosTable = cosTable.npu().half()
-sinTable = sinTable.npu().half()
 
 
 def rotate_half(x):
@@ -1182,6 +1180,8 @@ class TelechatModel(TelechatPreTrainedModel):
             self.weightFlag = True
         global cosTable
         global sinTable
+        cosTable = cosTable.npu().half()
+        sinTable = sinTable.npu().half()
 
         self.acl_inputs[0] = input_ids
         if self.encoder_flag:
