@@ -391,6 +391,16 @@ AscendSpeed旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBa
   </tbody>
 </table>
 
+### 开始之前 
+#### ModelLink根目录下克隆一份Megatron源码
+
+```bash
+# 克隆ModelLink仓
+git clone https://gitee.com/ascend/ModelLink.git -b modellink
+# ModelLink根目录下克隆一份Megatron源码
+cd ModelLink
+git clone https://github.com/NVIDIA/Megatron-LM.git && mv Megatron-LM/megatron ./ && rm -rf Megatron-LM
+```
 
 
 

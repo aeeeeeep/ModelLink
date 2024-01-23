@@ -389,6 +389,16 @@ Coming soon ...
   </tbody>
 </table>
 
+### Before Start 
+#### Clone a copy of Megatron source code in the ModelLink root directory.
+
+```bash
+# Clone ModelLink repository
+git clone https://gitee.com/ascend/ModelLink.git -b modellink
+# Clone a copy of Megatron source code in the ModelLink root directory.
+cd ModelLink
+git clone https://github.com/NVIDIA/Megatron-LM.git && mv Megatron-LM/megatron ./ && rm -rf Megatron-LM
+```
 
 
 
