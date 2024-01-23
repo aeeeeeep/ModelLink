@@ -395,9 +395,12 @@ Coming soon ...
 ```bash
 # Clone ModelLink repository
 git clone https://gitee.com/ascend/ModelLink.git -b modellink
-# Clone a copy of Megatron source code in the ModelLink root directory.
+# Clone a megatron directory of Megatron source code in the ModelLink root directory. 
+# commit id:bcce6f54e075e3c3374ea67adefe54f3f2da2b07
 cd ModelLink
-git clone https://github.com/NVIDIA/Megatron-LM.git && mv Megatron-LM/megatron ./ && rm -rf Megatron-LM
+git clone https://github.com/NVIDIA/Megatron-LM.git
+cd Megatron && git checkout bcce6f54 && cd ../
+mv Megatron-LM/megatron ./ && rm -rf Megatron-LM
 ```
 
 
