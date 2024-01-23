@@ -20,7 +20,7 @@
 
 namespace atb_speed {
 namespace chatglm2_6b {
-class PAModel : public Model {
+class PagedAttentionModel : public Model {
 public:
     struct Param {
         float rmsNormEps = 0;
@@ -35,13 +35,14 @@ public:
         float residualAddScale = 0;
         int rank = 0;
         int rankSize = 1;
+        bool isLmHeadParallel = true;
         
         void FromString(const std::string &param);
     };
 
-    explicit PAModel(const std::string &param);
+    explicit PagedAttentionModel(const std::string &param);
 
-    ~PAModel();
+    ~PagedAttentionModel();
 
     uint32_t GetInputNum() const override;
 
@@ -51,7 +52,7 @@ public:
                            std::vector<atb::TensorDesc> &outTensorDescs) override;
 
 private:
-    int64_t BuildGraph() override;
+    virtual int64_t BuildGraph() override;
 
     atb::Status ParseParam(const std::string &param) override;
 

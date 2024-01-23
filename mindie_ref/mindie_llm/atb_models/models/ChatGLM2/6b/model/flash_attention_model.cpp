@@ -18,7 +18,7 @@
 #include <atb/atb_infer.h>
 #include <nlohmann/json.hpp>
 #include "atb_speed/log.h"
-#include "chatglm2/6b/layer/flash_attention_layer.h"
+#include "models/ChatGLM2/6b/layer/flash_attention_layer.h"
 
 namespace atb_speed {
 namespace chatglm2_6b {
@@ -193,7 +193,7 @@ int64_t ChatGlm2CommonModelFa::BuildGraph()
     // before layers
     auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
     atb::infer::GatherParam wordEmbeddingParam;
-    CREATE_OPERATION(wordEmbeddingParam, &op);
+    atb::CreateOperation(wordEmbeddingParam, &op);
     wordEmbeddingNode.operation.reset(op);
     wordEmbeddingNode.inTensors = {&graph_.weightTensors.at(0), &graph_.inTensors.at(0)};
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(0)};
@@ -314,7 +314,7 @@ int64_t ChatGlm2CommonModelFa::BuildGraph()
     atb::infer::RmsNormParam finalNormParam;
     finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     finalNormParam.normParam.epsilon = param_.rmsNormEps;
-    CREATE_OPERATION(finalNormParam, &op);
+    atb::CreateOperation(finalNormParam, &op);
     finalNormNode.operation.reset(op);
     finalNormNode.inTensors = {firstInTensor, &graph_.weightTensors.at(weightTensorId++)};
     finalNormNode.outTensors = {&graph_.internalTensors.at(internalTensorId)};
@@ -323,17 +323,18 @@ int64_t ChatGlm2CommonModelFa::BuildGraph()
     atb::infer::SliceParam sliceParam;
     sliceParam.offsets = {0, -1, 0};
     sliceParam.size = {-1, 1, -1};
-    CREATE_OPERATION(sliceParam, &op);
+    atb::CreateOperation(sliceParam, &op);
     sliceNode.operation.reset(op);
     sliceNode.inTensors = {&graph_.internalTensors.at(internalTensorId++)};
     sliceNode.outTensors = {&graph_.internalTensors.at(internalTensorId)};
 
     auto &lmNode = graph_.nodes.at(nodeId++);
     atb::infer::LinearParam lmParam = {false, false, false};
-    CREATE_OPERATION(lmParam, &op);
+    atb::CreateOperation(lmParam, &op);
     lmNode.operation.reset(op);
     lmNode.inTensors = {&graph_.internalTensors.at(internalTensorId), &graph_.weightTensors.at(weightTensorId)};
     lmNode.outTensors = {&graph_.outTensors.at(0)};
+
     return atb::NO_ERROR;
 }
 

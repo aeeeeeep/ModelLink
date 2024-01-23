@@ -39,6 +39,7 @@
 #include "starcoder/model/flash_attention_quant_model.h"
 #include "starcoder/model/paged_attention_model.h"
 #include "starcoder/model/paged_attention_quant_model.h"
+#include "ChatGLM2/6b/model/paged_attention_model.h"
 #include "telechat/model/model.h"
 
 void* ModelTorch::GetWorkSpace(uint64_t bufferSize)
@@ -114,6 +115,8 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::star_coder::PAModel>(param);
     } else if (modelName_ == "starcoder_pa_quant_model") {
         model_ = std::make_shared<atb_speed::star_coder::PAQuantModel>(param);
+    } else if (modelName_ == "chatglm2_6b_decoder_pa_model") {
+        model_ = std::make_shared<atb_speed::chatglm2_6b::PagedAttentionModel>(param);
     } else {
         ATB_LOG(FATAL) << "not support modelName:" << modelName_;
         return atb::ERROR_INVALID_PARAM;
