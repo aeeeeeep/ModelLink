@@ -101,10 +101,10 @@ python $SCRIPT_PATH \
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # 修改数据集路径，权重路径，词表路径等
 TOKENIZER_PATH=./HF_Aquila7B_downloaded  #tokenizer 路径
-DATA=./dataset/aquila_text_document  #数据集 路径
-CHECKPOINT=./model_weights/aquila
-
-# 如果不需要加载权重，就移除 `--load` 参数
+DATA_PATH=./dataset/aquila_text_document  #数据集 路径
+CKPT_LOAD_DIR=./model_weights/aquila
+CKPT_SAVE_DIR=./ckpt
+# 如果不需要加载权重，就不需要设置CKPT_SAVE_DIR, 并且启动脚本里应不使用 `--load` 参数
 ```
 
 ### 7. 启动 Aquila-7B 预训练脚本

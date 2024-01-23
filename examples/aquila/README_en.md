@@ -99,11 +99,12 @@ python $SCRIPT_PATH \
 # modify the script according to your own  ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # modify script orign dataset path according to your own dataset path
-TOKENIZER_PATH=./HF_Aquila7B_downloaded    #tokenizer path
-DATA=./dataset/aquila_text_document   #processed dataset
-CHECKPOINT=./model_weights/aquila
+TOKENIZER_PATH=./HF_Aquila7B_downloaded  #tokenizer path
+DATA_PATH=./dataset/aquila_text_document  #processed dataset
+CKPT_LOAD_DIR=./model_weights/aquila
+CKPT_SAVE_DIR=./ckpt
 ```
-*Note that if you do not load weights for pre-training, remove the `--load` parameter from the training script*
+*Note that if you do not load weights for pre-training, you can ignore CKPT_SAVE_DIR, and remove the `--load` parameter from the training script*
 
 ### 7. Launch Aquila-7B pre-training script.
 
