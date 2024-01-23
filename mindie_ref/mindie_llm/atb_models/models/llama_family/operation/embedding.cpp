@@ -110,7 +110,7 @@ atb::Status Embedding(const EmbeddingParam &param, atb::Operation **operation)
         }
 
         outTensorDescs.at(1) = inTensorDescs.at(2);
-	    outTensorDescs.at(1).shape.dimNum = 2;
+        outTensorDescs.at(1).shape.dimNum = 2;
         if (param.unpadInputs) {
             outTensorDescs.at(1).shape.dims[0] = inTensorDescs.at(4).shape.dims[0];
         } else {

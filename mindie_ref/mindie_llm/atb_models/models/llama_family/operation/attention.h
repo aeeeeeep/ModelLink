@@ -17,10 +17,6 @@
 #ifndef ATB_SPEED_MODELS_LLAMA_FAMILY_ATTENTION_H
 #define ATB_SPEED_MODELS_LLAMA_FAMILY_ATTENTION_H
 
-#define QKV_TENSOR_IDX(x) static_cast<uint32_t>(QKVLinearSplitTensorIdx::x)
-#define SELF_ATTENTION_TENSOR_IDX(x) static_cast<uint32_t>(SelfAttentionTensorIdx::x)
-#define ATTENTION_TENSOR_IDX(x) static_cast<uint32_t>(AttentionTensorIdx::x)
-
 #include <atb/atb_infer.h>
 #include "atb_speed/log.h"
 

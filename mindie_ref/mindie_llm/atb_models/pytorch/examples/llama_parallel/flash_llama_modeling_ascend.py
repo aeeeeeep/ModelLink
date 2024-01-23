@@ -18,6 +18,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+import os
+import time
+import math
+from typing import Optional, List, Tuple
+
 import torch
 import torch_npu
 import torch.distributed
@@ -25,13 +31,7 @@ import torch.distributed
 from torch import nn
 from transformers.activations import ACT2FN
 from transformers.configuration_utils import PretrainedConfig
-from typing import Optional, List, Tuple
 from loguru import logger
-
-import json
-import os
-import time
-import math
 
 from text_generation_server.utils.env import ENV
 from text_generation_server.utils.npu import load_atb_speed, NPUSocInfo
@@ -45,6 +45,7 @@ from text_generation_server.utils.layers import (
     get_linear,
     AttentionMask,
 )
+
 
 class LlamaConfig(PretrainedConfig):
     def __init__(
@@ -112,9 +113,6 @@ class LlamaRMSNorm(nn.Module):
 
 
 def _load_gqa(config, prefix: str, weights):
-    assert config.hidden_size % config.num_attention_heads == 0
-    assert config.num_attention_heads % weights.process_group.size() == 0
-
     weight = weights.get_multi_weights_col(
         prefixes=[f"{prefix}.q_proj", f"{prefix}.k_proj", f"{prefix}.v_proj"],
         quantize=config.quantize,
@@ -124,17 +122,10 @@ def _load_gqa(config, prefix: str, weights):
     if config.quantize != "gptq":
         weight = weight.to(dtype=weights.dtype).to(device=weights.device)
 
-        head_size = config.hidden_size // config.num_attention_heads
-        num_heads = config.num_attention_heads // weights.process_group.size()
-        num_key_value_heads = config.num_key_value_heads // weights.process_group.size()
-        assert list(weight.shape) == [
-            (num_heads + 2 * num_key_value_heads) * head_size,
-            config.hidden_size,
-            ], f"{list(weight.shape)} != {[(num_heads + 2 * config.num_key_value_heads) * head_size, config.hidden_size]}"
-
     return TensorParallelColumnLinear(
         get_linear(weight, bias=None, quantize=config.quantize)
     )
+
 
 def _load_column_multi(config, prefixes: List[str], weights, head_size, lm_head: bool = False):
     if lm_head:
@@ -149,10 +140,12 @@ def _load_column_multi(config, prefixes: List[str], weights, head_size, lm_head:
     else:
         return TensorParallelHead(linear, process_group=weights.process_group, should_gather=False)
 
+
 def _load_row(config, prefix: str, weights, head_size):
     weight = weights.get_sharded(f"{prefix}.weight", dim=1, gqa_size=head_size)
     linear = get_linear(weight, None, quantize=config.quantize)
     return TensorParallelRowLinear(linear, process_group=weights.process_group)
+
 
 class FlashLlamaAttention(torch.nn.Module):
     def __init__(
@@ -297,7 +290,7 @@ class LlamaMLP(nn.Module):
                 head_size=1,
             )
         self.intermediate_size = (
-                (config.intermediate_size + weights.process_group.size() - 1)// weights.process_group.size()
+                (config.intermediate_size + weights.process_group.size() - 1) // weights.process_group.size()
         )
 
     def forward(self, hidden_states):
@@ -414,7 +407,7 @@ class FlashLlamaForCausalLM(torch.nn.Module):
         process_group = weights.process_group
         self.tp_rank = process_group.rank()
         self.tp_world_size = process_group.size()
-        self.num_heads = (self.num_heads + weights.process_group.size() -1) // weights.process_group.size()
+        self.num_heads = (self.num_heads + weights.process_group.size() - 1) // weights.process_group.size()
 
         if config.num_key_value_heads != config.num_attention_heads:
             self.num_key_value_heads = config.num_key_value_heads
@@ -551,8 +544,9 @@ class FlashLlamaForCausalLM(torch.nn.Module):
                                                                          "embed_tokens.weight"].device)
 
     def init_ascend_kvcache(self, kv_cache):
-        if not self.ascend_kcache_id or self.ascend_kcache_id != id(kv_cache[0][0]) \
-                or not self.ascend_vcache_id or self.ascend_vcache_id != id(kv_cache[0][1]):
+        kcache_id = not self.ascend_kcache_id or self.ascend_kcache_id != id(kv_cache[0][0])
+        vcache_id = not self.ascend_vcache_id or self.ascend_vcache_id != id(kv_cache[0][1])
+        if kcache_id or vcache_id:
             k_caches, v_caches = map(list, zip(*kv_cache))
             logger.info(f"<<<<<<< ori {k_caches[0].shape=}")
             if self.soc_info.need_nz:

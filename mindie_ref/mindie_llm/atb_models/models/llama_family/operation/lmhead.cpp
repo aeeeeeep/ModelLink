@@ -70,7 +70,7 @@ atb::Status CreateLmHead(const LmHeadParam &param, atb::Operation **operation, T
     atb::Node &linearParallelNode = opGraph.nodes.at(nodeId++);
     LinearParallel(param.linearParallelParam, &linearParallelNode.operation);
     linearParallelNode.inTensorIds = {
-        param.linearParallelParam.parallelType == ROW_PARALLEL ? config.INTERMEDIATE_SLICE_OUT : param.gatherAhead ? config.INTERMEDIATE_GATHER_OUT : LmHeadTensorIdx::IN_HIDDENSTATES, 
+        param.linearParallelParam.parallelType == ROW_PARALLEL ? config.INTERMEDIATE_SLICE_OUT : param.gatherAhead ? config.INTERMEDIATE_GATHER_OUT : LmHeadTensorIdx::IN_HIDDENSTATES,
         LmHeadTensorIdx::IN_WEIGHT, LmHeadTensorIdx::IN_SCALE, LmHeadTensorIdx::IN_OFFSET, LmHeadTensorIdx::IN_DESCALE};
     linearParallelNode.outTensorIds = {
         param.linearParallelParam.parallelType == COLUMN_PARALLEL ? config.INTERMEDIATE_LINEAR_PARALLEL_OUT : LmHeadTensorIdx::OUT_LOGITS
@@ -155,7 +155,7 @@ atb::Status LmHead(const LmHeadParam &param_, atb::Operation **operation)
         return CreateLmHead(param_, operation, lmHeadColumnParallelConfig);
     } else {
         ATB_LOG(ERROR) << "LmHead operation doesn't support parallelType: " << param_.linearParallelParam.parallelType;
-        return atb::ERROR_INVALID_PARAM;   
+        return atb::ERROR_INVALID_PARAM;
     }
 }
 

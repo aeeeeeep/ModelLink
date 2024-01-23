@@ -63,7 +63,7 @@ void DecoderModel::Param::FromString(const std::string &param)
                   << ", isEmbeddingParallel: " << isEmbeddingParallel << ", isLmHeadParallel: " << isLmHeadParallel
                   << ", quantType:" << quantType << ", rmsNormEps:" << rmsNormEps << ", numAttentionHeadsPerRank:" << numAttentionHeadsPerRank
                   << ", hiddenSizePerAttentionHead:" << hiddenSizePerAttentionHead << ", numHiddenLayers:" << numHiddenLayers
-                  << ", numKeyValueHeadsPerRank:" << numKeyValueHeadsPerRank 
+                  << ", numKeyValueHeadsPerRank:" << numKeyValueHeadsPerRank
                   << ", rank:" << rank << ", worldSize:" << worldSize << ", backend:" << backend
                   << ", tokenOffset:" << tokenOffset << ", seqLen:" << seqLen;
 }
@@ -81,7 +81,7 @@ uint32_t DecoderModel::GetInputNum() const { return graph_.inTensors.size(); }
 uint32_t DecoderModel::GetOutputNum() const { return graph_.outTensors.size(); }
 
 atb::Status DecoderModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
-                                      std::vector<atb::TensorDesc> &outTensorDescs)
+                                                          std::vector<atb::TensorDesc> &outTensorDescs)
 {
     ATB_LOG(INFO) << "Enter DecoderModel InferShape";
     if (outTensorDescs.size() != GetOutputNum()) {

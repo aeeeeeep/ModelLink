@@ -75,7 +75,7 @@ atb::Status CreateFusionLinear(const FusionLinearParam &param, atb::Operation **
         linearQuantParam.hasBias = false;
         CreateOperation(linearQuantParam, &linearQuantNode.operation);
         linearQuantNode.inTensorIds = {
-            param.quantType == RMS_NORM_QUANT_LINEAR_DEQUANT ? LinearTensorIdx::IN_INPUT : config.INTERMIDATE_INPUT, 
+            param.quantType == RMS_NORM_QUANT_LINEAR_DEQUANT ? LinearTensorIdx::IN_INPUT : config.INTERMIDATE_INPUT,
             LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_DESCALE
         };
         linearQuantNode.outTensorIds = {LinearTensorIdx::OUT_LINEAR};
@@ -138,7 +138,7 @@ atb::Status FusionLinear(const FusionLinearParam &param_, atb::Operation **opera
         return CreateFusionLinear(param_, operation, linearQuantConfig);
     } else {
         ATB_LOG(ERROR) << "FusionLinear operation doesn't support quantType: " << param_.quantType;
-        return atb::ERROR_INVALID_PARAM;   
+        return atb::ERROR_INVALID_PARAM;
     }
 }
 

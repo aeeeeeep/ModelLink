@@ -86,7 +86,7 @@ atb::Status LinearParallel(const LinearParallelParam &param_, atb::Operation **o
         return CreateLinearParallel(param_, operation);
     } else {
         ATB_LOG(ERROR) << "LinearParallel operation doesn't support parallelType: " << param_.parallelType;
-        return atb::ERROR_INVALID_PARAM;   
+        return atb::ERROR_INVALID_PARAM;
     }
 }
 
