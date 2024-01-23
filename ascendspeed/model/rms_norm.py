@@ -1,8 +1,10 @@
 # Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
 
+import os
 import torch
 from torch import nn
 import torch_npu
+
 from ascendspeed import get_args
 
 
@@ -25,6 +27,13 @@ class RMSNorm(torch.nn.Module):
         self.use_fused_rmsnorm = args.use_fused_rmsnorm
         self.eps = eps
         self.weight = nn.Parameter(torch.ones(dim))
+        if int(os.getenv('NPU_DETECT', '0')):
+            from torch_npu.hook_module.hook_module import HOOKModule
+
+            def norm_hook(grad):
+                HOOKModule.layernorm_list.append(torch.norm(grad))
+
+            self.weight.register_hook(norm_hook)
 
         setattr(self.weight, 'sequence_parallel', sequence_parallel)
 
