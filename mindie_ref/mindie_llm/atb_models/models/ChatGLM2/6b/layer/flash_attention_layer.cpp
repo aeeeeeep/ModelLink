@@ -100,24 +100,18 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
         inputNormParam.normParam.quantInputScale = param.qkvInputScale;
         inputNormParam.normParam.quantInputOffset = param.qkvInputOffset;
         inputNormParam.normParam.quantType = atb::infer::QUANT_INT8;
-        CREATE_OPERATION(inputNormParam, &inputNormNode.operation);
+        CreateOperation(inputNormParam, &inputNormNode.operation);
         inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT, IN_BETA};
     } else {
         inputNormParam.normParam.epsilon = param.rmsNormEps;
-        CREATE_OPERATION(inputNormParam, &inputNormNode.operation);
+        CreateOperation(inputNormParam, &inputNormNode.operation);
         inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT};
     }
     inputNormNode.outTensorIds = {INTERMIDATE_INPUTNORMOUT};
 
     atb_speed::common::FlashAttentionWithPosEmbedding flashAttentionWithRoPEObj;
     atb_speed::common::FTWithROPEParam faWithROPEParam;
-    // quant para
-    faWithROPEParam.useQuant = param.quantmodel;
-    // head dim, head num, kv head num
-    faWithROPEParam.headNum = param.numHeadsPerPartition;
-    faWithROPEParam.hiddenSizePerHead = param.hiddenSizePerHead;
-    faWithROPEParam.kvHeadNum = param.numGroupsPerPartition;
-    // self attention para
+    // self attention param
     faWithROPEParam.isGroupedQueryAttention = true;
     faWithROPEParam.selfAttentionKvCacheParam.headDim = param.hiddenSizePerHead;
     faWithROPEParam.selfAttentionKvCacheParam.headNum = param.numHeadsPerPartition;
@@ -131,17 +125,16 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
     } else {
         faWithROPEParam.selfAttentionKvCacheParam.coderType = atb::infer::SelfAttentionParam::DECODER;
     }
-    // RoPE para
+    // RoPE param
     faWithROPEParam.rotaryCoeff = param.hiddenSizePerHead / 2;
     faWithROPEParam.isHalfRotary = true;
-    // self out linear para
-    faWithROPEParam.commParam.rank = param.rank;
-    faWithROPEParam.commParam.rankSize = param.rankSize;
-    faWithROPEParam.commParam.backend = param.backend;
-    faWithROPEParam.selfOutLinearParam.commParam = faWithROPEParam.commParam;
+    // self out linear param
+    faWithROPEParam.selfOutLinearParam.commParam.rank = param.rank;
+    faWithROPEParam.selfOutLinearParam.commParam.rankSize = param.rankSize;
+    faWithROPEParam.selfOutLinearParam.commParam.backend = param.backend;
     faWithROPEParam.selfOutLinearParam.isBias = false;
     faWithROPEParam.selfOutLinearParam.isQuant = param.quantmodel;
-    // mixedQKV linear
+    // mixedQKV linear param
     faWithROPEParam.mixdQkvLinearParam.isBias = true;
     faWithROPEParam.mixdQkvLinearParam.isQuant = param.quantmodel;
     if (param.quantmodel) {
@@ -175,7 +168,6 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
                                               IN_SELFOUTLINEARWEIGHT_COMPRESSINFO,
                                               IN_COS_TABLE,
                                               IN_SIN_TABLE,
-                                              IN_PLACE_HOLDER,
                                               IN_SEQLEN,
                                               IN_PASTKEY,
                                               IN_PASTVALUE,
@@ -187,7 +179,7 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
     
     atb::infer::ElewiseParam AddParam;
     AddParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CREATE_OPERATION(AddParam, &selfResidualAddNode.operation);
+    CreateOperation(AddParam, &selfResidualAddNode.operation);
     selfResidualAddNode.inTensorIds = {IN_HIDDENSTATES, INTERMEDIATE_ATTENTION_OUTPUT};
     selfResidualAddNode.outTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT};
     atb::infer::RmsNormParam selfNormParam;
@@ -196,10 +188,10 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
         selfNormParam.normParam.quantInputScale = param.selfLnInputScale;
         selfNormParam.normParam.quantInputOffset = param.selfLnInputOffset;
         selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
-        CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
+        CreateOperation(selfNormParam, &selfNormNode.operation);
         selfNormNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_BETA};
     } else {
-        CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
+        CreateOperation(selfNormParam, &selfNormNode.operation);
         selfNormNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT};
     }
     selfNormNode.outTensorIds = {INTERMIDATE_SELFNORMOUT};
@@ -230,7 +222,7 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
 
     atb::infer::ElewiseParam Add2Param;
     Add2Param.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CREATE_OPERATION(Add2Param, &mlpResidualAddNode.operation);
+    CreateOperation(Add2Param, &mlpResidualAddNode.operation);
     mlpResidualAddNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, INTERMIDATE_MLPOUT};
     mlpResidualAddNode.outTensorIds = {OUT_GLMLAYEROUT};
 
@@ -243,7 +235,7 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
 
         return atb::NO_ERROR;
     };
-    CREATE_OPERATION(opGraph, operation);
+    atb::CreateOperation(opGraph, operation);
 
     return atb::NO_ERROR;
 }
