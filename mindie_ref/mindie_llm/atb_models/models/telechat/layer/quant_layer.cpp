@@ -187,7 +187,7 @@ atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operat
     selfOutQuantNode.inTensorIds = {INTERNAL_SELFOUT};
     selfOutQuantNode.outTensorIds = {INTERNAL_SELFQUNTOUT};
 
-    atb::infer::LinearQuantParam linearBiasParam = {false, false, true};
+    atb::infer::LinearQuantParam linearBiasParam = {false, true, true};
     CreateOperation(linearBiasParam, &selfOutLinearNode.operation);
     selfOutLinearNode.inTensorIds = {INTERNAL_SELFQUNTOUT, IN_SELFOUTLINEARWEIGHT, IN_SELFOUTLINEARBIAS, IN_SELFOUTLINEARDEQSCALE};
     selfOutLinearNode.outTensorIds = {INTERNAL_SELFLINEAROUT};
