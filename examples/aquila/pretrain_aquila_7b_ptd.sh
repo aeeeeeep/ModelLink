@@ -42,7 +42,6 @@ GPT_ARGS="
     --max-position-embeddings 2048 \
     --micro-batch-size 1 \
     --global-batch-size 8 \
-    --pad-vocab-size-to 100032 \
     --norm-epsilon 1e-6 \
     --make-vocab-size-divisible-by 8 \
     --lr 1.25e-6 \

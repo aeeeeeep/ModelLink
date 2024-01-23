@@ -42,8 +42,10 @@ def build_tokenizer(args):
             use_fast=args.tokenizer_not_use_fast
         )
 
-        if not hasattr(args, "padded_vocab_size"):
-            args.padded_vocab_size = _vocab_size_with_padding(tokenizer.vocab_size, args)
+        # Add vocab size (if not already set from a checkpoint).
+        if getattr(args, "padded_vocab_size", None) is None:
+            args.padded_vocab_size = _vocab_size_with_padding(tokenizer.vocab_size,
+                                                          args)
     else:
         tokenizer = TokenizerAdaptor(megatron_build_tokenizer(args))
 
