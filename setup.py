@@ -71,7 +71,8 @@ try:
         '-D__FILENAME__=\"$(notdir $(abspath $<))\"',
         '-I' + imp.find_module('torch_npu')[1] + "/include/third_party/acl/inc",
         '-I' + ASCEND_TOOLKIT_HOME + '/include/',
-        '-fstack-protector-all', '-Wl,-z,relro,-z,now,-z,noexecstack', '-fPIC -pie','-Wl,--disable-new-dtags,--rpath'
+        '-fstack-protector-all', '-Wl,-z,relro,-z,now,-z,noexecstack',
+        '-fPIC', '-pie', '-Wl,--disable-new-dtags,--rpath',
     ],
     )
     exts.append(ext_ops)
