@@ -333,8 +333,8 @@ atb::Status PAQuantModel::BindParamHostTensor(uint32_t nodeId)
 
     auto &node = graph_.nodes.at(nodeId);
 
-    const uint32_t floatSeqLenTensorId = 16;// TODO check
-    const uint32_t quantSeqLenTensorId = 23;// TODO check
+    const uint32_t floatSeqLenTensorId = 16;
+    const uint32_t quantSeqLenTensorId = 23;
 
     if (isFloatLayer) {
         node.variantPack.inTensors.at(floatSeqLenTensorId).hostData = seqLen_.data();
