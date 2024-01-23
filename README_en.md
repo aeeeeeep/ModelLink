@@ -399,7 +399,7 @@ git clone https://gitee.com/ascend/ModelLink.git -b modellink
 # commit id:bcce6f54e075e3c3374ea67adefe54f3f2da2b07
 cd ModelLink
 git clone https://github.com/NVIDIA/Megatron-LM.git
-cd Megatron && git checkout bcce6f54 && cd ../
+cd Megatron-LM && git checkout bcce6f54 && cd ../
 mv Megatron-LM/megatron ./ && rm -rf Megatron-LM
 ```
 
