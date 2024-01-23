@@ -35,6 +35,10 @@
 #include "llama_adapter/model/adapter_model.h"
 #include "llama_pa/model/paged_attention_model.h"
 #include "llama_pa/model/quant_paged_attention_model.h"
+#include "starcoder/model/flash_attention_model.h"
+#include "starcoder/model/flash_attention_quant_model.h"
+#include "starcoder/model/paged_attention_model.h"
+#include "starcoder/model/paged_attention_quant_model.h"
 #include "ChatGLM2/6b/model/paged_attention_model.h"
 #include "telechat/model/model.h"
 
@@ -103,6 +107,14 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::llama_adapter::DecoderAdapterModel>(param);
     } else if (modelName_ == "TelechatQuantFAModel") {
         model_ = std::make_shared<atb_speed::telechat::QuantFAModel>(param);
+    } else if (modelName_ == "starcoder_fa_parallel_model") {
+        model_ = std::make_shared<atb_speed::star_coder::FlashAttentionModel>(param);
+    } else if (modelName_ == "starcoder_fa_parallel_quant_model") {
+        model_ = std::make_shared<atb_speed::star_coder::FlashAttentionQuantModel>(param);
+    } else if (modelName_ == "starcoder_pa_model") {
+        model_ = std::make_shared<atb_speed::star_coder::PAModel>(param);
+    } else if (modelName_ == "starcoder_pa_quant_model") {
+        model_ = std::make_shared<atb_speed::star_coder::PAQuantModel>(param);
     } else if (modelName_ == "chatglm2_6b_decoder_pa_model") {
         model_ = std::make_shared<atb_speed::chatglm2_6b::PagedAttentionModel>(param);
     } else {
