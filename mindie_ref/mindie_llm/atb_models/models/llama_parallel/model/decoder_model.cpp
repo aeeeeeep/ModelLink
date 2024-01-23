@@ -112,7 +112,7 @@ atb::Status DecoderModel::InferShape(const std::vector<atb::TensorDesc> &inTenso
     return atb::NO_ERROR;
 }
 
-void DecoderModel::BuildGraph()
+int64_t DecoderModel::BuildGraph()
 {
     // define inTensor
     int inTensorIdx = 0;
@@ -260,6 +260,7 @@ void DecoderModel::BuildGraph()
     lmHeadNode.outTensors = {&graph_.outTensors.at(0)};      // shpae: FA: [batchSize, seqLen, vocabSize] PA: [seqLen, vocabSize]
 
     ATB_LOG(INFO) << "DecoderModel build graph success";
+    return atb::NO_ERROR;
 }
 
 atb::Status DecoderModel::ParseParam(const std::string &param)
