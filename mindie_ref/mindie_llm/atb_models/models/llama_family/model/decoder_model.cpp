@@ -80,8 +80,7 @@ uint32_t DecoderModel::GetInputNum() const { return graph_.inTensors.size(); }
 
 uint32_t DecoderModel::GetOutputNum() const { return graph_.outTensors.size(); }
 
-atb::Status DecoderModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
-                                                          std::vector<atb::TensorDesc> &outTensorDescs)
+atb::Status DecoderModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs, std::vector<atb::TensorDesc> &outTensorDescs)
 {
     ATB_LOG(INFO) << "Enter DecoderModel InferShape";
     if (outTensorDescs.size() != GetOutputNum()) {
