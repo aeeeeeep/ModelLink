@@ -6,8 +6,7 @@ from megatron import get_args, print_rank_0
 
 def get_lora_model_classes():
     from peft import PeftModel, LoraModel
-    from .lora_modules import AscendLoraModel
-    return PeftModel, LoraModel, AscendLoraModel
+    return PeftModel, LoraModel
 
 
 def is_enable_lora():
@@ -165,7 +164,6 @@ def get_lora_state_dict_with_deepspeed(model):
 
 def handle_model_with_lora(model):
     from peft import LoraConfig, get_peft_model
-    from . import lora_modules  # 给lora打补丁
 
     def _hook(_module, _x_in, _x_out):
         """ Extract the feature map of model"""
