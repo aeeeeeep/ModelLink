@@ -24,7 +24,7 @@ class PAQuantModel : public Model {
 public:
     struct Param {
         double layerNormEps = 0;
-        int headNum = 1;
+        int headNum = 0;
         int dk = 0;
         int kvHead = 1;
         int layerNum = 0;
