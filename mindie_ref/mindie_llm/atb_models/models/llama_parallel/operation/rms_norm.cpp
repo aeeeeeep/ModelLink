@@ -73,8 +73,7 @@ atb::Status FusionRmsNorm(const FusionRmsNormParam &param, atb::Operation **oper
         return atb::NO_ERROR;
     };
 
-    atb::CreateOperation(opGraph, operation);
-    return atb::NO_ERROR;
+    return atb::CreateOperation(opGraph, operation);
 }
 
 } // namespace llama_parallel

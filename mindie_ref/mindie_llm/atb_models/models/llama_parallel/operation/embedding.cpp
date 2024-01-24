@@ -124,8 +124,7 @@ atb::Status Embedding(const EmbeddingParam &param, atb::Operation **operation)
         return atb::NO_ERROR;
     };
 
-    atb::CreateOperation(opGraph, operation);
-    return atb::NO_ERROR;
+    return atb::CreateOperation(opGraph, operation);
 }
 }  // namespace llama_parallel
 }  // namespace atb_speed

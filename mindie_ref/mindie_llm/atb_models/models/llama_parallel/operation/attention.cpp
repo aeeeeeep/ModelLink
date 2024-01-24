@@ -127,8 +127,7 @@ atb::Status CreateQKVLinearSplit(const FusionAttentionParam &param, atb::Operati
         return atb::NO_ERROR;
     };
 
-    atb::CreateOperation(opGraph, operation);
-    return atb::NO_ERROR;
+    return atb::CreateOperation(opGraph, operation);
 }
 
 class QKVLinearSplitNoPackConfig {
@@ -305,8 +304,7 @@ atb::Status FusionAttention::SelfAttention(const FusionAttentionParam &param, at
         return atb::NO_ERROR;
     };
 
-    atb::CreateOperation(opGraph, operation);
-    return atb::NO_ERROR;
+    return atb::CreateOperation(opGraph, operation);
 }
 
 enum AttentionTensorIdx : uint32_t {
@@ -458,8 +456,7 @@ atb::Status FusionAttention::Attention(const FusionAttentionParam &param, atb::O
     selfOutLinearParallelNode.inTensorIds = {AttentionTensorIdx::INTERMIDATE_SELF_ATTENTION, AttentionTensorIdx::IN_WEIGHT_OUT, AttentionTensorIdx::IN_SCALE_OUT, AttentionTensorIdx::IN_OFFSET_OUT, AttentionTensorIdx::IN_DESCALE_OUT};
     selfOutLinearParallelNode.outTensorIds = {AttentionTensorIdx::OUT_ATTENTION};
 
-    atb::CreateOperation(opGraph, operation);
-    return atb::NO_ERROR;
+    return atb::CreateOperation(opGraph, operation);
 }
 
 } // namespace llama_parallel

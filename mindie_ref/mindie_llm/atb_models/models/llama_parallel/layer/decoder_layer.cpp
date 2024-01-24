@@ -169,8 +169,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
         return atb::NO_ERROR;
     };
 
-    atb::CreateOperation(opGraph, operation);
-    return atb::NO_ERROR;
+    return atb::CreateOperation(opGraph, operation);
 }
 
 DecoderLayerBinder::DecoderLayerBinder() {}

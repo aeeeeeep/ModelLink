@@ -100,8 +100,7 @@ atb::Status CreateLmHead(const LmHeadParam &param, atb::Operation **operation, T
         return atb::NO_ERROR;
     };
 
-    atb::CreateOperation(opGraph, operation);
-    return atb::NO_ERROR;
+    return atb::CreateOperation(opGraph, operation);
 }
 
 class LmHeadNoParallelConfig {

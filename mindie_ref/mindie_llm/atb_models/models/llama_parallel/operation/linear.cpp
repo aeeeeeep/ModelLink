@@ -91,8 +91,7 @@ atb::Status CreateFusionLinear(const FusionLinearParam &param, atb::Operation **
         return atb::NO_ERROR;
     };
 
-    atb::CreateOperation(opGraph, operation);
-    return atb::NO_ERROR;
+    return atb::CreateOperation(opGraph, operation);
 }
 
 class LinearNoQuantConfig {
