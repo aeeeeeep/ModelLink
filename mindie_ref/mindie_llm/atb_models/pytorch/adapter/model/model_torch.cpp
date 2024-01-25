@@ -38,7 +38,7 @@
 #include "llama_parallel/model/decoder_model.h"
 #include "ChatGLM2/6b/model/paged_attention_model.h"
 #include "telechat/model/model.h"
-#include "qwen/14b/model/flash_attention_rope_model.h"
+#include "qwen/14b/model/flash_attention_model.h"
 
 void* ModelTorch::GetWorkSpace(uint64_t bufferSize)
 {
@@ -111,8 +111,6 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::chatglm2_6b::PagedAttentionModel>(param);
     } else if (modelName_ == "qwen_14b_flash_attention_model") {
         model_ = std::make_shared<atb_speed::qwen_14b::FlashAttentionModel>(param);
-    } else if (modelName_ == "aquila_7b_flash_attention_model") {
-        model_ = std::make_shared<atb_speed::aquila_7b::FlashAttentionRopeModel>(param);
     } else {
         ATB_LOG(FATAL) << "not support modelName:" << modelName_;
         return atb::ERROR_INVALID_PARAM;

@@ -46,3 +46,4 @@ static atb::Operation *CreateRope(const nlohmann::json &paramJson)
 
 } // namespace qwen_14b
 } // namespace atb_speed
+#endif

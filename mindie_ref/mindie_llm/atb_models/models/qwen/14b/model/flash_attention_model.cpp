@@ -124,7 +124,7 @@ atb::Status FlashAttentionModel::InferShape(const std::vector<atb::TensorDesc> &
     return atb::NO_ERROR;
 }
 
-atb::Status FlashAttentionModel::BuildGraph()
+int64_t FlashAttentionModel::BuildGraph()
 {
     // 图中weightTensor总数量，分别是：1(word_embedding)、40*8（所有layer中weightTensor的总数量）、1(RmsNorm)、1(linear)
     const int weightTensorSize = WORDEMBEDDINGNODE_WEIGHT_COUNT + WEIGHT_COUNT_PER_LAYER * param_.layerNum +
