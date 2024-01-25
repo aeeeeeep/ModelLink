@@ -49,7 +49,7 @@ void from_json(const nlohmann::json &paramJson, FlashAttentionQuantLayerParam &p
 
 atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param, atb::Operation **operation);
 
-static atb::Operation *CreateFlashAttentionQuantLayer(const nlohmann::json &paramJson);
+atb::Operation *CreateFlashAttentionQuantLayer(const nlohmann::json &paramJson);
 
 class FlashAttentionQuantLayerBinder : public HostTensorBinder {
 public:
