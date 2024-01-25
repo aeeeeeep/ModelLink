@@ -35,21 +35,8 @@ struct FlashAttentionLayerParam {
     std::string model = "baichuan2_13b";
 };
 
-static void from_json(const nlohmann::json &paramJson, FlashAttentionLayerParam &param)
-{
-    paramJson.at("rmsNormEps").get_to(param.rmsNormEps);
-    paramJson.at("headNum").get_to(param.headNum);
-    paramJson.at("dk").get_to(param.dk);
-    if (paramJson.contains("rank")) {
-        paramJson.at("rank").get_to(param.rank);
-    }
-    if (paramJson.contains("rankSize")) {
-        paramJson.at("rankSize").get_to(param.rankSize);
-    }
-    if (paramJson.contains("backend")) {
-        paramJson.at("backend").get_to(param.backend);
-    }
-}
+void from_json(const nlohmann::json &paramJson, FlashAttentionLayerParam &param);
+
 atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Operation **operation);
 
 atb::Operation *CreateFlashAttentionLayer(const nlohmann::json &paramJson);

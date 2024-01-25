@@ -54,6 +54,22 @@ static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERNAL_TENSOR_COUNT = 10;
 static const uint64_t NODE_COUNT = 9;
 
+void from_json(const nlohmann::json &paramJson, FlashAttentionLayerParam &param)
+{
+    paramJson.at("rmsNormEps").get_to(param.rmsNormEps);
+    paramJson.at("headNum").get_to(param.headNum);
+    paramJson.at("dk").get_to(param.dk);
+    if (paramJson.contains("rank")) {
+        paramJson.at("rank").get_to(param.rank);
+    }
+    if (paramJson.contains("rankSize")) {
+        paramJson.at("rankSize").get_to(param.rankSize);
+    }
+    if (paramJson.contains("backend")) {
+        paramJson.at("backend").get_to(param.backend);
+    }
+}
+
 atb::Operation *CreateFlashAttentionLayer(const nlohmann::json &paramJson)
 {
     ATB_LOG(INFO) << GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
