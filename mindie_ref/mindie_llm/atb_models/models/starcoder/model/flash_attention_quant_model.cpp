@@ -287,10 +287,7 @@ int64_t FlashAttentionQuantModel::BuildGraph()
     outLinearNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
                                &graph_.weightTensors.at(finalLinearWeightTensorId)};
     outLinearNode.outTensors = {&graph_.outTensors.at(0)};
-<<<<<<< HEAD
     return atb::NO_ERROR;
-=======
->>>>>>> fbec655d8f922ef0965245b36ddbeeba216a86fb
 }
 
 atb::Status FlashAttentionQuantModel::ParseParam(const std::string &param)
