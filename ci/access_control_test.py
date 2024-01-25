@@ -9,6 +9,9 @@ import xmlrunner
 # =============================
 # ST test, run with shell
 # =============================
+def infer_test():
+pass
+
 def success_check(res):
     if res != 0:
         sys.exit(1)
