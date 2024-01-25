@@ -32,21 +32,19 @@ enum FlashAttentionQuantLayerTensorId : int {
     IN_SELF_OUT_LINEAR_WEIGHT,
     IN_SELF_OUT_LINEAR_DEQSCALE,
     IN_SELF_OUT_LINEAR_BIAS,
-
+    // mlp_up
     IN_MLP_UP_WEIGHT,
     IN_MLP_UP_DEQSCALE,
     IN_MLP_UP_BIAS,
-
+    // mlp_gate
     IN_MLP_GATE_WEIGHT,
     IN_MLP_GATE_DEQSCALE,
     IN_MLP_GATE_BIAS,
-
+    // mlp_down
     IN_MLP_DOWN_WEIGHT,
     IN_MLP_DOWN_DEQSCALE,
     IN_MLP_DOWN_BIAS,
-
     IN_SELF_OUT_NORM_WEIGHT,
-
     IN_ATTENTION_MASK,
     IN_PAST_KEY,
     IN_PAST_VALUE,
@@ -55,7 +53,6 @@ enum FlashAttentionQuantLayerTensorId : int {
     IN_BETA,
     IN_HOLDER,
     IN_LAYER_ID,
-
     OUT_LAYER_OUT,
     INTERNAL_INPUT_NORM_OUT,
     INTERNAL_QKV_MIXED_LINEAR_OUT,

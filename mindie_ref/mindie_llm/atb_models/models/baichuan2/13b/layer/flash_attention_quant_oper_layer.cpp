@@ -239,7 +239,7 @@ atb::Status FlashAttentionQuantOperLayer(const FlashAttentionQuantOperLayerParam
         INTERNAL_SELF_NORM_OUT, IN_MLP_UP_WEIGHT, IN_MLP_UP_BIAS, IN_MLP_UP_DEQSCALE, IN_HOLDER, IN_HOLDER, IN_HOLDER};
     matmulUpNode.outTensorIds = {INTERNAL_MATMUL_UP_OUT};
 
-    // gata quant
+    // gate quant
     atb_speed::common::ParallelParamV2 linearGateParam = {true, false, true, true, false};
     atb_speed::common::RowParallelLinearV2(linearGateParam, &matmulGateNode.operation);
     matmulGateNode.inTensorIds = {INTERNAL_SELF_NORM_OUT,
