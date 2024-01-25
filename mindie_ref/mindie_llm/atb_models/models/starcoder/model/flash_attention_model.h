@@ -46,7 +46,11 @@ public:
         std::vector<atb::TensorDesc> &outTensorDescs) override;
 
 private:
+<<<<<<< HEAD
     int64_t BuildGraph() override;
+=======
+    void BuildGraph() override;
+>>>>>>> fbec655d8f922ef0965245b36ddbeeba216a86fb
     Param param_;
     atb::Status ParseParam(const std::string &param) override;
     atb::Status BindParamHostTensor(uint32_t nodeId) override;

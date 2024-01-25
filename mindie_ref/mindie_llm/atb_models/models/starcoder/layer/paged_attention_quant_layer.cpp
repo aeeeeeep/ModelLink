@@ -122,9 +122,12 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     layerNormParam.normParam.epsilon = param.layerNormEps;
     layerNormParam.normParam.beginNormAxis = LAYER_NORM_AXIS_COUNT;
     layerNormParam.normParam.beginParamsAxis = LAYER_NORM_AXIS_COUNT;
+<<<<<<< HEAD
     layerNormParam.normParam.quantType = atb::infer::QUANT_INT8;
     layerNormParam.normParam.quantInputScale = param.qkvInputScale;
     layerNormParam.normParam.quantInputOffset = param.qkvInputOffset;
+=======
+>>>>>>> fbec655d8f922ef0965245b36ddbeeba216a86fb
     CreateOperation(layerNormParam, &inputLayerNormNode.operation);
     inputLayerNormNode.inTensorIds = {IN_HIDDENSTATES, IN_LAYERNORM_1_WEIGTH, IN_LAYERNORM_1_BIAS};
     inputLayerNormNode.outTensorIds = {INTERMEDIATE_INPUTNORM_OUT, INTERMEDIATE_INPUTNORM_OUT_QUANT};
