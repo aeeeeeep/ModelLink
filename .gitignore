@@ -142,3 +142,4 @@ cython_debug/
 
 # pycharm stuff
 .idea
+3rdparty
