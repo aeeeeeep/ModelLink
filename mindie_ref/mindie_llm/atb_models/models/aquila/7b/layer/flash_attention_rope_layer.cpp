@@ -72,7 +72,7 @@ void from_json(const nlohmann::json &paramJson, FlashAttentionRopeLayerParam &pa
         paramJson.at("rankSize").get_to(param.rankSize);
     }
     if (paramJson.contains("backend")) {
-        paramJson.at('backend').get_to(param.backend);
+        paramJson.at("backend").get_to(param.backend);
     }
 }
 
