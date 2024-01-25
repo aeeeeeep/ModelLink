@@ -143,11 +143,7 @@ atb::Status PAQuantModel::InferShape(const std::vector<atb::TensorDesc> &inTenso
     return atb::NO_ERROR;
 }
 
-<<<<<<< HEAD
 int64_t PAQuantModel::BuildGraph()
-=======
-void PAQuantModel::BuildGraph()
->>>>>>> fbec655d8f922ef0965245b36ddbeeba216a86fb
 {
     ATB_LOG(INFO) << "Enter PAQuantModel BuildGraph";
     const int floatLayerCnt = param_.floatLayers.size();

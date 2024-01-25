@@ -131,11 +131,7 @@ atb::Status FlashAttentionQuantModel::InferShape(const std::vector<atb::TensorDe
     return atb::NO_ERROR;
 }
 
-<<<<<<< HEAD
 int64_t FlashAttentionQuantModel::BuildGraph()
-=======
-void FlashAttentionQuantModel::BuildGraph()
->>>>>>> fbec655d8f922ef0965245b36ddbeeba216a86fb
 {
     ATB_LOG(INFO) << "Enter FlashAttentionQuantModel BuildGraph";
     const int floatLayerCnt = param_.floatLayers.size();
