@@ -3,9 +3,9 @@
 
 - [Aquila-7B](#aquila-7b)
   - [Training](#training)
-    - [Script](#script)
-    - [Performance](#performance)
-      - [Accuracy](#accuracy)
+  - [Script](#script)
+  - [Performance](#performance)
+    - [Accuracy](#accuracy)
 ## Training
 
 Here's a hardware summary of pre-training Aquila-7B:
