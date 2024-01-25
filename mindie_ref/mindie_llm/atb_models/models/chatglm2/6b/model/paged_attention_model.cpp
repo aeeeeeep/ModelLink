@@ -15,7 +15,7 @@
  */
 #include "paged_attention_model.h"
 #include <atb/atb_infer.h>
-#include "models/ChatGLM2/6b/layer/paged_attention_layer.h"
+#include "models/chatglm2/6b/layer/paged_attention_layer.h"
 #include "nlohmann/json.hpp"
 #include "parallel_lmhead.h"
 
