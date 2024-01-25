@@ -109,7 +109,7 @@ atb::Status FlashAttentionRopeModel::InferShape(const std::vector<atb::TensorDes
     return atb::NO_ERROR;
 }
 
-void FlashAttentionRopeModel::BuildGraph()
+int64_t FlashAttentionRopeModel::BuildGraph()
 {
     const int weightTensorSize = WORDEMBEDDINGNODE_WEIGHT_COUNT + WEIGHT_COUNT_PER_LAYER * param_.layerNum +
                                  FINALNORMNODE_WEIGHT_COUNT + OUT_LM_HEAD_WEIGHT_COUNT;
@@ -199,6 +199,8 @@ void FlashAttentionRopeModel::BuildGraph()
                                &graph_.internalTensors.at(IN_HOLDER),
                                &graph_.internalTensors.at(IN_HOLDER)};
     outLinearNode.outTensors = {&graph_.outTensors.at(0)};
+
+    return atb::NO_ERROR;
 }
 
 atb::Status FlashAttentionRopeModel::ParseParam(const std::string &param)

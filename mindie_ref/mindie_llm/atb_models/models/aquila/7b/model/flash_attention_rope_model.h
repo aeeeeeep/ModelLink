@@ -45,7 +45,7 @@ public:
                            std::vector<atb::TensorDesc> &outTensorDescs) override;
 
 private:
-    void BuildGraph() override;
+    virtual int64_t BuildGraph() override;
 
     Param param_;
 
