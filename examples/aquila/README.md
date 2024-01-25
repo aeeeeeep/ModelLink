@@ -16,9 +16,9 @@ Aquila-7B 训练的硬件配置如下:
 |:---:|:---:|:---------------:|
 | NPU | A+K | 8 x Ascend NPUs |
 
-### 脚本
+## 脚本
 
-#### 1. 克隆git仓库到个人服务器并切换到modellink分支
+### 1. 克隆git仓库到个人服务器并切换到modellink分支
 ```shell
 git clone -b modellink https://gitee.com/ascend/ModelLink.git
 cd ModelLink
@@ -26,7 +26,7 @@ mkdir logs
 mkdir ckpt
 ```
 
-#### 2. 搭建conda环境
+### 2. 搭建conda环境
 
 ```bash
 # python3.8
@@ -48,12 +48,12 @@ pip install -r requirements.txt
 ```
 
 
-#### 3. 使用浏览器下载 [Aquila-7B模型的配置，tokenizer，和预训练权重](https://huggingface.co/BAAI/Aquila-7B/tree/main)
+### 3. 使用浏览器下载 [Aquila-7B模型的配置，tokenizer，和预训练权重](https://huggingface.co/BAAI/Aquila-7B/tree/main)
 
 保存在 ModelLink/HF_Aquila7B_downloaded/ 目录。
 
 
-#### 4. 数据预处理
+### 4. 数据预处理
 
 第一步，使用浏览器 [下载数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)， 保存在ModelLink/dataset/ 目录
 
@@ -76,7 +76,7 @@ python ./tools/preprocess_data.py \
     --tokenizer-type PretrainedFromHF
 ```
 
-#### 5. 权重转换
+### 5. 权重转换
 
 将模型权重文件从 huggingface 格式转化为 AscendSpeed 格式
 
@@ -94,7 +94,7 @@ python $SCRIPT_PATH \
 ```
 
 
-#### 6. 配置 Aquila-7B 预训练脚本
+### 6. 配置 Aquila-7B 预训练脚本
 
 ```shell
 # 设置 ascend-toolkit 路径
@@ -107,7 +107,7 @@ CKPT_SAVE_DIR=./ckpt
 # 如果不需要加载权重，就不需要设置CKPT_SAVE_DIR, 并且启动脚本里应不使用 `--load` 参数
 ```
 
-#### 7. 启动 Aquila-7B 预训练脚本
+### 7. 启动 Aquila-7B 预训练脚本
 
 按以下方式启动训练：
 Aquila-7B
@@ -115,8 +115,8 @@ Aquila-7B
 bash examples/aquila/pretrain_aquila_7b_ptd.sh
 ```
 
-### 性能
-#### 精度
+## 性能
+### 精度
 
 Aquila-7b NPU vs 参考 loss.
 
