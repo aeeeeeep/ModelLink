@@ -35,30 +35,11 @@ struct FlashAttentionRopeLayerParam {
     std::string model = "aquila_7b";
 };
 
-static void from_json(const nlohmann::json &paramJson, FlashAttentionRopeLayerParam &param)
-{
-    paramJson.at("rmsNormEps").get_to(param.rmsNormEps);
-    paramJson.at("headNum").get_to(param.headNum);
-    paramJson.at("dk").get_to(param.dk);
-    if (paramJson.contains("rank")) {
-        paramJson.at("rank").get_to(param.rank);
-    }
-    if (paramJson.contains("rankSize")) {
-        paramJson.at("rankSize").get_to(param.rankSize);
-    }
-    if (paramJson.contains("backend")) {
-        paramJson.at('backend').get_to(param.backend);
-    }
-}
+void from_json(const nlohmann::json &paramJson, FlashAttentionRopeLayerParam &param);
+
 atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, atb::Operation **operation);
 
-static atb::Operation *CreateFlashAttentionRopeLayer(const nlohmann::json &paramJson)
-{
-    ATB_LOG(INFO) << GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
-    atb::Operation *op;
-    atb_speed::aquila_7b::FlashAttentionRopeLayer(paramJson.get<FlashAttentionRopeLayerParam>(), &op);
-    return op;
-}
+atb::Operation *CreateFlashAttentionRopeLayer(const nlohmann::json &paramJson);
 
 class FlashAttentionRopeLayerBinder : public HostTensorBinder {
 public:

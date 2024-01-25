@@ -32,6 +32,20 @@ static const uint64_t OUT_TENSOR_COUNT = 2;
 static const uint64_t INTERNAL_TENSOR_COUNT = 0;
 static const uint64_t NODE_COUNT = 1;
 
+atb::Operation *CreateRope(const nlohmann::json &paramJson)
+{
+    RopeParam param;
+    if (paramJson.contains("rotaryCoeff")) {
+        param.rotaryCoeff = paramJson["rotaryCoeff"].get<int>();
+    }
+    if (paramJson.contains("headNum")) {
+        param.headNum = paramJson["headNum"].get<int>();
+    }
+    atb::Operation *op;
+    Rope(param, &op);
+    return op;
+}
+
 static void MergeBatchNTokens1(const atb::Dims &oldShape, atb::Dims &newShape)
 {
     newShape.dimNum = 2;
@@ -60,7 +74,7 @@ atb::Status Rope(const RopeParam &param, atb::Operation **operation)
 
     atb::infer::RopeParam ropeParam;
     ropeParam.rotaryCoeff = param.rotaryCoeff;
-    CreateOperation(ropeParam, &ropeNode.operation);
+    CREATE_OPERATION(ropeParam, &ropeNode.operation);
     ropeNode.inTensorIds = {IN_MIXED_Q, IN_MIXED_K, IN_COS_EMBED, IN_SIN_EMBED, IN_SEQ_LEN};
     ropeNode.outTensorIds = {OUT_EMBED_Q, OUT_EMBED_K};
     ropeNode.inTensorReshapeFuncs.resize(ropeNode.inTensorIds.size());
@@ -81,7 +95,7 @@ atb::Status Rope(const RopeParam &param, atb::Operation **operation)
         return atb::NO_ERROR;
     };
 
-    atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
 }
 } // namespace qwen_14b

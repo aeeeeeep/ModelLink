@@ -128,7 +128,7 @@ int64_t FlashAttentionRopeModel::BuildGraph()
     auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
     atb::infer::GatherParam wordEmbeddingParam;
     atb::Operation *op = nullptr;
-    atb::CreateOperation(wordEmbeddingParam, &op);
+    CREATE_OPERATION(wordEmbeddingParam, &op);
     wordEmbeddingNode.operation.reset(op);
     wordEmbeddingNode.inTensors = {&graph_.weightTensors.at(WORDEMBEDDINGNODE_WEIGHT_ID),
                                    &graph_.inTensors.at(IN_TENSOR_INPUTIDS)};
@@ -174,7 +174,7 @@ int64_t FlashAttentionRopeModel::BuildGraph()
     atb::infer::RmsNormParam finalNormParam;
     finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     finalNormParam.normParam.epsilon = param_.rmsNormEps;
-    atb::CreateOperation(finalNormParam, &op);
+    CREATE_OPERATION(finalNormParam, &op);
     finalNormNode.operation.reset(op);
     const int finalLayerNormWeightTensorId =
         graph_.weightTensors.size() - FINALNORMNODE_WEIGHT_COUNT - OUT_LM_HEAD_WEIGHT_COUNT;

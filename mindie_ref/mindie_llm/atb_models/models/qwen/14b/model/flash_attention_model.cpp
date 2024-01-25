@@ -147,7 +147,7 @@ int64_t FlashAttentionModel::BuildGraph()
     auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
     atb::infer::GatherParam wordEmbeddingParam;
     atb::Operation *op = nullptr;                  // operation指针
-    atb::CreateOperation(wordEmbeddingParam, &op); // 创建Operation/GraphOperation接口
+    CREATE_OPERATION(wordEmbeddingParam, &op); // 创建Operation/GraphOperation接口
     wordEmbeddingNode.operation.reset(op);         // 含义应当是初始化指针的位置
     wordEmbeddingNode.inTensors = {&graph_.weightTensors.at(WORDEMBEDDINGNODE_WEIGHT_ID),
                                    &graph_.inTensors.at(IN_TENSOR_INPUTIDS)};
@@ -199,7 +199,7 @@ int64_t FlashAttentionModel::BuildGraph()
     atb::infer::RmsNormParam finalNormParam;
     finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     finalNormParam.normParam.epsilon = param_.RmsNormEps;
-    atb::CreateOperation(finalNormParam, &op);
+    CREATE_OPERATION(finalNormParam, &op);
     finalNormNode.operation.reset(op);
     const int finalLayerNormWeightTensorId =
         graph_.weightTensors.size() - FINALNORMNODE_WEIGHT_COUNT - OUT_LM_HEAD_WEIGHT_COUNT;
@@ -213,7 +213,7 @@ int64_t FlashAttentionModel::BuildGraph()
     atb::infer::SliceParam slicePassParam;
     slicePassParam.offsets = {0, 0, hiddenSize * param_.rank};
     slicePassParam.size = {-1, -1, hiddenSize};
-    CreateOperation(slicePassParam, &op);
+    CREATE_OPERATION(slicePassParam, &op);
     qPassSliceNode.operation.reset(op);
     const int qPassSliceNodeOutTensorId = internalTensorSize - 1;
     qPassSliceNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId)};

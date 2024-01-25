@@ -62,6 +62,33 @@ static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 13;
 static const uint64_t NODE_COUNT = 11;
 
+void from_json(const nlohmann::json &paramJson, FlashAttentionRopeLayerParam &param)
+{
+    paramJson.at("rmsNormEps").get_to(param.rmsNormEps);
+    paramJson.at("headNum").get_to(param.headNum);
+    paramJson.at("dk").get_to(param.dk);
+    if (paramJson.contains("rank")) {
+        paramJson.at("rank").get_to(param.rank);
+    }
+    if (paramJson.contains("rankSize")) {
+        paramJson.at("rankSize").get_to(param.rankSize);
+    }
+    if (paramJson.contains("backend")) {
+        paramJson.at("backend").get_to(param.backend);
+    }
+    if (paramJson.contains("coderType")) {
+        paramJson.at("coderType").get_to(param.coderType);
+    }
+}
+
+atb::Operation *CreateFlashAttentionRopeLayer(const nlohmann::json &paramJson)
+{
+    ATB_LOG(INFO) << GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
+    atb::Operation *op;
+    atb_speed::qwen_14b::FlashAttentionRopeLayer(paramJson.get<FlashAttentionRopeLayerParam>(), &op);
+    return op;
+}
+
 atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, atb::Operation **operation)
 {
     ATB_LOG(INFO) << __func__ << " called, headNum: " << param.headNum;
@@ -89,19 +116,19 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     atb::infer::RmsNormParam rmsNormParam;
     rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     rmsNormParam.normParam.epsilon = param.rmsNormEps;
-    CreateOperation(rmsNormParam, &inputNormNode.operation);
+    CREATE_OPERATION(rmsNormParam, &inputNormNode.operation);
     inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT};
     inputNormNode.outTensorIds = {INTERNAL_INPUTNORMOUT};
 
     // c_attn
     atb::infer::LinearParam linearParam = {false, false, true};
-    CreateOperation(linearParam, &qkvLinearNode.operation);
+    CREATE_OPERATION(linearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = {INTERNAL_INPUTNORMOUT, IN_QKVMIXEDLINEARWEIGHT, IN_QKVMIXEDLINEARBIAS};
     qkvLinearNode.outTensorIds = {INTERNAL_QKVMIXEDLINEAROUT};
 
     // split
     atb::infer::SplitParam splitParam = {2, 3};
-    CreateOperation(splitParam, &splitQKVNode.operation);
+    CREATE_OPERATION(splitParam, &splitQKVNode.operation);
     splitQKVNode.inTensorIds = {INTERNAL_QKVMIXEDLINEAROUT};
     splitQKVNode.outTensorIds = {INTERNAL_Q, INTERNAL_K, INTERNAL_V};
 
@@ -116,7 +143,7 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     // q*logn_tensor
     atb::infer::ElewiseParam mulParam;
     mulParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_MUL;
-    CreateOperation(mulParam, &mulNode.operation);
+    CREATE_OPERATION(mulParam, &mulNode.operation);
     mulNode.inTensorIds = {INTERNAL_QEMBED, IN_LOGN_TENSOR};
     mulNode.outTensorIds = {INTERNAL_Q_EMBED_AFTER_LOGN};
 
@@ -130,7 +157,7 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     } else if (param.coderType == 2) {
         selfAttentionParam.coderType = atb::infer::SelfAttentionParam::CoderType::DECODER;
     }
-    CreateOperation(selfAttentionParam, &flashAttentionNode.operation);
+    CREATE_OPERATION(selfAttentionParam, &flashAttentionNode.operation);
     flashAttentionNode.inTensorIds = {INTERNAL_Q_EMBED_AFTER_LOGN,
                                       INTERNAL_KEMBED,
                                       INTERNAL_V,
@@ -164,12 +191,12 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     // residual
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CreateOperation(addParam, &attentionResidualAddNode.operation);
+    CREATE_OPERATION(addParam, &attentionResidualAddNode.operation);
     attentionResidualAddNode.inTensorIds = {IN_HIDDENSTATES, INTERNAL_SELFLINEAROUT};
     attentionResidualAddNode.outTensorIds = {INTERNAL_ATTENTIONRESIDUALADDOUT};
 
     // ln_2
-    CreateOperation(rmsNormParam, &selfNormNode.operation);
+    CREATE_OPERATION(rmsNormParam, &selfNormNode.operation);
     selfNormNode.inTensorIds = {INTERNAL_ATTENTIONRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT};
     selfNormNode.outTensorIds = {INTERNAL_SELFNORMOUT};
 
@@ -207,7 +234,7 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     mlpNode.outTensorIds = {INTERNAL_MLPOUT};
 
     // residual
-    CreateOperation(addParam, &mlpResidualAddNode.operation);
+    CREATE_OPERATION(addParam, &mlpResidualAddNode.operation);
     mlpResidualAddNode.inTensorIds = {INTERNAL_ATTENTIONRESIDUALADDOUT, INTERNAL_MLPOUT};
     mlpResidualAddNode.outTensorIds = {OUT_LAYEROUT};
 
@@ -216,7 +243,7 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
         outTensorDescs.at(0) = inTensorDescs.at(0);
         return atb::NO_ERROR;
     };
-    atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
 }
 
