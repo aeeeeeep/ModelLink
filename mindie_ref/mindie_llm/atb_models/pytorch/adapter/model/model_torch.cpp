@@ -109,7 +109,7 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::telechat::QuantFAModel>(param);
     } else if (modelName_ == "chatglm2_6b_decoder_pa_model") {
         model_ = std::make_shared<atb_speed::chatglm2_6b::PagedAttentionModel>(param);
-    } else if (modelName_ == "qwen_14b_flash_attention_model") {
+    } else if (modelName_ == "qwen_14b_flash_attention_rope_model") {
         model_ = std::make_shared<atb_speed::qwen_14b::FlashAttentionModel>(param);
     } else {
         ATB_LOG(FATAL) << "not support modelName:" << modelName_;
