@@ -221,6 +221,7 @@ void FlashAttentionModel::BuildGraph()
                                &graph_.inTensors.at(IN_HOLDER), &graph_.inTensors.at(IN_HOLDER),
                                &graph_.inTensors.at(IN_HOLDER)};
     outLinearNode.outTensors = {&graph_.outTensors.at(0)};
+    return atb::NO_ERROR;
 }
 
 atb::Status FlashAttentionModel::ParseParam(const std::string &param)

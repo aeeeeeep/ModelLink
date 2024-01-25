@@ -191,6 +191,7 @@ void PAModel::BuildGraph()
 
         firstInTensor = layerNode.outTensors.at(0);
         ATB_LOG(INFO) << "StarCoderPAModel BuildGraph success";
+
     }
 
     auto &finalNormNode = graph_.nodes.at(nodeId++);
@@ -218,6 +219,7 @@ void PAModel::BuildGraph()
     outLinearNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
                                &graph_.weightTensors.at(finalLinearWeightTensorId)};
     outLinearNode.outTensors = {&graph_.outTensors.at(0)};
+    return atb::NO_ERROR;
 }
 
 atb::Status PAModel::ParseParam(const std::string &param)
