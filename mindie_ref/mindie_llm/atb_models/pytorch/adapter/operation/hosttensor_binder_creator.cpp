@@ -15,7 +15,18 @@
  */
 #include "hosttensor_binder_creator.h"
 
+#include "baichuan2/13b/layer/flash_attention_layer.h"
+#include "baichuan2/13b/layer/flash_attention_quant_layer.h"
+#include "baichuan2/13b/layer/flash_attention_quant_oper_layer.h"
+
 atb_speed::HostTensorBinder *CreateHostTensorBinder(const std::string &opName)
 {
+    if (opName == "baichuan2_13b_flash_attention_layer") {
+        return new atb_speed::baichuan2_13b::FlashAttentionLayerBinder();
+    } else if (opName == "baichuan2_13b_flash_attention_quant_layer") {
+        return new atb_speed::baichuan2_13b::FlashAttentionQuantLayerBinder();
+    } else if (opName == "baichuan2_13b_flash_attention_oper_quant_layer") {
+        return new atb_speed::baichuan2_13b::FlashAttentionQuantOperLayerBinder();
+    }
     return nullptr;
 }
