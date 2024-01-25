@@ -36,6 +36,23 @@ def add_arguments(parser):
     group.add_argument('--target-pipeline-parallel-size', type=int,
                        help='Target tensor model parallel size, default to the pipeline parall size '
                        'in the input checkpoint if provided by the loader, otherwise to 1')
+    group.add_argument('--save-model-type', type=str, default='megatron',
+                       help='Save model type')
+
+
+def save_huggingface(args, model):
+    '''Set model params.'''
+    from transformers import BloomForCausalLM
+
+    # Load Huggingface model.
+    hf_model = BloomForCausalLM.from_pretrained(args.save_dir, device_map="cpu")
+
+    for name_param_h, name_param_m in zip(hf_model.named_parameters(), model.named_parameters()):
+        name_param_h[1].data.copy_(name_param_m[1])
+
+    save_dir = os.path.join(args.save_dir, 'mg2hg')
+    print(f'save weight to {save_dir}')
+    hf_model.save_pretrained(save_dir)
 
 
 def save_model_checkpoint(queue, args):
@@ -221,6 +238,10 @@ def save_model_checkpoint(queue, args):
     if md.position_embedding_type == 'learned_absolute':
         pos_embed = embeddings_msg.pop("position embeddings")
     orig_word_embed = embeddings_msg.pop("word embeddings")
+    orig_word_embed_n_w, orig_word_embed_n_b = None, None
+    if "word embeddings norm_w" in embeddings_msg and "word embeddings norm_b" in embeddings_msg:
+        orig_word_embed_n_w = embeddings_msg.pop("word embeddings norm_w")
+        orig_word_embed_n_b = embeddings_msg.pop("word embeddings norm_b")
     check_message(embeddings_msg)
 
     # Deal with padding
@@ -259,6 +280,9 @@ def save_model_checkpoint(queue, args):
     models = get_models(args.target_tensor_parallel_size, md.params_dtype, True, post_process)
     for tp_rank, model in enumerate(models):
         model.language_model.embedding.word_embeddings.weight.data.copy_(out_word_embed[tp_rank])
+        if orig_word_embed_n_w is not None:
+            model.language_model.embedding.word_embeddings.norm.weight.data.copy_(orig_word_embed_n_w)
+            model.language_model.embedding.word_embeddings.norm.bias.data.copy_(orig_word_embed_n_b)
         if pos_embed is not None:
             model.language_model.embedding.position_embeddings.weight.data.copy_(pos_embed)
         else:
@@ -415,6 +439,10 @@ def save_model_checkpoint(queue, args):
 
         for tp_rank in range(args.target_tensor_parallel_size):
             mpu.set_tensor_model_parallel_rank(tp_rank)
-            save_checkpoint(md.iteration, [models[tp_rank]], None, None)
+            if args.save_model_type == 'megatron':
+                save_checkpoint(md.iteration, [models[tp_rank]], None, None)
+            elif args.save_model_type == 'huggingface_bloom':
+                save_huggingface(args, models[tp_rank])
+
     print("Done!")
 

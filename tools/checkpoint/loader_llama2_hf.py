@@ -270,6 +270,8 @@ def _load_checkpoint(queue, args):
     md.position_embedding_type = margs.position_embedding_type
     md.linear_bias = margs.add_bias_linear
     md.norm_has_bias = False
+    if args.loader in ['loader_bloom_hf', 'bloom_hf']:
+        md.norm_has_bias = True
     md.swiglu = margs.swiglu
     md.previous_tensor_parallel_size = margs.tensor_model_parallel_size
     md.previous_pipeline_parallel_size = margs.pipeline_model_parallel_size
@@ -295,6 +297,12 @@ def _load_checkpoint(queue, args):
     message = {
         "word embeddings": model.language_model.embedding.word_embeddings.weight.data
     }
+
+    # bloom
+    if hasattr(model.language_model.embedding.word_embeddings, 'norm'):
+        message["word embeddings norm_w"] = model.language_model.embedding.word_embeddings.norm.weight.data
+        message["word embeddings norm_b"] = model.language_model.embedding.word_embeddings.norm.bias.data
+
     if md.position_embedding_type == 'learned_absolute':
         message["position embeddings"] = model.language_model.embedding.position_embeddings.weight.data
     else:
@@ -313,6 +321,10 @@ def _load_checkpoint(queue, args):
         if md.linear_bias:
             message["dense bias"] = layer.self_attention.dense.bias.data
             message["mlp l1 bias"] = layer.mlp.dense_4h_to_h.bias.data
+
+        if md.norm_has_bias:
+            message["input norm bias"] = layer.input_norm.bias.data
+            message["post norm bias"] = layer.post_attention_norm.bias.data
 
         # Grab all parallel tensors for this layer.
         qkv_weight = []
@@ -360,6 +372,8 @@ def _load_checkpoint(queue, args):
     message = {
         "weight": model.language_model.encoder.final_norm.weight.data,
     }
+    if md.norm_has_bias:
+        message["bias"] = model.language_model.encoder.final_norm.bias.data
     queue_put("final norm", message)
 
     if md.output_layer:
