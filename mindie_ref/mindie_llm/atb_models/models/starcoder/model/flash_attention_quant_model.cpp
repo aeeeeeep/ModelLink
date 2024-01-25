@@ -156,14 +156,14 @@ int64_t FlashAttentionQuantModel::BuildGraph()
 
     auto &wtEmbeddingNode = graph_.nodes.at(nodeId++);
     atb::infer::GatherParam wtEmbeddingParam;
-    atb::CreateOperation(wtEmbeddingParam, &op);
+    CREATE_OPERATION(wtEmbeddingParam, &op);
     wtEmbeddingNode.operation.reset(op);
     wtEmbeddingNode.inTensors = {&graph_.weightTensors.at(weightOffset++), &graph_.inTensors.at(0)};
     wtEmbeddingNode.outTensors = {&graph_.internalTensors.at(0)};
 
     auto &wpEmbeddingNode = graph_.nodes.at(nodeId++);
     atb::infer::GatherParam wpEmbeddingParam;
-    atb::CreateOperation(wpEmbeddingParam, &op);
+    CREATE_OPERATION(wpEmbeddingParam, &op);
     wpEmbeddingNode.operation.reset(op);
     wpEmbeddingNode.inTensors = {&graph_.weightTensors.at(weightOffset++), &graph_.inTensors.at(1)};
     wpEmbeddingNode.outTensors = {&graph_.internalTensors.at(1)};
@@ -171,7 +171,7 @@ int64_t FlashAttentionQuantModel::BuildGraph()
     auto &addNode = graph_.nodes.at(nodeId++);
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CreateOperation(addParam, &op);
+    CREATE_OPERATION(addParam, &op);
     addNode.operation.reset(op);
     addNode.inTensors = {&graph_.internalTensors.at(0), &graph_.internalTensors.at(1)};
     addNode.outTensors = {&graph_.internalTensors.at(2)};
@@ -268,7 +268,7 @@ int64_t FlashAttentionQuantModel::BuildGraph()
     finalNormParam.normParam.epsilon = param_.layerNormEps;
     finalNormParam.normParam.beginNormAxis = LAYER_NORM_AXIS_COUNT;
     finalNormParam.normParam.beginParamsAxis = LAYER_NORM_AXIS_COUNT;
-    atb::CreateOperation(finalNormParam, &op);
+    CREATE_OPERATION(finalNormParam, &op);
     finalNormNode.operation.reset(op);
     const int finalLayerNormWeightTensorId =
         graph_.weightTensors.size() - FINALNORMNODE_WEIGHT_COUNT - OUT_LM_HEAD_WEIGHT_COUNT;
@@ -281,7 +281,7 @@ int64_t FlashAttentionQuantModel::BuildGraph()
 
     auto &outLinearNode = graph_.nodes.at(nodeId++);
     atb::infer::LinearParam outLinearParm = {false, false, false};
-    atb::CreateOperation(outLinearParm, &op);
+    CREATE_OPERATION(outLinearParm, &op);
     outLinearNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
     outLinearNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
