@@ -18,7 +18,7 @@
 #include <atb/atb_infer.h>
 #include <nlohmann/json.hpp>
 #include "atb_speed/log.h"
-#include "models/ChatGLM2/6b/layer/flash_attention_layer.h"
+#include "models/chatglm2/6b/layer/flash_attention_layer.h"
 
 namespace atb_speed {
 namespace chatglm2_6b {
