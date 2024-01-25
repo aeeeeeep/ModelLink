@@ -42,7 +42,7 @@ atb::Status ParallelLinearBase(const ParallelParam &param_, atb::Operation **ope
     atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
 
     atb::infer::LinearParam matmulParam = {param_.transposeA, param_.transposeB, false};
-    atb::CreateOperation(matmulParam, &matmulNode.operation);
+    CREATE_OPERATION(matmulParam, &matmulNode.operation);
     matmulNode.inTensorIds = {config.IN_INPUT, config.IN_WEIGHT};
     matmulNode.outTensorIds = {config.INTERMIDATE_MATMULOUT};
 
@@ -54,13 +54,13 @@ atb::Status ParallelLinearBase(const ParallelParam &param_, atb::Operation **ope
             allReduceParam.rank = param_.rank;
             allReduceParam.rankSize = param_.rankSize;
             allReduceParam.backend = param_.backend;
-            atb::CreateOperation(allReduceParam, &parallelNode.operation);
+            CREATE_OPERATION(allReduceParam, &parallelNode.operation);
         } else {
             atb::infer::AllGatherParam allGatherParam;
             allGatherParam.rank = param_.rank;
             allGatherParam.rankSize = param_.rankSize;
             allGatherParam.backend = param_.backend;
-            atb::CreateOperation(allGatherParam, &parallelNode.operation);
+            CREATE_OPERATION(allGatherParam, &parallelNode.operation);
         }
 
         parallelNode.inTensorIds = {config.INTERMIDATE_MATMULOUT};
@@ -71,7 +71,7 @@ atb::Status ParallelLinearBase(const ParallelParam &param_, atb::Operation **ope
         atb::Node &addNode = opGraph.nodes.at(nodeId++);
         atb::infer::ElewiseParam addParam;
         addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-        atb::CreateOperation(addParam, &addNode.operation);
+        CREATE_OPERATION(addParam, &addNode.operation);
         addNode.inTensorIds = {param_.rankSize > 1 ? config.INTERMIDATE_ALLREDUCEOUT : config.INTERMIDATE_MATMULOUT,
                                config.IN_BIAS};
         addNode.outTensorIds = {config.OUT_LINEAROUT};
@@ -118,7 +118,7 @@ atb::Status ParallelLinearBase(const ParallelParam &param_, atb::Operation **ope
         };
     }
 
-    atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
 }
 

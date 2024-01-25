@@ -193,7 +193,7 @@ int64_t ChatGlm2CommonModelFa::BuildGraph()
     // before layers
     auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
     atb::infer::GatherParam wordEmbeddingParam;
-    atb::CreateOperation(wordEmbeddingParam, &op);
+    CREATE_OPERATION(wordEmbeddingParam, &op);
     wordEmbeddingNode.operation.reset(op);
     wordEmbeddingNode.inTensors = {&graph_.weightTensors.at(0), &graph_.inTensors.at(0)};
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(0)};
@@ -314,7 +314,7 @@ int64_t ChatGlm2CommonModelFa::BuildGraph()
     atb::infer::RmsNormParam finalNormParam;
     finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     finalNormParam.normParam.epsilon = param_.rmsNormEps;
-    atb::CreateOperation(finalNormParam, &op);
+    CREATE_OPERATION(finalNormParam, &op);
     finalNormNode.operation.reset(op);
     finalNormNode.inTensors = {firstInTensor, &graph_.weightTensors.at(weightTensorId++)};
     finalNormNode.outTensors = {&graph_.internalTensors.at(internalTensorId)};
@@ -323,14 +323,14 @@ int64_t ChatGlm2CommonModelFa::BuildGraph()
     atb::infer::SliceParam sliceParam;
     sliceParam.offsets = {0, -1, 0};
     sliceParam.size = {-1, 1, -1};
-    atb::CreateOperation(sliceParam, &op);
+    CREATE_OPERATION(sliceParam, &op);
     sliceNode.operation.reset(op);
     sliceNode.inTensors = {&graph_.internalTensors.at(internalTensorId++)};
     sliceNode.outTensors = {&graph_.internalTensors.at(internalTensorId)};
 
     auto &lmNode = graph_.nodes.at(nodeId++);
     atb::infer::LinearParam lmParam = {false, false, false};
-    atb::CreateOperation(lmParam, &op);
+    CREATE_OPERATION(lmParam, &op);
     lmNode.operation.reset(op);
     lmNode.inTensors = {&graph_.internalTensors.at(internalTensorId), &graph_.weightTensors.at(weightTensorId)};
     lmNode.outTensors = {&graph_.outTensors.at(0)};
