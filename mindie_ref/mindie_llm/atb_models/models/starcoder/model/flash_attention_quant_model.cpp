@@ -131,7 +131,7 @@ atb::Status FlashAttentionQuantModel::InferShape(const std::vector<atb::TensorDe
     return atb::NO_ERROR;
 }
 
-void FlashAttentionQuantModel::BuildGraph()
+int64_t FlashAttentionQuantModel::BuildGraph()
 {
     ATB_LOG(INFO) << "Enter FlashAttentionQuantModel BuildGraph";
     const int floatLayerCnt = param_.floatLayers.size();
@@ -287,6 +287,7 @@ void FlashAttentionQuantModel::BuildGraph()
     outLinearNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
                                &graph_.weightTensors.at(finalLinearWeightTensorId)};
     outLinearNode.outTensors = {&graph_.outTensors.at(0)};
+    return atb::NO_ERROR;
 }
 
 atb::Status FlashAttentionQuantModel::ParseParam(const std::string &param)

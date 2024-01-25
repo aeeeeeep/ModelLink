@@ -143,7 +143,7 @@ atb::Status PAQuantModel::InferShape(const std::vector<atb::TensorDesc> &inTenso
     return atb::NO_ERROR;
 }
 
-void PAQuantModel::BuildGraph()
+int64_t PAQuantModel::BuildGraph()
 {
     ATB_LOG(INFO) << "Enter PAQuantModel BuildGraph";
     const int floatLayerCnt = param_.floatLayers.size();
@@ -304,6 +304,7 @@ void PAQuantModel::BuildGraph()
     outLinearNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
                                &graph_.weightTensors.at(finalLinearWeightTensorId)};
     outLinearNode.outTensors = {&graph_.outTensors.at(0)};
+    return atb::NO_ERROR;
 }
 
 atb::Status PAQuantModel::ParseParam(const std::string &param)

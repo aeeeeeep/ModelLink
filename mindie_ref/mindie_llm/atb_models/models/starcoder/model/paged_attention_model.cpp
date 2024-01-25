@@ -113,7 +113,7 @@ atb::Status PAModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDesc
     return atb::NO_ERROR;
 }
 
-void PAModel::BuildGraph()
+int64_t PAModel::BuildGraph()
 {
     ATB_LOG(INFO) << "Enter PAModel BuildGraph";
     const int weightTensorSize = BEFORE_LAYER_WEIGHT_COUNT + WEIGHT_COUNT_PER_LAYER * param_.layerNum +
@@ -218,6 +218,7 @@ void PAModel::BuildGraph()
     outLinearNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
                                &graph_.weightTensors.at(finalLinearWeightTensorId)};
     outLinearNode.outTensors = {&graph_.outTensors.at(0)};
+    return atb::NO_ERROR;
 }
 
 atb::Status PAModel::ParseParam(const std::string &param)

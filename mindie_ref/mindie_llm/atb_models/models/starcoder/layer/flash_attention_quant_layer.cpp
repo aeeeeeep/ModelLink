@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 #include "flash_attention_quant_layer.h"
-#include "models/chatglm2/6b/operation/LinearQuantParallel.h"
 #include "layers/mlp_gate_v2.h"
 #include "layers/parallel_layer_v2.h"
 namespace atb_speed {
