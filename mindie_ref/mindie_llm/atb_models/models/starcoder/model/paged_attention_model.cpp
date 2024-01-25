@@ -113,7 +113,7 @@ atb::Status PAModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDesc
     return atb::NO_ERROR;
 }
 
-void PAModel::BuildGraph()
+int64_t PAModel::BuildGraph()
 {
     ATB_LOG(INFO) << "Enter PAModel BuildGraph";
     const int weightTensorSize = BEFORE_LAYER_WEIGHT_COUNT + WEIGHT_COUNT_PER_LAYER * param_.layerNum +
@@ -134,14 +134,14 @@ void PAModel::BuildGraph()
 
     auto &wtEmbeddingNode = graph_.nodes.at(nodeId++);
     atb::infer::GatherParam wtEmbeddingParam;
-    atb::CreateOperation(wtEmbeddingParam, &op);
+    CREATE_OPERATION(wtEmbeddingParam, &op);
     wtEmbeddingNode.operation.reset(op);
     wtEmbeddingNode.inTensors = {&graph_.weightTensors.at(0), &graph_.inTensors.at(IN_TENSOR_INPUT_IDS)};
     wtEmbeddingNode.outTensors = {&graph_.internalTensors.at(0)};
 
     auto &wpEmbeddingNode = graph_.nodes.at(nodeId++);
     atb::infer::GatherParam wpEmbeddingParam;
-    atb::CreateOperation(wpEmbeddingParam, &op);
+    CREATE_OPERATION(wpEmbeddingParam, &op);
     wpEmbeddingNode.operation.reset(op);
     wpEmbeddingNode.inTensors = {&graph_.weightTensors.at(1), &graph_.inTensors.at(IN_TENSOR_POSITION_IDS)};
     wpEmbeddingNode.outTensors = {&graph_.internalTensors.at(1)};
@@ -149,7 +149,7 @@ void PAModel::BuildGraph()
     auto &addNode = graph_.nodes.at(nodeId++);
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CreateOperation(addParam, &op);
+    CREATE_OPERATION(addParam, &op);
     addNode.operation.reset(op);
     addNode.inTensors = {&graph_.internalTensors.at(0), &graph_.internalTensors.at(1)};
     addNode.outTensors = {&graph_.internalTensors.at(2)};
@@ -199,7 +199,7 @@ void PAModel::BuildGraph()
     finalNormParam.normParam.epsilon = param_.layerNormEps;
     finalNormParam.normParam.beginNormAxis = LAYER_NORM_AXIS_COUNT;
     finalNormParam.normParam.beginParamsAxis = LAYER_NORM_AXIS_COUNT;
-    atb::CreateOperation(finalNormParam, &op);
+    CREATE_OPERATION(finalNormParam, &op);
     finalNormNode.operation.reset(op);
     const int finalLayerNormWeightTensorId =
         graph_.weightTensors.size() - FINALNORMNODE_WEIGHT_COUNT - OUT_LM_HEAD_WEIGHT_COUNT;
@@ -212,12 +212,13 @@ void PAModel::BuildGraph()
 
     auto &outLinearNode = graph_.nodes.at(nodeId++);
     atb::infer::LinearParam outLinearParm = {false, false, false};
-    atb::CreateOperation(outLinearParm, &op);
+    CREATE_OPERATION(outLinearParm, &op);
     outLinearNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
     outLinearNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
                                &graph_.weightTensors.at(finalLinearWeightTensorId)};
     outLinearNode.outTensors = {&graph_.outTensors.at(0)};
+    return atb::NO_ERROR;
 }
 
 atb::Status PAModel::ParseParam(const std::string &param)
