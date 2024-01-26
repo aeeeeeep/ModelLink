@@ -94,7 +94,7 @@ def filling_sequence(
             tokens = torch.cat(
                 (
                     tokens,
-                    seq[counter + 1: counter+2].expand(tokens.shape[0], 1)
+                    seq[counter + 1 : counter + 2].expand(tokens.shape[0], 1)
                 ), dim=1
             )
             counter += 1

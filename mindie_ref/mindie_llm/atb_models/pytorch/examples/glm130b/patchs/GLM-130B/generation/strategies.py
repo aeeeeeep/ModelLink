@@ -114,7 +114,6 @@ class BeamSearchStrategy:
         if self.ngram > 0 and seq_len > self.ngram:
             for batch_idx in range(batch_size):
                 for i in range(num_beams):
-                    # TODO ngram=1
                     ngram_prefix = tokens[batch_idx,
                                           i, -(self.ngram - 1):].tolist()
                     for banned_index in self.cached_beam_ngram_bans[batch_idx][i].get(tuple(ngram_prefix), []):
@@ -174,7 +173,6 @@ class BeamSearchStrategy:
                     if self.ngram > 0:
                         bans = self.cached_beam_ngram_bans[batch_idx][next_indices[batch_idx, i]].copy(
                         )
-                        # TODO ngram=1
                         ngram_prefix = tuple(
                             tokens[batch_idx, next_indices[batch_idx, i], -(self.ngram - 1):].tolist())
                         bans[ngram_prefix] = bans.get(

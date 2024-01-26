@@ -186,7 +186,6 @@ class AutoModel():
                 'model_config.json must have key "model_class" for AutoModel.from_pretrained.')
         import SwissArmyTransformer.model
         if not hasattr(SwissArmyTransformer.model, args.model_class):
-            # TODO dynamic loading
             raise ValueError(f'model_class {args.model_class} not found.')
         else:
             model_cls = getattr(SwissArmyTransformer.model, args.model_class)

@@ -1,3 +1,4 @@
+from generate import add_generation_specific_args, generate
 from benchmark import add_performance_specific_args, test_performance
 from evaluate import add_evaluation_specific_args, evaluate
 from initialize import initialize, initialize_model_and_tokenizer
@@ -19,17 +20,20 @@ def add_main_specific_args(parser):
 
 
 def main():
-    
-    args = initialize(add_main_specific_args, add_evaluation_specific_args,
-                      add_performance_specific_args)
+    args = initialize(
+        add_generation_specific_args, 
+        add_main_specific_args, 
+        add_evaluation_specific_args,
+        add_performance_specific_args
+    )
+    model, tokenizer = initialize_model_and_tokenizer(args)
 
     if args.generate:
-        pass
+        with torch.no_grad():
+            generate(model, tokenizer, args)
     elif args.evaluate:
-        model, tokenizer = initialize_model_and_tokenizer(args)
         evaluate(model, tokenizer, args.task, args.data_path)
     elif args.benchmark:
-        model, tokenizer = initialize_model_and_tokenizer(args)
         test_performance(model, args.test_batchs, args.test_seqlen_cases, 
                          args.output_dir)
     else:

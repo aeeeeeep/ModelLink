@@ -60,7 +60,6 @@ def add_model_config_args(parser):
     # default "None" means hidden-size/num-attention-heads.
     group.add_argument('--hidden-size-per-attention-head',
                        type=int, default=None)
-    # TODO: fully test it, support the generation.
     group.add_argument('--model-parallel-size', type=int, default=1,
                        help='size of the model parallel.')
 

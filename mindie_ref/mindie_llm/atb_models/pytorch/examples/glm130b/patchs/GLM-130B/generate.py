@@ -76,8 +76,7 @@ def fill_blanks(raw_text: str, model, tokenizer, strategy) -> Tuple[List[str], L
     text_list = re.split(mask_pattern, raw_text)
     pattern_list = re.compile(mask_pattern).findall(raw_text)
     seq = []
-    for i in range(len(pattern_list)):
-        pattern = pattern_list[i]
+    for i, pattern in enumerate(pattern_list):
         sub_text = text_list[i]
         seq.extend(tokenizer.tokenize(sub_text))
         seq.append(tokenizer.get_command(pattern))
@@ -138,9 +137,9 @@ def fill_blanks(raw_text: str, model, tokenizer, strategy) -> Tuple[List[str], L
         output_list.extend(output)
 
         # clip -1s and fill back generated things into seq
-        for i in range(len(output_list)):
-            output = output_list[i].tolist() if isinstance(
-                output_list[i], torch.Tensor) else output_list[i]
+        for i, output in enumerate(output_list):
+            output = output.tolist() if isinstance(
+                output, torch.Tensor) else output
             try:
                 unfinished = output.index(-1)
             except ValueError:
@@ -173,9 +172,7 @@ def fill_blanks(raw_text: str, model, tokenizer, strategy) -> Tuple[List[str], L
     return answers, answers_with_style, blanks
 
 
-def main(args):
-    model, tokenizer = initialize_model_and_tokenizer(args)
-
+def generate(args):
     end_tokens = [tokenizer.get_command("eop"), tokenizer.get_command("eos")]
 
     if args.sampling_strategy == "BaseStrategy":
@@ -225,10 +222,3 @@ def main(args):
 
     os.makedirs(args.output_path, exist_ok=True)
     generate_continually(process, args.input_source)
-
-
-if __name__ == "__main__":
-    args = initialize(extra_args_provider=add_generation_specific_args)
-
-    with torch.no_grad():
-        main(args)

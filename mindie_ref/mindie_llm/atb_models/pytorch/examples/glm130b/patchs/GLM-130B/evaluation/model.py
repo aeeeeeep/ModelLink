@@ -58,7 +58,7 @@ def batch_filling_sequence(
         model_start = time.time()
         logits, *output_per_layers = model(
             tokens[:, index:],
-            position_ids[..., index: counter+1],
+            position_ids[..., index : counter + 1],
             attention_mask,
             mems=mems,
             **kw_args
@@ -67,7 +67,7 @@ def batch_filling_sequence(
         torch.npu.synchronize()
         model_time.append(time.time() - model_start)
         postprocess_start = time.time()
-        mem_kv = [o['mem_kv'] for o in output_per_layers]
+        mem_kv = [out['mem_kv'] for out in output_per_layers]
         mems = update_mems(mem_kv, mems, max_memory_length=max_memory_length)
         if counter == context_length - 1:
             logits = logits[torch.arange(batch_size), context_lengths - 1]
