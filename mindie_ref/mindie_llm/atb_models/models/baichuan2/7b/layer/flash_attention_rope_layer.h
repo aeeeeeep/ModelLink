@@ -38,13 +38,7 @@ struct FlashAttentionRopeLayerParam {
 
 atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, atb::Operation **operation);
 void from_json(const nlohmann::json &paramJson, FlashAttentionRopeLayerParam &param);
-static atb::Operation *CreateFlashAttentionRopeLayer(const nlohmann::json &paramJson)
-{
-    ATB_LOG(INFO) << GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
-    atb::Operation *op;
-    atb_speed::baichuan2_7b::FlashAttentionRopeLayer(paramJson.get<FlashAttentionRopeLayerParam>(), &op);
-    return op;
-}
+atb::Operation *CreateFlashAttentionRopeLayer(const nlohmann::json &paramJson);
 
 class FlashAttentionRopeLayerBinder : public HostTensorBinder {
 public:

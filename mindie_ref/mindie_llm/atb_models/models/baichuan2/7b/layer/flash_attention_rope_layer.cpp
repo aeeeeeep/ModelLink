@@ -77,6 +77,14 @@ void from_json(const nlohmann::json &paramJson, FlashAttentionRopeLayerParam &pa
     }
 }
 
+atb::Operation *CreateFlashAttentionRopeLayer(const nlohmann::json &paramJson)
+{
+    ATB_LOG(INFO) << GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
+    atb::Operation *op;
+    atb_speed::baichuan2_7b::FlashAttentionRopeLayer(paramJson.get<FlashAttentionRopeLayerParam>(), &op);
+    return op;
+}
+
 atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, atb::Operation **operation)
 {
     ATB_LOG(INFO) << __func__ << " called, headNum: " << param.headNum;

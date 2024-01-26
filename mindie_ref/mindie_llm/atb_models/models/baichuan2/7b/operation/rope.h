@@ -30,15 +30,7 @@ struct RopeParam {
 
 atb::Status Rope(const RopeParam &param, atb::Operation **operation);
 
-static atb::Operation *CreateRope(const nlohmann::json &paramJson)
-{
-    atb_speed::baichuan2_7b::RopeParam param;
-    param.rotaryCoeff = paramJson["rotaryCoeff"].get<int>();
-    param.headNum = paramJson["headNum"].get<int>();
-    atb::Operation *op;
-    atb_speed::baichuan2_7b::Rope(param, &op);
-    return op;
-}
+atb::Operation *CreateRope(const nlohmann::json &paramJson);
 
 } // namespace baichuan2_7b
 } // namespace atb_speed

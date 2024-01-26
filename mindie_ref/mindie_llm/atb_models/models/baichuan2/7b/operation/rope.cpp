@@ -32,6 +32,16 @@ static const uint64_t OUT_TENSOR_COUNT = 2;
 static const uint64_t INTERNAL_TENSOR_COUNT = 0;
 static const uint64_t NODE_COUNT = 1;
 
+atb::Operation *CreateRope(const nlohmann::json &paramJson)
+{
+    atb_speed::baichuan2_7b::RopeParam param;
+    param.rotaryCoeff = paramJson["rotaryCoeff"].get<int>();
+    param.headNum = paramJson["headNum"].get<int>();
+    atb::Operation *op;
+    atb_speed::baichuan2_7b::Rope(param, &op);
+    return op;
+}
+
 static void mergeBatchNTokens(const atb::Dims &oldShape, atb::Dims &newShape)
 {
     newShape.dimNum = 2;

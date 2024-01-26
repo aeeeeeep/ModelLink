@@ -106,6 +106,14 @@ void from_json(const nlohmann::json &paramJson, FlashAttentionQuantLayerParam &p
     paramJson.at("up_projInputOffset").get_to(param.up_projInputOffset);
 }
 
+atb::Operation *CreateFlashAttentionQuantLayer(const nlohmann::json &paramJson)
+{
+    ATB_LOG(INFO) << GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
+    atb::Operation *op;
+    atb_speed::baichuan2_7b::FlashAttentionQuantLayer(paramJson.get<FlashAttentionQuantLayerParam>(), &op);
+    return op;
+}
+
 atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param, atb::Operation **operation)
 {
     ATB_LOG(INFO) << __func__ << " called, headNum: " << param.headNum;
