@@ -94,7 +94,7 @@ def filling_sequence(
             tokens = torch.cat(
                 (
                     tokens,
-                    seq[counter+1: counter+2].expand(tokens.shape[0], 1)
+                    seq[counter + 1: counter+2].expand(tokens.shape[0], 1)
                 ), dim=1
             )
             counter += 1
@@ -102,35 +102,36 @@ def filling_sequence(
 
         # forward
         if log_attention_weights is not None:
-            # TODO memlen
             log_attention_weights_part = log_attention_weights[...,
-                                                               index: counter+1, :counter+1]
+                                                               index: counter + 1, :counter + 1]
         else:
             log_attention_weights_part = None
 
         logits, *output_per_layers = model(
             tokens[:, index:],
-            position_ids[..., index: counter+1],
-            attention_mask[..., index: counter+1, :counter+1],  # TODO memlen
+            position_ids[..., index: counter + 1],
+            attention_mask[..., index: counter + 1, :counter + 1],
             mems=mems,
             log_attention_weights=log_attention_weights_part,
             **kw_args
         )
-        mem_kv = [o['mem_kv'] for o in output_per_layers]
-        mems = update_mems(mem_kv, mems, max_memory_length=max_memory_length)
+        mem_kv = [out['mem_kv'] for out in output_per_layers]
+        update_mems(mem_kv, mems, max_memory_length=max_memory_length)
         counter += 1
         index = counter
         # sampling
         # [batch size, vocab size]
         logits = logits[:, -1].expand(batch_size, -1)
         tokens = tokens.expand(batch_size, -1)
-        tokens, mems = strategy.forward(logits, tokens, mems)
+        tokens, mems = strategy.forward(logits, tokens, None)
         if strategy.is_done:
             break
     return strategy.finalize(tokens, mems)
 
 
-def evaluate_perplexity(model, tokens, attention_mask, position_ids, loss_mask, invalid_slices=[], reduction='mean'):
+def evaluate_perplexity(model, tokens, attention_mask, position_ids, loss_mask, invalid_slices=None, reduction='mean'):
+    if not invalid_slices:
+        invalid_slices = []
     # sanity check
     if not (len(tokens.shape) <= 2 and len(loss_mask.shape)):
         raise RuntimeError("sanity check failed")

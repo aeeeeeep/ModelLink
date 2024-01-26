@@ -119,18 +119,18 @@ def test_performance_for_one_case(model, seq_len, batch, test_cycle):
 
 def test_performance(
         model, 
-        test_batchs=[1, 4, 8], 
-        test_seqlen_cases=[(256, 64), (512, 128), (1024, 256), (1536, 512)],
+        test_batchs=(1, 4, 8), 
+        test_seqlen_cases=((256, 64), (512, 128), (1024, 256), (1536, 512)),
         output_dir="./"):
     rank = torch.distributed.get_rank()
-    device_version = soc_version_map[torch_npu._C._npu_get_soc_version()]
+    device_version = soc_version_map.get(torch_npu._C._npu_get_soc_version())
 
     csv_path = osp.join(
         output_dir, f"zhiputest_{device_version}_rank{rank}.csv")
     file = open(csv_path, "w", encoding="utf-8", newline="")
     csv_writer = csv.writer(file)
     table_header = (
-        "Batch" , "MaxSeqLen" , "InputSeqLen(Encoding)",
+        "Batch", "MaxSeqLen", "InputSeqLen(Encoding)",
         "OutputSeqLen(Decoding)", "TokensPerSecond", "ResponseTime(ms)",
         "FirstTokenTime(ms)", "TimePerTokens(ms)"
     )
