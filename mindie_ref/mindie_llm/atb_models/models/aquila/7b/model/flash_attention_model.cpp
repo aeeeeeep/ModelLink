@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "models/aquila/7b/model/flash_attention_rope_model.h"
+#include "models/aquila/7b/model/flash_attention_model.h"
 
 #include "atb/atb_infer.h"
 #include "nlohmann/json.hpp"
 
 #include "layers/parallel_layer_v2.h"
-#include "models/aquila/7b/layer/flash_attention_rope_layer.h"
+#include "models/aquila/7b/layer/flash_attention_layer.h"
 
 namespace atb_speed {
 namespace aquila_7b {

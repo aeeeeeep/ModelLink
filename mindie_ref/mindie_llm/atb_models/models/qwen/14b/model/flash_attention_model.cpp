@@ -19,7 +19,7 @@
 #include "nlohmann/json.hpp"
 
 #include "layers/parallel_layer_v2.h"
-#include "models/qwen/14b/layer/flash_attention_rope_layer.h"
+#include "models/qwen/14b/layer/flash_attention_layer.h"
 
 namespace atb_speed {
 namespace qwen_14b {

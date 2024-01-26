@@ -13,41 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "flash_attention_rope_layer.h"
+#include "flash_attention_layer.h"
 
 #include "layers/mlp_gate_v2.h"
 #include "layers/parallel_layer_v2.h"
-#include "models/aquila/7b/operation/rope.h"
+#include "models/qwen/14b/operation/rope.h"
 
 namespace atb_speed {
-namespace aquila_7b {
+namespace qwen_14b {
 enum FlashAttentionRopeLayerTensorId : int {
-    IN_HIDDENSTATES = 0,  // [batchSize, seqLen, hiddenSize]
+    IN_HIDDENSTATES = 0, // [batchSize, seqLen, hiddenSize]
     IN_NORMWEIGHT,
-    IN_QLINEARWEIGHT,
-    IN_KLINEARWEIGHT,
-    IN_VLINEARWEIGHT,
+    IN_QKVMIXEDLINEARWEIGHT,
+    IN_QKVMIXEDLINEARBIAS,
     IN_SELFOUTLINEARWEIGHT,
     IN_SELFOUTNORMWEIGHT,
-    IN_MLPGATEWEIGHT,
-    IN_MLPDOWNWEIGHT,
-    IN_MLPUPWEIGHT,
-    IN_COS_EMBED,  // 目前只支持FP16
+    IN_MLPW1WEIGHT,
+    IN_MLPW2WEIGHT,
+    IN_MLPCPROJWEIGHT,
+    IN_COS_EMBED, // 目前只支持FP16
     IN_SIN_EMBED,
     IN_ATTENTIONMASK,
     IN_PASTKEY,
     IN_PASTVALUE,
+    IN_LOGN_TENSOR,
     IN_TOKENOFFSET,
     IN_SEQLEN,
     IN_HOLDER,
     IN_LAYERID,
     OUT_LAYEROUT,
     INTERNAL_INPUTNORMOUT,
-    INTERNAL_QLINEAROUT,
-    INTERNAL_KLINEAROUT,
-    INTERNAL_VLINEAROUT,
+    INTERNAL_QKVMIXEDLINEAROUT,
+    INTERNAL_Q,
+    INTERNAL_K,
+    INTERNAL_V,
     INTERNAL_QEMBED,
     INTERNAL_KEMBED,
+    INTERNAL_Q_EMBED_AFTER_LOGN,
     INTERNAL_SELFOUT,
     INTERNAL_SELFLINEAROUT,
     INTERNAL_ATTENTIONRESIDUALADDOUT,
@@ -57,7 +59,7 @@ enum FlashAttentionRopeLayerTensorId : int {
 
 static const uint64_t IN_TENSOR_COUNT = 19;
 static const uint64_t OUT_TENSOR_COUNT = 1;
-static const uint64_t INTERMEDIATE_TENSOR_COUNT = 11;
+static const uint64_t INTERMEDIATE_TENSOR_COUNT = 13;
 static const uint64_t NODE_COUNT = 11;
 
 void from_json(const nlohmann::json &paramJson, FlashAttentionRopeLayerParam &param)
@@ -74,13 +76,16 @@ void from_json(const nlohmann::json &paramJson, FlashAttentionRopeLayerParam &pa
     if (paramJson.contains("backend")) {
         paramJson.at("backend").get_to(param.backend);
     }
+    if (paramJson.contains("coderType")) {
+        paramJson.at("coderType").get_to(param.coderType);
+    }
 }
 
 atb::Operation *CreateFlashAttentionRopeLayer(const nlohmann::json &paramJson)
 {
     ATB_LOG(INFO) << GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
     atb::Operation *op;
-    atb_speed::aquila_7b::FlashAttentionRopeLayer(paramJson.get<FlashAttentionRopeLayerParam>(), &op);
+    atb_speed::qwen_14b::FlashAttentionRopeLayer(paramJson.get<FlashAttentionRopeLayerParam>(), &op);
     return op;
 }
 
@@ -96,10 +101,10 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
 
     size_t nodeId = 0;
     atb::Node &inputNormNode = opGraph.nodes.at(nodeId++);
-    atb::Node &qLinearNode = opGraph.nodes.at(nodeId++);
-    atb::Node &kLinearNode = opGraph.nodes.at(nodeId++);
-    atb::Node &vLinearNode = opGraph.nodes.at(nodeId++);
+    atb::Node &qkvLinearNode = opGraph.nodes.at(nodeId++);
+    atb::Node &splitQKVNode = opGraph.nodes.at(nodeId++);
     atb::Node &ropeNode = opGraph.nodes.at(nodeId++);
+    atb::Node &mulNode = opGraph.nodes.at(nodeId++);
     atb::Node &flashAttentionNode = opGraph.nodes.at(nodeId++);
     atb::Node &selfOutLinearNode = opGraph.nodes.at(nodeId++);
     atb::Node &attentionResidualAddNode = opGraph.nodes.at(nodeId++);
@@ -107,7 +112,7 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     atb::Node &mlpNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpResidualAddNode = opGraph.nodes.at(nodeId++);
 
-    // input_layernorm
+    // ln_1
     atb::infer::RmsNormParam rmsNormParam;
     rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     rmsNormParam.normParam.epsilon = param.rmsNormEps;
@@ -115,42 +120,47 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT};
     inputNormNode.outTensorIds = {INTERNAL_INPUTNORMOUT};
 
-    // q_proj
-    atb::infer::LinearParam linearParam = {false, false, false};
-    CREATE_OPERATION(linearParam, &qLinearNode.operation);
-    qLinearNode.inTensorIds = {INTERNAL_INPUTNORMOUT, IN_QLINEARWEIGHT};
-    qLinearNode.outTensorIds = {INTERNAL_QLINEAROUT};
-    
-    // k_proj
-    CREATE_OPERATION(linearParam, &kLinearNode.operation);
-    kLinearNode.inTensorIds = {INTERNAL_INPUTNORMOUT, IN_KLINEARWEIGHT};
-    kLinearNode.outTensorIds = {INTERNAL_KLINEAROUT};
+    // c_attn
+    atb::infer::LinearParam linearParam = {false, false, true};
+    CREATE_OPERATION(linearParam, &qkvLinearNode.operation);
+    qkvLinearNode.inTensorIds = {INTERNAL_INPUTNORMOUT, IN_QKVMIXEDLINEARWEIGHT, IN_QKVMIXEDLINEARBIAS};
+    qkvLinearNode.outTensorIds = {INTERNAL_QKVMIXEDLINEAROUT};
 
-    // v_proj
-    CREATE_OPERATION(linearParam, &vLinearNode.operation);
-    vLinearNode.inTensorIds = {INTERNAL_INPUTNORMOUT, IN_VLINEARWEIGHT};
-    vLinearNode.outTensorIds = {INTERNAL_VLINEAROUT};
+    // split
+    atb::infer::SplitParam splitParam = {2, 3};
+    CREATE_OPERATION(splitParam, &splitQKVNode.operation);
+    splitQKVNode.inTensorIds = {INTERNAL_QKVMIXEDLINEAROUT};
+    splitQKVNode.outTensorIds = {INTERNAL_Q, INTERNAL_K, INTERNAL_V};
 
     // rope (q_embedding + k_embedding)
-    atb_speed::aquila_7b::RopeParam ropeParam;
+    atb_speed::qwen_14b::RopeParam ropeParam;
     ropeParam.rotaryCoeff = 2;
     ropeParam.headNum = param.headNum;
-    atb_speed::aquila_7b::Rope(ropeParam, &ropeNode.operation);
-    ropeNode.inTensorIds = {INTERNAL_QLINEAROUT, INTERNAL_KLINEAROUT, IN_COS_EMBED, IN_SIN_EMBED, IN_SEQLEN};
+    atb_speed::qwen_14b::Rope(ropeParam, &ropeNode.operation);
+    ropeNode.inTensorIds = {INTERNAL_Q, INTERNAL_K, IN_COS_EMBED, IN_SIN_EMBED, IN_SEQLEN};
     ropeNode.outTensorIds = {INTERNAL_QEMBED, INTERNAL_KEMBED};
+
+    // q*logn_tensor
+    atb::infer::ElewiseParam mulParam;
+    mulParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_MUL;
+    CREATE_OPERATION(mulParam, &mulNode.operation);
+    mulNode.inTensorIds = {INTERNAL_QEMBED, IN_LOGN_TENSOR};
+    mulNode.outTensorIds = {INTERNAL_Q_EMBED_AFTER_LOGN};
 
     // flash attention
     atb::infer::SelfAttentionParam selfAttentionParam;
     selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
-    selfAttentionParam.qScale = 1.0 / sqrt(param.dk);
-    selfAttentionParam.clampMin = -1024.0;
-    selfAttentionParam.clampMax = 1024.0;
-    selfAttentionParam.isClamp = 1;
+    selfAttentionParam.qkScale = 1.0 / sqrt(param.dk);
+    if (param.coderType == 1) {
+        selfAttentionParam.coderType = atb::infer::SelfAttentionParam::CoderType::ENCODER;
+    } else if (param.coderType == 2) {
+        selfAttentionParam.coderType = atb::infer::SelfAttentionParam::CoderType::DECODER;
+    }
     CREATE_OPERATION(selfAttentionParam, &flashAttentionNode.operation);
-    flashAttentionNode.inTensorIds = {INTERNAL_QEMBED,
+    flashAttentionNode.inTensorIds = {INTERNAL_Q_EMBED_AFTER_LOGN,
                                       INTERNAL_KEMBED,
-                                      INTERNAL_VLINEAROUT,
+                                      INTERNAL_V,
                                       IN_PASTKEY,
                                       IN_PASTVALUE,
                                       IN_ATTENTIONMASK,
@@ -167,7 +177,7 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
         newShape.dims[3] = oldShape.dims[2] / param.headNum;
     };
 
-    // o_proj
+    // c_proj
     atb_speed::common::ParallelParamV2 selfOutLinearParam;
     selfOutLinearParam.commParam.rank = param.rank;
     selfOutLinearParam.commParam.rankSize = param.rankSize;
@@ -185,7 +195,7 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     attentionResidualAddNode.inTensorIds = {IN_HIDDENSTATES, INTERNAL_SELFLINEAROUT};
     attentionResidualAddNode.outTensorIds = {INTERNAL_ATTENTIONRESIDUALADDOUT};
 
-    // post_attention_layernorm
+    // ln_2
     CREATE_OPERATION(rmsNormParam, &selfNormNode.operation);
     selfNormNode.inTensorIds = {INTERNAL_ATTENTIONRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT};
     selfNormNode.outTensorIds = {INTERNAL_SELFNORMOUT};
@@ -202,9 +212,9 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);
     mlpNode.inTensorIds = {
         INTERNAL_SELFNORMOUT,
-        IN_MLPUPWEIGHT,
-        IN_MLPGATEWEIGHT,
-        IN_MLPDOWNWEIGHT,
+        IN_MLPW1WEIGHT,
+        IN_MLPW2WEIGHT,
+        IN_MLPCPROJWEIGHT,
         IN_HOLDER,
         IN_HOLDER,
         IN_HOLDER,
@@ -259,5 +269,5 @@ void FlashAttentionRopeLayerBinder::BindTensor(atb::VariantPack &variantPack)
     variantPack.inTensors.at(IN_TOKENOFFSET).hostData = tokenOffset_.data();
     variantPack.inTensors.at(IN_SEQLEN).hostData = seqLen_.data();
 }
-} // namespace aquila_7b
+} // namespace qwen_14b
 } // namespace atb_speed
