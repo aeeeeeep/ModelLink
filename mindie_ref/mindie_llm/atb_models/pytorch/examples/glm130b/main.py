@@ -1,3 +1,4 @@
+import torch
 from generate import add_generation_specific_args, generate
 from benchmark import add_performance_specific_args, test_performance
 from evaluate import add_evaluation_specific_args, evaluate
