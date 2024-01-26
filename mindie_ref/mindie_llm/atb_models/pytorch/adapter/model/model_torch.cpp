@@ -181,12 +181,12 @@ int64_t ModelTorch::SetKVCache(std::vector<torch::Tensor> atKCacheTensors, std::
     AtTensor2Tensor(atVCacheTensors, vCacheTensors);
 
     if (atb_speed::GetSingleton<atb_speed::Config>().IsConvertNCHWToND()) {
-        for (auto & kCacheTensor : kCacheTensors) {
+        for (auto &kCacheTensor : kCacheTensors) {
             if (kCacheTensor.desc.format == ACL_FORMAT_NCHW) {
                 kCacheTensor.desc.format = ACL_FORMAT_ND;
             }
         }
-        for (auto & vCacheTensor : vCacheTensors) {
+        for (auto &vCacheTensor : vCacheTensors) {
             if (vCacheTensor.desc.format == ACL_FORMAT_NCHW) {
                 vCacheTensor.desc.format = ACL_FORMAT_ND;
             }
@@ -210,7 +210,7 @@ std::vector<torch::Tensor> ModelTorch::Execute(std::vector<torch::Tensor> atInTe
     std::vector<atb::Tensor> inTensors;
     AtTensor2Tensor(atInTensors, inTensors);
     if (atb_speed::GetSingleton<atb_speed::Config>().IsConvertNCHWToND()) {
-        for (auto & inTensor : inTensors) {
+        for (auto &inTensor : inTensors) {
             if (inTensor.desc.format == ACL_FORMAT_NCHW) {
                 inTensor.desc.format = ACL_FORMAT_ND;
             }
@@ -238,7 +238,7 @@ std::vector<torch::Tensor> ModelTorch::Execute(std::vector<torch::Tensor> atInTe
     std::vector<atb::Tensor> outTensors;
     AtTensor2Tensor(atOutTensors, outTensors);
     if (atb_speed::GetSingleton<atb_speed::Config>().IsConvertNCHWToND()) {
-        for (auto & outTensor : outTensors) {
+        for (auto &outTensor : outTensors) {
             if (outTensor.desc.format == ACL_FORMAT_NCHW) {
                 outTensor.desc.format = ACL_FORMAT_ND;
             }
