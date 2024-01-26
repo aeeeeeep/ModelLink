@@ -172,7 +172,7 @@ def fill_blanks(raw_text: str, model, tokenizer, strategy) -> Tuple[List[str], L
     return answers, answers_with_style, blanks
 
 
-def generate(args):
+def generate(model, tokenizer, args):
     end_tokens = [tokenizer.get_command("eop"), tokenizer.get_command("eos")]
 
     if args.sampling_strategy == "BaseStrategy":
