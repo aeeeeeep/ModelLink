@@ -16,10 +16,13 @@
 
 """Transformer."""
 
-import gc
-import os
-import math
 import copy
+import gc
+import json
+import math
+import os
+
+from deepspeed.runtime.activation_checkpointing.checkpointing import checkpoint
 import torch
 import torch.nn.functional as F
 
@@ -27,18 +30,14 @@ from SwissArmyTransformer import mpu
 from SwissArmyTransformer.mpu.initialize import get_model_parallel_world_size
 from SwissArmyTransformer.mpu.layers import ColumnParallelLinear, RowParallelLinear, VocabParallelEmbedding
 from SwissArmyTransformer.mpu.mappings import gather_from_model_parallel_region, copy_to_model_parallel_region
-
-from deepspeed.runtime.activation_checkpointing.checkpointing import checkpoint
-
 from SwissArmyTransformer.mpu.utils import divide, sqrt, scaled_init_method, unscaled_init_method, gelu
 from SwissArmyTransformer.mpu.utils import split_tensor_along_last_dim
-from SwissArmyTransformer.ops import LayerNorm
 from SwissArmyTransformer.model.position_embedding import RotaryEmbedding
 from SwissArmyTransformer.model.position_embedding import apply_rotary_pos_emb_index
-
+from SwissArmyTransformer.ops import LayerNorm
 from SwissArmyTransformer.transformer_defaults import HOOKS_DEFAULT, standard_attention
 
-import json
+
 ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
 if ATB_SPEED_HOME_PATH is None:
     raise RuntimeError(
@@ -105,7 +104,8 @@ class SelfAttention(torch.nn.Module):
         self.output_dropout = torch.nn.Dropout(output_dropout_prob)
 
         object.__setattr__(self, 'transformer', transformer_pointer)
-        assert transformer_pointer is not None
+        if transformer_pointer is None:
+            raise RuntimeError(f'Invalid transformer_pointer: {transformer_pointer}')
 
     def _transpose_for_scores(self, tensor):
         """Transpose a 3D tensor [b, s, np*hn] into a 4D tensor with
@@ -174,7 +174,8 @@ class CrossAttention(torch.nn.Module):
         self.output_dropout = torch.nn.Dropout(output_dropout_prob)
 
         object.__setattr__(self, 'transformer', transformer_pointer)
-        assert transformer_pointer is not None
+        if transformer_pointer is None:
+            raise RuntimeError(f'Invalid transformer_pointer: {transformer_pointer}')
 
     def _transpose_for_scores(self, tensor):
         """Transpose a 3D tensor [b, s, np*hn] into a 4D tensor with
@@ -236,7 +237,8 @@ class MLP(torch.nn.Module):
         )
         self.dropout = torch.nn.Dropout(output_dropout_prob)
         object.__setattr__(self, 'transformer', transformer_pointer)
-        assert transformer_pointer is not None
+        if transformer_pointer is None:
+            raise RuntimeError(f'Invalid transformer_pointer: {transformer_pointer}')
 
     def forward(self, hidden_states, **kw_args):
         if 'mlp_forward' in self.hooks:
@@ -283,7 +285,8 @@ class BaseTransformerLayer(torch.nn.Module):
         self.layernorm_order = layernorm_order
         self.hooks = hooks
         object.__setattr__(self, 'transformer', transformer_pointer)
-        assert transformer_pointer is not None
+        if transformer_pointer is None:
+            raise RuntimeError(f'Invalid transformer_pointer: {transformer_pointer}')
 
         # Layernorm on the input data.
         self.input_layernorm = layernorm(hidden_size, eps=layernorm_epsilon)
@@ -514,9 +517,10 @@ class BaseTransformer(torch.nn.Module):
         if self.checkpoint_activations:
             raise RuntimeError("only support inference mode!")
         # sanity check
-        assert len(input_ids.shape) >= 2
-        batch_size, query_length = input_ids.shape[:2]
+        if len(input_ids.shape) < 2:
+            raise RuntimeError("Invalid input_ids shape:", input_ids.shape)
 
+        batch_size, query_length = input_ids.shape[:2]
 
         if not hasattr(self, "kv_cache") or batch_size != self.batch_num:
             self.batch_num = batch_size

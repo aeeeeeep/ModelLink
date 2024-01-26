@@ -1,17 +1,17 @@
+from functools import partial
 import os
+import re
+import stat
+from typing import List, Tuple
+
 import torch
 import torch_npu
 from torch_npu.contrib import transfer_to_npu
-import stat
-import re
-
-from functools import partial
-from typing import List, Tuple
 
 from SwissArmyTransformer import mpu
+from SwissArmyTransformer.generation.utils import timed_name, generate_continually
 from evaluation.model import batch_filling_sequence
 from generation import BeamSearchStrategy, BaseStrategy
-from SwissArmyTransformer.generation.utils import timed_name, generate_continually
 from initialize import initialize, initialize_model_and_tokenizer
 
 

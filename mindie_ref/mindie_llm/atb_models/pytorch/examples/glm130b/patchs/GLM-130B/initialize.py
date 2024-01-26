@@ -1,18 +1,18 @@
-import os
-import json
 import argparse
+import json
+import os
+import time
+
 import torch
 import torch_npu
 from torch_npu.contrib import transfer_to_npu
-import time
-
-from quantization import quantize
 
 from SwissArmyTransformer import get_args, get_tokenizer
 from SwissArmyTransformer.arguments import initialize_distributed
-from SwissArmyTransformer.training import load_checkpoint
 from SwissArmyTransformer.model import GLM130B
 from SwissArmyTransformer.mpu import get_model_parallel_world_size, get_model_parallel_rank, get_model_parallel_group
+from SwissArmyTransformer.training import load_checkpoint
+from quantization import quantize
 
 
 def add_bminf_args(parser):
@@ -84,7 +84,8 @@ def initialize_model_and_tokenizer(args):
             model = GLM130B(args).half()
 
             if args.from_quantized_checkpoint:
-                assert args.quantization_bit_width is not None
+                if args.quantization_bit_width is None:
+                    raise ValueError("Must specify quantization bit width!")
                 # Quantize model before moving to GPU
                 model = quantize(model, args.quantization_bit_width)
 

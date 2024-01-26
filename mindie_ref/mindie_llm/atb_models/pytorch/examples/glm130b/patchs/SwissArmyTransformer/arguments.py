@@ -16,15 +16,17 @@
 """argparser configuration"""
 
 import argparse
+import json
 import os
+import random
 import sys
+
+import deepspeed
+import numpy as np
 import torch
 import torch_npu
 from torch_npu.contrib import transfer_to_npu
-import deepspeed
-import json
-import random
-import numpy as np
+
 from SwissArmyTransformer import mpu
 
 
@@ -305,7 +307,8 @@ def get_args(args_list=None):
     if not args.train_data:
         print('WARNING: No training data specified')
 
-    assert (args.train_iters is None) ^ (args.epochs is None)
+    if not (args.train_iters is None) ^ (args.epochs is None):
+        raise ValueError("Must specify train_iters or epochs!")
 
     args.cuda = torch.cuda.is_available()
 
@@ -342,7 +345,9 @@ def get_args(args_list=None):
         _adjust_vocab_size(args)
 
     if args.train_data_weights is not None:
-        assert len(args.train_data_weights) == len(args.train_data)
+        if len(args.train_data_weights) != len(args.train_data):
+            raise RuntimeError(
+                "train_data_weights dims not equal train_data dims")
 
     if args.mode != 'inference':  # training with deepspeed
         args.deepspeed = True
@@ -459,7 +464,8 @@ def initialize_distributed(args):
 def set_random_seed(seed):
     """Set random seed for reproducability."""
     if seed is not None:
-        assert seed > 0
+        if seed <= 0:
+            raise ValueError("seed must greater than zero")
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)

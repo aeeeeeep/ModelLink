@@ -7,15 +7,16 @@
 '''
 
 # here put the import lib
+import argparse
+import math
+import json
 import os
+import random
 import sys
 import time
-import math
-import random
-import torch
+
 import numpy as np
-import json
-import argparse
+import torch
 
 from SwissArmyTransformer import mpu
 from .utils import print_rank_0
@@ -149,8 +150,8 @@ def get_checkpoint_iteration(load_path):
                 print_rank_0('ERROR: Invalid metadata file {}. Exiting'.format(
                     tracker_filename))
                 exit()
-    assert iteration > 0 or release, 'error parsing metadata file {}'.format(
-        tracker_filename)
+    if not (iteration > 0 or release):
+        raise RuntimeError('error parsing metadata file {}'.format(tracker_filename))
 
     return iteration, release, True
 
@@ -198,9 +199,10 @@ def load_checkpoint(model, args, load_path=None, prefix=''):
         if args.mode == 'inference':
             raise ValueError(f'Missing keys for inference: {missing_keys}.')
         else:  # new params
-            assert all(name.find('mixins') >=
-                       0 for name in missing_keys), missing_keys
-            assert args.mode == 'finetune'
+            if not all(name.find('mixins') >= 0 for name in missing_keys):
+                raise RuntimeError(missing_keys)
+            if args.mode != 'finetune':
+                raise RuntimeError('mode must be "finetune"')
             # list all mixin names
             mixin_names = []
             for key_name in missing_keys:

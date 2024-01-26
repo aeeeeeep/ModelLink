@@ -69,13 +69,13 @@ def filling_sequence(
             mems are the first-level citizens here, but we don't assume what is memorized.
             input mems are used when multi-phase generation.
     '''
-    assert len(seq.shape) == 1
 
     # building the initial tokens, attention_mask, and position_ids
     context_length = 0
     while seq[context_length] >= 0:
         context_length += 1  # [0, context_length-1] are given
-    assert context_length > 0
+    if context_length < 1:
+        raise RuntimeError("context length must greater than zero")
     tokens, attention_mask, position_ids = get_masks_and_position_ids(seq)
     tokens = tokens[..., :context_length]
     if attention_mask.dtype != torch.bool:
@@ -132,7 +132,8 @@ def filling_sequence(
 
 def evaluate_perplexity(model, tokens, attention_mask, position_ids, loss_mask, invalid_slices=[], reduction='mean'):
     # sanity check
-    assert len(tokens.shape) <= 2 and len(loss_mask.shape)
+    if not (len(tokens.shape) <= 2 and len(loss_mask.shape)):
+        raise RuntimeError("sanity check failed")
     if len(tokens.shape) == 1:
         tokens = tokens.unsqueeze(0)
     if len(loss_mask.shape) == 1:

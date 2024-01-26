@@ -14,31 +14,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import random
+from collections import defaultdict
+from contextlib import ExitStack
+from datetime import datetime
 import math
 import numpy as np
-import torch
-from collections import defaultdict
-from datetime import datetime
-from contextlib import ExitStack
+import os
+import random
 
-import torch.distributed as dist
 import deepspeed
+import torch
+import torch.distributed as dist
 
-from .learning_rates import AnnealingLR
 from .model_io import load_checkpoint, save_checkpoint
-
+from .learning_rates import AnnealingLR
 from .utils import Timers
-from .utils import report_memory
+from .utils import get_sample_writer
 from .utils import print_args
 from .utils import print_rank_0
-from .utils import get_sample_writer
+from .utils import report_memory
 
 from SwissArmyTransformer import mpu
+from SwissArmyTransformer.arguments import set_random_seed, initialize_distributed
 from SwissArmyTransformer.data_utils import make_loaders
 from SwissArmyTransformer.ops import LayerNorm
-from SwissArmyTransformer.arguments import set_random_seed, initialize_distributed
 
 
 def training_main(args, model_cls, forward_step_function, create_dataset_function, handle_metrics_function=None, init_function=None):
@@ -310,8 +309,8 @@ def train(model, optimizer, lr_scheduler,
         total_lm_loss += lm_loss.data.detach().float()
         for name in metrics:
             if not 'eval' in name:
-                assert len(
-                    metrics[name].shape) == 0, 'metrics without eval must be scalar'
+                if len(metrics[name].shape) != 0:
+                    raise RuntimeError('metrics without eval must be scalar')
                 total_metrics[name] += metrics[name].data.detach().float().item()
 
         # Logging.
@@ -464,7 +463,8 @@ def evaluate(data_iterator, model, eval_iters, args, timers, split, verbose=Fals
         last_shape = args.val_last_shape
         drop_number = args.val_drop_number
     else:
-        assert split == 'test'
+        if split != 'test':
+            raise ValueError("Invalid split:", split)
         last_shape = args.test_last_shape
         drop_number = args.test_drop_number
     is_scalar = {}
@@ -532,7 +532,8 @@ def evaluate(data_iterator, model, eval_iters, args, timers, split, verbose=Fals
             metrics = hooks['handle_metrics'](metrics_total)
         else:
             for name in metrics_total:
-                assert is_scalar[name], 'you must return scalar metrics or implement handle_metrics hooks'
+                if not is_scalar[name]:
+                    raise RuntimeError('you must return scalar metrics or implement handle_metrics hooks')
             metrics = {key: sum(value.split(1, 0))/len(value)
                        for key, value in metrics_total.items()}
     else:

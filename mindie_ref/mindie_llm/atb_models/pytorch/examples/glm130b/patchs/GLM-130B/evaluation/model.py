@@ -1,8 +1,8 @@
 import gc
 import time
-import torch
-
 from typing import List, Union
+
+import torch
 
 from SwissArmyTransformer.generation.autoregressive_sampling import update_mems, get_masks_and_position_ids_default
 from SwissArmyTransformer.mpu import vocab_parallel_cross_entropy
@@ -25,7 +25,8 @@ def batch_filling_sequence(
             mems are the first-level citizens here, but we don't assume what is memorized.
             input mems are used when multi-phase generation.
     '''
-    assert len(seqs.shape) == 2
+    if len(seqs.shape) != 2:
+        raise RuntimeError("Invalid seqs shape:", seqs.shape)
 
     # building the initial tokens, attention_mask, and position_ids
     batch_size, context_length = seqs.shape

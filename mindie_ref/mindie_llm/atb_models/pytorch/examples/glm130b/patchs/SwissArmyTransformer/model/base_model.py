@@ -93,8 +93,10 @@ class BaseModel(torch.nn.Module):
                 m.reinit(self)
 
     def add_mixin(self, name, new_mixin, reinit=False):
-        assert name not in self.mixins
-        assert isinstance(new_mixin, BaseMixin)
+        if name in self.mixins:
+            raise RuntimeError(f'{name} already exists')
+        if not isinstance(new_mixin, BaseMixin):
+            raise RuntimeError('Invalid type for new_mixin')
 
         self.mixins[name] = new_mixin  # will auto-register parameters
         # cannot use pytorch set_attr
@@ -105,7 +107,8 @@ class BaseModel(torch.nn.Module):
             new_mixin.reinit(self)  # also pass current mixins
 
     def del_mixin(self, name):
-        assert name in self.mixins
+        if name not in self.mixins:
+            raise RuntimeError(f"{name} not exists")
         del self.mixins[name]
         self.collect_hooks_()
 
