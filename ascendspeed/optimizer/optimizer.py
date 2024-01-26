@@ -965,7 +965,7 @@ class FP32Optimizer(MegatronOptimizer):
         found_silent_flag = False
         if int(os.getenv('NPU_DETECT', '0')):
             from torch_npu.utils.silent_error import silent_fault_check
-            silent_error = silent_fault_check(1.0)
+            silent_error = silent_fault_check(self.grad_scaler.inv_scale.item())
             silent_error = torch.tensor(silent_error, dtype=torch.float32).npu()
             torch.distributed.all_reduce(silent_error, op=torch.distributed.ReduceOp.MAX)
             found_silent_flag = (silent_error.item() > 0)
