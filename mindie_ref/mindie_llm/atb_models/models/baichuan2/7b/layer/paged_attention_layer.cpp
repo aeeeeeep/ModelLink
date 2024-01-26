@@ -66,6 +66,28 @@ void reshapeHeads(const atb::Dims &oldShape, atb::Dims &newShape, int headNum)
     newShape.dims[2] = oldShape.dims[1] / headNum; // 2 dim: head size, 1 hidden size
 }
 
+void from_json(const nlohmann::json &paramJson, PALayerParam &param)
+{
+    paramJson.at("rmsNormEps").get_to(param.rmsNormEps);
+    paramJson.at("headNum").get_to(param.headNum);
+    paramJson.at("dk").get_to(param.dk);
+    if (paramJson.contains("rank")) {
+        paramJson.at("rank").get_to(param.rank);
+    }
+    if (paramJson.contains("rankSize")) {
+        paramJson.at("rankSize").get_to(param.rankSize);
+    }
+    if (paramJson.contains("transposedWeight")) {
+        paramJson.at("transposedWeight").get_to(param.transposedWeight);
+    }
+    if (paramJson.contains("isPrefill")) {
+        paramJson.at("isPrefill").get_to(param.isPrefill);
+    }
+    if (paramJson.contains("backend")) {
+        paramJson.at("backend").get_to(param.backend);
+    }
+}
+
 atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
 {
     ATB_LOG(INFO) << __func__ << " called, headNum: " << param.headNum;

@@ -80,6 +80,32 @@ static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 12;
 static const uint64_t NODE_COUNT = 10;
 
+void from_json(const nlohmann::json &paramJson, FlashAttentionQuantLayerParam &param)
+{
+    paramJson.at("rmsNormEps").get_to(param.rmsNormEps);
+    paramJson.at("headNum").get_to(param.headNum);
+    paramJson.at("dk").get_to(param.dk);
+    if (paramJson.contains("rank")) {
+        paramJson.at("rank").get_to(param.rank);
+    }
+    if (paramJson.contains("rankSize")) {
+        paramJson.at("rankSize").get_to(param.rankSize);
+    }
+    if (paramJson.contains("backend")) {
+        paramJson.at("backend").get_to(param.backend);
+    }
+    paramJson.at("w_packInputScale").get_to(param.w_packInputScale);
+    paramJson.at("w_packInputOffset").get_to(param.w_packInputOffset);
+    paramJson.at("o_projInputScale").get_to(param.o_projInputScale);
+    paramJson.at("o_projInputOffset").get_to(param.o_projInputOffset);
+    paramJson.at("gate_projInputScale").get_to(param.gate_projInputScale);
+    paramJson.at("gate_projInputOffset").get_to(param.gate_projInputOffset);
+    paramJson.at("down_projInputScale").get_to(param.down_projInputScale);
+    paramJson.at("down_projInputOffset").get_to(param.down_projInputOffset);
+    paramJson.at("up_projInputScale").get_to(param.up_projInputScale);
+    paramJson.at("up_projInputOffset").get_to(param.up_projInputOffset);
+}
+
 atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param, atb::Operation **operation)
 {
     ATB_LOG(INFO) << __func__ << " called, headNum: " << param.headNum;

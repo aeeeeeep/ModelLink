@@ -35,23 +35,9 @@ struct FlashAttentionRopeLayerParam {
     std::string model = "baichuan2_7b";
 };
 
-static void from_json(const nlohmann::json &paramJson, FlashAttentionRopeLayerParam &param)
-{
-    paramJson.at("rmsNormEps").get_to(param.rmsNormEps);
-    paramJson.at("headNum").get_to(param.headNum);
-    paramJson.at("dk").get_to(param.dk);
-    if (paramJson.contains("rank")) {
-        paramJson.at("rank").get_to(param.rank);
-    }
-    if (paramJson.contains("rankSize")) {
-        paramJson.at("rankSize").get_to(param.rankSize);
-    }
-    if (paramJson.contains("backend")) {
-        paramJson.at("backend").get_to(param.backend);
-    }
-}
-atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, atb::Operation **operation);
 
+atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, atb::Operation **operation);
+void from_json(const nlohmann::json &paramJson, FlashAttentionRopeLayerParam &param);
 static atb::Operation *CreateFlashAttentionRopeLayer(const nlohmann::json &paramJson)
 {
     ATB_LOG(INFO) << GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
