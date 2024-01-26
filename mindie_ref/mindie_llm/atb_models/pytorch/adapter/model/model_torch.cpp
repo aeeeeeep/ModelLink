@@ -18,10 +18,9 @@
 
 #include <acl/acl.h>
 #include <atb/utils.h>
-#include <torch_npu/csrc/framework/OpCommand.h>
 #include <torch/torch.h>
-#include "pytorch/adapter/utils/utils.h"
-#include "pytorch/adapter/workspace/workspace.h"
+#include <torch_npu/csrc/framework/OpCommand.h>
+
 #include "atb_speed/base/context_factory.h"
 #include "atb_speed/log.h"
 #include "atb_speed/utils/config.h"
@@ -29,21 +28,26 @@
 #include "atb_speed/utils/statistic.h"
 #include "atb_speed/utils/tensor_util.h"
 #include "atb_speed/utils/timer.h"
-
-#include "llama/model/flash_attention_model.h"
+#include "baichuan2/13b/model/flash_attention_model.h"
+#include "baichuan2/13b/model/flash_attention_quant_model.h"
+#include "baichuan2/13b/model/paged_attention_model.h"
+#include "baichuan2/13b/model/paged_attention_quant_model.h"
+#include "chatglm2//6b/model/paged_attention_model.h"
 #include "llama/model/anti_quant_flashattention_model.h"
+#include "llama/model/flash_attention_model.h"
 #include "llama_adapter/model/adapter_model.h"
 #include "llama_pa/model/paged_attention_model.h"
 #include "llama_pa/model/quant_paged_attention_model.h"
 #include "llama_parallel/model/decoder_model.h"
-#include "ChatGLM2/6b/model/paged_attention_model.h"
+#include "pytorch/adapter/utils/utils.h"
+#include "pytorch/adapter/workspace/workspace.h"
 #include "telechat/model/model.h"
-
 #include "baichuan2/7b/model/flash_attention_quant_model.h"
 #include "baichuan2/7b/model/flash_attention_rope_model.h"
 #include "baichuan2/7b/model/paged_attention_model.h"
 
 void* ModelTorch::GetWorkSpace(uint64_t bufferSize)
+void *ModelTorch::GetWorkSpace(uint64_t bufferSize)
 {
     void *workspace = nullptr;
     if (bufferSize > 0) {
@@ -118,20 +122,27 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::baichuan2_7b::FlashAttentionQuantModel>(param);
     } else if (modelName_ == "baichuan2_7b_pa_model") {
         model_ = std::make_shared<atb_speed::baichuan2_7b::PagedAttentionModel>(param);
+    } else if (modelName_ == "baichuan2_13b_flash_attention_model") {
+        model_ = std::make_shared<atb_speed::baichuan2_13b::FlashAttentionModel>(param);
+    } else if (modelName_ == "baichuan2_13b_flash_attention_quant_model") {
+        model_ = std::make_shared<atb_speed::baichuan2_13b::FlashAttentionQuantModel>(param);
+    } else if (modelName_ == "baichuan2_13b_pa_model") {
+        model_ = std::make_shared<atb_speed::baichuan2_13b::PagedAttentionModel>(param);
+    } else if (modelName_ == "baichuan2_13b_pa_quant_model") {
+        model_ = std::make_shared<atb_speed::baichuan2_13b::PagedAttentionQuantModel>(param);
     } else {
         ATB_LOG(FATAL) << "not support modelName:" << modelName_;
         return atb::ERROR_INVALID_PARAM;
     }
 
-    const char *taskQueueEnv = std::getenv("TASK_QUEUE_ENABLE");   
+    const char *taskQueueEnv = std::getenv("TASK_QUEUE_ENABLE");
     const char *blockingEnv = std::getenv("ASCEND_LAUNCH_BLOCKING");
     bool isTaskQueueEnable = !((taskQueueEnv != nullptr && std::string(taskQueueEnv) == "0") ||
-                                (blockingEnv != nullptr && std::string(blockingEnv) == "1"));
+                               (blockingEnv != nullptr && std::string(blockingEnv) == "1"));
     auto getWorkspaceFunc = std::bind(&ModelTorch::GetWorkSpace, this, std::placeholders::_1);
-    auto createInternalTensorFromDescFunc = std::bind(&ModelTorch::CreateInternalTensorFromDesc,
-        this, std::placeholders::_1);
-    auto runTaskFunc = std::bind(&ModelTorch::RunTask, this, std::placeholders::_1,
-        std::placeholders::_2);
+    auto createInternalTensorFromDescFunc =
+        std::bind(&ModelTorch::CreateInternalTensorFromDesc, this, std::placeholders::_1);
+    auto runTaskFunc = std::bind(&ModelTorch::RunTask, this, std::placeholders::_1, std::placeholders::_2);
     int64_t atbStatus = 0;
     if (isTaskQueueEnable) {
         atbStatus = model_->Init(getWorkspaceFunc, createInternalTensorFromDescFunc, runTaskFunc);
@@ -159,8 +170,8 @@ int64_t ModelTorch::SetWeight(std::vector<torch::Tensor> atWeightTensors)
 
 int64_t ModelTorch::SetKVCache(std::vector<torch::Tensor> atKCacheTensors, std::vector<torch::Tensor> atVCacheTensors)
 {
-    ATB_LOG(INFO) << "ModelTorch set k cache tensors:" << atKCacheTensors.size() 
-                << ", v cache tensors:" << atVCacheTensors.size();
+    ATB_LOG(INFO) << "ModelTorch set k cache tensors:" << atKCacheTensors.size()
+                  << ", v cache tensors:" << atVCacheTensors.size();
     for (size_t i = 0; i < atKCacheTensors.size(); ++i) {
         const torch::Tensor &atkTensor = atKCacheTensors.at(i);
         ATB_LOG(INFO) << "ModelTorch atKCacheTensors[" << i << "]"
@@ -180,14 +191,14 @@ int64_t ModelTorch::SetKVCache(std::vector<torch::Tensor> atKCacheTensors, std::
     AtTensor2Tensor(atVCacheTensors, vCacheTensors);
 
     if (atb_speed::GetSingleton<atb_speed::Config>().IsConvertNCHWToND()) {
-        for (size_t i = 0; i < kCacheTensors.size(); ++i) {
-            if (kCacheTensors.at(i).desc.format == ACL_FORMAT_NCHW) {
-                kCacheTensors.at(i).desc.format = ACL_FORMAT_ND;
+        for (auto &kCacheTensor : kCacheTensors) {
+            if (kCacheTensor.desc.format == ACL_FORMAT_NCHW) {
+                kCacheTensor.desc.format = ACL_FORMAT_ND;
             }
         }
-        for (size_t i = 0; i < vCacheTensors.size(); ++i) {
-            if (vCacheTensors.at(i).desc.format == ACL_FORMAT_NCHW) {
-                vCacheTensors.at(i).desc.format = ACL_FORMAT_ND;
+        for (auto &vCacheTensor : vCacheTensors) {
+            if (vCacheTensor.desc.format == ACL_FORMAT_NCHW) {
+                vCacheTensor.desc.format = ACL_FORMAT_ND;
             }
         }
     }
@@ -209,9 +220,9 @@ std::vector<torch::Tensor> ModelTorch::Execute(std::vector<torch::Tensor> atInTe
     std::vector<atb::Tensor> inTensors;
     AtTensor2Tensor(atInTensors, inTensors);
     if (atb_speed::GetSingleton<atb_speed::Config>().IsConvertNCHWToND()) {
-        for (size_t i = 0; i < inTensors.size(); ++i) {
-            if (inTensors.at(i).desc.format == ACL_FORMAT_NCHW) {
-                inTensors.at(i).desc.format = ACL_FORMAT_ND;
+        for (auto &inTensor : inTensors) {
+            if (inTensor.desc.format == ACL_FORMAT_NCHW) {
+                inTensor.desc.format = ACL_FORMAT_ND;
             }
         }
     }
@@ -237,9 +248,9 @@ std::vector<torch::Tensor> ModelTorch::Execute(std::vector<torch::Tensor> atInTe
     std::vector<atb::Tensor> outTensors;
     AtTensor2Tensor(atOutTensors, outTensors);
     if (atb_speed::GetSingleton<atb_speed::Config>().IsConvertNCHWToND()) {
-        for (size_t i = 0; i < outTensors.size(); ++i) {
-            if (outTensors.at(i).desc.format == ACL_FORMAT_NCHW) {
-                outTensors.at(i).desc.format = ACL_FORMAT_ND;
+        for (auto &outTensor : outTensors) {
+            if (outTensor.desc.format == ACL_FORMAT_NCHW) {
+                outTensor.desc.format = ACL_FORMAT_ND;
             }
         }
     }
