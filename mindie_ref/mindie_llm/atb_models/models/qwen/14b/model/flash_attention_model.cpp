@@ -103,8 +103,8 @@ atb::Status FlashAttentionModel::InferShape(const std::vector<atb::TensorDesc> &
         return atb::ERROR_INVALID_GRAPH;
     }
 
-    const int64_t outDim = graph_.weightTensors.at(graph_.weightTensors.size() - 1)
-                               .desc.shape.dims[0]; // weightTensors的最后一个tensor的第一个维度值
+    const int64_t outDim = 
+        graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.shape.dims[0]; // weightTensors的最后一个tensor的第一个维度值
     outTensorDescs.at(OUT_TENSOR_HIDDENSTATES_ID) =
         graph_.weightTensors.at(WORDEMBEDDINGNODE_WEIGHT_ID).desc; // WORDEMBEDDINGNODE_WEIGHT_ID是第一个node节点，
     outTensorDescs.at(OUT_TENSOR_HIDDENSTATES_ID).shape.dimNum =
