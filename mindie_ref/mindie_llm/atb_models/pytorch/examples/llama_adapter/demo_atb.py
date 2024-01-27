@@ -146,7 +146,7 @@ for files_path in all_files_batch:
 
 batch_count = len(all_files_batch)
 if batch_count != 0:
-    avg_time = sum_time / len(all_files_batch)
+    avg_time = sum_time / batch_count
     print("[avg_time]:", avg_time)
     if avg_time != 0:
         print("[performance]:{} FPS" .format(BATCH_SIZE * 1000 / avg_time))
