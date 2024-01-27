@@ -39,6 +39,8 @@
 #include "llama_pa/model/paged_attention_model.h"
 #include "llama_pa/model/quant_paged_attention_model.h"
 #include "llama_parallel/model/decoder_model.h"
+#include "minigpt4/model/fusion_encoder_model.h"
+#include "minigpt4/model/fusion_model.h"
 #include "pytorch/adapter/utils/utils.h"
 #include "pytorch/adapter/workspace/workspace.h"
 #include "telechat/model/model.h"
@@ -120,6 +122,10 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::baichuan2_13b::PagedAttentionModel>(param);
     } else if (modelName_ == "baichuan2_13b_pa_quant_model") {
         model_ = std::make_shared<atb_speed::baichuan2_13b::PagedAttentionQuantModel>(param);
+    } else if (modelName_ == "minigpt4_vicuna_7b_encoder_model") {
+        model_ = std::make_shared<atb_speed::minigpt4_vicuna_7b::FusionEncoderModel>(param);
+    } else if (modelName_ == "minigpt4_vicuna_7b_decoder_model") {
+        model_ = std::make_shared<atb_speed::minigpt4_vicuna_7b::FusionModel>(param);
     } else {
         ATB_LOG(FATAL) << "not support modelName:" << modelName_;
         return atb::ERROR_INVALID_PARAM;
