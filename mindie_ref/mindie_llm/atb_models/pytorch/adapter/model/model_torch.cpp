@@ -36,7 +36,7 @@
 #include "llama_pa/model/paged_attention_model.h"
 #include "llama_pa/model/quant_paged_attention_model.h"
 #include "llama_parallel/model/decoder_model.h"
-#include "ChatGLM2/6b/model/paged_attention_model.h"
+#include "chatglm2/6b/model/paged_attention_model.h"
 #include "telechat/model/model.h"
 
 void* ModelTorch::GetWorkSpace(uint64_t bufferSize)
