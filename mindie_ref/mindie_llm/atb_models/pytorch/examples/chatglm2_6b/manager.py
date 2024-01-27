@@ -24,29 +24,30 @@ import numpy as np
 import torch
 import torch_npu
 from torch_npu.contrib import transfer_to_npu
-from transformers import AutoModel, AutoConfig
+from transformers import AutoModel
 
 
 class BaseManager(metaclass=ABCMeta):
     def __init__(
-        self, 
+        self,
         config,
         rank=0,
         world_size=1,
         **kwargs,
-        ):
-        
+    ):
+
         self.config = config
         self.rank = rank
         self.world_size = world_size
-        
+
         self.hidden_size_per_attention_head = config.hidden_size // config.num_attention_heads
         self.num_attention_heads_per_partition = config.num_attention_heads
         self.num_multi_query_groups_per_partition = config.multi_query_group_num
-        self.multi_query_group_num = max(config.multi_query_group_num // self.world_size, 1)
+        self.multi_query_group_num = max(
+            config.multi_query_group_num // self.world_size, 1)
 
-        pre_scale = [(1 / (math.sqrt(self.config.kv_channels) * (layer_id + 1))) * (layer_id + 1) for layer_id in
-                    range(self.config.num_layers)]
+        pre_scale = [layer_id / (math.sqrt(self.config.kv_channels) * layer_id) for layer_id in
+                     range(1, self.config.num_layers + 1)]
         post_scale = [1.0] * self.config.num_layers
 
         self.param_dict = {
@@ -74,9 +75,11 @@ class BaseManager(metaclass=ABCMeta):
             "offsetX": [0]*200, "compressInfo": [0]*200
         }
 
-        self.in_beta = torch.zeros(self.config.hidden_size, device="npu", dtype=torch.float16)
+        self.in_beta = torch.zeros(
+            self.config.hidden_size, device="npu", dtype=torch.float16)
         self.placeholder = torch.ones(1, device="npu")
-        self.layer_id_input = [torch.tensor([i], dtype=torch.int32, device="npu") for i in range(self.config.num_layers)]
+        self.layer_id_input = [torch.tensor(
+            [i], dtype=torch.int32, device="npu") for i in range(self.config.num_layers)]
 
     @abstractmethod
     def load_primal_weights(self) -> Union[Dict[str, torch.Tensor], Dict[str, Dict[str, torch.Tensor]]]:
@@ -152,7 +155,7 @@ class BaseManager(metaclass=ABCMeta):
         sliced_tensor_list = []
         if 'dense_h_to_4h' in key:  # weight
             chunk_tensors = torch.chunk(tensor, tp_size * 2, dim=0)
-            sliced_tensor_list = [torch.cat([chunk_tensors[i], chunk_tensors[i+tp_size]], dim=0)
+            sliced_tensor_list = [torch.cat([chunk_tensors[i], chunk_tensors[i + tp_size]], dim=0)
                                   for i in range(tp_size)]
         elif 'dense_4h_to_h' in key or 'self_attention.dense' in key:  # weight
             if weight_type == "weights":
@@ -171,11 +174,13 @@ class BaseManager(metaclass=ABCMeta):
                 ],
                 dim=0
             )
-            kv_tp_size = min(tp_size, self.num_multi_query_groups_per_partition)
+            kv_tp_size = min(
+                tp_size, self.num_multi_query_groups_per_partition)
             query_list = torch.chunk(query_layer, tp_size, dim=0)
             key_list = torch.chunk(key_layer, kv_tp_size, dim=0)
             value_list = torch.chunk(value_layer, kv_tp_size, dim=0)
-            sliced_tensor_list = [torch.cat([query_list[i], key_list[i*kv_tp_size//tp_size], value_list[i*kv_tp_size//tp_size]], dim=0) for i in range(tp_size)]
+            sliced_tensor_list = [torch.cat(
+                [query_list[i], key_list[i*kv_tp_size//tp_size], value_list[i*kv_tp_size//tp_size]], dim=0) for i in range(tp_size)]
         else:
             sliced_tensor_list = [tensor] * tp_size
         return sliced_tensor_list
@@ -186,7 +191,8 @@ class BaseManager(metaclass=ABCMeta):
         """
         state_dict_list = [{} for i in range(tp_size)]
         for key, tensor in state_dict.items():
-            sliced_tensor_list = self._slice_tensors(key, tensor, tp_size, weight_type)
+            sliced_tensor_list = self._slice_tensors(
+                key, tensor, tp_size, weight_type)
             for i in range(tp_size):
                 state_dict_list[i][key] = sliced_tensor_list[i]
         return state_dict_list
@@ -196,7 +202,8 @@ class Float(BaseManager):
     def __init__(self, config, pretrained_model_path="", **kwargs):
         super(Float, self).__init__(config, **kwargs)
         self.model_path = pretrained_model_path
-        self.float_weight_path = Path(pretrained_model_path).joinpath("tensor_parallel")
+        self.float_weight_path = Path(
+            pretrained_model_path).joinpath("tensor_parallel")
 
     def load_primal_weights(self) -> Dict[str, torch.Tensor]:
         model = AutoModel.from_pretrained(
@@ -205,25 +212,30 @@ class Float(BaseManager):
 
     def save_sliced_weights(self, state_dict_list, tp_size) -> None:
         self.config.world_size = tp_size
-        parallel_model = AutoModel.from_config(self.config, trust_remote_code=True)
+        parallel_model = AutoModel.from_config(
+            self.config, trust_remote_code=True)
         for i in range(tp_size):
-            target_dir = Path(self.float_weight_path).joinpath("part_model", str(i))
+            target_dir = Path(self.float_weight_path).joinpath(
+                "part_model", str(i))
             parallel_model.load_state_dict(state_dict_list[i])
             parallel_model.save_pretrained(target_dir)
             for source_file in ["configuration_chatglm.py", "quantization.py"]:
-                shutil.copy(Path(self.model_path).joinpath(source_file), target_dir)
+                shutil.copy(Path(self.model_path).joinpath(
+                    source_file), target_dir)
 
     def process_weights(self, tp_size) -> None:
         if tp_size == 1:
             return
         if Path(self.float_weight_path).exists():
-            print(f"[info]: The parallel float weights has exist in '{self.float_weight_path}'. Please remove it if you want to process float weights again.")
+            print(
+                f"[info]: The parallel float weights has exist in '{self.float_weight_path}'. Please remove it if you want to process float weights again.")
         else:
             state_dict = self.load_primal_weights()
             state_dict_list = self.slice_tensors(
                 state_dict, tp_size, weight_type="weights")
             self.save_sliced_weights(state_dict_list, tp_size)
-            print(f"[info]: The parallel float weights has been saved to '{self.float_weight_path}'.")
+            print(
+                f"[info]: The parallel float weights has been saved to '{self.float_weight_path}'.")
 
     def init_param(self, is_encoder=True) -> str:
         param_dict = {
@@ -243,7 +255,7 @@ class Float(BaseManager):
             inputs_dict["rope_cos"],
             inputs_dict["rope_sin"],
             inputs_dict["seq_len_tensor"],
-            inputs_dict["attention_mask_max"], 
+            inputs_dict["attention_mask_max"],
             inputs_dict["token_offset"],
             inputs_dict["k_cache_input"],
             inputs_dict["v_cache_input"],
@@ -266,23 +278,26 @@ class Quant(BaseManager):
             "input_scale": np.load(Path(self.quant_weight_path).joinpath("input_scale.npy"), allow_pickle=True).item(),
             "quant_weight": np.load(Path(self.quant_weight_path).joinpath("quant_weight.npy"), allow_pickle=True).item(),
             "deq_scale": np.load(Path(self.quant_weight_path).joinpath("deq_scale.npy"), allow_pickle=True).item(),
-            "fp_bias": np.load(Path(self.quant_weight_path).joinpath("fp_bias.npy"), allow_pickle=True).item(), 
+            "fp_bias": np.load(Path(self.quant_weight_path).joinpath("fp_bias.npy"), allow_pickle=True).item(),
         }
         return state_dict
 
     def load_sliced_weights(self):
         state_dict = {
             "quant_weight": np.load(Path(self.quant_weight_path).joinpath(f"quant_weight{self.rank}.npy"), allow_pickle=True).item(),
-            "bias": np.load(Path(self.quant_weight_path).joinpath(f"new_bias{self.rank}.npy"), allow_pickle=True).item(), 
+            "bias": np.load(Path(self.quant_weight_path).joinpath(f"new_bias{self.rank}.npy"), allow_pickle=True).item(),
             "deq_scale": np.load(Path(self.quant_weight_path).joinpath(f"new_deq_scale{self.rank}.npy"), allow_pickle=True).item(),
         }
         return state_dict
 
     def save_sliced_weights(self, state_dict_list, tp_size) -> None:
         for i in range(tp_size):
-            np.save(Path(self.quant_weight_path).joinpath(f"quant_weight{i}.npy"), state_dict_list["quant_weight"][i])
-            np.save(Path(self.quant_weight_path).joinpath(f"new_bias{i}.npy"), state_dict_list["bias"][i])
-            np.save(Path(self.quant_weight_path).joinpath(f"new_deq_scale{i}.npy"), state_dict_list["deq_scale"][i])
+            np.save(Path(self.quant_weight_path).joinpath(
+                f"quant_weight{i}.npy"), state_dict_list["quant_weight"][i])
+            np.save(Path(self.quant_weight_path).joinpath(
+                f"new_bias{i}.npy"), state_dict_list["bias"][i])
+            np.save(Path(self.quant_weight_path).joinpath(
+                f"new_deq_scale{i}.npy"), state_dict_list["deq_scale"][i])
 
     def bias_correction(self, fp_bias_dict, quant_weight_dict, input_offset_dict, deq_scale_dict) -> Dict[str, torch.Tensor]:
         """
@@ -307,7 +322,7 @@ class Quant(BaseManager):
                 key, torch.tensor(new_deq_scale.astype(np.int64)))
         return new_deq_scale_dict
 
-    def process_weights(self, tp_size) -> None: 
+    def process_weights(self, tp_size) -> None:
         self.float.process_weights(tp_size)  # 处理浮点权重
         state_dict = self.load_primal_weights()
         # >>> 待量化工具改进后,这段可删除
@@ -326,7 +341,8 @@ class Quant(BaseManager):
             "deq_scale": self.slice_tensors(state_dict["deq_scale"], tp_size, weight_type="scales"),
         }
         self.save_sliced_weights(state_dict_list, tp_size)
-        print(f"[info]: The processed quant weights has been saved to '{self.quant_weight_path}'.")
+        print(
+            f"[info]: The processed quant weights has been saved to '{self.quant_weight_path}'.")
 
     def init_param(self, is_encoder=True) -> str:
         state_dict = self.load_primal_weights()
@@ -341,7 +357,7 @@ class Quant(BaseManager):
         self_ln_input_offset = []
         ffn_out_input_scale = []
         ffn_out_input_offset = []
-        
+
         for i in range(self.config.num_layers):
             if i in self.config.float_layers_id:
                 qkv_input_scale.append(float(0))
@@ -357,26 +373,33 @@ class Quant(BaseManager):
                 dense_name = f"transformer.encoder.layers.{i}.self_attention.dense"
                 dense_h_to_4h_name = f"transformer.encoder.layers.{i}.mlp.dense_h_to_4h"
                 dense_4h_to_h_name = f"transformer.encoder.layers.{i}.mlp.dense_4h_to_h"
-                qkv_input_scale.append(float(1 / input_scale_dict[query_key_value_name]))
-                qkv_input_offset.append(int(input_offset_dict[query_key_value_name]))
-                dense_input_scale.append(float(1 / input_scale_dict[dense_name]))
+                qkv_input_scale.append(
+                    float(1 / input_scale_dict[query_key_value_name]))
+                qkv_input_offset.append(
+                    int(input_offset_dict[query_key_value_name]))
+                dense_input_scale.append(
+                    float(1 / input_scale_dict[dense_name]))
                 dense_input_offset.append(int(input_offset_dict[dense_name]))
-                self_ln_input_scale.append(float(1 / input_scale_dict[dense_h_to_4h_name]))
-                self_ln_input_offset.append(int(input_offset_dict[dense_h_to_4h_name]))
-                ffn_out_input_scale.append(float(1 / input_scale_dict[dense_4h_to_h_name]))
-                ffn_out_input_offset.append(int(input_offset_dict[dense_4h_to_h_name]))
-        
+                self_ln_input_scale.append(
+                    float(1 / input_scale_dict[dense_h_to_4h_name]))
+                self_ln_input_offset.append(
+                    int(input_offset_dict[dense_h_to_4h_name]))
+                ffn_out_input_scale.append(
+                    float(1 / input_scale_dict[dense_4h_to_h_name]))
+                ffn_out_input_offset.append(
+                    int(input_offset_dict[dense_4h_to_h_name]))
+
         param_dict = {
             "isEncoder": is_encoder,
             "quantmodel": True,
             "correctNodeId": self.config.float_layers_id[0],
-            "qkvInputScale": qkv_input_scale, 
+            "qkvInputScale": qkv_input_scale,
             "qkvInputOffset": qkv_input_offset,
-            "denseInputScale": dense_input_scale, 
+            "denseInputScale": dense_input_scale,
             "denseInputOffset": dense_input_offset,
-            "selfLnInputScale": self_ln_input_scale, 
+            "selfLnInputScale": self_ln_input_scale,
             "selfLnInputOffset": self_ln_input_offset,
-            "ffnOutInputScale": ffn_out_input_scale, 
+            "ffnOutInputScale": ffn_out_input_scale,
             "ffnOutInputOffset": ffn_out_input_offset,
         }
 
@@ -384,21 +407,24 @@ class Quant(BaseManager):
         return json.dumps(self.param_dict)
 
     def init_weights(self, state_dict, is_format_nz=False) -> List[torch.Tensor]:
-        weights_list = [state_dict['transformer.embedding.word_embeddings.weight']]
-        
+        weights_list = [
+            state_dict['transformer.embedding.word_embeddings.weight']]
+
         # load quant weights
         quant_state_dict = self.load_sliced_weights()
         quant_weight_dict = quant_state_dict["quant_weight"]
         new_bias_dict = quant_state_dict["bias"]
         deq_scale_dict = quant_state_dict["deq_scale"]
-        
+
         # adapt for NZ format
         if is_format_nz:
-            transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
+            transdata_operation = torch.classes.OperationTorch.OperationTorch(
+                "TransdataOperation")
             transdata_param = json.dumps({})
             transdata_operation.set_param(transdata_param)
             for k, v in quant_weight_dict.items():
-                quant_weight_dict[k] = transdata_operation.execute([v.npu()])[0]
+                quant_weight_dict[k] = transdata_operation.execute([v.npu()])[
+                    0]
 
         for i in range(self.config.num_layers):
             if i in self.config.float_layers_id:
@@ -411,13 +437,18 @@ class Quant(BaseManager):
                 dense_h_to_4h_name = f"transformer.encoder.layers.{i}.mlp.dense_h_to_4h"
                 dense_4h_to_h_name = f"transformer.encoder.layers.{i}.mlp.dense_4h_to_h"
 
-                weights_list.append(state_dict[f"transformer.encoder.layers.{i}.input_layernorm.weight"])
-                weights_list.append(quant_weight_dict[query_key_value_name].npu())
+                weights_list.append(
+                    state_dict[f"transformer.encoder.layers.{i}.input_layernorm.weight"])
+                weights_list.append(
+                    quant_weight_dict[query_key_value_name].npu())
                 weights_list.append(new_bias_dict[query_key_value_name].npu())
                 weights_list.append(quant_weight_dict[dense_name].npu())
-                weights_list.append(state_dict[f"transformer.encoder.layers.{i}.post_attention_layernorm.weight"])
-                weights_list.append(quant_weight_dict[dense_h_to_4h_name].npu())
-                weights_list.append(quant_weight_dict[dense_4h_to_h_name].npu())
+                weights_list.append(
+                    state_dict[f"transformer.encoder.layers.{i}.post_attention_layernorm.weight"])
+                weights_list.append(
+                    quant_weight_dict[dense_h_to_4h_name].npu())
+                weights_list.append(
+                    quant_weight_dict[dense_4h_to_h_name].npu())
 
                 weights_list.append(deq_scale_dict[query_key_value_name].npu())
                 weights_list.append(deq_scale_dict[dense_name].npu())
@@ -427,7 +458,8 @@ class Quant(BaseManager):
                 weights_list.append(deq_scale_dict[dense_4h_to_h_name].npu())
                 weights_list.append(new_bias_dict[dense_4h_to_h_name].npu())
 
-        weights_list.append(state_dict["transformer.encoder.final_layernorm.weight"])
+        weights_list.append(
+            state_dict["transformer.encoder.final_layernorm.weight"])
         weights_list.append(state_dict["transformer.output_layer.weight"])
         return weights_list
 
@@ -437,7 +469,7 @@ class Quant(BaseManager):
             inputs_dict["rope_cos"],
             inputs_dict["rope_sin"],
             inputs_dict["seq_len_tensor"],
-            inputs_dict["attention_mask_max"], 
+            inputs_dict["attention_mask_max"],
             inputs_dict["token_offset"],
             inputs_dict["k_cache_input"],
             inputs_dict["v_cache_input"],
@@ -465,16 +497,21 @@ class Sparse(BaseManager):
         for file_name in os.listdir(data_dir):
             weight_name = file_name[:-4]
             if is_compress_info:
-                data = np.fromfile(os.path.join(data_dir, file_name), dtype=np.int64)
+                data = np.fromfile(os.path.join(
+                    data_dir, file_name), dtype=np.int64)
             else:
-                data = np.fromfile(os.path.join(data_dir, file_name), dtype=np.int8)
+                data = np.fromfile(os.path.join(
+                    data_dir, file_name), dtype=np.int8)
             data_dict.setdefault(weight_name, torch.tensor(data))
         return data_dict
-    
+
     def load_sliced_weights(self):
-        compress_w_path = Path(self.compress_weight_path).joinpath(f"compress{self.rank}", "weight")
-        compress_index_path = Path(self.compress_weight_path).joinpath(f"compress{self.rank}", "index")
-        compress_info_path = Path(self.compress_weight_path).joinpath(f"compress{self.rank}", "info")
+        compress_w_path = Path(self.compress_weight_path).joinpath(
+            f"compress{self.rank}", "weight")
+        compress_index_path = Path(self.compress_weight_path).joinpath(
+            f"compress{self.rank}", "index")
+        compress_info_path = Path(self.compress_weight_path).joinpath(
+            f"compress{self.rank}", "info")
         state_dict = {
             "compress_weight": self._read_dat_file(compress_w_path),
             "compress_info": self._read_dat_file(compress_info_path, is_compress_info=True),
@@ -498,10 +535,11 @@ class Sparse(BaseManager):
         return json.dumps(param_dict)
 
     def init_weights(self, state_dict, is_format_nz=False) -> List[torch.Tensor]:
-        weights_list = [state_dict['transformer.embedding.word_embeddings.weight']]
+        weights_list = [
+            state_dict['transformer.embedding.word_embeddings.weight']]
 
         # load quant and compress weights
-        quant_state_dict = self.quant.load_sliced_weights() # 双芯
+        quant_state_dict = self.quant.load_sliced_weights()  # 双芯
         compress_state_dict = self.load_sliced_weights()
         new_bias_dict = quant_state_dict["bias"]
         deq_scale_dict = quant_state_dict["deq_scale"]
@@ -522,13 +560,18 @@ class Sparse(BaseManager):
                 dense_h_to_4h_name = f"transformer.encoder.layers.{i}.mlp.dense_h_to_4h"
                 dense_4h_to_h_name = f"transformer.encoder.layers.{i}.mlp.dense_4h_to_h"
 
-                weights_list.append(state_dict[f"transformer.encoder.layers.{i}.input_layernorm.weight"])
-                weights_list.append(compress_weight_dict[query_key_value_name].npu())
+                weights_list.append(
+                    state_dict[f"transformer.encoder.layers.{i}.input_layernorm.weight"])
+                weights_list.append(
+                    compress_weight_dict[query_key_value_name].npu())
                 weights_list.append(new_bias_dict[query_key_value_name].npu())
                 weights_list.append(compress_weight_dict[dense_name].npu())
-                weights_list.append(state_dict[f"transformer.encoder.layers.{i}.post_attention_layernorm.weight"])
-                weights_list.append(compress_weight_dict[dense_h_to_4h_name].npu())
-                weights_list.append(compress_weight_dict[dense_4h_to_h_name].npu())
+                weights_list.append(
+                    state_dict[f"transformer.encoder.layers.{i}.post_attention_layernorm.weight"])
+                weights_list.append(
+                    compress_weight_dict[dense_h_to_4h_name].npu())
+                weights_list.append(
+                    compress_weight_dict[dense_4h_to_h_name].npu())
 
                 weights_list.append(deq_scale_dict[query_key_value_name].npu())
                 weights_list.append(deq_scale_dict[dense_name].npu())
@@ -540,10 +583,12 @@ class Sparse(BaseManager):
 
                 for layer_name in [query_key_value_name, dense_name, dense_h_to_4h_name, dense_4h_to_h_name]:
                     weights_list.append(compress_index_dict[layer_name].npu())
-                    weights_list.append(offset_x_dict[layer_name].to(torch.int32).npu())
+                    weights_list.append(
+                        offset_x_dict[layer_name].to(torch.int32).npu())
                     weights_list.append(compress_info_dict[layer_name].npu())
 
-        weights_list.append(state_dict["transformer.encoder.final_layernorm.weight"])
+        weights_list.append(
+            state_dict["transformer.encoder.final_layernorm.weight"])
         weights_list.append(state_dict["transformer.output_layer.weight"])
         return weights_list
 
