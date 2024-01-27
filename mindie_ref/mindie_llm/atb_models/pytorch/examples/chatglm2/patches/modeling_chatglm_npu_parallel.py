@@ -6,8 +6,8 @@ import warnings
 import re
 import sys
 import time
-import os 
-import json
+import logging as lg
+from typing import Optional, Tuple, Union, List, Callable, Dict, Any
 
 import torch
 import torch.utils.checkpoint
@@ -15,7 +15,6 @@ import torch.nn.functional as F
 from torch import nn
 from torch.nn import CrossEntropyLoss, LayerNorm
 from torch.nn.utils import skip_init
-from typing import Optional, Tuple, Union, List, Callable, Dict, Any
 
 from transformers.modeling_outputs import (
     BaseModelOutputWithPast,
@@ -27,7 +26,6 @@ from transformers.generation.logits_process import LogitsProcessor
 from transformers.generation.utils import LogitsProcessorList, StoppingCriteriaList, GenerationConfig, ModelOutput
 
 from .configuration_chatglm import ChatGLMConfig
-import logging as lg
 
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S %p"
@@ -461,7 +459,7 @@ class SelfAttention(torch.nn.Module):
 
         output = self.dense(context_layer)
 
-        if self.world_size >=2:
+        if self.world_size >= 2:
             torch.distributed.all_reduce(output, op=torch.distributed.ReduceOp.SUM)
 
         return output, kv_cache
@@ -1119,7 +1117,6 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             return_past_key_values=False,
             **kwargs,
     ):
-        pre_processing_start = time.time()
         batch_size, input_ids_seq_length = input_ids.shape[0], input_ids.shape[-1]
 
         if generation_config is None:
@@ -1178,7 +1175,6 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         unfinished_sequences = input_ids.new(input_ids.shape[0]).fill_(1)
         scores = None
 
-        pre_processing_end = time.time()
         while True:
             torch.npu.synchronize()
             input_start = time.time()
@@ -1242,11 +1238,11 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             # stop when each sentence is finished, or if we exceed the maximum length
             if unfinished_sequences.max() == 0 or stopping_criteria(input_ids, scores):
                 break
-        model_avg = self.model_total / (self.count - 1)
-        token_avg = self.token_total / (self.count - 1)
-        lg.info(f"{self.count} tokens, avg model_time: {model_avg:.4f} ms, model_total: {self.model_total:.4f} ms")
-        lg.info(f"{self.count} tokens, avg token_time: {token_avg:.4f} m, token_total: {self.token_total:.4f} ms")
-        
+        if self.count != 1:
+            model_avg = self.model_total / (self.count - 1)
+            token_avg = self.token_total / (self.count - 1)
+            lg.info(f"{self.count} tokens, avg model_time: {model_avg:.4f} ms, model_total: {self.model_total:.4f} ms")
+            lg.info(f"{self.count} tokens, avg token_time: {token_avg:.4f} m, token_total: {self.token_total:.4f} ms")
 
     def quantize(self, bits: int, empty_init=False, device=None, **kwargs):
         if bits == 0:

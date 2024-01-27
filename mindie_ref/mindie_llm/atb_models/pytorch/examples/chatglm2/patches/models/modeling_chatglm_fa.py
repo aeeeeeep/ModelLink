@@ -5,20 +5,19 @@ import copy
 import warnings
 import re
 import sys
-import time
-import os
+from typing import Optional, Tuple, Union, List, Callable, Dict, Any
 import json
+import os
 
 import torch
-import torch_npu
-import numpy as np
 import torch.utils.checkpoint
 import torch.nn.functional as F
+import torch_npu
 from torch import nn
-from torch.nn import CrossEntropyLoss, LayerNorm, Parameter
+from torch.nn import CrossEntropyLoss, LayerNorm
 from torch.nn.utils import skip_init
-from typing import Optional, Tuple, Union, List, Callable, Dict, Any
 
+from atb_speed.common.arch.post_process.sample import SampleForModelsBase
 from transformers.modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
@@ -27,15 +26,14 @@ from transformers.modeling_utils import PreTrainedModel
 from transformers.utils import logging
 from transformers.generation.logits_process import LogitsProcessor
 from transformers.generation.utils import LogitsProcessorList, StoppingCriteriaList, GenerationConfig, ModelOutput
-
-from .configuration_chatglm import ChatGLMConfig
-from atb_speed.common.arch.post_process.sample import SampleForModelsBase
 from transformers.generation.logits_process import (
     TemperatureLogitsWarper,
     TopKLogitsWarper,
     TopPLogitsWarper,
 )
-from manager import ModeManager
+
+from .configuration_chatglm import ChatGLMConfig
+from .manager import ModeManager
 
 
 ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
@@ -288,10 +286,13 @@ class CoreAttention(torch.nn.Module):
             )
 
             # Raw attention scores. [b * np, sq, sk]
-            matmul_result = torch.bmm(
-                query_layer.transpose(0, 1),
-                key_layer.transpose(0, 1).transpose(1, 2)
-            ) * (1.0 / self.norm_factor)
+            matmul_result = torch.baddbmm(
+                matmul_input_buffer,
+                query_layer.transpose(0, 1),  # [b * np, sq, hn]
+                key_layer.transpose(0, 1).transpose(1, 2),  # [b * np, hn, sk]
+                beta=0.0,
+                alpha=(1.0 / self.norm_factor),
+            )
 
             # change view to [b, np, sq, sk]
             attention_scores = matmul_result.view(*output_size)
@@ -489,7 +490,7 @@ class SelfAttention(torch.nn.Module):
 
         output = self.dense(context_layer)
 
-        if self.world_size >=2:
+        if self.world_size >= 2:
             torch.distributed.all_reduce(output, op=torch.distributed.ReduceOp.SUM)
 
         return output, kv_cache
@@ -552,10 +553,11 @@ class MLP(torch.nn.Module):
 
         return output
 
+
 def bias_correction(fp_bias, quant_weight, input_offset, deq_scale):
     correction = quant_weight.to(torch.float32).npu().sum(dim=1) * float(input_offset) * deq_scale.npu()
-    bias_correction = fp_bias.npu() - correction
-    return bias_correction
+    return fp_bias.npu() - correction
+
 
 class GLMBlock(torch.nn.Module):
     """A single transformer layer.
@@ -578,7 +580,7 @@ class GLMBlock(torch.nn.Module):
                                              dtype=config.torch_dtype)
 
         # Self attention.
-        if not ENABLE_QUANT and not ENABLE_SPARSE or (self.layer_number-1) in config.float_layers_id:
+        if not ENABLE_QUANT and not ENABLE_SPARSE or (self.layer_number - 1) in config.float_layers_id:
             self.self_attention = SelfAttention(config, layer_number, device=device)
             self.hidden_dropout = config.hidden_dropout
 
@@ -587,7 +589,7 @@ class GLMBlock(torch.nn.Module):
                                                       dtype=config.torch_dtype)
 
         # MLP
-        if not ENABLE_QUANT and not ENABLE_SPARSE or (self.layer_number-1) in config.float_layers_id:
+        if not ENABLE_QUANT and not ENABLE_SPARSE or (self.layer_number - 1) in config.float_layers_id:
             self.mlp = MLP(config, device=device)
 
     def forward(
@@ -972,9 +974,10 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         self.model_rotary_pos_emb_cos, self.model_rotary_pos_emb_sin = \
             self.transformer.rotary_pos_emb(self.seq_length)
         # param required by FlashAttention, softmax(fp32(Q*preScale@K*postScale))@V
+        norm_factor = math.sqrt(config.kv_channels)  # 对应 CoreAttention 里的 self.norm_factor
         self.preScale = [
-            (1 / (math.sqrt(config.kv_channels) * (layer_id + 1))) * (layer_id + 1) 
-            for layer_id in range(self.num_layers)
+            (1 / (norm_factor * layer_id) * layer_id)
+            for layer_id in range(1, self.num_layers + 1)
         ]
         self.postScale = [1.0] * self.num_layers
 
@@ -1191,7 +1194,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
                             (self.batch, NZ_LAST_DIM, self.max_seq_len), device='npu', dtype=torch.half
                         )
                         self.attention_mask_max[:self.batch, :NZ_LAST_DIM, :attention_mask_acl.size()[-1]] -= 10000 * (
-                            F.pad(attention_mask_acl.unsqueeze(-2), (0,0,0,15)))
+                            F.pad(attention_mask_acl.unsqueeze(-2), (0, 0, 0, 15)))
                     else:
                         self.attention_mask_max = torch.zeros(
                             (self.batch, 1, self.max_seq_len), device='npu', dtype=torch.half
@@ -1359,7 +1362,6 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             return_past_key_values=False,
             **kwargs,
     ):
-        pre_processing_start = time.time()
         batch_size, input_ids_seq_length = input_ids.shape[0], input_ids.shape[-1]
 
         if generation_config is None:
@@ -1440,7 +1442,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
                 probs_opt = nn.functional.softmax(output, dim=-1)
                 next_tokens = torch.multinomial(probs_opt, num_samples=1)
                 for i in next_tokens:
-                    next_tokens = indices[0][len(indices[0])-i-1]
+                    next_tokens = indices[0][len(indices[0]) - i - 1]
             else:
                 next_tokens = torch.argmax(next_token_scores, dim=-1)
             next_tokens = next_tokens.npu()
@@ -1480,48 +1482,48 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         return self
 
     def sample(
-                self,
-                input_ids: torch.LongTensor,
-                logits_processor: Optional[LogitsProcessorList] = None,
-                stopping_criteria: Optional[StoppingCriteriaList] = None,
-                logits_warper: Optional[LogitsProcessorList] = None,
-                max_length: Optional[int] = None,
-                pad_token_id: Optional[int] = None,
-                eos_token_id: Optional[Union[int, List[int]]] = None,
-                output_attentions: Optional[bool] = None,
-                output_hidden_states: Optional[bool] = None,
-                output_scores: Optional[bool] = None,
-                return_dict_in_generate: Optional[bool] = None,
-                synced_gpus: bool = False,
-                streamer: Optional["BaseStreamer"] = None,
-                **model_kwargs,
-            ):
-                sample_config = {}
-                for obj in logits_warper :
-                    if (isinstance(obj, TemperatureLogitsWarper)):
-                        sample_config["temperature"] = obj.temperature
-                    if (isinstance(obj, TopKLogitsWarper)):
-                        sample_config["top_k"] = obj.top_k
-                    if (isinstance(obj, TopPLogitsWarper)):
-                        sample_config["top_p"] = obj.top_p
-                
-                model_sample = SampleForModelsBase(self,
-                                                self.generation_config,
-                                                self.config,
-                                                sample_config,
-                                                self.prepare_inputs_for_generation,
-                                                self._update_model_kwargs_for_generation
-                                                )
-                return model_sample.sample(
-                    input_ids,
-                    logits_processor=logits_processor,
-                    logits_warper=logits_warper,
-                    stopping_criteria=stopping_criteria,
-                    pad_token_id=pad_token_id,
-                    eos_token_id=eos_token_id,
-                    output_scores=output_scores,
-                    return_dict_in_generate=return_dict_in_generate,
-                    synced_gpus=synced_gpus,
-                    streamer=streamer,
-                    **model_kwargs,
-                )
+        self,
+        input_ids: torch.LongTensor,
+        logits_processor: Optional[LogitsProcessorList] = None,
+        stopping_criteria: Optional[StoppingCriteriaList] = None,
+        logits_warper: Optional[LogitsProcessorList] = None,
+        max_length: Optional[int] = None,
+        pad_token_id: Optional[int] = None,
+        eos_token_id: Optional[Union[int, List[int]]] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        output_scores: Optional[bool] = None,
+        return_dict_in_generate: Optional[bool] = None,
+        synced_gpus: bool = False,
+        streamer: Optional["BaseStreamer"] = None,
+        **model_kwargs,
+    ):
+        sample_config = {}
+        for obj in logits_warper :
+            if (isinstance(obj, TemperatureLogitsWarper)):
+                sample_config["temperature"] = obj.temperature
+            if (isinstance(obj, TopKLogitsWarper)):
+                sample_config["top_k"] = obj.top_k
+            if (isinstance(obj, TopPLogitsWarper)):
+                sample_config["top_p"] = obj.top_p
+
+        model_sample = SampleForModelsBase(self,
+                                        self.generation_config,
+                                        self.config,
+                                        sample_config,
+                                        self.prepare_inputs_for_generation,
+                                        self._update_model_kwargs_for_generation
+                                        )
+        return model_sample.sample(
+            input_ids,
+            logits_processor=logits_processor,
+            logits_warper=logits_warper,
+            stopping_criteria=stopping_criteria,
+            pad_token_id=pad_token_id,
+            eos_token_id=eos_token_id,
+            output_scores=output_scores,
+            return_dict_in_generate=return_dict_in_generate,
+            synced_gpus=synced_gpus,
+            streamer=streamer,
+            **model_kwargs,
+        )
