@@ -17,7 +17,6 @@ import os
 import shutil
 
 from transformers import AutoConfig
-
 from manager import ModeManager
 
 
@@ -42,8 +41,8 @@ def parse_args():
         default="patches/modeling_chatglm_npu_parallel.py",
         help="model_file_cut"
     )
-    args = parser.parse_args()
-    return args
+    args_input = parser.parse_args()
+    return args_input
 
 
 if __name__ == "__main__":

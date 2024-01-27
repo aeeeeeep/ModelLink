@@ -1,6 +1,6 @@
 import os
-import numpy as np
 import argparse
+import numpy as np
 from modelslim.pytorch.weight_compression import CompressConfig, Compressor
 
 
