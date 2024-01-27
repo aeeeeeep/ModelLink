@@ -94,7 +94,7 @@ atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operati
             atb::infer::SplitParam splitParam;
             splitParam.splitDim = -1; // 2: [bs, seq, 2*hidden_size]
             splitParam.splitNum = 2;  // 2: 进行二等分
-            atb::CreateOperation(splitParam, &splitNode.operation);
+            CREATE_OPERATION(splitParam, &splitNode.operation);
             splitNode.inTensorIds = {INTERMEDIATE_MATMUL_UP_OUT_ID};
             splitNode.outTensorIds = {INTERMEDIATE_MATMUL_OUT_ID, INTERMEDIATE_SPLIT_OUT_ID};
         } else {
@@ -112,7 +112,7 @@ atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operati
     auto &actNode = opGraph.nodes.at(nodeId++);
     atb::infer::ActivationParam actParam;
     actParam.activationType = param.activationType;
-    atb::CreateOperation(actParam, &actNode.operation);
+    CREATE_OPERATION(actParam, &actNode.operation);
     actNode.inTensorIds = {param.noGate ? INTERMEDIATE_MATMUL_UP_OUT_ID : INTERMEDIATE_MATMUL_OUT_ID};
     actNode.outTensorIds = {INTERMEDIATE_ACTIVATION_OUT_ID};
 
@@ -120,7 +120,7 @@ atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operati
         auto &mulNode = opGraph.nodes.at(nodeId++);
         atb::infer::ElewiseParam mulParam;
         mulParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_MUL;
-        atb::CreateOperation(mulParam, &mulNode.operation);
+        CREATE_OPERATION(mulParam, &mulNode.operation);
         if (param.isPack) {
             mulNode.inTensorIds = {INTERMEDIATE_ACTIVATION_OUT_ID, INTERMEDIATE_SPLIT_OUT_ID};
         } else {
@@ -152,7 +152,7 @@ atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operati
         return atb::NO_ERROR;
     };
 
-    atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
 }
 

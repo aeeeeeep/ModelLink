@@ -1,0 +1,3259 @@
+diff --git a/.gitignore b/.gitignore
+index 20c9bae..c3d0695 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -2,3 +2,4 @@
+ target
+ router/tokenizer.json
+ *__pycache__*
++.vscode
+diff --git a/benchmark/src/generation.rs b/benchmark/src/generation.rs
+index b57c652..c72d31d 100644
+--- a/benchmark/src/generation.rs
++++ b/benchmark/src/generation.rs
+@@ -217,7 +217,5 @@ fn create_sequence(sequence_length: u32, tokenizer: Tokenizer) -> String {
+     // Truncate to sequence_length
+     encoding.truncate(sequence_length as usize, 0, TruncationDirection::Left);
+     // Decode
+-    tokenizer
+-        .decode(Vec::from(encoding.get_ids()), false)
+-        .unwrap()
++    tokenizer.decode(encoding.get_ids(), false).unwrap()
+ }
+diff --git a/launcher/src/main.rs b/launcher/src/main.rs
+index 2ad788a..3b011a9 100644
+--- a/launcher/src/main.rs
++++ b/launcher/src/main.rs
+@@ -520,7 +520,7 @@ fn shutdown_shards(shutdown: Arc<AtomicBool>, shutdown_receiver: &mpsc::Receiver
+ }
+ 
+ fn num_cuda_devices() -> Option<usize> {
+-    let devices = match env::var("CUDA_VISIBLE_DEVICES") {
++    let devices = match env::var("ASCEND_RT_VISIBLE_DEVICES") {
+         Ok(devices) => devices,
+         Err(_) => env::var("NVIDIA_VISIBLE_DEVICES").ok()?,
+     };
+diff --git a/router/src/infer.rs b/router/src/infer.rs
+index 188ddc6..a083577 100644
+--- a/router/src/infer.rs
++++ b/router/src/infer.rs
+@@ -53,7 +53,7 @@ impl Infer {
+         generation_health: Arc<AtomicBool>,
+     ) -> Self {
+         // Infer shared state
+-        let queue = Queue::new(requires_padding, 16);
++        let queue = Queue::new(requires_padding, 128);
+         let shared = Arc::new(Shared {
+             batching_task: Notify::new(),
+         });
+diff --git a/router/src/validation.rs b/router/src/validation.rs
+index be835bf..f967361 100644
+--- a/router/src/validation.rs
++++ b/router/src/validation.rs
+@@ -311,7 +311,7 @@ fn prepare_input(
+             // truncate encoding and decode new inputs
+             encoding.truncate(truncate, 0, TruncationDirection::Left);
+             let inputs = tokenizer
+-                .decode(Vec::from(encoding.get_ids()), false)
++                .decode(encoding.get_ids(), false)
+                 .map_err(|err| ValidationError::Tokenizer(err.to_string()))?;
+             (inputs, encoding.len())
+         }
+diff --git a/server/README.md b/server/README.md
+index 8efd80a..16f5d55 100644
+--- a/server/README.md
++++ b/server/README.md
+@@ -12,4 +12,35 @@ make install
+ 
+ ```shell
+ make run-dev
+-```
+\ No newline at end of file
++```
++
++##   ≈‰Ω¯’π
++### Õ®”√–ﬁ∏ƒ
++1. `server.py` ÃÌº”¥Ú”°–≈œ¢
++2. `weigths.py` –ﬁ∏ƒ√ø¥Œload weightæÕœ¬∑¢µΩø®…œµƒπ˝≥Ã£¨±‹√‚ø®À¿£¨◊¢£∫ø®À¿‘≠“ÚŒ¥÷™
++3. `watermak.py` –ﬁ∏ƒ`Generator`£¨ π”√cpuΩ¯––º∆À„
++4. `tokens.py` Õ¨3
++5. `layers.py` ÃÌº”∑«»⁄∫œ∞Êropeº∆À„
++6. `flash_attn_ascend.py` ÃÌº”self attentionº∆À„£¨∫Û√ÊΩ´flash atten≤π≥‰µΩ¥ÀŒƒº˛
++7. …æ≥˝Œƒº˛÷–»ﬂ”‡`import torch_npu`
++
++### flash_llamaƒ£–Õ∏ƒ‘Ï
++1. `flash_causal_lm.py`
++“Úπ˚”Ô—‘ƒ£–Õª˘¿‡£¨Ã·π©`warmup`°¢`generate_token`°¢∫Û¥¶¿Ì£¨µ»high levelΩ”ø⁄
++1£© “Úπ˚”Ô—‘ƒ£–Õª˘¿‡£¨ÃÌº”∂‘œÛ–Ú¡–ªØΩ”ø⁄£¨∑Ω±„¥Ú”°£ª
++2£© –ﬁ∏ƒint32–Õ ‰»ÎŒ™int64–Õ£¨±‹√‚torch_npu≤ª÷ß≥÷
++2. `flash_llama.py`
++1£© flash ƒ£–Õ»Îø⁄£¨–ﬁ∏ƒŒ™loadÀ˘”–weight‘⁄»´≤øœ¬ø®
++2£© tokenizer π”√`use_fast=False`£¨±‹√‚protoŒ Ã‚º∞Ã·…˝ÀŸ∂»
++3. `flash_llama_modeling.py`
++ µº µƒÕ∆¿Ìƒ£–Õ£¨÷¥––forwardÕ∆¿Ì
++1£© Ω”»Î¡Àposition embedding
++2£© Ω”»Îself attentionº∆À„
++3£© `todo`£¨»±…Ÿ`reshape and cache`“‘º∞`paged attention`º∆À„
++
++
++### TGI patch
++
++- ’“µΩtgi≥ı ºµƒ◊¥Ã¨commit£¨»ª∫ÛΩ¯––¥Úpatch: git diff 8648c3da8cf661e2510fce0ff552c01439151a17 > ock_tgi.patch
++- œ¬‘ÿtgi 0.9.4∞Ê±æ£¨ π”√ git apply --reject --whitespace=fix --check ock_tgi.patch
++- ∂‘±»ø™‘¥∞Ê±æ¥Úpatch∫Û «∑Ò”Î◊‘º∫≤÷ø‚¥˙¬Î“ª÷¬
+diff --git a/server/requirements.txt b/server/requirements.txt
+index 98838b3..27091da 100644
+--- a/server/requirements.txt
++++ b/server/requirements.txt
+@@ -59,7 +59,7 @@ six==1.16.0 ; python_version >= "3.9" and python_version < "4.0"
+ sympy==1.12 ; python_version >= "3.9" and python_version < "4.0"
+ texttable==1.6.7 ; python_version >= "3.9" and python_version < "4.0"
+ tokenizers==0.13.3 ; python_version >= "3.9" and python_version < "4.0"
+-torch==2.0.1 ; python_version >= "3.9" and python_version < "4.0"
++torch==1.11.0 ; python_version >= "3.9" and python_version < "4.0"
+ tqdm==4.65.0 ; python_version >= "3.9" and python_version < "4.0"
+ transformers==4.29.2 ; python_version >= "3.9" and python_version < "4.0"
+ typer==0.6.1 ; python_version >= "3.9" and python_version < "4.0"
+diff --git a/server/text_generation_server/cli.py b/server/text_generation_server/cli.py
+index e74c033..45b2c3f 100644
+--- a/server/text_generation_server/cli.py
++++ b/server/text_generation_server/cli.py
+@@ -76,7 +76,7 @@ def serve(
+             "Only 1 can be set between `dtype` and `quantize`, as they both decide how goes the final model."
+         )
+     server.serve(
+-        model_id, revision, sharded, quantize, dtype, trust_remote_code, uds_path
++        model_id, revision, sharded, None, dtype, trust_remote_code, uds_path
+     )
+ 
+ 
+diff --git a/server/text_generation_server/models/__init__.py b/server/text_generation_server/models/__init__.py
+index e9260ee..1bf2d91 100644
+--- a/server/text_generation_server/models/__init__.py
++++ b/server/text_generation_server/models/__init__.py
+@@ -1,5 +1,6 @@
+ import os
+ import torch
++import torch_npu
+ 
+ from loguru import logger
+ from transformers.configuration_utils import PretrainedConfig
+@@ -19,6 +20,7 @@ from text_generation_server.models.santacoder import SantaCoder
+ from text_generation_server.models.t5 import T5Sharded
+ from text_generation_server.models.gpt_neox import GPTNeoxSharded
+ 
++
+ # The flag below controls whether to allow TF32 on matmul. This flag defaults to False
+ # in PyTorch 1.12 and later.
+ torch.backends.cuda.matmul.allow_tf32 = True
+@@ -45,24 +47,17 @@ __all__ = [
+ FLASH_ATT_ERROR_MESSAGE = "{} requires Flash Attention enabled models."
+ 
+ FLASH_ATTENTION = True
+-try:
+-    from text_generation_server.models.flash_rw import FlashRWSharded
+-    from text_generation_server.models.flash_neox import FlashNeoXSharded
+-    from text_generation_server.models.flash_llama import (
++
++from text_generation_server.models.flash_llama import (
+         FlashLlama,
+     )
+-    from text_generation_server.models.flash_santacoder import (
+-        FlashSantacoderSharded,
++from text_generation_server.models.flash_chatglm2 import (
++        FlashChatglm2,
+     )
+ 
+-except ImportError as e:
+-    logger.warning(f"Could not import Flash Attention enabled models: {e}")
+-    FLASH_ATTENTION = False
+ 
+ if FLASH_ATTENTION:
+-    __all__.append(FlashNeoXSharded)
+-    __all__.append(FlashRWSharded)
+-    __all__.append(FlashSantacoderSharded)
++
+     __all__.append(FlashLlama)
+ 
+ 
+@@ -187,7 +182,7 @@ def get_model(
+                 revision,
+                 quantize=quantize,
+                 dtype=dtype,
+-                trust_remote_code=trust_remote_code,
++                trust_remote_code=True,
+             )
+         elif sharded:
+             raise NotImplementedError(FLASH_ATT_ERROR_MESSAGE.format("Sharded Llama"))
+@@ -197,7 +192,26 @@ def get_model(
+                 revision,
+                 quantize=quantize,
+                 dtype=dtype,
+-                trust_remote_code=trust_remote_code,
++                trust_remote_code=True,
++            )
++    elif model_type == "chatglm":
++        if FLASH_ATTENTION:
++            return FlashChatglm2(
++                model_id,
++                revision,
++                quantize=quantize,
++                dtype=dtype,
++                trust_remote_code=True,
++            )
++        elif sharded:
++            raise NotImplementedError(FLASH_ATT_ERROR_MESSAGE.format("Sharded Chatglm2"))
++        else:
++            return CausalLM(
++                model_id,
++                revision,
++                quantize=quantize,
++                dtype=dtype,
++                trust_remote_code=True,
+             )
+ 
+     if model_type in ["RefinedWeb", "RefinedWebModel", "falcon"]:
+diff --git a/server/text_generation_server/models/causal_lm.py b/server/text_generation_server/models/causal_lm.py
+index cbdf480..1a5038d 100644
+--- a/server/text_generation_server/models/causal_lm.py
++++ b/server/text_generation_server/models/causal_lm.py
+@@ -1,4 +1,5 @@
+ import torch
++import torch_npu
+ import inspect
+ 
+ from dataclasses import dataclass
+@@ -457,8 +458,8 @@ class CausalLM(Model):
+         dtype: Optional[torch.dtype] = None,
+         trust_remote_code: bool = False,
+     ):
+-        if torch.cuda.is_available():
+-            device = torch.device("cuda")
++        if torch_npu.npu.is_available():
++            device = torch.device("npu")
+             dtype = torch.float16 if dtype is None else dtype
+         else:
+             if quantize:
+@@ -470,32 +471,20 @@ class CausalLM(Model):
+         tokenizer = AutoTokenizer.from_pretrained(
+             model_id,
+             revision=revision,
+-            padding_side="left",
+-            truncation_side="left",
+             trust_remote_code=trust_remote_code,
++            use_fast=False,
+         )
+         model = AutoModelForCausalLM.from_pretrained(
+             model_id,
+             revision=revision,
+             torch_dtype=dtype,
+-            device_map="auto"
+-            if torch.cuda.is_available() and torch.cuda.device_count() > 1
+-            else None,
+-            load_in_8bit=quantize == "bitsandbytes",
+             trust_remote_code=trust_remote_code,
+-        )
+-        if torch.cuda.is_available() and torch.cuda.device_count() == 1:
+-            model = model.cuda()
++        ).half().npu()
++        if torch_npu.npu.is_available() and torch_npu.npu.device_count() == 1:
++            model = model.half().npu()
+ 
+         if tokenizer.pad_token_id is None:
+-            if model.config.pad_token_id is not None:
+-                tokenizer.pad_token_id = model.config.pad_token_id
+-            elif model.config.eos_token_id is not None:
+-                tokenizer.pad_token_id = model.config.eos_token_id
+-            elif tokenizer.eos_token_id is not None:
+-                tokenizer.pad_token_id = tokenizer.eos_token_id
+-            else:
+-                tokenizer.add_special_tokens({"pad_token": "[PAD]"})
++            tokenizer.add_special_tokens({"pad_token": "[PAD]"})
+ 
+         super(CausalLM, self).__init__(
+             model=model,
+diff --git a/server/text_generation_server/models/custom_modeling/flash_chatglm2_modeling_ascend.py b/server/text_generation_server/models/custom_modeling/flash_chatglm2_modeling_ascend.py
+new file mode 100644
+index 0000000..5c3ee73
+--- /dev/null
++++ b/server/text_generation_server/models/custom_modeling/flash_chatglm2_modeling_ascend.py
+@@ -0,0 +1,648 @@
++# coding=utf-8
++# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
++#
++# This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
++# and OPT implementations in this library. It has been modified from its
++# original forms to accommodate minor architectural differences compared
++# to GPT-NeoX and OPT used by the Meta AI team that trained the model.
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#     http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++import torch
++import torch.distributed
++
++from torch import nn
++from transformers.activations import ACT2FN
++from transformers.configuration_utils import PretrainedConfig
++from typing import Optional, List, Tuple
++from loguru import logger
++
++from text_generation_server.utils.flash_attn_ascend import attention_ascend
++from text_generation_server.utils.layers import (
++    TensorParallelRowLinear,
++    TensorParallelColumnLinear,
++    TensorParallelEmbedding,
++    PositionRotaryEmbedding,
++    AttentionMask,
++    TensorParallelHead,
++    get_linear,
++)
++
++import json
++import os
++
++
++def load_ascend_transformer():
++    ACLTRANSFORMER_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
++    if ACLTRANSFORMER_HOME_PATH is None:
++        raise RuntimeError(
++            "env ATB_SPEED_HOME_PATH not exist, source set_env.sh")
++    LIB_PATH = os.path.join(ACLTRANSFORMER_HOME_PATH, "lib/libatb_speed_torch.so")
++    print(f"load {LIB_PATH}")
++    torch.classes.load_library(LIB_PATH)
++
++
++load_ascend_transformer()
++
++
++class Chatglm2Config(PretrainedConfig):
++    model_type = "chatglm2"
++    keys_to_ignore_at_inference = ["past_key_values"]
++
++    def __init__(
++            self,
++            vocab_size=65024,
++            hidden_size=4096,
++            kv_channels=128,
++            intermediate_size=11008,
++            num_layers=28,
++            multi_query_group_num = 2,
++            num_attention_heads=32,
++            hidden_act="silu",
++            seq_length=8192,
++            initializer_range=0.02,
++            layernorm_epsilon=1e-5,
++            use_cache=True,
++            eos_token_id=2,
++            tie_word_embeddings=False,
++            **kwargs,
++    ):
++        self.vocab_size = vocab_size
++        self.seq_length = seq_length
++        self.hidden_size = hidden_size
++        self.kv_channels = 128
++        self.intermediate_size = intermediate_size
++        self.num_layers = num_layers
++        self.multi_query_group_num = multi_query_group_num
++        self.num_attention_heads = num_attention_heads
++        self.hidden_act = hidden_act
++        self.initializer_range = initializer_range
++        self.layernorm_epsilon = layernorm_epsilon
++        self.use_cache = use_cache
++        super().__init__(
++            # bos_token_id=bos_token_id,
++            eos_token_id=eos_token_id,
++            tie_word_embeddings=tie_word_embeddings,
++            **kwargs,
++        )
++
++
++class RMSNorm(nn.Module):
++    def __init__(self, prefix, weights, eps=1e-6):
++        """
++        LlamaRMSNorm is equivalent to T5LayerNorm
++        """
++        super().__init__()
++
++        weight = weights.get_tensor(f"{prefix}.weight")
++        self.weight = nn.Parameter(weight)
++        self.variance_epsilon = eps
++
++    def forward(self, hidden_states, residual=None):
++        # ‰øÆÊîπ‰∏∫Âä†ÈÄüÂ∫ìrms normËûçÂêàÁÆóÂ≠ê
++        if residual is not None:
++            hidden_states += residual
++        residual = hidden_states
++
++        hidden_states = hidden_states.to(torch.float32)
++        variance = hidden_states.pow(2).mean(-1, keepdim=True)
++        hidden_states = hidden_states * torch.rsqrt(
++            variance + self.variance_epsilon
++        )
++
++        # convert into half-precision if necessary
++        if self.weight.dtype in [torch.float16, torch.bfloat16]:
++            hidden_states = hidden_states.to(self.weight.dtype)
++
++        return self.weight * hidden_states, residual
++
++
++class FlashChatglm2Attention(torch.nn.Module):
++    def __init__(
++        self,
++        prefix: str,
++        config,
++        weights,
++    ):
++        super().__init__()
++        self.num_heads = config.num_attention_heads
++        self.hidden_size = config.hidden_size
++        self.head_size = self.hidden_size // self.num_heads
++
++        self.rotary_emb = PositionRotaryEmbedding.static(dim=self.num_heads, base=10000.0, device="cpu").to(weights.device)
++
++        self.softmax_scale = self.head_size**-0.5
++
++        if self.num_heads % weights.process_group.size() != 0:
++            raise ValueError(
++                f"`num_heads` must be divisible by `num_shards` (got `num_heads`: {self.num_heads} "
++                f"and `num_shards`: {weights.process_group.size()}"
++            )
++        self.num_heads = self.num_heads // weights.process_group.size()
++        # Â§öÂç°ÂàáÂàÜÊúâÈóÆÈ¢ò
++        self.query_key_value = TensorParallelColumnLinear.load(
++            config, prefix=f"{prefix}.query_key_value", weights=weights, bias=True
++        )
++
++        self.dense = TensorParallelRowLinear.load(
++            config,
++            prefix=f"{prefix}.dense",
++            weights=weights,
++            bias=False,
++        )
++
++        self.prefix = prefix
++
++    def forward(
++        self,
++        hidden_states,
++        cos,
++        sin,
++        cu_seqlen_prefill,
++        kv_cache,
++        block_tables,
++        slots,
++        input_lengths,
++        max_s,
++    ):
++        qkv = self.query_key_value(hidden_states)
++        query, key, value = qkv.split([self.hidden_size, self.hidden_size, self.hidden_size], dim=1)
++
++        query = query.view(-1, self.num_heads, self.head_size)
++        key = key.view(-1, self.num_heads, self.head_size)
++        value = value.view(-1, self.num_heads, self.head_size)
++
++        query_embed = self.rotary_emb(query, cos, sin)
++        key_embed = self.rotary_emb(key, cos, sin)
++        breakpoint()
++
++        # ‰ΩøÁî® reshape_and_cacheÁÆóÂ≠ê
++        block_num, block_size, head_num, head_size = kv_cache[0].shape
++        slots_list = slots.tolist()
++        for i, slot in enumerate(slots_list):
++            block_index = slot // block_size
++            block_offset = slot % block_size
++
++            token_key = key_embed[i]
++            token_v = value[i]
++            kv_cache[0][block_index][block_offset] = token_key
++            kv_cache[1][block_index][block_offset] = token_v
++
++        # output tensor
++        attn_output = torch.zeros(size=query_embed.shape, device=query_embed.device)
++
++        # Prefill
++        if cu_seqlen_prefill is not None:
++            # flash attention
++            attn_output = attention_ascend(
++                query_embed,  # [n_tokens, head_num, head_size]
++                key_embed,  # [n_tokens, head_num, head_size]
++                value,  # [n_tokens, head_num, head_size]
++                attn_output,
++                cu_seqlen_prefill,
++                max_s,
++                self.softmax_scale,
++            )
++        return self.o_proj(attn_output.view(-1, self.num_heads * self.head_size))
++
++
++class MLP(nn.Module):
++    def __init__(self, prefix, config, weights):
++        super().__init__()
++        act = config.hidden_act
++        self.act = (
++            ACT2FN[act]
++            if "gelu" not in act
++            else lambda x: torch.nn.functional.gelu(
++                x,
++                approximate="tanh"
++                if act in ["gelu_fast", "gelu_pytorch_tanh"]
++                else "none",
++            )
++        )
++        # Fuse gate and up proj
++        self.gate_up_proj = TensorParallelColumnLinear.load(
++            config,
++            prefix=f"{prefix}.dense_h_to_4h",
++            weights=weights,
++            bias=False,
++        )
++        self.down_proj = TensorParallelRowLinear.load(
++            config,
++            prefix=f"{prefix}.dense_4h_to_h",
++            weights=weights,
++            bias=False,
++        )
++        self.intermediate_size = (
++            config.intermediate_size // weights.process_group.size()
++        )
++
++    def forward(self, hidden_states):
++        gate_up_states = self.gate_up_proj(hidden_states)
++        gate_up_states = gate_up_states.view(-1, 2, self.intermediate_size)
++        return self.down_proj(self.act(gate_up_states[:, 0]) * gate_up_states[:, 1])
++
++
++class RotaryEmbedding(nn.Module):
++    def __init__(self, dim, original_impl=False, device=None, dtype=None):
++        super().__init__()
++        inv_freq = 1.0 / (10000 ** (torch.arange(0, dim, 2, device=device).to(dtype=dtype) / dim))
++        self.register_buffer("inv_freq", inv_freq)
++        self.dim = dim
++        self.original_impl = original_impl
++
++    def forward_impl(
++            self, seq_len: int, n_elem: int, dtype: torch.dtype, device: torch.device, base: int = 10000
++    ):
++        """Enhanced Transformer with Rotary Position Embedding.
++
++        Derived from: https://github.com/labmlai/annotated_deep_learning_paper_implementations/blob/master/labml_nn/
++        transformers/rope/__init__.py. MIT License:
++        https://github.com/labmlai/annotated_deep_learning_paper_implementations/blob/master/license.
++        """
++        # $\Theta = {\theta_i = 10000^{\frac{2(i-1)}{d}}, i \in [1, 2, ..., \frac{d}{2}]}$
++        theta = 1.0 / (base ** (torch.arange(0, n_elem, 2, dtype=dtype, device=device) / n_elem))
++
++        # Create position indexes `[0, 1, ..., seq_len - 1]`
++        seq_idx = torch.arange(seq_len, dtype=dtype, device=device)
++
++        # Calculate the product of position index and $\theta_i$
++        idx_theta = torch.outer(seq_idx, theta).float()
++
++        cache = torch.stack([torch.cos(idx_theta), torch.sin(idx_theta)], dim=-1)
++
++        # this is to mimic the behaviour of complex32, else we will get different results
++        if dtype in (torch.float16, torch.bfloat16, torch.int8):
++            cache = cache.bfloat16() if dtype == torch.bfloat16 else cache.half()
++        return cache
++
++    def forward(self, max_seq_len, offset=0):
++        return self.forward_impl(
++            max_seq_len, self.dim, dtype=self.inv_freq.dtype, device=self.inv_freq.device
++        )
++
++
++class FlashDecoderLayer(nn.Module):
++    def __init__(self, layer_id, config, weights):
++        super().__init__()
++        prefix = f"transformer.encoder.layers.{layer_id}"
++        self.self_attention = FlashChatglm2Attention(
++            prefix=f"{prefix}.self_attention", config=config, weights=weights
++        )
++        self.mlp = MLP(prefix=f"{prefix}.mlp", config=config, weights=weights)
++
++        self.input_layernorm = RMSNorm(
++            prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.layernorm_epsilon
++        )
++        self.post_attention_layernorm = RMSNorm(
++            prefix=f"{prefix}.post_attention_layernorm",
++            weights=weights,
++            eps=config.layernorm_epsilon,
++        )
++        rotary_dim = (
++            config.hidden_size // config.num_attention_heads if config.kv_channels is None else config.kv_channels
++        )
++
++        self.rotary_pos_emb = RotaryEmbedding(rotary_dim // 2, original_impl=config.original_rope, device='npu',
++                                              dtype=config.torch_dtype)
++
++    def forward(
++        self,
++        hidden_states,
++        residual,
++        cos,
++        sin,
++        cu_seqlen_prefill,
++        kv_cache,
++        block_tables,
++        slots,
++        input_lengths,
++        max_s,
++    ):
++        normed_hidden_states, res = self.input_layernorm(hidden_states, residual)
++
++        # Self Attention
++        attn_output = self.self_attention(
++            normed_hidden_states,
++            cos,
++            sin,
++            cu_seqlen_prefill,
++            kv_cache,
++            block_tables,
++            slots,
++            input_lengths,
++            max_s,
++        )
++
++        # faster post attention rms norm
++        normed_attn_res_output, attn_res = self.post_attention_layernorm(
++            attn_output, res
++        )
++
++        mlp_output = self.mlp(normed_attn_res_output)
++
++        return mlp_output, attn_res
++
++
++class FlashChatglm2Model(torch.nn.Module):
++    def __init__(self, config, weights):
++        super().__init__()
++
++        process_group = weights.process_group
++        self.tp_rank = process_group.rank()
++        self.tp_world_size = process_group.size()
++        self.embed_tokens = TensorParallelEmbedding(
++            prefix="transformer.embedding.word_embeddings", weights=weights
++        )
++        self.layers = nn.ModuleList(
++            [
++                FlashDecoderLayer(
++                    layer_id,
++                    config,
++                    weights,
++                )
++                for layer_id in range(config.num_layers)
++            ]
++        )
++        self.norm = RMSNorm(
++            prefix="transformer.encoder.final_layernorm", weights=weights, eps=config.layernorm_epsilon
++        )
++
++        self.gradient_checkpointing = False
++
++        self.head_size = self.layers[0].self_attention.head_size
++        self.num_heads = self.layers[0].self_attention.num_heads
++        # self.num_key_value_heads = self.layers[0].self_attn.num_key_value_heads
++
++        # for ascend init
++        self.init_ascend_operations(config)
++        self.ascend_weight = []
++        self.ascend_rotary_embedding = PositionRotaryEmbedding.static(dim=self.head_size, base=10000.0, device="cpu").to(weights.device)
++
++    def init_ascend_operations(self, config: Chatglm2Config):
++        self.acl_param_encoder = json.dumps({
++            "rmsNormEps": config.layernorm_epsilon,
++            "headNum": config.num_attention_heads,
++            "dk": config.hidden_size // config.num_attention_heads,
++            "isPrefill": True,
++            "numHeadsPerPartition": config.num_attention_heads,
++            "hiddenSizePerHead": config.kv_channels,
++            "numGroupsPerPartition": 2,
++            "transKey": False,
++            "layerNum": config.num_layers,
++            "residualAddScale": 1,
++            "rank": 0,
++            "rankSize": 1
++        })
++        self.acl_param_decoder = json.dumps({
++            "rmsNormEps": config.layernorm_epsilon,
++            "headNum": config.num_attention_heads,
++            "dk": config.hidden_size // config.num_attention_heads,
++            "isPrefill": False,
++            "numHeadsPerPartition": config.num_attention_heads,
++            "hiddenSizePerHead": config.kv_channels,
++            "numGroupsPerPartition": 2,
++            "transKey": False,
++            "layerNum": config.num_layers,
++            "residualAddScale": 1,
++            "rank": 0,
++            "rankSize": 1
++        })
++        self.seq_length = config.seq_length
++
++        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm2_6b_decoder_pa_model")
++        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm2_6b_decoder_pa_model")
++
++        self.acl_encoder_operation.set_param(self.acl_param_encoder)
++        self.acl_decoder_operation.set_param(self.acl_param_decoder)
++
++        self.weight_flag = False
++        self.num_layers = config.num_layers
++        self.hidden_size = config.hidden_size
++
++        self.acl_encoder_operation_inputs = [None] * (8 + 2 * self.num_layers)
++        self.acl_decoder_operation_inputs = [None] * (8 + 2 * self.num_layers)
++        self.max_seqlen_tensor = torch.tensor([0], dtype=torch.int)
++        self.cu_seqlen_tensor_fake = torch.tensor([0], dtype=torch.int)
++        # self.lm_head_weight = None
++        self.ascend_atten_mask = AttentionMask.static(config.seq_length)
++
++    def init_ascend_weight(self):
++        weights = [self.state_dict()["embed_tokens.weight"]]
++        for i in range(self.num_layers):
++            weights_t = []
++            weights_layer = self.layers[i].state_dict()
++            weights_t.append(weights_layer["input_layernorm.weight"])
++            weights_t.append(weights_layer["self_attention.query_key_value.linear.weight"])
++            weights_t.append(weights_layer["self_attention.query_key_value.linear.bias"])
++            weights_t.append(weights_layer["self_attention.dense.linear.weight"])
++            weights_t.append(weights_layer["post_attention_layernorm.weight"])
++            weights_t.append(weights_layer["mlp.gate_up_proj.linear.weight"])
++            weights_t.append(weights_layer["mlp.down_proj.linear.weight"])
++
++            weights.extend(weights_t)
++        weights.append(self.state_dict()["norm.weight"])
++        # logger.info(self.state_dict()["norm.weight"].shape)
++        weights.append(self.lm_head_weight)
++
++        self.ascend_weight = weights
++        self.acl_encoder_operation.set_weight(weights)
++        self.acl_decoder_operation.set_weight(weights)
++
++    def prepare_inputs_for_ascend(self, input_ids: torch.Tensor,
++                                  position_ids: torch.Tensor,
++                                  cu_seqlen_prefill: Optional[torch.Tensor],
++                                  kv_cache: List[Tuple[torch.Tensor, torch.Tensor]],
++                                  block_tables: torch.Tensor,
++                                  slots: torch.Tensor,
++                                  input_lengths: torch.Tensor,
++                                  max_s: int):
++        rotary_pos_emb = self.layers[0].rotary_pos_emb(self.seq_length)
++        rope_cache = rotary_pos_emb[position_ids.long()].half()
++        atten_mask = self.ascend_atten_mask.get_attn_mask(max_s, kv_cache[0][0].dtype, kv_cache[0][0].device)
++        # logger.info(atten_mask)
++        self.max_seqlen_tensor[0] = max_s
++        self.max_seqlen_tensor = self.max_seqlen_tensor.to(kv_cache[0][0].device)
++
++        if self.acl_decoder_operation_inputs[0] is None:
++            k_caches, v_caches = map(list, zip(*kv_cache))
++            self.acl_encoder_operation_inputs[8: 8 + self.num_layers] = k_caches
++            self.acl_encoder_operation_inputs[8 + self.num_layers: 8 + 2*self.num_layers] = v_caches
++            self.acl_decoder_operation_inputs[8: 8 + self.num_layers] = k_caches
++            self.acl_decoder_operation_inputs[8 + self.num_layers: 8 + 2*self.num_layers] = v_caches
++
++        if cu_seqlen_prefill is not None:  # prefill
++            self.acl_param_encoder = json.dumps({
++                "seqLen" : input_lengths.tolist()
++            })
++            self.acl_encoder_operation_inputs[0] = input_ids.unsqueeze(0)
++            self.acl_encoder_operation_inputs[1] = rope_cache.unsqueeze(0)
++            self.acl_encoder_operation_inputs[2] = atten_mask
++            self.acl_encoder_operation_inputs[3] = block_tables.to(torch.int32)
++            self.acl_encoder_operation_inputs[4] = slots.to(torch.int32)
++            self.acl_encoder_operation_inputs[5] = input_lengths.to(torch.int32)
++            self.acl_encoder_operation_inputs[6] = self.max_seqlen_tensor
++            self.acl_encoder_operation_inputs[7] = cu_seqlen_prefill[1:].to(torch.int).to(kv_cache[0][0].device)
++            # self.acl_encoder_operation_inputs[10: 10 + self.num_layers] = k_caches
++            # self.acl_encoder_operation_inputs[10 +self.num_layers: 10 + 2*self.num_layers] = v_caches
++
++            # print("=====encoder acl param ", self.acl_param_encoder)
++            # logger.warning(f"===================================================")
++            # logger.warning(f">>encoder inputs {self.acl_encoder_operation_inputs[:10]}, param {self.acl_param_encoder}")
++            # logger.warning(f"===================================================")
++            return self.acl_encoder_operation_inputs, self.acl_param_encoder
++        else:
++            self.acl_decoder_operation_inputs[0] = input_ids.unsqueeze(0)
++            self.acl_decoder_operation_inputs[1] = rope_cache.unsqueeze(0)
++            self.acl_decoder_operation_inputs[2] = atten_mask
++            self.acl_decoder_operation_inputs[3] = block_tables.to(torch.int32)
++            self.acl_decoder_operation_inputs[4] = slots.to(torch.int32)
++            self.acl_decoder_operation_inputs[5] = input_lengths.to(torch.int32)
++            self.acl_decoder_operation_inputs[6] = self.max_seqlen_tensor
++            self.acl_decoder_operation_inputs[7] = self.cu_seqlen_tensor_fake.to(torch.int).to(kv_cache[0][0].device)
++            # self.acl_decoder_operation_inputs[10: 10 + self.num_layers] = k_caches
++            # self.acl_decoder_operation_inputs[10 + self.num_layers: 10 + 2*self.num_layers] = v_caches
++
++            # logger.warning(f"---------------------------------------------------")
++            # logger.warning(f">>decoder inputs {self.acl_decoder_operation_inputs[:10]}, param {self.acl_param_decoder}")
++            # logger.warning(f"---------------------------------------------------")
++
++            return self.acl_decoder_operation_inputs, self.acl_param_decoder
++
++    def execute_ascend_operator(self,
++                                input_ids: torch.Tensor,
++                                position_ids: torch.Tensor,
++                                cu_seqlen_prefill: Optional[torch.Tensor],
++                                kv_cache: List[Tuple[torch.Tensor, torch.Tensor]],
++                                block_tables: torch.Tensor,
++                                slots: torch.Tensor,
++                                input_lengths: torch.Tensor,
++                                max_s: int):
++        acl_inputs, acl_param = self.prepare_inputs_for_ascend(input_ids, position_ids, cu_seqlen_prefill, kv_cache,
++                                                               block_tables, slots, input_lengths, max_s)
++        # logger.info(acl_param)
++        if cu_seqlen_prefill is not None:
++            acl_model_out = self.acl_encoder_operation.execute(acl_inputs, acl_param)
++
++        else:
++            acl_model_out = self.acl_decoder_operation.execute(acl_inputs, acl_param)
++        acl_hidden_state = acl_model_out[0]
++        # print(">>>>>>>>>>>>>done ouput", acl_hidden_state.shape)
++        return acl_hidden_state
++
++
++    def forward(
++        self,
++        input_ids: torch.Tensor,
++        position_ids: torch.Tensor,
++        cu_seqlen_prefill: Optional[torch.Tensor],
++        kv_cache: List[Tuple[torch.Tensor, torch.Tensor]],
++        block_tables: torch.Tensor,
++        slots: torch.Tensor,
++        input_lengths: torch.Tensor,
++        max_s: int,
++    ) -> torch.Tensor:
++        # logger.warning(f"model forward input_ids {input_ids} position_ids {position_ids} block_tables {block_tables} "
++        #             f"slots {slots} input_lengths {input_lengths}  max_s {max_s}")
++
++        '''
++        hidden_states = self.embed_tokens(input_ids)
++
++        # Get rotary cos and sin for this forward
++        # Avoid to index in each layer
++        cos, sin = self.layers[0].self_attn.rotary_emb.get_cos_sin(
++            position_ids, max_s, torch.float32
++        )
++
++        residual = None
++        for i, layer in enumerate(self.layers):
++            hidden_states, residual = layer(
++                hidden_states,
++                residual,
++                cos,
++                sin,
++                cu_seqlen_prefill,
++                kv_cache[i],
++                block_tables,
++                slots,
++                input_lengths,
++                max_s,
++            )
++
++        hidden_states, _ = self.norm(hidden_states, residual)
++        '''
++        if not self.ascend_weight:
++            self.init_ascend_weight()
++        hidden_states_acl = self.execute_ascend_operator(input_ids, position_ids, cu_seqlen_prefill, kv_cache,
++                                                     block_tables, slots, input_lengths, max_s)
++
++        return hidden_states_acl
++
++
++class FlashChatglm2ForCausalLM(torch.nn.Module):
++    def __init__(self, config, weights):
++        super().__init__()
++
++        self.transformer = FlashChatglm2Model(config, weights)
++        self.lm_head = TensorParallelHead.load(
++            config,
++            prefix="transformer.output_layer",
++            weights=weights,
++            is_norm=True
++        )
++        # for ascend
++        self.lm_head_weight = None
++
++    def forward(
++        self,
++        input_ids: torch.Tensor,                            # input id, ÊãâÂπ≥ÁöÑ
++        position_ids: torch.Tensor,
++        cu_seqlen_prefill: Optional[torch.Tensor],          # prefill Èò∂ÊÆµ‰ΩøÁî®Ôºå‰∏çÂêåpromptÁöÑoffset
++        kv_cache: List[Tuple[torch.Tensor, torch.Tensor]],  # kv cache,
++        block_tables: torch.Tensor,                         # ÊØè‰∏™requests ÊâÄÊúâÁöÑblock tables
++        slots: torch.Tensor,                                # ÊØè‰∏™requests ÊâÄÊúâÁöÑslots
++        input_lengths: torch.Tensor,                        # ÊØè‰∏™ requestÁöÑk/vÈïøÂ∫¶
++        max_s: int,                                         # ÊúÄÈïøÁöÑrequestÈïøÂ∫¶
++        lm_head_indices: Optional[torch.Tensor] = None,     # prefillÈò∂ÊÆµ‰ΩøÁî®ÔºåÂèñÁöÑÁîüÊàêtokenÁöÑÂÅèÁßª
++    ) -> torch.Tensor:
++        # print(">>>state dict of model is", self.state_dict().keys())
++        if self.lm_head_weight is None:
++            self.lm_head_weight = self.state_dict()["lm_head.linear.weight"]
++            self.transformer.lm_head_weight = self.lm_head_weight
++        # logger.warning(f"input is input_ids:{input_ids}, position_ids:{position_ids}"
++        #                f"cu_seqlen_prefill:{cu_seqlen_prefill}, block_tables:{block_tables},"
++        #                f"slots:{slots}, input_lenghts:{input_lengths}, max_s:{max_s}, lm_head_indices:{lm_head_indices}")
++
++        hidden_states = self.transformer(
++            input_ids,
++            position_ids,
++            cu_seqlen_prefill,
++            kv_cache,
++            block_tables,
++            slots,
++            input_lengths,
++            max_s,
++        )
++        # # print(">>>output shape,",  hidden_states.shape)
++        # # logger.warning(f"===output {hidden_states}, shape {hidden_states.shape}")
++        if lm_head_indices is not None:
++            logits = hidden_states.squeeze(0)[lm_head_indices]
++        else:
++            logits = hidden_states.squeeze(0)
++        # # logger.warning(f"==logits: {logits}, shape: {logits.shape}")
++        # # if lm_head_indices is not None:
++        # #     hidden_states = hidden_states[lm_head_indices]
++        # logits = self.lm_head(hidden_states)
++        # if lm_head_indices is not None:
++        #     hidden_states = hidden_states[lm_head_indices]
++        return logits
+diff --git a/server/text_generation_server/models/custom_modeling/flash_llama_modeling.py b/server/text_generation_server/models/custom_modeling/flash_llama_modeling.py
+index b628585..7992699 100644
+--- a/server/text_generation_server/models/custom_modeling/flash_llama_modeling.py
++++ b/server/text_generation_server/models/custom_modeling/flash_llama_modeling.py
+@@ -26,14 +26,8 @@ from transformers.activations import ACT2FN
+ from transformers.configuration_utils import PretrainedConfig
+ from typing import Optional, List, Tuple
+ 
+-# Flash attention imports
+-import dropout_layer_norm
+ 
+-# vllm imports
+-import vllm_cache_ops
+-import vllm_attention_ops
+-
+-from text_generation_server.utils.flash_attn import attention
++from text_generation_server.utils.flash_attn_ascend import attention_ascend, attention_paged
+ from text_generation_server.utils.layers import (
+     TensorParallelRowLinear,
+     TensorParallelColumnLinear,
+@@ -106,45 +100,21 @@ class LlamaRMSNorm(nn.Module):
+         self.variance_epsilon = eps
+ 
+     def forward(self, hidden_states, residual=None):
+-        if hidden_states.shape[-1] > 8192:
+-            if residual is not None:
+-                hidden_states += residual
+-            residual = hidden_states
+-
+-            hidden_states = hidden_states.to(torch.float32)
+-            variance = hidden_states.pow(2).mean(-1, keepdim=True)
+-            hidden_states = hidden_states * torch.rsqrt(
+-                variance + self.variance_epsilon
+-            )
++        if residual is not None:
++            hidden_states += residual
++        residual = hidden_states
++
++        hidden_states = hidden_states.to(torch.float32)
++        variance = hidden_states.pow(2).mean(-1, keepdim=True)
++        hidden_states = hidden_states * torch.rsqrt(
++            variance + self.variance_epsilon
++        )
+ 
+-            # convert into half-precision if necessary
+-            if self.weight.dtype in [torch.float16, torch.bfloat16]:
+-                hidden_states = hidden_states.to(self.weight.dtype)
++        # convert into half-precision if necessary
++        if self.weight.dtype in [torch.float16, torch.bfloat16]:
++            hidden_states = hidden_states.to(self.weight.dtype)
+ 
+-            return self.weight * hidden_states, residual
+-        else:
+-            # faster post attention rms norm
+-            normed_hidden_states, res, *rest = dropout_layer_norm.dropout_add_ln_fwd(
+-                hidden_states,
+-                residual,
+-                self.weight,
+-                None,
+-                None,
+-                None,
+-                None,
+-                None,
+-                0.0,
+-                self.variance_epsilon,
+-                1.0,
+-                0,
+-                None,
+-                False,
+-                True,  # Activate RMSNorm
+-            )
+-            if res is None:
+-                res = hidden_states
+-
+-            return normed_hidden_states, res
++        return self.weight * hidden_states, residual
+ 
+ 
+ def _load_gqa(config, prefix: str, weights):
+@@ -185,11 +155,9 @@ class FlashLlamaAttention(torch.nn.Module):
+         self.hidden_size = config.hidden_size
+         self.head_size = self.hidden_size // self.num_heads
+ 
+-        self.rotary_emb = PositionRotaryEmbedding.load(
+-            prefix=f"{prefix}.rotary_emb", weights=weights
+-        )
++        self.rotary_emb = PositionRotaryEmbedding.static(dim=self.head_size, base=10000.0, device="cpu").to(weights.device)
+ 
+-        self.softmax_scale = self.head_size**-0.5
++        self.softmax_scale = self.head_size ** -0.5
+ 
+         if self.num_heads % weights.process_group.size() != 0:
+             raise ValueError(
+@@ -221,6 +189,8 @@ class FlashLlamaAttention(torch.nn.Module):
+             0, self.num_key_value_heads, dtype=torch.int32, device=weights.device
+         ).repeat_interleave(self.num_groups)
+ 
++        self.prefix = prefix
++
+     def forward(
+         self,
+         hidden_states,
+@@ -244,23 +214,34 @@ class FlashLlamaAttention(torch.nn.Module):
+         query = query.view(-1, self.num_heads, self.head_size)
+         kv = kv.view(-1, 2, self.num_key_value_heads, self.head_size)
+ 
+-        self.rotary_emb(query, cos, sin)
+-        self.rotary_emb(torch.select(kv, dim=1, index=0), cos, sin)
++        key = torch.select(kv, dim=1, index=0)
++        value = torch.select(kv, dim=1, index=1)
+ 
+-        vllm_cache_ops.reshape_and_cache(
+-            kv[:, 0], kv[:, 1], kv_cache[0], kv_cache[1], slots
+-        )
++        query_embed = self.rotary_emb(query, cos, sin)
++        key_embed = self.rotary_emb(key, cos, sin)
++
++        # reshape_and_cache
++        block_num, block_size, head_num, head_size = kv_cache[0].shape
++        slots_list = slots.tolist()
++        for i, slot in enumerate(slots_list):
++            block_index = slot // block_size
++            block_offset = slot % block_size
++
++            token_key = key_embed[i]
++            token_v = value[i]
++            kv_cache[0][block_index][block_offset] = token_key
++            kv_cache[1][block_index][block_offset] = token_v
+ 
+         # output tensor
+-        attn_output = torch.empty_like(query)
++        attn_output = torch.zeros(size=query_embed.shape, device=query_embed.device)
+ 
+         # Prefill
+         if cu_seqlen_prefill is not None:
+             # flash attention
+-            attention(
+-                query,
+-                torch.select(kv, dim=1, index=0),
+-                torch.select(kv, dim=1, index=1),
++            attn_output = attention_ascend(
++                query_embed,  # [n_tokens, head_num, head_size]
++                key_embed,    # [n_tokens, head_num, head_size]
++                value,        # [n_tokens, head_num, head_size]
+                 attn_output,
+                 cu_seqlen_prefill,
+                 max_s,
+@@ -268,19 +249,15 @@ class FlashLlamaAttention(torch.nn.Module):
+             )
+         # Decode
+         else:
+-            # kv_cache[1] => [num_blocks, num_heads, head_size, block_size]
+-            block_size = kv_cache[1].shape[3]
+-            vllm_attention_ops.single_query_cached_kv_attention(
+-                attn_output,
+-                query,
++            attn_output = attention_paged(
++                query_embed,
+                 kv_cache[0],
+                 kv_cache[1],
+-                self.kv_head_mapping,
+-                self.softmax_scale,
+-                block_tables,
+                 input_lengths,
+-                block_size,
++                block_tables,
++                attn_output,
+                 max_s,
++                self.softmax_scale,
+             )
+ 
+         return self.o_proj(attn_output.view(-1, self.num_heads * self.head_size))
+@@ -453,6 +430,9 @@ class FlashLlamaForCausalLM(torch.nn.Module):
+     def __init__(self, config, weights):
+         super().__init__()
+ 
++        self.num_heads = config.num_attention_heads
++        self.hidden_size = config.hidden_size
++        self.head_size = self.hidden_size // self.num_heads
+         self.model = FlashLlamaModel(config, weights)
+         self.lm_head = TensorParallelHead.load(
+             config,
+diff --git a/server/text_generation_server/models/custom_modeling/flash_llama_modeling_ascend.py b/server/text_generation_server/models/custom_modeling/flash_llama_modeling_ascend.py
+new file mode 100644
+index 0000000..2dd8254
+--- /dev/null
++++ b/server/text_generation_server/models/custom_modeling/flash_llama_modeling_ascend.py
+@@ -0,0 +1,509 @@
++# coding=utf-8
++# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
++#
++# This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
++# and OPT implementations in this library. It has been modified from its
++# original forms to accommodate minor architectural differences compared
++# to GPT-NeoX and OPT used by the Meta AI team that trained the model.
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#     http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++import torch
++import torch.distributed
++
++from torch import nn
++from transformers.activations import ACT2FN
++from transformers.configuration_utils import PretrainedConfig
++from typing import Optional, List, Tuple
++from loguru import logger
++
++import json
++import os
++
++from text_generation_server.utils.flash_attn_ascend import attention_ascend
++from text_generation_server.utils.layers import (
++    TensorParallelRowLinear,
++    TensorParallelColumnLinear,
++    TensorParallelEmbedding,
++    PositionRotaryEmbedding,
++    TensorEmbedding,
++    TensorParallelHead,
++    get_linear,
++    AttentionMask,
++)
++
++
++def load_ascend_transformer():
++    ACLTRANSFORMER_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
++    if ACLTRANSFORMER_HOME_PATH is None:
++        raise RuntimeError(
++            "env ATB_SPEED_HOME_PATH not exist, source set_env.sh")
++    LIB_PATH = os.path.join(ACLTRANSFORMER_HOME_PATH, "lib/libatb_speed_torch.so")
++    print(f"load {LIB_PATH}")
++    torch.classes.load_library(LIB_PATH)
++
++
++class LlamaConfig(PretrainedConfig):
++    def __init__(
++        self,
++        vocab_size=32000,
++        hidden_size=4096,
++        intermediate_size=11008,
++        num_hidden_layers=32,
++        num_attention_heads=32,
++        num_key_value_heads=None,
++        hidden_act="silu",
++        max_position_embeddings=2048,
++        initializer_range=0.02,
++        rms_norm_eps=1e-6,
++        use_cache=True,
++        pad_token_id=0,
++        bos_token_id=1,
++        eos_token_id=2,
++        pretraining_tp=1,
++        tie_word_embeddings=False,
++        rope_scaling=None,
++        **kwargs,
++    ):
++        self.vocab_size = vocab_size
++        self.max_position_embeddings = max_position_embeddings
++        self.hidden_size = hidden_size
++        self.intermediate_size = intermediate_size
++        self.num_hidden_layers = num_hidden_layers
++        self.num_attention_heads = num_attention_heads
++
++        # for backward compatibility
++        if num_key_value_heads is None:
++            num_key_value_heads = num_attention_heads
++
++        self.num_key_value_heads = num_key_value_heads
++        self.hidden_act = hidden_act
++        self.initializer_range = initializer_range
++        self.rms_norm_eps = rms_norm_eps
++        self.pretraining_tp = pretraining_tp
++        self.use_cache = use_cache
++        self.rope_scaling = rope_scaling
++
++        super().__init__(
++            pad_token_id=pad_token_id,
++            bos_token_id=bos_token_id,
++            eos_token_id=eos_token_id,
++            tie_word_embeddings=tie_word_embeddings,
++            **kwargs,
++        )
++
++
++class LlamaRMSNorm(nn.Module):
++    def __init__(self, prefix, weights, eps=1e-6):
++        """
++        LlamaRMSNorm is equivalent to T5LayerNorm
++        """
++        super().__init__()
++
++        weight = weights.get_tensor(f"{prefix}.weight")
++        self.weight = nn.Parameter(weight)
++        self.variance_epsilon = eps
++
++    def forward(self, hidden_states, residual=None):
++        return None, None
++
++
++def _load_gqa(config, prefix: str, weights):
++    assert config.hidden_size % config.num_attention_heads == 0
++    assert config.num_attention_heads % weights.process_group.size() == 0
++
++    weight = weights.get_multi_weights_col(
++        prefixes=[f"{prefix}.q_proj", f"{prefix}.k_proj", f"{prefix}.v_proj"],
++        quantize=config.quantize,
++        dim=0,
++    )
++
++    if config.quantize != "gptq":
++        weight = weight.to(dtype=weights.dtype).to(device=weights.device)
++
++        head_size = config.hidden_size // config.num_attention_heads
++        num_heads = config.num_attention_heads // weights.process_group.size()
++        num_key_value_heads = config.num_key_value_heads // weights.process_group.size()
++        assert list(weight.shape) == [
++            (num_heads + 2 * num_key_value_heads) * head_size,
++            config.hidden_size,
++        ], f"{list(weight.shape)} != {[(num_heads + 2 * config.num_key_value_heads) * head_size, config.hidden_size]}"
++
++    return TensorParallelColumnLinear(
++        get_linear(weight, bias=None, quantize=config.quantize)
++    )
++
++
++class FlashLlamaAttention(torch.nn.Module):
++    def __init__(
++        self,
++        prefix: str,
++        config,
++        weights,
++    ):
++        super().__init__()
++        self.num_heads = config.num_attention_heads
++        self.hidden_size = config.hidden_size
++        self.head_size = self.hidden_size // self.num_heads
++
++        self.rotary_emb = PositionRotaryEmbedding.static(dim=self.head_size, base=10000.0, device="cpu").to(weights.device)
++
++        self.softmax_scale = self.head_size ** -0.5
++
++        if self.num_heads % weights.process_group.size() != 0:
++            raise ValueError(
++                f"`num_heads` must be divisible by `num_shards` (got `num_heads`: {self.num_heads} "
++                f"and `num_shards`: {weights.process_group.size()}"
++            )
++        self.num_heads = self.num_heads // weights.process_group.size()
++        self.num_key_value_heads = (
++            config.num_key_value_heads // weights.process_group.size()
++        )
++        if config.num_attention_heads != config.num_key_value_heads:
++            self.query_key_value = _load_gqa(config, prefix, weights)
++        else:
++            self.query_key_value = TensorParallelColumnLinear.load_multi(
++                config,
++                prefixes=[f"{prefix}.q_proj", f"{prefix}.k_proj", f"{prefix}.v_proj"],
++                dim=0,
++                weights=weights,
++                bias=False,
++            )
++        self.o_proj = TensorParallelRowLinear.load(
++            config,
++            prefix=f"{prefix}.o_proj",
++            weights=weights,
++            bias=False,
++        )
++        self.num_groups = self.num_heads // self.num_key_value_heads
++        self.kv_head_mapping = torch.arange(
++            0, self.num_key_value_heads, dtype=torch.int32, device=weights.device
++        ).repeat_interleave(self.num_groups)
++
++        self.prefix = prefix
++
++    def forward(
++        self,
++        hidden_states,
++        cos,
++        sin,
++        cu_seqlen_prefill,
++        kv_cache,
++        block_tables,
++        slots,
++        input_lengths,
++        max_s,
++    ):
++        return None
++
++
++class LlamaMLP(nn.Module):
++    def __init__(self, prefix, config, weights):
++        super().__init__()
++        act = config.hidden_act
++        self.act = (
++            ACT2FN[act]
++            if "gelu" not in act
++            else lambda x: torch.nn.functional.gelu(
++                x,
++                approximate="tanh"
++                if act in ["gelu_fast", "gelu_pytorch_tanh"]
++                else "none",
++            )
++        )
++        # Fuse gate and up proj
++        self.gate_up_proj = TensorParallelColumnLinear.load_multi(
++            config,
++            prefixes=[f"{prefix}.gate_proj", f"{prefix}.up_proj"],
++            weights=weights,
++            dim=0,
++            bias=False,
++        )
++        self.down_proj = TensorParallelRowLinear.load(
++            config,
++            prefix=f"{prefix}.down_proj",
++            weights=weights,
++            bias=False,
++        )
++        self.intermediate_size = (
++            config.intermediate_size // weights.process_group.size()
++        )
++
++    def forward(self, hidden_states):
++        gate_up_states = self.gate_up_proj(hidden_states)
++        gate_up_states = gate_up_states.view(-1, 2, self.intermediate_size)
++        return self.down_proj(self.act(gate_up_states[:, 0]) * gate_up_states[:, 1])
++
++
++class FlashLlamaLayer(nn.Module):
++    def __init__(self, layer_id, config, weights):
++        super().__init__()
++        prefix = f"model.layers.{layer_id}"
++        self.self_attn = FlashLlamaAttention(
++            prefix=f"{prefix}.self_attn", config=config, weights=weights
++        )
++        self.mlp = LlamaMLP(prefix=f"{prefix}.mlp", config=config, weights=weights)
++
++        self.input_layernorm = LlamaRMSNorm(
++            prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.rms_norm_eps
++        )
++        self.post_attention_layernorm = LlamaRMSNorm(
++            prefix=f"{prefix}.post_attention_layernorm",
++            weights=weights,
++            eps=config.rms_norm_eps,
++        )
++
++    def forward(
++        self,
++        hidden_states,
++        residual,
++        cos,
++        sin,
++        cu_seqlen_prefill,
++        kv_cache,
++        block_tables,
++        slots,
++        input_lengths,
++        max_s,
++    ):
++        return None, None
++
++
++class FlashLlamaModel(torch.nn.Module):
++    def __init__(self, config, weights):
++        super().__init__()
++
++        process_group = weights.process_group
++        self.tp_rank = process_group.rank()
++        self.tp_world_size = process_group.size()
++        self.embed_tokens = TensorEmbedding(
++            prefix="model.embed_tokens", weights=weights
++        )
++        self.layers = nn.ModuleList(
++            [
++                FlashLlamaLayer(
++                    layer_id,
++                    config,
++                    weights,
++                )
++                for layer_id in range(config.num_hidden_layers)
++            ]
++        )
++        self.norm = LlamaRMSNorm(
++            prefix="model.norm", weights=weights, eps=config.rms_norm_eps
++        )
++
++        self.gradient_checkpointing = False
++
++    def forward(
++        self,
++        input_ids: torch.Tensor,
++        position_ids: torch.Tensor,
++        cu_seqlen_prefill: Optional[torch.Tensor],
++        kv_cache: List[Tuple[torch.Tensor, torch.Tensor]],
++        block_tables: torch.Tensor,
++        slots: torch.Tensor,
++        input_lengths: torch.Tensor,
++        max_s: int,
++        lm_head_indices: Optional[torch.Tensor] = None
++    ) -> torch.Tensor:
++        return None
++
++
++class FlashLlamaForCausalLM(torch.nn.Module):
++    def __init__(self, config, weights):
++        super().__init__()
++
++        self.model = FlashLlamaModel(config, weights)
++        self.lm_head = TensorParallelHead.load(
++            config,
++            prefix="lm_head",
++            weights=weights,
++        )
++
++        # for ascend
++        load_ascend_transformer()
++        self.num_heads = config.num_attention_heads
++        self.hidden_size = config.hidden_size
++        self.head_size = self.hidden_size // self.num_heads
++        process_group = weights.process_group
++        self.tp_rank = process_group.rank()
++        self.tp_world_size = process_group.size()
++        self.num_heads = self.num_heads // weights.process_group.size()
++
++        # for ascend init
++        self.init_ascend_operations(config)
++        self.ascend_weight = []
++        self.ascend_kcache_id = None
++        self.ascend_vcache_id = None
++        self.ascend_rotary_embedding = PositionRotaryEmbedding.static(dim=self.head_size, base=10000.0,
++                                                                      device="cpu").to(weights.device)
++
++    def init_ascend_operations(self, config: LlamaConfig):
++        self.acl_param_encoder = json.dumps({
++            "rmsNormEps": config.rms_norm_eps,
++            "headNum": config.num_attention_heads // self.tp_world_size,
++            "dk": config.hidden_size // config.num_attention_heads,
++            "layerNum": config.num_hidden_layers,
++            "rank": self.tp_rank,
++            "rankSize": self.tp_world_size,
++            "isPrefill": True,
++        })
++        self.acl_param_decoder = json.dumps({
++            "rmsNormEps": config.rms_norm_eps,
++            "headNum": config.num_attention_heads // self.tp_world_size,
++            "dk": config.hidden_size // config.num_attention_heads,
++            "layerNum": config.num_hidden_layers,
++            "rank": self.tp_rank,
++            "rankSize": self.tp_world_size,
++            "isPrefill": False,
++        })
++        self.max_position_embeddings = config.max_position_embeddings
++        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_65b_pa_model")
++        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_65b_pa_model")
++
++        self.acl_encoder_operation.set_param(self.acl_param_encoder)
++        self.acl_decoder_operation.set_param(self.acl_param_decoder)
++
++        self.num_layers = config.num_hidden_layers
++        self.hidden_size = config.hidden_size
++
++        self.acl_encoder_operation_inputs = [None] * 9
++        self.acl_decoder_operation_inputs = [None] * 9
++        self.cu_seqlen_tensor_fake = torch.tensor([0], dtype=torch.int)
++        self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64)
++
++        self.ascend_atten_mask = AttentionMask.static(config.max_position_embeddings)
++        self.ascend_atten_mask_fake = self.ascend_atten_mask.get_attn_mask(1,
++                                                                           dtype=torch.float16,
++                                                                           device="cpu")
++
++    def init_ascend_weight(self):
++        weights = [self.model.state_dict()["embed_tokens.weight"]]
++        for i in range(self.num_layers):
++            weights_t = []
++
++            weights_layer = self.model.layers[i].state_dict()
++            weights_t.append(weights_layer["input_layernorm.weight"])
++            weights_t.append(weights_layer["self_attn.query_key_value.linear.weight"])
++            weights_t.append(weights_layer["self_attn.o_proj.linear.weight"])
++            weights_t.append(weights_layer["post_attention_layernorm.weight"])
++            weights_t.append(weights_layer["mlp.gate_up_proj.linear.weight"])
++            weights_t.append(weights_layer["mlp.down_proj.linear.weight"])
++
++            weights.extend(weights_t)
++
++        weights.append(self.model.state_dict()["norm.weight"])
++        weights.append(self.state_dict()["lm_head.linear.weight"])
++
++        self.ascend_weight = weights
++        self.acl_encoder_operation.set_weight(weights)
++        self.acl_decoder_operation.set_weight(weights)
++
++        self.cu_seqlen_tensor_fake = self.cu_seqlen_tensor_fake.to(self.model.state_dict()[
++                                                                       "embed_tokens.weight"].device)
++        self.lm_head_indices_fake = self.lm_head_indices_fake.to(self.model.state_dict()[
++                                                                     "embed_tokens.weight"].device)
++        self.ascend_atten_mask_fake = self.ascend_atten_mask_fake.to(self.model.state_dict()[
++                                                                         "embed_tokens.weight"].device)
++
++    def init_ascend_kvcache(self, kv_cache):
++        if not self.ascend_kcache_id or self.ascend_kcache_id != id(kv_cache[0][0]) \
++                or not self.ascend_vcache_id or self.ascend_vcache_id != id(kv_cache[0][1]):
++            k_caches, v_caches = map(list, zip(*kv_cache))
++            self.acl_encoder_operation.set_kv_cache(k_caches, v_caches)
++            self.acl_decoder_operation.set_kv_cache(k_caches, v_caches)
++            self.ascend_kcache_id = id(kv_cache[0][0])
++            self.ascend_vcache_id = id(kv_cache[0][1])
++            logger.warning(f">>>>>>id of kcache is {self.ascend_kcache_id} id of vcache is {self.ascend_vcache_id}")
++
++    def prepare_inputs_for_ascend(self, input_ids: torch.Tensor,
++                                  position_ids: torch.Tensor,
++                                  cu_seqlen_prefill: Optional[torch.Tensor],
++                                  kv_cache: List[Tuple[torch.Tensor, torch.Tensor]],
++                                  block_tables: torch.Tensor,
++                                  slots: torch.Tensor,
++                                  input_lengths: torch.Tensor,
++                                  max_s: int,
++                                  lm_head_indices: Optional[torch.Tensor] = None):
++        cos_embed, sin_embed = self.ascend_rotary_embedding.get_cos_sin_total(
++            position_ids, max_s, torch.float16
++        )
++
++        if cu_seqlen_prefill is not None:  # prefill
++            atten_mask = self.ascend_atten_mask.get_attn_mask(max_s, kv_cache[0][0].dtype, kv_cache[0][0].device)
++            if lm_head_indices is None:
++                lm_head_indices = torch.tensor(range(input_ids.shape[0]), dtype=torch.int64, device=input_ids.device)
++            self.acl_param_encoder = json.dumps({
++                "seqLen": input_lengths.tolist()
++            })
++            self.acl_encoder_operation_inputs[0] = input_ids
++            self.acl_encoder_operation_inputs[1] = position_ids
++            self.acl_encoder_operation_inputs[2] = cos_embed
++            self.acl_encoder_operation_inputs[3] = sin_embed
++            self.acl_encoder_operation_inputs[4] = atten_mask
++            self.acl_encoder_operation_inputs[5] = block_tables.to(torch.int32)
++            self.acl_encoder_operation_inputs[6] = slots.to(torch.int32)
++            self.acl_encoder_operation_inputs[7] = input_lengths.to(torch.int32)
++            self.acl_encoder_operation_inputs[8] = lm_head_indices.to(torch.int64)
++            return self.acl_encoder_operation_inputs, self.acl_param_encoder
++        else:
++            self.acl_decoder_operation_inputs[0] = input_ids
++            self.acl_decoder_operation_inputs[1] = position_ids
++            self.acl_decoder_operation_inputs[2] = cos_embed
++            self.acl_decoder_operation_inputs[3] = sin_embed
++            self.acl_decoder_operation_inputs[4] = self.ascend_atten_mask_fake
++            self.acl_decoder_operation_inputs[5] = block_tables.to(torch.int32)
++            self.acl_decoder_operation_inputs[6] = slots.to(torch.int32)
++            self.acl_decoder_operation_inputs[7] = input_lengths.to(torch.int32)
++            self.acl_decoder_operation_inputs[8] = self.lm_head_indices_fake
++            return self.acl_decoder_operation_inputs, self.acl_param_decoder
++
++    def execute_ascend_operator(self,
++                                input_ids: torch.Tensor,
++                                position_ids: torch.Tensor,
++                                cu_seqlen_prefill: Optional[torch.Tensor],
++                                kv_cache: List[Tuple[torch.Tensor, torch.Tensor]],
++                                block_tables: torch.Tensor,
++                                slots: torch.Tensor,
++                                input_lengths: torch.Tensor,
++                                max_s: int,
++                                lm_head_indices: Optional[torch.Tensor] = None):
++        acl_inputs, acl_param = self.prepare_inputs_for_ascend(input_ids, position_ids, cu_seqlen_prefill, kv_cache,
++                                                               block_tables, slots, input_lengths, max_s,
++                                                               lm_head_indices)
++        if cu_seqlen_prefill is not None:
++            acl_model_out = self.acl_encoder_operation.execute(acl_inputs, acl_param)
++        else:
++            acl_model_out = self.acl_decoder_operation.execute(acl_inputs, acl_param)
++        acl_hidden_state = acl_model_out[0]
++        return acl_hidden_state
++
++    def forward(
++        self,
++        input_ids: torch.Tensor,
++        position_ids: torch.Tensor,
++        cu_seqlen_prefill: Optional[torch.Tensor],
++        kv_cache: List[Tuple[torch.Tensor, torch.Tensor]],
++        block_tables: torch.Tensor,
++        slots: torch.Tensor,
++        input_lengths: torch.Tensor,
++        max_s: int,
++        lm_head_indices: Optional[torch.Tensor] = None,
++    ) -> torch.Tensor:
++        if not self.ascend_weight:
++            self.init_ascend_weight()
++        self.init_ascend_kvcache(kv_cache)
++        logits = self.execute_ascend_operator(input_ids, position_ids, cu_seqlen_prefill, kv_cache,
++                                              block_tables, slots, input_lengths, max_s, lm_head_indices)
++        return logits
+diff --git a/server/text_generation_server/models/flash_causal_lm.py b/server/text_generation_server/models/flash_causal_lm.py
+index 7de5135..38ae1a9 100644
+--- a/server/text_generation_server/models/flash_causal_lm.py
++++ b/server/text_generation_server/models/flash_causal_lm.py
+@@ -1,9 +1,12 @@
+ import math
+ import itertools
+ import torch
++import torch_npu
++from torch_npu.contrib import transfer_to_npu
+ import torch.distributed
+ 
+ import numpy as np
++from loguru import logger
+ 
+ from dataclasses import dataclass
+ from opentelemetry import trace
+@@ -23,7 +26,7 @@ from text_generation_server.utils.dist import MEMORY_FRACTION
+ 
+ tracer = trace.get_tracer(__name__)
+ 
+-BLOCK_SIZE = 16
++BLOCK_SIZE = 128
+ # Will be set in warmup
+ CACHE_MANAGER: Optional["CacheManager"] = None
+ 
+@@ -47,12 +50,12 @@ class CacheManager:
+         self.kv_cache = [
+             (
+                 torch.empty(
+-                    (num_blocks, num_heads, head_size // x, self.block_size, x),
++                    (num_blocks, self.block_size, num_heads, head_size),
+                     dtype=dtype,
+                     device=device,
+                 ),
+                 torch.empty(
+-                    (num_blocks, num_heads, head_size, self.block_size),
++                    (num_blocks, self.block_size, num_heads, head_size),
+                     dtype=dtype,
+                     device=device,
+                 ),
+@@ -110,6 +113,15 @@ class CacheManager:
+             # Reset mask
+             self.free_block_mask[block_indices] = 1
+ 
++    def __repr__(self):
++        return (f"CacheManager: "
++                f"num_blocks={self.num_blocks},"
++                f"block_size={self.block_size},"
++                f"free_block_mask={self.free_block_mask},"
++                f"slots={self.slots},"
++                f"k_cache shape={self.kv_cache[0][0].shape},"
++                f"v_cache shape={self.kv_cache[0][1].shape}")
++
+ 
+ @dataclass
+ class FlashCausalLMBatch(Batch):
+@@ -288,7 +300,7 @@ class FlashCausalLMBatch(Batch):
+             else:
+                 prefill_head_indices.append(
+                     torch.tensor(
+-                        [cumulative_length + input_length - 1], dtype=torch.int32
++                        [cumulative_length + input_length - 1], dtype=torch.int64
+                     )
+                 )
+                 prefill_next_token_indices.append(prefill_out_cumulative_length)
+@@ -329,14 +341,14 @@ class FlashCausalLMBatch(Batch):
+             slot_indices = slot_indices[0]
+ 
+         cu_seqlen_prefill = torch.tensor(
+-            cu_seqlen_prefill, device=device, dtype=torch.int32
++            cu_seqlen_prefill, device=device, dtype=torch.int64
+         )
+ 
+         position_ids = position_ids.to(device)
+         slot_indices = slot_indices.to(device)
+         input_ids = torch.tensor(input_ids, dtype=torch.int64, device=device)
+         input_lengths_tensor = torch.tensor(
+-            input_lengths, dtype=torch.int32, device=device
++            input_lengths, dtype=torch.int64, device=device
+         )
+ 
+         if all_prefill_logprobs:
+@@ -679,6 +691,34 @@ class FlashCausalLMBatch(Batch):
+     def __len__(self):
+         return len(self.requests)
+ 
++    def __repr__(self):
++        return (f"FlashCausalLMBatch: batch_id={self.batch_id},"
++                # f"requests={self.requests},"
++                f"requests_idx_mapping={self.requests_idx_mapping},"
++                f"input_ids={self.input_ids},"
++                f"position_ids={self.position_ids},"
++                f"cu_seqlen_prefill={self.cu_seqlen_prefill},"
++                f"start_slots={self.start_slots},"
++                f"slot_indices={self.slot_indices},"
++                f"needed_blocks_slots={self.needed_blocks_slots},"
++                f"block_tables={self.block_tables},"
++                f"block_tables_tensor={self.block_tables_tensor},"
++                f"slots={self.slots},"
++                f"max_seqlen={self.max_seqlen},"
++                f"prefill_head_indices={self.prefill_head_indices},"
++                f"prefill_next_token_indices={self.prefill_next_token_indices},"
++                f"prefill_cu_outlens={self.prefill_cu_outlens},"
++                f"input_lengths={self.input_lengths},"
++                f"input_lengths_tensor={self.input_lengths_tensor},"
++                f"prefix_offsets={self.prefix_offsets},"
++                f"read_offsets={self.read_offsets},"
++                # f"all_input_ids={self.all_input_ids},"
++                f"all_input_ids_tensor={self.all_input_ids_tensor},"
++                f"next_token_chooser={self.next_token_chooser},"
++                f"stopping_criterias={self.stopping_criterias},"
++                f"blocks={self.blocks},"
++                f"max_blocks={self.max_blocks}")
++
+ 
+ class FlashCausalLM(Model):
+     def __init__(
+@@ -715,6 +755,9 @@ class FlashCausalLM(Model):
+         global CACHE_MANAGER
+ 
+         torch.cuda.empty_cache()
++
++        peak_memory = torch_npu.npu.max_memory_allocated()
++        logger.warning(f">>>>before warmup peak_memory {peak_memory}")
+         try:
+             CACHE_MANAGER = CacheManager(
+                 batch.blocks,
+@@ -724,7 +767,9 @@ class FlashCausalLM(Model):
+                 self.dtype,
+                 self.device,
+             )
++            logger.warning(f"warmup prefill batch {batch}")
+             _, batch = self.generate_token(batch)
++
+         except Exception as e:
+             raise RuntimeError(
+                 f"Not enough memory to handle {len(batch.input_ids)} prefill tokens. "
+@@ -732,15 +777,24 @@ class FlashCausalLM(Model):
+             ) from e
+ 
+         torch.cuda.synchronize(self.device)
+-
++        peak_memory = torch_npu.npu.max_memory_allocated()
++        logger.warning(f">>>>after warmup peak_memory {peak_memory}")
+         # Inspired by the original implementation in [vllm](https://github.com/vllm-project/vllm)
+         # Calculate the number of blocks that can be allocated with the free memory
+         dtype_size = torch.tensor([], dtype=self.dtype).element_size()
+         cache_block_size = BLOCK_SIZE * self.num_kv_heads * self.head_size
+         total_cache_size = self.num_layers * cache_block_size * 2 * dtype_size
+ 
+-        total_free_memory, _ = torch.cuda.mem_get_info(self.device)
+-        total_gpu_memory = torch.cuda.get_device_properties(self.device).total_memory
++        torch_npu.npu.synchronize()
++        now_memory = torch_npu.npu.memory_stats()
++        # total_gpu_memory = torch_npu.npu.get_device_properties(self.device).total_memory
++        total_gpu_memory = 45 * (1 << 30)  #  π”√ƒ¨»œ30GB  # todo
++        peak_memory = torch_npu.npu.max_memory_allocated()
++        logger.warning(f">>>>dtype_size {dtype_size}, cache_block_size {cache_block_size}, num_kv_heads {self.num_kv_heads}, "
++                       f"total_cache_size {total_cache_size}, peak_memory {peak_memory}")
++        total_free_memory = total_gpu_memory - peak_memory
++        logger.warning(f">>>>total_free_memory {total_free_memory}, total_gpu_memory {total_gpu_memory}, "
++                       f"MEMORY_FRACTION {MEMORY_FRACTION}")
+ 
+         free_memory = max(
+             0, total_free_memory - (1 - MEMORY_FRACTION) * total_gpu_memory
+@@ -764,6 +818,9 @@ class FlashCausalLM(Model):
+             self.dtype,
+             self.device,
+         )
++        logger.warning(f">>>>real CacheManger {CACHE_MANAGER}")
++        peak_memory = torch_npu.npu.max_memory_allocated()
++        logger.warning(f">>>>end warmup peak_memory {peak_memory}")
+ 
+         return int(num_blocks * BLOCK_SIZE)
+ 
+@@ -784,6 +841,22 @@ class FlashCausalLM(Model):
+         lm_head_indices: Optional[torch.Tensor] = None,
+     ) -> Tuple[torch.Tensor, torch.Tensor]:
+         global CACHE_MANAGER
++        if CACHE_MANAGER is None:
++            try:
++                print(f"====self.num_layers {self.num_layers}, self.num_kv_heads {self.num_kv_heads},"
++                      f"self.head_size {self.head_size}, self.dtype {self.dtype}, self.device {self.device}")
++                num_blocks = int(128 * 128 / BLOCK_SIZE)
++                CACHE_MANAGER = CacheManager(
++                    num_blocks,
++                    self.num_layers,
++                    self.num_kv_heads,
++                    self.head_size,
++                    self.dtype,
++                    self.device,
++                )
++                print("====done to alloc CACHE")
++            except:
++                print("====error to alloc CACHE")
+ 
+         # Model Forward
+         return self.model.forward(
+@@ -808,6 +881,7 @@ class FlashCausalLM(Model):
+         if batch.needed_blocks_slots:
+             # Allocate blocks to this batch
+             CACHE_MANAGER.allocate(batch)
++        # logger.warning(f"generate_token for batch: {batch}")
+ 
+         try:
+             out = self.forward(
+@@ -825,10 +899,13 @@ class FlashCausalLM(Model):
+             raise e
+ 
+         if prefill:
++            # logger.warning(f"Prefill batch size {batch.cu_seqlen_prefill.shape[0] - 1}, "
++            #                f"token num is {batch.input_ids.shape[0]}")
+             next_token_logits = (
+                 out[batch.prefill_next_token_indices] if prefill_logprobs else out
+             )
+         else:
++            # logger.warning(f"Decode batch size {batch.input_ids.shape[0]}")
+             next_token_logits = out
+ 
+         next_input_ids, next_token_logprobs = batch.next_token_chooser(
+@@ -898,9 +975,11 @@ class FlashCausalLM(Model):
+                             start_index + 1 : start_index + out_length
+                         ]
+ 
+-            batch.all_input_ids_tensor[i, input_length] = next_input_ids[i]
++            # batch.all_input_ids_tensor[i, input_length] = next_input_ids[i]
+ 
+             cumulative_length += input_length
++        batch.all_input_ids_tensor.scatter_(1, batch.input_lengths_tensor.view(batch.input_lengths_tensor.shape[0], 1),
++                                              next_input_ids.view(next_input_ids.shape[0], 1))
+ 
+         # Set values in batch
+         batch.input_ids = next_input_ids
+diff --git a/server/text_generation_server/models/flash_chatglm2.py b/server/text_generation_server/models/flash_chatglm2.py
+new file mode 100644
+index 0000000..ccef844
+--- /dev/null
++++ b/server/text_generation_server/models/flash_chatglm2.py
+@@ -0,0 +1,101 @@
++import torch
++import torch_npu
++import torch.distributed
++
++from opentelemetry import trace
++from transformers.models.llama import LlamaTokenizer, LlamaTokenizerFast
++from typing import Optional
++
++from loguru import logger
++
++from text_generation_server.models import FlashCausalLM
++# from text_generation_server.models.custom_modeling.flash_chatglm2_modeling import (
++from text_generation_server.models.custom_modeling.flash_chatglm2_modeling_ascend import (
++    FlashChatglm2ForCausalLM,
++    Chatglm2Config,
++)
++from text_generation_server.utils import (
++    initialize_torch_distributed,
++    weight_files,
++    Weights,
++)
++
++from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
++
++tracer = trace.get_tracer(__name__)
++
++
++class FlashChatglm2(FlashCausalLM):
++    def __init__(
++        self,
++        model_id: str,
++        revision: Optional[str] = None,
++        quantize: Optional[str] = None,
++        dtype: Optional[torch.dtype] = None,
++        trust_remote_code: bool = False,
++    ):
++        self.process_group, rank, world_size = initialize_torch_distributed()
++        # self.process_group, rank, world_size = None, 0, 1
++        logger.info(f">>>done distribute, process_group {self.process_group} size {self.process_group.size()}")
++        if torch_npu.npu.is_available():
++            device = torch.device(f"npu:{rank}")
++            dtype = torch.float16 if dtype is None else dtype
++            logger.warning(f"model device is {device}")
++        else:
++            raise NotImplementedError("FlashChatglm2 is only available on GPU")
++
++        try:
++            tokenizer = AutoTokenizer.from_pretrained(
++                model_id,
++                revision=revision,
++                padding_side="left",
++                truncation_side="left",
++                trust_remote_code=trust_remote_code,
++                use_fast=False,
++            )
++        except Exception:
++            tokenizer = AutoTokenizer.from_pretrained(
++                model_id,
++                revision=revision,
++                padding_side="left",
++                truncation_side="left",
++                trust_remote_code=trust_remote_code,
++                use_fast=False,
++            )
++        logger.info(f">>>done tokenizer")
++
++        config = Chatglm2Config.from_pretrained(
++            model_id, revision=revision, trust_remote_code=trust_remote_code
++        )
++        config.quantize = quantize
++        # config.num_layers = 2  # Âø´ÈÄüÊµãËØï
++        logger.info(f">>>done config {config}")
++
++        # torch.distributed.barrier(group=self.process_group)
++        logger.info(f">>>before model_id {model_id}")
++        filenames = weight_files(model_id, revision=revision, extension=".safetensors")
++
++        weights = Weights(filenames, device, dtype, process_group=self.process_group)
++        logger.info(f"check weights {weights} !!!!!!!!!!!!!!!!!!!!")
++        if config.quantize == "gptq":
++            weights._set_gptq_params(model_id)
++
++        model = FlashChatglm2ForCausalLM(config, weights)
++
++        # print(">>>done init model, device")
++        model = model.to(weights.device)
++        logger.warning(f">>>done init model on device {weights.device}")
++
++        # torch.distributed.barrier(group=self.process_group)
++        super(FlashChatglm2, self).__init__(
++            model=model,
++            tokenizer=tokenizer,
++            num_layers=len(model.transformer.layers),
++            # num_layers=2,
++            num_kv_heads=model.transformer.num_heads,
++            head_size=model.transformer.head_size,
++            dtype=dtype,
++            device=device,
++            rank=rank,
++            world_size=world_size,
++        )
+diff --git a/server/text_generation_server/models/flash_llama.py b/server/text_generation_server/models/flash_llama.py
+index 96fb0c2..c1f3ff5 100644
+--- a/server/text_generation_server/models/flash_llama.py
++++ b/server/text_generation_server/models/flash_llama.py
+@@ -1,12 +1,14 @@
+ import torch
++import torch_npu
+ import torch.distributed
+ 
+ from opentelemetry import trace
+ from transformers.models.llama import LlamaTokenizer, LlamaTokenizerFast
+ from typing import Optional
++from loguru import logger
+ 
+ from text_generation_server.models import FlashCausalLM
+-from text_generation_server.models.custom_modeling.flash_llama_modeling import (
++from text_generation_server.models.custom_modeling.flash_llama_modeling_ascend import (
+     FlashLlamaForCausalLM,
+     LlamaConfig,
+ )
+@@ -16,6 +18,8 @@ from text_generation_server.utils import (
+     Weights,
+ )
+ 
++from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
++
+ tracer = trace.get_tracer(__name__)
+ 
+ 
+@@ -29,50 +33,60 @@ class FlashLlama(FlashCausalLM):
+         trust_remote_code: bool = False,
+     ):
+         self.process_group, rank, world_size = initialize_torch_distributed()
+-        if torch.cuda.is_available():
+-            device = torch.device(f"cuda:{rank}")
++        # self.process_group, rank, world_size = None, 0, 1
++        print(">>>done distribute, process_group", self.process_group, "size", self.process_group.size())
++        if torch_npu.npu.is_available():
++            device = torch.device(f"npu:{rank}")
+             dtype = torch.float16 if dtype is None else dtype
+-        else:
+-            raise NotImplementedError("FlashLlama is only available on GPU")
++            logger.warning(f"model device is {device}")
+ 
+         try:
+-            tokenizer = LlamaTokenizer.from_pretrained(
++            tokenizer = AutoTokenizer.from_pretrained(
+                 model_id,
+                 revision=revision,
+                 padding_side="left",
+                 truncation_side="left",
+                 trust_remote_code=trust_remote_code,
++                use_fast=True,
+             )
+         except Exception:
+-            tokenizer = LlamaTokenizerFast.from_pretrained(
++            tokenizer = AutoTokenizer.from_pretrained(
+                 model_id,
+                 revision=revision,
+                 padding_side="left",
+                 truncation_side="left",
+                 trust_remote_code=trust_remote_code,
++                use_fast=False,
+             )
++        print(">>>done tokenizer")
+ 
+         config = LlamaConfig.from_pretrained(
+             model_id, revision=revision, trust_remote_code=trust_remote_code
+         )
+         config.quantize = quantize
+-
+-        torch.distributed.barrier(group=self.process_group)
++        # config.num_hidden_layers = 2  # Âø´ÈÄüÊµãËØï
++        print(">>>done config", config)
+ 
+         filenames = weight_files(model_id, revision=revision, extension=".safetensors")
++        print(">>>done files", filenames)
+         weights = Weights(filenames, device, dtype, process_group=self.process_group)
+         if config.quantize == "gptq":
+             weights._set_gptq_params(model_id)
++        print(">>>done weights", weights)
+ 
+         model = FlashLlamaForCausalLM(config, weights)
+ 
+-        torch.distributed.barrier(group=self.process_group)
++        print(">>>done init model")
++        model = model.to(weights.device)
++
++        print(">>>done model to device")
++
+         super(FlashLlama, self).__init__(
+             model=model,
+             tokenizer=tokenizer,
+             num_layers=len(model.model.layers),
+-            num_kv_heads=model.model.num_key_value_heads,
+-            head_size=model.model.head_size,
++            num_kv_heads=model.num_heads,
++            head_size=model.head_size,
+             dtype=dtype,
+             device=device,
+             rank=rank,
+diff --git a/server/text_generation_server/server.py b/server/text_generation_server/server.py
+index 1cedc15..6696c34 100644
+--- a/server/text_generation_server/server.py
++++ b/server/text_generation_server/server.py
+@@ -14,6 +14,9 @@ from text_generation_server.interceptor import ExceptionInterceptor
+ from text_generation_server.models import Model, get_model
+ from text_generation_server.pb import generate_pb2_grpc, generate_pb2
+ from text_generation_server.tracing import UDSOpenTelemetryAioServerInterceptor
++from text_generation_server.utils.cpu_binding import bind_cpus
++
++import torch_npu
+ 
+ 
+ class TextGenerationService(generate_pb2_grpc.TextGenerationServiceServicer):
+@@ -26,6 +29,8 @@ class TextGenerationService(generate_pb2_grpc.TextGenerationServiceServicer):
+             # Force inference mode for the lifetime of TextGenerationService
+             self._inference_mode_raii_guard = torch._C._InferenceMode(True)
+ 
++        self.step = 0
++
+     async def Info(self, request, context):
+         return self.model.info
+ 
+@@ -71,15 +76,19 @@ class TextGenerationService(generate_pb2_grpc.TextGenerationServiceServicer):
+         generations, next_batch = self.model.generate_token(batch)
+         self.cache.set(next_batch)
+ 
+-        return generate_pb2.PrefillResponse(
++        response_tmp = generate_pb2.PrefillResponse(
+             generations=[generation.to_pb() for generation in generations],
+             batch=next_batch.to_pb() if next_batch else None,
+         )
+ 
++        # logger.warning(f"Server Prefill response: {response_tmp}")
++
++        return response_tmp
++
+     async def Decode(self, request, context):
+         if len(request.batches) == 0:
+             raise ValueError("Must provide at least one batch")
+-
++        # logger.warning(f"Server Decode request: {request}")
+         batches = []
+         for batch_pb in request.batches:
+             batch = self.cache.pop(batch_pb.id)
+@@ -96,30 +105,36 @@ class TextGenerationService(generate_pb2_grpc.TextGenerationServiceServicer):
+             batch = batches[0]
+ 
+         generations, next_batch = self.model.generate_token(batch)
++        self.step += 1
+         self.cache.set(next_batch)
+ 
+-        return generate_pb2.DecodeResponse(
++        response_tmp = generate_pb2.DecodeResponse(
+             generations=[generation.to_pb() for generation in generations],
+             batch=next_batch.to_pb() if next_batch else None,
+         )
++        logger.warning(f"decode batch size {len(batch.input_lengths)}")
++
++        # logger.warning(f"Server Decode response: {response_tmp}")
++
++        return response_tmp
+ 
+ 
+ def serve(
+-    model_id: str,
+-    revision: Optional[str],
+-    sharded: bool,
+-    quantize: Optional[str],
+-    dtype: Optional[str],
+-    trust_remote_code: bool,
+-    uds_path: Path,
+-):
+-    async def serve_inner(
+         model_id: str,
+         revision: Optional[str],
+-        sharded: bool = False,
+-        quantize: Optional[str] = None,
+-        dtype: Optional[str] = None,
+-        trust_remote_code: bool = False,
++        sharded: bool,
++        quantize: Optional[str],
++        dtype: Optional[str],
++        trust_remote_code: bool,
++        uds_path: Path,
++):
++    async def serve_inner(
++            model_id: str,
++            revision: Optional[str],
++            sharded: bool = False,
++            quantize: Optional[str] = None,
++            dtype: Optional[str] = None,
++            trust_remote_code: bool = False,
+     ):
+         unix_socket_template = "unix://{}-{}"
+         if sharded:
+@@ -132,6 +147,10 @@ def serve(
+             local_url = unix_socket_template.format(uds_path, 0)
+             server_urls = [local_url]
+ 
++        # cpu bind
++        logger.info(f"Server try to start at {local_url}, pid is {os.getpid()}")
++        bind_cpus(ratio=1.0)
++
+         try:
+             model = get_model(
+                 model_id, revision, sharded, quantize, dtype, trust_remote_code
+@@ -173,7 +192,7 @@ def serve(
+ 
+         await server.start()
+ 
+-        logger.info("Server started at {}".format(local_url))
++        logger.info(f"Server started at {local_url}, pid is {os.getpid()}")
+ 
+         try:
+             await server.wait_for_termination()
+diff --git a/server/text_generation_server/utils/cpu_binding.py b/server/text_generation_server/utils/cpu_binding.py
+new file mode 100644
+index 0000000..5a48e31
+--- /dev/null
++++ b/server/text_generation_server/utils/cpu_binding.py
+@@ -0,0 +1,119 @@
++import os
++import psutil
++from loguru import logger
++
++
++def _get_pcie_info(devices, keyword="PCIeBusInfo"):
++    device_pcie_tbl = dict()
++    for device in devices:
++        pcie_info = os.popen(f"npu-smi info -t board -i {device}").read().strip().split("\n")
++        for _ in pcie_info:
++            line = ''.join(_.split())
++            if line.startswith(keyword):
++                device_pcie_tbl[device] = line[len(keyword) + 1:]
++                break
++
++    return device_pcie_tbl
++
++
++def _get_numa_info(pcie_tbl, keyword="NUMAnode"):
++    device_numa_tbl = dict()  # key is device id, value is numa id
++    numa_devices_tbl = dict()  # key is numa id, value is device id list
++
++    for device, pcie_no in pcie_tbl.items():
++        numa_info = os.popen(f"lspci -s {pcie_no} -vvv").read().strip().split("\n")
++        for _ in numa_info:
++            line = ''.join(_.split())
++            if line.startswith(keyword):
++                numa_id = int(line[len(keyword) + 1:])
++                device_numa_tbl[device] = numa_id
++
++                devices = numa_devices_tbl.get(numa_id, None)
++                if devices is None:
++                    numa_devices_tbl[numa_id] = list()
++
++                numa_devices_tbl[numa_id].append(device)
++                break
++
++    return device_numa_tbl, numa_devices_tbl
++
++
++def _get_cpu_info(numa_ids, keyword1="NUMAnode", keyword2="CPU(s)"):
++    cpu_idx_tbl = dict()
++    numa_keywords = [keyword1 + str(idx) + keyword2 for idx in numa_ids]
++    cpu_info = os.popen(f"lscpu").read().strip().split("\n")
++    for _ in cpu_info:
++        line = ''.join(_.split())
++        if any(line.startswith(word) for word in numa_keywords):
++            split_info = line.split(":")
++            cpu_id_ranges = split_info[-1].split(",")
++
++            ranges = list()
++            for range_str in cpu_id_ranges:
++                endpoints = range_str.split("-")
++                if len(endpoints) != 2:
++                    raise Exception("lscpu command output error, please check !")
++
++                ranges += [cid for cid in range(int(endpoints[0]), int(endpoints[1]) + 1)]
++
++            numa_id = int(split_info[0].replace(keyword1, '').replace(keyword2, ''))
++            cpu_idx_tbl[numa_id] = ranges
++    return cpu_idx_tbl
++
++
++# ÂèØ‰ª•Áî®export CPU_BINDING_NUMËÆæÁΩÆÊØè‰∏™ËøõÁ®ãÁªëÁöÑÊ†∏Êï∞;Â¶ÇÊûú‰∏çËÆæÁΩÆCPU_BINDING_NUM,
++# ‰ºöÊ†πÊçÆratio(numaÂà©Áî®Áéá)ËøõË°åËÆ°ÁÆó,Â¶ÇÊûúÊúâ64‰∏™Ê†∏Ôºå0.5Ë°®Á§∫Áî®‰∏ÄÂçäÔºåÁî®32‰∏™Ê†∏, Âπ≥ÂàÜÁªô‰∫≤ÂíåÂú®Ëøô‰∏™numa‰∏äÁöÑnpu
++def bind_cpus(ratio=0.5):
++    visible_devices = os.environ.get("ASCEND_RT_VISIBLE_DEVICES", None)
++
++    if visible_devices is None:
++        world_size = int(os.getenv("WORLD_SIZE", "1"))
++        devices = [_ for _ in range(world_size)]
++    else:
++        devices = list(map(int, visible_devices.split(',')))
++
++    # Ëé∑ÂèñnpuÂíåpcieÁöÑÂØπÂ∫îÂÖ≥Á≥ª
++    device_pcie_tbl = _get_pcie_info(devices)
++    # Ê†πÊçÆpcie‰ø°ÊÅØËé∑ÂèñnpuÂíånumaÁöÑÂØπÂ∫îÂÖ≥Á≥ª
++    device_numa_tbl, numa_devices_tbl = _get_numa_info(device_pcie_tbl)
++    # Ëé∑Âèñ‰ΩøÁî®ÁöÑnumaÂØπÂ∫îÁöÑcpuÊ†∏ÂàÜÈÖç‰ø°ÊÅØ
++    cpu_idx_tbl = _get_cpu_info(list(numa_devices_tbl.keys()))
++
++    # ÂΩìÂâçrankÁöÑnpu id
++    rank_id = int(os.environ["RANK"])
++    cur_device = devices[rank_id]
++    # Ëé∑ÂèñnpuÂØπÂ∫îÁöÑnuma id
++    numa_id = device_numa_tbl[cur_device]
++
++    # Ëé∑ÂèñÂÖ±‰∫´ËØ•numaÁöÑnpu‰ø°ÊÅØ
++    shard_devices = numa_devices_tbl[numa_id]
++    # ÊåâÁÖßnpu idËøõË°åÊéíÂ∫è
++    shard_devices.sort()
++
++    # Ëé∑ÂèñËØ•numa‰∏äÊâÄÊúâÁöÑcpu id‰ø°ÊÅØ
++    all_cpus = cpu_idx_tbl[numa_id]
++    logger.info(
++        f"rank_id: {rank_id}, device_id: {cur_device}, numa_id: {numa_id}, shard_devices: {shard_devices}, cpus: {all_cpus}")
++
++    cpu_nums = len(all_cpus)
++    # ËÆ°ÁÆóÁªôËØ•ÂÖ±‰∫´numaÁöÑnpuÂàÜÈÖçÁöÑÊ†∏ÁöÑ‰∏™Êï∞
++    CPU_BINDING_NUM = os.environ.get("CPU_BINDING_NUM", None)
++    if CPU_BINDING_NUM is None:
++        cpu_num_per_device = int(cpu_nums * ratio // len(shard_devices))
++    else:
++        cpu_num_per_device = int(CPU_BINDING_NUM)
++        if len(shard_devices) * cpu_num_per_device > cpu_nums:
++            raise Exception(
++                f"Cpu num in numa {numa_id} to assign {cpu_num_per_device} for every device is not enough, "
++                f"please decrease the value of CPU_BINDING_NUM!")
++
++    # Ëé∑ÂèñËØ•npuÁöÑ‰∏ãÊ†á‰ø°ÊÅØ
++    idx = shard_devices.index(cur_device)
++    # ÁªôËØ•npuÂàÜÈÖçË¶ÅÁªëÂÆöÁöÑcpu id
++    binding_cpus = [all_cpus[_] for _ in range(idx * cpu_num_per_device, (idx + 1) * cpu_num_per_device)]
++
++    # cpu bind
++    p = psutil.Process()
++    p.cpu_affinity(binding_cpus)
++    new_affinity = p.cpu_affinity()
++    logger.info(f"process {p.pid}, new_affinity is {new_affinity}, cpu count {cpu_num_per_device}")
+diff --git a/server/text_generation_server/utils/dist.py b/server/text_generation_server/utils/dist.py
+index d02bfc5..e63241d 100644
+--- a/server/text_generation_server/utils/dist.py
++++ b/server/text_generation_server/utils/dist.py
+@@ -1,13 +1,22 @@
+ import os
+ import torch
+-
++import torch_npu
+ from datetime import timedelta
+ from loguru import logger
+ 
+-# Tensor Parallelism settings
++# Âº†ÈáèÂπ∂Ë°åËÆæÁΩÆÁéØÂ¢ÉÂèòÈáè
++# os.environ["MASTER_ADDR"] = "61.47.2.160"
++# os.environ["MASTER_PORT"] = "23456"
++# os.environ["WORLD_SIZE"] = "2"
++# os.environ["RANK"] = "0"
++# os.environ["NPROC_PER_NODE"] = "2"
++# os.environ["NNODES"] = "1"
++# os.environ["NODE_RANK"] = "0"
++
++
+ RANK = int(os.getenv("RANK", "0"))
+ WORLD_SIZE = int(os.getenv("WORLD_SIZE", "1"))
+-
++logger.warning(f"RANK***********************{RANK}, WORLD_SIZE******************************{WORLD_SIZE}")
+ # CUDA memory fraction
+ MEMORY_FRACTION = float(os.getenv("CUDA_MEMORY_FRACTION", "1.0"))
+ 
+@@ -27,7 +36,7 @@ class FakeGroup:
+ 
+     def allgather(self, inputs, local_tensor, **kwargs):
+         assert (
+-            len(inputs[0]) == len(local_tensor) == 1
++                len(inputs[0]) == len(local_tensor) == 1
+         ), f"{len(inputs[0])} != {len(local_tensor)} != 1, and the FakeGroup is supposed to join on simple tensors"
+         for input_ in inputs:
+             input_[0].data = local_tensor[0].data
+@@ -44,18 +53,19 @@ class FakeGroup:
+ 
+ 
+ def initialize_torch_distributed():
+-    if torch.cuda.is_available():
+-        from torch.distributed import ProcessGroupNCCL
++    if torch.npu.is_available():
++        from torch.distributed import ProcessGroupHCCL
+ 
+         # Set the device id.
+-        assert WORLD_SIZE <= torch.cuda.device_count(), "Each process is one gpu"
+-        device = RANK % torch.cuda.device_count()
+-        torch.cuda.set_device(device)
+-        torch.cuda.set_per_process_memory_fraction(MEMORY_FRACTION, device)
+-        backend = "nccl"
+-        options = ProcessGroupNCCL.Options()
+-        options.is_high_priority_stream = True
+-        options._timeout = timedelta(seconds=60)
++        assert WORLD_SIZE <= torch.npu.device_count(), "Each process is one gpu"
++        device = RANK % torch.npu.device_count()
++        torch.npu.set_device(device)
++        torch.npu.set_per_process_memory_fraction(MEMORY_FRACTION, device)
++        backend = "hccl"
++        options = ProcessGroupHCCL.Options()
++        # options.is_high_priority_stream = True            # NPUÊ≤°ÊúâËøô‰∏™Â±ûÊÄß
++        # options._timeout = timedelta(seconds=60)
++        logger.warning("**********************************************ProcessGroupHCCL has been Set")
+     else:
+         backend = "gloo"
+         options = None
+@@ -63,8 +73,8 @@ def initialize_torch_distributed():
+     if WORLD_SIZE == 1:
+         return FakeGroup(RANK, WORLD_SIZE), RANK, WORLD_SIZE
+     else:
+-        if os.getenv("DEBUG", None) == "1":
+-            return FakeGroup(RANK, WORLD_SIZE), RANK, WORLD_SIZE
++        # if os.getenv("DEBUG", None) == "1":
++        #     return FakeGroup(RANK, WORLD_SIZE), RANK, WORLD_SIZE
+ 
+         if not torch.distributed.is_initialized():
+             # Call the init process.
+@@ -72,9 +82,13 @@ def initialize_torch_distributed():
+                 backend=backend,
+                 world_size=WORLD_SIZE,
+                 rank=RANK,
+-                timeout=timedelta(seconds=60),
++                timeout=timedelta(seconds=10),
+                 pg_options=options,
+             )
++            logger.warning(
++                f"rank {RANK}**********************************************init_process_group has been activated")
++            logger.warning(
++                f"rank {RANK}**********************************************initi{torch.distributed.is_initialized()}")
+         else:
+             logger.warning("torch.distributed is already initialized.")
+ 
+diff --git a/server/text_generation_server/utils/flash_attn_ascend.py b/server/text_generation_server/utils/flash_attn_ascend.py
+new file mode 100644
+index 0000000..cfc092c
+--- /dev/null
++++ b/server/text_generation_server/utils/flash_attn_ascend.py
+@@ -0,0 +1,163 @@
++import os
++import torch
++
++from loguru import logger
++
++if os.getenv("USE_FLASH_ATTENTION", "").lower() == "false":
++    raise ImportError("`USE_FLASH_ATTENTION` is false.")
++
++ATTN_MASK_CACHE = None
++
++HAS_SELF_ATTN = False
++HAS_FLASH_ATTN = False
++try:
++    import flash_attn_cuda
++except ImportError as e2:
++    HAS_SELF_ATTN = True
++    logger.info(f"Flash Attention is not available, use default self attention")
++else:
++    HAS_FLASH_ATTN = True
++    logger.info(f"Use flash attention")
++
++
++def make_attn_mask_cache(max_s, x):
++    global ATTN_MASK_CACHE
++    del ATTN_MASK_CACHE
++    bias_cache = torch.tril(torch.ones((max_s, max_s), dtype=torch.bool)).view(max_s, max_s)
++    bias_cache = ~bias_cache
++    mask_value = torch.finfo(torch.float32).min
++    mask_atten_cache = torch.masked_fill(torch.zeros(size=(max_s, max_s)), bias_cache, mask_value)
++    ATTN_MASK_CACHE = mask_atten_cache.to(dtype=x.dtype).to(device=x.device)
++
++
++def attention_ascend(
++        q,
++        k,
++        v,
++        out,
++        cu_seqlens,
++        max_s,
++        softmax_scale,
++):
++    global ATTN_MASK_CACHE
++    if HAS_SELF_ATTN:
++        if ATTN_MASK_CACHE is None or ATTN_MASK_CACHE.shape[-1] < max_s:
++            make_attn_mask_cache(max_s, q)
++        # q, k, v shape is [ntokens, head_num, head_size]
++        prefill_tokens = cu_seqlens.tolist()
++        for i in range(1, len(prefill_tokens)):
++            start = prefill_tokens[i-1]
++            end = prefill_tokens[i]
++
++            q_this = q[start: end, ...].permute(1, 0, 2)  # [n_tokens, head_num, head_size] to [hn, n_tokens, hs]
++            k_this = k[start: end, ...].permute(1, 0, 2)  # [n_tokens, head_num, head_size] to [hn, n_tokens, hs]
++            v_this = v[start: end, ...].permute(1, 0, 2)  # [n_tokens, head_num, head_size] to [hn, n_tokens, hs]
++
++            head_num, q_tokens, head_size = q_this.shape
++            k_tokens = k_this.shape[1]
++
++            attn_scores = torch.zeros(
++                head_num,
++                q_tokens,
++                k_tokens,
++                dtype=q_this.dtype,
++                device=q_this.device,
++            )  # shape is [hn, n_tokens, n_tokens]
++            attn_scores = torch.baddbmm(
++                attn_scores,
++                q_this,
++                k_this.transpose(1, 2),
++                beta=1.0,
++                alpha=softmax_scale,
++            )
++
++            attn_scores = attn_scores + ATTN_MASK_CACHE[None, :attn_scores.shape[1], :attn_scores.shape[2]]
++            attn_scores = torch.nn.functional.softmax(attn_scores, dim=-1)
++            attn_scores = attn_scores.to(v_this.dtype)
++            attn_scores = torch.matmul(attn_scores, v_this)  # shape is [hn, n_tokens, hs]
++
++            out[start: end, ...] = attn_scores.permute(1, 0, 2)
++
++        return out
++
++    raise NotImplementedError("flash attention is not installed")
++
++
++def attention_paged(
++        q,
++        k_cache,
++        v_cache,
++        input_lengths,
++        block_tables,
++        out,
++        max_s,
++        softmax_scale,
++):
++    global ATTN_MASK_CACHE
++    if HAS_SELF_ATTN:
++        if ATTN_MASK_CACHE is None or ATTN_MASK_CACHE.shape[-1] < max_s:
++            make_attn_mask_cache(max_s, q)
++        # q, k, v shape is [ntokens, head_num, head_size]
++        block_num, block_size, head_num, head_size = k_cache.shape
++
++        input_lengths_list = input_lengths.tolist()
++        start = 0
++        end = 0
++
++        for i, length in enumerate(input_lengths_list):
++            k_length = length
++            k_present = torch.zeros(size=(k_length, head_num, head_size), dtype=torch.float16,
++                                    device=k_cache[0].device)
++            v_present = torch.zeros(size=(k_length, head_num, head_size), dtype=torch.float16,
++                                    device=v_cache[0].device)
++
++            block_list = block_tables[i].tolist()
++
++            for k_i in range(k_length):
++                block_index = block_list[k_i // block_size]
++                block_offset = k_i % block_size
++
++                k_present[k_i] = k_cache[block_index][block_offset]
++                v_present[k_i] = v_cache[block_index][block_offset]
++
++            q_present = q[i:i+1, ...]
++
++            # logger.info(f"pa for {i} token, process with {length} caches, block_list {block_list}, "
++            #             f"q_present {q_present} with shape {q_present.shape}"
++            #             f"k_present {k_present} with shape {k_present.shape}"
++            #             f"v_present {v_present} with shape {v_present.shape}")
++
++            q_this = q_present.permute(1, 0, 2)  # [n_tokens, head_num, head_size] to [hn, n_tokens, hs]
++            k_this = k_present.permute(1, 0, 2)  # [n_tokens, head_num, head_size] to [hn, n_tokens, hs]
++            v_this = v_present.permute(1, 0, 2)  # [n_tokens, head_num, head_size] to [hn, n_tokens, hs]
++
++            head_num, q_tokens, head_size = q_this.shape
++            k_tokens = k_this.shape[1]
++
++            attn_scores = torch.zeros(
++                head_num,
++                q_tokens,
++                k_tokens,
++                dtype=q_this.dtype,
++                device=q_this.device,
++            )  # shape is [hn, n_tokens, n_tokens]
++            attn_scores = torch.baddbmm(
++                attn_scores,
++                q_this,
++                k_this.transpose(1, 2),
++                beta=1.0,
++                alpha=softmax_scale,
++            )
++
++            attn_scores = attn_scores
++            attn_scores = torch.nn.functional.softmax(attn_scores, dim=-1)
++            attn_scores = attn_scores.to(v_this.dtype)
++            attn_scores = torch.matmul(attn_scores, v_this)  # shape is [hn, n_tokens, hs]
++
++            end += q_tokens
++            out[start: end, ...] = attn_scores.permute(1, 0, 2)
++            start += q_tokens
++
++        return out
++
++    raise NotImplementedError("flash attention is not installed")
+diff --git a/server/text_generation_server/utils/layers.py b/server/text_generation_server/utils/layers.py
+index 183cf2c..71a416c 100644
+--- a/server/text_generation_server/utils/layers.py
++++ b/server/text_generation_server/utils/layers.py
+@@ -6,13 +6,15 @@ from torch import nn
+ from torch.nn import functional as F
+ from typing import List
+ 
+-HAS_BITS_AND_BYTES = True
+-try:
+-    import bitsandbytes as bnb
+-    from bitsandbytes.nn import Int8Params
++from loguru import logger
+ 
+-except ImportError:
+-    HAS_BITS_AND_BYTES = False
++HAS_BITS_AND_BYTES = False
++# try:
++#     import bitsandbytes as bnb
++#     from bitsandbytes.nn import Int8Params, Params4bit
++
++# except ImportError:
++#     HAS_BITS_AND_BYTES = False
+ 
+ from accelerate import init_empty_weights
+ 
+@@ -28,6 +30,7 @@ except ImportError:
+ 
+ from typing import Optional
+ 
++
+ # Monkey patching
+ @classmethod
+ def load_layer_norm(cls, prefix, weights, eps):
+@@ -58,9 +61,10 @@ torch.nn.LayerNorm.load_no_bias = load_layer_norm_no_bias
+ 
+ class FastLinear(nn.Module):
+     def __init__(
+-        self,
+-        weight,
+-        bias,
++            self,
++            weight,
++            bias,
++            is_norm=False,
+     ) -> None:
+         super().__init__()
+         self.weight = nn.Parameter(weight)
+@@ -69,6 +73,9 @@ class FastLinear(nn.Module):
+         else:
+             self.bias = None
+ 
++        self.is_norm_head = is_norm
++        self.first_flag = True
++
+     @classmethod
+     def load(cls, config, prefix: str, weights, bias: bool):
+         weight = weights.get_tensor(f"{prefix}.weight")
+@@ -79,18 +86,25 @@ class FastLinear(nn.Module):
+         return cls(weight, bias)
+ 
+     def forward(self, input: torch.Tensor) -> torch.Tensor:
++        if self.is_norm_head:
++            if self.first_flag:
++                self.first_flag = False
++                self.weight = nn.Parameter(F.normalize(self.weight))
++                logger.info(f"do normalize weight for norm head")
++            return F.linear(input, self.weight, self.bias)
++
+         return F.linear(input, self.weight, self.bias)
+ 
+ 
+ class Linear8bitLt(nn.Module):
+     def __init__(
+-        self,
+-        weight,
+-        bias,
+-        has_fp16_weights=True,
+-        memory_efficient_backward=False,
+-        threshold=0.0,
+-        index=None,
++            self,
++            weight,
++            bias,
++            has_fp16_weights=True,
++            memory_efficient_backward=False,
++            threshold=0.0,
++            index=None,
+     ):
+         super().__init__()
+         assert (
+@@ -140,9 +154,9 @@ class Linear8bitLt(nn.Module):
+         return out
+ 
+ 
+-def get_linear(weight, bias, quantize):
++def get_linear(weight, bias, quantize, is_norm=False):
+     if quantize is None:
+-        linear = FastLinear(weight, bias)
++        linear = FastLinear(weight, bias, is_norm)
+     elif quantize == "bitsandbytes":
+         linear = Linear8bitLt(
+             weight,
+@@ -160,18 +174,18 @@ def get_linear(weight, bias, quantize):
+                 f"The passed weight is not `gptq` compatible, loader needs to be updated."
+             )
+ 
+-        if use_exllama:
+-            linear = Ex4bitLinear(qweight, qzeros, scales, g_idx, bias, bits, groupsize)
+-        else:
+-            linear = QuantLinear(
+-                qweight,
+-                qzeros,
+-                scales,
+-                g_idx,
+-                bias,
+-                bits,
+-                groupsize,
+-            )
++        # if use_exllama:
++        #     #linear = Ex4bitLinear(qweight, qzeros, scales, g_idx, bias, bits, groupsize)
++        # else:
++        linear = QuantLinear(
++            qweight,
++            qzeros,
++            scales,
++            g_idx,
++            bias,
++            bits,
++            groupsize,
++        )
+     else:
+         raise NotImplementedError(f"Quantization `{quantize}` is not implemented yet.")
+     return linear
+@@ -193,7 +207,24 @@ class TensorParallelHead(SuperLayer):
+         self.should_gather = should_gather
+ 
+     @staticmethod
+-    def load(config, prefix: str, weights):
++    def load_weight(config, prefix: str, weights, is_norm=False):
++        # ≤ª∂‘»®÷ÿΩ¯––«–∑÷
++        weight = weights.get_tensor(f"{prefix}.weight")
++        should_gather = False
++
++        # GPTQ doesn't quantize heads (nor embeddings)
++        if config.quantize == "gptq":
++            quantize = None
++        else:
++            quantize = config.quantize
++        return TensorParallelHead(
++            get_linear(weight, bias=None, quantize=quantize, is_norm=is_norm),
++            process_group=weights.process_group,
++            should_gather=should_gather,
++        )
++
++    @staticmethod
++    def load(config, prefix: str, weights, is_norm=False):
+         if weights.process_group.size() > 1:
+             try:
+                 weight = weights.get_sharded(f"{prefix}.weight", dim=0)
+@@ -213,7 +244,7 @@ class TensorParallelHead(SuperLayer):
+         else:
+             quantize = config.quantize
+         return TensorParallelHead(
+-            get_linear(weight, bias=None, quantize=quantize),
++            get_linear(weight, bias=None, quantize=quantize, is_norm=is_norm),
+             process_group=weights.process_group,
+             should_gather=should_gather,
+         )
+@@ -225,7 +256,6 @@ class TensorParallelHead(SuperLayer):
+         world_size = self.process_group.size()
+         if len(input.shape) == 2 and isinstance(self.linear, FastLinear):
+             out_dim = self.linear.weight.shape[0]
+-
+             if input.shape[0] == 1:
+                 world_out = input.new_empty(1, out_dim * world_size)
+                 local_out = input.new_empty(1, out_dim)
+@@ -236,7 +266,6 @@ class TensorParallelHead(SuperLayer):
+                 local_out = gather_input.T
+ 
+             torch.mm(input, self.linear.weight.T, out=local_out)
+-
+             torch.distributed.all_gather_into_tensor(
+                 world_out, gather_input, group=self.process_group
+             )
+@@ -255,6 +284,19 @@ class TensorParallelHead(SuperLayer):
+ 
+ 
+ class TensorParallelColumnLinear(SuperLayer):
++    @classmethod
++    def load_qkv(cls, config, prefix: str, weights, bias: bool):
++        """Specific method when the QKV was joined after the fact"""
++        weight = weights.get_weights_col_packed_qkv(
++            prefix, quantize=config.quantize
++        )
++        if bias:
++            raise NotImplementedError("packed_qkv only implemented for model")
++        else:
++            bias = None
++        linear = get_linear(weight, bias, config.quantize)
++        return cls(linear)
++
+     @classmethod
+     def load(cls, config, prefix: str, weights, bias: bool):
+         return cls.load_multi(config, [prefix], weights, bias, dim=0)
+@@ -300,6 +342,32 @@ class TensorParallelRowLinear(SuperLayer):
+         return out
+ 
+ 
++class TensorEmbedding(nn.Module):
++    # ≤ªΩ¯––»®÷ÿ«–∑÷,–Ë“™∏˙º”ÀŸø‚≈‰∫Õ;»Áπ˚«–∑÷,º”ÀŸø‚–Ë“™all reduceÀ„◊”
++    def __init__(self, prefix: str, weights):
++        super().__init__()
++        weight = weights.get_whole_tensor(f"{prefix}.weight", dim=0)
++        num_embeddings = weights.get_shape(f"{prefix}.weight")[0]
++
++        self.min_id = 0
++        self.max_id = num_embeddings
++        self.null_idx = num_embeddings
++
++        """Additional 0 entry used for masking"""
++        self.weight = nn.Parameter(F.pad(weight, (0, 0, 0, 1)))
++
++    def forward(self, input: torch.Tensor) -> torch.Tensor:
++        # default all out of bounds values to `self.null_idx` that will then be mapped to 0
++        # translate for [0, self.max_id - self.min_id[
++        input = torch.where(
++            (self.min_id > input) | (input >= self.max_id),
++            self.null_idx,
++            input - self.min_id,
++        )
++        out = torch.nn.functional.embedding(input, self.weight)
++        return out
++
++
+ class TensorParallelEmbedding(nn.Module):
+     def __init__(self, prefix: str, weights, reduce=True):
+         super().__init__()
+@@ -338,6 +406,7 @@ class TensorParallelEmbedding(nn.Module):
+ try:
+     import dropout_layer_norm
+ 
++
+     class FastLayerNorm(nn.LayerNorm):
+         def forward(self, hidden_states, residual=None):
+             if hidden_states.shape[-1] > 8192:
+@@ -376,10 +445,9 @@ try:
+ except ImportError:
+     pass
+ 
+-
+ try:
+-    from flash_attn.layers.rotary import RotaryEmbedding
+-    import rotary_emb
++    # from flash_attn.layers.rotary import RotaryEmbedding
++    # import rotary_emb
+ 
+     class PositionRotaryEmbedding(nn.Module):
+         def __init__(self, inv_freq):
+@@ -389,14 +457,16 @@ try:
+             self._seq_len_cached = 0
+             self._cos_cached = None
+             self._sin_cached = None
++            self._cos_cached_total = None
++            self._sin_cached_total = None
+             self._cos_k_cached = None
+             self._sin_k_cached = None
+ 
+         @classmethod
+         def static(cls, dim, base, device):
+             inv_freq = 1.0 / (
+-                base
+-                ** (torch.arange(0, dim, 2, device=device, dtype=torch.float32) / dim)
++                    base
++                    ** (torch.arange(0, dim, 2, device=device, dtype=torch.double) / dim)
+             )
+             return cls(inv_freq)
+ 
+@@ -413,9 +483,9 @@ try:
+             # Reset the tables if the sequence length has changed,
+             # or if we're on a new device (possibly due to tracing for instance)
+             if (
+-                seqlen > self._seq_len_cached
+-                or self._cos_cached.device != device
+-                or self._cos_cached.dtype != dtype
++                    seqlen > self._seq_len_cached
++                    or self._cos_cached.device != device
++                    or self._cos_cached.dtype != dtype
+             ):
+                 self._seq_len_cached = seqlen
+                 t = torch.arange(seqlen, device=device, dtype=self.inv_freq.dtype)
+@@ -425,8 +495,25 @@ try:
+                 self._cos_cached = torch.cos(freqs).to(dtype)
+                 self._sin_cached = torch.sin(freqs).to(dtype)
+ 
++        def _update_cos_sin_cache_total(self, dtype, device, seqlen):
++            # Reset the tables if the sequence length has changed,
++            # or if we're on a new device (possibly due to tracing for instance)
++            if (
++                    seqlen > self._seq_len_cached
++                    or self._cos_cached_total.device != device
++                    or self._cos_cached_total.dtype != dtype
++            ):
++                self._seq_len_cached = seqlen
++                t = torch.arange(seqlen, device=device, dtype=self.inv_freq.dtype)
++                # Don't do einsum, it converts fp32 to fp16
++                # freqs = torch.einsum("i,j->ij", t, self.inv_freq)
++                freqs = torch.outer(t, self.inv_freq.to(device=t.device))
++                freqs = torch.cat((freqs, freqs), dim=-1)
++                self._cos_cached_total = torch.cos(freqs).to(dtype)
++                self._sin_cached_total = torch.sin(freqs).to(dtype)
++
+         def get_cos_sin(
+-            self, position_ids: torch.Tensor, max_s: int, dtype: torch.dtype
++                self, position_ids: torch.Tensor, max_s: int, dtype: torch.dtype
+         ):
+             """
+             Return cos and sin for the asked position ids
+@@ -438,13 +525,72 @@ try:
+             sin = torch.index_select(self._sin_cached, 0, position_ids)
+             return cos.unsqueeze(1), sin.unsqueeze(1)
+ 
++        def get_cos_sin_total(
++                self, position_ids: torch.Tensor, max_s: int, dtype: torch.dtype
++        ):
++            """
++            Return cos and sin for the asked position ids
++            """
++
++            self._update_cos_sin_cache_total(dtype, position_ids.device, max_s)
++
++            cos = torch.index_select(self._cos_cached_total, 0, position_ids)
++            sin = torch.index_select(self._sin_cached_total, 0, position_ids)
++            return cos, sin
++
+         def forward(self, x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor):
+             rotary_dim = cos.shape[-1]
+             x1 = x[..., :rotary_dim]
+-            x2 = x[..., rotary_dim : 2 * rotary_dim]
++            x2 = x[..., rotary_dim: 2 * rotary_dim]
++
++            # rotary_emb.apply_rotary(x1, x2, cos, sin, x1, x2, False)
+ 
+-            rotary_emb.apply_rotary(x1, x2, cos, sin, x1, x2, False)
++            # do original forward
++            dtype = x.dtype
++            cos_compute = torch.cat((cos, cos), dim=-1)
++            sin_compute = torch.cat((sin, sin), dim=-1)
++            x = (x * cos_compute) + (torch.cat((-x2, x1), dim=-1) * sin_compute)
++            x = x.to(dtype)
+             return x
+ 
+ except ImportError:
+     pass
++
++try:
++    class AttentionMask(nn.Module):
++        def __init__(self, atten_mask):
++            super().__init__()
++            self._seq_len_cached = 0
++            self.atten_mask_cache = atten_mask
++
++        @classmethod
++        def static(cls, max_seq_len):
++            bias_cache = torch.tril(torch.ones((max_seq_len, max_seq_len), dtype=torch.bool)).view(max_seq_len,
++                                                                                                   max_seq_len)
++            bias_cache = ~bias_cache
++            mask_value = torch.finfo(torch.float32).min
++            attn_mask = torch.masked_fill(torch.zeros(size=(max_seq_len, max_seq_len)), bias_cache, mask_value)
++            return cls(attn_mask)
++
++        def _update_attn_cache(self, dtype, device, seqlen):
++            # Reset the tables if the sequence length has changed,
++            # or if we're on a new device (possibly due to tracing for instance)
++            if seqlen > self._seq_len_cached:
++                self._seq_len_cached = seqlen
++                bias_cache = torch.tril(torch.ones((seqlen, seqlen), dtype=torch.bool)).view(seqlen, seqlen)
++                bias_cache = ~bias_cache
++                mask_value = torch.finfo(torch.float32).min
++                mask_atten_cache = torch.masked_fill(torch.zeros(size=(seqlen, seqlen)), bias_cache, mask_value)
++                self.atten_mask_cache = mask_atten_cache.to(dtype).to(device)
++            if self.atten_mask_cache.device != device or self.atten_mask_cache.dtype != dtype:
++                self.atten_mask_cache = self.atten_mask_cache.to(dtype).to(device)
++
++        def get_attn_mask(
++                self, max_s: int, dtype: torch.dtype, device: torch.device
++        ):
++            self._update_attn_cache(dtype, device, max_s)
++            return self.atten_mask_cache[:max_s, :max_s]
++
++
++except ImportError:
++    pass
+diff --git a/server/text_generation_server/utils/logits_process.py b/server/text_generation_server/utils/logits_process.py
+index f424eae..b5f6954 100644
+--- a/server/text_generation_server/utils/logits_process.py
++++ b/server/text_generation_server/utils/logits_process.py
+@@ -13,7 +13,7 @@ from transformers import (
+     TypicalLogitsWarper,
+ )
+ 
+-mempool = torch.cuda.graph_pool_handle() if torch.cuda.is_available() else None
++# mempool = torch.cuda.graph_pool_handle() if torch.cuda.is_available() else None
+ 
+ 
+ class StaticWarper:
+@@ -42,26 +42,26 @@ class StaticWarper:
+         self.static_next_logprob = None
+ 
+     def __call__(self, scores):
+-        if torch.cuda.is_available():
+-            if self.cuda_graph is None:
+-                self.static_scores = scores
+-                self.cuda_graph = torch.cuda.CUDAGraph()
++        # if torch.cuda.is_available():
++            # if self.cuda_graph is None:
++            #     self.static_scores = scores
++            #     # self.cuda_graph = torch.cuda.CUDAGraph()
+ 
+-                with torch.cuda.graph(self.cuda_graph, pool=mempool):
+-                    local_scores = self.static_scores
+-                    for warper in self.warpers:
+-                        local_scores = warper(None, local_scores)
++            #     # with torch.cuda.graph(self.cuda_graph, pool=mempool):
++            #     #     local_scores = self.static_scores
++            #     #     for warper in self.warpers:
++            #     #         local_scores = warper(None, local_scores)
+ 
+-                    self.static_warped_scores = local_scores
++            #     #     self.static_warped_scores = local_scores
+                     # Compute logprobs
+-                    self.static_next_logprob = torch.log_softmax(
+-                        self.static_warped_scores, -1
+-                    )
++            #     #     self.static_next_logprob = torch.log_softmax(
++            #     #         self.static_warped_scores, -1
++            #     #     )
+ 
+-            self.static_scores.copy_(scores)
+-            self.cuda_graph.replay()
++            # self.static_scores.copy_(scores)
++            # # self.cuda_graph.replay()
+ 
+-            return self.static_warped_scores, self.static_next_logprob
++            # return self.static_warped_scores, self.static_next_logprob
+ 
+         # CPU branch
+         for warper in self.warpers:
+@@ -184,13 +184,22 @@ class HeterogeneousTopPLogitsWarper(LogitsWarper):
+         sorted_logits, sorted_indices = torch.sort(scores, descending=False)
+         probs = sorted_logits.softmax(dim=-1)
+         # This is way faster for some reason
+-        for i in range(probs.shape[0]):
+-            probs[i] = probs[i].cumsum(dim=-1)
++        probs = probs.cumsum(dim=-1)
++        # for i in range(probs.shape[0]):
++        #     probs[i] = probs[i].cumsum(dim=-1)
+ 
+         # Remove tokens with cumulative top_p above the threshold (token with 0 are kept)
+         sorted_indices_to_remove = probs <= self.top_p_opposite
++        # sorted_indices_to_remove = torch.empty_like(probs, dtype=torch.bool)
++        # sorted_indices_to_remove.copy_(probs <= self.top_p_opposite)
+         # Keep at least min_tokens_to_keep
+-        sorted_indices_to_remove[..., -self.min_tokens_to_keep :] = 0
++        # sorted_indices_to_remove[..., -self.min_tokens_to_keep :] = 0
++        sorted_indices_to_remove = torch.cat((sorted_indices_to_remove[..., :-self.min_tokens_to_keep],
++                                              torch.zeros(sorted_indices_to_remove.shape[:-1]
++                                                          + torch.Size([self.min_tokens_to_keep]),
++                                                          dtype=torch.bool,
++                                                          device=sorted_indices_to_remove.device)),
++                                             dim=-1)
+ 
+         # scatter sorted tensors to original indexing
+         indices_to_remove = sorted_indices_to_remove.scatter(
+diff --git a/server/text_generation_server/utils/tokens.py b/server/text_generation_server/utils/tokens.py
+index b83af59..da1ffd0 100644
+--- a/server/text_generation_server/utils/tokens.py
++++ b/server/text_generation_server/utils/tokens.py
+@@ -1,5 +1,6 @@
+ import re
+ import torch
++from loguru import logger
+ 
+ from transformers import (
+     RepetitionPenaltyLogitsProcessor,
+@@ -134,6 +135,12 @@ class StoppingCriteria:
+ 
+         return False, None
+ 
++    def __repr__(self):
++        return (f"StoppingCriteria: eos_token_id={self.eos_token_id},"
++                f"stop_sequence_criterias={self.stop_sequence_criterias},"
++                f"max_new_tokens={self.max_new_tokens},"
++                f"ignore_eos_token={self.ignore_eos_token},")
++
+     @classmethod
+     def from_pb(
+         cls,
+@@ -282,16 +289,18 @@ class HeterogeneousNextTokenChooser:
+ 
+ class Sampling:
+     def __init__(self, seed: int, device: str = "cpu"):
+-        self.generator = torch.Generator(device)
++        self.generator = torch.Generator()
+         self.generator.manual_seed(seed)
+         self.seed = seed
++        self.device = device
+ 
+     def __call__(self, logits):
+-        probs = torch.nn.functional.softmax(logits, -1)
++        probs = torch.nn.functional.softmax(logits, -1).view(1, -1)
+         # Avoid GPU<->CPU sync done by torch multinomial
+         # See: https://github.com/pytorch/pytorch/blob/925a3788ec5c06db62ca732a0e9425a26a00916f/aten/src/ATen/native/Distributions.cpp#L631-L637
+-        q = torch.empty_like(probs).exponential_(1, generator=self.generator)
+-        return probs.div_(q).argmax()
++        # q = torch.empty_like(probs).exponential_(1, generator=self.generator).to(self.device)
++        # return probs.div_(q).argmax()
++        return torch.multinomial(probs, num_samples=1).squeeze(1)
+ 
+ 
+ class Greedy:
+diff --git a/server/text_generation_server/utils/watermark.py b/server/text_generation_server/utils/watermark.py
+index df7b90e..5befa21 100644
+--- a/server/text_generation_server/utils/watermark.py
++++ b/server/text_generation_server/utils/watermark.py
+@@ -34,7 +34,7 @@ class WatermarkLogitsProcessor(LogitsProcessor):
+         # watermarking parameters
+         self.gamma = gamma
+         self.delta = delta
+-        self.rng = torch.Generator(device=device)
++        self.rng = torch.Generator()
+         self.hash_key = hash_key
+ 
+     def _seed_rng(self, input_ids: Union[List[int], torch.LongTensor]):
+@@ -62,7 +62,7 @@ class WatermarkLogitsProcessor(LogitsProcessor):
+         self._seed_rng(input_ids)
+ 
+         greenlist_size = int(max_value * self.gamma)
+-        vocab_permutation = torch.randperm(max_value, device=device, generator=self.rng)
++        vocab_permutation = torch.randperm(max_value, generator=self.rng).to(input_ids.device)
+         greenlist_ids = vocab_permutation[:greenlist_size]
+         return greenlist_ids
+ 
+diff --git a/server/text_generation_server/utils/weights.py b/server/text_generation_server/utils/weights.py
+index 0330402..6439a72 100644
+--- a/server/text_generation_server/utils/weights.py
++++ b/server/text_generation_server/utils/weights.py
+@@ -9,12 +9,12 @@ import json
+ 
+ class Weights:
+     def __init__(
+-        self,
+-        filenames: List[Path],
+-        device,
+-        dtype,
+-        process_group,
+-        aliases: Optional[Dict[str, List[str]]] = None,
++            self,
++            filenames: List[Path],
++            device,
++            dtype,
++            process_group,
++            aliases: Optional[Dict[str, List[str]]] = None,
+     ):
+         routing = {}
+         for filename in filenames:
+@@ -72,10 +72,34 @@ class Weights:
+         tensor = tensor.to(device=self.device)
+         return tensor
+ 
++    def get_whole_tensor(self, tensor_name: str, dim: int):
++        filename, tensor_name = self.get_filename(tensor_name)
++        f = self._get_handle(filename)
++        slice_ = f.get_slice(tensor_name)
++
++        start = 0
++        stop = slice_.get_shape()[dim]
++
++        if dim == 0:
++            tensor = slice_[start:stop]
++        elif dim == 1:
++            tensor = slice_[:, start:stop]
++        else:
++            raise NotImplementedError("Let's make that generic when needed")
++        # Special case for gptq which shouldn't convert
++        # u4 which are disguised as int32
++        if tensor.dtype != torch.int32:
++            tensor = tensor.to(dtype=self.dtype)
++        # tensor = tensor.to(device=self.device)
++        # print("done load and shard, done to device", self.device, "with dtype", self.dtype, "tensor", tensor,
++        #       "shape", tensor.shape)
++        return tensor
++
+     def get_partial_sharded(self, tensor_name: str, dim: int):
+         filename, tensor_name = self.get_filename(tensor_name)
+         world_size = self.process_group.size()
+         rank = self.process_group.rank()
++        # print("in get partial_sharded, world_size", world_size, "rank", rank)
+ 
+         f = self._get_handle(filename)
+         slice_ = f.get_slice(tensor_name)
+@@ -94,7 +118,9 @@ class Weights:
+         # u4 which are disguised as int32
+         if tensor.dtype != torch.int32:
+             tensor = tensor.to(dtype=self.dtype)
+-        tensor = tensor.to(device=self.device)
++        # tensor = tensor.to(device=self.device)
++        # print("done load and shard, done to device", self.device, "with dtype", self.dtype, "tensor", tensor,
++        #       "shape", tensor.shape)
+         return tensor
+ 
+     def get_sharded(self, tensor_name: str, dim: int):
+@@ -104,10 +130,50 @@ class Weights:
+         world_size = self.process_group.size()
+         size = slice_.get_shape()[dim]
+         assert (
+-            size % world_size == 0
++                size % world_size == 0
+         ), f"The choosen size {size} is not compatible with sharding on {world_size} shards"
+         return self.get_partial_sharded(tensor_name, dim)
+ 
++    def get_weights_col_packed_qkv(self, prefix: str, quantize: str):
++        """
++        Highly specific when the underlying tensor is a simple cat of Q,K,V instead of being
++        already alternating Q,K,V within the main tensor
++        """
++        if quantize == "gptq":
++            try:
++                qweight = self._get_qweight(f"{prefix}.qweight")
++            except RuntimeError:
++                raise RuntimeError(
++                    "Cannot load `gptq` weight, make sure the model is already quantized, or quantize it with `text-generation-server quantize ORIGINAL_MODEL_ID NEW_MODEL_ID`"
++                )
++
++            qzeros = self._get_qweight(f"{prefix}.qzeros")
++            scales = self._get_qweight(f"{prefix}.scales")
++            scales = scales.to(dtype=self.dtype)
++            g_idx = self.get_tensor(f"{prefix}.g_idx")
++
++            bits, groupsize = self._get_gptq_params()
++            weight = (qweight, qzeros, scales, g_idx, bits, groupsize, False)
++        else:
++            slice_ = self._get_slice(f"{prefix}.weight")
++            total_size = slice_.get_shape()[0]
++            assert total_size % 3 == 0, "Prepacked qkv is not divisible by 3"
++            single_size = total_size // 3
++            world_size = self.process_group.size()
++            rank = self.process_group.rank()
++
++            assert single_size % world_size == 0, f"Prepacked qkv cannot be sharded across {world_size} shards"
++            block_size = single_size // world_size
++            start = rank * block_size
++            stop = (rank + 1) * block_size
++            q = slice_[start:stop]
++            k = slice_[start + single_size:stop + single_size]
++            v = slice_[start + 2 * single_size:stop + 2 * single_size]
++            weight = torch.cat([q, k, v], dim=0)
++            weight = weight.to(device=self.device)
++            weight = weight.to(dtype=self.dtype)
++        return weight
++
+     def get_multi_weights_col(self, prefixes: List[str], quantize: str, dim: int):
+         if quantize == "gptq":
+             try:
+@@ -149,14 +215,14 @@ class Weights:
+                 g_idx = self.get_tensor(f"{prefix}.g_idx")
+                 if g_idx is not None:
+                     if (
+-                        not torch.equal(
+-                            g_idx.cpu(),
+-                            torch.tensor(
+-                                [i // groupsize for i in range(g_idx.shape[0])],
+-                                dtype=torch.int32,
+-                            ),
+-                        )
+-                        and not (g_idx == 0).all()
++                            not torch.equal(
++                                g_idx.cpu(),
++                                torch.tensor(
++                                    [i // groupsize for i in range(g_idx.shape[0])],
++                                    dtype=torch.int32,
++                                ),
++                            )
++                            and not (g_idx == 0).all()
+                     ):
+                         # Exllama implementation does not support row tensor parallelism with act-order, as
+                         # it would require to reorder input activations that are split unto several GPUs
