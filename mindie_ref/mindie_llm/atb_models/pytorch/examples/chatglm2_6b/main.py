@@ -1,19 +1,16 @@
 # coding=utf-8
 # Copyright Huawei Technologies Co., Ltd. 2023-2031. All rights reserved
 
-import ast
 import argparse
 import glob
 import math
 import os
 import platform
 import shutil
-import stat
 import json
 import time
 from pathlib import Path
 
-import numpy as np
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModel
 import transformers
@@ -71,8 +68,8 @@ def parse_args():
     parser.add_argument("--device", type=int, default=0, help="device id")
     parser.add_argument("--batch", type=int, default=1, help="batch size")
     parser.add_argument(
-        "--model_file", 
-        type=str, 
+        "--model_file",
+        type=str,
         default="patches/models/modeling_chatglm_fa.py",
         help="The implementation of model"
     )
@@ -82,7 +79,7 @@ def parse_args():
         default='',
         help="The path to ceval dataset"
     )
-    
+
     parser.add_argument(
         "--set_case_pair",
         type=int,
@@ -148,9 +145,9 @@ def check_lists(arg):
         return arg
     return [int(i) for i in arg.split(',')]
 
-    
+
 def get_model(args):
-   
+
     # 加载 tokenizer 和 model
     tokenizer = AutoTokenizer.from_pretrained(args.model_path, trust_remote_code=True)
     if args.tp_size > 1:
@@ -169,7 +166,7 @@ def get_model(args):
         shutil.copy(args.model_file, os.path.join(args.model_path, "modeling_chatglm.py"))
         model = AutoModel.from_pretrained(args.model_path,
                                           trust_remote_code=True, torch_dtype=torch.half, device='npu')
-    
+
     # 使用二进制优化，消除动态shape的编译问题
     torch.npu.set_compile_mode(jit_compile=False)
 
@@ -267,8 +264,9 @@ def precision(args, tokenizer, model):
         acc_total += accuracy_dict[key] * count_dict[key]
         count_total += count_dict[key]
     if local_rank == 0:
-        print(acc_total / count_total)
-        accuracy_dict.update({"acc_total": acc_total / count_total})
+        acc_ratio = acc_total / count_total
+        print(f'acc_total = {acc_ratio}')
+        accuracy_dict.update({"acc_total": acc_ratio})
         json_str = json.dumps(accuracy_dict)
         with open(json_file, 'a') as f:
             f.write(json_str)
@@ -315,7 +313,7 @@ def performance(args, tokenizer, model):
     with torch.no_grad():
         outputs = model.generate(
             **inputs,
-            eos_token_id=model.config.vocab_size*2,
+            eos_token_id=model.config.vocab_size * 2,
             max_new_tokens=4,
         )
     if local_rank == 0:
@@ -332,7 +330,7 @@ def performance(args, tokenizer, model):
             first_token_start = time.time()
             outputs = model.generate(
                 **inputs,
-                eos_token_id=model.config.vocab_size*2,
+                eos_token_id=model.config.vocab_size * 2,
                 max_new_tokens=1,
             )
             torch.npu.synchronize()
@@ -342,7 +340,7 @@ def performance(args, tokenizer, model):
             total_start = time.time()
             outputs = model.generate(
                 **inputs,
-                eos_token_id=model.config.vocab_size*2,
+                eos_token_id=model.config.vocab_size * 2,
                 max_new_tokens=seq_len_out,
             )
             torch.npu.synchronize()
@@ -372,7 +370,7 @@ def performance(args, tokenizer, model):
                 f.write(
                     f"{args.batch}, {seq_len_in}, {seq_len_out}, {time_of_first_token * 1000}, {time_per_token * 1000}, {time_total}, {throughput}, {throughput_e2e}\n"
                 )
-            
+
             if args.print_response:
                 res = [
                     tokenizer.decode(output)
@@ -398,7 +396,7 @@ def cli_demo(args, tokenizer, model):
         if args.tp_size > 1:
             torch.distributed.broadcast_object_list(objects, src=0)
         query = objects[0]
-        
+
         if query.strip() == "stop":
             break
         if query.strip() == "clear":

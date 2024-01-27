@@ -1,13 +1,14 @@
-from modelslim.pytorch.weight_compression import CompressConfig, Compressor
-import sys
 import os
 import numpy as np
 import argparse
+from modelslim.pytorch.weight_compression import CompressConfig, Compressor
+
 
 def make_dir(path):
     if not os.path.exists(path):
-        os.makedirs(path, mode=0o750) 
+        os.makedirs(path, mode=0o750)
     return path
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Cut compress weights.")
@@ -16,8 +17,9 @@ def parse_args():
     parser.add_argument("--save_path",
                         help="save path")
 
-    args = parser.parse_args()
-    return args
+    args_input = parser.parse_args()
+    return args_input
+
 
 if __name__ == "__main__":
     args = parse_args()
@@ -27,11 +29,11 @@ if __name__ == "__main__":
         index_root = make_dir(os.path.join(save_path, 'index'))
         weight_root = make_dir(os.path.join(save_path, 'weight'))
         info_root = make_dir(os.path.join(save_path, 'info'))
-        
+
         compress_config = CompressConfig(do_pseudo_sparse=False, sparse_ratio=1, is_debug=True, record_detail_root=save_path)
         compressor = Compressor(compress_config, weight_path)
         compress_weight, compress_index, compress_info = compressor.run()
-        
+
         compressor.export(compress_weight, weight_root)
         compressor.export(compress_index, index_root)
         compressor.export(compress_info, info_root, dtype=np.int64)
