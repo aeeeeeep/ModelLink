@@ -69,6 +69,25 @@ namespace atb_speed {
         static const uint64_t INTERMEDIATE_TENSOR_COUNT = 10;
         static const uint64_t NODE_COUNT = 9;
 
+        atb::Operation *CreateLayerFusionOperation(const nlohmann::json &paramJson)
+        {
+            LayerFusionParam param;
+            param.rmsNormEps = paramJson["rmsNormEps"].get<float>();
+            param.headNum = paramJson["headNum"].get<int>();
+            param.dk = paramJson["dk"].get<int>();
+            param.layerId = paramJson["layerId"].get<int>();
+            param.rotaryCoeff = paramJson["rotaryCoeff"].get<int>();
+            param.qScale = paramJson["qScale"].get<float>();
+            param.model = paramJson["model"].get<std::string>();
+            param.coderType = paramJson["coderType"].get<int>();
+            ATB_LOG(INFO) << "LLaMA7BLayerFusionParam rmsNormEps:" << param.rmsNormEps << ", headNum:" << param.headNum
+                          << ", dk:" << param.dk << ", layerid:" << param.layerId   << ", qScale:" << param.qScale
+                          << ", model:"<<param.model << ", coderType:"<<param.coderType;
+            atb::Operation *op;
+            atb_speed::llama_7b::FusionLayerOperation(param, &op);
+            return op;
+        }
+
         atb::Status FusionLayerOperation(const LayerFusionParam &param, atb::Operation **operation)
         {
             atb::GraphParam opGraph;

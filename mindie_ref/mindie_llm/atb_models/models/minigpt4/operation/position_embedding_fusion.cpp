@@ -34,6 +34,16 @@ static const uint64_t OUT_TENSOR_COUNT = 3;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 2;
 static const uint64_t NODE_COUNT = 2;
 
+atb::Operation *CreatePositionEmbeddingFusionOperation(const nlohmann::json &paramJson)
+{
+    atb_speed::llama_7b::PositionEmbedding1dFusionParam param;
+    param.rotaryCoeff = paramJson["rotaryCoeff"].get<int>();
+    param.headNum = paramJson["headNum"].get<int>();
+    atb::Operation *op;
+    atb_speed::llama_7b::PositionEmbeddingFusionOperation(param, &op);
+    return op;
+}
+
 atb::Status PositionEmbeddingFusionOperation(const PositionEmbedding1dFusionParam &param, atb::Operation **operation)
 {
     atb::GraphParam opGraph;
@@ -61,7 +71,7 @@ atb::Status PositionEmbeddingFusionOperation(const PositionEmbedding1dFusionPara
     atb::infer::RopeParam ropeparam;
     ropeparam.rotaryCoeff = param.rotaryCoeff;
     CREATE_OPERATION(ropeparam, &ropeNode.operation);
-    ropeNode.inTensorIds = {INTERMEDIATE_EMBEDDINGQUERY, INTERMEDIATE_EMBEDDINGKEY, 
+    ropeNode.inTensorIds = {INTERMEDIATE_EMBEDDINGQUERY, INTERMEDIATE_EMBEDDINGKEY,
                             IN_COSTABLE, IN_SINTABLE, IN_SEQLEN};
     ropeNode.outTensorIds = {OUT_EMBEDDINGQUERY, OUT_EMBEDDINGKEY};
     ropeNode.inTensorReshapeFuncs.resize(ropeNode.inTensorIds.size());

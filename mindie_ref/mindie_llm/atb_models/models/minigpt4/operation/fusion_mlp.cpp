@@ -34,6 +34,18 @@ static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 5;
 static const uint64_t NODE_COUNT = 5;
 
+atb::Operation *CreateFusionMlp(const nlohmann::json &paramJson)
+{
+    FusionMlpParam param;
+    if (paramJson.contains("transpose")) {
+        param.transpose = paramJson["transpose"].get<bool>();
+    }
+    ATB_LOG(INFO) << "FusionMlpParam";
+    atb::Operation *op;
+    FusionMlp(param, &op);
+    return op;
+}
+
 atb::Status FusionMlp(const FusionMlpParam &param, atb::Operation **operation)
 {
     atb::GraphParam opGraph;

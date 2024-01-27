@@ -37,25 +37,7 @@ struct LayerFusionParam {
 };
 atb::Status FusionLayerOperation(const LayerFusionParam &param, atb::Operation **operation);
 
-
-static atb::Operation *CreateLayerFusionOperation(const nlohmann::json &paramJson)
-{
-    LayerFusionParam param;
-    param.rmsNormEps = paramJson["rmsNormEps"].get<float>();
-    param.headNum = paramJson["headNum"].get<int>();
-    param.dk = paramJson["dk"].get<int>();
-    param.layerId = paramJson["layerId"].get<int>();
-    param.rotaryCoeff = paramJson["rotaryCoeff"].get<int>();
-    param.qScale = paramJson["qScale"].get<float>();
-    param.model = paramJson["model"].get<std::string>();
-    param.coderType = paramJson["coderType"].get<int>();
-    ATB_LOG(INFO) << "LLaMA7BLayerFusionParam rmsNormEps:" << param.rmsNormEps << ", headNum:" << param.headNum
-                  << ", dk:" << param.dk << ", layerid:" << param.layerId   << ", qScale:" << param.qScale
-                  << ", model:"<<param.model << ", coderType:"<<param.coderType;
-    atb::Operation *op;
-    atb_speed::llama_7b::FusionLayerOperation(param, &op);
-    return op;
-}
+atb::Operation *CreateLayerFusionOperation(const nlohmann::json &paramJson);
 
 class LayerFusionBinder : public HostTensorBinder {
 public:

@@ -157,7 +157,7 @@ namespace atb_speed {
                 layerNode.inTensors.at(inTensorId++) = firstInTensor;
                 for (size_t weightTensorId = 0; weightTensorId < WEIGHT_COUNT_PER_LAYER; ++weightTensorId) {
                     layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(
-                            layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId + WORDEMBEDDINGNODE_WEIGHT_COUNT);
+                        layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId + WORDEMBEDDINGNODE_WEIGHT_COUNT);
                 }
                 layerNode.inTensors.at(inTensorId++) = cosEmbedTensor;
                 layerNode.inTensors.at(inTensorId++) = sinEmbedTensor;

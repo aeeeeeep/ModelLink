@@ -29,17 +29,8 @@ struct FusionMlpParam {
 
 atb::Status FusionMlp(const FusionMlpParam &param, atb::Operation **operation);
 
-static atb::Operation *CreateFusionMlp(const nlohmann::json &paramJson)
-{
-    FusionMlpParam param;
-    if (paramJson.contains("transpose")) {
-        param.transpose = paramJson["transpose"].get<bool>();
-    }
-    ATB_LOG(INFO) << "FusionMlpParam";
-    atb::Operation *op;
-    FusionMlp(param, &op);
-    return op;
-}
+atb::Operation *CreateFusionMlp(const nlohmann::json &paramJson);
+
 } // namespace llama_7b
 } // namespace atb_speed
 #endif
