@@ -107,6 +107,14 @@ function fn_init_pytorch_env()
     else
         echo "not use SetCustomHandler"
     fi
+
+    COUNT=`nm --dynamic ${PYTORCH_NPU_INSTALL_PATH}/lib/libtorch_npu.so | grep _ZN6at_npu6native17empty_with_formatEN3c108ArrayRefIlEERKNS1_13TensorOptionsElb | wc -l`
+    if [ $COUNT -ge 1 ];then
+        echo "using pta verion after PTA6RC1B010 (6.0.RC1.B010)"
+        COMPILE_OPTIONS="${COMPILE_OPTIONS} -DTORCH_PTA6RC1B010=ON"
+    else
+        echo "using pta version below PTA6RC1B010 (6.0.RC1.B010)"
+    fi
 }
 
 function fn_run_pythontest()
