@@ -92,7 +92,7 @@ function fn_init_pytorch_env()
     echo "PYTORCH_INSTALL_PATH=$PYTORCH_INSTALL_PATH"
     echo "PYTORCH_NPU_INSTALL_PATH=$PYTORCH_NPU_INSTALL_PATH"
 
-    COUNT=`grep get_tensor_npu_format ${PYTORCH_NPU_INSTALL_PATH}/include/torch_npu/csrc/framework/utils/CalcuOpUtil.h | wc -l`
+    COUNT=$(grep get_tensor_npu_format ${PYTORCH_NPU_INSTALL_PATH}/include/torch_npu/csrc/framework/utils/CalcuOpUtil.h | wc -l)
     if [ "$COUNT" == "1" ];then
         echo "use get_tensor_npu_format"
         COMPILE_OPTIONS="${COMPILE_OPTIONS} -DTORCH_GET_TENSOR_NPU_FORMAT_OLD=ON"
@@ -100,7 +100,7 @@ function fn_init_pytorch_env()
         echo "use GetTensorNpuFormat"
     fi
 
-    COUNT=`grep SetCustomHandler ${PYTORCH_NPU_INSTALL_PATH}/include/torch_npu/csrc/framework/OpCommand.h | wc -l`
+    COUNT=$(grep SetCustomHandler ${PYTORCH_NPU_INSTALL_PATH}/include/torch_npu/csrc/framework/OpCommand.h | wc -l)
     if [ $COUNT -ge 1 ];then
         echo "use SetCustomHandler"
         COMPILE_OPTIONS="${COMPILE_OPTIONS} -DTORCH_SETCUSTOMHANDLER=ON"
@@ -108,10 +108,10 @@ function fn_init_pytorch_env()
         echo "not use SetCustomHandler"
     fi
 
-    COUNT=`nm --dynamic ${PYTORCH_NPU_INSTALL_PATH}/lib/libtorch_npu.so | grep _ZN6at_npu6native17empty_with_formatEN3c108ArrayRefIlEERKNS1_13TensorOptionsElb | wc -l`
-    if [ $COUNT -ge 1 ];then
+    is_higher_PTA6=$(nm --dynamic ${PYTORCH_NPU_INSTALL_PATH}/lib/libtorch_npu.so | grep _ZN6at_npu6native17empty_with_formatEN3c108ArrayRefIlEERKNS1_13TensorOptionsElb | wc -l)
+    if [ $is_higher_PTA6 -ge 1 ];then
         echo "using pta verion after PTA6RC1B010 (6.0.RC1.B010)"
-        COMPILE_OPTIONS="${COMPILE_OPTIONS} -DTORCH_PTA6RC1B010=ON"
+        COMPILE_OPTIONS="${COMPILE_OPTIONS} -DTORCH_HIGHER_THAN_PTA6=ON"
     else
         echo "using pta version below PTA6RC1B010 (6.0.RC1.B010)"
     fi

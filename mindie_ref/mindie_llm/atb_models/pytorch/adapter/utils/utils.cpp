@@ -25,7 +25,7 @@
 #include <atb/utils.h>
 #include <atb_speed/utils/filesystem.h>
 #include <atb_speed/utils/singleton.h>
-#ifdef TORCH_PTA6RC1B010
+#ifdef TORCH_HIGHER_THAN_PTA6
 #include <torch_npu/csrc/core/npu/NPUFormat.h>
 #include <torch_npu/csrc/framework/OpCommand.h>
 #else
@@ -48,7 +48,7 @@ void *Utils::GetCurrentStream()
 
 int64_t Utils::GetTensorNpuFormat(const at::Tensor &tensor)
 {
-#ifdef TORCH_PTA6RC1B010
+#ifdef TORCH_HIGHER_THAN_PTA6
     return at_npu::native::get_npu_format(tensor);
 #else
     return at_npu::native::NPUNativeFunctions::get_npu_format(tensor);
@@ -57,7 +57,7 @@ int64_t Utils::GetTensorNpuFormat(const at::Tensor &tensor)
 
 at::Tensor Utils::NpuFormatCast(const at::Tensor &tensor)
 {
-#ifdef TORCH_PTA6RC1B010
+#ifdef TORCH_HIGHER_THAN_PTA6
     return at_npu::native::npu_format_cast(tensor, GetTensorNpuFormat(tensor));
 #else
     return at_npu::native::NPUNativeFunctions::npu_format_cast(tensor, GetTensorNpuFormat(tensor));
@@ -137,7 +137,7 @@ at::Tensor Utils::CreateAtTensorFromTensorDesc(const atb::TensorDesc &tensorDesc
 
     ATB_LOG(INFO) << "tensor_with_format stat, " << atb_speed::TensorUtil::TensorDescToString(tensorDesc);
 
-#ifdef TORCH_PTA6RC1B010
+#ifdef TORCH_HIGHER_THAN_PTA6
     at::Tensor newTensor = at_npu::native::empty_with_format(
         at::IntArrayRef(tensorDesc.shape.dims, tensorDesc.shape.dimNum), options, tensorDesc.format);
 #else
