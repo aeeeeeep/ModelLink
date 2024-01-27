@@ -4,6 +4,7 @@ project("atb_speed")
 #options, these can be pass in by cmake argument
 option(USE_CXX11_ABI "USE_CXX11_ABI" ON)
 option(USE_OPTIMIZE "USE_OPTIMIZE" ON)
+option(USE_W8A16 "USE_W8A16" OFF)
 
 # compile flag
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)

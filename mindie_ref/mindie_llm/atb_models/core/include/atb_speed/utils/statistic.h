@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,12 @@ struct Statistic {
     uint64_t kernelCacheHitCount = 0;
     uint64_t kernelCacheMissCount = 0;
     uint64_t mallocTorchTensorSize = 0;
-
+    uint64_t pluginOpCallCount = 0;
+    uint64_t pluginOpSetupTime = 0;
+    uint64_t pluginOpExecuteTime = 0;
+    uint64_t pluginOpExecuteLaunchTime = 0;
+    uint64_t pluginOpExecuteGetWorkspaceTime = 0;
+    
     std::string ToString() const;
     void Reset();
 };
