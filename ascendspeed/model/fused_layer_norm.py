@@ -16,7 +16,6 @@
 
 
 import numbers
-import os
 
 import torch
 from torch.nn.parameter import Parameter
