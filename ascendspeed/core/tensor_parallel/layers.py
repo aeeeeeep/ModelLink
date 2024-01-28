@@ -223,7 +223,7 @@ class VocabParallelEmbedding(torch.nn.Module):
             from torch_npu.hook_module.hook_module import HOOKModule
 
             def vocabparallelembedding_hook(grad):
-                HOOKModule.embedding_list.append(torch.norm(grad))
+                HOOKModule.embedding_list.append(torch.norm(grad.float()))
 
             self.weight.register_hook(vocabparallelembedding_hook)
 
@@ -596,13 +596,6 @@ class ColumnParallelLinear(torch.nn.Module):
                     _initialize_affine_weight_gpu(
                         self.weight, init_method, partition_dim=0, stride=stride
                     )
-            if int(os.getenv('NPU_DETECT', '0')):
-                from torch_npu.hook_module.hook_module import HOOKModule
-
-                def columnparallellinear_hook(grad):
-                    HOOKModule.linear_list.append(torch.norm(grad))
-
-                self.weight.register_hook(columnparallellinear_hook)
         else:
             self.weight = None
 
@@ -829,13 +822,6 @@ class RowParallelLinear(torch.nn.Module):
                 _initialize_affine_weight_gpu(
                     self.weight, init_method, partition_dim=1, stride=stride
                 )
-        if int(os.getenv('NPU_DETECT', '0')):
-            from torch_npu.hook_module.hook_module import HOOKModule
-
-            def rowparallellinear_hook(grad):
-                HOOKModule.linear_list.append(torch.norm(grad))
-
-            self.weight.register_hook(rowparallellinear_hook)
         if bias:
             if config.use_cpu_initialization:
                 self.bias = Parameter(torch.empty(self.output_size, dtype=dtype))
