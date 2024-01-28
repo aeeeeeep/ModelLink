@@ -464,6 +464,9 @@ class MixedPrecisionOptimizer(MegatronOptimizer):
 
             # If we found inf/nan, skip the update.
             if found_inf_flag:
+                if int(os.getenv('NPU_DETECT', '0')):
+                    from torch_npu.utils.silent_error import clear_hookmodule_list
+                    clear_hookmodule_list()
                 return False, None, None
 
         # Clip the main gradients.
@@ -742,6 +745,9 @@ class Float16OptimizerWithFloat16Params(MegatronOptimizer):
 
             # If we found inf/nan, skip the update.
             if found_inf_flag:
+                if int(os.getenv('NPU_DETECT', '0')):
+                    from torch_npu.utils.silent_error import clear_hookmodule_list
+                    clear_hookmodule_list()
                 return False, None, None
 
         # Clip the main gradients.
@@ -891,6 +897,9 @@ class Float16OptimizerWithoutFp32Grad(Float16OptimizerWithFloat16Params):
             timers('optimizer-check-inf-and-nan').stop()
             self.grad_scaler.update(found_inf_flag)
             if found_inf_flag:
+                if int(os.getenv('NPU_DETECT', '0')):
+                    from torch_npu.utils.silent_error import clear_hookmodule_list
+                    clear_hookmodule_list()
                 return False, None, None
         timers('optimizer-get-clip-grad-norm', log_level=1).start()
         grad_norm = None

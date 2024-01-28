@@ -78,13 +78,6 @@ class MixedFusedLayerNorm(torch.nn.Module):
         self.bias = torch.nn.parameter.Parameter(torch.Tensor(*normalized_shape))
         self.reset_parameters()
         self.sequence_parallel = sequence_parallel
-        if int(os.getenv('NPU_DETECT', '0')):
-            from torch_npu.hook_module.hook_module import HOOKModule
-
-            def layernorm_hook(grad):
-                HOOKModule.layernorm_list.append(torch.norm(grad.float()))
-
-            self.weight.register_hook(layernorm_hook)
 
         # set sequence parallelism flag on weight and bias parameters
         setattr(self.weight, 'sequence_parallel', self.sequence_parallel)
