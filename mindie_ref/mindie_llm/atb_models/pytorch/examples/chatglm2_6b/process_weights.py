@@ -41,8 +41,8 @@ def parse_args():
         default="patches/modeling_chatglm_npu_parallel.py",
         help="model_file_cut"
     )
-    args_input = parser.parse_args()
-    return args_input
+
+    return parser.parse_args()
 
 
 if __name__ == "__main__":

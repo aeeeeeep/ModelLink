@@ -118,9 +118,7 @@ def parse_args():
         help="print response during performance test"
     )
 
-    args = parser.parse_args()
-
-    return args
+    return parser.parse_args()
 
 
 def get_is_format_nz():

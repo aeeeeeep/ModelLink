@@ -17,8 +17,7 @@ def parse_args():
     parser.add_argument("--save_path",
                         help="save path")
 
-    args_input = parser.parse_args()
-    return args_input
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
