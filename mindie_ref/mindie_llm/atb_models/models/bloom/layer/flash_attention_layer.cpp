@@ -15,7 +15,7 @@
  */
 #include "layers/mlp_gate_v2.h"
 #include "layers/parallel_layer_v2.h"
-#include "models/bloom/7b/layer/flash_attention_layer.h"
+#include "models/bloom/layer/flash_attention_layer.h"
 
 
 namespace atb_speed {
