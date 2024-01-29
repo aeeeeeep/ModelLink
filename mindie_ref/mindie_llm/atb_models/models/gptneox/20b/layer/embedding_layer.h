@@ -31,11 +31,11 @@ atb::Status EmbeddingLayer(const EmbeddingLayerParam &param, atb::Operation **op
 
 atb::Operation *CreateEmbeddingLayer(const nlohmann::json &paramJson);
 
-class FlashAttentionHostBinder : public HostTensorBinder {
+class EmbeddingHostBinder : public HostTensorBinder {
 public:
-    FlashAttentionHostBinder();
+    EmbeddingHostBinder();
 
-    virtual ~FlashAttentionHostBinder();
+    virtual ~EmbeddingHostBinder();
 
     void ParseParam(const nlohmann::json &paramJson) override;
 

@@ -91,32 +91,12 @@ atb::Status EmbeddingLayer(const EmbeddingLayerParam &param, atb::Operation **op
 
 atb::Operation *CreateEmbeddingLayer(const nlohmann::json &paramJson)
 {
-    LayerParam param;
-    param.layerNormEps = paramJson["layerNormEps"].get<float>();
-    param.headNum = paramJson["headNum"].get<int>();
-    param.dk = paramJson["dk"].get<int>();
-    param.model = paramJson["model"].get<std::string>();
-    param.qScale = paramJson["qScale"].get<float>();
-    if (paramJson.contains("rotaryPct")) {
-        param.rotaryPct = paramJson["rotaryPct"].get<float>();
-    }
-    if (paramJson.contains("isPrefill")) {
-        param.isPrefill = paramJson["isPrefill"].get<bool>();
-    }
-    if (paramJson.contains("rank")) {
-        param.rank = paramJson["rank"].get<int>();
-    }
-    if (paramJson.contains("rankSize")) {
-        param.rankSize = paramJson["rankSize"].get<int>();
-    }
-    if (paramJson.contains("qkScale")) {
-        param.qkScale = paramJson["qkScale"].get<int>();
-    }
+    EmbeddingLayerParam param;
+    param.axis = paramJson["axis"].get<int>();
 
-    ATB_LOG(INFO) << __func__ << " layerNormEps:" << param.layerNormEps << ", headNum:" << param.headNum << ", dk:" <<
-        param.dk << ", model:" << param.model;
+    ATB_LOG(INFO) << __func__ << " axis:" << param.axis;
     atb::Operation *op;
-    FlashAttentionKvCacheLayer(param, &op);
+    EmbeddingLayer(param, &op);
     return op;
 }
 } // namespace gptneox_20b
