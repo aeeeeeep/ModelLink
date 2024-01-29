@@ -45,6 +45,7 @@
 #include "baichuan2/7b/model/flash_attention_quant_model.h"
 #include "baichuan2/7b/model/flash_attention_rope_model.h"
 #include "baichuan2/7b/model/paged_attention_model.h"
+#include "falcon/40b/model/flash_attention_model.h"
 
 void *ModelTorch::GetWorkSpace(uint64_t bufferSize)
 {
@@ -129,7 +130,9 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::baichuan2_7b::FlashAttentionQuantModel>(param);
     } else if (modelName_ == "baichuan2_7b_pa_model") {
         model_ = std::make_shared<atb_speed::baichuan2_7b::PagedAttentionModel>(param);
-    }  else {
+    } else if (modelName_ == "falcon_40b_model") {
+        model_ = std::make_shared<atb_speed::falcon_40b::FusionModel>(param);
+    } else {
         ATB_LOG(FATAL) << "not support modelName:" << modelName_;
         return atb::ERROR_INVALID_PARAM;
     }
