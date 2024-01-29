@@ -32,7 +32,7 @@
 #include "baichuan2/13b/model/flash_attention_quant_model.h"
 #include "baichuan2/13b/model/paged_attention_model.h"
 #include "baichuan2/13b/model/paged_attention_quant_model.h"
-#include "chatglm2//6b/model/paged_attention_model.h"
+#include "chatglm2/6b/model/paged_attention_model.h"
 #include "llama/model/anti_quant_flashattention_model.h"
 #include "llama/model/flash_attention_model.h"
 #include "llama_adapter/model/adapter_model.h"
