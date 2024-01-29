@@ -50,6 +50,14 @@
 #include "falcon/40b/model/flash_attention_model.h"
 #include "qwen/14b/model/flash_attention_model.h"
 #include "aquila/7b/model/flash_attention_model.h"
+#include "gptneox/20b/model/fa_kv_cache_rope_model.h"
+#include "gptneox/20b/model/fa_kvcache_model.h"
+#include "gptneox/20b/model/pa_model.h"
+#include "internlm/20b/model/flash_attention_quant_model.h"
+#include "internlm/20b/model/flash_attention_rope_model.h"
+#include "internlm/7b/model/flash_attention_rope_model.h"
+#include "codellama/34b/model/flash_attention_rope_model.h"
+
 
 void *ModelTorch::GetWorkSpace(uint64_t bufferSize)
 {
@@ -144,7 +152,21 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::qwen_14b::FlashAttentionModel>(param);
     } else if (modelName_ == "aquila_7b_flash_attention_model") {
         model_ = std::make_shared<atb_speed::aquila_7b::FlashAttentionRopeModel>(param);
-    }  else {
+    } else if (modelName_ == "gptneox_20b_fa_kvcache_model") {
+        model_ = std::make_shared<atb_speed::gptneox_20b::FaKvCacheModel>(param);
+    } else if (modelName_ == "gptneox_20b_pa_model") {
+        model_ = std::make_shared<atb_speed::gptneox_20b::PAModel>(param);
+    } else if (modelName_ == "internlm_7b_flash_attention_rope_model") {
+        model_ = std::make_shared<atb_speed::internlm_7b::FlashAttentionRopeModel>(param);
+    } else if (modelName_ == "internlm_20b_flash_attention_rope_model") {
+        model_ = std::make_shared<atb_speed::internlm_20b::FlashAttentionRopeModel>(param);
+    } else if (modelName_ == "internlm_20b_flash_attention_quant_model") {
+        model_ = std::make_shared<atb_speed::internlm_20b::FlashAttentionQuantModel>(param);
+    } else if (modelName_ == "codellama_34b_flash_attention_rope_model") {
+        model_ = std::make_shared<atb_speed::codellama_34b::FlashAttentionRopeModel>(param);
+    } else if (modelName_ == "gptneox_20b_fa_kvcache_rope_model") {
+        model_ = std::make_shared<atb_speed::gptneox_20b::FaKvCacheRopeModel>(param);
+    } else {
         ATB_LOG(FATAL) << "not support modelName:" << modelName_;
         return atb::ERROR_INVALID_PARAM;
     }

@@ -18,6 +18,11 @@
 #include "baichuan2/13b/layer/flash_attention_layer.h"
 #include "baichuan2/13b/layer/flash_attention_quant_layer.h"
 #include "baichuan2/13b/layer/flash_attention_quant_oper_layer.h"
+#include "codellama/34b/layer/flash_attention_rope_layer.h"
+#include "internlm/20b/layer/flash_attention_quant_layer.h"
+#include "internlm/20b/layer/flash_attention_rope_antioutlier_layer.h"
+#include "internlm/20b/layer/flash_attention_rope_layer.h"
+#include "internlm/7b/layer/flash_attention_rope_layer.h"
 
 atb_speed::HostTensorBinder *CreateHostTensorBinder(const std::string &opName)
 {
@@ -27,6 +32,16 @@ atb_speed::HostTensorBinder *CreateHostTensorBinder(const std::string &opName)
         return new atb_speed::baichuan2_13b::FlashAttentionQuantLayerBinder();
     } else if (opName == "baichuan2_13b_flash_attention_oper_quant_layer") {
         return new atb_speed::baichuan2_13b::FlashAttentionQuantOperLayerBinder();
+    } else if (opName == "internlm_7b_flash_attention_rope_layer") {
+        return new atb_speed::internlm_7b::FlashAttentionRopeLayerBinder();
+    } else if (opName == "internlm_20b_flash_attention_rope_layer") {
+        return new atb_speed::internlm_20b::FlashAttentionRopeLayerBinder();
+    } else if (opName == "internlm_20b_flash_attention_quant_layer") {
+        return new atb_speed::internlm_20b::FlashAttentionQuantLayerBinder();
+    } else if (opName == "internlm_20b_flash_attention_rope_antioutlier_layer") {
+        return new atb_speed::internlm_20b::FlashAttentionRopeAntiOutlierLayerBinder();
+    } else if (opName == "codellama_34b_flash_attention_rope_layer") {
+        return new atb_speed::codellama_34b::FlashAttentionRopeLayerBinder();
     }
     return nullptr;
 }
