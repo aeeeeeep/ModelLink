@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_TELECHAT_ALL_QUANT_FA_MODEL_H
-#define ATB_SPEED_MODELS_TELECHAT_ALL_QUANT_FA_MODEL_H
+#ifndef ATB_SPEED_MODELS_TELECHAT_QUANT_FA_MODEL_H
+#define ATB_SPEED_MODELS_TELECHAT_QUANT_FA_MODEL_H
 #include <atb/svector.h>
 #include "atb_speed/base/model.h"
 
