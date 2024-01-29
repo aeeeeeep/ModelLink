@@ -32,8 +32,6 @@ enum InTensorId : int {
     IN_BIAS,
     IN_DEQSCALE,
     IN_INDEX_IDS,
-    IN_OFFSET,
-    IN_COMPRESSINFO,
     OUT_LINEAR,
     INTER_ID,
 };
