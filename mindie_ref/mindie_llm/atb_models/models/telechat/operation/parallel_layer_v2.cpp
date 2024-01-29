@@ -31,7 +31,7 @@ enum InTensorId : int {
     IN_WEIGHT,
     IN_BIAS,
     IN_DEQSCALE,
-    IN_INDEX_IDS,
+    IN_INDEX_xIDS,
     OUT_LINEAR,
     INTER_ID,
 };
@@ -91,10 +91,9 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
         }
 
         atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
-        atb::infer::LinearQuantParam LinearQuantParam = {param_.transposeA, param_.transposeB, true};
-        CREATE_OPERATION(LinearQuantParam, &matmulNode.operation);
-        matmulNode.inTensorIds = {param_.quantParam.isQuantOp ? inteId++ : IN_INPUT, IN_WEIGHT, IN_BIAS, IN_DEQSCALE,
-                                  IN_INDEX_IDS};
+        atb::infer::LinearQuantParam matmulParam = {param_.transposeA, param_.transposeB, true};
+        CREATE_OPERATION(matmulParam, &matmulNode.operation);
+        matmulNode.inTensorIds = {param_.quantParam.isQuantOp ? inteId++ : IN_INPUT, IN_WEIGHT, IN_BIAS, IN_DEQSCALE};
         matmulNode.outTensorIds = {param_.commParam.rankSize > 1 ? inteId : OUT_LINEAR};
     }
 
