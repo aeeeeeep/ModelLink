@@ -72,7 +72,7 @@ try:
         '-I' + imp.find_module('torch_npu')[1] + "/include/third_party/acl/inc",
         '-I' + ASCEND_TOOLKIT_HOME + '/include/',
         '-fstack-protector-all', '-Wl,-z,relro,-z,now,-z,noexecstack',
-        '-fPIC', '-pie', '-Wl,--disable-new-dtags,--rpath',
+        '-fPIE -pie', '-Wl,--disable-new-dtags,--rpath', '-s',
     ],
     )
     exts.append(ext_ops)
