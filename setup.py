@@ -25,10 +25,7 @@ __description__ = 'AscendSpeed for LLMs of Ascend'
 __version__ = '0.0.1'
 __author__ = 'Ascend'
 __long_description__ = 'ModelLink for LLMs of Ascend'
-__url__ = 'https://gitee.com/ascend/ModelLink'
-__download_url__ = 'https://gitee.com/ascend/ModelLink/release'
 __keywords__ = 'Ascend, langauge, deep learning, NLP'
-__license__ = 'See https://gitee.com/ascend/ModelLink'
 __package_name__ = 'modellink'
 __contact_names__ = 'Ascend'
 
@@ -91,11 +88,9 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     # The project's main homepage.
-    url=__url__,
     author=__contact_names__,
     maintainer=__contact_names__,
     # The licence under which the project is released
-    license=__license__,
     classifiers=[
         'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',
