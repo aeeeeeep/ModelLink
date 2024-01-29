@@ -13,34 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#ifndef ATB_SPEED_LAYER_MLP_GATE_V2_H
-#define ATB_SPEED_LAYER_MLP_GATE_V2_H
-
+#ifndef ATB_SPEED_MODELS_LLAMA7B_POSITION_EMBEDDING_1DSPLIT_FUSION_OPERATION_H
+#define ATB_SPEED_MODELS_LLAMA7B_POSITION_EMBEDDING_1DSPLIT_FUSION_OPERATION_H
 #include <atb/atb_infer.h>
-#include "nlohmann/json.hpp"
 #include "atb_speed/log.h"
-#include "atb_speed/utils/operation_util.h"
-#include "parallel_layer_v2.h"
+#include "nlohmann/json.hpp"
 
 namespace atb_speed {
-namespace common {
-struct MlpGateParamV2 {
-    atb::infer::ActivationType activationType;
-    bool transposeB = false;
-    bool isBias = false;
-    bool isPack = false;
-    bool isQuant = false;
-    bool isSparse = false;
-    bool noGate = false;
-    CommParam commDownParam;
-    QuantParam quantUpParam;
-    QuantParam quantGateParam;
-    QuantParam quantDownParam;
+namespace llama_7b {
+struct PositionEmbedding1dFusionParam {
+    std::string model = "llama";
+    int64_t rotaryCoeff = 2;
+    int64_t headNum = 0;
 };
 
-atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operation);
+atb::Status PositionEmbeddingFusionOperation(const PositionEmbedding1dFusionParam &param,
+                                             atb::Operation **operation);
 
-} // namespace common
+atb::Operation *CreatePositionEmbeddingFusionOperation(const nlohmann::json &paramJson);
+
+} // namespace llama_7b
 } // namespace atb_speed
 #endif

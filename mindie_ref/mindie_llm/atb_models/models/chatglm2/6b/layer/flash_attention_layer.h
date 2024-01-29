@@ -19,6 +19,7 @@
 #include "atb_speed/log.h"
 #include "nlohmann/json.hpp"
 #include "atb_speed/base/hosttensor_binder.h"
+#include "atb_speed/utils/operation_util.h"
 
 namespace atb_speed {
 namespace chatglm2_6b {

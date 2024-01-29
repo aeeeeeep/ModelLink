@@ -13,34 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef ATB_SPEED_MODELS_LLAMA_7B_FUSION_MLP_H
+#define ATB_SPEED_MODELS_LLAMA_7B_FUSION_MLP_H
 
-#ifndef ATB_SPEED_LAYER_MLP_GATE_V2_H
-#define ATB_SPEED_LAYER_MLP_GATE_V2_H
-
-#include <atb/atb_infer.h>
+#include "atb/atb_infer.h"
+#include "atb_speed/log.h"
 #include "nlohmann/json.hpp"
 #include "atb_speed/log.h"
-#include "atb_speed/utils/operation_util.h"
-#include "parallel_layer_v2.h"
 
 namespace atb_speed {
-namespace common {
-struct MlpGateParamV2 {
-    atb::infer::ActivationType activationType;
-    bool transposeB = false;
-    bool isBias = false;
-    bool isPack = false;
-    bool isQuant = false;
-    bool isSparse = false;
-    bool noGate = false;
-    CommParam commDownParam;
-    QuantParam quantUpParam;
-    QuantParam quantGateParam;
-    QuantParam quantDownParam;
+namespace llama_7b {
+struct FusionMlpParam {
+    bool transpose = false;
 };
 
-atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operation);
+atb::Status FusionMlp(const FusionMlpParam &param, atb::Operation **operation);
 
-} // namespace common
+atb::Operation *CreateFusionMlp(const nlohmann::json &paramJson);
+
+} // namespace llama_7b
 } // namespace atb_speed
 #endif

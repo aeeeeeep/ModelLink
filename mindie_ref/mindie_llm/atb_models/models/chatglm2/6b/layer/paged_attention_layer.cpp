@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include "atb_speed/log.h"
 #include "paged_attention_layer.h"
 #include "layers/mlp_gate.h"
 #include "layers/parallel_layer.h"
@@ -84,6 +85,11 @@ void SqueezeLinearReshapeFuncPA(const atb::Dims &oldShape, atb::Dims &newShape)
 
 atb::Status DecoderPALayer(const LayerParamPa &param, atb::Operation **operation)
 {
+    if (param.headNum == 0) {
+        ATB_LOG(ERROR) << "headNum is 0, please input a correct value";
+        return atb::ERROR_INVALID_PARAM;
+    }
+
     atb::GraphParam opGraph;
     opGraph.name = "DecoderPALayer";
     opGraph.inTensorNum = IN_TENSOR_COUNT;
@@ -113,40 +119,40 @@ atb::Status DecoderPALayer(const LayerParamPa &param, atb::Operation **operation
     atb::infer::RmsNormParam inputNormParam;
     inputNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     inputNormParam.normParam.epsilon = param.rmsNormEps;
-    CreateOperation(inputNormParam, &inputNormNode.operation);
+    CREATE_OPERATION(inputNormParam, &inputNormNode.operation);
     inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT};
     inputNormNode.outTensorIds = {INTERMIDATE_INPUTNORMOUT};
 
     atb::infer::LinearParam mixdQkvLinearParam;
-    CreateOperation(mixdQkvLinearParam, &mixdQkvLinearNode.operation);
+    CREATE_OPERATION(mixdQkvLinearParam, &mixdQkvLinearNode.operation);
     mixdQkvLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_QKVMIXDWEIGHT, IN_QKVMIXDBIAS};
     mixdQkvLinearNode.outTensorIds = {INTERMIDATE_MIXEDLINEAROUTQKV};
 
     atb::infer::SliceParam sliceQNodeParam;
     sliceQNodeParam.offsets = {0, 0};
     sliceQNodeParam.size = {-1, param.numHeadsPerPartition * param.hiddenSizePerHead};
-    CreateOperation(sliceQNodeParam, &sliceQNode.operation);
+    CREATE_OPERATION(sliceQNodeParam, &sliceQNode.operation);
     sliceQNode.inTensorIds = {INTERMIDATE_MIXEDLINEAROUTQKV};
     sliceQNode.outTensorIds = {INTERMEDIATE_QLAYER};
 
     atb::infer::SliceParam sliceKVNodeParam;
     sliceKVNodeParam.offsets = {0, param.numHeadsPerPartition * param.hiddenSizePerHead};
     sliceKVNodeParam.size = {-1, param.numGroupsPerPartition * param.hiddenSizePerHead * 2};
-    CreateOperation(sliceKVNodeParam, &sliceKVNode.operation);
+    CREATE_OPERATION(sliceKVNodeParam, &sliceKVNode.operation);
     sliceKVNode.inTensorIds = {INTERMIDATE_MIXEDLINEAROUTQKV};
     sliceKVNode.outTensorIds = {INTERMEDIATE_KVLAYER};
 
     atb::infer::SplitParam splitKVParam;
     splitKVParam.splitDim = -1;
     splitKVParam.splitNum = 2; // 2 means half split
-    CreateOperation(splitKVParam, &splitKVNode.operation);
+    CREATE_OPERATION(splitKVParam, &splitKVNode.operation);
     splitKVNode.inTensorIds = {INTERMEDIATE_KVLAYER};
     splitKVNode.outTensorIds = {INTERMEDIATE_KLAYER, INTERMIDATE_VALUE};
 
     atb::infer::SplitParam splitQParam;
     splitQParam.splitDim = -1;
     splitQParam.splitNum = 2; // 2 means half split
-    CreateOperation(splitQParam, &splitQNode.operation);
+    CREATE_OPERATION(splitQParam, &splitQNode.operation);
     splitQNode.inTensorIds = {INTERMEDIATE_QLAYER};
     splitQNode.outTensorIds = {INTERMEDIATE_QCHUNK0, INTERMEDIATE_QCHUNK1};
     splitQNode.inTensorReshapeFuncs.resize(splitQNode.inTensorIds.size());
@@ -157,7 +163,7 @@ atb::Status DecoderPALayer(const LayerParamPa &param, atb::Operation **operation
     atb::infer::SplitParam splitKParam;
     splitKParam.splitDim = -1;
     splitKParam.splitNum = 2; // 2 means half split
-    CreateOperation(splitKParam, &splitKNode.operation);
+    CREATE_OPERATION(splitKParam, &splitKNode.operation);
     splitKNode.inTensorIds = {INTERMEDIATE_KLAYER};
     splitKNode.outTensorIds = {INTERMEDIATE_KCHUNK0, INTERMEDIATE_KCHUNK1};
     splitKNode.inTensorReshapeFuncs.resize(splitKNode.inTensorIds.size());
@@ -167,7 +173,7 @@ atb::Status DecoderPALayer(const LayerParamPa &param, atb::Operation **operation
 
     atb::infer::RopeParam ropeParam;
     ropeParam.rotaryCoeff = param.hiddenSizePerHead / 2; // 2 means half rotary
-    CreateOperation(ropeParam, &ropeNode.operation);
+    CREATE_OPERATION(ropeParam, &ropeNode.operation);
     ropeNode.inTensorIds = {INTERMEDIATE_QCHUNK0, INTERMEDIATE_KCHUNK0, IN_COS, IN_SIN, IN_INPUT_LENGTHS};
     ropeNode.outTensorIds = {INTERMEDIATE_QOUT, INTERMEDIATE_KOUT};
     ropeNode.inTensorReshapeFuncs.resize(ropeNode.inTensorIds.size());
@@ -178,7 +184,7 @@ atb::Status DecoderPALayer(const LayerParamPa &param, atb::Operation **operation
 
     atb::infer::ConcatParam cat1Param;
     cat1Param.concatDim = -1;
-    CreateOperation(cat1Param, &cat1Node.operation);
+    CREATE_OPERATION(cat1Param, &cat1Node.operation);
     cat1Node.inTensorIds = {INTERMEDIATE_QOUT, INTERMEDIATE_QCHUNK1};
     cat1Node.outTensorIds = {INTERMIDATE_POSITIONEMBEDQ};
     cat1Node.inTensorReshapeFuncs.resize(cat1Node.inTensorIds.size());
@@ -188,7 +194,7 @@ atb::Status DecoderPALayer(const LayerParamPa &param, atb::Operation **operation
 
     atb::infer::ConcatParam cat3Param;
     cat3Param.concatDim = -1;
-    CreateOperation(cat3Param, &cat3Node.operation);
+    CREATE_OPERATION(cat3Param, &cat3Node.operation);
     cat3Node.inTensorIds = {INTERMEDIATE_KOUT, INTERMEDIATE_KCHUNK1};
     cat3Node.outTensorIds = {INTERMIDATE_POSITIONEMBEDK};
     cat3Node.inTensorReshapeFuncs.resize(cat3Node.inTensorIds.size());
@@ -197,7 +203,7 @@ atb::Status DecoderPALayer(const LayerParamPa &param, atb::Operation **operation
     };
 
     atb::infer::ReshapeAndCacheParam reshapeCacheParm;
-    CreateOperation(reshapeCacheParm, &reshapeAndCacheNode.operation);
+    CREATE_OPERATION(reshapeCacheParm, &reshapeAndCacheNode.operation);
     reshapeAndCacheNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_VALUE,
                                         IN_K_CACHE, IN_V_CACHE, IN_SLOTS};
     reshapeAndCacheNode.outTensorIds = {};
@@ -211,8 +217,7 @@ atb::Status DecoderPALayer(const LayerParamPa &param, atb::Operation **operation
         faEnParam.headNum = param.headNum;
         faEnParam.qkScale = 1.0 / sqrt(param.dk);
         faEnParam.kvHeadNum = param.numGroupsPerPartition;
-        faEnParam.isEncoder = true;
-        CreateOperation(faEnParam, &attentionNode.operation);
+        CREATE_OPERATION(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_VALUE,
                                      IN_ATTENTION_MASK, IN_INPUT_LENGTHS};
         attentionNode.outTensorIds = {INTERMIDATE_SELFOUT};
@@ -225,7 +230,7 @@ atb::Status DecoderPALayer(const LayerParamPa &param, atb::Operation **operation
         paDeParam.headNum = param.headNum;
         paDeParam.qkScale = 1.0 / sqrt(param.dk);
         paDeParam.kvHeadNum = param.numGroupsPerPartition;
-        CreateOperation(paDeParam, &attentionNode.operation);
+        CREATE_OPERATION(paDeParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ, IN_K_CACHE, IN_V_CACHE,
                                      IN_BLOCK_TABLES, IN_INPUT_LENGTHS};
         attentionNode.outTensorIds = {INTERMIDATE_SELFOUT};
@@ -248,14 +253,14 @@ atb::Status DecoderPALayer(const LayerParamPa &param, atb::Operation **operation
 
     atb::infer::ElewiseParam AddParam;
     AddParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CreateOperation(AddParam, &selfResidualAddNode.operation);
+    CREATE_OPERATION(AddParam, &selfResidualAddNode.operation);
     selfResidualAddNode.inTensorIds = {IN_HIDDENSTATES, INTERMIDATE_SELFLINEAROUT};
     selfResidualAddNode.outTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT};
 
     atb::infer::RmsNormParam selfNormParam;
     selfNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     selfNormParam.normParam.epsilon = param.rmsNormEps;
-    CreateOperation(selfNormParam, &selfNormNode.operation);
+    CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
     selfNormNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT};
     selfNormNode.outTensorIds = {INTERMIDATE_SELFNORMOUT};
 
@@ -272,7 +277,7 @@ atb::Status DecoderPALayer(const LayerParamPa &param, atb::Operation **operation
 
     atb::infer::ElewiseParam Add2Param;
     Add2Param.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CreateOperation(Add2Param, &mlpResidualAddNode.operation);
+    CREATE_OPERATION(Add2Param, &mlpResidualAddNode.operation);
     mlpResidualAddNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, INTERMIDATE_MLPOUT};
     mlpResidualAddNode.outTensorIds = {OUT_GLMLAYEROUT};
 
@@ -284,7 +289,7 @@ atb::Status DecoderPALayer(const LayerParamPa &param, atb::Operation **operation
 
         return atb::NO_ERROR;
     };
-    atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
 
     return atb::NO_ERROR;
 }

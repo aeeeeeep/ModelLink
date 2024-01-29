@@ -13,68 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_CHATGML2_6B_COMMON_MODEL_FA_H
-#define ATB_SPEED_MODELS_CHATGML2_6B_COMMON_MODEL_FA_H
-
+#ifndef ATB_SPEED_MODELS_LLAMA_7B_WITH_FUSION_MODEL_H
+#define ATB_SPEED_MODELS_LLAMA_7B_WITH_FUSION_MODEL_H
 #include "atb_speed/base/model.h"
-#include "atb_speed/utils/operation_util.h"
+
 
 namespace atb_speed {
-namespace chatglm2_6b {
-class ChatGlm2CommonModelFa : public Model {
+namespace minigpt4_vicuna_7b {
+class FusionModel : public Model {
 public:
     struct Param {
-        float rmsNormEps = 0;
-        int numHeadsPerPartition = 0;
-        int hiddenSizePerHead = 0;
-        int numGroupsPerPartition = 0;
-        bool transKey = true;
-        bool quantmodel = false;
-        bool isSparse = false;
+        double rmsNormEps = 0;
+        int headNum = 0;
+        int dk = 0;
         int layerNum = 0;
-        int correctNodeId = -1;
-        float residualAddScale = 0;
-        std::vector<float> qkvInputScale;
-        std::vector<int> qkvInputOffset;
-        std::vector<float> denseInputScale;
-        std::vector<int> denseInputOffset;
-        std::vector<float> selfLnInputScale;
-        std::vector<int> selfLnInputOffset;
-        std::vector<float> ffnOutInputScale;
-        std::vector<int> ffnOutInputOffset;
-        std::vector<float> preScale;
-        std::vector<float> postScale;
+        float qkScale = 1.0;
+        int rotaryCoeff = 2;
+        int coderType = 0;
+        std::vector<int32_t> tokenOffset = {};
+        std::vector<int32_t> seqLen = {};
         void FromString(const std::string &param);
-        int rank = 0;
-        int rankSize = 1;
-        std::string backend = "hccl";
-        bool isEncoder = false;
-        std::vector<int64_t> offsetX;
-        std::vector<std::vector<int64_t>> compressInfo;
     };
 
-    explicit ChatGlm2CommonModelFa(const std::string &param);
-
-    ~ChatGlm2CommonModelFa();
-
+    explicit FusionModel(const std::string &param);
+    ~FusionModel();
     uint32_t GetInputNum() const override;
-
     uint32_t GetOutputNum() const override;
-
     atb::Status InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
                            std::vector<atb::TensorDesc> &outTensorDescs) override;
 
 private:
     virtual int64_t BuildGraph() override;
-
-    atb::Status ParseParam(const std::string &param) override;
-
-    atb::Status BindParamHostTensor(uint32_t nodeId) override;
-
     Param param_;
+    atb::Status ParseParam(const std::string &param) override;
+    atb::Status BindParamHostTensor(uint32_t nodeId) override;
     std::vector<int32_t> tokenOffset_;
     std::vector<int32_t> seqLen_;
+    int32_t layerId_ = 0;
 };
-} // namespace chatglm2_6b
+} // namespace minigpt4_vicuna_7b
 } // namespace atb_speed
 #endif
