@@ -53,7 +53,10 @@ def model_provider(pre_process=True, post_process=True) -> Union[GPTModel, megat
 
     print_rank_0('building GPT model ...')
     config = core_transformer_config_from_args(get_args())
-
+    if args.row_col_parallel_linear_bias:
+        config.column_parallel_linear_bias = True
+        config.row_parallel_linear_bias = True
+        config.row_parallel_linear_skip_bias_add = False
     if args.use_mcore_models:
         if args.spec is not None:
             transformer_layer_spec = import_module(args.spec)
@@ -228,7 +231,7 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
 
 
 if __name__ == "__main__":
-    torch.npu.set_compile_mode(jit_compile=True)
+    torch.npu.set_compile_mode(jit_compile=False)
     # Temporary for transition to core datasets
     train_valid_test_datasets_provider.is_distributed = True
 
