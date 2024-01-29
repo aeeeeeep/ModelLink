@@ -51,7 +51,7 @@ struct FlashAttentionQuantLayerParam {
 
 void from_json(const nlohmann::json &paramJson, FlashAttentionQuantLayerParam &param);
 
-atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param, const atb::Operation **operation);
+atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param, atb::Operation **operation);
 
 atb::Operation *CreateFlashAttentionQuantLayer(const nlohmann::json &paramJson);
 
