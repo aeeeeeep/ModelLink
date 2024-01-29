@@ -73,7 +73,7 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
     uint32_t inteId = INTER_ID;
 
     if (!param_.isQuant) {
-        ATB_LOG(INFO) << "ParrallelLinearV2 >> is not Quant >> matmulNode";
+        ATB_LOG(INFO) << "ParallelLinearV2 >> is not Quant >> matmulNode";
         atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
         atb::infer::LinearParam matmulParam = {param_.transposeA, param_.transposeB, false};
         CREATE_OPERATION(matmulParam, &matmulNode.operation);
@@ -93,8 +93,8 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
         }
 
         atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
-        atb::infer::LinearSparseParam linearSparseParam = {false, true, 8, 8};
-        CREATE_OPERATION(linearSparseParam, &matmulNode.operation);
+        atb::infer::LinearQuantParam LinearQuantParam = {param_.transposeA, param_.transposeB, true};
+        CREATE_OPERATION(LinearQuantParam, &matmulNode.operation);
         matmulNode.inTensorIds = {param_.quantParam.isQuantOp ? inteId++ : IN_INPUT, IN_WEIGHT, IN_BIAS, IN_DEQSCALE,
                                   IN_INDEX_IDS};
         matmulNode.outTensorIds = {param_.commParam.rankSize > 1 ? inteId : OUT_LINEAR};
