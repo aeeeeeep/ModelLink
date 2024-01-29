@@ -177,19 +177,19 @@ AscendSpeed旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBa
       <td>7B</td>
       <td>1x8</td>
       <td>FP16</td>
-      <td> 3763 </td>
+      <td> 3600 </td>
       <td> 3804 </td>
       <td> <a href="sources/images/llama7b-loss-with-weight.png">Loss</a> </td>
-      <td> <a href="examples/llama/pretrain_llama_7B_zero_8p.sh">训练</a> </td>
+      <td> <a href="examples/llama/pretrain_llama_7b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
       <td>13B</td>
       <td>1x8</td>
       <td>FP16</td>
-      <td> 1894 </td>
+      <td> 1895 </td>
       <td> 2012 </td>
       <td> <a href="sources/images/llama13b-loss-with-weight.png">Loss</a> </td>
-      <td> <a href="examples/llama/pretrain_llama_13B_ptd_8p.sh">训练</a> </td>
+      <td> <a href="examples/llama/pretrain_llama_13b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
         <td>33B</td>
@@ -209,8 +209,8 @@ AscendSpeed旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBa
       <td>BF16 </td>
       <td> 348 </td>
       <td> 426 </td>
-      <td> <a href="sources/images/llama65b_bf_loss.png">Loss</a> </td>
-      <td> <a href="examples/llama/pretrain_llama_65B_ptd_32p.sh">训练</a> </td>
+      <td> <a href="sources/images/llama65b-shape_layer10_loss-with-weight.png">Loss</a> </td>
+      <td> <a href="examples/llama/pretrain_llama_65B_ptd.sh">训练</a> </td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</td>
