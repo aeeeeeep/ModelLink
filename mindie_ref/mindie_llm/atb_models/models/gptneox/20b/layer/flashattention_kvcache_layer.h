@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_GPTNEOX_20B_LAYER_H
-#define ATB_SPEED_MODELS_GPTNEOX_20B_LAYER_H
+#ifndef ATB_SPEED_MODELS_GPTNEOX_20B_KVCACHE_LAYER_H
+#define ATB_SPEED_MODELS_GPTNEOX_20B_KVCACHE_LAYER_H
 
 #include <nlohmann/json.hpp>
 #include <atb/atb_infer.h>
