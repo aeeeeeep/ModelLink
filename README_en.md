@@ -20,9 +20,9 @@
     </p>
 </p>
 
-AscendSpeed provides end-to-end solutions for large language models on [Ascend](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) chips, including models, algorithms, kernels, and tasks.
+ModelLink provides end-to-end solutions for large language models on [Ascend](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) chips, including models, algorithms, kernels, and tasks.
 
-## Why AscendSpeed?
+## Why ModelLink?
 
 ---
 ### Prepared Models
@@ -900,7 +900,7 @@ Tensor parallelism (TP) is a kind of model parallelism strategy, which splits ex
 The basic principle of PP is:<div align=center>
 <img src="sources/images/tp_in_mlp.png" height="280px" width="500px">
 <img src="sources/images/tp_in_sa.png" height="280px" width="500px"></div>
-To use tensor model parallelism in Ascendspeed, add the `--tensor-model-parallel-size` flag to specify the number of GPUs among which to split the model.
+To use tensor model parallelism in ModelLink, add the `--tensor-model-parallel-size` flag to specify the number of GPUs among which to split the model.
 
 ### <span id="jump2">  (Virtual & Optimized) Pipeline Parallelism  </span>
 Pipeline parallelism (PP) is a kind of model parallelism strategy, which shards the transformer modules into stages
@@ -937,7 +937,7 @@ To enable sequence parallelism (SP), `--tensor-model-parallel-size` flag should 
 
 ### <span id="jump6"> ZeRO-1/2/3 </span>
 Zero Redundancy Optimizer (ZeRO) is a kind of memory-optimization strategy in data parallelism proposed by MicroSoft.
-AscendSpeed supports ZeRO-1/2/3 by adding a deepspeed branch. The basic principle of ZeRO is:<div align=center>
+ModelLink supports ZeRO-1/2/3 by adding a deepspeed branch. The basic principle of ZeRO is:<div align=center>
 <img src="sources/images/ZeRO.png" height="250px" width="600px"></div>
 To enable ZeRO-1/2/3, a deepspeed config is required and an [example](examples/llama/pretrain_llama_7B_zero_8p.sh) could be referred.
 Notably, if only the ZeRO-1 is supposed, deepspeed is not necessary, and simply set the `--use-distributed-optimizer` flag.
@@ -995,7 +995,7 @@ Test Result Table:
 ## Acknowledgments
 
 ---
-AscendSpeed is jointly contributed by the following departments of Huawei Corporation:
+ModelLink is jointly contributed by the following departments of Huawei Corporation:
 - Ascend Computing Product Unit
 - Algorithm Unit of Computing Product Unit
 - Research Unit of Computing Product Unit
@@ -1003,7 +1003,7 @@ AscendSpeed is jointly contributed by the following departments of Huawei Corpor
 - General Development Department
 - Global Technical Service Department
 
-We appreciate every PR from community, and welcome to contribute to AscendSpeed.
+We appreciate every PR from community, and welcome to contribute to ModelLink.
 
 ## Appendix
 
