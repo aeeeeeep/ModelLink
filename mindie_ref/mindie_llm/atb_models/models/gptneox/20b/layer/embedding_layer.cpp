@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "layer.h"
+#include "embedding_layer.h"
 
 namespace atb_speed {
 namespace gptneox_20b {
@@ -87,6 +87,37 @@ atb::Status EmbeddingLayer(const EmbeddingLayerParam &param, atb::Operation **op
 
     CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
+}
+
+atb::Operation *CreateFlashAttentionKvCacheLayer(const nlohmann::json &paramJson)
+{
+    LayerParam param;
+    param.layerNormEps = paramJson["layerNormEps"].get<float>();
+    param.headNum = paramJson["headNum"].get<int>();
+    param.dk = paramJson["dk"].get<int>();
+    param.model = paramJson["model"].get<std::string>();
+    param.qScale = paramJson["qScale"].get<float>();
+    if (paramJson.contains("rotaryPct")) {
+        param.rotaryPct = paramJson["rotaryPct"].get<float>();
+    }
+    if (paramJson.contains("isPrefill")) {
+        param.isPrefill = paramJson["isPrefill"].get<bool>();
+    }
+    if (paramJson.contains("rank")) {
+        param.rank = paramJson["rank"].get<int>();
+    }
+    if (paramJson.contains("rankSize")) {
+        param.rankSize = paramJson["rankSize"].get<int>();
+    }
+    if (paramJson.contains("qkScale")) {
+        param.qkScale = paramJson["qkScale"].get<int>();
+    }
+
+    ATB_LOG(INFO) << __func__ << " layerNormEps:" << param.layerNormEps << ", headNum:" << param.headNum << ", dk:" <<
+        param.dk << ", model:" << param.model;
+    atb::Operation *op;
+    FlashAttentionKvCacheLayer(param, &op);
+    return op;
 }
 } // namespace gptneox_20b
 } // atb_speed

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "layer.h"
+#include "flashattention_kvcache_layer.h"
 #include "layers/mlp_gate.h"
 #include "layers/parallel_layer.h"
 #include "models/gptneox/20b/operation/position_embedding.h"
@@ -174,6 +174,37 @@ atb::Status FlashAttentionKvCacheLayer(const LayerParam &param, atb::Operation *
 FlashAttentionHostBinder::FlashAttentionHostBinder() {}
 
 FlashAttentionHostBinder::~FlashAttentionHostBinder() {}
+
+atb::Operation *CreateFlashAttentionKvCacheLayer(const nlohmann::json &paramJson)
+{
+    LayerParam param;
+    param.layerNormEps = paramJson["layerNormEps"].get<float>();
+    param.headNum = paramJson["headNum"].get<int>();
+    param.dk = paramJson["dk"].get<int>();
+    param.model = paramJson["model"].get<std::string>();
+    param.qScale = paramJson["qScale"].get<float>();
+    if (paramJson.contains("rotaryPct")) {
+        param.rotaryPct = paramJson["rotaryPct"].get<float>();
+    }
+    if (paramJson.contains("isPrefill")) {
+        param.isPrefill = paramJson["isPrefill"].get<bool>();
+    }
+    if (paramJson.contains("rank")) {
+        param.rank = paramJson["rank"].get<int>();
+    }
+    if (paramJson.contains("rankSize")) {
+        param.rankSize = paramJson["rankSize"].get<int>();
+    }
+    if (paramJson.contains("qkScale")) {
+        param.qkScale = paramJson["qkScale"].get<int>();
+    }
+
+    ATB_LOG(INFO) << __func__ << " layerNormEps:" << param.layerNormEps << ", headNum:" << param.headNum << ", dk:" <<
+        param.dk << ", model:" << param.model;
+    atb::Operation *op;
+    FlashAttentionKvCacheLayer(param, &op);
+    return op;
+}
 
 void FlashAttentionHostBinder::ParseParam(const nlohmann::json &paramJson)
 {
