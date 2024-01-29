@@ -176,6 +176,37 @@ FlashAttentionRopeHostBinder::FlashAttentionRopeHostBinder() = default;
 
 FlashAttentionRopeHostBinder::~FlashAttentionRopeHostBinder() = default;
 
+atb::Operation *CreateFlashAttentionKvCacheRopeLayer(const nlohmann::json &paramJson)
+{
+    FlashAttentionKvCacheRopeParam param;
+    param.layerNormEps = paramJson["layerNormEps"].get<float>();
+    param.headNum = paramJson["headNum"].get<int>();
+    param.dk = paramJson["dk"].get<int>();
+    param.model = paramJson["model"].get<std::string>();
+    param.qScale = paramJson["qScale"].get<float>();
+    if (paramJson.contains("rotaryPct")) {
+        param.rotaryPct = paramJson["rotaryPct"].get<float>();
+    }
+    if (paramJson.contains("isPrefill")) {
+        param.isPrefill = paramJson["isPrefill"].get<bool>();
+    }
+    if (paramJson.contains("rank")) {
+        param.rank = paramJson["rank"].get<int>();
+    }
+    if (paramJson.contains("rankSize")) {
+        param.rankSize = paramJson["rankSize"].get<int>();
+    }
+    if (paramJson.contains("qkScale")) {
+        param.qkScale = paramJson["qkScale"].get<int>();
+    }
+
+    ATB_LOG(INFO) << __func__ << " layerNormEps:" << param.layerNormEps << ", headNum:" << param.headNum << ", dk:" <<
+        param.dk << ", model:" << param.model;
+    atb::Operation *op;
+    FlashAttentionKvCacheRopeLayer(param, &op);
+    return op;
+}
+
 void FlashAttentionRopeHostBinder::ParseParam(const nlohmann::json &paramJson)
 {
     tokenOffset_.clear();

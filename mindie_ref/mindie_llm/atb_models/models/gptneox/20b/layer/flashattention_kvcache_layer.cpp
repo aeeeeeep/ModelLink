@@ -171,9 +171,9 @@ atb::Status FlashAttentionKvCacheLayer(const LayerParam &param, atb::Operation *
     return atb::NO_ERROR;
 }
 
-atb::Operation *CreateFlashAttentionKvCacheRopeLayer(const nlohmann::json &paramJson)
+atb::Operation *CreateFlashAttentionKvCacheLayer(const nlohmann::json &paramJson)
 {
-    FlashAttentionKvCacheRopeParam param;
+    LayerParam param;
     param.layerNormEps = paramJson["layerNormEps"].get<float>();
     param.headNum = paramJson["headNum"].get<int>();
     param.dk = paramJson["dk"].get<int>();
@@ -195,10 +195,10 @@ atb::Operation *CreateFlashAttentionKvCacheRopeLayer(const nlohmann::json &param
         param.qkScale = paramJson["qkScale"].get<int>();
     }
 
-    ATB_LOG(INFO) << __func__ << " layerNormEps:" << param.layerNormEps << ", headNum:" << param.headNum << ", dk:" <<
-        param.dk << ", model:" << param.model;
+    ATB_LOG(INFO) << __func__ << " layerNormEps:" << param.layerNormEps << ", headNum:" << param.headNum
+                  << ", dk:" << param.dk << ", model:" << param.model;
     atb::Operation *op;
-    FlashAttentionKvCacheRopeLayer(param, &op);
+    FlashAttentionKvCacheLayer(param, &op);
     return op;
 }
 
