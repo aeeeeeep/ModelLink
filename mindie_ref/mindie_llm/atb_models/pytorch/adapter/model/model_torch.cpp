@@ -39,6 +39,8 @@
 #include "llama_pa/model/paged_attention_model.h"
 #include "llama_pa/model/quant_paged_attention_model.h"
 #include "llama_parallel/model/decoder_model.h"
+#include "minigpt4/model/fusion_encoder_model.h"
+#include "minigpt4/model/fusion_model.h"
 #include "pytorch/adapter/utils/utils.h"
 #include "pytorch/adapter/workspace/workspace.h"
 #include "telechat/model/model.h"
