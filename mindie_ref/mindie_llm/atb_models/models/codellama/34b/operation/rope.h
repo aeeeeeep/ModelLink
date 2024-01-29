@@ -41,7 +41,6 @@ static atb::Operation *CreateRope(const nlohmann::json &paramJson)
     atb_speed::codellama_34b::Rope(param, &op);
     return op;
 }
-
 } // namespace codellama_34b
 } // namespace atb_speed
 #endif

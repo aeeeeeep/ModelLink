@@ -73,8 +73,8 @@ void FaKvCacheRopeModel::Param::FromString(const std::string &param)
         qkScale = paramJson["qkScale"].get<float>();
     }
 
-    ATB_LOG(INFO) << "GptNeox20BModel param layerNormEps:" << layerNormEps << ", headNum:" << headNum << ", dk:" << dk
-                  << ", layerNum:" << layerNum << ", rotaryPct:" << rotaryPct;
+    ATB_LOG(INFO) << "GptNeox20BModel param layerNormEps:" << layerNormEps << ", headNum:" << headNum << ", dk:" <<
+        dk << ", layerNum:" << layerNum << ", rotaryPct:" << rotaryPct;
 }
 
 FaKvCacheRopeModel::FaKvCacheRopeModel(const std::string &param) : Model("GptNeoX_20B_MODEL", param)
@@ -84,12 +84,18 @@ FaKvCacheRopeModel::FaKvCacheRopeModel(const std::string &param) : Model("GptNeo
 
 FaKvCacheRopeModel::~FaKvCacheRopeModel() {}
 
-uint32_t FaKvCacheRopeModel::GetInputNum() const { return graph_.inTensors.size(); }
+uint32_t FaKvCacheRopeModel::GetInputNum() const
+{
+    return graph_.inTensors.size();
+}
 
-uint32_t FaKvCacheRopeModel::GetOutputNum() const { return graph_.outTensors.size(); }
+uint32_t FaKvCacheRopeModel::GetOutputNum() const
+{
+    return graph_.outTensors.size();
+}
 
 atb::Status FaKvCacheRopeModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
-                                           std::vector<atb::TensorDesc> &outTensorDescs)
+    std::vector<atb::TensorDesc> &outTensorDescs)
 {
     if (outTensorDescs.size() != GetOutputNum()) {
         return atb::ERROR_INVALID_GRAPH;
@@ -108,7 +114,7 @@ atb::Status FaKvCacheRopeModel::InferShape(const std::vector<atb::TensorDesc> &i
 int64_t FaKvCacheRopeModel::BuildGraph()
 {
     const int weightTensorSize = WORDEMBEDDINGNODE_WEIGHT_COUNT + WEIGHT_COUNT_PER_LAYER * param_.layerNum +
-                                 FINALNORMNODE_WEIGHT_COUNT + OUT_LM_HEAD_WEIGHT_COUNT;
+        FINALNORMNODE_WEIGHT_COUNT + OUT_LM_HEAD_WEIGHT_COUNT;
     graph_.weightTensors.resize(weightTensorSize);
 
     graph_.inTensors.resize(IN_TENSOR_MAX + param_.layerNum);
@@ -127,11 +133,11 @@ int64_t FaKvCacheRopeModel::BuildGraph()
     atb::Operation *op = nullptr;
     atb_speed::gptneox_20b::EmbeddingLayer(embeddingLayerParam, &op);
     embeddingNode.operation.reset(op);
-    embeddingNode.inTensors = {&graph_.weightTensors.at(0), &graph_.inTensors.at(IN_TENSOR_INPUTIDS),
-                               &graph_.inTensors.at(IN_TENSOR_COSTABLE), &graph_.inTensors.at(IN_TENSOR_SINTABLE),
-                               &graph_.inTensors.at(IN_TENSOR_POSITIONID)};
-    embeddingNode.outTensors = {&graph_.internalTensors.at(0), &graph_.internalTensors.at(1),
-                                &graph_.internalTensors.at(2)};
+    embeddingNode.inTensors = { &graph_.weightTensors.at(0), &graph_.inTensors.at(IN_TENSOR_INPUTIDS),
+        &graph_.inTensors.at(IN_TENSOR_COSTABLE), &graph_.inTensors.at(IN_TENSOR_SINTABLE),
+        &graph_.inTensors.at(IN_TENSOR_POSITIONID) };
+    embeddingNode.outTensors = { &graph_.internalTensors.at(0), &graph_.internalTensors.at(1),
+        &graph_.internalTensors.at(2) };
 
     atb::Tensor *firstInTensor = &graph_.internalTensors.at(0);
     atb::Tensor *cosEmbedTensor = &graph_.internalTensors.at(1);
@@ -158,8 +164,8 @@ int64_t FaKvCacheRopeModel::BuildGraph()
         size_t inTensorId = 0;
         layerNode.inTensors.at(inTensorId++) = firstInTensor;
         for (size_t weightTensorId = 0; weightTensorId < WEIGHT_COUNT_PER_LAYER; ++weightTensorId) {
-            layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(
-                layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId + WORDEMBEDDINGNODE_WEIGHT_COUNT);
+            layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(layerId * WEIGHT_COUNT_PER_LAYER +
+                weightTensorId + WORDEMBEDDINGNODE_WEIGHT_COUNT);
         }
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_POSITIONID);    // positionIdTensor
         layerNode.inTensors.at(inTensorId++) = cosEmbedTensor;                                // cosEmbed
@@ -171,7 +177,7 @@ int64_t FaKvCacheRopeModel::BuildGraph()
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SEQLEN);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MAX + layerId);
 
-        layerNode.outTensors = {&graph_.internalTensors.at(INTERMEDIATETENSOR_COUNT_BEFORE_LAYER + layerId)};
+        layerNode.outTensors = { &graph_.internalTensors.at(INTERMEDIATETENSOR_COUNT_BEFORE_LAYER + layerId) };
 
         firstInTensor = layerNode.outTensors.at(0);
     }
@@ -189,18 +195,18 @@ int64_t FaKvCacheRopeModel::BuildGraph()
     const int finalLayerNormBiasTensorId =
         graph_.weightTensors.size() - (FINALNORMNODE_WEIGHT_COUNT - 1) - OUT_LM_HEAD_WEIGHT_COUNT;
     const int finalLayerNormOutTensorId = internalTensorSize - 1;
-    finalNormNode.inTensors = {firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId),
-                               &graph_.weightTensors.at(finalLayerNormBiasTensorId)};
-    finalNormNode.outTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId)};
+    finalNormNode.inTensors = { firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId),
+        &graph_.weightTensors.at(finalLayerNormBiasTensorId) };
+    finalNormNode.outTensors = { &graph_.internalTensors.at(finalLayerNormOutTensorId) };
 
     auto &outLinearNode = graph_.nodes.at(nodeId++);
-    atb::infer::LinearParam outLinearParm = {false, false, false};
+    atb::infer::LinearParam outLinearParm = { false, false, false };
     CREATE_OPERATION(outLinearParm, &op);
     outLinearNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
-    outLinearNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
-                               &graph_.weightTensors.at(finalLinearWeightTensorId)};
-    outLinearNode.outTensors = {&graph_.outTensors.at(0)};
+    outLinearNode.inTensors = { &graph_.internalTensors.at(finalLayerNormOutTensorId),
+        &graph_.weightTensors.at(finalLinearWeightTensorId) };
+    outLinearNode.outTensors = { &graph_.outTensors.at(0) };
     return atb::NO_ERROR;
 }
 

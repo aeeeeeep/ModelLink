@@ -67,8 +67,8 @@ atb::Status Rope(const RopeParam &param, atb::Operation **operation)
     atb::infer::RopeParam ropeParam;
     ropeParam.rotaryCoeff = param.rotaryCoeff;
     CREATE_OPERATION(ropeParam, &ropeNode.operation);
-    ropeNode.inTensorIds = {IN_MIXED_Q, IN_MIXED_K, IN_COS_EMBED, IN_SIN_EMBED, IN_SEQ_LEN};
-    ropeNode.outTensorIds = {OUT_EMBED_Q, OUT_EMBED_K};
+    ropeNode.inTensorIds = { IN_MIXED_Q, IN_MIXED_K, IN_COS_EMBED, IN_SIN_EMBED, IN_SEQ_LEN };
+    ropeNode.outTensorIds = { OUT_EMBED_Q, OUT_EMBED_K };
     ropeNode.inTensorReshapeFuncs.resize(ropeNode.inTensorIds.size());
     ropeNode.inTensorReshapeFuncs.at(ROPE_IN_MIXED_Q_ID) = &mergeBatchNTokens;
     ropeNode.inTensorReshapeFuncs.at(ROPE_IN_MIXED_K_ID) = &mergeBatchNTokens;
@@ -76,7 +76,7 @@ atb::Status Rope(const RopeParam &param, atb::Operation **operation)
     ropeNode.inTensorReshapeFuncs.at(ROPE_IN_SIN_EMBED_ID) = &mergeBatchNTokens;
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
-                                 atb::SVector<atb::TensorDesc> &outTensorDescs) {
+        atb::SVector<atb::TensorDesc> &outTensorDescs) {
         size_t firstDim = 0;
         size_t secondDim = 1;
         size_t headNumDim = 2;

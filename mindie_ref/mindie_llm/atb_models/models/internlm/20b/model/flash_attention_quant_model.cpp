@@ -40,7 +40,7 @@ enum InTensorId : int {
     IN_TENSOR_MAX, // 10
 };
 
-enum OutTensorId {
+enum OutTensorId : int {
     OUT_TENSOR_HIDDEN_STATES = 0,
     OUT_TENSOR_MAX,
 };
@@ -118,9 +118,15 @@ FlashAttentionQuantModel::FlashAttentionQuantModel(const std::string &param) : M
 
 FlashAttentionQuantModel::~FlashAttentionQuantModel() = default;
 
-uint32_t FlashAttentionQuantModel::GetInputNum() const { return graph_.inTensors.size(); }
+uint32_t FlashAttentionQuantModel::GetInputNum() const
+{
+    return graph_.inTensors.size();
+}
 
-uint32_t FlashAttentionQuantModel::GetOutputNum() const { return graph_.outTensors.size(); }
+uint32_t FlashAttentionQuantModel::GetOutputNum() const
+{
+    return graph_.outTensors.size();
+}
 
 // 计算传入权重的起始id
 int CalWeightTensorStartId(const int layerId, int floatLayerNum)
@@ -133,7 +139,7 @@ int CalWeightTensorStartId(const int layerId, int floatLayerNum)
 
 // model修改输出shape
 atb::Status FlashAttentionQuantModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
-                                                 std::vector<atb::TensorDesc> &outTensorDescs)
+    std::vector<atb::TensorDesc> &outTensorDescs)
 {
     if (outTensorDescs.size() != GetOutputNum()) {
         return atb::ERROR_INVALID_GRAPH;
@@ -151,15 +157,15 @@ int64_t FlashAttentionQuantModel::BuildGraph()
 {
     int floatLayerSize = param_.float_layers.size();
     const int weightTensorSize = WORD_EMBEDDING_NODE_WEIGHT_COUNT + ROLLBACK_WEIGHT_COUNT_PER_LAYER * floatLayerSize +
-                                 WEIGHT_COUNT_PER_LAYER * (param_.layerNum - floatLayerSize) +
-                                 FINAL_NORM_NODE_WEIGHT_COUNT + OUT_LM_HEAD_WEIGHT_COUNT; // 传入权重总数
+        WEIGHT_COUNT_PER_LAYER * (param_.layerNum - floatLayerSize) + FINAL_NORM_NODE_WEIGHT_COUNT +
+        OUT_LM_HEAD_WEIGHT_COUNT; // 传入权重总数
     graph_.weightTensors.resize(weightTensorSize);
 
     graph_.inTensors.resize(IN_TENSOR_MAX + param_.layerNum); // 输入tensor数量
     graph_.outTensors.resize(OUT_TENSOR_MAX);                 // 输出tensor数量
 
     const int nodeSize = param_.layerNum + OPERATION_COUNT_BEFORE_LAYER + FINAL_NORM_NODE_WEIGHT_COUNT +
-                         OUT_LM_HEAD_WEIGHT_COUNT; // 计算图节点总数
+        OUT_LM_HEAD_WEIGHT_COUNT; // 计算图节点总数
     graph_.nodes.resize(nodeSize);
 
     const int internalTensorSize = graph_.nodes.size() - 1; // 临时tensor数量
@@ -172,8 +178,8 @@ int64_t FlashAttentionQuantModel::BuildGraph()
     atb::Operation *op = nullptr;
     CREATE_OPERATION(wordEmbeddingParam, &op);
     wordEmbeddingNode.operation.reset(op);
-    wordEmbeddingNode.inTensors = {&graph_.weightTensors.at(0), &graph_.inTensors.at(IN_TENSOR_INPUT_IDS)};
-    wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(0)};
+    wordEmbeddingNode.inTensors = { &graph_.weightTensors.at(0), &graph_.inTensors.at(IN_TENSOR_INPUT_IDS) };
+    wordEmbeddingNode.outTensors = { &graph_.internalTensors.at(0) };
 
     atb::Tensor *firstInTensor = &graph_.internalTensors.at(0);
     int floatLayerNum = 0;
@@ -245,7 +251,7 @@ int64_t FlashAttentionQuantModel::BuildGraph()
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MAX + layerId);
 
-        layerNode.outTensors = {&graph_.internalTensors.at(INTERNAL_TENSOR_COUNT_BEFORE_LAYER + layerId)};
+        layerNode.outTensors = { &graph_.internalTensors.at(INTERNAL_TENSOR_COUNT_BEFORE_LAYER + layerId) };
 
         firstInTensor = layerNode.outTensors.at(LAYER_FIRST_OUT_TENSORS);
     }
@@ -260,8 +266,8 @@ int64_t FlashAttentionQuantModel::BuildGraph()
     const int finalLayerNormWeightTensorId =
         graph_.weightTensors.size() - FINAL_NORM_NODE_WEIGHT_COUNT - OUT_LM_HEAD_WEIGHT_COUNT;
     const int finalLayerNormOutTensorId = internalTensorSize - 2;
-    finalNormNode.inTensors = {firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId)};
-    finalNormNode.outTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId)};
+    finalNormNode.inTensors = { firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId) };
+    finalNormNode.outTensors = { &graph_.internalTensors.at(finalLayerNormOutTensorId) };
 
     // self.norm后加上离群点抑制的bias
     auto &finalNormAddNode = graph_.nodes.at(nodeId++);
@@ -271,19 +277,19 @@ int64_t FlashAttentionQuantModel::BuildGraph()
     finalNormAddNode.operation.reset(op);
     const int finalLayerNormWeightAddBiasTensorId = finalLayerNormWeightTensorId + 1;
     const int finalLayerNormAddBiasOutTensorId = internalTensorSize - 1;
-    finalNormAddNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
-                                  &graph_.weightTensors.at(finalLayerNormWeightAddBiasTensorId)};
-    finalNormAddNode.outTensors = {&graph_.internalTensors.at(finalLayerNormAddBiasOutTensorId)};
+    finalNormAddNode.inTensors = { &graph_.internalTensors.at(finalLayerNormOutTensorId),
+        &graph_.weightTensors.at(finalLayerNormWeightAddBiasTensorId) };
+    finalNormAddNode.outTensors = { &graph_.internalTensors.at(finalLayerNormAddBiasOutTensorId) };
 
     // self.lm_head operation
     auto &outLinearNode = graph_.nodes.at(nodeId++);
-    atb::infer::LinearParam outLinearParm = {false, false, false};
+    atb::infer::LinearParam outLinearParm = { false, false, false };
     CREATE_OPERATION(outLinearParm, &op);
     outLinearNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
-    outLinearNode.inTensors = {&graph_.internalTensors.at(finalLayerNormAddBiasOutTensorId),
-                               &graph_.weightTensors.at(finalLinearWeightTensorId)};
-    outLinearNode.outTensors = {&graph_.outTensors.at(0)};
+    outLinearNode.inTensors = { &graph_.internalTensors.at(finalLayerNormAddBiasOutTensorId),
+        &graph_.weightTensors.at(finalLinearWeightTensorId) };
+    outLinearNode.outTensors = { &graph_.outTensors.at(0) };
     return atb::NO_ERROR;
 }
 

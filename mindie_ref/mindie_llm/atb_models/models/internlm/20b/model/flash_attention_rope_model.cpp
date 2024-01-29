@@ -78,12 +78,18 @@ FlashAttentionRopeModel::FlashAttentionRopeModel(const std::string &param) : Mod
 
 FlashAttentionRopeModel::~FlashAttentionRopeModel() = default;
 
-uint32_t FlashAttentionRopeModel::GetInputNum() const { return graph_.inTensors.size(); }
+uint32_t FlashAttentionRopeModel::GetInputNum() const
+{
+    return graph_.inTensors.size();
+}
 
-uint32_t FlashAttentionRopeModel::GetOutputNum() const { return graph_.outTensors.size(); }
+uint32_t FlashAttentionRopeModel::GetOutputNum() const
+{
+    return graph_.outTensors.size();
+}
 
 atb::Status FlashAttentionRopeModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
-                                                std::vector<atb::TensorDesc> &outTensorDescs)
+    std::vector<atb::TensorDesc> &outTensorDescs)
 {
     if (outTensorDescs.size() != GetOutputNum()) {
         return atb::ERROR_INVALID_GRAPH;
@@ -107,7 +113,7 @@ atb::Status FlashAttentionRopeModel::InferShape(const std::vector<atb::TensorDes
 int64_t FlashAttentionRopeModel::BuildGraph()
 {
     const int weightTensorSize = WORDEMBEDDINGNODE_WEIGHT_COUNT + WEIGHT_COUNT_PER_LAYER * param_.layerNum +
-                                 FINALNORMNODE_WEIGHT_COUNT + OUT_LM_HEAD_WEIGHT_COUNT;
+        FINALNORMNODE_WEIGHT_COUNT + OUT_LM_HEAD_WEIGHT_COUNT;
     graph_.weightTensors.resize(weightTensorSize);
 
     graph_.inTensors.resize(IN_TENSOR_MAX + param_.layerNum);
@@ -125,9 +131,9 @@ int64_t FlashAttentionRopeModel::BuildGraph()
     atb::Operation *op = nullptr;
     CREATE_OPERATION(wordEmbeddingParam, &op);
     wordEmbeddingNode.operation.reset(op);
-    wordEmbeddingNode.inTensors = {&graph_.weightTensors.at(WORDEMBEDDINGNODE_WEIGHT_ID),
-                                   &graph_.inTensors.at(IN_TENSOR_INPUTIDS)};
-    wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(FIRST_INTERNAL_TENSORS)};
+    wordEmbeddingNode.inTensors = { &graph_.weightTensors.at(WORDEMBEDDINGNODE_WEIGHT_ID),
+        &graph_.inTensors.at(IN_TENSOR_INPUTIDS) };
+    wordEmbeddingNode.outTensors = { &graph_.internalTensors.at(FIRST_INTERNAL_TENSORS) };
 
     atb::Tensor *firstInTensor = &graph_.internalTensors.at(FIRST_INTERNAL_TENSORS);
 
@@ -147,8 +153,8 @@ int64_t FlashAttentionRopeModel::BuildGraph()
         size_t inTensorId = 0;
         layerNode.inTensors.at(inTensorId++) = firstInTensor;
         for (size_t weightTensorId = 0; weightTensorId < WEIGHT_COUNT_PER_LAYER; ++weightTensorId) {
-            layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(
-                layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId + WORDEMBEDDINGNODE_WEIGHT_COUNT);
+            layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(layerId * WEIGHT_COUNT_PER_LAYER +
+                weightTensorId + WORDEMBEDDINGNODE_WEIGHT_COUNT);
         }
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_COSEMBED);      // cosEmbed
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SINEMBED);      // sinEmbed
@@ -159,7 +165,7 @@ int64_t FlashAttentionRopeModel::BuildGraph()
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SEQLEN); // seqLen
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MAX + layerId);
 
-        layerNode.outTensors = {&graph_.internalTensors.at(INTERMEDIATETENSOR_COUNT_BEFORE_LAYER + layerId)};
+        layerNode.outTensors = { &graph_.internalTensors.at(INTERMEDIATETENSOR_COUNT_BEFORE_LAYER + layerId) };
 
         firstInTensor = layerNode.outTensors.at(LAYER_FIRST_OUT_TENSORS);
     }
@@ -173,17 +179,17 @@ int64_t FlashAttentionRopeModel::BuildGraph()
     const int finalLayerNormWeightTensorId =
         graph_.weightTensors.size() - FINALNORMNODE_WEIGHT_COUNT - OUT_LM_HEAD_WEIGHT_COUNT;
     const int finalLayerNormOutTensorId = internalTensorSize - 1;
-    finalNormNode.inTensors = {firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId)};
-    finalNormNode.outTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId)};
+    finalNormNode.inTensors = { firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId) };
+    finalNormNode.outTensors = { &graph_.internalTensors.at(finalLayerNormOutTensorId) };
 
     auto &outLinearNode = graph_.nodes.at(nodeId++);
-    atb::infer::LinearParam outLinearParm = {false, false, false};
+    atb::infer::LinearParam outLinearParm = { false, false, false };
     CREATE_OPERATION(outLinearParm, &op);
     outLinearNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
-    outLinearNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
-                               &graph_.weightTensors.at(finalLinearWeightTensorId)};
-    outLinearNode.outTensors = {&graph_.outTensors.at(OUT_TENSOR_HIDDENSTATES_ID)};
+    outLinearNode.inTensors = { &graph_.internalTensors.at(finalLayerNormOutTensorId),
+        &graph_.weightTensors.at(finalLinearWeightTensorId) };
+    outLinearNode.outTensors = { &graph_.outTensors.at(OUT_TENSOR_HIDDENSTATES_ID) };
     return atb::NO_ERROR;
 }
 

@@ -31,7 +31,6 @@ struct RopeParam {
 atb::Status Rope(const RopeParam &param, atb::Operation **operation);
 
 atb::Operation *CreateRope(const nlohmann::json &paramJson);
-
 } // namespace internlm_7b
 } // namespace atb_speed
 #endif

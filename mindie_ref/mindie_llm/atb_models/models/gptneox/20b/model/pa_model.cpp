@@ -79,8 +79,8 @@ void PAModel::Param::FromString(const std::string &param)
         backend = paramJson["backend"];
     }
 
-    ATB_LOG(INFO) << "GptNeox20BModel param layerNormEps:" << layerNormEps << ", headNum:" << headNum << ", dk:" << dk
-                  << ", layerNum:" << layerNum << ", rotaryPct:" << rotaryPct << ", backend: " << backend;
+    ATB_LOG(INFO) << "GptNeox20BModel param layerNormEps:" << layerNormEps << ", headNum:" << headNum << ", dk:" <<
+        dk << ", layerNum:" << layerNum << ", rotaryPct:" << rotaryPct << ", backend: " << backend;
 }
 
 PAModel::PAModel(const std::string &param) : Model("GptNeoX_20B_MODEL", param)
@@ -91,12 +91,18 @@ PAModel::PAModel(const std::string &param) : Model("GptNeoX_20B_MODEL", param)
 
 PAModel::~PAModel() {}
 
-uint32_t PAModel::GetInputNum() const { return graph_.inTensors.size(); }
+uint32_t PAModel::GetInputNum() const
+{
+    return graph_.inTensors.size();
+}
 
-uint32_t PAModel::GetOutputNum() const { return graph_.outTensors.size(); }
+uint32_t PAModel::GetOutputNum() const
+{
+    return graph_.outTensors.size();
+}
 
 atb::Status PAModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
-                                std::vector<atb::TensorDesc> &outTensorDescs)
+    std::vector<atb::TensorDesc> &outTensorDescs)
 {
     if (outTensorDescs.size() != GetOutputNum()) {
         return atb::ERROR_INVALID_GRAPH;
@@ -121,7 +127,7 @@ atb::Status PAModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDesc
 int64_t PAModel::BuildGraph()
 {
     const int weightTensorSize = WORDEMBEDDINGNODE_WEIGHT_COUNT + WEIGHT_COUNT_PER_LAYER * param_.layerNum +
-                                 FINALNORMNODE_WEIGHT_COUNT + OUT_LM_HEAD_WEIGHT_COUNT;
+        FINALNORMNODE_WEIGHT_COUNT + OUT_LM_HEAD_WEIGHT_COUNT;
     graph_.weightTensors.resize(weightTensorSize);
 
     graph_.kCacheTensors.resize(param_.layerNum);
@@ -143,8 +149,8 @@ int64_t PAModel::BuildGraph()
     atb::Operation *op = nullptr;
     CREATE_OPERATION(wordEmbeddingParam, &op);
     wordEmbeddingNode.operation.reset(op);
-    wordEmbeddingNode.inTensors = {&graph_.weightTensors.at(0), &graph_.inTensors.at(IN_TENSOR_INPUTIDS)};
-    wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(0)};
+    wordEmbeddingNode.inTensors = { &graph_.weightTensors.at(0), &graph_.inTensors.at(IN_TENSOR_INPUTIDS) };
+    wordEmbeddingNode.outTensors = { &graph_.internalTensors.at(0) };
 
     atb::Tensor *firstInTensor = &graph_.internalTensors.at(0);
 
@@ -170,8 +176,8 @@ int64_t PAModel::BuildGraph()
         size_t inTensorId = 0;
         layerNode.inTensors.at(inTensorId++) = firstInTensor;
         for (size_t weightTensorId = 0; weightTensorId < WEIGHT_COUNT_PER_LAYER; ++weightTensorId) {
-            layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(
-                layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId + WORDEMBEDDINGNODE_WEIGHT_COUNT);
+            layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(layerId * WEIGHT_COUNT_PER_LAYER +
+                weightTensorId + WORDEMBEDDINGNODE_WEIGHT_COUNT);
         }
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_POSITIONID);    // positionIdTensor
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_COSEMBED);      // cosEmbed
@@ -183,7 +189,7 @@ int64_t PAModel::BuildGraph()
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SLOTS);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_INPUT_LENGTHS);
 
-        layerNode.outTensors = {&graph_.internalTensors.at(INTERMEDIATETENSOR_COUNT_BEFORE_LAYER + layerId)};
+        layerNode.outTensors = { &graph_.internalTensors.at(INTERMEDIATETENSOR_COUNT_BEFORE_LAYER + layerId) };
 
         firstInTensor = layerNode.outTensors.at(0);
     }
@@ -201,9 +207,9 @@ int64_t PAModel::BuildGraph()
     const int finalLayerNormBiasTensorId =
         graph_.weightTensors.size() - (FINALNORMNODE_WEIGHT_COUNT - 1) - OUT_LM_HEAD_WEIGHT_COUNT;
     const int finalLayerNormOutTensorId = internalTensorSize - 1;
-    finalNormNode.inTensors = {firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId),
-                               &graph_.weightTensors.at(finalLayerNormBiasTensorId)};
-    finalNormNode.outTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId)};
+    finalNormNode.inTensors = { firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId),
+        &graph_.weightTensors.at(finalLayerNormBiasTensorId) };
+    finalNormNode.outTensors = { &graph_.internalTensors.at(finalLayerNormOutTensorId) };
 
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
     atb_speed::common::ParallelLmHeadParam lmHeadParam;
@@ -216,14 +222,13 @@ int64_t PAModel::BuildGraph()
     lmHeadNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
     if (param_.isPrefill) {
-        lmHeadNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
-                                &graph_.weightTensors.at(finalLinearWeightTensorId),
-                                &graph_.inTensors.at(IN_TENSOR_LOGTIS_INDICES)};
+        lmHeadNode.inTensors = { &graph_.internalTensors.at(finalLayerNormOutTensorId),
+            &graph_.weightTensors.at(finalLinearWeightTensorId), &graph_.inTensors.at(IN_TENSOR_LOGTIS_INDICES) };
     } else {
-        lmHeadNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
-                                &graph_.weightTensors.at(finalLinearWeightTensorId)};
+        lmHeadNode.inTensors = { &graph_.internalTensors.at(finalLayerNormOutTensorId),
+            &graph_.weightTensors.at(finalLinearWeightTensorId) };
     }
-    lmHeadNode.outTensors = {&graph_.outTensors.at(0)};
+    lmHeadNode.outTensors = { &graph_.outTensors.at(0) };
     return atb::NO_ERROR;
 }
 

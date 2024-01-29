@@ -47,7 +47,7 @@ public:
     uint32_t GetOutputNum() const override;
 
     atb::Status InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
-                           std::vector<atb::TensorDesc> &outTensorDescs) override;
+        std::vector<atb::TensorDesc> &outTensorDescs) override;
 
 private:
     int64_t BuildGraph() override;

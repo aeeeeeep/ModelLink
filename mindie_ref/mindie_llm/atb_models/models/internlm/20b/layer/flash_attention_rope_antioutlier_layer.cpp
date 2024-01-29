@@ -91,7 +91,7 @@ static const uint64_t SELF_ATTENTION_V_INPUT_SIZE = 4;  // self_attn 传入v的s
 
 // 回退层Layer（离群点抑制）
 atb::Status FlashAttentionRopeAntiOutlierLayer(const FlashAttentionRopeAntiOutlierLayerParam &param,
-                                               atb::Operation **operation)
+    atb::Operation **operation)
 {
     ATB_LOG(INFO) << __func__ << " called, headNum: " << param.headNum;
     atb::GraphParam opGraph;
@@ -124,40 +124,40 @@ atb::Status FlashAttentionRopeAntiOutlierLayer(const FlashAttentionRopeAntiOutli
     rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     rmsNormParam.normParam.epsilon = param.rmsNormEps;
     CREATE_OPERATION(rmsNormParam, &inputNormNode.operation);
-    inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT};
-    inputNormNode.outTensorIds = {INTERMIDATE_INPUTNORMOUT};
+    inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT };
+    inputNormNode.outTensorIds = { INTERMIDATE_INPUTNORMOUT };
 
     // 离群点抑制，norm需要加上bias
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
     CREATE_OPERATION(addParam, &inputNormAddNode.operation);
-    inputNormAddNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_NORM_BIAS};
-    inputNormAddNode.outTensorIds = {INTERMIDATE_INPUTNORM_ADD_OUT};
+    inputNormAddNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_NORM_BIAS };
+    inputNormAddNode.outTensorIds = { INTERMIDATE_INPUTNORM_ADD_OUT };
 
     // q_proj
-    atb::infer::LinearParam linearParam = {false, false, true};
+    atb::infer::LinearParam linearParam = { false, false, true };
     CREATE_OPERATION(linearParam, &qLinearNode.operation);
-    qLinearNode.inTensorIds = {INTERMIDATE_INPUTNORM_ADD_OUT, IN_Q_LINEARWEIGHT, IN_Q_LINEARBIAS};
-    qLinearNode.outTensorIds = {INTERMIDATE_Q_MIXEDLINEAROUT};
+    qLinearNode.inTensorIds = { INTERMIDATE_INPUTNORM_ADD_OUT, IN_Q_LINEARWEIGHT, IN_Q_LINEARBIAS };
+    qLinearNode.outTensorIds = { INTERMIDATE_Q_MIXEDLINEAROUT };
 
     // k_proj
     CREATE_OPERATION(linearParam, &kLinearNode.operation);
-    kLinearNode.inTensorIds = {INTERMIDATE_INPUTNORM_ADD_OUT, IN_K_LINEARWEIGHT, IN_K_LINEARBIAS};
-    kLinearNode.outTensorIds = {INTERMIDATE_K_MIXEDLINEAROUT};
+    kLinearNode.inTensorIds = { INTERMIDATE_INPUTNORM_ADD_OUT, IN_K_LINEARWEIGHT, IN_K_LINEARBIAS };
+    kLinearNode.outTensorIds = { INTERMIDATE_K_MIXEDLINEAROUT };
 
     // v_proj
     CREATE_OPERATION(linearParam, &vLinearNode.operation);
-    vLinearNode.inTensorIds = {INTERMIDATE_INPUTNORM_ADD_OUT, IN_V_LINEARWEIGHT, IN_V_LINEARBIAS};
-    vLinearNode.outTensorIds = {INTERMIDATE_V_MIXEDLINEAROUT};
+    vLinearNode.inTensorIds = { INTERMIDATE_INPUTNORM_ADD_OUT, IN_V_LINEARWEIGHT, IN_V_LINEARBIAS };
+    vLinearNode.outTensorIds = { INTERMIDATE_V_MIXEDLINEAROUT };
 
     // 旋转计算
     atb_speed::internlm_7b::RopeParam ropeParam;
     ropeParam.rotaryCoeff = ROTARY_COEFF; // 旋转系数
     ropeParam.headNum = param.headNum;
     atb_speed::internlm_7b::Rope(ropeParam, &ropeNode.operation);
-    ropeNode.inTensorIds = {INTERMIDATE_Q_MIXEDLINEAROUT, INTERMIDATE_K_MIXEDLINEAROUT, IN_COS_EMBED, IN_SIN_EMBED,
-                            IN_SEQLEN};
-    ropeNode.outTensorIds = {INTERMIDATE_Q_POSITIONEMBED, INTERMIDATE_K_POSITIONEMBED};
+    ropeNode.inTensorIds = { INTERMIDATE_Q_MIXEDLINEAROUT, INTERMIDATE_K_MIXEDLINEAROUT, IN_COS_EMBED, IN_SIN_EMBED,
+        IN_SEQLEN };
+    ropeNode.outTensorIds = { INTERMIDATE_Q_POSITIONEMBED, INTERMIDATE_K_POSITIONEMBED };
 
     // 浮点self attn
     atb::infer::SelfAttentionParam selfAttentionParam;
@@ -166,19 +166,19 @@ atb::Status FlashAttentionRopeAntiOutlierLayer(const FlashAttentionRopeAntiOutli
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / sqrt(param.dk);
     CREATE_OPERATION(selfAttentionParam, &selfAttentionKvCacheNode.operation);
-    selfAttentionKvCacheNode.inTensorIds = {INTERMIDATE_Q_POSITIONEMBED,
-                                            INTERMIDATE_K_POSITIONEMBED,
-                                            INTERMIDATE_V_MIXEDLINEAROUT,
-                                            IN_PASTKEY,
-                                            IN_PASTVALUE,
-                                            IN_ATTENTIONMASK,
-                                            IN_TOKENOFFSET,
-                                            IN_SEQLEN,
-                                            IN_LAYERID};
-    selfAttentionKvCacheNode.outTensorIds = {INTERMIDATE_SELFOUT};
+    selfAttentionKvCacheNode.inTensorIds = { INTERMIDATE_Q_POSITIONEMBED,
+        INTERMIDATE_K_POSITIONEMBED,
+        INTERMIDATE_V_MIXEDLINEAROUT,
+        IN_PASTKEY,
+        IN_PASTVALUE,
+        IN_ATTENTIONMASK,
+        IN_TOKENOFFSET,
+        IN_SEQLEN,
+        IN_LAYERID };
+    selfAttentionKvCacheNode.outTensorIds = { INTERMIDATE_SELFOUT };
     selfAttentionKvCacheNode.inTensorReshapeFuncs.resize(selfAttentionKvCacheNode.inTensorIds.size());
     selfAttentionKvCacheNode.inTensorReshapeFuncs.at(SELF_ATTENTION_V_INPUT_INDEX) = [=](const atb::Dims &oldShape,
-                                                                                         atb::Dims &newShape) {
+        atb::Dims &newShape) {
         newShape.dimNum = SELF_ATTENTION_V_INPUT_SIZE;
         size_t newShapeDimIndex = 0;
         size_t oldShapeDimIndex = 0;
@@ -195,22 +195,22 @@ atb::Status FlashAttentionRopeAntiOutlierLayer(const FlashAttentionRopeAntiOutli
     selfOutLinearParam.isBias = false;
     selfOutLinearParam.backend = param.backend;
     atb_speed::common::RowParallelLinear(selfOutLinearParam, &selfOutLinearNode.operation);
-    selfOutLinearNode.inTensorIds = {INTERMIDATE_SELFOUT, IN_SELFOUTLINEARWEIGHT};
-    selfOutLinearNode.outTensorIds = {INTERMIDATE_SELFLINEAROUT};
+    selfOutLinearNode.inTensorIds = { INTERMIDATE_SELFOUT, IN_SELFOUTLINEARWEIGHT };
+    selfOutLinearNode.outTensorIds = { INTERMIDATE_SELFLINEAROUT };
 
     CREATE_OPERATION(addParam, &selfResidualAddNode.operation);
-    selfResidualAddNode.inTensorIds = {IN_HIDDENSTATES, INTERMIDATE_SELFLINEAROUT};
-    selfResidualAddNode.outTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT};
+    selfResidualAddNode.inTensorIds = { IN_HIDDENSTATES, INTERMIDATE_SELFLINEAROUT };
+    selfResidualAddNode.outTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT };
 
     // post_attention_layernorm
     CREATE_OPERATION(rmsNormParam, &selfNormNode.operation);
-    selfNormNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT};
-    selfNormNode.outTensorIds = {INTERMIDATE_SELFNORMOUT};
+    selfNormNode.inTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT };
+    selfNormNode.outTensorIds = { INTERMIDATE_SELFNORMOUT };
 
     // 离群点抑制，norm加上bias
     CREATE_OPERATION(addParam, &selfNormAddNode.operation);
-    selfNormAddNode.inTensorIds = {INTERMIDATE_SELFNORMOUT, IN_SELFOUTNORMBIAS};
-    selfNormAddNode.outTensorIds = {INTERMIDATE_SELFNORM_ADD_OUT};
+    selfNormAddNode.inTensorIds = { INTERMIDATE_SELFNORMOUT, IN_SELFOUTNORMBIAS };
+    selfNormAddNode.outTensorIds = { INTERMIDATE_SELFNORM_ADD_OUT };
 
     atb_speed::common::MlpGateParam mlpParam;
     mlpParam.rank = param.rank;
@@ -221,23 +221,23 @@ atb::Status FlashAttentionRopeAntiOutlierLayer(const FlashAttentionRopeAntiOutli
     mlpParam.isBias = true;
     mlpParam.isPack = false;
     atb_speed::common::MlpGateLayer(mlpParam, &mlpNode.operation);
-    mlpNode.inTensorIds = {INTERMIDATE_SELFNORM_ADD_OUT,
-                           IN_MLPUPWEIGHT,
-                           IN_MLPGATEWEIGHT,
-                           IN_MLPDOWNWEIGHT,
-                           IN_MLPUPBIAS,
-                           IN_MLPGATEBIAS,
-                           IN_BETA};
-    mlpNode.outTensorIds = {INTERMIDATE_MLPOUT};
+    mlpNode.inTensorIds = { INTERMIDATE_SELFNORM_ADD_OUT,
+        IN_MLPUPWEIGHT,
+        IN_MLPGATEWEIGHT,
+        IN_MLPDOWNWEIGHT,
+        IN_MLPUPBIAS,
+        IN_MLPGATEBIAS,
+        IN_BETA };
+    mlpNode.outTensorIds = { INTERMIDATE_MLPOUT };
 
     // add
     CREATE_OPERATION(addParam, &mlpResidualAddNode.operation);
-    mlpResidualAddNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, INTERMIDATE_MLPOUT};
-    mlpResidualAddNode.outTensorIds = {OUT_LAYEROUT};
+    mlpResidualAddNode.inTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT, INTERMIDATE_MLPOUT };
+    mlpResidualAddNode.outTensorIds = { OUT_LAYEROUT };
 
     // 全局tensor reshape
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
-                                 atb::SVector<atb::TensorDesc> &outTensorDescs) {
+        atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(0);
         return atb::NO_ERROR;
     };
@@ -268,7 +268,7 @@ void FlashAttentionRopeAntiOutlierLayerBinder::BindTensor(atb::VariantPack &vari
     variantPack.inTensors.at(IN_SEQLEN).hostData = seqLen_.data();
 }
 
-void from_json(const nlohmann::json &paramJson, FlashAttentionRopeAntiOutlierLayerParam &param)
+void from_json(const nlohmann::json &paramJson, const FlashAttentionRopeAntiOutlierLayerParam &param)
 {
     paramJson.at("rmsNormEps").get_to(param.rmsNormEps);
     paramJson.at("headNum").get_to(param.headNum);
@@ -292,6 +292,5 @@ atb::Operation *CreateFlashAttentionRopeAntiOutlierLayer(const nlohmann::json &p
         paramJson.get<FlashAttentionRopeAntiOutlierLayerParam>(), &op);
     return op;
 }
-
 } // namespace internlm_20b
 } // namespace atb_speed

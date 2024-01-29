@@ -37,8 +37,6 @@ static atb::Operation *CreatePositionEmbedding(const nlohmann::json &paramJson)
     PositionEmbedding(param, &op);
     return op;
 }
-
 } // namespace codellama_34b
 } // namespace atb_speed
 #endif
-

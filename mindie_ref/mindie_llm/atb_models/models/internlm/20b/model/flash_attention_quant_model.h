@@ -23,14 +23,14 @@ namespace internlm_20b {
 class FlashAttentionQuantModel : public Model {
 public:
     struct Param {
-        float rmsNormEps = 0;                // 模型config：rms_norm_eps
-        int headNum = 0;                     // 计算方式：（config.num_attention_heads // rankSize）
-        int dk = 0;                          // 计算方式：（config.hidden_size // config.num_attention_heads）
-        int layerNum = 0;                    // 模型layer层数
-        int rank = 0;                        // 多卡并行模型id
-        int rankSize = 1;                    // 模型切分数量
+        float rmsNormEps = 0; // 模型config：rms_norm_eps
+        int headNum = 0;      // 计算方式：（config.num_attention_heads // rankSize）
+        int dk = 0;           // 计算方式：（config.hidden_size // config.num_attention_heads）
+        int layerNum = 0;     // 模型layer层数
+        int rank = 0;         // 多卡并行模型id
+        int rankSize = 1;     // 模型切分数量
         std::string backend = "hccl";
-        std::vector<float> qProjInputScale;  // 量化参数
+        std::vector<float> qProjInputScale; // 量化参数
         std::vector<int> qProjInputOffset;
         std::vector<float> kProjInputScale;
         std::vector<int> kProjInputOffset;
@@ -55,7 +55,7 @@ public:
     uint32_t GetOutputNum() const override;
 
     atb::Status InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
-                           std::vector<atb::TensorDesc> &outTensorDescs) override;
+        std::vector<atb::TensorDesc> &outTensorDescs) override;
 
 private:
     int64_t BuildGraph() override;

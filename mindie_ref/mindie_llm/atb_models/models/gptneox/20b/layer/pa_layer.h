@@ -56,7 +56,7 @@ enum LayerPATensorId : int {
     IN_COSEMBED,
     IN_SINEMBED,
     IN_ATTENTIONMASK,
-    IN_CACHEK,  // kvcache
+    IN_CACHEK, // kvcache
     IN_CACHEV,
     IN_BLOCK_TABLES,
     IN_SLOTS,
@@ -83,7 +83,6 @@ enum LayerPATensorId : int {
 atb::Status PALayer(const PALayerParam &param, atb::Operation **operation);
 
 atb::Operation *CreatePALayer(const nlohmann::json &paramJson);
-
 } // namespace gptneox_20b
 } // namespace atb_speed
 

@@ -61,7 +61,6 @@ private:
     atb::SVector<int64_t> tokenOffset_;
     atb::SVector<int64_t> seqLen_;
 };
-
 } // namespace gptneox_20b
 } // namespace atb_speed
 #endif

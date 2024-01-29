@@ -20,7 +20,7 @@
 
 namespace atb_speed {
 namespace gptneox_20b {
-enum LayerTensorId {
+enum LayerTensorId : int {
     IN_HIDDENSTATES = 0,
     IN_INPUTLAYERNORMWEIGTH,
     IN_INPUTLAYERNORMBIAS,
@@ -97,14 +97,14 @@ atb::Status FlashAttentionKvCacheLayer(const LayerParam &param, atb::Operation *
     layerNormParam.normParam.beginParamsAxis = LAYER_NORM_AXIS_NUM;
 
     CREATE_OPERATION(layerNormParam, &inputLayerNormNode.operation);
-    inputLayerNormNode.inTensorIds = {IN_HIDDENSTATES, IN_INPUTLAYERNORMWEIGTH, IN_INPUTLAYERNORMBIAS};
-    inputLayerNormNode.outTensorIds = {INTERMEDIATE_INPUTLAYERNORMOUT};
+    inputLayerNormNode.inTensorIds = { IN_HIDDENSTATES, IN_INPUTLAYERNORMWEIGTH, IN_INPUTLAYERNORMBIAS };
+    inputLayerNormNode.outTensorIds = { INTERMEDIATE_INPUTLAYERNORMOUT };
 
     // qkv  [1, n_tokens, hidden_size] to [1, n_tokens, 3 * hidden_size]
-    atb::infer::LinearParam linearParam = {false, false, true};
+    atb::infer::LinearParam linearParam = { false, false, true };
     CREATE_OPERATION(linearParam, &qkvLinearNode.operation);
-    qkvLinearNode.inTensorIds = {INTERMEDIATE_INPUTLAYERNORMOUT, IN_QKVWEIGHT, IN_QKVBIAS};
-    qkvLinearNode.outTensorIds = {INTERMEDIATE_MIXEDQKVLINEAROUT};
+    qkvLinearNode.inTensorIds = { INTERMEDIATE_INPUTLAYERNORMOUT, IN_QKVWEIGHT, IN_QKVBIAS };
+    qkvLinearNode.outTensorIds = { INTERMEDIATE_MIXEDQKVLINEAROUT };
 
     // rope [1, n_tokens, hidden_size] to 3 * [1, n_tokens, hidden_size]
     atb_speed::gptneox_20b::PositionEmbeddingParam positionEmbeddingParam;
@@ -112,8 +112,8 @@ atb::Status FlashAttentionKvCacheLayer(const LayerParam &param, atb::Operation *
     positionEmbeddingParam.dk = param.dk;
     positionEmbeddingParam.rotaryPct = param.rotaryPct;
     atb_speed::gptneox_20b::PositionEmbedding(positionEmbeddingParam, &positionEmbeddingNode.operation);
-    positionEmbeddingNode.inTensorIds = {INTERMEDIATE_MIXEDQKVLINEAROUT, IN_POSITIONIDS, IN_COSEMBED, IN_SINEMBED};
-    positionEmbeddingNode.outTensorIds = {INTERMEDIATE_QUERYEMBED, INTERMEDIATE_KEYEMBED, INTERMEDIATE_VALUE};
+    positionEmbeddingNode.inTensorIds = { INTERMEDIATE_MIXEDQKVLINEAROUT, IN_POSITIONIDS, IN_COSEMBED, IN_SINEMBED };
+    positionEmbeddingNode.outTensorIds = { INTERMEDIATE_QUERYEMBED, INTERMEDIATE_KEYEMBED, INTERMEDIATE_VALUE };
 
     atb::infer::SelfAttentionParam selfAttentionParam;
     selfAttentionParam.headDim = param.dk;
@@ -124,44 +124,45 @@ atb::Status FlashAttentionKvCacheLayer(const LayerParam &param, atb::Operation *
     CREATE_OPERATION(selfAttentionParam, &selfAttentionKvCacheFusionNode.operation);
     selfAttentionKvCacheFusionNode.inTensorIds = {
         INTERMEDIATE_QUERYEMBED, INTERMEDIATE_KEYEMBED, INTERMEDIATE_VALUE, IN_CACHEK, IN_CACHEV,
-        IN_ATTENTIONMASK, IN_TOKENOFFSET, IN_SEQLEN, IN_LAYERID};
-    selfAttentionKvCacheFusionNode.outTensorIds = {INTERMEDIATE_SELFATTNOUT};
+        IN_ATTENTIONMASK,        IN_TOKENOFFSET,        IN_SEQLEN,          IN_LAYERID
+    };
+    selfAttentionKvCacheFusionNode.outTensorIds = { INTERMEDIATE_SELFATTNOUT };
 
     // different parallel linear
     CREATE_OPERATION(linearParam, &selfAttnLinearNode.operation);
-    selfAttnLinearNode.inTensorIds = {INTERMEDIATE_SELFATTNOUT, IN_SELFOUTLINEARWEIGHT, IN_SELFOUTLINEARBIAS};
-    selfAttnLinearNode.outTensorIds = {INTERMEDIATE_SELFATTNLINEAROUT};
+    selfAttnLinearNode.inTensorIds = { INTERMEDIATE_SELFATTNOUT, IN_SELFOUTLINEARWEIGHT, IN_SELFOUTLINEARBIAS };
+    selfAttnLinearNode.outTensorIds = { INTERMEDIATE_SELFATTNLINEAROUT };
 
     CREATE_OPERATION(layerNormParam, &postAttnLayerNormNode.operation);
-    postAttnLayerNormNode.inTensorIds = {IN_HIDDENSTATES, IN_POSTATTNLAYERNORMWEIGHT, IN_POSTATTNLAYERNORMBIAS};
-    postAttnLayerNormNode.outTensorIds = {INTERMEDIATE_POSTATTNLAYERNORMOUT};
+    postAttnLayerNormNode.inTensorIds = { IN_HIDDENSTATES, IN_POSTATTNLAYERNORMWEIGHT, IN_POSTATTNLAYERNORMBIAS };
+    postAttnLayerNormNode.outTensorIds = { INTERMEDIATE_POSTATTNLAYERNORMOUT };
 
     CREATE_OPERATION(linearParam, &ffnLinearNode.operation);
-    ffnLinearNode.inTensorIds = {INTERMEDIATE_POSTATTNLAYERNORMOUT, IN_FFNLINEARWEIGHT, IN_FFNLINEARBIAS};
-    ffnLinearNode.outTensorIds = {INTERMEDIATE_FFNLINEAROUT};
+    ffnLinearNode.inTensorIds = { INTERMEDIATE_POSTATTNLAYERNORMOUT, IN_FFNLINEARWEIGHT, IN_FFNLINEARBIAS };
+    ffnLinearNode.outTensorIds = { INTERMEDIATE_FFNLINEAROUT };
 
     atb::infer::ActivationParam activationParam;
     activationParam.activationType = atb::infer::ActivationType::ACTIVATION_GELU;
     CREATE_OPERATION(activationParam, &ffnActNode.operation);
-    ffnActNode.inTensorIds = {INTERMEDIATE_FFNLINEAROUT};
-    ffnActNode.outTensorIds = {INTERMEDIATE_FFNACTOUT};
+    ffnActNode.inTensorIds = { INTERMEDIATE_FFNLINEAROUT };
+    ffnActNode.outTensorIds = { INTERMEDIATE_FFNACTOUT };
 
     CREATE_OPERATION(linearParam, &ffnOutLinearNode.operation);
-    ffnOutLinearNode.inTensorIds = {INTERMEDIATE_FFNACTOUT, IN_FFNOUTLINEARWEIGHT, IN_FFNOUTLINEARBIAS};
-    ffnOutLinearNode.outTensorIds = {INTERMEDIATE_FFNOUTLINEAROUT};
+    ffnOutLinearNode.inTensorIds = { INTERMEDIATE_FFNACTOUT, IN_FFNOUTLINEARWEIGHT, IN_FFNOUTLINEARBIAS };
+    ffnOutLinearNode.outTensorIds = { INTERMEDIATE_FFNOUTLINEAROUT };
 
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ELEWISE_ADD;
     CREATE_OPERATION(addParam, &attnResidualAddNode.operation);
-    attnResidualAddNode.inTensorIds = {IN_HIDDENSTATES, INTERMEDIATE_SELFATTNLINEAROUT};
-    attnResidualAddNode.outTensorIds = {INTERMEDIATE_ATTNRESIDUALADDOUT};
+    attnResidualAddNode.inTensorIds = { IN_HIDDENSTATES, INTERMEDIATE_SELFATTNLINEAROUT };
+    attnResidualAddNode.outTensorIds = { INTERMEDIATE_ATTNRESIDUALADDOUT };
 
     CREATE_OPERATION(addParam, &ffnResidualAddNode.operation);
-    ffnResidualAddNode.inTensorIds = {INTERMEDIATE_ATTNRESIDUALADDOUT, INTERMEDIATE_FFNOUTLINEAROUT};
-    ffnResidualAddNode.outTensorIds = {OUT_GPTNEOXLAYEROUT};
+    ffnResidualAddNode.inTensorIds = { INTERMEDIATE_ATTNRESIDUALADDOUT, INTERMEDIATE_FFNOUTLINEAROUT };
+    ffnResidualAddNode.outTensorIds = { OUT_GPTNEOXLAYEROUT };
 
     opGraph.inferShapeFunc = [](const atb::SVector<atb::TensorDesc> &inTensorDescs,
-                                atb::SVector<atb::TensorDesc> &outTensorDescs) {
+        atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(0);
         return atb::NO_ERROR;
     };
@@ -194,8 +195,8 @@ atb::Operation *CreateFlashAttentionKvCacheRopeLayer(const nlohmann::json &param
         param.qkScale = paramJson["qkScale"].get<int>();
     }
 
-    ATB_LOG(INFO) << __func__ << " layerNormEps:" << param.layerNormEps << ", headNum:" << param.headNum
-                  << ", dk:" << param.dk << ", model:" << param.model;
+    ATB_LOG(INFO) << __func__ << " layerNormEps:" << param.layerNormEps << ", headNum:" << param.headNum << ", dk:" <<
+        param.dk << ", model:" << param.model;
     atb::Operation *op;
     FlashAttentionKvCacheRopeLayer(param, &op);
     return op;

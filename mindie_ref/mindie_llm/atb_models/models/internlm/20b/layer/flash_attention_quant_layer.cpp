@@ -130,33 +130,33 @@ atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param,
     inputNormParam.normParam.quantInputOffset = param.qProjInputOffset;
     inputNormParam.normParam.quantType = atb::infer::QUANT_INT8;
     CREATE_OPERATION(inputNormParam, &inputNormNode.operation);
-    inputNormNode.inTensorIds = {IN_HIDDEN_STATES, IN_NORM_WEIGHT, IN_NORM_BETA};
-    inputNormNode.outTensorIds = {INTERNAL_INPUT_NORM_OUT}; // int8
+    inputNormNode.inTensorIds = { IN_HIDDEN_STATES, IN_NORM_WEIGHT, IN_NORM_BETA };
+    inputNormNode.outTensorIds = { INTERNAL_INPUT_NORM_OUT }; // int8
 
     // q_proj
     atb::infer::LinearQuantParam mixedQkvLinearParam;
     mixedQkvLinearParam.transposeB = true;
     CREATE_OPERATION(mixedQkvLinearParam, &qLinearNode.operation);
-    qLinearNode.inTensorIds = {INTERNAL_INPUT_NORM_OUT, IN_Q_LINEAR_WEIGHT, IN_Q_LINEAR_BIAS, IN_Q_LINEAR_DEQSCALE};
-    qLinearNode.outTensorIds = {INTERNAL_MIXED_Q};
+    qLinearNode.inTensorIds = { INTERNAL_INPUT_NORM_OUT, IN_Q_LINEAR_WEIGHT, IN_Q_LINEAR_BIAS, IN_Q_LINEAR_DEQSCALE };
+    qLinearNode.outTensorIds = { INTERNAL_MIXED_Q };
 
     // k_proj
     CREATE_OPERATION(mixedQkvLinearParam, &kLinearNode.operation);
-    kLinearNode.inTensorIds = {INTERNAL_INPUT_NORM_OUT, IN_K_LINEAR_WEIGHT, IN_K_LINEAR_BIAS, IN_K_LINEAR_DEQSCALE};
-    kLinearNode.outTensorIds = {INTERNAL_MIXED_K};
+    kLinearNode.inTensorIds = { INTERNAL_INPUT_NORM_OUT, IN_K_LINEAR_WEIGHT, IN_K_LINEAR_BIAS, IN_K_LINEAR_DEQSCALE };
+    kLinearNode.outTensorIds = { INTERNAL_MIXED_K };
 
     // v_proj
     CREATE_OPERATION(mixedQkvLinearParam, &vLinearNode.operation);
-    vLinearNode.inTensorIds = {INTERNAL_INPUT_NORM_OUT, IN_V_LINEAR_WEIGHT, IN_V_LINEAR_BIAS, IN_V_LINEAR_DEQSCALE};
-    vLinearNode.outTensorIds = {INTERNAL_MIXED_V};
+    vLinearNode.inTensorIds = { INTERNAL_INPUT_NORM_OUT, IN_V_LINEAR_WEIGHT, IN_V_LINEAR_BIAS, IN_V_LINEAR_DEQSCALE };
+    vLinearNode.outTensorIds = { INTERNAL_MIXED_V };
 
     // 旋转计算
     atb_speed::internlm_7b::RopeParam ropeParam;
     ropeParam.rotaryCoeff = ROTARY_COEFF; // 旋转系数
     ropeParam.headNum = param.headNum;
     atb_speed::internlm_7b::Rope(ropeParam, &ropeNode.operation);
-    ropeNode.inTensorIds = {INTERNAL_MIXED_Q, INTERNAL_MIXED_K, IN_COS_EMBED, IN_SIN_EMBED, IN_SEQ_LEN};
-    ropeNode.outTensorIds = {INTERMIDATE_Q_MIXEDLINEAROUT, INTERMIDATE_K_MIXEDLINEAROUT};
+    ropeNode.inTensorIds = { INTERNAL_MIXED_Q, INTERNAL_MIXED_K, IN_COS_EMBED, IN_SIN_EMBED, IN_SEQ_LEN };
+    ropeNode.outTensorIds = { INTERMIDATE_Q_MIXEDLINEAROUT, INTERMIDATE_K_MIXEDLINEAROUT };
 
     // self attention
     atb::infer::SelfAttentionParam selfAttentionParam;
@@ -164,19 +164,19 @@ atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param,
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / sqrt(param.dk);
     CREATE_OPERATION(selfAttentionParam, &selfAttentionKvCacheNode.operation);
-    selfAttentionKvCacheNode.inTensorIds = {INTERMIDATE_Q_MIXEDLINEAROUT,
-                                            INTERMIDATE_K_MIXEDLINEAROUT,
-                                            INTERNAL_MIXED_V,
-                                            IN_PAST_KEY,
-                                            IN_PAST_VALUE,
-                                            IN_ATTENTION_MASK,
-                                            IN_TOKEN_OFFSET,
-                                            IN_SEQ_LEN,
-                                            IN_LAYER_ID};
-    selfAttentionKvCacheNode.outTensorIds = {INTERNAL_SELF_OUT};
+    selfAttentionKvCacheNode.inTensorIds = { INTERMIDATE_Q_MIXEDLINEAROUT,
+        INTERMIDATE_K_MIXEDLINEAROUT,
+        INTERNAL_MIXED_V,
+        IN_PAST_KEY,
+        IN_PAST_VALUE,
+        IN_ATTENTION_MASK,
+        IN_TOKEN_OFFSET,
+        IN_SEQ_LEN,
+        IN_LAYER_ID };
+    selfAttentionKvCacheNode.outTensorIds = { INTERNAL_SELF_OUT };
     selfAttentionKvCacheNode.inTensorReshapeFuncs.resize(selfAttentionKvCacheNode.operation->GetInputNum());
     selfAttentionKvCacheNode.inTensorReshapeFuncs[SELF_ATTENTION_V_INPUT_INDEX] = [=](const atb::Dims &oldShape,
-                                                                                      atb::Dims &newShape) {
+        atb::Dims &newShape) {
         newShape.dimNum = SELF_ATTENTION_V_INPUT_SIZE;
         size_t newShapeDimIndex = 0;
         size_t oldShapeDimIndex = 0;
@@ -200,20 +200,20 @@ atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param,
     selfOutLinearParam.quantParam.inputScale = param.oProjInputScale; // 使用o_proj的量化参数
     selfOutLinearParam.quantParam.inputOffset = param.oProjInputOffset;
     atb_speed::common::RowParallelLinearV2(selfOutLinearParam, &selfOutLinearNode.operation);
-    selfOutLinearNode.inTensorIds = {INTERNAL_SELF_OUT,
-                                     IN_SELF_OUT_LINEAR_WEIGHT,
-                                     IN_SELF_OUT_LINEAR_BIAS,
-                                     IN_SELF_OUT_LINEAR_DEQSCALE,
-                                     IN_HOLDER,
-                                     IN_HOLDER,
-                                     IN_HOLDER};
-    selfOutLinearNode.outTensorIds = {INTERNAL_SELF_LINEAR_OUT}; // float
+    selfOutLinearNode.inTensorIds = { INTERNAL_SELF_OUT,
+        IN_SELF_OUT_LINEAR_WEIGHT,
+        IN_SELF_OUT_LINEAR_BIAS,
+        IN_SELF_OUT_LINEAR_DEQSCALE,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER };
+    selfOutLinearNode.outTensorIds = { INTERNAL_SELF_LINEAR_OUT }; // float
 
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
     CREATE_OPERATION(addParam, &selfResidualAddNode.operation);
-    selfResidualAddNode.inTensorIds = {IN_HIDDEN_STATES, INTERNAL_SELF_LINEAR_OUT};
-    selfResidualAddNode.outTensorIds = {INTERNAL_SELF_RESIDUAL_ADD_OUT};
+    selfResidualAddNode.inTensorIds = { IN_HIDDEN_STATES, INTERNAL_SELF_LINEAR_OUT };
+    selfResidualAddNode.outTensorIds = { INTERNAL_SELF_RESIDUAL_ADD_OUT };
 
     atb::infer::RmsNormParam selfNormParam;
     selfNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
@@ -221,8 +221,8 @@ atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param,
     selfNormParam.normParam.quantInputOffset = param.gateProjInputOffset; // gate
     selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;           // 量化int8
     CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
-    selfNormNode.inTensorIds = {INTERNAL_SELF_RESIDUAL_ADD_OUT, IN_SELF_OUT_NORM_WEIGHT, IN_SELF_OUT_BETA}; // quant
-    selfNormNode.outTensorIds = {INTERNAL_SELF_NORM_OUT};
+    selfNormNode.inTensorIds = { INTERNAL_SELF_RESIDUAL_ADD_OUT, IN_SELF_OUT_NORM_WEIGHT, IN_SELF_OUT_BETA }; // quant
+    selfNormNode.outTensorIds = { INTERNAL_SELF_NORM_OUT };
 
     // 量化mlp
     atb_speed::common::MlpGateParamV2 mlpParam;
@@ -244,35 +244,35 @@ atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param,
     mlpParam.quantDownParam.inputOffset = param.downProjInputOffset;
 
     atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);
-    mlpNode.inTensorIds = {INTERNAL_SELF_NORM_OUT,
-                           IN_MLP_UP_WEIGHT,
-                           IN_MLP_GATE_WEIGHT,
-                           IN_MLP_DOWN_WEIGHT,
-                           IN_MLP_UP_DEQSCALE,
-                           IN_MLP_GATE_DEQSCALE,
-                           IN_MLP_DOWN_DEQSCALE,
-                           IN_MLP_UP_BIAS,
-                           IN_MLP_GATE_BIAS,
-                           IN_MLP_DOWN_BIAS,
-                           IN_HOLDER,
-                           IN_HOLDER,
-                           IN_HOLDER,
-                           IN_HOLDER,
-                           IN_HOLDER,
-                           IN_HOLDER,
-                           IN_HOLDER,
-                           IN_HOLDER,
-                           IN_HOLDER}; // float
-    mlpNode.outTensorIds = {INTERNAL_MLP_OUT};
+    mlpNode.inTensorIds = { INTERNAL_SELF_NORM_OUT,
+        IN_MLP_UP_WEIGHT,
+        IN_MLP_GATE_WEIGHT,
+        IN_MLP_DOWN_WEIGHT,
+        IN_MLP_UP_DEQSCALE,
+        IN_MLP_GATE_DEQSCALE,
+        IN_MLP_DOWN_DEQSCALE,
+        IN_MLP_UP_BIAS,
+        IN_MLP_GATE_BIAS,
+        IN_MLP_DOWN_BIAS,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER }; // float
+    mlpNode.outTensorIds = { INTERNAL_MLP_OUT };
 
     // add
     CREATE_OPERATION(addParam, &mlpResidualAddNode.operation);
-    mlpResidualAddNode.inTensorIds = {INTERNAL_SELF_RESIDUAL_ADD_OUT, INTERNAL_MLP_OUT};
-    mlpResidualAddNode.outTensorIds = {OUT_LAYER_OUT};
+    mlpResidualAddNode.inTensorIds = { INTERNAL_SELF_RESIDUAL_ADD_OUT, INTERNAL_MLP_OUT };
+    mlpResidualAddNode.outTensorIds = { OUT_LAYER_OUT };
 
     // 全局tensor reshape
     opGraph.inferShapeFunc = [](const atb::SVector<atb::TensorDesc> &inTensorDescs,
-                                atb::SVector<atb::TensorDesc> &outTensorDescs) {
+        atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(0);
         return atb::NO_ERROR;
     };
@@ -302,7 +302,7 @@ void FlashAttentionQuantLayerBinder::BindTensor(atb::VariantPack &variantPack)
     variantPack.inTensors.at(IN_SEQ_LEN).hostData = seqLen_.data();
 }
 
-void from_json(const nlohmann::json &paramJson, FlashAttentionQuantLayerParam &param)
+void from_json(const nlohmann::json &paramJson, const FlashAttentionQuantLayerParam &param)
 {
     paramJson.at("rmsNormEps").get_to(param.rmsNormEps);
     paramJson.at("headNum").get_to(param.headNum);
@@ -339,6 +339,5 @@ atb::Operation *CreateFlashAttentionQuantLayer(const nlohmann::json &paramJson)
     atb_speed::internlm_20b::FlashAttentionQuantLayer(paramJson.get<FlashAttentionQuantLayerParam>(), &op);
     return op;
 }
-
 } // namespace internlm_20b
 } // namespace atb_speed

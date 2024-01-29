@@ -1,23 +1,23 @@
 /*
-* Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #include "layer.h"
 
 namespace atb_speed {
 namespace gptneox_20b {
-enum LayerTensorId {
+enum LayerTensorId : int{
     IN_EMBEDDING_WEIGHTS = 0,
     IN_INPUT_IDS,
     IN_COS_TABLE,
@@ -54,19 +54,19 @@ atb::Status EmbeddingLayer(const EmbeddingLayerParam &param, atb::Operation **op
     gatherParam.axis = param.axis;
 
     CREATE_OPERATION(gatherParam, &inputIdEmbeddingNode.operation);
-    inputIdEmbeddingNode.inTensorIds = {IN_EMBEDDING_WEIGHTS, IN_INPUT_IDS};
-    inputIdEmbeddingNode.outTensorIds = {OUT_HIDDEN_STATES};
+    inputIdEmbeddingNode.inTensorIds = { IN_EMBEDDING_WEIGHTS, IN_INPUT_IDS };
+    inputIdEmbeddingNode.outTensorIds = { OUT_HIDDEN_STATES };
 
     CREATE_OPERATION(gatherParam, &cosEmbeddingNode.operation);
-    cosEmbeddingNode.inTensorIds = {IN_COS_TABLE, IN_POSITION_IDS};
-    cosEmbeddingNode.outTensorIds = {OUT_COS_EMBED};
+    cosEmbeddingNode.inTensorIds = { IN_COS_TABLE, IN_POSITION_IDS };
+    cosEmbeddingNode.outTensorIds = { OUT_COS_EMBED };
 
     CREATE_OPERATION(gatherParam, &sinEmbeddingNode.operation);
-    sinEmbeddingNode.inTensorIds = {IN_SIN_TABLE, IN_POSITION_IDS};
-    sinEmbeddingNode.outTensorIds = {OUT_SIN_EMBED};
+    sinEmbeddingNode.inTensorIds = { IN_SIN_TABLE, IN_POSITION_IDS };
+    sinEmbeddingNode.outTensorIds = { OUT_SIN_EMBED };
 
     opGraph.inferShapeFunc = [](const atb::SVector<atb::TensorDesc> &inTensorDescs,
-                                atb::SVector<atb::TensorDesc> &outTensorDescs) {
+        atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(0);
         outTensorDescs.at(0).shape.dimNum = OUT_TENSOR_DIM_NUM;
         // [batch_size, seq_len, hidden_size]
@@ -113,12 +113,11 @@ atb::Operation *CreateFlashAttentionKvCacheLayer(const nlohmann::json &paramJson
         param.qkScale = paramJson["qkScale"].get<int>();
     }
 
-    ATB_LOG(INFO) << __func__ << " layerNormEps:" << param.layerNormEps << ", headNum:" << param.headNum
-                  << ", dk:" << param.dk << ", model:" << param.model;
+    ATB_LOG(INFO) << __func__ << " layerNormEps:" << param.layerNormEps << ", headNum:" << param.headNum << ", dk:" <<
+        param.dk << ", model:" << param.model;
     atb::Operation *op;
     FlashAttentionKvCacheLayer(param, &op);
     return op;
 }
-
 } // namespace gptneox_20b
 } // atb_speed
