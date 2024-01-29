@@ -243,7 +243,7 @@ atb::Status FlashAttentionWithPosEmbedding::RotaryPositionEmbedding(const FTWith
                                          &squeezeRopeIntensor};
     }
 
-    opGraph.inferShapeFunc = [g_headNum, g_kvHeadNum, g_hiddenSizePerHead]
+    opGraph.inferShapeFunc = []
                 (const atb::SVector<atb::TensorDesc> &inTensorDescs, atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(0);
         outTensorDescs.at(0).shape.dimNum = DIM_NUM_4;
