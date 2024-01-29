@@ -49,7 +49,7 @@ struct FlashAttentionQuantLayerParam {
     std::string model = "internlm_20b";
 };
 
-void from_json(const nlohmann::json &paramJson, FlashAttentionQuantLayerParam &param);
+void from_json(const nlohmann::json &paramJson, const FlashAttentionQuantLayerParam &param);
 
 atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param, const atb::Operation **operation);
 

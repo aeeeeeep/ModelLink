@@ -36,7 +36,7 @@ struct FlashAttentionRopeLayerParam {
 
 atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, atb::Operation **operation);
 
-void from_json(const nlohmann::json &paramJson, const FlashAttentionRopeLayerParam &param);
+void from_json(const nlohmann::json &paramJson, FlashAttentionRopeLayerParam &param);
 
 atb::Operation *CreateFlashAttentionRopeLayer(const nlohmann::json &paramJson);
 
