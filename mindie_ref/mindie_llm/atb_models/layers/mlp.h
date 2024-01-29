@@ -19,6 +19,7 @@
 
 #include <atb/atb_infer.h>
 #include "atb_speed/log.h"
+#include "atb_speed/utils/operation_util.h"
 #include "nlohmann/json.hpp"
 #include "common.h"
 
