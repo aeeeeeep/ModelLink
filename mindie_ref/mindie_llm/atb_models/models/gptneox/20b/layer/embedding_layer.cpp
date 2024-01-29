@@ -17,7 +17,7 @@
 
 namespace atb_speed {
 namespace gptneox_20b {
-enum LayerTensorId : int{
+enum LayerTensorId : int {
     IN_EMBEDDING_WEIGHTS = 0,
     IN_INPUT_IDS,
     IN_COS_TABLE,

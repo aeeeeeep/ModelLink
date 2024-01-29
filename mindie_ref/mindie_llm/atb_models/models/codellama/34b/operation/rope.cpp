@@ -107,5 +107,16 @@ atb::Status Rope(const RopeParam &param, atb::Operation **operation)
     CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
 }
+
+atb::Operation *CreateRope(const nlohmann::json &paramJson)
+{
+    atb_speed::codellama_34b::RopeParam param;
+    param.rotaryCoeff = paramJson["rotaryCoeff"].get<int>();
+    param.headNum = paramJson["headNum"].get<int>();
+    param.kvHeadNum = paramJson["kvHeadNum"].get<int>();
+    atb::Operation *op;
+    atb_speed::codellama_34b::Rope(param, &op);
+    return op;
+}
 } // namespace codellama_34b
 } // namespace atb_speed

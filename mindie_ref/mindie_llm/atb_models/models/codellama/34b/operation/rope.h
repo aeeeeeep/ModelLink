@@ -31,16 +31,7 @@ struct RopeParam {
 
 atb::Status Rope(const RopeParam &param, atb::Operation **operation);
 
-static atb::Operation *CreateRope(const nlohmann::json &paramJson)
-{
-    atb_speed::codellama_34b::RopeParam param;
-    param.rotaryCoeff = paramJson["rotaryCoeff"].get<int>();
-    param.headNum = paramJson["headNum"].get<int>();
-    param.kvHeadNum = paramJson["kvHeadNum"].get<int>();
-    atb::Operation *op;
-    atb_speed::codellama_34b::Rope(param, &op);
-    return op;
-}
+atb::Operation *CreateRope(const nlohmann::json &paramJson);
 } // namespace codellama_34b
 } // namespace atb_speed
 #endif

@@ -39,7 +39,7 @@ struct FlashAttentionKvCacheRopeParam {
 
 atb::Status FlashAttentionKvCacheRopeLayer(const FlashAttentionKvCacheRopeParam &param, atb::Operation **operation);
 
-static atb::Operation *CreateFlashAttentionKvCacheRopeLayer(const nlohmann::json &paramJson);
+atb::Operation *CreateFlashAttentionKvCacheRopeLayer(const nlohmann::json &paramJson);
 
 class FlashAttentionRopeHostBinder : public HostTensorBinder {
 public:
