@@ -32,13 +32,15 @@
 #include "baichuan2/13b/model/flash_attention_quant_model.h"
 #include "baichuan2/13b/model/paged_attention_model.h"
 #include "baichuan2/13b/model/paged_attention_quant_model.h"
-#include "chatglm2//6b/model/paged_attention_model.h"
+#include "chatglm2/6b/model/paged_attention_model.h"
 #include "llama/model/anti_quant_flashattention_model.h"
 #include "llama/model/flash_attention_model.h"
 #include "llama_adapter/model/adapter_model.h"
 #include "llama_pa/model/paged_attention_model.h"
 #include "llama_pa/model/quant_paged_attention_model.h"
 #include "llama_parallel/model/decoder_model.h"
+#include "minigpt4/model/fusion_encoder_model.h"
+#include "minigpt4/model/fusion_model.h"
 #include "pytorch/adapter/utils/utils.h"
 #include "pytorch/adapter/workspace/workspace.h"
 #include "telechat/model/model.h"
@@ -46,6 +48,8 @@
 #include "baichuan2/7b/model/flash_attention_rope_model.h"
 #include "baichuan2/7b/model/paged_attention_model.h"
 #include "falcon/40b/model/flash_attention_model.h"
+#include "qwen/14b/model/flash_attention_model.h"
+#include "aquila/7b/model/flash_attention_model.h"
 
 void *ModelTorch::GetWorkSpace(uint64_t bufferSize)
 {
@@ -124,6 +128,10 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::baichuan2_13b::PagedAttentionModel>(param);
     } else if (modelName_ == "baichuan2_13b_pa_quant_model") {
         model_ = std::make_shared<atb_speed::baichuan2_13b::PagedAttentionQuantModel>(param);
+    } else if (modelName_ == "minigpt4_vicuna_7b_encoder_model") {
+        model_ = std::make_shared<atb_speed::minigpt4_vicuna_7b::FusionEncoderModel>(param);
+    } else if (modelName_ == "minigpt4_vicuna_7b_decoder_model") {
+        model_ = std::make_shared<atb_speed::minigpt4_vicuna_7b::FusionModel>(param);
     } else if (modelName_ == "baichuan2_7b_flash_attention_rope_model") {
         model_ = std::make_shared<atb_speed::baichuan2_7b::FlashAttentionRopeModel>(param);
     } else if (modelName_ == "baichuan2_7b_flash_attention_quant_model") {
@@ -132,7 +140,11 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::baichuan2_7b::PagedAttentionModel>(param);
     } else if (modelName_ == "falcon_40b_model") {
         model_ = std::make_shared<atb_speed::falcon_40b::FusionModel>(param);
-    } else {
+    } else if (modelName_ == "qwen_14b_flash_attention_model") {
+        model_ = std::make_shared<atb_speed::qwen_14b::FlashAttentionModel>(param);
+    } else if (modelName_ == "aquila_7b_flash_attention_model") {
+        model_ = std::make_shared<atb_speed::aquila_7b::FlashAttentionRopeModel>(param);
+    }  else {
         ATB_LOG(FATAL) << "not support modelName:" << modelName_;
         return atb::ERROR_INVALID_PARAM;
     }

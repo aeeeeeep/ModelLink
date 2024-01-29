@@ -17,6 +17,7 @@
 #define ATB_SPEED_MODELS_CHATGML2_6B_COMMON_MODEL_FA_H
 
 #include "atb_speed/base/model.h"
+#include "atb_speed/utils/operation_util.h"
 
 namespace atb_speed {
 namespace chatglm2_6b {

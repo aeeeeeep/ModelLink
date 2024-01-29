@@ -100,11 +100,11 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
         inputNormParam.normParam.quantInputScale = param.qkvInputScale;
         inputNormParam.normParam.quantInputOffset = param.qkvInputOffset;
         inputNormParam.normParam.quantType = atb::infer::QUANT_INT8;
-        CreateOperation(inputNormParam, &inputNormNode.operation);
+        CREATE_OPERATION(inputNormParam, &inputNormNode.operation);
         inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT, IN_BETA};
     } else {
         inputNormParam.normParam.epsilon = param.rmsNormEps;
-        CreateOperation(inputNormParam, &inputNormNode.operation);
+        CREATE_OPERATION(inputNormParam, &inputNormNode.operation);
         inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT};
     }
     inputNormNode.outTensorIds = {INTERMIDATE_INPUTNORMOUT};
@@ -179,7 +179,7 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
     
     atb::infer::ElewiseParam AddParam;
     AddParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CreateOperation(AddParam, &selfResidualAddNode.operation);
+    CREATE_OPERATION(AddParam, &selfResidualAddNode.operation);
     selfResidualAddNode.inTensorIds = {IN_HIDDENSTATES, INTERMEDIATE_ATTENTION_OUTPUT};
     selfResidualAddNode.outTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT};
     atb::infer::RmsNormParam selfNormParam;
@@ -188,10 +188,10 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
         selfNormParam.normParam.quantInputScale = param.selfLnInputScale;
         selfNormParam.normParam.quantInputOffset = param.selfLnInputOffset;
         selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
-        CreateOperation(selfNormParam, &selfNormNode.operation);
+        CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
         selfNormNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_BETA};
     } else {
-        CreateOperation(selfNormParam, &selfNormNode.operation);
+        CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
         selfNormNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT};
     }
     selfNormNode.outTensorIds = {INTERMIDATE_SELFNORMOUT};
@@ -222,7 +222,7 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
 
     atb::infer::ElewiseParam Add2Param;
     Add2Param.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CreateOperation(Add2Param, &mlpResidualAddNode.operation);
+    CREATE_OPERATION(Add2Param, &mlpResidualAddNode.operation);
     mlpResidualAddNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, INTERMIDATE_MLPOUT};
     mlpResidualAddNode.outTensorIds = {OUT_GLMLAYEROUT};
 
@@ -235,7 +235,7 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
 
         return atb::NO_ERROR;
     };
-    atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
 
     return atb::NO_ERROR;
 }
