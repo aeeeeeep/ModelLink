@@ -37,12 +37,6 @@ struct LayerParam {
     int rankSize = 1;
 };
 
-struct EmbeddingLayerParam {
-    int axis = 0;
-};
-
-atb::Status EmbeddingLayer(const EmbeddingLayerParam &param, atb::Operation **operation);
-
 atb::Status FlashAttentionKvCacheLayer(const LayerParam &param, atb::Operation **operation);
 
 atb::Operation *CreateFlashAttentionKvCacheLayer(const nlohmann::json &paramJson);

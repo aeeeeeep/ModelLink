@@ -23,27 +23,11 @@
 
 namespace atb_speed {
 namespace gptneox_20b {
-struct LayerParam {
-    float layerNormEps = 0;
-    int headNum = 0;
-    int dk = 0;
-    float rotaryPct = 0.0;
-    float qScale = 1.0;
-    float qkScale = 1.0;
-    bool transposedWeight = false;
-    std::string model = "gptneox_20b";
-    bool isPrefill = false;
-    int rank = 0;
-    int rankSize = 1;
-};
-
 struct EmbeddingLayerParam {
     int axis = 0;
 };
 
 atb::Status EmbeddingLayer(const EmbeddingLayerParam &param, atb::Operation **operation);
-
-atb::Status FlashAttentionKvCacheLayer(const LayerParam &param, atb::Operation **operation);
 
 atb::Operation *CreateEmbeddingLayer(const nlohmann::json &paramJson);
 
