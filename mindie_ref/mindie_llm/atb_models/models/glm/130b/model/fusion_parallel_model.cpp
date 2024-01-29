@@ -105,7 +105,7 @@ atb::Status FusionParallelModel::InferShape(const std::vector<atb::TensorDesc> &
     return atb::NO_ERROR;
 }
 
-void FusionParallelModel::BuildGraph()
+int64_t FusionParallelModel::BuildGraph()
 {
     const int weightTensorSize =
         WORDEMBEDDINGNODE_WEIGHT_COUNT + WEIGHT_COUNT_PER_LAYER * param_.layerNum + FINALNORMNODE_WEIGHT_COUNT;
@@ -201,6 +201,8 @@ void FusionParallelModel::BuildGraph()
     lmHeadNode.inTensors = {&graph_.internalTensors.at(internalTensorSize - 1),
                             &graph_.weightTensors.at(finalForwardWeightTensorId)};
     lmHeadNode.outTensors = {&graph_.outTensors.at(0)};
+
+    return atb::NO_ERROR;
 }
 
 atb::Status FusionParallelModel::ParseParam(const std::string &param)
