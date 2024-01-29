@@ -22,7 +22,7 @@
 
 #include "atb_speed/log.h"
 #include "layers/parallel_layer.h"
-#include "bloom/7b/layer/flash_attention_layer.h"
+#include "models/bloom/layer/flash_attention_layer.h"
 
 namespace atb_speed {
 namespace bloom_7b {
