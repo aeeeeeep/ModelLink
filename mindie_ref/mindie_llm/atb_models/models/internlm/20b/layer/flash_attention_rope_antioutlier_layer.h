@@ -35,7 +35,7 @@ struct FlashAttentionRopeAntiOutlierLayerParam {
     std::string model = "internlm_20b";
 };
 
-void from_json(const nlohmann::json &paramJson, const FlashAttentionRopeAntiOutlierLayerParam &param);
+void from_json(const nlohmann::json &paramJson, FlashAttentionRopeAntiOutlierLayerParam &param);
 
 atb::Status FlashAttentionRopeAntiOutlierLayer(const FlashAttentionRopeAntiOutlierLayerParam &param,
     atb::Operation **operation);

@@ -268,7 +268,7 @@ void FlashAttentionRopeAntiOutlierLayerBinder::BindTensor(atb::VariantPack &vari
     variantPack.inTensors.at(IN_SEQLEN).hostData = seqLen_.data();
 }
 
-void from_json(const nlohmann::json &paramJson, const FlashAttentionRopeAntiOutlierLayerParam &param)
+void from_json(const nlohmann::json &paramJson, FlashAttentionRopeAntiOutlierLayerParam &param)
 {
     paramJson.at("rmsNormEps").get_to(param.rmsNormEps);
     paramJson.at("headNum").get_to(param.headNum);

@@ -302,7 +302,7 @@ void FlashAttentionQuantLayerBinder::BindTensor(atb::VariantPack &variantPack)
     variantPack.inTensors.at(IN_SEQ_LEN).hostData = seqLen_.data();
 }
 
-void from_json(const nlohmann::json &paramJson, const FlashAttentionQuantLayerParam &param)
+void from_json(const nlohmann::json &paramJson, FlashAttentionQuantLayerParam &param)
 {
     paramJson.at("rmsNormEps").get_to(param.rmsNormEps);
     paramJson.at("headNum").get_to(param.headNum);
