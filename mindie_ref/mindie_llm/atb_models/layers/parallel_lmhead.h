@@ -19,6 +19,7 @@
 #include <nlohmann/json.hpp>
 
 #include "atb_speed/log.h"
+#include "atb_speed/utils/operation_util.h"
 #include "common.h"
 
 namespace atb_speed {

@@ -76,7 +76,7 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
     if (!param_.isQuant) {
         atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
         atb::infer::LinearParam matmulParam = {param_.transposeA, param_.transposeB, false};
-        atb::CreateOperation(matmulParam, &matmulNode.operation);
+        CREATE_OPERATION(matmulParam, &matmulNode.operation);
         matmulNode.inTensorIds = {IN_INPUT, IN_WEIGHT};
         matmulNode.outTensorIds = {(param_.commParam.rankSize > 1 || param_.isBias) ? inteId : OUT_LINEAR};
     } else {
@@ -86,7 +86,7 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
             quantParam.elewiseType = param_.quantParam.elewiseType;
             quantParam.quantParam.inputScale = param_.quantParam.inputScale;
             quantParam.quantParam.inputOffset = param_.quantParam.inputOffset;
-            atb::CreateOperation(quantParam, &quantNode.operation);
+            CREATE_OPERATION(quantParam, &quantNode.operation);
             quantNode.inTensorIds = {IN_INPUT};
             quantNode.outTensorIds = {inteId};
         }
@@ -94,14 +94,14 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
         if (param_.isSparse) {
             atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
             atb::infer::LinearSparseParam linearSparseParam = {false, true, 8, 8};
-            atb::CreateOperation(linearSparseParam, &matmulNode.operation);
+            CREATE_OPERATION(linearSparseParam, &matmulNode.operation);
             matmulNode.inTensorIds = {param_.quantParam.isQuantOp ? inteId++ : IN_INPUT, IN_WEIGHT,
                                       IN_BIAS, IN_DEQSCALE, IN_INDEX_IDS};
             matmulNode.outTensorIds = {param_.commParam.rankSize > 1 ? inteId : OUT_LINEAR};
         } else {
             atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
             atb::infer::LinearQuantParam matmulParam = {param_.transposeA, param_.transposeB, true};
-            atb::CreateOperation(matmulParam, &matmulNode.operation);
+            CREATE_OPERATION(matmulParam, &matmulNode.operation);
             matmulNode.inTensorIds = {param_.quantParam.isQuantOp ? inteId++ : IN_INPUT,
                                       IN_WEIGHT, IN_BIAS, IN_DEQSCALE};
             matmulNode.outTensorIds = {param_.commParam.rankSize > 1 ? inteId : OUT_LINEAR};
@@ -116,13 +116,13 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
             allReduceParam.rank = param_.commParam.rank;
             allReduceParam.rankSize = param_.commParam.rankSize;
             allReduceParam.backend = param_.commParam.backend;
-            atb::CreateOperation(allReduceParam, &parallelNode.operation);
+            CREATE_OPERATION(allReduceParam, &parallelNode.operation);
         } else {
             atb::infer::AllGatherParam allGatherParam;
             allGatherParam.rank = param_.commParam.rank;
             allGatherParam.rankSize = param_.commParam.rankSize;
             allGatherParam.backend = param_.commParam.backend;
-            atb::CreateOperation(allGatherParam, &parallelNode.operation);
+            CREATE_OPERATION(allGatherParam, &parallelNode.operation);
         }
 
         parallelNode.inTensorIds = {inteId++};
@@ -133,7 +133,7 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
         atb::Node &addNode = opGraph.nodes.at(nodeId++);
         atb::infer::ElewiseParam addParam;
         addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-        atb::CreateOperation(addParam, &addNode.operation);
+        CREATE_OPERATION(addParam, &addNode.operation);
         addNode.inTensorIds = {inteId, IN_BIAS};
         addNode.outTensorIds = {OUT_LINEAR};
     }
@@ -193,7 +193,7 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
         };
     }
 
-    atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
 }
 

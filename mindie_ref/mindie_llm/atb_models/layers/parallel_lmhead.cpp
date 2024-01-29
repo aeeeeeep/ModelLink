@@ -42,7 +42,7 @@ atb::Status CreateParallelLmHeadBase(const ParallelLmHeadParam &param, atb::Oper
     if (param.gatherAhead) {
         auto &gatherNode = opGraph.nodes.at(nodeId++);
         atb::infer::GatherParam gatherParam;
-        CreateOperation(gatherParam, &gatherNode.operation);
+        CREATE_OPERATION(gatherParam, &gatherNode.operation);
         gatherNode.inTensorIds = {config.IN_HIDDENSTATES_ID, config.IN_LMHEAD_INDICES_ID};
         gatherNode.outTensorIds = {config.INTERMIDATE_GATHER_OUT_ID};
     }
@@ -67,7 +67,7 @@ atb::Status CreateParallelLmHeadBase(const ParallelLmHeadParam &param, atb::Oper
         } else {
             transposeParam.perm = {1, 2, 0, 3};
         }
-        CreateOperation(transposeParam, &transposeNode.operation);
+        CREATE_OPERATION(transposeParam, &transposeNode.operation);
         transposeNode.inTensorIds = {config.INTERMEDIATE_ALLGATHER_OUT_ID};
         transposeNode.outTensorIds = {config.OUT_LOGITS_ID};
     }
@@ -91,7 +91,7 @@ atb::Status CreateParallelLmHeadBase(const ParallelLmHeadParam &param, atb::Oper
         };
     }
 
-    atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
 }
 
