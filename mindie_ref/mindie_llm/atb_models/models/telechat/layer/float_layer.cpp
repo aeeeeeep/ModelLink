@@ -150,7 +150,7 @@ atb::Status FloatFALayer(const FloatFALayerParam &param, atb::Operation **operat
     selfAttentionKvCacheFusedNode.outTensorIds = { INTERNAL_SELFOUT };
 
     ATB_LOG(INFO) << "Parallel linear";
-    atb_speed::common::ParallelParamV2 linearBiasParam;
+    atb_speed::telechat::ParallelParamV2 linearBiasParam;
     linearBiasParam.commParam.rank = param.rank;
     linearBiasParam.commParam.rankSize = param.rankSize;
     linearBiasParam.isBias = true;
