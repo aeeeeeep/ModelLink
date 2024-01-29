@@ -17,7 +17,8 @@
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
 #include "models/gptneox/20b/layer/flashattention_kvcache_rope_layer.h"
-#include "models/gptneox/20b/layer/layer.h"
+#include "models/gptneox/20b/layer/embedding_layer.h"
+#include "models/gptneox/20b/layer/flashattention_kvcache_layer.h"
 #include "nlohmann/json.hpp"
 
 namespace atb_speed {
