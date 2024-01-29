@@ -16,7 +16,7 @@
 #include "flash_attention_model.h"
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
-#include "models/falcon/7b//layers/flash_attention_layer.h"
+#include "models/falcon/7b//layer/flash_attention_layer.h"
 #include "nlohmann/json.hpp"
 
 namespace atb_speed {
