@@ -123,6 +123,10 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::baichuan2_13b::PagedAttentionModel>(param);
     } else if (modelName_ == "baichuan2_13b_pa_quant_model") {
         model_ = std::make_shared<atb_speed::baichuan2_13b::PagedAttentionQuantModel>(param);
+    } else if (modelName_ == "minigpt4_vicuna_7b_encoder_model") {
+        model_ = std::make_shared<atb_speed::minigpt4_vicuna_7b::FusionEncoderModel>(param);
+    } else if (modelName_ == "minigpt4_vicuna_7b_decoder_model") {
+        model_ = std::make_shared<atb_speed::minigpt4_vicuna_7b::FusionModel>(param);
     } else if (modelName_ == "baichuan2_7b_flash_attention_rope_model") {
         model_ = std::make_shared<atb_speed::baichuan2_7b::FlashAttentionRopeModel>(param);
     } else if (modelName_ == "baichuan2_7b_flash_attention_quant_model") {
