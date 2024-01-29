@@ -183,6 +183,7 @@ int64_t FloatFAModel::BuildGraph()
     lmHeadNode.inTensors = { &graph_.internalTensors.at(finalRmsNormOutTensorId),
                              &graph_.weightTensors.at(lmHeadWeightTensorId) };
     lmHeadNode.outTensors = { &graph_.outTensors.at(0) };
+    return atb::NO_ERROR;
 }
 
 atb::Status FloatFAModel::ParseParam(const std::string &param)
