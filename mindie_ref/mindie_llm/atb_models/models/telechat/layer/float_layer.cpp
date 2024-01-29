@@ -17,7 +17,7 @@
 #include "float_layer.h"
 #include "models/telechat/operation/rope.h"
 #include "models/telechat/operation/mlp_gate_v2.h"
-#include "layers/parallel_layer_v2.h"
+#include "models/telechat/operation/parallel_layer_v2.h"
 
 namespace atb_speed {
 namespace telechat {
