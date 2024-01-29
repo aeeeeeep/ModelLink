@@ -5,7 +5,7 @@ import jsonlines
 import torch
 from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 from modelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfig
-from transformers import AutoTokenizer, TelechatForCausalLM, TelechatConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 
 
 def quant(model, tokenizer):
@@ -66,8 +66,8 @@ def get_args():
 args = get_args()
 
 float_tokenizer = AutoTokenizer.from_pretrained(args.checkpoint_path)
-config = TelechatConfig.from_pretrained(args.checkpoint_path)
-float_model = TelechatForCausalLM.from_pretrained(args.checkpoint_path, config=config)
+config = AutoConfig.from_pretrained(args.checkpoint_path, trust_remote_code=True)
+float_model = AutoModelForCausalLM.from_pretrained(args.checkpoint_path, config=config, trust_remote_code=True)
 
 f = jsonlines.open(args.jsonl_path, "r")
 questions = []
