@@ -1,0 +1,3 @@
+gradio==3.39
+mdtex2html
+streamlit
