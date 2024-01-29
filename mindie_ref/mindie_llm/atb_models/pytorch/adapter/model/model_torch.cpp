@@ -59,7 +59,6 @@
 #include "internlm/20b/model/flash_attention_rope_model.h"
 #include "internlm/7b/model/flash_attention_rope_model.h"
 #include "codellama/34b/model/flash_attention_rope_model.h"
-
 #include "telechat/model/float_model.h"
 #include "telechat/model/quant_model.h"
 
