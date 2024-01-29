@@ -45,7 +45,7 @@ atb::Status EmbeddingLayer(const EmbeddingLayerParam &param, atb::Operation **op
 
 atb::Status FlashAttentionKvCacheLayer(const LayerParam &param, atb::Operation **operation);
 
-atb::Operation *CreateFlashAttentionKvCacheLayer(const nlohmann::json &paramJson);
+atb::Operation *CreateEmbeddingLayer(const nlohmann::json &paramJson);
 
 class FlashAttentionHostBinder : public HostTensorBinder {
 public:

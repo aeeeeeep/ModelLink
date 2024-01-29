@@ -89,7 +89,7 @@ atb::Status EmbeddingLayer(const EmbeddingLayerParam &param, atb::Operation **op
     return atb::NO_ERROR;
 }
 
-atb::Operation *CreateFlashAttentionKvCacheLayer(const nlohmann::json &paramJson)
+atb::Operation *CreateEmbeddingLayer(const nlohmann::json &paramJson)
 {
     LayerParam param;
     param.layerNormEps = paramJson["layerNormEps"].get<float>();

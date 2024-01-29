@@ -263,6 +263,7 @@ std::map<std::string, OperationCreateFunc> g_funcMap = {
     {"internlm_20b_flash_attention_rope_antioutlier_layer",
      &atb_speed::internlm_20b::CreateFlashAttentionRopeAntiOutlierLayer},
     {"gptneox_20b_flash_attention_kv_cache_layer", &atb_speed::gptneox_20b::CreateFlashAttentionKvCacheLayer},
+    {"gptneox_20b_embedding_layer", &atb_speed::gptneox_20b::CreateEmbeddingLayer},
     {"gptneox_20b_position_embedding_fusion", &atb_speed::gptneox_20b::CreatePositionEmbeddingFusionOperation},
     {"gptneox_20b_flash_attention_kv_cache_rope_layer", &atb_speed::gptneox_20b::CreateFlashAttentionKvCacheRopeLayer},
 };
