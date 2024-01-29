@@ -157,7 +157,11 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
                 if (dimNum == 3) {
                     outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[1];
                 }
-                outTensorDescs.at(0).shape.dims[dimNum - 1] = inTensorDescs.at(1).shape.dims[0];
+                if (param_.transposeB) {
+                    outTensorDescs.at(0).shape.dims[dimNum - 1] = inTensorDescs.at(1).shape.dims[1];
+                } else {
+                    outTensorDescs.at(0).shape.dims[dimNum - 1] = inTensorDescs.at(1).shape.dims[0];
+                }
             }
             return atb::NO_ERROR;
         };
