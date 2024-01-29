@@ -88,7 +88,6 @@ atb::Status CreateFusionParallelLayer(const FusionParallelLayerParam &param, atb
         selfAttentionParam.coderType = atb::infer::SelfAttentionParam::CoderType::DECODER;
     }
 
-    selfAttentionParam.isFusion = true;
     CreateOperation(selfAttentionParam, &selfAttentionKvCacheNode.operation);
     selfAttentionKvCacheNode.inTensorIds = {INTERMEDIATE_POSITIONEMBEDQ_ID,
                                             INTERMEDIATE_POSITIONEMBEDK_ID,

@@ -160,7 +160,6 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
         faEnParam.qScale = 1.0 / sqrt(param.dk);
         faEnParam.kvHeadNum = param.kvHead;         // 1
         faEnParam.isEncoder = true;
-        faEnParam.isFusion = true;
         CreateOperation(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERNAL_Q, INTERNAL_K, INTERNAL_V, IN_ATTENTIONMASK, IN_INPUT_LENGTHS};
         attentionNode.outTensorIds = {INTERMIDATE_SELFOUT};
