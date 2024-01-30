@@ -1,0 +1,1 @@
+torchrun --nproc_per_node 8 --master_port 39682 main.py --model_path /path/to/weights  --device 0 1 2 3 4 5 6 7 --data_dtype fp16 --hardware 910
