@@ -61,6 +61,5 @@ if __name__ == "__main__":
     st_test.run_shell()
     test_loader = unittest.TestLoader()
     discover = test_loader.discover(start_dir="../tests/ut", pattern="test*.py")
-    # 待新UT上来再恢复
-    # runner = unittest.TextTestRunner()
-    # success_check_ut(runner.run(discover))
+    runner = unittest.TextTestRunner()
+    success_check_ut(runner.run(discover))
