@@ -28,18 +28,18 @@ GPT_ARGS="
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --sequence-parallel \
-    --num-layers 32 \
-    --hidden-size 4096 \
-    --ffn-hidden-size 11008 \
-    --num-attention-heads 32 \
+    --num-layers 40 \
+    --hidden-size 5120 \
+    --ffn-hidden-size 13824 \
+    --num-attention-heads 40 \
     --tokenizer-type Llama2Tokenizer \
     --tokenizer-model ${TOKENIZER_MODEL} \
     --seq-length 4096 \
     --max-position-embeddings 4096 \
-    --micro-batch-size 4 \
+    --micro-batch-size 2 \
     --global-batch-size 16 \
     --make-vocab-size-divisible-by 1 \
-    --lr 1.25e-6 \
+    --lr 1e-6 \
     --train-iters 5000 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
@@ -54,14 +54,15 @@ GPT_ARGS="
     --use-flash-attn \
     --no-masked-softmax-fusion \
     --attention-softmax-in-fp32 \
-    --min-lr 1.25e-7 \
+    --min-lr 1e-8 \
     --weight-decay 1e-1 \
     --lr-warmup-fraction 0.01 \
     --clip-grad 1.0 \
     --adam-beta1 0.9 \
-    --initial-loss-scale 65536 \
+    --initial-loss-scale 4096 \
     --adam-beta2 0.95 \
     --no-gradient-accumulation-fusion \
+    --load ${CKPT_LOAD_DIR}  \
     --no-load-optim \
     --no-load-rng \
     --bf16
@@ -69,20 +70,19 @@ GPT_ARGS="
 
 DATA_ARGS="
     --data-path $DATA_PATH \
-    --split 100,0,0
+    --split 949,50,1
 "
 
 OUTPUT_ARGS="
     --log-interval 1 \
     --save-interval 10000 \
     --eval-interval 1000 \
-    --eval-iters 0 \
+    --eval-iters 10 \
 "
 
-torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
+python -m torch.distributed.launch $DISTRIBUTED_ARGS pretrain_gpt.py \
     $GPT_ARGS \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
-    --load $CKPT_LOAD_DIR \
     --save $CKPT_SAVE_DIR

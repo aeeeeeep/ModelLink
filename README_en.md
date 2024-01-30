@@ -20,9 +20,9 @@
     </p>
 </p>
 
-AscendSpeed provides end-to-end solutions for large language models on [Ascend](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) chips, including models, algorithms, kernels, and tasks.
+ModelLink provides end-to-end solutions for large language models on [Ascend](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) chips, including models, algorithms, kernels, and tasks.
 
-## Why AscendSpeed?
+## Why ModelLink?
 
 ---
 ### Prepared Models
@@ -225,7 +225,7 @@ Coming soon ...
       <td>13B</td>
       <td>1x8</td>
       <td>BF16 </td>
-      <td> 1468 </td>
+      <td> 1550 </td>
       <td> 1750 </td>
       <td> <a href="/sources/images/llama2/llama2_13b_bf16_loss_absolute.png">Loss</a> </td>
       <td> <a href="examples/llama2/pretrain_llama2_13B_ptd_8p.sh">Train</a> </td>
@@ -331,59 +331,59 @@ Coming soon ...
     <tr>
       <td rowspan="4"><a href="examples/llama/README.md">LLaMA</a></td>
       <td>7B</td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/llama/generate_llama_7B_deepspeed.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/evaluate_llama_7b_ptd.sh">evaluation</a>  </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/generate_llama_7B_deepspeed.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_7b_ptd.sh">evaluation</a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>13B</td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/llama/generate_llama_13B_tp1_pp8.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/evaluate_llama_13b_ptd.sh">evaluation</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/generate_llama_13B_tp1_pp8.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_13b_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>33B</td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/llama/generate_llama_33B_ptd.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/evaluate_llama_33B_ptd.sh">evaluation </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/generate_llama_33B_ptd.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_33B_ptd.sh">evaluation </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td > 65B </td>
       <td > -- </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/llama/generate_llama_65B_tp8_pp1.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/generate_llama_65B_tp8_pp1.sh">inference </a> </td>
       <td> -- </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</a></td>
       <td>7B</td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/llama2/tune_llama2_7b_ptd.sh">lora</a>  </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/llama/generate_llama2_7b_ptd.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/evaluate_llama2_7B_ptd.sh">evaluation </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_7b_ptd.sh">lora</a>  </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/generate_llama2_7b_ptd.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_7B_ptd.sh">evaluation </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>13B</td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/llama2/generate_llama2_13B_tp8_pp1.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/evaluate_llama2_13B_ptd.sh">evaluation </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/generate_llama2_13B_ptd.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_13B_ptd.sh">evaluation </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td > 34B </td>
       <td > -- </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/llama2/generate_llama2_34B_ptd.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/evaluate_llama2_34B_ptd.sh">evaluation </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/generate_llama2_34B_ptd.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_34B_ptd.sh">evaluation </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td > 70B </td>
       <td > -- </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/llama2/generate_llama2_70B_ptd.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/evaluate_llama2_70B_ptd.sh">evaluation </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/generate_llama2_70B_ptd.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_70B_ptd.sh">evaluation </a> </td>
       <td>  <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
   </tbody>
@@ -900,7 +900,7 @@ Tensor parallelism (TP) is a kind of model parallelism strategy, which splits ex
 The basic principle of PP is:<div align=center>
 <img src="sources/images/tp_in_mlp.png" height="280px" width="500px">
 <img src="sources/images/tp_in_sa.png" height="280px" width="500px"></div>
-To use tensor model parallelism in Ascendspeed, add the `--tensor-model-parallel-size` flag to specify the number of GPUs among which to split the model.
+To use tensor model parallelism in ModelLink, add the `--tensor-model-parallel-size` flag to specify the number of GPUs among which to split the model.
 
 ### <span id="jump2">  (Virtual & Optimized) Pipeline Parallelism  </span>
 Pipeline parallelism (PP) is a kind of model parallelism strategy, which shards the transformer modules into stages
@@ -937,7 +937,7 @@ To enable sequence parallelism (SP), `--tensor-model-parallel-size` flag should 
 
 ### <span id="jump6"> ZeRO-1/2/3 </span>
 Zero Redundancy Optimizer (ZeRO) is a kind of memory-optimization strategy in data parallelism proposed by MicroSoft.
-AscendSpeed supports ZeRO-1/2/3 by adding a deepspeed branch. The basic principle of ZeRO is:<div align=center>
+ModelLink supports ZeRO-1/2/3 by adding a deepspeed branch. The basic principle of ZeRO is:<div align=center>
 <img src="sources/images/ZeRO.png" height="250px" width="600px"></div>
 To enable ZeRO-1/2/3, a deepspeed config is required and an [example](examples/llama/pretrain_llama_7B_zero_8p.sh) could be referred.
 Notably, if only the ZeRO-1 is supposed, deepspeed is not necessary, and simply set the `--use-distributed-optimizer` flag.
@@ -995,7 +995,7 @@ Test Result Table:
 ## Acknowledgments
 
 ---
-AscendSpeed is jointly contributed by the following departments of Huawei Corporation:
+ModelLink is jointly contributed by the following departments of Huawei Corporation:
 - Ascend Computing Product Unit
 - Algorithm Unit of Computing Product Unit
 - Research Unit of Computing Product Unit
@@ -1003,7 +1003,7 @@ AscendSpeed is jointly contributed by the following departments of Huawei Corpor
 - General Development Department
 - Global Technical Service Department
 
-We appreciate every PR from community, and welcome to contribute to AscendSpeed.
+We appreciate every PR from community, and welcome to contribute to ModelLink.
 
 ## Appendix
 
@@ -1013,3 +1013,4 @@ We appreciate every PR from community, and welcome to contribute to AscendSpeed.
 - Permission Description: It is recommended that the umask value of Linux be greater than or eqaul to 027. Before running the program, you are advised to take security measures such as permission control for files required for training, such as ckpt, logs and so on. You are advised to run the program or execute commands as a regular user not as root or super user. Also, you are advised to set the folder permission to 750 and the file permission to 640. When multiple users share datasets, set the read and write permissions for folders and files based on the minimum permissions to avoid security problems such as unauthorized access.
 - Path Description: When you're using interface such as `torch.load`, unless weights_only parameter is set to True, uses pickle module implicitly, which is known to be insecure. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling. We don't suggest you load data that could have come from an untrusted source in an unsafe mode, or that could have been tampered with. Please load data you trust. Moreover, when you need to read data from outside or your specified path you'd better make it trusted and safe, including but not limited to weights path, dataset path.
 - Communication Matrix: Please refer to this [link](https://gitee.com/ascend/AscendSpeed/wikis/Communition%20Matrix/AscendSpeed%20Communication%20Matrix?sort_id=8855822) to check the communication matrix.
+- Public Network Address: Here is the [Public Network Address](public_address_statement.md).

@@ -47,8 +47,8 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
 
 1. Clone the repository to your local server:
     ```shell
-    git clone https://gitee.com/ascend/AscendSpeed.git 
-    cd AscendSpeed 
+    git clone https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink 
     mkdir logs
     mkdir ckpt
     ```
@@ -65,14 +65,10 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
     
-    # install megatron-core
-    pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
-    
     # install deepspeed and deepspeed_npu
-    pip install deepspeed==0.9.2
-    git clone https://gitee.com/ascend/DeepSpeed.git -b v0.9.2 deepspeed_npu
-    cd deepspeed_npu
-    pip3 install -e ./
+    git clone https://gitee.com/ascend/AscendSpeed.git
+    cd AscendSpeed
+    pip3 install -e .
     cd ..
     
     # install other packages
@@ -240,7 +236,7 @@ The absolute error: 0.00326<0.005
 
 
 ## Inference-7B
-Config llama2-7B inference script: examples/llama2/generate_llama2_7b_ptd.sh
+Config llama2-7B inference script: tasks/inference/generate_llama2_7b_ptd.sh
 ```bash
 # modify the script according to your own ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -249,7 +245,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 TOKENIZER_PATH=./llama2-7b-hf/  #tokenizer path
 CHECKPOINT=./llama2-7b-tp8pp1  #model path
 ```
-Launch llama2-7B inference script: examples/llama2/generate_llama2_7b_ptd.sh
+Launch llama2-7B inference script: tasks/inference/generate_llama2_7b_ptd.sh
 ```bash
 bash examples/llama2/generate_llama2_7b_ptd.sh
 ```
@@ -355,8 +351,8 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
 
 1. Clone the repository to your local server:
     ```shell
-    git clone https://gitee.com/ascend/AscendSpeed.git 
-    cd AscendSpeed 
+    git clone https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink 
     mkdir logs
     mkdir ckpt
     ```
@@ -373,14 +369,10 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
     
-    # install megatron-core
-    pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
-    
-    # install deepspeed and deepspeed_npu
-    pip install deepspeed==0.9.2
-    git clone https://gitee.com/ascend/DeepSpeed.git -b v0.9.2 deepspeed_npu
-    cd deepspeed_npu
-    pip3 install -e ./
+    # 安装加速库
+    git clone https://gitee.com/ascend/AscendSpeed.git
+    cd AscendSpeed
+    pip3 install -e .
     cd ..
     
     # install other packages
@@ -395,17 +387,19 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
     git clone https://huggingface.co/NousResearch/Llama-2-13b-hf
     ```
     
-   *Note that if you want to use the weight from huggingface, please run the weight conversion script first. The following uses llama-2-13b model  weight conversion as an example.*
+   *Note that if you want to use the weight from huggingface, please run the weight conversion script first. The following uses llama-2-13b model weight conversion as an example.*
     ```bash
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
-    # convert to deepspeed weights
-    python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir ./llama-2-13b-hf \
-                                                                        --output-model-dir ./llama-2-13b_tp8_pp1 \
-                                                                        --tensor-model-parallel-size 8 \
-                                                                        --pipeline-model-parallel-size 1 \
-                                                                        --type 13B \
+    # convert weights
+    python tools/checkpoint/util.py --model-type GPT \
+        --loader llama2_hf \
+        --saver megatron \
+        --target-tensor-parallel-size 8 \
+        --load-dir ./llama2-13b-hf \
+        --save-dir ./llama2-13b-hf-tp8 \
+        --tokenizer-model ./llama2-13b-hf/tokenizer.model
     ```
 
 4. pre-training
@@ -471,11 +465,13 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
 		  --append-eod
     ```
    5.2 Full Parameters Fine-Tuning
-   The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_13B_ptd_8p.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
+   The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_13B_ptd_8p.sh.*The difference is that the finetune switch is added and the weight path parameter is added.*
    ```bash
-   DATA_PATH=./finetune_dataset/alpaca
-   
-   --is-instruction-dataset \
+   # Enable finetune
+   --finetune
+   # Configure the model path and parameters based on the site requirements
+   CKPT_LOAD_DIR="your init model load path"
+   --load ${CKPT_LOAD_DIR}
    ```
 
 ### Performance
@@ -484,10 +480,10 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
 
 The performance of LLaMA2-13B in **Ascend NPU** and **Reference**:
 
-| Device |   Model    | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
-| :------: |:----------:|:----------------:|:-----------------------------:|:----------------------------:|:-------------------------:|:-----------------------------------:|
-| NPUs   | LLaMA2-13B |       5000       |             2.736             |           1400.832           |           93.45           |               120.69                |
-| Reference   | LLaMA2-13B |        --        |              --               |             1750             |            --             |                 --                  |
+|  Device   |   Model    | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
+|:---------:|:----------:|:----------------:|:-----------------------------:|:----------------------------:|:-------------------------:|:-----------------------------------:|
+|   NPUs    | LLaMA2-13B |       5000       |             3.027             |             1550             |           5.285           |               133.77                |
+| Reference | LLaMA2-13B |        --        |              --               |             1750             |            --             |                 --                  |
 
 
 #### Accuracy of the loss
@@ -504,7 +500,7 @@ The precision meets the requirements.The absolute error of the average loss is 0
 We support AscendSpeed Inference for text generation with Llama2 13B.
 Inference different from pre-training, such as we need to Load pre-training checkpoint and the length of the output samples:
 
-Config Llama2-13B inference script: examples/llama2/generate_llama2_13B_tp8_pp1.sh
+Config Llama2-13B inference script: tasks/inference/generate_llama2_13b_ptd.sh
 
 ```shell
 # modify the model weight path and tokenizer path
@@ -513,7 +509,7 @@ VOCAB_FILE=./llama2-13b-hf/
 ```
 
 ```shell
-bash ./examples/llama2/generate_llama2_13B_tp8_pp1.sh
+bash ./tasks/inference/generate_llama2_13b_ptd.sh
 ```
 Some inference samples are as follows:
 ![llama2-13B-generate.png](../../sources/images/llama2/llama2-13B-generate.png)
@@ -548,8 +544,8 @@ bash tasks/evaluation/evaluate_llama2_13B_ptd.sh
       <td><a href="https://huggingface.co/datasets/boolq">Boolq</a></td>
       <td>Test</td>
       <th>Llama2 13B</th>
-      <td>0.824</td>
-      <td><a href="https://opencompass.org.cn/dataset-detail/BoolQ">0.824</a></td>
+      <td>0.821</td>
+      <td><a href="https://paperswithcode.com/sota/question-answering-on-boolq">0.817</a></td>
     </tr>
   </tbody>
 </table>

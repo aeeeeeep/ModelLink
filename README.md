@@ -20,13 +20,13 @@
     </p>
 </p>
 
-AscendSpeed旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) 上的大语言模型提供端到端的解决方案, 包含模型，算法，算子，以及下游任务。
+ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) 上的大语言模型提供端到端的解决方案, 包含模型，算法，算子，以及下游任务。
 
-## AscendSpeed解决方案概览
+## ModelLink解决方案概览
 
 ---
 ### 大语言模型
-当前AscendSpeed支持下列模型的预训练以及全参微调:
+当前ModelLink支持下列模型的预训练以及全参微调:
 * <a href="https://huggingface.co/BAAI/Aquila-7B/tree/main" style="color:green">Aquila</a>-[[使用说明: 7B]](examples/aquila/README.md)
 * <a href="https://github.com/baichuan-inc" style="color:green">Baichuan</a>-[[使用说明: 7B/13B]](examples/baichuan/README.md)
 * <a href="https://arxiv.org/pdf/2108.12409.pdf" style="color:green">Bloom</a>-[[使用说明: 7B/176B]](examples/bloom/README.md)
@@ -37,7 +37,7 @@ AscendSpeed旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBa
 
 
 ### 下游任务
-当前AscendSpeed为大模型提供以下周边应用:
+当前ModelLink为大模型提供以下周边应用:
 * [指令/预训练数据集](#jump11)
 * [低参微调方法](#jump12)
 * [推理：人机对话](#jump13)
@@ -46,7 +46,7 @@ AscendSpeed旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBa
 强化学习，多专家网络等特性持续研发中....
 
 ### 加速算法
-当前AscendSpeed支持以下分布式加速算法:
+当前ModelLink支持以下分布式加速算法:
 
 * [张量并行](#jump1)
 * [(虚拟 & 动态) 流水并行](#jump2)
@@ -226,7 +226,7 @@ AscendSpeed旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBa
       <td>13B</td>
       <td>1x8</td>
       <td>BF16 </td>
-      <td> 1468 </td>
+      <td> 1550 </td>
       <td> 1750 </td>
       <td> <a href="/sources/images/llama2/llama2_13b_bf16_loss_absolute.png">Loss</a> </td>
       <td> <a href="examples/llama2/pretrain_llama2_13B_ptd_8p.sh">训练</a> </td>
@@ -333,59 +333,59 @@ AscendSpeed旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBa
     <tr>
       <td rowspan="4"><a href="examples/llama/README.md">LLaMA</a></td>
       <td>7B</td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/llama/generate_llama_7B_deepspeed.sh">对话 </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_7B_deepspeed.sh">对话 </a> </td>
       <td> <a href="https://gitee.com/ascend/AscendSpeed/blob/master/tasks/evaluation/evaluate_llama_7b_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>13B</td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/llama/generate_llama_13B_tp1_pp8.sh">对话 </a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/blob/master/tasks/evaluation/evaluate_llama_13b_ptd.sh">评估</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_13B_tp1_pp8.sh">对话 </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_13b_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>33B</td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/llama/generate_llama_33B_ptd.sh">对话 </a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/evaluate_llama_33B_ptd.sh">评估 </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_33B_ptd.sh">对话 </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_33B_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td > 65B </td>
       <td > -- </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/llama/generate_llama_65B_tp8_pp1.sh">对话 </a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/evaluate_llama_65B_tp8_pp1.sh">评估 </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_65B_tp8_pp1.sh">对话 </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_65B_tp8_pp1.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</a></td>
       <td>7B</td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/llama2/tune_llama2_7b_ptd.sh">lora </a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/llama2/generate_llama2_7b_ptd.sh">对话 </a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/evaluate_llama2_7B_ptd.sh">评估 </a>  </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_7b_ptd.sh">lora </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_7b_ptd.sh">对话 </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_7B_ptd.sh">评估 </a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td>13B</td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/llama2/generate_llama2_13B_tp8_pp1.sh">对话 </a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/evaluate_llama2_13B_ptd.sh">评估 </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_13B_ptd.sh">对话 </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_13B_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td > 34B </td>
       <td > -- </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/llama2/generate_llama2_34B_ptd.sh">对话 </a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/evaluate_llama2_34B_ptd.sh">评估 </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_34B_ptd.sh">对话 </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_34B_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td > 70B </td>
       <td > -- </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/llama2/generate_llama2_70B_ptd.sh">对话 </a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/evaluate_llama2_70B_ptd.sh">评估 </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_70B_ptd.sh">对话 </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_70B_ptd.sh">评估 </a> </td>
       <td>  <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
   </tbody>
@@ -492,7 +492,7 @@ python tools/preprocess_data.py --input WORKSPACE/alpaca/train-00000-of-00001-a0
 ### <span id="jump12"> 低参微调 </span>
 #### Lora
 
-当前 AscendSpeed基于 peft 仓库支持对大模型的 Lora 微调功能：
+当前 ModelLink基于 peft 仓库支持对大模型的 Lora 微调功能：
 
 ```shell
 pip install peft==0.4.0
@@ -858,7 +858,7 @@ Big-bench-hard 数据集是 BIG-Bench 的一个子集，专注于有挑战性的
 张量并行（Tensor Parallelism，TP）是一种模型并行策略，它将单个Transformer模块的执行拆分到多个设备上，以均分内存消耗。TP的基本原理如下：<div align=center>
 <img src="sources/images/tp_in_mlp.png" height="280px" width="500px">
 <img src="sources/images/tp_in_sa.png" height="280px" width="500px"></div>
-在 AscendSpeed 中使用张量并行， 可以在启动脚本中增加  `--tensor-model-parallel-size` 标志， 来明确用于拆分模型的GPU数量。
+在 ModelLink 中使用张量并行， 可以在启动脚本中增加  `--tensor-model-parallel-size` 标志， 来明确用于拆分模型的GPU数量。
 
 ### <span id="jump2">  (虚拟 & 动态) 流水并行  </span>
 流水并行（Pipeline Parallelism (PP)）是一种将模型所有的Transformer模块划分为多个stage放在不同卡上训练的模型并行技术。
@@ -866,17 +866,17 @@ Big-bench-hard 数据集是 BIG-Bench 的一个子集，专注于有挑战性的
 虚拟流水并行 （Virtual Pipeline (VP) Parallelism），通过增加虚拟的 stage 来减少 PP 运行时的空泡时间， 动态流水并行 （Dynamic Pipline Parallelism，DPP） 则是增强版本的 VP， 通过合理的设置每个微 batchsize的大小进一步降低空泡时间。
 PP 和 VP的基本原理如下：<div align=center> <img src="sources/images/pp_vp.png" height="350px" width="800px"> </div>
 
-在AscendSpeed中，可以通过使能`--pipeline-model-parallel-size` 标志来明确PP要将模型划分为多少个 stage，比如，该参数设置为4，就是将一个具有24层transformer的模型划分为4个stage，每个stage有6层transformer。
+在ModelLink中，可以通过使能`--pipeline-model-parallel-size` 标志来明确PP要将模型划分为多少个 stage，比如，该参数设置为4，就是将一个具有24层transformer的模型划分为4个stage，每个stage有6层transformer。
 为了使用VP，需要额外添加 `--num-layers-per-virtual-pipeline-stage` 标志，来决定每个虚拟stage的层数；目前仓库支持的VP形式为VP + no-overlap-p2p，当要开启VP时候，需要加入 --no-overlap-p2p-communication参数关闭overlap-p2p。为了使用DPP，则需要在PP的基础上添加 `--optimized-pipeline` 和 `--manual-mbs example-config-1` 标志。需要说明的是，虽然VP和DPP可以减少空泡时间，但是会增加通讯时间。
 
 
 ### <span id="jump3"> Fold3D </span>
 Fold3D 隐藏了 PP 中数据并行的通信时间，其基本原理如下：<div align=center>
 <img src="sources/images/fold3d.png" height="350px" width="800px"></div>
-在AscendSpeed中，使用 `--fold-mode "aiao"` 标志可以打开该功能。
+在ModelLink中，使用 `--fold-mode "aiao"` 标志可以打开该功能。
 
 ### <span id="jump4"> (选择性) 重计算 </span>
-为了使用有限的显存来训练更大的模型，AscendSpeed 支持完全重计算以及选择性重计算策略，为了使能完全重计算，可以使用 `--checkpoint-activations` 标志，
+为了使用有限的显存来训练更大的模型，ModelLink 支持完全重计算以及选择性重计算策略，为了使能完全重计算，可以使用 `--checkpoint-activations` 标志，
 至于选择性重计算，则可以通过添加 `--checkpoint-policy` 标志来决定选择性重计算的策略。
 
 为了最大限度地利用NPU内存，同时提高模型训练的性能，我们支持通过调整训练内存大小的方式，自动获取选择重计算策略，这一特性称为[自适应选择重计算](https://gitee.com/ascend/AscendSpeed/wikis/Algorithm%20Introduction/Auto%20Selective%20Recomputing)。
@@ -894,7 +894,7 @@ SP将TP中的allreduce操作拆分为了reduce-scatter和allgather操作，这�
 为了使能SP, `--tensor-model-parallel-size` 标志应该大于1，同时设置 `--sequence-parallel` 标志。
 
 ### <span id="jump6"> ZeRO-1/2/3 </span>
-无冗余优化器（Zero Redundancy Optimizer，ZeRO）是微软提出的一种在数据并行中优化内存的并行策略。AscendSpeed通过增加deepspeed分支，支持了ZeRO-1/2，其基本原理如下：
+无冗余优化器（Zero Redundancy Optimizer，ZeRO）是微软提出的一种在数据并行中优化内存的并行策略。ModelLink通过增加deepspeed分支，支持了ZeRO-1/2，其基本原理如下：
 <div align=center>
 <img src="sources/images/ZeRO.png" height="250px" width="600px"></div>
 
@@ -907,11 +907,11 @@ SP将TP中的allreduce操作拆分为了reduce-scatter和allgather操作，这�
 <div align=center>
 <img src="sources/images/triangle.png" height="600px" width="600px"></div>
 
-在AscendSpeed中可以通过使能 `--triangle-attn` 标志打开倒三角加速。
+在ModelLink中可以通过使能 `--triangle-attn` 标志打开倒三角加速。
 
 
 ### <span id="jump8"> 高性能优化器 </span>
-融合优化器通过减小算子下发降低计算时间，在AscendSpeed中，通过 `--optimizer` 可以选择不同的优化器，具体的，选择 `--optimizer adam` 可以节省更多内存，选择 `--optimizer fused_adam` 则可以运行的更快。
+融合优化器通过减小算子下发降低计算时间，在ModelLink中，通过 `--optimizer` 可以选择不同的优化器，具体的，选择 `--optimizer adam` 可以节省更多内存，选择 `--optimizer fused_adam` 则可以运行的更快。
 
 除此之外，我们还提供一些自研的低内存优化器。如：
 
@@ -1039,7 +1039,7 @@ Cadam是基于谷歌提出的[Lion优化器](https://arxiv.org/abs/2302.06675)�
 
 ---
 
-AscendSpeed由华为公司的下列部门联合贡献
+ModelLink由华为公司的下列部门联合贡献
 ：
 - 昇腾计算产品线
 - 计算算法部
@@ -1048,7 +1048,7 @@ AscendSpeed由华为公司的下列部门联合贡献
 - 公共开发部
 - 全球技术服务部
 
-感谢来自社区的每一个PR，欢迎贡献 AscendSpeed
+感谢来自社区的每一个PR，欢迎贡献 ModelLink
 
 ## 备注
 
@@ -1058,3 +1058,4 @@ AscendSpeed由华为公司的下列部门联合贡献
 - 许可描述: 在运行程序之前，建议您对训练所需的文件（如ckpt、日志等）采取权限控制（普通用户而不是root权限）等安全措施
 - 路径描述: 当你使用 `torch.load` 接口时，除非 weights_only 参数被设置为 True， 否则请隐式的使用 pickle 模块，我们不建议您加载和使用任何来源未知或不可信任的数据
 - 通信矩阵: [通信矩阵](https://gitee.com/ascend/AscendSpeed/wikis/Communition%20Matrix/AscendSpeed%20Communication%20Matrix?sort_id=8855822)
+- 公网地址: [公网地址](public_address_statement.md)

@@ -50,8 +50,8 @@ LLAMA2-7B 训练的硬件配置:
 1. 拷贝代码仓到本地服务器
 
    ```shell
-   git clone https://gitee.com/ascend/AscendSpeed.git 
-   cd AscendSpeed 
+   git clone https://gitee.com/ascend/ModelLink.git 
+   cd ModelLink 
    git checkout modellink
    pip install -r requirements.txt
    cd ..
@@ -69,8 +69,8 @@ LLAMA2-7B 训练的硬件配置:
    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 
    # 安装加速库
-   git clone https://gitee.com/ascend/AscendSpeed2.git
-   cd AscendSpeed2
+   git clone https://gitee.com/ascend/AscendSpeed.git
+   cd AscendSpeed
    pip3 install -e .
    cd ..
    ```
@@ -187,7 +187,7 @@ NPU VS 参考 loss
 
 ## 推理-7B
 
-首先需要配置llama2-7B的推理脚本: examples/llama2/generate_llama2_7b_ptd.sh
+首先需要配置llama2-7B的推理脚本: tasks/inference/generate_llama2_7b_ptd.sh
 
 ```bash
 # 根据您自己的 ascend-toolkit 路径，执行set_env.sh
@@ -202,7 +202,7 @@ TOKENIZER_MODEL="your tokenizer.model file path"
 然后可直接启动generate_llama2_7b_ptd.sh
 
 ```bash
-bash examples/llama2/generate_llama2_7b_ptd.sh
+bash tasks/inference/generate_llama2_7b_ptd.sh
 ```
 
 推理的示例如下:
@@ -310,8 +310,8 @@ LLaMA2-13B 训练的硬件配置:
 
 1. 拷贝代码仓到本地服务器
     ```shell
-    git clone https://gitee.com/ascend/AscendSpeed.git 
-    cd AscendSpeed 
+    git clone https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink 
     mkdir logs
     mkdir ckpt
     ```
@@ -328,14 +328,10 @@ LLaMA2-13B 训练的硬件配置:
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
     
-    # 安装 megatron-core
-    pip3 install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
-    
-    # 安装 deepspeed 和 deepspeed_npu
-    pip install deepspeed==0.9.2
-    git clone https://gitee.com/ascend/DeepSpeed.git -b v0.9.2 deepspeed_npu
-    cd deepspeed_npu
-    pip3 install -e ./
+    # 安装加速库
+    git clone https://gitee.com/ascend/AscendSpeed.git
+    cd AscendSpeed
+    pip3 install -e .
     cd ..
     
     # install other packages
@@ -350,17 +346,19 @@ LLaMA2-13B 训练的硬件配置:
     ```
 
 
-将权重从 huggingface 格式转化为 AscendSpeed 格式
+将权重从 huggingface 格式转化为 magatron 格式
 ```bash
 # 修改 ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 权重格式转换
-python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir ./llama-2-13b-hf \
-                                                                    --output-model-dir ./llama-2-13b_tp8_pp1 \
-                                                                    --tensor-model-parallel-size 8 \
-                                                                    --pipeline-model-parallel-size 1 \
-                                                                    --type 13B 
+python tools/checkpoint/util.py --model-type GPT \
+    --loader llama2_hf \
+    --saver megatron \
+    --target-tensor-parallel-size 8 \
+    --load-dir ./llama2-13b-hf \
+    --save-dir ./llama2-13b-hf-tp8 \
+    --tokenizer-model ./llama2-13b-hf/tokenizer.model
 ```
 
 
@@ -430,12 +428,14 @@ python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-mode
    ```
 
    5.2 全参微调 \
-   全参微调的配置脚本基本和预训练脚本pretrain_llama2_13B_ptd_8p.sh一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
+   全参微调的配置脚本基本和预训练脚本pretrain_llama2_13B_ptd_8p.sh一致. *区别是添加使能微调开关和增加权重路径参数*
 
    ```bash
-   DATA_PATH=./finetune_dataset/alpaca
-   
-   --is-instruction-dataset \
+   # 使能微调开关
+   --finetune
+   # 根据实际情况配置模型参数加载路径
+   CKPT_LOAD_DIR="your init model load path"
+   --load ${CKPT_LOAD_DIR}
    ```
 
 ### 性能
@@ -444,10 +444,10 @@ python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-mode
 
 LLaMA2-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
-|  设备  |    模型     | 迭代数  | 样本吞吐 (samples/p/s) | tokens吞吐 (tokens/s/p) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
-|:----:|:---------:|:----:|:------------------:|:---------------------:|:---------------:|:----------------:|
-| NPUs | LLaMA2-13B |       5000       |         2.736             |           1400.832           |           93.45           |               120.69     |
-|  参考  | LLaMA2-13B |        --        |              --               |             1750             |            --             |                 --                  |
+|  设备  |     模型     | 迭代数  | 样本吞吐 (samples/p/s) | tokens吞吐 (tokens/s/p) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
+|:----:|:----------:|:----:|:------------------:|:---------------------:|:---------------:|:----------------:|
+| NPUs | LLaMA2-13B |       5000       |       3.027        |         1550          |      5.285      |      133.77      |
+|  参考  | LLaMA2-13B |        --        |         --         |         1750          |       --        |        --        |
 
 
 #### 精度
@@ -462,7 +462,7 @@ NPU运行平稳，资源使用稳定，中间没有报错，Loss呈下降趋势�
 我们在Llama2 13B中支持AscendSpeed推理来生成文本。
 推理不同于预训练，比如我们需要加载预训练检查点和输出样本的长度:
 
-配置 LLaMA2-13B 推理脚本: examples/llama2/generate_llama2_13B_tp8_pp1.sh
+配置 LLaMA2-13B 推理脚本: tasks/inference/generate_llama2_13b_ptd.sh
 
 ```shell
 # 修改模型权重路径以及词表路径
@@ -471,7 +471,7 @@ VOCAB_FILE=./llama2-13b-hf/
 ```
 
 ```shell
-bash ./examples/llama2/generate_llama2_13B_tp8_pp1.sh
+bash ./tasks/inference/generate_llama2_13b_ptd.sh
 ```
 推理结果示例如下:
 ![llama2-13B-generate.png](../../sources/images/llama2/llama2-13B-generate.png)
@@ -506,8 +506,8 @@ bash tasks/evaluation/evaluate_llama2_13B_ptd.sh
       <td><a href="https://huggingface.co/datasets/boolq">Boolq</a></td>
       <td>Test</td>
       <th>Llama2 13B</th>
-      <td>0.824</td>
-      <td><a href="https://opencompass.org.cn/dataset-detail/BoolQ">0.824</a></td>
+      <td>0.821</td>
+      <td><a href="https://paperswithcode.com/sota/question-answering-on-boolq">0.817</a></td>
     </tr>
   </tbody>
 </table>
