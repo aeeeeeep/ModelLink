@@ -33,6 +33,9 @@
 #include "baichuan2/13b/model/paged_attention_model.h"
 #include "baichuan2/13b/model/paged_attention_quant_model.h"
 #include "chatglm2/6b/model/paged_attention_model.h"
+#include "bloom/model/flash_attention_model.h"
+#include "falcon/7b/model/flash_attention_model.h"
+#include "visualglm/6b/model/flash_attention_model.h"
 #include "llama/model/anti_quant_flashattention_model.h"
 #include "llama/model/flash_attention_model.h"
 #include "llama_adapter/model/adapter_model.h"
@@ -136,6 +139,12 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::baichuan2_13b::PagedAttentionModel>(param);
     } else if (modelName_ == "baichuan2_13b_pa_quant_model") {
         model_ = std::make_shared<atb_speed::baichuan2_13b::PagedAttentionQuantModel>(param);
+    } else if (modelName_ == "bloom_7b_common_model") {
+        model_ = std::make_shared<atb_speed::bloom_7b::FlashAttentionModel>(param);
+    } else if (modelName_ == "falcon_7b_model") {
+        model_ = std::make_shared<atb_speed::falcon_7b::FlashAttentionModel>(param);
+    } else if (modelName_ == "visualglm_6b_encoder_model") {
+        model_ = std::make_shared<atb_speed::visualglm_6b::FlashAttentionModel>(param);
     } else if (modelName_ == "minigpt4_vicuna_7b_encoder_model") {
         model_ = std::make_shared<atb_speed::minigpt4_vicuna_7b::FusionEncoderModel>(param);
     } else if (modelName_ == "minigpt4_vicuna_7b_decoder_model") {
