@@ -19,6 +19,7 @@ def get_args():
     parser.add_argument("--input-path", default="./model/bloom/", help="input model path",)
     parser.add_argument("--output-path", default='./', help="output model path")
     parser.add_argument("--device", default=-1, type=int, help="device number")
+    parser.add_argument("--world-size", default=2, type=int, help="world size")
     parser.add_argument(
         "--handle-type", type=str, required=True,
         choices=[
@@ -144,32 +145,21 @@ def quant_model(args_quant, verbose=False):
     print("all done!")
 
 
-def cut_weights_float(state_dict, world_size, cut_row_keys=('dense_h_to_4h'), cut_col_keys=('dense', 'dense_4h_to_h')):
+def cut_weights(state_dict, world_size, config, recuce_bias=False, cut_row_keys=('dense_h_to_4h',), cut_col_keys=('dense', 'dense_4h_to_h')):
     state_dict_list = [{} for i in range(world_size)]
     for key, tensor in state_dict.items():
         key_short = key.split('.')[-2]
         key_type = key.split('.')[-1]
 
         if key_short == 'query_key_value':
-            num_heads = 32
-            head_dim = 128
-            if key_type == "weight":
-                tensor = tensor.view(num_heads, 3, head_dim, num_heads * head_dim)
-            elif key_type == "bias":
-                tensor = tensor.view(num_heads, 3, head_dim)
-            tensor_list = (tensor[:, 0, ...], tensor[:, 1, ...], tensor[:, 2, ...])
-            cut_tensor_list = [torch.Tensor([]).half(), torch.Tensor([]).half()]
-            for i in range(3):
-                cut_tensor_list[0] = torch.cat(
-                    (cut_tensor_list[0], torch.chunk(tensor_list[i], world_size, dim=0)[0]), 1)
-                cut_tensor_list[1] = torch.cat(
-                    (cut_tensor_list[1], torch.chunk(tensor_list[i], world_size, dim=0)[1]), 1)
-            if key_type == "weight":
-                cut_tensor_list[0] =  cut_tensor_list[0].reshape(num_heads * head_dim * 3 // 2, num_heads * head_dim)
-                cut_tensor_list[1] =  cut_tensor_list[1].reshape(num_heads * head_dim * 3 // 2, num_heads * head_dim)
-            elif key_type == "bias":
-                cut_tensor_list[0] =  cut_tensor_list[0].reshape(num_heads * head_dim * 3 // 2)
-                cut_tensor_list[1] =  cut_tensor_list[1].reshape(num_heads * head_dim * 3 // 2)
+            num_heads, head_dim = config.n_head, config.hidden_size // config.n_head
+            dst_shape = list(tensor.shape)
+            dst_shape[0] //= world_size
+
+            tensor = tensor.view(num_heads, 3, head_dim, -1)
+            tensor_list = torch.unbind(tensor, dim=1)
+            chunk_tensor_list = [torch.chunk(item, world_size, dim=0) for item in tensor_list]
+            cut_tensor_list = [torch.cat(item, 1).reshape(*dst_shape) for item in zip(*chunk_tensor_list)]
         else:
             if key_short in cut_row_keys:
                 cut_tensor_list = torch.chunk(tensor, world_size, dim=0)
@@ -177,7 +167,8 @@ def cut_weights_float(state_dict, world_size, cut_row_keys=('dense_h_to_4h'), cu
                 if key_type == "weight":
                     cut_tensor_list = torch.chunk(tensor, world_size, dim=1)
                 elif key_type == "bias":
-                    # tensor = tensor / 2
+                    if recuce_bias:
+                        tensor = tensor / world_size
                     cut_tensor_list = [tensor] * world_size
             else:
                 cut_tensor_list = [tensor] * world_size
@@ -187,81 +178,29 @@ def cut_weights_float(state_dict, world_size, cut_row_keys=('dense_h_to_4h'), cu
     return state_dict_list
 
 
+def cut_weights_quant(weight_type, state_dict, world_size, config, recuce_bias=False):
+    state_dict = {k + "." + weight_type: v for k, v in state_dict.items()}
+    state_dict_list = cut_weights(state_dict, world_size, config, recuce_bias)
+    state_dict_list = [{k.rstrip(weight_type)[:-1]: v for k, v in state_dict_tmp.items()} for state_dict_tmp in state_dict_list]
+    return state_dict_list
+
+
 def cut_model_float(args_float):
     device = torch.device(f"npu:{args_float.device}" if args_float.device > 0 else "cpu")
     model, tokenizer = load_model(args_float)
     model = model.half().to(device)
     
-    tokenizer.save_pretrained(args_float.output_path + '/tokenizer')
+    tokenizer.save_pretrained(os.path.join(args_float.output_path, 'tokenizer'))
 
-    state_dict_list = cut_weights_float(model.state_dict(), args_float.world_size)
+    state_dict_list = cut_weights(model.state_dict(), args_float.world_size, model.config)
     model_config = model.config
     model_config.world_size = args_float.world_size
     create_model = BloomParallelForCausalLM(model_config).half().to(device)
     for i in range(args_float.world_size):
         create_model.load_state_dict(state_dict_list[i])
         create_model.save_pretrained(os.path.join(args_float.output_path, 'part_model', str(i)),
-                                     max_shard_size = "4096MB")
+                                     max_shard_size="2048MB")
     print('Tensor parallelism weights have been successfully saved.')
-
-
-def cut_weights_quant(weight, world_size):
-    state_dict_list = [{} for _ in range(world_size)]
-    for key, tensor in weight.items():
-        cut_tensor_list = []
-        key_short = ".".join([key.split(".")[-2], key.split(".")[-1]]) 
-        if key_short in ["mlp.dense_h_to_4h"]:
-            cut_tensor_list = torch.chunk(tensor, world_size, dim=0)
-        elif key_short in ["mlp.dense_4h_to_h", "self_attention.dense"]:
-            cut_tensor_list = torch.chunk(tensor, world_size, dim=1)
-        elif key_short in ["self_attention.query_key_value"]:
-            # model.config.n_head
-            num_heads = 32
-            head_dim = 4096 // num_heads
-            tensor = tensor.view(num_heads, 3, head_dim, num_heads * head_dim)            
-            tensor_list = (tensor[:, 0, ...], tensor[:, 1, ...], tensor[:, 2, ...])
-            cut_tensor_list = [torch.Tensor([]) for _ in range(world_size)]
-            for i in range(3):
-                for j in range(world_size):
-                    cut_tensor_list[j] = torch.cat((cut_tensor_list[j], torch.chunk(tensor_list[i], world_size, dim=0)[j]), 1)
-            for j in range(world_size):
-                cut_tensor_list[j] = cut_tensor_list[j].reshape(num_heads * head_dim * 3 // world_size, num_heads * head_dim)
-        else:
-            cut_tensor_list = [tensor] * world_size
-        for i in range(world_size):
-            state_dict_list[i][key] = cut_tensor_list[i]
-    return state_dict_list
-
-
-def cut_bias_quant(bias, world_size, is_bias=False):
-
-    state_dict_list = [{} for _ in range(world_size)]
-    for key, tensor in bias.items():
-        # cut tensors
-        cut_tensor_list = []
-        key_short = ".".join([key.split(".")[-2], key.split(".")[-1]])
-        if key_short in ["mlp.dense_h_to_4h"]:
-            cut_tensor_list = torch.chunk(tensor, world_size, dim=0)
-        elif key_short in ["self_attention.query_key_value"]:
-            num_heads = 32 # model.config.n_head
-            head_dim = 4096 // num_heads
-            tensor = tensor.view(num_heads, 3, head_dim)
-            tensor_list = (tensor[:, 0, ...], tensor[:, 1, ...], tensor[:, 2, ...])
-            cut_tensor_list = [torch.Tensor([]) for _ in range(world_size)]
-            for i in range(3):
-                for j in range(world_size):
-                    cut_tensor_list[j] = torch.cat((cut_tensor_list[j], torch.chunk(tensor_list[i], world_size, dim=0)[j]), 1)
-            for j in range(world_size):
-                cut_tensor_list[j] = cut_tensor_list[j].reshape(num_heads * head_dim * 3 // world_size)
-        else:
-            if is_bias:
-                tensor = tensor / 2.0
-            cut_tensor_list = [tensor] * world_size
-        # # assign state_dict_list
-        for i in range(world_size):
-            state_dict_list[i][key] = cut_tensor_list[i]
-
-    return state_dict_list
 
 
 def cut_model_quant(args_quant):
@@ -278,11 +217,11 @@ def cut_model_quant(args_quant):
 
     float_weight_dict = torch.load(os.path.join(weight_path, "float_layers_weights.pt"))
 
-    state_quant_weight_dict_list = cut_weights_quant(quant_weight_dict, args_quant.world_size)
-    state_bias_dict_list = cut_bias_quant(bias_dict, args_quant.world_size, True)
-    state_deq_scale_dict_list = cut_bias_quant(deq_scale_dict, args_quant.world_size)
+    state_quant_weight_dict_list = cut_weights_quant("weight", quant_weight_dict, args_quant.world_size, config)
+    state_bias_dict_list = cut_weights_quant("bias", bias_dict, args_quant.world_size, config, recuce_bias=True)
+    state_deq_scale_dict_list = cut_weights_quant("bias", deq_scale_dict, args_quant.world_size, config)
 
-    float_weight_dict_list = cut_weights_float(float_weight_dict, args_quant.world_size)
+    float_weight_dict_list = cut_weights(float_weight_dict, args_quant.world_size, config)
 
     save_path = os.path.join(args_quant.output_path, 'part_model')
     print(f"=========part quant weight path:{save_path} ==========")
@@ -304,13 +243,12 @@ def cut_model_quant(args_quant):
 
 
 if __name__ == "__main__":
-    args = get_args()
-    args.world_size = 2
-    if args.handle_type == "quant":
-        quant_model(args)
-    elif args.handle_type == "cut_quant":
-        cut_model_quant(args)
-    elif args.handle_type == "cut_float":
-        cut_model_float(args)
+    main_args = get_args()
+    if main_args.handle_type == "quant":
+        quant_model(main_args)
+    elif main_args.handle_type == "cut_quant":
+        cut_model_quant(main_args)
+    elif main_args.handle_type == "cut_float":
+        cut_model_float(main_args)
     else:
         raise Exception("handle_type error!")

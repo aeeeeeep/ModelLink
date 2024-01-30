@@ -92,7 +92,7 @@ def build_prompt(history, prefix):
     return prompt
 
 
-def signal_handler(signal, frame):
+def signal_handler(signal_in, frame):
     global stop_stream
     stop_stream = True
 
@@ -239,14 +239,16 @@ def performance_test(model):
     for batch_level in BATCH:
         file = open(f"{batch_level}_batch_performance_visualglm.csv", 'w')
         file.write(f"Batch,MaxSeqLen,InputSeqLen(Encoding),OutputSeqLen(Decoding),ResponseTime(ms),FirstTokenTime(ms),TimePerTokens(ms),TokensPerSecond(ms)\n")
-        for seq_len_level in range(5,11):
+        for seq_len_level in range(5, 11):
             for test_cycle_level in range(5, 11):
                 seq_len = 2 ** seq_len_level
                 test_cycle = 2 ** test_cycle_level
-                input_param = { "seq_len": seq_len,
-                                "batch": batch_level,
-                                "test_cycle": test_cycle,
-                                "model": model}
+                input_param = {
+                    "seq_len": seq_len,
+                    "batch": batch_level,
+                    "test_cycle": test_cycle,
+                    "model": model
+                    }
                 print(f"batch: {batch_level}, seq_len: {seq_len}, test_cycle: {test_cycle}")
                 first_time, avg_token = full_and_incremental_test(**input_param)
                 file.write(f"{batch_level},{max_seq_len},{seq_len},{test_cycle},{round(first_time+avg_token*test_cycle, 2)},{round(first_time, 2)},{round(avg_token, 2)},{round(1000/avg_token,2)}\n")
@@ -279,7 +281,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_path",
         type=str,
-        default = "/home/x30033355/testdata/weights/visualglm6b",
+        default="/testdata/weights/visualglm6b",
         help="Location of Model weights, which contains model folders",)
     parser.add_argument(
         "--device_id",
@@ -295,17 +297,17 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     set_device(args.device_id)
-    print("args.model_path=",args.model_path)
+    print("args.model_path=", args.model_path)
     
-    model, tokenizer = load_model(args.model_path, args.device_id)
+    main_model, main_tokenizer = load_model(args.model_path, args.device_id)
     if args.mode == "performance":
-        performance_test(model)
+        performance_test(main_model)
     elif args.mode == "precision":
         os.environ["PRECISION_TEST"] = "1"
-        run_example(args, model)
+        run_example(args, main_model)
     elif args.mode == "predict":
-        run_example(args, model)
+        run_example(args, main_model)
     elif args.mode == "run":
-        main(model, tokenizer)
+        main(main_model, main_tokenizer)
     else:
         print("mode not implemented!")

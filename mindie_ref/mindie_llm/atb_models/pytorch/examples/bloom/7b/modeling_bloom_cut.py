@@ -703,7 +703,7 @@ class BloomModel(BloomPreTrainedModel):
         self.world_size = 1
         if hasattr(config, 'world_size'):
             self.world_size = config.world_size
-        self.num_heads = self.num_heads//self.world_size
+        self.num_heads = self.num_heads // self.world_size
     
     def get_input_embeddings(self):
         return self.word_embeddings

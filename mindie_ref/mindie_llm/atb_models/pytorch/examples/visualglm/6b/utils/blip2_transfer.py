@@ -13,7 +13,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--model_path",
         type=str,
-        default = "/home/x30033355/testdata/weights/visualglm6b",
+        default="/testdata/weights/visualglm6b",
         help="Location of Model weights, which contains model folders",
         )
     args = parser.parse_args()

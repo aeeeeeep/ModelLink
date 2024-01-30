@@ -1,25 +1,25 @@
 """ PyTorch ChatGLM model. """
 
 import os
+import time
 import json
 import math
 import copy
 import warnings
 import re
 import sys
-import requests
-import time
+from typing import Optional, Tuple, Union, List, Callable, Dict, Any
 
-import numpy as np
-from PIL import Image
+import requests
 import torch
 import torch_npu
 import torch.utils.checkpoint
 import torch.nn.functional as F
+import numpy as np
+from PIL import Image
 from torch import nn
 from torch.nn import CrossEntropyLoss, LayerNorm
 from torch.nn.utils import skip_init
-from typing import Optional, Tuple, Union, List, Callable, Dict, Any
 
 from transformers.utils import (
     add_code_sample_docstrings,
@@ -117,7 +117,7 @@ class ChatGLMConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```
-"""
+    """
     model_type = "chatglm"
 
     def __init__(
@@ -939,7 +939,7 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
         qkScale = [float(layer_id + 1) for layer_id in range(self.num_layers)]
         param_dict = {
             "headDim": self.hidden_size_per_attention_head, "headNum": self.num_attention_heads, "qScale": qScale,
-            "qkScale": qkScale, "layerNum": self.num_layers,"layerNormEps": self.layernorm_epsilon, 
+            "qkScale": qkScale, "layerNum": self.num_layers, "layerNormEps": self.layernorm_epsilon, 
             "residualAddScale": math.sqrt(2 * self.num_layers)
             }
         acl_param = json.dumps(param_dict)
@@ -1045,7 +1045,7 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
 
         if input_ids is not None and inputs_embeds is not None:
             logger.warning_once("Specify both input_ids and inputs_embeds at the same time, will use inputs_embeds")
-            batch_size, seq_length= inputs_embeds.shape[:2]
+            batch_size, seq_length = inputs_embeds.shape[:2]
         elif input_ids is not None:
             batch_size, seq_length = input_ids.shape[:2]
         elif inputs_embeds is not None:
@@ -1632,7 +1632,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             probs = nn.functional.softmax(output, dim=-1)
             next_tokens = torch.multinomial(probs, num_samples=1)
             for i in next_tokens:
-                next_tokens = indices[0][len(indices[0])-i-1]
+                next_tokens = indices[0][len(indices[0]) - i - 1]
             next_tokens = next_tokens.npu()
 
             # update generated ids, model inputs, and length for next step

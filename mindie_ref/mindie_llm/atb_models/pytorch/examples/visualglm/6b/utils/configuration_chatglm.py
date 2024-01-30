@@ -53,7 +53,7 @@ class ChatGLMConfig(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```
-"""
+    """
     model_type = "chatglm"
 
     def __init__(

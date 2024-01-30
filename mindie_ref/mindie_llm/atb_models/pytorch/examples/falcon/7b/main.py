@@ -1,3 +1,16 @@
+# Copyright 2023 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the License);
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import argparse
 import os
 import time
@@ -80,13 +93,13 @@ def get_args():
 
     parser.add_argument(
         "--model_path",
-        default = "./",
+        default="./",
         help="Location of Model weights, which contains model folders",
     )
 
     parser.add_argument(
         "--data_dtype",
-        default = "int8",
+        default="int8",
         choices=['fp16', 'int8'],
         help="Data dtype",
     )
@@ -95,7 +108,7 @@ def get_args():
         "--device",
         nargs='+',
         type=int,
-        default = [1],
+        default=[1],
         help="NPU devices",
     )
     parser.add_argument(
@@ -147,7 +160,7 @@ def load_model(load_args):
 
 
 def inference(infer_model, infer_tokenizer, prompt, batch, seqlen_in, seqlen_out):
-    prompt= [ "Common sense questions and answers\n\nQuestion: Why do we need to learn a new language\nFactual answer:" ] * batch
+    prompt = ["Common sense questions and answers\n\nQuestion: Why do we need to learn a new language\nFactual answer:"] * batch
     # warmup
     inputs = infer_tokenizer(prompt[:batch], return_tensors="pt", padding='max_length', truncation=True, max_length=seqlen_in)
     with torch.no_grad():
@@ -198,7 +211,7 @@ def inference(infer_model, infer_tokenizer, prompt, batch, seqlen_in, seqlen_out
 
     print_rank_0("\nQ&A results are as follows:")
     for idx, item in enumerate(res):
-        print_rank_0(f"\n[Q&A {idx+1}]\n",item)
+        print_rank_0(f"\n[Q&A {idx+1}]\n", item)
     # time analysis
     new_tokens = len(generate_ids[0]) - len(inputs.input_ids[0])
     print_rank_0(f"\nBatch: {batch}, Input tokens number: {len(inputs.input_ids[0])}, Output tokens number: {new_tokens}")
@@ -270,15 +283,15 @@ def precision_test(prec_args):
     c_t.run()
 
 
-def main(main_args):
-    if main_args.mode == "performance":
-        performance_test(main_args)
-    elif main_args.mode == "precision":
-        precision_test(main_args)
+def main(args):
+    if args.mode == "performance":
+        performance_test(args)
+    elif args.mode == "precision":
+        precision_test(args)
     else:
         raise Exception("mode error!")
 
 
 if __name__ == "__main__":
-    args = get_args()
-    main(args)
+    main_args = get_args()
+    main(main_args)
