@@ -30,6 +30,7 @@ def parse_args_decorator(parse_args):
 def process_args(parser):
     parser.conflict_handler = 'resolve'
     parser = _add_lora_args(parser)
+    parser = _add_data_args(parser)
     return parser
 
 
@@ -52,4 +53,12 @@ def _add_lora_args(parser):
     group.add_argument('--lora-adapter-name', type=str, default='default',
                        help='Lora adapter name.')
 
+    return parser
+
+
+def _add_data_args(parser):
+    group = parser.add_argument_group(title='data')
+    group.add_argument('--is-instruction-dataset', action='store_true', help='use instruction dataset or not')
+    group.add_argument('--variable-seq-lengths', action='store_true', help='Use variable seq lengths or not.')
+    
     return parser

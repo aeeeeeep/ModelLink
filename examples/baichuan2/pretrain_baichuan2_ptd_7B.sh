@@ -11,8 +11,9 @@ WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
 CKPT_SAVE_DIR="your model save ckpt path"
 DATA_PATH="your data path"
-TOKENIZER_MODEL="your tokenizer path"
-CKPT_LOAD_DIR="your model ckpt path"
+TOKENIZER_MODEL="your tokenizer model path"
+CKPT_LOAD_DIR="your model load ckpt path"
+
 TP=8
 PP=1
 
@@ -34,12 +35,13 @@ GPT_ARGS="
     --num-attention-heads 32 \
     --tokenizer-type Llama2Tokenizer \
     --tokenizer-model ${TOKENIZER_MODEL} \
+    --load ${CKPT_LOAD_DIR} \
     --seq-length 4096 \
     --max-position-embeddings 4096 \
     --micro-batch-size 4 \
-    --global-batch-size 16 \
-    --make-vocab-size-divisible-by 1 \
-    --lr 1.25e-6 \
+    --global-batch-size 32 \
+    --make-vocab-size-divisible-by 128 \
+    --lr 1e-6 \
     --train-iters 5000 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
@@ -50,16 +52,16 @@ GPT_ARGS="
     --position-embedding-type rope \
     --normalization RMSNorm \
     --use-fused-rmsnorm \
-    --swiglu \
     --use-flash-attn \
+    --swiglu \
     --no-masked-softmax-fusion \
     --attention-softmax-in-fp32 \
-    --min-lr 1.25e-7 \
-    --weight-decay 1e-1 \
-    --lr-warmup-fraction 0.01 \
+    --min-lr 1e-8 \
+    --weight-decay 1e-2 \
+    --lr-warmup-fraction 0.1 \
     --clip-grad 1.0 \
     --adam-beta1 0.9 \
-    --initial-loss-scale 65536 \
+    --initial-loss-scale 8188.0 \
     --adam-beta2 0.95 \
     --no-gradient-accumulation-fusion \
     --no-load-optim \
@@ -69,14 +71,14 @@ GPT_ARGS="
 
 DATA_ARGS="
     --data-path $DATA_PATH \
-    --split 100,0,0
+    --split 949,50,1
 "
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 10000 \
+    --save-interval 1000 \
     --eval-interval 1000 \
-    --eval-iters 0 \
+    --eval-iters 1 \
 "
 
 torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
@@ -84,5 +86,4 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
-    --load $CKPT_LOAD_DIR \
-    --save $CKPT_SAVE_DIR
+    --save ${CKPT_SAVE_DIR}
