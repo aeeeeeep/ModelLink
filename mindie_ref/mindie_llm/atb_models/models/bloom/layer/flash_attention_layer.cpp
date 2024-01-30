@@ -170,7 +170,6 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0f / std::sqrt(param.dk);
     selfAttentionParam.qkScale = 1.0f;
-    selfAttentionParam.isFusion = true;
     selfAttentionParam.isSupportAlibi = true;
     CREATE_OPERATION(selfAttentionParam, &selfAttentionFusionNode.operation);
     selfAttentionFusionNode.inTensorIds = {
