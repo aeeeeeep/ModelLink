@@ -194,7 +194,6 @@ atb::Status PAQuantOperaLayer(const PAQuantOperaLayerParam &param, atb::Operatio
         faEnParam.isEncoder = true;
         faEnParam.isSupportAlibi = true;
         faEnParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_ALIBI;
-        faEnParam.isFusion = true;
         CREATE_OPERATION(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERNAL_MIXED_Q, INTERNAL_MIXED_K, INTERNAL_MIXED_V, IN_ATTENTION_MASK,
                                      IN_INPUT_LENGTHS};

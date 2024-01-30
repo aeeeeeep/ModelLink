@@ -104,7 +104,6 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
         faEnParam.qkScale = param.qkScale;
         faEnParam.kvHeadNum = param.headNum;
         faEnParam.isEncoder = true;
-        faEnParam.isFusion = true;
         CREATE_OPERATION(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = { INTERMEDIATE_QUERYEMBED_SCALED, INTERMEDIATE_KEYEMBED, INTERMEDIATE_VALUE,
             IN_ATTENTIONMASK, IN_INPUT_LENGTHS };
