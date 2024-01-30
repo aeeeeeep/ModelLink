@@ -161,7 +161,6 @@ atb::Status FlashAttentionRopeAntiOutlierLayer(const FlashAttentionRopeAntiOutli
 
     // 浮点self attn
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.isFusion = true;
     selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / sqrt(param.dk);

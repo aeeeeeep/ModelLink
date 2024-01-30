@@ -218,7 +218,6 @@ atb::Status DecoderPALayer(const LayerParamPa &param, atb::Operation **operation
         faEnParam.qkScale = 1.0 / sqrt(param.dk);
         faEnParam.kvHeadNum = param.numGroupsPerPartition;
         faEnParam.isEncoder = true;
-        faEnParam.isFusion = true;
         CREATE_OPERATION(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_VALUE,
                                      IN_ATTENTION_MASK, IN_INPUT_LENGTHS};
