@@ -13,7 +13,7 @@ Ascend-MindIE-MindIE_llm-ATB_Models，欢迎各位开发者
 1 使用者和贡献者可以直接克隆仓库，相关指令参考：
 
     ```
-    git clone https://gitee.com/ascend/modelzoo.git
+    git clone https://gitee.com/ascend/ModelLink.git
     ```
 
 2 参考[sample-c++](https://gitee.com/ascend/ModelLink/tree/master/mindie_ref/mindie_llm/atb_models/models/chatglm2/6b) [sample](https://gitee.com/ascend/ModelLink/tree/master/mindie_ref/mindie_llm/atb_models/pytorch/examples/chatglm2_6b)
