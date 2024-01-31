@@ -18,7 +18,8 @@ export ATB_OPERATION_EXECUTE_ASYNC=1
 export TASK_QUEUE_ENABLE=1
 export ATB_WORKSPACE_MEM_ALLOC_GLOBAL=0
 export ATB_CONTEXT_WORKSPACE_RING=1
-export ATB_USE_TILING_COPY_STREAM=0
+
+export ATB_USE_TILING_COPY_STREAM=0 # 该环境变量910B需要保持关闭，310P可开启
 
 export PYTORCH_NPU_ALLOC_CONF="max_split_size_mb:2048"
 
@@ -48,7 +49,7 @@ cp $SCRIPT_DIR/modeling_gpt_bigcode_simple.py $transformers_package_path/models/
 function fn_run_parallel()
 {
     echo "runing parallel......"
-    torchrun --nproc_per_node  --master_port 25241 run_parallel.py \
+    torchrun --nproc_per_node $WORLD_SIZE --master_port 25241 run_parallel.py \
         --load_path $OUTPUT_DIR \
         --device $DEVICE_ID \
         --batch $BATCH_SIZE \

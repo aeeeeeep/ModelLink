@@ -673,7 +673,6 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         # in this case: output_attentions=False、output_hidden_states=False、use_cache=True、return_dict=True
 
-        # self.warn_if_padding_and_no_attention_mask(input_ids, attention_mask)
         input_shape = input_ids.size()
         # input_ids = input_ids.view(-1, input_shape[-1])
         batch_size = input_ids.shape[0]

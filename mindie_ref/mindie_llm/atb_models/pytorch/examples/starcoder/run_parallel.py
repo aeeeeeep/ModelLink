@@ -269,7 +269,10 @@ if __name__ == "__main__":
             'def truncate_number(number: float) -> float: """ Given a positive floating point number, it can be decomposed into and integer part (largest integer smaller than given number) and decimals (leftover part always smaller than 1). Return the decimal part of the number. >>> truncate_number(3.5) 0.5 """',
             'def flip_case(string: str) -> str: """ For a given string, flip lowercase characters to uppercase and uppercase to lowercase. >>> flip_case("Hello") "hELLO" """'
         ]
-
+    multi_str = ""
+    for i in range(args.seqlen_in-1):
+        multi_str += "A "
+    test_prompt = [multi_str] * args.batch
     # load tokenizer and model
     model, tokenizer = init_model(args)
 
@@ -279,4 +282,5 @@ if __name__ == "__main__":
     else:
         # warm up
         warm_up(args, model, tokenizer, prompt)
-        inference(model, tokenizer, prompt, args.batch, args.seqlen_in, args.seqlen_out, args.multi_case)
+        # inference(model, tokenizer, prompt, args.batch, args.seqlen_in, args.seqlen_out, args.multi_case)
+        inference(model, tokenizer, test_prompt, args.batch, args.seqlen_in, args.seqlen_out, args.multi_case)

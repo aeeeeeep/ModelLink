@@ -233,7 +233,7 @@ StarCoder模型是在The Stack (v1.2)的80+种编程语言上训练的15.5B参�
 
 ## 模型推理
 
-1. 切分模型权重 **首次跑模型时**，需要先对模型权重进行**切分**，切分方法如下
+1. 切分模型权重 **首次跑模型时**，需要先对模型权重进行**切分**，切分方法如下 (在启动脚本run.sh中，world size为切分数，310P中每芯记为1，例：单卡双芯时WORLD SIZE为2)
 
 - 修改代码
 
@@ -250,7 +250,8 @@ StarCoder模型是在The Stack (v1.2)的80+种编程语言上训练的15.5B参�
   # run.sh中第44行
   cp $SCRIPT_DIR/modeling_gpt_bigcode_simple.py $transformers....
   modeling_gpt_bigcode_simple.p用于初始切分
-  后续需使用modeling_gpt_bigcode_parallel_model_310p.py进行模型库的双芯推理
+  后续需使用modeling_gpt_bigcode_parallel_model_310p.py进行模型库的310P双芯推理
+  patch/model路径下有各类modeling脚本，根据需要替换(例：如要使用910B,则替换为 modeling_gpt_bigcode_parallel_model_910b.py)
   ```
 
 2. **执行模型推理** 模型切分完成后，run_parallel.sh会加载`output_idr`下切分好的模型权重（`output_dir/part_model/0`和`output_dir/part_model/1`）进行推理
@@ -303,7 +304,7 @@ StarCoder模型是在The Stack (v1.2)的80+种编程语言上训练的15.5B参�
 - 自定义运行可参考`run_parallel.py`
 
 3. **优化选项** 
-- 开启多stream性能优化，修改run.sh中以下环境变量为1，并执行推理
+- 开启多stream性能优化，修改run.sh中以下环境变量为1，并执行推理（注意：910B不涉及，不要打开）
   ```
   export ATB_USE_TILING_COPY_STREAM=1
   ```
