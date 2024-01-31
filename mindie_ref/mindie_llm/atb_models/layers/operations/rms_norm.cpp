@@ -76,7 +76,8 @@ atb::Status FusionRmsNorm(const FusionRmsNormParam &param, atb::Operation **oper
         return atb::NO_ERROR;
     };
 
-    return CREATE_OPERATION(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
+    return atb::NO_ERROR;
 }
 
 } // namespace common

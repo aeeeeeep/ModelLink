@@ -77,7 +77,8 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
         allGatherNode.outTensorIds = {LinearParallelTensorIdx::OUT_LINEAR_PARALLEL};
     }
 
-    return CREATE_OPERATION(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
+    return atb::NO_ERROR;
 }
 
 atb::Status LinearParallel(const LinearParallelParam &param_, atb::Operation **operation)

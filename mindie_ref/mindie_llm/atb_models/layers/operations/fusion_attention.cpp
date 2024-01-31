@@ -16,7 +16,7 @@
 
 #include "layers/operations/linear.h"
 #include "layers/operations/linear_parallel.h"
-#include "layers/operations/attention.h"
+#include "layers/operations/fusion_attention.h"
 
 namespace atb_speed {
 namespace common {
@@ -144,7 +144,8 @@ atb::Status CreateQKVLinearSplit(const FusionAttentionParam &param, atb::Operati
         return atb::NO_ERROR;
     };
 
-    return CREATE_OPERATION(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
+    return atb::NO_ERROR;
 }
 
 class QKVLinearSplitNoPackConfig {
@@ -324,7 +325,8 @@ atb::Status FusionAttention::SelfAttention(const FusionAttentionParam &param, at
         return atb::NO_ERROR;
     };
 
-    return CREATE_OPERATION(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
+    return atb::NO_ERROR;
 }
 
 enum AttentionTensorIdx : uint32_t {
@@ -502,7 +504,8 @@ atb::Status FusionAttention::Attention(const FusionAttentionParam &param, atb::O
         return atb::NO_ERROR;
     };
 
-    return CREATE_OPERATION(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
+    return atb::NO_ERROR;
 }
 
 } // namespace common

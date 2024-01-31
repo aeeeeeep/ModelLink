@@ -131,7 +131,8 @@ atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation, T confi
         return atb::NO_ERROR;
     };
 
-    return CREATE_OPERATION(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
+    return atb::NO_ERROR;
 }
 
 class MlpNoPackConfig {

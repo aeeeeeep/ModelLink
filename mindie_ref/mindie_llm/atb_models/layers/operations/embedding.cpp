@@ -129,7 +129,8 @@ atb::Status Embedding(const EmbeddingParam &param, atb::Operation **operation)
         return atb::NO_ERROR;
     };
 
-    return CREATE_OPERATION(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
+    return atb::NO_ERROR;
 }
 }  // namespace common
 }  // namespace atb_speed
