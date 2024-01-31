@@ -25,6 +25,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation
        --tensor-model-parallel-size 4 \
        --pipeline-model-parallel-size 1 \
        --sequence-parallel \
+       --max-new-tokens 1 \
        --num-layers 30 \
        --hidden-size 4096 \
        --load ${CHECKPOINT} \

@@ -65,6 +65,7 @@ def _add_data_args(parser):
     group.add_argument('--is-instruction-dataset', action='store_true', help='use instruction dataset or not')
     group.add_argument('--variable-seq-lengths', action='store_true', help='Use variable seq lengths or not.')
 
+
 def add_parser_argument_choices_value(parser, argument_name, value):
     for i, action in enumerate(parser._actions):
         if isinstance(action, argparse._ArgumentGroup):

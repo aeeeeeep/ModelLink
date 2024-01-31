@@ -158,4 +158,44 @@ NPU vs Reference loss.
 
 ![NPU-LOSS](../../sources/images/bloom/bloom-7b-loss.png)
 
+## Inference Bloom-7B
+Config Bloom-7B inference script: tasks/inference/generate_bloom_7b_ptd.sh
+```bash
+# modify the script according to your own ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+ 
+# modify script model path and tokenizer path
+CHECKPOINT="your model save ckpt path"
+TOKENIZER_PATH="your tokenizer path"
+```
+Launch Bloom-7B inference script: tasks/inference/generate_bloom_7b_ptd.sh
+```bash
+bash tasks/inference/generate_bloom_7b_ptd.sh
+```
+Some inference samples are as follows:
+![Inference](../../sources/images/bloom/bloom7b-generate.png)
 
+## Evaluation Bloom-7B
+Config Bloom-7B evaluation script: tasks/evaluation/evaluate_bloom_7B_ptd.sh
+
+```bash
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+# modify script model path and tokenizer path
+CHECKPOINT="your model save ckpt path"
+TOKENIZER_PATH="your tokenizer path"
+# configure task and data path
+DATA_PATH="your dataset path"
+TASK="your task"
+```
+Launch Bloom-7B evaluation script:
+
+```bash
+bash tasks/evaluation/evaluate_bloom_7B_ptd.sh
+```
+
+Evaluation results
+
+|  dataset | subject_num | question_num | reference_acc |NPU acc|
+|:---:|:-----------:|:------------:|:-------------:|:---:|
+| MMLU |     57      |    14042     |    0.251     |0.254|

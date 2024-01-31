@@ -163,9 +163,8 @@ ModelLink与参考精度比对：
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
  
 # 修改模型权重路径和词表路径
-CHECKPOINT="your model directory path"
-TOKENIZER_PATH="your tokenizer directory path"
-TOKENIZER_MODEL="your tokenizer.model file path"
+CHECKPOINT="your model save ckpt path"
+TOKENIZER_PATH="your tokenizer path"
 ```
 
 然后可直接启动generate_bloom_7b_ptd.sh
@@ -177,21 +176,19 @@ bash tasks/inference/generate_bloom_7b_ptd.sh
 ![Inference](../../sources/images/bloom/bloom7b-generate.png)
 
 ## Bloom-7B评测
-## 评估-7B
 
-使用 Boolq数据集评估模型. 数据集下载路径 [这里](https://huggingface.co/datasets/cais/mmlu). 
-配置llama2-7B 评估脚本: tasks/evaluation/evaluate_llama2_7B_ptd.sh
+配置Bloom-7B 评估脚本: tasks/evaluation/evaluate_bloom_7b_ptd.sh
 
 ```bash
 # ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 # 修改模型参数路径和词表路径
-TOKENIZER_PATH=./llama2-7b-hf/  #词表路径
-CHECKPOINT=./llama2-7b-tp8pp1  #模型路径
+CHECKPOINT="your model save ckpt path"
+TOKENIZER_PATH="your tokenizer path"
 # 配置任务和数据集路径
-DATA_PATH="./mmlu/data/test/"
-TASK="mmlu"
+DATA_PATH="your dataset path"
+TASK="your task"
 ```
 
 启动评估
@@ -199,3 +196,8 @@ TASK="mmlu"
 ```bash
 bash tasks/evaluation/evaluate_llama2_7B_ptd.sh
 ```
+MMLU评测得分
+
+|  数据集 |验证集  |参考准确率|NPU准确率|
+|:---:|:---:|:---:|:---:|
+| mmlu | test |0.251|0.254|
