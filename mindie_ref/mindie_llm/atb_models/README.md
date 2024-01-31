@@ -37,8 +37,49 @@
       <td> FP16、Int8 </td>
       <td> 310P </td>
     </tr>
+    <tr>
+      <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
+      <td> 7B </td>
+      <td> FP16、Int8 </td>
+      <td> 310P </td>
+    </tr>
+    <tr>
+      <td> 176B </td>
+      <td> FP16、Int8 </td>
+      <td> 310P </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="">Chatglm1</a></td>
+      <td> 6B </td>
+      <td> FP16 </td>
+      <td> 310P </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="">Chatglm2</a></td>
+      <td> 6B </td>
+      <td> FP16 </td>
+      <td> 310P </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="">codellama</a></td>
+      <td>  </td>
+      <td> FP16 </td>
+      <td> 310P </td>
+    </tr>
+    <tr>
+      <td rowspan="2"><a href="">Falcon</a></td>
+      <td> 7B </td>
+      <td> FP16、Int8 </td>
+      <td> 310P </td>
+    </tr>
+    <tr>
+      <td> 40B </td>
+      <td> FP16、Int8 </td>
+      <td> 310P </td>
+    </tr>
   </tbody>
 </table>
+
 ## 开发指南
 ### 如何贡献
 在开始贡献之前，请先阅读 [notice](CONTRIBUTING.md)，谢谢！
