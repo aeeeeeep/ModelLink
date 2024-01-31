@@ -30,7 +30,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation
        --hidden-size 4096 \
        --load ${CHECKPOINT} \
        --num-attention-heads 32 \
-       --padded_vocab_size 250880 \
+       --padded-vocab-size 250880 \
        --embed-layernorm \
        --tokenizer-type PretrainedFromHF \
        --tokenizer-model ${TOKENIZER_MODEL} \

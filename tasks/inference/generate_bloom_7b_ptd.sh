@@ -29,7 +29,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference
     --num-layers 30 \
     --embed-layernorm \
     --hidden-size 4096 \
-    --padded_vocab_size 250880 \
+    --padded-vocab-size 250880 \
     --load ${CHECKPOINT} \
     --num-attention-heads 32 \
     --tokenizer-type PretrainedFromHF \

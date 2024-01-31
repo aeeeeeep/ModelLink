@@ -47,7 +47,7 @@ GPT_ARGS="
     --micro-batch-size 4 \
     --global-batch-size 16 \
     --embed-layernorm \
-    --padded_vocab_size 250880 \
+    --padded-vocab-size 250880 \
     --make-vocab-size-divisible-by 1 \
     --attention-softmax-in-fp32 \
     --apply-query-key-layer-scaling \
