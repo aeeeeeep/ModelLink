@@ -86,7 +86,7 @@ atb::Status FlashAttentionWithPosEmbedding::FlashAttentionWithPositionEmbeddingL
         atb::infer::SliceParam sliceQNodeParam;
         sliceQNodeParam.offsets = {0, 0, 0};
         sliceQNodeParam.size = {-1, -1, g_headNum * g_hiddenSizePerHead};
-        CreateOperation(sliceQNodeParam, &sliceQNode.operation);
+        CREATE_OPERATION(sliceQNodeParam, &sliceQNode.operation);
         sliceQNode.inTensorIds = {INTERMEDIATE_MIXED_QKV};
         sliceQNode.outTensorIds = {INTERMEDIATE_QUERY};
 
@@ -94,7 +94,7 @@ atb::Status FlashAttentionWithPosEmbedding::FlashAttentionWithPositionEmbeddingL
         atb::infer::SliceParam sliceKVNodeParam;
         sliceKVNodeParam.offsets = {0, 0, g_headNum * g_hiddenSizePerHead};
         sliceKVNodeParam.size = {-1, -1, g_kvHeadNum * g_hiddenSizePerHead * 2};
-        CreateOperation(sliceKVNodeParam, &sliceKVNode.operation);
+        CREATE_OPERATION(sliceKVNodeParam, &sliceKVNode.operation);
         sliceKVNode.inTensorIds = {INTERMEDIATE_MIXED_QKV};
         sliceKVNode.outTensorIds = {INTERMEDIATE_KV};
 
@@ -102,7 +102,7 @@ atb::Status FlashAttentionWithPosEmbedding::FlashAttentionWithPositionEmbeddingL
         atb::infer::SplitParam splitKVParam;
         splitKVParam.splitDim = DIM_2;
         splitKVParam.splitNum = SPLIT_NUM_2;
-        CreateOperation(splitKVParam, &splitKVNode.operation);
+        CREATE_OPERATION(splitKVParam, &splitKVNode.operation);
         splitKVNode.inTensorIds = {INTERMEDIATE_KV};
         splitKVNode.outTensorIds = {INTERMEDIATE_KEY, INTERMEDIATE_VALUE};
     } else {
@@ -110,7 +110,7 @@ atb::Status FlashAttentionWithPosEmbedding::FlashAttentionWithPositionEmbeddingL
         atb::infer::SplitParam splitMixedQKVParam;
         splitMixedQKVParam.splitDim = DIM_2;
         splitMixedQKVParam.splitNum = SPLIT_NUM_3;
-        CreateOperation(splitMixedQKVParam, &splitMixedQKVNode.operation);
+        CREATE_OPERATION(splitMixedQKVParam, &splitMixedQKVNode.operation);
         splitMixedQKVNode.inTensorIds = {INTERMEDIATE_MIXED_QKV};
         splitMixedQKVNode.outTensorIds = {INTERMEDIATE_QUERY, INTERMEDIATE_KEY, INTERMEDIATE_VALUE};
     }
@@ -123,7 +123,7 @@ atb::Status FlashAttentionWithPosEmbedding::FlashAttentionWithPositionEmbeddingL
     }
 
     atb::Node &selfAttentionNode = opGraph.nodes.at(nodeId++);
-    CreateOperation(param.selfAttentionKvCacheParam, &selfAttentionNode.operation);
+    CREATE_OPERATION(param.selfAttentionKvCacheParam, &selfAttentionNode.operation);
     selfAttentionNode.inTensorIds = {INTERMEDIATE_POSITIONEMBED_Q,
                                      INTERMEDIATE_POSITIONEMBED_K,
                                      INTERMEDIATE_VALUE,
@@ -154,13 +154,7 @@ atb::Status FlashAttentionWithPosEmbedding::FlashAttentionWithPositionEmbeddingL
         return atb::NO_ERROR;
     };
 
-    atb::Status status = atb::CreateOperation(opGraph, operation);
-    if (operation == nullptr || status != atb::NO_ERROR) {
-        ATB_LOG(ERROR) << "FlashAttentionWithPositionEmbeddingLayer operation create fail!";
-        return atb::ERROR_INVALID_GRAPH;
-    } else {
-        ATB_LOG(INFO) << "FlashAttentionWithPositionEmbeddingLayer operation create success!";
-    }
+    CREATE_OPERATION(opGraph, operation);
 
     return atb::NO_ERROR;
 }
@@ -193,7 +187,7 @@ atb::Status FlashAttentionWithPosEmbedding::RotaryPositionEmbedding(const FTWith
         atb::infer::SplitParam splitQParam;
         splitQParam.splitDim = DIM_3;
         splitQParam.splitNum = SPLIT_NUM_2;
-        CreateOperation(splitQParam, &splitQNode.operation);
+        CREATE_OPERATION(splitQParam, &splitQNode.operation);
         splitQNode.inTensorIds = {POS_EMB_CAST(IN_QUERY)};
         splitQNode.outTensorIds = {POS_EMB_CAST(INTERMEDIATE_QCHUNK0), POS_EMB_CAST(INTERMEDIATE_QCHUNK1)};
         splitQNode.inTensorReshapeFuncs = {&unsqueezeByHeadNum};
@@ -202,7 +196,7 @@ atb::Status FlashAttentionWithPosEmbedding::RotaryPositionEmbedding(const FTWith
         atb::infer::SplitParam splitKParam;
         splitKParam.splitDim = DIM_3;
         splitKParam.splitNum = SPLIT_NUM_2;
-        CreateOperation(splitKParam, &splitKNode.operation);
+        CREATE_OPERATION(splitKParam, &splitKNode.operation);
         splitKNode.inTensorIds = {POS_EMB_CAST(IN_KEY)};
         splitKNode.outTensorIds = {POS_EMB_CAST(INTERMEDIATE_KCHUNK0), POS_EMB_CAST(INTERMEDIATE_KCHUNK1)};
         splitKNode.inTensorReshapeFuncs = {&unsqueezeByKVHeadNum};
@@ -210,7 +204,7 @@ atb::Status FlashAttentionWithPosEmbedding::RotaryPositionEmbedding(const FTWith
         auto &ropeNode = opGraph.nodes[nodeId++];
         atb::infer::RopeParam ropeParam;
         ropeParam.rotaryCoeff = param.rotaryCoeff;
-        CreateOperation(ropeParam, &ropeNode.operation);
+        CREATE_OPERATION(ropeParam, &ropeNode.operation);
         ropeNode.inTensorIds = {POS_EMB_CAST(INTERMEDIATE_QCHUNK0), POS_EMB_CAST(INTERMEDIATE_KCHUNK0),
                                 POS_EMB_CAST(IN_ROPE_COS), POS_EMB_CAST(IN_ROPE_SIN), POS_EMB_CAST(IN_SEQLEN)};
         ropeNode.outTensorIds = {POS_EMB_CAST(INTERMEDIATE_QOUT), POS_EMB_CAST(INTERMEDIATE_KOUT)};
@@ -221,21 +215,21 @@ atb::Status FlashAttentionWithPosEmbedding::RotaryPositionEmbedding(const FTWith
         auto &cat1Node = opGraph.nodes[nodeId++];
         atb::infer::ConcatParam cat1Param;
         cat1Param.concatDim = DIM_LAST;
-        CreateOperation(cat1Param, &cat1Node.operation);
+        CREATE_OPERATION(cat1Param, &cat1Node.operation);
         cat1Node.inTensorIds = {POS_EMB_CAST(INTERMEDIATE_QOUT), POS_EMB_CAST(INTERMEDIATE_QCHUNK1)};
         cat1Node.outTensorIds = {POS_EMB_CAST(OUT_QUERY)};
 
         auto &cat2Node = opGraph.nodes[nodeId++];
         atb::infer::ConcatParam cat2Param;
         cat2Param.concatDim = DIM_LAST;
-        CreateOperation(cat2Param, &cat2Node.operation);
+        CREATE_OPERATION(cat2Param, &cat2Node.operation);
         cat2Node.inTensorIds = {POS_EMB_CAST(INTERMEDIATE_KOUT), POS_EMB_CAST(INTERMEDIATE_KCHUNK1)};
         cat2Node.outTensorIds = {POS_EMB_CAST(OUT_KEY)};
     } else {
         auto &ropeNode = opGraph.nodes[nodeId++];
         atb::infer::RopeParam ropeParam;
         ropeParam.rotaryCoeff = param.rotaryCoeff; // 设置旋转系数
-        CreateOperation(ropeParam, &ropeNode.operation);
+        CREATE_OPERATION(ropeParam, &ropeNode.operation);
         ropeNode.inTensorIds = {POS_EMB_CAST(IN_QUERY), POS_EMB_CAST(IN_KEY), POS_EMB_CAST(IN_ROPE_COS),
                                 POS_EMB_CAST(IN_ROPE_SIN), POS_EMB_CAST(IN_SEQLEN)};
         ropeNode.outTensorIds = {POS_EMB_CAST(OUT_QUERY), POS_EMB_CAST(OUT_KEY)};
@@ -243,7 +237,7 @@ atb::Status FlashAttentionWithPosEmbedding::RotaryPositionEmbedding(const FTWith
                                          &squeezeRopeIntensor};
     }
 
-    opGraph.inferShapeFunc = [g_headNum, g_kvHeadNum, g_hiddenSizePerHead]
+    opGraph.inferShapeFunc = []
                 (const atb::SVector<atb::TensorDesc> &inTensorDescs, atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(0);
         outTensorDescs.at(0).shape.dimNum = DIM_NUM_4;
@@ -260,13 +254,7 @@ atb::Status FlashAttentionWithPosEmbedding::RotaryPositionEmbedding(const FTWith
         return atb::NO_ERROR;
     };
 
-    atb::Status status = atb::CreateOperation(opGraph, operation);
-    if (operation == nullptr || status != atb::NO_ERROR) {
-        ATB_LOG(ERROR) << "RotaryPositionEmbedding operation create fail!";
-        return atb::ERROR_INVALID_GRAPH;
-    } else {
-        ATB_LOG(INFO) << "RotaryPositionEmbedding operation create success!";
-    }
+    CREATE_OPERATION(opGraph, operation);
 
     return atb::NO_ERROR;
 }

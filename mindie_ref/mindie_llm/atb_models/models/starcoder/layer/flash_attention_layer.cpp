@@ -128,7 +128,6 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / sqrt(param.dk);
     selfAttentionParam.kvHeadNum = param.kvHead;
-    selfAttentionParam.isFusion = true;
     if (param.isEncoder) {
         selfAttentionParam.coderType = atb::infer::SelfAttentionParam::ENCODER;
     } else {
