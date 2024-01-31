@@ -14,9 +14,24 @@
  * limitations under the License.
  */
 #include "operation_creator.h"
+
 #include <functional>
 #include <nlohmann/json.hpp>
+
 #include "atb_speed/log.h"
+#include "baichuan2/13b/layer/flash_attention_layer.h"
+#include "baichuan2/13b/layer/flash_attention_quant_layer.h"
+#include "baichuan2/13b/layer/flash_attention_quant_oper_layer.h"
+#include "codellama/34b/layer/flash_attention_rope_layer.h"
+#include "codellama/34b/operation/rope.h"
+#include "gptneox/20b/layer/flashattention_kvcache_rope_layer.h"
+#include "gptneox/20b/layer/embedding_layer.h"
+#include "gptneox/20b/layer/flashattention_kvcache_layer.h"
+#include "gptneox/20b/operation/position_embedding_fusion.h"
+#include "internlm/20b/layer/flash_attention_quant_layer.h"
+#include "internlm/20b/layer/flash_attention_rope_antioutlier_layer.h"
+#include "internlm/20b/layer/flash_attention_rope_layer.h"
+#include "internlm/7b/layer/flash_attention_rope_layer.h"
 
 using OperationCreateFunc = std::function<atb::Operation *(const nlohmann::json &paramJson)>;
 
@@ -33,7 +48,7 @@ static atb::Operation *AllReduceOperationCreate(const nlohmann::json &paramJson)
     }
     if (paramJson.find("allReduceType") != paramJson.end()) {
         param.allReduceType = paramJson["allReduceType"].get<std::string>();
-    } 
+    }
     ATB_LOG(INFO) << "AllReduceParam rank:" << param.rank;
     ATB_LOG(INFO) << "AllReduceParam rankSize:" << param.rankSize;
     atb::Operation *op;
@@ -48,7 +63,7 @@ static atb::Operation *AllGatherOperationCreate(const nlohmann::json &paramJson)
     param.rankSize = paramJson["rankSize"].get<int>();
     if (paramJson.find("rankRoot") != paramJson.end()) {
         param.rankRoot = paramJson["rankRoot"].get<int>();
-    } 
+    }
     ATB_LOG(INFO) << "AllGatherParam rank:" << param.rank;
     ATB_LOG(INFO) << "AllGatherParam rankSize:" << param.rankSize;
     ATB_LOG(INFO) << "AllGatherParam backend:" << param.backend;
@@ -72,40 +87,22 @@ static atb::Operation *BroadcastOperationCreate(const nlohmann::json &paramJson)
     return op;
 }
 
-static atb::Operation *LinearParallelOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
+static atb::Operation *LinearParallelOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
-static atb::Operation *RopeOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
+static atb::Operation *RopeOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
 static atb::Operation *PositionEmbedding1dSplitFusionOperationCreate(const nlohmann::json &paramJson)
 {
     return nullptr;
 }
 
-static atb::Operation *AddNormOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
+static atb::Operation *AddNormOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
-static atb::Operation *RmsNormOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
+static atb::Operation *RmsNormOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
-static atb::Operation *EmbeddingOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
+static atb::Operation *EmbeddingOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
-static atb::Operation *NormOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
+static atb::Operation *NormOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
 static atb::Operation *LinearOperationCreate(const nlohmann::json &paramJson)
 {
@@ -131,7 +128,6 @@ static atb::Operation *TransdataOperationCreate(const nlohmann::json &paramJson)
     return op;
 }
 
-
 static atb::Operation *FfnOldOperationCreate(const nlohmann::json &paramJson)
 {
     atb::infer::LinearActivationParam param;
@@ -150,36 +146,17 @@ static atb::Operation *FfnOldOperationCreate(const nlohmann::json &paramJson)
     return op;
 }
 
+static atb::Operation *MlpOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
-static atb::Operation *MlpOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
+static atb::Operation *MlpQuantOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
-static atb::Operation *MlpQuantOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
+static atb::Operation *SelfAttentionOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
-static atb::Operation *SelfAttentionOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
+static atb::Operation *PositionEmbedding1dSplitOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
-static atb::Operation *PositionEmbedding1dSplitOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
+static atb::Operation *PositionEmbeddingOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
-static atb::Operation *PositionEmbeddingOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
-
-static atb::Operation *SelfAttentionKvCacheOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
+static atb::Operation *SelfAttentionKvCacheOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
 static atb::Operation *TransposeOperationCreate(const nlohmann::json &paramJson)
 {
@@ -192,7 +169,6 @@ static atb::Operation *TransposeOperationCreate(const nlohmann::json &paramJson)
     CreateOperation(param, &op);
     return op;
 }
-
 
 static atb::Operation *LinearActivationOperationCreate(const nlohmann::json &paramJson)
 {
@@ -212,56 +188,29 @@ static atb::Operation *LinearActivationOperationCreate(const nlohmann::json &par
     return op;
 }
 
-static atb::Operation *LinearQuantOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
+static atb::Operation *LinearQuantOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
-static atb::Operation *AddNormQuantOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
+static atb::Operation *AddNormQuantOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
-static atb::Operation *NormQuantOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
+static atb::Operation *NormQuantOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
-static atb::Operation *QuantOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
+static atb::Operation *QuantOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
-static atb::Operation *SelfAttentionKvCacheFusionOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
+static atb::Operation *SelfAttentionKvCacheFusionOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
-static atb::Operation *WordEmbeddingParallelOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
+static atb::Operation *WordEmbeddingParallelOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
-static atb::Operation *LmHeadParallelOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
+static atb::Operation *LmHeadParallelOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
-static atb::Operation *RmsPreNormQuantOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
+static atb::Operation *RmsPreNormQuantOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
-static atb::Operation *RmsNormQuantOperationCreate(const nlohmann::json &paramJson)
-{
-    return nullptr;
-}
+static atb::Operation *RmsNormQuantOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
 static atb::Operation *ActivationOperationCreate(const nlohmann::json &paramJson)
 {
     atb::infer::ActivationParam param;
     if (paramJson.contains("activationType")) {
-        param.activationType =  atb::infer::ActivationType(paramJson["activationType"].get<int32_t>());
+        param.activationType = atb::infer::ActivationType(paramJson["activationType"].get<int32_t>());
     }
     if (paramJson.contains("scale")) {
         param.scale = paramJson["scale"].get<float>();
@@ -303,6 +252,20 @@ std::map<std::string, OperationCreateFunc> g_funcMap = {
     {"LmHeadParallelOperation", &LmHeadParallelOperationCreate},
     {"WordEmbeddingParallelOperation", &WordEmbeddingParallelOperationCreate},
     {"ActivationOperation", &ActivationOperationCreate},
+    {"baichuan2_13b_flash_attention_layer", &atb_speed::baichuan2_13b::CreateFlashAttentionLayer},
+    {"baichuan2_13b_flash_attention_quant_layer", &atb_speed::baichuan2_13b::CreateFlashAttentionQuantLayer},
+    {"baichuan2_13b_flash_attention_quant_oper_layer", &atb_speed::baichuan2_13b::CreateFlashAttentionQuantOperLayer},
+    {"codellama_34b_rope", &atb_speed::codellama_34b::CreateRope},
+    {"codellama_34b_flash_attention_rope_layer", &atb_speed::codellama_34b::CreateFlashAttentionRopeLayer},
+    {"internlm_7b_flash_attention_rope_layer", &atb_speed::internlm_7b::CreateFlashAttentionRopeLayer},
+    {"internlm_20b_flash_attention_rope_layer", &atb_speed::internlm_20b::CreateFlashAttentionRopeLayer},
+    {"internlm_20b_flash_attention_quant_layer", &atb_speed::internlm_20b::CreateFlashAttentionQuantLayer},
+    {"internlm_20b_flash_attention_rope_antioutlier_layer",
+     &atb_speed::internlm_20b::CreateFlashAttentionRopeAntiOutlierLayer},
+    {"gptneox_20b_flash_attention_kv_cache_layer", &atb_speed::gptneox_20b::CreateFlashAttentionKvCacheLayer},
+    {"gptneox_20b_embedding_layer", &atb_speed::gptneox_20b::CreateEmbeddingLayer},
+    {"gptneox_20b_position_embedding_fusion", &atb_speed::gptneox_20b::CreatePositionEmbeddingFusionOperation},
+    {"gptneox_20b_flash_attention_kv_cache_rope_layer", &atb_speed::gptneox_20b::CreateFlashAttentionKvCacheRopeLayer},
 };
 
 atb::Operation *CreateOperation(const std::string &opName, const std::string &param)

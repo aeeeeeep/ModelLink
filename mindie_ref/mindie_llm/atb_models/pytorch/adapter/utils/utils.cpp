@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
  *
@@ -20,15 +21,21 @@
 #pragma GCC diagnostic ignored "-Wunused-function"
 #include <torch_npu/csrc/core/npu/NPUStream.h>
 #pragma GCC diagnostic pop
+#include <acl/acl.h>
+#include <atb/utils.h>
+#include <atb_speed/utils/filesystem.h>
+#include <atb_speed/utils/singleton.h>
+#ifdef TORCH_HIGHER_THAN_PTA6
+#include <torch_npu/csrc/core/npu/NPUFormat.h>
+#include <torch_npu/csrc/framework/OpCommand.h>
+#else
 #include <torch_npu/csrc/framework/utils/OpPreparation.h>
 #include <torch_npu/csrc/aten/NPUNativeFunctions.h>
-#include <acl/acl.h>
-#include <atb_speed/utils/singleton.h>
-#include <atb_speed/utils/filesystem.h>
+#endif
+
+#include "atb_speed/log.h"
 #include "atb_speed/utils/config.h"
 #include "atb_speed/utils/tensor_util.h"
-#include "atb_speed/log.h"
-#include <atb/utils.h>
 
 void *Utils::GetCurrentStream()
 {
@@ -41,12 +48,20 @@ void *Utils::GetCurrentStream()
 
 int64_t Utils::GetTensorNpuFormat(const at::Tensor &tensor)
 {
+#ifdef TORCH_HIGHER_THAN_PTA6
+    return at_npu::native::get_npu_format(tensor);
+#else
     return at_npu::native::NPUNativeFunctions::get_npu_format(tensor);
+#endif
 }
 
 at::Tensor Utils::NpuFormatCast(const at::Tensor &tensor)
 {
+#ifdef TORCH_HIGHER_THAN_PTA6
+    return at_npu::native::npu_format_cast(tensor, GetTensorNpuFormat(tensor));
+#else
     return at_npu::native::NPUNativeFunctions::npu_format_cast(tensor, GetTensorNpuFormat(tensor));
+#endif
 }
 
 void Utils::BuildVariantPack(const std::vector<torch::Tensor> &inTensors, const std::vector<torch::Tensor> &outTensors,
@@ -122,8 +137,13 @@ at::Tensor Utils::CreateAtTensorFromTensorDesc(const atb::TensorDesc &tensorDesc
 
     ATB_LOG(INFO) << "tensor_with_format stat, " << atb_speed::TensorUtil::TensorDescToString(tensorDesc);
 
+#ifdef TORCH_HIGHER_THAN_PTA6
+    at::Tensor newTensor = at_npu::native::empty_with_format(
+        at::IntArrayRef(tensorDesc.shape.dims, tensorDesc.shape.dimNum), options, tensorDesc.format);
+#else
     at::Tensor newTensor = at_npu::native::NPUNativeFunctions::tensor_with_format(
         at::IntArrayRef(tensorDesc.shape.dims, tensorDesc.shape.dimNum), options, tensorDesc.format);
+#endif
 
     ATB_LOG(INFO) << "tensor_with_format end, newTensor.format:" << GetTensorNpuFormat(newTensor)
                   << ", is_contiguous:" << newTensor.is_contiguous();

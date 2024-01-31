@@ -37,7 +37,7 @@ template <class T> atb::Status MlpGateLayerBase(const MlpGateParam &param, atb::
 
     auto &matmulUpNode = opGraph.nodes.at(nodeId++);
     atb::infer::LinearParam matmulUpParam = {false, param.transposeB, param.isBias};
-    atb::CreateOperation(matmulUpParam, &matmulUpNode.operation);
+    CREATE_OPERATION(matmulUpParam, &matmulUpNode.operation);
     if (param.isBias) {
         matmulUpNode.inTensorIds = {config.IN_HIDDENSTATES_ID, config.IN_WEIGHT_UP_ID, config.IN_BIAS_UP_ID};
     } else {
@@ -50,13 +50,13 @@ template <class T> atb::Status MlpGateLayerBase(const MlpGateParam &param, atb::
         atb::infer::SplitParam splitParam;
         splitParam.splitDim = -1; // 2: split最后一维
         splitParam.splitNum = 2;  // 2: 进行二等分
-        atb::CreateOperation(splitParam, &splitNode.operation);
+        CREATE_OPERATION(splitParam, &splitNode.operation);
         splitNode.inTensorIds = {config.INTERMEDIATE_MATMUL_UP_OUT_ND_ID};
         splitNode.outTensorIds = {config.INTERMEDIATE_MATMUL_GATE_OUT_ND_ID, config.INTERMEDIATE_SPLIT_OUT_ND_ID};
     } else {
         auto &matmulGateNode = opGraph.nodes.at(nodeId++);
         atb::infer::LinearParam matmulGateParam = {false, param.transposeB, param.isBias};
-        atb::CreateOperation(matmulGateParam, &matmulGateNode.operation);
+        CREATE_OPERATION(matmulGateParam, &matmulGateNode.operation);
         if (param.isBias) {
             matmulGateNode.inTensorIds = {config.IN_HIDDENSTATES_ID, config.IN_WEIGHT_GATE_ID, config.IN_BIAS_GATE_ID};
         } else {
@@ -68,14 +68,14 @@ template <class T> atb::Status MlpGateLayerBase(const MlpGateParam &param, atb::
     auto &actNode = opGraph.nodes.at(nodeId++);
     atb::infer::ActivationParam actParam;
     actParam.activationType = param.activationType;
-    atb::CreateOperation(actParam, &actNode.operation);
+    CREATE_OPERATION(actParam, &actNode.operation);
     actNode.inTensorIds = {config.INTERMEDIATE_MATMUL_GATE_OUT_ND_ID};
     actNode.outTensorIds = {config.INTERMEDIATE_ACTIVATION_OUT_ID};
 
     auto &mulNode = opGraph.nodes.at(nodeId++);
     atb::infer::ElewiseParam mulParam;
     mulParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_MUL;
-    atb::CreateOperation(mulParam, &mulNode.operation);
+    CREATE_OPERATION(mulParam, &mulNode.operation);
     if (param.isPack) {
         mulNode.inTensorIds = {config.INTERMEDIATE_ACTIVATION_OUT_ID, config.INTERMEDIATE_SPLIT_OUT_ND_ID};
     } else {
@@ -101,7 +101,7 @@ template <class T> atb::Status MlpGateLayerBase(const MlpGateParam &param, atb::
         return atb::NO_ERROR;
     };
 
-    atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
 }
 

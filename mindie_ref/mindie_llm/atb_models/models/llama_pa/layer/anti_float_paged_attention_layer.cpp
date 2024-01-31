@@ -115,7 +115,6 @@ atb::Status AntiPALayer(const AntiPALayerParam &param, atb::Operation **operatio
         faEnParam.qkScale = 1.0 / sqrt(param.dk);
         faEnParam.kvHeadNum = param.headNum;
         faEnParam.isEncoder = true;
-        faEnParam.isFusion = true;
         CREATE_OPERATION(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_MIXEDV,
                                      IN_ATTENTIONMASK, IN_INPUT_LENGTHS};
@@ -180,7 +179,7 @@ atb::Status AntiPALayer(const AntiPALayerParam &param, atb::Operation **operatio
     selfOutNormAddNode.inTensorIds = {INTERMIDATE_SELFNORMOUT, IN_SELFOUTBETA};
     selfOutNormAddNode.outTensorIds = {INTERMIDATE_SELFNORMADDOUT};
 
-    atb_speed::llama_7b::MlpGateParam mlpParam;
+    atb_speed::llama::MlpGateParam mlpParam;
     mlpParam.rank = param.rank;
     mlpParam.rankSize = param.rankSize;
     mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
@@ -188,7 +187,7 @@ atb::Status AntiPALayer(const AntiPALayerParam &param, atb::Operation **operatio
     mlpParam.isBias = true;
     mlpParam.isPack = false;
     mlpParam.backend = param.backend;
-    atb_speed::llama_7b::MlpGateLayer(mlpParam, &mlpNode.operation);
+    atb_speed::llama::MlpGateLayer(mlpParam, &mlpNode.operation);
     mlpNode.inTensorIds = {INTERMIDATE_SELFNORMADDOUT, IN_MLPUPWEIGHT, IN_MLPGATEWEIGHT, IN_MLPDOWNWEIGHT,
                             IN_MLPUP_BIAS, IN_MLPGATE_BIAS};
     mlpNode.outTensorIds = {INTERMIDATE_MLPOUT};

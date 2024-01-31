@@ -5,7 +5,7 @@ import jsonlines
 import torch
 import torch_npu
 from tqdm import tqdm
-from transformers import AutoTokenizer, TelechatForCausalLM, TelechatConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 
 torch.npu.set_device(torch.device(f"npu:0"))
 soc_version = torch_npu._C._npu_get_soc_version()
@@ -34,11 +34,11 @@ def get_args():
 
 args = get_args()
 
-os.setenv('QUANT_PATH', args.quant_path)
+os.environ['QUANT_PATH'] = args.quant_path
 
 tokenizer = AutoTokenizer.from_pretrained(args.model_path)
-config = TelechatConfig.from_pretrained(args.model_path)
-model = TelechatForCausalLM.from_pretrained(args.model_path, config=config).eval().half().npu()
+config = AutoConfig.from_pretrained(args.model_path, trust_remote_code=True)
+model = AutoModelForCausalLM.from_pretrained(args.model_path, config=config, trust_remote_code=True).eval().half().npu()
 
 soc_version = torch_npu._C._npu_get_soc_version()
 if soc_version in [105, 220, 221, 222, 223]:

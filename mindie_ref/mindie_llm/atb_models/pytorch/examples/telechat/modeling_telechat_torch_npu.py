@@ -23,17 +23,16 @@ import torch.utils.checkpoint
 from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, LayerNorm, MSELoss
 from torch.nn import functional as F
-from apex.normalization import FusedLayerNorm
-from ...file_utils import add_code_sample_docstrings, add_start_docstrings, add_start_docstrings_to_model_forward
-from ...modeling_outputs import (
+from transformers.file_utils import add_code_sample_docstrings, add_start_docstrings, add_start_docstrings_to_model_forward
+from transformers.modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
     CausalLMOutputWithCrossAttentions,
     QuestionAnsweringModelOutput,
     SequenceClassifierOutputWithPast,
     TokenClassifierOutput,
 )
-from ...modeling_utils import PreTrainedModel
-from ...utils import logging
+from transformers.modeling_utils import PreTrainedModel
+from transformers.utils import logging
 from .configuration_telechat import TelechatConfig
 
 logger = logging.get_logger(__name__)
@@ -274,7 +273,6 @@ class TelechatAttention(nn.Module):
     def __init__(self, config: TelechatConfig, layer_idx):
         super().__init__()
         self.kv_cache = None
-        self.pretraining_tp = config.pretraining_tp
         self.slow_but_exact = config.slow_but_exact
         self.layer_idx = layer_idx
 
@@ -500,7 +498,6 @@ class TelechatMLP(nn.Module):
         super().__init__()
         hidden_size = config.hidden_size
 
-        self.pretraining_tp = config.pretraining_tp
         self.slow_but_exact = config.slow_but_exact
         self.gate_proj = nn.Linear(hidden_size, config.ffn_hidden_size, bias=False)
         self.up_proj = nn.Linear(hidden_size, config.ffn_hidden_size, bias=False)

@@ -27,17 +27,16 @@ import torch.utils.checkpoint
 from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, LayerNorm, MSELoss
 from torch.nn import functional as F
-from apex.normalization import FusedLayerNorm
-from ...file_utils import add_code_sample_docstrings, add_start_docstrings, add_start_docstrings_to_model_forward
-from ...modeling_outputs import (
+from transformers.file_utils import add_code_sample_docstrings, add_start_docstrings, add_start_docstrings_to_model_forward
+from transformers.modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,
     CausalLMOutputWithCrossAttentions,
     QuestionAnsweringModelOutput,
     SequenceClassifierOutputWithPast,
     TokenClassifierOutput,
 )
-from ...modeling_utils import PreTrainedModel
-from ...utils import logging
+from transformers.modeling_utils import PreTrainedModel
+from transformers.utils import logging
 from .configuration_telechat import TelechatConfig
 
 ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
@@ -153,8 +152,6 @@ class RotaryEmbedding(torch.nn.Module):
 zero_tensor = torch.zeros(1)
 rot_emb_global = RotaryEmbedding(128)
 cosTable, sinTable = rot_emb_global.forward(zero_tensor, seq_len=2048)
-cosTable = cosTable.npu().half()
-sinTable = sinTable.npu().half()
 
 
 def rotate_half(x):
@@ -1182,6 +1179,8 @@ class TelechatModel(TelechatPreTrainedModel):
             self.weightFlag = True
         global cosTable
         global sinTable
+        cosTable = cosTable.npu().half()
+        sinTable = sinTable.npu().half()
 
         self.acl_inputs[0] = input_ids
         if self.encoder_flag:

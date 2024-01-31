@@ -34,7 +34,7 @@ public:
         bool isLmHeadParallel = true;
         std::string backend = "hccl";
         bool isBF16 = false;
-        void FromString(const std::string &param);
+        int64_t FromString(const std::string &param);
     };
 
     explicit PAModel(const std::string &param);
