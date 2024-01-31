@@ -42,7 +42,7 @@ atb::Status CreateLmHead(const LmHeadParam &param, atb::Operation **operation, T
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
-    opGraph.internalTensorNum = 
+    opGraph.internalTensorNum =
         param.gatherAhead ? config.INTERMEDIATE_TENSOR_COUNT : config.INTERMEDIATE_TENSOR_COUNT - 1;
     opGraph.nodes.resize(param.gatherAhead ? config.NODE_COUNT : config.NODE_COUNT - 1);
     opGraph.name = "LmHead";
