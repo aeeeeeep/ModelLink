@@ -16,6 +16,8 @@
 #include "atb_speed/utils/operation_factory.h"
 #include "atb_speed/log.h"
 
+namespace atb_speed {
+
 bool OperationFactory::Register(const std::string &operationName, CreateOperationFuncPtr createOperation)
 {
     auto it = OperationFactory::GetRegistryMap().find(operationName);
@@ -43,3 +45,4 @@ std::unordered_map<std::string, CreateOperationFuncPtr> &OperationFactory::GetRe
     static std::unordered_map<std::string, CreateOperationFuncPtr> operationRegistryMap;
     return operationRegistryMap;
 }
+} // namespace atb_speed

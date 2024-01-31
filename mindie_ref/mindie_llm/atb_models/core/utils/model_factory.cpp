@@ -16,6 +16,8 @@
 #include "atb_speed/utils/model_factory.h"
 #include "atb_speed/log.h"
 
+namespace atb_speed {
+
 bool ModelFactory::Register(const std::string &modelName, CreateModelFuncPtr createModel)
 {
     auto it = ModelFactory::GetRegistryMap().find(modelName);
@@ -43,3 +45,4 @@ std::unordered_map<std::string, CreateModelFuncPtr> &ModelFactory::GetRegistryMa
     static std::unordered_map<std::string, CreateModelFuncPtr> modelRegistryMap;
     return modelRegistryMap;
 }
+} // namespace atb_speed

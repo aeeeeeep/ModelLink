@@ -273,7 +273,7 @@ atb::Operation *CreateOperation(const std::string &opName, const std::string &pa
 {
     nlohmann::json paramJson = nlohmann::json::parse(param);
 
-    auto operation = OperationFactory::CreateOperation(opName, paramJson);
+    auto operation = atb_speed::OperationFactory::CreateOperation(opName, paramJson);
     if (operation != nullptr) {
         ATB_LOG(INFO) << "Get Op from the OperationFactory, opName: " << opName;
         return operation;

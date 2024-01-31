@@ -122,7 +122,7 @@ int64_t ModelTorch::SetParam(std::string param)
         "chatglm2_6b_PagedAttentionModel"
     };
     if (std::find(modelNames.begin(), modelNames.end(), modelName_) != modelNames.end()) {
-        model_ = ModelFactory::CreateInstance(modelName_, param);
+        model_ = atb_speed::ModelFactory::CreateInstance(modelName_, param);
         if (model_ != nullptr) {
             ATB_LOG(INFO) << "Get model from the ModelFactory, " << modelName_
                           << ". If other models also want to be obtained from the ModelFactory, "
