@@ -136,7 +136,6 @@ atb::Status FloatFALayer(const FloatFALayerParam &param, atb::Operation **operat
     selfAttentionKvCacheParam.headDim = param.dk;
     selfAttentionKvCacheParam.qScale = 1.0f;
     selfAttentionKvCacheParam.qkScale = 1.0f / std::sqrt(param.dk);
-    selfAttentionKvCacheParam.isFusion = true;
     CreateOperation(selfAttentionKvCacheParam, &selfAttentionKvCacheFusedNode.operation);
     selfAttentionKvCacheFusedNode.inTensorIds = { INTERNAL_POSITIONEMBEDQ,
                                                   INTERNAL_POSITIONEMBEDK,
