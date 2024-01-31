@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_LLAMA_PARALLEL_LINEAR_H
-#define ATB_SPEED_MODELS_LLAMA_PARALLEL_LINEAR_H
+#ifndef ATB_SPEED_MODELS_COMMON_LINEAR_H
+#define ATB_SPEED_MODELS_COMMON_LINEAR_H
 
 #include "nlohmann/json.hpp"
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
 
 namespace atb_speed {
-namespace llama_parallel {
+namespace common {
 
 enum LinearQuantType : unsigned int {
     NO_QUANT = 0,
@@ -34,6 +34,6 @@ struct FusionLinearParam {
 };
 
 atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operation);
-} // namespace llama_parallel
+} // namespace common
 } // namespace atb_speed
 #endif

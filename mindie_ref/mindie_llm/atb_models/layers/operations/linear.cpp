@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@
 #include <cmath>
 #include <numeric>
 #include "atb_speed/log.h"
-#include "models/llama_parallel/operation/linear.h"
+#include "layers/operations/linear.h"
 
 namespace atb_speed {
-namespace llama_parallel {
+namespace common {
 
 enum LinearTensorIdx : uint32_t {
     IN_INPUT = 0,
@@ -42,7 +42,8 @@ atb::Status CreateFusionLinear(const FusionLinearParam &param, atb::Operation **
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
     opGraph.internalTensorNum = config.INTERMEDIATE_TENSOR_COUNT;
     opGraph.nodes.resize(config.NODE_COUNT);
-    opGraph.name = param.quantType == NO_QUANT ? "LinearNoQuant" : param.quantType == RMS_NORM_QUANT_LINEAR_DEQUANT ? "LinearDequantOnly" : "LinearQuant";
+    opGraph.name = param.quantType == NO_QUANT ? "LinearNoQuant" : \
+        param.quantType == RMS_NORM_QUANT_LINEAR_DEQUANT ? "LinearDequantOnly" : "LinearQuant";
 
     size_t nodeId = 0;
 
@@ -51,7 +52,7 @@ atb::Status CreateFusionLinear(const FusionLinearParam &param, atb::Operation **
         atb::Node &inputQuantNode = opGraph.nodes.at(nodeId++);
         atb::infer::ElewiseParam inputQuantParam;
         inputQuantParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_QUANT_PER_CHANNEL;
-        CreateOperation(inputQuantParam, &inputQuantNode.operation);
+        CREATE_OPERATION(inputQuantParam, &inputQuantNode.operation);
         inputQuantNode.inTensorIds = {LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_SCALE, LinearTensorIdx::IN_OFFSET};
         inputQuantNode.outTensorIds = {config.INTERMIDATE_INPUT};
     }
@@ -63,7 +64,7 @@ atb::Status CreateFusionLinear(const FusionLinearParam &param, atb::Operation **
         linearParam.transposeA = false;
         linearParam.transposeB = false;  // 是否不转置B矩阵: false => 需要转置矩阵B
         linearParam.hasBias = false;
-        CreateOperation(linearParam, &linearNode.operation);
+        CREATE_OPERATION(linearParam, &linearNode.operation);
         linearNode.inTensorIds = {LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT};
         linearNode.outTensorIds = {LinearTensorIdx::OUT_LINEAR};
     } else {
@@ -73,7 +74,7 @@ atb::Status CreateFusionLinear(const FusionLinearParam &param, atb::Operation **
         linearQuantParam.transposeA = false;
         linearQuantParam.transposeB = true;  // 是否转置B矩阵: true => 需要转置矩阵B
         linearQuantParam.hasBias = false;
-        CreateOperation(linearQuantParam, &linearQuantNode.operation);
+        CREATE_OPERATION(linearQuantParam, &linearQuantNode.operation);
         linearQuantNode.inTensorIds = {
             param.quantType == RMS_NORM_QUANT_LINEAR_DEQUANT ? LinearTensorIdx::IN_INPUT : config.INTERMIDATE_INPUT,
             LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_DESCALE
@@ -91,7 +92,7 @@ atb::Status CreateFusionLinear(const FusionLinearParam &param, atb::Operation **
         return atb::NO_ERROR;
     };
 
-    return atb::CreateOperation(opGraph, operation);
+    return CREATE_OPERATION(opGraph, operation);
 }
 
 class LinearNoQuantConfig {
@@ -141,5 +142,5 @@ atb::Status FusionLinear(const FusionLinearParam &param_, atb::Operation **opera
     }
 }
 
-} // namespace llama_parallel
+} // namespace common
 } // namespace atb_speed

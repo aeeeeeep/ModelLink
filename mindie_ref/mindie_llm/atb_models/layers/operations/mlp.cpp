@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 #include <atb/atb_infer.h>
-#include "models/llama_parallel/operation/linear.h"
-#include "models/llama_parallel/operation/linear_parallel.h"
-#include "models/llama_parallel/operation/mlp.h"
+#include "layers/operations/linear.h"
+#include "layers/operations/linear_parallel.h"
+#include "layers/operations/mlp.h"
 
 namespace atb_speed {
-namespace llama_parallel {
+namespace common {
 
 enum MlpTensorIdx : uint32_t {
     IN_INPUT = 0,
@@ -56,7 +56,7 @@ atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation, T confi
 
     if (param.isPack) {
         atb::Node &linearGateUpNode = opGraph.nodes.at(nodeId++);
-        atb_speed::llama_parallel::FusionLinearParam gateUpLinearParam = param.gateUpLinearParam;
+        atb_speed::common::FusionLinearParam gateUpLinearParam = param.gateUpLinearParam;
         FusionLinear(gateUpLinearParam, &linearGateUpNode.operation);
         linearGateUpNode.inTensorIds = {
             MlpTensorIdx::IN_INPUT,
@@ -71,12 +71,12 @@ atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation, T confi
         atb::infer::SplitParam splitParam;
         splitParam.splitDim = -1; // [batchSize, seqLen, 2 * hiddenSize]
         splitParam.splitNum = 2;  // 进行二等分
-        atb::CreateOperation(splitParam, &splitNode.operation);
+        CREATE_OPERATION(splitParam, &splitNode.operation);
         splitNode.inTensorIds = {config.INTERMIDATE_GATE_UP_OUT};
         splitNode.outTensorIds = {config.INTERMIDATE_GATE_OUT, config.INTERMIDATE_UP_OUT};
     } else {
         atb::Node &linearGateNode = opGraph.nodes.at(nodeId++);
-        atb_speed::llama_parallel::FusionLinearParam gateUpLinearParam = param.gateUpLinearParam;
+        atb_speed::common::FusionLinearParam gateUpLinearParam = param.gateUpLinearParam;
         FusionLinear(gateUpLinearParam, &linearGateNode.operation);
         linearGateNode.inTensorIds = {
             MlpTensorIdx::IN_INPUT,
@@ -102,19 +102,19 @@ atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation, T confi
     atb::Node &activationNode = opGraph.nodes.at(nodeId++);
     atb::infer::ActivationParam activationParam;
     activationParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
-    CreateOperation(activationParam, &activationNode.operation);
+    CREATE_OPERATION(activationParam, &activationNode.operation);
     activationNode.inTensorIds = {config.INTERMIDATE_GATE_OUT};
     activationNode.outTensorIds = {config.INTERMIDATE_SWISH_OUT};
 
     atb::Node &mulNode = opGraph.nodes.at(nodeId++);
     atb::infer::ElewiseParam elewiseParam;
     elewiseParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_MUL;
-    CreateOperation(elewiseParam, &mulNode.operation);
+    CREATE_OPERATION(elewiseParam, &mulNode.operation);
     mulNode.inTensorIds = {config.INTERMIDATE_SWISH_OUT, config.INTERMIDATE_UP_OUT};
     mulNode.outTensorIds = {config.INTERMIDATE_MUL_OUT};
 
     atb::Node &linearDownNode = opGraph.nodes.at(nodeId++);
-    atb_speed::llama_parallel::LinearParallelParam downLinearParallelParam = param.downLinearParallelParam;
+    atb_speed::common::LinearParallelParam downLinearParallelParam = param.downLinearParallelParam;
     LinearParallel(downLinearParallelParam, &linearDownNode.operation);
     linearDownNode.inTensorIds = {
         config.INTERMIDATE_MUL_OUT,
@@ -131,7 +131,7 @@ atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation, T confi
         return atb::NO_ERROR;
     };
 
-    return atb::CreateOperation(opGraph, operation);
+    return CREATE_OPERATION(opGraph, operation);
 }
 
 class MlpNoPackConfig {
@@ -171,5 +171,5 @@ atb::Status Mlp(const MlpParam &param_, atb::Operation **operation)
     }
 }
 
-} // namespace llama2_70b
+} // namespace common
 } // namespace atb_speed
