@@ -33,7 +33,7 @@ from transformers.generation.logits_process import (
 )
 
 from .configuration_chatglm import ChatGLMConfig
-from .manager import ModeManager
+from manager import ModeManager
 
 
 ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
@@ -814,7 +814,7 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
         self.rotary_pos_emb = RotaryEmbedding(rotary_dim // 2, original_impl=config.original_rope, device=device,
                                               dtype=config.torch_dtype)
         self.encoder = init_method(GLMTransformer, config, **init_kwargs)
-        self.output_layer = init_method(nn.Linear, config.hidden_size, config.padded_vocab_size, bias=False,
+        self.output_layer = init_method(nn.Linear, config.hidden_size, config.padded_vocab_size // config.world_size, bias=False,
                                         dtype=config.torch_dtype, **init_kwargs)
         self.pre_seq_len = config.pre_seq_len
         self.prefix_projection = config.prefix_projection
@@ -1003,11 +1003,11 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
 
         # get mode manager
         self.mode = ENABLE_SPARSE and "sparse" or ENABLE_QUANT and "quant" or "float"
-        self.manager = ModeManager.get_manager(mode=self.mode)
+        self.manager = ModeManager.get_manager(mode=self.mode)(self.config, rank=self.rank, world_size=self.world_size)
 
         # init_param
-        self.acl_encoder_param = self.manager(self.config, rank=self.rank, world_size=self.world_size).init_param(is_encoder=True)
-        self.acl_decoder_param = self.manager(self.config, rank=self.rank, world_size=self.world_size).init_param(is_encoder=False)
+        self.acl_encoder_param = self.manager.init_param(is_encoder=True)
+        self.acl_decoder_param = self.manager.init_param(is_encoder=False)
         self.acl_encoder_operation.set_param(self.acl_encoder_param)
         self.acl_decoder_operation.set_param(self.acl_decoder_param)
 
@@ -1056,7 +1056,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             position_ids = self.get_position_ids(input_ids, device=input_ids.device)
         if not is_first_forward:
             position_ids = position_ids[..., -1:]
-            input_ids = input_ids[:, -1:]
+            input_ids = input_ids[..., -1:]
         return {
             "input_ids": input_ids,
             "past_key_values": past_key_values,
@@ -1066,7 +1066,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         }
 
     def set_weight(self):
-        self.weights_list = self.manager(self.config, rank=self.rank, world_size=self.world_size).init_weights(self.state_dict(), is_format_nz=self.format_nz)
+        self.weights_list = self.manager.init_weights(self.state_dict(), is_format_nz=self.format_nz)
         self.acl_encoder_operation.set_weight(self.weights_list)
         self.acl_decoder_operation.set_weight(self.weights_list)
 
@@ -1170,7 +1170,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
                 "k_cache_input": self.k_cache_input,
                 "v_cache_input": self.v_cache_input,
             }
-            input_full = self.manager(self.config).init_inputs(inputs_dict)
+            input_full = self.manager.init_inputs(inputs_dict)
 
             acl_model_out = self.acl_encoder_operation.execute(input_full, acl_param)
             lm_logits = acl_model_out[0]
@@ -1222,7 +1222,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
                 "k_cache_input": self.k_cache_input,
                 "v_cache_input": self.v_cache_input,
             }
-            input_increament = self.manager(self.config).init_inputs(inputs_dict)
+            input_increament = self.manager.init_inputs(inputs_dict)
 
             acl_model_out = self.acl_decoder_operation.execute(input_increament, acl_param)
             lm_logits = acl_model_out[0]
