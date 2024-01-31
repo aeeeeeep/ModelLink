@@ -168,6 +168,12 @@ weight_offset.npy  weight_scale.npy
 
 ## 模型推理
 
+- 可开启CPU Performance模式以提高模型推理性能。
+
+  ```
+  cpupower frequency-set -g performance
+  ```
+  
 - 推理前开启如下环境变量
 
   ```shell

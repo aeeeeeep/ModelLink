@@ -199,7 +199,7 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
             outTensorDescs.at(0).format = inTensorDescs.at(0).format;
             auto dimNum = inTensorDescs.at(0).shape.dimNum;
             if (param_.isAllGatherTranspose){
-                outTensorDescs.at(0).shape.dimNum = dimNum
+                outTensorDescs.at(0).shape.dimNum = dimNum;
                 outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
                 if (dimNum == 3) {
                     outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[1]; // dim 2
