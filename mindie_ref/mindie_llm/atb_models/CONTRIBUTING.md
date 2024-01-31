@@ -1,12 +1,15 @@
 **介绍**
+
 Ascend-MindIE-MindIE_llm-ATB_Models，欢迎各位开发者
 
 
 **贡献要求**
+
 开发者提交的模型包括源码、readme，并遵循以下标准
 
 
 **一、源码**
+
 1 使用者和贡献者可以直接克隆仓库，相关指令参考：
 
     ```
@@ -21,6 +24,7 @@ Ascend-MindIE-MindIE_llm-ATB_Models，欢迎各位开发者
 
 
 **二、Readme**
+
 readme用于指导用户理解和部署样例，要包含如下内容：
 
 1 简介：模型的来源及原理；
@@ -29,6 +33,7 @@ readme用于指导用户理解和部署样例，要包含如下内容：
 
 
 **三、编程规范**
+
 规范标准
 1、C++代码遵循google编程规范：Google C++ Coding Guidelines；单元测测试遵循规范： Googletest Primer。
 
@@ -36,6 +41,7 @@ readme用于指导用户理解和部署样例，要包含如下内容：
 
 
 **四、提交**
+
 1 提交：请贡献者fork到个人仓库，通过Pull Request合入主仓的master分支。pr请勾选 “接受Pull Request时使用扁平化(Squash)合并”。
 
 2 请在提交代码之前签署CLA协议，“个人签署”，[签署链接](https://clasign.osinfra.cn/sign/gitee_ascend-1611222220829317930)
