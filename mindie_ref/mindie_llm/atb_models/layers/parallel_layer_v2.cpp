@@ -65,10 +65,11 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
     if (param_.commParam.rankSize > 1) {
         nodeCount += 1;
         internalTensorNum += 1;
-        if (parallelType == COLUMN_PARALLEL) {
+        if (parallelType == COLUMN_PARALLEL && param_.isAllGatherTranspose) {
             nodeCount += 1;
             internalTensorNum += 1;
         }
+
     }
 
     opGraph.internalTensorNum = internalTensorNum;
@@ -135,7 +136,7 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
             // (world_size,bs,seq,vocab_size//world_size)
             // -> (bs,seq,world_size,vocab_size//world_size)
             // -> (bs,seq,vocab_size)
-            if (param_.isAllGatherTranspose){
+            if (param_.isAllGatherTranspose) {
                 atb::Node &gatherTransposeNode = opGraph.nodes.at(nodeId++);
                 atb::infer::TransposeParam gatherTransposeParam;
                 gatherTransposeParam.perm = {1, 2, 0, 3};
@@ -198,7 +199,7 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
             }
             outTensorDescs.at(0).format = inTensorDescs.at(0).format;
             auto dimNum = inTensorDescs.at(0).shape.dimNum;
-            if (param_.isAllGatherTranspose){
+            if (param_.isAllGatherTranspose) {
                 outTensorDescs.at(0).shape.dimNum = dimNum;
                 outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
                 if (dimNum == 3) {

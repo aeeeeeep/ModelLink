@@ -31,9 +31,9 @@ from transformers.generation.logits_process import (
     TopKLogitsWarper,
     TopPLogitsWarper,
 )
+from manager import ModeManager
 
 from .configuration_chatglm import ChatGLMConfig
-from manager import ModeManager
 
 
 ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
