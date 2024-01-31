@@ -198,9 +198,8 @@ int64_t FlashAttentionModel::BuildGraph()
         if (std::find(param_.floatLayers.begin(), param_.floatLayers.end(), layerId) != param_.floatLayers.end()) {
             isFloatLayer = true;
         }
-        if (((param_.quantModel || param_.sparseModel) && isFloatLayer)
-            || (!param_.quantModel && !param_.sparseModel)) {
-            //浮点
+        if (((param_.quantModel || param_.sparseModel) && isFloatLayer) ||
+            (!param_.quantModel && !param_.sparseModel)) {
             ATB_LOG(FATAL) << "Float Layer " << layerId;
 
             atb_speed::llama::FlashAttentionLayerParam floatModelParam;
