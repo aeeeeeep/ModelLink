@@ -27,7 +27,6 @@ from .adaptor_arguments import apply_arguments_patch
 from .adaptor_model import apply_model_patch
 from .adapter_lora import apply_lora_patch
 from .adaptor_data import apply_data_patch
-from .adaptor_intern.model_adaptor import apply_Internlm_patch
 
 
 apply_arguments_patch()
@@ -35,4 +34,3 @@ apply_model_patch()
 apply_tokenizer_patch()
 apply_lora_patch()
 apply_data_patch()
-apply_Internlm_patch()

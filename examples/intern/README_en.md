@@ -127,7 +127,7 @@ SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
 python $SCRIPT_PATH \
     --input-model-dir ./model_from_hf/internlm-7b/ \
     --output-model-dir ./model_weights \
-    --tensor-model-parallel-size 1 \
+    --tensor-model-parallel-size 8 \
     --pipeline-model-parallel-size 1 \
     --type 7B \
     --bias \

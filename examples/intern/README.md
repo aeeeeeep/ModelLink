@@ -127,7 +127,7 @@ SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
 python $SCRIPT_PATH \
     --input-model-dir ./model_from_hf/internlm-7b/ \
     --output-model-dir ./model_weights \
-    --tensor-model-parallel-size 1 \
+    --tensor-model-parallel-size 8 \
     --pipeline-model-parallel-size 1 \
     --type 7B \
     --bias \
@@ -280,7 +280,7 @@ python ./tools/preprocess_data.py \
     --append-eod
 ```
 
-6. 配置 Internlm-65B 预训练脚本
+5. 配置 Internlm-65B 预训练脚本
 
 ```shell
 # 修改 ascend-toolkit 路径
@@ -291,7 +291,7 @@ TOKENIZER_PATH="your tokenizer path"#词表路径
 DATA_PATH="your data path" #数据集路径
 ```
 
-7. 启动 Internlm-65B 预训练脚本
+6. 启动 Internlm-65B 预训练脚本
 
 ```shell
 bash examples/intern/pretrain_internlm_65b_ptd.sh 
