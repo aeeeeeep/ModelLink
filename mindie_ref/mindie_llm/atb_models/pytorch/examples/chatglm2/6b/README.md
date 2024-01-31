@@ -168,11 +168,17 @@ weight_offset.npy  weight_scale.npy
 
 ## 模型推理
 
+- 可开启CPU Performance模式以提高模型推理性能。
+
+  ```
+  cpupower frequency-set -g performance
+  ```
+  
 - 推理前开启如下环境变量
 
   ```shell
   export HCCL_BUFFSIZE=110
-  export HCCL_OP_BASE_FFTS_MODE_ENABLE=1
+  export HCCL_OP_BASE_FFTS_MODE_ENABLE=TRUE
   export TASK_QUEUE_ENABLE=1
   export ATB_OPERATION_EXECUTE_ASYNC=1
   export ATB_LAYER_INTERNAL_TENSOR_REUSE=1

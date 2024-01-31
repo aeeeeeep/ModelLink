@@ -65,6 +65,10 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
     if (param_.commParam.rankSize > 1) {
         nodeCount += 1;
         internalTensorNum += 1;
+        if (parallelType == COLUMN_PARALLEL && param_.isAllGatherTranspose) {
+            nodeCount += 1;
+            internalTensorNum += 1;
+        }
     }
 
     opGraph.internalTensorNum = internalTensorNum;
@@ -117,16 +121,29 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
             allReduceParam.rankSize = param_.commParam.rankSize;
             allReduceParam.backend = param_.commParam.backend;
             CREATE_OPERATION(allReduceParam, &parallelNode.operation);
+            parallelNode.inTensorIds = {inteId++};
+            parallelNode.outTensorIds = {param_.isBias && !param_.isQuant ? inteId : OUT_LINEAR};
         } else {
             atb::infer::AllGatherParam allGatherParam;
             allGatherParam.rank = param_.commParam.rank;
             allGatherParam.rankSize = param_.commParam.rankSize;
             allGatherParam.backend = param_.commParam.backend;
             CREATE_OPERATION(allGatherParam, &parallelNode.operation);
-        }
+            parallelNode.inTensorIds = {inteId++};
+            parallelNode.outTensorIds = {(param_.isBias && !param_.isQuant) || param_.isAllGatherTranspose ? inteId : OUT_LINEAR};
 
-        parallelNode.inTensorIds = {inteId++};
-        parallelNode.outTensorIds = {param_.isBias && !param_.isQuant ? inteId : OUT_LINEAR};
+            // (world_size,bs,seq,vocab_size//world_size)
+            // -> (bs,seq,world_size,vocab_size//world_size)
+            // -> (bs,seq,vocab_size)
+            if (param_.isAllGatherTranspose) {
+                atb::Node &gatherTransposeNode = opGraph.nodes.at(nodeId++);
+                atb::infer::TransposeParam gatherTransposeParam;
+                gatherTransposeParam.perm = {1, 2, 0, 3};
+                CREATE_OPERATION(gatherTransposeParam, &gatherTransposeNode.operation);
+                gatherTransposeNode.inTensorIds = {inteId++};
+                gatherTransposeNode.outTensorIds = {param_.isBias && !param_.isQuant ? inteId : OUT_LINEAR};
+            }
+        }
     }
 
     if (param_.isBias && !param_.isQuant) {
@@ -181,13 +198,22 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
             }
             outTensorDescs.at(0).format = inTensorDescs.at(0).format;
             auto dimNum = inTensorDescs.at(0).shape.dimNum;
-            outTensorDescs.at(0).shape.dimNum = dimNum + 1; // add rank dim
-            outTensorDescs.at(0).shape.dims[0] = param_.commParam.rankSize;
-            outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[0];
-            if (dimNum == 3) {
-                outTensorDescs.at(0).shape.dims[2] = inTensorDescs.at(0).shape.dims[1]; // dim 2
+            if (param_.isAllGatherTranspose) {
+                outTensorDescs.at(0).shape.dimNum = dimNum;
+                outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
+                if (dimNum == 3) {
+                    outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[1]; // dim 2
+                }
+                outTensorDescs.at(0).shape.dims[dimNum-1] = inTensorDescs.at(1).shape.dims[0] * param_.commParam.rankSize; // last dim
+            } else {
+                outTensorDescs.at(0).shape.dimNum = dimNum + 1; // add rank dim
+                outTensorDescs.at(0).shape.dims[0] = param_.commParam.rankSize;
+                outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[0];
+                if (dimNum == 3) {
+                    outTensorDescs.at(0).shape.dims[2] = inTensorDescs.at(0).shape.dims[1]; // dim 2
+                }
+                outTensorDescs.at(0).shape.dims[dimNum] = inTensorDescs.at(1).shape.dims[0]; // last dim
             }
-            outTensorDescs.at(0).shape.dims[dimNum] = inTensorDescs.at(1).shape.dims[0]; // last dim
 
             return atb::NO_ERROR;
         };
