@@ -365,7 +365,7 @@ int64_t FlashAttentionModel::BuildGraph()
     const int gatherOutTensorId = internalTensorSize - 1; // the last 1 internel tensor
     gatherNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
                             &graph_.inTensors.at(IN_TENSOR_SEQ_INDEX)};
-    gatherNode.outTensors = {&graph_.internalTensors.at(gatherOutTensorId)}
+    gatherNode.outTensors = {&graph_.internalTensors.at(gatherOutTensorId)};
 
     auto &outLinearNode = graph_.nodes.at(nodeId++);
     atb::infer::LinearParam outLinearParm = {false, false, false};
