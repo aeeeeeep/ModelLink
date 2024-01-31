@@ -85,6 +85,8 @@ def inference(infer_model, infer_tokenizer, prompt, batch, seqlen_in, seqlen_out
     inputs = infer_tokenizer(prompt[:batch], return_tensors="pt", padding=True, truncation=True, max_length=seqlen_in).to(infer_model.device)
     #infer
     with torch.no_grad():
+        _ = infer_model.generate(inputs.input_ids,
+                                      attention_mask=inputs.attention_mask, min_new_tokens=1, max_new_tokens=10)
         torch.npu.synchronize()
         first_token_start = time.time()
         _ = infer_model.generate(inputs.input_ids,
