@@ -172,7 +172,7 @@ weight_offset.npy  weight_scale.npy
 
   ```shell
   export HCCL_BUFFSIZE=110
-  export HCCL_OP_BASE_FFTS_MODE_ENABLE=1
+  export HCCL_OP_BASE_FFTS_MODE_ENABLE=TRUE
   export TASK_QUEUE_ENABLE=1
   export ATB_OPERATION_EXECUTE_ASYNC=1
   export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
