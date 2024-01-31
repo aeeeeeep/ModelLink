@@ -49,6 +49,13 @@ if ATB_SPEED_HOME_PATH is None:
 LIB_PATH = os.path.join(ATB_SPEED_HOME_PATH ,"lib/libatb_speed_torch.so")
 torch.classes.load_library(LIB_PATH)
 
+RUN_QUANT_MODEL = os.environ.get("RUN_QUANT_MODEL", True)
+QUANT_WEIGHT_PATH = os.environ.get("QUANT_WEIGHT_PATH", "")
+MAX_SEQ_LEN = os.environ.get("MAX_SEQ_LEN", 2048)
+FLOAT_QUERY_LAYERS = []
+FLOAT_KV_LAYERS = []
+FLOAT_DOWN_LAYERS = [0,1,9,25,27]
+
 logger = logging.get_logger(__name__)
 
 _CHECKPOINT_FOR_DOC = "bigscience/telechat-560m"
@@ -65,107 +72,6 @@ TELECHAT_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 lm_head_weight = None
 
-############## flash attention, changed by ZihanWang
-try:
-    from einops import rearrange
-except ImportError:
-    rearrange = None
-
-use_flash_attn = True
-try:
-    from flash_attn.flash_attn_interface import flash_attn_unpadded_func
-except ImportError:
-    try:
-        from flash_attn.flash_attn_interface import flash_attn_varlen_func as flash_attn_unpadded_func
-    except ImportError:
-        flash_attn_unpadded_func = None
-# from .position_embedding import RotaryEmbedding, apply_rotary_pos_emb_torch, apply_rotary_pos_emb
-
-
-###############################################################
-
-################## flash-attention, changed by ZihanWang ######################
-class FlashSelfAttention(torch.nn.Module):
-    """Implement the scaled dot product attention with softmax.
-    Arguments
-    ---------
-        softmax_scale: The temperature to use for the softmax attention.
-                      (default: 1/sqrt(d_keys) where d_keys is computed at
-                      runtime)
-        attention_dropout: The dropout rate to apply to the attention
-                           (default: 0.0)
-    """
-
-    def __init__(self, causal=False, softmax_scale=None, attention_dropout=0.0,
-                 device=None, dtype=None):
-        super().__init__()
-        assert flash_attn_unpadded_func is not None, ('Please install FlashAttention first, '
-                                                      'e.g., with pip install flash-attn')
-        assert rearrange is not None, 'Please install einops first, e.g., with pip install einops'
-        self.causal = causal
-        self.softmax_scale = softmax_scale
-        self.dropout_p = attention_dropout
-
-    def forward(self, q, k, v):
-        """Implements the multihead softmax attention.
-        Arguments
-        ---------
-            q, k, v: The tensor containing the query, key, and value. (B, S, H, D)
-        """
-        assert all((i.dtype in [torch.float16, torch.bfloat16] for i in (q, k, v)))
-        assert all((i.is_cuda for i in (q, k, v)))
-
-        batch_size, seqlen_q = q.shape[0], q.shape[1]
-        seqlen_k = k.shape[1]
-
-        q, k, v = [rearrange(x, 'b s ... -> (b s) ...') for x in [q, k, v]]
-        cu_seqlens_q = torch.arange(0, (batch_size + 1) * seqlen_q, step=seqlen_q, dtype=torch.int32,
-                                    device=q.device)
-        self.training = False
-        if self.training:
-            # during training q,k,v always have same seqlen
-            assert seqlen_k == seqlen_q
-
-            is_causal = self.causal
-            cu_seqlens_k = cu_seqlens_q
-            dropout_p = self.dropout_p
-        else:
-            # turn off FA causal mask after first inference autoregressive iteration
-            # only on first autoregressive step q,k,v have same seqlen
-            is_causal = seqlen_q == seqlen_k
-            cu_seqlens_k = torch.arange(0, (batch_size + 1) * seqlen_k, step=seqlen_k, dtype=torch.int32,
-                                        device=q.device)
-            dropout_p = 0
-
-        output = flash_attn_unpadded_func(
-            q, k, v, cu_seqlens_q, cu_seqlens_k, seqlen_q, seqlen_k,
-            dropout_p=dropout_p,
-            softmax_scale=self.softmax_scale, causal=is_causal
-        )
-
-        output = rearrange(output, '(b s) ... -> b s ...', b=batch_size)
-        return output
-
-
-######################################
-
-def _make_causal_mask_old(
-        input_ids_shape: torch.Size, device: torch.device, past_key_values_length: int
-) -> torch.BoolTensor:
-    """
-    Make causal mask used for self-attention.
-    """
-    batch_size, target_length = input_ids_shape
-    mask = torch.empty((target_length, target_length + past_key_values_length), dtype=torch.bool, device=device)
-    # ONNX doesn't support `torch.Tensor.triu` properly, thus we use this workaround
-    seq_ids = torch.arange(target_length, device=device)
-    mask[:, past_key_values_length:] = seq_ids[:, None] < seq_ids[None, :]
-
-    if past_key_values_length > 0:
-        mask[:, :past_key_values_length] = False
-
-    expanded_mask = mask[None, None, :, :].expand(batch_size, 1, target_length, target_length + past_key_values_length)
-    return expanded_mask
 
 def _make_causal_mask(
         input_ids_shape: torch.Size, dtype: torch.dtype, device: torch.device, past_key_values_length: int
@@ -175,7 +81,6 @@ def _make_causal_mask(
     """
     batch_size, target_length = input_ids_shape
     mask = torch.full((target_length, target_length), torch.tensor(torch.finfo(dtype).min, device=device), device=device)
-    # mask = torch.empty((target_length, target_length + past_key_values_length), dtype=torch.bool, device=device)
     mask_cond = torch.arange(mask.size(-1), device=device)
     mask.masked_fill_(mask_cond < (mask_cond + 1).view(mask.size(-1), 1), 0)
     mask = mask.to(dtype)
@@ -190,16 +95,6 @@ def _make_causal_mask(
 
     expanded_mask = mask[None, None, :, :].expand(batch_size, 1, target_length, target_length + past_key_values_length)
     return expanded_mask
-
-def _expand_mask_old(mask: torch.Tensor, tgt_length: int) -> torch.BoolTensor:
-    """
-    Expands attention_mask from `[batch_size, src_length]` to `[batch_size, 1, tgt_length, src_length]`.
-    """
-    batch_size, src_length = mask.shape
-    tgt_length = tgt_length if tgt_length is not None else src_length
-
-    expanded_mask = ~(mask[:, None, None, :].to(torch.bool))
-    return expanded_mask.expand(batch_size, 1, tgt_length, src_length)
 
 def _expand_mask(mask: torch.Tensor, dtype: torch.dtype, tgt_length: int) -> torch.BoolTensor:
     """
@@ -219,15 +114,18 @@ class TelechatRMSNorm(nn.Module):
         super().__init__()
         self.weight = nn.Parameter(torch.ones(hidden_size))
         self.variance_epsilon = eps
-        self.bias = nn.Parameter(torch.ones(hidden_size))
+        if RUN_QUANT_MODEL:
+            self.bias = nn.Parameter(torch.ones(hidden_size))
 
     def forward(self, hidden_states):
         variance = hidden_states.to(torch.float32).pow(2).mean(-1, keepdim=True)
         hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
         if self.weight.dtype in [torch.float16, torch.bfloat16]:
             hidden_states = hidden_states.to(self.weight.dtype)
-
-        return self.weight * hidden_states + self.bias
+        if RUN_QUANT_MODEL:
+            return self.weight * hidden_states + self.bias
+        else:
+            return self.weight * hidden_states
 
 class RotaryEmbedding(torch.nn.Module):
 
@@ -248,97 +146,13 @@ class RotaryEmbedding(torch.nn.Module):
             self.max_seq_len_cached = seq_len
             t = torch.arange(self.max_seq_len_cached, device=x.device, dtype=self.inv_freq.dtype)
             freqs = torch.einsum('i,j->ij', t, self.inv_freq)
-            # Different from paper, but it uses a different permutation in order to obtain the same calculation
             emb = torch.cat((freqs, freqs), dim=-1).to(x.device)
-            # if self.precision == torch.bfloat16:
-            #     emb = emb.float()
-            # [sx, 1 (b * np), hn]
             self.cos_cached = emb.cos()
-            #self.cos_cached = emb.cos()[:, None, :]
             self.sin_cached = emb.sin()
-            #self.sin_cached = emb.sin()[:, None, :]
             if self.precision == torch.bfloat16:
                 self.cos_cached = self.cos_cached.bfloat16()
                 self.sin_cached = self.sin_cached.bfloat16()
         return self.cos_cached[:seq_len, ...], self.sin_cached[:seq_len, ...]
-
-# rotary pos emb helpers:
-zero_tensor = torch.zeros(1)
-rot_emb_global = RotaryEmbedding(128)
-cosTable, sinTable = rot_emb_global.forward(zero_tensor, seq_len=2048)
-
-def rotate_half(x):
-    x1, x2 = x[..., :x.shape[-1] // 2], x[..., x.shape[-1] // 2:]
-    return torch.cat((-x2, x1), dim=x1.ndim - 1)  # dim=-1 triggers a bug in earlier torch versions
-
-
-@torch.jit.script
-def apply_rotary_pos_emb(q, k, cos, sin, offset: int = 0):
-    cos, sin = cos[offset:q.shape[0] + offset, ...], sin[offset:q.shape[0] + offset, ...]
-    return (q * cos) + (rotate_half(q) * sin), (k * cos) + (rotate_half(k) * sin)
-
-
-def build_alibi_tensor(attention_mask: torch.Tensor, num_heads: int, dtype: torch.dtype) -> torch.Tensor:
-    """
-    Link to paper: https://arxiv.org/abs/2108.12409 Alibi tensor is not causal as the original paper mentions, it
-    relies on a translation invariance of softmax for quick implementation: with l being a tensor, and a fixed value
-    `softmax(l+a) = softmax(l)`. Based on
-    https://github.com/ofirpress/attention_with_linear_biases/blob/a35aaca144e0eb6b789dfcb46784c4b8e31b7983/fairseq/models/transformer.py#L742
-    TODO @thomasw21 this doesn't work as nicely due to the masking strategy, and so masking varies slightly.
-
-    Args:
-    Returns tensor shaped (batch_size * num_heads, 1, max_seq_len)
-        attention_mask (`torch.Tensor`):
-            Token-wise attention mask, this should be of shape (batch_size, max_seq_len).
-        num_heads (`int`, *required*):
-            number of heads
-        dtype (`torch.dtype`, *optional*, default=`torch.bfloat16`):
-            dtype of the output tensor
-    """
-    batch_size, seq_length = attention_mask.shape
-    closest_power_of_2 = 2 ** math.floor(math.log2(num_heads))
-    base = torch.tensor(
-        2 ** (-(2 ** -(math.log2(closest_power_of_2) - 3))), device=attention_mask.device, dtype=torch.float32
-    )
-    powers = torch.arange(1, 1 + closest_power_of_2, device=attention_mask.device, dtype=torch.int32)
-    slopes = torch.pow(base, powers)
-
-    if closest_power_of_2 != num_heads:
-        extra_base = torch.tensor(
-            2 ** (-(2 ** -(math.log2(2 * closest_power_of_2) - 3))), device=attention_mask.device, dtype=torch.float32
-        )
-        num_remaining_heads = min(closest_power_of_2, num_heads - closest_power_of_2)
-        extra_powers = torch.arange(1, 1 + 2 * num_remaining_heads, 2, device=attention_mask.device, dtype=torch.int32)
-        slopes = torch.cat([slopes, torch.pow(extra_base, extra_powers)], dim=0)
-
-    # Note: alibi will added to the attention bias that will be applied to the query, key product of attention
-    # => therefore alibi will have to be of shape (batch_size, num_heads, query_length, key_length)
-    # => here we set (batch_size=1, num_heads=num_heads, query_length=1, key_length=max_length)
-    # => the query_length dimension will then be broadcasted correctly
-    # This is more or less identical to T5's relative position bias:
-    # https://github.com/huggingface/transformers/blob/f681437203baa7671de3174b0fa583c349d9d5e1/src/transformers/models/t5/modeling_t5.py#L527
-    arange_tensor = ((attention_mask.cumsum(dim=-1) - 1) * attention_mask)[:, None, :]
-    alibi = slopes[..., None] * arange_tensor
-    return alibi.reshape(batch_size * num_heads, 1, seq_length).to(dtype)
-
-
-def dropout_add(x: torch.Tensor, residual: torch.Tensor, prob: float, training: bool) -> torch.Tensor:
-    """
-    Dropout add function
-
-    Args:
-        x (`torch.tensor`, *required*):
-            input tensor
-        residual (`torch.tensor`, *required*):
-            residual tensor
-        prob (`float`, *required*):
-            dropout probability
-        training (`bool`, *required*):
-            training mode
-    """
-    out = F.dropout(x, p=prob, training=training)
-    out = residual + out
-    return out
 
 
 def telechat_gelu_forward(x: torch.Tensor) -> torch.Tensor:
@@ -428,114 +242,19 @@ class TelechatAttention(nn.Module):
         self.inv_norm_factor = 1.0 / math.sqrt(self.head_dim)
         self.beta = 1.0
 
-        #################### changed by ZihanWang
         self.num_key_value_heads = 32
         kv_projection_size = self.head_dim * self.num_key_value_heads
         self.num_key_value_groups = self.num_heads // self.num_key_value_heads
-        # self.query = nn.Linear(self.hidden_size, self.hidden_size // self.world_size, bias=False)
-        # self.key_value = nn.Linear(self.hidden_size, kv_projection_size * 2 // self.world_size, bias=False)
-        # self.dense = nn.Linear(self.hidden_size // self.world_size, self.hidden_size)
+        self.query = nn.Linear(self.hidden_size, self.hidden_size // self.world_size, bias=False)
+        self.key_value = nn.Linear(self.hidden_size, kv_projection_size * 2 // self.world_size, bias=False)
+        self.dense = nn.Linear(self.hidden_size // self.world_size, self.hidden_size)
         self.attention_dropout = nn.Dropout(config.attention_dropout)
         self.rotary_emb = RotaryEmbedding(self.head_dim)
         self.num_heads = self.num_heads // self.world_size        
         self.num_key_value_heads = self.num_key_value_heads // self.world_size
-        # print(self.head_dim)
-        #self.core_attention_flash = FlashSelfAttention(
-        #    causal=True, attention_dropout=config.attention_dropout
-        #)
-        ################### cache ##################
+
         self.last_key_layer = None
-
-
-    def _split_heads(self, fused_qkv: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """
-        Split the last dimension into (num_heads, head_dim) without making any copies, results share same memory
-        storage as `fused_qkv`
-
-        Args:
-            fused_qkv (`torch.tensor`, *required*): [batch_size, seq_length, num_heads * 3 * head_dim]
-
-        Returns:
-            query: [batch_size, seq_length, num_heads, head_dim] key: [batch_size, seq_length, num_heads, head_dim]
-            value: [batch_size, seq_length, num_heads, head_dim]
-        """
-        batch_size, seq_length, three_times_hidden_size = fused_qkv.shape
-        fused_qkv = fused_qkv.view(batch_size, seq_length, self.num_heads, 3, self.head_dim)
-        return fused_qkv[..., 0, :], fused_qkv[..., 1, :], fused_qkv[..., 2, :]
-
-    def _merge_heads(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Merge heads together over the last dimension
-
-        Args:
-            x (`torch.tensor`, *required*): [batch_size * num_heads, seq_length, head_dim]
-
-        Returns:
-            torch.tensor: [batch_size, seq_length, num_heads * head_dim]
-        """
-        # What we want to achieve is:
-        # batch_size * num_heads, seq_length, head_dim -> batch_size, seq_length, num_heads * head_dim
-        batch_size_and_num_heads, seq_length, _ = x.shape
-        batch_size = batch_size_and_num_heads // self.num_heads
-
-        # First view to decompose the batch size
-        # batch_size * num_heads, seq_length, head_dim -> batch_size, num_heads, seq_length, head_dim
-        x = x.view(batch_size, self.num_heads, seq_length, self.head_dim)
-
-        # batch_size, num_heads, seq_length, head_dim -> batch_size, seq_length, num_heads, head_dim
-        x = x.permute(0, 2, 1, 3)
-
-        # batch_size, seq_length, num_heads, head_dim -> batch_size, seq_length, num_heads * head_dim
-        return x.reshape(batch_size, seq_length, self.num_heads * self.head_dim)
-
-    def repeat_kv(self, hidden_states, n_rep):
-        slen, batch, num_key_value_heads_per_partition, head_dim = hidden_states.shape
-        if n_rep == 1:
-            return hidden_states
-        hidden_states = hidden_states[:, :, :, None, :].expand(slen, batch, num_key_value_heads_per_partition, n_rep,
-                                                               head_dim)
-        return hidden_states.reshape(slen, batch, num_key_value_heads_per_partition * n_rep, head_dim)
-
-    def split_tensor_along_last_dim(self,
-                                    tensor: torch.Tensor,
-                                    num_partitions: int,
-                                    contiguous_split_chunks: bool = False,
-                                    ):
-
-        # Get the size and dimension.
-        last_dim = tensor.dim() - 1
-        last_dim_size = tensor.size()[last_dim] // num_partitions
-        # Split.
-        tensor_list = torch.split(tensor, last_dim_size, dim=last_dim)
-        # Note: torch.split does not create contiguous tensors by default.
-        if contiguous_split_chunks:
-            return tuple(chunk.contiguous() for chunk in tensor_list)
-
-        return tensor_list
-    def _merge_heads(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Merge heads together over the last dimension
-
-        Args:
-            x (`torch.tensor`, *required*): [batch_size * num_heads, seq_length, head_dim]
-
-        Returns:
-            torch.tensor: [batch_size, seq_length, num_heads * head_dim]
-        """
-        # What we want to achieve is:
-        # batch_size * num_heads, seq_length, head_dim -> batch_size, seq_length, num_heads * head_dim
-        batch_size_and_num_heads, seq_length, _ = x.shape
-        batch_size = batch_size_and_num_heads // self.num_heads
-
-        # First view to decompose the batch size
-        # batch_size * num_heads, seq_length, head_dim -> batch_size, num_heads, seq_length, head_dim
-        x = x.view(batch_size, self.num_heads, seq_length, self.head_dim)
-
-        # batch_size, num_heads, seq_length, head_dim -> batch_size, seq_length, num_heads, head_dim
-        x = x.permute(0, 2, 1, 3)
-
-        # batch_size, seq_length, num_heads, head_dim -> batch_size, seq_length, num_heads * head_dim
-        return x.reshape(batch_size, seq_length, self.num_heads * self.head_dim)
+        
     def forward(
             self,
             hidden_states: torch.Tensor,
@@ -547,159 +266,21 @@ class TelechatAttention(nn.Module):
             use_cache: bool = False,
             output_attentions: bool = False,
     ):
-
-        hidden_states = hidden_states.transpose(1, 0)  ###[seq,1,4096]
-        '''
-        qkv_weight = torch.cat((self.query.weight,self.key_value.weight),dim = 0)
-        qkv_layer = torch.matmul(hidden_states,qkv_weight.T)
-        query_layer = qkv_layer[...,:qkv_layer.shape[-1] // 3]
-        new_tensor_shape = query_layer.size()[:-1] + \
-                           (self.num_heads,
-                            self.head_dim)
-        query_layer = query_layer.view(*new_tensor_shape)
-        mixed_kv_layer = qkv_layer[...,qkv_layer.shape[-1] // 3:]
-        new_tensor_shape = mixed_kv_layer.size()[:-1] + \
-                           (self.num_key_value_heads,
-                            2 * self.head_dim)
-        mixed_kv_layer = mixed_kv_layer.view(*new_tensor_shape)
-        (key_layer, value_layer) = self.split_tensor_along_last_dim(mixed_kv_layer, 2)
-
-        '''
-        query_layer = self.query(hidden_states)#torch.matmul(hidden_states,self.query.weight.T)##[seq,1,4096]
-        new_tensor_shape = query_layer.size()[:-1] + \
-                           (self.num_heads,
-                            self.head_dim)
-        query_layer = query_layer.view(*new_tensor_shape)
-
-        mixed_kv_layer = self.key_value(hidden_states)#torch.matmul(hidden_states,self.key_value.weight.T)
-        new_tensor_shape = mixed_kv_layer.size()[:-1] + \
-                           (self.num_key_value_heads,
-                            2 * self.head_dim)
-        mixed_kv_layer = mixed_kv_layer.view(*new_tensor_shape)
-        (key_layer,value_layer) = self.split_tensor_along_last_dim(mixed_kv_layer,2)
-
-
-        output_size = (query_layer.size(1),
-                       query_layer.size(2),
-                       query_layer.size(0),
-                       key_layer.size(0))
-
-        query_layer = query_layer.view(output_size[2],output_size[0] * output_size[1], -1)
-        key_layer = key_layer.view(output_size[3],output_size[0] * output_size[1], -1)
-
-
-        #print(query_layer.shape, key_layer.shape,
-        #      value_layer.shape)  ##torch.Size([1, 32, 128]) torch.Size([1, 32, 128]) torch.Size([1, 1, 32, 128])
-        #exit()
-        apply_rotary_fn = apply_rotary_pos_emb
-
-        seq_len = key_layer.shape[0]
-        offset = 0
-
-        if  use_cache and layer_past != None:
-            past_key, past_value  = layer_past
-            offset = past_key.shape[0]
-            seq_len += offset
-
-
-        cos, sin = self.rotary_emb(value_layer, seq_len=seq_len)
-        #print("!!!",offset)
-        query_layer, key_layer = apply_rotary_fn(query_layer, key_layer, cos, sin, offset=offset)
-        if use_cache:
-            if layer_past != None:
-                past_key, past_value = layer_past
-                key_layer = torch.cat((past_key, key_layer[-1, ...].unsqueeze(0)),dim=0)
-                value_layer = torch.cat((past_value,value_layer[-1,...].unsqueeze(0)),dim = 0)
-            #print(f"layer_past shape is ({key_layer.shape()},{value_layer.shape()})")
-            layer_past = key_layer,value_layer
-        s,bz,head,dim = value_layer.shape
-        s_key = key_layer.shape[0]; s_query = query_layer.shape[0]
-        #print(query_layer.shape,key_layer.shape,value_layer.shape)  ##[9,32,128],[9,32,128],[9,1,32,128]
-        query_layer = query_layer.transpose(1, 0).reshape(bz * self.num_heads, s_query, self.head_dim)
-        key_layer = key_layer.permute(1, 2, 0)
-        value_layer = value_layer.transpose(2, 0).reshape(bz * self.num_heads, s_key, self.head_dim)
-        #print(query_layer.shape, key_layer.shape, value_layer.shape) ##[32,9,128],[32,128,9].[32,9,128]
-        '''
-        alibi = torch.zeros(query_layer.shape[0],s_query,s_key).to(1)
-
-        matmul_result = torch.baddbmm(
-            input = alibi,
-            batch1=query_layer.detach(),
-            batch2=key_layer.detach(),
-            beta=self.beta,
-            alpha=self.inv_norm_factor,
-        )
-        '''
-        matmul_result = self.inv_norm_factor * torch.einsum('bik,bkj->bij', query_layer, key_layer)
-
-        # change view to [batch_size, num_heads, q_length, kv_length]
-        attention_scores = matmul_result.view(bz, self.num_heads, s_query, s_key)
-        #print(attention_scores.shape)  ##[1,32,9,9]
-
-        # cast attention scores to fp32, compute scaled softmax and cast back to initial dtype - [batch_size, num_heads, q_length, kv_length]
-        input_dtype = attention_scores.dtype
-        # `float16` has a minimum value of -65504.0, whereas `bfloat16` and `float32` have a minimum value of `-3.4e+38`
-        if input_dtype == torch.float16:
-            attention_scores = attention_scores.to(torch.float)
-        attn_weights = torch.masked_fill(attention_scores, attention_mask, torch.finfo(attention_scores.dtype).min)
-        attention_probs = F.softmax(attn_weights, dim=-1).to(input_dtype) ##dtype = torch.float32
-
-        # [batch_size, num_heads, q_length, kv_length]
-        attention_probs = self.attention_dropout(attention_probs)
-
-        if head_mask is not None:
-            attention_probs = attention_probs * head_mask
-
-        # change view [batch_size x num_heads, q_length, kv_length]
-        attention_probs_reshaped = attention_probs.view(bz * self.num_heads, s_query, s_key)
-
-        # matmul: [batch_size * num_heads, q_length, head_dim]
-        context_layer = torch.bmm(attention_probs_reshaped, value_layer)
-
-        # change view [batch_size, q_length, num_heads * head_dim]
-        context_layer = self._merge_heads(context_layer)
-        #print(context_layer.shape)#[1,9,4096]
-        output_tensor = self.dense(context_layer)
-        # print(output_tensor.shape,residual.shape)
-        output_tensor1 = output_tensor
-        output_tensor = dropout_add(output_tensor, residual, self.hidden_dropout, self.training)
-#        print((output_tensor1==output_tensor).all())
-        present = None
-        outputs = (output_tensor, present)
-        if output_attentions:
-            outputs += (attention_probs,)
-
-        return output_tensor, layer_past
-        #exit()
-        '''
-
-        q, k, v = [rearrange(x, 's b ... -> b s ...').contiguous() for x in
-                   (query_layer, key_layer, value_layer)]
-
-
-        #exit()
-        context_layer = self.core_attention_flash(q, k, v)
-        context_layer = rearrange(context_layer, 'b s h d -> b s (h d)').contiguous()
-        output_tensor = self.dense(context_layer)
-        output_tensor = dropout_add(output_tensor, residual, self.hidden_dropout, self.training)
-        '''
-        return output_tensor , None
-
+        return
 
 
 class TelechatMLP(nn.Module):
-    def __init__(self, config: TelechatConfig):
+    def __init__(self, config: TelechatConfig, layer_idx):
         super().__init__()
         hidden_size = config.hidden_size
         self.world_size = 1
         if hasattr(config, 'world_size'):
             self.world_size = config.world_size
-        #self.pretraining_tp = config.pretraining_tp
-        #self.slow_but_exact = config.slow_but_exact
-        self.gate_proj = nn.Linear(hidden_size, config.ffn_hidden_size // self.world_size, bias=False)
-        self.up_proj = nn.Linear(hidden_size, config.ffn_hidden_size // self.world_size, bias=False)
-        self.down_proj = nn.Linear(config.ffn_hidden_size // self.world_size, hidden_size, bias=True)
-        #self.hidden_dropout = config.hidden_dropout
+        if not RUN_QUANT_MODEL:
+            self.gate_proj = nn.Linear(hidden_size, config.ffn_hidden_size // self.world_size, bias=False)
+            self.up_proj = nn.Linear(hidden_size, config.ffn_hidden_size // self.world_size, bias=False)
+        if not RUN_QUANT_MODEL or layer_idx in FLOAT_DOWN_LAYERS:
+            self.down_proj = nn.Linear(config.ffn_hidden_size // self.world_size, hidden_size, bias=True)
 
     def swiglu(self, x):
         x = torch.chunk(x, 2, dim=-1)  ###split x into 2 tensors along the last dimension
@@ -707,10 +288,7 @@ class TelechatMLP(nn.Module):
         return F.silu(x[0]) * x[1]
 
     def forward(self, hidden_states: torch.Tensor, residual: torch.Tensor) -> torch.Tensor:
-        intermediate_output = self.down_proj(F.silu(self.gate_proj(hidden_states)) * self.up_proj(hidden_states))
-        output = dropout_add(intermediate_output, residual, self.hidden_dropout, self.training)
-
-        return output
+        return
 
 
 class TelechatBlock(nn.Module):
@@ -725,10 +303,11 @@ class TelechatBlock(nn.Module):
 
         self.num_heads = config.n_head // self.world_size
         self.layer_idx = layer_idx
-        self.self_attention = TelechatAttention(config, layer_idx)
+        if RUN_QUANT_MODEL:
+            self.self_attention = TelechatAttention(config, layer_idx)
         self.post_attention_layernorm = TelechatRMSNorm(hidden_size, eps=config.layer_norm_epsilon)
 
-        self.mlp = TelechatMLP(config)
+        self.mlp = TelechatMLP(config, layer_idx)
 
         self.apply_residual_connection_post_layernorm = config.apply_residual_connection_post_layernorm
         self.hidden_dropout = config.hidden_dropout
@@ -743,51 +322,7 @@ class TelechatBlock(nn.Module):
             use_cache: bool = False,
             output_attentions: bool = False,
     ):
-        #print(f"use_cache in block is {use_cache}")
-        # hidden_states: [batch_size, seq_length, hidden_size]
-        #print("TELECHAT BLOCK",hidden_states.shape)
-        # Layer norm at the beginning of the transformer layer.
-        layernorm_output = self.input_layernorm(hidden_states)
-
-        # Layer norm post the self attention.
-        if self.apply_residual_connection_post_layernorm:
-            residual = layernorm_output
-        else:
-            residual = hidden_states
-
-        # Self attention.
-        attn_outputs = self.self_attention(
-            layernorm_output,
-            residual,
-            layer_past=layer_past,
-            attention_mask=attention_mask,
-            alibi=alibi,
-            head_mask=head_mask,
-            use_cache=use_cache,
-            output_attentions=output_attentions,
-        )
-
-        attention_output = attn_outputs[0]
-
-        outputs = attn_outputs[1:]
-
-        layernorm_output = self.post_attention_layernorm(attention_output)
-
-        # Get residual
-        if self.apply_residual_connection_post_layernorm:
-            residual = layernorm_output
-        else:
-            residual = attention_output
-
-        # MLP.
-        output = self.mlp(layernorm_output, residual)
-
-        if use_cache:
-            outputs = (output,) + outputs
-        else:
-            outputs = (output,) + outputs[1:]
-
-        return outputs  # hidden_states, present, attentions
+        return
 
 
 class TelechatPreTrainedModel(PreTrainedModel):
@@ -934,21 +469,6 @@ TELECHAT_INPUTS_DOCSTRING = r"""
     TELECHAT_START_DOCSTRING,
 )
 
-def bias_correction_new(fp_bias, quant_weight, input_offset, deq_scale):
-    bias_correction = fp_bias.npu() / deq_scale.npu() - quant_weight.to(torch.float32).npu().sum(dim=1) * float(input_offset)
-    return bias_correction
-
-def bias_correction(fp_bias, quant_weight, input_offset, deq_scale):
-    correction = quant_weight.to(torch.float32).npu().sum(dim=1)*float(input_offset)*deq_scale.npu()
-    bias_correction = fp_bias.npu()-correction
-    return bias_correction
-
-def process_deq_scale(deq_scale_dict):
-    new_deq_scale_dict = {}
-    for key, deq_scale in deq_scale_dict.items():
-        new_deq_scale = np.frombuffer(deq_scale.numpy().tobytes(), dtype=np.int32)
-        new_deq_scale_dict.setdefault(key, torch.tensor(new_deq_scale.astype(np.int64)))
-    return new_deq_scale_dict
 
 class TelechatModel(TelechatPreTrainedModel):
     def __init__(self, config: TelechatConfig):
@@ -968,7 +488,6 @@ class TelechatModel(TelechatPreTrainedModel):
 
         # Embedding + LN Embedding
         self.word_embeddings = nn.Embedding(config.vocab_size, self.embed_dim)
-        # self.word_embeddings_layernorm = LayerNorm(self.embed_dim, eps=config.layer_norm_epsilon)
 
         # Transformer blocks
         self.h = nn.ModuleList([TelechatBlock(config,_) for _ in range(config.num_hidden_layers)])
@@ -976,42 +495,51 @@ class TelechatModel(TelechatPreTrainedModel):
         self.ln_f = TelechatRMSNorm(self.embed_dim, eps=config.layer_norm_epsilon)
 
         self.gradient_checkpointing = False
+        self.dk = self.embed_dim // self.num_heads
+        self.num_heads = self.num_heads // self.world_size
+        # add  model op
+        self.num_hidden_layers = config.num_hidden_layers
 
         # Initialize weigts and apply final processing
         self.post_init()
-        self.dk = self.embed_dim // self.num_heads
-        self.num_heads = self.num_heads // self.world_size
+        
         print("self.rank", self.rank, "self.rankSize", self.rankSize)
         print("current_device", torch_npu.npu.current_device())
         print("device count", torch.npu.device_count())
-        # add  model op
-        self.num_hidden_layers = config.num_hidden_layers
-        # QUANT
-        self.float_query_layers = []
-        self.float_kv_layers = []
-        self.float_down_layers = [0,1,9,25,27]
-        # quant_param_path = "/data/models/telechat_quant_L5/"
-        quant_param_path = "/data/models/telechat_quant_L5_part/"
-        quant_param_path = os.path.join(quant_param_path, "part_model", str(self.rank))
-        quant_param_path = quant_param_path + "/"
-        import numpy as np
-        self.input_scale_dict = np.load(quant_param_path + "input_scale.npy", allow_pickle=True).item()
-        self.input_offset_dict = np.load(quant_param_path + "input_offset.npy", allow_pickle=True).item()
-        self.quant_weight_dict = np.load(quant_param_path + "quant_weight.npy", allow_pickle=True).item()
-        self.weight_scale_dict = np.load(quant_param_path + "weight_scale.npy", allow_pickle=True).item()
-        self.deq_scale_dict = np.load(quant_param_path + "deq_scale.npy", allow_pickle=True).item()
-        # self.quant_bias_dict = np.load(quant_param_path + "quant_bias.npy", allow_pickle=True).item()
-        # self.fp_bias_dict = np.load(quant_param_path + "fp_bias.npy", allow_pickle=True).item()
-        self.fp_bias_dict = np.load(quant_param_path + "fp_bias.npy", allow_pickle=True).item()
 
-        qkv_input_scale = []
-        qkv_input_offset = []
-        dense_input_scale = []
-        dense_input_offset = []
-        gate_up_input_scale = []
-        gate_up_input_offset = []
-        down_proj_input_scale = []
-        down_proj_input_offset = []
+        # rotary pos emb helpers:
+        zero_tensor = torch.zeros(1)
+        rot_emb_global = RotaryEmbedding(128)
+        cosTable, sinTable = rot_emb_global.forward(zero_tensor, seq_len=MAX_SEQ_LEN)
+        self.cosTable = cosTable.npu().half()
+        self.sinTable = sinTable.npu().half()
+        
+        # QUANT
+        if RUN_QUANT_MODEL:
+            self.float_query_layers = FLOAT_QUERY_LAYERS
+            self.float_kv_layers = FLOAT_KV_LAYERS
+            self.float_down_layers = FLOAT_DOWN_LAYERS
+            if self.world_size > 1:
+                quant_param_path = os.path.join(QUANT_WEIGHT_PATH, "part_model", str(self.rank))
+            else:
+                quant_param_path = QUANT_WEIGHT_PATH
+            self.input_scale_dict = np.load(os.path.join(quant_param_path, "input_scale.npy"), allow_pickle=True).item()
+            self.input_offset_dict = np.load(os.path.join(quant_param_path, "input_offset.npy"), allow_pickle=True).item()
+            self.quant_weight_dict = np.load(os.path.join(quant_param_path, "quant_weight.npy"), allow_pickle=True).item()
+            self.weight_scale_dict = np.load(os.path.join(quant_param_path, "weight_scale.npy"), allow_pickle=True).item()
+            self.deq_scale_dict = np.load(os.path.join(quant_param_path, "deq_scale.npy"), allow_pickle=True).item()
+            self.fp_bias_dict = np.load(os.path.join(quant_param_path, "fp_bias.npy"), allow_pickle=True).item()
+        
+        zero_list = [ 0 for _ in range(self.num_hidden_layers)]
+        qkv_input_scale = zero_list[:]
+        qkv_input_offset = zero_list[:]
+        dense_input_scale = zero_list[:]
+        dense_input_offset = zero_list[:]
+        gate_up_input_scale = zero_list[:]
+        gate_up_input_offset = zero_list[:]
+        down_proj_input_scale = zero_list[:]
+        down_proj_input_offset = zero_list[:]
+
         self.bias_correction = []
         self.weights = []
         for layer_idx in range(self.num_hidden_layers):
@@ -1022,22 +550,18 @@ class TelechatModel(TelechatPreTrainedModel):
             up_proj_name = "transformer.h.{}.mlp.up_proj".format(layer_idx)
             down_proj_name = "transformer.h.{}.mlp.down_proj".format(layer_idx)
 
-            if layer_idx in self.float_query_layers:
-                qkv_input_scale.append(0)
-                qkv_input_offset.append(0)
-            else:
-                qkv_input_scale.append(float(1 / self.input_scale_dict[query_name]))
-                qkv_input_offset.append(int(self.input_offset_dict[query_name]))
-            dense_input_scale.append(float(1 / self.input_scale_dict[dense_name]))
-            dense_input_offset.append(int(self.input_offset_dict[dense_name]))
-            gate_up_input_scale.append(float(1 / self.input_scale_dict[gate_proj_name]))
-            gate_up_input_offset.append(int(self.input_offset_dict[gate_proj_name]))
-            if layer_idx in self.float_down_layers:
-                down_proj_input_scale.append(0)
-                down_proj_input_offset.append(0)
-            else:
-                down_proj_input_scale.append(float(1 / self.input_scale_dict[down_proj_name]))
-                down_proj_input_offset.append(int(self.input_offset_dict[down_proj_name]))
+            if RUN_QUANT_MODEL:
+                dense_input_scale[layer_idx] = float(1 / self.input_scale_dict[dense_name])
+                dense_input_offset[layer_idx] = int(self.input_offset_dict[dense_name])
+                gate_up_input_scale[layer_idx] = float(1 / self.input_scale_dict[gate_proj_name])
+                gate_up_input_offset[layer_idx] = int(self.input_offset_dict[gate_proj_name])
+            if layer_idx not in self.float_query_layers:
+                qkv_input_scale[layer_idx] = float(1 / self.input_scale_dict[query_name])
+                qkv_input_offset[layer_idx] = int(self.input_offset_dict[query_name])
+            if layer_idx not in self.float_down_layers:
+                down_proj_input_scale[layer_idx] = float(1 / self.input_scale_dict[down_proj_name])
+                down_proj_input_offset[layer_idx] = int(self.input_offset_dict[down_proj_name])
+            
             if layer_idx in self.float_query_layers:
                 query_quant_bias_correction = [0]
             else:
@@ -1056,13 +580,6 @@ class TelechatModel(TelechatPreTrainedModel):
             up_proj_quant_bias_correction = self.fp_bias_dict[up_proj_name]
 
             if layer_idx in self.float_down_layers:
-                #print("============================")
-                #print(self.h)
-                #print("============================")
-                #print(self.h[layer_idx])
-                #print("============================")
-                #print(list(self.h[layer_idx].state_dict().values()))
-                # weight = list(self.h[layer_idx].state_dict().values())
                 down_proj_quant_bias_correction = [0]#weight[1]
             else:
                 down_proj_quant_bias_correction = self.fp_bias_dict[down_proj_name]
@@ -1110,7 +627,7 @@ class TelechatModel(TelechatPreTrainedModel):
             self.acl_inputs[i + num_intensors] = torch.tensor([i],dtype=torch.int32).npu()
 
         self.seq_len = 0
-        self.max_seq_len = 2048
+        self.max_seq_len = MAX_SEQ_LEN
         self.batch_num = 0
         self.cached_k = None
         self.cached_v = None
@@ -1119,8 +636,6 @@ class TelechatModel(TelechatPreTrainedModel):
         self.maskAttenincre = None
         self.maskAttenincreCache = torch.full((self.max_seq_len, self.max_seq_len), torch.finfo(torch.float16).min, device='npu', dtype=torch.half)
         self.maskAttenincreZero = torch.full((self.max_seq_len, self.max_seq_len), 0, device='npu', dtype=torch.half)
-
-        # self.deq_scale_dict = process_deq_scale(self.deq_scale_dict)
 
         #transfer quant weight from ND to NZ
         transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
@@ -1152,23 +667,13 @@ class TelechatModel(TelechatPreTrainedModel):
             self.transdata_quant_weight[layer_idx].append(transdata_operation.execute([self.quant_weight_dict[up_proj_name].to(torch.int8).npu()])[0])
 
             if layer_idx in self.float_down_layers:
-                #torch.save(weights_float['mlp.down_proj.weight'].half().cpu(), "/home/HwHiAiUser/workspace/save/init_down_orig.pth")
-                #torch.save(weights_float['mlp.down_proj.weight'].half().npu().transpose(0,1).contiguous().cpu(), "/home/HwHiAiUser/workspace/save/init_down.pth")
-                #torch.save(torch_npu.npu_format_cast(weights_float['mlp.down_proj.weight'].half().npu().transpose(0,1).contiguous(),29).cpu(), "/home/HwHiAiUser/workspace/save/init_trans_down.pth")
                 self.transdata_quant_weight[layer_idx].append(weights_float['mlp.down_proj.weight'].npu())
             else:
                 self.transdata_quant_weight[layer_idx].append(transdata_operation.execute([self.quant_weight_dict[down_proj_name].to(torch.int8).npu()])[0])
         print("end TelechatModel")
 
-    def build_alibi_tensor(self, attention_mask: torch.Tensor, num_heads: int, dtype: torch.dtype) -> torch.Tensor:
-        return build_alibi_tensor(attention_mask, num_heads, dtype)
-
     def get_input_embeddings(self):
         return self.word_embeddings
-   # def clear_cache(self):
-   #     for layer in self.h:
-   #         layer.self_attention.last_key_layer = None
-   #         layer.self_attention.kv_cache = None
 
     def _prepare_attn_mask_old(
             self, attention_mask: torch.Tensor, input_shape: Tuple[int, int], past_key_values_length: int
@@ -1224,12 +729,6 @@ class TelechatModel(TelechatPreTrainedModel):
         config_class=_CONFIG_FOR_DOC,
     )
 
-    #def bias_correction(fp_bias, quant_weiht, input_offset, deq_scale):
-    #    correction = quant_weight.to(torch.float32).npu().sum(dim=1)*float(input_offset)*deq_scale.npu()
-    #    bias_correction = fp_bias.npu()-correction
-    #    return bias_correction
-
-
     def forward(
             self,
             input_ids: Optional[torch.LongTensor] = None,
@@ -1276,7 +775,6 @@ class TelechatModel(TelechatPreTrainedModel):
         if seq_length > 1:
             self.encoder_flag = True
 
-        #if self.batch_num != batch_size or self.encoder_flag:
         if self.batch_num != batch_size:
             self.batch_num = batch_size
             self.hidden_size_nz = self.embed_dim // self.world_size // 16
@@ -1284,8 +782,6 @@ class TelechatModel(TelechatPreTrainedModel):
             self.cached_v = torch.zeros(self.num_hidden_layers, self.batch_num,  self.hidden_size_nz, self.max_seq_len, 16, device = "npu").half().contiguous()
             self.cached_k.data = torch_npu.npu_format_cast(self.cached_k.data, 29)
             self.cached_v.data = torch_npu.npu_format_cast(self.cached_v.data, 29)
-            #self.maskAttenfull = torch.full((self.batch_num, self.max_seq_len, self.max_seq_len), 0, device='npu', dtype=torch.half)
-            #self.maskAttenincre = None
 
         if self.encoder_flag:
             self.maskAttenfull = torch.full((self.batch_num, self.max_seq_len, self.max_seq_len), 0, device='npu', dtype=torch.half)
@@ -1296,14 +792,6 @@ class TelechatModel(TelechatPreTrainedModel):
         # attention_probs has shape batch_size x num_heads x N x N
         # head_mask has shape n_layer x batch x num_heads x N x N
         head_mask = self.get_head_mask(head_mask, self.config.n_layer)
-#        print("after get head mask", torch.npu.memory_allocated()/1024/1024/1024)
-        #if past_key_values[0] is None:
-        #    if inputs_embeds is None:
-                # for key in self.state_dict().keys():
-                #     print(f"{key} device is {self.state_dict()[key].device}")
-        #        inputs_embeds = self.word_embeddings(input_ids)
-        #    hidden_states = inputs_embeds  ###ZihanWang
-        # hidden_states = self.word_embeddings_layernorm(inputs_embeds)
 
         presents = () if use_cache else None
         all_self_attentions = () if output_attentions else None
@@ -1316,7 +804,6 @@ class TelechatModel(TelechatPreTrainedModel):
                 )
                 use_cache = False
 
-        # Compute alibi tensor: check build_alibi_tensor documentation
         seq_length_with_past = seq_length
         past_key_values_length = 0
         if not self.encoder_flag:
@@ -1332,12 +819,6 @@ class TelechatModel(TelechatPreTrainedModel):
             input_shape=(batch_size, seq_length),
             past_key_values_length=past_key_values_length,
         )
-        #print(causal_mask)
-        #print(causal_mask.shape)
-        #attn_mask = torch.full((batch_size, self.max_seq_len, self.max_seq_len),0,device='npu', dtype=torch.half)
-        #if self.encoder_flag:
-        #    attn_mask[:,:seq_length,:seq_length] = causal_mask[0]
-        #causal_mask = torch_npu.npu_format_cast(attn_mask.view(batch_size, self.max_seq_len, self.max_seq_len//16, 16).transpose(1,2).contiguous(),29)
         if self.weightFlag is False:
 
             global lm_head_weight
@@ -1395,9 +876,7 @@ class TelechatModel(TelechatPreTrainedModel):
                 if layer_idx in self.float_down_layers:
                     weight = list(self.h[layer_idx].state_dict().values())
                     weights_down = [
-                                    #weights_float['mlp.down_proj.weight'].transpose(0,1).contiguous(),
                                     weights_float['mlp.down_proj.weight'],
-                                    #transdata_operation.execute([weight[0].npu()])[0],
                                     torch.tensor([0]).npu(),
                                     weights_float['mlp.down_proj.bias'].npu()
                                     ]
@@ -1410,61 +889,40 @@ class TelechatModel(TelechatPreTrainedModel):
                 weights_all.extend(weights_down)
                 self.weights.extend(weights_all)
                 self.weights.append(weights_float['input_layernorm.weight'].npu())
-                #print(f"input norm bias is {weights_float['input_layernorm.bias']}")
                 self.weights.append(weights_float['input_layernorm.bias'].npu())
                 self.weights.append(weights_float['post_attention_layernorm.weight'].npu())
-                #print(f"output norm bias is {weights_float['post_attention_layernorm.bias']}")
                 self.weights.append(weights_float['post_attention_layernorm.bias'].npu())
 
             self.weights.append(self.state_dict()["ln_f.weight"].npu())
             self.weights.append(lm_head_weight)
             self.acl_operation.set_weight(self.weights)
             self.weightFlag = True
-        global cosTable
-        global sinTable
-        cosTable = cosTable.npu().half()
-        sinTable = sinTable.npu().half()
 
         self.acl_inputs[0] = input_ids
         if self.encoder_flag:
             if self.batch_num == 1:
-                #print(f"causal_mask shape is {causal_mask.shape}")
-                #print(f"{self.maskAttenfull.shape}")
                 self.maskAttenfull[:, :seq_length, :seq_length] = causal_mask[0]
                 count = torch.eq(causal_mask[0][0][seq_length - 1], 0).sum().item()
-                #print(f"count is {count}")
                 decoder_leftmask = self.maskAttenincreCache[:, :seq_length - count]
                 decoder_rightmask = self.maskAttenincreZero[:, :self.max_seq_len - seq_length + count]
-                #print(f"decoder_leftmask shape is {decoder_leftmask.shape}, decoder_rightmask shape is {decoder_rightmask.shape}")
                 self.maskAttenincre = torch.concat([decoder_leftmask, decoder_rightmask], dim=-1).unsqueeze(0)
             else:
                 decoder_masks = []
                 for i in range(self.batch_num):
-                    #print(f"{i} causal_mask is {causal_mask[i][0]}")
-                    #print(f"{i} {self.maskAttenfull[i].shape}")
                     self.maskAttenfull[i][:seq_length, :seq_length] = causal_mask[i][0]
                     count = torch.eq(causal_mask[i][0][seq_length - 1], 0).sum().item()
-                    #print(f"{i} count is {count}")
                     decoder_leftmask = self.maskAttenincreCache[:, :seq_length - count]
                     decoder_rightmask = self.maskAttenincreZero[:, :self.max_seq_len - seq_length + count]
-                    #print(f"{i} decoder_leftmask is {decoder_leftmask}, shape is {decoder_leftmask.shape}")
-                    #print(f"{i} decoder_rightmask is {decoder_rightmask}, shape is {decoder_rightmask.shape}")
                     decoder_mask = torch.concat([decoder_leftmask, decoder_rightmask], dim=-1).unsqueeze(0)
                     decoder_masks.append(decoder_mask)
                 self.maskAttenincre = torch.concat(decoder_masks, dim=0)
-            #print(self.maskAttenfull[:, 13:seq_length, 13:seq_length])
-            #print(self.maskAttenincre[:, 13:seq_length, 13:seq_length])
-            #self.maskAttenfull = self.maskAttenfull.view(self.batch_num, self.max_seq_len, self.max_seq_len//16, 16).transpose(1,2)
-            #self.maskAttenincre = self.maskAttenincre.view(self.batch_num, self.max_seq_len, self.max_seq_len//16, 16).transpose(1,2)
             self.maskAttenfull = torch_npu.npu_format_cast(self.maskAttenfull.view(self.batch_num, self.max_seq_len, self.max_seq_len//16, 16).transpose(1,2).contiguous(),29)
             self.maskAttenincre = torch_npu.npu_format_cast(self.maskAttenincre.view(self.batch_num, self.max_seq_len, self.max_seq_len//16, 16).transpose(1,2).contiguous(),29)
-            #self.encoderMask = torch_npu.npu_format_cast(self.maskAttenfull.view(self.batch_num, self.max_seq_len, self.max_seq_len//16, 16).transpose(1,2).contiguous(),29)
-            #self.decoderMask = torch_npu.npu_format_cast(self.maskAttenincre.view(self.batch_num, self.max_seq_len, self.max_seq_len//16, 16).transpose(1,2).contiguous(),29)
             position_ids = torch.arange(0, input_ids.shape[1], dtype=torch.long, device=input_ids.device).unsqueeze(0)
             position_ids = torch.concat([position_ids] * self.batch_num, dim=0)
             self.acl_inputs[1] = position_ids
-            self.acl_inputs[2] = cosTable
-            self.acl_inputs[3] = sinTable
+            self.acl_inputs[2] = self.cosTable
+            self.acl_inputs[3] = self.sinTable
             self.acl_inputs[4] = self.maskAttenfull
             self.acl_inputs[5] = self.cached_k
             self.acl_inputs[6] = self.cached_v
@@ -1481,8 +939,8 @@ class TelechatModel(TelechatPreTrainedModel):
             position_ids = torch.arange(offset, offset + input_ids.shape[1], dtype=torch.long, device=input_ids.device).unsqueeze(0)
             position_ids = torch.concat([position_ids] * self.batch_num, dim=0)
             self.acl_inputs[1] = position_ids
-            self.acl_inputs[2] = cosTable
-            self.acl_inputs[3] = sinTable
+            self.acl_inputs[2] = self.cosTable
+            self.acl_inputs[3] = self.sinTable
             self.acl_inputs[4] = self.maskAttenincre
             self.acl_inputs[5] = self.cached_k
             self.acl_inputs[6] = self.cached_v
@@ -1494,9 +952,6 @@ class TelechatModel(TelechatPreTrainedModel):
         param = json.dumps({"tokenOffset":token_offset.tolist(), "seqLen":seqlen.tolist()})
         acl_outputs = self.acl_operation.execute(self.acl_inputs, param)
         hidden_states = acl_outputs[0]
-        #if seq_length == 1:
-        #    exit()
-        #    torch.save(hidden_states.cpu(), "save/logits.pth")
         presents = ((None, None),)
         if output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)
@@ -1594,14 +1049,9 @@ class TelechatForCausalLM(TelechatPreTrainedModel):
             `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
             are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
-#        print("casullmstart", torch.npu.memory_allocated()/1024/1024/1024)
         global lm_head_weight
-#        print("global lm_head_weight", torch.npu.memory_allocated()/1024/1024/1024)
         if lm_head_weight is None:
-            #lm_head_weight = self.state_dict()["lm_head.weight"].npu()
-            #self.state_dict()["lm_head.weight"] = self.state_dict()["lm_head.weight"].npu()
             lm_head_weight = self.state_dict()["lm_head.weight"]
-        #print("causal",input_ids.shape)
         if deprecated_arguments.pop("position_ids", False) is not False:
             # `position_ids` could have been `torch.Tensor` or `None` so defaulting pop to `False` allows to detect if users were passing explicitly `None`
             warnings.warn(
@@ -1613,7 +1063,6 @@ class TelechatForCausalLM(TelechatPreTrainedModel):
             raise ValueError(f"Got unexpected arguments: {deprecated_arguments}")
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-#        print("before transformer", torch.npu.memory_allocated()/1024/1024/1024)
         transformer_outputs = self.transformer(
             input_ids,
             past_key_values=past_key_values,
@@ -1626,14 +1075,8 @@ class TelechatForCausalLM(TelechatPreTrainedModel):
             return_dict=return_dict,
         )
         hidden_states = transformer_outputs[0]
-        #print("causal",hidden_states.shape)
 
-        #lm_logits = self.lm_head(hidden_states)
         lm_logits = hidden_states
-        # if past_key_values is None:
-        #     lm_logits = self.lm_head(hidden_states)
-        # else:
-        #     lm_logits = hidden_states
 
         loss = None
         if labels is not None:
