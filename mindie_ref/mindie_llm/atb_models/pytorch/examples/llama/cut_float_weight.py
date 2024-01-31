@@ -17,12 +17,13 @@ import torch
 from transformers import LlamaTokenizer, pipeline, LlamaForCausalLM, AutoTokenizer
 from transformers.models.llama.configuration_llama import LlamaConfig
 
-#cut weights
-#cut_row_keys :dim 0  cut_col_keys :dim 1  nn.linear: x*A.T
-def cut_weights(model, world_size, cut_row_keys=['q_proj', 'k_proj', 'v_proj', 'gate_proj', 'up_proj'],
+
+# cut float weights
+# cut_row_keys :dim 0  cut_col_keys :dim 1  nn.linear: x*A.T
+def cut_weights(model_in, world_size, cut_row_keys=['q_proj', 'k_proj', 'v_proj', 'gate_proj', 'up_proj'],
                 cut_col_keys=['o_proj', 'down_proj']):
-    state_dict_list = [{} for i in range(world_size)]
-    for key, tensor in model.state_dict().items():
+    new_state_dict_list = [{} for i in range(world_size)]
+    for key, tensor in model_in.state_dict().items():
         key_short = key.split('.')[-2]
         if key_short in cut_row_keys:
             cut_tensor_list = torch.chunk(tensor, world_size, dim=0)
@@ -30,9 +31,9 @@ def cut_weights(model, world_size, cut_row_keys=['q_proj', 'k_proj', 'v_proj', '
             cut_tensor_list = torch.chunk(tensor, world_size, dim=1)
         else:
             cut_tensor_list = [tensor] * world_size
-        for i in range(world_size):
-            state_dict_list[i][key] = cut_tensor_list[i]
-    return state_dict_list
+        for tmp_world in range(world_size):
+            new_state_dict_list[tmp_world][key] = cut_tensor_list[tmp_world]
+    return new_state_dict_list
 
 
 if __name__ == "__main__":

@@ -21,16 +21,17 @@ from torch_npu.contrib import transfer_to_npu
 from transformers import LlamaTokenizer, LlamaForCausalLM
 from transformers.models.llama.configuration_llama import LlamaConfig
 
+
 def setup_model_parallel(init_args):
     torch.distributed.init_process_group("hccl")
-    local_rank = torch.distributed.get_rank()
-    world_size = torch.distributed.get_world_size()
-    for i in range(world_size):
-        if local_rank == i:
-            torch_npu.npu.set_device(init_args.device + i)
-            print(f"device id {init_args.device + i} set success.")
+    curr_rank = torch.distributed.get_rank()
+    device_id = init_args.device
+    torch_npu.npu.set_device(device_id + curr_rank)
+    print(f"device id {init_args.device + curr_rank} set success.")
+
     torch.manual_seed(1)
-    return local_rank, world_size
+    return curr_rank
+
 
 def check_env(seqlen_in, seqlen_out):
     llama_context_length = 4096
@@ -50,10 +51,11 @@ def check_env(seqlen_in, seqlen_out):
         elif npu_num < 2:
             print("MAX_SEQ_LENGTH not set, use 2048 by default.")
 
-def trans_data_format(model):
+
+def trans_data_format(model_in):
     soc_version = torch_npu._C._npu_get_soc_version()
     if soc_version in [104, 220, 221, 222, 223, 224]:
-        for name, module in model.named_modules():
+        for name, module in model_in.named_modules():
             if isinstance(module, torch.nn.Linear):
                 module.weight.data = torch_npu.npu_format_cast(module.weight.data, 2)
         if npu_num >= 2 and not torch.distributed.get_rank():
@@ -62,7 +64,7 @@ def trans_data_format(model):
             print("soc version: ", soc_version, " is 910B, support ND")
     else:
         # if on 910A or 310P chip, eliminate the TransData and Transpose ops by converting weight data types
-        for name, module in model.named_modules():
+        for name, module in model_in.named_modules():
             if isinstance(module, torch.nn.Linear):
                 if name == 'lm_head':
                     # eliminate TransData op before lm_head calculation
@@ -73,14 +75,16 @@ def trans_data_format(model):
         elif npu_num < 2:
             print("soc version: ", soc_version, " is not 910B, support NZ")
 
-    for name, module in model.named_modules():
+    for name, module in model_in.named_modules():
         if isinstance(module, torch.nn.Embedding):
             module.weight.data = torch_npu.npu_format_cast(module.weight.data, 2)
+
 
 def write_file(model_name, batch, seqlen_in, seqlen_out, new_tokens, time_of_first_token, time_per_token, time_generate):
     file_utils = open(f"multibatch_performance_{model_name}_device{str(torch_npu.npu.current_device())}.csv", 'a')
     file_utils.write(f"{batch},{seqlen_in},{seqlen_out},{time_generate:.2f},{(time_of_first_token):.2f},{(time_per_token):.2f},{(1000*batch/time_per_token):.2f},{(batch*new_tokens/time_generate):.2f}\n")
     file_utils.close()
+
 
 def init_model(init_args):
     if npu_num >= 2:
@@ -108,11 +112,12 @@ def init_model(init_args):
     trans_data_format(model_init)
     return model_init, tokenizer_init
 
-def inference(infer_model, infer_tokenizer, prompt, batch, seqlen_in, seqlen_out, model_name="LLAMA2-7B"):
+
+def inference(infer_model, infer_tokenizer, infer_prompt, batch, seqlen_in, seqlen_out, model_name="LLAMA2-7B"):
     check_env(seqlen_in, seqlen_out)
     # tokenize
-    inputs = infer_tokenizer(prompt[:batch], return_tensors="pt", padding='max_length', truncation=True, max_length=seqlen_in)
-    batch = len(prompt[:batch])
+    inputs = infer_tokenizer(infer_prompt[:batch], return_tensors="pt", padding='max_length', truncation=True, max_length=seqlen_in)
+    batch = len(infer_prompt[:batch])
     #infer
     with torch.no_grad():
         torch.npu.synchronize()
@@ -146,7 +151,7 @@ def inference(infer_model, infer_tokenizer, prompt, batch, seqlen_in, seqlen_out
     if npu_num >= 2 and not torch.distributed.get_rank():
         print("\nQ&A results are as follows:")
         for idx, item in enumerate(res):
-            print(f"\n[Q&A {idx+1}]\n",item)
+            print(f"\n[Q&A {idx + 1}]\n", item)
         write_file(model_name, batch, seqlen_in, seqlen_out, new_tokens, time_of_first_token, time_per_token, time_generate)
         # time analysis
         print(f"\nBatch: {batch}, Input tokens number: {len(inputs.input_ids[0])}, Output tokens number: {new_tokens}")
@@ -154,28 +159,30 @@ def inference(infer_model, infer_tokenizer, prompt, batch, seqlen_in, seqlen_out
     elif npu_num < 2:
         print("\nQ&A results are as follows:")
         for idx, item in enumerate(res):
-            print(f"\n[Q&A {idx+1}]\n",item)
+            print(f"\n[Q&A {idx + 1}]\n", item)
         write_file(model_name, batch, seqlen_in, seqlen_out, new_tokens, time_of_first_token, time_per_token, time_generate)
         # time analysis
         print(f"\nBatch: {batch}, Input tokens number: {len(inputs.input_ids[0])}, Output tokens number: {new_tokens}")
         print(f"Generated in {time_generate:.2f} s, first token costs {time_of_first_token:.2f} ms, avg token cost {time_per_token:.2f} ms, inference speed(avg) is {(1000*batch/time_per_token):.2f} tokens/s, inference speed(E2E) is {(batch*new_tokens/time_generate):.2f} tokens/s")
 
-def multi_specified_cases(init_args, infer_model, infer_tokenizer, prompt, batch):
+
+def multi_specified_cases(init_args, infer_model, infer_tokenizer, infer_prompt, batch):
     
     seqlen_in_pair = [int(length) for length in init_args.seqlen_in_pair.strip('[').strip(']').split(",")]
     seqlen_out_pair = [int(length) for length in init_args.seqlen_out_pair.strip('[').strip(']').split(",")]
-    assert len(seqlen_in_pair)==len(seqlen_out_pair), "The number of seqlen_in_pair and seqlen_out_pair parameters must be the same. Please check cut_model_and_run_llama.sh"
+    assert len(seqlen_in_pair) == len(seqlen_out_pair), "The number of seqlen_in_pair and seqlen_out_pair parameters must be the same. Please check cut_model_and_run_llama.sh"
     
     for seqlen_in, seqlen_out in zip(seqlen_in_pair, seqlen_out_pair):
         # warm-up
-        inputs_warm_up = infer_tokenizer(prompt[:batch], return_tensors="pt", padding='max_length', truncation=True, max_length=seqlen_in)
+        inputs_warm_up = infer_tokenizer(infer_prompt[:batch], return_tensors="pt", padding='max_length', truncation=True, max_length=seqlen_in)
         _ = infer_model.generate(inputs_warm_up.input_ids.npu(),
                                         attention_mask=inputs_warm_up.attention_mask.npu(), max_new_tokens=10)
         torch.npu.empty_cache()
 
-        inference(infer_model, infer_tokenizer, prompt, batch, seqlen_in, seqlen_out, model_name=init_args.model_name)
+        inference(infer_model, infer_tokenizer, infer_prompt, batch, seqlen_in, seqlen_out, model_name=init_args.model_name)
 
-def multi_default_cases(init_args, infer_model, infer_tokenizer, prompt, batch):
+
+def multi_default_cases(init_args, infer_model, infer_tokenizer, infer_prompt, batch):
 
     seqlen_in_range = [int(length) for length in init_args.seqlen_in_range.strip('[').strip(']').split(",")]
     seqlen_out_range = [int(length) for length in init_args.seqlen_out_range.strip('[').strip(']').split(",")]
@@ -185,14 +192,15 @@ def multi_default_cases(init_args, infer_model, infer_tokenizer, prompt, batch):
         for j in range(seqlen_out_range[0], seqlen_out_range[1]):
             seqlen_out = 2 ** j
             # warm-up
-            inputs_warm_up = infer_tokenizer(prompt[:batch], return_tensors="pt", padding='max_length', truncation=True, max_length=seqlen_in)
+            inputs_warm_up = infer_tokenizer(infer_prompt[:batch], return_tensors="pt", padding='max_length', truncation=True, max_length=seqlen_in)
             _ = infer_model.generate(inputs_warm_up.input_ids.npu(),
                                             attention_mask=inputs_warm_up.attention_mask.npu(), max_new_tokens=10)
             torch.npu.empty_cache()
 
-            inference(infer_model, infer_tokenizer, prompt, batch, seqlen_in, seqlen_out, model_name=init_args.model_name)
+            inference(infer_model, infer_tokenizer, infer_prompt, batch, seqlen_in, seqlen_out, model_name=init_args.model_name)
 
-def batch_inference(init_args, infer_model, infer_tokenizer, prompt):
+
+def batch_inference(init_args, infer_model, infer_tokenizer, prompt_in):
     if npu_num >= 2 and not torch.distributed.get_rank():
         print("inference start")
         file_utils = open(f"multibatch_performance_{init_args.model_name}_device{str(torch_npu.npu.current_device())}.csv", 'a')
@@ -204,28 +212,29 @@ def batch_inference(init_args, infer_model, infer_tokenizer, prompt):
         file_utils.write(f"Batch,Input_seq_len,Output_seq_len,TotalTime(s),first_token_time(ms),avg_token_time(ms),avg TPS(tokens/s),E2E TPS(tokens/s)\n")
         file_utils.close()
 
-    multi_batch_size = list(map(int,args.multi_batch_size[1:-1].strip().split(",")))
-    prompt = prompt * max(multi_batch_size)
+    multi_batch_size = list(map(int, args.multi_batch_size[1:-1].strip().split(",")))
+    prompt_in = prompt_in * max(multi_batch_size)
 
     for batch in multi_batch_size:
         # warm-up
-        inputs_warm_up = infer_tokenizer(prompt[:batch], return_tensors="pt", padding='max_length', truncation=True, max_length=init_args.seqlen_in)
+        inputs_warm_up = infer_tokenizer(prompt_in[:batch], return_tensors="pt", padding='max_length', truncation=True, max_length=init_args.seqlen_in)
         _ = infer_model.generate(inputs_warm_up.input_ids.npu(),
                                         attention_mask=inputs_warm_up.attention_mask.npu(), max_new_tokens=10)
         torch.npu.empty_cache()
 
         if not init_args.multi_case:
-            inference(infer_model, infer_tokenizer, prompt, batch, init_args.seqlen_in, init_args.seqlen_out, model_name=init_args.model_name)
+            inference(infer_model, infer_tokenizer, prompt_in, batch, init_args.seqlen_in, init_args.seqlen_out, model_name=init_args.model_name)
         elif init_args.set_case_pair:
-            multi_specified_cases(init_args, infer_model, infer_tokenizer, prompt, batch)
+            multi_specified_cases(init_args, infer_model, infer_tokenizer, prompt_in, batch)
         else:
-            multi_default_cases(init_args, infer_model, infer_tokenizer, prompt, batch)
+            multi_default_cases(init_args, infer_model, infer_tokenizer, prompt_in, batch)
         torch.npu.empty_cache()
     
     if npu_num >= 2 and not torch.distributed.get_rank():
         print("inference success")
     elif npu_num < 2:
         print("inference success")
+
 
 if __name__ == "__main__":
     # load path
@@ -278,27 +287,27 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--multi_batch_size",
-        default=[1,4,8,16,32],
+        default=[1, 4, 8, 16, 32],
         help="run model with given batch_size",
     )
     parser.add_argument(
         "--seqlen_in_range",
-        default=[5,11],
+        default=[5, 11],
         help="[2^5~2^11), input seqlen ranges from 2^5 to 2^10",
     )
     parser.add_argument(
         "--seqlen_out_range",
-        default=[5,11],
+        default=[5, 11],
         help="[2^5~2^11), output seqlen ranges from 2^5 to 2^10",
     )
     parser.add_argument(
         "--seqlen_in_pair",
-        default=[128,256,512,1024],
+        default=[128, 256, 512, 1024],
         help="specified case",
     )
     parser.add_argument(
         "--seqlen_out_pair",
-        default=[128,256,512,1024],
+        default=[128, 256, 512, 1024],
         help="specified case",
     )
     args = parser.parse_args()
@@ -306,7 +315,8 @@ if __name__ == "__main__":
     npu_num = int(args.world_size)
     # initialize tensor-parallel mode
     if npu_num >= 2:
-        local_rank, world_size = setup_model_parallel(args)
+        world_size = torch.distributed.get_world_size()
+        local_rank = setup_model_parallel(args)
     else:
         torch_npu.npu.set_device(args.device)
         print(f"device id {args.device} set success.")

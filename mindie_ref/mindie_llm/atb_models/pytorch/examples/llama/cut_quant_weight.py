@@ -20,18 +20,21 @@ from transformers import LlamaTokenizer, pipeline, LlamaForCausalLM, AutoTokeniz
 from transformers.models.llama.configuration_llama import LlamaConfig
 import torch_npu
 
+
 #量化权重310P修正
 def bias_correction(fp_bias, quant_weight, input_offset, deq_scale):
-    bias_correction = fp_bias.npu()/deq_scale.npu() - quant_weight.to(torch.float32).npu().sum(dim=1) * float(input_offset)
-    return bias_correction
+    new_bias = fp_bias.npu() / deq_scale.npu() - quant_weight.to(torch.float32).npu().sum(dim=1) * float(input_offset)
+    return new_bias
 
-def process_deq_scale(deq_scale_dict):
-    new_deq_scale_dict = {}
-    for key, deq_scale in deq_scale_dict.items():
+
+def process_deq_scale(deq_scale_dict_in):
+    new_deq_scale_dict_out = {}
+    for key, deq_scale in deq_scale_dict_in.items():
         deq_scale = deq_scale.numpy()
         new_deq_scale = np.frombuffer(deq_scale.tobytes(), dtype=np.int32)
-        new_deq_scale_dict.setdefault(key, torch.tensor(new_deq_scale.astype(np.int64)))
-    return new_deq_scale_dict
+        new_deq_scale_dict_out.setdefault(key, torch.tensor(new_deq_scale.astype(np.int64)))
+    return new_deq_scale_dict_out
+
 
 #cut quant weights
 #cut_row_keys :dim 0  cut_col_keys :dim 1  nn.linear: x*A.T
@@ -46,9 +49,10 @@ def cut_weights(weight, world_size, cut_row_keys=['q_proj', 'k_proj', 'v_proj', 
             cut_tensor_list = torch.chunk(tensor, world_size, dim=1)
         else:
             cut_tensor_list = [tensor] * world_size
-        for i in range(world_size):
-            state_dict_list[i][key] = cut_tensor_list[i]
+        for tmp_world in range(world_size):
+            state_dict_list[tmp_world][key] = cut_tensor_list[tmp_world]
     return state_dict_list
+
 
 # cut quant bias
 def cut_bias(bias, world_size, is_bias=False, cut_row_keys=['q_proj', 'k_proj', 'v_proj', 'gate_proj', 'up_proj']):
@@ -65,8 +69,8 @@ def cut_bias(bias, world_size, is_bias=False, cut_row_keys=['q_proj', 'k_proj', 
                 tensor = tensor / world_size
             cut_tensor_list = [tensor] * world_size
         
-        for i in range(world_size):
-            state_dict_list[i][key] = cut_tensor_list[i]
+        for tmp_world in range(world_size):
+            state_dict_list[tmp_world][key] = cut_tensor_list[tmp_world]
     return state_dict_list
 
 

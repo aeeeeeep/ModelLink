@@ -9,7 +9,6 @@ cut_col_keys_=['o_proj','down_proj']
 script_dir=$(cd $(dirname $0); pwd)
 transformers_package_path=$(python3 -c 'import transformers; import os; print(os.path.dirname(transformers.__file__))')
 
-# if model has already been cutted, then run the model; if not, cut the model first
 function fn_main()
 {
     if [[ ! -z "$1" ]];then
@@ -26,10 +25,10 @@ function fn_main()
 
     case "${CUT_OPTION}" in
     "--float")
-        echo "cuting the float weight..."
+        echo "cutting the float weight..."
         cp $script_dir/modeling_llama_cut.py $transformers_package_path/models/llama/modeling_llama.py
         python ./cut_float_weight.py \
-        --input_path $input_dir_for_cut_model \
+        --input_path $input_dir \
         --output_path $output_dir \
         --world_size $WORLD_SIZE \
         --cut_row_keys $cut_row_keys_ \
@@ -37,7 +36,7 @@ function fn_main()
         ;;
 
     "--quant")
-        echo "cuting the quant weight..."
+        echo "cutting the quant weight..."
         python ./cut_quant_weight.py \
         --input_path $input_dir \
         --output_path $output_dir \
