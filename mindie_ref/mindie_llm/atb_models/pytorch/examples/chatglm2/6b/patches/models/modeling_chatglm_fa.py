@@ -998,8 +998,8 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         self.seq_len = None
 
         # get acl model_operation
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm2_common_model")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm2_common_model")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm2_6b_ChatGlm2CommonModelFa")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm2_6b_ChatGlm2CommonModelFa")
 
         # get mode manager
         self.mode = ENABLE_SPARSE and "sparse" or ENABLE_QUANT and "quant" or "float"
