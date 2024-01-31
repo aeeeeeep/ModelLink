@@ -337,7 +337,7 @@ int64_t ChatGlm2CommonModelFa::BuildGraph()
     lmParam.commParam.backend = param_.backend;
     atb_speed::common::ColumnParallelLinearV2(lmParam, &op);
     lmNode.operation.reset(op);
-    lmNode.inTensors = {&graph_.internalTensors.at(internalTensorId), 
+    lmNode.inTensors = {&graph_.internalTensors.at(internalTensorId),
                         &graph_.weightTensors.at(weightTensorId),
                         &graph_.inTensors.at(IN_PLACE_HOLDER),
                         &graph_.inTensors.at(IN_PLACE_HOLDER),

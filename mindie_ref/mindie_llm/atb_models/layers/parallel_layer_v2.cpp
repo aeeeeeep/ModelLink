@@ -69,7 +69,6 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
             nodeCount += 1;
             internalTensorNum += 1;
         }
-
     }
 
     opGraph.internalTensorNum = internalTensorNum;
