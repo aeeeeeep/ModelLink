@@ -79,7 +79,7 @@ def add_parser_argument_choices_value(parser, argument_name, value):
 def _add_network_size_args(parser):
     group = parser.add_argument_group(title='network_size_args')
     group.add_argument('--padded-vocab-size',
-                       action='store_true',
+                       type=int,
                        default=None,
                        help='set padded vocab size')
     group.add_argument('--embed-layernorm',
