@@ -704,7 +704,7 @@ pretrained_model_name_or_path(`str`, *optional*, defaults to None):
   <tbody>
     <tr>
       <td><a href="https://huggingface.co/datasets/lukaemon/bbh">BBH</a></td>
-      <td>Test</td>
+      <td>test</td>
       <th>Llama7b</th>
       <td>0.334</td>
       <td>0.333</td>
@@ -712,7 +712,7 @@ pretrained_model_name_or_path(`str`, *optional*, defaults to None):
     </tr>
     <tr>
       <td><a href="https://huggingface.co/datasets/lighteval/agi_eval_en">AGIEval</a></td>
-      <td>Test</td>
+      <td>test</td>
       <th>Llama7b</th>
       <td>0.210</td>
       <td>0.210</td>
@@ -720,7 +720,7 @@ pretrained_model_name_or_path(`str`, *optional*, defaults to None):
     </tr>
     <tr>
       <td><a href="https://huggingface.co/datasets/openai_humaneval">HumanEval</a></td>
-      <td>Test</td>
+      <td>test</td>
       <th>Llama7b</th>
       <td>0.128</td>
       <td>0.128</td>
@@ -736,7 +736,7 @@ pretrained_model_name_or_path(`str`, *optional*, defaults to None):
     </tr>
     <tr>
       <td><a href="https://huggingface.co/datasets/gsm8k">GSM8K</a></td>
-      <td>Test</td>
+      <td>test</td>
       <th>Llama7b</th>
       <td>0.102</td>
       <td>0.103</td>
@@ -744,7 +744,7 @@ pretrained_model_name_or_path(`str`, *optional*, defaults to None):
     </tr>
     <tr>
       <td><a href="https://huggingface.co/datasets/ceval/ceval-exam">CEval</a></td>
-      <td>Validation</td>
+      <td>val</td>
       <th>Llama7b</th>
       <td>0.408</td>
       <td>0.404</td>
