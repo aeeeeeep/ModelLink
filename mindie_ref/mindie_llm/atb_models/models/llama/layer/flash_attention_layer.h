@@ -29,6 +29,7 @@ struct FlashAttentionLayerParam {
     int dk = 0; // headDim
     int rank = 0;
     int rankSize = 1;
+    std::string backend = "hccl";
     std::string model = "llama_13b";
     float qScale = 1.0;
     bool quantModel = false;

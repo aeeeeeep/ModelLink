@@ -22,8 +22,8 @@
 
 namespace atb_speed {
 namespace llama {
-const int QUANT_WEIGHT_COUNT_PER_LAYER = 23;
-const int SPARSE_WEIGHT_COUNT_PER_LAYER = 30;
+const int QUANT_WEIGHT_COUNT_PER_LAYER = 25;
+const int SPARSE_WEIGHT_COUNT_PER_LAYER = 32;
 const int FLOAT_WEIGHT_COUNT_PER_LAYER = 9;
 const int INPUT_TENSOR_COUNT_BEFORE_KEY = 11;
 const int OUTPUT_TENSOR_COUNT_BEFORE_KEY = 1;
@@ -32,7 +32,7 @@ const int FINALNORMNODE_WEIGHT_COUNT = 1;
 const int OUT_LM_HEAD_WEIGHT_COUNT = 1;
 const int OPERATION_COUNT_BEFORE_LAYER = 2;
 const int INTERMEDIATETENSOR_COUNT_BEFORE_LAYER = 3;
-const int OPERATION_COUNT_AFTER_LAYER = 2;
+const int OPERATION_COUNT_AFTER_LAYER = 3;
 const int MODEL_OUT_DIM_NUM = 3;
 const int MODEL_OUT_DIM2 = 2;
 
@@ -46,9 +46,9 @@ enum InTensorId : int {
     IN_TENSOR_PAST_VALUE,
     IN_TENSOR_TOKENOFFSET,
     IN_TENSOR_SEQLEN,
-    IN_TENSOR_BETA,
+    IN_TENSOR_SEQ_INDEX,
     IN_HOLDER,
-    IN_TENSOR_MAX, // 9
+    IN_TENSOR_MAX,
 };
 
 enum OutTensorId : int {
@@ -65,6 +65,7 @@ void FlashAttentionModel::Param::FromString(const std::string &param)
     layerNum = paramJson["layerNum"].get<int>();
     rank = paramJson["rank"].get<int>();
     rankSize = paramJson["rankSize"].get<int>();
+    backend = paramJson["backend"].get<std::string>();
     quantModel = paramJson["quantModel"].get<bool>();
     sparseModel = paramJson["sparseModel"].get<bool>();
     isEncoder = paramJson["isEncoder"].get<bool>();
@@ -124,7 +125,7 @@ atb::Status FlashAttentionModel::InferShape(const std::vector<atb::TensorDesc> &
     outTensorDescs.at(0) = graph_.weightTensors.at(0).desc;
     outTensorDescs.at(0).shape.dimNum = MODEL_OUT_DIM_NUM;
     outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
-    outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[1];
+    outTensorDescs.at(0).shape.dims[1] = 1; // output shape is [batch, 1, logits]
     outTensorDescs.at(0).shape.dims[MODEL_OUT_DIM2] = outDim;
 
     ATB_LOG(INFO) << "LLaMA FlashAttentionModel InferShape Success";
@@ -199,6 +200,7 @@ int64_t FlashAttentionModel::BuildGraph()
         }
         if (((param_.quantModel || param_.sparseModel) && isFloatLayer)
             || (!param_.quantModel && !param_.sparseModel)) {
+            //浮点
             ATB_LOG(FATAL) << "Float Layer " << layerId;
 
             atb_speed::llama::FlashAttentionLayerParam floatModelParam;
@@ -208,6 +210,7 @@ int64_t FlashAttentionModel::BuildGraph()
             floatModelParam.model = "llama13b";
             floatModelParam.rank = param_.rank;
             floatModelParam.rankSize = param_.rankSize;
+            floatModelParam.backend = param_.backend;
             floatModelParam.quantModel = false;
             floatModelParam.isEncoder = param_.isEncoder;
 
@@ -233,7 +236,6 @@ int64_t FlashAttentionModel::BuildGraph()
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_PAST_VALUE);
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_TOKENOFFSET);
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SEQLEN); // seqLen
-            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_BETA);
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MAX + layerId);
 
@@ -241,6 +243,7 @@ int64_t FlashAttentionModel::BuildGraph()
 
             firstInTensor = layerNode.outTensors.at(0);
         } else if (param_.quantModel) {
+            // W8A8量化
             ATB_LOG(FATAL) << "Quant Layer " << layerId;
 
             atb_speed::llama::FlashAttentionLayerParam quantModelParam;
@@ -250,6 +253,7 @@ int64_t FlashAttentionModel::BuildGraph()
             quantModelParam.model = "llama13b";
             quantModelParam.rank = param_.rank;
             quantModelParam.rankSize = param_.rankSize;
+            quantModelParam.backend = param_.backend;
             quantModelParam.quantModel = true;
             quantModelParam.isEncoder = param_.isEncoder;
             // 量化适配
@@ -284,14 +288,14 @@ int64_t FlashAttentionModel::BuildGraph()
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_PAST_VALUE);
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_TOKENOFFSET);
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SEQLEN); // seqLen
-            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_BETA);
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MAX + layerId);
 
             layerNode.outTensors = {&graph_.internalTensors.at(INTERMEDIATETENSOR_COUNT_BEFORE_LAYER + layerId)};
 
             firstInTensor = layerNode.outTensors.at(0);
-        } else {     // sparse
+        } else {
+            // 稀疏量化
             ATB_LOG(FATAL) << "Sparse Layer " << layerId;
 
             atb_speed::llama::FlashAttentionLayerParam sparseModelParam;
@@ -301,6 +305,7 @@ int64_t FlashAttentionModel::BuildGraph()
             sparseModelParam.model = "llama13b";
             sparseModelParam.rank = param_.rank;
             sparseModelParam.rankSize = param_.rankSize;
+            sparseModelParam.backend = param_.backend;
             sparseModelParam.sparseModel = true;
             sparseModelParam.isEncoder = param_.isEncoder;
             // 量化适配
@@ -331,7 +336,6 @@ int64_t FlashAttentionModel::BuildGraph()
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_PAST_VALUE);
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_TOKENOFFSET);
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SEQLEN); // seqLen
-            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_BETA);
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MAX + layerId);
 
@@ -349,16 +353,26 @@ int64_t FlashAttentionModel::BuildGraph()
     finalNormNode.operation.reset(op);
     const int finalLayerNormWeightTensorId =
         graph_.weightTensors.size() - FINALNORMNODE_WEIGHT_COUNT - OUT_LM_HEAD_WEIGHT_COUNT;
-    const int finalLayerNormOutTensorId = internalTensorSize - 1;
+    const int finalLayerNormOutTensorId = internalTensorSize - 2; // the last 2 internel tensor
     finalNormNode.inTensors = {firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId)};
     finalNormNode.outTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId)};
+
+    auto &gatherNode = graph_.nodes.at(nodeId++);
+    atb::infer::GatherParam gatherParam;
+    gatherParam.axis = 1;
+    CREATE_OPERATION(gatherParam, &op);
+    gatherNode.operation.reset(op);
+    const int gatherOutTensorId = internalTensorSize - 1; // the last 1 internel tensor
+    gatherNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
+                            &graph_.inTensors.at(IN_TENSOR_SEQ_INDEX)};
+    gatherNode.outTensors = {&graph_.internalTensors.at(gatherOutTensorId)}
 
     auto &outLinearNode = graph_.nodes.at(nodeId++);
     atb::infer::LinearParam outLinearParm = {false, false, false};
     CREATE_OPERATION(outLinearParm, &op);
     outLinearNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
-    outLinearNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
+    outLinearNode.inTensors = {&graph_.internalTensors.at(gatherOutTensorId),
                                &graph_.weightTensors.at(finalLinearWeightTensorId)};
     outLinearNode.outTensors = {&graph_.outTensors.at(0)};
     
@@ -389,8 +403,8 @@ atb::Status FlashAttentionModel::BindParamHostTensor(uint32_t nodeId)
         return atb::NO_ERROR;
     }
 
-    const uint32_t tokenOffsetTensorId = 37;
-    const uint32_t seqLenTensorId = 38;
+    const uint32_t tokenOffsetTensorId = 39; // input id for IN_TOKENOFFSET
+    const uint32_t seqLenTensorId = 40; // input id for IN_SEQLEN
 
     auto &node = graph_.nodes.at(nodeId);
     node.variantPack.inTensors.at(tokenOffsetTensorId).hostData = tokenOffset_.data();
