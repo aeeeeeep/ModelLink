@@ -19,6 +19,7 @@
 #include <nlohmann/json.hpp>
 #include "atb_speed/log.h"
 #include "models/chatglm2/6b/layer/flash_attention_layer.h"
+#include "layers/parallel_layer_v2.h"
 
 namespace atb_speed {
 namespace chatglm2_6b {
@@ -150,7 +151,7 @@ atb::Status ChatGlm2CommonModelFa::InferShape(
     outTensorDescs.at(0).shape.dimNum = DIM3;
     outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
     outTensorDescs.at(0).shape.dims[1] = DIM1;
-    outTensorDescs.at(0).shape.dims[2] = outDim; // 对输出的1，2，3轴infershape
+    outTensorDescs.at(0).shape.dims[2] = outDim * param_.rankSize; // 对输出的1，2，3轴infershape
 
     const atb::TensorDesc &keyTensorDesc = inTensorDescs.at(IN_TENSOR_MAX);
     for (size_t i = 1; i < outTensorDescs.size(); i++) {
@@ -329,10 +330,21 @@ int64_t ChatGlm2CommonModelFa::BuildGraph()
     sliceNode.outTensors = {&graph_.internalTensors.at(internalTensorId)};
 
     auto &lmNode = graph_.nodes.at(nodeId++);
-    atb::infer::LinearParam lmParam = {false, false, false};
-    CREATE_OPERATION(lmParam, &op);
+    atb_speed::common::ParallelParamV2 lmParam = {false, false, false, false, false};
+    lmParam.isAllGatherTranspose = true;
+    lmParam.commParam.rank = param_.rank;
+    lmParam.commParam.rankSize = param_.rankSize;
+    lmParam.commParam.backend = param_.backend;
+    atb_speed::common::ColumnParallelLinearV2(lmParam, &op);
     lmNode.operation.reset(op);
-    lmNode.inTensors = {&graph_.internalTensors.at(internalTensorId), &graph_.weightTensors.at(weightTensorId)};
+    lmNode.inTensors = {&graph_.internalTensors.at(internalTensorId),
+                        &graph_.weightTensors.at(weightTensorId),
+                        &graph_.inTensors.at(IN_PLACE_HOLDER),
+                        &graph_.inTensors.at(IN_PLACE_HOLDER),
+                        &graph_.inTensors.at(IN_PLACE_HOLDER),
+                        &graph_.inTensors.at(IN_PLACE_HOLDER),
+                        &graph_.inTensors.at(IN_PLACE_HOLDER),
+    };
     lmNode.outTensors = {&graph_.outTensors.at(0)};
 
     return atb::NO_ERROR;
