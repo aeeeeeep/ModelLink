@@ -55,6 +55,11 @@ def model_provider(pre_process=True, post_process=True) -> Union[GPTModel, megat
 
     print_rank_0('building GPT model ...')
     config = core_transformer_config_from_args(get_args())
+    
+    if get_args().row_col_parallel_linear_bias:
+        config.column_parallel_linear_bias = True
+        config.row_parallel_linear_bias = True
+        config.row_parallel_linear_skip_bias_add = False
 
     if args.use_mcore_models:
         if args.spec is not None:

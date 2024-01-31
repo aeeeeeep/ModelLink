@@ -31,6 +31,7 @@ def process_args(parser):
     parser.conflict_handler = 'resolve'
     parser = _add_lora_args(parser)
     parser = _add_data_args(parser)
+    parser = _add_intern_args(parser)
     return parser
 
 
@@ -61,4 +62,12 @@ def _add_data_args(parser):
     group.add_argument('--is-instruction-dataset', action='store_true', help='use instruction dataset or not')
     group.add_argument('--variable-seq-lengths', action='store_true', help='Use variable seq lengths or not.')
     
+    return parser
+    
+    
+def _add_intern_args(parser):
+    group = parser.add_argument_group(title='intern')
+
+    group.add_argument("--row-col-parallel-linear-bias", action="store_true", default=False, 
+                       help='Configuration for the InternLM model.')
     return parser
