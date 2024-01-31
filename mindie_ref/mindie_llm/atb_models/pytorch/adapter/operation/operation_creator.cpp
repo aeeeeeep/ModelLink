@@ -19,6 +19,7 @@
 #include <nlohmann/json.hpp>
 
 #include "atb_speed/log.h"
+#include "atb_speed/utils/operation_factory.h"
 #include "baichuan2/13b/layer/flash_attention_layer.h"
 #include "baichuan2/13b/layer/flash_attention_quant_layer.h"
 #include "baichuan2/13b/layer/flash_attention_quant_oper_layer.h"
@@ -271,6 +272,12 @@ std::map<std::string, OperationCreateFunc> g_funcMap = {
 atb::Operation *CreateOperation(const std::string &opName, const std::string &param)
 {
     nlohmann::json paramJson = nlohmann::json::parse(param);
+
+    auto operation = OperationFactory::CreateOperation(opName, paramJson);
+    if (operation != nullptr) {
+        ATB_LOG(INFO) << "Get Op from the OperationFactory, opName: " << opName;
+        return operation;
+    }
 
     auto it = g_funcMap.find(opName);
     if (it == g_funcMap.end()) {

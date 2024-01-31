@@ -17,10 +17,11 @@
 #ifndef ATB_SPEED_LAYERS_POST_PROCESS_LAYER_H
 #define ATB_SPEED_LAYERS_POST_PROCESS_LAYER_H
 
-#include <atb/atb_infer.h>
 #include "atb_speed/log.h"
-#include "nlohmann/json.hpp"
+#include "atb_speed/utils/operation_factory.h"
 #include "common.h"
+#include "nlohmann/json.hpp"
+#include <atb/atb_infer.h>
 
 namespace atb_speed {
 namespace common {
@@ -32,6 +33,21 @@ struct PostProcessParam {
 };
 
 atb::Status Sample(const PostProcessParam &param, atb::Operation **operation);
+
+static atb::Operation *SampleLayerCreate(const nlohmann::json &paramJson)
+{
+    atb_speed::common::PostProcessParam param;
+    param.temperature = paramJson["temperature"].get<double>();
+    param.topK = paramJson["topK"].get<uint32_t>();
+    param.randSeed = paramJson["randSeed"].get<uint32_t>();
+    ATB_LOG(INFO) << "SampleLayerCreate: temperature:" << param.temperature << ", topK:" << param.topK
+                  << ", randSeed:" << param.randSeed;
+    atb::Operation *op;
+    Sample(param, &op);
+    return op;
+}
+
+REGISTER_OPERATION(common, SampleLayerCreate);
 
 } // namespace common
 } // namespace atb_speed

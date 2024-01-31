@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 #include "paged_attention_model.h"
+#include "atb_speed/utils/operation_util.h"
 #include <atb/atb_infer.h>
 #include "models/chatglm2/6b/layer/paged_attention_layer.h"
 #include "nlohmann/json.hpp"
