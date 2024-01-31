@@ -31,10 +31,11 @@ def parse_args_decorator(parse_args):
 
 def process_args(parser):
     parser.conflict_handler = 'resolve'
-    parser = _add_lora_args(parser)
-    parser = _add_data_args(parser)
     parser = _add_alibi_args(parser)
     parser = _add_network_size_args(parser)
+    parser = _add_lora_args(parser)
+    parser = _add_data_args(parser)
+
     return parser
 
 
@@ -64,6 +65,8 @@ def _add_data_args(parser):
     group = parser.add_argument_group(title='data')
     group.add_argument('--is-instruction-dataset', action='store_true', help='use instruction dataset or not')
     group.add_argument('--variable-seq-lengths', action='store_true', help='Use variable seq lengths or not.')
+    
+    return parser
 
 
 def add_parser_argument_choices_value(parser, argument_name, value):
