@@ -49,6 +49,75 @@ BUILD_CONFIGURE_LIST=("--output=.*" "--cache=.*" "--verbose" "--incremental" "--
     "--use_cxx11_abi=1" "--build_config=.*" "--optimize_off" "--use_torch_runner" "--use_lccl_runner" "--use_hccl_runner" "--doxygen" "--no_warn" 
     "--ascend_speed_version=.*" "--release_b_version=.*")
 
+function export_speed_env()
+{
+    cd $OUTPUT_DIR/atb_speed
+    source set_env.sh
+}
+
+function fn_build_googletest()
+{
+    if [ -d "$THIRD_PARTY_DIR/googletest/lib" -a -d "$THIRD_PARTY_DIR/googletest/include" ]; then
+        return $?
+    fi
+    cd $CACHE_DIR
+    wget --no-check-certificate https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz
+    tar -xf v1.13.0.tar.gz
+    cd googletest-1.13.0
+    mkdir build
+    cd build
+    if [ "$USE_CXX11_ABI" == "ON" ]
+    then
+        sed -i '4 a add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=1)' ../CMakeLists.txt
+    else
+        sed -i '4 a add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)' ../CMakeLists.txt
+    fi
+    cmake .. -DCMAKE_INSTALL_PREFIX=$THIRD_PARTY_DIR/googletest -DCMAKE_SKIP_RPATH=TRUE -DCMAKE_CXX_FLAGS="-fPIC"
+    cmake --build . --parallel $(nproc)
+    cmake --install .
+    [[ -d "$THIRD_PARTY_DIR/googletest/lib64" ]] && cp -rf $THIRD_PARTY_DIR/googletest/lib64 $THIRD_PARTY_DIR/googletest/lib
+    echo "Googletest is successfully installed to $THIRD_PARTY_DIR/googletest"
+}
+
+function fn_run_unittest()
+{
+    export_speed_env
+    export PYTORCH_INSTALL_PATH="$(python3 -c 'import torch, os; print(os.path.dirname(os.path.abspath(torch.__file__)))')"
+    export LD_LIBRARY_PATH=$PYTORCH_INSTALL_PATH/lib:$LD_LIBRARY_PATH
+    if [ -z "${PYTORCH_NPU_INSTALL_PATH}" ];then
+        export PYTORCH_NPU_INSTALL_PATH="$(python3 -c 'import torch, torch_npu, os; print(os.path.dirname(os.path.abspath(torch_npu.__file__)))')"
+    fi
+    export LD_LIBRARY_PATH=$PYTORCH_NPU_INSTALL_PATH/lib:$LD_LIBRARY_PATH
+    echo "run $OUTPUT_DIR/atb_speed/bin/speed_unittest"
+    $OUTPUT_DIR/atb_speed/bin/speed_unittest --gtest_filter=-*.TestAllGatherHccl:*.TestBroadcastHccl --gtest_output=xml:test_detail.xml
+}
+
+function fn_build_stub()
+{
+    if [[ -f "$THIRD_PARTY_DIR/googletest/include/gtest/stub.h" ]]; then
+        return $?
+    fi
+    cd $CACHE_DIR
+    rm -rf cpp-stub-master.tar.gz
+    wget --no-check-certificate https://github.com/coolxv/cpp-stub/archive/refs/heads/master.tar.gz
+    tar -zxvf master.tar.gz
+    cp $CACHE_DIR/cpp-stub-master/src/stub.h $THIRD_PARTY_DIR/googletest/include/gtest
+    rm -rf $CACHE_DIR/cpp-stub-master/
+}
+
+function fn_build_3rdparty_for_test()
+{
+    if [ -d "$CACHE_DIR" ]
+    then
+        rm -rf $CACHE_DIR
+    fi
+    mkdir $CACHE_DIR
+    cd $CACHE_DIR
+    fn_build_googletest
+    fn_build_stub
+    cd ..
+}
+
 function fn_build_nlohmann_json()
 {
     NLOHMANN_DIR=$THIRD_PARTY_DIR/nlohmannJson/include
@@ -149,7 +218,8 @@ function fn_build_coverage()
     find $CACHE_DIR -not -path "$FIND_IGNORE_PATH" -name "*.gcno" | xargs -i cp {} $GCOV_CACHE_DIR
     $LCOV_PATH -c -i -d $GCOV_CACHE_DIR -o $GCOV_INFO_DIR/init.info >> $GCOV_DIR/log.txt
     
-    fn_run_pythontest
+    [[ "$COVERAGE_TYPE" == "unittest" ]] && fn_run_unittest
+    [[ "$COVERAGE_TYPE" == "pythontest" ]] && fn_run_pythontest
 
     find $CACHE_DIR -name "*.gcda" | xargs -i cp {} $GCOV_CACHE_DIR
     cd $GCOV_CACHE_DIR
@@ -375,8 +445,16 @@ function fn_main()
             ;;
         "pythontest")
             COMPILE_OPTIONS="${COMPILE_OPTIONS} -DUSE_PYTHON_TEST=ON"
+            export COVERAGE_TYPE="pythontest"
             fn_build
             fn_build_coverage
+            ;;
+        "unittest")
+            COMPILE_OPTIONS="${COMPILE_OPTIONS} -DUSE_UNIT_TEST=ON"
+            export COVERAGE_TYPE="unittest"
+            fn_build_3rdparty_for_test
+            fn_build
+            fn_run_unittest
             ;;
         "master")
             COMPILE_OPTIONS="${COMPILE_OPTIONS} -DCMAKE_BUILD_TYPE=Release"
