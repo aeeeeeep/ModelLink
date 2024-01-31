@@ -385,8 +385,8 @@ void unsqueezeByHeadNumANDBatchSize(const atb::Dims &oldShape, atb::Dims &newSha
     newShape.dimNum = 4;
     newShape.dims[0] = batchSize;
     newShape.dims[1] = oldShape.dims[0] / batchSize;
-    newShape.dims[2] = oldShape.dims[1];
-    newShape.dims[3] = oldShape.dims[2];
+    newShape.dims[2] = headNum;
+    newShape.dims[3] = headDim;
 }
 
 void squeezeBatchSize(const atb::Dims &oldShape, atb::Dims &newShape)

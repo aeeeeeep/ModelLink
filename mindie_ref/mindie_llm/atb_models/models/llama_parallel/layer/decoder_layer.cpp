@@ -17,9 +17,9 @@
 #include "layers/operations/rms_norm.h"
 #include "layers/operations/linear.h"
 #include "layers/operations/linear_parallel.h"
-#include "layers/operations/attention.h"
+#include "layers/operations/fusion_attention.h"
 #include "layers/operations/mlp.h"
-#include "layers/operations/decoder_layer.h"
+#include "models/llama_parallel/layer/decoder_layer.h"
 
 namespace atb_speed {
 namespace llama_parallel {
@@ -68,7 +68,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     fusionAttentionParam.selfAttentionParam.kvHeadNum = param.numKeyValueHeadsPerRank;
     fusionAttentionParam.selfAttentionParam.headDim = param.hiddenSizePerAttentionHead;
     if (param.hiddenSizePerAttentionHead == 0) {
-        return atb::ERROR_INVALID_GRAPH
+        return atb::ERROR_INVALID_GRAPH;
     }
     fusionAttentionParam.selfAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
     if (param.isFA) {
