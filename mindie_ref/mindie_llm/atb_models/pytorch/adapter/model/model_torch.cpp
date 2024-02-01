@@ -61,7 +61,10 @@
 #include "internlm/20b/model/flash_attention_rope_model.h"
 #include "internlm/7b/model/flash_attention_rope_model.h"
 #include "codellama/34b/model/flash_attention_rope_model.h"
-
+#include "starcoder/model/flash_attention_model.h"
+#include "starcoder/model/flash_attention_quant_model.h"
+#include "starcoder/model/paged_attention_model.h"
+#include "starcoder/model/paged_attention_quant_model.h"
 
 void *ModelTorch::GetWorkSpace(uint64_t bufferSize)
 {
@@ -178,6 +181,14 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::codellama_34b::FlashAttentionRopeModel>(param);
     } else if (modelName_ == "gptneox_20b_fa_kvcache_rope_model") {
         model_ = std::make_shared<atb_speed::gptneox_20b::FaKvCacheRopeModel>(param);
+    } else if (modelName_ == "starcoder_fa_parallel_model") {
+        model_ = std::make_shared<atb_speed::star_coder::FlashAttentionModel>(param);
+    } else if (modelName_ == "starcoder_fa_parallel_quant_model") {
+        model_ = std::make_shared<atb_speed::star_coder::FlashAttentionQuantModel>(param);
+    } else if (modelName_ == "starcoder_pa_model") {
+        model_ = std::make_shared<atb_speed::star_coder::PAModel>(param);
+    } else if (modelName_ == "starcoder_pa_quant_model") {
+        model_ = std::make_shared<atb_speed::star_coder::PAQuantModel>(param);
     } else {
         ATB_LOG(FATAL) << "not support modelName:" << modelName_;
         return atb::ERROR_INVALID_PARAM;

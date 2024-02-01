@@ -18,9 +18,8 @@ export ATB_OPERATION_EXECUTE_ASYNC=1
 export TASK_QUEUE_ENABLE=1
 export ATB_WORKSPACE_MEM_ALLOC_GLOBAL=0
 export ATB_CONTEXT_WORKSPACE_RING=1
-
 export ATB_USE_TILING_COPY_STREAM=0 # 该环境变量910B需要保持关闭，310P可开启
-
+export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
 export PYTORCH_NPU_ALLOC_CONF="max_split_size_mb:2048"
 
 # if running quant model, adapt below enviroment statements
