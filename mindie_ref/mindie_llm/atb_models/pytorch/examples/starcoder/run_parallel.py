@@ -280,7 +280,7 @@ if __name__ == "__main__":
 
     # singlecase_inference or multicase_inference
     if args.multi_case:
-        multicase_inference(args, model, tokenizer, prompt)
+        multicase_inference(args, model, tokenizer, test_prompt)
     else:
         # warm up
         warm_up(args, model, tokenizer, prompt)
