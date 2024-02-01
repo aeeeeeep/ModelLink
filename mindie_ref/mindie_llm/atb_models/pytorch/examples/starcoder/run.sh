@@ -43,8 +43,8 @@ SEQLEN_IN_PAIR=[256,256,512,1024]
 SEQLEN_OUT_PAIR=[64,256,512,1024]
 
 transformers_package_path=$(python3 -c 'import transformers; import os; print(os.path.dirname(transformers.__file__))')
-# cp $SCRIPT_DIR/modeling_gpt_bigcode_simple.py $transformers_package_path/models/gpt_bigcode/modeling_gpt_bigcode.py
-cp $SCRIPT_DIR/patch/model/modeling_gpt_bigcode_parallel_model_910b.py $transformers_package_path/models/gpt_bigcode/modeling_gpt_bigcode.py
+cp $SCRIPT_DIR/modeling_gpt_bigcode_simple.py $transformers_package_path/models/gpt_bigcode/modeling_gpt_bigcode.py
+# cp $SCRIPT_DIR/patch/model/modeling_gpt_bigcode_parallel_model_910b.py $transformers_package_path/models/gpt_bigcode/modeling_gpt_bigcode.py
 
 function fn_run_parallel()
 {
