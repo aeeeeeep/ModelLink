@@ -48,6 +48,7 @@ struct ParallelParamV2 {
     bool transposeB = false;
     bool isQuant = false;
     bool isSparse = false;
+    bool isAllGatherTranspose = false;
     CommParam commParam;
     QuantParam quantParam;
 };
