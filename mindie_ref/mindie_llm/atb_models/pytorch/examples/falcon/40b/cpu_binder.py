@@ -81,17 +81,16 @@ def bind_cpus(world_size, rank_id, device_id, ratio=0.5):
     
     # 当前rank的npu id
     cur_device = (rank_id + device_id)
-    print(device_numa_tbl, cur_device)
     # 获取npu对应的numa id
-    numa_id = device_numa_tbl[cur_device]
+    numa_id = device_numa_tbl.get(cur_device)
 
     # 获取共享该numa的npu信息
-    shard_devices = numa_devices_tbl[numa_id]
+    shard_devices = numa_devices_tbl.get(numa_id)
     # 按照npu id进行排序
     shard_devices.sort()
 
     # 获取该numa上所有的cpu id信息
-    all_cpus = cpu_idx_tbl[numa_id]
+    all_cpus = cpu_idx_tbl.get(numa_id)
     logger.info(
         f"rank_id: {rank_id}, device_id: {cur_device}, numa_id: {numa_id}, shard_devices: {shard_devices}, cpus: {all_cpus}")
 

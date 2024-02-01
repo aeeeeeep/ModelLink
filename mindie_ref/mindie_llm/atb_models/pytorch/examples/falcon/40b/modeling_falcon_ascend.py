@@ -14,6 +14,8 @@
 # limitations under the License.
 """PyTorch Falcon model."""
 
+import os
+import json
 import math
 import warnings
 from typing import Optional, Tuple, Union
@@ -32,8 +34,6 @@ from transformers.modeling_utils import PreTrainedModel
 from transformers.utils import add_code_sample_docstrings, add_start_docstrings, add_start_docstrings_to_model_forward, logging
 
 # ======================== load so ========================
-import os
-import json
 ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
 if ATB_SPEED_HOME_PATH is None:
     raise RuntimeError("env ATB_SPEED_HOME_PATH not exist, source set_env.sh")
@@ -190,12 +190,12 @@ class FalconAttention(nn.Module):
         self.config = config
         self.hidden_size = config.hidden_size
         self.num_heads = config.num_attention_heads
-        self.head_dim = self.hidden_size // self.num_heads # 8192/128 = 64
+        self.head_dim = self.hidden_size // self.num_heads # 8192 / 128 = 64
         self.split_size = self.hidden_size
         self.hidden_dropout = config.hidden_dropout
         self.is_causal = True
         self.world_size = 1 if not hasattr(config, 'world_size') else config.world_size
-        self.num_heads =  self.num_heads // self.world_size # 128/4=32
+        self.num_heads =  self.num_heads // self.world_size # 128 / 4 = 32
         self.maybe_rotary = self._init_rope() if config.rotary else lambda q, k, t, p: (q, k)
 
         # Layer-wise attention scaling
@@ -271,7 +271,7 @@ class FalconDecoderLayer(nn.Module):
             # The layer norm before self-attention
             self.ln_attn = LayerNorm(hidden_size, eps=config.layer_norm_epsilon)
             # The layer norm before the MLP
-            self.ln_mlp  = LayerNorm(hidden_size, eps=config.layer_norm_epsilon)
+            self.ln_mlp = LayerNorm(hidden_size, eps=config.layer_norm_epsilon)
         else:
             self.input_layernorm = LayerNorm(hidden_size, eps=config.layer_norm_epsilon)
             if not config.parallel_attn:
@@ -378,7 +378,7 @@ class FalconModel(FalconPreTrainedModel):
         self.gradient_checkpointing = False
 
         self.world_size = 1 if not hasattr(config, 'world_size') else config.world_size
-        self.num_heads = self.num_heads//self.world_size
+        self.num_heads = self.num_heads // self.world_size
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -592,8 +592,8 @@ class FalconForCausalLM(FalconPreTrainedModel):
             self.attention_mask_max[:, :self.seq_len, :self.seq_len] = causal_mask[:, 0, :, :]
 
             if self.cache_k is None or batch_size != self.cache_k.shape[1] or self.total_seqlen != self.cache_k.shape[-2]:
-                self.cache_k = torch.zeros(self.num_hidden_layers, batch_size, self.total_seqlen, self.head_dim*self.num_heads, dtype=torch.float16, device=device)
-                self.cache_v = torch.zeros(self.num_hidden_layers, batch_size, self.total_seqlen, self.head_dim*self.num_heads, dtype=torch.float16, device=device)
+                self.cache_k = torch.zeros(self.num_hidden_layers, batch_size, self.total_seqlen, self.head_dim * self.num_heads, dtype=torch.float16, device=device)
+                self.cache_v = torch.zeros(self.num_hidden_layers, batch_size, self.total_seqlen, self.head_dim * self.num_heads, dtype=torch.float16, device=device)
                 self.rope.cos_sin(0, self.total_seqlen, device=device, dtype=torch.float16)
         
         param_seqlen = seqlen.cpu().tolist()

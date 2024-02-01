@@ -167,7 +167,7 @@ def build_alibi_tensor(attention_mask: torch.Tensor, num_heads: int, dtype: torc
     else:
         world_size = 1
     alibi = slopes[..., None] * arange_tensor
-    return alibi.reshape(batch_size * num_heads // world_size , 1, seq_length).to(dtype)
+    return alibi.reshape(batch_size * num_heads // world_size, 1, seq_length).to(dtype)
 
 
 class BloomCommonForCausalLM(BloomPreTrainedModel):
@@ -206,13 +206,13 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
             dense_name = f"transformer.h.{layer_count}.self_attention.dense"
             dense_h_to_4h_name = f"transformer.h.{layer_count}.mlp.dense_h_to_4h"
             dense_4h_to_h_name = f"transformer.h.{layer_count}.mlp.dense_4h_to_h"
-            self.quant_param.get("qkvInputScale")[layer_count] = float(1/self.input_scale_dict[query_key_value_name])
+            self.quant_param.get("qkvInputScale")[layer_count] = float(1 / self.input_scale_dict[query_key_value_name])
             self.quant_param.get("qkvInputOffset")[layer_count] = int(self.input_offset_dict[query_key_value_name])
-            self.quant_param.get("denseInputScale")[layer_count] = float(1/self.input_scale_dict[dense_name])
+            self.quant_param.get("denseInputScale")[layer_count] = float(1 / self.input_scale_dict[dense_name])
             self.quant_param.get("denseInputOffset")[layer_count] = int(self.input_offset_dict[dense_name])
-            self.quant_param.get("selfLnInputScale")[layer_count] = float(1/self.input_scale_dict[dense_h_to_4h_name])
+            self.quant_param.get("selfLnInputScale")[layer_count] = float(1 / self.input_scale_dict[dense_h_to_4h_name])
             self.quant_param.get("selfLnInputOffset")[layer_count] = int(self.input_offset_dict[dense_h_to_4h_name])
-            self.quant_param.get("ffnOutInputScale")[layer_count] = float(1/self.input_scale_dict[dense_4h_to_h_name])
+            self.quant_param.get("ffnOutInputScale")[layer_count] = float(1 / self.input_scale_dict[dense_4h_to_h_name])
             self.quant_param.get("ffnOutInputOffset")[layer_count] = int(self.input_offset_dict[dense_4h_to_h_name])
 
         param_dict = {
@@ -241,8 +241,6 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
         for i in range(self.num_hidden_layers):
             self.inputs_acl[i + 7] = torch.tensor([i], dtype=torch.int32).npu()
         
-        self.maybe_transdata = lambda x: self.transdata_operation.execute([x])[0] if not self.is_910b else x
-        self.maybe_formatcast = lambda x: torch_npu.npu_format_cast(x, 29) if not self.is_910b else x
         self.bias_dtype = torch.int32
         self.deq_scale_dtype = torch.int64
 
@@ -251,6 +249,15 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
         self.acl_model.set_weight(self.weights)
         torch.npu.empty_cache()
     
+
+    def maybe_transdata(self, x):
+        return self.transdata_operation.execute([x])[0] if not self.is_910b else x
+    
+
+    def maybe_formatcast(self, x):
+        return torch_npu.npu_format_cast(x, 29) if not self.is_910b else x
+
+
     def load_model(self, config):
         if config.data_dtype == "fp16":
             return self.load_model_fp16(config)

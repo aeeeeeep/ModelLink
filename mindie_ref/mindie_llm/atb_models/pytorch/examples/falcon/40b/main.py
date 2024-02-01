@@ -13,6 +13,7 @@ from transformers import AutoConfig, AutoTokenizer
 
 from cpu_binder import bind_cpus
 
+
 def get_rank():
     return 0 if not torch.distributed.is_initialized() else torch.distributed.get_rank()
 
@@ -21,9 +22,9 @@ def is_rank_0(rank=None):
     return rank == 0 or get_rank() == 0
 
 
-def print_rank_0(*args, **kwargs):
+def print_rank_0(*_args, **_kwargs):
     if is_rank_0():
-        print(*args, **kwargs)
+        print(*_args, **_kwargs)
 
 
 def get_world_size():
@@ -76,14 +77,14 @@ def get_args():
 
     parser.add_argument(
         "--model_path",
-        default = "./",
+        default="./",
         help="Location of Model weights, which contains model folders",
     )
     parser.add_argument(
         "--device",
         nargs='+',
         type=int,
-        default = [0, 1, 2, 3],
+        default=[0, 1, 2, 3],
         help="NPU devices",
     )
     parser.add_argument(
@@ -117,34 +118,33 @@ def get_args():
         default=4,
         help="tensor parallel"
     )
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
-def load_model(args):
-    if len(args.device) != 4:
-        raise Exception(f"Error! unsupported device num {len(args.device)}!")
+def load_model(args_load_model):
+    if len(args_load_model.device) != 4:
+        raise Exception(f"Error! unsupported device num {len(args_load_model.device)}!")
 
     torch.distributed.init_process_group("hccl")
     local_rank = torch.distributed.get_rank()
     world_size = torch.distributed.get_world_size()
 
-    torch_npu.npu.set_device(args.device[local_rank])
+    torch_npu.npu.set_device(args_load_model.device[local_rank])
 
     # seed must be the same in all processes
     torch.manual_seed(1)
 
-    bind_cpus(world_size, 0, args.device[local_rank])
+    bind_cpus(world_size, 0, args_load_model.device[local_rank])
 
-    tokenizer_path = os.path.join(args.model_path, 'tokenizer')
+    tokenizer_path = os.path.join(args_load_model.model_path, 'tokenizer')
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, use_fast=False, padding_side='left')
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    part_model_path = os.path.join(args.model_path, 'part_model', str(local_rank))
+    part_model_path = os.path.join(args_load_model.model_path, 'part_model', str(local_rank))
     config = AutoConfig.from_pretrained(part_model_path)
 
-    config.model_path = args.model_path
+    config.model_path = args_load_model.model_path
     config.local_rank = local_rank
     config.world_size = world_size
     model = FalconForCausalLM.from_pretrained(part_model_path, config=config).half().npu().eval()
@@ -302,14 +302,13 @@ def inference(infer_model, infer_tokenizer, prompt, batch, seqlen_in, seqlen_out
 
     print_rank_0("\nQ&A results are as follows:")
     for idx, item in enumerate(res):
-        print_rank_0(f"\n[Q&A {idx+1}]\n",item)
+        print_rank_0(f"\n[Q&A {idx+1}]\n", item)
 
     return time_of_first_token.cpu().tolist(), time_per_token.cpu().tolist(), total_time.cpu().tolist()
 
 
 def random_test():
-    args = get_args()
-    model, tokenizer = load_model(args)
+    model, tokenizer = load_model(get_args())
 
     if is_rank_0():
         file = open(f"zhiputest.csv", 'w')
@@ -334,19 +333,19 @@ def random_test():
         file.close()
 
 
-def performance_test(args):
-    result_filename = args.performance_output_file
-    model, tokenizer = load_model(args)
+def performance_test(args_perf):
+    result_filename = args_perf.performance_output_file
+    model, tokenizer = load_model(args_perf)
     prompt = get_text_input()
-    print(f"args.set_case_pair: {args.set_case_pair}")
-    if args.set_case_pair:
-        assert len(args.seqlen_in_pair) == len(args.seqlen_out_pair), "length between seqlen_in_pair and seqlen_out_pair not equal!"
-        test_cases = [(args.batch, seq_len_in, seq_len_out) for seq_len_in, seq_len_out in zip(args.seqlen_in_pair, args.seqlen_out_pair)]
+    print(f"args_perf.set_case_pair: {args_perf.set_case_pair}")
+    if args_perf.set_case_pair:
+        assert len(args_perf.seqlen_in_pair) == len(args_perf.seqlen_out_pair), "length between seqlen_in_pair and seqlen_out_pair not equal!"
+        test_cases = [(args_perf.batch, seq_len_in, seq_len_out) for seq_len_in, seq_len_out in zip(args_perf.seqlen_in_pair, args_perf.seqlen_out_pair)]
     else:
-        assert len(args.seqlen_in_range) == len(args.seqlen_out_range) == 2, "length for seqlen_in_range and seqlen_out_range which is [begin, end]!"
-        batch_sizes = [args.batch]
-        seq_lens_in = [2**x for x in range(args.seqlen_in_range[0], args.seqlen_in_range[1] + 1)]
-        seq_lens_out = [2**x for x in range(args.seqlen_out_range[0], args.seqlen_out_range[1] + 1)]
+        assert len(args_perf.seqlen_in_range) == len(args_perf.seqlen_out_range) == 2, "length for seqlen_in_range and seqlen_out_range which is [begin, end]!"
+        batch_sizes = [args_perf.batch]
+        seq_lens_in = [2**x for x in range(args_perf.seqlen_in_range[0], args_perf.seqlen_in_range[1] + 1)]
+        seq_lens_out = [2**x for x in range(args_perf.seqlen_out_range[0], args_perf.seqlen_out_range[1] + 1)]
         test_cases = product(*[batch_sizes, seq_lens_in, seq_lens_out])
     
     if is_rank_0():
@@ -375,7 +374,7 @@ def performance_test(args):
     print_rank_0(f"save performance to {result_filename}")
 
 
-def precision_test(args):
+def precision_test(args_prec):
     try:
         from atb_speed.common.precision import get_precision_test_cls
         from atb_speed.common.config import atb_speed_config
@@ -384,8 +383,8 @@ def precision_test(args):
 
 
     class FalconModel:
-        def __init__(self, args):
-            self.model, self.tokenizer = load_model(args)
+        def __init__(self, args_falcon):
+            self.model, self.tokenizer = load_model(args_falcon)
             self.local_rank = get_rank()
 
     with NamedTemporaryFile('w+t') as f:
@@ -396,8 +395,8 @@ def precision_test(args):
 
         atb_speed_config.init_config(f.name)
     
-    falcon = FalconModel(args)
-    c_t = get_precision_test_cls()(falcon, args.dataset_path, batch=args.batch)
+    falcon = FalconModel(args_prec)
+    c_t = get_precision_test_cls()(falcon, args_prec.dataset_path, batch=args_prec.batch)
     c_t.run()
 
 
@@ -416,7 +415,7 @@ def _cut_weight(model, world_size):
             tensor = tensor.view(config_num_kv_heads, -1, head_dim, model.config.hidden_size)
             query_layer, key_layer, value_layer = tensor.split([16, 1, 1], dim=1)
             query_list = torch.chunk(query_layer, world_size, dim=0)
-            key_list   = torch.chunk(key_layer,   world_size, dim=0)
+            key_list = torch.chunk(key_layer, world_size, dim=0)
             value_list = torch.chunk(value_layer, world_size, dim=0)
             for i in range(world_size):
                 cut_tensor_list.append(torch.cat([query_list[i], key_list[i], value_list[i]], dim=1).view(-1, 8192))
@@ -430,28 +429,28 @@ def _cut_weight(model, world_size):
     return state_dict_list
 
 
-def cut_weight(args):
-    tokenizer = AutoTokenizer.from_pretrained(args.model_path, use_fast=False)  # load the tokenizer
-    tokenizer.save_pretrained(args.output_model_path+'/tokenizer')  # save the tokenizer
+def cut_weight(args_cut):
+    tokenizer = AutoTokenizer.from_pretrained(args_cut.model_path, use_fast=False)  # load the tokenizer
+    tokenizer.save_pretrained(os.path.join(args_cut.output_model_path, '/tokenizer'))  # save the tokenizer
     
-    args.world_size = int(args.world_size)
+    args_cut.world_size = int(args_cut.world_size)
 
     print("[~] Loading model ...")
     START_TIME = time.time()
-    model = FalconForCausalLM.from_pretrained(args.model_path, torch_dtype=torch.float16)
+    model = FalconForCausalLM.from_pretrained(args_cut.model_path, torch_dtype=torch.float16)
     print(f"[+] Load model success: {int(time.time() - START_TIME)//60} min")
-    state_dict_list = _cut_weight(model, args.world_size)  # cut the weight
+    state_dict_list = _cut_weight(model, args_cut.world_size)  # cut the weight
 
     model_config = model.config
-    model_config.world_size = args.world_size
+    model_config.world_size = args_cut.world_size
     model_config.torch_dtype = torch.float16
     create_model = FalconForCausalLM(model_config)
     print(f"[~] Saving parts ...")
-    for i in range(args.world_size):
+    for i in range(args_cut.world_size):
         # load the weights to the model
         create_model.load_state_dict(state_dict_list[i])
         create_model = create_model.half()
-        save_path = os.path.join(args.output_model_path, "part_model", str(i))
+        save_path = os.path.join(args_cut.output_model_path, "part_model", str(i))
         create_model.save_pretrained(save_path)  # save model
         print(f"[{i}] save to {save_path}")
     print('[+] save model weights succcessfully')

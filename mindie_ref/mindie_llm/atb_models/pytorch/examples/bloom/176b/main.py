@@ -446,8 +446,7 @@ def precision_test(args):
         from atb_speed.common.precision import get_precision_test_cls
         from atb_speed.common.config import atb_speed_config
     except ImportError as e:
-        print_rank_0("you need to install atb_speed sdk!")
-        exit()
+        raise Exception("you need to install atb_speed sdk!")
 
 
     class Bloom176B:
