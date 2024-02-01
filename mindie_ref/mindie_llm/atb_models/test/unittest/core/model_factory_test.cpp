@@ -36,24 +36,7 @@ TEST(ModelFactory, RegisterShouldReturnTrueWhenGivenUniqueModelName)
     ASSERT_EQ(duplicateRegister, false);
 }
 
-TEST(ModelFactory, RegistryMapShouldContainsAllRegisteredModels)
-{
-    auto registryMap = ModelFactory::GetRegistryMap();
-    ASSERT_FALSE(registryMap.empty());
-    ASSERT_EQ(registryMap.size(), 2);
-    std::vector<std::string> modelClassNames = { "chatglm2_6b_ChatGlm2CommonModelFa" };
-    for (auto &modelName : modelClassNames) {
-        ASSERT_NE(registryMap.find(modelName), registryMap.end());
-    }
-}
-
-TEST(ModelFactory, InCorrectModelNamesWouldNotBeFoundInRegistryMap)
-{
-    auto registryMap = ModelFactory::GetRegistryMap();
-    ASSERT_EQ(registryMap.find("ChatGlm2CommonModelFa_2"), registryMap.end());
-}
-
-TEST(ModelFactory, CreateModelByClassConstructorWouldNotGetNullptr)
+TEST(ModelFactory, CreateModelByClassConstructorWouldNotGetNullptrWhenGivenCorrectParam)
 {
     std::string param = R"(
     {
@@ -89,7 +72,7 @@ TEST(ModelFactory, CreateModelByClassConstructorWouldNotGetNullptr)
     ASSERT_NE(model_, nullptr);
 }
 
-TEST(ModelFactory, CreateModelByCreateInstanceWouldNotGetNullptr)
+TEST(ModelFactory, CreateModelByCreateInstanceWouldNotGetNullptrWhenGivenCorrectParam)
 {
     std::string param = R"(
     {

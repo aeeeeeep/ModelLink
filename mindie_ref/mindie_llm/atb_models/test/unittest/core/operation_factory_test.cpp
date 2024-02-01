@@ -33,24 +33,7 @@ TEST(OperationFactory, RegisterShouldReturnTrueWhenGivenUniqueOperationName)
     ASSERT_EQ(DuplicateRegister, false);
 }
 
-TEST(OperationFactory, RegistryMapShouldContainsAllRegisteredOperations)
-{
-    auto registryMap = OperationFactory::GetRegistryMap();
-    ASSERT_FALSE(registryMap.empty());
-    ASSERT_EQ(registryMap.size(), 2);
-    std::vector<std::string> createOperationNames = {"common_SampleLayerCreate"};
-    for (auto &createOperationName : createOperationNames) {
-        ASSERT_NE(registryMap.find(createOperationName), registryMap.end());
-    }
-}
-
-TEST(OperationFactory, InCorrectOperationNamesWouldNotBeFoundInRegistryMap)
-{
-    auto registryMap = OperationFactory::GetRegistryMap();
-    ASSERT_EQ(registryMap.find("SampleLayerCreate_2"), registryMap.end());
-}
-
-TEST(OperationFactory, CreateOperationByFunctionWouldNotGetNullptr)
+TEST(OperationFactory, CreateOperationByFunctionWouldNotGetNullptrWhenGivenCorrectParam)
 {
     std::string param = R"(
     {
@@ -64,7 +47,7 @@ TEST(OperationFactory, CreateOperationByFunctionWouldNotGetNullptr)
     ASSERT_NE(operation_, nullptr);
 }
 
-TEST(OperationFactory, CreateOperationByCreateOperationWouldNotGetNullptr)
+TEST(OperationFactory, CreateOperationByCreateOperationWouldNotGetNullptrWhenGivenCorrectParam)
 {
     std::string param = R"(
     {

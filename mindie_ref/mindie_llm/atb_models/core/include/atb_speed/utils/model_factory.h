@@ -31,6 +31,7 @@ class ModelFactory {
 public:
     static bool Register(const std::string &modelName, CreateModelFuncPtr createModel);
     static std::shared_ptr<atb_speed::Model> CreateInstance(const std::string &modelName, const std::string &param);
+private:
     static std::unordered_map<std::string, CreateModelFuncPtr> &GetRegistryMap();
 };
 

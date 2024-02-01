@@ -32,6 +32,7 @@ class OperationFactory {
 public:
     static bool Register(const std::string &operationName, CreateOperationFuncPtr createOperation);
     static atb::Operation *CreateOperation(const std::string &operationName, const nlohmann::json &param);
+private:
     static std::unordered_map<std::string, CreateOperationFuncPtr> &GetRegistryMap();
 };
 
