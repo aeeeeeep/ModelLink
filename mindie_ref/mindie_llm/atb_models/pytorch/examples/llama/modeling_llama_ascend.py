@@ -38,7 +38,6 @@ from transformers.utils import add_start_docstrings, add_start_docstrings_to_mod
     replace_return_docstrings
 import torch_npu
 
-import time
 
 MAX_SEQ_LENGTH = int(os.getenv("MAX_SEQ_LENGTH", "2048")) # 自定义最大输入输出长度，默认值2048
 
@@ -60,6 +59,7 @@ RUN_SPARSE_MODEL = False
 # Rollback float layer ids for quant inference
 FLOAT_LAYERS = [0, 1, 2, 4, 30]
 
+
 # 稀疏模型权重读取
 def read_dat_file(data_dir, message=False, is_compress_info=False):
     data_dict = {}
@@ -71,6 +71,7 @@ def read_dat_file(data_dir, message=False, is_compress_info=False):
             data = np.fromfile(os.path.join(data_dir, file_name), dtype=np.int8)
         data_dict.setdefault(weight_name, torch.tensor(data))
     return data_dict
+
 
 def load_acl_transformer():
     """
@@ -84,10 +85,12 @@ def load_acl_transformer():
     LIB_PATH = os.path.join(ACLTRANSFORMER_HOME_PATH, "lib/libatb_speed_torch.so")
     torch.classes.load_library(LIB_PATH)
 
+
 # quant weight processor
 def bias_correction(fp_bias, quant_weight, input_offset, deq_scale):
-    bias_correction = fp_bias.npu()/deq_scale.npu() - quant_weight.to(torch.float32).npu().sum(dim=1) * float(input_offset)
-    return bias_correction
+    new_bias = fp_bias.npu() / deq_scale.npu() - quant_weight.to(torch.float32).npu().sum(dim=1) * float(input_offset)
+    return new_bias
+
 
 def process_deq_scale(deq_scale_dict):
     new_deq_scale_dict = {}
@@ -244,7 +247,7 @@ class LlamaAttention(nn.Module):
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
                 f" and `num_heads`: {self.num_heads})."
             )
-        self.num_heads=self.num_heads // self.world_size
+        self.num_heads = self.num_heads // self.world_size
         self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=False)
         self.k_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=False)
         self.v_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=False)
@@ -627,13 +630,13 @@ class LlamaModel(LlamaPreTrainedModel):
                     up_name = "model.layers.{}.mlp.up_proj".format(layer_id)
                     gate_name = "model.layers.{}.mlp.gate_proj".format(layer_id)
                     down_name = "model.layers.{}.mlp.down_proj".format(layer_id)
-                    self.qkv_input_scale.append(float(1/self.input_scale_dict[q_name]))
+                    self.qkv_input_scale.append(float(1 / self.input_scale_dict[q_name]))
                     self.qkv_input_offset.append(int(self.input_offset_dict[q_name]))
-                    self.dense_input_scale.append(float(1/self.input_scale_dict[o_name]))
+                    self.dense_input_scale.append(float(1 / self.input_scale_dict[o_name]))
                     self.dense_input_offset.append(int(self.input_offset_dict[o_name]))
-                    self.self_ln_input_scale.append(float(1/self.input_scale_dict[gate_name]))
+                    self.self_ln_input_scale.append(float(1 / self.input_scale_dict[gate_name]))
                     self.self_ln_input_offset.append(int(self.input_offset_dict[gate_name]))
-                    self.ffn_out_input_scale.append(float(1/self.input_scale_dict[down_name]))
+                    self.ffn_out_input_scale.append(float(1 / self.input_scale_dict[down_name]))
                     self.ffn_out_input_offset.append(int(self.input_offset_dict[down_name]))
 
         # initialize ascend model inputs and parameters
