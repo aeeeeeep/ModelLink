@@ -228,6 +228,7 @@ class Float(BaseManager):
     def process_weights(self, tp_size) -> None:
         if tp_size == 1:
             return
+        self.float_weight_path = f"{self.float_weight_path}_tp{tp_size}"
         if Path(self.float_weight_path).exists():
             print(
                 f"[info]: The parallel float weights has exist in '{self.float_weight_path}'. Please remove it if you want to process float weights again.")
@@ -285,20 +286,22 @@ class Quant(BaseManager):
         return state_dict
 
     def load_sliced_weights(self):
+        quant_parallel_path = f"{self.quant_weight_path}/tp{self.config.world_size}"
         state_dict = {
-            "quant_weight": np.load(Path(self.quant_weight_path).joinpath(f"quant_weight{self.rank}.npy"), allow_pickle=True).item(),
-            "bias": np.load(Path(self.quant_weight_path).joinpath(f"new_bias{self.rank}.npy"), allow_pickle=True).item(),
-            "deq_scale": np.load(Path(self.quant_weight_path).joinpath(f"new_deq_scale{self.rank}.npy"), allow_pickle=True).item(),
+            "quant_weight": np.load(Path(quant_parallel_path).joinpath(f"quant_weight{self.rank}.npy"), allow_pickle=True).item(),
+            "bias": np.load(Path(quant_parallel_path).joinpath(f"new_bias{self.rank}.npy"), allow_pickle=True).item(),
+            "deq_scale": np.load(Path(quant_parallel_path).joinpath(f"new_deq_scale{self.rank}.npy"), allow_pickle=True).item(),
         }
         return state_dict
 
     def save_sliced_weights(self, state_dict_list, tp_size) -> None:
+        quant_parallel_path = f"{self.quant_weight_path}/tp{tp_size}"
         for i in range(tp_size):
-            np.save(Path(self.quant_weight_path).joinpath(
+            np.save(Path(quant_parallel_path).joinpath(
                 f"quant_weight{i}.npy"), state_dict_list["quant_weight"][i])
-            np.save(Path(self.quant_weight_path).joinpath(
+            np.save(Path(quant_parallel_path).joinpath(
                 f"new_bias{i}.npy"), state_dict_list["bias"][i])
-            np.save(Path(self.quant_weight_path).joinpath(
+            np.save(Path(quant_parallel_path).joinpath(
                 f"new_deq_scale{i}.npy"), state_dict_list["deq_scale"][i])
 
     def bias_correction(self, fp_bias_dict, quant_weight_dict, input_offset_dict, deq_scale_dict) -> Dict[str, torch.Tensor]:
