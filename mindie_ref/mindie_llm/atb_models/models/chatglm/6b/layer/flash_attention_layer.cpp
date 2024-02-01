@@ -121,6 +121,7 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
     atb_speed::common::FTWithROPEParam faWithROPEParam;
     // self attention param
     faWithROPEParam.isGroupedQueryAttention = false;
+    faWithROPEParam.isCrossedWeight = true;
     faWithROPEParam.selfAttentionKvCacheParam.headDim = param.hiddenSizePerHead;
     faWithROPEParam.selfAttentionKvCacheParam.headNum = param.numHeadsPerPartition;
     faWithROPEParam.selfAttentionKvCacheParam.kvHeadNum = param.numHeadsPerPartition;
