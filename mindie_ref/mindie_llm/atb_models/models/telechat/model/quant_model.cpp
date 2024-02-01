@@ -13,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "model.h"
+#include "quant_model.h"
 #include <nlohmann/json.hpp>
 #include <atb/atb_infer.h>
 #include "telechat/layer/embedding_layer.h"
-#include "telechat/layer/layer.h"
-#include "telechat/operation/common_mlp_quant.h"
+#include "telechat/layer/quant_layer.h"
 
 namespace atb_speed {
 namespace telechat {
@@ -28,7 +27,6 @@ const int WORD_EMBEDDING_WEIGHT_COUNT = 1;
 const int FINAL_RMSNORM_WEIGHT_COUNT = 1;
 const int OUT_LM_HEAD_WEIGHT_COUNT = 1;
 const int INTERNAL_TENSOR_COUNT_BEFORE_LAYER = 3;
-const int INPUT_TENSOR_COUNT_BEFORE_KEY = 9;
 const int OPERATION_COUNT_BEFORE_LAYER = 1;
 const int OPERATION_COUNT_AFTER_LAYER = 2;
 const int OUT_TENSOR_NUM = 1;
@@ -43,7 +41,7 @@ enum InTensorId {
     IN_TENSOR_PAST_VALUE,
     IN_TOKENOFFSET,
     IN_SEQLEN,
-    IN_LAYERID,
+    IN_HOLDER,
     IN_MAX_TENSOR
 };
 
@@ -54,6 +52,8 @@ void QuantFAModel::QuantFAParam::FromString(const std::string &param)
     headNum = paramJson["headNum"].get<int>();
     dk = paramJson["dk"].get<int>();
     layerNum = paramJson["layerNum"].get<int>();
+    rank = paramJson["rank"].get<int>();
+    rankSize = paramJson["rankSize"].get<int>();
     for (auto item : paramJson["float_query_layers"]) {
         float_query_layers.push_back(item.get<int>());
     }
@@ -65,7 +65,7 @@ void QuantFAModel::QuantFAParam::FromString(const std::string &param)
     }
     for (auto item : paramJson["inputScale_qkv"]) {
         inputScale_qkv.push_back(item.get<float>());
-    } // quant
+    }
     for (auto item : paramJson["inputOffset_qkv"]) {
         inputOffset_qkv.push_back(item.get<int>());
     }
@@ -87,8 +87,8 @@ void QuantFAModel::QuantFAParam::FromString(const std::string &param)
     for (auto item : paramJson["inputOffset_down_proj"]) {
         inputOffset_down_proj.push_back(item.get<int>());
     }
-    ATB_LOG(INFO) << "QuantFAModel param rmsNormEps:" << rmsNormEps << ", headNum:" << headNum
-                    << ", dk:" << dk << ", layerNum:" << layerNum;
+    ATB_LOG(INFO) << "QuantFAModel param rmsNormEps:" << rmsNormEps << ", headNum:" << headNum << ", dk:" << dk
+                  << ", layerNum:" << layerNum << ", rankSize:" << rankSize << ", rank:" << rank;
 }
 
 QuantFAModel::QuantFAModel(const std::string &param) : Model("QuantFAModel", param)
@@ -102,7 +102,10 @@ uint32_t QuantFAModel::GetInputNum() const
 {
     return graph_.inTensors.size();
 }
-uint32_t QuantFAModel::GetOutputNum() const { return graph_.outTensors.size(); }
+uint32_t QuantFAModel::GetOutputNum() const
+{
+    return graph_.outTensors.size();
+}
 
 atb::Status QuantFAModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
                                      std::vector<atb::TensorDesc> &outTensorDescs)
@@ -126,12 +129,11 @@ int64_t QuantFAModel::BuildGraph()
 {
     ATB_LOG(INFO) << "Enter Telechat QuantFAModel BuildGraph";
 
-    const int weightTensorSize = WORD_EMBEDDING_WEIGHT_COUNT +
-                                    WEIGHT_COUNT_PER_LAYER * param_.layerNum +
-                                    FINAL_RMSNORM_WEIGHT_COUNT + OUT_LM_HEAD_WEIGHT_COUNT;
+    const int weightTensorSize = WORD_EMBEDDING_WEIGHT_COUNT + WEIGHT_COUNT_PER_LAYER * param_.layerNum +
+                                 FINAL_RMSNORM_WEIGHT_COUNT + OUT_LM_HEAD_WEIGHT_COUNT;
     graph_.weightTensors.resize(weightTensorSize);
 
-    const int inTensorSize = INPUT_TENSOR_COUNT_BEFORE_KEY + param_.layerNum;
+    const int inTensorSize = IN_MAX_TENSOR + param_.layerNum;
     graph_.inTensors.resize(inTensorSize);
 
     const int outTensorSize = OUT_TENSOR_NUM;
@@ -150,14 +152,11 @@ int64_t QuantFAModel::BuildGraph()
     EmbeddingLayerParam embeddingLayerParam;
     EmbeddingLayer(embeddingLayerParam, &op);
     embeddingNode.operation.reset(op);
-    embeddingNode.inTensors = {&graph_.weightTensors.at(0),
-                                &graph_.inTensors.at(IN_TENSOR_INPUT_IDS),
-                                &graph_.inTensors.at(IN_TENSOR_COSTABLE),
-                                &graph_.inTensors.at(IN_TENSOR_SINTABLE),
-                                &graph_.inTensors.at(IN_TENSOR_POSITIONIDS)};
-    embeddingNode.outTensors = {&graph_.internalTensors.at(0),
-                                &graph_.internalTensors.at(1),
-                                &graph_.internalTensors.at(2)};
+    embeddingNode.inTensors = { &graph_.weightTensors.at(0), &graph_.inTensors.at(IN_TENSOR_INPUT_IDS),
+                                &graph_.inTensors.at(IN_TENSOR_COSTABLE), &graph_.inTensors.at(IN_TENSOR_SINTABLE),
+                                &graph_.inTensors.at(IN_TENSOR_POSITIONIDS) };
+    embeddingNode.outTensors = { &graph_.internalTensors.at(0), &graph_.internalTensors.at(1),
+                                 &graph_.internalTensors.at(2) };
     atb::Tensor *firstInTensor = &graph_.internalTensors.at(0);
     atb::Tensor *cosEmbedTensor = &graph_.internalTensors.at(1);
     atb::Tensor *sinEmbedTensor = &graph_.internalTensors.at(2);
@@ -165,18 +164,24 @@ int64_t QuantFAModel::BuildGraph()
         auto &layerNode = graph_.nodes.at(nodeId++);
 
         QuantFALayerParam layerParam;
+
         layerParam.rmsNormEps = param_.rmsNormEps;
         layerParam.headNum = param_.headNum;
         layerParam.dk = param_.dk;
-        if (std::find(param_.float_query_layers.begin(), param_.float_query_layers.end(), layerId) != param_.float_query_layers.end()) {
+        layerParam.rank = param_.rank;
+        layerParam.rankSize = param_.rankSize;
+        if (std::find(param_.float_query_layers.begin(), param_.float_query_layers.end(), layerId) !=
+            param_.float_query_layers.end()) {
             layerParam.isFloatQueryLayer = true;
             ATB_LOG(INFO) << "layerParam.isFloatQueryLayer" << layerParam.isFloatQueryLayer;
         }
-        if (std::find(param_.float_kv_layers.begin(), param_.float_kv_layers.end(), layerId) != param_.float_kv_layers.end()) {
+        if (std::find(param_.float_kv_layers.begin(), param_.float_kv_layers.end(), layerId) !=
+            param_.float_kv_layers.end()) {
             layerParam.isFloatKVLayer = true;
             ATB_LOG(INFO) << "layerParam.isFloatKVLayer" << layerParam.isFloatKVLayer;
         }
-        if (std::find(param_.float_down_layers.begin(), param_.float_down_layers.end(), layerId) != param_.float_down_layers.end()) {
+        if (std::find(param_.float_down_layers.begin(), param_.float_down_layers.end(), layerId) !=
+            param_.float_down_layers.end()) {
             layerParam.isFloatDownLayer = true;
             ATB_LOG(INFO) << "layerParam.isFloatDownLayer" << layerParam.isFloatDownLayer;
         }
@@ -206,9 +211,10 @@ int64_t QuantFAModel::BuildGraph()
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_PAST_VALUE);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TOKENOFFSET);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_SEQLEN);
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_LAYERID + layerId);
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_MAX_TENSOR + layerId);
 
-        layerNode.outTensors = {&graph_.internalTensors.at(INTERNAL_TENSOR_COUNT_BEFORE_LAYER + layerId)};
+        layerNode.outTensors = { &graph_.internalTensors.at(INTERNAL_TENSOR_COUNT_BEFORE_LAYER + layerId) };
         firstInTensor = layerNode.outTensors.at(0);
     }
 
@@ -216,30 +222,28 @@ int64_t QuantFAModel::BuildGraph()
     atb::infer::RmsNormParam rmsNormParam;
     rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     rmsNormParam.normParam.epsilon = param_.rmsNormEps;
-    atb::CreateOperation(rmsNormParam, &op);
+    CREATE_OPERATION(rmsNormParam, &op);
     finalRmsNormNode.operation.reset(op);
-    const int finalRmsNormWeightTensorId = graph_.weightTensors.size() -
-                                            FINAL_RMSNORM_WEIGHT_COUNT - OUT_LM_HEAD_WEIGHT_COUNT;
+    const int finalRmsNormWeightTensorId =
+        graph_.weightTensors.size() - FINAL_RMSNORM_WEIGHT_COUNT - OUT_LM_HEAD_WEIGHT_COUNT;
     const int finalRmsNormOutTensorId = internalTensorSize - 1;
-    finalRmsNormNode.inTensors = {firstInTensor, &graph_.weightTensors.at(finalRmsNormWeightTensorId)};
-    finalRmsNormNode.outTensors = {&graph_.internalTensors.at(finalRmsNormOutTensorId)};
+    finalRmsNormNode.inTensors = { firstInTensor, &graph_.weightTensors.at(finalRmsNormWeightTensorId) };
+    finalRmsNormNode.outTensors = { &graph_.internalTensors.at(finalRmsNormOutTensorId) };
 
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
-    atb::infer::LinearParam linearParam = {false, true, false};
-    atb::CreateOperation(linearParam, &op);
+    atb::infer::LinearParam linearParam = { false, true, false };
+    CREATE_OPERATION(linearParam, &op);
     lmHeadNode.operation.reset(op);
     const int lmHeadWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
-    lmHeadNode.inTensors = {&graph_.internalTensors.at(finalRmsNormOutTensorId),
-                            &graph_.weightTensors.at(lmHeadWeightTensorId)};
-    lmHeadNode.outTensors = {&graph_.outTensors.at(0)};
-
+    lmHeadNode.inTensors = { &graph_.internalTensors.at(finalRmsNormOutTensorId),
+                             &graph_.weightTensors.at(lmHeadWeightTensorId) };
+    lmHeadNode.outTensors = { &graph_.outTensors.at(0) };
     return atb::NO_ERROR;
 }
 
 atb::Status QuantFAModel::ParseParam(const std::string &param)
 {
     nlohmann::json paramJson = nlohmann::json::parse(param);
-    
     tokenOffset_.clear();
     for (auto item : paramJson["tokenOffset"]) {
         tokenOffset_.push_back(item.get<int>());
@@ -249,8 +253,9 @@ atb::Status QuantFAModel::ParseParam(const std::string &param)
     for (auto item : paramJson["seqLen"]) {
         seqLen_.push_back(item.get<int>());
     }
-    
+
     ATB_LOG(INFO) << "ParseParam tokenOffset:" << tokenOffset_ << ", seqLen:" << seqLen_;
+
     return atb::NO_ERROR;
 }
 
@@ -267,5 +272,5 @@ atb::Status QuantFAModel::BindParamHostTensor(uint32_t nodeId)
     node.variantPack.inTensors.at(seqLenTensorId).hostData = seqLen_.data();
     return atb::NO_ERROR;
 }
-} // namespace telechat
-} // namespace atb_speed
+}  // namespace telechat
+}  // namespace atb_speed

@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_TELECHAT_ALL_QUANT_FA_MODEL_H
-#define ATB_SPEED_MODELS_TELECHAT_ALL_QUANT_FA_MODEL_H
+#ifndef ATB_SPEED_MODELS_TELECHAT_QUANT_FA_MODEL_H
+#define ATB_SPEED_MODELS_TELECHAT_QUANT_FA_MODEL_H
 #include <atb/svector.h>
 #include "atb_speed/base/model.h"
 
@@ -28,12 +28,16 @@ public:
         int headNum = 0;
         int dk = 0;
         double rmsNormEps = 0;
-        void FromString(const std::string& param);
+        int rank = 0;
+        int rankSize = 1;
+        void FromString(const std::string &param);
 
+        // quant+float
         std::vector<float> float_query_layers;
         std::vector<float> float_kv_layers;
         std::vector<float> float_down_layers;
 
+        // quant
         std::vector<float> inputScale_qkv;
         std::vector<int> inputOffset_qkv;
         std::vector<float> inputScale_dense;
@@ -44,12 +48,12 @@ public:
         std::vector<int> inputOffset_down_proj;
     };
 
-    explicit QuantFAModel(const std::string& param);
+    explicit QuantFAModel(const std::string &param);
     ~QuantFAModel();
     uint32_t GetInputNum() const override;
     uint32_t GetOutputNum() const override;
-    atb::Status InferShape(const std::vector<atb::TensorDesc>& inTensorDescs,
-        std::vector<atb::TensorDesc>& outTensorDescs) override;
+    atb::Status InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
+                           std::vector<atb::TensorDesc> &outTensorDescs) override;
 
 private:
     int64_t BuildGraph() override;
@@ -59,6 +63,6 @@ private:
     atb::SVector<int32_t> tokenOffset_;
     atb::SVector<int32_t> seqLen_;
 };
-}
-} // namespace atb_speed
+}  // namespace telechat
+}  // namespace atb_speed
 #endif

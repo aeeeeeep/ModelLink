@@ -47,7 +47,6 @@
 #include "minigpt4/model/fusion_model.h"
 #include "pytorch/adapter/utils/utils.h"
 #include "pytorch/adapter/workspace/workspace.h"
-#include "telechat/model/model.h"
 #include "baichuan2/7b/model/flash_attention_quant_model.h"
 #include "baichuan2/7b/model/flash_attention_rope_model.h"
 #include "baichuan2/7b/model/paged_attention_model.h"
@@ -65,6 +64,8 @@
 #include "starcoder/model/flash_attention_quant_model.h"
 #include "starcoder/model/paged_attention_model.h"
 #include "starcoder/model/paged_attention_quant_model.h"
+#include "telechat/model/float_model.h"
+#include "telechat/model/quant_model.h"
 
 void *ModelTorch::GetWorkSpace(uint64_t bufferSize)
 {
@@ -131,8 +132,6 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::llama_adapter::EncoderAdapterModel>(param);
     } else if (modelName_ == "llama_adapter_decoder_model") {
         model_ = std::make_shared<atb_speed::llama_adapter::DecoderAdapterModel>(param);
-    } else if (modelName_ == "TelechatQuantFAModel") {
-        model_ = std::make_shared<atb_speed::telechat::QuantFAModel>(param);
     } else if (modelName_ == "chatglm2_common_model") {
         model_ = std::make_shared<atb_speed::chatglm2_6b::ChatGlm2CommonModelFa>(param);
     } else if (modelName_ == "chatglm2_6b_decoder_pa_model") {
@@ -189,6 +188,10 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::star_coder::PAModel>(param);
     } else if (modelName_ == "starcoder_pa_quant_model") {
         model_ = std::make_shared<atb_speed::star_coder::PAQuantModel>(param);
+    } else if (modelName_ == "telechat_float_model") {
+        model_ = std::make_shared<atb_speed::telechat::FloatFAModel>(param);
+    } else if (modelName_ == "telechat_quant_model") {
+        model_ = std::make_shared<atb_speed::telechat::QuantFAModel>(param);
     } else {
         ATB_LOG(FATAL) << "not support modelName:" << modelName_;
         return atb::ERROR_INVALID_PARAM;
