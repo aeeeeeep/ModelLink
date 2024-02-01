@@ -32,7 +32,7 @@ function fn_run_parallel() {
         --input-path $INPUT_JSON_PATH \
         --output-path $OUTPUT_JSON_PATH \
         --checkpoint $FLOAT_PART_MODEL_PATH \
-        --run_parallel \
+        --run-parallel \
         "$RUNNING_MODE"
 }
 
@@ -44,7 +44,7 @@ function fn_run_single() {
         --input-path $INPUT_JSON_PATH \
         --output-path $OUTPUT_JSON_PATH \
         --checkpoint $FLOAT_MODEL_PATH \
-        --run_parallel \
+        --run-single \
         "$RUNNING_MODE"
 }
 
