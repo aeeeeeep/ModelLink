@@ -414,7 +414,7 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
         input_ids: torch.LongTensor,
         past: Optional[torch.Tensor] = None,
         attention_mask: Optional[torch.Tensor] = None,
-        past_key_values = None,
+        past_key_values=None,
         **kwargs
     ) -> dict:
         # only last token for input_ids if past is not None

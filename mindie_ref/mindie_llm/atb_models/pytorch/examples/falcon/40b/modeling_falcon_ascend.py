@@ -190,12 +190,12 @@ class FalconAttention(nn.Module):
         self.config = config
         self.hidden_size = config.hidden_size
         self.num_heads = config.num_attention_heads
-        self.head_dim = self.hidden_size // self.num_heads # 8192 / 128 = 64
+        self.head_dim = self.hidden_size // self.num_heads  # 8192 / 128 = 64
         self.split_size = self.hidden_size
         self.hidden_dropout = config.hidden_dropout
         self.is_causal = True
         self.world_size = 1 if not hasattr(config, 'world_size') else config.world_size
-        self.num_heads =  self.num_heads // self.world_size # 128 / 4 = 32
+        self.num_heads = self.num_heads // self.world_size  # 128 / 4 = 32
         self.maybe_rotary = self._init_rope() if config.rotary else lambda q, k, t, p: (q, k)
 
         # Layer-wise attention scaling

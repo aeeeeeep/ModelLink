@@ -456,13 +456,13 @@ def cut_weight(args_cut):
     print('[+] save model weights succcessfully')
 
 
-def main(args):
-    if args.mode == "performance":
-        performance_test(args)
-    elif args.mode == "precision":
-        precision_test(args)
-    elif args.mode == "cut":
-        cut_weight(args)
+def main(main_args):
+    if main_args.mode == "performance":
+        performance_test(main_args)
+    elif main_args.mode == "precision":
+        precision_test(main_args)
+    elif main_args.mode == "cut":
+        cut_weight(main_args)
     else:
         raise Exception("mode error!")
 
