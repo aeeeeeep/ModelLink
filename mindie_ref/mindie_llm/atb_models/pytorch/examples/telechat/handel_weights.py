@@ -29,7 +29,7 @@ def load_model(args):
     model = TelechatForCausalLM.from_pretrained(args.input_path, torch_dtype=torch.float32).cpu()
     return model, tokenizer
 
-def cut_weights_float(state_dict, world_size, cut_row_keys=["query", "key_value", "gate_proj", "up_proj"], cut_col_keys=["dense", "down_proj"]):
+def cut_weights_float(state_dict, world_size, cut_row_keys=("query", "key_value", "gate_proj", "up_proj"), cut_col_keys=("dense", "down_proj")):
     state_dict_list = [{} for i in range(world_size)]
     for key, tensor in state_dict.items():
         key_short = key.split(".")[-2]
@@ -81,7 +81,7 @@ def bias_correction_new(fp_bias, quant_weight, input_offset, deq_scale):
     return bias_correction
 
 
-def cut_weights_quant(state_dict, world_size, cut_row_keys=["query", "key_value", "gate_proj", "up_proj"], cut_col_keys=["dense", "down_proj"]):
+def cut_weights_quant(state_dict, world_size, cut_row_keys=("query", "key_value", "gate_proj", "up_proj"), cut_col_keys=("dense", "down_proj")):
     state_dict_list = [{} for i in range(world_size)]
     for key, tensor in state_dict.items():
         key_short = key.split(".")[-1]
@@ -97,7 +97,7 @@ def cut_weights_quant(state_dict, world_size, cut_row_keys=["query", "key_value"
     return state_dict_list
 
 
-def cut_bias_quant(state_dict, world_size, is_bias=False, cut_row_keys=["query", "key_value", "gate_proj", "up_proj"], cut_col_keys=["dense", "down_proj"]):
+def cut_bias_quant(state_dict, world_size, is_bias=False, cut_row_keys=("query", "key_value", "gate_proj", "up_proj"), cut_col_keys=("dense", "down_proj")):
     state_dict_list = [{} for i in range(world_size)]
     for key, tensor in state_dict.items():
         key_short = key.split(".")[-1]
