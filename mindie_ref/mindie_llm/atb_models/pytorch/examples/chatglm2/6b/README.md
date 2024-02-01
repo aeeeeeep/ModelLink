@@ -258,7 +258,7 @@ weight_offset.npy  weight_scale.npy
   1. 可通过配置`--seqlen_in_pair`和`--seqlen_out_pair`指定输入输出序列长度，例如以下命令测试的输入输出组合为[256,256]，[512,512]，[1024,1024]
 
      ```shell
-     torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode performance --model_path ${CHECKPOINT} --device 0 --seqlen_in_pair 256,512,1024 --seqlen_out_pair 256,512,1024 --batch 1 --performance_output_file performance_bs1.csv
+     torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode performance --model_path ${CHECKPOINT} --device 0 --seqlen_in_pair 256,512,1024 --seqlen_out_pair 256,512,1024 --batch 1 --tp_size ${TP_SIZE} --performance_output_file performance_bs1.csv
      ```
 
   2. 环境变量 `MAX_SEQ_LEN` （默认值2048）必须大于等于 `seqlen_in + seqlen_out`，例如：

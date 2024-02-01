@@ -227,6 +227,7 @@ class Float(BaseManager):
 
     def process_weights(self, tp_size) -> None:
         if tp_size == 1:
+            print('float model with tp_size 1, skip processing weights.')
             return
         self.float_weight_path = f"{self.float_weight_path}_tp{tp_size}"
         if Path(self.float_weight_path).exists():
