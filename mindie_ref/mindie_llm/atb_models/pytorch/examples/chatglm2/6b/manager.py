@@ -296,6 +296,11 @@ class Quant(BaseManager):
 
     def save_sliced_weights(self, state_dict_list, tp_size) -> None:
         quant_parallel_path = f"{self.quant_weight_path}/tp{tp_size}"
+        if Path(quant_parallel_path).exists():
+            print(
+                f"[info]: The parallel quant weights has exist in '{quant_parallel_path}'. Please remove it if you want to process quant weights again.")
+        else:
+            os.mkdir(quant_parallel_path)
         for i in range(tp_size):
             np.save(Path(quant_parallel_path).joinpath(
                 f"quant_weight{i}.npy"), state_dict_list["quant_weight"][i])
