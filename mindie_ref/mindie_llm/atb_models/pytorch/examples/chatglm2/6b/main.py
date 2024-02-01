@@ -153,7 +153,7 @@ def get_model(args):
         local_rank = torch.distributed.get_rank()
         torch_npu.npu.set_device(args.device + local_rank)
         torch.manual_seed(1)
-        part_model_path = os.path.join(args.model_path, "tensor_parallel/part_model", str(local_rank))
+        part_model_path = os.path.join(args.model_path, f"tensor_parallel_tp{args.tp_size}/part_model", str(local_rank))
         shutil.copy(args.model_file, os.path.join(part_model_path, "modeling_chatglm.py"))
         model = AutoModel.from_pretrained(part_model_path,
                                           trust_remote_code=True, torch_dtype=torch.half, device='npu')

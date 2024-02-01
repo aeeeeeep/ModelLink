@@ -197,7 +197,7 @@ if __name__ == "__main__":
     # save new model config and parallel float weights
     if args.tp_size > 1:
         save_path = os.path.join(
-            args.model_path, args.parallel_float_weight_path)
+            args.model_path, f"{args.parallel_float_weight_path}_tp{args.tp_siz}")
         if os.path.exists(save_path):
             print(
                 f"[info]: The parallel float weights has exist in '{save_path}'.")
@@ -206,8 +206,7 @@ if __name__ == "__main__":
             parallel_model = AutoModel.from_config(
                 model_config, trust_remote_code=True)
             for i in range(args.tp_size):
-                target_dir = os.path.join(
-                    args.model_path, args.parallel_float_weight_path, "part_model", str(i))
+                target_dir = os.path.join(save_path, "part_model", str(i))
                 parallel_model.load_state_dict(state_dict_list[i])
                 parallel_model.save_pretrained(target_dir)
                 for source_file in ["configuration_chatglm.py", "quantization.py"]:

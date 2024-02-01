@@ -30,6 +30,7 @@ public:
         float qkScale = 1.0;
         int rank = 0;
         int rankSize = 1;
+        std::string backend = "hccl";
         bool quantModel = false;
         bool sparseModel = false;
         bool isEncoder = false;

@@ -181,6 +181,8 @@ class BaseManager(metaclass=ABCMeta):
             value_list = torch.chunk(value_layer, kv_tp_size, dim=0)
             sliced_tensor_list = [torch.cat(
                 [query_list[i], key_list[i*kv_tp_size//tp_size], value_list[i*kv_tp_size//tp_size]], dim=0) for i in range(tp_size)]
+        elif 'output_layer' in key:
+            sliced_tensor_list = torch.chunk(tensor, tp_size, dim=0)
         else:
             sliced_tensor_list = [tensor] * tp_size
         return sliced_tensor_list
