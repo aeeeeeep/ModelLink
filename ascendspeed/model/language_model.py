@@ -18,6 +18,7 @@ import torch
 import torch.nn.functional as F
 
 from ascendspeed import get_args
+from ascendspeed import get_tokenizer
 from ascendspeed.core import tensor_parallel, parallel_state
 from ascendspeed.enums import PositionEmbeddingType
 from ascendspeed.core.enums import LayerType, AttnMaskType, ModelType
@@ -33,6 +34,13 @@ from ascendspeed.error_utils import (
     ensure_valid
 )
 
+def print_rank_0(message):
+    """If distributed is initialized, print only on rank 0."""
+    if torch.distributed.is_initialized():
+        if torch.distributed.get_rank() == 0:
+            print(message, flush=True)
+    else:
+        print(message, flush=True)
 
 def parallel_lm_logits(input_, word_embeddings_weight, parallel_output,
                        bias=None):
@@ -489,6 +497,8 @@ class TransformerLanguageModel(MegatronModule):
                     init_method=self.init_method,
                     bias=False) # Setting bias to False always to keep it consistent with embedding tying that also does not have a bias.
                 self._output_layer_key = 'output_layer'
+        self.tokenizer = get_tokenizer()
+
 
     def set_input_tensor(self, input_tensor):
         """ See ascendspeed.model.transformer.set_input_tensor()"""
@@ -527,6 +537,11 @@ class TransformerLanguageModel(MegatronModule):
                 pooling_sequence_index=0,
                 enc_hidden_states=None, output_enc_hidden=False):
 
+
+        seq_lengths = torch.sum(enc_input_ids.ne(self.tokenizer.eod), 1)
+        seq_lengths = seq_lengths.cpu().tolist()
+        seq_lengths = [(s+15)//16*16 for s in seq_lengths]
+
         # Encoder embedding.
         if self.pre_process:
             encoder_input = self.embedding(enc_input_ids, enc_position_ids,
@@ -559,7 +574,8 @@ class TransformerLanguageModel(MegatronModule):
                     retriever_input=retriever_input,
                     retriever_attn_mask=retriever_attn_mask,
                     inference_params=inference_params,
-                    rotary_pos_emb=rotary_pos_emb)
+                    rotary_pos_emb=rotary_pos_emb,
+                    seq_lengths=seq_lengths)
             else:
                 encoder_output = self.encoder_hidden_state
         else:
@@ -592,7 +608,8 @@ class TransformerLanguageModel(MegatronModule):
             encoder_output=encoder_output,
             enc_dec_attn_mask=enc_dec_attn_mask,
             inference_params=inference_params,
-            rotary_pos_emb=rotary_pos_emb)
+            rotary_pos_emb=rotary_pos_emb,
+            seq_lengths=seq_lengths)
 
         if self.add_pooler and self.post_process:
             return decoder_output, encoder_output, pooled_output, decoder_moe_losses, encoder_moe_losses

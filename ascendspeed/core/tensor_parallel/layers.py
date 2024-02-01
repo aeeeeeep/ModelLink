@@ -333,13 +333,15 @@ class LinearWithGradAccumulationAndAsyncCommunication(torch.autograd.Function):
         # Doing gather + slicing during the NeMo forward pass can make this tensor not be contiguous.
         # PyTorch only checks if the tensor is contiguous.
         grad_output = grad_output.contiguous()
-        # Convert the tensor shapes to 2D for execution compatibility
-        grad_output = grad_output.view(
-            grad_output.shape[0] * grad_output.shape[1], grad_output.shape[2]
-        )
-        total_input = total_input.view(
-            total_input.shape[0] * total_input.shape[1], total_input.shape[2]
-        )
+        # # Convert the tensor shapes to 2D for execution compatibility
+        if grad_output.dim() != 2:
+            grad_output = grad_output.view(
+                grad_output.shape[0] * grad_output.shape[1], grad_output.shape[2]
+            )
+        if total_input.dim() != 2:
+            total_input = total_input.view(
+                total_input.shape[0] * total_input.shape[1], total_input.shape[2]
+            )
 
         if ctx.async_grad_allreduce:
             # Asynchronous all-reduce

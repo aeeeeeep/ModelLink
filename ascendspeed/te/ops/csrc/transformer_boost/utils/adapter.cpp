@@ -97,3 +97,52 @@ atb::Tensor Input(const c10::optional<at::Tensor> &tensor)
     }
     return Input(tensor.value());
 }
+
+
+void BuildVariantPack(std::vector<atb::Tensor> inTensors, std::vector<at::Tensor> &outTensors, atb::VariantPack &variantPack, atb::Operation *operation)
+{
+    atb::SVector<atb::TensorDesc> inTensorDescs;
+    atb::SVector<atb::TensorDesc> outTensorDescs;
+    for (size_t i = 0; i < inTensors.size(); ++i) {
+        atb::Tensor inTensor = inTensors.at(i);
+        inTensorDescs.push_back(inTensor.desc);
+        variantPack.inTensors.push_back(inTensors[i]);
+    }
+    atb::Status status = operation->InferShape(inTensorDescs, outTensorDescs);
+    TORCH_CHECK(status == 0, "infershape failed!");
+
+    for (size_t i = 0; i < outTensorDescs.size(); ++i) {
+        at::Tensor newTensor = CreateAtTensorFromTensorDesc(outTensorDescs.at(i));
+        outTensors.push_back(newTensor);
+        atb::Tensor atbOutTensor = AtTensor2Tensor(newTensor);
+        atbOutTensor.desc.format = ACL_FORMAT_ND;
+        variantPack.outTensors.push_back(atbOutTensor);
+    }
+}
+
+void RunAtbOps(atb::VariantPack &variantPack, const char* name, atb::Operation *operation)
+{
+    atb::Context *context = GetContext();
+    TORCH_CHECK(context, "execute failed");
+
+    uint8_t *workspace = nullptr;
+    uint64_t workspaceSize = 0;
+    atb::Status status = operation->Setup(variantPack, workspaceSize, context);
+    TORCH_CHECK(status == 0, "setup failed!");
+    if (workspaceSize > 0) {
+        at::TensorOptions options = at::TensorOptions(torch_npu::utils::get_npu_device_type());
+        auto workspaceTensor = at::empty({workspaceSize}, options.dtype(at::kByte));
+        workspace = (uint8_t *)workspaceTensor.storage().data();
+    }
+
+    auto aclCall = [operation, variantPack, workspace, workspaceSize, context]() -> int {
+        atb::Status status = operation->Execute(variantPack, workspace, workspaceSize, context);
+        TORCH_CHECK(status == 0, "execute failed");
+        atb::DestroyOperation(operation);
+        return 0;
+    };
+    at_npu::native::OpCommand cmd;
+    cmd.Name(name);
+    cmd.SetCustomHandler(aclCall);
+    cmd.Run();
+}

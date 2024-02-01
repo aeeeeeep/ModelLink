@@ -10,6 +10,7 @@ https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/sof
 ### 1. set the environment variables
 
 + export ASCEND_TOOLKIT_HOME = /usr/local/Ascend/latest/
++ source ${atb_path}/set_env.sh
 
 ### 2. include head files
 
@@ -18,6 +19,12 @@ https://support.huawei.com/enterprise/zh/ascend-computing/cann-pid-251168373/sof
 
 ### 3. install scripts
 ```shell
+mkdir build
+cd build
+wget --no-check-certificate https://cmc-szver-artifactory.cmc.tools.huawei.com/artifactory/cmc-software-release/Baize%20C/AscendTransformerBoost/1.0.0/asdops_dependency/common/nlohmannjson-v3.11.2.tar.gz
+tar -zxvf nlohmannjson-v3.11.2.tar.gz
+cd ..
+
 python3 setup.py build
 python3 setup.py bdist_wheel
 pip3 install dist/*.whl --force-reinstall

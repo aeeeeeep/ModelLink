@@ -570,6 +570,9 @@ def _add_network_size_args(parser):
                        help='Cast word embedding weights to fp32 before embedding fwd.'),
     group.add_argument('--no-add-gate', action='store_false', default=True, dest="add_gate",
                        help='Do not add gate layer in model.'),
+    group.add_argument('--use-unpad', action='store_true',
+                       help='use unpad.',
+                       dest='use_unpad')
     return parser
 
 

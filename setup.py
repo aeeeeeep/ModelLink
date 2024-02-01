@@ -50,6 +50,7 @@ def req_file(filename):
 install_requires = req_file("requirements.txt")
 cmd_class = {}
 exts = []
+
 try:
     import imp
     import os
@@ -57,10 +58,14 @@ try:
     from torch_npu.utils import cpp_extension
     from torch.utils.cpp_extension import BuildExtension
 
+    ATB_HOME_PATH = os.environ.get("ATB_HOME_PATH")
+    print('ATB_HOME_PATH: ', ATB_HOME_PATH)
     ASCEND_TOOLKIT_HOME = os.environ.get("ASCEND_TOOLKIT_HOME")
     op_files = []
     op_files += glob.glob("ascendspeed/te/ops/csrc/*.cpp")
     op_files += glob.glob("ascendspeed/te/ops/csrc/cann/*.cpp")
+    op_files += glob.glob("ascendspeed/te/ops/csrc/transformer_boost/*.cpp")
+    op_files += glob.glob("ascendspeed/te/ops/csrc/transformer_boost/utils/*.cpp")
     ext_ops = cpp_extension.NpuExtension(
         name="ascendspeed_te_ops",
         sources=op_files,
@@ -71,6 +76,15 @@ try:
         '-D__FILENAME__=\"$(notdir $(abspath $<))\"',
         '-I' + imp.find_module('torch_npu')[1] + "/include/third_party/acl/inc",
         '-I' + ASCEND_TOOLKIT_HOME + '/include/',
+        '-I' + ATB_HOME_PATH + '/include/',
+        '-Ibuild/nlohmannJson/include',
+        '-Iascendspeed/te/ops/csrc/transformer_boost/inc',
+    ],
+        extra_link_args=[
+        '-L'+ATB_HOME_PATH+'/lib/',
+        '-latb',
+        '-llcal',
+        '-lasdops',
     ],
     )
     exts.append(ext_ops)
