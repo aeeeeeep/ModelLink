@@ -17,7 +17,6 @@
 #include "atb_speed/log.h"
 
 namespace atb_speed {
-
 bool OperationFactory::Register(const std::string &operationName, CreateOperationFuncPtr createOperation)
 {
     auto it = OperationFactory::GetRegistryMap().find(operationName);

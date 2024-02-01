@@ -25,7 +25,6 @@
 #include "atb_speed/log.h"
 
 namespace atb_speed {
-
 using CreateModelFuncPtr = std::function<std::shared_ptr<atb_speed::Model>(const std::string &)>;
 
 class ModelFactory {
@@ -36,14 +35,16 @@ public:
 };
 
 #define MODEL_NAMESPACE_STRINGIFY(modelNameSpace) #modelNameSpace
-#define REGISTER_MODEL(nameSpace, modelName)                                                                        \
-    struct Register##_##nameSpace##_##modelName {                                                                   \
-        inline Register##_##nameSpace##_##modelName() {                                                             \
-            ATB_LOG(INFO) << "register " << #nameSpace << "_" << #modelName;                                         \
-            ModelFactory::Register(MODEL_NAMESPACE_STRINGIFY(nameSpace##_##modelName),                              \
-                                    [](const std::string &param) { return std::make_shared<modelName>(param); });   \
-        }                                                                                                           \
-    } static instance_##nameSpace##modelName;
-
+#define REGISTER_MODEL(nameSpace, modelName)                                                      \
+    do {                                                                                          \
+        struct Register##_##nameSpace##_##modelName {                                             \
+            inline Register##_##nameSpace##_##modelName()                                         \
+            {                                                                                     \
+                ATB_LOG(INFO) << "register " << #nameSpace << "_" << #modelName;                  \
+                ModelFactory::Register(MODEL_NAMESPACE_STRINGIFY(nameSpace##_##modelName),        \
+                    [](const std::string &param) { return std::make_shared<modelName>(param); }); \
+            }                                                                                     \
+        } static instance_##nameSpace##modelName;                                                 \
+    } while (0)
 } // namespace atb_speed
 #endif

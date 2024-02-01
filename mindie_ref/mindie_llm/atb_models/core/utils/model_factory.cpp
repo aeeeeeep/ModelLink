@@ -17,7 +17,6 @@
 #include "atb_speed/log.h"
 
 namespace atb_speed {
-
 bool ModelFactory::Register(const std::string &modelName, CreateModelFuncPtr createModel)
 {
     auto it = ModelFactory::GetRegistryMap().find(modelName);

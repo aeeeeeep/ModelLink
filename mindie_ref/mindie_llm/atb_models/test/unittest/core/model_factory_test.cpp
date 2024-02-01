@@ -16,6 +16,7 @@
 #include "atb_speed/base/model.h"
 #include "atb_speed/utils/model_factory.h"
 #include "chatglm2/6b/model/flash_attention_model.h"
+
 #include <gtest/gtest.h>
 #include <string>
 #include <vector>
@@ -40,7 +41,7 @@ TEST(ModelFactory, RegistryMapShouldContainsAllRegisteredModels)
     auto registryMap = ModelFactory::GetRegistryMap();
     ASSERT_FALSE(registryMap.empty());
     ASSERT_EQ(registryMap.size(), 2);
-    std::vector<std::string> modelClassNames = {"chatglm2_6b_ChatGlm2CommonModelFa"};
+    std::vector<std::string> modelClassNames = { "chatglm2_6b_ChatGlm2CommonModelFa" };
     for (auto &modelName : modelClassNames) {
         ASSERT_NE(registryMap.find(modelName), registryMap.end());
     }

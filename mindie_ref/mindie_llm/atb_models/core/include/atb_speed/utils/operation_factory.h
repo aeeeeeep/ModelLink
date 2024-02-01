@@ -26,7 +26,6 @@
 #include "nlohmann/json.hpp"
 
 namespace atb_speed {
-
 using CreateOperationFuncPtr = std::function<atb::Operation *(const nlohmann::json &)>;
 
 class OperationFactory {
@@ -37,14 +36,16 @@ public:
 };
 
 #define OPERATION_NAMESPACE_STRINGIFY(operationNameSpace) #operationNameSpace
-#define REGISTER_OPERATION(nameSpace, operationCreateFunc)                                                                        \
-    struct Register##_##nameSpace##_##operationCreateFunc {                                                                   \
-        inline Register##_##nameSpace##_##operationCreateFunc() {                                                             \
-            ATB_LOG(INFO) << "register " << #nameSpace << "_" << #operationCreateFunc;                                         \
-            OperationFactory::Register(OPERATION_NAMESPACE_STRINGIFY(nameSpace##_##operationCreateFunc),                              \
-                                    &(operationCreateFunc));   \
-        }                                                                                                           \
-    } static instance_##nameSpace##operationCreateFunc;
-
+#define REGISTER_OPERATION(nameSpace, operationCreateFunc)                                                   \
+    do {                                                                                                     \
+        struct Register##_##nameSpace##_##operationCreateFunc {                                              \
+            inline Register##_##nameSpace##_##operationCreateFunc()                                          \
+            {                                                                                                \
+                ATB_LOG(INFO) << "register " << #nameSpace << "_" << #operationCreateFunc;                   \
+                OperationFactory::Register(OPERATION_NAMESPACE_STRINGIFY(nameSpace##_##operationCreateFunc), \
+                    &(operationCreateFunc));                                                                 \
+            }                                                                                                \
+        } static instance_##nameSpace##operationCreateFunc;                                                  \
+    } while (0)
 } // namespace atb_speed
 #endif
