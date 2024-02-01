@@ -238,7 +238,7 @@ LLaMA（Large Language Model Meta AI），由 Meta AI 发布的一个开放且�
 
 - 修改代码
 
-  1. 修改`cut_weight.sh`中`input_dir`为真实`input_dir`
+  1. 修改`cut_weight.sh`中`input_dir`为实际存放模型权重的路径
   
   2. 修改`cut_weight.sh`中`output_dir`为自定义路径，用于存放切分后的模型权重
 
@@ -368,9 +368,9 @@ multicase=1时，多case；当前多case推理支持用例排列组合，set_cas
 2. 量化权重切分
   - 切分anti-outlier量化权重
     ```
-    # 1. 修改cut_quant_model.sh中input_dir为实际存放anti-outlier量化权重的路径，例如：
+    # 1. 修改cut_weight.sh中input_dir为实际存放anti-outlier量化权重的路径，例如：
     input_dir="./llama7b_quant_weight"
-    # 2. 修改cut_quant_model.sh中output_dir为自定义路径，用于存放切分后的量化权重，例如：
+    # 2. 修改cut_weight.sh中output_dir为自定义路径，用于存放切分后的量化权重，例如：
     output_dir="./llama7b_anti_quant_parallel"
     # 3. 执行切分，切分量化权重2份
     bash cut_weight.sh --quant 2
@@ -451,9 +451,9 @@ multicase=1时，多case；当前多case推理支持用例排列组合，set_cas
         --compress_1
     ```
 
-    - 运行compress_model_util.py脚本
+    - 运行compress_llama_sparse_weight.py脚本
     ```bash
-    python compress_model_util.py
+    python compress_llama_sparse_weight.py
     ```
 
     【FAQ】若运行脚本时出现"FileNotFoundError: [Errno2] No such file or directory: '/xxx/modelslim/pytorch/weight_compression/compress_graph/build/compress_executor': ..."，请按照以下步骤进行手动编译之后再执行脚本：
