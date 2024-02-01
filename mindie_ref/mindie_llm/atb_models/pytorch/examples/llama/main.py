@@ -24,13 +24,14 @@ from transformers.models.llama.configuration_llama import LlamaConfig
 
 def setup_model_parallel(init_args):
     torch.distributed.init_process_group("hccl")
+    curr_world_size = torch.distributed.get_world_size()
     curr_rank = torch.distributed.get_rank()
     device_id = init_args.device
     torch_npu.npu.set_device(device_id + curr_rank)
     print(f"device id {init_args.device + curr_rank} set success.")
 
     torch.manual_seed(1)
-    return curr_rank
+    return curr_rank, curr_world_size
 
 
 def check_env(seqlen_in, seqlen_out):
@@ -315,8 +316,7 @@ if __name__ == "__main__":
     npu_num = int(args.world_size)
     # initialize tensor-parallel mode
     if npu_num >= 2:
-        world_size = torch.distributed.get_world_size()
-        local_rank = setup_model_parallel(args)
+        local_rank, world_size = setup_model_parallel(args)
     else:
         torch_npu.npu.set_device(args.device)
         print(f"device id {args.device} set success.")
