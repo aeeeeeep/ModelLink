@@ -14,33 +14,34 @@
  * limitations under the License.
  */
 
-#ifndef ATB_SPEED_MODELS_TELECHAT_QUANT_FA_LAYER_H
-#define ATB_SPEED_MODELS_TELECHAT_QUANT_FA_LAYER_H
+#ifndef ATB_SPEED_TELECHAT_MLP_GATE_V2_H
+#define ATB_SPEED_TELECHAT_MLP_GATE_V2_H
 
-#include "atb/atb_infer.h"
 #include "atb_speed/log.h"
 #include "nlohmann/json.hpp"
+#include "parallel_layer_v2.h"
+#include <atb/atb_infer.h>
 
 namespace atb_speed {
 namespace telechat {
-struct QuantFALayerParam {
-    double rmsNormEps = 0;
-    int headNum = 0;
-    int dk = 0;
-    bool isFloatQueryLayer = false;
-    bool isFloatKVLayer = false;
-    bool isFloatDownLayer = false;
-    float inputScale_qkv = 1;
-    int inputOffset_qkv = 0;
-    float inputScale_dense = 1;
-    int inputOffset_dense = 0;
-    float inputScale_gate_up = 1;
-    int inputOffset_gate_up = 0;
-    float inputScale_down_proj = 1;
-    int inputOffset_down_proj = 0;
+struct MlpGateParamV2 {
+    atb::infer::ActivationType activationType;
+    bool transposeB = false;
+    bool isBias = false;
+    bool isPack = false;
+    bool isUpQuant = false;
+    bool isGateQuant = false;
+    bool isDownQuant = false;
+    bool isSparse = false;
+    bool noGate = false;
+    CommParam commDownParam;
+    QuantParam quantUpParam;
+    QuantParam quantGateParam;
+    QuantParam quantDownParam;
 };
 
-atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operation);
-}
-}
+atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operation);
+
+} // namespace telechat
+} // namespace atb_speed
 #endif

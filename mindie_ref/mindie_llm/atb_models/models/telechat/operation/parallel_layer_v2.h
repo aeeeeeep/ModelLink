@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-#ifndef ATB_SPEED_LAYER_PARALLEL_LAYER_V2_H
-#define ATB_SPEED_LAYER_PARALLEL_LAYER_V2_H
-#include <atb/atb_infer.h>
-#include "atb_speed/utils/operation_util.h"
+#ifndef ATB_SPEED_TELECHAT_PARALLEL_LAYER_V2_H
+#define ATB_SPEED_TELECHAT_PARALLEL_LAYER_V2_H
+#include "atb_speed/log.h"
 #include "nlohmann/json.hpp"
-#include "plugin_op/matmul_compress_dequant_operation.h"
+#include <atb/atb_infer.h>
 
 namespace atb_speed {
-namespace common {
+namespace telechat {
 
 struct QuantParam {
     atb::infer::QuantType quantType;
@@ -48,7 +47,6 @@ struct ParallelParamV2 {
     bool transposeB = false;
     bool isQuant = false;
     bool isSparse = false;
-    bool isAllGatherTranspose = false;
     CommParam commParam;
     QuantParam quantParam;
 };
@@ -56,7 +54,7 @@ struct ParallelParamV2 {
 atb::Status RowParallelLinearV2(const ParallelParamV2 &param, atb::Operation **operation);
 atb::Status ColumnParallelLinearV2(const ParallelParamV2 &param, atb::Operation **operation);
 atb::Status VocabParallelEmbeddingV2(const ParallelParamV2 &param, atb::Operation **operation);
-} // namespace common
+} // namespace telechat
 } // namespace atb_speed
 
 #endif
