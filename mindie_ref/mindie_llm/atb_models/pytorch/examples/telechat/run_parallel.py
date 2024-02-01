@@ -5,99 +5,36 @@ import pandas as pd
 import argparse
 import jsonlines
 import torch_npu
-#from torch_npu.contrib import transfer_to_npu
-from accelerate import init_empty_weights, load_checkpoint_in_model, dispatch_model, infer_auto_device_map, \
-    load_checkpoint_and_dispatch, load_checkpoint_in_model, dispatch_model
-from transformers import AutoConfig, AutoTokenizer, AutoModelForSeq2SeqLM
-from transformers import TelechatForCausalLM, TelechatConfig
+from transformers import AutoTokenizer, TelechatForCausalLM, TelechatConfig
 
 
 def load_model(args):
-    torch.npu.set_device(torch.device(f"npu:0"))
+    torch.npu.set_device(torch.device(f"npu:{args.device}"))
     tokenizer = AutoTokenizer.from_pretrained(args.checkpoint)
     config = TelechatConfig.from_pretrained(args.checkpoint)
-
-    with init_empty_weights():
-        model = TelechatForCausalLM._from_config(config)
-    model.tie_weights()
-
-    max_mem = 4686198491 * 8  # 32G
-    device_map = infer_auto_device_map(
-        model.transformer,
-        max_memory={0: max_mem},
-        no_split_module_classes=["BloomBlock"],
-        dtype='float16'
-    )
-
-    load_checkpoint_in_model(
-        model.transformer,
-        args.checkpoint,
-        device_map=device_map,
-        offload_folder=None,
-        dtype='float16',
-        # offload_state_dict=True
-    )
-    model.tie_weights()
-
-    full_model_device_map = {f"transformer.{k}": v for k, v in device_map.items()}
-    full_model_device_map["lm_head"] = 0
-    dispatch_model(model, device_map=full_model_device_map)
-    print("ok!!")
-
-    model.eval().npu()
+    model = TelechatForCausalLM.from_pretrained(args.checkpoint, config=config).eval().half().npu()
     return model, tokenizer
 
-def setup_model_parallel():
+def setup_model_parallel(args):
     torch.distributed.init_process_group("hccl")
     local_rank = torch.distributed.get_rank()
     world_size = torch.distributed.get_world_size()
-    if local_rank==0:
-        torch_npu.npu.set_device(0)
-    elif local_rank==1:
-        torch_npu.npu.set_device(1)
+    local_device = int(args.device) + int(local_rank)
+    print(f"loading model on device {local_device}, rank: {local_rank}")
+    torch_npu.npu.set_device(local_device)
     torch.manual_seed(1)
     return local_rank, world_size
 
 def load_model_parallel(args):
-    local_rank, world_size = setup_model_parallel()
+    local_rank, world_size = setup_model_parallel(args)
 
     tokenizer_path = os.path.join(args.checkpoint, "tokenizer")
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
     part_model_path=os.path.join(args.checkpoint, "part_model", str(local_rank))
     config = TelechatConfig.from_pretrained(part_model_path)
-    model = TelechatForCausalLM.from_pretrained(part_model_path, torch_dtype=torch.float16).npu()
+    model = TelechatForCausalLM.from_pretrained(part_model_path, config=config).eval().half().npu()
     if not local_rank:
         print("load model successfully!")
-    
-    # with init_empty_weights():
-    #     model = TelechatForCausalLM._from_config(config)
-    # model.tie_weights()
-
-    # max_mem = 4686198491 * 8  # 32G
-
-    # device_map = infer_auto_device_map(
-    #     model.transformer,
-    #     max_memory={0: max_mem},
-    #     no_split_module_classes=["BloomBlock"],
-    #     dtype='float16'
-    # )
-    # print(type(model))
-    # load_checkpoint_in_model(
-    #     model.transformer,
-    #     part_model_path,
-    #     device_map=device_map,
-    #     offload_folder=None,
-    #     dtype='float16',
-    #     # offload_state_dict=True
-    # )
-    # model.tie_weights()
-
-    # full_model_device_map = {f"transformer.{k}": v for k, v in device_map.items()}
-    # full_model_device_map["lm_head"] = 0
-    # dispatch_model(model, device_map=full_model_device_map)
-    # print("ok!!")
-
-    model.eval().npu()
     return model, tokenizer
 
 def nd2nz(model):
@@ -113,8 +50,7 @@ def nd2nz(model):
                 if name == 'lm_head':
                     # eliminate TransData op before lm_head calculation
                     module.weight = torch.nn.parameter.Parameter(module.weight.data)
-                module.weight.data = torch_npu.npu_format_cast(module.weight.data.transpose(0,1).contiguous(), 29)
-                # module.weight.data = torch_npu.npu_format_cast(module.weight.data,29)
+                module.weight.data = torch_npu.npu_format_cast(module.weight.data.transpose(0, 1).contiguous(), 29)
 
     for name, module in model.named_modules():
             if isinstance(module, torch.nn.Embedding):
@@ -139,13 +75,11 @@ def infer_precision():
     print("start!")
     questions = load_dataset(args.input_path)
     is_printing = 1
-    if args.run :
-
+    if args.run_single :
         model, tokenizer = load_model(args)
-    if args.runparallel:
+    if args.run_parallel:
         model, tokenizer = load_model_parallel(args)
         is_printing = torch.distributed.get_rank()
-
 
     torch.npu.set_compile_mode(jit_compile=False)
     option = {}
@@ -159,18 +93,21 @@ def infer_precision():
         context_ids = tokenizer(context, return_tensors="pt")
 
         with torch.no_grad():
+            torch.npu.synchronize()
             start_time_model = time.time()
-            output = model.generate(context_ids["input_ids"].npu(), max_length=4096, do_sample=False, use_cache=True,
+            output = model.generate(context_ids["input_ids"].npu(), max_new_tokens=4096, do_sample=False, use_cache=True,
                                     repetition_penalty=1.03, eos_token_id=[160133, 160130])
+            torch.npu.synchronize()
             end_time_model = time.time()
             output_str = tokenizer.decode(output[0].tolist()).split("<_bot>")[-1]
             print_(is_printing, output_str)
+            torch.npu.synchronize()
             end_time_e2e = time.time()
             answers.append(output_str)
             model.transformer.clear_cache()
-        # print("model_time:", end_time_model - start_time_model, "s")
-        # print("end2end_time:", end_time_e2e - start_time_model)
-        # print("output token delay", len(output_str[0]) / (end_time_model - start_time_model), "s")
+        print(f"model_time:{end_time_model - start_time_model}s")
+        print(f"end2end_time: {end_time_e2e - start_time_model}s")
+        print(f"output token delay {len(output_str[0]) / (end_time_model - start_time_model)}s")
 
     f = jsonlines.open(args.output_path, "w")
     for q, i in zip(questions, answers):
@@ -181,13 +118,12 @@ def infer_precision():
 def performance_test():
     args = get_args()
     print("start!")
-    questions = load_dataset(args.input_path)
     is_printing = 1
-    if args.run :
+    if args.run_single :
         model, tokenizer = load_model(args)
-    if args.runparallel:
+    if args.run_parallel:
         model, tokenizer = load_model_parallel(args)
-        is_printing = torch.distributed.get_rank()
+        is_printing = (torch.distributed.get_rank() == 0)
 
     torch.npu.set_compile_mode(jit_compile=False)
     option = {}
@@ -244,7 +180,6 @@ def performance_test():
 
 
 
-
 def get_args():
     parser = argparse.ArgumentParser(
         'Evaluation',
@@ -254,17 +189,17 @@ def get_args():
     group.add_argument(
         '--device', type=str, metavar='DIR', default=None)
     group.add_argument(
-        '--input-path', type=str, metavar='DIR', default="/home/HwHiAiUser/workspace/data/test.jsonl")        
+        '--input-path', type=str, metavar='DIR', default="")        
     group.add_argument(
-        '--output-path', type=str, metavar='DIR', default="/home/HwHiAiUser/workspace/data/test-out.jsonl")
+        '--output-path', type=str, metavar='DIR', default="")
     group.add_argument(
-        '--checkpoint', type=str, metavar='DIR', default="/home/telechat_anti/telechat_anti_cpu_part/")
+        '--checkpoint', type=str, metavar='DIR', default="")
     group.add_argument(
-        '--tokenizer-path', type=str, metavar='DIR', default="/home/telechat_anti/telechat_anti_cpu_part/tokenizer/")
+        '--tokenizer-path', type=str, metavar='DIR', default="")
     group.add_argument(
-        '--run', action = "store_true", help = "run float model")
+        '--run_single', action = "store_true", help = "run float model")
     group.add_argument(
-        '--runparallel', action = "store_true", help = "run parallel+float model")
+        '--run_parallel', action = "store_true", help = "run parallel + float model")
     args = parser.parse_args()
     return args
 
