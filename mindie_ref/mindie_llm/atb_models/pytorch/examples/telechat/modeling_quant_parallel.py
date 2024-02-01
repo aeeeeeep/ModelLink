@@ -39,10 +39,9 @@ from .configuration_telechat import TelechatConfig
 # add acceration
 import os
 import json
-import time
 import numpy as np
-
 import torch_npu
+
 ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
 if ATB_SPEED_HOME_PATH is None:
         raise RuntimeError("env ATB_SPEED_HOME_PATH  not exist, source set_env.sh")
@@ -540,7 +539,7 @@ class TelechatModel(TelechatPreTrainedModel):
         down_proj_input_scale = zero_list[:]
         down_proj_input_offset = zero_list[:]
 
-        self.bias_correction = []
+        self.bias_list = []
         self.weights = []
         for layer_idx in range(self.num_hidden_layers):
             query_name = "transformer.h.{}.self_attention.query".format(layer_idx)
@@ -555,44 +554,39 @@ class TelechatModel(TelechatPreTrainedModel):
                 dense_input_offset[layer_idx] = int(self.input_offset_dict[dense_name])
                 gate_up_input_scale[layer_idx] = float(1 / self.input_scale_dict[gate_proj_name])
                 gate_up_input_offset[layer_idx] = int(self.input_offset_dict[gate_proj_name])
+
             if layer_idx not in self.float_query_layers:
                 qkv_input_scale[layer_idx] = float(1 / self.input_scale_dict[query_name])
                 qkv_input_offset[layer_idx] = int(self.input_offset_dict[query_name])
+                query_quant_bias = self.fp_bias_dict[query_name]
+            else:
+                query_quant_bias = [0]
+
             if layer_idx not in self.float_down_layers:
                 down_proj_input_scale[layer_idx] = float(1 / self.input_scale_dict[down_proj_name])
                 down_proj_input_offset[layer_idx] = int(self.input_offset_dict[down_proj_name])
-            
-            if layer_idx in self.float_query_layers:
-                query_quant_bias_correction = [0]
+                down_proj_quant_bias = self.fp_bias_dict[down_proj_name]
             else:
-                query_quant_bias_correction = self.fp_bias_dict[query_name]
+                down_proj_quant_bias = [0]
 
             if layer_idx in self.float_kv_layers:
-                key_value_quant_bias_correction = [0]
+                key_value_quant_bias = [0]
             else:
-                key_value_quant_bias_correction = self.fp_bias_dict[key_value_name]
+                key_value_quant_bias = self.fp_bias_dict[key_value_name]
 
-            dense_quant_bias_correction = self.fp_bias_dict[dense_name]
+            dense_quant_bias = self.fp_bias_dict[dense_name]
+            gate_proj_quant_bias = self.fp_bias_dict[gate_proj_name]
+            up_proj_quant_bias = self.fp_bias_dict[up_proj_name]
 
-            gate_proj_quant_bias_correction = self.fp_bias_dict[gate_proj_name]
-
-
-            up_proj_quant_bias_correction = self.fp_bias_dict[up_proj_name]
-
-            if layer_idx in self.float_down_layers:
-                down_proj_quant_bias_correction = [0]#weight[1]
-            else:
-                down_proj_quant_bias_correction = self.fp_bias_dict[down_proj_name]
-
-            bias_cor = [
-                       query_quant_bias_correction,
-                       key_value_quant_bias_correction,
-                       dense_quant_bias_correction,
-                       gate_proj_quant_bias_correction,
-                       up_proj_quant_bias_correction,
-                       down_proj_quant_bias_correction
+            bias_pre_layer = [
+                       query_quant_bias,
+                       key_value_quant_bias,
+                       dense_quant_bias,
+                       gate_proj_quant_bias,
+                       up_proj_quant_bias,
+                       down_proj_quant_bias
                        ]
-            self.bias_correction.append(bias_cor)
+            self.bias_list.append(bias_pre_layer)
 
         self.acl_param = json.dumps({
             "dk": self.dk,
@@ -614,8 +608,10 @@ class TelechatModel(TelechatPreTrainedModel):
             "inputOffset_down_proj": down_proj_input_offset,
             })
 
-        self.acl_operation = torch.classes.ModelTorch.ModelTorch(
-                "telechat_quant_model")
+        if RUN_QUANT_MODEL:
+            self.acl_operation = torch.classes.ModelTorch.ModelTorch("telechat_quant_model")
+        else:
+            self.acl_operation = torch.classes.ModelTorch.ModelTorch("telechat_float_model")
 
         print("set param")
         self.acl_operation.set_param(self.acl_param)
@@ -642,7 +638,7 @@ class TelechatModel(TelechatPreTrainedModel):
         transdata_param = json.dumps({})
         transdata_operation.set_param(transdata_param)
 
-        self.transdata_quant_weight = [[] for i in range(self.num_hidden_layers)]
+        self.model_weights = [[] for i in range(self.num_hidden_layers)]
         for layer_idx in range(self.num_hidden_layers):
             query_name = "transformer.h.{}.self_attention.query".format(layer_idx)
             key_value_name = "transformer.h.{}.self_attention.key_value".format(layer_idx)
@@ -654,48 +650,26 @@ class TelechatModel(TelechatPreTrainedModel):
            
 
             if layer_idx in self.float_query_layers:
-                self.transdata_quant_weight[layer_idx].append(weights_float["self_attention.query.weight"].npu())
+                self.model_weights[layer_idx].append(weights_float["self_attention.query.weight"].npu())
             else:
-                self.transdata_quant_weight[layer_idx].append(transdata_operation.execute([self.quant_weight_dict[query_name].to(torch.int8).npu()])[0])
+                self.model_weights[layer_idx].append(transdata_operation.execute([self.quant_weight_dict[query_name].to(torch.int8).npu()])[0])
             if layer_idx in self.float_kv_layers:
-                self.transdata_quant_weight[layer_idx].append(weights_float["self_attention.key_value.weight"].npu())
+                self.model_weights[layer_idx].append(weights_float["self_attention.key_value.weight"].npu())
             else:
-                self.transdata_quant_weight[layer_idx].append(transdata_operation.execute([self.quant_weight_dict[key_value_name].to(torch.int8).npu()])[0])
+                self.model_weights[layer_idx].append(transdata_operation.execute([self.quant_weight_dict[key_value_name].to(torch.int8).npu()])[0])
 
-            self.transdata_quant_weight[layer_idx].append(transdata_operation.execute([self.quant_weight_dict[dense_name].to(torch.int8).npu()])[0])
-            self.transdata_quant_weight[layer_idx].append(transdata_operation.execute([self.quant_weight_dict[gate_proj_name].to(torch.int8).npu()])[0])
-            self.transdata_quant_weight[layer_idx].append(transdata_operation.execute([self.quant_weight_dict[up_proj_name].to(torch.int8).npu()])[0])
+            self.model_weights[layer_idx].append(transdata_operation.execute([self.quant_weight_dict[dense_name].to(torch.int8).npu()])[0])
+            self.model_weights[layer_idx].append(transdata_operation.execute([self.quant_weight_dict[gate_proj_name].to(torch.int8).npu()])[0])
+            self.model_weights[layer_idx].append(transdata_operation.execute([self.quant_weight_dict[up_proj_name].to(torch.int8).npu()])[0])
 
             if layer_idx in self.float_down_layers:
-                self.transdata_quant_weight[layer_idx].append(weights_float['mlp.down_proj.weight'].npu())
+                self.model_weights[layer_idx].append(weights_float['mlp.down_proj.weight'].npu())
             else:
-                self.transdata_quant_weight[layer_idx].append(transdata_operation.execute([self.quant_weight_dict[down_proj_name].to(torch.int8).npu()])[0])
+                self.model_weights[layer_idx].append(transdata_operation.execute([self.quant_weight_dict[down_proj_name].to(torch.int8).npu()])[0])
         print("end TelechatModel")
 
     def get_input_embeddings(self):
         return self.word_embeddings
-
-    def _prepare_attn_mask_old(
-            self, attention_mask: torch.Tensor, input_shape: Tuple[int, int], past_key_values_length: int
-    ) -> torch.BoolTensor:
-        # create causal mask
-        # [batch_size, seq_length] -> [batch_size, 1, tgt_length, src_length]
-        combined_attention_mask = None
-        device = attention_mask.device
-        _, src_length = input_shape
-
-        if src_length > 1:
-            combined_attention_mask = _make_causal_mask(
-                input_shape, device=device, past_key_values_length=past_key_values_length
-            )
-
-        # [batch_size, seq_length] -> [batch_size, 1, tgt_length, src_length]
-        expanded_attn_mask = _expand_mask(attention_mask, tgt_length=src_length)
-        combined_attention_mask = (
-            expanded_attn_mask if combined_attention_mask is None else expanded_attn_mask | combined_attention_mask
-        )
-
-        return combined_attention_mask
 
     def _prepare_attn_mask(
             self, attention_mask: torch.Tensor, input_shape: Tuple[int, int], past_key_values_length: int
@@ -823,6 +797,8 @@ class TelechatModel(TelechatPreTrainedModel):
 
             global lm_head_weight
             self.weights.append(self.state_dict()["word_embeddings.weight"].npu())
+            zero_tensor = torch.tensor([0]).npu()
+                                            
             for layer_idx in range(self.num_hidden_layers):
                 query_name = "transformer.h.{}.self_attention.query".format(layer_idx)
                 key_value_name = "transformer.h.{}.self_attention.key_value".format(layer_idx)
@@ -832,60 +808,58 @@ class TelechatModel(TelechatPreTrainedModel):
                 down_proj_name = "transformer.h.{}.mlp.down_proj".format(layer_idx)
                 weights_all = []
                 weights_float = self.h[layer_idx].state_dict()
-                #print(self.h[layer_idx].state_dict().keys())
                 if layer_idx in self.float_query_layers:
                     weights_q = [
-                                self.transdata_quant_weight[layer_idx][0],
-                                torch.tensor([0]).npu(),
-                                torch.tensor([0]).npu(),
+                                self.model_weights[layer_idx][0],
+                                zero_tensor,
+                                zero_tensor,
                                 ]
                 else:
                     weights_q = [
-                    self.transdata_quant_weight[layer_idx][0].to(torch.int8),
-                    self.deq_scale_dict[query_name].to(torch.int64).npu(),
-                    self.bias_correction[layer_idx][0].to(torch.int32).npu()]
+                                self.model_weights[layer_idx][0].to(torch.int8),
+                                self.deq_scale_dict[query_name].to(torch.int64).npu(),
+                                self.bias_list[layer_idx][0].to(torch.int32).npu()]
                 weights_all.extend(weights_q)
                 if layer_idx in self.float_kv_layers:
                     weights_kv = [
-                            self.transdata_quant_weight[layer_idx][1],
-                            torch.tensor([0]).npu(),
-                            torch.tensor([0]).npu(),
-                            ]
+                                self.model_weights[layer_idx][1],
+                                zero_tensor,
+                                zero_tensor,
+                                ]
                 else:
                     weights_kv = [
-                    self.transdata_quant_weight[layer_idx][1].to(torch.int8),
-                    self.deq_scale_dict[key_value_name].to(torch.int64).npu(),
-                    self.bias_correction[layer_idx][1].to(torch.int32).npu()]
+                                self.model_weights[layer_idx][1].to(torch.int8),
+                                self.deq_scale_dict[key_value_name].to(torch.int64).npu(),
+                                self.bias_list[layer_idx][1].to(torch.int32).npu()]
                 weights_all.extend(weights_kv)
                 weights_dense = [
-                self.transdata_quant_weight[layer_idx][2].to(torch.int8),
-                self.deq_scale_dict[dense_name].to(torch.int64).npu(),
-                self.bias_correction[layer_idx][2].to(torch.int32).npu()]
+                                self.model_weights[layer_idx][2].to(torch.int8),
+                                self.deq_scale_dict[dense_name].to(torch.int64).npu(),
+                                self.bias_list[layer_idx][2].to(torch.int32).npu()]
                 weights_all.extend(weights_dense)
                 weights_gate = [
-                self.transdata_quant_weight[layer_idx][3].to(torch.int8),
-                self.deq_scale_dict[gate_proj_name].to(torch.int64).npu(),
-                self.bias_correction[layer_idx][3].to(torch.int32).npu()]
+                                self.model_weights[layer_idx][3].to(torch.int8),
+                                self.deq_scale_dict[gate_proj_name].to(torch.int64).npu(),
+                                self.bias_list[layer_idx][3].to(torch.int32).npu()]
                 weights_all.extend(weights_gate)
                 weights_up = [
-                self.transdata_quant_weight[layer_idx][4].to(torch.int8),
-                self.deq_scale_dict[up_proj_name].to(torch.int64).npu(),
-                self.bias_correction[layer_idx][4].to(torch.int32).npu(),
-                ]
+                            self.model_weights[layer_idx][4].to(torch.int8),
+                            self.deq_scale_dict[up_proj_name].to(torch.int64).npu(),
+                            self.bias_list[layer_idx][4].to(torch.int32).npu(),
+                            ]
                 weights_all.extend(weights_up)
                 if layer_idx in self.float_down_layers:
-                    weight = list(self.h[layer_idx].state_dict().values())
                     weights_down = [
                                     weights_float['mlp.down_proj.weight'],
-                                    torch.tensor([0]).npu(),
+                                    zero_tensor,
                                     weights_float['mlp.down_proj.bias'].npu()
                                     ]
                 else:
                     weights_down = [
-                    self.transdata_quant_weight[layer_idx][5].to(torch.int8),
-                    self.deq_scale_dict[down_proj_name].to(torch.int64).npu(),
-                    self.bias_correction[layer_idx][5].to(torch.int32).npu()
-                    ]
+                                    self.model_weights[layer_idx][5].to(torch.int8),
+                                    self.deq_scale_dict[down_proj_name].to(torch.int64).npu(),
+                                    self.bias_list[layer_idx][5].to(torch.int32).npu()
+                                    ]
                 weights_all.extend(weights_down)
                 self.weights.extend(weights_all)
                 self.weights.append(weights_float['input_layernorm.weight'].npu())
