@@ -15,7 +15,6 @@ import os
 import argparse
 import torch
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, AutoConfig
-import pdb
 import torch_npu
 import numpy as np
 import shutil
