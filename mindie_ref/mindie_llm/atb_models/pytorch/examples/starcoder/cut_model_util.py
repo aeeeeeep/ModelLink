@@ -15,7 +15,7 @@ import os
 import argparse
 import torch
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, AutoConfig
-
+import pdb
 
 #cut weights
 #cut_row_keys :dim 0  cut_col_keys :dim 1  nn.linear: x*A.T
