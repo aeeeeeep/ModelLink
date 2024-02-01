@@ -20,8 +20,8 @@ from transformers.models.llama.configuration_llama import LlamaConfig
 
 # cut float weights
 # cut_row_keys :dim 0  cut_col_keys :dim 1  nn.linear: x*A.T
-def cut_weights(model_in, world_size, cut_row_keys=['q_proj', 'k_proj', 'v_proj', 'gate_proj', 'up_proj'],
-                cut_col_keys=['o_proj', 'down_proj']):
+def cut_weights(model_in, world_size, cut_row_keys=('q_proj', 'k_proj', 'v_proj', 'gate_proj', 'up_proj'),
+                cut_col_keys=('o_proj', 'down_proj')):
     new_state_dict_list = [{} for i in range(world_size)]
     for key, tensor in model_in.state_dict().items():
         key_short = key.split('.')[-2]
@@ -56,12 +56,12 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--cut_row_keys",
-        default=['q_proj', 'k_proj', 'v_proj', 'gate_proj', 'up_proj'],
+        default=('q_proj', 'k_proj', 'v_proj', 'gate_proj', 'up_proj'),
         help="cut_row_keys",
     )
     parser.add_argument(
         "--cut_col_keys",
-        default=['o_proj', 'down_proj'],
+        default=('o_proj', 'down_proj'),
         help="cut_col_keys",
     )
     args = parser.parse_args()

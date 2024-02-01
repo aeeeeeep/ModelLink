@@ -38,8 +38,8 @@ def process_deq_scale(deq_scale_dict_in):
 
 #cut quant weights
 #cut_row_keys :dim 0  cut_col_keys :dim 1  nn.linear: x*A.T
-def cut_weights(weight, world_size, cut_row_keys=['q_proj', 'k_proj', 'v_proj', 'gate_proj', 'up_proj'],
-                cut_col_keys=['o_proj', 'down_proj']):
+def cut_weights(weight, world_size, cut_row_keys=('q_proj', 'k_proj', 'v_proj', 'gate_proj', 'up_proj'),
+                cut_col_keys=('o_proj', 'down_proj')):
     state_dict_list = [{} for _ in range(world_size)]
     for key, tensor in weight.items():
         key_short = key.split('.')[-1]
@@ -55,7 +55,7 @@ def cut_weights(weight, world_size, cut_row_keys=['q_proj', 'k_proj', 'v_proj', 
 
 
 # cut quant bias
-def cut_bias(bias, world_size, is_bias=False, cut_row_keys=['q_proj', 'k_proj', 'v_proj', 'gate_proj', 'up_proj']):
+def cut_bias(bias, world_size, is_bias=False, cut_row_keys=('q_proj', 'k_proj', 'v_proj', 'gate_proj', 'up_proj')):
     state_dict_list = [{} for _ in range(world_size)]
     for key, tensor in bias.items():
         cut_tensor_list = []
@@ -65,7 +65,7 @@ def cut_bias(bias, world_size, is_bias=False, cut_row_keys=['q_proj', 'k_proj', 
             cut_tensor_list = torch.chunk(tensor, world_size, dim=0)
         else:
             if is_bias:
-                 # weight横切，bias除world_size
+                # weight横切，bias除world_size
                 tensor = tensor / world_size
             cut_tensor_list = [tensor] * world_size
         
@@ -94,12 +94,12 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--cut_row_keys",
-        default=['q_proj', 'k_proj', 'v_proj', 'gate_proj', 'up_proj'],
+        default=('q_proj', 'k_proj', 'v_proj', 'gate_proj', 'up_proj'),
         help="cut_row_keys",
     )
     parser.add_argument(
         "--cut_col_keys",
-        default=['o_proj', 'down_proj'],
+        default=('o_proj', 'down_proj'),
         help="cut_col_keys",
     )
     args = parser.parse_args()

@@ -3,8 +3,8 @@ input_dir="./llama2-7b"
 # cutted model path
 output_dir="./llama2-7b_parallel"
 # cutting parameters
-cut_row_keys_=['q_proj','k_proj','v_proj','gate_proj','up_proj']
-cut_col_keys_=['o_proj','down_proj']
+cut_row_keys_=('q_proj','k_proj','v_proj','gate_proj','up_proj')
+cut_col_keys_=('o_proj','down_proj')
 
 script_dir=$(cd $(dirname $0); pwd)
 transformers_package_path=$(python3 -c 'import transformers; import os; print(os.path.dirname(transformers.__file__))')
