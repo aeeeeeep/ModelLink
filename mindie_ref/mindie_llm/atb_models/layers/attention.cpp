@@ -53,6 +53,8 @@ void unsqueezeByHeadNum(const atb::Dims &oldShape, atb::Dims &newShape);
 
 void unsqueezeByKVHeadNum(const atb::Dims &oldShape, atb::Dims &newShape);
 
+void unsqueezeMixedQKVByHeadNum(const atb::Dims &oldShape, atb::Dims &newShape);
+
 atb::Status FlashAttentionWithPosEmbedding::FlashAttentionWithPositionEmbeddingLayer(const FTWithROPEParam &param,
                                                                                      atb::Operation **operation)
 {
@@ -113,11 +115,14 @@ atb::Status FlashAttentionWithPosEmbedding::FlashAttentionWithPositionEmbeddingL
         CREATE_OPERATION(splitMixedQKVParam, &splitMixedQKVNode.operation);
         splitMixedQKVNode.inTensorIds = {INTERMEDIATE_MIXED_QKV};
         splitMixedQKVNode.outTensorIds = {INTERMEDIATE_QUERY, INTERMEDIATE_KEY, INTERMEDIATE_VALUE};
+        if (param.isCrossedWeight) {
+            splitMixedQKVNode.inTensorReshapeFuncs = {&unsqueezeMixedQKVByHeadNum};
+        }
     }
 
     if (!param.selfAttentionKvCacheParam.isSupportAlibi) {
         atb::Node &positionEmbeddingNode = opGraph.nodes.at(nodeId++);
-        RotaryPositionEmbedding(param, &positionEmbeddingNode.operation);
+        PositionEmbedding(param, &positionEmbeddingNode.operation);
         positionEmbeddingNode.inTensorIds = {INTERMEDIATE_QUERY, INTERMEDIATE_KEY, IN_ROPE_COS, IN_ROPE_SIN, IN_SEQLEN};
         positionEmbeddingNode.outTensorIds = {INTERMEDIATE_POSITIONEMBED_Q, INTERMEDIATE_POSITIONEMBED_K};
     }
@@ -166,11 +171,10 @@ static const uint64_t POS_EMB_INTERMEDIATE_TENSOR_1D_COUNT = 0;
 static const uint64_t POS_EMB_NODE_2D_COUNT = 5;
 static const uint64_t POS_EMB_NODE_1D_COUNT = 1;
 
-atb::Status FlashAttentionWithPosEmbedding::RotaryPositionEmbedding(const FTWithROPEParam &param,
-                                                                    atb::Operation **operation)
+atb::Status FlashAttentionWithPosEmbedding::PositionEmbedding(const FTWithROPEParam &param, atb::Operation **operation)
 {
     atb::GraphParam opGraph;
-    opGraph.name = "RotaryPositionEmbedding";
+    opGraph.name = "PositionEmbedding";
     opGraph.inTensorNum = POS_EMB_IN_TENSOR_COUNT;
     opGraph.outTensorNum = POS_EMB_OUT_TENSOR_COUNT;
     opGraph.internalTensorNum = param.isHalfRotary ?
@@ -290,6 +294,15 @@ void unsqueezeByKVHeadNum(const atb::Dims &oldShape, atb::Dims &newShape)
     newShape.dims[1] = oldShape.dims[1];
     newShape.dims[DIM_2] = g_kvHeadNum;
     newShape.dims[DIM_3] = g_hiddenSizePerHead;
+}
+
+void unsqueezeMixedQKVByHeadNum(const atb::Dims &oldShape, atb::Dims &newShape)
+{
+    newShape.dimNum = DIM_NUM_4;
+    newShape.dims[0] = oldShape.dims[0];
+    newShape.dims[1] = oldShape.dims[1];
+    newShape.dims[DIM_2] = g_headNum;
+    newShape.dims[DIM_3] = g_hiddenSizePerHead * SPLIT_NUM_3;
 }
 
 } // namespace common
