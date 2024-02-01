@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#include "models/llama_parallel/operation/linear.h"
-#include "models/llama_parallel/operation/linear_parallel.h"
-#include "models/llama_parallel/operation/attention.h"
+#include "layers/operations/linear.h"
+#include "layers/operations/linear_parallel.h"
+#include "layers/operations/fusion_attention.h"
 
 namespace atb_speed {
-namespace llama_parallel {
+namespace common {
 
 enum QKVLinearSplitTensorIdx : uint32_t {
     IN_QKV_INPUT = 0,
@@ -56,9 +56,13 @@ atb::Status CreateQKVLinearSplit(const FusionAttentionParam &param, atb::Operati
     size_t nodeId = 0;
 
     atb::Node &linearNode = opGraph.nodes.at(nodeId++);
-    atb_speed::llama_parallel::FusionLinearParam qkvLinearParam = param.qkvLinearParam;
+    atb_speed::common::FusionLinearParam qkvLinearParam = param.qkvLinearParam;
     FusionLinear(qkvLinearParam, &linearNode.operation);
-    linearNode.inTensorIds = {QKVLinearSplitTensorIdx::IN_QKV_INPUT, QKVLinearSplitTensorIdx::IN_QKV_WEIGHT_0, QKVLinearSplitTensorIdx::IN_QKV_SCALE_0, QKVLinearSplitTensorIdx::IN_QKV_OFFSET_0, QKVLinearSplitTensorIdx::IN_QKV_DESCALE_0};
+    linearNode.inTensorIds = {
+        QKVLinearSplitTensorIdx::IN_QKV_INPUT, QKVLinearSplitTensorIdx::IN_QKV_WEIGHT_0,
+        QKVLinearSplitTensorIdx::IN_QKV_SCALE_0, QKVLinearSplitTensorIdx::IN_QKV_OFFSET_0,
+        QKVLinearSplitTensorIdx::IN_QKV_DESCALE_0
+    };
     linearNode.outTensorIds = {param.isPack ? config.INTERMEDIATE_MIXED_QKV : QKVLinearSplitTensorIdx::OUT_Q};
 
     if (param.isPack && param.isGroupedQueryAttention) {  // Split GQA
@@ -71,7 +75,7 @@ atb::Status CreateQKVLinearSplit(const FusionAttentionParam &param, atb::Operati
             sliceQNodeParam.offsets = {0, 0};
             sliceQNodeParam.size = {-1, param.selfAttentionParam.headNum * param.selfAttentionParam.headDim};
         }
-        CreateOperation(sliceQNodeParam, &sliceQNode.operation);
+        CREATE_OPERATION(sliceQNodeParam, &sliceQNode.operation);
         sliceQNode.inTensorIds = {config.INTERMEDIATE_MIXED_QKV};
         sliceQNode.outTensorIds = {QKVLinearSplitTensorIdx::OUT_Q};
 
@@ -84,7 +88,7 @@ atb::Status CreateQKVLinearSplit(const FusionAttentionParam &param, atb::Operati
             sliceKVNodeParam.offsets = {0, param.selfAttentionParam.headNum * param.selfAttentionParam.headDim};
             sliceKVNodeParam.size = {-1, param.selfAttentionParam.kvHeadNum * param.selfAttentionParam.headDim * 2};
         }
-        CreateOperation(sliceKVNodeParam, &sliceKVNode.operation);
+        CREATE_OPERATION(sliceKVNodeParam, &sliceKVNode.operation);
         sliceKVNode.inTensorIds = {config.INTERMEDIATE_MIXED_QKV};
         sliceKVNode.outTensorIds = {config.INTERMEDIATE_KV};
 
@@ -92,7 +96,7 @@ atb::Status CreateQKVLinearSplit(const FusionAttentionParam &param, atb::Operati
         atb::infer::SplitParam splitKVParam;
         splitKVParam.splitDim = -1;
         splitKVParam.splitNum = 2;
-        CreateOperation(splitKVParam, &splitKVNode.operation);
+        CREATE_OPERATION(splitKVParam, &splitKVNode.operation);
         splitKVNode.inTensorIds = {config.INTERMEDIATE_KV};
         splitKVNode.outTensorIds = {QKVLinearSplitTensorIdx::OUT_K, QKVLinearSplitTensorIdx::OUT_V};
     } else if (param.isPack && !param.isGroupedQueryAttention) {  // Split MHA
@@ -100,34 +104,48 @@ atb::Status CreateQKVLinearSplit(const FusionAttentionParam &param, atb::Operati
         atb::infer::SplitParam splitMixedQKVParam;
         splitMixedQKVParam.splitDim = -1;
         splitMixedQKVParam.splitNum = 3;
-        CreateOperation(splitMixedQKVParam, &splitMixedQKVNode.operation);
+        CREATE_OPERATION(splitMixedQKVParam, &splitMixedQKVNode.operation);
         splitMixedQKVNode.inTensorIds = {config.INTERMEDIATE_MIXED_QKV};
-        splitMixedQKVNode.outTensorIds = {QKVLinearSplitTensorIdx::OUT_Q, QKVLinearSplitTensorIdx::OUT_K, QKVLinearSplitTensorIdx::OUT_V};
+        splitMixedQKVNode.outTensorIds = {
+            QKVLinearSplitTensorIdx::OUT_Q, QKVLinearSplitTensorIdx::OUT_K,
+            QKVLinearSplitTensorIdx::OUT_V
+        };
     } else {  // isPack: false
         atb::Node &kLinearNode = opGraph.nodes.at(nodeId++);
         FusionLinear(qkvLinearParam, &kLinearNode.operation);
-        kLinearNode.inTensorIds = {QKVLinearSplitTensorIdx::IN_QKV_INPUT, QKVLinearSplitTensorIdx::IN_QKV_WEIGHT_1, QKVLinearSplitTensorIdx::IN_QKV_SCALE_1, QKVLinearSplitTensorIdx::IN_QKV_OFFSET_1, QKVLinearSplitTensorIdx::IN_QKV_DESCALE_1};
+        kLinearNode.inTensorIds = {
+            QKVLinearSplitTensorIdx::IN_QKV_INPUT, QKVLinearSplitTensorIdx::IN_QKV_WEIGHT_1,
+            QKVLinearSplitTensorIdx::IN_QKV_SCALE_1, QKVLinearSplitTensorIdx::IN_QKV_OFFSET_1,
+            QKVLinearSplitTensorIdx::IN_QKV_DESCALE_1
+        };
         kLinearNode.outTensorIds = {QKVLinearSplitTensorIdx::OUT_K};
 
         atb::Node &vLinearNode = opGraph.nodes.at(nodeId++);
         FusionLinear(qkvLinearParam, &vLinearNode.operation);
-        vLinearNode.inTensorIds = {QKVLinearSplitTensorIdx::IN_QKV_INPUT, QKVLinearSplitTensorIdx::IN_QKV_WEIGHT_2, QKVLinearSplitTensorIdx::IN_QKV_SCALE_2, QKVLinearSplitTensorIdx::IN_QKV_OFFSET_2, QKVLinearSplitTensorIdx::IN_QKV_DESCALE_2};
+        vLinearNode.inTensorIds = {
+            QKVLinearSplitTensorIdx::IN_QKV_INPUT, QKVLinearSplitTensorIdx::IN_QKV_WEIGHT_2,
+            QKVLinearSplitTensorIdx::IN_QKV_SCALE_2, QKVLinearSplitTensorIdx::IN_QKV_OFFSET_2,
+            QKVLinearSplitTensorIdx::IN_QKV_DESCALE_2
+        };
         vLinearNode.outTensorIds = {QKVLinearSplitTensorIdx::OUT_V};
     }
 
     opGraph.inferShapeFunc = [=]
                 (const atb::SVector<atb::TensorDesc> &inTensorDescs, atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(0);
-        outTensorDescs.at(0).shape.dims[inTensorDescs.at(0).shape.dimNum - 1] = param.selfAttentionParam.headNum * param.selfAttentionParam.headDim;
+        outTensorDescs.at(0).shape.dims[inTensorDescs.at(0).shape.dimNum - 1] \
+            = param.selfAttentionParam.headNum * param.selfAttentionParam.headDim;
 
         outTensorDescs.at(1) = outTensorDescs.at(0);
-        outTensorDescs.at(1).shape.dims[inTensorDescs.at(0).shape.dimNum - 1] = param.selfAttentionParam.kvHeadNum * param.selfAttentionParam.headDim;
+        outTensorDescs.at(1).shape.dims[inTensorDescs.at(0).shape.dimNum - 1] \
+            = param.selfAttentionParam.kvHeadNum * param.selfAttentionParam.headDim;
 
         outTensorDescs.at(2) = outTensorDescs.at(1);
         return atb::NO_ERROR;
     };
 
-    return atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
+    return atb::NO_ERROR;
 }
 
 class QKVLinearSplitNoPackConfig {
@@ -230,24 +248,32 @@ atb::Status FusionAttention::SelfAttention(const FusionAttentionParam &param, at
     if (!param.isFA) {  // PA
         atb::Node &reshapeAndCacheNode = opGraph.nodes.at(nodeId++);
         atb::infer::ReshapeAndCacheParam reshapeCacheParm;
-        CreateOperation(reshapeCacheParm, &reshapeAndCacheNode.operation);
+        CREATE_OPERATION(reshapeCacheParm, &reshapeAndCacheNode.operation);
         reshapeAndCacheNode.inTensorIds = {
-            SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_K,  // shape: [1, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
-            SelfAttentionTensorIdx::IN_SELF_ATTENTION_V,                 // shape: [1, seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
-            SelfAttentionTensorIdx::IN_SELF_ATTENTION_K_CACHE,           // shape: [2622, hiddenSizePerAttentionHead, numAttentionHeadsPerRank, hiddenSizePerAttentionHead]
-            SelfAttentionTensorIdx::IN_SELF_ATTENTION_V_CACHE,           // shape: [2622, hiddenSizePerAttentionHead, numAttentionHeadsPerRank, hiddenSizePerAttentionHead]
-            SelfAttentionTensorIdx::IN_SELF_ATTENTION_SLOTS              // shape: [seqLen]
+            // shape: [1, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
+            SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_K,
+            // shape: [1, seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
+            SelfAttentionTensorIdx::IN_SELF_ATTENTION_V,
+            // shape: [2622, hiddenSizePerAttentionHead, numAttentionHeadsPerRank, hiddenSizePerAttentionHead]
+            SelfAttentionTensorIdx::IN_SELF_ATTENTION_K_CACHE,
+            // shape: [2622, hiddenSizePerAttentionHead, numAttentionHeadsPerRank, hiddenSizePerAttentionHead]
+            SelfAttentionTensorIdx::IN_SELF_ATTENTION_V_CACHE,
+            // shape: [seqLen]
+            SelfAttentionTensorIdx::IN_SELF_ATTENTION_SLOTS
         };
         reshapeAndCacheNode.outTensorIds = {};
     }
 
     atb::Node &selfAttentionNode = opGraph.nodes.at(nodeId++);
     if (param.isFA) { // FA
-        CreateOperation(param.selfAttentionParam, &selfAttentionNode.operation);
+        CREATE_OPERATION(param.selfAttentionParam, &selfAttentionNode.operation);
         selfAttentionNode.inTensorIds = {
-            SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_Q,   // shape: [seqLen, headNum, hiddenSizePerHead]
-            SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_K,   // shape: [seqLen, headNum, hiddenSizePerHead]
-            SelfAttentionTensorIdx::IN_SELF_ATTENTION_V,                  // shape: [batchSize, seqLen, headNum, hiddenSizePerHead]
+            // shape: [seqLen, headNum, hiddenSizePerHead]
+            SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_Q,
+            // shape: [seqLen, headNum, hiddenSizePerHead]
+            SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_K,
+            // shape: [batchSize, seqLen, headNum, hiddenSizePerHead]
+            SelfAttentionTensorIdx::IN_SELF_ATTENTION_V,
             SelfAttentionTensorIdx::IN_SELF_ATTENTION_K_CACHE,
             SelfAttentionTensorIdx::IN_SELF_ATTENTION_V_CACHE,
             SelfAttentionTensorIdx::IN_SELF_ATTENTION_ATTENTION_MASK,
@@ -256,55 +282,51 @@ atb::Status FusionAttention::SelfAttention(const FusionAttentionParam &param, at
             SelfAttentionTensorIdx::IN_SELF_ATTENTION_LAYER_ID
         };
         selfAttentionNode.outTensorIds = {SelfAttentionTensorIdx::OUT_SELF_ATTENTION};
-        // Unsqeeze batch size of POSITION_EMBED_Q and POSITION_EMBED_K
-        selfAttentionNode.inTensorReshapeFuncs.resize(selfAttentionNode.inTensorIds.size());
-        selfAttentionNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            unSqueezeBatchSize(oldShape, newShape, *batchNumPtr);
-        };
-        selfAttentionNode.inTensorReshapeFuncs.at(1) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            unSqueezeBatchSize(oldShape, newShape, *batchNumPtr);
-        };
-        // Unsqueeze layer axis of kv cache
-        selfAttentionNode.inTensorReshapeFuncs.at(3) = &unSqueezeLayerAxis;
-        selfAttentionNode.inTensorReshapeFuncs.at(4) = &unSqueezeLayerAxis;
     } else if (!param.isFA && param.isPrefill) {  // PA Prefill
-        CreateOperation(param.selfAttentionParam, &selfAttentionNode.operation);
-        selfAttentionNode.inTensorIds = {SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_Q, SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_K, SelfAttentionTensorIdx::IN_SELF_ATTENTION_V, SelfAttentionTensorIdx::IN_SELF_ATTENTION_ATTENTION_MASK, SelfAttentionTensorIdx::IN_SELF_ATTENTION_SEQ_LEN};
+        CREATE_OPERATION(param.selfAttentionParam, &selfAttentionNode.operation);
+        selfAttentionNode.inTensorIds = {
+            SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_Q, SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_K,
+            SelfAttentionTensorIdx::IN_SELF_ATTENTION_V, SelfAttentionTensorIdx::IN_SELF_ATTENTION_ATTENTION_MASK,
+            SelfAttentionTensorIdx::IN_SELF_ATTENTION_SEQ_LEN
+        };
         selfAttentionNode.outTensorIds = {SelfAttentionTensorIdx::OUT_SELF_ATTENTION};
     } else {  // PA Decode
         if (param.isBF16) {
-            selfAttentionNode.inTensorIds = {SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_Q, SelfAttentionTensorIdx::IN_SELF_ATTENTION_K_CACHE, SelfAttentionTensorIdx::IN_SELF_ATTENTION_V_CACHE, SelfAttentionTensorIdx::IN_SELF_ATTENTION_BLOCK_TABLES,
-                                             SelfAttentionTensorIdx::IN_SELF_ATTENTION_SEQ_LEN, SelfAttentionTensorIdx::IN_SELF_ATTENTION_ATTENTION_MASK};
+            selfAttentionNode.inTensorIds = {
+                SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_Q, SelfAttentionTensorIdx::IN_SELF_ATTENTION_K_CACHE,
+                SelfAttentionTensorIdx::IN_SELF_ATTENTION_V_CACHE, SelfAttentionTensorIdx::IN_SELF_ATTENTION_BLOCK_TABLES,
+                SelfAttentionTensorIdx::IN_SELF_ATTENTION_SEQ_LEN, SelfAttentionTensorIdx::IN_SELF_ATTENTION_ATTENTION_MASK
+            };
         } else {
             selfAttentionNode.inTensorIds = {
-                SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_Q,  // shape: [1, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
-                SelfAttentionTensorIdx::IN_SELF_ATTENTION_K_CACHE,           // shape: [2622, hiddenSizePerAttentionHead, numAttentionHeadsPerRank, hiddenSizePerAttentionHead]
-                SelfAttentionTensorIdx::IN_SELF_ATTENTION_V_CACHE,           // shape: [2622, hiddenSizePerAttentionHead, numAttentionHeadsPerRank, hiddenSizePerAttentionHead]
-                SelfAttentionTensorIdx::IN_SELF_ATTENTION_BLOCK_TABLES,      // shape: [seqLen, seqLen]
-                SelfAttentionTensorIdx::IN_SELF_ATTENTION_SEQ_LEN            // shape: [seqLen]
+                // shape: [1, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
+                SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_Q,
+                // shape: [2622, hiddenSizePerAttentionHead, numAttentionHeadsPerRank, hiddenSizePerAttentionHead]
+                SelfAttentionTensorIdx::IN_SELF_ATTENTION_K_CACHE,
+                // shape: [2622, hiddenSizePerAttentionHead, numAttentionHeadsPerRank, hiddenSizePerAttentionHead]
+                SelfAttentionTensorIdx::IN_SELF_ATTENTION_V_CACHE,
+                // shape: [seqLen, seqLen]
+                SelfAttentionTensorIdx::IN_SELF_ATTENTION_BLOCK_TABLES,
+                // shape: [seqLen]
+                SelfAttentionTensorIdx::IN_SELF_ATTENTION_SEQ_LEN
             };
         }
-        CreateOperation(param.pageAttentionParam, &selfAttentionNode.operation);
-        selfAttentionNode.outTensorIds = {SelfAttentionTensorIdx::OUT_SELF_ATTENTION};  // shape: [seqLen, numAttentionHeadsPerRank, hiddenSizePerAttentionHead]
+        CREATE_OPERATION(param.pageAttentionParam, &selfAttentionNode.operation);
+        // shape: [seqLen, numAttentionHeadsPerRank, hiddenSizePerAttentionHead]
+        selfAttentionNode.outTensorIds = {SelfAttentionTensorIdx::OUT_SELF_ATTENTION};
     }
 
     opGraph.inferShapeFunc = [=]
                 (const atb::SVector<atb::TensorDesc> &inTensorDescs, atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(0);
-        if (param.isFA) {
-            outTensorDescs.at(0).shape.dimNum = 3;
-            outTensorDescs.at(0).shape.dims[0] = *batchNumPtr;  // batchSize
-            outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[0] / (*batchNumPtr); // seqLen
-            outTensorDescs.at(0).shape.dims[2] = param.selfAttentionParam.headNum * param.selfAttentionParam.headDim;
-        } else {
-            outTensorDescs.at(0).shape.dimNum = 2;
-            outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0]; // seqLen
-            outTensorDescs.at(0).shape.dims[1] = param.selfAttentionParam.headNum * param.selfAttentionParam.headDim;
-        }
+        outTensorDescs.at(0).shape.dimNum = inTensorDescs.at(0).shape.dimNum - 1;
+        outTensorDescs.at(0).shape.dims[inTensorDescs.at(0).shape.dimNum - 2] \
+            = param.selfAttentionParam.headNum * param.selfAttentionParam.headDim;
         return atb::NO_ERROR;
     };
 
-    return atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
+    return atb::NO_ERROR;
 }
 
 enum AttentionTensorIdx : uint32_t {
@@ -341,7 +363,7 @@ enum AttentionTensorIdx : uint32_t {
     INTERMIDATE_V,  // shape: PA: [seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
     INTERMIDATE_POSITION_EMBED_Q,  // shape: PA: [seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
     INTERMIDATE_POSITION_EMBED_K,  // shape: PA: [seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
-    INTERMIDATE_SELF_ATTENTION  // shape: PA: [seqLen, numAttentionHeadsPerRank, hiddenSizePerAttentionHead]
+    INTERMIDATE_SELF_ATTENTION  // shape: PA: [seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
 };
 
 static const uint64_t ATTENTION_IN_TENSOR_COUNT = 27;
@@ -351,34 +373,20 @@ static const uint64_t ATTENTION_NODE_COUNT = 4;
 
 void unsqueezeByHeadNum(const atb::Dims &oldShape, atb::Dims &newShape, int headNum, int headDim)
 {
-    if (oldShape.dimNum == 3) {
-        newShape.dimNum = 4;
-        newShape.dims[0] = oldShape.dims[0];
-        newShape.dims[1] = oldShape.dims[1];
-        newShape.dims[2] = headNum;
-        newShape.dims[3] = headDim;
-    } else {
-        newShape.dimNum = 3;
-        newShape.dims[0] = oldShape.dims[0];       // seqLen
-        newShape.dims[1] = headNum;                // numAttentionHeadsPerRank
-        newShape.dims[2] = headDim;                // hiddenSizePerAttentionHead
-    }
+    newShape.dimNum = 3;
+    newShape.dims[0] = oldShape.dims[0];       // seqLen
+    newShape.dims[1] = headNum;                // numAttentionHeadsPerRank or numKeyValueHeadsPerRank
+    newShape.dims[2] = headDim;                // hiddenSizePerAttentionHead
 }
 
-void unsqueezeByKVHeadNum(const atb::Dims &oldShape, atb::Dims &newShape, int kvHeadNum, int headDim)
+void unsqueezeByHeadNumANDBatchSize(const atb::Dims &oldShape, atb::Dims &newShape,
+                                    int batchSize, int headNum, int headDim)
 {
-    if (oldShape.dimNum == 3) {
-        newShape.dimNum = 4;
-        newShape.dims[0] = oldShape.dims[0];
-        newShape.dims[1] = oldShape.dims[1];
-        newShape.dims[2] = kvHeadNum;
-        newShape.dims[3] = headDim;
-    } else {
-        newShape.dimNum = 3;
-        newShape.dims[0] = oldShape.dims[0];       // seqLen
-        newShape.dims[1] = kvHeadNum;              // numKeyValueHeadsPerRank
-        newShape.dims[2] = headDim;                // hiddenSizePerAttentionHead
-    }
+    newShape.dimNum = 4;
+    newShape.dims[0] = batchSize;
+    newShape.dims[1] = oldShape.dims[0] / batchSize;
+    newShape.dims[2] = headNum;
+    newShape.dims[3] = headDim;
 }
 
 void squeezeBatchSize(const atb::Dims &oldShape, atb::Dims &newShape)
@@ -390,6 +398,7 @@ void squeezeBatchSize(const atb::Dims &oldShape, atb::Dims &newShape)
 
 atb::Status FusionAttention::Attention(const FusionAttentionParam &param, atb::Operation **operation)
 {
+    std::shared_ptr<int64_t> batchSizePtr = std::make_shared<int64_t>(0);
     atb::GraphParam opGraph;
     opGraph.name = "Attention";
     opGraph.inTensorNum = ATTENTION_IN_TENSOR_COUNT;
@@ -402,22 +411,31 @@ atb::Status FusionAttention::Attention(const FusionAttentionParam &param, atb::O
     atb::Node &qkvLinearSplitNode = opGraph.nodes.at(nodeId++);
     QKVLinearSplit(param, &qkvLinearSplitNode.operation);
     qkvLinearSplitNode.inTensorIds = {
-        AttentionTensorIdx::IN_INPUT, AttentionTensorIdx::IN_WEIGHT_0, AttentionTensorIdx::IN_SCALE_0, AttentionTensorIdx::IN_OFFSET_0, AttentionTensorIdx::IN_DESCALE_0,
-        AttentionTensorIdx::IN_WEIGHT_1, AttentionTensorIdx::IN_SCALE_1, AttentionTensorIdx::IN_OFFSET_1, AttentionTensorIdx::IN_DESCALE_1,
-        AttentionTensorIdx::IN_WEIGHT_2, AttentionTensorIdx::IN_SCALE_2, AttentionTensorIdx::IN_OFFSET_2, AttentionTensorIdx::IN_DESCALE_2,
+        AttentionTensorIdx::IN_INPUT, AttentionTensorIdx::IN_WEIGHT_0, AttentionTensorIdx::IN_SCALE_0,
+        AttentionTensorIdx::IN_OFFSET_0, AttentionTensorIdx::IN_DESCALE_0,
+        AttentionTensorIdx::IN_WEIGHT_1, AttentionTensorIdx::IN_SCALE_1, AttentionTensorIdx::IN_OFFSET_1,
+        AttentionTensorIdx::IN_DESCALE_1, AttentionTensorIdx::IN_WEIGHT_2, AttentionTensorIdx::IN_SCALE_2,
+        AttentionTensorIdx::IN_OFFSET_2, AttentionTensorIdx::IN_DESCALE_2,
     };
-    qkvLinearSplitNode.outTensorIds = {AttentionTensorIdx::INTERMIDATE_Q, AttentionTensorIdx::INTERMIDATE_K, AttentionTensorIdx::INTERMIDATE_V};
+    qkvLinearSplitNode.outTensorIds = {
+        AttentionTensorIdx::INTERMIDATE_Q, AttentionTensorIdx::INTERMIDATE_K, AttentionTensorIdx::INTERMIDATE_V
+    };
 
     atb::Node &ropeNode = opGraph.nodes.at(nodeId++);
     atb::infer::RopeParam ropeparam;
     ropeparam.rotaryCoeff = param.rotaryCoeff;
-    CreateOperation(ropeparam, &ropeNode.operation);
-    ropeNode.inTensorIds = {AttentionTensorIdx::INTERMIDATE_Q, AttentionTensorIdx::INTERMIDATE_K, AttentionTensorIdx::IN_COS_TABLE, AttentionTensorIdx::IN_SIN_TABLE, AttentionTensorIdx::IN_SEQ_LEN};
-    ropeNode.outTensorIds = {AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_Q, AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_K};
+    CREATE_OPERATION(ropeparam, &ropeNode.operation);
+    ropeNode.inTensorIds = {
+        AttentionTensorIdx::INTERMIDATE_Q, AttentionTensorIdx::INTERMIDATE_K, AttentionTensorIdx::IN_COS_TABLE,
+        AttentionTensorIdx::IN_SIN_TABLE, AttentionTensorIdx::IN_SEQ_LEN
+    };
+    ropeNode.outTensorIds = {
+        AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_Q, AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_K
+    };
     if (param.isFA) {
         ropeNode.inTensorReshapeFuncs.resize(ropeNode.inTensorIds.size());
         ropeNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            *batchNumPtr = oldShape.dims[0];
+            *batchSizePtr = oldShape.dims[0];
             squeezeBatchSize(oldShape, newShape);
         };
         ropeNode.inTensorReshapeFuncs.at(1) = &squeezeBatchSize;
@@ -440,24 +458,55 @@ atb::Status FusionAttention::Attention(const FusionAttentionParam &param, atb::O
     };
     selfAttentionNode.outTensorIds = {AttentionTensorIdx::INTERMIDATE_SELF_ATTENTION};
     selfAttentionNode.inTensorReshapeFuncs.resize(selfAttentionNode.inTensorIds.size());
-    selfAttentionNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        unsqueezeByHeadNum(oldShape, newShape, param.selfAttentionParam.headNum, param.selfAttentionParam.headDim);
-    };
-    selfAttentionNode.inTensorReshapeFuncs[1] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        unsqueezeByHeadNum(oldShape, newShape, param.selfAttentionParam.kvHeadNum, param.selfAttentionParam.headDim);
-    };
-    selfAttentionNode.inTensorReshapeFuncs[2] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        unsqueezeByHeadNum(oldShape, newShape, param.selfAttentionParam.kvHeadNum, param.selfAttentionParam.headDim);
-    };
+    if (param.isFA) {
+        selfAttentionNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            unsqueezeByHeadNumANDBatchSize(oldShape, newShape, (*batchSizePtr),
+                                           param.selfAttentionParam.headNum, param.selfAttentionParam.headDim);
+        };
+        selfAttentionNode.inTensorReshapeFuncs[1] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            unsqueezeByHeadNumANDBatchSize(oldShape, newShape, (*batchSizePtr),
+                                           param.selfAttentionParam.kvHeadNum, param.selfAttentionParam.headDim);
+        };
+        selfAttentionNode.inTensorReshapeFuncs[2] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            unsqueezeByHeadNumANDBatchSize(oldShape, newShape, (*batchSizePtr),
+                                           param.selfAttentionParam.kvHeadNum, param.selfAttentionParam.headDim);
+        };
+        // Unsqueeze layer axis of kv cache
+        selfAttentionNode.inTensorReshapeFuncs.at(3) = &unSqueezeLayerAxis;
+        selfAttentionNode.inTensorReshapeFuncs.at(4) = &unSqueezeLayerAxis;
+    } else {
+        selfAttentionNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            unsqueezeByHeadNum(oldShape, newShape,
+                               param.selfAttentionParam.headNum, param.selfAttentionParam.headDim);
+        };
+        selfAttentionNode.inTensorReshapeFuncs[1] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            unsqueezeByHeadNum(oldShape, newShape,
+                               param.selfAttentionParam.kvHeadNum, param.selfAttentionParam.headDim);
+        };
+        selfAttentionNode.inTensorReshapeFuncs[2] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            unsqueezeByHeadNum(oldShape, newShape,
+                               param.selfAttentionParam.kvHeadNum, param.selfAttentionParam.headDim);
+        };
+    }
 
     atb::Node &selfOutLinearParallelNode = opGraph.nodes.at(nodeId++);
-    atb_speed::llama_parallel::LinearParallelParam selfOutLinearParam = param.selfOutLinearParallelParam;
+    atb_speed::common::LinearParallelParam selfOutLinearParam = param.selfOutLinearParallelParam;
     LinearParallel(selfOutLinearParam, &selfOutLinearParallelNode.operation);
-    selfOutLinearParallelNode.inTensorIds = {AttentionTensorIdx::INTERMIDATE_SELF_ATTENTION, AttentionTensorIdx::IN_WEIGHT_OUT, AttentionTensorIdx::IN_SCALE_OUT, AttentionTensorIdx::IN_OFFSET_OUT, AttentionTensorIdx::IN_DESCALE_OUT};
+    selfOutLinearParallelNode.inTensorIds = {
+        AttentionTensorIdx::INTERMIDATE_SELF_ATTENTION, AttentionTensorIdx::IN_WEIGHT_OUT,
+        AttentionTensorIdx::IN_SCALE_OUT, AttentionTensorIdx::IN_OFFSET_OUT, AttentionTensorIdx::IN_DESCALE_OUT
+    };
     selfOutLinearParallelNode.outTensorIds = {AttentionTensorIdx::OUT_ATTENTION};
 
-    return atb::CreateOperation(opGraph, operation);
+    opGraph.inferShapeFunc = [=]
+                (const atb::SVector<atb::TensorDesc> &inTensorDescs, atb::SVector<atb::TensorDesc> &outTensorDescs) {
+        outTensorDescs.at(0) = inTensorDescs.at(0);
+        return atb::NO_ERROR;
+    };
+
+    CREATE_OPERATION(opGraph, operation);
+    return atb::NO_ERROR;
 }
 
-} // namespace llama_parallel
+} // namespace common
 } // namespace atb_speed

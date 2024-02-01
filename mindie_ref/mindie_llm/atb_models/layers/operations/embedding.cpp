@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "llama_parallel/operation/embedding.h"
+#include "layers/operations/embedding.h"
 
 namespace atb_speed {
-namespace llama_parallel {
+namespace common {
 
 enum LayerEmbeddingTensorIdx : uint32_t {
     IN_EMBEDDING_WEIGHTS = 0,
@@ -45,7 +45,8 @@ atb::Status Embedding(const EmbeddingParam &param, atb::Operation **operation)
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
     // 若权重按列切分，则需使用all gather方式收集完整的hidden states
     // 相比不使用all gather会多两个internalTensor和两个node
-    opGraph.internalTensorNum = param.worldSize > 1 ? INTERMEDIATE_TENSOR_ALL_GATHER_COUNT : INTERMEDIATE_TENSOR_NO_ALL_GATHER_COUNT;
+    opGraph.internalTensorNum \
+        = param.worldSize > 1 ? INTERMEDIATE_TENSOR_ALL_GATHER_COUNT : INTERMEDIATE_TENSOR_NO_ALL_GATHER_COUNT;
     opGraph.nodes.resize(param.worldSize > 1 ? NODE_ALL_GATHER_COUNT : NODE_NO_ALL_GATHER_COUNT);
     opGraph.name = "ParallelEmbedding";
 
@@ -53,9 +54,13 @@ atb::Status Embedding(const EmbeddingParam &param, atb::Operation **operation)
     auto &inputIdEmbeddingNode = opGraph.nodes.at(nodeId++);
     atb::infer::GatherParam inputembedinggatherparam;
     inputembedinggatherparam.axis = param.axis;
-    CreateOperation(inputembedinggatherparam, &inputIdEmbeddingNode.operation);
-    inputIdEmbeddingNode.inTensorIds = {LayerEmbeddingTensorIdx::IN_EMBEDDING_WEIGHTS, LayerEmbeddingTensorIdx::IN_INPUT_IDS};
-    inputIdEmbeddingNode.outTensorIds = {param.worldSize > 1 ? LayerEmbeddingTensorIdx::INTERMEDIATE_GATHER : LayerEmbeddingTensorIdx::OUT_HIDDEN_STATES};
+    CREATE_OPERATION(inputembedinggatherparam, &inputIdEmbeddingNode.operation);
+    inputIdEmbeddingNode.inTensorIds = {
+        LayerEmbeddingTensorIdx::IN_EMBEDDING_WEIGHTS, LayerEmbeddingTensorIdx::IN_INPUT_IDS
+    };
+    inputIdEmbeddingNode.outTensorIds = {
+        param.worldSize > 1 ? LayerEmbeddingTensorIdx::INTERMEDIATE_GATHER : LayerEmbeddingTensorIdx::OUT_HIDDEN_STATES
+    };
 
     if (param.worldSize > 1) {
         auto &allGatherNode = opGraph.nodes[nodeId++];
@@ -64,7 +69,7 @@ atb::Status Embedding(const EmbeddingParam &param, atb::Operation **operation)
         allGatherParam.rankSize = param.worldSize;
         allGatherParam.rankRoot = param.rankRoot;
         allGatherParam.backend = param.backend;
-        CreateOperation(allGatherParam, &allGatherNode.operation);
+        CREATE_OPERATION(allGatherParam, &allGatherNode.operation);
         allGatherNode.inTensorIds = {LayerEmbeddingTensorIdx::INTERMEDIATE_GATHER};
         allGatherNode.outTensorIds = {LayerEmbeddingTensorIdx::INTERMEDIATE_ALLGATHER_OUT_ID};
     
@@ -75,7 +80,7 @@ atb::Status Embedding(const EmbeddingParam &param, atb::Operation **operation)
         } else {
             transposeParam.perm = {1, 2, 0, 3};
         }
-        CreateOperation(transposeParam, &transposeNode.operation);
+        CREATE_OPERATION(transposeParam, &transposeNode.operation);
         transposeNode.inTensorIds = {LayerEmbeddingTensorIdx::INTERMEDIATE_ALLGATHER_OUT_ID};
         transposeNode.outTensorIds = {LayerEmbeddingTensorIdx::OUT_HIDDEN_STATES};
     }
@@ -83,14 +88,14 @@ atb::Status Embedding(const EmbeddingParam &param, atb::Operation **operation)
     auto &cosEmbeddingNode = opGraph.nodes.at(nodeId++);
     atb::infer::GatherParam cosEmbeddingGatherParam;
     cosEmbeddingGatherParam.axis = param.axis;
-    CreateOperation(cosEmbeddingGatherParam, &cosEmbeddingNode.operation);
+    CREATE_OPERATION(cosEmbeddingGatherParam, &cosEmbeddingNode.operation);
     cosEmbeddingNode.inTensorIds = {LayerEmbeddingTensorIdx::IN_COS_TABLE, LayerEmbeddingTensorIdx::IN_POSITION_IDS};
     cosEmbeddingNode.outTensorIds = {LayerEmbeddingTensorIdx::OUT_COS_EMBED};
 
     auto &sinEmbeddingNode = opGraph.nodes.at(nodeId++);
     atb::infer::GatherParam sinEmbeddingGatherParam;
     sinEmbeddingGatherParam.axis = param.axis;
-    CreateOperation(sinEmbeddingGatherParam, &sinEmbeddingNode.operation);
+    CREATE_OPERATION(sinEmbeddingGatherParam, &sinEmbeddingNode.operation);
     sinEmbeddingNode.inTensorIds = {LayerEmbeddingTensorIdx::IN_SIN_TABLE, LayerEmbeddingTensorIdx::IN_POSITION_IDS};
     sinEmbeddingNode.outTensorIds = {LayerEmbeddingTensorIdx::OUT_SIN_EMBED};
 
@@ -124,7 +129,8 @@ atb::Status Embedding(const EmbeddingParam &param, atb::Operation **operation)
         return atb::NO_ERROR;
     };
 
-    return atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
+    return atb::NO_ERROR;
 }
-}  // namespace llama_parallel
+}  // namespace common
 }  // namespace atb_speed

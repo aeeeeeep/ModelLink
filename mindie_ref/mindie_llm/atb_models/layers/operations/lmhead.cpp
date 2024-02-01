@@ -1,6 +1,6 @@
 
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,10 @@
 #include <atb/atb_infer.h>
 #include "atb_speed/log.h"
 
-#include "models/llama_parallel/operation/lmhead.h"
+#include "layers/operations/lmhead.h"
 
 namespace atb_speed {
-namespace llama_parallel {
+namespace common {
 
 enum LmHeadTensorIdx : uint32_t {
     IN_HIDDENSTATES = 0,
@@ -42,7 +42,8 @@ atb::Status CreateLmHead(const LmHeadParam &param, atb::Operation **operation, T
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
-    opGraph.internalTensorNum = param.gatherAhead ? config.INTERMEDIATE_TENSOR_COUNT : config.INTERMEDIATE_TENSOR_COUNT - 1;
+    opGraph.internalTensorNum =
+        param.gatherAhead ? config.INTERMEDIATE_TENSOR_COUNT : config.INTERMEDIATE_TENSOR_COUNT - 1;
     opGraph.nodes.resize(param.gatherAhead ? config.NODE_COUNT : config.NODE_COUNT - 1);
     opGraph.name = "LmHead";
 
@@ -52,7 +53,7 @@ atb::Status CreateLmHead(const LmHeadParam &param, atb::Operation **operation, T
         auto &gatherNode = opGraph.nodes.at(nodeId++);
         atb::infer::GatherParam gatherParam;
         gatherParam.axis = param.unpadInputs ? 0 : 1;
-        CreateOperation(gatherParam, &gatherNode.operation);
+        CREATE_OPERATION(gatherParam, &gatherNode.operation);
         gatherNode.inTensorIds = {LmHeadTensorIdx::IN_HIDDENSTATES, LmHeadTensorIdx::IN_INDICES};
         gatherNode.outTensorIds = {config.INTERMEDIATE_GATHER_OUT};
     }
@@ -62,7 +63,7 @@ atb::Status CreateLmHead(const LmHeadParam &param, atb::Operation **operation, T
         atb::infer::SliceParam slicePassParam;
         slicePassParam.offsets = {0, 0, param.hiddenSizePerAttentionHead * param.linearParallelParam.rank};
         slicePassParam.size = {-1, -1, param.hiddenSizePerAttentionHead};
-        CreateOperation(slicePassParam, &sliceNode.operation);
+        CREATE_OPERATION(slicePassParam, &sliceNode.operation);
         sliceNode.inTensorIds = {param.gatherAhead ? config.INTERMEDIATE_GATHER_OUT : LmHeadTensorIdx::IN_HIDDENSTATES};
         sliceNode.outTensorIds = {config.INTERMEDIATE_SLICE_OUT};
     }
@@ -70,10 +71,12 @@ atb::Status CreateLmHead(const LmHeadParam &param, atb::Operation **operation, T
     atb::Node &linearParallelNode = opGraph.nodes.at(nodeId++);
     LinearParallel(param.linearParallelParam, &linearParallelNode.operation);
     linearParallelNode.inTensorIds = {
-        param.linearParallelParam.parallelType == ROW_PARALLEL ? config.INTERMEDIATE_SLICE_OUT : param.gatherAhead ? config.INTERMEDIATE_GATHER_OUT : LmHeadTensorIdx::IN_HIDDENSTATES,
+        param.linearParallelParam.parallelType == ROW_PARALLEL ? config.INTERMEDIATE_SLICE_OUT : \
+            param.gatherAhead ? config.INTERMEDIATE_GATHER_OUT : LmHeadTensorIdx::IN_HIDDENSTATES,
         LmHeadTensorIdx::IN_WEIGHT, LmHeadTensorIdx::IN_SCALE, LmHeadTensorIdx::IN_OFFSET, LmHeadTensorIdx::IN_DESCALE};
     linearParallelNode.outTensorIds = {
-        param.linearParallelParam.parallelType == COLUMN_PARALLEL ? config.INTERMEDIATE_LINEAR_PARALLEL_OUT : LmHeadTensorIdx::OUT_LOGITS
+        param.linearParallelParam.parallelType == COLUMN_PARALLEL ? \
+            config.INTERMEDIATE_LINEAR_PARALLEL_OUT : LmHeadTensorIdx::OUT_LOGITS
     };
 
     if (param.linearParallelParam.parallelType == COLUMN_PARALLEL) {
@@ -84,7 +87,7 @@ atb::Status CreateLmHead(const LmHeadParam &param, atb::Operation **operation, T
         } else {
             transposeParam.perm = {1, 2, 0, 3};
         }
-        CreateOperation(transposeParam, &transposeNode.operation);
+        CREATE_OPERATION(transposeParam, &transposeNode.operation);
         transposeNode.inTensorIds = {config.INTERMEDIATE_LINEAR_PARALLEL_OUT};
         transposeNode.outTensorIds = {LmHeadTensorIdx::OUT_LOGITS};
     }
@@ -93,14 +96,16 @@ atb::Status CreateLmHead(const LmHeadParam &param, atb::Operation **operation, T
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(0);
         auto dimLast = inTensorDescs.at(0).shape.dimNum - 1;
-        if (param.unpadInputs) {
-            outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(2).shape.dims[0];
+        if (param.gatherAhead) {
+            outTensorDescs.at(0).shape.dims[param.unpadInputs ? 0 : 1] = inTensorDescs.at(2).shape.dims[0];
         }
-        outTensorDescs.at(0).shape.dims[dimLast] = inTensorDescs.at(1).shape.dims[0] * param.linearParallelParam.worldSize;
+        outTensorDescs.at(0).shape.dims[dimLast] \
+            = inTensorDescs.at(1).shape.dims[0] * param.linearParallelParam.worldSize;
         return atb::NO_ERROR;
     };
 
-    return atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
+    return atb::NO_ERROR;
 }
 
 class LmHeadNoParallelConfig {

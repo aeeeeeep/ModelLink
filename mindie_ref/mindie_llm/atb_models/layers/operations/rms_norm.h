@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,25 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_LLAMA_PARALLEL_RMS_NORM_H
-#define ATB_SPEED_MODELS_LLAMA_PARALLEL_RMS_NORM_H
+#ifndef ATB_SPEED_MODELS_COMMON_RMS_NORM_H
+#define ATB_SPEED_MODELS_COMMON_RMS_NORM_H
 
 #include "nlohmann/json.hpp"
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
-#include "models/llama_parallel/operation/linear.h"
+#include "layers/operations/linear.h"
 
 namespace atb_speed {
-namespace llama_parallel {
+namespace common {
 
 struct FusionRmsNormParam {
-    int quantType = atb_speed::llama_parallel::NO_QUANT;
+    int quantType = atb_speed::common::NO_QUANT;
     float rmsNormEps = 0;
     float quantInputScale = 1.0f;
     int quantInputOffset = 0;
 };
 
 atb::Status FusionRmsNorm(const FusionRmsNormParam &param, atb::Operation **operation);
-} // namespace llama_parallel
+} // namespace common
 } // namespace atb_speed
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#ifndef ASCEND_SPEED_INFERENCE_LLAMA_PARALLEL_LINEAR_PARALLEL_H
-#define ASCEND_SPEED_INFERENCE_LLAMA_PARALLEL_LINEAR_PARALLE_H
+#ifndef ASCEND_SPEED_INFERENCE_COMMON_LINEAR_PARALLEL_H
+#define ASCEND_SPEED_INFERENCE_COMMON_LINEAR_PARALLE_H
 
 #include <atb/atb_infer.h>
 
 namespace atb_speed {
-namespace llama_parallel {
+namespace common {
 
 enum LinearParallelType : uint32_t {
     UNDEFINED = 0,
@@ -29,7 +29,7 @@ enum LinearParallelType : uint32_t {
 };
 
 struct LinearParallelParam {
-    atb_speed::llama_parallel::FusionLinearParam fusionLinearParam;
+    atb_speed::common::FusionLinearParam fusionLinearParam;
     int parallelType = UNDEFINED;
     int rank = 0;
     int worldSize = 1;
@@ -38,7 +38,7 @@ struct LinearParallelParam {
 };
 
 atb::Status LinearParallel(const LinearParallelParam &param, atb::Operation **operation);
-} // namespace llama_parallel
+} // namespace common
 } // namespace atb_speed
 
 #endif

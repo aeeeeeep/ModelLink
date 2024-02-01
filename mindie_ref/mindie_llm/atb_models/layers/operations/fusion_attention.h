@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-#ifndef ATB_SPEED_MODELS_LLAMA_PARALLEL_ATTENTION_H
-#define ATB_SPEED_MODELS_LLAMA_PARALLEL_ATTENTION_H
+#ifndef ATB_SPEED_MODELS_COMMON_ATTENTION_H
+#define ATB_SPEED_MODELS_COMMON_ATTENTION_H
 
 #include <atb/atb_infer.h>
 #include "atb_speed/log.h"
 
 namespace atb_speed {
-namespace llama_parallel {
+namespace common {
 struct FusionAttentionParam {
     bool isFA = true;
     // QKV linear param
     bool isPack = true;
     int isGroupedQueryAttention = false;
-    atb_speed::llama_parallel::FusionLinearParam qkvLinearParam;
+    atb_speed::common::FusionLinearParam qkvLinearParam;
     // rope param
     int rotaryCoeff = 2;
     // self attention param
@@ -36,16 +36,15 @@ struct FusionAttentionParam {
     atb::infer::SelfAttentionParam selfAttentionParam;
     atb::infer::PagedAttentionParam pageAttentionParam;
     // self out linear param
-    atb_speed::llama_parallel::LinearParallelParam selfOutLinearParallelParam;
+    atb_speed::common::LinearParallelParam selfOutLinearParallelParam;
 };
 
 class FusionAttention {
 public:
-    virtual atb::Status Attention(const FusionAttentionParam &param, atb::Operation **operation) final;
-    virtual atb::Status QKVLinearSplit(const FusionAttentionParam &param, atb::Operation **operation) final;
-    virtual atb::Status SelfAttention(const FusionAttentionParam &param, atb::Operation **operation) final;
-    std::shared_ptr<int64_t> batchNumPtr = std::make_shared<int64_t>(0);
+    static atb::Status Attention(const FusionAttentionParam &param, atb::Operation **operation);
+    static atb::Status QKVLinearSplit(const FusionAttentionParam &param, atb::Operation **operation);
+    static atb::Status SelfAttention(const FusionAttentionParam &param, atb::Operation **operation);
 };
-} // namespace llama_parallel
+} // namespace common
 } // namespace atb_speed
 #endif
