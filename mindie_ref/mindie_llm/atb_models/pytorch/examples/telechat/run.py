@@ -79,7 +79,7 @@ def infer_precision():
         model, tokenizer = load_model(args)
     if args.run_parallel:
         model, tokenizer = load_model_parallel(args)
-        is_printing = torch.distributed.get_rank()
+        is_printing = (torch.distributed.get_rank() == 0)
 
     torch.npu.set_compile_mode(jit_compile=False)
     option = {}
@@ -195,15 +195,19 @@ def get_args():
     group.add_argument(
         '--checkpoint', type=str, metavar='DIR', default="")
     group.add_argument(
-        '--tokenizer-path', type=str, metavar='DIR', default="")
+        '--run-single', action = "store_true", help = "run float model")
     group.add_argument(
-        '--run_single', action = "store_true", help = "run float model")
+        '--run-parallel', action = "store_true", help = "run parallel + float model")
     group.add_argument(
-        '--run_parallel', action = "store_true", help = "run parallel + float model")
+        '--run-precision', action = "store_true", help = "run precision")
+    group.add_argument(
+        '--run-performance', action = "store_true", help = "run performance")
     args = parser.parse_args()
     return args
 
 if __name__ == '__main__':
-
-    infer_precision()
-    performance_test()
+    args = get_args()
+    if args.run_precision:
+        infer_precision()
+    elif args.run_performance:
+        performance_test()

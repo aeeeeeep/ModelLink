@@ -48,7 +48,7 @@ if ATB_SPEED_HOME_PATH is None:
 LIB_PATH = os.path.join(ATB_SPEED_HOME_PATH ,"lib/libatb_speed_torch.so")
 torch.classes.load_library(LIB_PATH)
 
-RUN_QUANT_MODEL = os.environ.get("RUN_QUANT_MODEL", True)
+RUN_QUANT_MODEL = os.environ.get("RUN_QUANT_MODEL", 0)
 QUANT_WEIGHT_PATH = os.environ.get("QUANT_WEIGHT_PATH", "")
 MAX_SEQ_LEN = os.environ.get("MAX_SEQ_LEN", 2048)
 FLOAT_QUERY_LAYERS = []
