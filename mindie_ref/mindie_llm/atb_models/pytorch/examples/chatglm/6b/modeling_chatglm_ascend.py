@@ -30,8 +30,8 @@ from transformers.utils import logging
 from transformers.generation.logits_process import LogitsProcessor
 from transformers.generation.utils import LogitsProcessorList, StoppingCriteriaList, GenerationConfig
 
-from .configuration_chatglm import ChatGLMConfig
 from manager import ModeManager
+from .configuration_chatglm import ChatGLMConfig
 
 
 ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")

@@ -17,8 +17,7 @@ import os
 import shutil
 
 from transformers import AutoConfig
-
-from .manager import ModeManager
+from manager import ModeManager
 
 
 def parse_args():
@@ -56,6 +55,6 @@ if __name__ == "__main__":
     shutil.copy(args.model_file_cut, os.path.join(
         args.model_path, "modeling_chatglm.py"))
 
-    manager = ModeManager.get_manager(mode)
     config = AutoConfig.from_pretrained(args.model_path, trust_remote_code=True)
-    manager(config, args.model_path).process_weights(args.tp_size)
+    manager = ModeManager.get_manager(mode)
+    manager(config, pretrained_model_path=args.model_path, world_size=args.tp_size).process_weights(args.tp_size)

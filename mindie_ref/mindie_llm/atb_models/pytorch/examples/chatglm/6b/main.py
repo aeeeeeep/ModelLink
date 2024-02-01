@@ -145,14 +145,14 @@ def get_model(args):
         torch.distributed.init_process_group("hccl")
         local_rank = torch.distributed.get_rank()
         torch_npu.npu.set_device(args.device + local_rank)
-        part_model_path = Path(args.model_path).join(f"tensor_parallel_tp{args.tp_size}/part_model/{local_rank}")
-        shutil.copy(args.model_file, Path(part_model_path).join("modeling_chatglm.py"))
+        part_model_path = Path(args.model_path).joinpath(f"tensor_parallel_tp{args.tp_size}/part_model/{local_rank}")
+        shutil.copy(args.model_file, Path(part_model_path).joinpath("modeling_chatglm.py"))
         model = AutoModel.from_pretrained(part_model_path,
                                           trust_remote_code=True, torch_dtype=torch.half).npu()
     else:
         local_rank = 0
         torch.npu.set_device(args.device)
-        shutil.copy(args.model_file, Path(args.model_path).join("modeling_chatglm.py"))
+        shutil.copy(args.model_file, Path(args.model_path).joinpath("modeling_chatglm.py"))
         model = AutoModel.from_pretrained(args.model_path,
                                           trust_remote_code=True, torch_dtype=torch.half).npu()
 

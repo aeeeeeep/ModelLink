@@ -149,7 +149,7 @@ class BaseManager(metaclass=ABCMeta):
             sliced_tensor_list = [tensor] * tp_size
         return sliced_tensor_list
 
-    def slice_tensors(self, state_dict, tp_size, weight_type) -> List[Dict[str, torch.Tensor]]:
+    def slice_tensors(self, state_dict, tp_size) -> List[Dict[str, torch.Tensor]]:
         """
         Slice tensors
         """
@@ -194,8 +194,7 @@ class Float(BaseManager):
                 f"[info]: The parallel float weights has exist in '{self.float_weight_path}'. Please remove it if you want to process float weights again.")
         else:
             state_dict = self.load_primal_weights()
-            state_dict_list = self.slice_tensors(
-                state_dict, tp_size, weight_type="weights")
+            state_dict_list = self.slice_tensors(state_dict, tp_size)
             self.save_sliced_weights(state_dict_list, tp_size)
             print(
                 f"[info]: The parallel float weights has been saved to '{self.float_weight_path}'.")
