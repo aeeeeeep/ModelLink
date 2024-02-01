@@ -173,11 +173,7 @@ weight_offset.npy  weight_scale.npy
   ```
   cpupower frequency-set -g performance
   ```
-<<<<<<< HEAD
 
-=======
-  
->>>>>>> master
 - 推理前开启如下环境变量
 
   ```shell
