@@ -70,7 +70,7 @@ def parse_args():
     parser.add_argument(
         "--model_file",
         type=str,
-        default="patches/models/modeling_chatglm_fa.py",
+        default="patches/models/modeling_chatglm_ascend.py",
         help="The implementation of model"
     )
     parser.add_argument(
@@ -79,23 +79,6 @@ def parse_args():
         default='',
         help="The path to ceval dataset"
     )
-
-    parser.add_argument(
-        "--set_case_pair",
-        type=int,
-        default=0,
-        help="set specified case_pair if 1",
-    )
-    parser.add_argument(
-        "--seqlen_in_range",
-        default=[5, 10],
-        help="input seqlen ranges from 2^5 to 2^10",
-    )
-    parser.add_argument(
-        "--seqlen_out_range",
-        default=[5, 10],
-        help="output seqlen ranges from 2^5 to 2^10",
-    )
     parser.add_argument(
         "--seqlen_in_pair",
         default=[256, 512, 1024],
@@ -103,7 +86,7 @@ def parse_args():
     )
     parser.add_argument(
         "--seqlen_out_pair",
-        default=[64, 128, 256],
+        default=[256, 512, 1024],
         help="specified case",
     )
     parser.add_argument(
@@ -279,18 +262,10 @@ def performance(args, tokenizer, model):
             f.write(
                 f"Batch,InputSeqLen(Encoding),OutputSeqLen(Decoding),TimeOfFirstToken(ms),TimePerToken(ms),TimeTotal(s),Throughput(tokens/s),ThroughputE2E(tokens/s)\n")
 
-    if args.set_case_pair:
-        seq_len_in_level = check_lists(args.seqlen_in_pair)
-        seq_len_out_level = check_lists(args.seqlen_out_pair)
-        assert len(seq_len_in_level) == len(seq_len_out_level)
-        seq_lens = list(zip(seq_len_in_level, seq_len_out_level))
-    else:
-        seq_len_in_level = check_lists(args.seqlen_in_range)
-        seq_len_out_level = check_lists(args.seqlen_out_range)
-        seq_lens = []
-        for i in range(seq_len_in_level[0], seq_len_in_level[1] + 1):
-            for j in range(seq_len_out_level[0], seq_len_out_level[1] + 1):
-                seq_lens.append((2 ** i, 2 ** j))
+    seq_len_in_level = check_lists(args.seqlen_in_pair)
+    seq_len_out_level = check_lists(args.seqlen_out_pair)
+    assert len(seq_len_in_level) == len(seq_len_out_level)
+    seq_lens = list(zip(seq_len_in_level, seq_len_out_level))
 
     texts = [
         "中国的首都在哪里",
