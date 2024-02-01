@@ -195,7 +195,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
         <td>33B</td>
         <td>4x8</td>
         <td>FP16</td>
-        <td>621</td>
+        <td>635</td>
         <td>776</td>
         <td>
         <a href="sources/images/llama/llama33b-layer20-loss-with-weight.png">Loss</a> </td>
@@ -217,7 +217,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>7B</td>
       <td>1x8</td>
       <td>BF16 </td>
-      <td> 2662 </td>
+      <td> 2681 </td>
       <td> 2884 </td>
       <td> <a href="sources/images/llama2/llama2-7b-tp8pp1mbs4gbs16-cann1115-Megatron-GPU-loss-releative.png">Loss</a> </td>
       <td> <a href="examples/llama2/pretrain_llama2_7b_ptd.sh">训练</a> </td>
@@ -226,7 +226,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>13B</td>
       <td>1x8</td>
       <td>BF16 </td>
-      <td> 1550 </td>
+      <td> 1485 </td>
       <td> 1750 </td>
       <td> <a href="/sources/images/llama2/llama2_13b_bf16_loss_absolute.png">Loss</a> </td>
       <td> <a href="examples/llama2/pretrain_llama2_13B_ptd_8p.sh">训练</a> </td>
