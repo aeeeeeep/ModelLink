@@ -127,8 +127,6 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
     faWithROPEParam.selfAttentionKvCacheParam.kvHeadNum = param.numHeadsPerPartition;
     faWithROPEParam.selfAttentionKvCacheParam.qScale = param.preScale;
     faWithROPEParam.selfAttentionKvCacheParam.qkScale = param.postScale;
-    faWithROPEParam.selfAttentionKvCacheParam.isFusion = true;
-    faWithROPEParam.selfAttentionKvCacheParam.withCache = true;
     if (param.isEncoder) {
         faWithROPEParam.selfAttentionKvCacheParam.coderType = atb::infer::SelfAttentionParam::ENCODER;
     } else {
