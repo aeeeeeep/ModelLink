@@ -7,8 +7,7 @@ export ATB_USE_TILING_COPY_STREAM=1
 
 export PYTORCH_NPU_ALLOC_CONF="max_split_size_mb:2048"
 
-export RUN_QUANT_MODEL=1
-
+SCRIPT_DIR=$(cd $(diname $0); pwd)
 FLOAT_MODEL_PATH=""
 FLOAT_PART_MODEL_PATH=""
 QUANT_MODEL_PATH=""
@@ -61,12 +60,68 @@ function fn_cut_quant() {
     python handel_weights.py --input-path $QUANT_MODEL_PATH --output-path $QUANT_PART_MODEL_PATH --handle-type cut_quant
 }
 
-cp $TRANSFORMER_PACKAGE_PATH/modeling_telechat.py $TRANSFORMER_PACKAGE_PATH/modeling_telechat.py.bak
-cp modeling_quant_parallel.py $TRANSFORMER_PACKAGE_PATH/modeling_telechat.py
+function fn_main() {
+    echo "------- run.sh --------"
 
-# fn_cut_float
-# fn_cut_quant
-# fn_run_single
-fn_run_parallel
+    cd $SCRIPT_DIR
 
-cp $TRANSFORMER_PACKAGE_PATH/modeling_telechat.py.bak $TRANSFORMER_PACKAGE_PATH/modeling_telechat.py
+    until [[ -z "$1" ]]
+    do {
+        arg2=$1
+        case "${arg2}" in
+        "--run_performance=0")
+            RUNNING_MODE="--run-precision"
+            ;;
+        "--run_performance=1")
+            RUNNING_MODE="--run-performance"
+            ;;
+        "--run_parallel=0")
+            RUN_PARALLEL=0
+            ;;
+        "--run_parallel=1")
+            RUN_PARALLEL=1
+            ;;
+        "--run_quant=0")
+            RUN_QUANT_MODEL=0
+            ;;
+        "--run_quant=1")
+            RUN_QUANT_MODEL=1
+            ;;
+        "--cut_float")
+            fn_cut_float
+            ;;
+        "--cut_quant")
+            fn_cut_quant
+            ;;
+        "--help")
+            echo "bash run.sh --run_performance=0/1 | --run_parallel=0/1 | --run_quant=0/1 | [--cut_float | --cut_quant]"
+            ;;
+        esac
+        shift
+    }
+    done
+
+    export RUN_QUANT_MODEL=$RUN_QUANT_MODEL
+
+    cp $TRANSFORMER_PACKAGE_PATH/modeling_telechat.py $TRANSFORMER_PACKAGE_PATH/modeling_telechat.py.bak
+
+    if [ $RUN_QUANT_MODEL -eq 1 ]; then
+        echo "Copying quant modeling..."
+        cp modeling_quant_parallel.py $TRANSFORMER_PACKAGE_PATH/modeling_telechat.py
+    else
+        echo "Copying float modeling..."
+        cp modeling_float_parallel.py $TRANSFORMER_PACKAGE_PATH/modeling_telechat.py
+    fi
+
+    if [ $RUN_PARALLEL -eq 1 ]; then
+        echo "running on multiple npu..."
+        fn_run_parallel
+    else
+        echo "running on single npu..."
+        fn_run_single
+    fi
+
+    cp $TRANSFORMER_PACKAGE_PATH/modeling_telechat.py.bak $TRANSFORMER_PACKAGE_PATH/modeling_telechat.py
+}
+
+fn_main "$@"
