@@ -60,7 +60,10 @@ class BaseLauncher:
         self.logger_path = os.path.join(atb_speed_config.model.log_dir, self.logger_name)
         self.logger = init_logger(logging.getLogger(f"device_{self.local_rank}"), self.logger_path)
         if atb_speed_config.model.bind_cpu:
-            self.bind_cpu()
+            try:
+                self.bind_cpu()
+            except Exception as err:
+                self.logger.error(f"Failed to bind cpu, skip to bind cpu. \nDetail:{err}")
         self.set_torch_env(self.device_ids, options)
         self.model, self.tokenizer = self.init_model()
         self.logger.info(self.model.device)
