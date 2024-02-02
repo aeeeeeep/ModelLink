@@ -37,7 +37,7 @@ class Gsm8kEval(DatasetEval):
         self.batch_size = batch_size
 
     def eval(self, chat: Chat) -> (dict, pd.DataFrame):
-        answer_result = {}
+        final_result = {}
         score_datas = []
         total_acc_n = 0
         total_n = 0
@@ -88,13 +88,13 @@ class Gsm8kEval(DatasetEval):
             if rank == 0:
                 total_n += len(gsm8k_list)
                 total_acc_n += acc_n
-                answer_result['Gsm8k_dataset'] = subject_result
+                final_result['Gsm8k_dataset'] = subject_result
                 score_datas.append(['Gsm8k_dataset', len(gsm8k_list), acc_n / len(gsm8k_list)])
         if rank == 0:
             logger.info(f"gsm8k acc = {total_acc_n}/{total_n}={check_divisible_by_zero(total_acc_n, total_n)}")
             score_datas.append(["total", total_n, total_acc_n / total_n])
         score_df = pd.DataFrame(columns=['subject', 'question_n', 'acc'], data=score_datas)
-        return answer_result, score_df
+        return final_result, score_df
 
     def top_k_eval(self, ) -> (dict, pd.DataFrame):
         pass
