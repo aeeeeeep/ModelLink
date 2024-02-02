@@ -57,10 +57,10 @@ def cut_model_float(args):
 
     tokenizer.save_pretrained(f"{args.output_path}/tokenizer")
 
-    state_dict_list = cut_model_float(model.state_dict(), args.world_size)
+    state_dict_list = cut_weights_float(model.state_dict(), args.world_size)
 
     model_config = model.config
-    model_config.world_size = arg.world_size
+    model_config.world_size = args.world_size
     create_model = TelechatForCausalLM(model_config).half().to(device)
     for i in range(args.world_size):
         create_model.load_state_dict(state_dict_list[i])
