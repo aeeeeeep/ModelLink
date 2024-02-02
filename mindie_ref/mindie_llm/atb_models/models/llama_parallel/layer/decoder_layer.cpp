@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#include "models/llama_parallel/operation/rms_norm.h"
-#include "models/llama_parallel/operation/linear.h"
-#include "models/llama_parallel/operation/linear_parallel.h"
-#include "models/llama_parallel/operation/attention.h"
-#include "models/llama_parallel/operation/mlp.h"
+#include "layers/operations/rms_norm.h"
+#include "layers/operations/linear.h"
+#include "layers/operations/linear_parallel.h"
+#include "layers/operations/fusion_attention.h"
+#include "layers/operations/mlp.h"
 #include "models/llama_parallel/layer/decoder_layer.h"
 
 namespace atb_speed {
@@ -46,14 +46,14 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     atb::Node &mlpParallelNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpResidualAddNode = opGraph.nodes.at(nodeId++);
 
-    atb_speed::llama_parallel::FusionRmsNormParam fusionRmsNormParam;
+    atb_speed::common::FusionRmsNormParam fusionRmsNormParam;
     fusionRmsNormParam.quantType = param.quantType;
     fusionRmsNormParam.rmsNormEps = param.rmsNormEps;
     FusionRmsNorm(fusionRmsNormParam, &inputNormNode.operation);
     inputNormNode.inTensorIds = {IN_HIDDEN_STATES, IN_INPUT_NORM_WEIGHT, IN_BETA};
     inputNormNode.outTensorIds = {INTERMEDIATE_INPUT_NORM_OUT};
 
-    atb_speed::llama_parallel::FusionAttentionParam fusionAttentionParam;
+    atb_speed::common::FusionAttentionParam fusionAttentionParam;
     // QKV linear param
     fusionAttentionParam.isPack = param.isPack;
     fusionAttentionParam.isGroupedQueryAttention = param.numAttentionHeadsPerRank != param.numKeyValueHeadsPerRank;
@@ -67,10 +67,14 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     fusionAttentionParam.selfAttentionParam.headNum = param.numAttentionHeadsPerRank;
     fusionAttentionParam.selfAttentionParam.kvHeadNum = param.numKeyValueHeadsPerRank;
     fusionAttentionParam.selfAttentionParam.headDim = param.hiddenSizePerAttentionHead;
+    if (param.hiddenSizePerAttentionHead == 0) {
+        return atb::ERROR_INVALID_GRAPH;
+    }
     fusionAttentionParam.selfAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
     if (param.isFA) {
         fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
-        fusionAttentionParam.selfAttentionParam.coderType = param.isPrefill ? atb::infer::SelfAttentionParam::CoderType::ENCODER : atb::infer::SelfAttentionParam::CoderType::DECODER;
+        fusionAttentionParam.selfAttentionParam.coderType = param.isPrefill ? \
+            atb::infer::SelfAttentionParam::CoderType::ENCODER : atb::infer::SelfAttentionParam::CoderType::DECODER;
     } else {
         fusionAttentionParam.selfAttentionParam.isEncoder = param.isPrefill;
     }
@@ -78,13 +82,16 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     fusionAttentionParam.pageAttentionParam.kvHeadNum = param.numKeyValueHeadsPerRank;
     fusionAttentionParam.pageAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
     fusionAttentionParam.pageAttentionParam.isSupportAlibi = param.isBF16;
+    if (param.isBF16) {
+        fusionAttentionParam.pageAttentionParam.maskType = atb::infer::PagedAttentionParam::MaskType::MASK_TYPE_ALIBI;
+    }
     // self out linear param
-    fusionAttentionParam.selfOutLinearParallelParam.parallelType = atb_speed::llama_parallel::ROW_PARALLEL;
+    fusionAttentionParam.selfOutLinearParallelParam.parallelType = atb_speed::common::ROW_PARALLEL;
     fusionAttentionParam.selfOutLinearParallelParam.fusionLinearParam.quantType = param.quantType;
     fusionAttentionParam.selfOutLinearParallelParam.rank = param.rank;
     fusionAttentionParam.selfOutLinearParallelParam.worldSize = param.worldSize;
     fusionAttentionParam.selfOutLinearParallelParam.backend = param.backend;
-    atb_speed::llama_parallel::FusionAttention fusionAttentionObj;
+    atb_speed::common::FusionAttention fusionAttentionObj;
     fusionAttentionObj.Attention(fusionAttentionParam, &attentionNode.operation);
     attentionNode.inTensorIds = {
         INTERMEDIATE_INPUT_NORM_OUT,
@@ -119,7 +126,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
 
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CreateOperation(addParam, &selfResidualAddNode.operation);
+    CREATE_OPERATION(addParam, &selfResidualAddNode.operation);
     selfResidualAddNode.inTensorIds = {
         IN_HIDDEN_STATES,
         INTERMEDIATE_ATTENTION_OUT
@@ -130,11 +137,11 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     selfNormNode.inTensorIds = {INTERMEDIATE_RESIDUAL_ADD_OUT, IN_ATTENTION_NORM_WEIGHT, IN_BETA};
     selfNormNode.outTensorIds = {INTERMEDIATE_ATTENTION_NORM_OUT};
 
-    atb_speed::llama_parallel::MlpParam mlpParam;
+    atb_speed::common::MlpParam mlpParam;
     mlpParam.isPack = param.isPack;
     mlpParam.gateUpLinearParam.quantType = param.quantType;
     mlpParam.downLinearParallelParam.fusionLinearParam.quantType = param.quantType;
-    mlpParam.downLinearParallelParam.parallelType = atb_speed::llama_parallel::ROW_PARALLEL;
+    mlpParam.downLinearParallelParam.parallelType = atb_speed::common::ROW_PARALLEL;
     mlpParam.downLinearParallelParam.rank = param.rank;
     mlpParam.downLinearParallelParam.worldSize = param.worldSize;
     mlpParam.downLinearParallelParam.backend = param.backend;
@@ -156,7 +163,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     };
     mlpParallelNode.outTensorIds = {INTERMEDIATE_MLP_OUT};
 
-    CreateOperation(addParam, &mlpResidualAddNode.operation);
+    CREATE_OPERATION(addParam, &mlpResidualAddNode.operation);
     mlpResidualAddNode.inTensorIds = {
         INTERMEDIATE_RESIDUAL_ADD_OUT,
         INTERMEDIATE_MLP_OUT
@@ -169,7 +176,8 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
         return atb::NO_ERROR;
     };
 
-    return atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
+    return atb::NO_ERROR;
 }
 
 DecoderLayerBinder::DecoderLayerBinder() {}

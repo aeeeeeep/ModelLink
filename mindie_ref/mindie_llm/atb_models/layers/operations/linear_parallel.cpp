@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 #include <cmath>
 #include <numeric>
 #include "atb_speed/log.h"
-#include "models/llama_parallel/operation/linear.h"
-#include "models/llama_parallel/operation/linear_parallel.h"
+#include "layers/operations/linear.h"
+#include "layers/operations/linear_parallel.h"
 
 namespace atb_speed {
-namespace llama_parallel {
+namespace common {
 
 static const uint64_t IN_TENSOR_COUNT = 5;
 static const uint64_t OUT_TENSOR_COUNT = 1;
@@ -49,9 +49,12 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
     size_t nodeId = 0;
 
     atb::Node &linearNode = opGraph.nodes.at(nodeId++);
-    atb_speed::llama_parallel::FusionLinearParam linearParam = param.fusionLinearParam;
+    atb_speed::common::FusionLinearParam linearParam = param.fusionLinearParam;
     FusionLinear(linearParam, &linearNode.operation);
-    linearNode.inTensorIds = {LinearParallelTensorIdx::IN_INPUT, LinearParallelTensorIdx::IN_WEIGHT, LinearParallelTensorIdx::IN_SCALE, LinearParallelTensorIdx::IN_OFFSET, LinearParallelTensorIdx::IN_DESCALE};
+    linearNode.inTensorIds = {
+        LinearParallelTensorIdx::IN_INPUT, LinearParallelTensorIdx::IN_WEIGHT, LinearParallelTensorIdx::IN_SCALE,
+        LinearParallelTensorIdx::IN_OFFSET, LinearParallelTensorIdx::IN_DESCALE
+    };
     linearNode.outTensorIds = {LinearParallelTensorIdx::INTERMIDATE_LINEAR_OUT};
 
     if (param.parallelType == ROW_PARALLEL) {
@@ -60,7 +63,7 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
         allReduceParam.rank = param.rank;
         allReduceParam.rankSize = param.worldSize;
         allReduceParam.backend = param.backend;
-        CreateOperation(allReduceParam, &allReduceNode.operation);
+        CREATE_OPERATION(allReduceParam, &allReduceNode.operation);
         allReduceNode.inTensorIds = {LinearParallelTensorIdx::INTERMIDATE_LINEAR_OUT};
         allReduceNode.outTensorIds = {LinearParallelTensorIdx::OUT_LINEAR_PARALLEL};
     } else {
@@ -69,12 +72,13 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
         allGatherParam.rank = param.rank;
         allGatherParam.rankSize = param.worldSize;
         allGatherParam.backend = param.backend;
-        atb::CreateOperation(allGatherParam, &allGatherNode.operation);
+        CREATE_OPERATION(allGatherParam, &allGatherNode.operation);
         allGatherNode.inTensorIds = {LinearParallelTensorIdx::INTERMIDATE_LINEAR_OUT};
         allGatherNode.outTensorIds = {LinearParallelTensorIdx::OUT_LINEAR_PARALLEL};
     }
 
-    return atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
+    return atb::NO_ERROR;
 }
 
 atb::Status LinearParallel(const LinearParallelParam &param_, atb::Operation **operation)
@@ -89,5 +93,5 @@ atb::Status LinearParallel(const LinearParallelParam &param_, atb::Operation **o
     }
 }
 
-} // namespace llama_parallel
+} // namespace common
 } // namespace atb_speed

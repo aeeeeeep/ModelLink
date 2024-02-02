@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,13 +24,20 @@ namespace llama_parallel {
 class DecoderModel : public Model {
 public:
     struct Param {
-        bool isFA = true;                    // isFA为true则使用Flash Attention; 反之，则使用Paged Attention
-        bool isPrefill = false;              // isPrefill为true时为全量阶段，encoder的isPrefill参数应为true; isPrefill为false时为增量阶段，decoder的isPrefill参数应为false
-        bool isBF16 = false;                 // isBF16为true时采用BF16精度; 反之，则采用FP16精度
-        bool isPack = true;                  // isPack为true时QKV和MLP中的gate和up权重合并; 反之，则权重不合并
-        bool isEmbeddingParallel = false;    // isEmbeddingParallel为true时，embedding的权重在hiddenSize维度进行切分; 反之，则不对权重进行切分; 测试表明embedding切分并不会带来性能提升
-        bool isLmHeadParallel = true;        // isLmHeadParallel为true时，LmHead的权重在vacobSize维度进行切分; 反之，则不对权重进行切分
-        int quantType = 0;                   // 0 - No quant; 1- Quant in RmsNorm，dequant in Linear; 2 - Both quant and dequant in Linear
+        // isFA为true则使用Flash Attention; 反之，则使用Paged Attention
+        bool isFA = true;
+        // isPrefill为true时为全量阶段，encoder的isPrefill参数应为true; isPrefill为false时为增量阶段，decoder的isPrefill参数应为false
+        bool isPrefill = false;
+        // isBF16为true时采用BF16精度; 反之，则采用FP16精度
+        bool isBF16 = false;
+        // isPack为true时QKV和MLP中的gate和up权重合并; 反之，则权重不合并
+        bool isPack = true;
+        // isEmbeddingParallel为true时，embedding的权重在hiddenSize维度进行切分; 反之，则不对权重进行切分; 测试表明embedding切分并不会带来性能提升
+        bool isEmbeddingParallel = false;
+        // isLmHeadParallel为true时，LmHead的权重在vacobSize维度进行切分; 反之，则不对权重进行切分
+        bool isLmHeadParallel = true;
+        // 0 - No quant; 1- Quant in RmsNorm，dequant in Linear; 2 - Both quant and dequant in Linear
+        int quantType = 0;
         float rmsNormEps = 0;
         int numAttentionHeadsPerRank = 0;
         int hiddenSizePerAttentionHead = 0;
