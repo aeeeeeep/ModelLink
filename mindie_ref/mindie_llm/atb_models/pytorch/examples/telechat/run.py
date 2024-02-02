@@ -100,6 +100,7 @@ def infer_precision():
             torch.npu.synchronize()
             end_time_model = time.time()
             output_str = tokenizer.decode(output[0].tolist()).split("<_bot>")[-1]
+            print_(is_printing, context)
             print_(is_printing, output_str)
             torch.npu.synchronize()
             end_time_e2e = time.time()

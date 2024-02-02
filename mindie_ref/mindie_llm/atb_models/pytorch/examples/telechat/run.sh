@@ -48,9 +48,21 @@ function fn_run_single() {
         "$RUNNING_MODE"
 }
 
+function fn_cut_float() {
+    cp modeling_float_parallel_cut.py $TRANSFORMER_PACKAGE_PATH/modeling_telechat.py
+    python handel_weights.py --input-path $FLOAT_MODEL_PATH --output-path $FLOAT_PART_MODEL_PATH --handel_type cut_float
+}
+
+function fn_cut_quant() {
+    cp modeling_quant_parallel.py $TRANSFORMER_PACKAGE_PATH/modeling_telechat.py
+    python handel_weights.py --input-path $QUANT_MODEL_PATH --output-path $QUANT_PART_MODEL_PATH --handel_type cut_quant
+}
+
 cp $TRANSFORMER_PACKAGE_PATH/modeling_telechat.py $TRANSFORMER_PACKAGE_PATH/modeling_telechat.py.bak
 cp modeling_quant_parallel.py $TRANSFORMER_PACKAGE_PATH/modeling_telechat.py
 
+# fn_cut_float
+# fn_cut_quant
 # fn_run_single
 fn_run_parallel
 

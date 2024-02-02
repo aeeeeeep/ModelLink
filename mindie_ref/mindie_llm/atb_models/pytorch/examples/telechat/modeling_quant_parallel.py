@@ -468,6 +468,22 @@ TELECHAT_INPUTS_DOCSTRING = r"""
     TELECHAT_START_DOCSTRING,
 )
 
+def process_deq_scale(deq_scale_dict):
+    new_deq_scale_dict = {}
+    for key, deq_scale in deq_scale_dict.items():
+        new_deq_scale = np.frombuffer(deq_scale.numpy().tobytes(), dtype=np.int32)
+        new_deq_scale_dict.setdefault(key, torch.tensor(new_deq_scale.astype(np.int64)))
+    return new_deq_scale_dict
+
+def bias_correction_new(fp_bias, quant_weight, input_offset, deq_scale):
+    bias_correction = fp_bias.npu() / deq_scale.npu() - quant_weight.to(torch.float32).npu().sum(dim=1) * float(input_offset)
+    return bias_correction
+
+def get_bias_correction_dict(fp_bias_dict, quant_weight_dict, input_offset_dict, deq_scale_dict):
+    bias_dict = {}
+    for k in fp_bias_dict.keys():
+        bias_dict[k] = bias_correction_new(fp_bias_dict[k], quant_weight_dict[k], input_offset_dict[k], deq_scale_dict[k])
+    return bias_dict
 
 class TelechatModel(TelechatPreTrainedModel):
     def __init__(self, config: TelechatConfig):
@@ -528,6 +544,9 @@ class TelechatModel(TelechatPreTrainedModel):
             self.weight_scale_dict = np.load(os.path.join(quant_param_path, "weight_scale.npy"), allow_pickle=True).item()
             self.deq_scale_dict = np.load(os.path.join(quant_param_path, "deq_scale.npy"), allow_pickle=True).item()
             self.fp_bias_dict = np.load(os.path.join(quant_param_path, "fp_bias.npy"), allow_pickle=True).item()
+            if self.world_size == 1:
+                self.fp_bias_dict = get_bias_correction_dict(self.fp_bias_dict, self.quant_weight_dict, self.input_offset_dict, self.deq_scale_dict)
+                self.deq_scale_dict = process_deq_scale(self.deq_scale_dict)
         
         zero_list = [ 0 for _ in range(self.num_hidden_layers)]
         qkv_input_scale = zero_list[:]
