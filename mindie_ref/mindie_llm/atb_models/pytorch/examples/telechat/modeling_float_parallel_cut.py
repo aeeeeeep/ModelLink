@@ -51,90 +51,6 @@ TELECHAT_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "bigscience/telechat",
 ]
 
-############## flash attention, changed by ZihanWang
-try:
-    from einops import rearrange
-except ImportError:
-    rearrange = None
-
-use_flash_attn = True
-try:
-    from flash_attn.flash_attn_interface import flash_attn_unpadded_func
-except ImportError:
-    try:
-        from flash_attn.flash_attn_interface import flash_attn_varlen_func as flash_attn_unpadded_func
-    except ImportError:
-        flash_attn_unpadded_func = None
-# from .position_embedding import RotaryEmbedding, apply_rotary_pos_emb_torch, apply_rotary_pos_emb
-
-
-###############################################################
-
-################## flash-attention, changed by ZihanWang ######################
-class FlashSelfAttention(torch.nn.Module):
-    """Implement the scaled dot product attention with softmax.
-    Arguments
-    ---------
-        softmax_scale: The temperature to use for the softmax attention.
-                      (default: 1/sqrt(d_keys) where d_keys is computed at
-                      runtime)
-        attention_dropout: The dropout rate to apply to the attention
-                           (default: 0.0)
-    """
-
-    def __init__(self, causal=False, softmax_scale=None, attention_dropout=0.0,
-                 device=None, dtype=None):
-        super().__init__()
-        assert flash_attn_unpadded_func is not None, ('Please install FlashAttention first, '
-                                                      'e.g., with pip install flash-attn')
-        assert rearrange is not None, 'Please install einops first, e.g., with pip install einops'
-        self.causal = causal
-        self.softmax_scale = softmax_scale
-        self.dropout_p = attention_dropout
-
-    def forward(self, q, k, v):
-        """Implements the multihead softmax attention.
-        Arguments
-        ---------
-            q, k, v: The tensor containing the query, key, and value. (B, S, H, D)
-        """
-        assert all((i.dtype in [torch.float16, torch.bfloat16] for i in (q, k, v)))
-        assert all((i.is_cuda for i in (q, k, v)))
-
-        batch_size, seqlen_q = q.shape[0], q.shape[1]
-        seqlen_k = k.shape[1]
-
-        q, k, v = [rearrange(x, 'b s ... -> (b s) ...') for x in [q, k, v]]
-        cu_seqlens_q = torch.arange(0, (batch_size + 1) * seqlen_q, step=seqlen_q, dtype=torch.int32,
-                                    device=q.device)
-        self.training = False
-        if self.training:
-            # during training q,k,v always have same seqlen
-            assert seqlen_k == seqlen_q
-
-            is_causal = self.causal
-            cu_seqlens_k = cu_seqlens_q
-            dropout_p = self.dropout_p
-        else:
-            # turn off FA causal mask after first inference autoregressive iteration
-            # only on first autoregressive step q,k,v have same seqlen
-            is_causal = seqlen_q == seqlen_k
-            cu_seqlens_k = torch.arange(0, (batch_size + 1) * seqlen_k, step=seqlen_k, dtype=torch.int32,
-                                        device=q.device)
-            dropout_p = 0
-
-        output = flash_attn_unpadded_func(
-            q, k, v, cu_seqlens_q, cu_seqlens_k, seqlen_q, seqlen_k,
-            dropout_p=dropout_p,
-            softmax_scale=self.softmax_scale, causal=is_causal
-        )
-
-        output = rearrange(output, '(b s) ... -> b s ...', b=batch_size)
-        return output
-
-
-######################################
-
 def _make_causal_mask(
         input_ids_shape: torch.Size, device: torch.device, past_key_values_length: int
 ) -> torch.BoolTensor:
@@ -356,8 +272,6 @@ class TelechatAttention(nn.Module):
         if hasattr(config, 'world_size'):
             self.world_size = config.world_size
         self.kv_cache = None
-        # self.pretraining_tp = config.pretraining_tp
-        # self.slow_but_exact = config.slow_but_exact
         self.layer_idx = layer_idx
 
         self.hidden_size = config.hidden_size
@@ -366,17 +280,10 @@ class TelechatAttention(nn.Module):
         self.split_size = self.hidden_size
         self.hidden_dropout = config.hidden_dropout
 
-        # if self.head_dim * self.num_heads != self.hidden_size:
-        #     raise ValueError(
-        #         f"`hidden_size` must be divisible by num_heads (got `hidden_size`: {self.hidden_size} and `num_heads`:"
-        #         f" {self.num_heads})."
-        #     )
-
         # Layer-wise attention scaling
         self.inv_norm_factor = 1.0 / math.sqrt(self.head_dim)
         self.beta = 1.0
 
-        #################### changed by ZihanWang
         self.num_key_value_heads = 32
         kv_projection_size = self.head_dim * self.num_key_value_heads
         self.num_key_value_groups = self.num_heads // self.num_key_value_heads
@@ -385,14 +292,9 @@ class TelechatAttention(nn.Module):
         self.dense = nn.Linear(self.hidden_size // self.world_size, self.hidden_size)
         self.attention_dropout = nn.Dropout(config.attention_dropout)
         self.rotary_emb = RotaryEmbedding(self.head_dim)
-        
         self.num_heads = self.num_heads // self.world_size        
         self.num_key_value_heads = self.num_key_value_heads // self.world_size
-        # print(self.head_dim)
-        #self.core_attention_flash = FlashSelfAttention(
-        #    causal=True, attention_dropout=config.attention_dropout
-        #)
-        ################### cache ##################
+
         self.last_key_layer = None
 
 
@@ -516,14 +418,12 @@ class TelechatAttention(nn.Module):
         '''
         query_layer = self.query(hidden_states)#torch.matmul(hidden_states,self.query.weight.T)##[seq,1,4096]
         local_rank = torch.distributed.get_rank()
-        #torch.save(query_layer,f"/home/HwHiAiUser/workspace/ascend-speed-inference/pytorch/examples/telechat/dump/query_layer_{local_rank}.pt")
         new_tensor_shape = query_layer.size()[:-1] + \
                            (self.num_heads,
                             self.head_dim)
         query_layer = query_layer.view(*new_tensor_shape)
         mixed_kv_layer = self.key_value(hidden_states)#torch.matmul(hidden_states,self.key_value.weight.T)
         local_rank = torch.distributed.get_rank()
-        #torch.save(mixed_kv_layer,f"/home/HwHiAiUser/workspace/ascend-speed-inference/pytorch/examples/telechat/dump/mixed_kv_layer_{local_rank}.pt")
         new_tensor_shape = mixed_kv_layer.size()[:-1] + \
                            (self.num_key_value_heads,
                             2 * self.head_dim)
@@ -538,10 +438,6 @@ class TelechatAttention(nn.Module):
         query_layer = query_layer.view(output_size[2],output_size[0] * output_size[1], -1)
         key_layer = key_layer.view(output_size[3],output_size[0] * output_size[1], -1)
 
-
-        #print(query_layer.shape, key_layer.shape,
-        #      value_layer.shape)  ##torch.Size([1, 32, 128]) torch.Size([1, 32, 128]) torch.Size([1, 1, 32, 128])
-        #exit()
         apply_rotary_fn = apply_rotary_pos_emb
 
         seq_len = key_layer.shape[0]
@@ -554,22 +450,18 @@ class TelechatAttention(nn.Module):
 
 
         cos, sin = self.rotary_emb(value_layer, seq_len=seq_len)
-        #print("!!!",offset)
         query_layer, key_layer = apply_rotary_fn(query_layer, key_layer, cos, sin, offset=offset)
         if use_cache:
             if layer_past != None:
                 past_key, past_value = layer_past
                 key_layer = torch.cat((past_key, key_layer[-1, ...].unsqueeze(0)),dim=0)
                 value_layer = torch.cat((past_value,value_layer[-1,...].unsqueeze(0)),dim = 0)
-            #print(f"layer_past shape is ({key_layer.shape()},{value_layer.shape()})")
             layer_past = key_layer,value_layer
         s,bz,head,dim = value_layer.shape
         s_key = key_layer.shape[0]; s_query = query_layer.shape[0]
-        #print(query_layer.shape,key_layer.shape,value_layer.shape)  ##[9,32,128],[9,32,128],[9,1,32,128]
         query_layer = query_layer.transpose(1, 0).reshape(bz * self.num_heads, s_query, self.head_dim)
         key_layer = key_layer.permute(1, 2, 0)
         value_layer = value_layer.transpose(2, 0).reshape(bz * self.num_heads, s_key, self.head_dim)
-        #print(query_layer.shape, key_layer.shape, value_layer.shape) ##[32,9,128],[32,128,9].[32,9,128]
         '''
         alibi = torch.zeros(query_layer.shape[0],s_query,s_key).to(1)
 
@@ -585,7 +477,6 @@ class TelechatAttention(nn.Module):
 
         # change view to [batch_size, num_heads, q_length, kv_length]
         attention_scores = matmul_result.view(bz, self.num_heads, s_query, s_key)
-        #print(attention_scores.shape)  ##[1,32,9,9]
 
         # cast attention scores to fp32, compute scaled softmax and cast back to initial dtype - [batch_size, num_heads, q_length, kv_length]
         input_dtype = attention_scores.dtype
@@ -603,52 +494,24 @@ class TelechatAttention(nn.Module):
 
         # change view [batch_size x num_heads, q_length, kv_length]
         attention_probs_reshaped = attention_probs.view(bz * self.num_heads, s_query, s_key)
-        #print('attention_probs_reshaped',attention_probs_reshaped.shape)
         # matmul: [batch_size * num_heads, q_length, head_dim]
         context_layer = torch.bmm(attention_probs_reshaped, value_layer)
-        #print('context_layer', context_layer.shape)
         # change view [batch_size, q_length, num_heads * head_dim]
         context_layer = self._merge_heads(context_layer)
-        #print(context_layer.shape)#[1,9,4096]
         local_rank = torch.distributed.get_rank()
-        #torch.save(context_layer,f"/home/HwHiAiUser/workspace/ascend-speed-inference/pytorch/examples/telechat/dump/context_layer_{local_rank}.pt")
         output_tensor = self.dense(context_layer)
-        #torch.save(self.dense.weight,f"/home/HwHiAiUser/workspace/ascend-speed-inference/pytorch/examples/telechat/dump/dense_weight_{local_rank}.pt")
-        #torch.save(self.dense.bias,f"/home/HwHiAiUser/workspace/ascend-speed-inference/pytorch/examples/telechat/dump/dense_bias_{local_rank}.pt")
-        #print("dense.weight", self.dense.weight.shape, "dense.bias", self.dense.bias.shape, "output_tensor", output_tensor.shape)
-        #torch.save(output_tensor,f"/home/HwHiAiUser/workspace/ascend-speed-inference/pytorch/examples/telechat/dump/attn_{local_rank}.pt")
         if self.world_size >= 2:
             torch.distributed.all_reduce(output_tensor, op=torch.distributed.ReduceOp.SUM)
 
-        # print(output_tensor.shape,residual.shape)
         local_rank = torch.distributed.get_rank()
-        #torch.save(output_tensor,f"/home/HwHiAiUser/workspace/ascend-speed-inference/pytorch/examples/telechat/dump/attn_after_allreduce_{local_rank}.pt")
-        #exit()
         output_tensor1 = output_tensor
         output_tensor = dropout_add(output_tensor, residual, self.hidden_dropout, self.training)
-#        print((output_tensor1==output_tensor).all())
         present = None
         outputs = (output_tensor, present)
         if output_attentions:
             outputs += (attention_probs,)
 
         return output_tensor, layer_past
-        #exit()
-        '''
-
-        q, k, v = [rearrange(x, 's b ... -> b s ...').contiguous() for x in
-                   (query_layer, key_layer, value_layer)]
-
-
-        #exit()
-        context_layer = self.core_attention_flash(q, k, v)
-        context_layer = rearrange(context_layer, 'b s h d -> b s (h d)').contiguous()
-        output_tensor = self.dense(context_layer)
-        output_tensor = dropout_add(output_tensor, residual, self.hidden_dropout, self.training)
-        '''
-        return output_tensor , None
-
-
 
 class TelechatMLP(nn.Module):
     def __init__(self, config: TelechatConfig):
@@ -659,8 +522,6 @@ class TelechatMLP(nn.Module):
         if hasattr(config, 'world_size'):
             self.world_size = config.world_size
 
-        # self.pretraining_tp = config.pretraining_tp
-        # self.slow_but_exact = config.slow_but_exact
         self.gate_proj = nn.Linear(hidden_size, config.ffn_hidden_size // self.world_size, bias=False)
         self.up_proj = nn.Linear(hidden_size, config.ffn_hidden_size // self.world_size, bias=False)
         self.down_proj = nn.Linear(config.ffn_hidden_size // self.world_size, hidden_size, bias=True)
@@ -710,9 +571,7 @@ class TelechatBlock(nn.Module):
             use_cache: bool = False,
             output_attentions: bool = False,
     ):
-        #print(f"use_cache in block is {use_cache}")
         # hidden_states: [batch_size, seq_length, hidden_size]
-        #print("TELECHAT BLOCK",hidden_states.shape)
         # Layer norm at the beginning of the transformer layer.
         layernorm_output = self.input_layernorm(hidden_states)
 

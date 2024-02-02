@@ -65,107 +65,6 @@ TELECHAT_PRETRAINED_MODEL_ARCHIVE_LIST = [
 ]
 lm_head_weight = None
 
-############## flash attention, changed by ZihanWang
-try:
-    from einops import rearrange
-except ImportError:
-    rearrange = None
-
-use_flash_attn = True
-try:
-    from flash_attn.flash_attn_interface import flash_attn_unpadded_func
-except ImportError:
-    try:
-        from flash_attn.flash_attn_interface import flash_attn_varlen_func as flash_attn_unpadded_func
-    except ImportError:
-        flash_attn_unpadded_func = None
-# from .position_embedding import RotaryEmbedding, apply_rotary_pos_emb_torch, apply_rotary_pos_emb
-
-
-###############################################################
-
-################## flash-attention, changed by ZihanWang ######################
-class FlashSelfAttention(torch.nn.Module):
-    """Implement the scaled dot product attention with softmax.
-    Arguments
-    ---------
-        softmax_scale: The temperature to use for the softmax attention.
-                      (default: 1/sqrt(d_keys) where d_keys is computed at
-                      runtime)
-        attention_dropout: The dropout rate to apply to the attention
-                           (default: 0.0)
-    """
-
-    def __init__(self, causal=False, softmax_scale=None, attention_dropout=0.0,
-                 device=None, dtype=None):
-        super().__init__()
-        assert flash_attn_unpadded_func is not None, ('Please install FlashAttention first, '
-                                                      'e.g., with pip install flash-attn')
-        assert rearrange is not None, 'Please install einops first, e.g., with pip install einops'
-        self.causal = causal
-        self.softmax_scale = softmax_scale
-        self.dropout_p = attention_dropout
-
-    def forward(self, q, k, v):
-        """Implements the multihead softmax attention.
-        Arguments
-        ---------
-            q, k, v: The tensor containing the query, key, and value. (B, S, H, D)
-        """
-        assert all((i.dtype in [torch.float16, torch.bfloat16] for i in (q, k, v)))
-        assert all((i.is_cuda for i in (q, k, v)))
-
-        batch_size, seqlen_q = q.shape[0], q.shape[1]
-        seqlen_k = k.shape[1]
-
-        q, k, v = [rearrange(x, 'b s ... -> (b s) ...') for x in [q, k, v]]
-        cu_seqlens_q = torch.arange(0, (batch_size + 1) * seqlen_q, step=seqlen_q, dtype=torch.int32,
-                                    device=q.device)
-        self.training = False
-        if self.training:
-            # during training q,k,v always have same seqlen
-            assert seqlen_k == seqlen_q
-
-            is_causal = self.causal
-            cu_seqlens_k = cu_seqlens_q
-            dropout_p = self.dropout_p
-        else:
-            # turn off FA causal mask after first inference autoregressive iteration
-            # only on first autoregressive step q,k,v have same seqlen
-            is_causal = seqlen_q == seqlen_k
-            cu_seqlens_k = torch.arange(0, (batch_size + 1) * seqlen_k, step=seqlen_k, dtype=torch.int32,
-                                        device=q.device)
-            dropout_p = 0
-
-        output = flash_attn_unpadded_func(
-            q, k, v, cu_seqlens_q, cu_seqlens_k, seqlen_q, seqlen_k,
-            dropout_p=dropout_p,
-            softmax_scale=self.softmax_scale, causal=is_causal
-        )
-
-        output = rearrange(output, '(b s) ... -> b s ...', b=batch_size)
-        return output
-
-
-######################################
-
-def _make_causal_mask_old(
-        input_ids_shape: torch.Size, device: torch.device, past_key_values_length: int
-) -> torch.BoolTensor:
-    """
-    Make causal mask used for self-attention.
-    """
-    batch_size, target_length = input_ids_shape
-    mask = torch.empty((target_length, target_length + past_key_values_length), dtype=torch.bool, device=device)
-    # ONNX doesn't support `torch.Tensor.triu` properly, thus we use this workaround
-    seq_ids = torch.arange(target_length, device=device)
-    mask[:, past_key_values_length:] = seq_ids[:, None] < seq_ids[None, :]
-
-    if past_key_values_length > 0:
-        mask[:, :past_key_values_length] = False
-
-    expanded_mask = mask[None, None, :, :].expand(batch_size, 1, target_length, target_length + past_key_values_length)
-    return expanded_mask
 
 def _make_causal_mask(
         input_ids_shape: torch.Size, dtype: torch.dtype, device: torch.device, past_key_values_length: int
@@ -191,15 +90,6 @@ def _make_causal_mask(
     expanded_mask = mask[None, None, :, :].expand(batch_size, 1, target_length, target_length + past_key_values_length)
     return expanded_mask
 
-def _expand_mask_old(mask: torch.Tensor, tgt_length: int) -> torch.BoolTensor:
-    """
-    Expands attention_mask from `[batch_size, src_length]` to `[batch_size, 1, tgt_length, src_length]`.
-    """
-    batch_size, src_length = mask.shape
-    tgt_length = tgt_length if tgt_length is not None else src_length
-
-    expanded_mask = ~(mask[:, None, None, :].to(torch.bool))
-    return expanded_mask.expand(batch_size, 1, tgt_length, src_length)
 
 def _expand_mask(mask: torch.Tensor, dtype: torch.dtype, tgt_length: int) -> torch.BoolTensor:
     """
@@ -428,7 +318,6 @@ class TelechatAttention(nn.Module):
         self.inv_norm_factor = 1.0 / math.sqrt(self.head_dim)
         self.beta = 1.0
 
-        #################### changed by ZihanWang
         self.num_key_value_heads = 32
         kv_projection_size = self.head_dim * self.num_key_value_heads
         self.num_key_value_groups = self.num_heads // self.num_key_value_heads
@@ -439,11 +328,6 @@ class TelechatAttention(nn.Module):
         self.rotary_emb = RotaryEmbedding(self.head_dim)
         self.num_heads = self.num_heads // self.world_size        
         self.num_key_value_heads = self.num_key_value_heads // self.world_size
-        # print(self.head_dim)
-        #self.core_attention_flash = FlashSelfAttention(
-        #    causal=True, attention_dropout=config.attention_dropout
-        #)
-        ################### cache ##################
         self.last_key_layer = None
 
 
@@ -587,10 +471,6 @@ class TelechatAttention(nn.Module):
         query_layer = query_layer.view(output_size[2],output_size[0] * output_size[1], -1)
         key_layer = key_layer.view(output_size[3],output_size[0] * output_size[1], -1)
 
-
-        #print(query_layer.shape, key_layer.shape,
-        #      value_layer.shape)  ##torch.Size([1, 32, 128]) torch.Size([1, 32, 128]) torch.Size([1, 1, 32, 128])
-        #exit()
         apply_rotary_fn = apply_rotary_pos_emb
 
         seq_len = key_layer.shape[0]
@@ -603,38 +483,23 @@ class TelechatAttention(nn.Module):
 
 
         cos, sin = self.rotary_emb(value_layer, seq_len=seq_len)
-        #print("!!!",offset)
         query_layer, key_layer = apply_rotary_fn(query_layer, key_layer, cos, sin, offset=offset)
         if use_cache:
             if layer_past != None:
                 past_key, past_value = layer_past
                 key_layer = torch.cat((past_key, key_layer[-1, ...].unsqueeze(0)),dim=0)
                 value_layer = torch.cat((past_value,value_layer[-1,...].unsqueeze(0)),dim = 0)
-            #print(f"layer_past shape is ({key_layer.shape()},{value_layer.shape()})")
             layer_past = key_layer,value_layer
         s,bz,head,dim = value_layer.shape
         s_key = key_layer.shape[0]; s_query = query_layer.shape[0]
-        #print(query_layer.shape,key_layer.shape,value_layer.shape)  ##[9,32,128],[9,32,128],[9,1,32,128]
         query_layer = query_layer.transpose(1, 0).reshape(bz * self.num_heads, s_query, self.head_dim)
         key_layer = key_layer.permute(1, 2, 0)
         value_layer = value_layer.transpose(2, 0).reshape(bz * self.num_heads, s_key, self.head_dim)
-        #print(query_layer.shape, key_layer.shape, value_layer.shape) ##[32,9,128],[32,128,9].[32,9,128]
-        '''
-        alibi = torch.zeros(query_layer.shape[0],s_query,s_key).to(1)
 
-        matmul_result = torch.baddbmm(
-            input = alibi,
-            batch1=query_layer.detach(),
-            batch2=key_layer.detach(),
-            beta=self.beta,
-            alpha=self.inv_norm_factor,
-        )
-        '''
         matmul_result = self.inv_norm_factor * torch.einsum('bik,bkj->bij', query_layer, key_layer)
 
         # change view to [batch_size, num_heads, q_length, kv_length]
         attention_scores = matmul_result.view(bz, self.num_heads, s_query, s_key)
-        #print(attention_scores.shape)  ##[1,32,9,9]
 
         # cast attention scores to fp32, compute scaled softmax and cast back to initial dtype - [batch_size, num_heads, q_length, kv_length]
         input_dtype = attention_scores.dtype
@@ -658,10 +523,7 @@ class TelechatAttention(nn.Module):
 
         # change view [batch_size, q_length, num_heads * head_dim]
         context_layer = self._merge_heads(context_layer)
-        #print(context_layer.shape)#[1,9,4096]
         output_tensor = self.dense(context_layer)
-        # print(output_tensor.shape,residual.shape)
-        output_tensor1 = output_tensor
         output_tensor = dropout_add(output_tensor, residual, self.hidden_dropout, self.training)
 #        print((output_tensor1==output_tensor).all())
         present = None
@@ -670,20 +532,6 @@ class TelechatAttention(nn.Module):
             outputs += (attention_probs,)
 
         return output_tensor, layer_past
-        #exit()
-        '''
-
-        q, k, v = [rearrange(x, 's b ... -> b s ...').contiguous() for x in
-                   (query_layer, key_layer, value_layer)]
-
-
-        #exit()
-        context_layer = self.core_attention_flash(q, k, v)
-        context_layer = rearrange(context_layer, 'b s h d -> b s (h d)').contiguous()
-        output_tensor = self.dense(context_layer)
-        output_tensor = dropout_add(output_tensor, residual, self.hidden_dropout, self.training)
-        '''
-        return output_tensor , None
 
 
 
@@ -694,12 +542,9 @@ class TelechatMLP(nn.Module):
         self.world_size = 1
         if hasattr(config, 'world_size'):
             self.world_size = config.world_size
-        #self.pretraining_tp = config.pretraining_tp
-        #self.slow_but_exact = config.slow_but_exact
         self.gate_proj = nn.Linear(hidden_size, config.ffn_hidden_size // self.world_size, bias=False)
         self.up_proj = nn.Linear(hidden_size, config.ffn_hidden_size // self.world_size, bias=False)
         self.down_proj = nn.Linear(config.ffn_hidden_size // self.world_size, hidden_size, bias=True)
-        #self.hidden_dropout = config.hidden_dropout
 
     def swiglu(self, x):
         x = torch.chunk(x, 2, dim=-1)  ###split x into 2 tensors along the last dimension
@@ -743,9 +588,7 @@ class TelechatBlock(nn.Module):
             use_cache: bool = False,
             output_attentions: bool = False,
     ):
-        #print(f"use_cache in block is {use_cache}")
         # hidden_states: [batch_size, seq_length, hidden_size]
-        #print("TELECHAT BLOCK",hidden_states.shape)
         # Layer norm at the beginning of the transformer layer.
         layernorm_output = self.input_layernorm(hidden_states)
 
@@ -938,11 +781,6 @@ def bias_correction_new(fp_bias, quant_weight, input_offset, deq_scale):
     bias_correction = fp_bias.npu() / deq_scale.npu() - quant_weight.to(torch.float32).npu().sum(dim=1) * float(input_offset)
     return bias_correction
 
-def bias_correction(fp_bias, quant_weight, input_offset, deq_scale):
-    correction = quant_weight.to(torch.float32).npu().sum(dim=1)*float(input_offset)*deq_scale.npu()
-    bias_correction = fp_bias.npu()-correction
-    return bias_correction
-
 def process_deq_scale(deq_scale_dict):
     new_deq_scale_dict = {}
     for key, deq_scale in deq_scale_dict.items():
@@ -961,14 +799,12 @@ class TelechatModel(TelechatPreTrainedModel):
         if hasattr(config, 'world_size'):
             self.world_size = config.world_size
             self.rankSize = self.world_size
-            # self.rank = torch.distributed.get_rank()
 
         self.embed_dim = config.hidden_size
         self.num_heads = config.n_head
 
         # Embedding + LN Embedding
         self.word_embeddings = nn.Embedding(config.vocab_size, self.embed_dim)
-        # self.word_embeddings_layernorm = LayerNorm(self.embed_dim, eps=config.layer_norm_epsilon)
 
         # Transformer blocks
         self.h = nn.ModuleList([TelechatBlock(config,_) for _ in range(config.num_hidden_layers)])
@@ -980,7 +816,6 @@ class TelechatModel(TelechatPreTrainedModel):
         # Initialize weigts and apply final processing
         self.post_init()
         
-
         self.dk = self.embed_dim // self.num_heads
         self.num_heads = self.num_heads // self.world_size
         print("self.rank", self.rank, "self.rankSize", self.rankSize)
@@ -999,7 +834,6 @@ class TelechatModel(TelechatPreTrainedModel):
             "layerNum": self.num_hidden_layers,
             })
 
-        # print([i.device for i in self.state_dict().values()])
         print("init acl operation")
         self.acl_operation = torch.classes.ModelTorch.ModelTorch(
                 "telechat_float_model")
@@ -1026,20 +860,11 @@ class TelechatModel(TelechatPreTrainedModel):
 
         print("end TelechatModel")
         
-        #transfer quant weight from ND to NZ
-        # transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
-        # transdata_param = json.dumps({})
-        # transdata_operation.set_param(transdata_param)
-
     def build_alibi_tensor(self, attention_mask: torch.Tensor, num_heads: int, dtype: torch.dtype) -> torch.Tensor:
         return build_alibi_tensor(attention_mask, num_heads, dtype)
 
     def get_input_embeddings(self):
         return self.word_embeddings
-   # def clear_cache(self):
-   #     for layer in self.h:
-   #         layer.self_attention.last_key_layer = None
-   #         layer.self_attention.kv_cache = None
 
     def _prepare_attn_mask_old(
             self, attention_mask: torch.Tensor, input_shape: Tuple[int, int], past_key_values_length: int
@@ -1095,12 +920,6 @@ class TelechatModel(TelechatPreTrainedModel):
         config_class=_CONFIG_FOR_DOC,
     )
 
-    #def bias_correction(fp_bias, quant_weiht, input_offset, deq_scale):
-    #    correction = quant_weight.to(torch.float32).npu().sum(dim=1)*float(input_offset)*deq_scale.npu()
-    #    bias_correction = fp_bias.npu()-correction
-    #    return bias_correction
-
-
     def forward(
             self,
             input_ids: Optional[torch.LongTensor] = None,
@@ -1147,7 +966,6 @@ class TelechatModel(TelechatPreTrainedModel):
         if seq_length > 1:
             self.encoder_flag = True
 
-        #if self.batch_num != batch_size or self.encoder_flag:
         if self.batch_num != batch_size:
             self.batch_num = batch_size
             self.hidden_size_nz = self.embed_dim // self.world_size // 16
@@ -1155,8 +973,6 @@ class TelechatModel(TelechatPreTrainedModel):
             self.cached_v = torch.zeros(self.num_hidden_layers, self.batch_num,  self.hidden_size_nz, self.max_seq_len, 16, device = "npu").half().contiguous()
             self.cached_k.data = torch_npu.npu_format_cast(self.cached_k.data, 29)
             self.cached_v.data = torch_npu.npu_format_cast(self.cached_v.data, 29)
-            #self.maskAttenfull = torch.full((self.batch_num, self.max_seq_len, self.max_seq_len), 0, device='npu', dtype=torch.half)
-            #self.maskAttenincre = None
 
         if self.encoder_flag:
             self.maskAttenfull = torch.full((self.batch_num, self.max_seq_len, self.max_seq_len), 0, device='npu', dtype=torch.half)
@@ -1167,14 +983,6 @@ class TelechatModel(TelechatPreTrainedModel):
         # attention_probs has shape batch_size x num_heads x N x N
         # head_mask has shape n_layer x batch x num_heads x N x N
         head_mask = self.get_head_mask(head_mask, self.config.n_layer)
-#        print("after get head mask", torch.npu.memory_allocated()/1024/1024/1024)
-        #if past_key_values[0] is None:
-        #    if inputs_embeds is None:
-                # for key in self.state_dict().keys():
-                #     print(f"{key} device is {self.state_dict()[key].device}")
-        #        inputs_embeds = self.word_embeddings(input_ids)
-        #    hidden_states = inputs_embeds  ###ZihanWang
-        # hidden_states = self.word_embeddings_layernorm(inputs_embeds)
 
         presents = () if use_cache else None
         all_self_attentions = () if output_attentions else None
@@ -1197,22 +1005,14 @@ class TelechatModel(TelechatPreTrainedModel):
             attention_mask = torch.ones((batch_size, seq_length_with_past), device=input_ids.device)
         else:
             attention_mask = attention_mask.to(input_ids.device)
-        alibi = None
         causal_mask = self._prepare_attn_mask(
             attention_mask,
             input_shape=(batch_size, seq_length),
             past_key_values_length=past_key_values_length,
         )
-        #print(causal_mask)
-        #print(causal_mask.shape)
-        #attn_mask = torch.full((batch_size, self.max_seq_len, self.max_seq_len),0,device='npu', dtype=torch.half)
-        #if self.encoder_flag:
-        #    attn_mask[:,:seq_length,:seq_length] = causal_mask[0]
-        #causal_mask = torch_npu.npu_format_cast(attn_mask.view(batch_size, self.max_seq_len, self.max_seq_len//16, 16).transpose(1,2).contiguous(),29)
         if self.weightFlag is False:
 
             global lm_head_weight
-            # self.weights.append(self.state_dict()["word_embeddings.weight"].npu())
             weight_layer = self.state_dict()
             self.weights.append(weight_layer["word_embeddings.weight"])
             for layer_idx in range(self.num_hidden_layers):
@@ -1227,7 +1027,6 @@ class TelechatModel(TelechatPreTrainedModel):
                 self.weights.append(weight_layer[f"h.{layer_idx}.input_layernorm.weight"])
                 self.weights.append(weight_layer[f"h.{layer_idx}.post_attention_layernorm.weight"])
             self.weights.append(weight_layer[f"ln_f.weight"])
-            # print(list(weight_layer.keys()))
             self.weights.append(lm_head_weight)
             self.acl_operation.set_weight(self.weights)
             self.weightFlag = True
@@ -1239,38 +1038,23 @@ class TelechatModel(TelechatPreTrainedModel):
         self.acl_inputs[0] = input_ids
         if self.encoder_flag:
             if self.batch_num == 1:
-                #print(f"causal_mask shape is {causal_mask.shape}")
-                #print(f"{self.maskAttenfull.shape}")
                 self.maskAttenfull[:, :seq_length, :seq_length] = causal_mask[0]
                 count = torch.eq(causal_mask[0][0][seq_length - 1], 0).sum().item()
-                #print(f"count is {count}")
                 decoder_leftmask = self.maskAttenincreCache[:, :seq_length - count]
                 decoder_rightmask = self.maskAttenincreZero[:, :self.max_seq_len - seq_length + count]
-                #print(f"decoder_leftmask shape is {decoder_leftmask.shape}, decoder_rightmask shape is {decoder_rightmask.shape}")
                 self.maskAttenincre = torch.concat([decoder_leftmask, decoder_rightmask], dim=-1).unsqueeze(0)
             else:
                 decoder_masks = []
                 for i in range(self.batch_num):
-                    #print(f"{i} causal_mask is {causal_mask[i][0]}")
-                    #print(f"{i} {self.maskAttenfull[i].shape}")
                     self.maskAttenfull[i][:seq_length, :seq_length] = causal_mask[i][0]
                     count = torch.eq(causal_mask[i][0][seq_length - 1], 0).sum().item()
-                    #print(f"{i} count is {count}")
                     decoder_leftmask = self.maskAttenincreCache[:, :seq_length - count]
                     decoder_rightmask = self.maskAttenincreZero[:, :self.max_seq_len - seq_length + count]
-                    #print(f"{i} decoder_leftmask is {decoder_leftmask}, shape is {decoder_leftmask.shape}")
-                    #print(f"{i} decoder_rightmask is {decoder_rightmask}, shape is {decoder_rightmask.shape}")
                     decoder_mask = torch.concat([decoder_leftmask, decoder_rightmask], dim=-1).unsqueeze(0)
                     decoder_masks.append(decoder_mask)
                 self.maskAttenincre = torch.concat(decoder_masks, dim=0)
-            #print(self.maskAttenfull[:, 13:seq_length, 13:seq_length])
-            #print(self.maskAttenincre[:, 13:seq_length, 13:seq_length])
-            #self.maskAttenfull = self.maskAttenfull.view(self.batch_num, self.max_seq_len, self.max_seq_len//16, 16).transpose(1,2)
-            #self.maskAttenincre = self.maskAttenincre.view(self.batch_num, self.max_seq_len, self.max_seq_len//16, 16).transpose(1,2)
             self.maskAttenfull = torch_npu.npu_format_cast(self.maskAttenfull.view(self.batch_num, self.max_seq_len, self.max_seq_len//16, 16).transpose(1,2).contiguous(),29)
             self.maskAttenincre = torch_npu.npu_format_cast(self.maskAttenincre.view(self.batch_num, self.max_seq_len, self.max_seq_len//16, 16).transpose(1,2).contiguous(),29)
-            #self.encoderMask = torch_npu.npu_format_cast(self.maskAttenfull.view(self.batch_num, self.max_seq_len, self.max_seq_len//16, 16).transpose(1,2).contiguous(),29)
-            #self.decoderMask = torch_npu.npu_format_cast(self.maskAttenincre.view(self.batch_num, self.max_seq_len, self.max_seq_len//16, 16).transpose(1,2).contiguous(),29)
             position_ids = torch.arange(0, input_ids.shape[1], dtype=torch.long, device=input_ids.device).unsqueeze(0)
             position_ids = torch.concat([position_ids] * self.batch_num, dim=0)
             self.acl_inputs[1] = position_ids
@@ -1302,15 +1086,10 @@ class TelechatModel(TelechatPreTrainedModel):
             token_offset = torch.tensor([self.seq_len] * batch_size, dtype = torch.int32, device=input_ids.device)
             self.acl_inputs[7] = token_offset
             self.acl_inputs[8] = seqlen
-            # placeholder = torch.ones(1).npu()
-            # self.acl_inputs[9] = placeholder
 
         param = json.dumps({"tokenOffset":token_offset.tolist(), "seqLen":seqlen.tolist()})
         acl_outputs = self.acl_operation.execute(self.acl_inputs, param)
         hidden_states = acl_outputs[0]
-        #if seq_length == 1:
-        #    exit()
-        #    torch.save(hidden_states.cpu(), "save/logits.pth")
         presents = ((None, None),)
         if output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)
@@ -1408,14 +1187,9 @@ class TelechatForCausalLM(TelechatPreTrainedModel):
             `labels = input_ids` Indices are selected in `[-100, 0, ..., config.vocab_size]` All labels set to `-100`
             are ignored (masked), the loss is only computed for labels in `[0, ..., config.vocab_size]`
         """
-#        print("casullmstart", torch.npu.memory_allocated()/1024/1024/1024)
         global lm_head_weight
-#        print("global lm_head_weight", torch.npu.memory_allocated()/1024/1024/1024)
         if lm_head_weight is None:
-            #lm_head_weight = self.state_dict()["lm_head.weight"].npu()
-            #self.state_dict()["lm_head.weight"] = self.state_dict()["lm_head.weight"].npu()
             lm_head_weight = self.state_dict()["lm_head.weight"]
-        #print("causal",input_ids.shape)
         if deprecated_arguments.pop("position_ids", False) is not False:
             # `position_ids` could have been `torch.Tensor` or `None` so defaulting pop to `False` allows to detect if users were passing explicitly `None`
             warnings.warn(
@@ -1440,14 +1214,8 @@ class TelechatForCausalLM(TelechatPreTrainedModel):
             return_dict=return_dict,
         )
         hidden_states = transformer_outputs[0]
-        #print("causal",hidden_states.shape)
 
-        #lm_logits = self.lm_head(hidden_states)
         lm_logits = hidden_states
-        # if past_key_values is None:
-        #     lm_logits = self.lm_head(hidden_states)
-        # else:
-        #     lm_logits = hidden_states
 
         loss = None
         if labels is not None:
