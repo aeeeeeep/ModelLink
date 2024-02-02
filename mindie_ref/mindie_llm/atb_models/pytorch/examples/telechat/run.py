@@ -105,7 +105,6 @@ def infer_precision():
             torch.npu.synchronize()
             end_time_e2e = time.time()
             answers.append(output_str)
-            model.transformer.clear_cache()
         print(f"model_time:{end_time_model - start_time_model}s")
         print(f"end2end_time: {end_time_e2e - start_time_model}s")
         print(f"output token delay {len(output_str[0]) / (end_time_model - start_time_model)}s")

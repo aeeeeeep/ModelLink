@@ -7,7 +7,7 @@ export ATB_USE_TILING_COPY_STREAM=1
 
 export PYTORCH_NPU_ALLOC_CONF="max_split_size_mb:2048"
 
-SCRIPT_DIR=$(cd $(diname $0); pwd)
+SCRIPT_DIR=$(cd $(dirname $0); pwd)
 FLOAT_MODEL_PATH=""
 FLOAT_PART_MODEL_PATH=""
 QUANT_MODEL_PATH=""
@@ -17,8 +17,8 @@ INPUT_JSON_PATH=""
 OUTPUT_JSON_PATH=""
 
 RUNNING_MODE="--run-precision"
-# RUNNING_MODE="--run-performance"
-
+RUN_QUANT_MODEL=0
+RUN_PARALLEL=0
 DEVICE=0
 
 TRANSFORMER_PACKAGE_PATH=$(python3 -c 'import transformers; import os; print(os.path.dirname(transformers.__file__))')/models/telechat
@@ -36,7 +36,7 @@ function fn_run_parallel() {
 }
 
 function fn_run_single() {
-    echo "running single...."
+    echo "running on single npu..."
     export QUANT_WEIGHT_PATH="$QUANT_MODEL_PATH"
     python3 run.py \
         --device $DEVICE \
@@ -117,7 +117,6 @@ function fn_main() {
         echo "running on multiple npu..."
         fn_run_parallel
     else
-        echo "running on single npu..."
         fn_run_single
     fi
 
