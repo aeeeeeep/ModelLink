@@ -20,11 +20,15 @@
 """ PyTorch Aquila model."""
 import math
 from typing import List, Optional, Tuple, Union
+import os
+import json
+import platform
 
 import torch
 import torch.utils.checkpoint
 from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+import torch_npu
 
 from transformers.activations import ACT2FN
 from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, SequenceClassifierOutputWithPast
@@ -32,10 +36,6 @@ from transformers.modeling_utils import PreTrainedModel
 from transformers.utils import add_start_docstrings, add_start_docstrings_to_model_forward, logging, replace_return_docstrings
 from .configuration_aquila import AquilaConfig
 
-import os
-import torch_npu
-import json
-import platform
 
 
 def load_acl_transformer():

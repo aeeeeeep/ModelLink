@@ -9,6 +9,9 @@ import math
 import pathlib
 import warnings
 from typing import TYPE_CHECKING, Optional, Tuple, Union, Callable, List, Any, Generator
+import os
+import json
+import torch_npu
 
 import torch
 import torch.nn.functional as F
@@ -46,10 +49,6 @@ from .qwen_generation_utils import (
     get_stop_words_ids,
     StopWordsLogitsProcessor,
 )
-
-import os
-import json
-import torch_npu
 
 
 def is_nd():

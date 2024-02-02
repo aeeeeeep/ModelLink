@@ -79,6 +79,7 @@ rms_norm = None
 flash_attn_unpadded_func = None
 flash_attn_func = None
 
+
 def _import_flash_attn():
     global apply_rotary_emb_func, rms_norm, flash_attn_unpadded_func, flash_attn_func
     try:
@@ -119,6 +120,7 @@ def _import_flash_attn():
             "https://github.com/Dao-AILab/flash-attention"
         )
 
+
 def quantize_cache_v(fdata, bits, qmax, qmin):
     # b, s, head, h-dim->b, head, s, h-dim
     qtype = torch.uint8
@@ -134,16 +136,18 @@ def quantize_cache_v(fdata, bits, qmax, qmin):
         qmin = qmin.to(device)
     scale = (fmax - fmin) / (qmax - qmin)
     zero = qmin - fmin / scale
-    scale = scale.unsqueeze(-1).repeat(1,1,shape[2],1).contiguous()
-    zero = zero.unsqueeze(-1).repeat(1,1,shape[2],1).contiguous()
+    scale = scale.unsqueeze(-1).repeat(1, 1, shape[2], 1).contiguous()
+    zero = zero.unsqueeze(-1).repeat(1, 1, shape[2], 1).contiguous()
     # Quantize
     res_data = fdata / scale + zero
     qdata = torch.clamp(res_data, qmin, qmax).to(qtype)
     return qdata.contiguous(), scale, zero
 
+
 def dequantize_cache_torch(qdata, scale, zero):
     data = scale * (qdata - zero)
     return data
+
 
 class FlashSelfAttention(torch.nn.Module):
     def __init__(
@@ -242,6 +246,7 @@ class FlashSelfAttention(torch.nn.Module):
             output = output.view(new_shape)
         return output
 
+
 class QWenAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -257,7 +262,7 @@ class QWenAttention(nn.Module):
         ################################################
         # For model cut
         self.rank_size = 1
-        if hasattr(config,"rank_size"):
+        if hasattr(config, "rank_size"):
             self.rank_size = config.rank_size
         
         self.num_heads = self.num_heads // self.rank_size  # 单卡NPU的头数
@@ -308,10 +313,10 @@ class QWenAttention(nn.Module):
         self.attn_dropout = nn.Dropout(config.attn_dropout_prob)
         self.softmax_in_fp32 = config.softmax_in_fp32 if hasattr(config, 'softmax_in_fp32') else False
         self.use_cache_quantization = config.use_cache_quantization if hasattr(config, 'use_cache_quantization') else False
-        self.use_cache_kernel = config.use_cache_kernel if hasattr(config,'use_cache_kernel') else False
+        self.use_cache_kernel = config.use_cache_kernel if hasattr(config, 'use_cache_kernel') else False
         cache_dtype = torch.float
         if self.bf16:
-            cache_dtype=torch.bfloat16
+            cache_dtype = torch.bfloat16
         elif config.fp16:
             cache_dtype = torch.float16
         self.cache_qmax = torch.tensor(torch.iinfo(torch.uint8).max, dtype=cache_dtype)
@@ -321,7 +326,7 @@ class QWenAttention(nn.Module):
             # pre check if the support files existing
             module_root = pathlib.Path(__file__).parent
             src_files = ("cache_autogptq_cuda_256.cpp", "cache_autogptq_cuda_kernel_256.cu")
-            if any(not (module_root/src).is_file() for src in src_files):
+            if any(not (module_root / src).is_file() for src in src_files):
                 warnings.warn("KV cache kernel source files (.cpp and .cu) not found.")
                 self.cache_kernels = None
             else:
@@ -454,8 +459,8 @@ class QWenAttention(nn.Module):
                     rotary_pos_emb = (rotary_pos_emb,) * 2
                     q_pos_emb, k_pos_emb = rotary_pos_emb
                     # Slice the pos emb for current inference
-                    query_list += [apply_rotary_pos_emb(query[i:i+1, :, :], q_pos_emb)]
-                    key_list += [apply_rotary_pos_emb(key[i:i+1, :, :], k_pos_emb)]
+                    query_list += [apply_rotary_pos_emb(query[i: i+1, :, :], q_pos_emb)]
+                    key_list += [apply_rotary_pos_emb(key[i: i+1, :, :], k_pos_emb)]
                 query = torch.cat(query_list, dim=0)
                 key = torch.cat(key_list, dim=0)
 
@@ -582,7 +587,7 @@ class QWenMLP(nn.Module):
         ###########################################
         # For model cut
         self.rank_size = 1
-        if hasattr(config,"rank_size"):
+        if hasattr(config, "rank_size"):
             self.rank_size = config.rank_size
         rank_intermediate_size = config.intermediate_size // self.rank_size
         ###########################################
@@ -610,7 +615,7 @@ class QWenBlock(nn.Module):
         ################################################
         # For cut models
         self.rank_size = 1
-        if hasattr(config,"rank_size"):
+        if hasattr(config, "rank_size"):
             self.rank_size = config.rank_size
         ################################################
         hidden_size = config.hidden_size
