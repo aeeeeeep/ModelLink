@@ -15,6 +15,7 @@
  */
 
 #include "flash_attention_model.h"
+#include "atb_speed/utils/operation_util.h"
 #include <atb/atb_infer.h>
 #include <nlohmann/json.hpp>
 #include "atb_speed/log.h"

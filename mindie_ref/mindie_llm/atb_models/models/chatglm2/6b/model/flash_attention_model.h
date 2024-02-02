@@ -17,7 +17,7 @@
 #define ATB_SPEED_MODELS_CHATGML2_6B_COMMON_MODEL_FA_H
 
 #include "atb_speed/base/model.h"
-#include "atb_speed/utils/operation_util.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace chatglm2_6b {
@@ -75,6 +75,9 @@ private:
     std::vector<int32_t> tokenOffset_;
     std::vector<int32_t> seqLen_;
 };
+
+REGISTER_MODEL(chatglm2_6b, ChatGlm2CommonModelFa);
+
 } // namespace chatglm2_6b
 } // namespace atb_speed
 #endif
