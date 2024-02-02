@@ -17,8 +17,8 @@ INPUT_JSON_PATH=""
 OUTPUT_JSON_PATH=""
 
 RUNNING_MODE="--run-precision"
-# RUNNING_MODE="--run-performance"
-
+RUN_QUANT_MODEL=0
+RUN_PARALLEL=0
 DEVICE=0
 
 TRANSFORMER_PACKAGE_PATH=$(python3 -c 'import transformers; import os; print(os.path.dirname(transformers.__file__))')/models/telechat
