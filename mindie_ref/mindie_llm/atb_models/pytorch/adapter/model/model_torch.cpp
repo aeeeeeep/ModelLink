@@ -183,18 +183,12 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::baichuan2_7b::FlashAttentionQuantModel>(param);
     } else if (modelName_ == "baichuan2_7b_pa_model") {
         model_ = std::make_shared<atb_speed::baichuan2_7b::PagedAttentionModel>(param);
-<<<<<<< HEAD
-=======
     } else if (modelName_ == "falcon_40b_model") {
         model_ = std::make_shared<atb_speed::falcon_40b::FusionModel>(param);
->>>>>>> fa5e307e29cdd8c39aa2dd6141579a8258b77fa7
     } else if (modelName_ == "qwen_14b_flash_attention_model") {
         model_ = std::make_shared<atb_speed::qwen_14b::FlashAttentionModel>(param);
     } else if (modelName_ == "aquila_7b_flash_attention_model") {
         model_ = std::make_shared<atb_speed::aquila_7b::FlashAttentionRopeModel>(param);
-<<<<<<< HEAD
-    }  else {
-=======
     } else if (modelName_ == "gptneox_20b_fa_kvcache_model") {
         model_ = std::make_shared<atb_speed::gptneox_20b::FaKvCacheModel>(param);
     } else if (modelName_ == "gptneox_20b_pa_model") {
@@ -214,7 +208,6 @@ int64_t ModelTorch::SetParam(std::string param)
     } else if (modelName_ == "telechat_quant_model") {
         model_ = std::make_shared<atb_speed::telechat::QuantFAModel>(param);
     } else {
->>>>>>> fa5e307e29cdd8c39aa2dd6141579a8258b77fa7
         ATB_LOG(FATAL) << "not support modelName:" << modelName_;
         return atb::ERROR_INVALID_PARAM;
     }
