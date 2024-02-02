@@ -108,11 +108,11 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
         inputNormParam.normParam.quantInputScale = param.qkvInputScale;
         inputNormParam.normParam.quantInputOffset = param.qkvInputOffset;
         inputNormParam.normParam.quantType = atb::infer::QUANT_INT8;
-        CreateOperation(inputNormParam, &inputNormNode.operation);
+        CREATE_OPERATION(inputNormParam, &inputNormNode.operation);
         inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT, IN_BETA};
     } else {
         inputNormParam.normParam.epsilon = param.rmsNormEps;
-        CreateOperation(inputNormParam, &inputNormNode.operation);
+        CREATE_OPERATION(inputNormParam, &inputNormNode.operation);
         inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT, IN_NORMBIAS};
     }
     inputNormNode.outTensorIds = {INTERMEDIATE_INPUTNORMOUT};
@@ -187,13 +187,13 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
     atb::infer::ElewiseParam mulsParam;
     mulsParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_MULS;
     mulsParam.mulsParam.varAttr = param.residualAddScale;
-    CreateOperation(mulsParam, &selfResidualMulsNode.operation);
+    CREATE_OPERATION(mulsParam, &selfResidualMulsNode.operation);
     selfResidualMulsNode.inTensorIds = {INTERMEDIATE_INPUTNORMOUT};
     selfResidualMulsNode.outTensorIds = {INTERMEDIATE_SELFRESIDUALMULSOUT};
     
     atb::infer::ElewiseParam AddParam;
     AddParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CreateOperation(AddParam, &selfResidualAddNode.operation);
+    CREATE_OPERATION(AddParam, &selfResidualAddNode.operation);
     selfResidualAddNode.inTensorIds = {INTERMEDIATE_SELFRESIDUALMULSOUT, INTERMEDIATE_ATTENTION_OUTPUT};
     selfResidualAddNode.outTensorIds = {INTERMEDIATE_SELFRESIDUALADDOUT};
     
@@ -205,10 +205,10 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
         selfNormParam.normParam.quantInputScale = param.selfLnInputScale;
         selfNormParam.normParam.quantInputOffset = param.selfLnInputOffset;
         selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
-        CreateOperation(selfNormParam, &selfNormNode.operation);
+        CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
         selfNormNode.inTensorIds = {INTERMEDIATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_BETA};
     } else {
-        CreateOperation(selfNormParam, &selfNormNode.operation);
+        CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
         selfNormNode.inTensorIds = {INTERMEDIATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_SELFOUTNORMBIAS};
     }
     selfNormNode.outTensorIds = {INTERMEDIATE_SELFNORMOUT};
@@ -242,13 +242,13 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
     atb::infer::ElewiseParam muls2Param;
     muls2Param.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_MULS;
     muls2Param.mulsParam.varAttr = param.residualAddScale;
-    CreateOperation(muls2Param, &mlpResidualMulsNode.operation);
+    CREATE_OPERATION(muls2Param, &mlpResidualMulsNode.operation);
     mlpResidualMulsNode.inTensorIds = {INTERMEDIATE_SELFNORMOUT};
     mlpResidualMulsNode.outTensorIds = {INTERMEDIATE_MLPRESIDUALMULSOUT};
     
     atb::infer::ElewiseParam Add2Param;
     Add2Param.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CreateOperation(Add2Param, &mlpResidualAddNode.operation);
+    CREATE_OPERATION(Add2Param, &mlpResidualAddNode.operation);
     mlpResidualAddNode.inTensorIds = {INTERMEDIATE_MLPRESIDUALMULSOUT, INTERMEDIATE_MLPOUT};
     mlpResidualAddNode.outTensorIds = {OUT_GLMLAYEROUT};
 
@@ -261,7 +261,7 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
 
         return atb::NO_ERROR;
     };
-    atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
 
     return atb::NO_ERROR;
 }

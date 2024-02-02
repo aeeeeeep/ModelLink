@@ -263,7 +263,7 @@ def performance(args, tokenizer, model):
     if local_rank == 0:
         with open(args.performance_output_file, 'a', encoding='utf-8') as f:
             f.write(
-                f"Batch,InputSeqLen(Encoding),OutputSeqLen(Decoding),TimeOfFirstToken(ms),TimePerToken(ms),TimeTotal(s),Throughput(tokens/s),ThroughputE2E(tokens/s)\n")
+                f"Batch,InputSeqLen(Encoding),OutputSeqLen(Decoding),TimeTotal(s),TimeOfFirstToken(ms),TimePerToken(ms),Throughput(tokens/s),ThroughputE2E(tokens/s)\n")
 
     if args.set_case_pair:
         seq_len_in_level = check_lists(args.seqlen_in_pair)
@@ -352,7 +352,7 @@ def performance(args, tokenizer, model):
 
             with open(args.performance_output_file, 'a', encoding='utf-8') as f:
                 f.write(
-                    f"{args.batch}, {seq_len_in}, {seq_len_out}, {time_of_first_token * 1000}, {time_per_token * 1000}, {time_total}, {throughput}, {throughput_e2e}\n"
+                    f"{args.batch}, {seq_len_in}, {seq_len_out}, {time_total}, {time_of_first_token * 1000}, {time_per_token * 1000}, {throughput}, {throughput_e2e}\n"
                 )
 
             if args.print_response:
