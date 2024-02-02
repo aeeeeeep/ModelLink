@@ -265,35 +265,34 @@ class KVAttentionManager:
         self.num_head = config.num_attention_heads // WORLD_SIZE
         self.hidden_size = config.hidden_size // WORLD_SIZE
         self.max_seq_len = int(os.getenv("MAX_SEQ_LEN", config.model_max_length))
-
         if not IS_ND:
             self.k_cache_input = torch.zeros(self.num_layers,
-                                             self.batch_size,  # batch
+                                             self.batch_size,
                                              self.hidden_size // self.nz_dim,
                                              self.max_seq_len,
                                              self.nz_dim,
-                                             device="npu").half()
+                                             device="npu", dtype=torch.half)
             self.v_cache_input = torch.zeros(self.num_layers,
-                                             self.batch_size,  # batch
+                                             self.batch_size,
                                              self.hidden_size // self.nz_dim,
                                              self.max_seq_len,
                                              self.nz_dim,
-                                             device="npu").half()
-
+                                             device="npu", dtype=torch.half)
             self.k_cache_input = torch_npu.npu_format_cast(self.k_cache_input, 29)
+            torch.npu.empty_cache()
             self.v_cache_input = torch_npu.npu_format_cast(self.v_cache_input, 29)
         else:
             self.k_cache_input = torch.zeros(self.num_layers,
-                                             batch_size,  # batch
+                                             batch_size,
                                              self.max_seq_len,
                                              self.hidden_size,
-                                             device="npu").half()
+                                             device="npu", dtype=torch.half)
             self.v_cache_input = torch.zeros(self.num_layers,
-                                             batch_size,  # batch
+                                             batch_size,
                                              self.max_seq_len,
                                              self.hidden_size,
-                                             device="npu").half()
-
+                                             device="npu", dtype=torch.half)
+        torch.npu.empty_cache()
         self.token_offset = 1
         self.attention_mask_max = torch.zeros(
             (self.batch_size, self.num_head, self.max_seq_len, self.max_seq_len),
@@ -445,13 +444,15 @@ class BaichuanModel(BaichuanPreTrainedModel):
 
     def prepare_inputs_for_ascend(self, input_ids, attention_mask=None, past_key_values=None):
         self.kv_attention_manager.is_full = not past_key_values
+        seqlen_max = torch.tensor([self.kv_attention_manager.seq_len_tensor[0] - 1], dtype=torch.int64, device="npu")
         inputs = [input_ids,
                   self.kv_attention_manager.get_attention_mask(attention_mask),
                   self.kv_attention_manager.k_cache_input,
                   self.kv_attention_manager.v_cache_input,
                   self.kv_attention_manager.token_offset_tensor,
                   self.kv_attention_manager.seq_len_tensor,
-                  self.place_holder
+                  self.place_holder,
+                  seqlen_max,
                   ] + self.layer_id_list
 
         return inputs
@@ -521,17 +522,12 @@ class BaichuanModel(BaichuanPreTrainedModel):
         if batch_size != self.batch_size:
             self.batch_size = batch_size
             self.kv_attention_manager = KVAttentionManager(self.config, batch_size)
-            # self.attention_mask_max_inc = torch.zeros(
-            #     (self.batch_size, self.max_position_embeddings, self.max_position_embeddings), dtype=torch.half).npu()
 
         if past_key_values is None:
-            # 假设输入batch的长度一样
             self.kv_attention_manager.init_seq_len_and_token_offset(seq_length)
             self.kv_attention_manager.init_attention_mask()
-            # self.attention_mask_max_inc.zero_()
 
         if past_key_values is not None:
-            # print("----->  past key value shape", past_key_values[0][0].shape)
             past_key_values_length = self.kv_attention_manager.token_offset
             seq_length_with_past = seq_length_with_past + past_key_values_length
             self.kv_attention_manager.token_offset = self.kv_attention_manager.token_offset + 1
