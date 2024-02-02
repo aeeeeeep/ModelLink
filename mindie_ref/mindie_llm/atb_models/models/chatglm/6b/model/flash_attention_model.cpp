@@ -329,14 +329,14 @@ int64_t ChatGlmCommonModelFa::BuildGraph()
     lmParam.commParam.backend = param_.backend;
     atb_speed::common::ColumnParallelLinearV2(lmParam, &op);
     lmNode.operation.reset(op);
-    lmNode.inTensors = {&graph_.internalTensors.at(internalTensorId++), 
-                        &graph_.weightTensors.at(weightTensorId),
-                        &graph_.inTensors.at(IN_PLACE_HOLDER),
-                        &graph_.inTensors.at(IN_PLACE_HOLDER),
-                        &graph_.inTensors.at(IN_PLACE_HOLDER),
-                        &graph_.inTensors.at(IN_PLACE_HOLDER),
-                        &graph_.inTensors.at(IN_PLACE_HOLDER)
-                        };
+    lmNode.inTensors = {&graph_.internalTensors.at(internalTensorId++),
+        &graph_.weightTensors.at(weightTensorId),
+        &graph_.inTensors.at(IN_PLACE_HOLDER),
+        &graph_.inTensors.at(IN_PLACE_HOLDER),
+        &graph_.inTensors.at(IN_PLACE_HOLDER),
+        &graph_.inTensors.at(IN_PLACE_HOLDER),
+        &graph_.inTensors.at(IN_PLACE_HOLDER)
+    };
     lmNode.outTensors = {&graph_.outTensors.at(0)};
 
     return atb::NO_ERROR;
