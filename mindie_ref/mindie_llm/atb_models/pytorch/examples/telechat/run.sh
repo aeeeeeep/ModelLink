@@ -7,7 +7,7 @@ export ATB_USE_TILING_COPY_STREAM=1
 
 export PYTORCH_NPU_ALLOC_CONF="max_split_size_mb:2048"
 
-SCRIPT_DIR=$(cd $(diname $0); pwd)
+SCRIPT_DIR=$(cd $(dirname $0); pwd)
 FLOAT_MODEL_PATH=""
 FLOAT_PART_MODEL_PATH=""
 QUANT_MODEL_PATH=""
