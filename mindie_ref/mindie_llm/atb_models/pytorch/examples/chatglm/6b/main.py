@@ -70,7 +70,7 @@ def parse_args():
     parser.add_argument(
         "--model_file",
         type=str,
-        default="patches/models/modeling_chatglm_fa.py",
+        default="modeling_chatglm_ascend.py",
         help="The implementation of model"
     )
     parser.add_argument(
@@ -129,14 +129,7 @@ def get_is_format_nz():
         return False
     else:
         raise NotImplementedError
-
-
-def padding_zeros(x):
-    zeros = torch.zeros(x.shape)
-    result = torch.cat(
-        (x.unsqueeze(1), zeros.unsqueeze(1)), dim=1).view(-1)
-    return result
-
+    
 
 def check_lists(arg):
     if isinstance(arg, list):
@@ -152,18 +145,16 @@ def get_model(args):
         torch.distributed.init_process_group("hccl")
         local_rank = torch.distributed.get_rank()
         torch_npu.npu.set_device(args.device + local_rank)
-        torch.manual_seed(1)
-        part_model_path = os.path.join(args.model_path, "tensor_parallel/part_model", str(local_rank))
-        shutil.copy(args.model_file, os.path.join(part_model_path, "modeling_chatglm.py"))
+        part_model_path = Path(args.model_path).joinpath(f"tensor_parallel_tp{args.tp_size}/part_model/{local_rank}")
+        shutil.copy(args.model_file, Path(part_model_path).joinpath("modeling_chatglm.py"))
         model = AutoModel.from_pretrained(part_model_path,
-                                          trust_remote_code=True, torch_dtype=torch.half, device='npu')
+                                          trust_remote_code=True, torch_dtype=torch.half).npu()
     else:
         local_rank = 0
         torch.npu.set_device(args.device)
-        torch.manual_seed(1)
-        shutil.copy(args.model_file, os.path.join(args.model_path, "modeling_chatglm.py"))
+        shutil.copy(args.model_file, Path(args.model_path).joinpath("modeling_chatglm.py"))
         model = AutoModel.from_pretrained(args.model_path,
-                                          trust_remote_code=True, torch_dtype=torch.half, device='npu')
+                                          trust_remote_code=True, torch_dtype=torch.half).npu()
 
     # 使用二进制优化，消除动态shape的编译问题
     torch.npu.set_compile_mode(jit_compile=False)
@@ -172,18 +163,13 @@ def get_model(args):
     model = model.eval()
 
     # 确认配置
-    ENABLE_QUANT = os.environ.get("ENABLE_QUANT", "0") == "1"
     is_format_nz = get_is_format_nz()
-    if ENABLE_QUANT:
-        QUANT_WEIGHT_PATH = os.environ.get("QUANT_WEIGHT_PATH")
 
     # 浮点模型适配
     if is_format_nz:
         for name, module in model.named_modules():
             if isinstance(module, torch.nn.Linear):
                 module.weight.data = torch_npu.npu_format_cast(module.weight.data, 29)
-
-    model.set_weight()
 
     return tokenizer, model
 
@@ -246,7 +232,7 @@ def precision(args, tokenizer, model):
                 input_tokens = [build_prompt(answer_text) for answer_text in answer_texts]
                 inputs = tokenizer(input_tokens, padding=True, return_tensors="pt",
                                    truncation=True, max_length=2048).to('npu')
-                outputs = model(**inputs, return_last_logit=True)
+                outputs = model(**inputs)
                 logits = outputs.logits[:, -1]
                 logits = logits[:, choice_tokens]
                 preds = logits.argmax(dim=-1)

@@ -775,7 +775,7 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
         self.rotary_pos_emb = RotaryEmbedding(rotary_dim // 2, original_impl=config.original_rope, device=device,
                                               dtype=config.torch_dtype)
         self.encoder = init_method(GLMTransformer, config, **init_kwargs)
-        self.output_layer = init_method(nn.Linear, config.hidden_size, config.padded_vocab_size, bias=False,
+        self.output_layer = init_method(nn.Linear, config.hidden_size, config.padded_vocab_size // config.world_size, bias=False,
                                         dtype=config.torch_dtype, **init_kwargs)
         self.pre_seq_len = config.pre_seq_len
         self.prefix_projection = config.prefix_projection
@@ -891,6 +891,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         self.token_first = 0
         self.pre_processing = 0
         self.post_processing = 0
+        self.world_size = config.world_size
 
         if self.config.quantization_bit:
             self.quantize(self.config.quantization_bit, empty_init=True)
@@ -981,6 +982,15 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         if return_last_logit:
             hidden_states = hidden_states[-1:]
         lm_logits = self.transformer.output_layer(hidden_states)
+
+        if self.world_size >= 2:
+            tensor_list = [
+                torch.zeros(lm_logits.shape, device=lm_logits.device, dtype=lm_logits.dtype) 
+                for _ in range(self.world_size)
+            ]
+            torch.distributed.all_gather(tensor_list, lm_logits)
+            lm_logits = torch.cat(tensor_list, dim=-1)
+        
         lm_logits = lm_logits.transpose(0, 1).contiguous()
 
         loss = None

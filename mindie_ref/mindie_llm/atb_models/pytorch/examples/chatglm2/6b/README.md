@@ -168,11 +168,17 @@ weight_offset.npy  weight_scale.npy
 
 ## 模型推理
 
+- 可开启CPU Performance模式以提高模型推理性能。
+
+  ```
+  cpupower frequency-set -g performance
+  ```
+
 - 推理前开启如下环境变量
 
   ```shell
   export HCCL_BUFFSIZE=110
-  export HCCL_OP_BASE_FFTS_MODE_ENABLE=1
+  export HCCL_OP_BASE_FFTS_MODE_ENABLE=TRUE
   export TASK_QUEUE_ENABLE=1
   export ATB_OPERATION_EXECUTE_ASYNC=1
   export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
@@ -184,71 +190,75 @@ weight_offset.npy  weight_scale.npy
 - `C-Eval` 数据集推理
 
   ```shell
-  # 单芯场景
-  python main.py --mode precision_dataset --model_path ${CHECKPOINT} --ceval_dataset ${DATASET} --batch 8
-
-  # 多芯场景, 将TP_SIZE改为对应的并行数，例如双芯场景TP_SIZE=2
+  # 浮点
+  # 将TP_SIZE设为对应的并行数，例如单芯场景TP_SIZE=1，双芯场景TP_SIZE=2
+  # 多芯场景请先执行权重生成(浮点单芯跳过)
   python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
+  # 执行浮点推理
   torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode precision_dataset --model_path ${CHECKPOINT} --ceval_dataset ${DATASET} --batch 8 --tp_size ${TP_SIZE}
 
-  # 量化单芯场景
+  # 量化
+  # 添加量化环境变量
   export ENABLE_QUANT=1
   export QUANT_WEIGHT_PATH=${QUANT_WEIGHT_PATH}
-  python process_weights.py --model_path ${CHECKPOINT}
-  python main.py --mode precision_dataset --model_path ${CHECKPOINT} --ceval_dataset ${DATASET} --batch 8
-
-  # 量化双芯场景(300 IDuo)，将TP_SIZE改为对应的并行数，例如双芯场景TP_SIZE=2
-  export ENABLE_QUANT=1
-  export QUANT_WEIGHT_PATH=${QUANT_WEIGHT_PATH}
+  # 将TP_SIZE设为对应的并行数，例如单芯场景TP_SIZE=1，双芯场景TP_SIZE=2
+  # 执行权重生成（单芯/多芯都要执行）
   python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
+  # 执行量化推理
   torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode precision_dataset --model_path ${CHECKPOINT} --ceval_dataset ${DATASET} --batch 8 --tp_size ${TP_SIZE}
 
-  # 稀疏量化双芯场景(300 IDuo)，将TP_SIZE改为对应的并行数，例如双芯场景TP_SIZE=2
+  # 稀疏量化（当前仅支持300I DUO）
+  # 添加稀疏量化环境变量
   export ENABLE_SPARSE=1
   export QUANT_WEIGHT_PATH=${QUANT_WEIGHT_PATH}
   export COMPRESS_WEIGHT_PATH=${COMPRESS_WEIGHT_PATH}
+  # 将TP_SIZE设为对应的并行数，例如单芯场景TP_SIZE=1，双芯场景TP_SIZE=2
+  # 执行权重生成（单芯/多芯都要执行）
   python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
   python3 generate_compress_weight.py --weight_path=${QUANT_WEIGHT_PATH} --save_path=${COMPRESS_WEIGHT_PATH}
+  # 执行稀疏量化推理
   torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode precision_dataset --model_path ${CHECKPOINT} --ceval_dataset ${DATASET} --batch 8 --tp_size ${TP_SIZE}
   ```
 
 - 模型性能数据测试
 
   ```shell
-  # 单芯场景
-  python main.py --mode performance --model_path ${CHECKPOINT} --batch ${batch_size}
-
-  # 双芯场景，将TP_SIZE改为对应的并行数，例如双芯场景TP_SIZE=2
+  # 浮点
+  # 将TP_SIZE设为对应的并行数，例如单芯场景TP_SIZE=1，双芯场景TP_SIZE=2
+  # 多芯场景请先执行权重生成(浮点单芯跳过)
   python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
+  # 执行浮点推理
   torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode performance --model_path ${CHECKPOINT} --batch ${batch_size} --tp_size ${TP_SIZE}
 
-  # 量化单芯场景
+  # 量化
+  # 添加量化环境变量
   export ENABLE_QUANT=1
   export QUANT_WEIGHT_PATH=${QUANT_WEIGHT_PATH}
-  python process_weights.py --model_path ${CHECKPOINT}
-  python main.py --mode performance --model_path ${CHECKPOINT} --batch ${batch_size}
-
-  # 量化双芯场景(300 IDuo)，将TP_SIZE改为对应的并行数，例如双芯场景TP_SIZE=2
-  export ENABLE_QUANT=1
-  export QUANT_WEIGHT_PATH=${QUANT_WEIGHT_PATH}
+  # 将TP_SIZE设为对应的并行数，例如单芯场景TP_SIZE=1，双芯场景TP_SIZE=2
+  # 执行权重生成（单芯/多芯都要执行）
   python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
+  # 执行量化推理
   torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode performance --model_path ${CHECKPOINT} --batch ${batch_size} --tp_size ${TP_SIZE}
 
-  # 稀疏量化双芯场景(300 IDuo)，将TP_SIZE改为对应的并行数，例如双芯场景TP_SIZE=2
+  # 稀疏量化（当前仅支持300I DUO）
+  # 添加稀疏量化环境变量
   export ENABLE_SPARSE=1
   export QUANT_WEIGHT_PATH=${QUANT_WEIGHT_PATH}
   export COMPRESS_WEIGHT_PATH=${COMPRESS_WEIGHT_PATH}
+  # 将TP_SIZE设为对应的并行数，例如单芯场景TP_SIZE=1，双芯场景TP_SIZE=2
+  # 执行权重生成（单芯/多芯都要执行）
   python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
   python3 generate_compress_weight.py --weight_path=${QUANT_WEIGHT_PATH} --save_path=${COMPRESS_WEIGHT_PATH}
+  # 执行稀疏量化推理
   torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode performance --model_path ${CHECKPOINT} --batch ${batch_size} --tp_size ${TP_SIZE}
   ```
 
   备注：
 
-  1. 可通过开启 --set_case_pair 指定输入输出序列长度，例如
+  1. 可通过配置`--seqlen_in_pair`和`--seqlen_out_pair`指定输入输出序列长度，例如以下命令测试的输入输出组合为[256,256]，[512,512]，[1024,1024]
 
      ```shell
-     python main.py --mode performance --model_path ${CHECKPOINT} --device 4 --set_case_pair 1 --seqlen_in_pair 256,512,1024 --seqlen_out_pair 64,128,256 --batch 1 --performance_output_file performance_bs1.csv
+     torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode performance --model_path ${CHECKPOINT} --device 0 --seqlen_in_pair 256,512,1024 --seqlen_out_pair 256,512,1024 --batch 1 --tp_size ${TP_SIZE} --performance_output_file performance_bs1.csv
      ```
 
   2. 环境变量 `MAX_SEQ_LEN` （默认值2048）必须大于等于 `seqlen_in + seqlen_out`，例如：
@@ -263,23 +273,21 @@ weight_offset.npy  weight_scale.npy
   - 命令行交互
 
     ```shell
-    # 单芯场景
-    python main.py --mode cli_demo --model_path ${CHECKPOINT}
-
-    # 双芯场景
+    # 浮点
+    # 将TP_SIZE设为对应的并行数，例如单芯场景TP_SIZE=1，双芯场景TP_SIZE=2
+    # 多芯场景请先执行权重生成(浮点单芯跳过)
     python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
+    # 执行浮点推理
     torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode cli_demo --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
 
-    # 量化单芯场景
+    # 量化
+    # 添加量化环境变量
     export ENABLE_QUANT=1
     export QUANT_WEIGHT_PATH=${QUANT_WEIGHT_PATH}
-    python process_weights.py --model_path ${CHECKPOINT}
-    python main.py --mode cli_demo --model_path ${CHECKPOINT}
-
-    # 量化双芯场景(300 IDuo)
-    export ENABLE_QUANT=1
-    export QUANT_WEIGHT_PATH=${QUANT_WEIGHT_PATH}
+    # 将TP_SIZE设为对应的并行数，例如单芯场景TP_SIZE=1，双芯场景TP_SIZE=2
+    # 执行权重生成（单芯/多芯都要执行）
     python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
+    # 执行量化推理
     torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode cli_demo --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
     ```
 
@@ -296,17 +304,25 @@ weight_offset.npy  weight_scale.npy
     git apply web_demo_gradio.patch
     cd ..
 
-    # 单芯场景（Gradio 框架）
-    python web_demo.py --model_path ${CHECKPOINT}
-
-    # 双芯场景（Gradio 框架）
+    # Gradio 框架
+    # 将TP_SIZE设为对应的并行数，例如单芯场景TP_SIZE=1，双芯场景TP_SIZE=2
     torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 web_demo.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
     ```
 
 - `main.py` 参数说明：
 
   ```shell
-  # 这里应该是main.py的help信息
+  --mode: 推理模式，可选单数据推理，数据集推理，性能测试以及命令行交互
+  --model_path：模型权重路径
+  --tp_size：张量并行数，等于使用的芯片数量
+  --device：NPU设备id(可通过npu-smi info查看)，多芯场景则为NPU设备起始id，例：--device=0 --tp_size=4，则使用device：0，1，2，3
+  --batch：batch大小
+  --model_file：推理使用的modeling文件
+  --ceval_dataset：CEval数据集路径
+  --seqlen_in_pair：性能测试时需要测试的输入长度，默认为[256, 512, 1024]
+  --seqlen_out_pair：性能测试时需要测试的输出长度，默认为[256, 512, 1024]
+  --performance_output_file：性能测试数据保存文件，默认为performance.csv
+  --print_response：是否打印性能测试的推理回答
   ```
 
 # 模型参考精度和性能结果
@@ -317,8 +333,8 @@ weight_offset.npy  weight_scale.npy
 
   | ChatGLM2   | 类别 | Average Accuracy |
   | ---------- | ---- | ---------------- |
-  | GPU        | val  | 53.56%           |
-  | NPU (ours) | val  | 52.60%           |
+  | GPU (浮点bs8)  | val  | 53.56%           |
+  | NPU (浮点bs8)  | val  | 53.12%           |
 
 - 推理性能
 
