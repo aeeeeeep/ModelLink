@@ -11,15 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import pandas as pd
+import os
+import argparse
 import torch
+import json
 import torch.utils.data
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 from modelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfig
-import json
-import pandas as pd
-import os
-import argparse
 import tqdm
 
 current_path = os.getcwd()
@@ -41,9 +41,9 @@ def load_csv_by_task_name(task_name):
     return dev_df, val_df
 
 
-def get_dataset(args, tokenizer):
+def get_dataset(args_in, tokenizer_in):
     dataset_all = []
-    task_name = args.quant_task_name
+    task_name = args_in.quant_task_name
     print("task name", task_name)
     dev_df, val_df = load_csv_by_task_name(task_name)
     records = []
@@ -52,7 +52,7 @@ def get_dataset(args, tokenizer):
             prompt_end = format_example(val_df, i, include_answer=False)
             train_prompt = gen_prompt(dev_df, task_name, SHOT - cut_shot)
             prompt = train_prompt + prompt_end
-            input_len = len(tokenizer(prompt, return_tensors="pt").input_ids[0])
+            input_len = len(tokenizer_in(prompt, return_tensors="pt").input_ids[0])
             if input_len > 2000:
                 continue
             label = val_df.iloc[i, val_df.shape[1] - 1]
@@ -61,7 +61,7 @@ def get_dataset(args, tokenizer):
 
     for i in range(0, len(records)):
         prompt = records[i]['prompt']
-        inputs = tokenizer(prompt, return_tensors="pt")
+        inputs = tokenizer_in(prompt, return_tensors="pt")
 
         inputs_calib = {}
         for k, v in inputs.items():
@@ -92,11 +92,11 @@ def gen_prompt(train_df, subject, k=-1):
 
 
 def format_subject(subject):
-    l = subject.split("_")
-    s = ""
-    for entry in l:
-        s += " " + entry
-    return s   
+    line = subject.split("_")
+    sub = ""
+    for entry in line:
+        sub += " " + entry
+    return sub   
 
 
 if __name__ == "__main__":
@@ -146,7 +146,7 @@ if __name__ == "__main__":
         temp_calib_data.append([item["input_ids"], item["attention_mask"]])
     
     disable_idx_lst = [int(idx) for idx in args.disable_idx_lst.strip('[').strip(']').split(",")]
-    disable_names=[]
+    disable_names = []
     for layer_index in disable_idx_lst:
         q_pack_name = "model.layers.{}.self_attn.q_proj".format(layer_index)
         k_pack_name = "model.layers.{}.self_attn.k_proj".format(layer_index)

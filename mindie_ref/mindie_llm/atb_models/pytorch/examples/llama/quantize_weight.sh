@@ -16,12 +16,6 @@ function fn_main()
         shift
     fi
 
-    if [[ ! -z "$1" ]];then
-        WORLD_SIZE=$1
-        echo "[WORLD_SIZE]: $WORLD_SIZE"
-        shift
-    fi
-
     case "${QUANT_OPTION}" in
     "--quant")
         echo "generating the quant weight..."

@@ -76,15 +76,15 @@ class Record:
         return cache_dict
 
 
-def init_model(args):
-    model = AutoModelForCausalLM.from_pretrained(args.load_path,
+def init_model(args_in):
+    init_model = AutoModelForCausalLM.from_pretrained(args_in.load_path,
                                                       trust_remote_code=True,
                                                       torch_dtype=torch.float32,
                                                       return_dict_in_generate=True,)
-    tokenizer = AutoTokenizer.from_pretrained(args.load_path, use_fast=False, padding_side='left')
+    init_tokenizer = AutoTokenizer.from_pretrained(args_in.load_path, use_fast=False, padding_side='left')
     
-    model.eval()
-    return model, tokenizer
+    init_model.eval()
+    return init_model, init_tokenizer
 
 
 def get_subject_mapping():
@@ -104,11 +104,11 @@ def load_csv_by_task_name(task_name):
 
 
 def format_subject(subject):
-    l = subject.split("_")
-    s = ""
-    for entry in l:
-        s += " " + entry
-    return s
+    line = subject.split("_")
+    sub = ""
+    for entry in line:
+        sub += " " + entry
+    return sub
 
 
 def format_example(df, idx, include_answer=True):
@@ -131,7 +131,7 @@ def gen_prompt(train_df, subject, k=-1):
     return prompt
 
 
-def get_dataset(tokenizer, args):
+def get_dataset(tokenizer_in, args_in):
     dataset_all = []
     task_name = 'college_economics'
     dev_df, val_df = load_csv_by_task_name(task_name)
@@ -141,19 +141,19 @@ def get_dataset(tokenizer, args):
             prompt_end = format_example(val_df, i, include_answer=False)
             train_prompt = gen_prompt(dev_df, task_name, SHOT - cut_shot)
             prompt = train_prompt + prompt_end
-            input_len = len(tokenizer(prompt, return_tensors="pt").input_ids[0])
+            input_len = len(tokenizer_in(prompt, return_tensors="pt").input_ids[0])
             if input_len > 2000:
                 continue
             label = val_df.iloc[i, val_df.shape[1] - 1]
             records.append({'prompt': prompt, 'answer': label})
             break
 
-    batch_size = args.batch_size
+    batch_size = args_in.batch_size
     for i in tqdm(range(0, len(records), batch_size)):
         end_idx = min(i + batch_size, len(records))
         prompt = [record['prompt'] for record in records[i: end_idx]]
         length = [len(record['prompt']) for record in records[i: end_idx]]
-        inputs = tokenizer(prompt, return_tensors="pt", padding=True)
+        inputs = tokenizer_in(prompt, return_tensors="pt", padding=True)
         inputs_calib = {}
         for k, v in inputs.items():
             inputs_calib[k] = v

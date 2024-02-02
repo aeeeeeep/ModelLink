@@ -36,10 +36,10 @@ calib_list = ["Where is the capital of China?",
               "What are the most worth visiting scenic spots in China?"]
 
 
-def get_calib_dataset(tokenizer, calib_list):
+def get_calib_dataset(tokenizer_in, data):
     calib_dataset = []
-    for calib_data in calib_list:
-        inputs = tokenizer([calib_data], return_tensors='pt').to('cpu')
+    for calib_data in data:
+        inputs = tokenizer_in([calib_data], return_tensors='pt').to('cpu')
         print(inputs)
         calib_dataset.append([inputs.data['input_ids'], inputs.data['attention_mask']])
     return calib_dataset
