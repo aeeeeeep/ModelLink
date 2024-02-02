@@ -32,15 +32,11 @@
 #include "baichuan2/13b/model/flash_attention_quant_model.h"
 #include "baichuan2/13b/model/paged_attention_model.h"
 #include "baichuan2/13b/model/paged_attention_quant_model.h"
-<<<<<<< HEAD
-#include "chatglm2/6b/model/paged_attention_model.h"
-=======
 #include "chatglm2/6b/model/flash_attention_model.h"
 #include "chatglm2/6b/model/paged_attention_model.h"
 #include "bloom/model/flash_attention_model.h"
 #include "falcon/7b/model/flash_attention_model.h"
 #include "visualglm/6b/model/flash_attention_model.h"
->>>>>>> fa5e307e29cdd8c39aa2dd6141579a8258b77fa7
 #include "llama/model/anti_quant_flashattention_model.h"
 #include "llama/model/flash_attention_model.h"
 #include "llama_adapter/model/adapter_model.h"
@@ -54,10 +50,6 @@
 #include "baichuan2/7b/model/flash_attention_quant_model.h"
 #include "baichuan2/7b/model/flash_attention_rope_model.h"
 #include "baichuan2/7b/model/paged_attention_model.h"
-<<<<<<< HEAD
-#include "qwen/14b/model/flash_attention_model.h"
-#include "aquila/7b/model/flash_attention_model.h"
-=======
 #include "falcon/40b/model/flash_attention_model.h"
 #include "qwen/14b/model/flash_attention_model.h"
 #include "aquila/7b/model/flash_attention_model.h"
@@ -71,7 +63,6 @@
 #include "atb_speed/utils/model_factory.h"
 #include "telechat/model/float_model.h"
 #include "telechat/model/quant_model.h"
->>>>>>> fa5e307e29cdd8c39aa2dd6141579a8258b77fa7
 
 void *ModelTorch::GetWorkSpace(uint64_t bufferSize)
 {
