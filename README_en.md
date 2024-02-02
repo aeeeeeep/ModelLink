@@ -176,19 +176,19 @@ Coming soon ...
       <td>7B</td>
       <td>1x8</td>
       <td>FP16</td>
-      <td> 3763 </td>
+      <td> 3600 </td>
       <td> 3804 </td>
-      <td> <a href="sources/images/llama7b_loss.png">Loss</a> </td>
-      <td> <a href="examples/llama/pretrain_llama_7B_zero_8p.sh">Train</a> </td>
+      <td> <a href="sources/images/llama7b-loss-with-weight.png">Loss</a> </td>
+      <td> <a href="examples/llama/pretrain_llama_7b_ptd.sh">Train</a> </td>
     </tr>
     <tr>
       <td>13B</td>
       <td>1x8</td>
       <td>FP16</td>
-      <td> 1894 </td>
+      <td> 1895 </td>
       <td> 2012 </td>
-      <td> <a href="sources/images/llama13b_loss.png">Loss</a> </td>
-      <td> <a href="examples/llama/pretrain_llama_13B_zero_8p.sh">Train</a> </td>
+      <td> <a href="sources/images/llama13b-loss-with-weight.png">Loss</a> </td>
+      <td> <a href="examples/llama/pretrain_llama_13b_ptd.sh">Train</a> </td>
     </tr>
     <tr>
         <td>33B</td>
@@ -208,7 +208,7 @@ Coming soon ...
       <td>BF16 </td>
       <td> 348 </td>
       <td> 426 </td>
-      <td> <a href="sources/images/llama65b_bf_loss.png">Loss</a> </td>
+      <td> <a href="sources/images/llama65b-shape_layer10_loss-with-weight.png">Loss</a> </td>
       <td> <a href="examples/llama/pretrain_llama_65B_ptd_32p.sh">Train</a> </td>
     </tr>
     <tr>
