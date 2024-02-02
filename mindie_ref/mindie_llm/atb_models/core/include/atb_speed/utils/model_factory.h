@@ -37,7 +37,6 @@ private:
 
 #define MODEL_NAMESPACE_STRINGIFY(modelNameSpace) #modelNameSpace
 #define REGISTER_MODEL(nameSpace, modelName)                                                      \
-    do {                                                                                          \
         struct Register##_##nameSpace##_##modelName {                                             \
             inline Register##_##nameSpace##_##modelName()                                         \
             {                                                                                     \
@@ -45,7 +44,6 @@ private:
                 ModelFactory::Register(MODEL_NAMESPACE_STRINGIFY(nameSpace##_##modelName),        \
                     [](const std::string &param) { return std::make_shared<modelName>(param); }); \
             }                                                                                     \
-        } static instance_##nameSpace##modelName;                                                 \
-    } while (0)
+        } static instance_##nameSpace##modelName;
 } // namespace atb_speed
 #endif

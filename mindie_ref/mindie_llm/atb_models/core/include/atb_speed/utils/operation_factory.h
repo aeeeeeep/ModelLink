@@ -38,7 +38,6 @@ private:
 
 #define OPERATION_NAMESPACE_STRINGIFY(operationNameSpace) #operationNameSpace
 #define REGISTER_OPERATION(nameSpace, operationCreateFunc)                                                   \
-    do {                                                                                                     \
         struct Register##_##nameSpace##_##operationCreateFunc {                                              \
             inline Register##_##nameSpace##_##operationCreateFunc()                                          \
             {                                                                                                \
@@ -46,7 +45,6 @@ private:
                 OperationFactory::Register(OPERATION_NAMESPACE_STRINGIFY(nameSpace##_##operationCreateFunc), \
                     &(operationCreateFunc));                                                                 \
             }                                                                                                \
-        } static instance_##nameSpace##operationCreateFunc;                                                  \
-    } while (0)
+        } static instance_##nameSpace##operationCreateFunc;
 } // namespace atb_speed
 #endif
