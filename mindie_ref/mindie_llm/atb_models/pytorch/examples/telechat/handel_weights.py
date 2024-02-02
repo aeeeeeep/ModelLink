@@ -9,27 +9,48 @@ import torch
 import torch_npu
 import transformers
 from torch_npu.contrib import transfer_to_npu
-from transformers import AutoModelForCausalLM, AutoTokenizer, TelechatForCausalLM, TelechatConfig, AutoConfig
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    TelechatForCausalLM,
+    TelechatConfig,
+    AutoConfig,
+)
+
 
 def get_args():
     parser = argparse.ArgumentParser(description="Telechat info.")
     parser.add_argument("--world-size", type=int, default=2, help="world size")
-    parser.add_argument("--input-path", type=str, default="", help="path to input model")
-    parser.add_argument("--output-path", type=str, default="", help="path to output model")
+    parser.add_argument(
+        "--input-path", type=str, default="", help="path to input model"
+    )
+    parser.add_argument(
+        "--output-path", type=str, default="", help="path to output model"
+    )
     parser.add_argument("--device", default=-1, type=int, help="device number")
     parser.add_argument("--hardware", default="310", help="310 or 910")
-    parser.add_argument("--handle-type", type=str, required=True,
-                        choices=["cut_quant", "cut_float"])
+    parser.add_argument(
+        "--handle-type", type=str, required=True, choices=["cut_quant", "cut_float"]
+    )
     args = parser.parse_args()
 
     return args
 
+
 def load_model(args):
     tokenizer = AutoTokenizer.from_pretrained(args.input_path, use_fast=False)
-    model = TelechatForCausalLM.from_pretrained(args.input_path, torch_dtype=torch.float32).cpu()
+    model = TelechatForCausalLM.from_pretrained(
+        args.input_path, torch_dtype=torch.float32
+    ).cpu()
     return model, tokenizer
 
-def cut_weights_float(state_dict, world_size, cut_row_keys=("query", "key_value", "gate_proj", "up_proj"), cut_col_keys=("dense", "down_proj")):
+
+def cut_weights_float(
+    state_dict,
+    world_size,
+    cut_row_keys=("query", "key_value", "gate_proj", "up_proj"),
+    cut_col_keys=("dense", "down_proj"),
+):
     state_dict_list = [{} for i in range(world_size)]
     for key, tensor in state_dict.items():
         key_short = key.split(".")[-2]
@@ -44,7 +65,7 @@ def cut_weights_float(state_dict, world_size, cut_row_keys=("query", "key_value"
                 cut_tensor_list = [tensor] * world_size
         else:
             cut_tensor_list = [tensor] * world_size
-        
+
         for i in range(world_size):
             state_dict_list[i][key] = cut_tensor_list[i]
     return state_dict_list
@@ -64,7 +85,9 @@ def cut_model_float(args):
     create_model = TelechatForCausalLM(model_config).half().to(device)
     for i in range(args.world_size):
         create_model.load_state_dict(state_dict_list[i])
-        create_model.save_pretrained(f"{args.output_path}/part_model/{i}/", max_shard_size="4096MB")
+        create_model.save_pretrained(
+            f"{args.output_path}/part_model/{i}/", max_shard_size="4096MB"
+        )
     print(f"save successfully to: {args.output_path}")
 
 
@@ -77,11 +100,18 @@ def process_deq_scale(deq_scale_dict):
 
 
 def bias_correction_new(fp_bias, quant_weight, input_offset, deq_scale):
-    bias_correction = fp_bias.npu() / deq_scale.npu() - quant_weight.to(torch.float32).npu().sum(dim=1) * float(input_offset)
+    bias_correction = fp_bias.npu() / deq_scale.npu() - quant_weight.to(
+        torch.float32
+    ).npu().sum(dim=1) * float(input_offset)
     return bias_correction
 
 
-def cut_weights_quant(state_dict, world_size, cut_row_keys=("query", "key_value", "gate_proj", "up_proj"), cut_col_keys=("dense", "down_proj")):
+def cut_weights_quant(
+    state_dict,
+    world_size,
+    cut_row_keys=("query", "key_value", "gate_proj", "up_proj"),
+    cut_col_keys=("dense", "down_proj"),
+):
     state_dict_list = [{} for i in range(world_size)]
     for key, tensor in state_dict.items():
         key_short = key.split(".")[-1]
@@ -91,13 +121,19 @@ def cut_weights_quant(state_dict, world_size, cut_row_keys=("query", "key_value"
             cut_tensor_list = torch.chunk(tensor, world_size, dim=1)
         else:
             cut_tensor_list = [tensor] * world_size
-        
+
         for i in range(world_size):
             state_dict_list[i][key] = cut_tensor_list[i]
     return state_dict_list
 
 
-def cut_bias_quant(state_dict, world_size, is_bias=False, cut_row_keys=("query", "key_value", "gate_proj", "up_proj"), cut_col_keys=("dense", "down_proj")):
+def cut_bias_quant(
+    state_dict,
+    world_size,
+    is_bias=False,
+    cut_row_keys=("query", "key_value", "gate_proj", "up_proj"),
+    cut_col_keys=("dense", "down_proj"),
+):
     state_dict_list = [{} for i in range(world_size)]
     for key, tensor in state_dict.items():
         key_short = key.split(".")[-1]
@@ -107,7 +143,7 @@ def cut_bias_quant(state_dict, world_size, is_bias=False, cut_row_keys=("query",
             if is_bias:
                 tensor = tensor / world_size
             cut_tensor_list = [tensor] * world_size
-        
+
         for i in range(world_size):
             state_dict_list[i][key] = cut_tensor_list[i]
     return state_dict_list
@@ -117,16 +153,25 @@ def cut_model_quant(args):
     weight_path = args.input_path
 
     print(f"loading quant weight from {weight_path}")
-    quant_weight_dict = np.load(f"{weight_path}/quant_weight.npy", allow_pickle=True).item() 
-    deq_scale_dict = np.load(f"{weight_path}/deq_scale.npy", allow_pickle=True).item() 
-    fp_bias_dict = np.load(f"{weight_path}/fp_bias.npy", allow_pickle=True).item() 
-    quant_bias_dict = np.load(f"{weight_path}/quant_bias.npy", allow_pickle=True).item() 
-    input_offset_dict = np.load(f"{weight_path}/input_offset.npy", allow_pickle=True).item() 
+    quant_weight_dict = np.load(
+        f"{weight_path}/quant_weight.npy", allow_pickle=True
+    ).item()
+    deq_scale_dict = np.load(f"{weight_path}/deq_scale.npy", allow_pickle=True).item()
+    fp_bias_dict = np.load(f"{weight_path}/fp_bias.npy", allow_pickle=True).item()
+    quant_bias_dict = np.load(f"{weight_path}/quant_bias.npy", allow_pickle=True).item()
+    input_offset_dict = np.load(
+        f"{weight_path}/input_offset.npy", allow_pickle=True
+    ).item()
 
     print("correcting bias...")
     bias = {}
     for k in fp_bias_dict.keys():
-        bias[k] = bias_correction_new(fp_bias_dict[k], quant_weight_dict[k], input_offset_dict[k], deq_scale_dict[k])
+        bias[k] = bias_correction_new(
+            fp_bias_dict[k],
+            quant_weight_dict[k],
+            input_offset_dict[k],
+            deq_scale_dict[k],
+        )
     np.save(os.path.join(weight_path, "bias.npy"), bias)
     print(f"corrected bias saved to {weight_path}")
 
@@ -142,23 +187,36 @@ def cut_model_quant(args):
     for i in range(args.world_size):
         base_path = os.path.join(save_path, str(i))
         os.makedirs(base_path, exist_ok=True)
-        np.save(os.path.join(base_path, "quant_weight.npy"), state_quant_weight_dict_list[i])
+        np.save(
+            os.path.join(base_path, "quant_weight.npy"), state_quant_weight_dict_list[i]
+        )
         np.save(os.path.join(base_path, "fp_bias.npy"), state_fp_bias_dict_list[i])
         np.save(os.path.join(base_path, "deq_scale.npy"), state_deq_scale_dict_list[i])
 
-        shutil.copyfile(os.path.join(weight_path, "input_offset.npy"), os.path.join(base_path, "input_offset.npy"))
-        shutil.copyfile(os.path.join(weight_path, "weight_offset.npy"), os.path.join(base_path, "weight_offset.npy"))
-        shutil.copyfile(os.path.join(weight_path, "input_scale.npy"), os.path.join(base_path, "input_scale.npy"))
-        shutil.copyfile(os.path.join(weight_path, "weight_scale.npy"), os.path.join(base_path, "weight_scale.npy"))
+        shutil.copyfile(
+            os.path.join(weight_path, "input_offset.npy"),
+            os.path.join(base_path, "input_offset.npy"),
+        )
+        shutil.copyfile(
+            os.path.join(weight_path, "weight_offset.npy"),
+            os.path.join(base_path, "weight_offset.npy"),
+        )
+        shutil.copyfile(
+            os.path.join(weight_path, "input_scale.npy"),
+            os.path.join(base_path, "input_scale.npy"),
+        )
+        shutil.copyfile(
+            os.path.join(weight_path, "weight_scale.npy"),
+            os.path.join(base_path, "weight_scale.npy"),
+        )
     print(f"save successfully to: {args.output_path}")
 
 
-
 if __name__ == "__main__":
-    args = get_args()
-    if args.handle_type == "cut_float":
-        cut_model_float(args)
-    elif args.handle_type == "cut_quant":
-        cut_model_quant(args)
+    main_args = get_args()
+    if main_args.handle_type == "cut_float":
+        cut_model_float(main_args)
+    elif main_args.handle_type == "cut_quant":
+        cut_model_quant(main_args)
     else:
         raise Exception("handle_type invalid!")
