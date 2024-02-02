@@ -18,7 +18,7 @@ def get_args():
     parser.add_argument("--output-path", type=str, default="", help="path to output model")
     parser.add_argument("--device", default=-1, type=int, help="device number")
     parser.add_argument("--hardware", default="310", help="310 or 910")
-    parser.add_argument("--handel_type", type=str, required=True,
+    parser.add_argument("--handel-type", type=str, required=True,
                         choices=["cut_quant", "cut_float"])
     args = parser.parse_args()
 
