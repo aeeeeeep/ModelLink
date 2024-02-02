@@ -5,17 +5,19 @@ import copy
 import warnings
 import re
 import sys
-import time
-import logging as lg
 from typing import Optional, Tuple, Union, List, Callable, Dict, Any
+import json
+import os
 
 import torch
 import torch.utils.checkpoint
 import torch.nn.functional as F
+import torch_npu
 from torch import nn
 from torch.nn import CrossEntropyLoss, LayerNorm
 from torch.nn.utils import skip_init
 
+from atb_speed.common.arch.post_process.sample import SampleForModelsBase
 from transformers.modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
@@ -24,14 +26,28 @@ from transformers.modeling_utils import PreTrainedModel
 from transformers.utils import logging
 from transformers.generation.logits_process import LogitsProcessor
 from transformers.generation.utils import LogitsProcessorList, StoppingCriteriaList, GenerationConfig, ModelOutput
+from transformers.generation.logits_process import (
+    TemperatureLogitsWarper,
+    TopKLogitsWarper,
+    TopPLogitsWarper,
+)
+from manager import ModeManager
 
 from .configuration_chatglm import ChatGLMConfig
 
-LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
-DATE_FORMAT = "%Y-%m-%d %H:%M:%S %p"
 
-lg.basicConfig(filename=f"glm_npu_parallel.log", level=lg.INFO, format=LOG_FORMAT, datefmt=DATE_FORMAT)
+ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
+if ATB_SPEED_HOME_PATH is None:
+    raise RuntimeError(
+        "env ATB_SPEED_HOME_PATH not exist, source set_env.sh")
 
+LIB_PATH = os.path.join(ATB_SPEED_HOME_PATH,
+                        "lib/libatb_speed_torch.so")
+torch.classes.load_library(LIB_PATH)
+
+ENABLE_QUANT = os.environ.get("ENABLE_QUANT", "0") == "1"
+ENABLE_SPARSE = os.environ.get("ENABLE_SPARSE", "0") == "1"
+NZ_LAST_DIM = 16
 
 # flags required to enable jit fusion kernels
 
@@ -127,7 +143,8 @@ def split_tensor_along_last_dim(
 class RotaryEmbedding(nn.Module):
     def __init__(self, dim, original_impl=False, device=None, dtype=None):
         super().__init__()
-        inv_freq = 1.0 / (10000 ** (torch.arange(0, dim, 2, device=device).to(dtype=dtype) / dim))
+        inv_freq = 1.0 / \
+            (10000 ** (torch.arange(0, dim, 2, device=device).to(dtype=dtype) / dim))
         self.register_buffer("inv_freq", inv_freq)
         self.dim = dim
         self.original_impl = original_impl
@@ -142,7 +159,8 @@ class RotaryEmbedding(nn.Module):
         https://github.com/labmlai/annotated_deep_learning_paper_implementations/blob/master/license.
         """
         # $\Theta = {\theta_i = 10000^{\frac{2(i-1)}{d}}, i \in [1, 2, ..., \frac{d}{2}]}$
-        theta = 1.0 / (base ** (torch.arange(0, n_elem, 2, dtype=dtype, device=device) / n_elem))
+        theta = 1.0 / (base ** (torch.arange(0, n_elem, 2,
+                       dtype=dtype, device=device) / n_elem))
 
         # Create position indexes `[0, 1, ..., seq_len - 1]`
         seq_idx = torch.arange(seq_len, dtype=dtype, device=device)
@@ -150,12 +168,19 @@ class RotaryEmbedding(nn.Module):
         # Calculate the product of position index and $\theta_i$
         idx_theta = torch.outer(seq_idx, theta).float()
 
-        cache = torch.stack([torch.cos(idx_theta), torch.sin(idx_theta)], dim=-1)
+        emb = torch.stack((idx_theta, idx_theta), dim=-1)
+        rope_cos = torch.cos(emb)
+        rope_sin = torch.sin(emb)
 
         # this is to mimic the behaviour of complex32, else we will get different results
         if dtype in (torch.float16, torch.bfloat16, torch.int8):
-            cache = cache.bfloat16() if dtype == torch.bfloat16 else cache.half()
-        return cache
+            if dtype == torch.bfloat16:
+                rope_cos = rope_cos.bfloat16()
+                rope_sin = rope_sin.bfloat16()
+            else:
+                rope_cos = rope_cos.half()
+                rope_sin = rope_sin.half()
+        return rope_cos, rope_sin
 
     def forward(self, max_seq_len, offset=0):
         return self.forward_impl(
@@ -175,8 +200,10 @@ def apply_rotary_pos_emb(x: torch.Tensor, rope_cache: torch.Tensor) -> torch.Ten
     rope_cache = rope_cache.view(sq, -1, 1, xshaped.size(3), 2)
     x_out2 = torch.stack(
         [
-            xshaped[..., 0] * rope_cache[..., 0] - xshaped[..., 1] * rope_cache[..., 1],
-            xshaped[..., 1] * rope_cache[..., 0] + xshaped[..., 0] * rope_cache[..., 1],
+            xshaped[..., 0] * rope_cache[..., 0] -
+            xshaped[..., 1] * rope_cache[..., 1],
+            xshaped[..., 1] * rope_cache[..., 0] +
+            xshaped[..., 0] * rope_cache[..., 1],
         ],
         -1,
     )
@@ -187,7 +214,8 @@ def apply_rotary_pos_emb(x: torch.Tensor, rope_cache: torch.Tensor) -> torch.Ten
 class RMSNorm(torch.nn.Module):
     def __init__(self, normalized_shape, eps=1e-5, device=None, dtype=None, **kwargs):
         super().__init__()
-        self.weight = torch.nn.Parameter(torch.empty(normalized_shape, device=device, dtype=dtype))
+        self.weight = torch.nn.Parameter(torch.empty(
+            normalized_shape, device=device, dtype=dtype))
         self.eps = eps
 
     def forward(self, hidden_states: torch.Tensor):
@@ -258,10 +286,13 @@ class CoreAttention(torch.nn.Module):
             )
 
             # Raw attention scores. [b * np, sq, sk]
-            matmul_result = torch.bmm(
-                query_layer.transpose(0, 1), 
-                key_layer.transpose(0, 1).transpose(1, 2)
-                ) * (1.0 / self.norm_factor)
+            matmul_result = torch.baddbmm(
+                matmul_input_buffer,
+                query_layer.transpose(0, 1),  # [b * np, sq, hn]
+                key_layer.transpose(0, 1).transpose(1, 2),  # [b * np, hn, sk]
+                beta=0.0,
+                alpha=(1.0 / self.norm_factor),
+            )
 
             # change view to [b, np, sq, sk]
             attention_scores = matmul_result.view(*output_size)
@@ -352,8 +383,8 @@ class SelfAttention(torch.nn.Module):
 
         # Output.
         self.dense = nn.Linear(
-            self.projection_size // self.world_size, 
-            config.hidden_size, 
+            self.projection_size // self.world_size,
+            config.hidden_size,
             bias=config.add_bias_linear,
             device=device,
             **_config_to_kwargs(config)
@@ -519,8 +550,13 @@ class MLP(torch.nn.Module):
 
         if self.world_size >= 2:
             torch.distributed.all_reduce(output, op=torch.distributed.ReduceOp.SUM)
-            
+
         return output
+
+
+def bias_correction(fp_bias, quant_weight, input_offset, deq_scale):
+    correction = quant_weight.to(torch.float32).npu().sum(dim=1) * float(input_offset) * deq_scale.npu()
+    return fp_bias.npu() - correction
 
 
 class GLMBlock(torch.nn.Module):
@@ -544,15 +580,17 @@ class GLMBlock(torch.nn.Module):
                                              dtype=config.torch_dtype)
 
         # Self attention.
-        self.self_attention = SelfAttention(config, layer_number, device=device)
-        self.hidden_dropout = config.hidden_dropout
+        if not ENABLE_QUANT and not ENABLE_SPARSE or (self.layer_number - 1) in config.float_layers_id:
+            self.self_attention = SelfAttention(config, layer_number, device=device)
+            self.hidden_dropout = config.hidden_dropout
 
         # Layernorm on the attention output
         self.post_attention_layernorm = LayerNormFunc(config.hidden_size, eps=config.layernorm_epsilon, device=device,
                                                       dtype=config.torch_dtype)
 
         # MLP
-        self.mlp = MLP(config, device=device)
+        if not ENABLE_QUANT and not ENABLE_SPARSE or (self.layer_number - 1) in config.float_layers_id:
+            self.mlp = MLP(config, device=device)
 
     def forward(
             self, hidden_states, attention_mask, rotary_pos_emb, kv_cache=None, use_cache=True,
@@ -631,6 +669,7 @@ class GLMTransformer(torch.nn.Module):
             use_cache: Optional[bool] = True,
             output_hidden_states: Optional[bool] = False,
     ):
+
         if not kv_caches:
             kv_caches = [None for _ in range(self.num_layers)]
         presents = () if use_cache else None
@@ -665,6 +704,7 @@ class GLMTransformer(torch.nn.Module):
                     kv_cache=kv_caches[index],
                     use_cache=use_cache
                 )
+
             hidden_states, kv_cache = layer_ret
             if use_cache:
                 presents = presents + (kv_cache,)
@@ -699,12 +739,11 @@ class ChatGLMPreTrainedModel(PreTrainedModel):
         batch_size, seq_length = input_ids.shape
         full_attention_mask = torch.ones(batch_size, seq_length, seq_length, device=input_ids.device)
         full_attention_mask.tril_()
-        past_length = 0
-        if past_key_values:
-            past_length = past_key_values[0][0].shape[0]
+        past_length = past_key_values
         if past_length:
             full_attention_mask = torch.cat((torch.ones(batch_size, seq_length, past_length,
                                                         device=input_ids.device), full_attention_mask), dim=-1)
+
         if padding_mask is not None:
             full_attention_mask = full_attention_mask * padding_mask.unsqueeze(1)
         if not past_length and padding_mask is not None:
@@ -752,7 +791,7 @@ class Embedding(torch.nn.Module):
 
 
 class ChatGLMModel(ChatGLMPreTrainedModel):
-    def __init__(self, config: ChatGLMConfig, device=None, empty_init=True):
+    def __init__(self, config: ChatGLMConfig, device=None, empty_init=False):
         super().__init__(config)
         if empty_init:
             init_method = skip_init
@@ -788,7 +827,7 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
 
     def get_input_embeddings(self):
         return self.embedding.word_embeddings
-    
+
     def set_input_embeddings(self, new_embeddings:torch.Tensor):
         self.embedding.word_embeddings = new_embeddings
 
@@ -872,29 +911,105 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
         return self
 
 
+class TopPLogits(torch.nn.Module):
+    def __init__(self, top_p: float, top_k: float, temperature: float,
+                 filter_value: float = -float("Inf"), min_tokens_to_keep: int = 1):
+        super(TopPLogits, self).__init__()
+        top_p = float(top_p)
+        if top_p < 0 or top_p > 1.0:
+            raise ValueError(f"'top_p' has to be a float > 0 and < 1, but is {top_p}")
+        if not isinstance(min_tokens_to_keep, int) or (min_tokens_to_keep < 0):
+            raise ValueError(f"'min_tokens_to_keep' has to be a non-begative integer, but is {min_tokens_to_keep}")
+
+        self.top_p = top_p
+        self.filter_value = filter_value
+        self.min_tokens_to_keep = min_tokens_to_keep
+        self.top_k = top_k
+        self.temperature = temperature
+
+    def __call__(self, scores: torch.FloatTensor):
+        if self.temperature != 0:
+            scores = scores / self.temperature
+        else:
+            raise ValueError(f"'temperature has to be a float != 0 , but is {self.temperature}")
+        top_k = min(self.top_k, scores.size(-1)) # safety check
+        # remove all tokens with a probability less than the last token of the top-k
+
+        values, indices = torch.topk(scores, top_k)
+        values = torch.flip(values, dims=[1])
+        cumulative_probs = values.softmax(dim=-1).cumsum(dim=-1)
+
+        sorted_indices_to_remove = cumulative_probs <= (1 - self.top_p)
+
+        if self.min_tokens_to_keep > 1:
+            sorted_indices_to_remove[..., -self.min_tokens_to_keep:] = 0
+        values = values.masked_fill(sorted_indices_to_remove, torch.finfo(values.dtype).min)
+
+        return values, indices
+
+
 class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
     def __init__(self, config: ChatGLMConfig, empty_init=True, device=None):
         super().__init__(config)
 
-        self.max_sequence_length = config.max_length
         self.transformer = ChatGLMModel(config, empty_init=empty_init, device=device)
         self.config = config
+
         self.quantized = False
+        self.num_layers = config.num_layers
+        # max sequence length supported by model
+        self.seq_length = config.seq_length
+        # max sequence length required in current application, 
+        # it should be set to an appropriate value to avoid memory waste of npu 
+        self.max_seq_len = int(os.environ.get("MAX_SEQ_LEN", default=2048))
+        # use tensor parallel or not
+        if config.world_size > 1:
+            self.rank = torch.distributed.get_rank()
+            self.world_size = torch.distributed.get_world_size()
+        else:
+            self.rank = 0
+            self.world_size = 1
+        self.multi_query_group_num = max(config.multi_query_group_num // self.world_size, 1)
+        # pre-calculation for position embedding
+        self.model_rotary_pos_emb_cos, self.model_rotary_pos_emb_sin = \
+            self.transformer.rotary_pos_emb(self.seq_length)
+        # param required by FlashAttention, softmax(fp32(Q*preScale@K*postScale))@V
+        norm_factor = math.sqrt(config.kv_channels)  # 对应 CoreAttention 里的 self.norm_factor
+        self.preScale = [
+            (1 / (norm_factor * layer_id) * layer_id)
+            for layer_id in range(1, self.num_layers + 1)
+        ]
+        self.postScale = [1.0] * self.num_layers
 
-        self.count = 0
-        self.input_generate = 0
-        self.model_total = 0
-        self.token_total = 0
-        self.model_time = 0
-        self.token_time = 0
-        self.model_first = 0
-        self.token_first = 0
-        self.pre_processing = 0
-        self.post_processing = 0
-        self.world_size = config.world_size
+        # use NZ format or not
+        soc_version = torch_npu._C._npu_get_soc_version()
+        if soc_version in [104, 220, 221, 222, 223, 224]:
+            self.format_nz = False
+        else:
+            self.format_nz = True
+            self.hidden_dim_nz = math.ceil(config.kv_channels * self.multi_query_group_num / NZ_LAST_DIM)
 
-        if self.config.quantization_bit:
-            self.quantize(self.config.quantization_bit, empty_init=True)
+        # init required inputs
+        self.batch = 0
+        self.token_num = None
+        self.k_cache_input = None
+        self.v_cache_input = None
+        self.token_offset = None
+        self.seq_len = None
+
+        # get acl model_operation
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm2_common_model")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm2_common_model")
+
+        # get mode manager
+        self.mode = ENABLE_SPARSE and "sparse" or ENABLE_QUANT and "quant" or "float"
+        self.manager = ModeManager.get_manager(mode=self.mode)(self.config, rank=self.rank, world_size=self.world_size)
+
+        # init_param
+        self.acl_encoder_param = self.manager.init_param(is_encoder=True)
+        self.acl_decoder_param = self.manager.init_param(is_encoder=False)
+        self.acl_encoder_operation.set_param(self.acl_encoder_param)
+        self.acl_decoder_operation.set_param(self.acl_decoder_param)
 
     def _update_model_kwargs_for_generation(
             self,
@@ -941,7 +1056,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             position_ids = self.get_position_ids(input_ids, device=input_ids.device)
         if not is_first_forward:
             position_ids = position_ids[..., -1:]
-            input_ids = input_ids[:, -1:]
+            input_ids = input_ids[..., -1:]
         return {
             "input_ids": input_ids,
             "past_key_values": past_key_values,
@@ -949,6 +1064,11 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             "attention_mask": attention_mask,
             "return_last_logit": True
         }
+
+    def set_weight(self):
+        self.weights_list = self.manager.init_weights(self.state_dict(), is_format_nz=self.format_nz)
+        self.acl_encoder_operation.set_weight(self.weights_list)
+        self.acl_decoder_operation.set_weight(self.weights_list)
 
     def forward(
             self,
@@ -967,32 +1087,147 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        transformer_outputs = self.transformer(
-            input_ids=input_ids,
-            position_ids=position_ids,
-            attention_mask=attention_mask,
-            past_key_values=past_key_values,
-            inputs_embeds=inputs_embeds,
-            use_cache=use_cache,
-            output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
-        )
+        # ========================= atb ====================================
+        batch_size, seq_length = input_ids.shape
 
-        hidden_states = transformer_outputs[0]
-        if return_last_logit:
-            hidden_states = hidden_states[-1:]
-        lm_logits = self.transformer.output_layer(hidden_states)
+        # Rotary positional embeddings
+        if position_ids is not None:
+            rope_cos = self.model_rotary_pos_emb_cos[position_ids]
+            rope_sin = self.model_rotary_pos_emb_sin[position_ids]
+        else:
+            rope_cos = self.model_rotary_pos_emb_cos[None, :seq_length]
+            rope_sin = self.model_rotary_pos_emb_sin[None, :seq_length]
 
-        if self.world_size >= 2:
-            tensor_list = [
-                torch.zeros(lm_logits.shape, device=lm_logits.device, dtype=lm_logits.dtype) 
-                for _ in range(self.world_size)
-            ]
-            torch.distributed.all_gather(tensor_list, lm_logits)
-            lm_logits = torch.cat(tensor_list, dim=-1)
+        if batch_size != self.batch:
+            self.batch = batch_size
+            self.decoder_seq_len_tensor = torch.ones(batch_size, dtype=torch.int32, device='npu')
+            if self.format_nz:
+                # 28, bs, 16, 2048, 16
+                self.k_cache_input = torch_npu.npu_format_cast(torch.zeros(self.num_layers, self.batch,
+                                                                           self.hidden_dim_nz,
+                                                                           math.ceil(self.max_seq_len / NZ_LAST_DIM) * NZ_LAST_DIM,
+                                                                           NZ_LAST_DIM,
+                                                                           device='npu',
+                                                                           dtype=torch.float16).contiguous(), 29)
+                self.v_cache_input = torch_npu.npu_format_cast(torch.zeros(self.num_layers, self.batch,
+                                                                           self.hidden_dim_nz,
+                                                                           math.ceil(self.max_seq_len / NZ_LAST_DIM) * NZ_LAST_DIM,
+                                                                           NZ_LAST_DIM,
+                                                                           device='npu',
+                                                                           dtype=torch.float16).contiguous(), 29)
+            else:
+                self.k_cache_input = torch.zeros(self.num_layers, self.batch,
+                                                 self.max_seq_len,
+                                                 self.config.kv_channels * self.multi_query_group_num,
+                                                 dtype=torch.float16, device="npu").contiguous()
+                self.v_cache_input = torch.zeros(self.num_layers, self.batch,
+                                                 self.max_seq_len,
+                                                 self.config.kv_channels * self.multi_query_group_num,
+                                                 dtype=torch.float16, device="npu").contiguous()
         
-        lm_logits = lm_logits.transpose(0, 1).contiguous()
+        full_flag = True if seq_length > 1 else False
 
+        if past_key_values is None:
+            self.token_num = [0] * batch_size
+        if full_flag:  # 首token
+            # attention_mask without flashattention
+            if (attention_mask is not None and not attention_mask.all()) or (past_key_values and seq_length != 1):
+                attention_mask_acl = self.get_masks(
+                    input_ids, past_key_values, padding_mask=attention_mask)
+            else:
+                attention_mask_acl = torch.ones(
+                    batch_size, 1, seq_length, seq_length, device=input_ids.device, dtype=torch.bool)
+                attention_mask_acl = attention_mask_acl.tril()
+                attention_mask_acl = ~attention_mask_acl
+
+            # attention_mask for flashattention
+            self.attention_mask_max = torch.zeros(
+                (self.batch, self.max_seq_len, self.max_seq_len), device='npu', dtype=torch.half
+            )
+
+            if attention_mask_acl is not None:
+                attention_mask_acl = attention_mask_acl[:, 0, :, :].to(torch.half)
+                self.attention_mask_max[:self.batch, :seq_length, :attention_mask_acl.size()[-1]] -= 10000 * (
+                    attention_mask_acl)
+            if self.format_nz:
+                self.attention_mask_max = torch_npu.npu_format_cast(
+                    self.attention_mask_max.view(self.batch, self.max_seq_len, self.max_seq_len // NZ_LAST_DIM,
+                                                 NZ_LAST_DIM).transpose(1, 2).contiguous(), 29)
+
+            # other inputs
+            encoder_seq_len_tensor = torch.full((batch_size,), seq_length, dtype=torch.int32).npu()
+            self.token_num = [i + seq_length for i in self.token_num]
+            self.token_offset = torch.tensor(self.token_num, device=input_ids.device, dtype=torch.int32)
+            acl_param = json.dumps({"tokenOffset": self.token_num, "seqLen": [seq_length] * batch_size})
+
+            inputs_dict = {
+                "input_ids": input_ids,
+                "rope_cos": rope_cos,
+                "rope_sin": rope_sin,
+                "seq_len_tensor": encoder_seq_len_tensor,
+                "attention_mask_max": self.attention_mask_max,
+                "token_offset": self.token_offset,
+                "k_cache_input": self.k_cache_input,
+                "v_cache_input": self.v_cache_input,
+            }
+            input_full = self.manager.init_inputs(inputs_dict)
+
+            acl_model_out = self.acl_encoder_operation.execute(input_full, acl_param)
+            lm_logits = acl_model_out[0]
+
+            # recover presents/past_key_values
+            self.attention_mask_max = None
+
+        else:  # 非首token
+            if self.attention_mask_max is None:
+                if (attention_mask is not None and not attention_mask.all()) or (past_key_values and seq_length != 1):
+                    attention_mask_acl = self.get_masks(
+                        input_ids, past_key_values, padding_mask=attention_mask)
+                else:
+                    attention_mask_acl = torch.zeros(batch_size, 1, 1, seq_length, device='npu', dtype=torch.bool)
+
+                # flashattention inputs
+                if attention_mask_acl is not None:
+                    attention_mask_acl = attention_mask_acl[:, 0, 0, :].to(torch.half)
+                    if self.format_nz:
+                        self.attention_mask_max = torch.zeros(
+                            (self.batch, NZ_LAST_DIM, self.max_seq_len), device='npu', dtype=torch.half
+                        )
+                        self.attention_mask_max[:self.batch, :NZ_LAST_DIM, :attention_mask_acl.size()[-1]] -= 10000 * (
+                            F.pad(attention_mask_acl.unsqueeze(-2), (0, 0, 0, 15)))
+                    else:
+                        self.attention_mask_max = torch.zeros(
+                            (self.batch, 1, self.max_seq_len), device='npu', dtype=torch.half
+                        )
+                        self.attention_mask_max[:self.batch, :1, :attention_mask_acl.size()[-1]] -= 10000 * (
+                            attention_mask_acl.unsqueeze(-2))
+
+                if self.format_nz:
+                    self.attention_mask_max = torch_npu.npu_format_cast(
+                        self.attention_mask_max.view(self.batch, NZ_LAST_DIM, self.max_seq_len // NZ_LAST_DIM, NZ_LAST_DIM
+                    ).transpose(1, 2).contiguous(), 29)
+
+            # other inputs
+            self.token_num = [i + 1 for i in self.token_num]
+            self.token_offset += 1
+            acl_param = json.dumps({"tokenOffset": self.token_num, "seqLen": [1] * batch_size})
+
+            inputs_dict = {
+                "input_ids": input_ids,
+                "rope_cos": rope_cos,
+                "rope_sin": rope_sin,
+                "seq_len_tensor": self.decoder_seq_len_tensor,
+                "attention_mask_max": self.attention_mask_max,
+                "token_offset": self.token_offset,
+                "k_cache_input": self.k_cache_input,
+                "v_cache_input": self.v_cache_input,
+            }
+            input_increament = self.manager.init_inputs(inputs_dict)
+
+            acl_model_out = self.acl_decoder_operation.execute(input_increament, acl_param)
+            lm_logits = acl_model_out[0]
+
+        # ========================= atb ====================================
         loss = None
         if labels is not None:
             lm_logits = lm_logits.to(torch.float32)
@@ -1014,9 +1249,9 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         return CausalLMOutputWithPast(
             loss=loss,
             logits=lm_logits,
-            past_key_values=transformer_outputs.past_key_values,
-            hidden_states=transformer_outputs.hidden_states,
-            attentions=transformer_outputs.attentions,
+            past_key_values=self.token_num[0],
+            hidden_states=None,
+            attentions=None,
         )
 
     @staticmethod
@@ -1095,7 +1330,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         else:
             inputs = self.build_stream_inputs(tokenizer, query, history=history)
         if past_key_values is not None:
-            past_length = past_key_values[0][0].shape[0]
+            past_length = past_key_values
             if self.transformer.pre_seq_len is not None:
                 past_length -= self.transformer.pre_seq_len
             inputs.position_ids += past_length
@@ -1180,39 +1415,37 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         stopping_criteria = self._get_stopping_criteria(
             generation_config=generation_config, stopping_criteria=stopping_criteria
         )
-        logits_warper = self._get_logits_warper(generation_config)
 
         unfinished_sequences = input_ids.new(input_ids.shape[0]).fill_(1)
         scores = None
 
+        # initialize the new TopPLogits outside the loop
+        tp = TopPLogits(generation_config.top_p, generation_config.top_k, generation_config.temperature)
+
         while True:
-            torch.npu.synchronize()
-            input_start = time.time()
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
             # forward pass to get next token
-            torch.npu.synchronize()
-            model_start = time.time()
             outputs = self(
                 **model_inputs,
                 return_dict=True,
                 output_attentions=False,
                 output_hidden_states=False,
             )
-            torch.npu.synchronize()
-            model_end = time.time()
 
             next_token_logits = outputs.logits[:, -1, :]
 
             # pre-process distribution
             next_token_scores = logits_processor(input_ids, next_token_logits)
-            next_token_scores = logits_warper(input_ids, next_token_scores)
-
-            # sample
-            probs = nn.functional.softmax(next_token_scores, dim=-1)
             if generation_config.do_sample:
-                next_tokens = torch.multinomial(probs, num_samples=1).squeeze(1)
+                # ------------------post-processing optimization--------------------
+                output, indices = tp(next_token_scores)
+                probs_opt = nn.functional.softmax(output, dim=-1)
+                next_tokens = torch.multinomial(probs_opt, num_samples=1)
+                for i in next_tokens:
+                    next_tokens = indices[0][len(indices[0]) - i - 1]
             else:
-                next_tokens = torch.argmax(probs, dim=-1)
+                next_tokens = torch.argmax(next_token_scores, dim=-1)
+            next_tokens = next_tokens.npu()
 
             # update generated ids, model inputs, and length for next step
             input_ids = torch.cat([input_ids, next_tokens[:, None]], dim=-1)
@@ -1221,25 +1454,6 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             )
             unfinished_sequences = unfinished_sequences.mul((sum(next_tokens != i for i in eos_token_id)).long())
             torch.npu.synchronize()
-            post_processing_end = time.time()
-
-            self.count += 1
-            self.input_generate = (model_start - input_start) * 1000
-            self.model_time = (model_end - model_start) * 1000
-            self.post_processing = (
-                post_processing_end - model_end) * 1000
-            self.token_time = (post_processing_end - input_start) * 1000
-            if self.count == 1:
-                self.model_first = self.model_time
-                self.token_first = self.token_time
-            else:
-                self.model_total += self.model_time
-                self.token_total += self.token_time
-
-            lg.info(f"{self.count} tokens model_time: {self.model_time:.4f} ms")
-            lg.info(f"{self.count} tokens token_time: {self.token_time:.4f} ms")
-            lg.info(f"{self.count} tokens input_generate: {self.input_generate:.4f} ms")
-            lg.info(f"{self.count} tokens post_processing: {self.post_processing:.4f} ms")
 
             if return_past_key_values:
                 yield input_ids, outputs.past_key_values
@@ -1248,11 +1462,6 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             # stop when each sentence is finished, or if we exceed the maximum length
             if unfinished_sequences.max() == 0 or stopping_criteria(input_ids, scores):
                 break
-        if self.count != 1:
-            model_avg = self.model_total / (self.count - 1)
-            token_avg = self.token_total / (self.count - 1)
-            lg.info(f"{self.count} tokens, avg model_time: {model_avg:.4f} ms, model_total: {self.model_total:.4f} ms")
-            lg.info(f"{self.count} tokens, avg token_time: {token_avg:.4f} m, token_total: {self.token_total:.4f} ms")
 
     def quantize(self, bits: int, empty_init=False, device=None, **kwargs):
         if bits == 0:
@@ -1271,3 +1480,50 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         self.transformer.encoder = quantize(self.transformer.encoder, bits, empty_init=empty_init, device=device,
                                             **kwargs)
         return self
+
+    def sample(
+        self,
+        input_ids: torch.LongTensor,
+        logits_processor: Optional[LogitsProcessorList] = None,
+        stopping_criteria: Optional[StoppingCriteriaList] = None,
+        logits_warper: Optional[LogitsProcessorList] = None,
+        max_length: Optional[int] = None,
+        pad_token_id: Optional[int] = None,
+        eos_token_id: Optional[Union[int, List[int]]] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        output_scores: Optional[bool] = None,
+        return_dict_in_generate: Optional[bool] = None,
+        synced_gpus: bool = False,
+        streamer: Optional["BaseStreamer"] = None,
+        **model_kwargs,
+    ):
+        sample_config = {}
+        for obj in logits_warper :
+            if (isinstance(obj, TemperatureLogitsWarper)):
+                sample_config["temperature"] = obj.temperature
+            if (isinstance(obj, TopKLogitsWarper)):
+                sample_config["top_k"] = obj.top_k
+            if (isinstance(obj, TopPLogitsWarper)):
+                sample_config["top_p"] = obj.top_p
+
+        model_sample = SampleForModelsBase(self,
+                                        self.generation_config,
+                                        self.config,
+                                        sample_config,
+                                        self.prepare_inputs_for_generation,
+                                        self._update_model_kwargs_for_generation
+                                        )
+        return model_sample.sample(
+            input_ids,
+            logits_processor=logits_processor,
+            logits_warper=logits_warper,
+            stopping_criteria=stopping_criteria,
+            pad_token_id=pad_token_id,
+            eos_token_id=eos_token_id,
+            output_scores=output_scores,
+            return_dict_in_generate=return_dict_in_generate,
+            synced_gpus=synced_gpus,
+            streamer=streamer,
+            **model_kwargs,
+        )
