@@ -1,6 +1,22 @@
 cmake_minimum_required(VERSION 3.8)
 project("atb_speed")
 
+include_directories(
+    ${PROJECT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}/core/include
+    ${PROJECT_SOURCE_DIR}/models
+    ${PROJECT_SOURCE_DIR}/layers
+    ${PROJECT_SOURCE_DIR}/3rdparty/nlohmannJson/include
+    ${PROJECT_SOURCE_DIR}/3rdparty/lccl/include
+    $ENV{ATB_HOME_PATH}/include
+    $ENV{ASCEND_HOME_PATH}/include)
+
+link_directories(
+    ${PROJECT_SOURCE_DIR}/3rdparty/lccl/lib
+    $ENV{ASCEND_HOME_PATH}/lib64
+    $ENV{ATB_HOME_PATH}/lib
+    $ENV{ASCEND_TOOLKIT_HOME}/lib64)
+
 #options, these can be pass in by cmake argument
 option(USE_CXX11_ABI "USE_CXX11_ABI" ON)
 option(USE_OPTIMIZE "USE_OPTIMIZE" ON)
@@ -64,28 +80,11 @@ if(TORCH_HIGHER_THAN_PTA6)
     message(STATUS "define TORCH_HIGHER_THAN_PTA6")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTORCH_HIGHER_THAN_PTA6")
 endif()
-include_directories(
-    ${PROJECT_SOURCE_DIR}
-    ${PROJECT_SOURCE_DIR}/core/include
-    ${PROJECT_SOURCE_DIR}/models
-    ${PROJECT_SOURCE_DIR}/layers
-    ${PROJECT_SOURCE_DIR}/3rdparty/nlohmannJson/include
-    ${PROJECT_SOURCE_DIR}/3rdparty/lccl/include
-    $ENV{ATB_HOME_PATH}/include
-    $ENV{ASCEND_HOME_PATH}/include
-    $ENV{PYTHON_INCLUDE_PATH}
-    $ENV{PYTORCH_INSTALL_PATH}/include
-    $ENV{PYTORCH_INSTALL_PATH}/include/torch/csrc/api/include
-    $ENV{PYTORCH_NPU_INSTALL_PATH}/include)
-
-link_directories(
-    ${PROJECT_SOURCE_DIR}/3rdparty/lccl/lib
-    $ENV{ASCEND_HOME_PATH}/lib64
-    $ENV{ATB_HOME_PATH}/lib
-    $ENV{PYTHON_LIB_PATH}
-    $ENV{PYTORCH_INSTALL_PATH}/lib
-    $ENV{PYTORCH_NPU_INSTALL_PATH}/lib
-    $ENV{ASCEND_TOOLKIT_HOME}/lib64)
+if(USE_UNIT_TEST)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage -O3")
+    set(CMAKE_CXX_OUTPUT_EXTENSION_REPLACE 1)
+    add_subdirectory(tests)
+endif()
 
 add_subdirectory(core)
 add_subdirectory(models)
