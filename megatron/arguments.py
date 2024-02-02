@@ -646,7 +646,10 @@ def _add_network_size_args(parser):
     group.add_argument('--num-experts', type=int, default=None,
                        help='Number of Experts in Switch Transformer (None means no Switch)')
     group.add_argument('--untie-embeddings-and-output-weights', action='store_true',
-                       help='Untie embeddings and output weights.'),
+                       help='Untie embeddings and output weights.')
+    group.add_argument('--use-unpad', action='store_true',
+                       help='use unpad.',
+                       dest='use_unpad'),
     return parser
 
 
