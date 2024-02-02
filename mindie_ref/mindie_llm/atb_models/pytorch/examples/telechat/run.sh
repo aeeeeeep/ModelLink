@@ -36,7 +36,7 @@ function fn_run_parallel() {
 }
 
 function fn_run_single() {
-    echo "running single...."
+    echo "running on single npu..."
     export QUANT_WEIGHT_PATH="$QUANT_MODEL_PATH"
     python3 run.py \
         --device $DEVICE \
@@ -117,7 +117,6 @@ function fn_main() {
         echo "running on multiple npu..."
         fn_run_parallel
     else
-        echo "running on single npu..."
         fn_run_single
     fi
 
