@@ -77,14 +77,14 @@ class Record:
 
 
 def init_model(args_in):
-    init_model = AutoModelForCausalLM.from_pretrained(args_in.load_path,
+    model_ini = AutoModelForCausalLM.from_pretrained(args_in.load_path,
                                                       trust_remote_code=True,
                                                       torch_dtype=torch.float32,
                                                       return_dict_in_generate=True,)
-    init_tokenizer = AutoTokenizer.from_pretrained(args_in.load_path, use_fast=False, padding_side='left')
+    tokenizer_ini = AutoTokenizer.from_pretrained(args_in.load_path, use_fast=False, padding_side='left')
     
-    init_model.eval()
-    return init_model, init_tokenizer
+    model_ini.eval()
+    return model_ini, tokenizer_ini
 
 
 def get_subject_mapping():
