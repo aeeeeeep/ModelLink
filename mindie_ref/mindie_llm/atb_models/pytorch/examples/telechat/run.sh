@@ -54,7 +54,10 @@ function fn_cut_float() {
 }
 
 function fn_cut_quant() {
-    cp modeling_quant_parallel.py $TRANSFORMER_PACKAGE_PATH/modeling_telechat.py
+    cp modeling_quant_cut.py $TRANSFORMER_PACKAGE_PATH/modeling_telechat.py
+    # cut antioutlier float weight
+    python handel_weights.py --input-path $FLOAT_MODEL_PATH --output-path $FLOAT_PART_MODEL_PATH --handle-type cut_float
+    #cut quant weight
     python handel_weights.py --input-path $QUANT_MODEL_PATH --output-path $QUANT_PART_MODEL_PATH --handle-type cut_quant
 }
 
