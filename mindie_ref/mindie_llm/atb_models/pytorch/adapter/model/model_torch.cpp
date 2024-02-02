@@ -32,21 +32,46 @@
 #include "baichuan2/13b/model/flash_attention_quant_model.h"
 #include "baichuan2/13b/model/paged_attention_model.h"
 #include "baichuan2/13b/model/paged_attention_quant_model.h"
+<<<<<<< HEAD
 #include "chatglm2/6b/model/paged_attention_model.h"
+=======
+#include "chatglm2/6b/model/flash_attention_model.h"
+#include "chatglm2/6b/model/paged_attention_model.h"
+#include "bloom/model/flash_attention_model.h"
+#include "falcon/7b/model/flash_attention_model.h"
+#include "visualglm/6b/model/flash_attention_model.h"
+>>>>>>> fa5e307e29cdd8c39aa2dd6141579a8258b77fa7
 #include "llama/model/anti_quant_flashattention_model.h"
 #include "llama/model/flash_attention_model.h"
 #include "llama_adapter/model/adapter_model.h"
 #include "llama_pa/model/paged_attention_model.h"
 #include "llama_pa/model/quant_paged_attention_model.h"
 #include "llama_parallel/model/decoder_model.h"
+#include "minigpt4/model/fusion_encoder_model.h"
+#include "minigpt4/model/fusion_model.h"
 #include "pytorch/adapter/utils/utils.h"
 #include "pytorch/adapter/workspace/workspace.h"
-#include "telechat/model/model.h"
 #include "baichuan2/7b/model/flash_attention_quant_model.h"
 #include "baichuan2/7b/model/flash_attention_rope_model.h"
 #include "baichuan2/7b/model/paged_attention_model.h"
+<<<<<<< HEAD
 #include "qwen/14b/model/flash_attention_model.h"
 #include "aquila/7b/model/flash_attention_model.h"
+=======
+#include "falcon/40b/model/flash_attention_model.h"
+#include "qwen/14b/model/flash_attention_model.h"
+#include "aquila/7b/model/flash_attention_model.h"
+#include "gptneox/20b/model/fa_kv_cache_rope_model.h"
+#include "gptneox/20b/model/fa_kvcache_model.h"
+#include "gptneox/20b/model/pa_model.h"
+#include "internlm/20b/model/flash_attention_quant_model.h"
+#include "internlm/20b/model/flash_attention_rope_model.h"
+#include "internlm/7b/model/flash_attention_rope_model.h"
+#include "codellama/34b/model/flash_attention_rope_model.h"
+#include "atb_speed/utils/model_factory.h"
+#include "telechat/model/float_model.h"
+#include "telechat/model/quant_model.h"
+>>>>>>> fa5e307e29cdd8c39aa2dd6141579a8258b77fa7
 
 void *ModelTorch::GetWorkSpace(uint64_t bufferSize)
 {
@@ -99,7 +124,24 @@ ModelTorch::~ModelTorch()
 int64_t ModelTorch::SetParam(std::string param)
 {
     ATB_LOG(INFO) << "ModelTorch set param start, modelName:" << modelName_ << ", param:" << param;
-    if (modelName_ == "llama_anti_quant_flashattention_model") {
+
+    // vector contains adapted models, when all models are adapted, delete vector.
+    std::vector<string> modelNames = {
+        "chatglm2_6b_ChatGlm2CommonModelFa",
+        "chatglm2_6b_PagedAttentionModel"
+    };
+    if (std::find(modelNames.begin(), modelNames.end(), modelName_) != modelNames.end()) {
+        model_ = atb_speed::ModelFactory::CreateInstance(modelName_, param);
+        if (model_ != nullptr) {
+            ATB_LOG(INFO) << "Get model from the ModelFactory, " << modelName_
+                          << ". If other models also want to be obtained from the ModelFactory, "
+                          << "please register it and set `namespace` and `model class name`. "
+                          << "Examples: REGISTER_MODEL(chatglm2_6b, ChatGlm2CommonModelFa). "
+                          << "And then set `chatglm2_6b_ChatGlm2CommonModelFa` as input modelName_.";
+        } else {
+            ATB_LOG(ERROR) << modelName_ << " not found in ModelFactory.";
+        }
+    } else if (modelName_ == "llama_anti_quant_flashattention_model") {
         model_ = std::make_shared<atb_speed::llama::AntiQuantFlashAttentionModel>(param);
     } else if (modelName_ == "llama_flashattention_model") {
         model_ = std::make_shared<atb_speed::llama::FlashAttentionModel>(param);
@@ -113,8 +155,8 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::llama_adapter::EncoderAdapterModel>(param);
     } else if (modelName_ == "llama_adapter_decoder_model") {
         model_ = std::make_shared<atb_speed::llama_adapter::DecoderAdapterModel>(param);
-    } else if (modelName_ == "TelechatQuantFAModel") {
-        model_ = std::make_shared<atb_speed::telechat::QuantFAModel>(param);
+    } else if (modelName_ == "chatglm2_common_model") {
+        model_ = std::make_shared<atb_speed::chatglm2_6b::ChatGlm2CommonModelFa>(param);
     } else if (modelName_ == "chatglm2_6b_decoder_pa_model") {
         model_ = std::make_shared<atb_speed::chatglm2_6b::PagedAttentionModel>(param);
     } else if (modelName_ == "baichuan2_13b_flash_attention_model") {
@@ -125,6 +167,12 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::baichuan2_13b::PagedAttentionModel>(param);
     } else if (modelName_ == "baichuan2_13b_pa_quant_model") {
         model_ = std::make_shared<atb_speed::baichuan2_13b::PagedAttentionQuantModel>(param);
+    } else if (modelName_ == "bloom_7b_common_model") {
+        model_ = std::make_shared<atb_speed::bloom_7b::FlashAttentionModel>(param);
+    } else if (modelName_ == "falcon_7b_model") {
+        model_ = std::make_shared<atb_speed::falcon_7b::FlashAttentionModel>(param);
+    } else if (modelName_ == "visualglm_6b_encoder_model") {
+        model_ = std::make_shared<atb_speed::visualglm_6b::FlashAttentionModel>(param);
     } else if (modelName_ == "minigpt4_vicuna_7b_encoder_model") {
         model_ = std::make_shared<atb_speed::minigpt4_vicuna_7b::FusionEncoderModel>(param);
     } else if (modelName_ == "minigpt4_vicuna_7b_decoder_model") {
@@ -135,11 +183,38 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::baichuan2_7b::FlashAttentionQuantModel>(param);
     } else if (modelName_ == "baichuan2_7b_pa_model") {
         model_ = std::make_shared<atb_speed::baichuan2_7b::PagedAttentionModel>(param);
+<<<<<<< HEAD
+=======
+    } else if (modelName_ == "falcon_40b_model") {
+        model_ = std::make_shared<atb_speed::falcon_40b::FusionModel>(param);
+>>>>>>> fa5e307e29cdd8c39aa2dd6141579a8258b77fa7
     } else if (modelName_ == "qwen_14b_flash_attention_model") {
         model_ = std::make_shared<atb_speed::qwen_14b::FlashAttentionModel>(param);
     } else if (modelName_ == "aquila_7b_flash_attention_model") {
         model_ = std::make_shared<atb_speed::aquila_7b::FlashAttentionRopeModel>(param);
+<<<<<<< HEAD
     }  else {
+=======
+    } else if (modelName_ == "gptneox_20b_fa_kvcache_model") {
+        model_ = std::make_shared<atb_speed::gptneox_20b::FaKvCacheModel>(param);
+    } else if (modelName_ == "gptneox_20b_pa_model") {
+        model_ = std::make_shared<atb_speed::gptneox_20b::PAModel>(param);
+    } else if (modelName_ == "internlm_7b_flash_attention_rope_model") {
+        model_ = std::make_shared<atb_speed::internlm_7b::FlashAttentionRopeModel>(param);
+    } else if (modelName_ == "internlm_20b_flash_attention_rope_model") {
+        model_ = std::make_shared<atb_speed::internlm_20b::FlashAttentionRopeModel>(param);
+    } else if (modelName_ == "internlm_20b_flash_attention_quant_model") {
+        model_ = std::make_shared<atb_speed::internlm_20b::FlashAttentionQuantModel>(param);
+    } else if (modelName_ == "codellama_34b_flash_attention_rope_model") {
+        model_ = std::make_shared<atb_speed::codellama_34b::FlashAttentionRopeModel>(param);
+    } else if (modelName_ == "gptneox_20b_fa_kvcache_rope_model") {
+        model_ = std::make_shared<atb_speed::gptneox_20b::FaKvCacheRopeModel>(param);
+    } else if (modelName_ == "telechat_float_model") {
+        model_ = std::make_shared<atb_speed::telechat::FloatFAModel>(param);
+    } else if (modelName_ == "telechat_quant_model") {
+        model_ = std::make_shared<atb_speed::telechat::QuantFAModel>(param);
+    } else {
+>>>>>>> fa5e307e29cdd8c39aa2dd6141579a8258b77fa7
         ATB_LOG(FATAL) << "not support modelName:" << modelName_;
         return atb::ERROR_INVALID_PARAM;
     }

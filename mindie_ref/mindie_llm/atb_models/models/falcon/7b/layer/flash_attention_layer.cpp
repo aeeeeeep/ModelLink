@@ -181,8 +181,6 @@ atb::Status FusionLayerOperation(const LayerFusionParam &param, atb::Operation *
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = param.preScale;
     selfAttentionParam.qkScale = param.postScale;
-    selfAttentionParam.isFusion = true;
-    selfAttentionParam.withCache = true;
     selfAttentionParam.kvHeadNum = param.kvHeadNum;
     CreateOperation(selfAttentionParam, &selfAttentionFusionNode.operation);
     selfAttentionFusionNode.inTensorIds = {INTERNAL_POSITION_EMBED_Q,  // [bs, seq_len, q_head, head_size]

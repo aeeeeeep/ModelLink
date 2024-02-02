@@ -19,9 +19,20 @@
 #include <nlohmann/json.hpp>
 
 #include "atb_speed/log.h"
+#include "atb_speed/utils/operation_factory.h"
 #include "baichuan2/13b/layer/flash_attention_layer.h"
 #include "baichuan2/13b/layer/flash_attention_quant_layer.h"
 #include "baichuan2/13b/layer/flash_attention_quant_oper_layer.h"
+#include "codellama/34b/layer/flash_attention_rope_layer.h"
+#include "codellama/34b/operation/rope.h"
+#include "gptneox/20b/layer/flashattention_kvcache_rope_layer.h"
+#include "gptneox/20b/layer/embedding_layer.h"
+#include "gptneox/20b/layer/flashattention_kvcache_layer.h"
+#include "gptneox/20b/operation/position_embedding_fusion.h"
+#include "internlm/20b/layer/flash_attention_quant_layer.h"
+#include "internlm/20b/layer/flash_attention_rope_antioutlier_layer.h"
+#include "internlm/20b/layer/flash_attention_rope_layer.h"
+#include "internlm/7b/layer/flash_attention_rope_layer.h"
 
 using OperationCreateFunc = std::function<atb::Operation *(const nlohmann::json &paramJson)>;
 
@@ -245,11 +256,28 @@ std::map<std::string, OperationCreateFunc> g_funcMap = {
     {"baichuan2_13b_flash_attention_layer", &atb_speed::baichuan2_13b::CreateFlashAttentionLayer},
     {"baichuan2_13b_flash_attention_quant_layer", &atb_speed::baichuan2_13b::CreateFlashAttentionQuantLayer},
     {"baichuan2_13b_flash_attention_quant_oper_layer", &atb_speed::baichuan2_13b::CreateFlashAttentionQuantOperLayer},
+    {"codellama_34b_rope", &atb_speed::codellama_34b::CreateRope},
+    {"codellama_34b_flash_attention_rope_layer", &atb_speed::codellama_34b::CreateFlashAttentionRopeLayer},
+    {"internlm_7b_flash_attention_rope_layer", &atb_speed::internlm_7b::CreateFlashAttentionRopeLayer},
+    {"internlm_20b_flash_attention_rope_layer", &atb_speed::internlm_20b::CreateFlashAttentionRopeLayer},
+    {"internlm_20b_flash_attention_quant_layer", &atb_speed::internlm_20b::CreateFlashAttentionQuantLayer},
+    {"internlm_20b_flash_attention_rope_antioutlier_layer",
+     &atb_speed::internlm_20b::CreateFlashAttentionRopeAntiOutlierLayer},
+    {"gptneox_20b_flash_attention_kv_cache_layer", &atb_speed::gptneox_20b::CreateFlashAttentionKvCacheLayer},
+    {"gptneox_20b_embedding_layer", &atb_speed::gptneox_20b::CreateEmbeddingLayer},
+    {"gptneox_20b_position_embedding_fusion", &atb_speed::gptneox_20b::CreatePositionEmbeddingFusionOperation},
+    {"gptneox_20b_flash_attention_kv_cache_rope_layer", &atb_speed::gptneox_20b::CreateFlashAttentionKvCacheRopeLayer},
 };
 
 atb::Operation *CreateOperation(const std::string &opName, const std::string &param)
 {
     nlohmann::json paramJson = nlohmann::json::parse(param);
+
+    auto operation = atb_speed::OperationFactory::CreateOperation(opName, paramJson);
+    if (operation != nullptr) {
+        ATB_LOG(INFO) << "Get Op from the OperationFactory, opName: " << opName;
+        return operation;
+    }
 
     auto it = g_funcMap.find(opName);
     if (it == g_funcMap.end()) {

@@ -175,7 +175,6 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
         faEnParam.qScale = 1.0 / sqrt(param.dk);
         faEnParam.kvHeadNum = param.kvHead;
         faEnParam.isEncoder = true;
-        faEnParam.isFusion = true;
         CreateOperation(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERMEDIATE_Q, INTERMEDIATE_K, INTERMEDIATE_V, IN_ATTENTIONMASK, IN_INPUT_LENGTHS};
         attentionNode.outTensorIds = {INTERMEDIATE_SELF_OUT};

@@ -26,10 +26,8 @@ const int ATTENTION_DIM_3 = 3;
 
 enum FlashAttentionLayerTensorId : int {
     IN_HIDDENSTATES = 0,
-
     // float weights
     IN_NORMWEIGHT,
-
     IN_QMIXDWEIGHT,
     IN_KMIXDWEIGHT,
     IN_VMIXDWEIGHT,
@@ -53,6 +51,9 @@ enum FlashAttentionLayerTensorId : int {
     IN_MLPDOWN_BIAS,
     IN_MLPUP_DEQSCALE,
     IN_MLPUP_BIAS,
+    // anti-outlier weights
+    IN_NORM_BIAS,
+    IN_SELFOUTNORM_BIAS,
     // sparse weights
     IN_QMIXD_INDEX,
     IN_KMIXD_INDEX,
@@ -61,6 +62,7 @@ enum FlashAttentionLayerTensorId : int {
     IN_MLPGATE_INDEX,
     IN_MLPUP_INDEX,
     IN_MLPDOWN_INDEX,
+    // layer inputs
     IN_POSITIONIDS,
     IN_COSTABLE,
     IN_SINTABLE,
@@ -69,10 +71,11 @@ enum FlashAttentionLayerTensorId : int {
     IN_CACHEV,
     IN_TOKENOFFSET,
     IN_SEQLEN,
-    IN_BETA,
     IN_HOLDER,
     IN_LAYERID,
+    // layer output
     OUT_LLAMA7BLAYEROUT,
+    // intermediate inputs & outputs
     INTERMIDATE_INPUTNORMOUT,
     INTERMIDATE_MIXEDQ,
     INTERMIDATE_MIXEDK,
@@ -86,7 +89,7 @@ enum FlashAttentionLayerTensorId : int {
     INTERMIDATE_MLPOUT,
 };
 
-static const uint64_t IN_TENSOR_COUNT = 42;
+static const uint64_t IN_TENSOR_COUNT = 43;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 11;
 static const uint64_t NODE_COUNT = 11;
@@ -112,7 +115,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
     atb::Node &mlpNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpResidualAddNode = opGraph.nodes.at(nodeId++);
     if (param.quantModel) {
-        // INPUT_NORM 量化
+        // W8A8量化
         atb::infer::RmsNormParam rmsNormParam;
         rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
         rmsNormParam.normParam.epsilon = param.rmsNormEps;
@@ -120,9 +123,9 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         rmsNormParam.normParam.quantInputOffset = param.qkvInputOffset;
         rmsNormParam.normParam.quantType = atb::infer::QUANT_INT8;
         CREATE_OPERATION(rmsNormParam, &inputNormNode.operation);
-        inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT, IN_BETA };
+        inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT, IN_NORM_BIAS };
         inputNormNode.outTensorIds = { INTERMIDATE_INPUTNORMOUT };
-        //  QKV LINEAR量化
+
         atb::infer::LinearQuantParam quantQkvLinearParam;
         quantQkvLinearParam.transposeB = true;
         CREATE_OPERATION(quantQkvLinearParam, &mixdQLinearNode.operation);
@@ -137,6 +140,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         mixdVLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_VMIXDWEIGHT, IN_VMIXD_BIAS, IN_VMIXD_DEQSCALE };
         mixdVLinearNode.outTensorIds = { INTERMIDATE_MIXEDV };
     } else if (param.sparseModel) {
+        // 稀疏量化
         atb::infer::RmsNormParam rmsNormParam;
         rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
         rmsNormParam.normParam.epsilon = param.rmsNormEps;
@@ -144,7 +148,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         rmsNormParam.normParam.quantInputOffset = param.qkvInputOffset;
         rmsNormParam.normParam.quantType = atb::infer::QUANT_INT8;
         CREATE_OPERATION(rmsNormParam, &inputNormNode.operation);
-        inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT, IN_BETA };
+        inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT, IN_NORM_BIAS };
         inputNormNode.outTensorIds = { INTERMIDATE_INPUTNORMOUT };
 
         atb::infer::LinearSparseParam linearSparseParam = { false, true, 8, 8 };
@@ -218,10 +222,11 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         newShape.dims[ATTENTION_DIM_3] = oldShape.dims[ATTENTION_DIM_2] / param.headNum;
     };
     if (param.quantModel) {
-        // SelfAttention 输出量化
+        // W8A8量化
         atb_speed::common::ParallelParamV2 selfOutLinearParam;
         selfOutLinearParam.commParam.rank = param.rank;
         selfOutLinearParam.commParam.rankSize = param.rankSize;
+        selfOutLinearParam.commParam.backend = param.backend;
         selfOutLinearParam.isBias = true;
         selfOutLinearParam.isQuant = true;
         selfOutLinearParam.transposeB = true;
@@ -236,10 +241,11 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
                                           IN_HOLDER, IN_HOLDER, IN_HOLDER };
         selfOutLinearNode.outTensorIds = { INTERMIDATE_SELFLINEAROUT };
     } else if (param.sparseModel) {
-        // Sparse
+        // 稀疏量化
         atb_speed::common::ParallelParamV2 selfOutLinearParam;
         selfOutLinearParam.commParam.rank = param.rank;
         selfOutLinearParam.commParam.rankSize = param.rankSize;
+        selfOutLinearParam.commParam.backend = param.backend;
         selfOutLinearParam.isBias = true;
         selfOutLinearParam.isQuant = true;
         selfOutLinearParam.isSparse = true;
@@ -255,9 +261,11 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
                                           IN_SELFOUT_INDEX, IN_HOLDER, IN_HOLDER };
         selfOutLinearNode.outTensorIds = { INTERMIDATE_SELFLINEAROUT };
     } else {
+        // 浮点
         atb_speed::common::ParallelParamV2 selfOutLinearParam;
         selfOutLinearParam.commParam.rank = param.rank;
         selfOutLinearParam.commParam.rankSize = param.rankSize;
+        selfOutLinearParam.commParam.backend = param.backend;
         selfOutLinearParam.isBias = false;
         atb_speed::common::RowParallelLinearV2(selfOutLinearParam, &selfOutLinearNode.operation);
 
@@ -274,7 +282,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
     selfResidualAddNode.outTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT };
 
     if (param.quantModel) {
-        // RMSNORM量化
+        // W8A8量化
         atb::infer::RmsNormParam selfNormParam;
         selfNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
         selfNormParam.normParam.epsilon = param.rmsNormEps;
@@ -283,10 +291,9 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
 
         CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
-        selfNormNode.inTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_BETA };
+        selfNormNode.inTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_SELFOUTNORM_BIAS };
         selfNormNode.outTensorIds = { INTERMIDATE_SELFNORMOUT };
 
-        // MLP量化
         atb_speed::common::MlpGateParamV2 mlpParam;
         mlpParam.isBias = true;
         mlpParam.isPack = false;
@@ -294,6 +301,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         mlpParam.transposeB = true;
         mlpParam.commDownParam.rank = param.rank;
         mlpParam.commDownParam.rankSize = param.rankSize;
+        mlpParam.commDownParam.backend = param.backend;
         mlpParam.quantUpParam.quantType = atb::infer::QUANT_INT8;
         mlpParam.quantUpParam.isQuantOp = false;
         mlpParam.quantGateParam.quantType = atb::infer::QUANT_INT8;
@@ -314,8 +322,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
                                 IN_HOLDER, IN_HOLDER, IN_HOLDER };
         mlpNode.outTensorIds = { INTERMIDATE_MLPOUT };
     } else if (param.sparseModel) {
-        // Sparse
-        // RMSNORM 量化
+        // 稀疏量化
         atb::infer::RmsNormParam selfNormParam;
         selfNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
         selfNormParam.normParam.epsilon = param.rmsNormEps;
@@ -324,10 +331,9 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
 
         CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
-        selfNormNode.inTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_BETA };
+        selfNormNode.inTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_SELFOUTNORM_BIAS };
         selfNormNode.outTensorIds = { INTERMIDATE_SELFNORMOUT };
 
-        // MLP量化
         atb_speed::common::MlpGateParamV2 mlpParam;
         mlpParam.isBias = true;
         mlpParam.isPack = false;
@@ -336,6 +342,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         mlpParam.transposeB = true;
         mlpParam.commDownParam.rank = param.rank;
         mlpParam.commDownParam.rankSize = param.rankSize;
+        mlpParam.commDownParam.backend = param.backend;
         mlpParam.quantUpParam.quantType = atb::infer::QUANT_INT8;
         mlpParam.quantUpParam.isQuantOp = false;
         mlpParam.quantGateParam.quantType = atb::infer::QUANT_INT8;
@@ -355,6 +362,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
                                 IN_HOLDER, IN_HOLDER, IN_HOLDER };
         mlpNode.outTensorIds = { INTERMIDATE_MLPOUT };
     } else {
+        // 浮点
         atb::infer::RmsNormParam selfNormParam;
         selfNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
         selfNormParam.normParam.epsilon = param.rmsNormEps;
@@ -364,6 +372,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         atb_speed::common::MlpGateParamV2 mlpParam;
         mlpParam.commDownParam.rank = param.rank;
         mlpParam.commDownParam.rankSize = param.rankSize;
+        mlpParam.commDownParam.backend = param.backend;
         mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
         mlpParam.transposeB = false;
         mlpParam.isBias = false;

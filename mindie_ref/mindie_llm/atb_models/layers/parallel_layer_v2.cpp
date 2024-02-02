@@ -65,6 +65,10 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
     if (param_.commParam.rankSize > 1) {
         nodeCount += 1;
         internalTensorNum += 1;
+        if (parallelType == COLUMN_PARALLEL && param_.isAllGatherTranspose) {
+            nodeCount += 1;
+            internalTensorNum += 1;
+        }
     }
 
     opGraph.internalTensorNum = internalTensorNum;
@@ -76,7 +80,7 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
     if (!param_.isQuant) {
         atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
         atb::infer::LinearParam matmulParam = {param_.transposeA, param_.transposeB, false};
-        atb::CreateOperation(matmulParam, &matmulNode.operation);
+        CREATE_OPERATION(matmulParam, &matmulNode.operation);
         matmulNode.inTensorIds = {IN_INPUT, IN_WEIGHT};
         matmulNode.outTensorIds = {(param_.commParam.rankSize > 1 || param_.isBias) ? inteId : OUT_LINEAR};
     } else {
@@ -86,7 +90,7 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
             quantParam.elewiseType = param_.quantParam.elewiseType;
             quantParam.quantParam.inputScale = param_.quantParam.inputScale;
             quantParam.quantParam.inputOffset = param_.quantParam.inputOffset;
-            atb::CreateOperation(quantParam, &quantNode.operation);
+            CREATE_OPERATION(quantParam, &quantNode.operation);
             quantNode.inTensorIds = {IN_INPUT};
             quantNode.outTensorIds = {inteId};
         }
@@ -94,14 +98,14 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
         if (param_.isSparse) {
             atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
             atb::infer::LinearSparseParam linearSparseParam = {false, true, 8, 8};
-            atb::CreateOperation(linearSparseParam, &matmulNode.operation);
+            CREATE_OPERATION(linearSparseParam, &matmulNode.operation);
             matmulNode.inTensorIds = {param_.quantParam.isQuantOp ? inteId++ : IN_INPUT, IN_WEIGHT,
                                       IN_BIAS, IN_DEQSCALE, IN_INDEX_IDS};
             matmulNode.outTensorIds = {param_.commParam.rankSize > 1 ? inteId : OUT_LINEAR};
         } else {
             atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
             atb::infer::LinearQuantParam matmulParam = {param_.transposeA, param_.transposeB, true};
-            atb::CreateOperation(matmulParam, &matmulNode.operation);
+            CREATE_OPERATION(matmulParam, &matmulNode.operation);
             matmulNode.inTensorIds = {param_.quantParam.isQuantOp ? inteId++ : IN_INPUT,
                                       IN_WEIGHT, IN_BIAS, IN_DEQSCALE};
             matmulNode.outTensorIds = {param_.commParam.rankSize > 1 ? inteId : OUT_LINEAR};
@@ -116,24 +120,37 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
             allReduceParam.rank = param_.commParam.rank;
             allReduceParam.rankSize = param_.commParam.rankSize;
             allReduceParam.backend = param_.commParam.backend;
-            atb::CreateOperation(allReduceParam, &parallelNode.operation);
+            CREATE_OPERATION(allReduceParam, &parallelNode.operation);
+            parallelNode.inTensorIds = {inteId++};
+            parallelNode.outTensorIds = {param_.isBias && !param_.isQuant ? inteId : OUT_LINEAR};
         } else {
             atb::infer::AllGatherParam allGatherParam;
             allGatherParam.rank = param_.commParam.rank;
             allGatherParam.rankSize = param_.commParam.rankSize;
             allGatherParam.backend = param_.commParam.backend;
-            atb::CreateOperation(allGatherParam, &parallelNode.operation);
-        }
+            CREATE_OPERATION(allGatherParam, &parallelNode.operation);
+            parallelNode.inTensorIds = {inteId++};
+            parallelNode.outTensorIds = {(param_.isBias && !param_.isQuant) || param_.isAllGatherTranspose ? inteId : OUT_LINEAR};
 
-        parallelNode.inTensorIds = {inteId++};
-        parallelNode.outTensorIds = {param_.isBias && !param_.isQuant ? inteId : OUT_LINEAR};
+            // (world_size,bs,seq,vocab_size//world_size)
+            // -> (bs,seq,world_size,vocab_size//world_size)
+            // -> (bs,seq,vocab_size)
+            if (param_.isAllGatherTranspose) {
+                atb::Node &gatherTransposeNode = opGraph.nodes.at(nodeId++);
+                atb::infer::TransposeParam gatherTransposeParam;
+                gatherTransposeParam.perm = {1, 2, 0, 3};
+                CREATE_OPERATION(gatherTransposeParam, &gatherTransposeNode.operation);
+                gatherTransposeNode.inTensorIds = {inteId++};
+                gatherTransposeNode.outTensorIds = {param_.isBias && !param_.isQuant ? inteId : OUT_LINEAR};
+            }
+        }
     }
 
     if (param_.isBias && !param_.isQuant) {
         atb::Node &addNode = opGraph.nodes.at(nodeId++);
         atb::infer::ElewiseParam addParam;
         addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-        atb::CreateOperation(addParam, &addNode.operation);
+        CREATE_OPERATION(addParam, &addNode.operation);
         addNode.inTensorIds = {inteId, IN_BIAS};
         addNode.outTensorIds = {OUT_LINEAR};
     }
@@ -181,19 +198,28 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
             }
             outTensorDescs.at(0).format = inTensorDescs.at(0).format;
             auto dimNum = inTensorDescs.at(0).shape.dimNum;
-            outTensorDescs.at(0).shape.dimNum = dimNum + 1; // add rank dim
-            outTensorDescs.at(0).shape.dims[0] = param_.commParam.rankSize;
-            outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[0];
-            if (dimNum == 3) {
-                outTensorDescs.at(0).shape.dims[2] = inTensorDescs.at(0).shape.dims[1]; // dim 2
+            if (param_.isAllGatherTranspose) {
+                outTensorDescs.at(0).shape.dimNum = dimNum;
+                outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
+                if (dimNum == 3) {
+                    outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[1]; // dim 2
+                }
+                outTensorDescs.at(0).shape.dims[dimNum-1] = inTensorDescs.at(1).shape.dims[0] * param_.commParam.rankSize; // last dim
+            } else {
+                outTensorDescs.at(0).shape.dimNum = dimNum + 1; // add rank dim
+                outTensorDescs.at(0).shape.dims[0] = param_.commParam.rankSize;
+                outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[0];
+                if (dimNum == 3) {
+                    outTensorDescs.at(0).shape.dims[2] = inTensorDescs.at(0).shape.dims[1]; // dim 2
+                }
+                outTensorDescs.at(0).shape.dims[dimNum] = inTensorDescs.at(1).shape.dims[0]; // last dim
             }
-            outTensorDescs.at(0).shape.dims[dimNum] = inTensorDescs.at(1).shape.dims[0]; // last dim
 
             return atb::NO_ERROR;
         };
     }
 
-    atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
 }
 

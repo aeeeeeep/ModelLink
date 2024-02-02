@@ -19,6 +19,7 @@
 
 #include <atb/atb_infer.h>
 #include "atb_speed/log.h"
+#include "atb_speed/utils/operation_util.h"
 #include "layers/parallel_layer_v2.h"
 
 namespace atb_speed {
@@ -82,6 +83,7 @@ enum class PositionEmbeddingTensorId : int {
 
 struct FTWithROPEParam {
     // QKV linear param
+    bool isCrossedWeight = false;
     atb_speed::common::ParallelParamV2 mixdQkvLinearParam;
     // self attention param
     int isGroupedQueryAttention = false;
@@ -100,7 +102,7 @@ public:
                                                                  atb::Operation **operation) final;
 
 private:
-    atb::Status RotaryPositionEmbedding(const FTWithROPEParam &param, atb::Operation **operation);
+    atb::Status PositionEmbedding(const FTWithROPEParam &param, atb::Operation **operation);
 };
 } // namespace common
 } // namespace atb_speed

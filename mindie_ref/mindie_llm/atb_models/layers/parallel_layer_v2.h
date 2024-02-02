@@ -17,6 +17,7 @@
 #ifndef ATB_SPEED_LAYER_PARALLEL_LAYER_V2_H
 #define ATB_SPEED_LAYER_PARALLEL_LAYER_V2_H
 #include <atb/atb_infer.h>
+#include "atb_speed/utils/operation_util.h"
 #include "nlohmann/json.hpp"
 #include "plugin_op/matmul_compress_dequant_operation.h"
 
@@ -47,6 +48,7 @@ struct ParallelParamV2 {
     bool transposeB = false;
     bool isQuant = false;
     bool isSparse = false;
+    bool isAllGatherTranspose = false;
     CommParam commParam;
     QuantParam quantParam;
 };
