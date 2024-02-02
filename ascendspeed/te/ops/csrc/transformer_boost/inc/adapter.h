@@ -23,10 +23,14 @@
 #include "atb/operation.h"
 #include "atb/utils.h"
 
+const static int N = 32;
+
 atb::Tensor Input(const at::Tensor &tensor);
 atb::Tensor Input(const c10::optional<at::Tensor> &tensor);
 at::Tensor CreateAtTensorFromTensorDesc(const atb::TensorDesc &tensorDesc);
 atb::Tensor AtTensor2Tensor(const at::Tensor atTensor);
 atb::Context* GetContext();
+at::Tensor CreateAtTensor(c10::IntArrayRef shape, at::ScalarType inputDtype);
+at::Tensor CreateAtTensor(c10::SmallVector<int64_t, N> shape, at::ScalarType inputDtype);
 
 #endif

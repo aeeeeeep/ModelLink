@@ -58,9 +58,12 @@ try:
     from torch.utils.cpp_extension import BuildExtension
 
     ASCEND_TOOLKIT_HOME = os.environ.get("ASCEND_TOOLKIT_HOME")
+    ATB_HOME_PATH = os.environ.get("ATB_HOME_PATH")
     op_files = []
     op_files += glob.glob("ascendspeed/te/ops/csrc/*.cpp")
     op_files += glob.glob("ascendspeed/te/ops/csrc/cann/*.cpp")
+    op_files += glob.glob("ascendspeed/te/ops/csrc/transformer_boost/*.cpp")
+    op_files += glob.glob("ascendspeed/te/ops/csrc/transformer_boost/utils/*.cpp")
     ext_ops = cpp_extension.NpuExtension(
         name="ascendspeed_te_ops",
         sources=op_files,
@@ -71,6 +74,12 @@ try:
         '-D__FILENAME__=\"$(notdir $(abspath $<))\"',
         '-I' + imp.find_module('torch_npu')[1] + "/include/third_party/acl/inc",
         '-I' + ASCEND_TOOLKIT_HOME + '/include/',
+        '-I' + ATB_HOME_PATH + '/include/',
+        '-Iascendspeed/te/ops/csrc/transformer_boost/inc/',
+    ],
+    extra_link_args=[
+        '-L' + os.path.join(ATB_HOME_PATH, 'lib'),
+        '-latb'
     ],
     )
     exts.append(ext_ops)

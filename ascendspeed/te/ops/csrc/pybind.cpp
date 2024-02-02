@@ -21,4 +21,12 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("npu_fusion_attention", &npu_flash_attention, "fusion attention forward");
     m.def("npu_fusion_attention_grad", &npu_flash_attention_grad, "fusion attention backward");
     m.def("npu_dropout_add_layer_norm", &npu_dropout_add_layer_norm, "Run Dropout + Add + LayerNorm forward kernel");
+    m.def("npu_gen_attention_mask", &gen_attention_mask, "gen attentionmask on ascend device");
+    m.def("npu_fast_softmax", &fast_softmax, "fast softmax forward");
+    m.def("npu_fast_softmax_grad", &fast_softmax_grad, "fast softmax backward");
+    m.def("npu_unpad_seqlen", &unpad_seqlen, "unpad seqlen input");
+    m.def("npu_pad_seqlen", &pad_seqlen, "pad seqlen input");
+    m.def("npu_rope", &rope, "rope forward");
+    m.def("npu_rope_grad", &rope_grad, "rope backward");
+    m.def("npu_strided_batch_matmul", &strided_batch_matmul, "stridedbatchmatmul forward");
 }

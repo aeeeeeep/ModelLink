@@ -89,4 +89,27 @@ std::tuple<at::Tensor, int64_t, int64_t, int64_t> gen_mask(const at::Tensor &sel
 at::Tensor exist_gen_mask(const at::Tensor &self, double keep_prob, bool gen_mask_parallel, bool sync,
     int64_t seed, int64_t offset, int64_t numels);
 
+at::Tensor gen_attention_mask(const at::Tensor &input, const std::vector<int> seqLen, int headSize);
+
+at::Tensor fast_softmax(const at::Tensor &dataInput, const std::vector<int32_t> &seqLen, int32_t headNum);
+
+at::Tensor fast_softmax_grad(const at::Tensor &yInput, const at::Tensor &yGrad,
+    const std::vector<int32_t> &seqLen, int32_t headNum);
+
+std::tuple<at::Tensor, at::Tensor> rope(const at::Tensor &input1, const at::Tensor &input2, 
+    const at::Tensor &input3, const at::Tensor &input4, const at::Tensor &input5, int rotaryCoeff, int cosFormat);
+
+std::tuple<at::Tensor, at::Tensor> rope_grad(const at::Tensor &input1, const at::Tensor &input2,
+    const at::Tensor &input3, const at::Tensor &input4, const std::vector<int> qSeqLen);
+
+at::Tensor strided_batch_matmul(const at::Tensor &input1, const at::Tensor &input2, int32_t transA,
+    int32_t transB, const std::vector<int32_t> m, const std::vector<int32_t> k, const std::vector<int32_t> n,
+    const std::vector<int32_t> lda, const std::vector<int32_t> ldb, const std::vector<int32_t> ldc,
+    const std::vector<int32_t> strideA, const std::vector<int32_t> strideB,
+    const std::vector<int32_t> strideC, int32_t batch, int32_t headNum);
+
+at::Tensor unpad_seqlen(const at::Tensor &input, const std::vector<int> seqLen, int maxSeqLen);
+
+at::Tensor pad_seqlen(const at::Tensor &input, const std::vector<int> seqLen, int maxSeqLen);
+
 #endif
