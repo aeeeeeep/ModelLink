@@ -19,10 +19,13 @@ class PositionRotaryEmbedding(nn.Module):
 
     @classmethod
     def static(cls, dim, base, device):
-        inv_freq = 1.0 / (
-                base
-                ** (torch.arange(0, dim, 2, device=device, dtype=torch.double) / dim)
-        ).to(torch.float)
+        try:
+            inv_freq = 1.0 / (
+                    base
+                    ** (torch.arange(0, dim, 2, device=device, dtype=torch.double) / dim)
+            ).to(torch.float)
+        except ZeroDivisionError as e:
+            raise ZeroDivisionError from e
         return cls(inv_freq)
 
     @classmethod

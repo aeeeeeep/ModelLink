@@ -53,7 +53,10 @@ class FlashBaichuanAttention(torch.nn.Module):
 
         self.softmax_scale = self.head_size ** -0.5
         # can support self.num_heads % weights.process_group.size() != 0
-        self.num_heads = math.ceil(self.num_heads / weights.process_group.size())
+        if weights.process_group.size() != 0:
+            self.num_heads = math.ceil(self.num_heads / weights.process_group.size())
+        else:
+            raise ZeroDivisionError
         self.query_key_value = TensorParallelColumnLinear.load_qkv(
             config, prefix=f"{prefix}.W_pack", weights=weights, bias=False, head_size=self.head_size
         )
@@ -98,9 +101,11 @@ class MLP(nn.Module):
             head_size=1
         )
 
-        self.intermediate_size = (
-            math.ceil(config.intermediate_size / weights.process_group.size())
-        )
+        if weights.process_group.size() != 0:
+            self.intermediate_size = (math.ceil(config.intermediate_size / weights.process_group.size()))
+        else:
+            raise ZeroDivisionError
+
 
 
 class FlashDecoderLayer(nn.Module):
@@ -179,8 +184,12 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
         process_group = weights.process_group
         self.tp_rank = process_group.rank()
         self.tp_world_size = process_group.size()
-        self.num_heads = math.ceil(self.num_heads / weights.process_group.size())
-        self.num_key_value_heads = math.ceil(config.num_key_value_heads / weights.process_group.size())
+        
+        if weights.process_group.size() != 0:
+            self.num_heads = math.ceil(self.num_heads / weights.process_group.size())
+            self.num_key_value_heads = math.ceil(config.num_key_value_heads / weights.process_group.size())
+        else:
+            raise ZeroDivisionError
 
         self.init_ascend_operations(config)
         self.ascend_weight = []

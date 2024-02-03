@@ -130,7 +130,10 @@ class Weights:
                 cut_tensor_list = torch.chunk(tensor, world_size, dim=0)
             elif key_short in cut_col_keys:
                 if is_bias:
-                    tensor = tensor / world_size
+                    try:
+                        tensor = tensor / world_size
+                    except ZeroDivisionError as e:
+                        raise ZeroDivisionError from e
                 cut_tensor_list = [tensor] * world_size
             for i in range(world_size):
                 state_dict_list[i][key] = cut_tensor_list[i]
@@ -138,10 +141,12 @@ class Weights:
 
     @staticmethod
     def bias_correction(fp_bias, quant_weight, input_offset, deq_scale):
-        bias_correction = fp_bias.npu() / deq_scale.npu() - quant_weight.to(
-            torch.float32
-        ).npu().sum(dim=1) * float(input_offset)
-
+        try:
+            bias_correction = fp_bias.npu() / deq_scale.npu() - quant_weight.to(
+                torch.float32
+            ).npu().sum(dim=1) * float(input_offset)
+        except ZeroDivisionError as e:
+            raise ZeroDivisionError from e
         return bias_correction
 
     @staticmethod
@@ -314,6 +319,8 @@ class Weights:
             if head_size is None:
                 if single_size % world_size != 0:
                     raise RuntimeError(f"Prepacked qkv cannot be sharded across {world_size} shards")
+                if world_size == 0:
+                    raise ZeroDivisionError("world size is 0")
                 block_size = single_size // world_size
                 start = rank * block_size
                 stop = (rank + 1) * block_size

@@ -438,8 +438,7 @@ class BaichuanModel(BaichuanPreTrainedModel):
         """
         pad_max_s = max_s
         if self.soc_info.need_nz:
-            nz_dim = 16
-            nz_pad = math.ceil(max_s / nz_dim) * nz_dim - max_s
+            nz_pad = math.ceil(max_s / 16) * 16 - max_s
             pad_max_s = max_s + nz_pad
         attention_mask = self.ascend_atten_mask.get_attn_mask(pad_max_s, kv_cache[0][0].dtype, kv_cache[0][0].device)
 

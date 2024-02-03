@@ -534,6 +534,8 @@ class LlamaAttention(torch.nn.Module):
         key = key.view(-1, q_len, self.num_key_value_heads, self.head_size)
         value = value.view(-1, q_len, self.num_key_value_heads, self.head_size)
 
+        if self.head_dim == 0:
+            raise ValueError('headdim is 0')
         attn_weights = torch.matmul(query, key.transpose(2, 3)) / math.sqrt(self.head_dim)
         if attn_weights.size() != (bsz, self.num_heads, q_len, kv_seq_len):
             raise ValueError(

@@ -24,7 +24,10 @@ class Request:
 
         self.input_length = self.input_ids.numel()
 
-        self.need_blocks = math.ceil((self.input_length + max_out_length) / block_size)
+        try:
+            self.need_blocks = math.ceil((self.input_length + max_out_length) / block_size)
+        except ZeroDivisionError as e:
+            raise ZeroDivisionError from e
         self.need_slots = self.need_blocks * block_size
         self.block_tables = None
         self.slot_tables = None

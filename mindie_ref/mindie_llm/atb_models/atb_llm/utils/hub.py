@@ -74,7 +74,10 @@ def try_to_load_from_cache(model_id: str, revision: Optional[str], filename: str
         raise AssertionError
 
     # Check if file exists in cache
-    cached_file = snapshots_dir / revision / filename
+    try:
+        cached_file = snapshots_dir / revision / filename
+    except ZeroDivisionError as e:
+        raise ZeroDivisionError from e 
     return cached_file if cached_file.is_file() else None
 
 
