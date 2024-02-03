@@ -41,39 +41,31 @@ torch.nn.LayerNorm.load_no_bias = load_layer_norm_no_bias
 
 
 def _load_gqa(config, prefix: str, weights):
-    if not config.hidden_size % config.num_attention_heads == 0:
-        logger.error('config.hidden_size % config.num_attention_heads != 0')
-    if not config.num_attention_heads % weights.process_group.size() == 0:
-        logger.error('config.num_attention_heads % weights.process_group.size()!= 0')
+    hidden_size, num_attention_heads, process_group_size = config.hidden_size, config.num_attention_heads, weights.process_group.size()
 
-    weight = weights.get_multi_weights_col(
-        prefixes=[f"{prefix}.q_proj", f"{prefix}.k_proj", f"{prefix}.v_proj"],
-        quantize=config.quantize,
-        dim=0,
-    )
+    if not hidden_size % num_attention_heads == 0:
+        logger.error(f'{hidden_size} % {num_attention_heads} != 0')
+    if not num_attention_heads % process_group_size == 0:
+        logger.error(f'{num_attention_heads} % {process_group_size} != 0')
 
-    return TensorParallelColumnLinear(
-        get_linear(weight, bias=None, quantize=config.quantize)
-    )
+    weight_prefixes = [f"{prefix}.{proj}" for proj in ["q_proj", "k_proj", "v_proj"]]
+    weight = weights.get_multi_weights_col(prefixes=weight_prefixes, quantize=config.quantize, dim=0)
+
+    return TensorParallelColumnLinear(get_linear(weight, bias=None, quantize=config.quantize))
 
 
-def _load_column_multi(
-        config, prefixes: List[str], weights, head_size, lm_head: bool = False, norm: bool = False
-):
+def _load_column_multi(config, prefixes: List[str], weights, head_size, lm_head: bool = False, norm: bool = False):
+    quantize = None if lm_head else config.quantize
+    weight = weights.get_multi_weights_col(prefixes, quantize=quantize, dim=0, gqa_size=head_size)
     if lm_head:
-        weight = weights.get_multi_weights_col(prefixes, quantize=None, dim=0, gqa_size=head_size)
         weight = weight.npu()
-        weight = torch.nan_to_num(weight if not norm else F.normalize(weight))  # 提前做norm  如果有nan则填充nan值
-        linear = get_linear(weight, None, None)
-    else:
-        weight = weights.get_multi_weights_col(prefixes, quantize=config.quantize, dim=0, gqa_size=head_size)
-        linear = get_linear(weight, None, config.quantize)
+        weight = torch.nan_to_num(weight if not norm else F.normalize(weight))
+    linear = get_linear(weight, None, quantize)
 
+    process_group = weights.process_group
+    should_gather = weights.process_group.size() != 1
     if lm_head:
-        if weights.process_group.size() != 1:
-            return TensorParallelHead(linear, process_group=weights.process_group, should_gather=True)
-        else:
-            return TensorParallelHead(linear, process_group=weights.process_group, should_gather=False)
+        return TensorParallelHead(linear, process_group=process_group, should_gather=should_gather)
     else:
         return TensorParallelColumnLinear(linear)
 
