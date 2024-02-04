@@ -1,8 +1,10 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
+import pandas as pd
 import torch
 
-from loguru import logger
 from .batch import Batch
+from atb_llm.utils.env import ENV
+from atb_llm.utils.log import logger, print_log
 
 
 def next_token_chooser(logits: torch.Tensor):
@@ -10,16 +12,25 @@ def next_token_chooser(logits: torch.Tensor):
 
 
 def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length, rank):
+    input_ids = batch.batch_input_ids.npu()
+    position_ids = batch.batch_position_ids.npu()
+    is_prefill = batch.cu_seqlen_prefill is not None
+    block_tables = batch.batch_block_tables.npu()
+    kv_cache = cache_manager.kv_cache
+    slots = batch.batch_slots_tables[batch.batch_slot_indices].npu()
+    input_lengths = batch.context_length.npu()
+    lm_head_indices = None if batch.lm_head_indices is None else batch.lm_head_indices.npu()
+
     logits = model.forward(
-        input_ids=batch.batch_input_ids.npu(),
-        position_ids=batch.batch_position_ids.npu(),
-        is_prefill=batch.cu_seqlen_prefill is not None,
-        block_tables=batch.batch_block_tables.npu(),
-        kv_cache=cache_manager.kv_cache,
-        slots=batch.batch_slots_tables[batch.batch_slot_indices].npu(),
-        input_lengths=batch.context_length.npu(),
+        input_ids=input_ids,
+        position_ids=position_ids,
+        is_prefill=is_prefill,
+        block_tables=block_tables,
+        kv_cache=kv_cache,
+        slots=slots,
+        input_lengths=input_lengths,
         max_seq_len=batch.max_s,
-        lm_head_indices=None if batch.lm_head_indices is None else batch.lm_head_indices.npu()
+        lm_head_indices=lm_head_indices
     )
     next_token = next_token_chooser(logits)
 
@@ -41,16 +52,17 @@ def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length
     return batch.filter(eos_token_id, max_out_length, cache_manager)
 
 
-def generate_req(req_list, model, tokenizer, max_batch_size, max_prefill_tokens, max_out_length, cache_manager,
-                        rank):
+def generate_req(req_list, model, tokenizer,
+                 max_batch_size, max_prefill_tokens, max_out_length, cache_manager,
+                 rank):
     req_num = len(req_list)
-    if rank == 0:
-        logger.info(f"------total req num: {req_num}, infer start--------")
+    print_log(rank, logger.info, f"------total req num: {req_num}, infer start--------")
 
     req_idx = 0
     total_req_finished = 0
     generate_batch_size = 0
 
+    benchmark_timelist = []
     generate_batches = []
 
     while total_req_finished < req_num:
@@ -80,7 +92,16 @@ def generate_req(req_list, model, tokenizer, max_batch_size, max_prefill_tokens,
             if prefill_batch_size > 0:
                 batch = Batch(req_list[prefill_start:prefill_start + prefill_batch_size])
                 cache_manager.allocate(batch)
-                req_finished = generate_token(model, tokenizer, cache_manager, batch, max_out_length, rank)
+                if ENV.benchmark_enable:
+                    import time
+                    prefill_start = time.time()
+                    req_finished = generate_token(model, tokenizer, cache_manager, batch, max_out_length, rank)
+                    prefill_end = time.time()
+                    prefill_time = prefill_end - prefill_start
+                    benchmark_timelist.append(prefill_time)
+
+                else:
+                    req_finished = generate_token(model, tokenizer, cache_manager, batch, max_out_length, rank)
 
                 generate_batches.append(batch)
 
@@ -99,13 +120,57 @@ def generate_req(req_list, model, tokenizer, max_batch_size, max_prefill_tokens,
                 logger.error(f"decode batch size: {generate_batch_size}, max allowed: {max_batch_size}")
                 raise AssertionError
 
-            req_finished = generate_token(model, tokenizer, cache_manager, generate_batches[0], max_out_length, rank)
+            if ENV.benchmark_enable:
+                import time
+                decode_start = time.time()
+                req_finished = generate_token(model, tokenizer, cache_manager, generate_batches[0], max_out_length,
+                                              rank)
+                decode_end = time.time()
+                decode_time = decode_end - decode_start
+                benchmark_timelist.append(decode_time)
+            else:
+                req_finished = generate_token(model, tokenizer, cache_manager, generate_batches[0], max_out_length,
+                                              rank)
 
             if req_finished != (generate_batch_size - generate_batches[0].batch_num):
                 logger.error(f"batch filter error")
                 raise AssertionError
             generate_batch_size = generate_batches[0].batch_num
             total_req_finished += req_finished
+    if ENV.benchmark_enable:
+        prefill_time = benchmark_timelist[0]
+        e2e_time = sum(benchmark_timelist)
+        decode_token_time = (e2e_time - prefill_time) / (max_out_length - 1)
+
+        logger.info(
+            f"Prefill time: {prefill_time * 1000}ms, "
+            f"Decode token time: {decode_token_time * 1000}ms, "
+            f"E2E time: {e2e_time * 1000}ms")
+        batch_size = len(req_list)
+        input_len = req_list[0].input_length
+        output_len = max_out_length
+        decode_token_times = ','.join(list(map(str, benchmark_timelist[1:])))
+        if rank == 0:
+            import os
+            benchmark_filepath = ENV.benchmark_filepath \
+                if ENV.benchmark_filepath else './benchmark_result/benchmark.csv'
+            benchmark_folder = os.path.dirname(benchmark_filepath)
+            if not os.path.exists(benchmark_folder):
+                os.makedirs(benchmark_folder)
+            stat_data = {
+                'batch_size': [batch_size],
+                'input_seq_len': [input_len],
+                'output_seq_len': [output_len],
+                'e2e_time(ms)': [f'{e2e_time * 1000: .2f}'],
+                'prefill_time(ms)': [f'{prefill_time * 1000: .2f}'],
+                'decoder_token_time(ms)': [f'{decode_token_time * 1000: .2f}'],
+                'token_times': [decode_token_times]
+            }
+            df = pd.DataFrame(stat_data)
+            df.to_csv(benchmark_filepath, index=False)
+            logger.info('-------------------performance dumped------------------------')
+            df = df.drop('token_times', axis=1)
+            print(df)
 
 
 def decode_token(req_list, tokenizer):

@@ -13,7 +13,7 @@ from transformers import PreTrainedModel
 from transformers.activations import ACT2FN
 from transformers.modeling_outputs import CausalLMOutputWithPast
 
-from atb_llm.common.log.logging import logger
+from atb_llm.utils.log import logger
 from atb_llm.models.baichuan.v2_13b.config import BaichuanConfig
 from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
 from atb_llm.utils.layers import (

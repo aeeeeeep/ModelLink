@@ -11,7 +11,7 @@ import torch_npu
 from torch import nn
 from transformers.activations import ACT2FN
 
-from atb_llm.common.log.logging import logger
+from atb_llm.utils.log import logger
 from atb_llm.utils.initial import NPUSocInfo, load_atb_speed
 from atb_llm.utils.layers import (
     TensorParallelColumnLinear,
@@ -19,8 +19,8 @@ from atb_llm.utils.layers import (
     PositionRotaryEmbedding,
     AttentionMask,
     TensorParallelHead,
-    _load_column_multi,
-    _load_row
+    load_column_multi,
+    load_row
 )
 
 
@@ -53,15 +53,15 @@ class FlashBaichuanAttention(torch.nn.Module):
 
         self.softmax_scale = self.head_size ** -0.5
         # can support self.num_heads % weights.process_group.size() != 0
-        if weights.process_group.size() != 0:
+        try:
             self.num_heads = math.ceil(self.num_heads / weights.process_group.size())
-        else:
-            raise ZeroDivisionError
+        except ZeroDivisionError as e:
+            raise ZeroDivisionError from e
         self.query_key_value = TensorParallelColumnLinear.load_qkv(
             config, prefix=f"{prefix}.W_pack", weights=weights, bias=False, head_size=self.head_size
         )
 
-        self.o_proj = _load_row(
+        self.o_proj = load_row(
             config,
             prefix=f"{prefix}.o_proj",
             weights=weights,
@@ -87,24 +87,24 @@ class MLP(nn.Module):
         )
         # Fuse gate and up proj
 
-        self.gate_up_proj = _load_column_multi(
+        self.gate_up_proj = load_column_multi(
             config,
             prefixes=[f"{prefix}.gate_proj", f"{prefix}.up_proj"],
             weights=weights,
             head_size=1
         )
 
-        self.down_proj = _load_row(
+        self.down_proj = load_row(
             config,
             prefix=f"{prefix}.down_proj",
             weights=weights,
             head_size=1
         )
 
-        if weights.process_group.size() != 0:
+        try:
             self.intermediate_size = (math.ceil(config.intermediate_size / weights.process_group.size()))
-        else:
-            raise ZeroDivisionError
+        except ZeroDivisionError as e:
+            raise ZeroDivisionError from e
 
 
 
@@ -161,7 +161,7 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
         self.parallel_lm_head = not self.soc_info.need_nz
 
         if self.parallel_lm_head:
-            self.lm_head = _load_column_multi(
+            self.lm_head = load_column_multi(
                 config,
                 prefixes=["lm_head"],
                 weights=weights,
@@ -185,11 +185,11 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
         self.tp_rank = process_group.rank()
         self.tp_world_size = process_group.size()
         
-        if weights.process_group.size() != 0:
+        try:
             self.num_heads = math.ceil(self.num_heads / weights.process_group.size())
             self.num_key_value_heads = math.ceil(config.num_key_value_heads / weights.process_group.size())
-        else:
-            raise ZeroDivisionError
+        except ZeroDivisionError as e:
+            raise ZeroDivisionError from e
 
         self.init_ascend_operations(config)
         self.ascend_weight = []

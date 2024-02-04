@@ -8,7 +8,7 @@ from typing import List, Dict
 import torch
 from safetensors.torch import save_file, load_file, _find_shared_tensors, _is_complete
 
-from atb_llm.common.log.logging import logger
+from .log import logger
 
 
 def _process_shared_tensors(state_dict, preferred_names, shared_tensors, discard_names):

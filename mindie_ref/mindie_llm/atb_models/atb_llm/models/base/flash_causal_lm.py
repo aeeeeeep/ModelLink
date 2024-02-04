@@ -8,7 +8,7 @@ import torch
 import torch_npu
 from transformers.configuration_utils import PretrainedConfig
 
-from atb_llm.common.log.logging import logger
+from atb_llm.utils.log import logger, print_log
 from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
 from atb_llm.utils.layers import PositionRotaryEmbedding, AttentionMask
 
@@ -43,7 +43,6 @@ class FlashForCausalLM(torch.nn.Module):
         super().__init__()
         load_atb_speed()
         self.soc_info = NPUSocInfo()
-        logger.info(self.soc_info)
 
         self.num_attention_heads = config.num_attention_heads
         if hasattr(config, 'num_key_value_heads'):
@@ -56,6 +55,7 @@ class FlashForCausalLM(torch.nn.Module):
         process_group = weights.process_group
         self.tp_rank = process_group.rank()
         self.tp_world_size = process_group.size()
+        print_log(self.tp_rank, logger.info, self.soc_info)
 
         self.num_attention_heads = (self.num_attention_heads + self.tp_world_size - 1) // self.tp_world_size
         self.num_key_value_heads = self.num_key_value_heads // self.tp_world_size
@@ -91,7 +91,7 @@ class FlashForCausalLM(torch.nn.Module):
         if not self.soc_info.need_nz:
             return tensor
         torch_npu.npu_format_cast_(tensor, 29)
-        logger.info(f"trans to {torch_npu.get_npu_format(tensor)}")
+        print_log(self.tp_rank, logger.info, f"trans to {torch_npu.get_npu_format(tensor)}")
         return tensor
 
     @abstractmethod
@@ -115,7 +115,7 @@ class FlashForCausalLM(torch.nn.Module):
         vcache_id = not self.ascend_vcache_id or self.ascend_vcache_id != id(kv_cache[0][1])
         if kcache_id or vcache_id:
             k_caches, v_caches = map(list, zip(*kv_cache))
-            logger.info(f"<<<<<<< ori {k_caches[0].shape=}")
+            print_log(self.tp_rank, logger.info, f"<<<<<<< ori {k_caches[0].shape=}")
             if self.soc_info.need_nz:
                 k_caches = [torch_npu.npu_format_cast_(k_cache, 29) for k_cache in k_caches]
                 v_caches = [torch_npu.npu_format_cast_(v_cache, 29) for v_cache in v_caches]
@@ -124,7 +124,8 @@ class FlashForCausalLM(torch.nn.Module):
             self.acl_decoder_operation.set_kv_cache(k_caches, v_caches)
             self.ascend_kcache_id = id(kv_cache[0][0])
             self.ascend_vcache_id = id(kv_cache[0][1])
-            logger.warning(f">>>>>>id of kcache is {self.ascend_kcache_id} id of vcache is {self.ascend_vcache_id}")
+            print_log(self.tp_rank, logger.info,
+                      f">>>>>>id of kcache is {self.ascend_kcache_id} id of vcache is {self.ascend_vcache_id}")
 
     def prepare_inputs_for_ascend(self, input_ids: torch.Tensor,
                                   position_ids: torch.Tensor,
@@ -162,6 +163,9 @@ class FlashForCausalLM(torch.nn.Module):
             self.acl_encoder_operation_inputs[8] = lm_head_indices.to(torch.int64)
             return self.acl_encoder_operation_inputs, self.acl_param
         else:
+            self.acl_param = json.dumps({
+                "seqLen": input_lengths.tolist()
+            })
             self.acl_decoder_operation_inputs[0] = input_ids
             self.acl_decoder_operation_inputs[1] = position_ids.to(torch.int64)
             self.acl_decoder_operation_inputs[2] = self.cos_embed

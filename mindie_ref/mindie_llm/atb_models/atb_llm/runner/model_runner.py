@@ -3,12 +3,10 @@ from typing import Optional
 
 import torch
 
-from atb_llm.common.log.logging import logger
 from ..models import get_model
-from ..utils import Weights
-from ..utils import bind_cpus
-from ..utils import initialize_torch_distributed
+from ..utils import bind_cpus, initialize_torch_distributed, Weights
 from ..utils.env import ENV
+from ..utils.log import logger, print_log
 
 
 class ModelRunner:
@@ -23,6 +21,7 @@ class ModelRunner:
 
     def __init__(self, model_name_or_path, rank, world_size,
                  quantize=None, dtype=None, kv_cache_dtype=None,
+                 max_position_embeddings=None,
                  is_flash_causal_lm: bool = True,
                  revision: Optional[str] = None,
                  trust_remote_code: bool = True,
@@ -37,13 +36,14 @@ class ModelRunner:
         if ENV.bind_cpu:
             bind_cpus(world_size, rank, ratio=1.0)
         self.model_cls, self.config, self.tokenizer = \
-            get_model(model_name_or_path, quantize, is_flash_causal_lm, revision, trust_remote_code)
+            get_model(model_name_or_path, quantize, max_position_embeddings, is_flash_causal_lm,
+                      revision, trust_remote_code)
 
         setattr(self.config, "use_refactor", use_refactor)
 
         self.process_group, self.device = initialize_torch_distributed(rank, world_size)
 
-        logger.info(f'init tokenizer done: {self.tokenizer}')
+        print_log(rank, logger.info, f'init tokenizer done: {self.tokenizer}')
 
     def load_weights(self):
         weights = Weights(

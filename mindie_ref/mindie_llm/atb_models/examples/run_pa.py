@@ -4,13 +4,156 @@ import os
 import math
 import torch
 
-from loguru import logger
-
+from atb_llm.utils.cpu_binding import get_hbm_capacity, get_hbm_usage
+from atb_llm.utils.env import ENV
+from atb_llm.utils.log import logger, print_log
 from atb_llm.runner import ModelRunner
 from examples.server.cache import CacheConfig, ModelConfig, CacheManager
-from examples.server.batch import Batch
 from examples.server.request import Request, request_from_token_file, request_from_text
 from examples.server.generate import generate_token, decode_token, generate_req
+
+
+class PARunner:
+    def __init__(self, **kwargs):
+        self.rank = kwargs.get('rank', '0')
+        self.world_size = kwargs.get('world_size', '1')
+
+        self.model_path = kwargs.get('model_path', None)
+        self.input_text = kwargs.get('input_text', None)
+        self.max_position_embeddings = kwargs.get('max_position_embeddings', None)
+        self.max_input_length = kwargs.get('max_input_length', None)
+        self.max_prefill_tokens = kwargs.get('max_prefill_tokens', None)
+        self.max_output_length = kwargs.get('max_output_length', None)
+        self.is_flash_model = kwargs.get('is_flash_model', None)
+        self.max_batch_size = kwargs.get('max_batch_size', None)
+        self.use_refactor = kwargs.get('use_refactor', None)
+        self.dtype = torch.bfloat16 if kwargs.get('is_bf16', False) else torch.float16
+
+        self.block_size = kwargs.get('block_size', None)
+
+        self.model = ModelRunner(
+            self.model_path, rank=self.rank, world_size=self.world_size, dtype=self.dtype,
+            max_position_embeddings=self.max_position_embeddings,
+            quantize=None, use_refactor=self.use_refactor
+        )
+        self.tokenizer = self.model.tokenizer
+        self.model.load_weights()
+
+        self.device = self.model.device
+        self.model_config = ModelConfig(self.model.num_heads,
+                                        self.model.num_kv_heads,
+                                        self.model.head_size,
+                                        self.model.num_layers,
+                                        self.model.device,
+                                        self.model.dtype,
+                                        self.model.soc_info)
+
+        self.max_memory = get_hbm_capacity(self.rank, self.model.soc_info.need_nz)
+        self.init_memory = int(self.max_memory * get_hbm_usage(self.rank, self.model.soc_info.need_nz))
+        print_log(self.rank, logger.info, f'hbm_capacity(GB): {self.max_memory / (1024 ** 3)}, '
+                                          f'init_memory(GB): {self.init_memory / (1024 ** 3)}')
+
+        self.warm_up_memory = 0
+        self.warm_up_num_blocks = 0
+
+    def __repr__(self):
+        return (
+                f"PARunner("
+                + f"model_path={self.model_path}, "
+                + f"input_text={self.input_text}, "
+                + f"max_position_embeddings={self.max_position_embeddings}, "
+                + f"max_input_length={self.max_input_length}, "
+                + f"max_output_length={self.max_output_length}, "
+                + f"max_prefill_tokens={self.max_prefill_tokens}, "
+                + f"is_flash_model={self.is_flash_model}, "
+                + f"max_batch_size={self.max_batch_size}, "
+                + f"use_refactor={self.use_refactor}, "
+                + f"dtype={self.dtype}, "
+                + f"block_size={self.block_size}, "
+                + f"model_config={self.model_config}, "
+                + f"max_memory={self.max_memory}, "
+        )
+
+    def warm_up(self):
+        max_prefill_tokens = self.max_batch_size * (self.max_input_length + self.max_output_length)
+        if self.max_prefill_tokens == -1:
+            self.max_prefill_tokens = max_prefill_tokens
+        else:
+            self.max_prefill_tokens = max(self.max_prefill_tokens, max_prefill_tokens)
+        input_ids = torch.ones(self.max_prefill_tokens, dtype=torch.int64).to(self.device)
+        position_ids = torch.arange(self.max_prefill_tokens, dtype=torch.int32).to(self.device)
+        cu_seqlen_prefill = torch.tensor([1])
+        block_num = math.ceil(self.max_prefill_tokens / self.block_size)
+        block_tables_tensor = torch.arange(block_num, dtype=torch.int32).view(1, -1).to(self.device)
+        slots = torch.arange(self.max_prefill_tokens, dtype=torch.int32).to(self.device)
+        input_lengths_tensor = torch.tensor([self.max_prefill_tokens], dtype=torch.int64).to(self.device)
+        prefill_head_indices = torch.tensor([self.max_prefill_tokens - 1], dtype=torch.int64).to(self.device)
+
+        print_log(self.rank, logger.info, "---------------begin warm_up---------------")
+
+        self.warm_up_num_blocks = math.ceil(self.max_prefill_tokens / self.block_size)
+        cache_config = CacheConfig(self.warm_up_num_blocks)
+        cache_manager = CacheManager(cache_config, self.model_config)
+        logits = self.model.forward(
+            input_ids=input_ids,
+            position_ids=position_ids,
+            is_prefill=cu_seqlen_prefill is not None,
+            block_tables=block_tables_tensor,
+            kv_cache=cache_manager.kv_cache,
+            slots=slots,
+            input_lengths=input_lengths_tensor,
+            max_seq_len=self.max_prefill_tokens,
+            lm_head_indices=prefill_head_indices
+        )
+        self.warm_up_memory = int(self.max_memory * get_hbm_usage(self.rank, self.model.soc_info.need_nz))
+        print_log(self.rank, logger.info, f'warmup_memory(GB): {self.warm_up_memory / (1024 ** 3): .2f}')
+        print_log(self.rank, logger.info, "---------------end warm_up---------------")
+
+    def infer(self, input_texts, batch_size, max_output_length):
+        print_log(self.rank, logger.info, "---------------begin inference---------------")
+        if len(input_texts) == 1:
+            req_list = [request_from_text(input_texts[0], self.tokenizer, max_output_length, self.block_size, req_idx=i) \
+                        for i in range(batch_size)]
+        else:
+            req_list = [request_from_text(input_text, self.tokenizer, max_output_length, self.block_size, req_idx=i) \
+                        for input_text in input_texts]
+        print_log(self.rank, logger.debug, f'req_list[0].input_ids: {req_list[0].input_ids}')
+
+        cache_block_size = self.block_size * self.model.num_kv_heads * self.model.head_size
+        dtype_size = CacheManager.get_dtype_size(self.dtype)
+        total_cache_size = self.model.num_layers * cache_block_size * 2 * dtype_size
+
+        max_memory = ENV.memory_fraction * self.max_memory if batch_size != 1 else ENV.max_memory_gb * (1 << 30)
+        free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory else self.init_memory)
+        print_log(self.rank, logger.info,
+                  f"infer max_memory(GB): {max_memory / (1024 ** 3): .2f}, "
+                  f"warm_up_memory(GB): {self.warm_up_memory / (1024 ** 3): .2f}, "
+                  f"free_memory(GB): {free_memory / (1024 ** 3): .2f}")
+
+        num_blocks = int(free_memory // total_cache_size)
+        print_log(self.rank, logger.info, f"num_blocks: {num_blocks}, free_memory: {free_memory}")
+        cache_config = CacheConfig(num_blocks, self.block_size)
+        cache_manager = CacheManager(cache_config, self.model_config)
+
+        if not ENV.profiling_enable:
+            print_log(self.rank, logger.debug, "no profiling")
+            generate_req(req_list, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
+                         max_output_length, cache_manager, rank)
+        else:
+            print_log(self.rank, logger.debug, "enter profiling")
+            import os
+            profiling_path = './profiling'
+            if not os.path.exists(profiling_path):
+                os.makedirs(profiling_path)
+            torch.npu.synchronize()
+            with torch.npu.profile(profiling_path):
+                generate_req(req_list, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
+                             max_output_length, cache_manager, rank)
+            torch.npu.synchronize()
+
+        generate_text_list, token_num_list = decode_token(req_list, self.tokenizer)
+        print_log(self.rank, logger.info, "---------------end inference---------------")
+        return generate_text_list, token_num_list
 
 
 def parse_arguments():
@@ -20,7 +163,7 @@ def parse_arguments():
                         default='/data/acltransformer_testdata/weights/llama2/llama-2-70b',
                         )
     parser.add_argument(
-        '--input_text',
+        '--input_texts',
         type=str,
         nargs='+',
         default=["What's deep learning?"])
@@ -29,10 +172,12 @@ def parse_arguments():
         type=str,
         help='CSV or Numpy file containing tokenized input. Alternative to text input.',
         default=None)
+    parser.add_argument('--max_position_embeddings', type=int, default=None)
     parser.add_argument('--max_input_length', type=int, default=1024)
     parser.add_argument('--max_output_length', type=int, default=20)
-    parser.add_argument('--max_prefill_tokens', type=int, default=2048)
-    parser.add_argument("--batch_size", type=int, default=1)
+    parser.add_argument('--max_prefill_tokens', type=int, default=-1)
+    parser.add_argument("--max_batch_size", type=int, default=1)
+    parser.add_argument("--block_size", type=int, default=128)
 
     parser.add_argument('--is_flash_model', action='store_false')
     parser.add_argument('--is_bf16', action='store_true')
@@ -53,96 +198,28 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def warm_up(model, max_prefill_tokens, cache_manager, rank):
-    block_size = cache_manager.block_size
-
-    input_ids = torch.ones(max_prefill_tokens, dtype=torch.int64)
-    position_ids = torch.arange(max_prefill_tokens, dtype=torch.int32)
-    cu_seqlen_prefill = torch.tensor([1])
-    block_num = math.ceil(max_prefill_tokens / block_size)
-    block_tables_tensor = torch.arange(block_num, dtype=torch.int32).view(1, -1)
-    slots = torch.arange(max_prefill_tokens, dtype=torch.int32)
-    input_lengths_tensor = torch.tensor([max_prefill_tokens], dtype=torch.int64)
-    prefill_head_indices = torch.tensor([max_prefill_tokens - 1], dtype=torch.int64)
-    if rank == 0:
-        logger.info("---------------begin warm-up---------------")
-    logits = model.forward(
-        input_ids=input_ids.npu(),
-        position_ids=position_ids.npu(),
-        is_prefill=cu_seqlen_prefill.npu() is not None,
-        block_tables=block_tables_tensor.npu(),
-        kv_cache=cache_manager.kv_cache,
-        slots=slots.npu(),
-        input_lengths=input_lengths_tensor.npu(),
-        max_seq_len=max_prefill_tokens,
-        lm_head_indices=prefill_head_indices.npu()
-    )
-    if rank == 0:
-        logger.info("---------------end warm-up---------------")
-
-
-def infer(model, tokenizer, input_text, batch_size, max_prefill_tokens, max_output_length, block_size, cache_manager,
-          rank):
-    if rank == 0:
-        logger.info("---------------begin inference---------------")
-    input_text = input_text[0]
-    req_list = [request_from_text(input_text, tokenizer, max_output_length, block_size, req_idx=i) \
-                for i in range(batch_size)]
-
-    generate_req(req_list, model, tokenizer, batch_size, max_prefill_tokens, max_output_length, cache_manager,
-                 rank)
-    generate_text_list, token_num_list = decode_token(req_list, tokenizer)
-    if rank == 0:
-        logger.info(f'Question: {input_text}')
-        for i, generate_text in enumerate(generate_text_list):
-            logger.info(f'Answer: {generate_text}')
-            logger.info(f'Generate token num: {token_num_list[i]}')
-
-        logger.info("---------------end inference---------------")
-
-
 if __name__ == '__main__':
     args = parse_arguments()
-    model_path = args.model_path
-    input_text = args.input_text
-    max_input_length = args.max_input_length
-    max_prefill_tokens = args.max_prefill_tokens
-    max_output_length = args.max_output_length
-    is_flash_model = args.is_flash_model
-    batch_size = args.batch_size
-    use_refactor = args.use_refactor
-    is_bf16 = args.is_bf16
 
     rank = int(os.getenv("RANK", "0"))
     world_size = int(os.getenv("WORLD_SIZE", "1"))
+    input_dict = {
+        'rank': rank,
+        'world_size': world_size,
+        **vars(args)
+    }
 
-    if is_bf16:
-        dtype = torch.bfloat16
-    else:
-        dtype = torch.float16
+    pa_runner = PARunner(**input_dict)
+    print_log(rank, logger.info, f'pa_runner: {pa_runner}')
+    pa_runner.warm_up()
+    torch.cuda.empty_cache()
 
-    model = ModelRunner(
-        model_path, rank=rank, world_size=world_size, dtype=dtype,
-        quantize=None, use_refactor=use_refactor
-    )
-    tokenizer = model.tokenizer
+    generate_texts, token_nums = pa_runner.infer(args.input_texts, args.max_batch_size, args.max_output_length)
 
-    model.load_weights()
-
-    cache_config = CacheConfig()
-    model_config = ModelConfig(model.num_heads,
-                               model.num_kv_heads,
-                               model.head_size,
-                               model.num_layers,
-                               model.device,
-                               model.dtype,
-                               model.soc_info)
-
-    cache_manager = CacheManager(cache_config, model_config)
-    warm_up(model, max_prefill_tokens, cache_manager, rank)
-
-    infer(model, tokenizer, input_text, batch_size, max_prefill_tokens, max_output_length, cache_config.block_size,
-          cache_manager, rank)
-
+    for i, generate_text in enumerate(generate_texts):
+        if i < len(args.input_texts):
+            print_log(rank, logger.info, f'Question[{i}]: {args.input_texts[i]}')
+        print_log(rank, logger.info, f'Answer[{i}]: {generate_text}')
+        print_log(rank, logger.info, f'Generate[{i}] token num: {token_nums[i]}')
     if world_size > 1:
         torch.distributed.destroy_process_group()

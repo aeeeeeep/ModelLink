@@ -3,3 +3,4 @@ from .dist import initialize_torch_distributed
 from .hub import weight_files
 from .weights import Weights
 from .cpu_binding import bind_cpus
+from .log import logger, print_log

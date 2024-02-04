@@ -9,8 +9,8 @@ import torch
 from huggingface_hub import hf_hub_download
 from safetensors import safe_open, SafetensorError
 
-from atb_llm.common.log.logging import logger
 from .hub import weight_files
+from .log import logger
 
 
 class Weights:

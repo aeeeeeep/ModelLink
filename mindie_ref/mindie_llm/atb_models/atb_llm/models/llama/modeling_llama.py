@@ -1,4 +1,17 @@
-# Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
+# Copyright(C) 2023. Huawei Technologies Co.,Ltd. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import math
 from typing import Optional, List, Tuple
 
@@ -13,7 +26,7 @@ from atb_llm.utils.layers import (
     TensorParallelColumnLinear,
     PositionRotaryEmbedding,
     TensorEmbedding,
-    _load_column_multi,
+    load_column_multi,
     paged_attn,
     flash_attn,
     reshape_and_cache
@@ -132,7 +145,7 @@ class LlamaMLP(nn.Module):
             )
         else:
             # Fuse gate and up proj
-            self.gate_up_proj = _load_column_multi(
+            self.gate_up_proj = load_column_multi(
                 config,
                 prefixes=[f"{prefix}.gate_proj", f"{prefix}.up_proj"],
                 weights=weights,
@@ -207,7 +220,7 @@ class FlashLlamaAttention(torch.nn.Module):
                 bias=False,
             )
         else:
-            self.query_key_value = _load_column_multi(
+            self.query_key_value = load_column_multi(
                 config,
                 prefixes=[f"{prefix}.q_proj", f"{prefix}.k_proj", f"{prefix}.v_proj"],
                 weights=weights,
@@ -476,7 +489,7 @@ class LlamaAttention(torch.nn.Module):
                 bias=False,
             )
         else:
-            self.query_key_value = _load_column_multi(
+            self.query_key_value = load_column_multi(
                 config,
                 prefixes=[f"{prefix}.q_proj", f"{prefix}.k_proj", f"{prefix}.v_proj"],
                 weights=weights,
@@ -533,10 +546,10 @@ class LlamaAttention(torch.nn.Module):
         query = query.view(-1, q_len, self.num_heads, self.head_size)
         key = key.view(-1, q_len, self.num_key_value_heads, self.head_size)
         value = value.view(-1, q_len, self.num_key_value_heads, self.head_size)
-
-        if self.head_dim == 0:
-            raise ValueError('headdim is 0')
-        attn_weights = torch.matmul(query, key.transpose(2, 3)) / math.sqrt(self.head_dim)
+        try:
+            attn_weights = torch.matmul(query, key.transpose(2, 3)) / math.sqrt(self.head_dim)
+        except ZeroDivisionError as e:
+            raise ZeroDivisionError from e
         if attn_weights.size() != (bsz, self.num_heads, q_len, kv_seq_len):
             raise ValueError(
                 f"Attention weights should be of size {(bsz, self.num_heads, q_len, kv_seq_len)}, but is"

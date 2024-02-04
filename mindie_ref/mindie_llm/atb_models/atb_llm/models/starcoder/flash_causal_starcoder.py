@@ -11,7 +11,7 @@ import torch_npu
 from safetensors import safe_open
 from transformers.configuration_utils import PretrainedConfig
 
-from atb_llm.common.log.logging import logger
+from atb_llm.utils.log import logger
 from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
 
 

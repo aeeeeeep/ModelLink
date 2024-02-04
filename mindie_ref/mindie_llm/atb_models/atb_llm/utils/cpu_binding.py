@@ -5,8 +5,8 @@ from typing import List, Dict, Union
 
 import psutil
 
-from atb_llm.common.log.logging import logger
-from atb_llm.utils.env import ENV
+from .env import ENV
+from .log import logger
 
 
 @dataclass

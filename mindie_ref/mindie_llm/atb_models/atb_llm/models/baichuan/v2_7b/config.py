@@ -1,9 +1,4 @@
-#!/usr/bin/env python
-# coding:utf-8
-# Copyright Huawei Technologies Co., Ltd. 2010-2018. All rights reserved
-"""
-config
-"""
+# Copyright (c) 2023, Baichuan Intelligent Technology. All rights reserved.
 from transformers.configuration_utils import PretrainedConfig
 
 

@@ -2,7 +2,7 @@
 import os
 import torch
 
-from loguru import logger
+from atb_llm.utils.log import logger, print_log
 
 
 class CacheConfig:
@@ -46,10 +46,9 @@ class CacheManager:
         self.dtype = model_config.dtype
         self.soc_info = model_config.soc_info
 
-        dtype_size_map = {torch.float16: 2, torch.float32: 4, torch.bfloat16: 2}
         mem_need = self.num_blocks * self.block_size * self.num_heads * self.head_size * self.num_layers * 2 * \
-                   dtype_size_map[self.dtype] / 1024 / 1024 / 1024
-        logger.info(f"kv cache will allocate {mem_need}GB memory")
+                   self.get_dtype_size(self.dtype) / 1024 / 1024 / 1024
+        print_log(torch.distributed.get_rank(), logger.info, f"kv cache will allocate {mem_need}GB memory")
 
         if self.soc_info.need_nz:
             self.kv_cache = [
@@ -97,6 +96,11 @@ class CacheManager:
         self.free_block_mask = torch.ones(self.num_blocks, dtype=torch.long)
         self.total_slots = torch.arange(self.num_blocks * self.block_size, dtype=torch.long)
         self.total_slots = self.total_slots.view(self.num_blocks, self.block_size)
+
+    @staticmethod
+    def get_dtype_size(dtype):
+        dtype_size_map = {torch.float16: 2, torch.float32: 4, torch.bfloat16: 2}
+        return dtype_size_map[dtype]
 
     def allocate(self, batch):
         total_need_blocks = 0

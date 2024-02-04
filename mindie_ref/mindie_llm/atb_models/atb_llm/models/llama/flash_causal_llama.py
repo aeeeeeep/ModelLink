@@ -7,7 +7,7 @@ from typing import Optional, List, Tuple
 import torch
 import torch_npu
 
-from atb_llm.utils.layers import _load_column_multi
+from atb_llm.utils.layers import load_column_multi
 from .modeling_llama import FlashLlamaModel, LlamaConfig
 from ..base.flash_causal_lm import FlashForCausalLM
 
@@ -16,7 +16,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
     def __init__(self, config, weights):
         super().__init__(config, weights)
         self.model = FlashLlamaModel(config, weights)
-        self.lm_head = _load_column_multi(
+        self.lm_head = load_column_multi(
             config,
             prefixes=["lm_head"],
             weights=weights,

@@ -1,4 +1,17 @@
-# Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
+# Copyright(C) 2023. Huawei Technologies Co.,Ltd. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import time
 from datetime import timedelta
@@ -10,10 +23,9 @@ from huggingface_hub.constants import HUGGINGFACE_HUB_CACHE
 from huggingface_hub.utils import (
     LocalEntryNotFoundError,
     EntryNotFoundError,
-    # Import here to ease try/except in other part of the lib
 )
 
-from atb_llm.common.log.logging import logger
+from .log import logger
 
 WEIGHTS_CACHE_OVERRIDE = os.getenv("WEIGHTS_CACHE_OVERRIDE", None)
 
@@ -74,10 +86,7 @@ def try_to_load_from_cache(model_id: str, revision: Optional[str], filename: str
         raise AssertionError
 
     # Check if file exists in cache
-    try:
-        cached_file = snapshots_dir / revision / filename
-    except ZeroDivisionError as e:
-        raise ZeroDivisionError from e 
+    cached_file = snapshots_dir / revision / filename
     return cached_file if cached_file.is_file() else None
 
 

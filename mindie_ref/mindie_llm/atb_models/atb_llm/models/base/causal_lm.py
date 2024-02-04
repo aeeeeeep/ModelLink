@@ -10,7 +10,7 @@ from transformers.configuration_utils import PretrainedConfig
 from transformers.modeling_outputs import CausalLMOutputWithPast
 from transformers.modeling_utils import PreTrainedModel
 
-from atb_llm.common.log.logging import logger
+from atb_llm.utils.log import logger
 from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
 from atb_llm.utils.layers import PositionRotaryEmbedding
 

@@ -3,8 +3,8 @@ from datetime import timedelta
 
 import torch
 
-from atb_llm.common.log.logging import logger
-from atb_llm.utils.env import ENV
+from .env import ENV
+from .log import logger
 
 
 class FakeBarrier:
@@ -64,8 +64,7 @@ def initialize_torch_distributed(rank, world_size):
                 timeout=timedelta(seconds=ENV.pg_init_timeout),
                 pg_options=options,
             )
-            logger.info(f"rank {rank} init_process_group has been activated")
-            logger.info(f"rank {rank} init {torch.distributed.is_initialized()}")
+            logger.info(f"rank {rank} init {torch.distributed.is_initialized()}, init_process_group has been activated")
         else:
             logger.info("torch.distributed is already initialized.")
 

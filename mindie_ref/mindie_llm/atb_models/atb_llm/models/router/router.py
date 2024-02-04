@@ -13,6 +13,7 @@ from ..starcoder.flash_causal_starcoder import StarcoderConfig
 class BaseRouter:
     model_name_or_path: str = ""
     quantize: Optional[str] = None
+    max_position_embeddings: Optional[int] = None,
     is_flash_causal_lm: bool = True
     revision: Optional[str] = None
     trust_remote_code: bool = None
@@ -101,9 +102,12 @@ class LlamaRouter(BaseRouter):
 
     @property
     def config(self):
-        return LlamaConfig.from_pretrained(self.model_name_or_path,
-                                           revision=self.revision,
-                                           trust_remote_code=self.trust_remote_code)
+        config = LlamaConfig.from_pretrained(self.model_name_or_path,
+                                             revision=self.revision,
+                                             trust_remote_code=self.trust_remote_code)
+        if self.max_position_embeddings:
+            config.max_position_embeddings = self.max_position_embeddings
+        return config
 
 
 @dataclass
@@ -111,9 +115,12 @@ class StarcoderRouter(BaseRouter):
 
     @property
     def config(self):
-        return StarcoderConfig.from_pretrained(self.model_name_or_path,
-                                           revision=self.revision,
-                                           trust_remote_code=self.trust_remote_code)
+        config = StarcoderConfig.from_pretrained(self.model_name_or_path,
+                                                 revision=self.revision,
+                                                 trust_remote_code=self.trust_remote_code)
+        if self.max_position_embeddings:
+            config.seq_length = self.max_position_embeddings
+        return config
 
 
 @dataclass
@@ -134,9 +141,12 @@ class BaichuanRouter(BaseRouter):
     @property
     def config(self):
         config_cls = self.get_config_cls()
-        return config_cls.from_pretrained(self.model_name_or_path,
-                                          revision=self.revision,
-                                          trust_remote_code=self.trust_remote_code)
+        config = config_cls.from_pretrained(self.model_name_or_path,
+                                            revision=self.revision,
+                                            trust_remote_code=self.trust_remote_code)
+        if self.max_position_embeddings:
+            config.model_max_length = self.max_position_embeddings
+        return config
 
     def get_tokenizer(self):
         return AutoTokenizer.from_pretrained(

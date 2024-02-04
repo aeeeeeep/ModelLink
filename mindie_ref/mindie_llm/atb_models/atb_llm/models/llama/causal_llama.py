@@ -3,7 +3,7 @@ import json
 from typing import Optional
 import torch
 
-from atb_llm.utils.layers import TensorHead, _load_column_multi
+from atb_llm.utils.layers import TensorHead, load_column_multi
 from ..base.causal_lm import CausalLM
 from .modeling_llama import LlamaModel, LlamaConfig
 
@@ -14,7 +14,7 @@ class LlamaForCausalLM(CausalLM):
         self.model = LlamaModel(config, weights)
 
         if not self.soc_info.need_nz:
-            self.lm_head = _load_column_multi(
+            self.lm_head = load_column_multi(
                 config,
                 prefixes=["lm_head"],
                 weights=weights,
