@@ -7,6 +7,7 @@ from .router import router
 
 def get_model(model_name_or_path: str,
               quantize: Optional[str] = None,
+              max_position_embeddings: Optional[int] = None,
               is_flash_causal_lm: bool = True,
               revision: Optional[str] = None,
               trust_remote_code: bool = True,
@@ -18,6 +19,7 @@ def get_model(model_name_or_path: str,
     router_ins = router_cls(
         model_name_or_path,
         quantize,
+        max_position_embeddings,
         is_flash_causal_lm,
         revision,
         trust_remote_code,

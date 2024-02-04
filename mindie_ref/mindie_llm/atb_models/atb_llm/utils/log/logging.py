@@ -48,3 +48,8 @@ def init_logger(logger_ins: logging.Logger, file_name: str):
 
 
 logger = init_logger(logging.getLogger(), LOG_TO_FILE)
+
+
+def print_log(rank_id, logger_fn, msg):
+    if rank_id == 0:
+        logger_fn(msg)
