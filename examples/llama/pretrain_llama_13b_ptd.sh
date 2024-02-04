@@ -4,17 +4,17 @@ export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 GPUS_PER_NODE=8
 MASTER_ADDR=localhost
-MASTER_PORT=6000
+MASTER_PORT=6001
 NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
-CKPT_SAVE_DIR="your model save ckpt path"
+LOAD_CHECKPOINT_PATH="your init model load path"
+SAVE_CHECKPOINT_PATH="your model ckpt save path"
 DATA_PATH="your data path"
 TOKENIZER_MODEL="your tokenizer path"
-CKPT_LOAD_DIR="your model ckpt path"
-TP=8
-PP=1
+TP=1
+PP=8
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $GPUS_PER_NODE \
@@ -28,19 +28,19 @@ GPT_ARGS="
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --sequence-parallel \
-    --num-layers 32 \
-    --hidden-size 4096 \
-    --ffn-hidden-size 11008 \
-    --num-attention-heads 32 \
+    --num-layers 40 \
+    --hidden-size 5120 \
+    --ffn-hidden-size 13824 \
+    --num-attention-heads 40 \
     --tokenizer-type Llama2Tokenizer \
     --tokenizer-model ${TOKENIZER_MODEL} \
-    --seq-length 4096 \
-    --max-position-embeddings 4096 \
-    --micro-batch-size 4 \
-    --global-batch-size 16 \
+    --seq-length 2048 \
+    --max-position-embeddings 2048 \
+    --micro-batch-size 1 \
+    --global-batch-size 128 \
     --make-vocab-size-divisible-by 1 \
-    --lr 1.25e-6 \
-    --train-iters 5000 \
+    --lr 1.0e-6 \
+    --train-iters 1000 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
     --disable-bias-linear \
@@ -54,17 +54,18 @@ GPT_ARGS="
     --use-flash-attn \
     --no-masked-softmax-fusion \
     --attention-softmax-in-fp32 \
-    --min-lr 1.25e-7 \
+    --min-lr 1.0e-7 \
     --weight-decay 1e-1 \
     --lr-warmup-fraction 0.01 \
     --clip-grad 1.0 \
     --adam-beta1 0.9 \
-    --initial-loss-scale 65536 \
     --adam-beta2 0.95 \
+    --initial-loss-scale 65536 \
     --no-gradient-accumulation-fusion \
+    --load ${LOAD_CHECKPOINT_PATH}  \
     --no-load-optim \
     --no-load-rng \
-    --bf16
+    --fp16
 "
 
 DATA_ARGS="
@@ -76,7 +77,7 @@ OUTPUT_ARGS="
     --log-interval 1 \
     --save-interval 10000 \
     --eval-interval 1000 \
-    --eval-iters 0 \
+    --eval-iters 10 \
 "
 
 torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
@@ -84,5 +85,4 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
-    --load $CKPT_LOAD_DIR \
-    --save $CKPT_SAVE_DIR
+    --save ${SAVE_CHECKPOINT_PATH}
