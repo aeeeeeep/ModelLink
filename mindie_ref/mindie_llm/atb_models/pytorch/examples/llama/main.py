@@ -19,7 +19,9 @@ import torch
 import torch_npu
 from torch_npu.contrib import transfer_to_npu
 from transformers import LlamaTokenizer, LlamaForCausalLM
-from transformers.models.llama.configuration_llama import LlamaConfig
+from cpu_binder import bind_cpus
+
+BIND_CPU = int(os.getenv("BIND_CPU", "0"))
 
 
 def setup_model_parallel(init_args):
@@ -29,7 +31,10 @@ def setup_model_parallel(init_args):
     device_id = init_args.device
     torch_npu.npu.set_device(device_id + curr_rank)
     print(f"device id {init_args.device + curr_rank} set success.")
-
+    # bind cpu NUMAs
+    if BIND_CPU == 1:
+        bind_cpus(curr_world_size, curr_rank, device_id)
+    # seed must be the same in all processes
     torch.manual_seed(1)
     return curr_rank, curr_world_size
 
