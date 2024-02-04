@@ -103,14 +103,6 @@ static void from_json(const nlohmann::json &paramJson, PaCommonLayerParam &param
 
 atb::Status PaCommonLayer(const PaCommonLayerParam &param, atb::Operation **operation);
 
-static atb::Operation *CreatePaCommonLayer(const nlohmann::json &paramJson)
-{
-    ATB_LOG(INFO) << GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
-    atb::Operation *op;
-    PaCommonLayer(paramJson.get<PaCommonLayerParam>(), &op);
-    return op;
-}
-
 class CommonFlashAttentionHostBinder : public HostTensorBinder {
 public:
     CommonFlashAttentionHostBinder();
