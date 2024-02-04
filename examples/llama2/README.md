@@ -522,42 +522,43 @@ LLaMA2-34B/70B 训练的硬件配置:
 | 模型  | 硬件   |        配置        |
 |:---:|:----:|:----------------:|
 | 34B | NPU  | 16 x Ascend NPUs |
-| 70B | NPU  | 64 x Ascend NPUs |
+| 70B | NPU  | 32 x Ascend NPUs |
 
 ### 脚本-2
 
 1. 拷贝仓库到本地服务器:
     ```shell
-    git clone https://gitee.com/ascend/AscendSpeed.git 
-    cd AscendSpeed 
+    git clone https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink 
     mkdir logs
+    mkdir ckpt
     ```
 
 2. 搭建环境
     
-    ```bash
-    # python3.8
-    conda create -n test python=3.8
-    conda activate test
-    
-    # 按照 torch 和 torch_npu
-    pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
-    pip install torch_npu-2.1.0.post4_XXXXXX-cp38-cp38m-manylinux2014_aarch64.whl
-    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-    
-    # 安装 megatron-core
-    pip install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
-    
-    # 安装 deepspeed 和 deepspeed_npu
-    pip install deepspeed==0.9.2
-    git clone https://gitee.com/ascend/DeepSpeed.git -b v0.9.2 deepspeed_npu
-    cd deepspeed_npu
-    pip install -e ./
-    cd ..
-    
-    # 安装其余依赖包
-    pip install -r requirements.txt 
-    ```
+```bash
+# python3.8
+conda create -n test python=3.8
+conda activate test
+
+# 安装 torch 和 torch_npu 
+pip install torch-2.1.0-cp38-cp38m-linux_aarch64.whl
+pip install torch_npu-2.1.0.XXX-cp38-cp38m-linux_aarch64.whl
+pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+
+# 修改 ascend-toolkit 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+# 安装加速库
+git clone https://gitee.com/ascend/AscendSpeed.git
+cd AscendSpeed
+pip install -r requirements.txt 
+pip3 install -e .
+cd ..
+
+# 安装其余依赖库
+pip install -r requirements.txt 
+```
 
 3. 准备预训练权重和词表
 
@@ -622,32 +623,29 @@ LLaMA2-34B/70B 训练的硬件配置:
     cd ..
     ```
 
-    将Llama-2-70B权重从huggingface格式转换为AscendSpeed格式
+    将Llama-2-70B权重从huggingface格式转换为Megatron格式
     ```bash
     # 配置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
     # 权重格式转换
-    SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
-    python $SCRIPT_PATH \
-    --input-model-dir ./llama2-70b-hf/ \
-    --output-model-dir ./load_ckpt \
-    --tensor-model-parallel-size 8 \
-    --pipeline-model-parallel-size 8 \
-    --make-vocab-size-divisible-by 8 \
-    --merge-mlp \
-    --type llama2-70B \
-    --num_heads 64 \
-    --num_kv_heads 8 \
-    --hidden_size 8192 \
-    --num_layers 80                                                                   
+    python tools/checkpoint/util.py \
+    --model-type GPT \
+    --loader llama2_hf \
+    --saver megatron \
+    --target-tensor-parallel-size 8 \
+    --target-pipeline-parallel-size 4 \
+    --load-dir ./llama2-70b-hf/ \
+    --save-dir ./load_ckpt \
+    --tokenizer-model ./llama2-70b-hf/tokenizer.model                                                                  
     ```
+
     将Llama-2-34B权重从huggingface格式转换为AscendSpeed格式
     ```bash
     # 配置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
-    # 转换Ascendspeed权重
+    # 转换权重
     SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
     python $SCRIPT_PATH \
     --input-model-dir ./codellama-34b-hf \
@@ -771,14 +769,6 @@ LLaMA2-70B NPU vs 参考 loss.
 
 ![NPU-LOSS](../../sources/images/llama2/llama2_70b_bf16_loss_compare.png)
 
-相对误差
-
-![NPU-LOSS and NPU-Relative-Error](../../sources/images/llama2/llama2_70b_bf16_loss_relative.png)
-
-绝对误差
-
-![NPU-LOSS and NPU-Absolute-Error](../../sources/images/llama2/llama2_70b_bf16_loss_absolute.png)
-
 
 ## 推理-2
 
@@ -786,53 +776,13 @@ LLaMA2-70B NPU vs 参考 loss.
 
 也可以将训练后的权重转为单机8卡可以运行的格式
 
-LLaMA2-34B:
-```shell
-SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_when_tp_pp_change.py
-python $SCRIPT_PATH \
-  --input-model-dir ./load_ckpt/release \
-  --output-model-dir ./ptd_48lt8p1/ \
-  --orig-vocab-size 32000 \
-  --make-vocab-size-divisible-by 8 \
-  --src-tensor-model-parallel-size 8 \
-  --src-pipeline-model-parallel-size 3 \
-  --tgt-tensor-model-parallel-size 8 \
-  --tgt-pipeline-model-parallel-size 1 \
-  --merge-mlp \
-  --type 34B \
-  --num-heads 64 \
-  --num-kv-heads 8 \
-  --hidden-size 8192 \
-  --num-layers 48
-```
-
-LLaMA2-70B:
-```shell
-SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_when_tp_pp_change.py
-python $SCRIPT_PATH \
-  --input-model-dir ./load_ckpt/release \
-  --output-model-dir ./ptd_80lt8p1/ \
-  --orig-vocab-size 32000 \
-  --make-vocab-size-divisible-by 8 \
-  --src-tensor-model-parallel-size 8 \
-  --src-pipeline-model-parallel-size 8 \
-  --tgt-tensor-model-parallel-size 8 \
-  --tgt-pipeline-model-parallel-size 1 \
-  --merge-mlp \
-  --type 70B \
-  --num-heads 64 \
-  --num-kv-heads 8 \
-  --hidden-size 8192 \
-  --num-layers 80
-```
-
 我们支持使用 LLaMA2-34B/70B 进行文本生成的推理，我们需要加载预训练权重：
 
 配置推理脚本
 
 LLaMA2-34B:`examples/llama2/generate_llama2_34B_ptd.sh`。
 
-LLaMA2-70B:`examples/llama2/generate_llama2_70B_ptd.sh`。
+LLaMA2-70B:`task/inference/generate_llama2_70B_ptd.sh`。
 
 ```shell
 # 修改模型权重路径和分词器路径
@@ -846,7 +796,7 @@ bash ./examples/llama2/generate_llama2_34B_ptd.sh
 ```
 LLaMA2-70B启动推理:
 ```shell
-bash ./examples/llama2/generate_llama2_70B_ptd.sh
+bash ./task/inference/generate_llama2_70B_ptd.sh
 ```
 
 LLaMA2-34B推理样例:
@@ -910,70 +860,7 @@ Elapsed: 12.13s
 ```
 
 LLaMA2-70B推理样例：
-```
-=============== Greedy Search ================
-
-You:
-how are you?
-
-AscendSpeed:
-I hope you are fine. I am fine too.
-I am writing to you because I want to tell you about my holidays.
-I went to the seaside with my family. We stayed in a hotel.
-We went to the beach every day. I played with my my my my my my my my my..
-.
-. . 0. .... my I was't' I
-==============================================
-
-Elapsed: 60.25s
-
-================ Do Sample =================
-
-You:
-how are you?
-
-AscendSpeed:
-long time, no hear.
-I know! It has been far too long... I'm doing alright though, and yourself?
-I've been doing pretty well!
-Do you live in the US?
-No, actually I'm in Australia... I think it would be fairly difficult to make it there.
-Subject: I think.
- there? the time for subject...... Sub subject - subject the
-============================================
-
-Elapsed: 34.13s
-
-=============== Beam Search =================
-
-You:
-how are you?
-
-AscendSpeed:
-I hope you are fine. I am fine too.
-I am writing to you because I want to tell you about my holidays.
-I went to the seaside with my family. We stayed in a hotel near the beach.
-We went to the beach every day. We We We We We
-=============================================
-
-Elapsed: 46.29s
-
-======== Beam Search with sampling ==========
-
-You:
-how are you?
-
-AscendSpeed:
-I hope you are fine.
-I would like to tell you that I have a problem with my account.
-I have a problem with my account.
-I have a problem with my account. I can't log in.
-I have a problem with my account. I can't log in.
-
-=============================================
-
-Elapsed: 48.53s
-```
+![llama2-70B_generate.png](../../sources/images/llama2/llama2-70B-generate.png)
 
 ## 评估-2
 
@@ -1018,8 +905,8 @@ BoolQ 数据集评估结果:
       <td><a href="https://huggingface.co/datasets/boolq">BoolQ</a></td>
       <td>dev</td>
       <th>Llama2-70b</th>
-      <td>0.858</td>
-      <td><a href="https://opencompass.org.cn/dataset-detail/BoolQ">(Llama2-70b test) 0.877</a></td>
+      <td>0.859</td>
+      <td><a href="https://paperswithcode.com/sota/question-answering-on-boolq">(Llama2-70b test) 0.85</a></td>
     </tr>
     <tr>
       <td><a href="https://huggingface.co/datasets/boolq">BoolQ</a></td>
