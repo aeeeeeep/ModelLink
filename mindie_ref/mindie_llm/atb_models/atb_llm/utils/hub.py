@@ -187,7 +187,10 @@ def download_weights(
 
         elapsed = timedelta(seconds=int(time.time() - start_time))
         remaining = len(filenames) - (i + 1)
-        eta = (elapsed / (i + 1)) * remaining if remaining > 0 else 0
+        try:
+            eta = (elapsed / (i + 1)) * remaining if remaining > 0 else 0
+        except ZeroDivisionError as e:
+            raise ZeroDivisionError from e
 
         logger.info(f"Download: [{i + 1}/{len(filenames)}] -- ETA: {eta}")
         files.append(file)

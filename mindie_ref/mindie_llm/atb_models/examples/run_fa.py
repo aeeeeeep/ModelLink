@@ -94,7 +94,10 @@ def infer(model, tokenizer, input_text, batch_size, max_input_length, max_output
 
         prefill_time = (prefill_end_time - prefill_start_time)
         e2e_time = (decode_end_time - decode_start_time)
-        decode_average_time = (e2e_time - prefill_time) / (max_output_length - 1)
+        try:
+            decode_average_time = (e2e_time - prefill_time) / (max_output_length - 1)
+        except ZeroDivisionError as e:
+            raise ZeroDivisionError from e
         logger.info(
             f"Prefill time: {prefill_time}ms, Decode average time: {decode_average_time}ms, E2E time: {e2e_time}ms")
 

@@ -319,9 +319,10 @@ class Weights:
             if head_size is None:
                 if single_size % world_size != 0:
                     raise RuntimeError(f"Prepacked qkv cannot be sharded across {world_size} shards")
-                if world_size == 0:
-                    raise ZeroDivisionError("world size is 0")
-                block_size = single_size // world_size
+                try:
+                    block_size = single_size // world_size
+                except ZeroDivisionError as e:
+                    raise ZeroDivisionError from e
                 start = rank * block_size
                 stop = (rank + 1) * block_size
                 q = slice_[start:stop]
@@ -329,9 +330,11 @@ class Weights:
                 v = slice_[start + 2 * single_size:stop + 2 * single_size]
                 weight = torch.cat([q, k, v], dim=0)
             else:
-                head_num = single_size // head_size
-                rank_heads = math.ceil(head_num / world_size)
-
+                try:
+                    head_num = single_size // head_size
+                    rank_heads = math.ceil(head_num / world_size)
+                except ZeroDivisionError as e:
+                    raise ZeroDivisionError from e
                 if rank != world_size - 1:
                     start = rank * (rank_heads * head_size)
                     stop = (rank + 1) * (rank_heads * head_size)

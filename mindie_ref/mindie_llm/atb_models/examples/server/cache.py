@@ -100,7 +100,7 @@ class CacheManager:
     @staticmethod
     def get_dtype_size(dtype):
         dtype_size_map = {torch.float16: 2, torch.float32: 4, torch.bfloat16: 2}
-        return dtype_size_map[dtype]
+        return dtype_size_map.get(dtype, 2)
 
     def allocate(self, batch):
         total_need_blocks = 0

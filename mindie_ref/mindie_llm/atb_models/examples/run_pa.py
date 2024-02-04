@@ -83,15 +83,19 @@ class PARunner:
         input_ids = torch.ones(self.max_prefill_tokens, dtype=torch.int64).to(self.device)
         position_ids = torch.arange(self.max_prefill_tokens, dtype=torch.int32).to(self.device)
         cu_seqlen_prefill = torch.tensor([1])
-        block_num = math.ceil(self.max_prefill_tokens / self.block_size)
+        try:
+            block_num = math.ceil(self.max_prefill_tokens / self.block_size)
+        except ZeroDivisionError as e:
+            raise ZeroDivisionError from e
         block_tables_tensor = torch.arange(block_num, dtype=torch.int32).view(1, -1).to(self.device)
         slots = torch.arange(self.max_prefill_tokens, dtype=torch.int32).to(self.device)
         input_lengths_tensor = torch.tensor([self.max_prefill_tokens], dtype=torch.int64).to(self.device)
         prefill_head_indices = torch.tensor([self.max_prefill_tokens - 1], dtype=torch.int64).to(self.device)
-
         print_log(self.rank, logger.info, "---------------begin warm_up---------------")
-
-        self.warm_up_num_blocks = math.ceil(self.max_prefill_tokens / self.block_size)
+        try:
+            self.warm_up_num_blocks = math.ceil(self.max_prefill_tokens / self.block_size)
+        except ZeroDivisionError as e:
+            raise ZeroDivisionError from e
         cache_config = CacheConfig(self.warm_up_num_blocks)
         cache_manager = CacheManager(cache_config, self.model_config)
         logits = self.model.forward(

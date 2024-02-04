@@ -2,9 +2,9 @@
 import pandas as pd
 import torch
 
-from .batch import Batch
 from atb_llm.utils.env import ENV
 from atb_llm.utils.log import logger, print_log
+from .batch import Batch
 
 
 def next_token_chooser(logits: torch.Tensor):
@@ -140,7 +140,10 @@ def generate_req(req_list, model, tokenizer,
     if ENV.benchmark_enable:
         prefill_time = benchmark_timelist[0]
         e2e_time = sum(benchmark_timelist)
-        decode_token_time = (e2e_time - prefill_time) / (max_out_length - 1)
+        try:
+            decode_token_time = (e2e_time - prefill_time) / (max_out_length - 1)
+        except ZeroDivisionError as e:
+            raise ZeroDivisionError from e
 
         logger.info(
             f"Prefill time: {prefill_time * 1000}ms, "

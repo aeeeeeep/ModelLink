@@ -31,6 +31,7 @@ def _process_shared_tensors(state_dict, preferred_names, shared_tensors, discard
         to_remove[keep_name].extend(name for name in shared if name != keep_name)
     return to_remove
 
+
 def _remove_duplicate_names(
     state_dict: Dict[str, torch.Tensor],
     *,
@@ -43,6 +44,7 @@ def _remove_duplicate_names(
     shared_tensors = _find_shared_tensors(state_dict)
     to_remove = _process_shared_tensors(state_dict, preferred_names, shared_tensors, discard_names)
     return to_remove
+
 
 def convert_file(pt_file: Path, sf_file: Path, discard_names: List[str]):
     loaded_state_dict = torch.load(pt_file, map_location="cpu").get("state_dict", {})
@@ -63,6 +65,7 @@ def convert_file(pt_file: Path, sf_file: Path, discard_names: List[str]):
         sf_tensor = reloaded_state_dict[k]
         if not torch.equal(pt_tensor, sf_tensor):
             raise RuntimeError(f"The output tensors do not match for key {k}")
+
 
 def convert_files(pt_files: List[Path], sf_files: List[Path], discard_names: List[str]):
     num_pt_files = len(pt_files)

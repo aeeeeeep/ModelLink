@@ -67,15 +67,11 @@ def _load_gqa(config, prefix: str, weights):
     return TensorParallelColumnLinear(get_linear(weight, bias=None, quantize=config.quantize))
 
 
-<<<<<<< HEAD
-def _load_column_multi(config, prefixes: List[str], weights, head_size, lm_head: bool = False, norm: bool = False):
-    quantize = None if lm_head else config.quantize
-    weight = weights.get_multi_weights_col(prefixes, quantize=quantize, dim=0, gqa_size=head_size)
-=======
 def load_column_multi(
         config, prefixes: List[str], weights, head_size, lm_head: bool = False, norm: bool = False
 ):
->>>>>>> cabb6e8 (change run_pa: add performance/profiling/max_postion_embedding)
+    quantize = None if lm_head else config.quantize
+    weight = weights.get_multi_weights_col(prefixes, quantize=quantize, dim=0, gqa_size=head_size)
     if lm_head:
         weight = weight.npu()
         weight = torch.nan_to_num(weight if not norm else F.normalize(weight))
