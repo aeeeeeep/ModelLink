@@ -237,10 +237,10 @@ function fn_build_coverage()
 
 function fn_build_version_info()
 {
-    if [ -f "$CODE_ROOT"/../CI/config/version.ini ]; then
-        PACKAGE_NAME=$(cat $CODE_ROOT/../CI/config/version.ini | grep "PackageName" | cut -d "=" -f 2)
-        VERSION=$(cat "$CODE_ROOT"/../CI/config/version.ini | grep "ATBVersion" | cut -d "=" -f 2)
-        ASCEND_SPEED_VERSION=$(cat $CODE_ROOT/../CI/config/version.ini | grep "ATB-ModelsVersion" | cut -d "=" -f 2)
+    if [ -f "$CODE_ROOT"/../../../../CI/config/version.ini ]; then
+        PACKAGE_NAME=$(cat $CODE_ROOT/../../../../CI/config/version.ini | grep "PackageName" | cut -d "=" -f 2)
+        VERSION=$(cat "$CODE_ROOT"/../../../../CI/config/version.ini | grep "ATBVersion" | cut -d "=" -f 2)
+        ASCEND_SPEED_VERSION=$(cat $CODE_ROOT/../../../../CI/config/version.ini | grep "ATB-ModelsVersion" | cut -d "=" -f 2)
     fi
     current_time=$(date +"%Y-%m-%d %r %Z")
     touch $OUTPUT_DIR/atb_speed/version.info
