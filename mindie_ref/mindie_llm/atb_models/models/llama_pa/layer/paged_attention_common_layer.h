@@ -48,58 +48,7 @@ struct PaCommonLayerParam {
     int ffnOutInputOffset = 0;
 };
 
-static void from_json(const nlohmann::json &paramJson, PaCommonLayerParam &param)
-{
-    paramJson.at("rmsNormEps").get_to(param.rmsNormEps);
-    paramJson.at("headNum").get_to(param.headNum);
-    paramJson.at("dk").get_to(param.dk);
-    if (paramJson.contains("rank")) {
-        paramJson.at("rank").get_to(param.rank);
-    }
-    if (paramJson.contains("rankSize")) {
-        paramJson.at("rankSize").get_to(param.rankSize);
-    }
-    if (paramJson.contains("transposedWeight")) {
-        paramJson.at("transposedWeight").get_to(param.transposedWeight);
-    }
-    if (paramJson.contains("isPrefill")) {
-        paramJson.at("isPrefill").get_to(param.isPrefill);
-    }
-    if (paramJson.contains("backend")) {
-        paramJson.at("backend").get_to(param.backend);
-    }
-    if (paramJson.contains("isBF16")) {
-        paramJson.at("isBF16").get_to(param.isBF16);
-    }
-    if (paramJson.contains("isQuant")) {
-        paramJson.at("isQuant").get_to(param.isQuant);
-    }
-    // 量化参数
-    if (paramJson.contains("qkvInputScale")) {
-        paramJson.at("qkvInputScale").get_to(param.qkvInputScale);
-    }
-    if (paramJson.contains("qkvInputOffset")) {
-        paramJson.at("qkvInputOffset").get_to(param.qkvInputOffset);
-    }
-    if (paramJson.contains("denseInputScale")) {
-        paramJson.at("denseInputScale").get_to(param.denseInputScale);
-    }
-    if (paramJson.contains("denseInputOffset")) {
-        paramJson.at("denseInputOffset").get_to(param.denseInputOffset);
-    }
-    if (paramJson.contains("selfLnInputScale")) {
-        paramJson.at("selfLnInputScale").get_to(param.selfLnInputScale);
-    }
-    if (paramJson.contains("selfLnInputOffset")) {
-        paramJson.at("selfLnInputOffset").get_to(param.selfLnInputOffset);
-    }
-    if (paramJson.contains("ffnOutInputScale")) {
-        paramJson.at("ffnOutInputScale").get_to(param.ffnOutInputScale);
-    }
-    if (paramJson.contains("ffnOutInputOffset")) {
-        paramJson.at("ffnOutInputOffset").get_to(param.ffnOutInputOffset);
-    }
-}
+void from_json(const nlohmann::json &paramJson, PaCommonLayerParam &param);
 
 atb::Status PaCommonLayer(const PaCommonLayerParam &param, atb::Operation **operation);
 
