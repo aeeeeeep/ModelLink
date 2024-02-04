@@ -99,7 +99,7 @@ def infer_precision(chat=False):
             start_time_model = time.time()
             if chat:
                 output = model.chat(tokenizer=tokenizer, questions=context, history=[], generate_config=generate_config,
-                                    stream=True, max_new_tokens=4096)
+                                    stream=True, max_new_tokens=1024)
                 print_(is_printing, context)
                 
                 history = []
