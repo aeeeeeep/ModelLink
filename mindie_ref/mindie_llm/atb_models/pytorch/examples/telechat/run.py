@@ -5,15 +5,16 @@ import pandas as pd
 import argparse
 import jsonlines
 import torch_npu
-from transformers import AutoTokenizer, TelechatForCausalLM, TelechatConfig
+from transformers import AutoTokenizer, TelechatForCausalLM, TelechatConfig, GenerationConfig
 
 
 def load_model(args):
     torch.npu.set_device(torch.device(f"npu:{args.device}"))
     tokenizer = AutoTokenizer.from_pretrained(args.checkpoint)
     config = TelechatConfig.from_pretrained(args.checkpoint)
+    generate_config = GenerationConfig.from_pretrained(args.checkpoint)
     model = TelechatForCausalLM.from_pretrained(args.checkpoint, config=config).eval().half().npu()
-    return model, tokenizer
+    return model, tokenizer, generate_config
 
 def setup_model_parallel(args):
     torch.distributed.init_process_group("hccl")
@@ -32,10 +33,11 @@ def load_model_parallel(args):
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
     part_model_path=os.path.join(args.checkpoint, "part_model", str(local_rank))
     config = TelechatConfig.from_pretrained(part_model_path)
+    generate_config = GenerationConfig.from_pretrained(part_model_path)
     model = TelechatForCausalLM.from_pretrained(part_model_path, config=config).eval().half().npu()
     if not local_rank:
         print("load model successfully!")
-    return model, tokenizer
+    return model, tokenizer, generate_config
 
 def nd2nz(model):
     soc_version = torch_npu._C._npu_get_soc_version()
@@ -65,20 +67,20 @@ def load_dataset(input_path):
     f.close()
     return questions
 
-def print_(is_printing, msg):
+def print_(is_printing, msg, end="\n"):
     if is_printing:
-        print(msg)
+        print(msg, end=end)
 
 
-def infer_precision():
+def infer_precision(chat=False):
     args = get_args()
     print("start!")
     questions = load_dataset(args.input_path)
     is_printing = 1
     if args.run_single :
-        model, tokenizer = load_model(args)
+        model, tokenizer, generate_config = load_model(args)
     if args.run_parallel:
-        model, tokenizer = load_model_parallel(args)
+        model, tokenizer, generate_config = load_model_parallel(args)
         is_printing = (torch.distributed.get_rank() == 0)
 
     torch.npu.set_compile_mode(jit_compile=False)
@@ -95,8 +97,18 @@ def infer_precision():
         with torch.no_grad():
             torch.npu.synchronize()
             start_time_model = time.time()
-            output = model.generate(context_ids["input_ids"].npu(), max_new_tokens=4096, do_sample=False, use_cache=True,
-                                    repetition_penalty=1.03, eos_token_id=[160133, 160130])
+            if chat:
+                output = model.chat(tokenizer=tokenizer, questions=context, history=[], generate_config=generate_config,
+                                    stream=True, max_new_tokens=4096)
+                print_(is_printing, context)
+                
+                history = []
+                for answer, history in output:
+                    print_(is_printing, answer, end="")
+                output_str = history.pop()["content"]
+            else:
+                output = model.generate(context_ids["input_ids"].npu(), max_new_tokens=4096, do_sample=False, use_cache=True,
+                                        repetition_penalty=1.03, eos_token_id=[160133, 160130])
             torch.npu.synchronize()
             end_time_model = time.time()
             output_str = tokenizer.decode(output[0].tolist()).split("<_bot>")[-1]
@@ -120,9 +132,9 @@ def performance_test():
     print("start!")
     is_printing = 1
     if args.run_single :
-        model, tokenizer = load_model(args)
+        model, tokenizer, _ = load_model(args)
     if args.run_parallel:
-        model, tokenizer = load_model_parallel(args)
+        model, tokenizer, _ = load_model_parallel(args)
         is_printing = (torch.distributed.get_rank() == 0)
 
     torch.npu.set_compile_mode(jit_compile=False)
