@@ -1,4 +1,4 @@
-# ChatGLM2-6B 模型推理指导 <!-- omit in toc -->
+# ChatGLM3-6B 模型推理指导 <!-- omit in toc -->
 
 - [概述](#概述)
 - [输入输出数据](#输入输出数据)
@@ -11,7 +11,7 @@
 
 # 概述
 
-[ChatGLM2-6B](https://github.com/THUDM/ChatGLM2-6B/) 是开源中英双语对话模型 [ChatGLM-6B](https://github.com/THUDM/ChatGLM-6B) 的第二代版本，在保留了初代模型对话流畅、部署门槛较低等众多优秀特性的基础之上，ChatGLM2-6B有更强大的性能、更长的上下文、更高效的推理和更开放的协议。
+ChatGLM3 是智谱AI和清华大学 KEG 实验室联合发布的对话预训练模型。[ChatGLM3-6B](https://github.com/THUDM/ChatGLM3-6B/) 是 ChatGLM3 系列中的开源模型，在保留了前两代模型对话流畅、部署门槛低等众多优秀特性的基础上，ChatGLM3-6B 有更强大的基础模型、更完整的功能支持、和更全面的开源序列。
 
 # 输入输出数据
 
@@ -50,37 +50,27 @@
        ```shell
        # 请自行确认已安装 git-lfs
        git lfs install
-       git clone https://huggingface.co/THUDM/chatglm2-6b
-       cd chatglm2-6b
-       git reset --hard 4e38bef4c028beafc8fb1837462f74c02e68fcc2
+       git clone https://huggingface.co/THUDM/chatglm3-6b
+       cd chatglm3-6b
        ```
-
-     - 其他下载方式
-
-       如果你的网络环境较差，下载模型参数可能会花费较长时间甚至失败。此时可以先将模型下载到本地，然后从本地加载。
-       - 分开下载模型实现文件和权重文件
-         ```shell
-         # 只下载模型实现文件
-         GIT_LFS_SKIP_SMUDGE=1 git clone https://huggingface.co/THUDM/chatglm2-6b
-         cd chatglm2-6b
-         git reset --hard 4e38bef4c028beafc8fb1837462f74c02e68fcc2
-         ```
-         从 [这里](https://cloud.tsinghua.edu.cn/d/674208019e314311ab5c/) 手动下载模型参数文件，并将下载的文件替换到本地的 `chatglm2-6b` 目录下。
-
-       - 手动从 [THUDM/chatglm2-6b](https://huggingface.co/THUDM/chatglm2-6b) 下载所有文件
-
+       
+- 其他下载方式
+     
+  如果你的网络环境较差，下载模型参数可能会花费较长时间甚至失败。此时可以先将模型下载到本地，然后从本地加载。
+       - 手动从 [THUDM/chatglm3-6b](https://huggingface.co/THUDM/chatglm3-6b) 下载所有文件
+       
      - 下载后检查`${CHECKPOINT}`目录如下所示
-
+     
        ```
        |-- config.json
        |-- configuration_chatglm.py
        |-- modeling_chatglm.py
        |-- pytorch_model-00001-of-00007.bin
-       |-- pytorch_model-00002-of-00007.bin
+  |-- pytorch_model-00002-of-00007.bin
        |-- pytorch_model-00003-of-00007.bin
-       |-- pytorch_model-00004-of-00007.bin
+  |-- pytorch_model-00004-of-00007.bin
        |-- pytorch_model-00005-of-00007.bin
-       |-- pytorch_model-00006-of-00007.bin
+  |-- pytorch_model-00006-of-00007.bin
        |-- pytorch_model-00007-of-00007.bin
        |-- pytorch_model.bin.index.json
        |-- quantization.py
@@ -88,9 +78,9 @@
        |-- tokenizer_config.json
        |-- tokenizer.model
        ```
-
+     
      - 在config.json中添加如下配置：
-
+     
        ```
        {
          ......
@@ -101,17 +91,10 @@
 
 3. 获取量化权重
 
-     - 直接下载量化权重
-
-       - [A300I DUO 量化权重下载](https://model-weight.obs.cn-north-4.myhuaweicloud.com/chatglm2_6B_310p.tar.gz)
-       - [A800I A2 量化权重下载](https://model-weight.obs.cn-north-4.myhuaweicloud.com/chatglm2_6B_910b.tar.gz)
-
-       请使用wget下载，下载完成后请将文件解压到任意路径`QUANT_WEIGHT_PATH=${path-to-quant-weight}`
-
      - 手动生成量化权重
 
        详见章节[量化工具使用](#量化工具使用)
-
+     
 4. 下载 `C-Eval` 数据集
 
    从 [Tsinghua Cloud](https://cloud.tsinghua.edu.cn/f/e84444333b6d434ea7b0) 下载处理好的 `C-Eval` 数据集，解压到任意目录下 `DATASET={path-to-dataset}` 。
@@ -120,7 +103,7 @@
 
 量化权重的获取需要使用大模型量化工具（集成至CANN包中），详细操作手册可见[大模型权重量化工具-ModelSlim](https://www.hiascend.com/document/detail/zh/canncommercial/70RC1/devtools/auxiliarydevtool/modelslim_0001.html)。
 
-导出 ChatGLM2-6B 的量化权重或者是稀疏量化权重：
+导出 ChatGLM3-6B 的量化权重或者是稀疏量化权重：
 
 ```shell
 # 量化权重导出
@@ -155,7 +138,7 @@ weight_offset.npy  weight_scale.npy
 
 ## 获取源码及依赖
 
-1. 获取源码
+1. ChatGLM3-6B 相比 ChatGLM2-6B 改动较小，将改动整合入了 ChatGLM2-6B 中，在ChatGLM2-6B 中获取源码
 
    ```shell
    cd ${path-to-atb_models}/pytorch/examples/chatglm2/6b
@@ -195,7 +178,7 @@ weight_offset.npy  weight_scale.npy
   # 多芯场景请先执行权重生成(浮点单芯跳过)
   python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
   # 执行浮点推理
-  torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode precision_dataset --model_path ${CHECKPOINT} --ceval_dataset ${DATASET} --batch 8 --tp_size ${TP_SIZE}
+  torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode precision_dataset --model_path ${CHECKPOINT} --ceval_dataset ${DATASET} --batch 8 --tp_size ${TP_SIZE} --model chatglm3
 
   # 量化
   # 添加量化环境变量
@@ -205,7 +188,7 @@ weight_offset.npy  weight_scale.npy
   # 执行权重生成（单芯/多芯都要执行）
   python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
   # 执行量化推理
-  torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode precision_dataset --model_path ${CHECKPOINT} --ceval_dataset ${DATASET} --batch 8 --tp_size ${TP_SIZE}
+  torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode precision_dataset --model_path ${CHECKPOINT} --ceval_dataset ${DATASET} --batch 8 --tp_size ${TP_SIZE} --model chatglm3
 
   # 稀疏量化（当前仅支持300I DUO）
   # 添加稀疏量化环境变量
@@ -217,7 +200,7 @@ weight_offset.npy  weight_scale.npy
   python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
   python3 generate_compress_weight.py --weight_path=${QUANT_WEIGHT_PATH} --save_path=${COMPRESS_WEIGHT_PATH}
   # 执行稀疏量化推理
-  torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode precision_dataset --model_path ${CHECKPOINT} --ceval_dataset ${DATASET} --batch 8 --tp_size ${TP_SIZE}
+  torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode precision_dataset --model_path ${CHECKPOINT} --ceval_dataset ${DATASET} --batch 8 --tp_size ${TP_SIZE} --model chatglm3
   ```
 
 - <a name="perf">模型性能数据测试</a>
@@ -230,7 +213,7 @@ weight_offset.npy  weight_scale.npy
   # 多芯场景请先执行权重生成(浮点单芯跳过)
   python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
   # 执行浮点推理
-  torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode performance --model_path ${CHECKPOINT} --batch ${batch_size} --tp_size ${TP_SIZE}
+  torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode performance --model_path ${CHECKPOINT} --batch ${batch_size} --tp_size ${TP_SIZE} --model chatglm3
 
   # 量化
   # 添加量化环境变量
@@ -240,7 +223,7 @@ weight_offset.npy  weight_scale.npy
   # 执行权重生成（单芯/多芯都要执行）
   python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
   # 执行量化推理
-  torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode performance --model_path ${CHECKPOINT} --batch ${batch_size} --tp_size ${TP_SIZE}
+  torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode performance --model_path ${CHECKPOINT} --batch ${batch_size} --tp_size ${TP_SIZE} --model chatglm3
 
   # 稀疏量化（当前仅支持300I DUO）
   # 添加稀疏量化环境变量
@@ -252,7 +235,7 @@ weight_offset.npy  weight_scale.npy
   python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
   python3 generate_compress_weight.py --weight_path=${QUANT_WEIGHT_PATH} --save_path=${COMPRESS_WEIGHT_PATH}
   # 执行稀疏量化推理
-  torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode performance --model_path ${CHECKPOINT} --batch ${batch_size} --tp_size ${TP_SIZE}
+  torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode performance --model_path ${CHECKPOINT} --batch ${batch_size} --tp_size ${TP_SIZE} --model chatglm3
   ```
 
   备注：
@@ -260,7 +243,7 @@ weight_offset.npy  weight_scale.npy
   1. 可通过配置`--seqlen_in_pair`和`--seqlen_out_pair`指定输入输出序列长度，例如以下命令测试的输入输出组合为[256,256]，[512,512]，[1024,1024]
 
      ```shell
-     torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode performance --model_path ${CHECKPOINT} --device 0 --seqlen_in_pair 256,512,1024 --seqlen_out_pair 256,512,1024 --batch 1 --tp_size ${TP_SIZE} --performance_output_file performance_bs1.csv
+     torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode performance --model_path ${CHECKPOINT} --device 0 --seqlen_in_pair 256,512,1024 --seqlen_out_pair 256,512,1024 --batch 1 --tp_size ${TP_SIZE} --performance_output_file performance_bs1.csv --model chatglm3
      ```
 
   2. 环境变量 `MAX_SEQ_LEN` （默认值2048）必须大于等于 `seqlen_in + seqlen_out`，例如：
@@ -280,8 +263,8 @@ weight_offset.npy  weight_scale.npy
     # 多芯场景请先执行权重生成(浮点单芯跳过)
     python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
     # 执行浮点推理
-    torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode cli_demo --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
-
+    torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode cli_demo --model_path ${CHECKPOINT} --tp_size ${TP_SIZE} --model chatglm3
+  
     # 量化
     # 添加量化环境变量
     export ENABLE_QUANT=1
@@ -290,34 +273,7 @@ weight_offset.npy  weight_scale.npy
     # 执行权重生成（单芯/多芯都要执行）
     python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
     # 执行量化推理
-    torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode cli_demo --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
-    ```
-
-  - Web 交互
-
-    ```shell
-    # 安装依赖
-    pip install -r web_requirements.txt
-    
-    # 下载 GitHub 仓库
-    git clone https://github.com/THUDM/ChatGLM2-6B.git
-    cd ChatGLM2-6B
-    git reset --hard 921d7e9adc69020a19169d1ba4f76c2675a2dd29
-
-    # 应用适配代码
-    git apply ../web_demo.patch
-    cd ..
-    
-    # 将 TP_SIZE 设为对应的并行数，例如单芯场景 TP_SIZE=1，双芯场景 TP_SIZE=2
-
-    # Gradio 框架
-    torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 ChatGLM2-6B/web_demo.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
-    
-    # Streamlit 框架
-    # ATB OpsRunner 的全局缓存暂不支持多线程，需要降低缓存级别，否则会报错
-    # 0 不开启缓存，1 开启本地缓存，2 开启全局缓存，3 同时开启本地和全局缓存，默认为 3
-    export ATB_OPSRUNNER_KERNEL_CACHE_TYPE=1
-    torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 -m streamlit run ChatGLM2-6B/web_demo2.py -- --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
+    torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode cli_demo --model_path ${CHECKPOINT} --tp_size ${TP_SIZE} --model chatglm3
     ```
 
 - `main.py` 参数说明：
@@ -337,21 +293,13 @@ weight_offset.npy  weight_scale.npy
   --print_response：是否打印性能测试的推理回答
   ```
 
-# 模型参考精度和性能结果
+# 模型参考精度结果
 
 - 参考精度
 
   > 因为 `C-Eval` 数据集test子集需要上传官网得到结果，所以这里使用val子集进行精度对比
 
-  | ChatGLM2   | 类别 | Average Accuracy |
+  | ChatGLM3  | 类别 | Average Accuracy |
   | ---------- | ---- | ---------------- |
-  | GPU (浮点bs8)  | val  | 53.56%           |
-  | NPU (浮点bs8)  | val  | 53.12%           |
-
-- 推理性能
-
-  > 这里性能结果仅作为参考，并非版本极致性能优化结果。
-
-  | 硬件形态 | 批大小 | 输入长度 | 输出长度 | 解码速度 |
-  | -------- | ------ | -------- | -------- | -------- |
-  | 300I Duo | 1      | 8192     | 1024     | 162ms    |
+  | GPU (浮点bs8)  | val  | 49.41%      |
+  | NPU (浮点bs8)  | val  | 49.55%      |
