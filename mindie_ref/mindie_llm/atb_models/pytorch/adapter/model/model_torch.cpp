@@ -47,7 +47,6 @@
 #include "minigpt4/model/fusion_model.h"
 #include "pytorch/adapter/utils/utils.h"
 #include "pytorch/adapter/workspace/workspace.h"
-#include "telechat/model/model.h"
 #include "baichuan2/7b/model/flash_attention_quant_model.h"
 #include "baichuan2/7b/model/flash_attention_rope_model.h"
 #include "baichuan2/7b/model/paged_attention_model.h"
@@ -61,7 +60,9 @@
 #include "internlm/20b/model/flash_attention_rope_model.h"
 #include "internlm/7b/model/flash_attention_rope_model.h"
 #include "codellama/34b/model/flash_attention_rope_model.h"
-
+#include "atb_speed/utils/model_factory.h"
+#include "telechat/model/float_model.h"
+#include "telechat/model/quant_model.h"
 
 void *ModelTorch::GetWorkSpace(uint64_t bufferSize)
 {
@@ -114,7 +115,24 @@ ModelTorch::~ModelTorch()
 int64_t ModelTorch::SetParam(std::string param)
 {
     ATB_LOG(INFO) << "ModelTorch set param start, modelName:" << modelName_ << ", param:" << param;
-    if (modelName_ == "llama_anti_quant_flashattention_model") {
+
+    // vector contains adapted models, when all models are adapted, delete vector.
+    std::vector<string> modelNames = {
+        "chatglm2_6b_ChatGlm2CommonModelFa",
+        "chatglm2_6b_PagedAttentionModel"
+    };
+    if (std::find(modelNames.begin(), modelNames.end(), modelName_) != modelNames.end()) {
+        model_ = atb_speed::ModelFactory::CreateInstance(modelName_, param);
+        if (model_ != nullptr) {
+            ATB_LOG(INFO) << "Get model from the ModelFactory, " << modelName_
+                          << ". If other models also want to be obtained from the ModelFactory, "
+                          << "please register it and set `namespace` and `model class name`. "
+                          << "Examples: REGISTER_MODEL(chatglm2_6b, ChatGlm2CommonModelFa). "
+                          << "And then set `chatglm2_6b_ChatGlm2CommonModelFa` as input modelName_.";
+        } else {
+            ATB_LOG(ERROR) << modelName_ << " not found in ModelFactory.";
+        }
+    } else if (modelName_ == "llama_anti_quant_flashattention_model") {
         model_ = std::make_shared<atb_speed::llama::AntiQuantFlashAttentionModel>(param);
     } else if (modelName_ == "llama_flashattention_model") {
         model_ = std::make_shared<atb_speed::llama::FlashAttentionModel>(param);
@@ -128,8 +146,6 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::llama_adapter::EncoderAdapterModel>(param);
     } else if (modelName_ == "llama_adapter_decoder_model") {
         model_ = std::make_shared<atb_speed::llama_adapter::DecoderAdapterModel>(param);
-    } else if (modelName_ == "TelechatQuantFAModel") {
-        model_ = std::make_shared<atb_speed::telechat::QuantFAModel>(param);
     } else if (modelName_ == "chatglm2_common_model") {
         model_ = std::make_shared<atb_speed::chatglm2_6b::ChatGlm2CommonModelFa>(param);
     } else if (modelName_ == "chatglm2_6b_decoder_pa_model") {
@@ -178,6 +194,10 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::codellama_34b::FlashAttentionRopeModel>(param);
     } else if (modelName_ == "gptneox_20b_fa_kvcache_rope_model") {
         model_ = std::make_shared<atb_speed::gptneox_20b::FaKvCacheRopeModel>(param);
+    } else if (modelName_ == "telechat_float_model") {
+        model_ = std::make_shared<atb_speed::telechat::FloatFAModel>(param);
+    } else if (modelName_ == "telechat_quant_model") {
+        model_ = std::make_shared<atb_speed::telechat::QuantFAModel>(param);
     } else {
         ATB_LOG(FATAL) << "not support modelName:" << modelName_;
         return atb::ERROR_INVALID_PARAM;

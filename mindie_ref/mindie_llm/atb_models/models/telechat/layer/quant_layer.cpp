@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-#include "layer.h"
-#include "models/telechat/operation/common_mlp_quant.h"
+#include "quant_layer.h"
 #include "models/telechat/operation/rope.h"
+#include "models/telechat/operation/mlp_gate_v2.h"
+#include "models/telechat/operation/parallel_layer_v2.h"
 
 namespace atb_speed {
 namespace telechat {
@@ -51,11 +52,13 @@ enum QuantFALayerTensorId {
     IN_PASTVALUE,
     IN_TOKENOFFSET,
     IN_SEQLEN,
+    IN_HOLDER,
     IN_LAYERID,
+
     OUT_TELECHATLAYEROUT,
+
     INTERNAL_INPUTNORMOUT,
     INTERNAL_QMIXEDLINEAROUT,
-    INTERNAL_SELFQUNTOUT,
     INTERNAL_KVMIXEDLINEAROUT,
     INTERNAL_KMIXEDLINEAROUT,
     INTERNAL_VMIXEDLINEAROUT,
@@ -68,10 +71,10 @@ enum QuantFALayerTensorId {
     INTERNAL_MLPOUT,
 };
 
-static const uint64_t IN_TENSOR_COUNT = 31;
+static const uint64_t IN_TENSOR_COUNT = 32;
 static const uint64_t OUT_TENSOR_COUNT = 1;
-static const uint64_t INTERNAL_TENSOR_COUNT = 13;
-static const uint64_t NODE_COUNT = 12;
+static const uint64_t INTERNAL_TENSOR_COUNT = 12;
+static const uint64_t NODE_COUNT = 11;
 
 atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operation)
 {
@@ -89,20 +92,20 @@ atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operat
     atb::Node &splitKVNode = opGraph.nodes.at(nodeId++);
     atb::Node &ropeNode = opGraph.nodes.at(nodeId++);
     atb::Node &selfAttentionKvCacheFusedNode = opGraph.nodes.at(nodeId++);
-    atb::Node &selfOutQuantNode = opGraph.nodes.at(nodeId++);
     atb::Node &selfOutLinearNode = opGraph.nodes.at(nodeId++);
     atb::Node &selfResidualAddNode = opGraph.nodes.at(nodeId++);
     atb::Node &selfNormNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpQuantNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpResidualAddNode = opGraph.nodes.at(nodeId++);
 
+    ATB_LOG(INFO) << "rmsNorm";
     if (param.isFloatQueryLayer || param.isFloatKVLayer) {
         atb::infer::RmsNormParam rmsNormParam;
         rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
         rmsNormParam.normParam.epsilon = param.rmsNormEps;
         CreateOperation(rmsNormParam, &inputNormNode.operation);
-        inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT};
-        inputNormNode.outTensorIds = {INTERNAL_INPUTNORMOUT};
+        inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT };
+        inputNormNode.outTensorIds = { INTERNAL_INPUTNORMOUT };
     } else {
         atb::infer::RmsNormParam rmsNormParam;
         rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
@@ -112,40 +115,43 @@ atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operat
 
         rmsNormParam.normParam.epsilon = param.rmsNormEps;
         CreateOperation(rmsNormParam, &inputNormNode.operation);
-        inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT, IN_NORMBIAS};
-        inputNormNode.outTensorIds = {INTERNAL_INPUTNORMOUT};
+        inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT, IN_NORMBIAS };
+        inputNormNode.outTensorIds = { INTERNAL_INPUTNORMOUT };
     }
 
+    ATB_LOG(INFO) << "Linear Q";
     if (param.isFloatQueryLayer) {
-        atb::infer::LinearParam linearQParam = {false, true, false};
+        atb::infer::LinearParam linearQParam = { false, true, false };
         CreateOperation(linearQParam, &mixedQLinearNode.operation);
-        mixedQLinearNode.inTensorIds = {INTERNAL_INPUTNORMOUT, IN_QMIXEDWEIGHT};
-        mixedQLinearNode.outTensorIds = {INTERNAL_QMIXEDLINEAROUT};
+        mixedQLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_QMIXEDWEIGHT };
+        mixedQLinearNode.outTensorIds = { INTERNAL_QMIXEDLINEAROUT };
     } else {
-        atb::infer::LinearQuantParam linearQParam = {false, true, true};
+        atb::infer::LinearQuantParam linearQParam = { false, true, true };
         CreateOperation(linearQParam, &mixedQLinearNode.operation);
-        mixedQLinearNode.inTensorIds = {INTERNAL_INPUTNORMOUT, IN_QMIXEDWEIGHT, IN_QMIXEDBIAS, IN_QMIXEDDEQSCALE};
-        mixedQLinearNode.outTensorIds = {INTERNAL_QMIXEDLINEAROUT};
+        mixedQLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_QMIXEDWEIGHT, IN_QMIXEDBIAS, IN_QMIXEDDEQSCALE };
+        mixedQLinearNode.outTensorIds = { INTERNAL_QMIXEDLINEAROUT };
     }
 
+    ATB_LOG(INFO) << "Linear KV";
     if (param.isFloatKVLayer) {
-        atb::infer::LinearParam linearKVParam = {false, true, false};
+        atb::infer::LinearParam linearKVParam = { false, true, false };
         CreateOperation(linearKVParam, &mixedKVLinearNode.operation);
-        mixedKVLinearNode.inTensorIds = {INTERNAL_INPUTNORMOUT, IN_KVMIXEDWEIGHT};
-        mixedKVLinearNode.outTensorIds = {INTERNAL_KVMIXEDLINEAROUT};
+        mixedKVLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_KVMIXEDWEIGHT };
+        mixedKVLinearNode.outTensorIds = { INTERNAL_KVMIXEDLINEAROUT };
     } else {
-        atb::infer::LinearQuantParam linearKVParam = {false, true, true};
+        atb::infer::LinearQuantParam linearKVParam = { false, true, true };
         CreateOperation(linearKVParam, &mixedKVLinearNode.operation);
-        mixedKVLinearNode.inTensorIds = {INTERNAL_INPUTNORMOUT, IN_KVMIXEDWEIGHT, IN_KVMIXEDBIAS, IN_KVMIXEDDEQSCALE};
-        mixedKVLinearNode.outTensorIds = {INTERNAL_KVMIXEDLINEAROUT};
+        mixedKVLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_KVMIXEDWEIGHT, IN_KVMIXEDBIAS, IN_KVMIXEDDEQSCALE };
+        mixedKVLinearNode.outTensorIds = { INTERNAL_KVMIXEDLINEAROUT };
     }
 
+    ATB_LOG(INFO) << "Split";
     atb::infer::SplitParam splitParam;
     splitParam.splitDim = 3;
     splitParam.splitNum = 2;
     CreateOperation(splitParam, &splitKVNode.operation);
-    splitKVNode.inTensorIds = {INTERNAL_KVMIXEDLINEAROUT};
-    splitKVNode.outTensorIds = {INTERNAL_KMIXEDLINEAROUT, INTERNAL_VMIXEDLINEAROUT};
+    splitKVNode.inTensorIds = { INTERNAL_KVMIXEDLINEAROUT };
+    splitKVNode.outTensorIds = { INTERNAL_KMIXEDLINEAROUT, INTERNAL_VMIXEDLINEAROUT };
     splitKVNode.inTensorReshapeFuncs.resize(splitKVNode.inTensorIds.size());
     splitKVNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         newShape.dimNum = 4;
@@ -155,48 +161,54 @@ atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operat
         newShape.dims[3] = oldShape.dims[2] / param.headNum;
     };
 
+    ATB_LOG(INFO) << "ROPE";
     atb_speed::telechat::RopeParam ropeParam;
     ropeParam.rotaryCoeff = 2;
     ropeParam.headNum = param.headNum;
     atb_speed::telechat::Rope(ropeParam, &ropeNode.operation);
-    ropeNode.inTensorIds = {INTERNAL_QMIXEDLINEAROUT, INTERNAL_KMIXEDLINEAROUT, IN_COSEMBED, IN_SINEMBED, IN_SEQLEN};
-    ropeNode.outTensorIds = {INTERNAL_POSITIONEMBEDQ, INTERNAL_POSITIONEMBEDK};
+    ropeNode.inTensorIds = { INTERNAL_QMIXEDLINEAROUT, INTERNAL_KMIXEDLINEAROUT, IN_COSEMBED, IN_SINEMBED, IN_SEQLEN };
+    ropeNode.outTensorIds = { INTERNAL_POSITIONEMBEDQ, INTERNAL_POSITIONEMBEDK };
 
+    ATB_LOG(INFO) << "KV Cache";
     atb::infer::SelfAttentionParam selfAttentionKvCacheParam;
     selfAttentionKvCacheParam.headNum = param.headNum;
     selfAttentionKvCacheParam.headDim = param.dk;
     selfAttentionKvCacheParam.qScale = 1.0f;
     selfAttentionKvCacheParam.qkScale = 1.0f / std::sqrt(param.dk);
     CreateOperation(selfAttentionKvCacheParam, &selfAttentionKvCacheFusedNode.operation);
-    selfAttentionKvCacheFusedNode.inTensorIds = {INTERNAL_POSITIONEMBEDQ,
-                                                INTERNAL_POSITIONEMBEDK,
-                                                INTERNAL_VMIXEDLINEAROUT,
-                                                IN_PASTKEY,
-                                                IN_PASTVALUE,
-                                                IN_ATTENTIONMASK,
-                                                IN_TOKENOFFSET,
-                                                IN_SEQLEN,
-                                                IN_LAYERID};
-    selfAttentionKvCacheFusedNode.outTensorIds = {INTERNAL_SELFOUT};
+    selfAttentionKvCacheFusedNode.inTensorIds = { INTERNAL_POSITIONEMBEDQ,
+                                                  INTERNAL_POSITIONEMBEDK,
+                                                  INTERNAL_VMIXEDLINEAROUT,
+                                                  IN_PASTKEY,
+                                                  IN_PASTVALUE,
+                                                  IN_ATTENTIONMASK,
+                                                  IN_TOKENOFFSET,
+                                                  IN_SEQLEN,
+                                                  IN_LAYERID };
+    selfAttentionKvCacheFusedNode.outTensorIds = { INTERNAL_SELFOUT };
 
-    atb::infer::ElewiseParam selfOutQuantParam;
-    selfOutQuantParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_QUANT;
-    selfOutQuantParam.quantParam.inputScale = param.inputScale_dense;
-    selfOutQuantParam.quantParam.inputOffset = param.inputOffset_dense;
-    CreateOperation(selfOutQuantParam, &selfOutQuantNode.operation);
-    selfOutQuantNode.inTensorIds = {INTERNAL_SELFOUT};
-    selfOutQuantNode.outTensorIds = {INTERNAL_SELFQUNTOUT};
-
-    atb::infer::LinearQuantParam linearBiasParam = {false, true, true};
-    CreateOperation(linearBiasParam, &selfOutLinearNode.operation);
-    selfOutLinearNode.inTensorIds = {INTERNAL_SELFQUNTOUT, IN_SELFOUTLINEARWEIGHT, IN_SELFOUTLINEARBIAS, IN_SELFOUTLINEARDEQSCALE};
-    selfOutLinearNode.outTensorIds = {INTERNAL_SELFLINEAROUT};
+    ATB_LOG(INFO) << "Parallel linear";
+    atb_speed::telechat::ParallelParamV2 linearBiasParam;
+    linearBiasParam.commParam.rank = param.rank;
+    linearBiasParam.commParam.rankSize = param.rankSize;
+    linearBiasParam.isBias = true;
+    linearBiasParam.isQuant = true;
+    linearBiasParam.transposeB = true;
+    linearBiasParam.quantParam.quantType = atb::infer::QUANT_INT8;
+    linearBiasParam.quantParam.isQuantOp = true;
+    linearBiasParam.quantParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_QUANT;
+    linearBiasParam.quantParam.inputScale = param.inputScale_dense;
+    linearBiasParam.quantParam.inputOffset = param.inputOffset_dense;
+    atb_speed::telechat::RowParallelLinearV2(linearBiasParam, &selfOutLinearNode.operation);
+    selfOutLinearNode.inTensorIds = { INTERNAL_SELFOUT, IN_SELFOUTLINEARWEIGHT, IN_SELFOUTLINEARBIAS,
+                                      IN_SELFOUTLINEARDEQSCALE, IN_HOLDER };
+    selfOutLinearNode.outTensorIds = { INTERNAL_SELFLINEAROUT };
 
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
     CreateOperation(addParam, &selfResidualAddNode.operation);
-    selfResidualAddNode.inTensorIds = {IN_HIDDENSTATES, INTERNAL_SELFLINEAROUT};
-    selfResidualAddNode.outTensorIds = {INTERNAL_SELFRESIDUALADDOUT};
+    selfResidualAddNode.inTensorIds = { IN_HIDDENSTATES, INTERNAL_SELFLINEAROUT };
+    selfResidualAddNode.outTensorIds = { INTERNAL_SELFRESIDUALADDOUT };
 
     atb::infer::RmsNormParam rmsMlpNormParam;
     rmsMlpNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
@@ -204,40 +216,63 @@ atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operat
     rmsMlpNormParam.normParam.quantInputOffset = param.inputOffset_gate_up;
     rmsMlpNormParam.normParam.quantType = atb::infer::QUANT_INT8;
     CreateOperation(rmsMlpNormParam, &selfNormNode.operation);
-    selfNormNode.inTensorIds = {INTERNAL_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_SELFOUTNORMBIAS};
-    selfNormNode.outTensorIds = {INTERNAL_SELFNORMOUT};
+    selfNormNode.inTensorIds = { INTERNAL_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_SELFOUTNORMBIAS };
+    selfNormNode.outTensorIds = { INTERNAL_SELFNORMOUT };
 
-    atb_speed::telechat::CommonMlpQuantParam mlpQuantParam;
-    mlpQuantParam.inputScale_down_proj = param.inputScale_down_proj;
-    mlpQuantParam.inputOffset_down_proj = param.inputOffset_down_proj;
-    mlpQuantParam.isFloat = param.isFloatDownLayer;
-    atb_speed::telechat::CommonMlpQuant(mlpQuantParam, &mlpQuantNode.operation);
-    mlpQuantNode.inTensorIds = {INTERNAL_SELFNORMOUT,
-                                IN_MLPGATEWEIGHT,
-                                IN_MLPLINEARDEQSCALEGATE,
-                                IN_LINEARBIASGATE,
-                                IN_MLPUPWEIGHT,
-                                IN_MLPLINEARDEQSCALEUP,
-                                IN_LINEARBIASUP,
-                                IN_MLPDOWNWEIGHT,
-                                IN_MLPLINEARDEQSCALEDOWN,
-                                IN_LINEARBIASDOWN};
-    mlpQuantNode.outTensorIds = {INTERNAL_MLPOUT};
+    ATB_LOG(INFO) << "MLP";
+    atb_speed::telechat::MlpGateParamV2 mlpQuantParam;
+    mlpQuantParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
+    mlpQuantParam.isBias = true;
+    mlpQuantParam.transposeB = true;
+    mlpQuantParam.isPack = false;
+    mlpQuantParam.isUpQuant = true;
+    mlpQuantParam.isGateQuant = true;
+    mlpQuantParam.isDownQuant = !param.isFloatDownLayer;
+    mlpQuantParam.commDownParam.rankSize = param.rankSize;
+    mlpQuantParam.commDownParam.rank = param.rank;
+    mlpQuantParam.quantUpParam.quantType = atb::infer::QUANT_INT8;
+    mlpQuantParam.quantUpParam.isQuantOp = false;
+    mlpQuantParam.quantGateParam.quantType = atb::infer::QUANT_INT8;
+    mlpQuantParam.quantGateParam.isQuantOp = false;
+    mlpQuantParam.quantDownParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_QUANT;
+    mlpQuantParam.quantDownParam.inputScale = param.inputScale_down_proj;
+    mlpQuantParam.quantDownParam.inputOffset = param.inputOffset_down_proj;
+    mlpQuantParam.quantDownParam.isQuantOp = true;
 
+    atb_speed::telechat::MlpGateLayerV2(mlpQuantParam, &mlpQuantNode.operation);
+    mlpQuantNode.inTensorIds = {
+        INTERNAL_SELFNORMOUT,
+        IN_MLPUPWEIGHT,
+        IN_MLPGATEWEIGHT,
+        IN_MLPDOWNWEIGHT,
+        IN_MLPLINEARDEQSCALEUP,
+        IN_MLPLINEARDEQSCALEGATE,
+        IN_MLPLINEARDEQSCALEDOWN,
+        IN_LINEARBIASUP,
+        IN_LINEARBIASGATE,
+        IN_LINEARBIASDOWN,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER,
+    };
+    mlpQuantNode.outTensorIds = { INTERNAL_MLPOUT };
+
+    ATB_LOG(INFO) << "residual add";
     CreateOperation(addParam, &mlpResidualAddNode.operation);
-    mlpResidualAddNode.inTensorIds = {INTERNAL_SELFRESIDUALADDOUT, INTERNAL_MLPOUT};
-    mlpResidualAddNode.outTensorIds = {OUT_TELECHATLAYEROUT};
+    mlpResidualAddNode.inTensorIds = { INTERNAL_SELFRESIDUALADDOUT, INTERNAL_MLPOUT };
+    mlpResidualAddNode.outTensorIds = { OUT_TELECHATLAYEROUT };
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
-                                atb::SVector<atb::TensorDesc> &outTensorDescs) {
+                                 atb::SVector<atb::TensorDesc> &outTensorDescs) {
         const atb::TensorDesc &keyTensorDesc = inTensorDescs.at(IN_PASTKEY);
         const atb::TensorDesc &valueTensorDesc = inTensorDescs.at(IN_PASTVALUE);
         outTensorDescs.at(0) = inTensorDescs.at(0);
         return atb::NO_ERROR;
     };
 
-    atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
+    ATB_LOG(INFO) << "end quant layer";
     return atb::NO_ERROR;
 }
-}   // namespace telechat
-}   // namespace atb_speed
+}  // namespace telechat
+}  // namespace atb_speed

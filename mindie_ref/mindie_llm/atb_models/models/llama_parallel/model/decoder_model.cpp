@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 #include "nlohmann/json.hpp"
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
-#include "models/llama_parallel/operation/embedding.h"
-#include "models/llama_parallel/operation/rms_norm.h"
-#include "models/llama_parallel/operation/lmhead.h"
+#include "layers/operations/embedding.h"
+#include "layers/operations/rms_norm.h"
+#include "layers/operations/lmhead.h"
 #include "models/llama_parallel/layer/decoder_layer.h"
 #include "models/llama_parallel/model/decoder_model.h"
 
@@ -59,10 +59,13 @@ void DecoderModel::Param::FromString(const std::string &param)
     for (auto item : paramJson["seqLen"]) {
         seqLen.push_back(item.get<int>());
     }
-    ATB_LOG(INFO) << "DecoderModel param" << ", isFA:" << isFA << ", isPrefill:" << isPrefill << ", isBF16:" << isBF16 << ", isPack:" << isPack
-                  << ", isEmbeddingParallel: " << isEmbeddingParallel << ", isLmHeadParallel: " << isLmHeadParallel
-                  << ", quantType:" << quantType << ", rmsNormEps:" << rmsNormEps << ", numAttentionHeadsPerRank:" << numAttentionHeadsPerRank
-                  << ", hiddenSizePerAttentionHead:" << hiddenSizePerAttentionHead << ", numHiddenLayers:" << numHiddenLayers
+    ATB_LOG(INFO) << "DecoderModel param" << ", isFA:" << isFA << ", isPrefill:" << isPrefill
+                  << ", isBF16:" << isBF16 << ", isPack:" << isPack
+                  << ", isEmbeddingParallel: " << isEmbeddingParallel << ", isLmHeadParallel: "
+                  << isLmHeadParallel
+                  << ", quantType:" << quantType << ", rmsNormEps:" << rmsNormEps << ", numAttentionHeadsPerRank:"
+                  << numAttentionHeadsPerRank << ", hiddenSizePerAttentionHead:" << hiddenSizePerAttentionHead
+                  << ", numHiddenLayers:" << numHiddenLayers
                   << ", numKeyValueHeadsPerRank:" << numKeyValueHeadsPerRank
                   << ", rank:" << rank << ", worldSize:" << worldSize << ", backend:" << backend
                   << ", tokenOffset:" << tokenOffset << ", seqLen:" << seqLen;
@@ -80,7 +83,10 @@ uint32_t DecoderModel::GetInputNum() const { return graph_.inTensors.size(); }
 
 uint32_t DecoderModel::GetOutputNum() const { return graph_.outTensors.size(); }
 
-atb::Status DecoderModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs, std::vector<atb::TensorDesc> &outTensorDescs)
+atb::Status DecoderModel::InferShape(
+    const std::vector<atb::TensorDesc> &inTensorDescs,
+    std::vector<atb::TensorDesc> &outTensorDescs
+)
 {
     ATB_LOG(INFO) << "Enter DecoderModel InferShape";
     if (outTensorDescs.size() != GetOutputNum()) {
@@ -116,32 +122,54 @@ int64_t DecoderModel::BuildGraph()
 {
     // define inTensor
     int inTensorIdx = 0;
-    int IN_TENSOR_INPUT_IDS = inTensorIdx++;          // idx: 0, shape: FA: [batchSize, seqLen] PA: [seqLen]
-    int IN_TENSOR_POSITION_IDS = inTensorIdx++;       // idx: 1, shape: FA: [batchSize, seqLen] PA: [seqLen]
-    int IN_TENSOR_COS_TABLE = inTensorIdx++;          // idx: 2, shape: FA: [maxPositionEmbeddings, hiddenSizePerAttentionHead] PA: [maxInputLength, hiddenSizePerAttentionHead]
-    int IN_TENSOR_SIN_TABLE = inTensorIdx++;          // idx: 3, shape: FA: [maxPositionEmbeddings, hiddenSizePerAttentionHead] PA: [maxInputLength, hiddenSizePerAttentionHead]
-    int IN_TENSOR_ATTENTION_MASK = inTensorIdx++;     // idx: 4, shape: FA: [batchSize, maxPositionEmbeddings, maxPositionEmbeddings] PA: [maxInputLength, maxInputLength]
-    int IN_TENSOR_BLOCK_TABLES = inTensorIdx++;       // idx: 5, shape: [4, 9]; PA所需入参
-    int IN_TENSOR_SLOTS = inTensorIdx++;              // idx: 6, shape: [seqLen]; PA所需入参
-    int IN_TENSOR_KV_CACHE_IDX = inTensorIdx++;       // idx: 7, shape: [1]; FA所需入参
-    int IN_TENSOR_TOKEN_OFFSET = inTensorIdx++;       // idx: 8, shape: [batchSize]; FA所需入参
-    int IN_TENSOR_PLACE_HOLDER = inTensorIdx++;       // idx: 9, shape: [1]
-    int IN_TENSOR_BETA = inTensorIdx++;               // idx: 10, shape: [hiddenSize]; Quant所需参数
-    int IN_TENSOR_SEQ_LEN = inTensorIdx++;            // idx: 11, shape: FA: [batchSize] PA: [4]
-    int IN_TENSOR_LOGTIS_INDICES = inTensorIdx++;     // idx: 12, shape: FA: [batchSize]  PA: [4]
+    // idx: 0, shape: FA: [batchSize, seqLen] PA: [seqLen]
+    int IN_TENSOR_INPUT_IDS = inTensorIdx++;
+    // idx: 1, shape: FA: [batchSize, seqLen] PA: [seqLen]
+    int IN_TENSOR_POSITION_IDS = inTensorIdx++;
+    // idx: 2, shape: FA: [maxPositionEmbeddings, hiddenSizePerAttentionHead]
+    // PA: [maxInputLength, hiddenSizePerAttentionHead]
+    int IN_TENSOR_COS_TABLE = inTensorIdx++;
+    // idx: 3, shape: FA: [maxPositionEmbeddings, hiddenSizePerAttentionHead]
+    // PA: [maxInputLength, hiddenSizePerAttentionHead]
+    int IN_TENSOR_SIN_TABLE = inTensorIdx++;
+    // idx: 4, shape: FA: [batchSize, maxPositionEmbeddings, maxPositionEmbeddings]
+    // PA: [maxInputLength, maxInputLength]
+    int IN_TENSOR_ATTENTION_MASK = inTensorIdx++;
+    // idx: 5, shape: [4, 9]; PA所需入参
+    int IN_TENSOR_BLOCK_TABLES = inTensorIdx++;
+    // idx: 6, shape: [seqLen]; PA所需入参
+    int IN_TENSOR_SLOTS = inTensorIdx++;
+    // idx: 7, shape: [1]; FA所需入参
+    int IN_TENSOR_KV_CACHE_IDX = inTensorIdx++;
+    // idx: 8, shape: [batchSize]; FA所需入参
+    int IN_TENSOR_TOKEN_OFFSET = inTensorIdx++;
+    // idx: 9, shape: [1]
+    int IN_TENSOR_PLACE_HOLDER = inTensorIdx++;
+    // idx: 10, shape: [hiddenSize]; Quant所需参数
+    int IN_TENSOR_BETA = inTensorIdx++;
+    // idx: 11, shape: FA: [batchSize] PA: [4]
+    int IN_TENSOR_SEQ_LEN = inTensorIdx++;
+    // idx: 12, shape: FA: [batchSize]  PA: [4]
+    int IN_TENSOR_LOGTIS_INDICES = inTensorIdx++;
 
     // define internelTensor
     int internelTensorIdx = 0;
-    int INTERNEL_TENSOR_HIDDEN_STATES = internelTensorIdx++;              // idx: 0, shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
-    int INTERNEL_TENSOR_COS_TABLE = internelTensorIdx++;                  // idx: 1, shape: [batchSize * seqLen, hiddenSizePerAttentionHead]
-    int INTERNEL_TENSOR_SIN_TABLE = internelTensorIdx++;                  // idx: 2, shape: [batchSize * seqLen, hiddenSizePerAttentionHead]
-    int INTERNEL_TENSOR_LAYER_OUT_BASE = internelTensorIdx++;             // idx: [3, 3 + numHiddenLayers), shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
+    // idx: 0, shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
+    int INTERNEL_TENSOR_HIDDEN_STATES = internelTensorIdx++;
+    // idx: 1, shape: [batchSize * seqLen, hiddenSizePerAttentionHead]
+    int INTERNEL_TENSOR_COS_TABLE = internelTensorIdx++;
+    // idx: 2, shape: [batchSize * seqLen, hiddenSizePerAttentionHead]
+    int INTERNEL_TENSOR_SIN_TABLE = internelTensorIdx++;
+    // idx: [3, 3 + numHiddenLayers), shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
+    int INTERNEL_TENSOR_LAYER_OUT_BASE = internelTensorIdx++;
     internelTensorIdx = internelTensorIdx + param_.numHiddenLayers - 1;
-    int INTERNEL_TENSOR_FINAL_NORM_OUT = internelTensorIdx++;             // idx: 3 + numHiddenLayers, shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
+    // idx: 3 + numHiddenLayers, shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
+    int INTERNEL_TENSOR_FINAL_NORM_OUT = internelTensorIdx++;
 
     // set size
     const int weightTensorSize =
-        WEIGHT_COUNT_WORD_EMBEDDINGNODE + WEIGHT_COUNT_PER_LAYER * param_.numHiddenLayers + WEIGHT_COUNT_POST_NORM + WEIGHT_COUNT_LM_HEAD;
+        WEIGHT_COUNT_WORD_EMBEDDINGNODE + WEIGHT_COUNT_PER_LAYER * param_.numHiddenLayers
+        + WEIGHT_COUNT_POST_NORM + WEIGHT_COUNT_LM_HEAD;
     graph_.weightTensors.resize(weightTensorSize);
 
     graph_.inTensors.resize(inTensorIdx);
@@ -159,14 +187,14 @@ int64_t DecoderModel::BuildGraph()
     atb::Operation *op = nullptr;
 
     auto &embeddingNode = graph_.nodes.at(nodeId++);
-    atb_speed::llama_parallel::EmbeddingParam embeddingParam;
+    atb_speed::common::EmbeddingParam embeddingParam;
     embeddingParam.unpadInputs = !param_.isFA;
     if (param_.isEmbeddingParallel) {
         embeddingParam.rank = param_.rank;
         embeddingParam.worldSize = param_.worldSize;
     };
     embeddingParam.backend = param_.backend;
-    atb_speed::llama_parallel::Embedding(embeddingParam, &op);
+    atb_speed::common::Embedding(embeddingParam, &op);
     embeddingNode.operation.reset(op);
     embeddingNode.inTensors = {&graph_.weightTensors.at(0),                    // shape: [vocabSize + 1, hiddenSize]
                                &graph_.inTensors.at(IN_TENSOR_INPUT_IDS),
@@ -221,7 +249,7 @@ int64_t DecoderModel::BuildGraph()
     }
 
     auto &finalNormNode = graph_.nodes.at(nodeId++);
-    atb_speed::llama_parallel::FusionRmsNormParam fusionRmsNormParam;
+    atb_speed::common::FusionRmsNormParam fusionRmsNormParam;
     fusionRmsNormParam.quantType = param_.quantType;
     fusionRmsNormParam.rmsNormEps = param_.rmsNormEps;
     FusionRmsNorm(fusionRmsNormParam, &op);
@@ -230,18 +258,22 @@ int64_t DecoderModel::BuildGraph()
         graph_.weightTensors.size() - WEIGHT_COUNT_POST_NORM - WEIGHT_COUNT_LM_HEAD;
     finalNormNode.inTensors = {
         firstInTensor,
-        &graph_.weightTensors.at(finalLayerNormWeightTensorId), &graph_.inTensors.at(IN_TENSOR_BETA)  // shape: [hiddenSize]
+        &graph_.weightTensors.at(finalLayerNormWeightTensorId),
+        &graph_.inTensors.at(IN_TENSOR_BETA)  // shape: [hiddenSize]
     };
-    finalNormNode.outTensors = {&graph_.internalTensors.at(INTERNEL_TENSOR_FINAL_NORM_OUT)};  // shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
+    finalNormNode.outTensors = {
+        // shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
+        &graph_.internalTensors.at(INTERNEL_TENSOR_FINAL_NORM_OUT)
+    };
 
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
-    atb_speed::llama_parallel::LmHeadParam lmHeadParam;
+    atb_speed::common::LmHeadParam lmHeadParam;
     lmHeadParam.unpadInputs = !param_.isFA;
     lmHeadParam.gatherAhead = param_.isPrefill;
     lmHeadParam.hiddenSizePerAttentionHead = param_.hiddenSizePerAttentionHead;
     lmHeadParam.linearParallelParam.fusionLinearParam.quantType = false;  // LmHead未接入量化
-    if (param_.isLmHeadParallel && param_.worldSize > 1) {
-        lmHeadParam.linearParallelParam.parallelType = atb_speed::llama_parallel::COLUMN_PARALLEL;
+    if (param_.isLmHeadParallel) {
+        lmHeadParam.linearParallelParam.parallelType = atb_speed::common::COLUMN_PARALLEL;
         lmHeadParam.linearParallelParam.rank = param_.rank;
         lmHeadParam.linearParallelParam.worldSize = param_.worldSize;
         lmHeadParam.linearParallelParam.backend = param_.backend;
@@ -251,13 +283,16 @@ int64_t DecoderModel::BuildGraph()
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - WEIGHT_COUNT_LM_HEAD;
     lmHeadNode.inTensors = {
         &graph_.internalTensors.at(INTERNEL_TENSOR_FINAL_NORM_OUT),
-        &graph_.weightTensors.at(finalLinearWeightTensorId), // shape: [vocabSizePerRank, hiddenSize]
-        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),        // LmHead未接入量化，量化权重使用placeholder代替
+        // shape: [vocabSizePerRank, hiddenSize]
+        &graph_.weightTensors.at(finalLinearWeightTensorId),
+        // LmHead未接入量化，量化权重使用placeholder代替
+        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
         &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
         &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
         &graph_.inTensors.at(IN_TENSOR_LOGTIS_INDICES)
     };
-    lmHeadNode.outTensors = {&graph_.outTensors.at(0)};      // shpae: FA: [batchSize, seqLen, vocabSize] PA: [seqLen, vocabSize]
+    // shpae: FA: [batchSize, seqLen, vocabSize] PA: [seqLen, vocabSize]
+    lmHeadNode.outTensors = {&graph_.outTensors.at(0)};
 
     ATB_LOG(INFO) << "DecoderModel build graph success";
     return atb::NO_ERROR;
