@@ -5,7 +5,10 @@
   - [训练](#训练)
   - [脚本](#脚本)
   - [性能](#性能)
+    - [吞吐](#吞吐)
     - [精度](#精度)
+  - [推理](#推理)
+  - [评估](#评估)
 
 ## 训练
 
@@ -38,9 +41,10 @@ pip install torch==2.1.0
 pip install torch_npu-2.1.0.postxxxx-cp38-cp38-xxxx_aarch64.whl
 # 通过PTA上提供的安装包，以whl文件方式安装apex
 pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-# 进入AscendSpeed目录，源码方式安装ascendspeed加速包
+# 进入AscendSpeed目录，source相应的CANN环境文件（请按实际情况修改路径），然后源码方式安装ascendspeed加速包
 git clone https://gitee.com/ascend/AscendSpeed.git
 cd AscendSpeed/
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
 pip install -e ./
 # 进入ModelLink主目录，安装其余依赖包
 cd ModelLink/
@@ -116,8 +120,84 @@ bash examples/aquila/pretrain_aquila_7b_ptd.sh
 ```
 
 ## 性能
+### 吞吐
 ### 精度
 
 Aquila-7b NPU vs 参考 loss.
 
 ![NPU-GPU-Relative-Error](../../sources/images/aquila/aquila_comp0122.png)
+
+
+## 推理
+
+我们支持使用 Aquila-7B进行文本生成的推理。
+
+推理与预训练不同，我们需要加载预训练权重，因此需要先完成前面叙述的转换权重的工作。然后配置Aquila-7B推理脚本`examples/aquila/generate_aquila_7B.sh`，CHECKPOINT要指向转换后的权重，而VOCAB_FILE要指向含有Aquila词表文件的目录，在我们的例子中，即下载权重后保存的位置"./HF_Aquila7B_downloaded"。在您实际操作中，请根据情况填入正确的值。
+
+```shell
+# 修改模型权重路径和分词器路径
+CHECKPOINT=<checkpoint-path>
+VOCAB_FILE=<vocabfile-path>
+```
+
+启动Aquila-7B推理:
+```shell
+bash ./examples/aquila/generate_aquila_7B.sh
+```
+
+部分推理样本如下：
+
+Aquila-7B:
+
+![aquila-7B_generate.png](../../sources/images/aquila/aquila_7B_generate.png)
+
+
+## 评估
+
+我们使用 BoolQ benchmark 来评估我们的模型。在[Benchmark下载页面](https://github.com/google-research-datasets/boolean-questions)找到[数据集](https://storage.cloud.google.com/boolq/dev.jsonl)下载后保存。例如，保存在AscendSpeed/boolq/test目录下。
+
+评估与推理类似，也需要加载转换后的权重。我们配置Aquila-7B评估脚本，例如下面代码所示：
+
+```shell
+    CHECKPOINT="./model_weights/aquila/"
+    VOCAB_FILE="./HF_Aquila7B_downloaded/"
+    DATA_PATH="./boolq/test"
+    TASK="boolq"
+    # Different task needs different max_new_tokens value, please follow the instruction in readme.
+    python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation_llama.py \
+        --task-data-path $DATA_PATH \
+        --task $TASK \
+        --seq-length 2048 \
+        --max-new-tokens 1 \
+        --max-position-embeddings 2048 \
+        --tensor-model-parallel-size 1  \
+        --pipeline-model-parallel-size 1  \
+        --num-layers 32  \
+        --hidden-size 4096  \
+        --ffn-hidden-size 11008 \
+        --load ${CHECKPOINT}  \
+        --num-attention-heads 32  \
+        --tokenizer-type PretrainedFromHF  \
+        --tokenizer-name-or-path $VOCAB_FILE \
+        --tokenizer-not-use-fast \
+        --fp16  \
+        --micro-batch-size 1  \
+        --position-embedding-type rope \
+        --normalization RMSNorm \
+        --layernorm-epsilon 1e-6 \
+        --make-vocab-size-divisible-by 8 \
+        --use-flash-attn \
+        --pad-vocab-size-to 100008 \
+        --seed 42 | tee logs/train.log
+```
+
+```shell
+# 开始评估
+bash examples/aquila/eval_aquila_7B.sh
+```
+
+Aquila-7B在**Ascend NPU**中的评测表现：
+
+| 任务                                                                   | 模型       | 昇腾值|社区值|
+|------------------------------------------------------------------------|------------|------|------|
+| [BoolQ](https://github.com/google-research-datasets/boolean-questions) | Aquila-7B  | 76.9% |     |

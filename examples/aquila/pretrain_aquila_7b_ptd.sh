@@ -1,4 +1,5 @@
 #!/bin/bash
+source /home/yaojia/yj_canntoolkit_POC.T800.B070/ascend-toolkit/set_env.sh
 
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
@@ -11,10 +12,12 @@ NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
-CKPT_SAVE_DIR="your model ckpt save path"
-DATA_PATH="your data path"
-TOKENIZER_PATH="your tokenizer path"
-CKPT_LOAD_DIR="your model ckpt load path"
+CKPT_SAVE_DIR="./ckpt"
+DATA_PATH="../dataset/aquila_text_document"
+TOKENIZER_PATH="../HF_Aquila7B_downloaded"
+#CKPT_LOAD_DIR="/home/yaojia/bigfiles/data-loading/GPU/modellink-converted-weights-xlc-div1"
+#CKPT_LOAD_DIR="/home/yaojia/bigfiles/data-loading/GPU/HF-div1"
+CKPT_LOAD_DIR="/home/yaojia/bigfiles/data-loading/GPU/HF-Aquila7B_converted_div1"
 TP=8
 PP=1
 
@@ -40,10 +43,10 @@ GPT_ARGS="
     --tokenizer-type PretrainedFromHF \
     --seq-length 2048 \
     --max-position-embeddings 2048 \
-    --micro-batch-size 1 \
-    --global-batch-size 8 \
+    --micro-batch-size 8 \
+    --global-batch-size 64 \
     --norm-epsilon 1e-6 \
-    --make-vocab-size-divisible-by 8 \
+    --make-vocab-size-divisible-by 1 \
     --lr 1.25e-6 \
     --train-iters 1000 \
     --lr-decay-style cosine \
@@ -68,7 +71,9 @@ GPT_ARGS="
     --no-gradient-accumulation-fusion \
     --no-load-optim \
     --no-load-rng \
-    --bf16
+    --bf16 \
+    --tokenizer-not-use-fast \
+    --use-flash-attn
 "
 
 DATA_ARGS="

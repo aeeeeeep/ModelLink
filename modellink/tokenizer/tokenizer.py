@@ -119,6 +119,10 @@ class _AutoTokenizer(AbstractTokenizer):
     @property
     def eod(self):
         return self.eos
+    
+    @property
+    def eos_token_id(self):
+        return self.tokenizer.eos_token_id
 
     @property
     def cls(self):

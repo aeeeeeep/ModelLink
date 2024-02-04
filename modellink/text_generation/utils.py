@@ -45,7 +45,7 @@ def pad_batch(batch, args):
 
     tokenizer = get_tokenizer()
 
-    pad_id = tokenizer.pad if tokenizer.pad else tokenizer.eos_token_id
+    pad_id = tokenizer.pad if tokenizer.pad is not None else tokenizer.eos_token_id
     context_lengths = [len(val) for val in batch]
 
     if args.text_generation_config['max_new_tokens'] > 0:

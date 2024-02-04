@@ -5,7 +5,10 @@
   - [Training](#training)
   - [Script](#script)
   - [Performance](#performance)
-    - [Accuracy](#accuracy)
+    - [Machine performance](#machine-performance)
+    - [Accuracy of the loss](#accuracy-of-the-loss)
+  - [Inference](#inference)
+  - [Evaluation](#evaluation-with-benchmark)
 ## Training
 
 Here's a hardware summary of pre-training Aquila-7B:
@@ -24,6 +27,7 @@ mkdir logs
 mkdir ckpt
 ```
 
+
 ### 2. Build environment
 
 ```bash
@@ -35,9 +39,10 @@ pip install torch==2.1.0
 pip install torch_npu-2.1.0.postxxxx-cp38-cp38-xxxx_aarch64.whl
 # install apex
 pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-# enter the AscendSpeed/ directory，install ascendspeed package by source code
+# enter the AscendSpeed/ directory，source proper CANN env file(please modify the path based on your real scenario), then install ascendspeed package by source code
 git clone https://gitee.com/ascend/AscendSpeed.git
 cd AscendSpeed/
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
 pip install -e ./
 # enter the ModelLink/ directory and install other packages
 cd ModelLink/
@@ -113,7 +118,80 @@ start training Aquila-7B model:
 bash examples/aquila/pretrain_aquila_7b_ptd.sh
 ```
 ## Performance
-### Accuracy
+### Machine performance
+### Accuracy of the loss
 
 Aquila-7B NPU vs Reference loss.
 ![NPU-GPU-Relative-Error](../../sources/images/aquila/aquila_comp0122.png)
+
+
+## Inference
+
+We support AscendSpeed Inference for text generation with Aquila 7B model.
+
+Inference is different from pre-training because it requires loading the pre-trained model weights. Therefore, we need to complete the aforementioned model weight conversion task first, then configure the Aquila-7B Inference shell script `examples/aquila/generate_aquila_7B.sh`. "CHECKPOINT" must point to the converted weights directory, and "VOCAB_FILE" must point to the directory which contains Aquila vocabulary files -- in our example, it is "./HF_Aquila7B_downloaded". In your operation, please fill in correct value based on your actual scenario.
+
+```shell
+# please change to actual values
+CHECKPOINT=<checkpoint-path>
+VOCAB_FILE=<vocabfile-path>
+```
+
+Start Aquila-7B Inference:
+```shell
+bash ./examples/aquila/generate_aquila_7B.sh
+```
+
+Sample results of Aquila-7B Inference:
+
+![aquila-7B_generate.png](../../sources/images/aquila/aquila_7B_generate.png)
+
+
+## Evaluation with Benchmark
+
+We use BoolQ benchmark to evaluate our model. You can [go to the BoolQ Benchmark page](https://github.com/google-research-datasets/boolean-questions) and find the [dataset](https://storage.cloud.google.com/boolq/dev.jsonl), download it and save it. For example, save to "AscendSpeed/boolq/test" directory
+
+Evaluation task is similar to inference task，it also requires loading the pre-trained model weights. You can configure Aquila-7B evaluation script as the following example code shows：
+
+```shell
+    CHECKPOINT="./model_weights/aquila/"
+    VOCAB_FILE="./HF_Aquila7B_downloaded/"
+    DATA_PATH="./boolq/test"
+    TASK="boolq"
+    python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation_llama.py \
+        --task-data-path $DATA_PATH \
+        --task $TASK \
+        --seq-length 2048 \
+        --max-new-tokens 1 \
+        --max-position-embeddings 2048 \
+        --tensor-model-parallel-size 1  \
+        --pipeline-model-parallel-size 1  \
+        --num-layers 32  \
+        --hidden-size 4096  \
+        --ffn-hidden-size 11008 \
+        --load ${CHECKPOINT}  \
+        --num-attention-heads 32  \
+        --tokenizer-type PretrainedFromHF  \
+        --tokenizer-name-or-path $VOCAB_FILE \
+        --tokenizer-not-use-fast \
+        --fp16  \
+        --micro-batch-size 1  \
+        --position-embedding-type rope \
+        --normalization RMSNorm \
+        --layernorm-epsilon 1e-6 \
+        --make-vocab-size-divisible-by 8 \
+        --use-flash-attn \
+        --pad-vocab-size-to 100008 \
+        --seed 42 | tee logs/train.log
+```
+
+```shell
+# Start evaluation task
+bash examples/aquila/eval_aquila_7B.sh
+```
+
+Sample Aquila-7B performance running in **Ascend NPU**:
+
+| Task                                                                   | Model     | NPU | Benchmark |
+|------------------------------------------------------------------------|------------|------|------|
+| [BoolQ](https://github.com/google-research-datasets/boolean-questions) | Aquila-7B  | 76.9% |     |
