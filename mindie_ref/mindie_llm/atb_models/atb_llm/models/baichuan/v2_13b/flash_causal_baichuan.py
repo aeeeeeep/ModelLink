@@ -1,5 +1,4 @@
-# Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
-
+# Copyright (c) 2023, Baichuan Intelligent Technology. All rights reserved.
 import json
 import math
 import os
