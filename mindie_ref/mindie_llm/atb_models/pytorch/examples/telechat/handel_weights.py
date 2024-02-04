@@ -1,7 +1,6 @@
 # coding=utf-8
 import argparse
 import os
-import time
 import shutil
 from itertools import product
 import numpy as np

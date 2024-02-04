@@ -1,4 +1,5 @@
-import os, time
+import os
+import time
 from tqdm import tqdm
 import torch
 import pandas as pd
@@ -98,7 +99,7 @@ def infer_precision(chat=False):
             torch.npu.synchronize()
             start_time_model = time.time()
             if chat:
-                output = model.chat(tokenizer=tokenizer, questions=context, history=[], generate_config=generate_config,
+                output = model.chat(tokenizer=tokenizer, question=context, history=[], generation_config=generate_config,
                                     stream=True, max_new_tokens=1024)
                 print_(is_printing, context)
                 
@@ -109,16 +110,13 @@ def infer_precision(chat=False):
             else:
                 output = model.generate(context_ids["input_ids"].npu(), max_new_tokens=4096, do_sample=False, use_cache=True,
                                         repetition_penalty=1.03, eos_token_id=[160133, 160130])
+                output_str = tokenizer.decode(output[0].tolist()).split("<_bot>")[-1]
             torch.npu.synchronize()
             end_time_model = time.time()
-            output_str = tokenizer.decode(output[0].tolist()).split("<_bot>")[-1]
             print_(is_printing, context)
             print_(is_printing, output_str)
-            torch.npu.synchronize()
-            end_time_e2e = time.time()
             answers.append(output_str)
         print(f"model_time:{end_time_model - start_time_model}s")
-        print(f"end2end_time: {end_time_e2e - start_time_model}s")
         print(f"output token delay {len(output_str[0]) / (end_time_model - start_time_model)}s")
 
     f = jsonlines.open(args.output_path, "w")

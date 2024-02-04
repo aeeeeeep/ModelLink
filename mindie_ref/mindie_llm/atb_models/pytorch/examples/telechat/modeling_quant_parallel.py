@@ -779,6 +779,7 @@ class TelechatModel(TelechatPreTrainedModel):
             self.cached_v = torch.zeros(self.num_hidden_layers, self.batch_num,  self.hidden_size_nz, self.max_seq_len, 16, device = "npu").half().contiguous()
             self.cached_k.data = torch_npu.npu_format_cast(self.cached_k.data, 29)
             self.cached_v.data = torch_npu.npu_format_cast(self.cached_v.data, 29)
+            torch.npu.empty_cache()
 
         if self.encoder_flag:
             self.maskAttenfull = torch.full((self.batch_num, self.max_seq_len, self.max_seq_len), 0, device='npu', dtype=torch.half)
@@ -963,89 +964,6 @@ class TelechatModel(TelechatPreTrainedModel):
             attentions=all_self_attentions,
         )
 
-    def chat(self, tokenizer, question: str = '', history: Union[List[Dict], History] = None, stream: bool = False,
-             generation_config: Optional[GenerationConfig] = None, **kwargs):
-        """
-        Args:
-            tokenizer:  the tokenizer of  telechat
-            question: question which the model reply in this turn
-            history: history which will format the input for telechat
-            stream: if return the full text at last or yield the text in token
-            generation_config:  configuration for generation
-            **kwargs: args which will update the generation config or pass to model forward
-        """
-        generation_config = generation_config or self.generation_config
-        if not generation_config:
-            logger.error("generation_config is None")
-            raise ValueError("generation_config must not be None")
-        if not question:
-            logger.error("question is empty")
-            raise ValueError("question must not be empty")
-        if history is None:
-            history = []
-
-        # we update and check generate_config here for building inputs.
-
-        generation_config = copy.deepcopy(generation_config)
-        user_id = generation_config.user_token_id
-        bot_id = generation_config.bot_token_id
-        model_kwargs = generation_config.update(**kwargs)
-        generation_config.validate()
-
-        # transfer to History
-        if not isinstance(history, History):
-            history = History(tokenizer, history)
-
-        inputs = self.build_inputs_for_chat(tokenizer, question, history, generation_config, user_id, bot_id)
-        history.append({"role": "user", "content": question})
-        if stream:
-            streamer = TelechatIterTextStreamer(tokenizer, history,skip_prompt=True)
-            Thread(target=self.generate, kwargs=dict(
-                inputs=inputs.to(self.device), streamer=streamer,
-                generation_config=generation_config, **model_kwargs
-            )).start()
-            return streamer
-        else:
-            outputs = self.generate(inputs.to(self.device), generation_config=generation_config, **model_kwargs)
-            response = tokenizer.decode(outputs[0][len(inputs[0]):-1])
-            history.append({"role": "bot", "content": response})
-            return response, history
-
-    def build_inputs_for_chat(self, tokenizer, question, history, generation_config, usr_id, bot_id):
-        """
-        check history and  build inputs here
-        """
-        # first tokenize question
-        q_token = tokenizer(question)
-        qa_history = copy.deepcopy(history)
-
-        # get the max length we should build our inputs in
-        model_max_length = self.config.seq_length
-        build_max_length = max(0, model_max_length - generation_config.max_new_tokens) \
-            if generation_config.max_new_tokens else max(0, generation_config.max_length)
-        if build_max_length < 3:
-            logger.warning("the model can not meet the  requirements of input length,Please check config")
-            raise ValueError("")
-
-        # trunc left
-        input_tokens = [usr_id] + q_token["input_ids"][-build_max_length + 1:] + [bot_id]
-        length = len(input_tokens)
-
-        while len(qa_history) != 0:
-            message = qa_history.pop()
-            if message["role"] == "user":
-                tokens = [usr_id] + message["input_ids"]
-            elif message["role"] == "bot":
-                tokens = [bot_id] + message["input_ids"] + [generation_config.eos_token_id]
-            else:
-                tokens = []
-            if len(tokens) + length >= build_max_length:
-                break
-            else:
-                input_tokens = tokens + input_tokens
-
-        return torch.tensor([input_tokens], dtype=torch.int64)
-
 
 @add_start_docstrings(
     """
@@ -1183,7 +1101,90 @@ class TelechatForCausalLM(TelechatPreTrainedModel):
             hidden_states=transformer_outputs.hidden_states,
             attentions=transformer_outputs.attentions,
         )
+    
+    def chat(self, tokenizer, question: str = '', history: Union[List[Dict], History] = None, stream: bool = False,
+             generation_config: Optional[GenerationConfig] = None, **kwargs):
+        """
+        Args:
+            tokenizer:  the tokenizer of  telechat
+            question: question which the model reply in this turn
+            history: history which will format the input for telechat
+            stream: if return the full text at last or yield the text in token
+            generation_config:  configuration for generation
+            **kwargs: args which will update the generation config or pass to model forward
+        """
+        generation_config = generation_config or self.generation_config
+        if not generation_config:
+            logger.error("generation_config is None")
+            raise ValueError("generation_config must not be None")
+        if not question:
+            logger.error("question is empty")
+            raise ValueError("question must not be empty")
+        if history is None:
+            history = []
 
+        # we update and check generate_config here for building inputs.
+
+        generation_config = copy.deepcopy(generation_config)
+        user_id = generation_config.user_token_id
+        bot_id = generation_config.bot_token_id
+        model_kwargs = generation_config.update(**kwargs)
+        generation_config.validate()
+
+        # transfer to History
+        if not isinstance(history, History):
+            history = History(tokenizer, history)
+
+        inputs = self.build_inputs_for_chat(tokenizer, question, history, generation_config, user_id, bot_id)
+        history.append({"role": "user", "content": question})
+        if stream:
+            streamer = TelechatIterTextStreamer(tokenizer, history,skip_prompt=True)
+            Thread(target=self.generate, kwargs=dict(
+                inputs=inputs.to(self.device), streamer=streamer,
+                generation_config=generation_config, **model_kwargs
+            )).start()
+            return streamer
+        else:
+            outputs = self.generate(inputs.to(self.device), generation_config=generation_config, **model_kwargs)
+            response = tokenizer.decode(outputs[0][len(inputs[0]):-1])
+            history.append({"role": "bot", "content": response})
+            return response, history
+
+    def build_inputs_for_chat(self, tokenizer, question, history, generation_config, usr_id, bot_id):
+        """
+        check history and  build inputs here
+        """
+        # first tokenize question
+        q_token = tokenizer(question)
+        qa_history = copy.deepcopy(history)
+
+        # get the max length we should build our inputs in
+        model_max_length = self.config.seq_length
+        build_max_length = max(0, model_max_length - generation_config.max_new_tokens) \
+            if generation_config.max_new_tokens else max(0, generation_config.max_length)
+        if build_max_length < 3:
+            logger.warning("the model can not meet the  requirements of input length,Please check config")
+            raise ValueError("")
+
+        # trunc left
+        input_tokens = [usr_id] + q_token["input_ids"][-build_max_length + 1:] + [bot_id]
+        length = len(input_tokens)
+
+        while len(qa_history) != 0:
+            message = qa_history.pop()
+            if message["role"] == "user":
+                tokens = [usr_id] + message["input_ids"]
+            elif message["role"] == "bot":
+                tokens = [bot_id] + message["input_ids"] + [generation_config.eos_token_id]
+            else:
+                tokens = []
+            if len(tokens) + length >= build_max_length:
+                break
+            else:
+                input_tokens = tokens + input_tokens
+
+        return torch.tensor([input_tokens], dtype=torch.int64)
+    
     def _reorder_cache(
             self, past: Tuple[Tuple[torch.Tensor, torch.Tensor], ...], beam_idx: torch.LongTensor
     ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], ...]:

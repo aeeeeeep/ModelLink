@@ -944,6 +944,7 @@ class TelechatModel(TelechatPreTrainedModel):
             self.cached_v = torch.zeros(self.num_hidden_layers, self.batch_num,  self.hidden_size_nz, self.max_seq_len, 16, device = "npu").half().contiguous()
             self.cached_k.data = torch_npu.npu_format_cast(self.cached_k.data, 29)
             self.cached_v.data = torch_npu.npu_format_cast(self.cached_v.data, 29)
+            torch.npu.empty_cache()
 
         if self.encoder_flag:
             self.maskAttenfull = torch.full((self.batch_num, self.max_seq_len, self.max_seq_len), 0, device='npu', dtype=torch.half)
