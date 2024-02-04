@@ -406,7 +406,7 @@ atb::Status PaCommonLayer(const PaCommonLayerParam &param, atb::Operation **oper
         return atb::NO_ERROR;
     };
 
-    atb::CREATE_OPERATION(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
 }
 
