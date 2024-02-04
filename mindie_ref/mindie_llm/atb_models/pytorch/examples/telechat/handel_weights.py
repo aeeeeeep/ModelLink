@@ -206,10 +206,10 @@ def cut_model_quant(args):
 
 
 if __name__ == "__main__":
-    args = get_args()
-    if args.handle_type == "cut_float":
-        cut_model_float(args)
-    elif args.handle_type == "cut_quant":
-        cut_model_quant(args)
+    args_main = get_args()
+    if args_main.handle_type == "cut_float":
+        cut_model_float(args_main)
+    elif args_main.handle_type == "cut_quant":
+        cut_model_quant(args_main)
     else:
         raise Exception("handle_type invalid!")

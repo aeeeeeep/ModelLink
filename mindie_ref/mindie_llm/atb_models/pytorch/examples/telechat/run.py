@@ -216,8 +216,8 @@ def get_args():
     return args
 
 if __name__ == '__main__':
-    args = get_args()
-    if args.run_precision:
-        infer_precision()
-    elif args.run_performance:
+    args_main = get_args()
+    if args_main.run_precision:
+        infer_precision(chat=False)
+    elif args_main.run_performance:
         performance_test()
