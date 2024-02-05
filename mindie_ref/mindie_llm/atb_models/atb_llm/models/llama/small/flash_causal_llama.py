@@ -391,9 +391,10 @@ class FlashLlamaForCausalLM(torch.nn.Module):
         if deq_scale == 0:
             logger.warning(f"Division by deq_scale is zero!")
             return None
-        bias_correction = fp_bias.npu() / deq_scale.npu() - quant_weight.to(torch.float32).npu().sum(dim=1) \
-            * float(input_offset)
-        return bias_correction
+        else:
+            bias_correction = fp_bias.npu() / deq_scale.npu() - quant_weight.to(torch.float32).npu().sum(dim=1) \
+                * float(input_offset)
+            return bias_correction
 
     def process_deq_scale(self, deq_scale_dict):
         new_deq_scale_dict = {}
@@ -476,26 +477,26 @@ class FlashLlamaForCausalLM(torch.nn.Module):
                     down_name = "model.layers.{}.mlp.down_proj".format(layer_id)
                     if self.input_scale_dict[q_name] == 0:
                         logger.warning(f"Division by zero: {q_name}")
-                        return None
-                    self.qkv_input_scale.append(float(1 / self.input_scale_dict[q_name]))
+                    else:
+                        self.qkv_input_scale.append(float(1 / self.input_scale_dict[q_name]))
                     self.qkv_input_offset.append(int(self.input_offset_dict[q_name]))
 
                     if self.input_scale_dict[o_name] == 0:
                         logger.warning(f"Division by zero: {o_name}")
-                        return None
-                    self.dense_input_scale.append(float(1 / self.input_scale_dict[o_name]))
+                    else:
+                        self.dense_input_scale.append(float(1 / self.input_scale_dict[o_name]))
                     self.dense_input_offset.append(int(self.input_offset_dict[o_name]))
 
                     if self.input_scale_dict[gate_name] == 0:
                         logger.warning(f"Division by zero: {gate_name}")
-                        return None
-                    self.self_ln_input_scale.append(float(1 / self.input_scale_dict[gate_name]))
+                    else:
+                        self.self_ln_input_scale.append(float(1 / self.input_scale_dict[gate_name]))
                     self.self_ln_input_offset.append(int(self.input_offset_dict[gate_name]))
 
                     if self.input_scale_dict[down_name] == 0:
                         logger.warning(f"Division by zero: {down_name}")
-                        return None
-                    self.ffn_out_input_scale.append(float(1 / self.input_scale_dict[down_name]))
+                    else:
+                        self.ffn_out_input_scale.append(float(1 / self.input_scale_dict[down_name]))
                     self.ffn_out_input_offset.append(int(self.input_offset_dict[down_name]))
             
             self.acl_param_encoder = json.dumps({
