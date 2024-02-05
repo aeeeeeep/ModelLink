@@ -8,6 +8,7 @@ from megatron.model.module import MegatronModule
 from megatron.model.enums import AttnMaskType
 from megatron.model.language_model import parallel_lm_logits
 from megatron.model.language_model import get_language_model
+from megatron.arguments import core_transformer_config_from_args
 
 from .model.module import MegatronModuleForCausalLM
 
@@ -21,6 +22,40 @@ def seq_length_wrapper(fn):
     return wrapper
 
 
+def ParallelAttention_wrapper(fn):
+    @wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        fn(self, *args, **kwargs)
+        config = args[0]
+        query_projection_size = config.kv_channels * config.num_attention_heads
+        _args = get_args()
+        if _args.group_query_attention:
+            kv_projection_size = _args.kv_channels * _args.num_query_groups
+        else:
+            kv_projection_size = _args.kv_channels * _args.num_attention_heads
+        bias = getattr(config, "column_parallel_linear_bias", _args.add_bias_linear)
+        self.query_key_value = tensor_parallel.ColumnParallelLinear(
+            config.hidden_size,
+            query_projection_size + 2 * kv_projection_size,
+            config=config,
+            init_method=config.init_method,
+            bias=bias,
+            gather_output=False)
+        #   ≈‰internlmƒ£–Õ
+        bias = getattr(config, "row_parallel_linear_bias", _args.add_bias_linear)
+        skip_bias_add = getattr(config, "row_parallel_linear_skip_bias_add", True)
+        # Output.
+        self.dense = tensor_parallel.RowParallelLinear(
+            query_projection_size,
+            config.hidden_size,
+            config=config,
+            init_method=config.output_layer_init_method,
+            bias=bias,
+            input_is_parallel=True,
+            skip_bias_add=skip_bias_add)
+    return wrapper
+    
+    
 class BaseModel(GPTModel, MegatronModuleForCausalLM):
     def __init__(self, config, num_tokentypes=0, parallel_output=True, pre_process=True, post_process=True):
         super(BaseModel, self).__init__(config=config, num_tokentypes=num_tokentypes, parallel_output=parallel_output,
@@ -31,6 +66,7 @@ def apply_model_patch():
     megatron.model.GPTModel = GPTModel
     megatron.model.language_model.TransformerLanguageModel.forward = (seq_length_wrapper(
         megatron.model.language_model.TransformerLanguageModel.forward))
+    megatron.model.transformer.ParallelAttention.__init__ = ParallelAttention_wrapper(megatron.model.transformer.ParallelAttention.__init__)
 
 
 def post_language_model_processing(lm_output, labels, logit_weights,
