@@ -4,7 +4,7 @@ import os
 import math
 import torch
 
-from atb_llm.utils.cpu_binding import get_hbm_capacity, get_hbm_usage
+from atb_llm.utils.cpu_binding import NpuHbmInfo
 from atb_llm.utils.env import ENV
 from atb_llm.utils.log import logger, print_log
 from atb_llm.runner import ModelRunner
@@ -48,8 +48,9 @@ class PARunner:
                                         self.model.dtype,
                                         self.model.soc_info)
 
-        self.max_memory = get_hbm_capacity(self.rank, self.model.soc_info.need_nz)
-        self.init_memory = int(self.max_memory * get_hbm_usage(self.rank, self.model.soc_info.need_nz))
+        self.max_memory = NpuHbmInfo.get_hbm_capacity(self.rank, self.world_size, self.model.soc_info.need_nz)
+        self.init_memory = int(
+            self.max_memory * NpuHbmInfo.get_hbm_usage(self.rank, self.world_size, self.model.soc_info.need_nz))
         print_log(self.rank, logger.info, f'hbm_capacity(GB): {self.max_memory / (1024 ** 3)}, '
                                           f'init_memory(GB): {self.init_memory / (1024 ** 3)}')
 
@@ -109,7 +110,8 @@ class PARunner:
             max_seq_len=self.max_prefill_tokens,
             lm_head_indices=prefill_head_indices
         )
-        self.warm_up_memory = int(self.max_memory * get_hbm_usage(self.rank, self.model.soc_info.need_nz))
+        self.warm_up_memory = int(
+            self.max_memory * NpuHbmInfo.get_hbm_usage(self.rank, self.world_size, self.model.soc_info.need_nz))
         print_log(self.rank, logger.info, f'warmup_memory(GB): {self.warm_up_memory / (1024 ** 3): .2f}')
         print_log(self.rank, logger.info, "---------------end warm_up---------------")
 
@@ -127,7 +129,8 @@ class PARunner:
         dtype_size = CacheManager.get_dtype_size(self.dtype)
         total_cache_size = self.model.num_layers * cache_block_size * 2 * dtype_size
 
-        max_memory = ENV.memory_fraction * self.max_memory if batch_size != 1 else ENV.max_memory_gb * (1 << 30)
+        max_memory = ENV.memory_fraction * self.max_memory \
+            if not ENV.max_memory_gb else int(ENV.max_memory_gb) * (1 << 30)
         free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory else self.init_memory)
         print_log(self.rank, logger.info,
                   f"infer max_memory(GB): {max_memory / (1024 ** 3): .2f}, "

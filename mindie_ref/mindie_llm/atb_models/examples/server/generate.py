@@ -94,12 +94,13 @@ def generate_req(req_list, model, tokenizer,
                 cache_manager.allocate(batch)
                 if ENV.benchmark_enable:
                     import time
+                    torch.npu.synchronize()
                     prefill_start = time.time()
                     req_finished = generate_token(model, tokenizer, cache_manager, batch, max_out_length, rank)
+                    torch.npu.synchronize()
                     prefill_end = time.time()
                     prefill_time = prefill_end - prefill_start
                     benchmark_timelist.append(prefill_time)
-
                 else:
                     req_finished = generate_token(model, tokenizer, cache_manager, batch, max_out_length, rank)
 
@@ -122,9 +123,11 @@ def generate_req(req_list, model, tokenizer,
 
             if ENV.benchmark_enable:
                 import time
+                torch.npu.synchronize()
                 decode_start = time.time()
                 req_finished = generate_token(model, tokenizer, cache_manager, generate_batches[0], max_out_length,
                                               rank)
+                torch.npu.synchronize()                              
                 decode_end = time.time()
                 decode_time = decode_end - decode_start
                 benchmark_timelist.append(decode_time)
@@ -173,7 +176,7 @@ def generate_req(req_list, model, tokenizer,
             df.to_csv(benchmark_filepath, index=False)
             logger.info('-------------------performance dumped------------------------')
             df = df.drop('token_times', axis=1)
-            print(df)
+            print(df.to_markdown(index=False))
 
 
 def decode_token(req_list, tokenizer):
