@@ -82,20 +82,6 @@ def cut_bias(bias, world_size, cut_W_pack_keys=['W_pack'], cut_row_keys=['gate_p
     return state_dict_list
 
 
-def bias_correction(fp_bias, quant_weight, input_offset, deq_scale):
-    bias_correction = fp_bias.npu()/deq_scale.npu() - quant_weight.to(torch.float32).npu().sum(dim=1) * float(input_offset)
-
-    return bias_correction
-
-def process_deq_scale(deq_scale_dict):
-    new_deq_scale_dict = {}
-    for key, deq_scale in deq_scale_dict.items():
-        deq_scale = deq_scale.numpy()
-        new_deq_scale = np.frombuffer(deq_scale.tobytes(), dtype=np.int32)
-        new_deq_scale_dict.setdefault(key, torch.tensor(new_deq_scale.astype(np.int64)))
-    return new_deq_scale_dict
-
-
 if __name__ == "__main__":
     # parse args
     opts = parse_args()
@@ -104,18 +90,8 @@ if __name__ == "__main__":
     print(f"=========quant weight path:{weight_path} ==========")
     quant_weight_dict = np.load(weight_path + "/quant_weight.npy", allow_pickle=True).item()
     deq_scale_dict = np.load(weight_path + "/deq_scale.npy", allow_pickle=True).item()
-    fp_bias_dict = np.load(weight_path + "/fp_bias.npy", allow_pickle=True).item()
+    bias_dict = np.load(weight_path + "/quant_bias.npy", allow_pickle=True).item()
     input_offset_dict = np.load(weight_path + "/input_offset.npy", allow_pickle=True).item()
-
-    print(f"========= Quant Weight BiasCorrection ==========")
-    bias_dict = {}
-    for i in fp_bias_dict.keys():
-        bias_dict[i] = bias_correction(fp_bias_dict[i],
-                                       quant_weight_dict[i],
-                                       int(input_offset_dict[i]),
-                                       deq_scale_dict[i]).cpu()
-    print(f"========= Quant Weight DeqScaleCorrection ==========")
-    new_deq_scale_dict = process_deq_scale(deq_scale_dict)
 
     print(f"========= Quant Weight Cut Start ==========")
     state_quant_weight_dict_list = cut_weights(quant_weight_dict, 2, cut_W_pack_keys=['W_pack'],
@@ -125,7 +101,7 @@ if __name__ == "__main__":
     state_bias_dict_list = cut_bias(bias_dict, 2, cut_W_pack_keys=['W_pack'], cut_row_keys=['gate_proj', 'up_proj'],
                                     cut_col_keys=['o_proj', 'down_proj'], is_bias=True)
     print(f"========= Quant DeqScale Cut Start ==========")
-    state_deq_scale_dict_list = cut_bias(new_deq_scale_dict, 2, cut_W_pack_keys=['W_pack'],
+    state_deq_scale_dict_list = cut_bias(deq_scale_dict, 2, cut_W_pack_keys=['W_pack'],
                                          cut_row_keys=['gate_proj', 'up_proj'],
                                          cut_col_keys=['o_proj', 'down_proj'], is_bias=False)
 
