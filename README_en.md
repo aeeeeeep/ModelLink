@@ -237,7 +237,7 @@ Coming soon ...
       <td> 690 </td>
       <td> 796 </td>
       <td> <a href="sources/images/llama2/llama2_34b_bf16_layer12_loss_compare.png">Loss</a> </td>
-      <td> <a href="examples/llama2/pretrain_llama2_34B_ptd.sh">Train</a> </td>
+      <td> <a href="examples/llama2/pretrain_llama2_34B_ptd_16p.sh">Train</a> </td>
     </tr>
     <tr>
       <td>70B</td>

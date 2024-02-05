@@ -642,25 +642,20 @@ LLaMA2-34B/70B 训练的硬件配置:
     --hidden_size 8192 \
     --num_layers 80                                                                   
     ```
-    将Llama-2-34B权重从huggingface格式转换为AscendSpeed格式
+    将Llama-2-34B权重从huggingface格式转换为megatron格式
     ```bash
     # 配置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
-    # 转换Ascendspeed权重
-    SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
-    python $SCRIPT_PATH \
-    --input-model-dir ./codellama-34b-hf \
-    --output-model-dir ./load_ckpt \
-    --tensor-model-parallel-size 8 \
-    --pipeline-model-parallel-size 2 \
-    --make-vocab-size-divisible-by 8 \
-    --merge-mlp \
-    --type llama2-34B \
-    --num_heads 64 \
-    --num_kv_heads 8 \
-    --hidden_size 8192 \
-    --num_layers 48                                                                   
+    # 转换megatron权重
+    python tools/checkpoint/util.py --model-type GPT \
+     --loader llama2_hf \
+     --saver megatron \
+     --target-tensor-parallel-size 8 \
+     --target-pipeline-parallel-size 4 \
+     --load-dir ./codellama-34b-hf \
+     --save-dir ./load_ckpt \
+     --tokenizer-model ./llama2-70b-hf/tokenizer.model
     ```
 
 4. 准备数据集
@@ -711,7 +706,7 @@ LLaMA2-34B/70B 训练的硬件配置:
    
 5. 配置预训练脚本
 
-    LLaMA2-34B: examples/llama2/pretrain_llama2_34B_ptd.sh 
+    LLaMA2-34B: examples/llama2/pretrain_llama2_34B_ptd_16p.sh 
     ```shell
     # 设置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -733,9 +728,9 @@ LLaMA2-34B/70B 训练的硬件配置:
     
 6. 启动训练脚本
     
-    LLaMA2-34B: examples/llama2/pretrain_llama2_34B_ptd.sh
+    LLaMA2-34B: examples/llama2/pretrain_llama2_34B_ptd_16p.sh
     ```shell
-    bash examples/llama2/pretrain_llama2_34B_ptd.sh
+    bash examples/llama2/pretrain_llama2_34B_ptd_16p.sh
     ```
     LLaMA2-70B: examples/llama2/pretrain_llama2_70B_ptd.sh
     ```shell
@@ -830,7 +825,7 @@ python $SCRIPT_PATH \
 
 配置推理脚本
 
-LLaMA2-34B:`examples/llama2/generate_llama2_34B_ptd.sh`。
+LLaMA2-34B:`tasks/inference/generate_llama2_34B_ptd.sh`。
 
 LLaMA2-70B:`examples/llama2/generate_llama2_70B_ptd.sh`。
 
@@ -842,7 +837,7 @@ VOCAB_FILE=<vocabfile-path>
 
 LLaMA2-34B启动推理:
 ```shell
-bash ./examples/llama2/generate_llama2_34B_ptd.sh
+bash ./tasks/inference/generate_llama2_34B_ptd.sh
 ```
 LLaMA2-70B启动推理:
 ```shell
@@ -850,64 +845,8 @@ bash ./examples/llama2/generate_llama2_70B_ptd.sh
 ```
 
 LLaMA2-34B推理样例:
-```
-=============== Greedy Search ================
 
-You:
-how are you?
-
-AscendSpeed:
-
-I am doing well. I am happy to be here.
-I am happy to be here.
-I am happy to be here.
-I am happy to be here.
-I am happy to be here.
-I am happy to be here.
-I am happy to be here.
-I am
-==============================================
-
-Elapsed: 36.48s
-/
-================ Do Sample =================
-
-You:
-how are you?
-
-AscendSpeed:
-['is good?\nShaun, you’re a good writer. It is the truth, but the truth is also a matter of perspective. Is a matter of perspective. That is the matter. The matter is.\nThe matter.\nThe matter is.\n\n\n\n\n\n\n\n\n\n', 'are you alive?  are you okay? can you help me? do you want to? are you done? does your girlfriend know? do you need help? can you get me one? do you want to go see a movie? are you going to the mall? are you okay? are you okay']
-============================================
-
-Elapsed: 50.4s
-\
-=============== Beam Search =================
-
-You:
-how are you?
-
-AscendSpeed:
-
-I'm doing well, thanks for asking. I've been busy with work and other things, but I'm doing well.
-How about you?
-I'm doing well, thanks for asking. I've been busy with work and other things, but I'm. I'm
-=============================================
-
-Elapsed: 27.7s
-|
-======== Beam Search with sampling ==========
-
-You:
-how are you?
-
-AscendSpeed:
-
-How are you? is a common greeting in English.
-It is used to ask about the other person's well-being. It can be used in a variety of situations, such as when meeting someone for the first time, or when greeting someone you haven't seen in a while.
-=============================================
-
-Elapsed: 12.13s
-```
+![llama2-34B-generate](../../sources/images/llama2/llama2-34B-generate.png)
 
 LLaMA2-70B推理样例：
 ```

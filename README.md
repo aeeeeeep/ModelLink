@@ -238,7 +238,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> 690 </td>
       <td> 796 </td>
       <td> <a href="sources/images/llama2/llama2_34b_bf16_layer12_loss_compare.png">Loss</a> </td>
-      <td> <a href="examples/llama2/pretrain_llama2_34B_ptd.sh">训练</a> </td>
+      <td> <a href="examples/llama2/pretrain_llama2_34B_ptd_16p.sh">训练</a> </td>
     </tr>
     <tr>
       <td>70B</td>
