@@ -31,7 +31,6 @@ from transformers.activations import ACT2FN
 from transformers.configuration_utils import PretrainedConfig
 from loguru import logger
 
-
 from text_generation_server.utils.flash_attn_ascend import attention_ascend
 from text_generation_server.utils.layers import (
     TensorParallelRowLinear,
@@ -44,16 +43,6 @@ from text_generation_server.utils.layers import (
     get_linear,
 )
 from text_generation_server.utils.npu import load_atb_speed, NPUSocInfo
-
-def load_ascend_transformer():
-    ACLTRANSFORMER_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
-    if ACLTRANSFORMER_HOME_PATH is None:
-        raise RuntimeError(
-            "env ATB_SPEED_HOME_PATH not exist, source set_env.sh")
-    LIB_PATH = os.path.join(ACLTRANSFORMER_HOME_PATH, "lib/libatb_speed_torch.so")
-    print(f"load {LIB_PATH}")
-    torch.classes.load_library(LIB_PATH)
-
 
 class Chatglm2Config(PretrainedConfig):
     model_type = "chatglm2"
@@ -434,7 +423,7 @@ class FlashChatglm2Model(torch.nn.Module):
             config.hidden_size // config.num_attention_heads if config.kv_channels is None else config.kv_channels
         )
 
-        self.rotary_pos_emb = RotaryEmbedding(rotary_dim // 2, original_impl=config.original_rope, 
+        self.rotary_pos_emb = RotaryEmbedding(rotary_dim // 2, original_impl=config.original_rope,
                                               device=weights.device,
                                               dtype=config.torch_dtype)
         self.cos_embed, self.sin_embed = self.rotary_pos_emb(config.seq_length)
@@ -484,8 +473,6 @@ class FlashChatglm2Model(torch.nn.Module):
 
         self.acl_encoder_operation_inputs = [None] * 8
         self.acl_decoder_operation_inputs = [None] * 8
-        self.max_seqlen_tensor = torch.tensor([0], dtype=torch.int)
-        self.cu_seqlen_tensor_fake = torch.tensor([0], dtype=torch.int)
         self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64)
         # self.lm_head_weight = None
 
@@ -526,8 +513,7 @@ class FlashChatglm2Model(torch.nn.Module):
 
     def init_ascend_kvcache(self, kv_cache):
         if not self.ascend_kcache_id or self.ascend_kcache_id != id(kv_cache[0][0]) \
-                or not self.ascend_vcache_id or self.ascend_vcache_id != id(kv_cache[0][1]):
-            
+            or not self.ascend_vcache_id or self.ascend_vcache_id != id(kv_cache[0][1]):
             k_caches, v_caches = map(list, zip(*kv_cache))
             if self.soc_info.need_nz:
                 k_caches = [torch_npu.npu_format_cast_(k_cache, 29) for k_cache in k_caches]
@@ -554,7 +540,7 @@ class FlashChatglm2Model(torch.nn.Module):
                 lm_head_indices = torch.tensor(range(input_ids.shape[0]), dtype=torch.int64, device=input_ids.device)
             
             if self.soc_info.need_nz:
-                self.transdata_operation = torch.classes.OperationTorch.OperationTorch('TransdataOperation')
+                self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
                 self.transdata_param = json.dumps({})
                 self.transdata_operation.set_param(self.transdata_param)
 
@@ -578,13 +564,13 @@ class FlashChatglm2Model(torch.nn.Module):
             return self.acl_encoder_operation_inputs, self.acl_param_encoder
         else:
             atten_mask = torch.tensor([1], device=input_ids.device, dtype=kv_cache[0][0].dtype)
-            self.acl_encoder_operation_inputs[0] = input_ids
-            self.acl_encoder_operation_inputs[1] = cos_embed
-            self.acl_encoder_operation_inputs[2] = sin_embed
-            self.acl_encoder_operation_inputs[3] = atten_mask
-            self.acl_encoder_operation_inputs[4] = block_tables.to(torch.int32)
-            self.acl_encoder_operation_inputs[5] = slots.to(torch.int32)
-            self.acl_encoder_operation_inputs[6] = input_lengths.to(torch.int32)
+            self.acl_decoder_operation_inputs[0] = input_ids
+            self.acl_decoder_operation_inputs[1] = cos_embed
+            self.acl_decoder_operation_inputs[2] = sin_embed
+            self.acl_decoder_operation_inputs[3] = atten_mask
+            self.acl_decoder_operation_inputs[4] = block_tables.to(torch.int32)
+            self.acl_decoder_operation_inputs[5] = slots.to(torch.int32)
+            self.acl_decoder_operation_inputs[6] = input_lengths.to(torch.int32)
             self.acl_decoder_operation_inputs[7] = self.lm_head_indices_fake
 
             return self.acl_decoder_operation_inputs, self.acl_param_decoder
