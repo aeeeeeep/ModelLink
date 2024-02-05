@@ -1,4 +1,4 @@
-# Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
+# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
 import os
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -19,10 +19,10 @@ def _remove_duplicate_names(
 ) -> Dict[str, List[str]]:
     if preferred_names is None:
         preferred_names = []
-    preferred_names = set(preferred_names)
+    preferred_names = list(set(preferred_names))
     if discard_names is None:
         discard_names = []
-    discard_names = set(discard_names)
+    discard_names = list(set(discard_names))
 
     shareds = _find_shared_tensors(state_dict)
     to_remove = defaultdict(list)
