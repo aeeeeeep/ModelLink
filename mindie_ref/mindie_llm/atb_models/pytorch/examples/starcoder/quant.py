@@ -84,10 +84,7 @@ print("Current soc version: ", soc_version)
 
 #310P和910B都用该方法重定义bias
 def bias_correction(fp_bias, quant_weight, input_offset, deq_scale):
-    try:
-        _bias_correction = fp_bias.npu() / deq_scale.npu() - quant_weight.to(torch.float32).npu().sum(dim=1) * float(input_offset)
-    except:
-        return fp_bias
+    _bias_correction = fp_bias.npu() / deq_scale.npu() - quant_weight.to(torch.float32).npu().sum(dim=1) * float(input_offset)
     return _bias_correction
 
 
