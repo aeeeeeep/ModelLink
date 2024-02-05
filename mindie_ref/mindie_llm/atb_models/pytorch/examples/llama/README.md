@@ -233,8 +233,7 @@ LLaMA（Large Language Model Meta AI），由 Meta AI 发布的一个开放且�
    > 注： 每次运行前都需要 source CANN， 加速库，大模型
 
 ## 模型推理
-
-1. 切分模型权重 **首次跑模型时**，需要先对模型权重进行**切分**，切分方法如下
+1. 如果跑多卡多芯推理，需要先切分模型权重，切分方法如下：
 
 - 修改代码
 
@@ -252,10 +251,19 @@ LLaMA（Large Language Model Meta AI），由 Meta AI 发布的一个开放且�
   ```
 
 2. **执行模型推理**
-
 - 开启CPU Performance模式以提高模型推理性能（首次开启时，根据提示安装依赖）
   ```
   cpupower frequency-set -g performance
+  ```
+
+- 在800I A2执行推理时，可以通过**绑核**以达到最佳性能
+  ```
+  # 进入./pytorch/examples/atb_speed_sdk/，安装sdk依赖
+  cd ../atb_speed_sdk/
+  pip install .
+
+  # 进入run.sh，设置环境变量BIND_CPU为1（默认为0，不绑核）
+  export BIND_CPU=1
   ```
 
 - 配置必选参数：最大输入输出长度
