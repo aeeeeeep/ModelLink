@@ -41,7 +41,7 @@
 #include "llama/model/flash_attention_model.h"
 #include "llama_adapter/model/adapter_model.h"
 #include "llama_pa/model/paged_attention_model.h"
-#include "llama_pa/model/quant_paged_attention_model.h"
+#include "llama_pa/model/paged_attention_common_model.h"
 #include "llama_parallel/model/decoder_model.h"
 #include "minigpt4/model/fusion_encoder_model.h"
 #include "minigpt4/model/fusion_model.h"
@@ -138,8 +138,8 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::llama::FlashAttentionModel>(param);
     } else if (modelName_ == "llama_pa_model" || modelName_ == "llama_65b_pa_model") {
         model_ = std::make_shared<atb_speed::llama_pa::PAModel>(param);
-    } else if (modelName_ == "llama_quant_pa_model") {
-        model_ = std::make_shared<atb_speed::llama_pa::QuantPAModel>(param);
+    } else if (modelName_ == "llama_small_pa_model") {
+        model_ = std::make_shared<atb_speed::llama_pa::CommonPAModel>(param);
     } else if (modelName_ == "llama_parallel_decoder_model") {
         model_ = std::make_shared<atb_speed::llama_parallel::DecoderModel>(param);
     } else if (modelName_ == "llama_adapter_encoder_model") {
