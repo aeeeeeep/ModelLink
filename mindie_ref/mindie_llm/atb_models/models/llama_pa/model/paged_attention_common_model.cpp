@@ -123,6 +123,7 @@ int64_t CommonPAModel::Param::FromString(const std::string &param)
                   << ", layerNum:" << layerNum << ", transposedWeight:" << transposedWeight << ", rank:" << rank
                   << ", rankSize:" << rankSize << ", backend: " << backend << ", isLmHeadParallel:" << isLmHeadParallel
                   << ", isBF16:" << isBF16 << ", is Quant:" << isQuant;
+    return atb::NO_ERROR;
 }
 
 CommonPAModel::CommonPAModel(const std::string &param) : Model("LlamaCommonPAModel", param)
