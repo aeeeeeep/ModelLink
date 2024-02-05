@@ -1,7 +1,7 @@
 # original model path
-input_dir="./llama2-7b"
+input_dir="./codellama"
 # cutted model path
-output_dir="./llama2-7b_parallel"
+output_dir="./codellama_cutted"
 # cutting parameters
 cut_row_keys_=('q_proj','k_proj','v_proj','gate_proj','up_proj')
 cut_col_keys_=('o_proj','down_proj')

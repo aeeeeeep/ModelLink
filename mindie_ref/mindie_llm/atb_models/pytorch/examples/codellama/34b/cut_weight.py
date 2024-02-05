@@ -41,12 +41,12 @@ if __name__ == "__main__":
         description="Cut Model weights.")
     parser.add_argument(
         "--input_path",
-        default="/data/models/llama2-7b",
+        default="/data/models/codellama",
         help="Location of Model weights, which contains model folders",
     )
     parser.add_argument(
         "--output_path",
-        default='/data/models/llama2-7b-part_model_2',
+        default='/data/models/codellama-part',
         help="Location to write the part weights",
     )
     parser.add_argument(

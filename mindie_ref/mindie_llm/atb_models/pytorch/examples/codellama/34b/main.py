@@ -4,11 +4,10 @@ import json
 import sys
 import time
 import itertools
-import torch
-
 from collections import defaultdict
 
 import numpy as np
+import torch
 import eval
 from atb_speed.common.ceval.base import CEvalTest
 from atb_speed.common.config import atb_speed_config
