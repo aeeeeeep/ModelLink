@@ -46,6 +46,7 @@ from text_generation_server.utils.npu import load_atb_speed, NPUSocInfo
 
 from .config import ChatglmConfig
 
+
 class RMSNorm(nn.Module):
     def __init__(self, prefix, weights, eps=1e-6):
         """
@@ -73,6 +74,7 @@ class RMSNorm(nn.Module):
 
         return self.weight * hidden_states, residual
 
+
 # for parallel weight cut
 def cut_fp_tensors(model_cfg, tensor, tp_size):
     cut_tensor_list = []
@@ -94,6 +96,7 @@ def cut_fp_tensors(model_cfg, tensor, tp_size):
                             for i in range(tp_size)], dim=0)
     return cut_tensor_list
 
+
 def load_qkv(config, prefix: str, weights):
     hidden_size_per_attention_head = config.hidden_size // config.num_attention_heads
     num_attention_heads_per_partition = config.num_attention_heads
@@ -105,6 +108,13 @@ def load_qkv(config, prefix: str, weights):
     bias = weights.get_weights_col_packed_qkv_glm(prefix, None, q_size, kv_size, True)
     linear = get_linear(weight, bias, config.quantize)
 
+    return TensorParallelColumnLinear(linear)
+
+
+def load_gate_up_proj(config, prefix, weights, size):
+    weight = weights.get_gate_up_glm(prefix, size)
+    bias = None
+    linear = get_linear(weight, bias, config.quantize)
     return TensorParallelColumnLinear(linear)
 
 
@@ -196,12 +206,6 @@ class FlashChatglmAttention(torch.nn.Module):
 
         return self.o_proj(attn_output.view(-1, self.num_heads * self.head_size))
 
-def load_gate_up_proj(config, prefix, weights, size):
-    weight = weights.get_gate_up_glm(prefix, size)
-    bias = None
-    linear = get_linear(weight, bias, config.quantize)
-    return TensorParallelColumnLinear(linear)
-
 
 class MLP(nn.Module):
     def __init__(self, prefix, config, weights):
@@ -287,6 +291,7 @@ class RotaryEmbedding(nn.Module):
         return self.forward_impl(
             max_seq_len, self.dim, dtype=self.inv_freq.dtype, device=self.inv_freq.device
         )
+
 
 class FlashDecoderLayer(nn.Module):
     def __init__(self, layer_id, config, weights):
@@ -473,8 +478,10 @@ class FlashChatglmModel(torch.nn.Module):
         self.lm_head_indices_fake = self.lm_head_indices_fake.to(self.state_dict()["embed_tokens.weight"].device)
 
     def init_ascend_kvcache(self, kv_cache):
-        if not self.ascend_kcache_id or self.ascend_kcache_id != id(kv_cache[0][0]) \
-            or not self.ascend_vcache_id or self.ascend_vcache_id != id(kv_cache[0][1]):
+        kv_cache_exist = self.ascend_kcache_id and self.ascend_vcache_id
+        if not kv_cache_exist or \
+            self.ascend_kcache_id != id(kv_cache[0][0]) or \
+            self.ascend_vcache_id != id(kv_cache[0][1]):
             k_caches, v_caches = map(list, zip(*kv_cache))
             if self.soc_info.need_nz:
                 k_caches = [torch_npu.npu_format_cast_(k_cache, 29) for k_cache in k_caches]
@@ -609,9 +616,9 @@ class FlashChatglmForCausalLM(torch.nn.Module):
         position_ids: torch.Tensor,  #
         is_prefill: bool,  # 是否prefill阶段
         kv_cache: List[Tuple[torch.Tensor, torch.Tensor]],  # kv cache,
-        block_tables: torch.Tensor,  #  每个requests 所有的block tables
-        slots: torch.Tensor,  #  每个requests 所有的slots
-        input_lengths: torch.Tensor,  #  每个 request的k/v长度
+        block_tables: torch.Tensor,  # 每个requests 所有的block tables
+        slots: torch.Tensor,  # 每个requests 所有的slots
+        input_lengths: torch.Tensor,  # 每个 request的k/v长度
         max_seq_len: int,  # 最长的request长度
         lm_head_indices: Optional[torch.Tensor] = None,  # prefill阶段使用，取的生成token的偏移
     ) -> torch.Tensor:

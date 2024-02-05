@@ -25,7 +25,7 @@ class ChatglmConfig(PretrainedConfig):
             kv_channels=128,
             intermediate_size=11008,
             num_layers=28,
-            multi_query_group_num = 2,
+            multi_query_group_num=2,
             num_attention_heads=32,
             hidden_act="silu",
             seq_length=8192,
@@ -48,7 +48,7 @@ class ChatglmConfig(PretrainedConfig):
         self.initializer_range = initializer_range
         self.layernorm_epsilon = layernorm_epsilon
         self.use_cache = use_cache
-        
+
         super().__init__(
             eos_token_id=eos_token_id,
             tie_word_embeddings=tie_word_embeddings,

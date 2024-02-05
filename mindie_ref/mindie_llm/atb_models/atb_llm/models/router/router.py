@@ -158,6 +158,7 @@ class BaichuanRouter(BaseRouter):
             use_fast=False
         )
 
+
 @dataclass
 class ChatglmRouter(BaseRouter):
 
