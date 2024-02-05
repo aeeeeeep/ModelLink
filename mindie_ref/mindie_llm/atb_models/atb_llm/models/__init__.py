@@ -11,6 +11,7 @@ def get_model(model_name_or_path: str,
               is_flash_causal_lm: bool = True,
               revision: Optional[str] = None,
               trust_remote_code: bool = True,
+              use_refactor: bool = False,
               ):
     config = PretrainedConfig.from_pretrained(model_name_or_path,
                                               revision=revision,
@@ -23,6 +24,7 @@ def get_model(model_name_or_path: str,
         is_flash_causal_lm,
         revision,
         trust_remote_code,
+        use_refactor,
         config)
     config = router_ins.config
 

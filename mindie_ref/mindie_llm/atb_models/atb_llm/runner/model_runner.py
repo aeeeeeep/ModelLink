@@ -37,7 +37,7 @@ class ModelRunner:
             bind_cpus(world_size, rank, ratio=1.0)
         self.model_cls, self.config, self.tokenizer = \
             get_model(model_name_or_path, quantize, max_position_embeddings, is_flash_causal_lm,
-                      revision, trust_remote_code)
+                      revision, trust_remote_code, use_refactor)
 
         setattr(self.config, "use_refactor", use_refactor)
 
