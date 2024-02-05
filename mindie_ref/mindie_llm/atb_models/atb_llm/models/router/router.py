@@ -105,7 +105,6 @@ class LlamaRouter(BaseRouter):
     def model_version(self):
         """
         次级模型:此处用于区分7b、13b,以small为浮点量化归一版本的tag
-
         """
         if not self.use_refactor and self.ori_config.num_hidden_layers in [32, 40]:
             model_ver = "small"
