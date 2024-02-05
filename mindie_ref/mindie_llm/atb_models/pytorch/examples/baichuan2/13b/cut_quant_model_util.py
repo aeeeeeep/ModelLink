@@ -91,7 +91,6 @@ if __name__ == "__main__":
     quant_weight_dict = np.load(weight_path + "/quant_weight.npy", allow_pickle=True).item()
     deq_scale_dict = np.load(weight_path + "/deq_scale.npy", allow_pickle=True).item()
     bias_dict = np.load(weight_path + "/quant_bias.npy", allow_pickle=True).item()
-    input_offset_dict = np.load(weight_path + "/input_offset.npy", allow_pickle=True).item()
 
     print(f"========= Quant Weight Cut Start ==========")
     state_quant_weight_dict_list = cut_weights(quant_weight_dict, 2, cut_W_pack_keys=['W_pack'],
