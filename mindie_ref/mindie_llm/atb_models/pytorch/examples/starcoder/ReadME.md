@@ -313,6 +313,28 @@ StarCoder模型是在The Stack (v1.2)的80+种编程语言上训练的15.5B参�
   export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
   ```
 
+# 量化Readme
+
+1. 先将浮点权重量化
+
+   ```
+   python quant.py --model_path <浮点权重路径> --output_path <量化权重路径>
+   ```
+
+2. 将浮点权重，量化权重进行切分
+
+   ```
+   transformers_package_path=$(python3 -c 'import transformers; import os; print(os.path.dirname(transformers.__file__))')
+   cp modeling_gpt_bigcode_simple.py $transformers_package_path/models/gpt_bigcode/modeling_gpt_bigcode.py
+   python cut_model_util.py --input_path  <浮点权重路径>   --output_path <浮点多卡权重路径> 
+   python cut_quant_model_util.py  --input_path <量化权重路径> --output_path <量化多卡权重路径> 
+   ```
+
+3.  运行量化modeling
+
+   将 `run.sh` 中的 `cp $SCRIPT_DIR/modeling_gpt_bigcode_simple.py $transformers_package_path/models/gpt_bigcode/modeling_gpt_bigcode.py` 
+   改为 ``cp  $SCRIPT_DIR/patch/model/modeling_gpt_bigcode_model_quant_310p.py $transformers_package_path/models/gpt_bigcode/modeling_gpt_bigcode.py``
+
 # 模型推理性能
 
 | 硬件形态 | 模型 | Batch | 首token(ms)     |非首token(ms)      |
