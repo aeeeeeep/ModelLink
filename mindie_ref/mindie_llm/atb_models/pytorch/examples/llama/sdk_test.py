@@ -40,7 +40,7 @@ class LlamaLMParallel(ParallelLauncher):
     """
     def init_model(self):
         tokenizer_path = os.path.join(self.model_path, "tokenizer")
-        part_model_path = os.path.join(self.model_pathk, "part_model", str(self.local_rank))
+        part_model_path = os.path.join(self.model_path, "part_model", str(self.local_rank))
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True, use_fast=False,
                                                   padding_side="left")
         model = AutoModelForCausalLM.from_pretrained(part_model_path, trust_remote_code=True,
