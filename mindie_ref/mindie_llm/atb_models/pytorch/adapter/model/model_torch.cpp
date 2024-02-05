@@ -60,6 +60,10 @@
 #include "internlm/20b/model/flash_attention_rope_model.h"
 #include "internlm/7b/model/flash_attention_rope_model.h"
 #include "codellama/34b/model/flash_attention_rope_model.h"
+#include "starcoder/model/flash_attention_model.h"
+#include "starcoder/model/flash_attention_quant_model.h"
+#include "starcoder/model/paged_attention_model.h"
+#include "starcoder/model/paged_attention_quant_model.h"
 #include "atb_speed/utils/model_factory.h"
 #include "telechat/model/float_model.h"
 #include "telechat/model/quant_model.h"
@@ -194,6 +198,14 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::codellama_34b::FlashAttentionRopeModel>(param);
     } else if (modelName_ == "gptneox_20b_fa_kvcache_rope_model") {
         model_ = std::make_shared<atb_speed::gptneox_20b::FaKvCacheRopeModel>(param);
+    } else if (modelName_ == "starcoder_fa_parallel_model") {
+        model_ = std::make_shared<atb_speed::star_coder::FlashAttentionModel>(param);
+    } else if (modelName_ == "starcoder_fa_parallel_quant_model") {
+        model_ = std::make_shared<atb_speed::star_coder::FlashAttentionQuantModel>(param);
+    } else if (modelName_ == "starcoder_pa_model") {
+        model_ = std::make_shared<atb_speed::star_coder::PAModel>(param);
+    } else if (modelName_ == "starcoder_pa_quant_model") {
+        model_ = std::make_shared<atb_speed::star_coder::PAQuantModel>(param);
     } else if (modelName_ == "telechat_float_model") {
         model_ = std::make_shared<atb_speed::telechat::FloatFAModel>(param);
     } else if (modelName_ == "telechat_quant_model") {
