@@ -16,7 +16,6 @@
 #include "paged_attention_common_model.h"
 
 #include "atb/atb_infer.h"
-#include "models/llama_pa/layer/pa_anti_layer.h"
 #include "models/llama_pa/layer/pa_common_layer.h"
 #include "nlohmann/json.hpp"
 #include "parallel_lmhead.h"
