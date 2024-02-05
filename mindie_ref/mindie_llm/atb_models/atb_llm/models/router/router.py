@@ -17,6 +17,7 @@ class BaseRouter:
     is_flash_causal_lm: bool = True
     revision: Optional[str] = None
     trust_remote_code: bool = None
+    use_refactor: bool = False
 
     # 初始化默认读取的autoconfig，各个模型可能会自定义，self.config会返回后续使用的config，注意不要循环依赖
     ori_config: Any = None
@@ -99,6 +100,18 @@ class BaseRouter:
 
 @dataclass
 class LlamaRouter(BaseRouter):
+
+    @property
+    def model_version(self):
+        """
+        次级模型:此处用于区分7b、13b,以small为浮点量化归一版本的tag
+
+        """
+        if not self.use_refactor and self.ori_config.num_hidden_layers in [32, 40]:
+            model_ver = "small"
+        else:
+            model_ver = ""
+        return model_ver
 
     @property
     def config(self):
