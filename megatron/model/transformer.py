@@ -25,11 +25,11 @@ from megatron.core.tensor_parallel import (
 )
 from megatron.core.parallel_state import get_tensor_model_parallel_group, get_tensor_and_expert_parallel_group
 
-from ascendspeed.ops.gen_attention_mask import GenAttentionMask
-from ascendspeed.ops.rope import Rope
-from ascendspeed.ops.fast_softmax import FastSoftMax
-from ascendspeed.ops.bmm1 import Bmm1
-from ascendspeed.ops.bmm2 import Bmm2
+from ascendspeed.ops.unpad_gen_attention_mask import UnpadGenAttentionMask
+from ascendspeed.ops.unpad_rope import UnpadRope
+from ascendspeed.ops.unpad_softmax import UnpadSoftMax
+from ascendspeed.ops.unpad_bmm1 import UnpadBmm1
+from ascendspeed.ops.unpad_bmm2 import UnpadBmm2
 from ascendspeed.ops.unpad_seqlen import UnpadSeqLen
 from ascendspeed.ops.pad_seqlen import PadSeqLen
 
@@ -838,10 +838,10 @@ class UnpadParallelAttention(ParallelAttention):
                  attn_mask_type=AttnMaskType.padding)
         args = get_args()
         self.use_unpad = args.use_unpad
-        self.bmm1 = Bmm1(self.num_attention_heads_per_partition)
-        self.bmm2 = Bmm2(self.num_attention_heads_per_partition)
-        self.fast_softmax = FastSoftMax()
-        self.rope = Rope()
+        self.bmm1 = UnpadBmm1(self.num_attention_heads_per_partition)
+        self.bmm2 = UnpadBmm2(self.num_attention_heads_per_partition)
+        self.unpad_softmax = UnpadSoftMax()
+        self.rope = UnpadRope()
         self.hidden_size_per_partition = self.hidden_size_per_attention_head * self.num_attention_heads_per_partition
         self.norm_factor = math.sqrt(self.hidden_size_per_attention_head)
 
@@ -903,7 +903,7 @@ class UnpadParallelAttention(ParallelAttention):
         # ===================================
         attention_scores.masked_fill_(attention_mask, -10000.0)
         attention_scores = attention_scores * (1.0 / self.norm_factor)
-        attention_scores = self.fast_softmax(attention_scores, seq_lengths, self.num_attention_heads_per_partition)
+        attention_scores = self.unpad_softmax(attention_scores, seq_lengths, self.num_attention_heads_per_partition)
 
         # ===================================
         # Context layer. [sq, b, hp]
@@ -1580,7 +1580,7 @@ class ParallelTransformer(MegatronModule):
         world_size = mpu.get_tensor_model_parallel_world_size()
         self.num_attention_heads_per_partition = core.utils.divide(
             config.num_attention_heads, world_size)
-        self.genAttentionMask = GenAttentionMask(self.num_attention_heads_per_partition)
+        self.genAttentionMask = UnpadGenAttentionMask(self.num_attention_heads_per_partition)
 
         def build_layer(layer_number):
             if args.transformer_impl == 'local':
