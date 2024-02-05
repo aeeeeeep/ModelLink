@@ -21,11 +21,12 @@
 import math
 from typing import List, Optional, Tuple, Union
 
-import torch
-import torch_npu
 import os
 import json
 import sys
+import torch
+import torch_npu
+
 pwd = os.path.realpath(os.path.dirname(__file__))
 sys.path.append(pwd)
 
@@ -189,6 +190,7 @@ class LlamaDynamicNTKScalingRotaryEmbedding(LlamaRotaryEmbedding):
         self.register_buffer("cos_cached", emb.cos()[None, None, :, :].to(dtype), persistent=False)
         self.register_buffer("sin_cached", emb.sin()[None, None, :, :].to(dtype), persistent=False)
 
+
 class AscendRotaryEmbedding(LlamaRotaryEmbedding):
     def __init__(self, dim, max_position_embeddings=2048, base=10000, device=None):
         super().__init__(dim, max_position_embeddings, base, device)
@@ -206,6 +208,7 @@ class AscendRotaryEmbedding(LlamaRotaryEmbedding):
             self.cos_cached = self.cos_cached.to(x.device)
             self.sin_cached = self.sin_cached.to(x.device)
         return self.cos_cached, self.sin_cached
+
 
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
