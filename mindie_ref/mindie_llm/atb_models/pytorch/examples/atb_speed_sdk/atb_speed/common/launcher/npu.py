@@ -44,7 +44,6 @@ class Launcher(BaseLauncher):
         super().__init__(device_ids, model_path, options)
         self.soc_info = NPUSocInfo()
         self.fit_npu(self.model)
-        CPUBinder
 
     @staticmethod
     def set_torch_env(device_ids, options: Dict = None):
@@ -98,6 +97,7 @@ class Launcher(BaseLauncher):
         """
         cpu_binder = CPUBinder(self.logger)
         cpu_binder.bind_cpus(self.device_id_list, self.local_rank, 1.0)
+        self.logger.info("Bind cpu successfully!")
 
 
 class ParallelLauncher(Launcher):

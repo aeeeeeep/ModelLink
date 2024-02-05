@@ -37,7 +37,7 @@ static const uint64_t IN_TENSOR_COUNT = 6;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 
 template <class T>
-atb::Status CreateLmHead(const LmHeadParam &param, atb::Operation **operation, T config)
+atb::Status CreateLmHead(const LmHeadParam &param, atb::Operation **operation, T config, atb_speed::common::LinearParallelType parallelType)
 {
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;
@@ -58,7 +58,7 @@ atb::Status CreateLmHead(const LmHeadParam &param, atb::Operation **operation, T
         gatherNode.outTensorIds = {config.INTERMEDIATE_GATHER_OUT};
     }
 
-    if (param.linearParallelParam.parallelType == ROW_PARALLEL) {
+    if (parallelType == ROW_PARALLEL) {
         atb::Node &sliceNode = opGraph.nodes.at(nodeId++);
         atb::infer::SliceParam slicePassParam;
         slicePassParam.offsets = {0, 0, param.hiddenSizePerAttentionHead * param.linearParallelParam.rank};
@@ -71,15 +71,15 @@ atb::Status CreateLmHead(const LmHeadParam &param, atb::Operation **operation, T
     atb::Node &linearParallelNode = opGraph.nodes.at(nodeId++);
     LinearParallel(param.linearParallelParam, &linearParallelNode.operation);
     linearParallelNode.inTensorIds = {
-        param.linearParallelParam.parallelType == ROW_PARALLEL ? config.INTERMEDIATE_SLICE_OUT : \
+        parallelType == ROW_PARALLEL ? config.INTERMEDIATE_SLICE_OUT : \
             param.gatherAhead ? config.INTERMEDIATE_GATHER_OUT : LmHeadTensorIdx::IN_HIDDENSTATES,
         LmHeadTensorIdx::IN_WEIGHT, LmHeadTensorIdx::IN_SCALE, LmHeadTensorIdx::IN_OFFSET, LmHeadTensorIdx::IN_DESCALE};
     linearParallelNode.outTensorIds = {
-        param.linearParallelParam.parallelType == COLUMN_PARALLEL ? \
+        parallelType == COLUMN_PARALLEL ? \
             config.INTERMEDIATE_LINEAR_PARALLEL_OUT : LmHeadTensorIdx::OUT_LOGITS
     };
 
-    if (param.linearParallelParam.parallelType == COLUMN_PARALLEL) {
+    if (parallelType == COLUMN_PARALLEL) {
         atb::Node &transposeNode = opGraph.nodes.at(nodeId++);
         atb::infer::TransposeParam transposeParam;
         if (param.unpadInputs) {
@@ -97,7 +97,7 @@ atb::Status CreateLmHead(const LmHeadParam &param, atb::Operation **operation, T
         outTensorDescs.at(0) = inTensorDescs.at(0);
         auto dimLast = inTensorDescs.at(0).shape.dimNum - 1;
         if (param.gatherAhead) {
-            outTensorDescs.at(0).shape.dims[param.unpadInputs ? 0 : 1] = inTensorDescs.at(2).shape.dims[0];
+            outTensorDescs.at(0).shape.dims[param.unpadInputs ? 0 : 1] = inTensorDescs.at(5).shape.dims[0];
         }
         outTensorDescs.at(0).shape.dims[dimLast] \
             = inTensorDescs.at(1).shape.dims[0] * param.linearParallelParam.worldSize;
@@ -150,13 +150,13 @@ atb::Status LmHead(const LmHeadParam &param_, atb::Operation **operation)
 {
     if (param_.linearParallelParam.worldSize <= 1) {
         LmHeadNoParallelConfig lmHeadNoParallelConfig;
-        return CreateLmHead(param_, operation, lmHeadNoParallelConfig);
+        return CreateLmHead(param_, operation, lmHeadNoParallelConfig, UNDEFINED);
     } else if (param_.linearParallelParam.parallelType == ROW_PARALLEL) {
         LmHeadRowParallelConfig lmHeadRowParallelConfig;
-        return CreateLmHead(param_, operation, lmHeadRowParallelConfig);
+        return CreateLmHead(param_, operation, lmHeadRowParallelConfig, ROW_PARALLEL);
     } else if (param_.linearParallelParam.parallelType == COLUMN_PARALLEL) {
         LmHeadColumnParallelConfig lmHeadColumnParallelConfig;
-        return CreateLmHead(param_, operation, lmHeadColumnParallelConfig);
+        return CreateLmHead(param_, operation, lmHeadColumnParallelConfig, COLUMN_PARALLEL);
     } else {
         ATB_LOG(ERROR) << "LmHead operation doesn't support parallelType: " << param_.linearParallelParam.parallelType;
         return atb::ERROR_INVALID_PARAM;
