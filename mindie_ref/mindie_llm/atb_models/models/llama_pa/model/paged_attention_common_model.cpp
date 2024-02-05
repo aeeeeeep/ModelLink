@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "pa_common_model.h"
+#include "paged_attention_common_model.h"
 
 #include "atb/atb_infer.h"
 #include "models/llama_pa/layer/pa_anti_layer.h"
