@@ -19,8 +19,8 @@
 #include "nlohmann/json.hpp"
 
 #include "atb_speed/utils/operation_util.h"
-#include "layers/parallel_layer_v2.h"
 #include "models/baichuan2/13b/layer/flash_attention_layer.h"
+#include "operations/lmhead.h"
 
 namespace atb_speed {
 namespace baichuan2_13b {
@@ -30,7 +30,7 @@ const int FINAL_NORM_NODE_WEIGHT_COUNT = 1;
 const int OUT_LM_HEAD_WEIGHT_COUNT = 1;
 const int OPERATION_COUNT_BEFORE_LAYER = 1;
 const int INTERNAL_TENSOR_COUNT_BEFORE_LAYER = 1;
-const int OPERATION_COUNT_AFTER_LAYER = 4;
+const int OPERATION_COUNT_AFTER_LAYER = 2;
 
 enum InTensorId : int {
     IN_TENSOR_INPUT_IDS = 0,
@@ -89,7 +89,7 @@ atb::Status FlashAttentionModel::InferShape(const std::vector<atb::TensorDesc> &
     outTensorDescs.at(0).shape.dimNum = 3;
     outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
     outTensorDescs.at(0).shape.dims[1] = 1; // inTensorDescs.at(0).shape.dims[1];  [batch,1,logits]
-    outTensorDescs.at(0).shape.dims[2] = outDim;
+    outTensorDescs.at(0).shape.dims[2] = outDim * param_.rankSize;
 
     return atb::NO_ERROR;
 }
@@ -161,50 +161,32 @@ int64_t FlashAttentionModel::BuildGraph()
     finalNormNode.operation.reset(op);
     const int finalLayerNormWeightTensorId =
         graph_.weightTensors.size() - FINAL_NORM_NODE_WEIGHT_COUNT - OUT_LM_HEAD_WEIGHT_COUNT;
-    const int finalLayerNormOutTensorId = internalTensorSize - 3;
+    const int finalLayerNormOutTensorId = internalTensorSize - 1;
     finalNormNode.inTensors = {firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId)};
     finalNormNode.outTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId)};
-    //
-    auto &gatherNode = graph_.nodes.at(nodeId++);
-    atb::infer::GatherParam gatherParam;
-    gatherParam.axis = 1;
-    CREATE_OPERATION(gatherParam, &op);
-    gatherNode.operation.reset(op);
-    const int gatherOutTensorId = internalTensorSize - 2;
-    gatherNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
-                            &graph_.inTensors.at(IN_FINAL_NORM_SLICE_OFFSET)};
-    gatherNode.outTensors = {&graph_.internalTensors.at(gatherOutTensorId)};
 
-    //
-    const int hiddenSize = param_.headNum * param_.dk;
-    auto &qPassSliceNode = graph_.nodes.at(nodeId++);
-    atb::infer::SliceParam slicePassParam;
-    slicePassParam.offsets = {0, 0, hiddenSize * param_.rank};
-    slicePassParam.size = {-1, -1, hiddenSize};
-    CREATE_OPERATION(slicePassParam, &op);
-    qPassSliceNode.operation.reset(op);
-    const int qPassSliceNodeOutTensorId = internalTensorSize - 1;
-    qPassSliceNode.inTensors = {&graph_.internalTensors.at(gatherOutTensorId)};
-    qPassSliceNode.outTensors = {&graph_.internalTensors.at(qPassSliceNodeOutTensorId)};
-
-    //
-    auto &outLinearNode = graph_.nodes.at(nodeId++);
-    atb_speed::common::ParallelParamV2 outLinearParm;
-    outLinearParm.commParam.rank = param_.rank;
-    outLinearParm.commParam.rankSize = param_.rankSize;
-    outLinearParm.isBias = false;
-    outLinearParm.commParam.backend = param_.backend;
-    atb_speed::common::RowParallelLinearV2(outLinearParm, &op);
-    outLinearNode.operation.reset(op);
+    auto &lmHeadNode = graph_.nodes.at(nodeId++);
+    atb_speed::common::LmHeadParam lmHeadParam;
+    lmHeadParam.unpadInputs = !param_.isFA;
+    lmHeadParam.gatherAhead = param_.isPrefill;
+    lmHeadParam.linearParallelParam.fusionLinearParam.quantType = false; // LmHead未接入量化
+    if (param_.rankSize > 1) {
+        lmHeadParam.linearParallelParam.parallelType = atb_speed::common::COLUMN_PARALLEL;
+        lmHeadParam.linearParallelParam.rank = param_.rank;
+        lmHeadParam.linearParallelParam.worldSize = param_.rankSize;
+        lmHeadParam.linearParallelParam.backend = param_.backend;
+    }
+    LmHead(lmHeadParam, &op);
+    lmHeadNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
-    outLinearNode.inTensors = {&graph_.internalTensors.at(qPassSliceNodeOutTensorId),
-                               &graph_.weightTensors.at(finalLinearWeightTensorId),
-                               &graph_.internalTensors.at(IN_HOLDER),
-                               &graph_.internalTensors.at(IN_HOLDER),
-                               &graph_.internalTensors.at(IN_HOLDER),
-                               &graph_.internalTensors.at(IN_HOLDER),
-                               &graph_.internalTensors.at(IN_HOLDER)};
-    outLinearNode.outTensors = {&graph_.outTensors.at(OUT_TENSOR_HIDDEN_STATES)};
+    lmHeadNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
+                            // shape: [vocabSizePerRank, hiddenSize]
+                            &graph_.weightTensors.at(finalLinearWeightTensorId),
+                            // LmHead未接入量化，量化权重使用placeholder代替
+                            &graph_.inTensors.at(IN_HOLDER), &graph_.inTensors.at(IN_HOLDER),
+                            &graph_.inTensors.at(IN_HOLDER), &graph_.inTensors.at(IN_FINAL_NORM_SLICE_OFFSET)};
+    // shape: FA: [batchSize, seqLen, vocabSize] PA: [seqLen, vocabSize]
+    lmHeadNode.outTensors = {&graph_.outTensors.at(OUT_TENSOR_HIDDEN_STATES)};
     return atb::NO_ERROR;
 }
 

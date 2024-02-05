@@ -159,28 +159,73 @@
        {"input": "根据给定的故事情节编写结局。以下是一篇故事的示例，故事情节应该具有足够的信息以使参与者编写自己的结局。“小明和小红是俩好朋友，他们一起长大，彼此之间的友谊非常稳固。他们的家庭都住在同一个小区，而且也是邻居。自从小明的父亲因为工作原因要外派到国外，小明便非常的寂寞。夜里，小明会偷偷地默默地流泪，每当他想起小红时，他就更加难过。小红察觉到小明的变化之后，决定在小明的父亲离开之前做点什么来让他感到开心一些。"}
        {"input": "以下是一段两人的对话内容：小明：老师李，我这次数学考试考了多少分？老师李：小明，你考了60分。小明：60分？我怎么可能考这么低分啊！老师李：你平时上课不认真，不做作业，只顾着玩游戏，这是应得的结果。小明：可是我可以补考吗？老师李：可以，但是你必须得用这段时间好好复习，不能再浪费时间了。根据这段对话内容回答问题：小明为什么会考这么低的分数？"}
        ```
-       执行推理脚本
+       **执行推理脚本**
+       
+       1. 修改`ModelLink/mindie_ref/mindie_llm/atb_models/pytorch/examples/telechat/run.sh`脚本中
+            - 浮点权重路径: `FLOAT_MODEL_PATH`
+            - 浮点切分权重路径: `FLOAT_PART_MODEL_PATH`
+            - 量化权重路径: `QUANT_MODEL_PATH`
+            - 量化切分权重路径: `QUANT_PART_MODEL_PATH`
+            - 问题文件路径: `INPUT_JSON_PATH`
+            - 答案文件路径: `OUTPUT_JSON_PATH`
+            - 运行卡ID: `DEVICE` 
        ```bash
-       cd ModelLink/mindie_ref/mindie_llm/atb_models/pytorch/examples/telechat
-       cp modeling_telechat_anti.py $Telechat_anti_float_path/modeling_telechat.py
-       python3 run_precision.py --jsonl_path=xx --model_path=xx --quant_path=xx
+       # 单卡量化推理
+       bash run.sh --run_performance=0 --run_parallel=0 --run_quant=1
+      
+       # 多卡量化切分并推理
+       bash run.sh --run_performance=0 --run_parallel=1 --run_quant=1 --cut_quant
+       
+       # 多卡量化推理（跳过切分）
+       bash run.sh --run_performance=0 --run_parallel=1 --run_quant=1
+
+       # 单卡浮点推理
+       bash run.sh --run_performance=0 --run_parallel=0 --run_quant=0
+       # 多卡浮点切分并推理
+       bash run.sh --run_performance=0 --run_parallel=1 --run_quant=0 --cut_float
+       # 多卡浮点推理（跳过切分）
+       bash run.sh --run_performance=0 --run_parallel=1 --run_quant=0
        ```
        - 命令参数说明：       
-         -   `--jsonl_path`：按规定格式编辑完成的jsonl文件路径
-         -   `--model_path`：anti outlier调优后的FP16权重，即$Telechat_anti_float_path
-         -   `--quant_path`：int8量化权重，即$Telechat_quant_path
+         -   `--run_performance`：为0时运行精度测试，为1时运行性能测试
+         -   `--run_parallel`：为0时单卡运行，为1时双卡运行
+         -   `--run_quant`：为0时运行浮点模型，为1时运行量化模型
+         -   `--cut_quant`: 将antioutlier浮点权重切分，并同时切分量化权重
          
    **效果方面，完成了和基于A10卡模型量化效果对齐**
  
 2. 开始性能验证
 
-   ```
-   python3 run_perf.py --model_path=xx --quant_path=xx
-   ```
+   a. 修改`ModelLink/mindie_ref/mindie_llm/atb_models/pytorch/examples/telechat/run.sh`脚本中
+      - 浮点权重路径: `FLOAT_MODEL_PATH`
+      - 浮点切分权重路径: `FLOAT_PART_MODEL_PATH`
+      - 量化权重路径: `QUANT_MODEL_PATH`
+      - 量化切分权重路径: `QUANT_PART_MODEL_PATH`
+      - 问题文件路径: `INPUT_JSON_PATH`
+      - 答案文件路径: `OUTPUT_JSON_PATH`
+      - 运行卡ID: `DEVICE` 
+      ```bash
+      # 单卡量化推理
+      bash run.sh --run_performance=1 --run_parallel=0 --run_quant=1
    
+      # 多卡量化切分并推理
+      bash run.sh --run_performance=1 --run_parallel=1 --run_quant=1 --cut_quant
+      
+      # 多卡量化推理（跳过切分）
+      bash run.sh --run_performance=1 --run_parallel=1 --run_quant=1
+
+      # 单卡浮点推理
+      bash run.sh --run_performance=1 --run_parallel=0 --run_quant=0
+      # 多卡浮点切分并推理
+      bash run.sh --run_performance=1 --run_parallel=1 --run_quant=0 --cut_float
+      # 多卡浮点推理（跳过切分）
+      bash run.sh --run_performance=1 --run_parallel=1 --run_quant=0
+      ```
       - 命令参数说明：       
-        -   `--model_path`：anti outlier调优后的FP16权重，即$Telechat_anti_float_path
-        -   `--quant_path`：int8量化权重，即$Telechat_quant_path
+         -   `--run_performance`：为0时运行精度测试，为1时运行性能测试
+         -   `--run_parallel`：为0时单卡运行，为1时双卡运行
+         -   `--run_quant`：为0时运行浮点模型，为1时运行量化模型
+         -   `--cut_quant`: 将antioutlier浮点权重切分，并同时切分量化权重
  
    脚本中一共测试了25组case，其中部分case具体比对效果如下：
    

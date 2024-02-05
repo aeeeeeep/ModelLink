@@ -10,12 +10,21 @@ pwd = os.path.realpath(os.path.dirname(__file__))
 
 
 # cut_row_keys: dim 0  cut_col_keys: dim 1  nn.linear: x*A.T
-def cut_weights(model, world_size, cut_W_pack_keys=['W_pack'], cut_row_keys=['gate_proj', 'up_proj'],
-                cut_col_keys=['o_proj', 'down_proj']):
-    state_dict_list = [{} for _ in range(world_size)]
-    for key, tensor in model.state_dict().items():
+def cut_weights(model_ins,
+                world_size,
+                cut_w_pack_keys=None,
+                cut_row_keys=None,
+                cut_col_keys=None):
+    if cut_w_pack_keys is None:
+        cut_w_pack_keys = ['W_pack']
+    if cut_row_keys is None:
+        cut_row_keys = ['gate_proj', 'up_proj']
+    if cut_col_keys is None:
+        cut_col_keys = ['o_proj', 'down_proj']
+    _state_dict_list = [{} for _ in range(world_size)]
+    for key, tensor in model_ins.state_dict().items():
         key_short = key.split('.')[-2]
-        if key_short in cut_W_pack_keys:
+        if key_short in cut_w_pack_keys:
             split_linear_size = 3  # q k v linear
             full_q_weights, full_k_weights, full_v_weights = torch.chunk(tensor, split_linear_size, dim=0)
             cut_q_weights = torch.chunk(full_q_weights, world_size, dim=0)
@@ -29,12 +38,12 @@ def cut_weights(model, world_size, cut_W_pack_keys=['W_pack'], cut_row_keys=['ga
         elif key_short in cut_col_keys:
             cut_tensor_list = torch.chunk(tensor, world_size, dim=1)
         elif "lm_head" in key:
-            cut_tensor_list = torch.chunk(tensor, world_size, dim=1)
+            cut_tensor_list = torch.chunk(tensor, world_size, dim=0)
         else:
             cut_tensor_list = [tensor] * world_size
         for i in range(world_size):
-            state_dict_list[i][key] = cut_tensor_list[i]
-    return state_dict_list
+            _state_dict_list[i][key] = cut_tensor_list[i]
+    return _state_dict_list
 
 
 if __name__ == "__main__":
