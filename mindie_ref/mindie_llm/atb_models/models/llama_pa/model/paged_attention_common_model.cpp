@@ -51,7 +51,7 @@ enum CommonPAModelOutTensorId : int {
     OUT_TENSOR_MAX,
 };
 
-void CommonPAModel::Param::FromString(const std::string &param)
+int64_t CommonPAModel::Param::FromString(const std::string &param)
 {
     nlohmann::json paramJson = nlohmann::json::parse(param);
     rmsNormEps = paramJson["rmsNormEps"].get<double>();
@@ -201,7 +201,7 @@ int64_t CommonPAModel::BuildGraph()
     auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
     atb::infer::GatherParam wordEmbeddingParam;
     atb::Operation *op = nullptr;
-    atb::CreateOperation(wordEmbeddingParam, &op);
+    CREATE_OPERATION(wordEmbeddingParam, &op);
     wordEmbeddingNode.operation.reset(op);
     wordEmbeddingNode.inTensors = {&graph_.weightTensors.at(weightOffset++), &graph_.inTensors.at(IN_TENSOR_INPUTIDS)};
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(0)};
@@ -222,7 +222,7 @@ int64_t CommonPAModel::BuildGraph()
             opParam.headNum = param_.headNum;
             opParam.dk = param_.dk;
             opParam.transposedWeight = param_.transposedWeight;
-            opParam.model = "llama_mini";
+            opParam.model = "llama_small";
             opParam.isPrefill = param_.isPrefill;
             opParam.rank = param_.rank;
             opParam.rankSize = param_.rankSize;
@@ -308,7 +308,7 @@ int64_t CommonPAModel::BuildGraph()
     atb::infer::RmsNormParam finalNormParam;
     finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     finalNormParam.normParam.epsilon = param_.rmsNormEps;
-    atb::CreateOperation(finalNormParam, &op);
+    CREATE_OPERATION(finalNormParam, &op);
     finalNormNode.operation.reset(op);
     const int finalLayerNormWeightTensorId =
         graph_.weightTensors.size() - FINALNORMNODE_WEIGHT_COUNT - OUT_LM_HEAD_WEIGHT_COUNT;

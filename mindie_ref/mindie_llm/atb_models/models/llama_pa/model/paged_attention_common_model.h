@@ -47,7 +47,7 @@ public:
         std::vector<int> ffnOutInputOffset;
         std::vector<int> floatLayers;
 
-        void FromString(const std::string &param);
+        int64_t FromString(const std::string &param);
     };
 
     explicit CommonPAModel(const std::string &param);
@@ -62,7 +62,7 @@ public:
                            std::vector<atb::TensorDesc> &outTensorDescs) override;
 
 private:
-    int64_t BuildGraph() override;
+    virtual int64_t BuildGraph() override;
 
     atb::Status ParseParam(const std::string &param) override;
 
