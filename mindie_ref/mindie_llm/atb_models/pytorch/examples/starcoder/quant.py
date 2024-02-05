@@ -8,13 +8,14 @@ import torch.utils.data
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig # 导入量化配置接口
 
-def inference(_model, tokenizer, max_new_tokens=32):
+
+def inference(_model, _tokenizer, max_new_tokens=32):
     test_prompt = "def Fibonacci_sequence(n):"
-    test_input = tokenizer(test_prompt, return_tensors="pt")
+    test_input = _tokenizer(test_prompt, return_tensors="pt")
     print("model is inferring...")
     _model.eval()
     generate_ids = _model.generate(test_input.input_ids.cpu(), attention_mask=test_input.attention_mask.cpu(), max_new_tokens=max_new_tokens)
-    res = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+    res = _tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
     for idx, item in enumerate(res):
         print(item)
 
@@ -83,9 +84,10 @@ print("Current soc version: ", soc_version)
 
 #310P和910B都用该方法重定义bias
 def bias_correction(fp_bias, quant_weight, input_offset, deq_scale):
-    if deq_scale.npu() == 0:
+    try:
+        _bias_correction = fp_bias.npu() / deq_scale.npu() - quant_weight.to(torch.float32).npu().sum(dim=1) * float(input_offset)
+    except:
         return fp_bias
-    _bias_correction = fp_bias.npu() / deq_scale.npu() - quant_weight.to(torch.float32).npu().sum(dim=1) * float(input_offset)
     return _bias_correction
 
 
