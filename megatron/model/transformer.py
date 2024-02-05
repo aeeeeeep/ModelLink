@@ -843,7 +843,7 @@ class UnpadParallelAttention(ParallelAttention):
         self.fast_softmax = FastSoftMax()
         self.rope = Rope()
         self.hidden_size_per_partition = self.hidden_size_per_attention_head * self.num_attention_heads_per_partition
-        self.norm_factor = math.sqrt(self.num_attention_heads_per_partition)
+        self.norm_factor = math.sqrt(self.hidden_size_per_attention_head)
 
     def apply_unpad_rotary_pos_emb(self, query_layer, key_layer, rotary_pos_emb, seq_lengths):
         cos = torch.cos(rotary_pos_emb).to(query_layer.dtype)
