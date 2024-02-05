@@ -122,7 +122,7 @@ class FlashChatglmAttention(torch.nn.Module):
 
         self.rotary_emb = PositionRotaryEmbedding.static(dim=self.num_heads, base=10000.0, device="cpu").to(weights.device)
 
-        self.softmax_seq_lencale = self.head_size**-0.5
+        self.softmax_scale = self.head_size**-0.5
 
         if self.num_heads % weights.process_group.size() != 0:
             raise ValueError(
@@ -191,7 +191,7 @@ class FlashChatglmAttention(torch.nn.Module):
                 attn_output,
                 is_prefill,
                 max_seq_len,
-                self.softmax_seq_lencale,
+                self.softmax_scale,
             )
 
         return self.o_proj(attn_output.view(-1, self.num_heads * self.head_size))
@@ -283,9 +283,9 @@ class RotaryEmbedding(nn.Module):
         
         return rope_cos, rope_sin
 
-    def forward(self, max_seq_leneq_len, offset=0):
+    def forward(self, max_seq_len, offset=0):
         return self.forward_impl(
-            max_seq_leneq_len, self.dim, dtype=self.inv_freq.dtype, device=self.inv_freq.device
+            max_seq_len, self.dim, dtype=self.inv_freq.dtype, device=self.inv_freq.device
         )
 
 class FlashDecoderLayer(nn.Module):
