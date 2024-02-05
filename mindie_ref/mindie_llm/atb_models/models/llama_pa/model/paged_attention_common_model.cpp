@@ -13,19 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "quant_paged_attention_model.h"
+#include "paged_attention_common_model.h"
 
 #include "atb/atb_infer.h"
+#include "models/llama_pa/layer/paged_attention_common_layer.h"
 #include "nlohmann/json.hpp"
-
 #include "parallel_lmhead.h"
-#include "models/llama_pa/layer/anti_quant_paged_attention_layer.h"
-#include "models/llama_pa/layer/anti_float_paged_attention_layer.h"
 
 namespace atb_speed {
 namespace llama_pa {
 const int QUANT_WEIGHT_COUNT_PER_LAYER = 25;
-const int FLOAT_WEIGHT_COUNT_PER_LAYER = 16;
+const int FLOAT_WEIGHT_COUNT_PER_LAYER = 9;
+
 const int WORDEMBEDDINGNODE_WEIGHT_COUNT = 1;
 const int FINALNORMNODE_WEIGHT_COUNT = 1;
 const int OUT_LM_HEAD_WEIGHT_COUNT = 1;
@@ -33,7 +32,7 @@ const int OPERATION_COUNT_BEFORE_LAYER = 1;
 const int INTERMEDIATETENSOR_COUNT_BEFORE_LAYER = 1;
 const int OPERATION_COUNT_AFTER_LAYER = 2;
 
-enum QuantPAModelInTensorId : int {
+enum CommonPAModelInTensorId : int {
     IN_TENSOR_INPUTIDS = 0,
     IN_TENSOR_POSITIONID,
     IN_TENSOR_COSEMBED,
@@ -47,12 +46,12 @@ enum QuantPAModelInTensorId : int {
     IN_TENSOR_MAX,
 };
 
-enum QuantPAModelOutTensorId : int {
+enum CommonPAModelOutTensorId : int {
     OUT_TENSOR_HIDDENSTATES = 0,
     OUT_TENSOR_MAX,
 };
 
-int64_t QuantPAModel::Param::FromString(const std::string &param)
+int64_t CommonPAModel::Param::FromString(const std::string &param)
 {
     nlohmann::json paramJson = nlohmann::json::parse(param);
     rmsNormEps = paramJson["rmsNormEps"].get<double>();
@@ -80,32 +79,37 @@ int64_t QuantPAModel::Param::FromString(const std::string &param)
     if (paramJson.contains("isBF16")) {
         isBF16 = paramJson["isBF16"].get<bool>();
     }
-    for (auto item : paramJson["qkvInputScale"]) {
-        qkvInputScale.push_back(item.get<float>());
-    }
-    for (auto item : paramJson["qkvInputOffset"]) {
-        qkvInputOffset.push_back(item.get<int>());
-    }
-    for (auto item : paramJson["denseInputScale"]) {
-        denseInputScale.push_back(item.get<float>());
-    }
-    for (auto item : paramJson["denseInputOffset"]) {
-        denseInputOffset.push_back(item.get<int>());
-    }
-    for (auto item : paramJson["selfLnInputScale"]) {
-        selfLnInputScale.push_back(item.get<float>());
-    }
-    for (auto item : paramJson["selfLnInputOffset"]) {
-        selfLnInputOffset.push_back(item.get<int>());
-    }
-    for (auto item : paramJson["ffnOutInputScale"]) {
-        ffnOutInputScale.push_back(item.get<float>());
-    }
-    for (auto item : paramJson["ffnOutInputOffset"]) {
-        ffnOutInputOffset.push_back(item.get<int>());
-    }
-    for (auto item : paramJson["floatLayers"]) {
-        floatLayers.push_back(item.get<int>());
+    if (paramJson.contains("isQuant")) {
+        isQuant = paramJson["isQuant"].get<bool>();
+        if (isQuant) {
+            for (auto item : paramJson["qkvInputScale"]) {
+            qkvInputScale.push_back(item.get<float>());
+            }
+            for (auto item : paramJson["qkvInputOffset"]) {
+                qkvInputOffset.push_back(item.get<int>());
+            }
+            for (auto item : paramJson["denseInputScale"]) {
+                denseInputScale.push_back(item.get<float>());
+            }
+            for (auto item : paramJson["denseInputOffset"]) {
+                denseInputOffset.push_back(item.get<int>());
+            }
+            for (auto item : paramJson["selfLnInputScale"]) {
+                selfLnInputScale.push_back(item.get<float>());
+            }
+            for (auto item : paramJson["selfLnInputOffset"]) {
+                selfLnInputOffset.push_back(item.get<int>());
+            }
+            for (auto item : paramJson["ffnOutInputScale"]) {
+                ffnOutInputScale.push_back(item.get<float>());
+            }
+            for (auto item : paramJson["ffnOutInputOffset"]) {
+                ffnOutInputOffset.push_back(item.get<int>());
+            }
+            for (auto item : paramJson["floatLayers"]) {
+                floatLayers.push_back(item.get<int>());
+            }
+        }
     }
     if (headNum == 0) {
         ATB_LOG(ERROR) << "param.headNum is 0, please input a correct value";
@@ -115,27 +119,26 @@ int64_t QuantPAModel::Param::FromString(const std::string &param)
         ATB_LOG(ERROR) << "param.dk is 0, please input a correct value";
         return atb::ERROR_INVALID_PARAM;
     }
-    ATB_LOG(INFO) << "Llama QuantPAModel param rmsNormEps:" << rmsNormEps << ", headNum:" << headNum << ", dk:" << dk
+    ATB_LOG(INFO) << "Llama CommonPAModel param rmsNormEps:" << rmsNormEps << ", headNum:" << headNum << ", dk:" << dk
                   << ", layerNum:" << layerNum << ", transposedWeight:" << transposedWeight << ", rank:" << rank
                   << ", rankSize:" << rankSize << ", backend: " << backend << ", isLmHeadParallel:" << isLmHeadParallel
-                  << ", isBF16:" << isBF16;
-    return atb::NO_ERROR;
+                  << ", isBF16:" << isBF16 << ", is Quant:" << isQuant;
 }
 
-QuantPAModel::QuantPAModel(const std::string &param) : Model("LlamaQuantPAModel", param)
+CommonPAModel::CommonPAModel(const std::string &param) : Model("LlamaCommonPAModel", param)
 {
     param_.FromString(param);
     modelName_ += param_.isPrefill ? "_Prefill" : "_Decoder";
 }
 
-QuantPAModel::~QuantPAModel() {}
+CommonPAModel::~CommonPAModel() {}
 
-uint32_t QuantPAModel::GetInputNum() const { return graph_.inTensors.size(); }
+uint32_t CommonPAModel::GetInputNum() const { return graph_.inTensors.size(); }
 
-uint32_t QuantPAModel::GetOutputNum() const { return graph_.outTensors.size(); }
+uint32_t CommonPAModel::GetOutputNum() const { return graph_.outTensors.size(); }
 
-atb::Status QuantPAModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
-                                     std::vector<atb::TensorDesc> &outTensorDescs)
+atb::Status CommonPAModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
+                                      std::vector<atb::TensorDesc> &outTensorDescs)
 {
     if (outTensorDescs.size() != GetOutputNum()) {
         return atb::ERROR_INVALID_GRAPH;
@@ -160,30 +163,41 @@ atb::Status QuantPAModel::InferShape(const std::vector<atb::TensorDesc> &inTenso
     return atb::NO_ERROR;
 }
 
-int64_t QuantPAModel::BuildGraph()
+int64_t CommonPAModel::BuildGraph()
 {
     const int floatLayerCnt = param_.floatLayers.size();
-    const int weightTensorSize = WORDEMBEDDINGNODE_WEIGHT_COUNT +
-                        FLOAT_WEIGHT_COUNT_PER_LAYER * floatLayerCnt +
-                        QUANT_WEIGHT_COUNT_PER_LAYER * (param_.layerNum - floatLayerCnt) +
-                        FINALNORMNODE_WEIGHT_COUNT + OUT_LM_HEAD_WEIGHT_COUNT;
-    ATB_LOG(INFO) << "weightTensorSize is: " << weightTensorSize;
-    
-    graph_.weightTensors.resize(weightTensorSize);
+    const int weightTensorSizeQuant = WORDEMBEDDINGNODE_WEIGHT_COUNT +
+                    FLOAT_WEIGHT_COUNT_PER_LAYER * floatLayerCnt +
+                    QUANT_WEIGHT_COUNT_PER_LAYER * (param_.layerNum - floatLayerCnt) +
+                    FINALNORMNODE_WEIGHT_COUNT + OUT_LM_HEAD_WEIGHT_COUNT;
+    const int weightTensorSizeFloat = WORDEMBEDDINGNODE_WEIGHT_COUNT +
+                                   FLOAT_WEIGHT_COUNT_PER_LAYER * param_.layerNum +
+                                   FINALNORMNODE_WEIGHT_COUNT + OUT_LM_HEAD_WEIGHT_COUNT;
+
+    if (param_.isQuant) {
+        graph_.weightTensors.resize(weightTensorSizeQuant);
+        ATB_LOG(INFO) << "model type is Quant, Weight tensor size is: " << weightTensorSizeQuant;
+    } else {
+        graph_.weightTensors.resize(weightTensorSizeFloat);
+        ATB_LOG(INFO) << "model type is Float, Weight tensor size is: " << weightTensorSizeFloat;
+    }
+
     graph_.kCacheTensors.resize(param_.layerNum);
     graph_.vCacheTensors.resize(param_.layerNum);
+
     graph_.inTensors.resize(IN_TENSOR_MAX);
     graph_.outTensors.resize(OUT_TENSOR_MAX);
 
     const int nodeSize = param_.layerNum + OPERATION_COUNT_BEFORE_LAYER + OPERATION_COUNT_AFTER_LAYER;
     graph_.nodes.resize(nodeSize);
-    ATB_LOG(INFO) << "LlamaQuantPAModel nodeSize is " << nodeSize;
+    ATB_LOG(INFO) << "LlamaCommonPAModel nodeSize is " << nodeSize;
 
     const int internalTensorSize = graph_.nodes.size() - 1;
     graph_.internalTensors.resize(internalTensorSize);
 
     int nodeId = 0;
     int weightOffset = 0;
+
     auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
     atb::infer::GatherParam wordEmbeddingParam;
     atb::Operation *op = nullptr;
@@ -200,20 +214,22 @@ int64_t QuantPAModel::BuildGraph()
         if (std::find(param_.floatLayers.begin(), param_.floatLayers.end(), layerId) != param_.floatLayers.end()) {
             isFloatLayer = true;
         }
-        if (isFloatLayer) {
-            ATB_LOG(INFO) << "Enter Float Layer, LayerId is: " << layerId;
-            AntiPALayerParam opParam;
+        if ((param_.isQuant && isFloatLayer) || !param_.isQuant) {
+            // 浮点
+            ATB_LOG(INFO) << "Enter Float Layer, layerId: " << layerId;
+            PaCommonLayerParam opParam;
             opParam.rmsNormEps = param_.rmsNormEps;
             opParam.headNum = param_.headNum;
             opParam.dk = param_.dk;
             opParam.transposedWeight = param_.transposedWeight;
-            opParam.model = "llama";
+            opParam.model = "llama_small";
             opParam.isPrefill = param_.isPrefill;
             opParam.rank = param_.rank;
             opParam.rankSize = param_.rankSize;
             opParam.backend = param_.backend;
             opParam.isBF16 = param_.isBF16;
-            AntiPALayer(opParam, &op);
+            opParam.isQuant = false;
+            PaCommonLayer(opParam, &op);
             layerNode.operation.reset(op);
             layerNode.inTensors.resize(layerNode.operation->GetInputNum());
 
@@ -222,32 +238,37 @@ int64_t QuantPAModel::BuildGraph()
             for (size_t weightTensorId = 0; weightTensorId < FLOAT_WEIGHT_COUNT_PER_LAYER; ++weightTensorId) {
                 layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(weightOffset++);
             }
-            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_POSITIONID);    // positionIdTensor
+            size_t weightHolderCnt = QUANT_WEIGHT_COUNT_PER_LAYER - FLOAT_WEIGHT_COUNT_PER_LAYER;
+            for (size_t weightTensorId = 0; weightTensorId < weightHolderCnt; ++weightTensorId) {
+                layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);
+            }
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_COSEMBED);      // cosEmbed
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SINEMBED);      // sinEmbed
-            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_ATTENTIONMASK); // attentionMaskTensor
+            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_ATTENTIONMASK); // attentionMask
             layerNode.inTensors.at(inTensorId++) = &graph_.kCacheTensors.at(layerId);
             layerNode.inTensors.at(inTensorId++) = &graph_.vCacheTensors.at(layerId);
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_BLOCK_TABLES);
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SLOTS);
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_INPUT_LENGTHS);
+            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);
 
             layerNode.outTensors = {&graph_.internalTensors.at(INTERMEDIATETENSOR_COUNT_BEFORE_LAYER + layerId)};
 
             firstInTensor = layerNode.outTensors.at(0);
         } else {
-            ATB_LOG(INFO) << "Enter Quant Layer, LayerId: " << layerId;
-            QuantPALayerParam opParam;
+            ATB_LOG(INFO) << "Enter Pure Quant Layer, layerId: " << layerId;
+            PaCommonLayerParam opParam;
             opParam.rmsNormEps = param_.rmsNormEps;
             opParam.headNum = param_.headNum;
             opParam.dk = param_.dk;
             opParam.transposedWeight = param_.transposedWeight;
-            opParam.model = "llama";
+            opParam.model = "llama_small";
             opParam.isPrefill = param_.isPrefill;
             opParam.rank = param_.rank;
             opParam.rankSize = param_.rankSize;
             opParam.backend = param_.backend;
             opParam.isBF16 = param_.isBF16;
+            opParam.isQuant = true;
 
             opParam.qkvInputScale = param_.qkvInputScale[layerId];
             opParam.qkvInputOffset = param_.qkvInputOffset[layerId];
@@ -257,8 +278,7 @@ int64_t QuantPAModel::BuildGraph()
             opParam.selfLnInputOffset = param_.selfLnInputOffset[layerId];
             opParam.ffnOutInputScale = param_.ffnOutInputScale[layerId];
             opParam.ffnOutInputOffset = param_.ffnOutInputOffset[layerId];
-
-            QuantPALayer(opParam, &op);
+            PaCommonLayer(opParam, &op);
             layerNode.operation.reset(op);
             layerNode.inTensors.resize(layerNode.operation->GetInputNum());
             layerNode.outTensors.resize(layerNode.operation->GetOutputNum());
@@ -268,10 +288,9 @@ int64_t QuantPAModel::BuildGraph()
             for (size_t weightTensorId = 0; weightTensorId < QUANT_WEIGHT_COUNT_PER_LAYER; ++weightTensorId) {
                 layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(weightOffset++);
             }
-            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_POSITIONID);    // positionIdTensor
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_COSEMBED);      // cosEmbed
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SINEMBED);      // sinEmbed
-            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_ATTENTIONMASK); // attentionMaskTensor
+            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_ATTENTIONMASK); // attentionMask
             layerNode.inTensors.at(inTensorId++) = &graph_.kCacheTensors.at(layerId);
             layerNode.inTensors.at(inTensorId++) = &graph_.vCacheTensors.at(layerId);
             layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_BLOCK_TABLES);
@@ -318,42 +337,29 @@ int64_t QuantPAModel::BuildGraph()
                                 &graph_.weightTensors.at(finalLinearWeightTensorId)};
     }
     lmHeadNode.outTensors = {&graph_.outTensors.at(0)};
+
     return atb::NO_ERROR;
 }
 
-atb::Status QuantPAModel::ParseParam(const std::string &param)
+atb::Status CommonPAModel::ParseParam(const std::string &param)
 {
     nlohmann::json paramJson = nlohmann::json::parse(param);
-
     seqLen_.clear();
     for (auto item : paramJson["seqLen"]) {
         seqLen_.push_back(item.get<int>());
     }
-
     return atb::NO_ERROR;
 }
 
-atb::Status QuantPAModel::BindParamHostTensor(uint32_t nodeId)
+atb::Status CommonPAModel::BindParamHostTensor(uint32_t nodeId)
 {
     if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
         return atb::NO_ERROR;
     }
-    
-    bool isFloatLayer = false;
-    size_t layerId = nodeId - OPERATION_COUNT_BEFORE_LAYER;
-    if (std::find(param_.floatLayers.begin(), param_.floatLayers.end(), layerId) != param_.floatLayers.end()) {
-        isFloatLayer = true;
-    }
-
     auto &node = graph_.nodes.at(nodeId);
-    const uint32_t floatSeqLenTensorId = 25;
-    const uint32_t quantSeqLenTensorId = 34;
+    const uint32_t commonSeqLenTensorId = 33;
+    node.variantPack.inTensors.at(commonSeqLenTensorId).hostData = seqLen_.data();
 
-    if (isFloatLayer) {
-        node.variantPack.inTensors.at(floatSeqLenTensorId).hostData = seqLen_.data();
-    } else {
-        node.variantPack.inTensors.at(quantSeqLenTensorId).hostData = seqLen_.data();
-    }
     ATB_LOG(INFO) << "BindParamHostTensor end";
     return atb::NO_ERROR;
 }
