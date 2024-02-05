@@ -16,6 +16,7 @@ import os
 import torch
 from atb_speed.common.config import atb_speed_config
 from atb_speed.common.launcher import Launcher, ParallelLauncher
+from atb_speed.common.performance.base import PerformanceTest
 from atb_speed.common.precision import get_precision_test_cls
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
@@ -56,8 +57,8 @@ def parse_args():
         "--task",
         type=str,
         default='run',
-        choices=['run', 'precision'],
-        help="Specify the task in which to run the script [--task run|precision]"
+        choices=['run', 'performance', 'precision'],
+        help="Specify the task in which to run the script [--task run|performance|precision]"
     )
     args = parser.parse_args()
     return args
@@ -80,6 +81,12 @@ def run_example(launcher):
     launcher.logger.info("inference success!")
 
 
+def run_performance(launcher):
+    performance_tester = PerformanceTest(launcher)
+    performance_tester.warm_up()
+    performance_tester.run_test()
+
+
 def run_precision(launcher):
     precision_tester = get_precision_test_cls()(launcher)
     precision_tester.run()
@@ -87,6 +94,7 @@ def run_precision(launcher):
 
 TASK_MAP = {
     "run": run_example,
+    "performance": run_performance,
     "precision": run_precision
 }
 
