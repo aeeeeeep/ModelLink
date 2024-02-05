@@ -201,8 +201,6 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
         paDeParam.headNum = param.headNum;
         paDeParam.qkScale = 1.0 / sqrt(param.dk);
         paDeParam.kvHeadNum = param.headNum;
-        paDeParam.isSupportAlibi = true;
-        // 910B上暂时必须多传这一个枚举maskType
         paDeParam.maskType = atb::infer::PagedAttentionParam::MaskType::MASK_TYPE_ALIBI;
         CREATE_OPERATION(paDeParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERNAL_MIXED_Q, IN_K_CACHE,       IN_V_CACHE,
