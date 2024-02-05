@@ -44,46 +44,7 @@ from text_generation_server.utils.layers import (
 )
 from text_generation_server.utils.npu import load_atb_speed, NPUSocInfo
 
-class Chatglm2Config(PretrainedConfig):
-    model_type = "chatglm2"
-    keys_to_ignore_at_inference = ["past_key_values"]
-
-    def __init__(
-            self,
-            vocab_size=65024,
-            hidden_size=4096,
-            kv_channels=128,
-            intermediate_size=11008,
-            num_layers=28,
-            multi_query_group_num = 2,
-            num_attention_heads=32,
-            hidden_act="silu",
-            seq_length=8192,
-            initializer_range=0.02,
-            layernorm_epsilon=1e-5,
-            use_cache=True,
-            eos_token_id=2,
-            tie_word_embeddings=False,
-            **kwargs,
-    ):
-        self.vocab_size = vocab_size
-        self.seq_length = seq_length
-        self.hidden_size = hidden_size
-        self.kv_channels = 128
-        self.intermediate_size = intermediate_size
-        self.num_layers = num_layers
-        self.multi_query_group_num = multi_query_group_num
-        self.num_attention_heads = num_attention_heads
-        self.hidden_act = hidden_act
-        self.initializer_range = initializer_range
-        self.layernorm_epsilon = layernorm_epsilon
-        self.use_cache = use_cache
-        super().__init__(
-            eos_token_id=eos_token_id,
-            tie_word_embeddings=tie_word_embeddings,
-            **kwargs,
-        )
-
+from .config import ChatglmConfig
 
 class RMSNorm(nn.Module):
     def __init__(self, prefix, weights, eps=1e-6):
@@ -147,7 +108,7 @@ def load_qkv(config, prefix: str, weights):
     return TensorParallelColumnLinear(linear)
 
 
-class FlashChatglm2Attention(torch.nn.Module):
+class FlashChatglmAttention(torch.nn.Module):
     def __init__(
         self,
         prefix: str,
@@ -161,7 +122,7 @@ class FlashChatglm2Attention(torch.nn.Module):
 
         self.rotary_emb = PositionRotaryEmbedding.static(dim=self.num_heads, base=10000.0, device="cpu").to(weights.device)
 
-        self.softmax_scale = self.head_size**-0.5
+        self.softmax_seq_lencale = self.head_size**-0.5
 
         if self.num_heads % weights.process_group.size() != 0:
             raise ValueError(
@@ -189,12 +150,12 @@ class FlashChatglm2Attention(torch.nn.Module):
         hidden_states,
         cos,
         sin,
-        cu_seqlen_prefill,
+        is_prefill,
         kv_cache,
         block_tables,
         slots,
         input_lengths,
-        max_s,
+        max_seq_len,
     ):
         qkv = self.query_key_value(hidden_states)
         query, key, value = qkv.split([self.hidden_size, self.hidden_size, self.hidden_size], dim=1)
@@ -221,16 +182,16 @@ class FlashChatglm2Attention(torch.nn.Module):
         attn_output = torch.zeros(size=query_embed.shape, device=query_embed.device)
 
         # Prefill
-        if cu_seqlen_prefill is not None:
+        if is_prefill is not None:
             # flash attention
             attn_output = attention_ascend(
                 query_embed,  # [n_tokens, head_num, head_size]
                 key_embed,  # [n_tokens, head_num, head_size]
                 value,  # [n_tokens, head_num, head_size]
                 attn_output,
-                cu_seqlen_prefill,
-                max_s,
-                self.softmax_scale,
+                is_prefill,
+                max_seq_len,
+                self.softmax_seq_lencale,
             )
 
         return self.o_proj(attn_output.view(-1, self.num_heads * self.head_size))
@@ -322,16 +283,16 @@ class RotaryEmbedding(nn.Module):
         
         return rope_cos, rope_sin
 
-    def forward(self, max_seq_len, offset=0):
+    def forward(self, max_seq_leneq_len, offset=0):
         return self.forward_impl(
-            max_seq_len, self.dim, dtype=self.inv_freq.dtype, device=self.inv_freq.device
+            max_seq_leneq_len, self.dim, dtype=self.inv_freq.dtype, device=self.inv_freq.device
         )
 
 class FlashDecoderLayer(nn.Module):
     def __init__(self, layer_id, config, weights):
         super().__init__()
         prefix = f"transformer.encoder.layers.{layer_id}"
-        self.self_attention = FlashChatglm2Attention(
+        self.self_attention = FlashChatglmAttention(
             prefix=f"{prefix}.self_attention", config=config, weights=weights
         )
         self.mlp = MLP(prefix=f"{prefix}.mlp", config=config, weights=weights)
@@ -351,12 +312,12 @@ class FlashDecoderLayer(nn.Module):
         residual,
         cos,
         sin,
-        cu_seqlen_prefill,
+        is_prefill,
         kv_cache,
         block_tables,
         slots,
         input_lengths,
-        max_s,
+        max_seq_len,
     ):
         normed_hidden_states, res = self.input_layernorm(hidden_states, residual)
 
@@ -365,12 +326,12 @@ class FlashDecoderLayer(nn.Module):
             normed_hidden_states,
             cos,
             sin,
-            cu_seqlen_prefill,
+            is_prefill,
             kv_cache,
             block_tables,
             slots,
             input_lengths,
-            max_s,
+            max_seq_len,
         )
 
         # faster post attention rms norm
@@ -383,7 +344,7 @@ class FlashDecoderLayer(nn.Module):
         return mlp_output, attn_res
 
 
-class FlashChatglm2Model(torch.nn.Module):
+class FlashChatglmModel(torch.nn.Module):
     def __init__(self, config, weights):
         super().__init__()
 
@@ -428,7 +389,7 @@ class FlashChatglm2Model(torch.nn.Module):
                                               dtype=config.torch_dtype)
         self.cos_embed, self.sin_embed = self.rotary_pos_emb(config.seq_length)
 
-    def init_ascend_operations(self, config: Chatglm2Config):
+    def init_ascend_operations(self, config: ChatglmConfig):
         self.acl_param_encoder = json.dumps({
             "rmsNormEps": config.layernorm_epsilon,
             "headNum": config.num_attention_heads // self.tp_world_size,
@@ -525,17 +486,17 @@ class FlashChatglm2Model(torch.nn.Module):
 
     def prepare_inputs_for_ascend(self, input_ids: torch.Tensor,
                                   position_ids: torch.Tensor,
-                                  cu_seqlen_prefill: Optional[torch.Tensor],
+                                  is_prefill: bool,
                                   kv_cache: List[Tuple[torch.Tensor, torch.Tensor]],
                                   block_tables: torch.Tensor,
                                   slots: torch.Tensor,
                                   input_lengths: torch.Tensor,
-                                  max_s: int,
+                                  max_seq_len: int,
                                   lm_head_indices: Optional[torch.Tensor] = None
     ):
         cos_embed, sin_embed = self.cos_embed[position_ids.long()], self.sin_embed[position_ids.long()]
 
-        if cu_seqlen_prefill is not None:  # prefill
+        if is_prefill is not None:  # prefill
             if lm_head_indices is None:
                 lm_head_indices = torch.tensor(range(input_ids.shape[0]), dtype=torch.int64, device=input_ids.device)
             
@@ -544,11 +505,11 @@ class FlashChatglm2Model(torch.nn.Module):
                 self.transdata_param = json.dumps({})
                 self.transdata_operation.set_param(self.transdata_param)
 
-                pad_maxs = math.ceil(max_s / 16) * 16
+                pad_maxs = math.ceil(max_seq_len / 16) * 16
                 atten_mask = self.ascend_atten_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
                 atten_mask = self.transdata_operation.execute([atten_mask])[0]
             else:
-                atten_mask = self.ascend_atten_mask.get_attn_mask(max_s, kv_cache[0][0].dtype, kv_cache[0][0].device)
+                atten_mask = self.ascend_atten_mask.get_attn_mask(max_seq_len, kv_cache[0][0].dtype, kv_cache[0][0].device)
             self.acl_param_encoder = json.dumps({
                 "seqLen" : input_lengths.tolist()
             })
@@ -578,17 +539,17 @@ class FlashChatglm2Model(torch.nn.Module):
     def execute_ascend_operator(self,
                                 input_ids: torch.Tensor,
                                 position_ids: torch.Tensor,
-                                cu_seqlen_prefill: Optional[torch.Tensor],
+                                is_prefill: bool,
                                 kv_cache: List[Tuple[torch.Tensor, torch.Tensor]],
                                 block_tables: torch.Tensor,
                                 slots: torch.Tensor,
                                 input_lengths: torch.Tensor,
-                                max_s: int,
+                                max_seq_len: int,
                                 lm_head_indices: Optional[torch.Tensor] = None):
-        acl_inputs, acl_param = self.prepare_inputs_for_ascend(input_ids, position_ids, cu_seqlen_prefill, kv_cache,
-                                                               block_tables, slots, input_lengths, max_s, lm_head_indices)
+        acl_inputs, acl_param = self.prepare_inputs_for_ascend(input_ids, position_ids, is_prefill, kv_cache,
+                                                               block_tables, slots, input_lengths, max_seq_len, lm_head_indices)
 
-        if cu_seqlen_prefill is not None:
+        if is_prefill:
             acl_model_out = self.acl_encoder_operation.execute(acl_inputs, acl_param)
 
         else:
@@ -602,29 +563,29 @@ class FlashChatglm2Model(torch.nn.Module):
         self,
         input_ids: torch.Tensor,
         position_ids: torch.Tensor,
-        cu_seqlen_prefill: Optional[torch.Tensor],
+        is_prefill: bool,
         kv_cache: List[Tuple[torch.Tensor, torch.Tensor]],
         block_tables: torch.Tensor,
         slots: torch.Tensor,
         input_lengths: torch.Tensor,
-        max_s: int,
+        max_seq_len: int,
         lm_head_indices: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         if not self.ascend_weight:
             self.init_ascend_weight()
         self.init_ascend_kvcache(kv_cache)
-        hidden_states_acl = self.execute_ascend_operator(input_ids, position_ids, cu_seqlen_prefill, kv_cache,
-                                                     block_tables, slots, input_lengths, max_s, lm_head_indices)
+        hidden_states_acl = self.execute_ascend_operator(input_ids, position_ids, is_prefill, kv_cache,
+                                                     block_tables, slots, input_lengths, max_seq_len, lm_head_indices)
 
         return hidden_states_acl
 
 
-class FlashChatglm2ForCausalLM(torch.nn.Module):
+class FlashChatglmForCausalLM(torch.nn.Module):
     def __init__(self, config, weights):
         super().__init__()
         load_atb_speed()
 
-        self.transformer = FlashChatglm2Model(config, weights)
+        self.transformer = FlashChatglmModel(config, weights)
         self.lm_head = TensorParallelHead.load_weight(
             config,
             prefix="transformer.output_layer",
@@ -633,18 +594,25 @@ class FlashChatglm2ForCausalLM(torch.nn.Module):
         )
 
         # for ascend
+        self.tp_world_size = self.transformer.tp_world_size
+        self.soc_info = self.transformer.soc_info
+        self.head_size = self.transformer.head_size
+        self.num_attention_heads = self.transformer.num_heads // self.tp_world_size
+        self.num_key_value_heads = self.transformer.kv_head_num
+        self.num_layers = self.transformer.num_layers
+
         self.lm_head_weight = None
 
     def forward(
         self,
         input_ids: torch.Tensor,  # input id, 拉平的
         position_ids: torch.Tensor,  #
-        cu_seqlen_prefill: Optional[torch.Tensor],  # prefill 阶段使用，不同prompt的offset
+        is_prefill: bool,  # 是否prefill阶段
         kv_cache: List[Tuple[torch.Tensor, torch.Tensor]],  # kv cache,
         block_tables: torch.Tensor,  #  每个requests 所有的block tables
         slots: torch.Tensor,  #  每个requests 所有的slots
         input_lengths: torch.Tensor,  #  每个 request的k/v长度
-        max_s: int,  # 最长的request长度
+        max_seq_len: int,  # 最长的request长度
         lm_head_indices: Optional[torch.Tensor] = None,  # prefill阶段使用，取的生成token的偏移
     ) -> torch.Tensor:
         if self.lm_head_weight is None:
@@ -654,12 +622,12 @@ class FlashChatglm2ForCausalLM(torch.nn.Module):
         logits = self.transformer(
             input_ids,
             position_ids,
-            cu_seqlen_prefill,
+            is_prefill,
             kv_cache,
             block_tables,
             slots,
             input_lengths,
-            max_s,
+            max_seq_len,
             lm_head_indices
         )
 
