@@ -49,9 +49,6 @@ from .config import ChatglmConfig
 
 class RMSNorm(nn.Module):
     def __init__(self, prefix, weights, eps=1e-6):
-        """
-        LlamaRMSNorm is equivalent to T5LayerNorm
-        """
         super().__init__()
 
         weight = weights.get_tensor(f"{prefix}.weight")
