@@ -178,6 +178,8 @@ class ChatglmRouter(BaseRouter):
         config = config_cls.from_pretrained(self.model_name_or_path,
                                             revision=self.revision,
                                             trust_remote_code=self.trust_remote_code)
+        if self.max_position_embeddings:
+            config.seq_length = self.max_position_embeddings
         return config
 
     def get_tokenizer(self):
