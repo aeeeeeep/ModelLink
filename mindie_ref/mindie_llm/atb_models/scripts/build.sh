@@ -281,6 +281,16 @@ function fn_build_for_ci()
     fi
 }
 
+function fn_make_whl() {
+    echo "make atb_llm whl package"
+    cd $CODE_ROOT
+    python3 $CODE_ROOT/setup.py bdist_wheel
+    cp $CODE_ROOT/dist/atb_llm*.whl $OUTPUT_DIR/atb_speed/
+    cp -r $CODE_ROOT/atb_llm $OUTPUT_DIR/atb_speed/
+    cp $CODE_ROOT/setup.py $OUTPUT_DIR/atb_speed/
+    cp -r $CODE_ROOT/examples $OUTPUT_DIR/atb_speed/
+}
+
 function fn_build()
 {
     fn_build_3rdparty
@@ -315,6 +325,7 @@ function fn_build()
         make -j
     fi
     make install
+    fn_make_whl
     fn_build_for_ci
 }
 
