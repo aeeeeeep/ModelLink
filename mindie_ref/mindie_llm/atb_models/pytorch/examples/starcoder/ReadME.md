@@ -43,7 +43,7 @@ StarCoder模型是在The Stack (v1.2)的80+种编程语言上训练的15.5B参�
 | -------------- | ------ | -------- |
 | 固件与驱动     |        | -        |
 | CANN           |        | -        |
-| Python         | 3.8.16 | -        |
+| Python         | 3.9    | -        |
 | PytorchAdapter | 2.0.1  | -        |
 | 推理引擎       | -      | -        |
 
@@ -60,7 +60,8 @@ StarCoder模型是在The Stack (v1.2)的80+种编程语言上训练的15.5B参�
 | ------- | -------- |
 | aarch64 | 300I DUO |
 | x86     | 300I DUO |
-
+| x86     | 800I A2  |
+| x86     | 800I A2  |
 # 快速上手
 
 ## 获取源码及依赖
@@ -106,7 +107,7 @@ StarCoder模型是在The Stack (v1.2)的80+种编程语言上训练的15.5B参�
 
   1.2.1. 安装toolkit
 
-  安装方法：
+  安装方法：1. 1. 这里是列表文本
 
 | cpu     | 包名                                                         |
 |---------|------------------------------------------------------------|
@@ -189,10 +190,10 @@ StarCoder模型是在The Stack (v1.2)的80+种编程语言上训练的15.5B参�
 
    | 加速库包名                                            |
    | ----------------------------------------------------- |
-   | Ascend-cann-atb_{version}_cxx11abi0_linux-aarch64.run |
-   | Ascend-cann-atb_{version}_cxx11abi1_linux-aarch64.run |
-   | Ascend-cann-atb_{version}_cxx11abi1_linux-x86_64.run  |
-   | Ascend-cann-atb_{version}_cxx11abi0_linux-x86_64.run  |
+   | Ascend-mindie-atb_{version}_cxx11abi0_linux-aarch64.run |
+   | Ascend-mindie-atb_{version}_cxx11abi1_linux-aarch64.run |
+   | Ascend-mindie-atb_{version}_cxx11abi1_linux-x86_64.run  |
+   | Ascend-mindie-atb_{version}_cxx11abi0_linux-x86_64.run  |
    
    具体使用cxx11abi0 还是cxx11abi1 可通过python命令查询
    
@@ -215,10 +216,10 @@ StarCoder模型是在The Stack (v1.2)的80+种编程语言上训练的15.5B参�
 
    | 大模型包名                                                   |
    | ------------------------------------------------------------ |
-   | Ascend-cann-llm_{version_id}_linux-x86_64_torch{pta_version}-abi0.tar.gz |
-   | Ascend-cann-llm_{version_id}_linux-x86_64_torch{pta_version}-abi1.tar.gz |
-   | Ascend-cann-llm_{version_id}_linux-aarch64_torch{pta_version}-abi0.tar.gz |
-   | Ascend-cann-llm_{version_id}_linux-aarch64_torch{pta_version}-abi1.tar.gz |
+   | Ascend-mindie-atb-models_{version_id}_linux-x86_64_torch{pta_version}-abi0.tar.gz |
+   | Ascend-mindie-atb-models_{version_id}_linux-x86_64_torch{pta_version}-abi1.tar.gz |
+   | Ascend-mindie-atb-models_{version_id}_linux-aarch64_torch{pta_version}-abi0.tar.gz |
+   | Ascend-mindie-atb-models_{version_id}_linux-aarch64_torch{pta_version}-abi1.tar.gz |
 
     具体使用cxx11abi0 还是cxx11abi1 方法同安装atb
 
