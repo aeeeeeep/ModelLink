@@ -112,7 +112,14 @@ void CommonPAModel::Param::FromString(const std::string &param)
             }
         }
     }
-    
+    if (headNum == 0) {
+        ATB_LOG(ERROR) << "param.headNum is 0, please input a correct value";
+        return atb::ERROR_INVALID_PARAM;
+    }
+    if (dk == 0) {
+        ATB_LOG(ERROR) << "param.dk is 0, please input a correct value";
+        return atb::ERROR_INVALID_PARAM;
+    }
     ATB_LOG(INFO) << "Llama CommonPAModel param rmsNormEps:" << rmsNormEps << ", headNum:" << headNum << ", dk:" << dk
                   << ", layerNum:" << layerNum << ", transposedWeight:" << transposedWeight << ", rank:" << rank
                   << ", rankSize:" << rankSize << ", backend: " << backend << ", isLmHeadParallel:" << isLmHeadParallel
