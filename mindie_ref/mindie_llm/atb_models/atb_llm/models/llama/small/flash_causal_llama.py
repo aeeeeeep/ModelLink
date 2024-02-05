@@ -390,6 +390,7 @@ class FlashLlamaForCausalLM(torch.nn.Module):
     def bias_correction(self, fp_bias, quant_weight, input_offset, deq_scale):
         if deq_scale == 0:
             logger.warning(f"Division by deq_scale is zero!")
+            return None
         bias_correction = fp_bias.npu() / deq_scale.npu() - quant_weight.to(torch.float32).npu().sum(dim=1) \
             * float(input_offset)
         return bias_correction
