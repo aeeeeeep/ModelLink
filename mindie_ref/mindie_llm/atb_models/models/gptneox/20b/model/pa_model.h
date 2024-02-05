@@ -30,17 +30,11 @@ public:
         float rotaryPct = 0.0;
         int rank = 0;
         int rankSize = 1;
-<<<<<<<< HEAD:speed_infer/models/llama_pa/model/paged_attention_model.h
-        bool isLmHeadParallel = true;
-        std::string backend = "hccl";
-        bool isBF16 = false;
-========
         bool isPrefill = false;
         float qScale = 1.0;
         float qkScale = 1.0;
         std::string backend = "hccl";
 
->>>>>>>> 2d6877b7cc8a9e9e4ea53d6e38f6a38fe6e3a1e1:mindie_ref/mindie_llm/atb_models/models/gptneox/20b/model/pa_model.h
         void FromString(const std::string &param);
     };
 
@@ -56,11 +50,7 @@ public:
         std::vector<atb::TensorDesc> &outTensorDescs) override;
 
 private:
-<<<<<<<< HEAD:speed_infer/models/llama_pa/model/paged_attention_model.h
-    virtual int64_t BuildGraph() override;
-========
     int64_t BuildGraph() override;
->>>>>>>> 2d6877b7cc8a9e9e4ea53d6e38f6a38fe6e3a1e1:mindie_ref/mindie_llm/atb_models/models/gptneox/20b/model/pa_model.h
 
     atb::Status ParseParam(const std::string &param) override;
 
