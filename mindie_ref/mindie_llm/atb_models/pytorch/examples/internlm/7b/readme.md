@@ -55,7 +55,7 @@ InternLM开源了一个为实际场景量身定制的70亿参数库模型。该�
 | CPU     | Device |
 |---------|--------|
 | aarch64 | 800I A2  |
-| aarch64 | 310P3  |
+| aarch64 | 300I DUO  |
 
 # 快速上手
 
@@ -74,7 +74,7 @@ InternLM开源了一个为实际场景量身定制的70亿参数库模型。该�
 | 包名                                             |
 |------------------------------------------------|
 | Ascend-hdk-800IA2-npu-firmware_7.0.t9.0.b221.run |
-| Ascend-hdk-310p-npu-firmware_7.0.t9.0.b221.run |
+| Ascend-hdk-300IDUO-npu-firmware_7.0.t9.0.b221.run |
 
 根据芯片型号选择相应的安装包安装
 
@@ -88,12 +88,12 @@ chmod +x Ascend-hdk-800IA2-npu-firmware_7.0.t9.0.b221.run
 
 安装方法：
 
-| cpu     | 包名                                                     | 
-|---------|--------------------------------------------------------|
+| cpu     | 包名                                                    | 
+|---------|-------------------------------------------------------|
 | aarch64 | Ascend-hdk-800IA2-npu-driver_23.0.rc3.b060_linux-aarch64.run |
-| x86     | Ascend-hdk-800IA2-npu-driver_23.0.rc3.b060_linux-x86_64.run  |
-| aarch64 | Ascend-hdk-310p-npu-driver_23.0.rc3.b060_linux-aarch64.run |
-| x86     | Ascend-hdk-310p-npu-driver_23.0.rc3.b060_linux-x86-64.run |
+| x86     | Ascend-hdk-800IA2-npu-driver_23.0.rc3.b060_linux-x86_64.run |
+| aarch64 | Ascend-hdk-300IDUO-npu-driver_23.0.rc3.b060_linux-aarch64.run |
+| x86     | Ascend-hdk-300IDUO-npu-driver_23.0.rc3.b060_linux-x86-64.run |
 
 ```bash
 # 根据CPU架构 以及npu型号 安装对应的 driver
@@ -128,7 +128,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 | 包名                                         |
 |--------------------------------------------|
 | Ascend-cann-kernels-800IA2_7.0.T10_linux.run |
-| Ascend-cann-kernels-310p_7.0.T10_linux.run |
+| Ascend-cann-kernels-300IDUO_7.0.T10_linux.run |
 
 ```bash
 # 安装 kernel 以800I A2为例
