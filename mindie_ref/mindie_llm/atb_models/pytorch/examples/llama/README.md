@@ -271,8 +271,8 @@ LLaMA（Large Language Model Meta AI），由 Meta AI 发布的一个开放且�
 
 - 修改配置参数
 当前支持单case推理和多case推理。
-multicase=0时，单case；
-multicase=1时，多case；当前多case推理支持用例排列组合，set_case_pair=1时生效。
+multicase=0时，单case推理；
+multicase=1时，多case推理；支持用例排列组合，set_case_pair=1时生效。
 
   ```
   # 双芯模型权重路径
@@ -301,22 +301,24 @@ multicase=1时，多case；当前多case推理支持用例排列组合，set_cas
   # LLAMA2-7B or LLAMA2-13B, 为输出文件名字的后缀
   model_name="LLAMA2-7B"
   ```
-> 单case: 推理[batch_size,seqlen_in,seqlen_out]这个用例；
-> 多case: 默认测试batch=1/4/8/16/32，输入32~1024，输出32~1024这些case的性能；当set_case_pair=1时，测试seqlen_in_pair/seqlen_out_pair中的用例排列组合；
+> 单case: 推理用例为[batch_size, seqlen_in, seqlen_out]；
+> 多case: 默认测试batch=1/4/8/16/32，输入32-1024，输出32-1024多case的性能；当set_case_pair=1时，测试seqlen_in_pair/seqlen_out_pair中的用例排列组合；
 > 推理完成后性能数据保存在./multibatch_performance_{model_name}_{device_id}.csv，包括用例配置、首token、非首token处理时延等;
 
 - 执行推理
   指令：bash run.sh --[RUN_OPTION] [WORLD_SIZE] [DEVICE_TYPE]  
   ```
-  # 环境搭载的芯片为910型号，执行单卡推理
+  # 800I A2环境执行单卡推理
   bash run.sh --performance 1 d9
-  # 环境搭载的芯片为310型号，执行单卡双芯推理
+  # 800I A2环境执行双卡推理
+  bash run.sh --performance 2 d9
+  # 300I DUO环境执行单卡双芯推理
   bash run.sh --performance 2 d3
-  # 环境搭载的芯片为310型号，执行双卡四芯推理
+  # 300I DUO环境执行双卡四芯推理
   bash run.sh --performance 4 d3
   ```
   > WORLD_SIZE: 指定芯片数量，实现单卡和多卡推理（默认1）
-  > DEVICE_TYPE: d9/d3, 适配芯片型号910/310 (默认310)
+  > DEVICE_TYPE: d9/d3, 分别适配800I A2和300I DUO芯片型号 (默认d3，支持300I DUO推理)
 
   该命令会运行一次简单的推理实例warm up，并启动后续的推理；自定义运行可参考`main.py`
 
@@ -393,9 +395,9 @@ multicase=1时，多case；当前多case推理支持用例排列组合，set_cas
 
 4. 执行量化模型推理
   ```
-  # 环境搭载的芯片为910型号，执行单卡推理
+  # 800I A2环境执行单卡推理
   bash run.sh --performance 1 d9
-  # 环境搭载的芯片为310型号，执行单卡双芯推理
+  # 300I DUO环境执行单卡双芯推理
   bash run.sh --performance 2 d3
   ```
 
@@ -476,11 +478,11 @@ multicase=1时，多case；当前多case推理支持用例排列组合，set_cas
     FLOAT_LAYERS = [0, 1, 2, 4, 30] 
     ```
 
-5. 执行量化模型推理
+5. 执行稀疏量化模型推理
   ```
-  # 环境搭载的芯片为910型号，执行单卡推理
+  # 800I A2环境执行单卡推理
   bash run.sh --performance 1 d9
-  # 环境搭载的芯片为310型号，执行单卡双芯推理
+  # 300I DUO环境执行单卡双芯推理
   bash run.sh --performance 2 d3
   ```
 
@@ -548,4 +550,3 @@ torchrun --nproc_per_node 2 --master_port 25641 sdk_test.py --task precision
 | llama Model 5-shot | GPU LLaMA2-7B | NPU LLaMA2-7B | GPU LLaMA2-13B | NPU LLaMA2-13B |
 | ------------------ | ------------- | ------------- | -------------- | -------------- |
 | Average(%) | 45.97 | 45.94	|	55.72 | 55.67	|
-> LLaMA2-7B量化精度在bs=1场景下测试
