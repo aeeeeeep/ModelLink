@@ -21,14 +21,17 @@ def parse_args():
     return args
 
 
-class BaichuanLMParallel(ParallelLauncher):
+class AquilaLMParallel(ParallelLauncher):
     """
     多卡推理launcher
     """
 
     def init_model(self):
-        tokenizer = AutoTokenizer.from_pretrained(self.model_path, trust_remote_code=True, use_fast=False,
-                                                  padding_side="left")
+
+        tokenizer_path = os.path.join(self.model_path)
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True,
+                                                  use_fast=True)
+        tokenizer.add_special_tokens({'pad_token': "<|endoftext|>"})
 
         part_model_path = os.path.join(self.model_path, 'part_model', str(self.local_rank))
         model = AutoModelForCausalLM.from_pretrained(part_model_path, trust_remote_code=True)
@@ -38,7 +41,7 @@ class BaichuanLMParallel(ParallelLauncher):
         return model, tokenizer
 
 
-class BaichuanLM(Launcher):
+class AquilaLM(Launcher):
     """
     单卡推理launcher
     """
@@ -48,7 +51,8 @@ class BaichuanLM(Launcher):
         模型初始化
         :return:
         """
-        tokenizer = AutoTokenizer.from_pretrained(self.model_path, trust_remote_code=True, use_fast=True)
+        tokenizer = AutoTokenizer.from_pretrained(self.model_path, trust_remote_code=True,
+                                                  use_fast=True)
         tokenizer.add_special_tokens({'pad_token': "<|endoftext|>"})
         model = AutoModelForCausalLM.from_pretrained(self.model_path, trust_remote_code=True).half().to(self._device)
         model.eval()
@@ -88,13 +92,17 @@ def demo_inference(launcher: Launcher):
                    {'max_new_tokens': 64, 'repetition_penalty': 1.1})
 
     launcher.logger.info("---------------inference---------------")
+    launcher.infer('请给出10个要到北京旅游的理由。', {'max_new_tokens': 64, 'repetition_penalty': 1.1})
     launcher.infer('登鹳雀楼->王之涣\n夜雨寄北->', {'max_new_tokens': 64, 'repetition_penalty': 1.1})
+    launcher.infer('苹果公司的CEO是', {'max_new_tokens': 64, 'repetition_penalty': 1.1})
+    launcher.infer('华为公司的CEO是', {'max_new_tokens': 64, 'repetition_penalty': 1.1})
+    launcher.infer('微软公司的CEO是', {'max_new_tokens': 64, 'repetition_penalty': 1.1})
 
     launcher.logger.info("---------------2k---------------")
     launcher.infer_test(1, 2048, 64)
 
     launcher.logger.info("---------------batch---------------")
-    query_list = ["谷歌公司的CEO是",
+    query_list = ["请给出10个要到北京旅游的理由。",
                   '登鹳雀楼->王之涣\n夜雨寄北->',
                   '苹果公司的CEO是',
                   '华为公司的CEO是',
@@ -113,9 +121,9 @@ def main():
     args = parse_args()
     atb_speed_config.init_config("config.ini")
     if atb_speed_config.model.device_num > 1:
-        launcher = BaichuanLMParallel()
+        launcher = AquilaLMParallel()
     else:
-        launcher = BaichuanLM()
+        launcher = AquilaLM()
     TASK_MAP.get(args.task)(launcher)
 
 
