@@ -137,7 +137,7 @@ class LlamaForCausalLM(CausalLM):
         ]
         acl_param = json.dumps({
             "tokenOffset": [int(self.token_offset[0])] * self.batch_num,
-            "seqLen": [input_ids.shape[1]]  * self.batch_num if cu_seqlen_prefill else self.acl_param_seq_len_decoder
+            "seqLen": [input_ids.shape[1]] * self.batch_num if cu_seqlen_prefill else self.acl_param_seq_len_decoder
         })
 
         return acl_operation_inputs, acl_param
