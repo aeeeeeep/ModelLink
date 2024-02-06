@@ -16,6 +16,8 @@
 #ifndef ATB_SPEED_MODELS_COMMON_MLP_OPERATION_H
 #define ATB_SPEED_MODELS_COMMON_MLP_OPERATION_H
 #include <atb/atb_infer.h>
+#include "layers/operations/linear.h"
+#include "layers/operations/linear_parallel.h"
 
 namespace atb_speed {
 namespace common {
