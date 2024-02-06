@@ -281,9 +281,9 @@ cp ${script_path}/modeling_gpt_neox_ascend.py ${model_path}
   *.json(模型源文件)
   *.tiktoken(模型源文件)
   *.bin(模型源文件，软链接，部分模型权重为其它格式，如*.safetensors等)
-  modeling_gpt_neox_ascend.py
+  modeling_gpt_neox_ascend.py(加速库modeling)
   modeling_gpt_neox_cut.py(权重切分脚本)
-  configuration_gpt_neox.py
+  configuration_gpt_neox.py(模型配置文件)
   --part_model(以双卡为例，权重切分成功后文件夹)
     --0
     --1
