@@ -148,7 +148,7 @@
     ```
     cp ../../chatglm2/6b/patches/models/modeling_chatglm_ascend.py ${CHECKPOINT}/modeling_chatglm.py
     cd CodeGeeX2
-    bash scripts/run_humanevalx.sh
+    MODE=gen bash ./scripts/run_humanevalx.sh
     ```
 
 - 模型性能数据测试

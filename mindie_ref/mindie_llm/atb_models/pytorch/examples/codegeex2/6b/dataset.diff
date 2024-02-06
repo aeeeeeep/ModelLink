@@ -32,9 +32,18 @@ index 3b1bca7..26c61bc 100644
      add_code_generation_specific_args(parser)
      args = parser.parse_args()
 diff --git a/scripts/run_humanevalx.sh b/scripts/run_humanevalx.sh
-index 14e1775..badc762 100644
+index 14e1775..83775c2 100644
 --- a/scripts/run_humanevalx.sh
 +++ b/scripts/run_humanevalx.sh
+@@ -14,7 +14,7 @@ SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
+ MAIN_DIR=$(dirname "$SCRIPT_DIR")
+ 
+ # enviroment settings
+-HOSTLIST=$SCRIPT_DIR/hostlist
++HOSTLIST=
+ WORLD_SIZE=1
+ DATASET=humanevalx
+ GENERATION_MODE=completion
 @@ -25,24 +25,24 @@ TIMEOUT=5
  
  # generation settings
