@@ -9,6 +9,7 @@
     - [Accuracy of the loss](#accuracy-of-the-loss)
   - [Inference](#inference)
   - [Evaluation](#evaluation-with-benchmark)
+
 ## Training
 
 Here's a hardware summary of pre-training Aquila-7B:
@@ -17,9 +18,9 @@ Here's a hardware summary of pre-training Aquila-7B:
 |:--------:|:------:|:----------------:|
 |   NPU    |  A+K   | 8 x Ascend NPUs  |
 
-## Script
+### Script
 
-#### 1. Clone the repository to your local server and switch to modellink branch:
+1. Clone the repository to your local server and switch to modellink branch:
 ```shell
 git clone -b modellink https://gitee.com/ascend/ModelLink.git
 cd ModelLink
@@ -28,7 +29,7 @@ mkdir ckpt
 ```
 
 
-### 2. Build environment
+2. Build conda environment
 
 ```bash
 # python3.8
@@ -50,12 +51,12 @@ pip install -r requirements.txt
 ```
 
 
-### 3. Download the Aquila-7B model, config, and tokenizer from [here](https://huggingface.co/BAAI/Aquila-7B/tree/main)
+3. Download the Aquila-7B model, config, and tokenizer from [here](https://huggingface.co/BAAI/Aquila-7B/tree/main)
 
 save to ModelLink/HF_Aquila7B_downloaded/ directory.
 
 
-### 4. Prepare dataset.
+4. Prepare dataset.
 
 step1: Download the datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet), save to ModelLink/dataset/ directory.
 
@@ -80,21 +81,24 @@ python ./tools/preprocess_data.py \
     --tokenizer-type PretrainedFromHF
 ```
 
-### 5. Weights convert
+5. Weights convert
 
 convert the model pre-training weights.
 
 ```shell
 mkdir model_weights
-SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
-python $SCRIPT_PATH \
-    --input-model-dir ./HF_Aquila7B_downloaded/ \
-    --output-model-dir ./model_weights/aquila \
-    --tensor-model-parallel-size 8 \
-    --pipeline-model-parallel-size 1 \
-    --make-vocab-size-divisible-by 8 \
-    --type 7B \
-    --merge-mlp
+cd AscendSpeed
+# please modify the path to set_env.sh based on your environment.
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --load-dir ./HF_Aquila7B_downloaded \
+    --save-dir ./model_weights/aquila \
+    --loader llama2_hf \
+    --saver megatron \
+    --target-tensor-parallel-size 8 \
+    --make-vocab-size-divisible-by 1 \
+    --tokenizer-name-or-path ./HF_Aquila7B_downloaded \
+    --tokenizer-type PretrainedFromHF
 ```
 
 
