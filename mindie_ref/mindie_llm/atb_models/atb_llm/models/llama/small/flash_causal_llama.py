@@ -331,6 +331,10 @@ class FlashLlamaForCausalLM(torch.nn.Module):
                 weights=weights,
                 is_norm=False,
             )
+        # for 310p quant
+        self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
+        self.transdata_param = json.dumps({})
+        self.transdata_operation.set_param(self.transdata_param)    
         # for ascend
         self.num_attention_heads = config.num_attention_heads
         self.hidden_size = config.hidden_size
@@ -363,10 +367,6 @@ class FlashLlamaForCausalLM(torch.nn.Module):
         self.ascend_rotary_embedding = PositionRotaryEmbedding.static(dim=self.head_size, base=10000.0,
                                                                       device="cpu").to(weights.device)
 
-        self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
-        self.transdata_param = json.dumps({})
-        self.transdata_operation.set_param(self.transdata_param)
-        
         self.soc_info = NPUSocInfo()
         logger.info(self.soc_info)
         logger.info(f"{self.num_layers=}")
@@ -375,7 +375,7 @@ class FlashLlamaForCausalLM(torch.nn.Module):
         tensor = tensor.to(torch.float16).npu()
         if not self.soc_info.need_nz:
             return tensor
-        torch_npu.npu_format_cast_(tensor, 29)
+        tensor.data = torch_npu.npu_format_cast(tensor.data, 29)
         logger.info(f"trans to {torch_npu.get_npu_format(tensor)}")
         return tensor
     
@@ -508,7 +508,7 @@ class FlashLlamaForCausalLM(torch.nn.Module):
             "rankSize": self.tp_world_size,
             "isLmHeadParallel": not self.soc_info.need_nz,  # 310P 暂不支持all-gather
             "isPrefill": True,
-            "backend": os.getenv("BACKEND", "lccl"),  # 310P 暂不支持lccl
+            "backend": "hccl" if self.soc_info.need_nz else os.getenv("BACKEND", "lccl"),  # 310P 暂不支持lccl
             "isQuant": self.is_quant,
             "qkvInputScale": self.qkv_input_scale, "qkvInputOffset": self.qkv_input_offset,
             "denseInputScale": self.dense_input_scale, "denseInputOffset": self.dense_input_offset,
@@ -525,7 +525,7 @@ class FlashLlamaForCausalLM(torch.nn.Module):
                 "rankSize": self.tp_world_size,
                 "isLmHeadParallel": not self.soc_info.need_nz,
                 "isPrefill": False,
-                "backend": os.getenv("BACKEND", "lccl"),
+                "backend": "hccl" if self.soc_info.need_nz else os.getenv("BACKEND", "lccl"),
                 "isQuant": self.is_quant,
                 "qkvInputScale": self.qkv_input_scale, "qkvInputOffset": self.qkv_input_offset,
                 "denseInputScale": self.dense_input_scale, "denseInputOffset": self.dense_input_offset,
@@ -543,7 +543,7 @@ class FlashLlamaForCausalLM(torch.nn.Module):
                 "rankSize": self.tp_world_size,
                 "isLmHeadParallel": not self.soc_info.need_nz,  # 310P 暂不支持all-gather
                 "isPrefill": True,
-                "backend": os.getenv("BACKEND", "lccl"),  # 310P 暂不支持lccl
+                "backend": "hccl" if self.soc_info.need_nz else os.getenv("BACKEND", "lccl"),  # 310P 暂不支持lccl
                 "isQuant": self.is_quant,
             })
             self.acl_param_decoder = json.dumps({
@@ -555,7 +555,7 @@ class FlashLlamaForCausalLM(torch.nn.Module):
                 "rankSize": self.tp_world_size,
                 "isLmHeadParallel": not self.soc_info.need_nz,
                 "isPrefill": False,
-                "backend": os.getenv("BACKEND", "lccl"),
+                "backend": "hccl" if self.soc_info.need_nz else os.getenv("BACKEND", "lccl"),
                 "isQuant": self.is_quant,
             })
 
@@ -584,12 +584,12 @@ class FlashLlamaForCausalLM(torch.nn.Module):
             weights_layer = self.model.layers[i].state_dict()
             if not self.is_quant or (i in self.float_layers):
                 
-                self.weights.append(self.weight_format_cast(weights_layer["input_layernorm.weight"]))
+                self.weights.append(weights_layer["input_layernorm.weight"].to(torch.float16).npu())
                 self.weights.append(self.weight_format_cast(weights_layer["self_attn.query_key_value.linear.weight"]))
                 self.weights.append(self.placeholder)
                 self.weights.append(self.placeholder)
                 self.weights.append(self.weight_format_cast(weights_layer["self_attn.o_proj.linear.weight"]))
-                self.weights.append(self.weight_format_cast(weights_layer["post_attention_layernorm.weight"]))
+                self.weights.append(weights_layer["post_attention_layernorm.weight"].to(torch.float16).npu())
                 self.weights.append(self.weight_format_cast(weights_layer["mlp.gate_up_proj.linear.weight"]))
                 self.weights.append(self.placeholder)
                 self.weights.append(self.weight_format_cast(weights_layer["mlp.down_proj.linear.weight"]))
@@ -638,8 +638,8 @@ class FlashLlamaForCausalLM(torch.nn.Module):
                 self.weights.append(self.deq_scale_dict[up_name].to(torch.int64).npu())
                 self.weights.append(self.quant_bias_dict[up_name].to(torch.int32).npu())
                 
-                self.weights.append(self.weight_format_cast(weights_layer["input_layernorm.bias"]))
-                self.weights.append(self.weight_format_cast(weights_layer["post_attention_layernorm.bias"]))
+                self.weights.append(weights_layer["input_layernorm.bias"].to(torch.float16).npu())
+                self.weights.append(weights_layer["post_attention_layernorm.bias"].to(torch.float16).npu())
             
             del self.model.layers[i].input_layernorm
             del self.model.layers[i].self_attn
