@@ -43,6 +43,7 @@
 #include "llama_pa/model/paged_attention_model.h"
 #include "llama_pa/model/paged_attention_common_model.h"
 #include "llama_parallel/model/decoder_model.h"
+#include "llama2/70b/model/fusion_pa_model.h"
 #include "minigpt4/model/fusion_encoder_model.h"
 #include "minigpt4/model/fusion_model.h"
 #include "pytorch/adapter/utils/utils.h"
@@ -150,6 +151,8 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::llama_adapter::EncoderAdapterModel>(param);
     } else if (modelName_ == "llama_adapter_decoder_model") {
         model_ = std::make_shared<atb_speed::llama_adapter::DecoderAdapterModel>(param);
+    } else if (modelName_ == "llama2_70b_fusion_pa_model") {
+        model_ = std::make_shared<atb_speed::llama2_70b::FusionPAModel>(param);
     } else if (modelName_ == "chatglm2_common_model") {
         model_ = std::make_shared<atb_speed::chatglm2_6b::ChatGlm2CommonModelFa>(param);
     } else if (modelName_ == "chatglm2_6b_decoder_pa_model") {

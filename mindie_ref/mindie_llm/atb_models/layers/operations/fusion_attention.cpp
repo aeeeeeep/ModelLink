@@ -195,24 +195,6 @@ atb::Status FusionAttention::QKVLinearSplit(const FusionAttentionParam &param_, 
     }
 }
 
-void unSqueezeBatchSize(const atb::Dims &oldShape, atb::Dims &newShape, int batchSize)
-{
-    newShape.dimNum = 4;
-    newShape.dims[0] = batchSize;
-    newShape.dims[1] = oldShape.dims[0] / batchSize;
-    newShape.dims[2] = oldShape.dims[1];
-    newShape.dims[3] = oldShape.dims[2];
-}
-
-void unSqueezeLayerAxis(const atb::Dims &oldShape, atb::Dims &newShape)
-{
-    newShape.dimNum = 4;
-    newShape.dims[0] = 1;  // Layer Axis
-    newShape.dims[1] = oldShape.dims[0];
-    newShape.dims[2] = oldShape.dims[1];
-    newShape.dims[3] = oldShape.dims[2];
-}
-
 enum SelfAttentionTensorIdx : uint32_t {
     IN_SELF_ATTENTION_POSITION_EMBED_Q = 0,
     IN_SELF_ATTENTION_POSITION_EMBED_K,
@@ -250,15 +232,10 @@ atb::Status FusionAttention::SelfAttention(const FusionAttentionParam &param, at
         atb::infer::ReshapeAndCacheParam reshapeCacheParm;
         CREATE_OPERATION(reshapeCacheParm, &reshapeAndCacheNode.operation);
         reshapeAndCacheNode.inTensorIds = {
-            // shape: [1, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
             SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_K,
-            // shape: [1, seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
             SelfAttentionTensorIdx::IN_SELF_ATTENTION_V,
-            // shape: [2622, hiddenSizePerAttentionHead, numAttentionHeadsPerRank, hiddenSizePerAttentionHead]
             SelfAttentionTensorIdx::IN_SELF_ATTENTION_K_CACHE,
-            // shape: [2622, hiddenSizePerAttentionHead, numAttentionHeadsPerRank, hiddenSizePerAttentionHead]
             SelfAttentionTensorIdx::IN_SELF_ATTENTION_V_CACHE,
-            // shape: [seqLen]
             SelfAttentionTensorIdx::IN_SELF_ATTENTION_SLOTS
         };
         reshapeAndCacheNode.outTensorIds = {};
@@ -268,11 +245,8 @@ atb::Status FusionAttention::SelfAttention(const FusionAttentionParam &param, at
     if (param.isFA) { // FA
         CREATE_OPERATION(param.selfAttentionParam, &selfAttentionNode.operation);
         selfAttentionNode.inTensorIds = {
-            // shape: [seqLen, headNum, hiddenSizePerHead]
             SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_Q,
-            // shape: [seqLen, headNum, hiddenSizePerHead]
             SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_K,
-            // shape: [batchSize, seqLen, headNum, hiddenSizePerHead]
             SelfAttentionTensorIdx::IN_SELF_ATTENTION_V,
             SelfAttentionTensorIdx::IN_SELF_ATTENTION_K_CACHE,
             SelfAttentionTensorIdx::IN_SELF_ATTENTION_V_CACHE,
@@ -299,20 +273,14 @@ atb::Status FusionAttention::SelfAttention(const FusionAttentionParam &param, at
             };
         } else {
             selfAttentionNode.inTensorIds = {
-                // shape: [1, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
                 SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_Q,
-                // shape: [2622, hiddenSizePerAttentionHead, numAttentionHeadsPerRank, hiddenSizePerAttentionHead]
                 SelfAttentionTensorIdx::IN_SELF_ATTENTION_K_CACHE,
-                // shape: [2622, hiddenSizePerAttentionHead, numAttentionHeadsPerRank, hiddenSizePerAttentionHead]
                 SelfAttentionTensorIdx::IN_SELF_ATTENTION_V_CACHE,
-                // shape: [seqLen, seqLen]
                 SelfAttentionTensorIdx::IN_SELF_ATTENTION_BLOCK_TABLES,
-                // shape: [seqLen]
                 SelfAttentionTensorIdx::IN_SELF_ATTENTION_SEQ_LEN
             };
         }
         CREATE_OPERATION(param.pageAttentionParam, &selfAttentionNode.operation);
-        // shape: [seqLen, numAttentionHeadsPerRank, hiddenSizePerAttentionHead]
         selfAttentionNode.outTensorIds = {SelfAttentionTensorIdx::OUT_SELF_ATTENTION};
     }
 
@@ -358,11 +326,17 @@ enum AttentionTensorIdx : uint32_t {
     IN_OFFSET_OUT,
     IN_DESCALE_OUT,
     OUT_ATTENTION,
-    INTERMIDATE_Q,  // shape: PA: [seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
-    INTERMIDATE_K,  // shape: PA: [seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
-    INTERMIDATE_V,  // shape: PA: [seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
-    INTERMIDATE_POSITION_EMBED_Q,  // shape: PA: [seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
-    INTERMIDATE_POSITION_EMBED_K,  // shape: PA: [seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
+    // shape: PA: [seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
+    // shape: FA: [batchSize, seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
+    INTERMIDATE_Q,
+    // shape: PA: [seqLen, numKeyValueHeadsPerRank * hiddenSizePerAttentionHead]
+    // shape: FA: [batchSize, seqLen, numKeyValueHeadsPerRank * hiddenSizePerAttentionHead]
+    INTERMIDATE_K,
+    INTERMIDATE_V,  // same as INTERMIDATE_K
+    // shape: PA: [unpadSeqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
+    // shape: FA: [batchSize * seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
+    INTERMIDATE_POSITION_EMBED_Q,
+    INTERMIDATE_POSITION_EMBED_K,  // same as INTERMIDATE_POSITION_EMBED_Q
     INTERMIDATE_SELF_ATTENTION  // shape: PA: [seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
 };
 
@@ -379,14 +353,22 @@ void unsqueezeByHeadNum(const atb::Dims &oldShape, atb::Dims &newShape, int head
     newShape.dims[2] = headDim;                // hiddenSizePerAttentionHead
 }
 
-void unsqueezeByHeadNumANDBatchSize(const atb::Dims &oldShape, atb::Dims &newShape,
+void unsqueezeByHeadNumAndBatchSize(const atb::Dims &oldShape, atb::Dims &newShape,
                                     int batchSize, int headNum, int headDim)
 {
-    newShape.dimNum = 4;
-    newShape.dims[0] = batchSize;
-    newShape.dims[1] = oldShape.dims[0] / batchSize;
-    newShape.dims[2] = headNum;
-    newShape.dims[3] = headDim;
+    if (oldShape.dimNum == 3) {
+        newShape.dimNum = 4;
+        newShape.dims[0] = oldShape.dims[0];  // batchSize
+        newShape.dims[1] = oldShape.dims[1];  // seqLen
+        newShape.dims[2] = headNum;
+        newShape.dims[3] = headDim;
+    } else {
+        newShape.dimNum = 4;
+        newShape.dims[0] = batchSize;
+        newShape.dims[1] = oldShape.dims[0] / batchSize;
+        newShape.dims[2] = headNum;
+        newShape.dims[3] = headDim;
+    }
 }
 
 void squeezeBatchSize(const atb::Dims &oldShape, atb::Dims &newShape)
@@ -394,6 +376,15 @@ void squeezeBatchSize(const atb::Dims &oldShape, atb::Dims &newShape)
     newShape.dimNum = 2;
     newShape.dims[0] = oldShape.dims[0] * oldShape.dims[1];
     newShape.dims[1] = oldShape.dims[2];
+}
+
+void unSqueezeLayerAxis(const atb::Dims &oldShape, atb::Dims &newShape)
+{
+    newShape.dimNum = oldShape.dimNum + 1;
+    newShape.dims[0] = 1;  // Layer Axis
+    for (auto i = 0; i < oldShape.dimNum; i++) {
+        newShape.dims[i + 1] = oldShape.dims[i];
+    }
 }
 
 atb::Status FusionAttention::Attention(const FusionAttentionParam &param, atb::Operation **operation)
@@ -460,15 +451,15 @@ atb::Status FusionAttention::Attention(const FusionAttentionParam &param, atb::O
     selfAttentionNode.inTensorReshapeFuncs.resize(selfAttentionNode.inTensorIds.size());
     if (param.isFA) {
         selfAttentionNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            unsqueezeByHeadNumANDBatchSize(oldShape, newShape, (*batchSizePtr),
+            unsqueezeByHeadNumAndBatchSize(oldShape, newShape, (*batchSizePtr),
                                            param.selfAttentionParam.headNum, param.selfAttentionParam.headDim);
         };
         selfAttentionNode.inTensorReshapeFuncs[1] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            unsqueezeByHeadNumANDBatchSize(oldShape, newShape, (*batchSizePtr),
+            unsqueezeByHeadNumAndBatchSize(oldShape, newShape, (*batchSizePtr),
                                            param.selfAttentionParam.kvHeadNum, param.selfAttentionParam.headDim);
         };
         selfAttentionNode.inTensorReshapeFuncs[2] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            unsqueezeByHeadNumANDBatchSize(oldShape, newShape, (*batchSizePtr),
+            unsqueezeByHeadNumAndBatchSize(oldShape, newShape, (*batchSizePtr),
                                            param.selfAttentionParam.kvHeadNum, param.selfAttentionParam.headDim);
         };
         // Unsqueeze layer axis of kv cache
