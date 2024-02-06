@@ -15,9 +15,10 @@
  */
 
 #ifndef ASCEND_SPEED_INFERENCE_COMMON_LINEAR_PARALLEL_H
-#define ASCEND_SPEED_INFERENCE_COMMON_LINEAR_PARALLE_H
+#define ASCEND_SPEED_INFERENCE_COMMON_LINEAR_PARALLEL_H
 
 #include <atb/atb_infer.h>
+#include "layers/operations/linear.h"
 
 namespace atb_speed {
 namespace common {
