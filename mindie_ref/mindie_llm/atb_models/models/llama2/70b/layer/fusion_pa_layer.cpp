@@ -175,6 +175,7 @@ atb::Status FusionPALayer(const FusionPALayerParam &param, atb::Operation **oper
     mlpParallelParam.rankRoot = 0;
     mlpParallelParam.transposeB = false;
     mlpParallelParam.hcclComm = nullptr;
+    mlpParallelParam.backend = param.backend;
     mlpParallelParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
     atb_speed::common::MlpGateLayer(mlpParallelParam, &mlpParallelNode.operation);
     mlpParallelNode.inTensorIds = {INTERMIDATE_SELFNORMOUT, IN_MLPUPWEIGHT, IN_MLPGATEWEIGHT, IN_MLPDOWNWEIGHT};

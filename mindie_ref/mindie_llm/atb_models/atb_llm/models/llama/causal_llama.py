@@ -36,8 +36,8 @@ class LlamaForCausalLM(CausalLM):
 
     def init_ascend_operations(self, config: LlamaConfig):
         # 初始化模型
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_family_decoder_model")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_family_decoder_model")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_decoder_model")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_decoder_model")
 
         # 设置模型参数
         coder_param = {
@@ -127,9 +127,6 @@ class LlamaForCausalLM(CausalLM):
         cos_embed = self.ascend_rotary_embedding.get_cos_cached_total()
         sin_embed = self.ascend_rotary_embedding.get_sin_cached_total()
 
-        if self.soc_info.need_nz:
-            pass
-
         acl_operation_inputs = [
             input_ids, position_ids, cos_embed, sin_embed, self.mask_full,
             self.placeholder, self.placeholder, self.kv_cache_idx, self.token_offset,
@@ -138,7 +135,9 @@ class LlamaForCausalLM(CausalLM):
             torch.tensor([self.seq_len_encoder[0] - 1], dtype=torch.int64,
                          device="npu") if cu_seqlen_prefill else self.lm_head_indices_fake
         ]
-        acl_param = json.dumps({"tokenOffset": [int(self.token_offset[0])] * self.batch_num,
-                                "seqLen": ([input_ids.shape[1]] if cu_seqlen_prefill else [1]) * self.batch_num})
+        acl_param = json.dumps({
+            "tokenOffset": [int(self.token_offset[0])] * self.batch_num,
+            "seqLen": [input_ids.shape[1]]  * self.batch_num if cu_seqlen_prefill else self.acl_param_seq_len_decoder
+        })
 
         return acl_operation_inputs, acl_param
