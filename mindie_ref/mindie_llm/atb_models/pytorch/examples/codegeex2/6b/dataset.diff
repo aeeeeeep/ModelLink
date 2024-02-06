@@ -1,0 +1,99 @@
+diff --git a/evaluation/generation.py b/evaluation/generation.py
+index 3b1bca7..26c61bc 100644
+--- a/evaluation/generation.py
++++ b/evaluation/generation.py
+@@ -6,6 +6,8 @@ import torch
+ import random
+ import socket
+ import argparse
++import torch_npu
++from torch_npu.contrib import transfer_to_npu
+ 
+ from typing import *
+ from transformers import AutoModel, AutoModelForCausalLM, AutoTokenizer, StoppingCriteria
+@@ -292,7 +294,9 @@ def main(args, node_rank: int, local_rank: int, master_port: int, num_devices: i
+         else:
+             tokenizer = AutoTokenizer.from_pretrained(args.model_path, clean_up_tokenization_spaces=False, trust_remote_code=True)
+         if args.model_name in ["codegeex2-6b"]:
+-            model = AutoModel.from_pretrained(args.model_path, trust_remote_code=True).to("cuda:{}".format(local_rank % torch.cuda.device_count()))
++            torch_npu.npu.set_device(local_rank % torch.cuda.device_count())
++            model = AutoModel.from_pretrained(args.model_path, trust_remote_code=True, torch_dtype=torch.half, device='npu')
++            model.set_weight()
+         elif args.model_name in ["starcoder", "replit-code-v1-3b", "codegen25-7b-multi", "codegen25-7b-mono", "codegen-16B-multi"]:
+             model = AutoModelForCausalLM.from_pretrained(args.model_path, trust_remote_code=True).to("cuda:{}".format(local_rank % torch.cuda.device_count()))
+         else:
+@@ -392,7 +396,7 @@ def server(args):
+ 
+ 
+ if __name__ == "__main__":
+-    torch.multiprocessing.set_start_method("spawn")
++    torch.multiprocessing.set_start_method("spawn", force=True)
+     parser = argparse.ArgumentParser()
+     add_code_generation_specific_args(parser)
+     args = parser.parse_args()
+diff --git a/scripts/run_humanevalx.sh b/scripts/run_humanevalx.sh
+index 14e1775..383e4df 100644
+--- a/scripts/run_humanevalx.sh
++++ b/scripts/run_humanevalx.sh
+@@ -14,35 +14,35 @@ SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
+ MAIN_DIR=$(dirname "$SCRIPT_DIR")
+ 
+ # enviroment settings
+-HOSTLIST=$SCRIPT_DIR/hostlist
++HOSTLIST=
+ WORLD_SIZE=1
+ DATASET=humanevalx
+ GENERATION_MODE=completion
+ MODEL_NAME=codegeex2-6b
+-MODEL_PATH=/pathto/codegeex2-6b/
++MODEL_PATH=${CHECKPOINT}
+ N_CPU_WORKERS=16
+ TIMEOUT=5
+ 
+ # generation settings
+ ## pass@1 greedy
+-NUM_SAMPLES=1
+-MICRO_BSZ=1
+-TEMP=1.0
+-TOPK=1
+-TOPP=1.0
+-MAX_LENGTH=1024
+-SEED=42
+-GREEDY=1
+-
+-## pass@1 estimated
+-# NUM_SAMPLES=20
++# NUM_SAMPLES=1
+ # MICRO_BSZ=1
+-# TEMP=0.2
+-# TOPK=0
+-# TOPP=0.95
++# TEMP=1.0
++# TOPK=1
++# TOPP=1.0
+ # MAX_LENGTH=1024
+ # SEED=42
+-# GREEDY=0
++# GREEDY=1
++
++## pass@1 estimated
++NUM_SAMPLES=20
++MICRO_BSZ=1
++TEMP=0.2
++TOPK=0
++TOPP=0.95
++MAX_LENGTH=1024
++SEED=42
++GREEDY=0
+ 
+ ## pass@10 & pass@100
+ # NUM_SAMPLES=200
+@@ -54,7 +54,7 @@ GREEDY=1
+ # SEED=42
+ # GREEDY=0
+ 
+-for l in python java js cpp go rust;
++for l in python;
+ do
+     LANGUAGE=$l
+     DATA_DIR=$MAIN_DIR/benchmark/$DATASET/
