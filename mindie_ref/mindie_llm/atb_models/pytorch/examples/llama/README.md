@@ -233,8 +233,7 @@ LLaMA（Large Language Model Meta AI），由 Meta AI 发布的一个开放且�
    > 注： 每次运行前都需要 source CANN， 加速库，大模型
 
 ## 模型推理
-
-1. 切分模型权重 **首次跑模型时**，需要先对模型权重进行**切分**，切分方法如下
+1. 如果跑多卡多芯推理，需要先切分模型权重，切分方法如下：
 
 - 修改代码
 
@@ -252,10 +251,19 @@ LLaMA（Large Language Model Meta AI），由 Meta AI 发布的一个开放且�
   ```
 
 2. **执行模型推理**
-
 - 开启CPU Performance模式以提高模型推理性能（首次开启时，根据提示安装依赖）
   ```
   cpupower frequency-set -g performance
+  ```
+
+- 在800I A2执行推理时，可以通过**绑核**以达到最佳性能
+  ```
+  # 进入./pytorch/examples/atb_speed_sdk/，安装sdk依赖
+  cd ../atb_speed_sdk/
+  pip install .
+
+  # 进入run.sh，设置环境变量BIND_CPU为1（默认为0，不绑核）
+  export BIND_CPU=1
   ```
 
 - 配置必选参数：最大输入输出长度
@@ -337,24 +345,14 @@ multicase=1时，多case；当前多case推理支持用例排列组合，set_cas
 
     ```
 1.2 cpu生成量化权重
-  - 下载量化数据集
+  - 下载ceval量化数据集到./quant_script/下
     - ceval数据集 https://huggingface.co/datasets/ceval/ceval-exam/tree/main
-    解压从链接获取的.ZIP权重压缩包，权重解压在llama_parallel文件下，目录示例如下：
-    ```
-    --llama
-        --ceval-exam
-            #用于量化的数据集
-            --dev
-            --test
-            --val
-        --quantize_llama_antioutlier_weight.py
-        --quantize_weight.sh
-    ```
+    解压从链接获取的.zip权重压缩包，权重解压在quan_script文件夹下，目录示例如下
   - 生成anti-outlier浮点和量化权重
     ```
-    # 1. 修改quantize_weight.sh中input_dir为实际存放**模型原始浮点权重**的路径，例如：
+    # 1. 修改./quant_script/quantize_weight.sh中input_dir为实际存放**模型原始浮点权重**的路径，例如：
     input_dir="./llama2-7b"
-    # 2. 修改quantize_weight.sh中output_dir为自定义路径，用于存放anti-outlier浮点和量化权重，例如：
+    # 2. 修改./quant_script/quantize_weight.sh中output_dir为自定义路径，用于存放anti-outlier浮点和量化权重，例如：
     output_dir="./llama7b_quant_weight"
 
     # 如果跑llama2-7b，量化回退层推荐设置为L6
@@ -362,7 +360,7 @@ multicase=1时，多case；当前多case推理支持用例排列组合，set_cas
     # 如果跑llama2-13b，量化回退层推荐设置为L8
     disable_level="L8"
     # 执行量化权重生成
-    bash quantize_weight.sh --anti_quant
+    bash ./quant_script/quantize_weight.sh --anti_quant
     ```
 
 2. 量化权重切分
@@ -403,7 +401,7 @@ multicase=1时，多case；当前多case推理支持用例排列组合，set_cas
 
 ## 稀疏量化推理
 1. 生成稀疏量化权重
-  - 进入quantize_llama_sparse_weight.py，修改用于做校准的ceval数据集路径以及生成的稀疏量化权重保存路径
+  - 进入./quant_script/quantize_llama_sparse_weight.py，修改用于做校准的ceval数据集路径以及生成的稀疏量化权重保存路径
   ```python
   # line 14
   WORKDIR = "./ceval"
@@ -412,9 +410,9 @@ multicase=1时，多case；当前多case推理支持用例排列组合，set_cas
   dest_dir = "./llama7b_sparsequant_weight"
   ```
 
-  - 运行quantize_llama_sparse_weight.py脚本
+  - 运行./quant_script/quantize_llama_sparse_weight.py脚本
   ```bash
-  python quantize_llama_sparse_weight.py
+  python ./quant_script/quantize_llama_sparse_weight.py
   ```
 
 2. 稀疏权重切分
@@ -428,9 +426,9 @@ multicase=1时，多case；当前多case推理支持用例排列组合，set_cas
     ```
 
 3. 压缩切分后的稀疏权重
-  - 进入compress_llama_sparse_weight.py，修改切分后的稀疏量化权重路径以及压缩后保存的路径。
+  - 进入./quant_script/compress_llama_sparse_weight.py，修改切分后的稀疏量化权重路径以及压缩后保存的路径。
   
-  【注意】请分别修改切分后的两份权重路径以及压缩后保存的路径，并运行两次compress_model_util.py脚本。
+  【注意】请分别修改切分后的两份权重路径以及压缩后保存的路径，并运行两次./quant_script/compress_llama_sparse_weight.py脚本。
   
   ```python
   # line 14
@@ -451,9 +449,9 @@ multicase=1时，多case；当前多case推理支持用例排列组合，set_cas
         --compress_1
     ```
 
-    - 运行compress_llama_sparse_weight.py脚本
+    - 运行./quant_script/compress_llama_sparse_weight.py脚本
     ```bash
-    python compress_llama_sparse_weight.py
+    python ./quant_script/compress_llama_sparse_weight.py
     ```
 
     【FAQ】若运行脚本时出现"FileNotFoundError: [Errno2] No such file or directory: '/xxx/modelslim/pytorch/weight_compression/compress_graph/build/compress_executor': ..."，请按照以下步骤进行手动编译之后再执行脚本：
@@ -497,67 +495,57 @@ multicase=1时，多case；当前多case推理支持用例排列组合，set_cas
 
 
 # 精度验证指南
-> 模型基于C-EVAL数据集，采用5-shot的方式验证模型推理精度。 
+> 模型精度验证基于MMLU数据集，采用5-shot的方式验证模型推理精度。 
 
-## 1. 下载测试数据集以及分类信息
+## 1.下载MMLU数据集
+```
+wget https://people.eecs.berkeley.edu/~hendrycks/data.tar
+tar -xvf data.tar
+```
 
-https://huggingface.co/datasets/ceval/ceval-exam/tree/main
-https://github.com/hkust-nlp/ceval/blob/main/subject_mapping.json
+## 2. 安装atb-speed插件
+```
+cd ../atb_speed_sdk/
+pip install .
+```
 
-## 2. 当前目录示例
-**2.1 创建文件夹**
-> 该文件夹存放已经推理好的结果文件
+## 3.配置精度测试参数
+1. 在当前目录新建工作文件夹${mmlu_test_dir}
+2. 将下载的测试数据集进行解压后的数据放置在${mmlu_test_dir}
+3. 修改sdk_config.ini文件中精度测试的相关配置，设置模型路径、工作目录、device id(默认0、1卡)、和batch size(默认1)
+    * model_path=./llama2-7b_parallel
+    * work_dir=./mmlu_test
+    * device=0,1
+    * batch=1
 
-```
-mkdir ceval_result
-```
-> 注：开始下一次数据集精度推理前，请重命名之前保存的结果文件ceval_result/cache.csv
+目录结构示例${mmlu_test_dir}:
+--mmlu_test
+    --test_result 跑完之后生成  
+    --data (包含：数据文件夹dev、test、val三者)
 
-**2.2 目录示例**
-```
---llama
-    --ceval_result
-    --ceval-exam
-        --dev
-        --test
-        --val
-    --ceval_test.py
-    --subject_mapping.json
-```
-## 3. 修改参数
-
-```
-vim run.sh
-```
-* 修改模型路径、device id(默认0、1卡)和batch_size（默认1-batch）
-    * output_dir="./llama2-7b_parallel" #双芯模型权重路径
-    * device=0（偶数）
-    * ceval_batch_size=1
 ## 4. 运行并查看结果
 
-**4.1 开始推理**
+**4.1 开始精度数据集推理**
 ```
-# 环境搭载的芯片为910型号，执行单卡验证
-bash run.sh --precision 1 d9
-# 环境搭载的芯片为310型号，执行单卡双芯验证
-bash run.sh --precision 2 d3
+# 执行单芯推理
+python sdk_test.py --task precision
+
+# 执行多卡多芯推理
+torchrun --nproc_per_node 2 --master_port 25641 sdk_test.py --task precision
 ```
 
 **4.2 查看结果**
-
-| ceval_result目录                        | 用途                   | 
+| test_result目录                        | 用途                   | 
 |---------------------------|----------------------| 
 | cache.csv                | 结果详情，C列为预期答案，D列为测试答案 |
 | summary_classes_acc.json | 测试数据下按不同维度统计准确率      |
 | summary_subject_acc.json | 测试数据下按不同学科统计准确率      |
 
+> 注：开始下一次数据集精度推理前，请重命名之前保存的结果文件./mmlu_test/test_result
+
+
 # 模型推理精度
-| llama Model 5-shot | Average | Avg(Hard) | STEM  | Social Sciences | Humanities | Others |
-| ------------------ | ------- | --------- | ----- | --------------- | ---------- | ------ |
-| GPU LLaMA2-7B	|34.10|24.34	|	31.16| 44.36	|	34.24	|29.95  |
-| NPU LLaMA2-7B |34.32 | 25.0 |	31.86| 44.0 |	34.63 	| 30.21  |
-| NPU LLaMA2-7B(int8量化) |32.54 | 23.68 |	30.93| 39.64 |	33.07 	| 28.91  |
-| GPU LLaMA2-13B            |39.38|23.03	|	33.02| 44.0	|	46.69	|38.28  |
-| NPU LLaMA2-13B            | 39.30 | 23.68| 33.26| 44.0 |	46.69 	| 37.76  |
-| NPU LLaMA2-13B(int8量化)  | 39.00 | 25.66| 34.42| 43.64 |	43.97 	| 37.5  |
-> LLaMA2-7B量化精度在bs=1场景下测试；LLaMA2-13B量化精度在bs=2场景下测试
+| llama Model 5-shot | GPU LLaMA2-7B | NPU LLaMA2-7B | GPU LLaMA2-13B | NPU LLaMA2-13B |
+| ------------------ | ------------- | ------------- | -------------- | -------------- |
+| Average(%) | 45.97 | 45.94	|	55.72 | 55.67	|
+> LLaMA2-7B量化精度在bs=1场景下测试
