@@ -147,9 +147,9 @@
 
     ```
     export PYTHONPATH=${ATB_SPEED_HOME_PATH}/pytorch/examples/chatglm2/6b:${PYTHONPATH}
-    cp ../../chatglm2/6b/patches/models/modeling_chatglm_ascend.py ${CHECKPOINT}/modeling_chatglm.py
+    cp ${ATB_SPEED_HOME_PATH}/pytorch/examples/chatglm2/6b/patches/models/modeling_chatglm_ascend.py ${CHECKPOINT}/modeling_chatglm.py
     cd CodeGeeX2
-    MODE=gen bash ./scripts/run_humanevalx.sh
+    MODE=both bash ./scripts/run_humanevalx.sh
     ```
 
 - 模型性能数据测试
