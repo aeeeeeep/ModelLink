@@ -30,13 +30,15 @@ class PARunner:
         self.max_batch_size = kwargs.get('max_batch_size', None)
         self.use_refactor = kwargs.get('use_refactor', None)
         self.dtype = torch.bfloat16 if kwargs.get('is_bf16', False) else torch.float16
+        self.quantize = kwargs.get('quantize', None)
 
         self.block_size = kwargs.get('block_size', None)
 
         self.model = ModelRunner(
             self.model_path, rank=self.rank, world_size=self.world_size, dtype=self.dtype,
+            quantize=self.quantize,
             max_position_embeddings=self.max_position_embeddings,
-            quantize=None, use_refactor=self.use_refactor
+            use_refactor=self.use_refactor
         )
         self.tokenizer = self.model.tokenizer
         self.model.load_weights()
@@ -198,6 +200,7 @@ def parse_arguments():
     parser.add_argument('--max_prefill_tokens', type=int, default=-1)
     parser.add_argument("--max_batch_size", type=int, default=1)
     parser.add_argument("--block_size", type=int, default=128)
+    parser.add_argument("--quantize", type=str, default=None)
 
     parser.add_argument('--is_flash_model', action='store_false')
     parser.add_argument('--is_bf16', action='store_true')
@@ -239,5 +242,6 @@ if __name__ == '__main__':
             print_log(rank, logger.info, f'Question[{i}]: {args.input_texts[i]}')
         print_log(rank, logger.info, f'Answer[{i}]: {generate_text}')
         print_log(rank, logger.info, f'Generate[{i}] token num: {token_nums[i]}')
+        
     if world_size > 1:
         torch.distributed.destroy_process_group()

@@ -184,7 +184,8 @@ class Weights:
         filename, tensor_name = self.get_filename(tensor_name)
         f = self._get_handle(filename)
         tensor = f.get_tensor(tensor_name)
-
+        if tensor.dtype not in [torch.int8]:
+            tensor = tensor.to(dtype=self.dtype)
         tensor = tensor.to(device=self.device)
         return tensor
 
@@ -201,6 +202,8 @@ class Weights:
         else:
             logger.error("Let's make that generic when needed")
             raise AssertionError
+        if tensor.dtype not in [torch.int8]:
+            tensor = tensor.to(dtype=self.dtype)
         return tensor
 
     def get_partial_sharded(self, tensor_name: str, dim: int, gqa_size: int = 1):
@@ -227,6 +230,8 @@ class Weights:
         else:
             logger.error("Let's make that generic when needed")
             raise AssertionError
+        if tensor.dtype not in [torch.int8]:
+            tensor = tensor.to(dtype=self.dtype)
         return tensor
 
     def get_partial_sharded_padding(self, tensor_name: str, dim: int, gqa_size=1):

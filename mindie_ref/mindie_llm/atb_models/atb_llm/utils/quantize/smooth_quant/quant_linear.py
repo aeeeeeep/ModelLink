@@ -73,10 +73,6 @@ class W8A8LinearStatic(nn.Module):
 
         self.output_quant_name = 'per_channel'
 
-        self.losses = None
-        self.weight = None
-        self.bias = None
-
     def __repr__(self):
         return (f'W8A8LinearStatic({self.in_features}, {self.out_features}, '
                 f'bias={self.act_zeros is not None}, weight_quant={self.weight_quant_name}, '
