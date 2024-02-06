@@ -25,38 +25,69 @@ class DeviceInfo:
             self.chip_logic_id = int(self.chip_logic_id)
 
 
-def get_hbm_capacity(rank, need_nz):
-    npu_id = ENV.visible_devices.split(',')[rank]
-    memory_info = os.popen(f"npu-smi info -i {npu_id} -t memory").read().strip().split("\n")[1:]
-    if not need_nz:
-        hbm_capacity_key = 'HBM Capacity(MB)'
-    else:
-        hbm_capacity_key = 'DDR Capacity(MB)'
-    for line in memory_info:
-        try:
-            key, value = line.strip().split(':', 2)
-            if key.strip() == hbm_capacity_key:
-                return int(value.strip()) * 1024 * 1024
-        except ValueError:
-            pass
-    raise ValueError('not found valid hbm capactiy')
+class NpuHbmInfo:
+    visible_npu_ids: List = None
+    hbm_capacity: int = None
+    hbm_usage: int = None
 
+    @classmethod
+    def set_visible_devices(cls, world_size):
+        if cls.visible_npu_ids:
+            return
+        if ENV.visible_devices is None:
+            devices = [_ for _ in range(world_size)]
+        else:
+            devices = list(map(int, ENV.visible_devices.split(',')))
+        device_map_info = _get_device_map_info()
+        npu_ids = []
+        for device in devices:
+            device_info = device_map_info.get(device)
+            npu_ids.append(device_info.npu_id)
+        cls.visible_npu_ids = npu_ids
 
-def get_hbm_usage(rank, need_nz): 
-    npu_id = ENV.visible_devices.split(',')[rank]
-    usage_info = os.popen(f"npu-smi info -i {npu_id} -t usages").read().strip().split("\n")[1:]
-    if not need_nz:
-        hbm_capacity_key = 'HBM Usage Rate(%)'
-    else:
-        hbm_capacity_key = 'DDR Usage Rate(%)'
-    for line in usage_info:
-        try:
-            key, value = line.strip().split(':', 2)
-            if key.strip() == hbm_capacity_key:
-                return (float(value.strip()) + 1) / 100
-        except ValueError:
-            pass
-    raise ValueError('not found valid hbm capactiy')
+    @classmethod
+    def get_hbm_capacity(cls, rank, world_size, need_nz):
+        if cls.hbm_capacity:
+            return cls.hbm_capacity
+        if not cls.visible_npu_ids:
+            cls.set_visible_devices(world_size)
+        npu_id = cls.visible_npu_ids[rank]
+        memory_info = os.popen(f"npu-smi info -i {npu_id} -t memory").read().strip().split("\n")[1:]
+        if not need_nz:
+            hbm_capacity_key = 'HBM Capacity(MB)'
+        else:
+            hbm_capacity_key = 'DDR Capacity(MB)'
+        for line in memory_info:
+            try:
+                key, value = line.strip().split(':', 2)
+                if key.strip() == hbm_capacity_key:
+                    cls.hbm_capacity = int(value.strip()) * 1024 * 1024
+                    return cls.hbm_capacity
+            except ValueError:
+                pass
+        raise ValueError('not found valid hbm capactiy')
+
+    @classmethod
+    def get_hbm_usage(cls, rank, world_size, need_nz):
+        if cls.hbm_usage:
+            return cls.hbm_usage
+        if not cls.visible_npu_ids:
+            cls.set_visible_devices(world_size)
+        npu_id = cls.visible_npu_ids[rank]
+        usage_info = os.popen(f"npu-smi info -i {npu_id} -t usages").read().strip().split("\n")[1:]
+        if not need_nz:
+            hbm_capacity_key = 'HBM Usage Rate(%)'
+        else:
+            hbm_capacity_key = 'DDR Usage Rate(%)'
+        for line in usage_info:
+            try:
+                key, value = line.strip().split(':', 2)
+                if key.strip() == hbm_capacity_key:
+                    hbm_usage = (float(value.strip()) + 1) / 100
+                    return hbm_usage
+            except ValueError:
+                pass
+        raise ValueError('not found valid hbm usage')
 
 
 def _get_device_map_info() -> Dict[int, DeviceInfo]:
@@ -175,8 +206,8 @@ def bind_cpus(world_size, rank_id, ratio=0.5):
         cpu_num_per_device = int(cpu_binding_num)
         if len(shard_devices) * cpu_num_per_device > cpu_nums:
             raise Exception(
-                f"Cpu num in numa {numa_id} to assign {cpu_num_per_device} for every device is not enough, "  
-              f"please decrease the value of CPU_BINDING_NUM!")
+                f"Cpu num in numa {numa_id} to assign {cpu_num_per_device} for every device is not enough, "
+                f"please decrease the value of CPU_BINDING_NUM!")
 
     # 获取该npu的下标信息
     idx = shard_devices.index(cur_device)

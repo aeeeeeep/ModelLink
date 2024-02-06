@@ -30,7 +30,7 @@
 
 # 推理前准备
 
-1. 参见 [推理环境准备](../../../docs/推理环境准备.md) 安装 固件与驱动，CANN，PyTorchAdapter等基础软件。
+1. 参见 [推理环境准备](../../../../docs/推理环境准备.md) 安装 固件与驱动，CANN，PyTorchAdapter等基础软件。
    ```shell
    # 使能cann环境变量（根据实际安装路径修改）
    source ${path-to-ascend-toolkit}/set_env.sh
@@ -38,7 +38,7 @@
    source ${path-to-ascendTB}/set_env.sh
    # 使能inference库环境变量
    source ${path-to-transfomer-llm}/set_env.sh
-   #稀疏工具在线编译
+   # 稀疏工具在线编译(可选)
    cd ${path-to-ascend-toolkit}/tools/modelslim/pytorch/weight_compression/compress_graph/
    bash build.sh ${path-to-ascend-toolkit}/ascend-toolkit/latest/
    ```
@@ -168,7 +168,7 @@ weight_offset.npy  weight_scale.npy
 
 ## 模型推理
 
-- 可开启CPU Performance模式以提高模型推理性能。
+- 可开启CPU Performance模式以提高模型推理性能
 
   ```
   cpupower frequency-set -g performance
@@ -177,13 +177,13 @@ weight_offset.npy  weight_scale.npy
 - 推理前开启如下环境变量
 
   ```shell
-  export HCCL_BUFFSIZE=110
   export HCCL_OP_BASE_FFTS_MODE_ENABLE=TRUE
   export TASK_QUEUE_ENABLE=1
   export ATB_OPERATION_EXECUTE_ASYNC=1
   export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
 
-  # 300 Ipro 和 300 IDuo 上使能多 stream 可提升性能
+  # 仅300 Ipro和300 IDuo上开启
+  export HCCL_BUFFSIZE=110
   export ATB_USE_TILING_COPY_STREAM=1
   ```
 
@@ -221,6 +221,8 @@ weight_offset.npy  weight_scale.npy
   ```
 
 - 模型性能数据测试
+
+  性能测试请先参见[atb_speed_sdk 精确打点法](../../atb_speed_sdk/README.md#精确打点法)替换transformers库的utils.py文件，并配置环境变量`export RETURN_PERF_DETAIL=1`。
 
   ```shell
   # 浮点
