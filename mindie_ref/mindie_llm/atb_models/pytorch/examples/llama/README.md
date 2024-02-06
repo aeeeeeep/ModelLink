@@ -549,4 +549,4 @@ torchrun --nproc_per_node 2 --master_port 25641 sdk_test.py --task precision
 # 模型推理精度
 | llama Model 5-shot | GPU LLaMA2-7B | NPU LLaMA2-7B | GPU LLaMA2-13B | NPU LLaMA2-13B |
 | ------------------ | ------------- | ------------- | -------------- | -------------- |
-| Average(%) | 45.97 | 45.94	|	55.72 | 55.67	|
+| Average(%) | 45.97 | 45.99	|	55.72 | 55.64	|
