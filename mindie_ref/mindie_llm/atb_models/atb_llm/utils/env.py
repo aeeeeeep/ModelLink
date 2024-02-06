@@ -28,7 +28,7 @@ class EnvVar:
     # process group 初始化timeout，单位 秒，默认是10
     pg_init_timeout = int(os.getenv("PG_INIT_TIMEOUT", "10"))
 
-    memory_fraction = float(os.getenv("CUDA_MEMORY_FRACTION", "0.95"))
+    memory_fraction = float(os.getenv("CUDA_MEMORY_FRACTION", "1.0"))
 
     profiling_enable = os.getenv("ATB_PROFILING_ENABLE", "0") == "1"
     profiling_filepath = os.getenv("PROFILING_FILEPATH", './profiling')
