@@ -43,6 +43,7 @@ bash run.sh pa_fp16 [performance|full_CEval|full_MMLU|full_BoolQ] ([case_pair]) 
     Starcoder-15.5B: starcoder
 3. weight_dir: 权重路径
 4. chip_num: 使用的卡数
+5. 运行完成后，会在控制台末尾呈现保存数据的文件夹
 
 举例：
 1. 测试Llama-70B在8卡[512, 512]场景下，16 batch的性能
@@ -50,7 +51,7 @@ bash run.sh pa_fp16 performance [[512,512]] 16 llama /path 8
 1. 测试Starcoder-15.5B在8卡1 batch下游数据集BoolQ
 bash run.sh pa_fp16 full_BoolQ 1 starcoder /path 8
 ``` 
-``` 
+ 
 
 ## 300I DUO 运行操作说明
 

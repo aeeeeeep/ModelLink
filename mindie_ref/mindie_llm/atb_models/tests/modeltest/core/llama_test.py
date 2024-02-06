@@ -8,6 +8,7 @@ import torch
 from base import model_test
 from atb_llm.runner import ModelRunner
 
+
 class LlamaModelTest(model_test.ModelTest):
     def __init__(self, *args) -> None:
         self.max_position_embeddings = max([pair[0] for pair in ast.literal_eval(args[11])]) + max([pair[1] for pair in ast.literal_eval(args[11])])
@@ -46,7 +47,8 @@ class LlamaModelTest(model_test.ModelTest):
 
     def get_dataset_list(self):
         return ["GSM8K", "MMLU", "TruthfulQA"]
-    
+
+
 def main():
     LlamaModelTest.create_instance()
 

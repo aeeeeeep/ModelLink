@@ -11,6 +11,8 @@ try:
     from torch_npu.contrib import transfer_to_npu
 except ModuleNotFoundError:
     pass
+
+
 class Chatglm26BModelTest(model_test.ModelTest):
     def __init__(self, *args) -> None:
         super().__init__(*args)

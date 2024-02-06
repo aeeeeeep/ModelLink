@@ -1,19 +1,17 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
-from base import model_precision_test
 import os
 import sys
-import shutil
 import torch
 import torch_npu
-
 from transformers import (AutoConfig, AutoModelForCausalLM, AutoTokenizer,
                           BloomTokenizerFast)
-
 MODEL_FILE = os.path.join(model_precision_test.ATB_SPEED_HOME_PATH, "pytorch/examples/bloom7b")
 sys.path.append(MODEL_FILE)
 from modelling_bloom_ascend import BloomForCausalLM
+from base import model_precision_test
 
 WEIGHT_DIR = os.path.join(model_precision_test.ATB_TESTDATA_PATH, "weights", "bloom_7b")
+
 
 class Bloom7BModelTest(model_precision_test.ModelPrecisionTest):
     def __init__(self, *args) -> None:
@@ -55,6 +53,7 @@ class Bloom7BModelTest(model_precision_test.ModelPrecisionTest):
     
     def get_chip_num(self):
         return 2
+
 
 def main():
     Bloom7BModelTest.create_instance()

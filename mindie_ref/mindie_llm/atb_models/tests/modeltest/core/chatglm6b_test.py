@@ -1,16 +1,17 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
-from transformers import AutoTokenizer, AutoModel
 import os
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
-from base import model_precision_test
 import shutil
+from transformers import AutoTokenizer, AutoModel
 import torch
+sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
 try:
     import torch_npu
     from torch_npu.contrib import transfer_to_npu
 except ModuleNotFoundError:
     pass
+from base import model_precision_test
+
 
 class Chatglm6BModelTest(model_precision_test.ModelPrecisionTest):
     def __init__(self, *args) -> None:
@@ -67,6 +68,7 @@ class Chatglm6BModelTest(model_precision_test.ModelPrecisionTest):
             return False
         else:
             raise NotImplementedError
+
 
 def main():
     Chatglm6BModelTest.create_instance()

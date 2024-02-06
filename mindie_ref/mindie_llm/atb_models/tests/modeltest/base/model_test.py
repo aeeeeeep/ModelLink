@@ -1,36 +1,37 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
+import csv
+import glob
+import json
+import logging
+import math
 import os
 import re
-import csv
-import time
-import json
-import math
-import glob
 import shutil
-import logging
+import time
+import argparse
+import ast
+import copy
+import importlib
+from datetime import datetime, timedelta, timezone
+from importlib import reload
+from pathlib import Path
 import torch
 try:
     import torch_npu
     from torch_npu.contrib import transfer_to_npu
 except ModuleNotFoundError:
     pass
-import transformers
-import importlib
-import argparse
-import copy
-import ast
-import pandas as pd
 import numpy as np
-from importlib import reload
-from datetime import datetime, timezone, timedelta
-from tqdm import tqdm
+import pandas as pd
+import transformers
 from thefuzz import process
-from pathlib import Path
+from tqdm import tqdm
 from atb_llm.utils import env
 from atb_llm.utils.cpu_binding import NpuHbmInfo
-from examples.server.cache import CacheConfig, ModelConfig, CacheManager
-from examples.server.request import request_from_token, request_from_text
+from examples.server.cache import CacheConfig, CacheManager, ModelConfig
 from examples.server.generate import decode_token, generate_req
+from examples.server.request import request_from_text, request_from_token
+
 
 QA_PRIMER = """Q: What is human life expectancy in the United States?
 A: Human life expectancy in the United States is 78 years.
@@ -113,8 +114,11 @@ prompt_map = {"GSM8K": "", "TruthfulQA": QA_PRIMER}
 question_num = {"GSM8K": 11, "TruthfulQA": 12}
 
 logging.basicConfig(level=logging.DEBUG)
+
+
 class ModelTest:
-    def __init__(self, model_type, data_type, test_mode, model_name, data_dir, dataset_name, batch_size, device_id, result_dir, log_dir, hardware_type, case_pair, _) -> None:
+    def __init__(self, model_type, data_type, test_mode, model_name, data_dir, dataset_name, batch_size, device_id,
+                 result_dir, log_dir, hardware_type, case_pair, _) -> None:
         self.model_type = model_type
         self.data_type = data_type
         self.test_mode = test_mode
@@ -132,42 +136,45 @@ class ModelTest:
         self.log_dir = log_dir
         self.hardware_type = hardware_type
         self.warm_up_memory = 0
-        self.case_pair = ast.literal_eval(case_pair) if case_pair != "[]" else [[256, 256], [512, 512], [1024, 1024], [2048, 2048]]
+        self.case_pair = ast.literal_eval(case_pair) if case_pair != "[]" else [[256, 256], [512, 512], [1024, 1024],
+                                                                                [2048, 2048]]
         self.core_type = core_map[self.hardware_type] if hardware_type in core_map.keys() else "npu"
         self.is_format_nz = False
         self.current_result_path = ''
         self.logger = self.__get_log("log")
         self.result_logger = self.__get_log("result")
-        self.logger.info("\nmodel_name: " + self.model_name + "\nmodel_type: " + self.model_type + "\ndata_type: " + self.data_type + "\ntest_mode: " + self.test_mode +
-                            "\ndata_dir: " + self.data_dir + "\ndataset_name: " + self.dataset_name + "\nbatch_size: " + str(self.batch_size) + "\nresult_dir: " +
-                            self.result_dir + "\nlog_dir: " + self.log_dir)
-        
+        self.logger.info(
+            "\nmodel_name: " + self.model_name + "\nmodel_type: " + self.model_type + "\ndata_type: " + self.data_type + "\ntest_mode: " + self.test_mode +
+            "\ndata_dir: " + self.data_dir + "\ndataset_name: " + self.dataset_name + "\nbatch_size: " + str(
+                self.batch_size) + "\nresult_dir: " +
+            self.result_dir + "\nlog_dir: " + self.log_dir)
+
     @classmethod
     def create_instance(cls):
         args = get_args()
         test_instance = cls(*args)
         test_instance.run()
-    
+
     def run(self):
         self.prepare_environ()
         self.__prepare_and_check()
         self.__run()
         self.__compare_results()
         self.clear()
-    
+
     def get_chip_num(self):
         return 1
-    
+
     def get_model(self, hardware_type, model_type, data_type):
         pass
 
     def prepare_environ(self):
         if self.hardware_type == "NPU":
             torch.npu.set_compile_mode(jit_compile=False)
-    
+
     def get_dataset_list(self):
         return ["GSM8K", "TruthfulQA", "MMLU", "CEval", "BoolQ"]
-    
+
     def clear(self):
         os.unsetenv("test_mode")
         os.unsetenv("hardware_type")
@@ -186,7 +193,7 @@ class ModelTest:
             folder_path = f"{self.data_dir}/{self.hardware_type}/{self.dataset_name}/batch{self.batch_size}"
             if os.path.exists(folder_path):
                 try:
-                    shutil.rmtree(folder_path) 
+                    shutil.rmtree(folder_path)
                 except Exception as e:
                     self.logger.error(f"Error deleting folder {folder_path}: {e}")
             os.makedirs(folder_path, exist_ok=True)
@@ -202,20 +209,23 @@ class ModelTest:
         if self.model_type == "pa":
             self.block_size = 128
             self.max_prefill_tokens = self.batch_size * \
-                (max([pair[0] for pair in self.case_pair]) + max([pair[1] for pair in self.case_pair]))
+                                      (max([pair[0] for pair in self.case_pair]) + max(
+                                          [pair[1] for pair in self.case_pair]))
             self.model_config = ModelConfig(self.model.num_heads,
-                                        self.model.num_kv_heads,
-                                        self.model.head_size,
-                                        self.model.num_layers,
-                                        self.model.device,
-                                        self.model.dtype,
-                                        self.model.soc_info)
+                                            self.model.num_kv_heads,
+                                            self.model.head_size,
+                                            self.model.num_layers,
+                                            self.model.device,
+                                            self.model.dtype,
+                                            self.model.soc_info)
             self.max_memory = NpuHbmInfo.get_hbm_capacity(self.local_rank, self.world_size, self.model.soc_info.need_nz)
-            self.init_memory = int(self.max_memory * NpuHbmInfo.get_hbm_usage(self.local_rank, self.world_size, self.model.soc_info.need_nz))
+            self.init_memory = int(self.max_memory * NpuHbmInfo.get_hbm_usage(self.local_rank, self.world_size,
+                                                                              self.model.soc_info.need_nz))
             self.cache_manager = None
             self.__pa_warmup()
-            self.logger.info("RANK " + str(self.local_rank) + ": hbm_capacity(GB): " + str(self.max_memory / (1024 ** 3)) +
-                                            "init_memory(GB): " + str(self.init_memory / (1024 ** 3)))
+            self.logger.info(
+                "RANK " + str(self.local_rank) + ": hbm_capacity(GB): " + str(self.max_memory / (1024 ** 3)) +
+                "init_memory(GB): " + str(self.init_memory / (1024 ** 3)))
         torch.manual_seed(1)
         self.device_type = self.__get_device_type()
         self.logger.info("tokenizer and model get success.")
@@ -235,7 +245,7 @@ class ModelTest:
             os.environ['HCCL_DETERMINISTIC'] = "1"
             if self.model_type == "fa":
                 self.__npu_adapt()
-    
+
     def __pa_warmup(self):
         self.logger.info("PA warmup start")
         input_ids = torch.ones(self.max_prefill_tokens, dtype=torch.int64).to(self.device)
@@ -259,8 +269,10 @@ class ModelTest:
             max_seq_len=self.max_prefill_tokens,
             lm_head_indices=prefill_head_indices
         )
-        self.warm_up_memory = int(self.max_memory * NpuHbmInfo.get_hbm_usage(self.local_rank, self.world_size, self.model.soc_info.need_nz))
-        self.logger.info("RANK " + str(self.local_rank) + ": warmup_memory(GB): " + str(self.warm_up_memory / (1024 ** 3)))
+        self.warm_up_memory = int(
+            self.max_memory * NpuHbmInfo.get_hbm_usage(self.local_rank, self.world_size, self.model.soc_info.need_nz))
+        self.logger.info(
+            "RANK " + str(self.local_rank) + ": warmup_memory(GB): " + str(self.warm_up_memory / (1024 ** 3)))
         del self.cache_manager
         self.cache_manager = None
         torch.npu.empty_cache()
@@ -275,11 +287,12 @@ class ModelTest:
         else:
             self.logger.error(self.test_mode + " test not support, only support performance, simplified and full")
             raise RuntimeError(f"{self.test_mode} test not support, only support performance, simplified and full")
-    
+
     def __run_performance(self):
         self.logger.info("performance test start")
-        performance_prompt = ["Common sense questions and answers\n\nQuestion: How to learn a new language\nFactual answer:"]
-        
+        performance_prompt = [
+            "Common sense questions and answers\n\nQuestion: How to learn a new language\nFactual answer:"]
+
         csv_results = []
         folder_name = self.model_name
         csv_name = self.model_type + "_" + self.data_type + "_performance_test_result.csv" if self.data_type != "" else self.model_type
@@ -295,7 +308,7 @@ class ModelTest:
             self.logger.info("performance test warmup start")
             if self.model_type == "fa":
                 warmup_input_ids = torch.randint(0, self.model.config.vocab_size, [self.batch_size, 2048],
-                                                dtype=torch.int64)
+                                                 dtype=torch.int64)
                 warmup_attention_mask = torch.ones((self.batch_size, 2048), dtype=torch.int64)
                 inputs = self.tokenizer(performance_prompt * self.batch_size, return_tensors="pt", padding='max_length',
                                         max_length=2048)
@@ -324,9 +337,10 @@ class ModelTest:
                                  "seq_len_out: " + str(seq_len_out))
                 if self.model_type == "fa":
                     input_ids = torch.randint(0, self.model.config.vocab_size, [self.batch_size, seq_len_in],
-                                                    dtype=torch.int64)
+                                              dtype=torch.int64)
                     attention_mask = torch.ones((self.batch_size, seq_len_in), dtype=torch.int64)
-                    inputs = self.tokenizer(performance_prompt * self.batch_size, return_tensors="pt", padding='max_length',
+                    inputs = self.tokenizer(performance_prompt * self.batch_size, return_tensors="pt",
+                                            padding='max_length',
                                             max_length=seq_len_in)
                     inputs["input_ids"] = input_ids
                     inputs["attention_mask"] = attention_mask
@@ -338,10 +352,10 @@ class ModelTest:
                         getattr(torch, self.core_type).synchronize()
                         e2e_start = time.time()
                         generate_ids = self.model.generate(inputs=input_ids,
-                                                            attention_mask=attention_mask,
-                                                            min_new_tokens=seq_len_out,
-                                                            max_new_tokens=seq_len_out
-                        )
+                                                           attention_mask=attention_mask,
+                                                           min_new_tokens=seq_len_out,
+                                                           max_new_tokens=seq_len_out
+                                                           )
                         try:
                             _ = self.tokenizer.batch_decode(generate_ids, skip_special_tokens=True,
                                                             clean_up_tokenization_spaces=False)
@@ -354,11 +368,11 @@ class ModelTest:
                         e2e_end = time.time()
                 else:
                     input_ids = torch.randint(0, self.model.config.vocab_size, [seq_len_in],
-                                                    dtype=torch.int64)
+                                              dtype=torch.int64)
                     self.tokenizer.eos_token_id = self.model.config.vocab_size * 2
                     req_list = [request_from_token(input_ids, seq_len_out, self.block_size, req_idx=i) \
-                        for i in range(self.batch_size)]
-                    
+                                for i in range(self.batch_size)]
+
                     if not self.cache_manager:
                         cache_block_size = self.block_size * self.model.num_kv_heads * self.model.head_size
                         dtype = dtype_map[self.data_type] if self.data_type in dtype_map else dtype_map["fp16"]
@@ -367,24 +381,27 @@ class ModelTest:
 
                         max_memory = env.ENV.memory_fraction * self.max_memory \
                             if not env.ENV.max_memory_gb else int(env.ENV.max_memory_gb) * (1 << 30)
-    
-                        free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory != 0 else \
-                                                     (self.init_memory + env.ENV.atb_memory_gb_reserved * (1 << 30)))
 
-                        self.logger.info("RANK " + str(self.local_rank) + ": infer max_memory(GB): " + str(max_memory / (1024 ** 3)) +
-                                                ", warm_up_memory(GB): " + str(self.warm_up_memory / (1024 ** 3)) +
-                                                ", free_memory(GB): " + str(free_memory / (1024 ** 3)))
+                        free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory != 0 else \
+                                                        (self.init_memory + env.ENV.atb_memory_gb_reserved * (1 << 30)))
+
+                        self.logger.info("RANK " + str(self.local_rank) + ": infer max_memory(GB): " + str(
+                            max_memory / (1024 ** 3)) +
+                                         ", warm_up_memory(GB): " + str(self.warm_up_memory / (1024 ** 3)) +
+                                         ", free_memory(GB): " + str(free_memory / (1024 ** 3)))
                         num_blocks = int(free_memory // total_cache_size)
-                        self.logger.info("RANK " + str(self.local_rank) + ": num_blocks: " + str(num_blocks) + ", free memory: " + str(free_memory))
+                        self.logger.info("RANK " + str(self.local_rank) + ": num_blocks: " + str(
+                            num_blocks) + ", free memory: " + str(free_memory))
                         cache_config = CacheConfig(num_blocks, self.block_size)
                         self.cache_manager = CacheManager(cache_config, self.model_config)
                         req_list_dummy = copy.deepcopy(req_list)
-                        generate_req(req_list_dummy, self.model, self.tokenizer, self.batch_size, self.max_prefill_tokens,
-                                    2, self.cache_manager, self.local_rank)
+                        generate_req(req_list_dummy, self.model, self.tokenizer, self.batch_size,
+                                     self.max_prefill_tokens,
+                                     2, self.cache_manager, self.local_rank)
                     getattr(torch, self.core_type).synchronize()
                     e2e_start = time.time()
                     generate_req(req_list, self.model, self.tokenizer, self.batch_size, self.max_prefill_tokens,
-                                  seq_len_out, self.cache_manager, self.local_rank)
+                                 seq_len_out, self.cache_manager, self.local_rank)
                     _, _ = decode_token(req_list, self.tokenizer)
                     getattr(torch, self.core_type).synchronize()
                     e2e_end = time.time()
@@ -394,13 +411,12 @@ class ModelTest:
 
                 if self.world_size > 1:
                     torch.distributed.all_reduce(e2e_time_tensor, torch.distributed.ReduceOp.MAX)
-                    print(e2e_time_tensor[0])    
 
                 if self.model_type == "fa":
                     first_token_time_tensor = torch.load(f"{folder_path}/first_token_time.pth").cpu()
                     first_token_time = first_token_time_tensor.item()
                     non_first_token_time_tensor = torch.load(f"{folder_path}/non_first_token_time.pth").cpu()
-                    non_first_token_time = non_first_token_time_tensor.item() / (seq_len_out - 1) 
+                    non_first_token_time = non_first_token_time_tensor.item() / (seq_len_out - 1)
                 else:
                     benchmark_csv = os.path.join(self.script_path, "../benchmark.csv")
                     with open(benchmark_csv, newline='') as csvfile:
@@ -409,7 +425,7 @@ class ModelTest:
                         second_row = next(csv_reader)
                         first_token_time = float(second_row[4]) / 1000
                         non_first_token_time = float(second_row[5]) / 1000
-                
+
                 non_first_token_throughput = self.batch_size / non_first_token_time
                 non_first_token_throughput_total += non_first_token_throughput
                 e2e_time_tensor = e2e_time_tensor.cpu()
@@ -417,19 +433,27 @@ class ModelTest:
                 e2e_throughput_total += e2e_throughput
 
                 if self.local_rank == 0:
-                    self.logger.info(f"batch: {self.batch_size}, seq_len_in: {seq_len_in}, seq_len_out: {seq_len_out}, total_time: {e2e_time}, first_token_time: {first_token_time * 1000}," +
-                                    f" non_first_token_time: {non_first_token_time * 1000}, non_first_token_throughput: {non_first_token_throughput}," +
-                                    f" e2e_time: {e2e_time_tensor[0]}, e2e_throughput: {e2e_throughput}")
-                    csv_results.append([str(self.model_name).ljust(15), str(self.batch_size).ljust(15), str(seq_len_in).ljust(15), str(seq_len_out).ljust(15),
-                                str(round(e2e_time, 10)).ljust(15), str(round(first_token_time * 1000, 10)).ljust(25), str(round(non_first_token_time * 1000, 10)).ljust(25),
-                                str(round(non_first_token_throughput, 10)).ljust(36), str(round(e2e_throughput, 10)).ljust(25)])
+                    self.logger.info(
+                        f"batch: {self.batch_size}, seq_len_in: {seq_len_in}, seq_len_out: {seq_len_out}, total_time: {e2e_time}, first_token_time: {first_token_time * 1000}," +
+                        f" non_first_token_time: {non_first_token_time * 1000}, non_first_token_throughput: {non_first_token_throughput}," +
+                        f" e2e_time: {e2e_time_tensor[0]}, e2e_throughput: {e2e_throughput}")
+                    csv_results.append(
+                        [str(self.model_name).ljust(15), str(self.batch_size).ljust(15), str(seq_len_in).ljust(15),
+                         str(seq_len_out).ljust(15),
+                         str(round(e2e_time, 10)).ljust(15), str(round(first_token_time * 1000, 10)).ljust(25),
+                         str(round(non_first_token_time * 1000, 10)).ljust(25),
+                         str(round(non_first_token_throughput, 10)).ljust(36),
+                         str(round(e2e_throughput, 10)).ljust(25)])
 
             if self.local_rank == 0:
                 non_first_token_throughput_average = non_first_token_throughput_total / 4
                 e2e_throughput_average = e2e_throughput_total / 4
-                self.logger.info(f"batch: {self.batch_size}, non_first_token_throughput_total: {non_first_token_throughput_total}, non_first_token_throughput_average:"+
-                                 f" {non_first_token_throughput_average}, e2e_throughput_total: {e2e_throughput_total}, e2e_throughput_average: {e2e_throughput_average}")
-                csv_results[len(self.case_pair) - 1].extend([str(round(non_first_token_throughput_average, 10)).ljust(45), str(round(e2e_throughput_average, 10)).ljust(35)])
+                self.logger.info(
+                    f"batch: {self.batch_size}, non_first_token_throughput_total: {non_first_token_throughput_total}, non_first_token_throughput_average:" +
+                    f" {non_first_token_throughput_average}, e2e_throughput_total: {e2e_throughput_total}, e2e_throughput_average: {e2e_throughput_average}")
+                csv_results[len(self.case_pair) - 1].extend(
+                    [str(round(non_first_token_throughput_average, 10)).ljust(45),
+                     str(round(e2e_throughput_average, 10)).ljust(35)])
                 if not os.path.exists(csv_performance_path):
                     self.logger.warning("performance dataset result csv file not exist, skip recording results")
                     raise RuntimeError(f"csv result file not exist")
@@ -437,12 +461,14 @@ class ModelTest:
                     csv_writer = csv.writer(csv_performance_file, delimiter='|')
                     for csv_result in csv_results:
                         csv_writer.writerow(csv_result)
-                
-                self.logger.info(self.model_name + " " + " batch" + str(self.batch_size) + " result saved in " + csv_performance_path)
+
+                self.logger.info(self.model_name + " " + " batch" + str(
+                    self.batch_size) + " result saved in " + csv_performance_path)
+
         warmup()
         run_performance_test()
         self.logger.info("performance test end")
-    
+
     def __run_precision(self):
         if self.test_mode == "simplified":
             self.__run_simplified_dataset()
@@ -458,7 +484,7 @@ class ModelTest:
         else:
             self.logger.error(self.test_mode + " not support")
             raise RuntimeError(f"{self.test_mode} not support")
-    
+
     def __run_simplified_dataset(self):
         if self.dataset_name not in prompt_map.keys():
             self.logger.error(self.dataset_name + " not support")
@@ -487,18 +513,22 @@ class ModelTest:
                 queries = [''.join([prompt, query]) for query in texts]
                 if self.model_type == "fa":
                     tokenizer_out = self.tokenizer(queries, padding=True, return_tensors="pt",
-                            truncation=True, max_length=2048).to(self.model.device)
+                                                   truncation=True, max_length=2048).to(self.model.device)
                     tokenizer_out_ids = tokenizer_out.input_ids.to(self.model.device)
                     attention_mask = tokenizer_out.attention_mask.to(self.model.device)
-                    outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask, do_sample=False, max_new_tokens=1024)
+                    outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
+                                                  do_sample=False, max_new_tokens=1024)
                     for idx in range(len(outputs)):
                         output = outputs.tolist()[idx][len(tokenizer_out["input_ids"][idx]):]
                         response = self.tokenizer.decode(output)
-                        if torch.distributed.get_rank() == 0: 
+                        if torch.distributed.get_rank() == 0:
                             self.logger.info(response)
                 else:
-                    req_list = [request_from_text(queries[i], self.tokenizer, 1024, self.cache_config.block_size, req_idx=i) for i in range(len(queries))]
-                    generate_req(req_list, self.model, self.tokenizer, self.batch_size, 3072 * self.batch_size, 1024, self.cache_manager, self.local_rank)
+                    req_list = [
+                        request_from_text(queries[i], self.tokenizer, 1024, self.cache_config.block_size, req_idx=i) for
+                        i in range(len(queries))]
+                    generate_req(req_list, self.model, self.tokenizer, self.batch_size, 3072 * self.batch_size, 1024,
+                                 self.cache_manager, self.local_rank)
                     generate_text_list, token_num_list = decode_token(req_list, self.tokenizer)
                     if self.local_rank == 0:
                         self.logger.info(f'Question: {queries}')
@@ -509,23 +539,24 @@ class ModelTest:
 
     def __run_full_dataset_mmlu_or_ceval(self):
         choices = ["A", "B", "C", "D"]
+
         def format_example(dataset_type, query, answer):
             if dataset_type == "MMLU":
                 prompt = "The following is a multiple-choice question. Please choose the most suitable one among A, B, C and D as the answer to this question.\n\n"
             elif dataset_type == "CEval":
                 prompt = "下面是一道选择题。请在A、B、C、D中选择一个最合适的答案作为本题的答案。\n\n"
- 
+
             example = (prompt + query + "\n")
             for choice, ans in zip(choices, answer):
                 example += f'{choice}. {ans}\n'
             return example
- 
+
         def process_before_extraction(gen, choice_dict):
             for key, val in sorted(choice_dict.items(), key=lambda x: len(x[1]), reverse=True):
                 pattern = re.compile(re.escape(val.rstrip(".")), re.IGNORECASE)
                 gen = pattern.sub(key, gen)
             return gen
-        
+
         def extract_choice_mmlu(gen, choice_list):
             res = re.search(
                 r"(?:(?:[Cc]hoose)|(?:(?:[Aa]nswer|[Cc]hoice)(?![^ABCD]{0,20}?(?:n't|not))[^ABCD]{0,10}?\b(?:|is|:|be))\b)[^ABCD]{0,20}?\b(A|B|C|D)\b",
@@ -543,7 +574,7 @@ class ModelTest:
             if res is None:
                 return choices[choice_list.index(process.extractOne(gen, choice_list)[0])]
             return res.group(1)
-        
+
         def extract_choice_ceval(gen, choice_list):
             res = re.search(
                 r"(?:(?:选|选择|选定)[：:]?\s*|(?:(?:答案|选项)(?![^ABCD]{0,10}?(?:不|非)[^ABCD]{0,10}?(?:是|选|为|：|:|】))[^ABCD]{0,10}?(?:是|选|为|：|:|】))[^ABCD]{0,10}?)(A|B|C|D)(?:选项)?(?:\)|。|\.|，|,|．|、|A|B|C|D|$|：|:|\)|）)",
@@ -561,7 +592,7 @@ class ModelTest:
             if res is None:
                 return choices[choice_list.index(process.extractOne(gen, choice_list)[0])]
             return res.group(1)
-        
+
         def extract_answer(dataset_type, response, ansList):
             gen = process_before_extraction(
                 response, {choice: ans for choice, ans in zip(choices, ansList)}
@@ -571,7 +602,7 @@ class ModelTest:
             elif dataset_type == "CEval":
                 pred = extract_choice_ceval(gen, ansList)
             return pred
-        
+
         correct_total = 0
         sum_total = 0
         result_total = []
@@ -582,35 +613,40 @@ class ModelTest:
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.csv").as_posix(),
                                         recursive=True), desc='global'):
                 if self.dataset_name == "MMLU":
-                    val_df = pd.read_csv(entry, names=['question','A','B','C','D','answer']).astype(str)
+                    val_df = pd.read_csv(entry, names=['question', 'A', 'B', 'C', 'D', 'answer']).astype(str)
                 elif self.dataset_name == "CEval":
                     val_df = pd.read_csv(entry).astype(str)
-                
+
                 correct = 0
                 sum = len(val_df)
                 dataset = []
                 for _, row in val_df.iterrows():
                     line = json.dumps(row.to_dict())
                     dataset.append(json.loads(line))
- 
+
                 dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size)
                 for batch in tqdm(dataloader):
                     queries = [format_example(self.dataset_name, query, [ansA, ansB, ansC, ansD]) \
-                            for query, ansA, ansB, ansC, ansD in zip(batch["question"], batch["A"], batch["B"], batch["C"], batch["D"])]
+                               for query, ansA, ansB, ansC, ansD in
+                               zip(batch["question"], batch["A"], batch["B"], batch["C"], batch["D"])]
                     if self.model_type == "fa":
-                        inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True, max_length=2048).to(self.model.device)
+                        inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
+                                                max_length=2048).to(self.model.device)
                         tokenizer_out_ids = inputs.input_ids.to(self.model.device)
                         attention_mask = inputs.attention_mask.to(self.model.device)
-                        outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask, do_sample=False, max_new_tokens=512)
+                        outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
+                                                      do_sample=False, max_new_tokens=512)
                         if is_result:
-                            for idx, (ansA, ansB, ansC, ansD, ans) in enumerate(zip(batch['A'], batch['B'], batch['C'], batch['D'], batch['answer'])):
+                            for idx, (ansA, ansB, ansC, ansD, ans) in enumerate(
+                                    zip(batch['A'], batch['B'], batch['C'], batch['D'], batch['answer'])):
                                 output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
                                 response = self.tokenizer.decode(output)
                                 pred = extract_answer(self.dataset_name, response, [ansA, ansB, ansC, ansD])
                                 if pred == ans:
                                     correct += 1
                     else:
-                        req_list = [request_from_text(queries[i], self.tokenizer, 512, self.block_size, req_idx=i) for i in range(len(queries))]
+                        req_list = [request_from_text(queries[i], self.tokenizer, 512, self.block_size, req_idx=i) for i
+                                    in range(len(queries))]
                         if not self.cache_manager:
                             cache_block_size = self.block_size * self.model.num_kv_heads * self.model.head_size
                             dtype = dtype_map[self.data_type] if self.data_type in dtype_map else dtype_map["fp16"]
@@ -619,26 +655,31 @@ class ModelTest:
 
                             max_memory = env.ENV.memory_fraction * self.max_memory \
                                 if not env.ENV.max_memory_gb else int(env.ENV.max_memory_gb) * (1 << 30)
-        
-                            free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory != 0 else \
-                                                        (self.init_memory + env.ENV.atb_memory_gb_reserved * (1 << 30)))
 
-                            self.logger.info("RANK " + str(self.local_rank) + ": infer max_memory(GB): " + str(max_memory / (1024 ** 3)) +
-                                                    ", warm_up_memory(GB): " + str(self.warm_up_memory / (1024 ** 3)) +
-                                                    ", free_memory(GB): " + str(free_memory / (1024 ** 3)))
+                            free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory != 0 else \
+                                                            (self.init_memory + env.ENV.atb_memory_gb_reserved * (
+                                                                        1 << 30)))
+
+                            self.logger.info("RANK " + str(self.local_rank) + ": infer max_memory(GB): " + str(
+                                max_memory / (1024 ** 3)) +
+                                             ", warm_up_memory(GB): " + str(self.warm_up_memory / (1024 ** 3)) +
+                                             ", free_memory(GB): " + str(free_memory / (1024 ** 3)))
                             num_blocks = int(free_memory // total_cache_size)
-                            self.logger.info("RANK " + str(self.local_rank) + ": num_blocks: " + str(num_blocks) + ", free memory: " + str(free_memory))
+                            self.logger.info("RANK " + str(self.local_rank) + ": num_blocks: " + str(
+                                num_blocks) + ", free memory: " + str(free_memory))
                             cache_config = CacheConfig(num_blocks, self.block_size)
                             self.cache_manager = CacheManager(cache_config, self.model_config)
-                        generate_req(req_list, self.model, self.tokenizer, self.batch_size, self.max_prefill_tokens, 512, self.cache_manager, self.local_rank)
+                        generate_req(req_list, self.model, self.tokenizer, self.batch_size, self.max_prefill_tokens,
+                                     512, self.cache_manager, self.local_rank)
                         generate_text_list, _ = decode_token(req_list, self.tokenizer)
                         if is_result:
-                            for idx, (ansA, ansB, ansC, ansD, ans) in enumerate(zip(batch['A'], batch['B'], batch['C'], batch['D'], batch['answer'])):
+                            for idx, (ansA, ansB, ansC, ansD, ans) in enumerate(
+                                    zip(batch['A'], batch['B'], batch['C'], batch['D'], batch['answer'])):
                                 response = generate_text_list[idx]
                                 pred = extract_answer(self.dataset_name, response, [ansA, ansB, ansC, ansD])
                                 if pred == ans:
                                     correct += 1
-                    
+
                 filename = os.path.basename(entry)
                 result = [filename, correct / sum, correct, sum]
                 self.result_logger.debug(f"result:{result}")
@@ -649,11 +690,11 @@ class ModelTest:
             result_total.insert(0, total)
         if is_result:
             self.__save_result(result_total)
-    
+
     def __run_full_dataset_gsm8k(self):
         def build_prompt(text):
             return f"question:{text}\n\n"
-        
+
         def extract_answer(s):
             _PAT_LAST_DIGIT = re.compile(
                 r"([+-])?(?=([0-9]|\.[0-9]))(0|([1-9](\d{0,2}(,\d{3})*)|\d*))?(\.\d*)?(?=\D|$)"
@@ -664,12 +705,12 @@ class ModelTest:
             else:
                 last_digit = None
             return last_digit
- 
+
         def is_correct(completion, answer):
             gold = extract_answer(answer)
             if gold is None:
                 return False
- 
+
             def number_equal(answer, pred):
                 if pred is None:
                     return False
@@ -677,9 +718,9 @@ class ModelTest:
                     return math.isclose(eval(answer), eval(pred), rel_tol=0, abs_tol=1e-4)
                 except:
                     return False
- 
+
             return number_equal(gold, extract_answer(completion))
-        
+
         correct_total = 0
         sum_total = 0
         result_total = []
@@ -701,10 +742,12 @@ class ModelTest:
                     texts = batch["question"]
                     queries = [build_prompt(query) for query in texts]
                     if self.model_type == "fa":
-                        inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True, max_length=2048).to(self.model.device)
+                        inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
+                                                max_length=2048).to(self.model.device)
                         tokenizer_out_ids = inputs.input_ids.to(self.model.device)
                         attention_mask = inputs.attention_mask.to(self.model.device)
-                        outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask, do_sample=False, max_new_tokens=512)
+                        outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
+                                                      do_sample=False, max_new_tokens=512)
                         if is_result:
                             for idx, ans in enumerate(batch['answer']):
                                 output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
@@ -713,8 +756,11 @@ class ModelTest:
                                 if acc:
                                     correct += 1
                     else:
-                        req_list = [request_from_text(queries[i], self.tokenizer, 512, self.cache_config.block_size, req_idx=i) for i in range(len(queries))]
-                        generate_req(req_list, self.model, self.tokenizer, self.batch_size, 2560 * self.batch_size, 512, self.cache_manager, self.local_rank)
+                        req_list = [
+                            request_from_text(queries[i], self.tokenizer, 512, self.cache_config.block_size, req_idx=i)
+                            for i in range(len(queries))]
+                        generate_req(req_list, self.model, self.tokenizer, self.batch_size, 2560 * self.batch_size, 512,
+                                     self.cache_manager, self.local_rank)
                         generate_text_list, _ = decode_token(req_list, self.tokenizer)
                         if is_result:
                             for idx, ans in enumerate(batch['answer']):
@@ -732,25 +778,26 @@ class ModelTest:
             result_total.insert(0, total)
         if is_result:
             self.__save_result(result_total)
-    
+
     def __run_full_dataset_truthfulqa(self):
         BEST_COL = 'Best Answer'
         ANSWER_COL = 'Correct Answers'
         INCORRECT_COL = 'Incorrect Answers'
+
         def format_prompt(ser):
             prompt = ''.join([QA_PRIMER, ser['Question']])
             return prompt
-    
+
         def format_prompt_with_answer_strings(question, ans):
             prompt = ''.join([QA_PRIMER, question, '\nA: ', ans])
             return prompt
- 
+
         def format_best(best_ans):
             best = best_ans.strip()
             if best[-1] != '.':
                 best = best + '.'
             return best
- 
+
         def split_multi_answer(ans, sep=';'):
             answers = ans.strip().split(sep)
             split_answers = []
@@ -762,7 +809,7 @@ class ModelTest:
                     else:
                         split_answers.append(a)
             return split_answers
-        
+
         def get_scorces(frame, idx, ref_answer, device):
             scores_answer = []
             input_prompt = format_prompt(frame.loc[idx])
@@ -778,7 +825,7 @@ class ModelTest:
                 log_probs = log_probs[3:]
                 scores_answer.append(log_probs.sum().item())
             return scores_answer
-        
+
         def MC_calcs(idx, scores_true, scores_false, ref_true, ref_best, is_result):
             # compute MC1: 1vFalse -- best correct answer vs all false answers
             max_false = max(scores_false)
@@ -786,21 +833,21 @@ class ModelTest:
                 MC1 = 1.0
             else:
                 MC1 = 0.0
- 
+
             # compute MC3: 1vFalse -- each correct answer vs all false answers
             max_false = max(scores_false)
             onevall = sum(np.array(scores_true) > max_false) / float(len(scores_true))
             MC3 = onevall
- 
+
             # compute MC2: normalized probability mass for correct answers
             probs_true = np.exp(scores_true)
             probs_false = np.exp(scores_false)
             probs_true = probs_true / (sum(probs_true) + sum(probs_false))
             MC2 = sum(probs_true)
- 
+
             result = [idx, MC1, MC2, MC3]
             return result
-        
+
         device = self.model.device
         result_total = []
         is_result = False
@@ -809,7 +856,7 @@ class ModelTest:
         with torch.no_grad():
             frame = pd.read_csv((Path(self.dataset_path) / "TruthfulQA.csv").as_posix())
             frame.dropna(axis=1, how='all', inplace=True)
- 
+
             for idx in tqdm(frame.index):
                 if pd.isnull(frame.loc[idx, INCORRECT_COL]):
                     self.result_logger.debug("References missing for {0}!".format(idx))
@@ -817,14 +864,14 @@ class ModelTest:
                 if not len(frame.loc[idx, INCORRECT_COL]):
                     self.result_logger.debug("References missing for {0}!".format(idx))
                     continue
-                
+
                 ref_best = format_best(frame.loc[idx, BEST_COL])
                 ref_true = split_multi_answer(frame.loc[idx, ANSWER_COL])
                 ref_false = split_multi_answer(frame.loc[idx, INCORRECT_COL])
- 
+
                 scores_true = get_scorces(frame, idx, ref_true, device)
                 scores_false = get_scorces(frame, idx, ref_false, device)
- 
+
                 result = MC_calcs(idx, scores_true, scores_false, ref_true, ref_best, is_result)
                 result_total.append(result)
         if is_result:
@@ -835,13 +882,13 @@ class ModelTest:
             prompt = "The following is a true or false question. Please judge the \"question\" based on the \"passage\". The answer should only provide \"true\" or \"false\".\n"
             prompt = prompt + f"passage:{passage}\nquestion:{text}?\nAnswer:"
             return prompt
- 
+
         def is_correct(completion, answer):
             first_word = re.split(r'[^a-zA-Z]', completion)[0]
             if first_word == answer:
                 return True
             return False
-        
+
         correct_total = 0
         sum_total = 0
         result_total = []
@@ -870,10 +917,12 @@ class ModelTest:
                     passages = batch["passage"]
                     queries = [build_prompt(query, passage) for query, passage in zip(texts, passages)]
                     if self.model_type == "fa":
-                        inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True, max_length=2048).to(self.model.device)
+                        inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
+                                                max_length=2048).to(self.model.device)
                         tokenizer_out_ids = inputs.input_ids.to(self.model.device)
                         attention_mask = inputs.attention_mask.to(self.model.device)
-                        outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask, do_sample=False, max_new_tokens=512)
+                        outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
+                                                      do_sample=False, max_new_tokens=512)
                         if is_result:
                             for idx, ans in enumerate(batch['answer']):
                                 output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
@@ -882,7 +931,8 @@ class ModelTest:
                                 if acc:
                                     correct += 1
                     else:
-                        req_list = [request_from_text(queries[i], self.tokenizer, 512, self.block_size, req_idx=i) for i in range(len(queries))]
+                        req_list = [request_from_text(queries[i], self.tokenizer, 512, self.block_size, req_idx=i) for i
+                                    in range(len(queries))]
                         if not self.cache_manager:
                             cache_block_size = self.block_size * self.model.num_kv_heads * self.model.head_size
                             dtype = dtype_map[self.data_type] if self.data_type in dtype_map else dtype_map["fp16"]
@@ -891,18 +941,22 @@ class ModelTest:
 
                             max_memory = env.ENV.memory_fraction * self.max_memory \
                                 if not env.ENV.max_memory_gb else int(env.ENV.max_memory_gb) * (1 << 30)
-        
-                            free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory != 0 else \
-                                                        (self.init_memory + env.ENV.atb_memory_gb_reserved * (1 << 30)))
 
-                            self.logger.info("RANK " + str(self.local_rank) + ": infer max_memory(GB): " + str(max_memory / (1024 ** 3)) +
-                                                    ", warm_up_memory(GB): " + str(self.warm_up_memory / (1024 ** 3)) +
-                                                    ", free_memory(GB): " + str(free_memory / (1024 ** 3)))
+                            free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory != 0 else \
+                                                            (self.init_memory + env.ENV.atb_memory_gb_reserved * (
+                                                                        1 << 30)))
+
+                            self.logger.info("RANK " + str(self.local_rank) + ": infer max_memory(GB): " + str(
+                                max_memory / (1024 ** 3)) +
+                                             ", warm_up_memory(GB): " + str(self.warm_up_memory / (1024 ** 3)) +
+                                             ", free_memory(GB): " + str(free_memory / (1024 ** 3)))
                             num_blocks = int(free_memory // total_cache_size)
-                            self.logger.info("RANK " + str(self.local_rank) + ": num_blocks: " + str(num_blocks) + ", free memory: " + str(free_memory))
+                            self.logger.info("RANK " + str(self.local_rank) + ": num_blocks: " + str(
+                                num_blocks) + ", free memory: " + str(free_memory))
                             cache_config = CacheConfig(num_blocks, self.block_size)
                             self.cache_manager = CacheManager(cache_config, self.model_config)
-                        generate_req(req_list, self.model, self.tokenizer, self.batch_size, self.max_prefill_tokens, 512, self.cache_manager, self.local_rank)
+                        generate_req(req_list, self.model, self.tokenizer, self.batch_size, self.max_prefill_tokens,
+                                     512, self.cache_manager, self.local_rank)
                         generate_text_list, _ = decode_token(req_list, self.tokenizer)
                         if is_result:
                             for idx, ans in enumerate(batch['answer']):
@@ -922,7 +976,7 @@ class ModelTest:
             result_total.insert(0, total)
         if is_result:
             self.__save_result(result_total)
-    
+
     def __compare_results(self):
         if self.test_mode != "performance" and self.hardware_type == "NPU" and torch.distributed.get_rank() == 0:
             if self.test_mode == "simplified":
@@ -935,7 +989,7 @@ class ModelTest:
             else:
                 self.logger.error(self.test_mode + " not supported")
                 raise RuntimeError(f"{self.test_mode} not supported")
-    
+
     def __compare_simplified_dataset_results(self):
         if not os.path.exists(f"{self.data_dir}/GPU"):
             self.logger.error(f"GPU golden data not exist, upload to data dir folder")
@@ -946,20 +1000,23 @@ class ModelTest:
         if not os.path.exists(folder_path):
             self.logger.error(f"folder {folder_path} create fail")
             raise RuntimeError(f"result folder {folder_path} create fail")
-        
+
         if self.dataset_name not in question_num.keys():
             self.logger.error(self.dataset_name + " not supported")
             raise RuntimeError(f"{self.dataset_name} not supported")
         self.eos_token = [-1 for _ in range(question_num[self.dataset_name])]
 
-        self.logger.info("---------------------" + self.dataset_name + " Batch " + str(self.batch_size) + " Tokens Result Compare Begins------------------------")
+        self.logger.info("---------------------" + self.dataset_name + " Batch " + str(
+            self.batch_size) + " Tokens Result Compare Begins------------------------")
         self.__compare_results_helper("tokens")
-        self.logger.info("---------------------" + self.dataset_name + " Batch " + str(self.batch_size) + " Tokens Result Compare Ends------------------------")
-        self.logger.info("---------------------" + self.dataset_name + " Batch " + str(self.batch_size) + " Logits Result Compare Begins------------------------")
+        self.logger.info("---------------------" + self.dataset_name + " Batch " + str(
+            self.batch_size) + " Tokens Result Compare Ends------------------------")
+        self.logger.info("---------------------" + self.dataset_name + " Batch " + str(
+            self.batch_size) + " Logits Result Compare Begins------------------------")
         self.__compare_results_helper("logits")
-        self.logger.info("---------------------" + self.dataset_name + " Batch " + str(self.batch_size) + " Logits Result Compare Ends------------------------")
+        self.logger.info("---------------------" + self.dataset_name + " Batch " + str(
+            self.batch_size) + " Logits Result Compare Ends------------------------")
 
-    
     def __compare_results_helper(self, type):
         error_1e4 = 0
         error_1e3 = 0
@@ -974,7 +1031,8 @@ class ModelTest:
                 golden_file_exists = os.path.exists(golden_path)
                 npu_file_exists = os.path.exists(npu_path)
                 if not golden_file_exists and not npu_file_exists:
-                    self.result_logger.debug(self.dataset_name + " batch " + str(self.batch_size) + " epoch " + str(epoch_id) + " " + type + " compare finish, total " + str(cnt) + " " + type)
+                    self.result_logger.debug(self.dataset_name + " batch " + str(self.batch_size) + " epoch " + str(
+                        epoch_id) + " " + type + " compare finish, total " + str(cnt) + " " + type)
                     break
                 elif golden_file_exists and npu_file_exists:
                     golden_results = torch.load(golden_path).cpu()
@@ -982,11 +1040,17 @@ class ModelTest:
                     if type == "tokens":
                         for i in range(len(golden_results)):
                             total_tokens_checked += 1
-                            if self.eos_token[self.batch_size * epoch_id + i] == -1 and (npu_results[i] != golden_results[i] or npu_results[i] == self.tokenizer.eos_token_id):
+                            if self.eos_token[self.batch_size * epoch_id + i] == -1 and (
+                                    npu_results[i] != golden_results[i] or npu_results[
+                                i] == self.tokenizer.eos_token_id):
                                 self.eos_token[self.batch_size * epoch_id + i] = cnt
-                                self.result_logger.debug(self.dataset_name + " batch " + str(self.batch_size) + " epoch " + str(epoch_id) + " question " + str(self.batch_size * epoch_id + i) +
-                                                         " token No." + str(cnt) + " is the first different token or eos token, ignore checking the rest.\ngolden tokenId: " + str(golden_results[i]) + ", npu tokenId: " + str(npu_results[i]))
-                    
+                                self.result_logger.debug(
+                                    self.dataset_name + " batch " + str(self.batch_size) + " epoch " + str(
+                                        epoch_id) + " question " + str(self.batch_size * epoch_id + i) +
+                                    " token No." + str(
+                                        cnt) + " is the first different token or eos token, ignore checking the rest.\ngolden tokenId: " + str(
+                                        golden_results[i]) + ", npu tokenId: " + str(npu_results[i]))
+
                     elif type == "logits":
                         split_golden_results = torch.split(golden_results, 1, dim=0)
                         split_npu_results = torch.split(npu_results, 1, dim=0)
@@ -997,7 +1061,7 @@ class ModelTest:
                             total_logits_checked += 1
                             golden_results_logsoftmax = torch.log_softmax(split_golden_results[i].float(), dim=-1)
                             npu_results_logsoftmax = torch.log_softmax(split_npu_results[i].float(), dim=-1)
-    
+
                             kl_loss = torch.nn.KLDivLoss(log_target=True, reduction='sum')
                             output = kl_loss(npu_results_logsoftmax, golden_results_logsoftmax)
                             greatest_kll = output.item() if output.item() > greatest_kll else greatest_kll
@@ -1005,33 +1069,50 @@ class ModelTest:
                                 if (output > 0.001):
                                     error_1e3 += 1
                                 error_1e4 += 1
-                                self.result_logger.debug("--------------------------------" + type + " Error Begins--------------------------------")
-                                self.result_logger.debug(self.dataset_name + " batch" + str(self.batch_size) + " epoch " + str(epoch_id) + " question " + str(self.batch_size * epoch_id + i) +
-                                                         " logits No." + str(cnt) + " fail, KL loss is: {:.6f}".format(output.item()))
+                                self.result_logger.debug(
+                                    "--------------------------------" + type + " Error Begins--------------------------------")
+                                self.result_logger.debug(
+                                    self.dataset_name + " batch" + str(self.batch_size) + " epoch " + str(
+                                        epoch_id) + " question " + str(self.batch_size * epoch_id + i) +
+                                    " logits No." + str(cnt) + " fail, KL loss is: {:.6f}".format(output.item()))
 
                                 golden_logits_sorted = torch.sort(split_golden_results[i], descending=True)
                                 npu_logits_sorted = torch.sort(split_npu_results[i], descending=True)
-                                self.result_logger.debug("golden logits: \n" + str(golden_logits_sorted[0]) + "\nnpu logits: \n" + str(npu_logits_sorted[0]))
-                                self.result_logger.debug("golden index: \n" + str(golden_logits_sorted[1]) + "\nnpu index: \n" + str(npu_logits_sorted[1]))
-                                self.result_logger.debug("--------------------------------" + type + " Error Ends--------------------------------")
+                                self.result_logger.debug(
+                                    "golden logits: \n" + str(golden_logits_sorted[0]) + "\nnpu logits: \n" + str(
+                                        npu_logits_sorted[0]))
+                                self.result_logger.debug(
+                                    "golden index: \n" + str(golden_logits_sorted[1]) + "\nnpu index: \n" + str(
+                                        npu_logits_sorted[1]))
+                                self.result_logger.debug(
+                                    "--------------------------------" + type + " Error Ends--------------------------------")
                     cnt += 1
                 else:
-                    self.result_logger.debug(self.dataset_name + " batch " + str(self.batch_size) + " epoch " + str(epoch_id) + " " + type + " size not equal")
-                    self.result_logger.debug(self.dataset_name + " batch " + str(self.batch_size) + " epoch " + str(epoch_id) + " " + type + " compare finish, total " + str(cnt) + " " + type)
+                    self.result_logger.debug(self.dataset_name + " batch " + str(self.batch_size) + " epoch " + str(
+                        epoch_id) + " " + type + " size not equal")
+                    self.result_logger.debug(self.dataset_name + " batch " + str(self.batch_size) + " epoch " + str(
+                        epoch_id) + " " + type + " compare finish, total " + str(cnt) + " " + type)
                     break
 
         if type == "tokens":
-            self.result_logger.debug(self.dataset_name + " batch " + str(self.batch_size) + " finished check, total tokens num " + str(total_tokens_checked) + ", find " +
-                                        str(len(self.eos_token) - self.eos_token.count(-1)) +  " question responses have " + type + " mismatch")
+            self.result_logger.debug(
+                self.dataset_name + " batch " + str(self.batch_size) + " finished check, total tokens num " + str(
+                    total_tokens_checked) + ", find " +
+                str(len(self.eos_token) - self.eos_token.count(-1)) + " question responses have " + type + " mismatch")
         elif type == "logits":
             pass_rate = error_1e4 / total_logits_checked
             pass_result = "Pass"
             if pass_rate > 0.005 or error_1e3 > 0:
                 pass_result = "Fail"
-            self.result_logger.debug(self.dataset_name + " batch " + str(self.batch_size) + " finished check, total logits checked " + str(total_logits_checked) + ", " + str(error_1e4) +
-                                     " 1e-4 " + type + " errors found, " + str(error_1e3) + " 1e-3 " + type + " errors found, 1e-4 error rate " + str(pass_rate))
-            csv_result = [str(self.model_name).ljust(15), str(self.dataset_name).ljust(15), str(self.batch_size).ljust(15), str(total_logits_checked).ljust(15),
-                          str(round(greatest_kll, 10)).ljust(15), str(round(pass_rate, 10)).ljust(15), str(pass_result).ljust(15)]
+            self.result_logger.debug(
+                self.dataset_name + " batch " + str(self.batch_size) + " finished check, total logits checked " + str(
+                    total_logits_checked) + ", " + str(error_1e4) +
+                " 1e-4 " + type + " errors found, " + str(
+                    error_1e3) + " 1e-3 " + type + " errors found, 1e-4 error rate " + str(pass_rate))
+            csv_result = [str(self.model_name).ljust(15), str(self.dataset_name).ljust(15),
+                          str(self.batch_size).ljust(15), str(total_logits_checked).ljust(15),
+                          str(round(greatest_kll, 10)).ljust(15), str(round(pass_rate, 10)).ljust(15),
+                          str(pass_result).ljust(15)]
             csv_simplified_path = os.path.join(self.script_path, "../result", "simplified_test_result.csv")
             if not os.path.exists(csv_simplified_path):
                 self.logger.warning("simplified dataset result csv file not exist, skip recording results")
@@ -1039,7 +1120,8 @@ class ModelTest:
             with open(csv_simplified_path, 'a', newline='') as csv_simplified_file:
                 csv_writer = csv.writer(csv_simplified_file, delimiter='|')
                 csv_writer.writerow(csv_result)
-                self.logger.info(self.model_name + " " + self.dataset_name + " batch" + str(self.batch_size) + " result saved in result/simplified_test_result.csv")
+                self.logger.info(self.model_name + " " + self.dataset_name + " batch" + str(
+                    self.batch_size) + " result saved in result/simplified_test_result.csv")
 
     def __compare_full_dataset_results(self):
         golden_name = '_'.join([self.model_name, self.dataset_name])
@@ -1048,16 +1130,17 @@ class ModelTest:
             if file_name.startswith(f"{golden_name}"):
                 golden_path = os.path.join(f"{self.data_dir}/GPU/{self.dataset_name}/batch{self.batch_size}", file_name)
                 break
- 
+
         if not os.path.exists(f"{self.current_result_path}"):
             raise RuntimeError(
                 "NPU test data not exist, An error occurred in the test")
         if not os.path.exists(f"{golden_path}"):
             raise RuntimeError(
                 "GPU golden data not exist, upload to result dir folder")
-        result_df = pd.read_csv(self.current_result_path, sep = '|', skipinitialspace = True).rename(columns=lambda x: x.strip())
+        result_df = pd.read_csv(self.current_result_path, sep='|', skipinitialspace=True).rename(
+            columns=lambda x: x.strip())
         result_df = result_df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
-        golden_df = pd.read_csv(golden_path, sep = '|', skipinitialspace = True).rename(columns=lambda x: x.strip())
+        golden_df = pd.read_csv(golden_path, sep='|', skipinitialspace=True).rename(columns=lambda x: x.strip())
         golden_df = golden_df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
         csv_result = []
         if self.dataset_name == 'MMLU' or self.dataset_name == 'CEval' or self.dataset_name == 'GSM8K':
@@ -1066,11 +1149,14 @@ class ModelTest:
             diff_val = golden_total - result_total
             pass_result = "Pass"
             if diff_val <= 0.1:
-                self.result_logger.debug(f"{self.current_result_path} is pass({diff_val}%), golden:{golden_total}, test:{result_total}")
+                self.result_logger.debug(
+                    f"{self.current_result_path} is pass({diff_val}%), golden:{golden_total}, test:{result_total}")
             else:
                 pass_result = "Fail"
-                self.result_logger.debug(f"{self.current_result_path} is failed({diff_val}%), golden:{golden_total}, test:{result_total}")
-            csv_result = [str(self.model_name).ljust(15), str(self.dataset_name).ljust(15), str(self.batch_size).ljust(15), str(round(golden_total, 10)).ljust(15),
+                self.result_logger.debug(
+                    f"{self.current_result_path} is failed({diff_val}%), golden:{golden_total}, test:{result_total}")
+            csv_result = [str(self.model_name).ljust(15), str(self.dataset_name).ljust(15),
+                          str(self.batch_size).ljust(15), str(round(golden_total, 10)).ljust(15),
                           str(round(result_total, 10)).ljust(15), str(pass_result).ljust(15)]
         elif self.dataset_name == 'TruthfulQA':
             if len(result_df) != len(golden_df):
@@ -1089,11 +1175,14 @@ class ModelTest:
             diff_MC1 = (golden_MC1_sum - result_MC1_sum) / len(result_df)
             diff_MC2 = (golden_MC2_sum - result_MC2_sum) / len(result_df)
             if ((diff_MC1 <= 0.1) and (diff_MC2 <= 0.1)):
-                self.result_logger.debug(f"{self.current_result_path} is pass(MC1:{diff_MC1} MC2:{diff_MC2}), golden:{golden_MC2_sum / len(result_df)} , test:{result_MC2_sum / len(result_df)}")
+                self.result_logger.debug(
+                    f"{self.current_result_path} is pass(MC1:{diff_MC1} MC2:{diff_MC2}), golden:{golden_MC2_sum / len(result_df)} , test:{result_MC2_sum / len(result_df)}")
             else:
                 pass_result = "Fail"
-                self.result_logger.debug(f"{self.current_result_path} is failed(MC1:{diff_MC1} MC2:{diff_MC2}), golden:{golden_MC2_sum / len(result_df)}, test:{result_MC2_sum / len(result_df)}")
-            csv_result = [str(self.model_name).ljust(15), str(self.dataset_name).ljust(15), str(self.batch_size).ljust(15), str(round((golden_MC2_sum / len(result_df)), 10)).ljust(15),
+                self.result_logger.debug(
+                    f"{self.current_result_path} is failed(MC1:{diff_MC1} MC2:{diff_MC2}), golden:{golden_MC2_sum / len(result_df)}, test:{result_MC2_sum / len(result_df)}")
+            csv_result = [str(self.model_name).ljust(15), str(self.dataset_name).ljust(15),
+                          str(self.batch_size).ljust(15), str(round((golden_MC2_sum / len(result_df)), 10)).ljust(15),
                           str(round((result_MC2_sum / len(result_df)), 10)).ljust(15), str(pass_result).ljust(15)]
         csv_full_path = os.path.join(self.script_path, "../result", "full_test_result.csv")
         if not os.path.exists(csv_full_path):
@@ -1102,7 +1191,8 @@ class ModelTest:
         with open(csv_full_path, 'a', newline='') as csv_full_file:
             csv_writer = csv.writer(csv_full_file, delimiter='|')
             csv_writer.writerow(csv_result)
-            self.logger.info(self.model_name + " " + self.dataset_name + " batch" + str(self.batch_size) + " result saved in result/full_test_result.csv")
+            self.logger.info(self.model_name + " " + self.dataset_name + " batch" + str(
+                self.batch_size) + " result saved in result/full_test_result.csv")
 
     def __get_device_type(self):
         if self.hardware_type == "NPU":
@@ -1131,13 +1221,13 @@ class ModelTest:
             utils_content.insert(insert_position + 203, UTILS_CODE_INSERTED_PART_3)
             utils_content.insert(insert_position + 154, UTILS_CODE_INSERTED_PART_2)
             utils_content.insert(insert_position + 153, UTILS_CODE_INSERTED_PART_1)
-            
+
             with open(transformers_utils_path, "w") as utils_file:
                 utils_file.writelines(utils_content)
             self.logger.info("transformers utils.py update success")
             return
         self.logger.warning("transformers utils.py not update. Please confirm it performs as you expect")
-    
+
     def __setup_model_parallel(self):
         if self.hardware_type in communication_map:
             torch.distributed.init_process_group(communication_map[self.hardware_type])
@@ -1163,14 +1253,14 @@ class ModelTest:
             self.logger.info(f"current soc: {self.soc_version}({self.device_type}), cast NZ")
         else:
             self.logger.info(f"current soc: {self.soc_version}({self.device_type}), not cast NZ")
-    
+
     def __save_result(self, result):
         def align_columns(df):
             max_widths = df.applymap(lambda x: len(str(x))).max()
             for col in df.columns:
                 df[col] = df[col].apply(lambda x: str(x).ljust(max_widths[col]))
             return df
-        
+
         def align_headers(df):
             max_widths = [max(len(str(col)), df[col].map(lambda x: len(str(x))).max()) for col in df.columns]
             headers = [col.ljust(max_widths[i]) for i, col in enumerate(df.columns)]
@@ -1178,11 +1268,12 @@ class ModelTest:
             for i, row in enumerate(df.values):
                 df.iloc[i] = [str(val).ljust(max_widths[j]) for j, val in enumerate(row)]
             return df
-        
+
         now = datetime.now()
         date_str = now.strftime("%Y_%m_%d_%H_%M_%S")
         result_name = "_".join([self.model_name, self.dataset_name, date_str]) + '.csv'
-        result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}", result_name)
+        result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}",
+                                   result_name)
         if self.dataset_name == "TruthfulQA":
             df = pd.DataFrame(result, columns=['idx', 'MC1', 'MC2', 'MC3'])
         else:
@@ -1192,7 +1283,6 @@ class ModelTest:
         df.to_csv(result_path, sep='|', index=False)
         self.logger.info(f"{self.dataset_name} result saved to: {result_path}")
         self.current_result_path = result_path
-
 
     def __get_log(self, type):
         if type == "log":
@@ -1210,7 +1300,7 @@ class ModelTest:
         streamer_handler.setFormatter(formatter)
         file_handler = logging.FileHandler(os.path.join(folder_path, self.model_name + "_" + self.model_type + "_" +
                                                         self.data_type + "_" + self.dataset_name + "_batch" +
-                                                        str(self.batch_size) + "_"  + formatted_datetime + ".log"))
+                                                        str(self.batch_size) + "_" + formatted_datetime + ".log"))
         file_handler.setFormatter(formatter)
         logger = logging.getLogger(type)
         if type == "log":
@@ -1225,6 +1315,7 @@ class ModelTest:
         logger.addHandler(file_handler)
         logger.propagate = False
         return logger
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Model precision test arguments")
@@ -1258,15 +1349,17 @@ def parse_args():
     parser.add_argument("--result_dir", type=str, help="path to save results")
     parser.add_argument("--log_dir", type=str, help="path to save logs")
     parser.add_argument("--hardware_type", type=str, default="NPU", help="current device type, GPU or NPU")
-    parser.add_argument("--case_pair", type=str, default="[[256, 256], [512, 512], [1024, 1024], [2048, 2048]]", help="performance test pair")
+    parser.add_argument("--case_pair", type=str, default="[[256, 256], [512, 512], [1024, 1024], [2048, 2048]]",
+                        help="performance test pair")
 
     return parser.parse_args()
+
 
 def get_args():
     args = parse_args()
     base_path = ATB_TESTDATA_PATH
     test_type = "performance" if args.test_mode == "performance" else "precision"
-    if ATB_TESTDATA_PATH == None:
+    if ATB_TESTDATA_PATH is None:
         base_path = os.path.join(os.path.dirname(__file__), "../")
     if args.data_dir is None:
         data_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode, args.model_name, "data")
@@ -1275,7 +1368,7 @@ def get_args():
     if args.result_dir is None:
         result_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode, args.model_name, "results")
     else:
-        result_dir = args.result_dir  
+        result_dir = args.result_dir
     if args.log_dir is None:
         log_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode, args.model_name, "logs")
     else:
@@ -1283,6 +1376,5 @@ def get_args():
     case_pair = args.case_pair
     if args.case_pair == "[]":
         case_pair = "[[256, 256], [512, 512], [1024, 1024], [2048, 2048]]"
-    return [args.model_type, args.data_type, args.test_mode, args.model_name, data_dir, args.dataset_name, args.batch_size, args.device_id, result_dir, log_dir, args.hardware_type, case_pair, args.weight_dir]
-
-    
+    return [args.model_type, args.data_type, args.test_mode, args.model_name, data_dir, args.dataset_name,
+            args.batch_size, args.device_id, result_dir, log_dir, args.hardware_type, case_pair, args.weight_dir]
