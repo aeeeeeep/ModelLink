@@ -54,7 +54,7 @@ InternLM开源了一个为实际场景量身定制的70亿参数库模型。该�
 
 | CPU     | Device |
 |---------|--------|
-| aarch64 | 910B3  |
+| aarch64 | 800I A2  |
 | aarch64 | 310P3  |
 
 # 快速上手
@@ -73,32 +73,32 @@ InternLM开源了一个为实际场景量身定制的70亿参数库模型。该�
 
 | 包名                                             |
 |------------------------------------------------|
-| Ascend-hdk-910b-npu-firmware_7.0.t9.0.b221.run |
+| Ascend-hdk-800IA2-npu-firmware_7.0.t9.0.b221.run |
 | Ascend-hdk-310p-npu-firmware_7.0.t9.0.b221.run |
 
 根据芯片型号选择相应的安装包安装
 
 ```bash
-# 安装firmwire 以910b为例
-chmod +x Ascend-hdk-910b-npu-firmware_7.0.t9.0.b221.run
-./Ascend-hdk-910b-npu-firmware_7.0.t9.0.b221.run --full
+# 安装firmwire 以800I A2为例
+chmod +x Ascend-hdk-800IA2-npu-firmware_7.0.t9.0.b221.run
+./Ascend-hdk-800IA2-npu-firmware_7.0.t9.0.b221.run --full
 ```
 
 ##### 1.1.2 安装driver
 
 安装方法：
 
-| cpu     | 包名                                                         | 
-|---------|------------------------------------------------------------|
-| aarch64 | Ascend-hdk-910b-npu-driver_23.0.rc3.b060_linux-aarch64.run |
-| x86     | Ascend-hdk-910b-npu-driver_23.0.rc3.b060_linux-x86_64.run  |
+| cpu     | 包名                                                     | 
+|---------|--------------------------------------------------------|
+| aarch64 | Ascend-hdk-800IA2-npu-driver_23.0.rc3.b060_linux-aarch64.run |
+| x86     | Ascend-hdk-800IA2-npu-driver_23.0.rc3.b060_linux-x86_64.run  |
 | aarch64 | Ascend-hdk-310p-npu-driver_23.0.rc3.b060_linux-aarch64.run |
-| x86     | Ascend-hdk-310p-npu-driver_23.0.rc3.b060_linux-x86-64.run  |
+| x86     | Ascend-hdk-310p-npu-driver_23.0.rc3.b060_linux-x86-64.run |
 
 ```bash
 # 根据CPU架构 以及npu型号 安装对应的 driver
-chmod +x Ascend-hdk-910b-npu-driver_23.0.rc3.b060_*.run
-./Ascend-hdk-910b-npu-driver_23.0.rc3.b060_*.run --full
+chmod +x Ascend-hdk-800IA2-npu-driver_23.0.rc3.b060_*.run
+./Ascend-hdk-800IA2-npu-driver_23.0.rc3.b060_*.run --full
 ```
 
 #### 1.2 安装CANN
@@ -127,13 +127,13 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 | 包名                                         |
 |--------------------------------------------|
-| Ascend-cann-kernels-910b_7.0.T10_linux.run |
+| Ascend-cann-kernels-800IA2_7.0.T10_linux.run |
 | Ascend-cann-kernels-310p_7.0.T10_linux.run |
 
 ```bash
-# 安装 kernel 以910B 为例
-chmod +x Ascend-cann-kernels-910b_7.0.T10_linux.run
-./Ascend-cann-kernels-910b_7.0.T10_linux.run --install
+# 安装 kernel 以800I A2为例
+chmod +x Ascend-cann-kernels-800IA2_7.0.T10_linux.run
+./Ascend-cann-kernels-800IA2_7.0.T10_linux.run --install
 ```
 
 #### 1.3 安装PytorchAdapter
@@ -311,7 +311,7 @@ python main.py --task inference
 
 ### 精度
 
-| 精度             | 910B3（313T）        | A100               | 对比                 |
+| 精度             | 800I A2（313T）      | A100               | 对比                 |
 |----------------|--------------------|--------------------|--------------------| 
 | STEM           | 0.4558139534883721 | 0.4511627906976744 | 1.010309278350516  |
 | Social Science | 0.5963636363636363 | 0.6036363636363636 | 0.9879518072289156 |
@@ -324,14 +324,14 @@ python main.py --task inference
 | 芯片型号        | batch_size | 首token推理速度(token/s) | 增量推理速度(token/s)    |
 |-------------|------------|---------------------|--------------------|
 | A100        | 1          | 8.472709848091108   | 32.70245536545943  |
-| 910B3（313T） | 1          | 10.62104062813386   | 32.45752413727395  |
+| 800I A2（313T） | 1          | 10.62104062813386   | 32.45752413727395  |
 | 对比          | 1          | 1.253558875325675   | 0.9925103107565379 |
 
 ## 接入FA、Rope
 
 ### 精度
 
-| 精度             | 910B3（313T）         | A100               | 对比                 |
+| 精度             | 800I A2（313T）         | A100               | 对比                 |
 |----------------|---------------------|--------------------|--------------------|
 | STEM           | 0.45813953488372094 | 0.4511627906976744 | 1.0154639175257734 |
 | Social Science | 0.5963636363636363  | 0.6036363636363636 | 0.9879518072289156 |
@@ -344,7 +344,7 @@ python main.py --task inference
 | 芯片型号        | batch_size | 首token推理速度(token/s) | 增量推理速度(token/s)    |
 |-------------|------------|---------------------|--------------------|
 | FT A100     | 1          | 22.68088002         | 88.88888889        |
-| 910B3（313T） | 1          | 23.01697799230084   | 66.73531056262117  |
+| 800I A2（313T） | 1          | 23.01697799230084   | 66.73531056262117  |
 | 对比          | 1          | 1.0148185595975319  | 0.7507722438201034 |
 
 # 附录：
