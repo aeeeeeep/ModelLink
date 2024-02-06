@@ -16,7 +16,6 @@
 #include <cmath>
 #include <numeric>
 #include "atb_speed/log.h"
-#include "layers/operations/linear.h"
 #include "layers/operations/linear_parallel.h"
 
 namespace atb_speed {
