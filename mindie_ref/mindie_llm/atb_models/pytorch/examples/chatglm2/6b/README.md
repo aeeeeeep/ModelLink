@@ -86,7 +86,7 @@
        |-- quantization.py
        |-- tokenization_chatglm.py
        |-- tokenizer_config.json
-       `-- tokenizer.model
+       |-- tokenizer.model
        ```
 
      - 在config.json中添加如下配置：
@@ -158,7 +158,7 @@ weight_offset.npy  weight_scale.npy
 1. 获取源码
 
    ```shell
-   cd ${path-to-transfomer-llm}/pytorch/examples/chatglm2_6b
+   cd ${path-to-transfomer-llm}/pytorch/examples/chatglm2/6b
    ```
 2. 安装第三方依赖
 
