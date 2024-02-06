@@ -375,7 +375,7 @@ class FlashLlamaForCausalLM(torch.nn.Module):
         tensor = tensor.to(torch.float16).npu()
         if not self.soc_info.need_nz:
             return tensor
-        tensor = torch_npu.npu_format_cast(tensor, 29)
+        tensor.data = torch_npu.npu_format_cast(tensor.data, 29)
         logger.info(f"trans to {torch_npu.get_npu_format(tensor)}")
         return tensor
     
