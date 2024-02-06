@@ -7,7 +7,7 @@
 # 特性矩阵
 - 此矩阵罗列了各LLaMa模型支持的特性
 
-| 模型及参数量 | 800I A2 Tensor Parallelism | 310P Tensor Parallelism | FP16 | BF16 | Flash Attention | Paged Attention | W8A8量化 | KV cache量化 | 稀疏量化 | MOE量化 | MindIE | TGI |
+| 模型及参数量 | 800I A2 Tensor Parallelism | 300I DUO Tensor Parallelism | FP16 | BF16 | Flash Attention | Paged Attention | W8A8量化 | KV cache量化 | 稀疏量化 | MOE量化 | MindIE | TGI |
 |-------------|-------------------------|-------------------------|------|------|-----------------|-----------------|---------|--------------|----------|--------|--------|-----|
 | LLaMa-7B    | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 否       | 否           | 否       | 否     | 是     | 否  |
 | LLaMa-13B   | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 否       | 否           | 否       | 否     | 是     | 否  |
@@ -20,18 +20,6 @@
 # 使用说明
 
 ## 环境准备
-**使用 VPN 连接杭州绿区实验室**
-- VPN 下载和安装操作：可到 idesk 搜索 VPN Client 并下载
-    ![VPN client](./vpn_client.png)
-
-**登录服务器**
-- 使用Xshell等工具，连接至服务器
-- 服务器登录信息请咨询环境管理员
-
-**进入运行环境**
-- 使用`docker exec -it {容器名} bash`进入容器
-- 使用`conda activate {环境名}`进入python环境
-- 部分机器可能无需执行上面两个指令
 
 **激活CANN**
 ```shell
@@ -98,7 +86,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
         - 若加上`use_refactor`则使用归一后代码，若不开启`use_refactor`，则使用未归一前的代码
         - 注意：当前Flash Attention仅支持打开此开关
 
-## 310P 运行操作说明
+## 300I DUO 运行操作说明
 
 ### 对话测试
 - 设置环境变量

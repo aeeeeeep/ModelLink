@@ -23,7 +23,7 @@ python /path-to-ModelLink/mindie_ref/mindie_llm/atb_models/examples/convert/conv
 ```
 - 输出结果会保存在bin权重同目录下
 
-## 310P 运行操作说明
+## 300I DUO 运行操作说明
 
 - 设置环境变量
 ```shell
