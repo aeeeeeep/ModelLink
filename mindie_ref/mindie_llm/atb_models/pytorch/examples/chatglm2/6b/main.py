@@ -311,26 +311,32 @@ def performance(args, tokenizer, model):
 
             torch.npu.synchronize()
             total_start = time.time()
-            outputs = model.generate(
-                **inputs,
-                eos_token_id=model.config.vocab_size * 2,
-                max_new_tokens=seq_len_out,
-            )
+            outputs, \
+                time_of_first_token, \
+                time_per_token, \
+                per_next_token_time, \
+                post_next_token_time \
+                = model.generate(
+                    **inputs,
+                    eos_token_id=model.config.vocab_size * 2,
+                    max_new_tokens=seq_len_out,
+                )
             torch.npu.synchronize()
             total_end = time.time()
 
         # time analysis
-        time_of_first_token = (first_token_end - first_token_start)
         time_total = total_end - total_start
-        time_tensor = torch.tensor([time_of_first_token, time_total], device="npu")
+        time_tensor = torch.tensor([time_of_first_token, time_per_token, time_total], device="npu")
 
         if args.tp_size > 1:
             # 首token和总时间取双芯的较大值
             dist.all_reduce(time_tensor, dist.ReduceOp.MAX)
 
         if local_rank == 0:
-            time_per_token = (time_tensor[1] - time_tensor[0]) / (seq_len_out - 1)
-            throughput = args.batch * (seq_len_out - 1) / (time_tensor[1] - time_tensor[0])
+            time_of_first_token = time_tensor[0] / 1000
+            time_per_token = time_tensor[1] / 1000
+            time_total = time_tensor[2]
+            throughput = args.batch / time_per_token
             throughput_e2e = args.batch * seq_len_out / time_total
 
             print(
