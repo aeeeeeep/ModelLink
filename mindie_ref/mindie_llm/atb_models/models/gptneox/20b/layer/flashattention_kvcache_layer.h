@@ -35,6 +35,7 @@ struct LayerParam {
     bool isPrefill = false;
     int rank = 0;
     int rankSize = 1;
+    std::string backend = "hccl";
 };
 
 atb::Status FlashAttentionKvCacheLayer(const LayerParam &param, atb::Operation **operation);
