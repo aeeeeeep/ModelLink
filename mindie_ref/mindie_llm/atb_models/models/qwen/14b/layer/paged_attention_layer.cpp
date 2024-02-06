@@ -274,7 +274,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
                            IN_HOLDER,
                            IN_HOLDER,
                            IN_HOLDER,
-                           IN_HOLDER,};
+                           IN_HOLDER};
     mlpNode.outTensorIds = {INTERNAL_MLPOUT};
 
     // residual

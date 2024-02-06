@@ -36,13 +36,13 @@ struct PALayerParam {
     std::string model = "qwen_14b";
 };
 
-static void from_json(const nlohmann::json &paramJson, PALayerParam &param);
+void from_json(const nlohmann::json &paramJson, PALayerParam &param);
 
 atb::Status PALayer(const PALayerParam &param, atb::Operation **operation);
 
 void reshapeHeads(const atb::Dims &oldShape, atb::Dims &newShape, int headNum);
 
-static atb::Operation *CreatePALayer(const nlohmann::json &paramJson);
+atb::Operation *CreatePALayer(const nlohmann::json &paramJson);
 
 class FlashAttentionHostBinder : public HostTensorBinder {
 public:

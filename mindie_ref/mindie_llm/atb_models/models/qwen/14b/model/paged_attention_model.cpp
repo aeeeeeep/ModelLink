@@ -18,7 +18,6 @@
 #include "atb/atb_infer.h"
 #include "nlohmann/json.hpp"
 
-// #include "layers/parallel_layer_v2.h"
 #include "models/qwen/14b/layer/paged_attention_layer.h"
 #include "parallel_lmhead.h"
 

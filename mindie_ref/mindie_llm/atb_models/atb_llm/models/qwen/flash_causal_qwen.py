@@ -10,6 +10,10 @@ import pathlib
 import warnings
 from typing import TYPE_CHECKING, Optional, Tuple, Union, Callable, List, Any, Generator
 
+import os
+import json
+import torch_npu
+
 import torch
 import torch.nn.functional as F
 import torch.utils.checkpoint
@@ -38,19 +42,6 @@ SUPPORT_BF16 = SUPPORT_CUDA and torch.cuda.is_bf16_supported()
 SUPPORT_FP16 = SUPPORT_CUDA and torch.cuda.get_device_capability(0)[0] >= 7
 SUPPORT_TORCH2 = hasattr(torch, '__version__') and int(torch.__version__.split(".")[0]) >= 2
 
-# from .configuration_qwen import QWenConfig
-from .qwen_generation_utils import (
-    HistoryType,
-    make_context,
-    decode_tokens,
-    get_stop_words_ids,
-    StopWordsLogitsProcessor,
-)
-
-import os
-import json
-import torch_npu
-
 from atb_llm.common.log.logging import logger
 from atb_llm.models.qwen.config import QWenConfig
 from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
@@ -63,6 +54,15 @@ from atb_llm.utils.layers import (
     AttentionMask,
     _load_column_multi,
     _load_row
+)
+
+# from .configuration_qwen import QWenConfig
+from .qwen_generation_utils import (
+    HistoryType,
+    make_context,
+    decode_tokens,
+    get_stop_words_ids,
+    StopWordsLogitsProcessor,
 )
 
 
@@ -206,12 +206,12 @@ class FlashSelfAttention(torch.nn.Module):
             attention_dropout=0.0,
     ):
         super().__init__()
-        assert flash_attn_unpadded_func is not None, (
-            "Please install FlashAttention first, " "e.g., with pip install flash-attn"
-        )
-        assert (
-                rearrange is not None
-        ), "Please install einops first, e.g., with pip install einops"
+        if flash_attn_unpadded_func is None:
+            logger.error("Please install FlashAttention first, " "e.g., with pip install flash-attn")
+            raise RuntimeError
+        if rearrange is None:
+            logger.error("Please install einops first, e.g., with pip install einops")
+            raise RuntimeError
         self.causal = causal
         self.softmax_scale = softmax_scale
         self.dropout_p = attention_dropout
@@ -232,8 +232,10 @@ class FlashSelfAttention(torch.nn.Module):
         return rearrange(output, '(b s) ... -> b s ...', b=batch)
 
     def forward(self, q, k, v, attention_mask=None):
-        assert all((i.dtype in [torch.float16, torch.bfloat16] for i in (q, k, v)))
-        assert all((i.is_cuda for i in (q, k, v)))
+        if all((i.dtype in [torch.float16, torch.bfloat16] for i in (q, k, v))) is False:
+            raise RuntimeError
+        if all((i.is_cuda for i in (q, k, v))) is False:
+            raise RuntimeError
         batch_size, seqlen_q = q.shape[0], q.shape[1]
         seqlen_k = k.shape[1]
         seqlen_out = seqlen_q
@@ -264,7 +266,8 @@ class FlashSelfAttention(torch.nn.Module):
             )
 
         if self.training:
-            assert seqlen_k == seqlen_q
+            if seqlen_k != seqlen_q:
+                raise RuntimeError
             is_causal = self.causal
             dropout_p = self.dropout_p
         else:
@@ -309,7 +312,8 @@ class QWenAttention(nn.Module):
 
         self.projection_size = config.kv_channels * config.num_attention_heads
 
-        assert self.projection_size % config.num_attention_heads == 0
+        if self.projection_size % config.num_attention_heads != 0:
+            raise RuntimeError
         self.hidden_size_per_attention_head = (
                 self.projection_size // config.num_attention_heads
         )
@@ -479,7 +483,8 @@ class QWenModel(QWenPreTrainedModel):
         if config.rotary_pct == 1.0:
             self.rotary_ndims = None
         else:
-            assert config.rotary_pct < 1
+            if config.rotary_pct >= 1:
+                raise RuntimeError
             self.rotary_ndims = int(
                 config.kv_channels * config.rotary_pct
             )
@@ -802,9 +807,9 @@ class FlashQwenForCausalLM(QWenPreTrainedModel):
 
     def __init__(self, config, weights):
         super().__init__(config)
-        assert (
-                config.bf16 + config.fp16 + config.fp32 <= 1
-        ), "Only one of \"bf16\", \"fp16\", \"fp32\" can be true"
+        if config.bf16 + config.fp16 + config.fp32 > 1:
+            logger.error("Only one of \"bf16\", \"fp16\", \"fp32\" can be true")
+            raise RuntimeError
         logger.warn(
             "Warning: please make sure that you are using the latest codes and checkpoints, "
             "especially if you used Qwen-7B before 09.25.2023."
@@ -988,8 +993,12 @@ class FlashQwenForCausalLM(QWenPreTrainedModel):
     ) -> Tuple[str, HistoryType]:
         generation_config = generation_config if generation_config is not None else self.generation_config
 
-        assert stream is _SENTINEL, _ERROR_STREAM_IN_CHAT
-        assert generation_config.chat_format == 'chatml', _ERROR_BAD_CHAT_FORMAT
+        if stream is not _SENTINEL:
+            _ERROR_STREAM_IN_CHAT
+            raise RuntimeError
+        if generation_config.chat_format != 'chatml':
+            _ERROR_BAD_CHAT_FORMAT
+            raise RuntimeError
         if history is None:
             history = []
         else:
@@ -1053,7 +1062,9 @@ class FlashQwenForCausalLM(QWenPreTrainedModel):
             **kwargs,
     ) -> Generator[str, Any, None]:
         generation_config = generation_config if generation_config is not None else self.generation_config
-        assert generation_config.chat_format == 'chatml', _ERROR_BAD_CHAT_FORMAT
+        if generation_config.chat_format != 'chatml':
+            _ERROR_BAD_CHAT_FORMAT
+            raise RuntimeError
         if history is None:
             history = []
         if stop_words_ids is None:

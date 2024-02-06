@@ -339,11 +339,9 @@ class StopWordsLogitsProcessor(LogitsProcessor):
         )
         self.eos_token_id = eos_token_id
         for stop_token_seq in self.stop_words_ids:
-            assert (
-                len(stop_token_seq) > 0
-            ), "Stop words token sequences {} cannot have an empty list".format(
-                stop_words_ids
-            )
+            if len(stop_token_seq) <= 0:
+                logger.error("Stop words token sequences {} cannot have an empty list".format(stop_words_ids))
+                raise RuntimeError
 
     def __call__(
         self, input_ids: torch.LongTensor, scores: torch.FloatTensor
@@ -382,10 +380,12 @@ class StopWordsLogitsProcessor(LogitsProcessor):
 
 
 def top_k_logits(logits, top_k=0, top_p=0.0, filter_value=-float("Inf")):
-    """This function has been mostly taken from huggingface conversational
+    """
+    This function has been mostly taken from huggingface conversational
     ai code at
         https://medium.com/huggingface/how-to-build-a-state-of-the-art-
-             conversational-ai-with-transfer-learning-2d818ac26313"""
+             conversational-ai-with-transfer-learning-2d818ac26313
+    """
 
     if top_k > 0:
         # Remove all tokens with a probability less than the

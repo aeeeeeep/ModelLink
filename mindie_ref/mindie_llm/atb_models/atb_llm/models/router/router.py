@@ -7,6 +7,7 @@ from transformers import AutoTokenizer
 
 from ..llama.modeling_llama import LlamaConfig
 from ..starcoder.flash_causal_starcoder import StarcoderConfig
+from ..qwen.config import QWenConfig
 
 
 @dataclass
@@ -204,6 +205,7 @@ class ChatglmRouter(BaseRouter):
             trust_remote_code=self.trust_remote_code,
             use_fast=False
         )
+
 
 @dataclass
 class QwenRouter(BaseRouter):
