@@ -1481,7 +1481,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
                                             **kwargs)
         return self
 
-    def sample(
+    def _sample(
         self,
         input_ids: torch.LongTensor,
         logits_processor: Optional[LogitsProcessorList] = None,
