@@ -20,6 +20,9 @@
 """ PyTorch Aquila model."""
 import math
 from typing import List, Optional, Tuple, Union
+import os
+import json
+import platform
 
 import torch
 import torch.utils.checkpoint
@@ -27,15 +30,15 @@ from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
 from transformers.activations import ACT2FN
-from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, SequenceClassifierOutputWithPast
+from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, \
+    SequenceClassifierOutputWithPast
 from transformers.modeling_utils import PreTrainedModel
-from transformers.utils import add_start_docstrings, add_start_docstrings_to_model_forward, logging, replace_return_docstrings
-from .configuration_aquila import AquilaConfig
+from transformers.utils import add_start_docstrings, add_start_docstrings_to_model_forward, logging, \
+    replace_return_docstrings
 
-import os
 import torch_npu
-import json
-import platform
+
+from .configuration_aquila import AquilaConfig
 
 
 def is_nd():
@@ -51,7 +54,7 @@ def get_rank_and_world_size():
     try:
         rank = torch.distributed.get_rank()
         world_size = torch.distributed.get_world_size()
-    except:
+    except (RuntimeError, OSError) as e:
         rank = 0
         world_size = 1
     return rank, world_size
@@ -82,7 +85,7 @@ _CONFIG_FOR_DOC = "AquilaConfig"
 
 # Copied from transformers.models.bart.modeling_bart._make_causal_mask
 def _make_causal_mask(
-    input_ids_shape: torch.Size, dtype: torch.dtype, device: torch.device, past_key_values_length: int = 0
+        input_ids_shape: torch.Size, dtype: torch.dtype, device: torch.device, past_key_values_length: int = 0
 ):
     """
     Make causal mask used for bi-directional self-attention.
@@ -190,7 +193,7 @@ class AscendRotaryEmbedding(AquilaRotaryEmbedding):
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
     x1 = x[..., : x.shape[-1] // 2]
-    x2 = x[..., x.shape[-1] // 2 :]
+    x2 = x[..., x.shape[-1] // 2:]
     return torch.cat((-x2, x1), dim=-1)
 
 
@@ -208,10 +211,10 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids):
 # Copied from transformers.models.llama.modeling_llama.LlamaMLP with Llama->Aquila
 class AquilaMLP(nn.Module):
     def __init__(
-        self,
-        hidden_size: int,
-        intermediate_size: int,
-        hidden_act: str,
+            self,
+            hidden_size: int,
+            intermediate_size: int,
+            hidden_act: str,
     ):
         super().__init__()
         self.gate_proj = nn.Linear(hidden_size, intermediate_size, bias=False)
@@ -252,13 +255,13 @@ class AquilaAttention(nn.Module):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
 
     def forward(
-        self,
-        hidden_states: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        past_key_value: Optional[Tuple[torch.Tensor]] = None,
-        output_attentions: bool = False,
-        use_cache: bool = False,
+            self,
+            hidden_states: torch.Tensor,
+            attention_mask: Optional[torch.Tensor] = None,
+            position_ids: Optional[torch.LongTensor] = None,
+            past_key_value: Optional[Tuple[torch.Tensor]] = None,
+            output_attentions: bool = False,
+            use_cache: bool = False,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
         bsz, q_len, _ = hidden_states.size()
 
@@ -336,13 +339,13 @@ class AquilaDecoderLayer(nn.Module):
         self.post_attention_layernorm = AquilaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
     def forward(
-        self,
-        hidden_states: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        past_key_value: Optional[Tuple[torch.Tensor]] = None,
-        output_attentions: Optional[bool] = False,
-        use_cache: Optional[bool] = False,
+            self,
+            hidden_states: torch.Tensor,
+            attention_mask: Optional[torch.Tensor] = None,
+            position_ids: Optional[torch.LongTensor] = None,
+            past_key_value: Optional[Tuple[torch.Tensor]] = None,
+            output_attentions: Optional[bool] = False,
+            use_cache: Optional[bool] = False,
     ) -> Tuple[torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]]:
         """
         Args:
@@ -540,9 +543,9 @@ class KVAttentionManager:
             for i in range(self.batch_size):
                 self.attention_mask_max[i][:self.token_offset, :self.token_offset] = attention_mask[i]
                 ori_len = self.ori_len_list[i].item()
-            # 左padding
-                #self.attention_mask_max_inc[i][:, :self.token_offset - ori_len] = self.min_cache[:, :self.token_offset - ori_len]
-            # 右padding
+                # 左padding
+                # self.attention_mask_max_inc[i][:, :self.token_offset - ori_len] = self.min_cache[:, :self.token_offset - ori_len]
+                # 右padding
                 self.attention_mask_max_inc[i][:, ori_len:self.token_offset] = \
                     self.min_cache[:, ori_len:self.token_offset]
             if not IS_ND:
@@ -643,12 +646,12 @@ class AquilaModel(AquilaPreTrainedModel):
         self.rank = RANK
         self.world_size = WORLD_SIZE
         self.post_init()
-        
+
         # for ascend
         self.init_ascend_operations(config)
         self.layer_id_list = [torch.tensor([i], dtype=torch.int32).npu() for i in range(config.num_hidden_layers)]
         self.place_holder = torch.ones(1).npu()
-    
+
     def init_ascend_operations(self, config: AquilaConfig):
         self.acl_param = json.dumps({
             "headNum": config.num_attention_heads // self.world_size,
@@ -679,7 +682,7 @@ class AquilaModel(AquilaPreTrainedModel):
             torch.finfo(torch.half).min,
             dtype=torch.half
         ).npu()
-    
+
     def init_ascend_weight(self):
         weights = [self.state_dict()["embed_tokens.weight"]]
         for i in range(self.num_layers):
@@ -701,7 +704,7 @@ class AquilaModel(AquilaPreTrainedModel):
 
         self.ascend_weight = weights
         self.acl_operation.set_weight(weights)
-    
+
     def prepare_inputs_for_ascend(self, input_ids, position_ids, attention_mask=None, past_key_values=None):
         self.kv_attention_manager.is_full = not past_key_values
         cos_table, sin_table = self.ascend_rotary_embedding(input_ids, self.kv_attention_manager.token_offset)
@@ -712,19 +715,19 @@ class AquilaModel(AquilaPreTrainedModel):
         sin_embed = torch.nn.functional.embedding(position_ids, sin_table)
 
         inputs = [
-            input_ids,  # IN_TENSOR_INPUTIDS
-            cos_embed.half().npu(),  # IN_TENSOR_COSEMBED
-            sin_embed.half().npu(),  # IN_TENSOR_SINEMBED
-            self.kv_attention_manager.get_attention_mask(attention_mask),  # IN_TENSOR_ATTENTIONMASK
-            self.kv_attention_manager.k_cache_input,  # IN_TENSOR_PAST_KEY
-            self.kv_attention_manager.v_cache_input,  # IN_TENSOR_PAST_VALUE
-            self.kv_attention_manager.token_offset_tensor,  # IN_TENSOR_TOKENOFFSET
-            self.kv_attention_manager.seq_len_tensor,  # IN_TENSOR_SEQLEN
-            self.place_holder
-        ] + self.layer_id_list
+                     input_ids,  # IN_TENSOR_INPUTIDS
+                     cos_embed.half().npu(),  # IN_TENSOR_COSEMBED
+                     sin_embed.half().npu(),  # IN_TENSOR_SINEMBED
+                     self.kv_attention_manager.get_attention_mask(attention_mask),  # IN_TENSOR_ATTENTIONMASK
+                     self.kv_attention_manager.k_cache_input,  # IN_TENSOR_PAST_KEY
+                     self.kv_attention_manager.v_cache_input,  # IN_TENSOR_PAST_VALUE
+                     self.kv_attention_manager.token_offset_tensor,  # IN_TENSOR_TOKENOFFSET
+                     self.kv_attention_manager.seq_len_tensor,  # IN_TENSOR_SEQLEN
+                     self.place_holder
+                 ] + self.layer_id_list
 
         return inputs
-    
+
     def execute_ascend_operator(self, input_ids, position_ids, attention_mask=None, past_key_values=None):
         acl_inputs = self.prepare_inputs_for_ascend(input_ids, position_ids, attention_mask, past_key_values)
         tmp_param = json.dumps(
@@ -766,16 +769,16 @@ class AquilaModel(AquilaPreTrainedModel):
 
     @add_start_docstrings_to_model_forward(AQUILA_INPUTS_DOCSTRING)
     def forward(
-        self,
-        input_ids: torch.LongTensor = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        past_key_values: Optional[List[torch.FloatTensor]] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            input_ids: torch.LongTensor = None,
+            attention_mask: Optional[torch.Tensor] = None,
+            position_ids: Optional[torch.LongTensor] = None,
+            past_key_values: Optional[List[torch.FloatTensor]] = None,
+            inputs_embeds: Optional[torch.FloatTensor] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -802,7 +805,7 @@ class AquilaModel(AquilaPreTrainedModel):
             self.batch_size = batch_size
             self.kv_attention_manager = KVAttentionManager(self.config, batch_size)
             self.kv_attention_manager.min_cache = self.min_cache
-        
+
         if past_key_values is None:
             self.kv_attention_manager.init_attention_mask()
             # 假设输入batch的长度一样
@@ -855,7 +858,7 @@ class AquilaModel(AquilaPreTrainedModel):
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
         next_decoder_cache = () if use_cache else None
-        
+
         # add acl model
         if not self.ascend_weight:
             self.init_ascend_weight()
@@ -873,7 +876,7 @@ class AquilaModel(AquilaPreTrainedModel):
 
         next_cache = (
             (self.kv_attention_manager.k_cache_input, self.kv_attention_manager.v_cache_input),) if use_cache else None
-        
+
         if not return_dict:
             return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
         return BaseModelOutputWithPast(
@@ -897,7 +900,7 @@ class AquilaForCausalLM(AquilaPreTrainedModel):
 
         # Initialize weights and apply final processing
         self.post_init()
-        
+
         # for ascend
         self.lm_head_weight = None
 
@@ -922,17 +925,17 @@ class AquilaForCausalLM(AquilaPreTrainedModel):
     @add_start_docstrings_to_model_forward(AQUILA_INPUTS_DOCSTRING)
     @replace_return_docstrings(output_type=CausalLMOutputWithPast, config_class=_CONFIG_FOR_DOC)
     def forward(
-        self,
-        input_ids: torch.LongTensor = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        past_key_values: Optional[List[torch.FloatTensor]] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
-        labels: Optional[torch.LongTensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            input_ids: torch.LongTensor = None,
+            attention_mask: Optional[torch.Tensor] = None,
+            position_ids: Optional[torch.LongTensor] = None,
+            past_key_values: Optional[List[torch.FloatTensor]] = None,
+            inputs_embeds: Optional[torch.FloatTensor] = None,
+            labels: Optional[torch.LongTensor] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
         Args:
@@ -1013,7 +1016,7 @@ class AquilaForCausalLM(AquilaPreTrainedModel):
         )
 
     def prepare_inputs_for_generation(
-        self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
+            self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
     ):
         if past_key_values:
             input_ids = input_ids[:, -1:]
@@ -1086,17 +1089,17 @@ class AquilaForSequenceClassification(AquilaPreTrainedModel):
 
     @add_start_docstrings_to_model_forward(AQUILA_INPUTS_DOCSTRING)
     def forward(
-        self,
-        input_ids: torch.LongTensor = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        past_key_values: Optional[List[torch.FloatTensor]] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
-        labels: Optional[torch.LongTensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            input_ids: torch.LongTensor = None,
+            attention_mask: Optional[torch.Tensor] = None,
+            position_ids: Optional[torch.LongTensor] = None,
+            past_key_values: Optional[List[torch.FloatTensor]] = None,
+            inputs_embeds: Optional[torch.FloatTensor] = None,
+            labels: Optional[torch.LongTensor] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         r"""
         labels (`torch.LongTensor` of shape `(batch_size,)`, *optional*):

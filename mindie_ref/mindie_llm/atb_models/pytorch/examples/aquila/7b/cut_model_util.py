@@ -10,27 +10,26 @@ pwd = os.path.realpath(os.path.dirname(__file__))
 
 
 # cut_row_keys: dim 0  cut_col_keys: dim 1  nn.linear: x*A.T
-def cut_weights(model, world_size, cut_c_attn_keys=['q_proj', 'k_proj', 'v_proj'], cut_row_keys=['gate_proj', 'up_proj'],
-                cut_col_keys=['o_proj', 'down_proj']):
-    state_dict_list = [{} for _ in range(world_size)]
-    for key, tensor in model.state_dict().items():
+def cut_weights(ori_model, world_size, cut_c_attn_keys=None, cut_row_keys=None, cut_col_keys=None):
+    state_dict_list_result = [{} for _ in range(world_size)]
+    for key, tensor in ori_model.state_dict().items():
         key_short = key.split('.')[-2]
         cut_tensor_list_t = []
-        if key_short in cut_c_attn_keys:
+        if cut_c_attn_keys is not None and key_short in cut_c_attn_keys:
             cut_tensor_list = torch.chunk(tensor, world_size, dim=0)
-        elif key_short in cut_row_keys:
+        elif cut_row_keys is not None and key_short in cut_row_keys:
             cut_tensor_list = torch.chunk(tensor, world_size, dim=0)
-        elif key_short in cut_col_keys:
+        elif cut_col_keys is not None and key_short in cut_col_keys:
             cut_tensor_list = torch.chunk(tensor, world_size, dim=1)
         elif "lm_head" in key:
             cut_tensor_list = torch.chunk(tensor, world_size, dim=1)
         else:
             cut_tensor_list = [tensor] * world_size
-        for tensor in cut_tensor_list:
-            cut_tensor_list_t.append(tensor.clone())
+        for ori_tensor in cut_tensor_list:
+            cut_tensor_list_t.append(ori_tensor.clone())
         for i in range(world_size):
-            state_dict_list[i][key] = cut_tensor_list_t[i]
-    return state_dict_list
+            state_dict_list_result[i][key] = cut_tensor_list_t[i]
+    return state_dict_list_result
 
 
 if __name__ == "__main__":
