@@ -32,6 +32,8 @@ class RMSNorm(torch.nn.Module):
 
             def norm_hook(grad):
                 if HOOKModule.collect_flag:
+                    if grad.dtype == torch.float16:
+                        grad = grad.float()
                     HOOKModule.layernorm_list.append(torch.norm(grad))
 
             self.weight.register_hook(norm_hook)
