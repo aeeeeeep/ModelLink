@@ -60,8 +60,11 @@ def load_column_multi(
     quantize = None if lm_head else config.quantize
     weight = weights.get_multi_weights_col(prefixes, quantize=quantize, dim=0, gqa_size=head_size)
     if lm_head:
-        weight = weight.npu()
-        weight = torch.nan_to_num(weight if not norm else F.normalize(weight))
+        weight_type = weight.dtype
+        weight = weight.float()
+        weight = weight if not norm else torch.nan_to_num(F.normalize(weight))
+        weight = weight.to(dtype = weight_type).npu()
+
     linear = get_linear(weight, None, quantize)
 
     process_group = weights.process_group
