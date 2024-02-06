@@ -30,7 +30,7 @@
 
 # 推理前准备
 
-1. 参见 [推理环境准备](../../../docs/推理环境准备.md) 安装 固件与驱动，CANN，PyTorchAdapter等基础软件。
+1. 参见 [推理环境准备](../../../../docs/推理环境准备.md) 安装 固件与驱动，CANN，PyTorchAdapter等基础软件。
    ```shell
    # 使能cann环境变量（根据实际安装路径修改）
    source ${path-to-ascend-toolkit}/set_env.sh
@@ -96,6 +96,7 @@
     ```
     git clone https://github.com/THUDM/CodeGeeX2
     cd CodeGeeX2
+    git checkout 448db3560b082b24ecf9a9a0da105afee35886c8
     git apply ../dataset.diff
     cd ..
     ```
@@ -111,7 +112,7 @@
 1. 获取源码
 
    ```shell
-   cd ${path-to-transfomer-llm}/pytorch/examples/codegeex2/6b
+   cd ${path-to-atb_models}/pytorch/examples/codegeex2/6b
    ```
 2. 安装第三方依赖
 
@@ -130,6 +131,8 @@
 - 推理前开启如下环境变量
 
     ```shell
+    export CHECKPOINT={path_to_weights} # 模型权重路径
+    
     export HCCL_OP_BASE_FFTS_MODE_ENABLE=TRUE
     export TASK_QUEUE_ENABLE=1
     export ATB_OPERATION_EXECUTE_ASYNC=1
@@ -143,18 +146,18 @@
 - `HumanEval-X`数据集推理
 
     ```
-    cp ../../chatglm2/6b/patches/models/modeling_chatglm_ascend.py 
+    cp ../../chatglm2/6b/patches/models/modeling_chatglm_ascend.py ${CHECKPOINT}/modeling_chatglm.py
     cd CodeGeeX2
-    bash script/run_humanevalx.sh
+    bash scripts/run_humanevalx.sh
     ```
 
 - 模型性能数据测试
 
-    参见[ChatGLM2 模型推理-模型性能数据测试](../../chatglm2/6b/README.md#模型推理)，直接使用ChatGLM2文件进行测试（将`${CHECKPOINT}`改为CodeGeeX2的权重路径）。
+    参见[ChatGLM2 模型推理-模型性能数据测试](../../chatglm2/6b/README.md#perf)，直接使用ChatGLM2文件进行测试（将`${CHECKPOINT}`改为CodeGeeX2的权重路径）。
 
 - UI 交互
 
-  参见[ChatGLM2 模型推理-UI 交互](../../chatglm2/6b/README.md#模型推理)，直接使用ChatGLM2文件进行测试（将`${CHECKPOINT}`改为CodeGeeX2的权重路径）。
+    参见[ChatGLM2 模型推理-UI 交互](../../chatglm2/6b/README.md#ui)，直接使用ChatGLM2文件进行测试（将`${CHECKPOINT}`改为CodeGeeX2的权重路径）。
 
 # 模型参考精度和性能结果
 

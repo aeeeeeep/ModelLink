@@ -37,7 +37,7 @@
    # 使能加速库环境变量（根据实际安装路径修改）
    source ${path-to-ascendTB}/set_env.sh
    # 使能inference库环境变量
-   source ${path-to-transfomer-llm}/set_env.sh
+   source ${path-to-atb_models}/set_env.sh
    # 稀疏工具在线编译(可选)
    cd ${path-to-ascend-toolkit}/tools/modelslim/pytorch/weight_compression/compress_graph/
    bash build.sh ${path-to-ascend-toolkit}/ascend-toolkit/latest/
@@ -158,7 +158,7 @@ weight_offset.npy  weight_scale.npy
 1. 获取源码
 
    ```shell
-   cd ${path-to-transfomer-llm}/pytorch/examples/chatglm2/6b
+   cd ${path-to-atb_models}/pytorch/examples/chatglm2/6b
    ```
 2. 安装第三方依赖
 
@@ -220,7 +220,7 @@ weight_offset.npy  weight_scale.npy
   torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode precision_dataset --model_path ${CHECKPOINT} --ceval_dataset ${DATASET} --batch 8 --tp_size ${TP_SIZE}
   ```
 
-- 模型性能数据测试
+- <a name="perf">模型性能数据测试</a>
 
   性能测试请先参见[atb_speed_sdk 精确打点法](../../atb_speed_sdk/README.md#精确打点法)替换transformers库的utils.py文件，并配置环境变量`export RETURN_PERF_DETAIL=1`。
 
@@ -270,7 +270,7 @@ weight_offset.npy  weight_scale.npy
      export MAX_SEQ_LEN=4096
      ```
 
-- UI 交互
+- <a name="ui">UI 交互</a>
 
   - 命令行交互
 
