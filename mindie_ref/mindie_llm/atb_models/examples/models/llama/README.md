@@ -7,7 +7,7 @@
 # 特性矩阵
 - 此矩阵罗列了各LLaMa模型支持的特性
 
-| 模型及参数量 | 910B Tensor Parallelism | 310P Tensor Parallelism | FP16 | BF16 | Flash Attention | Paged Attention | W8A8量化 | KV cache量化 | 稀疏量化 | MOE量化 | MindIE | TGI |
+| 模型及参数量 | 800I A2 Tensor Parallelism | 310P Tensor Parallelism | FP16 | BF16 | Flash Attention | Paged Attention | W8A8量化 | KV cache量化 | 稀疏量化 | MOE量化 | MindIE | TGI |
 |-------------|-------------------------|-------------------------|------|------|-----------------|-----------------|---------|--------------|----------|--------|--------|-----|
 | LLaMa-7B    | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 否       | 否           | 否       | 否     | 是     | 否  |
 | LLaMa-13B   | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 否       | 否           | 否       | 否     | 是     | 否  |
@@ -135,7 +135,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
         torchrun --nproc_per_node 4 --master_port 20010 -m examples.run_pa --model_path {LLaMa2-13B模型的权重路径}
         ```
 
-## 910B 运行操作说明
+## 800I A2 运行操作说明
 
 ### 对话测试
 **运行Flash Attention FP16**
@@ -159,7 +159,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
     - 运行指令
     ```shell
-    torchrun --nproc_per_node {TP数，即world size} --master_port {卡间通信端口} -m examples.run_fa --model_path {模型的权重路径} --use_refactor
+    torchrun --nproc_per_node {TP数，即world size} --master_port {卡间通信端口} -m examples.run_fa --model_path {模型的权重路径}
     ```
     - 在/path-to-ModelLink/mindie_ref/mindie_llm/atb_models/路径下运行以上指令
     - 各模型支持的TP数参考“特性矩阵”
@@ -191,11 +191,9 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 - 运行指令
     ```shell
-    torchrun --nproc_per_node {TP数，即world size} --master-port {卡间通信端口} -m examples.run_pa --model_path {模型的权重路径} --use_refactor
+    torchrun --nproc_per_node {TP数，即world size} --master-port {卡间通信端口} -m examples.run_pa --model_path {模型的权重路径}
     ```
     - 在/path-to-ModelLink/mindie_ref/mindie_llm/atb_models/路径下运行以上指令
-    - 参数说明
-        - 运行LLama2-7B和LLaMa2-13B时不加`use_refactor`参数；运行其他模型时加上`use_refactor`参数
     - 示例
         ```shell
         torchrun --nproc_per_node 1 --master_port 20010 -m examples.run_pa --model_path {LLaMa-7B模型的权重路径}
@@ -220,11 +218,9 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 - 运行指令
     ```shell
-    torchrun --nproc_per_node {TP数，即world size} --master-port {卡间通信端口} -m examples.run_pa --model_path {模型的权重路径} --use_refactor --is_bf16
+    torchrun --nproc_per_node {TP数，即world size} --master-port {卡间通信端口} -m examples.run_pa --model_path {模型的权重路径} --is_bf16
     ```
     - 在/path-to-ModelLink/mindie_ref/mindie_llm/atb_models/路径下运行以上指令
-    - 参数说明
-        - 未添加`use_refactor`参数时仅LLaMa-65B和LLaMa2-70B支持BF16；添加`use_refactor`参数后代码所有LLaMa模型都支持BF16
     - 示例
         ```shell
         torchrun --nproc_per_node 8 --master_port 20010 -m examples.run_pa --model_path {LLaMa-65B模型的权重路径} --is_bf16
@@ -247,4 +243,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 - 待补充
 
 ## 性能测试
+- 待补充
+
+## 性能数据
 - 待补充
