@@ -148,7 +148,7 @@ function fn_build_3rdparty()
     cd ..
 }
 
-function fn_init_pytorch_env()
+function fn_init_env()
 {
     export PYTHON_INCLUDE_PATH="$(python3 -c 'from sysconfig import get_paths; print(get_paths()["include"])')"
     export PYTHON_LIB_PATH="$(python3 -c 'from sysconfig import get_paths; print(get_paths()["include"])')"
@@ -175,6 +175,9 @@ function fn_init_pytorch_env()
         COMPILE_OPTIONS="${COMPILE_OPTIONS} -DTORCH_SETCUSTOMHANDLER=ON"
     else
         echo "not use SetCustomHandler"
+    fi
+    if [ $(find "$ASCEND_HOME_PATH" -name "aclnn_weight_quant_batch_matmul_v2.h") &> /dev/null ]; then
+        COMPILE_OPTIONS="${COMPILE_OPTIONS} -DUSE_W8A16=ON"
     fi
 
     is_higher_PTA6=$(nm --dynamic ${PYTORCH_NPU_INSTALL_PATH}/lib/libtorch_npu.so | grep _ZN6at_npu6native17empty_with_formatEN3c108ArrayRefIlEERKNS1_13TensorOptionsElb | wc -l)
@@ -445,7 +448,7 @@ function fn_main()
     }
     done
 
-    fn_init_pytorch_env
+    fn_init_env
     case "${arg1}" in
         "download_testdata")
             fn_download_testdata

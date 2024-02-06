@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,12 @@ std::string Statistic::ToString() const
            ", kernelExecuteTime:" + std::to_string(kernelExecuteTime) +
            ", kernelCacheHitCount:" + std::to_string(kernelCacheHitCount) +
            ", kernelCacheMissCount:" + std::to_string(kernelCacheMissCount) +
-           ", mallocTorchTensorSize:" + std::to_string(mallocTorchTensorSize);
+           ", mallocTorchTensorSize:" + std::to_string(mallocTorchTensorSize) +
+           ", pluginOpCallCount:" + std::to_string(pluginOpCallCount) +
+            ", pluginOpSetupTime:" + std::to_string(pluginOpSetupTime) +
+            ", pluginOpExecuteTime:" + std::to_string(pluginOpExecuteTime) +
+            ", pluginOpExecuteLaunchTime:" + std::to_string(pluginOpExecuteLaunchTime) +
+            ", pluginOpExecuteGetworkspaceTime:" + std::to_string(pluginOpExecuteGetWorkspaceTime);
 }
 
 void Statistic::Reset()
@@ -46,6 +51,11 @@ void Statistic::Reset()
     kernelCacheHitCount = 0;
     kernelCacheMissCount = 0;
     mallocTorchTensorSize = 0;
+    pluginOpCallCount = 0;
+    pluginOpSetupTime = 0;
+    pluginOpExecuteTime = 0;
+    pluginOpExecuteLaunchTime = 0;
+    pluginOpExecuteGetWorkspaceTime = 0;
 }
 
 Statistic &GetStatistic() { return g_statistic; }
