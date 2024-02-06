@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#include "layers/operations/linear.h"
-#include "layers/operations/linear_parallel.h"
 #include "layers/operations/fusion_attention.h"
 
 namespace atb_speed {
