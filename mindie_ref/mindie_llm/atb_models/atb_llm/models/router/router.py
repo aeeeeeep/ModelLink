@@ -169,3 +169,57 @@ class BaichuanRouter(BaseRouter):
             trust_remote_code=self.trust_remote_code,
             use_fast=False
         )
+
+
+@dataclass
+class ChatglmRouter(BaseRouter):
+
+    @property
+    def model_version(self):
+        """
+        次级模型名称，比如v2_13b
+        :return:
+        """
+        if self.ori_config.multi_query_attention:
+            model_ver = "v2_6b"
+
+        return model_ver
+
+    @property
+    def config(self):
+        config_cls = self.get_config_cls()
+        config = config_cls.from_pretrained(self.model_name_or_path,
+                                            revision=self.revision,
+                                            trust_remote_code=self.trust_remote_code)
+        if self.max_position_embeddings:
+            config.seq_length = self.max_position_embeddings
+        return config
+
+    def get_tokenizer(self):
+        return AutoTokenizer.from_pretrained(
+            self.model_name_or_path,
+            revision=self.revision,
+            padding_side="left",
+            truncation_side="left",
+            trust_remote_code=self.trust_remote_code,
+            use_fast=False
+        )
+
+@dataclass
+class QwenRouter(BaseRouter):
+    @property
+    def config(self):
+        return QWenConfig.from_pretrained(
+            self.model_name_or_path,
+            revision=self.revision,
+            trust_remote_code=self.trust_remote_code
+        )
+    
+    def get_tokenizer(self):
+        return AutoTokenizer.from_pretrained(
+            self.model_name_or_path,
+            pad_token='<|extra_0|>',
+            eos_token='<|endoftext|>',
+            padding_side='left',
+            trust_remote_code=True
+        )

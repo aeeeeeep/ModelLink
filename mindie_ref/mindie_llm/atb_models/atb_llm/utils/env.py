@@ -15,7 +15,8 @@ class EnvVar:
     # 使用Flash Attention and Paged Attention
     use_flash_attention: bool = os.getenv("FLASH_ATTENTION", "1") == "1"
     # 最大内存 GB
-    max_memory_gb: int = int(os.getenv("MAX_MEMORY_GB", 35))
+    max_memory_gb: str = os.getenv("MAX_MEMORY_GB", None)
+    atb_memory_gb_reserved: int = int(os.getenv("MAX_MEMORY_GB", "3"))
     # 跳过warmup
     skip_warmup: bool = os.getenv("SKIP_WARMUP", "0") == "1"
     # 使用哪些卡
@@ -27,9 +28,10 @@ class EnvVar:
     # process group 初始化timeout，单位 秒，默认是10
     pg_init_timeout = int(os.getenv("PG_INIT_TIMEOUT", "10"))
 
-    memory_fraction = float(os.getenv("CUDA_MEMORY_FRACTION", "0.95"))
+    memory_fraction = float(os.getenv("CUDA_MEMORY_FRACTION", "1.0"))
 
     profiling_enable = os.getenv("ATB_PROFILING_ENABLE", "0") == "1"
+    profiling_filepath = os.getenv("PROFILING_FILEPATH", './profiling')
 
     benchmark_enable = os.getenv("ATB_LLM_BENCHMARK_ENABLE", "0") == "1"
     benchmark_filepath = os.getenv("ATB_LLM_BENCHMARK_FILEPATH", None)

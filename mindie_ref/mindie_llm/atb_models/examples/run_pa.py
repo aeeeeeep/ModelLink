@@ -2,9 +2,11 @@
 import argparse
 import os
 import math
+import copy
+
 import torch
 
-from atb_llm.utils.cpu_binding import get_hbm_capacity, get_hbm_usage
+from atb_llm.utils.cpu_binding import NpuHbmInfo
 from atb_llm.utils.env import ENV
 from atb_llm.utils.log import logger, print_log
 from atb_llm.runner import ModelRunner
@@ -48,13 +50,15 @@ class PARunner:
                                         self.model.dtype,
                                         self.model.soc_info)
 
-        self.max_memory = get_hbm_capacity(self.rank, self.model.soc_info.need_nz)
-        self.init_memory = int(self.max_memory * get_hbm_usage(self.rank, self.model.soc_info.need_nz))
+        self.max_memory = NpuHbmInfo.get_hbm_capacity(self.rank, self.world_size, self.model.soc_info.need_nz)
+        self.init_memory = int(
+            self.max_memory * NpuHbmInfo.get_hbm_usage(self.rank, self.world_size, self.model.soc_info.need_nz))
         print_log(self.rank, logger.info, f'hbm_capacity(GB): {self.max_memory / (1024 ** 3)}, '
                                           f'init_memory(GB): {self.init_memory / (1024 ** 3)}')
 
         self.warm_up_memory = 0
         self.warm_up_num_blocks = 0
+        self.cache_manager = None
 
     def __repr__(self):
         return (
@@ -97,20 +101,24 @@ class PARunner:
         except ZeroDivisionError as e:
             raise ZeroDivisionError from e
         cache_config = CacheConfig(self.warm_up_num_blocks)
-        cache_manager = CacheManager(cache_config, self.model_config)
+        self.cache_manager = CacheManager(cache_config, self.model_config)
         logits = self.model.forward(
             input_ids=input_ids,
             position_ids=position_ids,
             is_prefill=cu_seqlen_prefill is not None,
             block_tables=block_tables_tensor,
-            kv_cache=cache_manager.kv_cache,
+            kv_cache=self.cache_manager.kv_cache,
             slots=slots,
             input_lengths=input_lengths_tensor,
             max_seq_len=self.max_prefill_tokens,
             lm_head_indices=prefill_head_indices
         )
-        self.warm_up_memory = int(self.max_memory * get_hbm_usage(self.rank, self.model.soc_info.need_nz))
+        self.warm_up_memory = int(
+            self.max_memory * NpuHbmInfo.get_hbm_usage(self.rank, self.world_size, self.model.soc_info.need_nz))
         print_log(self.rank, logger.info, f'warmup_memory(GB): {self.warm_up_memory / (1024 ** 3): .2f}')
+        del self.cache_manager
+        self.cache_manager = None
+        torch.npu.empty_cache()
         print_log(self.rank, logger.info, "---------------end warm_up---------------")
 
     def infer(self, input_texts, batch_size, max_output_length):
@@ -123,36 +131,44 @@ class PARunner:
                         for input_text in input_texts]
         print_log(self.rank, logger.debug, f'req_list[0].input_ids: {req_list[0].input_ids}')
 
-        cache_block_size = self.block_size * self.model.num_kv_heads * self.model.head_size
-        dtype_size = CacheManager.get_dtype_size(self.dtype)
-        total_cache_size = self.model.num_layers * cache_block_size * 2 * dtype_size
+        if not self.cache_manager:
+            cache_block_size = self.block_size * self.model.num_kv_heads * self.model.head_size
+            dtype_size = CacheManager.get_dtype_size(self.dtype)
+            total_cache_size = self.model.num_layers * cache_block_size * 2 * dtype_size
 
-        max_memory = ENV.memory_fraction * self.max_memory if batch_size != 1 else ENV.max_memory_gb * (1 << 30)
-        free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory else self.init_memory)
-        print_log(self.rank, logger.info,
-                  f"infer max_memory(GB): {max_memory / (1024 ** 3): .2f}, "
-                  f"warm_up_memory(GB): {self.warm_up_memory / (1024 ** 3): .2f}, "
-                  f"free_memory(GB): {free_memory / (1024 ** 3): .2f}")
+            max_memory = ENV.memory_fraction * self.max_memory \
+                if not ENV.max_memory_gb else int(ENV.max_memory_gb) * (1 << 30)
+            free_memory = max_memory - (
+                self.warm_up_memory if self.warm_up_memory != 0 else (
+                        self.init_memory + ENV.atb_memory_gb_reserved * (1 << 30)))
+            print_log(self.rank, logger.info,
+                      f"infer max_memory(GB): {max_memory / (1024 ** 3): .2f}, "
+                      f"warm_up_memory(GB): {self.warm_up_memory / (1024 ** 3): .2f}, "
+                      f"free_memory(GB): {free_memory / (1024 ** 3): .2f}")
 
-        num_blocks = int(free_memory // total_cache_size)
-        print_log(self.rank, logger.info, f"num_blocks: {num_blocks}, free_memory: {free_memory}")
-        cache_config = CacheConfig(num_blocks, self.block_size)
-        cache_manager = CacheManager(cache_config, self.model_config)
+            num_blocks = int(free_memory // total_cache_size)
+            print_log(self.rank, logger.info, f"num_blocks: {num_blocks}, free_memory: {free_memory}")
+            cache_config = CacheConfig(num_blocks, self.block_size)
+            self.cache_manager = CacheManager(cache_config, self.model_config)
+
+            req_list_dummy = copy.deepcopy(req_list)
+            generate_req(req_list_dummy, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
+                         2, self.cache_manager, rank)
 
         if not ENV.profiling_enable:
             print_log(self.rank, logger.debug, "no profiling")
             generate_req(req_list, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                         max_output_length, cache_manager, rank)
+                         max_output_length, self.cache_manager, rank)
         else:
             print_log(self.rank, logger.debug, "enter profiling")
             import os
-            profiling_path = './profiling'
+            profiling_path = ENV.profiling_filepath
             if not os.path.exists(profiling_path):
                 os.makedirs(profiling_path)
             torch.npu.synchronize()
             with torch.npu.profile(profiling_path):
                 generate_req(req_list, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                             max_output_length, cache_manager, rank)
+                             max_output_length, self.cache_manager, rank)
             torch.npu.synchronize()
 
         generate_text_list, token_num_list = decode_token(req_list, self.tokenizer)
@@ -216,8 +232,6 @@ if __name__ == '__main__':
     pa_runner = PARunner(**input_dict)
     print_log(rank, logger.info, f'pa_runner: {pa_runner}')
     pa_runner.warm_up()
-    torch.cuda.empty_cache()
-
     generate_texts, token_nums = pa_runner.infer(args.input_texts, args.max_batch_size, args.max_output_length)
 
     for i, generate_text in enumerate(generate_texts):

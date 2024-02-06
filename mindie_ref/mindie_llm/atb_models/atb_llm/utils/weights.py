@@ -186,6 +186,8 @@ class Weights:
         tensor = f.get_tensor(tensor_name)
 
         tensor = tensor.to(device=self.device)
+        if tensor.dtype not in [torch.int32, torch.int64]:
+            tensor = tensor.to(dtype=self.dtype)
         return tensor
 
     def get_whole_tensor(self, tensor_name: str, dim: int):

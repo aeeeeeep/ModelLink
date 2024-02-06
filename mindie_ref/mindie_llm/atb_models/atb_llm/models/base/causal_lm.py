@@ -135,6 +135,7 @@ class CausalLM(PreTrainedModel):
             self.token_offset = torch.full((self.batch_num,), 0, dtype=torch.int32, device=input_ids.device)
             self.seq_len_encoder = torch.full((self.batch_num,), 1, dtype=torch.int32, device=input_ids.device)
             self.seq_len_decoder = torch.full((self.batch_num,), 1, dtype=torch.int32, device=input_ids.device)
+            self.acl_param_seq_len_decoder = [1] * self.batch_num
             self.mask_full = torch.zeros((self.batch_num, self.max_position_embeddings, self.max_position_embeddings),
                                          dtype=torch.half, device=input_ids.device)
 

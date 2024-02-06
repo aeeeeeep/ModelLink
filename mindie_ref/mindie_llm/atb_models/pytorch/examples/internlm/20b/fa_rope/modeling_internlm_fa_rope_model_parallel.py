@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2023 EleutherAI and the HuggingFace Inc. team. All rights reserved.
+# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
 #
 # This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
 # and OPT implementations in this library. It has been modified from its
@@ -17,29 +17,40 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" PyTorch Aquila model."""
+""" PyTorch InternLM model."""
 import math
 from typing import List, Optional, Tuple, Union
-import os
-import json
-import platform
+import threading, queue
 
 import torch
+import torch_npu
+import os
+import json
+import numpy as np
 import torch.utils.checkpoint
 from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from contextlib import contextmanager
 
 from transformers.activations import ACT2FN
-from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, \
-    SequenceClassifierOutputWithPast
+from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, SequenceClassifierOutputWithPast
 from transformers.modeling_utils import PreTrainedModel
-from transformers.utils import add_start_docstrings, add_start_docstrings_to_model_forward, logging, \
-    replace_return_docstrings
+from transformers.generation.streamers import BaseStreamer
+from transformers.utils import add_start_docstrings, add_start_docstrings_to_model_forward, logging, replace_return_docstrings
+import os
+import sys
+pwd = os.path.realpath(os.path.dirname(__file__))
+sys.path.append(pwd)
+from .configuration_internlm import InternLMConfig
+from functools import wraps
 
-import torch_npu
 
-from .configuration_aquila import AquilaConfig
-
+def load_acl_transformer():
+    acl_transformer_home_path = os.getenv("ATB_SPEED_HOME_PATH", "")
+    if not acl_transformer_home_path or not os.path.exists(acl_transformer_home_path):
+        raise RuntimeError("env ACLTRANSFORMER_HOME_PATH not exist, source set_env.sh")
+    lib_path = os.path.join(acl_transformer_home_path, "lib/libatb_speed_torch.so")
+    torch.classes.load_library(lib_path)
 
 def is_nd():
     soc_version = torch_npu._C._npu_get_soc_version()
@@ -47,41 +58,25 @@ def is_nd():
 
 
 IS_ND = is_nd()
-print(f"IS_ND = {IS_ND}")
 
 
 def get_rank_and_world_size():
     try:
         rank = torch.distributed.get_rank()
         world_size = torch.distributed.get_world_size()
-    except (RuntimeError, OSError) as e:
+    except:
         rank = 0
         world_size = 1
     return rank, world_size
 
 
 RANK, WORLD_SIZE = get_rank_and_world_size()
-print(f"RANK = {RANK} | WORLD_SIZE = {WORLD_SIZE}")
-
-
-def load_acl_transformer():
-    """
-    加载acl transformers
-    :return:
-    """
-    acl_transformer_home_path = os.getenv("ATB_SPEED_HOME_PATH", "")
-    if not acl_transformer_home_path or not os.path.exists(acl_transformer_home_path):
-        raise RuntimeError("env ACLTRANSFORMER_HOME_PATH not exist, source set_env.sh")
-    lib_path = os.path.join(acl_transformer_home_path, "lib/libatb_speed_torch.so")
-    torch.classes.load_library(lib_path)
-
 
 load_acl_transformer()
 
 logger = logging.get_logger(__name__)
 
-_CONFIG_FOR_DOC = "AquilaConfig"
-
+_CONFIG_FOR_DOC = "InternLMConfig"
 
 # Copied from transformers.models.bart.modeling_bart._make_causal_mask
 def _make_causal_mask(
@@ -116,34 +111,36 @@ def _expand_mask(mask: torch.Tensor, dtype: torch.dtype, tgt_len: Optional[int] 
     return inverted_mask.masked_fill(inverted_mask.to(torch.bool), torch.finfo(dtype).min)
 
 
-# Copied from transformers.models.llama.modeling_llama.LlamaRMSNorm with Llama->Aquila
-class AquilaRMSNorm(nn.Module):
+class InternLMRMSNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-6):
         """
-        AquilaRMSNorm is equivalent to T5LayerNorm
+        InternLMRMSNorm is equivalent to T5LayerNorm
         """
         super().__init__()
         self.weight = nn.Parameter(torch.ones(hidden_size))
         self.variance_epsilon = eps
 
     def forward(self, hidden_states):
-        input_dtype = hidden_states.dtype
         variance = hidden_states.to(torch.float32).pow(2).mean(-1, keepdim=True)
         hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
 
-        return (self.weight * hidden_states).to(input_dtype)
+        # convert into half-precision if necessary
+        if self.weight.dtype in [torch.float16, torch.bfloat16]:
+            hidden_states = hidden_states.to(self.weight.dtype)
+
+        return self.weight * hidden_states
 
 
-# Copied from transformers.models.llama.modeling_llama.LlamaRotaryEmbedding with Llama->Aquila
-class AquilaRotaryEmbedding(torch.nn.Module):
+class InternLMRotaryEmbedding(torch.nn.Module):
     def __init__(self, dim, max_position_embeddings=2048, base=10000, device=None):
         super().__init__()
+        import platform
         if platform.machine() == "aarch64":
             inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2).double().to(device) / dim))
         else:
             inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2).float().to(device) / dim))
         # inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2).float().to(device) / dim))
-        self.register_buffer("inv_freq", inv_freq)
+        self.register_buffer("inv_freq", inv_freq, persistent=False)
 
         # Build here to make `torch.jit.trace` work.
         self.max_seq_len_cached = max_position_embeddings
@@ -170,8 +167,7 @@ class AquilaRotaryEmbedding(torch.nn.Module):
             self.sin_cached[:, :, :seq_len, ...].to(dtype=x.dtype),
         )
 
-
-class AscendRotaryEmbedding(AquilaRotaryEmbedding):
+class AscendRotaryEmbedding(InternLMRotaryEmbedding):
     def __init__(self, dim, max_position_embeddings=2048, base=10000, device=None):
         super().__init__(dim, max_position_embeddings, base, device)
         self.cos_cached = self.cos_cached.squeeze(1).squeeze(0)
@@ -189,11 +185,10 @@ class AscendRotaryEmbedding(AquilaRotaryEmbedding):
             self.sin_cached = self.sin_cached.to(x.device)
         return self.cos_cached, self.sin_cached
 
-
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
     x1 = x[..., : x.shape[-1] // 2]
-    x2 = x[..., x.shape[-1] // 2:]
+    x2 = x[..., x.shape[-1] // 2 :]
     return torch.cat((-x2, x1), dim=-1)
 
 
@@ -208,8 +203,7 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids):
     return q_embed, k_embed
 
 
-# Copied from transformers.models.llama.modeling_llama.LlamaMLP with Llama->Aquila
-class AquilaMLP(nn.Module):
+class InternLMMLP(nn.Module):
     def __init__(
             self,
             hidden_size: int,
@@ -226,30 +220,31 @@ class AquilaMLP(nn.Module):
         return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
 
 
-# Copied from transformers.models.llama.modeling_llama.LlamaAttention with Llama->Aquila
-class AquilaAttention(nn.Module):
+class InternLMAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
-    def __init__(self, config: AquilaConfig):
+    def __init__(self, config: InternLMConfig):
         super().__init__()
         self.config = config
-        self.world_size = WORLD_SIZE
+        self.world_size = 1
+        if hasattr(config, 'world_size'):
+            self.world_size = config.world_size
         self.hidden_size = config.hidden_size
         self.num_heads = config.num_attention_heads
         self.head_dim = self.hidden_size // self.num_heads
-        self.max_position_embeddings = int(os.getenv("MAX_SEQ_LEN", config.max_position_embeddings))
+        self.max_position_embeddings = config.max_position_embeddings
 
         if (self.head_dim * self.num_heads) != self.hidden_size:
             raise ValueError(
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
                 f" and `num_heads`: {self.num_heads})."
             )
-        self.num_heads = self.num_heads // self.world_size
-        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=False)
-        self.k_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=False)
-        self.v_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=False)
-        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=False)
-        self.rotary_emb = AquilaRotaryEmbedding(self.head_dim, max_position_embeddings=self.max_position_embeddings)
+        self.num_heads = self.num_heads//self.world_size
+        self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.bias)
+        self.k_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.bias)
+        self.v_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.bias)
+        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=config.bias)
+        self.rotary_emb = InternLMRotaryEmbedding(self.head_dim, max_position_embeddings=self.max_position_embeddings)
 
     def _shape(self, tensor: torch.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
@@ -285,7 +280,6 @@ class AquilaAttention(nn.Module):
 
         attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
 
-        attn_weights = torch.clamp(attn_weights, min=-1024., max=1024.)
         if attn_weights.size() != (bsz, self.num_heads, q_len, kv_seq_len):
             raise ValueError(
                 f"Attention weights should be of size {(bsz, self.num_heads, q_len, kv_seq_len)}, but is"
@@ -298,9 +292,7 @@ class AquilaAttention(nn.Module):
                     f"Attention mask should be of size {(bsz, 1, q_len, kv_seq_len)}, but is {attention_mask.size()}"
                 )
             attn_weights = attn_weights + attention_mask
-            attn_weights = torch.max(
-                attn_weights, torch.tensor(torch.finfo(attn_weights.dtype).min, device=attn_weights.device)
-            )
+            attn_weights = torch.max(attn_weights, torch.tensor(torch.finfo(attn_weights.dtype).min, device=attn_weights.device))
 
         # upcast attention to fp32
         attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
@@ -313,9 +305,15 @@ class AquilaAttention(nn.Module):
             )
 
         attn_output = attn_output.transpose(1, 2)
-        attn_output = attn_output.reshape(bsz, q_len, self.num_heads * self.head_dim)
+        # attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
+        attn_output = attn_output.reshape(
+            bsz, q_len, self.num_heads * self.head_dim)
 
         attn_output = self.o_proj(attn_output)
+        # reduce
+        if self.world_size >= 2:
+            torch.distributed.all_reduce(
+                attn_output, op=torch.distributed.ReduceOp.SUM)
 
         if not output_attentions:
             attn_weights = None
@@ -323,20 +321,21 @@ class AquilaAttention(nn.Module):
         return attn_output, attn_weights, past_key_value
 
 
-# Copied from transformers.models.llama.modeling_llama.LlamaDecoderLayer with Llama->Aquila
-class AquilaDecoderLayer(nn.Module):
-    def __init__(self, config: AquilaConfig):
+class InternLMDecoderLayer(nn.Module):
+    def __init__(self, config: InternLMConfig):
         super().__init__()
         self.hidden_size = config.hidden_size
-        self.self_attn = AquilaAttention(config=config)
-        self.world_size = WORLD_SIZE
-        self.mlp = AquilaMLP(
+        self.self_attn = InternLMAttention(config=config)
+        self.world_size = 1
+        if hasattr(config, 'world_size'):
+            self.world_size = config.world_size
+        self.mlp = InternLMMLP(
             hidden_size=self.hidden_size,
-            intermediate_size=config.intermediate_size // self.world_size,
+            intermediate_size=config.intermediate_size//self.world_size,
             hidden_act=config.hidden_act,
         )
-        self.input_layernorm = AquilaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        self.post_attention_layernorm = AquilaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.input_layernorm = InternLMRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.post_attention_layernorm = InternLMRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
     def forward(
             self,
@@ -397,7 +396,7 @@ class AquilaDecoderLayer(nn.Module):
         return outputs
 
 
-AQUILA_START_DOCSTRING = r"""
+INTERNLM_START_DOCSTRING = r"""
     This model inherits from [`PreTrainedModel`]. Check the superclass documentation for the generic methods the
     library implements for all its model (such as downloading or saving, resizing the input embeddings, pruning heads
     etc.)
@@ -407,7 +406,7 @@ AQUILA_START_DOCSTRING = r"""
     and behavior.
 
     Parameters:
-        config ([`AquilaConfig`]):
+        config ([`InternLMConfig`]):
             Model configuration class with all the parameters of the model. Initializing with a config file does not
             load the weights associated with the model, only the configuration. Check out the
             [`~PreTrainedModel.from_pretrained`] method to load the model weights.
@@ -415,16 +414,14 @@ AQUILA_START_DOCSTRING = r"""
 
 
 @add_start_docstrings(
-    "The bare Aquila Model outputting raw hidden-states without any specific head on top.",
-    AQUILA_START_DOCSTRING,
+    "The bare InternLM Model outputting raw hidden-states without any specific head on top.",
+    INTERNLM_START_DOCSTRING,
 )
-# Copied from transformers.models.llama.modeling_llama.LlamaPreTrainedModel with Llama->Aquila
-class AquilaPreTrainedModel(PreTrainedModel):
-    config_class = AquilaConfig
+class InternLMPreTrainedModel(PreTrainedModel):
+    config_class = InternLMConfig
     base_model_prefix = "model"
     supports_gradient_checkpointing = True
-    _no_split_modules = ["AquilaDecoderLayer"]
-    _skip_keys_device_placement = "past_key_values"
+    _no_split_modules = ["InternLMDecoderLayer"]
     _keys_to_ignore_on_load_unexpected = [r"decoder\.version"]
 
     def _init_weights(self, module):
@@ -439,27 +436,23 @@ class AquilaPreTrainedModel(PreTrainedModel):
                 module.weight.data[module.padding_idx].zero_()
 
     def _set_gradient_checkpointing(self, module, value=False):
-        if isinstance(module, AquilaModel):
+        if isinstance(module, InternLMModel):
             module.gradient_checkpointing = value
 
-
 class KVAttentionManager:
-    def __init__(self, config: AquilaConfig, batch_size):
+    def __init__(self, config: InternLMConfig, batch_size):
         self.nz_dim = 16
         self.world_size = WORLD_SIZE
         self.is_full = True
         self.batch_size = batch_size
         self.num_layers = config.num_hidden_layers
-        self.hidden_size = config.hidden_size // self.world_size
-        self.max_seq_len = int(os.getenv("MAX_SEQ_LEN", config.max_position_embeddings))
-        self.token_offset = 1
-        self.ori_len_list = []
-        self.min_cache = None
+        self.hidden_size = config.hidden_size // WORLD_SIZE
+        self.max_sequence_length = config.max_position_embeddings
         if not IS_ND:
             self.k_cache_input = torch.zeros(self.num_layers,
                                              self.batch_size,  # batch
                                              self.hidden_size // self.nz_dim,
-                                             self.max_seq_len,
+                                             self.max_sequence_length,
                                              self.nz_dim,
                                              device="npu",
                                              dtype=torch.half)
@@ -467,7 +460,7 @@ class KVAttentionManager:
             self.v_cache_input = torch.zeros(self.num_layers,
                                              self.batch_size,  # batch
                                              self.hidden_size // self.nz_dim,
-                                             self.max_seq_len,
+                                             self.max_sequence_length,
                                              self.nz_dim,
                                              device="npu",
                                              dtype=torch.half)
@@ -477,31 +470,30 @@ class KVAttentionManager:
         else:
             self.k_cache_input = torch.zeros(self.num_layers,
                                              batch_size,  # batch
-                                             self.max_seq_len,
+                                             self.max_sequence_length,
                                              self.hidden_size,
-                                             device="npu",
-                                             dtype=torch.half)
+                                             device="cpu").half().npu()
             self.v_cache_input = torch.zeros(self.num_layers,
                                              batch_size,  # batch
-                                             self.max_seq_len,
+                                             self.max_sequence_length,
                                              self.hidden_size,
-                                             device="npu",
-                                             dtype=torch.half)
-        torch.npu.empty_cache()
-
-        self.attention_mask_max = torch.zeros(
-            (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
+                                             device="cpu").half().npu()
+        self.token_offset = 1
+        self.attention_mask_max_full = torch.zeros(
+            (self.batch_size, self.max_sequence_length, self.max_sequence_length), dtype=torch.half).npu()
         self.attention_mask_max_inc = torch.zeros(
-            (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
+            (self.batch_size, self.max_sequence_length, self.max_sequence_length), dtype=torch.half).npu()
+        self.ori_len_list = []
+        self.min_cache = None
 
     def init_attention_mask(self):
         if IS_ND:
-            self.attention_mask_max.zero_()
+            self.attention_mask_max_full.zero_()
             self.attention_mask_max_inc.zero_()
         else:
-            self.attention_mask_max.zero_()
+            self.attention_mask_max_full.zero_()
             self.attention_mask_max_inc = torch.zeros(
-                (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
+                (self.batch_size, self.max_sequence_length, self.max_sequence_length), device="npu", dtype=torch.half)
 
     def init_seq_len_and_token_offset(self, seq_len):
         self.token_offset = seq_len
@@ -533,29 +525,29 @@ class KVAttentionManager:
         :return:
         """
         return torch_npu.npu_format_cast(tensor.view(
-            self.batch_size, self.max_seq_len,
-            self.max_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
+            self.batch_size, self.max_sequence_length,
+            self.max_sequence_length // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
 
     def get_attention_mask(self, attention_mask=None):
         if not self.is_full:
             return self.attention_mask_max_inc
         else:
             for i in range(self.batch_size):
-                self.attention_mask_max[i][:self.token_offset, :self.token_offset] = attention_mask[i]
+                self.attention_mask_max_full[i][:self.token_offset, :self.token_offset] = attention_mask[i]
                 ori_len = self.ori_len_list[i].item()
                 # 左padding
-                # self.attention_mask_max_inc[i][:, :self.token_offset - ori_len] = self.min_cache[:, :self.token_offset - ori_len]
+                self.attention_mask_max_inc[i][:, :self.token_offset - ori_len] = self.min_cache[:, :self.token_offset - ori_len]
                 # 右padding
-                self.attention_mask_max_inc[i][:, ori_len:self.token_offset] = \
-                    self.min_cache[:, ori_len:self.token_offset]
+                # self.attention_mask_max_inc[i][:, ori_len:self.token_offset] = \
+                #     self.min_cache[:, ori_len:self.token_offset]
             if not IS_ND:
                 self.attention_mask_max_inc = self.trans_data(self.attention_mask_max_inc)
-                return self.trans_data(self.attention_mask_max)
+                return self.trans_data(self.attention_mask_max_full)
             else:
-                return self.attention_mask_max
+                return self.attention_mask_max_full
 
 
-AQUILA_INPUTS_DOCSTRING = r"""
+INTERNLM_INPUTS_DOCSTRING = r"""
     Args:
         input_ids (`torch.LongTensor` of shape `(batch_size, sequence_length)`):
             Indices of input sequence tokens in the vocabulary. Padding will be ignored by default should you provide
@@ -620,56 +612,57 @@ AQUILA_INPUTS_DOCSTRING = r"""
 
 
 @add_start_docstrings(
-    "The bare Aquila Model outputting raw hidden-states without any specific head on top.",
-    AQUILA_START_DOCSTRING,
+    "The bare InternLM Model outputting raw hidden-states without any specific head on top.",
+    INTERNLM_START_DOCSTRING,
 )
-# Copied from transformers.models.llama.modeling_llama.LlamaModel with LLAMA->AQUILA,Llama->Aquila
-class AquilaModel(AquilaPreTrainedModel):
+class InternLMModel(InternLMPreTrainedModel):
     """
-    Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`AquilaDecoderLayer`]
+    Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`InternLMDecoderLayer`]
 
     Args:
-        config: AquilaConfig
+        config: InternLMConfig
     """
+    _auto_class = "AutoModel"
 
-    def __init__(self, config: AquilaConfig):
+    def __init__(self, config: InternLMConfig):
         super().__init__(config)
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
 
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
-        self.layers = nn.ModuleList([AquilaDecoderLayer(config) for _ in range(config.num_hidden_layers)])
-        self.norm = AquilaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.layers = nn.ModuleList([InternLMDecoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.norm = InternLMRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
-        self.rank = RANK
-        self.world_size = WORLD_SIZE
         self.post_init()
 
-        # for ascend
+        if hasattr(config, 'world_size'):
+            self.world_size = config.world_size
+        # for ascend init
         self.init_ascend_operations(config)
         self.layer_id_list = [torch.tensor([i], dtype=torch.int32).npu() for i in range(config.num_hidden_layers)]
-        self.place_holder = torch.ones(1).npu()
+        self.rank_size=torch.distributed.get_world_size()
 
-    def init_ascend_operations(self, config: AquilaConfig):
-        self.acl_param = json.dumps({
-            "headNum": config.num_attention_heads // self.world_size,
-            "rmsNormEps": config.rms_norm_eps,
-            "dk": config.hidden_size // config.num_attention_heads,
-            "layerNum": config.num_hidden_layers,
-            "rank": self.rank,
-            "rankSize": self.world_size,
-            "backend": os.getenv("BACKEND", "hccl")
-        })
-        self.max_position_embeddings = int(os.getenv("MAX_SEQ_LEN", config.max_position_embeddings))
-        self.acl_operation = torch.classes.ModelTorch.ModelTorch("aquila_7b_flash_attention_model")
+    def init_ascend_operations(self, config: InternLMConfig):
+        self.head_size = config.hidden_size // config.num_attention_heads
+        self.head_num = config.num_attention_heads // self.world_size
+        if hasattr(config, 'world_size'):
+            rank = torch.distributed.get_rank()
+            rankSize = torch.distributed.get_world_size()
+            self.acl_param = json.dumps({"headNum": self.head_num, "rmsNormEps": config.rms_norm_eps,
+                                         "dk": self.head_size, "layerNum": config.num_hidden_layers, "rank": rank, "rankSize": rankSize})
+        else:
+            self.acl_param = json.dumps({"headNum": self.head_num, "rmsNormEps": config.rms_norm_eps,
+                                         "dk": self.head_size, "layerNum": config.num_hidden_layers})
+        self.max_position_embeddings = config.max_position_embeddings
 
-        self.acl_operation.set_param(self.acl_param)
+        self.acl_fa_operation = torch.classes.ModelTorch.ModelTorch("internlm_20b_flash_attention_rope_model")
+
+        self.acl_fa_operation.set_param(self.acl_param)
 
         self.ascend_rotary_embedding = AscendRotaryEmbedding(
-            config.hidden_size // config.num_attention_heads, max_position_embeddings=self.max_position_embeddings
-        )
+            config.hidden_size // config.num_attention_heads, max_position_embeddings=self.max_position_embeddings)
 
         self.num_layers = config.num_hidden_layers
         self.hidden_size = config.hidden_size
@@ -679,10 +672,10 @@ class AquilaModel(AquilaPreTrainedModel):
         self.kv_attention_manager = None
         self.min_cache = torch.full(
             (self.max_position_embeddings, self.max_position_embeddings),
-            torch.finfo(torch.half).min,
-            dtype=torch.half
-        ).npu()
+            torch.finfo(torch.half).min, dtype=torch.half).npu()
+
     def init_ascend_weight(self):
+        weights: List = []
         weights = [self.state_dict()["embed_tokens.weight"]]
         for i in range(self.num_layers):
             weights_t = []
@@ -702,8 +695,10 @@ class AquilaModel(AquilaPreTrainedModel):
         weights.append(self.lm_head_weight)
 
         self.ascend_weight = weights
-        self.acl_operation.set_weight(weights)
-    def prepare_inputs_for_ascend(self, input_ids, position_ids, attention_mask=None, past_key_values=None):
+        self.acl_fa_operation.set_weight(weights)
+
+    def prepare_inputs_for_ascend(self, input_ids, position_ids, attention_mask=None,
+                                  past_key_values=None):
         self.kv_attention_manager.is_full = not past_key_values
         cos_table, sin_table = self.ascend_rotary_embedding(input_ids, self.kv_attention_manager.token_offset)
         cos_table = cos_table.npu()
@@ -712,17 +707,15 @@ class AquilaModel(AquilaPreTrainedModel):
         cos_embed = torch.nn.functional.embedding(position_ids, cos_table)
         sin_embed = torch.nn.functional.embedding(position_ids, sin_table)
 
-        inputs = [
-                     input_ids,  # IN_TENSOR_INPUTIDS
-                     cos_embed.half().npu(),  # IN_TENSOR_COSEMBED
-                     sin_embed.half().npu(),  # IN_TENSOR_SINEMBED
-                     self.kv_attention_manager.get_attention_mask(attention_mask),  # IN_TENSOR_ATTENTIONMASK
-                     self.kv_attention_manager.k_cache_input,  # IN_TENSOR_PAST_KEY
-                     self.kv_attention_manager.v_cache_input,  # IN_TENSOR_PAST_VALUE
-                     self.kv_attention_manager.token_offset_tensor,  # IN_TENSOR_TOKENOFFSET
-                     self.kv_attention_manager.seq_len_tensor,  # IN_TENSOR_SEQLEN
-                     self.place_holder
-                 ] + self.layer_id_list
+        inputs = [input_ids,
+                  cos_embed.half().npu(),
+                  sin_embed.half().npu(),
+                  self.kv_attention_manager.get_attention_mask(attention_mask),
+                  self.kv_attention_manager.k_cache_input,
+                  self.kv_attention_manager.v_cache_input,
+                  self.kv_attention_manager.token_offset_tensor,
+                  self.kv_attention_manager.seq_len_tensor,
+                  ] + self.layer_id_list
 
         return inputs
 
@@ -732,7 +725,7 @@ class AquilaModel(AquilaPreTrainedModel):
             {"tokenOffset": self.kv_attention_manager.token_offset_list,
              "seqLen": self.kv_attention_manager.seq_len_list
              })
-        acl_model_out = self.acl_operation.execute(acl_inputs, tmp_param)
+        acl_model_out = self.acl_fa_operation.execute(acl_inputs, tmp_param)
         acl_hidden_state = acl_model_out[0]
         return acl_hidden_state
 
@@ -742,6 +735,7 @@ class AquilaModel(AquilaPreTrainedModel):
     def set_input_embeddings(self, value):
         self.embed_tokens = value
 
+    # Copied from transformers.models.bart.modeling_bart.BartDecoder._prepare_decoder_attention_mask
     def _prepare_decoder_attention_mask(self, attention_mask, input_shape, inputs_embeds, past_key_values_length):
         # create causal mask
         # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
@@ -765,7 +759,7 @@ class AquilaModel(AquilaPreTrainedModel):
 
         return combined_attention_mask
 
-    @add_start_docstrings_to_model_forward(AQUILA_INPUTS_DOCSTRING)
+    @add_start_docstrings_to_model_forward(INTERNLM_INPUTS_DOCSTRING)
     def forward(
             self,
             input_ids: torch.LongTensor = None,
@@ -803,6 +797,7 @@ class AquilaModel(AquilaPreTrainedModel):
             self.batch_size = batch_size
             self.kv_attention_manager = KVAttentionManager(self.config, batch_size)
             self.kv_attention_manager.min_cache = self.min_cache
+
         if past_key_values is None:
             self.kv_attention_manager.init_attention_mask()
             # 假设输入batch的长度一样
@@ -855,16 +850,15 @@ class AquilaModel(AquilaPreTrainedModel):
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
         next_decoder_cache = () if use_cache else None
+
         # add acl model
         if not self.ascend_weight:
             self.init_ascend_weight()
 
-        hidden_states = self.execute_ascend_operator(
-            input_ids,
-            position_ids,
-            attention_mask,
-            past_key_values
-        )
+        hidden_states = self.execute_ascend_operator(input_ids,
+                                                     position_ids,
+                                                     attention_mask,
+                                                     past_key_values)
 
         # add hidden states from the last decoder layer
         if output_hidden_states:
@@ -872,6 +866,7 @@ class AquilaModel(AquilaPreTrainedModel):
 
         next_cache = (
             (self.kv_attention_manager.k_cache_input, self.kv_attention_manager.v_cache_input),) if use_cache else None
+
         if not return_dict:
             return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
         return BaseModelOutputWithPast(
@@ -882,16 +877,14 @@ class AquilaModel(AquilaPreTrainedModel):
         )
 
 
-# Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM with LLAMA->AQUILA,Llama->Aquila
-class AquilaForCausalLM(AquilaPreTrainedModel):
+class InternLMForCausalLM(InternLMPreTrainedModel):
+    _auto_class = "AutoModelForCausalLM"
+
     def __init__(self, config):
         super().__init__(config)
-        self.model = AquilaModel(config)
+        self.model = InternLMModel(config)
 
-        self.world_size = 1
-        if hasattr(config, 'world_size'):
-            self.world_size = config.world_size
-        self.lm_head = nn.Linear(config.hidden_size // self.world_size, config.vocab_size, bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -917,7 +910,7 @@ class AquilaForCausalLM(AquilaPreTrainedModel):
     def get_decoder(self):
         return self.model
 
-    @add_start_docstrings_to_model_forward(AQUILA_INPUTS_DOCSTRING)
+    @add_start_docstrings_to_model_forward(INTERNLM_INPUTS_DOCSTRING)
     @replace_return_docstrings(output_type=CausalLMOutputWithPast, config_class=_CONFIG_FOR_DOC)
     def forward(
             self,
@@ -944,9 +937,9 @@ class AquilaForCausalLM(AquilaPreTrainedModel):
         Example:
 
         ```python
-        >>> from transformers import AutoTokenizer, AquilaForCausalLM
+        >>> from transformers import AutoTokenizer, InternLMForCausalLM
 
-        >>> model = AquilaForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
+        >>> model = InternLMForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
         >>> tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
 
         >>> prompt = "Hey, are you consciours? Can you talk to me?"
@@ -957,10 +950,16 @@ class AquilaForCausalLM(AquilaPreTrainedModel):
         >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         "Hey, are you consciours? Can you talk to me?\nI'm not consciours, but I can talk to you."
         ```"""
-        if self.model.lm_head_weight is None:
+        # if self.model.lm_head_weight is None:
+        #     soc_version = torch_npu._C._npu_get_soc_version()
+        #     if soc_version not in [104, 220, 221, 222, 223, 224]:
+        #         self.model.lm_head_weight = torch_npu.npu_format_cast(self.lm_head.weight.data, 29)
+        #     self.model.lm_head_weight = self.lm_head.weight.data
+        if self.lm_head_weight is None:
+            self.lm_head_weight = nn.functional.normalize(self.state_dict()["lm_head.weight"])
             if not IS_ND:
-                self.model.lm_head_weight = torch_npu.npu_format_cast(self.lm_head.weight.data, 29)
-            self.model.lm_head_weight = self.lm_head.weight.data
+                self.lm_head_weight.data = torch_npu.npu_format_cast(self.lm_head_weight.data, 29)
+            self.model.lm_head_weight = self.lm_head_weight
 
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1047,12 +1046,119 @@ class AquilaForCausalLM(AquilaPreTrainedModel):
             reordered_past += (tuple(past_state.index_select(0, beam_idx) for past_state in layer_past),)
         return reordered_past
 
+    def build_inputs(self, tokenizer, query: str, history: List[Tuple[str, str]] = []):
+        prompt = ""
+        for record in history:
+            prompt += f"""<|User|>:{record[0]}<eoh>\n<|Bot|>:{record[1]}<eoa>\n"""
+        prompt += f"""<|User|>:{query}<eoh>\n<|Bot|>:"""
+        return tokenizer([prompt], return_tensors="pt")
+
+    @torch.no_grad()
+    def chat(self,
+             tokenizer,
+             query: str,
+             history: List[Tuple[str, str]] = [],
+             streamer: Optional[BaseStreamer] = None,
+             max_new_tokens: int = 1024,
+             do_sample: bool = True,
+             temperature: float = 0.8,
+             top_p: float = 0.8,
+             **kwargs):
+        inputs = self.build_inputs(tokenizer, query, history)
+        inputs = {k: v.to(self.device) for k, v in inputs.items() if torch.is_tensor(v)}
+        outputs = self.generate(**inputs,
+                                streamer=streamer,
+                                max_new_tokens=max_new_tokens,
+                                do_sample=do_sample,
+                                temperature=temperature,
+                                top_p=top_p,
+                                **kwargs)
+        outputs = outputs[0].cpu().tolist()[len(inputs["input_ids"][0]):]
+        response = tokenizer.decode(outputs, skip_special_tokens=True)
+        response = response.split("<eoa>")[0]
+        history = history + [(query, response)]
+        return response, history
+
+    @torch.no_grad()
+    def stream_chat(self,
+                    tokenizer,
+                    query: str,
+                    history: List[Tuple[str, str]] = [],
+                    max_new_tokens: int = 1024,
+                    do_sample: bool = True,
+                    temperature: float = 0.8,
+                    top_p: float = 0.8,
+                    **kwargs):
+        """
+        Return a generator in format: (response, history)
+        Eg.
+        ('你好，有什么可以帮助您的吗', [('你好', '你好，有什么可以帮助您的吗')])
+        ('你好，有什么可以帮助您的吗？', [('你好', '你好，有什么可以帮助您的吗？')])
+        """
+
+        response_queue = queue.Queue(maxsize=20)
+
+        class ChatStreamer(BaseStreamer):
+            def __init__(self, tokenizer) -> None:
+                super().__init__()
+                self.tokenizer = tokenizer
+                self.queue = response_queue
+                self.query = query
+                self.history = history
+                self.response = ""
+                self.received_inputs = False
+                self.queue.put((self.response, history + [(self.query, self.response)]))
+
+            def put(self, value):
+                if len(value.shape) > 1 and value.shape[0] > 1:
+                    raise ValueError("ChatStreamer only supports batch size 1")
+                elif len(value.shape) > 1:
+                    value = value[0]
+
+                if not self.received_inputs:
+                    # The first received value is input_ids, ignore here
+                    self.received_inputs = True
+                    return
+
+                token = self.tokenizer.decode([value[-1]], skip_special_tokens=True)
+                if token.strip() != "<eoa>":
+                    self.response = self.response + token
+                    history = self.history + [(self.query, self.response)]
+                    self.queue.put((self.response, history))
+
+            def end(self):
+                self.queue.put(None)
+
+        def stream_producer():
+            return self.chat(
+                tokenizer=tokenizer,
+                query=query,
+                streamer=ChatStreamer(tokenizer=tokenizer),
+                history=history,
+                max_new_tokens=max_new_tokens,
+                do_sample=do_sample,
+                temperature=temperature,
+                top_p=top_p,
+                **kwargs
+            )
+
+        def consumer():
+            producer = threading.Thread(target=stream_producer)
+            producer.start()
+            while True:
+                res = response_queue.get()
+                if res is None:
+                    return
+                yield res
+
+        return consumer()
+
 
 @add_start_docstrings(
     """
-    The LLaMa Model transformer with a sequence classification head on top (linear layer).
+    The InternLM Model transformer with a sequence classification head on top (linear layer).
 
-    [`AquilaForSequenceClassification`] uses the last token in order to do the classification, as other causal models
+    [`InternLMForSequenceClassification`] uses the last token in order to do the classification, as other causal models
     (e.g. GPT-2) do.
 
     Since it does classification on the last token, it requires to know the position of the last token. If a
@@ -1061,16 +1167,15 @@ class AquilaForCausalLM(AquilaPreTrainedModel):
     padding tokens when `inputs_embeds` are passed instead of `input_ids`, it does the same (take the last value in
     each row of the batch).
     """,
-    AQUILA_START_DOCSTRING,
+    INTERNLM_START_DOCSTRING,
 )
-# Copied from transformers.models.llama.modeling_llama.LlamaForSequenceClassification with LLAMA->AQUILA,Llama->Aquila
-class AquilaForSequenceClassification(AquilaPreTrainedModel):
+class InternLMForSequenceClassification(InternLMPreTrainedModel):
     _keys_to_ignore_on_load_missing = [r"lm_head.weight"]
 
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
-        self.model = AquilaModel(config)
+        self.model = InternLMModel(config)
         self.score = nn.Linear(config.hidden_size, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
@@ -1082,7 +1187,7 @@ class AquilaForSequenceClassification(AquilaPreTrainedModel):
     def set_input_embeddings(self, value):
         self.model.embed_tokens = value
 
-    @add_start_docstrings_to_model_forward(AQUILA_INPUTS_DOCSTRING)
+    @add_start_docstrings_to_model_forward(INTERNLM_INPUTS_DOCSTRING)
     def forward(
             self,
             input_ids: torch.LongTensor = None,

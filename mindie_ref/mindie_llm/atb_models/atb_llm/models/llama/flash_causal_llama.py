@@ -85,8 +85,8 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                 "worldSize": self.tp_world_size,
                 "backend": "lccl"
             })
-            self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_family_decoder_model")
-            self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_family_decoder_model")
+            self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_decoder_model")
+            self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_decoder_model")
 
             self.acl_encoder_operation.set_param(self.acl_param_encoder)
             self.acl_decoder_operation.set_param(self.acl_param_decoder)
@@ -102,7 +102,6 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                     "numHeadsPerPartition": self.num_key_value_heads,
                     "isPrefill": True,
                     "backend": "lccl"
-
                 })
                 self.acl_param_decoder = json.dumps({
                     "rmsNormEps": config.rms_norm_eps,
@@ -275,7 +274,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                 if lm_head_indices is None:
                     lm_head_indices = torch.tensor(range(input_ids.shape[0]),
                                                    dtype=torch.int64, device=input_ids.device)
-                self.acl_param_encoder = json.dumps({
+                self.acl_param = json.dumps({
                     "seqLen": input_lengths.tolist()
                 })
                 self.acl_encoder_operation_inputs[0] = input_ids
@@ -294,10 +293,11 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                 self.acl_encoder_operation_inputs[10] = self.in_beta
                 self.acl_encoder_operation_inputs[11] = input_lengths.to(torch.int32)
                 self.acl_encoder_operation_inputs[12] = lm_head_indices.to(torch.int64)
-                return self.acl_encoder_operation_inputs, self.acl_param_encoder
+                return self.acl_encoder_operation_inputs, self.acl_param
             else:
-                self.ascend_atten_mask_fake = self.ascend_atten_mask_fake.to(self.model.state_dict()[
-                                                                                 "embed_tokens.weight"].device)
+                self.acl_param = json.dumps({
+                    "seqLen": input_lengths.tolist()
+                })
                 self.acl_decoder_operation_inputs[0] = input_ids
                 self.acl_decoder_operation_inputs[1] = position_ids.to(torch.int64)
                 self.acl_decoder_operation_inputs[2] = self.cos_embed
@@ -318,7 +318,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                 self.acl_decoder_operation_inputs[10] = self.in_beta
                 self.acl_decoder_operation_inputs[11] = input_lengths.to(torch.int32)
                 self.acl_decoder_operation_inputs[12] = self.lm_head_indices_fake
-                return self.acl_decoder_operation_inputs, self.acl_param_decoder
+                return self.acl_decoder_operation_inputs, self.acl_param
         else:
             return super().prepare_inputs_for_ascend(input_ids, position_ids, is_prefill,
                                                      kv_cache, block_tables, slots, input_lengths,
