@@ -48,7 +48,7 @@ class CacheManager:
 
         mem_need = self.num_blocks * self.block_size * self.num_heads * self.head_size * self.num_layers * 2 * \
                    self.get_dtype_size(self.dtype) / 1024 / 1024 / 1024
-        print_log(torch.distributed.get_rank(), logger.info, f"kv cache will allocate {mem_need}GB memory")
+        logger.info(f"kv cache will allocate {mem_need}GB memory")
 
         if self.soc_info.need_nz:
             self.kv_cache = [
