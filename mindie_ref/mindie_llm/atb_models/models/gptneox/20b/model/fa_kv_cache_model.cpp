@@ -18,6 +18,7 @@
 #include "atb_speed/log.h"
 #include "models/gptneox/20b/layer/embedding_layer.h"
 #include "models/gptneox/20b/layer/flashattention_kvcache_layer.h"
+#include "layers/parallel_layer_v2.h"
 #include "nlohmann/json.hpp"
 
 namespace atb_speed {
@@ -42,6 +43,7 @@ enum InTensorId : int {
     IN_TENSOR_VALUECACHE,
     IN_TENSOR_TOKENOFFSET,
     IN_TENSOR_SEQLEN,
+    IN_HOLDER,
     IN_TENSOR_MAX
 };
 
@@ -71,6 +73,9 @@ void FaKvCacheModel::Param::FromString(const std::string &param)
     }
     if (paramJson.contains("qkScale")) {
         qkScale = paramJson["qkScale"].get<float>();
+    }
+    if (paramJson.contains("backend")) {
+        backend = paramJson["backend"];
     }
 
     ATB_LOG(INFO) << "GptNeox20BModel param layerNormEps:" << layerNormEps << ", headNum:" << headNum << ", dk:" <<
@@ -156,6 +161,7 @@ int64_t FaKvCacheModel::BuildGraph()
         opParam.qScale = param_.qScale;
         opParam.qkScale = param_.qkScale;
         opParam.rank = param_.rank;
+        opParam.backend = param_.backend;
         opParam.rankSize = param_.rankSize;
         atb_speed::gptneox_20b::FlashAttentionKvCacheLayer(opParam, &op);
         layerNode.operation.reset(op);
@@ -175,6 +181,7 @@ int64_t FaKvCacheModel::BuildGraph()
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_VALUECACHE);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_TOKENOFFSET);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SEQLEN);
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MAX + layerId);
 
         layerNode.outTensors = { &graph_.internalTensors.at(INTERMEDIATETENSOR_COUNT_BEFORE_LAYER + layerId) };
