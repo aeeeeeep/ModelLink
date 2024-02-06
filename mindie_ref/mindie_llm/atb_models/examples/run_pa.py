@@ -2,6 +2,8 @@
 import argparse
 import os
 import math
+import copy
+
 import torch
 
 from atb_llm.utils.cpu_binding import NpuHbmInfo
@@ -148,6 +150,10 @@ class PARunner:
             print_log(self.rank, logger.info, f"num_blocks: {num_blocks}, free_memory: {free_memory}")
             cache_config = CacheConfig(num_blocks, self.block_size)
             self.cache_manager = CacheManager(cache_config, self.model_config)
+
+            req_list_dummy = copy.deepcopy(req_list)
+            generate_req(req_list_dummy, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
+                         2, self.cache_manager, rank)
 
         if not ENV.profiling_enable:
             print_log(self.rank, logger.debug, "no profiling")
