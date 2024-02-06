@@ -85,7 +85,7 @@ def clip_grad_norm_fp32(parameters, grads_for_norm,
 
         if int(os.getenv('NPU_DETECT', '0')):
             from torch_npu.utils.silent_error import get_silent_check
-            total_norm = torch.Tensor([total_norm, float(get_silent_check())]).npu()
+            total_norm_cuda = torch.Tensor([total_norm_cuda, float(get_silent_check())]).npu()
 
         # Take max across all model-parallel GPUs.
         torch.distributed.all_reduce(total_norm_cuda,
@@ -94,8 +94,8 @@ def clip_grad_norm_fp32(parameters, grads_for_norm,
 
         if int(os.getenv('NPU_DETECT', '0')):
             from torch_npu.utils.silent_error import set_silent_check
-            set_silent_check(total_norm_cuda[1])
-            total_norm_cuda = total_norm[0]
+            set_silent_check(total_norm_cuda[1].item())
+            total_norm_cuda = total_norm_cuda[0]
 
         total_norm = total_norm_cuda[0].item()
     else:
@@ -118,7 +118,7 @@ def clip_grad_norm_fp32(parameters, grads_for_norm,
 
         if int(os.getenv('NPU_DETECT', '0')):
             from torch_npu.utils.silent_error import set_silent_check
-            set_silent_check(total_norm[1])
+            set_silent_check(total_norm[1].item())
             total_norm = total_norm[0]
 
         total_norm = total_norm.item() ** (1.0 / norm_type)

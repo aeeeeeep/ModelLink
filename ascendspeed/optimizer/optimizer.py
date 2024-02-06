@@ -51,7 +51,7 @@ def get_silent_check_flag():
     found_silent_flag = False
     if int(os.getenv('NPU_DETECT', '0')):
         from torch_npu.utils.silent_error import get_silent_check
-        found_silent_flag = get_silent_check().item() > 0
+        found_silent_flag = get_silent_check() > 0
     return found_silent_flag
 
 
