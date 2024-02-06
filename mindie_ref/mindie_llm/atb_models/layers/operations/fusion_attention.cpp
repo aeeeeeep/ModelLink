@@ -356,7 +356,7 @@ void unsqueezeByHeadNum(const atb::Dims &oldShape, atb::Dims &newShape, int head
 void unsqueezeByHeadNumAndBatchSize(const atb::Dims &oldShape, atb::Dims &newShape,
                                     int batchSize, int headNum, int headDim)
 {
-    if (oldShape.dimNum = 3) {
+    if (oldShape.dimNum == 3) {
         newShape.dimNum = 4;
         newShape.dims[0] = oldShape.dims[0];  // batchSize
         newShape.dims[1] = oldShape.dims[1];  // seqLen
