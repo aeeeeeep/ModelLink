@@ -157,7 +157,8 @@ class TensorParallelColumnLinear(SuperLayer):
             prefix, quantize=config.quantize, head_size=head_size
         )
         if bias:
-            raise NotImplementedError("packed_qkv only implemented for baichuan")
+            # raise NotImplementedError("packed_qkv only implemented for baichuan")
+            bias = weights.get_sharded(f"{prefix}.bias", dim=0)
         else:
             bias = None
         linear = get_linear(weight, bias, config.quantize)

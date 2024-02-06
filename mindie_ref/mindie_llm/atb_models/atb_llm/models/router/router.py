@@ -204,3 +204,22 @@ class ChatglmRouter(BaseRouter):
             trust_remote_code=self.trust_remote_code,
             use_fast=False
         )
+
+@dataclass
+class QwenRouter(BaseRouter):
+    @property
+    def config(self):
+        return QWenConfig.from_pretrained(
+            self.model_name_or_path,
+            revision=self.revision,
+            trust_remote_code=self.trust_remote_code
+        )
+    
+    def get_tokenizer(self):
+        return AutoTokenizer.from_pretrained(
+            self.model_name_or_path,
+            pad_token='<|extra_0|>',
+            eos_token='<|endoftext|>',
+            padding_side='left',
+            trust_remote_code=True
+        )

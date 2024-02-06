@@ -1,4 +1,8 @@
+<<<<<<< HEAD
+# Aquila-7b 模型推理指导[910B]
+=======
 # Aquila-7b 模型推理指导
+>>>>>>> 7a4865661526e48eaaed34004d0bc462f580ad54
 
 # 概述
 
@@ -17,12 +21,21 @@ Aquila 系列模型的源代码基于 Apache 2.0 协议，而模型权重基于 
 
   **表 1** 版本配套表
 
+<<<<<<< HEAD
+| 配套                 | 版本            | 下载链接 |
+|--------------------|---------------|------|
+| Ascend HDK         | 23.0.RC3.B050 | -    |
+| CANN               | 7.0.RC1.B050  | -    |
+| python             | 3.8.18        | -    |           
+| FrameworkPTAdapter | 5.0.rc3.B050  | -    |
+=======
 | 配套                 | 版本           | 下载链接 |
 |--------------------|--------------|------|
 | Ascend HDK         | 24.0.T1      |      |
 | CANN               | 8.0.T2.B010  |      |
 | python             | 3.9.18       |      |           
 | FrameworkPTAdapter | 6.0.RC1.B011 |      |
+>>>>>>> 7a4865661526e48eaaed34004d0bc462f580ad54
 
 **表 2** 推理引擎依赖
 
@@ -52,23 +65,49 @@ Aquila 系列模型的源代码基于 Apache 2.0 协议，而模型权重基于 
 
 安装方法:
 
+<<<<<<< HEAD
+| 包名                                             |
+|------------------------------------------------|
+| Ascend-hdk-910b-npu-firmware_7.0.t9.0.b221.run |
+| Ascend-hdk-310p-npu-firmware_7.0.t9.0.b221.run |
+=======
 | 包名                                   |
 |--------------------------------------|
 | Ascend-hdk-910b-npu-firmware_xxx.run |
 | Ascend-hdk-310p-npu-firmware_xxx.run |
+>>>>>>> 7a4865661526e48eaaed34004d0bc462f580ad54
 
 根据芯片型号选择相应的安装包安装
 
 ```bash
+<<<<<<< HEAD
+# 安装firmwire 以910b为例
+chmod +x Ascend-hdk-910b-npu-firmware_7.0.t9.0.b221.run
+./Ascend-hdk-910b-npu-firmware_7.0.t9.0.b221.run --full
+=======
 # 安装firmwire
 chmod +x Ascend-hdk-310p-npu-firmware_xxx.run
 ./Ascend-hdk-310p-npu-firmware_xxx.run --full
+>>>>>>> 7a4865661526e48eaaed34004d0bc462f580ad54
 ```
 
 ##### 1.1.2 安装driver
 
 安装方法：
 
+<<<<<<< HEAD
+| cpu     | 包名                                                         | 
+|---------|------------------------------------------------------------|
+| aarch64 | Ascend-hdk-910b-npu-driver_23.0.rc3.b060_linux-aarch64.run |
+| x86     | Ascend-hdk-910b-npu-driver_23.0.rc3.b060_linux-x86_64.run  |
+| aarch64 | Ascend-hdk-310p-npu-driver_23.0.rc3.b060_linux-aarch64.run |
+| x86     | Ascend-hdk-310p-npu-driver_23.0.rc3.b060_linux-x86-64.run  |
+
+```bash
+# 根据CPU架构 以及npu型号 安装对应的 driver
+chmod +x Ascend-hdk-910b-npu-driver_23.0.rc3.b060_*.run
+./Ascend-hdk-910b-npu-driver_23.0.rc3.b060_*.run --full
+=======
 | cpu     | 包名                                               | 
 |---------|--------------------------------------------------|
 | aarch64 | Ascend-hdk-910b-npu-driver_xxx_linux-aarch64.run |
@@ -80,6 +119,7 @@ chmod +x Ascend-hdk-310p-npu-firmware_xxx.run
 # 根据CPU架构 以及npu型号 安装对应的 driver
 chmod +x Ascend-hdk-910b-npu-driver_xxx_*.run
 ./Ascend-hdk-910b-npu-driver_xxx_*.run --full
+>>>>>>> 7a4865661526e48eaaed34004d0bc462f580ad54
 ```
 
 #### 1.2 安装CANN
@@ -92,6 +132,15 @@ chmod +x Ascend-hdk-910b-npu-driver_xxx_*.run
 
 | cpu     | 包名                                            |
 |---------|-----------------------------------------------|
+<<<<<<< HEAD
+| aarch64 | Ascend-cann-toolkit_7.0.T10_linux-aarch64.run |
+| x86     | Ascend-cann-toolkit_7.0.T10_linux-x86_64.run  |
+
+```bash
+# 安装toolkit  以arm为例
+chmod +x Ascend-cann-toolkit_7.0.T10_linux-aarch64.run
+./Ascend-cann-toolkit_7.0.T10_linux-aarch64.run --install
+=======
 | aarch64 | Ascend-cann-toolkit_8.0.RC1_linux-aarch64.run |
 | x86     | Ascend-cann-toolkit_8.0.RC1_linux-aarch64.run |
 
@@ -99,6 +148,7 @@ chmod +x Ascend-hdk-910b-npu-driver_xxx_*.run
 # 安装toolkit  以arm为例
 chmod +x Ascend-cann-toolkit_8.0.RC1_linux-aarch64.run
 ./Ascend-cann-toolkit_8.0.RC1_linux-aarch64.run --install
+>>>>>>> 7a4865661526e48eaaed34004d0bc462f580ad54
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 ```
 
@@ -108,6 +158,15 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 | 包名                                         |
 |--------------------------------------------|
+<<<<<<< HEAD
+| Ascend-cann-kernels-910b_7.0.T10_linux.run |
+| Ascend-cann-kernels-310p_7.0.T10_linux.run |
+
+```bash
+# 安装 kernel 以910B 为例
+chmod +x Ascend-cann-kernels-910b_7.0.T10_linux.run
+./Ascend-cann-kernels-910b_7.0.T10_linux.run --install
+=======
 | Ascend-cann-kernels-910b_8.0.RC1_linux.run |
 | Ascend-cann-kernels-310b_8.0.RC1_linux.run |
 
@@ -115,6 +174,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # 安装 kernel 以910B 为例
 chmod +x Ascend-cann-kernels-910b_8.0.RC1_linux.run
 ./Ascend-cann-kernels-910b_8.0.RC1_linux.run --install
+>>>>>>> 7a4865661526e48eaaed34004d0bc462f580ad54
 ```
 
 #### 1.3 安装PytorchAdapter
@@ -125,6 +185,23 @@ chmod +x Ascend-cann-kernels-910b_8.0.RC1_linux.run
 
 安装方法：
 
+<<<<<<< HEAD
+| 包名                                            |
+|-----------------------------------------------|
+| torch-1.11.0+cpu-cp38-cp38-linux_x86_64.whl   |
+| torch-1.11.0+cpu-cp39-cp39-linux_x86_64.whl   |
+| torch-1.11.0+cpu-cp310-cp310-linux_x86_64.whl |
+| ttorch-1.11.0-cp310-cp310-linux_aarch64.whl   |
+| ttorch-1.11.0-cp38-cp38-linux_aarch64.whl     |
+| ttorch-1.11.0-cp39-cp39-linux_aarch64.whl     |
+| ...                                           |
+
+根据所使用的环境中的python版本以及cpu类型，选择torch-1.11.0相应的安装包。
+
+```bash
+# 安装torch 1.11.0 的python 3.8 的arm版本为例
+pip install torch-1.11.0-cp38-cp38-linux_aarch64.whl
+=======
 | 包名                                              |
 |-------------------------------------------------|
 | torch-2.0.1+cpu-cp38-cp38-linux_x86_64.whl      |
@@ -138,21 +215,43 @@ chmod +x Ascend-cann-kernels-910b_8.0.RC1_linux.run
 ```bash
 # 安装torch 2.0.1 的python 3.9 的arm版本为例
 pip install torch-2.0.1-cp39-cp39-linux_aarch64.whl
+>>>>>>> 7a4865661526e48eaaed34004d0bc462f580ad54
 ```
 
 ##### 1.3.2 安装torch_npu
 
 安装方法：
 
+<<<<<<< HEAD
+| 包名                           |
+|------------------------------|
+| pytorch_v1.11.0_py38.tar.gz  |
+| pytorch_v1.11.0_py39.tar.gz  |
+| pytorch_v1.11.0_py310.tar.gz |
+| ...                          |
+=======
 | 包名                         |
 |----------------------------|
 | pytorch_v2.0.1_py38.tar.gz |
 | pytorch_v2.0.1_py39.tar.gz |
 | ...                        |
+>>>>>>> 7a4865661526e48eaaed34004d0bc462f580ad54
 
 - 安装选择与torch版本 以及 python版本 一致的npu_torch版本
 
 ```bash
+<<<<<<< HEAD
+# 安装 torch_npu 以torch 1.11.0 的python 3.8的版本为例
+tar -zxvf pytorch_v1.11.0_py38.tar.gz
+pip install torch*_aarch64.whl
+```
+
+### 2. 安装依赖
+
+#### 2.1 推理环境准备
+
+1. 下载aquila-7b模型权重，放置到自定义`input_dir`
+=======
 # 安装 torch_npu 以torch 2.0.1 的python 3.9的版本为例
 tar -zxvf pytorch_v2.0.1_py39.tar.gz
 pip install torch*_aarch64.whl
@@ -185,13 +284,17 @@ pip install torch*_aarch64.whl
 #### 2.1 推理环境准备
 
 1. 下载aquila_7b模型权重，放置到自定义`${model_download_path}` (请下载链接中'Files and versions'页签下的所有文件)
+>>>>>>> 7a4865661526e48eaaed34004d0bc462f580ad54
 
    ```
    https://huggingface.co/BAAI/Aquila-7B/tree/main
    ```
 
 2. 根据版本发布链接，安装加速库
+<<<<<<< HEAD
+=======
    将加速库下载至 `${llm_path}` 目录
+>>>>>>> 7a4865661526e48eaaed34004d0bc462f580ad54
 
 | 加速库包名                                                 |
 |-------------------------------------------------------|
@@ -208,7 +311,11 @@ import torch
 torch.compiled_with_cxx11_abi()
 ```
 
+<<<<<<< HEAD
+若返回True 则使用 cxx11abi=1，否则相反。
+=======
 若返回True 则使用 cxx11abi1，否则相反。
+>>>>>>> 7a4865661526e48eaaed34004d0bc462f580ad54
 
 ```bash
 # 安装atb 
@@ -217,6 +324,16 @@ chmod +x Ascend-cann-atb_*.run
 source /usr/local/Ascend/atb/set_env.sh
 ```
 
+<<<<<<< HEAD
+3. 根据版本发布链接，解压大模型文件
+
+| 大模型包名                                                                     |
+|---------------------------------------------------------------------------|
+| Ascend-cann-llm_{version_id}_linux-x86_64_torch{pta_version}-abi0.tar.gz  |
+| Ascend-cann-llm_{version_id}_linux-x86_64_torch{pta_version}-abi1.tar.gz  |
+| Ascend-cann-llm_{version_id}_linux-aarch64_torch{pta_version}-abi0.tar.gz |
+| Ascend-cann-llm_{version_id}_linux-aarch64_torch{pta_version}-abi1.tar.gz |
+=======
 3. 根据版本发布链接，安装加速库
    将加速库下载至 `${llm_path}` 目录
 
@@ -226,16 +343,25 @@ source /usr/local/Ascend/atb/set_env.sh
 | Ascend-cann-llm_{version_id}_linux-x86_64_torch2.0.1-abi1.tar.gz  |
 | Ascend-cann-llm_{version_id}_linux-aarch64_torch2.0.1-abi0.tar.gz |
 | Ascend-cann-llm_{version_id}_linux-aarch64_torch2.0.1-abi1.tar.gz |
+>>>>>>> 7a4865661526e48eaaed34004d0bc462f580ad54
 
 具体使用cxx11abi0 还是cxx11abi1 方法同安装atb
 
  ```bash
  # 安装大模型加速库
+<<<<<<< HEAD
+=======
  cd ${llm_path}
+>>>>>>> 7a4865661526e48eaaed34004d0bc462f580ad54
  tar -xzvf Ascend-cann-llm_*.tar.gz
  source set_env.sh
  ```
 
+<<<<<<< HEAD
+> 注： 每次运行前都需要 source CANN， 加速库，大模型
+
+## 单芯模型推理
+=======
 4. 下载CEval数据集
 
    若需执行精度测试，请参考附录中的精度测试指南 进行下载
@@ -248,6 +374,7 @@ source /usr/local/Ascend/atb/set_env.sh
    source ${llm_path}/set_env.sh
    ```
    > 注： 每次运行前都需要 source CANN， 加速库，大模型
+>>>>>>> 7a4865661526e48eaaed34004d0bc462f580ad54
 
 ### 拷贝文件
 
@@ -269,6 +396,23 @@ cd ${llm_path}/pytorch/examples/atb_speed_sdk
 pip install .
 ```
 
+<<<<<<< HEAD
+### 接入加速库
+
+- 修改`config.json` , 将 AutoModelForCausalLM 对应的值修改为 "modeling_aquila_fa_rope_model.AquilaForCausalLM"
+
+### 执行推理
+
+修改 `config.ini`
+[config文件配置参考](../../atb_speed_sdk/README.md)
+
+```shell
+cd ${script_path}
+python main.py --task inference
+```
+
+main.py 提供了demo推理，精度测试，性能测试三种下游任务。task_name可选inference、precision、performance
+=======
 ### 张量并行模型切分（仅在模型需要多卡并行时使用）
 
 ```shell
@@ -384,6 +528,7 @@ bash cut_model_and_run_aquila.sh ${task_name}
 ```shell
 run_cmd="${atb_options} ${atb_async_options} ${atb_launch_kernel} ${start_cmd}"
 ```
+>>>>>>> 7a4865661526e48eaaed34004d0bc462f580ad54
 
 **可以使用 MAX_SEQ_LEN 环境变量来设置model支持的最大长度以优化显存占用, 默认使用config里面的max_model_length**
 如
@@ -392,6 +537,27 @@ run_cmd="${atb_options} ${atb_async_options} ${atb_launch_kernel} ${start_cmd}"
 MAX_SEQ_LEN=2048 python main.py --task ${task_name}
 ```
 
+<<<<<<< HEAD
+## 竞品对比
+
+### 精度
+
+| 精度             | 910B3（313T）         | A100                | 对比                    |
+|----------------|---------------------|---------------------|-----------------------| 
+| STEM           | 0.37209302325581395 | 0.3813953488372093  | -0.009302325581395376 |
+| Social Science | 0.5018181818181818  | 0.48363636363636364 | +0.018181818181818188 |
+| Humanities     | 0.42023346303501946 | 0.41245136186770426 | +0.007782101167315203 |
+| Other          | 0.4088541666666667  | 0.3932291666666667  | +0.015625             |
+| Avg acc        | 0.4182763744427935  | 0.4115898959881129  | +0.006686478454680567 |
+
+### 性能
+
+| 芯片型号        | batch_size | 首token推理速度(token/s) | 增量推理速度(token/s)    |
+|-------------|------------|---------------------|--------------------|
+| A100        | 1          | 22.68088002         | 88.88888889        |
+| 910B3（313T） | 1          | 25.425999779824572  | 68.81384251548891  |
+| 对比          | 1          | 1.121032330200765   | 0.7741557282895734 |
+=======
 或
 
 ```shell
@@ -441,6 +607,7 @@ MAX_SEQ_LEN=2048 bash cut_model_and_run_aquila.sh ${task_name}
 |-------|-----|----------|----------|----------------|-----------------|
 | Duo双芯 | 1   | 2^5~2^10 | 2^5~2^10 | 235.0490424    | 91.39817598     |
 
+>>>>>>> 7a4865661526e48eaaed34004d0bc462f580ad54
 
 # 附录：
 
@@ -459,6 +626,9 @@ cd ${script_path}
 python main.py --task precision
 ```
 
+<<<<<<< HEAD
+结束后在{ceval_work_dir}/test_result目录下查看测试结果。
+=======
 - 多芯
 
 ```shell
@@ -467,6 +637,7 @@ bash cut_model_and_run_aquila.sh precision
 ```
 
 结束后在${ceval_work_dir}/test_result目录下查看测试结果。[双芯结果每个两份，只需看其中一份即可]。
+>>>>>>> 7a4865661526e48eaaed34004d0bc462f580ad54
 
 | 文件                        | 用途                   | 
 |---------------------------|----------------------| 
@@ -497,13 +668,19 @@ bash cut_model_and_run_aquila.sh precision
 
 ## 3. 执行测试脚本
 
+<<<<<<< HEAD
+=======
 - 单芯
 
+>>>>>>> 7a4865661526e48eaaed34004d0bc462f580ad54
 ```shell
 cd ${script_path}
 RETURN_PERF_DETAIL=1 python main.py --task performance
 ```
 
+<<<<<<< HEAD
+为了不影响正常使用，将`RETURN_PERF_DETAIL`设置成1来返回具体的性能测试的值，默认是0
+=======
 - 多芯
 
 ```shell
@@ -515,6 +692,7 @@ RETURN_PERF_DETAIL=1 bash cut_model_and_run_aquila.sh performance
 上述多芯场景参数
 
 * performance表示性能测试。
+>>>>>>> 7a4865661526e48eaaed34004d0bc462f580ad54
 
 ### 性能测试结果
 

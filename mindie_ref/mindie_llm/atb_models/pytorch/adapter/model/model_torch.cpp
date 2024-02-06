@@ -53,6 +53,7 @@
 #include "baichuan2/7b/model/paged_attention_model.h"
 #include "falcon/40b/model/flash_attention_model.h"
 #include "qwen/14b/model/flash_attention_model.h"
+#include "qwen/14b/model/paged_attention_model.h"
 #include "aquila/7b/model/flash_attention_model.h"
 #include "gptneox/20b/model/fa_kv_cache_rope_model.h"
 #include "gptneox/20b/model/fa_kvcache_model.h"
@@ -185,6 +186,8 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::falcon_40b::FusionModel>(param);
     } else if (modelName_ == "qwen_14b_flash_attention_model") {
         model_ = std::make_shared<atb_speed::qwen_14b::FlashAttentionModel>(param);
+    } else if (modelName_ == "qwen_14b_pa_model") {
+        model_ = std::make_shared<atb_speed::qwen_14b::PagedAttentionModel>(param);
     } else if (modelName_ == "aquila_7b_flash_attention_model") {
         model_ = std::make_shared<atb_speed::aquila_7b::FlashAttentionRopeModel>(param);
     } else if (modelName_ == "gptneox_20b_fa_kvcache_model") {

@@ -682,7 +682,6 @@ class AquilaModel(AquilaPreTrainedModel):
             torch.finfo(torch.half).min,
             dtype=torch.half
         ).npu()
-
     def init_ascend_weight(self):
         weights = [self.state_dict()["embed_tokens.weight"]]
         for i in range(self.num_layers):
@@ -704,7 +703,6 @@ class AquilaModel(AquilaPreTrainedModel):
 
         self.ascend_weight = weights
         self.acl_operation.set_weight(weights)
-
     def prepare_inputs_for_ascend(self, input_ids, position_ids, attention_mask=None, past_key_values=None):
         self.kv_attention_manager.is_full = not past_key_values
         cos_table, sin_table = self.ascend_rotary_embedding(input_ids, self.kv_attention_manager.token_offset)
@@ -805,7 +803,6 @@ class AquilaModel(AquilaPreTrainedModel):
             self.batch_size = batch_size
             self.kv_attention_manager = KVAttentionManager(self.config, batch_size)
             self.kv_attention_manager.min_cache = self.min_cache
-
         if past_key_values is None:
             self.kv_attention_manager.init_attention_mask()
             # 假设输入batch的长度一样
@@ -858,7 +855,6 @@ class AquilaModel(AquilaPreTrainedModel):
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
         next_decoder_cache = () if use_cache else None
-
         # add acl model
         if not self.ascend_weight:
             self.init_ascend_weight()
@@ -876,7 +872,6 @@ class AquilaModel(AquilaPreTrainedModel):
 
         next_cache = (
             (self.kv_attention_manager.k_cache_input, self.kv_attention_manager.v_cache_input),) if use_cache else None
-
         if not return_dict:
             return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
         return BaseModelOutputWithPast(
