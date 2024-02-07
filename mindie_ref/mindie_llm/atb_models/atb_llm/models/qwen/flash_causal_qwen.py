@@ -912,7 +912,7 @@ class FlashQwenForCausalLM(QWenPreTrainedModel):
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         if self.transformer.lm_head_weight is None:
             if self.soc_info.need_nz:
-                self.lm_head_weight.data = torch_npu.npu_format_cast(self.lm_head_weight.data, 29)
+                self.lm_head.linear.weight.data = torch_npu.npu_format_cast(self.lm_head.linear.weight.data, 29)
             self.transformer.lm_head_weight = self.lm_head.linear.weight
 
         # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
