@@ -1,14 +1,5 @@
 #!/bin/bash
 
-# export CUDA_DEVICE_MAX_CONNECTIONS=1
-# CKPT_LOAD_DIR="../model_weights/aquila"
-# TOKENIZER_PATH="../HF_Aquila7B_downloaded"
-# TP=8
-# PP=1
-# EVAL_DATA_PATH="./boolq/test"
-# TASK="boolq"
-
-
 # See README, please remember to source the set_env.sh file in CLI, or here
 # source /path/to/your/ascend-toolkit/set_env.sh
 export CUDA_DEVICE_MAX_CONNECTIONS=1
