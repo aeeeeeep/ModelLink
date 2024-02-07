@@ -753,6 +753,7 @@ class LlamaModel(LlamaPreTrainedModel):
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
         self.layers = nn.ModuleList([LlamaDecoderLayer(config, i) for i in range(config.num_hidden_layers)])
         self.norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        print(f"LlamaModel, dtype: {self.dtype}")
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
@@ -760,9 +761,9 @@ class LlamaModel(LlamaPreTrainedModel):
 
         x = torch.zeros(1).npu()
         cosTable, sinTable = rotary_emb.forward(x, 2048)
-        self.cosTable, self.sinTable = cosTable.npu().to(dtype=torch.float16), sinTable.npu().to(dtype=torch.float16)
+        self.cosTable, self.sinTable = cosTable.npu().to(dtype=self.dtype), sinTable.npu().to(dtype=self.dtype)
 
-        self.tag_mask = torch.ones((1, 20), dtype=torch.float16).npu()
+        self.tag_mask = torch.ones((1, 20), dtype=self.dtype).npu()
         # initialize ascend parameters
         self.weightFlag = False
         self.weights_a = []
@@ -779,7 +780,7 @@ class LlamaModel(LlamaPreTrainedModel):
         self.seq_index = None
 
         self.float_layers = FLOAT_LAYERS
-        self.in_beta = torch.zeros(config.hidden_size, dtype=torch.float16).npu()
+        self.in_beta = torch.zeros(config.hidden_size, dtype=self.dtype).npu()
         self.qkv_input_scale = []
         self.qkv_input_offset = []
         self.dense_input_scale = []
@@ -858,7 +859,7 @@ class LlamaModel(LlamaPreTrainedModel):
                 self.attention_mask_max_incre = torch.zeros(
                     (self.batch_num, math.ceil(self.max_sequence_length / self.nz_dim), self.max_sequence_length, self.nz_dim),
                     device='npu',
-                    dtype=torch.float16
+                    dtype=self.dtype
                 ).contiguous()
 
         placeholder = torch.ones(1).npu()
@@ -936,7 +937,7 @@ class LlamaModel(LlamaPreTrainedModel):
 
                 weights = self.layers[i].state_dict()
                 if self.anti_quant_model:
-                    weights_p.append(self.anti_quant_weight_dict[in_norm_weight].to(torch.float16).npu())
+                    weights_p.append(self.anti_quant_weight_dict[in_norm_weight].to(self.dtype).npu())
                 else:
                     weights_p.append(weights.get("input_layernorm.weight"))
                     
@@ -948,7 +949,7 @@ class LlamaModel(LlamaPreTrainedModel):
                     weights_p.append(self.quant_weight_dict[v_name].to(torch.int8).npu())
                     weights_p.append(self.quant_weight_dict[o_name].to(torch.int8).npu())
                     if self.anti_quant_model:
-                        weights_p.append(self.anti_quant_weight_dict[post_norm_weight].to(torch.float16).npu())
+                        weights_p.append(self.anti_quant_weight_dict[post_norm_weight].to(self.dtype).npu())
                     else:
                         weights_p.append(weights.get("post_attention_layernorm.weight"))         
                     # mlp量化 
@@ -961,7 +962,7 @@ class LlamaModel(LlamaPreTrainedModel):
                     weights_p.append(self.transdata_operation.execute([self.quant_weight_dict[v_name].to(torch.int8).npu()])[0])
                     weights_p.append(self.transdata_operation.execute([self.quant_weight_dict[o_name].to(torch.int8).npu()])[0])
                     if self.anti_quant_model:
-                        weights_p.append(self.anti_quant_weight_dict[post_norm_weight].to(torch.float16).npu())
+                        weights_p.append(self.anti_quant_weight_dict[post_norm_weight].to(self.dtype).npu())
                     else:
                         weights_p.append(weights.get("post_attention_layernorm.weight"))
                     weights_p.append(self.transdata_operation.execute([self.quant_weight_dict[gate_name].to(torch.int8).npu()])[0])
@@ -996,8 +997,8 @@ class LlamaModel(LlamaPreTrainedModel):
                 weights_p.append(self.quant_bias_dict[up_name].to(torch.int32).npu())
 
                 if self.quant_model and self.anti_quant_model:
-                    weights_p.append(self.anti_quant_weight_dict[in_norm_bias].to(torch.float16).npu())
-                    weights_p.append(self.anti_quant_weight_dict[post_norm_bias].to(torch.float16).npu())
+                    weights_p.append(self.anti_quant_weight_dict[in_norm_bias].to(self.dtype).npu())
+                    weights_p.append(self.anti_quant_weight_dict[post_norm_bias].to(self.dtype).npu())
                 else:
                     weights_p.append(self.in_beta)
                     weights_p.append(self.in_beta)
@@ -1031,14 +1032,14 @@ class LlamaModel(LlamaPreTrainedModel):
                                         self.hidden_size_nz,
                                         self.max_sequence_length,
                                         self.nz_dim,
-                                        dtype=torch.float16,
+                                        dtype=self.dtype,
                                         device="npu").contiguous()
             self.v_cache_input = torch.zeros(self.num_layers,
                                         self.batch_num,  # batch
                                         self.hidden_size_nz,
                                         self.max_sequence_length,
                                         self.nz_dim,
-                                        dtype=torch.float16,
+                                        dtype=self.dtype,
                                         device="npu").contiguous()
             self.k_cache_input.data = torch_npu.npu_format_cast(self.k_cache_input.data, 29)
             self.v_cache_input.data = torch_npu.npu_format_cast(self.v_cache_input.data, 29)
@@ -1048,27 +1049,32 @@ class LlamaModel(LlamaPreTrainedModel):
                                             self.batch_num,
                                             self.max_sequence_length,
                                             self.kv_head_num * self.headSize // self.world_size,
-                                            dtype=torch.float16,
+                                            dtype=self.dtype,
                                             device="npu")
             self.v_cache_input = torch.zeros(self.num_layers,
                                             self.batch_num,
                                             self.max_sequence_length,
                                             self.kv_head_num * self.headSize // self.world_size,
-                                            dtype=torch.float16,
+                                            dtype=self.dtype,
                                             device="npu")
     
     def get_triumask(self, mask_block_size):
         bias_cache = torch.tril(torch.ones((mask_block_size, mask_block_size), dtype=torch.bool)).view(mask_block_size,
                                                                                                    mask_block_size)
         bias_cache = ~bias_cache
-        mask_value = torch.finfo(torch.float16).min
+        mask_value = torch.finfo(self.dtype).min
         attn_mask = torch.masked_fill(torch.zeros(size=(mask_block_size, mask_block_size)), bias_cache, mask_value)
         return attn_mask
 
+    def get_bf16_mask(self, attention_mask):
+        if attention_mask.dtype == torch.bfloat16:
+            attention_mask = torch.where(attention_mask == 0, 0, 1).to(dtype=self.dtype)
+        return attention_mask
+
     def update_ascend_mask(self, attention_mask, seq_length):
         if self.is_triu_mask and self.full_flag:
-            self.attention_mask_max = self.get_triumask(self.mask_block_size).npu().to(dtype=torch.float16)
-            self.attention_mask_max_incre = torch.zeros((self.batch_num, 1, self.max_sequence_length), dtype=torch.float16).npu()
+            self.attention_mask_max = self.get_bf16_mask(self.get_triumask(self.mask_block_size)).npu().to(dtype=self.dtype)
+            self.attention_mask_max_incre = torch.zeros((self.batch_num, 1, self.max_sequence_length), dtype=self.dtype).npu()
             if self.format_nz:
                 soc_version = torch_npu._C._npu_get_soc_version()
                 raise ValueError(f"{soc_version=} not supports LONG_SEQ_ENABLE=1")
@@ -1077,18 +1083,19 @@ class LlamaModel(LlamaPreTrainedModel):
             return
         if self.full_flag:
             self.attention_mask_max = torch.zeros(
-                (self.batch_num, self.max_sequence_length, self.max_sequence_length), device='npu', dtype=torch.float16)
+                (self.batch_num, self.max_sequence_length, self.max_sequence_length), device='npu', dtype=self.dtype)
             if attention_mask is not None:
-                attention_mask_acl = attention_mask[:, 0, :, :].to(torch.float16)
+                attention_mask_acl = attention_mask[:, 0, :, :].to(self.dtype)
                 self.attention_mask_max[:self.batch_num, :seq_length, :attention_mask_acl.size()[-1]] += attention_mask_acl
             if self.format_nz:
                 self.attention_mask_max = torch_npu.npu_format_cast(
                     self.attention_mask_max.view(self.batch_num, self.max_sequence_length,
                     self.max_sequence_length // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
+            self.attention_mask_max = self.get_bf16_mask(self.attention_mask_max)
         else:
             if not self.decoder_mask:
                 if attention_mask is not None:
-                    attention_mask_acl = attention_mask[:, 0, 0, :].to(torch.float16)
+                    attention_mask_acl = attention_mask[:, 0, 0, :].to(self.dtype)
                 if self.format_nz:
                     seq_len_enc = attention_mask_acl.shape[-1]
                     padding_seq = self.max_sequence_length - seq_len_enc
@@ -1099,8 +1106,9 @@ class LlamaModel(LlamaPreTrainedModel):
                         :self.nz_dim, :self.nz_dim] += attention_mask_acl
                 else:
                     self.attention_mask_max_incre = torch.zeros(
-                        (self.batch_num, 1, self.max_sequence_length), device='npu', dtype=torch.float16)
+                        (self.batch_num, 1, self.max_sequence_length), device='npu', dtype=self.dtype)
                     self.attention_mask_max_incre[:self.batch_num, :1, :attention_mask_acl.size()[-1]] += attention_mask_acl.unsqueeze(-2)
+                self.attention_mask_max_incre = self.get_bf16_mask(self.attention_mask_max_incre)
                 self.decoder_mask = True
         return
     
