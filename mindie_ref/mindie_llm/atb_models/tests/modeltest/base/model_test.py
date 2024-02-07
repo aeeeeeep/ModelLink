@@ -208,9 +208,7 @@ class ModelTest:
         self.device = self.model.device
         if self.model_type == "pa":
             self.block_size = 128
-            self.max_prefill_tokens = self.batch_size * \
-                                      (max([pair[0] for pair in self.case_pair]) + max(
-                                          [pair[1] for pair in self.case_pair]))
+            self.max_prefill_tokens = 4096
             self.model_config = ModelConfig(self.model.num_heads,
                                             self.model.num_kv_heads,
                                             self.model.head_size,
@@ -333,8 +331,8 @@ class ModelTest:
             e2e_throughput_total = 0
             for seq_len_in, seq_len_out in self.case_pair:
                 self.logger.info("batch_size: " + str(self.batch_size) +
-                                 "seq_len_in: " + str(seq_len_in) +
-                                 "seq_len_out: " + str(seq_len_out))
+                                 ", seq_len_in: " + str(seq_len_in) +
+                                 ", seq_len_out: " + str(seq_len_out))
                 if self.model_type == "fa":
                     input_ids = torch.randint(0, self.model.config.vocab_size, [self.batch_size, seq_len_in],
                                               dtype=torch.int64)
