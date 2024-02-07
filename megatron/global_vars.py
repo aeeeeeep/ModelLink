@@ -219,5 +219,23 @@ def _ensure_var_is_not_initialized(var, name):
     """Make sure the input variable is not None."""
     assert var is None, '{} is already initialized.'.format(name)
 
-
-
+def destroy_global_vars():
+    """Set the global vars to None"""
+    global _GLOBAL_ARGS
+    _GLOBAL_ARGS = None
+    global _GLOBAL_RETRO_ARGS
+    _GLOBAL_RETRO_ARGS = None
+    global _GLOBAL_NUM_MICROBATCHES_CALCULATOR
+    _GLOBAL_NUM_MICROBATCHES_CALCULATOR = None
+    global _GLOBAL_TOKENIZER
+    _GLOBAL_TOKENIZER = None
+    global _GLOBAL_TENSORBOARD_WRITER
+    _GLOBAL_TENSORBOARD_WRITER = None
+    global _GLOBAL_WANDB_WRITER
+    _GLOBAL_WANDB_WRITER = None
+    global _GLOBAL_ADLR_AUTORESUME
+    _GLOBAL_ADLR_AUTORESUME = None
+    global _GLOBAL_TIMERS
+    _GLOBAL_TIMERS = None
+    global _GLOBAL_SIGNAL_HANDLER
+    _GLOBAL_SIGNAL_HANDLER = None
