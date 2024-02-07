@@ -446,8 +446,8 @@ class ModelTest:
                          str(round(e2e_throughput, 10)).ljust(25)])
 
             if self.local_rank == 0:
-                non_first_token_throughput_average = non_first_token_throughput_total / 4
-                e2e_throughput_average = e2e_throughput_total / 4
+                non_first_token_throughput_average = non_first_token_throughput_total / len(self.case_pair)
+                e2e_throughput_average = e2e_throughput_total / len(self.case_pair)
                 self.logger.info(
                     f"batch: {self.batch_size}, non_first_token_throughput_total: {non_first_token_throughput_total}, non_first_token_throughput_average:" +
                     f" {non_first_token_throughput_average}, e2e_throughput_total: {e2e_throughput_total}, e2e_throughput_average: {e2e_throughput_average}")
