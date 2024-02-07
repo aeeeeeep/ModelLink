@@ -213,7 +213,7 @@ int64_t FlashAttentionModel::BuildGraph()
             floatModelParam.model = "llama13b";
             floatModelParam.rank = param_.rank;
             floatModelParam.rankSize = param_.rankSize;
-            floatModelParam.rankSize = param_.rankSize;
+            floatModelParam.isTriuMask = param_.isTriuMask;
             floatModelParam.backend = param_.backend;
             floatModelParam.quantModel = false;
             floatModelParam.isEncoder = param_.isEncoder;
