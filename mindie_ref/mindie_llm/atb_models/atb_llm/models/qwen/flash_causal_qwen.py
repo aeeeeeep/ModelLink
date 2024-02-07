@@ -318,7 +318,6 @@ class QWenAttention(nn.Module):
                 self.projection_size // config.num_attention_heads
         )
         
-        ################################################################################################
         # mindIE
         self.c_attn = TensorParallelColumnLinear.load_qkv(
             config,
@@ -334,7 +333,6 @@ class QWenAttention(nn.Module):
             bias=False
         )
         self.prefix = prefix
-        ################################################################################################
 
         self.is_fp32 = not (config.bf16 or config.fp16)
         if (
@@ -498,7 +496,6 @@ class QWenModel(QWenPreTrainedModel):
         self.is_fp32 = not (config.bf16 or config.fp16)
         self.place_holder = torch.ones(1).npu()
 
-        ################################################################################################
         # mindIE
         self.rotary_emb = PositionRotaryEmbedding.static(
             dim=dim, base=config.rotary_emb_base, device=weights.device
@@ -509,7 +506,6 @@ class QWenModel(QWenPreTrainedModel):
         self.ln_f = RMSNorm(
             prefix=f"transformer.ln_f", weights=weights, eps=config.layer_norm_epsilon
         )
-        ################################################################################################
 
         # self.post_init()
 
@@ -746,37 +742,7 @@ class QWenModel(QWenPreTrainedModel):
         logger.debug(f"{input_lengths=}")
         logger.debug(f"{input_lengths.shape=}")
         logger.debug(f"{max_seq_len=}")
-        """
-        self.is_prefill=True
-        input_ids.shape=torch.Size([4096])
-        block_tables=tensor([[ 0,  1,  2,  3,  4,  5,  6,  7,  8],
-        [ 9, 10, 11, 12, 13, 14, 15, 16, 17],
-        [18, 19, 20, 21, 22, 23, 24, 25, 26],
-        [27, 28, 29, 30, 31, 32, 33, 34, 35]], device='npu:0', dtype=torch.int32)
-        block_tables.shape=torch.Size([4, 9])
-        slots=tensor([   0,    1,    2,  ..., 4477, 4478, 4479], device='npu:0',dtype=torch.int32)
-        slots.shape=torch.Size([4096])
-        input_lengths=tensor([1024, 1024, 1024, 1024], device='npu:0')
-        input_lengths.shape=torch.Size([4])
-        max_s=1024
-        """
 
-        """
-        input_ids.shape=torch.Size([1])
-        block_tables=tensor([[0]], device='npu:0', dtype=torch.int32)
-        block_tables.shape=torch.Size([1, 1])
-        slots=tensor([16], device='npu:0', dtype=torch.int32)
-        slots.shape=torch.Size([1])
-        input_lengths=tensor([17], device='npu:0')
-        input_lengths.shape=torch.Size([1])
-        max_s=17
-        self.n_head=40
-        attention_mask.shape=torch.Size([17, 17])
-        total_alibi_mask.shape=torch.Size([1, 40, 17, 17])
-        final attention_mask shape in self.is_prefill=False is torch.Size([1, 40, 1, 17])
-        shape of tensor in is_prefill=False before transdata  is torch.Size([1, 40, 1, 17])
-
-        """
         # add acl model
         if not self.ascend_weight:
             self.init_ascend_weight()
