@@ -302,13 +302,12 @@ weight_offset.npy  weight_scale.npy
     git reset --hard 921d7e9adc69020a19169d1ba4f76c2675a2dd29
 
     # 应用适配代码
-    cp ../web_demo_gradio.patch ./
-    git apply web_demo_gradio.patch
+    git apply ../web_demo_gradio.patch
     cd ..
 
     # Gradio 框架
     # 将TP_SIZE设为对应的并行数，例如单芯场景TP_SIZE=1，双芯场景TP_SIZE=2
-    torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 web_demo.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
+    torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 ChatGLM2-6B/web_demo.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
     ```
 
 - `main.py` 参数说明：
