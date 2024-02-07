@@ -66,7 +66,7 @@ static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERNAL_TENSOR_COUNT = 12;
 static const uint64_t NODE_COUNT = 11;
 
-static void from_json(const nlohmann::json &paramJson, PALayerParam &param)
+void from_json(const nlohmann::json &paramJson, PALayerParam &param)
 {
     paramJson.at("rmsNormEps").get_to(param.rmsNormEps);
     paramJson.at("headNum").get_to(param.headNum);
@@ -88,7 +88,7 @@ static void from_json(const nlohmann::json &paramJson, PALayerParam &param)
     }
 }
 
-static atb::Operation *CreatePALayer(const nlohmann::json &paramJson)
+atb::Operation *CreatePALayer(const nlohmann::json &paramJson)
 {
     ATB_LOG(INFO) << GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
     atb::Operation *op;
