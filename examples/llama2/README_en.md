@@ -352,7 +352,8 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
 1. Clone the repository to your local server:
     ```shell
     git clone https://gitee.com/ascend/ModelLink.git 
-    cd ModelLink 
+    cd ModelLink
+    git checkout modellink 
     mkdir logs
     mkdir ckpt
     ```
@@ -559,42 +560,43 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
 | Model | Hardware |      Value       |
 |:-----:|:--------:|:----------------:|
 |  34B  |    NPU   | 16 x Ascend NPUs |
-|  70B  |    NPU   | 64 x Ascend NPUs |
+|  70B  |    NPU   | 32 x Ascend NPUs |
 
 ### Script-2
 
 1. Clone the repository to your local server:
-    ```shell
-    git clone https://gitee.com/ascend/AscendSpeed.git 
-    cd AscendSpeed 
-    mkdir logs
-    ```
+```shell
+git clone https://gitee.com/ascend/ModelLink.git 
+cd ModeLlink 
+git checkout modellink
+mkdir logs
+mkdir ckpt
+```
 
 2. Build environment
-    
-    ```bash
-    # python3.8
-    conda create -n test python=3.8
-    conda activate test
-    
-    # install torch and torch_npu
-    pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
-    pip install torch_npu-2.1.0.post4_XXXXXX-cp38-cp38m-manylinux2014_aarch64.whl
-    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-    
-    # install megatron-core
-    pip install --no-use-pep517 -e git+https://github.com/NVIDIA/Megatron-LM.git@23.05#egg=megatron-core
-    
-    # install deepspeed and deepspeed_npu
-    pip install deepspeed==0.9.2
-    git clone https://gitee.com/ascend/DeepSpeed.git -b v0.9.2 deepspeed_npu
-    cd deepspeed_npu
-    pip install -e ./
-    cd ..
-    
-    # install other packages
-    pip install -r requirements.txt 
-    ```
+```bash
+# python3.8
+conda create -n test python=3.8
+conda activate test
+
+# install torch and torch_npu 
+pip install torch-2.1.0-cp38-cp38m-linux_aarch64.whl
+pip install torch_npu-2.1.0.XXX-cp38-cp38m-linux_aarch64.whl
+pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+
+# modify the path according to your own  ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+# install AscendSpeed
+git clone https://gitee.com/ascend/AscendSpeed.git
+cd AscendSpeed
+pip install -r requirements.txt 
+pip3 install -e .
+cd ..
+
+# install other packages
+pip install -r requirements.txt 
+```
 
 3. Prepare pretrained weights and tokenizer
     Download the LLaMA2-70B checkpoint from [here](https://huggingface.co/meta-llama/Llama-2-70b-hf)
@@ -665,20 +667,16 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
-    # convert to deepspeed weights
-    SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
-    python $SCRIPT_PATH \
-      --input-model-dir ./llama2-70b-hf/ \
-      --output-model-dir ./load_ckpt \
-      --tensor-model-parallel-size 8 \
-      --pipeline-model-parallel-size 8 \
-      --make-vocab-size-divisible-by 8 \
-      --merge-mlp \
-      --type llama2-70B \
-      --num_heads 64 \
-      --num_kv_heads 8 \
-      --hidden_size 8192 \
-      --num_layers 80                                                                   
+    # convert to megatron weights
+    python tools/checkpoint/util.py \
+    --model-type GPT \
+    --loader llama2_hf \
+    --saver megatron \
+    --target-tensor-parallel-size 8 \
+    --target-pipeline-parallel-size 4 \
+    --load-dir ./llama2-70b-hf/ \
+    --save-dir ./load_ckpt \
+    --tokenizer-model ./llama2-70b-hf/tokenizer.model                                                                    
     ```
     The following converts llama-2-34b model weight.
     ```bash
@@ -809,12 +807,6 @@ The precision meets the requirements.
 
 The relative error of the average loss is less than 2%.
 
-![NPU-LOSS and NPU-Relative-Error](../../sources/images/llama2/llama2_70b_bf16_loss_relative.png)
-
-The maximum absolute error is 0.089. 
-
-![NPU-LOSS and NPU-Absolute-Error](../../sources/images/llama2/llama2_70b_bf16_loss_absolute.png)
-
 
 ## Inference-2
 
@@ -824,53 +816,13 @@ and the "pipeline-model-parallel-size" parameter need to be set to 1.
 
 The model weights of 64 NPUs can be converted to 8 NPUs with the follow shell.
 
-LLaMA2-34B:
-```shell
-SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_when_tp_pp_change.py
-python $SCRIPT_PATH \
-  --input-model-dir ./load_ckpt/release \
-  --output-model-dir ./ptd_48lt8p1/ \
-  --orig-vocab-size 32000 \
-  --make-vocab-size-divisible-by 8 \
-  --src-tensor-model-parallel-size 8 \
-  --src-pipeline-model-parallel-size 3 \
-  --tgt-tensor-model-parallel-size 8 \
-  --tgt-pipeline-model-parallel-size 1 \
-  --merge-mlp \
-  --type 34B \
-  --num-heads 64 \
-  --num-kv-heads 8 \
-  --hidden-size 8192 \
-  --num-layers 48
-```
-
-LLaMA2-70B:
-```shell
-SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_when_tp_pp_change.py
-python $SCRIPT_PATH \
-  --input-model-dir ./load_ckpt/release \
-  --output-model-dir ./ptd_80lt8p1/ \
-  --orig-vocab-size 32000 \
-  --make-vocab-size-divisible-by 8 \
-  --src-tensor-model-parallel-size 8 \
-  --src-pipeline-model-parallel-size 8 \
-  --tgt-tensor-model-parallel-size 8 \
-  --tgt-pipeline-model-parallel-size 1 \
-  --merge-mlp \
-  --type 70B \
-  --num-heads 64 \
-  --num-kv-heads 8 \
-  --hidden-size 8192 \
-  --num-layers 80
-```
-
 Models could generate with 8 NPUs, for example:
 
 Config inference script:
 
 LLaMA2-34B:`tasks/inference/generate_llama2_34B_ptd.sh`.
 
-LLaMA2-70B:`examples/llama2/generate_llama2_70B_ptd.sh`.
+LLaMA2-70B:`task/inference/generate_llama2_70B_ptd.sh`.
 
 ```shell
 # Modify checkpoint path and vocabfile path.
@@ -884,7 +836,7 @@ bash ./tasks/inference/generate_llama2_34B_ptd.sh
 ```
 Launch LLaMA2-70B inference:
 ```shell
-bash ./examples/llama2/generate_llama2_70B_ptd.sh
+bash ./task/llama2/generate_llama2_70B_ptd.sh
 ```
 
 Some inference samples of LLaMA2-34B are as follows:
@@ -957,6 +909,9 @@ I have a problem with my account. I can't log in.
 Elapsed: 48.53s
 ```
 
+Some inference samples of LLaMA2-70B are as follows:
+![llama2-70B_generate.png](../../sources/images/llama2/llama2-70B-generate.png)
+
 ## Evaluation-2
 
 We use BoolQ benchmark to evaluate our model. Benchmark [here](https://huggingface.co/datasets/boolq)
@@ -1000,8 +955,8 @@ Evaluation results with BoolQ dataset:
       <td><a href="https://huggingface.co/datasets/boolq">BoolQ</a></td>
       <td>dev</td>
       <th>Llama2-70b</th>
-      <td>0.858</td>
-      <td><a href="https://opencompass.org.cn/dataset-detail/BoolQ">(Llama2-70b test) 0.877</a></td>
+      <td>0.859</td>
+      <td><a href="https://paperswithcode.com/sota/question-answering-on-boolq">(Llama2-70b test) 0.877</a></td>
     </tr>
     <tr>
       <td><a href="https://huggingface.co/datasets/boolq">BoolQ</a></td>
