@@ -17,6 +17,7 @@ CKPT_LOAD_DIR="your model load ckpt path"
 TP=8
 PP=1
 
+
 DISTRIBUTED_ARGS="
     --nproc_per_node $GPUS_PER_NODE \
     --nnodes $NNODES \
@@ -29,41 +30,45 @@ GPT_ARGS="
     --tensor-model-parallel-size $TP \
     --pipeline-model-parallel-size $PP \
     --sequence-parallel \
-    --num-layers 32 \
-    --hidden-size 4096 \
-    --ffn-hidden-size 11008 \
-    --num-attention-heads 32 \
+    --num-layers 40 \
+    --hidden-size 5120 \
+    --ffn-hidden-size 13696 \
+    --num-attention-heads 40 \
     --tokenizer-type Llama2Tokenizer \
     --tokenizer-model $TOKENIZER_MODEL \
-    --load $CKPT_LOAD_DIR \
     --seq-length 4096 \
-    --max-position-embeddings 4096 \
-    --micro-batch-size 4 \
-    --global-batch-size 32 \
-    --make-vocab-size-divisible-by 128 \
-    --lr 1e-5 \
-    --train-iters 5000 \
-    --lr-decay-style cosine \
-    --untie-embeddings-and-output-weights \
     --disable-bias-linear \
+    --max-position-embeddings 4096 \
+    --micro-batch-size 1 \
+    --global-batch-size 8 \
+    --untie-embeddings-and-output-weights \
+    --no-gradient-accumulation-fusion \
+    --make-vocab-size-divisible-by 8 \
+    --lr 1e-5 \
+    --load ${CKPT_LOAD_DIR} \
+    --train-iters 1000 \
+    --lr-decay-style cosine \
     --attention-dropout 0.0 \
     --init-method-std 0.01 \
+    --position-embedding-type alibi \
     --hidden-dropout 0.0 \
-    --position-embedding-type rope \
+    --norm-epsilon 1e-6 \
     --normalization RMSNorm \
     --use-fused-rmsnorm \
-    --use-flash-attn \
     --swiglu \
     --no-masked-softmax-fusion \
     --attention-softmax-in-fp32 \
-    --min-lr 1e-6 \
-    --weight-decay 1e-2 \
-    --lr-warmup-fraction 0.1 \
+    --square-alibi-mask \
+    --fill-neg-inf \
+    --min-lr 1e-8 \
+    --weight-decay 1e-4 \
     --clip-grad 1.0 \
+    --seed 1234 \
+    --use-distributed-optimizer \
     --adam-beta1 0.9 \
     --initial-loss-scale 8188.0 \
-    --adam-beta2 0.95 \
-    --no-gradient-accumulation-fusion \
+    --adam-beta2 0.98 \
+    --adam-eps 1.0e-8 \
     --no-load-optim \
     --no-load-rng \
     --fp16
@@ -76,7 +81,7 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 1000 \
+    --save-interval 10000 \
     --eval-interval 1000 \
     --eval-iters 1 \
 "
