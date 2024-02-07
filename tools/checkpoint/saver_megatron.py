@@ -15,13 +15,12 @@
 # Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
 
 import argparse
-from collections.abc import Mapping
 import concurrent.futures
 import os
 import sys
-
 import torch
 import torch_npu
+from collections.abc import Mapping
 
 
 def add_arguments(parser):
@@ -32,14 +31,13 @@ def add_arguments(parser):
 
     group.add_argument('--target-tensor-parallel-size', type=int,
                        help='Target tensor model parallel size, defaults to the tensor parallel size '
-                       'in the input checkpoint if provided by the loader, otherwise to 1')
+                            'in the input checkpoint if provided by the loader, otherwise to 1')
     group.add_argument('--target-pipeline-parallel-size', type=int,
                        help='Target tensor model parallel size, default to the pipeline parall size '
-                       'in the input checkpoint if provided by the loader, otherwise to 1')
+                            'in the input checkpoint if provided by the loader, otherwise to 1')
 
 
 def save_model_checkpoint(queue, args):
-
     # Search in directory above this
     sys.path.append(os.path.abspath(
         os.path.join(os.path.dirname(__file__),
@@ -81,25 +79,25 @@ def save_model_checkpoint(queue, args):
             print(f"Exiting. If you want to ignore this, use the argument --no-checking.")
             exit(1)
 
-
     md = queue_get()
 
     if args.target_tensor_parallel_size is None:
         if hasattr(md, 'previous_tensor_parallel_size'):
             args.target_tensor_parallel_size = md.previous_tensor_parallel_size
         else:
-            print("loader did not provide a tensor parallel size and --target-tensor-parallel-size not provided on command line. "
-                  "Default to 1.")
+            print(
+                "loader did not provide a tensor parallel size and --target-tensor-parallel-size not provided on command line. "
+                "Default to 1.")
             args.target_tensor_parallel_size = 1
 
     if args.target_pipeline_parallel_size is None:
         if hasattr(md, 'previous_pipeline_parallel_size'):
             args.target_pipeline_parallel_size = md.previous_pipeline_parallel_size
         else:
-            print("loader did not provide a pipeline parallel size and --target-pipeline-parallel-size not provided on command line. "
-                  "Default to 1.")
+            print(
+                "loader did not provide a pipeline parallel size and --target-pipeline-parallel-size not provided on command line. "
+                "Default to 1.")
             args.target_pipeline_parallel_size = 1
-
 
     # Arguments do sanity checks on the world size, but we don't care,
     # so trick it into thinking we are plenty of processes
@@ -149,7 +147,6 @@ def save_model_checkpoint(queue, args):
 
     margs = parse_args()
 
-
     if hasattr(md, 'checkpoint_args'):
         # These are arguments that we are either changing, or cause problems for validation if they are set
         # Note that some of these deal with T5 so will need to be changed if we support T5.
@@ -166,7 +163,6 @@ def save_model_checkpoint(queue, args):
                         'distribute_saved_activations',
                         'train_iters', 'lr_decay_iters', 'lr_warmup_iters', 'lr_warmup_fraction',
                         'start_weight_decay', 'end_weight_decay']
-
 
         for arg, value in vars(md.checkpoint_args).items():
             if arg in args_to_keep:
@@ -214,7 +210,7 @@ def save_model_checkpoint(queue, args):
     mpu.set_pipeline_model_parallel_rank(0)
 
     # Embeddings
-    #-----------
+    # -----------
     embeddings_msg = queue_get("embeddings")
 
     pos_embed = None
@@ -266,7 +262,7 @@ def save_model_checkpoint(queue, args):
                 raise ValueError("model should have position_embeddings")
 
     # Transformer layers
-    #-------------------
+    # -------------------
     total_layer_num = 0
     for pp_rank in range(args.target_pipeline_parallel_size):
         # For later pipeline parallel ranks, make the new models
@@ -290,6 +286,21 @@ def save_model_checkpoint(queue, args):
                 mlp_l1_bias = msg.pop("mlp l1 bias")
 
             # Split up the parallel tensors
+            tp = args.target_tensor_parallel_size
+            np = margs.num_attention_heads // tp
+            gp = (margs.num_query_groups if margs.group_query_attention else margs.num_attention_heads) // tp
+            repeats = np // gp
+            hn = margs.kv_channels
+            qkv_weight_tuple = torch.chunk(msg.pop("qkv weight"), args.target_tensor_parallel_size, dim=0)
+            qkv_weight = ()
+            for i in range(len(qkv_weight_tuple)):
+                w_s0, w_s1 = qkv_weight_tuple[i].shape
+                qkv_weight += (
+                qkv_weight_tuple[i].reshape(repeats + 2, gp, hn, qkv_weight_tuple[i].shape[1]).contiguous().permute(1,
+                                                                                                                    0,
+                                                                                                                    2,
+                                                                                                                    3).reshape(
+                    w_s0, w_s1).contiguous(),)
             qkv_weight = torch.chunk(msg.pop("qkv weight"), args.target_tensor_parallel_size, dim=0)
             dense_weight = torch.chunk(msg.pop("dense weight"), args.target_tensor_parallel_size, dim=1)
             mlp_l1_weight = torch.chunk(msg.pop("mlp l1 weight"), args.target_tensor_parallel_size, dim=1)
@@ -332,7 +343,6 @@ def save_model_checkpoint(queue, args):
 
             total_layer_num = total_layer_num + 1
             check_message(msg)
-
 
         if post_process:
             msg = queue_get("final norm")
@@ -417,4 +427,3 @@ def save_model_checkpoint(queue, args):
             mpu.set_tensor_model_parallel_rank(tp_rank)
             save_checkpoint(md.iteration, [models[tp_rank]], None, None)
     print("Done!")
-
