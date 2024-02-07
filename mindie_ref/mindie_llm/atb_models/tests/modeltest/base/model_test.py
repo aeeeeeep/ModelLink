@@ -407,10 +407,6 @@ class ModelTest:
                     e2e_end = time.time()
 
                 e2e_time = e2e_end - e2e_start
-                e2e_time_tensor = torch.tensor([e2e_time]).to(self.model.device)
-
-                if self.world_size > 1:
-                    torch.distributed.all_reduce(e2e_time_tensor, torch.distributed.ReduceOp.MAX)
 
                 if self.model_type == "fa":
                     first_token_time_tensor = torch.load(f"{folder_path}/first_token_time.pth").cpu()
@@ -428,15 +424,14 @@ class ModelTest:
 
                 non_first_token_throughput = self.batch_size / non_first_token_time
                 non_first_token_throughput_total += non_first_token_throughput
-                e2e_time_tensor = e2e_time_tensor.cpu()
-                e2e_throughput = self.batch_size * seq_len_out / e2e_time_tensor.item()
+                e2e_throughput = self.batch_size * seq_len_out / e2e_time
                 e2e_throughput_total += e2e_throughput
 
                 if self.local_rank == 0:
                     self.logger.info(
                         f"batch: {self.batch_size}, seq_len_in: {seq_len_in}, seq_len_out: {seq_len_out}, total_time: {e2e_time}, first_token_time: {first_token_time * 1000}," +
                         f" non_first_token_time: {non_first_token_time * 1000}, non_first_token_throughput: {non_first_token_throughput}," +
-                        f" e2e_time: {e2e_time_tensor[0]}, e2e_throughput: {e2e_throughput}")
+                        f" e2e_time: {e2e_time}, e2e_throughput: {e2e_throughput}")
                     csv_results.append(
                         [str(self.model_name).ljust(15), str(self.batch_size).ljust(15), str(seq_len_in).ljust(15),
                          str(seq_len_out).ljust(15),
