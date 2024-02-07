@@ -17,7 +17,7 @@
 
 namespace atb_speed {
 
-bool SpeedProbe::IsReportModelTopoInfo(const std::string &modelName)
+bool SpeedProbe::GetReportModelTopoInfoFlag()
 {
     // 具体代码由ait工具实现，通过打桩方式替换掉speed仓代码。正常流程不会走入
     return false;

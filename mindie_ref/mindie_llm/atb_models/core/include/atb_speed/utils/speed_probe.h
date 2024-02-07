@@ -25,7 +25,7 @@ namespace atb_speed {
 
 class SpeedProbe {
 public:
-    static bool IsReportModelTopoInfo(const std::string &modelName);
+    static bool GetReportModelTopoInfoFlag();
     static void ReportModelTopoInfo(const std::string &modelName, const std::string &graph);
 };
 

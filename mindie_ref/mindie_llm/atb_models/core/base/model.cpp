@@ -239,7 +239,7 @@ atb::Status Model::Execute(atb::Context *context, std::vector<atb::Tensor> &inTe
         }
     }
 
-    if (atb_speed::SpeedProbe::IsReportModelTopoInfo(modelName_)) {
+    if (atb_speed::SpeedProbe::GetReportModelTopoInfoFlag()) {
         std::string modelTopo = GetModelTopoInfo();
         atb_speed::SpeedProbe::ReportModelTopoInfo(modelName_, modelTopo);
     }
@@ -483,10 +483,10 @@ void Model::FreeInternalTensor(void *tensorDeviceData)
 }
 
 void Model::MakeTensorNameMap(nlohmann::json &modelJson, std::map<atb::Tensor *, std::string> &tensorNameMap,
-    const std::vector<atb::Tensor> &tensorList, std::string tensorType)
+    std::vector<atb::Tensor> &tensorList, std::string tensorType)
 {
     std::string tensorName;
-    const std::map<std::string, std::string> tensorNameTagMap = {
+    std::map<std::string, std::string> tensorNameTagMap = {
         {"weightTensors", "_weight_"},
         {"inTensors", "_input_"},
         {"outTensors", "_output_"},
