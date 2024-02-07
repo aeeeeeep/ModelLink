@@ -3,10 +3,10 @@
 
 - [Aquila-7B](#aquila-7b)
   - [Training](#training)
-  - [Script](#script)
-  - [Performance](#performance)
-    - [Machine performance](#machine-performance)
-    - [Accuracy of the loss](#accuracy-of-the-loss)
+    - [Script](#script)
+    - [Performance](#performance)
+      - [Machine performance](#machine-performance)
+      - [Accuracy of the loss](#accuracy-of-the-loss)
   - [Inference](#inference)
   - [Evaluation](#evaluation-with-benchmark)
 
