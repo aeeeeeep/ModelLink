@@ -759,7 +759,7 @@ class LlamaModel(LlamaPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-        x = torch.zeros(1).npu()
+        x = torch.zeros(1)
         cosTable, sinTable = rotary_emb.forward(x, 2048)
         self.cosTable, self.sinTable = cosTable.npu().to(dtype=self.dtype), sinTable.npu().to(dtype=self.dtype)
 

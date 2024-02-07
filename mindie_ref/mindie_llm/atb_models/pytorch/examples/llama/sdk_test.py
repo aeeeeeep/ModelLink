@@ -29,7 +29,7 @@ class LlamaLM(Launcher):
         tokenizer = AutoTokenizer.from_pretrained(self.model_path, trust_remote_code=True, use_fast=False,
                                                   padding_side="left")
         model = AutoModelForCausalLM.from_pretrained(self.model_path, trust_remote_code=True,
-                                                     torch_dtype="auto").to(self._device)
+                                                     torch_dtype=torch.float16).to(self._device)
         model.eval()
         model.generation_config = self.remove_part_of_generation_config(model.generation_config)
         return model, tokenizer
@@ -45,7 +45,7 @@ class LlamaLMParallel(ParallelLauncher):
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True, use_fast=False,
                                                   padding_side="left")
         model = AutoModelForCausalLM.from_pretrained(part_model_path, trust_remote_code=True,
-                                                     torch_dtype="auto").to(self._device)
+                                                     torch_dtype=torch.float16).to(self._device)
         model.eval()
         model.generation_config = self.remove_part_of_generation_config(model.generation_config)
         return model, tokenizer
