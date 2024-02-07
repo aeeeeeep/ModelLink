@@ -1,9 +1,10 @@
 ---
- web_demo.py | 91 ++++++++++++++++++++++++++++++++---------------------
- 1 file changed, 56 insertions(+), 35 deletions(-)
+ web_demo.py  | 93 ++++++++++++++++++++++++++++++++--------------------
+ web_demo2.py | 54 ++++++++++++++++++++++++------
+ 2 files changed, 102 insertions(+), 45 deletions(-)
 
 diff --git a/web_demo.py b/web_demo.py
-index 1af24c9..3d2e158 100644
+index 1af24c9..26db8bd 100644
 --- a/web_demo.py
 +++ b/web_demo.py
 @@ -1,14 +1,9 @@
@@ -32,12 +33,12 @@ index 1af24c9..3d2e158 100644
 +    # 需要在点击事件里 stream_chat 执行前 set_device，否则会出现 context 空指针报错
 +    torch.npu.set_device(args.device)
 +    if args.tp_size > 1:
-+        object_list = [input, max_length, top_p, temperature]
++        object_list = [input, max_length, top_p, temperature, history, past_key_values]
 +        torch.distributed.broadcast_object_list(object_list, src=0)
      for response, history, past_key_values in model.stream_chat(tokenizer, input, history, past_key_values=past_key_values,
                                                                  return_past_key_values=True,
                                                                  max_length=max_length, top_p=top_p,
-@@ -79,30 +80,50 @@ def reset_state():
+@@ -79,30 +80,52 @@ def reset_state():
      return [], [], None
  
  
@@ -100,19 +101,101 @@ index 1af24c9..3d2e158 100644
 +
 +        emptyBtn.click(reset_state, outputs=[chatbot, history, past_key_values], show_progress=True)
 +
++    # server_name 设置为 0.0.0.0，以便于在局域网访问
 +    demo.queue().launch(server_name='0.0.0.0', share=False, inbrowser=True)
 +else:
-+    torch.npu.set_device(args.device + torch.distributed.get_rank())
 +    history, past_key_values = [], None
 +    while True:
-+        object_list = [None] * 4
++        object_list = [None] * 6
 +        torch.distributed.broadcast_object_list(object_list, src=0)
-+        query, max_length, top_p, temperature = object_list
-+        for response, history, past_key_values in model.stream_chat(tokenizer, query, history,
-+                                                                    past_key_values=past_key_values, return_past_key_values=True,
-+                                                                    max_length=max_length, top_p=top_p, temperature=temperature):
-+            # 因为 rank 0 和 rank 1 推理出的 response 是一致的
-+            # 所以只需取 rank 0 推理出的 response 显示在网页上即可，rank 1 的推理结果不需要做任何操作
-+            # 但仍然需要 for 循环调用 stream_chat，以便 rank 0 在 all_reduce 时能接收到 rank 1 的数据
++        query, max_length, top_p, temperature, history, past_key_values = object_list
++        for response, history, past_key_values in model.stream_chat(
++                tokenizer, query, history,
++                past_key_values=past_key_values, return_past_key_values=True,
++                max_length=max_length, top_p=top_p, temperature=temperature,
++        ):
++            # 因为 rank 0 和其他 rank 推理出的 response 是一致的
++            # 所以只需取 rank 0 推理出的 response 显示在网页上即可，其他 rank 的推理结果不需要做任何操作
++            # 但仍然需要 for 循环调用 stream_chat，以便 rank 0 在 all_reduce 时能接收到其他 rank 的数据
 +            pass
--- 
+diff --git a/web_demo2.py b/web_demo2.py
+index 203cbdc..07fa69f 100644
+--- a/web_demo2.py
++++ b/web_demo2.py
+@@ -1,6 +1,9 @@
+-from transformers import AutoModel, AutoTokenizer
+ import streamlit as st
++import torch
++import torch.multiprocessing
++import torch_npu
+ 
++from main import get_model, override_topp_and_topk, parse_args
+ 
+ st.set_page_config(
+     page_title="ChatGLM2-6b 演示",
+@@ -10,17 +13,42 @@ st.set_page_config(
+ 
+ 
+ @st.cache_resource
+-def get_model():
+-    tokenizer = AutoTokenizer.from_pretrained("THUDM/chatglm2-6b", trust_remote_code=True)
+-    model = AutoModel.from_pretrained("THUDM/chatglm2-6b", trust_remote_code=True).cuda()
+-    # 多显卡支持，使用下面两行代替上面一行，将num_gpus改为你实际的显卡数量
+-    # from utils import load_model_on_gpus
+-    # model = load_model_on_gpus("THUDM/chatglm2-6b", num_gpus=2)
+-    model = model.eval()
+-    return tokenizer, model
++def get_model_cache():
++    return get_model(args)
+ 
+ 
+-tokenizer, model = get_model()
++def process(args):
++    override_topp_and_topk()
++    args.rank = 1
++    tokenizer, model = get_model(args)
++    while True:
++        object_list = [None] * 6
++        torch.distributed.broadcast_object_list(object_list, src=0)
++        query, max_length, top_p, temperature, history, past_key_values = object_list
++        for _, _, _ in model.stream_chat(
++                tokenizer, query, history,
++                past_key_values=past_key_values, return_past_key_values=True,
++                max_length=max_length, top_p=top_p, temperature=temperature,
++        ):
++            # 因为 rank 0 和其他 rank 推理出的 response 是一致的
++            # 所以只需取 rank 0 推理出的 response 显示在网页上即可，其他 rank 的推理结果不需要做任何操作
++            # 但仍需要 for 循环调用 stream_chat，以便 rank 0 在 all_reduce 时能接收到其他 rank 的数据
++            pass
++
++
++@st.cache_resource
++def start_process():
++    p = torch.multiprocessing.Process(target=process, args=(args,))
++    p.start()
++
++
++override_topp_and_topk()
++args = parse_args()
++args.mode = "web_demo_streamlit"
++if args.tp_size > 1:
++    start_process()
++args.rank = 0
++tokenizer, model = get_model_cache()
+ 
+ st.title("ChatGLM2-6B")
+ 
+@@ -59,6 +87,12 @@ button = st.button("发送", key="predict")
+ if button:
+     input_placeholder.markdown(prompt_text)
+     history, past_key_values = st.session_state.history, st.session_state.past_key_values
++    # 因为点击事件会另起线程执行，所以在主线程 set_device 对点击事件里的 stream_chat 无效
++    # 需要在点击事件里 stream_chat 执行前 set_device，否则会出现 context 空指针报错
++    torch.npu.set_device(args.device)
++    if args.tp_size > 1:
++        object_list = [prompt_text, max_length, top_p, temperature, history, past_key_values]
++        torch.distributed.broadcast_object_list(object_list, src=0)
+     for response, history, past_key_values in model.stream_chat(tokenizer, prompt_text, history,
+                                                                 past_key_values=past_key_values,
+                                                                 max_length=max_length, top_p=top_p,
+--
