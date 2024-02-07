@@ -707,7 +707,7 @@ class LlamaModel(LlamaPreTrainedModel):
         self.rank = 0
         self.rankSize = 1
         self.backend = "lccl"
-        self.isTriuMask = int(os.getenv("LONG_SEQ_ENABLE", "0"))
+        self.is_triu_mask = int(os.getenv("LONG_SEQ_ENABLE", "0"))
         if hasattr(config, 'world_size'):
             self.world_size = config.world_size
         else: 
@@ -836,7 +836,7 @@ class LlamaModel(LlamaPreTrainedModel):
             "dk": self.headSize, 
             "layerNum": self.num_layers, 
             "rank": self.rank,
-            "isTriuMask": self.isTriuMask,
+            "isTriuMask": self.is_triu_mask,
             "rankSize": self.rankSize,
             "backend": self.backend,
             "quantModel": self.quant_model,
@@ -854,7 +854,7 @@ class LlamaModel(LlamaPreTrainedModel):
         if self.batch_num != batch_size:
             self.batch_num = batch_size
             self.init_ascend_kvcache()
-            if not self.isTriuMask:
+            if not self.is_triu_mask:
                 self.attention_mask_max_incre = torch.zeros(
                     (self.batch_num, math.ceil(self.max_sequence_length / self.nz_dim), self.max_sequence_length, self.nz_dim),
                     device='npu',
@@ -1066,12 +1066,14 @@ class LlamaModel(LlamaPreTrainedModel):
         return attn_mask
 
     def update_ascend_mask(self, attention_mask, seq_length):
-        if self.isTriuMask and self.full_flag:
+        if self.is_triu_mask and self.full_flag:
             self.attention_mask_max = self.get_triumask(self.mask_block_size).npu().to(dtype=torch.float16)
             self.attention_mask_max_incre = torch.zeros((self.batch_num, 1, self.max_sequence_length), dtype=torch.float16).npu()
             if self.format_nz:
                 soc_version = torch_npu._C._npu_get_soc_version()
                 raise ValueError(f"{soc_version=} not supports LONG_SEQ_ENABLE=1")
+            if self.batch_num > 1:
+                raise ValueError(f"batch_size must be 1, but got `MAX_SEQ_LENGTH`:")
             return
         if self.full_flag:
             self.attention_mask_max = torch.zeros(
