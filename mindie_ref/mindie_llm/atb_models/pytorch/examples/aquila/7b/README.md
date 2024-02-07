@@ -90,7 +90,7 @@ chmod +x Ascend-hdk-xxxx-npu-driver_xxx_*.run
 | cpu     | 包名                                            |
 |---------|-----------------------------------------------|
 | aarch64 | Ascend-cann-toolkit_8.0.RC1_linux-aarch64.run |
-| x86     | Ascend-cann-toolkit_8.0.RC1_linux-aarch64.run |
+| x86     | Ascend-cann-toolkit_8.0.RC1_linux-x86_64.run |
 
 ```bash
 # 安装toolkit  以arm为例
