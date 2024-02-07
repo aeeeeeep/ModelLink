@@ -68,9 +68,8 @@ atb::Status CreateFusionLinear(const FusionLinearParam &param, atb::Operation **
     } else {
         // linear + dequant
         atb::Node &linearQuantNode = opGraph.nodes.at(nodeId++);
-        atb::infer::LinearQuantParam linearQuantParam;
-        linearQuantParam.transposeA = false;
-        linearQuantParam.transposeB = true;
+        atb::infer::LinearParam linearQuantParam;
+        linearQuantParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
         linearQuantParam.hasBias = false;
         CREATE_OPERATION(linearQuantParam, &linearQuantNode.operation);
         linearQuantNode.inTensorIds = {

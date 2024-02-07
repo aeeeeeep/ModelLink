@@ -138,7 +138,8 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
     }
 
     if (param.quantmodel) {
-        atb::infer::LinearQuantParam mixdQkvLinearParam;
+        atb::infer::LinearParam mixdQkvLinearParam;
+        mixdQkvLinearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
         CREATE_OPERATION(mixdQkvLinearParam, &mixdQkvLinearNode.operation);
         mixdQkvLinearNode.inTensorIds = {
             INTERMIDATE_INPUTNORM_OUT, IN_QKVMIXED_WEIGHT, IN_QKVMIXED_BIAS, IN_QKVMIXED_DEQSCALE};

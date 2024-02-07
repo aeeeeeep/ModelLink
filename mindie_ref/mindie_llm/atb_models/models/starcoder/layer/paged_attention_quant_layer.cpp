@@ -129,8 +129,8 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     inputLayerNormNode.inTensorIds = {IN_HIDDENSTATES, IN_LAYERNORM_1_WEIGTH, IN_LAYERNORM_1_BIAS};
     inputLayerNormNode.outTensorIds = {INTERMEDIATE_INPUTNORM_OUT, INTERMEDIATE_INPUTNORM_OUT_QUANT};
 
-    atb::infer::LinearQuantParam qkvLinearParam;
-    qkvLinearParam.transposeB = true;
+    atb::infer::LinearParam qkvLinearParam;
+    qkvLinearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
     CreateOperation(qkvLinearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = {INTERMEDIATE_INPUTNORM_OUT_QUANT, IN_QKV_WEIGHT, IN_QKV_BIAS, IN_QKV_DEQSCALE};
     qkvLinearNode.outTensorIds = {INTERMEDIATE_QKV};
