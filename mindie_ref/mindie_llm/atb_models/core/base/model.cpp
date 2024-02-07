@@ -240,8 +240,9 @@ atb::Status Model::Execute(atb::Context *context, std::vector<atb::Tensor> &inTe
     }
 
     if (atb_speed::SpeedProbe::GetReportModelTopoInfoFlag()) {
-        std::string modelTopo = GetModelTopoInfo();
-        atb_speed::SpeedProbe::ReportModelTopoInfo(modelName_, modelTopo);
+        nlohmann::json modelJson;
+        GetModelTopoInfo(modelJson);
+        atb_speed::SpeedProbe::ReportModelTopoInfo(modelName_, modelJson.dump());
     }
 
     WaitAsyncPlanExecuteFinish();
@@ -533,9 +534,8 @@ void Model::GetNodeTopoInfo(nlohmann::json &nodeJson, const Node &opNode,
     }
 }
 
-std::string Model::GetModelTopoInfo()
+void Model::GetModelTopoInfo(nlohmann::json &modelJson)
 {
-    nlohmann::json modelJson;
     modelJson["modelName"] = modelName_;
 
     std::map<atb::Tensor *, std::string> tensorNameMap;
@@ -547,7 +547,7 @@ std::string Model::GetModelTopoInfo()
         GetNodeTopoInfo(nodeJson, opNode, tensorNameMap);
         modelJson["nodes"].emplace_back(nodeJson);
     }
-    return modelJson.dump();
+    return;
 }
 
 } // namespace atb_speed
