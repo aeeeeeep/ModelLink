@@ -139,8 +139,15 @@ static atb::Operation *TransdataOperationCreate(const nlohmann::json &paramJson)
 static atb::Operation *FfnOldOperationCreate(const nlohmann::json &paramJson)
 {
     atb::infer::LinearActivationParam param;
-    param.transposeA = paramJson["transposeA"].get<bool>();
-    param.transposeB = paramJson["transposeB"].get<bool>();
+    if (paramJson.contains("linearType")) {
+        param.linearType = atb::infer::LinearType(paramJson["linearType"].get<int32_t>());
+    }
+    if (paramJson.contains("transposeA")) {
+        param.transposeA = paramJson["transposeA"].get<bool>();
+    }
+    if (paramJson.contains("transposeB")) {
+        param.transposeB = paramJson["transposeB"].get<bool>();
+    }
     if (paramJson.contains("hasBias")) {
         param.hasBias = paramJson["hasBias"].get<bool>();
     }
@@ -181,8 +188,15 @@ static atb::Operation *TransposeOperationCreate(const nlohmann::json &paramJson)
 static atb::Operation *LinearActivationOperationCreate(const nlohmann::json &paramJson)
 {
     atb::infer::LinearActivationParam param;
-    param.transposeA = paramJson["transposeA"].get<bool>();
-    param.transposeB = paramJson["transposeB"].get<bool>();
+    if (paramJson.contains("linearType")) {
+        param.linearType = atb::infer::LinearType(paramJson["linearType"].get<int32_t>());
+    }
+    if (paramJson.contains("transposeA")) {
+        param.transposeA = paramJson["transposeA"].get<bool>();
+    }
+    if (paramJson.contains("transposeB")) {
+        param.transposeB = paramJson["transposeB"].get<bool>();
+    }
     if (paramJson.contains("hasBias")) {
         param.hasBias = paramJson["hasBias"].get<bool>();
     }
