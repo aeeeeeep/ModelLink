@@ -406,28 +406,29 @@ class ModelTest:
                     getattr(torch, self.core_type).synchronize()
                     e2e_end = time.time()
 
-                e2e_time = e2e_end - e2e_start
-
-                if self.model_type == "fa":
-                    first_token_time_tensor = torch.load(f"{folder_path}/first_token_time.pth").cpu()
-                    first_token_time = first_token_time_tensor.item()
-                    non_first_token_time_tensor = torch.load(f"{folder_path}/non_first_token_time.pth").cpu()
-                    non_first_token_time = non_first_token_time_tensor.item() / (seq_len_out - 1)
-                else:
-                    benchmark_csv = os.path.join(self.script_path, "../benchmark.csv")
-                    with open(benchmark_csv, newline='') as csvfile:
-                        csv_reader = csv.reader(csvfile)
-                        next(csv_reader)
-                        second_row = next(csv_reader)
-                        first_token_time = float(second_row[4]) / 1000
-                        non_first_token_time = float(second_row[5]) / 1000
-
-                non_first_token_throughput = self.batch_size / non_first_token_time
-                non_first_token_throughput_total += non_first_token_throughput
-                e2e_throughput = self.batch_size * seq_len_out / e2e_time
-                e2e_throughput_total += e2e_throughput
-
                 if self.local_rank == 0:
+                    e2e_time = e2e_end - e2e_start
+
+                    if self.model_type == "fa":
+                        first_token_time_tensor = torch.load(f"{folder_path}/first_token_time.pth").cpu()
+                        first_token_time = first_token_time_tensor.item()
+                        non_first_token_time_tensor = torch.load(f"{folder_path}/non_first_token_time.pth").cpu()
+                        non_first_token_time = non_first_token_time_tensor.item() / (seq_len_out - 1)
+                    else:
+                        benchmark_csv = os.path.join(self.script_path, "../benchmark.csv")
+                        with open(benchmark_csv, newline='') as csvfile:
+                            csv_reader = csv.reader(csvfile)
+                            next(csv_reader)
+                            second_row = next(csv_reader)
+                            first_token_time = float(second_row[4]) / 1000
+                            non_first_token_time = float(second_row[5]) / 1000
+
+                    non_first_token_throughput = self.batch_size / non_first_token_time
+                    non_first_token_throughput_total += non_first_token_throughput
+                    e2e_throughput = self.batch_size * seq_len_out / e2e_time
+                    e2e_throughput_total += e2e_throughput
+
+                
                     self.logger.info(
                         f"batch: {self.batch_size}, seq_len_in: {seq_len_in}, seq_len_out: {seq_len_out}, total_time: {e2e_time}, first_token_time: {first_token_time * 1000}," +
                         f" non_first_token_time: {non_first_token_time * 1000}, non_first_token_throughput: {non_first_token_throughput}," +
