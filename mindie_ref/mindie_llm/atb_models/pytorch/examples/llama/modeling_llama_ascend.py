@@ -705,6 +705,7 @@ class LlamaModel(LlamaPreTrainedModel):
         self.rank = 0
         self.rankSize = 1
         self.backend = "lccl"
+        self.is_long_seq = int(os.getenv("LONG_SEQ_ENABLE", "0"))
         if hasattr(config, 'world_size'):
             self.world_size = config.world_size
         else: 
@@ -744,6 +745,7 @@ class LlamaModel(LlamaPreTrainedModel):
         self.hidden_size = config.hidden_size
         self.headSize = self.hidden_size // self.num_heads
         self.rms_norm_eps = config.rms_norm_eps
+        self.mask_block_size = 128
         self.isTriuMask = 0
 
         # initialize model modules
@@ -880,11 +882,12 @@ class LlamaModel(LlamaPreTrainedModel):
         if self.batch_num != batch_size:
             self.batch_num = batch_size
             self.init_ascend_kvcache()
-            self.attention_mask_max_incre = torch.zeros(
-                (self.batch_num, math.ceil(self.max_sequence_length / self.nz_dim), self.max_sequence_length, self.nz_dim),
-                device='npu',
-                dtype=torch.half
-            ).contiguous()
+            if not self.is_long_seq:
+                self.attention_mask_max_incre = torch.zeros(
+                    (self.batch_num, math.ceil(self.max_sequence_length / self.nz_dim), self.max_sequence_length, self.nz_dim),
+                    device='npu',
+                    dtype=torch.half
+                ).contiguous()
 
         placeholder = torch.ones(1).npu()
 
@@ -1081,8 +1084,23 @@ class LlamaModel(LlamaPreTrainedModel):
                                             self.hidden_size // self.world_size,
                                             dtype=torch.half,
                                             device="npu")
+    
+    def get_triumask(self, mask_block_size):
+        bias_cache = torch.tril(torch.ones((mask_block_size, mask_block_size), dtype=torch.bool)).view(mask_block_size,
+                                                                                                   mask_block_size)
+        bias_cache = ~bias_cache
+        mask_value = torch.finfo(torch.float16).min
+        attn_mask = torch.masked_fill(torch.zeros(size=(mask_block_size, mask_block_size)), bias_cache, mask_value)
+        return attn_mask
 
     def update_ascend_mask(self, attention_mask, seq_length):
+        if self.is_long_seq and self.full_flag:
+            self.attention_mask_max = self.get_triumask(self.mask_block_size).npu()
+            self.attention_mask_max_incre = torch.zeros((self.batch_num, 1, self.max_sequence_length), dtype=torch.float16).npu()
+            if self.format_nz:
+                soc_version = torch_npu._C._npu_get_soc_version()
+                raise ValueError(f"{soc_version=} not supports LONG_SEQ_ENABLE=1")
+            return
         if self.full_flag:
             self.attention_mask_max = torch.zeros(
                 (self.batch_num, self.max_sequence_length, self.max_sequence_length), device='npu', dtype=torch.half)
@@ -1110,6 +1128,7 @@ class LlamaModel(LlamaPreTrainedModel):
                         (self.batch_num, 1, self.max_sequence_length), device='npu', dtype=torch.half)
                     self.attention_mask_max_incre[:self.batch_num, :1, :attention_mask_acl.size()[-1]] += attention_mask_acl.unsqueeze(-2)
                 self.decoder_mask = True
+        return
     
     def load_ascend_quant_weight(self):
         if self.world_size > 1:
@@ -1254,13 +1273,6 @@ class LlamaModel(LlamaPreTrainedModel):
             attention_mask = torch.ones(
                 (batch_size, seq_length_with_past), dtype=torch.bool, device=input_ids.device
             )
-            padding_mask = None
-        else:
-            if 0 in attention_mask:
-                padding_mask = attention_mask
-            else:
-                padding_mask = None
-
         attention_mask = self._prepare_decoder_attention_mask(
             attention_mask, (batch_size,
                              seq_length), self.tag_mask, past_key_values_length
