@@ -287,6 +287,10 @@ class LlamaMLP(nn.Module):
         self.world_size = 1
         if hasattr(config, 'world_size'):
             self.world_size = config.world_size
+        if hasattr(config, 'pretraining_tp'):
+            self.pretraining_tp = config.pretraining_tp
+        else: 
+            self.pretraining_tp = 1
         self.hidden_size = config.hidden_size
         self.intermediate_size = config.intermediate_size // self.world_size
         self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
@@ -295,20 +299,20 @@ class LlamaMLP(nn.Module):
         self.act_fn = ACT2FN[config.hidden_act]
 
     def forward(self, x):
-        if self.config.pretraining_tp > 1:
-            slice = self.intermediate_size // self.config.pretraining_tp
+        if self.pretraining_tp > 1:
+            slice = self.intermediate_size // self.pretraining_tp
             gate_proj_slices = self.gate_proj.weight.split(slice, dim=0)
             up_proj_slices = self.up_proj.weight.split(slice, dim=0)
             down_proj_slices = self.down_proj.weight.split(slice, dim=1)
 
             gate_proj = torch.cat(
-                [F.linear(x, gate_proj_slices[i]) for i in range(self.config.pretraining_tp)], dim=-1
+                [F.linear(x, gate_proj_slices[i]) for i in range(self.pretraining_tp)], dim=-1
             )
-            up_proj = torch.cat([F.linear(x, up_proj_slices[i]) for i in range(self.config.pretraining_tp)], dim=-1)
+            up_proj = torch.cat([F.linear(x, up_proj_slices[i]) for i in range(self.pretraining_tp)], dim=-1)
 
             intermediate_states = (self.act_fn(gate_proj) * up_proj).split(slice, dim=2)
             down_proj = [
-                F.linear(intermediate_states[i], down_proj_slices[i]) for i in range(self.config.pretraining_tp)
+                F.linear(intermediate_states[i], down_proj_slices[i]) for i in range(self.pretraining_tp)
             ]
             down_proj = sum(down_proj)
         else:
@@ -338,13 +342,27 @@ class LlamaAttention(nn.Module):
         self.world_size = 1
         if hasattr(config, 'world_size'):
             self.world_size = config.world_size
-        self.rope_theta = config.rope_theta
+        if hasattr(config, 'pretraining_tp'):
+            self.pretraining_tp = config.pretraining_tp
+        else: 
+            self.pretraining_tp = 1
+        if hasattr(config, 'rope_scaling'):
+            self.rope_scaling = config.rope_scaling
+        else: 
+            self.rope_scaling = None
+        if hasattr(config, 'rope_theta'):
+            self.rope_theta = config.rope_theta
+        else: 
+            self.rope_theta = 10000
         self.hidden_size = config.hidden_size
         self.num_heads = config.num_attention_heads
         self.head_dim = self.hidden_size // self.num_heads
-        self.num_key_value_heads = config.num_key_value_heads
-        self.num_key_value_groups = self.num_heads // self.num_key_value_heads
         self.max_position_embeddings = config.max_position_embeddings
+        if hasattr(config, 'num_key_value_heads'):
+            self.num_key_value_heads = config.num_key_value_heads
+        else:
+            self.num_key_value_heads = self.num_heads
+        self.num_key_value_groups = self.num_heads // self.num_key_value_heads
 
         if (self.head_dim * self.num_heads) != self.hidden_size:
             raise ValueError(
@@ -359,15 +377,15 @@ class LlamaAttention(nn.Module):
         self._init_rope()
 
     def _init_rope(self):
-        if self.config.rope_scaling is None:
+        if self.rope_scaling is None:
             self.rotary_emb = LlamaRotaryEmbedding(
                 self.head_dim,
                 max_position_embeddings=self.max_position_embeddings,
                 base=self.rope_theta,
             )
         else:
-            scaling_type = self.config.rope_scaling["type"]
-            scaling_factor = self.config.rope_scaling["factor"]
+            scaling_type = self.rope_scaling["type"]
+            scaling_factor = self.rope_scaling["factor"]
             if scaling_type == "linear":
                 self.rotary_emb = LlamaLinearScalingRotaryEmbedding(
                     self.head_dim,
@@ -400,21 +418,21 @@ class LlamaAttention(nn.Module):
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
         bsz, q_len, _ = hidden_states.size()
 
-        if self.config.pretraining_tp > 1:
-            key_value_slicing = (self.num_key_value_heads * self.head_dim) // self.config.pretraining_tp
+        if self.pretraining_tp > 1:
+            key_value_slicing = (self.num_key_value_heads * self.head_dim) // self.pretraining_tp
             query_slices = self.q_proj.weight.split(
-                (self.num_heads * self.head_dim) // self.config.pretraining_tp, dim=0
+                (self.num_heads * self.head_dim) // self.pretraining_tp, dim=0
             )
             key_slices = self.k_proj.weight.split(key_value_slicing, dim=0)
             value_slices = self.v_proj.weight.split(key_value_slicing, dim=0)
 
-            query_states = [F.linear(hidden_states, query_slices[i]) for i in range(self.config.pretraining_tp)]
+            query_states = [F.linear(hidden_states, query_slices[i]) for i in range(self.pretraining_tp)]
             query_states = torch.cat(query_states, dim=-1)
 
-            key_states = [F.linear(hidden_states, key_slices[i]) for i in range(self.config.pretraining_tp)]
+            key_states = [F.linear(hidden_states, key_slices[i]) for i in range(self.pretraining_tp)]
             key_states = torch.cat(key_states, dim=-1)
 
-            value_states = [F.linear(hidden_states, value_slices[i]) for i in range(self.config.pretraining_tp)]
+            value_states = [F.linear(hidden_states, value_slices[i]) for i in range(self.pretraining_tp)]
             value_states = torch.cat(value_states, dim=-1)
 
         else:
@@ -457,8 +475,10 @@ class LlamaAttention(nn.Module):
                     f"Attention mask should be of size {(bsz, 1, q_len, kv_seq_len)}, but is {attention_mask.size()}"
                 )
             attn_weights = attn_weights + attention_mask
-            attn_weights = torch.max(attn_weights,
-                                     torch.tensor(torch.finfo(attn_weights.dtype).min, device=attn_weights.device))
+            attn_weights = torch.max(
+                attn_weights, torch.tensor(torch.finfo(
+                    attn_weights.dtype).min, device=attn_weights.device)
+            )
 
         # upcast attention to fp32
         attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
@@ -471,13 +491,12 @@ class LlamaAttention(nn.Module):
             )
 
         attn_output = attn_output.transpose(1, 2)
-
         attn_output = attn_output.reshape(bsz, q_len, self.num_heads * self.head_dim)
 
-        if self.config.pretraining_tp > 1:
-            attn_output = attn_output.split(self.hidden_size // self.config.pretraining_tp, dim=2)
-            o_proj_slices = self.o_proj.weight.split(self.hidden_size // self.config.pretraining_tp, dim=1)
-            attn_output = sum([F.linear(attn_output[i], o_proj_slices[i]) for i in range(self.config.pretraining_tp)])
+        if self.pretraining_tp > 1:
+            attn_output = attn_output.split(self.hidden_size // self.pretraining_tp, dim=2)
+            o_proj_slices = self.o_proj.weight.split(self.hidden_size // self.pretraining_tp, dim=1)
+            attn_output = sum([F.linear(attn_output[i], o_proj_slices[i]) for i in range(self.pretraining_tp)])
         else:
             attn_output = self.o_proj(attn_output)
         
@@ -882,6 +901,20 @@ class LlamaModel(LlamaPreTrainedModel):
         self.backend = "lccl"
         if hasattr(config, 'world_size'):
             self.world_size = config.world_size
+        else: 
+            self.pretraining_tp = 1
+        if hasattr(config, 'rope_scaling'):
+            self.rope_scaling = config.rope_scaling
+        else: 
+            self.rope_scaling = None
+        if hasattr(config, 'rope_theta'):
+            self.rope_theta = config.rope_theta
+        else: 
+            self.rope_theta = 10000
+        if hasattr(config, 'num_key_value_heads'):
+            self.num_key_value_heads = config.num_key_value_heads
+        else:
+            self.num_key_value_heads = self.num_heads
         if self.world_size >= 2:
             self.rank = torch.distributed.get_rank()
             self.rankSize = torch.distributed.get_world_size()
@@ -916,8 +949,8 @@ class LlamaModel(LlamaPreTrainedModel):
         self.post_init()
 
         x = torch.zeros(1).npu()
-        rot_emb_global = LlamaRotaryEmbedding(128, max_position_embeddings=2048)
-        cosTable, sinTable = rot_emb_global.forward(x, 2048)
+        self._init_rope()
+        cosTable, sinTable = self.rotary_emb.forward(x, 2048)
         self.cosTable, self.sinTable = cosTable.npu().half(), sinTable.npu().half()
 
         self.tag_mask = torch.ones((1, 20), dtype=torch.float16).npu().half()
@@ -986,6 +1019,33 @@ class LlamaModel(LlamaPreTrainedModel):
 
         # initialize ascend model inputs and parameters
         self.init_ascend_operations()
+    
+    def _init_rope(self):
+        if self.rope_scaling is None:
+            self.rotary_emb = LlamaRotaryEmbedding(
+                self.head_dim,
+                max_position_embeddings=self.max_position_embeddings,
+                base=self.rope_theta,
+            )
+        else:
+            scaling_type = self.rope_scaling["type"]
+            scaling_factor = self.rope_scaling["factor"]
+            if scaling_type == "linear":
+                self.rotary_emb = LlamaLinearScalingRotaryEmbedding(
+                    self.head_dim,
+                    max_position_embeddings=self.max_position_embeddings,
+                    scaling_factor=scaling_factor,
+                    base=self.rope_theta,
+                )
+            elif scaling_type == "dynamic":
+                self.rotary_emb = LlamaDynamicNTKScalingRotaryEmbedding(
+                    self.head_dim,
+                    max_position_embeddings=self.max_position_embeddings,
+                    scaling_factor=scaling_factor,
+                    base=self.rope_theta,
+                )
+            else:
+                raise ValueError(f"Unknown RoPE scaling type {scaling_type}")
 
     def set_ascend_param(self, isEncoder):
         acl_param = json.dumps({
