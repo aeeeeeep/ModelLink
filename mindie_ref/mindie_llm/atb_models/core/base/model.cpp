@@ -515,7 +515,7 @@ void Model::GetModelTensorNameList(nlohmann::json &modelJson, std::map<atb::Tens
 }
 
 void Model::GetNodeTopoInfo(nlohmann::json &nodeJson, const Node &opNode,
-    const std::map<atb::Tensor *, std::string> tensorNameMap)
+    const std::map<atb::Tensor *, std::string> &tensorNameMap)
 {
     nodeJson["opName"] = opNode.operation->GetName();
 
