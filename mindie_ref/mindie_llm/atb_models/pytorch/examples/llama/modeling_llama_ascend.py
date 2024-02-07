@@ -943,6 +943,7 @@ class LlamaModel(LlamaPreTrainedModel):
         self.hidden_size = config.hidden_size
         self.headSize = self.hidden_size // self.num_heads
         self.rms_norm_eps = config.rms_norm_eps
+        self.isTriuMask = 0
 
         # initialize model modules
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
@@ -1055,10 +1056,12 @@ class LlamaModel(LlamaPreTrainedModel):
     def set_ascend_param(self, isEncoder):
         acl_param = json.dumps({
             "headNum": self.num_heads // self.world_size, 
+            "kvHeadNum": self.num_key_value_heads // self.world_size, 
             "rmsNormEps": self.rms_norm_eps,
             "dk": self.headSize, 
             "layerNum": self.num_layers, 
             "rank": self.rank,
+            "isTriuMask": self.isTriuMask,
             "rankSize": self.rankSize,
             "backend": self.backend,
             "quantModel": self.quant_model,
