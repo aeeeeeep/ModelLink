@@ -1,10 +1,10 @@
 ---
- web_demo.py  | 90 ++++++++++++++++++++++++++++++++--------------------
- web_demo2.py | 54 +++++++++++++++++++++++++------
- 2 files changed, 99 insertions(+), 45 deletions(-)
+ web_demo.py  | 93 ++++++++++++++++++++++++++++++++--------------------
+ web_demo2.py | 54 ++++++++++++++++++++++++------
+ 2 files changed, 102 insertions(+), 45 deletions(-)
 
 diff --git a/web_demo.py b/web_demo.py
-index 1af24c9..ac7e2b4 100644
+index 1af24c9..26db8bd 100644
 --- a/web_demo.py
 +++ b/web_demo.py
 @@ -1,14 +1,9 @@
@@ -38,7 +38,7 @@ index 1af24c9..ac7e2b4 100644
      for response, history, past_key_values in model.stream_chat(tokenizer, input, history, past_key_values=past_key_values,
                                                                  return_past_key_values=True,
                                                                  max_length=max_length, top_p=top_p,
-@@ -79,30 +80,49 @@ def reset_state():
+@@ -79,30 +80,52 @@ def reset_state():
      return [], [], None
  
  
@@ -101,6 +101,7 @@ index 1af24c9..ac7e2b4 100644
 +
 +        emptyBtn.click(reset_state, outputs=[chatbot, history, past_key_values], show_progress=True)
 +
++    # server_name 设置为 0.0.0.0，以便于在局域网访问
 +    demo.queue().launch(server_name='0.0.0.0', share=False, inbrowser=True)
 +else:
 +    history, past_key_values = [], None
@@ -108,12 +109,14 @@ index 1af24c9..ac7e2b4 100644
 +        object_list = [None] * 6
 +        torch.distributed.broadcast_object_list(object_list, src=0)
 +        query, max_length, top_p, temperature, history, past_key_values = object_list
-+        for response, history, past_key_values in model.stream_chat(tokenizer, query, history,
-+                                                                    past_key_values=past_key_values, return_past_key_values=True,
-+                                                                    max_length=max_length, top_p=top_p, temperature=temperature):
-+            # 因为 rank 0 和 rank 1 推理出的 response 是一致的
-+            # 所以只需取 rank 0 推理出的 response 显示在网页上即可，rank 1 的推理结果不需要做任何操作
-+            # 但仍然需要 for 循环调用 stream_chat，以便 rank 0 在 all_reduce 时能接收到 rank 1 的数据
++        for response, history, past_key_values in model.stream_chat(
++                tokenizer, query, history,
++                past_key_values=past_key_values, return_past_key_values=True,
++                max_length=max_length, top_p=top_p, temperature=temperature,
++        ):
++            # 因为 rank 0 和其他 rank 推理出的 response 是一致的
++            # 所以只需取 rank 0 推理出的 response 显示在网页上即可，其他 rank 的推理结果不需要做任何操作
++            # 但仍然需要 for 循环调用 stream_chat，以便 rank 0 在 all_reduce 时能接收到其他 rank 的数据
 +            pass
 diff --git a/web_demo2.py b/web_demo2.py
 index 203cbdc..07fa69f 100644
