@@ -186,6 +186,8 @@ class Weights:
         tensor = f.get_tensor(tensor_name)
 
         tensor = tensor.to(device=self.device)
+        if tensor.dtype not in [torch.int32, torch.int64]:
+            tensor = tensor.to(dtype=self.dtype)
         return tensor
 
     def get_whole_tensor(self, tensor_name: str, dim: int):
@@ -219,6 +221,28 @@ class Weights:
             block_size = gqa_size
             start = (rank // (world_size // group_size)) * block_size
             stop = ((rank // (world_size // group_size)) + 1) * block_size
+        
+        if "c_attn.bias" in tensor_name:
+            b = slice_[:]
+            single_size = b.shape[0] // 3
+            head_size = 128
+            head_num = single_size // head_size
+            rank_heads = math.ceil(head_num / world_size)
+            if rank != world_size - 1:
+                start = rank * (rank_heads * head_size)
+                stop = (rank + 1) * (rank_heads * head_size)
+                bq = slice_[start:stop]
+                bk = slice_[start + single_size:stop + single_size]
+                bv = slice_[start + 2 * single_size:stop + 2 * single_size]
+            else:
+                # last rank
+                start = rank * (rank_heads * head_size)
+                stop = head_num * head_size
+                bq = slice_[start:stop]
+                bk = slice_[start + single_size:stop + single_size]
+                bv = slice_[start + 2 * single_size:stop + 2 * single_size]
+            b_ = torch.cat([bq, bk, bv], dim=0)
+            return b_
 
         if dim == 0:
             tensor = slice_[start:stop]
