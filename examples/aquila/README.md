@@ -75,6 +75,7 @@ cd ..
 ```shell
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
+cd ModelLink/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./HF_Aquila7B_downloaded \
@@ -89,8 +90,8 @@ python ./tools/preprocess_data.py \
 将模型权重文件从 huggingface 格式转化为 AscendSpeed 格式
 
 ```shell
+cd ModelLink/
 mkdir model_weights
-cd ModelLink
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 python tools/checkpoint/util.py \
@@ -152,12 +153,12 @@ Aquila-7b NPU vs 参考 loss.
 
 推理与预训练不同，我们必须加载预训练权重，请注意：在转换权重时使用的模型结构参数，和运行评估任务时使用的模型结构参数，应保持一致。
 
-权重转换完成后，我们配置Aquila-7B推理脚本`examples/aquila/generate_aquila_7B.sh`，需要正确指定加载权重的路径，词表路径等（下面样例仅供参考）
+权重转换完成后，我们配置Aquila-7B推理脚本`tasks/inference/generate_aquila_7b_ptd.sh`，需要正确指定加载权重的路径，词表路径等（下面样例仅供参考）
 
 ```shell
-# 修改模型权重路径和分词器路径
-CHECKPOINT=<checkpoint-path>
-VOCAB_FILE=<vocabfile-path>
+# 请按实际情况修改模型权重路径和分词器路径
+CKPT_LOAD_DIR="./model_weights/aquila/"
+TOKENIZER_PATH="./HF_Aquila7B_downloaded/"
 ```
 
 启动Aquila-7B推理:
@@ -174,17 +175,17 @@ Aquila-7B:
 
 ## 评估
 
-我们使用 BoolQ benchmark 来评估我们的模型。在[Benchmark下载页面](https://github.com/google-research-datasets/boolean-questions)找到[数据集](https://storage.cloud.google.com/boolq/dev.jsonl)下载后保存。例如，保存在AscendSpeed/boolq/test目录下。
+我们使用 BoolQ benchmark 来评估我们的模型。在[Benchmark下载页面](https://github.com/google-research-datasets/boolean-questions)找到[数据集](https://storage.cloud.google.com/boolq/dev.jsonl)下载后保存。例如，保存在ModelLink/boolq/test目录下。
 
 评估与推理类似，也必须加载转换后的权重，请注意：在转换权重时使用的模型结构参数，和运行评估任务时使用的模型结构参数，应保持一致。
 
-权重转换完成后，我们配置Aquila-7B评估脚本 `tasks/evaluation/evaluate_llama2_34B_ptd.sh`，需要正确指定加载权重的路径，词表路径，评估数据的路径，以及评估任务的名字等(下面样例仅供参考)：
+权重转换完成后，我们配置Aquila-7B评估脚本 `tasks/evaluation/evaluate_aquila_7b_ptd.sh`，需要正确指定加载权重的路径，词表路径，评估数据的路径，以及评估任务的名字等(下面样例仅供参考)：
 
 ```shell
-    CHECKPOINT="./model_weights/aquila/"
-    VOCAB_FILE="./HF_Aquila7B_downloaded/"
-    DATA_PATH="./boolq/test"
-    TASK="boolq"
+CKPT_LOAD_DIR="./model_weights/aquila/"
+TOKENIZER_PATH="./HF_Aquila7B_downloaded/"
+EVAL_DATA_PATH="./boolq/test"
+TASK="boolq"
 ```
 
 启动Aquila-7B评估
@@ -196,4 +197,4 @@ Aquila-7B在**Ascend NPU**中的评测表现：
 
 | 任务                                                                   | 模型       | 昇腾值|社区值|
 |------------------------------------------------------------------------|------------|--------|------|
-| [BoolQ](https://github.com/google-research-datasets/boolean-questions) | Aquila-7B  | 77.43% |      |
+| [BoolQ](https://github.com/google-research-datasets/boolean-questions) | Aquila-7B  | 77.3% |      |

@@ -1,12 +1,25 @@
 #!/bin/bash
 
-# Please remember to source the CANN set_env.sh file
-source /home/yaojia/yj_canntoolkit_POC.T800.B070/ascend-toolkit/set_env.sh
+# source /home/yaojia/yj_canntoolkit_POC.T800.B070/ascend-toolkit/set_env.sh
+# export TOKENIZERS_PARALLELISM=false
+# export CUDA_DEVICE_MAX_CONNECTIONS=1
+# CKPT_LOAD_DIR="../model_weights/aquila"
+# TOKENIZER_PATH="../HF_Aquila7B_downloaded"
+# TP=8
+# PP=1
+# NPUS_PER_NODE=8
+# MASTER_ADDR=localhost
+# MASTER_PORT=6000
+# NNODES=1
+# NODE_RANK=0
+# WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
+# See README, please remember to source the set_env.sh file in CLI, or here
+# source /path/to/your/ascend-toolkit/set_env.sh
 export TOKENIZERS_PARALLELISM=false
 export CUDA_DEVICE_MAX_CONNECTIONS=1
-CKPT_LOAD_DIR="/home/yaojia/bigfiles/data-loading/GPU/HF-Aquila7B_converted_div1"
-TOKENIZER_PATH="/home/yaojia/bigfiles/data-loading/GPU/HF_Aquila7B_downloaded"
+CKPT_LOAD_DIR="your checkpoint load dir"
+TOKENIZER_PATH="your tokenizer path"
 TP=8
 PP=1
 NPUS_PER_NODE=8
