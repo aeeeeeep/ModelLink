@@ -118,7 +118,7 @@ protected:
         const std::map<atb::Tensor *, std::string> tensorNameMap);
     std::string GetModelTopoInfo();
     void MakeTensorNameMap(nlohmann::json &modelJson, std::map<atb::Tensor *, std::string> &tensorNameMap,
-        const std::vector<atb::Tensor> &tensorList, std::string tensorType);
+        std::vector<atb::Tensor> &tensorList, std::string tensorType);
 
 protected:
     GetWorkspaceFunc getWorkSpaceFunc_;
