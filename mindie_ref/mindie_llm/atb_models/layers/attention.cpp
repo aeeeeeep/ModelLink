@@ -102,7 +102,7 @@ atb::Status FlashAttentionWithPosEmbedding::FlashAttentionWithPositionEmbeddingL
 
         auto &splitKVNode = opGraph.nodes[nodeId++];
         atb::infer::SplitParam splitKVParam;
-        splitKVParam.splitDim = DIM_2;
+        splitKVParam.splitDim = DIM_LAST;
         splitKVParam.splitNum = SPLIT_NUM_2;
         CREATE_OPERATION(splitKVParam, &splitKVNode.operation);
         splitKVNode.inTensorIds = {INTERMEDIATE_KV};
@@ -110,7 +110,7 @@ atb::Status FlashAttentionWithPosEmbedding::FlashAttentionWithPositionEmbeddingL
     } else {
         auto &splitMixedQKVNode = opGraph.nodes[nodeId++];
         atb::infer::SplitParam splitMixedQKVParam;
-        splitMixedQKVParam.splitDim = DIM_2;
+        splitMixedQKVParam.splitDim = DIM_LAST;
         splitMixedQKVParam.splitNum = SPLIT_NUM_3;
         CREATE_OPERATION(splitMixedQKVParam, &splitMixedQKVNode.operation);
         splitMixedQKVNode.inTensorIds = {INTERMEDIATE_MIXED_QKV};

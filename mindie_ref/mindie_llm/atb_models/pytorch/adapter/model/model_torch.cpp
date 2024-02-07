@@ -33,6 +33,7 @@
 #include "baichuan2/13b/model/paged_attention_model.h"
 #include "baichuan2/13b/model/paged_attention_quant_model.h"
 #include "chatglm2/6b/model/flash_attention_model.h"
+#include "chatglm/6b/model/flash_attention_model.h"
 #include "chatglm2/6b/model/paged_attention_model.h"
 #include "bloom/model/flash_attention_model.h"
 #include "falcon/7b/model/flash_attention_model.h"
@@ -155,6 +156,8 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::llama2_70b::FusionPAModel>(param);
     } else if (modelName_ == "chatglm2_common_model") {
         model_ = std::make_shared<atb_speed::chatglm2_6b::ChatGlm2CommonModelFa>(param);
+    } else if (modelName_ == "chatglm_6b_flash_attention_model") {
+        model_ = std::make_shared<atb_speed::chatglm_6b::ChatGlmCommonModelFa>(param);
     } else if (modelName_ == "chatglm2_6b_decoder_pa_model") {
         model_ = std::make_shared<atb_speed::chatglm2_6b::PagedAttentionModel>(param);
     } else if (modelName_ == "baichuan2_13b_flash_attention_model") {
