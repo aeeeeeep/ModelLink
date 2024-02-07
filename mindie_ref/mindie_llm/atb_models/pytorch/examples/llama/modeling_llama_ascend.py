@@ -705,7 +705,7 @@ class LlamaModel(LlamaPreTrainedModel):
         self.rank = 0
         self.rankSize = 1
         self.backend = "lccl"
-        self.is_long_seq = int(os.getenv("LONG_SEQ_ENABLE", "0"))
+        self.isTriuMask = int(os.getenv("LONG_SEQ_ENABLE", "0"))
         if hasattr(config, 'world_size'):
             self.world_size = config.world_size
         else: 
@@ -746,7 +746,6 @@ class LlamaModel(LlamaPreTrainedModel):
         self.headSize = self.hidden_size // self.num_heads
         self.rms_norm_eps = config.rms_norm_eps
         self.mask_block_size = 128
-        self.isTriuMask = 0
 
         # initialize model modules
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
@@ -882,7 +881,7 @@ class LlamaModel(LlamaPreTrainedModel):
         if self.batch_num != batch_size:
             self.batch_num = batch_size
             self.init_ascend_kvcache()
-            if not self.is_long_seq:
+            if not self.isTriuMask:
                 self.attention_mask_max_incre = torch.zeros(
                     (self.batch_num, math.ceil(self.max_sequence_length / self.nz_dim), self.max_sequence_length, self.nz_dim),
                     device='npu',
@@ -1094,7 +1093,7 @@ class LlamaModel(LlamaPreTrainedModel):
         return attn_mask
 
     def update_ascend_mask(self, attention_mask, seq_length):
-        if self.is_long_seq and self.full_flag:
+        if self.isTriuMask and self.full_flag:
             self.attention_mask_max = self.get_triumask(self.mask_block_size).npu()
             self.attention_mask_max_incre = torch.zeros((self.batch_num, 1, self.max_sequence_length), dtype=torch.float16).npu()
             if self.format_nz:
