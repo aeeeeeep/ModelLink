@@ -198,7 +198,7 @@ def _decode_default(
     raw_text_len: int,
     verbose: bool = False,
     return_end_reason: bool = False,
-    errors: str='replace',
+    errors: str = 'replace',
 ):
     trim_decode_tokens = tokenizer.decode(tokens, errors=errors)[raw_text_len:]
     if verbose:
@@ -232,7 +232,7 @@ def _decode_chatml(
     context_length: int,
     verbose: bool = False,
     return_end_reason: bool = False,
-    errors: str='replace'
+    errors: str = 'replace'
 ):
     end_reason = f"Gen length {len(tokens)}"
     eod_token_idx = context_length
@@ -266,7 +266,7 @@ def decode_tokens(
     chat_format: str,
     verbose: bool = False,
     return_end_reason: bool = False,
-    errors: str="replace",
+    errors: str = "replace",
 ) -> str:
     if torch.is_tensor(tokens):
         tokens = tokens.cpu().numpy().tolist()
