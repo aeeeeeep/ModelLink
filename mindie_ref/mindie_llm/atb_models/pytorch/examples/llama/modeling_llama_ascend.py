@@ -759,10 +759,9 @@ class LlamaModel(LlamaPreTrainedModel):
         x = torch.zeros(1).npu()
         self._init_rope()
         cosTable, sinTable = self.rotary_emb.forward(x, 2048)
-        self.cosTable, self.sinTable = cosTable.npu().half(), sinTable.npu().half()
+        self.cosTable, self.sinTable = cosTable.npu().to(dtype=torch.float16), sinTable.npu().to(dtype=torch.float16)
 
-        self.tag_mask = torch.ones((1, 20), dtype=torch.float16).npu().half()
-
+        self.tag_mask = torch.ones((1, 20), dtype=torch.float16).npu()
         # initialize ascend parameters
         self.weightFlag = False
         self.weights_a = []
@@ -885,7 +884,7 @@ class LlamaModel(LlamaPreTrainedModel):
                 self.attention_mask_max_incre = torch.zeros(
                     (self.batch_num, math.ceil(self.max_sequence_length / self.nz_dim), self.max_sequence_length, self.nz_dim),
                     device='npu',
-                    dtype=torch.half
+                    dtype=torch.float16
                 ).contiguous()
 
         placeholder = torch.ones(1).npu()
@@ -1058,14 +1057,14 @@ class LlamaModel(LlamaPreTrainedModel):
                                         self.hidden_size_nz,
                                         self.max_sequence_length,
                                         self.nz_dim,
-                                        dtype=torch.half,
+                                        dtype=torch.float16,
                                         device="npu").contiguous()
             self.v_cache_input = torch.zeros(self.num_layers,
                                         self.batch_num,  # batch
                                         self.hidden_size_nz,
                                         self.max_sequence_length,
                                         self.nz_dim,
-                                        dtype=torch.half,
+                                        dtype=torch.float16,
                                         device="npu").contiguous()
             self.k_cache_input.data = torch_npu.npu_format_cast(self.k_cache_input.data, 29)
             self.v_cache_input.data = torch_npu.npu_format_cast(self.v_cache_input.data, 29)
@@ -1075,13 +1074,13 @@ class LlamaModel(LlamaPreTrainedModel):
                                             self.batch_num,
                                             self.max_sequence_length,
                                             self.hidden_size // self.world_size,
-                                            dtype=torch.half,
+                                            dtype=torch.float16,
                                             device="npu")
             self.v_cache_input = torch.zeros(self.num_layers,
                                             self.batch_num,
                                             self.max_sequence_length,
                                             self.hidden_size // self.world_size,
-                                            dtype=torch.half,
+                                            dtype=torch.float16,
                                             device="npu")
     
     def get_triumask(self, mask_block_size):
@@ -1102,9 +1101,9 @@ class LlamaModel(LlamaPreTrainedModel):
             return
         if self.full_flag:
             self.attention_mask_max = torch.zeros(
-                (self.batch_num, self.max_sequence_length, self.max_sequence_length), device='npu', dtype=torch.half)
+                (self.batch_num, self.max_sequence_length, self.max_sequence_length), device='npu', dtype=torch.float16)
             if attention_mask is not None:
-                attention_mask_acl = attention_mask[:, 0, :, :].to(torch.half)
+                attention_mask_acl = attention_mask[:, 0, :, :].to(torch.float16)
                 self.attention_mask_max[:self.batch_num, :seq_length, :attention_mask_acl.size()[-1]] += attention_mask_acl
             if self.format_nz:
                 self.attention_mask_max = torch_npu.npu_format_cast(
@@ -1113,7 +1112,7 @@ class LlamaModel(LlamaPreTrainedModel):
         else:
             if not self.decoder_mask:
                 if attention_mask is not None:
-                    attention_mask_acl = attention_mask[:, 0, 0, :].to(torch.half)
+                    attention_mask_acl = attention_mask[:, 0, 0, :].to(torch.float16)
                 if self.format_nz:
                     seq_len_enc = attention_mask_acl.shape[-1]
                     padding_seq = self.max_sequence_length - seq_len_enc
@@ -1124,7 +1123,7 @@ class LlamaModel(LlamaPreTrainedModel):
                         :self.nz_dim, :self.nz_dim] += attention_mask_acl
                 else:
                     self.attention_mask_max_incre = torch.zeros(
-                        (self.batch_num, 1, self.max_sequence_length), device='npu', dtype=torch.half)
+                        (self.batch_num, 1, self.max_sequence_length), device='npu', dtype=torch.float16)
                     self.attention_mask_max_incre[:self.batch_num, :1, :attention_mask_acl.size()[-1]] += attention_mask_acl.unsqueeze(-2)
                 self.decoder_mask = True
         return
