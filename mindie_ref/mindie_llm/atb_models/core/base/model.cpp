@@ -482,50 +482,35 @@ void Model::FreeInternalTensor(void *tensorDeviceData)
     }
 }
 
-void Model::GetModelTensorNameList(nlohmann::json &modelJson, std::map<atb::Tensor *, std::string> &tensorNameMap)
+void Model::MakeTensorNameMap(nlohmann::json &modelJson, std::map<atb::Tensor *, std::string> &tensorNameMap,
+    const std::vector<atb::Tensor> &tensorList, std::string tensorType)
 {
     std::string tensorName;
-    for (size_t i = 0; i < graph_.weightTensors.size(); i++) {
-        tensorName = modelName_ + "_weight_" + std::to_string(i);
-        modelJson["weightTensors"].emplace_back(tensorName);
-        atb::Tensor &weightTensor = graph_.weightTensors[i];
-        tensorNameMap[&weightTensor] = tensorName;
-    }
+    const std::map<std::string, std::string> tensorNameTagMap = {
+        {"weightTensors", "_weight_"},
+        {"inTensors", "_input_"},
+        {"outTensors", "_output_"},
+        {"internalTensors", "_internal_"},
+        {"kCacheTensors", "_kCache_"},
+        {"vCacheTensors", "_vCache_"},
+    };
     
-    for (size_t i = 0; i < graph_.inTensors.size(); i++) {
-        tensorName = modelName_ + "_input_" + std::to_string(i);
-        modelJson["inTensors"].emplace_back(tensorName);
-        atb::Tensor &inTensor = graph_.inTensors[i];
-        tensorNameMap[&inTensor] = tensorName;
+    for (size_t i = 0; i < tensorList.size(); i++) {
+        tensorName = modelName_ + tensorNameTagMap[tensorType] + std::to_string(i);
+        modelJson[tensorType].emplace_back(tensorName);
+        atb::Tensor &tensor = tensorList[i];
+        tensorNameMap[&tensor] = tensorName;
     }
+}
 
-    for (size_t i = 0; i < graph_.outTensors.size(); i++) {
-        tensorName = modelName_ + "_output_" + std::to_string(i);
-        modelJson["outTensors"].emplace_back(tensorName);
-        atb::Tensor &outTensor = graph_.outTensors[i];
-        tensorNameMap[&outTensor] = tensorName;
-    }
-
-    for (size_t i = 0; i < graph_.internalTensors.size(); i++) {
-        tensorName = modelName_ + "_internal_" + std::to_string(i);
-        modelJson["internalTensors"].emplace_back(tensorName);
-        atb::Tensor &internalTensor = graph_.internalTensors[i];
-        tensorNameMap[&internalTensor] = tensorName;
-    }
-
-    for (size_t i = 0; i < graph_.kCacheTensors.size(); i++) {
-        tensorName = modelName_ + "_kCache_" + std::to_string(i);
-        modelJson["kCacheTensors"].emplace_back(tensorName);
-        atb::Tensor &kCacheTensor = graph_.kCacheTensors[i];
-        tensorNameMap[&kCacheTensor] = tensorName;
-    }
-        
-    for (size_t i = 0; i < graph_.vCacheTensors.size(); i++) {
-        tensorName = modelName_ + "_vCache_" + std::to_string(i);
-        modelJson["vCacheTensors"].emplace_back(tensorName);
-        atb::Tensor &vCacheTensor = graph_.vCacheTensors[i];
-        tensorNameMap[&vCacheTensor] = tensorName;
-    }
+void Model::GetModelTensorNameList(nlohmann::json &modelJson, std::map<atb::Tensor *, std::string> &tensorNameMap)
+{
+    MakeTensorNameMap(modelJson, tensorNameMap, graph_.weightTensors, "weightTensors");
+    MakeTensorNameMap(modelJson, tensorNameMap, graph_.inTensors, "inTensors");
+    MakeTensorNameMap(modelJson, tensorNameMap, graph_.outTensors, "outTensors");
+    MakeTensorNameMap(modelJson, tensorNameMap, graph_.internalTensors, "internalTensors");
+    MakeTensorNameMap(modelJson, tensorNameMap, graph_.kCacheTensors, "kCacheTensors");
+    MakeTensorNameMap(modelJson, tensorNameMap, graph_.vCacheTensors, "vCacheTensors");
 }
 
 void Model::GetNodeTopoInfo(nlohmann::json &nodeJson, const Node &opNode,
