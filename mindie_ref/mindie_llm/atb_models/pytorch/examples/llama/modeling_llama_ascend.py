@@ -346,10 +346,10 @@ class LlamaAttention(nn.Module):
         self.head_dim = self.hidden_size // self.num_heads
         self.max_position_embeddings = MAX_SEQ_LENGTH
         if hasattr(config, 'num_key_value_heads'):
-            self.num_key_value_heads = config.num_key_value_heads
+            self.kv_head_num = config.num_key_value_heads
         else:
-            self.num_key_value_heads = self.num_heads
-        self.num_key_value_groups = self.num_heads // self.num_key_value_heads
+            self.kv_head_num = self.num_heads
+        self.num_key_value_groups = self.num_heads // self.kv_head_num
 
         if (self.head_dim * self.num_heads) != self.hidden_size:
             raise ValueError(
@@ -357,10 +357,10 @@ class LlamaAttention(nn.Module):
                 f" and `num_heads`: {self.num_heads})."
             )
         self.num_heads = self.num_heads // self.world_size
-        self.num_key_value_heads = self.num_key_value_heads // self.world_size
+        self.kv_head_num = self.kv_head_num // self.world_size
         self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=self.attention_bias)
-        self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=self.attention_bias)
-        self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=self.attention_bias)
+        self.k_proj = nn.Linear(self.hidden_size, self.kv_head_num * self.head_dim, bias=self.attention_bias)
+        self.v_proj = nn.Linear(self.hidden_size, self.kv_head_num * self.head_dim, bias=self.attention_bias)
         self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=self.attention_bias)
         global rotary_emb
         rotary_emb = self._init_rope()
@@ -409,7 +409,7 @@ class LlamaAttention(nn.Module):
         bsz, q_len, _ = hidden_states.size()
 
         if self.pretraining_tp > 1:
-            key_value_slicing = (self.num_key_value_heads * self.head_dim) // self.pretraining_tp
+            key_value_slicing = (self.kv_head_num * self.head_dim) // self.pretraining_tp
             query_slices = self.q_proj.weight.split(
                 (self.num_heads * self.head_dim) // self.pretraining_tp, dim=0
             )
@@ -431,8 +431,8 @@ class LlamaAttention(nn.Module):
             value_states = self.v_proj(hidden_states)
 
         query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
-        key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
-        value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
+        key_states = key_states.view(bsz, q_len, self.kv_head_num, self.head_dim).transpose(1, 2)
+        value_states = value_states.view(bsz, q_len, self.kv_head_num, self.head_dim).transpose(1, 2)
 
         kv_seq_len = key_states.shape[-2]
         if past_key_value is not None:
@@ -721,9 +721,9 @@ class LlamaModel(LlamaPreTrainedModel):
         else: 
             self.rope_theta = 10000
         if hasattr(config, 'num_key_value_heads'):
-            self.num_key_value_heads = config.num_key_value_heads
+            self.kv_head_num = config.num_key_value_heads
         else:
-            self.num_key_value_heads = self.num_heads
+            self.kv_head_num = self.num_heads
         if self.world_size >= 2:
             self.rank = torch.distributed.get_rank()
             self.rankSize = torch.distributed.get_world_size()
@@ -831,7 +831,7 @@ class LlamaModel(LlamaPreTrainedModel):
     def set_ascend_param(self, isEncoder):
         acl_param = json.dumps({
             "headNum": self.num_heads // self.world_size, 
-            "kvHeadNum": self.num_key_value_heads // self.world_size, 
+            "kvHeadNum": self.kv_head_num // self.world_size, 
             "rmsNormEps": self.rms_norm_eps,
             "dk": self.headSize, 
             "layerNum": self.num_layers, 
@@ -1047,13 +1047,13 @@ class LlamaModel(LlamaPreTrainedModel):
             self.k_cache_input = torch.zeros(self.num_layers,
                                             self.batch_num,
                                             self.max_sequence_length,
-                                            self.hidden_size // self.world_size,
+                                            self.kv_head_num * self.headSize // self.world_size,
                                             dtype=torch.float16,
                                             device="npu")
             self.v_cache_input = torch.zeros(self.num_layers,
                                             self.batch_num,
                                             self.max_sequence_length,
-                                            self.hidden_size // self.world_size,
+                                            self.kv_head_num * self.headSize // self.world_size,
                                             dtype=torch.float16,
                                             device="npu")
     
