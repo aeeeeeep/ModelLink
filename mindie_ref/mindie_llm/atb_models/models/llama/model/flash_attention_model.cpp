@@ -61,10 +61,12 @@ void FlashAttentionModel::Param::FromString(const std::string &param)
     nlohmann::json paramJson = nlohmann::json::parse(param);
     rmsNormEps = paramJson["rmsNormEps"].get<double>();
     headNum = paramJson["headNum"].get<int>();
+    kvHeadNum = paramJson["kvHeadNum"].get<int>();
     dk = paramJson["dk"].get<int>();
     layerNum = paramJson["layerNum"].get<int>();
     rank = paramJson["rank"].get<int>();
     rankSize = paramJson["rankSize"].get<int>();
+    isTriuMask = paramJson["isTriuMask"].get<int>();
     backend = paramJson["backend"].get<std::string>();
     quantModel = paramJson["quantModel"].get<bool>();
     sparseModel = paramJson["sparseModel"].get<bool>();
@@ -99,7 +101,8 @@ void FlashAttentionModel::Param::FromString(const std::string &param)
     }
 
     ATB_LOG(INFO) << "Llama FlashAttentionModel param rmsNormEps:" << rmsNormEps << ", headNum:" << headNum
-                  << ", dk:" << dk << ", layerNum:" << layerNum << ", rank:" << rank << ", rankSize:" << rankSize;
+                  << ", kvHeadNum:" << kvHeadNum << ", dk:" << dk << ", layerNum:" << layerNum << ", rank:" 
+                  << rank << ", rankSize:" << rankSize;
 }
 
 FlashAttentionModel::FlashAttentionModel(
@@ -205,9 +208,11 @@ int64_t FlashAttentionModel::BuildGraph()
             atb_speed::llama::FlashAttentionLayerParam floatModelParam;
             floatModelParam.rmsNormEps = param_.rmsNormEps;
             floatModelParam.headNum = param_.headNum;
+            floatModelParam.kvHeadNum = param_.kvHeadNum;
             floatModelParam.dk = param_.dk;
             floatModelParam.model = "llama13b";
             floatModelParam.rank = param_.rank;
+            floatModelParam.rankSize = param_.rankSize;
             floatModelParam.rankSize = param_.rankSize;
             floatModelParam.backend = param_.backend;
             floatModelParam.quantModel = false;
