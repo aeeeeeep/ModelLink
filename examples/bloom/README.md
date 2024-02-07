@@ -58,8 +58,8 @@ pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 安装加速库
-git clone https://gitee.com/ascend/AscendSpeed.git
-cd AscendSpeed
+git clone https://gitee.com/ascend/ModelLink.git
+cd ModelLink
 pip install -r requirements.txt 
 pip3 install -e .
 cd ..
@@ -226,8 +226,8 @@ Bloom-176B 训练的硬件配置:
 1. 将仓库拉取到个人服务器
 
 ```shell
-git clone https://gitee.com/ascend/AscendSpeed.git
-cd AscendSpeed
+git clone https://gitee.com/ascend/ModelLink.git
+cd ModelLink
 ```
 
 2. 搭建环境
@@ -270,7 +270,7 @@ wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer_config.json
 cd ..
 ```
 
-将权重格式从 huggingface 格式转换为 AscendSpeed 格式：
+将权重格式从 huggingface 格式转换为 ModelLink 格式：
 
 ```shell
 #!/bin/bash
@@ -278,7 +278,7 @@ cd ..
 SCRIPT_PATH=./tools/ckpt_convert/bloom/convert_weights_from_huggingface.py
 python $SCRIPT_PATH \
     --input-model-dir "your huggingface checkpoint path" \
-    --output-model-dir "your ascendspeed checkpoint path" \
+    --output-model-dir "your ModelLink checkpoint path" \
     --tensor-model-parallel-size 8 \
     --pipeline-model-parallel-size 12 \
     --type 176B \
@@ -361,8 +361,8 @@ NPU vs 参考 loss
 
 ## 推理
 
-AscendSpeed 支持 BLOOM 176B的在线文本生成推理
-We support AscendSpeed Inference for text generation with BLOOM 176B (deepspeed or megatron).
+ModelLink 支持 BLOOM 176B的在线文本生成推理
+We support ModelLink Inference for text generation with BLOOM 176B (deepspeed or megatron).
 
 ### deepspeed_pipeline
 ```text
