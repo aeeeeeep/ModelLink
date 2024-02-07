@@ -112,11 +112,11 @@ protected:
     void ClearInternalTensors();
     atb::Tensor MallocInternalTensor(size_t nodeId, size_t outTensorId, const atb::TensorDesc &tensorDesc);
     void FreeInternalTensor(void *tensorDeviceData);
-    std::string GetModelTopoInfo();
     void GetModelTensorNameList(nlohmann::json &modelJson,
-        const std::map<atb::Tensor *, std::string> tensorNameMap);
+        std::map<atb::Tensor *, std::string> &tensorNameMap);
     void GetNodeTopoInfo(nlohmann::json &nodeJson, const Node &opNode,
         const std::map<atb::Tensor *, std::string> tensorNameMap);
+    std::string GetModelTopoInfo();
 
 protected:
     GetWorkspaceFunc getWorkSpaceFunc_;

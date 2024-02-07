@@ -482,7 +482,7 @@ void Model::FreeInternalTensor(void *tensorDeviceData)
     }
 }
 
-void Model::GetModelTensorNameList(nlohmann::json &modelJson, const std::map<atb::Tensor *, std::string> tensorNameMap)
+void Model::GetModelTensorNameList(nlohmann::json &modelJson, std::map<atb::Tensor *, std::string> &tensorNameMap)
 {
     std::string tensorName;
     for (size_t i = 0; i < graph_.weightTensors.size(); i++) {
@@ -507,7 +507,7 @@ void Model::GetModelTensorNameList(nlohmann::json &modelJson, const std::map<atb
     }
 
     for (size_t i = 0; i < graph_.internalTensors.size(); i++) {
-        tensorName = modelName_ + "_inernal_" + std::to_string(i);
+        tensorName = modelName_ + "_internal_" + std::to_string(i);
         modelJson["internalTensors"].emplace_back(tensorName);
         atb::Tensor &internalTensor = graph_.internalTensors[i];
         tensorNameMap[&internalTensor] = tensorName;
@@ -528,7 +528,7 @@ void Model::GetModelTensorNameList(nlohmann::json &modelJson, const std::map<atb
     }
 }
 
-void Model::GetNodeTopoInfo(nlohmann::json &nodeJson, const Node &opNode, 
+void Model::GetNodeTopoInfo(nlohmann::json &nodeJson, const Node &opNode,
     const std::map<atb::Tensor *, std::string> tensorNameMap)
 {
     nodeJson["opName"] = opNode.operation->GetName();
@@ -548,8 +548,7 @@ void Model::GetNodeTopoInfo(nlohmann::json &nodeJson, const Node &opNode,
     }
 }
 
-void Model::GetNodeTopoInfo(nlohmann::json &nodeJson, const Node &opNode,
-    const std::map<atb::Tensor *, std::string> tensorNameMap)
+std::string Model::GetModelTopoInfo()
 {
     nlohmann::json modelJson;
     modelJson["modelName"] = modelName_;
