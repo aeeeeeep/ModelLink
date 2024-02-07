@@ -51,9 +51,7 @@ from atb_llm.utils.layers import (
     TensorEmbedding,
     PositionRotaryEmbedding,
     TensorParallelHead,
-    AttentionMask,
-    _load_column_multi,
-    _load_row
+    AttentionMask
 )
 
 # from .configuration_qwen import QWenConfig
