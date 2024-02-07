@@ -1,121 +1,90 @@
 #!/bin/bash
-export LD_LIBRARY_PATH=/usr/local/lib:/home/anaconda3/lib:$LD_LIBRARY_PATH
-export HCCL_CONNECT_TIMEOUT=1600
-# Enable memory reuse in INF_NAN mode can reduce memory usage and achieve lossless performance
-export MULTI_STREAM_MEMORY_REUSE=1
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
+export CUDA_DEVICE_MAX_CONNECTIONS=1
+export HCCL_CONNECT_TIMEOUT=1200
 
-# If this environment variable is set, all nodes will compile the dataset,
-# which is suitable for cluster training.
-export AZUREML_EXPERIMENT_ID=0
-
-# output data path
-CHECKPOINT_PATH='./ckpt'
-TENSORBOARD_PATH='./tensorboard/'
-LOGS_PATH='./logs/'
-mkdir -p $LOGS_PATH
-
-# train parameter 
-MASTER_ADDR=localhost
-MASTER_PORT=12890
 GPUS_PER_NODE=8
+MASTER_ADDR=localhost
+MASTER_PORT=6001
 NNODES=12
 NODE_RANK=0
-PP_SIZE=12
-TP_SIZE=8
+WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
-MICRO_BATCH_SIZE=2
-GLOBAL_BATCH_SIZE=2048
 
-NLAYERS=70
-NHIDDEN=14336
-NHEADS=112
-SEQ_LEN=2048
+CKPT_SAVE_DIR="your model save ckpt path"
+DATA_PATH="your data path"
+TOKENIZER_PATH="your tokenizer path"
+CKPT_LOAD_DIR="your model load ckpt path"
 
-SAVE_INTERVAL=5000
 
-TRAIN_SAMPLES=220_000_000  # 450B tokens
-LR_DECAY_SAMPLES=200_000_000  # Decay for the first 410B tokens then continue at fixed --min-lr
-LR_WARMUP_SAMPLES=183_105  # 375M tokens
 
-# dataset path
-TOKENIZER_NAME_OR_PATH=/home/bloom_data/vocab_file/
-DATA_PATH=/home/bloom_data/oscar_data_1g/my-gpt2_text_document
+TP=8
+PP=12
 
-ZERO_STAGE=0 # important: bf16 must use z0! it implements its own zero stage 1 equivalent
-config_json="./ds_config.json"
+DISTRIBUTED_ARGS="
+    --nproc_per_node $GPUS_PER_NODE \
+    --nnodes $NNODES \
+    --node_rank $NODE_RANK \
+    --master_addr $MASTER_ADDR \
+    --master_port $MASTER_PORT
+"
 
-cat <<EOT > $config_json
-{
-  "train_micro_batch_size_per_gpu": $MICRO_BATCH_SIZE,
-  "train_batch_size": $GLOBAL_BATCH_SIZE,
-  "gradient_clipping": 1.0,
-  "zero_optimization": {
-    "stage": $ZERO_STAGE
-  },
-  "bf16": {
-    "enabled": true
-  },
-  "steps_per_print": 2000,
-  "wall_clock_breakdown": false
-}
-EOT
-
-DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
-
-TRANSFORMERS_OFFLINE=1  \
-    python -m torch.distributed.run $DISTRIBUTED_ARGS \
-    pretrain_bloom.py \
+GPT_ARGS="
+    --tensor-model-parallel-size ${TP} \
+    --pipeline-model-parallel-size ${PP} \
+    --sequence-parallel \
+    --num-layers 70 \
+    --hidden-size 14336 \
+    --load ${CKPT_LOAD_DIR} \
+    --num-attention-heads 112 \
     --tokenizer-type PretrainedFromHF \
+    --tokenizer-model ${TOKENIZER_MODEL} \
+    --tokenizer-name-or-path ${TOKENIZER_PATH} \
+    --vocab-file ${TOKENIZER_MODEL} \
+    --seq-length 2048 \
+    --max-position-embeddings 2048 \
+    --micro-batch-size 4 \
+    --global-batch-size 16 \
     --embed-layernorm \
-    --tokenizer-name-or-path $TOKENIZER_NAME_OR_PATH \
-    --data-path $DATA_PATH \
-    --pad-vocab-size-to 250880 \
-    --tensor-model-parallel-size $TP_SIZE \
-    --pipeline-model-parallel-size $PP_SIZE \
-    --num-layers $NLAYERS \
-    --hidden-size $NHIDDEN \
-    --num-attention-heads $NHEADS \
-    --seq-length $SEQ_LEN \
-    --max-position-embeddings $SEQ_LEN \
-    --micro-batch-size $MICRO_BATCH_SIZE \
-    --rampup-batch-size 192 16 9_765_625 \
-    --global-batch-size $GLOBAL_BATCH_SIZE \
-    --train-samples $TRAIN_SAMPLES \
-    --normalization LayerNorm \
+    --padded-vocab-size 250880 \
+    --make-vocab-size-divisible-by 1 \
+    --attention-softmax-in-fp32 \
+    --apply-query-key-layer-scaling \
+    --lr 1.2e-4 \
+    --train-iters 200 \
     --init-method-std 0.0048 \
-    --bf16 \
-    --seed 42 \
+    --hidden-dropout 0.0 \
     --position-embedding-type alibi \
-    --optimizer adam \
-    --adam-beta1 0.9 \
-    --adam-beta2 0.95 \
-    --adam-eps 1e-8 \
-    --lr 6e-5 \
+    --normalization LayerNorm \
+    --no-masked-softmax-fusion \
     --min-lr 6e-6 \
-    --lr-decay-style cosine \
-    --lr-decay-samples $LR_DECAY_SAMPLES \
-    --lr-warmup-samples $LR_WARMUP_SAMPLES \
-    --clip-grad 1.0 \
+    --lr-decay-iters 200 \
     --weight-decay 1e-1 \
+    --clip-grad 1.0 \
+    --adam-beta1 0.9 \
+    --initial-loss-scale 4096 \
+    --adam-beta2 0.95 \
+    --no-gradient-accumulation-fusion \
+    --no-load-optim \
+    --no-load-rng \
+    --bf16 \
+    --seed 42
+"
+
+DATA_ARGS="
+    --data-path $DATA_PATH
+    --split 100,0,0
+"
+
+OUTPUT_ARGS="
     --log-interval 1 \
-    --save $CHECKPOINT_PATH \
-    --save-interval $SAVE_INTERVAL \
+    --save-interval 10000 \
     --eval-interval 1000 \
     --eval-iters 1 \
-    --load $CHECKPOINT_PATH \
-    --data-impl mmap \
+"
+
+torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
+    $GPT_ARGS \
+    $DATA_ARGS \
+    $OUTPUT_ARGS \
     --distributed-backend nccl \
-    --deepspeed \
-    --deepspeed_config ${config_json} \
-    --zero-stage ${ZERO_STAGE} \
-    --deepspeed-activation-checkpointing  \
-    --sequence-parallel \
-    --checkpoint-activations \
-    --use-manual-layer-allocation \
-    --manual-layers 5,6,6,6,6,6,6,6,6,6,6,5 \
-    --no-add-gate \
-    --add-bias-linear \
-    --query-key-layer-scaling \
-    --no-attention-softmax-in-fp32 \
-    --no-untie-embeddings-and-output-weights
+    --save $CKPT_SAVE_DIR
