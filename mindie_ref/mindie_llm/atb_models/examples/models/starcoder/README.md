@@ -117,7 +117,7 @@ torchrun --nproc_per_node 8 --master_port 12345 -m examples.run_pa --model_path 
 - 待补充
 
 ## 性能测试
-- 待补充
+- 参考tests/modeltest/README.md
 
 ## 性能数据
 - 待补充

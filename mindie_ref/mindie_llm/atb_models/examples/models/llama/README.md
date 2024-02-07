@@ -39,7 +39,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 **获取模型仓代码**
 - 获取模型仓代码
     ```shell
-    git clone https://gitee.com/ascend/AscendSpeed.git
+    git clone https://gitee.com/ascend/ModelLink.git
     ```
 - 代码编译
     ```shell
@@ -228,10 +228,10 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 - 待补充
 
 ## 精度测试
-- 待补充
+- 参考tests/modeltest/README.md
 
 ## 性能测试
-- 待补充
+- 参考tests/modeltest/README.md
 
 ## 性能数据
 - 待补充

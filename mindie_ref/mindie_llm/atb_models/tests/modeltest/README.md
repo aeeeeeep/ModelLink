@@ -53,9 +53,12 @@ bash run.sh pa_fp16 full_BoolQ 1 starcoder /path 8
 ``` 
  
 
-## 300I DUO 运行操作说明
-
-- 对于startcoder设置环境变量，修改/core/starcoder.py中prepare_environ函数。
+## startcoder 特别运行操作说明
+- 修改base/model_test.py 第 `211` 行 
+```
+self.max_prefill_tokens = 8192
+```
+- 对于300I DUO设置环境变量，修改core/starcoder.py中prepare_environ函数。
 ```shell
 os.environ['ATB_LAUNCH_KERNEL_WITH_TILING'] = "1"
 os.environ['LCCL_ENABLE_FALLBACK'] = "0"
