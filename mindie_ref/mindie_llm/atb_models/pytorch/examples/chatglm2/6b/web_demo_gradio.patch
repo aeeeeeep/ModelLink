@@ -1,9 +1,9 @@
 ---
- web_demo.py | 91 ++++++++++++++++++++++++++++++++---------------------
- 1 file changed, 56 insertions(+), 35 deletions(-)
+ web_demo.py | 90 ++++++++++++++++++++++++++++++++---------------------
+ 1 file changed, 55 insertions(+), 35 deletions(-)
 
 diff --git a/web_demo.py b/web_demo.py
-index 1af24c9..e4e609e 100644
+index 1af24c9..ac7e2b4 100644
 --- a/web_demo.py
 +++ b/web_demo.py
 @@ -1,14 +1,9 @@
@@ -37,7 +37,7 @@ index 1af24c9..e4e609e 100644
      for response, history, past_key_values in model.stream_chat(tokenizer, input, history, past_key_values=past_key_values,
                                                                  return_past_key_values=True,
                                                                  max_length=max_length, top_p=top_p,
-@@ -79,30 +80,50 @@ def reset_state():
+@@ -79,30 +80,49 @@ def reset_state():
      return [], [], None
  
  
@@ -102,7 +102,6 @@ index 1af24c9..e4e609e 100644
 +
 +    demo.queue().launch(server_name='0.0.0.0', share=False, inbrowser=True)
 +else:
-+    torch.npu.set_device(args.device + torch.distributed.get_rank())
 +    history, past_key_values = [], None
 +    while True:
 +        object_list = [None] * 6
