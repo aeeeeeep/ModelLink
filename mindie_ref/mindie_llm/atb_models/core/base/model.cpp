@@ -499,8 +499,7 @@ void Model::MakeTensorNameMap(nlohmann::json &modelJson, std::map<atb::Tensor *,
     for (size_t i = 0; i < tensorList.size(); i++) {
         tensorName = modelName_ + tensorNameTagMap[tensorType] + std::to_string(i);
         modelJson[tensorType].emplace_back(tensorName);
-        atb::Tensor &tensor = tensorList[i];
-        tensorNameMap[&tensor] = tensorName;
+        tensorNameMap[&tensorList[i]] = tensorName;
     }
 }
 
