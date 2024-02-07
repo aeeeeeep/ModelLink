@@ -30,8 +30,8 @@ from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from ...activations import ACT2FN
 from ...modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, SequenceClassifierOutputWithPast
 from ...modeling_utils import PreTrainedModel
-from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
-from transformers.utils import (
+from ...pytorch_utils import ALL_LAYERNORM_LAYERS
+from ...utils import (
     add_start_docstrings,
     add_start_docstrings_to_model_forward,
     logging,
@@ -921,7 +921,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             logits = torch.cat(logits, dim=-1)
         else:
             logits = self.lm_head(hidden_states)
-        logits = logits.floate()
+        logits = logits.float()
 
         loss = None
         if labels is not None:
