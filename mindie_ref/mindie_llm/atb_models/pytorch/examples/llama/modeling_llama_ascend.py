@@ -1094,7 +1094,7 @@ class LlamaModel(LlamaPreTrainedModel):
 
     def update_ascend_mask(self, attention_mask, seq_length):
         if self.isTriuMask and self.full_flag:
-            self.attention_mask_max = self.get_triumask(self.mask_block_size).npu()
+            self.attention_mask_max = self.get_triumask(self.mask_block_size).npu().to(dtype=torch.float16)
             self.attention_mask_max_incre = torch.zeros((self.batch_num, 1, self.max_sequence_length), dtype=torch.float16).npu()
             if self.format_nz:
                 soc_version = torch_npu._C._npu_get_soc_version()
