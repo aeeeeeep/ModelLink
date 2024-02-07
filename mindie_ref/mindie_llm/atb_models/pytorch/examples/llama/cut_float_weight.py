@@ -76,23 +76,23 @@ if __name__ == "__main__":
     # the model size will be cut according to the world size in the model file
     if hasattr(model_config, 'num_key_value_heads'):
         num_key_value_heads = model_config.num_key_value_heads
-    else: 
+    else:
         num_key_value_heads = model_config.num_attention_heads
     if hasattr(model_config, 'pretraining_tp'):
         pretraining_tp = model_config.pretraining_tp
-    else: 
+    else:
         pretraining_tp = 1
     if hasattr(model_config, 'rope_scaling'):
         rope_scaling = model_config.rope_scaling
-    else: 
+    else:
         rope_scaling = None
     if hasattr(model_config, 'rope_theta'):
         rope_theta = model_config.rope_theta
-    else: 
+    else:
         rope_theta = 10000
     if hasattr(model_config, 'attention_bias'):
         attention_bias = model_config.attention_bias
-    else: 
+    else:
         attention_bias = False
     create_config = LlamaConfig(
             vocab_size=model_config.vocab_size,
