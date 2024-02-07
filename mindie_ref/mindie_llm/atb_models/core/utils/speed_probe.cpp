@@ -17,7 +17,7 @@
 
 namespace atb_speed {
 
-bool SpeedProbe::speedProbeIsReportModelTopoInfo(const std::string &modelName)
+bool SpeedProbe::IsReportModelTopoInfo(const std::string &modelName)
 {
     return false;
 }
