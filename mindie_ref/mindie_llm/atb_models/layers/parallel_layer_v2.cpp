@@ -107,7 +107,7 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
             matmulNode.outTensorIds = {param_.commParam.rankSize > 1 ? inteId : OUT_LINEAR};
         } else {
             atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
-            atb::infer::LinearParam matmulParam = {param_.transposeA, param_.transposeB, true};
+            atb::infer::LinearParam matmulParam;
             matmulParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
             matmulParam.transposeA = param_.transposeA;
             matmulParam.transposeB = param_.transposeB;

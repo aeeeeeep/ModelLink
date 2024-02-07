@@ -65,8 +65,8 @@ atb::Status CommonMlpQuant(const CommonMlpQuantParam& param, atb::Operation** op
     auto &mulNode = opGraph.nodes.at(nodeId++);
 
     atb::infer::LinearParam linearGateParam;
-    linearGateParam.transposeB = param.transpose;
     linearGateParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
+    linearGateParam.transposeB = param.transpose;
     CreateOperation(linearGateParam, &linearGateNode.operation);
     linearGateNode.inTensorIds = { IN_HIDDENSTATES_ID, IN_WEIGHT_GATE_ID, IN_LINEARBIASGATE, IN_MLPLINEARDEQSCALEGATE }; // quant
     linearGateNode.outTensorIds = { INTERMEDIATE_MATMUL_GATE_OUT_ND_ID };
@@ -78,8 +78,8 @@ atb::Status CommonMlpQuant(const CommonMlpQuantParam& param, atb::Operation** op
     swishNode.outTensorIds = { INTERMEDIATE_SWISH_OUT_ID };
 
 	atb::infer::LinearParam linearUpParam;
-    linearUpParam.transposeB = param.transpose;
     linearUpParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
+    linearUpParam.transposeB = param.transpose;
     CreateOperation(linearGateParam, &linearUpNode.operation);
     linearUpNode.inTensorIds = { IN_HIDDENSTATES_ID, IN_WEIGHT_UP_ID, IN_LINEARBIASUP, IN_MLPLINEARDEQSCALEUP };
     linearUpNode.outTensorIds = { INTERMEDIATE_MATMUL_UP_OUT_ND_ID };

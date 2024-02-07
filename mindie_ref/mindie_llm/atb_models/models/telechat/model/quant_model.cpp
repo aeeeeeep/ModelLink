@@ -231,7 +231,7 @@ int64_t QuantFAModel::BuildGraph()
     finalRmsNormNode.outTensors = { &graph_.internalTensors.at(finalRmsNormOutTensorId) };
 
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
-    atb::infer::LinearParam linearParam = { false, true, false };
+    atb::infer::LinearParam linearParam;
     linearParam.transposeB = false;
     linearParam.hasBias = false;
     CREATE_OPERATION(linearParam, &op);

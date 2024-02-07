@@ -73,7 +73,7 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
     if (!param_.isQuant) {
         ATB_LOG(INFO) << "ParallelLinearV2 >> is not Quant >> matmulNode";
         atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
-        atb::infer::LinearParam matmulParam = {param_.transposeA, param_.transposeB, false};
+        atb::infer::LinearParam matmulParam;
         matmulParam.transposeA = param_.transposeA;
         matmulParam.transposeB = param_.transposeB;
         matmulParam.hasBias = false;

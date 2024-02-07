@@ -41,7 +41,7 @@ atb::Status ParallelLinearBase(const ParallelParam &param_, atb::Operation **ope
     size_t nodeId = 0;
     atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
 
-    atb::infer::LinearParam matmulParam = {param_.transposeA, param_.transposeB, false};
+    atb::infer::LinearParam matmulParam;
     matmulParam.transposeA = param_.transposeA;
     matmulParam.transposeB = param_.transposeB;
     matmulParam.hasBias = false;
