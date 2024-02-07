@@ -344,7 +344,7 @@ class LlamaAttention(nn.Module):
         self.hidden_size = config.hidden_size
         self.num_heads = config.num_attention_heads
         self.head_dim = self.hidden_size // self.num_heads
-        self.max_position_embeddings = config.max_position_embeddings
+        self.max_position_embeddings = MAX_SEQ_LENGTH
         if hasattr(config, 'num_key_value_heads'):
             self.num_key_value_heads = config.num_key_value_heads
         else:
@@ -362,11 +362,12 @@ class LlamaAttention(nn.Module):
         self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=self.attention_bias)
         self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=self.attention_bias)
         self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=self.attention_bias)
-        self._init_rope()
+        global rotary_emb
+        rotary_emb = self._init_rope()
 
     def _init_rope(self):
         if self.rope_scaling is None:
-            self.rotary_emb = LlamaRotaryEmbedding(
+            rotary_emb = LlamaRotaryEmbedding(
                 self.head_dim,
                 max_position_embeddings=self.max_position_embeddings,
                 base=self.rope_theta,
@@ -375,14 +376,14 @@ class LlamaAttention(nn.Module):
             scaling_type = self.rope_scaling["type"]
             scaling_factor = self.rope_scaling["factor"]
             if scaling_type == "linear":
-                self.rotary_emb = LlamaLinearScalingRotaryEmbedding(
+                rotary_emb = LlamaLinearScalingRotaryEmbedding(
                     self.head_dim,
                     max_position_embeddings=self.max_position_embeddings,
                     scaling_factor=scaling_factor,
                     base=self.rope_theta,
                 )
             elif scaling_type == "dynamic":
-                self.rotary_emb = LlamaDynamicNTKScalingRotaryEmbedding(
+                rotary_emb = LlamaDynamicNTKScalingRotaryEmbedding(
                     self.head_dim,
                     max_position_embeddings=self.max_position_embeddings,
                     scaling_factor=scaling_factor,
@@ -390,6 +391,7 @@ class LlamaAttention(nn.Module):
                 )
             else:
                 raise ValueError(f"Unknown RoPE scaling type {scaling_type}")
+        return rotary_emb
 
     def _shape(self, tensor: torch.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
@@ -435,7 +437,7 @@ class LlamaAttention(nn.Module):
         kv_seq_len = key_states.shape[-2]
         if past_key_value is not None:
             kv_seq_len += past_key_value[0].shape[-2]
-        cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
+        cos, sin = rotary_emb(value_states, seq_len=kv_seq_len)
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
         # [bsz, nh, t, hd]
 
@@ -757,8 +759,7 @@ class LlamaModel(LlamaPreTrainedModel):
         self.post_init()
 
         x = torch.zeros(1).npu()
-        self._init_rope()
-        cosTable, sinTable = self.rotary_emb.forward(x, 2048)
+        cosTable, sinTable = rotary_emb.forward(x, 2048)
         self.cosTable, self.sinTable = cosTable.npu().to(dtype=torch.float16), sinTable.npu().to(dtype=torch.float16)
 
         self.tag_mask = torch.ones((1, 20), dtype=torch.float16).npu()
@@ -826,33 +827,6 @@ class LlamaModel(LlamaPreTrainedModel):
 
         # initialize ascend model inputs and parameters
         self.init_ascend_operations()
-    
-    def _init_rope(self):
-        if self.rope_scaling is None:
-            self.rotary_emb = LlamaRotaryEmbedding(
-                self.headSize,
-                max_position_embeddings=self.max_sequence_length,
-                base=self.rope_theta,
-            )
-        else:
-            scaling_type = self.rope_scaling["type"]
-            scaling_factor = self.rope_scaling["factor"]
-            if scaling_type == "linear":
-                self.rotary_emb = LlamaLinearScalingRotaryEmbedding(
-                    self.headSize,
-                    max_position_embeddings=self.max_sequence_length,
-                    scaling_factor=scaling_factor,
-                    base=self.rope_theta,
-                )
-            elif scaling_type == "dynamic":
-                self.rotary_emb = LlamaDynamicNTKScalingRotaryEmbedding(
-                    self.headSize,
-                    max_position_embeddings=self.max_sequence_length,
-                    scaling_factor=scaling_factor,
-                    base=self.rope_theta,
-                )
-            else:
-                raise ValueError(f"Unknown RoPE scaling type {scaling_type}")
 
     def set_ascend_param(self, isEncoder):
         acl_param = json.dumps({
