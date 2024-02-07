@@ -42,6 +42,9 @@ atb::Status ParallelLinearBase(const ParallelParam &param_, atb::Operation **ope
     atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
 
     atb::infer::LinearParam matmulParam = {param_.transposeA, param_.transposeB, false};
+    matmulParam.transposeA = param_.transposeA;
+    matmulParam.transposeB = param_.transposeB;
+    matmulParam.hasBias = false;
     CREATE_OPERATION(matmulParam, &matmulNode.operation);
     matmulNode.inTensorIds = {config.IN_INPUT, config.IN_WEIGHT};
     matmulNode.outTensorIds = {config.INTERMIDATE_MATMULOUT};

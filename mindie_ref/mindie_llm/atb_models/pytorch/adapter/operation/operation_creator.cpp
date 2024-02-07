@@ -108,8 +108,15 @@ static atb::Operation *NormOperationCreate(const nlohmann::json &paramJson) { re
 static atb::Operation *LinearOperationCreate(const nlohmann::json &paramJson)
 {
     atb::infer::LinearParam param;
-    param.transposeA = paramJson["transposeA"].get<bool>();
-    param.transposeB = paramJson["transposeB"].get<bool>();
+    if (paramJson.contains("linearType")) {
+        param.linearType = atb::infer::LinearType(paramJson["linearType"].get<int32_t>());
+    }
+    if (paramJson.contains("transposeA")) {
+        param.transposeA = paramJson["transposeA"].get<bool>();
+    }
+    if (paramJson.contains("transposeB")) {
+        param.transposeB = paramJson["transposeB"].get<bool>();
+    }
     if (paramJson.contains("hasBias")) {
         param.hasBias = paramJson["hasBias"].get<bool>();
     }

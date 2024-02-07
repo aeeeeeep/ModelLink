@@ -269,7 +269,7 @@ atb::Status DecoderPALayer(const LayerParamPa &param, atb::Operation **operation
     mlpParam.rank = param.rank;
     mlpParam.rankSize = param.rankSize;
     mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
-    mlpParam.transposeB = false;
+    mlpParam.transposeB = true;
     mlpParam.isBias = false;
     mlpParam.isPack = true;
     atb_speed::common::MlpGateLayer(mlpParam, &mlpNode.operation);

@@ -71,7 +71,8 @@ atb::Status FusionPALayer(const FusionPALayerParam &param, atb::Operation **oper
     inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT};
     inputNormNode.outTensorIds = {INTERMIDATE_INPUTNORMOUT};
 
-    atb::infer::LinearParam linearParam = {false, false, false};
+    atb::infer::LinearParam linearParam;
+    linearParam.hasBias = false;
     CreateOperation(linearParam, &mixdQLinearNode.operation);
     mixdQLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_QMIXDWEIGHT};
     mixdQLinearNode.outTensorIds = {INTERMIDATE_MIXEDQ};

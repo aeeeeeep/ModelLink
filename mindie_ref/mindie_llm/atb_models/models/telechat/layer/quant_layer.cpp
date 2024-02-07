@@ -121,7 +121,9 @@ atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operat
 
     ATB_LOG(INFO) << "Linear Q";
     if (param.isFloatQueryLayer) {
-        atb::infer::LinearParam linearQParam = { false, true, false };
+        atb::infer::LinearParam linearQParam;
+        linearQParam.transposeB = false;
+        linearQParam.hasBias = false;
         CreateOperation(linearQParam, &mixedQLinearNode.operation);
         mixedQLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_QMIXEDWEIGHT };
         mixedQLinearNode.outTensorIds = { INTERNAL_QMIXEDLINEAROUT };
@@ -134,7 +136,9 @@ atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operat
 
     ATB_LOG(INFO) << "Linear KV";
     if (param.isFloatKVLayer) {
-        atb::infer::LinearParam linearKVParam = { false, true, false };
+        atb::infer::LinearParam linearKVParam;
+        linearKVParam.transposeB = false;
+        linearKVParam.hasBias = false;
         CreateOperation(linearKVParam, &mixedKVLinearNode.operation);
         mixedKVLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_KVMIXEDWEIGHT };
         mixedKVLinearNode.outTensorIds = { INTERNAL_KVMIXEDLINEAROUT };

@@ -37,7 +37,9 @@ atb::Status MlpLayerBase(const MlpParam &param, atb::Operation **operation, T co
     size_t nodeId = 0;
 
     auto &matmulUpNode = opGraph.nodes.at(nodeId++);
-    atb::infer::LinearParam matmulUpParam = { false, param.transpose, param.isBias };
+    atb::infer::LinearParam matmulUpParam;
+    matmulUpParam.transposeB = param.transpose;
+    matmulUpParam.hasBias = param.isBias;
     CREATE_OPERATION(matmulUpParam, &matmulUpNode.operation);
     if (param.isBias) {
         matmulUpNode.inTensorIds = { config.IN_HIDDENSTATES_ID, config.IN_WEIGHT_UP_ID, config.IN_BIAS_UP_ID };

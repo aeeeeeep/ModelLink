@@ -204,7 +204,7 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
         selfOutLinearParam.commParam.rank = param.rank;
         selfOutLinearParam.commParam.rankSize = param.rankSize;
         selfOutLinearParam.isBias = true;
-        selfOutLinearParam.transposeB = false;
+        selfOutLinearParam.transposeB = true;
         atb_speed::common::RowParallelLinearV2(selfOutLinearParam, &selfOutLinearNode.operation);
         selfOutLinearNode.inTensorIds = {INTERMIDATE_SELFOUT, IN_SELFOUTLINEAR_WEIGHT,
                                         IN_SELFOUTLINEAR_BIAS, IN_PLACE_HOLDER, IN_PLACE_HOLDER,
@@ -268,7 +268,7 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
         mlpParam.commDownParam.rank = param.rank;
         mlpParam.commDownParam.rankSize = param.rankSize;
         mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_GELU;
-        mlpParam.transposeB = false;
+        mlpParam.transposeB = true;
         mlpParam.isBias = true;
         mlpParam.noGate = true;
         mlpParam.isPack = false;

@@ -59,7 +59,7 @@ atb::Status MlpAdapter(const MlpParam &param, atb::Operation **operation)
     auto &mulNode = opGraph.nodes.at(nodeId++);
     auto &matmulDownNode = opGraph.nodes.at(nodeId++);
 
-    atb::infer::LinearParam matmulGateParam = { false, false, true };
+    atb::infer::LinearParam matmulGateParam;
     CREATE_OPERATION(matmulGateParam, &matmulGateNode.operation);
     matmulGateNode.inTensorIds = { IN_HIDDENSTATES, IN_WEIGHT_GATE, IN_BIAS_GATE };
     matmulGateNode.outTensorIds = { INTERMEDIATE_MATMUL_GATE_OUT };
@@ -70,7 +70,7 @@ atb::Status MlpAdapter(const MlpParam &param, atb::Operation **operation)
     swishNode.inTensorIds = { INTERMEDIATE_MATMUL_GATE_OUT };
     swishNode.outTensorIds = { INTERMEDIATE_SWISH_OUT };
 
-    atb::infer::LinearParam matmulUpParam = { false, false, true };
+    atb::infer::LinearParam matmulUpParam;
     CREATE_OPERATION(matmulUpParam, &matmulUpNode.operation);
     matmulUpNode.inTensorIds = { IN_HIDDENSTATES, IN_WEIGHT_UP, IN_BIAS_UP };
     matmulUpNode.outTensorIds = { INTERMEDIATE_MATMUL_UP_OUT };
@@ -81,7 +81,7 @@ atb::Status MlpAdapter(const MlpParam &param, atb::Operation **operation)
     mulNode.inTensorIds = { INTERMEDIATE_SWISH_OUT, INTERMEDIATE_MATMUL_UP_OUT };
     mulNode.outTensorIds = { INTERMEDIATE_MUL_OUT };
 
-    atb::infer::LinearParam matmulDownParam = { false, false, true };
+    atb::infer::LinearParam matmulDownParam;
     CREATE_OPERATION(matmulDownParam, &matmulDownNode.operation);
     matmulDownNode.inTensorIds = { INTERMEDIATE_MUL_OUT, IN_WEIGHT_DOWN, IN_BIAS_DOWN };
     matmulDownNode.outTensorIds = { OUT_MLP_OUT };

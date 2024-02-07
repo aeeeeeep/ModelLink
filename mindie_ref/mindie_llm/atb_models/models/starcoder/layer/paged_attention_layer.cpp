@@ -114,7 +114,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     inputLayerNormNode.inTensorIds = {IN_HIDDENSTATES, IN_LN_1_WEIGTH, IN_LN_1_BIAS};
     inputLayerNormNode.outTensorIds = {INTERMIDATE_INPUTNORMOUT};
 
-    atb::infer::LinearParam linearBiasParam = { false, false, true };
+    atb::infer::LinearParam linearBiasParam;
     CreateOperation(linearBiasParam, &cAttnLinearNode.operation);
     cAttnLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_C_ATTN_WEIGHT, IN_C_ATTN_BIAS };
     cAttnLinearNode.outTensorIds = { INTERMIDATE_QKV };
@@ -219,7 +219,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     mlpParam.commDownParam.rankSize = param.rankSize;
     mlpParam.commDownParam.backend = param.backend;
     mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_GELU;
-    mlpParam.transposeB = false;
+    mlpParam.transposeB = true;
     mlpParam.isBias = true;
     mlpParam.isPack = false;
     mlpParam.noGate = true;

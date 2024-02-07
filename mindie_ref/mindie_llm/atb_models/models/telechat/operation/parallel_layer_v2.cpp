@@ -74,6 +74,9 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
         ATB_LOG(INFO) << "ParallelLinearV2 >> is not Quant >> matmulNode";
         atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
         atb::infer::LinearParam matmulParam = {param_.transposeA, param_.transposeB, false};
+        matmulParam.transposeA = param_.transposeA;
+        matmulParam.transposeB = param_.transposeB;
+        matmulParam.hasBias = false;
         CREATE_OPERATION(matmulParam, &matmulNode.operation);
         matmulNode.inTensorIds = {IN_INPUT, IN_WEIGHT};
         matmulNode.outTensorIds = {(param_.commParam.rankSize > 1 || param_.isBias) ? inteId : OUT_LINEAR};
@@ -155,9 +158,9 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
                     outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[1];
                 }
                 if (param_.transposeB) {
-                    outTensorDescs.at(0).shape.dims[dimNum - 1] = inTensorDescs.at(1).shape.dims[1];
-                } else {
                     outTensorDescs.at(0).shape.dims[dimNum - 1] = inTensorDescs.at(1).shape.dims[0];
+                } else {
+                    outTensorDescs.at(0).shape.dims[dimNum - 1] = inTensorDescs.at(1).shape.dims[1];
                 }
             }
             return atb::NO_ERROR;

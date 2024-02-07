@@ -119,7 +119,8 @@ atb::Status LayerParallelFlashAttentionOperation(const LayerParallelFlashAttenti
     inputNormMlpNode.inTensorIds = {IN_HIDDEN_STATES, IN_NORM_MLP_WEIGHT, IN_NORM_MLP_BIAS};
     inputNormMlpNode.outTensorIds = {INTERMIDATE_INPUTNORM_OUT_MLP};
 
-    atb::infer::LinearParam fusedQkvLinearParam = {false, false, false};
+    atb::infer::LinearParam fusedQkvLinearParam;
+    fusedQkvLinearParam.hasBias = false;
     CreateOperation(fusedQkvLinearParam, &fusedQkvLinearNode.operation);
     fusedQkvLinearNode.inTensorIds = {INTERMIDATE_INPUTNORM_OUT_ATTN, IN_QKV_FUSED_WEIGHT};
     fusedQkvLinearNode.outTensorIds = {INTERMIDATE_FUSED_QKV};
@@ -242,7 +243,7 @@ atb::Status LayerParallelFlashAttentionOperation(const LayerParallelFlashAttenti
 
     // MlpGateLayerV2
     atb_speed::common::MlpGateParamV2 mlpParam;
-    mlpParam.transposeB = false;
+    mlpParam.transposeB = true;
     mlpParam.isBias = false;
     mlpParam.isQuant = false;
     mlpParam.isSparse = false;

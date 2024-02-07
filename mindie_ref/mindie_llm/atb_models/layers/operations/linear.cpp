@@ -61,8 +61,6 @@ atb::Status CreateFusionLinear(const FusionLinearParam &param, atb::Operation **
         // linear
         atb::Node &linearNode = opGraph.nodes.at(nodeId++);
         atb::infer::LinearParam linearParam;
-        linearParam.transposeA = false;
-        linearParam.transposeB = false;  // 是否不转置B矩阵: false => 需要转置矩阵B
         linearParam.hasBias = false;
         CREATE_OPERATION(linearParam, &linearNode.operation);
         linearNode.inTensorIds = {LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT};
@@ -72,7 +70,7 @@ atb::Status CreateFusionLinear(const FusionLinearParam &param, atb::Operation **
         atb::Node &linearQuantNode = opGraph.nodes.at(nodeId++);
         atb::infer::LinearQuantParam linearQuantParam;
         linearQuantParam.transposeA = false;
-        linearQuantParam.transposeB = true;  // 是否转置B矩阵: true => 需要转置矩阵B
+        linearQuantParam.transposeB = true;
         linearQuantParam.hasBias = false;
         CREATE_OPERATION(linearQuantParam, &linearQuantNode.operation);
         linearQuantNode.inTensorIds = {
