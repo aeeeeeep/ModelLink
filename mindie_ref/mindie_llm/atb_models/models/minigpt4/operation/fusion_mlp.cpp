@@ -64,7 +64,7 @@ atb::Status FusionMlp(const FusionMlpParam &param, atb::Operation **operation)
 
     atb::infer::LinearParam matmulGateParam;
     matmulGateParam.transposeB = param.transpose;
-    matmulGateParam.hasBias = false
+    matmulGateParam.hasBias = false;
     CREATE_OPERATION(matmulGateParam, &matmulGateUpNode.operation);
     matmulGateUpNode.inTensorIds = {IN_HIDDENSTATES_ID, IN_WEIGHT_GATE_UP_ID};
     matmulGateUpNode.outTensorIds = {INTERMEDIATE_MATMUL_GATEUP_OUT_ID};
