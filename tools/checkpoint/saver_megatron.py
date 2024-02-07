@@ -305,8 +305,7 @@ def save_model_checkpoint(queue, args):
                         2,
                         3).reshape(
                         w_s0, w_s1).contiguous(),)
-            # Split up the parallel tensors
-            qkv_weight = torch.chunk(msg.pop("qkv weight"), args.target_tensor_parallel_size, dim=0)
+            # Split up the parallel tensors·
             dense_weight = torch.chunk(msg.pop("dense weight"), args.target_tensor_parallel_size, dim=1)
             mlp_l1_weight = torch.chunk(msg.pop("mlp l1 weight"), args.target_tensor_parallel_size, dim=1)
 
