@@ -644,7 +644,6 @@ class QWenModel(QWenPreTrainedModel):
                                   input_lengths: torch.Tensor,
                                   max_seq_len: int,
                                   lm_head_indices: Optional[torch.Tensor] = None):
-        logger.info(f"{position_ids = }")
         cos_embed, sin_embed = self.rotary_emb.get_cos_sin_total(
             position_ids, max_seq_len, dtype=torch.float32
         )
@@ -835,14 +834,10 @@ class FlashQwenForCausalLM(QWenPreTrainedModel):
             is_norm=True
         )
 
-        logger.info(f"{config.bf16 = }")
-        logger.info(f"{config.fp16 = }")
         if config.bf16:
-            logger.info(">>>>bf16")
             self.transformer.bfloat16()
             self.lm_head.bfloat16()
         if config.fp16:
-            logger.info(">>>>fp16")
             self.transformer.half()
             self.lm_head.half()
 
