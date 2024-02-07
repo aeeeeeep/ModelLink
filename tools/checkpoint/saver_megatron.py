@@ -288,7 +288,23 @@ def save_model_checkpoint(queue, args):
             if md.linear_bias:
                 dense_bias = msg.pop("dense bias")
                 mlp_l1_bias = msg.pop("mlp l1 bias")
-
+            # kv head
+            tp = args.target_tensor_parallel_size
+            np = margs.num_attention_heads // tp
+            gp = (margs.num_query_groups if margs.group_query_attention else margs.num_attention_heads) // tp
+            repeats = np // gp
+            hn = margs.kv_channels
+            qkv_weight_tuple = torch.chunk(msg.pop("qkv weight"), args.target_tensor_parallel_size, dim=0)
+            qkv_weight = ()
+            for i in range(len(qkv_weight_tuple)):
+                w_s0, w_s1 = qkv_weight_tuple[i].shape
+                qkv_weight += (
+                    qkv_weight_tuple[i].reshape(repeats + 2, gp, hn, qkv_weight_tuple[i].shape[1]).contiguous().permute(
+                        1,
+                        0,
+                        2,
+                        3).reshape(
+                        w_s0, w_s1).contiguous(),)
             # Split up the parallel tensors
             qkv_weight = torch.chunk(msg.pop("qkv weight"), args.target_tensor_parallel_size, dim=0)
             dense_weight = torch.chunk(msg.pop("dense weight"), args.target_tensor_parallel_size, dim=1)
