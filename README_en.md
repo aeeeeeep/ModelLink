@@ -176,25 +176,25 @@ Coming soon ...
       <td>7B</td>
       <td>1x8</td>
       <td>FP16</td>
-      <td> 3600 </td>
+      <td> 3763 </td>
       <td> 3804 </td>
-      <td> <a href="sources/images/llama7b-loss-with-weight.png">Loss</a> </td>
-      <td> <a href="examples/llama/pretrain_llama_7b_ptd.sh">Train</a> </td>
+      <td> <a href="sources/images/llama7b_loss.png">Loss</a> </td>
+      <td> <a href="examples/llama/pretrain_llama_7B_zero_8p.sh">Train</a> </td>
     </tr>
     <tr>
       <td>13B</td>
       <td>1x8</td>
       <td>FP16</td>
-      <td> 1895 </td>
+      <td> 1894 </td>
       <td> 2012 </td>
-      <td> <a href="sources/images/llama13b-loss-with-weight.png">Loss</a> </td>
-      <td> <a href="examples/llama/pretrain_llama_13b_ptd.sh">Train</a> </td>
+      <td> <a href="sources/images/llama13b_loss.png">Loss</a> </td>
+      <td> <a href="examples/llama/pretrain_llama_13B_zero_8p.sh">Train</a> </td>
     </tr>
     <tr>
         <td>33B</td>
         <td>4x8</td>
         <td>FP16</td>
-        <td>635 </td>
+        <td>621 </td>
         <td>776 </td>
         <td>
         <a href="sources/images/llama/llama33b-layer20-loss-with-weight.png">Loss</a> </td>
@@ -208,7 +208,7 @@ Coming soon ...
       <td>BF16 </td>
       <td> 348 </td>
       <td> 426 </td>
-      <td> <a href="sources/images/llama65b-shape_layer10_loss-with-weight.png">Loss</a> </td>
+      <td> <a href="sources/images/llama65b_bf_loss.png">Loss</a> </td>
       <td> <a href="examples/llama/pretrain_llama_65B_ptd_32p.sh">Train</a> </td>
     </tr>
     <tr>
@@ -216,7 +216,7 @@ Coming soon ...
       <td>7B</td>
       <td>1x8</td>
       <td>BF16 </td>
-      <td> 2681</td>
+      <td> 2662</td>
       <td> 2884 </td>
       <td> <a href="sources/images/llama2/llama2-7b-tp8pp1mbs4gbs16-cann1115-Megatron-GPU-loss-releative.png">Loss</a> </td>
       <td> <a href="examples/llama2/pretrain_llama2_7b_ptd.sh">Train</a> </td>
@@ -225,7 +225,7 @@ Coming soon ...
       <td>13B</td>
       <td>1x8</td>
       <td>BF16 </td>
-      <td> 1485 </td>
+      <td> 1550 </td>
       <td> 1750 </td>
       <td> <a href="/sources/images/llama2/llama2_13b_bf16_loss_absolute.png">Loss</a> </td>
       <td> <a href="examples/llama2/pretrain_llama2_13B_ptd_8p.sh">Train</a> </td>
@@ -237,7 +237,7 @@ Coming soon ...
       <td> 690 </td>
       <td> 796 </td>
       <td> <a href="sources/images/llama2/llama2_34b_bf16_layer12_loss_compare.png">Loss</a> </td>
-      <td> <a href="examples/llama2/pretrain_llama2_34B_ptd.sh">Train</a> </td>
+      <td> <a href="examples/llama2/pretrain_llama2_34B_ptd_16p.sh">Train</a> </td>
     </tr>
     <tr>
       <td>70B</td>
@@ -717,7 +717,7 @@ pretrained_model_name_or_path(`str`, *optional*, defaults to None):
   <tbody>
     <tr>
       <td><a href="https://huggingface.co/datasets/lukaemon/bbh">BBH</a></td>
-      <td>Test</td>
+      <td>test</td>
       <th>Llama7b</th>
       <td>0.334</td>
       <td>0.333</td>
@@ -725,7 +725,7 @@ pretrained_model_name_or_path(`str`, *optional*, defaults to None):
     </tr>
     <tr>
       <td><a href="https://huggingface.co/datasets/lighteval/agi_eval_en">AGIEval</a></td>
-      <td>Test</td>
+      <td>test</td>
       <th>Llama7b</th>
       <td>0.210</td>
       <td>0.210</td>
@@ -733,7 +733,7 @@ pretrained_model_name_or_path(`str`, *optional*, defaults to None):
     </tr>
     <tr>
       <td><a href="https://huggingface.co/datasets/openai_humaneval">HumanEval</a></td>
-      <td>Test</td>
+      <td>test</td>
       <th>Llama7b</th>
       <td>0.128</td>
       <td>0.128</td>
@@ -749,7 +749,7 @@ pretrained_model_name_or_path(`str`, *optional*, defaults to None):
     </tr>
     <tr>
       <td><a href="https://huggingface.co/datasets/gsm8k">GSM8K</a></td>
-      <td>Test</td>
+      <td>test</td>
       <th>Llama7b</th>
       <td>0.102</td>
       <td>0.103</td>
@@ -757,7 +757,7 @@ pretrained_model_name_or_path(`str`, *optional*, defaults to None):
     </tr>
     <tr>
       <td><a href="https://huggingface.co/datasets/ceval/ceval-exam">CEval</a></td>
-      <td>Validation</td>
+      <td>val</td>
       <th>Llama7b</th>
       <td>0.408</td>
       <td>0.404</td>
