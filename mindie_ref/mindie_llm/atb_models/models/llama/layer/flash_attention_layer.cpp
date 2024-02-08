@@ -25,7 +25,7 @@ const int ATTENTION_DIM_2 = 2;
 const int ATTENTION_DIM_3 = 3;
 
 void ReshapeHeads(const atb::Dims &oldShape, atb::Dims &newShape)
-{   
+{
     newShape.dimNum = 2;
     newShape.dims[0] = oldShape.dims[0] * oldShape.dims[1];
     if (oldShape.dimNum == 3) {
@@ -199,7 +199,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         mixdVLinearNode.outTensorIds = { INTERMIDATE_MIXEDV };
     }
     // GQA reshape -> [b*s, hd]
-    if (param.kvHeadNum < param.headNum){
+    if (param.kvHeadNum < param.headNum) {
         atb::infer::RopeParam ropeFusionParam;
         ropeFusionParam.rotaryCoeff = 2;
         CREATE_OPERATION(ropeFusionParam, &ropeNode.operation);
@@ -253,7 +253,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
     selfAttentionKvCacheNode.outTensorIds = { INTERMIDATE_SELFOUT };
     selfAttentionKvCacheNode.inTensorReshapeFuncs.resize(selfAttentionKvCacheNode.inTensorIds.size());
     // GQA reshape -> [b*s, hd]
-    if (param.kvHeadNum < param.headNum){
+    if (param.kvHeadNum < param.headNum) {
         selfAttentionKvCacheNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
             ReshapeHeads(oldShape, newShape);
         };
@@ -326,7 +326,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
     selfResidualAddNode.inTensorIds = { IN_HIDDENSTATES, INTERMIDATE_SELFLINEAROUT };
     selfResidualAddNode.outTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT };
     // GQA reshape -> [b, s, hd]
-    if (param.kvHeadNum < param.headNum){
+    if (param.kvHeadNum < param.headNum) {
         selfResidualAddNode.inTensorReshapeFuncs.resize(selfResidualAddNode.inTensorIds.size());
         selfResidualAddNode.inTensorReshapeFuncs.at(1) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
             int batchSize = *batchNumPtr;

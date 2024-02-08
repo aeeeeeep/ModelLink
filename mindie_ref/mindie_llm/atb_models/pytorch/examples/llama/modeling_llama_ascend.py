@@ -63,6 +63,8 @@ RUN_SPARSE_MODEL = False
 # Rollback float layer ids for quant inference
 FLOAT_LAYERS = [0, 1, 2, 4, 30]
 
+rotary_emb = None
+
 
 # 稀疏模型权重读取
 def read_dat_file(data_dir, message=False, is_compress_info=False):
@@ -367,7 +369,7 @@ class LlamaAttention(nn.Module):
 
     def _init_rope(self):
         if self.rope_scaling is None:
-            rotary_emb = LlamaRotaryEmbedding(
+            local_rotary_emb = LlamaRotaryEmbedding(
                 self.head_dim,
                 max_position_embeddings=self.max_position_embeddings,
                 base=self.rope_theta,
@@ -376,14 +378,14 @@ class LlamaAttention(nn.Module):
             scaling_type = self.rope_scaling["type"]
             scaling_factor = self.rope_scaling["factor"]
             if scaling_type == "linear":
-                rotary_emb = LlamaLinearScalingRotaryEmbedding(
+                local_rotary_emb = LlamaLinearScalingRotaryEmbedding(
                     self.head_dim,
                     max_position_embeddings=self.max_position_embeddings,
                     scaling_factor=scaling_factor,
                     base=self.rope_theta,
                 )
             elif scaling_type == "dynamic":
-                rotary_emb = LlamaDynamicNTKScalingRotaryEmbedding(
+                local_rotary_emb = LlamaDynamicNTKScalingRotaryEmbedding(
                     self.head_dim,
                     max_position_embeddings=self.max_position_embeddings,
                     scaling_factor=scaling_factor,
@@ -391,7 +393,7 @@ class LlamaAttention(nn.Module):
                 )
             else:
                 raise ValueError(f"Unknown RoPE scaling type {scaling_type}")
-        return rotary_emb
+        return local_rotary_emb
 
     def _shape(self, tensor: torch.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
@@ -937,7 +939,7 @@ class LlamaModel(LlamaPreTrainedModel):
 
                 weights = self.layers[i].state_dict()
                 if self.anti_quant_model:
-                    weights_p.append(self.anti_quant_weight_dict[in_norm_weight].to(self.dtype).npu())
+                    weights_p.append(self.anti_quant_weight_dict.get(in_norm_weight).to(self.dtype).npu())
                 else:
                     weights_p.append(weights.get("input_layernorm.weight"))
                     
@@ -949,7 +951,7 @@ class LlamaModel(LlamaPreTrainedModel):
                     weights_p.append(self.quant_weight_dict[v_name].to(torch.int8).npu())
                     weights_p.append(self.quant_weight_dict[o_name].to(torch.int8).npu())
                     if self.anti_quant_model:
-                        weights_p.append(self.anti_quant_weight_dict[post_norm_weight].to(self.dtype).npu())
+                        weights_p.append(self.anti_quant_weight_dict.get(post_norm_weight).to(self.dtype).npu())
                     else:
                         weights_p.append(weights.get("post_attention_layernorm.weight"))         
                     # mlp量化 
@@ -962,7 +964,7 @@ class LlamaModel(LlamaPreTrainedModel):
                     weights_p.append(self.transdata_operation.execute([self.quant_weight_dict[v_name].to(torch.int8).npu()])[0])
                     weights_p.append(self.transdata_operation.execute([self.quant_weight_dict[o_name].to(torch.int8).npu()])[0])
                     if self.anti_quant_model:
-                        weights_p.append(self.anti_quant_weight_dict[post_norm_weight].to(self.dtype).npu())
+                        weights_p.append(self.anti_quant_weight_dict.get(post_norm_weight).to(self.dtype).npu())
                     else:
                         weights_p.append(weights.get("post_attention_layernorm.weight"))
                     weights_p.append(self.transdata_operation.execute([self.quant_weight_dict[gate_name].to(torch.int8).npu()])[0])
@@ -997,8 +999,8 @@ class LlamaModel(LlamaPreTrainedModel):
                 weights_p.append(self.quant_bias_dict[up_name].to(torch.int32).npu())
 
                 if self.quant_model and self.anti_quant_model:
-                    weights_p.append(self.anti_quant_weight_dict[in_norm_bias].to(self.dtype).npu())
-                    weights_p.append(self.anti_quant_weight_dict[post_norm_bias].to(self.dtype).npu())
+                    weights_p.append(self.anti_quant_weight_dict.get(in_norm_bias).to(self.dtype).npu())
+                    weights_p.append(self.anti_quant_weight_dict.get(post_norm_bias).to(self.dtype).npu())
                 else:
                     weights_p.append(self.in_beta)
                     weights_p.append(self.in_beta)
