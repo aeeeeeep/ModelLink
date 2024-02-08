@@ -114,7 +114,7 @@ if __name__ == "__main__":
             intermediate_size=model_config.intermediate_size,
             num_hidden_layers=model_config.num_hidden_layers,
             num_attention_heads=model_config.num_attention_heads,
-            num_key_value_heads=num_key_value_heads*2 if args.is_yi6b else num_key_value_heads,
+            num_key_value_heads=num_key_value_heads * 2 if args.is_yi6b else num_key_value_heads,
             hidden_act=model_config.hidden_act,
             max_position_embeddings=model_config.max_position_embeddings,
             initializer_range=model_config.initializer_range,

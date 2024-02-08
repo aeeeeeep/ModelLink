@@ -211,6 +211,8 @@ class LlamaMLP(nn.Module):
             self.pretraining_tp = config.pretraining_tp
         else: 
             self.pretraining_tp = 1
+        if self.pretraining_tp > 1:
+            self.slice = self.intermediate_size // self.pretraining_tp
         self.hidden_size = config.hidden_size
         self.intermediate_size = config.intermediate_size // self.world_size
         self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
@@ -220,17 +222,16 @@ class LlamaMLP(nn.Module):
 
     def forward(self, x):
         if self.pretraining_tp > 1:
-            slice = self.intermediate_size // self.pretraining_tp
-            gate_proj_slices = self.gate_proj.weight.split(slice, dim=0)
-            up_proj_slices = self.up_proj.weight.split(slice, dim=0)
-            down_proj_slices = self.down_proj.weight.split(slice, dim=1)
+            gate_proj_slices = self.gate_proj.weight.split(self.slice, dim=0)
+            up_proj_slices = self.up_proj.weight.split(self.slice, dim=0)
+            down_proj_slices = self.down_proj.weight.split(self.slice, dim=1)
 
             gate_proj = torch.cat(
                 [F.linear(x, gate_proj_slices[i]) for i in range(self.pretraining_tp)], dim=-1
             )
             up_proj = torch.cat([F.linear(x, up_proj_slices[i]) for i in range(self.pretraining_tp)], dim=-1)
 
-            intermediate_states = (self.act_fn(gate_proj) * up_proj).split(slice, dim=2)
+            intermediate_states = (self.act_fn(gate_proj) * up_proj).split(self.slice, dim=2)
             down_proj = [
                 F.linear(intermediate_states[i], down_proj_slices[i]) for i in range(self.pretraining_tp)
             ]
@@ -771,7 +772,7 @@ class LlamaModel(LlamaPreTrainedModel):
             if self.gradient_checkpointing and self.training:
 
                 def create_custom_forward(module):
-                    def custom_forward(*inputs):
+                    def custom_forward(*inputs, past_key_value):
                         # None for past_key_value
                         return module(*inputs, past_key_value, output_attentions, padding_mask=padding_mask)
 
