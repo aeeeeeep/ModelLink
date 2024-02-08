@@ -1074,14 +1074,15 @@ class LlamaModel(LlamaPreTrainedModel):
         return attention_mask
 
     def update_ascend_mask(self, attention_mask, seq_length):
-        if self.is_triu_mask and self.full_flag:
-            self.attention_mask_max = self.get_bf16_mask(self.get_triumask(self.mask_block_size)).npu().to(dtype=self.dtype)
-            self.attention_mask_max_incre = torch.zeros((self.batch_num, 1, self.max_sequence_length), dtype=self.dtype).npu()
-            if self.format_nz:
-                soc_version = torch_npu._C._npu_get_soc_version()
-                raise ValueError(f"{soc_version=} not supports LONG_SEQ_ENABLE=1")
-            if self.batch_num > 1:
-                raise ValueError(f"batch_size must be 1, but got `MAX_SEQ_LENGTH`:")
+        if self.is_triu_mask:
+            if self.full_flag:
+                self.attention_mask_max = self.get_bf16_mask(self.get_triumask(self.mask_block_size)).npu().to(dtype=self.dtype)
+                self.attention_mask_max_incre = torch.zeros((self.batch_num, 1, self.max_sequence_length), dtype=self.dtype).npu()
+                if self.format_nz:
+                    soc_version = torch_npu._C._npu_get_soc_version()
+                    raise ValueError(f"{soc_version=} not supports LONG_SEQ_ENABLE=1")
+                if self.batch_num > 1:
+                    raise ValueError(f"batch_size must be 1, but got `MAX_SEQ_LENGTH`:")
             return
         if self.full_flag:
             self.attention_mask_max = torch.zeros(
@@ -1257,10 +1258,11 @@ class LlamaModel(LlamaPreTrainedModel):
             attention_mask = torch.ones(
                 (batch_size, seq_length_with_past), dtype=torch.bool, device=input_ids.device
             )
-        attention_mask = self._prepare_decoder_attention_mask(
-            attention_mask, (batch_size,
-                             seq_length), self.tag_mask, past_key_values_length
-        )
+        if not self.is_triu_mask:
+            attention_mask = self._prepare_decoder_attention_mask(
+                attention_mask, (batch_size,
+                                seq_length), self.tag_mask, past_key_values_length
+            )
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
