@@ -12,7 +12,6 @@
     - [Script](#script)
     - [Performance](#performance)
         - [Machine performance](#machine-performance)
-        - [Accuracy of the loss](#accuracy-of-the-loss)
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
   
@@ -21,7 +20,6 @@
     - [Script](#script)
     - [Performance](#performance)
         - [Machine performance](#machine-performance)
-        - [Accuracy of the loss](#accuracy-of-the-loss)
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
 
@@ -168,15 +166,6 @@ The performance of Baichuan2-7B in **Ascend NPU** and **Reference**:
 | NPUs | Baichuan2-7B | 1000 | 5.07 | 2598 | 6.305| 
 |  Reference  | Baichuan2-7B | 1000 | -- |  3969 | --   | 
 
-#### Accuracy of the loss
-
-NPU vs Reference loss.
-
-![NPU-LOSS](../../sources/images/baichuan2/baichuan2-7B-loss-compare.png)
-
-NPU vs Reference loss relative error.
-
-![NPU-Relative-Error](../../sources/images/baichuan2/baichuan2-7B-loss-relative-error.png)
 
 
 ## Inference
@@ -369,17 +358,6 @@ The performance of the Baichuan2-13B in **Ascend NPU** and **Reference**:
 | NPUs | Baichuan2-13B |1000 |1.72| 880    | 4.647 |
 |  Reference  | Baichuan2-13B |-|-| 872|- |
 
-
-
-#### Accuracy of the loss
-
-NPU vs Reference loss.
-
-![NPU-LOSS](../../sources/images/baichuan2/baichuan2_13B_loss_compare.png)
-
-NPU vs Reference loss relative error.
-
-![NPU-Relative-Error](../../sources/images/baichuan2/baichuan2_13B_loss_relative_error.png)
 
 
 ## Inference

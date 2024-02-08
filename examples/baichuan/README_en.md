@@ -13,7 +13,6 @@
     - [Script](#script)
     - [Performance](#performance)
         - [Machine performance](#machine-performance)
-        - [Accuracy of the loss](#accuracy-of-the-loss)
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
 
@@ -22,7 +21,6 @@
     - [Script](#script)
     - [Performance](#performance)
         - [Machine performance](#machine-performance)
-        - [Accuracy of the loss](#accuracy-of-the-loss)
   - [Lora](#Lora)
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
@@ -163,15 +161,6 @@ The performance of Baichuan-7B in **Ascend NPU** and **Reference**:
 | NPUs | Baichuan-7B | 1000 | 5.16 | 2643.00 | 6.199| 
 |  Reference  | Baichuan-7B | - | - |  2036 | - | 
 
-#### Accuracy of the loss
-
-NPU vs Reference loss.
-
-![NPU-LOSS](../../sources/images/baichuan/baichuan7B-loss-compare.png)
-
-NPU vs Reference loss relative error.
-
-![NPU-Relative-Error](../../sources/images/baichuan/baichuan7B-loss-relative-error.png)
 
 ## Inference
 Config baichuan-7B inference script: tasks/inference/generate_baichuan_7b_ptd.sh
@@ -369,15 +358,6 @@ The performance of the Baichuan-13B in **Ascend NPU** and **Reference**:
 |  Reference | Baichuan-13B |  - |  -   | 862  |  -   |    
 
 
-
-#### Accuracy of the loss
-
-NPU vs Reference loss.
-![NPU-LOSS](../../sources/images/baichuan/baichuan13B-loss-compare.png)
-
-NPU vs Reference loss relative error.
-
-![NPU-Relative-Error](../../sources/images/baichuan/baichuan13B-loss-relative-error.png)
 
 ## Lora
 We support AscendSpeed Lora fine-tuning with Baichuan-13B.
