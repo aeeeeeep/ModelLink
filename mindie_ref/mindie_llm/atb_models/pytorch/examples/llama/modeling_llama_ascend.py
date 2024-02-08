@@ -862,7 +862,7 @@ class LlamaModel(LlamaPreTrainedModel):
                     dtype=self.dtype
                 ).contiguous()
 
-        placeholder = torch.ones(1).npu()
+        placeholder = torch.ones(1, dtype=self.dtype).npu()
 
         self.full_flag = True if seq_length > 1 else False
 
