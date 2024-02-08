@@ -6,6 +6,7 @@ from megatron import get_args
 from megatron.core import DistributedDataParallel as DDP
 from megatron.model import Float16Module
 from megatron.training import unwrap_model
+from .lora_utils import is_enable_lora
 
 ALL_MODULE_WRAPPER_CLASSNAMES = (DDP, Float16Module, PeftModel, LoraModel)
 
@@ -14,7 +15,7 @@ def get_model_megatron_patch(*args_input):
     model = get_model(*args_input)
     args = get_args()
 
-    if args.lora_target_modules:
+    if is_enable_lora():
         config = core_transformer_config_from_args(args)
         lora_config = LoraConfig(
             r=args.lora_r,

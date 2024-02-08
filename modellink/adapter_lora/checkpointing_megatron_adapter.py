@@ -3,6 +3,7 @@ from functools import wraps
 import megatron
 from megatron.checkpointing import _load_base_checkpoint, load_checkpoint
 from megatron import get_args
+from .lora_utils import is_enable_lora
 
 
 def merge_dicts(dict1, dict2):
@@ -41,7 +42,7 @@ def _load_base_checkpoint_megatron_patch(load_dir, rank0=False):
     args = get_args()
     state_dict, checkpoint_name, release = _load_base_checkpoint(load_dir, rank0)
 
-    if args.lora_target_modules and state_dict is not None:
+    if is_enable_lora() and state_dict is not None:
         words_to_match = {'weight': 'base_layer.weight', 'bias': 'base_layer.bias'}
         exclude_words = ['base_layer', 'lora_', 'norm']
         state_dict = modify_keys_with_dict(state_dict, words_to_match, exclude_words)
@@ -60,7 +61,7 @@ def _load_base_checkpoint_megatron_patch(load_dir, rank0=False):
 
 def load_checkpoint_megatron_patch(model, optimizer, opt_param_scheduler, load_arg='load', strict=True):
     args = get_args()
-    if args.lora_target_modules and (not args.lora_load or not os.path.exists(args.lora_load)):
+    if is_enable_lora() and (not args.lora_load or not os.path.exists(args.lora_load)):
         strict = False
 
     return load_checkpoint(model, optimizer, opt_param_scheduler, load_arg=load_arg, strict=strict)
@@ -77,8 +78,7 @@ def state_dict_for_save_checkpoint_patch(state_dict):
 def state_dict_for_save_checkpoint_wrapper(fn):
     @wraps(fn)
     def wrapper(self, prefix='', keep_vars=False):
-        args = get_args()
-        if hasattr(args, 'lora_target_modules') and args.lora_target_modules:
+        if is_enable_lora():
             return state_dict_for_save_checkpoint_patch(self.state_dict(prefix=prefix, keep_vars=keep_vars))
         return fn(self, prefix='', keep_vars=False)
 
