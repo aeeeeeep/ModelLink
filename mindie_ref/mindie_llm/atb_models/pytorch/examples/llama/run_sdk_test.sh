@@ -29,12 +29,6 @@ function fn_main()
     fi
 
     if [[ ! -z "$1" ]];then
-        TASK=$1
-        echo "[TASK]: $TASK"
-        shift
-    fi
-
-    if [[ ! -z "$1" ]];then
         DEVICE_TYPE=$1
         if [[ $DEVICE_TYPE == "d9" ]];then
             echo "[DEVICE_TYPE]: 910"
@@ -45,6 +39,12 @@ function fn_main()
         shift
     fi
 
+    if [[ ! -z "$1" ]];then
+        TASK=$1
+        echo "[TASK]: $TASK"
+        shift
+    fi
+
     if [[ $WORLD_SIZE == "1" ]];then
         echo "run model on a single npu"
         python sdk_test.py --task $TASK
@@ -52,7 +52,6 @@ function fn_main()
         echo "run model on $WORLD_SIZE npus"
         torchrun --nproc_per_node $WORLD_SIZE --master_port 25641 sdk_test.py --task $TASK
     fi
-    ;;
 }
 
 fn_main "$@"
