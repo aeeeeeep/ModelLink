@@ -101,7 +101,7 @@ void FlashAttentionModel::Param::FromString(const std::string &param)
     }
 
     ATB_LOG(INFO) << "Llama FlashAttentionModel param rmsNormEps:" << rmsNormEps << ", headNum:" << headNum
-                  << ", kvHeadNum:" << kvHeadNum << ", dk:" << dk << ", layerNum:" << layerNum << ", rank:" 
+                  << ", kvHeadNum:" << kvHeadNum << ", dk:" << dk << ", layerNum:" << layerNum << ", rank:"
                   << rank << ", rankSize:" << rankSize;
 }
 

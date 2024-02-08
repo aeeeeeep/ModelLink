@@ -75,7 +75,7 @@ static atb::Operation *CreateFlashAttentionLayer(const nlohmann::json &paramJson
     param.ffnOutInputOffset = paramJson["ffnOutInputOffset"].get<int>();
 
     ATB_LOG(INFO) << "LLaMA FlashAttentionLayer headNum:" << param.headNum << ", kvHeadNum:" << param.kvHeadNum
-                  << ", rmsNormEps:" << param.rmsNormEps << ", dk:" << param.dk << ", model:" << param.model 
+                  << ", rmsNormEps:" << param.rmsNormEps << ", dk:" << param.dk << ", model:" << param.model
                   << ", rank:" << param.rank << ", rankSize:" << param.rankSize << ", isTriuMask: " << param.isTriuMask;
     atb::Operation *op;
     FlashAttentionLayer(param, &op);
