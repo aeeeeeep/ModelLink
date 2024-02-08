@@ -262,6 +262,7 @@ pip install torch*_aarch64.whl
 3. **长序列推理**
 - 配置必选参数
   - 修改run_sdk_test.sh中`MAX_SEQ_LENGTH=200128`
+  - 修改run_sdk_test.sh中`LOG_SEQ_ENABLE=1`
 - 配置输入输出长度
   - 修改sdk_config.ini中`performance.model_name=Yi-6B-200K`
   - 修改sdk_config.ini中`performance.batch_size=1`
