@@ -32,6 +32,14 @@ def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length
         max_seq_len=batch.max_s,
         lm_head_indices=lm_head_indices
     )
+
+    if batch.cu_seqlen_prefill is not None and logits.size(0) != batch.batch_num:
+        if logits.size(0) != batch.lm_head_indices[-1] + 1:
+            logger.error(f"prefill logits is invalid, batch num: {batch.batch_num}," +
+                         f" total token: {int(batch.lm_head_indices[-1] + 1)}, but logits shape is: {logits.shape}")
+            raise AssertionError
+        logits = logits[batch.lm_head_indices]
+
     next_token = next_token_chooser(logits)
 
     for i, req in enumerate(batch.req_list):
@@ -81,6 +89,10 @@ def generate_req(req_list, model, tokenizer,
                 cur_context_len = req_list[req_idx].input_length
                 if total_need_blocks + cur_need_blocks > free_block:
                     break
+                if cur_context_len > max_prefill_tokens:
+                    logger.error(f"req: {req_idx} input length: {cur_context_len} is too long," +
+                                 f" max_prefill_tokens: {max_prefill_tokens}")
+                    raise AssertionError
                 if total_prefill_token + cur_context_len > max_prefill_tokens:
                     do_generate = False
                     break
@@ -104,21 +116,24 @@ def generate_req(req_list, model, tokenizer,
                 else:
                     req_finished = generate_token(model, tokenizer, cache_manager, batch, max_out_length, rank)
 
-                generate_batches.append(batch)
-
                 if req_finished != (prefill_batch_size - batch.batch_num):
                     logger.error("batch filter error")
                     raise AssertionError
-                generate_batch_size += batch.batch_num
-                total_req_finished += req_finished
+
+                if batch.batch_num > 0:
+                    generate_batches.append(batch)
+                    generate_batch_size += batch.batch_num
+                if req_finished > 0:
+                    do_generate = False
+                    total_req_finished += req_finished
 
         if do_generate:
             if len(generate_batches) > 1:
                 Batch.concatenate(generate_batches)
 
-            generate_batch_size = generate_batches[0].batch_num
-            if generate_batch_size > max_batch_size:
-                logger.error(f"decode batch size: {generate_batch_size}, max allowed: {max_batch_size}")
+            if generate_batch_size != generate_batches[0].batch_num:
+                logger.error(f"batch concatenate error, expect batchnum: {generate_batch_size}," +
+                             f" in fact: {generate_batches[0].batch_num}")
                 raise AssertionError
 
             if ENV.benchmark_enable:
@@ -139,7 +154,10 @@ def generate_req(req_list, model, tokenizer,
                 logger.error(f"batch filter error")
                 raise AssertionError
             generate_batch_size = generate_batches[0].batch_num
+            if generate_batch_size == 0:
+                del generate_batches[0]
             total_req_finished += req_finished
+
     if ENV.benchmark_enable:
         prefill_time = benchmark_timelist[0]
         e2e_time = sum(benchmark_timelist)
