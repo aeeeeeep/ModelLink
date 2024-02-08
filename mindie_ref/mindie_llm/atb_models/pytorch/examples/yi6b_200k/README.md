@@ -259,6 +259,16 @@ pip install torch*_aarch64.whl
   > DEVICE_TYPE: d9, 对应800I A2
   > TASK: 可选'run', 'performance', 'precision'
 
+3. **长序列推理**
+- 配置必选参数
+  - 修改run_sdk_test.sh中`MAX_SEQ_LENGTH=200128`
+- 配置输入输出长度
+  - 修改sdk_config.ini中`performance.model_name=Yi-6B-200K`
+  - 修改sdk_config.ini中`performance.batch_size=1`
+  - 修改sdk_config.ini中`performance.case_pair=[[200000,128]]`
+- 执行推理，此时执行batch_size=1，输入200000, 输出128的性能测试
+  - bash run_sdk_test.sh 8 d9 performance
+
 # 精度验证指南
 > 模型精度验证基于MMLU数据集，采用5-shot的方式验证模型推理精度。 
 
