@@ -24,6 +24,17 @@ const int ATTENTION_DIM_NUM = 4;
 const int ATTENTION_DIM_2 = 2;
 const int ATTENTION_DIM_3 = 3;
 
+void ReshapeHeads(const atb::Dims &oldShape, atb::Dims &newShape)
+{
+    newShape.dimNum = 2;
+    newShape.dims[0] = oldShape.dims[0] * oldShape.dims[1];
+    if (oldShape.dimNum == 3) {
+        newShape.dims[1] = oldShape.dims[2];
+    } else {
+        newShape.dims[1] = oldShape.dims[2] * oldShape.dims[3];
+    }
+}
+
 enum FlashAttentionLayerTensorId : int {
     IN_HIDDENSTATES = 0,
     // float weights
@@ -96,6 +107,8 @@ static const uint64_t NODE_COUNT = 11;
 
 atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Operation **operation)
 {
+    std::shared_ptr<int64_t> batchNumPtr = std::make_shared<int64_t>(0);
+
     atb::GraphParam opGraph;
     opGraph.name = "FlashAttentionLayer";
     opGraph.inTensorNum = IN_TENSOR_COUNT;
@@ -185,20 +198,45 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         mixdVLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_VMIXDWEIGHT };
         mixdVLinearNode.outTensorIds = { INTERMIDATE_MIXEDV };
     }
-    atb_speed::llama::RopeFusionParam ropeFusionParam;
-    ropeFusionParam.headNum = param.headNum;
-    atb_speed::llama::RopeFusionOperation(ropeFusionParam, &ropeNode.operation);
-    ropeNode.inTensorIds = {
-        INTERMIDATE_MIXEDQ, INTERMIDATE_MIXEDK, IN_POSITIONIDS, IN_COSTABLE, IN_SINTABLE, IN_SEQLEN
-    };
-    ropeNode.outTensorIds = { INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK };
+    // GQA reshape -> [b*s, hd]
+    if (param.kvHeadNum < param.headNum) {
+        atb::infer::RopeParam ropeFusionParam;
+        ropeFusionParam.rotaryCoeff = 2;
+        CREATE_OPERATION(ropeFusionParam, &ropeNode.operation);
+        ropeNode.inTensorIds = { INTERMIDATE_MIXEDQ, INTERMIDATE_MIXEDK, IN_COSTABLE, IN_SINTABLE, IN_SEQLEN };
+        ropeNode.outTensorIds = { INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK };
+        ropeNode.inTensorReshapeFuncs.resize(ropeNode.inTensorIds.size());
+        ropeNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            *batchNumPtr = oldShape.dims[0];
+            ReshapeHeads(oldShape, newShape);
+        };
+        ropeNode.inTensorReshapeFuncs.at(1) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            ReshapeHeads(oldShape, newShape);
+        };
+        ropeNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            ReshapeHeads(oldShape, newShape);
+        };
+        ropeNode.inTensorReshapeFuncs.at(3) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            ReshapeHeads(oldShape, newShape);
+        };
+    } else {
+        atb_speed::llama::RopeFusionParam ropeFusionParam;
+        ropeFusionParam.headNum = param.headNum;
+        atb_speed::llama::RopeFusionOperation(ropeFusionParam, &ropeNode.operation);
+        ropeNode.inTensorIds = {
+            INTERMIDATE_MIXEDQ, INTERMIDATE_MIXEDK, IN_POSITIONIDS, IN_COSTABLE, IN_SINTABLE, IN_SEQLEN
+        };
+        ropeNode.outTensorIds = { INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK };
+    }
     atb::infer::SelfAttentionParam selfAttentionKvCacheParam;
     selfAttentionKvCacheParam.headDim = param.dk;
     selfAttentionKvCacheParam.headNum = param.headNum;
+    selfAttentionKvCacheParam.kvHeadNum = param.kvHeadNum;
     selfAttentionKvCacheParam.qkScale = 1.0 / sqrt(param.dk);
     selfAttentionKvCacheParam.qScale = 1.0;
     if (param.isEncoder) {
         selfAttentionKvCacheParam.coderType = atb::infer::SelfAttentionParam::ENCODER;
+        selfAttentionKvCacheParam.isTriuMask = param.isTriuMask;
     } else {
         selfAttentionKvCacheParam.coderType = atb::infer::SelfAttentionParam::DECODER;
     }
@@ -214,13 +252,20 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         IN_LAYERID };
     selfAttentionKvCacheNode.outTensorIds = { INTERMIDATE_SELFOUT };
     selfAttentionKvCacheNode.inTensorReshapeFuncs.resize(selfAttentionKvCacheNode.inTensorIds.size());
-    selfAttentionKvCacheNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        newShape.dimNum = ATTENTION_DIM_NUM;
-        newShape.dims[0] = oldShape.dims[0];
-        newShape.dims[1] = oldShape.dims[1];
-        newShape.dims[ATTENTION_DIM_2] = param.headNum;
-        newShape.dims[ATTENTION_DIM_3] = oldShape.dims[ATTENTION_DIM_2] / param.headNum;
-    };
+    // GQA reshape -> [b*s, hd]
+    if (param.kvHeadNum < param.headNum) {
+        selfAttentionKvCacheNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            ReshapeHeads(oldShape, newShape);
+        };
+    } else {
+        selfAttentionKvCacheNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            newShape.dimNum = ATTENTION_DIM_NUM;
+            newShape.dims[0] = oldShape.dims[0];
+            newShape.dims[1] = oldShape.dims[1];
+            newShape.dims[ATTENTION_DIM_2] = param.headNum;
+            newShape.dims[ATTENTION_DIM_3] = oldShape.dims[ATTENTION_DIM_2] / param.headNum;
+        };
+    }
     if (param.quantModel) {
         // W8A8量化
         atb_speed::common::ParallelParamV2 selfOutLinearParam;
@@ -280,7 +325,17 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
     CREATE_OPERATION(addParam, &selfResidualAddNode.operation);
     selfResidualAddNode.inTensorIds = { IN_HIDDENSTATES, INTERMIDATE_SELFLINEAROUT };
     selfResidualAddNode.outTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT };
-
+    // GQA reshape -> [b, s, hd]
+    if (param.kvHeadNum < param.headNum) {
+        selfResidualAddNode.inTensorReshapeFuncs.resize(selfResidualAddNode.inTensorIds.size());
+        selfResidualAddNode.inTensorReshapeFuncs.at(1) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            int batchSize = *batchNumPtr;
+            newShape.dimNum = 3;
+            newShape.dims[0] = batchSize;
+            newShape.dims[1] = oldShape.dims[0] / batchSize;
+            newShape.dims[2] = oldShape.dims[1];
+        };
+    }
     if (param.quantModel) {
         // W8A8量化
         atb::infer::RmsNormParam selfNormParam;
