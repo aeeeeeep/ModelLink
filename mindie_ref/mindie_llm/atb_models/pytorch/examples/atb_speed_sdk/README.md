@@ -214,13 +214,20 @@ SDK提供了两种性能测试的方法,常规估计法，精确打点法。也�
 | perf_mode      | normal | 性能测试方法，detail / normal , 默认是normal.要使用detail需要侵入式替换utils，并加上环境变量 RETURN_PERF_DETAIL=1 |
 | skip_decode    | 1      | 性能测试时是否只测试generate而跳过decode，0/1 默认是1                                                  |
 
+## 精确打点法
+
+- 通过在modeling中使用sdk里的计时装饰器进行计时
+- 不再需要侵入式修改任何的三方件中的源码，支持任意版本的transformers
+- perf_mode设为detail
+- 将环境变量`TIMEIT`设置成1来开启性能测试，为了不影响正常使用，默认是0
+
 ## 常规估计法
 
 - 通过第一次生成1个token，第2次生成n个token，计时作差来估计性能。
 - *假设两次推理首token的时延相同*
 - perf_mode设为normal
 
-## 精确打点法
+## 精确打点法(老，本章节内容后续将不再使用)
 
 - 通过在transformers中侵入式打点来计时
 - 需要侵入式修改开源三方件源码
