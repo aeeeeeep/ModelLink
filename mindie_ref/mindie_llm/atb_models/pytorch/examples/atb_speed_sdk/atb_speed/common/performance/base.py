@@ -166,6 +166,7 @@ class PerformanceTest:
         :return:
         """
         Timer.reset()
+        Timer.sync = getattr(torch, self.launcher.device_type).synchronize
         with torch.no_grad():
             generate_ids = self.model.generate(**inputs, max_new_tokens=seq_len_out,
                                                eos_token_id=self.model.config.vocab_size * 2  # 避免提前停止
