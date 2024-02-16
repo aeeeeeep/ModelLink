@@ -33,10 +33,10 @@ Aquila 系列模型的源代码基于 Apache 2.0 协议，而模型权重基于 
 
 **表 3** 硬件形态
 
-| CPU     | Device |
-|---------|--------|
-| aarch64 | 910B3  |
-| aarch64 | 310P3  |
+| CPU     | Device         |
+|---------|----------------|
+| aarch64 | Atlas 800I A2  |
+| aarch64 | Atlas 300I DUO |
 
 # 快速上手
 
@@ -54,15 +54,14 @@ Aquila 系列模型的源代码基于 Apache 2.0 协议，而模型权重基于 
 
 | 包名                                   |
 |--------------------------------------|
-| Ascend-hdk-910b-npu-firmware_xxx.run |
-| Ascend-hdk-310p-npu-firmware_xxx.run |
+| Ascend-hdk-xxxx-npu-firmware_xxx.run |
 
 根据芯片型号选择相应的安装包安装
 
 ```bash
 # 安装firmwire
-chmod +x Ascend-hdk-310p-npu-firmware_xxx.run
-./Ascend-hdk-310p-npu-firmware_xxx.run --full
+chmod +x Ascend-hdk-xxxx-npu-firmware_xxx.run
+./Ascend-hdk-xxxx-npu-firmware_xxx.run --full
 ```
 
 ##### 1.1.2 安装driver
@@ -71,15 +70,13 @@ chmod +x Ascend-hdk-310p-npu-firmware_xxx.run
 
 | cpu     | 包名                                               | 
 |---------|--------------------------------------------------|
-| aarch64 | Ascend-hdk-910b-npu-driver_xxx_linux-aarch64.run |
-| x86     | Ascend-hdk-910b-npu-driver_xxx_linux-x86_64.run  |
-| aarch64 | Ascend-hdk-310p-npu-driver_xxx_linux-aarch64.run |
-| x86     | Ascend-hdk-310p-npu-driver_xxx_linux-x86-64.run  |
+| aarch64 | Ascend-hdk-xxxx-npu-driver_xxx_linux-aarch64.run |
+| x86     | Ascend-hdk-xxxx-npu-driver_xxx_linux-x86_64.run  |
 
 ```bash
 # 根据CPU架构 以及npu型号 安装对应的 driver
-chmod +x Ascend-hdk-910b-npu-driver_xxx_*.run
-./Ascend-hdk-910b-npu-driver_xxx_*.run --full
+chmod +x Ascend-hdk-xxxx-npu-driver_xxx_*.run
+./Ascend-hdk-xxxx-npu-driver_xxx_*.run --full
 ```
 
 #### 1.2 安装CANN
@@ -93,7 +90,7 @@ chmod +x Ascend-hdk-910b-npu-driver_xxx_*.run
 | cpu     | 包名                                            |
 |---------|-----------------------------------------------|
 | aarch64 | Ascend-cann-toolkit_8.0.RC1_linux-aarch64.run |
-| x86     | Ascend-cann-toolkit_8.0.RC1_linux-aarch64.run |
+| x86     | Ascend-cann-toolkit_8.0.RC1_linux-x86_64.run |
 
 ```bash
 # 安装toolkit  以arm为例
@@ -108,13 +105,12 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 | 包名                                         |
 |--------------------------------------------|
-| Ascend-cann-kernels-910b_8.0.RC1_linux.run |
-| Ascend-cann-kernels-310b_8.0.RC1_linux.run |
+| Ascend-cann-kernels-xxxx_8.0.RC1_linux.run |
 
 ```bash
-# 安装 kernel 以910B 为例
-chmod +x Ascend-cann-kernels-910b_8.0.RC1_linux.run
-./Ascend-cann-kernels-910b_8.0.RC1_linux.run --install
+# 安装 kernel 以Atlas 800I A2 为例
+chmod +x Ascend-cann-kernels-xxxx_8.0.RC1_linux.run
+./Ascend-cann-kernels-xxxx_8.0.RC1_linux.run --install
 ```
 
 #### 1.3 安装PytorchAdapter
@@ -378,7 +374,7 @@ bash cut_model_and_run_aquila.sh ${task_name}
 
 #### cut_model_and_run_aquila.sh
 
-- 910B
+- Atlas 800I A2
   需要去掉run_cmd中的${atb_stream}参数
   
 ```shell
@@ -400,11 +396,11 @@ MAX_SEQ_LEN=2048 bash cut_model_and_run_aquila.sh ${task_name}
 
 # 竞品对比
 
-# 910B
+# Atlas 800I A2
 
 ## 精度
 
-| 精度             | 910B3(313T)         | A100                | 对比                   |
+| 精度             | Atlas 800I A2       | A100                | 对比                   |
 |----------------|---------------------|---------------------|----------------------| 
 | STEM           | 0.3767441860465116  | 0.3813953488372093  | -0.0046511627906977  |
 | Social Science | 0.48363636363636364 | 0.48363636363636364 | 0                    |
@@ -414,18 +410,18 @@ MAX_SEQ_LEN=2048 bash cut_model_and_run_aquila.sh ${task_name}
 
 ## 性能
 
-| 芯片型号  | batch_size | 首token推理速度(token/s) | 增量推理速度(token/s) |
-|-------|------------|---------------------|-----------------|
-| A100  | 1          | 22.68088002         | 88.88888889     |
-| 910B3 | 1          | 24.20406347         | 67.56546904     |
-| 对比    | 1          | 1.067157158         | 0.760111527     |
+| 芯片型号          | batch_size | 首token推理速度(token/s) | 增量推理速度(token/s) |
+|---------------|------------|---------------------|-----------------|
+| A100          | 1          | 22.68088002         | 88.88888889     |
+| Atlas 800I A2 | 1          | 24.20406347         | 67.56546904     |
+| 对比            | 1          | 1.067157158         | 0.760111527     |
 
 
-# 310P
+# Atlas 300I DUO
 
 ## 精度
 
-| 精度             | 310P                | 
+| 精度             | Atlas 300I DUO      | 
 |----------------|---------------------|
 | STEM           | 0.3627906976744186  |
 | Social Science | 0.49818181818181817 |
@@ -437,9 +433,9 @@ MAX_SEQ_LEN=2048 bash cut_model_and_run_aquila.sh ${task_name}
 
 浮点
 
-| 硬件形态  | 批大小 | 输入长度     | 输出长度     | 首次推理（ms/token） | 非首次推理(ms/token) |
-|-------|-----|----------|----------|----------------|-----------------|
-| Duo双芯 | 1   | 2^5~2^10 | 2^5~2^10 | 235.0490424    | 91.39817598     |
+| 硬件形态           | 批大小 | 输入长度     | 输出长度     | 首次推理（ms/token） | 非首次推理(ms/token) |
+|----------------|-----|----------|----------|----------------|-----------------|
+| Atlas 300I DUO | 1   | 2^5~2^10 | 2^5~2^10 | 235.0490424    | 91.39817598     |
 
 
 # 附录：

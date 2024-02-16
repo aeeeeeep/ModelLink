@@ -263,7 +263,7 @@ def performance(args, tokenizer, model):
     if local_rank == 0:
         with open(args.performance_output_file, 'a', encoding='utf-8') as f:
             f.write(
-                f"Batch,InputSeqLen(Encoding),OutputSeqLen(Decoding),TimeOfFirstToken(ms),TimePerToken(ms),TimeTotal(s),Throughput(tokens/s),ThroughputE2E(tokens/s)\n")
+                f"Batch,InputSeqLen(Encoding),OutputSeqLen(Decoding),TimeTotal(s),TimeOfFirstToken(ms),TimePerToken(ms),Throughput(tokens/s),ThroughputE2E(tokens/s)\n")
 
     if args.set_case_pair:
         seq_len_in_level = check_lists(args.seqlen_in_pair)
@@ -352,7 +352,7 @@ def performance(args, tokenizer, model):
 
             with open(args.performance_output_file, 'a', encoding='utf-8') as f:
                 f.write(
-                    f"{args.batch}, {seq_len_in}, {seq_len_out}, {time_of_first_token * 1000}, {time_per_token * 1000}, {time_total}, {throughput}, {throughput_e2e}\n"
+                    f"{args.batch}, {seq_len_in}, {seq_len_out}, {time_total}, {time_of_first_token * 1000}, {time_per_token * 1000}, {throughput}, {throughput_e2e}\n"
                 )
 
             if args.print_response:
@@ -364,13 +364,13 @@ def performance(args, tokenizer, model):
 
 
 def cli_demo(args, tokenizer, model):
-    history, past_key_values = [], None
+    history = []
     os_name = platform.system()
     clear_command = 'cls' if os_name == 'Windows' else 'clear'
     is_rank_0 = (args.tp_size == 1) or (torch.distributed.get_rank() == 0)
 
     if is_rank_0:
-        print("欢迎使用 ChatGLM2-6B 模型，输入内容即可进行对话，clear 清空对话历史，stop 终止程序")
+        print("欢迎使用 ChatGLM-6B 模型，输入内容即可进行对话，clear 清空对话历史，stop 终止程序")
 
     while True:
         if is_rank_0:
@@ -391,9 +391,7 @@ def cli_demo(args, tokenizer, model):
             continue
 
         current_length = 0
-        for response, history, past_key_values in model.stream_chat(tokenizer, query, history=history,
-                                                                    past_key_values=past_key_values,
-                                                                    return_past_key_values=True):
+        for response, history in model.stream_chat(tokenizer, query, history=history):
             if is_rank_0:
                 print(response[current_length:], end="", flush=True)
                 current_length = len(response)

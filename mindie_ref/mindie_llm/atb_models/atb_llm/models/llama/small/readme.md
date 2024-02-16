@@ -9,7 +9,7 @@ llama2-7b/13b服务化解耦框架适配说明
 在模型仓根目录执行：
 
 ```shell
-python -m example.convert.convert_weights --model-path ${path/to/weight}
+python -m examples.convert.convert_weights --model_path ${path/to/weight}
 ```
 
 当前量化权重获取之后，也以相同方式对量化权重中的anti_weight进行转换

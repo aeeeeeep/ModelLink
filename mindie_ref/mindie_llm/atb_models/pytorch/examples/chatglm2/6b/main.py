@@ -104,7 +104,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def get_is_format_nz():
+def is_format_nz():
     soc_version = torch_npu._C._npu_get_soc_version()
     if soc_version in [200, 201, 202, 203]:
         return True
@@ -128,7 +128,6 @@ def check_lists(arg):
 
 
 def get_model(args):
-
     # 加载 tokenizer 和 model
     tokenizer = AutoTokenizer.from_pretrained(args.model_path, trust_remote_code=True)
     if args.tp_size > 1:
@@ -154,14 +153,8 @@ def get_model(args):
     # 推理模式
     model = model.eval()
 
-    # 确认配置
-    ENABLE_QUANT = os.environ.get("ENABLE_QUANT", "0") == "1"
-    is_format_nz = get_is_format_nz()
-    if ENABLE_QUANT:
-        QUANT_WEIGHT_PATH = os.environ.get("QUANT_WEIGHT_PATH")
-
     # 浮点模型适配
-    if is_format_nz:
+    if is_format_nz():
         for name, module in model.named_modules():
             if isinstance(module, torch.nn.Linear):
                 module.weight.data = torch_npu.npu_format_cast(module.weight.data, 29)
