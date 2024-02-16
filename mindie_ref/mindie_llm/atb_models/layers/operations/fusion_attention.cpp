@@ -61,7 +61,11 @@ atb::Status CreateQKVLinearSplit(const FusionAttentionParam &param, atb::Operati
         QKVLinearSplitTensorIdx::IN_QKV_SCALE_0, QKVLinearSplitTensorIdx::IN_QKV_OFFSET_0,
         QKVLinearSplitTensorIdx::IN_QKV_DESCALE_0
     };
-    linearNode.outTensorIds = {param.isPack ? config.INTERMEDIATE_MIXED_QKV : QKVLinearSplitTensorIdx::OUT_Q};
+    if (param.isPack) {
+        linearNode.outTensorIds = {config.INTERMEDIATE_MIXED_QKV};
+    } else {
+        linearNode.outTensorIds = {QKVLinearSplitTensorIdx::OUT_Q};
+    }
 
     if (param.isPack && param.isGroupedQueryAttention) {  // Split GQA
         auto &sliceQNode = opGraph.nodes[nodeId++];
