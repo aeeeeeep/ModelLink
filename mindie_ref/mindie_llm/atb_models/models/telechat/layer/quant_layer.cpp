@@ -126,7 +126,8 @@ atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operat
         mixedQLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_QMIXEDWEIGHT };
         mixedQLinearNode.outTensorIds = { INTERNAL_QMIXEDLINEAROUT };
     } else {
-        atb::infer::LinearQuantParam linearQParam = { false, true, true };
+        atb::infer::LinearParam linearQParam;
+        linearQParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
         CreateOperation(linearQParam, &mixedQLinearNode.operation);
         mixedQLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_QMIXEDWEIGHT, IN_QMIXEDBIAS, IN_QMIXEDDEQSCALE };
         mixedQLinearNode.outTensorIds = { INTERNAL_QMIXEDLINEAROUT };
@@ -139,7 +140,8 @@ atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operat
         mixedKVLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_KVMIXEDWEIGHT };
         mixedKVLinearNode.outTensorIds = { INTERNAL_KVMIXEDLINEAROUT };
     } else {
-        atb::infer::LinearQuantParam linearKVParam = { false, true, true };
+        atb::infer::LinearParam linearKVParam = { false, true, true };
+        linearKVParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
         CreateOperation(linearKVParam, &mixedKVLinearNode.operation);
         mixedKVLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_KVMIXEDWEIGHT, IN_KVMIXEDBIAS, IN_KVMIXEDDEQSCALE };
         mixedKVLinearNode.outTensorIds = { INTERNAL_KVMIXEDLINEAROUT };
