@@ -64,33 +64,33 @@ atb::Status CreateLmHead(const LmHeadParam &param, atb::Operation **operation, T
         slicePassParam.offsets = {0, 0, param.hiddenSizePerAttentionHead * param.linearParallelParam.rank};
         slicePassParam.size = {-1, -1, param.hiddenSizePerAttentionHead};
         CREATE_OPERATION(slicePassParam, &sliceNode.operation);
-        sliceNode.inTensorIds = {param.gatherAhead ? config.INTERMEDIATE_GATHER_OUT : LmHeadTensorIdx::IN_HIDDENSTATES};
+        if (param.gatherAhead) {
+            sliceNode.inTensorIds = {config.INTERMEDIATE_GATHER_OUT};
+        } else {
+            sliceNode.inTensorIds = {LmHeadTensorIdx::IN_HIDDENSTATES};
+        }
         sliceNode.outTensorIds = {config.INTERMEDIATE_SLICE_OUT};
     }
 
     atb::Node &linearParallelNode = opGraph.nodes.at(nodeId++);
     LinearParallel(param.linearParallelParam, &linearParallelNode.operation);
-    linearParallelNode.inTensorIds = {
-        parallelType == ROW_PARALLEL ? config.INTERMEDIATE_SLICE_OUT : \
-            param.gatherAhead ? config.INTERMEDIATE_GATHER_OUT : LmHeadTensorIdx::IN_HIDDENSTATES,
-        LmHeadTensorIdx::IN_WEIGHT, LmHeadTensorIdx::IN_SCALE, LmHeadTensorIdx::IN_OFFSET, LmHeadTensorIdx::IN_DESCALE};
-    linearParallelNode.outTensorIds = {
-        parallelType == COLUMN_PARALLEL ? \
-            config.INTERMEDIATE_LINEAR_PARALLEL_OUT : LmHeadTensorIdx::OUT_LOGITS
-    };
-
-    if (parallelType == COLUMN_PARALLEL) {
-        atb::Node &transposeNode = opGraph.nodes.at(nodeId++);
-        atb::infer::TransposeParam transposeParam;
-        if (param.unpadInputs) {
-            transposeParam.perm = {1, 0, 2};
-        } else {
-            transposeParam.perm = {1, 2, 0, 3};
-        }
-        CREATE_OPERATION(transposeParam, &transposeNode.operation);
-        transposeNode.inTensorIds = {config.INTERMEDIATE_LINEAR_PARALLEL_OUT};
-        transposeNode.outTensorIds = {LmHeadTensorIdx::OUT_LOGITS};
+    if (parallelType == ROW_PARALLEL) {
+        linearParallelNode.inTensorIds = {
+            config.INTERMEDIATE_SLICE_OUT, LmHeadTensorIdx::IN_WEIGHT, LmHeadTensorIdx::IN_SCALE,
+            LmHeadTensorIdx::IN_OFFSET, LmHeadTensorIdx::IN_DESCALE
+        };
+    } else if (param.gatherAhead) {
+        linearParallelNode.inTensorIds = {
+            config.INTERMEDIATE_GATHER_OUT, LmHeadTensorIdx::IN_WEIGHT, LmHeadTensorIdx::IN_SCALE,
+            LmHeadTensorIdx::IN_OFFSET, LmHeadTensorIdx::IN_DESCALE
+        };
+    } else {
+        linearParallelNode.inTensorIds = {
+            LmHeadTensorIdx::IN_HIDDENSTATES, LmHeadTensorIdx::IN_WEIGHT, LmHeadTensorIdx::IN_SCALE,
+            LmHeadTensorIdx::IN_OFFSET, LmHeadTensorIdx::IN_DESCALE
+        };
     }
+    linearParallelNode.outTensorIds = {LmHeadTensorIdx::OUT_LOGITS};
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
@@ -99,8 +99,12 @@ atb::Status CreateLmHead(const LmHeadParam &param, atb::Operation **operation, T
         if (param.gatherAhead) {
             outTensorDescs.at(0).shape.dims[param.unpadInputs ? 0 : 1] = inTensorDescs.at(5).shape.dims[0];
         }
-        outTensorDescs.at(0).shape.dims[dimLast] \
-            = inTensorDescs.at(1).shape.dims[0] * param.linearParallelParam.worldSize;
+        if (parallelType == COLUMN_PARALLEL) {
+            outTensorDescs.at(0).shape.dims[dimLast] \
+                = inTensorDescs.at(1).shape.dims[0] * param.linearParallelParam.worldSize;
+        } else {
+            outTensorDescs.at(0).shape.dims[dimLast] = inTensorDescs.at(1).shape.dims[0];
+        }
         return atb::NO_ERROR;
     };
 
@@ -115,7 +119,6 @@ public:
 
     enum LmHeadNoParallelTensorIdx : uint32_t {
         INTERMEDIATE_GATHER_OUT = LmHeadTensorIdx::OUT_LOGITS + 1,
-        INTERMEDIATE_LINEAR_PARALLEL_OUT,  // no usage
         INTERMEDIATE_SLICE_OUT  // no usage
     };
 };
@@ -129,19 +132,17 @@ public:
     enum LmHeadRowParallelTensorIdx : uint32_t {
         INTERMEDIATE_SLICE_OUT = LmHeadTensorIdx::OUT_LOGITS + 1,
         INTERMEDIATE_GATHER_OUT,
-        INTERMEDIATE_LINEAR_PARALLEL_OUT  // no usage
     };
 };
 
 class LmHeadColumnParallelConfig {
 public:
 
-    uint64_t NODE_COUNT = 3;
-    uint64_t INTERMEDIATE_TENSOR_COUNT = 2;
+    uint64_t NODE_COUNT = 2;
+    uint64_t INTERMEDIATE_TENSOR_COUNT = 1;
 
     enum LmHeadColumnParallelTensorIdx : uint32_t {
-        INTERMEDIATE_LINEAR_PARALLEL_OUT = LmHeadTensorIdx::OUT_LOGITS + 1,
-        INTERMEDIATE_GATHER_OUT,
+        INTERMEDIATE_GATHER_OUT = LmHeadTensorIdx::OUT_LOGITS + 1,
         INTERMEDIATE_SLICE_OUT  // no usage
     };
 };
