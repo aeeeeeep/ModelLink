@@ -95,13 +95,17 @@ atb::Status FloatFALayer(const FloatFALayerParam &param, atb::Operation **operat
     inputNormNode.outTensorIds = { INTERNAL_INPUTNORMOUT };
 
     ATB_LOG(INFO) << "Linear Q";
-    atb::infer::LinearParam linearQParam = { false, true, false };
+    atb::infer::LinearParam linearQParam;
+    linearQParam.transposeB = false;
+    linearQParam.hasBias = false;
     CreateOperation(linearQParam, &mixedQLinearNode.operation);
     mixedQLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_QMIXEDWEIGHT };
     mixedQLinearNode.outTensorIds = { INTERNAL_QMIXEDLINEAROUT };
 
     ATB_LOG(INFO) << "Linear KV";
-    atb::infer::LinearParam linearKVParam = { false, true, false };
+    atb::infer::LinearParam linearKVParam;
+    linearKVParam.transposeB = false;
+    linearKVParam.hasBias = false;
     CreateOperation(linearKVParam, &mixedKVLinearNode.operation);
     mixedKVLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_KVMIXEDWEIGHT };
     mixedKVLinearNode.outTensorIds = { INTERNAL_KVMIXEDLINEAROUT };
@@ -177,7 +181,7 @@ atb::Status FloatFALayer(const FloatFALayerParam &param, atb::Operation **operat
     atb_speed::telechat::MlpGateParamV2 mlpQuantParam;
     mlpQuantParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
     mlpQuantParam.isBias = false;
-    mlpQuantParam.transposeB = true;
+    mlpQuantParam.transposeB = false;
     mlpQuantParam.isPack = false;
     mlpQuantParam.isUpQuant = false;
     mlpQuantParam.isGateQuant = false;

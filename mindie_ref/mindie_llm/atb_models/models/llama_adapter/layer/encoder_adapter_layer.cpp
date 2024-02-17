@@ -94,17 +94,19 @@ atb::Status EncoderAdapterLayer(const LayerParam &param, atb::Operation **operat
     inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT };
     inputNormNode.outTensorIds = { INTERMIDATE_INPUTNORMOUT };
 
-    atb::infer::LinearParam linearBiasParam = { false, false, true };
+    atb::infer::LinearParam linearBiasParam;
     CREATE_OPERATION(linearBiasParam, &wQLinearNode.operation);
     wQLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_QWEIGHT, IN_QBIAS };
     wQLinearNode.outTensorIds = { INTERMIDATE_Q };
 
-    atb::infer::LinearParam linearKParam = { false, false, false };
+    atb::infer::LinearParam linearKParam;
+    linearKParam.hasBias = false;
     CREATE_OPERATION(linearKParam, &wKLinearNode.operation);
     wKLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_KWEIGHT };
     wKLinearNode.outTensorIds = { INTERMIDATE_K };
 
-    atb::infer::LinearParam linearVParam = { false, false, false };
+    atb::infer::LinearParam linearVParam;
+    linearVParam.hasBias = false;
     CREATE_OPERATION(linearVParam, &wVLinearNode.operation);
     wVLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_VWEIGHT };
     wVLinearNode.outTensorIds = { INTERMIDATE_V };
@@ -130,7 +132,8 @@ atb::Status EncoderAdapterLayer(const LayerParam &param, atb::Operation **operat
         newShape.dims[3] = oldShape.dims[2] / param.headNum;
     };
 
-    atb::infer::LinearParam linearAParam = { false, false, false };
+    atb::infer::LinearParam linearAParam;
+    linearAParam.hasBias = false;
     CREATE_OPERATION(linearAParam, &wAVLinearNode.operation);
     wAVLinearNode.inTensorIds = { IN_ADAPTER, IN_VWEIGHT };
     wAVLinearNode.outTensorIds = { INTERMIDATE_AV };

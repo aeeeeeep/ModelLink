@@ -73,7 +73,10 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
     if (!param_.isQuant) {
         ATB_LOG(INFO) << "ParallelLinearV2 >> is not Quant >> matmulNode";
         atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
-        atb::infer::LinearParam matmulParam = {param_.transposeA, param_.transposeB, false};
+        atb::infer::LinearParam matmulParam;
+        matmulParam.transposeA = param_.transposeA;
+        matmulParam.transposeB = param_.transposeB;
+        matmulParam.hasBias = false;
         CREATE_OPERATION(matmulParam, &matmulNode.operation);
         matmulNode.inTensorIds = {IN_INPUT, IN_WEIGHT};
         matmulNode.outTensorIds = {(param_.commParam.rankSize > 1 || param_.isBias) ? inteId : OUT_LINEAR};
@@ -91,7 +94,10 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
         }
 
         atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
-        atb::infer::LinearQuantParam matmulParam = {param_.transposeA, param_.transposeB, true};
+        atb::infer::LinearParam matmulParam;
+        matmulParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
+        matmulParam.transposeA = param_.transposeA;
+        matmulParam.transposeB = param_.transposeB;
         CREATE_OPERATION(matmulParam, &matmulNode.operation);
         matmulNode.inTensorIds = {param_.quantParam.isQuantOp ? inteId++ : IN_INPUT, IN_WEIGHT, IN_BIAS, IN_DEQSCALE};
         matmulNode.outTensorIds = {param_.commParam.rankSize > 1 ? inteId : OUT_LINEAR};
@@ -155,9 +161,9 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
                     outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[1];
                 }
                 if (param_.transposeB) {
-                    outTensorDescs.at(0).shape.dims[dimNum - 1] = inTensorDescs.at(1).shape.dims[1];
-                } else {
                     outTensorDescs.at(0).shape.dims[dimNum - 1] = inTensorDescs.at(1).shape.dims[0];
+                } else {
+                    outTensorDescs.at(0).shape.dims[dimNum - 1] = inTensorDescs.at(1).shape.dims[1];
                 }
             }
             return atb::NO_ERROR;

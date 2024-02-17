@@ -70,7 +70,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     inputLayerNormNode.outTensorIds = { INTERMEDIATE_INPUTLAYERNORMOUT };
 
     // qkv [n_tokens, hidden_size] to [n_tokens, 3 * hidden_size]
-    atb::infer::LinearParam linearParam = { false, false, true };
+    atb::infer::LinearParam linearParam;
     CREATE_OPERATION(linearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = { INTERMEDIATE_INPUTLAYERNORMOUT, IN_QKVWEIGHT, IN_QKVBIAS };
     qkvLinearNode.outTensorIds = { INTERMEDIATE_MIXEDQKVLINEAROUT };

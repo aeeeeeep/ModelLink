@@ -182,7 +182,8 @@ namespace atb_speed {
             finalNormNode.outTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId)};
 
             auto &outLinearNode = graph_.nodes.at(nodeId++);
-            atb::infer::LinearParam linearParam = {false, false, false};
+            atb::infer::LinearParam linearParam;
+            linearParam.hasBias = false;
             CREATE_OPERATION(linearParam, &op);
             outLinearNode.operation.reset(op);
             const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;

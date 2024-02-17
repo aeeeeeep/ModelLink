@@ -62,7 +62,9 @@ atb::Status FusionMlp(const FusionMlpParam &param, atb::Operation **operation)
     auto &mulNode = opGraph.nodes.at(nodeId++);
     auto &matmulDownNode = opGraph.nodes.at(nodeId++);
 
-    atb::infer::LinearParam matmulGateParam = {false, param.transpose, false};
+    atb::infer::LinearParam matmulGateParam;
+    matmulGateParam.transposeB = param.transpose;
+    matmulGateParam.hasBias = false;
     CREATE_OPERATION(matmulGateParam, &matmulGateUpNode.operation);
     matmulGateUpNode.inTensorIds = {IN_HIDDENSTATES_ID, IN_WEIGHT_GATE_UP_ID};
     matmulGateUpNode.outTensorIds = {INTERMEDIATE_MATMUL_GATEUP_OUT_ID};
@@ -84,7 +86,9 @@ atb::Status FusionMlp(const FusionMlpParam &param, atb::Operation **operation)
     mulNode.inTensorIds = {INTERMEDIATE_SWISH_OUT_ID, INTERMEDIATE_MATMUL_UP_OUT_ID};
     mulNode.outTensorIds = {INTERMEDIATE_MUL_OUT_ID};
 
-    atb::infer::LinearParam matmulDownParam = {false, param.transpose, false};
+    atb::infer::LinearParam matmulDownParam;
+    matmulDownParam.transposeB = param.transpose;
+    matmulDownParam.hasBias = false;
     CREATE_OPERATION(matmulDownParam, &matmulDownNode.operation);
     matmulDownNode.inTensorIds = {INTERMEDIATE_MUL_OUT_ID, IN_WEIGHT_DOWN_ID};
     matmulDownNode.outTensorIds = {OUT_TRANSPOSED_RESULT_ID};
