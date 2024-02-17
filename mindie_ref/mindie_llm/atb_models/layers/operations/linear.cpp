@@ -71,7 +71,7 @@ atb::Status CreateFusionLinear(const FusionLinearParam &param, atb::Operation **
         atb::infer::LinearParam linearParam;
         linearParam.hasBias = false;
         linearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
-        CREATE_OPERATION(linearQuantParam, &linearQuantNode.operation);
+        CREATE_OPERATION(linearParam, &linearQuantNode.operation);
         if (param.quantType == RMS_NORM_QUANT_LINEAR_DEQUANT) {
             linearQuantNode.inTensorIds = {
                 LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_DESCALE

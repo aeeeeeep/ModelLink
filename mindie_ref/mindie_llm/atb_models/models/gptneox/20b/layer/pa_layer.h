@@ -30,7 +30,7 @@ struct PALayerParam {
     float rotaryPct = 0.0;
     float qScale = 1.0;
     float qkScale = 1.0;
-    bool transposedWeight = false;
+    bool transposedWeight = true;
     std::string model = "gptneox_20b";
     bool isPrefill = false;
     int rank = 0;
