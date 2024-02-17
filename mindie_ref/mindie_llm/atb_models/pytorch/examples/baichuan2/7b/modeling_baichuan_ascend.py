@@ -27,6 +27,8 @@ from typing import List, Optional, Tuple, Union
 import torch
 import torch.utils.checkpoint
 import torch_npu
+from atb_speed.common.timer import Timer
+from atb_speed.common.utils import load_atb_speed
 from torch import nn
 from torch.nn import CrossEntropyLoss
 from transformers import PreTrainedModel, PretrainedConfig
@@ -59,20 +61,7 @@ def get_rank_and_world_size():
 
 RANK, WORLD_SIZE = get_rank_and_world_size()
 
-
-def load_acl_transformer():
-    """
-    加载acl transformers
-    :return:
-    """
-    acl_transformer_home_path = os.getenv("ATB_SPEED_HOME_PATH", "")
-    if not acl_transformer_home_path or not os.path.exists(acl_transformer_home_path):
-        raise RuntimeError("env ACLTRANSFORMER_HOME_PATH not exist, source set_env.sh")
-    lib_path = os.path.join(acl_transformer_home_path, "lib/libatb_speed_torch.so")
-    torch.classes.load_library(lib_path)
-
-
-load_acl_transformer()
+load_atb_speed()
 
 logger = logging.get_logger(__name__)
 
@@ -448,7 +437,7 @@ class KVAttentionManager:
         else:
             self.attention_mask_max.zero_()
             self.attention_mask_max_inc = torch.zeros(
-            (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
+                (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
 
     def init_seq_len_and_token_offset(self, seq_len):
         self.token_offset = seq_len
@@ -924,6 +913,7 @@ class BaichuanForCausalLM(BaichuanPreTrainedModel):
                                                                revision=revision,
                                                                use_safetensors=use_safetensors, **kwargs)
 
+    @Timer.timing
     def forward(
             self,
             input_ids: torch.LongTensor = None,

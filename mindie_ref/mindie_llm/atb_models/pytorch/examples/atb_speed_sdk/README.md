@@ -214,13 +214,67 @@ SDK提供了两种性能测试的方法,常规估计法，精确打点法。也�
 | perf_mode      | normal | 性能测试方法，detail / normal , 默认是normal.要使用detail需要侵入式替换utils，并加上环境变量 RETURN_PERF_DETAIL=1 |
 | skip_decode    | 1      | 性能测试时是否只测试generate而跳过decode，0/1 默认是1                                                  |
 
+## 精确打点法
+
+- 通过在modeling中使用sdk里的计时装饰器进行计时
+- 不再需要侵入式修改任何的三方件中的源码，支持任意版本的transformers
+- perf_mode设为detail
+- 将环境变量`TIMEIT`设置成1来开启性能测试，为了不影响正常使用，默认是0
+
+### Timer介绍
+
+- 将环境变量`TIMEIT`设置成1来开计时，为了不影响正常使用，默认是0
+- 计时的数据是累积的，使用 Timer.reset() 来重置计时器
+- 硬件设备上的数据需要同步才能准确计时。在计时前，请使用`Timer.sync = getattr(torch, device_type).synchronize`设置计时器的同步函数
+
+### 如何使用
+
+只需要在最外层的forward函数上方增加timing的计时器即可。  
+例如：
+
+```python
+import torch
+from torch import nn
+
+from atb_speed.common.timer import Timer
+
+
+class AddNet(nn.Module):
+    def __init__(self, in_dim, h_dim=5, out_dim=1):
+        super().__init__()
+        self.fc1 = nn.Linear(in_dim, h_dim)
+        self.fc2 = nn.Linear(h_dim, out_dim)
+
+
+    @Timer.timing
+    def forward(self, x, y):
+        out = torch.cat([x, y], dim=1)
+        out = torch.relu(self.fc1(out))
+        out = self.fc2(out)
+        return out
+
+
+if __name__ == '__main__':
+    add_net = AddNet(in_dim=2)
+    Timer.sync = torch.cuda.synchronize
+    Timer.reset()
+    for i in range(5):
+        x = torch.randn(1, 1)
+        y = torch.randn(1, 1)
+        result = add_net.forward(x, y)
+        print(result)
+    print(Timer.timeit_res)
+    print(Timer.timeit_res.first_token_delay)
+    print(Timer.timeit_res.next_token_avg_delay)
+```
+
 ## 常规估计法
 
 - 通过第一次生成1个token，第2次生成n个token，计时作差来估计性能。
 - *假设两次推理首token的时延相同*
 - perf_mode设为normal
 
-## 精确打点法
+## 精确打点法(老，本章节内容后续将不再使用)
 
 - 通过在transformers中侵入式打点来计时
 - 需要侵入式修改开源三方件源码
