@@ -38,7 +38,7 @@ class TestConvertCkptFromHuggingface(unittest.TestCase):
         including embedding, final_norm, output and encoder. In the encoder, there will be some different layers 
         to compose the unique transformer layer and all these layer stack to compose the entity of the model.
         """
-        base_dir = Path(__file__).absolute().parent.parent.parent
+        base_dir = Path(__file__).absolute().parent.parent.parent.parent
         file_path = os.path.join(base_dir, "tools/checkpoint/util.py")
         arguments = sys.argv[1:]
         subprocess.run(["python", file_path] + arguments)
