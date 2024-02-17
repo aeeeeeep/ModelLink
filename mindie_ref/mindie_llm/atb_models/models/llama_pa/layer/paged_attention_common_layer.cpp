@@ -208,7 +208,8 @@ atb::Status PaCommonLayer(const PaCommonLayerParam &param, atb::Operation **oper
 
         // qkv
         atb::Node &qkvLinearNode = opGraph.nodes.at(nodeId++);
-        atb::infer::LinearParam linearParam = {false, false, false};
+        atb::infer::LinearParam linearParam;
+        linearParam.hasBias = false;
         CREATE_OPERATION(linearParam, &qkvLinearNode.operation);
         qkvLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_QMIXDWEIGHT};
         qkvLinearNode.outTensorIds = {INTERMIDATE_QKVMIXEDLINEAROUT};
@@ -385,7 +386,7 @@ atb::Status PaCommonLayer(const PaCommonLayerParam &param, atb::Operation **oper
         mlpParam.commDownParam.rankSize = param.rankSize;
         mlpParam.commDownParam.backend = param.backend;
         mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
-        mlpParam.transposeB = false;
+        mlpParam.transposeB = true;
         mlpParam.isBias = false;
         mlpParam.isPack = true;
         atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);

@@ -242,7 +242,7 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     mlpParam.quantGateParam.quantType = atb::infer::QUANT_INT8;
     mlpParam.quantGateParam.isQuantOp = false;
     mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_GELU;
-    mlpParam.transposeB = false;
+    mlpParam.transposeB = true;
     mlpParam.quantDownParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_QUANT;
     mlpParam.quantDownParam.inputScale = param.mlpOutInputScale;
     mlpParam.quantDownParam.inputOffset = param.mlpOutInputOffset;

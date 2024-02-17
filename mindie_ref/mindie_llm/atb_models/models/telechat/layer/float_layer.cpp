@@ -95,13 +95,13 @@ atb::Status FloatFALayer(const FloatFALayerParam &param, atb::Operation **operat
     inputNormNode.outTensorIds = { INTERNAL_INPUTNORMOUT };
 
     ATB_LOG(INFO) << "Linear Q";
-    atb::infer::LinearParam linearQParam = { false, true, false };
+    atb::infer::LinearParam linearQParam = { false, false, false };
     CreateOperation(linearQParam, &mixedQLinearNode.operation);
     mixedQLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_QMIXEDWEIGHT };
     mixedQLinearNode.outTensorIds = { INTERNAL_QMIXEDLINEAROUT };
 
     ATB_LOG(INFO) << "Linear KV";
-    atb::infer::LinearParam linearKVParam = { false, true, false };
+    atb::infer::LinearParam linearKVParam = { false, false, false };
     CreateOperation(linearKVParam, &mixedKVLinearNode.operation);
     mixedKVLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_KVMIXEDWEIGHT };
     mixedKVLinearNode.outTensorIds = { INTERNAL_KVMIXEDLINEAROUT };

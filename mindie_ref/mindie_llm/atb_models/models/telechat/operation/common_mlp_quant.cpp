@@ -96,7 +96,7 @@ atb::Status CommonMlpQuant(const CommonMlpQuantParam& param, atb::Operation** op
     if (param.isFloat) {
         auto &linearDownNode = opGraph.nodes.at(nodeId++);
 
-        atb::infer::LinearParam linearDownParam = { false, true, true };
+        atb::infer::LinearParam linearDownParam;
         CreateOperation(linearDownParam, &linearDownNode.operation);
 
         linearDownNode.inTensorIds = { INTERMEDIATE_MUL_OUT_ID, IN_WEIGHT_DOWN_ID, IN_BIAS_DOWN_ID };
