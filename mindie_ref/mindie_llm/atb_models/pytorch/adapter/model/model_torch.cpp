@@ -70,6 +70,7 @@
 #include "atb_speed/utils/model_factory.h"
 #include "telechat/model/float_model.h"
 #include "telechat/model/quant_model.h"
+#include "llama2/70b/model/fusion_pa_model_w8a8.h"
 
 void *ModelTorch::GetWorkSpace(uint64_t bufferSize)
 {
@@ -219,6 +220,8 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::telechat::FloatFAModel>(param);
     } else if (modelName_ == "telechat_quant_model") {
         model_ = std::make_shared<atb_speed::telechat::QuantFAModel>(param);
+    } else if (modelName_ == "llama2_70b_fusion_pa_model_w8a8") {
+        model_ = std::make_shared<atb_speed::llama2_70b::FusionPAModelW8A8>(param);
     } else {
         ATB_LOG(FATAL) << "not support modelName:" << modelName_;
         return atb::ERROR_INVALID_PARAM;

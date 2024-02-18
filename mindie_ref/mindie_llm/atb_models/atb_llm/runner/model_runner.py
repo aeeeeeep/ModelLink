@@ -53,6 +53,8 @@ class ModelRunner:
             revision=self.revision,
             extension=".safetensors"
         )
+        if self.quantize == 'smooth_quant':
+            weights._set_smooth_quant_params(self.model_name_or_path)
         self.model = self.model_cls(self.config, weights)
         self.model.to(weights.device)
         if self.dtype in [torch.float16, torch.bfloat16]:
