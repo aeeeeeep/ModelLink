@@ -291,7 +291,7 @@ cp ${script_path}/modeling_baichuan_cut.py ${model_path}
 修改 ${model_path}里的config.json中的kv对，改成`"AutoModelForCausalLM": "modeling_baichuan_cut.BaichuanForCausalLM"`
 
 ```text
-修改`${script_path}/cut_model_and_run_baichuan.sh`    
+修改`${script_path}/cut_model_and_run.sh`    
 将 `input_dir` 修改为模型所在路径 `${model_path}` 
 将 `output_dir` 修改为切分后的模型所存储的路径,比如仍为原目录 `${model_path}`。模型切分成功后，会自动生成新目录part_model(用户无需新建该文件夹)，即：${model_path/part_model}
 
@@ -384,8 +384,7 @@ bash cut_model_and_run.sh ${task_name}
 MAX_SEQ_LEN=2048 python main.py --task ${task_name}
 ```
 
-或
-
+或  
 ```shell
 MAX_SEQ_LEN=2048 bash cut_model_and_run.sh ${task_name}
 ```
