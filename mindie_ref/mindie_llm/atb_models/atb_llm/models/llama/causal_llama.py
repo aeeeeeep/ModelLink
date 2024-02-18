@@ -25,7 +25,6 @@ class LlamaForCausalLM(CausalLM):
         self.kv_cache_idx = torch.zeros(1, dtype=torch.int32).npu()
         self.in_beta = torch.zeros(config.hidden_size, dtype=torch.float16).npu()
         self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64).npu()
-        self.nz_dim = 16
 
     def init_ascend_operations(self, config: LlamaConfig):
         # 初始化模型

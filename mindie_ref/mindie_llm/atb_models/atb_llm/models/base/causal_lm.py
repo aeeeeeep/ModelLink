@@ -157,13 +157,13 @@ class CausalLM(PreTrainedModel):
                                             dtype=torch.float16) for _ in range(self.num_layers)]
             else:
                 self.k_cache = [torch_npu.npu_format_cast_(torch.zeros(self.batch_num,
-                                math.ceil(self.num_key_value_heads * self.head_size / self.nz_dim),
-                                self.max_position_embeddings, self.nz_dim, device=input_ids.device,
+                                math.ceil(self.num_key_value_heads * self.head_size / 16),
+                                self.max_position_embeddings, 16, device=input_ids.device,
                                 dtype=torch.float16).contiguous(), 29) for _ in range(self.num_layers)]
                 torch.npu.empty_cache()
                 self.v_cache = [torch_npu.npu_format_cast_(torch.zeros(self.batch_num,
-                                math.ceil(self.num_key_value_heads * self.head_size / self.nz_dim),
-                                self.max_position_embeddings, self.nz_dim, device=input_ids.device,
+                                math.ceil(self.num_key_value_heads * self.head_size / 16),
+                                self.max_position_embeddings, 16, device=input_ids.device,
                                 dtype=torch.float16).contiguous(), 29) for _ in range(self.num_layers)]
                 torch.npu.empty_cache()
             self.past_key_values_length = 0
@@ -208,11 +208,11 @@ class CausalLM(PreTrainedModel):
             self.mask_full[:batch_size, :dim_0, :dim_1] = attention_mask.squeeze(1)
         else:
             self.mask_full = torch.zeros((self.batch_num, self.max_position_embeddings, 
-                self.max_position_embeddings),dtype=torch.half, device=input_ids.device)
+                self.max_position_embeddings), dtype=torch.half, device=input_ids.device)
             self.mask_full[:batch_size, :dim_0, :dim_1] = attention_mask.squeeze(1)
             self.mask_full = torch_npu.npu_format_cast_(
                 self.mask_full.view(self.batch_num, self.mask_full.shape[1],
-                self.mask_full.shape[2] // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
+                self.mask_full.shape[2] // 16, 16).transpose(1, 2).contiguous(), 29)
 
     def prepare_inputs_for_ascend(self,
                                   input_ids: torch.Tensor,
