@@ -39,7 +39,19 @@ from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutpu
 from transformers.modeling_utils import PreTrainedModel
 from transformers.utils import add_start_docstrings, add_start_docstrings_to_model_forward, logging, replace_return_docstrings
 from transformers.models.llama.configuration_llama import LlamaConfig
-from atb_llm.utils.initial import NPUSocInfo
+from dataclasses import dataclass
+
+
+@dataclass
+class NPUSocInfo:
+    soc_name: str = ""
+    soc_version: int = -1
+    need_nz: bool = False
+
+    def __post_init__(self):
+        self.soc_version = torch_npu._C._npu_get_soc_version()
+        if self.soc_version in (100, 101, 102, 200, 201, 202, 203):
+            self.need_nz = True
 
 def load_acl_transformer():
     acl_transformer_home_path = os.getenv("ATB_SPEED_HOME_PATH", "")
