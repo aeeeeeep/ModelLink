@@ -1,4 +1,4 @@
-# Copyright (c) 2022 MIT HAN Lab.
+# Copyright (c) 2022 MIT HAN Lab
 from functools import partial
 
 import torch
