@@ -17,10 +17,10 @@
 #define ATB_SPEED_MODELS_LLAMA2_70B_FUSION_PA_LAYER_W8A8_H
 
 #include <vector>
+#include "nlohmann/json.hpp"
 #include "atb/atb_infer.h"
 #include "atb_speed/base/hosttensor_binder.h"
 #include "atb_speed/log.h"
-#include "nlohmann/json.hpp"
 
 namespace atb_speed {
 namespace llama2_70b {

@@ -15,7 +15,7 @@ class EnvVar:
     # 使用Flash Attention and Paged Attention
     use_flash_attention: bool = os.getenv("FLASH_ATTENTION", "1") == "1"
     # 最大内存 GB
-    max_memory_gb: str = os.getenv("MAX_MEMORY_GB", "58")
+    max_memory_gb: str = os.getenv("MAX_MEMORY_GB", None)
     reserved_memory_gb: int = int(os.getenv("RESERVED_MEMORY_GB", "3"))
     # 跳过warmup
     skip_warmup: bool = os.getenv("SKIP_WARMUP", "0") == "1"
