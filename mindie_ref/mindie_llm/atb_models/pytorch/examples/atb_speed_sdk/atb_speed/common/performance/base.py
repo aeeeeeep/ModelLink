@@ -13,6 +13,7 @@ import torch
 import torch.distributed as dist
 from atb_speed.common.config import atb_speed_config
 from atb_speed.common.launcher.base import BaseLauncher
+from atb_speed.common.timer import Timer
 
 
 class PerfMode(str, Enum):
@@ -61,7 +62,7 @@ class PerformanceTest:
         self.config = PerformanceTestConfig(device_name=self.launcher.device_name)
         self.model, self.tokenizer = launcher.model, launcher.tokenizer
         self.dummy_input = "Common sense questions and answers\n\nQuestion: Why do people need sleep\nFactual answer:"
-        self.perf = self._perf_detail if atb_speed_config.performance.perf_mode == PerfMode.detail else self._perf
+        self.perf = self._perf_detail_v2 if atb_speed_config.performance.perf_mode == PerfMode.detail else self._perf
         self.test_case = self.generate_test_case()
 
     def generate_test_case(self):
@@ -156,6 +157,25 @@ class PerformanceTest:
             dist.all_reduce(time_tensor, dist.ReduceOp.MAX)
         time_tensor = time_tensor.tolist()
         return time_tensor
+
+    def _perf_detail_v2(self, inputs, seq_len_out):
+        """
+        使用装饰器的方式进行计时，从而从根本上解决侵入式修改打点的方式
+        :param inputs:
+        :param seq_len_out:
+        :return:
+        """
+        Timer.reset()
+        Timer.sync = getattr(torch, self.launcher.device_type).synchronize
+        with torch.no_grad():
+            generate_ids = self.model.generate(**inputs, max_new_tokens=seq_len_out,
+                                               eos_token_id=self.model.config.vocab_size * 2  # 避免提前停止
+                                               )
+            # decode
+            if not atb_speed_config.performance.skip_decode:
+                _ = self.tokenizer.batch_decode(generate_ids, skip_special_tokens=True,
+                                                clean_up_tokenization_spaces=False)
+        return [Timer.timeit_res.first_token_delay, Timer.timeit_res.next_token_avg_delay, 0, 0]
 
     def _perf_detail(self, inputs, seq_len_out):
         with torch.no_grad():

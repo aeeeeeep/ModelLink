@@ -30,14 +30,14 @@ ChatGLM-6B 是一个开源的、支持中英双语问答的对话语言模型，
 
 # 推理前准备
 
-1. 参见 [推理环境准备](../../../docs/推理环境准备.md) 安装 固件与驱动，CANN，PyTorchAdapter等基础软件。
+1. 参见 [推理环境准备](../../../../docs/推理环境准备.md) 安装 固件与驱动，CANN，PyTorchAdapter等基础软件。
    ```shell
    # 使能cann环境变量（根据实际安装路径修改）
    source ${path-to-ascend-toolkit}/set_env.sh
    # 使能加速库环境变量（根据实际安装路径修改）
-   source ${path-to-ascendTB}/set_env.sh
+   source ${path-to-mindie-atb}/set_env.sh
    # 使能inference库环境变量
-   source ${path-to-transfomer-llm}/set_env.sh
+   source ${path-to-atb-models}/set_env.sh
    ```
    
 2. 下载模型实现文件和权重文件，并存储到任意路径下 `CHECKPOINT={path-to-weights}`
@@ -104,7 +104,7 @@ ChatGLM-6B 是一个开源的、支持中英双语问答的对话语言模型，
 
 ## 获取源码及依赖
 
-1. 获取源码并应用补丁文件
+1. 切换到 `chatglm-6b` 执行目录
 
    ```shell
    export CHECKPOINT={path-to-weights}
@@ -114,10 +114,10 @@ ChatGLM-6B 是一个开源的、支持中英双语问答的对话语言模型，
 
     ```shell
     # torch 1.11.0
-    pip3 install torch==1.11.0 torchvision==0.14.1 icetk==0.0.4 transformers=4.30.2 sentencepiece
+    pip3 install torch==1.11.0 torchvision==0.14.1 icetk==0.0.4 transformers==4.30.2 sentencepiece
     
     # torch 2.0.1
-    pip3 install torch==2.0.1 torchvision==0.15.2 icetk==0.0.4 transformers=4.30.2 sentencepiece
+    pip3 install torch==2.0.1 torchvision==0.15.2 icetk==0.0.4 transformers==4.30.2 sentencepiece
     ```
 
 ## 模型推理
@@ -128,26 +128,23 @@ ChatGLM-6B 是一个开源的、支持中英双语问答的对话语言模型，
   cpupower frequency-set -g performance
   ```
   
-- 推理前开启如下环境变量
+- 推理前设置和开启如下环境变量
 
   ```shell
-  export HCCL_BUFFSIZE=110
   export HCCL_OP_BASE_FFTS_MODE_ENABLE=TRUE
   export TASK_QUEUE_ENABLE=1
   export ATB_OPERATION_EXECUTE_ASYNC=1
   export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
-
-  # 300 Ipro 和 300 IDuo 上使能多 stream 可提升性能
+  
+  # 300 Ipro 和 300 IDuo 上开启
+  export HCCL_BUFFSIZE=110
   export ATB_USE_TILING_COPY_STREAM=1
   ```
 
 - `C-Eval` 数据集推理
 
   ```shell
-  # 单芯场景
-  python main.py --mode precision_dataset --model_path ${CHECKPOINT} --ceval_dataset ${DATASET} --batch 8
-  
-  # 多芯场景, 将TP_SIZE改为对应的并行数，例如双芯场景TP_SIZE=2
+  # 将TP_SIZE设置为对应的并行数，例如单芯场景TP_SIZE=1，双芯场景TP_SIZE=2
   python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
   torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode precision_dataset --model_path ${CHECKPOINT} --ceval_dataset ${DATASET} --batch 8 --tp_size ${TP_SIZE}
   ```
@@ -155,20 +152,17 @@ ChatGLM-6B 是一个开源的、支持中英双语问答的对话语言模型，
 - 模型性能数据测试
 
   ```shell
-  # 单芯场景
-  python main.py --mode performance --model_path ${CHECKPOINT} --batch ${batch_size}
-  
-  # 多芯场景，将TP_SIZE改为对应的并行数，例如双芯场景TP_SIZE=2
+  # 将TP_SIZE设置为对应的并行数，例如单芯场景TP_SIZE=1，双芯场景TP_SIZE=2
   python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
   torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode performance --model_path ${CHECKPOINT} --batch ${batch_size} --tp_size ${TP_SIZE}
   ```
   
   备注：
   
-  1. 可通过开启 --set_case_pair 指定输入输出序列长度，例如
+  1. 可通过开启 --set_case_pair 指定输入输出序列长度，例如以下命令为输入输出组合为[256,256], [512,512], [1024,1024]的情况：
   
      ```shell
-     python main.py --mode performance --model_path ${CHECKPOINT} --device 4 --set_case_pair 1 --seqlen_in_pair 256,512,1024 --seqlen_out_pair 64,128,256 --batch 1 --performance_output_file performance_bs1.csv
+     torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 --mode performance --model_path ${CHECKPOINT} --device 4 --set_case_pair 1 --seqlen_in_pair 256,512,1024 --seqlen_out_pair 256,512,1024 --batch 1 --performance_output_file performance_bs1.csv
      ```
   
   2. 环境变量 `MAX_SEQ_LEN` （默认值2048）必须大于等于 `seqlen_in + seqlen_out`，例如：
@@ -181,10 +175,7 @@ ChatGLM-6B 是一个开源的、支持中英双语问答的对话语言模型，
 - 命令行交互
 
   ```shell
-  # 单芯场景
-  python main.py --mode cli_demo --model_path ${CHECKPOINT}
-  
-  # 双芯场景
+  # 将TP_SIZE设置为对应的并行数，例如单芯场景TP_SIZE=1，双芯场景TP_SIZE=2
   python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
   torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode cli_demo --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
   ```

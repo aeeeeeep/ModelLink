@@ -17,7 +17,7 @@ atb_stream="ATB_USE_TILING_COPY_STREAM=${use_tiling_copy_stream}"
 atb_launch_kernel="ATB_LAUNCH_KERNEL_WITH_TILING=${use_launch_kernel_with_tiling}"
 lccl_options="BACKEND='lccl'"
 start_cmd="MAX_SEQ_LEN=$max_seqence_length torchrun --nproc_per_node $world_size_ --master_port 20002 main.py --task $task_name"
-# 910B机器执行需要去掉run_cmd中的${atb_stream}参数
+# Atlas 800I A2 机器执行需要去掉run_cmd中的${atb_stream}参数
 run_cmd="${atb_options} ${atb_async_options} ${atb_stream} ${atb_launch_kernel} ${start_cmd}"
 
 echo "**********************float model**********************"

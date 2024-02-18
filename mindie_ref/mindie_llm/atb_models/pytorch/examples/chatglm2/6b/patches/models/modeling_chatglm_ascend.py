@@ -1175,7 +1175,6 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             acl_model_out = self.acl_encoder_operation.execute(input_full, acl_param)
             lm_logits = acl_model_out[0]
 
-            # recover presents/past_key_values
             self.attention_mask_max = None
 
         else:  # 非首token
@@ -1481,7 +1480,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
                                             **kwargs)
         return self
 
-    def sample(
+    def _sample(
         self,
         input_ids: torch.LongTensor,
         logits_processor: Optional[LogitsProcessorList] = None,

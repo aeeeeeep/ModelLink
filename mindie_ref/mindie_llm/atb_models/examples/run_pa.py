@@ -81,11 +81,6 @@ class PARunner:
         )
 
     def warm_up(self):
-        max_prefill_tokens = self.max_batch_size * (self.max_input_length + self.max_output_length)
-        if self.max_prefill_tokens == -1:
-            self.max_prefill_tokens = max_prefill_tokens
-        else:
-            self.max_prefill_tokens = max(self.max_prefill_tokens, max_prefill_tokens)
         input_ids = torch.ones(self.max_prefill_tokens, dtype=torch.int64).to(self.device)
         position_ids = torch.arange(self.max_prefill_tokens, dtype=torch.int32).to(self.device)
         cu_seqlen_prefill = torch.tensor([1])
@@ -197,7 +192,7 @@ def parse_arguments():
     parser.add_argument('--max_position_embeddings', type=int, default=None)
     parser.add_argument('--max_input_length', type=int, default=1024)
     parser.add_argument('--max_output_length', type=int, default=20)
-    parser.add_argument('--max_prefill_tokens', type=int, default=-1)
+    parser.add_argument('--max_prefill_tokens', type=int, default=4096)
     parser.add_argument("--max_batch_size", type=int, default=1)
     parser.add_argument("--block_size", type=int, default=128)
     parser.add_argument("--quantize", type=str, default=None)

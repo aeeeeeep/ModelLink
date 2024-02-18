@@ -272,6 +272,7 @@ int64_t DecoderModel::BuildGraph()
     lmHeadParam.gatherAhead = param_.isPrefill;
     lmHeadParam.hiddenSizePerAttentionHead = param_.hiddenSizePerAttentionHead;
     lmHeadParam.linearParallelParam.fusionLinearParam.quantType = false;  // LmHead未接入量化
+    lmHeadParam.linearParallelParam.unpadInputs = !param_.isFA;
     if (param_.isLmHeadParallel) {
         lmHeadParam.linearParallelParam.parallelType = atb_speed::common::COLUMN_PARALLEL;
         lmHeadParam.linearParallelParam.rank = param_.rank;

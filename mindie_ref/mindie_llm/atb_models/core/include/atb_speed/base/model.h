@@ -30,6 +30,7 @@
 #include <map>
 #include <atomic>
 #include <set>
+#include <nlohmann/json.hpp>
 
 
 namespace atb_speed {
@@ -111,6 +112,11 @@ protected:
     void ClearInternalTensors();
     atb::Tensor MallocInternalTensor(size_t nodeId, size_t outTensorId, const atb::TensorDesc &tensorDesc);
     void FreeInternalTensor(void *tensorDeviceData);
+    void GetModelTensorNameList(nlohmann::json &modelJson,
+        std::map<atb::Tensor *, std::string> &tensorNameMap);
+    void GetNodeTopoInfo(nlohmann::json &nodeJson, const Node &opNode,
+        const std::map<atb::Tensor *, std::string> tensorNameMap);
+    std::string GetModelTopoInfo();
 
 protected:
     GetWorkspaceFunc getWorkSpaceFunc_;
