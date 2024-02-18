@@ -3,7 +3,7 @@ import json
 from typing import Optional
 import torch
 
-from atb_llm.utils.layers import TensorHead, load_column_multi
+from atb_llm.utils.layers import load_column_multi
 from ..base.causal_lm import CausalLM
 from .modeling_llama import LlamaModel, LlamaConfig
 
@@ -13,26 +13,19 @@ class LlamaForCausalLM(CausalLM):
         super().__init__(config, weights)
         self.model = LlamaModel(config, weights)
 
-        if not self.soc_info.need_nz:
-            self.lm_head = load_column_multi(
-                config,
-                prefixes=["lm_head"],
-                weights=weights,
-                head_size=1,
-                lm_head=True,
-            )
-        else:  # 310P 暂不支持all-gather
-            self.lm_head = TensorHead.load_weight(
-                config,
-                prefix="lm_head",
-                weights=weights,
-                is_norm=False,
-            )
+        self.lm_head = load_column_multi(
+            config,
+            prefixes=["lm_head"],
+            weights=weights,
+            head_size=1,
+            lm_head=True,
+        )
 
         self.placeholder = torch.zeros(1, dtype=torch.float16).npu()
         self.kv_cache_idx = torch.zeros(1, dtype=torch.int32).npu()
         self.in_beta = torch.zeros(config.hidden_size, dtype=torch.float16).npu()
         self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64).npu()
+        self.nz_dim = 16
 
     def init_ascend_operations(self, config: LlamaConfig):
         # 初始化模型
@@ -45,7 +38,7 @@ class LlamaForCausalLM(CausalLM):
             "isBF16": False,
             "isPack": True,
             "isEmbeddingParallel": False,
-            "isLmHeadParallel": True,  # 310P 暂不支持all-gather
+            "isLmHeadParallel": True,
             "quantType": 2 if self.quantize == "smooth_quant" else 0,
             "rmsNormEps": config.rms_norm_eps,
             "numAttentionHeadsPerRank": self.num_attention_heads,
@@ -54,7 +47,7 @@ class LlamaForCausalLM(CausalLM):
             "numHiddenLayers": self.num_layers,
             "rank": self.tp_rank,
             "worldSize": self.tp_world_size,
-            "backend": "lccl",
+            "backend": "hccl" if self.soc_info.need_nz else "lccl",
             "tokenOffset": [0],
             "seqLen": [1],
         }
