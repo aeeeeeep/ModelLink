@@ -424,8 +424,8 @@ class FlashChatglmModel(torch.nn.Module):
         })
         self.seq_length = config.seq_length
 
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm2_6b_decoder_pa_model")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm2_6b_decoder_pa_model")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm2_6b_PagedAttentionModel")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm2_6b_PagedAttentionModel")
 
         self.acl_encoder_operation.set_param(self.acl_param_encoder)
         self.acl_decoder_operation.set_param(self.acl_param_decoder)

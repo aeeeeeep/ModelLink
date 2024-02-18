@@ -558,7 +558,7 @@ class Model(PreTrainedModel):
             "backend": os.getenv("BACKEND", "hccl")
         })
         self.max_position_embeddings = int(os.getenv("MAX_SEQ_LEN", config.max_position_embeddings))
-        self.acl_fa_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_flash_attention_rope_model")
+        self.acl_fa_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_FlashAttentionRopeModel")
 
         self.acl_fa_operation.set_param(self.acl_param)
 

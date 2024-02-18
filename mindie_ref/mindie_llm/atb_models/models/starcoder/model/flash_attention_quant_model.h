@@ -17,6 +17,7 @@
 #define ATB_SPEED_MODELS_STAR_CODER_FA_PARALLEL_QUANT_MODEL_H
 
 #include "atb_speed/base/model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace star_coder {
@@ -65,6 +66,9 @@ private:
     std::vector<int32_t> seqLen_;
     int32_t layerId_ = 0;
 };
+
+REGISTER_MODEL(star_coder, FlashAttentionQuantModel);
+
 } // namespace star_coder
 } // namespace atb_speed
 #endif

@@ -85,8 +85,8 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                 "worldSize": self.tp_world_size,
                 "backend": "lccl"
             })
-            self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_decoder_model")
-            self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_decoder_model")
+            self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_DecoderModel")
+            self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_DecoderModel")
 
             self.acl_encoder_operation.set_param(self.acl_param_encoder)
             self.acl_decoder_operation.set_param(self.acl_param_decoder)
@@ -118,8 +118,8 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                     self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama2_70b_fusion_pa_model_w8a8")
                     self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama2_70b_fusion_pa_model_w8a8")
                 else:
-                    self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama2_70b_fusion_pa_model")
-                    self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama2_70b_fusion_pa_model")
+                    self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama2_70b_FusionPAModel")
+                    self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama2_70b_FusionPAModel")
             else:
                 self.acl_param_encoder = json.dumps({
                     "rmsNormEps": config.rms_norm_eps,
@@ -144,8 +144,8 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                     "backend": os.getenv("BACKEND", "lccl"),
                 })
 
-                self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_65b_pa_model")
-                self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_65b_pa_model")
+                self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_pa_PAModel")
+                self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_pa_PAModel")
 
             self.acl_encoder_operation.set_param(self.acl_param_encoder)
             self.acl_decoder_operation.set_param(self.acl_param_decoder)
