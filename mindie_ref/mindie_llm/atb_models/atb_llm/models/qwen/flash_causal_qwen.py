@@ -654,6 +654,10 @@ class QWenModel(QWenPreTrainedModel):
             self.acl_param_encoder = json.dumps({
                 "seqLen": input_lengths.tolist()
             })
+        else:
+            self.acl_param_encoder = json.dumps({
+                "seqLen": input_lengths.tolist()
+            })
         
         if self.soc_info.need_nz:
             pad_maxs = math.ceil(max_seq_len / 16) * 16
