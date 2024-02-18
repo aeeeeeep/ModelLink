@@ -229,6 +229,7 @@ int64_t FusionPAModelW8A8::BuildGraph()
                                 &graph_.weightTensors.at(finalLinearWeightTensorId)};
     }
     lmHeadNode.outTensors = {&graph_.outTensors.at(0)};
+    return atb::NO_ERROR;
 }
 
 atb::Status FusionPAModelW8A8::ParseParam(const std::string &param)
