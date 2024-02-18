@@ -25,11 +25,13 @@ public:
     struct Param {
         double rmsNormEps = 0;
         int headNum = 0;
+        int kvHeadNum = 0;
         int dk = 0;
         int layerNum = 0;
         float qkScale = 1.0;
         int rank = 0;
         int rankSize = 1;
+        int isTriuMask = 0;
         std::string backend = "hccl";
         bool quantModel = false;
         bool sparseModel = false;
