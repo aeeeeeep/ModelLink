@@ -655,7 +655,7 @@ class QWenModel(QWenPreTrainedModel):
                 "seqLen": input_lengths.tolist()
             })
         else:
-            self.acl_param_encoder = json.dumps({
+            self.acl_param_decoder = json.dumps({
                 "seqLen": input_lengths.tolist()
             })
         
