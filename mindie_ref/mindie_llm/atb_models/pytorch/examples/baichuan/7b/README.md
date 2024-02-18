@@ -282,7 +282,7 @@ cp ${script_path}/modeling_baichuan_cut.py ${model_path}
 修改 ${model_path}里的config.json中的kv对，改成`"AutoModelForCausalLM": "modeling_baichuan_cut.BaiChuanForCausalLM"`
 
 ```text
-修改`${script_path}/cut_model_and_run_baichuan.sh`    
+修改`${script_path}/cut_model_and_run.sh`    
 将 `input_dir` 修改为模型所在路径 `${model_path}` 
 将 `output_dir` 修改为切分后的模型所存储的路径,比如仍为原目录 `${model_path}`。模型切分成功后，会自动生成新目录part_model(用户无需新建该文件夹)，即：${model_path/part_model}
 将 `world_size_` 修改成希望切成的卡的数量
@@ -342,10 +342,10 @@ bash cut_model_and_run.sh ${task_name}
 MAX_SEQ_LEN=2048 python main.py --task ${task_name}
 ```
 
-或
-
+或  
+修改cut_model_and_run.sh 中的 max_seq_length
 ```shell
-MAX_SEQ_LEN=2048 bash cut_model_and_run.sh ${task_name}
+bash cut_model_and_run.sh ${task_name}
 ```
 
 
@@ -408,17 +408,17 @@ bash cut_model_and_run.sh precision
 
 ```shell
 cd ${script_path}
-RETURN_PERF_DETAIL=1 python main.py --task performance
+TIMEIT=1 python main.py --task performance
 ```
 
 - 多芯
 
 ```shell
 cd ${script_path}
-RETURN_PERF_DETAIL=1 bash cut_model_and_run.sh performance
+TIMEIT=1 bash cut_model_and_run.sh performance
 ```
 
-为了不影响正常使用，将`RETURN_PERF_DETAIL`设置成1来返回具体的性能测试的值，默认是0
+为了不影响正常使用，将`TIMEIT`设置成1来返回具体的性能测试的值，默认是0
 
 ### 性能测试结果
 
