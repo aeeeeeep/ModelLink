@@ -32,6 +32,8 @@ class AddNet(nn.Module):
 class TimerTest(TestCase):
     @classmethod
     def setUpClass(cls):
+        Timer.reset()
+        # Timer.sync= xxxx
         cls.add_net = AddNet(in_dim=2)
 
     def test_1(self):
