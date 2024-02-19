@@ -1,7 +1,9 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 import os
+
 ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
 import sys
+
 sys.path.append(os.path.join(ATB_SPEED_HOME_PATH, "../.."))
 from atb_llm.runner import ModelRunner
 from base import model_test
@@ -11,7 +13,6 @@ MODEL_FILE = os.path.join(
     model_test.ATB_SPEED_HOME_PATH,
     "pytorch/examples/baichuan2/13b/modeling_baichuan_ascend.py",
 )
-WEIGHT_DIR = os.path.join(model_test.ATB_TESTDATA_PATH, "weights", "baichuan2_13b")
 
 
 class Baichuan213BModelTest(model_test.ModelTest):
@@ -42,6 +43,12 @@ class Baichuan213BModelTest(model_test.ModelTest):
         tokenizer = model.tokenizer
         model.load_weights()
         return tokenizer, model
+
+    def prepare_environ(self):
+        os.environ['ATB_LAYER_INTERNAL_TENSOR_REUSE'] = "1"
+        os.environ['ATB_OPERATION_EXECUTE_ASYNC'] = "1"
+        os.environ['TASK_QUEUE_ENABLE'] = "1"
+        os.environ['LCCL_ENABLE_FALLBACK'] = "1"
 
     def get_dataset_list(self):
         return ["GSM8K", "MMLU", "CEval"]
