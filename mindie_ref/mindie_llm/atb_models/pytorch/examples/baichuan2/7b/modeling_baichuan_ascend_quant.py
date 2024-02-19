@@ -584,7 +584,7 @@ class BaichuanModel(BaichuanPreTrainedModel):
             "roll_back_layer": self.roll_back_layer
         })
         self.max_position_embeddings = int(os.getenv("MAX_SEQ_LEN", config.max_position_embeddings))
-        self.acl_fa_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_flash_attention_quant_model")
+        self.acl_fa_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_FlashAttentionQuantModel")
 
         print((self.acl_param))
 

@@ -663,7 +663,7 @@ class AquilaModel(AquilaPreTrainedModel):
             "backend": os.getenv("BACKEND", "hccl")
         })
         self.max_position_embeddings = int(os.getenv("MAX_SEQ_LEN", config.max_position_embeddings))
-        self.acl_operation = torch.classes.ModelTorch.ModelTorch("aquila_7b_flash_attention_model")
+        self.acl_operation = torch.classes.ModelTorch.ModelTorch("aquila_7b_FlashAttentionRopeModel")
 
         self.acl_operation.set_param(self.acl_param)
 

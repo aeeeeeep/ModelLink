@@ -1051,7 +1051,7 @@ class FalconForCausalLM(FalconPreTrainedModel):
                                  "kvHeadNum": 1, "preScale": 1.0 / math.sqrt(self.head_dim), "postScale": 1.0, "model": "falcon_7b",
                                  "layerNum": self.hidden_layers})
         self.falcon_model = torch.classes.ModelTorch.ModelTorch(
-            "falcon_7b_model")
+            "falcon_7b_FlashAttentionModel")
         self.falcon_model.set_param(self.param)
 
         self.flag = True

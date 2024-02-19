@@ -453,7 +453,7 @@ class FalconForCausalLM(FalconPreTrainedModel):
             "layerNormEps": config.layer_norm_epsilon,
             "model": "falcon_40b",
         })
-        self.falcon_model = torch.classes.ModelTorch.ModelTorch("falcon_40b_model")
+        self.falcon_model = torch.classes.ModelTorch.ModelTorch("falcon_40b_FusionModel")
         self.falcon_model.set_param(self.param)
 
 

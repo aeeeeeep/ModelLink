@@ -16,6 +16,7 @@
 #ifndef ATB_SPEED_MODELS_VICUNA_7B_DECODER_WITH_FUSION_MODEL_H
 #define ATB_SPEED_MODELS_VICUNA_7B_DECODER_WITH_FUSION_MODEL_H
 #include "atb_speed/base/model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
     namespace minigpt4_vicuna_7b {
@@ -50,6 +51,9 @@ namespace atb_speed {
             std::vector<int32_t> seqLen_;
             int32_t layerId_ = 0;
         };
+
+        REGISTER_MODEL(minigpt4_vicuna_7b, FusionEncoderModel);
+
     } // namespace minigpt4_vicuna_7b
 } // namespace atb_speed
 #endif

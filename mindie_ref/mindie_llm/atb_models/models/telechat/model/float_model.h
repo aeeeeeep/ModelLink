@@ -17,6 +17,7 @@
 #define ATB_SPEED_MODELS_TELECHAT_ALL_FLOAT_FA_MODEL_H
 #include <atb/svector.h>
 #include "atb_speed/base/model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace telechat {
@@ -48,6 +49,9 @@ private:
     atb::SVector<int32_t> tokenOffset_;
     atb::SVector<int32_t> seqLen_;
 };
+
+REGISTER_MODEL(telechat, FloatFAModel);
+
 }  // namespace telechat
 }  // namespace atb_speed
 #endif
