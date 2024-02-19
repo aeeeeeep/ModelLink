@@ -112,6 +112,7 @@ class CausalLM(PreTrainedModel):
         self.k_cache = None
         self.v_cache = None
         self.past_key_values_length = 0
+        self.nz_dim = 16
 
     def weight_format_cast(self, tensor):
         if not self.soc_info.need_nz:
@@ -157,14 +158,14 @@ class CausalLM(PreTrainedModel):
                                             dtype=torch.float16) for _ in range(self.num_layers)]
             else:
                 self.k_cache = [torch_npu.npu_format_cast_(torch.zeros(self.batch_num,
-                                math.ceil(self.num_key_value_heads * self.head_size / 16),
-                                self.max_position_embeddings, 16, device=input_ids.device,
-                                dtype=torch.float16).contiguous(), 29) for _ in range(self.num_layers)]
+                                math.ceil(self.num_key_value_heads * self.head_size / self.nz_dim),
+                                self.max_position_embeddings, self.nz_dim, device=input_ids.device,
+                                dtype=torch.float16), 29) for _ in range(self.num_layers)]
                 torch.npu.empty_cache()
                 self.v_cache = [torch_npu.npu_format_cast_(torch.zeros(self.batch_num,
-                                math.ceil(self.num_key_value_heads * self.head_size / 16),
-                                self.max_position_embeddings, 16, device=input_ids.device,
-                                dtype=torch.float16).contiguous(), 29) for _ in range(self.num_layers)]
+                                math.ceil(self.num_key_value_heads * self.head_size / self.nz_dim),
+                                self.max_position_embeddings, self.nz_dim, device=input_ids.device,
+                                dtype=torch.float16), 29) for _ in range(self.num_layers)]
                 torch.npu.empty_cache()
             self.past_key_values_length = 0
             self.token_offset[:] = input_ids.shape[1]
@@ -212,7 +213,7 @@ class CausalLM(PreTrainedModel):
             self.mask_full[:batch_size, :dim_0, :dim_1] = attention_mask.squeeze(1)
             self.mask_full = torch_npu.npu_format_cast_(
                 self.mask_full.view(self.batch_num, self.mask_full.shape[1],
-                self.mask_full.shape[2] // 16, 16).transpose(1, 2).contiguous(), 29)
+                self.mask_full.shape[2] // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
 
     def prepare_inputs_for_ascend(self,
                                   input_ids: torch.Tensor,
