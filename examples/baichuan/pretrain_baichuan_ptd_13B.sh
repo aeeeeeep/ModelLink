@@ -29,41 +29,39 @@ GPT_ARGS="
     --tensor-model-parallel-size $TP \
     --pipeline-model-parallel-size $PP \
     --sequence-parallel \
-    --num-layers 32 \
-    --hidden-size 4096 \
-    --ffn-hidden-size 11008 \
-    --num-attention-heads 32 \
+    --num-layers 40 \
+    --hidden-size 5120 \
+    --ffn-hidden-size 13696 \
+    --num-attention-heads 40 \
     --tokenizer-type Llama2Tokenizer \
     --tokenizer-model $TOKENIZER_MODEL \
-    --load $CKPT_LOAD_DIR \
     --seq-length 4096 \
+    --disable-bias-linear \
     --max-position-embeddings 4096 \
-    --micro-batch-size 4 \
+    --micro-batch-size 1 \
     --global-batch-size 32 \
+    --untie-embeddings-and-output-weights \
     --make-vocab-size-divisible-by 128 \
     --lr 1e-5 \
-    --train-iters 5000 \
+    --no-gradient-accumulation-fusion \
+    --load ${LOAD_PATH} \
+    --train-iters 1000 \
     --lr-decay-style cosine \
-    --untie-embeddings-and-output-weights \
-    --disable-bias-linear \
     --attention-dropout 0.0 \
-    --init-method-std 0.01 \
+    --position-embedding-type alibi \
+    --alibi-repeat \
     --hidden-dropout 0.0 \
-    --position-embedding-type rope \
     --normalization RMSNorm \
     --use-fused-rmsnorm \
-    --use-flash-attn \
     --swiglu \
-    --no-masked-softmax-fusion \
     --attention-softmax-in-fp32 \
-    --min-lr 1e-6 \
-    --weight-decay 1e-2 \
-    --lr-warmup-fraction 0.1 \
+    --min-lr 1e-7 \
+    --weight-decay 1e-1 \
     --clip-grad 1.0 \
     --adam-beta1 0.9 \
-    --initial-loss-scale 8188.0 \
+    --initial-loss-scale 1024.0 \
     --adam-beta2 0.95 \
-    --no-gradient-accumulation-fusion \
+    --adam-eps 1.0e-5 \
     --no-load-optim \
     --no-load-rng \
     --fp16
