@@ -257,6 +257,11 @@ function fn_build_for_ci()
 {
     cd $OUTPUT_DIR/atb_speed
     rm -rf ./*.tar.gz
+    cp $CODE_ROOT/dist/atb_llm*.whl .
+    cp -r $CODE_ROOT/atb_llm .
+    cp $CODE_ROOT/setup.py .
+    cp -r $CODE_ROOT/examples .
+    cp -r $CODE_ROOT/tests .
     cp $README_DIR/README.md .
     fn_build_version_info
 
@@ -285,10 +290,6 @@ function fn_make_whl() {
     echo "make atb_llm whl package"
     cd $CODE_ROOT
     python3 $CODE_ROOT/setup.py bdist_wheel
-    cp $CODE_ROOT/dist/atb_llm*.whl $OUTPUT_DIR/atb_speed/
-    cp -r $CODE_ROOT/atb_llm $OUTPUT_DIR/atb_speed/
-    cp $CODE_ROOT/setup.py $OUTPUT_DIR/atb_speed/
-    cp -r $CODE_ROOT/examples $OUTPUT_DIR/atb_speed/
 }
 
 function fn_build()
