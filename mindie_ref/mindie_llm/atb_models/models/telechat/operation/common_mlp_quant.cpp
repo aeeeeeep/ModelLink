@@ -77,7 +77,7 @@ atb::Status CommonMlpQuant(const CommonMlpQuantParam& param, atb::Operation** op
     swishNode.inTensorIds = { INTERMEDIATE_MATMUL_GATE_OUT_ND_ID };
     swishNode.outTensorIds = { INTERMEDIATE_SWISH_OUT_ID };
 
-	atb::infer::LinearParam linearUpParam;
+    atb::infer::LinearParam linearUpParam;
     linearUpParam.transposeB = param.transpose;
     linearUpParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
     CreateOperation(linearGateParam, &linearUpNode.operation);
