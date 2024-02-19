@@ -16,7 +16,7 @@ class EnvVar:
     use_flash_attention: bool = os.getenv("FLASH_ATTENTION", "1") == "1"
     # 最大内存 GB
     max_memory_gb: str = os.getenv("MAX_MEMORY_GB", None)
-    atb_memory_gb_reserved: int = int(os.getenv("MAX_MEMORY_GB", "3"))
+    reserved_memory_gb: int = int(os.getenv("RESERVED_MEMORY_GB", "3"))
     # 跳过warmup
     skip_warmup: bool = os.getenv("SKIP_WARMUP", "0") == "1"
     # 使用哪些卡

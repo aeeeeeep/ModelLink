@@ -1,4 +1,4 @@
-# Copyright (c) 2022 MIT HAN Lab.
+# Copyright (c) 2022 MIT HAN Lab
 from functools import partial
 
 import torch
@@ -72,10 +72,6 @@ class W8A8LinearStatic(nn.Module):
             self.output_zeros = None
 
         self.output_quant_name = 'per_channel'
-
-        self.losses = None
-        self.weight = None
-        self.bias = None
 
     def __repr__(self):
         return (f'W8A8LinearStatic({self.in_features}, {self.out_features}, '
