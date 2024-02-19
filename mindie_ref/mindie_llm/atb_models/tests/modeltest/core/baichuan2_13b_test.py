@@ -18,6 +18,7 @@ MODEL_FILE = os.path.join(
 class Baichuan213BModelTest(model_test.ModelTest):
     def __init__(self, *args) -> None:
         super().__init__(*args)
+        self.weight_dir = args[12]
 
     def remove_part_of_generation_config(self, generation_config):
         ori_gen = GenerationConfig()
