@@ -32,6 +32,10 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
             self.in_beta = torch.zeros(config.hidden_size, dtype=self.dtype, device="npu")
             self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64, device="npu")
 
+            self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
+            self.transdata_param = json.dumps({})
+            self.transdata_operation.set_param(self.transdata_param)
+
     def init_position_rotary_embedding(self,
                                        position_ids: torch.Tensor,
                                        max_seq_len: int):
@@ -66,7 +70,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                 "isLmHeadParallel": True,
                 "rank": self.tp_rank,
                 "worldSize": self.tp_world_size,
-                "backend": "lccl"
+                "backend": "hccl" if self.soc_info.need_nz else "lccl"
             })
             self.acl_param_decoder = json.dumps({
                 "rmsNormEps": config.rms_norm_eps,
@@ -83,7 +87,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                 "isLmHeadParallel": True,
                 "rank": self.tp_rank,
                 "worldSize": self.tp_world_size,
-                "backend": "lccl"
+                "backend": "hccl" if self.soc_info.need_nz else "lccl"
             })
             self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_decoder_model")
             self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_decoder_model")
@@ -265,8 +269,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                     pad_maxs = math.ceil(max_seq_len / 16) * 16
                     atten_mask = self.ascend_atten_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype,
                                                                       kv_cache[0][0].device)
-                    atten_mask = atten_mask.view(1, pad_maxs, pad_maxs // 16, 16).transpose(1, 2)
-                    torch_npu.npu_format_cast_(atten_mask, 29)
+                    atten_mask = self.transdata_operation.execute([atten_mask])[0]
                 else:
                     atten_mask = self.ascend_atten_mask.get_attn_mask(max_seq_len, kv_cache[0][0].dtype,
                                                                       kv_cache[0][0].device)
