@@ -644,7 +644,6 @@ class QWenModel(QWenPreTrainedModel):
                                   input_lengths: torch.Tensor,
                                   max_seq_len: int,
                                   lm_head_indices: Optional[torch.Tensor] = None):
-        logger.info(f"{position_ids = }")
         cos_embed, sin_embed = self.rotary_emb.get_cos_sin_total(
             position_ids, max_seq_len, dtype=torch.float32
         )
@@ -652,9 +651,6 @@ class QWenModel(QWenPreTrainedModel):
         if self.is_prefill:
             if lm_head_indices is None:
                 lm_head_indices = torch.tensor(range(input_ids.shape[0]), dtype=torch.int64, device=input_ids.device)
-            self.acl_param_encoder = json.dumps({
-                "seqLen": input_lengths.tolist()
-            })
         
         if self.soc_info.need_nz:
             pad_maxs = math.ceil(max_seq_len / 16) * 16
@@ -677,7 +673,7 @@ class QWenModel(QWenPreTrainedModel):
             self.place_holder,  # IN_HOLDER
         ]
 
-        return self.acl_operation_inputs, self.acl_param_encoder if self.is_prefill else self.acl_param_decoder
+        return self.acl_operation_inputs
 
     def execute_ascend_operator(self,
                                 acl_model,
@@ -690,7 +686,7 @@ class QWenModel(QWenPreTrainedModel):
                                 input_lengths: torch.Tensor,
                                 max_seq_len: int,
                                 lm_head_indices: Optional[torch.Tensor] = None,):
-        acl_inputs, acl_param = self.prepare_inputs_for_ascend(
+        acl_inputs = self.prepare_inputs_for_ascend(
             input_ids,
             position_ids,
             is_prefill,
@@ -700,6 +696,9 @@ class QWenModel(QWenPreTrainedModel):
             input_lengths,
             max_seq_len,
             lm_head_indices)
+        acl_param = json.dumps({
+            "seqLen": input_lengths.tolist()
+        })
         acl_model_out = acl_model.execute(acl_inputs, acl_param)
         acl_hidden_state = acl_model_out[0]
         return acl_hidden_state
@@ -834,15 +833,11 @@ class FlashQwenForCausalLM(QWenPreTrainedModel):
             weights=weights,
             is_norm=True
         )
-
-        logger.info(f"{config.bf16 = }")
-        logger.info(f"{config.fp16 = }")
+        
         if config.bf16:
-            logger.info(">>>>bf16")
             self.transformer.bfloat16()
             self.lm_head.bfloat16()
         if config.fp16:
-            logger.info(">>>>fp16")
             self.transformer.half()
             self.lm_head.half()
 

@@ -20,21 +20,22 @@
 import json
 import math
 import os
-from contextlib import contextmanager
-from threading import Thread
 from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.utils.checkpoint
 import torch_npu
+from atb_speed.common.timer import Timer
+from atb_speed.common.utils import load_atb_speed
 from torch import nn
-from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from transformers import PreTrainedModel, add_start_docstrings
+from torch.nn import CrossEntropyLoss
+from transformers import PreTrainedModel
 from transformers.activations import ACT2FN
-from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, \
-    SequenceClassifierOutputWithPast
-from transformers.utils import logging, add_start_docstrings_to_model_forward, replace_return_docstrings
+from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
+from transformers.utils import logging
+
 from .configuration_baichuan import BaiChuanConfig
+
 
 def is_nd():
     soc_version = torch_npu._C._npu_get_soc_version()
@@ -56,27 +57,14 @@ def get_rank_and_world_size():
 
 RANK, WORLD_SIZE = get_rank_and_world_size()
 
-
-def load_acl_transformer():
-    """
-    加载acl transformers
-    :return:
-    """
-    acl_transformer_home_path = os.getenv("ATB_SPEED_HOME_PATH", "")
-    if not acl_transformer_home_path or not os.path.exists(acl_transformer_home_path):
-        raise RuntimeError("env ACLTRANSFORMER_HOME_PATH not exist, source set_env.sh")
-    lib_path = os.path.join(acl_transformer_home_path, "lib/libatb_speed_torch.so")
-    torch.classes.load_library(lib_path)
-
-
-load_acl_transformer()
+load_atb_speed()
 
 logger = logging.get_logger(__name__)
 
+
 # Copied from transformers.models.bart.modeling_bart._make_causal_mask
-def _make_causal_mask(
-        input_ids_shape: torch.Size, dtype: torch.dtype, device: torch.device, past_key_values_length: int = 0
-):
+def _make_causal_mask(input_ids_shape: torch.Size, dtype: torch.dtype, device: torch.device,
+        past_key_values_length: int = 0):
     """
     Make causal mask used for bi-directional self-attention.
     """
@@ -157,11 +145,9 @@ class RotaryEmbedding(torch.nn.Module):
         elif self.cos_cached.device != x.device:
             self.cos_cached = self.cos_cached.to(x.device)
             self.sin_cached = self.sin_cached.to(x.device)
-        return (
-            self.cos_cached[:, :, :seq_len, ...],
-            self.sin_cached[:, :, :seq_len, ...],
-        )
-        
+        return (self.cos_cached[:, :, :seq_len, ...], self.sin_cached[:, :, :seq_len, ...],)
+
+
 class AscendRotaryEmbedding(RotaryEmbedding):
     def __init__(self, dim, max_position_embeddings=2048, base=10000, device=None):
         super().__init__(dim, max_position_embeddings, base, device)
@@ -207,13 +193,9 @@ def apply_rotary_pos_emb(q, k, cos_, sin_, position_ids):
     k_embed = (k.float() * cos) + (rotate_half(k.float()) * sin)
     return q_embed.to(q.dtype), k_embed.to(k.dtype)
 
+
 class MLP(nn.Module):
-    def __init__(
-            self,
-            hidden_size: int,
-            intermediate_size: int,
-            hidden_act: str,
-    ):
+    def __init__(self, hidden_size: int, intermediate_size: int, hidden_act: str, ):
         super().__init__()
         self.gate_proj = nn.Linear(hidden_size, intermediate_size, bias=False)
         self.down_proj = nn.Linear(intermediate_size, hidden_size, bias=False)
@@ -237,10 +219,8 @@ class Attention(nn.Module):
         self.max_position_embeddings = int(os.getenv("MAX_SEQ_LEN", config.max_position_embeddings))
 
         if (self.head_dim * self.num_heads) != self.hidden_size:
-            raise ValueError(
-                f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
-                f" and `num_heads`: {self.num_heads})."
-            )
+            raise ValueError(f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
+                             f" and `num_heads`: {self.num_heads}).")
         self.num_heads = self.num_heads // self.world_size
         self.W_pack = nn.Linear(self.hidden_size, 3 * self.num_heads * self.head_dim, bias=False)
         self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=False)
@@ -249,15 +229,10 @@ class Attention(nn.Module):
     def _shape(self, tensor: torch.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
 
-    def forward(
-            self,
-            hidden_states: torch.Tensor,
-            attention_mask: Optional[torch.Tensor] = None,
-            position_ids: Optional[torch.LongTensor] = None,
-            past_key_value: Optional[Tuple[torch.Tensor]] = None,
-            output_attentions: bool = False,
-            use_cache: bool = False,
-    ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
+    def forward(self, hidden_states: torch.Tensor, attention_mask: Optional[torch.Tensor] = None,
+            position_ids: Optional[torch.LongTensor] = None, past_key_value: Optional[Tuple[torch.Tensor]] = None,
+            output_attentions: bool = False, use_cache: bool = False, ) -> Tuple[
+        torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
         bsz, q_len, _ = hidden_states.size()
 
         proj = self.W_pack(hidden_states)
@@ -283,16 +258,13 @@ class Attention(nn.Module):
         attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
 
         if attn_weights.size() != (bsz, self.num_heads, q_len, kv_seq_len):
-            raise ValueError(
-                f"Attention weights should be of size {(bsz, self.num_heads, q_len, kv_seq_len)}, but is"
-                f" {attn_weights.size()}"
-            )
+            raise ValueError(f"Attention weights should be of size {(bsz, self.num_heads, q_len, kv_seq_len)}, but is"
+                             f" {attn_weights.size()}")
 
         if attention_mask is not None:
             if attention_mask.size() != (bsz, 1, q_len, kv_seq_len):
                 raise ValueError(
-                    f"Attention mask should be of size {(bsz, 1, q_len, kv_seq_len)}, but is {attention_mask.size()}"
-                )
+                    f"Attention mask should be of size {(bsz, 1, q_len, kv_seq_len)}, but is {attention_mask.size()}")
             attn_weights = attn_weights + attention_mask
             attn_weights = torch.max(attn_weights,
                                      torch.tensor(torch.finfo(attn_weights.dtype).min).to(attn_weights.device))
@@ -317,23 +289,15 @@ class DecoderLayer(nn.Module):
         self.hidden_size = config.hidden_size
         self.self_attn = Attention(config=config)
         self.world_size = WORLD_SIZE
-        self.mlp = MLP(
-            hidden_size=self.hidden_size,
-            intermediate_size=config.intermediate_size // self.world_size,
-            hidden_act=config.hidden_act,
-        )
+        self.mlp = MLP(hidden_size=self.hidden_size, intermediate_size=config.intermediate_size // self.world_size,
+            hidden_act=config.hidden_act, )
         self.input_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
-    def forward(
-            self,
-            hidden_states: torch.Tensor,
-            attention_mask: Optional[torch.Tensor] = None,
-            position_ids: Optional[torch.LongTensor] = None,
-            past_key_value: Optional[Tuple[torch.Tensor]] = None,
-            output_attentions: Optional[bool] = False,
-            use_cache: Optional[bool] = False,
-    ) -> Tuple[torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]]:
+    def forward(self, hidden_states: torch.Tensor, attention_mask: Optional[torch.Tensor] = None,
+            position_ids: Optional[torch.LongTensor] = None, past_key_value: Optional[Tuple[torch.Tensor]] = None,
+            output_attentions: Optional[bool] = False, use_cache: Optional[bool] = False, ) -> Tuple[
+        torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]]:
         """
         Args:
             hidden_states (`torch.FloatTensor`): input to the layer of shape `(batch, seq_len, embed_dim)`
@@ -353,14 +317,9 @@ class DecoderLayer(nn.Module):
         hidden_states = self.input_layernorm(hidden_states)
 
         # Self Attention
-        hidden_states, self_attn_weights, present_key_value = self.self_attn(
-            hidden_states=hidden_states,
-            attention_mask=attention_mask,
-            position_ids=position_ids,
-            past_key_value=past_key_value,
-            output_attentions=output_attentions,
-            use_cache=use_cache,
-        )
+        hidden_states, self_attn_weights, present_key_value = self.self_attn(hidden_states=hidden_states,
+            attention_mask=attention_mask, position_ids=position_ids, past_key_value=past_key_value,
+            output_attentions=output_attentions, use_cache=use_cache, )
         hidden_states = residual + hidden_states
 
         # Fully Connected
@@ -369,8 +328,7 @@ class DecoderLayer(nn.Module):
         hidden_states = self.mlp(hidden_states)
         # reduce
         if self.world_size >= 2:
-            torch.distributed.all_reduce(
-                hidden_states, op=torch.distributed.ReduceOp.SUM)
+            torch.distributed.all_reduce(hidden_states, op=torch.distributed.ReduceOp.SUM)
         hidden_states = residual + hidden_states
 
         outputs = (hidden_states,)
@@ -420,43 +378,27 @@ class KVAttentionManager:
         self.ori_len_list = []
         self.min_cache = None
         if not IS_ND:
-            self.k_cache_input = torch.zeros(self.num_layers,
-                                             self.batch_size,  # batch
-                                             self.hidden_size // self.nz_dim,
-                                             self.max_seq_len,
-                                             self.nz_dim,
-                                             device="npu",
-                                             dtype=torch.half)
+            self.k_cache_input = torch.zeros(self.num_layers, self.batch_size,  # batch
+                                             self.hidden_size // self.nz_dim, self.max_seq_len, self.nz_dim,
+                                             device="npu", dtype=torch.half)
 
-            self.v_cache_input = torch.zeros(self.num_layers,
-                                             self.batch_size,  # batch
-                                             self.hidden_size // self.nz_dim,
-                                             self.max_seq_len,
-                                             self.nz_dim,
-                                             device="npu",
-                                             dtype=torch.half)
+            self.v_cache_input = torch.zeros(self.num_layers, self.batch_size,  # batch
+                                             self.hidden_size // self.nz_dim, self.max_seq_len, self.nz_dim,
+                                             device="npu", dtype=torch.half)
             self.k_cache_input = torch_npu.npu_format_cast(self.k_cache_input, 29)
             torch.npu.empty_cache()
             self.v_cache_input = torch_npu.npu_format_cast(self.v_cache_input, 29)
         else:
-            self.k_cache_input = torch.zeros(self.num_layers,
-                                             batch_size,  # batch
-                                             self.max_seq_len,
-                                             self.hidden_size,
-                                             device="npu",
-                                             dtype=torch.half)
-            self.v_cache_input = torch.zeros(self.num_layers,
-                                             batch_size,  # batch
-                                             self.max_seq_len,
-                                             self.hidden_size,
-                                             device="npu",
-                                             dtype=torch.half)
+            self.k_cache_input = torch.zeros(self.num_layers, batch_size,  # batch
+                                             self.max_seq_len, self.hidden_size, device="npu", dtype=torch.half)
+            self.v_cache_input = torch.zeros(self.num_layers, batch_size,  # batch
+                                             self.max_seq_len, self.hidden_size, device="npu", dtype=torch.half)
         torch.npu.empty_cache()
 
-        self.attention_mask_max = torch.zeros(
-            (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
-        self.attention_mask_max_inc = torch.zeros(
-            (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
+        self.attention_mask_max = torch.zeros((self.batch_size, self.max_seq_len, self.max_seq_len), device="npu",
+            dtype=torch.half)
+        self.attention_mask_max_inc = torch.zeros((self.batch_size, self.max_seq_len, self.max_seq_len), device="npu",
+            dtype=torch.half)
 
     def init_attention_mask(self):
         if IS_ND:
@@ -464,8 +406,8 @@ class KVAttentionManager:
             self.attention_mask_max_inc.zero_()
         else:
             self.attention_mask_max.zero_()
-            self.attention_mask_max_inc = torch.zeros(
-            (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
+            self.attention_mask_max_inc = torch.zeros((self.batch_size, self.max_seq_len, self.max_seq_len),
+                device="npu", dtype=torch.half)
 
     def init_seq_len_and_token_offset(self, seq_len):
         self.token_offset = seq_len
@@ -496,9 +438,10 @@ class KVAttentionManager:
         :param tensor:
         :return:
         """
-        return torch_npu.npu_format_cast(tensor.view(
-            self.batch_size, self.max_seq_len,
-            self.max_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
+        return torch_npu.npu_format_cast(
+            tensor.view(self.batch_size, self.max_seq_len, self.max_seq_len // self.nz_dim, self.nz_dim).transpose(1,
+                                                                                                                   2).contiguous(),
+            29)
 
     def get_attention_mask(self, attention_mask=None):
         if not self.is_full:
@@ -510,8 +453,8 @@ class KVAttentionManager:
                 # 左padding
                 # self.attention_mask_max_inc[i][:, :self.token_offset - ori_len] = self.min_cache[:, :self.token_offset - ori_len]
                 # 右padding
-                self.attention_mask_max_inc[i][:, ori_len:self.token_offset] = \
-                    self.min_cache[:, ori_len:self.token_offset]
+                self.attention_mask_max_inc[i][:, ori_len:self.token_offset] = self.min_cache[:,
+                                                                               ori_len:self.token_offset]
             if not IS_ND:
                 self.attention_mask_max_inc = self.trans_data(self.attention_mask_max_inc)
                 return self.trans_data(self.attention_mask_max)
@@ -541,29 +484,24 @@ class Model(PreTrainedModel):
         self.rank = RANK
         self.world_size = WORLD_SIZE
         self.post_init()
-        
+
         # for ascend init
         self.init_ascend_operations(config)
         self.layer_id_list = [torch.tensor([i], dtype=torch.int32).npu() for i in range(config.num_hidden_layers)]
         self.place_holder = torch.ones(1).npu()
-        
+
     def init_ascend_operations(self, config: BaiChuanConfig):
-        self.acl_param = json.dumps({
-            "rmsNormEps": config.rms_norm_eps,
-            "headNum": config.num_attention_heads // self.world_size,
-            "dk": config.hidden_size // config.num_attention_heads,
-            "layerNum": config.num_hidden_layers,
-            "rank": self.rank,
-            "rankSize": self.world_size,
-            "backend": os.getenv("BACKEND", "hccl")
-        })
+        self.acl_param = json.dumps(
+            {"rmsNormEps": config.rms_norm_eps, "headNum": config.num_attention_heads // self.world_size,
+                "dk": config.hidden_size // config.num_attention_heads, "layerNum": config.num_hidden_layers,
+                "rank": self.rank, "rankSize": self.world_size, "backend": os.getenv("BACKEND", "hccl")})
         self.max_position_embeddings = int(os.getenv("MAX_SEQ_LEN", config.max_position_embeddings))
         self.acl_fa_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_flash_attention_rope_model")
 
         self.acl_fa_operation.set_param(self.acl_param)
 
-        self.ascend_rotary_embedding = AscendRotaryEmbedding(
-            config.hidden_size // config.num_attention_heads, max_position_embeddings=self.max_position_embeddings)
+        self.ascend_rotary_embedding = AscendRotaryEmbedding(config.hidden_size // config.num_attention_heads,
+            max_position_embeddings=self.max_position_embeddings)
 
         self.num_layers = config.num_hidden_layers
         self.hidden_size = config.hidden_size
@@ -571,8 +509,7 @@ class Model(PreTrainedModel):
         self.lm_head_weight = None
         self.batch_size = 0
         self.kv_attention_manager = None
-        self.min_cache = torch.full(
-            (self.max_position_embeddings, self.max_position_embeddings),
+        self.min_cache = torch.full((self.max_position_embeddings, self.max_position_embeddings),
             torch.finfo(torch.half).min, dtype=torch.half).npu()
 
     def init_ascend_weight(self):
@@ -594,35 +531,26 @@ class Model(PreTrainedModel):
         weights.append(self.lm_head_weight)
 
         self.ascend_weight = weights
-        
+
         self.acl_fa_operation.set_weight(weights)
 
-    def prepare_inputs_for_ascend(self, input_ids, position_ids, attention_mask=None,
-                                  past_key_values=None):
+    def prepare_inputs_for_ascend(self, input_ids, position_ids, attention_mask=None, past_key_values=None):
         self.kv_attention_manager.is_full = not past_key_values
         cos_table, sin_table = self.ascend_rotary_embedding(input_ids, self.kv_attention_manager.token_offset)
         cos_embed = torch.nn.functional.embedding(position_ids, cos_table)
         sin_embed = torch.nn.functional.embedding(position_ids, sin_table)
 
-        inputs = [input_ids,
-                  cos_embed,
-                  sin_embed,
-                  self.kv_attention_manager.get_attention_mask(attention_mask),
-                  self.kv_attention_manager.k_cache_input,
-                  self.kv_attention_manager.v_cache_input,
-                  self.kv_attention_manager.token_offset_tensor,
-                  self.kv_attention_manager.seq_len_tensor,
-                  self.place_holder
-                  ] + self.layer_id_list
+        inputs = [input_ids, cos_embed, sin_embed, self.kv_attention_manager.get_attention_mask(attention_mask),
+                  self.kv_attention_manager.k_cache_input, self.kv_attention_manager.v_cache_input,
+                  self.kv_attention_manager.token_offset_tensor, self.kv_attention_manager.seq_len_tensor,
+                  self.place_holder] + self.layer_id_list
 
         return inputs
 
     def execute_ascend_operator(self, input_ids, position_ids, attention_mask=None, past_key_values=None):
         acl_inputs = self.prepare_inputs_for_ascend(input_ids, position_ids, attention_mask, past_key_values)
-        tmp_param = json.dumps(
-            {"tokenOffset": self.kv_attention_manager.token_offset_list,
-             "seqLen": self.kv_attention_manager.seq_len_list
-             })
+        tmp_param = json.dumps({"tokenOffset": self.kv_attention_manager.token_offset_list,
+                                "seqLen": self.kv_attention_manager.seq_len_list})
         acl_model_out = self.acl_fa_operation.execute(acl_inputs, tmp_param)
         acl_hidden_state = acl_model_out[0]
         return acl_hidden_state
@@ -639,40 +567,26 @@ class Model(PreTrainedModel):
         # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
         combined_attention_mask = None
         if input_shape[-1] > 1:
-            combined_attention_mask = _make_causal_mask(
-                input_shape,
-                inputs_embeds.dtype,
-                device=inputs_embeds.device,
-                past_key_values_length=past_key_values_length,
-            )
+            combined_attention_mask = _make_causal_mask(input_shape, inputs_embeds.dtype, device=inputs_embeds.device,
+                past_key_values_length=past_key_values_length, )
 
         if attention_mask is not None:
             # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
             expanded_attn_mask = _expand_mask(attention_mask, inputs_embeds.dtype, tgt_len=input_shape[-1]).to(
-                inputs_embeds.device
-            )
+                inputs_embeds.device)
             combined_attention_mask = (
-                expanded_attn_mask if combined_attention_mask is None else expanded_attn_mask + combined_attention_mask
-            )
+                expanded_attn_mask if combined_attention_mask is None else expanded_attn_mask + combined_attention_mask)
 
         return combined_attention_mask
 
-    def forward(
-            self,
-            input_ids: torch.LongTensor = None,
-            attention_mask: Optional[torch.Tensor] = None,
-            position_ids: Optional[torch.LongTensor] = None,
-            past_key_values: Optional[List[torch.FloatTensor]] = None,
-            inputs_embeds: Optional[torch.FloatTensor] = None,
-            use_cache: Optional[bool] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, BaseModelOutputWithPast]:
+    def forward(self, input_ids: torch.LongTensor = None, attention_mask: Optional[torch.Tensor] = None,
+            position_ids: Optional[torch.LongTensor] = None, past_key_values: Optional[List[torch.FloatTensor]] = None,
+            inputs_embeds: Optional[torch.FloatTensor] = None, use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None, ) -> Union[Tuple, BaseModelOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
-        )
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states)
         use_cache = use_cache if use_cache is not None else self.config.use_cache
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
@@ -689,7 +603,7 @@ class Model(PreTrainedModel):
 
         seq_length_with_past = seq_length
         past_key_values_length = 0
-        
+
         # flash attention init
         if batch_size != self.batch_size:
             self.batch_size = batch_size
@@ -711,9 +625,8 @@ class Model(PreTrainedModel):
 
         if position_ids is None:
             device = input_ids.device if input_ids is not None else inputs_embeds.device
-            position_ids = torch.arange(
-                past_key_values_length, seq_length + past_key_values_length, dtype=torch.long, device=device
-            )
+            position_ids = torch.arange(past_key_values_length, seq_length + past_key_values_length, dtype=torch.long,
+                device=device)
             position_ids = position_ids.unsqueeze(0).view(-1, seq_length)
         else:
             position_ids = position_ids.view(-1, seq_length).long()
@@ -722,35 +635,29 @@ class Model(PreTrainedModel):
             inputs_embeds = self.embed_tokens(input_ids)
         # embed positions
         if attention_mask is None:
-            attention_mask = torch.ones(
-                (batch_size, seq_length_with_past), dtype=torch.bool, device=inputs_embeds.device
-            )
+            attention_mask = torch.ones((batch_size, seq_length_with_past), dtype=torch.bool,
+                device=inputs_embeds.device)
         if not past_key_values:  # 使用fa时，在计算首token时会同时计算增量额attention_mask
             self.kv_attention_manager.ori_len_list = attention_mask.sum(dim=-1)
-            attention_mask = self._prepare_decoder_attention_mask(
-                attention_mask, (batch_size, seq_length), inputs_embeds, past_key_values_length
-            )
+            attention_mask = self._prepare_decoder_attention_mask(attention_mask, (batch_size, seq_length),
+                inputs_embeds, past_key_values_length)
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
                 logger.warning_once(
-                    "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
-                )
+                    "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`...")
                 use_cache = False
 
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
         next_decoder_cache = () if use_cache else None
-        
+
         # add acl model
         if not self.ascend_weight:
             self.init_ascend_weight()
 
-        hidden_states = self.execute_ascend_operator(input_ids,
-                                                     position_ids,
-                                                     attention_mask,
-                                                     past_key_values)
+        hidden_states = self.execute_ascend_operator(input_ids, position_ids, attention_mask, past_key_values)
 
         # add hidden states from the last decoder layer
         if output_hidden_states:
@@ -760,12 +667,8 @@ class Model(PreTrainedModel):
             (self.kv_attention_manager.k_cache_input, self.kv_attention_manager.v_cache_input),) if use_cache else None
         if not return_dict:
             return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
-        return BaseModelOutputWithPast(
-            last_hidden_state=hidden_states,
-            past_key_values=next_cache,
-            hidden_states=all_hidden_states,
-            attentions=all_self_attns,
-        )
+        return BaseModelOutputWithPast(last_hidden_state=hidden_states, past_key_values=next_cache,
+            hidden_states=all_hidden_states, attentions=all_self_attns, )
 
 
 class BaiChuanForCausalLM(PreTrainedModel):
@@ -801,19 +704,13 @@ class BaiChuanForCausalLM(PreTrainedModel):
     def get_decoder(self):
         return self.model
 
-    def forward(
-            self,
-            input_ids: torch.LongTensor = None,
-            attention_mask: Optional[torch.Tensor] = None,
-            position_ids: Optional[torch.LongTensor] = None,
-            past_key_values: Optional[List[torch.FloatTensor]] = None,
-            inputs_embeds: Optional[torch.FloatTensor] = None,
-            labels: Optional[torch.LongTensor] = None,
-            use_cache: Optional[bool] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            return_dict: Optional[bool] = None,
-    ) -> Union[Tuple, CausalLMOutputWithPast]:
+    @Timer.timing
+    def forward(self, input_ids: torch.LongTensor = None, attention_mask: Optional[torch.Tensor] = None,
+            position_ids: Optional[torch.LongTensor] = None, past_key_values: Optional[List[torch.FloatTensor]] = None,
+            inputs_embeds: Optional[torch.FloatTensor] = None, labels: Optional[torch.LongTensor] = None,
+            use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None, ) -> Union[
+        Tuple, CausalLMOutputWithPast]:
         r"""
         Args:
             labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
@@ -847,22 +744,13 @@ class BaiChuanForCausalLM(PreTrainedModel):
 
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
-        )
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states)
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
-        outputs = self.model(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            position_ids=position_ids,
-            past_key_values=past_key_values,
-            inputs_embeds=inputs_embeds,
-            use_cache=use_cache,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
-        )
+        outputs = self.model(input_ids=input_ids, attention_mask=attention_mask, position_ids=position_ids,
+            past_key_values=past_key_values, inputs_embeds=inputs_embeds, use_cache=use_cache,
+            output_attentions=output_attentions, output_hidden_states=output_hidden_states, return_dict=return_dict, )
 
         logits = outputs[0]
 
@@ -883,17 +771,11 @@ class BaiChuanForCausalLM(PreTrainedModel):
             output = (logits,) + outputs[1:]
             return (loss,) + output if loss is not None else output
 
-        return CausalLMOutputWithPast(
-            loss=loss,
-            logits=logits,
-            past_key_values=outputs.past_key_values,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
-        )
+        return CausalLMOutputWithPast(loss=loss, logits=logits, past_key_values=outputs.past_key_values,
+            hidden_states=outputs.hidden_states, attentions=outputs.attentions, )
 
-    def prepare_inputs_for_generation(
-            self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None, **kwargs
-    ):
+    def prepare_inputs_for_generation(self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None,
+            **kwargs):
         if past_key_values:
             input_ids = input_ids[:, -1:]
 
@@ -912,13 +794,8 @@ class BaiChuanForCausalLM(PreTrainedModel):
             model_inputs = {"input_ids": input_ids}
 
         model_inputs.update(
-            {
-                "position_ids": position_ids,
-                "past_key_values": past_key_values,
-                "use_cache": kwargs.get("use_cache"),
-                "attention_mask": attention_mask,
-            }
-        )
+            {"position_ids": position_ids, "past_key_values": past_key_values, "use_cache": kwargs.get("use_cache"),
+                "attention_mask": attention_mask, })
         return model_inputs
 
     @staticmethod
