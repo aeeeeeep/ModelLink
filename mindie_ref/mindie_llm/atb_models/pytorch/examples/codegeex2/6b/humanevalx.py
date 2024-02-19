@@ -23,7 +23,7 @@ from torch_npu.contrib import transfer_to_npu
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../chatglm2/6b'))
 from main import get_model
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), 'CodeGeex2/evaluation'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), 'CodeGeeX2/evaluation'))
 from generation import CodeStoppingCriteria
 from utils import Logger, read_dataset, process_extra_prompt, is_code_generation_finished, cleanup_code
 
@@ -33,7 +33,6 @@ def parse_args():
     parser.add_argument("--model_path", type=str, required=True, help="The path to model weights")
     parser.add_argument("--tp_size", type=int, default=1, help="Whether test model in parallel")
     parser.add_argument("--device", type=int, default=0, help="device id")
-    parser.add_argument("--batch", type=int, default=1, help="batch size")
     parser.add_argument(
         "--model_file",
         type=str,
@@ -114,12 +113,13 @@ def parse_args():
 def precision(args, tokenizer, model):
     local_rank = 0 if not args.tp_size > 1 else torch.distributed.get_rank()
 
-    entries = read_dataset(args.dataset, dataset_type='humanevalx')
+    dataset_type = 'humanevalx'
+    entries = read_dataset(args.dataset, dataset_type=dataset_type)
     for entry in entries.values():
         entry["prompt"] = process_extra_prompt(
             entry["prompt"], 
             language_type=args.language_type, 
-            dataset_type=args.dataset_type, 
+            dataset_type=dataset_type, 
             generation_mode=args.generation_mode,
         )
     res = []
@@ -136,7 +136,7 @@ def precision(args, tokenizer, model):
                 max_length=args.max_length,
                 micro_batch_size=args.micro_batch_size,
                 tokenizer=tokenizer,
-                dataset_type=args.dataset_type,
+                dataset_type=dataset_type,
                 language_type=args.language_type,
                 prompt=prompt)
             outputs = model.generate(**inputs,
@@ -148,16 +148,16 @@ def precision(args, tokenizer, model):
                                     top_k=args.top_k,
                                     temperature=args.temperature,
                                     pad_token_id=tokenizer.eos_token_id)
-        if local_rank == 0:
-            for output in outputs:
-                response = tokenizer.decode(output)
-                entry["generation_raw"] = response
-                entry["generation"] = cleanup_code(
-                    response[len(prompt):], 
-                    dataset_type=args.dataset_type,
-                    language_type=args.language_type)
-                fout.write(json.dumps(res, ensure_ascii=False) + "\n")
-                fout.flush()
+            if local_rank == 0:
+                for output in outputs:
+                    response = tokenizer.decode(output)
+                    entry["generation_raw"] = response
+                    entry["generation"] = cleanup_code(
+                        response[len(prompt):], 
+                        dataset_type=dataset_type,
+                        language_type=args.language_type)
+                    fout.write(json.dumps(entry, ensure_ascii=False) + "\n")
+                    fout.flush()
 
 
 def main():

@@ -151,9 +151,9 @@
     # 多芯场景请先执行权重生成(浮点单芯跳过)
     python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
     # 执行浮点推理生成推理结果，使用Greedy Search
-    torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 humanevalx.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE} --dataset CodeGeeX2/benchmark\humanevalx\humanevalx_python.jsonl.gz --output_dir output --max_length 1024 --top_p 1.0 --top_k 1 --temperature 1.0 --greedy 1 --micro_batch_size 1 --samples_per_problem 1 --language_type python --generation_mode completion
+    torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 humanevalx.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE} --dataset CodeGeeX2/benchmark/humanevalx/humanevalx_python.jsonl.gz --output_dir output --max_length 1024 --top_p 1.0 --top_k 1 --temperature 1.0 --greedy 1 --micro_batch_size 1 --samples_per_problem 1 --language_type python --generation_mode completion
     # 评估推理结果
-    python CodeGeeX2/evaluation/evaluation.py --input_path output/results.jsonl --output_path output --log-path output/evaluation.log --model_name codegeex2-6b --language_type python --dataset_type humanevalx --generation_mode completion --n_workers 16 --tmp_dir CodeGeeX2/benchmark/humanevalx/python --problem_file CodeGeeX2/benchmark\humanevalx\humanevalx_python.jsonl.gz
+    python CodeGeeX2/evaluation/evaluation.py --input_path output/results.jsonl --output_path output --log-path output/evaluation.log --model_name codegeex2-6b --language_type python --dataset_type humanevalx --generation_mode completion --n_workers 16 --tmp_dir CodeGeeX2/benchmark/humanevalx/python --problem_file CodeGeeX2/benchmark/humanevalx/humanevalx_python.jsonl.gz
     ```
 
 - 模型性能数据测试
