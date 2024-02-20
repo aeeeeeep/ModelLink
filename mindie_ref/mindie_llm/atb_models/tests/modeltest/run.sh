@@ -138,10 +138,10 @@ function fn_main()
 {
     if command -v nvidia-smi &> /dev/null; then
         hardware_type="GPU"
-        echo "Detected NVIDIA GPU"
+        echo "INFO: Detected NVIDIA GPU"
     else
         if command -v npu-smi info &> /dev/null; then
-            echo "Detected Ascend NPU"
+            echo "INFO: Detected Ascend NPU"
         else
             echo "Error: No GPU or NPU detected"
             exit 1
@@ -156,19 +156,19 @@ function fn_main()
     model_type=$1
     case "$model_type" in
         fa|pa_fp16|pa_bf16)
-            echo "current model_type: $model_type"
+            echo "INFO: current model_type: $model_type"
             ;;
         *)
-            echo "invalid model_type, only support fa, pa_fp16, pa_bf16"
+            echo "ERROR: invalid model_type, only support fa, pa_fp16, pa_bf16"
             ;;
     esac
     test_modes=$2
     case "$test_modes" in
         performance|simplified_GSM8K|simplified_TruthfulQA|full_CEval|full_GSM8K|full_MMLU|full_TruthfulQA|full_BoolQ|full_HumanEval)
-            echo "current test_mode: $test_modes"
+            echo "INFO: current test_mode: $test_modes"
             ;;
         *)
-            echo "invalid test_mode, only support performance, simplified_GSM8K, simplified_TruthfulQA, \
+            echo "ERROR: invalid test_mode, only support performance, simplified_GSM8K, simplified_TruthfulQA, \
             full_CEval, full_GSM8K, full_MMLU, full_TruthfulQA, full_BoolQ, full_HumanEval"
             exit 1
             ;;
@@ -188,8 +188,8 @@ function fn_main()
     fi
 
     weight_dir=$5
-    echo "current batch_size: $batch_size"
-    echo "current model_name: $model_name"
+    echo "INFO: current batch_size: $batch_size"
+    echo "INFO: current model_name: $model_name"
 
     fn_prepare "$model_type" "$test_modes"
 
