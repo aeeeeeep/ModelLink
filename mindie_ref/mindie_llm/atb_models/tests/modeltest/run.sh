@@ -203,7 +203,7 @@ function fn_main()
 
 
     if [ $# -ge 7 ]; then
-        if ! [[ "$7" =~ ^[1-9]+$ ]]; then
+        if ! [[ "$7" =~ ^[0-9]+$ ]]; then
             echo "Error: input max_position_embedding or max_seq_len is not a digit."
             exit 1
         fi
