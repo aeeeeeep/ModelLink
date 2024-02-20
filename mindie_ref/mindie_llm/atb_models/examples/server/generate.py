@@ -112,6 +112,8 @@ def generate_req(req_list, model, tokenizer,
                     raise AssertionError
                 generate_batch_size += batch.batch_num
                 total_req_finished += req_finished
+                if generate_batch_size > max_generate_batch_size:
+                    max_generate_batch_size = generate_batch_size
 
         if do_generate:
             if len(generate_batches) > 1:
@@ -143,6 +145,10 @@ def generate_req(req_list, model, tokenizer,
             total_req_finished += req_finished
             if generate_batch_size > max_generate_batch_size:
                 max_generate_batch_size = generate_batch_size
+    
+    if rank == 0:
+        logger.info(f"max_generate_batch_size: {max_generate_batch_size}")
+
     if ENV.benchmark_enable:
         prefill_time = benchmark_timelist[0]
         e2e_time = sum(benchmark_timelist)
