@@ -1,24 +1,25 @@
 # coding=utf-8
 # Copyright Huawei Technologies Co., Ltd. 2023-2031. All rights reserved
 
-import argparse
+import os
 import glob
 import math
-import os
-import platform
 import shutil
 import json
 import time
+import argparse
+import platform
 from pathlib import Path
 
-from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModel
 import transformers
-from transformers.utils import check_min_version
 import torch
 import torch.distributed as dist
 import torch_npu
+from tqdm import tqdm
+from transformers import AutoTokenizer, AutoModel
+from transformers.utils import check_min_version
 from torch_npu.contrib import transfer_to_npu
+from atb_speed.common.timer import Timer
 
 
 def override_topp_and_topk():
@@ -302,14 +303,11 @@ def performance(args, tokenizer, model):
             torch.npu.synchronize()
             first_token_end = time.time()
 
+            Timer.reset()
+            Timer.sync = torch.npu.synchronize
             torch.npu.synchronize()
             total_start = time.time()
-            outputs, \
-                time_of_first_token, \
-                time_per_token, \
-                per_next_token_time, \
-                post_next_token_time \
-                = model.generate(
+            outputs = model.generate(
                     **inputs,
                     eos_token_id=model.config.vocab_size * 2,
                     max_new_tokens=seq_len_out,
@@ -319,7 +317,7 @@ def performance(args, tokenizer, model):
 
         # time analysis
         time_total = total_end - total_start
-        time_tensor = torch.tensor([time_of_first_token, time_per_token, time_total], device="npu")
+        time_tensor = torch.tensor([Timer.timeit_res.first_token_delay, Timer.timeit_res.next_token_avg_delay, time_total], device="npu")
 
         if args.tp_size > 1:
             # 首token和总时间取双芯的较大值
