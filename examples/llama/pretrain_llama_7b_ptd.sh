@@ -40,7 +40,7 @@ GPT_ARGS="
     --global-batch-size 256 \
     --make-vocab-size-divisible-by 1 \
     --lr 1.0e-6 \
-    --train-iters 1000 \
+    --train-iters 5000 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
     --disable-bias-linear \
@@ -65,7 +65,7 @@ GPT_ARGS="
     --load ${LOAD_CHECKPOINT_PATH}  \
     --no-load-optim \
     --no-load-rng \
-    --fp16
+    --bf16
 "
 
 DATA_ARGS="

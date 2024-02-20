@@ -246,7 +246,7 @@ if __name__ == "__main__":
         model_provider=model_provider,
         pretrained_model_name_or_path=args.load
     )
-    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name_or_path)
+    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name_or_path, trust_remote_code=True)
     max_new_tokens = args.max_new_tokens
     template = "{instruction}"
     if 'mmlu' in args.task:

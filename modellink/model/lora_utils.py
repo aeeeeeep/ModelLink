@@ -6,8 +6,7 @@ from megatron import get_args, print_rank_0
 
 def get_lora_model_classes():
     from peft import PeftModel, LoraModel
-    from .lora_modules import AscendLoraModel
-    return PeftModel, LoraModel, AscendLoraModel
+    return PeftModel, LoraModel
 
 
 def is_enable_lora():

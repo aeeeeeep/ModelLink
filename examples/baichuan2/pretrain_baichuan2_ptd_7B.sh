@@ -26,23 +26,23 @@ DISTRIBUTED_ARGS="
 "
 
 GPT_ARGS="
-    --tensor-model-parallel-size ${TP} \
-    --pipeline-model-parallel-size ${PP} \
+    --tensor-model-parallel-size $TP \
+    --pipeline-model-parallel-size $PP \
     --sequence-parallel \
     --num-layers 32 \
     --hidden-size 4096 \
     --ffn-hidden-size 11008 \
     --num-attention-heads 32 \
     --tokenizer-type Llama2Tokenizer \
-    --tokenizer-model ${TOKENIZER_MODEL} \
+    --tokenizer-model $TOKENIZER_MODEL \
     --load ${CKPT_LOAD_DIR} \
     --seq-length 4096 \
     --max-position-embeddings 4096 \
-    --micro-batch-size 4 \
+    --micro-batch-size 2 \
     --global-batch-size 32 \
     --make-vocab-size-divisible-by 128 \
     --lr 1e-6 \
-    --train-iters 5000 \
+    --train-iters 1000 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
     --disable-bias-linear \
@@ -58,7 +58,6 @@ GPT_ARGS="
     --attention-softmax-in-fp32 \
     --min-lr 1e-8 \
     --weight-decay 1e-2 \
-    --lr-warmup-fraction 0.1 \
     --clip-grad 1.0 \
     --adam-beta1 0.9 \
     --initial-loss-scale 8188.0 \
@@ -86,4 +85,4 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
-    --save ${CKPT_SAVE_DIR}
+    --save $CKPT_SAVE_DIR

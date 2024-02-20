@@ -1,7 +1,5 @@
 #!/bin/bash
 
-export CUDA_DEVICE_MAX_CONNECTIONS=1
-
 GPUS_PER_NODE=8
 MASTER_ADDR=localhost
 MASTER_PORT=6000
@@ -11,11 +9,10 @@ WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
 CKPT_SAVE_DIR="your model save ckpt path"
 DATA_PATH="your data path"
-TOKENIZER_MODEL="your tokenizer model path"
-CKPT_LOAD_DIR="your model load ckpt path"
-
+TOKENIZER_MODEL="your tokenizer path"
+CKPT_LOAD_DIR="your model ckpt path"
 TP=8
-PP=1
+PP=4
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $GPUS_PER_NODE \
@@ -26,47 +23,49 @@ DISTRIBUTED_ARGS="
 "
 
 GPT_ARGS="
-    --tensor-model-parallel-size $TP \
-    --pipeline-model-parallel-size $PP \
+    --tensor-model-parallel-size ${TP} \
+    --pipeline-model-parallel-size ${PP} \
     --sequence-parallel \
-    --num-layers 32 \
-    --hidden-size 4096 \
-    --ffn-hidden-size 11008 \
-    --num-attention-heads 32 \
+    --num-layers 80 \
+    --hidden-size 8192 \
+    --ffn-hidden-size 28672 \
+    --num-attention-heads 64 \
     --tokenizer-type Llama2Tokenizer \
-    --tokenizer-model $TOKENIZER_MODEL \
-    --load $CKPT_LOAD_DIR \
+    --tokenizer-model ${TOKENIZER_MODEL} \
     --seq-length 4096 \
     --max-position-embeddings 4096 \
-    --micro-batch-size 4 \
-    --global-batch-size 32 \
-    --make-vocab-size-divisible-by 128 \
-    --lr 1e-5 \
+    --micro-batch-size 2 \
+    --global-batch-size 128  \
+    --make-vocab-size-divisible-by 1 \
+    --lr 1.0e-6 \
     --train-iters 5000 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
-    --disable-bias-linear \
     --attention-dropout 0.0 \
     --init-method-std 0.01 \
     --hidden-dropout 0.0 \
     --position-embedding-type rope \
     --normalization RMSNorm \
     --use-fused-rmsnorm \
-    --use-flash-attn \
     --swiglu \
+    --use-flash-attn \
     --no-masked-softmax-fusion \
     --attention-softmax-in-fp32 \
-    --min-lr 1e-6 \
+    --min-lr 1.0e-7 \
     --weight-decay 1e-2 \
-    --lr-warmup-fraction 0.1 \
     --clip-grad 1.0 \
     --adam-beta1 0.9 \
-    --initial-loss-scale 8188.0 \
-    --adam-beta2 0.95 \
+    --initial-loss-scale 4096.0 \
+    --adam-beta2 0.999 \
     --no-gradient-accumulation-fusion \
+    --load ${CKPT_LOAD_DIR}  \
     --no-load-optim \
     --no-load-rng \
-    --fp16
+    --disable-bias-linear \
+    --group-query-attention \
+    --num-query-groups 8 \
+    --lr-warmup-fraction 0.01 \
+    --bf16
 "
 
 DATA_ARGS="
@@ -76,9 +75,9 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 1000 \
+    --save-interval 10000 \
     --eval-interval 1000 \
-    --eval-iters 1 \
+    --eval-iters 10 \
 "
 
 torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
@@ -86,4 +85,4 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
-    --save $CKPT_SAVE_DIR
+    --save CKPT_SAVE_DIR 

@@ -1,18 +1,21 @@
 #!/bin/bash
-
 export CUDA_DEVICE_MAX_CONNECTIONS=1
+export HCCL_CONNECT_TIMEOUT=1200
 
 GPUS_PER_NODE=8
 MASTER_ADDR=localhost
-MASTER_PORT=6000
+MASTER_PORT=6001
 NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
+
 CKPT_SAVE_DIR="your model save ckpt path"
 DATA_PATH="your data path"
-TOKENIZER_MODEL="your tokenizer model path"
+TOKENIZER_PATH="your tokenizer path"
 CKPT_LOAD_DIR="your model load ckpt path"
+
+
 
 TP=8
 PP=1
@@ -26,57 +29,55 @@ DISTRIBUTED_ARGS="
 "
 
 GPT_ARGS="
-    --tensor-model-parallel-size $TP \
-    --pipeline-model-parallel-size $PP \
+    --tensor-model-parallel-size ${TP} \
+    --pipeline-model-parallel-size ${PP} \
     --sequence-parallel \
-    --num-layers 32 \
+    --num-layers 30 \
     --hidden-size 4096 \
-    --ffn-hidden-size 11008 \
+    --load ${CKPT_LOAD_DIR} \
     --num-attention-heads 32 \
-    --tokenizer-type Llama2Tokenizer \
-    --tokenizer-model $TOKENIZER_MODEL \
-    --load $CKPT_LOAD_DIR \
-    --seq-length 4096 \
-    --max-position-embeddings 4096 \
+    --tokenizer-type PretrainedFromHF \
+    --tokenizer-model ${TOKENIZER_MODEL} \
+    --tokenizer-name-or-path ${TOKENIZER_PATH} \
+    --vocab-file ${TOKENIZER_MODEL} \
+    --seq-length 2048 \
+    --max-position-embeddings 2048 \
     --micro-batch-size 4 \
-    --global-batch-size 32 \
-    --make-vocab-size-divisible-by 128 \
-    --lr 1e-5 \
-    --train-iters 5000 \
-    --lr-decay-style cosine \
-    --untie-embeddings-and-output-weights \
-    --disable-bias-linear \
-    --attention-dropout 0.0 \
-    --init-method-std 0.01 \
-    --hidden-dropout 0.0 \
-    --position-embedding-type rope \
-    --normalization RMSNorm \
-    --use-fused-rmsnorm \
-    --use-flash-attn \
-    --swiglu \
-    --no-masked-softmax-fusion \
+    --global-batch-size 16 \
+    --embed-layernorm \
+    --padded-vocab-size 250880 \
+    --make-vocab-size-divisible-by 1 \
     --attention-softmax-in-fp32 \
-    --min-lr 1e-6 \
-    --weight-decay 1e-2 \
-    --lr-warmup-fraction 0.1 \
+    --apply-query-key-layer-scaling \
+    --lr 1.2e-4 \
+    --train-iters 200 \
+    --init-method-std 0.0048 \
+    --hidden-dropout 0.0 \
+    --position-embedding-type alibi \
+    --normalization LayerNorm \
+    --no-masked-softmax-fusion \
+    --min-lr 6e-6 \
+    --lr-decay-iters 200 \
+    --weight-decay 1e-1 \
     --clip-grad 1.0 \
     --adam-beta1 0.9 \
-    --initial-loss-scale 8188.0 \
+    --initial-loss-scale 4096 \
     --adam-beta2 0.95 \
     --no-gradient-accumulation-fusion \
     --no-load-optim \
     --no-load-rng \
-    --fp16
+    --bf16 \
+    --seed 42
 "
 
 DATA_ARGS="
-    --data-path $DATA_PATH \
-    --split 949,50,1
+    --data-path $DATA_PATH
+    --split 100,0,0
 "
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 1000 \
+    --save-interval 10000 \
     --eval-interval 1000 \
     --eval-iters 1 \
 "
