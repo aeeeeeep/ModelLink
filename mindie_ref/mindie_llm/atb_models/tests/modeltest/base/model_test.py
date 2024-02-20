@@ -382,7 +382,7 @@ class ModelTest:
                             if not env.ENV.max_memory_gb else int(env.ENV.max_memory_gb) * (1 << 30)
 
                         free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory != 0 else \
-                                                        (self.init_memory + env.ENV.atb_memory_gb_reserved * (1 << 30)))
+                                                        (self.init_memory + env.ENV.reserved_memory_gb * (1 << 30)))
 
                         self.logger.info("RANK " + str(self.local_rank) + ": infer max_memory(GB): " + str(
                             max_memory / (1024 ** 3)) +
@@ -654,7 +654,7 @@ class ModelTest:
                                 if not env.ENV.max_memory_gb else int(env.ENV.max_memory_gb) * (1 << 30)
 
                             free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory != 0 else \
-                                                            (self.init_memory + env.ENV.atb_memory_gb_reserved * (
+                                                            (self.init_memory + env.ENV.reserved_memory_gb * (
                                                                         1 << 30)))
 
                             self.logger.info("RANK " + str(self.local_rank) + ": infer max_memory(GB): " + str(
@@ -940,7 +940,7 @@ class ModelTest:
                                 if not env.ENV.max_memory_gb else int(env.ENV.max_memory_gb) * (1 << 30)
 
                             free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory != 0 else \
-                                                            (self.init_memory + env.ENV.atb_memory_gb_reserved * (
+                                                            (self.init_memory + env.ENV.reserved_memory_gb * (
                                                                         1 << 30)))
 
                             self.logger.info("RANK " + str(self.local_rank) + ": infer max_memory(GB): " + str(
@@ -1028,7 +1028,7 @@ class ModelTest:
                                 if not env.ENV.max_memory_gb else int(env.ENV.max_memory_gb) * (1 << 30)
 
                             free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory != 0 else \
-                                                            (self.init_memory + env.ENV.atb_memory_gb_reserved * (
+                                                            (self.init_memory + env.ENV.reserved_memory_gb * (
                                                                         1 << 30)))
 
                             self.logger.info("RANK " + str(self.local_rank) + ": infer max_memory(GB): " + str(
