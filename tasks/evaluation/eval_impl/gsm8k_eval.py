@@ -58,7 +58,7 @@ class Gsm8kEval(DatasetEval):
                 instruction = self.instruction_template.format(fewshot_template=gsm8k_few_shot_template['few_shot'],
                                                                question=item['question'])
                 instructions.append(instruction)
-                answers.append(item['answer'].split('####')[-1])
+                answers.append([item['answer'].split('#### ')[-1]])
                 if len(instructions) == self.batch_size or len(gsm8k_list) == index + 1:
                     chat_results, rank = chat.chat(instruction=instructions, history=[])
 
