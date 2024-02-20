@@ -22,6 +22,12 @@
 | glibc | >= 2.27  |
 | gcc   | >= 7.5.0 |
 
+**表 3** 硬件形态
+
+| CPU     | Device |
+|---------|--------|
+| aarch64 | 800l A2  |
+| aarch64 | 300l DUO  |
 
 # 快速上手
 
@@ -39,15 +45,15 @@
 
 | 包名                                   |
 |--------------------------------------|
-| Ascend-hdk-800l A2-npu-firmware_xxx.run |
-| Ascend-hdk-300l DUO-npu-firmware_xxx.run |
+| Ascend-hdk-910b-npu-firmware_xxx.run |
+| Ascend-hdk-310p-npu-firmware_xxx.run |
 
 根据芯片型号选择相应的安装包安装
 
 ```bash
 # 安装firmwire
-chmod +x Ascend-hdk-300l DUO-npu-firmware_xxx.run
-./Ascend-hdk-300l DUO-npu-firmware_xxx.run --full
+chmod +x Ascend-hdk-310p-npu-firmware_xxx.run
+./Ascend-hdk-310p-npu-firmware_xxx.run --full
 ```
 
 ##### 1.1.2 安装driver
@@ -56,15 +62,15 @@ chmod +x Ascend-hdk-300l DUO-npu-firmware_xxx.run
 
 | cpu     | 包名                                               | 
 |---------|--------------------------------------------------|
-| aarch64 | Ascend-hdk-800l A2-npu-driver_xxx_linux-aarch64.run |
-| x86     | Ascend-hdk-800l A2-npu-driver_xxx_linux-x86_64.run  |
-| aarch64 | Ascend-hdk-300l DUO-npu-driver_xxx_linux-aarch64.run |
-| x86     | Ascend-hdk-300l DUO-npu-driver_xxx_linux-x86-64.run  |
+| aarch64 | Ascend-hdk-910b-npu-driver_xxx_linux-aarch64.run |
+| x86     | Ascend-hdk-910b-npu-driver_xxx_linux-x86_64.run  |
+| aarch64 | Ascend-hdk-310p-npu-driver_xxx_linux-aarch64.run |
+| x86     | Ascend-hdk-310p-npu-driver_xxx_linux-x86-64.run  |
 
 ```bash
 # 根据CPU架构 以及npu型号 安装对应的 driver
-chmod +x Ascend-hdk-300l DUO-npu-driver_23.0.rc3.b060_*.run
-./Ascend-hdk-300l DUO-npu-driver_23.0.rc3.b060_*.run --full
+chmod +x Ascend-hdk-310p-npu-driver_23.0.rc3.b060_*.run
+./Ascend-hdk-310p-npu-driver_23.0.rc3.b060_*.run --full
 ```
 
 #### 1.2 安装CANN
@@ -93,13 +99,15 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 | 包名                                     |
 |----------------------------------------|
-| Ascend-cann-kernels-800l A2_xxx_linux.run |
-| Ascend-cann-kernels-300l DUO_xxx_linux.run |
+| Ascend-cann-kernels-910b_xxx_linux.run |
+| Ascend-cann-kernels-310p_xxx_linux.run |
 
 ```bash
-# 安装 kernel 以300l DUO 为例
-chmod +x Ascend-cann-kernels-300l DUO_xxx_linux.run
-./Ascend-cann-kernels-300l DUO_xxx_linux.run --install
+# 安装 kernel 以310P 为例
+chmod +x Ascend-cann-kernels-310p_xxx_linux.run
+./Ascend-cann-kernels-310p_xxx_linux.run --install
+
+
 ```
 
 #### 1.3 安装PytorchAdapter
@@ -354,9 +362,6 @@ python main.py --task ${task_name}
 注意，由于本模型体量较大，受硬件限制，单卡很可能无法跑起。
 
 - 多卡
-多卡推理，芯片类型区分为300l DUO、800l A2系列。当在800l A2芯片进行多卡推理时，"cut_model_and_run_gpt_neox.sh"脚本需修改环境变量"ATB_USE_TILING_COPY_STREAM=0"。
-该环境变量功能是为了解决300l DUO上asynccopy性能慢的问题，与800l A2无关。
-另外，当本模型切分为8卡时，"cut_model_and_run_gpt_neox.sh"脚本需修改环境变量"ATB_LAUNCH_KERNEL_WITH_TILING=1"。
 
 ```shell
 bash cut_model_and_run.sh ${task_name}
@@ -374,6 +379,7 @@ MAX_SEQ_LEN=2048 python main.py --task ${task_name}
 ```
 
 或
+修改cut_model_and_run.sh 中的 max_seq_length
 
 ```shell
 MAX_SEQ_LEN=2048 bash cut_model_and_run.sh ${task_name}
@@ -399,24 +405,6 @@ Segmentation fault (core dumped)
 LD_PRELOAD=/root/miniconda3/envs/wqh39/bin/../lib/libgomp.so.1 MAX_SEQ_LEN=2048 python main.py --task ${task_name}  --is_quant ${is_quant}
 ```
 
-##### 执行性能（performance）任务时，需替换transformers中的utils，实现精确打点
-utils替换：
-- 获取transformers相关目录
-```
-python -c "import os;import transformers;print(os.path.join(os.path.dirname(transformers.__file__),'generation'))"
-```
-- 替换utils
-1.进入transformers相关目录，备份原始utils.py，可命名为 utils_ori.py
-2.将 `pytorch/examples/atb_speed_sdk/atb_speed/common/transformers_patch/4.30.2/utils_performance_test_npu_greedy.py`
-  拷贝到当前路径下，并重命名为utils.py
-- 精确计时
-开启环境变量"RETURN_PERF_DETAIL=1"，例如：
-```shell
-RETURN_PERF_DETAIL=1 python main.py --task performance
-```
-
-相关详细说明请参考 [SDK性能测试指南精确打点法章节](../../atb_speed_sdk/README.md) 
-
 # 附录：
 
 # 精度测试指南
@@ -435,8 +423,7 @@ python main.py --task precision
 ```
 
 - 多芯  
-  多卡推理，芯片类型区分为300l DUO、800l A2系列。当在800l A2芯片进行多卡推理时，"cut_model_and_run_gpt_neox.sh"脚本需修改环境变量"ATB_USE_TILING_COPY_STREAM=0"。
-该环境变量功能是为了解决300l DUO上asynccopy性能慢的问题，与800l A2无关。
+】
 
 ```shell
 cd ${script_path}
@@ -478,19 +465,19 @@ bash cut_model_and_run.sh precision
 
 ```shell
 cd ${script_path}
-RETURN_PERF_DETAIL=1 python main.py --task performance
+TIMEIT=1 python main.py --task performance
 ```
 
 - 多芯  
-  多卡推理，芯片类型区分为300l DUO、800l A2系列。当在800l A2芯片进行多卡推理时，"cut_model_and_run_gpt_neox.sh"脚本需修改环境变量"ATB_USE_TILING_COPY_STREAM=0"。
+  多卡推理，芯片类型区分为300l DUO、800l A2系列。当在800l A2芯片进行多卡推理时，"cut_model_and_run.sh"脚本需修改环境变量"ATB_USE_TILING_COPY_STREAM=0"。
 该环境变量功能是为了解决300l DUO上asynccopy性能慢的问题，与800l A2无关。
 
 ```shell
 cd ${script_path}
-RETURN_PERF_DETAIL=1 bash cut_model_and_run.sh performance
+TIMEIT=1 bash cut_model_and_run.sh performance
 ```
 
-为了不影响正常使用，将`RETURN_PERF_DETAIL`设置成1来返回具体的性能测试的值，默认是0
+为了不影响正常使用，将`TIMEIT`设置成1来返回具体的性能测试的值，默认是0
 
 ### 性能测试结果
 
