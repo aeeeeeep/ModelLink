@@ -243,7 +243,14 @@ source ${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models/scripts/set_env
     export ASDOPS_LOG_TO_STDOUT=0
     ```
   - 日志存放在~/atb/log下
-- **注意：**开启日志后会影响推理性能，建议默认关闭；当推理执行报错时，开启日志定位原因
+- 注意：开启日志后会影响推理性能，建议默认关闭；当推理执行报错时，开启日志定位原因
+
+### 性能Profiling
+- 待补充
+
+### Dump Tensor
+- 适用于定位精度问题
+- 使用方式见[dump tensor工具README](https://gitee.com/ascend/ait/tree/5ffd45a7f7520266976599912f8e35b97fb0c74d/ait/docs/llm#https://gitee.com/link?target=https%3A%2F%2Fais-bench.obs.cn-north-4.myhuaweicloud.com%2Fcompare%2F20231226%2FABI0%2Fait_llm-0.1.0-py3-none-linux_x86_64.whl)
 
 ## 特性支持矩阵
 - 待补充
@@ -255,6 +262,7 @@ source ${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models/scripts/set_env
 
 ## 问题定位
 - 若遇到推理执行报错，优先打开日志环境变量，并查看算子库和加速库的日志中是否有error级别的告警，基于error信息进一步定位
+- 若遇到精度问题，可以dump tensor后进行定位
 
 ## Key Feature
 - 待补充

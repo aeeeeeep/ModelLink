@@ -191,4 +191,4 @@
 
 ## FAQ
 - 更多环境变量见\${llm_path}/examples/README.md
-- 对话测试实际执行的Python文件为\${llm_path}/examples/run_fa.py和\${llm_path}/examples/run_pa.py；这两个文件的参数说明见\${llm_path}/examples/README.md
+- 对话测试实际执行的Python文件为`${llm_path}/examples/run_fa.py和\${llm_path}/examples/run_pa.py`；这两个文件的参数说明见`${llm_path}/examples/README.md`
