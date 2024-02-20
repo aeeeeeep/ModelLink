@@ -300,7 +300,7 @@ cp ${script_path}/modeling_gpt_neox_ascend.py ${model_path}
 
 ```shell
 cd ${script_path}
-bash cut_model_and_run_gpt_neox.sh
+bash cut_model_and_run.sh
 ```
 
 切分所需时间较长，切分完成后，将会打印 'Tensor parallelism weights have been successfully saved.'。
@@ -359,7 +359,7 @@ python main.py --task ${task_name}
 另外，当本模型切分为8卡时，"cut_model_and_run_gpt_neox.sh"脚本需修改环境变量"ATB_LAUNCH_KERNEL_WITH_TILING=1"。
 
 ```shell
-bash cut_model_and_run_gpt_neox.sh ${task_name}
+bash cut_model_and_run.sh ${task_name}
 ```
 
 **注意**
@@ -376,7 +376,7 @@ MAX_SEQ_LEN=2048 python main.py --task ${task_name}
 或
 
 ```shell
-MAX_SEQ_LEN=2048 bash cut_model_and_run_gpt_neox.sh ${task_name}
+MAX_SEQ_LEN=2048 bash cut_model_and_run.sh ${task_name}
 ```
 
 如果遇到
@@ -440,7 +440,7 @@ python main.py --task precision
 
 ```shell
 cd ${script_path}
-bash cut_model_and_run_gpt_neox.sh precision
+bash cut_model_and_run.sh precision
 ```
 
 结束后在${ceval_work_dir}/test_result目录下查看测试结果。[双芯结果每个两份，只需看其中一份即可]。
@@ -487,7 +487,7 @@ RETURN_PERF_DETAIL=1 python main.py --task performance
 
 ```shell
 cd ${script_path}
-RETURN_PERF_DETAIL=1 bash cut_model_and_run_gpt_neox.sh performance
+RETURN_PERF_DETAIL=1 bash cut_model_and_run.sh performance
 ```
 
 为了不影响正常使用，将`RETURN_PERF_DETAIL`设置成1来返回具体的性能测试的值，默认是0
