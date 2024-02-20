@@ -454,8 +454,8 @@ class ModelTest:
                 if not os.path.exists(csv_performance_formatted_path):
                     self.logger.warning("performance result csv formatted file not exist, skip recording results")
                     raise RuntimeError(f"csv result formatted file not exist")
-                with open(csv_performance_formatted_path, 'a', newline='') as csv_performance_formatted_path:
-                    csv_writer = csv.writer(csv_performance_formatted_path, delimiter='|')
+                with open(csv_performance_formatted_path, 'a', newline='') as csv_file:
+                    csv_writer = csv.writer(csv_file, delimiter='|')
                     for csv_result in csv_results:
                         csv_writer.writerow(csv_result)
                 
