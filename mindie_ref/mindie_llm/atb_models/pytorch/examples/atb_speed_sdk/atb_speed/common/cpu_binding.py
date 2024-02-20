@@ -44,7 +44,7 @@ class CPUBinder:
         for device in devices:
             device_info = device_map_info.get(device)
             if not device_info:
-                raise RuntimeError("Can not get device info, you can use BIND_CPU=0 to skip.")
+                raise RuntimeError("Can not get device info, binding cpu will skip.")
             pcie_info = os.popen(
                 f"npu-smi info -t board -i {device_info.npu_id} -c {device_info.chip_id}"
             ).read().strip().split("\n")
