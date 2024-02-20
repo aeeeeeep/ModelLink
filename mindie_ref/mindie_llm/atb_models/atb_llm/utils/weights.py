@@ -461,17 +461,21 @@ class Weights:
             weight = (qweight, qzeros, scales, g_idx, bits, groupsize, False)
         if quantize == "smooth_quant":
             qweight = torch.cat(
-                [self.get_sharded(f"{p}.weight", dim=0) for p in prefixes], dim=1
+                [self.get_sharded(f"{p}.weight", dim=0, gqa_size=gqa_size) for p in prefixes], dim=dim
             )
             weight_scales = torch.cat(
-                [self.get_sharded(f"{p}.scales", dim=0) for p in prefixes], dim=1
+                [self.get_sharded(f"{p}.scales", dim=0, gqa_size=gqa_size) for p in prefixes], dim=dim
             )
             weight_zeros = None
-            act_scales = (lambda x: x if None in x else torch.cat(x))(
-                [self.get_smooth_quant_sharded(f"{p}", idx=0, dim=0).reshape(1) for p in prefixes]
-            )
-            act_zeros = (lambda x: None if None in x else torch.cat(x))(
-                [self.get_smooth_quant_sharded(f"{p}", idx=1, dim=0) for p in prefixes])
+            act_scales_temp = [self.get_smooth_quant_sharded(f"{p}", idx=0, dim=0, gqa_size=gqa_size).reshape(1) for p in prefixes]
+            for one_act_scale in act_scales_temp[1:]:
+                if not torch.equal(act_scales_temp[0], one_act_scale):
+                    raise ValueError(
+                        f"`act_scales` are not equal: {act_scales_temp}"
+                    )
+            act_scales = (lambda x: x if None in x else x[0])(act_scales_temp)
+            act_zeros = (lambda x: None if None in x else x[0])(
+                [self.get_smooth_quant_sharded(f"{p}", idx=1, dim=0, gqa_size=gqa_size) for p in prefixes])
             weight = (qweight, weight_scales, weight_zeros, act_scales, act_zeros)
         else:
             w = [self.get_sharded(f"{p}.weight", dim=0, gqa_size=gqa_size) for p in prefixes]

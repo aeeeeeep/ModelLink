@@ -65,7 +65,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                 "isPrefill": True,
                 "isBF16": self.dtype == torch.bfloat16,
                 "quantType": 2 if self.quantize == "smooth_quant" else 0,
-                "isPack": False if self.quantize == "smooth_quant" else True,
+                "isPack": True,
                 "isEmbeddingParallel": False,
                 "isLmHeadParallel": True,
                 "rank": self.tp_rank,
@@ -82,7 +82,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                 "isPrefill": False,
                 "isBF16": self.dtype == torch.bfloat16,
                 "quantType": 2 if self.quantize == "smooth_quant" else 0,
-                "isPack": False if self.quantize == "smooth_quant" else True,
+                "isPack": True,
                 "isEmbeddingParallel": False,
                 "isLmHeadParallel": True,
                 "rank": self.tp_rank,
@@ -167,17 +167,25 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                 weights_layer = self.model.layers[i].state_dict()
                 if self.quantize == "smooth_quant":
                     weights_t.append(weights_layer["input_layernorm.weight"])
-                    for layer_name in attn_layer_names:
-                        weights_t.append(weights_layer[f'{layer_name}.weight'])
-                        weights_t.append(weights_layer[f'{layer_name}.act_scales'])
-                        weights_t.append(weights_layer[f'{layer_name}.act_zeros'])
-                        weights_t.append(weights_layer[f'{layer_name}.output_scales'])
+                    weights_t.append(self.weight_format_cast(weights_layer["self_attn.query_key_value.linear.weight"]))
+                    weights_t.append(self.weight_format_cast(weights_layer["self_attn.query_key_value.linear.act_scales"]))
+                    weights_t.append(self.weight_format_cast(weights_layer["self_attn.query_key_value.linear.act_zeros"]))
+                    weights_t.append(self.weight_format_cast(weights_layer["self_attn.query_key_value.linear.output_scales"]))
+                    weights_t.extend([self.placeholder] * 8)
+                    weights_t.append(self.weight_format_cast(weights_layer["self_attn.o_proj.linear.weight"]))
+                    weights_t.append(self.weight_format_cast(weights_layer["self_attn.o_proj.linear.act_scales"]))
+                    weights_t.append(self.weight_format_cast(weights_layer["self_attn.o_proj.linear.act_zeros"]))
+                    weights_t.append(self.weight_format_cast(weights_layer["self_attn.o_proj.linear.output_scales"]))
                     weights_t.append(weights_layer["post_attention_layernorm.weight"])
-                    for layer_name in mlp_layer_names:
-                        weights_t.append(weights_layer[f'{layer_name}.weight'])
-                        weights_t.append(weights_layer[f'{layer_name}.act_scales'])
-                        weights_t.append(weights_layer[f'{layer_name}.act_zeros'])
-                        weights_t.append(weights_layer[f'{layer_name}.output_scales'])
+                    weights_t.append(self.weight_format_cast(weights_layer["mlp.gate_up_proj.linear.weight"]))
+                    weights_t.append(self.weight_format_cast(weights_layer["mlp.gate_up_proj.linear.act_scales"]))
+                    weights_t.append(self.weight_format_cast(weights_layer["mlp.gate_up_proj.linear.act_zeros"]))
+                    weights_t.append(self.weight_format_cast(weights_layer["mlp.gate_up_proj.linear.output_scales"]))
+                    weights_t.extend([self.placeholder] * 4)
+                    weights_t.append(self.weight_format_cast(weights_layer["mlp.down_proj.linear.weight"]))
+                    weights_t.append(self.weight_format_cast(weights_layer["mlp.down_proj.linear.act_scales"]))
+                    weights_t.append(self.weight_format_cast(weights_layer["mlp.down_proj.linear.act_zeros"]))
+                    weights_t.append(self.weight_format_cast(weights_layer["mlp.down_proj.linear.output_scales"]))
                 else:
                     weights_t.append(weights_layer["input_layernorm.weight"])
                     weights_t.append(self.weight_format_cast(weights_layer["self_attn.query_key_value.linear.weight"]))
