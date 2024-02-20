@@ -47,7 +47,9 @@ class Gsm8kEval(DatasetEval):
         for file in tqdm.tqdm(os.listdir(self.test_dir)):
             file_path = os.path.join(self.test_dir, file)
             with open(file_path, encoding='utf-8') as f:
-                gsm8k_list = json.load(f)
+                gsm8k_list = []
+                for line in f.readlines():
+                    gsm8k_list.append(json.loads(line))
             subject_result = {}
             acc_n = 0
             instructions = []
@@ -56,7 +58,7 @@ class Gsm8kEval(DatasetEval):
                 instruction = self.instruction_template.format(fewshot_template=gsm8k_few_shot_template['few_shot'],
                                                                question=item['question'])
                 instructions.append(instruction)
-                answers.append(item['answer'])
+                answers.append([item['answer'].split('#### ')[-1]])
                 if len(instructions) == self.batch_size or len(gsm8k_list) == index + 1:
                     chat_results, rank = chat.chat(instruction=instructions, history=[])
 
