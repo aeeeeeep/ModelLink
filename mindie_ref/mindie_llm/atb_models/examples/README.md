@@ -6,7 +6,7 @@
 | 变量名  | 含义                                             |
 |--------|--------------------------------------------------|
 | working_dir | 加速库及模型库下载后放置目录                  |
-| llm_path | 模型仓所在路径。若使用编译好的包，则路径为\${working_dir}/ModelLink/；若使用gitee下载的代码，则路径为\${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models    |
+| llm_path | 模型仓所在路径。若使用编译好的包，则路径为`${working_dir}/ModelLink/`；若使用gitee下载的代码，则路径为`${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models`    |
 | weight_path | 模型权重路径                                 |
 | cur_dir | 运行指令或执行脚本时的路径（当前目录）                  |
 
@@ -108,7 +108,7 @@
   - Prefill推理阶段，最大输入长度
   - 默认4096个token
 - `max_batch_size`
-  - 最大batch size，实际运行的batch size动态变化
+  - 最大batch size，实际运行的batch size动态变化，有可能达不到设置的最大batch size
   - 默认单batch
 - `is_flash_model`
   - 是否使用Paged Attention，默认使用

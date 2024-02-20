@@ -31,15 +31,14 @@
 
 | 包名                                   |
 |--------------------------------------|
-| Ascend-hdk-910b-npu-firmware_${version}.run |
-| Ascend-hdk-310p-npu-firmware_${version}.run |
+| Ascend-hdk-*-npu-firmware_${version}.run |
 
 根据芯片型号选择相应的安装包安装
 
 ```bash
 # 安装firmwire
-chmod +x Ascend-hdk-310p-npu-firmware_${version}.run
-./Ascend-hdk-310p-npu-firmware_${version}.run --full
+chmod +x Ascend-hdk-*-npu-firmware_${version}.run
+./Ascend-hdk-*-npu-firmware_${version}.run --full
 ```
 
 #### 1.1.2 安装driver
@@ -48,15 +47,13 @@ chmod +x Ascend-hdk-310p-npu-firmware_${version}.run
 
 | cpu     | 包名                                               | 
 |---------|--------------------------------------------------|
-| aarch64 | Ascend-hdk-910b-npu-driver_${version}_linux-aarch64.run |
-| x86     | Ascend-hdk-910b-npu-driver_${version}_linux-x86_64.run  |
-| aarch64 | Ascend-hdk-310p-npu-driver_${version}_linux-aarch64.run |
-| x86     | Ascend-hdk-310p-npu-driver_${version}_linux-x86-64.run  |
+| aarch64 | Ascend-hdk-*-npu-driver_${version}_linux-aarch64.run |
+| x86     | Ascend-hdk-*-npu-driver_${version}_linux-x86-64.run  |
 
 ```bash
 # 根据CPU架构 以及npu型号 安装对应的 driver
-chmod +x Ascend-hdk-310p-npu-driver_${version}_*.run
-./Ascend-hdk-310p-npu-driver_${version}_*.run --full
+chmod +x Ascend-hdk-*-npu-driver_${version}_*.run
+./Ascend-hdk-*-npu-driver_${version}_*.run --full
 ```
 
 ### 1.2 安装CANN
@@ -85,13 +82,14 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 | 包名                                         |
 |--------------------------------------------|
-| Ascend-cann-kernels-910b_${version}_linux.run |
-| Ascend-cann-kernels-310p_${version}_linux.run |
+| Ascend-cann-kernels-*_${version}_linux.run |
+
+根据芯片型号选择相应的安装包安装
 
 ```bash
-# 安装 kernel 以310P 为例
-chmod +x Ascend-cann-kernels-310p_${version}_linux.run
-./Ascend-cann-kernels-310p_${version}_linux.run --install
+# 安装 kernel
+chmod +x Ascend-cann-kernels-*_${version}_linux.run
+./Ascend-cann-kernels-*_${version}_linux.run --install
 ```
 
 ### 1.3 安装PytorchAdapter
@@ -106,8 +104,6 @@ chmod +x Ascend-cann-kernels-310p_${version}_linux.run
 |----------------------------------------------|
 | torch-2.0.1+cpu-cp38-cp38-linux_x86_64.whl   |
 | torch-2.0.1+cpu-cp39-cp39-linux_x86_64.whl   |
-| torch-2.0.1+cpu-cp310-cp310-linux_x86_64.whl |
-| torch-2.0.1-cp310-cp310-linux_aarch64.whl    |
 | torch-2.0.1-cp38-cp38-linux_aarch64.whl      |
 | torch-2.0.1-cp39-cp39-linux_aarch64.whl      |
 | ...                                          |
@@ -127,7 +123,6 @@ pip install torch-2.0.1-cp39-cp39-linux_aarch64.whl
 |-----------------------------|
 | pytorch_v2.0.1_py38.tar.gz  |
 | pytorch_v2.0.1_py39.tar.gz  |
-| pytorch_v2.0.1_py310.tar.gz |
 | ...                         |
 
 - 安装选择与torch版本 以及 python版本 一致的npu_torch版本
@@ -161,13 +156,11 @@ pip install torch*_aarch64.whl
 - 可以使用`uname -a`指令查看服务器是x86还是aarch架构
 - 可以使用以下指令查看abi是0还是1
     ```shell
-    python
-    import torch
-    torch.compiled_with_cxx11_abi()
+    python -c "import torch; print(torch.compiled_with_cxx11_abi())"
     ```
     - 若输出结果为True表示abi1，False表示abi0
 
-**安装模型仓**
+### 1.5 安装模型仓
 - 场景一：使用编译好的包进行安装
   - 下载编译好的包
     - 下载链接待补充
@@ -201,14 +194,10 @@ pip install torch*_aarch64.whl
   - 代码编译
     ```shell
     cd mindie_ref/mindie_llm/atb_models
-    # 若abi为0则执行以下指令
-    bash scripts/build.sh --use_cxx11_abi=0
-    # 若abi为1则执行以下指令
-    bash scripts/build.sh --use_cxx11_abi=1
+    bash scripts/build.sh
     cd output/atb/
     source set_env.sh
     ```
-    - abi查询方式见1.4章节
 
 ## 环境变量参考
 
@@ -216,7 +205,10 @@ pip install torch*_aarch64.whl
 ```shell
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 source ${working_dir}/atb/set_env.sh
+# 若使用编译好的包（即1.5章节的场景一），则执行以下指令
 source ${working_dir}/ModelLink/set_env.sh
+# 若使用gitee上的源码进行编译（即1.5章节的场景二），则执行以下指令
+source ${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models/scripts/set_env.sh
 ```
 
 ### 日志打印（可选）
@@ -251,6 +243,7 @@ source ${working_dir}/ModelLink/set_env.sh
     export ASDOPS_LOG_TO_STDOUT=0
     ```
   - 日志存放在~/atb/log下
+- **注意：**开启日志后会影响推理性能，建议默认关闭；当推理执行报错时，开启日志定位原因
 
 ## 特性支持矩阵
 - 待补充

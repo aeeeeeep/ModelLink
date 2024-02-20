@@ -27,8 +27,9 @@
 | 变量名  | 含义                                             |
 |--------|--------------------------------------------------|
 | working_dir | 加速库及模型库下载后放置的目录                  |
-| llm_path | 模型仓所在路径。若使用编译好的包，则路径为\${working_dir}/ModelLink/；若使用gitee下载的代码，则路径为\${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models    |
+| llm_path | 模型仓所在路径。若使用编译好的包，则路径为`${working_dir}/ModelLink/`；若使用gitee下载的代码，则路径为`${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models`    |
 | script_path | 脚本所在路径；LLaMa和LLaMa2的工作脚本所在路径为${llm_path}/examples/models/llama                            |
+| weight_path | 模型权重路径                            |
 
 ## 权重转换
 - 参考[此README文件](../../README.md)
@@ -39,7 +40,7 @@
 - 运行启动脚本
   - 在\${llm_path}目录下执行以下指令
     ```shell
-    bash ${script_path}/run_300i_duo.sh
+    bash ${script_path}/run_300i_duo.sh ${weight_path}
     ```
 - 环境变量说明
   - `export BIND_CPU=1`
@@ -68,8 +69,6 @@
     - 默认使用20030端口
     - 目的是为了避免同一台机器同时运行多个多卡模型时出现通信冲突
     - 设置时端口建议范围为：20000-20050
-  - `export MODEL_WEIGHT_PATH=""`
-    - 模型权重路径
   - `export PYTHONPATH=${llm_path}:$PYTHONPATH`
     - 将模型仓路径加入Python查询模块和包的搜索路径中
     - 将${llm_path}替换为实际路径
@@ -81,7 +80,7 @@
 - 运行启动脚本
   - 在\${llm_path}目录下执行以下指令
     ```shell
-    bash ${script_path}/run_800i_a2_fa.sh
+    bash ${script_path}/run_800i_a2_fa.sh ${weight_path}
     ```
 - 环境变量说明
   - `export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7`
@@ -100,8 +99,6 @@
     - 默认使用20030端口
     - 目的是为了避免同一台机器同时运行多个多卡模型时出现通信冲突
     - 设置时端口建议范围为：20000-20050
-  - `export MODEL_WEIGHT_PATH=""`
-    - 模型权重路径
   - `export PYTHONPATH=${llm_path}:$PYTHONPATH`
     - 将模型仓路径加入Python查询模块和包的搜索路径中
     - 将${llm_path}替换为实际路径
@@ -129,7 +126,7 @@
 - 运行启动脚本
   - 在\${llm_path}目录下执行以下指令
     ```shell
-    bash ${script_path}/run_800i_a2_pa.sh
+    bash ${script_path}/run_800i_a2_pa.sh ${weight_path}
     ```
 - 环境变量说明
   - `export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7`
@@ -148,8 +145,6 @@
     - 默认使用20030端口
     - 目的是为了避免同一台机器同时运行多个多卡模型时出现通信冲突
     - 设置时端口建议范围为：20000-20050
-  - `export MODEL_WEIGHT_PATH=""`
-    - 模型权重路径
   - `export PYTHONPATH=${llm_path}:$PYTHONPATH`
     - 将模型仓路径加入Python查询模块和包的搜索路径中
     - 将${llm_path}替换为实际路径
