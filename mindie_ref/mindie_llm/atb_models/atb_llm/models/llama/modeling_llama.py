@@ -135,8 +135,7 @@ class LlamaMLP(nn.Module):
         )
 
         no_refactor_no_pack = not config.use_refactor and config.num_attention_heads != config.num_key_value_heads
-        quant_no_pack = config.use_refactor and config.quantize == "smooth_quant"
-        if no_refactor_no_pack or quant_no_pack:
+        if no_refactor_no_pack:
             self.gate_proj = TensorParallelColumnLinear.load(
                 config,
                 prefix=f"{prefix}.gate_proj",
@@ -205,8 +204,7 @@ class FlashLlamaAttention(torch.nn.Module):
         else:
             self.num_key_value_heads = self.num_heads
         no_refactor_no_pack = not config.use_refactor and config.num_attention_heads != config.num_key_value_heads
-        quant_no_pack = config.use_refactor and config.quantize == "smooth_quant"
-        if no_refactor_no_pack or quant_no_pack:
+        if no_refactor_no_pack:
             self.q_proj = TensorParallelColumnLinear.load(
                 config,
                 prefix=f"{prefix}.q_proj",
@@ -474,8 +472,7 @@ class LlamaAttention(torch.nn.Module):
         else:
             self.num_key_value_heads = self.num_heads
         no_refactor_no_pack = not config.use_refactor and config.num_attention_heads != config.num_key_value_heads
-        quant_no_pack = config.use_refactor and config.quantize == "smooth_quant"
-        if no_refactor_no_pack or quant_no_pack:
+        if no_refactor_no_pack:
             self.q_proj = TensorParallelColumnLinear.load(
                 config,
                 prefix=f"{prefix}.q_proj",

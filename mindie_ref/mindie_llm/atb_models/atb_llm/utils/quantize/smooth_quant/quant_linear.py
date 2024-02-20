@@ -53,7 +53,7 @@ class W8A8LinearStatic(nn.Module):
         self.weight_quant_name = 'per_channel'
 
         self.act_quant_name = 'per_tensor'
-        self.register_buffer('act_scales', act_scales.reshape(1).to(torch.float16))
+        self.register_buffer('act_scales', act_scales.reshape(-1).to(torch.float16))
 
         if act_zeros:
             self.register_buffer('act_zeros', act_zeros.to(torch.int8), requires_grad=False)
