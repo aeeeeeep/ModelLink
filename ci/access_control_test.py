@@ -51,6 +51,7 @@ class ST_Test:
         for shell_file in self.shell_file_list:
             success_check(os.system("sh {}".format(shell_file)))
 
+
 # ===============================================
 # UT test, run with pytest, waiting for more ...
 # ===============================================
