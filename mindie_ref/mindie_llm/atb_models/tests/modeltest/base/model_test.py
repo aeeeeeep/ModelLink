@@ -31,6 +31,7 @@ from atb_llm.utils.cpu_binding import NpuHbmInfo
 from examples.server.cache import CacheConfig, CacheManager, ModelConfig
 from examples.server.generate import decode_token, generate_req
 from examples.server.request import request_from_text, request_from_token
+from .human_eval import evaluate_functional_correctness
 
 
 QA_PRIMER = """Q: What is human life expectancy in the United States?
@@ -475,6 +476,8 @@ class ModelTest:
                 self.__run_full_dataset_truthfulqa()
             elif self.dataset_name == 'BoolQ':
                 self.__run_full_dataset_boolq()
+            elif self.dataset_name == 'HumanEval':
+                self.__run_full_dataset_humaneval()
         else:
             self.logger.error(self.test_mode + " not support")
             raise RuntimeError(f"{self.test_mode} not support")
@@ -971,6 +974,95 @@ class ModelTest:
         if is_result:
             self.__save_result(result_total)
 
+    def __run_full_dataset_humaneval(self):
+
+        def filter_code(completion: str) -> str:
+            completion = completion.lstrip("\n")
+            return completion.split("\n\n")[0]
+
+        def fix_indents(text: str) -> str:
+            return text.replace("\t", "    ")
+
+        is_result = False
+        if torch.distributed.get_rank() == 0:
+            is_result = True
+        with torch.no_grad():
+            for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.jsonl").as_posix(),
+                                        recursive=True), desc='global'):
+                dataset = []
+                with open(entry, encoding='utf-8') as f:
+                    for line in f:
+                        line_json = json.loads(line)
+                        dataset.append(line_json)
+
+                correct = 0
+                task_id = 0
+                samples = []
+                dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
+                for batch in tqdm(dataloader):
+                    queries = [prompt.replace("    ", "\t") for prompt in batch["prompt"]]
+                    if self.model_type == "fa":
+                        inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
+                                                max_length=2048).to(self.model.device)
+                        tokenizer_out_ids = inputs.input_ids.to(self.model.device)
+                        attention_mask = inputs.attention_mask.to(self.model.device)
+                        outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
+                                                      do_sample=False, max_new_tokens=512)
+                        if is_result:
+                            for idx, ans in enumerate(batch['answer']):
+                                output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
+                                response = self.tokenizer.decode(output)
+                                acc = is_correct(response, ans)
+                                if acc:
+                                    correct += 1
+                    else:
+                        req_list = [request_from_text(queries[i], self.tokenizer, 512, self.block_size, req_idx=i) for i
+                                    in range(len(queries))]
+                        if not self.cache_manager:
+                            cache_block_size = self.block_size * self.model.num_kv_heads * self.model.head_size
+                            dtype = dtype_map[self.data_type] if self.data_type in dtype_map else dtype_map["fp16"]
+                            dtype_size = CacheManager.get_dtype_size(dtype)
+                            total_cache_size = self.model.num_layers * cache_block_size * 2 * dtype_size
+
+                            max_memory = env.ENV.memory_fraction * self.max_memory \
+                                if not env.ENV.max_memory_gb else int(env.ENV.max_memory_gb) * (1 << 30)
+
+                            free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory != 0 else \
+                                                            (self.init_memory + env.ENV.atb_memory_gb_reserved * (
+                                                                        1 << 30)))
+
+                            self.logger.info("RANK " + str(self.local_rank) + ": infer max_memory(GB): " + str(
+                                max_memory / (1024 ** 3)) +
+                                             ", warm_up_memory(GB): " + str(self.warm_up_memory / (1024 ** 3)) +
+                                             ", free_memory(GB): " + str(free_memory / (1024 ** 3)))
+                            num_blocks = int(free_memory // total_cache_size)
+                            self.logger.info("RANK " + str(self.local_rank) + ": num_blocks: " + str(
+                                num_blocks) + ", free memory: " + str(free_memory))
+                            cache_config = CacheConfig(num_blocks, self.block_size)
+                            self.cache_manager = CacheManager(cache_config, self.model_config)
+                        if is_result:
+                            print("req_list: ", queries)
+                        generate_req(req_list, self.model, self.tokenizer, self.batch_size, self.max_prefill_tokens,
+                                     512, self.cache_manager, self.local_rank)
+                        generate_text_list, _ = decode_token(req_list, self.tokenizer)
+                        # if is_result:
+                        #     print("generate_text_list: ", generate_text_list)
+                        generate_text_list = [filter_code(fix_indents(completion)) for completion in generate_text_list]
+                        if is_result:
+                            print("generate_text_list_1: ", generate_text_list)
+                        for sample in generate_text_list:
+                            result = dict(
+                                task_id="HumanEval/" + str(task_id),
+                                completion=sample,
+                            )
+                            samples += [result]
+                    task_id += 1
+                if is_result:
+                    self.__save_result(samples)
+        if is_result:
+            results = evaluate_functional_correctness(self.current_result_path, [1], 4, 3.0, self.script_path + "/../dataset/full/HumanEval/human-eval.jsonl")
+            self.result_logger.debug(results)
+
     def __compare_results(self):
         if self.test_mode != "performance" and self.hardware_type == "NPU" and torch.distributed.get_rank() == 0:
             if self.test_mode == "simplified":
@@ -1265,16 +1357,25 @@ class ModelTest:
 
         now = datetime.now()
         date_str = now.strftime("%Y_%m_%d_%H_%M_%S")
-        result_name = "_".join([self.model_name, self.dataset_name, date_str]) + '.csv'
-        result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}",
+
+        if self.dataset_name == "HumanEval":
+            result_name = "_".join([self.model_name, self.dataset_name]) + '.jsonl'
+            result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}",
                                    result_name)
-        if self.dataset_name == "TruthfulQA":
-            df = pd.DataFrame(result, columns=['idx', 'MC1', 'MC2', 'MC3'])
+            with open(result_path, 'wb') as fp:
+                for x in result:
+                    fp.write((json.dumps(x) + "\n").encode('utf-8'))
         else:
-            df = pd.DataFrame(result, columns=['file_name', 'value', 'correct', 'sum'])
-        df = align_columns(df)
-        df = align_headers(df)
-        df.to_csv(result_path, sep='|', index=False)
+            result_name = "_".join([self.model_name, self.dataset_name, date_str]) + '.csv'
+            result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}",
+                                   result_name) 
+            if self.dataset_name == "TruthfulQA":
+                df = pd.DataFrame(result, columns=['idx', 'MC1', 'MC2', 'MC3'])
+            else:
+                df = pd.DataFrame(result, columns=['file_name', 'value', 'correct', 'sum'])
+            df = align_columns(df)
+            df = align_headers(df)
+            df.to_csv(result_path, sep='|', index=False)
         self.logger.info(f"{self.dataset_name} result saved to: {result_path}")
         self.current_result_path = result_path
 
