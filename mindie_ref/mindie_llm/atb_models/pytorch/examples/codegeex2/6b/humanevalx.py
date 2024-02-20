@@ -14,7 +14,7 @@ from torch_npu.contrib import transfer_to_npu
 
 sys.path.insert(0, str(Path(__file__, '../../../chatglm2/6b').resolve()))
 from main import get_model
-sys.path.insert(0, str(Path(__file__,  '../CodeGeeX2/evaluation').resolve()))
+sys.path.insert(0, str(Path(__file__, '../CodeGeeX2/evaluation').resolve()))
 from generation import CodeStoppingCriteria
 from utils import Logger, read_dataset, process_extra_prompt, is_code_generation_finished, cleanup_code
 
