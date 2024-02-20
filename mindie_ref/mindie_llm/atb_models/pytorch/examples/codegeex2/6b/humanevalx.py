@@ -3,27 +3,18 @@
 
 import os
 import sys
-import glob
 import json
-import math
-import time
-import shutil
 import argparse
-import platform
 from pathlib import Path
 
 import torch
-import torch_npu
-import transformers
-import torch.distributed as dist
 from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModel
 from transformers.utils import check_min_version
 from torch_npu.contrib import transfer_to_npu
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../chatglm2/6b'))
+sys.path.insert(0, Path(__file__, '../../../chatglm2/6b').resolve())
 from main import get_model
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), 'CodeGeeX2/evaluation'))
+sys.path.insert(0, Path(__file__,  '../CodeGeeX2/evaluation').resolve())
 from generation import CodeStoppingCriteria
 from utils import Logger, read_dataset, process_extra_prompt, is_code_generation_finished, cleanup_code
 
@@ -80,12 +71,6 @@ def parse_args():
         help="Use greedy decoding instead of sampling",
     )
     parser.add_argument(
-        "--seed",
-        type=int,
-        default=42,
-        help="Random seed",
-    )
-    parser.add_argument(
         "--micro_batch_size",
         type=int,
         default=1,
@@ -126,38 +111,40 @@ def precision(args, tokenizer, model):
     for entry in entries.values():
         res.extend([entry] * (args.samples_per_problem // args.micro_batch_size))
     output_dir = args.output_dir
-    os.makedirs(output_dir, exist_ok=True)
-    fout = open(f"{output_dir}/results.jsonl", "w", encoding="utf-8")
-    with torch.no_grad():
-        for entry in tqdm(res):
-            prompt = entry["prompt"]
-            inputs = tokenizer([prompt for _ in range(args.micro_batch_size)], return_tensors="pt").to(model.device)
-            stop_criteria = CodeStoppingCriteria(
-                max_length=args.max_length,
-                micro_batch_size=args.micro_batch_size,
-                tokenizer=tokenizer,
-                dataset_type=dataset_type,
-                language_type=args.language_type,
-                prompt=prompt)
-            outputs = model.generate(**inputs,
-                                    max_length=args.max_length,
-                                    do_sample=True if not args.greedy else False,
-                                    use_cache=True,
-                                    stopping_criteria=[stop_criteria],
-                                    top_p=args.top_p,
-                                    top_k=args.top_k,
-                                    temperature=args.temperature,
-                                    pad_token_id=tokenizer.eos_token_id)
-            if local_rank == 0:
-                for output in outputs:
-                    response = tokenizer.decode(output)
-                    entry["generation_raw"] = response
-                    entry["generation"] = cleanup_code(
-                        response[len(prompt):], 
-                        dataset_type=dataset_type,
-                        language_type=args.language_type)
-                    fout.write(json.dumps(entry, ensure_ascii=False) + "\n")
-                    fout.flush()
+    os.makedirs(output_dir, mode=0o640, exist_ok=True)
+    with os.fdopen(
+        os.open(f"{output_dir}/results.jsonl", os.O_WRONLY | os.O_CREAT, 0o640), 
+        "w", encoding="utf-8") as fout:
+        with torch.no_grad():
+            for entry in tqdm(res):
+                prompt = entry["prompt"]
+                inputs = tokenizer([prompt for _ in range(args.micro_batch_size)], return_tensors="pt").to(model.device)
+                stop_criteria = CodeStoppingCriteria(
+                    max_length=args.max_length,
+                    micro_batch_size=args.micro_batch_size,
+                    tokenizer=tokenizer,
+                    dataset_type=dataset_type,
+                    language_type=args.language_type,
+                    prompt=prompt)
+                outputs = model.generate(**inputs,
+                                        max_length=args.max_length,
+                                        do_sample=True if not args.greedy else False,
+                                        use_cache=True,
+                                        stopping_criteria=[stop_criteria],
+                                        top_p=args.top_p,
+                                        top_k=args.top_k,
+                                        temperature=args.temperature,
+                                        pad_token_id=tokenizer.eos_token_id)
+                if local_rank == 0:
+                    for output in outputs:
+                        response = tokenizer.decode(output)
+                        entry["generation_raw"] = response
+                        entry["generation"] = cleanup_code(
+                            response[len(prompt):], 
+                            dataset_type=dataset_type,
+                            language_type=args.language_type)
+                        fout.write(json.dumps(entry, ensure_ascii=False) + "\n")
+                        fout.flush()
 
 
 def main():
