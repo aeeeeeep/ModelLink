@@ -13,6 +13,9 @@
     - [性能](#性能)
         - [吞吐](#吞吐)
         - [精度](#精度)
+  - [推理](#推理)
+  - [评估](#评估)
+
 - [Baichuan2-13B](#Baichuan2-13B)
   - [训练](#训练)
     - [脚本](#脚本)
@@ -172,6 +175,66 @@ NPU vs 参考 loss 相对误差.
 ![NPU-Relative-Error](../../sources/images/baichuan2/baichuan2-7B-loss-relative-error.png)
 
 
+## 推理
+
+首先需要配置baichuan2-7B的推理脚本: tasks/inference/generate_baichuan2_7b_ptd.sh
+
+```bash
+# 根据您自己的 ascend-toolkit 路径，执行set_env.sh
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+ 
+# 修改模型权重路径和词表路径
+CHECKPOINT="your model directory path"
+TOKENIZER_PATH="your tokenizer directory path"
+```
+
+然后可直接启动generate_baichuan2_7b_ptd.sh
+
+```bash
+bash tasks/inference/generate_baichuan2_7b_ptd.sh
+```
+
+推理的示例如下:
+![Inference](../../sources/images/baichuan2/baichuan2_7B_inference.png)
+
+## 评估
+
+我们使用boolq基准来评估我们的模型。基准[下载](https://huggingface.co/datasets/boolq).
+
+```shell
+# 配置原始权重与词表的路径
+CHECKPOINT=<origin-ckpt-path>
+TOKENIZER_PATH=<tokenizer-path>
+# 配置任务以及数据路径
+DATA_PATH="./boolq/"
+TASK="boolq"
+```
+
+```shell
+bash ./tasks/evaluation/evaluate_baichuan2_7B_ptd.sh
+```
+
+<table>
+  <thead>
+    <tr>
+      <th>任务</th>
+      <th>验证集</th>
+      <th>模型</th>
+      <th>昇腾值</th>
+      <th>社区值</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="https://huggingface.co/datasets/boolq">Boolq</a></td>
+      <td>test</td>
+      <th>Baichuan2-7B</th>
+      <td>0.7</td>
+      <td><a href="https://hub.opencompass.org.cn/dataset-detail/BoolQ">0.632</a></td>
+    </tr>
+  </tbody>
+</table>
+
 # Baichuan2-13B
 
 ## 训练
@@ -292,7 +355,6 @@ CKPT_LOAD_DIR="./baichuan2-13b-merge"
 6. 启动 Baichuan2-13B 训练脚本: examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
 
 ```bash
-# 请在双机上分别运行该命令，双机会自动同步通信，开始进程运行
 bash examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
 ```
 
@@ -304,7 +366,7 @@ Baichuan2-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 
 |  设备  |            模型          | 迭代数  | 样本吞吐 (samples/s) | token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 
 |:----:|:-------------------------:|:----:|:------------------:|:--------------------:|:---------------:|
-| NPUs | Baichuan2-13B | 1000 |1.72| 916    | 4.647 |
+| NPUs | Baichuan2-13B | 1000 |1.72| 880    | 4.647 |
 |  参考  | Baichuan2-13B | - | - | 872|- |
 
 
@@ -343,15 +405,8 @@ bash tasks/inference/generate_baichuan2_13b_ptd.sh
 
 ## 评估
 
-我们使用boolq基准来评估我们的模型。基准[下载](https://super.gluebenchmark.com/tasks).
-1. 准备数据集
-```shell
- mkdir boolq
- cd boolq
- wget https://storage.googleapis.com/boolq/dev.jsonl
- cd ..
-```
-2. 配置Baichuan2-13B评估脚本: tasks/evaluation/eval_baichuan2_13B.sh
+我们使用boolq基准来评估我们的模型。基准[下载](https://huggingface.co/datasets/boolq).
+
 
 ```shell
 # 配置原始权重与词表的路径
@@ -361,10 +416,10 @@ TOKENIZER_PATH=<tokenizer-path>
 DATA_PATH="./boolq/"
 TASK="boolq"
 ```
-3. 执行Baichuan2-13B评估脚本: tasks/evaluation/eval_baichuan2_13B.sh
+
 
 ```shell
-bash ./tasks/evaluation/eval_baichuan2_13B.sh
+bash ./tasks/evaluation/evaluate_baichuan2_13B_ptd.sh
 ```
 
 <table>

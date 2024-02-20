@@ -101,18 +101,18 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>7B</td>
       <td> 1x8</td>
       <td> FP16 </td>
-      <td> 2350 </td>
+      <td> 2643 </td>
       <td> 2036 </td>
-      <td> <a href="./sources/images/baichuan/7B_loss_compare.png">Loss</a> </td>
-      <td> <a href="examples/baichuan/pretrain_baichuan_zero_7B.sh">训练</a> </td>
+      <td> <a href="./sources/images/baichuan/baichuan7B_compare.png">Loss</a> </td>
+      <td> <a href="examples/baichuan/pretrain_baichuan_ptd_7B.sh">训练</a> </td>
     </tr>
     <tr>
       <td>13B</td>
       <td> 1x8</td>
       <td> FP16 </td>
-      <td> 1016 </td>
+      <td> 1213 </td>
       <td> 824 </td>
-      <td> <a href="./sources/images/baichuan/13B-loss-compare.png">Loss</a> </td>
+      <td> <a href="./sources/images/baichuan/baichuan13B_compare.png">Loss</a> </td>
       <td> <a href="examples/baichuan/pretrain_baichuan_ptd_13B.sh">训练</a> </td>
     </tr>
     <tr>
@@ -120,18 +120,18 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>7B</td>
       <td> 1x8</td>
       <td> BF16 </td>
-      <td> 2607 </td>
+      <td> 2598 </td>
       <td> 3936 </td>
-      <td> <a href="./sources/images/baichuan2/7B_loss_compare.png">Loss</a> </td>
+      <td> <a href="./sources/images/baichuan2/baichuan2_7B_compare.png">Loss</a> </td>
       <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_7B.sh">训练</a> </td>
     </tr>
     <tr>
       <td>13B</td>
-      <td> 2x8</td>
+      <td> 1x8</td>
       <td> BF16 </td>
-      <td> 852 </td>
+      <td> 880 </td>
       <td> 872 </td>
-      <td> <a href="./sources/images/baichuan2/13B-loss-compare.png">Loss</a> </td>
+      <td> <a href="./sources/images/baichuan2/baichuan2_13B_compare.png">Loss</a> </td>
       <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_13B.sh">训练</a> </td>
     </tr>
     <tr>
@@ -296,15 +296,30 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td rowspan="2"> <a href="examples/baichuan/README.md">Baichuan</a> </td>
       <td> 7B </td>
       <td> -- </td>
-      <td> -- </td>
-      <td> -- </td>
+      <td> <a href="tasks/inference/generate_baichuan_7b_ptd.sh">对话</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_baichuan_7B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td> 13B </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/baichuan/tune_baichuan_ptd_13B.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/baichuan/generate_baichuan_13B_tp8_pp1.sh">对话</a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/eval_baichuan_13B.sh">评估</a> </td>
+      <td> <a href="examples/baichuan/tune_baichuan_ptd_13B.sh">lora</a> </td>
+      <td> <a href="tasks/inference/generate_baichuan_13b_ptd.sh">对话</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_baichuan_13B_ptd.sh">评估</a> </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="2"> <a href="examples/baichuan/README.md">Baichuan2</a> </td>
+      <td> 7B </td>
+      <td> -- </td>
+      <td> <a href="tasks/inference/generate_baichuan2_7b_ptd.sh">对话</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_baichuan2_7B_ptd.sh">评估</a> </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+    </tr>
+    <tr>
+      <td> 13B </td>
+      <td> -- </td>
+      <td> <a href="tasks/inference/generate_baichuan2_13b_ptd.sh">对话</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_baichuan2_13B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
