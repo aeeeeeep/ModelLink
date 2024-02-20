@@ -1,0 +1,208 @@
+#!/bin/bash
+# Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# shellcheck disable=SC2148
+SCRIPT_DIR=$(cd $(dirname $0); pwd)
+TESTS_DIR=$(cd $SCRIPT_DIR/core/; pwd)
+
+test_mode="performance"
+model_type="pa"
+model_name=""
+weight_dir=""
+data_type="fp16"
+hardware_type="NPU"
+chip_num=0
+dataset="CEval"
+batch_size=0
+case_pair="[]"
+
+function fn_prepare()
+{
+    if [ "$hardware_type" == "NPU" ]; then
+        if [ -z "$ASCEND_HOME_PATH" ];then
+            echo "env ASCEND_HOME_PATH not exists, fail"
+            exit 0
+        fi
+        if [ -z "$ATB_HOME_PATH" ];then
+            echo "env ATB_HOME_PATH not exists, fail"
+            exit 0
+        fi
+    fi
+
+    IFS="_"
+    read -ra parts <<< "$1"
+    model_type="${parts[0]}"
+    if [ "$model_type" == "pa" ]; then
+        data_type="${parts[1]}"
+    fi
+
+    test_mode="$2"
+    if ! [ "$2" == "performance" ]; then
+        read -ra parts <<< "$2"
+        test_mode="${parts[0]}"
+        dataset="${parts[1]}"
+    fi
+
+    csv_path=$SCRIPT_DIR/result/"$model_name"/"$1"_"$2"_test_result.csv
+    mkdir -p "$(dirname "$csv_path")"
+    touch "$csv_path" > "$csv_path"
+    if [ "$test_mode" == "performance" ]; then
+        export ATB_LLM_BENCHMARK_ENABLE=1
+        export ATB_LLM_BENCHMARK_FILEPATH="${SCRIPT_DIR}/benchmark.csv"
+        printf "%-15s|%-15s|%-15s|%-15s|%-15s|%-25s|%-25s|%-36s|%-25s|%-45s|%-35s\n" \
+        "Model" "Batchsize" "In_seq" "Out_seq" "Total time(s)" "First token time(ms)" "Non-first token time(ms)" "Non-first token Throughout(Tokens/s)" \
+        "E2E Throughout(Tokens/s)" "Non-first token Throughout Average(Tokens/s)" "E2E Throughout Average(Tokens/s)" > "$csv_path"
+    elif [ "$test_mode" == "simplified" ]; then
+        echo "Standard: [1] KL loss <= 1e-3. [2] rate of KL loss > 1e-4 <= 0.5%". > "$csv_path"
+        printf "%-15s|%-15s|%-15s|%-15s|%-15s|%-15s|%-15s\n" \
+        "Model" "Dataset" "Batchsize" "Logits Num" "Greatest KLL" "Error Rate" "Result" >> "$csv_path"
+    else
+        printf "%-15s|%-15s|%-15s|%-15s|%-15s|%-15s\n" \
+        "Model" "Dataset" "Batchsize" "Golden" "NPU" "Result" > "$csv_path"
+    fi
+}
+
+function fn_run_single()
+{
+    test_file="${model_name}_test.py"
+    test_path="${TESTS_DIR}/${test_file}"
+    if [[ ! -e "$test_path" ]];then
+        echo "model test file $test_path is not found."
+        exit 0
+    fi
+    
+    if [ "$chip_num" == 0 ]; then
+        code_line=$(grep -A 1 "def get_chip_num(self):" "${test_path}" | tail -n 1)
+        if [ -z "$code_line" ]; then
+            echo "Warning: get_chip_num() not overwrite in '$test_file', use chip_num 1"
+            chip_num=1
+        else
+            chip_num=$(echo "$code_line" | awk -F 'return ' '{print $2}')
+            if ! [[ "$chip_num" =~ ^[1-9]+$ ]]; then
+                echo "Error: return value of get_chip_num() in '$test_file' is not a digit."
+                exit 1
+            fi
+        fi
+    fi
+
+    devices=""
+    for ((i=0; i<chip_num-1; i++)); do
+        devices+="$i,"
+    done
+    devices+="$((chip_num-1))"
+    export ASCEND_RT_VISIBLE_DEVICES="$devices"
+
+    random_port=$(( RANDOM % 9999 + 10001 ))
+    torchrun --nproc_per_node "$chip_num" --master_port $random_port "$test_path" \
+    --model_type "$model_type" \
+    --data_type "$data_type" \
+    --test_mode "$test_mode" \
+    --batch_size "$batch_size" \
+    --model_name "$model_name" \
+    --weight_dir "$weight_dir" \
+    --dataset_name "$dataset" \
+    --hardware_type $hardware_type \
+    --case_pair "$case_pair"
+}
+
+function fn_run_all()
+{
+    for model_script in "$TESTS_DIR"/*; do
+        if [ -f "$model_script" ]; then
+            file_name=$(basename "$model_script")
+            model_name="${file_name%%_test*}"
+            fn_run_single "$model_name"
+        fi
+    done
+}
+
+
+function fn_main()
+{
+    if command -v nvidia-smi &> /dev/null; then
+        hardware_type="GPU"
+        echo "Detected NVIDIA GPU"
+    else
+        if command -v npu-smi info &> /dev/null; then
+            echo "Detected Ascend NPU"
+        else
+            echo "Error: No GPU or NPU detected"
+            exit 1
+        fi
+    fi
+
+    if [ $# -eq 0 ]; then
+        echo "Error: require parameter. Usage: bash run.sh [test_mode] ([model_name] [chip_num]) "
+        exit 1
+    fi
+
+    model_type=$1
+    case "$model_type" in
+        fa|pa_fp16|pa_bf16)
+            echo "current model_type: $model_type"
+            ;;
+        *)
+            echo "invalid model_type, only support fa, pa_fp16, pa_bf16"
+            ;;
+    esac
+    test_modes=$2
+    case "$test_modes" in
+        performance|simplified_GSM8K|simplified_TruthfulQA|full_CEval|full_GSM8K|full_MMLU|full_TruthfulQA|full_BoolQ)
+            echo "current test_mode: $test_modes"
+            ;;
+        *)
+            echo "invalid test_mode, only support performance, simplified_GSM8K, simplified_TruthfulQA, \
+            full_CEval, full_GSM8K, full_MMLU, full_TruthfulQA, full_BoolQ"
+            ;;
+    esac
+    if [ "$test_modes" == "performance" ]; then
+        case_pair=$3
+        batch_size=$4
+        model_name=$5
+        weight_dir=$6
+        echo "current batch_size: $batch_size"
+        echo "current model_name: $model_name"
+
+        fn_prepare "$1" "$2"
+
+        if [ $# -ge 7 ]; then
+            if ! [[ "$7" =~ ^[1-9]+$ ]]; then
+                echo "Error: input chip_num is not a digit."
+                exit 1
+            fi
+            chip_num=$7
+            echo "INFO: use input chip_num $chip_num"
+        fi
+    else
+        batch_size=$3
+        model_name=$4
+        weight_dir=$5
+        echo "current batch_size: $batch_size"
+        echo "current model_name: $model_name"
+
+        fn_prepare "$1" "$2"
+
+        if [ $# -ge 6 ]; then
+            if ! [[ "$6" =~ ^[1-9]+$ ]]; then
+                echo "Error: input chip_num is not a digit."
+                exit 1
+            fi
+            chip_num=$6
+            echo "INFO: use input chip_num $chip_num"
+        fi
+    fi
+    fn_run_single
+}
+
+fn_main "$@"

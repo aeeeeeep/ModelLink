@@ -26,9 +26,11 @@ namespace llama {
 struct FlashAttentionLayerParam {
     float rmsNormEps = 0;
     int headNum = 0;
+    int kvHeadNum = 0;
     int dk = 0; // headDim
     int rank = 0;
     int rankSize = 1;
+    int isTriuMask = 0;
     std::string backend = "hccl";
     std::string model = "llama_13b";
     float qScale = 1.0;
@@ -53,9 +55,11 @@ static atb::Operation *CreateFlashAttentionLayer(const nlohmann::json &paramJson
     FlashAttentionLayerParam param;
     param.rmsNormEps = paramJson["rmsNormEps"].get<float>();
     param.headNum = paramJson["headNum"].get<int>();
+    param.kvHeadNum = paramJson["kvHeadNum"].get<int>();
     param.dk = paramJson["dk"].get<int>();
     param.rank = paramJson["rank"].get<int>();
     param.rankSize = paramJson["rankSize"].get<int>();
+    param.isTriuMask = paramJson["isTriuMask"].get<int>();
     param.model = paramJson["model"].get<std::string>();
     param.quantModel = paramJson["quantModel"].get<bool>();
     param.sparseModel = paramJson["sparseModel"].get<bool>();
@@ -70,9 +74,9 @@ static atb::Operation *CreateFlashAttentionLayer(const nlohmann::json &paramJson
     param.ffnOutInputScale = paramJson["ffnOutInputScale"].get<float>();
     param.ffnOutInputOffset = paramJson["ffnOutInputOffset"].get<int>();
 
-    ATB_LOG(INFO) << "LLaMA FlashAttentionLayer headNum:" << param.headNum << ", rmsNormEps:" <<
-        param.rmsNormEps << ", dk:" << param.dk << ", model:" << param.model << ", rank:" << param.rank <<
-        ", rankSize:" << param.rankSize;
+    ATB_LOG(INFO) << "LLaMA FlashAttentionLayer headNum:" << param.headNum << ", kvHeadNum:" << param.kvHeadNum
+                  << ", rmsNormEps:" << param.rmsNormEps << ", dk:" << param.dk << ", model:" << param.model
+                  << ", rank:" << param.rank << ", rankSize:" << param.rankSize << ", isTriuMask: " << param.isTriuMask;
     atb::Operation *op;
     FlashAttentionLayer(param, &op);
     return op;

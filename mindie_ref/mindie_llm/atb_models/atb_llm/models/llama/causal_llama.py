@@ -3,7 +3,7 @@ import json
 from typing import Optional
 import torch
 
-from atb_llm.utils.layers import TensorHead, load_column_multi
+from atb_llm.utils.layers import load_column_multi
 from ..base.causal_lm import CausalLM
 from .modeling_llama import LlamaModel, LlamaConfig
 
@@ -13,21 +13,13 @@ class LlamaForCausalLM(CausalLM):
         super().__init__(config, weights)
         self.model = LlamaModel(config, weights)
 
-        if not self.soc_info.need_nz:
-            self.lm_head = load_column_multi(
-                config,
-                prefixes=["lm_head"],
-                weights=weights,
-                head_size=1,
-                lm_head=True,
-            )
-        else:  # 310P 暂不支持all-gather
-            self.lm_head = TensorHead.load_weight(
-                config,
-                prefix="lm_head",
-                weights=weights,
-                is_norm=False,
-            )
+        self.lm_head = load_column_multi(
+            config,
+            prefixes=["lm_head"],
+            weights=weights,
+            head_size=1,
+            lm_head=True,
+        )
 
         self.placeholder = torch.zeros(1, dtype=torch.float16).npu()
         self.kv_cache_idx = torch.zeros(1, dtype=torch.int32).npu()
@@ -36,8 +28,8 @@ class LlamaForCausalLM(CausalLM):
 
     def init_ascend_operations(self, config: LlamaConfig):
         # 初始化模型
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_family_decoder_model")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_family_decoder_model")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_decoder_model")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_decoder_model")
 
         # 设置模型参数
         coder_param = {
@@ -45,7 +37,7 @@ class LlamaForCausalLM(CausalLM):
             "isBF16": False,
             "isPack": True,
             "isEmbeddingParallel": False,
-            "isLmHeadParallel": True,  # 310P 暂不支持all-gather
+            "isLmHeadParallel": True,
             "quantType": 2 if self.quantize == "smooth_quant" else 0,
             "rmsNormEps": config.rms_norm_eps,
             "numAttentionHeadsPerRank": self.num_attention_heads,
@@ -54,7 +46,7 @@ class LlamaForCausalLM(CausalLM):
             "numHiddenLayers": self.num_layers,
             "rank": self.tp_rank,
             "worldSize": self.tp_world_size,
-            "backend": "lccl",
+            "backend": "hccl" if self.soc_info.need_nz else "lccl",
             "tokenOffset": [0],
             "seqLen": [1],
         }
@@ -127,9 +119,6 @@ class LlamaForCausalLM(CausalLM):
         cos_embed = self.ascend_rotary_embedding.get_cos_cached_total()
         sin_embed = self.ascend_rotary_embedding.get_sin_cached_total()
 
-        if self.soc_info.need_nz:
-            pass
-
         acl_operation_inputs = [
             input_ids, position_ids, cos_embed, sin_embed, self.mask_full,
             self.placeholder, self.placeholder, self.kv_cache_idx, self.token_offset,
@@ -138,7 +127,9 @@ class LlamaForCausalLM(CausalLM):
             torch.tensor([self.seq_len_encoder[0] - 1], dtype=torch.int64,
                          device="npu") if cu_seqlen_prefill else self.lm_head_indices_fake
         ]
-        acl_param = json.dumps({"tokenOffset": [int(self.token_offset[0])] * self.batch_num,
-                                "seqLen": ([input_ids.shape[1]] if cu_seqlen_prefill else [1]) * self.batch_num})
+        acl_param = json.dumps({
+            "tokenOffset": [int(self.token_offset[0])] * self.batch_num,
+            "seqLen": [input_ids.shape[1]] * self.batch_num if cu_seqlen_prefill else self.acl_param_seq_len_decoder
+        })
 
         return acl_operation_inputs, acl_param

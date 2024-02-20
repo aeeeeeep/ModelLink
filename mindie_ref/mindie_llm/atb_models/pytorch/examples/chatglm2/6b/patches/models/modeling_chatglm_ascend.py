@@ -1,13 +1,12 @@
 """ PyTorch ChatGLM model. """
 
+import os
+import sys
 import math
 import copy
-import warnings
-import re
-import sys
-from typing import Optional, Tuple, Union, List, Callable, Dict, Any
 import json
-import os
+import warnings
+from typing import Optional, Tuple, Union, List, Callable, Dict, Any
 
 import torch
 import torch.utils.checkpoint
@@ -17,7 +16,6 @@ from torch import nn
 from torch.nn import CrossEntropyLoss, LayerNorm
 from torch.nn.utils import skip_init
 
-from atb_speed.common.arch.post_process.sample import SampleForModelsBase
 from transformers.modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
@@ -31,6 +29,8 @@ from transformers.generation.logits_process import (
     TopKLogitsWarper,
     TopPLogitsWarper,
 )
+from atb_speed.common.timer import Timer
+from atb_speed.common.arch.post_process.sample import SampleForModelsBase
 from manager import ModeManager
 
 from .configuration_chatglm import ChatGLMConfig
@@ -1070,6 +1070,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         self.acl_encoder_operation.set_weight(self.weights_list)
         self.acl_decoder_operation.set_weight(self.weights_list)
 
+    @Timer.timing
     def forward(
             self,
             input_ids: Optional[torch.Tensor] = None,
@@ -1175,7 +1176,6 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             acl_model_out = self.acl_encoder_operation.execute(input_full, acl_param)
             lm_logits = acl_model_out[0]
 
-            # recover presents/past_key_values
             self.attention_mask_max = None
 
         else:  # 非首token
@@ -1481,7 +1481,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
                                             **kwargs)
         return self
 
-    def sample(
+    def _sample(
         self,
         input_ids: torch.LongTensor,
         logits_processor: Optional[LogitsProcessorList] = None,

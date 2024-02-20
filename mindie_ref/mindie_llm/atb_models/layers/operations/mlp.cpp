@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 #include <atb/atb_infer.h>
-#include "layers/operations/linear.h"
-#include "layers/operations/linear_parallel.h"
 #include "layers/operations/mlp.h"
 
 namespace atb_speed {

@@ -23,7 +23,8 @@ def init_logger(logger: logging.Logger, file_name: str):
     flask_file_handle = RotatingFileHandler(
         filename=file_name,
         maxBytes=int(os.getenv('PYTHON_LOG_MAXSIZE', "1073741824")),
-        backupCount=10)
+        backupCount=10,
+        encoding="utf-8")
     formatter = logging.Formatter('%(asctime)s [%(levelname)s] pid: %(process)d %(filename)s-%(lineno)d: %(message)s')
     # 将日志记录器指定日志的格式
     flask_file_handle.setFormatter(formatter)

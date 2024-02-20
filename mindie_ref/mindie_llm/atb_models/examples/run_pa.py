@@ -2,6 +2,8 @@
 import argparse
 import os
 import math
+import copy
+
 import torch
 
 from atb_llm.utils.cpu_binding import NpuHbmInfo
@@ -28,13 +30,15 @@ class PARunner:
         self.max_batch_size = kwargs.get('max_batch_size', None)
         self.use_refactor = kwargs.get('use_refactor', None)
         self.dtype = torch.bfloat16 if kwargs.get('is_bf16', False) else torch.float16
+        self.quantize = kwargs.get('quantize', None)
 
         self.block_size = kwargs.get('block_size', None)
 
         self.model = ModelRunner(
             self.model_path, rank=self.rank, world_size=self.world_size, dtype=self.dtype,
+            quantize=self.quantize,
             max_position_embeddings=self.max_position_embeddings,
-            quantize=None, use_refactor=self.use_refactor
+            use_refactor=self.use_refactor
         )
         self.tokenizer = self.model.tokenizer
         self.model.load_weights()
@@ -77,11 +81,6 @@ class PARunner:
         )
 
     def warm_up(self):
-        max_prefill_tokens = self.max_batch_size * (self.max_input_length + self.max_output_length)
-        if self.max_prefill_tokens == -1:
-            self.max_prefill_tokens = max_prefill_tokens
-        else:
-            self.max_prefill_tokens = max(self.max_prefill_tokens, max_prefill_tokens)
         input_ids = torch.ones(self.max_prefill_tokens, dtype=torch.int64).to(self.device)
         position_ids = torch.arange(self.max_prefill_tokens, dtype=torch.int32).to(self.device)
         cu_seqlen_prefill = torch.tensor([1])
@@ -138,7 +137,7 @@ class PARunner:
                 if not ENV.max_memory_gb else int(ENV.max_memory_gb) * (1 << 30)
             free_memory = max_memory - (
                 self.warm_up_memory if self.warm_up_memory != 0 else (
-                        self.init_memory + ENV.atb_memory_gb_reserved * (1 << 30)))
+                        self.init_memory + ENV.reserved_memory_gb * (1 << 30)))
             print_log(self.rank, logger.info,
                       f"infer max_memory(GB): {max_memory / (1024 ** 3): .2f}, "
                       f"warm_up_memory(GB): {self.warm_up_memory / (1024 ** 3): .2f}, "
@@ -148,6 +147,10 @@ class PARunner:
             print_log(self.rank, logger.info, f"num_blocks: {num_blocks}, free_memory: {free_memory}")
             cache_config = CacheConfig(num_blocks, self.block_size)
             self.cache_manager = CacheManager(cache_config, self.model_config)
+
+            req_list_dummy = copy.deepcopy(req_list)
+            generate_req(req_list_dummy, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
+                         2, self.cache_manager, rank)
 
         if not ENV.profiling_enable:
             print_log(self.rank, logger.debug, "no profiling")
@@ -189,9 +192,10 @@ def parse_arguments():
     parser.add_argument('--max_position_embeddings', type=int, default=None)
     parser.add_argument('--max_input_length', type=int, default=1024)
     parser.add_argument('--max_output_length', type=int, default=20)
-    parser.add_argument('--max_prefill_tokens', type=int, default=-1)
+    parser.add_argument('--max_prefill_tokens', type=int, default=4096)
     parser.add_argument("--max_batch_size", type=int, default=1)
     parser.add_argument("--block_size", type=int, default=128)
+    parser.add_argument("--quantize", type=str, default=None)
 
     parser.add_argument('--is_flash_model', action='store_false')
     parser.add_argument('--is_bf16', action='store_true')
@@ -233,5 +237,6 @@ if __name__ == '__main__':
             print_log(rank, logger.info, f'Question[{i}]: {args.input_texts[i]}')
         print_log(rank, logger.info, f'Answer[{i}]: {generate_text}')
         print_log(rank, logger.info, f'Generate[{i}] token num: {token_nums[i]}')
+        
     if world_size > 1:
         torch.distributed.destroy_process_group()

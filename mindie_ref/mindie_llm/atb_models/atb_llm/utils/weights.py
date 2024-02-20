@@ -184,8 +184,11 @@ class Weights:
         filename, tensor_name = self.get_filename(tensor_name)
         f = self._get_handle(filename)
         tensor = f.get_tensor(tensor_name)
-
+        if tensor.dtype not in [torch.int8]:
+            tensor = tensor.to(dtype=self.dtype)
         tensor = tensor.to(device=self.device)
+        if tensor.dtype not in [torch.int32, torch.int64]:
+            tensor = tensor.to(dtype=self.dtype)
         return tensor
 
     def get_whole_tensor(self, tensor_name: str, dim: int):
@@ -201,6 +204,8 @@ class Weights:
         else:
             logger.error("Let's make that generic when needed")
             raise AssertionError
+        if tensor.dtype not in [torch.int8]:
+            tensor = tensor.to(dtype=self.dtype)
         return tensor
 
     def get_partial_sharded(self, tensor_name: str, dim: int, gqa_size: int = 1):
@@ -219,6 +224,28 @@ class Weights:
             block_size = gqa_size
             start = (rank // (world_size // group_size)) * block_size
             stop = ((rank // (world_size // group_size)) + 1) * block_size
+        
+        if "c_attn.bias" in tensor_name:
+            b = slice_[:]
+            single_size = b.shape[0] // 3
+            head_size = 128
+            head_num = single_size // head_size
+            rank_heads = math.ceil(head_num / world_size)
+            if rank != world_size - 1:
+                start = rank * (rank_heads * head_size)
+                stop = (rank + 1) * (rank_heads * head_size)
+                bq = slice_[start:stop]
+                bk = slice_[start + single_size:stop + single_size]
+                bv = slice_[start + 2 * single_size:stop + 2 * single_size]
+            else:
+                # last rank
+                start = rank * (rank_heads * head_size)
+                stop = head_num * head_size
+                bq = slice_[start:stop]
+                bk = slice_[start + single_size:stop + single_size]
+                bv = slice_[start + 2 * single_size:stop + 2 * single_size]
+            b_ = torch.cat([bq, bk, bv], dim=0)
+            return b_
 
         if dim == 0:
             tensor = slice_[start:stop]
@@ -227,6 +254,8 @@ class Weights:
         else:
             logger.error("Let's make that generic when needed")
             raise AssertionError
+        if tensor.dtype not in [torch.int8]:
+            tensor = tensor.to(dtype=self.dtype)
         return tensor
 
     def get_partial_sharded_padding(self, tensor_name: str, dim: int, gqa_size=1):
@@ -432,17 +461,21 @@ class Weights:
             weight = (qweight, qzeros, scales, g_idx, bits, groupsize, False)
         if quantize == "smooth_quant":
             qweight = torch.cat(
-                [self.get_sharded(f"{p}.weight", dim=0) for p in prefixes], dim=1
+                [self.get_sharded(f"{p}.weight", dim=0, gqa_size=gqa_size) for p in prefixes], dim=dim
             )
             weight_scales = torch.cat(
-                [self.get_sharded(f"{p}.scales", dim=0) for p in prefixes], dim=1
+                [self.get_sharded(f"{p}.scales", dim=0, gqa_size=gqa_size) for p in prefixes], dim=dim
             )
             weight_zeros = None
-            act_scales = (lambda x: x if None in x else torch.cat(x))(
-                [self.get_smooth_quant_sharded(f"{p}", idx=0, dim=0).reshape(1) for p in prefixes]
-            )
-            act_zeros = (lambda x: None if None in x else torch.cat(x))(
-                [self.get_smooth_quant_sharded(f"{p}", idx=1, dim=0) for p in prefixes])
+            act_scales_temp = [self.get_smooth_quant_sharded(f"{p}", idx=0, dim=0, gqa_size=gqa_size).reshape(1) for p in prefixes]
+            for one_act_scale in act_scales_temp[1:]:
+                if not torch.equal(act_scales_temp[0], one_act_scale):
+                    raise ValueError(
+                        f"`act_scales` are not equal: {act_scales_temp}"
+                    )
+            act_scales = (lambda x: x if None in x else x[0])(act_scales_temp)
+            act_zeros = (lambda x: None if None in x else x[0])(
+                [self.get_smooth_quant_sharded(f"{p}", idx=1, dim=0, gqa_size=gqa_size) for p in prefixes])
             weight = (qweight, weight_scales, weight_zeros, act_scales, act_zeros)
         else:
             w = [self.get_sharded(f"{p}.weight", dim=0, gqa_size=gqa_size) for p in prefixes]

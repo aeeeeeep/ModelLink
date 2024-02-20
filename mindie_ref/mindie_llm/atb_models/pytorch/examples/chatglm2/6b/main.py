@@ -1,24 +1,25 @@
 # coding=utf-8
 # Copyright Huawei Technologies Co., Ltd. 2023-2031. All rights reserved
 
-import argparse
+import os
 import glob
 import math
-import os
-import platform
 import shutil
 import json
 import time
+import argparse
+import platform
 from pathlib import Path
 
-from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModel
 import transformers
-from transformers.utils import check_min_version
 import torch
 import torch.distributed as dist
 import torch_npu
+from tqdm import tqdm
+from transformers import AutoTokenizer, AutoModel
+from transformers.utils import check_min_version
 from torch_npu.contrib import transfer_to_npu
+from atb_speed.common.timer import Timer
 
 
 def override_topp_and_topk():
@@ -104,7 +105,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def get_is_format_nz():
+def is_format_nz():
     soc_version = torch_npu._C._npu_get_soc_version()
     if soc_version in [200, 201, 202, 203]:
         return True
@@ -128,7 +129,6 @@ def check_lists(arg):
 
 
 def get_model(args):
-
     # 加载 tokenizer 和 model
     tokenizer = AutoTokenizer.from_pretrained(args.model_path, trust_remote_code=True)
     if args.tp_size > 1:
@@ -154,14 +154,8 @@ def get_model(args):
     # 推理模式
     model = model.eval()
 
-    # 确认配置
-    ENABLE_QUANT = os.environ.get("ENABLE_QUANT", "0") == "1"
-    is_format_nz = get_is_format_nz()
-    if ENABLE_QUANT:
-        QUANT_WEIGHT_PATH = os.environ.get("QUANT_WEIGHT_PATH")
-
     # 浮点模型适配
-    if is_format_nz:
+    if is_format_nz():
         for name, module in model.named_modules():
             if isinstance(module, torch.nn.Linear):
                 module.weight.data = torch_npu.npu_format_cast(module.weight.data, 29)
@@ -309,14 +303,11 @@ def performance(args, tokenizer, model):
             torch.npu.synchronize()
             first_token_end = time.time()
 
+            Timer.reset()
+            Timer.sync = torch.npu.synchronize
             torch.npu.synchronize()
             total_start = time.time()
-            outputs, \
-                time_of_first_token, \
-                time_per_token, \
-                per_next_token_time, \
-                post_next_token_time \
-                = model.generate(
+            outputs = model.generate(
                     **inputs,
                     eos_token_id=model.config.vocab_size * 2,
                     max_new_tokens=seq_len_out,
@@ -326,7 +317,7 @@ def performance(args, tokenizer, model):
 
         # time analysis
         time_total = total_end - total_start
-        time_tensor = torch.tensor([time_of_first_token, time_per_token, time_total], device="npu")
+        time_tensor = torch.tensor([Timer.timeit_res.first_token_delay, Timer.timeit_res.next_token_avg_delay, time_total], device="npu")
 
         if args.tp_size > 1:
             # 首token和总时间取双芯的较大值
