@@ -251,8 +251,8 @@ class BaichuanModel(BaichuanPreTrainedModel):
             "rank": self.tp_rank,
             "rankSize": self.tp_world_size,
             "isPrefill": True,
-            "backend": os.getenv("BACKEND", "hccl"),
-            "isLmHeadParallel": not self.soc_info.need_nz
+            "backend":  "hccl" if self.soc_info.need_nz else "lccl",
+            "isLmHeadParallel": True
         })
         self.acl_param_decoder = json.dumps({
             "rmsNormEps": config.rms_norm_eps,
@@ -262,8 +262,8 @@ class BaichuanModel(BaichuanPreTrainedModel):
             "rank": self.tp_rank,
             "rankSize": self.tp_world_size,
             "isPrefill": False,
-            "backend": os.getenv("BACKEND", "hccl"),
-            "isLmHeadParallel": not self.soc_info.need_nz
+            "backend":  "hccl" if self.soc_info.need_nz else "lccl",
+            "isLmHeadParallel": True
         })
         logger.info(self.acl_param_encoder)
         logger.info(self.acl_param_decoder)
@@ -582,7 +582,7 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
         logger.info(self.soc_info)
         # Initialize weights and apply final processing
         self.lm_head_weight = None
-        self.parallel_lm_head = not self.soc_info.need_nz  # 310P 暂时不支持ALLGather算子
+        self.parallel_lm_head = True
         self.model.parallel_lm_head = self.parallel_lm_head
         self.lm_head = (TensorParallelHead.load if self.parallel_lm_head else TensorParallelHead.load_weight)(
             config,
