@@ -190,6 +190,7 @@ function fn_main()
     weight_dir=$5
     echo "INFO: current batch_size: $batch_size"
     echo "INFO: current model_name: $model_name"
+    echo "INFO: current weight_dir: $weight_dir"
 
     fn_prepare "$model_type" "$test_modes"
 
