@@ -96,12 +96,14 @@ function fn_run_single()
         fi
     fi
 
-    devices=""
-    for ((i=0; i<chip_num-1; i++)); do
-        devices+="$i,"
-    done
-    devices+="$((chip_num-1))"
-    export ASCEND_RT_VISIBLE_DEVICES="$devices"
+    if ! [ -n "$ASCEND_RT_VISIBLE_DEVICES" ]; then
+        devices=""
+        for ((i=0; i<chip_num-1; i++)); do
+            devices+="$i,"
+        done
+        devices+="$((chip_num-1))"
+        export ASCEND_RT_VISIBLE_DEVICES="$devices"
+    fi
 
     random_port=$(( RANDOM % 9999 + 10001 ))
     torchrun --nproc_per_node "$chip_num" --master_port $random_port "$test_path" \
@@ -158,12 +160,13 @@ function fn_main()
     esac
     test_modes=$2
     case "$test_modes" in
-        performance|simplified_GSM8K|simplified_TruthfulQA|full_CEval|full_GSM8K|full_MMLU|full_TruthfulQA|full_BoolQ)
+        performance|simplified_GSM8K|simplified_TruthfulQA|full_CEval|full_GSM8K|full_MMLU|full_TruthfulQA|full_BoolQ|full_HumanEval)
             echo "current test_mode: $test_modes"
             ;;
         *)
             echo "invalid test_mode, only support performance, simplified_GSM8K, simplified_TruthfulQA, \
-            full_CEval, full_GSM8K, full_MMLU, full_TruthfulQA, full_BoolQ"
+            full_CEval, full_GSM8K, full_MMLU, full_TruthfulQA, full_BoolQ, full_HumanEval"
+            exit 1
             ;;
     esac
     if [ "$test_modes" == "performance" ]; then
