@@ -293,11 +293,6 @@ class ModelTest:
             "Common sense questions and answers\n\nQuestion: How to learn a new language\nFactual answer:"]
 
         csv_results = []
-        folder_name = self.model_name
-        csv_name = self.model_type + "_" + self.data_type + "_performance_test_result.csv" if self.data_type != "" else self.model_type
-        csv_formatted_name = self.model_type + "_" + self.data_type + "_performance_test_result_formatted.csv" if self.data_type != "" else self.model_type
-        csv_performance_path = os.path.join(self.script_path, "../result", folder_name, csv_name)
-        csv_performance_formatted_path = os.path.join(self.script_path, "../result", folder_name, csv_formatted_name)
         folder_path = f"{self.data_dir}/{self.hardware_type}/batch{self.batch_size}"
         os.environ['tensor_folder'] = f"{folder_path}"
         os.makedirs(folder_path, exist_ok=True)
@@ -451,6 +446,11 @@ class ModelTest:
                 csv_results[len(self.case_pair) - 1].extend(
                     [str(round(non_first_token_throughput_average, 10)).ljust(45),
                      str(round(e2e_throughput_average, 10)).ljust(35)])
+                folder_name = self.model_name
+                csv_name = self.model_type + "_" + self.data_type + "_performance_test_result.csv" if self.data_type != "" else self.model_type
+                csv_formatted_name = self.model_type + "_" + self.data_type + "_performance_test_result_formatted.csv" if self.data_type != "" else self.model_type
+                csv_performance_path = os.path.join(self.script_path, "../result", folder_name, csv_name)
+                csv_performance_formatted_path = os.path.join(self.script_path, "../result", folder_name, csv_formatted_name)
                 if not os.path.exists(csv_performance_formatted_path):
                     self.logger.warning("performance result csv formatted file not exist, skip recording results")
                     raise RuntimeError(f"csv result formatted file not exist")
