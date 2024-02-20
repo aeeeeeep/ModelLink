@@ -315,9 +315,6 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
         if self.is_prefill:  # prefill
             if lm_head_indices is None:
                 lm_head_indices = torch.tensor(range(input_ids.shape[0]), dtype=torch.int64, device=input_ids.device)
-            self.acl_param_encoder = json.dumps({
-                "seqLen": input_lengths.tolist()
-            })
 
         self.acl_operation_inputs = [
             input_ids,
@@ -333,7 +330,7 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
         ]
         for ind, item in enumerate(self.acl_operation_inputs):
             logger.debug(f"{ind} {item.device=}")
-        return self.acl_operation_inputs, self.acl_param_encoder if self.is_prefill else self.acl_param_decoder
+        return self.acl_operation_inputs
 
     def execute_ascend_operator(self,
                                 input_ids: torch.Tensor,
@@ -345,9 +342,12 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
                                 input_lengths: torch.Tensor,
                                 max_s: int,
                                 lm_head_indices: Optional[torch.Tensor] = None):
-        acl_inputs, acl_param = self.prepare_inputs_for_ascend(input_ids, position_ids, is_prefill, kv_cache,
+        acl_inputs = self.prepare_inputs_for_ascend(input_ids, position_ids, is_prefill, kv_cache,
                                                                block_tables, slots, input_lengths, max_s,
                                                                lm_head_indices)
+        acl_param = json.dumps({
+            "seqLen": input_lengths.tolist()
+        })
         if self.is_prefill:
             acl_model_out = self.acl_encoder_operation.execute(acl_inputs, acl_param)
         else:

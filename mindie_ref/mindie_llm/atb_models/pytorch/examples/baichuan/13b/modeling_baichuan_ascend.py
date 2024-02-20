@@ -9,6 +9,8 @@ from typing import List, Optional, Tuple, Union
 import torch
 import torch.utils.checkpoint
 import torch_npu
+from atb_speed.common.timer import Timer
+from atb_speed.common.utils import load_atb_speed
 from torch.nn import CrossEntropyLoss
 from transformers import PreTrainedModel
 from transformers.activations import ACT2FN
@@ -42,16 +44,7 @@ def get_rank_and_world_size():
 
 RANK, WORLD_SIZE = get_rank_and_world_size()
 
-
-def load_ascend_transformer():
-    ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
-    if ATB_SPEED_HOME_PATH is None:
-        raise RuntimeError("env ATB_SPEED_HOME_PATH not exist, source set_env.sh")
-    LIB_PATH = os.path.join(ATB_SPEED_HOME_PATH, "lib/libatb_speed_torch.so")
-    torch.classes.load_library(LIB_PATH)
-
-
-load_ascend_transformer()
+load_atb_speed()
 
 
 def _get_interleave(n):
@@ -627,6 +620,7 @@ class BaichuanForCausalLM(BaichuanPreTrainedModel):
     def get_decoder(self):
         return self.model
 
+    @Timer.timing
     def forward(
             self,
             input_ids: torch.LongTensor = None,

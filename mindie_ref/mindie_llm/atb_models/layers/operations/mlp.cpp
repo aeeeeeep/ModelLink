@@ -126,6 +126,9 @@ atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation, T confi
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(0);
+        if (inTensorDescs.at(0).dtype == ACL_INT8) {
+            outTensorDescs.at(0).dtype = ACL_FLOAT16;
+        }
         return atb::NO_ERROR;
     };
 

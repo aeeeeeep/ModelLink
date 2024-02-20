@@ -342,9 +342,6 @@ class BaichuanModel(BaichuanPreTrainedModel):
         if self.is_prefill:  # prefill
             if lm_head_indices is None:
                 lm_head_indices = torch.tensor(range(input_ids.shape[0]), dtype=torch.int64, device=input_ids.device)
-            self.acl_param_encoder = json.dumps({
-                "seqLen": input_lengths.tolist()
-            })
 
         self.acl_operation_inputs = [
             input_ids,
@@ -356,7 +353,7 @@ class BaichuanModel(BaichuanPreTrainedModel):
             self.place_holder
         ]
 
-        return self.acl_operation_inputs, self.acl_param_encoder if self.is_prefill else self.acl_param_decoder
+        return self.acl_operation_inputs
 
     def execute_ascend_operator(self,
                                 acl_model,
@@ -369,7 +366,7 @@ class BaichuanModel(BaichuanPreTrainedModel):
                                 max_s: int,
                                 lm_head_indices: Optional[torch.Tensor] = None,
                                 attention_mask=None):
-        acl_inputs, acl_param = self.prepare_inputs_for_ascend(
+        acl_inputs = self.prepare_inputs_for_ascend(
             input_ids,
             is_prefill,
             kv_cache,
@@ -379,6 +376,9 @@ class BaichuanModel(BaichuanPreTrainedModel):
             max_s,
             lm_head_indices,
             attention_mask)
+        acl_param = json.dumps({
+            "seqLen": input_lengths.tolist()
+        })
         acl_model_out = acl_model.execute(acl_inputs, acl_param)
         acl_hidden_state = acl_model_out[0]
         return acl_hidden_state
