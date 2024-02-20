@@ -56,13 +56,12 @@ function fn_main()
 
     if [[ ! -z "$1" ]];then
         DEVICE_TYPE=$1
-        if [[ $DEVICE_TYPE == "d9" ]];then
-            echo "[DEVICE_TYPE]: 910"
-            export ATB_USE_TILING_COPY_STREAM=0
-        else
-            echo "[DEVICE_TYPE]: 310"
-        fi
+        echo "[DEVICE_TYPE]: $DEVICE_TYPE"
         shift
+    fi
+
+    if [[ $DEVICE_TYPE == "d9" ]];then
+        export ATB_USE_TILING_COPY_STREAM=0
     fi
 
     case "${RUN_OPTION}" in
