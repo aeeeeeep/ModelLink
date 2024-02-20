@@ -713,6 +713,7 @@ class AquilaModel(AquilaPreTrainedModel):
         position_ids = position_ids.npu()
         cos_embed = torch.nn.functional.embedding(position_ids, cos_table)
         sin_embed = torch.nn.functional.embedding(position_ids, sin_table)
+        seqlen_max = torch.tensor([self.kv_attention_manager.seq_len_tensor[0] - 1], dtype=torch.int64, device="npu")
 
         inputs = [
                      input_ids,  # IN_TENSOR_INPUTIDS
@@ -723,7 +724,8 @@ class AquilaModel(AquilaPreTrainedModel):
                      self.kv_attention_manager.v_cache_input,  # IN_TENSOR_PAST_VALUE
                      self.kv_attention_manager.token_offset_tensor,  # IN_TENSOR_TOKENOFFSET
                      self.kv_attention_manager.seq_len_tensor,  # IN_TENSOR_SEQLEN
-                     self.place_holder
+                     self.place_holder,
+                     seqlen_max
                  ] + self.layer_id_list
 
         return inputs

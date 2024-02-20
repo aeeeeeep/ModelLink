@@ -206,7 +206,8 @@ int64_t FlashAttentionRopeModel::BuildGraph()
     // shape: FA: [batchSize, seqLen, vocabSize] PA: [seqLen, vocabSize]
     lmHeadNode.outTensors = {&graph_.outTensors.at(OUT_TENSOR_HIDDENSTATES)};
 
-    return atb::NO_ERROR;}
+    return atb::NO_ERROR;
+}
 
 atb::Status FlashAttentionRopeModel::ParseParam(const std::string &param)
 {
