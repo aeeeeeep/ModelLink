@@ -26,6 +26,8 @@ chip_num=0
 dataset="CEval"
 batch_size=0
 case_pair="[]"
+use_refactor="True"
+max_position_embedding=-1
 
 function fn_prepare()
 {
@@ -115,7 +117,9 @@ function fn_run_single()
     --weight_dir "$weight_dir" \
     --dataset_name "$dataset" \
     --hardware_type $hardware_type \
-    --case_pair "$case_pair"
+    --case_pair "$case_pair" \
+    --use_refactor "$use_refactor" \
+    --max_position_embedding "$max_position_embedding"
 }
 
 function fn_run_all()
@@ -169,41 +173,42 @@ function fn_main()
             exit 1
             ;;
     esac
+
     if [ "$test_modes" == "performance" ]; then
         case_pair=$3
-        batch_size=$4
-        model_name=$5
-        weight_dir=$6
-        echo "current batch_size: $batch_size"
-        echo "current model_name: $model_name"
+        shift
+    fi
+  
+    batch_size=$3
+    model_name=$4
 
-        fn_prepare "$1" "$2"
+    if [ "$model_name" == "llama" ]; then
+        use_refactor=$5
+        shift
+    fi
 
-        if [ $# -ge 7 ]; then
-            if ! [[ "$7" =~ ^[1-9]+$ ]]; then
-                echo "Error: input chip_num is not a digit."
-                exit 1
-            fi
-            chip_num=$7
-            echo "INFO: use input chip_num $chip_num"
+    weight_dir=$5
+    echo "current batch_size: $batch_size"
+    echo "current model_name: $model_name"
+
+    fn_prepare "$model_type" "$test_modes"
+
+
+    if ! [[ "$6" =~ ^[1-9]+$ ]]; then
+        echo "Error: input chip_num is not a digit."
+        exit 1
+    fi
+    chip_num=$6
+    echo "INFO: use input chip_num $chip_num"
+
+
+    if [ $# -ge 7 ]; then
+        if ! [[ "$7" =~ ^[1-9]+$ ]]; then
+            echo "Error: input max_position_embedding or max_seq_len is not a digit."
+            exit 1
         fi
-    else
-        batch_size=$3
-        model_name=$4
-        weight_dir=$5
-        echo "current batch_size: $batch_size"
-        echo "current model_name: $model_name"
-
-        fn_prepare "$1" "$2"
-
-        if [ $# -ge 6 ]; then
-            if ! [[ "$6" =~ ^[1-9]+$ ]]; then
-                echo "Error: input chip_num is not a digit."
-                exit 1
-            fi
-            chip_num=$6
-            echo "INFO: use input chip_num $chip_num"
-        fi
+        max_position_embedding=$7
+        echo "INFO: use input max_position_embedding or max_seq_len $max_position_embedding"
     fi
     fn_run_single
 }

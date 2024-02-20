@@ -119,7 +119,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 class ModelTest:
     def __init__(self, model_type, data_type, test_mode, model_name, data_dir, dataset_name, batch_size, device_id,
-                 result_dir, log_dir, hardware_type, case_pair, _) -> None:
+                 result_dir, log_dir, hardware_type, case_pair, _, __) -> None:
         self.model_type = model_type
         self.data_type = data_type
         self.test_mode = test_mode
@@ -295,7 +295,9 @@ class ModelTest:
         csv_results = []
         folder_name = self.model_name
         csv_name = self.model_type + "_" + self.data_type + "_performance_test_result.csv" if self.data_type != "" else self.model_type
+        csv_formatted_name = self.model_type + "_" + self.data_type + "_performance_test_result_formatted.csv" if self.data_type != "" else self.model_type
         csv_performance_path = os.path.join(self.script_path, "../result", folder_name, csv_name)
+        csv_performance_formatted_path = os.path.join(self.script_path, "../result", folder_name, csv_formatted_name)
         folder_path = f"{self.data_dir}/{self.hardware_type}/batch{self.batch_size}"
         os.environ['tensor_folder'] = f"{folder_path}"
         os.makedirs(folder_path, exist_ok=True)
@@ -449,16 +451,24 @@ class ModelTest:
                 csv_results[len(self.case_pair) - 1].extend(
                     [str(round(non_first_token_throughput_average, 10)).ljust(45),
                      str(round(e2e_throughput_average, 10)).ljust(35)])
-                if not os.path.exists(csv_performance_path):
+                if not os.path.exists(csv_performance_formatted_path):
                     self.logger.warning("performance dataset result csv file not exist, skip recording results")
                     raise RuntimeError(f"csv result file not exist")
-                with open(csv_performance_path, 'a', newline='') as csv_performance_file:
-                    csv_writer = csv.writer(csv_performance_file, delimiter='|')
+                with open(csv_performance_formatted_path, 'a', newline='') as csv_performance_formatted_path:
+                    csv_writer = csv.writer(csv_performance_formatted_path, delimiter='|')
                     for csv_result in csv_results:
                         csv_writer.writerow(csv_result)
+                
+                csv_result.insert(0, ["Model", "Batchsize", "In_seq", "Out_seq", "Total time(s)", "First token time(ms)", "Non-first token time(ms)", 
+                                      "Non-first token Throughout(Tokens/s)", "Throughout(Tokens/s)", "Non-first token Throughout Average(Tokens/s)",
+                                      "E2E Throughout Average(Tokens/s)"])
+                df = pd.DataFrame(csv_result)
+                df.to_csv(csv_performance_path, index=False, header=False)
 
                 self.logger.info(self.model_name + " " + " batch" + str(
                     self.batch_size) + " result saved in " + csv_performance_path)
+                self.logger.info(self.model_name + " " + " batch" + str(
+                    self.batch_size) + " formatted result saved in " + csv_performance_formatted_path)
 
         warmup()
         run_performance_test()
@@ -1446,6 +1456,8 @@ def parse_args():
     parser.add_argument("--hardware_type", type=str, default="NPU", help="current device type, GPU or NPU")
     parser.add_argument("--case_pair", type=str, default="[[256, 256], [512, 512], [1024, 1024], [2048, 2048]]",
                         help="performance test pair")
+    parser.add_argument("--use_refactor", type=str, default="True", help="specify whether llama model use refactor")
+    parser.add_argument("--max_position_embeddings", type=int, help="specify whether llama model use refactor")
 
     return parser.parse_args()
 
@@ -1472,4 +1484,5 @@ def get_args():
     if args.case_pair == "[]":
         case_pair = "[[256, 256], [512, 512], [1024, 1024], [2048, 2048]]"
     return [args.model_type, args.data_type, args.test_mode, args.model_name, data_dir, args.dataset_name,
-            args.batch_size, args.device_id, result_dir, log_dir, args.hardware_type, case_pair, args.weight_dir]
+            args.batch_size, args.device_id, result_dir, log_dir, args.hardware_type, case_pair, args.weight_dir,
+            eval(args.use_refactor), args.max_position_embeddings]
