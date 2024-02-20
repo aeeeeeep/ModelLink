@@ -452,17 +452,17 @@ class ModelTest:
                     [str(round(non_first_token_throughput_average, 10)).ljust(45),
                      str(round(e2e_throughput_average, 10)).ljust(35)])
                 if not os.path.exists(csv_performance_formatted_path):
-                    self.logger.warning("performance dataset result csv file not exist, skip recording results")
-                    raise RuntimeError(f"csv result file not exist")
+                    self.logger.warning("performance result csv formatted file not exist, skip recording results")
+                    raise RuntimeError(f"csv result formatted file not exist")
                 with open(csv_performance_formatted_path, 'a', newline='') as csv_performance_formatted_path:
                     csv_writer = csv.writer(csv_performance_formatted_path, delimiter='|')
                     for csv_result in csv_results:
                         csv_writer.writerow(csv_result)
                 
-                csv_result.insert(0, ["Model", "Batchsize", "In_seq", "Out_seq", "Total time(s)", "First token time(ms)", "Non-first token time(ms)", 
+                csv_results.insert(0, ["Model", "Batchsize", "In_seq", "Out_seq", "Total time(s)", "First token time(ms)", "Non-first token time(ms)", 
                                       "Non-first token Throughout(Tokens/s)", "Throughout(Tokens/s)", "Non-first token Throughout Average(Tokens/s)",
                                       "E2E Throughout Average(Tokens/s)"])
-                df = pd.DataFrame(csv_result)
+                df = pd.DataFrame(csv_results)
                 df.to_csv(csv_performance_path, index=False, header=False)
 
                 self.logger.info(self.model_name + " " + " batch" + str(

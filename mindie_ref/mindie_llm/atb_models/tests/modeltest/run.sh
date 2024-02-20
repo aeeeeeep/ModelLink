@@ -56,7 +56,7 @@ function fn_prepare()
         dataset="${parts[1]}"
     fi
 
-    csv_path=$SCRIPT_DIR/result/"$model_name"/"$1"_"$2"_test_result.csv
+    csv_path=$SCRIPT_DIR/result/"$model_name"/"$1"_"$2"_test_result_formatted.csv
     mkdir -p "$(dirname "$csv_path")"
     touch "$csv_path" > "$csv_path"
     if [ "$test_mode" == "performance" ]; then
