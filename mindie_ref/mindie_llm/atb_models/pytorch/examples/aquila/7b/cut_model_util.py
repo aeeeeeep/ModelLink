@@ -22,7 +22,7 @@ def cut_weights(ori_model, world_size, cut_c_attn_keys=None, cut_row_keys=None, 
         elif cut_col_keys is not None and key_short in cut_col_keys:
             cut_tensor_list = torch.chunk(tensor, world_size, dim=1)
         elif "lm_head" in key:
-            cut_tensor_list = torch.chunk(tensor, world_size, dim=1)
+            cut_tensor_list = torch.chunk(tensor, world_size, dim=0)
         else:
             cut_tensor_list = [tensor] * world_size
         for ori_tensor in cut_tensor_list:
