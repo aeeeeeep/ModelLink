@@ -1,6 +1,7 @@
 #!/bin/bash
 
 export CUDA_DEVICE_MAX_CONNECTIONS=1
+export NPU_DETECT=0
 
 source "./envs/ascend-toolkit/set_env.sh"
 #export ASCEND_RT_VISIBLE_DEVICES=2

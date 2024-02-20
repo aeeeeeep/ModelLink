@@ -1,4 +1,5 @@
 #!/bin/bash
+export NPU_DETECT=0
 
 GPUS_PER_NODE=8
 MASTER_ADDR=localhost
