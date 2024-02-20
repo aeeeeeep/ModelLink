@@ -61,6 +61,7 @@ def generate_req(req_list, model, tokenizer,
     req_idx = 0
     total_req_finished = 0
     generate_batch_size = 0
+    max_generate_batch_size = 0
 
     benchmark_timelist = []
     generate_batches = []
@@ -140,6 +141,8 @@ def generate_req(req_list, model, tokenizer,
                 raise AssertionError
             generate_batch_size = generate_batches[0].batch_num
             total_req_finished += req_finished
+            if generate_batch_size > max_generate_batch_size:
+                max_generate_batch_size = generate_batch_size
     if ENV.benchmark_enable:
         prefill_time = benchmark_timelist[0]
         e2e_time = sum(benchmark_timelist)
@@ -170,10 +173,11 @@ def generate_req(req_list, model, tokenizer,
                 'e2e_time(ms)': [f'{e2e_time * 1000: .2f}'],
                 'prefill_time(ms)': [f'{prefill_time * 1000: .2f}'],
                 'decoder_token_time(ms)': [f'{decode_token_time * 1000: .2f}'],
-                'token_times': [decode_token_times]
+                'token_times': [decode_token_times],
+                'max_generate_batch_size': [max_generate_batch_size]
             }
             df = pd.DataFrame(stat_data)
-            df.to_csv(benchmark_filepath, index=False)
+            df.to_csv(benchmark_filepath, mode="a", index=False)
             logger.info('-------------------performance dumped------------------------')
             df = df.drop('token_times', axis=1)
             print(df.to_markdown(index=False))
