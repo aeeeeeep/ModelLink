@@ -16,6 +16,7 @@
 #ifndef ATB_SPEED_MODELS_CODELLAMA_34B_FLASH_ATTENTION_MODEL_H
 #define ATB_SPEED_MODELS_CODELLAMA_34B_FLASH_ATTENTION_MODEL_H
 #include "atb_speed/base/model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace codellama_34b {
@@ -57,6 +58,9 @@ private:
 
     std::vector<int32_t> seqLen_;
 };
+
+REGISTER_MODEL(codellama_34b, FlashAttentionRopeModel);
+
 } // namespace codellama_34b
 } // namespace atb_speed
 #endif

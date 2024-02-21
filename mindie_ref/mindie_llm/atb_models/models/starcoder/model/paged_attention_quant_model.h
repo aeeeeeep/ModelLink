@@ -17,6 +17,7 @@
 #define ATB_SPEED_MODELS_STAR_CODER_PA_PARALLEL_QUANT_MODEL_H
 
 #include "atb_speed/base/model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace star_coder {
@@ -66,6 +67,9 @@ private:
     atb::Status BindParamHostTensor(uint32_t nodeId) override;
     std::vector<int32_t> seqLen_;
 };
+
+REGISTER_MODEL(star_coder, PAQuantModel);
+
 } // namespace star_coder
 } // namespace atb_speed
 #endif

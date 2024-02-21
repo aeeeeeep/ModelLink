@@ -828,7 +828,7 @@ class TelechatModel(TelechatPreTrainedModel):
         # print([i.device for i in self.state_dict().values()])
         print("init acl operation")
         self.acl_operation = torch.classes.ModelTorch.ModelTorch(
-                "telechat_float_model")
+                "telechat_FloatFAModel")
 
         print("set param")
         self.acl_operation.set_param(self.acl_param)

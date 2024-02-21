@@ -471,8 +471,8 @@ class FlashLlamaForCausalLM(torch.nn.Module):
             "worldSize": self.tp_world_size,
             "backend": "lccl"
         })
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_decoder_model")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_decoder_model")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_DecoderModel")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_DecoderModel")
 
         self.max_position_embeddings = config.max_position_embeddings
         self.acl_encoder_operation.set_param(self.acl_param_encoder)
