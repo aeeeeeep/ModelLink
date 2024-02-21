@@ -3,6 +3,7 @@ import argparse
 import os
 import math
 import copy
+import time
 
 import torch
 
@@ -163,8 +164,14 @@ class PARunner:
 
         if not ENV.profiling_enable:
             print_log(self.rank, logger.debug, "no profiling")
+            torch.npu.synchronize()
+            e2e_start = time.time()
             generate_req(req_list, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
                          max_output_length, self.cache_manager, rank, ignore_eos)
+            _, _ = decode_token(req_list, self.tokenizer)
+            torch.npu.synchronize()
+            e2e_end = time.time()
+            e2e_time = e2e_end - e2e_start
         else:
             print_log(self.rank, logger.debug, "enter profiling")
             import os
@@ -179,7 +186,7 @@ class PARunner:
 
         generate_text_list, token_num_list = decode_token(req_list, self.tokenizer)
         print_log(self.rank, logger.info, "---------------end inference---------------")
-        return generate_text_list, token_num_list
+        return generate_text_list, token_num_list, e2e_time
 
 def parse_list(list_str):
     return [int(item) for item in list_str.split(',')]
@@ -249,10 +256,10 @@ if __name__ == '__main__':
     pa_runner.warm_up()
 
     if args.input_texts == None:
-        generate_texts, token_nums = pa_runner.infer(args.input_token_ids, args.max_batch_size, args.max_output_length,
+        generate_texts, token_nums, _ = pa_runner.infer(args.input_token_ids, args.max_batch_size, args.max_output_length,
                                                 args.ignore_eos)
     else:
-        generate_texts, token_nums = pa_runner.infer(args.input_texts, args.max_batch_size, args.max_output_length,
+        generate_texts, token_nums, _ = pa_runner.infer(args.input_texts, args.max_batch_size, args.max_output_length,
                                                 args.ignore_eos)
 
     for i, generate_text in enumerate(generate_texts):
