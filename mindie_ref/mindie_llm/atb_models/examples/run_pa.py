@@ -158,9 +158,10 @@ class PARunner:
             cache_config = CacheConfig(num_blocks, self.block_size)
             self.cache_manager = CacheManager(cache_config, self.model_config)
 
-            req_list_dummy = copy.deepcopy(req_list)
-            generate_req(req_list_dummy, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                         2, self.cache_manager, self.rank, ignore_eos)
+            if ENV.benchmark_enable:
+                req_list_dummy = copy.deepcopy(req_list)
+                generate_req(req_list_dummy, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
+                            2, self.cache_manager, self.rank, ignore_eos)
 
         if not ENV.profiling_enable:
             print_log(self.rank, logger.debug, "no profiling")
