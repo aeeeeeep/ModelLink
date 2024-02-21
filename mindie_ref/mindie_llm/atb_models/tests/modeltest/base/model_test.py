@@ -31,6 +31,7 @@ from atb_llm.utils.cpu_binding import NpuHbmInfo
 from examples.server.cache import CacheConfig, CacheManager, ModelConfig
 from examples.server.generate import decode_token, generate_req
 from examples.server.request import request_from_text, request_from_token
+from examples.run_pa import PARunner
 from .human_eval import evaluate_functional_correctness
 
 
@@ -136,9 +137,11 @@ class ModelTest:
         self.result_dir = result_dir
         self.log_dir = log_dir
         self.hardware_type = hardware_type
-        self.warm_up_memory = 0
         self.case_pair = ast.literal_eval(case_pair) if case_pair != "[]" else [[256, 256], [512, 512], [1024, 1024],
                                                                                 [2048, 2048]]
+        self.weight_dir = weight_dir
+        self.use_refactor = use_refactor
+        self.max_position_embedding = max_position_embedding
         self.core_type = core_map[self.hardware_type] if hardware_type in core_map.keys() else "npu"
         self.is_format_nz = False
         self.current_result_path = ''
@@ -205,26 +208,21 @@ class ModelTest:
         self.local_rank, self.world_size = int(os.getenv("RANK", "0")), int(os.getenv("WORLD_SIZE", "1"))
         if self.hardware_type == "GPU":
             self.__setup_model_parallel()
-        self.tokenizer, self.model = self.get_model(self.hardware_type, self.model_type, self.data_type)
-        self.device = self.model.device
+            self.tokenizer, self.model = self.get_model(self.hardware_type, self.model_type, self.data_type)
+            self.device = self.model.device
         if self.model_type == "pa":
-            self.block_size = 128
-            self.max_prefill_tokens = 4096
-            self.model_config = ModelConfig(self.model.num_heads,
-                                            self.model.num_kv_heads,
-                                            self.model.head_size,
-                                            self.model.num_layers,
-                                            self.model.device,
-                                            self.model.dtype,
-                                            self.model.soc_info)
-            self.max_memory = NpuHbmInfo.get_hbm_capacity(self.local_rank, self.world_size, self.model.soc_info.need_nz)
-            self.init_memory = int(self.max_memory * NpuHbmInfo.get_hbm_usage(self.local_rank, self.world_size,
-                                                                              self.model.soc_info.need_nz))
-            self.cache_manager = None
-            self.__pa_warmup()
-            self.logger.info(
-                "RANK " + str(self.local_rank) + ": hbm_capacity(GB): " + str(self.max_memory / (1024 ** 3)) +
-                "init_memory(GB): " + str(self.init_memory / (1024 ** 3)))
+            input_dict = {
+                'rank': self.local_rank,
+                'world_size': self.world_size,
+                'max_prefill_tokens': 4096,
+                'block_size': 128,
+                'model_path': self.weight_dir,
+                'is_bf16': True if self.data_type == "bf16" else False,
+                'max_position_embeddings': self.max_position_embedding if self.max_position_embedding != 1 else None
+            }
+            self.pa_runner = PARunner(**input_dict)
+            self.logger.info(self.local_rank + f'pa_runner: {self.pa_runner}')
+
         torch.manual_seed(1)
         self.device_type = self.__get_device_type()
         self.logger.info("tokenizer and model get success.")
@@ -244,38 +242,6 @@ class ModelTest:
             os.environ['HCCL_DETERMINISTIC'] = "1"
             if self.model_type == "fa":
                 self.__npu_adapt()
-
-    def __pa_warmup(self):
-        self.logger.info("PA warmup start")
-        input_ids = torch.ones(self.max_prefill_tokens, dtype=torch.int64).to(self.device)
-        position_ids = torch.arange(self.max_prefill_tokens, dtype=torch.int32).to(self.device)
-        cu_seqlen_prefill = torch.tensor([1])
-        block_num = math.ceil(self.max_prefill_tokens / self.block_size)
-        block_tables_tensor = torch.arange(block_num, dtype=torch.int32).view(1, -1).to(self.device)
-        slots = torch.arange(self.max_prefill_tokens, dtype=torch.int32).to(self.device)
-        input_lengths_tensor = torch.tensor([self.max_prefill_tokens], dtype=torch.int64).to(self.device)
-        prefill_head_indices = torch.tensor([self.max_prefill_tokens - 1], dtype=torch.int64).to(self.device)
-        cache_config = CacheConfig(block_num)
-        self.cache_manager = CacheManager(cache_config, self.model_config)
-        _ = self.model.forward(
-            input_ids=input_ids,
-            position_ids=position_ids,
-            is_prefill=cu_seqlen_prefill is not None,
-            block_tables=block_tables_tensor,
-            kv_cache=self.cache_manager.kv_cache,
-            slots=slots,
-            input_lengths=input_lengths_tensor,
-            max_seq_len=self.max_prefill_tokens,
-            lm_head_indices=prefill_head_indices
-        )
-        self.warm_up_memory = int(
-            self.max_memory * NpuHbmInfo.get_hbm_usage(self.local_rank, self.world_size, self.model.soc_info.need_nz))
-        self.logger.info(
-            "RANK " + str(self.local_rank) + ": warmup_memory(GB): " + str(self.warm_up_memory / (1024 ** 3)))
-        del self.cache_manager
-        self.cache_manager = None
-        torch.npu.empty_cache()
-        self.logger.info("PA warmup end")
 
     def __run(self):
         importlib.reload(transformers)
@@ -321,7 +287,7 @@ class ModelTest:
                         eos_token_id=self.model.config.vocab_size * 2
                     )
             else:
-                pass
+                self.pa_runner.warm_up()
             self.logger.info("performance test warmup end")
 
         def run_performance_test():
@@ -362,48 +328,13 @@ class ModelTest:
                             ]
                         getattr(torch, self.core_type).synchronize()
                         e2e_end = time.time()
+                        e2e_time = e2e_end - e2e_start
                 else:
-                    input_ids = torch.randint(0, self.model.config.vocab_size, [seq_len_in],
+                    input_ids = torch.randint(0, self.pa_runner.model.config.vocab_size, [seq_len_in],
                                               dtype=torch.int64)
-                    req_list = [request_from_token(input_ids, seq_len_out, self.block_size, req_idx=i) \
-                                for i in range(self.batch_size)]
-
-                    if not self.cache_manager:
-                        cache_block_size = self.block_size * self.model.num_kv_heads * self.model.head_size
-                        dtype = dtype_map[self.data_type] if self.data_type in dtype_map else dtype_map["fp16"]
-                        dtype_size = CacheManager.get_dtype_size(dtype)
-                        total_cache_size = self.model.num_layers * cache_block_size * 2 * dtype_size
-
-                        max_memory = env.ENV.memory_fraction * self.max_memory \
-                            if not env.ENV.max_memory_gb else int(env.ENV.max_memory_gb) * (1 << 30)
-
-                        free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory != 0 else \
-                                                        (self.init_memory + env.ENV.reserved_memory_gb * (1 << 30)))
-
-                        self.logger.info("RANK " + str(self.local_rank) + ": infer max_memory(GB): " + str(
-                            max_memory / (1024 ** 3)) +
-                                         ", warm_up_memory(GB): " + str(self.warm_up_memory / (1024 ** 3)) +
-                                         ", free_memory(GB): " + str(free_memory / (1024 ** 3)))
-                        num_blocks = int(free_memory // total_cache_size)
-                        self.logger.info("RANK " + str(self.local_rank) + ": num_blocks: " + str(
-                            num_blocks) + ", free memory: " + str(free_memory))
-                        cache_config = CacheConfig(num_blocks, self.block_size)
-                        self.cache_manager = CacheManager(cache_config, self.model_config)
-                        req_list_dummy = copy.deepcopy(req_list)
-                        generate_req(req_list_dummy, self.model, self.tokenizer, self.batch_size,
-                                     self.max_prefill_tokens,
-                                     2, self.cache_manager, self.local_rank, True)
-                    getattr(torch, self.core_type).synchronize()
-                    e2e_start = time.time()
-                    generate_req(req_list, self.model, self.tokenizer, self.batch_size, self.max_prefill_tokens,
-                                 seq_len_out, self.cache_manager, self.local_rank, True)
-                    _, _ = decode_token(req_list, self.tokenizer)
-                    getattr(torch, self.core_type).synchronize()
-                    e2e_end = time.time()
+                    _, _, e2e_time = self.pa_runner.infer([input_ids], self.batch_size, seq_len_out, True)
 
                 if self.local_rank == 0:
-                    e2e_time = e2e_end - e2e_start
-
                     if self.model_type == "fa":
                         first_token_time_tensor = torch.load(f"{folder_path}/first_token_time.pth").cpu()
                         first_token_time = first_token_time_tensor.item()
