@@ -205,25 +205,25 @@ def load_model_and_tokenizer(path):
 
 def get_result_scores():
     reuslt_dir = os.getenv("RESULT_DIR", "")
-    file_path = os.path.join(reuslt_dir, "result.json")
+    reuslt_path = os.path.join(reuslt_dir, "result.json")
     csv_title = ""
     csv_content = ""
     avg_all = []
-    if os.path.exists(file_path):
-        with open(file_path, 'r', encoding="utf-8") as f:
+    if os.path.exists(reuslt_path):
+        with open(reuslt_path, 'r', encoding="utf-8") as f:
             result = json.load(f)
-            for dataset, res in result.items():
+            for dataset_name, res in result.items():
                 avg_dataset = []
-                csv_title += f"{dataset},"
+                csv_title += f"{dataset_name},"
                 for _, score in res.items():
                     if not math.isnan(score):
                         avg_dataset.append(score)
-                avg_dataset = round(np.mean(avg_dataset),2)
+                avg_dataset = round(np.mean(avg_dataset), 2)
                 avg_all.append(avg_dataset)
                 csv_content += f"{avg_dataset},"
     else:
         print("RESULT_DIR is not a real path, please correct.")
-    avg_all = round(np.mean(avg_all),2)
+    avg_all = round(np.mean(avg_all), 2)
     csv_title += "avg"
     csv_content += f"{avg_all}"
     with open(os.path.join(reuslt_dir, "result.csv"), 'w') as f:
