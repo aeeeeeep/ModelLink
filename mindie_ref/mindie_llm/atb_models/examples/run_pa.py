@@ -11,7 +11,7 @@ from atb_llm.utils.env import ENV
 from atb_llm.utils.log import logger, print_log
 from atb_llm.runner import ModelRunner
 from examples.server.cache import CacheConfig, ModelConfig, CacheManager
-from examples.server.request import Request, request_from_token_file, request_from_text
+from examples.server.request import Request, request_from_token_file, request_from_text, request_from_token
 from examples.server.generate import generate_token, decode_token, generate_req
 
 
@@ -119,14 +119,23 @@ class PARunner:
         torch.npu.empty_cache()
         print_log(self.rank, logger.info, "---------------end warm_up---------------")
 
-    def infer(self, input_texts, batch_size, max_output_length, ignore_eos):
+    def infer(self, inputs, batch_size, max_output_length, ignore_eos):
         print_log(self.rank, logger.info, "---------------begin inference---------------")
-        if len(input_texts) == 1:
-            req_list = [request_from_text(input_texts[0], self.tokenizer, max_output_length, self.block_size, req_idx=i) \
-                        for i in range(batch_size)]
+        if isinstance(inputs[0], str):
+            if len(inputs) == 1:
+                req_list = [request_from_text(inputs[0], self.tokenizer, max_output_length, self.block_size, req_idx=i) \
+                            for i in range(batch_size)]
+            else:
+                req_list = [request_from_text(input_text, self.tokenizer, max_output_length, self.block_size, req_idx=i) \
+                            for i, input_text in enumerate(inputs)]
         else:
-            req_list = [request_from_text(input_text, self.tokenizer, max_output_length, self.block_size, req_idx=i) \
-                        for i, input_text in enumerate(input_texts)]
+            if len(inputs) == 1:
+                req_list = [request_from_token(inputs[0], max_output_length, self.block_size, req_idx=i) \
+                            for i in range(batch_size)]
+            else:
+                req_list = [request_from_token(input_ids, max_output_length, self.block_size, req_idx=i) \
+                            for i, input_ids in enumerate(inputs)]
+            
         print_log(self.rank, logger.debug, f'req_list[0].input_ids: {req_list[0].input_ids}')
 
         if not self.cache_manager:
@@ -172,6 +181,8 @@ class PARunner:
         print_log(self.rank, logger.info, "---------------end inference---------------")
         return generate_text_list, token_num_list
 
+def parse_list(list_str):
+    return [int(item) for item in list_str.split(',')]
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
@@ -183,7 +194,12 @@ def parse_arguments():
         '--input_texts',
         type=str,
         nargs='+',
-        default=["What's deep learning?"])
+        default=None)
+    parser.add_argument(
+        '--input_token_ids',
+        type=parse_list,
+        nargs='+',
+        default=None)
     parser.add_argument(
         '--input_file',
         type=str,
@@ -231,8 +247,13 @@ if __name__ == '__main__':
     pa_runner = PARunner(**input_dict)
     print_log(rank, logger.info, f'pa_runner: {pa_runner}')
     pa_runner.warm_up()
-    generate_texts, token_nums = pa_runner.infer(args.input_texts, args.max_batch_size, args.max_output_length,
-                                                 args.ignore_eos)
+
+    if args.input_texts == None:
+        generate_texts, token_nums = pa_runner.infer(args.input_token_ids, args.max_batch_size, args.max_output_length,
+                                                args.ignore_eos)
+    else:
+        generate_texts, token_nums = pa_runner.infer(args.input_texts, args.max_batch_size, args.max_output_length,
+                                                args.ignore_eos)
 
     for i, generate_text in enumerate(generate_texts):
         if i < len(args.input_texts):
