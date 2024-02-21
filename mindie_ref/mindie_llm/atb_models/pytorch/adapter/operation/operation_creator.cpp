@@ -268,20 +268,8 @@ std::map<std::string, OperationCreateFunc> g_funcMap = {
     {"LmHeadParallelOperation", &LmHeadParallelOperationCreate},
     {"WordEmbeddingParallelOperation", &WordEmbeddingParallelOperationCreate},
     {"ActivationOperation", &ActivationOperationCreate},
-    {"baichuan2_13b_flash_attention_layer", &atb_speed::baichuan2_13b::CreateFlashAttentionLayer},
-    {"baichuan2_13b_flash_attention_quant_layer", &atb_speed::baichuan2_13b::CreateFlashAttentionQuantLayer},
-    {"baichuan2_13b_flash_attention_quant_oper_layer", &atb_speed::baichuan2_13b::CreateFlashAttentionQuantOperLayer},
-    {"codellama_34b_rope", &atb_speed::codellama_34b::CreateRope},
-    {"codellama_34b_flash_attention_rope_layer", &atb_speed::codellama_34b::CreateFlashAttentionRopeLayer},
-    {"internlm_7b_flash_attention_rope_layer", &atb_speed::internlm_7b::CreateFlashAttentionRopeLayer},
-    {"internlm_20b_flash_attention_rope_layer", &atb_speed::internlm_20b::CreateFlashAttentionRopeLayer},
-    {"internlm_20b_flash_attention_quant_layer", &atb_speed::internlm_20b::CreateFlashAttentionQuantLayer},
-    {"internlm_20b_flash_attention_rope_antioutlier_layer",
-     &atb_speed::internlm_20b::CreateFlashAttentionRopeAntiOutlierLayer},
-    {"gptneox_20b_flash_attention_kv_cache_layer", &atb_speed::gptneox_20b::CreateFlashAttentionKvCacheLayer},
-    {"gptneox_20b_embedding_layer", &atb_speed::gptneox_20b::CreateEmbeddingLayer},
-    {"gptneox_20b_position_embedding_fusion", &atb_speed::gptneox_20b::CreatePositionEmbeddingFusionOperation},
-    {"gptneox_20b_flash_attention_kv_cache_rope_layer", &atb_speed::gptneox_20b::CreateFlashAttentionKvCacheRopeLayer},
+    // Do not register operations or layers here, expect atb's operations;
+    // Please register them in files `.h`, see `models/baichuan2/13b/layer/flash_attention_layer.h`;
 };
 
 atb::Operation *CreateOperation(const std::string &opName, const std::string &param)
