@@ -11,8 +11,9 @@ from atb_llm.runner import ModelRunner
 
 class LlamaModelTest(model_test.ModelTest):
     def __init__(self, *args) -> None:
-        self.max_position_embeddings = max([pair[0] for pair in ast.literal_eval(args[11])]) + max([pair[1] for pair in ast.literal_eval(args[11])])
         self.weight_dir = args[12]
+        self.use_refactor = args[13]
+        self.max_position_embeddings = args[14] if args[14] != -1 else None
         super().__init__(*args)
 
     def get_chip_num(self):
@@ -24,14 +25,14 @@ class LlamaModelTest(model_test.ModelTest):
 
         if model_type == "fa":
             model = ModelRunner(self.weight_dir, rank=rank, world_size=world_size, quantize=None, dtype=torch.float16,
-                            is_flash_causal_lm=False, use_refactor=True)
+                            is_flash_causal_lm=False, use_refactor=self.use_refactor)
             tokenizer = model.tokenizer
             tokenizer.add_special_tokens({'pad_token': '[PAD]'})   
         else:
             dtype = model_test.dtype_map[data_type] if data_type in model_test.dtype_map else model_test.dtype_map["fp16"]
             model = ModelRunner(
                 self.weight_dir, rank=rank, world_size=world_size, dtype=dtype,
-                max_position_embeddings=self.max_position_embeddings, quantize=None, use_refactor=True
+                max_position_embeddings=self.max_position_embeddings, quantize=None, use_refactor=self.use_refactor
             )
             tokenizer = model.tokenizer
         model.load_weights()    
