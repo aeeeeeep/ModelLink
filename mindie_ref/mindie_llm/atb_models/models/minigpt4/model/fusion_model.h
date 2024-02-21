@@ -16,6 +16,7 @@
 #ifndef ATB_SPEED_MODELS_LLAMA_7B_WITH_FUSION_MODEL_H
 #define ATB_SPEED_MODELS_LLAMA_7B_WITH_FUSION_MODEL_H
 #include "atb_speed/base/model.h"
+#include "atb_speed/utils/model_factory.h"
 
 
 namespace atb_speed {
@@ -51,6 +52,9 @@ private:
     std::vector<int32_t> seqLen_;
     int32_t layerId_ = 0;
 };
+
+REGISTER_MODEL(minigpt4_vicuna_7b, FusionModel);
+
 } // namespace minigpt4_vicuna_7b
 } // namespace atb_speed
 #endif

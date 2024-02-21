@@ -944,13 +944,13 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
             }
         acl_param = json.dumps(param_dict)
 
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("visualglm_6b_encoder_model")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("visualglm_6b_FlashAttentionModel")
         self.acl_encoder_operation.set_param(acl_param)
 
         param_dict["isEncoder"] = False
         acl_param = json.dumps(param_dict)
 
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("visualglm_6b_encoder_model")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("visualglm_6b_FlashAttentionModel")
         self.acl_decoder_operation.set_param(acl_param)
 
         self.weightFlag = False

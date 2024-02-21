@@ -16,6 +16,7 @@
 #ifndef ATB_SPEED_MODELS_BAICHUAN2_7B_FLASH_ATTENTION_QUANT_MODEL_H
 #define ATB_SPEED_MODELS_BAICHUAN2_7B_FLASH_ATTENTION_QUANT_MODEL_H
 #include "atb_speed/base/model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace baichuan2_7b {
@@ -58,6 +59,9 @@ private:
     std::vector<int32_t> tokenOffset_;
     std::vector<int32_t> seqLen_;
 };
+
+REGISTER_MODEL(baichuan2_7b, FlashAttentionQuantModel);
+
 } // namespace baichuan2_13b
 } // namespace atb_speed
 #endif

@@ -986,8 +986,8 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         self.max_seq_len = int(os.environ.get("MAX_SEQ_LEN", default=2048))
 
         # get acl model_operation
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm_6b_flash_attention_model")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm_6b_flash_attention_model")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm_6b_ChatGlmCommonModelFa")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm_6b_ChatGlmCommonModelFa")
 
         # get mode manager
         self.mode = ENABLE_SPARSE and "sparse" or ENABLE_QUANT and "quant" or "float"

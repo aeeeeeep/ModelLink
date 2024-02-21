@@ -238,8 +238,8 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
             "isLmHeadParallel": self.parallel_lm_head
         })
         self.max_position_embeddings = config.max_position_embeddings
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_pa_model")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_pa_model")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_PagedAttentionModel")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_PagedAttentionModel")
 
         self.acl_encoder_operation.set_param(self.acl_param_encoder)
         self.acl_decoder_operation.set_param(self.acl_param_decoder)

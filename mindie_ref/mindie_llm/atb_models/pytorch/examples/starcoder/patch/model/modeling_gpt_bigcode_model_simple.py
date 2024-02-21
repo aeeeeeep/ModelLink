@@ -492,7 +492,7 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
-        self.acl_fa_model = torch.classes.ModelTorch.ModelTorch("starcoder_fa_parallel_model")
+        self.acl_fa_model = torch.classes.ModelTorch.ModelTorch("star_coder_FlashAttentionModel")
         print(">>> init ATB model")
 
         self.acl_param = json.dumps({"headNum": self.n_head, 

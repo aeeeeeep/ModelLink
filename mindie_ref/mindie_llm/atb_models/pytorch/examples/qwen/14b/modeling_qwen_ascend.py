@@ -941,12 +941,12 @@ class QWenModel(QWenPreTrainedModel):
 
         param_dict["coderType"] = 1
         self.acl_param_encoder = json.dumps(param_dict)
-        self.acl_operation_encoder = torch.classes.ModelTorch.ModelTorch("qwen_14b_flash_attention_model")
+        self.acl_operation_encoder = torch.classes.ModelTorch.ModelTorch("qwen_14b_FlashAttentionModel")
         self.acl_operation_encoder.set_param(self.acl_param_encoder)
 
         param_dict["coderType"] = 2
         self.acl_param_decoder = json.dumps(param_dict)
-        self.acl_operation_decoder = torch.classes.ModelTorch.ModelTorch("qwen_14b_flash_attention_model")
+        self.acl_operation_decoder = torch.classes.ModelTorch.ModelTorch("qwen_14b_FlashAttentionModel")
         self.acl_operation_decoder.set_param(self.acl_param_decoder)
 
 
