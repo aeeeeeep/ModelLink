@@ -69,9 +69,12 @@ def generate_req(req_list, model, tokenizer,
     req_idx = 0
     total_req_finished = 0
     generate_batch_size = 0
+    max_generate_batch_size = 0
 
     benchmark_timelist = []
     generate_batches = []
+    prefill_benchmark_timelist = []
+    decoder_benchmark_timelist = []
 
     while total_req_finished < req_num:
         do_generate = True
@@ -113,7 +116,7 @@ def generate_req(req_list, model, tokenizer,
                     torch.npu.synchronize()
                     prefill_end = time.time()
                     prefill_time = prefill_end - prefill_start
-                    benchmark_timelist.append(prefill_time)
+                    prefill_benchmark_timelist.append(prefill_time)
                 else:
                     req_finished = generate_token(model, tokenizer, cache_manager, batch, max_out_length, rank,
                                                   ignore_eos)
@@ -147,7 +150,7 @@ def generate_req(req_list, model, tokenizer,
                 torch.npu.synchronize()                              
                 decode_end = time.time()
                 decode_time = decode_end - decode_start
-                benchmark_timelist.append(decode_time)
+                decoder_benchmark_timelist.append(decode_time)
             else:
                 req_finished = generate_token(model, tokenizer, cache_manager, generate_batches[0], max_out_length,
                                               rank, ignore_eos)
@@ -155,16 +158,20 @@ def generate_req(req_list, model, tokenizer,
             if req_finished != (generate_batch_size - generate_batches[0].batch_num):
                 logger.error(f"batch filter error")
                 raise AssertionError
+            if generate_batch_size > max_generate_batch_size:
+                max_generate_batch_size = generate_batch_size
             generate_batch_size = generate_batches[0].batch_num
             if generate_batch_size == 0:
                 del generate_batches[0]
             total_req_finished += req_finished
 
+    if rank == 0:
+        print("max_generate_batch_size", max_generate_batch_size)
     if ENV.benchmark_enable:
-        prefill_time = benchmark_timelist[0]
-        e2e_time = sum(benchmark_timelist)
+        prefill_time = sum(prefill_benchmark_timelist) / len(prefill_benchmark_timelist)
+        e2e_time = sum(prefill_benchmark_timelist) + sum(decoder_benchmark_timelist)
         try:
-            decode_token_time = (e2e_time - prefill_time) / (max_out_length - 1)
+            decode_token_time = sum(decoder_benchmark_timelist) / (max_out_length - 1)
         except ZeroDivisionError as e:
             raise ZeroDivisionError from e
 
@@ -175,7 +182,8 @@ def generate_req(req_list, model, tokenizer,
         batch_size = len(req_list)
         input_len = req_list[0].input_length
         output_len = max_out_length
-        decode_token_times = ','.join(list(map(str, benchmark_timelist[1:])))
+        prefill_token_times = ','.join(list(map(str, prefill_benchmark_timelist)))
+        decode_token_times = ','.join(list(map(str, decoder_benchmark_timelist)))
         if rank == 0:
             import os
             benchmark_filepath = ENV.benchmark_filepath \
@@ -190,12 +198,16 @@ def generate_req(req_list, model, tokenizer,
                 'e2e_time(ms)': [f'{e2e_time * 1000: .2f}'],
                 'prefill_time(ms)': [f'{prefill_time * 1000: .2f}'],
                 'decoder_token_time(ms)': [f'{decode_token_time * 1000: .2f}'],
-                'token_times': [decode_token_times]
+                'prefill_count': [len(prefill_benchmark_timelist)],
+                'prefill_token_times': [prefill_token_times],
+                'decode_token_times': [decode_token_times],
+                'max_generate_batch_size': [max_generate_batch_size],
             }
             df = pd.DataFrame(stat_data)
-            df.to_csv(benchmark_filepath, index=False)
+            df.to_csv(benchmark_filepath, mode="a", index=False)
             logger.info('-------------------performance dumped------------------------')
-            df = df.drop('token_times', axis=1)
+            df = df.drop('prefill_token_times', axis=1)
+            df = df.drop('decode_token_times', axis=1)
             print(df.to_markdown(index=False))
 
 
