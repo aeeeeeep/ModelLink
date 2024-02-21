@@ -1,4 +1,6 @@
 from functools import wraps
+import argparse
+
 import megatron
 
 
@@ -29,6 +31,7 @@ def parse_args_decorator(parse_args):
 
 def process_args(parser):
     parser.conflict_handler = 'resolve'
+    parser = _add_network_size_args(parser)
     parser = _add_lora_args(parser)
     parser = _add_data_args(parser)
     return parser
@@ -61,4 +64,18 @@ def _add_data_args(parser):
     group.add_argument('--is-instruction-dataset', action='store_true', help='use instruction dataset or not')
     group.add_argument('--variable-seq-lengths', action='store_true', help='Use variable seq lengths or not.')
 
+    return parser
+
+
+def _add_network_size_args(parser):
+    group = parser.add_argument_group(title='network_size_args')
+    group.add_argument('--padded-vocab-size',
+                       type=int,
+                       default=None,
+                       help='set padded vocab size')
+    group.add_argument('--embed-layernorm',
+                       action='store_true',
+                       default=False,
+                       help='set padded vocab size'
+                       )
     return parser
