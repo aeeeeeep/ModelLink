@@ -9,65 +9,57 @@ https://huggingface.co/bigcode/starcoder
 
 # 使用说明
 
-##权重
+## 权重转换
+- 参考[此README文件](../../README.md)
 
-- 下载starcoder模型权重，放置到自定义`model_path`
-```
-https://huggingface.co/bigcode/starcoder/tree/main
-```
-- 进入刚才下载的权重文件夹中将config.json文件中的 "model_type": "gpt_bigcode" 修改为 "model_type": "starcoder" 
-- 使用`/path-to-ModelLink/mindie_ref/mindie_llm/atb_models/examples/convert/convert_weights.py`将bin转成safetensor格式
-- 示例
-```shell
-python /path-to-ModelLink/mindie_ref/mindie_llm/atb_models/examples/convert/convert_weights.py --model_path {bin文件权重的路径}
-```
-- 输出结果会保存在bin权重同目录下
+## 路径变量解释
+| 变量名  | 含义                                             |
+|--------|--------------------------------------------------|
+| working_dir | 加速库及模型库下载后放置的目录                  |
+| llm_path | 模型仓所在路径。若使用编译好的包，则路径为`${working_dir}/ModelLink/`；若使用gitee下载的代码，则路径为`${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models`    |
+| script_path | 脚本所在路径；starcoder的工作脚本所在路径为${llm_path}/examples/models/starcoder                          |
+| weight_path | 模型权重路径 |
 
 ## 300I DUO 运行操作说明
 
-- 设置环境变量
-```shell
-export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
-export ATB_LLM_BENCHMARK_ENABLE=1
-export ATB_OPERATION_EXECUTE_ASYNC=1
-export TASK_QUEUE_ENABLE=1
-export ATB_LAUNCH_KERNEL_WITH_TILING=1
-```
-### 其余操作同800I A2
+### 对话测试
+- 运行启动脚本
+  - 在\${llm_path}目录下执行以下指令
+    ```shell
+    bash ${script_path}/run_300i_duo.sh ${weight_path}
+    ```
+- 环境变量说明
+  - `export BIND_CPU=1`
+    - 绑定CPU核心开关
+    - 默认进行绑核
+    - 若当前机器未设置NUMA或绑核失败，可将 BIND_CPU 设为 0
+  - `export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3`
+    - 指定当前机器上可用的逻辑NPU核心，多个核心间使用逗号相连
+    - 核心ID查阅方式见[此README文件](../../README.md)的【启动脚本相关环境变量】章节
+    - 若要使用单卡双芯，请指定至少两个可见核心；若要使用双卡四芯，请指定至少四个可见核心
+  - `export TP_WORLD_SIZE=2`
+    - 指定模型运行时的TP数，即world size
+    - 默认为单卡双芯
+    - 各模型支持的TP数参考“特性矩阵”
+    - “单卡双芯”运行请指定`TP_WORLD_SIZE`为`2`，“双卡四芯”运行请指定`TP_WORLD_SIZE`为`4`
+  - `export MASTER_PORT=20030`
+    - 设置卡间通信端口
+    - 默认使用20030端口
+    - 目的是为了避免同一台机器同时运行多个多卡模型时出现通信冲突
+    - 设置时端口建议范围为：20000-20050
+  - `export PYTHONPATH=${llm_path}:$PYTHONPATH`
+    - 将模型仓路径加入Python查询模块和包的搜索路径中
+    - 将${llm_path}替换为实际路径
 
-## 800I A2 运行操作说明
-
-### 环境变量
-```shell
-# source cann环境变量
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-# source 加速库环境变量
-source /usr/local/Ascend/atb/set_env.sh
-# source 模型仓tar包解压出来后的环境变量
-source set_env.sh
-```
-
-### 安装python依赖
-```
-pip install loguru
-pip install tabulate
-```
-
-### 参数说明
+### 对话测试脚本参数说明
 - `--model_path` 模型路径
 - `--input_text` 输入问题
-- `--input_file` 已文件形式批量传入输入问题，输入需经过tokenizer转换为token id
 - `--max_input_length` 最大输入长度
 - `--max_output_length` 最大输出长度
 - `--max_batch_size` 每次运行时固定的batch数量
-- `--is_flash_causal_lm`
-    - Flash Attention时应设为False，Paged Attention时应设为True
-    - `run_fa.py`和`run_pa.py`脚本已自动做过适配，无需手动传入
-- `--is_bf16`
-    - 默认精度为`FP16`，若运行时传入此参数，则精度设置为`BF16`
-    - 注意：当前仅Paged Attention支持打开此开关
-
 - 所有参数可见run_pa.py文件中
+
+## 800I A2 运行操作说明
 
 ### 对话测试
 **运行Flash Attention FP16**
@@ -78,31 +70,48 @@ pip install tabulate
 
 **运行Paged Attention FP16**
 
-- 设置环境变量
-```shell
-export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
-export INF_NAN_MODE_ENABLE=1
-export ATB_LLM_BENCHMARK_ENABLE=1
-export ATB_OPERATION_EXECUTE_ASYNC=1
-export TASK_QUEUE_ENABLE=1
-export ATB_CONVERT_NCHW_TO_ND=1
-export LCCL_ENABLE_FALLBACK=1
-```
+### 对话测试
+- 运行启动脚本
+  - 在\${llm_path}目录下执行以下指令
+    ```shell
+    bash ${script_path}/run_800i_a2_pa.sh ${weight_path}
+    ```
+- 环境变量说明
+  - `export BIND_CPU=1`
+    - 绑定CPU核心开关
+    - 默认进行绑核
+    - 若当前机器未设置NUMA或绑核失败，可将 BIND_CPU 设为 0
+  - `export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3`
+    - 指定当前机器上可用的逻辑NPU核心，多个核心间使用逗号相连
+    - 核心ID查阅方式见[此README文件](../../README.md)的【启动脚本相关环境变量】章节
+    - 若要使用单卡双芯，请指定至少两个可见核心；若要使用双卡四芯，请指定至少四个可见核心
+  - `export TP_WORLD_SIZE=2`
+    - 指定模型运行时的TP数，即world size
+    - 默认为单卡双芯
+    - 各模型支持的TP数参考“特性矩阵”
+    - “单卡双芯”运行请指定`TP_WORLD_SIZE`为`2`，“双卡四芯”运行请指定`TP_WORLD_SIZE`为`4`
+  - `export MASTER_PORT=20030`
+    - 设置卡间通信端口
+    - 默认使用20030端口
+    - 目的是为了避免同一台机器同时运行多个多卡模型时出现通信冲突
+    - 设置时端口建议范围为：20000-20050
+  - `export PYTHONPATH=${llm_path}:$PYTHONPATH`
+    - 将模型仓路径加入Python查询模块和包的搜索路径中
+    - 将${llm_path}替换为实际路径
 
-- 运行指令（在/path-to-ModelLink/mindie_ref/mindie_llm/atb_models/路径下运行以上指令）
-```shell
-torchrun --nproc_per_node {TP数，即world size} --master-port {卡间通信端口} -m examples.run_pa --model_path {模型的权重路径}
-```
-- 示例
-```shell
-torchrun --nproc_per_node 8 --master_port 12345 -m examples.run_pa --model_path /path/to/model --input_text "def print_hello_word()" --max_input_length 20 --max_output_length 50 --max_batch_size 1
-```
+### 对话测试脚本参数说明
+- `--model_path` 模型路径
+- `--input_text` 输入问题
+- `--max_input_length` 最大输入长度
+- `--max_output_length` 最大输出长度
+- `--max_batch_size` 每次运行时固定的batch数量
+- 所有参数可见run_pa.py文件中
 
 **运行Paged Attention BF16**    
-- 待补充(同FP16)
+- 待补充
 
 **运行W8A8量化**
-- 权重转换
+- 待补充
 
 **运行KV cache量化**
 - 待补充
@@ -114,11 +123,10 @@ torchrun --nproc_per_node 8 --master_port 12345 -m examples.run_pa --model_path 
 - 待补充
 
 ## 精度测试
-- 待补充
+- 参考[此README文件](../../../tests/modeltest/README.md)
 
 ## 性能测试
-- 参考tests/modeltest/README.md
+- 参考[此README文件](../../../tests/modeltest/README.md)
 
-## 性能数据
-- 待补充
+
 
