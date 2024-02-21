@@ -71,7 +71,9 @@ void OperationTorch::SetParam(std::string param)
 
     operation_.reset(operation);
 
-    atb_speed::HostTensorBinder *binder = CreateHostTensorBinder(opName_);
+    // Please register them in files `.h`, see `models/baichuan2/13b/layer/flash_attention_layer.h`;
+    // And set correct opName_;
+    atb_speed::HostTensorBinder *binder = atb_speed::HosttensorBinderFactory::CreateInstance(opName_);
     if (!binder) {
         ATB_LOG(INFO) << name_ << "create host tensor binder fail, opName:" << opName_;
     }
