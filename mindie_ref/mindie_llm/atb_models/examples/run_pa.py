@@ -259,11 +259,12 @@ if __name__ == '__main__':
     generate_texts, token_nums, _ = pa_runner.infer(args.input_texts, args.max_batch_size, args.max_output_length,
                                             args.ignore_eos, args.input_ids)
 
-    for i, generate_text in enumerate(generate_texts):
-        if i < len(args.input_texts):
-            print_log(rank, logger.info, f'Question[{i}]: {args.input_texts[i]}')
-        print_log(rank, logger.info, f'Answer[{i}]: {generate_text}')
-        print_log(rank, logger.info, f'Generate[{i}] token num: {token_nums[i]}')
+    if not args.input_ids:
+        for i, generate_text in enumerate(generate_texts):
+            if i < len(args.input_texts):
+                print_log(rank, logger.info, f'Question[{i}]: {args.input_texts[i]}')
+            print_log(rank, logger.info, f'Answer[{i}]: {generate_text}')
+            print_log(rank, logger.info, f'Generate[{i}] token num: {token_nums[i]}')
         
     if world_size > 1:
         torch.distributed.destroy_process_group()
