@@ -10,6 +10,7 @@ from megatron.model.language_model import parallel_lm_logits
 from megatron.model.language_model import get_language_model
 
 from .model.module import MegatronModuleForCausalLM
+from .model.transformer import GeneralMoeBlock
 
 
 def seq_length_wrapper(fn):
@@ -31,6 +32,7 @@ def apply_model_patch():
     megatron.model.GPTModel = GPTModel
     megatron.model.language_model.TransformerLanguageModel.forward = (seq_length_wrapper(
         megatron.model.language_model.TransformerLanguageModel.forward))
+    megatron.model.transformer.SwitchMLP = GeneralMoeBlock
 
 
 def post_language_model_processing(lm_output, labels, logit_weights,
