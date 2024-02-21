@@ -21,10 +21,7 @@
 # SOFTWARE.
 import os
 import json
-<<<<<<< HEAD
 import math
-=======
->>>>>>> 838bb9a1877ea3b6d14d8390470d62c3b15376d3
 import random
 import argparse
 from dataclasses import dataclass, field
