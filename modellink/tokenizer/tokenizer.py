@@ -35,11 +35,18 @@ def build_tokenizer(args):
         if args.tokenizer_name_or_path is None:
             raise ValueError("Missing tokenizer_name_or_path while building PretrainFromHF tokenizer.")
 
+        hf_tokenizer_kwargs = dict()
+        if hasattr(args, "tokenizer_kwargs") and args.tokenizer_kwargs:
+            for i in range(0, len(args.tokenizer_kwargs), 2):
+                hf_tokenizer_kwargs[args.tokenizer_kwargs[i]] = \
+                    args.tokenizer_kwargs[i + 1]
+
         tokenizer = _AutoTokenizer(
             args.tokenizer_name_or_path,
             vocab_extra_ids=args.vocab_extra_ids,
             model_max_length=args.seq_length,
-            use_fast=args.tokenizer_not_use_fast
+            use_fast=args.tokenizer_not_use_fast,
+            **hf_tokenizer_kwargs
         )
 
         if not hasattr(args, "padded_vocab_size"):
@@ -76,10 +83,10 @@ class TokenizerAdaptor:
 class _AutoTokenizer(AbstractTokenizer):
     """AutoTokenizer for Hf Pretrained model loading."""
 
-    def __init__(self, tokenizer_name_or_path, vocab_extra_ids, model_max_length, use_fast):
+    def __init__(self, tokenizer_name_or_path, vocab_extra_ids, model_max_length, use_fast, **kwargs):
         name = tokenizer_name_or_path
         super().__init__(name)
-        hf_tokenizer_kwargs = {}
+        hf_tokenizer_kwargs = kwargs
         if vocab_extra_ids > 0:
             hf_tokenizer_kwargs["additional_special_tokens"] = [f"<extra_id_{_id}>" for _id in range(vocab_extra_ids)]
 
