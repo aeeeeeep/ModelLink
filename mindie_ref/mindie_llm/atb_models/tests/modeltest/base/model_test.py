@@ -31,6 +31,7 @@ from atb_llm.utils.cpu_binding import NpuHbmInfo
 from examples.server.cache import CacheConfig, CacheManager, ModelConfig
 from examples.server.generate import decode_token, generate_req
 from examples.server.request import request_from_text, request_from_token
+from .human_eval import evaluate_functional_correctness
 
 
 QA_PRIMER = """Q: What is human life expectancy in the United States?
@@ -118,7 +119,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 class ModelTest:
     def __init__(self, model_type, data_type, test_mode, model_name, data_dir, dataset_name, batch_size, device_id,
-                 result_dir, log_dir, hardware_type, case_pair, _) -> None:
+                 result_dir, log_dir, hardware_type, case_pair, weight_dir, use_refactor, max_position_embedding) -> None:
         self.model_type = model_type
         self.data_type = data_type
         self.test_mode = test_mode
@@ -292,9 +293,6 @@ class ModelTest:
             "Common sense questions and answers\n\nQuestion: How to learn a new language\nFactual answer:"]
 
         csv_results = []
-        folder_name = self.model_name
-        csv_name = self.model_type + "_" + self.data_type + "_performance_test_result.csv" if self.data_type != "" else self.model_type
-        csv_performance_path = os.path.join(self.script_path, "../result", folder_name, csv_name)
         folder_path = f"{self.data_dir}/{self.hardware_type}/batch{self.batch_size}"
         os.environ['tensor_folder'] = f"{folder_path}"
         os.makedirs(folder_path, exist_ok=True)
@@ -367,7 +365,6 @@ class ModelTest:
                 else:
                     input_ids = torch.randint(0, self.model.config.vocab_size, [seq_len_in],
                                               dtype=torch.int64)
-                    self.tokenizer.eos_token_id = self.model.config.vocab_size * 2
                     req_list = [request_from_token(input_ids, seq_len_out, self.block_size, req_idx=i) \
                                 for i in range(self.batch_size)]
 
@@ -381,7 +378,7 @@ class ModelTest:
                             if not env.ENV.max_memory_gb else int(env.ENV.max_memory_gb) * (1 << 30)
 
                         free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory != 0 else \
-                                                        (self.init_memory + env.ENV.atb_memory_gb_reserved * (1 << 30)))
+                                                        (self.init_memory + env.ENV.reserved_memory_gb * (1 << 30)))
 
                         self.logger.info("RANK " + str(self.local_rank) + ": infer max_memory(GB): " + str(
                             max_memory / (1024 ** 3)) +
@@ -395,11 +392,11 @@ class ModelTest:
                         req_list_dummy = copy.deepcopy(req_list)
                         generate_req(req_list_dummy, self.model, self.tokenizer, self.batch_size,
                                      self.max_prefill_tokens,
-                                     2, self.cache_manager, self.local_rank)
+                                     2, self.cache_manager, self.local_rank, True)
                     getattr(torch, self.core_type).synchronize()
                     e2e_start = time.time()
                     generate_req(req_list, self.model, self.tokenizer, self.batch_size, self.max_prefill_tokens,
-                                 seq_len_out, self.cache_manager, self.local_rank)
+                                 seq_len_out, self.cache_manager, self.local_rank, True)
                     _, _ = decode_token(req_list, self.tokenizer)
                     getattr(torch, self.core_type).synchronize()
                     e2e_end = time.time()
@@ -448,16 +445,29 @@ class ModelTest:
                 csv_results[len(self.case_pair) - 1].extend(
                     [str(round(non_first_token_throughput_average, 10)).ljust(45),
                      str(round(e2e_throughput_average, 10)).ljust(35)])
-                if not os.path.exists(csv_performance_path):
-                    self.logger.warning("performance dataset result csv file not exist, skip recording results")
-                    raise RuntimeError(f"csv result file not exist")
-                with open(csv_performance_path, 'a', newline='') as csv_performance_file:
-                    csv_writer = csv.writer(csv_performance_file, delimiter='|')
+                folder_name = self.model_name
+                csv_name = self.model_type + "_" + self.data_type + "_performance_test_result.csv" if self.data_type != "" else self.model_type
+                csv_formatted_name = self.model_type + "_" + self.data_type + "_performance_test_result_formatted.csv" if self.data_type != "" else self.model_type
+                csv_performance_path = os.path.join(self.script_path, "../result", folder_name, csv_name)
+                csv_performance_formatted_path = os.path.join(self.script_path, "../result", folder_name, csv_formatted_name)
+                if not os.path.exists(csv_performance_formatted_path):
+                    self.logger.warning("performance result csv formatted file not exist, skip recording results")
+                    raise RuntimeError(f"csv result formatted file not exist")
+                with open(csv_performance_formatted_path, 'a', newline='') as csv_file:
+                    csv_writer = csv.writer(csv_file, delimiter='|')
                     for csv_result in csv_results:
                         csv_writer.writerow(csv_result)
+                
+                csv_results.insert(0, ["Model", "Batchsize", "In_seq", "Out_seq", "Total time(s)", "First token time(ms)", "Non-first token time(ms)", 
+                                      "Non-first token Throughout(Tokens/s)", "Throughout(Tokens/s)", "Non-first token Throughout Average(Tokens/s)",
+                                      "E2E Throughout Average(Tokens/s)"])
+                df = pd.DataFrame(csv_results)
+                df.to_csv(csv_performance_path, index=False, header=False)
 
                 self.logger.info(self.model_name + " " + " batch" + str(
                     self.batch_size) + " result saved in " + csv_performance_path)
+                self.logger.info(self.model_name + " " + " batch" + str(
+                    self.batch_size) + " formatted result saved in " + csv_performance_formatted_path)
 
         warmup()
         run_performance_test()
@@ -475,6 +485,8 @@ class ModelTest:
                 self.__run_full_dataset_truthfulqa()
             elif self.dataset_name == 'BoolQ':
                 self.__run_full_dataset_boolq()
+            elif self.dataset_name == 'HumanEval':
+                self.__run_full_dataset_humaneval()
         else:
             self.logger.error(self.test_mode + " not support")
             raise RuntimeError(f"{self.test_mode} not support")
@@ -651,7 +663,7 @@ class ModelTest:
                                 if not env.ENV.max_memory_gb else int(env.ENV.max_memory_gb) * (1 << 30)
 
                             free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory != 0 else \
-                                                            (self.init_memory + env.ENV.atb_memory_gb_reserved * (
+                                                            (self.init_memory + env.ENV.reserved_memory_gb * (
                                                                         1 << 30)))
 
                             self.logger.info("RANK " + str(self.local_rank) + ": infer max_memory(GB): " + str(
@@ -937,7 +949,7 @@ class ModelTest:
                                 if not env.ENV.max_memory_gb else int(env.ENV.max_memory_gb) * (1 << 30)
 
                             free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory != 0 else \
-                                                            (self.init_memory + env.ENV.atb_memory_gb_reserved * (
+                                                            (self.init_memory + env.ENV.reserved_memory_gb * (
                                                                         1 << 30)))
 
                             self.logger.info("RANK " + str(self.local_rank) + ": infer max_memory(GB): " + str(
@@ -970,6 +982,95 @@ class ModelTest:
             result_total.insert(0, total)
         if is_result:
             self.__save_result(result_total)
+
+    def __run_full_dataset_humaneval(self):
+
+        def filter_code(completion: str) -> str:
+            completion = completion.lstrip("\n")
+            return completion.split("\n\n")[0]
+
+        def fix_indents(text: str) -> str:
+            return text.replace("\t", "    ")
+
+        is_result = False
+        if torch.distributed.get_rank() == 0:
+            is_result = True
+        with torch.no_grad():
+            for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.jsonl").as_posix(),
+                                        recursive=True), desc='global'):
+                dataset = []
+                with open(entry, encoding='utf-8') as f:
+                    for line in f:
+                        line_json = json.loads(line)
+                        dataset.append(line_json)
+
+                correct = 0
+                task_id = 0
+                samples = []
+                dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
+                for batch in tqdm(dataloader):
+                    queries = [prompt.replace("    ", "\t") for prompt in batch["prompt"]]
+                    if self.model_type == "fa":
+                        inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
+                                                max_length=2048).to(self.model.device)
+                        tokenizer_out_ids = inputs.input_ids.to(self.model.device)
+                        attention_mask = inputs.attention_mask.to(self.model.device)
+                        outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
+                                                      do_sample=False, max_new_tokens=512)
+                        if is_result:
+                            for idx, ans in enumerate(batch['answer']):
+                                output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
+                                response = self.tokenizer.decode(output)
+                                acc = is_correct(response, ans)
+                                if acc:
+                                    correct += 1
+                    else:
+                        req_list = [request_from_text(queries[i], self.tokenizer, 512, self.block_size, req_idx=i) for i
+                                    in range(len(queries))]
+                        if not self.cache_manager:
+                            cache_block_size = self.block_size * self.model.num_kv_heads * self.model.head_size
+                            dtype = dtype_map[self.data_type] if self.data_type in dtype_map else dtype_map["fp16"]
+                            dtype_size = CacheManager.get_dtype_size(dtype)
+                            total_cache_size = self.model.num_layers * cache_block_size * 2 * dtype_size
+
+                            max_memory = env.ENV.memory_fraction * self.max_memory \
+                                if not env.ENV.max_memory_gb else int(env.ENV.max_memory_gb) * (1 << 30)
+
+                            free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory != 0 else \
+                                                            (self.init_memory + env.ENV.reserved_memory_gb * (
+                                                                        1 << 30)))
+
+                            self.logger.info("RANK " + str(self.local_rank) + ": infer max_memory(GB): " + str(
+                                max_memory / (1024 ** 3)) +
+                                             ", warm_up_memory(GB): " + str(self.warm_up_memory / (1024 ** 3)) +
+                                             ", free_memory(GB): " + str(free_memory / (1024 ** 3)))
+                            num_blocks = int(free_memory // total_cache_size)
+                            self.logger.info("RANK " + str(self.local_rank) + ": num_blocks: " + str(
+                                num_blocks) + ", free memory: " + str(free_memory))
+                            cache_config = CacheConfig(num_blocks, self.block_size)
+                            self.cache_manager = CacheManager(cache_config, self.model_config)
+                        if is_result:
+                            print("req_list: ", queries)
+                        generate_req(req_list, self.model, self.tokenizer, self.batch_size, self.max_prefill_tokens,
+                                     512, self.cache_manager, self.local_rank)
+                        generate_text_list, _ = decode_token(req_list, self.tokenizer)
+                        # if is_result:
+                        #     print("generate_text_list: ", generate_text_list)
+                        generate_text_list = [filter_code(fix_indents(completion)) for completion in generate_text_list]
+                        if is_result:
+                            print("generate_text_list_1: ", generate_text_list)
+                        for sample in generate_text_list:
+                            result = dict(
+                                task_id="HumanEval/" + str(task_id),
+                                completion=sample,
+                            )
+                            samples += [result]
+                    task_id += 1
+                if is_result:
+                    self.__save_result(samples)
+        if is_result:
+            results = evaluate_functional_correctness(self.current_result_path, [1], 4, 3.0, self.script_path + "/../dataset/full/HumanEval/human-eval.jsonl")
+            self.result_logger.debug(results)
 
     def __compare_results(self):
         if self.test_mode != "performance" and self.hardware_type == "NPU" and torch.distributed.get_rank() == 0:
@@ -1265,16 +1366,25 @@ class ModelTest:
 
         now = datetime.now()
         date_str = now.strftime("%Y_%m_%d_%H_%M_%S")
-        result_name = "_".join([self.model_name, self.dataset_name, date_str]) + '.csv'
-        result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}",
+
+        if self.dataset_name == "HumanEval":
+            result_name = "_".join([self.model_name, self.dataset_name]) + '.jsonl'
+            result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}",
                                    result_name)
-        if self.dataset_name == "TruthfulQA":
-            df = pd.DataFrame(result, columns=['idx', 'MC1', 'MC2', 'MC3'])
+            with open(result_path, 'wb') as fp:
+                for x in result:
+                    fp.write((json.dumps(x) + "\n").encode('utf-8'))
         else:
-            df = pd.DataFrame(result, columns=['file_name', 'value', 'correct', 'sum'])
-        df = align_columns(df)
-        df = align_headers(df)
-        df.to_csv(result_path, sep='|', index=False)
+            result_name = "_".join([self.model_name, self.dataset_name, date_str]) + '.csv'
+            result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}",
+                                   result_name) 
+            if self.dataset_name == "TruthfulQA":
+                df = pd.DataFrame(result, columns=['idx', 'MC1', 'MC2', 'MC3'])
+            else:
+                df = pd.DataFrame(result, columns=['file_name', 'value', 'correct', 'sum'])
+            df = align_columns(df)
+            df = align_headers(df)
+            df.to_csv(result_path, sep='|', index=False)
         self.logger.info(f"{self.dataset_name} result saved to: {result_path}")
         self.current_result_path = result_path
 
@@ -1345,6 +1455,8 @@ def parse_args():
     parser.add_argument("--hardware_type", type=str, default="NPU", help="current device type, GPU or NPU")
     parser.add_argument("--case_pair", type=str, default="[[256, 256], [512, 512], [1024, 1024], [2048, 2048]]",
                         help="performance test pair")
+    parser.add_argument("--use_refactor", type=str, default="True", help="specify whether llama model use refactor")
+    parser.add_argument("--max_position_embeddings", type=int, help="specify whether llama model use refactor")
 
     return parser.parse_args()
 
@@ -1371,4 +1483,5 @@ def get_args():
     if args.case_pair == "[]":
         case_pair = "[[256, 256], [512, 512], [1024, 1024], [2048, 2048]]"
     return [args.model_type, args.data_type, args.test_mode, args.model_name, data_dir, args.dataset_name,
-            args.batch_size, args.device_id, result_dir, log_dir, args.hardware_type, case_pair, args.weight_dir]
+            args.batch_size, args.device_id, result_dir, log_dir, args.hardware_type, case_pair, args.weight_dir,
+            eval(args.use_refactor), args.max_position_embeddings]

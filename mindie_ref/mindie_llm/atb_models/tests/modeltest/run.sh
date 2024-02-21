@@ -26,6 +26,8 @@ chip_num=0
 dataset="CEval"
 batch_size=0
 case_pair="[]"
+use_refactor="True"
+max_position_embedding=-1
 
 function fn_prepare()
 {
@@ -54,7 +56,7 @@ function fn_prepare()
         dataset="${parts[1]}"
     fi
 
-    csv_path=$SCRIPT_DIR/result/"$model_name"/"$1"_"$2"_test_result.csv
+    csv_path=$SCRIPT_DIR/result/"$model_name"/"$1"_"$2"_test_result_formatted.csv
     mkdir -p "$(dirname "$csv_path")"
     touch "$csv_path" > "$csv_path"
     if [ "$test_mode" == "performance" ]; then
@@ -96,12 +98,14 @@ function fn_run_single()
         fi
     fi
 
-    devices=""
-    for ((i=0; i<chip_num-1; i++)); do
-        devices+="$i,"
-    done
-    devices+="$((chip_num-1))"
-    export ASCEND_RT_VISIBLE_DEVICES="$devices"
+    if ! [ -n "$ASCEND_RT_VISIBLE_DEVICES" ]; then
+        devices=""
+        for ((i=0; i<chip_num-1; i++)); do
+            devices+="$i,"
+        done
+        devices+="$((chip_num-1))"
+        export ASCEND_RT_VISIBLE_DEVICES="$devices"
+    fi
 
     random_port=$(( RANDOM % 9999 + 10001 ))
     torchrun --nproc_per_node "$chip_num" --master_port $random_port "$test_path" \
@@ -113,7 +117,9 @@ function fn_run_single()
     --weight_dir "$weight_dir" \
     --dataset_name "$dataset" \
     --hardware_type $hardware_type \
-    --case_pair "$case_pair"
+    --case_pair "$case_pair" \
+    --use_refactor "$use_refactor" \
+    --max_position_embedding "$max_position_embedding"
 }
 
 function fn_run_all()
@@ -132,10 +138,10 @@ function fn_main()
 {
     if command -v nvidia-smi &> /dev/null; then
         hardware_type="GPU"
-        echo "Detected NVIDIA GPU"
+        echo "INFO: Detected NVIDIA GPU"
     else
         if command -v npu-smi info &> /dev/null; then
-            echo "Detected Ascend NPU"
+            echo "INFO: Detected Ascend NPU"
         else
             echo "Error: No GPU or NPU detected"
             exit 1
@@ -150,57 +156,60 @@ function fn_main()
     model_type=$1
     case "$model_type" in
         fa|pa_fp16|pa_bf16)
-            echo "current model_type: $model_type"
+            echo "INFO: current model_type: $model_type"
             ;;
         *)
-            echo "invalid model_type, only support fa, pa_fp16, pa_bf16"
+            echo "ERROR: invalid model_type, only support fa, pa_fp16, pa_bf16"
             ;;
     esac
     test_modes=$2
     case "$test_modes" in
-        performance|simplified_GSM8K|simplified_TruthfulQA|full_CEval|full_GSM8K|full_MMLU|full_TruthfulQA|full_BoolQ)
-            echo "current test_mode: $test_modes"
+        performance|simplified_GSM8K|simplified_TruthfulQA|full_CEval|full_GSM8K|full_MMLU|full_TruthfulQA|full_BoolQ|full_HumanEval)
+            echo "INFO: current test_mode: $test_modes"
             ;;
         *)
-            echo "invalid test_mode, only support performance, simplified_GSM8K, simplified_TruthfulQA, \
-            full_CEval, full_GSM8K, full_MMLU, full_TruthfulQA, full_BoolQ"
+            echo "ERROR: invalid test_mode, only support performance, simplified_GSM8K, simplified_TruthfulQA, \
+            full_CEval, full_GSM8K, full_MMLU, full_TruthfulQA, full_BoolQ, full_HumanEval"
+            exit 1
             ;;
     esac
+
     if [ "$test_modes" == "performance" ]; then
         case_pair=$3
-        batch_size=$4
-        model_name=$5
-        weight_dir=$6
-        echo "current batch_size: $batch_size"
-        echo "current model_name: $model_name"
+        shift
+    fi
+  
+    batch_size=$3
+    model_name=$4
 
-        fn_prepare "$1" "$2"
+    if [ "$model_name" == "llama" ]; then
+        use_refactor=$5
+        shift
+    fi
 
-        if [ $# -ge 7 ]; then
-            if ! [[ "$7" =~ ^[1-9]+$ ]]; then
-                echo "Error: input chip_num is not a digit."
-                exit 1
-            fi
-            chip_num=$7
-            echo "INFO: use input chip_num $chip_num"
+    weight_dir=$5
+    echo "INFO: current batch_size: $batch_size"
+    echo "INFO: current model_name: $model_name"
+    echo "INFO: current weight_dir: $weight_dir"
+
+    fn_prepare "$model_type" "$test_modes"
+
+
+    if ! [[ "$6" =~ ^[1-9]+$ ]]; then
+        echo "Error: input chip_num is not a digit."
+        exit 1
+    fi
+    chip_num=$6
+    echo "INFO: use input chip_num $chip_num"
+
+
+    if [ $# -ge 7 ]; then
+        if ! [[ "$7" =~ ^[0-9]+$ ]]; then
+            echo "Error: input max_position_embedding or max_seq_len is not a digit."
+            exit 1
         fi
-    else
-        batch_size=$3
-        model_name=$4
-        weight_dir=$5
-        echo "current batch_size: $batch_size"
-        echo "current model_name: $model_name"
-
-        fn_prepare "$1" "$2"
-
-        if [ $# -ge 6 ]; then
-            if ! [[ "$6" =~ ^[1-9]+$ ]]; then
-                echo "Error: input chip_num is not a digit."
-                exit 1
-            fi
-            chip_num=$6
-            echo "INFO: use input chip_num $chip_num"
-        fi
+        max_position_embedding=$7
+        echo "INFO: use input max_position_embedding or max_seq_len $max_position_embedding"
     fi
     fn_run_single
 }

@@ -135,7 +135,6 @@ SDK提供了两种精度测试方法，ceval和mmlu
 | shot        | 5     | 每个科目的shot数量                       |
 | seq_len_out | 32    | 每个问题的回答长度                         |
 
-## ceval
 
 ### 1. 下载测试数据集
 
