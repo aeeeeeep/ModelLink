@@ -189,8 +189,10 @@ class PARunner:
         print_log(self.rank, logger.info, "---------------end inference---------------")
         return generate_text_list, token_num_list, e2e_time
 
+
 def parse_list(list_str):
     return [int(item) for item in list_str.split(',')]
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
