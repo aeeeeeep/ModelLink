@@ -120,22 +120,22 @@ class PARunner:
         torch.npu.empty_cache()
         print_log(self.rank, logger.info, "---------------end warm_up---------------")
 
-    def infer(self, inputs, batch_size, max_output_length, ignore_eos):
+    def infer(self, input_texts, batch_size, max_output_length, ignore_eos, input_ids=None):
         print_log(self.rank, logger.info, "---------------begin inference---------------")
-        if isinstance(inputs[0], str):
-            if len(inputs) == 1:
-                req_list = [request_from_text(inputs[0], self.tokenizer, max_output_length, self.block_size, req_idx=i) \
-                            for i in range(batch_size)]
-            else:
-                req_list = [request_from_text(input_text, self.tokenizer, max_output_length, self.block_size, req_idx=i) \
-                            for i, input_text in enumerate(inputs)]
-        else:
-            if len(inputs) == 1:
-                req_list = [request_from_token(inputs[0], max_output_length, self.block_size, req_idx=i) \
+        if input_ids:
+            if len(input_ids) == 1:
+                req_list = [request_from_token(input_ids[0], max_output_length, self.block_size, req_idx=i) \
                             for i in range(batch_size)]
             else:
                 req_list = [request_from_token(input_ids, max_output_length, self.block_size, req_idx=i) \
-                            for i, input_ids in enumerate(inputs)]
+                            for i, input_ids in enumerate(input_ids)]
+        else:
+            if len(input_texts) == 1:
+                req_list = [request_from_text(input_texts[0], self.tokenizer, max_output_length, self.block_size, req_idx=i) \
+                            for i in range(batch_size)]
+            else:
+                req_list = [request_from_text(input_text, self.tokenizer, max_output_length, self.block_size, req_idx=i) \
+                            for i, input_text in enumerate(input_texts)]
             
         print_log(self.rank, logger.debug, f'req_list[0].input_ids: {req_list[0].input_ids}')
 
@@ -160,14 +160,14 @@ class PARunner:
 
             req_list_dummy = copy.deepcopy(req_list)
             generate_req(req_list_dummy, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                         2, self.cache_manager, rank, ignore_eos)
+                         2, self.cache_manager, self.rank, ignore_eos)
 
         if not ENV.profiling_enable:
             print_log(self.rank, logger.debug, "no profiling")
             torch.npu.synchronize()
             e2e_start = time.time()
             generate_req(req_list, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                         max_output_length, self.cache_manager, rank, ignore_eos)
+                         max_output_length, self.cache_manager, self.rank, ignore_eos)
             _, _ = decode_token(req_list, self.tokenizer)
             torch.npu.synchronize()
             e2e_end = time.time()
@@ -181,7 +181,7 @@ class PARunner:
             torch.npu.synchronize()
             with torch.npu.profile(profiling_path):
                 generate_req(req_list, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                             max_output_length, self.cache_manager, rank, ignore_eos)
+                             max_output_length, self.cache_manager, self.rank, ignore_eos)
             torch.npu.synchronize()
 
         generate_text_list, token_num_list = decode_token(req_list, self.tokenizer)
@@ -201,7 +201,7 @@ def parse_arguments():
         '--input_texts',
         type=str,
         nargs='+',
-        default=None)
+        default=["What's deep learning?"])
     parser.add_argument(
         '--input_token_ids',
         type=parse_list,
@@ -255,9 +255,9 @@ if __name__ == '__main__':
     print_log(rank, logger.info, f'pa_runner: {pa_runner}')
     pa_runner.warm_up()
 
-    if args.input_texts == None:
-        generate_texts, token_nums, _ = pa_runner.infer(args.input_token_ids, args.max_batch_size, args.max_output_length,
-                                                args.ignore_eos)
+    if args.input_token_ids != None:
+        generate_texts, token_nums, _ = pa_runner.infer(args.input_texts, args.max_batch_size, args.max_output_length,
+                                                args.ignore_eos, args.input_token_ids)
     else:
         generate_texts, token_nums, _ = pa_runner.infer(args.input_texts, args.max_batch_size, args.max_output_length,
                                                 args.ignore_eos)

@@ -221,7 +221,7 @@ class ModelTest:
                 'max_position_embeddings': self.max_position_embedding if self.max_position_embedding != -1 else None
             }
             self.pa_runner = PARunner(**input_dict)
-            self.logger.info(self.local_rank + f'pa_runner: {self.pa_runner}')
+            self.logger.info(str(self.local_rank) + f'pa_runner: {self.pa_runner}')
 
         torch.manual_seed(1)
         self.device_type = self.__get_device_type()
@@ -332,7 +332,7 @@ class ModelTest:
                 else:
                     input_ids = torch.randint(0, self.pa_runner.model.config.vocab_size, [seq_len_in],
                                               dtype=torch.int64)
-                    _, _, e2e_time = self.pa_runner.infer([input_ids], self.batch_size, seq_len_out, True)
+                    _, _, e2e_time = self.pa_runner.infer("", self.batch_size, seq_len_out, True, [input_ids])
 
                 if self.local_rank == 0:
                     if self.model_type == "fa":
