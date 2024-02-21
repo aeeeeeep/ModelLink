@@ -47,7 +47,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
 
 1. Clone the repository to your local server:
     ```shell
-    git clone https://gitee.com/ascend/ModelLink.git 
+    git clone -b modellink https://gitee.com/ascend/ModelLink.git 
     cd ModelLink 
     mkdir logs
     mkdir ckpt
@@ -65,9 +65,13 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
     
-    # install deepspeed and deepspeed_npu
+    # modify ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+   
+    # install AscendSpeed
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
+    pip install -r requirements.txt 
     pip3 install -e .
     cd ..
     
@@ -205,6 +209,12 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
        --load ${ORIGIN_CHECKPOINT}  \
        --lora-load ${LORA_CHECKPOINT} \
    ```
+   
+   Launch LLAMA2-7B lora fine tune script: examples/llama2/tune_llama2_7b_ptd.sh
+   
+   ```shell
+    bash examples/llama2/tune_llama2_7b_ptd.sh 
+   ```
 
 ### Performance
 
@@ -245,9 +255,18 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 TOKENIZER_PATH=./llama2-7b-hf/  #tokenizer path
 CHECKPOINT=./llama2-7b-tp8pp1  #model path
 ```
+Config llama2-7B lora inference script: tasks/inference/generate_llama2_7b_lora_ptd.sh
+```bash
+# modify lora model path
+CHECKPOINT_LORA="your lora model directory path"
+```
 Launch llama2-7B inference script: tasks/inference/generate_llama2_7b_ptd.sh
 ```bash
 bash examples/llama2/generate_llama2_7b_ptd.sh
+```
+Launch llama2-7B lora inference script: tasks/inference/generate_llama2_7b_lora_ptd.sh
+```bash
+bash examples/llama2/generate_llama2_7b_lora_ptd.sh
 ```
 Some inference samples are as follows:
 ![Inference](../../sources/images/llama2/llama2-7B-generate.png)
@@ -351,9 +370,8 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
 
 1. Clone the repository to your local server:
     ```shell
-    git clone https://gitee.com/ascend/ModelLink.git 
-    cd ModelLink
-    git checkout modellink 
+    git clone -b modellink https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink 
     mkdir logs
     mkdir ckpt
     ```
@@ -365,14 +383,18 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
     conda create -n test python=3.8
     conda activate test
     
-    # 安装 torch 和 torch_npu
+    # install torch 和 torch_npu
     pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-    
-    # 安装加速库
+
+    # modify ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+    # install AscendSpeed
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
+    pip install -r requirements.txt 
     pip3 install -e .
     cd ..
     
@@ -466,13 +488,33 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
 		  --append-eod
     ```
    5.2 Full Parameters Fine-Tuning
-   The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_13B_ptd_8p.sh.*The difference is that the finetune switch is added and the weight path parameter is added.*
+   The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_7b_ptd.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
    ```bash
-   # Enable finetune
-   --finetune
-   # Configure the model path and parameters based on the site requirements
-   CKPT_LOAD_DIR="your init model load path"
-   --load ${CKPT_LOAD_DIR}
+   DATA_PATH=./finetune_dataset/alpaca
+   
+   --is-instruction-dataset \
+   ```
+   5.3 Lora Fine-Tuning
+   The Lora fine-tuning script is configured by adding the following lora parameters to the pretrain_llama2_7b_ptd.sh script:
+   ```bash
+       --lora-target-modules query_key_value dense proj dense_4h_to_h \
+       --lora-r 16 \
+       --lora-alpha 32 \
+   ```
+   If the vocabulary is changed, add the following parameters:
+   ```bash
+     --lora-modules-to-save word_embeddings output_layer \
+   ```
+   The following parameters are added to the resumable training capability of Lora:
+   ```bash
+       --load ${ORIGIN_CHECKPOINT}  \
+       --lora-load ${LORA_CHECKPOINT} \
+   ```
+   
+   Launch LLAMA2-13B lora fine tune script: examples/llama2/tune_llama2_13b_ptd.sh
+   
+   ```shell
+    bash examples/llama2/tune_llama2_13b_ptd.sh 
    ```
 
 ### Performance
@@ -509,8 +551,20 @@ CHECKPOINT=./llama2-13b-tp8-pp1/
 VOCAB_FILE=./llama2-13b-hf/
 ```
 
+Config Llama2-13B lora inference script: tasks/inference/generate_llama2_13b_lora_ptd.sh
+
+```bash
+# modify lora model directory path
+CHECKPOINT_LORA="your lora model directory path"
+```
+
+Launch Llama2-13B inference script.
 ```shell
 bash ./tasks/inference/generate_llama2_13b_ptd.sh
+```
+Launch Llama2-13B lora inference script.
+```shell
+bash ./tasks/inference/generate_llama2_13b_lora_ptd.sh
 ```
 Some inference samples are as follows:
 ![llama2-13B-generate.png](../../sources/images/llama2/llama2-13B-generate.png)
@@ -566,9 +620,8 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
 
 1. Clone the repository to your local server:
 ```shell
-git clone https://gitee.com/ascend/ModelLink.git 
+git clone -b modellink https://gitee.com/ascend/ModelLink.git 
 cd ModeLlink 
-git checkout modellink
 mkdir logs
 mkdir ckpt
 ```
@@ -694,7 +747,9 @@ pip install -r requirements.txt
      --tokenizer-model ./llama2-70b-hf/tokenizer.model                                                               
     ```
 
-4. Prepare dataset
+4. pre-training
+
+	4.1 Prepare dataset
 
     There are two dataset examples: Alpaca and Moss. 
 
@@ -740,7 +795,7 @@ pip install -r requirements.txt
     --handler-name MOSSInstructionHandler
     ```
    
-5. Config pre-training script
+	4.2 pre-training using ptd mode
 
     LLaMA2-34B: examples/llama2/pretrain_llama2_34B_ptd_16p.sh
     ```shell
@@ -762,7 +817,7 @@ pip install -r requirements.txt
     DATA_PATH=./dataset_llama2/alpaca_text_document  #processed dataset
     ``` 
     
-6. Launch pre-training script
+    Launch pre-training script
     
     LLaMA2-34B: examples/llama2/pretrain_llama2_34B_ptd_16p.sh
     ```shell
@@ -772,7 +827,65 @@ pip install -r requirements.txt
     ```shell
     bash examples/llama2/pretrain_llama2_70B_ptd.sh
     ```
+
+5. fine-tuning
+
+	5.1 Prepare fine-tuning dataset 
+	Download the LLAMA2-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
+    ```shell
+	# download datasets
+	mkdir finetune_dataset
+	cd ./finetune_dataset
+	wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+	cd ..
+	
+	# process datasets                              
+	python ./tools/preprocess_data.py \
+		  --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+		  --tokenizer-name-or-path ./llama-2-70b-hf \
+		  --output-prefix ./finetune_dataset/alpaca \
+		  --workers 4 \
+		  --log-interval 1000 \
+		  --tokenizer-type PretrainedFromHF \
+		  --handler-name GeneralInstructionHandler \
+		  --append-eod
+    ```
+   5.2 Full Parameters Fine-Tuning
+   The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_7b_ptd.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
+   ```bash
+   DATA_PATH=./finetune_dataset/alpaca
    
+   --is-instruction-dataset \
+   ```
+   5.3 Lora Fine-Tuning
+   The Lora fine-tuning script is configured by adding the following lora parameters to the pretrain_llama2_7b_ptd.sh script:
+   ```bash
+       --lora-target-modules query_key_value dense proj dense_4h_to_h \
+       --lora-r 16 \
+       --lora-alpha 32 \
+   ```
+   If the vocabulary is changed, add the following parameters:
+   ```bash
+     --lora-modules-to-save word_embeddings output_layer \
+   ```
+   The following parameters are added to the resumable training capability of Lora:
+   ```bash
+       --load ${ORIGIN_CHECKPOINT}  \
+       --lora-load ${LORA_CHECKPOINT} \
+   ```
+   
+   Launch LLAMA2-34B lora fine tune script: examples/llama2/tune_llama2_34b_ptd.sh
+   
+   ```shell
+    bash examples/llama2/tune_llama2_34b_ptd.sh 
+   ```
+   
+   Launch LLAMA2-70B lora fine tune script: examples/llama2/tune_llama2_70b_ptd.sh
+   
+   ```shell
+    bash examples/llama2/tune_llama2_70b_ptd.sh 
+   ```
+
 ### Performance-2
 
 #### Machine performance-2
@@ -830,84 +943,32 @@ CHECKPOINT=<checkpoint-path>
 VOCAB_FILE=<vocabfile-path>
 ```
 
+Config lora inference script:
+```bash
+# modify lora model directory path
+CHECKPOINT_LORA="your lora model directory path"
+```
+
 Launch LLaMA2-34B inference:
 ```shell
 bash ./tasks/inference/generate_llama2_34B_ptd.sh
+```
+Launch LLaMA2-34B lora inference:
+```shell
+bash ./tasks/inference/generate_llama2_34b_lora_ptd.sh
 ```
 Launch LLaMA2-70B inference:
 ```shell
 bash ./task/llama2/generate_llama2_70B_ptd.sh
 ```
+Launch LLaMA2-70B lora inference:
+```shell
+bash ./task/llama2/generate_llama2_70b_lora_ptd.sh
+```
 
 Some inference samples of LLaMA2-34B are as follows:
 
 ![llama2-34B-generate](../../sources/images/llama2/llama2-34B-generate.png)
-
-Some inference samples of LLaMA2-70B are as follows:
-```
-=============== Greedy Search ================
-
-You:
-how are you?
-
-AscendSpeed:
-I hope you are fine. I am fine too.
-I am writing to you because I want to tell you about my holidays.
-I went to the seaside with my family. We stayed in a hotel.
-We went to the beach every day. I played with my my my my my my my my my..
-.
-. . 0. .... my I was't' I
-==============================================
-
-Elapsed: 60.25s
-
-================ Do Sample =================
-
-You:
-how are you?
-
-AscendSpeed:
-long time, no hear.
-I know! It has been far too long... I'm doing alright though, and yourself?
-I've been doing pretty well!
-Do you live in the US?
-No, actually I'm in Australia... I think it would be fairly difficult to make it there.
-Subject: I think.
- there? the time for subject...... Sub subject - subject the
-============================================
-
-Elapsed: 34.13s
-
-=============== Beam Search =================
-
-You:
-how are you?
-
-AscendSpeed:
-I hope you are fine. I am fine too.
-I am writing to you because I want to tell you about my holidays.
-I went to the seaside with my family. We stayed in a hotel near the beach.
-We went to the beach every day. We We We We We
-=============================================
-
-Elapsed: 46.29s
-
-======== Beam Search with sampling ==========
-
-You:
-how are you?
-
-AscendSpeed:
-I hope you are fine.
-I would like to tell you that I have a problem with my account.
-I have a problem with my account.
-I have a problem with my account. I can't log in.
-I have a problem with my account. I can't log in.
-
-=============================================
-
-Elapsed: 48.53s
-```
 
 Some inference samples of LLaMA2-70B are as follows:
 ![llama2-70B_generate.png](../../sources/images/llama2/llama2-70B-generate.png)
