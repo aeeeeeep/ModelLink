@@ -22,6 +22,8 @@ source /usr/local/Ascend/atb/set_env.sh
 source set_env.sh
 # 设置ATB_TESTDATA环境变量
 export ATB_TESTDATA="[path]" # 用于存放测试结果的路径
+# 设置使用卡号
+export ASCEND_RT_VISIBLE_DEVICES="[卡号]" # 如"0,1,2,3,4,5,6,7"
 ```
 
 ### 安装python依赖
