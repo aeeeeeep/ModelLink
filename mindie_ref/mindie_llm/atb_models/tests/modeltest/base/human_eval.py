@@ -285,7 +285,8 @@ def estimate_pass_at_k(
     if isinstance(num_samples, int):
         num_samples_it = itertools.repeat(num_samples, len(num_correct))
     else:
-        assert len(num_samples) == len(num_correct)
+        if len(num_samples) != len(num_correct):
+            raise ValueError("length of num_samples should be equal to length of num_correct")
         num_samples_it = iter(num_samples)
 
     return np.array(
