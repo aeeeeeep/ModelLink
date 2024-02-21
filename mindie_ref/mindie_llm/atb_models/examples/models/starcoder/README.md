@@ -9,6 +9,13 @@ https://huggingface.co/bigcode/starcoder
 
 # 使用说明
 
+## 权重下载
+- 下载starcoder模型权重，放置到自定义路径下
+```
+https://huggingface.co/bigcode/starcoder/tree/main
+```
+- 进入刚才下载的权重文件夹中将config.json文件中的 "model_type": "gpt_bigcode" 修改为 "model_type": "starcoder" 
+
 ## 权重转换
 - 参考[此README文件](../../README.md)
 
