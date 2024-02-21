@@ -1,9 +1,10 @@
 #!/bin/bash
 
-export CUDA_DEVICE_MAX_CONNECTIONS=1
-export NPU_DETECT=0
+export HCCL_CONNECT_TIMEOUT=1200
+export COMBINED_ENABLE=1
+export AZUREML_EXPERIMENT_ID=0
 
-source "./envs/ascend-toolkit/set_env.sh"
+export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 GPUS_PER_NODE=8
 MASTER_ADDR=localhost
@@ -33,21 +34,21 @@ GPT_ARGS="
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --sequence-parallel \
-    --num-layers 32 \
-    --hidden-size 4096 \
-    --ffn-hidden-size 11008 \
+    --num-layers 40 \
+    --hidden-size 5120 \
+    --ffn-hidden-size 13824 \
     --load ${CKPT_LOAD_DIR} \
     --lora-load ${LORA_CHECKPOINT} \
-    --num-attention-heads 32 \
+    --num-attention-heads 40 \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_MODEL} \
     --tokenizer-not-use-fast \
     --seq-length 4096 \
     --max-position-embeddings 4096 \
-    --micro-batch-size 4 \
+    --micro-batch-size 2 \
     --global-batch-size 16 \
     --make-vocab-size-divisible-by 1 \
-    --lr 1.25e-6 \
+    --lr 1e-6 \
     --train-iters 200 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
@@ -62,12 +63,12 @@ GPT_ARGS="
     --use-flash-attn \
     --no-masked-softmax-fusion \
     --attention-softmax-in-fp32 \
-    --min-lr 1.25e-7 \
+    --min-lr 1e-8 \
     --weight-decay 1e-1 \
     --lr-warmup-fraction 0.01 \
     --clip-grad 1.0 \
     --adam-beta1 0.9 \
-    --initial-loss-scale 65536 \
+    --initial-loss-scale 4096 \
     --adam-beta2 0.95 \
     --no-gradient-accumulation-fusion \
     --no-load-optim \

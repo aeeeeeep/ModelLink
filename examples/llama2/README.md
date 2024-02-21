@@ -50,9 +50,8 @@ LLAMA2-7B 训练的硬件配置:
 1. 拷贝代码仓到本地服务器
 
    ```shell
-   git clone https://gitee.com/ascend/ModelLink.git 
+   git clone -b modellink https://gitee.com/ascend/ModelLink.git 
    cd ModelLink 
-   git checkout modellink
    pip install -r requirements.txt
    cd ..
    ```
@@ -68,11 +67,18 @@ LLAMA2-7B 训练的硬件配置:
    pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 
+   # 修改 ascend-toolkit 路径
+   source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+   
    # 安装加速库
    git clone https://gitee.com/ascend/AscendSpeed.git
    cd AscendSpeed
+   pip install -r requirements.txt 
    pip3 install -e .
    cd ..
+   
+   # 安装其余依赖库
+   pip install -r requirements.txt 
    ```
 3. 下载 LLAMA2-7B 的 [预训练权重和词表](https://huggingface.co/daryl149/llama-2-7b-hf/tree/main)
 
@@ -146,21 +152,71 @@ LLAMA2-7B 训练的硬件配置:
     DATA_PATH=usr_local/dataset_llama2/alpaca_text_document  #数据集路径
    ```
 
-   启动 LLaMA2-7B 预训练脚本: examples/pretrain_llama2_7b.sh
+   启动 LLaMA2-7B 预训练脚本: examples/llama2/pretrain_llama2_7b_ptd.sh
 
    ```shell
-    bash examples/llama2/pretrain_llama2_7b.sh
+    bash examples/llama2/pretrain_llama2_7b_ptd.sh
    ```
 5. 微调
 
-   微调的配置脚本基本和预训练脚本pretrain_llama2_7b.sh一致. *区别是添加使能微调开关和增加权重路径参数*
-```shell
-  # 使能微调开关
-  --finetune
-  # 根据实际情况配置模型参数加载路径
-  CKPT_LOAD_DIR="your init model load path"
-  --load ${CKPT_LOAD_DIR}
-```
+   5.1 准备微调数据集
+   下载微调数据集 [这里](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+
+   ```shell
+   # 下载数据集
+   mkdir finetune_dataset
+   cd ./finetune_dataset
+   wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+   cd ..
+   
+   # 处理微调数据集                            
+   python ./tools/preprocess_data.py \
+     --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+     --tokenizer-name-or-path ./llama-2-7b-hf \
+     --output-prefix ./finetune_dataset/alpaca \
+     --workers 4 \
+     --log-interval 1000 \
+     --tokenizer-type PretrainedFromHF \
+     --handler-name GeneralInstructionHandler \
+     --append-eod
+   ```
+
+   5.2 全参微调
+   全参微调的配置脚本基本和预训练脚本一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
+
+   ```bash
+   DATA_PATH=./finetune_dataset/alpaca
+   
+   --is-instruction-dataset \
+   ```
+
+   5.3 Lora微调
+   Lora微调的脚本配置是在预训练脚本基础上加上lora参数，如下所示:
+
+   ```bash
+       --lora-target-modules query_key_value dense proj dense_4h_to_h \
+       --lora-r 16 \
+       --lora-alpha 32 \
+   ```
+
+   如果模型的词表变化了，可以加上以下参数（词表不变不建议添加）
+
+   ```bash
+     --lora-modules-to-save word_embeddings output_layer \
+   ```
+
+   Lora微调的断点续训需要加上以下参数：
+
+   ```bash
+       --load ${ORIGIN_CHECKPOINT}  \   # 原始模型参数路径
+       --lora-load ${LORA_CHECKPOINT} \   # lora参数checkpoint
+   ```
+   
+   启动Lora微调脚本: examples/llama2/tune_llama2_7b_ptd.sh
+
+   ```shell
+    bash examples/llama2/tune_llama2_7b_ptd.sh
+   ```
 
 ### 性能
 
@@ -187,7 +243,7 @@ NPU VS 参考 loss
 
 ## 推理-7B
 
-首先需要配置llama2-7B的推理脚本: tasks/inference/generate_llama2_7b_ptd.sh
+配置llama2-7B 推理脚本: tasks/inference/generate_llama2_7b_ptd.sh
 
 ```bash
 # 根据您自己的 ascend-toolkit 路径，执行set_env.sh
@@ -199,10 +255,22 @@ TOKENIZER_PATH="your tokenizer directory path"
 TOKENIZER_MODEL="your tokenizer.model file path"
 ```
 
-然后可直接启动generate_llama2_7b_ptd.sh
+配置 LLaMA2-7B lora推理脚本: tasks/inference/generate_llama2_7b_lora_ptd.sh
+
+```bash
+# 修改lora权重路径
+CHECKPOINT_LORA="your lora model directory path"
+```
+
+启动llama2-7B 推理脚本
 
 ```bash
 bash tasks/inference/generate_llama2_7b_ptd.sh
+```
+
+启动llama2-7B lora推理脚本
+```bash
+bash tasks/inference/generate_llama2_7b_lora_ptd.sh
 ```
 
 推理的示例如下:
@@ -310,9 +378,8 @@ LLaMA2-13B 训练的硬件配置:
 
 1. 拷贝代码仓到本地服务器
     ```shell
-    git clone https://gitee.com/ascend/ModelLink.git 
+    git clone -b modellink https://gitee.com/ascend/ModelLink.git 
     cd ModelLink 
-    git checkout modellink
     mkdir logs
     mkdir ckpt
     ```
@@ -329,13 +396,17 @@ LLaMA2-13B 训练的硬件配置:
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
     
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+   
     # 安装加速库
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
+    pip install -r requirements.txt 
     pip3 install -e .
     cd ..
-    
-    # install other packages
+   
+    # 安装其余依赖库
     pip install -r requirements.txt 
     ```
 
@@ -428,15 +499,41 @@ python tools/checkpoint/util.py --model-type GPT \
      --append-eod
    ```
 
-   5.2 全参微调 \
-   全参微调的配置脚本基本和预训练脚本pretrain_llama2_13B_ptd_8p.sh一致. *区别是添加使能微调开关和增加权重路径参数*
+   5.2 全参微调
+   全参微调的配置脚本基本和预训练脚本一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
 
    ```bash
-   # 使能微调开关
-   --finetune
-   # 根据实际情况配置模型参数加载路径
-   CKPT_LOAD_DIR="your init model load path"
-   --load ${CKPT_LOAD_DIR}
+   DATA_PATH=./finetune_dataset/alpaca
+   
+   --is-instruction-dataset \
+   ```
+
+   5.3 Lora微调
+   Lora微调的脚本配置是在预训练脚本基础上加上lora参数，如下所示:
+
+   ```bash
+       --lora-target-modules query_key_value dense proj dense_4h_to_h \
+       --lora-r 16 \
+       --lora-alpha 32 \
+   ```
+
+   如果模型的词表变化了，可以加上以下参数（词表不变不建议添加）
+
+   ```bash
+     --lora-modules-to-save word_embeddings output_layer \
+   ```
+
+   Lora微调的断点续训需要加上以下参数：
+
+   ```bash
+       --load ${ORIGIN_CHECKPOINT}  \   # 原始模型参数路径
+       --lora-load ${LORA_CHECKPOINT} \   # lora参数checkpoint
+   ```
+   
+   启动Lora微调脚本: examples/llama2/tune_llama2_13b_ptd.sh
+
+   ```shell
+    bash examples/llama2/tune_llama2_13b_ptd.sh
    ```
 
 ### 性能
@@ -470,9 +567,19 @@ NPU运行平稳，资源使用稳定，中间没有报错，Loss呈下降趋势�
 CHECKPOINT=./llama2-13b-tp8-pp1/
 VOCAB_FILE=./llama2-13b-hf/
 ```
+配置 LLaMA2-13B lora推理脚本: tasks/inference/generate_llama2_13b_lora_ptd.sh
 
+```bash
+# 修改lora权重路径
+CHECKPOINT_LORA="your lora model directory path"
+```
+启动推理脚本
 ```shell
 bash ./tasks/inference/generate_llama2_13b_ptd.sh
+```
+启动lora推理脚本
+```shell
+bash ./tasks/inference/generate_llama2_13b_lora_ptd.sh
 ```
 推理结果示例如下:
 ![llama2-13B-generate.png](../../sources/images/llama2/llama2-13B-generate.png)
@@ -529,9 +636,8 @@ LLaMA2-34B/70B 训练的硬件配置:
 
 1. 拷贝仓库到本地服务器:
     ```shell
-    git clone https://gitee.com/ascend/ModelLink.git 
+    git clone -b modellink https://gitee.com/ascend/ModelLink.git 
     cd ModelLink 
-    git checkout modellink
     mkdir logs
     mkdir ckpt
     ```
@@ -657,7 +763,9 @@ pip install -r requirements.txt
      --tokenizer-model ./llama2-70b-hf/tokenizer.model
     ```
 
-4. 准备数据集
+4. 预训练
+
+    4.1 准备预训练数据集
 
     有两个数据集可以使用: Alpaca 和 Moss. 
 
@@ -703,7 +811,7 @@ pip install -r requirements.txt
     --handler-name MOSSInstructionHandler
     ```
    
-5. 配置预训练脚本
+    4.2 使用ptd模式预训练
 
     LLaMA2-34B: examples/llama2/pretrain_llama2_34B_ptd_16p.sh 
     ```shell
@@ -725,7 +833,7 @@ pip install -r requirements.txt
     DATA_PATH=./dataset_llama2/alpaca_text_document  #数据集路径
     ```
     
-6. 启动训练脚本
+    启动预训练脚本
     
     LLaMA2-34B: examples/llama2/pretrain_llama2_34B_ptd_16p.sh
     ```shell
@@ -735,7 +843,74 @@ pip install -r requirements.txt
     ```shell
     bash examples/llama2/pretrain_llama2_70B_ptd.sh
     ```
+
+5. 微调
+
+   5.1 准备微调数据集
+   下载微调数据集 [这里](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+
+   ```shell
+   # 下载数据集
+   mkdir finetune_dataset
+   cd ./finetune_dataset
+   wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+   cd ..
    
+   # 处理微调数据集                            
+   python ./tools/preprocess_data.py \
+     --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+     --tokenizer-name-or-path ./llama-2-70b-hf \
+     --output-prefix ./finetune_dataset/alpaca \
+     --workers 4 \
+     --log-interval 1000 \
+     --tokenizer-type PretrainedFromHF \
+     --handler-name GeneralInstructionHandler \
+     --append-eod
+   ```
+
+   5.2 全参微调
+   全参微调的配置脚本基本和预训练脚本一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
+
+   ```bash
+   DATA_PATH=./finetune_dataset/alpaca
+   
+   --is-instruction-dataset \
+   ```
+
+   5.3 Lora微调
+   Lora微调的脚本配置是在预训练脚本基础上加上lora参数，如下所示:
+
+   ```bash
+       --lora-target-modules query_key_value dense proj dense_4h_to_h \
+       --lora-r 16 \
+       --lora-alpha 32 \
+   ```
+
+   如果模型的词表变化了，可以加上以下参数（词表不变不建议添加）
+
+   ```bash
+     --lora-modules-to-save word_embeddings output_layer \
+   ```
+
+   Lora微调的断点续训需要加上以下参数：
+
+   ```bash
+       --load ${ORIGIN_CHECKPOINT}  \   # 原始模型参数路径
+       --lora-load ${LORA_CHECKPOINT} \   # lora参数checkpoint
+   ```
+   
+   启动llama2-34B Lora微调脚本: examples/llama2/tune_llama2_34b_ptd.sh
+
+   ```shell
+    bash examples/llama2/tune_llama2_34b_ptd.sh
+   ```
+   
+   启动llama2-70B Lora微调脚本: examples/llama2/tune_llama2_70b_ptd.sh
+
+   ```shell
+    bash examples/llama2/tune_llama2_70b_ptd.sh
+   ```
+
 ### 性能-2
 
 #### 吞吐-2
@@ -786,13 +961,32 @@ CHECKPOINT=<checkpoint-path>
 VOCAB_FILE=<vocabfile-path>
 ```
 
+配置lora推理脚本
+
+LLaMA2-34B:`tasks/inference/generate_llama2_34b_lora_ptd.sh`。
+
+LLaMA2-70B:`task/inference/generate_llama2_70b_lora_ptd.sh`。
+
+```bash
+# 修改lora权重路径
+CHECKPOINT_LORA="your lora model directory path"
+```
+
 LLaMA2-34B启动推理:
 ```shell
 bash ./tasks/inference/generate_llama2_34B_ptd.sh
 ```
+LLaMA2-34B启动lora推理:
+```shell
+bash ./tasks/inference/generate_llama2_34b_lora_ptd.sh
+```
 LLaMA2-70B启动推理:
 ```shell
 bash ./task/inference/generate_llama2_70B_ptd.sh
+```
+LLaMA2-70B启动lora推理:
+```shell
+bash ./task/inference/generate_llama2_70b_lora_ptd.sh
 ```
 
 LLaMA2-34B推理样例:
