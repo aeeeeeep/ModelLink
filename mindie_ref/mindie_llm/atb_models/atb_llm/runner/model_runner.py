@@ -56,9 +56,9 @@ class ModelRunner:
         if self.quantize == 'smooth_quant':
             weights._set_smooth_quant_params(self.model_name_or_path)
         self.model = self.model_cls(self.config, weights)
-        self.model.to(weights.device)
         if self.dtype in [torch.float16, torch.bfloat16]:
             self.model.to(self.dtype)
+        self.model.to(weights.device)
 
         self.soc_info = self.model.soc_info
         self.head_size = self.model.head_size

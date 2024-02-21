@@ -29,7 +29,7 @@ class PerformanceConfig:
     case_pair: Union[Optional[List[int]], str] = None
     save_file_name: str = ""
     perf_mode: str = "normal"
-    skip_decode: int = 1
+    skip_decode: int = 0
 
     def __post_init__(self):
         int_attr = ("batch_size", "max_len_exp", "min_len_exp", "skip_decode")

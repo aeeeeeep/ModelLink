@@ -3,8 +3,8 @@
 #  Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
 """
 gpt-neox-20b
-@create: 2024/1/24 19:32 
-@since: 2024/1/24 19:32 
+@create: 2024/1/24 19:32
+@since: 2024/1/24 19:32
 """
 import argparse
 import os
@@ -94,12 +94,12 @@ def demo_inference(launcher: Launcher):
                    {"max_new_tokens": 64, "do_sample": False, "repetition_penalty": 1.1})
 
     launcher.logger.info("---------------inference---------------")
-    launcher.infer('登鹳雀楼->王之涣\n夜雨寄北->',
+    launcher.infer('How to learn a new language?',
                    {"max_new_tokens": 64, "do_sample": False, "repetition_penalty": 1.1})
 
     launcher.logger.info("---------------batch---------------")
     query_list = [
-        "浙江的省会在哪里？",
+        "How to learn a new language?",
         'The CEO of Google is',
     ]
     launcher.infer_batch(query_list,

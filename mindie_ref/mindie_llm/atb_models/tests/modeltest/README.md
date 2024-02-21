@@ -5,7 +5,7 @@ ModelTest为大模型的性能和精度提供测试功能。
 目前支持：PA场景，float16
 功能：
 1. 性能测试：指定batch，指定输入输出长度的e2e性能、吞吐，首Token以及非首Token性能。吞吐。
-2. 精度测试：CEval, MMLU, BoolQ下游数据集
+2. 精度测试：CEval, MMLU, BoolQ, HumanEval下游数据集
 PA模型：
 1. Llama (Llama-65B, Llama2-7B, Llama2-13B, Llama2-70B)
 2. Starcoder-15.5B
@@ -22,28 +22,29 @@ source /usr/local/Ascend/atb/set_env.sh
 source set_env.sh
 # 设置ATB_TESTDATA环境变量
 export ATB_TESTDATA="[path]" # 用于存放测试结果的路径
+# 设置使用卡号
+export ASCEND_RT_VISIBLE_DEVICES="[卡号]" # 如"0,1,2,3,4,5,6,7"
 ```
 
 ### 安装python依赖
 ```
-pip install loguru
-pip install tabulate
-pip install accelerate
-pip install thefuzz
+pip install -r requirements.txt
 ```
 
 ### 运行指令
 ```
-bash run.sh pa_fp16 [performance|full_CEval|full_MMLU|full_BoolQ] ([case_pair]) [batch_size] [model_name] [weight_dir] [chip_num]
+bash run.sh pa_fp16 [performance|full_CEval|full_MMLU|full_BoolQ] ([case_pair]) [batch_size] [model_name] ([use_refactor]) [weight_dir] [chip_num] ([max_position_embedding/max_sequence_length])
 
 说明:
 1. case_pair只在performance场景下接受输入，接收一组或多组输入，格式为[[seq_in_1,seq_out_1],...,[seq_in_n,seq_out_n]], 如[[256,256],[512,512]]
 2. model_name:
     Llama-65B, Llama2-7B, Llama2-13B, Llama2-70B: llama
     Starcoder-15.5B: starcoder
-3. weight_dir: 权重路径
-4. chip_num: 使用的卡数
-5. 运行完成后，会在控制台末尾呈现保存数据的文件夹
+3. 当model_name为llama时，须指定use_refactor为True或者False
+4. weight_dir: 权重路径
+5. chip_num: 使用的卡数
+6. max_position_embedding: 可选参数，不传入则使用config中的默认配置
+7. 运行完成后，会在控制台末尾呈现保存数据的文件夹
 
 举例：
 1. 测试Llama-70B在8卡[512, 512]场景下，16 batch的性能

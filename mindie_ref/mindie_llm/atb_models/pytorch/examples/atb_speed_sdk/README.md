@@ -65,9 +65,9 @@ min_len_exp=5
 ;case_pair=[[1,2],[2,3]]
 ;生成的结果文件名称，默认会自动生成，一般不设置
 ;save_file_name=
-;性能测试方法，detail / normal , 默认是normal.要使用detail需要侵入式替换utils，并加上环境变量 RETURN_PERF_DETAIL=1
+;性能测试方法，detail / normal , 默认是normal.要使用detail需要配合装饰器计时，并加上环境变量 TIMEIT=1
 ;perf_mode=
-;性能测试时是否只测试generate而跳过decode，0/1 默认是1
+;性能测试时是否只测试generate而跳过decode，0/1 默认是0
 ;skip_decode=
 ```
 
@@ -135,7 +135,6 @@ SDK提供了两种精度测试方法，ceval和mmlu
 | shot        | 5     | 每个科目的shot数量                       |
 | seq_len_out | 32    | 每个问题的回答长度                         |
 
-## ceval
 
 ### 1. 下载测试数据集
 

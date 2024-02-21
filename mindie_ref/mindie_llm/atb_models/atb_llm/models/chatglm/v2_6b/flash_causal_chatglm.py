@@ -29,7 +29,6 @@ import torch.nn.functional as F
 from torch import nn
 from transformers.activations import ACT2FN
 from transformers.configuration_utils import PretrainedConfig
-from loguru import logger
 
 from text_generation_server.utils.flash_attn_ascend import attention_ascend
 from text_generation_server.utils.layers import (

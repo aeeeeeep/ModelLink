@@ -233,8 +233,8 @@ Vicuna是由 LMSYS 发布的基于Llama 2用ShareGPT收集的125K对话集微调
   cd ../atb_speed_sdk/
   pip install .
 
-  # 进入run.sh，设置环境变量BIND_CPU为1（默认为0，不绑核）
-  export BIND_CPU=1
+  # 进入sdk_config.ini，设置环境变量bind_cpu为1（默认为1，绑核）
+  bind_cpu=1
   ```
 
 - 配置必选参数：最大输入输出长度

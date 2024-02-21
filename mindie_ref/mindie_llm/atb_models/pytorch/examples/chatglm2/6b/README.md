@@ -222,7 +222,7 @@ weight_offset.npy  weight_scale.npy
 
 - <a name="perf">模型性能数据测试</a>
 
-  性能测试请先参见[atb_speed_sdk 精确打点法](../../atb_speed_sdk/README.md#精确打点法)替换transformers库的utils.py文件，并配置环境变量`export RETURN_PERF_DETAIL=1`。
+  **性能测试请先配置环境变量`export TIMEIT=1`，测试结束后删除该环境变量`unset TIMEIT`。**
 
   ```shell
   # 浮点
