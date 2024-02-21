@@ -9,6 +9,8 @@ export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
 export PYTORCH_NPU_ALLOC_CONF="max_split_size_mb:2048"
 export LCCL_ENABLE_FALLBACK=1
 export MAX_SEQ_LENGTH=2048
+export LONG_SEQ_ENABLE=0
+export BIND_CPU=0
 
 WORLD_SIZE="1"
 DEVICE_TYPE="d3"
@@ -54,13 +56,12 @@ function fn_main()
 
     if [[ ! -z "$1" ]];then
         DEVICE_TYPE=$1
-        if [[ $DEVICE_TYPE == "d9" ]];then
-            echo "[DEVICE_TYPE]: 910"
-            export ATB_USE_TILING_COPY_STREAM=0
-        else
-            echo "[DEVICE_TYPE]: 310"
-        fi
+        echo "[DEVICE_TYPE]: $DEVICE_TYPE"
         shift
+    fi
+
+    if [[ $DEVICE_TYPE == "d9" ]];then
+        export ATB_USE_TILING_COPY_STREAM=0
     fi
 
     case "${RUN_OPTION}" in

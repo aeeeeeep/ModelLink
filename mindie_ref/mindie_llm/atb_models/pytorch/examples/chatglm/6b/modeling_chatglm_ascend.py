@@ -1158,11 +1158,11 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             else:
                 self.k_cache_input = torch.zeros(self.num_layers, self.batch,
                                                  self.max_seq_len,
-                                                 self.config.kv_channels * self.multi_query_group_num,
+                                                 self.config.hidden_size // self.world_size,
                                                  dtype=torch.float16, device="npu").contiguous()
                 self.v_cache_input = torch.zeros(self.num_layers, self.batch,
                                                  self.max_seq_len,
-                                                 self.config.kv_channels * self.multi_query_group_num,
+                                                 self.config.hidden_size // self.world_size,
                                                  dtype=torch.float16, device="npu").contiguous()
         
         if full_flag:  # 首token

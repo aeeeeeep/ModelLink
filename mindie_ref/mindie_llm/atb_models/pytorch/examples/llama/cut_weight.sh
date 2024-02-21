@@ -5,6 +5,7 @@ output_dir="./llama2-7b_parallel"
 # cutting parameters
 cut_row_keys_=('q_proj','k_proj','v_proj','gate_proj','up_proj')
 cut_col_keys_=('o_proj','down_proj')
+yi6b=0
 
 script_dir=$(cd $(dirname $0); pwd)
 transformers_package_path=$(python3 -c 'import transformers; import os; print(os.path.dirname(transformers.__file__))')
@@ -32,7 +33,8 @@ function fn_main()
         --output_path $output_dir \
         --world_size $WORLD_SIZE \
         --cut_row_keys $cut_row_keys_ \
-        --cut_col_keys $cut_col_keys_
+        --cut_col_keys $cut_col_keys_ \
+        --is_yi6b $yi6b
         ;;
 
     "--quant")

@@ -75,10 +75,15 @@ atb::Status CreateFusionLinear(const FusionLinearParam &param, atb::Operation **
         linearQuantParam.transposeB = true;  // 是否转置B矩阵: true => 需要转置矩阵B
         linearQuantParam.hasBias = false;
         CREATE_OPERATION(linearQuantParam, &linearQuantNode.operation);
-        linearQuantNode.inTensorIds = {
-            param.quantType == RMS_NORM_QUANT_LINEAR_DEQUANT ? LinearTensorIdx::IN_INPUT : config.INTERMIDATE_INPUT,
-            LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_DESCALE
-        };
+        if (param.quantType == RMS_NORM_QUANT_LINEAR_DEQUANT) {
+            linearQuantNode.inTensorIds = {
+                LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_DESCALE
+            };
+        } else {
+            linearQuantNode.inTensorIds = {
+                config.INTERMIDATE_INPUT, LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_DESCALE
+            };
+        }
         linearQuantNode.outTensorIds = {LinearTensorIdx::OUT_LINEAR};
     }
 

@@ -33,6 +33,7 @@
 #include "baichuan2/13b/model/paged_attention_model.h"
 #include "baichuan2/13b/model/paged_attention_quant_model.h"
 #include "chatglm2/6b/model/flash_attention_model.h"
+#include "chatglm/6b/model/flash_attention_model.h"
 #include "chatglm2/6b/model/paged_attention_model.h"
 #include "bloom/model/flash_attention_model.h"
 #include "falcon/7b/model/flash_attention_model.h"
@@ -41,8 +42,9 @@
 #include "llama/model/flash_attention_model.h"
 #include "llama_adapter/model/adapter_model.h"
 #include "llama_pa/model/paged_attention_model.h"
-#include "llama_pa/model/quant_paged_attention_model.h"
+#include "llama_pa/model/paged_attention_common_model.h"
 #include "llama_parallel/model/decoder_model.h"
+#include "llama2/70b/model/fusion_pa_model.h"
 #include "minigpt4/model/fusion_encoder_model.h"
 #include "minigpt4/model/fusion_model.h"
 #include "pytorch/adapter/utils/utils.h"
@@ -52,6 +54,7 @@
 #include "baichuan2/7b/model/paged_attention_model.h"
 #include "falcon/40b/model/flash_attention_model.h"
 #include "qwen/14b/model/flash_attention_model.h"
+#include "qwen/14b/model/paged_attention_model.h"
 #include "aquila/7b/model/flash_attention_model.h"
 #include "gptneox/20b/model/fa_kv_cache_rope_model.h"
 #include "gptneox/20b/model/fa_kvcache_model.h"
@@ -60,9 +63,14 @@
 #include "internlm/20b/model/flash_attention_rope_model.h"
 #include "internlm/7b/model/flash_attention_rope_model.h"
 #include "codellama/34b/model/flash_attention_rope_model.h"
+#include "starcoder/model/flash_attention_model.h"
+#include "starcoder/model/flash_attention_quant_model.h"
+#include "starcoder/model/paged_attention_model.h"
+#include "starcoder/model/paged_attention_quant_model.h"
 #include "atb_speed/utils/model_factory.h"
 #include "telechat/model/float_model.h"
 #include "telechat/model/quant_model.h"
+#include "llama2/70b/model/fusion_pa_model_w8a8.h"
 
 void *ModelTorch::GetWorkSpace(uint64_t bufferSize)
 {
@@ -138,16 +146,20 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::llama::FlashAttentionModel>(param);
     } else if (modelName_ == "llama_pa_model" || modelName_ == "llama_65b_pa_model") {
         model_ = std::make_shared<atb_speed::llama_pa::PAModel>(param);
-    } else if (modelName_ == "llama_quant_pa_model") {
-        model_ = std::make_shared<atb_speed::llama_pa::QuantPAModel>(param);
+    } else if (modelName_ == "llama_small_pa_model") {
+        model_ = std::make_shared<atb_speed::llama_pa::CommonPAModel>(param);
     } else if (modelName_ == "llama_parallel_decoder_model") {
         model_ = std::make_shared<atb_speed::llama_parallel::DecoderModel>(param);
     } else if (modelName_ == "llama_adapter_encoder_model") {
         model_ = std::make_shared<atb_speed::llama_adapter::EncoderAdapterModel>(param);
     } else if (modelName_ == "llama_adapter_decoder_model") {
         model_ = std::make_shared<atb_speed::llama_adapter::DecoderAdapterModel>(param);
+    } else if (modelName_ == "llama2_70b_fusion_pa_model") {
+        model_ = std::make_shared<atb_speed::llama2_70b::FusionPAModel>(param);
     } else if (modelName_ == "chatglm2_common_model") {
         model_ = std::make_shared<atb_speed::chatglm2_6b::ChatGlm2CommonModelFa>(param);
+    } else if (modelName_ == "chatglm_6b_flash_attention_model") {
+        model_ = std::make_shared<atb_speed::chatglm_6b::ChatGlmCommonModelFa>(param);
     } else if (modelName_ == "chatglm2_6b_decoder_pa_model") {
         model_ = std::make_shared<atb_speed::chatglm2_6b::PagedAttentionModel>(param);
     } else if (modelName_ == "baichuan2_13b_flash_attention_model") {
@@ -178,6 +190,8 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::falcon_40b::FusionModel>(param);
     } else if (modelName_ == "qwen_14b_flash_attention_model") {
         model_ = std::make_shared<atb_speed::qwen_14b::FlashAttentionModel>(param);
+    } else if (modelName_ == "qwen_14b_pa_model") {
+        model_ = std::make_shared<atb_speed::qwen_14b::PagedAttentionModel>(param);
     } else if (modelName_ == "aquila_7b_flash_attention_model") {
         model_ = std::make_shared<atb_speed::aquila_7b::FlashAttentionRopeModel>(param);
     } else if (modelName_ == "gptneox_20b_fa_kvcache_model") {
@@ -194,10 +208,20 @@ int64_t ModelTorch::SetParam(std::string param)
         model_ = std::make_shared<atb_speed::codellama_34b::FlashAttentionRopeModel>(param);
     } else if (modelName_ == "gptneox_20b_fa_kvcache_rope_model") {
         model_ = std::make_shared<atb_speed::gptneox_20b::FaKvCacheRopeModel>(param);
+    } else if (modelName_ == "starcoder_fa_parallel_model") {
+        model_ = std::make_shared<atb_speed::star_coder::FlashAttentionModel>(param);
+    } else if (modelName_ == "starcoder_fa_parallel_quant_model") {
+        model_ = std::make_shared<atb_speed::star_coder::FlashAttentionQuantModel>(param);
+    } else if (modelName_ == "starcoder_pa_model") {
+        model_ = std::make_shared<atb_speed::star_coder::PAModel>(param);
+    } else if (modelName_ == "starcoder_pa_quant_model") {
+        model_ = std::make_shared<atb_speed::star_coder::PAQuantModel>(param);
     } else if (modelName_ == "telechat_float_model") {
         model_ = std::make_shared<atb_speed::telechat::FloatFAModel>(param);
     } else if (modelName_ == "telechat_quant_model") {
         model_ = std::make_shared<atb_speed::telechat::QuantFAModel>(param);
+    } else if (modelName_ == "llama2_70b_fusion_pa_model_w8a8") {
+        model_ = std::make_shared<atb_speed::llama2_70b::FusionPAModelW8A8>(param);
     } else {
         ATB_LOG(FATAL) << "not support modelName:" << modelName_;
         return atb::ERROR_INVALID_PARAM;

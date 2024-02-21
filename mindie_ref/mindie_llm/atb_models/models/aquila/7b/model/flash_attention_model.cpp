@@ -47,7 +47,7 @@ const int FINALNORMNODE_WEIGHT_COUNT = 1;
 const int OUT_LM_HEAD_WEIGHT_COUNT = 1;
 const int OPERATION_COUNT_BEFORE_LAYER = 1;
 const int INTERMEDIATETENSOR_COUNT_BEFORE_LAYER = 1;
-const int OPERATION_COUNT_AFTER_LAYER = 2;
+const int OPERATION_COUNT_AFTER_LAYER = 3;
 const int OUT_TENSOR_HIDDENSTATES_ID = 0;
 const int OUT_TENSOR_MAX_ID = 1;
 const int IN_TENSOR_INPUTIDS_ID = 0;
@@ -145,6 +145,7 @@ int64_t FlashAttentionRopeModel::BuildGraph()
         opParam.dk = param_.dk;
         opParam.rank = param_.rank;
         opParam.rankSize = param_.rankSize;
+        opParam.backend = param_.backend;
         atb_speed::aquila_7b::FlashAttentionRopeLayer(opParam, &op);
         layerNode.operation.reset(op);
         layerNode.inTensors.resize(layerNode.operation->GetInputNum()); // .at 需要resize，直接赋值不需要
@@ -178,9 +179,20 @@ int64_t FlashAttentionRopeModel::BuildGraph()
     finalNormNode.operation.reset(op);
     const int finalLayerNormWeightTensorId =
         graph_.weightTensors.size() - FINALNORMNODE_WEIGHT_COUNT - OUT_LM_HEAD_WEIGHT_COUNT;
-    const int finalLayerNormOutTensorId = internalTensorSize - 1;
+    const int finalLayerNormOutTensorId = internalTensorSize - 2;
     finalNormNode.inTensors = {firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId)};
     finalNormNode.outTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId)};
+
+    const int hiddenSize = param_.headNum * param_.dk;
+    auto &qPassSliceNode = graph_.nodes.at(nodeId++);
+    atb::infer::SliceParam slicePassParam;
+    slicePassParam.offsets = {0, 0, hiddenSize * param_.rank};
+    slicePassParam.size = {-1, -1, hiddenSize};
+    CREATE_OPERATION(slicePassParam, &op);
+    qPassSliceNode.operation.reset(op);
+    const int qPassSliceNodeOutTensorId = internalTensorSize - 1;
+    qPassSliceNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId)};
+    qPassSliceNode.outTensors = {&graph_.internalTensors.at(qPassSliceNodeOutTensorId)};
 
     auto &outLinearNode = graph_.nodes.at(nodeId++);
     atb_speed::common::ParallelParamV2 outLinearParm;
@@ -191,7 +203,7 @@ int64_t FlashAttentionRopeModel::BuildGraph()
     atb_speed::common::RowParallelLinearV2(outLinearParm, &op);
     outLinearNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
-    outLinearNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
+    outLinearNode.inTensors = {&graph_.internalTensors.at(qPassSliceNodeOutTensorId),
                                &graph_.weightTensors.at(finalLinearWeightTensorId),
                                &graph_.internalTensors.at(IN_HOLDER),
                                &graph_.internalTensors.at(IN_HOLDER),

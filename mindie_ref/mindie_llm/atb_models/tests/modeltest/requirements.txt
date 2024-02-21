@@ -1,0 +1,4 @@
+loguru
+tabulate
+accelerate
+thefuzz

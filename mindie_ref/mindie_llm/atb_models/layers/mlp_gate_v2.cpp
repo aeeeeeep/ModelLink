@@ -148,7 +148,9 @@ atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operati
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(0);
-        outTensorDescs.at(0).dtype = ACL_FLOAT16;
+        if (inTensorDescs.at(0).dtype == ACL_INT8) {
+            outTensorDescs.at(0).dtype = ACL_FLOAT16;
+        }
         return atb::NO_ERROR;
     };
 

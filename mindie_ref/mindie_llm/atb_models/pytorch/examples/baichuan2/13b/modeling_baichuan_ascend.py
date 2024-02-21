@@ -1,3 +1,5 @@
+# Copyright (c) 2023, Baichuan Intelligent Technology. All rights reserved.
+
 import json
 import math
 import os
@@ -9,6 +11,8 @@ import torch
 import torch_npu
 from torch import nn
 from torch.nn import CrossEntropyLoss
+from atb_speed.common.timer import Timer
+from atb_speed.common.utils import load_atb_speed
 from transformers import PreTrainedModel, PretrainedConfig
 from transformers.activations import ACT2FN
 from transformers.generation.utils import GenerationConfig
@@ -41,16 +45,7 @@ def get_rank_and_world_size():
 
 RANK, WORLD_SIZE = get_rank_and_world_size()
 
-
-def load_ascend_transformer():
-    ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
-    if ATB_SPEED_HOME_PATH is None:
-        raise RuntimeError("env ATB_SPEED_HOME_PATH not exist, source set_env.sh")
-    LIB_PATH = os.path.join(ATB_SPEED_HOME_PATH, "lib/libatb_speed_torch.so")
-    torch.classes.load_library(LIB_PATH)
-
-
-load_ascend_transformer()
+load_atb_speed()
 
 
 def _get_interleave(n):
@@ -657,7 +652,7 @@ class BaichuanForCausalLM(BaichuanPreTrainedModel):
     def __init__(self, config, *model_args, **model_kwargs):
         super().__init__(config, *model_args, **model_kwargs)
         self.model = BaichuanModel(config)
-        self.lm_head = NormHead(config.hidden_size // WORLD_SIZE, config.vocab_size, bias=False)
+        self.lm_head = NormHead(config.hidden_size, config.vocab_size // WORLD_SIZE, bias=False)
         if hasattr(config, "quantization_config") and config.quantization_config['load_in_4bit']:
             try:
                 from .quantizer import quantize_offline, init_model_weight_int4
@@ -795,6 +790,7 @@ class BaichuanForCausalLM(BaichuanPreTrainedModel):
                                                                revision=revision,
                                                                use_safetensors=use_safetensors, **kwargs)
 
+    @Timer.timing
     def forward(
             self,
             input_ids: torch.LongTensor = None,

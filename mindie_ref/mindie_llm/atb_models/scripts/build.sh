@@ -237,10 +237,10 @@ function fn_build_coverage()
 
 function fn_build_version_info()
 {
-    if [ -f "$CODE_ROOT"/../CI/config/version.ini ]; then
-        PACKAGE_NAME=$(cat $CODE_ROOT/../CI/config/version.ini | grep "PackageName" | cut -d "=" -f 2)
-        VERSION=$(cat "$CODE_ROOT"/../CI/config/version.ini | grep "ATBVersion" | cut -d "=" -f 2)
-        ASCEND_SPEED_VERSION=$(cat $CODE_ROOT/../CI/config/version.ini | grep "ATB-ModelsVersion" | cut -d "=" -f 2)
+    if [ -f "$CODE_ROOT"/../../../../CI/config/version.ini ]; then
+        PACKAGE_NAME=$(cat $CODE_ROOT/../../../../CI/config/version.ini | grep "PackageName" | cut -d "=" -f 2)
+        VERSION=$(cat "$CODE_ROOT"/../../../../CI/config/version.ini | grep "ATBVersion" | cut -d "=" -f 2)
+        ASCEND_SPEED_VERSION=$(cat $CODE_ROOT/../../../../CI/config/version.ini | grep "ATB-ModelsVersion" | cut -d "=" -f 2)
     fi
     current_time=$(date +"%Y-%m-%d %r %Z")
     touch $OUTPUT_DIR/atb_speed/version.info
@@ -257,6 +257,11 @@ function fn_build_for_ci()
 {
     cd $OUTPUT_DIR/atb_speed
     rm -rf ./*.tar.gz
+    cp $CODE_ROOT/dist/atb_llm*.whl .
+    cp -r $CODE_ROOT/atb_llm .
+    cp $CODE_ROOT/setup.py .
+    cp -r $CODE_ROOT/examples .
+    cp -r $CODE_ROOT/tests .
     cp $README_DIR/README.md .
     fn_build_version_info
 
@@ -279,6 +284,12 @@ function fn_build_for_ci()
     if [ -f "README.md" ];then
         rm -rf README.md
     fi
+}
+
+function fn_make_whl() {
+    echo "make atb_llm whl package"
+    cd $CODE_ROOT
+    python3 $CODE_ROOT/setup.py bdist_wheel
 }
 
 function fn_build()
@@ -315,6 +326,7 @@ function fn_build()
         make -j
     fi
     make install
+    fn_make_whl
     fn_build_for_ci
 }
 

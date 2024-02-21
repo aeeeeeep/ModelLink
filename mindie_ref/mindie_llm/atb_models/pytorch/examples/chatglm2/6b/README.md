@@ -30,15 +30,15 @@
 
 # 推理前准备
 
-1. 参见 [推理环境准备](../../../docs/推理环境准备.md) 安装 固件与驱动，CANN，PyTorchAdapter等基础软件。
+1. 参见 [推理环境准备](../../../../docs/推理环境准备.md) 安装 固件与驱动，CANN，PyTorchAdapter等基础软件。
    ```shell
    # 使能cann环境变量（根据实际安装路径修改）
    source ${path-to-ascend-toolkit}/set_env.sh
    # 使能加速库环境变量（根据实际安装路径修改）
    source ${path-to-ascendTB}/set_env.sh
    # 使能inference库环境变量
-   source ${path-to-transfomer-llm}/set_env.sh
-   #稀疏工具在线编译
+   source ${path-to-atb_models}/set_env.sh
+   # 稀疏工具在线编译(可选)
    cd ${path-to-ascend-toolkit}/tools/modelslim/pytorch/weight_compression/compress_graph/
    bash build.sh ${path-to-ascend-toolkit}/ascend-toolkit/latest/
    ```
@@ -86,7 +86,7 @@
        |-- quantization.py
        |-- tokenization_chatglm.py
        |-- tokenizer_config.json
-       `-- tokenizer.model
+       |-- tokenizer.model
        ```
 
      - 在config.json中添加如下配置：
@@ -158,7 +158,7 @@ weight_offset.npy  weight_scale.npy
 1. 获取源码
 
    ```shell
-   cd ${path-to-transfomer-llm}/pytorch/examples/chatglm2_6b
+   cd ${path-to-atb_models}/pytorch/examples/chatglm2/6b
    ```
 2. 安装第三方依赖
 
@@ -168,7 +168,7 @@ weight_offset.npy  weight_scale.npy
 
 ## 模型推理
 
-- 可开启CPU Performance模式以提高模型推理性能。
+- 可开启CPU Performance模式以提高模型推理性能
 
   ```
   cpupower frequency-set -g performance
@@ -177,13 +177,13 @@ weight_offset.npy  weight_scale.npy
 - 推理前开启如下环境变量
 
   ```shell
-  export HCCL_BUFFSIZE=110
   export HCCL_OP_BASE_FFTS_MODE_ENABLE=TRUE
   export TASK_QUEUE_ENABLE=1
   export ATB_OPERATION_EXECUTE_ASYNC=1
   export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
 
-  # 300 Ipro 和 300 IDuo 上使能多 stream 可提升性能
+  # 仅300 Ipro和300 IDuo上开启
+  export HCCL_BUFFSIZE=110
   export ATB_USE_TILING_COPY_STREAM=1
   ```
 
@@ -220,7 +220,9 @@ weight_offset.npy  weight_scale.npy
   torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode precision_dataset --model_path ${CHECKPOINT} --ceval_dataset ${DATASET} --batch 8 --tp_size ${TP_SIZE}
   ```
 
-- 模型性能数据测试
+- <a name="perf">模型性能数据测试</a>
+
+  **性能测试请先配置环境变量`export TIMEIT=1`，测试结束后删除该环境变量`unset TIMEIT`。**
 
   ```shell
   # 浮点
@@ -268,7 +270,7 @@ weight_offset.npy  weight_scale.npy
      export MAX_SEQ_LEN=4096
      ```
 
-- UI 交互
+- <a name="ui">UI 交互</a>
 
   - 命令行交互
 
@@ -294,19 +296,28 @@ weight_offset.npy  weight_scale.npy
   - Web 交互
 
     ```shell
-    # 先 clone GitHub 仓库
+    # 安装依赖
+    pip install -r web_requirements.txt
+    
+    # 下载 GitHub 仓库
     git clone https://github.com/THUDM/ChatGLM2-6B.git
     cd ChatGLM2-6B
     git reset --hard 921d7e9adc69020a19169d1ba4f76c2675a2dd29
 
     # 应用适配代码
-    cp ../web_demo_gradio.patch ./
-    git apply web_demo_gradio.patch
+    git apply ../web_demo.patch
     cd ..
+    
+    # 将 TP_SIZE 设为对应的并行数，例如单芯场景 TP_SIZE=1，双芯场景 TP_SIZE=2
 
     # Gradio 框架
-    # 将TP_SIZE设为对应的并行数，例如单芯场景TP_SIZE=1，双芯场景TP_SIZE=2
-    torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 web_demo.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
+    torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 ChatGLM2-6B/web_demo.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
+    
+    # Streamlit 框架
+    # ATB OpsRunner 的全局缓存暂不支持多线程，需要降低缓存级别，否则会报错
+    # 0 不开启缓存，1 开启本地缓存，2 开启全局缓存，3 同时开启本地和全局缓存，默认为 3
+    export ATB_OPSRUNNER_KERNEL_CACHE_TYPE=1
+    torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 -m streamlit run ChatGLM2-6B/web_demo2.py -- --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
     ```
 
 - `main.py` 参数说明：

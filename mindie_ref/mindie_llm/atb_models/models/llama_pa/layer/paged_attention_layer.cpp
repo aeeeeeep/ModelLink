@@ -128,7 +128,6 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
         paDeParam.headNum = param.headNum;
         paDeParam.qkScale = 1.0 / sqrt(param.dk);
         paDeParam.kvHeadNum = param.headNum;
-        paDeParam.isSupportAlibi = param.isBF16;
         if (param.isBF16) {
             paDeParam.maskType = atb::infer::PagedAttentionParam::MaskType::MASK_TYPE_ALIBI;
             attentionNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ, IN_K_CACHE, IN_V_CACHE, IN_BLOCK_TABLES,
