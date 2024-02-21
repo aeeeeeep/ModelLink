@@ -119,7 +119,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 class ModelTest:
     def __init__(self, model_type, data_type, test_mode, model_name, data_dir, dataset_name, batch_size, device_id,
-                 result_dir, log_dir, hardware_type, case_pair, _, __, ___) -> None:
+                 result_dir, log_dir, hardware_type, case_pair, weight_dir, use_refactor, max_position_embedding) -> None:
         self.model_type = model_type
         self.data_type = data_type
         self.test_mode = test_mode

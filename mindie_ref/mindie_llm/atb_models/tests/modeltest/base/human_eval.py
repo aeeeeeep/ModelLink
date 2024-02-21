@@ -27,7 +27,6 @@ import io
 import os
 import json
 import gzip
-import tqdm
 import contextlib
 import tempfile
 import platform
@@ -35,7 +34,9 @@ import faulthandler
 import signal
 import multiprocessing
 import itertools
+import tqdm
 import numpy as np
+
 
 def read_problems(evalset_file: str) -> Dict[str, Dict]:
     return {task["task_id"]: task for task in stream_jsonl(evalset_file)}
@@ -54,6 +55,7 @@ def stream_jsonl(filename: str) -> Iterable[Dict]:
                 if any(not x.isspace() for x in line):
                     yield json.loads(line)
 
+
 class WriteOnlyStringIO(io.StringIO):
     """ StringIO that throws an exception when it's read from """
 
@@ -70,11 +72,14 @@ class WriteOnlyStringIO(io.StringIO):
         """ Returns True if the IO object can be read. """
         return False
 
+
 class redirect_stdin(contextlib._RedirectStream):  # type: ignore
     _stream = 'stdin'
 
+
 class TimeoutException(Exception):
     pass
+
 
 @contextlib.contextmanager
 def chdir(root):
@@ -90,11 +95,13 @@ def chdir(root):
     finally:
         os.chdir(cwd)
 
+
 @contextlib.contextmanager
 def create_tempdir():
     with tempfile.TemporaryDirectory() as dirname:
         with chdir(dirname):
             yield dirname
+
 
 @contextlib.contextmanager
 def swallow_io():
@@ -103,6 +110,7 @@ def swallow_io():
         with contextlib.redirect_stderr(stream):
             with redirect_stdin(stream):
                 yield
+
 
 @contextlib.contextmanager
 def time_limit(seconds: float):
@@ -142,7 +150,6 @@ def reliability_guard(maximum_memory_bytes: Optional[int] = None):
     builtins.exit = None
     builtins.quit = None
 
-    import os
     os.environ['OMP_NUM_THREADS'] = '1'
 
     os.kill = None
@@ -190,6 +197,7 @@ def reliability_guard(maximum_memory_bytes: Optional[int] = None):
     sys.modules['psutil'] = None
     sys.modules['tkinter'] = None
 
+
 def check_correctness(problem: Dict, completion: str, timeout: float,
                       completion_id: Optional[int] = None) -> Dict:
     """
@@ -205,7 +213,6 @@ def check_correctness(problem: Dict, completion: str, timeout: float,
         with create_tempdir():
 
             # These system calls are needed when cleaning up tempdir.
-            import os
             import shutil
             rmtree = shutil.rmtree
             rmdir = os.rmdir
@@ -257,6 +264,7 @@ def check_correctness(problem: Dict, completion: str, timeout: float,
         completion_id=completion_id,
     )
 
+
 def estimate_pass_at_k(
     num_samples: Union[int, List[int], np.ndarray],
     num_correct: Union[List[int], np.ndarray],
@@ -284,6 +292,7 @@ def estimate_pass_at_k(
         [estimator(int(n), int(c), k) for n, c in zip(num_samples_it, num_correct)]
     )
 
+
 def write_jsonl(filename: str, data: Iterable[Dict], append: bool = False):
     """
     Writes an iterable of dictionaries to jsonl
@@ -302,6 +311,7 @@ def write_jsonl(filename: str, data: Iterable[Dict], append: bool = False):
         with open(filename, mode) as fp:
             for x in data:
                 fp.write((json.dumps(x) + "\n").encode('utf-8'))
+
 
 def evaluate_functional_correctness(
     sample_file: str,
