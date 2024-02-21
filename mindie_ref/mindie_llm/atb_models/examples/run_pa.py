@@ -204,7 +204,7 @@ def parse_arguments():
         nargs='+',
         default=["What's deep learning?"])
     parser.add_argument(
-        '--input_token_ids',
+        '--input_ids',
         type=parse_list,
         nargs='+',
         default=None)
@@ -256,18 +256,14 @@ if __name__ == '__main__':
     print_log(rank, logger.info, f'pa_runner: {pa_runner}')
     pa_runner.warm_up()
 
-    if args.input_token_ids != None:
-        generate_texts, token_nums, _ = pa_runner.infer(args.input_texts, args.max_batch_size, args.max_output_length,
-                                                args.ignore_eos, args.input_token_ids)
-    else:
-        generate_texts, token_nums, _ = pa_runner.infer(args.input_texts, args.max_batch_size, args.max_output_length,
-                                                args.ignore_eos)
+    generate_texts, token_nums, _ = pa_runner.infer(args.input_texts, args.max_batch_size, args.max_output_length,
+                                            args.ignore_eos, args.input_ids)
 
-        for i, generate_text in enumerate(generate_texts):
-            if i < len(args.input_texts):
-                print_log(rank, logger.info, f'Question[{i}]: {args.input_texts[i]}')
-            print_log(rank, logger.info, f'Answer[{i}]: {generate_text}')
-            print_log(rank, logger.info, f'Generate[{i}] token num: {token_nums[i]}')
+    for i, generate_text in enumerate(generate_texts):
+        if i < len(args.input_texts):
+            print_log(rank, logger.info, f'Question[{i}]: {args.input_texts[i]}')
+        print_log(rank, logger.info, f'Answer[{i}]: {generate_text}')
+        print_log(rank, logger.info, f'Generate[{i}] token num: {token_nums[i]}')
         
     if world_size > 1:
         torch.distributed.destroy_process_group()
