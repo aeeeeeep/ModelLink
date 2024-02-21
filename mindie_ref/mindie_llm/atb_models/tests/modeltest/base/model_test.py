@@ -1,5 +1,6 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 import csv
+import sys
 import glob
 import json
 import logging
@@ -26,6 +27,9 @@ import pandas as pd
 import transformers
 from thefuzz import process
 from tqdm import tqdm
+ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
+sys.path.append(os.path.join(ATB_SPEED_HOME_PATH, "../.."))
+sys.path.append(ATB_SPEED_HOME_PATH)
 from atb_llm.utils import env
 from atb_llm.utils.cpu_binding import NpuHbmInfo
 from examples.server.cache import CacheConfig, CacheManager, ModelConfig
@@ -99,7 +103,6 @@ UTILS_CODE_INSERTED_PART_4 = """
 UTILS_CODE_INSERTED_MARKER = "        import os\n"
 
 ATB_HOME_PATH = os.environ.get("ATB_HOME_PATH")
-ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
 ATB_TESTDATA_PATH = os.environ.get("ATB_TESTDATA")
 
 soc_version_map = {-1: "unknown soc version",
