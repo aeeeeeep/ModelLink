@@ -223,6 +223,7 @@ class ModelTest:
             }
             self.pa_runner = PARunner(**input_dict)
             self.logger.info(str(self.local_rank) + f'pa_runner: {self.pa_runner}')
+            self.pa_runner.warm_up()
 
         torch.manual_seed(1)
         self.device_type = self.__get_device_type()
@@ -288,7 +289,7 @@ class ModelTest:
                         eos_token_id=self.model.config.vocab_size * 2
                     )
             else:
-                self.pa_runner.warm_up()
+                pass
             self.logger.info("performance test warmup end")
 
         def run_performance_test():
