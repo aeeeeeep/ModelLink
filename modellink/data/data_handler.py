@@ -85,12 +85,17 @@ class BaseDatasetHandler(object):
         total_bytes_processed = 0
         logger.info("Time to startup:%s", startup_end - startup_start)
 
+        skip_num = 0
         for i, doc in enumerate(iter(self.tokenized_dataset), start=1):
             for key in self.args.json_keys:
                 sentences = doc[key]
                 if len(sentences) == 0:
                     continue
                 for sentence in sentences:
+                    if self.args.seq_length is not None and len(sentence) >= self.args.seq_length:
+                        skip_num += 1
+                        continue
+
                     total_bytes_processed += len(sentence) * np.int32().itemsize
                     builders[key].add_item(torch.IntTensor(sentence))
                 builders[key].end_document()
@@ -100,6 +105,7 @@ class BaseDatasetHandler(object):
                 mbs = total_bytes_processed / elapsed / 1024 / 1024
                 logger.info("Processed %s documents (%s docs/s, %s MB/s).", i, i / elapsed, mbs)
 
+        logger.info("Skip %s sample exceeded seq-length(%s)", skip_num // 3, self.args.seq_length)
         for key in self.args.json_keys:
             builders[key].finalize(output_idx_files[key])
 
