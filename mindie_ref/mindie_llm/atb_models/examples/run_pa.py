@@ -81,6 +81,7 @@ class PARunner:
         )
 
     def warm_up(self):
+
         input_ids = torch.ones(self.max_prefill_tokens, dtype=torch.int64).to(self.device)
         position_ids = torch.arange(self.max_prefill_tokens, dtype=torch.int32).to(self.device)
         cu_seqlen_prefill = torch.tensor([1])
@@ -118,14 +119,14 @@ class PARunner:
         torch.npu.empty_cache()
         print_log(self.rank, logger.info, "---------------end warm_up---------------")
 
-    def infer(self, input_texts, batch_size, max_output_length):
+    def infer(self, input_texts, batch_size, max_output_length, ignore_eos):
         print_log(self.rank, logger.info, "---------------begin inference---------------")
         if len(input_texts) == 1:
             req_list = [request_from_text(input_texts[0], self.tokenizer, max_output_length, self.block_size, req_idx=i) \
                         for i in range(batch_size)]
         else:
             req_list = [request_from_text(input_text, self.tokenizer, max_output_length, self.block_size, req_idx=i) \
-                        for input_text in input_texts]
+                        for i, input_text in enumerate(input_texts)]
         print_log(self.rank, logger.debug, f'req_list[0].input_ids: {req_list[0].input_ids}')
 
         if not self.cache_manager:
@@ -135,9 +136,8 @@ class PARunner:
 
             max_memory = ENV.memory_fraction * self.max_memory \
                 if not ENV.max_memory_gb else int(ENV.max_memory_gb) * (1 << 30)
-            free_memory = max_memory - (
-                self.warm_up_memory if self.warm_up_memory != 0 else (
-                        self.init_memory + ENV.reserved_memory_gb * (1 << 30)))
+            free_memory = max_memory - (ENV.reserved_memory_gb * (1 << 30) +
+                self.warm_up_memory if self.warm_up_memory != 0 else self.init_memory)
             print_log(self.rank, logger.info,
                       f"infer max_memory(GB): {max_memory / (1024 ** 3): .2f}, "
                       f"warm_up_memory(GB): {self.warm_up_memory / (1024 ** 3): .2f}, "
@@ -150,12 +150,12 @@ class PARunner:
 
             req_list_dummy = copy.deepcopy(req_list)
             generate_req(req_list_dummy, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                         2, self.cache_manager, rank)
+                         2, self.cache_manager, rank, ignore_eos)
 
         if not ENV.profiling_enable:
             print_log(self.rank, logger.debug, "no profiling")
             generate_req(req_list, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                         max_output_length, self.cache_manager, rank)
+                         max_output_length, self.cache_manager, rank, ignore_eos)
         else:
             print_log(self.rank, logger.debug, "enter profiling")
             import os
@@ -165,7 +165,7 @@ class PARunner:
             torch.npu.synchronize()
             with torch.npu.profile(profiling_path):
                 generate_req(req_list, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                             max_output_length, self.cache_manager, rank)
+                             max_output_length, self.cache_manager, rank, ignore_eos)
             torch.npu.synchronize()
 
         generate_text_list, token_num_list = decode_token(req_list, self.tokenizer)
@@ -212,6 +212,7 @@ def parse_arguments():
     parser.add_argument('--presence_penalty', type=float, default=0.0)
     parser.add_argument('--frequency_penalty', type=float, default=0.0)
     parser.add_argument('--use_refactor', action='store_true')
+    parser.add_argument('--ignore_eos', action='store_true')
 
     return parser.parse_args()
 
@@ -230,7 +231,8 @@ if __name__ == '__main__':
     pa_runner = PARunner(**input_dict)
     print_log(rank, logger.info, f'pa_runner: {pa_runner}')
     pa_runner.warm_up()
-    generate_texts, token_nums = pa_runner.infer(args.input_texts, args.max_batch_size, args.max_output_length)
+    generate_texts, token_nums = pa_runner.infer(args.input_texts, args.max_batch_size, args.max_output_length,
+                                                 args.ignore_eos)
 
     for i, generate_text in enumerate(generate_texts):
         if i < len(args.input_texts):

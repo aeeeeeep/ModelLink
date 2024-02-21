@@ -10,7 +10,6 @@ export PYTORCH_NPU_ALLOC_CONF="max_split_size_mb:2048"
 export LCCL_ENABLE_FALLBACK=1
 export MAX_SEQ_LENGTH=2048
 export LONG_SEQ_ENABLE=0
-export BIND_CPU=0
 
 WORLD_SIZE="8"
 DEVICE_TYPE="d9"
@@ -30,12 +29,7 @@ function fn_main()
 
     if [[ ! -z "$1" ]];then
         DEVICE_TYPE=$1
-        if [[ $DEVICE_TYPE == "d9" ]];then
-            echo "[DEVICE_TYPE]: 910"
-            export ATB_USE_TILING_COPY_STREAM=0
-        else
-            echo "[DEVICE_TYPE]: 310"
-        fi
+        echo "[DEVICE_TYPE]: $DEVICE_TYPE"
         shift
     fi
 
@@ -43,6 +37,14 @@ function fn_main()
         TASK=$1
         echo "[TASK]: $TASK"
         shift
+    fi
+
+    if [[ $DEVICE_TYPE == "d9" ]];then
+        export ATB_USE_TILING_COPY_STREAM=0
+    fi
+
+    if [[ $TASK == "performance" ]];then
+        export TIMEIT=1
     fi
 
     if [[ $WORLD_SIZE == "1" ]];then

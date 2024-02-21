@@ -96,7 +96,7 @@ atb::Status DecoderModel::InferShape(
     const int64_t vocabSizePerRank = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.shape.dims[0];
     // FA: [batchSize, seqLen, vocabSize] PA: [seqLen, vocabSisze]
     outTensorDescs.at(0).dtype = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.dtype;
-    outTensorDescs.at(0).format = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.format;
+    outTensorDescs.at(0).format = graph_.weightTensors.at(0).desc.format;
     outTensorDescs.at(0).shape.dimNum = inTensorDescs.at(0).shape.dimNum + 1;
 
     if (param_.isFA) {
