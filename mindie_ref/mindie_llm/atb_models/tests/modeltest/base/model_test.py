@@ -365,7 +365,6 @@ class ModelTest:
                 else:
                     input_ids = torch.randint(0, self.model.config.vocab_size, [seq_len_in],
                                               dtype=torch.int64)
-                    self.tokenizer.eos_token_id = self.model.config.vocab_size * 2
                     req_list = [request_from_token(input_ids, seq_len_out, self.block_size, req_idx=i) \
                                 for i in range(self.batch_size)]
 
@@ -393,11 +392,11 @@ class ModelTest:
                         req_list_dummy = copy.deepcopy(req_list)
                         generate_req(req_list_dummy, self.model, self.tokenizer, self.batch_size,
                                      self.max_prefill_tokens,
-                                     2, self.cache_manager, self.local_rank)
+                                     2, self.cache_manager, self.local_rank, True)
                     getattr(torch, self.core_type).synchronize()
                     e2e_start = time.time()
                     generate_req(req_list, self.model, self.tokenizer, self.batch_size, self.max_prefill_tokens,
-                                 seq_len_out, self.cache_manager, self.local_rank)
+                                 seq_len_out, self.cache_manager, self.local_rank, True)
                     _, _ = decode_token(req_list, self.tokenizer)
                     getattr(torch, self.core_type).synchronize()
                     e2e_end = time.time()
