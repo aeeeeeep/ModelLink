@@ -583,33 +583,7 @@ class ModelTest:
                                 if pred == ans:
                                     correct += 1
                     else:
-                        req_list = [request_from_text(queries[i], self.tokenizer, 512, self.block_size, req_idx=i) for i
-                                    in range(len(queries))]
-                        if not self.cache_manager:
-                            cache_block_size = self.block_size * self.model.num_kv_heads * self.model.head_size
-                            dtype = dtype_map[self.data_type] if self.data_type in dtype_map else dtype_map["fp16"]
-                            dtype_size = CacheManager.get_dtype_size(dtype)
-                            total_cache_size = self.model.num_layers * cache_block_size * 2 * dtype_size
-
-                            max_memory = env.ENV.memory_fraction * self.max_memory \
-                                if not env.ENV.max_memory_gb else int(env.ENV.max_memory_gb) * (1 << 30)
-
-                            free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory != 0 else \
-                                                            (self.init_memory + env.ENV.reserved_memory_gb * (
-                                                                        1 << 30)))
-
-                            self.logger.info("RANK " + str(self.local_rank) + ": infer max_memory(GB): " + str(
-                                max_memory / (1024 ** 3)) +
-                                             ", warm_up_memory(GB): " + str(self.warm_up_memory / (1024 ** 3)) +
-                                             ", free_memory(GB): " + str(free_memory / (1024 ** 3)))
-                            num_blocks = int(free_memory // total_cache_size)
-                            self.logger.info("RANK " + str(self.local_rank) + ": num_blocks: " + str(
-                                num_blocks) + ", free memory: " + str(free_memory))
-                            cache_config = CacheConfig(num_blocks, self.block_size)
-                            self.cache_manager = CacheManager(cache_config, self.model_config)
-                        generate_req(req_list, self.model, self.tokenizer, self.batch_size, self.max_prefill_tokens,
-                                     512, self.cache_manager, self.local_rank)
-                        generate_text_list, _ = decode_token(req_list, self.tokenizer)
+                        generate_text_list, _, _ = self.pa_runner.infer(queries, self.batch_size, 512, True)
                         if is_result:
                             for idx, (ansA, ansB, ansC, ansD, ans) in enumerate(
                                     zip(batch['A'], batch['B'], batch['C'], batch['D'], batch['answer'])):
@@ -869,33 +843,7 @@ class ModelTest:
                                 if acc:
                                     correct += 1
                     else:
-                        req_list = [request_from_text(queries[i], self.tokenizer, 512, self.block_size, req_idx=i) for i
-                                    in range(len(queries))]
-                        if not self.cache_manager:
-                            cache_block_size = self.block_size * self.model.num_kv_heads * self.model.head_size
-                            dtype = dtype_map[self.data_type] if self.data_type in dtype_map else dtype_map["fp16"]
-                            dtype_size = CacheManager.get_dtype_size(dtype)
-                            total_cache_size = self.model.num_layers * cache_block_size * 2 * dtype_size
-
-                            max_memory = env.ENV.memory_fraction * self.max_memory \
-                                if not env.ENV.max_memory_gb else int(env.ENV.max_memory_gb) * (1 << 30)
-
-                            free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory != 0 else \
-                                                            (self.init_memory + env.ENV.reserved_memory_gb * (
-                                                                        1 << 30)))
-
-                            self.logger.info("RANK " + str(self.local_rank) + ": infer max_memory(GB): " + str(
-                                max_memory / (1024 ** 3)) +
-                                             ", warm_up_memory(GB): " + str(self.warm_up_memory / (1024 ** 3)) +
-                                             ", free_memory(GB): " + str(free_memory / (1024 ** 3)))
-                            num_blocks = int(free_memory // total_cache_size)
-                            self.logger.info("RANK " + str(self.local_rank) + ": num_blocks: " + str(
-                                num_blocks) + ", free memory: " + str(free_memory))
-                            cache_config = CacheConfig(num_blocks, self.block_size)
-                            self.cache_manager = CacheManager(cache_config, self.model_config)
-                        generate_req(req_list, self.model, self.tokenizer, self.batch_size, self.max_prefill_tokens,
-                                     512, self.cache_manager, self.local_rank)
-                        generate_text_list, _ = decode_token(req_list, self.tokenizer)
+                        generate_text_list, _, _ = self.pa_runner.infer(queries, self.batch_size, 512, True)
                         if is_result:
                             for idx, ans in enumerate(batch['answer']):
                                 response = generate_text_list[idx]
@@ -957,37 +905,8 @@ class ModelTest:
                                 if acc:
                                     correct += 1
                     else:
-                        req_list = [request_from_text(queries[i], self.tokenizer, 512, self.block_size, req_idx=i) for i
-                                    in range(len(queries))]
-                        if not self.cache_manager:
-                            cache_block_size = self.block_size * self.model.num_kv_heads * self.model.head_size
-                            dtype = dtype_map[self.data_type] if self.data_type in dtype_map else dtype_map["fp16"]
-                            dtype_size = CacheManager.get_dtype_size(dtype)
-                            total_cache_size = self.model.num_layers * cache_block_size * 2 * dtype_size
+                        generate_text_list, _, _ = self.pa_runner.infer(queries, self.batch_size, 512, True)
 
-                            max_memory = env.ENV.memory_fraction * self.max_memory \
-                                if not env.ENV.max_memory_gb else int(env.ENV.max_memory_gb) * (1 << 30)
-
-                            free_memory = max_memory - (self.warm_up_memory if self.warm_up_memory != 0 else \
-                                                            (self.init_memory + env.ENV.reserved_memory_gb * (
-                                                                        1 << 30)))
-
-                            self.logger.info("RANK " + str(self.local_rank) + ": infer max_memory(GB): " + str(
-                                max_memory / (1024 ** 3)) +
-                                             ", warm_up_memory(GB): " + str(self.warm_up_memory / (1024 ** 3)) +
-                                             ", free_memory(GB): " + str(free_memory / (1024 ** 3)))
-                            num_blocks = int(free_memory // total_cache_size)
-                            self.logger.info("RANK " + str(self.local_rank) + ": num_blocks: " + str(
-                                num_blocks) + ", free memory: " + str(free_memory))
-                            cache_config = CacheConfig(num_blocks, self.block_size)
-                            self.cache_manager = CacheManager(cache_config, self.model_config)
-                        if is_result:
-                            print("req_list: ", queries)
-                        generate_req(req_list, self.model, self.tokenizer, self.batch_size, self.max_prefill_tokens,
-                                     512, self.cache_manager, self.local_rank)
-                        generate_text_list, _ = decode_token(req_list, self.tokenizer)
-                        # if is_result:
-                        #     print("generate_text_list: ", generate_text_list)
                         generate_text_list = [filter_code(fix_indents(completion)) for completion in generate_text_list]
                         if is_result:
                             print("generate_text_list_1: ", generate_text_list)
