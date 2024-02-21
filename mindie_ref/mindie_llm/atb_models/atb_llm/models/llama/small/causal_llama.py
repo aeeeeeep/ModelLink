@@ -432,9 +432,6 @@ class LlamaAttention(nn.Module):
             weights=weights,
             bias=False,
         )
-        self.k_proj = nn.Linear(self.hidden_size, self.kv_head_num * self.head_dim, bias=self.attention_bias)
-        self.v_proj = nn.Linear(self.hidden_size, self.kv_head_num * self.head_dim, bias=self.attention_bias)
-        self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=self.attention_bias)
         global rotary_emb
         rotary_emb = self._init_rope()
 
@@ -677,9 +674,6 @@ class LlamaModel(nn.Module):
             self.kv_head_num = config.num_key_value_heads
         else:
             self.kv_head_num = self.num_heads
-        if self.world_size >= 2:
-            self.rank = torch.distributed.get_rank()
-            self.rankSize = torch.distributed.get_world_size()
 
         # set flag for different devices
         self.format_nz = True
@@ -1268,7 +1262,6 @@ class LlamaForCausalLM(PreTrainedModel):
         super().__init__(config)
         self.soc_info = NPUSocInfo()
         self.model = LlamaModel(config, weights)
-        self.vocab_size = config.vocab_size
         self.lm_head = TensorHead.load_weight(
             config,
             prefix="lm_head",
@@ -1280,7 +1273,8 @@ class LlamaForCausalLM(PreTrainedModel):
         # for ascend
         self.num_attention_heads = config.num_attention_heads
         self.hidden_size = config.hidden_size
-        self.head_size = config.num_hidden_layers
+        self.head_size = self.hidden_size // self.num_attention_heads
+        self.num_layers = config.num_hidden_layers
         self.num_key_value_heads = config.num_key_value_heads // weights.process_group.size()
 
     def get_input_embeddings(self):
