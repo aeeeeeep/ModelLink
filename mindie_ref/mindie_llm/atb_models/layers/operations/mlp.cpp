@@ -38,7 +38,6 @@ enum MlpTensorIdx : uint32_t {
 
 static const uint64_t IN_TENSOR_COUNT = 13;
 static const uint64_t OUT_TENSOR_COUNT = 1;
-static const uint64_t NODE_COUNT = 5;
 
 template <class T>
 atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation, T config)
@@ -47,7 +46,7 @@ atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation, T confi
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
     opGraph.internalTensorNum = config.INTERMEDIATE_TENSOR_COUNT;
-    opGraph.nodes.resize(NODE_COUNT);
+    opGraph.nodes.resize(config.NODE_COUNT);
     opGraph.name = param.isPack ? "MlpPack" : "MlpNoPack";
 
     size_t nodeId = 0;
@@ -64,14 +63,6 @@ atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation, T confi
             MlpTensorIdx::IN_DESCALE_0
         };
         linearGateUpNode.outTensorIds = {config.INTERMIDATE_GATE_UP_OUT};
-
-        atb::Node &splitNode = opGraph.nodes.at(nodeId++);
-        atb::infer::SplitParam splitParam;
-        splitParam.splitDim = -1; // [batchSize, seqLen, 2 * hiddenSize]
-        splitParam.splitNum = 2;  // 进行二等分
-        CREATE_OPERATION(splitParam, &splitNode.operation);
-        splitNode.inTensorIds = {config.INTERMIDATE_GATE_UP_OUT};
-        splitNode.outTensorIds = {config.INTERMIDATE_GATE_OUT, config.INTERMIDATE_UP_OUT};
     } else {
         atb::Node &linearGateNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::FusionLinearParam gateUpLinearParam = param.gateUpLinearParam;
@@ -95,27 +86,27 @@ atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation, T confi
             MlpTensorIdx::IN_DESCALE_1
         };
         linearUpNode.outTensorIds = {config.INTERMIDATE_UP_OUT};
+
+        atb::Node &concatNode = opGraph.nodes.at(nodeId++);
+        atb::infer::ConcatParam concatParam;
+        CREATE_OPERATION(concatParam, &concatNode.operation);
+        concatNode.inTensorIds = {config.INTERMIDATE_GATE_OUT, config.INTERMIDATE_UP_OUT};
+        concatNode.outTensorIds = {config.INTERMIDATE_GATE_UP_OUT};
     }
 
     atb::Node &activationNode = opGraph.nodes.at(nodeId++);
     atb::infer::ActivationParam activationParam;
-    activationParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
+    activationParam.activationType = atb::infer::ActivationType::ACTIVATION_SWIGLU_FORWARD;
+    activationParam.dim = -1;
     CREATE_OPERATION(activationParam, &activationNode.operation);
-    activationNode.inTensorIds = {config.INTERMIDATE_GATE_OUT};
+    activationNode.inTensorIds = {config.INTERMIDATE_GATE_UP_OUT};
     activationNode.outTensorIds = {config.INTERMIDATE_SWISH_OUT};
-
-    atb::Node &mulNode = opGraph.nodes.at(nodeId++);
-    atb::infer::ElewiseParam elewiseParam;
-    elewiseParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_MUL;
-    CREATE_OPERATION(elewiseParam, &mulNode.operation);
-    mulNode.inTensorIds = {config.INTERMIDATE_SWISH_OUT, config.INTERMIDATE_UP_OUT};
-    mulNode.outTensorIds = {config.INTERMIDATE_MUL_OUT};
 
     atb::Node &linearDownNode = opGraph.nodes.at(nodeId++);
     atb_speed::common::LinearParallelParam downLinearParallelParam = param.downLinearParallelParam;
     LinearParallel(downLinearParallelParam, &linearDownNode.operation);
     linearDownNode.inTensorIds = {
-        config.INTERMIDATE_MUL_OUT,
+        config.INTERMIDATE_SWISH_OUT,
         MlpTensorIdx::IN_WEIGHT_2,
         MlpTensorIdx::IN_SCALE_2,
         MlpTensorIdx::IN_OFFSET_2,
@@ -139,26 +130,24 @@ atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation, T confi
 class MlpNoPackConfig {
 public:
     uint64_t INTERMEDIATE_TENSOR_COUNT = 4;
-
+    uint64_t NODE_COUNT = 5;
     enum MlpNoPackTensorIdx : uint32_t {
-        INTERMIDATE_GATE_OUT = MlpTensorIdx::OUT_RESULT + 1,
-        INTERMIDATE_UP_OUT,
-        INTERMIDATE_SWISH_OUT,
-        INTERMIDATE_MUL_OUT,
-        INTERMIDATE_GATE_UP_OUT  // no usage
+        INTERMIDATE_SWISH_OUT = MlpTensorIdx::OUT_RESULT + 1,
+        INTERMIDATE_GATE_UP_OUT,
+        INTERMIDATE_GATE_OUT,
+        INTERMIDATE_UP_OUT
     };
 };
 
 class MlpPackConfig {
 public:
-    uint64_t INTERMEDIATE_TENSOR_COUNT = 5;
-
+    uint64_t INTERMEDIATE_TENSOR_COUNT = 2;
+    uint64_t NODE_COUNT = 3;
     enum MlpPackTensorIdx : uint32_t {
-        INTERMIDATE_GATE_OUT = MlpTensorIdx::OUT_RESULT + 1,
-        INTERMIDATE_UP_OUT,
-        INTERMIDATE_SWISH_OUT,
-        INTERMIDATE_MUL_OUT,
-        INTERMIDATE_GATE_UP_OUT
+        INTERMIDATE_SWISH_OUT = MlpTensorIdx::OUT_RESULT + 1,
+        INTERMIDATE_GATE_UP_OUT,
+        INTERMIDATE_GATE_OUT,   // no usage
+        INTERMIDATE_UP_OUT      // no usage
     };
 };
 
