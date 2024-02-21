@@ -89,11 +89,11 @@ Coming soon ...
       <td rowspan="1"><a href="examples/aquila/README.md">Aquila</a></td>
       <td>7B</td>
       <td> 1x8</td>
-      <td> FP16 </td>
-      <td> 3394 </td>
+      <td> BF16 </td>
+      <td> 2849 </td>
       <td> 4078 </td>
-      <td> <a href="./sources/images/aquila/aquila_comp1130.png">Loss</a> </td>
-      <td> <a href="examples/aquila/pretrain_aquila_7B.sh">Train</a> </td>
+      <td> <a href="./sources/images/aquila/aquila_comp0122.png">Loss</a> </td>
+      <td> <a href="examples/aquila/pretrain_aquila_7b_ptd.sh">Train</a> </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/baichuan/README.md">Baichuan</a></td>
@@ -286,8 +286,8 @@ Coming soon ...
       <td rowspan="1"> <a href="examples/aquila/README.md">Aquila</a> </td>
       <td> 7B </td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/aquila/generate_aquila_7B.sh">inference</a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/eval_aquila_7B.sh">evaluation</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_aquila_7b_ptd.sh">inference</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_aquila_7b_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
