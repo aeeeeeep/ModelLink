@@ -43,6 +43,13 @@
 ## 300I DUO 运行操作说明
 
 ### 对话测试
+**运行Flash Attention FP16**
+- 待补充
+
+**运行Flash Attention BF16**
+- 暂不支持
+
+**运行Paged Attention FP16**
 - 运行启动脚本
   - 在\${llm_path}目录下执行以下指令
     ```shell
@@ -79,6 +86,10 @@
     - 是否使用新版模型组图
     - 默认使用
     - 运行llama2-7b和llama2-13b时`use_refactor`参数需设置为False，其余模型运行时需设置为True
+
+**运行Paged Attention BF16**
+- 暂不支持
+
 
 ## 800I A2 运行操作说明
 
