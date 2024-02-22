@@ -788,7 +788,7 @@ class KVAttentionManager:
                 (self.batch_size, 1, self.max_seq_len), device="npu", dtype=torch.half)
         else:
             self.attention_mask_max_inc = torch.zeros(
-                (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
+                (self.batch_size, self.nz_dim, self.max_seq_len), device="npu", dtype=torch.half)
         if not LONG_SEQ_ENABLE:
             self.registered_causal_mask = torch.tril(torch.ones(
                 (batch_size, 1, self.max_seq_len, self.max_seq_len),
@@ -813,7 +813,7 @@ class KVAttentionManager:
             self.attention_mask_max_inc.zero_()
         else:
             self.attention_mask_max_inc = torch.zeros(
-                (self.batch_size, self.max_seq_len, self.max_seq_len), dtype=torch.half, device="npu")
+                (self.batch_size, self.nz_dim, self.max_seq_len), dtype=torch.half, device="npu")
 
     def init_seq_len_and_token_offset(self, seq_len):
         self.token_offset = seq_len
@@ -844,9 +844,14 @@ class KVAttentionManager:
         :param tensor:
         :return:
         """
-        return torch_npu.npu_format_cast(tensor.view(
-            self.batch_size, self.max_seq_len,
-            self.max_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
+        if self.is_full:
+            return torch_npu.npu_format_cast(tensor.view(
+                self.batch_size, self.max_seq_len,
+                self.max_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
+        else:
+            return torch_npu.npu_format_cast(tensor.view(
+                self.batch_size, self.nz_dim,
+                self.max_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
 
     def get_attention_mask(self, attention_mask=None):
         if LONG_SEQ_ENABLE:
@@ -990,6 +995,7 @@ class QWenModel(QWenPreTrainedModel):
         self.lm_head_weight = None
         self.batch_size = 0
         self.kv_attention_manager = None
+        self.nz_dim = 16
         if IS_ND:
             self.min_cache = torch.full(
                 (1, self.max_position_embeddings),
@@ -998,7 +1004,7 @@ class QWenModel(QWenPreTrainedModel):
             )
         else:
             self.min_cache = torch.full(
-                (self.max_position_embeddings, self.max_position_embeddings),
+                (self.nz_dim, self.max_position_embeddings),
                 torch.finfo(torch.half).min,
                 dtype=torch.half, device="npu"
             )
