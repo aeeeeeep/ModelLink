@@ -140,7 +140,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     inputNormNode.outTensorIds = {INTERNAL_INPUTNORMOUT};
 
     // c_attn
-    atb::infer::LinearParam linearParam = {false, false, true};
+    atb::infer::LinearParam linearParam;
     CreateOperation(linearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = {INTERNAL_INPUTNORMOUT, IN_QKVMIXEDLINEARWEIGHT, IN_QKVMIXEDLINEARBIAS};
     qkvLinearNode.outTensorIds = {INTERNAL_QKVMIXEDLINEAROUT};

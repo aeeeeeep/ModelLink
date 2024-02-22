@@ -121,7 +121,7 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     inputNormNode.outTensorIds = {INTERNAL_INPUTNORMOUT};
 
     // c_attn
-    atb::infer::LinearParam linearParam = {false, false, true};
+    atb::infer::LinearParam linearParam;
     CREATE_OPERATION(linearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = {INTERNAL_INPUTNORMOUT, IN_QKVMIXEDLINEARWEIGHT, IN_QKVMIXEDLINEARBIAS};
     qkvLinearNode.outTensorIds = {INTERNAL_QKVMIXEDLINEAROUT};
@@ -206,7 +206,7 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     mlpParam.commDownParam.rankSize = param.rankSize;
     mlpParam.commDownParam.backend = param.backend;
     mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
-    mlpParam.transposeB = false;
+    mlpParam.transposeB = true;
     mlpParam.isBias = false;
     mlpParam.isPack = false;
     atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);
