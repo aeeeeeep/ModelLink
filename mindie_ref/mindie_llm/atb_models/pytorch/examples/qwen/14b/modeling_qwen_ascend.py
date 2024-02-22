@@ -809,7 +809,8 @@ class KVAttentionManager:
     def init_attention_mask(self):
         if IS_ND:
             self.attention_mask_max_full.zero_()
-            self.attention_mask_max_inc.zero_()
+            if not LONG_SEQ_ENABLE:
+                self.attention_mask_max_inc.zero_()
         else:
             self.attention_mask_max_inc = torch.zeros(
                 (self.batch_size, self.max_seq_len, self.max_seq_len), dtype=torch.half, device="npu")
