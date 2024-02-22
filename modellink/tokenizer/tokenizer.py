@@ -37,6 +37,9 @@ def build_tokenizer(args):
 
         hf_tokenizer_kwargs = dict()
         if hasattr(args, "tokenizer_kwargs") and args.tokenizer_kwargs:
+            if len(args.tokenizer_kwargs) % 2 != 0:
+                raise ValueError("The token name and token value must be entered in pairs.")
+
             for i in range(0, len(args.tokenizer_kwargs), 2):
                 hf_tokenizer_kwargs[args.tokenizer_kwargs[i]] = \
                     args.tokenizer_kwargs[i + 1]
