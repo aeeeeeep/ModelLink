@@ -231,7 +231,8 @@ int64_t QuantFAModel::BuildGraph()
     finalRmsNormNode.outTensors = { &graph_.internalTensors.at(finalRmsNormOutTensorId) };
 
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
-    atb::infer::LinearParam linearParam = { false, true, false };
+    atb::infer::LinearParam linearParam;
+    linearParam.hasBias = false;
     CREATE_OPERATION(linearParam, &op);
     lmHeadNode.operation.reset(op);
     const int lmHeadWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;

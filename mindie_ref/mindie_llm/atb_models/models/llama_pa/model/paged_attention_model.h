@@ -17,6 +17,7 @@
 #define ATB_SPEED_MODELS_LLAMA_PA_PA_MODEL_H
 
 #include "atb_speed/base/model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama_pa {
@@ -27,7 +28,7 @@ public:
         int headNum = 0;
         int dk = 0;
         int layerNum = 0;
-        bool transposedWeight = false;
+        bool transposedWeight = true;
         bool isPrefill = false;
         int rank = 0;
         int rankSize = 1;
@@ -59,6 +60,9 @@ private:
     Param param_;
     std::vector<int32_t> seqLen_;
 };
+
+REGISTER_MODEL(llama_pa, PAModel);
+
 } // namespace llama_pa
 } // namespace atb_speed
 #endif

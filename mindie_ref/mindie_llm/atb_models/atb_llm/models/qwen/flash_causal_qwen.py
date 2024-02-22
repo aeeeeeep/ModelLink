@@ -566,8 +566,8 @@ class QWenModel(QWenPreTrainedModel):
         logger.info(self.acl_param_decoder)
         logger.info("using flash_qwen_modeling_ascend")
 
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("qwen_14b_pa_model")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("qwen_14b_pa_model")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("qwen_14b_PagedAttentionModel")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("qwen_14b_PagedAttentionModel")
 
         self.acl_encoder_operation.set_param(self.acl_param_encoder)
         self.acl_decoder_operation.set_param(self.acl_param_decoder)

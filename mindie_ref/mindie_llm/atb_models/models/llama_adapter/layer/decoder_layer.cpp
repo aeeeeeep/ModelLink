@@ -90,12 +90,13 @@ atb::Status DecoderLayer(const LayerParam &param, atb::Operation **operation)
     inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT };
     inputNormNode.outTensorIds = { INTERMIDATE_INPUTNORMOUT };
 
-    atb::infer::LinearParam linearBiasParam = { false, false, true };
+    atb::infer::LinearParam linearBiasParam;
     CREATE_OPERATION(linearBiasParam, &wQLinearNode.operation);
     wQLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_QWEIGHT, IN_QBIAS };
     wQLinearNode.outTensorIds = { INTERMIDATE_Q };
 
-    atb::infer::LinearParam linearParam = { false, false, false };
+    atb::infer::LinearParam linearParam;
+    linearParam.hasBias = false;
     CREATE_OPERATION(linearParam, &wKLinearNode.operation);
     wKLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_KWEIGHT };
     wKLinearNode.outTensorIds = { INTERMIDATE_K };

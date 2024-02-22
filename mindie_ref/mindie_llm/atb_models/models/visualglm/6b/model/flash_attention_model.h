@@ -18,6 +18,7 @@
 #include <atb/svector.h>
 #include <vector>
 #include "atb_speed/base/model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace visualglm_6b {
@@ -54,6 +55,9 @@ private:
     std::vector<int> tokenOffset_;
     std::vector<int> seqLen_;
 };
+
+REGISTER_MODEL(visualglm_6b, FlashAttentionModel);
+
 } // namespace visualglm_6b
 } // namespace atb_speed
 #endif

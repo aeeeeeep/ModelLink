@@ -32,7 +32,7 @@ struct PAQuantOperaLayerParam {
     int rank = 0;
     int rankSize = 1;
     bool isPrefill = false;
-    bool transposedWeight = false;
+    bool transposedWeight = true;
     std::string backend = "hccl";
     float wPackInputScale = 1;
     int wPackInputOffset = 0;
