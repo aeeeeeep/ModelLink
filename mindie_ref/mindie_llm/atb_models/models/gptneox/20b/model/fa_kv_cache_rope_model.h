@@ -32,9 +32,10 @@ public:
         float qkScale = 1.0;
         bool isPrefill = false;
         int layerNum = 0;
-
+        bool isFA = true;
         int rank = 0;
         int rankSize = 1;
+        std::string backend = "hccl";
 
         void FromString(const std::string &param);
     };

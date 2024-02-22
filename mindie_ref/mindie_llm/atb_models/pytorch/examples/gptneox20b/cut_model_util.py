@@ -16,17 +16,14 @@ import torch
 from transformers import AutoModelForCausalLM
 
 
-def cut_weights(model, world_size, cut_row_keys=['query_key_value', 'dense_h_to_4h'],
+def cut_weights(model, world_size, cut_row_keys=['query_key_value', 'dense_h_to_4h','embed_out'],
                 cut_col_keys=['dense', 'dense_4h_to_h']):
     state_dict_list = [{} for i in range(world_size)]
     for key, tensor in model.state_dict().items():
         key_short = key.split('.')[-2]
         cut_tensor_list_t = []
         if key_short in cut_row_keys:
-            if key.split('.')[-1] == "weight":
-                cut_tensor_list = torch.chunk(tensor, world_size, dim=0)
-            else:
-                cut_tensor_list = torch.chunk(tensor, world_size, dim=0)
+            cut_tensor_list = torch.chunk(tensor, world_size, dim=0)
         elif key_short in cut_col_keys:
             if key.split('.')[-1] == "weight":
                 cut_tensor_list = torch.chunk(tensor, world_size, dim=1)
@@ -62,7 +59,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--cut_row_keys",
-        default=['query_key_value', 'dense_h_to_4h'],
+        default=['query_key_value', 'dense_h_to_4h', 'embed_out'],
         help="cut_row_keys",
     )
     parser.add_argument(
