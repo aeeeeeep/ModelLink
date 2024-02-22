@@ -60,5 +60,7 @@ def _add_data_args(parser):
     group = parser.add_argument_group(title='data')
     group.add_argument('--is-instruction-dataset', action='store_true', help='use instruction dataset or not')
     group.add_argument('--variable-seq-lengths', action='store_true', help='Use variable seq lengths or not.')
+    group.add_argument("--tokenizer-kwargs", type=str, nargs='+', default=None,
+                       help="Kwargs of the huggingface tokenizer.")
 
     return parser
