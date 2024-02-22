@@ -939,7 +939,8 @@ class QWenModel(QWenPreTrainedModel):
             "rank": self.rank,
             "rankSize": self.rank_size,
             "backend": os.getenv("BACKEND", "hccl"),
-            "coderType": 0
+            "coderType": 0,
+            "isTriuMask": LONG_SEQ_ENABLE
         }
 
         self.max_position_embeddings = int(os.getenv("MAX_SEQ_LEN", config.max_position_embeddings))
