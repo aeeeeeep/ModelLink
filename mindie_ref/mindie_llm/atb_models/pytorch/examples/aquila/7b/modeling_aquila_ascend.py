@@ -38,6 +38,9 @@ from transformers.utils import add_start_docstrings, add_start_docstrings_to_mod
 
 import torch_npu
 
+from atb_speed.common.timer import Timer
+from atb_speed.common.utils import load_atb_speed
+
 from .configuration_aquila import AquilaConfig
 
 
@@ -64,19 +67,7 @@ RANK, WORLD_SIZE = get_rank_and_world_size()
 print(f"RANK = {RANK} | WORLD_SIZE = {WORLD_SIZE}")
 
 
-def load_acl_transformer():
-    """
-    加载acl transformers
-    :return:
-    """
-    acl_transformer_home_path = os.getenv("ATB_SPEED_HOME_PATH", "")
-    if not acl_transformer_home_path or not os.path.exists(acl_transformer_home_path):
-        raise RuntimeError("env ACLTRANSFORMER_HOME_PATH not exist, source set_env.sh")
-    lib_path = os.path.join(acl_transformer_home_path, "lib/libatb_speed_torch.so")
-    torch.classes.load_library(lib_path)
-
-
-load_acl_transformer()
+load_atb_speed()
 
 logger = logging.get_logger(__name__)
 
@@ -926,6 +917,7 @@ class AquilaForCausalLM(AquilaPreTrainedModel):
 
     @add_start_docstrings_to_model_forward(AQUILA_INPUTS_DOCSTRING)
     @replace_return_docstrings(output_type=CausalLMOutputWithPast, config_class=_CONFIG_FOR_DOC)
+    @Timer.timing
     def forward(
             self,
             input_ids: torch.LongTensor = None,
