@@ -564,7 +564,7 @@ class BaichuanForCausalLM(BaichuanPreTrainedModel):
         self.world_size = 1
         if hasattr(config, 'world_size'):
             self.world_size = config.world_size
-        self.lm_head = NormHead(config.hidden_size // self.world_size, config.vocab_size, bias=False)
+        self.lm_head = NormHead(config.hidden_size, config.vocab_size // self.world_size, bias=False)
         if hasattr(config, "quantization_config") and config.quantization_config['load_in_4bit']:
             try:
                 from .quantizer import quantize_offline, init_model_weight_int4

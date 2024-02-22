@@ -202,6 +202,11 @@ void OperationTorch::CreateAtOutTensors(const std::vector<torch::Tensor> &atInTe
     for (size_t i = 0; i < atInTensors.size(); ++i) {
         auto &atInTensor = atInTensors.at(i);
         atb::Tensor inTensor = Utils::AtTensor2Tensor(atInTensor);
+        if (atb_speed::GetSingleton<atb_speed::Config>().IsConvertNCHWToND()) {
+            if (inTensor.desc.format == ACL_FORMAT_NCHW) {
+                inTensor.desc.format = ACL_FORMAT_ND;
+            }
+        }
         inTensorDescs.push_back(inTensor.desc);
         ATB_LOG(INFO) << name_ << " infer shape inTensors[" << i 
                       << "]:" << atb_speed::TensorUtil::TensorToString(inTensor);

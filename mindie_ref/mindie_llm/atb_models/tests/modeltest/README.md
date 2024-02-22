@@ -40,15 +40,15 @@ bash run.sh pa_fp16 [performance|full_CEval|full_MMLU|full_BoolQ] ([case_pair]) 
 2. model_name:
     Llama-65B, Llama2-7B, Llama2-13B, Llama2-70B: llama
     Starcoder-15.5B: starcoder
-3. 当model_name为llama时，须指定use_refactor为True或者False
+3. 当model_name为llama时，须指定use_refactor为True或者False（llama2-7b/13b 模型下，use_refactor为False使用的是浮点量化归一版本，可测试量化）
 4. weight_dir: 权重路径
 5. chip_num: 使用的卡数
 6. max_position_embedding: 可选参数，不传入则使用config中的默认配置
 7. 运行完成后，会在控制台末尾呈现保存数据的文件夹
 
 举例：
-1. 测试Llama-70B在8卡[512, 512]场景下，16 batch的性能
-bash run.sh pa_fp16 performance [[512,512]] 16 llama /path 8
+1. 测试Llama-70B在8卡[512, 512]场景下，16 batch的性能，使用归一代码
+bash run.sh pa_fp16 performance [[512,512]] 16 llama True /path 8
 1. 测试Starcoder-15.5B在8卡1 batch下游数据集BoolQ
 bash run.sh pa_fp16 full_BoolQ 1 starcoder /path 8
 ``` 

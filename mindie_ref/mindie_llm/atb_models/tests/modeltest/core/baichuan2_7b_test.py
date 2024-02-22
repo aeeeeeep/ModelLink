@@ -11,11 +11,11 @@ from transformers.generation.utils import GenerationConfig
 
 MODEL_FILE = os.path.join(
     model_test.ATB_SPEED_HOME_PATH,
-    "pytorch/examples/baichuan2/13b/modeling_baichuan_ascend.py",
+    "pytorch/examples/baichuan2/7b/modeling_baichuan_ascend.py",
 )
 
 
-class Baichuan213BModelTest(model_test.ModelTest):
+class Baichuan27BModelTest(model_test.ModelTest):
     def __init__(self, *args) -> None:
         super().__init__(*args)
         self.weight_dir = args[12]
@@ -56,7 +56,7 @@ class Baichuan213BModelTest(model_test.ModelTest):
 
 
 def main():
-    Baichuan213BModelTest.create_instance()
+    Baichuan27BModelTest.create_instance()
 
 
 if __name__ == "__main__":
