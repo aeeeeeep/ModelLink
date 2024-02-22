@@ -38,6 +38,8 @@ public:
         // isLmHeadParallel为true时，LmHead的权重在vacobSize维度进行切分; 反之，则不对权重进行切分
         bool isLmHeadParallel = true;
         // 0 - No quant; 1- Quant in RmsNorm，dequant in Linear; 2 - Both quant and dequant in Linear
+        bool supportSwiGLU = false;
+        // MLP是否使用SwiGLU，若为true时，则使用；反之，使用swish
         int quantType = 0;
         float rmsNormEps = 0;
         int numAttentionHeadsPerRank = 0;
