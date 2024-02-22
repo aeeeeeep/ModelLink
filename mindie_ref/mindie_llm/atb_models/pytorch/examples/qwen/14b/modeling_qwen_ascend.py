@@ -5,19 +5,19 @@
 
 import copy
 import importlib
+import json
 import math
+import os
 import pathlib
 import warnings
 from typing import TYPE_CHECKING, Optional, Tuple, Union, Callable, List, Any, Generator
-import os
-import json
-import torch_npu
-from atb_speed.common.timer import Timer
-from atb_speed.common.utils import load_atb_speed
 
 import torch
 import torch.nn.functional as F
 import torch.utils.checkpoint
+import torch_npu
+from atb_speed.common.timer import Timer
+from atb_speed.common.utils import load_atb_speed
 from torch.nn import CrossEntropyLoss
 from transformers import PreTrainedTokenizer, GenerationConfig, StoppingCriteriaList
 from transformers.generation.logits_process import LogitsProcessorList
@@ -60,6 +60,7 @@ def is_nd():
 
 IS_ND = is_nd()
 print(f"IS_ND = {IS_ND}")
+LONG_SEQ_ENABLE = int(os.getenv("LONG_SEQ_ENABLE", "0"))
 
 
 def get_rank_and_world_size():
@@ -741,6 +742,7 @@ class KVAttentionManager:
         self.token_offset = 1
         self.ori_len_list = []
         self.min_cache = None
+        self.long_seq_mask_len = 128
         if not IS_ND:
             self.k_cache_input = torch.zeros(self.num_layers,
                                              self.batch_size,  # batch
@@ -775,15 +777,26 @@ class KVAttentionManager:
                                              dtype=torch.half)
         torch.npu.empty_cache()
 
-        self.attention_mask_max_full = torch.zeros(
-            (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
-        self.attention_mask_max_inc = torch.zeros(
-            (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
-
-        self.registered_causal_mask = torch.tril(torch.ones(
-            (batch_size, 1, self.max_seq_len, self.max_seq_len),
-            dtype=torch.bool
-        ).npu())
+        if not LONG_SEQ_ENABLE:
+            self.attention_mask_max_full = torch.zeros(
+                (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
+        else:
+            self.attention_mask_max_full = torch.zeros(
+                (self.batch_size, self.long_seq_mask_len, self.long_seq_mask_len), device="npu", dtype=torch.half)
+        if IS_ND:
+            self.attention_mask_max_inc = torch.zeros(
+                (self.batch_size, 1, self.max_seq_len), device="npu", dtype=torch.half)
+        else:
+            self.attention_mask_max_inc = torch.zeros(
+                (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
+        if not LONG_SEQ_ENABLE:
+            self.registered_causal_mask = torch.tril(torch.ones(
+                (batch_size, 1, self.max_seq_len, self.max_seq_len),
+                dtype=torch.bool, device="npu"))
+        else:
+            self.registered_causal_mask = torch.tril(torch.ones(
+                (batch_size, 1, self.long_seq_mask_len, self.long_seq_mask_len),
+                dtype=torch.bool, device="npu"))
 
     def init_attention_mask(self):
         if IS_ND:
@@ -830,7 +843,10 @@ class KVAttentionManager:
         if not self.is_full:
             return self.attention_mask_max_inc
         else:
-            causal_mask = self.registered_causal_mask[:, :, : self.token_offset, : self.token_offset]
+            if not LONG_SEQ_ENABLE:
+                causal_mask = self.registered_causal_mask[:, :, : self.token_offset, : self.token_offset]
+            else:
+                causal_mask = self.registered_causal_mask[:, :, : self.long_seq_mask_len, : self.long_seq_mask_len]
             if attention_mask is not None:
                 attention_mask = attention_mask.expand(
                     -1, -1, causal_mask.size(2), -1
@@ -959,11 +975,18 @@ class QWenModel(QWenPreTrainedModel):
         self.lm_head_weight = None
         self.batch_size = 0
         self.kv_attention_manager = None
-        self.min_cache = torch.full(
-            (self.max_position_embeddings, self.max_position_embeddings),
-            torch.finfo(torch.half).min,
-            dtype=torch.half
-        ).npu()
+        if IS_ND:
+            self.min_cache = torch.full(
+                (1, self.max_position_embeddings),
+                torch.finfo(torch.half).min,
+                dtype=torch.half, device="npu"
+            )
+        else:
+            self.min_cache = torch.full(
+                (self.max_position_embeddings, self.max_position_embeddings),
+                torch.finfo(torch.half).min,
+                dtype=torch.half, device="npu"
+            )
 
         self.use_logn_attn = config.use_logn_attn
         logn_list = [
@@ -1100,8 +1123,6 @@ class QWenModel(QWenPreTrainedModel):
             self.batch_size = batch_size
             self.kv_attention_manager = KVAttentionManager(self.config, batch_size)
             self.kv_attention_manager.min_cache = self.min_cache
-            self.attention_mask_max_inc = torch.zeros(
-                (self.batch_size, self.max_position_embeddings, self.max_position_embeddings), dtype=torch.half).npu()
 
         if past_key_values is None:
             past_length = 0
