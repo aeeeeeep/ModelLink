@@ -1463,7 +1463,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             self.position_ids = self.all_one_tensor.cumsum(-1) - 1
             self.position_ids.masked_fill_(self.all_one_tensor == 0, 1)
             input_ids = input_ids[:, -1:]
-            position_ids = self.position_ids[:, seq_len-1]
+            position_ids = self.position_ids[:, seq_len - 1]
             position_ids = position_ids.unsqueeze(0).view(-1, 1).long()
 
         position_ids = position_ids.npu()
