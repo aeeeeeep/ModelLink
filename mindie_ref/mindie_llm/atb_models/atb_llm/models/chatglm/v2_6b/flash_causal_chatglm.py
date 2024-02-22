@@ -29,9 +29,7 @@ import torch.nn.functional as F
 from torch import nn
 from transformers.activations import ACT2FN
 from transformers.configuration_utils import PretrainedConfig
-
-from text_generation_server.utils.flash_attn_ascend import attention_ascend
-from text_generation_server.utils.layers import (
+from atb_llm.utils.layers import (
     TensorParallelRowLinear,
     TensorParallelColumnLinear,
     TensorParallelEmbedding,
@@ -41,7 +39,7 @@ from text_generation_server.utils.layers import (
     TensorParallelHead,
     get_linear,
 )
-from text_generation_server.utils.npu import load_atb_speed, NPUSocInfo
+from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
 
 from .config import ChatglmConfig
 
@@ -423,8 +421,8 @@ class FlashChatglmModel(torch.nn.Module):
         })
         self.seq_length = config.seq_length
 
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm2_6b_decoder_pa_model")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm2_6b_decoder_pa_model")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm2_6b_PagedAttentionModel")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm2_6b_PagedAttentionModel")
 
         self.acl_encoder_operation.set_param(self.acl_param_encoder)
         self.acl_decoder_operation.set_param(self.acl_param_decoder)

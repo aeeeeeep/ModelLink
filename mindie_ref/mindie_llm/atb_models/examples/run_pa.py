@@ -3,6 +3,7 @@ import argparse
 import os
 import math
 import copy
+import time
 
 import torch
 
@@ -11,7 +12,7 @@ from atb_llm.utils.env import ENV
 from atb_llm.utils.log import logger, print_log
 from atb_llm.runner import ModelRunner
 from examples.server.cache import CacheConfig, ModelConfig, CacheManager
-from examples.server.request import Request, request_from_token_file, request_from_text
+from examples.server.request import Request, request_from_token_file, request_from_text, request_from_token
 from examples.server.generate import generate_token, decode_token, generate_req
 
 
@@ -119,14 +120,23 @@ class PARunner:
         torch.npu.empty_cache()
         print_log(self.rank, logger.info, "---------------end warm_up---------------")
 
-    def infer(self, input_texts, batch_size, max_output_length, ignore_eos):
+    def infer(self, input_texts, batch_size, max_output_length, ignore_eos, input_ids=None):
         print_log(self.rank, logger.info, "---------------begin inference---------------")
-        if len(input_texts) == 1:
-            req_list = [request_from_text(input_texts[0], self.tokenizer, max_output_length, self.block_size, req_idx=i) \
-                        for i in range(batch_size)]
+        if input_ids:
+            if len(input_ids) == 1:
+                req_list = [request_from_token(input_ids[0], max_output_length, self.block_size, req_idx=i) \
+                            for i in range(batch_size)]
+            else:
+                req_list = [request_from_token(input_ids, max_output_length, self.block_size, req_idx=i) \
+                            for i, input_ids in enumerate(input_ids)]
         else:
-            req_list = [request_from_text(input_text, self.tokenizer, max_output_length, self.block_size, req_idx=i) \
-                        for i, input_text in enumerate(input_texts)]
+            if len(input_texts) == 1:
+                req_list = [request_from_text(input_texts[0], self.tokenizer, max_output_length, self.block_size, req_idx=i) \
+                            for i in range(batch_size)]
+            else:
+                req_list = [request_from_text(input_text, self.tokenizer, max_output_length, self.block_size, req_idx=i) \
+                            for i, input_text in enumerate(input_texts)]
+            
         print_log(self.rank, logger.debug, f'req_list[0].input_ids: {req_list[0].input_ids}')
 
         if not self.cache_manager:
@@ -148,14 +158,21 @@ class PARunner:
             cache_config = CacheConfig(num_blocks, self.block_size)
             self.cache_manager = CacheManager(cache_config, self.model_config)
 
-            req_list_dummy = copy.deepcopy(req_list)
-            generate_req(req_list_dummy, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                         2, self.cache_manager, rank, ignore_eos)
+            if ENV.benchmark_enable:
+                req_list_dummy = copy.deepcopy(req_list)
+                generate_req(req_list_dummy, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
+                            2, self.cache_manager, self.rank, ignore_eos)
 
         if not ENV.profiling_enable:
             print_log(self.rank, logger.debug, "no profiling")
+            torch.npu.synchronize()
+            e2e_start = time.time()
             generate_req(req_list, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                         max_output_length, self.cache_manager, rank, ignore_eos)
+                         max_output_length, self.cache_manager, self.rank, ignore_eos)
+            _, _ = decode_token(req_list, self.tokenizer)
+            torch.npu.synchronize()
+            e2e_end = time.time()
+            e2e_time = e2e_end - e2e_start
         else:
             print_log(self.rank, logger.debug, "enter profiling")
             import os
@@ -165,12 +182,16 @@ class PARunner:
             torch.npu.synchronize()
             with torch.npu.profile(profiling_path):
                 generate_req(req_list, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                             max_output_length, self.cache_manager, rank, ignore_eos)
+                             max_output_length, self.cache_manager, self.rank, ignore_eos)
             torch.npu.synchronize()
 
         generate_text_list, token_num_list = decode_token(req_list, self.tokenizer)
         print_log(self.rank, logger.info, "---------------end inference---------------")
-        return generate_text_list, token_num_list
+        return generate_text_list, token_num_list, e2e_time
+
+
+def parse_ids(list_str):
+    return [int(item) for item in list_str.split(',')]
 
 
 def parse_arguments():
@@ -184,6 +205,11 @@ def parse_arguments():
         type=str,
         nargs='+',
         default=["What's deep learning?"])
+    parser.add_argument(
+        '--input_ids',
+        type=parse_ids,
+        nargs='+',
+        default=None)
     parser.add_argument(
         '--input_file',
         type=str,
@@ -231,12 +257,15 @@ if __name__ == '__main__':
     pa_runner = PARunner(**input_dict)
     print_log(rank, logger.info, f'pa_runner: {pa_runner}')
     pa_runner.warm_up()
-    generate_texts, token_nums = pa_runner.infer(args.input_texts, args.max_batch_size, args.max_output_length,
-                                                 args.ignore_eos)
+
+    generate_texts, token_nums, _ = pa_runner.infer(args.input_texts, args.max_batch_size, args.max_output_length,
+                                            args.ignore_eos, args.input_ids)
 
     for i, generate_text in enumerate(generate_texts):
-        if i < len(args.input_texts):
-            print_log(rank, logger.info, f'Question[{i}]: {args.input_texts[i]}')
+        length = len(args.input_ids) if args.input_ids else len(args.input_texts)
+        inputs = args.input_ids if args.input_ids else args.input_texts
+        if i < length:
+            print_log(rank, logger.info, f'Question[{i}]: {inputs[i]}')
         print_log(rank, logger.info, f'Answer[{i}]: {generate_text}')
         print_log(rank, logger.info, f'Generate[{i}] token num: {token_nums[i]}')
         

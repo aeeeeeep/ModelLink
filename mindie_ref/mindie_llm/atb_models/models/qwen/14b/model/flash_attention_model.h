@@ -16,6 +16,7 @@
 #ifndef ATB_SPEED_MODELS_QWEN_14B_FLASH_ATTENTION_MODEL_H
 #define ATB_SPEED_MODELS_QWEN_14B_FLASH_ATTENTION_MODEL_H
 #include "atb_speed/base/model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace qwen_14b {
@@ -31,6 +32,13 @@ public:
         double RmsNormEps = 0.0;
         int coderType = 0;
         std::string backend = "hccl";
+        // isFA为true则使用Flash Attention; 反之，则使用Paged Attention
+        bool isFA = true;
+        // isPrefill为true时为全量阶段，encoder的isPrefill参数应为true;
+        // isPrefill为false时为增量阶段，decoder的isPrefill参数应为false
+        bool isPrefill = true;
+        // isPack为true时QKV和MLP中的gate和up权重合并; 反之，则权重不合并
+        bool isPack = true;
         void FromString(const std::string &Param); // 参数传入
     };
 
@@ -51,6 +59,9 @@ private:
     std::vector<int32_t> tokenOffset_;
     std::vector<int32_t> seqLen_;
 };
+
+REGISTER_MODEL(qwen_14b, FlashAttentionModel);
+
 } // namespace qwen_14b
 } // namespace atb_speed
 

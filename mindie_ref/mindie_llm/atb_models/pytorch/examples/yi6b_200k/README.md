@@ -340,6 +340,7 @@ unzip data.zip
 https://github.com/THUDM/LongBench/blob/main/config/dataset2maxlen.json
 https://github.com/THUDM/LongBench/blob/main/config/dataset2prompt.json
 https://github.com/THUDM/LongBench/blob/main/eval.py
+https://github.com/THUDM/LongBench/blob/main/metrics.py
 
 ####  2. 运行并查看结果
 ```bash
@@ -351,5 +352,7 @@ MAX_SEQ_LENGTH=16000 torchrun --nproc_per_node 8 --master_port 25641 longbench.p
 运行结束后，可以在`pred_e/对应模型名称`的文件夹下得到模型在LongBench-E所有数据集下的输出，此后运行eval.py的评测代码：
 ```bash
 python eval.py --model yi_6b_200k --e
+export RESULT_DIR=./pred_e/yi_6b_200k
+python3 -c "from longbench import get_result_scores; get_result_scores()"
 ```
-可以在存储模型输出文件夹下的result.json中得到模型在LongBench-E各数据集上的评测结果。
+可以在存储模型输出文件夹下的result.json和result.csv中得到模型在LongBench-E各数据集上的评测结果。

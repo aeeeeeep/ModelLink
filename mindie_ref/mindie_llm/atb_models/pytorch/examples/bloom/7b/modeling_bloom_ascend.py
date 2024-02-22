@@ -222,7 +222,7 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
             }
         param_dict.update(self.quant_param)
         
-        self.acl_model = torch.classes.ModelTorch.ModelTorch("bloom_7b_common_model")
+        self.acl_model = torch.classes.ModelTorch.ModelTorch("bloom_7b_FlashAttentionModel")
         
         self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
 

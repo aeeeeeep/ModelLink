@@ -96,8 +96,8 @@ class LLaMA_adapter(nn.Module):
 
         # acl modelV2
         
-        self.acl_encoder_model = torch.classes.ModelTorch.ModelTorch("llama_adapter_encoder_model")
-        self.acl_decoder_model = torch.classes.ModelTorch.ModelTorch("llama_adapter_decoder_model")
+        self.acl_encoder_model = torch.classes.ModelTorch.ModelTorch("llama_adapter_EncoderAdapterModel")
+        self.acl_decoder_model = torch.classes.ModelTorch.ModelTorch("llama_adapter_DecoderAdapterModel")
 
         self.acl_param = json.dumps({"headNum": model_args.n_heads, 
                                      "rmsNormEps": model_args.norm_eps,

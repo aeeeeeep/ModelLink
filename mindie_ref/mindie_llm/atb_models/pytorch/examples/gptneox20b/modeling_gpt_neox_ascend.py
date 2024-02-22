@@ -660,8 +660,8 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
         self.num_layers = config.num_hidden_layers
         self.num_attention_heads = config.num_attention_heads // WORLD_SIZE
 
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("gptneox_20b_fa_kvcache_model")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("gptneox_20b_fa_kvcache_model")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("gptneox_20b_FaKvCacheModel")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("gptneox_20b_FaKvCacheModel")
 
         self.acl_encoder_operation.set_param(self.acl_param_encoder)
         self.acl_decoder_operation.set_param(self.acl_param_decoder)
