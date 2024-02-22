@@ -19,7 +19,6 @@ from pathlib import Path
 import torch
 try:
     import torch_npu
-    from torch_npu.contrib import transfer_to_npu
 except ModuleNotFoundError:
     pass
 import numpy as np
