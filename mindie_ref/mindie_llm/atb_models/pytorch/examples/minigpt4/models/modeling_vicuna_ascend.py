@@ -903,7 +903,7 @@ class LlamaModel(LlamaPreTrainedModel):
         acl_encoder_param = self.set_ascend_param(True)
         acl_decoder_param = self.set_ascend_param(False)
 
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("minigpt4_llama_flashattention_encoder_model")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("minigpt4_vicuna_7b_FlashAttentionEncoderModel")
         self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_FlashAttentionModel")
         self.acl_encoder_operation.set_param(acl_encoder_param)
         self.acl_decoder_operation.set_param(acl_decoder_param)
