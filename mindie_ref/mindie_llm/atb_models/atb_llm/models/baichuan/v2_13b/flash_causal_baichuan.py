@@ -1,18 +1,11 @@
 # Copyright (c) 2023, Baichuan Intelligent Technology. All rights reserved.
 import json
 import math
-import os
 from contextlib import contextmanager
 from typing import List, Optional, Tuple, Union
 
 import torch
 import torch_npu
-from torch import nn
-from transformers import PreTrainedModel
-from transformers.activations import ACT2FN
-from transformers.modeling_outputs import CausalLMOutputWithPast
-
-from atb_llm.utils.log import logger
 from atb_llm.models.baichuan.v2_13b.config import BaichuanConfig
 from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
 from atb_llm.utils.layers import (
@@ -22,6 +15,11 @@ from atb_llm.utils.layers import (
     TensorParallelHead,
     AttentionMask
 )
+from atb_llm.utils.log import logger
+from torch import nn
+from transformers import PreTrainedModel
+from transformers.activations import ACT2FN
+from transformers.modeling_outputs import CausalLMOutputWithPast
 
 
 def _get_interleave(n):
@@ -167,34 +165,6 @@ class BaichuanPreTrainedModel(PreTrainedModel):
             module.gradient_checkpointing = value
 
 
-def ntokens_trans_data_attention_mask(tensor, is_prefill=False):
-    """
-    prefill: [batch , head_num,max_s,max_s] -> [batch * head_num, maxS/16, maxS, 16]
-    prefill: [4, 40, 1024, 1024]  ->  [160, 64, 1024, 16]
-    max_s不够16整除的要pad 如[4,40,17,17] -> [4, 40, 17, 32] -> [160,2,17,16]
-
-    decode: [batch , head_num,1,max_s] -> [batch * head_num, max_s/16, 16, 16]
-    max_s不够16整除的要pad 如[1,40,1,17] -> [1, 40, 1, 32] -> [1, 40, 16, 32] ->[40,2,16,16]
-    """
-    logger.debug(f"shape of tensor in {is_prefill=} before transdata  is {tensor.shape}")
-    nz_dim = 16
-    if is_prefill:
-        return torch_npu.npu_format_cast(tensor.view(
-            tensor.shape[0] * tensor.shape[1],
-            tensor.shape[2],
-            tensor.shape[3] // nz_dim,
-            nz_dim
-        ).transpose(1, 2).contiguous(), 29)
-    else:
-        tensor = tensor.repeat(1, 1, nz_dim, 1)
-        return torch_npu.npu_format_cast(tensor.view(
-            tensor.shape[0] * tensor.shape[1],
-            nz_dim,
-            tensor.shape[3] // nz_dim,
-            nz_dim
-        ).transpose(1, 2).contiguous(), 29)
-
-
 class BaichuanModel(BaichuanPreTrainedModel):
     def __init__(self, config, weights):
         super().__init__(config)
@@ -231,6 +201,9 @@ class BaichuanModel(BaichuanPreTrainedModel):
         self.place_holder = torch.tensor([1], dtype=torch.float16, device='npu')
 
         self.batch_size = 0
+        self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
+        transdata_param = json.dumps({})
+        self.transdata_operation.set_param(transdata_param)
 
     def maybe_format_cast(self, tensor):
         """
@@ -251,8 +224,8 @@ class BaichuanModel(BaichuanPreTrainedModel):
             "rank": self.tp_rank,
             "rankSize": self.tp_world_size,
             "isPrefill": True,
-            "backend": os.getenv("BACKEND", "hccl"),
-            "isLmHeadParallel": not self.soc_info.need_nz
+            "backend": "hccl" if self.soc_info.need_nz else "lccl",
+            "isLmHeadParallel": True
         })
         self.acl_param_decoder = json.dumps({
             "rmsNormEps": config.rms_norm_eps,
@@ -262,8 +235,8 @@ class BaichuanModel(BaichuanPreTrainedModel):
             "rank": self.tp_rank,
             "rankSize": self.tp_world_size,
             "isPrefill": False,
-            "backend": os.getenv("BACKEND", "hccl"),
-            "isLmHeadParallel": not self.soc_info.need_nz
+            "backend": "hccl" if self.soc_info.need_nz else "lccl",
+            "isLmHeadParallel": True
         })
         logger.info(self.acl_param_encoder)
         logger.info(self.acl_param_decoder)
@@ -282,6 +255,20 @@ class BaichuanModel(BaichuanPreTrainedModel):
         self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64, device="npu")
         self.lm_head_weight = None
         self.is_prefill = True
+
+    def ntoken_transdata(self, tensor):
+        """
+        prefill: [batch , head_num,max_s,max_s] -> [batch * head_num, maxS/16, maxS, 16]
+        prefill: [4, 40, 1024, 1024]  ->  [160, 64, 1024, 16]
+        max_s不够16整除的要pad 如[4,40,17,17] -> [4, 40, 17, 32] -> [160,2,17,16]
+
+        decode: [batch,head_num,1,max_s] -> [batch * head_num, max_s/16, 16, 16]
+        max_s不够16整除的要pad 如[1,40,1,17] -> [1, 40, 1, 32] -> [1, 40, 16, 32] ->[40,2,16,16]
+        """
+        return self.transdata_operation.execute(
+            [tensor.view(tensor.shape[0] * tensor.shape[1], tensor.shape[2], tensor.shape[3])]
+        )[0]
+
 
     def init_ascend_weight(self):
         torch.npu.synchronize()
@@ -454,7 +441,7 @@ class BaichuanModel(BaichuanPreTrainedModel):
         if self.soc_info.need_nz:
             attention_mask = attention_mask.unsqueeze(0)
             attention_mask = attention_mask.repeat(self.batch_size, 1, 1, 1)
-            attention_mask = ntokens_trans_data_attention_mask(attention_mask, self.is_prefill)
+            attention_mask = self.ntoken_transdata(attention_mask)
             logger.debug(f"final attention_mask shape after transdata is {attention_mask.shape}")
         return attention_mask
 
@@ -582,7 +569,7 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
         logger.info(self.soc_info)
         # Initialize weights and apply final processing
         self.lm_head_weight = None
-        self.parallel_lm_head = not self.soc_info.need_nz  # 310P 暂时不支持ALLGather算子
+        self.parallel_lm_head = True
         self.model.parallel_lm_head = self.parallel_lm_head
         self.lm_head = (TensorParallelHead.load if self.parallel_lm_head else TensorParallelHead.load_weight)(
             config,
