@@ -190,7 +190,7 @@ class PARunner:
         return generate_text_list, token_num_list, e2e_time
 
 
-def parse_list(list_str):
+def parse_ids(list_str):
     return [int(item) for item in list_str.split(',')]
 
 
@@ -207,7 +207,7 @@ def parse_arguments():
         default=["What's deep learning?"])
     parser.add_argument(
         '--input_ids',
-        type=parse_list,
+        type=parse_ids,
         nargs='+',
         default=None)
     parser.add_argument(
