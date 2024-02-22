@@ -168,7 +168,7 @@ def generate_req(req_list, model, tokenizer,
     if rank == 0:
         print("max_generate_batch_size", max_generate_batch_size)
     if ENV.benchmark_enable:
-        prefill_time = sum(prefill_benchmark_timelist) / len(prefill_benchmark_timelist)
+        prefill_time = sum(prefill_benchmark_timelist)
         e2e_time = sum(prefill_benchmark_timelist) + sum(decoder_benchmark_timelist)
         try:
             decode_token_time = sum(decoder_benchmark_timelist) / (max_out_length - 1)
