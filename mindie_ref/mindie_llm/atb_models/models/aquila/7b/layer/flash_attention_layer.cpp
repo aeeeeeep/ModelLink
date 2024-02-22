@@ -116,7 +116,8 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     inputNormNode.outTensorIds = {INTERNAL_INPUTNORMOUT};
 
     // q_proj
-    atb::infer::LinearParam linearParam = {false, false, false};
+    atb::infer::LinearParam linearParam;
+    linearParam.hasBias = false;
     CREATE_OPERATION(linearParam, &qLinearNode.operation);
     qLinearNode.inTensorIds = {INTERNAL_INPUTNORMOUT, IN_QLINEARWEIGHT};
     qLinearNode.outTensorIds = {INTERNAL_QLINEAROUT};
@@ -196,7 +197,7 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     mlpParam.commDownParam.rankSize = param.rankSize;
     mlpParam.commDownParam.backend = param.backend;
     mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
-    mlpParam.transposeB = false;
+    mlpParam.transposeB = true;
     mlpParam.isBias = false;
     mlpParam.isPack = false;
     atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);

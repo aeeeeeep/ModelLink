@@ -331,7 +331,7 @@ int64_t ChatGlm2CommonModelFa::BuildGraph()
     sliceNode.outTensors = {&graph_.internalTensors.at(internalTensorId)};
 
     auto &lmNode = graph_.nodes.at(nodeId++);
-    atb_speed::common::ParallelParamV2 lmParam = {false, false, false, false, false};
+    atb_speed::common::ParallelParamV2 lmParam = {false, false, true, false, false};
     lmParam.isAllGatherTranspose = true;
     lmParam.commParam.rank = param_.rank;
     lmParam.commParam.rankSize = param_.rankSize;
