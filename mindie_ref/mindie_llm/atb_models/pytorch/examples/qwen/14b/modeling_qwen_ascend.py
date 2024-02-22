@@ -743,6 +743,7 @@ class KVAttentionManager:
         self.ori_len_list = []
         self.min_cache = None
         self.long_seq_mask_len = 128
+        self.dtype = torch.float16
         if not IS_ND:
             self.k_cache_input = torch.zeros(self.num_layers,
                                              self.batch_size,  # batch
@@ -781,8 +782,7 @@ class KVAttentionManager:
             self.attention_mask_max_full = torch.zeros(
                 (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
         else:
-            self.attention_mask_max_full = torch.zeros(
-                (self.batch_size, self.long_seq_mask_len, self.long_seq_mask_len), device="npu", dtype=torch.half)
+            self.attention_mask_max_full = self.get_triumask(self.long_seq_mask_len).npu()
         if IS_ND:
             self.attention_mask_max_inc = torch.zeros(
                 (self.batch_size, 1, self.max_seq_len), device="npu", dtype=torch.half)
@@ -797,6 +797,14 @@ class KVAttentionManager:
             self.registered_causal_mask = torch.tril(torch.ones(
                 (batch_size, 1, self.long_seq_mask_len, self.long_seq_mask_len),
                 dtype=torch.bool, device="npu"))
+
+    def get_triumask(self, mask_block_size):
+        bias_cache = torch.tril(torch.ones((mask_block_size, mask_block_size), dtype=torch.bool)).view(mask_block_size,
+                                                                                                       mask_block_size)
+        bias_cache = ~bias_cache
+        mask_value = torch.finfo(self.dtype).min
+        attn_mask = torch.masked_fill(torch.zeros(size=(mask_block_size, mask_block_size)), bias_cache, mask_value)
+        return attn_mask.to(dtype=self.dtype)
 
     def init_attention_mask(self):
         if IS_ND:
@@ -840,13 +848,16 @@ class KVAttentionManager:
             self.max_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
 
     def get_attention_mask(self, attention_mask=None):
+        if LONG_SEQ_ENABLE:
+            if self.is_full:
+                return self.attention_mask_max_full
+            else:
+                return self.attention_mask_max_inc
+
         if not self.is_full:
             return self.attention_mask_max_inc
         else:
-            if not LONG_SEQ_ENABLE:
-                causal_mask = self.registered_causal_mask[:, :, : self.token_offset, : self.token_offset]
-            else:
-                causal_mask = self.registered_causal_mask[:, :, : self.long_seq_mask_len, : self.long_seq_mask_len]
+            causal_mask = self.registered_causal_mask[:, :, : self.token_offset, : self.token_offset]
             if attention_mask is not None:
                 attention_mask = attention_mask.expand(
                     -1, -1, causal_mask.size(2), -1
