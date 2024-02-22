@@ -836,12 +836,13 @@ class KVAttentionManager:
     def token_offset_list(self):
         return [self.token_offset] * self.batch_size
 
-    def trans_data(self, tensor):
+    def trans_data(self, tensor, trans_type="full"):
         """
         :param tensor:
+        :param trans_type:full or inc
         :return:
         """
-        if self.is_full:
+        if trans_type == "full":
             return torch_npu.npu_format_cast(tensor.view(
                 self.batch_size, self.max_seq_len,
                 self.max_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
@@ -882,8 +883,8 @@ class KVAttentionManager:
                 # self.attention_mask_max_inc[i][:, ori_len:self.token_offset] = \
                 #     self.min_cache[:, ori_len:self.token_offset]
             if not IS_ND:
-                self.attention_mask_max_inc = self.trans_data(self.attention_mask_max_inc)
-                return self.trans_data(self.attention_mask_max_full)
+                self.attention_mask_max_inc = self.trans_data(self.attention_mask_max_inc, "inc")
+                return self.trans_data(self.attention_mask_max_full, "full")
             else:
                 return self.attention_mask_max_full
 
