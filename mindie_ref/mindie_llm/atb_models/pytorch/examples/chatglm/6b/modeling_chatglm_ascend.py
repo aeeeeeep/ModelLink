@@ -30,6 +30,7 @@ from transformers.utils import logging
 from transformers.generation.logits_process import LogitsProcessor
 from transformers.generation.utils import LogitsProcessorList, StoppingCriteriaList, GenerationConfig
 
+from atb_speed.common.timer import Timer
 from manager import ModeManager
 from .configuration_chatglm import ChatGLMConfig
 
@@ -1082,6 +1083,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
                 "attention_mask": attention_mask
             }
 
+    @Timer.timing
     def forward(
             self,
             input_ids: Optional[torch.Tensor] = None,
