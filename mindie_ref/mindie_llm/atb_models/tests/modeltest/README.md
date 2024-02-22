@@ -3,12 +3,18 @@
 ModelTest为大模型的性能和精度提供测试功能。
 
 目前支持：PA场景，float16
+
 功能：
 1. 性能测试：指定batch，指定输入输出长度的e2e性能、吞吐，首Token以及非首Token性能。吞吐。
 2. 精度测试：CEval, MMLU, BoolQ, HumanEval下游数据集
-PA模型：
+
+PA模型支持：
 1. Llama (Llama-65B, Llama2-7B, Llama2-13B, Llama2-70B)
 2. Starcoder-15.5B
+3. Chatglm2-6b
+4. CodegeeX2-6b
+5. Baichuan2 (Baichuan2-7B, Baichuan2-13B)
+6. Qwen (Qwen-14B, Qwen-72B) 
 
 # 使用说明
 
