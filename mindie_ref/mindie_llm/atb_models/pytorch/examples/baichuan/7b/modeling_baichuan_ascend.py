@@ -496,7 +496,7 @@ class Model(PreTrainedModel):
                 "dk": config.hidden_size // config.num_attention_heads, "layerNum": config.num_hidden_layers,
                 "rank": self.rank, "rankSize": self.world_size, "backend": os.getenv("BACKEND", "hccl")})
         self.max_position_embeddings = int(os.getenv("MAX_SEQ_LEN", config.max_position_embeddings))
-        self.acl_fa_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_flash_attention_rope_model")
+        self.acl_fa_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_FlashAttentionRopeModel")
 
         self.acl_fa_operation.set_param(self.acl_param)
 

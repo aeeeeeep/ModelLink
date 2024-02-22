@@ -143,3 +143,7 @@ cython_debug/
 # pycharm stuff
 .idea
 3rdparty
+
+# mindie_ref/mindie_llm/atb_models stuff
+mindie_ref/mindie_llm/atb_models/output
+mindie_ref/mindie_llm/atb_models/MindIE_ATB

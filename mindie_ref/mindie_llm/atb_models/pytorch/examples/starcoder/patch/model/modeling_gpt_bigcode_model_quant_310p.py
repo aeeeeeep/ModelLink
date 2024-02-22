@@ -525,8 +525,8 @@ class GPTBigCodeModel(GPTBigCodePreTrainedModel):
         self.input_offset_dict = np.load(os.path.join(part_quant_weight_path, "input_offset.npy"), allow_pickle=True).item()
         print(f"quant weight {part_quant_weight_path} load success!")
 
-        self.acl_model_en = torch.classes.ModelTorch.ModelTorch("starcoder_fa_parallel_quant_model")
-        self.acl_model_de = torch.classes.ModelTorch.ModelTorch("starcoder_fa_parallel_quant_model")
+        self.acl_model_en = torch.classes.ModelTorch.ModelTorch("star_coder_FlashAttentionQuantModel")
+        self.acl_model_de = torch.classes.ModelTorch.ModelTorch("star_coder_FlashAttentionQuantModel")
         print(">>> init ATB model")
 
         self.float_layers = FLOAT_LAYERS

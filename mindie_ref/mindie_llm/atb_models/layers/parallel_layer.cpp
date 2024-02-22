@@ -89,9 +89,9 @@ atb::Status ParallelLinearBase(const ParallelParam &param_, atb::Operation **ope
                 outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[1];
             }
             if (param_.transposeB) {
-                outTensorDescs.at(0).shape.dims[dimNum - 1] = inTensorDescs.at(1).shape.dims[1];
-            } else {
                 outTensorDescs.at(0).shape.dims[dimNum - 1] = inTensorDescs.at(1).shape.dims[0];
+            } else {
+                outTensorDescs.at(0).shape.dims[dimNum - 1] = inTensorDescs.at(1).shape.dims[1];
             }
 
             return atb::NO_ERROR;
@@ -109,9 +109,9 @@ atb::Status ParallelLinearBase(const ParallelParam &param_, atb::Operation **ope
                 outTensorDescs.at(0).shape.dims[2] = inTensorDescs.at(0).shape.dims[1]; // dim 2
             }
             if (param_.transposeB) {
-                outTensorDescs.at(0).shape.dims[dimNum] = inTensorDescs.at(1).shape.dims[1]; // last dim
-            } else {
                 outTensorDescs.at(0).shape.dims[dimNum] = inTensorDescs.at(1).shape.dims[0]; // last dim
+            } else {
+                outTensorDescs.at(0).shape.dims[dimNum] = inTensorDescs.at(1).shape.dims[1]; // last dim
             }
 
             return atb::NO_ERROR;

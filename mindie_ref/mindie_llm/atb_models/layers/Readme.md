@@ -14,7 +14,7 @@ struct MlpGateParam {
     int rankRoot = 0; # 选填
     void *hcclComm = nullptr; # 选填
     atb::infer::ActivationType activationType; # 激活函数
-    bool transposeB = false; # 是否weight做转置
+    bool transposeB = true; # 是否weight做转置
     bool isBias = false;  # 是否加bias
     bool isPack = false;  # gate和up 合并计算，内部插split算子
 };
@@ -77,7 +77,7 @@ struct MlpParam {
     int rankRoot = 0; # 选填
     void *hcclComm = nullptr; # 选填
     atb::infer::ActivationType activationType; # 激活函数
-    bool transposeB = false; # 是否weight做转置
+    bool transposeB = true; # 是否weight做转置
     bool isBias = false;  # 是否加bias
 };
 ```
@@ -116,7 +116,7 @@ struct ParallelParam {
     void *hcclComm = nullptr;
     bool isBias = false;
     bool transposeA = false;
-    bool transposeB = false; # weight
+    bool transposeB = true; # weight
 };
 ```
 
@@ -130,7 +130,7 @@ struct ParallelParam {
     void *hcclComm = nullptr;
     bool isBias = false;
     bool transposeA = false;
-    bool transposeB = false;
+    bool transposeB = true;
 };
 ```
 
@@ -144,7 +144,7 @@ struct ParallelLmHeadParam {
     bool unpadInputs = false;   # unpad场景，无batch维度
     bool gatherAhead = false;   # 提供prefill gather ahead功能，减少lmhead计算量
     bool transposeA = false;
-    bool transposeB = false;
+    bool transposeB = true;
 };
 ```
 

@@ -151,8 +151,8 @@ class FlashStarCoderModel(torch.nn.Module):
 
         self.seq_length = config.seq_length  # 8192
 
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("starcoder_pa_model")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("starcoder_pa_model")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("star_coder_PAModel")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("star_coder_PAModel")
 
         self.acl_encoder_operation.set_param(self.acl_param_encoder)
         self.acl_decoder_operation.set_param(self.acl_param_decoder)

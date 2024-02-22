@@ -72,13 +72,14 @@ ChatGLM-6B 是一个开源的、支持中英双语问答的对话语言模型，
        |-- config.json
        |-- configuration_chatglm.py
        |-- modeling_chatglm.py
-       |-- pytorch_model-00001-of-00007.bin
-       |-- pytorch_model-00002-of-00007.bin
-       |-- pytorch_model-00003-of-00007.bin
-       |-- pytorch_model-00004-of-00007.bin
-       |-- pytorch_model-00005-of-00007.bin
-       |-- pytorch_model-00006-of-00007.bin
-       |-- pytorch_model-00007-of-00007.bin
+       |-- pytorch_model-00001-of-00008.bin
+       |-- pytorch_model-00002-of-00008.bin
+       |-- pytorch_model-00003-of-00008.bin
+       |-- pytorch_model-00004-of-00008.bin
+       |-- pytorch_model-00005-of-00008.bin
+       |-- pytorch_model-00006-of-00008.bin
+       |-- pytorch_model-00007-of-00008.bin
+       |-- pytorch_model-00008-of-00008.bin
        |-- pytorch_model.bin.index.json
        |-- quantization.py
        |-- tokenization_chatglm.py
@@ -151,6 +152,8 @@ ChatGLM-6B 是一个开源的、支持中英双语问答的对话语言模型，
   
 - 模型性能数据测试
 
+  **性能测试请先配置环境变量`export TIMEIT=1`，测试结束后删除该环境变量`unset TIMEIT`。**
+  
   ```shell
   # 将TP_SIZE设置为对应的并行数，例如单芯场景TP_SIZE=1，双芯场景TP_SIZE=2
   python process_weights.py --model_path ${CHECKPOINT} --tp_size ${TP_SIZE}
@@ -159,10 +162,10 @@ ChatGLM-6B 是一个开源的、支持中英双语问答的对话语言模型，
   
   备注：
   
-  1. 可通过开启 --set_case_pair 指定输入输出序列长度，例如以下命令为输入输出组合为[256,256], [512,512], [1024,1024]的情况：
+  1. 可通过配置`--seqlen_in_pair`和`--seqlen_out_pair`指定输入输出序列长度，例如以下命令测试的输入输出组合为[256,256]，[512,512]，[1024,1024]
   
      ```shell
-     torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 --mode performance --model_path ${CHECKPOINT} --device 4 --set_case_pair 1 --seqlen_in_pair 256,512,1024 --seqlen_out_pair 256,512,1024 --batch 1 --performance_output_file performance_bs1.csv
+     torchrun --nproc_per_node ${TP_SIZE} --master_port 2000 main.py --mode performance --model_path ${CHECKPOINT} --device 0 --seqlen_in_pair 256,512,1024 --seqlen_out_pair 256,512,1024 --batch ${batch_size} --tp_size ${TP_SIZE} --performance_output_file performance_bs${batch_size}.csv
      ```
   
   2. 环境变量 `MAX_SEQ_LEN` （默认值2048）必须大于等于 `seqlen_in + seqlen_out`，例如：

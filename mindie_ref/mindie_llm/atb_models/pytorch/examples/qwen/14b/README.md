@@ -271,7 +271,7 @@ cp ${script_path}/modeling_qwen_ascend.py ${model_path}
 修改 ${model_path}里的config.json中的kv对，改成`"AutoModelForCausalLM": "modeling_qwen_cut.QWenLMHeadModel"`
 
 ```text
-修改`${script_path}/cut_model_and_run_qwen.sh`    
+修改`${script_path}/cut_model_and_run.sh`    
 将 `input_dir` 修改为模型所在路径 `${model_path}` 
 将 `output_dir` 修改为原目录下子目录 `${model_path/part_model}`。模型切分成功后，会自动生成新目录part_model(用户无需新建该文件夹)
 将 `rank_size` 修改为期望切分的份数。例如rank_size=4表示模型切分为4份。
@@ -292,7 +292,7 @@ cp ${script_path}/modeling_qwen_ascend.py ${model_path}
     --1
   ......(其他)
 --script_path
-  cut_model_and_run_qwen.sh
+  cut_model_and_run.sh
   cut_model_util.py
   main.py
   config.ini
@@ -303,7 +303,7 @@ cp ${script_path}/modeling_qwen_ascend.py ${model_path}
 
 ```shell
 cd ${script_path}
-bash cut_model_and_run_qwen.sh
+bash cut_model_and_run.sh
 ```
 
 切分所需时间较长，切分完成后，将会打印 'Tensor parallelism weights have been successfully saved.'。
@@ -354,11 +354,9 @@ task_name可选inference、precision、performance。
 python main.py --task ${task_name}
 ```
 
-- 多卡   
-多卡推理，芯片类型区分为310P、910B系列。当在910B芯片进行多卡推理时，"cut_model_and_run_qwen.sh"脚本需修改环境变量"ATB_USE_TILING_COPY_STREAM=0"。
-该环境变量功能是为了解决310P上asynccopy性能慢的问题，与910B无关。
+- 多卡
 ```shell
-bash cut_model_and_run_qwen.sh ${task_name}
+bash cut_model_and_run.sh ${task_name}
 ```
 
 **注意**
@@ -375,7 +373,7 @@ MAX_SEQ_LEN=2048 python main.py --task ${task_name}
 或
 
 ```shell
-MAX_SEQ_LEN=2048 bash cut_model_and_run_qwen.sh ${task_name}
+MAX_SEQ_LEN=2048 bash cut_model_and_run.sh ${task_name}
 ```
 
 如果遇到
@@ -409,9 +407,9 @@ python -c "import os;import transformers;print(os.path.join(os.path.dirname(tran
 2.将 `pytorch/examples/atb_speed_sdk/atb_speed/common/transformers_patch/4.30.2/utils_performance_test_npu_greedy.py`
   拷贝到当前路径下，并重命名为utils.py
 - 精确计时
-开启环境变量"RETURN_PERF_DETAIL=1"，例如：
+开启环境变量"TIMEIT=1"，例如：
 ```shell
-RETURN_PERF_DETAIL=1 python main.py --task performance
+TIMEIT=1 python main.py --task performance
 ```
 
 相关详细说明请参考 [SDK性能测试指南精确打点法章节](../../atb_speed_sdk/README.md) 
@@ -419,17 +417,17 @@ RETURN_PERF_DETAIL=1 python main.py --task performance
 
 # 竞品对比
 
-# 910B
+# 910B3
 
 ## 精度
 
-| 精度             | NPU                | GPU                | 对比                     |
-|----------------|--------------------|--------------------|------------------------|
-| STEM           | 0.6627906976744186 | 0.6534883720930232 | +0.009302325581395321  |
-| Social Science | 0. 8               | 0.8                | 0.0                    |
-| Humanities     | 0.7470817120622568 | 0.7470817120622568 | 0.0                    |
-| Other          | 0.6432291666666666 | 0.6458333333333334 | -0.0026041666666667407 |
-| Avg acc        | 0.7013372956909361 | 0.6991084695393759 | +0.0022288261515601704 |
+| 精度             | NPU                | GPU                | 对比                  |
+|----------------|--------------------|--------------------|---------------------|
+| STEM           | 0.6534883720930232 | 0.6534883720930232 | 0.0                 |
+| Social Science | 0. 8               | 0.8                | 0.0                 |
+| Humanities     | 0.7509727626459144 | 0.7470817120622568 | +0.0038910505836576 |
+| Other          | 0.6458333333333334 | 0.6458333333333334 | 0.0                 |
+| Avg acc        | 0.6998514115898959 | 0.6991084695393759 | +0.00074294205052   |
 
 ## 性能
 
@@ -519,13 +517,11 @@ cd ${script_path}
 python main.py --task precision
 ```
 
-- 多芯  
-  多卡推理，芯片类型区分为310P、910B系列。当在910B芯片进行多卡推理时，"cut_model_and_run_qwen.sh"脚本需修改环境变量"ATB_USE_TILING_COPY_STREAM=0"。
-该环境变量功能是为了解决310P上asynccopy性能慢的问题，与910B无关。
+- 多芯
 
 ```shell
 cd ${script_path}
-bash cut_model_and_run_qwen.sh precision
+bash cut_model_and_run.sh precision
 ```
 
 结束后在${ceval_work_dir}/test_result目录下查看测试结果。[双芯结果每个两份，只需看其中一份即可]。
@@ -553,7 +549,7 @@ bash cut_model_and_run_qwen.sh precision
 
 - 配置config.ini中[performance]属性， 如下：
   ```
-  model_name=internlm_7b
+  model_name=qwen_14b
   perf_mode=detail
   ```
 
@@ -563,19 +559,16 @@ bash cut_model_and_run_qwen.sh precision
 
 ```shell
 cd ${script_path}
-RETURN_PERF_DETAIL=1 python main.py --task performance
+TIMEIT=1 python main.py --task performance
 ```
 
 - 多芯  
-  多卡推理，芯片类型区分为310P、910B系列。当在910B芯片进行多卡推理时，"cut_model_and_run_qwen.sh"脚本需修改环境变量"ATB_USE_TILING_COPY_STREAM=0"。
-该环境变量功能是为了解决310P上asynccopy性能慢的问题，与910B无关。
-
 ```shell
 cd ${script_path}
-RETURN_PERF_DETAIL=1 bash cut_model_and_run_qwen.sh performance
+TIMEIT=1 bash cut_model_and_run.sh performance
 ```
 
-为了不影响正常使用，将`RETURN_PERF_DETAIL`设置成1来返回具体的性能测试的值，默认是0
+为了不影响正常使用，将`TIMEIT`设置成1来返回具体的性能测试的值，默认是0
 
 ### 性能测试结果
 

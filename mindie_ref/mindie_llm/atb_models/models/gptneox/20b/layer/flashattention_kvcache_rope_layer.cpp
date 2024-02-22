@@ -101,7 +101,7 @@ atb::Status FlashAttentionKvCacheRopeLayer(const FlashAttentionKvCacheRopeParam 
     inputLayerNormNode.outTensorIds = { INTERMEDIATE_INPUTLAYERNORMOUT };
 
     // qkv  [1, n_tokens, hidden_size] to [1, n_tokens, 3 * hidden_size]
-    atb::infer::LinearParam linearParam = { false, false, true };
+    atb::infer::LinearParam linearParam;
     CREATE_OPERATION(linearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = { INTERMEDIATE_INPUTLAYERNORMOUT, IN_QKVWEIGHT, IN_QKVBIAS };
     qkvLinearNode.outTensorIds = { INTERMEDIATE_MIXEDQKVLINEAROUT };

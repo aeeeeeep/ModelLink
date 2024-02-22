@@ -99,7 +99,7 @@
    ./Ascend-cann-atb_7.0.0_linux-aarch64_abi0.run --install
    
    # 激活环境变量
-   source /usr/local/Ascend/atb/set_env/sh
+   source /usr/local/Ascend/atb/set_env.sh
    ```
 
 5. 编译ModelLink代码仓
