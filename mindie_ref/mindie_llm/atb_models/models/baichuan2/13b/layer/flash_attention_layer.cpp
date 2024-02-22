@@ -105,7 +105,8 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
     inputNormNode.inTensorIds = {IN_HIDDEN_STATES, IN_NORM_WEIGHT};
     inputNormNode.outTensorIds = {INTERNAL_INPUT_NORM_OUT};
 
-    atb::infer::LinearParam linearParam = {false, false, false};
+    atb::infer::LinearParam linearParam;
+    linearParam.hasBias = false;
     CREATE_OPERATION(linearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = {INTERNAL_INPUT_NORM_OUT, IN_QKV_MIXED_LINEAR_WEIGHT};
     qkvLinearNode.outTensorIds = {INTERNAL_QKV_MIXED_LINEAR_OUT};
@@ -174,7 +175,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
     mlpParam.commDownParam.rankSize = param.rankSize;
     mlpParam.commDownParam.backend = param.backend;
     mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
-    mlpParam.transposeB = false;
+    mlpParam.transposeB = true;
     mlpParam.isBias = false;
     mlpParam.isPack = false;
     atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);

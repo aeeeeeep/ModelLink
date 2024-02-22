@@ -32,7 +32,7 @@ public:
         int rank = 0;
         int rankSize = 1;
         bool isPrefill = false;
-        bool transposedWeight = false;
+        bool transposedWeight = true;
         std::string backend = "hccl";
         void FromString(const std::string &param);
     };

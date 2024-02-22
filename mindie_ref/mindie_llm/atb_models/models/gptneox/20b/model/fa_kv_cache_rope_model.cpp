@@ -201,7 +201,8 @@ int64_t FaKvCacheRopeModel::BuildGraph()
     finalNormNode.outTensors = { &graph_.internalTensors.at(finalLayerNormOutTensorId) };
 
     auto &outLinearNode = graph_.nodes.at(nodeId++);
-    atb::infer::LinearParam outLinearParm = { false, false, false };
+    atb::infer::LinearParam outLinearParm;
+    outLinearParm.hasBias = false;
     CREATE_OPERATION(outLinearParm, &op);
     outLinearNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
