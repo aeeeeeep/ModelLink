@@ -51,7 +51,7 @@ atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation)
     atb::Node &mulNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpLinearParallelNode = opGraph.nodes.at(nodeId++);
 
-    atb::infer::LinearParam linearParam = {false, false, true};
+    atb::infer::LinearParam linearParam;
     CreateOperation(linearParam, &linearNode.operation);
     linearNode.inTensorIds = {IN_HIDDEN_STATES_ID, IN_DENSE_H_TO_4H_WEIGHT_ID, IN_DENSE_H_TO_4H_BIAS_ID};
     linearNode.outTensorIds = {

@@ -46,7 +46,8 @@ atb::Status CreateLmHead(const LmHeadParam &param, atb::Operation **operation)
     atb::Node &allGatherNode = opGraph.nodes.at(nodeId++);
     atb::Node &transposeNode = opGraph.nodes.at(nodeId++);
 
-    atb::infer::LinearParam linearParam = {false, false, false};
+    atb::infer::LinearParam linearParam;
+    linearParam.hasBias = false;
     CreateOperation(linearParam, &linearNode.operation);
     linearNode.inTensorIds = {IN_LOGITS_ID, IN_LINEARWEIGHT_ID};
     linearNode.outTensorIds = {INTERMIDATE_LINEAR_OUT_ID}; // [bs, seqlen, num_embeddings/rankSize]

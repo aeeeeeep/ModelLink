@@ -115,7 +115,7 @@ struct MlpGateParam {
     int rankRoot = 0;
     void *hcclComm = nullptr;
     atb::infer::ActivationType activationType;
-    bool transposeB = false;
+    bool transposeB = true;
     bool isBias = false;
     bool isPack = false;
     std::string backend = "hccl";
