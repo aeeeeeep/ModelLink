@@ -850,6 +850,8 @@ class KVAttentionManager:
 
     def get_attention_mask(self, attention_mask=None):
         if LONG_SEQ_ENABLE:
+            if self.batch_size > 1:
+                raise ValueError(f"batch_size must be 1, but got {self.batch_size} when LONG_SEQ_ENABLE=1")
             if self.is_full:
                 return self.attention_mask_max_full
             else:
