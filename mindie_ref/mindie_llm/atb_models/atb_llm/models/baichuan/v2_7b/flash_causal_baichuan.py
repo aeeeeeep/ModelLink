@@ -342,8 +342,13 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
                                 max_s: int,
                                 lm_head_indices: Optional[torch.Tensor] = None):
         acl_inputs = self.prepare_inputs_for_ascend(input_ids, position_ids, is_prefill, kv_cache,
+<<<<<<< HEAD
+                                                               block_tables, slots, input_lengths, max_s,
+                                                               lm_head_indices)
+=======
                                                     block_tables, slots, input_lengths, max_s,
                                                     lm_head_indices)
+>>>>>>> ab85ca3ea0ed40988018786f6885cc6829bcc107
         acl_param = json.dumps({
             "seqLen": input_lengths.tolist()
         })
