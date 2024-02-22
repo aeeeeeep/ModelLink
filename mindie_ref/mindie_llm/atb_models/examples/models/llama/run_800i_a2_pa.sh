@@ -2,7 +2,7 @@
 # 参数配置以及启动指令的说明见同级目录下的README.md文件
 export MAX_MEMORY_GB=29
 export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
-export TP_WORLD_SIZE=8
+export world_size=8
 export MASTER_PORT=20030
 export IS_BF16=false
 export USE_REFACTOR=true
@@ -16,6 +16,7 @@ export ATB_CONVERT_NCHW_TO_ND=1
 export LCCL_ENABLE_FALLBACK=1
 
 extra_param=""
+world_size=$(($(echo "${ASCEND_RT_VISIBLE_DEVICES}" | grep -o , | wc -l) +1))
 
 if [ "$IS_BF16" = true ]; then
     extra_param="${extra_param} --is_bf16"
@@ -28,5 +29,5 @@ fi
 if [ "$TP_WORLD_SIZE" == "1" ]; then
     python -m examples.run_pa --model_path $1 $extra_param
 else
-    torchrun --nproc_per_node $TP_WORLD_SIZE --master_port $MASTER_PORT -m examples.run_pa --model_path $1 $extra_param
+    torchrun --nproc_per_node $world_size --master_port $MASTER_PORT -m examples.run_pa --model_path $1 $extra_param
 fi

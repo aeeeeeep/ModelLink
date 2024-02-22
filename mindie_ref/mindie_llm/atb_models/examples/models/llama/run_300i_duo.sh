@@ -4,14 +4,14 @@ export BIND_CPU=1
 export IS_QUANT=0
 export MAX_MEMORY_GB=15
 export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3
-export TP_WORLD_SIZE=2
 export MASTER_PORT=20030
 export USE_REFACTOR=true
 
 extra_param=""
+world_size=$(($(echo "${ASCEND_RT_VISIBLE_DEVICES}" | grep -o , | wc -l) +1))
 
 if [ "$USE_REFACTOR" = true ]; then
     extra_param="${extra_param} --use_refactor"
 fi
 
-torchrun --nproc_per_node $TP_WORLD_SIZE --master_port $MASTER_PORT -m ../../examples.run_pa --model_path $1 $extra_param
+torchrun --nproc_per_node $world_size --master_port $MASTER_PORT -m ../../examples.run_pa --model_path $1 $extra_param
