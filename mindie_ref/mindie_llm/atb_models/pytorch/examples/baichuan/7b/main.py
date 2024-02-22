@@ -109,7 +109,6 @@ class BaichuanLM(Launcher):
         模型初始化
         :return:
         """
-        print(self.model_path)
         tokenizer = AutoTokenizer.from_pretrained(self.model_path, trust_remote_code=True, use_fast=False,
                                                   padding_side="left")
         model = AutoModelForCausalLM.from_pretrained(self.model_path, trust_remote_code=True).half().to(self._device)
@@ -122,6 +121,7 @@ class BaichuanLM(Launcher):
         model.eval()
         model.generation_config = self.remove_part_of_generation_config(model.generation_config)
         return model, tokenizer
+
 
 def demo_ceval(launcher: Launcher):
     """
@@ -151,10 +151,10 @@ def demo_inference(launcher: Launcher):
     :return:
     """
     launcher.logger.info("---------------warm-up---------------")
-    launcher.infer('Hamlet->Shakespeare\nOne Hundred Years of Solitude->', {"max_new_tokens": 128})
+    launcher.infer('Hamlet->Shakespeare\nOne Hundred Years of Solitude->', {"max_new_tokens": 64})
 
     launcher.logger.info("---------------inference---------------")
-    launcher.infer('登鹳雀楼->王之涣\n夜雨寄北->', {"max_new_tokens": 128})
+    launcher.infer('登鹳雀楼->王之涣\n夜雨寄北->', {"max_new_tokens": 64})
 
     launcher.logger.info("---------------2k---------------")
     launcher.infer_test(1, 2048, 32)
