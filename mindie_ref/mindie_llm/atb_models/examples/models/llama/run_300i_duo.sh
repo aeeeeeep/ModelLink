@@ -6,6 +6,5 @@ export MAX_MEMORY_GB=15
 export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3
 export TP_WORLD_SIZE=2
 export MASTER_PORT=20030
-export PYTHONPATH=${llm_path}:$PYTHONPATH
 
 torchrun --nproc_per_node $TP_WORLD_SIZE --master_port $MASTER_PORT -m ../../examples.run_pa --model_path $1

@@ -34,6 +34,12 @@
 ## 权重转换
 - 参考[此README文件](../../README.md)
 
+## 设置通用环境变量
+- 将模型仓路径加入Python查询模块和包的搜索路径中
+  ```shell
+  export PYTHONPATH=${llm_path}:$PYTHONPATH
+  ```
+
 ## 300I DUO 运行操作说明
 
 ### 对话测试
@@ -69,9 +75,6 @@
     - 默认使用20030端口
     - 目的是为了避免同一台机器同时运行多个多卡模型时出现通信冲突
     - 设置时端口建议范围为：20000-20050
-  - `export PYTHONPATH=${llm_path}:$PYTHONPATH`
-    - 将模型仓路径加入Python查询模块和包的搜索路径中
-    - 将${llm_path}替换为实际路径
 
 ## 800I A2 运行操作说明
 
@@ -99,9 +102,6 @@
     - 默认使用20030端口
     - 目的是为了避免同一台机器同时运行多个多卡模型时出现通信冲突
     - 设置时端口建议范围为：20000-20050
-  - `export PYTHONPATH=${llm_path}:$PYTHONPATH`
-    - 将模型仓路径加入Python查询模块和包的搜索路径中
-    - 将${llm_path}替换为实际路径
   - 以下环境变量与性能和内存优化相关，通常情况下无需修改
     ```shell
     export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
@@ -145,9 +145,6 @@
     - 默认使用20030端口
     - 目的是为了避免同一台机器同时运行多个多卡模型时出现通信冲突
     - 设置时端口建议范围为：20000-20050
-  - `export PYTHONPATH=${llm_path}:$PYTHONPATH`
-    - 将模型仓路径加入Python查询模块和包的搜索路径中
-    - 将${llm_path}替换为实际路径
   - `export IS_BF16=false`
     - 是否使用BF16精度进行推理
     - 默认使用FP16
@@ -187,8 +184,26 @@
 - 参考[此README文件](../../../tests/modeltest/README.md)
 
 ## 性能测试
-- 参考[此README文件](../../../tests/modeltest/README.md)
+- 进入以下路径
+  ```shell
+  ${llm_path}/tests/modeltest
+  ```
+- 运行指令
+  ```shell
+  bash run.sh pa_fp16 [performance|full_CEval|full_MMLU|full_BoolQ] ([case_pair]) [batch_size] [model_name] ([use_refactor]) [weight_dir] [chip_num] ([max_position_embedding/max_sequence_length])
+  ```
+    - 参考[此README文件](../../../tests/modeltest/README.md)
+  - 运行llama2-7b和llama2-13b时`use_refactor`参数需设置为False，其余模型运行时需设置为True
+  - 示例
+    ```shell
+    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama False ${llama2-7b权重路径} 8
+    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama False ${llama2-13b权重路径} 8
+    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${llama2-70b权重路径} 8
+    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${llama-7b权重路径} 8
+    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${llama-13b权重路径} 8
+    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${llama-65b权重路径} 8
+    ```
 
 ## FAQ
-- 更多环境变量见\${llm_path}/examples/README.md
-- 对话测试实际执行的Python文件为`${llm_path}/examples/run_fa.py和\${llm_path}/examples/run_pa.py`；这两个文件的参数说明见`${llm_path}/examples/README.md`
+- 更多环境变量见`${llm_path}/examples/README.md`
+- 对话测试实际执行的Python文件为`${llm_path}/examples/run_fa.py`和`${llm_path}/examples/run_pa.py`；这两个文件的参数说明见`${llm_path}/examples/README.md`
