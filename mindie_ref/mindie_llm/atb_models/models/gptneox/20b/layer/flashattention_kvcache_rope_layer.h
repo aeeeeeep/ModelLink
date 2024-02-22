@@ -35,6 +35,7 @@ struct FlashAttentionKvCacheRopeParam {
     bool isPrefill = false;
     int rank = 0;
     int rankSize = 1;
+    std::string backend = "hccl";
 };
 
 atb::Status FlashAttentionKvCacheRopeLayer(const FlashAttentionKvCacheRopeParam &param, atb::Operation **operation);
