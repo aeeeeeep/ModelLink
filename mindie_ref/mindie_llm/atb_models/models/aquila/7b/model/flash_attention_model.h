@@ -36,7 +36,7 @@ public:
         // isPrefill为false时为增量阶段，decoder的isPrefill参数应为false
         bool isPrefill = true;
         // isPack为true时QKV和MLP中的gate和up权重合并; 反之，则权重不合并
-        bool isPack = true;
+        bool isPack = false;
         void FromString(const std::string &param);
     };
 

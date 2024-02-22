@@ -255,7 +255,7 @@ source /usr/local/Ascend/atb/set_env.sh
 cp ${model_download_path}/*.py ${model_path}/
 cp ${model_download_path}/*.json ${model_path}/
 cp ${model_download_path}/*.model ${model_path}/
-ln -s ${model_download_path}/*.bin ${model_path}/
+cp -s ${model_download_path}/*.bin ${model_path}/
 ```
 
 ### 安装 atb_speed_sdk
