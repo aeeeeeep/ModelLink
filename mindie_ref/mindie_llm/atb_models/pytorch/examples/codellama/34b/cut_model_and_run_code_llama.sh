@@ -13,11 +13,8 @@ then
     echo "Weight directory exists, runing......"
     cp fa_rope/modeling_llama_fa_rope.py $TRANSFORMER_PACKAGE_PATH/models/llama/modeling_llama.py
 
-    # HCCL_OP_BASE_FFTS_MODE_ENABLE=1 ATB_OPERATION_EXECUTE_ASYNC=0 TASK_QUEUE_ENABLE=0 HCCL_BUFFSIZE=110 torchrun --nproc_per_node 2 run_codellama_half_parallel.py --load_path $output_dir
     HCCL_OP_BASE_FFTS_MODE_ENABLE=1 ATB_OPERATION_EXECUTE_ASYNC=0 TASK_QUEUE_ENABLE=0 HCCL_BUFFSIZE=110 \
     torchrun --nproc_per_node 2 run.py --device $DEVICE --checkpoint $output_dir --run-precision --run-parallel
-    # torchrun --nproc_per_node 2 run_codellama_half_parallel.py --load_path $output_dir
-    # torchrun --nproc_per_node 2 run_llama70b_parallel_performance.py --load_path $output_dir
 else
     echo "Cutted Weight directory does not exist, cuting the weight......"
     cp modeling_llama_parallel.py $TRANSFORMER_PACKAGE_PATH/models/llama/modeling_llama.py
