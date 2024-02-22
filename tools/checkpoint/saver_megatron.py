@@ -38,6 +38,9 @@ def add_arguments(parser):
                        'in the input checkpoint if provided by the loader, otherwise to 1')
     group.add_argument('--save-model-type', type=str, default='megatron',
                        help='Save model type')
+    group.add_argument("--w-pack", type=bool,
+                       help='True is w_pack weight for llm like baichuan',
+                       default=False)
 
 
 def save_huggingface(args, model):
@@ -49,6 +52,74 @@ def save_huggingface(args, model):
 
     for name_param_h, name_param_m in zip(hf_model.named_parameters(), model.named_parameters()):
         name_param_h[1].data.copy_(name_param_m[1])
+
+    save_dir = os.path.join(args.save_dir, 'mg2hg')
+    print(f'save weight to {save_dir}')
+    hf_model.save_pretrained(save_dir)
+
+
+def permute_qkv_weight_inv(w, n_head, hidden_size):
+    """ adapt for ascendspeed llama qkv layer """
+    hn = hidden_size // n_head
+    w_s0, w_s1 = w.shape
+    return w.reshape(n_head, 3, hn, w.shape[1]).contiguous().permute(1, 0, 2, 3).reshape(w_s0, w_s1).contiguous().clone()
+
+
+def save_huggingface_llama(args, model, model_args):
+    '''Set model params.'''
+    from transformers import AutoModelForCausalLM
+
+    # Load Huggingface model.
+    hf_model = AutoModelForCausalLM.from_pretrained(args.save_dir, device_map="cpu", trust_remote_code=True)
+    hf2mg_map = {}
+    for name_param_m in model.named_parameters():
+        layer_num = name_param_m[0].split(".")[3] if len(name_param_m[0].split(".")) > 3 else name_param_m[0].split(".")[1]
+        if name_param_m[0] == "language_model.embedding.word_embeddings.weight":
+            hf2mg_map["model.embed_tokens.weight"] = name_param_m[1]
+            continue
+        if name_param_m[0] == f"language_model.encoder.layers.{layer_num}.post_attention_norm.weight":
+            hf2mg_map[f"model.layers.{layer_num}.post_attention_layernorm.weight"] = name_param_m[1]
+            continue
+        if name_param_m[0] == f"language_model.encoder.layers.{layer_num}.input_norm.weight":
+            hf2mg_map[f"model.layers.{layer_num}.input_layernorm.weight"] = name_param_m[1]
+            continue
+        if name_param_m[0] == f"language_model.encoder.layers.{layer_num}.post_attention_norm.weight":
+            hf2mg_map[f"model.layers.{layer_num}.post_attention_layernorm.weight"] = name_param_m[1]
+            continue
+        if name_param_m[0] == f"language_model.encoder.layers.{layer_num}.self_attention.query_key_value.weight":
+            # use w_pack
+            if args.w_pack:
+                hf2mg_map[f"model.layers.{layer_num}.self_attn.W_pack.weight"] = name_param_m[1]
+            else:
+                permute_w_read = permute_qkv_weight_inv(name_param_m[1], model_args.num_attention_heads, model_args.hidden_size)
+                h, w = permute_w_read.shape
+                qw = permute_w_read[:h // 3, ...]
+                kw = permute_w_read[h // 3:h // 3 * 2, ...]
+                vw = permute_w_read[h // 3 * 2:, ...]
+                hf2mg_map[f"model.layers.{layer_num}.self_attn.q_proj.weight"] = qw
+                hf2mg_map[f"model.layers.{layer_num}.self_attn.k_proj.weight"] = kw
+                hf2mg_map[f"model.layers.{layer_num}.self_attn.v_proj.weight"] = vw
+            continue
+        if name_param_m[0] == f"language_model.encoder.layers.{layer_num}.self_attention.dense.weight":
+            hf2mg_map[f"model.layers.{layer_num}.self_attn.o_proj.weight"] = name_param_m[1]
+            continue
+        if name_param_m[0] == f"language_model.encoder.layers.{layer_num}.mlp.dense_h_to_4h.weight":
+            proj_read_h_half = name_param_m[1].shape[0] // 2
+            hf2mg_map[f"model.layers.{layer_num}.mlp.gate_proj.weight"] = name_param_m[1][:proj_read_h_half, ...]
+            hf2mg_map[f"model.layers.{layer_num}.mlp.up_proj.weight"] = name_param_m[1][proj_read_h_half:, ...]
+            continue
+        if name_param_m[0] == f"language_model.encoder.layers.{layer_num}.mlp.dense_4h_to_h.weight":
+            hf2mg_map[f"model.layers.{layer_num}.mlp.down_proj.weight"] = name_param_m[1]
+            continue
+        if name_param_m[0] == "language_model.encoder.final_norm.weight":
+            hf2mg_map[f"model.norm.weight"] = name_param_m[1]
+            continue
+        if name_param_m[0] == "language_model.output_layer.weight":
+            hf2mg_map[f"lm_head.weight"] = name_param_m[1]
+            continue
+    for name_param_h in hf_model.named_parameters():
+        if name_param_h[0] in hf2mg_map.keys():
+            name_param_h[1].data.copy_(hf2mg_map[name_param_h[0]])
 
     save_dir = os.path.join(args.save_dir, 'mg2hg')
     print(f'save weight to {save_dir}')
@@ -165,6 +236,7 @@ def save_model_checkpoint(queue, args):
         sys.argv.append('--bert-no-binary-head')
 
     margs = parse_args()
+    margs.w_pack = args.w_pack
 
 
     if hasattr(md, 'checkpoint_args'):
@@ -312,9 +384,17 @@ def save_model_checkpoint(queue, args):
             if md.linear_bias:
                 dense_bias = msg.pop("dense bias")
                 mlp_l1_bias = msg.pop("mlp l1 bias")
-
+            tp = args.target_tensor_parallel_size
+            np = margs.num_attention_heads // tp
+            gp = (margs.num_query_groups if margs.group_query_attention else margs.num_attention_heads) // tp
+            repeats = np // gp
+            hn = margs.kv_channels
+            qkv_weight_tuple = torch.chunk(msg.pop("qkv weight"), args.target_tensor_parallel_size, dim=0)
+            qkv_weight = ()
+            for i in range(len(qkv_weight_tuple)):
+                w_s0, w_s1 = qkv_weight_tuple[i].shape
+                qkv_weight += (qkv_weight_tuple[i].reshape(repeats + 2, gp, hn, qkv_weight_tuple[i].shape[1]).contiguous().permute(1, 0, 2, 3).reshape(w_s0, w_s1).contiguous(),)
             # Split up the parallel tensors
-            qkv_weight = torch.chunk(msg.pop("qkv weight"), args.target_tensor_parallel_size, dim=0)
             dense_weight = torch.chunk(msg.pop("dense weight"), args.target_tensor_parallel_size, dim=1)
             mlp_l1_weight = torch.chunk(msg.pop("mlp l1 weight"), args.target_tensor_parallel_size, dim=1)
 
@@ -443,6 +523,8 @@ def save_model_checkpoint(queue, args):
                 save_checkpoint(md.iteration, [models[tp_rank]], None, None)
             elif args.save_model_type == 'huggingface_bloom':
                 save_huggingface(args, models[tp_rank])
+            elif args.save_model_type == "save_huggingface_llama":
+                save_huggingface_llama(args, models[tp_rank], md)
 
     print("Done!")
 
