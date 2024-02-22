@@ -34,7 +34,7 @@ Currently, the following models has been supported:
 * <a href="https://huggingface.co/docs/transformers/main/model_doc/llama" style="color:green">LLaMA</a>-[[README: 7B/13B/33B/65B]](examples/llama/README.md)
 * <a href="https://huggingface.co/docs/transformers/main/model_doc/llama2" style="color:green">LLaMA2</a>-[[README: 7B/13B/34B/70B]](examples/llama2/README.md)
 * <a href="https://github.com/baichuan-inc" style="color:green">Baichuan2</a>-[[README: 7B/13B]](examples/baichuan2/README.md)
-
+* <a href="https://huggingface.co/Qwen/Qwen-7B" style="color:green">Qwen</a>-[[README: 7B]](examples/qwen/README.md)
 
 ### Downstream Tasks
 Currently, the following downstream tasks have been supported:
@@ -248,6 +248,16 @@ Coming soon ...
       <td> <a href="sources/images/llama2/llama2_70b_bf16_loss_compare.png">Loss</a> </td>
       <td> <a href="examples/llama2/pretrain_llama2_70B_ptd.sh">Train</a> </td>
     </tr>
+    <tr>
+      <td rowspan="4"><a href="examples/qwen/README.md">Qwen</a></td>
+      <td>7B</td>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 2499 </td>
+      <td> 2867 </td>
+      <td> <a href="sources/images/qwen/qwen7b_compare_loss.png">Loss</a> </td>
+      <td> <a href="examples/qwen/pretrain_qwen_7b_ptd.sh">Train</a> </td>
+    </tr>
   </tbody>
 </table>
 
@@ -385,6 +395,14 @@ Coming soon ...
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/generate_llama2_70B_ptd.sh">inference </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_70B_ptd.sh">evaluation </a> </td>
       <td>  <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
+    </tr>
+    <tr>
+      <td rowspan="4"><a href="examples/qwen/README.md">Qwen</a></td>
+      <td>7B</td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
   </tbody>
 </table>
