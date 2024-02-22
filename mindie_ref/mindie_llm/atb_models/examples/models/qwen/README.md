@@ -44,7 +44,7 @@ bash bash examples/models/qwen/run_pa.sh -m ${weight_path}
 | MAX_MEMORY_GB             | 每张卡上的预计使用的最大显存，若出现显存不足导致的异常，请将该参数改小 | 30              | 40             |
 | MASTER_PORT               | 卡间通信端口,通常不用修改，有冲突时再改                             |                 |                |
 
-注：run_pa.sh中默认RANK_SIZE为8，使用的卡号为0~7，实际使用时可根据需要进行修改。暂不支持奇数卡并行。
+注：暂不支持奇数卡并行。
 
 ## 精度测试
 
