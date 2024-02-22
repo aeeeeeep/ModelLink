@@ -1,11 +1,11 @@
 import argparse
 import os
 
-from atb_speed.common.ceval.base import CEvalTest
 from atb_speed.common.config import atb_speed_config
 from atb_speed.common.launcher import ParallelLauncher, Launcher
 from atb_speed.common.performance.base import PerformanceTest
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from atb_speed.common.precision import get_precision_test_cls
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 
 def parse_args():
@@ -14,7 +14,7 @@ def parse_args():
         "--task",
         type=str,
         default='inference',
-        choices=['inference', 'ceval', 'performance'],
+        choices=['inference', 'precision', 'performance'],
         help="Specify the task in which to run the script"
     )
     args = parser.parse_args()
@@ -62,8 +62,8 @@ def demo_ceval(launcher: Launcher):
     :param launcher:
     :return:
     """
-    c_t = CEvalTest(launcher)
-    c_t.run_ceval()
+    c_t = get_precision_test_cls()(launcher)
+    c_t.run()
 
 
 def demo_perf(launcher: Launcher):
@@ -102,7 +102,7 @@ def demo_inference(launcher: Launcher):
 
 TASK_MAP = {
     "inference": demo_inference,
-    "ceval": demo_ceval,
+    "precision": demo_ceval,
     "performance": demo_perf
 }
 
