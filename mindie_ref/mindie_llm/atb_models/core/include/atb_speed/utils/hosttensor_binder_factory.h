@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_UTILS_MODEL_FACTORY_H
-#define ATB_SPEED_UTILS_MODEL_FACTORY_H
+#ifndef ATB_SPEED_UTILS_HOSTTENSOR_BINDER_FACTORY_H
+#define ATB_SPEED_UTILS_HOSTTENSOR_BINDER_FACTORY_H
 
 #include <functional>
 #include <iostream>
