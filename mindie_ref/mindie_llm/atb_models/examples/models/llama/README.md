@@ -75,6 +75,10 @@
     - 默认使用20030端口
     - 目的是为了避免同一台机器同时运行多个多卡模型时出现通信冲突
     - 设置时端口建议范围为：20000-20050
+  - `export USE_REFACTOR=true`
+    - 是否使用新版模型组图
+    - 默认使用
+    - 运行llama2-7b和llama2-13b时`use_refactor`参数需设置为False，其余模型运行时需设置为True
 
 ## 800I A2 运行操作说明
 
@@ -102,6 +106,10 @@
     - 默认使用20030端口
     - 目的是为了避免同一台机器同时运行多个多卡模型时出现通信冲突
     - 设置时端口建议范围为：20000-20050
+  - `export USE_REFACTOR=true`
+    - 是否使用新版模型组图
+    - 默认使用
+    - 运行llama2-7b和llama2-13b时`use_refactor`参数需设置为False，其余模型运行时需设置为True
   - 以下环境变量与性能和内存优化相关，通常情况下无需修改
     ```shell
     export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
@@ -148,6 +156,10 @@
   - `export IS_BF16=false`
     - 是否使用BF16精度进行推理
     - 默认使用FP16
+  - `export USE_REFACTOR=true`
+    - 是否使用新版模型组图
+    - 默认使用
+    - 运行llama2-7b和llama2-13b时`use_refactor`参数需设置为False，其余模型运行时需设置为True
   - 以下环境变量与性能和内存优化相关，通常情况下无需修改
     ```shell
     export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
