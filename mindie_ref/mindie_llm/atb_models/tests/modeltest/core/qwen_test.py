@@ -6,9 +6,6 @@ from base import model_test
 class LlamaModelTest(model_test.ModelTest):
     def __init__(self, *args) -> None:
         super().__init__(*args)
-
-    def get_chip_num(self):
-        return 8
     
     def get_model(self, hardware_type, model_type, data_type):
         pass
