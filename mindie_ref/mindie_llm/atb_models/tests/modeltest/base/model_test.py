@@ -19,7 +19,6 @@ from pathlib import Path
 import torch
 try:
     import torch_npu
-    from torch_npu.contrib import transfer_to_npu
 except ModuleNotFoundError:
     pass
 import numpy as np
@@ -207,6 +206,8 @@ class ModelTest:
             if not os.path.exists(folder_path):
                 self.logger.error(f"folder {folder_path} create fail")
                 raise RuntimeError(f"folder {folder_path} create fail")
+            os.environ['LCCL_DETERMINISTIC'] = "1"
+            os.environ['HCCL_DETERMINISTIC'] = "1"
         os.environ['core_type'] = self.core_type
         self.local_rank, self.world_size = int(os.getenv("RANK", "0")), int(os.getenv("WORLD_SIZE", "1"))
         if self.hardware_type == "GPU":
@@ -243,8 +244,7 @@ class ModelTest:
                 raise RuntimeError(
                     "env ATB_SPEED_HOME_PATH not exist, source atb_speed set_env.sh")
             self.logger.info("ATB_SPEED env get success")
-            os.environ['LCCL_DETERMINISTIC'] = "1"
-            os.environ['HCCL_DETERMINISTIC'] = "1"
+            
             if self.model_type == "fa":
                 self.__npu_adapt()
 
