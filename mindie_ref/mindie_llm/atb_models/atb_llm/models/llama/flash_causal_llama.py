@@ -68,6 +68,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                 "isPack": True,
                 "isEmbeddingParallel": False,
                 "isLmHeadParallel": True,
+                "supportSwiGLU": False if self.soc_info.need_nz else True,
                 "rank": self.tp_rank,
                 "worldSize": self.tp_world_size,
                 "backend": "hccl" if self.soc_info.need_nz else "lccl"
@@ -85,6 +86,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                 "isPack": True,
                 "isEmbeddingParallel": False,
                 "isLmHeadParallel": True,
+                "supportSwiGLU": False if self.soc_info.need_nz else True,
                 "rank": self.tp_rank,
                 "worldSize": self.tp_world_size,
                 "backend": "hccl" if self.soc_info.need_nz else "lccl"
