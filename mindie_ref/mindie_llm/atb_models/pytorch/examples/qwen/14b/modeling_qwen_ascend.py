@@ -59,7 +59,8 @@ def is_nd():
 
 
 IS_ND = is_nd()
-print(f"IS_ND = {IS_ND}")
+print(f"{IS_ND=}")
+MASK_INC_DIM1 = 1 if IS_ND else 16  # 增量attention mask shape的第二维
 LONG_SEQ_ENABLE = int(os.getenv("LONG_SEQ_ENABLE", "0"))
 
 
@@ -783,12 +784,8 @@ class KVAttentionManager:
                 (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
         else:
             self.attention_mask_max_full = self.get_triumask(self.long_seq_mask_len).npu()
-        if IS_ND:
-            self.attention_mask_max_inc = torch.zeros(
-                (self.batch_size, 1, self.max_seq_len), device="npu", dtype=torch.half)
-        else:
-            self.attention_mask_max_inc = torch.zeros(
-                (self.batch_size, self.nz_dim, self.max_seq_len), device="npu", dtype=torch.half)
+        self.attention_mask_max_inc = torch.zeros(
+            (self.batch_size, MASK_INC_DIM1, self.max_seq_len), device="npu", dtype=torch.half)
         if not LONG_SEQ_ENABLE:
             self.registered_causal_mask = torch.tril(torch.ones(
                 (batch_size, 1, self.max_seq_len, self.max_seq_len),
@@ -855,6 +852,8 @@ class KVAttentionManager:
 
     def get_attention_mask(self, attention_mask=None):
         if LONG_SEQ_ENABLE:
+            if not IS_ND:
+                raise ValueError(f"This SOC does not supports LONG_SEQ_ENABLE=1")
             if self.batch_size > 1:
                 raise ValueError(f"batch_size must be 1, but got {self.batch_size} when LONG_SEQ_ENABLE=1")
             if self.is_full:
@@ -996,18 +995,11 @@ class QWenModel(QWenPreTrainedModel):
         self.batch_size = 0
         self.kv_attention_manager = None
         self.nz_dim = 16
-        if IS_ND:
-            self.min_cache = torch.full(
-                (1, self.max_position_embeddings),
-                torch.finfo(torch.half).min,
-                dtype=torch.half, device="npu"
-            )
-        else:
-            self.min_cache = torch.full(
-                (self.nz_dim, self.max_position_embeddings),
-                torch.finfo(torch.half).min,
-                dtype=torch.half, device="npu"
-            )
+        self.min_cache = torch.full(
+            (MASK_INC_DIM1, self.max_position_embeddings),
+            torch.finfo(torch.half).min,
+            dtype=torch.half, device="npu"
+        )
 
         self.use_logn_attn = config.use_logn_attn
         logn_list = [
