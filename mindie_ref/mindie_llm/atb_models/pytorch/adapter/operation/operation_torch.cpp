@@ -21,6 +21,7 @@
 #include <atb_speed/utils/timer.h>
 #include <atb_speed/utils/singleton.h>
 #include <atb_speed/base/context_factory.h>
+#include "atb_speed/utils/hosttensor_binder_factory.h"
 #include "atb_speed/utils/tensor_util.h"
 #include "atb_speed/utils/config.h"
 #include "atb_speed/utils/statistic.h"
@@ -28,7 +29,6 @@
 #include "pytorch/adapter/utils/utils.h"
 #include "pytorch/adapter/workspace/workspace.h"
 #include "operation_creator.h"
-#include "hosttensor_binder_creator.h"
 
 uint64_t GetNewOpId()
 {

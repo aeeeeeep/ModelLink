@@ -57,7 +57,7 @@ private:
     std::vector<int32_t> seqLen_;
 };
 
-REGISTER_BINDER(baichuan2_13b, HostTensorBinder);
+REGISTER_BINDER(baichuan2_13b, FlashAttentionLayerBinder);
 
 } // namespace baichuan2_13b
 } // namespace atb_speed

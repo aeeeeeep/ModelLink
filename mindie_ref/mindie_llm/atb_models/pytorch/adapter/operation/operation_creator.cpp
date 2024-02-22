@@ -20,19 +20,6 @@
 
 #include "atb_speed/log.h"
 #include "atb_speed/utils/operation_factory.h"
-#include "baichuan2/13b/layer/flash_attention_layer.h"
-#include "baichuan2/13b/layer/flash_attention_quant_layer.h"
-#include "baichuan2/13b/layer/flash_attention_quant_oper_layer.h"
-#include "codellama/34b/layer/flash_attention_rope_layer.h"
-#include "codellama/34b/operation/rope.h"
-#include "gptneox/20b/layer/flashattention_kvcache_rope_layer.h"
-#include "gptneox/20b/layer/embedding_layer.h"
-#include "gptneox/20b/layer/flashattention_kvcache_layer.h"
-#include "gptneox/20b/operation/position_embedding_fusion.h"
-#include "internlm/20b/layer/flash_attention_quant_layer.h"
-#include "internlm/20b/layer/flash_attention_rope_antioutlier_layer.h"
-#include "internlm/20b/layer/flash_attention_rope_layer.h"
-#include "internlm/7b/layer/flash_attention_rope_layer.h"
 
 using OperationCreateFunc = std::function<atb::Operation *(const nlohmann::json &paramJson)>;
 

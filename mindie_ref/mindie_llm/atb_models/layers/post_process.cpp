@@ -107,7 +107,7 @@ atb::Status Sample(const PostProcessParam &param, atb::Operation **operation)
     return atb::NO_ERROR;
 }
 
-static atb::Operation *SampleLayerCreate(const nlohmann::json &paramJson)
+atb::Operation *SampleLayerCreate(const nlohmann::json &paramJson)
 {
     atb_speed::common::PostProcessParam param;
     param.temperature = paramJson["temperature"].get<double>();

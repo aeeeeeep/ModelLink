@@ -15,7 +15,7 @@
  */
 #include "atb_speed/base/model.h"
 #include "atb_speed/utils/hosttensor_binder_factory.h"
-#include "chatglm2/6b/layer/flash_attention_layer.h"
+#include "chatglm2/6b/layer/paged_attention_layer.h"
 
 #include <gtest/gtest.h>
 #include <string>
@@ -25,25 +25,25 @@ using namespace atb_speed;
 
 TEST(HosttensorBinderFactory, RegisterShouldReturnTrueWhenGivenUniqueBinderName)
 {
-    bool firstTimeRegister = HosttensorBinderFactory::Register("CommonLayerFaBinder_1", []() {
-        return new atb_speed::chatglm2_6b::CommonLayerFaBinder();
+    bool firstTimeRegister = HosttensorBinderFactory::Register("FlashAttentionHostBinder_1", []() {
+        return new atb_speed::chatglm2_6b::FlashAttentionHostBinder();
     });
     ASSERT_EQ(firstTimeRegister, true);
 
-    bool duplicateRegister = HosttensorBinderFactory::Register("CommonLayerFaBinder_1", []() {
-        return new atb_speed::chatglm2_6b::CommonLayerFaBinder();
+    bool duplicateRegister = HosttensorBinderFactory::Register("FlashAttentionHostBinder_1", []() {
+        return new atb_speed::chatglm2_6b::FlashAttentionHostBinder();
     });
     ASSERT_EQ(duplicateRegister, false);
 }
 
 TEST(HosttensorBinderFactory, CreateHosttensorBinderByClassConstructorWouldNotGetNullptrWhenGivenCorrectParam)
 {
-    atb_speed::HostTensorBinder *binder_ = new atb_speed::chatglm2_6b::CommonLayerFaBinder();
+    atb_speed::HostTensorBinder *binder_ = new atb_speed::chatglm2_6b::FlashAttentionHostBinder();
     ASSERT_NE(binder_, nullptr);
 }
 
 TEST(HosttensorBinderFactory, CreateModelByCreateInstanceWouldNotGetNullptrWhenGivenCorrectBinderName)
 {
-    atb_speed::HostTensorBinder *binder_ = HosttensorBinderFactory::CreateInstance("CommonLayerFaBinder_1");
+    atb_speed::HostTensorBinder *binder_ = HosttensorBinderFactory::CreateInstance("FlashAttentionHostBinder_1");
     ASSERT_NE(binder_, nullptr);
 }

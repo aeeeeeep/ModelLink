@@ -34,7 +34,7 @@ struct PostProcessParam {
 
 atb::Status Sample(const PostProcessParam &param, atb::Operation **operation);
 
-static atb::Operation *SampleLayerCreate(const nlohmann::json &paramJson);
+atb::Operation *SampleLayerCreate(const nlohmann::json &paramJson);
 
 REGISTER_OPERATION(common, SampleLayerCreate);
 
