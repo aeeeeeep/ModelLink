@@ -51,7 +51,7 @@ def seed_everything(seed):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_name', type=str, default="yi_6b_200k", choices=["llama2-7b-chat-4k", "longchat-v1.5-7b-32k", "xgen-7b-8k", "internlm-7b-8k", "chatglm2-6b", "chatglm2-6b-32k", "chatglm3-6b-32k", "vicuna-v1.5-7b-16k", "yi_6b_200k"])
+    parser.add_argument('--model_name', type=str, default="yi_6b_200k", choices=["llama2-7b-chat-4k", "longchat-v1.5-7b-32k", "xgen-7b-8k", "internlm-7b-8k", "chatglm2-6b", "chatglm2-6b-32k", "chatglm3-6b-32k", "vicuna-v1.5-7b-16k", "yi_6b_200k", "vicuna-13b-v1.5-16k"])
     parser.add_argument('--model_path', type=str, default="/home/data/yi_6b_200k")
     parser.add_argument('--dataset_path', type=str, default="/home/dataset")
     parser.add_argument('--max_length', type=int, default=15500)
@@ -92,13 +92,13 @@ def build_chat(prompt):
         prompt = tokenizer.build_chat_input(prompt)
     elif "chatglm" in model_name:
         prompt = tokenizer.build_prompt(prompt)
-    elif "longchat" in model_name or "vicuna" in model_name:
+    elif "longchat" in model_name:
         from fastchat.model import get_conversation_template
         conv = get_conversation_template("vicuna")
         conv.append_message(conv.roles[0], prompt)
         conv.append_message(conv.roles[1], None)
         prompt = conv.get_prompt()
-    elif "llama2" in model_name or "yi" in model_name:
+    elif "llama2" in model_name or "yi" in model_name or "vicuna" in model_name:
         prompt = f"[INST]{prompt}[/INST]"
     elif "xgen" in model_name:
         header = (
@@ -182,7 +182,7 @@ def load_model_and_tokenizer(path):
         replace_llama_attn_with_flash_attn()
         tokenizer_ = LlamaTokenizer.from_pretrained(tokenizer_path)
         model_ = LlamaForCausalLM.from_pretrained(part_model_path, torch_dtype=torch.bfloat16).npu()
-    elif "longchat" in model_name or "vicuna" in model_name:
+    elif "longchat" in model_name:
         from llama_flash_attn_monkey_patch import replace_llama_attn_with_flash_attn
         replace_llama_attn_with_flash_attn()
         from fastchat.model import load_model
@@ -196,6 +196,9 @@ def load_model_and_tokenizer(path):
         model_ = model_.npu()
         model_ = model_.bfloat16()
         tokenizer_ = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True, use_fast=False)
+    elif "vicuna" in model_name:
+        tokenizer_ = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True)
+        model_ = AutoModelForCausalLM.from_pretrained(part_model_path, trust_remote_code=True, torch_dtype=torch.float16).npu()
     else:
         tokenizer_ = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True)
         model_ = AutoModelForCausalLM.from_pretrained(part_model_path, trust_remote_code=True, torch_dtype=torch.bfloat16).npu()
