@@ -27,9 +27,9 @@ def parse_args():
     parser.add_argument(
         "--task",
         type=str,
-        default='inference',
-        choices=['inference', 'ceval', 'performance', 'human_eval'],
-        help="Specify the task in which to run the script"
+        default="inference",
+        choices=["inference", "ceval", "performance", "human_eval"],
+        help="Specify the task in which to run the script",
     )
     args = parser.parse_args()
     return args
@@ -63,17 +63,15 @@ class CodeLlama34BParallel(ParallelLauncher):
 
         generation_kwargs = dict(
             inputs=inputs["input_ids"].npu(),
-            attention_mask=inputs['attention_mask'].npu(),
-            **gen_kwargs
+            attention_mask=inputs["attention_mask"].npu(),
+            **gen_kwargs,
         )
         print(f"问:{query}")
         start_time = time.time()
         with torch.no_grad():
-            outputs = self.model.generate(
-                **generation_kwargs
-            )
+            outputs = self.model.generate(**generation_kwargs)
         output = self.tokenizer.decode(outputs[0].cpu().numpy().tolist())
-        print(f'CodeLlama34b-答:\n')
+        print(f"CodeLlama34b-答:\n")
         print(output)
         end_time = time.time()
         time_cost = end_time - start_time
@@ -81,22 +79,31 @@ class CodeLlama34BParallel(ParallelLauncher):
         return output
 
     def init_model(self):
-        tokenizer = AutoTokenizer.from_pretrained(os.path.join(self.model_path, 'tokenizer'), trust_remote_code=True, use_fast=False,
-                                                  padding_side="left")
-        part_model_path = os.path.join(self.model_path, 'part_model', str(self.local_rank))
-        model = LlamaForCausalLM.from_pretrained(part_model_path, trust_remote_code=True)
+        tokenizer = AutoTokenizer.from_pretrained(
+            os.path.join(self.model_path, "tokenizer"),
+            trust_remote_code=True,
+            use_fast=False,
+            padding_side="left",
+        )
+        part_model_path = os.path.join(
+            self.model_path, "part_model", str(self.local_rank)
+        )
+        model = LlamaForCausalLM.from_pretrained(
+            part_model_path, trust_remote_code=True
+        )
         model = model.half().to(self._device)
         model.eval()
         return model, tokenizer
 
-    def get_prompt(self, message: str,
-                   system_prompt: str = DEFAULT_SYSTEM_PROMPT) -> str:
-        texts = [f'<s>[INST] <<SYS>>\n{system_prompt}\n<</SYS>>\n\n']
+    def get_prompt(
+        self, message: str, system_prompt: str = DEFAULT_SYSTEM_PROMPT
+    ) -> str:
+        texts = [f"<s>[INST] <<SYS>>\n{system_prompt}\n<</SYS>>\n\n"]
         # The first user input is _not_ stripped
         do_strip = False
         message = message.strip() if do_strip else message
-        texts.append(f'{message} [/INST]')
-        return ''.join(texts)
+        texts.append(f"{message} [/INST]")
+        return "".join(texts)
 
     def infer_human_eval(self, query):
         """
@@ -106,7 +113,7 @@ class CodeLlama34BParallel(ParallelLauncher):
         :return:
         """
         prompt = self.get_prompt(query)
-        inputs = self.tokenizer(prompt, return_tensors='pt', add_special_tokens=False)
+        inputs = self.tokenizer(prompt, return_tensors="pt", add_special_tokens=False)
         inputs = inputs.to(self.model.device)
         gen_kwargs = dict(
             max_new_tokens=2048,
@@ -125,8 +132,10 @@ class CodeLlama34BParallel(ParallelLauncher):
             time_cost = end_time - start_time
         output = self.tokenizer.decode(pred[0].cpu().numpy().tolist())
         new_tokens = len(pred[0]) - len(inputs.input_ids[0])
-        self.logger.info(f"generate {new_tokens} new tokens，({new_tokens / time_cost:.2f} tokens/s")
-        print(f'output = {output}')
+        self.logger.info(
+            f"generate {new_tokens} new tokens，({new_tokens / time_cost:.2f} tokens/s"
+        )
+        print(f"output = {output}")
         resp = output.replace(query, "")
         start = resp.find("```python")
         have_python = "```python"
@@ -149,7 +158,7 @@ class CodeLlama34BParallel(ParallelLauncher):
                 end = resp.find("[/PYTHON]", start)
             if end >= 0:
                 resp = resp[start:end]
-        print(f'resp = {resp}')
+        print(f"resp = {resp}")
         return resp
 
 
@@ -157,14 +166,20 @@ class CodeLlama34B(Launcher):
     """
     单卡推理launcher
     """
+
     def init_model(self):
         """
         模型初始化
         :return:
         """
-        tokenizer = AutoTokenizer.from_pretrained(self.model_path, trust_remote_code=True, use_fast=False,
-                                                  padding_side="left")
-        model = LlamaForCausalLM.from_pretrained(self.model_path, trust_remote_code=True).half().to(self._device)
+        tokenizer = AutoTokenizer.from_pretrained(
+            self.model_path, trust_remote_code=True, use_fast=False, padding_side="left"
+        )
+        model = (
+            LlamaForCausalLM.from_pretrained(self.model_path, trust_remote_code=True)
+            .half()
+            .to(self._device)
+        )
         model.eval()
         return model, tokenizer
 
@@ -196,24 +211,34 @@ def demo_inference(launcher: Launcher):
     :param launcher:Launcher
     """
     launcher.logger.info("---------------warm-up---------------")
-    launcher.infer('Hamlet->Shakespeare\nOne Hundred Years of Solitude->',
-                   {"max_new_tokens":128, "do_sample":False, "repetition_penalty":1.0})
+    launcher.infer(
+        "Hamlet->Shakespeare\nOne Hundred Years of Solitude->",
+        {"max_new_tokens": 128, "do_sample": False, "repetition_penalty": 1.0},
+    )
 
-    launcher.infer('Please use Java to implement a binary search algorithm.')
+    launcher.infer("Please use Java to implement a binary search algorithm.")
 
     # launcher.logger.info("---------------inference---------------")
-    launcher.infer('登鹳雀楼->王之涣\n夜雨寄北->', {"max_new_tokens":64, "do_sample":False, "repetition_penalty":1.0})
+    launcher.infer(
+        "登鹳雀楼->王之涣\n夜雨寄北->",
+        {"max_new_tokens": 64, "do_sample": False, "repetition_penalty": 1.0},
+    )
 
     # launcher.logger.info("---------------2k---------------")
     launcher.infer_test(1, 2048, 64)
 
     # launcher.logger.info("---------------batch---------------")
-    query_list = ["谷歌公司的CEO是",
-                  '登鹳雀楼->王之涣\n夜雨寄北->',
-                  '苹果公司的CEO是',
-                  '华为公司的CEO是',
-                  '微软公司的CEO是']
-    launcher.infer_batch(query_list, {"max_new_tokens":64, "do_sample":False, "repetition_penalty":1.0})
+    query_list = [
+        "谷歌公司的CEO是",
+        "登鹳雀楼->王之涣\n夜雨寄北->",
+        "苹果公司的CEO是",
+        "华为公司的CEO是",
+        "微软公司的CEO是",
+    ]
+    launcher.infer_batch(
+        query_list,
+        {"max_new_tokens": 64, "do_sample": False, "repetition_penalty": 1.0},
+    )
 
 
 def compute(datas, max_k, launcher):
@@ -227,7 +252,7 @@ def compute(datas, max_k, launcher):
     results = defaultdict(list)
     for task_id, doc in enumerate(datas):
         i = 0
-        while (i < max_k):
+        while i < max_k:
             start = int(time.time())
             # 获取数据集的prompt
             prompt = eval.get_prompt(doc)
@@ -238,11 +263,15 @@ def compute(datas, max_k, launcher):
             reference = eval.get_reference(doc)
             # 运行测试用例，获取评测结果
             evaluateDict = eval.evaluate(task_id, candidate, reference)
-            results[evaluateDict["task_id"]].append((evaluateDict["completion_id"], evaluateDict))
+            results[evaluateDict["task_id"]].append(
+                (evaluateDict["completion_id"], evaluateDict)
+            )
             end = int(time.time())
             print(f"### candidate: \n{evaluateDict['candidate']}")
-            print(f"### task_id: {str(task_id)} ### i: {str(i)} ### test_result: {evaluateDict['result']} "
-                  f"### time cost: {str(end - start)}s")
+            print(
+                f"### task_id: {str(task_id)} ### i: {str(i)} ### test_result: {evaluateDict['result']} "
+                f"### time cost: {str(end - start)}s"
+            )
             time.sleep(5)
             i += 1
     # 计算pass_at_k
@@ -255,7 +284,11 @@ def compute(datas, max_k, launcher):
     total = np.array(total)
     correct = np.array(correct)
     ks = [1]
-    pass_at_k = {f"pass@{k}": eval.estimate_pass_at_k(total, correct, k).mean() for k in ks if (total >= k).all()}
+    pass_at_k = {
+        f"pass@{k}": eval.estimate_pass_at_k(total, correct, k).mean()
+        for k in ks
+        if (total >= k).all()
+    }
     return pass_at_k, results
 
 
@@ -265,9 +298,9 @@ def demo_human_eval(launcher: Launcher):
     :param launcher:Launcher
     """
     datas = []
-    dataset_path = r'human-eval-v2-20210705.jsonl'
+    dataset_path = r"human-eval-v2-20210705.jsonl"
     print("testset path: " + dataset_path)
-    with open(dataset_path, 'r', encoding='utf-8') as f:
+    with open(dataset_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
     for line in lines:
         data = json.loads(str(line))
@@ -281,7 +314,7 @@ TASK_MAP = {
     "inference": demo_inference,
     "ceval": demo_ceval,
     "performance": demo_perf,
-    "human_eval": demo_human_eval
+    "human_eval": demo_human_eval,
 }
 
 
