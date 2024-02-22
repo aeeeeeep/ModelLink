@@ -640,7 +640,7 @@ class AquilaForCausalLM(AquilaPreTrainedModel):
         self.world_size = 1
         if hasattr(config, 'world_size'):
             self.world_size = config.world_size
-        self.lm_head = nn.Linear(config.hidden_size // self.world_size, config.vocab_size, bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size // self.world_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
