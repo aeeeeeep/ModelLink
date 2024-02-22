@@ -481,8 +481,8 @@ class LlamaModel(LlamaPreTrainedModel):
         for i in range(self.num_layers):
             self.acl_operation_inputs[9 + i] = torch.tensor([i], dtype=torch.int32).npu()
 
-        self.acl_operation_encoder = torch.classes.ModelTorch.ModelTorch("minigpt4_vicuna_7b_encoder_model")  # 适配minigpt4
-        self.acl_operation_decoder = torch.classes.ModelTorch.ModelTorch("minigpt4_vicuna_7b_decoder_model")  # 适配minigpt4
+        self.acl_operation_encoder = torch.classes.ModelTorch.ModelTorch("minigpt4_vicuna_7b_FusionEncoderModel")  # 适配minigpt4
+        self.acl_operation_decoder = torch.classes.ModelTorch.ModelTorch("minigpt4_vicuna_7b_FusionModel")  # 适配minigpt4
 
         acl_param_encoder = json.dumps({"headNum": self.num_heads, "rmsNormEps": self.rms_norm_eps,
                                 "dk": self.headSize, "tokenOffset": [self.token_num] * self.batch_num,

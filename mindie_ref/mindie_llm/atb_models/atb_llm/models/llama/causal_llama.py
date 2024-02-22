@@ -28,8 +28,8 @@ class LlamaForCausalLM(CausalLM):
 
     def init_ascend_operations(self, config: LlamaConfig):
         # 初始化模型
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_decoder_model")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_decoder_model")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_DecoderModel")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_DecoderModel")
 
         # 设置模型参数
         coder_param = {
