@@ -24,7 +24,7 @@
 namespace atb_speed {
 namespace llama_7b {
 struct FusionMlpParam {
-    bool transpose = false;
+    bool transpose = true;
 };
 
 atb::Status FusionMlp(const FusionMlpParam &param, atb::Operation **operation);

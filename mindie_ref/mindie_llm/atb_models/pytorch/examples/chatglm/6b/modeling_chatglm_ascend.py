@@ -30,6 +30,7 @@ from transformers.utils import logging
 from transformers.generation.logits_process import LogitsProcessor
 from transformers.generation.utils import LogitsProcessorList, StoppingCriteriaList, GenerationConfig
 
+from atb_speed.common.timer import Timer
 from manager import ModeManager
 from .configuration_chatglm import ChatGLMConfig
 
@@ -986,8 +987,8 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         self.max_seq_len = int(os.environ.get("MAX_SEQ_LEN", default=2048))
 
         # get acl model_operation
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm_6b_flash_attention_model")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm_6b_flash_attention_model")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm_6b_ChatGlmCommonModelFa")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm_6b_ChatGlmCommonModelFa")
 
         # get mode manager
         self.mode = ENABLE_SPARSE and "sparse" or ENABLE_QUANT and "quant" or "float"
@@ -1082,6 +1083,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
                 "attention_mask": attention_mask
             }
 
+    @Timer.timing
     def forward(
             self,
             input_ids: Optional[torch.Tensor] = None,

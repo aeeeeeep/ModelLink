@@ -34,7 +34,8 @@ export CODE_ROOT=`pwd`
 export CACHE_DIR=$CODE_ROOT/build
 export OUTPUT_DIR=$CODE_ROOT/output
 THIRD_PARTY_DIR=$CODE_ROOT/3rdparty
-PACKAGE_NAME="7.0.T800"
+PACKAGE_NAME="1.0.RC1"
+MindIE_ATB_VERSION="1.0.RC1.B021"
 ASCEND_SPEED_VERSION=""
 VERSION_B=""
 README_DIR=$CODE_ROOT
@@ -118,6 +119,26 @@ function fn_build_3rdparty_for_test()
     cd ..
 }
 
+function fn_build_atb()
+{
+    if [ $ATB_HOME_PATH ]; then
+        echo "MindIE-ATB is ready"
+        return 0
+    fi
+
+    #belows are for ci build
+    if [ "$USE_CXX11_ABI" == "OFF" ]; then
+        abi="abi0"
+    else
+        abi="abi1"
+    fi
+    cd $CODE_ROOT
+    mindie_atb_package="MindIE_ATB/$MindIE_ATB_VERSION/Ascend-mindie-atb_${PACKAGE_NAME}_linux-${ARCH}_${abi}.run"
+    chmod 755 ./$mindie_atb_package
+    ./$mindie_atb_package --install
+    source /usr/local/Ascend/atb/set_env.sh
+}
+
 function fn_build_nlohmann_json()
 {
     NLOHMANN_DIR=$THIRD_PARTY_DIR/nlohmannJson/include
@@ -144,6 +165,7 @@ function fn_build_3rdparty()
     rm -rf $CACHE_DIR
     mkdir $CACHE_DIR
     cd $CACHE_DIR
+    fn_build_atb
     fn_build_nlohmann_json
     cd ..
 }
@@ -257,6 +279,11 @@ function fn_build_for_ci()
 {
     cd $OUTPUT_DIR/atb_speed
     rm -rf ./*.tar.gz
+    cp $CODE_ROOT/dist/atb_llm*.whl .
+    cp -r $CODE_ROOT/atb_llm .
+    cp $CODE_ROOT/setup.py .
+    cp -r $CODE_ROOT/examples .
+    cp -r $CODE_ROOT/tests .
     cp $README_DIR/README.md .
     fn_build_version_info
 
@@ -285,14 +312,14 @@ function fn_make_whl() {
     echo "make atb_llm whl package"
     cd $CODE_ROOT
     python3 $CODE_ROOT/setup.py bdist_wheel
-    cp $CODE_ROOT/dist/atb_llm*.whl $OUTPUT_DIR/atb_speed/
-    cp -r $CODE_ROOT/atb_llm $OUTPUT_DIR/atb_speed/
-    cp $CODE_ROOT/setup.py $OUTPUT_DIR/atb_speed/
-    cp -r $CODE_ROOT/examples $OUTPUT_DIR/atb_speed/
 }
 
 function fn_build()
 {
+    if [ -z $ASCEND_HOME_PATH ]; then
+        echo "env ASCEND_HOME_PATH not exist, please source cann's set_env.sh"
+        exit -1
+    fi
     fn_build_3rdparty
     if [ ! -d "$OUTPUT_DIR" ];then
         mkdir -p $OUTPUT_DIR
@@ -331,16 +358,6 @@ function fn_build()
 
 function fn_main()
 {
-    if [ -z $ATB_HOME_PATH ];then
-        echo "env ATB_HOME_PATH not exist, please source atb's set_env.sh"
-        exit -1
-    fi
-
-    PYTORCH_VERSION="$(python3 -c 'import torch; print(torch.__version__)')"
-    if [ ${PYTORCH_VERSION:0:5} == "1.8.0" ] || [ ${PYTORCH_VERSION:0:4} == "1.11" ];then
-        COMPILE_OPTIONS="${COMPILE_OPTIONS} -DTORCH_18=ON"
-    fi
-
     if [[ "$BUILD_OPTION_LIST" =~ "$1" ]];then
         if [[ -z "$1" ]];then
             arg1="master"

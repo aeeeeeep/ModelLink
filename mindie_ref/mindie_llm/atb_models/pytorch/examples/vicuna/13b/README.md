@@ -1,210 +1,207 @@
-#  Vicuna-13B模型-推理指导（800I A2）
+  #  Vicuna-13B-v1.5-16K模型-推理指导（800I A2）
 
-- [Vicuna-13B模型-推理指导（800I A2）](#vicuna-13b模型-推理指导800i-a2)
 - [概述](#概述)
-- [版本配套](#版本配套)
+- [输入输出数据](#输入输出数据)
+- [推理环境准备](#推理环境准备)
+- [安装配套版本](#安装配套版本)
 - [快速上手](#快速上手)
-  - [获取源码及依赖](#获取源码及依赖)
-  - [推理环境准备](#推理环境准备)
-  - [模型推理](#模型推理)
-- [模型推理精度](#模型推理精度)
+- [精度验证指南](#精度验证指南)
 
 # 概述
 
-Vicuna是由 LMSYS 发布的基于Llama 2用ShareGPT收集的125K对话集微调的大模型，最长可以支持16K
+Vicuna是由 LMSYS 发布的基于Llama 2用ShareGPT收集的125K对话集微调的大模型，最长可以支持16K。
 
-- 参考实现：
+# 输入输出数据
 
-  ```
-  https://github.com/lm-sys/FastChat
-  ```
+- 输入数据
 
+  | 输入数据       | 大小                 | 数据类型 | 数据排布格式 | 是否必选 |
+  | -------------- | -------------------- | -------- | ------------ | -------- |
+  | input_ids      | BATCH_SIZE x SEQ_LEN | INT64    | ND           | 是       |
+  | attention_mask | BATCH_SIZE x 1 x SEQ_LEN x SEQ_LEN | FLOAT16  | ND           | 否       |
 
-# 版本配套
+- 输出数据
 
-该模型需要以下插件与驱动
+  | 输出数据   | 大小                        | 数据类型 | 数据排布格式 |
+  | ---------- | --------------------------- | -------- | ------------ |
+  | output_ids | BATCH_SIZE x OUTPUT_SEQ_LEN | INT64    | ND           |
 
-**表 1** 版本配套表
+# 推理环境准备
 
-| 配套           | 版本          | 下载链接 |
-| -------------- | ------------- | -------- |
-| 固件与驱动     | 24.0.T1.B010 | -        |
-| CANN           | 8.0.T2.B010  | -        |
-| Python         | 3.9.18        | -        |
-| torch         | 2.0.1        | -        |
-| PytorchAdapter | 6.0.RC1.B010        | -        |
+### 1 安装HDK
 
+详细信息可参见[昇腾社区驱动与固件](https://www.hiascend.com/document/detail/zh/canncommercial/63RC2/envdeployment/instg/instg_000018.html)，先安装firmwire，再安装driver
 
-# 快速上手
+#### 1.1 安装firmwire
 
-## 获取源码及依赖
+安装方法: `{version}`代表具体版本
 
-1. 环境部署
+| 包名                                   |
+|--------------------------------------|
+| Ascend-hdk-910b-npu-firmware_{version}.run |
+| Ascend-hdk-310p-npu-firmware_{version}.run |
 
-- 1.1. 安装HDK
+根据芯片型号选择相应的安装包安装
 
-> 先安装firmwire，再安装driver
+```bash
+# 安装firmwire
+chmod +x Ascend-hdk-910b-npu-firmware_{version}.run
+./Ascend-hdk-910b-npu-firmware_{version}.run --full
+```
 
-  1.1.1. 安装firmwire
+#### 1.2 安装driver
 
-  安装方法:
+安装方法：
 
-| 包名                                             |
-|------------------------------------------------|
-| Ascend-hdk-910b-npu-firmware_7.2.t3.0.b023.run |
+| cpu     | 包名                                               | 
+|---------|--------------------------------------------------|
+| aarch64 | Ascend-hdk-910b-npu-driver_{version}_linux-aarch64.run |
+| x86     | Ascend-hdk-910b-npu-driver_{version}_linux-x86_64.run  |
+| aarch64 | Ascend-hdk-310p-npu-driver_{version}_linux-aarch64.run |
+| x86     | Ascend-hdk-310p-npu-driver_{version}_linux-x86-64.run  |
 
-  ```bash
-  # 安装firmwire
-  chmod +x Ascend-hdk-910b-npu-firmware_7.2.t3.0.b023.run
-  ./Ascend-hdk-910b-npu-firmware_7.2.t3.0.b023.run --full
-  ```
+```bash
+# 根据CPU架构 以及npu型号 安装对应的 driver
+chmod +x Ascend-hdk-910b-npu-driver_{version}_*.run
+./Ascend-hdk-910b-npu-driver_{version}_*.run --full
+```
 
-  1.1.2. 安装driver
+### 2 安装CANN
 
-  安装方法：
+详细信息可参见[昇腾社区CANN软件](https://www.hiascend.com/software/cann)，先安装toolkit 再安装kernel
 
-| cpu     | 包名                                                         |
-|---------|------------------------------------------------------------|
-| aarch64 | Ascend-hdk-910b-npu-driver_24.0.rc1.b010_linux-aarch64.run |
-| x86     | Ascend-hdk-910b-npu-driver_24.0.rc1.b010_linux-x86-64.run |
+#### 2.1 安装toolkit
 
-  ```bash
-  # 根据CPU架构安装对应的 driver
-  chmod +x Ascend-hdk-910b-npu-driver_24.0.rc1.b010_*.run
-  ./Ascend-hdk-910b-npu-driver_24.0.rc1.b010_*.run --full
-  ```
+安装方法：`{version}`代表具体版本
 
-- 1.2. 安装CANN
+| cpu     | 包名                                            |
+|---------|-----------------------------------------------|
+| aarch64 | Ascend-cann-toolkit_{version}_linux-aarch64.run |
+| x86     | Ascend-cann-toolkit_{version}_linux-x86_64.run  |
 
-> 先安装toolkit 再安装kernel
+```bash
+# 安装toolkit  以arm为例
+chmod +x Ascend-cann-toolkit_{version}_linux-aarch64.run
+./Ascend-cann-toolkit_{version}_linux-aarch64.run --install
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+```
 
-  1.2.1. 安装toolkit
+#### 2.2 安装kernel
 
-  安装方法：
-
-| cpu     | 包名                                                         |
-|---------|------------------------------------------------------------|
-| aarch64 | Ascend-cann-toolkit_8.0.T2_linux-aarch64.run |
-| x86     | Ascend-cann-toolkit_8.0.T2_linux-x86_64.run |
-
-  ```bash
-  # 安装toolkit
-  chmod +x Ascend-cann-toolkit_8.0.T2_linux-*.run
-  ./Ascend-cann-toolkit_8.0.T2_linux-*.run --install
-  source /usr/local/Ascend/ascend-toolkit/set_env.sh
-  ```
-  1.2.2. 安装kernel
-
-  安装方法：
+安装方法：
 
 | 包名                                         |
 |--------------------------------------------|
-| Ascend-cann-kernels-910b_8.0.T2_linux.run |
+| Ascend-cann-kernels-910b_{version}_linux.run |
+| Ascend-cann-kernels-310p_{version}_linux.run |
 
-  ```bash
-  # 安装 kernel
-  chmod +x Ascend-cann-kernels-910b_8.0.T2_linux.run
-  ./Ascend-cann-kernels-910b_8.0.T2_linux.run --install
-  ```
+```bash
+# 安装 kernel 以910b 为例
+chmod +x Ascend-cann-kernels-910b_{version}_linux.run
+./Ascend-cann-kernels-910b_{version}_linux.run --install
+```
 
-- 1.3. 安装PytorchAdapter
+### 3 安装PytorchAdapter
 
-> 安装apex、torch、torch_npu
+先安装torch 再安装torch_npu
 
-  1.3.1 安装torch
+#### 3.1 安装torch
 
-  安装方法：
+安装方法：
 
-| cpu     | 包名                                                         |
-|---------|------------------------------------------------------------|
-| aarch64 | torch-2.0.1-cp39-cp39-linux_aarch64.whl |
-| x86     | torch-2.0.1+cpu-cp39-cp39-linux_x86_64.whl |
+| 包名                                           |
+|----------------------------------------------|
+| torch-2.0.1+cpu-cp38-cp38-linux_x86_64.whl   |
+| torch-2.0.1+cpu-cp39-cp39-linux_x86_64.whl   |
+| torch-2.0.1+cpu-cp310-cp310-linux_x86_64.whl |
+| torch-2.0.1-cp310-cp310-linux_aarch64.whl    |
+| torch-2.0.1-cp38-cp38-linux_aarch64.whl      |
+| torch-2.0.1-cp39-cp39-linux_aarch64.whl      |
+| ...                                          |
 
-  根据所使用的环境中的python版本，选择torch-2.0.1相应的安装包。
+根据所使用的环境中的python版本以及cpu类型，选择对应版本的torch安装包。
 
-  ```bash
-  # 安装torch 2.0.1 的python 3.9 的arm版本为例
-  pip install torch-2.0.1-cp39-cp39-linux_aarch64.whl
-  ```
+```bash
+# 安装torch 2.0.1 的python 3.9 的arm版本为例
+pip install torch-2.0.1-cp39-cp39-linux_aarch64.whl
+```
 
-  1.3.2 安装torch_npu
+#### 3.2 安装torch_npu
 
-  安装方法：
+[下载PyTorch Adapter](https://www.hiascend.com/software/ai-frameworks/commercial)，安装方法：
 
 | 包名                          |
 |-----------------------------|
-| pytorch_v2.0.1_py39.tar.gz |
+| pytorch_v2.0.1_py38.tar.gz  |
+| pytorch_v2.0.1_py39.tar.gz  |
+| pytorch_v2.0.1_py310.tar.gz |
+| ...                         |
 
-> 安装选择与torch版本 以及 python版本 一致的torch_npu版本
+- 安装选择与torch版本 以及 python版本 一致的npu_torch版本
 
-  ```bash
-  # 安装 torch_npu 以torch 2.0.1 的python 3.9的arm版本为例
-  tar -zxvf pytorch_v2.0.1_py39.tar.gz
-  pip install torch*_aarch64.whl
-  ```
+```bash
+# 安装 torch_npu 以torch 2.0.1 的python 3.9的版本为例
+tar -zxvf pytorch_v2.0.1_py39.tar.gz
+pip install torch*_aarch64.whl
+```
+# 安装配套版本
 
-## 推理环境准备
-
-> 安装配套软件。安装python依赖。
-
-  ```
-  pip3 install -r requirements.txt
-  ```
-
-1. 下载vicuna-13b-v1.5-16k模型权重，放置到自定义`input_dir`
+#### 1. 下载Vicuna-13b-v1.5-16k模型权重，放置到自定义`input_dir`
 
    ```
    https://huggingface.co/lmsys/vicuna-13b-v1.5-16k
    ```
 
-2. 根据版本发布链接，安装加速库 
+#### 2. 根据版本发布链接，安装MindIE-ATB 
 
-   | 加速库包名                                            |
+   | MindIE-ATB包名                                            |
    | ----------------------------------------------------- |
-   | Ascend-cann-atb_{version}_cxx11abi0_linux-aarch64.run |
-   | Ascend-cann-atb_{version}_cxx11abi1_linux-aarch64.run |
-   | Ascend-cann-atb_{version}_cxx11abi1_linux-x86_64.run  |
-   | Ascend-cann-atb_{version}_cxx11abi0_linux-x86_64.run  |
+   | Ascend-mindie-atb_{version}_linux-aarch64_abi0.run |
+   | Ascend-mindie-atb_{version}_linux-aarch64_abi1.run |
+   | Ascend-mindie-atb_{version}_linux-x86_abi0.run     |
+   | Ascend-mindie-atb_{version}_linux-x86_abi1.run     |
    
-   具体使用cxx11abi0 还是cxx11abi1 可通过python命令查询
+   具体使用abi0 还是abi1 可通过python命令查询
    
-   ```python
-   import torch
-
-   torch.compiled_with_cxx11_abi()
+   ```python3
+   python3 -c "import torch; print(torch.compiled_with_cxx11_abi())"
    ```
    
-   若返回True 则使用 cxx11abi1，否则相反。
+   若返回True 则使用 abi1，否则相反。
    
    ```bash
    # 安装
-   chmod +x Ascend-cann-atb_7.0.T10_*.run
-   ./Ascend-cann-atb_7.0.T10_*.run --install
+   chmod +x Ascend-mindie-atb_{version}_linux-*.run
+   ./Ascend-mindie-atb_{version}_linux-*.run --install
    source /usr/local/Ascend/atb/set_env.sh
    ```
    
-3. 根据版本发布链接，解压大模型文件
+#### 3. 根据版本发布链接，解压大模型ATB-Models
+
 
    | 大模型包名                                                   |
    | ------------------------------------------------------------ |
-   | Ascend-cann-llm_{version_id}_linux-x86_64_torch{pta_version}-abi0.tar.gz |
-   | Ascend-cann-llm_{version_id}_linux-x86_64_torch{pta_version}-abi1.tar.gz |
-   | Ascend-cann-llm_{version_id}_linux-aarch64_torch{pta_version}-abi0.tar.gz |
-   | Ascend-cann-llm_{version_id}_linux-aarch64_torch{pta_version}-abi1.tar.gz |
+   | Ascend-mindie-atb-models_1.0.RC1_linux-aarch64_torchxx-abi0.tar.gz |
+   | Ascend-mindie-atb-models_1.0.RC1_linux-aarch64_torchxx-abi1.tar.gz |
+   | Ascend-mindie-atb-models_1.0.RC1_linux-x86_torchxx-abi0.tar.gz |
+   | Ascend-mindie-atb-models_1.0.RC1_linux-x86_torchxx-abi1.tar.gz |
 
-    具体使用cxx11abi0 还是cxx11abi1 方法同安装atb
+    具体使用abi0 还是abi1 方法同安装atb
 
    ```bash
    # 安装
    mkdir {llm_path}
-   tar -xzvf Ascend-cann-llm_*.tar.gz -C {llm_path} --no-same-owner
+   tar -xzvf Ascend-mindie-atb-models_*.tar.gz -C {llm_path} --no-same-owner
    source set_env.sh
    ```
 
-   > 注： 每次运行前都需要 source CANN， 加速库，大模型
+   > 注： 每次运行前都需要 source CANN， MindIE-ATB ，ATB-Models
 
-## 模型推理
-1. 如果跑多卡多芯推理，需要先切分模型权重，切分方法如下：
+# 快速上手
+
+> 工作目录和llama一致,  `cd ./pytorch/examples/llama`
+
+#### 1. 跑多卡推理，需要先切分模型权重，切分方法如下：
 
 - 修改代码
 
@@ -214,14 +211,12 @@ Vicuna是由 LMSYS 发布的基于Llama 2用ShareGPT收集的125K对话集微调
 
 - 执行切分
 
-  ```
-  # 切分模型权重2份，切分好的权重会存放在自定义的output_dir
-  bash cut_weight.sh --float 2
-  # 切分模型权重8份
+  ```bash
+  # 切分模型权重8份，切分好的权重会存放在自定义的`output_dir`
   bash cut_weight.sh --float 8
   ```
 
-2. **执行模型推理**
+#### 2. **执行模型推理**
 - 开启CPU Performance模式以提高模型推理性能（首次开启时，根据提示安装依赖）
   ```
   cpupower frequency-set -g performance
@@ -233,138 +228,122 @@ Vicuna是由 LMSYS 发布的基于Llama 2用ShareGPT收集的125K对话集微调
   cd ../atb_speed_sdk/
   pip install .
 
-  # 进入run.sh，设置环境变量BIND_CPU为1（默认为0，不绑核）
-  export BIND_CPU=1
+  # 进入sdk_config.ini，设置环境变量bind_cpu为1（默认为1，绑核）
+  bind_cpu=1
   ```
 
-- 配置必选参数：最大输入输出长度
-  修改run_sdk_test.sh中环境变量**MAX_SEQ_LENGTH**为：**期望的最大输入长度 + 最大输出长度**，默认值为2048
+- 配置必选参数
+  - 修改run_sdk_test.sh中环境变量**MAX_SEQ_LENGTH**为：**期望的最大输入长度 + 最大输出长度**，默认值为2048
+  - 修改sdk_config.ini中`model.model_path=${output_dir}`
+  - 修改sdk_config.ini中`model.device_ids=0,1,2,3,4,5,6,7`
 
-- 修改sdk_config.ini配置参数
+    > 注意：正常推理时，**MAX_SEQ_LENGTH**必须大于或者等于**输入长度 + 输出长度**, 否则会出现精度问题; 最大吞吐测试时，**MAX_SEQ_LENGTH**必须等于**输入长度 + 输出长度**，否则会影响内存申请
 
-  ```
-  # [model]
-  # 模型权重路径
-  model_path="./vicuna-13b-v1.5-16k_parallel_8
-  # 指定芯片，默认为0,1
-  device_id=0,1,2,3,4,5,6,7
+- 配置输入输出长度
+  - 修改sdk_config.ini中`performance.model_name=vicuna_13b_v1.5_16k`
+  - 修改sdk_config.ini中`performance.batch_size=16`
+  - 修改sdk_config.ini中`performance.case_pair=[[256,256]]`
+  - 修改sdk_config.ini中`performance.perf_mode=detail`
 
-  # [performance]
-  # 性能测试模型名称，用于结果文件的命名
-  model_name=vicuna_13b_v1.5_16k
-  # 测试的batch size
-  batch_size=1
-  # 测试的输入的最大2的幂
-  max_len_exp=10
-  # 测试的输入的最小2的幂
-  min_len_exp=5
-  # 特定用例测试，格式为[[seq_in,seq_out]]，注意当设置这个参数时，max_len_exp min_len_exp不生效
-  case_pair=[[256,256],[512,512]]
+- 执行推理，此时执行batch_size=16，输入256, 输出256的性能测试
+  指令：bash run_sdk_test.sh [WORLD_SIZE] [DEVICE_TYPE] [TASK]
   
-> 推理完成后性能数据保存在./performance_test_{model_name}_{device_type}_bs{batch_size}.csv，包括用例配置、端到端时间、首token、非首token处理时延等;
-
-- 执行推理
-  指令：bash run_sdk_test.sh [WORLD_SIZE] [DEVICE_TYPE] [RUN_OPTION]
   ```
+  # 800I A2环境执行单机8卡推理
   bash run_sdk_test.sh 8 d9 performance
   ```
   > WORLD_SIZE: 指定芯片数量，实现单卡和多卡推理（默认1）
-  > DEVICE_TYPE: d9/d3, 分别适配800I A2和300I DUO芯片型号 (默认d3，支持300I DUO推理)
-  > RUN_OPTION: run，部分case推理；performance，性能测试；precision，精度测试
+  > DEVICE_TYPE: d9/d3, 分别适配800I A2和300I DUO芯片型号
+  > TASK: 'run'，部分case推理；'performance'，性能测试；'precision'，精度测试
 
+#### 3. **长序列推理**
+- 配置必选参数
+  - 修改run_sdk_test.sh中`MAX_SEQ_LENGTH=16512`
+  - 修改run_sdk_test.sh中`LOG_SEQ_ENABLE=1`
+- 配置输入输出长度
+  - 修改sdk_config.ini中`performance.batch_size=1`
+  - 修改sdk_config.ini中`performance.case_pair=[[16384,128]]`
+- 执行推理，此时执行batch_size=1，输入16384, 输出128的性能测试
+  - bash run_sdk_test.sh 8 d9 performance
 
-# MMLU数据集精度验证指南
-> 采用5-shot的方式验证模型推理精度。 
+# 精度验证指南
 
-## 1.下载MMLU数据集
-  ```
-  wget https://people.eecs.berkeley.edu/~hendrycks/data.tar
-  tar -xvf data.tar
-  ```
+### C-EVAL/MMLU
+> 支持C-EVAL、MMLU两种数据集，采用5-shot的方式验证模型推理精度。 
 
-## 2. 安装atb-speed插件
-  ```
-  cd ../atb_speed_sdk/
-  pip install .
-  ```
+####  1.下载数据集
+``` bash
+# C-EVAL
+wget https://huggingface.co/datasets/ceval/ceval-exam/resolve/main/ceval-exam.zip
+unzip ceval-exam.zip -d data
+# MMLU
+wget https://people.eecs.berkeley.edu/~hendrycks/data.tar
+tar -xvf data.tar
+```
 
-## 3.配置精度测试参数
+####  2. 安装atb-speed插件
+```
+cd ../atb_speed_sdk/
+pip install .
+```
+
+####  3.配置精度测试参数(以MMLU为例)
 1. 在当前目录新建工作文件夹${mmlu_test_dir}
 2. 将下载的测试数据集进行解压后的数据放置在${mmlu_test_dir}
-3. 修改sdk_config.ini文件中精度测试的相关配置，设置模型路径、工作目录、device id(默认0、1卡)、和batch size(默认1)
-    * model_path=./vicuna-13b-v1.5-16k_parallel_8
+3. 修改sdk_config.ini文件中精度测试的相关配置，设置模型路径、device id(默认0卡)、数据集类型、数据集目录
+    * model_path=${output_dir}
+    * device_ids=0,1,2,3,4,5,6,7
+    * mode=mmlu
     * work_dir=${mmlu_test_dir}
-    * device=0,1,2,3,4,5,6,7
-    * batch=1
 
-目录结构示例:  
-    --test_result 跑完之后生成  
-    --data (包含：数据文件夹dev、test、val三者)
+目录结构示例${mmlu_test_dir}:
+- mmlu_test_dir
+    - test_result 跑完之后生成
+    - data (包含：数据文件夹dev、test、val三者)
 
-## 4. 运行并查看结果
+####  4. 运行并查看结果
 
 **4.1 开始精度数据集推理**
-  ```
-  bash run_sdk_test.sh 8 d9 precision
-  ```
+```
+# 执行多卡多芯推理
+bash run_sdk_test.sh 8 d9 precision
+```
 
 **4.2 查看结果**
 | test_result目录                        | 用途                   | 
 |---------------------------|----------------------| 
 | cache.csv                | 结果详情，C列为预期答案，D列为测试答案 |
-| result_classes_acc.json  | 测试数据下按不同维度统计准确率      |
-| result_subject_acc.json  | 测试数据下按不同学科统计准确率      |
-
-> 注：开始下一次数据集精度推理前，请重命名之前保存的结果文件夹 ${mmlu_test_dir}/test_result
+| result_classes_acc.json | 测试数据下按不同维度统计准确率      |
+| result_subject_acc.json | 测试数据下按不同学科统计准确率      |
 
 
-# CEVAL数据集精度验证指南
-> 采用5-shot的方式验证模型推理精度。 
+### LONGBENCH
+> [LongBench](https://github.com/THUDM/LongBench)是第一个多任务、中英双语、针对大语言模型长文本理解能力的评测基准，包含14个英文任务、5个中文任务和2个代码任务，多数任务的平均长度在5k-15k之间，共包含4750条测试数据，以此来对大模型在长文本下的多语言能力进行更全面的评估。
 
-## 1.下载CEVAL数据集
-  ```
-  wget https://huggingface.co/datasets/ceval/ceval-exam/resolve/main/ceval-exam.zip
-  unzip ceval-exam.zip -d data
-  ```
+####  1.下载数据集和相关代码
+1.1 下载数据集, 存放在${dataset_dir}
+```bash
+wget https://huggingface.co/datasets/THUDM/LongBench/resolve/main/data.zip
+unzip data.zip
+```
 
-## 2. 安装atb-speed插件
-  ```
-  cd ../atb_speed_sdk/
-  pip install .
-  ```
+1.2 下载数据集映射信息和评测代码, 存放在./pytorch/examples/llama
+https://github.com/THUDM/LongBench/blob/main/config/dataset2maxlen.json
+https://github.com/THUDM/LongBench/blob/main/config/dataset2prompt.json
+https://github.com/THUDM/LongBench/blob/main/eval.py
+https://github.com/THUDM/LongBench/blob/main/metrics.py
 
-## 3.配置精度测试参数
-1. 在当前目录新建工作文件夹${ceval_test_dir}
-2. 将下载的测试数据集进行解压后的数据放置在${ceval_test_dir}
-3. 修改sdk_config.ini文件中精度测试的相关配置，设置模型路径、工作目录、device id(默认0、1卡)、和batch size(默认1)
-    * model_path=./vicuna-13b-v1.5-16k_parallel_8
-    * work_dir=${ceval_test_dir}
-    * device=0,1,2,3,4,5,6,7
-    * batch=1
-
-目录结构示例:  
-    --test_result 跑完之后生成  
-    --data (包含：数据文件夹dev、test、val三者)
-
-## 4. 运行并查看结果
-
-**4.1 开始精度数据集推理**
-  ```
-  bash run_sdk_test.sh 8 d9 precision
-  ```
-
-**4.2 查看结果**
-| test_result目录                        | 用途                   | 
-|---------------------------|----------------------| 
-| cache.csv                | 结果详情，C列为预期答案，D列为测试答案 |
-| result_classes_acc.json  | 测试数据下按不同维度统计准确率      |
-| result_subject_acc.json  | 测试数据下按不同学科统计准确率      |
-
-> 注：开始下一次数据集精度推理前，请重命名之前保存的结果文件夹 ${ceval_test_dir}/test_result
-
-
-# 模型推理精度
-
-| Vicuna 5-shot | MMLU | CEVAL |
-| ------------------ | ------------- | ------------- |
-| Average(%) | 55.69 | 40.19	|
+####  2. 运行并查看结果
+```bash
+cd ./pytorch/examples/llama
+transformers_package_path=$(python3 -c 'import transformers; import os; print(os.path.dirname(transformers.__file__))')
+cp ./modeling_llama_ascend.py $transformers_package_path/models/llama/modeling_llama.py
+MAX_SEQ_LENGTH=16000 torchrun --nproc_per_node 8 --master_port 25641 longbench.py --model_name vicuna-13b-v1.5-16k --model_path ${output_dir} --dataset_path ${dataset_dir} --e
+```
+运行结束后，可以在`pred_e/对应模型名称`的文件夹下得到模型在LongBench-E所有数据集下的输出，此后运行eval.py的评测代码：
+```bash
+python eval.py --model vicuna-13b-v1.5-16k --e
+export RESULT_DIR=./pred_e/vicuna-13b-v1.5-16k
+python3 -c "from longbench import get_result_scores; get_result_scores()"
+```
+可以在存储模型输出文件夹下的result.json和result.csv中得到模型在LongBench-E各数据集上的评测结果。

@@ -44,7 +44,7 @@ struct CommParam {
 struct ParallelParamV2 {
     bool isBias = false;
     bool transposeA = false;
-    bool transposeB = false;
+    bool transposeB = true;
     bool isQuant = false;
     bool isSparse = false;
     CommParam commParam;

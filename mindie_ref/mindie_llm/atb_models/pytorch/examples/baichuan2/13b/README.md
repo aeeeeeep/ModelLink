@@ -14,156 +14,21 @@ benchmark上均取得同尺寸最好的效果。本次发布包含有 7B、13B �
   https://huggingface.co/baichuan-inc/Baichuan2-13B-Chat
   ```
 
-# 推理环境准备
-
-- 该模型需要以下插件与驱动
-
-  **表 1** 版本配套表
-
-| 配套                 | 版本          | 下载链接 |
-|--------------------|-------------|------|
-| Ascend HDK         | 23.0.0.B060 |      |
-| CANN               | 7.0.0.B060  |      |
-| python             | 3.9.18      |      |           
-| FrameworkPTAdapter | 5.0.0.B060  |      |
-
-**表 2** 推理引擎依赖
-
-| 软件    | 版本要求     |
-|-------|----------|
-| glibc | >= 2.27  |
-| gcc   | >= 7.5.0 |
-
-**表 3** 硬件形态
-
-| CPU     | Device |
-|---------|--------|
-| aarch64 | 910B3  |
-| aarch64 | 310P3  |
-
-**备注**：910B4请按多卡操作
-
 # 快速上手
+
+## 路径变量解释
+
+| 变量名                 | 含义                                                                   |  
+|---------------------|----------------------------------------------------------------------|
+| model_download_path | 开源权重放置目录                                                             | 
+| llm_path            | 加速库及模型库下载后放置目录                                                       |
+| model_path          | 工作时模型所在的目录，可以和model_download_path相同，但一般模型是公共的，为了避免影响其他用户，单独建一个模型工作目录 |
+| script_path         | 工作脚本所在路径，本文为${llm_path}/pytorch/examples/baichuan2/7b                |
+| ceval_work_dir      | ceval数据集、及结果保存所在目录，不必和模型脚本在相同目录                                      |
 
 ## 获取源码及依赖
 
-### 1. 环境部署
-
-#### 1.1 安装HDK
-
-先安装firmwire，再安装driver
-
-##### 1.1.1 安装firmwire
-
-安装方法: xxx代表具体版本
-
-| 包名                                   |
-|--------------------------------------|
-| Ascend-hdk-910b-npu-firmware_xxx.run |
-| Ascend-hdk-310p-npu-firmware_xxx.run |
-
-根据芯片型号选择相应的安装包安装
-
-```bash
-# 安装firmwire
-chmod +x Ascend-hdk-310p-npu-firmware_xxx.run
-./Ascend-hdk-310p-npu-firmware_xxx.run --full
-```
-
-##### 1.1.2 安装driver
-
-安装方法：
-
-| cpu     | 包名                                               | 
-|---------|--------------------------------------------------|
-| aarch64 | Ascend-hdk-910b-npu-driver_xxx_linux-aarch64.run |
-| x86     | Ascend-hdk-910b-npu-driver_xxx_linux-x86_64.run  |
-| aarch64 | Ascend-hdk-310p-npu-driver_xxx_linux-aarch64.run |
-| x86     | Ascend-hdk-310p-npu-driver_xxx_linux-x86-64.run  |
-
-```bash
-# 根据CPU架构 以及npu型号 安装对应的 driver
-chmod +x Ascend-hdk-310p-npu-driver_23.0.rc3.b060_*.run
-./Ascend-hdk-310p-npu-driver_23.0.rc3.b060_*.run --full
-```
-
-#### 1.2 安装CANN
-
-先安装toolkit 再安装kernel
-
-##### 1.2.1 安装toolkit
-
-安装方法：xxx代表具体的版本
-
-| cpu     | 包名                                        |
-|---------|-------------------------------------------|
-| aarch64 | Ascend-cann-toolkit_xxx_linux-aarch64.run |
-| x86     | Ascend-cann-toolkit_xxx_linux-x86_64.run  |
-
-```bash
-# 安装toolkit  以arm为例
-chmod +x Ascend-cann-toolkit_xxx_linux-aarch64.run
-./Ascend-cann-toolkit_xxx_linux-aarch64.run --install
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-```
-
-##### 1.2.2 安装kernel
-
-安装方法：xxx代表具体的版本
-
-| 包名                                     |
-|----------------------------------------|
-| Ascend-cann-kernels-910b_xxx_linux.run |
-| Ascend-cann-kernels-310p_xxx_linux.run |
-
-```bash
-# 安装 kernel 以310P 为例
-chmod +x Ascend-cann-kernels-310p_xxx_linux.run
-./Ascend-cann-kernels-310p_xxx_linux.run --install
-```
-
-#### 1.3 安装PytorchAdapter
-
-首先安装torch，其次安装torch_npu，支持torch1.11.1、2.0.1，下面以torch2.0.1为例进行说明
-
-##### 1.3.1 安装torch
-
-安装方法：
-
-| 包名                                              |
-|-------------------------------------------------|
-| torch-2.0.1+cpu-cp38-cp38-linux_x86_64.whl      |
-| torch-2.0.1+cpu-cp39-cp39-linux_x86_64.whl      |
-| torch-2.0.1-cp38-cp38-manylinux2014_aarch64.whl |
-| torch-2.0.1-cp39-cp39-manylinux2014_aarch64.whl |
-| ...                                             |
-
-根据所使用python版本，以及CPU架构，选择对应的包
-
-```bash
-# 以安装torch-2.0.1-cp39-cp39-manylinux2014_aarch64.whl包为例
-pip install torch-2.0.1-cp39-cp39-manylinux2014_aarch64.whl
-```
-
-##### 1.3.2 安装torch_npu
-
-安装方法：
-
-| 包名                         |
-|----------------------------|
-| pytorch_v2.0.1_py38.tar.gz |
-| pytorch_v2.0.1_py39.tar.gz |
-| ...                        |
-
-选择安装与torch版本以及python版本一致的torch_npu版本
-
-```bash
-# 安装torch_npu，以torch2.0.1对应的python3.9的aarch64版本为例
-tar -zxvf pytorch_v2.0.1_py39.tar.gz
-pip install torch*_aarch64.whl
-```
-
-#### 1.3.3 requirements
+### 1.python requirements
 
 | 包名            | 推荐版本   |  
 |---------------|--------|
@@ -175,84 +40,13 @@ pip install torch*_aarch64.whl
 | psutil        | 5.9.6  |
 | sentencepiece | 0.1.99 |
 
-### 2. 安装依赖
+### 下载模型权重
 
-#### 路径变量解释
+下载模型权重，放置到自定义`${model_download_path}` (请下载链接中'Files and versions'页签下的所有文件)
 
-| 变量名                 | 含义                                                                   |  
-|---------------------|----------------------------------------------------------------------|
-| model_download_path | 开源权重放置目录                                                             | 
-| llm_path            | 加速库及模型库下载后放置目录                                                       |
-| model_path          | 工作时模型所在的目录，可以和model_download_path相同，但一般模型是公共的，为了避免影响其他用户，单独建一个模型工作目录 |
-| script_path         | 工作脚本所在路径，本文为${llm_path}/pytorch/examples/baichuan2/13b               |
-| ceval_work_dir      | ceval数据集、及结果保存所在目录，不必和模型脚本在相同目录                                      |
-
-#### 2.1 推理环境准备
-
-1. 下载模型权重，放置到自定义`${model_download_path}` (请下载链接中'Files and versions'页签下的所有文件)
-
-   ```
-   https://huggingface.co/baichuan-inc/Baichuan2-13B-Chat/tree/main
-   ```
-
-2. 根据版本发布链接，安装加速库
-   将加速库下载至 `${llm_path}` 目录
-
-| 加速库包名                                                 |
-|-------------------------------------------------------|
-| Ascend-cann-atb_{version}_cxx11abi0_linux-aarch64.run |
-| Ascend-cann-atb_{version}_cxx11abi1_linux-aarch64.run |
-| Ascend-cann-atb_{version}_cxx11abi1_linux-x86_64.run  |
-| Ascend-cann-atb_{version}_cxx11abi0_linux-x86_64.run  |
-
-具体使用cxx11abi0 还是cxx11abi1 可通过python命令查询
-
-```python
-import torch
-
-torch.compiled_with_cxx11_abi()
 ```
-
-若返回True 则使用 cxx11abi1，否则相反。
-
-```bash
-# 安装atb 
-chmod +x Ascend-cann-atb_*.run
-./Ascend-cann-atb_*.run --install
-source /usr/local/Ascend/atb/set_env.sh
+https://huggingface.co/baichuan-inc/Baichuan2-13B-Chat/tree/main
 ```
-
-3. 根据版本发布链接，安装加速库
-   将加速库下载至 `${llm_path}` 目录
-
-| 大模型包名                                                             |
-|-------------------------------------------------------------------|
-| Ascend-cann-llm_{version_id}_linux-x86_64_torch2.0.1-abi0.tar.gz  |
-| Ascend-cann-llm_{version_id}_linux-x86_64_torch2.0.1-abi1.tar.gz  |
-| Ascend-cann-llm_{version_id}_linux-aarch64_torch2.0.1-abi0.tar.gz |
-| Ascend-cann-llm_{version_id}_linux-aarch64_torch2.0.1-abi1.tar.gz |
-
-具体使用cxx11abi0 还是cxx11abi1 方法同安装atb
-
- ```bash
- # 安装大模型加速库
- cd ${llm_path}
- tar -xzvf Ascend-cann-llm_*.tar.gz
- source set_env.sh
- ```
-
-4. 下载CEval数据集
-
-   若需执行精度测试，请参考附录中的精度测试指南 进行下载
-
-5. 设置环境变量
-
-   ```
-   source /usr/local/Ascend/ascend-toolkit/set_env.sh
-   source /usr/local/Ascend/atb/set_env.sh
-   source ${llm_path}/set_env.sh
-   ```
-   > 注： 每次运行前都需要 source CANN， 加速库，大模型
 
 ### 拷贝文件
 
@@ -283,7 +77,7 @@ cp ${script_path}/modeling_baichuan_cut.py ${model_path}
 修改 ${model_path}里的config.json中的kv对，改成`"AutoModelForCausalLM": "modeling_baichuan_cut.BaichuanForCausalLM"`
 
 ```text
-修改`${script_path}/cut_model_and_run_baichuan.sh`    
+修改`${script_path}/cut_model_and_run.sh`    
 将 `input_dir` 修改为模型所在路径 `${model_path}` 
 将 `output_dir` 修改为切分后的模型所存储的路径,比如仍为原目录 `${model_path}`。模型切分成功后，会自动生成新目录part_model(用户无需新建该文件夹)，即：${model_path/part_model}
 将 `world_size_` 修改成希望切成的卡的数量
@@ -385,20 +179,21 @@ bash cut_model_and_run.sh ${task_name}  ${is_quant}
 #### FAQ
 
 1. **可以使用 MAX_SEQ_LEN 环境变量来设置model支持的最大长度以优化显存占用,
-  一般设置为最大输入输出token之和，默认使用config里面的max_model_length**  
-  如
+   一般设置为最大输入输出token之和，默认使用config里面的max_model_length**  
+   如
 
 ```shell
 MAX_SEQ_LEN=2048 python main.py --task ${task_name}  --is_quant ${is_quant}
 ```
 
-或
+或  
+修改cut_model_and_run.sh 中的 max_seq_length
 
 ```shell
-MAX_SEQ_LEN=2048 bash cut_model_and_run.sh ${task_name}  ${is_quant}
+bash cut_model_and_run.sh ${task_name}  ${is_quant}
 ```
 
-2. ImportError: /root/miniconda3/envs/wqh39/bin/../lib/libgomp.so.1: cannot allocate memory in static TLS block  
+2. ImportError: /root/miniconda3/envs/wqh39/bin/../lib/libgomp.so.1: cannot allocate memory in static TLS block
 
 如果遇到
 
@@ -419,9 +214,11 @@ Segmentation fault (core dumped)
 ```shell
 LD_PRELOAD=/root/miniconda3/envs/wqh39/bin/../lib/libgomp.so.1 MAX_SEQ_LEN=2048 python main.py --task ${task_name}  --is_quant ${is_quant}
 ```
+
 3. 多卡推理脚本中的环境变量设置
-- 默认配置是给310P/910A上使用的
-- 910B上需要 1.删除run_cmd中的atb_stream变量 2.添加lccl_options变量
+
+- 默认配置是给300I DUO上使用的
+- 800I A2 /800T A2上需要添加lccl_options变量
 
 ## 量化推理
 
@@ -526,7 +323,7 @@ calibrator.save('QUANT_WEIGHT_PATH')  # 保存量化参数
 
 # 竞品对比
 
-# 910B
+# 800T A2
 
 ## 精度
 
@@ -545,7 +342,7 @@ calibrator.save('QUANT_WEIGHT_PATH')  # 保存量化参数
 | Baichuan-13B NPU              | 14.260809086490132  |             | 31.69616807901823 |             |
 | Baichuan-13B A100(80G) NVlink | 15.642417690338782  | 0.911675508 | 36.41638939692089 | 0.870381952 |
 
-# 310P
+# 300I DUO
 
 ## 性能
 
@@ -571,7 +368,7 @@ calibrator.save('QUANT_WEIGHT_PATH')  # 保存量化参数
 | Other          | 0.572916667 | 0.567708333 | 1.009174313 |
 | Avg acc        | 0.569093611 | 0.568350669 | 1.001307189 |
 
-# 附录：
+# 附录
 
 # 精度测试指南
 
@@ -630,17 +427,17 @@ bash cut_model_and_run.sh precision
 
 ```shell
 cd ${script_path}
-RETURN_PERF_DETAIL=1 python main.py --task performance
+TIMEIT=1 python main.py --task performance
 ```
 
 - 多芯
 
 ```shell
 cd ${script_path}
-RETURN_PERF_DETAIL=1 bash cut_model_and_run.sh performance 0
+TIMEIT=1 bash cut_model_and_run.sh performance 0
 ```
 
-将`RETURN_PERF_DETAIL`设置成1来返回具体的性能测试的值，默认是0  
+将`TIMEIT`设置成1来返回具体的性能测试的值，默认是0  
 上述多芯场景参数
 
 * performance表示性能测试。

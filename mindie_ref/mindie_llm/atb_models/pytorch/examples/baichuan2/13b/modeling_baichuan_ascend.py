@@ -1,3 +1,5 @@
+# Copyright (c) 2023, Baichuan Intelligent Technology. All rights reserved.
+
 import json
 import math
 import os
@@ -9,6 +11,8 @@ import torch
 import torch_npu
 from torch import nn
 from torch.nn import CrossEntropyLoss
+from atb_speed.common.timer import Timer
+from atb_speed.common.utils import load_atb_speed
 from transformers import PreTrainedModel, PretrainedConfig
 from transformers.activations import ACT2FN
 from transformers.generation.utils import GenerationConfig
@@ -41,16 +45,7 @@ def get_rank_and_world_size():
 
 RANK, WORLD_SIZE = get_rank_and_world_size()
 
-
-def load_ascend_transformer():
-    ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
-    if ATB_SPEED_HOME_PATH is None:
-        raise RuntimeError("env ATB_SPEED_HOME_PATH not exist, source set_env.sh")
-    LIB_PATH = os.path.join(ATB_SPEED_HOME_PATH, "lib/libatb_speed_torch.so")
-    torch.classes.load_library(LIB_PATH)
-
-
-load_ascend_transformer()
+load_atb_speed()
 
 
 def _get_interleave(n):
@@ -427,7 +422,7 @@ class BaichuanModel(BaichuanPreTrainedModel):
             "backend": os.getenv("BACKEND", "hccl")
         })
         self.max_position_embeddings = int(os.getenv("MAX_SEQ_LEN", config.model_max_length))
-        self.acl_fa_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_13b_flash_attention_model")
+        self.acl_fa_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_13b_FlashAttentionModel")
 
         self.acl_fa_operation.set_param(self.acl_param)
 
@@ -795,6 +790,7 @@ class BaichuanForCausalLM(BaichuanPreTrainedModel):
                                                                revision=revision,
                                                                use_safetensors=use_safetensors, **kwargs)
 
+    @Timer.timing
     def forward(
             self,
             input_ids: torch.LongTensor = None,

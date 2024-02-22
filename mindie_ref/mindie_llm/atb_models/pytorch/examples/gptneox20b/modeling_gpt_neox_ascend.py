@@ -24,6 +24,8 @@ import torch.utils.checkpoint
 from configuration_gpt_neox import GPTNeoXConfig
 from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from atb_speed.common.timer import Timer
+from atb_speed.common.utils import load_atb_speed
 from transformers.activations import ACT2FN
 from transformers.file_utils import (
     add_code_sample_docstrings,
@@ -89,6 +91,7 @@ def load_ascend_transformer():
 
 
 load_ascend_transformer()
+load_atb_speed()
 
 torch._C._jit_set_profiling_mode(False)
 torch._C._jit_set_profiling_executor(False)
@@ -657,8 +660,8 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
         self.num_layers = config.num_hidden_layers
         self.num_attention_heads = config.num_attention_heads // WORLD_SIZE
 
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("gptneox_20b_fa_kvcache_model")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("gptneox_20b_fa_kvcache_model")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("gptneox_20b_FaKvCacheModel")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("gptneox_20b_FaKvCacheModel")
 
         self.acl_encoder_operation.set_param(self.acl_param_encoder)
         self.acl_decoder_operation.set_param(self.acl_param_decoder)
@@ -1057,6 +1060,7 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
     @add_start_docstrings_to_model_forward(GPT_NEOX_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
     @replace_return_docstrings(output_type=CausalLMOutputWithPast, config_class=_CONFIG_FOR_DOC)
     @torch.no_grad()
+    @Timer.timing
     def forward(
             self,
             input_ids: Optional[torch.LongTensor] = None,

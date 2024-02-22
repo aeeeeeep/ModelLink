@@ -146,13 +146,13 @@ pip install torch*_aarch64.whl
 ```
 # 安装配套版本
 
-1. 下载Yi-6B-200K模型权重，放置到自定义`input_dir`
+#### 1. 下载Yi-6B-200K模型权重，放置到自定义`input_dir`
 
    ```
    https://huggingface.co/01-ai/Yi-6B-200K
    ```
 
-2. 根据版本发布链接，安装MindIE-ATB 
+#### 2. 根据版本发布链接，安装MindIE-ATB 
 
    | MindIE-ATB包名                                            |
    | ----------------------------------------------------- |
@@ -176,7 +176,7 @@ pip install torch*_aarch64.whl
    source /usr/local/Ascend/atb/set_env.sh
    ```
    
-3. 根据版本发布链接，解压大模型ATB-Models
+#### 3. 根据版本发布链接，解压大模型ATB-Models
 
 
    | 大模型包名                                                   |
@@ -198,11 +198,10 @@ pip install torch*_aarch64.whl
    > 注： 每次运行前都需要 source CANN， MindIE-ATB ，ATB-Models
 
 # 快速上手
-## 模型推理
 
 > 工作目录和llama一致,  `cd ./pytorch/examples/llama`
 
-1. 跑多卡推理，需要先切分模型权重，切分方法如下：
+#### 1. 跑多卡推理，需要先切分模型权重，切分方法如下：
 
 - 修改代码
 
@@ -218,7 +217,7 @@ pip install torch*_aarch64.whl
   bash cut_weight.sh --float 8
   ```
 
-2. **执行模型推理**
+#### 2. **执行模型推理**
 - 开启CPU Performance模式以提高模型推理性能（首次开启时，根据提示安装依赖）
   ```
   cpupower frequency-set -g performance
@@ -230,11 +229,11 @@ pip install torch*_aarch64.whl
   cd ../atb_speed_sdk/
   pip install .
 
-  # 进入run_sdk_test.sh，设置环境变量BIND_CPU为1（默认为0，不绑核）
-  export BIND_CPU=1
+  # 进入sdk_config.ini，设置环境变量bind_cpu为1（默认为1，绑核）
+  bind_cpu=1
   ```
 - 配置数据类型
-  - 修改sdk_test.py中`FLOAT16`为`BFLOAT16`
+  - 修改sdk_test.py中`torch.float16`为`torch.bfloat16`
 
 - 配置必选参数
   - 修改run_sdk_test.sh中环境变量**MAX_SEQ_LENGTH**为：**期望的最大输入长度 + 最大输出长度**，默认值为2048
@@ -249,7 +248,7 @@ pip install torch*_aarch64.whl
   - 修改sdk_config.ini中`performance.case_pair=[[256,256]]`
 
 - 执行推理，此时执行batch_size=300，输入256, 输出256的性能测试
-  指令：bash run_sdk_test.sh --[WORLD_SIZE] [DEVICE_TYPE] [TASK]
+  指令：bash run_sdk_test.sh [WORLD_SIZE] [DEVICE_TYPE] [TASK]
   
   ```
   # 800I A2环境执行单机8卡推理
@@ -259,7 +258,7 @@ pip install torch*_aarch64.whl
   > DEVICE_TYPE: d9, 对应800I A2
   > TASK: 可选'run', 'performance', 'precision'
 
-3. **长序列推理**
+#### 3. **长序列推理**
 - 配置必选参数
   - 修改run_sdk_test.sh中`MAX_SEQ_LENGTH=200128`
   - 修改run_sdk_test.sh中`LOG_SEQ_ENABLE=1`
@@ -271,9 +270,11 @@ pip install torch*_aarch64.whl
   - bash run_sdk_test.sh 8 d9 performance
 
 # 精度验证指南
-> 模型精度验证基于MMLU数据集，采用5-shot的方式验证模型推理精度。 
 
-## 1.下载数据集
+### C-EVAL/MMLU
+> 支持C-EVAL、MMLU两种数据集，采用5-shot的方式验证模型推理精度。 
+
+####  1.下载数据集
 ``` bash
 # C-EVAL
 wget https://huggingface.co/datasets/ceval/ceval-exam/resolve/main/ceval-exam.zip
@@ -282,32 +283,32 @@ unzip ceval-exam.zip -d data
 wget https://people.eecs.berkeley.edu/~hendrycks/data.tar
 tar -xvf data.tar
 ```
-> 先测试C-EVAL, 修改`pytorch/examples/atb_speed_sdk/atb_speed/common/precision/base.py` 132行数据集，重安装atb-speed，再测试MMLU
+> 先测试C-EVAL, 修改`pytorch/examples/atb_speed_sdk/atb_speed/common/precision/base.py` 132行为test数据集，重安装atb-speed，再测试MMLU
 
 ```python3
 val_df = pd.read_csv(os.path.join(self.data_dir, "test", task_name + "_test.csv"), header=None)
 ```
-## 2. 安装atb-speed插件
+####  2. 安装atb-speed插件
 ```
 cd ../atb_speed_sdk/
 pip install .
 ```
 
-## 3.配置精度测试参数(以MMLU为例)
+####  3.配置精度测试参数(以MMLU为例)
 1. 在当前目录新建工作文件夹${mmlu_test_dir}
 2. 将下载的测试数据集进行解压后的数据放置在${mmlu_test_dir}
 3. 修改sdk_config.ini文件中精度测试的相关配置，设置模型路径、工作目录、device id(默认0卡)、和batch size(默认1)
     * model_path=./yi_6b_200k
-    * work_dir=./mmlu_test
+    * work_dir=./mmlu_test_dir
     * device=0,1,2,3,4,5,6,7
     * batch=1
 
 目录结构示例${mmlu_test_dir}:
---mmlu_test
+--mmlu_test_dir
     --test_result 跑完之后生成  
     --data (包含：数据文件夹dev、test、val三者)
 
-## 4. 运行并查看结果
+####  4. 运行并查看结果
 
 **4.1 开始精度数据集推理**
 ```
@@ -324,3 +325,34 @@ bash run_sdk_test.sh 8 d9 precision
 
 > CEVAL test数据集golden未公开，因此使用dev作为few-shot来源，val作为测试数据
 > MMLU 使用dev作为few-shot来源，test作为测试数据
+
+### LONGBENCH
+> [LongBench](https://github.com/THUDM/LongBench)是第一个多任务、中英双语、针对大语言模型长文本理解能力的评测基准，包含14个英文任务、5个中文任务和2个代码任务，多数任务的平均长度在5k-15k之间，共包含4750条测试数据，以此来对大模型在长文本下的多语言能力进行更全面的评估。
+
+####  1.下载数据集和相关代码
+1.1 下载数据集, 存放在${dataset_dir}
+```bash
+wget https://huggingface.co/datasets/THUDM/LongBench/resolve/main/data.zip
+unzip data.zip
+```
+
+1.2 下载数据集映射信息和评测代码, 存放在./pytorch/examples/llama
+https://github.com/THUDM/LongBench/blob/main/config/dataset2maxlen.json
+https://github.com/THUDM/LongBench/blob/main/config/dataset2prompt.json
+https://github.com/THUDM/LongBench/blob/main/eval.py
+https://github.com/THUDM/LongBench/blob/main/metrics.py
+
+####  2. 运行并查看结果
+```bash
+cd ./pytorch/examples/llama
+transformers_package_path=$(python3 -c 'import transformers; import os; print(os.path.dirname(transformers.__file__))')
+cp ./modeling_llama_ascend.py $transformers_package_path/models/llama/modeling_llama.py
+MAX_SEQ_LENGTH=16000 torchrun --nproc_per_node 8 --master_port 25641 longbench.py --model_path ${output_dir} --dataset_path ${dataset_dir} --e
+```
+运行结束后，可以在`pred_e/对应模型名称`的文件夹下得到模型在LongBench-E所有数据集下的输出，此后运行eval.py的评测代码：
+```bash
+python eval.py --model yi_6b_200k --e
+export RESULT_DIR=./pred_e/yi_6b_200k
+python3 -c "from longbench import get_result_scores; get_result_scores()"
+```
+可以在存储模型输出文件夹下的result.json和result.csv中得到模型在LongBench-E各数据集上的评测结果。

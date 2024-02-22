@@ -42,6 +42,7 @@ from transformers.utils import (
     replace_return_docstrings,
 )
 from transformers.models.llama.configuration_llama import LlamaConfig
+from atb_speed.common.timer import Timer
 
 MAX_SEQ_LENGTH = int(os.getenv("MAX_SEQ_LENGTH", "2048")) # 自定义最大输入输出长度，默认值2048
 
@@ -705,15 +706,15 @@ class LlamaModel(LlamaPreTrainedModel):
     def __init__(self, config: LlamaConfig):
         super().__init__(config)
         # initialize model parallel parameter if needed
-        self.world_size = 1
         self.rank = 0
         self.rankSize = 1
         self.backend = "lccl"
         self.is_triu_mask = int(os.getenv("LONG_SEQ_ENABLE", "0"))
+        self.num_heads = config.num_attention_heads
         if hasattr(config, 'world_size'):
             self.world_size = config.world_size
         else: 
-            self.pretraining_tp = 1
+            self.world_size = 1
         if hasattr(config, 'rope_scaling'):
             self.rope_scaling = config.rope_scaling
         else: 
@@ -745,7 +746,6 @@ class LlamaModel(LlamaPreTrainedModel):
         self.padding_idx = config.pad_token_id
         self.num_layers = config.num_hidden_layers
         self.max_sequence_length = MAX_SEQ_LENGTH
-        self.num_heads = config.num_attention_heads
         self.hidden_size = config.hidden_size
         self.headSize = self.hidden_size // self.num_heads
         self.rms_norm_eps = config.rms_norm_eps
@@ -762,7 +762,7 @@ class LlamaModel(LlamaPreTrainedModel):
         self.post_init()
 
         x = torch.zeros(1)
-        cosTable, sinTable = rotary_emb.forward(x, 2048)
+        cosTable, sinTable = rotary_emb.forward(x, self.max_sequence_length)
         self.cosTable, self.sinTable = cosTable.npu().to(dtype=self.dtype), sinTable.npu().to(dtype=self.dtype)
 
         self.tag_mask = torch.ones((1, 20), dtype=self.dtype).npu()
@@ -900,8 +900,8 @@ class LlamaModel(LlamaPreTrainedModel):
         acl_encoder_param = self.set_ascend_param(True)
         acl_decoder_param = self.set_ascend_param(False)
 
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_flashattention_model")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_flashattention_model")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_FlashAttentionModel")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_FlashAttentionModel")
         self.acl_encoder_operation.set_param(acl_encoder_param)
         self.acl_decoder_operation.set_param(acl_decoder_param)
     
@@ -1066,7 +1066,7 @@ class LlamaModel(LlamaPreTrainedModel):
         bias_cache = ~bias_cache
         mask_value = torch.finfo(self.dtype).min
         attn_mask = torch.masked_fill(torch.zeros(size=(mask_block_size, mask_block_size)), bias_cache, mask_value)
-        return attn_mask
+        return attn_mask.to(dtype=self.dtype)
 
     def get_bf16_mask(self, attention_mask):
         if attention_mask.dtype == torch.bfloat16:
@@ -1082,7 +1082,7 @@ class LlamaModel(LlamaPreTrainedModel):
                     soc_version = torch_npu._C._npu_get_soc_version()
                     raise ValueError(f"{soc_version=} not supports LONG_SEQ_ENABLE=1")
                 if self.batch_num > 1:
-                    raise ValueError(f"batch_size must be 1, but got `MAX_SEQ_LENGTH`:")
+                    raise ValueError(f"batch_size must be 1, but got {self.batch_num}")
             return
         if self.full_flag:
             self.attention_mask_max = torch.zeros(
@@ -1342,8 +1342,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
     def get_decoder(self):
         return self.model
 
-    @add_start_docstrings_to_model_forward(LLAMA_INPUTS_DOCSTRING)
-    @replace_return_docstrings(output_type=CausalLMOutputWithPast, config_class=_CONFIG_FOR_DOC)
+    @Timer.timing
     def forward(
         self,
         input_ids: torch.LongTensor = None,

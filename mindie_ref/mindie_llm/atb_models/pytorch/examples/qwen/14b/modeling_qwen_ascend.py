@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING, Optional, Tuple, Union, Callable, List, Any, G
 import os
 import json
 import torch_npu
+from atb_speed.common.timer import Timer
+from atb_speed.common.utils import load_atb_speed
 
 import torch
 import torch.nn.functional as F
@@ -73,20 +75,7 @@ def get_rank_and_world_size():
 RANK, WORLD_SIZE = get_rank_and_world_size()
 print(f"RANK = {RANK} | WORLD_SIZE = {WORLD_SIZE}")
 
-
-def load_acl_transformer():
-    """
-    加载acl transformers
-    :return:
-    """
-    acl_transformer_home_path = os.getenv("ATB_SPEED_HOME_PATH", "")
-    if not acl_transformer_home_path or not os.path.exists(acl_transformer_home_path):
-        raise RuntimeError("env ACLTRANSFORMER_HOME_PATH not exist, source set_env.sh")
-    lib_path = os.path.join(acl_transformer_home_path, "lib/libatb_speed_torch.so")
-    torch.classes.load_library(lib_path)
-
-
-load_acl_transformer()
+load_atb_speed()
 
 logger = logging.get_logger(__name__)
 
@@ -802,7 +791,7 @@ class KVAttentionManager:
             self.attention_mask_max_inc.zero_()
         else:
             self.attention_mask_max_inc = torch.zeros(
-            (self.batch_size, self.max_seq_len, self.max_seq_len), dtype=torch.half, device="npu")
+                (self.batch_size, self.max_seq_len, self.max_seq_len), dtype=torch.half, device="npu")
 
     def init_seq_len_and_token_offset(self, seq_len):
         self.token_offset = seq_len
@@ -941,14 +930,21 @@ class QWenModel(QWenPreTrainedModel):
 
         param_dict["coderType"] = 1
         self.acl_param_encoder = json.dumps(param_dict)
+<<<<<<< HEAD
         self.acl_operation_encoder = torch.classes.ModelTorch.ModelTorch("qwen_14b_flash_attention_model")
+=======
+        self.acl_operation_encoder = torch.classes.ModelTorch.ModelTorch("qwen_14b_FlashAttentionModel")
+>>>>>>> ab85ca3ea0ed40988018786f6885cc6829bcc107
         self.acl_operation_encoder.set_param(self.acl_param_encoder)
 
         param_dict["coderType"] = 2
         self.acl_param_decoder = json.dumps(param_dict)
+<<<<<<< HEAD
         self.acl_operation_decoder = torch.classes.ModelTorch.ModelTorch("qwen_14b_flash_attention_model")
+=======
+        self.acl_operation_decoder = torch.classes.ModelTorch.ModelTorch("qwen_14b_FlashAttentionModel")
+>>>>>>> ab85ca3ea0ed40988018786f6885cc6829bcc107
         self.acl_operation_decoder.set_param(self.acl_param_decoder)
-
 
         if config.rotary_pct == 1.0:
             self.rotary_ndims = None
@@ -1018,7 +1014,7 @@ class QWenModel(QWenPreTrainedModel):
         seq_end = self.kv_attention_manager.token_offset
         logn_tensor = self.logn_tensor[:, seq_start: seq_end, :, :]
         logn_tensor = logn_tensor.repeat(input_ids.shape[0], 1, self.num_attention_heads, self.head_size_ori)
-
+        seqlen_max = torch.tensor([self.kv_attention_manager.seq_len_tensor[0] - 1], dtype=torch.int64, device="npu")
         inputs = [
                      input_ids,  # IN_TENSOR_INPUTIDS
                      cos_embed,  # IN_TENSOR_COSEMBED
@@ -1030,6 +1026,7 @@ class QWenModel(QWenPreTrainedModel):
                      self.kv_attention_manager.seq_len_tensor,  # IN_TENSOR_SEQLEN
                      logn_tensor,
                      self.place_holder,
+                     seqlen_max,
                  ] + self.layer_id_list
 
         return inputs
@@ -1059,6 +1056,7 @@ class QWenModel(QWenPreTrainedModel):
         ntk_alpha = max(ntk_alpha, 1)
         return ntk_alpha
 
+    @Timer.timing
     def forward(
             self,
             input_ids: Optional[torch.LongTensor] = None,
@@ -1266,7 +1264,7 @@ class QWenLMHeadModel(QWenPreTrainedModel):
             _import_flash_attn()
 
         self.transformer = QWenModel(config)
-        self.lm_head = nn.Linear(config.hidden_size // WORLD_SIZE, config.vocab_size, bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size // WORLD_SIZE, bias=False)
 
         if config.bf16:
             self.transformer.bfloat16()

@@ -126,7 +126,7 @@ namespace atb_speed {
             inputNormNode.outTensorIds = {INTERMIDATE_INPUTNORMOUT};
 
             // (bsz,seq_len,hidden_size) - > (bsz,seq_len,hidden_size)
-            atb::infer::LinearParam mixdQLinearParam = {false, false, false};
+            atb::infer::LinearParam mixdQLinearParam;
             mixdQLinearParam.hasBias = false;
             CREATE_OPERATION(mixdQLinearParam, &mixdQKVLinearNode.operation);
             mixdQKVLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_MIXEDQKVLINEARWEIGHT};
