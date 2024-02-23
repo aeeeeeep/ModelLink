@@ -78,7 +78,7 @@ class BaichuanLMParallel(ParallelLauncher):
     """
 
     def init_model(self):
-        tokenizer = AutoTokenizer.from_pretrained(self.model_path, trust_remote_code=True, use_fast=False)
+        tokenizer = AutoTokenizer.from_pretrained(self.model_path, trust_remote_code=True, use_fast=False, padding_side="left")
 
         part_model_path = os.path.join(self.model_path, 'part_model', str(self.local_rank))
         model = AutoModelForCausalLM.from_pretrained(part_model_path, trust_remote_code=True)
@@ -118,7 +118,7 @@ class BaichuanLM(Launcher):
         模型初始化
         :return:
         """
-        tokenizer = AutoTokenizer.from_pretrained(self.model_path, trust_remote_code=True, use_fast=False)
+        tokenizer = AutoTokenizer.from_pretrained(self.model_path, trust_remote_code=True, use_fast=False, padding_side="left")
         model = AutoModelForCausalLM.from_pretrained(self.model_path, trust_remote_code=True).half().to(self._device)
         model.eval()
         model.generation_config = self.remove_part_of_generation_config(model.generation_config)
@@ -158,8 +158,8 @@ def demo_inference(launcher: Launcher):
     launcher.logger.info("---------------inference---------------")
     launcher.infer('登鹳雀楼->王之涣\n夜雨寄北->', {"max_new_tokens": 64})
 
-    launcher.logger.info("---------------2k---------------")
-    launcher.infer_test(1, 2048, 32)
+    # launcher.logger.info("---------------2k---------------")
+    # launcher.infer_test(1, 2048, 32)
 
     launcher.logger.info("---------------batch---------------")
     query_list = ["谷歌公司的CEO是",

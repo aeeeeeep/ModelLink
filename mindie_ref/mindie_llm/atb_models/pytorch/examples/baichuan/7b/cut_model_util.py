@@ -29,7 +29,7 @@ def cut_weights(model, world_size, cut_W_pack_keys=['W_pack'], cut_row_keys=['ga
         elif key_short in cut_col_keys:
             cut_tensor_list = torch.chunk(tensor, world_size, dim=1)
         elif "lm_head" in key:
-            cut_tensor_list = torch.chunk(tensor, world_size, dim=1)
+            cut_tensor_list = torch.chunk(tensor, world_size, dim=0)
         else:
             cut_tensor_list = [tensor] * world_size
         for i in range(world_size):
