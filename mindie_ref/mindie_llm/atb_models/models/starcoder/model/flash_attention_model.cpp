@@ -19,7 +19,7 @@
 
 #include "layers/parallel_layer_v2.h"
 #include "models/starcoder/layer/flash_attention_layer.h"
-
+#pragma GCC diagnostic ignored "-Wsign-compare"
 #include "flash_attention_model.h"
 
 namespace atb_speed {

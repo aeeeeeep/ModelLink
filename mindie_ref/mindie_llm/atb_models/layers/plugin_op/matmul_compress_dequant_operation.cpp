@@ -24,6 +24,7 @@
 #include "acl/acl.h"
 #include "aclnnop/aclnn_matmul_compress_dequant.h"
 #include "atb_speed/log.h"
+#pragma GCC diagnostic ignored "-Wunused-variable"
 
 namespace atb_speed {
 namespace common {

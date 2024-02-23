@@ -17,7 +17,7 @@
 #include "mlp_gate_v2.h"
 
 #include <atb/atb_infer.h>
-
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #include "parallel_layer_v2.h"
 
 namespace atb_speed {

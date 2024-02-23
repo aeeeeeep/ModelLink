@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 #include "flash_attention_quant_oper_layer.h"
-
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #include <cmath>
 
 #include "layers/parallel_layer_v2.h"

@@ -18,6 +18,7 @@
 #include "atb_speed/log.h"
 #include "models/minigpt4/layer/layer_fusion.h"
 #include "fusion_model.h"
+#pragma GCC diagnostic ignored "-Wsign-compare"
 
 namespace atb_speed {
 namespace minigpt4_vicuna_7b {

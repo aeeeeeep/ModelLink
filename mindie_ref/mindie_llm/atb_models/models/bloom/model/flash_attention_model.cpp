@@ -16,10 +16,10 @@
 #include "flash_attention_model.h"
 
 #include <algorithm>
-
+#pragma GCC diagnostic ignored "-Wunused-variable"
 #include <nlohmann/json.hpp>
 #include <atb/atb_infer.h>
-
+#pragma GCC diagnostic ignored "-Wsign-compare"
 #include "atb_speed/log.h"
 #include "layers/parallel_layer.h"
 #include "models/bloom/layer/flash_attention_layer.h"

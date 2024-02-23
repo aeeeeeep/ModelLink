@@ -18,6 +18,7 @@
 #include "models/telechat/operation/rope.h"
 #include "models/telechat/operation/mlp_gate_v2.h"
 #include "models/telechat/operation/parallel_layer_v2.h"
+#pragma GCC diagnostic ignored "-Wunused-variable"
 
 namespace atb_speed {
 namespace telechat {

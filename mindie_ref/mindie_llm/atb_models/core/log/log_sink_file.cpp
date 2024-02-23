@@ -24,6 +24,7 @@
 #include <iomanip>
 #include <sys/stat.h>
 #include "atb_speed/utils/filesystem.h"
+#pragma GCC diagnostic ignored "-Wunused-function"
 
 namespace atb_speed {
 const int64_t MAX_LOG_FILE_SIZE = 1073741824; // 1G

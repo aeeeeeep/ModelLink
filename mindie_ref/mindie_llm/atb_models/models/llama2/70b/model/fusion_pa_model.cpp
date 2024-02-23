@@ -21,6 +21,7 @@
 #include "models/llama2/70b/operation/pa_layer_embedding.h"
 #include "nlohmann/json.hpp"
 #include "parallel_lmhead.h"
+#pragma GCC diagnostic ignored "-Wsign-compare"
 
 namespace atb_speed {
 namespace llama2_70b {

@@ -20,6 +20,8 @@
 #include "atb_speed/log.h"
 #include "models/chatglm/6b/layer/flash_attention_layer.h"
 #include "layers/parallel_layer_v2.h"
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#pragma GCC diagnostic ignored "-Wsign-compare"
 
 namespace atb_speed {
 namespace chatglm_6b {

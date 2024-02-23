@@ -16,9 +16,9 @@
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
 #include "nlohmann/json.hpp"
-
+#pragma GCC diagnostic ignored "-Wsign-compare"
 #include "models/llama_adapter/layer/layer.h"
-
+#pragma GCC diagnostic ignored "-Wunused-variable"
 #include "adapter_model.h"
 
 namespace atb_speed {

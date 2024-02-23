@@ -17,7 +17,7 @@
 
 #include "atb/atb_infer.h"
 #include "nlohmann/json.hpp"
-
+#pragma GCC diagnostic ignored "-Wsign-compare"
 #include "atb_speed/log.h"
 #include "models/minigpt4/layer/layer_fusion.h"
 

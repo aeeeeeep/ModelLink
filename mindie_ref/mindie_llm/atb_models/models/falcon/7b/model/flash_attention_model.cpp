@@ -18,6 +18,7 @@
 #include "atb_speed/log.h"
 #include "models/falcon/7b//layer/flash_attention_layer.h"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic ignored "-Wsign-compare"
 
 namespace atb_speed {
 namespace falcon_7b {

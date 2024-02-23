@@ -18,6 +18,8 @@
 #include <atb/atb_infer.h>
 #include "telechat/layer/embedding_layer.h"
 #include "telechat/layer/float_layer.h"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wsign-compare"
 
 namespace atb_speed {
 namespace telechat {

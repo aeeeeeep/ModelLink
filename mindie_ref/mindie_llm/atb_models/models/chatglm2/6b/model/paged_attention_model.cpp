@@ -19,6 +19,7 @@
 #include "models/chatglm2/6b/layer/paged_attention_layer.h"
 #include "nlohmann/json.hpp"
 #include "parallel_lmhead.h"
+#pragma GCC diagnostic ignored "-Wsign-compare"
 
 namespace atb_speed {
 namespace chatglm2_6b {

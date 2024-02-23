@@ -17,6 +17,7 @@
 #define ATB_SPEED_MODELS_LLAMA_POSITION_EMBEDDING_1DSPLIT_FUSION_OPERATION_H
 #include <atb/atb_infer.h>
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic ignored "-Wunused-function"
 
 namespace atb_speed {
 namespace llama2_70b {

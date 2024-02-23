@@ -17,7 +17,7 @@
 
 #include "atb/atb_infer.h"
 #include "nlohmann/json.hpp"
-
+#pragma GCC diagnostic ignored "-Wsign-compare"
 #include "atb_speed/utils/operation_util.h"
 #include "layers/parallel_layer_v2.h"
 #include "models/baichuan2/13b/layer/flash_attention_layer.h"

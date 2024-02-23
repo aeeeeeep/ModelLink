@@ -15,7 +15,7 @@
  */
 #ifndef ATB_SPEED_MODELS_LLAMA_FLASHATTENTION_LAYER_OPERATION_H
 #define ATB_SPEED_MODELS_LLAMA_FLASHATTENTION_LAYER_OPERATION_H
-
+#pragma GCC diagnostic ignored "-Wunused-function"
 #include <atb/atb_infer.h>
 #include <atb/svector.h>
 #include "nlohmann/json.hpp"

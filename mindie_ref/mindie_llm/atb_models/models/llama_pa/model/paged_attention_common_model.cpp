@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 #include "paged_attention_common_model.h"
-
+#pragma GCC diagnostic ignored "-Wsign-compare"
 #include "atb/atb_infer.h"
 #include "models/llama_pa/layer/paged_attention_common_layer.h"
 #include "nlohmann/json.hpp"

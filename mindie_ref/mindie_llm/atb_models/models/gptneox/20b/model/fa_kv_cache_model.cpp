@@ -20,6 +20,7 @@
 #include "models/gptneox/20b/layer/flashattention_kvcache_layer.h"
 #include "layers/parallel_layer_v2.h"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic ignored "-Wsign-compare"
 
 namespace atb_speed {
 namespace gptneox_20b {

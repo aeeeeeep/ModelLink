@@ -15,7 +15,7 @@
  */
 
 #include "mlp_gate_v2.h"
-
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #include <atb/atb_infer.h>
 
 #include "parallel_layer_v2.h"

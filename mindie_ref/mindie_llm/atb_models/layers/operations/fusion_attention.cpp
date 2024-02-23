@@ -15,6 +15,7 @@
  */
 
 #include "layers/operations/fusion_attention.h"
+#pragma GCC diagnostic ignored "-Wsign-compare"
 
 namespace atb_speed {
 namespace common {

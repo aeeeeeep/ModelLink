@@ -15,7 +15,7 @@
  */
 #include <algorithm>
 #include <iostream>
-
+#pragma GCC diagnostic ignored "-Wsign-compare"
 #include "models/internlm/20b/model/flash_attention_quant_model.h"
 
 #include "atb/atb_infer.h"

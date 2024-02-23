@@ -17,6 +17,7 @@
 #include "parallel_layer_v2.h"
 #include "nlohmann/json.hpp"
 #include <atb/atb_infer.h>
+#pragma GCC diagnostic ignored "-Wextra"
 
 namespace atb_speed {
 namespace telechat {
