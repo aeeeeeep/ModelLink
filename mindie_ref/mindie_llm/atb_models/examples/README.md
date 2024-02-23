@@ -43,6 +43,7 @@
         ![npu_smi_info](../images/npu_smi_info_800i_a2.png)
     - Atlas 300I DUO服务器需基于输出的 Device 列查阅
         ![npu_smi_info](../images/npu_smi_info_300i_duo.png)
+        - 若要使用单卡双芯，请指定至少两个可见核心；若要使用双卡四芯，请指定至少四个可见核心
   - `BIND_CPU`
     - 绑定CPU核心开关
     - 设置为1进行绑核，设置为0则不绑核；默认进行绑核
@@ -68,19 +69,19 @@
   - 支持字符串列表或者字符串
   - 若此值为字符串，则构造推理输入时会基于batch size入参复制多份
   - 若此值为列表，则构造推理输入时会忽略batch size入参，真实的batch size为此列表实际长度
-- `max_input_length`
+- `--max_input_length`
   - 最大输入长度
   - 默认512个token
   - 若输入长度不足512个token，会自动使用padding补齐
-- `max_output_length`
+- `--max_output_length`
   - 最大输出长度
   - - 默认输出20个token
 - `--batch_size`
   - 推理时固定的batch数量
   - 默认单batch
-- `is_flash_causal_lm`
+- `--is_flash_causal_lm`
   - 是否使用Paged Attention，默认不使用
-- `is_bf16`
+- `--is_bf16`
   - 是否使用BF16精度，默认使用FP16，Flash Attention暂不支持BF16
 - `--use_refactor`
     - 若加上`use_refactor`则使用归一后代码，若不开启`use_refactor`，则使用未归一前的代码
@@ -98,21 +99,21 @@
   - 支持字符串列表或者字符串
   - 若此值为单元素列表或字符串，则构造推理输入时会基于batch size入参复制多份
   - 若此值为多元素列表，则构造推理输入时会忽略batch size入参，真实的batch size为此列表实际长度
-- `max_position_embeddings`
+- `--max_position_embeddings`
   - 模型可接受的最长输入长度
   - 默认从模型权重的config文件中读取
-- `max_output_length`
+- `--max_output_length`
   - 最大输出长度
   - - 默认输出20个token
-- `max_prefill_tokens`
+- `--max_prefill_tokens`
   - Prefill推理阶段，最大输入长度
   - 默认4096个token
-- `max_batch_size`
+- `--max_batch_size`
   - 最大batch size，实际运行的batch size动态变化，有可能达不到设置的最大batch size
   - 默认单batch
-- `is_flash_model`
+- `--is_flash_model`
   - 是否使用Paged Attention，默认使用
-- `is_bf16`
+- `--is_bf16`
   - 是否使用BF16精度，默认使用FP16
 - `--use_refactor`
     - 若加上`use_refactor`则使用归一后代码，若不开启`use_refactor`，则使用未归一前的代码
