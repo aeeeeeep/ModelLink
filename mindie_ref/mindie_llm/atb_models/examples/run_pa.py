@@ -146,8 +146,7 @@ class PARunner:
 
             max_memory = ENV.memory_fraction * self.max_memory \
                 if not ENV.max_memory_gb else int(ENV.max_memory_gb) * (1 << 30)
-            free_memory = max_memory - (ENV.reserved_memory_gb * (1 << 30) +
-                self.warm_up_memory if self.warm_up_memory != 0 else self.init_memory)
+            free_memory = max_memory - ENV.reserved_memory_gb * (1 << 30) - (self.warm_up_memory if self.warm_up_memory != 0 else self.init_memory)
             print_log(self.rank, logger.info,
                       f"infer max_memory(GB): {max_memory / (1024 ** 3): .2f}, "
                       f"warm_up_memory(GB): {self.warm_up_memory / (1024 ** 3): .2f}, "
