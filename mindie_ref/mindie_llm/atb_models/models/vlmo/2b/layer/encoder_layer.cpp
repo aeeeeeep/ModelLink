@@ -76,7 +76,7 @@ enum EncoderLayerTensorId : int {
     INTERMIDATE_MLPIMAGE_OUT,
     INTERMIDATE_GAMMA2_IMAGE_OUT,
     INTERMIDATE_SELFRESIDUALADDIMAGEOUT,
-    
+
 };
 
 static const uint64_t IN_TENSOR_COUNT = 31;
@@ -119,35 +119,33 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
     atb::Node &catNode = opGraph.nodes.at(nodeId++);
 
     atb::infer::FillParam maskfillParam;
-    maskfillParam.value = { -10000};
+    maskfillParam.value = {-10000};
     maskfillParam.withMask = true;
     CREATE_OPERATION(maskfillParam, &maskFillBiasNode.operation);
     maskFillBiasNode.inTensorIds = {IN_RELATIVE_POSITION_BIAS, IN_ATTENTIONMASK};
     maskFillBiasNode.outTensorIds = {INTERMIDATE_MASKEDBIAS};
     maskFillBiasNode.inTensorReshapeFuncs.resize(maskFillBiasNode.inTensorIds.size());
     maskFillBiasNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        if(oldShape.dimNum == 3) {
+        if (oldShape.dimNum == 3) {
             newShape.dimNum = 4;
             newShape.dims[0] = 1;
             newShape.dims[1] = oldShape.dims[0];
             newShape.dims[2] = oldShape.dims[1];
             newShape.dims[3] = oldShape.dims[2];
-        }else {
+        } else {
             newShape = oldShape;
         }
-        
     };
     maskFillBiasNode.inTensorReshapeFuncs.at(1) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        if(oldShape.dimNum == 2) {
+        if (oldShape.dimNum == 2) {
             newShape.dimNum = 4;
             newShape.dims[0] = 1;
             newShape.dims[1] = 1;
             newShape.dims[2] = oldShape.dims[0];
             newShape.dims[3] = oldShape.dims[1];
-        }else {
+        } else {
             newShape = oldShape;
         }
-        
     };
 
     atb::infer::LayerNormParam layerNormParam;
@@ -173,9 +171,9 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
     CREATE_OPERATION(linearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_QKVMIXEDLINEARWEIGHT, INTERMIDATE_QKVBIAS_OUT};
     qkvLinearNode.outTensorIds = {INTERMIDATE_QKVMIXEDLINEAROUT};
-    
+
     atb::infer::TransposeParam transParam;
-    transParam.perm = { 2, 0, 1, 3, 4 };
+    transParam.perm = {2, 0, 1, 3, 4};
     CREATE_OPERATION(transParam, &transposeNode.operation);
     transposeNode.inTensorIds = {INTERMIDATE_QKVMIXEDLINEAROUT};
     transposeNode.outTensorIds = {INTERMIDATE_QKVTRANSROUT};
@@ -189,11 +187,10 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
         newShape.dims[4] = oldShape.dims[2] / 3 / param.headNum;
     };
 
-    atb::infer::SplitParam splitParam = {0, 3}; 
+    atb::infer::SplitParam splitParam = {0, 3};
     CREATE_OPERATION(splitParam, &splitQKVNode.operation);
     splitQKVNode.inTensorIds = {INTERMIDATE_QKVTRANSROUT};
     splitQKVNode.outTensorIds = {INTERMIDATE_MIXEDQ, INTERMIDATE_MIXEDK, INTERMIDATE_MIXEDV};
-
 
     atb::infer::SelfAttentionParam selfAttentionParam;
     selfAttentionParam.headDim = param.dk;
@@ -202,37 +199,30 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
     selfAttentionParam.qkScale = 1.0f;
     selfAttentionParam.isSupportAlibi = true;
     CREATE_OPERATION(selfAttentionParam, &selfAttentionNode.operation);
-    selfAttentionNode.inTensorIds = {INTERMIDATE_MIXEDQ,
-                                            INTERMIDATE_MIXEDK,
-                                            INTERMIDATE_MIXEDV,
-                                            IN_PASTKEY,
-                                            IN_PASTVALUE,
-                                            INTERMIDATE_MASKEDBIAS,
-                                            IN_TOKENOFFSET,
-                                            IN_SEQLEN,
-                                            IN_LAYERID};
+    selfAttentionNode.inTensorIds = {INTERMIDATE_MIXEDQ, INTERMIDATE_MIXEDK, INTERMIDATE_MIXEDV,
+                                     IN_PASTKEY,         IN_PASTVALUE,       INTERMIDATE_MASKEDBIAS,
+                                     IN_TOKENOFFSET,     IN_SEQLEN,          IN_LAYERID};
     selfAttentionNode.outTensorIds = {INTERMIDATE_SELFOUT};
     selfAttentionNode.inTensorReshapeFuncs.resize(selfAttentionNode.inTensorIds.size());
     selfAttentionNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         newShape.dimNum = 2;
-        newShape.dims[0] = oldShape.dims[1]*oldShape.dims[2];
-        newShape.dims[1] = oldShape.dims[3]*oldShape.dims[4];
+        newShape.dims[0] = oldShape.dims[1] * oldShape.dims[2];
+        newShape.dims[1] = oldShape.dims[3] * oldShape.dims[4];
     };
     selfAttentionNode.inTensorReshapeFuncs.at(1) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         newShape.dimNum = 2;
-        newShape.dims[0] = oldShape.dims[1]*oldShape.dims[2];
-        newShape.dims[1] = oldShape.dims[3]*oldShape.dims[4];
+        newShape.dims[0] = oldShape.dims[1] * oldShape.dims[2];
+        newShape.dims[1] = oldShape.dims[3] * oldShape.dims[4];
     };
     selfAttentionNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         newShape.dimNum = 2;
-        newShape.dims[0] = oldShape.dims[1]*oldShape.dims[2];
-        newShape.dims[1] = oldShape.dims[3]*oldShape.dims[4];
+        newShape.dims[0] = oldShape.dims[1] * oldShape.dims[2];
+        newShape.dims[1] = oldShape.dims[3] * oldShape.dims[4];
     };
-    
-    atb::infer::LinearParam layerParam={false, true, true};
+
+    atb::infer::LinearParam layerParam = {false, true, true};
     CREATE_OPERATION(layerParam, &selfOutLinearNode.operation);
-    selfOutLinearNode.inTensorIds = {
-        INTERMIDATE_SELFOUT, IN_SELFOUTLINEARWEIGHT,IN_SELFOUTLINEBIASID};
+    selfOutLinearNode.inTensorIds = {INTERMIDATE_SELFOUT, IN_SELFOUTLINEARWEIGHT, IN_SELFOUTLINEBIASID};
     selfOutLinearNode.outTensorIds = {INTERMIDATE_SELFLINEAROUT};
 
     atb::infer::ElewiseParam gamma1MutmalParam;
@@ -240,8 +230,6 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
     CREATE_OPERATION(gamma1MutmalParam, &gama1MultNode.operation);
     gama1MultNode.inTensorIds = {IN_GAMMA1, INTERMIDATE_SELFLINEAROUT};
     gama1MultNode.outTensorIds = {INTERMIDATE_GAMMA1_OUT};
-    
-    
 
     atb::infer::ElewiseParam addGamma1Param;
     addGamma1Param.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
@@ -257,7 +245,7 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
     sliceTextNode.outTensorIds = {INTERMIDATE_SLICE_TEXT_OUT};
 
     atb::infer::LayerNormParam layerTextNormParam;
-    
+
     layerTextNormParam.layerType = atb::infer::LayerNormParam::LayerNormType::LAYER_NORM_NORM;
     layerTextNormParam.normParam.beginNormAxis = 2;
     layerTextNormParam.normParam.beginParamsAxis = 0;
@@ -265,7 +253,6 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
     CREATE_OPERATION(layerTextNormParam, &normalTextNode.operation);
     normalTextNode.inTensorIds = {INTERMIDATE_SLICE_TEXT_OUT, IN_NORM2TEXTWEIGHT, IN_NORM2TEXTBIAS};
     normalTextNode.outTensorIds = {INTERMIDATE_NORM2TEXT_OUT};
-
 
     atb_speed::common::MlpGateParamV2 mlpTextParam;
     mlpTextParam.commDownParam.rank = param.rank;
@@ -276,10 +263,25 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
     mlpTextParam.noGate = true;
     mlpTextParam.isPack = false;
     atb_speed::common::MlpGateLayerV2(mlpTextParam, &mlpTextNode.operation);
-    mlpTextNode.inTensorIds = {INTERMIDATE_NORM2TEXT_OUT, IN_MLPTEXTUPWEIGHT, IN_HOLDER, IN_MLPTEXTDOWNWEIGHT,
-                        IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_MPLTEXTBIASUP, IN_HOLDER,
-                        IN_MPLTEXTBIASDOWN, IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_HOLDER,
-                        IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_HOLDER};
+    mlpTextNode.inTensorIds = {INTERMIDATE_NORM2TEXT_OUT,
+                               IN_MLPTEXTUPWEIGHT,
+                               IN_HOLDER,
+                               IN_MLPTEXTDOWNWEIGHT,
+                               IN_HOLDER,
+                               IN_HOLDER,
+                               IN_HOLDER,
+                               IN_MPLTEXTBIASUP,
+                               IN_HOLDER,
+                               IN_MPLTEXTBIASDOWN,
+                               IN_HOLDER,
+                               IN_HOLDER,
+                               IN_HOLDER,
+                               IN_HOLDER,
+                               IN_HOLDER,
+                               IN_HOLDER,
+                               IN_HOLDER,
+                               IN_HOLDER,
+                               IN_HOLDER};
     mlpTextNode.outTensorIds = {INTERMIDATE_MLPTEXT_OUT};
 
     atb::infer::ElewiseParam gamma2TextMutmalParam;
@@ -294,14 +296,12 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
     selfResidualTextAddNode.inTensorIds = {INTERMIDATE_SLICE_TEXT_OUT, INTERMIDATE_GAMMA2_TEXT_OUT};
     selfResidualTextAddNode.outTensorIds = {INTERMIDATE_SELFRESIDUALADDTEXTOUT};
 
-
     atb::infer::SliceParam sliceImageParam;
-    sliceImageParam.offsets = {0, param.maxTextLen,0};
+    sliceImageParam.offsets = {0, param.maxTextLen, 0};
     sliceImageParam.size = {-1, -1, -1};
     CREATE_OPERATION(sliceImageParam, &sliceImageNode.operation);
     sliceImageNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT};
     sliceImageNode.outTensorIds = {INTERMIDATE_SLICE_IMAGE_OUT};
-
 
     atb::infer::LayerNormParam layerIMAGENormParam;
     layerIMAGENormParam.layerType = atb::infer::LayerNormParam::LayerNormType::LAYER_NORM_NORM;
@@ -312,7 +312,6 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
     normalImageNode.inTensorIds = {INTERMIDATE_SLICE_IMAGE_OUT, IN_NORM2IMAGEWEIGHT, IN_NORM2IMAGEBIAS};
     normalImageNode.outTensorIds = {INTERMIDATE_NORM2IMAGE_OUT};
 
-
     atb_speed::common::MlpGateParamV2 mlpIMAGEParam;
     mlpIMAGEParam.commDownParam.rank = param.rank;
     mlpIMAGEParam.commDownParam.rankSize = param.rankSize;
@@ -322,12 +321,26 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
     mlpIMAGEParam.noGate = true;
     mlpIMAGEParam.isPack = false;
     atb_speed::common::MlpGateLayerV2(mlpIMAGEParam, &mlpImageNode.operation);
-    mlpImageNode.inTensorIds = {INTERMIDATE_NORM2IMAGE_OUT, IN_MLPIMAGEUPWIGHT, IN_HOLDER, IN_MLPIMAGEDOWNWIGHT,
-                        IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_MPLIMAGEBIASUP, IN_HOLDER,
-                        IN_MPLIMAGEBIASDOWN, IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_HOLDER,
-                        IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_HOLDER};
+    mlpImageNode.inTensorIds = {INTERMIDATE_NORM2IMAGE_OUT,
+                                IN_MLPIMAGEUPWIGHT,
+                                IN_HOLDER,
+                                IN_MLPIMAGEDOWNWIGHT,
+                                IN_HOLDER,
+                                IN_HOLDER,
+                                IN_HOLDER,
+                                IN_MPLIMAGEBIASUP,
+                                IN_HOLDER,
+                                IN_MPLIMAGEBIASDOWN,
+                                IN_HOLDER,
+                                IN_HOLDER,
+                                IN_HOLDER,
+                                IN_HOLDER,
+                                IN_HOLDER,
+                                IN_HOLDER,
+                                IN_HOLDER,
+                                IN_HOLDER,
+                                IN_HOLDER};
     mlpImageNode.outTensorIds = {INTERMIDATE_MLPIMAGE_OUT};
-
 
     atb::infer::ElewiseParam gamma2IMAGEMutmalParam;
     gamma2IMAGEMutmalParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_MUL;

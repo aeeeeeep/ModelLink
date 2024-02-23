@@ -86,7 +86,7 @@ uint32_t FlashAttentionModel::GetInputNum() const { return graph_.inTensors.size
 uint32_t FlashAttentionModel::GetOutputNum() const { return graph_.outTensors.size(); }
 
 atb::Status FlashAttentionModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
-                                                std::vector<atb::TensorDesc> &outTensorDescs)
+                                            std::vector<atb::TensorDesc> &outTensorDescs)
 {
     if (outTensorDescs.size() != GetOutputNum()) {
         return atb::ERROR_INVALID_GRAPH;
@@ -98,13 +98,13 @@ atb::Status FlashAttentionModel::InferShape(const std::vector<atb::TensorDesc> &
 int64_t FlashAttentionModel::BuildGraph()
 {
     const int weightTensorSize = WEIGHT_COUNT_PER_LAYER * param_.vlLayerIndex +
-                                 WEIGHT_COUNT_PER_VL_LAYER * (param_.layerNum - param_.vlLayerIndex) ;
+                                 WEIGHT_COUNT_PER_VL_LAYER * (param_.layerNum - param_.vlLayerIndex);
     graph_.weightTensors.resize(weightTensorSize);
 
     graph_.inTensors.resize(IN_TENSOR_MAX + param_.layerNum);
     graph_.outTensors.resize(OUT_TENSOR_MAX);
 
-    const int nodeSize = OPERATION_COUNT_BEFORE_LAYER + param_.layerNum  + OPERATION_COUNT_AFTER_LAYER;
+    const int nodeSize = OPERATION_COUNT_BEFORE_LAYER + param_.layerNum + OPERATION_COUNT_AFTER_LAYER;
     graph_.nodes.resize(nodeSize);
 
     const int internalTensorSize = (param_.layerNum - 1) * OUT_TENSOR_MAX;
@@ -113,7 +113,7 @@ int64_t FlashAttentionModel::BuildGraph()
     int nodeId = 0;
 
     atb::Operation *op = nullptr;
-    
+
     ATB_LOG(INFO) << __func__ << " called, layerNum: " << param_.layerNum;
     atb::Tensor *firstInTensor = &graph_.inTensors.at(0);
     int layerId = 0;
@@ -131,7 +131,7 @@ int64_t FlashAttentionModel::BuildGraph()
         opParam.maxTextLen = param_.maxTextLen;
         atb_speed::vlmo::EncoderLayer(opParam, &op);
         layerNode.operation.reset(op);
-        layerNode.inTensors.resize(layerNode.operation->GetInputNum()); 
+        layerNode.inTensors.resize(layerNode.operation->GetInputNum());
 
         size_t inTensorId = 0;
         layerNode.inTensors.at(inTensorId++) = firstInTensor;
@@ -142,16 +142,17 @@ int64_t FlashAttentionModel::BuildGraph()
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SEQLEN);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MAX + layerId);
-        
+
         for (size_t weightTensorId = 0; weightTensorId < WEIGHT_COUNT_PER_LAYER; ++weightTensorId) {
-            ATB_LOG(INFO) << __func__ << " layerId " << layerId << " weightID"<<weightTensorId << " -> in weight ID" << (layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId );
-            layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(
-                layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId );
+            ATB_LOG(INFO) << __func__ << " layerId " << layerId << " weightID" << weightTensorId << " -> in weight ID"
+                          << (layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId);
+            layerNode.inTensors.at(inTensorId++) =
+                &graph_.weightTensors.at(layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId);
         }
-        
+
         layerNode.outTensors.resize(layerNode.operation->GetOutputNum());
-        for (int i = 0; i < OUT_TENSOR_MAX; i++ ){
-            layerNode.outTensors.at(i) = &graph_.internalTensors.at((layerId * 1) + i );
+        for (int i = 0; i < OUT_TENSOR_MAX; i++) {
+            layerNode.outTensors.at(i) = &graph_.internalTensors.at((layerId * 1) + i);
         }
         firstInTensor = layerNode.outTensors.at(0);
     }
@@ -180,25 +181,24 @@ int64_t FlashAttentionModel::BuildGraph()
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SEQLEN);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MAX + layerId);
-        
+
         for (size_t weightTensorId = 0; weightTensorId < WEIGHT_COUNT_PER_VL_LAYER; ++weightTensorId) {
-            layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at( 
-                (WEIGHT_COUNT_PER_LAYER * param_.vlLayerIndex) +
-                ( layerId - param_.vlLayerIndex ) * WEIGHT_COUNT_PER_VL_LAYER + weightTensorId);
+            layerNode.inTensors.at(inTensorId++) =
+                &graph_.weightTensors.at((WEIGHT_COUNT_PER_LAYER * param_.vlLayerIndex) +
+                                         (layerId - param_.vlLayerIndex) * WEIGHT_COUNT_PER_VL_LAYER + weightTensorId);
         }
 
         layerNode.outTensors.resize(layerNode.operation->GetOutputNum());
-        if(layerId + 1 == param_.layerNum) {
+        if (layerId + 1 == param_.layerNum) {
             for (int i = 0; i < OUT_TENSOR_MAX; i++) {
                 layerNode.outTensors.at(i) = &graph_.outTensors.at(i);
             }
-        }else {
+        } else {
             for (int i = 0; i < OUT_TENSOR_MAX; i++) {
                 layerNode.outTensors.at(i) = &graph_.internalTensors.at((layerId * OUT_TENSOR_MAX) + i);
             }
             firstInTensor = layerNode.outTensors.at(0);
         }
-
     }
     return atb::NO_ERROR;
 }

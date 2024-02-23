@@ -55,8 +55,6 @@ static void from_json(const nlohmann::json &paramJson, EncoderLayerParam &param)
     }
 }
 
-
-
 atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operation);
 
 static atb::Operation *CreateEncoderLayer(const nlohmann::json &paramJson)
@@ -66,7 +64,6 @@ static atb::Operation *CreateEncoderLayer(const nlohmann::json &paramJson)
     atb_speed::vlmo::EncoderLayer(paramJson.get<EncoderLayerParam>(), &op);
     return op;
 }
-
 
 class EncoderLayerBinder : public HostTensorBinder {
 public:

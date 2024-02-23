@@ -63,7 +63,6 @@ enum EncoderLayerTensorId : int {
     INTERMIDATE_NORM2VL_OUT,
     INTERMIDATE_MLPVL_OUT,
     INTERMIDATE_GAMMA2_VL_OUT,
-    
 };
 
 static const uint64_t IN_TENSOR_COUNT = 25;
@@ -99,36 +98,34 @@ atb::Status EncoderVlLayer(const EncoderVllayerParam &param, atb::Operation **op
     atb::Node &selfResidualVlAddNode = opGraph.nodes.at(nodeId++);
 
     atb::infer::FillParam maskfillParam;
-    maskfillParam.value = { -10000};
+    maskfillParam.value = {-10000};
     maskfillParam.withMask = true;
     CREATE_OPERATION(maskfillParam, &maskFillBiasNode.operation);
     maskFillBiasNode.inTensorIds = {IN_RELATIVE_POSITION_BIAS, IN_ATTENTIONMASK};
     maskFillBiasNode.outTensorIds = {INTERMIDATE_MASKEDBIAS};
     maskFillBiasNode.inTensorReshapeFuncs.resize(maskFillBiasNode.inTensorIds.size());
     maskFillBiasNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        if(oldShape.dimNum == 3) {
+        if (oldShape.dimNum == 3) {
             newShape.dimNum = 4;
             newShape.dims[0] = 1;
             newShape.dims[1] = oldShape.dims[0];
             newShape.dims[2] = oldShape.dims[1];
             newShape.dims[3] = oldShape.dims[2];
-        }else {
+        } else {
             newShape = oldShape;
         }
-        
     };
 
     maskFillBiasNode.inTensorReshapeFuncs.at(1) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        if(oldShape.dimNum == 2) {
+        if (oldShape.dimNum == 2) {
             newShape.dimNum = 4;
             newShape.dims[0] = 1;
             newShape.dims[1] = 1;
             newShape.dims[2] = oldShape.dims[0];
             newShape.dims[3] = oldShape.dims[1];
-        }else {
+        } else {
             newShape = oldShape;
         }
-        
     };
 
     atb::infer::LayerNormParam layerNormParam;
@@ -154,9 +151,9 @@ atb::Status EncoderVlLayer(const EncoderVllayerParam &param, atb::Operation **op
     CREATE_OPERATION(linearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_QKVMIXEDLINEARWEIGHT, INTERMIDATE_QKVBIAS_OUT};
     qkvLinearNode.outTensorIds = {INTERMIDATE_QKVMIXEDLINEAROUT};
-    
+
     atb::infer::TransposeParam transParam;
-    transParam.perm = { 2, 0, 1, 3, 4 };
+    transParam.perm = {2, 0, 1, 3, 4};
     CREATE_OPERATION(transParam, &transposeNode.operation);
     transposeNode.inTensorIds = {INTERMIDATE_QKVMIXEDLINEAROUT};
     transposeNode.outTensorIds = {INTERMIDATE_QKVTRANSROUT};
@@ -182,46 +179,37 @@ atb::Status EncoderVlLayer(const EncoderVllayerParam &param, atb::Operation **op
     selfAttentionParam.qkScale = 1.0f;
     selfAttentionParam.isSupportAlibi = true;
     CREATE_OPERATION(selfAttentionParam, &selfAttentionNode.operation);
-    selfAttentionNode.inTensorIds = {INTERMIDATE_MIXEDQ,
-                                            INTERMIDATE_MIXEDK,
-                                            INTERMIDATE_MIXEDV,
-                                            IN_PASTKEY,
-                                            IN_PASTVALUE,
-                                            INTERMIDATE_MASKEDBIAS,
-                                            IN_TOKENOFFSET,
-                                            IN_SEQLEN,
-                                            IN_LAYERID};
+    selfAttentionNode.inTensorIds = {INTERMIDATE_MIXEDQ, INTERMIDATE_MIXEDK, INTERMIDATE_MIXEDV,
+                                     IN_PASTKEY,         IN_PASTVALUE,       INTERMIDATE_MASKEDBIAS,
+                                     IN_TOKENOFFSET,     IN_SEQLEN,          IN_LAYERID};
     selfAttentionNode.outTensorIds = {INTERMIDATE_SELFOUT};
     selfAttentionNode.inTensorReshapeFuncs.resize(selfAttentionNode.inTensorIds.size());
     selfAttentionNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         newShape.dimNum = 2;
-        newShape.dims[0] = oldShape.dims[1]*oldShape.dims[2];
-        newShape.dims[1] = oldShape.dims[3]*oldShape.dims[4];
+        newShape.dims[0] = oldShape.dims[1] * oldShape.dims[2];
+        newShape.dims[1] = oldShape.dims[3] * oldShape.dims[4];
     };
     selfAttentionNode.inTensorReshapeFuncs.at(1) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         newShape.dimNum = 2;
-        newShape.dims[0] = oldShape.dims[1]*oldShape.dims[2];
-        newShape.dims[1] = oldShape.dims[3]*oldShape.dims[4];
+        newShape.dims[0] = oldShape.dims[1] * oldShape.dims[2];
+        newShape.dims[1] = oldShape.dims[3] * oldShape.dims[4];
     };
     selfAttentionNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         newShape.dimNum = 2;
-        newShape.dims[0] = oldShape.dims[1]*oldShape.dims[2];
-        newShape.dims[1] = oldShape.dims[3]*oldShape.dims[4];
+        newShape.dims[0] = oldShape.dims[1] * oldShape.dims[2];
+        newShape.dims[1] = oldShape.dims[3] * oldShape.dims[4];
     };
-    
-    atb::infer::LinearParam layerParam={false, false, true};
-    CREATE_OPERATION(layerParam, &selfOutLinearNode.operation);
-    selfOutLinearNode.inTensorIds = {
-        INTERMIDATE_SELFOUT, IN_SELFOUTLINEARWEIGHT,IN_SELFOUTLINEBIASID};
-    selfOutLinearNode.outTensorIds = {INTERMIDATE_SELFLINEAROUT};
 
+    atb::infer::LinearParam layerParam = {false, false, true};
+    CREATE_OPERATION(layerParam, &selfOutLinearNode.operation);
+    selfOutLinearNode.inTensorIds = {INTERMIDATE_SELFOUT, IN_SELFOUTLINEARWEIGHT, IN_SELFOUTLINEBIASID};
+    selfOutLinearNode.outTensorIds = {INTERMIDATE_SELFLINEAROUT};
 
     atb::infer::ElewiseParam gamma1MutmalParam;
     gamma1MutmalParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_MUL;
     CREATE_OPERATION(gamma1MutmalParam, &gama1MultNode.operation);
     gama1MultNode.inTensorIds = {IN_GAMMA1, INTERMIDATE_SELFLINEAROUT};
     gama1MultNode.outTensorIds = {INTERMIDATE_GAMMA1_OUT};
-
 
     atb::infer::ElewiseParam addGamma1Param;
     addGamma1Param.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
@@ -230,7 +218,7 @@ atb::Status EncoderVlLayer(const EncoderVllayerParam &param, atb::Operation **op
     selfResidualAddNode.outTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT};
 
     atb::infer::LayerNormParam layerTextNormParam;
-    
+
     layerTextNormParam.layerType = atb::infer::LayerNormParam::LayerNormType::LAYER_NORM_NORM;
     layerTextNormParam.normParam.beginNormAxis = 2;
     layerTextNormParam.normParam.beginParamsAxis = 0;
@@ -238,7 +226,6 @@ atb::Status EncoderVlLayer(const EncoderVllayerParam &param, atb::Operation **op
     CREATE_OPERATION(layerTextNormParam, &normalVlNode.operation);
     normalVlNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, IN_NORM2VLWEIGHT, IN_NORM2VLBIAS};
     normalVlNode.outTensorIds = {INTERMIDATE_NORM2VL_OUT};
-
 
     atb_speed::common::MlpGateParamV2 mlpTextParam;
     mlpTextParam.commDownParam.rank = param.rank;
@@ -249,10 +236,25 @@ atb::Status EncoderVlLayer(const EncoderVllayerParam &param, atb::Operation **op
     mlpTextParam.noGate = true;
     mlpTextParam.isPack = false;
     atb_speed::common::MlpGateLayerV2(mlpTextParam, &mlpVlNode.operation);
-    mlpVlNode.inTensorIds = {INTERMIDATE_NORM2VL_OUT, IN_MLPVLUPWEIGHT, IN_HOLDER, IN_MLPVLDOWNWEIGHT,
-                        IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_MPLVLBIASUP, IN_HOLDER,
-                        IN_MPLVLBIASDOWN, IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_HOLDER,
-                        IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_HOLDER};
+    mlpVlNode.inTensorIds = {INTERMIDATE_NORM2VL_OUT,
+                             IN_MLPVLUPWEIGHT,
+                             IN_HOLDER,
+                             IN_MLPVLDOWNWEIGHT,
+                             IN_HOLDER,
+                             IN_HOLDER,
+                             IN_HOLDER,
+                             IN_MPLVLBIASUP,
+                             IN_HOLDER,
+                             IN_MPLVLBIASDOWN,
+                             IN_HOLDER,
+                             IN_HOLDER,
+                             IN_HOLDER,
+                             IN_HOLDER,
+                             IN_HOLDER,
+                             IN_HOLDER,
+                             IN_HOLDER,
+                             IN_HOLDER,
+                             IN_HOLDER};
     mlpVlNode.outTensorIds = {INTERMIDATE_MLPVL_OUT};
 
     atb::infer::ElewiseParam gamma2TextMutmalParam;

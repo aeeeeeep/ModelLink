@@ -17,6 +17,7 @@ paper `DeiT: Data-efficient Image Transformers` - https://arxiv.org/abs/2012.128
 
 Hacked together by / Copyright 2020 Ross Wightman
 """
+
 from functools import partial
 import os
 import json
@@ -33,7 +34,6 @@ from timm.models.registry import register_model
 from pytorch_lightning.utilities.distributed import rank_zero_info
 
 
-
 # def load_ascend_transformer():
 #     ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
 #     if ATB_SPEED_HOME_PATH is None:
@@ -43,6 +43,7 @@ from pytorch_lightning.utilities.distributed import rank_zero_info
 
 
 # load_ascend_transformer()
+
 
 class Mlp(nn.Module):
     def __init__(
@@ -84,7 +85,7 @@ class Attention(nn.Module):
         self.num_heads = num_heads
         head_dim = dim // num_heads
         # NOTE scale factor was wrong in my original version, can set manually to be compat with prev weights
-        self.scale = qk_scale or  head_dim ** -0.5
+        self.scale = qk_scale or head_dim**-0.5
 
         self.qkv = nn.Linear(dim, dim * 3, bias=False)
         if qkv_bias:
@@ -93,76 +94,75 @@ class Attention(nn.Module):
         else:
             self.q_bias = None
             self.v_bias = None
-        
+
         # self.attn_drop = attn_drop
         self.proj = nn.Linear(dim, dim)
         # self.proj_drop = proj_drop
-
 
     def forward(self, x, mask=None, relative_position_bias=None):
         # print("multiway transformer attention forward")
         # print("x.shape ",x.shape)
 
-
         B, N, C = x.shape
 
         qkv_bias = None
         if self.q_bias is not None:
-            qkv_bias = torch.cat((self.q_bias, torch.zeros_like(self.v_bias, requires_grad=False), self.v_bias))
-        
+            qkv_bias = torch.cat(
+                (
+                    self.q_bias,
+                    torch.zeros_like(self.v_bias, requires_grad=False),
+                    self.v_bias,
+                )
+            )
 
         qkv = F.linear(input=x, weight=self.qkv.weight, bias=qkv_bias)
-        
-        
 
-        # 1 941 2304 
-        #1 941 3 12 64
+        # 1 941 2304
+        # 1 941 3 12 64
         # 3 1 12 941 64
-        qkv = qkv.reshape(B, N, 3, self.num_heads, -1).permute(2, 0, 3, 1, 4) # 3 batchSize numHeads N -1
+        qkv = qkv.reshape(B, N, 3, self.num_heads, -1).permute(
+            2, 0, 3, 1, 4
+        )  # 3 batchSize numHeads N -1
 
         q, k, v = (
             qkv[0],
             qkv[1],
             qkv[2],
         )  # make torchscript happy (cannot use tensor as tuple)
-        
-        # 相当于有个rope操作。
 
+        # 相当于有个rope操作。
 
         # print("q  k  v.shape ",q.shape)
         q = q * self.scale
-        #941  768
-        #768 941
+        # 941  768
+        # 768 941
         #  941 941
         #  1 12 941 64
         #   1 12 64 941
         # 1 12 941 941
 
-        attn = (q.float() @ k.float().transpose(-2, -1))
+        attn = q.float() @ k.float().transpose(-2, -1)
         # print("1 attn shape",attn.shape)
         # 移动到外面，加到mask上面
         if relative_position_bias is not None:
-           
+
             attn = attn + relative_position_bias.unsqueeze(0)
             # 1  12  941 941
         if mask is not None:
-            mask = mask.bool() # 1 1 1 941
+            mask = mask.bool()  # 1 1 1 941
             # print("~mask[:, None, None, :]",~mask[:, None, None, :])
             attn = attn.masked_fill(~mask[:, None, None, :], float("-inf"))
-            
-        
+
         attn = attn.softmax(dim=-1).type_as(x)
 
         # attn = self.attn_drop(attn)
 
         x = (attn @ v).transpose(1, 2).reshape(B, N, C)
 
-        
         x = self.proj(x)
         # print("final x shape ",x.shape)
         # x = self.proj_drop(x)
         return x
-    
 
 
 class Block(nn.Module):
@@ -181,7 +181,7 @@ class Block(nn.Module):
         with_vlffn=False,
         layer_scale_init_values=0.1,
         max_text_len=40,
-        layerid =0,
+        layerid=0,
     ):
         super().__init__()
         self.norm1 = norm_layer(dim)
@@ -220,24 +220,32 @@ class Block(nn.Module):
                 drop=drop,
             )
             self.norm2_vl = norm_layer(dim)
-        
-        self.gamma_1 = \
-            nn.Parameter(layer_scale_init_values * torch.ones((dim)), requires_grad=True) \
-            if layer_scale_init_values is not None else 1.0
-        self.gamma_2 = \
-            nn.Parameter(layer_scale_init_values * torch.ones((dim)), requires_grad=True) \
-            if layer_scale_init_values is not None else 1.0
+
+        self.gamma_1 = (
+            nn.Parameter(
+                layer_scale_init_values * torch.ones((dim)), requires_grad=True
+            )
+            if layer_scale_init_values is not None
+            else 1.0
+        )
+        self.gamma_2 = (
+            nn.Parameter(
+                layer_scale_init_values * torch.ones((dim)), requires_grad=True
+            )
+            if layer_scale_init_values is not None
+            else 1.0
+        )
 
         self.max_text_len = max_text_len
-        
-    
+
     def forward(self, x, mask=None, modality_type=None, relative_position_bias=None):
-        
+
         norm = self.norm1(x)
-        
-        orgattn = self.attn(norm, mask=mask, relative_position_bias=relative_position_bias)
+
+        orgattn = self.attn(
+            norm, mask=mask, relative_position_bias=relative_position_bias
+        )
         x = x + self.gamma_1 * orgattn
-        
 
         if modality_type == "image":
             x = x + self.gamma_2 * self.mlp_imag(self.norm2_imag(x))
@@ -254,13 +262,12 @@ class Block(nn.Module):
             else:
                 x = x + self.gamma_2 * self.mlp_vl(self.norm2_vl(x))
         # print("org x shape",x.shape)
-        
-        
+
         return x
 
 
 class PatchEmbed(nn.Module):
-    """ Image to Patch Embedding"""
+    """Image to Patch Embedding"""
 
     def __init__(
         self,
@@ -289,18 +296,19 @@ class PatchEmbed(nn.Module):
 
     def forward(self, x):
         # print("multiway transformer PatchEmbed forward")
-        
+
         B, C, H, W = x.shape
         # print("image size : " ,H , "*",W)
-        assert H == self.img_size[0] and W == self.img_size[1], \
-            f"Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})."
+        assert (
+            H == self.img_size[0] and W == self.img_size[1]
+        ), f"Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})."
         # FIXME look at relaxing size constraints
         x = self.proj(x)
         return x
 
 
 class MultiWayTransformer(nn.Module):
-    """ Vision Transformer
+    """Vision Transformer
 
     A PyTorch impl of : `An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale`  -
         https://arxiv.org/abs/2010.11929
@@ -355,9 +363,9 @@ class MultiWayTransformer(nn.Module):
         self.use_abs_pos_emb = use_abs_pos_emb
         self.need_relative_position_embed = need_relative_position_embed
 
-        self.num_features = (
-            self.embed_dim
-        ) = embed_dim  # num_features for consistency with other models
+        self.num_features = self.embed_dim = (
+            embed_dim  # num_features for consistency with other models
+        )
         norm_layer = norm_layer or partial(nn.LayerNorm, eps=1e-6)
 
         self.patch_embed = PatchEmbed(
@@ -374,9 +382,17 @@ class MultiWayTransformer(nn.Module):
         self.vlffn_start_layer_index = vlffn_start_layer_index
         if config["loss_names"]["textmlm"] > 0:
             self.vlffn_start_layer_index = depth
-            rank_zero_info("Set vlffn_start_layer_index={} for text-only pretraining".format(self.vlffn_start_layer_index))
+            rank_zero_info(
+                "Set vlffn_start_layer_index={} for text-only pretraining".format(
+                    self.vlffn_start_layer_index
+                )
+            )
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
-        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, embed_dim)) if self.use_abs_pos_emb else None
+        self.pos_embed = (
+            nn.Parameter(torch.zeros(1, num_patches + 1, embed_dim))
+            if self.use_abs_pos_emb
+            else None
+        )
         self.pos_drop = nn.Dropout(p=drop_rate)
 
         dpr = [
@@ -394,12 +410,11 @@ class MultiWayTransformer(nn.Module):
                     drop=drop_rate,
                     attn_drop=attn_drop_rate,
                     drop_path=dpr[i],
-                    layerid = i,
+                    layerid=i,
                     norm_layer=norm_layer,
                     with_vlffn=(i >= self.vlffn_start_layer_index),
                     layer_scale_init_values=layer_scale_init_values,
                     max_text_len=config["max_text_len"],
-                    
                 )
                 for i in range(depth)
             ]
@@ -425,14 +440,14 @@ class MultiWayTransformer(nn.Module):
         return {"pos_embed", "cls_token"}
 
     def visual_embed(self, _x):
-        
+
         x = self.patch_embed(_x)
         x = x.flatten(2).transpose(1, 2)
         B, L, _ = x.shape
 
         cls_tokens = self.cls_token.expand(B, -1, -1)
         x = torch.cat((cls_tokens, x), dim=1)
-        
+
         if self.pos_embed is not None:
             x = x + self.pos_embed
         # x = self.pos_drop(x)
@@ -447,28 +462,56 @@ class MultiWayTransformer(nn.Module):
 def vlmo_base_patch16(pretrained=False, **kwargs):
     img_size = kwargs.pop("img_size", 224)
     model = MultiWayTransformer(
-        img_size=img_size, patch_size=16, embed_dim=768, depth=12, num_heads=12, 
-        mlp_ratio=4, qkv_bias=True, vlffn_start_layer_index=10, 
-        norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+        img_size=img_size,
+        patch_size=16,
+        embed_dim=768,
+        depth=12,
+        num_heads=12,
+        mlp_ratio=4,
+        qkv_bias=True,
+        vlffn_start_layer_index=10,
+        norm_layer=partial(nn.LayerNorm, eps=1e-6),
+        **kwargs,
+    )
     return model
+
 
 # VLMo large/p16
 @register_model
 def vlmo_large_patch16(pretrained=False, **kwargs):
     img_size = kwargs.pop("img_size", 224)
     model = MultiWayTransformer(
-        img_size=img_size, patch_size=16, embed_dim=1024, depth=24, num_heads=16, 
-        mlp_ratio=4, qkv_bias=True, vlffn_start_layer_index=21, 
-        norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+        img_size=img_size,
+        patch_size=16,
+        embed_dim=1024,
+        depth=24,
+        num_heads=16,
+        mlp_ratio=4,
+        qkv_bias=True,
+        vlffn_start_layer_index=21,
+        norm_layer=partial(nn.LayerNorm, eps=1e-6),
+        **kwargs,
+    )
     return model
+
 
 # VLMo base+/p16
 @register_model
 def vlmo_base_plus_patch16(pretrained=False, **kwargs):
     img_size = kwargs.pop("img_size", 224)
     model = MultiWayTransformer(
-        img_size=img_size, patch_size=16, embed_dim=544, depth=24, num_heads=16, 
-        mlp_ratio=4, qkv_bias=True, vlffn_start_layer_index=21,
-        use_abs_pos_emb=True, need_relative_position_embed=False, 
-        layer_scale_init_values=None, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+        img_size=img_size,
+        patch_size=16,
+        embed_dim=544,
+        depth=24,
+        num_heads=16,
+        mlp_ratio=4,
+        qkv_bias=True,
+        vlffn_start_layer_index=21,
+        use_abs_pos_emb=True,
+        need_relative_position_embed=False,
+        layer_scale_init_values=None,
+        norm_layer=partial(nn.LayerNorm, eps=1e-6),
+        **kwargs,
+    )
     return model
