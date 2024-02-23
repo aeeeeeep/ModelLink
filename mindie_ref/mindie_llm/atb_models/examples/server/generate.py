@@ -41,9 +41,10 @@ def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length
         logits = logits[batch.lm_head_indices]
 
     next_token = next_token_chooser(logits)
+    next_token_list = next_token.tolist()
 
     for i, req in enumerate(batch.req_list):
-        req.out_token_list.append(int(next_token[i]))
+        req.out_token_list.append(next_token_list[i])
 
     batch.batch_input_ids = next_token.to(torch.int64)
     batch.batch_position_ids = batch.context_length.to(torch.long)
