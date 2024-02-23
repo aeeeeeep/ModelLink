@@ -28,6 +28,12 @@ Paged Attention 场景需要.safetensors格式的权重，如果没有，参考[
 
 在`${llm_path}`目录执行以下指令
 
+- 800I A2
+```shell
+BACKEND=lccl bash examples/models/qwen/run_pa.sh -m ${weight_path}
+```
+
+- 300I DUO
 ```shell
 bash examples/models/qwen/run_pa.sh -m ${weight_path}
 ```
