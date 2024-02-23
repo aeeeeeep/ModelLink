@@ -190,7 +190,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         atb::infer::LinearParam linearParam;
         linearParam.hasBias = false;
         if (param.isBF16) {
-            outLinearParm.linearType = atb::infer::LINEAR_BF16BF16_FP32_BF16;
+            linearParam.linearType = atb::infer::LINEAR_BF16BF16_FP32_BF16;
         }
         CREATE_OPERATION(linearParam, &mixdQLinearNode.operation);
         mixdQLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_QMIXDWEIGHT };
