@@ -757,7 +757,7 @@ class LlamaModel(LlamaPreTrainedModel):
         self.norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
         # initialize dtype
-        self.BF16 = (self.dtype == torch.bfloat16)
+        self.isBF16 = (self.dtype == torch.bfloat16)
         print(f"LlamaModel, dtype: {self.dtype}")
 
         self.gradient_checkpointing = False
@@ -848,7 +848,7 @@ class LlamaModel(LlamaPreTrainedModel):
             "quantModel": self.quant_model,
             "sparseModel": self.sparse_model,
             "isEncoder": isEncoder,
-            "isBF16": self.BF16,
+            "isBF16": self.isBF16,
             "qkvInputScale": self.qkv_input_scale, "qkvInputOffset": self.qkv_input_offset,
             "denseInputScale": self.dense_input_scale, "denseInputOffset": self.dense_input_offset,
             "selfLnInputScale": self.self_ln_input_scale, "selfLnInputOffset": self.self_ln_input_offset,
