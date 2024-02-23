@@ -45,8 +45,9 @@ bash examples/models/qwen/run_pa.sh -m ${weight_path}
 | MASTER_PORT               | 卡间通信端口,通常不用修改，有冲突时再改                             |                 |                |
 
 注：
-1.暂不支持奇数卡并行
-2.暂不支持量化
+1. 暂不支持奇数卡并行
+2. 暂不支持量化
+3. 300I DUO暂不支持lccl，因此在300I DUO上运行时请删除`run_cmd`中的环境变量`${lccl_options}`
 
 ## 精度测试
 
