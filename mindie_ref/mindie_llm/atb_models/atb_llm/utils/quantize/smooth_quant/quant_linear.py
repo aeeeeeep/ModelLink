@@ -44,7 +44,7 @@ def quantize_activation_per_tensor_absmax(t, n_bits=8):
     return t
 
 
-class W8A8LinearStatic(nn.Module):
+class SmoothQuantLinearStatic(nn.Module):
     def __init__(self, weight, weight_scales, act_scales, weight_zeros=None, act_zeros=None):
         super().__init__()
         self.in_features = weight.shape[1]
@@ -96,7 +96,7 @@ class W8A8LinearStatic(nn.Module):
         return q_y
 
     def to(self, *args, **kwargs):
-        super(W8A8LinearStatic, self).to(*args, **kwargs)
+        super(SmoothQuantLinearStatic, self).to(*args, **kwargs)
         self.weight = self.weight.to(*args, **kwargs)
         if self.bias is not None:
             self.bias = self.bias.to(*args, **kwargs)

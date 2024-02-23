@@ -6,7 +6,8 @@ from torch import nn
 
 from atb_llm.utils.log import logger
 from .fast_linear import FastLinear
-from ...quantize.smooth_quant.quant_linear import W8A8LinearStatic
+from ...quantize.smooth_quant.quant_linear import SmoothQuantLinearStatic
+from ...quantize.w8a8 import W8A8LinearStatic
 
 
 def get_linear(weight, bias, quantize, is_norm=False):
@@ -20,13 +21,31 @@ def get_linear(weight, bias, quantize, is_norm=False):
                 f"The passed weight is not `smooth_quant` compatible, loader needs to be updated."
             )
             raise AssertionError from err
-        linear = W8A8LinearStatic(
+        linear = SmoothQuantLinearStatic(
             weight=qweight,
             weight_scales=weight_scales,
             weight_zeros=weight_zeros,
             act_scales=act_scales,
             act_zeros=act_zeros
         )
+    elif quantize == "w8a8":
+        if isinstance(weight, torch.Tensor):
+            linear = FastLinear(weight, bias, is_norm)
+        else:
+            try:
+                qweight, deq_scale, quant_bias, input_scale, input_offset = weight
+            except Exception as err:
+                logger.error(
+                    f"The passed weight is not `w8a8` compatible, loader needs to be updated."
+                )
+                raise AssertionError from err
+            linear = W8A8LinearStatic(
+                weight=qweight,
+                deq_scale=deq_scale,
+                input_scale=input_scale,
+                quant_bias=quant_bias,
+                input_offset=input_offset
+            )
     else:
         logger.error(f"Quantization `{quantize}` is not implemented yet.")
         raise AssertionError
