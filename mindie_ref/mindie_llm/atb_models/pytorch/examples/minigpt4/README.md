@@ -279,7 +279,7 @@ drwxrwxrwx 9 root root   4K May  7 09:02 ..
 state_dict = torch.load("${model_path}/othfiles/eva_vit_g.pth", map_location="cpu")
 ```
 
-以及minigpt4.py文件的相关配置，路径为 `${work_space}/minigpt4/models/minigpt4.py`
+修改minigpt4.py文件的相关配置，路径为 `${work_space}/minigpt4/models/minigpt4.py`
 
 ```bash
 q_former_model = "${model_path}/othfiles/blip2_pretrained_flant5xxl.pth",
@@ -291,6 +291,11 @@ encoder_config = BertConfig.from_pretrained("${model_path}/othfiles/bert-base-un
 
 ```bash
 q_former_model = cfg.get("q_former_model", "${model_path}/othfiles/blip2_pretrained_flant5xxl.pth")",
+```
+修改eva_vit_model.py文件的相关配置，路径为 `${work_space}/minigpt4/models/eva_vit_model.py`
+
+```bash
+encoder_config = BertConfig.from_pretrained("${model_path}/othfiles/bert-base-uncased")
 ```
 
 模型推理需要三个类型的外部文件：分别为原始模型文件、图像部分离线模型eva_vit_g.om以及测试图片。
@@ -319,7 +324,9 @@ https://github.com/Vision-CAIR/MiniGPT-4/blob/main/examples_v2/office.jpg
 
 4. 安装ais_bench和aclruntime包，参考 https://gitee.com/ascend/tools/tree/master/ais-bench_workload/tool/ais_bench ，保证om模型可正常推理。
 
-5. 完成上述步骤后，即可进行模型推理任务。在 `${work_space}` 目录下，执行如下命令：
+5. 打开下载好的模型仓，进入`ModelLink\mindie_ref\mindie_llm\atb_models\pytorch\examples\atb_speed_sdk`目录执行`pip install .`，安装SDK
+
+6. 完成上述步骤后，即可进行模型推理任务。在 `${work_space}` 目录下，执行如下命令：
 
 `python run_predict.py --cfg-path eval_configs/minigpt4_eval.yaml --image-path ${image_path}/office.jpg  --npu-id ${npu-id}`
 
