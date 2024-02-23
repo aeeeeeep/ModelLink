@@ -1,21 +1,21 @@
 #!/bin/bash
 
 export CUDA_DEVICE_MAX_CONNECTIONS=1
-export NPU_DETECT=0
 
 GPUS_PER_NODE=8
 MASTER_ADDR=localhost
 MASTER_PORT=6001
-NNODES=4
+NNODES=2
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
+LORA_CHECKPOINT="your lora weight"
 LOAD_CHECKPOINT_PATH="your init model load path"
 SAVE_CHECKPOINT_PATH="your model ckpt save path"
 DATA_PATH="your data path"
-TOKENIZER_MODEL="your tokenizer path"
+TOKENIZER_PATH="your tokenizer path"
 TP=8
-PP=4
+PP=2
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $GPUS_PER_NODE \
@@ -33,8 +33,9 @@ GPT_ARGS="
     --hidden-size 8192 \
     --ffn-hidden-size 22016 \
     --num-attention-heads 64 \
-    --tokenizer-type Llama2Tokenizer \
-    --tokenizer-model ${TOKENIZER_MODEL} \
+    --tokenizer-type PretrainedFromHF \
+    --tokenizer-name-or-path ${TOKENIZER_PATH} \
+    --tokenizer-not-use-fast \
     --seq-length 2048 \
     --max-position-embeddings 2048 \
     --micro-batch-size 2 \
@@ -60,6 +61,7 @@ GPT_ARGS="
     --initial-loss-scale 524288.0 \
     --no-gradient-accumulation-fusion \
     --load ${LOAD_CHECKPOINT_PATH}  \
+    --lora-load ${LORA_CHECKPOINT} \
     --no-load-optim \
     --no-load-rng \
     --adam-beta1 0.9 \
@@ -67,12 +69,17 @@ GPT_ARGS="
     --untie-embeddings-and-output-weights \
     --disable-bias-linear \
     --swiglu \
+    --finetune \
+    --is-instruction-dataset \
+    --lora-r 16 \
+    --lora-alpha 32 \
+    --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
     --bf16
 "
 
 DATA_ARGS="
     --data-path $DATA_PATH \
-    --split 949,50,1 \
+    --split 100,0,0 \
 "
 
 OUTPUT_ARGS="

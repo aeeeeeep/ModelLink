@@ -31,19 +31,17 @@
 
 Here's a hardware summary of pre-training LLaMA-7B/13B:
 
-| Hardware | Device |      Value       |
-|:--------:|:------:|:----------------:|
-|   NPU    |  A+K   | 8 x Ascend NPUs  |
-|   NPU    |  A+X   | 16 x Ascend NPUs |
+| Hardware |                      Value                      |
+| :------: | :---------------------------------------------: |
+|   NPU    |               8 x Ascend NPUs                   |
 
 
 ### Script
 
 1. Clone the repository to your local server:
 ```shell
-git clone https://gitee.com/ascend/ModelLink.git 
-cd ModelLink 
-git checkout modellink
+git clone -b modellink https://gitee.com/ascend/ModelLink.git 
+cd ModelLink
 mkdir logs
 cd ..
 ```
@@ -70,43 +68,7 @@ cd ..
 pip install -r requirements.txt 
 ```
 
-3. Download the LLaMA-7B/13B tokenizer model and file from [here](https://huggingface.co/ruibin-wang/llama-7b-hf/tree/main) 
-
-
-```shell
-  #!/bin/bash
-  mkdir -p dataset/llama
-  cd ./dataset/llama
-  wget https://huggingface.co/ruibin-wang/llama-7b-hf/tree/main/config.json
-  wget https://huggingface.co/ruibin-wang/llama-7b-hf/tree/main/generation_config.json
-  wget https://huggingface.co/ruibin-wang/llama-7b-hf/tree/main/special_tokens_map.json
-  wget https://huggingface.co/ruibin-wang/llama-7b-hf/tree/main/tokenizer.model
-  wget https://huggingface.co/ruibin-wang/llama-7b-hf/tree/main/tokenizer_config.json
-  cd ..
-```
-
-
-4. Prepare dataset. Download the LLaMA-7B/13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
-
-```shell
-cd dataset/
-wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-cd ..
-```
-
-```shell
-#!/bin/bash
-source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-python ./tools/preprocess_data.py \
-    --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ./dataset/llama \
-    --output-prefix ./dataset/llama \
-    --workers 4 \
-    --log-interval 1000  \
-    --tokenizer-type PretrainedFromHF  
-```
-
-5. Weights convert
+3. Download the LLaMA-7B/13B tokenizer model file and checkpoint.
 
 Download the LLaMA-7B checkpoint from [here](https://huggingface.co/ruibin-wang/llama-7b-hf/tree/main) 
 ```shell
@@ -156,32 +118,161 @@ python tools/checkpoint/util.py --model-type GPT \
     --tokenizer-model ./model_from_hf/llama-13b-hf/tokenizer.model
 ```
 
-6. Config LLaMA-7B/13B pre-training script.
+4. Pretrain
 
+4.1 Prepare pretrain dataset
+Download the LLaMA-7B/13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
+
+```shell
+cd dataset/
+wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+cd ..
+```
+
+Preprocess dataset
+
+LLaMA-7B
+```shell
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+python ./tools/preprocess_data.py \
+    --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+    --tokenizer-name-or-path ./model_from_hf/llama-7b-hf \
+    --output-prefix ./dataset/llama \
+    --workers 4 \
+    --log-interval 1000  \
+    --tokenizer-type PretrainedFromHF  
+```
+
+LLaMA-13B
+```shell
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+python ./tools/preprocess_data.py \
+    --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+    --tokenizer-name-or-path ./model_from_hf/llama-13b-hf \
+    --output-prefix ./dataset/llama \
+    --workers 4 \
+    --log-interval 1000  \
+    --tokenizer-type PretrainedFromHF  
+```
+
+4.2 Config LLaMA-7B/13B pre-training script.
+
+LLaMA-7B
 ```shell
 # modify the script according to your own  ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # modify script orign dataset path according to your own dataset path
-TOKENIZER_MODEL=./dataset/llama/tokenizer.model  #tokenizer path
+TOKENIZER_MODEL=./model_from_hf/llama-7b-hf/tokenizer.model 
 DATA_PATH=./dataset/llama_text_document  #processed dataset
 LOAD_CHECKPOINT_PATH="your init model load path"
 SAVE_CHECKPOINT_PATH="your model ckpt save path"
 ```
-*Note that if you do not load weights for pre-training, remove the `--load` parameter from the training script*
-*Note that if you use the instruction dataset, add the `--is-instruction-dataset` parameter from the training script, otherwise please remove the parameter*
 
-7. Launch LLaMA-7B/13B pre-training script.
+LLaMA-13B
+```shell
+# modify the script according to your own  ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+# modify script orign dataset path according to your own dataset path
+TOKENIZER_MODEL=./model_from_hf/llama-13b-hf/tokenizer.model 
+DATA_PATH=./dataset/llama_text_document  #processed dataset
+LOAD_CHECKPOINT_PATH="your init model load path"
+SAVE_CHECKPOINT_PATH="your model ckpt save path"
+```
+
+4.3 Launch LLaMA-7B/13B pre-training script.
 
 LLaMA-7B
 ```shell
-bash examples/llama/pretrain_llama_7B_ptd.sh
+bash examples/llama/pretrain_llama_7b_ptd.sh
 ```
 
 LLaMA-13B
 ```shell
 # 8p
-bash examples/llama/pretrain_llama_13B_ptd.sh 
+bash examples/llama/pretrain_llama_13b_ptd.sh 
 ```
+
+
+5. Pretrain
+
+5.1 Prepare fine-tune dataset
+Download the LLaMA-7B/13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
+
+```shell
+cd dataset/
+wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+cd ..
+```
+
+Preprocess instruction dataset
+
+LLaMA-7B
+```shell
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+python ./tools/preprocess_data.py \
+  --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+  --tokenizer-name-or-path ./model_from_hf/llama-7b-hf \
+  --output-prefix ./finetune_dataset/alpaca \
+  --workers 4 \
+  --log-interval 1000 \
+  --tokenizer-type PretrainedFromHF \
+  --handler-name GeneralInstructionHandler \
+  --append-eod
+```
+
+LLaMA-13B
+```shell
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+python ./tools/preprocess_data.py \
+  --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+  --tokenizer-name-or-path ./model_from_hf/llama-13b-hf \ 
+  --output-prefix ./finetune_dataset/alpaca \
+  --workers 4 \
+  --log-interval 1000 \
+  --tokenizer-type PretrainedFromHF \
+  --handler-name GeneralInstructionHandler \
+  --append-eod
+```
+
+5.2 Config LLaMA-7B/13B fine-tune script.
+
+LLaMA-7B
+```shell
+# modify the script according to your own  ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+# modify script orign dataset path according to your own dataset path
+TOKENIZER_MODEL=./model_from_hf/llama-7b-hf/  #tokenizer path
+DATA_PATH=./finetune_dataset/alpaca  #processed dataset
+LORA_CHECKPOINT="your lora weight"
+LOAD_CHECKPOINT_PATH="your init model load path"
+SAVE_CHECKPOINT_PATH="your model ckpt save path"
+```
+
+LLaMA-13B
+```shell
+# modify the script according to your own  ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+# modify script orign dataset path according to your own dataset path
+TOKENIZER_MODEL=./model_from_hf/llama-13b-hf/  #tokenizer path
+DATA_PATH=./finetune_dataset/alpaca  #processed dataset
+LORA_CHECKPOINT="your lora weight"
+LOAD_CHECKPOINT_PATH="your init model load path"
+SAVE_CHECKPOINT_PATH="your model ckpt save path"
+```
+
+5.3 Launch LLaMA-7B/13B fine-tune script.
+
+LLaMA-7B
+```shell
+bash examples/llama/tune_llama_7b_ptd.sh
+```
+
+LLaMA-13B
+```shell
+# 8p
+bash examples/llama/tune_llama_13b_ptd.sh 
+```
+
 
 ### Performance
 
@@ -302,16 +393,15 @@ Here's a hardware summary of training llama:
 The model was trained using alpaca datasets.
 
 ### Script
-1.Clone the repository to your local server
+1. Clone the repository to your local server
 ```shell
-git clone https://gitee.com/ascend.ModelLink.git
+git clone -b modellink https://gitee.com/ascend/ModelLink.git 
 cd ModelLink
-git checkout modellink
 mkdir logs
 mkdir ckpt
 ```
 
-2.Install ModelLink requirement environment.
+2. Install ModelLink requirement environment.
 ```bash
 # python3.8
 conda create -n test python=3.8
@@ -334,7 +424,7 @@ cd ..
 pip install -r requirements.txt 
 ```
 
-3.Download checkpoint
+3. Download tokenizer model file and checkpoint
 
 llama-33B checkpoint
 ```shell
@@ -345,6 +435,7 @@ cd ./tokenizer
 git lfs install
 git clone https://huggingface.co/pinkmanlove/llama-33b-hf
 cd ..
+# revise "LLaMATokenizer" as "LLaMTokenizer" in tokenizer_config.json
 ```
 
 llama-65B checkpoint
@@ -356,21 +447,22 @@ cd ./model_from_hf
 git lfs install
 git clone https://huggingface.co/pinkmanlove/llama-65b-hf
 cd ..
+# revise "LLaMATokenizer" as "LLaMTokenizer" in tokenizer_config.json
 ```
-4.In order to adapt to llama-33B/65B model, the following script is used to convert the model pre-training weights
+In order to adapt to llama-33B/65B model, the following script is used to convert the model pre-training weights
 
 llama-33B
 ```shell
 mkdir model_weights
 
-SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
-python $SCRIPT_PATH \
-      --input-model-dir ./tokenizer \
-      --output-model-dir ./model_weights \
-      --tensor-model-parallel-size 4 \
-      --pipeline-model-parallel-size 4 \
-      --merge-mlp \
-      --type 30B
+python tools/checkpoint/util.py --model-type GPT \
+                                --loader llama2_hf \
+                                --saver megatron \
+                                --target-tensor-parallel-size 4 \
+                                --target-pipeline-parallel-size 4 \
+                                --load-dir ./model_from_hf/llama-33b-hf \
+                                --save-dir ./model_weights/llama-33b \
+                                --tokenizer-model ./model_from_hf/llama-33b-hf/tokenizer.model
 ```
 
 llama-65B
@@ -382,55 +474,78 @@ python tools/checkpoint/util.py --model-type GPT \
                                 --target-tensor-parallel-size 8 \
                                 --target-pipeline-parallel-size 4 \
                                 --load-dir ./model_from_hf/llama-65b-hf \
-                                --save-dir ./model_weights/llama-65b \
+                                --save-dir ./model_weights/llama-65b-tp8-pp4 \
                                 --tokenizer-model ./model_from_hf/llama-65b-hf/tokenizer.model
 ```
 
-5.Download dataset
+4. Pretrain
+
+4.1 Prepare pretrain dataset
 ```shell
 # for llama, dowload alpaca dataset, like
 wget http://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json
+```
 
-# download tokenizer configs nad (selective) weights from
-# http://huggingface.co/pinkmanlove/llama-33b-hf
-# http://huggingface.co/pinkmanlove/llama-65b-hf
-# revise "LLaMATokenizer" as "LLaMTokenizer" in tokenizer_config.json
+LLaMA-33B
+```shell
 mkdir dataset
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/llama-33b-hf \
-    # --tokenizer-name-or-path ./model_from_hf/llama-65b-hf \
     --output-prefix ./dataset/llama \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF 
 ```
 
-6.Config llama-33B/65B pre-training script :
-ModelLink/examples/llama/pretrain_llama_33B_ptd_32p.sh
-ModelLink/examples/llama/pretrain_llama_65B_ptd.sh
+LLaMA-65B
+```shell
+mkdir dataset
+python ./tools/preprocess_data.py \
+    --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+    --tokenizer-name-or-path ./model_from_hf/llama-65b-hf \
+    --output-prefix ./dataset/llama \
+    --workers 4 \
+    --log-interval 1000  \
+    --tokenizer-type PretrainedFromHF 
+```
 
+4.2 Config llama-33B/65B pre-training script :
+
+Config llama-33B pre-training script `./examples/llama/pretrain_llama_33B_ptd_32p.sh`:
 ```bash
 # modify the script according to your own conda and ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # modify script orign dataset path according to your own dataset path
-TOKENIZER_MODEL=./dataset/llama/tokenizer.model 
+TOKENIZER_MODEL=./tokenizer/llama-33b-hf/tokenizer.model
 DATA_PATH=./dataset/llama_text_document 
 LOAD_CHECKPOINT_PATH="your init model load path"
 SAVE_CHECKPOINT_PATH="your model ckpt save path"
 ```
 
-7.Launch  pre-training script:
+Config llama-65B pre-training script `./examples/llama/pretrain_llama_65b_ptd.sh`:
+```bash
+# modify the script according to your own conda and ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+# modify script orign dataset path according to your own dataset path
+TOKENIZER_MODEL=./model_from_hf/llama-65b-hf/tokenizer.model
+DATA_PATH=./dataset/llama_text_document 
+LOAD_CHECKPOINT_PATH="your init model load path"
+SAVE_CHECKPOINT_PATH="your model ckpt save path"
+```
+
+4.3 Launch  pre-training script:
 
 Launch llama-33B pre-training script : ModelLink/examples/llama/pretrain_llama_33B_ptd_32p.sh
 ```bash
 bash examples/llama/pretrain_llama_33B_ptd_32p.sh
 ```
 
-Launch llama-65B pre-training script : ModelLink/examples/llama/pretrain_llama_65B_ptd.sh
+Launch llama-65B pre-training script : ModelLink/examples/llama/pretrain_llama_65b_ptd.sh
 ```bash
-bash examples/llama/pretrain_llama_65B_ptd.sh
+bash examples/llama/pretrain_llama_65b_ptd.sh
 ```
 Config llama-33B/65B pre-training script for multinode (Launch llama-65B pre-training script on each machine):
 
@@ -446,6 +561,89 @@ The Training log will look like these:
  iteration  11/50000 | consumed samples: 5632 | consumed tokens:  11534336 | elapsed time per iteration (ms):  52728.1 | learning rate:    1.499E-05 | gloabl batch size:  512 | lm loss:  1.376514E+01 | loss scale:  65536.0 | grad norm:    459.628 | actual seqlen:  2048 | number of skipped
 iterations: 0 | number of nan iterations:   0 | samples per second: 9.710 | TFLOPs: 167.52 |
 time (ms)
+```
+
+5. Finetune
+
+5.1 Prepare fine-tune dataset
+```shell
+# for llama, dowload alpaca dataset, like
+wget http://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json
+```
+
+LLaMA-33B
+```shell
+mkdir dataset
+python ./tools/preprocess_data.py \
+  --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+  --tokenizer-name-or-path ./model_from_hf/llama-33b-hf \ 
+  --output-prefix ./finetune_dataset/alpaca \
+  --workers 4 \
+  --log-interval 1000 \
+  --tokenizer-type PretrainedFromHF \
+  --handler-name GeneralInstructionHandler \
+  --append-eod
+```
+
+LLaMA-65B
+```shell
+mkdir dataset
+python ./tools/preprocess_data.py \
+  --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+  --tokenizer-name-or-path ./model_from_hf/llama-65b-hf \
+  --output-prefix ./finetune_dataset/alpaca \
+  --workers 4 \
+  --log-interval 1000 \
+  --tokenizer-type PretrainedFromHF \
+  --handler-name GeneralInstructionHandler \
+  --append-eod
+```
+
+5.2 Config llama-33B/65B fine-tune script :
+Config llama-33B fine-tune script `./examples/llama/tune_llama_33B_ptd_32p.sh`:
+```bash
+# modify the script according to your own conda and ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+# modify script orign dataset path according to your own dataset path
+TOKENIZER_MODEL=./model_from_hf/llama-33b-hf/  #tokenizer path
+DATA_PATH=./finetune_dataset/alpaca  #processed dataset
+LORA_CHECKPOINT="your lora weight"
+LOAD_CHECKPOINT_PATH="your init model load path"
+SAVE_CHECKPOINT_PATH="your model ckpt save path"
+```
+
+Config llama-65B fine-tune script `./examples/llama/tune_llama_65b_ptd.sh`:
+```bash
+# modify the script according to your own conda and ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+# modify script orign dataset path according to your own dataset path
+TOKENIZER_MODEL=./model_from_hf/llama-65b-hf/  #tokenizer path
+DATA_PATH=./finetune_dataset/alpaca  #processed dataset
+LORA_CHECKPOINT="your lora weight"
+LOAD_CHECKPOINT_PATH="your init model load path"
+SAVE_CHECKPOINT_PATH="your model ckpt save path"
+```
+
+5.3 Launch fine-tune script:
+
+Launch llama-33B pre-training script : ModelLink/examples/llama/tune_llama_33B_ptd_32p.sh
+```bash
+bash examples/llama/tune_llama_33B_ptd_32p.sh
+```
+
+Launch llama-65B pre-training script : ModelLink/examples/llama/tune_llama_65b_ptd.sh
+```bash
+bash examples/llama/tune_llama_65b_ptd.sh
+```
+Config llama-33B/65B pre-training script for multinode (Launch llama-65B pre-training script on each machine):
+
+```shell
+MASTER_ADDR=localhost
+MASTER_PORT=6001
+NNODES=4
+NODE_RANK=0
 ```
 
 ### Performance

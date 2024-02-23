@@ -5,6 +5,7 @@ from megatron.model import GPTModel
 from megatron import get_args
 from megatron.core import tensor_parallel
 from megatron.core import parallel_state
+from megatron.core import parallel_state
 from megatron.model.module import MegatronModule
 from megatron.model.enums import AttnMaskType
 from megatron.model.language_model import parallel_lm_logits
@@ -154,6 +155,27 @@ class GPTModel(MegatronModule, MegatronModuleForCausalLM):
         if self._language_model_key in state_dict:
             state_dict = state_dict[self._language_model_key]
         self.language_model.load_state_dict(state_dict, strict=strict)
+
+
+def norm_wrapper(fn):
+    @wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        fn(self, *args, **kwargs)
+        args = get_args()
+        if parallel_state.is_pipeline_first_stage() and args.embed_layernorm:
+            norm = MixedFusedLayerNorm(args.hidden_size)
+            self.norm = norm
+    return wrapper
+
+
+def vocab_embedding_wrapper(fn):
+    @wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        output = fn(self, *args, **kwargs)
+        if hasattr(self, 'norm'):
+            output = self.norm(output)
+        return output
+    return wrapper
 
 
 def norm_wrapper(fn):

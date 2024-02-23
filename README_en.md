@@ -34,7 +34,7 @@ Currently, the following models has been supported:
 * <a href="https://huggingface.co/docs/transformers/main/model_doc/llama" style="color:green">LLaMA</a>-[[README: 7B/13B/33B/65B]](examples/llama/README.md)
 * <a href="https://huggingface.co/docs/transformers/main/model_doc/llama2" style="color:green">LLaMA2</a>-[[README: 7B/13B/34B/70B]](examples/llama2/README.md)
 * <a href="https://github.com/baichuan-inc" style="color:green">Baichuan2</a>-[[README: 7B/13B]](examples/baichuan2/README.md)
-
+* <a href="https://huggingface.co/Qwen/Qwen-7B" style="color:green">Qwen</a>-[[README: 7B]](examples/qwen/README.md)
 
 ### Downstream Tasks
 Currently, the following downstream tasks have been supported:
@@ -89,11 +89,11 @@ Coming soon ...
       <td rowspan="1"><a href="examples/aquila/README.md">Aquila</a></td>
       <td>7B</td>
       <td> 1x8</td>
-      <td> FP16 </td>
-      <td> 3394 </td>
+      <td> BF16 </td>
+      <td> 2849 </td>
       <td> 4078 </td>
-      <td> <a href="./sources/images/aquila/aquila_comp1130.png">Loss</a> </td>
-      <td> <a href="examples/aquila/pretrain_aquila_7B.sh">Train</a> </td>
+      <td> <a href="./sources/images/aquila/aquila_comp0122.png">Loss</a> </td>
+      <td> <a href="examples/aquila/pretrain_aquila_7b_ptd.sh">Train</a> </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/baichuan/README.md">Baichuan</a></td>
@@ -179,7 +179,7 @@ Coming soon ...
       <td> 3763 </td>
       <td> 3804 </td>
       <td> <a href="sources/images/llama7b_loss.png">Loss</a> </td>
-      <td> <a href="examples/llama/pretrain_llama_7B_zero_8p.sh">Train</a> </td>
+      <td> <a href="examples/llama/pretrain_llama_7b_ptd.sh">Train</a> </td>
     </tr>
     <tr>
       <td>13B</td>
@@ -188,7 +188,7 @@ Coming soon ...
       <td> 1894 </td>
       <td> 2012 </td>
       <td> <a href="sources/images/llama13b_loss.png">Loss</a> </td>
-      <td> <a href="examples/llama/pretrain_llama_13B_zero_8p.sh">Train</a> </td>
+      <td> <a href="examples/llama/pretrain_llama_13b_ptd.sh">Train</a> </td>
     </tr>
     <tr>
         <td>33B</td>
@@ -209,7 +209,7 @@ Coming soon ...
       <td> 348 </td>
       <td> 426 </td>
       <td> <a href="sources/images/llama65b_bf_loss.png">Loss</a> </td>
-      <td> <a href="examples/llama/pretrain_llama_65B_ptd_32p.sh">Train</a> </td>
+      <td> <a href="examples/llama/pretrain_llama_65b_ptd.sh">Train</a> </td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</td>
@@ -246,7 +246,17 @@ Coming soon ...
       <td> 350  </td>
       <td> 339 </td>
       <td> <a href="sources/images/llama2/llama2_70b_bf16_loss_compare.png">Loss</a> </td>
-      <td> <a href="examples/llama2/pretrain_llama2_70B_ptd.sh">Train</a> </td>
+      <td> <a href="examples/llama2/pretrain_llama2_70b_ptd.sh">Train</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="4"><a href="examples/qwen/README.md">Qwen</a></td>
+      <td>7B</td>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 2499 </td>
+      <td> 2867 </td>
+      <td> <a href="sources/images/qwen/qwen7b_compare_loss.png">Loss</a> </td>
+      <td> <a href="examples/qwen/pretrain_qwen_7b_ptd.sh">Train</a> </td>
     </tr>
   </tbody>
 </table>
@@ -286,8 +296,8 @@ Coming soon ...
       <td rowspan="1"> <a href="examples/aquila/README.md">Aquila</a> </td>
       <td> 7B </td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/aquila/generate_aquila_7B.sh">inference</a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/eval_aquila_7B.sh">evaluation</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_aquila_7b_ptd.sh">inference</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_aquila_7b_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
@@ -331,29 +341,29 @@ Coming soon ...
     <tr>
       <td rowspan="4"><a href="examples/llama/README.md">LLaMA</a></td>
       <td>7B</td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/generate_llama_7B_deepspeed.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_7b_ptd.sh">lora</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_7b_lora_ptd.sh">inference </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_7b_ptd.sh">evaluation</a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>13B</td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/generate_llama_13B_tp1_pp8.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_13b_ptd.sh">lora</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_13b_lora_ptd.sh">inference </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_13b_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>33B</td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/alpaca/finetune_chinese_llama_alpaca_7_13_33b_tp4_pp2.sh">lora</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_33b_ptd.sh">lora</a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/generate_llama_33B_ptd.sh">inference </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_33B_ptd.sh">evaluation </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td > 65B </td>
-      <td > -- </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/generate_llama_65B_tp8_pp1.sh">inference </a> </td>
+      <td > <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_65b_ptd.sh">lora</a>  </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_65b_lora_ptd.sh">inference </a> </td>
       <td> -- </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
@@ -367,24 +377,32 @@ Coming soon ...
     </tr>
     <tr>
       <td>13B</td>
-      <td> -- </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_13b_ptd.sh">lora</a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/generate_llama2_13B_ptd.sh">inference </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_13B_ptd.sh">evaluation </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
-      <td > 34B </td>
-      <td > -- </td>
+      <td> 34B </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_34b_ptd.sh">lora</a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/generate_llama2_34B_ptd.sh">inference </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_34B_ptd.sh">evaluation </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td > 70B </td>
-      <td > -- </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/generate_llama2_70B_ptd.sh">inference </a> </td>
+      <td > <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_70b_ptd.sh">lora</a>  </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_70b_lora_ptd.sh">inference </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_70B_ptd.sh">evaluation </a> </td>
       <td>  <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
+    </tr>
+    <tr>
+      <td rowspan="4"><a href="examples/qwen/README.md">Qwen</a></td>
+      <td>7B</td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
   </tbody>
 </table>

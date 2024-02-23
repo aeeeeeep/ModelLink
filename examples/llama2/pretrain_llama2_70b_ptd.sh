@@ -4,7 +4,7 @@ export NPU_DETECT=0
 GPUS_PER_NODE=8
 MASTER_ADDR=localhost
 MASTER_PORT=6000
-NNODES=1
+NNODES=8
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
@@ -13,7 +13,7 @@ DATA_PATH="your data path"
 TOKENIZER_MODEL="your tokenizer path"
 CKPT_LOAD_DIR="your model ckpt path"
 TP=8
-PP=4
+PP=8
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $GPUS_PER_NODE \
@@ -36,7 +36,7 @@ GPT_ARGS="
     --seq-length 4096 \
     --max-position-embeddings 4096 \
     --micro-batch-size 2 \
-    --global-batch-size 128  \
+    --global-batch-size 1024  \
     --make-vocab-size-divisible-by 1 \
     --lr 1.0e-6 \
     --train-iters 5000 \
@@ -86,4 +86,4 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
-    --save CKPT_SAVE_DIR 
+    --save $CKPT_SAVE_DIR 
