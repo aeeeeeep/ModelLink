@@ -55,47 +55,32 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
 
     def init_ascend_operations(self, config: LlamaConfig):
         if config.use_refactor:
-            self.acl_param_encoder = json.dumps({
-                "rmsNormEps": config.rms_norm_eps,
-                "numAttentionHeadsPerRank": self.num_attention_heads,
-                "hiddenSizePerAttentionHead": self.head_size,
-                "numHiddenLayers": config.num_hidden_layers,
-                "numKeyValueHeadsPerRank": self.num_key_value_heads,
-                "isFA": False,
-                "isPrefill": True,
-                "isBF16": self.dtype == torch.bfloat16,
-                "quantType": 2 if self.quantize == "smooth_quant" else 0,
-                "isPack": True,
-                "isEmbeddingParallel": False,
-                "isLmHeadParallel": True,
-                "supportSwiGLU": False if self.soc_info.need_nz else True,
-                "rank": self.tp_rank,
-                "worldSize": self.tp_world_size,
-                "backend": "hccl" if self.soc_info.need_nz else "lccl"
-            })
-            self.acl_param_decoder = json.dumps({
-                "rmsNormEps": config.rms_norm_eps,
-                "numAttentionHeadsPerRank": self.num_attention_heads,
-                "hiddenSizePerAttentionHead": self.head_size,
-                "numHiddenLayers": config.num_hidden_layers,
-                "numKeyValueHeadsPerRank": self.num_key_value_heads,
-                "isFA": False,
-                "isPrefill": False,
-                "isBF16": self.dtype == torch.bfloat16,
-                "quantType": 2 if self.quantize == "smooth_quant" else 0,
-                "isPack": True,
-                "isEmbeddingParallel": False,
-                "isLmHeadParallel": True,
-                "supportSwiGLU": False if self.soc_info.need_nz else True,
-                "rank": self.tp_rank,
-                "worldSize": self.tp_world_size,
-                "backend": "hccl" if self.soc_info.need_nz else "lccl"
-            })
+            # 初始化模型
             self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_DecoderModel")
             self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_DecoderModel")
 
-            self.acl_encoder_operation.set_param(self.acl_param_encoder)
-            self.acl_decoder_operation.set_param(self.acl_param_decoder)
+            # 设置模型参数
+            coder_param = {
+                "rmsNormEps": config.rms_norm_eps,
+                "numAttentionHeadsPerRank": self.num_attention_heads,
+                "hiddenSizePerAttentionHead": self.head_size,
+                "numHiddenLayers": config.num_hidden_layers,
+                "numKeyValueHeadsPerRank": self.num_key_value_heads,
+                "isFA": False,
+                "isBF16": self.dtype == torch.bfloat16,
+                "quantType": 2 if self.quantize == "smooth_quant" else 0,
+                "isPack": True,
+                "isEmbeddingParallel": False,
+                "isLmHeadParallel": True,
+                "supportSwiGLU": False if self.soc_info.need_nz else True,
+                "rank": self.tp_rank,
+                "worldSize": self.tp_world_size,
+                "backend": "hccl" if self.soc_info.need_nz else "lccl"
+            }
+            encoder_param = {**coder_param, "isPrefill": True}
+            decoder_param = {**coder_param, "isPrefill": False}
+            self.acl_encoder_operation.set_param(json.dumps({**encoder_param}))
+            self.acl_decoder_operation.set_param(json.dumps({**decoder_param}))
         else:
             if self.num_key_value_heads != self.num_attention_heads:
                 self.acl_param_encoder = json.dumps({
@@ -136,7 +121,8 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                     "rankSize": self.tp_world_size,
                     "isLmHeadParallel": not self.soc_info.need_nz,  # 310P 暂不支持all-gather
                     "isPrefill": True,
-                    "backend": os.getenv("BACKEND", "lccl"),  # 310P 暂不支持lccl
+                    "backend": os.getenv("BACKEND", "lccl"),  # 310P 暂不支持lccl,
+                    "isBF16": self.dtype == torch.bfloat16,
                 })
                 self.acl_param_decoder = json.dumps({
                     "rmsNormEps": config.rms_norm_eps,
@@ -148,6 +134,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                     "isLmHeadParallel": not self.soc_info.need_nz,
                     "isPrefill": False,
                     "backend": os.getenv("BACKEND", "lccl"),
+                    "isBF16": self.dtype == torch.bfloat16,
                 })
 
                 self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_pa_PAModel")

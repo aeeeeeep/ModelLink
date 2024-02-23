@@ -33,6 +33,7 @@ struct ParallelParam {
     bool transposeA = false;
     bool transposeB = true;
     std::string backend = "hccl";
+    bool isBF16 = false;
 };
 
 class LinearWithBiasAndParallel : public CommonOpBase {

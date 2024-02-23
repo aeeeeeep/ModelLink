@@ -57,32 +57,28 @@ atb::Status CreateFusionLinear(const FusionLinearParam &param, atb::Operation **
         inputQuantNode.outTensorIds = {config.INTERMIDATE_INPUT};
     }
 
-    if (param.quantType == NO_QUANT) {
-        // linear
-        atb::Node &linearNode = opGraph.nodes.at(nodeId++);
-        atb::infer::LinearParam linearParam;
-        linearParam.hasBias = false;
-        CREATE_OPERATION(linearParam, &linearNode.operation);
-        linearNode.inTensorIds = {LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT};
-        linearNode.outTensorIds = {LinearTensorIdx::OUT_LINEAR};
-    } else {
-        // linear + dequant
-        atb::Node &linearQuantNode = opGraph.nodes.at(nodeId++);
-        atb::infer::LinearParam linearParam;
-        linearParam.hasBias = false;
+    atb::Node &linearNode = opGraph.nodes.at(nodeId++);
+    atb::infer::LinearParam linearParam;
+    linearParam.hasBias = false;
+    if (param.quantType != NO_QUANT && !param.isBF16) {
         linearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
-        CREATE_OPERATION(linearParam, &linearQuantNode.operation);
-        if (param.quantType == RMS_NORM_QUANT_LINEAR_DEQUANT) {
-            linearQuantNode.inTensorIds = {
-                LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_DESCALE
-            };
-        } else {
-            linearQuantNode.inTensorIds = {
-                config.INTERMIDATE_INPUT, LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_DESCALE
-            };
-        }
-        linearQuantNode.outTensorIds = {LinearTensorIdx::OUT_LINEAR};
+    } else if (param.quantType == NO_QUANT && param.isBF16) {
+        linearParam.linearType = atb::infer::LinearType::LINEAR_BF16BF16_FP32_BF16;
     }
+    CREATE_OPERATION(linearParam, &linearNode.operation);
+    if (param.quantType == NO_QUANT) {
+        linearNode.inTensorIds = {LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT};
+    }
+    else if (param.quantType == RMS_NORM_QUANT_LINEAR_DEQUANT) {
+        linearNode.inTensorIds = {
+            LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_DESCALE
+        };
+    } else {
+        linearNode.inTensorIds = {
+            config.INTERMIDATE_INPUT, LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_DESCALE
+        };
+    }
+    linearNode.outTensorIds = {LinearTensorIdx::OUT_LINEAR};
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {

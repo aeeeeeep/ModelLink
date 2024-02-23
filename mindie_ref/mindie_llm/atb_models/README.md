@@ -263,7 +263,11 @@ source ${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models/scripts/set_env
 - 待补充
 
 ## 预置模型列表
+- [BaiChuan](./examples/models/baichuan/README.md)
+- [CodeGeeX2](./examples/models/codegeex/v2_6b/README.md)
+- [ChatGLM2](./examples/models/chatglmn/v2_6b/README.md)
 - [LLaMa](./examples/models/llama/README.md)
+- [Qwen](./examples/models/qwen/README.md)
 - [StarCoder](./examples/models/starcoder/README.md)
 - 多模态模型Readme链接待补充
 
