@@ -27,8 +27,6 @@ import torch_npu
 import torch.nn as nn
 import torch.nn.functional as F
 
-from functools import partial
-
 from timm.models.layers import DropPath, to_2tuple, trunc_normal_
 from timm.models.registry import register_model
 from pytorch_lightning.utilities.distributed import rank_zero_info
@@ -298,11 +296,6 @@ class PatchEmbed(nn.Module):
         # print("multiway transformer PatchEmbed forward")
 
         B, C, H, W = x.shape
-        # print("image size : " ,H , "*",W)
-        assert (
-            H == self.img_size[0] and W == self.img_size[1]
-        ), f"Input image size ({H}*{W}) doesn't match model ({self.img_size[0]}*{self.img_size[1]})."
-        # FIXME look at relaxing size constraints
         x = self.proj(x)
         return x
 

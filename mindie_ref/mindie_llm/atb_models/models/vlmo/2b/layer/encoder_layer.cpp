@@ -76,7 +76,6 @@ enum EncoderLayerTensorId : int {
     INTERMIDATE_MLPIMAGE_OUT,
     INTERMIDATE_GAMMA2_IMAGE_OUT,
     INTERMIDATE_SELFRESIDUALADDIMAGEOUT,
-
 };
 
 static const uint64_t IN_TENSOR_COUNT = 31;
@@ -390,5 +389,33 @@ void EncoderLayerBinder::BindTensor(atb::VariantPack &variantPack)
     variantPack.inTensors.at(IN_TOKENOFFSET).hostData = tokenOffset_.data();
     variantPack.inTensors.at(IN_SEQLEN).hostData = seqLen_.data();
 }
+
+void from_json(const nlohmann::json &paramJson, EncoderLayerParam &param)
+{
+    paramJson.at("layerNormEps").get_to(param.layerNormEps);
+    paramJson.at("headNum").get_to(param.headNum);
+    paramJson.at("dk").get_to(param.dk);
+    if (paramJson.contains("rank")) {
+        paramJson.at("rank").get_to(param.rank);
+    }
+    if (paramJson.contains("rankSize")) {
+        paramJson.at("rankSize").get_to(param.rankSize);
+    }
+    if (paramJson.contains("backend")) {
+        paramJson.at("backend").get_to(param.backend);
+    }
+    if (paramJson.contains("maxTextLen")) {
+        paramJson.at("maxTextLen").get_to(param.maxTextLen);
+    }
+}
+
+atb::Operation *CreateEncoderLayer(const nlohmann::json &paramJson)
+{
+    ATB_LOG(INFO) << GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
+    atb::Operation *op;
+    atb_speed::vlmo::EncoderLayer(paramJson.get<EncoderLayerParam>(), &op);
+    return op;
+}
+
 } // namespace vlmo
 } // namespace atb_speed

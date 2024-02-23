@@ -46,28 +46,13 @@ def main(_config):
     model.eval()
 
     textlables = torch.full((database.max_text_len,), -101, dtype=torch.int)
-    runResult = open("multtest.log", "w")
     label2ans = label_2_ans(VQA_ARROW_DIR)
-    for i in range(len(database)):
-        res = database[i]
+    for res in database:
         qid = res["qid"]
         question, other = res["text"]
         image = res["image"]
-        print(str(i), "/", len(database), " qid:", qid, " ", question)
-        runResult.write(
-            " ".join(
-                (
-                    str(i),
-                    "/",
-                    str(len(database)),
-                    " qid:",
-                    str(qid),
-                    " ",
-                    question,
-                    "\n",
-                )
-            )
-        )
+        print(" qid:", qid, " ", question)
+        
         batch = {}
         batch["text_ids"] = (
             torch.tensor(other["input_ids"]).reshape(1, database.max_text_len).npu()
@@ -81,7 +66,6 @@ def main(_config):
         imageTensor = []
         imageTensor.append(torch.tensor(image[0].reshape(1, 3, 480, 480)).npu())
         batch["image"] = imageTensor
-        batch["index"] = str(i)
 
         with torch.no_grad():
             start_time_org = time.time()
@@ -92,4 +76,3 @@ def main(_config):
         res = label2ans[preds[0].item()]
         print("cost:", float(end_time_org - start_time_org) * 1000, "ms")
         print("res:", res)
-        runResult.write(" ".join(("res:", res, "\n")))

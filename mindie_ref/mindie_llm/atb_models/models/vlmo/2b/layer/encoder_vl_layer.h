@@ -36,34 +36,11 @@ struct EncoderVllayerParam {
     std::string model = "vlmo";
 };
 
-static void from_json(const nlohmann::json &paramJson, EncoderVllayerParam &param)
-{
-    paramJson.at("layerNormEps").get_to(param.layerNormEps);
-    paramJson.at("headNum").get_to(param.headNum);
-    paramJson.at("dk").get_to(param.dk);
-    if (paramJson.contains("rank")) {
-        paramJson.at("rank").get_to(param.rank);
-    }
-    if (paramJson.contains("rankSize")) {
-        paramJson.at("rankSize").get_to(param.rankSize);
-    }
-    if (paramJson.contains("backend")) {
-        paramJson.at("backend").get_to(param.backend);
-    }
-    if (paramJson.contains("maxTextLen")) {
-        paramJson.at("maxTextLen").get_to(param.maxTextLen);
-    }
-}
+void from_json(const nlohmann::json &paramJson, EncoderVllayerParam &param);
 
 atb::Status EncoderVlLayer(const EncoderVllayerParam &param, atb::Operation **operation);
 
-static atb::Operation *CreateEncoderVlLayer(const nlohmann::json &paramJson)
-{
-    ATB_LOG(INFO) << GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
-    atb::Operation *op;
-    atb_speed::vlmo::EncoderVlLayer(paramJson.get<EncoderVllayerParam>(), &op);
-    return op;
-}
+atb::Operation *CreateEncoderVlLayer(const nlohmann::json &paramJson);
 
 class EncoderVlLayerBinder : public HostTensorBinder {
 public:
