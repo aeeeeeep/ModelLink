@@ -863,7 +863,7 @@ class VLMo(pl.LightningModule):
             ] + self.layer_id_list
             return inputs
 
-    def execute_acl_encoder(self, x, mask=None, modality_type="vl"):
+    def execute_acl_encoder(self, x, mask, modality_type):
         acl_input = self.init_acl_encoder_param(x, mask, modality_type)
 
         # print("acl_input size ",len(acl_input))
