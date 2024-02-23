@@ -36,8 +36,6 @@ struct EncoderVllayerParam {
     std::string model = "vlmo";
 };
 
-
-
 static void from_json(const nlohmann::json &paramJson, EncoderVllayerParam &param)
 {
     paramJson.at("layerNormEps").get_to(param.layerNormEps);

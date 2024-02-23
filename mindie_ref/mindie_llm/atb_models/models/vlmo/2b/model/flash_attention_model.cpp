@@ -92,13 +92,6 @@ atb::Status FlashAttentionModel::InferShape(const std::vector<atb::TensorDesc> &
         return atb::ERROR_INVALID_GRAPH;
     }
     outTensorDescs.at(0) = inTensorDescs.at(0);
-    
-    // outTensorDescs.at(0) = graph_.inTensors.at(0).desc;
-    // outTensorDescs.at(0).shape.dimNum = 3;
-    // outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
-    // outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[1];
-    // outTensorDescs.at(0).shape.dims[2] = inTensorDescs.at(0).shape.dims[2];
-
     return atb::NO_ERROR;
 }
 
@@ -120,24 +113,11 @@ int64_t FlashAttentionModel::BuildGraph()
     int nodeId = 0;
 
     atb::Operation *op = nullptr;
-    // auto &splitNode = graph_.nodes.at(nodeId++);
-    // atb::infer::SplitParam splitParam;
-    // splitParam.splitDim = 0;
-    // splitParam.splitNum = param_.layerNum;
-
-    
-    // CREATE_OPERATION(splitParam, &op);
-    // splitNode.operation.reset(op);
-    // splitNode.inTensors = {&graph_.inTensors.at(IN_TENSOR_RELATIVE_POSITION_BIAS_LIST)};
-    // for(int i =0 ;i< param_.layerNum;i++){
-    //     splitNode.outTensors.at(i) = &graph_.internalTensors.at(i);
-    // }
-    
     
     ATB_LOG(INFO) << __func__ << " called, layerNum: " << param_.layerNum;
     atb::Tensor *firstInTensor = &graph_.inTensors.at(0);
     int layerId = 0;
-    for (; layerId < param_.vlLayerIndex; ++layerId) {//0-9层共10层
+    for (; layerId < param_.vlLayerIndex; ++layerId) {
         ATB_LOG(INFO) << __func__ << " layerId " << layerId << " create node";
         auto &layerNode = graph_.nodes.at(nodeId++);
 
@@ -155,11 +135,11 @@ int64_t FlashAttentionModel::BuildGraph()
 
         size_t inTensorId = 0;
         layerNode.inTensors.at(inTensorId++) = firstInTensor;
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MASK); // attentionMaskTensor
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MASK);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_PAST_KEY);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_PAST_VALUE);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_TOKENOFFSET);
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SEQLEN); // seqLen
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SEQLEN);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MAX + layerId);
         
@@ -169,14 +149,13 @@ int64_t FlashAttentionModel::BuildGraph()
                 layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId );
         }
         
-
         layerNode.outTensors.resize(layerNode.operation->GetOutputNum());
-        for (int i=0;i< OUT_TENSOR_MAX;i++ ){
+        for (int i = 0; i < OUT_TENSOR_MAX; i++ ){
             layerNode.outTensors.at(i) = &graph_.internalTensors.at((layerId * 1) + i );
         }
         firstInTensor = layerNode.outTensors.at(0);
     }
-    for (; layerId < param_.layerNum; ++layerId) {//10-11 两层
+    for (; layerId < param_.layerNum; ++layerId) {
         ATB_LOG(INFO) << __func__ << " layerId " << layerId << " create node";
         auto &layerNode = graph_.nodes.at(nodeId++);
 
@@ -190,83 +169,37 @@ int64_t FlashAttentionModel::BuildGraph()
         opParam.maxTextLen = param_.maxTextLen;
         atb_speed::vlmo::EncoderVlLayer(opParam, &op);
         layerNode.operation.reset(op);
-        layerNode.inTensors.resize(layerNode.operation->GetInputNum()); // .at 需要resize，直接赋值不需要
+        layerNode.inTensors.resize(layerNode.operation->GetInputNum());
 
         size_t inTensorId = 0;
         layerNode.inTensors.at(inTensorId++) = firstInTensor;
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MASK); // attentionMaskTensor
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MASK);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_PAST_KEY);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_PAST_VALUE);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_TOKENOFFSET);
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SEQLEN); // seqLen
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SEQLEN);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MAX + layerId);
         
         for (size_t weightTensorId = 0; weightTensorId < WEIGHT_COUNT_PER_VL_LAYER; ++weightTensorId) {
-            ATB_LOG(INFO) << __func__ << " layerId " << layerId << " weightID"<<weightTensorId << " -> in weight ID" << ( (WEIGHT_COUNT_PER_LAYER * param_.vlLayerIndex) + 
-                ( layerId - param_.vlLayerIndex ) * WEIGHT_COUNT_PER_VL_LAYER + weightTensorId);
             layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at( 
-                (WEIGHT_COUNT_PER_LAYER * param_.vlLayerIndex) + // 23 * 10  + (10 - 10) * 17 + i
+                (WEIGHT_COUNT_PER_LAYER * param_.vlLayerIndex) +
                 ( layerId - param_.vlLayerIndex ) * WEIGHT_COUNT_PER_VL_LAYER + weightTensorId);
         }
 
         layerNode.outTensors.resize(layerNode.operation->GetOutputNum());
-        if(layerId + 1 == param_.layerNum){//已经到结尾，需要退出
-            for (int i=0;i< OUT_TENSOR_MAX;i++ ){
+        if(layerId + 1 == param_.layerNum) {
+            for (int i = 0; i < OUT_TENSOR_MAX; i++) {
                 layerNode.outTensors.at(i) = &graph_.outTensors.at(i);
             }
-            // layerNode.outTensors = {&graph_.outTensors.at(0)};
-        }else{
-            for (int i=0;i< OUT_TENSOR_MAX;i++ ){
-                layerNode.outTensors.at(i) = &graph_.internalTensors.at((layerId * OUT_TENSOR_MAX) + i );
+        }else {
+            for (int i = 0; i < OUT_TENSOR_MAX; i++) {
+                layerNode.outTensors.at(i) = &graph_.internalTensors.at((layerId * OUT_TENSOR_MAX) + i);
             }
             firstInTensor = layerNode.outTensors.at(0);
-            // layerNode.outTensors = {&graph_.internalTensors.at(layerId)};
         }
 
-        // firstInTensor = layerNode.outTensors.at(0);
     }
-    
-    // auto &finalNormNode = graph_.nodes.at(nodeId++);
-    // atb::infer::RmsNormParam finalNormParam;
-    // finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    // finalNormParam.normParam.epsilon = param_.layerNormEps;
-    // CREATE_OPERATION(finalNormParam, &op);
-    // finalNormNode.operation.reset(op);
-    // const int finalLayerNormWeightTensorId =
-    //     graph_.weightTensors.size() - FINALNORMNODE_WEIGHT_COUNT - OUT_LM_HEAD_WEIGHT_COUNT;
-    // const int finalLayerNormOutTensorId = internalTensorSize - 2;
-    // finalNormNode.inTensors = {firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId)};
-    // finalNormNode.outTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId)};
-
-    // const int hiddenSize = param_.headNum * param_.dk;
-    // auto &qPassSliceNode = graph_.nodes.at(nodeId++);
-    // atb::infer::SliceParam slicePassParam;
-    // slicePassParam.offsets = {0, 0, hiddenSize * param_.rank};
-    // slicePassParam.size = {-1, -1, hiddenSize};
-    // CREATE_OPERATION(slicePassParam, &op);
-    // qPassSliceNode.operation.reset(op);
-    // const int qPassSliceNodeOutTensorId = internalTensorSize - 1;
-    // qPassSliceNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId)};
-    // qPassSliceNode.outTensors = {&graph_.internalTensors.at(qPassSliceNodeOutTensorId)};
-
-    // auto &outLinearNode = graph_.nodes.at(nodeId++);
-    // atb_speed::common::ParallelParamV2 outLinearParm;
-    // outLinearParm.commParam.rank = param_.rank;
-    // outLinearParm.commParam.rankSize = param_.rankSize;
-    // outLinearParm.isBias = false;
-    // outLinearParm.commParam.backend = param_.backend;
-    // atb_speed::common::RowParallelLinearV2(outLinearParm, &op);
-    // outLinearNode.operation.reset(op);
-    // const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
-    // outLinearNode.inTensors = {&graph_.internalTensors.at(qPassSliceNodeOutTensorId),
-    //                            &graph_.weightTensors.at(finalLinearWeightTensorId),
-    //                            &graph_.internalTensors.at(IN_HOLDER),
-    //                            &graph_.internalTensors.at(IN_HOLDER),
-    //                            &graph_.internalTensors.at(IN_HOLDER),
-    //                            &graph_.internalTensors.at(IN_HOLDER),
-    //                            &graph_.internalTensors.at(IN_HOLDER)};
-    // outLinearNode.outTensors = {&graph_.outTensors.at(0)};
     return atb::NO_ERROR;
 }
 
@@ -290,14 +223,9 @@ atb::Status FlashAttentionModel::BindParamHostTensor(uint32_t nodeId)
         return atb::NO_ERROR;
     }
 
-    
     auto &node = graph_.nodes.at(nodeId);
-
     const uint32_t tokenOffsetTensorId = 4;
     const uint32_t seqLenTensorId = 5;
-
-    
-
     node.variantPack.inTensors.at(tokenOffsetTensorId).hostData = tokenOffset_.data();
     node.variantPack.inTensors.at(seqLenTensorId).hostData = seqLen_.data();
     ATB_LOG(INFO) << "BindParamHostTensor end";

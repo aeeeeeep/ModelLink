@@ -222,10 +222,10 @@ class Block(nn.Module):
             self.norm2_vl = norm_layer(dim)
         
         self.gamma_1 = \
-            nn.Parameter(layer_scale_init_values * torch.ones((dim)),requires_grad=True) \
+            nn.Parameter(layer_scale_init_values * torch.ones((dim)), requires_grad=True) \
             if layer_scale_init_values is not None else 1.0
         self.gamma_2 = \
-            nn.Parameter(layer_scale_init_values * torch.ones((dim)),requires_grad=True) \
+            nn.Parameter(layer_scale_init_values * torch.ones((dim)), requires_grad=True) \
             if layer_scale_init_values is not None else 1.0
 
         self.max_text_len = max_text_len

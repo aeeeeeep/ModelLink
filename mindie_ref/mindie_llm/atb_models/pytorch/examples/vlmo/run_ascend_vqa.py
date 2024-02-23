@@ -10,7 +10,9 @@ from vlmo.config import ex
 from vlmo.modules.vlmo_module import VLMo
 from vlmo.datasets import VQAv2Dataset
 
+
 def label_2_ans(path):
+
     ans2label_file = os.path.join(path, "answer2label.txt")
     ans2label = {}
     label2ans = []
@@ -30,7 +32,7 @@ def main(_config):
     
     DEVICE_ID = 4
     VQA_ARROW_DIR = "/data1/models/vlmo/arrow/"
-    BERT_VOCAB= "./vocab.txt"
+    BERT_VOCAB = "./vocab.txt"
     _config = copy.deepcopy(_config)
     database = VQAv2Dataset(image_size=_config["image_size"],data_dir=VQA_ARROW_DIR,transform_keys=_config["train_transform_keys"],split="test")
     database.tokenizer = BertTokenizer.from_pretrained(BERT_VOCAB)

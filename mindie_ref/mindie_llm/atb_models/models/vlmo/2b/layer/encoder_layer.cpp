@@ -29,7 +29,6 @@ enum EncoderLayerTensorId : int {
     IN_SEQLEN,
     IN_HOLDER,
     IN_LAYERID,
-
     IN_GAMMA1,
     IN_GAMMA2,
     IN_NORMWEIGHT,
@@ -53,17 +52,11 @@ enum EncoderLayerTensorId : int {
     IN_MPLIMAGEBIASUP,
     IN_MPLIMAGEBIASDOWN,
     IN_RELATIVE_POSITION_BIAS,
-
-
     OUT_LAYEROUT,
-
     INTERMIDATE_INPUTNORMOUT,
     INTERMIDATE_QKVBIAS_OUT,
     INTERMIDATE_QKVMIXEDLINEAROUT,
-
     INTERMIDATE_SELFOUT,
-    
-
     INTERMIDATE_MASKEDBIAS,
     INTERMIDATE_QKBIAS_OUT,
     INTERMIDATE_QKVTRANSROUT,
@@ -86,10 +79,10 @@ enum EncoderLayerTensorId : int {
     
 };
 
-static const uint64_t IN_TENSOR_COUNT = 31;//30;
-static const uint64_t OUT_TENSOR_COUNT = 1;//1;
+static const uint64_t IN_TENSOR_COUNT = 31;
+static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 23;
-static const uint64_t NODE_COUNT = 22;//21;
+static const uint64_t NODE_COUNT = 22;
 
 atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operation)
 {
@@ -102,32 +95,28 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
     opGraph.name = GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
 
     size_t nodeId = 0;
-    atb::Node &maskFillBiasNode = opGraph.nodes.at(nodeId++); //ok
-    atb::Node &inputNormNode = opGraph.nodes.at(nodeId++); //ok
-    atb::Node &catQKNode = opGraph.nodes.at(nodeId++); //new
-    atb::Node &catKVNode = opGraph.nodes.at(nodeId++); //new
-    atb::Node &qkvLinearNode = opGraph.nodes.at(nodeId++); //ok
-    atb::Node &transposeNode = opGraph.nodes.at(nodeId++); //new
-    atb::Node &splitQKVNode = opGraph.nodes.at(nodeId++); //ok
-
-    atb::Node &selfAttentionNode = opGraph.nodes.at(nodeId++); //ok
-
-    // atb::Node &outSelfNode= opGraph.nodes.at(nodeId++); //new
-
-    atb::Node &selfOutLinearNode = opGraph.nodes.at(nodeId++); //ok
-    atb::Node &gama1MultNode = opGraph.nodes.at(nodeId++); //new
-    atb::Node &selfResidualAddNode = opGraph.nodes.at(nodeId++);//ok
-    atb::Node &sliceTextNode = opGraph.nodes.at(nodeId++);//new
-    atb::Node &normalTextNode = opGraph.nodes.at(nodeId++);//new
-    atb::Node &mlpTextNode = opGraph.nodes.at(nodeId++);//new
-    atb::Node &gama2MultTextNode = opGraph.nodes.at(nodeId++); //new
-    atb::Node &selfResidualTextAddNode = opGraph.nodes.at(nodeId++);//new
-    atb::Node &sliceImageNode = opGraph.nodes.at(nodeId++);//new
-    atb::Node &normalImageNode = opGraph.nodes.at(nodeId++);//new
-    atb::Node &mlpImageNode = opGraph.nodes.at(nodeId++);//new
-    atb::Node &gama2MultImageNode = opGraph.nodes.at(nodeId++); //new
-    atb::Node &selfResidualImageAddNode = opGraph.nodes.at(nodeId++);//new
-    atb::Node &catNode = opGraph.nodes.at(nodeId++);//new
+    atb::Node &maskFillBiasNode = opGraph.nodes.at(nodeId++);
+    atb::Node &inputNormNode = opGraph.nodes.at(nodeId++);
+    atb::Node &catQKNode = opGraph.nodes.at(nodeId++);
+    atb::Node &catKVNode = opGraph.nodes.at(nodeId++);
+    atb::Node &qkvLinearNode = opGraph.nodes.at(nodeId++);
+    atb::Node &transposeNode = opGraph.nodes.at(nodeId++);
+    atb::Node &splitQKVNode = opGraph.nodes.at(nodeId++);
+    atb::Node &selfAttentionNode = opGraph.nodes.at(nodeId++);
+    atb::Node &selfOutLinearNode = opGraph.nodes.at(nodeId++);
+    atb::Node &gama1MultNode = opGraph.nodes.at(nodeId++);
+    atb::Node &selfResidualAddNode = opGraph.nodes.at(nodeId++);
+    atb::Node &sliceTextNode = opGraph.nodes.at(nodeId++);
+    atb::Node &normalTextNode = opGraph.nodes.at(nodeId++);
+    atb::Node &mlpTextNode = opGraph.nodes.at(nodeId++);
+    atb::Node &gama2MultTextNode = opGraph.nodes.at(nodeId++);
+    atb::Node &selfResidualTextAddNode = opGraph.nodes.at(nodeId++);
+    atb::Node &sliceImageNode = opGraph.nodes.at(nodeId++);
+    atb::Node &normalImageNode = opGraph.nodes.at(nodeId++);
+    atb::Node &mlpImageNode = opGraph.nodes.at(nodeId++);
+    atb::Node &gama2MultImageNode = opGraph.nodes.at(nodeId++);
+    atb::Node &selfResidualImageAddNode = opGraph.nodes.at(nodeId++);
+    atb::Node &catNode = opGraph.nodes.at(nodeId++);
 
     atb::infer::FillParam maskfillParam;
     maskfillParam.value = { -10000};
@@ -137,101 +126,70 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
     maskFillBiasNode.outTensorIds = {INTERMIDATE_MASKEDBIAS};
     maskFillBiasNode.inTensorReshapeFuncs.resize(maskFillBiasNode.inTensorIds.size());
     maskFillBiasNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        if(oldShape.dimNum==3){
+        if(oldShape.dimNum == 3) {
             newShape.dimNum = 4;
             newShape.dims[0] = 1;
             newShape.dims[1] = oldShape.dims[0];
             newShape.dims[2] = oldShape.dims[1];
             newShape.dims[3] = oldShape.dims[2];
-        }else{
+        }else {
             newShape = oldShape;
         }
         
     };
     maskFillBiasNode.inTensorReshapeFuncs.at(1) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        if(oldShape.dimNum==2){
+        if(oldShape.dimNum == 2) {
             newShape.dimNum = 4;
             newShape.dims[0] = 1;
             newShape.dims[1] = 1;
             newShape.dims[2] = oldShape.dims[0];
             newShape.dims[3] = oldShape.dims[1];
-        }else{
+        }else {
             newShape = oldShape;
         }
         
     };
 
-    // self.norm1(x)  x 1 941 768
     atb::infer::LayerNormParam layerNormParam;
     layerNormParam.layerType = atb::infer::LayerNormParam::LayerNormType::LAYER_NORM_NORM;
     layerNormParam.normParam.epsilon = param.layerNormEps;
     layerNormParam.normParam.beginNormAxis = 2;
     layerNormParam.normParam.beginParamsAxis = 0;
     CREATE_OPERATION(layerNormParam, &inputNormNode.operation);
-    // (bsz,seq_len,hidden_size) - > (bsz,seq_len,hidden_size)
     inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT, IN_NORMBIASID};
     inputNormNode.outTensorIds = {INTERMIDATE_INPUTNORMOUT};
-    // inputNormNode.inTensorReshapeFuncs.resize(inputNormNode.inTensorIds.size());
-    // inputNormNode.inTensorReshapeFuncs.at(1) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {// TODO
-    //     newShape.dimNum = 3;
-    //     newShape.dims[0] = 1;
-    //     newShape.dims[1] = 1;
-    //     newShape.dims[2] = oldShape.dims[0];
-    // };
-    // inputNormNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {// TODO
-    //     newShape.dimNum = 3;
-    //     newShape.dims[0] = 1;
-    //     newShape.dims[1] = 1;
-    //     newShape.dims[2] = oldShape.dims[0];
-    // };
 
-
-    // cat q k bias 
     atb::infer::ConcatParam catQKVParam;
     catQKVParam.concatDim = 0;
     CreateOperation(catQKVParam, &catQKNode.operation);
     catQKNode.inTensorIds = {IN_QBAISID, IN_KBAISID};
     catQKNode.outTensorIds = {INTERMIDATE_QKBIAS_OUT};
 
-    // cat qkv bias [dim*3]
     CreateOperation(catQKVParam, &catKVNode.operation);
     catKVNode.inTensorIds = {INTERMIDATE_QKBIAS_OUT, IN_VBIASID};
     catKVNode.outTensorIds = {INTERMIDATE_QKVBIAS_OUT};
 
-
-    
-    // (bsz,seq_len,hidden_size) - > (bsz,seq_len,hidden_size)
     atb::infer::LinearParam linearParam = {false, true, true};
     CREATE_OPERATION(linearParam, &qkvLinearNode.operation);
-    qkvLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_QKVMIXEDLINEARWEIGHT,INTERMIDATE_QKVBIAS_OUT};
+    qkvLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_QKVMIXEDLINEARWEIGHT, INTERMIDATE_QKVBIAS_OUT};
     qkvLinearNode.outTensorIds = {INTERMIDATE_QKVMIXEDLINEAROUT};
     
-    // reshape 
     atb::infer::TransposeParam transParam;
-    //transParam.perm = { 2, 0, 3, 1, 4 };
     transParam.perm = { 2, 0, 1, 3, 4 };
     CREATE_OPERATION(transParam, &transposeNode.operation);
     transposeNode.inTensorIds = {INTERMIDATE_QKVMIXEDLINEAROUT};
     transposeNode.outTensorIds = {INTERMIDATE_QKVTRANSROUT};
     transposeNode.inTensorReshapeFuncs.resize(transposeNode.inTensorIds.size());
-    transposeNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {// TODO
+    transposeNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         newShape.dimNum = 5;
         newShape.dims[0] = oldShape.dims[0];
         newShape.dims[1] = oldShape.dims[1];
         newShape.dims[2] = 3;
         newShape.dims[3] = param.headNum;
         newShape.dims[4] = oldShape.dims[2] / 3 / param.headNum;
-        // 0  1   2  3  4 
-
-        // 3 1 941 12 64
-        //
-        //原始  1 941 768
     };
 
-
-    // 1 941 2304 -> 
-    // atb::infer::SplitParam splitParam = {0, 3};
-    atb::infer::SplitParam splitParam = {0, 3}; // 1 941 2304 -> 3 * 1 941 [12 64]
+    atb::infer::SplitParam splitParam = {0, 3}; 
     CREATE_OPERATION(splitParam, &splitQKVNode.operation);
     splitQKVNode.inTensorIds = {INTERMIDATE_QKVTRANSROUT};
     splitQKVNode.outTensorIds = {INTERMIDATE_MIXEDQ, INTERMIDATE_MIXEDK, INTERMIDATE_MIXEDV};
@@ -255,45 +213,27 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
                                             IN_LAYERID};
     selfAttentionNode.outTensorIds = {INTERMIDATE_SELFOUT};
     selfAttentionNode.inTensorReshapeFuncs.resize(selfAttentionNode.inTensorIds.size());
-    selfAttentionNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {// TODO
+    selfAttentionNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         newShape.dimNum = 2;
         newShape.dims[0] = oldShape.dims[1]*oldShape.dims[2];
         newShape.dims[1] = oldShape.dims[3]*oldShape.dims[4];
     };
-    selfAttentionNode.inTensorReshapeFuncs.at(1) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {// TODO
+    selfAttentionNode.inTensorReshapeFuncs.at(1) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         newShape.dimNum = 2;
         newShape.dims[0] = oldShape.dims[1]*oldShape.dims[2];
         newShape.dims[1] = oldShape.dims[3]*oldShape.dims[4];
     };
-    selfAttentionNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {// TODO
+    selfAttentionNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         newShape.dimNum = 2;
         newShape.dims[0] = oldShape.dims[1]*oldShape.dims[2];
         newShape.dims[1] = oldShape.dims[3]*oldShape.dims[4];
     };
-    // selfAttentionNode.inTensorReshapeFuncs.at(5) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {// TODO
-    //     newShape.dimNum = 4;
-    //     newShape.dims[0] = 1;
-    //     newShape.dims[1] = oldShape.dims[0];
-    //     newShape.dims[2] = oldShape.dims[1];
-    //     newShape.dims[3] = oldShape.dims[2];
-    // };
-
-    // atb::infer::TransposeParam outSelfTransParam;
-    // outSelfTransParam.perm = { 0,1,2 };
-    // CREATE_OPERATION(outSelfTransParam, &outSelfNode.operation);
-    // outSelfNode.inTensorIds = {INTERMIDATE_SELFOUT};
-    // outSelfNode.outTensorIds = {OUT_ATTEN_RES};
     
-
-
-   
     atb::infer::LinearParam layerParam={false, true, true};
     CREATE_OPERATION(layerParam, &selfOutLinearNode.operation);
     selfOutLinearNode.inTensorIds = {
         INTERMIDATE_SELFOUT, IN_SELFOUTLINEARWEIGHT,IN_SELFOUTLINEBIASID};
     selfOutLinearNode.outTensorIds = {INTERMIDATE_SELFLINEAROUT};
-    // Attention over
-
 
     atb::infer::ElewiseParam gamma1MutmalParam;
     gamma1MutmalParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_MUL;
@@ -309,9 +249,6 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
     selfResidualAddNode.inTensorIds = {IN_HIDDENSTATES, INTERMIDATE_GAMMA1_OUT};
     selfResidualAddNode.outTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT};
 
-    ////  
-
-    //  1 941 768 
     atb::infer::SliceParam sliceTextParam;
     sliceTextParam.offsets = {0, 0, 0};
     sliceTextParam.size = {-1, param.maxTextLen, -1};
@@ -326,9 +263,8 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
     layerTextNormParam.normParam.beginParamsAxis = 0;
     layerTextNormParam.normParam.epsilon = param.layerNormEps;
     CREATE_OPERATION(layerTextNormParam, &normalTextNode.operation);
-    // (bsz,seq_len,hidden_size) - > (bsz,seq_len,hidden_size)
-    normalTextNode.inTensorIds = {INTERMIDATE_SLICE_TEXT_OUT, IN_NORM2TEXTWEIGHT,IN_NORM2TEXTBIAS};
-    normalTextNode.outTensorIds = {INTERMIDATE_NORM2TEXT_OUT};// 1 40 768
+    normalTextNode.inTensorIds = {INTERMIDATE_SLICE_TEXT_OUT, IN_NORM2TEXTWEIGHT, IN_NORM2TEXTBIAS};
+    normalTextNode.outTensorIds = {INTERMIDATE_NORM2TEXT_OUT};
 
 
     atb_speed::common::MlpGateParamV2 mlpTextParam;
@@ -373,8 +309,7 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
     layerIMAGENormParam.normParam.beginParamsAxis = 0;
     layerIMAGENormParam.normParam.epsilon = param.layerNormEps;
     CREATE_OPERATION(layerIMAGENormParam, &normalImageNode.operation);
-    // (bsz,seq_len,hidden_size) - > (bsz,seq_len,hidden_size)
-    normalImageNode.inTensorIds = {INTERMIDATE_SLICE_IMAGE_OUT, IN_NORM2IMAGEWEIGHT,IN_NORM2IMAGEBIAS};
+    normalImageNode.inTensorIds = {INTERMIDATE_SLICE_IMAGE_OUT, IN_NORM2IMAGEWEIGHT, IN_NORM2IMAGEBIAS};
     normalImageNode.outTensorIds = {INTERMIDATE_NORM2IMAGE_OUT};
 
 
@@ -411,9 +346,6 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
     CREATE_OPERATION(catParam, &catNode.operation);
     catNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDTEXTOUT, INTERMIDATE_SELFRESIDUALADDIMAGEOUT};
     catNode.outTensorIds = {OUT_LAYEROUT};
-    
-
-
     opGraph.inferShapeFunc = [](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                 atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(0);
