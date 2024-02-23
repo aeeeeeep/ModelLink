@@ -10,6 +10,7 @@ import time
 import argparse
 import platform
 from pathlib import Path
+from enum import Enum
 
 import transformers
 import torch
@@ -21,6 +22,9 @@ from transformers.utils import check_min_version
 from torch_npu.contrib import transfer_to_npu
 from atb_speed.common.timer import Timer
 
+class Model(Enum):
+    CHATGLM2 = 'chatglm2'
+    CHATGLM3 = 'chatglm3'
 
 def override_topp_and_topk():
     # 修改transformers的TopKLogitsWarper
@@ -56,7 +60,8 @@ def override_topp_and_topk():
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Adapting ChatGLM2-6B on Ascend")
+    parser = argparse.ArgumentParser(description="Adapting ChatGLM2-6B/ChatGLM3-6b on Ascend")
+    parser.add_argument("--model", type=str, default="chatglm2", help="Model name")
     parser.add_argument(
         "--mode",
         type=str,
@@ -356,7 +361,10 @@ def cli_demo(args, tokenizer, model):
     is_rank_0 = (args.tp_size == 1) or (torch.distributed.get_rank() == 0)
 
     if is_rank_0:
-        print("欢迎使用 ChatGLM2-6B 模型，输入内容即可进行对话，clear 清空对话历史，stop 终止程序")
+        if args.model == Model.CHATGLM2.value:
+            print("欢迎使用 ChatGLM2-6B 模型，输入内容即可进行对话，clear 清空对话历史，stop 终止程序")
+        elif args.model == Model.CHATGLM3.value:
+            print("欢迎使用 ChatGLM3-6B 模型，输入内容即可进行对话，clear 清空对话历史，stop 终止程序")
 
     while True:
         if is_rank_0:
@@ -377,12 +385,21 @@ def cli_demo(args, tokenizer, model):
             continue
 
         current_length = 0
-        for response, history, past_key_values in model.stream_chat(tokenizer, query, history=history,
-                                                                    past_key_values=past_key_values,
-                                                                    return_past_key_values=True):
-            if is_rank_0:
-                print(response[current_length:], end="", flush=True)
-                current_length = len(response)
+        if args.model == Model.CHATGLM2.value:
+            for response, history, past_key_values in model.stream_chat(tokenizer, query, history=history,
+                                                                        past_key_values=past_key_values,
+                                                                        return_past_key_values=True):
+                if is_rank_0:
+                    print(response[current_length:], end="", flush=True)
+                    current_length = len(response)
+        elif args.model == Model.CHATGLM3.value:
+            for response, history, past_key_values in model.stream_chat_chatglm3(tokenizer, query, history=history,
+                                                                        top_p=1, temperature=0.01,
+                                                                        past_key_values=past_key_values,
+                                                                        return_past_key_values=True):
+                if is_rank_0:
+                    print(response[current_length:], end="", flush=True)
+                    current_length = len(response)
         if is_rank_0:
             print("")
 

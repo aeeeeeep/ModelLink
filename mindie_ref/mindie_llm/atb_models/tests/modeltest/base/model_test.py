@@ -223,7 +223,8 @@ class ModelTest:
                 'model_path': self.weight_dir,
                 'is_bf16': True if self.data_type == "bf16" else False,
                 'max_position_embeddings': self.max_position_embedding if self.max_position_embedding != -1 else None,
-                'max_batch_size': self.batch_size
+                'max_batch_size': self.batch_size,
+                'use_refactor': self.use_refactor
             }
             self.pa_runner = PARunner(**input_dict)
             self.logger.info(str(self.local_rank) + f'pa_runner: {self.pa_runner}')
