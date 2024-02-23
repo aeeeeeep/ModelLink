@@ -35,7 +35,7 @@ std::shared_ptr<atb_speed::Model> ModelFactory::CreateInstance(const std::string
         ATB_LOG(INFO) << "find model: " << modelName;
         return it->second(param);
     }
-    ATB_LOG(WARN) << "ModelCreateInstance Failed, Illegal modelName: " << modelName;
+    ATB_LOG(WARN) << "ModelName: " << modelName << " not find in model factory map";
     return nullptr;
 }
 

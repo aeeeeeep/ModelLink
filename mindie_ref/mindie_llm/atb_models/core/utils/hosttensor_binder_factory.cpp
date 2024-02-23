@@ -36,7 +36,7 @@ atb_speed::HostTensorBinder *HosttensorBinderFactory::CreateInstance(const std::
         ATB_LOG(INFO) << "find hosttensor binder: " << binderName;
         return it->second();
     }
-    ATB_LOG(WARN) << "HosttensorBinderCreateInstance Failed, Illegal hosttenor binderName: " << binderName;
+    ATB_LOG(WARN) << "HosttensorBinderName: " << modelName << " not find in model factory map";
     return nullptr;
 }
 
