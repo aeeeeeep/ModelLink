@@ -92,7 +92,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                     "rankSize": self.tp_world_size,
                     "numHeadsPerPartition": self.num_key_value_heads,
                     "isPrefill": True,
-                    "backend": "lccl"
+                    "backend": "hccl" if self.soc_info.need_nz else os.getenv("BACKEND", "lccl"),
                 })
                 self.acl_param_decoder = json.dumps({
                     "rmsNormEps": config.rms_norm_eps,
@@ -103,7 +103,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                     "rankSize": self.tp_world_size,
                     "numHeadsPerPartition": self.num_key_value_heads,
                     "isPrefill": False,
-                    "backend": "lccl"
+                    "backend": "hccl" if self.soc_info.need_nz else os.getenv("BACKEND", "lccl"),
                 })
                 if config.quantize == "smooth_quant":
                     self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama2_70b_FusionPAModelW8A8")
@@ -121,7 +121,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                     "rankSize": self.tp_world_size,
                     "isLmHeadParallel": not self.soc_info.need_nz,  # 310P 暂不支持all-gather
                     "isPrefill": True,
-                    "backend": os.getenv("BACKEND", "lccl"),  # 310P 暂不支持lccl,
+                    "backend": "hccl" if self.soc_info.need_nz else os.getenv("BACKEND", "lccl"),  # 310P 暂不支持lccl,
                     "isBF16": self.dtype == torch.bfloat16,
                 })
                 self.acl_param_decoder = json.dumps({
@@ -133,7 +133,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                     "rankSize": self.tp_world_size,
                     "isLmHeadParallel": not self.soc_info.need_nz,
                     "isPrefill": False,
-                    "backend": os.getenv("BACKEND", "lccl"),
+                    "backend": "hccl" if self.soc_info.need_nz else os.getenv("BACKEND", "lccl"),
                     "isBF16": self.dtype == torch.bfloat16,
                 })
 
