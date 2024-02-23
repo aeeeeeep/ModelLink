@@ -8,6 +8,7 @@ import math
 import torch
 import torch.nn.functional as F
 from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
+
 from megatron import get_args
 from megatron import get_tokenizer
 from megatron.core import parallel_state
@@ -17,13 +18,14 @@ from megatron.core.pipeline_parallel.p2p_communication import recv_forward, send
 
 from megatron.core.distributed import DistributedDataParallel as LocalDDP
 from megatron.model import Float16Module
-from modellink.model.lora_utils import is_enable_lora, get_lora_model_classes
 from megatron.core.utils import get_model_config
+
+from modellink.text_generation.communication import broadcast_tensor
+from modellink.model.lora_utils import is_enable_lora, get_lora_model_classes
 
 
 def get_batch(context_tokens):
     """Generate batch from context tokens."""
-    args = get_args()
     tokenizer = get_tokenizer()
 
     # Move to GPU.
@@ -31,21 +33,21 @@ def get_batch(context_tokens):
     # Get the attention mask and position ids.
     attention_mask, _, position_ids = get_ltor_masks_and_position_ids(
         tokens,
-        tokenizer.pad,
-        args.reset_position_ids,
-        args.reset_attention_mask,
-        args.eod_mask_loss)
+        tokenizer.pad_token_id,
+        False, False, False)
 
     return tokens, attention_mask, position_ids
 
 
 def pad_batch(batch, args):
     max_context_length = torch.LongTensor([max(len(val) for val in batch)]).cuda()
+    micro_batch_size = torch.LongTensor([args.micro_batch_size]).cuda()
     torch.distributed.all_reduce(max_context_length, op=torch.distributed.ReduceOp.MAX)
+    torch.distributed.all_reduce(micro_batch_size, op=torch.distributed.ReduceOp.MAX)
 
     tokenizer = get_tokenizer()
 
-    pad_id = tokenizer.pad if tokenizer.pad is not None else tokenizer.eos_token_id
+    pad_id = tokenizer.pad_token_id if tokenizer.pad_token_id else tokenizer.eos_token_id
     context_lengths = [len(val) for val in batch]
 
     if args.text_generation_config['max_new_tokens'] > 0:
@@ -63,8 +65,19 @@ def pad_batch(batch, args):
     context_tokens_tensor = torch.LongTensor(batch).cuda()
     context_length_tensor = torch.LongTensor(context_lengths).cuda()
 
-    torch.distributed.broadcast(context_length_tensor, args.master_rank)
-    torch.distributed.broadcast(context_tokens_tensor, args.master_rank)
+    context_tokens_tensor = broadcast_tensor(
+        (micro_batch_size[0].item(), max_length_padded),
+        torch.int64,
+        tensor=context_tokens_tensor,
+        rank=args.master_rank
+    )
+
+    context_length_tensor = broadcast_tensor((
+        micro_batch_size[0].item()),
+        torch.int64,
+        tensor=context_length_tensor,
+        rank=args.master_rank
+    )
 
     args.seq_length = context_tokens_tensor.shape[1]
     args.max_position_embeddings = args.seq_length
@@ -110,7 +123,6 @@ def top_k_logits(logits, top_k=0, top_p=0.0, filter_value=-float('Inf')):
 def greedy_search_or_sampling(model, context_tokens, model_latencies=None, single_token_latency=None):
     args = get_args()
     model_latencies = [] if model_latencies is None else model_latencies
-    single_token_latency = [] if single_token_latency is None else single_token_latency
 
     context_tokens_tensor, context_length_tensor = pad_batch(context_tokens, args)
 
@@ -126,22 +138,12 @@ def greedy_search_or_sampling(model, context_tokens, model_latencies=None, singl
     yield from _post_process(
         batch_token_iterator,
         context_length,
-        context_length_tensor,
-        single_token_latency
+        context_length_tensor
     )
 
 
-def _post_process(batch_token_iterator, context_length, context_lengths, single_token_latency):
-    t0 = time.time()
-    count = 0
-    for tokens, lengths, log_probs in batch_token_iterator:
-        if count > 1:
-            torch.cuda.synchronize()
-            t_elapsed = time.time() - t0
-            single_token_latency.append(t_elapsed)
-        torch.cuda.synchronize()
-        t0 = time.time()
-        count += 1
+def _post_process(batch_token_iterator, context_length, context_lengths):
+    for tokens, _, log_probs in batch_token_iterator:
         context_length += 1
         if tokens is not None:
             yield tokens[:, :context_length], context_lengths.cpu().numpy().tolist(), log_probs
@@ -162,7 +164,6 @@ def forward_step(model, tokens, **kwargs):
     attention_mask = kwargs.pop("attention_mask")
     tokentype_ids = kwargs.pop("tokentype_ids")
     model_latencies = kwargs.pop("model_latencies", None)
-    inference_params = kwargs.pop("inference_params", None)
 
     model_latencies = [] if model_latencies is None else model_latencies
 
@@ -218,7 +219,7 @@ def _unwrap_and_set_input_tensor(args, input_tensor, model):
 def sample_sequence_batch(model, context_tokens, context_lengths, type_ids=None, model_latencies=None):
     model_latencies = [] if model_latencies is None else model_latencies
     args = get_args()
-    tokenizer = get_tokenizer().tokenizer
+    tokenizer = get_tokenizer()
     tokens, attention_mask, position_ids = get_batch(context_tokens)
 
     model.eval()
