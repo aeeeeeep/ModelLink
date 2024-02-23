@@ -257,7 +257,6 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
 
 
 if __name__ == "__main__":
-    torch.npu.set_compile_mode(jit_compile=True)
     # Temporary for transition to core datasets
     train_valid_test_datasets_provider.is_distributed = True
 

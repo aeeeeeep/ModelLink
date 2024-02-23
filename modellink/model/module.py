@@ -22,7 +22,7 @@ import torch
 from torch import distributed as dist
 from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
 
-from megatron import get_args
+from megatron import get_args, global_vars
 from megatron.core import parallel_state, tensor_parallel
 from modellink.error_utils import ensure_valid
 
@@ -357,6 +357,7 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         from megatron import get_tokenizer
         from modellink.text_generation import greedy_search_or_sampling
         from modellink.text_generation import beam_search
+        from modellink.text_generation.communication import broadcast_float_list
 
         args = get_args()
         args.max_tokens_to_oom = args.max_tokens_to_oom if hasattr(args, "max_tokens_to_oom") else 4096
@@ -365,6 +366,7 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
 
         self.padded_vocab_size = args.padded_vocab_size
         self.pipeline_size_larger_than_one = args.pipeline_model_parallel_size > 1
+
         try:
             self.tokenizer = get_tokenizer().tokenizer
         except AssertionError:
@@ -373,6 +375,7 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         # import module to avoid error of circular import
         self.greedy_search_or_sampling = greedy_search_or_sampling
         self.beam_search_in_sampling = beam_search
+        self.broadcast_float_list = broadcast_float_list
 
     @staticmethod
     def _ids_check(ids, tokenizer):
@@ -414,7 +417,6 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
 
         unwrap_classes = (torchDDP, LocalDDP, MegatronFloat16Module)
 
-        # The returned model provides the MegatronModuleForCausalLM class identifier. In actual inference, args.model is still used.
         return unwrap_model(args.model, unwrap_classes)[0]
 
     def generate(self, input_ids=None, **kwargs):
@@ -425,21 +427,11 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
 
         super(MegatronModuleForCausalLM, self).generate(input_ids=input_ids, **kwargs)
 
-        setattr(args, "text_generation_config", {
-            "top_k": self.top_k,
-            "top_p": self.top_p,
-            "num_beams": self.num_beams,
-            "length_penalty": self.length_penalty,
-            "temperature": self.temperature,
-            "recompute": self.recompute,
-            "return_output_log_probs": self.return_output_log_probs,
-            "max_length": self.max_length,
-            "max_new_tokens": self.max_new_tokens,
-            "eos_token_id": self.eos_token_id,
-            "bos_token_id": self.bos_token_id,
-            "pad_token_id": self.pad_token_id,
-            "greedy": True if not self.do_sample else False
-        })
+        # =======================================
+        # Make sure input params are available
+        # to all ranks
+        # =======================================
+        self._broadcast_config(args)
 
         # =======================================
         # Add additional parameters to args which
@@ -487,9 +479,54 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         # =======================================
         return self._token_generator(token_stream)
 
+    def _broadcast_config(self, args):
+        values = [
+            self.num_beams,
+            self.do_sample,
+            self.top_k,
+            self.top_p,
+            self.temperature,
+            self.max_length,
+            self.max_new_tokens,
+            self.length_penalty,
+            self.return_output_log_probs,
+            self.stream
+        ]
+
+        values_float_tensor = self.broadcast_float_list(len(values), float_list=values)
+        self.num_beams = int(values_float_tensor[0].item())
+        self.do_sample = bool(values_float_tensor[1].item())
+        self.top_k = int(values_float_tensor[2].item())
+        self.top_p = values_float_tensor[3].item()
+        self.temperature = values_float_tensor[4].item()
+        self.max_length = int(values_float_tensor[5].item())
+        self.max_new_tokens = int(values_float_tensor[6].item())
+        self.length_penalty = values_float_tensor[7].item()
+        self.return_output_log_probs = bool(values_float_tensor[8].item())
+        self.stream = bool(values_float_tensor[9].item())
+
+        setattr(args, "text_generation_config", {
+            "top_k": self.top_k,
+            "top_p": self.top_p,
+            "num_beams": self.num_beams,
+            "length_penalty": self.length_penalty,
+            "temperature": self.temperature,
+            "recompute": self.recompute,
+            "return_output_log_probs": self.return_output_log_probs,
+            "max_length": self.max_length,
+            "max_new_tokens": self.max_new_tokens,
+            "eos_token_id": self.eos_token_id,
+            "bos_token_id": self.bos_token_id,
+            "pad_token_id": self.pad_token_id,
+            "greedy": True if not self.do_sample else False
+        })
+
     def _init_tokenizer(self, args):
+        self.tokenizer = self.tokenizer if self.tokenizer_new is None else self.tokenizer_new
+        global_vars._GLOBAL_TOKENIZER = self.tokenizer
+
         if self.pad_token_id is not None:
-            self.tokenizer.pad = self.pad_token_id
+            self.tokenizer.pad_token_id = self.pad_token_id
         if self.eos_token_id is not None:
             self.tokenizer.eos_token_id = self.eos_token_id
         if self.bos_token_id is not None:
@@ -501,7 +538,7 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         else:
             raise ValueError("Your tokenizer doesn't include eos_token.")
 
-        if self.tokenizer.pad_token_id is None or self.tokenizer.pad_token_id < 0:
+        if self.tokenizer.pad_token_id is None:
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
     def _tokenize(self, input_ids):
@@ -547,7 +584,7 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
                 output_checked = self._ids_check(output, self.tokenizer)
                 output = self.tokenizer.batch_decode(output_checked, skip_special_tokens=True)
             except Exception as e:
-                error_info = "Meet errors when trying to decode the tokens. " \
+                error_info = "Meet errors when trying to decode the tokens. "\
                              "Please handle it by yourself."
                 logging.error(error_info)
                 logging.error(e)
