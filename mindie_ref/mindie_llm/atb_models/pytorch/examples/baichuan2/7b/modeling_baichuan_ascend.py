@@ -479,11 +479,8 @@ class KVAttentionManager:
             for i in range(self.batch_size):
                 self.attention_mask_max[i][:self.token_offset, :self.token_offset] = attention_mask[i]
                 ori_len = self.ori_len_list[i].item()
-                # 左padding
-                # self.attention_mask_max_inc[i][:, :self.token_offset - ori_len] = self.min_cache[:, :self.token_offset - ori_len]
-                # 右padding
-                self.attention_mask_max_inc[i][:, ori_len:self.token_offset] = \
-                    self.min_cache[:, ori_len:self.token_offset]
+                #左padding
+                self.attention_mask_max_inc[i][:, :self.token_offset - ori_len] = self.min_cache[:, :self.token_offset - ori_len]
             if not IS_ND:
                 self.attention_mask_max_inc = self.trans_data(self.attention_mask_max_inc)
                 return self.trans_data(self.attention_mask_max)
