@@ -210,7 +210,7 @@ Aquila Language Model is the first open source language model that supports both
   cp ${model_download_path}/*.py ${model_path}/
   cp ${model_download_path}/*.json ${model_path}/
   cp ${model_download_path}/*.model ${model_path}/
-  ln -s ${model_download_path}/*.bin ${model_path}/
+  cp -s ${model_download_path}/*.bin ${model_path}/
   ```
   
 - edit `config.json` \

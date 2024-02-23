@@ -255,7 +255,7 @@ source /usr/local/Ascend/atb/set_env.sh
 cp ${model_download_path}/*.py ${model_path}/
 cp ${model_download_path}/*.json ${model_path}/
 cp ${model_download_path}/*.model ${model_path}/
-ln -s ${model_download_path}/*.bin ${model_path}/
+cp -s ${model_download_path}/*.bin ${model_path}/
 ```
 
 ### 安装 atb_speed_sdk
@@ -497,17 +497,17 @@ bash cut_model_and_run_aquila.sh precision
 
 ```shell
 cd ${script_path}
-RETURN_PERF_DETAIL=1 python main.py --task performance
+TIMEIT=1 python main.py --task performance
 ```
 
 - 多芯
 
 ```shell
 cd ${script_path}
-RETURN_PERF_DETAIL=1 bash cut_model_and_run_aquila.sh performance
+TIMEIT=1 bash cut_model_and_run_aquila.sh performance
 ```
 
-将`RETURN_PERF_DETAIL`设置成1来返回具体的性能测试的值，默认是0  
+将`TIMEIT`设置成1来返回具体的性能测试的值，默认是0  
 上述多芯场景参数
 
 * performance表示性能测试。

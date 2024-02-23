@@ -199,6 +199,13 @@ pip install torch*_aarch64.whl
     source set_env.sh
     ```
 
+- 安装 sdk
+
+  ```
+  cd pytorch/examples/atb_speed_sdk
+  pip3 install .
+  ```
+
 ## 环境变量参考
 
 ### CANN、加速库、模型仓的环境变量
