@@ -957,7 +957,7 @@ class QWenModel(QWenPreTrainedModel):
             "layerNum": config.num_hidden_layers,
             "rank": self.rank,
             "rankSize": self.rank_size,
-            "backend": os.getenv("BACKEND", "hccl"),
+            "backend": "lccl" if IS_ND else "hccl",
             "coderType": 0,
             "isTriuMask": LONG_SEQ_ENABLE
         }
