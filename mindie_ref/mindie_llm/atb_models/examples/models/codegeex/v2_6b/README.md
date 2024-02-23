@@ -21,7 +21,7 @@
 - 参考[此README文件](../../chatglm/v2_6b/README.md)
 
 ## 精度测试
-- 参考[此README文件](../../../tests/modeltest/README.md)
+- 参考[此README文件](../../../../tests/modeltest/README.md)
 
 ## 性能测试
-- 参考[此README文件](../../../tests/modeltest/README.md)
+- 参考[此README文件](../../../../tests/modeltest/README.md)

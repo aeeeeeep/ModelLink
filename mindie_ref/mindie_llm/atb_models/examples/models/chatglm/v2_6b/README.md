@@ -26,7 +26,7 @@
 | weight_path | 模型权重路径                            |
 
 ## 权重转换
-- 参考[此README文件](../../README.md)
+- 参考[此README文件](../../../README.md)
 
 ## 300I DUO 运行操作说明
 - 可开启CPU Performance模式以提高模型推理性能
@@ -141,7 +141,7 @@
 
 
 ## 精度测试
-- 参考[此README文件](../../../tests/modeltest/README.md)
+- 参考[此README文件](../../../../tests/modeltest/README.md)
 
 ## 性能测试
-- 参考[此README文件](../../../tests/modeltest/README.md)
+- 参考[此README文件](../../../../tests/modeltest/README.md)
