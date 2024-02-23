@@ -156,10 +156,10 @@ class FlashForCausalLM(torch.nn.Module):
             self.acl_encoder_operation_inputs[1] = position_ids.to(torch.int64)
             self.acl_encoder_operation_inputs[2] = self.cos_embed
             self.acl_encoder_operation_inputs[3] = self.sin_embed
-            if self.dtype == torch.float16:
-                self.acl_encoder_operation_inputs[4] = atten_mask
-            else:
+            if self.dtype == torch.bfloat16:
                 self.acl_encoder_operation_inputs[4] = torch.where(atten_mask == -torch.inf, 1, atten_mask)
+            else:
+                self.acl_encoder_operation_inputs[4] = atten_mask
             self.acl_encoder_operation_inputs[5] = block_tables.to(torch.int32)
             self.acl_encoder_operation_inputs[6] = slots.to(torch.int32)
             self.acl_encoder_operation_inputs[7] = input_lengths.to(torch.int32)
@@ -173,14 +173,14 @@ class FlashForCausalLM(torch.nn.Module):
             self.acl_decoder_operation_inputs[1] = position_ids.to(torch.int64)
             self.acl_decoder_operation_inputs[2] = self.cos_embed
             self.acl_decoder_operation_inputs[3] = self.sin_embed
-            if self.dtype == torch.float16:
-                self.acl_decoder_operation_inputs[4] = self.ascend_atten_mask_fake
-            else:
+            if self.dtype == torch.bfloat16:
                 self.acl_decoder_operation_inputs[4] = torch.zeros(input_lengths.size(0),
                                                                     self.num_attention_heads,
                                                                     1, input_lengths.max(),
                                                                     dtype=self.dtype,
                                                                     device=input_ids.device)
+            else:
+                self.acl_decoder_operation_inputs[4] = self.ascend_atten_mask_fake
             self.acl_decoder_operation_inputs[5] = block_tables.to(torch.int32)
             self.acl_decoder_operation_inputs[6] = slots.to(torch.int32)
             self.acl_decoder_operation_inputs[7] = input_lengths.to(torch.int32)
