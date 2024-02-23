@@ -37,6 +37,7 @@ public:
         bool quantModel = false;
         bool sparseModel = false;
         bool isEncoder = false;
+        bool isBF16 = false;
         // 量化参数
         std::vector<float> qkvInputScale;
         std::vector<int> qkvInputOffset;
