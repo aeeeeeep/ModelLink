@@ -108,13 +108,20 @@ static atb::Operation *NormOperationCreate(const nlohmann::json &paramJson) { re
 static atb::Operation *LinearOperationCreate(const nlohmann::json &paramJson)
 {
     atb::infer::LinearParam param;
-    param.transposeA = paramJson["transposeA"].get<bool>();
-    param.transposeB = paramJson["transposeB"].get<bool>();
+    if (paramJson.contains("transposeA")) {
+        param.transposeA = paramJson["transposeA"].get<bool>();
+    }
+    if (paramJson.contains("transposeB")) {
+        param.transposeB = paramJson["transposeB"].get<bool>();
+    }
     if (paramJson.contains("hasBias")) {
         param.hasBias = paramJson["hasBias"].get<bool>();
     }
+    if (paramJson.contains("linearType")) {
+        param.linearType = atb::infer::LinearType(paramJson["linearType"].get<int32_t>());
+    }
     ATB_LOG(INFO) << "LinearParam transposeA:" << param.transposeA << ", transposeB:" << param.transposeB
-                  << ", hasBias:" << param.hasBias;
+                  << ", hasBias:" << param.hasBias << ", linearType:" << param.linearType;
     atb::Operation *op;
     CreateOperation(param, &op);
     return op;
@@ -174,16 +181,24 @@ static atb::Operation *TransposeOperationCreate(const nlohmann::json &paramJson)
 static atb::Operation *LinearActivationOperationCreate(const nlohmann::json &paramJson)
 {
     atb::infer::LinearActivationParam param;
-    param.transposeA = paramJson["transposeA"].get<bool>();
-    param.transposeB = paramJson["transposeB"].get<bool>();
+    if (paramJson.contains("transposeA")) {
+        param.transposeA = paramJson["transposeA"].get<bool>();
+    }
+    if (paramJson.contains("transposeB")) {
+        param.transposeB = paramJson["transposeB"].get<bool>();
+    }
     if (paramJson.contains("hasBias")) {
         param.hasBias = paramJson["hasBias"].get<bool>();
+    }
+    if (paramJson.contains("linearType")) {
+        param.linearType = atb::infer::LinearType(paramJson["linearType"].get<int32_t>());
     }
     if (paramJson.contains("activationFuncType")) {
         param.activationFuncType = atb::infer::ActivationType(paramJson["activationFuncType"].get<int32_t>());
     }
     ATB_LOG(INFO) << "LinearActivationParam transposeA:" << param.transposeA << ", transposeB:" << param.transposeB
-                  << ", hasBias:" << param.hasBias << ", activationFuncType:" << param.activationFuncType;
+                  << ", hasBias:" << param.hasBias << ", linearType:" << param.linearType
+                  << ", activationFuncType:" << param.activationFuncType;
     atb::Operation *op;
     CreateOperation(param, &op);
     return op;

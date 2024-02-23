@@ -30,7 +30,7 @@ struct PALayerParam {
     float rmsNormEps = 0;
     int headNum = 0;
     int dk = 0;
-    bool transposedWeight = false;
+    bool transposedWeight = true;
     bool isPrefill = false;
     std::string backend = "hccl";
     std::string model = "llama_65b";

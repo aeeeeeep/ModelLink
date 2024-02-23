@@ -179,7 +179,8 @@ int64_t FlashAttentionModel::BuildGraph()
     firstInTensor = finalNormNode.outTensors.at(0);
 
     auto &linearNode = graph_.nodes.at(nodeId++);
-    atb::infer::LinearParam linearParam = {false, false, false};
+    atb::infer::LinearParam linearParam;
+    linearParam.hasBias = false;
     CREATE_OPERATION(linearParam, &op);
     linearNode.operation.reset(op);
     const int finalLmheadWeightTensorId = graph_.weightTensors.size() - LMHEADNODE_WEIGHT_COUNT;

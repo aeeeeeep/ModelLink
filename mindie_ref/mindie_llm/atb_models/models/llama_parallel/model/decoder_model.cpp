@@ -45,6 +45,7 @@ void DecoderModel::Param::FromString(const std::string &param)
     isPack = paramJson["isPack"].get<bool>();
     isEmbeddingParallel = paramJson["isEmbeddingParallel"].get<bool>();
     isLmHeadParallel = paramJson["isLmHeadParallel"].get<bool>();
+    supportSwiGLU = paramJson["supportSwiGLU"].get<bool>();
     quantType = paramJson["quantType"].get<int>();
     rmsNormEps = paramJson["rmsNormEps"].get<float>();
     numAttentionHeadsPerRank = paramJson["numAttentionHeadsPerRank"].get<int>();
@@ -63,7 +64,7 @@ void DecoderModel::Param::FromString(const std::string &param)
     ATB_LOG(INFO) << "DecoderModel param" << ", isFA:" << isFA << ", isPrefill:" << isPrefill
                   << ", isBF16:" << isBF16 << ", isPack:" << isPack
                   << ", isEmbeddingParallel: " << isEmbeddingParallel << ", isLmHeadParallel: "
-                  << isLmHeadParallel
+                  << isLmHeadParallel << ", supportSwiGLU: " << supportSwiGLU
                   << ", quantType:" << quantType << ", rmsNormEps:" << rmsNormEps << ", numAttentionHeadsPerRank:"
                   << numAttentionHeadsPerRank << ", hiddenSizePerAttentionHead:" << hiddenSizePerAttentionHead
                   << ", numHiddenLayers:" << numHiddenLayers
@@ -214,6 +215,7 @@ int64_t DecoderModel::BuildGraph()
         layerParam.isPrefill = param_.isPrefill;
         layerParam.isBF16 = param_.isBF16;
         layerParam.isPack = param_.isPack;
+        layerParam.supportSwiGLU = param_.supportSwiGLU;
         layerParam.quantType = param_.quantType;
         layerParam.rmsNormEps = param_.rmsNormEps;
         layerParam.numAttentionHeadsPerRank = param_.numAttentionHeadsPerRank;

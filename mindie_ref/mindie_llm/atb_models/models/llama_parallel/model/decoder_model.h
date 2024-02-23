@@ -18,6 +18,7 @@
 
 #include <vector>
 #include "atb_speed/base/model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama_parallel {
@@ -37,6 +38,8 @@ public:
         // isLmHeadParallel为true时，LmHead的权重在vacobSize维度进行切分; 反之，则不对权重进行切分
         bool isLmHeadParallel = true;
         // 0 - No quant; 1- Quant in RmsNorm，dequant in Linear; 2 - Both quant and dequant in Linear
+        bool supportSwiGLU = false;
+        // MLP是否使用SwiGLU，若为true时，则使用；反之，使用swish
         int quantType = 0;
         float rmsNormEps = 0;
         int numAttentionHeadsPerRank = 0;
@@ -67,6 +70,9 @@ private:
     std::vector<int> seqLen_;
     int32_t layerId_ = 0;
 };
+
+REGISTER_MODEL(llama_parallel, DecoderModel);
+
 }  // namespace llama_parallel
 }  // namespace atb_speed
 #endif

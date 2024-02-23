@@ -124,7 +124,7 @@ atb::Status AntiFloatLayer(const AntiFloatLayerParam  &param,
     InputNormAddNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_BETA};
     InputNormAddNode.outTensorIds = {INTERMIDATE_NORMADDOUT};
 
-    atb::infer::LinearParam linearParam = {false, false, true};
+    atb::infer::LinearParam linearParam;
     CREATE_OPERATION(linearParam, &mixdQLinearNode.operation);
     mixdQLinearNode.inTensorIds = {INTERMIDATE_NORMADDOUT, IN_QMIXDWEIGHT, IN_QMIXD_BIAS};
     mixdQLinearNode.outTensorIds = {INTERMIDATE_MIXEDQ};
@@ -192,7 +192,7 @@ atb::Status AntiFloatLayer(const AntiFloatLayerParam  &param,
     mlpParam.rank = param.rank;
     mlpParam.rankSize = param.rankSize;
     mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
-    mlpParam.transposeB = false;
+    mlpParam.transposeB = true;
     mlpParam.isBias = true;
     mlpParam.isPack = false;
     atb_speed::llama::MlpGateLayer(mlpParam, &mlpNode.operation);

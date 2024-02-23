@@ -65,7 +65,7 @@ struct MlpParam {
     int rankRoot = 0;
     void *hcclComm = nullptr;
     atb::infer::ActivationType activationType;
-    bool transpose = false;
+    bool transpose = true;
     bool isBias = false;
 };
 

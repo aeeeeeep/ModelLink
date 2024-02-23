@@ -16,6 +16,7 @@
 #ifndef ATB_SPEED_MODELS_INTERNLM_20B_FLASH_ATTENTION_MODEL_H
 #define ATB_SPEED_MODELS_INTERNLM_20B_FLASH_ATTENTION_MODEL_H
 #include "atb_speed/base/model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace internlm_20b {
@@ -56,6 +57,9 @@ private:
 
     std::vector<int32_t> seqLen_;
 };
+
+REGISTER_MODEL(internlm_20b, FlashAttentionRopeModel);
+
 } // namespace internlm_20b
 } // namespace atb_speed
 #endif

@@ -11,7 +11,7 @@ def next_token_chooser(logits: torch.Tensor):
     return torch.argmax(logits, dim=-1)
 
 
-def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length, rank):
+def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length, rank, ignore_eos):
     input_ids = batch.batch_input_ids.npu()
     position_ids = batch.batch_position_ids.npu()
     is_prefill = batch.cu_seqlen_prefill is not None
@@ -32,6 +32,14 @@ def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length
         max_seq_len=batch.max_s,
         lm_head_indices=lm_head_indices
     )
+
+    if batch.cu_seqlen_prefill is not None and logits.size(0) != batch.batch_num:
+        if logits.size(0) != batch.lm_head_indices[-1] + 1:
+            logger.error(f"prefill logits is invalid, batch num: {batch.batch_num}," +
+                         f" total token: {int(batch.lm_head_indices[-1] + 1)}, but logits shape is: {logits.shape}")
+            raise AssertionError
+        logits = logits[batch.lm_head_indices]
+
     next_token = next_token_chooser(logits)
 
     for i, req in enumerate(batch.req_list):
@@ -49,21 +57,24 @@ def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length
     batch.max_s += 1
 
     eos_token_id = tokenizer.eos_token_id
-    return batch.filter(eos_token_id, max_out_length, cache_manager)
+    return batch.filter(eos_token_id, max_out_length, cache_manager, ignore_eos)
 
 
 def generate_req(req_list, model, tokenizer,
                  max_batch_size, max_prefill_tokens, max_out_length, cache_manager,
-                 rank):
+                 rank, ignore_eos):
     req_num = len(req_list)
     print_log(rank, logger.info, f"------total req num: {req_num}, infer start--------")
 
     req_idx = 0
     total_req_finished = 0
     generate_batch_size = 0
+    max_generate_batch_size = 0
 
     benchmark_timelist = []
     generate_batches = []
+    prefill_benchmark_timelist = []
+    decoder_benchmark_timelist = []
 
     while total_req_finished < req_num:
         do_generate = True
@@ -81,6 +92,10 @@ def generate_req(req_list, model, tokenizer,
                 cur_context_len = req_list[req_idx].input_length
                 if total_need_blocks + cur_need_blocks > free_block:
                     break
+                if cur_context_len > max_prefill_tokens:
+                    logger.error(f"req: {req_idx} input length: {cur_context_len} is too long," +
+                                 f" max_prefill_tokens: {max_prefill_tokens}")
+                    raise AssertionError
                 if total_prefill_token + cur_context_len > max_prefill_tokens:
                     do_generate = False
                     break
@@ -96,29 +111,34 @@ def generate_req(req_list, model, tokenizer,
                     import time
                     torch.npu.synchronize()
                     prefill_start = time.time()
-                    req_finished = generate_token(model, tokenizer, cache_manager, batch, max_out_length, rank)
+                    req_finished = generate_token(model, tokenizer, cache_manager, batch, max_out_length, rank,
+                                                  ignore_eos)
                     torch.npu.synchronize()
                     prefill_end = time.time()
                     prefill_time = prefill_end - prefill_start
-                    benchmark_timelist.append(prefill_time)
+                    prefill_benchmark_timelist.append(prefill_time)
                 else:
-                    req_finished = generate_token(model, tokenizer, cache_manager, batch, max_out_length, rank)
-
-                generate_batches.append(batch)
+                    req_finished = generate_token(model, tokenizer, cache_manager, batch, max_out_length, rank,
+                                                  ignore_eos)
 
                 if req_finished != (prefill_batch_size - batch.batch_num):
                     logger.error("batch filter error")
                     raise AssertionError
-                generate_batch_size += batch.batch_num
-                total_req_finished += req_finished
+
+                if batch.batch_num > 0:
+                    generate_batches.append(batch)
+                    generate_batch_size += batch.batch_num
+                if req_finished > 0:
+                    do_generate = False
+                    total_req_finished += req_finished
 
         if do_generate:
             if len(generate_batches) > 1:
                 Batch.concatenate(generate_batches)
 
-            generate_batch_size = generate_batches[0].batch_num
-            if generate_batch_size > max_batch_size:
-                logger.error(f"decode batch size: {generate_batch_size}, max allowed: {max_batch_size}")
+            if generate_batch_size != generate_batches[0].batch_num:
+                logger.error(f"batch concatenate error, expect batchnum: {generate_batch_size}," +
+                             f" in fact: {generate_batches[0].batch_num}")
                 raise AssertionError
 
             if ENV.benchmark_enable:
@@ -126,25 +146,32 @@ def generate_req(req_list, model, tokenizer,
                 torch.npu.synchronize()
                 decode_start = time.time()
                 req_finished = generate_token(model, tokenizer, cache_manager, generate_batches[0], max_out_length,
-                                              rank)
+                                              rank, ignore_eos)
                 torch.npu.synchronize()                              
                 decode_end = time.time()
                 decode_time = decode_end - decode_start
-                benchmark_timelist.append(decode_time)
+                decoder_benchmark_timelist.append(decode_time)
             else:
                 req_finished = generate_token(model, tokenizer, cache_manager, generate_batches[0], max_out_length,
-                                              rank)
+                                              rank, ignore_eos)
 
             if req_finished != (generate_batch_size - generate_batches[0].batch_num):
                 logger.error(f"batch filter error")
                 raise AssertionError
+            if generate_batch_size > max_generate_batch_size:
+                max_generate_batch_size = generate_batch_size
             generate_batch_size = generate_batches[0].batch_num
+            if generate_batch_size == 0:
+                del generate_batches[0]
             total_req_finished += req_finished
+
+    if rank == 0:
+        print("max_generate_batch_size", max_generate_batch_size)
     if ENV.benchmark_enable:
-        prefill_time = benchmark_timelist[0]
-        e2e_time = sum(benchmark_timelist)
+        prefill_time = sum(prefill_benchmark_timelist)
+        e2e_time = sum(prefill_benchmark_timelist) + sum(decoder_benchmark_timelist)
         try:
-            decode_token_time = (e2e_time - prefill_time) / (max_out_length - 1)
+            decode_token_time = sum(decoder_benchmark_timelist) / (max_out_length - 1)
         except ZeroDivisionError as e:
             raise ZeroDivisionError from e
 
@@ -155,7 +182,8 @@ def generate_req(req_list, model, tokenizer,
         batch_size = len(req_list)
         input_len = req_list[0].input_length
         output_len = max_out_length
-        decode_token_times = ','.join(list(map(str, benchmark_timelist[1:])))
+        prefill_token_times = ','.join(list(map(str, prefill_benchmark_timelist)))
+        decode_token_times = ','.join(list(map(str, decoder_benchmark_timelist)))
         if rank == 0:
             import os
             benchmark_filepath = ENV.benchmark_filepath \
@@ -170,12 +198,16 @@ def generate_req(req_list, model, tokenizer,
                 'e2e_time(ms)': [f'{e2e_time * 1000: .2f}'],
                 'prefill_time(ms)': [f'{prefill_time * 1000: .2f}'],
                 'decoder_token_time(ms)': [f'{decode_token_time * 1000: .2f}'],
-                'token_times': [decode_token_times]
+                'prefill_count': [len(prefill_benchmark_timelist)],
+                'prefill_token_times': [prefill_token_times],
+                'decode_token_times': [decode_token_times],
+                'max_generate_batch_size': [max_generate_batch_size],
             }
             df = pd.DataFrame(stat_data)
             df.to_csv(benchmark_filepath, index=False)
             logger.info('-------------------performance dumped------------------------')
-            df = df.drop('token_times', axis=1)
+            df = df.drop('prefill_token_times', axis=1)
+            df = df.drop('decode_token_times', axis=1)
             print(df.to_markdown(index=False))
 
 

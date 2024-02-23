@@ -17,157 +17,123 @@
 | LLaMa2-13B  | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 是       | 否           | 是       | 否     | 是     | 否  |
 | LLaMa2-70B  | 支持world size 8         | 否                      | 是   | 是   | 是              | 是              | 否       | 否           | 否       | 否     | 是     | 否  |
 
+- 此模型仓已适配的模型版本
+  - [LLaMa系列](https://github.com/facebookresearch/llama/tree/llama_v1)
+  - [LLaMa2系列](https://github.com/facebookresearch/llama/tree/v2)
+
 # 使用说明
 
-## 环境准备
+## 路径变量解释
+| 变量名  | 含义                                             |
+|--------|--------------------------------------------------|
+| working_dir | 加速库及模型库下载后放置的目录                  |
+| llm_path | 模型仓所在路径。若使用编译好的包，则路径为`${working_dir}/ModelLink/`；若使用gitee下载的代码，则路径为`${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models`    |
+| script_path | 脚本所在路径；LLaMa和LLaMa2的工作脚本所在路径为${llm_path}/examples/models/llama                            |
+| weight_path | 模型权重路径                            |
 
-**激活CANN**
-```shell
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-```
+## 权重
+**权重下载**
+- [LLaMa-7B](https://huggingface.co/huggyllama/llama-7b)
+- [LLaMa-13B](https://huggingface.co/huggyllama/llama-13b)
+- LLaMa-33B（待补充）
+- [LLaMa-65B](https://huggingface.co/huggyllama/llama-65b)
+- [LLaMa2-7B](https://huggingface.co/NousResearch/Llama-2-7b-hf)
+- [LLaMa2-13B](https://huggingface.co/NousResearch/Llama-2-13b-hf)
+- [LLaMa2-70B](https://huggingface.co/NousResearch/Llama-2-70b-hf)
 
-**安装加速库**
-- 获取Ascend-cann-atb_*_cxx11abi*_linux-{x86/aarch64}.run
-- 安装
-    ```shell
-    chmod +x Ascend-cann-atb_*_cxx*abi*_linux-{x86/aarch64}.run
-    ./Ascend-cann-atb_*_cxx*abi*_linux-{x86/aarch64}.run --install --install-path=YOUR_PATH
-    source YOUR_PATH/atb/set_env.sh
-    ```
-- 可以使用`uname -a`指令查看服务器是x86还是aarch架构
+**权重装换**
+- 参考[此README文件](../../README.md)
 
-**获取模型仓代码**
-- 获取模型仓代码
-    ```shell
-    git clone https://gitee.com/ascend/ModelLink.git
-    ```
-- 代码编译
-    ```shell
-    cd mindie_ref/mindie_llm/atb_models
-    bash scripts/build.sh --use_cxx11_abi={0/1}
-    cd output/atb/
-    source set_env.sh
-    ```
-- 可以使用以下指令查看cxx11abi是0还是1
-    ```shell
-    python
-    import torch
-    torch.compiled_with_cxx11_abi()
-    ```
-    - 若输出结果为True表示cxx11abi1，False表示cxx11abi0
+## 设置通用环境变量
+- 将模型仓路径加入Python查询模块和包的搜索路径中
+  ```shell
+  export PYTHONPATH=${llm_path}:$PYTHONPATH
+  ```
 
-## 权重转换
-> 当前仅支持加载safetensor格式的权重文件，若环境中已有bin格式的权重文件，请按照如下方式进行转换
-> 若当前环境不存在模型权重，请至hugging face官网下载
-- 使用`/path-to-ModelLink/mindie_ref/mindie_llm/atb_models/examples/convert/convert_weights.py`将bin转成safetensor格式
-- 示例
-    ```shell
-    python /path-to-ModelLink/mindie_ref/mindie_llm/atb_models/examples/convert/convert_weights.py --model_path {bin文件权重的路径}
-    ```
-- 输出结果会保存在bin权重同目录下
-
-## 启动脚本
-- Flash Attention的启动脚本路径为`/path-to-ModelLink/mindie_ref/mindie_llm/atb_models/examples/run_fa.py`
-- Page Attention的启动脚本路径为`/path-to-ModelLink/mindie_ref/mindie_llm/atb_models/examples/run_pa.py`
-- 参数说明
-    - `--model_path` 模型路径
-    - `--input_text` 输入问题
-    - `--input_file` 已文件形式批量传入输入问题，输入需经过tokenizer转换为token id
-    - `--max_input_length` 最大输入长度
-    - `--max_output_length` 最大输出长度
-    - `--batch_size` 每次运行时固定的batch数量
-    - `--is_flash_causal_lm`
-        - Flash Attention时应设为False，Paged Attention时应设为True
-        - `run_fa.py`和`run_pa.py`脚本已自动做过适配，无需手动传入
-    - `--is_bf16`
-        - 默认精度为`FP16`，若运行时传入此参数，则精度设置为`BF16`
-        - 注意：当前仅Paged Attention支持打开此开关
-    - `--use_refactor`
-        - 若加上`use_refactor`则使用归一后代码，若不开启`use_refactor`，则使用未归一前的代码
-        - 注意：当前Flash Attention仅支持打开此开关
-
-## 300I DUO 运行操作说明
-
-### 对话测试
-- 设置环境变量
-    ```shell
-    # 绑定CPU核心开关，若当前机器未设置NUMA或绑核失败，可将 BIND_CPU 设为 0
-    export BIND_CPU=1
-    # 量化开关，默认为 0，若需要开启请参照文档/path-to-ModelLink/mindie_ref/mindie_llm/atb_models/atb_llm/models/llama/small/readme.md
-    export IS_QUANT=0
-    # 指定当前机器上可用的逻辑NPU核心
-    # 核心编号需要通过 npu-smi info 指令输出的 Device 列查阅
-    # 若要使用单卡双芯，请指定至少两个可见核心；若要使用双卡四芯，请指定至少四个可见核心
-    export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3
-    # 限制最大内存，若出现内存不足导致的异常，请将该参数改小
-    export MAX_MEMORY_GB=15
-    ```
-- 查阅核心编号方法
-![npu_smi_info](./npu_smi_info.png)
-- 运行指令
-
-    ```shell
-    torchrun --nproc_per_node {TP数，即world size} --master_port {卡间通信端口} -m examples.run_pa --model_path {模型的权重路径}
-    ```
-
-    - 在/path-to-ModelLink/mindie_ref/mindie_llm/atb_models/路径下运行以上指令
-    - 各模型支持的TP数参考“特性矩阵”
-    - 设置“卡间通信端口”的目的是为了避免同一台机器同时运行两个多卡模型时出现通信冲突，设置时端口建议范围：20000-20050
-    - “单卡双芯”运行请指定`--nproc_per_node`为`2`，“双卡四芯”运行请指定`--nproc_per_node`为`4`
-    - 示例：
-
-        ```shell
-        torchrun --nproc_per_node 2 --master_port 20010 -m examples.run_pa --model_path {LLaMa-7B模型的权重路径}
-        torchrun --nproc_per_node 2 --master_port 20010 -m examples.run_pa --model_path {LLaMa-13B模型的权重路径}
-        torchrun --nproc_per_node 4 --master_port 20010 -m examples.run_pa --model_path {LLaMa2-7B模型的权重路径}
-        torchrun --nproc_per_node 4 --master_port 20010 -m examples.run_pa --model_path {LLaMa2-13B模型的权重路径}
-        ```
-
-## 800I A2 运行操作说明
+## 推理
 
 ### 对话测试
 **运行Flash Attention FP16**
-- 设置环境变量
-    ```shell
-    export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
-    export INF_NAN_MODE_ENABLE=0
-    export ATB_OPERATION_EXECUTE_ASYNC=1
-    export TASK_QUEUE_ENABLE=1
-    export ATB_CONVERT_NCHW_TO_ND=1
-    export HCCL_BUFFSIZE=120
-    export HCCL_WHITELIST_DISABLE=1
-    export ATB_CONTEXT_WORKSPACE_RING=1
-    export ATB_CONTEXT_WORKSPACE_SIZE=2629145600
-    export ATB_WORKSPACE_MEM_ALLOC_GLOBAL=0
-    export ATB_LAUNCH_KERNEL_WITH_TILING=0
-    export ATB_OPSRUNNER_KERNEL_CACHE_GLOABL_COUNT=1
-    export ATB_OPSRUNNER_KERNEL_CACHE_LOCAL_COUNT=0
-    ```
-        - 使用`export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3` 指定运行的显卡id
-
-    - 运行指令
-    ```shell
-    torchrun --nproc_per_node {TP数，即world size} --master_port {卡间通信端口} -m examples.run_fa --model_path {模型的权重路径}
-    ```
-    - 在/path-to-ModelLink/mindie_ref/mindie_llm/atb_models/路径下运行以上指令
-    - 各模型支持的TP数参考“特性矩阵”
-    - 设置“卡间通信端口”的目的是为了避免同一台机器同时运行两个多卡模型时出现通信冲突，设置时端口建议范围：20000-20050
-    - 示例
-        ```shell
-        torchrun --nproc_per_node 1 --master_port 20010 -m examples.run_fa --model_path {LLaMa-7B模型的权重路径}
-        torchrun --nproc_per_node 1 --master_port 20010 -m examples.run_fa --model_path {LLaMa-13B模型的权重路径}
-        torchrun --nproc_per_node 4 --master_port 20010 -m examples.run_fa --model_path {LLaMa-33B模型的权重路径}
-        torchrun --nproc_per_node 8 --master_port 20010 -m examples.run_fa --model_path {LLaMa-65B模型的权重路径}
-        torchrun --nproc_per_node 1 --master_port 20010 -m examples.run_fa --model_path {LLaMa2-7B模型的权重路径}
-        torchrun --nproc_per_node 1 --master_port 20010 -m examples.run_fa --model_path {LLaMa2-13B模型的权重路径}
-        torchrun --nproc_per_node 8 --master_port 20010 -m examples.run_fa --model_path {LLaMa2-70B模型的权重路径}
-        ```
+- LLaMa2-7B和LLaMa2-13B参考[此README文档](../../../pytorch/examples/llama/README.md)
+- 其余LLaMa模型参考以下运行方式
+  - 运行启动脚本
+    - 在\${llm_path}目录下执行以下指令
+      ```shell
+      bash ${script_path}/run_fa.sh ${weight_path}
+      ```
+  - 环境变量说明
+    - `export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7`
+      - 指定当前机器上可用的逻辑NPU核心，多个核心间使用逗号相连
+      - 核心ID查阅方式见[此README文件](../../README.md)的【启动脚本相关环境变量】章节
+      - 对于300I DUO卡而言，若要使用单卡双芯，请指定至少两个可见核心；若要使用双卡四芯，请指定至少四个可见核心
+      - 各模型支持的核心数参考“特性矩阵”
+    - `export MAX_MEMORY_GB=29`
+      - 限制最大显存
+      - 默认设置最大显存为29GB
+      - 若出现显存不足导致的异常，请将该参数改小
+    - `export MASTER_PORT=20030`
+      - 设置卡间通信端口
+      - 默认使用20030端口
+      - 目的是为了避免同一台机器同时运行多个多卡模型时出现通信冲突
+      - 设置时端口建议范围为：20000-20050
+    - `export USE_REFACTOR=true`
+      - 是否使用新版模型组图
+      - 默认使用
+      - 运行LLaMa2-7b和LLaMa2-13b时`use_refactor`参数需设置为False，其余模型运行时需设置为True
+    - 以下环境变量与性能和内存优化相关，通常情况下无需修改
+      ```shell
+      export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
+      export INF_NAN_MODE_ENABLE=0
+      export ATB_OPERATION_EXECUTE_ASYNC=1
+      export TASK_QUEUE_ENABLE=1
+      export ATB_CONVERT_NCHW_TO_ND=1
+      export HCCL_BUFFSIZE=120
+      export HCCL_WHITELIST_DISABLE=1
+      export ATB_CONTEXT_WORKSPACE_RING=1
+      export ATB_CONTEXT_WORKSPACE_SIZE=2629145600
+      export ATB_WORKSPACE_MEM_ALLOC_GLOBAL=0
+      export ATB_LAUNCH_KERNEL_WITH_TILING=0
+      export ATB_OPSRUNNER_KERNEL_CACHE_GLOABL_COUNT=1
+      export ATB_OPSRUNNER_KERNEL_CACHE_LOCAL_COUNT=0
+      ```
 
 **运行Flash Attention BF16**
 - 暂不支持
 
 **运行Paged Attention FP16**
-- 设置环境变量
+- 运行启动脚本
+  - 在\${llm_path}目录下执行以下指令
+    ```shell
+    bash ${script_path}/run_pa.sh ${weight_path}
+    ```
+- 环境变量说明
+  - `export IS_QUANT=0`
+    - 量化开关；仅在300I DUO卡上生效
+    - 默认非量化
+    - 若需要开启请参照[文档](../../../atb_llm/models/llama/small/readme.md)
+  - `export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7`
+    - 指定当前机器上可用的逻辑NPU核心，多个核心间使用逗号相连
+    - 核心ID查阅方式见[此README文件](../../README.md)的【启动脚本相关环境变量】章节
+    - 对于300I DUO卡而言，若要使用单卡双芯，请指定至少两个可见核心；若要使用双卡四芯，请指定至少四个可见核心
+    - 各模型支持的核心数参考“特性矩阵”
+  - `export MAX_MEMORY_GB=29`
+    - 限制最大显存
+    - 默认设置最大显存为29GB
+    - 若出现显存不足导致的异常，请将该参数改小
+    - 300I DUO卡推荐值40GB，800I A2推荐值29GB
+  - `export MASTER_PORT=20030`
+    - 设置卡间通信端口
+    - 默认使用20030端口
+    - 目的是为了避免同一台机器同时运行多个多卡模型时出现通信冲突
+    - 设置时端口建议范围为：20000-20050
+  - `export IS_BF16=false`
+    - 是否使用BF16精度进行推理
+    - 默认使用FP16
+  - `export USE_REFACTOR=true`
+    - 是否使用新版模型组图
+    - 默认使用
+    - 运行LLaMa2-7b和LLaMa2-13b时`use_refactor`参数需设置为False，其余模型运行时需设置为True
+  - 以下环境变量与性能和内存优化相关，通常情况下无需修改
     ```shell
     export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
     export INF_NAN_MODE_ENABLE=0
@@ -176,44 +142,17 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
     export ATB_CONVERT_NCHW_TO_ND=1
     export LCCL_ENABLE_FALLBACK=1
     ```
-
-- 运行指令
-    ```shell
-    torchrun --nproc_per_node {TP数，即world size} --master-port {卡间通信端口} -m examples.run_pa --model_path {模型的权重路径}
-    ```
-    - 在/path-to-ModelLink/mindie_ref/mindie_llm/atb_models/路径下运行以上指令
-    - 示例
-        ```shell
-        torchrun --nproc_per_node 1 --master_port 20010 -m examples.run_pa --model_path {LLaMa-7B模型的权重路径}
-        torchrun --nproc_per_node 1 --master_port 20010 -m examples.run_pa --model_path {LLaMa-13B模型的权重路径}
-        torchrun --nproc_per_node 4 --master_port 20010 -m examples.run_pa --model_path {LLaMa-33B模型的权重路径}
-        torchrun --nproc_per_node 8 --master_port 20010 -m examples.run_pa --model_path {LLaMa-65B模型的权重路径}
-        torchrun --nproc_per_node 1 --master_port 20010 -m examples.run_pa --model_path {LLaMa2-7B模型的权重路径}
-        torchrun --nproc_per_node 1 --master_port 20010 -m examples.run_pa --model_path {LLaMa2-13B模型的权重路径}
-        torchrun --nproc_per_node 8 --master_port 20010 -m examples.run_pa --model_path {LLaMa2-70B模型的权重路径}
-        ```
 
 **运行Paged Attention BF16**
-- 设置环境变量
-    ```shell
-    export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
-    export INF_NAN_MODE_ENABLE=0
-    export ATB_OPERATION_EXECUTE_ASYNC=1
-    export TASK_QUEUE_ENABLE=1
-    export ATB_CONVERT_NCHW_TO_ND=1
-    export LCCL_ENABLE_FALLBACK=1
-    ```
-
-- 运行指令
-    ```shell
-    torchrun --nproc_per_node {TP数，即world size} --master-port {卡间通信端口} -m examples.run_pa --model_path {模型的权重路径} --is_bf16
-    ```
-    - 在/path-to-ModelLink/mindie_ref/mindie_llm/atb_models/路径下运行以上指令
-    - 示例
-        ```shell
-        torchrun --nproc_per_node 8 --master_port 20010 -m examples.run_pa --model_path {LLaMa-65B模型的权重路径} --is_bf16
-        torchrun --nproc_per_node 8 --master_port 20010 -m examples.run_pa --model_path {LLaMa2-70B模型的权重路径} --is_bf16
-        ```
+- 运行启动脚本
+  - 与“运行Paged Attention FP16”的启动方式相同
+- 环境变量说明
+  - 参见“运行Paged Attention FP16”中的环境变量说明
+  - 相比于FP16，运行BF16时需修改以下环境变量
+    - `export IS_BF16=true`
+      - 是否使用BF16精度进行推理
+      - 默认使用FP16，运行BF16时需将此环境变量的值设置为true
+- 300I DUO卡暂不支持BF16特性
 
 **运行W8A8量化**
 - 待补充
@@ -228,10 +167,38 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 - 待补充
 
 ## 精度测试
-- 参考tests/modeltest/README.md
+- 参考[此README文件](../../../tests/modeltest/README.md)
+  - 运行llama2-7b和llama2-13b时`use_refactor`参数需设置为False，其余模型运行时需设置为True
+  - 示例
+    ```shell
+    cd ${llm_path}/tests/modeltest
+    export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+    export MAX_MEMORY_GB=29
+    bash run.sh pa_fp16 full_CEval 1 llama False ${llama2-7b权重路径} 8
+    bash run.sh pa_fp16 full_CEval 1 llama False ${llama2-13b权重路径} 8
+    bash run.sh pa_fp16 full_CEval 1 llama True ${llama2-70b权重路径} 8
+    bash run.sh pa_fp16 full_CEval 1 llama True ${llama-7b权重路径} 8
+    bash run.sh pa_fp16 full_CEval 1 llama True ${llama-13b权重路径} 8
+    bash run.sh pa_fp16 full_CEval 1 llama True ${llama-65b权重路径} 8
+    ```
 
 ## 性能测试
-- 参考tests/modeltest/README.md
+- 参考[此README文件](../../../tests/modeltest/README.md)
+  - 运行llama2-7b和llama2-13b时`use_refactor`参数需设置为False，其余模型运行时需设置为True
+  - 示例
+    ```shell
+    cd ${llm_path}/tests/modeltest
+    export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+    export MAX_MEMORY_GB=29
+    export ATB_LLM_BENCHMARK_ENABLE=1
+    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama False ${llama2-7b权重路径} 8
+    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama False ${llama2-13b权重路径} 8
+    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${llama2-70b权重路径} 8
+    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${llama-7b权重路径} 8
+    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${llama-13b权重路径} 8
+    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${llama-65b权重路径} 8
+    ```
 
-## 性能数据
-- 待补充
+## FAQ
+- 更多环境变量见[此README文件](../../README.md)
+- 对话测试实际执行的Python文件为`${llm_path}/examples/run_fa.py`和`${llm_path}/examples/run_pa.py`；这两个文件的参数说明见[此README文件](../../README.md)

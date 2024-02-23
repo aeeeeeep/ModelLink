@@ -446,8 +446,8 @@ class FlashLlamaForCausalLM(torch.nn.Module):
 
 
     def init_ascend_operations(self, config: LlamaConfig):
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_small_pa_model")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_small_pa_model")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_pa_CommonPAModel")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_pa_CommonPAModel")
         logger.info(f"num_key_value_heads {self.num_key_value_heads}, num_heads {self.num_attention_heads}")
         if self.is_quant:
             # initialize quant input params

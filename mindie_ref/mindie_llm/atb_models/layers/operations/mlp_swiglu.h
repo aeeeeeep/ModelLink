@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_LLAMA_7B_FUSION_MLP_H
-#define ATB_SPEED_MODELS_LLAMA_7B_FUSION_MLP_H
-
-#include "atb/atb_infer.h"
-#include "atb_speed/log.h"
-#include "nlohmann/json.hpp"
-#include "atb_speed/log.h"
+#ifndef ATB_SPEED_MODELS_COMMON_MLP_SWIGLU_OPERATION_H
+#define ATB_SPEED_MODELS_COMMON_MLP_SWIGLU_OPERATION_H
+#include <atb/atb_infer.h>
+#include "layers/operations/linear.h"
+#include "layers/operations/linear_parallel.h"
 
 namespace atb_speed {
-namespace llama_7b {
-struct FusionMlpParam {
-    bool transpose = false;
+namespace common {
+struct MlpSwiGLUParam {
+    bool isPack = false;
+    atb_speed::common::FusionLinearParam gateUpLinearParam;
+    atb_speed::common::LinearParallelParam downLinearParallelParam;
 };
 
-atb::Status FusionMlp(const FusionMlpParam &param, atb::Operation **operation);
-
-atb::Operation *CreateFusionMlp(const nlohmann::json &paramJson);
-
-} // namespace llama_7b
+atb::Status MlpSwiGLU(const MlpSwiGLUParam &param, atb::Operation **operation);
+} // namespace common
 } // namespace atb_speed
 #endif

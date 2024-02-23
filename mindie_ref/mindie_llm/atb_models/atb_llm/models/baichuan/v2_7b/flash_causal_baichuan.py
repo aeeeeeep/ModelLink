@@ -2,16 +2,11 @@
 
 import json
 import math
-import os
 from typing import Optional, List, Tuple
 
 import torch
 import torch.distributed
 import torch_npu
-from torch import nn
-from transformers.activations import ACT2FN
-
-from atb_llm.utils.log import logger
 from atb_llm.utils.initial import NPUSocInfo, load_atb_speed
 from atb_llm.utils.layers import (
     TensorParallelColumnLinear,
@@ -22,6 +17,9 @@ from atb_llm.utils.layers import (
     load_column_multi,
     load_row
 )
+from atb_llm.utils.log import logger
+from torch import nn
+from transformers.activations import ACT2FN
 
 
 class RMSNorm(nn.Module):
@@ -107,7 +105,6 @@ class MLP(nn.Module):
             raise ZeroDivisionError from e
 
 
-
 class FlashDecoderLayer(nn.Module):
     def __init__(self, layer_id, config, weights):
         super().__init__()
@@ -184,7 +181,7 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
         process_group = weights.process_group
         self.tp_rank = process_group.rank()
         self.tp_world_size = process_group.size()
-        
+
         try:
             self.num_heads = math.ceil(self.num_heads / weights.process_group.size())
             self.num_key_value_heads = math.ceil(config.num_key_value_heads / weights.process_group.size())
@@ -203,6 +200,9 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
         self.num_layers = config.num_hidden_layers
         self.lm_head_weight = None
         self.is_prefill = True
+        self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
+        transdata_param = json.dumps({})
+        self.transdata_operation.set_param(transdata_param)
 
     def maybe_format_cast(self, tensor):
         """
@@ -223,7 +223,7 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
             "rank": self.tp_rank,
             "rankSize": self.tp_world_size,
             "isPrefill": True,
-            "backend": os.getenv("BACKEND", "hccl"),
+            "backend": "hccl" if self.soc_info.need_nz else "lccl",
             "isLmHeadParallel": self.parallel_lm_head
         })
         self.acl_param_decoder = json.dumps({
@@ -234,12 +234,12 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
             "rank": self.tp_rank,
             "rankSize": self.tp_world_size,
             "isPrefill": False,
-            "backend": os.getenv("BACKEND", "hccl"),
+            "backend": "hccl" if self.soc_info.need_nz else "lccl",
             "isLmHeadParallel": self.parallel_lm_head
         })
         self.max_position_embeddings = config.max_position_embeddings
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_pa_model")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_pa_model")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_PagedAttentionModel")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_PagedAttentionModel")
 
         self.acl_encoder_operation.set_param(self.acl_param_encoder)
         self.acl_decoder_operation.set_param(self.acl_param_decoder)
@@ -307,8 +307,7 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
         if self.soc_info.need_nz:
             pad_maxs = math.ceil(max_s / 16) * 16
             atten_mask = self.ascend_atten_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
-            atten_mask = atten_mask.view(1, pad_maxs, pad_maxs // 16, 16).transpose(1, 2)
-            torch_npu.npu_format_cast_(atten_mask, 29)
+            atten_mask = self.transdata_operation.execute([atten_mask])[0]
         else:
             atten_mask = self.ascend_atten_mask.get_attn_mask(max_s, kv_cache[0][0].dtype, kv_cache[0][0].device)
 
@@ -343,8 +342,8 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
                                 max_s: int,
                                 lm_head_indices: Optional[torch.Tensor] = None):
         acl_inputs = self.prepare_inputs_for_ascend(input_ids, position_ids, is_prefill, kv_cache,
-                                                               block_tables, slots, input_lengths, max_s,
-                                                               lm_head_indices)
+                                                    block_tables, slots, input_lengths, max_s,
+                                                    lm_head_indices)
         acl_param = json.dumps({
             "seqLen": input_lengths.tolist()
         })

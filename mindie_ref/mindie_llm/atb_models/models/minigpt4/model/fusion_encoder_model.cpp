@@ -228,3 +228,4 @@ namespace atb_speed {
 
     } // namespace minigpt4_vicuna_7b
 } // namespace atb_speed
+

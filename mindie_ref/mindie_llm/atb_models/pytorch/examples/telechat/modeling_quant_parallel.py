@@ -632,9 +632,9 @@ class TelechatModel(TelechatPreTrainedModel):
             })
 
         if RUN_QUANT_MODEL:
-            self.acl_operation = torch.classes.ModelTorch.ModelTorch("telechat_quant_model")
+            self.acl_operation = torch.classes.ModelTorch.ModelTorch("telechat_QuantFAModel")
         else:
-            self.acl_operation = torch.classes.ModelTorch.ModelTorch("telechat_float_model")
+            self.acl_operation = torch.classes.ModelTorch.ModelTorch("telechat_FloatFAModel")
 
         print("set param")
         self.acl_operation.set_param(self.acl_param)

@@ -565,7 +565,7 @@ class InternLMModel(InternLMPreTrainedModel):
                                      "dk": head_size, "layerNum": config.num_hidden_layers})
         self.max_position_embeddings = config.max_position_embeddings
 
-        self.acl_fa_operation = torch.classes.ModelTorch.ModelTorch("internlm_7b_flash_attention_rope_model")
+        self.acl_fa_operation = torch.classes.ModelTorch.ModelTorch("internlm_7b_FlashAttentionRopeModel")
 
         self.acl_fa_operation.set_param(self.acl_param)
 

@@ -479,11 +479,8 @@ class KVAttentionManager:
             for i in range(self.batch_size):
                 self.attention_mask_max[i][:self.token_offset, :self.token_offset] = attention_mask[i]
                 ori_len = self.ori_len_list[i].item()
-                # 左padding
-                # self.attention_mask_max_inc[i][:, :self.token_offset - ori_len] = self.min_cache[:, :self.token_offset - ori_len]
-                # 右padding
-                self.attention_mask_max_inc[i][:, ori_len:self.token_offset] = \
-                    self.min_cache[:, ori_len:self.token_offset]
+                #左padding
+                self.attention_mask_max_inc[i][:, :self.token_offset - ori_len] = self.min_cache[:, :self.token_offset - ori_len]
             if not IS_ND:
                 self.attention_mask_max_inc = self.trans_data(self.attention_mask_max_inc)
                 return self.trans_data(self.attention_mask_max)
@@ -524,7 +521,7 @@ class BaichuanModel(BaichuanPreTrainedModel):
             "backend": os.getenv("BACKEND", "hccl")
         })
         self.max_position_embeddings = int(os.getenv("MAX_SEQ_LEN", config.max_position_embeddings))
-        self.acl_fa_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_flash_attention_rope_model")
+        self.acl_fa_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_FlashAttentionRopeModel")
 
         self.acl_fa_operation.set_param(self.acl_param)
 
@@ -567,6 +564,7 @@ class BaichuanModel(BaichuanPreTrainedModel):
         cos_table, sin_table = self.ascend_rotary_embedding(input_ids, self.kv_attention_manager.token_offset)
         cos_embed = torch.nn.functional.embedding(position_ids, cos_table)
         sin_embed = torch.nn.functional.embedding(position_ids, sin_table)
+        seqlen_max = torch.tensor([self.kv_attention_manager.seq_len_tensor[0] - 1], dtype=torch.int64, device="npu")
 
         inputs = [input_ids,
                   cos_embed,
@@ -576,7 +574,8 @@ class BaichuanModel(BaichuanPreTrainedModel):
                   self.kv_attention_manager.v_cache_input,
                   self.kv_attention_manager.token_offset_tensor,
                   self.kv_attention_manager.seq_len_tensor,
-                  self.place_holder
+                  self.place_holder,
+                  seqlen_max,
                   ] + self.layer_id_list
 
         return inputs
@@ -773,7 +772,7 @@ class BaichuanForCausalLM(BaichuanPreTrainedModel):
         self.world_size = 1
         if hasattr(config, 'world_size'):
             self.world_size = config.world_size
-        self.lm_head = NormHead(config.hidden_size // self.world_size, config.vocab_size, bias=False)
+        self.lm_head = NormHead(config.hidden_size, config.vocab_size // self.world_size, bias=False)
         if hasattr(config, "quantization_config") and config.quantization_config['load_in_4bit']:
             try:
                 from .quantizer import quantize_offline, init_model_weight_int4

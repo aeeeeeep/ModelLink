@@ -18,6 +18,7 @@
 
 #include <vector>
 #include "atb_speed/base/model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama2_70b {
@@ -62,6 +63,9 @@ private:
     std::vector<int> seqLen_;
     int32_t layerId_ = 0;
 };
+
+REGISTER_MODEL(llama2_70b, FusionPAModelW8A8);
+
 } // namespace llama2_70b
 } // namespace atb_speed
 #endif

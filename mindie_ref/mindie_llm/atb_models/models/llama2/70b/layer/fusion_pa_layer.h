@@ -36,7 +36,7 @@ struct FusionPALayerParam {
     std::vector<int> seqLen;
     std::vector<int> tokenOffset;
     int rotaryCoeff = 2;
-    bool transposedWeight = false;
+    bool transposedWeight = true;
     bool isPrefill = false;
 };
 
