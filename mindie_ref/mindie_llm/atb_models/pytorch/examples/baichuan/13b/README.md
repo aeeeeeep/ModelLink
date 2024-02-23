@@ -20,7 +20,7 @@ benchmark 上均取得同尺寸最好的效果。
 | model_download_path | 开源权重放置目录                                                             | 
 | llm_path            | 加速库及模型库下载后放置目录                                                       |
 | model_path          | 工作时模型所在的目录，可以和model_download_path相同，但一般模型是公共的，为了避免影响其他用户，单独建一个模型工作目录 |
-| script_path         | 工作脚本所在路径，本文为${llm_path}/pytorch/examples/baichuan2/7b                |
+| script_path         | 工作脚本所在路径，本文为${llm_path}/pytorch/examples/baichuan/13b                |
 | ceval_work_dir      | ceval数据集、及结果保存所在目录，不必和模型脚本在相同目录                                      |
 
 ## 获取源码及依赖
@@ -52,6 +52,7 @@ benchmark 上均取得同尺寸最好的效果。
 #### 1. 将开源模型拷贝到模型工作目录，bin文件使用软链接即可,同时将modeling文件拷贝到模型，并修改开源的config.json,
 
 ```shell
+cd ${model_path}
 cp ${model_download_path}/*.py ${model_path}/
 cp ${model_download_path}/*.json ${model_path}/
 cp ${model_download_path}/*.model ${model_path}/
@@ -77,7 +78,7 @@ cp ${script_path}/modeling_baichuan_cut.py ${model_path}
 修改`${script_path}/cut_model_and_run.sh`    
 将 `input_dir` 修改为模型所在路径 `${model_path}` 
 将 `output_dir` 修改为切分后的模型所存储的路径,比如仍为原目录 `${model_path}`。模型切分成功后，会自动生成新目录part_model(用户无需新建该文件夹)，即：${model_path/part_model}
-
+将 `world_size_` 修改成希望切成的卡的数量
 ```
 
 目录结构示例建议
@@ -94,7 +95,7 @@ cp ${script_path}/modeling_baichuan_cut.py ${model_path}
     --1
   ......(其他)
 --script_path
-  cut_model_and_run_baichuan.sh
+  cut_model_and_run.sh
   cut_model_util.py
   main.py
   config.ini
@@ -116,7 +117,10 @@ bash cut_model_and_run.sh
 - 多卡运行时，会在切分阶段会自动修改，没有定制的情况下，可以不操作
 
 ##### 单卡
-
+拷贝修改后的modeling
+```shell
+cp ${script_path}/modeling_baichuan_ascend.py ${model_path}
+```
 修改${model_path}/config.json中的kv对，改成
 
 ```
@@ -211,11 +215,6 @@ Segmentation fault (core dumped)
 ```shell
 LD_PRELOAD=/root/miniconda3/envs/wqh39/bin/../lib/libgomp.so.1 MAX_SEQ_LEN=2048 python main.py --task ${task_name}  --is_quant ${is_quant}
 ```
-
-3. 多卡推理脚本中的环境变量设置
-
-- 默认配置是给300I DUO上使用的
-- 800I A2 /800T A2上需要添加lccl_options变量
 
 ## 量化推理
 

@@ -127,7 +127,7 @@ class BaichuanAttention(torch.nn.Module):
         self.hidden_size = config.hidden_size
         self.num_heads = config.num_attention_heads
         self.head_dim = self.hidden_size // self.num_heads
-        self.max_position_embeddings = config.model_max_length
+        self.max_position_embeddings = int(os.getenv("MAX_SEQ_LEN", config.model_max_length))
 
         if (self.head_dim * self.num_heads) != self.hidden_size:
             raise ValueError(
@@ -261,32 +261,32 @@ class KVAttentionManager:
 
         if not IS_ND:
             self.k_cache_input = torch.zeros(self.num_layers,
-                                             self.batch_size,  # batch
+                                             self.batch_size,
                                              self.hidden_size // self.nz_dim,
                                              self.max_seq_len,
                                              self.nz_dim,
-                                             device="npu").half()
+                                             device="npu", dtype=torch.half)
             self.v_cache_input = torch.zeros(self.num_layers,
-                                             self.batch_size,  # batch
+                                             self.batch_size,
                                              self.hidden_size // self.nz_dim,
                                              self.max_seq_len,
                                              self.nz_dim,
-                                             device="npu").half()
-
+                                             device="npu", dtype=torch.half)
             self.k_cache_input = torch_npu.npu_format_cast(self.k_cache_input, 29)
+            torch.npu.empty_cache()
             self.v_cache_input = torch_npu.npu_format_cast(self.v_cache_input, 29)
         else:
             self.k_cache_input = torch.zeros(self.num_layers,
-                                             batch_size,  # batch
+                                             batch_size,
                                              self.max_seq_len,
                                              self.hidden_size,
-                                             device="npu").half()
+                                             device="npu", dtype=torch.half)
             self.v_cache_input = torch.zeros(self.num_layers,
-                                             batch_size,  # batch
+                                             batch_size,
                                              self.max_seq_len,
                                              self.hidden_size,
-                                             device="npu").half()
-
+                                             device="npu", dtype=torch.half)
+        torch.npu.empty_cache()
         self.token_offset = 1
         self.attention_mask_max = torch.zeros(
             (self.batch_size, self.num_head, self.max_seq_len, self.max_seq_len),
@@ -401,7 +401,7 @@ class BaichuanModel(BaichuanPreTrainedModel):
             "layerNum": config.num_hidden_layers,
             "rank": self.rank,
             "rankSize": self.world_size,
-            "backend": os.getenv("BACKEND", "hccl")
+            "backend": "lccl" if IS_ND else "hccl"
         })
         self.max_position_embeddings = int(os.getenv("MAX_SEQ_LEN", config.model_max_length))
         self.acl_fa_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_13b_FlashAttentionModel")
@@ -438,13 +438,15 @@ class BaichuanModel(BaichuanPreTrainedModel):
 
     def prepare_inputs_for_ascend(self, input_ids, attention_mask=None, past_key_values=None):
         self.kv_attention_manager.is_full = not past_key_values
+        seqlen_max = torch.tensor([self.kv_attention_manager.seq_len_tensor[0] - 1], dtype=torch.int64, device="npu")
         inputs = [input_ids,
                   self.kv_attention_manager.get_attention_mask(attention_mask),
                   self.kv_attention_manager.k_cache_input,
                   self.kv_attention_manager.v_cache_input,
                   self.kv_attention_manager.token_offset_tensor,
                   self.kv_attention_manager.seq_len_tensor,
-                  self.place_holder
+                  self.place_holder,
+                  seqlen_max,
                   ] + self.layer_id_list
 
         return inputs
