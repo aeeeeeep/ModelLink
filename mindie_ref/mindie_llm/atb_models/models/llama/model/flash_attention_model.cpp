@@ -71,6 +71,7 @@ void FlashAttentionModel::Param::FromString(const std::string &param)
     quantModel = paramJson["quantModel"].get<bool>();
     sparseModel = paramJson["sparseModel"].get<bool>();
     isEncoder = paramJson["isEncoder"].get<bool>();
+    isBF16 = paramJson["isBF16"].get<bool>();
     
     for (auto item : paramJson["qkvInputScale"]) {
         qkvInputScale.push_back(item.get<float>());
@@ -102,7 +103,7 @@ void FlashAttentionModel::Param::FromString(const std::string &param)
 
     ATB_LOG(INFO) << "Llama FlashAttentionModel param rmsNormEps:" << rmsNormEps << ", headNum:" << headNum
                   << ", kvHeadNum:" << kvHeadNum << ", dk:" << dk << ", layerNum:" << layerNum << ", rank:"
-                  << rank << ", rankSize:" << rankSize;
+                  << rank << ", rankSize:" << rankSize << ", isBF16:" << isBF16;
 }
 
 FlashAttentionModel::FlashAttentionModel(
@@ -217,6 +218,7 @@ int64_t FlashAttentionModel::BuildGraph()
             floatModelParam.backend = param_.backend;
             floatModelParam.quantModel = false;
             floatModelParam.isEncoder = param_.isEncoder;
+            floatModelParam.isBF16 = param_.isBF16;
 
             atb_speed::llama::FlashAttentionLayer(floatModelParam, &op);
             layerNode.operation.reset(op);
@@ -260,6 +262,7 @@ int64_t FlashAttentionModel::BuildGraph()
             quantModelParam.backend = param_.backend;
             quantModelParam.quantModel = true;
             quantModelParam.isEncoder = param_.isEncoder;
+            quantModelParam.isBF16 = param_.isBF16;
             // 量化适配
             quantModelParam.qkvInputScale = param_.qkvInputScale[layerId];
             quantModelParam.qkvInputOffset = param_.qkvInputOffset[layerId];
@@ -312,6 +315,7 @@ int64_t FlashAttentionModel::BuildGraph()
             sparseModelParam.backend = param_.backend;
             sparseModelParam.sparseModel = true;
             sparseModelParam.isEncoder = param_.isEncoder;
+            sparseModelParam.isBF16 = param_.isBF16;
             // 量化适配
             sparseModelParam.qkvInputScale = param_.qkvInputScale[layerId];
             sparseModelParam.qkvInputOffset = param_.qkvInputOffset[layerId];
@@ -374,6 +378,9 @@ int64_t FlashAttentionModel::BuildGraph()
     auto &outLinearNode = graph_.nodes.at(nodeId++);
     atb::infer::LinearParam outLinearParm;
     outLinearParm.hasBias = false;
+    if (param_.isBF16) {
+        outLinearParm.linearType = atb::infer::LINEAR_BF16BF16_FP32_BF16;
+    }
     CREATE_OPERATION(outLinearParm, &op);
     outLinearNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
