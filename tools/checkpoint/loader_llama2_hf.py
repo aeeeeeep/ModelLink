@@ -280,6 +280,10 @@ def _load_checkpoint(queue, args):
     md.checkpoint_args = margs
     md.consumed_train_samples = 0
     md.consumed_valid_samples = 0
+    if hasattr(margs, 'embed_layernorm'):
+        md.embed_layernorm = margs.embed_layernorm
+    else:
+        md.embed_layernorm = False
 
     # Get first pipe stage.
     mpu.set_tensor_model_parallel_rank(0)

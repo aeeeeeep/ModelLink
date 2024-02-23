@@ -220,6 +220,8 @@ def save_model_checkpoint(queue, args):
     else:
         raise Exception(f'unrecognized model type: {args.model_type}')
 
+    setattr(margs, 'embed_layernorm', md.embed_layernorm)
+
     def get_models(count, dtype, pre_process, post_process):
         models = [model_provider(pre_process, post_process).to(dtype) for _ in range(count)]
         return models
