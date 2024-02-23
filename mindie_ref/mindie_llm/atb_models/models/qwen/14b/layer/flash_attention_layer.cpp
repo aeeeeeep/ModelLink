@@ -79,6 +79,9 @@ void from_json(const nlohmann::json &paramJson, FlashAttentionRopeLayerParam &pa
     if (paramJson.contains("coderType")) {
         paramJson.at("coderType").get_to(param.coderType);
     }
+    if (paramJson.contains("isTriuMask")) {
+        paramJson.at("isTriuMask").get_to(param.isTriuMask);
+    }
 }
 
 atb::Operation *CreateFlashAttentionRopeLayer(const nlohmann::json &paramJson)
@@ -154,6 +157,7 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     selfAttentionParam.qkScale = 1.0 / sqrt(param.dk);
     if (param.coderType == 1) {
         selfAttentionParam.coderType = atb::infer::SelfAttentionParam::CoderType::ENCODER;
+        selfAttentionParam.isTriuMask = param.isTriuMask;
     } else if (param.coderType == 2) {
         selfAttentionParam.coderType = atb::infer::SelfAttentionParam::CoderType::DECODER;
     }

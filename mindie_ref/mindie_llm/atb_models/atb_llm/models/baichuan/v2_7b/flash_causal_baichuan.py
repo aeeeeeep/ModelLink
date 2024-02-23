@@ -155,7 +155,7 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
         self.config = config
         self.soc_info = NPUSocInfo()
         self.model = FlashBaichuanModel(config, weights)
-        self.parallel_lm_head = not self.soc_info.need_nz
+        self.parallel_lm_head = True
 
         if self.parallel_lm_head:
             self.lm_head = load_column_multi(
