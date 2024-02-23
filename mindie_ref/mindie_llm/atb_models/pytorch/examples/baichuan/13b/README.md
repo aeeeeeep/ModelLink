@@ -52,6 +52,7 @@ benchmark 上均取得同尺寸最好的效果。
 #### 1. 将开源模型拷贝到模型工作目录，bin文件使用软链接即可,同时将modeling文件拷贝到模型，并修改开源的config.json,
 
 ```shell
+cd ${model_path}
 cp ${model_download_path}/*.py ${model_path}/
 cp ${model_download_path}/*.json ${model_path}/
 cp ${model_download_path}/*.model ${model_path}/
@@ -77,7 +78,7 @@ cp ${script_path}/modeling_baichuan_cut.py ${model_path}
 修改`${script_path}/cut_model_and_run.sh`    
 将 `input_dir` 修改为模型所在路径 `${model_path}` 
 将 `output_dir` 修改为切分后的模型所存储的路径,比如仍为原目录 `${model_path}`。模型切分成功后，会自动生成新目录part_model(用户无需新建该文件夹)，即：${model_path/part_model}
-
+将 `world_size_` 修改成希望切成的卡的数量
 ```
 
 目录结构示例建议
@@ -94,7 +95,7 @@ cp ${script_path}/modeling_baichuan_cut.py ${model_path}
     --1
   ......(其他)
 --script_path
-  cut_model_and_run_baichuan.sh
+  cut_model_and_run.sh
   cut_model_util.py
   main.py
   config.ini
@@ -116,7 +117,10 @@ bash cut_model_and_run.sh
 - 多卡运行时，会在切分阶段会自动修改，没有定制的情况下，可以不操作
 
 ##### 单卡
-
+拷贝修改后的modeling
+```shell
+cp ${script_path}/modeling_baichuan_ascend.py ${model_path}
+```
 修改${model_path}/config.json中的kv对，改成
 
 ```

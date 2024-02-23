@@ -55,6 +55,7 @@ https://huggingface.co/baichuan-inc/Baichuan2-7B-Chat/tree/main
 #### 1. 将开源模型拷贝到模型工作目录，bin文件使用软链接即可,同时将modeling文件拷贝到模型，并修改开源的config.json,
 
 ```shell
+cd ${model_path}
 cp ${model_download_path}/*.py ${model_path}/
 cp ${model_download_path}/*.json ${model_path}/
 cp ${model_download_path}/*.model ${model_path}/
@@ -97,7 +98,7 @@ cp ${script_path}/modeling_baichuan_cut.py ${model_path}
     --1
   ......(其他)
 --script_path
-  cut_model_and_run_baichuan.sh
+  cut_model_and_run.sh
   cut_model_util.py
   main.py
   config.ini
@@ -119,7 +120,10 @@ bash cut_model_and_run.sh
 - 多卡运行时，会在切分阶段会自动修改，没有定制的情况下，可以不操作
 
 ##### 单卡
-
+拷贝修改后的modeling
+```shell
+cp ${script_path}/modeling_baichuan_ascend.py ${model_path}
+```
 修改${model_path}/config.json中的kv对，改成
 
 ```

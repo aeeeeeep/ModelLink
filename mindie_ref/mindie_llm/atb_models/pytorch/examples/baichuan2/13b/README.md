@@ -97,7 +97,7 @@ cp ${script_path}/modeling_baichuan_cut.py ${model_path}
     --1
   ......(其他)
 --script_path
-  cut_model_and_run_baichuan.sh
+  cut_model_and_run.sh
   cut_model_util.py
   main.py
   config.ini
@@ -119,7 +119,10 @@ bash cut_model_and_run.sh
 - 多卡运行时，会在切分阶段会自动修改，没有定制的情况下，可以不操作
 
 ##### 单卡
-
+拷贝修改后的modeling
+```shell
+cp ${script_path}/modeling_baichuan_ascend.py ${model_path}
+```
 修改${model_path}/config.json中的kv对，改成
 
 ```
