@@ -23,7 +23,7 @@ benchmark上均取得同尺寸最好的效果。本次发布包含有 7B、13B �
 | model_download_path | 开源权重放置目录                                                             | 
 | llm_path            | 加速库及模型库下载后放置目录                                                       |
 | model_path          | 工作时模型所在的目录，可以和model_download_path相同，但一般模型是公共的，为了避免影响其他用户，单独建一个模型工作目录 |
-| script_path         | 工作脚本所在路径，本文为${llm_path}/pytorch/examples/baichuan2/7b                |
+| script_path         | 工作脚本所在路径，本文为${llm_path}/pytorch/examples/baichuan2/13b               |
 | ceval_work_dir      | ceval数据集、及结果保存所在目录，不必和模型脚本在相同目录                                      |
 
 ## 获取源码及依赖
