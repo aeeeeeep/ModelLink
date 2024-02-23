@@ -15,7 +15,6 @@ max_seq_length=4096
 
 atb_options="ATB_LAUNCH_KERNEL_WITH_TILING=1 ATB_LAYER_INTERNAL_TENSOR_REUSE=1 PYTORCH_NPU_ALLOC_CONF='max_split_size_mb:2048' HCCL_OP_BASE_FFTS_MODE_ENABLE=1 HCCL_BUFFSIZE=110"
 atb_async_options="ATB_OPERATION_EXECUTE_ASYNC=1 TASK_QUEUE_ENABLE=1"
-lccl_options="BACKEND='lccl'"
 start_cmd="MAX_SEQ_LEN=$max_seq_length torchrun --nproc_per_node $world_size_ --master_port 20001 main.py --task $task_name --is_quant $is_quant"
 run_cmd="${atb_options} ${atb_async_options} ${start_cmd}"
 
