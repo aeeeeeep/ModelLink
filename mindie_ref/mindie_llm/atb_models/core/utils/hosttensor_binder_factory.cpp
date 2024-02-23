@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 #include "atb_speed/utils/hosttensor_binder_factory.h"
+
 #include "atb_speed/log.h"
 
 namespace atb_speed {
