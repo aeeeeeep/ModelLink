@@ -47,6 +47,7 @@ atb::Status ParallelLinearBase(const ParallelParam &param_, atb::Operation **ope
     } else {
         matmulParam = {param_.transposeA, param_.transposeB, false};
     }
+    CREATE_OPERATION(matmulParam, &matmulNode.operation);
     matmulNode.inTensorIds = {config.IN_INPUT, config.IN_WEIGHT};
     matmulNode.outTensorIds = {config.INTERMIDATE_MATMULOUT};
 
