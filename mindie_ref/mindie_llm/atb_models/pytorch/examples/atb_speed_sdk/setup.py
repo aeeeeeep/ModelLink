@@ -11,7 +11,7 @@ setup(name='atb_speed',
       license='MIT',
       keywords='atb_speed',
       packages=find_packages(),
-      install_requires=[],
+      install_requires=["pandas"],
       package_data={"atb_speed": ["**/*.json"]},
       include_package_data=True
       )
