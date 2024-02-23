@@ -182,7 +182,7 @@ atb::Status EncoderVlLayer(const EncoderVllayerParam &param, atb::Operation **op
 
     
     // (bsz,seq_len,hidden_size) - > (bsz,seq_len,hidden_size)
-    atb::infer::LinearParam linearParam = {false, false, true};
+    atb::infer::LinearParam linearParam = {false, true, true};
     CREATE_OPERATION(linearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_QKVMIXEDLINEARWEIGHT,INTERMIDATE_QKVBIAS_OUT};
     qkvLinearNode.outTensorIds = {INTERMIDATE_QKVMIXEDLINEAROUT};
@@ -313,7 +313,7 @@ atb::Status EncoderVlLayer(const EncoderVllayerParam &param, atb::Operation **op
     mlpTextParam.commDownParam.rank = param.rank;
     mlpTextParam.commDownParam.rankSize = param.rankSize;
     mlpTextParam.activationType = atb::infer::ActivationType::ACTIVATION_GELU;
-    mlpTextParam.transposeB = false;
+    mlpTextParam.transposeB = true;
     mlpTextParam.isBias = true;
     mlpTextParam.noGate = true;
     mlpTextParam.isPack = false;

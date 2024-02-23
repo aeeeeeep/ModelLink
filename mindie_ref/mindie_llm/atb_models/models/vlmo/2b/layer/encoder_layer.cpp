@@ -201,7 +201,7 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
 
     
     // (bsz,seq_len,hidden_size) - > (bsz,seq_len,hidden_size)
-    atb::infer::LinearParam linearParam = {false, false, true};
+    atb::infer::LinearParam linearParam = {false, true, true};
     CREATE_OPERATION(linearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_QKVMIXEDLINEARWEIGHT,INTERMIDATE_QKVBIAS_OUT};
     qkvLinearNode.outTensorIds = {INTERMIDATE_QKVMIXEDLINEAROUT};
@@ -287,7 +287,7 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
 
 
    
-    atb::infer::LinearParam layerParam={false, false, true};
+    atb::infer::LinearParam layerParam={false, true, true};
     CREATE_OPERATION(layerParam, &selfOutLinearNode.operation);
     selfOutLinearNode.inTensorIds = {
         INTERMIDATE_SELFOUT, IN_SELFOUTLINEARWEIGHT,IN_SELFOUTLINEBIASID};
@@ -335,7 +335,7 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
     mlpTextParam.commDownParam.rank = param.rank;
     mlpTextParam.commDownParam.rankSize = param.rankSize;
     mlpTextParam.activationType = atb::infer::ActivationType::ACTIVATION_GELU;
-    mlpTextParam.transposeB = false;
+    mlpTextParam.transposeB = true;
     mlpTextParam.isBias = true;
     mlpTextParam.noGate = true;
     mlpTextParam.isPack = false;
@@ -382,7 +382,7 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
     mlpIMAGEParam.commDownParam.rank = param.rank;
     mlpIMAGEParam.commDownParam.rankSize = param.rankSize;
     mlpIMAGEParam.activationType = atb::infer::ActivationType::ACTIVATION_GELU;
-    mlpIMAGEParam.transposeB = false;
+    mlpIMAGEParam.transposeB = true;
     mlpIMAGEParam.isBias = true;
     mlpIMAGEParam.noGate = true;
     mlpIMAGEParam.isPack = false;

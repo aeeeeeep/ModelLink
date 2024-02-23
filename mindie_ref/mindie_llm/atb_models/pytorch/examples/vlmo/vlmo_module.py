@@ -389,15 +389,15 @@ class VLMo(pl.LightningModule):
             "maxTextLen": config["max_text_len"],
             "vlLayerIndex": 0
         })
-        self.acl_fa_vl_operation = torch.classes.ModelTorch.ModelTorch("vlmo_flash_attention_model")
+        self.acl_fa_vl_operation = torch.classes.ModelTorch.ModelTorch("vlmo_FlashAttentionModel")
         # print("acl param",self.acl_param)
         self.acl_fa_vl_operation.set_param(self.acl_vl_param)
 
-        self.acl_fa_text_operation = torch.classes.ModelTorch.ModelTorch("vlmo_flash_attention_model")
+        self.acl_fa_text_operation = torch.classes.ModelTorch.ModelTorch("vlmo_FlashAttentionModel")
         # print("acl param",self.acl_param)
         self.acl_fa_text_operation.set_param(self.acl_others_param)
 
-        self.acl_fa_image_operation = torch.classes.ModelTorch.ModelTorch("vlmo_flash_attention_model")
+        self.acl_fa_image_operation = torch.classes.ModelTorch.ModelTorch("vlmo_FlashAttentionModel")
         # print("acl param",self.acl_param)
         self.acl_fa_image_operation.set_param(self.acl_others_param)
 

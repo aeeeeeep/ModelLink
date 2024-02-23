@@ -52,6 +52,9 @@ private:
     std::vector<int32_t> tokenOffset_;
     std::vector<int32_t> seqLen_;
 };
+
+REGISTER_MODEL(vlmo, FlashAttentionModel);
+
 } // namespace vlmo
 } // namespace atb_speed
 #endif
