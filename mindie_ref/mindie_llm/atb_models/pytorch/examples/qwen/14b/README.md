@@ -361,7 +361,6 @@ bash cut_model_and_run.sh ${task_name}
 
 **注意**
 1.docker环境与conda环境有所不同，docker环境中启动模型时需要修改环境变量"ATB_OPERATION_EXECUTE_ASYNC=0"、"TASK_QUEUE_ENABLE=0"，否则可能出现算子下发同步失败。
-2.310p暂时不支持lccl，因此在310p上启动模型时需删去环境变量"BACKEND='lccl'"
 
 **可以使用 MAX_SEQ_LEN 环境变量来设置model支持的最大长度以优化显存占用, 默认使用config里面的max_model_length**  
 如

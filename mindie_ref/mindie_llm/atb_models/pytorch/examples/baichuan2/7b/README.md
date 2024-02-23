@@ -219,11 +219,6 @@ Segmentation fault (core dumped)
 LD_PRELOAD=/root/miniconda3/envs/wqh39/bin/../lib/libgomp.so.1 MAX_SEQ_LEN=2048 python main.py --task ${task_name}  --is_quant ${is_quant}
 ```
 
-3. 多卡推理脚本中的环境变量设置
-
-- 默认配置是给300I DUO上使用的
-- 800I A2 /800T A2上需要添加lccl_options变量
-
 ## 量化推理
 
 # 量化工具使用
