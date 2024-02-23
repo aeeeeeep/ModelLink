@@ -204,7 +204,7 @@ def generate_req(req_list, model, tokenizer,
                 'max_generate_batch_size': [max_generate_batch_size],
             }
             df = pd.DataFrame(stat_data)
-            df.to_csv(benchmark_filepath, mode="a", index=False)
+            df.to_csv(benchmark_filepath, index=False)
             logger.info('-------------------performance dumped------------------------')
             df = df.drop('prefill_token_times', axis=1)
             df = df.drop('decode_token_times', axis=1)

@@ -190,6 +190,7 @@
     cd ${llm_path}/tests/modeltest
     export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
     export MAX_MEMORY_GB=29
+    export ATB_LLM_BENCHMARK_ENABLE=1
     bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama False ${llama2-7b权重路径} 8
     bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama False ${llama2-13b权重路径} 8
     bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${llama2-70b权重路径} 8
