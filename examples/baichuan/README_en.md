@@ -14,6 +14,8 @@
     - [Performance](#performance)
         - [Machine performance](#machine-performance)
         - [Accuracy of the loss](#accuracy-of-the-loss)
+  - [Inference](#Inference)
+  - [Evaluation](#Evaluation)
 
 - [Baichuan-13B](#contents)
   - [Training](#pre-training)
@@ -21,6 +23,7 @@
     - [Performance](#performance)
         - [Machine performance](#machine-performance)
         - [Accuracy of the loss](#accuracy-of-the-loss)
+  - [Lora](#Lora)
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
 
@@ -170,6 +173,62 @@ NPU vs Reference loss relative error.
 
 ![NPU-Relative-Error](../../sources/images/baichuan/baichuan7B-loss-relative-error.png)
 
+## Inference
+Config baichuan-7B inference script: tasks/inference/generate_baichuan_7b_ptd.sh
+```bash
+# modify the script according to your own ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+ 
+# modify script model path and tokenizer path
+CHECKPOINT="your model directory path"
+TOKENIZER_PATH="your tokenizer directory path"
+```
+Launch baichuan-7B inference script: tasks/inference/generate_baichuan_7b_ptd.sh
+```bash
+bash tasks/inference/generate_baichuan_7b_ptd.sh
+```
+Some inference samples are as follows:
+![Inference](../../sources/images/baichuan/baichuan_7B_inference.png)
+
+
+
+## Evaluation
+We use the boolq benchmark to evaluate our model. Benchmark [Download](https://huggingface.co/datasets/boolq).
+
+```shell
+# config origin weight and vocab file path
+CHECKPOINT=<origin-ckpt-path>
+TOKENIZER_PATH=<tokenizer-path>
+# config tasks and dataset path
+DATA_PATH="./boolq/"
+TASK="boolq"
+```
+
+
+```shell
+bash ./tasks/evaluation/evaluate_baichuan_7B_ptd.sh
+```
+
+<table>
+  <thead>
+    <tr>
+      <th>Task</th>
+      <th>Subset</th>
+      <th>Model</th>
+      <th>NPU</th>
+      <th>OpenSource</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="https://huggingface.co/datasets/boolq">Boolq</a></td>
+      <td>test</td>
+      <th>Baichuan 7B</th>
+      <td>0.69</td>
+      <td><a href="https://hub.opencompass.org.cn/dataset-detail/BoolQ">0.67</a></td>
+    </tr>
+  </tbody>
+</table>
 
 
 # Baichuan-13B
@@ -320,6 +379,53 @@ NPU vs Reference loss relative error.
 
 ![NPU-Relative-Error](../../sources/images/baichuan/baichuan13B-loss-relative-error.png)
 
+## Lora
+We support AscendSpeed Lora fine-tuning with Baichuan-13B.
+When Fine-tuning using `instruction fine-tuning data set`, the production process is as follows, 
+pay attention to add ` --handler-name GeneralInstructionHandler `
+
+```python
+mkdir alpaca_preprocessed
+python tools/preprocess_data.py \
+    --input ./dataset_baichuan13B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+    --output-prefix ./alpaca_preprocessed/alpaca \
+    --tokenizer-type PretrainedFromHF \
+    --tokenizer-name-or-path ./baichuan-13B-hf \
+    --tokenizer-not-use-fast \
+    --handler-name GeneralInstructionHandler \
+    --append-eod
+```
+
+Configure Baichuan-13B lora script `examples/baichuan/tune_baichuan_ptd_13B.sh`
+
+```shell
+# configure the path to save the lora weights and the dataset path, initial megatron weight and tokenizer path 
+CKPT_SAVE_DIR="./ckpt_lora"
+DATA_PATH="./alpaca_preprocessed/alpaca"
+CHECKPOINT="./baichuan-13B-mt"
+TOKENIZER_PATH="./baichuan-13B-hf"
+```
+Launch Baichuan-13B fine-tuned with lora script: examples/baichuan/tune_baichuan_ptd_13B.sh
+Baichuan-13B:
+```shell
+bash ./examples/baichuan/tune_baichuan_ptd_13B.sh
+```
+Then use the fine-tuned weights for inference:
+```shell
+# configure the initial megatron weight path, lora weight path and tokenizer path 
+CHECKPOINT="./baichuan-13B-mt"
+LORA_CHECKPOINT="./ckpt_lora"
+TOKENIZER_PATH="./baichuan-13B-hf"
+```
+
+Baichuan-13B:
+```shell
+bash ./tasks/inference/generate_baichuan_13b_lora_ptd.sh
+```
+
+FineTune with lora and operate inference
+![13B-lora-inference.png](../../sources/images/baichuan/baichuan_13B_inference_lora.png)
+
 ## Inference
 Config baichuan-13B inference script: tasks/inference/generate_baichuan_13b_ptd.sh
 ```bash
@@ -340,15 +446,7 @@ Some inference samples are as follows:
 
 
 ## Evaluation
-We use the boolq benchmark to evaluate our model. Benchmark [Download](https://storage.googleapis.com/boolq/dev.jsonl).
-1. Prepare dataset
-```shell
- mkdir boolq
- cd boolq
- wget https://storage.googleapis.com/boolq/dev.jsonl
- cd ..
-```
-2. Config Baichuan-13B evaluation script: tasks/evaluation/eval_baichuan_13B.sh
+We use the boolq benchmark to evaluate our model. Benchmark [Download](https://huggingface.co/datasets/boolq).
 
 ```shell
 # config origin weight and vocab file path
@@ -358,10 +456,10 @@ TOKENIZER_PATH=<tokenizer-path>
 DATA_PATH="./boolq/"
 TASK="boolq"
 ```
-3. Launch Baichuan-13B evaluation script: tasks/evaluation/eval_baichuan_13B.sh
+
 
 ```shell
-bash ./tasks/evaluation/eval_baichuan_13B.sh
+bash ./tasks/evaluation/evaluate_baichuan_13B_ptd.sh
 ```
 
 <table>

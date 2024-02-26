@@ -50,7 +50,6 @@ GPT_ARGS="
     --lr-decay-style cosine \
     --attention-dropout 0.0 \
     --position-embedding-type alibi \
-    --alibi-repeat \
     --hidden-dropout 0.0 \
     --normalization RMSNorm \
     --use-fused-rmsnorm \
@@ -77,7 +76,7 @@ OUTPUT_ARGS="
     --log-interval 1 \
     --save-interval 1000 \
     --eval-interval 1000 \
-    --eval-iters 1 \
+    --eval-iters 1 
 "
 
 torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \

@@ -13,7 +13,9 @@
     - [Performance](#performance)
         - [Machine performance](#machine-performance)
         - [Accuracy of the loss](#accuracy-of-the-loss)
-
+  - [Inference](#Inference)
+  - [Evaluation](#Evaluation)
+  
 - [Baichuan2-13B](#contents)
   - [Training](#pre-training)
     - [Script](#script)
@@ -177,6 +179,61 @@ NPU vs Reference loss relative error.
 ![NPU-Relative-Error](../../sources/images/baichuan2/baichuan2-7B-loss-relative-error.png)
 
 
+## Inference
+Config baichuan2-7B inference script: tasks/inference/generate_baichuan2_7b_ptd.sh
+```bash
+# modify the script according to your own ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+ 
+# modify script model path and tokenizer path
+CHECKPOINT="your model directory path"
+TOKENIZER_PATH="your tokenizer directory path"
+```
+Launch baichuan2-7B inference script: tasks/inference/generate_baichuan2_7b_ptd.sh
+```bash
+bash tasks/inference/generate_baichuan2_7b_ptd.sh
+```
+Some inference samples are as follows:
+![Inference](../../sources/images/baichuan2/baichuan2_7B_inference.png)
+
+
+## Evaluation
+We use the boolq benchmark to evaluate our model. Benchmark [Download](https://huggingface.co/datasets/boolq).
+
+```shell
+# config origin weight and vocab file path
+CHECKPOINT=<origin-ckpt-path>
+TOKENIZER_PATH=<tokenizer-path>
+# config tasks and dataset path
+DATA_PATH="./boolq/"
+TASK="boolq"
+```
+
+```shell
+bash ./tasks/evaluation/evaluate_baichuan2_13B_ptd.sh
+```
+
+<table>
+  <thead>
+    <tr>
+      <th>Task</th>
+      <th>Subset</th>
+      <th>Model</th>
+      <th>NPU</th>
+      <th>OpenSource</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="https://huggingface.co/datasets/boolq">Boolq</a></td>
+      <td>test</td>
+      <th>Baichuan2-7B</th>
+      <td>0.7</td>
+      <td><a href="https://hub.opencompass.org.cn/dataset-detail/BoolQ">0.632</a></td>
+    </tr>
+  </tbody>
+</table>
+
 # Baichuan2-13B
 
 ## Training
@@ -309,7 +366,7 @@ The performance of the Baichuan2-13B in **Ascend NPU** and **Reference**:
 
 | Device |     Model     | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | 
 |:----:|:-------------------------:|:----:|:------------------:|:--------------------:|:---------------:|
-| NPUs | Baichuan2-13B |1000 |1.72| 916    | 4.647 |
+| NPUs | Baichuan2-13B |1000 |1.72| 880    | 4.647 |
 |  Reference  | Baichuan2-13B |-|-| 872|- |
 
 
@@ -344,15 +401,7 @@ Some inference samples are as follows:
 
 
 ## Evaluation
-We use the boolq benchmark to evaluate our model. Benchmark [Download](https://storage.googleapis.com/boolq/dev.jsonl).
-1. Prepare dataset
-```shell
- mkdir boolq
- cd boolq
- wget https://storage.googleapis.com/boolq/dev.jsonl
- cd ..
-```
-2. Config Baichuan2-13B evaluation script: tasks/evaluation/eval_baichuan2_13B.sh
+We use the boolq benchmark to evaluate our model. Benchmark [Download](https://huggingface.co/datasets/boolq).
 
 ```shell
 # config origin weight and vocab file path
@@ -362,10 +411,9 @@ TOKENIZER_PATH=<tokenizer-path>
 DATA_PATH="./boolq/"
 TASK="boolq"
 ```
-3. Launch Baichuan2-13B evaluation script: tasks/evaluation/eval_baichuan2_13B.sh
 
 ```shell
-bash ./tasks/evaluation/eval_baichuan2_13B.sh
+bash ./tasks/evaluation/evaluate_baichuan2_13B_ptd.sh
 ```
 
 <table>
