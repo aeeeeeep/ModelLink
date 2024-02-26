@@ -60,6 +60,7 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
         allReduceParam.rank = param.rank;
         allReduceParam.rankSize = param.worldSize;
         allReduceParam.backend = param.backend;
+        allReduceParam.rankTableFile = param.rankTableFile;
         CREATE_OPERATION(allReduceParam, &allReduceNode.operation);
         allReduceNode.inTensorIds = {config.INTERMIDATE_LINEAR_OUT};
         allReduceNode.outTensorIds = {LinearParallelTensorIdx::OUT_LINEAR_PARALLEL};
@@ -69,6 +70,7 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
         allGatherParam.rank = param.rank;
         allGatherParam.rankSize = param.worldSize;
         allGatherParam.backend = param.backend;
+        allGatherParam.rankTableFile = param.rankTableFile;
         CREATE_OPERATION(allGatherParam, &allGatherNode.operation);
         allGatherNode.inTensorIds = {config.INTERMIDATE_LINEAR_OUT};
         allGatherNode.outTensorIds = {config.INTERMIDATE_ALL_GATHER_OUT};

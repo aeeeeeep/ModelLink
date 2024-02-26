@@ -49,6 +49,7 @@ public:
         int rank = 0;
         int worldSize = 1;
         std::string backend = "hccl";
+        std::string rankTableFile = "";
         std::vector<int> tokenOffset = {};
         std::vector<int> seqLen = {};
         void FromString(const std::string &param);
