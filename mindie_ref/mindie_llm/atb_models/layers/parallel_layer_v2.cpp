@@ -79,7 +79,12 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
 
     if (!param_.isQuant) {
         atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
-        atb::infer::LinearParam matmulParam = {param_.transposeA, param_.transposeB, false};
+        atb::infer::LinearParam matmulParam;
+        if (param_.isBF16) {
+            matmulParam = {param_.transposeA, param_.transposeB, false, atb::infer::LinearType::LINEAR_BF16BF16_FP32_BF16};
+        } else {
+            matmulParam = {param_.transposeA, param_.transposeB, false};
+        }
         CREATE_OPERATION(matmulParam, &matmulNode.operation);
         matmulNode.inTensorIds = {IN_INPUT, IN_WEIGHT};
         matmulNode.outTensorIds = {(param_.commParam.rankSize > 1 || param_.isBias) ? inteId : OUT_LINEAR};

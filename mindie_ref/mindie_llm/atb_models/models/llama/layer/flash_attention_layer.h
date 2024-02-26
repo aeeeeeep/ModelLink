@@ -37,6 +37,7 @@ struct FlashAttentionLayerParam {
     bool quantModel = false;
     bool sparseModel = false;
     bool isEncoder = false;
+    bool isBF16 = false;
     // 量化参数
     float qkvInputScale = 1;
     int qkvInputOffset = 0;
@@ -64,6 +65,7 @@ static atb::Operation *CreateFlashAttentionLayer(const nlohmann::json &paramJson
     param.quantModel = paramJson["quantModel"].get<bool>();
     param.sparseModel = paramJson["sparseModel"].get<bool>();
     param.isEncoder = paramJson["isEncoder"].get<bool>();
+    param.isBF16 = paramJson["isBF16"].get<bool>();
     // 量化参数
     param.qkvInputScale = paramJson["qkvInputScale"].get<float>();
     param.qkvInputOffset = paramJson["qkvInputOffset"].get<int>();
@@ -76,7 +78,8 @@ static atb::Operation *CreateFlashAttentionLayer(const nlohmann::json &paramJson
 
     ATB_LOG(INFO) << "LLaMA FlashAttentionLayer headNum:" << param.headNum << ", kvHeadNum:" << param.kvHeadNum
                   << ", rmsNormEps:" << param.rmsNormEps << ", dk:" << param.dk << ", model:" << param.model
-                  << ", rank:" << param.rank << ", rankSize:" << param.rankSize << ", isTriuMask: " << param.isTriuMask;
+                  << ", rank:" << param.rank << ", rankSize:" << param.rankSize << ", isTriuMask: " << param.isTriuMask
+                  << ", isBF16:" << param.isBF16;
     atb::Operation *op;
     FlashAttentionLayer(param, &op);
     return op;

@@ -82,7 +82,7 @@ atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operati
     auto &matmulUpNode = opGraph.nodes.at(nodeId++);
 
     atb_speed::common::ParallelParamV2 linearUpParam = {param.isBias, false, param.transposeB, param.isQuant,
-                                                        param.isSparse};
+                                                        param.isSparse, false, param.isBF16};
     linearUpParam.quantParam = param.quantUpParam;
     atb_speed::common::RowParallelLinearV2(linearUpParam, &matmulUpNode.operation);
     matmulUpNode.inTensorIds = {IN_HIDDENSTATES_ID, IN_WEIGHT_UP_ID, IN_BIAS_UP_ID,     IN_DEQSCALE_UP,
@@ -100,7 +100,7 @@ atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operati
         } else {
             auto &matmulGateNode = opGraph.nodes.at(nodeId++);
             atb_speed::common::ParallelParamV2 linearGateParam = {param.isBias, false, param.transposeB, param.isQuant,
-                                                                  param.isSparse};
+                                                                  param.isSparse, false, param.isBF16};
             linearGateParam.quantParam = param.quantGateParam;
             atb_speed::common::RowParallelLinearV2(linearGateParam, &matmulGateNode.operation);
             matmulGateNode.inTensorIds = {IN_HIDDENSTATES_ID, IN_WEIGHT_GATE_ID, IN_BIAS_GATE_ID,     IN_DEQSCALE_GATE,
@@ -131,7 +131,7 @@ atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operati
 
     auto &matmulDownNode = opGraph.nodes.at(nodeId++);
     atb_speed::common::ParallelParamV2 linearDownParam = {param.isBias, false, param.transposeB, param.isQuant,
-                                                          param.isSparse};
+                                                          param.isSparse, false, param.isBF16};
     linearDownParam.commParam = param.commDownParam;
     linearDownParam.quantParam = param.quantDownParam;
     linearDownParam.quantParam.isQuantOp = true;

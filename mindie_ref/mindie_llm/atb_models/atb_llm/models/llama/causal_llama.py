@@ -38,6 +38,7 @@ class LlamaForCausalLM(CausalLM):
             "isPack": True,
             "isEmbeddingParallel": False,
             "isLmHeadParallel": True,
+            "supportSwiGLU": False if self.soc_info.need_nz else True,
             "quantType": 2 if self.quantize == "smooth_quant" else 0,
             "rmsNormEps": config.rms_norm_eps,
             "numAttentionHeadsPerRank": self.num_attention_heads,

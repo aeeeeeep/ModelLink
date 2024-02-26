@@ -87,6 +87,9 @@ void FlashAttentionModel::Param::FromString(const std::string &param)
     if (paramJson.contains("backend")) {
         backend = paramJson["backend"];
     }
+    if (paramJson.contains("isTriuMask")) {
+        isTriuMask = paramJson["isTriuMask"].get<int>();
+    }
 }
 
 FlashAttentionModel::FlashAttentionModel(const std::string &param) : Model("FlashAttentionModel", param)
@@ -168,6 +171,7 @@ int64_t FlashAttentionModel::BuildGraph()
         opParam.rankSize = param_.rankSize;
         opParam.backend = param_.backend;
         opParam.coderType = param_.coderType;
+        opParam.isTriuMask = param_.isTriuMask;
         atb_speed::qwen_14b::FlashAttentionRopeLayer(opParam, &op);
         layerNode.operation.reset(op);
         layerNode.inTensors.resize(layerNode.operation->GetInputNum());

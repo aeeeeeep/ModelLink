@@ -43,6 +43,8 @@ def is_nd():
 
 
 IS_ND = is_nd()
+print(f"{IS_ND=}")
+MASK_INC_DIM1 = 1 if IS_ND else 16  # 增量attention mask shape的第二维
 
 
 def get_rank_and_world_size():
@@ -64,7 +66,7 @@ logger = logging.get_logger(__name__)
 
 # Copied from transformers.models.bart.modeling_bart._make_causal_mask
 def _make_causal_mask(input_ids_shape: torch.Size, dtype: torch.dtype, device: torch.device,
-        past_key_values_length: int = 0):
+                      past_key_values_length: int = 0):
     """
     Make causal mask used for bi-directional self-attention.
     """
@@ -145,7 +147,7 @@ class RotaryEmbedding(torch.nn.Module):
         elif self.cos_cached.device != x.device:
             self.cos_cached = self.cos_cached.to(x.device)
             self.sin_cached = self.sin_cached.to(x.device)
-        return (self.cos_cached[:, :, :seq_len, ...], self.sin_cached[:, :, :seq_len, ...],)
+        return (self.cos_cached[:, :, :seq_len, ...], self.sin_cached[:, :, :seq_len, ...])
 
 
 class AscendRotaryEmbedding(RotaryEmbedding):
@@ -173,16 +175,6 @@ def rotate_half(x):
     x2 = x[..., x.shape[-1] // 2:]
     return torch.cat((-x2, x1), dim=-1)
 
-
-# def apply_rotary_pos_emb(q, k, cos, sin, position_ids):
-#     # The first two dimensions of cos and sin are always 1, so we can `squeeze` them.
-#     cos = cos.squeeze(1).squeeze(0)  # [seq_len, dim]
-#     sin = sin.squeeze(1).squeeze(0)  # [seq_len, dim]
-#     cos = cos[position_ids].unsqueeze(1)  # [bs, 1, seq_len, dim]
-#     sin = sin[position_ids].unsqueeze(1)  # [bs, 1, seq_len, dim]
-#     q_embed = (q * cos) + (rotate_half(q) * sin)
-#     k_embed = (k * cos) + (rotate_half(k) * sin)
-#     return q_embed, k_embed
 
 def apply_rotary_pos_emb(q, k, cos_, sin_, position_ids):
     cos = cos_.squeeze(1).squeeze(0)  # [seq_len, dim]
@@ -230,8 +222,8 @@ class Attention(nn.Module):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
 
     def forward(self, hidden_states: torch.Tensor, attention_mask: Optional[torch.Tensor] = None,
-            position_ids: Optional[torch.LongTensor] = None, past_key_value: Optional[Tuple[torch.Tensor]] = None,
-            output_attentions: bool = False, use_cache: bool = False, ) -> Tuple[
+                position_ids: Optional[torch.LongTensor] = None, past_key_value: Optional[Tuple[torch.Tensor]] = None,
+                output_attentions: bool = False, use_cache: bool = False, ) -> Tuple[
         torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
         bsz, q_len, _ = hidden_states.size()
 
@@ -290,13 +282,13 @@ class DecoderLayer(nn.Module):
         self.self_attn = Attention(config=config)
         self.world_size = WORLD_SIZE
         self.mlp = MLP(hidden_size=self.hidden_size, intermediate_size=config.intermediate_size // self.world_size,
-            hidden_act=config.hidden_act, )
+                       hidden_act=config.hidden_act, )
         self.input_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
     def forward(self, hidden_states: torch.Tensor, attention_mask: Optional[torch.Tensor] = None,
-            position_ids: Optional[torch.LongTensor] = None, past_key_value: Optional[Tuple[torch.Tensor]] = None,
-            output_attentions: Optional[bool] = False, use_cache: Optional[bool] = False, ) -> Tuple[
+                position_ids: Optional[torch.LongTensor] = None, past_key_value: Optional[Tuple[torch.Tensor]] = None,
+                output_attentions: Optional[bool] = False, use_cache: Optional[bool] = False, ) -> Tuple[
         torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]]:
         """
         Args:
@@ -318,8 +310,11 @@ class DecoderLayer(nn.Module):
 
         # Self Attention
         hidden_states, self_attn_weights, present_key_value = self.self_attn(hidden_states=hidden_states,
-            attention_mask=attention_mask, position_ids=position_ids, past_key_value=past_key_value,
-            output_attentions=output_attentions, use_cache=use_cache, )
+                                                                             attention_mask=attention_mask,
+                                                                             position_ids=position_ids,
+                                                                             past_key_value=past_key_value,
+                                                                             output_attentions=output_attentions,
+                                                                             use_cache=use_cache, )
         hidden_states = residual + hidden_states
 
         # Fully Connected
@@ -396,9 +391,9 @@ class KVAttentionManager:
         torch.npu.empty_cache()
 
         self.attention_mask_max = torch.zeros((self.batch_size, self.max_seq_len, self.max_seq_len), device="npu",
-            dtype=torch.half)
-        self.attention_mask_max_inc = torch.zeros((self.batch_size, self.max_seq_len, self.max_seq_len), device="npu",
-            dtype=torch.half)
+                                              dtype=torch.half)
+        self.attention_mask_max_inc = torch.zeros((self.batch_size, MASK_INC_DIM1, self.max_seq_len), device="npu",
+                                                  dtype=torch.half)
 
     def init_attention_mask(self):
         if IS_ND:
@@ -406,8 +401,8 @@ class KVAttentionManager:
             self.attention_mask_max_inc.zero_()
         else:
             self.attention_mask_max.zero_()
-            self.attention_mask_max_inc = torch.zeros((self.batch_size, self.max_seq_len, self.max_seq_len),
-                device="npu", dtype=torch.half)
+            self.attention_mask_max_inc = torch.zeros((self.batch_size, MASK_INC_DIM1, self.max_seq_len),
+                                                      device="npu", dtype=torch.half)
 
     def init_seq_len_and_token_offset(self, seq_len):
         self.token_offset = seq_len
@@ -433,15 +428,20 @@ class KVAttentionManager:
     def token_offset_list(self):
         return [self.token_offset] * self.batch_size
 
-    def trans_data(self, tensor):
+    def trans_data(self, tensor, trans_type="full"):
         """
         :param tensor:
+        :param trans_type:full or inc
         :return:
         """
-        return torch_npu.npu_format_cast(
-            tensor.view(self.batch_size, self.max_seq_len, self.max_seq_len // self.nz_dim, self.nz_dim).transpose(1,
-                                                                                                                   2).contiguous(),
-            29)
+        if trans_type == "full":
+            return torch_npu.npu_format_cast(tensor.view(
+                self.batch_size, self.max_seq_len,
+                self.max_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
+        else:
+            return torch_npu.npu_format_cast(tensor.view(
+                self.batch_size, self.nz_dim,
+                self.max_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
 
     def get_attention_mask(self, attention_mask=None):
         if not self.is_full:
@@ -450,11 +450,12 @@ class KVAttentionManager:
             for i in range(self.batch_size):
                 self.attention_mask_max[i][:self.token_offset, :self.token_offset] = attention_mask[i]
                 ori_len = self.ori_len_list[i].item()
-                #左padding
-                self.attention_mask_max_inc[i][:, :self.token_offset - ori_len] = self.min_cache[:, :self.token_offset - ori_len]
+                # 左padding
+                self.attention_mask_max_inc[i][:, :self.token_offset - ori_len] = self.min_cache[:,
+                                                                                  :self.token_offset - ori_len]
             if not IS_ND:
-                self.attention_mask_max_inc = self.trans_data(self.attention_mask_max_inc)
-                return self.trans_data(self.attention_mask_max)
+                self.attention_mask_max_inc = self.trans_data(self.attention_mask_max_inc, "inc")
+                return self.trans_data(self.attention_mask_max, "full")
             else:
                 return self.attention_mask_max
 
@@ -488,17 +489,22 @@ class Model(PreTrainedModel):
         self.place_holder = torch.ones(1).npu()
 
     def init_ascend_operations(self, config: BaiChuanConfig):
-        self.acl_param = json.dumps(
-            {"rmsNormEps": config.rms_norm_eps, "headNum": config.num_attention_heads // self.world_size,
-                "dk": config.hidden_size // config.num_attention_heads, "layerNum": config.num_hidden_layers,
-                "rank": self.rank, "rankSize": self.world_size, "backend": os.getenv("BACKEND", "hccl")})
+        self.acl_param = json.dumps({
+            "rmsNormEps": config.rms_norm_eps,
+            "headNum": config.num_attention_heads // self.world_size,
+            "dk": config.hidden_size // config.num_attention_heads,
+            "layerNum": config.num_hidden_layers,
+            "rank": self.rank,
+            "rankSize": self.world_size,
+            "backend": "lccl" if IS_ND else "hccl"
+        })
         self.max_position_embeddings = int(os.getenv("MAX_SEQ_LEN", config.max_position_embeddings))
         self.acl_fa_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_FlashAttentionRopeModel")
 
         self.acl_fa_operation.set_param(self.acl_param)
 
         self.ascend_rotary_embedding = AscendRotaryEmbedding(config.hidden_size // config.num_attention_heads,
-            max_position_embeddings=self.max_position_embeddings)
+                                                             max_position_embeddings=self.max_position_embeddings)
 
         self.num_layers = config.num_hidden_layers
         self.hidden_size = config.hidden_size
@@ -506,12 +512,12 @@ class Model(PreTrainedModel):
         self.lm_head_weight = None
         self.batch_size = 0
         self.kv_attention_manager = None
-        self.min_cache = torch.full((self.max_position_embeddings, self.max_position_embeddings),
+        self.min_cache = torch.full(
+            (MASK_INC_DIM1, self.max_position_embeddings),
             torch.finfo(torch.half).min, dtype=torch.half).npu()
 
     def init_ascend_weight(self):
         weights = [self.state_dict()["embed_tokens.weight"]]
-        print(weights[0].shape)
         for i in range(self.num_layers):
             weights_t = []
             weights_layer = self.layers[i].state_dict()
@@ -541,7 +547,7 @@ class Model(PreTrainedModel):
         inputs = [input_ids, cos_embed, sin_embed, self.kv_attention_manager.get_attention_mask(attention_mask),
                   self.kv_attention_manager.k_cache_input, self.kv_attention_manager.v_cache_input,
                   self.kv_attention_manager.token_offset_tensor, self.kv_attention_manager.seq_len_tensor,
-                  self.place_holder,seqlen_max,] + self.layer_id_list
+                  self.place_holder, seqlen_max] + self.layer_id_list
 
         return inputs
 
@@ -566,7 +572,7 @@ class Model(PreTrainedModel):
         combined_attention_mask = None
         if input_shape[-1] > 1:
             combined_attention_mask = _make_causal_mask(input_shape, inputs_embeds.dtype, device=inputs_embeds.device,
-                past_key_values_length=past_key_values_length, )
+                                                        past_key_values_length=past_key_values_length, )
 
         if attention_mask is not None:
             # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
@@ -578,10 +584,11 @@ class Model(PreTrainedModel):
         return combined_attention_mask
 
     def forward(self, input_ids: torch.LongTensor = None, attention_mask: Optional[torch.Tensor] = None,
-            position_ids: Optional[torch.LongTensor] = None, past_key_values: Optional[List[torch.FloatTensor]] = None,
-            inputs_embeds: Optional[torch.FloatTensor] = None, use_cache: Optional[bool] = None,
-            output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None,
-            return_dict: Optional[bool] = None, ) -> Union[Tuple, BaseModelOutputWithPast]:
+                position_ids: Optional[torch.LongTensor] = None,
+                past_key_values: Optional[List[torch.FloatTensor]] = None,
+                inputs_embeds: Optional[torch.FloatTensor] = None, use_cache: Optional[bool] = None,
+                output_attentions: Optional[bool] = None, output_hidden_states: Optional[bool] = None,
+                return_dict: Optional[bool] = None, ) -> Union[Tuple, BaseModelOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states)
@@ -624,7 +631,7 @@ class Model(PreTrainedModel):
         if position_ids is None:
             device = input_ids.device if input_ids is not None else inputs_embeds.device
             position_ids = torch.arange(past_key_values_length, seq_length + past_key_values_length, dtype=torch.long,
-                device=device)
+                                        device=device)
             position_ids = position_ids.unsqueeze(0).view(-1, seq_length)
         else:
             position_ids = position_ids.view(-1, seq_length).long()
@@ -634,11 +641,11 @@ class Model(PreTrainedModel):
         # embed positions
         if attention_mask is None:
             attention_mask = torch.ones((batch_size, seq_length_with_past), dtype=torch.bool,
-                device=inputs_embeds.device)
+                                        device=inputs_embeds.device)
         if not past_key_values:  # 使用fa时，在计算首token时会同时计算增量额attention_mask
             self.kv_attention_manager.ori_len_list = attention_mask.sum(dim=-1)
             attention_mask = self._prepare_decoder_attention_mask(attention_mask, (batch_size, seq_length),
-                inputs_embeds, past_key_values_length)
+                                                                  inputs_embeds, past_key_values_length)
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
@@ -666,7 +673,7 @@ class Model(PreTrainedModel):
         if not return_dict:
             return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
         return BaseModelOutputWithPast(last_hidden_state=hidden_states, past_key_values=next_cache,
-            hidden_states=all_hidden_states, attentions=all_self_attns, )
+                                       hidden_states=all_hidden_states, attentions=all_self_attns, )
 
 
 class BaiChuanForCausalLM(PreTrainedModel):
@@ -704,10 +711,11 @@ class BaiChuanForCausalLM(PreTrainedModel):
 
     @Timer.timing
     def forward(self, input_ids: torch.LongTensor = None, attention_mask: Optional[torch.Tensor] = None,
-            position_ids: Optional[torch.LongTensor] = None, past_key_values: Optional[List[torch.FloatTensor]] = None,
-            inputs_embeds: Optional[torch.FloatTensor] = None, labels: Optional[torch.LongTensor] = None,
-            use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None, ) -> Union[
+                position_ids: Optional[torch.LongTensor] = None,
+                past_key_values: Optional[List[torch.FloatTensor]] = None,
+                inputs_embeds: Optional[torch.FloatTensor] = None, labels: Optional[torch.LongTensor] = None,
+                use_cache: Optional[bool] = None, output_attentions: Optional[bool] = None,
+                output_hidden_states: Optional[bool] = None, return_dict: Optional[bool] = None, ) -> Union[
         Tuple, CausalLMOutputWithPast]:
         r"""
         Args:
@@ -747,8 +755,9 @@ class BaiChuanForCausalLM(PreTrainedModel):
 
         # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
         outputs = self.model(input_ids=input_ids, attention_mask=attention_mask, position_ids=position_ids,
-            past_key_values=past_key_values, inputs_embeds=inputs_embeds, use_cache=use_cache,
-            output_attentions=output_attentions, output_hidden_states=output_hidden_states, return_dict=return_dict, )
+                             past_key_values=past_key_values, inputs_embeds=inputs_embeds, use_cache=use_cache,
+                             output_attentions=output_attentions, output_hidden_states=output_hidden_states,
+                             return_dict=return_dict, )
 
         logits = outputs[0]
 
@@ -770,10 +779,10 @@ class BaiChuanForCausalLM(PreTrainedModel):
             return (loss,) + output if loss is not None else output
 
         return CausalLMOutputWithPast(loss=loss, logits=logits, past_key_values=outputs.past_key_values,
-            hidden_states=outputs.hidden_states, attentions=outputs.attentions, )
+                                      hidden_states=outputs.hidden_states, attentions=outputs.attentions, )
 
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None, attention_mask=None, inputs_embeds=None,
-            **kwargs):
+                                      **kwargs):
         if past_key_values:
             input_ids = input_ids[:, -1:]
 
@@ -793,7 +802,7 @@ class BaiChuanForCausalLM(PreTrainedModel):
 
         model_inputs.update(
             {"position_ids": position_ids, "past_key_values": past_key_values, "use_cache": kwargs.get("use_cache"),
-                "attention_mask": attention_mask, })
+             "attention_mask": attention_mask, })
         return model_inputs
 
     @staticmethod

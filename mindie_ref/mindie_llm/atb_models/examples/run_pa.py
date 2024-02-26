@@ -82,9 +82,10 @@ class PARunner:
         )
 
     def warm_up(self):
-
+        if self.max_prefill_tokens == -1:
+            self.max_prefill_tokens = self.max_batch_size * self.max_input_length
         input_ids = torch.ones(self.max_prefill_tokens, dtype=torch.int64).to(self.device)
-        position_ids = torch.arange(self.max_prefill_tokens, dtype=torch.int32).to(self.device)
+        position_ids = torch.arange(self.max_input_length, dtype=torch.int32).repeat(self.max_batch_size).to(self.device)
         cu_seqlen_prefill = torch.tensor([1])
         try:
             block_num = math.ceil(self.max_prefill_tokens / self.block_size)
@@ -136,7 +137,7 @@ class PARunner:
             else:
                 req_list = [request_from_text(input_text, self.tokenizer, max_output_length, self.block_size, req_idx=i) \
                             for i, input_text in enumerate(input_texts)]
-            
+           
         print_log(self.rank, logger.debug, f'req_list[0].input_ids: {req_list[0].input_ids}')
 
         if not self.cache_manager:
@@ -146,8 +147,7 @@ class PARunner:
 
             max_memory = ENV.memory_fraction * self.max_memory \
                 if not ENV.max_memory_gb else int(ENV.max_memory_gb) * (1 << 30)
-            free_memory = max_memory - (ENV.reserved_memory_gb * (1 << 30) +
-                self.warm_up_memory if self.warm_up_memory != 0 else self.init_memory)
+            free_memory = max_memory - ENV.reserved_memory_gb * (1 << 30) - (self.warm_up_memory if self.warm_up_memory != 0 else self.init_memory)
             print_log(self.rank, logger.info,
                       f"infer max_memory(GB): {max_memory / (1024 ** 3): .2f}, "
                       f"warm_up_memory(GB): {self.warm_up_memory / (1024 ** 3): .2f}, "
@@ -218,7 +218,7 @@ def parse_arguments():
     parser.add_argument('--max_position_embeddings', type=int, default=None)
     parser.add_argument('--max_input_length', type=int, default=1024)
     parser.add_argument('--max_output_length', type=int, default=20)
-    parser.add_argument('--max_prefill_tokens', type=int, default=4096)
+    parser.add_argument('--max_prefill_tokens', type=int, default=-1)
     parser.add_argument("--max_batch_size", type=int, default=1)
     parser.add_argument("--block_size", type=int, default=128)
     parser.add_argument("--quantize", type=str, default=None)
@@ -268,6 +268,6 @@ if __name__ == '__main__':
             print_log(rank, logger.info, f'Question[{i}]: {inputs[i]}')
         print_log(rank, logger.info, f'Answer[{i}]: {generate_text}')
         print_log(rank, logger.info, f'Generate[{i}] token num: {token_nums[i]}')
-        
+       
     if world_size > 1:
         torch.distributed.destroy_process_group()
