@@ -37,31 +37,6 @@ struct FlashAttentionLayerParam {
 
 atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Operation **operation);
 
-static atb::Operation *CreateFlashAttentionLayer(const nlohmann::json &paramJson)
-{
-    FlashAttentionLayerParam param;
-    param.layerNormEps = paramJson["layerNormEps"].get<float>();
-    param.headNum = paramJson["headNum"].get<int>();
-    param.dk = paramJson["dk"].get<int>();
-    param.model = paramJson["model"].get<std::string>();
-    param.isEncoder = paramJson["isEncoder"].get<bool>();
-    if (paramJson.contains("qScale")) {
-        param.qScale = paramJson["qScale"].get<float>();
-    }
-    if (paramJson.contains("rank")) {
-        param.rank = paramJson["rank"].get<int>();
-    }
-    if (paramJson.contains("rankSize")) {
-        param.rankSize = paramJson["rankSize"].get<int>();
-    }
-
-    ATB_LOG(INFO) << __func__ << " layerNormEps:" << param.layerNormEps << ", headNum:" << param.headNum << ", dk:" <<
-        param.dk << ", model:" << param.model;
-    atb::Operation *op;
-    FlashAttentionLayer(param, &op);
-    return op;
-}
-
 class FlashAttentionHostBinder : public HostTensorBinder {
 public:
     FlashAttentionHostBinder();

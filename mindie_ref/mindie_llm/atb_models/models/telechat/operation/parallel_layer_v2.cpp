@@ -76,7 +76,7 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
         atb::infer::LinearParam matmulParam = {param_.transposeA, param_.transposeB, false};
         CREATE_OPERATION(matmulParam, &matmulNode.operation);
         matmulNode.inTensorIds = {IN_INPUT, IN_WEIGHT};
-        matmulNode.outTensorIds = {(param_.commParam.rankSize > 1 || param_.isBias) ? inteId : OUT_LINEAR};
+        matmulNode.outTensorIds = {(param_.commParam.rankSize > 1 || param_.isBias) ? inteId : static_cast<uint32_t>(OUT_LINEAR)};
     } else {
         if (param_.quantParam.isQuantOp) {
             ATB_LOG(INFO) << "ParrallelLinearV2 >> is Quant >> matmulNode";
@@ -96,8 +96,9 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
         matmulParam.transposeB = param_.transposeB;
         matmulParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
         CREATE_OPERATION(matmulParam, &matmulNode.operation);
-        matmulNode.inTensorIds = {param_.quantParam.isQuantOp ? inteId++ : IN_INPUT, IN_WEIGHT, IN_BIAS, IN_DEQSCALE};
-        matmulNode.outTensorIds = {param_.commParam.rankSize > 1 ? inteId : OUT_LINEAR};
+        matmulNode.inTensorIds = {param_.quantParam.isQuantOp ? inteId++ : static_cast<uint32_t>(IN_INPUT), static_cast<uint32_t>(IN_WEIGHT),
+                                  static_cast<uint32_t>(IN_BIAS), static_cast<uint32_t>(IN_DEQSCALE)};
+        matmulNode.outTensorIds = {param_.commParam.rankSize > 1 ? inteId : static_cast<uint32_t>(OUT_LINEAR)};
     }
 
     if (param_.commParam.rankSize > 1) {
@@ -121,7 +122,7 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
         }
 
         parallelNode.inTensorIds = {inteId++};
-        parallelNode.outTensorIds = {param_.isBias && !param_.isQuant ? inteId : OUT_LINEAR};
+        parallelNode.outTensorIds = {param_.isBias && !param_.isQuant ? inteId : static_cast<uint32_t>(OUT_LINEAR)};
     }
 
     if (param_.isBias && !param_.isQuant) {
@@ -206,6 +207,11 @@ atb::Status ColumnParallelLinearV2(const ParallelParamV2 &param_, atb::Operation
     return ParallelLinearV2(param_, operation, COLUMN_PARALLEL);
 }
 
-atb::Status VocabParallelEmbeddingV2(const ParallelParamV2 &param_, atb::Operation **operation) { return 0; }
+atb::Status VocabParallelEmbeddingV2(const ParallelParamV2 &param_, atb::Operation **operation)
+{
+    (void)param_;
+    (void)operation;
+    return 0;
+}
 } // namespace telechat
 } // namespace atb_speed

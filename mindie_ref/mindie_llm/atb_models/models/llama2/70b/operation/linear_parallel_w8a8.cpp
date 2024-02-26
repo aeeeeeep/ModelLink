@@ -54,8 +54,15 @@ atb::Status CreateLinearParallelW8A8(const LinearParallelW8A8Param &param, atb::
     CreateLinearW8A8(linearParam, &linearNode.operation, atb_speed::llama2_70b::ROW_PARALLEL);
     linearNode.inTensorIds = {IN_INPUT, IN_WEIGHT, IN_SCALE, IN_OFFSET, IN_DESCALE};
     linearNode.outTensorIds = {INTERMIDATE_LINEAROUT};
-    atb::infer::AllReduceParam allReduceParam = {param.rank, param.rankSize, param.rankRoot,
-                                                 "sum",      param.backend,  param.hcclComm};
+    
+    atb::infer::AllReduceParam allReduceParam;
+    allReduceParam.rank = param.rank;
+    allReduceParam.rankSize = param.rankSize;
+    allReduceParam.rankRoot = param.rankRoot;
+    allReduceParam.allReduceType = "sum";
+    allReduceParam.backend = param.backend;
+    allReduceParam.hcclComm = param.hcclComm;
+
     CreateOperation(allReduceParam, &allReduceNode.operation);
     allReduceNode.inTensorIds = {INTERMIDATE_LINEAROUT};
     allReduceNode.outTensorIds = {OUT_LINEAROUT};
