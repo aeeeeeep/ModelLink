@@ -95,6 +95,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     fusionAttentionParam.selfOutLinearParallelParam.rank = param.rank;
     fusionAttentionParam.selfOutLinearParallelParam.worldSize = param.worldSize;
     fusionAttentionParam.selfOutLinearParallelParam.backend = param.backend;
+    fusionAttentionParam.selfOutLinearParallelParam.rankTableFile = param.rankTableFile;
     atb_speed::common::FusionAttention fusionAttentionObj;
     fusionAttentionObj.Attention(fusionAttentionParam, &attentionNode.operation);
     attentionNode.inTensorIds = {
@@ -152,6 +153,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
         mlpParam.downLinearParallelParam.rank = param.rank;
         mlpParam.downLinearParallelParam.worldSize = param.worldSize;
         mlpParam.downLinearParallelParam.backend = param.backend;
+        mlpParam.downLinearParallelParam.rankTableFile = param.rankTableFile;
         MlpSwiGLU(mlpParam, &mlpParallelNode.operation);
     } else {
         atb_speed::common::MlpParam mlpParam;
@@ -164,6 +166,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
         mlpParam.downLinearParallelParam.rank = param.rank;
         mlpParam.downLinearParallelParam.worldSize = param.worldSize;
         mlpParam.downLinearParallelParam.backend = param.backend;
+        mlpParam.downLinearParallelParam.rankTableFile = param.rankTableFile;
         Mlp(mlpParam, &mlpParallelNode.operation);
     }
     mlpParallelNode.inTensorIds = {
