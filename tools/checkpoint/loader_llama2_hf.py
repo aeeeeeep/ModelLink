@@ -36,6 +36,9 @@ def add_arguments(parser):
                        help='Sentencepiece tokenizer model.')
     group.add_argument('--megatron-path', type=str, default=None,
                        help='Base directory of deepspeed repository')
+    group.add_argument("--w-pack", type=bool,
+                       help='True is w_pack weight for llm like baichuan',
+                       default=False)
 
 
 def verify_transformers_version():
@@ -107,12 +110,21 @@ def set_attn_state(args, layer, hf_layer):
     if not nh % ng == 0:
         raise ValueError("nh % ng should equal 0")
 
-    # Copy weights (re-order dimensions for Megatron).
-    attn.query_key_value.weight.data.copy_(torch.cat([
-        hf_attn.q_proj.weight.reshape((ng, dim * nh // ng, -1)),
-        hf_attn.k_proj.weight.reshape((ng, dim, -1)),
-        hf_attn.v_proj.weight.reshape((ng, dim, -1)),
-    ], dim=1).reshape((-1, args.hidden_size)))
+    if args.w_pack:
+        w_pack = hf_attn.W_pack.weight
+        ws = torch.split(w_pack, w_pack.shape[0] // 3)
+        attn.query_key_value.weight.data.copy_(torch.cat([
+            ws[0].reshape((ng, dim * nh // ng, -1)),
+            ws[1].reshape((ng, dim, -1)),
+            ws[2].reshape((ng, dim, -1)),
+        ], dim=1).reshape((-1, args.hidden_size)))
+    else:
+        # Copy weights (re-order dimensions for Megatron).
+        attn.query_key_value.weight.data.copy_(torch.cat([
+            hf_attn.q_proj.weight.reshape((ng, dim * nh // ng, -1)),
+            hf_attn.k_proj.weight.reshape((ng, dim, -1)),
+            hf_attn.v_proj.weight.reshape((ng, dim, -1)),
+        ], dim=1).reshape((-1, args.hidden_size)))
     attn.dense.weight.data.copy_(hf_attn.o_proj.weight)
 
 
@@ -145,10 +157,13 @@ def load_checkpoint_to_model(args):
     '''Set model params.'''
 
     from pretrain_gpt import model_provider
-    from transformers import LlamaForCausalLM
+    from transformers import LlamaForCausalLM, AutoModelForCausalLM
 
     # Load Huggingface model.
-    hf_model = LlamaForCausalLM.from_pretrained(args.load, device_map="cpu")
+    if args.w_pack:
+        hf_model = AutoModelForCausalLM.from_pretrained(args.load, device_map="cpu", trust_remote_code=True)
+    else:
+        hf_model = LlamaForCausalLM.from_pretrained(args.load, device_map="cpu")
 
     # Init Megatron model.
     model = model_provider(True, True).to(args.params_dtype)
@@ -200,6 +215,7 @@ def _load_checkpoint(queue, args):
                 ]
 
     margs = parse_args()
+    margs.w_pack = args.w_pack
     margs.tokenizer_model = args.tokenizer_model
     load_args_from_checkpoint(margs)
 

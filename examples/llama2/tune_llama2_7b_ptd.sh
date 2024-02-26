@@ -4,19 +4,19 @@ export CUDA_DEVICE_MAX_CONNECTIONS=1
 export NPU_DETECT=0
 
 source "./envs/ascend-toolkit/set_env.sh"
-#export ASCEND_RT_VISIBLE_DEVICES=2
+
 GPUS_PER_NODE=8
 MASTER_ADDR=localhost
-MASTER_PORT=6000
+MASTER_PORT=6001
 NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
-CKPT_SAVE_DIR="./models/lora_weight_save"
-DATA_PATH="./dataset_llama2/test/alpaca_text_document"
-TOKENIZER_MODEL="./llama-2-7b-hf/tokenizer.model"
-CKPT_LOAD_DIR="./llama-2-7b-hf/test"
-LORA_CHECKPOINT="./models/lora_weight"
+CKPT_SAVE_DIR="your model save lora ckpt path"
+DATA_PATH="your data path"
+TOKENIZER_MODEL="your tokenizer path"
+CKPT_LOAD_DIR="your model ckpt path"
+LORA_CHECKPOINT="your lora ckpt path"
 
 TP=8
 PP=1
@@ -39,8 +39,9 @@ GPT_ARGS="
     --load ${CKPT_LOAD_DIR} \
     --lora-load ${LORA_CHECKPOINT} \
     --num-attention-heads 32 \
-    --tokenizer-type Llama2Tokenizer \
-    --tokenizer-model ${TOKENIZER_MODEL} \
+    --tokenizer-type PretrainedFromHF \
+    --tokenizer-name-or-path ${TOKENIZER_MODEL} \
+    --tokenizer-not-use-fast \
     --seq-length 4096 \
     --max-position-embeddings 4096 \
     --micro-batch-size 4 \
@@ -72,6 +73,7 @@ GPT_ARGS="
     --no-load-optim \
     --no-load-rng \
     --finetune \
+    --is-instruction-dataset \
     --lora-r 16 \
     --lora-alpha 32 \
     --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
