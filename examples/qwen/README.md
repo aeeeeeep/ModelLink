@@ -13,17 +13,13 @@
   - [性能](#性能)
     - [吞吐](#吞吐)
     - [精度](#精度)
-  - [推理](#推理)
-  - [评估](#评估)
 
 - [Qwen-14B](#Qwen-14B)
-  - [训练](#训练)
-  - [脚本](#脚本)
-  - [性能](#性能)
-    - [吞吐](#吞吐)
-    - [精度](#精度)
-  - [推理](#推理)
-  - [评估](#评估)
+  - [训练](#训练-14B)
+  - [脚本](#脚本-14B)
+  - [性能](#性能-14B)
+    - [吞吐](#吞吐-14B)
+    - [精度](#精度-14B)
 
 # Qwen-7B
 
@@ -160,122 +156,10 @@ NPU vs 参考loss相对误差.
 
 ![NPU-Relative-Error](../../sources/images/qwen/qwen7b_relative_loss.png)
 
-## 推理
-
-配置 qwen-7b 推理脚本：tasks/inference/generate_qwen_7b_ptd.sh
-
-```bash
-# ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-
-# 修改模型权重路径和此表路径
-CHECKPOINT="your model directory path"
-TOKENIZER_PATH="your tokenizer path"
-```
-
-启动qwen-14B 推理脚本
-```bash
-bash tasks/inference/generate_qwen_7b_ptd.sh
-```
-
-推理示例如下：
-![Inference]()
-
-
-## 评估
-
-使用 MMLU数据集评估模型. 数据集下载路径 [这里](https://huggingface.co/datasets/cais/mmlu). 
-配置qwen-7b评估脚本: tasks/evaluation/evaluate_qwen_7b_ptd.sh
-
-```bash
-# ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-
-# 修改模型参数路径和词表路径
-TOKENIZER_PATH=./qwen-7b-hf  #词表路径
-CHECKPOINT=./qwen-7b-t8p1  #模型路径
-# 配置任务和数据集路径
-DATA_PATH="./mmlu/data/test/"
-TASK="mmlu"
-```
-
-启动评估
-
-```bash
-bash tasks/evaluation/evaluate_qwen_7b_ptd.sh
-```
-
-评估结果如下
-
-```text
-                           学科名             问题数  NPU准确率
-0                     us_foreign_policy         100  0.830000
-1                           human_aging         223  0.623318
-2                     international_law         121  0.743802
-3                   high_school_physics         151  0.397351
-4                          global_facts         100  0.370000
-5                      machine_learning         112  0.410714
-6                   high_school_biology         310  0.719355
-7                            management         103  0.747573
-8                high_school_us_history         204  0.735294
-9                             sociology         201  0.786070
-10                high_school_chemistry         203  0.487685
-11                         econometrics         114  0.315789
-12                     public_relations         110  0.636364
-13                      college_physics         102  0.401961
-14               high_school_statistics         216  0.435185
-15                  college_mathematics         100  0.330000
-16             college_computer_science         100  0.550000
-17                           prehistory         324  0.679012
-18                      human_sexuality         131  0.694656
-19                high_school_geography         198  0.757576
-20           high_school_microeconomics         238  0.609244
-21         high_school_computer_science         100  0.670000
-22                        miscellaneous         783  0.777778
-23               elementary_mathematics         378  0.428571
-24               electrical_engineering         145  0.544828
-25                      moral_scenarios         895  0.289385
-26                      world_religions         171  0.771930
-27                     college_medicine         173  0.601156
-28               high_school_psychology         545  0.805505
-29                        jurisprudence         108  0.796296
-30                    college_chemistry         100  0.500000
-31                       moral_disputes         346  0.641618
-32                     security_studies         245  0.718367
-33         high_school_european_history         165  0.672727
-34            high_school_world_history         237  0.767932
-35                     professional_law        1534  0.430900
-36                            astronomy         152  0.611842
-37                    logical_fallacies         163  0.687117
-38                professional_medicine         272  0.577206
-39              high_school_mathematics         270  0.281481
-40                         formal_logic         126  0.412698
-41                   conceptual_physics         235  0.540426
-42                            marketing         234  0.824786
-43  high_school_government_and_politics         193  0.829016
-44                      business_ethics         100  0.650000
-45           high_school_macroeconomics         390  0.607692
-46                           philosophy         311  0.668810
-47                      college_biology         144  0.659722
-48                            nutrition         306  0.637255
-49                   clinical_knowledge         265  0.618868
-50                             virology         166  0.475904
-51              professional_psychology         612  0.594771
-52                     abstract_algebra         100  0.310000
-53              professional_accounting         282  0.418440
-54                              anatomy         135  0.488889
-55                     medical_genetics         100  0.620000
-56                    computer_security         100  0.720000
-57                                total       14042  0.581256
-```
-
-|  数据集 | 总学科数  |总问题数  |参考准确率|NPU准确率|
-|:---:|:---:|:---:|:---:|:---:|
-| MMLU | 57| 14042 |0.5813|0.582|
 
 # Qwen-14B
 
-## 训练
+## 训练-14B
 
 Qwen-14B 训练的硬件配置:
 
@@ -283,7 +167,7 @@ Qwen-14B 训练的硬件配置:
 | :--: | :-------------: |
 | NPU | 8 x Ascend NPUs |
 
-### 脚本
+### 脚本-14B
 
 1. 拷贝代码仓到本地服务器
 
@@ -316,8 +200,8 @@ Qwen-14B 训练的硬件配置:
 3. 下载 Qwen-14B 的 [预训练权重和词表](https://huggingface.co/Qwen/Qwen-14B/tree/main)
 
    ```bash
-   mkdir -p qwen-14B-hf
-   cd qwen-14B-hf
+   mkdir -p qwen-14b-hf
+   cd qwen-14b-hf
    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/cache_autogptq_cuda_256.cpp
    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/cache_autogptq_cuda_kernel_256.cu
    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/config.json
@@ -393,18 +277,18 @@ Qwen-14B 训练的硬件配置:
    ```
 
 
-### 性能
+### 性能-14B
 
-#### 吞吐
+#### 吞吐-14B
 
 Qwen-14B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
-|  设备  |   模型    | 迭代数  | tokens吞吐 (tokens/s/p) |
-|:----:|:-------:|:----:|:---------------------:|
-| NPUs | Qwen-14B | 2000 |         1560          |
-|  参考  | Qwen-14B | 2000 |         -          |
+|  设备   |    模型    | tokens吞吐 (tokens/s/p) |
+|:-----:|:--------:|:---------------------:|
+| NPUs | Qwen-14B |         1560          |
+|  参考   | Qwen-14B |         -          |
 
-#### 精度
+#### 精度-14B
 
 NPU vs 参考loss.
 
@@ -413,58 +297,3 @@ NPU vs 参考loss.
 NPU vs 参考loss相对误差.
 
 ![NPU-Relative-Error](../../sources/images/qwen/qwen14b_relative_loss.png)
-
-## 推理
-
-配置qwen-14B推理脚本：tasks/inference/generate_qwen_14b_ptd.sh
-
-```bash
-# ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-
-# 修改模型权重路径和此表路径
-CHECKPOINT="your model directory path"
-TOKENIZER_PATH="your tokenizer path"
-```
-
-启动qwen-14B 推理脚本
-```bash
-bash tasks/inference/generate_qwen_14b_ptd.sh
-```
-
-推理示例如下：
-![Inference]()
-
-
-## 评估
-
-使用 MMLU数据集评估模型. 数据集下载路径 [这里](https://huggingface.co/datasets/cais/mmlu). 
-配置qwen-14B评估脚本: tasks/evaluation/evaluate_qwen_14b_ptd.sh
-
-```bash
-# ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-
-# 修改模型参数路径和词表路径
-TOKENIZER_PATH=./qwen-14b-hf  #词表路径
-CHECKPOINT=./qwen-14b-t8p1  #模型路径
-# 配置任务和数据集路径
-DATA_PATH="./mmlu/data/test/"
-TASK="mmlu"
-```
-
-启动评估
-
-```bash
-bash tasks/evaluation/evaluate_qwen_14b_ptd.sh
-```
-
-评估结果如下
-
-```text
-
-```
-
-|  数据集 | 总学科数  |总问题数  |参考准确率|NPU准确率|
-|:---:|:---:|:---:|:---:|:---:|
-| MMLU | 57| 14042 |0.4691|0.4698|

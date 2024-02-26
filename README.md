@@ -34,7 +34,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
 * <a href="https://huggingface.co/docs/transformers/main/model_doc/llama" style="color:green">LLaMA</a>-[[使用说明: 7B/13B/33B/65B]](examples/llama/README.md)
 * <a href="https://huggingface.co/docs/transformers/main/model_doc/llama2" style="color:green">LLaMA2</a>-[[使用说明: 7B/13B/34B/70B]](examples/llama2/README.md)
 * <a href="https://github.com/baichuan-inc" style="color:green">Baichuan2</a>-[[使用说明: 7B/13B]](examples/baichuan2/README.md)
-* <a href="https://huggingface.co/Qwen/Qwen-7B" style="color:green">Qwen</a>-[[使用说明: 7B]](examples/qwen/README.md)
+* <a href="https://huggingface.co/Qwen/Qwen-7B" style="color:green">Qwen</a>-[[使用说明: 7B/14B]](examples/qwen/README.md)
 
 
 ### 下游任务
@@ -260,6 +260,15 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="sources/images/qwen/qwen7b_compare_loss.png">Loss</a> </td>
       <td> <a href="examples/qwen/pretrain_qwen_7b_ptd.sh">训练</a> </td>
     </tr>
+    <tr>
+      <td>14B</td>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 1560 </td>
+      <td> -- </td>
+      <td> <a href="sources/images/qwen/qwen14b_compare_loss.png">Loss</a> </td>
+      <td> <a href="examples/qwen/pretrain_qwen_14b_ptd.sh">训练</a> </td>
+    </tr>
   </tbody>
 </table>
 
@@ -402,6 +411,13 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td rowspan="4"><a href="examples/qwen/README.md">Qwen</a></td>
       <td>7B</td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+    </tr>
+    <tr>
+      <td>14B</td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
