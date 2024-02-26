@@ -54,6 +54,9 @@ void DecoderModel::Param::FromString(const std::string &param)
     rank = paramJson["rank"].get<int>();
     worldSize = paramJson["worldSize"].get<int>();
     backend = paramJson["backend"].get<std::string>();
+    if (paramJson.contains("rankTableFile")) {
+        rankTableFile = paramJson["rankTableFile"].get<std::string>();
+    }
     for (auto item : paramJson["tokenOffset"]) {
         tokenOffset.push_back(item.get<int>());
     }
@@ -69,7 +72,7 @@ void DecoderModel::Param::FromString(const std::string &param)
                   << ", numHiddenLayers:" << numHiddenLayers
                   << ", numKeyValueHeadsPerRank:" << numKeyValueHeadsPerRank
                   << ", rank:" << rank << ", worldSize:" << worldSize << ", backend:" << backend
-                  << ", tokenOffset:" << tokenOffset << ", seqLen:" << seqLen;
+                  << ", tokenOffset:" << tokenOffset << ", seqLen:" << seqLen << ", rankTableFile" << rankTableFile;
 }
 
 DecoderModel::DecoderModel(const std::string &param) : Model("DecoderModel", param)
@@ -223,6 +226,7 @@ int64_t DecoderModel::BuildGraph()
         layerParam.rank = param_.rank;
         layerParam.worldSize = param_.worldSize;
         layerParam.backend = param_.backend;
+        layerParam.rankTableFile = param_.rankTableFile;
         atb_speed::llama_parallel::DecoderLayer(layerParam, &op);
 
         layerNode.operation.reset(op);
@@ -280,6 +284,7 @@ int64_t DecoderModel::BuildGraph()
         lmHeadParam.linearParallelParam.rank = param_.rank;
         lmHeadParam.linearParallelParam.worldSize = param_.worldSize;
         lmHeadParam.linearParallelParam.backend = param_.backend;
+        lmHeadParam.linearParallelParam.rankTableFile = param_.rankTableFile;
     }
     LmHead(lmHeadParam, &op);
     lmHeadNode.operation.reset(op);
