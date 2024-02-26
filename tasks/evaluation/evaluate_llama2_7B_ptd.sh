@@ -36,6 +36,8 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation
        --hidden-size 4096  \
        --ffn-hidden-size 11008 \
        --num-attention-heads 32  \
+       --swiglu \
+       --disable-bias-linear \
        --load ${CHECKPOINT}  \
        --normalization RMSNorm \
        --tokenizer-type PretrainedFromHF  \
@@ -44,13 +46,11 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation
        --fp16  \
        --micro-batch-size 1  \
        --use-fused-rmsnorm \
-       --use-rotary-position-embeddings \
+       --position-embedding-type rope \
        --exit-on-missing-checkpoint \
-       --use-checkpoint-args \
        --no-load-rng \
        --no-load-optim \
        --untie-embeddings-and-output-weights \
-       --no-position-embedding \
        --no-masked-softmax-fusion \
        --make-vocab-size-divisible-by 1 \
        --seed 42 | tee logs/mmlu.log

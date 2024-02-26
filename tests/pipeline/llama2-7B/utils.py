@@ -26,6 +26,7 @@ class ParamConfig:
     
     distributed_param = config_file["DISTRIBUTED_PARAM"]
     network_size = config_file["NETWORK_SIZE"]
+    inference_aux = config_file["INFERENCE_AUX"]
     inference_param = config_file["INFERENCE_PARAM"]
     evaluation_param = config_file["EVALUATION_PARAM"]
     lora_param = config_file["LORA_PARAM"]
@@ -34,6 +35,9 @@ class ParamConfig:
     learning_rate_param = config_file["LEARNING_RATE"]
     regularization = config_file["REGULARIZATION"]
     auxiliary_param = config_file["AUXILIARY_PARAM"]
+    pretrain_data_param = config_file["PROCESS_PRETRAIN_DATA"]
+    instruction_data_param = config_file["PROCESS_INSTRUCTION_DATA"]
+    convert_ckpt_param = config_file["CONVERT_CKPT_FROM_HF"]
 
 
 def assert_judge(expression):

@@ -50,8 +50,6 @@ def _add_lora_args(parser):
     group.add_argument('--lora-register-forward-hook', nargs='+', type=str,
                        default=['word_embeddings', 'input_layernorm'],
                        help='Lora register forward hook.')
-    group.add_argument('--lora-adapter-name', type=str, default='default',
-                       help='Lora adapter name.')
 
     return parser
 
