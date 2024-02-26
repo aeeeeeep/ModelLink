@@ -15,7 +15,7 @@
  */
 #ifndef ATB_SPEED_MODELS_LLAMA_7B_SELF_ATTETNTION_H
 #define ATB_SPEED_MODELS_LLAMA_7B_SELF_ATTETNTION_H
-
+#pragma GCC diagnostic ignored "-Wunused-function"
 #include "atb/atb_infer.h"
 #include "nlohmann/json.hpp"
 #include "atb_speed/log.h"

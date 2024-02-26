@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 #include "common_mlp_quant.h"
+#pragma GCC diagnostic ignored "-Wunused-variable"
 
 namespace atb_speed {
 namespace telechat {

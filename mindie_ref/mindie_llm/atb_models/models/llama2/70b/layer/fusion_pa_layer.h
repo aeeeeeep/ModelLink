@@ -15,7 +15,7 @@
  */
 #ifndef ATB_SPEED_MODELS_LLAMA2_70B_FUSION_PA_LAYER_H
 #define ATB_SPEED_MODELS_LLAMA2_70B_FUSION_PA_LAYER_H
-
+#pragma GCC diagnostic ignored "-Wunused-function"
 #include <vector>
 #include "atb/atb_infer.h"
 #include "atb_speed/base/hosttensor_binder.h"

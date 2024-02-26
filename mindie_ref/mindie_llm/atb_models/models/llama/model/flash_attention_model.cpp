@@ -19,6 +19,7 @@
 #include "models/llama/operation/layer_embedding.h"
 #include "models/llama/layer/flash_attention_layer.h"
 #include "flash_attention_model.h"
+#pragma GCC diagnostic ignored "-Wsign-compare"
 
 namespace atb_speed {
 namespace llama {

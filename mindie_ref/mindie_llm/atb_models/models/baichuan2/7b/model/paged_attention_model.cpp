@@ -17,7 +17,7 @@
 
 #include <atb/atb_infer.h>
 #include <nlohmann/json.hpp>
-
+#pragma GCC diagnostic ignored "-Wsign-compare"
 #include "models/baichuan2/7b/layer/paged_attention_layer.h"
 #include "parallel_lmhead.h"
 

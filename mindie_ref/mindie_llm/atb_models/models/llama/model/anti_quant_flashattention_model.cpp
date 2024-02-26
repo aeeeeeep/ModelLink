@@ -19,6 +19,7 @@
 #include "models/llama/layer/anti_float_layer.h"
 #include "models/llama/layer/anti_quant_layer.h"
 #include "anti_quant_flashattention_model.h"
+#pragma GCC diagnostic ignored "-Wsign-compare"
 
 namespace atb_speed {
 namespace llama {

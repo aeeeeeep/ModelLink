@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 #include "paged_attention_quant_opera_layer.h"
-
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #include "layers/parallel_layer_v2.h"
 #include "paged_attention_layer.h"
 

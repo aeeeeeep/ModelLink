@@ -21,6 +21,7 @@
 #include "layers/operations/lmhead.h"
 #include "models/llama_parallel/layer/decoder_layer.h"
 #include "models/llama_parallel/model/decoder_model.h"
+#pragma GCC diagnostic ignored "-Wsign-compare"
 
 namespace atb_speed {
 namespace llama_parallel {

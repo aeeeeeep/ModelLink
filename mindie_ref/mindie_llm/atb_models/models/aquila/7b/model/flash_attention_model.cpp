@@ -17,6 +17,8 @@
 
 #include "atb/atb_infer.h"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#include "layers/parallel_layer_v2.h"
 
 #include "models/aquila/7b/layer/flash_attention_layer.h"
 #include "operations/lmhead.h"

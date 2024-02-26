@@ -17,7 +17,7 @@
 #define ATB_SPEED_MODELS_BAICHUAN2_13B_PA_LAYER_H
 #include <atb/atb_infer.h>
 #include <nlohmann/json.hpp>
-
+#pragma GCC diagnostic ignored "-Wunused-function"
 #include "atb_speed/base/hosttensor_binder.h"
 #include "atb_speed/log.h"
 #include "atb_speed/utils/str_split.h"

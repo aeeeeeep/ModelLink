@@ -17,7 +17,7 @@
 
 #include <functional>
 #include <nlohmann/json.hpp>
-
+#pragma GCC diagnostic ignored "-Wunused-function"
 #include "atb_speed/log.h"
 #include "atb_speed/utils/operation_factory.h"
 #include "baichuan2/13b/layer/flash_attention_layer.h"

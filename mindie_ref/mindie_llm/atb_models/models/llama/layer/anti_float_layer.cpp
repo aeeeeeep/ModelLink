@@ -17,6 +17,8 @@
 #include "layers/parallel_layer.h"
 #include "models/llama/operation/anti_mlp.h"
 #include "models/llama/operation/rope_fusion_operation.h"
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wunused-variable"
 
 namespace atb_speed {
 namespace llama {

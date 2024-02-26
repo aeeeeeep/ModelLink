@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 #include "models/codellama/34b/model/flash_attention_rope_model.h"
-
+#pragma GCC diagnostic ignored "-Wsign-compare"
 #include "atb/atb_infer.h"
 #include "models/codellama/34b/layer/flash_attention_rope_layer.h"
 #include "nlohmann/json.hpp"

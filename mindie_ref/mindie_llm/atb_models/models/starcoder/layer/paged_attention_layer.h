@@ -15,7 +15,7 @@
  */
 #ifndef ATB_SPEED_MODELS_STAR_CODER_PA_LAYER_H
 #define ATB_SPEED_MODELS_STAR_CODER_PA_LAYER_H
-
+#pragma GCC diagnostic ignored "-Wunused-function"
 #include <nlohmann/json.hpp>
 #include <atb/atb_infer.h>
 #include "atb_speed/log.h"

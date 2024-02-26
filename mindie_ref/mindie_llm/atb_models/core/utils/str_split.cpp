@@ -15,6 +15,7 @@
  */
 #include "atb_speed/utils/str_split.h"
 #include <sstream>
+#pragma GCC diagnostic ignored "-Wsign-compare"
 
 namespace atb_speed {
 void StrSplit(const std::string &text, const char delimiter, std::vector<std::string> &result)

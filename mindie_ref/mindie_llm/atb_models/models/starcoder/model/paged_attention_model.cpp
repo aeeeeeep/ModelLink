@@ -16,7 +16,7 @@
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
 #include "nlohmann/json.hpp"
-
+#pragma GCC diagnostic ignored "-Wsign-compare"
 #include "models/starcoder/layer/paged_attention_layer.h"
 
 #include "paged_attention_model.h"

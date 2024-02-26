@@ -15,7 +15,7 @@
  */
 #ifndef ATB_SPEED_MODELS_LLAMA2_70B_PA_LAYER_EMBEDDING_H
 #define ATB_SPEED_MODELS_LLAMA2_70B_PA_LAYER_EMBEDDING_H
-
+#pragma GCC diagnostic ignored "-Wunused-function"
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
 #include "nlohmann/json.hpp"

@@ -18,6 +18,7 @@
 #include <atb/atb_infer.h>
 #include "atb_speed/log.h"
 #include "visualglm/6b/layer/flash_attention_layer.h"
+#pragma GCC diagnostic ignored "-Wsign-compare"
 
 namespace atb_speed {
 namespace visualglm_6b {
