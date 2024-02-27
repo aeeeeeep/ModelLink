@@ -122,7 +122,7 @@ class LlamaRMSNorm(nn.Module):
         return self.weight * hidden_states, residual
 
 
-class LlamaRMSNormAnti(nn.Module):
+class LlamaRMSNormBias(nn.Module):
     def __init__(self, prefix, weights, eps=1e-6):
         """
         LlamaRMSNorm is equivalent to T5LayerNorm
@@ -130,12 +130,23 @@ class LlamaRMSNormAnti(nn.Module):
         super().__init__()
 
         weight = weights.get_tensor(f"{prefix}.weight")
-        anti_weight = weights.get_tensor(f"{prefix}.anti_weight")
-        anti_bias = weights.get_tensor(f"{prefix}.anti_bias")
+        bias = weights.get_tensor(f"{prefix}.bias")
+            #if f"{prefix}.bias" in weights else \
+            #torch.tensor(weight.shape, dtype=torch.float16)
         self.weight = nn.Parameter(weight)
-        self.anti_weight = nn.Parameter(anti_weight)
-        self.anti_bias = nn.Parameter(anti_bias)
+        self.bias = nn.Parameter(bias)
         self.variance_epsilon = eps
+
+
+class LlamaRMSNormWrapper(nn.Module):
+    def __init__(self, prefix, weights, eps=1e-6):
+        """
+        LlamaRMSNorm is equivalent to T5LayerNorm
+        """
+        super().__init__()
+
+        self.ori = LlamaRMSNorm(prefix, weights, eps)
+        self.anti = LlamaRMSNormBias(f'{prefix}.module', weights, eps)
 
 
 class LlamaMLP(nn.Module):
@@ -378,22 +389,32 @@ class FlashLlamaLayer(nn.Module):
             prefix=f"{prefix}.self_attn", config=config, weights=weights
         )
         self.mlp = LlamaMLP(prefix=f"{prefix}.mlp", config=config, weights=weights)
-        if self.self_attn.pack_type not in [PackType.ALL_ANTI, PackType.MIX_FP_ANTI]:
+        if self.self_attn.pack_type == PackType.ALL_FP:
             self.input_layernorm = LlamaRMSNorm(
                 prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.rms_norm_eps
             )
-        else:
-            self.input_layernorm_anti = LlamaRMSNormAnti(
+        elif self.self_attn.pack_type in [PackType.ALL_INT, PackType.MIX_FP_INT]:
+            self.input_layernorm = LlamaRMSNormBias(
                 prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.rms_norm_eps
             )
-        if self.mlp.pack_type not in [PackType.ALL_ANTI, PackType.MIX_FP_ANTI]:
+        else:
+            self.input_layernorm = LlamaRMSNormWrapper(
+                prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.rms_norm_eps
+            )
+        if self.mlp.pack_type == PackType.ALL_FP:
             self.post_attention_layernorm = LlamaRMSNorm(
                 prefix=f"{prefix}.post_attention_layernorm",
                 weights=weights,
                 eps=config.rms_norm_eps,
             )
+        elif self.mlp.pack_type in [PackType.ALL_INT, PackType.MIX_FP_INT]:
+            self.post_attention_layernorm = LlamaRMSNormBias(
+                prefix=f"{prefix}.post_attention_layernorm",
+                weights=weights,
+                eps=config.rms_norm_eps,
+            )
         else:
-            self.post_attention_layernorm_anti = LlamaRMSNormAnti(
+            self.post_attention_layernorm = LlamaRMSNormWrapper(
                 prefix=f"{prefix}.post_attention_layernorm", weights=weights, eps=config.rms_norm_eps
             )
 

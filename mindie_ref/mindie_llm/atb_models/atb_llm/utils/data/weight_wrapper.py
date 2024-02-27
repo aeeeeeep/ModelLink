@@ -34,21 +34,26 @@ class WeightWrapper:
         self.weights.append(self.weight_format_cast(layer_dict[f'{norm_name}.weight']))
         self.weights.extend([self.placeholder] * 2)  # for anti
 
-    def register_layer_norm_anti(self, layer_dict, norm_name):
+    def register_layer_norm_bias(self, layer_dict, norm_name):
+        self.weights.append(self.placeholder)
         self.weights.append(self.weight_format_cast(layer_dict[f'{norm_name}.weight']))
-        self.weights.append(self.weight_format_cast(layer_dict[f'{norm_name}.anti_weight']))
-        self.weights.append(self.weight_format_cast(layer_dict[f'{norm_name}.anti_bias']))
+        self.weights.append(self.weight_format_cast(layer_dict[f'{norm_name}.bias']))
+
+    def register_layer_norm_wrapper(self, layer_dict, norm_name):
+        self.weights.append(self.weight_format_cast(layer_dict[f'{norm_name}.ori.weight']))
+        self.weights.append(self.weight_format_cast(layer_dict[f'{norm_name}.anti.weight']))
+        self.weights.append(self.weight_format_cast(layer_dict[f'{norm_name}.anti.bias']))
 
     def register_layer_linear_pack_fp16(self, layer_dict, norm_name, pack_linear_name):
         self.register_layer_norm(layer_dict, norm_name)
-        self.weights.append(self.weight_format_cast(layer_dict[f'self_attn.{pack_linear_name}.linear.weight']))
+        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.weight']))
         self.weights.extend([self.placeholder] * 19)
 
     def register_layer_linear_pack_w8a8(self, layer_dict, norm_name, pack_linear_name, pack_type):
         if pack_type == PackType.ALL_INT:
-            self.register_layer_norm(layer_dict, norm_name)
+            self.register_layer_norm_bias(layer_dict, norm_name)
         else:
-            self.register_layer_norm_anti(layer_dict, f'{norm_name}_anti')
+            self.register_layer_norm_wrapper(layer_dict, f'{norm_name}')
         self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.weight']))
         self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.input_scale']))
         self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.input_offset']))

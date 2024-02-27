@@ -17,7 +17,7 @@ def calc_attn_pack_type(prefix, weights):
     k_desc = weights.w8a8_desc[f'{prefix}.k_proj.weight']
     v_desc = weights.w8a8_desc[f'{prefix}.v_proj.weight']
     layer_prefix = '.'.join(prefix.split('.')[:-1])
-    is_anti = True if f'{layer_prefix}.input_layernorm.anti_weight' in weights.w8a8_desc else False
+    is_anti = True if f'{layer_prefix}.input_layernorm.module.weight' in weights.w8a8_desc else False
     is_q_w8a8 = is_w8a8(q_desc)
     is_k_w8a8 = is_w8a8(k_desc)
     is_v_w8a8 = is_w8a8(v_desc)
@@ -39,7 +39,7 @@ def calc_mlp_pack_type(prefix, weights):
     up_desc = weights.w8a8_desc[f'{prefix}.up_proj.weight']
     gate_desc = weights.w8a8_desc[f'{prefix}.gate_proj.weight']
     layer_prefix = '.'.join(prefix.split('.')[:-1])
-    is_anti = True if f'{layer_prefix}.post_attention_layernorm.anti_weight' in weights.w8a8_desc else False
+    is_anti = True if f'{layer_prefix}.post_attention_layernorm.module.weight' in weights.w8a8_desc else False
     is_up_w8a8 = is_w8a8(up_desc)
     is_gate_w8a8 = is_w8a8(gate_desc)
 
@@ -68,7 +68,7 @@ class W8A8LinearStatic(nn.Module):
         self.register_buffer('input_scale', input_scale.reshape(1).to(torch.float16))
 
         if input_offset is not None:
-            self.register_buffer('input_offset', input_offset.to(torch.int8))
+            self.register_buffer('input_offset', input_offset)
         else:
             self.register_buffer('input_offset', torch.tensor([], dtype=torch.int8))
 
