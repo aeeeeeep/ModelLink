@@ -32,5 +32,5 @@ from .adaptor_data import apply_data_patch
 apply_arguments_patch()
 apply_model_patch()
 apply_tokenizer_patch()
-# apply_lora_patch()
+apply_lora_patch()
 apply_data_patch()
