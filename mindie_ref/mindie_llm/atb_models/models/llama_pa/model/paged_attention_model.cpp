@@ -222,6 +222,7 @@ int64_t PAModel::BuildGraph()
     lmHeadParam.unpadInputs = true;
     lmHeadParam.gatherAhead = param_.isPrefill;
     lmHeadParam.backend = param_.backend;
+    lmHeadParam.isBF16 = param_.isBF16;
     ParallelLmHead(lmHeadParam, &op);
     lmHeadNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;

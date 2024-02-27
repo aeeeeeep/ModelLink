@@ -5,13 +5,14 @@ from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.utils.checkpoint
-from configuration_baichuan import BaichuanConfig
 from torch.nn import CrossEntropyLoss
 from transformers import PreTrainedModel
 from transformers.activations import ACT2FN
 from transformers.generation.utils import GenerationConfig
 from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast
 from transformers.utils import logging
+
+from .configuration_baichuan import BaichuanConfig
 
 logger = logging.get_logger(__name__)
 

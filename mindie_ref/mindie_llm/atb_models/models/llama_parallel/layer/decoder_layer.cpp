@@ -59,6 +59,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     fusionAttentionParam.isPack = param.isPack;
     fusionAttentionParam.isGroupedQueryAttention = param.numAttentionHeadsPerRank != param.numKeyValueHeadsPerRank;
     fusionAttentionParam.qkvLinearParam.quantType = param.quantType;
+    fusionAttentionParam.qkvLinearParam.isBF16 = param.isBF16;
     // rope param
     fusionAttentionParam.rotaryCoeff = 2;
     // self attention param
@@ -90,9 +91,11 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     // self out linear param
     fusionAttentionParam.selfOutLinearParallelParam.parallelType = atb_speed::common::ROW_PARALLEL;
     fusionAttentionParam.selfOutLinearParallelParam.fusionLinearParam.quantType = param.quantType;
+    fusionAttentionParam.selfOutLinearParallelParam.fusionLinearParam.isBF16 = param.isBF16;
     fusionAttentionParam.selfOutLinearParallelParam.rank = param.rank;
     fusionAttentionParam.selfOutLinearParallelParam.worldSize = param.worldSize;
     fusionAttentionParam.selfOutLinearParallelParam.backend = param.backend;
+    fusionAttentionParam.selfOutLinearParallelParam.rankTableFile = param.rankTableFile;
     atb_speed::common::FusionAttention fusionAttentionObj;
     fusionAttentionObj.Attention(fusionAttentionParam, &attentionNode.operation);
     attentionNode.inTensorIds = {
@@ -143,21 +146,27 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
         atb_speed::common::MlpSwiGLUParam mlpParam;
         mlpParam.isPack = param.isPack;
         mlpParam.gateUpLinearParam.quantType = param.quantType;
+        mlpParam.gateUpLinearParam.isBF16 = param.isBF16;
         mlpParam.downLinearParallelParam.fusionLinearParam.quantType = param.quantType;
+        mlpParam.downLinearParallelParam.fusionLinearParam.isBF16 = param.isBF16;
         mlpParam.downLinearParallelParam.parallelType = atb_speed::common::ROW_PARALLEL;
         mlpParam.downLinearParallelParam.rank = param.rank;
         mlpParam.downLinearParallelParam.worldSize = param.worldSize;
         mlpParam.downLinearParallelParam.backend = param.backend;
+        mlpParam.downLinearParallelParam.rankTableFile = param.rankTableFile;
         MlpSwiGLU(mlpParam, &mlpParallelNode.operation);
     } else {
         atb_speed::common::MlpParam mlpParam;
         mlpParam.isPack = param.isPack;
         mlpParam.gateUpLinearParam.quantType = param.quantType;
+        mlpParam.gateUpLinearParam.isBF16 = param.isBF16;
         mlpParam.downLinearParallelParam.fusionLinearParam.quantType = param.quantType;
+        mlpParam.downLinearParallelParam.fusionLinearParam.isBF16 = param.isBF16;
         mlpParam.downLinearParallelParam.parallelType = atb_speed::common::ROW_PARALLEL;
         mlpParam.downLinearParallelParam.rank = param.rank;
         mlpParam.downLinearParallelParam.worldSize = param.worldSize;
         mlpParam.downLinearParallelParam.backend = param.backend;
+        mlpParam.downLinearParallelParam.rankTableFile = param.rankTableFile;
         Mlp(mlpParam, &mlpParallelNode.operation);
     }
     mlpParallelNode.inTensorIds = {

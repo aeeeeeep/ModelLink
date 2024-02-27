@@ -1,3 +1,4 @@
+
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 import csv
 import sys
@@ -214,21 +215,6 @@ class ModelTest:
             self.__setup_model_parallel()
             self.tokenizer, self.model = self.get_model(self.hardware_type, self.model_type, self.data_type)
             self.device = self.model.device
-        if self.model_type == "pa":
-            input_dict = {
-                'rank': self.local_rank,
-                'world_size': self.world_size,
-                'max_prefill_tokens': 4096,
-                'block_size': 128,
-                'model_path': self.weight_dir,
-                'is_bf16': True if self.data_type == "bf16" else False,
-                'max_position_embeddings': self.max_position_embedding if self.max_position_embedding != -1 else None,
-                'max_batch_size': self.batch_size,
-                'use_refactor': self.use_refactor
-            }
-            self.pa_runner = PARunner(**input_dict)
-            self.logger.info(str(self.local_rank) + f'pa_runner: {self.pa_runner}')
-            self.pa_runner.warm_up()
 
         torch.manual_seed(1)
         self.device_type = self.__get_device_type()
@@ -245,7 +231,7 @@ class ModelTest:
                 raise RuntimeError(
                     "env ATB_SPEED_HOME_PATH not exist, source atb_speed set_env.sh")
             self.logger.info("ATB_SPEED env get success")
-            
+
             if self.model_type == "fa":
                 self.__npu_adapt()
 
@@ -336,9 +322,27 @@ class ModelTest:
                         e2e_end = time.time()
                         e2e_time = e2e_end - e2e_start
                 else:
-                    input_ids = torch.randint(0, self.pa_runner.model.config.vocab_size, [seq_len_in],
+                    input_dict = {
+                        'rank': self.local_rank,
+                        'world_size': self.world_size,
+                        'max_prefill_tokens': -1,
+                        'block_size': 128,
+                        'model_path': self.weight_dir,
+                        'is_bf16': True if self.data_type == "bf16" else False,
+                        'max_position_embeddings': self.max_position_embedding if self.max_position_embedding != -1 else seq_len_in + seq_len_out,
+                        'max_batch_size': self.batch_size,
+                        'use_refactor': self.use_refactor,
+                        'max_input_length': seq_len_in,
+                        'max_output_length': seq_len_out
+                    }
+                    pa_runner = PARunner(**input_dict)
+                    self.logger.info(str(self.local_rank) + f'pa_runner: {pa_runner}')
+                    pa_runner.warm_up()
+                    input_ids = torch.randint(0, pa_runner.model.config.vocab_size, [seq_len_in],
                                               dtype=torch.int64)
-                    _, _, e2e_time = self.pa_runner.infer("", self.batch_size, seq_len_out, True, [input_ids])
+                    _, _, e2e_time = pa_runner.infer("", self.batch_size, seq_len_out, True, [input_ids])
+                    del pa_runner
+                    torch.npu.empty_cache()
 
                 if self.local_rank == 0:
                     if self.model_type == "fa":
@@ -360,7 +364,6 @@ class ModelTest:
                     e2e_throughput = self.batch_size * seq_len_out / e2e_time
                     e2e_throughput_total += e2e_throughput
 
-                
                     self.logger.info(
                         f"batch: {self.batch_size}, seq_len_in: {seq_len_in}, seq_len_out: {seq_len_out}, total_time: {e2e_time}, first_token_time: {first_token_time * 1000}," +
                         f" non_first_token_time: {non_first_token_time * 1000}, non_first_token_throughput: {non_first_token_throughput}," +
@@ -394,8 +397,8 @@ class ModelTest:
                     csv_writer = csv.writer(csv_file, delimiter='|')
                     for csv_result in csv_results:
                         csv_writer.writerow(csv_result)
-                
-                csv_results.insert(0, ["Model", "Batchsize", "In_seq", "Out_seq", "Total time(s)", "First token time(ms)", "Non-first token time(ms)", 
+
+                csv_results.insert(0, ["Model", "Batchsize", "In_seq", "Out_seq", "Total time(s)", "First token time(ms)", "Non-first token time(ms)",
                                       "Non-first token Throughout(Tokens/s)", "Throughout(Tokens/s)", "Non-first token Throughout Average(Tokens/s)",
                                       "E2E Throughout Average(Tokens/s)"])
                 df = pd.DataFrame(csv_results)
@@ -406,11 +409,26 @@ class ModelTest:
                 self.logger.info(self.model_name + " " + " batch" + str(
                     self.batch_size) + " formatted result saved in " + csv_performance_formatted_path)
 
-        warmup()
         run_performance_test()
         self.logger.info("performance test end")
 
     def __run_precision(self):
+        input_dict = {
+            'rank': self.local_rank,
+            'world_size': self.world_size,
+            'max_prefill_tokens': -1,
+            'block_size': 128,
+            'model_path': self.weight_dir,
+            'is_bf16': True if self.data_type == "bf16" else False,
+            'max_position_embeddings': self.max_position_embedding if self.max_position_embedding != -1 else None,
+            'max_batch_size': self.batch_size,
+            'use_refactor': self.use_refactor,
+            'max_input_length': 1024,
+            'max_output_length': 512,
+        }
+        self.pa_runner = PARunner(**input_dict)
+        self.logger.info(str(self.local_rank) + f'pa_runner: {self.pa_runner}')
+        self.pa_runner.warm_up()
         if self.test_mode == "simplified":
             self.__run_simplified_dataset()
         elif self.test_mode == "full":
@@ -1233,7 +1251,7 @@ class ModelTest:
         else:
             result_name = "_".join([self.model_name, self.dataset_name, date_str]) + '.csv'
             result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}",
-                                   result_name) 
+                                   result_name)
             if self.dataset_name == "TruthfulQA":
                 df = pd.DataFrame(result, columns=['idx', 'MC1', 'MC2', 'MC3'])
             else:

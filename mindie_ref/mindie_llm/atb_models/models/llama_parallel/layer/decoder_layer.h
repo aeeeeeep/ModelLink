@@ -38,6 +38,7 @@ struct DecoderLayerParam {
     int rank = 0;
     int worldSize = 1;
     std::string backend = "hccl";
+    std::string rankTableFile = "";
     std::vector<int> seqLen;
     std::vector<int> tokenOffset;
 };
