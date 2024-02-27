@@ -1,5 +1,5 @@
 # Aquila-7B
-简体中文 | [English](https://gitee.com/ascend/ModelLink/blob/master/examples/aquila/README_en.md)
+简体中文 | [English](https://gitee.com/ascend/ModelLink/blob/modellink/examples/aquila/README_en.md)
 
 - [Aquila-7B](#Aquila-7B)
   - [训练](#训练)
