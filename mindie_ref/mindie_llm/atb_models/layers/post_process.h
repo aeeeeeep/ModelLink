@@ -34,7 +34,18 @@ struct PostProcessParam {
 
 atb::Status Sample(const PostProcessParam &param, atb::Operation **operation);
 
-atb::Operation *SampleLayerCreate(const nlohmann::json &paramJson);
+static atb::Operation *SampleLayerCreate(const nlohmann::json &paramJson)
+{
+    atb_speed::common::PostProcessParam param;
+    param.temperature = paramJson["temperature"].get<double>();
+    param.topK = paramJson["topK"].get<uint32_t>();
+    param.randSeed = paramJson["randSeed"].get<uint32_t>();
+    ATB_LOG(INFO) << "SampleLayerCreate: temperature:" << param.temperature << ", topK:" << param.topK
+                  << ", randSeed:" << param.randSeed;
+    atb::Operation *op;
+    Sample(param, &op);
+    return op;
+}
 
 REGISTER_OPERATION(common, SampleLayerCreate);
 
