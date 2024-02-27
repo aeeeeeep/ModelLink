@@ -11,14 +11,12 @@
   - [Script](#script)
   - [Performance](#performance)
     - [Machine performance](#machine-performance)
-    - [Accuracy of the loss](#accuracy-of-the-loss)
 
 - [Qwen-14B](#contents)
-  - [Training](#training-14B)
-  - [Script](#script-14B)
-  - [Performance](#performance-14B)
-    - [Machine performance](#machine-performance-14B)
-    - [Accuracy of the loss](#accuracy-of-the-loss-14B)
+  - [Training](#training)
+  - [Script](#script)
+  - [Performance](#performance)
+    - [Machine performance](#machine-performance)
 
 # Qwen-7B
 
@@ -34,9 +32,8 @@ Here's a hardware summary of pre-training  Qwen-7B:
 
 1. Clone the repository to your local server:
     ```shell
-    git clone https://gitee.com/ascend/ModelLink.git 
+    git clone -b modellink https://gitee.com/ascend/ModelLink.git 
     cd ModelLink
-    git checkout modellink
     ```
 
 2. Build environment
@@ -116,7 +113,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
 
 5. fine-tuning
 
-	Config Qwen-7B pre-training script: examples/qwen/pretrain_qwen_7b_ptd.sh 
+	Config Qwen-7B fine-tuning script: examples/qwen/pretrain_qwen_7b_ptd.sh 
    ```shell
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -128,7 +125,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
     CKPT_LOAD_DIR="./qwen-7b-mt/"
    ```
 
-	Launch Qwen-7B  pre-training script: examples/qwen/pretrain_qwen_7b_ptd.sh
+	Launch Qwen-7B fine-tuning script: examples/qwen/pretrain_qwen_7b_ptd.sh
    
    ```shell
     bash examples/qwen/pretrain_qwen_7b_ptd.sh 
@@ -146,20 +143,9 @@ The performance of Qwen-7B in **Ascend NPU** and **Reference**:
 | Reference | Qwen-7B |       2000       |             2867             |
 
 
-#### Accuracy of the loss
-
-NPU vs Reference loss.
-
-![NPU-Compare-Error](../../sources/images/qwen/qwen7b_compare_loss.png)
-
-NPU vs Reference loss relative error.
-
-![NPU-Relative-Error](../../sources/images/qwen/qwen7b_relative_loss.png)
-
-
 # Qwen-14B
 
-## Training-14B
+## Training
 
 Here's a hardware summary of pre-training  Qwen-14B:
 
@@ -167,13 +153,12 @@ Here's a hardware summary of pre-training  Qwen-14B:
 | :------: | :---------------------------------------------: |
 |   NPU    |               8 x Ascend NPUs                   |
 
-### Script-14B
+### Script
 
 1. Clone the repository to your local server:
     ```shell
-    git clone https://gitee.com/ascend/ModelLink.git 
+    git clone -b modellink https://gitee.com/ascend/ModelLink.git 
     cd ModelLink
-    git checkout modellink
     ```
 
 2. Build environment
@@ -260,7 +245,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
 
 5. fine-tuning
 
-	Config Qwen-14B pre-training script: examples/qwen/pretrain_qwen_14b_ptd.sh 
+	Config Qwen-14B fine-tuning script: examples/qwen/pretrain_qwen_14b_ptd.sh 
    ```shell
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -272,15 +257,15 @@ Here's a hardware summary of pre-training  Qwen-14B:
     CKPT_LOAD_DIR="./qwen-14b-mt/"
    ```
 
-	Launch Qwen-14B  pre-training script: examples/qwen/pretrain_qwen_14b_ptd.sh
+	Launch Qwen-14B fine-tuning script: examples/qwen/pretrain_qwen_14b_ptd.sh
    
    ```shell
     bash examples/qwen/pretrain_qwen_14b_ptd.sh 
    ```
 
-### Performance-14B
+### Performance
 
-#### Machine performance-14B
+#### Machine performance
 
 The performance of Qwen-14B in **Ascend NPU** and **Reference**:
 
@@ -288,14 +273,3 @@ The performance of Qwen-14B in **Ascend NPU** and **Reference**:
 |:---------:|:--------:|:----------------------------:|
 |   NPUs    | Qwen-14B |             1560             |
 | Reference | Qwen-14B |              -               |
-
-
-#### Accuracy of the loss-14B
-
-NPU vs Reference loss.
-
-![NPU-Compare-Error](../../sources/images/qwen/qwen14b_compare_loss.png)
-
-NPU vs Reference loss relative error.
-
-![NPU-Relative-Error](../../sources/images/qwen/qwen14b_relative_loss.png)

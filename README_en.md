@@ -255,7 +255,7 @@ Coming soon ...
       <td>BF16 </td>
       <td> 2499 </td>
       <td> 2867 </td>
-      <td> <a href="sources/images/qwen/qwen7b_compare_loss.png">Loss</a> </td>
+      <td> -- </td>
       <td> <a href="examples/qwen/pretrain_qwen_7b_ptd.sh">Train</a> </td>
     </tr>
     <tr>
@@ -264,7 +264,7 @@ Coming soon ...
       <td>BF16 </td>
       <td> 1560 </td>
       <td> -- </td>
-      <td> <a href="sources/images/qwen/qwen14b_compare_loss.png">Loss</a> </td>
+      <td> -- </td>
       <td> <a href="examples/qwen/pretrain_qwen_14b_ptd.sh">Train</a> </td>
     </tr>
   </tbody>

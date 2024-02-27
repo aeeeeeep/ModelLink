@@ -257,7 +257,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>BF16 </td>
       <td> 2499 </td>
       <td> 2867 </td>
-      <td> <a href="sources/images/qwen/qwen7b_compare_loss.png">Loss</a> </td>
+      <td> -- </td>
       <td> <a href="examples/qwen/pretrain_qwen_7b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
@@ -266,7 +266,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>BF16 </td>
       <td> 1560 </td>
       <td> -- </td>
-      <td> <a href="sources/images/qwen/qwen14b_compare_loss.png">Loss</a> </td>
+      <td> -- </td>
       <td> <a href="examples/qwen/pretrain_qwen_14b_ptd.sh">训练</a> </td>
     </tr>
   </tbody>

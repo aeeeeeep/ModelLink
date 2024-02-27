@@ -12,14 +12,12 @@
   - [脚本](#脚本)
   - [性能](#性能)
     - [吞吐](#吞吐)
-    - [精度](#精度)
 
 - [Qwen-14B](#Qwen-14B)
-  - [训练](#训练-14B)
-  - [脚本](#脚本-14B)
-  - [性能](#性能-14B)
-    - [吞吐](#吞吐-14B)
-    - [精度](#精度-14B)
+  - [训练](#训练)
+  - [脚本](#脚本)
+  - [性能](#性能)
+    - [吞吐](#吞吐)
 
 # Qwen-7B
 
@@ -36,9 +34,8 @@ Qwen-7B 训练的硬件配置:
 1. 拷贝代码仓到本地服务器
 
    ```shell
-   git clone https://gitee.com/ascend/ModelLink.git 
-   cd ModelLink 
-   git checkout modellink
+   git clone -b modellink https://gitee.com/ascend/ModelLink.git 
+   cd ModelLink
    ```
 2. 搭建环境
 
@@ -115,7 +112,7 @@ Qwen-7B 训练的硬件配置:
    ```
 5. 微调
 
-    配置Qwen-7B 预训练脚本: examples/qwen/pretrain_qwen_7b_ptd.sh
+    配置Qwen-7B 微调脚本: examples/qwen/pretrain_qwen_7b_ptd.sh
 
    ```shell
     # 设置 ascend-toolkit 路径
@@ -128,7 +125,7 @@ Qwen-7B 训练的硬件配置:
     CKPT_LOAD_DIR="./qwen-7b-mt/"
    ```
 
-   启动 Qwen-7B 预训练脚本: examples/qwen/pretrain_qwen_7b_ptd.sh
+   启动 Qwen-7B 微调脚本: examples/qwen/pretrain_qwen_7b_ptd.sh
 
    ```shell
     bash examples/qwen/pretrain_qwen_7b_ptd.sh
@@ -146,20 +143,10 @@ Qwen-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 | NPUs | Qwen-7B | 2000 |         2499          |
 |  参考  | Qwen-7B | 2000 |         2867          |
 
-#### 精度
-
-NPU vs 参考loss.
-
-![NPU-Compare-Error](../../sources/images/qwen/qwen7b_compare_loss.png)
-
-NPU vs 参考loss相对误差.
-
-![NPU-Relative-Error](../../sources/images/qwen/qwen7b_relative_loss.png)
-
 
 # Qwen-14B
 
-## 训练-14B
+## 训练
 
 Qwen-14B 训练的硬件配置:
 
@@ -167,7 +154,7 @@ Qwen-14B 训练的硬件配置:
 | :--: | :-------------: |
 | NPU | 8 x Ascend NPUs |
 
-### 脚本-14B
+### 脚本
 
 1. 拷贝代码仓到本地服务器
 
@@ -257,7 +244,7 @@ Qwen-14B 训练的硬件配置:
    ```
 5. 微调
 
-    配置Qwen-14B 预训练脚本: examples/qwen/pretrain_qwen_14b_ptd.sh
+    配置Qwen-14B 微调脚本: examples/qwen/pretrain_qwen_14b_ptd.sh
 
    ```shell
     # 设置 ascend-toolkit 路径
@@ -270,16 +257,15 @@ Qwen-14B 训练的硬件配置:
     CKPT_LOAD_DIR="./qwen-14b-mt/"
    ```
 
-   启动 Qwen-14B 预训练脚本: examples/qwen/pretrain_qwen_14b_ptd.sh
+   启动 Qwen-14B 微调脚本: examples/qwen/pretrain_qwen_14b_ptd.sh
 
    ```shell
     bash examples/qwen/pretrain_qwen_14b_ptd.sh
    ```
 
+### 性能
 
-### 性能-14B
-
-#### 吞吐-14B
+#### 吞吐
 
 Qwen-14B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
@@ -287,13 +273,3 @@ Qwen-14B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 |:-----:|:--------:|:---------------------:|
 | NPUs | Qwen-14B |         1560          |
 |  参考   | Qwen-14B |         -          |
-
-#### 精度-14B
-
-NPU vs 参考loss.
-
-![NPU-Compare-Error](../../sources/images/qwen/qwen14b_compare_loss.png)
-
-NPU vs 参考loss相对误差.
-
-![NPU-Relative-Error](../../sources/images/qwen/qwen14b_relative_loss.png)
