@@ -25,7 +25,7 @@ class BaseLogExtractor(ABC):
         pass
 
     def _extract(self) -> None:
-        with open(self.input_path, encoding='utf-8') as f:
+        with open(self.input_path) as f:
             for line in f:
                 self._extract_parameter(line)
                 self._extract_iterline(line)
@@ -95,56 +95,9 @@ class MegatronLogExtractor(BaseLogExtractor):
             self.memories.append((int(rankid), float(memory)))
             start = line.find("[Rank", pipe_pos)
 
-
-class DeepSpeedLogExtractor(BaseLogExtractor):
-
-    def __init__(self, input_path: str, out_path_prefix: str):
-        super().__init__(input_path, out_path_prefix)
-        self.parameters = {
-            "train_batch_size": 0,
-            "seq-length": 0
-        }
-
-    def _extract_parameter(self, line: str) -> None:
-        for param in self.parameters.keys():
-            param_pos = line.find(f"  \"{param}\":")
-            if f"  \"{param}\":" in line:
-                colon_pos = line.find(':', param_pos)
-                comma_pos = line.find(',', colon_pos)
-                self.parameters[param] = int(line[colon_pos+1:comma_pos])
-
-    def _extract_iterline(self, line: str):
-        if not line.startswith("steps: "):
-            return
-
-        step_pos = 0
-        loss_pos = line.find(' loss:')
-        iter_time_pos = line.find(' iter time (s):')
-        iter_time_end = line.find(' samples/sec:')
-
-        step = line[step_pos+7:loss_pos]
-        iter_time = line[iter_time_pos+15:iter_time_end]
-        if loss_pos > 0:
-            loss = line[loss_pos+6:iter_time_pos]
-        else:
-            loss = 'inf'
-        self.losses.append((int(step), float(loss), float(iter_time)))
-    
-    def _extract_memory(self, line) -> None:
-        if not line.startswith("after 1 iterations memory (MB)"):
-            return
-
-        mem_pos = line.find('allocated: ')
-        pipe_pos = line.find('|', mem_pos)
-        memory = line[mem_pos+11:pipe_pos-1]
-        self.memories.append((0, float(memory)))
-
-
 def main(args):
     if args.frame_kind.lower() == 'megatron':
         MegatronLogExtractor(args.input_path, args.output_path_prefix)()
-    if args.frame_kind.lower() == 'deepspeed':
-        DeepSpeedLogExtractor(args.input_path, args.output_path_prefix)()
 
 
 if __name__ == '__main__':

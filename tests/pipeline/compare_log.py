@@ -10,7 +10,6 @@ class Comparator:
                  loss_error_rate: float = 0.02,
                  perf_error_rate: float = 0.03,
                  mem_error_rate: float = 0.003,
-                 warm_up: int = 1,
                  compute_steps: int = 2000):
         self.base_path_prefix = base_path_prefix
         self.test_path_prefix = test_path_prefix
@@ -18,7 +17,6 @@ class Comparator:
         self.perf_error_rate = perf_error_rate
         self.mem_error_rate = mem_error_rate
         self.compute_steps = compute_steps
-        self.warm_up = warm_up
     
     def _read_check_loss_file(self) -> Optional[Tuple[pd.DataFrame, pd.DataFrame, int]]:
         base_loss_pd = pd.read_csv(f"{self.base_path_prefix}_loss.tsv", sep='\t')
@@ -42,7 +40,7 @@ class Comparator:
         test_mem_pd = pd.read_csv(f"{self.test_path_prefix}_memory.tsv", sep='\t')
         base_mem_mean = base_mem_pd.memory.mean()
         test_mem_mean = test_mem_pd.memory.mean()
-        if base_mem_mean * (1 + self.mem_error_rate) < test_mem_mean:
+        if abs((test_mem_mean - base_mem_mean) / base_mem_mean) > self.mem_error_rate:
             print("Memory test failed!")
             return False
         
@@ -66,19 +64,18 @@ class Comparator:
             print("The parameters are not equal")
             return False
 
-        global_batch_size = base_params.get("global_batch_size") or base_params.get("train_batch_size")
-        seq_length = base_params.get("seq_length") or base_params.get("seq-length")
-        world_size = base_params.get("world_size", 8)
-        
-
+        global_batch_size = base_params["global_batch_size"]
+        seq_length = base_params["seq_length"]
+        world_size = base_params["world_size"]
+    
         # Here we need to skip the first steps until the training is stable
-        base_itertime_mean = base_loss_pd[self.warm_up:self.compute_steps].iter_time.mean()
-        test_itertime_mean = test_loss_pd[self.warm_up:self.compute_steps].iter_time.mean()
+        base_itertime_mean = base_loss_pd[loss_start+1:self.compute_steps].iter_time.mean()
+        test_itertime_mean = test_loss_pd[loss_start+1:self.compute_steps].iter_time.mean()
 
         base_perf = global_batch_size * seq_length / world_size / base_itertime_mean
         test_perf = global_batch_size * seq_length / world_size / test_itertime_mean
 
-        if (1 - self.perf_error_rate) * base_perf > test_perf:
+        if abs((test_perf - base_perf) / base_perf) > self.perf_error_rate:
             print("Perf test failed!")
             return False
         
@@ -113,7 +110,6 @@ def main(args):
                args.loss_error_rate,
                args.perf_error_rate,
                args.mem_error_rate,
-               args.warm_up,
                args.compute_steps)()
 
 
@@ -123,7 +119,6 @@ if __name__ == '__main__':
     parser.add_argument('test_path_prefix', help='The test path prefix')
     parser.add_argument('--loss_error_rate', type=float, default=0.02, help='The loss error rate')
     parser.add_argument('--perf_error_rate', type=float, default=0.03, help='The perf error rate')
-    parser.add_argument('--warm_up', type=int, default=1, help='The perf test start from warm_up step')
     parser.add_argument('--mem_error_rate', type=float, default=0.003, help='The memory error rate')
     parser.add_argument('--compute_steps', type=int, default=2000, help='The compute steps')
     args = parser.parse_args()
