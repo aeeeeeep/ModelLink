@@ -21,9 +21,13 @@
 #include "models/starcoder/layer/flash_attention_quant_layer.h"
 
 #include "flash_attention_quant_model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace star_coder {
+
+REGISTER_MODEL(star_coder, FlashAttentionQuantModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 16;
 const int WEIGHT_FLOAT_COUNT_PER_LAYER = 12;
 const int INPUT_TENSOR_COUNT_BEFORE_KEY = 2;

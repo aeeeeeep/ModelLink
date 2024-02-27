@@ -21,9 +21,13 @@
 #include "layers/parallel_layer_v2.h"
 #include "models/vlmo/2b/layer/encoder_layer.h"
 #include "models/vlmo/2b/layer/encoder_vl_layer.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace vlmo {
+
+REGISTER_MODEL(vlmo, FlashAttentionModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 23;
 const int WEIGHT_COUNT_PER_VL_LAYER = 17;
 

@@ -20,9 +20,13 @@
 
 #include "models/aquila/7b/layer/flash_attention_layer.h"
 #include "operations/lmhead.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace aquila_7b {
+
+REGISTER_MODEL(aquila_7b, FlashAttentionRopeModel);
+
 enum InTensorId : int {
     IN_TENSOR_INPUTIDS = 0,
     IN_TENSOR_COSEMBED,

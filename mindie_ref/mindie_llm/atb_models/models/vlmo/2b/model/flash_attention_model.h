@@ -18,7 +18,6 @@
 
 #include "atb_speed/base/model.h"
 #include "atb_speed/log.h"
-#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace vlmo {
@@ -52,8 +51,6 @@ private:
     std::vector<int32_t> tokenOffset_;
     std::vector<int32_t> seqLen_;
 };
-
-REGISTER_MODEL(vlmo, FlashAttentionModel);
 
 } // namespace vlmo
 } // namespace atb_speed

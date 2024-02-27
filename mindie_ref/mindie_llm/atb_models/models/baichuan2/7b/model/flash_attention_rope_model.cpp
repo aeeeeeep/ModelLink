@@ -19,9 +19,13 @@
 #include "nlohmann/json.hpp"
 #include "operations/lmhead.h"
 #include "models/baichuan2/7b/layer/flash_attention_rope_layer.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace baichuan2_7b {
+
+REGISTER_MODEL(baichuan2_7b, FlashAttentionRopeModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 7;
 const int WORDEMBEDDINGNODE_WEIGHT_COUNT = 1;
 const int FINALNORMNODE_WEIGHT_COUNT = 1;

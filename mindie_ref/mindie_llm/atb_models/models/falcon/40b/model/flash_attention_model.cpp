@@ -18,9 +18,13 @@
 #include "atb_speed/log.h"
 #include "models/falcon/40b/layer/flash_attention_layer.h"
 #include "nlohmann/json.hpp"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace falcon_40b {
+
+REGISTER_MODEL(falcon_40b, FusionModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 8;
 const int OPERATION_COUNT_BEFORE_LAYER = 3;
 const int OPERATION_COUNT_AFTER_LAYER = 2;

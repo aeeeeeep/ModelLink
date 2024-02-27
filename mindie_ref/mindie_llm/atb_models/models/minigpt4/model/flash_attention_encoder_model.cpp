@@ -19,9 +19,13 @@
 #include "models/llama/layer/flash_attention_layer.h"
 #include "models/llama/operation/layer_embedding.h"
 #include "nlohmann/json.hpp"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace minigpt4_vicuna_7b {
+
+REGISTER_MODEL(minigpt4_vicuna_7b, FlashAttentionEncoderModel);
+
 const int QUANT_WEIGHT_COUNT_PER_LAYER = 25;
 const int SPARSE_WEIGHT_COUNT_PER_LAYER = 32;
 const int FLOAT_WEIGHT_COUNT_PER_LAYER = 9;

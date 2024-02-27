@@ -21,9 +21,13 @@
 #include "atb_speed/log.h"
 #include "models/chatglm2/6b/layer/flash_attention_layer.h"
 #include "layers/parallel_layer_v2.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace chatglm2_6b {
+
+REGISTER_MODEL(chatglm2_6b, ChatGlm2CommonModelFa);
+
 const int WEIGHT_COUNT_BEFORE_LAYER = 1;
 const int WEIGHT_COUNT_AFTER_LAYER = 2;
 const int WEIGHT_COUNT_QUANT_LAYER = 14;

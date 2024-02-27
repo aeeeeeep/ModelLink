@@ -18,9 +18,12 @@
 #include <atb/atb_infer.h>
 #include "telechat/layer/embedding_layer.h"
 #include "telechat/layer/quant_layer.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace telechat {
+
+REGISTER_MODEL(telechat, QuantFAModel);
 
 const int WEIGHT_COUNT_PER_LAYER = 22;
 const int WORD_EMBEDDING_WEIGHT_COUNT = 1;

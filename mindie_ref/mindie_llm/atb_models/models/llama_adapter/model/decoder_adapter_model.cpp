@@ -20,9 +20,13 @@
 #include "models/llama_adapter/layer/layer.h"
 
 #include "adapter_model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama_adapter {
+
+REGISTER_MODEL(llama_adapter, DecoderAdapterModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 15;
 
 enum InTensorId : int {

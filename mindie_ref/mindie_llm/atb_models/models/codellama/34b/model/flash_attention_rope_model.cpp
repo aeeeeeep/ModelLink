@@ -18,9 +18,11 @@
 #include "atb/atb_infer.h"
 #include "models/codellama/34b/layer/flash_attention_rope_layer.h"
 #include "nlohmann/json.hpp"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace codellama_34b {
+REGISTER_MODEL(codellama_34b, FlashAttentionRopeModel);
 enum InTensorId : int {
     IN_TENSOR_INPUTIDS = 0,
     IN_TENSOR_COSEMBED,

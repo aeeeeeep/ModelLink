@@ -20,9 +20,13 @@
 
 #include "models/qwen/14b/layer/flash_attention_layer.h"
 #include "operations/lmhead.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace qwen_14b {
+
+REGISTER_MODEL(qwen_14b, FlashAttentionModel);
+
 enum InTensorId : int {
     IN_TENSOR_INPUTIDS = 0,
     IN_TENSOR_COSEMBED,
