@@ -2,7 +2,7 @@
 
 <p align="left">
         <b>简体中文</b> |
-        <b><a href="https://gitee.com/ascend/AscendSpeed/blob/master/examples/llama2/README_en.md">English</a> </b> 
+        <b><a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/README_en.md">English</a> </b> 
 </p>
 
 # 目录
@@ -101,7 +101,7 @@ LLAMA2-7B 训练的硬件配置:
    将权重从 huggingface 格式转化为 magatron 格式 
 
    ```bash
-    cd AscendSpeed
+    cd ModelLink
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
    
@@ -128,7 +128,7 @@ LLAMA2-7B 训练的硬件配置:
      cd ./dataset_llama2
      wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
      cd ..
-     cd AscendSpeed
+     cd ModelLink
      # 处理数据                           
      python ./tools/preprocess_data.py \
        --input ../dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
@@ -141,8 +141,7 @@ LLAMA2-7B 训练的硬件配置:
    ```
    4.2 预训练
    ```shell
-    # 配置LLaMA2-7B 预训练脚本: pretrain_llama2_7b.sh
-    cd AscendSpeed
+    cd ModelLink
     # 设置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
@@ -557,7 +556,7 @@ NPU运行平稳，资源使用稳定，中间没有报错，Loss呈下降趋势�
 
 ## 推理
 
-我们在Llama2 13B中支持AscendSpeed推理来生成文本。
+我们在Llama2 13B中支持推理来生成文本。
 推理不同于预训练，比如我们需要加载预训练检查点和输出样本的长度:
 
 配置 LLaMA2-13B 推理脚本: tasks/inference/generate_llama2_13b_ptd.sh
@@ -1047,7 +1046,7 @@ BoolQ 数据集评估结果:
       <td>dev</td>
       <th>Llama2-34b</th>
       <td>0.651</td>
-      <td><a href="https://opencompass.org.cn/dataset-detail/BoolQ">(AquilaChat2-34B test) 0.571</a></td>
+      <td><a href="https://hub.opencompass.org.cn/dataset-detail/BoolQ">(AquilaChat2-34B test) 0.571</a></td>
     </tr>
   </tbody>
 </table>
