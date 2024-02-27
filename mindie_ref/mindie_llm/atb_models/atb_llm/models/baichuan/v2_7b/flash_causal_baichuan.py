@@ -253,7 +253,7 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
         self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64, device="npu")
 
         self.ascend_atten_mask = AttentionMask.static(config.max_position_embeddings)
-        self.ascend_atten_mask_fake = self.ascend_atten_mask.get_attn_mask(1, dtype=self.dtype, device="npu")
+        self.ascend_atten_mask_fake = self.ascend_atten_mask.get_attn_mask(1, dtype=torch.float16, device="npu")
 
     def init_ascend_weight(self):
         weights = [self.model.state_dict()["embed_tokens.weight"]]
