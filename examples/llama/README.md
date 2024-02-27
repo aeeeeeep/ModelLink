@@ -389,8 +389,8 @@ LLaMA-7B/13B在**Ascend NPU**中的评测表现：
 
 | 任务                                                  | 模型        | 昇腾值  | 社区值  |
 |-----------------------------------------------------|-----------|------|------|
-| [Boolq](https://huggingface.co/datasets/boolq) | LLaMA-7B  | 74.6 | [75.4](https://opencompass.org.cn/dataset-detail/BoolQ) | 
-| [Boolq](https://huggingface.co/datasets/boolq) | LLaMA-13B | 79.6 | [78.7](https://opencompass.org.cn/dataset-detail/BoolQ) |
+| [Boolq](https://huggingface.co/datasets/boolq) | LLaMA-7B  | 74.6 | [75.4](https://hub.opencompass.org.cn/dataset-detail/BoolQ) | 
+| [Boolq](https://huggingface.co/datasets/boolq) | LLaMA-13B | 79.6 | [78.7](https://hub.opencompass.org.cn/dataset-detail/BoolQ) |
 
 # LLaMA-33B/65B
 

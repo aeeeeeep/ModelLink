@@ -1,6 +1,6 @@
 # LLaMA
 <p align="left">
-        <b><a href="https://gitee.com/ascend/AscendSpeed/blob/master/examples/llama2/README.md">简体中文</a></b> |
+        <b><a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/README.md">简体中文</a></b> |
         <b>English</b> 
 </p>
 
@@ -540,7 +540,7 @@ The precision meets the requirements.The absolute error of the average loss is 0
 
 ## Inference
 
-We support AscendSpeed Inference for text generation with Llama2 13B.
+We support Inference for text generation with Llama2 13B.
 Inference different from pre-training, such as we need to Load pre-training checkpoint and the length of the output samples:
 
 Config Llama2-13B inference script: tasks/inference/generate_llama2_13b_ptd.sh
@@ -1024,7 +1024,7 @@ Evaluation results with BoolQ dataset:
       <td>dev</td>
       <th>Llama2-34b</th>
       <td>0.651</td>
-      <td><a href="https://opencompass.org.cn/dataset-detail/BoolQ">(AquilaChat2-34B test) 0.571</a></td>
+      <td><a href="https://hub.opencompass.org.cn/dataset-detail/BoolQ">(AquilaChat2-34B test) 0.571</a></td>
     </tr>
   </tbody>
 </table>

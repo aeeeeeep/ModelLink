@@ -17,7 +17,6 @@
 <p align="center">
         <b>简体中文</b> |
         <b><a href="https://gitee.com/fengliangjun66/AscendSpeed/blob/master/README_en.md">English</a> </b>
-    </p>
 </p>
 
 ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) 上的大语言模型提供端到端的解决方案, 包含模型，算法，算子，以及下游任务。
@@ -180,7 +179,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>FP16</td>
       <td> 3763 </td>
       <td> 3804 </td>
-      <td> <a href="sources/images/llama7b-loss-with-weight.png">Loss</a> </td>
+      <td> <a href="sources/images/llama/llama7b-loss-with-weight.png">Loss</a> </td>
       <td> <a href="examples/llama/pretrain_llama_7b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
@@ -189,8 +188,8 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>FP16</td>
       <td> 1894 </td>
       <td> 2012 </td>
-      <td> <a href="sources/images/llama13b-loss-with-weight.png">Loss</a> </td>
-      <td> <a href="examples/llama/pretrain_llama_13B_ptd.sh">训练</a> </td>
+      <td> <a href="sources/images/llama/llama13b-loss-with-weight.png">Loss</a> </td>
+      <td> <a href="examples/llama/pretrain_llama_13b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
         <td>33B</td>
@@ -210,7 +209,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>BF16 </td>
       <td> 348 </td>
       <td> 426 </td>
-      <td> <a href="sources/images/llama65b_bf_loss.png">Loss</a> </td>
+      <td> <a href="sources/images/llama/llama65b-shape_layer10_loss-with-weight.png">Loss</a> </td>
       <td> <a href="examples/llama/pretrain_llama_65b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
@@ -247,8 +246,8 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>BF16 </td>
       <td> 350 </td>
       <td> 339 </td>
-      <td> <a href="sources/images/llama2/llama2_70b_bf16_loss_compare.png">Loss</a> </td>
-      <td> <a href="examples/llama2/pretrain_llama2_70B_ptd.sh">训练</a> </td>
+      <td> <a href="sources/images/llama2/llama2_70b_bf16_layer12_loss_compare.png">Loss</a> </td>
+      <td> <a href="examples/llama2/pretrain_llama2_70b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/qwen/README.md">Qwen</a></td>
@@ -361,7 +360,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>7B</td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_7b_ptd.sh">lora</a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_7b_lora_ptd.sh">对话 </a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/blob/master/tasks/evaluation/evaluate_llama_7B_ptd.sh">评估</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_7B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
@@ -520,7 +519,7 @@ python tools/preprocess_data.py --input WORKSPACE/alpaca/train-00000-of-00001-a0
 在处理后，`WORKSPACE/alpaca_preprocessed` 文件夹下会有3个 `bin` 文件 和 3个 `idx` 文件，我们便可以通过添加 `--data-path WORKSPACE/alpaca_preprocessed/alpaca` 和 `--is-instruction-dataset` 标志来进行指令微调。
 此外，基于指令数据集，我们还可以通过加上 `--variable-seq-lengths` 标志使用动态序列长度训练模型。
 
-请注意，使用 `--handler-name GeneralInstructionHandler` 标志的指令数据集，在处理时会从 `ascendspeed/data/data_handler.py` 中选择 `GeneralInstructionHandler` 类来制作prompt。如果你处理的是 alpaca 格式风格的数据集，即包含 `instruction`, `input` 和 `output` 列的数据集，可以直接使用 `--handler-name GeneralInstructionHandler` 标志。
+请注意，使用 `--handler-name GeneralInstructionHandler` 标志的指令数据集，在处理时会从 `modellink/data/data_handler.py` 中选择 `GeneralInstructionHandler` 类来制作prompt。如果你处理的是 alpaca 格式风格的数据集，即包含 `instruction`, `input` 和 `output` 列的数据集，可以直接使用 `--handler-name GeneralInstructionHandler` 标志。
 此外，`BelleMultiTurnInstructionHandler` 可以被用于处理 [belle](https://huggingface.co/datasets/BelleGroup/multiturn_chat_0.8M) 格式的数据集，`MOSSInstructionHandler` 可以被用于处理 [MOSS](https://huggingface.co/datasets/fnlp/moss-003-sft-data) 格式的数据集，`LeetcodePythonInstructionHandler` 可以被用于处理 [Leetcode](https://huggingface.co/datasets/mhhmm/leetcode-solutions-python) 风格的数据集
 
 ### <span id="jump12"> 低参微调 </span>
@@ -566,7 +565,7 @@ Lora有一些相关参数，在 [PEFT](https://github.com/huggingface/peft) 仓�
 ```shell
 You >> Give three tips for staying healthy.
 
-AscendSpeed:
+ModelLink:
 
 - Start exercising regularly and eat healthy food.
 - Get a good eight hours of sleep each night.
@@ -578,8 +577,6 @@ AscendSpeed:
 ### <span id="jump13"> 推理: 人机对话 </span>
 当前，我们支持使用如下并行策略训练的模型进行推理:
 - 仅仅使用 PTD 策略训练的模型
-- 仅仅使用 DeepSpeed 中 ZeRO 策略训练的模型
-- 基于 DeepSpeed 拉起的带 TP 策略的模型
 - 使用 Lora 策略微调的模型
 
 #### 快速开始
@@ -590,38 +587,25 @@ AscendSpeed:
       - PTD 策略的转换
 
            ```bash
-           python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir llama-7b-hf \
-                                                                               --output-model-dir llama-7b-tp2-pp2 \
-                                                                               --tensor-model-parallel-size 2 \
-                                                                               --pipeline-model-parallel-size 2 \
-                                                                               --type 7B
+           python tools/checkpoint/util.py --model-type GPT \
+                                --loader llama2_hf \
+                                --saver megatron \
+                                --target-tensor-parallel-size 2 \
+                                --target-pipeline-parallel-size 2 \
+                                --load-dir ./model_from_hf/llama-7b-hf \
+                                --save-dir ./model_weights/llama-7b-tp2-pp2 \
+                                --tokenizer-model ./model_from_hf/llama-7b-hf/tokenizer.model
            ```
-
-      - ZeRO 策略的转换
-          ```bash
-          python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir llama-7b-hf \
-                                                                              --output-model-dir llama-7b-deepspeed \
-                                                                              --type 7B \
-                                                                              --deepspeed
-          ```
 
 5. 下面脚本中的一些路径需要修改，比如：模型权重路径 和 词表路径.
 
     - 仅仅使用 PTD 策略训练的模型：在这种模式下，模型以 Megatron-LM 的风格被 流水并行 和 张量并行 切分
         ```bash
-        sh examples/llama/generate_llama_7B_tp2_pp2.sh
-        ```
-    - 仅仅使用 DeepSpeed 中 ZeRO 策略训练的模型：在这种模式下，模型使用 DeepSpeed 的 ZeRO 1, 2 or 3 策略训练，并且 tp=1, pp=1
-        ```bash
-        sh examples/alpaca/generate_alpaca_13B_deepspeed.sh
-        ```
-    - 基于 DeepSpeed 拉起的带 TP 策略的模型：在这种模式下，模型使用 DeepSpeed 的 ZeRO 1, 2 or 3 策略训练，并且 tp>1, pp=1
-        ```bash
-        sh examples/llama/generate_llama_7B_deepspeed_pipeline.sh
+        sh tasks/inference/generate_llama_7B_ptd.sh
         ```
     - 如果你仅仅使用 Lora, 可以参考:
         ```bash
-        sh examples/alpaca/generate_alpaca_13B_lora_deepspeed.sh
+        sh tasks/inference/generate_llama_7b_lora_ptd.sh
         ```
 
 #### 使用手册

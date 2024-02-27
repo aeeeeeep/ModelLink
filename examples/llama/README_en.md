@@ -367,8 +367,8 @@ The evaluation performance of LLaMA-7B/13B in **Ascend NPU**:
 
 | Task    | Model     | NPU  | Benchmark                                               |
 |---------|-----------|------|---------------------------------------------------------|
-| [Boolq](https://huggingface.co/datasets/boolq) | LLaMA-7B  | 74.6 | [75.4](https://opencompass.org.cn/dataset-detail/BoolQ) | 
-| [Boolq](https://huggingface.co/datasets/boolq) | LLaMA-13B | 79.6 | [78.7](https://opencompass.org.cn/dataset-detail/BoolQ)   |
+| [Boolq](https://huggingface.co/datasets/boolq) | LLaMA-7B  | 74.6 | [75.4](https://hub.opencompass.org.cn/dataset-detail/BoolQ) | 
+| [Boolq](https://huggingface.co/datasets/boolq) | LLaMA-13B | 79.6 | [78.7](https://hub.opencompass.org.cn/dataset-detail/BoolQ)   |
 
 # LLaMA-33B/65B
 

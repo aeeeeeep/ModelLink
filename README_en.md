@@ -178,7 +178,7 @@ Coming soon ...
       <td>FP16</td>
       <td> 3763 </td>
       <td> 3804 </td>
-      <td> <a href="sources/images/llama7b_loss.png">Loss</a> </td>
+      <td> <a href="sources/images/llama/llama7b-loss-with-weight.png">Loss</a> </td>
       <td> <a href="examples/llama/pretrain_llama_7b_ptd.sh">Train</a> </td>
     </tr>
     <tr>
@@ -187,7 +187,7 @@ Coming soon ...
       <td>FP16</td>
       <td> 1894 </td>
       <td> 2012 </td>
-      <td> <a href="sources/images/llama13b_loss.png">Loss</a> </td>
+      <td> <a href="sources/images/llama/llama13b-loss-with-weight.png">Loss</a> </td>
       <td> <a href="examples/llama/pretrain_llama_13b_ptd.sh">Train</a> </td>
     </tr>
     <tr>
@@ -208,7 +208,7 @@ Coming soon ...
       <td>BF16 </td>
       <td> 348 </td>
       <td> 426 </td>
-      <td> <a href="sources/images/llama65b_bf_loss.png">Loss</a> </td>
+      <td> <a href="sources/images/llama/llama65b-shape_layer10_loss-with-weight.png">Loss</a> </td>
       <td> <a href="examples/llama/pretrain_llama_65b_ptd.sh">Train</a> </td>
     </tr>
     <tr>
@@ -245,7 +245,7 @@ Coming soon ...
       <td>BF16 </td>
       <td> 350  </td>
       <td> 339 </td>
-      <td> <a href="sources/images/llama2/llama2_70b_bf16_loss_compare.png">Loss</a> </td>
+      <td> <a href="sources/images/llama2/llama2_70b_bf16_layer12_loss_compare.png">Loss</a> </td>
       <td> <a href="examples/llama2/pretrain_llama2_70b_ptd.sh">Train</a> </td>
     </tr>
     <tr>
@@ -371,7 +371,7 @@ Coming soon ...
     <tr>
       <td>33B</td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_33b_ptd.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/generate_llama_33B_ptd.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_33B_ptd.sh">inference </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_33B_ptd.sh">evaluation </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
@@ -379,28 +379,28 @@ Coming soon ...
       <td > 65B </td>
       <td > <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_65b_ptd.sh">lora</a>  </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_65b_lora_ptd.sh">inference </a> </td>
-      <td> -- </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_65B_ptd.sh">evaluation </a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</a></td>
       <td>7B</td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_7b_ptd.sh">lora</a>  </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/generate_llama2_7b_ptd.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_7b_ptd.sh">inference </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_7B_ptd.sh">evaluation </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>13B</td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_13b_ptd.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/generate_llama2_13B_ptd.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_13B_ptd.sh">inference </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_13B_ptd.sh">evaluation </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td> 34B </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_34b_ptd.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/generate_llama2_34B_ptd.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_34B_ptd.sh">inference </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_34B_ptd.sh">evaluation </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
@@ -525,7 +525,7 @@ python tools/preprocess_data.py --input WORKSPACE/alpaca/train-00000-of-00001-a0
 After preprocessing, there will be three `bin` files and three `idx` files in the `WORKSPACE/alpaca_preprocessed` dictionary. Then, we can train a model with `--data-path WORKSPACE/alpaca_preprocessed/alpaca` and `--is-instruction-dataset` flags.
 In addition, we have developed the dynamic padding function based on the instruction dataset, which can be implemented using the `--variable-seq-lengths` flag.
 
-Note that instruction dataset has a `--handler-name GeneralInstructionHandler` flag which will choose `GeneralInstructionHandler` class to create prompt in `ascendspeed/data/data_handler.py`.
+Note that instruction dataset has a `--handler-name GeneralInstructionHandler` flag which will choose `GeneralInstructionHandler` class to create prompt in `modellink/data/data_handler.py`.
 If you have an alpaca-style dataset which have `instruction`, `input` and `output` columns, just use `GeneralInstructionHandler`.
 In addition, `BelleMultiTurnInstructionHandler` is used to handle [belle dataset](https://huggingface.co/datasets/BelleGroup/multiturn_chat_0.8M),
 `MOSSInstructionHandler` is used to handle [MOSS dataset](https://huggingface.co/datasets/fnlp/moss-003-sft-data) and `LeetcodePythonInstructionHandler` is used to handle [Leetcode dataset](https://huggingface.co/datasets/mhhmm/leetcode-solutions-python).
@@ -575,7 +575,7 @@ After using Lora to fine-tune the Llama model, the instruction dialogue effect i
 ```shell
 You >> Give three tips for staying healthy.
 
-AscendSpeed:
+ModelLink:
 
 - Start exercising regularly and eat healthy food.
 - Get a good eight hours of sleep each night.
@@ -587,8 +587,6 @@ If after completing lora fine-tuning, we need a model without lora structure, th
 ### <span id="jump13"> Inference: human-machine dialogue </span>
 Currently, we support the following four cases of inference:
 - PTD only
-- DeepSpeed ZeRO only
-- DeepSpeed ZeRO in PIPELINE with TP
 - Model fine-tuned with lora
 
 #### Quick Start
@@ -601,38 +599,25 @@ Here are some example scripts in different mode mentioned above for you to launc
       - PTD only
 
            ```bash
-           python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir llama-7b-hf \
-                                                                               --output-model-dir llama-7b-tp2-pp2 \
-                                                                               --tensor-model-parallel-size 2 \
-                                                                               --pipeline-model-parallel-size 2 \
-                                                                               --type 7B
+           python tools/checkpoint/util.py --model-type GPT \
+                                --loader llama2_hf \
+                                --saver megatron \
+                                --target-tensor-parallel-size 2 \
+                                --target-pipeline-parallel-size 2 \
+                                --load-dir ./model_from_hf/llama-7b-hf \
+                                --save-dir ./model_weights/llama-7b-tp2-pp2 \
+                                --tokenizer-model ./model_from_hf/llama-7b-hf/tokenizer.model
            ```
-
-    - DeepSpeed ZeRO only
-        ```bash
-        python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir llama-7b-hf \
-                                                                            --output-model-dir llama-7b-deepspeed \
-                                                                            --type 7B \
-                                                                            --deepspeed
-        ```
 
 2. You need to modify some variables in the shell script such as **model weight path** and **vocab path**.
 
     - **PTD only:** In this mode, the model is split by pipeline parallel and tensor parallel mode in megatron ways.
         ```bash
-        sh examples/llama/generate_llama_7B_tp2_pp2.sh
-        ```
-    - **Deepspeed ZeRO only:** In this mode, the model uses DeepSpeed ZeRO 1, 2 or 3 definition with tp=1, pp=1.
-        ```bash
-        sh examples/alpaca/generate_alpaca_13B_deepspeed.sh
-        ```
-    - **Deepspeed ZeRO in Pipe with TP:** In this mode, the model uses pipe model definition in DeepSpeed ZeRO 1, 2 or 3 with tp>1, pp=1.
-        ```bash
-        sh examples/llama/generate_llama_7B_deepspeed_pipeline.sh
+        sh tasks/inference/generate_llama_7B_ptd.sh
         ```
     - **If you want to use lora model**, for details, refer to:
         ```bash
-        sh examples/alpaca/generate_alpaca_13B_lora_deepspeed.sh
+        sh tasks/inference/generate_llama_7b_lora_ptd.sh
         ```
 
 ***Some examples with [Chinese-LLaMA-Alpaca-13B weights](https://github.com/ymcui/Chinese-LLaMA-Alpaca) is as below***
