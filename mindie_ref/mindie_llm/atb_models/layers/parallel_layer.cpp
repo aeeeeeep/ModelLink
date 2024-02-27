@@ -155,7 +155,7 @@ atb::Status ColumnParallelLinear(const ParallelParam &param_, atb::Operation **o
 
 atb::Status VocabParallelEmbedding(atb::Operation **operation)
 {
-    (void)&operation;
+    (void)operation;
     return 0;
 }
 

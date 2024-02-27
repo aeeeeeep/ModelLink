@@ -269,5 +269,5 @@ if __name__ == '__main__':
         print_log(rank, logger.info, f'Answer[{i}]: {generate_text}')
         print_log(rank, logger.info, f'Generate[{i}] token num: {token_nums[i]}')
        
-    if world_size > 1:
+    if world_size > 1 and os.getenv("RANKTABLEFILE", "") == "":
         torch.distributed.destroy_process_group()

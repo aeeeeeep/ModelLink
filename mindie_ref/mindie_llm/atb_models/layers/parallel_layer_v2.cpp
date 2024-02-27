@@ -247,8 +247,9 @@ atb::Status ColumnParallelLinearV2(const ParallelParamV2 &param_, atb::Operation
     return ParallelLinearV2(param_, operation, COLUMN_PARALLEL);
 }
 
-atb::Status VocabParallelEmbeddingV2(atb::Operation **operation)
+atb::Status VocabParallelEmbeddingV2(const ParallelParamV2 &param_, atb::Operation **operation)
 {
+    (void)param_;
     (void)operation;
     return 0;
 }
