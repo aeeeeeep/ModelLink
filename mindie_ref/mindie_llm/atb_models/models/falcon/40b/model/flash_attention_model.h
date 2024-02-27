@@ -18,7 +18,6 @@
 
 #include <vector>
 #include "atb_speed/base/model.h"
-#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace falcon_40b {
@@ -61,8 +60,6 @@ private:
     std::vector<int> seqLen_;
     int32_t layerId_ = 0;
 };
-
-REGISTER_MODEL(falcon_40b, FusionModel);
 
 } // namespace falcon_40b
 } // namespace atb_speed

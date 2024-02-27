@@ -18,7 +18,6 @@
 
 #include <vector>
 #include "atb_speed/base/model.h"
-#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama_parallel {
@@ -71,8 +70,6 @@ private:
     std::vector<int> seqLen_;
     int32_t layerId_ = 0;
 };
-
-REGISTER_MODEL(llama_parallel, DecoderModel);
 
 }  // namespace llama_parallel
 }  // namespace atb_speed
