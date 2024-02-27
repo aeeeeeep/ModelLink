@@ -111,7 +111,7 @@ class DeepSpeedLogExtractor(BaseLogExtractor):
             if f"  \"{param}\":" in line:
                 colon_pos = line.find(':', param_pos)
                 comma_pos = line.find(',', colon_pos)
-                self.parameters[param] = int(line[colon_pos+1:comma_pos])
+                self.parameters[param] = int(line[colon_pos + 1 : comma_pos])
 
     def _extract_iterline(self, line: str):
         if not line.startswith("steps: "):
@@ -122,10 +122,10 @@ class DeepSpeedLogExtractor(BaseLogExtractor):
         iter_time_pos = line.find(' iter time (s):')
         iter_time_end = line.find(' samples/sec:')
 
-        step = line[step_pos+7:loss_pos]
-        iter_time = line[iter_time_pos+15:iter_time_end]
+        step = line[step_pos + 7 : loss_pos]
+        iter_time = line[iter_time_pos + 15 : iter_time_end]
         if loss_pos > 0:
-            loss = line[loss_pos+6:iter_time_pos]
+            loss = line[loss_pos + 6 : iter_time_pos]
         else:
             loss = 'inf'
         self.losses.append((int(step), float(loss), float(iter_time)))
@@ -136,7 +136,7 @@ class DeepSpeedLogExtractor(BaseLogExtractor):
 
         mem_pos = line.find('allocated: ')
         pipe_pos = line.find('|', mem_pos)
-        memory = line[mem_pos+11:pipe_pos-1]
+        memory = line[mem_pos + 11 : pipe_pos - 1]
         self.memories.append((0, float(memory)))
 
 
