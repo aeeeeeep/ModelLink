@@ -1,19 +1,18 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 import argparse
-import os
-import math
 import copy
+import math
+import os
 import time
 
 import torch
-
+from atb_llm.runner import ModelRunner
 from atb_llm.utils.cpu_binding import NpuHbmInfo
 from atb_llm.utils.env import ENV
 from atb_llm.utils.log import logger, print_log
-from atb_llm.runner import ModelRunner
 from examples.server.cache import CacheConfig, ModelConfig, CacheManager
-from examples.server.request import Request, request_from_token_file, request_from_text, request_from_token
-from examples.server.generate import generate_token, decode_token, generate_req
+from examples.server.generate import decode_token, generate_req
+from examples.server.request import request_from_text, request_from_token
 
 
 class PARunner:
@@ -85,7 +84,8 @@ class PARunner:
         if self.max_prefill_tokens == -1:
             self.max_prefill_tokens = self.max_batch_size * self.max_input_length
         input_ids = torch.ones(self.max_prefill_tokens, dtype=torch.int64).to(self.device)
-        position_ids = torch.arange(self.max_input_length, dtype=torch.int32).repeat(self.max_batch_size).to(self.device)
+        position_ids = torch.arange(self.max_input_length, dtype=torch.int32).repeat(self.max_batch_size).to(
+            self.device)
         cu_seqlen_prefill = torch.tensor([1])
         try:
             block_num = math.ceil(self.max_prefill_tokens / self.block_size)
@@ -93,7 +93,9 @@ class PARunner:
             raise ZeroDivisionError from e
         block_tables_tensor = torch.arange(block_num, dtype=torch.int32).view(1, -1).to(self.device)
         slots = torch.arange(self.max_prefill_tokens, dtype=torch.int32).to(self.device)
-        input_lengths_tensor = torch.tensor([self.max_prefill_tokens], dtype=torch.int64).to(self.device)
+        input_lengths_tensor = torch.tensor(
+            [self.max_input_length] * self.max_batch_size, dtype=torch.int64
+        ).to(self.device)
         prefill_head_indices = torch.tensor([self.max_prefill_tokens - 1], dtype=torch.int64).to(self.device)
         print_log(self.rank, logger.info, "---------------begin warm_up---------------")
         try:
@@ -132,12 +134,13 @@ class PARunner:
                             for i, input_ids in enumerate(input_ids)]
         else:
             if len(input_texts) == 1:
-                req_list = [request_from_text(input_texts[0], self.tokenizer, max_output_length, self.block_size, req_idx=i) \
-                            for i in range(batch_size)]
+                req_list = [
+                    request_from_text(input_texts[0], self.tokenizer, max_output_length, self.block_size, req_idx=i) \
+                    for i in range(batch_size)]
             else:
                 req_list = [request_from_text(input_text, self.tokenizer, max_output_length, self.block_size, req_idx=i) \
                             for i, input_text in enumerate(input_texts)]
-           
+
         print_log(self.rank, logger.debug, f'req_list[0].input_ids: {req_list[0].input_ids}')
 
         if not self.cache_manager:
@@ -147,7 +150,8 @@ class PARunner:
 
             max_memory = ENV.memory_fraction * self.max_memory \
                 if not ENV.max_memory_gb else int(ENV.max_memory_gb) * (1 << 30)
-            free_memory = max_memory - ENV.reserved_memory_gb * (1 << 30) - (self.warm_up_memory if self.warm_up_memory != 0 else self.init_memory)
+            free_memory = max_memory - ENV.reserved_memory_gb * (1 << 30) - (
+                self.warm_up_memory if self.warm_up_memory != 0 else self.init_memory)
             print_log(self.rank, logger.info,
                       f"infer max_memory(GB): {max_memory / (1024 ** 3): .2f}, "
                       f"warm_up_memory(GB): {self.warm_up_memory / (1024 ** 3): .2f}, "
@@ -161,7 +165,7 @@ class PARunner:
             if ENV.benchmark_enable:
                 req_list_dummy = copy.deepcopy(req_list)
                 generate_req(req_list_dummy, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                            2, self.cache_manager, self.rank, ignore_eos)
+                             2, self.cache_manager, self.rank, ignore_eos)
 
         if not ENV.profiling_enable:
             print_log(self.rank, logger.debug, "no profiling")
@@ -259,7 +263,7 @@ if __name__ == '__main__':
     pa_runner.warm_up()
 
     generate_texts, token_nums, _ = pa_runner.infer(args.input_texts, args.max_batch_size, args.max_output_length,
-                                            args.ignore_eos, args.input_ids)
+                                                    args.ignore_eos, args.input_ids)
 
     for i, generate_text in enumerate(generate_texts):
         length = len(args.input_ids) if args.input_ids else len(args.input_texts)
@@ -268,6 +272,6 @@ if __name__ == '__main__':
             print_log(rank, logger.info, f'Question[{i}]: {inputs[i]}')
         print_log(rank, logger.info, f'Answer[{i}]: {generate_text}')
         print_log(rank, logger.info, f'Generate[{i}] token num: {token_nums[i]}')
-       
+
     if world_size > 1:
         torch.distributed.destroy_process_group()

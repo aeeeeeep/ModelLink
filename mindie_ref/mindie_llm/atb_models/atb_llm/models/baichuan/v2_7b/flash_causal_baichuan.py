@@ -253,6 +253,7 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
         self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64, device="npu")
 
         self.ascend_atten_mask = AttentionMask.static(config.max_position_embeddings)
+        self.ascend_atten_mask_fake = self.ascend_atten_mask.get_attn_mask(1, dtype=self.dtype, device="npu")
 
     def init_ascend_weight(self):
         weights = [self.model.state_dict()["embed_tokens.weight"]]
@@ -305,14 +306,16 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
         cos_embed, sin_embed = self.ascend_rotary_embedding.get_cos_sin_total(
             position_ids, self.max_position_embeddings, torch.float32
         )
-        if self.soc_info.need_nz:
-            pad_maxs = math.ceil(self.max_position_embeddings / 16) * 16
-            atten_mask = self.ascend_atten_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
-            atten_mask = self.transdata_operation.execute([atten_mask])[0]
+        if self.is_prefill:
+            if self.soc_info.need_nz:
+                pad_maxs = math.ceil(self.max_position_embeddings / 16) * 16
+                atten_mask = self.ascend_atten_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
+                atten_mask = self.transdata_operation.execute([atten_mask])[0]
+            else:
+                atten_mask = self.ascend_atten_mask.get_attn_mask(self.max_position_embeddings, kv_cache[0][0].dtype,
+                                                                  kv_cache[0][0].device)
         else:
-            atten_mask = self.ascend_atten_mask.get_attn_mask(self.max_position_embeddings, kv_cache[0][0].dtype,
-                                                              kv_cache[0][0].device)
-
+            atten_mask = self.ascend_atten_mask_fake
         if self.is_prefill:  # prefill
             if lm_head_indices is None:
                 lm_head_indices = torch.tensor(range(input_ids.shape[0]), dtype=torch.int64, device=input_ids.device)
