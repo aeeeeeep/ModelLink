@@ -527,6 +527,7 @@ class QWenModel(QWenPreTrainedModel):
         self.ascend_vcache_id = None
 
         self.ascend_atten_mask = AttentionMask.static(config.max_position_embeddings)
+        self.ascend_atten_mask_fake = self.ascend_atten_mask.get_attn_mask(1, dtype=torch.float16, device="npu")
         self.place_holder = torch.tensor([1], dtype=torch.float16, device='npu')
 
         self.batch_size = 0
@@ -654,14 +655,17 @@ class QWenModel(QWenPreTrainedModel):
             if lm_head_indices is None:
                 lm_head_indices = torch.tensor(range(input_ids.shape[0]), dtype=torch.int64, device=input_ids.device)
         
-        if self.soc_info.need_nz:
-            pad_maxs = math.ceil(self.max_position_embedding / 16) * 16
-            attention_mask = self.ascend_atten_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
-            attention_mask = attention_mask.view(1, pad_maxs, pad_maxs // 16, 16).transpose(1, 2)
-            torch_npu.npu_format_cast_(attention_mask, 29)
+        if self.is_prefill:
+            if self.soc_info.need_nz:
+                pad_maxs = math.ceil(self.max_position_embedding / 16) * 16
+                attention_mask = self.ascend_atten_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
+                attention_mask = attention_mask.view(1, pad_maxs, pad_maxs // 16, 16).transpose(1, 2)
+                torch_npu.npu_format_cast_(attention_mask, 29)
+            else:
+                attention_mask = self.ascend_atten_mask.get_attn_mask(self.max_position_embedding, kv_cache[0][0].dtype,
+                                                                    kv_cache[0][0].device)
         else:
-            attention_mask = self.ascend_atten_mask.get_attn_mask(self.max_position_embedding, kv_cache[0][0].dtype,
-                                                                  kv_cache[0][0].device)
+            attention_mask = self.ascend_atten_mask_fake
         
         self.acl_operation_inputs = [
             input_ids,  # IN_TENSOR_INPUTIDS
