@@ -92,7 +92,8 @@ def generate_req(req_list, model, tokenizer,
                 cur_need_blocks = req_list[req_idx].need_blocks
                 cur_context_len = req_list[req_idx].input_length
                 if total_need_blocks + cur_need_blocks > free_block:
-                    break
+                    raise Exception(f"req: {req_idx} out of memory, need block:" +
+                                 f"{total_need_blocks + cur_need_blocks} is more than free block {free_block}")
                 if cur_context_len > max_prefill_tokens:
                     logger.error(f"req: {req_idx} input length: {cur_context_len} is too long," +
                                  f" max_prefill_tokens: {max_prefill_tokens}")
