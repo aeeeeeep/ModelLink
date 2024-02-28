@@ -18,7 +18,7 @@ DEVICE_TYPE="d3"
 # customized parameters
 input_dir="./llama2-7b_parallel"
 device_id=0
-multi_batch_size=[1]
+multi_batch_size=[1,4,8,16,32]
 
 # single case inference
 seqlen_in=128
