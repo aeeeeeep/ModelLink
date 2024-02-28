@@ -119,8 +119,11 @@ aclTensor *CreateTensor(const atb::VariantPack &variantPack, int64_t index, bool
     }
 }
 
-atb::Status MatMulCompressDequantOperation::Setup(uint64_t &workspaceSize)
+atb::Status MatMulCompressDequantOperation::Setup(const atb::VariantPack &variantPack, uint64_t &workspaceSize,
+    atb::Context *context)
 {
+    (void)variantPack;
+    (void)context;
     workspaceSize = 0;
     return 0;
 }

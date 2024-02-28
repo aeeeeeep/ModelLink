@@ -126,6 +126,7 @@ atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operati
     mulNode.outTensorIds = {INTERMEDIATE_MUL_OUT_ID};
 
     auto &matmulDownNode = opGraph.nodes.at(nodeId++);
+    
     // atb_speed::telechat::ParallelParamV2 linearDownParam = {true, false, param.transposeB, param.isDownQuant};
     atb_speed::telechat::ParallelParamV2 linearDownParam;
     linearDownParam.isBias = true;

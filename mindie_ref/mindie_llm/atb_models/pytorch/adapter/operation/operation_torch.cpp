@@ -16,19 +16,21 @@
 #include "operation_torch.h"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wno-unused-variable"
+#pragma GCC diagnostic ignored "-Wno-unused-parameter"
+#include "pytorch/adapter/utils/utils.h"
+#include "pytorch/adapter/workspace/workspace.h"
 #pragma GCC diagnostic pop
 #include <acl/acl.h>
 #include <atb_speed/utils/timer.h>
 #include <atb_speed/utils/singleton.h>
 #include <atb_speed/base/context_factory.h>
-#include "atb_speed/utils/hosttensor_binder_factory.h"
 #include "atb_speed/utils/tensor_util.h"
 #include "atb_speed/utils/config.h"
 #include "atb_speed/utils/statistic.h"
 #include "atb_speed/log.h"
-#include "pytorch/adapter/utils/utils.h"
-#include "pytorch/adapter/workspace/workspace.h"
 #include "operation_creator.h"
+#include "hosttensor_binder_creator.h"
 
 uint64_t GetNewOpId()
 {
@@ -71,9 +73,7 @@ void OperationTorch::SetParam(std::string param)
 
     operation_.reset(operation);
 
-    // Please register them in files `.h`, see `models/baichuan2/13b/layer/flash_attention_layer.h`;
-    // And set correct opName_;
-    atb_speed::HostTensorBinder *binder = atb_speed::HosttensorBinderFactory::CreateInstance(opName_);
+    atb_speed::HostTensorBinder *binder = CreateHostTensorBinder(opName_);
     if (!binder) {
         ATB_LOG(INFO) << name_ << "create host tensor binder fail, opName:" << opName_;
     }

@@ -482,11 +482,17 @@ class Weights:
             weight = torch.cat(w, dim=dim)
         return weight
 
-    def get_weights_col_packed_qkv_glm(self, prefix: str, quantize: str, q_size, kv_size, bias):
+    def get_weights_col_packed_qkv_glm(self, config, prefix: str, quantize: str, is_bias):
         """
         Highly specific when the underlying tensor is a simple cat of Q,K,V instead of being
         already alternating Q,K,V within the main tensor
         """
+        hidden_size_per_attention_head = config.hidden_size // config.num_attention_heads
+        num_attention_heads_per_partition = config.num_attention_heads
+        num_multi_query_groups_per_partition = config.multi_query_group_num
+        q_size = hidden_size_per_attention_head * num_attention_heads_per_partition
+        kv_size = hidden_size_per_attention_head * num_multi_query_groups_per_partition
+
         if quantize == "gptq":
             try:
                 qweight = self._get_qweight(f"{prefix}.qweight")
@@ -503,7 +509,7 @@ class Weights:
             bits, groupsize = self._get_gptq_params()
             weight = (qweight, qzeros, scales, g_idx, bits, groupsize, False)
         else:
-            if bias:
+            if is_bias:
                 slice_ = self.get_tensor(f"{prefix}.bias")
             else:
                 slice_ = self.get_tensor(f"{prefix}.weight")
@@ -519,13 +525,7 @@ class Weights:
             if q_single_size % world_size != 0:
                 logger.error(f"Prepacked qkv cannot be sharded across {world_size} shards")
                 raise AssertionError
-            q_block_size = q_single_size // world_size
-            q_start = rank * q_block_size
-            q_stop = (rank + 1) * q_block_size
 
-            kv_block_size = kv_single_size // world_size
-            kv_start = rank * 2 * q_block_size
-            kv_stop = (rank + 1) * kv_block_size
             query_layer, key_layer, value_layer = slice_.split(
                 [
                     q_single_size,
@@ -534,11 +534,11 @@ class Weights:
                 ],
                 dim=0
             )
+            kv_tp_size = min(world_size, num_multi_query_groups_per_partition)
             query_list = torch.chunk(query_layer, world_size, dim=0)
-            key_list = torch.chunk(key_layer, world_size, dim=0)
-            value_list = torch.chunk(value_layer, world_size, dim=0)
-            q, k, v = query_list[rank], key_list[rank], value_list[rank]
-            weight = torch.cat([q, k, v], dim=0)
+            key_list = torch.chunk(key_layer, kv_tp_size, dim=0)
+            value_list = torch.chunk(value_layer, kv_tp_size, dim=0)
+            weight = torch.cat([query_list[rank], key_list[rank * kv_tp_size // world_size], value_list[rank * kv_tp_size // world_size]], dim=0)
             weight = weight.to(device=self.device)
         return weight
 
