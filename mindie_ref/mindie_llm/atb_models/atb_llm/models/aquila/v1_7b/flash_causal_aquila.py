@@ -501,8 +501,8 @@ class FlashAquilaForCausalLM(torch.nn.Module):
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         if self.model.lm_head_weight is None:
             if self.soc_info.need_nz:
-                self.model.lm_head_weight = torch_npu.npu_format_cast(self.lm_head.weight.data, 29)
-            self.model.lm_head_weight = self.lm_head.weight.data
+                self.model.lm_head_weight = torch_npu.npu_format_cast(self.lm_head.linear.weight.data, 29)
+            self.model.lm_head_weight = self.lm_head.linear.weight.data
 
         outputs = self.model(
             input_ids,  # input id, 拉平的
