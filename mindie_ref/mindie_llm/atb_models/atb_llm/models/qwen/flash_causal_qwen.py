@@ -472,7 +472,7 @@ class QWenModel(QWenPreTrainedModel):
         self.use_dynamic_ntk = config.use_dynamic_ntk
         self.seq_length = config.seq_length
 
-        self.max_position_embedding = config.max_position_embedding
+        self.max_position_embeddings = config.max_position_embeddings
 
         self.wte = TensorEmbedding(prefix="transformer.wte", weights=weights)  # mindIE
 
@@ -657,12 +657,12 @@ class QWenModel(QWenPreTrainedModel):
         
         if self.is_prefill:
             if self.soc_info.need_nz:
-                pad_maxs = math.ceil(self.max_position_embedding / 16) * 16
+                pad_maxs = math.ceil(self.max_position_embeddings / 16) * 16
                 attention_mask = self.ascend_atten_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
                 attention_mask = attention_mask.view(1, pad_maxs, pad_maxs // 16, 16).transpose(1, 2)
                 torch_npu.npu_format_cast_(attention_mask, 29)
             else:
-                attention_mask = self.ascend_atten_mask.get_attn_mask(self.max_position_embedding, kv_cache[0][0].dtype,
+                attention_mask = self.ascend_atten_mask.get_attn_mask(self.max_position_embeddings, kv_cache[0][0].dtype,
                                                                     kv_cache[0][0].device)
         else:
             attention_mask = self.ascend_atten_mask_fake
