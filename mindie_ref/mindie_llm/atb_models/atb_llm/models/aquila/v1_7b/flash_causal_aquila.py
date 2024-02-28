@@ -85,7 +85,7 @@ class AquilaMLP(nn.Module):
 
         self.gate_proj = TensorParallelColumnLinear.load(
             config,
-            prefixes=f"{prefix}.gate_proj",
+            prefix=f"{prefix}.gate_proj",
             weights=weights,
             bias=False,
         )
@@ -97,7 +97,7 @@ class AquilaMLP(nn.Module):
         )
         self.up_proj = TensorParallelColumnLinear.load(
             config,
-            prefixes=f"{prefix}.up_proj",
+            prefix=f"{prefix}.up_proj",
             weights=weights,
             bias=False,
         )
