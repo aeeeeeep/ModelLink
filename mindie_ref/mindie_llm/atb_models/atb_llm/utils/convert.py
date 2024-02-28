@@ -38,9 +38,13 @@ def _remove_duplicate_names(
             print(f'=====================state_dict[name]: {tensor}')
             print(f'=====================tensor.data_ptr(): {tensor.data_ptr()}')
             print(f'=====================storage_ptr(tensor): {storage_ptr(tensor)}')
+            print(f'=====================tensor.untyped_storage().data_ptr(): {tensor.untyped_storage().data_ptr()}')
+            print(f'=====================tensor.storage().data_ptr(): {tensor.storage().data_ptr()}')
             print(f'=====================tensor.nelement(): {tensor.nelement()}')
             print(f'=====================_SIZE[tensor.dtype]: {_SIZE[tensor.dtype]}')
             print(f'=====================storage_size(tensor): {storage_size(tensor)}')
+            print(f'=====================tensor.untyped_storage().nbytes(): {tensor.untyped_storage().nbytes()}')
+            print(f'=====================tensor.storage().size(): {tensor.storage().size()}')
             print(f'=====================sharedinfo: \t||||||{name}\t{tensor.data_ptr()}\t{storage_ptr(tensor)}\t{tensor.nelement()}\t{_SIZE[tensor.dtype]}\t{storage_size(tensor)}')
 
     for shared in shareds:
