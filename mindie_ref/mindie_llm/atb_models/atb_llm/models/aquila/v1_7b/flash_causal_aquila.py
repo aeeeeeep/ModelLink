@@ -221,7 +221,7 @@ class AquilaModel(AquilaPreTrainedModel):
         self.layers = nn.ModuleList(
             [AquilaDecoderLayer(layer_id, config, weights, ) for layer_id in range(config.num_hidden_layers)]
         )
-        self.norm = AquilaRMSNorm(prefix="model.norm", weights=weights, epsilon=config.rms_norm_eps)
+        self.norm = AquilaRMSNorm(prefix="model.norm", weights=weights, eps=config.rms_norm_eps)
 
         # for ascend
         self.training = False
