@@ -69,35 +69,7 @@
 
 # 快速上手
 
-## 获取源码及依赖
-
-### 1. 环境部署
-
-#### 1.1 安装HDK
-
-先安装firmwire，再安装driver
-
-##### 1.1.1 安装firmwire
-
-##### 1.1.2 安装driver
-
-#### 1.2 安装CANN
-
-先安装toolkit 再安装kernel
-
-##### 1.2.1 安装toolkit
-
-##### 1.2.2 安装kernel
-
-#### 1.3 安装PytorchAdapter
-
-先安装torch 再安装torch_npu
-
-##### 1.3.1 安装torch
-
-##### 1.3.2 安装torch_npu
-
-##### 1.3.3 安装依赖
+### 1.安装依赖
 
 | 包名            | 推荐版本   |  
 |---------------|--------|
@@ -122,12 +94,12 @@
 
 2. 根据版本发布链接，安装加速库
 
-| 加速库包名                                                 |
-|-------------------------------------------------------|
-| Ascend-cann-atb_{version}_cxx11abi0_linux-aarch64.run |
-| Ascend-cann-atb_{version}_cxx11abi1_linux-aarch64.run |
-| Ascend-cann-atb_{version}_cxx11abi1_linux-x86_64.run  |
-| Ascend-cann-atb_{version}_cxx11abi0_linux-x86_64.run  |
+| 加速库包名                                              |
+|----------------------------------------------------|
+| Ascend-mindie-atb_{version}_linux-aarch64_abi0.run |
+| Ascend-mindie-atb_{version}_linux-aarch64_abi1.run |
+| Ascend-mindie-atb_{version}_linux-x86_64_abi0.run  |
+| Ascend-mindie-atb_{version}_linux-x86_64_abi1.run  |
 
 具体使用cxx11abi0 还是cxx11abi1 可通过python命令查询
 
@@ -141,29 +113,27 @@ torch.compiled_with_cxx11_abi()
 
 ```bash
 # 安装atb 
-chmod +x Ascend-cann-atb_*.run
-./Ascend-cann-atb_*.run --install
+chmod +x Ascend-mindie-atb_*.run
+./Ascend-mindie-atb_*.run --install
 source /usr/local/Ascend/atb/set_env.sh
 ```
 
 3. 根据版本发布链接，解压大模型文件
 
-| 大模型包名                                    |
-|------------------------------------------|
-| Ascend-cann-transformer-llm_abi_1.tar.gz |
-| Ascend-cann-transformer-llm_abi_0.tar.gz |
+| 大模型包名                                              |
+|----------------------------------------------------|
+| Ascend-mindie-torch_1.0.RC1_linux-aarch64.tar.gz   |
 
-具体使用cxx11abi0 还是cxx11abi1 方法同安装atb
 
  ```bash
  # 安装大模型加速库
- tar -xzvf Ascend-cann-transformer-llm_abi*.tar.gz
+ tar -xzvf Ascend-mindie-torch_1.0.RC1_linux-aarch64.tar.gz
  source set_env.sh
  ```
 
 > 注： 每次运行前都需要 source CANN， 加速库，大模型
 
-## 单芯模型推理
+## 模型推理
 
 ### 拷贝文件
 
@@ -187,7 +157,7 @@ cp {model_path}/.gitattributes ./
 ```
 
 - 修改`config.json` , 将 AutoModel 和 AutoModelForCausalLM 对应的值修改为 "
-  modeling_internlm_fa_rope_parallel_model.InternLMForCausalLM"
+  modeling_internlm_fa_rope_model_parallel.InternLMForCausalLM"
 
 ### 软链接模型权重文件
 
@@ -207,7 +177,7 @@ cd ${internlm_20b_path}/pytorch/examples/atb_speed_sdk
 pip install .
 ```
 
-#### 3. 张量并行模型切分（仅在模型需要多卡并行时使用）
+#### 3. 张量并行模型切分（多卡并行时使用）
 
 ```shell
 cp ${internlm_20b_path}/pytorch/examples/internlm/20b/modeling_internlm_cut.py ${model_path}
@@ -226,27 +196,20 @@ cp ${internlm_20b_path}/pytorch/examples/internlm/20b/modeling_internlm_cut.py $
 
 切分所需时间较长，切分完成后，将会打印 'Tensor parallelism weights have been successfully saved.'。
 
-#### 拷贝运行用的modeling （仅在模型需要多卡并行时使用）
+#### 拷贝运行用的modeling （多卡并行时使用）
 
 rank_id，表示卡的编号，0,1,2,3.。。，并修改里面的config.json
 
 ```shell
 cd ${model_path}/part_model/{rank_id}
-cp ${internlm_20b_path}/pytorch/examples/internlm/20b/modeling_internlm_fa_rope_parallel_model.py ./
+cp ${internlm_20b_path}/pytorch/examples/internlm/20b/modeling_internlm_fa_rope_model_parallel.py ./
 vim config.json
 ```
 
 修改config.json中的kv对，改成
-`"AutoModelForCausalLM": "modeling_internlm_fa_rope_parallel_model.InternLMForCausalLM"`
-`"bias": true`
+`"AutoModelForCausalLM": "modeling_internlm_fa_rope_model_parallel.InternLMForCausalLM"`
 
 ### 配置 config.ini
-
-- 在{internlm_20b_path}/pytorch/examples/internlm/20b目录下创建config.ini文件
-  ```shell
-  cd {internlm_20b_path}/pytorch/examples/internlm/20b/script
-  vi config.ini
-  ```
 
   [参考atb_speed_sdk下的README.md](../../atb_speed_sdk/README.md)
 
@@ -255,7 +218,7 @@ vim config.json
 - 配置config.ini中属性值：
   ```
   model_path={output_path}
-  work_dir={internlm_20b_path}/pytorch/examples/internlm/20b/script
+  work_dir={internlm_20b_path}/pytorch/examples/internlm/20b
   ```
 
 # 竞品对比
@@ -289,13 +252,6 @@ vim config.json
 参考 [SDK精度测试指南CEVAL章节](../../atb_speed_sdk/README.md)
 
 ## 运行脚本
-
-- 单芯
-
-```shell
-cd ${script_path}
-python main.py --task precision
-```
 
 - 多芯
 
