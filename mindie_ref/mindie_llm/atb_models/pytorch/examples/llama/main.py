@@ -20,6 +20,7 @@ import torch_npu
 from atb_speed.common.cpu_binding import CPUBinder
 from torch_npu.contrib import transfer_to_npu
 from transformers import AutoTokenizer, AutoModelForCausalLM
+import json
 
 BIND_CPU = int(os.getenv("BIND_CPU", "0"))
 
@@ -102,7 +103,11 @@ def init_model(init_args):
         tokenizer_path = init_args.load_path
         model_path = init_args.load_path
 
-    tokenizer_init = AutoTokenizer.from_pretrained(tokenizer_path, padding_side='left')
+    tokenizer_config_path = os.path.join(tokenizer_path, 'tokenizer_config.json')
+    with open(tokenizer_config_path) as f:
+        tokenizer_config = json.load(f)
+        use_fast = tokenizer_config.get('use_fast', True)
+    tokenizer_init = AutoTokenizer.from_pretrained(tokenizer_path, padding_side='left', use_fast=use_fast)
     # adapt PAD token
     if tokenizer_init.pad_token is None:
         tokenizer_init.pad_token = '[PAD]'
@@ -111,7 +116,7 @@ def init_model(init_args):
     elif npu_num < 2:
         print("load tokenizer success!")
 
-    model_init = AutoModelForCausalLM.from_pretrained(model_path, torch_dtype=torch.float16).npu()
+    model_init = AutoModelForCausalLM.from_pretrained(model_path, torch_dtype=torch.float16, device_map="npu")
     if npu_num >= 2 and not torch.distributed.get_rank():
         print("load model success!")
     elif npu_num < 2:
