@@ -31,6 +31,7 @@ enum LinearQuantType : unsigned int {
 
 struct FusionLinearParam {
     int quantType = NO_QUANT;
+    bool isBF16 = false;
 };
 
 atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operation);

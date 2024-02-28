@@ -32,7 +32,7 @@ public:
         atb::SVector<atb::TensorDesc> &outTensorDescs) const override;
     uint32_t GetInputNum() const override;
     uint32_t GetOutputNum() const override;
-    atb::Status Setup(const atb::VariantPack &variantPack, uint64_t &workspaceSize, atb::Context *context) override;
+    atb::Status Setup(uint64_t &workspaceSize);
     atb::Status Execute(const atb::VariantPack &variantPack, uint8_t *workspace, uint64_t workspaceSize,
         atb::Context *context) override;
 

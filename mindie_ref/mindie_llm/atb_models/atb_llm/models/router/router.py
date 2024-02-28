@@ -6,8 +6,8 @@ from typing import Optional, Any
 from transformers import AutoTokenizer
 
 from ..llama.modeling_llama import LlamaConfig
-from ..starcoder.flash_causal_starcoder import StarcoderConfig
 from ..qwen.config import QWenConfig
+from ..starcoder.flash_causal_starcoder import StarcoderConfig
 
 
 @dataclass
@@ -158,7 +158,8 @@ class BaichuanRouter(BaseRouter):
                                             revision=self.revision,
                                             trust_remote_code=self.trust_remote_code)
         if self.max_position_embeddings:
-            config.model_max_length = self.max_position_embeddings
+            config.model_max_length = self.max_position_embeddings  # 13b
+            config.max_position_embeddings = self.max_position_embeddings
         return config
 
     def get_tokenizer(self):
@@ -216,7 +217,7 @@ class QwenRouter(BaseRouter):
             revision=self.revision,
             trust_remote_code=self.trust_remote_code
         )
-    
+
     def get_tokenizer(self):
         return AutoTokenizer.from_pretrained(
             self.model_name_or_path,

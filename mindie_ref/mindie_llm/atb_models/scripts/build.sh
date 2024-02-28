@@ -47,7 +47,7 @@ USE_VERBOSE=OFF
 IS_RELEASE=0
 BUILD_OPTION_LIST="3rdparty download_testdata unittest unittest_and_run pythontest pythontest_and_run debug release help python_unittest_and_run master"
 BUILD_CONFIGURE_LIST=("--output=.*" "--cache=.*" "--verbose" "--incremental" "--gcov" "--no_hostbin" "--no_devicebin" "--use_cxx11_abi=0"
-    "--use_cxx11_abi=1" "--build_config=.*" "--optimize_off" "--use_torch_runner" "--use_lccl_runner" "--use_hccl_runner" "--doxygen" "--no_warn" 
+    "--use_cxx11_abi=1" "--build_config=.*" "--optimize_off" "--use_torch_runner" "--use_lccl_runner" "--use_hccl_runner" "--doxygen"  
     "--ascend_speed_version=.*" "--release_b_version=.*")
 
 function export_speed_env()
@@ -432,10 +432,6 @@ function fn_main()
         "--use_cxx11_abi=0")
             USE_CXX11_ABI=OFF
             COMPILE_OPTIONS="${COMPILE_OPTIONS} -DUSE_CXX11_ABI=OFF"
-            ;;
-        "--no_warn")
-            ENABLE_WARNINGS=OFF
-            COMPILE_OPTIONS="${COMPILE_OPTIONS} -DENABLE_WARNINGS=OFF"
             ;;
         "--verbose")
             USE_VERBOSE=ON

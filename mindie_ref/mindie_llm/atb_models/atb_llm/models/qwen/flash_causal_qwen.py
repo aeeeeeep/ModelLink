@@ -548,7 +548,7 @@ class QWenModel(QWenPreTrainedModel):
             "rank": self.tp_rank,
             "rankSize": self.tp_world_size,
             "isPrefill": True,
-            "backend": os.getenv("BACKEND", "hccl"),
+            "backend": "hccl" if self.soc_info.need_nz else "lccl",
             "isLmHeadParallel": not self.soc_info.need_nz
         })
         self.acl_param_decoder = json.dumps({
@@ -559,7 +559,7 @@ class QWenModel(QWenPreTrainedModel):
             "rank": self.tp_rank,
             "rankSize": self.tp_world_size,
             "isPrefill": False,
-            "backend": os.getenv("BACKEND", "hccl"),
+            "backend": "hccl" if self.soc_info.need_nz else "lccl",
             "isLmHeadParallel": not self.soc_info.need_nz
         })
         logger.info(self.acl_param_encoder)

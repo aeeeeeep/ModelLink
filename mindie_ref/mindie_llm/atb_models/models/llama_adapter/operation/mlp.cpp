@@ -46,6 +46,7 @@ static const uint64_t NODE_COUNT = 5;
 atb::Status MlpAdapter(const MlpParam &param, atb::Operation **operation)
 {
     atb::GraphParam opGraph;
+    (void)param;
     opGraph.name = "MlpAdapter";
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;

@@ -31,6 +31,7 @@ public:
         float QKScale = 0.0;
         double RmsNormEps = 0.0;
         int coderType = 0;
+        int isTriuMask = 0;
         std::string backend = "hccl";
         // isFA为true则使用Flash Attention; 反之，则使用Paged Attention
         bool isFA = true;

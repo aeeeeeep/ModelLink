@@ -20,5 +20,7 @@ extra_param=""
 #     extra_param="${extra_param} --is_bf16"
 # fi
 
-if [ "$TP_WORLD_SIZE" == "1" ]; then    python -m examples.run_pa --model_path $1 $extra_paramelse
-    torchrun --nproc_per_node $TP_WORLD_SIZE --master_port $MASTER_PORT -m examples.run_pa --model_path $1 $extra_paramfi
+if [ "$TP_WORLD_SIZE" == "1" ]; then    python -m examples.run_pa --model_path $1 $extra_param
+else
+    torchrun --nproc_per_node $TP_WORLD_SIZE --master_port $MASTER_PORT -m examples.run_pa --model_path $1 $extra_param
+fi

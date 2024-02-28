@@ -32,6 +32,7 @@ struct ParallelLmHeadParam {
     bool gatherAhead = false;
     bool transposeA = false;
     bool transposeB = true;
+    bool isBF16 = false;
 };
 
 class ParallelLmHeadConfig : public CommonOpBase {

@@ -33,6 +33,7 @@ struct MlpGateParamV2 {
     bool isQuant = false;
     bool isSparse = false;
     bool noGate = false;
+    bool isBF16 = false;
     CommParam commDownParam;
     QuantParam quantUpParam;
     QuantParam quantGateParam;

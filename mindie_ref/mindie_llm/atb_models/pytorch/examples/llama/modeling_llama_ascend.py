@@ -755,6 +755,9 @@ class LlamaModel(LlamaPreTrainedModel):
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
         self.layers = nn.ModuleList([LlamaDecoderLayer(config, i) for i in range(config.num_hidden_layers)])
         self.norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+
+        # initialize dtype
+        self.isBF16 = (self.dtype == torch.bfloat16)
         print(f"LlamaModel, dtype: {self.dtype}")
 
         self.gradient_checkpointing = False
@@ -845,6 +848,7 @@ class LlamaModel(LlamaPreTrainedModel):
             "quantModel": self.quant_model,
             "sparseModel": self.sparse_model,
             "isEncoder": isEncoder,
+            "isBF16": self.isBF16,
             "qkvInputScale": self.qkv_input_scale, "qkvInputOffset": self.qkv_input_offset,
             "denseInputScale": self.dense_input_scale, "denseInputOffset": self.dense_input_offset,
             "selfLnInputScale": self.self_ln_input_scale, "selfLnInputOffset": self.self_ln_input_offset,
