@@ -6,7 +6,6 @@
     - [Script](#script)
     - [Performance](#performance)
       - [Machine performance](#machine-performance)
-      - [Accuracy of the loss](#accuracy-of-the-loss)
   - [Inference](#inference)
   - [Evaluation](#evaluation-with-benchmark)
 
@@ -138,12 +137,6 @@ The performance of Aquila-7B in Ascend NPU and reference device:
 | NPU  | 910b 1node*8p | Aquila-7B  | 1000 | 2849                  | 5.75                  |
 | 参考  |              | Aquila-7B  | 1000 | 2874                   |    5.70               |
 
-
-#### Accuracy of the loss
-
-Aquila-7B NPU vs Reference loss.
-
-![NPU-GPU-Relative-Error](../../sources/images/aquila/aquila_comp0122.png)
 
 
 ## Inference

@@ -11,7 +11,6 @@
     - [Script](#script)
     - [Performance](#performance)
       - [Machine performance](#machine-performance)
-      - [Accuracy of the loss](#accuracy-of-the-loss)
   - [Inference](#Inference)
     - [Script](#script)
   - [Evaluation with Numerous Benchmarks](#Evaluation-with-Numerous-Benchmarks)
@@ -21,7 +20,6 @@
     - [Script](#script-1)
     - [Performance](#performance-1)
       - [Machine performance](#machine-performance-1)
-      - [Accuracy of the loss](#accuracy-of-the-loss-1)
   - [Inference](#Inference)
     - [Script](#script)
   - [Evaluation with Numerous Benchmarks](#Evaluation-with-Numerous-Benchmarks)
@@ -287,15 +285,6 @@ The performance of LLaMA-7B/13B in **Ascend NPU** and **Reference**:
 | NPUs      | 910 1*8p  | LLaMA-13B | 2048             | 0.92                         | 1895                         | 17.2                     | 200.57                              |
 | Reference | -         | LLaMA-13B | 2048             | 0.96                          | 2012                         | 16.6                     | 213.29                              |
 
-
-
-#### Accuracy of the loss
-
-LLama-7b with huggingface weights NPU vs GPU loss.
-![NPU-Loss-with-weight-and-Relative-Error](../../sources/images/llama/llama7b-loss-with-weight.png)
-
-LLama-13b with huggingface weights NPU vs GPU loss.
-![NPU-Loss-with-weight-and-Relative-Error](../../sources/images/llama/llama13b-loss-with-weight.png)
 
 
 ## Inference
@@ -660,27 +649,6 @@ The performance of the NPUs in **Ascend** and Reference:
 |   NPUs    | llama-65B |             348              |
 
 
-#### Accuracy of the loss
-
-NPU vs GPU loss and relative error:
-
-LLaMa-33B
-
-The NPU runs smoothly, the resource usage is stable, no errors are reported in the middle of the process, the Loss is on a decreasing trend, and the convergence speed is as expected.
-
-![NPU-LOSS](../../sources/images/llama/llama33B_loss.png)
-
-The relative error between NPU and GPU Loss is less than 0.03 throughout, as expected.
-
-![NPU-Relative-Error](../../sources/images/llama/llama33B_relative_error.png)
-
-
-
-LLaMa-65B
-
-The NPU runs smoothly, the resource usage is stable, no errors are reported in the middle of the process, the Loss is on a decreasing trend, and the convergence speed is as expected. The relative error between NPU and GPU Loss is less than 0.02 throughout, as expected.
-
-![NPU-Loss-with-weight-and-Relative-Error](../../sources/images/llama/llama65b-shape_layer10_loss-with-weight.png)
 
 ## Inference
 

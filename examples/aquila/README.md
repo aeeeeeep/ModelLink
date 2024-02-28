@@ -6,7 +6,6 @@
     - [脚本](#脚本)
     - [性能](#性能)
       - [吞吐](#吞吐)
-      - [精度](#精度)
   - [推理](#推理)
   - [评估](#评估)
 
@@ -140,11 +139,6 @@ Aquila-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 | NPU  | 910b 1node*8p | Aquila-7B  | 1000 | 2849                  | 5.75                  | 
 | 参考  |              | Aquila-7B  | 1000 | 2874                   |    5.70               | 
 
-#### 精度
-
-Aquila-7b NPU vs 参考 loss.
-
-![NPU-GPU-Relative-Error](../../sources/images/aquila/aquila_comp0122.png)
 
 
 ## 推理

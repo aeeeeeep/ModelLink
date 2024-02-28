@@ -142,15 +142,7 @@ The performance of Bloom-7B in **Ascend NPU** and **Reference**:
 | NPUs | Bloom 7b | 1000 | 7.95 | 2034 | 64.55
 |  Reference  | Bloom 7B | 1000 | 9.894 |  2525 | 19.40 
 
-#### Accuracy of the loss
 
-NPU vs Reference loss.
-
-![NPU-LOSS](../../sources/images/bloom/7b_lm_loss.png)
-
-NPU VS Reference relative error
-
-![relative_error](../../sources/images/bloom/relative_error.png)
 
 ## Inference Bloom-7B
 Config Bloom-7B inference script: tasks/inference/generate_bloom_7b_ptd.sh
@@ -338,16 +330,6 @@ The performance of Bloom-176B in **Ascend NPU** and **Reference**:
 | NPUs      | Bloom-176B | 1000             | 108                          |
 | Reference | Bloom-176B | NA               | 107                          |
 
-### Accuracy of the loss
-
-NPU vs GPU loss. The loss curves of GPUs and NPUs basically coincide.
-
-![bloom176b_lm_loss_compare](../../sources/images/bloom/bloom176b_lm_loss_compare.PNG)
-
-We reduce the number of layers of the model to six, the following figure shows the loss comparsion between the NPU 
-and GPU on a single-node system. The average relative error is 0.1%, less than 2%, and the proportion of relative error less than 2% reaches 99.9%. The average absolute error is 0.04. The precision meets the requirements.
-
-![bloom176b_1node_lm_loss_compare](../../sources/images/bloom/bloom176b_lm_loss_1node_compare.PNG)
 
 ## Inference
 

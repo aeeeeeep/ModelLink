@@ -12,7 +12,6 @@
   - [脚本](#脚本)
   - [性能](#性能)
     - [吞吐](#吞吐)
-    - [精度](#精度)
   - [推理](#推理-7B)
   - [评估](#评估-7B)
 
@@ -21,7 +20,6 @@
   - [脚本](#脚本)
   - [性能](#性能)
     - [吞吐](#吞吐)
-    - [精度](#精度)
   - [推理](#推理)
   - [评估](#评估)
 
@@ -30,7 +28,6 @@
     - [脚本](#脚本-2)
     - [性能](#性能-2)
       - [吞吐](#吞吐-2)
-      - [精度](#精度-2)
   - [推理](#推理-2)
   - [评估](#评估-2)
 
@@ -228,17 +225,6 @@ LLaMA2-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 | NPUs | LLaMA2-7B |  1024  |        5.63         |         2884          |      2.84       |        131.96        |
 | 参考 | LLaMA2-7B |  1024  |        5.63         |         2884          |      2.84       |        131.96        |
 
-#### 精度
-
-5000步的均方误差为0.00000195
-
-NPU VS 参考 loss
-
-![NPU-LOSS](../../sources/images/llama2/llama2-7b-tp8pp1mbs4gbs16-Megatron-GPU-loss-absolute.png)
-
-相对误差
-
-![NPU-Relative-Error](../../sources/images/llama2/llama2-7b-tp8pp1mbs4gbs16-Megatron-GPU-loss-relative.png)
 
 ## 推理-7B
 
@@ -547,12 +533,6 @@ LLaMA2-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 |  参考  | LLaMA2-13B |        --        |         --         |         1750          |       --        |        --        |
 
 
-#### 精度
-
-NPU vs 参考 loss
-NPU运行平稳，资源使用稳定，中间没有报错，Loss呈下降趋势，收敛速度符合预期。
-精度满足要求。平均损耗的绝对误差为0.0011，小于0.5%。
-![NPU-LOSS](../../sources/images/llama2/llama2_13b_bf16_loss_absolute.png)
 
 ## 推理
 
@@ -923,21 +903,6 @@ LLaMA2-34B/70B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比
 | NPUs | LLaMA2-70B |          350          |
 |  参考  | LLaMA2-70B |          339          |
 
-
-#### 精度-2
-
-LLaMA2-34B 8卡上12层模型 NPU vs 参考 loss. 
-
-![NPU-LOSS](../../sources/images/llama2/llama2_34b_bf16_layer12_loss_compare.png)
-
-相对误差
-
-![NPU-LOSS and NPU-Relative-Error](../../sources/images/llama2/llama2_34b_bf16_layer12_loss_relative.png)
-
-
-LLaMA2-70B NPU vs 参考 loss.
-
-![NPU-LOSS](../../sources/images/llama2/llama2_70b_bf16_layer12_loss_compare.png)
 
 
 ## 推理-2

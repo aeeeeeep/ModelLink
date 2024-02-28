@@ -12,7 +12,6 @@
     - [脚本](#脚本)
     - [性能](#性能)
         - [吞吐](#吞吐)
-        - [精度](#精度)
   - [推理](#推理)
   - [评估](#评估)
 
@@ -21,7 +20,6 @@
     - [脚本](#脚本)
     - [性能](#性能)
         - [吞吐](#吞吐)
-        - [精度](#精度)
   - [推理](#推理)
   - [评估](#评估)
 
@@ -162,17 +160,6 @@ Baichuan2-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 | NPUs | Baichuan2-7B | 1000 | 5.07 | 2598 | 6.305| 
 |  参考  | Baichuan2-7B | 1000 | -- |  3969 | --   | 
 
-
-
-#### 精度
-
-NPU vs 参考 loss.
-
-![NPU-LOSS](../../sources/images/baichuan2/baichuan2-7B-loss-compare.png)
-
-NPU vs 参考 loss 相对误差.
-
-![NPU-Relative-Error](../../sources/images/baichuan2/baichuan2-7B-loss-relative-error.png)
 
 
 ## 推理
@@ -370,16 +357,6 @@ Baichuan2-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 |  参考  | Baichuan2-13B | - | - | 872|- |
 
 
-
-#### 精度
-
-NPU vs 参考 loss.
-
-![NPU-LOSS](../../sources/images/baichuan2/baichuan2_13B_loss_compare.png)
-
-NPU vs 参考 loss 相对误差.
-
-![NPU-Relative-Error](../../sources/images/baichuan2/baichuan2_13B_loss_relative_error.png)
 
 ## 推理
 

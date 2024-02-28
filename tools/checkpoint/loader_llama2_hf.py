@@ -299,6 +299,7 @@ def _load_checkpoint(queue, args):
     if hasattr(margs, 'embed_layernorm'):
         md.embed_layernorm = margs.embed_layernorm
     else:
+        setattr(margs, 'embed_layernorm', False)
         md.embed_layernorm = False
 
     # Get first pipe stage.
