@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import List, Dict
 
 import torch
-from safetensors.torch import save_file, load_file, _find_shared_tensors, _is_complete
+from safetensors.torch import save_file, load_file, _find_shared_tensors, _is_complete, storage_ptr, _SIZE, storage_size
 
 from .log import logger
 
@@ -31,6 +31,14 @@ def _remove_duplicate_names(
     to_remove = defaultdict(list)
     for shared in shareds:
         print(f'=====================shared: ${shared}')
+        # return tensor.data_ptr() == storage_ptr(tensor) and tensor.nelement() * _SIZE[tensor.dtype] == storage_size(tensor)
+        tensor = state_dict[name]
+        print(f'=====================state_dict[name]: ${tensor}')
+        print(f'=====================tensor.data_ptr(): ${tensor.data_ptr()}')
+        print(f'=====================storage_ptr(tensor): ${storage_ptr(tensor)}')
+        print(f'=====================tensor.nelement(): ${tensor.nelement()}')
+        print(f'=====================_SIZE[tensor.dtype]: ${_SIZE[tensor.dtype]}')
+        print(f'=====================storage_size(tensor): ${storage_size(tensor)}')
         complete_names = set(
             [name for name in shared if _is_complete(state_dict[name])]
         )
