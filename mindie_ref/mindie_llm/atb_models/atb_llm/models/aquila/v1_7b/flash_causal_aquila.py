@@ -461,7 +461,7 @@ class AquilaModel(AquilaPreTrainedModel):
 
 
 # Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM with LLAMA->AQUILA,Llama->Aquila
-class AquilaForCausalLM(torch.nn.Module):
+class FlashAquilaForCausalLM(torch.nn.Module):
     def __init__(self, config, weights):
         super().__init__()
         self.config = config
