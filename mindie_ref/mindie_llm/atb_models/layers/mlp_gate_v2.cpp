@@ -144,8 +144,6 @@ atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operati
     }
 
     auto &matmulDownNode = opGraph.nodes.at(nodeId++);
-    // atb_speed::common::ParallelParamV2 linearDownParam = {param.isBias, false, param.transposeB, param.isQuant,
-    //                                                       param.isSparse, false, param.isBF16};
     atb_speed::common::ParallelParamV2 linearDownParam;
     linearDownParam.isBias = param.isBias;
     linearDownParam.transposeA = false;

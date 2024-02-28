@@ -107,7 +107,7 @@ atb::Status FusionPAModelW8A8::InferShape(const std::vector<atb::TensorDesc> &in
     const int64_t outDim = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.shape.dims[0];
     outTensorDescs.at(0) = graph_.weightTensors.at(0).desc;
     auto outDimNum = inTensorDescs.at(0).shape.dimNum + 1;
-    for (uint i = 0; i < outDimNum - 1; i++) {
+    for (uint32_t i = 0; i < outDimNum - 1; i++) {
         outTensorDescs.at(0).shape.dims[i] = inTensorDescs.at(0).shape.dims[i];
     }
     outTensorDescs.at(0).shape.dims[outDimNum - 1] = outDim * param_.rankSize;

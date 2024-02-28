@@ -15,12 +15,17 @@
  */
 #include "buffer_device.h"
 #include <acl/acl.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#include "pytorch/adapter/utils/utils.h"
+#pragma GCC diagnostic pop
 #include <atb_speed/utils/timer.h>
 #include <atb_speed/utils/singleton.h>
 #include <atb/types.h>
 #include "atb_speed/log.h"
 #include "atb_speed/utils/statistic.h"
-#include "pytorch/adapter/utils/utils.h"
 
 namespace atb_speed {
 constexpr int KB_1 = 1024;

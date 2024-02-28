@@ -268,7 +268,6 @@ atb::Status PAQuantOperaLayer(const PAQuantOperaLayerParam &param, atb::Operatio
     selfNormNode.outTensorIds = {INTERNAL_SELF_NORM_OUT};
 
     // up quant
-    // atb_speed::common::ParallelParamV2 linearUpParam = {true, false, true, true, false};
     atb_speed::common::ParallelParamV2 linearUpParam;
     linearUpParam.isBias = true;
     linearUpParam.transposeA = false;
@@ -282,7 +281,6 @@ atb::Status PAQuantOperaLayer(const PAQuantOperaLayerParam &param, atb::Operatio
     matmulUpNode.outTensorIds = {INTERNAL_MATMUL_UP_OUT};
 
     // gata quant
-    // atb_speed::common::ParallelParamV2 linearGateParam = {true, false, true, true, false};
     atb_speed::common::ParallelParamV2 linearGateParam;
     linearGateParam.isBias = true;
     linearGateParam.transposeA = false;

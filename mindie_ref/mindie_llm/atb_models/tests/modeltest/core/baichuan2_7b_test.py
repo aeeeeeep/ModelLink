@@ -50,9 +50,11 @@ class Baichuan27BModelTest(model_test.ModelTest):
         os.environ['ATB_OPERATION_EXECUTE_ASYNC'] = "1"
         os.environ['TASK_QUEUE_ENABLE'] = "1"
         os.environ['LCCL_ENABLE_FALLBACK'] = "1"
+        os.environ['ATB_LAUNCH_KERNEL_WITH_TILING'] = "1"
+        os.environ['PYTORCH_NPU_ALLOC_CONF'] = 'max_split_size_mb:2048'
 
     def get_dataset_list(self):
-        return ["GSM8K", "MMLU", "CEval"]
+        return ["BoolQ", "CEval"]
 
 
 def main():

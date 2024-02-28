@@ -17,7 +17,12 @@
 #define ATB_SPEED_OPERATION_TORCH_H
 #include <string>
 #include <vector>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #include <torch/script.h>
+#pragma GCC diagnostic pop
 #include <torch/custom_class.h>
 #include "atb/operation.h"
 #include "atb_speed/base/hosttensor_binder.h"

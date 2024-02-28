@@ -153,11 +153,11 @@ atb::Status ColumnParallelLinear(const ParallelParam &param_, atb::Operation **o
     return ParallelLinear(param_, operation, COLUMN_PARALLEL);
 }
 
-atb::Status VocabParallelEmbedding(atb::Operation **operation)
+atb::Status VocabParallelEmbedding(const ParallelParam &param_, atb::Operation **operation)
 {
+    (void)param_;
     (void)operation;
     return 0;
 }
-
 } // namespace common
 } // namespace atb_speed

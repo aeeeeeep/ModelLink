@@ -20,8 +20,6 @@
 #include <atb/svector.h>
 
 #include "atb_speed/base/hosttensor_binder.h"
-#include "atb_speed/utils/hosttensor_binder_factory.h"
-#include "atb_speed/utils/operation_factory.h"
 #include "atb_speed/log.h"
 #include "atb_speed/utils/str_split.h"
 
@@ -43,8 +41,6 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
 
 atb::Operation *CreateFlashAttentionLayer(const nlohmann::json &paramJson);
 
-REGISTER_OPERATION(baichuan2_13b, CreateFlashAttentionLayer);
-
 class FlashAttentionLayerBinder : public HostTensorBinder {
 public:
     FlashAttentionLayerBinder();
@@ -56,9 +52,6 @@ private:
     std::vector<int32_t> tokenOffset_;
     std::vector<int32_t> seqLen_;
 };
-
-REGISTER_BINDER(baichuan2_13b, FlashAttentionLayerBinder);
-
 } // namespace baichuan2_13b
 } // namespace atb_speed
 #endif
