@@ -19,12 +19,9 @@
 #include <sys/stat.h>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #include <torch_npu/csrc/core/npu/NPUStream.h>
-#pragma GCC diagnostic pop
-#include <acl/acl.h>
-#include <atb/utils.h>
-#include <atb_speed/utils/filesystem.h>
-#include <atb_speed/utils/singleton.h>
 #ifdef TORCH_HIGHER_THAN_PTA6
 #include <torch_npu/csrc/core/npu/NPUFormat.h>
 #include <torch_npu/csrc/framework/OpCommand.h>
@@ -32,7 +29,11 @@
 #include <torch_npu/csrc/framework/utils/OpPreparation.h>
 #include <torch_npu/csrc/aten/NPUNativeFunctions.h>
 #endif
-
+#pragma GCC diagnostic pop
+#include <acl/acl.h>
+#include <atb/utils.h>
+#include <atb_speed/utils/filesystem.h>
+#include <atb_speed/utils/singleton.h>
 #include "atb_speed/log.h"
 #include "atb_speed/utils/config.h"
 #include "atb_speed/utils/tensor_util.h"

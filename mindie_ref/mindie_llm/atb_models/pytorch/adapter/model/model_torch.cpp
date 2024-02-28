@@ -14,13 +14,18 @@
  * limitations under the License.
  */
 
-#include "model_torch.h"
-
 #include <acl/acl.h>
 #include <atb/utils.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#include "model_torch.h"
+#include "pytorch/adapter/utils/utils.h"
+#include "pytorch/adapter/workspace/workspace.h"
 #include <torch/torch.h>
 #include <torch_npu/csrc/framework/OpCommand.h>
-
+#pragma GCC diagnostic pop
 #include "atb_speed/base/context_factory.h"
 #include "atb_speed/log.h"
 #include "atb_speed/utils/config.h"
@@ -28,8 +33,6 @@
 #include "atb_speed/utils/statistic.h"
 #include "atb_speed/utils/tensor_util.h"
 #include "atb_speed/utils/timer.h"
-#include "pytorch/adapter/utils/utils.h"
-#include "pytorch/adapter/workspace/workspace.h"
 #include "atb_speed/utils/model_factory.h"
 
 void *ModelTorch::GetWorkSpace(uint64_t bufferSize)

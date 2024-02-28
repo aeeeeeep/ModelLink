@@ -73,37 +73,47 @@ static atb::Operation *AllGatherOperationCreate(const nlohmann::json &paramJson)
     return op;
 }
 
-static atb::Operation *BroadcastOperationCreate(const nlohmann::json &paramJson)
+static atb::Operation *LinearParallelOperationCreate(const nlohmann::json &paramJson)
 {
-    atb::infer::BroadcastParam param;
-    param.rank = paramJson["rank"].get<int>();
-    param.rankSize = paramJson["rankSize"].get<int>();
-    if (paramJson.find("rankRoot") != paramJson.end()) {
-        param.rankRoot = paramJson["rankRoot"].get<int>();
-    }
-    ATB_LOG(INFO) << "BroadcastParam rank:" << param.rank << "rankSize:" << param.rankSize
-                  << "rankRoot:" << param.rankRoot;
-    atb::Operation *op;
-    CreateOperation(param, &op);
-    return op;
-}
-
-static atb::Operation *LinearParallelOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
-
-static atb::Operation *RopeOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
-
-static atb::Operation *PositionEmbedding1dSplitFusionOperationCreate(const nlohmann::json &paramJson)
-{
+    (void)paramJson;
     return nullptr;
 }
 
-static atb::Operation *AddNormOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
+static atb::Operation *RopeOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
 
-static atb::Operation *RmsNormOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
+static atb::Operation *PositionEmbedding1dSplitFusionOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
 
-static atb::Operation *EmbeddingOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
+static atb::Operation *AddNormOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
 
-static atb::Operation *NormOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
+static atb::Operation *RmsNormOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
+
+static atb::Operation *EmbeddingOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
+
+static atb::Operation *NormOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
 
 static atb::Operation *LinearOperationCreate(const nlohmann::json &paramJson)
 {
@@ -129,6 +139,7 @@ static atb::Operation *LinearOperationCreate(const nlohmann::json &paramJson)
 
 static atb::Operation *TransdataOperationCreate(const nlohmann::json &paramJson)
 {
+    (void)paramJson;
     atb::infer::TransdataParam param;
     param.transdataType = atb::infer::TransdataParam::ND_TO_FRACTAL_NZ;
     atb::Operation *op;
@@ -154,17 +165,41 @@ static atb::Operation *FfnOldOperationCreate(const nlohmann::json &paramJson)
     return op;
 }
 
-static atb::Operation *MlpOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
+static atb::Operation *MlpOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
 
-static atb::Operation *MlpQuantOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
+static atb::Operation *MlpQuantOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
 
-static atb::Operation *SelfAttentionOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
+static atb::Operation *SelfAttentionOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
 
-static atb::Operation *PositionEmbedding1dSplitOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
+static atb::Operation *PositionEmbedding1dSplitOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
 
-static atb::Operation *PositionEmbeddingOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
+static atb::Operation *PositionEmbeddingOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
 
-static atb::Operation *SelfAttentionKvCacheOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
+static atb::Operation *SelfAttentionKvCacheOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
 
 static atb::Operation *TransposeOperationCreate(const nlohmann::json &paramJson)
 {
@@ -204,23 +239,59 @@ static atb::Operation *LinearActivationOperationCreate(const nlohmann::json &par
     return op;
 }
 
-static atb::Operation *LinearQuantOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
+static atb::Operation *LinearQuantOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
 
-static atb::Operation *AddNormQuantOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
+static atb::Operation *AddNormQuantOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
 
-static atb::Operation *NormQuantOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
+static atb::Operation *NormQuantOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
 
-static atb::Operation *QuantOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
+static atb::Operation *QuantOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
 
-static atb::Operation *SelfAttentionKvCacheFusionOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
+static atb::Operation *SelfAttentionKvCacheFusionOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
 
-static atb::Operation *WordEmbeddingParallelOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
+static atb::Operation *WordEmbeddingParallelOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
 
-static atb::Operation *LmHeadParallelOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
+static atb::Operation *LmHeadParallelOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
 
-static atb::Operation *RmsPreNormQuantOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
+static atb::Operation *RmsPreNormQuantOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
 
-static atb::Operation *RmsNormQuantOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
+static atb::Operation *RmsNormQuantOperationCreate(const nlohmann::json &paramJson)
+{
+    (void)paramJson;
+    return nullptr;
+}
 
 static atb::Operation *ActivationOperationCreate(const nlohmann::json &paramJson)
 {

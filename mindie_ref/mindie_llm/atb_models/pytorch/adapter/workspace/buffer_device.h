@@ -15,7 +15,12 @@
  */
 #ifndef ATB_SPEED_CONTEXT_BUFFER_DEVICE_H
 #define ATB_SPEED_CONTEXT_BUFFER_DEVICE_H
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #include <torch/torch.h>
+#pragma GCC diagnostic pop
 #include "buffer_base.h"
 
 namespace atb_speed {

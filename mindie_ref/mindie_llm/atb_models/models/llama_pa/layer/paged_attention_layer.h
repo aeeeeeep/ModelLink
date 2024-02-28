@@ -73,37 +73,7 @@ enum LayerPATensorId : int {
     INTERMIDATE_MLPOUT,
 };
 
-static void from_json(const nlohmann::json &paramJson, PALayerParam &param)
-{
-    paramJson.at("rmsNormEps").get_to(param.rmsNormEps);
-    paramJson.at("headNum").get_to(param.headNum);
-    paramJson.at("dk").get_to(param.dk);
-    if (paramJson.contains("rank")) {
-        paramJson.at("rank").get_to(param.rank);
-    }
-    if (paramJson.contains("rankSize")) {
-        paramJson.at("rankSize").get_to(param.rankSize);
-    }
-    if (paramJson.contains("transposedWeight")) {
-        paramJson.at("transposedWeight").get_to(param.transposedWeight);
-    }
-    if (paramJson.contains("isPrefill")) {
-        paramJson.at("isPrefill").get_to(param.isPrefill);
-    }
-    if (paramJson.contains("backend")) {
-        paramJson.at("backend").get_to(param.backend);
-    }
-}
-
 atb::Status PALayer(const PALayerParam &param, atb::Operation **operation);
-
-static atb::Operation *CreatePALayer(const nlohmann::json &paramJson)
-{
-    ATB_LOG(INFO) << GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
-    atb::Operation *op;
-    PALayer(paramJson.get<PALayerParam>(), &op);
-    return op;
-}
 
 class FlashAttentionHostBinder : public HostTensorBinder {
 public:

@@ -216,6 +216,7 @@ atb::Status LayerParallelFlashAttentionOperation(const LayerParallelFlashAttenti
     selfAttentionFusionNode.outTensorIds = {INTERMEDIATE_ATTN_OUTPUT};
     selfAttentionFusionNode.inTensorReshapeFuncs.resize(selfAttentionFusionNode.inTensorIds.size());
     selfAttentionFusionNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+        (void)oldShape;
         newShape.dimNum = 4;                // reshape
         newShape.dims[0] = *batchDimPtr;    // batch_size
         newShape.dims[1] = *seqLenPtr;      // query_length==seq_len

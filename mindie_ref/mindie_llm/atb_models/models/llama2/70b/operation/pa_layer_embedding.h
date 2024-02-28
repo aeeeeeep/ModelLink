@@ -31,18 +31,6 @@ struct PALayerEmbeddingParam {
 };
 
 atb::Status PALayerEmbedding(const PALayerEmbeddingParam &param, atb::Operation **operation);
-
-static atb::Operation *CreatePALayerEmbedding(const nlohmann::json &paramJson)
-{
-    PALayerEmbeddingParam param;
-    param.axis = paramJson["axis"].get<int>();
-    param.rank = paramJson["rank"].get<int>();
-    param.rankSize = paramJson["rankSize"].get<int>();
-    ATB_LOG(INFO) << "axis is " << param.axis << ", rank is" << param.rank << ", rankSize is" << param.rankSize;
-    atb::Operation *op;
-    PALayerEmbedding(param, &op);
-    return op;
-}
 } // namespace llama2_70b
 } // namespace atb_speed
 #endif

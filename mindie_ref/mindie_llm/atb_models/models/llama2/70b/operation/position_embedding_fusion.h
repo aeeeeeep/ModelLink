@@ -29,16 +29,6 @@ struct PositionEmbedding1dFusionParam {
 atb::Status PositionEmbeddingFusionOperation(const PositionEmbedding1dFusionParam &param,
                                              atb::Operation **operation);
 
-static atb::Operation *CreatePositionEmbeddingFusionOperation(const nlohmann::json &paramJson)
-{
-    atb_speed::llama2_70b::PositionEmbedding1dFusionParam param;
-    param.rotaryCoeff = paramJson["rotaryCoeff"].get<int>();
-    param.headNum = paramJson["headNum"].get<int>();
-    atb::Operation *op;
-    atb_speed::llama2_70b::PositionEmbeddingFusionOperation(param, &op);
-    return op;
-}
-
 } // namespace llama2_70b
 } // namespace atb_speed
 #endif

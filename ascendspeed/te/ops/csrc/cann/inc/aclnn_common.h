@@ -18,6 +18,10 @@
 #ifndef PYTORCH_NPU_UTIL_HPP_
 #define PYTORCH_NPU_UTIL_HPP_
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #include <torch_npu/csrc/framework/utils/CalcuOpUtil.h>
 #include <torch_npu/csrc/framework/utils/OpAdapter.h>
 #include <dlfcn.h>
@@ -35,6 +39,7 @@
 #include "torch_npu/csrc/framework/interface/EnvVariables.h"
 #include "torch_npu/csrc/aten/NPUNativeFunctions.h"
 #include "torch_npu/csrc/core/npu/DeviceUtils.h"
+#pragma GCC diagnostic pop
 
 #define NPU_NAME_SPACE at_npu::native
 

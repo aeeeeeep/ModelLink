@@ -72,6 +72,7 @@ void ReshapeAdapterReshapeFunc(const atb::Dims &oldShape, atb::Dims &newShape)
 atb::Status ApplyRotaryEmb(const ApplyRotaryEmbParam &param, atb::Operation **operation)
 {
     ATB_LOG(INFO) << __func__ << " called";
+    (void)param;
     atb::GraphParam opGraph;
     opGraph.name = "ApplyRotaryEmb";
     opGraph.inTensorNum = IN_TENSOR_COUNT;

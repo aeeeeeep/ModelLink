@@ -238,7 +238,7 @@ atb::Status FaKvCacheModel::ParseParam(const std::string &param)
 
 atb::Status FaKvCacheModel::BindParamHostTensor(uint32_t nodeId)
 {
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
 

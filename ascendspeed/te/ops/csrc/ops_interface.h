@@ -16,11 +16,16 @@
 #ifndef ASCENDSPEED_TE_OPS_CSRC_COMMON_H
 #define ASCENDSPEED_TE_OPS_CSRC_COMMON_H
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #include <torch_npu/csrc/core/npu/NPUStream.h>
 #include <torch_npu/csrc/core/npu/DeviceUtils.h>
 #include <torch_npu/csrc/framework/OpCommand.h>
 #include <torch/script.h>
 #include <torch/custom_class.h>
+#pragma GCC diagnostic pop
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, int64_t, int64_t, int64_t> npu_flash_attention(
     const at::Tensor &query, const at::Tensor &key,

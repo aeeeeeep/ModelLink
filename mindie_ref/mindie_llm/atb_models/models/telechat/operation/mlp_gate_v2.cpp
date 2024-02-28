@@ -73,7 +73,12 @@ atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operati
 
     auto &matmulUpNode = opGraph.nodes.at(nodeId++);
 
-    atb_speed::telechat::ParallelParamV2 linearUpParam = {param.isBias, false, param.transposeB, param.isUpQuant};
+    atb_speed::telechat::ParallelParamV2 linearUpParam;
+    linearUpParam.isBias = param.isBias;
+    linearUpParam.transposeA = false;
+    linearUpParam.transposeB = param.transposeB;
+    linearUpParam.isQuant = param.isUpQuant;
+
     linearUpParam.quantParam = param.quantUpParam;
     atb_speed::telechat::RowParallelLinearV2(linearUpParam, &matmulUpNode.operation);
     matmulUpNode.inTensorIds = {IN_HIDDENSTATES_ID, IN_WEIGHT_UP_ID, IN_BIAS_UP_ID, IN_DEQSCALE_UP, IN_INDEX_UP};
@@ -88,7 +93,13 @@ atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operati
         splitNode.outTensorIds = {INTERMEDIATE_MATMUL_OUT_ID, INTERMEDIATE_SPLIT_OUT_ID};
     } else {
         auto &matmulGateNode = opGraph.nodes.at(nodeId++);
-        atb_speed::telechat::ParallelParamV2 linearGateParam = {param.isBias, false, param.transposeB, param.isGateQuant};
+
+        atb_speed::telechat::ParallelParamV2 linearGateParam;
+        linearGateParam.isBias = param.isBias;
+        linearGateParam.transposeA = false;
+        linearGateParam.transposeB = param.transposeB;
+        linearGateParam.isQuant = param.isGateQuant;
+
         linearGateParam.quantParam = param.quantGateParam;
         atb_speed::telechat::RowParallelLinearV2(linearGateParam, &matmulGateNode.operation);
         matmulGateNode.inTensorIds = {IN_HIDDENSTATES_ID, IN_WEIGHT_GATE_ID, IN_BIAS_GATE_ID, IN_DEQSCALE_GATE, IN_INDEX_GATE};
@@ -114,7 +125,13 @@ atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operati
     mulNode.outTensorIds = {INTERMEDIATE_MUL_OUT_ID};
 
     auto &matmulDownNode = opGraph.nodes.at(nodeId++);
-    atb_speed::telechat::ParallelParamV2 linearDownParam = {true, false, param.transposeB, param.isDownQuant};
+
+    atb_speed::telechat::ParallelParamV2 linearDownParam;
+    linearDownParam.isBias = true;
+    linearDownParam.transposeA = false;
+    linearDownParam.transposeB = param.transposeB;
+    linearDownParam.isQuant = param.isDownQuant;
+
     linearDownParam.commParam = param.commDownParam;
     linearDownParam.quantParam = param.quantDownParam;
     atb_speed::telechat::RowParallelLinearV2(linearDownParam, &matmulDownNode.operation);

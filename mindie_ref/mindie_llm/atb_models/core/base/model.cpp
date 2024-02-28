@@ -256,9 +256,17 @@ atb::Status Model::Execute(atb::Context *context, std::vector<atb::Tensor> &inTe
     return atb::NO_ERROR;
 }
 
-atb::Status Model::ParseParam(const std::string &param) { return atb::NO_ERROR; }
+atb::Status Model::ParseParam(const std::string &param)
+{
+    (void)param;
+    return atb::NO_ERROR;
+}
 
-atb::Status Model::BindParamHostTensor(uint32_t nodeId) { return atb::NO_ERROR; }
+atb::Status Model::BindParamHostTensor(uint32_t nodeId)
+{
+    (void)nodeId;
+    return atb::NO_ERROR;
+}
 
 void Model::BuildNodeVariantPack(int nodeId)
 {

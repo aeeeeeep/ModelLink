@@ -216,7 +216,7 @@ atb::Status FlashAttentionModel::ParseParam(const std::string &param)
 
 atb::Status FlashAttentionModel::BindParamHostTensor(uint32_t nodeId)
 {
-    if (nodeId < param_.operationCountBeforeLayers || nodeId >= param_.operationCountBeforeLayers + param_.layerNum) {
+    if (nodeId < static_cast<uint32_t>(param_.operationCountBeforeLayers) || nodeId >= static_cast<uint32_t>(param_.operationCountBeforeLayers + param_.layerNum)) {
         return atb::NO_ERROR;
     }
 

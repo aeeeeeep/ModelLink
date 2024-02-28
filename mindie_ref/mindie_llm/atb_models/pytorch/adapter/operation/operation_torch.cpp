@@ -16,6 +16,10 @@
 #include "operation_torch.h"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#include "pytorch/adapter/utils/utils.h"
+#include "pytorch/adapter/workspace/workspace.h"
 #pragma GCC diagnostic pop
 #include <acl/acl.h>
 #include <atb_speed/utils/timer.h>
@@ -25,8 +29,6 @@
 #include "atb_speed/utils/config.h"
 #include "atb_speed/utils/statistic.h"
 #include "atb_speed/log.h"
-#include "pytorch/adapter/utils/utils.h"
-#include "pytorch/adapter/workspace/workspace.h"
 #include "operation_creator.h"
 #include "hosttensor_binder_creator.h"
 
