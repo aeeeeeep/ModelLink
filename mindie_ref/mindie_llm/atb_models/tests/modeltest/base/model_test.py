@@ -189,6 +189,13 @@ class ModelTest:
 
     def __prepare_and_check(self):
         reload(env)
+        max_csv_limit = sys.maxsize
+        while True:
+            try:
+                csv.field_size_limit(max_csv_limit)
+                break
+            except OverflowError:
+                max_csv_limit = int(max_csv_limit/10)
         if self.model_type == "fa" and self.test_mode != "full":
             self.__patch_hf_transformers_utils()
         os.environ['test_mode'] = self.test_mode
