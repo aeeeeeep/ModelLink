@@ -133,7 +133,7 @@ source /usr/local/Ascend/atb/set_env.sh
 
 > 注： 每次运行前都需要 source CANN， 加速库，大模型
 
-## 单芯模型推理
+## 模型推理
 
 ### 拷贝文件
 
@@ -177,7 +177,7 @@ cd ${internlm_20b_path}/pytorch/examples/atb_speed_sdk
 pip install .
 ```
 
-#### 3. 张量并行模型切分（仅在模型需要多卡并行时使用）
+#### 3. 张量并行模型切分（多卡并行时使用）
 
 ```shell
 cp ${internlm_20b_path}/pytorch/examples/internlm/20b/modeling_internlm_cut.py ${model_path}
@@ -196,7 +196,7 @@ cp ${internlm_20b_path}/pytorch/examples/internlm/20b/modeling_internlm_cut.py $
 
 切分所需时间较长，切分完成后，将会打印 'Tensor parallelism weights have been successfully saved.'。
 
-#### 拷贝运行用的modeling （仅在模型需要多卡并行时使用）
+#### 拷贝运行用的modeling （多卡并行时使用）
 
 rank_id，表示卡的编号，0,1,2,3.。。，并修改里面的config.json
 
@@ -252,13 +252,6 @@ vim config.json
 参考 [SDK精度测试指南CEVAL章节](../../atb_speed_sdk/README.md)
 
 ## 运行脚本
-
-- 单芯
-
-```shell
-cd ${script_path}
-python main.py --task precision
-```
 
 - 多芯
 
