@@ -308,9 +308,9 @@ class AquilaModel(AquilaPreTrainedModel):
             weights_t = []
             weights_layer = self.layers[i].state_dict()
             weights_t.append(weights_layer["input_layernorm.weight"])
-            weights_t.append(self.maybe_format_cast(weights_layer["self_attn.q_proj.weight"]))
-            weights_t.append(self.maybe_format_cast(weights_layer["self_attn.k_proj.weight"]))
-            weights_t.append(self.maybe_format_cast(weights_layer["self_attn.v_proj.weight"]))
+            weights_t.append(self.maybe_format_cast(weights_layer["self_attn.q_proj.linear.weight"]))
+            weights_t.append(self.maybe_format_cast(weights_layer["self_attn.k_proj.linear.weight"]))
+            weights_t.append(self.maybe_format_cast(weights_layer["self_attn.v_proj.linear.weight"]))
             weights_t.append(self.maybe_format_cast(weights_layer["self_attn.o_proj.linear.weight"]))
             weights_t.append(weights_layer["post_attention_layernorm.weight"])
             weights_t.append(self.maybe_format_cast(weights_layer["mlp.gate_proj.linear.weight"]))
