@@ -242,7 +242,7 @@ class AquilaModel(AquilaPreTrainedModel):
         self.ascend_kcache_id = None
         self.ascend_vcache_id = None
 
-        self.ascend_atten_mask = AttentionMask.static(config.model_max_length)
+        self.ascend_atten_mask = AttentionMask.static(config.max_position_embeddings)
         self.place_holder = torch.tensor([1], dtype=torch.float16, device='npu')
 
         self.batch_size = 0
