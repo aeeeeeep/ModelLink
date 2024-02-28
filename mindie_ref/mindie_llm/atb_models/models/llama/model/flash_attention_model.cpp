@@ -22,7 +22,6 @@
 
 namespace atb_speed {
 namespace llama {
-const int TEST=0;
 const int QUANT_WEIGHT_COUNT_PER_LAYER = 25;
 const int SPARSE_WEIGHT_COUNT_PER_LAYER = 32;
 const int FLOAT_WEIGHT_COUNT_PER_LAYER = 9;
