@@ -152,7 +152,7 @@ def get_unpad_length(input_ids, pad_token_id):
     """
     batch_size, _ = input_ids.shape
     unpad_input_ids = torch.tensor([], dtype=torch.int32, device=input_ids.device)
-    input_len_list = torch.full((batch_size), 1, dtype=torch.int32, device=input_ids.device)
+    input_len_list = torch.full((batch_size,), 1, dtype=torch.int32, device=input_ids.device)
 
     for i in range(batch_size):
         unpad_tensor = input_ids[i][input_ids[i] != pad_token_id]
