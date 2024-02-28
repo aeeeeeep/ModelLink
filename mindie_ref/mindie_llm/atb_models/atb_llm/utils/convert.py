@@ -41,7 +41,7 @@ def _remove_duplicate_names(
             print(f'=====================tensor.nelement(): {tensor.nelement()}')
             print(f'=====================_SIZE[tensor.dtype]: {_SIZE[tensor.dtype]}')
             print(f'=====================storage_size(tensor): {storage_size(tensor)}')
-            print(f'=====================sharedinfo: {name}\t{tensor}\t{tensor.data_ptr()}\t{storage_ptr(tensor)}\t{tensor.nelement()}\t{_SIZE[tensor.dtype]}\t{storage_size(tensor)}')
+            print(f'=====================sharedinfo: {name}\t{tensor.data_ptr()}\t{storage_ptr(tensor)}\t{tensor.nelement()}\t{_SIZE[tensor.dtype]}\t{storage_size(tensor)}')
 
     for shared in shareds:
         print(f'=====================shared: ${shared}')
