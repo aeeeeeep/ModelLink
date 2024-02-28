@@ -113,7 +113,7 @@ atb::Status FaKvCacheRopeModel::InferShape(const std::vector<atb::TensorDesc> &i
     outTensorDescs.at(0) = graph_.weightTensors.at(0).desc;
     outTensorDescs.at(0).shape.dimNum = OUT_TENSOR_DIM_NUM;
     outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
-    outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[1];
+    outTensorDescs.at(0).shape.dims[1] = 1;
     outTensorDescs.at(0).shape.dims[2] = outTensorLastDimSize * param_.rankSize;
 
     return atb::NO_ERROR;
@@ -208,7 +208,6 @@ int64_t FaKvCacheRopeModel::BuildGraph()
     finalNormNode.inTensors = { firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId),
         &graph_.weightTensors.at(finalLayerNormBiasTensorId) };
     finalNormNode.outTensors = { &graph_.internalTensors.at(finalLayerNormOutTensorId) };
-
 
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
     atb_speed::common::LmHeadParam lmHeadParam;
