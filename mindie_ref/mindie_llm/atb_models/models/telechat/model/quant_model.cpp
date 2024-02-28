@@ -114,8 +114,6 @@ atb::Status QuantFAModel::InferShape(const std::vector<atb::TensorDesc> &inTenso
         return atb::ERROR_INVALID_GRAPH;
     }
 
-    const atb::TensorDesc &keyTensorDesc = inTensorDescs.at(IN_TENSOR_PAST_KEY);
-    const atb::TensorDesc &valueTensorDesc = inTensorDescs.at(IN_TENSOR_PAST_KEY + param_.layerNum);
     outTensorDescs.at(0) = graph_.weightTensors.at(0).desc;
     outTensorDescs.at(0).shape.dimNum = 3;
     outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(IN_TENSOR_INPUT_IDS).shape.dims[0];
@@ -262,7 +260,7 @@ atb::Status QuantFAModel::ParseParam(const std::string &param)
 
 atb::Status QuantFAModel::BindParamHostTensor(uint32_t nodeId)
 {
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
 

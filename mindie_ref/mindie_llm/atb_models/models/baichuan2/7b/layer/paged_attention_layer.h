@@ -40,14 +40,6 @@ void from_json(const nlohmann::json &paramJson, PALayerParam &param);
 
 atb::Status PALayer(const PALayerParam &param, atb::Operation **operation);
 
-static atb::Operation *CreatePALayer(const nlohmann::json &paramJson)
-{
-    ATB_LOG(INFO) << GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
-    atb::Operation *op;
-    PALayer(paramJson.get<PALayerParam>(), &op);
-    return op;
-}
-
 class FlashAttentionHostBinder : public HostTensorBinder {
 public:
     FlashAttentionHostBinder();

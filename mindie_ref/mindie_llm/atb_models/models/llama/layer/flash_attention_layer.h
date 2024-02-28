@@ -51,40 +51,6 @@ struct FlashAttentionLayerParam {
 
 atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Operation **operation);
 
-static atb::Operation *CreateFlashAttentionLayer(const nlohmann::json &paramJson)
-{
-    FlashAttentionLayerParam param;
-    param.rmsNormEps = paramJson["rmsNormEps"].get<float>();
-    param.headNum = paramJson["headNum"].get<int>();
-    param.kvHeadNum = paramJson["kvHeadNum"].get<int>();
-    param.dk = paramJson["dk"].get<int>();
-    param.rank = paramJson["rank"].get<int>();
-    param.rankSize = paramJson["rankSize"].get<int>();
-    param.isTriuMask = paramJson["isTriuMask"].get<int>();
-    param.model = paramJson["model"].get<std::string>();
-    param.quantModel = paramJson["quantModel"].get<bool>();
-    param.sparseModel = paramJson["sparseModel"].get<bool>();
-    param.isEncoder = paramJson["isEncoder"].get<bool>();
-    param.isBF16 = paramJson["isBF16"].get<bool>();
-    // 量化参数
-    param.qkvInputScale = paramJson["qkvInputScale"].get<float>();
-    param.qkvInputOffset = paramJson["qkvInputOffset"].get<int>();
-    param.denseInputScale = paramJson["denseInputScale"].get<float>();
-    param.denseInputOffset = paramJson["denseInputOffset"].get<int>();
-    param.selfLnInputScale = paramJson["selfLnInputScale"].get<float>();
-    param.selfLnInputOffset = paramJson["selfLnInputOffset"].get<int>();
-    param.ffnOutInputScale = paramJson["ffnOutInputScale"].get<float>();
-    param.ffnOutInputOffset = paramJson["ffnOutInputOffset"].get<int>();
-
-    ATB_LOG(INFO) << "LLaMA FlashAttentionLayer headNum:" << param.headNum << ", kvHeadNum:" << param.kvHeadNum
-                  << ", rmsNormEps:" << param.rmsNormEps << ", dk:" << param.dk << ", model:" << param.model
-                  << ", rank:" << param.rank << ", rankSize:" << param.rankSize << ", isTriuMask: " << param.isTriuMask
-                  << ", isBF16:" << param.isBF16;
-    atb::Operation *op;
-    FlashAttentionLayer(param, &op);
-    return op;
-}
-
 class FlashAttentionLayerBinder : public HostTensorBinder {
 public:
     FlashAttentionLayerBinder();

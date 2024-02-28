@@ -212,8 +212,6 @@ atb::Status FloatFALayer(const FloatFALayerParam &param, atb::Operation **operat
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
-        const atb::TensorDesc &keyTensorDesc = inTensorDescs.at(IN_PASTKEY);
-        const atb::TensorDesc &valueTensorDesc = inTensorDescs.at(IN_PASTVALUE);
         outTensorDescs.at(0) = inTensorDescs.at(0);
         return atb::NO_ERROR;
     };
