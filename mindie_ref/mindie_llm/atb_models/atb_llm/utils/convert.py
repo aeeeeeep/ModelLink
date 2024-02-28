@@ -31,14 +31,15 @@ def _remove_duplicate_names(
     to_remove = defaultdict(list)
     for shared in shareds:
         print(f'=====================shared: ${shared}')
-        # return tensor.data_ptr() == storage_ptr(tensor) and tensor.nelement() * _SIZE[tensor.dtype] == storage_size(tensor)
-        tensor = state_dict[name]
-        print(f'=====================state_dict[name]: ${tensor}')
-        print(f'=====================tensor.data_ptr(): ${tensor.data_ptr()}')
-        print(f'=====================storage_ptr(tensor): ${storage_ptr(tensor)}')
-        print(f'=====================tensor.nelement(): ${tensor.nelement()}')
-        print(f'=====================_SIZE[tensor.dtype]: ${_SIZE[tensor.dtype]}')
-        print(f'=====================storage_size(tensor): ${storage_size(tensor)}')
+        for name in shared:
+            # return tensor.data_ptr() == storage_ptr(tensor) and tensor.nelement() * _SIZE[tensor.dtype] == storage_size(tensor)
+            tensor = state_dict[name]
+            print(f'=====================state_dict[name]: ${tensor}')
+            print(f'=====================tensor.data_ptr(): ${tensor.data_ptr()}')
+            print(f'=====================storage_ptr(tensor): ${storage_ptr(tensor)}')
+            print(f'=====================tensor.nelement(): ${tensor.nelement()}')
+            print(f'=====================_SIZE[tensor.dtype]: ${_SIZE[tensor.dtype]}')
+            print(f'=====================storage_size(tensor): ${storage_size(tensor)}')
         complete_names = set(
             [name for name in shared if _is_complete(state_dict[name])]
         )
