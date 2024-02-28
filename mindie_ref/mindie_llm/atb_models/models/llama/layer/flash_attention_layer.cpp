@@ -252,11 +252,32 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         IN_LAYERID };
     selfAttentionKvCacheNode.outTensorIds = { INTERMIDATE_SELFOUT };
     selfAttentionKvCacheNode.inTensorReshapeFuncs.resize(selfAttentionKvCacheNode.inTensorIds.size());
-    // GQA reshape -> [b*s, hd]
+    // GQA reshape -> [b, s, headnum, headdim]]
     if (param.kvHeadNum < param.headNum) {
-        selfAttentionKvCacheNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            ReshapeHeads(oldShape, newShape);
+        selfAttentionKvCacheNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            int batchSize = *batchNumPtr;
+            newShape.dimNum = 4;
+            newShape.dims[0] = batchSize;
+            newShape.dims[1] = oldShape.dims[0] / batchSize;
+            newShape.dims[2] = param.headNum;
+            newShape.dims[3] = oldShape.dims[1] / param.headNum;
         };
+        selfAttentionKvCacheNode.inTensorReshapeFuncs.at(1) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            int batchSize = *batchNumPtr;
+            newShape.dimNum = 4;
+            newShape.dims[0] = batchSize;
+            newShape.dims[1] = oldShape.dims[0] / batchSize;
+            newShape.dims[2] = param.kvHeadNum;
+            newShape.dims[3] = oldShape.dims[1] / param.kvHeadNum;
+        };
+        selfAttentionKvCacheNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            newShape.dimNum = 4;
+            newShape.dims[0] = oldShape.dims[0];
+            newShape.dims[1] = oldShape.dims[1];
+            newShape.dims[2] = param.kvHeadNum;
+            newShape.dims[3] = oldShape.dims[2] / param.kvHeadNum;
+        };
+        
     } else {
         selfAttentionKvCacheNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
             newShape.dimNum = ATTENTION_DIM_NUM;
@@ -325,17 +346,6 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
     CREATE_OPERATION(addParam, &selfResidualAddNode.operation);
     selfResidualAddNode.inTensorIds = { IN_HIDDENSTATES, INTERMIDATE_SELFLINEAROUT };
     selfResidualAddNode.outTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT };
-    // GQA reshape -> [b, s, hd]
-    if (param.kvHeadNum < param.headNum) {
-        selfResidualAddNode.inTensorReshapeFuncs.resize(selfResidualAddNode.inTensorIds.size());
-        selfResidualAddNode.inTensorReshapeFuncs.at(1) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            int batchSize = *batchNumPtr;
-            newShape.dimNum = 3;
-            newShape.dims[0] = batchSize;
-            newShape.dims[1] = oldShape.dims[0] / batchSize;
-            newShape.dims[2] = oldShape.dims[1];
-        };
-    }
     if (param.quantModel) {
         // W8A8量化
         atb::infer::RmsNormParam selfNormParam;
