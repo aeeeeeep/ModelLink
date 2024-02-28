@@ -115,8 +115,10 @@ protected:
     void GetModelTensorNameList(nlohmann::json &modelJson,
         std::map<atb::Tensor *, std::string> &tensorNameMap);
     void GetNodeTopoInfo(nlohmann::json &nodeJson, const Node &opNode,
-        const std::map<atb::Tensor *, std::string> tensorNameMap);
-    std::string GetModelTopoInfo();
+        const std::map<atb::Tensor *, std::string> &tensorNameMap);
+    void GetModelTopoInfo(nlohmann::json &modelJson);
+    void MakeTensorNameMap(nlohmann::json &modelJson, std::map<atb::Tensor *, std::string> &tensorNameMap,
+        std::vector<atb::Tensor> &tensorList, std::string tensorType);
 
 protected:
     GetWorkspaceFunc getWorkSpaceFunc_;
