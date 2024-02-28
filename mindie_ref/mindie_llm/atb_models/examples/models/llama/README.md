@@ -202,3 +202,4 @@
 ## FAQ
 - 更多环境变量见[此README文件](../../README.md)
 - 对话测试实际执行的Python文件为`${llm_path}/examples/run_fa.py`和`${llm_path}/examples/run_pa.py`；这两个文件的参数说明见[此README文件](../../README.md)
+- 跑LLaMA2-7B/13B时，需要通过指令pip list｜grep protobuf确认protobuf版本，如果版本高于3.20.x，请运行指令pip install protobuf==3.20.0进行更新
