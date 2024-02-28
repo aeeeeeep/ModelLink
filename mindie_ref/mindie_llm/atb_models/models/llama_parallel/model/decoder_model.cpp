@@ -21,9 +21,12 @@
 #include "layers/operations/lmhead.h"
 #include "models/llama_parallel/layer/decoder_layer.h"
 #include "models/llama_parallel/model/decoder_model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama_parallel {
+
+REGISTER_MODEL(llama_parallel, DecoderModel);
 
 // Weight count
 const int WEIGHT_COUNT_PER_LAYER = 30;

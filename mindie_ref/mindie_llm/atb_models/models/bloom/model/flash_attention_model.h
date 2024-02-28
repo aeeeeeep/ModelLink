@@ -17,7 +17,6 @@
 #define BLOOM7B_COMMON_MODEL_H
 
 #include "atb_speed/base/model.h"
-#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace bloom_7b {
@@ -73,8 +72,6 @@ private:
     std::vector<int32_t> tokenOffset_;
     std::vector<int32_t> seqLen_;
 };
-
-REGISTER_MODEL(bloom_7b, FlashAttentionModel);
 
 } // namespace bloom_7b
 } // namespace atb_speed
