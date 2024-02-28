@@ -328,11 +328,11 @@ class AquilaModel(AquilaPreTrainedModel):
             torch.npu.synchronize()
 
         weights.append(self.state_dict()["norm.weight"])
-        self.lm_head_weight = self.state_dict()["lm_head.linear.weight"]
-        weights.append(self.maybe_format_cast(self.lm_head_weight))
+        weights.append(self.lm_head_weight)
 
         self.ascend_weight = weights
-        self.acl_operation.set_weight(weights)
+        self.acl_encoder_operation.set_weight(weights)
+        self.acl_decoder_operation.set_weight(weights)
 
     def init_ascend_kvcache(self, kv_cache):
         kcache_id = not self.ascend_kcache_id or self.ascend_kcache_id != id(kv_cache[0][0])
@@ -500,6 +500,7 @@ class FlashAquilaForCausalLM(torch.nn.Module):
             lm_head_indices: Optional[torch.Tensor] = None,  # prefill阶段使用，取的生成token的偏移
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         if self.model.lm_head_weight is None:
+            self.lm_head_weight = self.state_dict()["lm_head.linear.weight"]
             if self.soc_info.need_nz:
                 self.model.lm_head_weight = torch_npu.npu_format_cast(self.lm_head.linear.weight.data, 29)
             self.model.lm_head_weight = self.lm_head.linear.weight.data
