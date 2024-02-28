@@ -245,7 +245,6 @@ class AquilaModel(AquilaPreTrainedModel):
         self.ascend_atten_mask = AttentionMask.static(config.max_position_embeddings)
         self.place_holder = torch.tensor([1], dtype=torch.float16, device='npu')
 
-        self.batch_size = 0
         self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
         transdata_param = json.dumps({})
         self.transdata_operation.set_param(transdata_param)
@@ -433,7 +432,6 @@ class AquilaModel(AquilaPreTrainedModel):
             lm_head_indices: Optional[torch.Tensor] = None,  # prefill阶段使用，取的生成token的偏移
     ):
         self.is_prefill = is_prefill
-        self.batch_size = len(input_lengths)
 
         # add acl model
         if not self.ascend_weight:
