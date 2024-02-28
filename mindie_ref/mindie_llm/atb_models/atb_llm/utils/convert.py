@@ -17,6 +17,9 @@ def _remove_duplicate_names(
         preferred_names: List[str] = None,
         discard_names: List[str] = None,
 ) -> Dict[str, List[str]]:
+    print(f'=====================state_dict: ${state_dict}')
+    print(f'=====================preferred_names: ${preferred_names}')
+    print(f'=====================discard_names: ${discard_names}')
     if preferred_names is None:
         preferred_names = []
     preferred_names = list(set(preferred_names))
@@ -27,9 +30,11 @@ def _remove_duplicate_names(
     shareds = _find_shared_tensors(state_dict)
     to_remove = defaultdict(list)
     for shared in shareds:
+        print(f'=====================shared: ${shared}')
         complete_names = set(
             [name for name in shared if _is_complete(state_dict[name])]
         )
+        print(f'=====================complete_names: ${complete_names}')
         if not complete_names:
             raise RuntimeError(
                 f"Error while trying to find names to remove to save state dict,"
@@ -76,6 +81,7 @@ def convert_file(pt_file: Path, sf_file: Path, discard_names: List[str]):
 
 
 def convert_files(pt_files: List[Path], sf_files: List[Path], discard_names: List[str]):
+    print(f'=====================pt_files: ${pt_files}')
     num_pt_files = len(pt_files)
 
     for i, (pt_file, sf_file) in enumerate(zip(pt_files, sf_files)):

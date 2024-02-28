@@ -41,7 +41,7 @@ import torch_npu
 from atb_speed.common.timer import Timer
 from atb_speed.common.utils import load_atb_speed
 
-from .configuration_aquila import AquilaConfig
+from configuration_aquila import AquilaConfig
 
 
 def is_nd():
