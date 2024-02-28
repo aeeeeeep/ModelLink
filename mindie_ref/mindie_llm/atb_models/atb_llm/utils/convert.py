@@ -50,7 +50,7 @@ def _remove_duplicate_names(
     for shared in shareds:
         print(f'=====================shared: ${shared}')
         complete_names = set(
-            [name for name in shared if _is_complete(state_dict[name])]
+            [name for name in shared if True]
         )
         print(f'=====================complete_names: ${complete_names}')
         if not complete_names:
