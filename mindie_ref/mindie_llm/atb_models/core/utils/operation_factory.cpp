@@ -35,7 +35,7 @@ atb::Operation *OperationFactory::CreateOperation(const std::string &operationNa
         ATB_LOG(INFO) << "find operation: " << operationName;
         return it->second(param);
     }
-    ATB_LOG(WARN) << "CreateOperation Failed, OperationName not exist: " << operationName;
+    ATB_LOG(WARN) << "OperationName: " << operationName << " not find in operation factory map";
     return nullptr;
 }
 
