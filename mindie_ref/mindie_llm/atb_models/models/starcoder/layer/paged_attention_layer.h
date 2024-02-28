@@ -37,36 +37,6 @@ struct PALayerParam {
 
 atb::Status PALayer(const PALayerParam &param, atb::Operation **operation);
 
-static atb::Operation *CreatePALayer(const nlohmann::json &paramJson)
-{
-    PALayerParam param;
-    param.layerNormEps = paramJson["layerNormEps"].get<float>();
-    param.headNum = paramJson["headNum"].get<int>();
-    param.dk = paramJson["dk"].get<int>();
-    param.model = paramJson["model"].get<std::string>();
-    if (paramJson.contains("rank")) {
-        param.rank = paramJson["rank"].get<int>();
-    }
-    if (paramJson.contains("rankSize")) {
-        param.rankSize = paramJson["rankSize"].get<int>();
-    }
-    if (paramJson.contains("kvHead")) {
-        param.rankSize = paramJson["kvHead"].get<int>();
-    }
-    if (paramJson.contains("isPrefill")) {
-        paramJson.at("isPrefill").get_to(param.isPrefill);
-    }
-    if (paramJson.contains("backend")) {
-        paramJson.at("backend").get_to(param.backend);
-    }
-
-    ATB_LOG(INFO) << __func__ << "model:" << param.model << ", layerNormEps:" << param.layerNormEps << ", headNum:"
-        << param.headNum << ", dk:" << param.dk << ", kvHead" << param.kvHead << ", backend" << param.backend;
-    atb::Operation *op;
-    PALayer(param, &op);
-    return op;
-}
-
 class StarCoderPAFlashAttentionHostBinder : public HostTensorBinder {
 public:
     StarCoderPAFlashAttentionHostBinder();

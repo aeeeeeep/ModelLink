@@ -29,12 +29,6 @@ namespace atb_speed {
 const int64_t MAX_LOG_FILE_SIZE = 1073741824; // 1G
 const size_t MAX_LOG_FILE_COUNT = 5;
 
-static bool GetLogToFileFlushEnv()
-{
-    const char *envLogToFileFlush = std::getenv("ATB_LOG_TO_FILE_FLUSH");
-    return envLogToFileFlush != nullptr && strcmp(envLogToFileFlush, "1") == 0;
-}
-
 LogSinkFile::LogSinkFile(LogLevel level) : LogSink(level)
 {
     std::time_t tmpTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());

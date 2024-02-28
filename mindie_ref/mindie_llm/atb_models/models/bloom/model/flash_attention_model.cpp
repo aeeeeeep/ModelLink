@@ -138,7 +138,7 @@ atb::Status FlashAttentionModel::InferShape(
     outTensorDescs.at(1).shape.dims[dim++] = vocabSize;                // 长度vocab_size
     outTensorDescs.at(1).dtype = inTensorDescs.at(IN_ATTENTION_MASK).dtype;
 
-    for (int i = 2; i < GetOutputNum(); i++) {
+    for (uint32_t i = 2; i < GetOutputNum(); i++) {
         outTensorDescs.at(i) = inputIds;
         outTensorDescs.at(i).shape.dimNum = dimAll;
         outTensorDescs.at(i).shape.dims[dimAll - 1] = hiddenSize;
@@ -151,8 +151,6 @@ atb::Status FlashAttentionModel::InferShape(
 int64_t FlashAttentionModel::BuildGraph()
 {
     ATB_LOG(INFO) << "Build Graph Start.";
-
-    const int floatLayersCount = param_.floatLayers.size();
 
     const int weightTensorSize = (
         EMBEDDING_WEIGHT_COUNT + EMBEDDING_WEIGHT_NORM_COUNT +

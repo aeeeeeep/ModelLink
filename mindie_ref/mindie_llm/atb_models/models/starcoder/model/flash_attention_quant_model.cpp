@@ -310,7 +310,7 @@ atb::Status FlashAttentionQuantModel::ParseParam(const std::string &param)
 atb::Status FlashAttentionQuantModel::BindParamHostTensor(uint32_t nodeId)
 {
     ATB_LOG(INFO) << "BindParamHostTensor";
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         ATB_LOG(INFO) << "No bind";
         return atb::NO_ERROR;
     }
