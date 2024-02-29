@@ -584,7 +584,7 @@ class BaichuanModel(BaichuanPreTrainedModel):
                   self.kv_attention_manager.token_offset_tensor,
                   self.kv_attention_manager.seq_len_tensor,
                   self.place_holder,
-                  # seqlen_max
+                  seqlen_max
                   ] + self.layer_id_list
 
         return inputs
