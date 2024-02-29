@@ -15,7 +15,9 @@
  */
 #ifndef ATB_SPEED_MODELS_AQUILA_7B_PAGED_ATTENTION_MODEL_H
 #define ATB_SPEED_MODELS_AQUILA_7B_PAGED_ATTENTION_MODEL_H
+
 #include "atb_speed/base/model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace aquila_7b {
@@ -59,6 +61,9 @@ private:
 
     std::vector<int32_t> seqLen_;
 };
+
+REGISTER_MODEL(aquila_7b, PagedAttentionRopeModel);
+
 } // namespace aquila_7b
 } // namespace atb_speed
 #endif
