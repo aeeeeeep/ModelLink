@@ -135,8 +135,14 @@ atb::Status FlashAttentionKvCacheRopeLayer(const FlashAttentionKvCacheRopeParam 
     selfAttnLinearParam.commParam.backend = param.backend;
     selfAttnLinearParam.isBias = true;
     atb_speed::common::RowParallelLinearV2(selfAttnLinearParam, &selfAttnLinearNode.operation);
-    selfAttnLinearNode.inTensorIds = {INTERMEDIATE_SELFATTNOUT, IN_SELFOUTLINEARWEIGHT, IN_SELFOUTLINEARBIAS,IN_HOLDER,IN_HOLDER,IN_HOLDER,IN_HOLDER};
-    selfAttnLinearNode.outTensorIds = {INTERMEDIATE_SELFATTNLINEAROUT};
+    selfAttnLinearNode.inTensorIds = { INTERMEDIATE_SELFATTNOUT,
+        IN_SELFOUTLINEARWEIGHT,
+        IN_SELFOUTLINEARBIAS,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER };
+    selfAttnLinearNode.outTensorIds = { INTERMEDIATE_SELFATTNLINEAROUT };
 
     CREATE_OPERATION(layerNormParam, &postAttnLayerNormNode.operation);
     postAttnLayerNormNode.inTensorIds = { IN_HIDDENSTATES, IN_POSTATTNLAYERNORMWEIGHT, IN_POSTATTNLAYERNORMBIAS };
@@ -158,8 +164,10 @@ atb::Status FlashAttentionKvCacheRopeLayer(const FlashAttentionKvCacheRopeParam 
     mlpLinearParam.commParam.backend = param.backend;
     mlpLinearParam.isBias = true;
     atb_speed::common::RowParallelLinearV2(mlpLinearParam, &ffnOutLinearNode.operation);
-    ffnOutLinearNode.inTensorIds = {INTERMEDIATE_FFNACTOUT, IN_FFNOUTLINEARWEIGHT, IN_FFNOUTLINEARBIAS,IN_HOLDER,IN_HOLDER,IN_HOLDER,IN_HOLDER};
-    ffnOutLinearNode.outTensorIds = {INTERMEDIATE_FFNOUTLINEAROUT};
+    ffnOutLinearNode.inTensorIds = {
+        INTERMEDIATE_FFNACTOUT, IN_FFNOUTLINEARWEIGHT, IN_FFNOUTLINEARBIAS, IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_HOLDER
+    };
+    ffnOutLinearNode.outTensorIds = { INTERMEDIATE_FFNOUTLINEAROUT };
 
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ELEWISE_ADD;
