@@ -41,7 +41,7 @@ enum InTensorId : int {
    IN_TENSOR_TOKENOFFSET,
    IN_TENSOR_SEQLEN,
    IN_HOLDER,
-   IN_TENSOR_MAX, // 10
+   IN_TENSOR_MAX, // 9
 };
 
 enum OutTensorId : int {
