@@ -325,6 +325,7 @@ weight_offset.npy  weight_scale.npy
   ```shell
   --mode: 推理模式，可选单数据推理，数据集推理，性能测试以及命令行交互
   --model_path：模型权重路径
+  --model：模型名称，当前仅支持chatglm2和chatglm3，默认为chatglm2
   --tp_size：张量并行数，等于使用的芯片数量
   --device：NPU设备id(可通过npu-smi info查看)，多芯场景则为NPU设备起始id，例：--device=0 --tp_size=4，则使用device：0，1，2，3
   --batch：batch大小

@@ -29,9 +29,7 @@ import torch.nn.functional as F
 from torch import nn
 from transformers.activations import ACT2FN
 from transformers.configuration_utils import PretrainedConfig
-
-from text_generation_server.utils.flash_attn_ascend import attention_ascend
-from text_generation_server.utils.layers import (
+from atb_llm.utils.layers import (
     TensorParallelRowLinear,
     TensorParallelColumnLinear,
     TensorParallelEmbedding,
@@ -41,7 +39,7 @@ from text_generation_server.utils.layers import (
     TensorParallelHead,
     get_linear,
 )
-from text_generation_server.utils.npu import load_atb_speed, NPUSocInfo
+from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
 
 from .config import ChatglmConfig
 
@@ -71,37 +69,9 @@ class RMSNorm(nn.Module):
         return self.weight * hidden_states, residual
 
 
-# for parallel weight cut
-def cut_fp_tensors(model_cfg, tensor, tp_size):
-    cut_tensor_list = []
-    hidden_size_per_attention_head = model_cfg.hidden_size // model_cfg.num_attention_heads
-    num_attention_heads_per_partition = model_cfg.num_attention_heads
-    num_multi_query_groups_per_partition = model_cfg.multi_query_group_num
-    query_layer, key_layer, value_layer = tensor.split(
-        [
-            hidden_size_per_attention_head * num_attention_heads_per_partition,
-            hidden_size_per_attention_head * num_multi_query_groups_per_partition,
-            hidden_size_per_attention_head * num_multi_query_groups_per_partition
-        ],
-        dim=0
-    )
-    query_list = torch.chunk(query_layer, tp_size, dim=0)
-    key_list = torch.chunk(key_layer, tp_size, dim=0)
-    value_list = torch.chunk(value_layer, tp_size, dim=0)
-    cut_tensor_list = torch.stack([torch.cat([query_list[i], key_list[i], value_list[i]], dim=0)
-                            for i in range(tp_size)], dim=0)
-    return cut_tensor_list
-
-
 def load_qkv(config, prefix: str, weights):
-    hidden_size_per_attention_head = config.hidden_size // config.num_attention_heads
-    num_attention_heads_per_partition = config.num_attention_heads
-    num_multi_query_groups_per_partition = config.multi_query_group_num
-    q_size = hidden_size_per_attention_head * num_attention_heads_per_partition
-    kv_size = hidden_size_per_attention_head * num_multi_query_groups_per_partition
-
-    weight = weights.get_weights_col_packed_qkv_glm(prefix, None, q_size, kv_size, False)
-    bias = weights.get_weights_col_packed_qkv_glm(prefix, None, q_size, kv_size, True)
+    weight = weights.get_weights_col_packed_qkv_glm(config, prefix, None, False)
+    bias = weights.get_weights_col_packed_qkv_glm(config, prefix, None, True)
     linear = get_linear(weight, bias, config.quantize)
 
     return TensorParallelColumnLinear(linear)
@@ -378,7 +348,7 @@ class FlashChatglmModel(torch.nn.Module):
         # for ascend init
         self.init_ascend_operations(config)
         self.ascend_weight = []
-        self.kv_head_num = config.multi_query_group_num // self.tp_world_size
+        self.kv_head_num = max(config.multi_query_group_num // self.tp_world_size, 1)
         self.ascend_kcache_id = None
         self.ascend_vcache_id = None
         rotary_dim = (
@@ -398,7 +368,7 @@ class FlashChatglmModel(torch.nn.Module):
             "isPrefill": True,
             "numHeadsPerPartition": config.num_attention_heads // self.tp_world_size,
             "hiddenSizePerHead": config.kv_channels,
-            "numGroupsPerPartition": config.multi_query_group_num // self.tp_world_size,
+            "numGroupsPerPartition": max(config.multi_query_group_num // self.tp_world_size, 1),
             "transKey": False,
             "layerNum": config.num_layers,
             "residualAddScale": 1,
@@ -413,7 +383,7 @@ class FlashChatglmModel(torch.nn.Module):
             "isPrefill": False,
             "numHeadsPerPartition": config.num_attention_heads // self.tp_world_size,
             "hiddenSizePerHead": config.kv_channels,
-            "numGroupsPerPartition": config.multi_query_group_num // self.tp_world_size,
+            "numGroupsPerPartition": max(config.multi_query_group_num // self.tp_world_size, 1),
             "transKey": False,
             "layerNum": config.num_layers,
             "residualAddScale": 1,

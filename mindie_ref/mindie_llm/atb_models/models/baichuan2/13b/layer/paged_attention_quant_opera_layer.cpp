@@ -161,8 +161,8 @@ atb::Status PAQuantOperaLayer(const PAQuantOperaLayerParam &param, atb::Operatio
     inputNormNode.outTensorIds = {INTERNAL_INPUT_NORM_OUT}; // int8
 
     // qkv  [n_tokens, hidden_size] to [n_tokens, 3 * hidden_size]
-    atb::infer::LinearQuantParam mixedQkvLinearParam;
-    mixedQkvLinearParam.transposeB = true; //
+    atb::infer::LinearParam mixedQkvLinearParam;
+    mixedQkvLinearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
     CREATE_OPERATION(mixedQkvLinearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = {INTERNAL_INPUT_NORM_OUT, IN_QKV_MIXED_LINEAR_WEIGHT, IN_QKV_MIXED_BIAS,
                                  IN_QKV_MIXED_DEQSCALE};
@@ -268,14 +268,28 @@ atb::Status PAQuantOperaLayer(const PAQuantOperaLayerParam &param, atb::Operatio
     selfNormNode.outTensorIds = {INTERNAL_SELF_NORM_OUT};
 
     // up quant
-    atb_speed::common::ParallelParamV2 linearUpParam = {true, false, true, true, false};
+    // atb_speed::common::ParallelParamV2 linearUpParam = {true, false, true, true, false};
+    atb_speed::common::ParallelParamV2 linearUpParam;
+    linearUpParam.isBias = true;
+    linearUpParam.transposeA = false;
+    linearUpParam.transposeB = true;
+    linearUpParam.isQuant = true;
+    linearUpParam.isSparse = false;
+
     atb_speed::common::RowParallelLinearV2(linearUpParam, &matmulUpNode.operation);
     matmulUpNode.inTensorIds = {
         INTERNAL_SELF_NORM_OUT, IN_MLP_UP_WEIGHT, IN_MLP_UP_BIAS, IN_MLP_UP_DEQSCALE, IN_HOLDER, IN_HOLDER, IN_HOLDER};
     matmulUpNode.outTensorIds = {INTERNAL_MATMUL_UP_OUT};
 
     // gata quant
-    atb_speed::common::ParallelParamV2 linearGateParam = {true, false, true, true, false};
+    // atb_speed::common::ParallelParamV2 linearGateParam = {true, false, true, true, false};
+    atb_speed::common::ParallelParamV2 linearGateParam;
+    linearGateParam.isBias = true;
+    linearGateParam.transposeA = false;
+    linearGateParam.transposeB = true;
+    linearGateParam.isQuant = true;
+    linearGateParam.isSparse = false;
+
     atb_speed::common::RowParallelLinearV2(linearGateParam, &matmulGateNode.operation);
     matmulGateNode.inTensorIds = {INTERNAL_SELF_NORM_OUT,
                                   IN_MLP_GATE_WEIGHT,

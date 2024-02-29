@@ -3,12 +3,18 @@
 ModelTest为大模型的性能和精度提供测试功能。
 
 目前支持：PA场景，float16
+
 功能：
 1. 性能测试：指定batch，指定输入输出长度的e2e性能、吞吐，首Token以及非首Token性能。吞吐。
 2. 精度测试：CEval, MMLU, BoolQ, HumanEval下游数据集
-PA模型：
+
+PA模型支持：
 1. Llama (Llama-65B, Llama2-7B, Llama2-13B, Llama2-70B)
 2. Starcoder-15.5B
+3. Chatglm2-6b
+4. CodegeeX2-6b
+5. Baichuan2 (Baichuan2-7B, Baichuan2-13B)
+6. Qwen (Qwen-14B, Qwen-72B) 
 
 # 使用说明
 
@@ -40,15 +46,20 @@ bash run.sh pa_fp16 [performance|full_CEval|full_MMLU|full_BoolQ] ([case_pair]) 
 2. model_name:
     Llama-65B, Llama2-7B, Llama2-13B, Llama2-70B: llama
     Starcoder-15.5B: starcoder
-3. 当model_name为llama时，须指定use_refactor为True或者False
+    Chatglm2-6b: chatglm2_6b
+    CodegeeX2-6b: codegeex2_6b
+    Baichuan2-7b: baichuan2_7b
+    Baichuan2-13b: baichuan2_13b
+    Qwen-14b, Qwen-72b: qwen
+3. 当model_name为llama时，须指定use_refactor为True或者False（llama2-7b/13b 模型下，use_refactor为False使用的是浮点量化归一版本，可测试量化）
 4. weight_dir: 权重路径
 5. chip_num: 使用的卡数
 6. max_position_embedding: 可选参数，不传入则使用config中的默认配置
 7. 运行完成后，会在控制台末尾呈现保存数据的文件夹
 
 举例：
-1. 测试Llama-70B在8卡[512, 512]场景下，16 batch的性能
-bash run.sh pa_fp16 performance [[512,512]] 16 llama /path 8
+1. 测试Llama-70B在8卡[512, 512]场景下，16 batch的性能，使用归一代码
+bash run.sh pa_fp16 performance [[512,512]] 16 llama True /path 8
 1. 测试Starcoder-15.5B在8卡1 batch下游数据集BoolQ
 bash run.sh pa_fp16 full_BoolQ 1 starcoder /path 8
 ``` 

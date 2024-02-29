@@ -81,8 +81,6 @@ atb::Status FloatFAModel::InferShape(const std::vector<atb::TensorDesc> &inTenso
         return atb::ERROR_INVALID_GRAPH;
     }
 
-    const atb::TensorDesc &keyTensorDesc = inTensorDescs.at(IN_TENSOR_PAST_KEY);
-    const atb::TensorDesc &valueTensorDesc = inTensorDescs.at(IN_TENSOR_PAST_KEY + param_.layerNum);
     // bs seqlen vocabsize
     outTensorDescs.at(0) = graph_.weightTensors.at(0).desc;
     outTensorDescs.at(0).shape.dimNum = 3;
@@ -176,7 +174,8 @@ int64_t FloatFAModel::BuildGraph()
     finalRmsNormNode.outTensors = { &graph_.internalTensors.at(finalRmsNormOutTensorId) };
 
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
-    atb::infer::LinearParam linearParam = { false, true, false };
+    atb::infer::LinearParam linearParam;
+    linearParam.hasBias = false;
     CREATE_OPERATION(linearParam, &op);
     lmHeadNode.operation.reset(op);
     const int lmHeadWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
@@ -206,7 +205,7 @@ atb::Status FloatFAModel::ParseParam(const std::string &param)
 
 atb::Status FloatFAModel::BindParamHostTensor(uint32_t nodeId)
 {
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
 

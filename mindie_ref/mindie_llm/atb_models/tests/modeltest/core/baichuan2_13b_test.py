@@ -1,21 +1,24 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 import os
-import shutil
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from transformers.generation.utils import GenerationConfig
-import torch
+
+ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
+import sys
+
+sys.path.append(os.path.join(ATB_SPEED_HOME_PATH, "../.."))
+from atb_llm.runner import ModelRunner
 from base import model_test
+from transformers.generation.utils import GenerationConfig
 
 MODEL_FILE = os.path.join(
     model_test.ATB_SPEED_HOME_PATH,
     "pytorch/examples/baichuan2/13b/modeling_baichuan_ascend.py",
 )
-WEIGHT_DIR = os.path.join(model_test.ATB_TESTDATA_PATH, "weights", "baichuan2_13b")
 
 
 class Baichuan213BModelTest(model_test.ModelTest):
     def __init__(self, *args) -> None:
         super().__init__(*args)
+        self.weight_dir = args[12]
 
     def remove_part_of_generation_config(self, generation_config):
         ori_gen = GenerationConfig()
@@ -30,33 +33,28 @@ class Baichuan213BModelTest(model_test.ModelTest):
                 print(f"replace {key}")
         return generation_config
 
-    def get_model(self, hardware_type):
-        super().get_model()
+    def get_model(self, hardware_type, model_type, data_type):
+        world_size = int(os.getenv("WORLD_SIZE", "1"))
+        rank = int(os.getenv("RANK", "0"))
 
-        tokenizer = AutoTokenizer.from_pretrained(
-            WEIGHT_DIR,
-            padding_side="left",
-            use_fast=False,
-            trust_remote_code=True,
+        dtype = model_test.dtype_map.get(data_type, "fp16")
+        model = ModelRunner(
+            self.weight_dir, rank=rank, world_size=world_size, dtype=dtype, quantize=None
         )
-
-        torch.manual_seed(1)
-        shutil.copy(MODEL_FILE, os.path.join(WEIGHT_DIR, "modeling_baichuan_ascend.py"))
-        model = (
-            AutoModelForCausalLM.from_pretrained(WEIGHT_DIR, trust_remote_code=True)
-            .half()
-            .npu()
-        )
-        torch.npu.set_compile_mode(jit_compile=False)
-        model = model.eval()
-        model.generation_config = self.remove_part_of_generation_config(
-            model.generation_config
-        )
-
+        tokenizer = model.tokenizer
+        model.load_weights()
         return tokenizer, model
 
+    def prepare_environ(self):
+        os.environ['ATB_LAYER_INTERNAL_TENSOR_REUSE'] = "1"
+        os.environ['ATB_OPERATION_EXECUTE_ASYNC'] = "1"
+        os.environ['TASK_QUEUE_ENABLE'] = "1"
+        os.environ['LCCL_ENABLE_FALLBACK'] = "1"
+        os.environ['ATB_LAUNCH_KERNEL_WITH_TILING'] = "1"
+        os.environ['PYTORCH_NPU_ALLOC_CONF'] = 'max_split_size_mb:2048'
+
     def get_dataset_list(self):
-        return ["GSM8K", "MMLU", "CEval"]
+        return ["BoolQ", "CEval"]
 
 
 def main():

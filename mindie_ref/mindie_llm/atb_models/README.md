@@ -199,6 +199,13 @@ pip install torch*_aarch64.whl
     source set_env.sh
     ```
 
+- 安装 sdk
+
+  ```
+  cd pytorch/examples/atb_speed_sdk
+  pip3 install .
+  ```
+
 ## 环境变量参考
 
 ### CANN、加速库、模型仓的环境变量
@@ -256,7 +263,11 @@ source ${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models/scripts/set_env
 - 待补充
 
 ## 预置模型列表
+- [BaiChuan](./examples/models/baichuan/README.md)
+- [CodeGeeX2](./examples/models/codegeex/v2_6b/README.md)
+- [ChatGLM2](./examples/models/chatglm/v2_6b/README.md)
 - [LLaMa](./examples/models/llama/README.md)
+- [Qwen](./examples/models/qwen/README.md)
 - [StarCoder](./examples/models/starcoder/README.md)
 - 多模态模型Readme链接待补充
 

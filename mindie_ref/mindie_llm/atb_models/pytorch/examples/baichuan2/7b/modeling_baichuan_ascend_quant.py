@@ -48,6 +48,8 @@ def is_nd():
 
 
 IS_ND = is_nd()
+print(f"{IS_ND=}")
+MASK_INC_DIM1 = 1 if IS_ND else 16  # 增量attention mask shape的第二维
 
 
 def get_rank_and_world_size():
@@ -429,7 +431,7 @@ class KVAttentionManager:
         self.attention_mask_max = torch.zeros(
             (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
         self.attention_mask_max_inc = torch.zeros(
-            (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
+            (self.batch_size, MASK_INC_DIM1, self.max_seq_len), device="npu", dtype=torch.half)
 
     def init_attention_mask(self):
         if IS_ND:
@@ -438,7 +440,7 @@ class KVAttentionManager:
         else:
             self.attention_mask_max.zero_()
             self.attention_mask_max_inc = torch.zeros(
-            (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
+                (self.batch_size, MASK_INC_DIM1, self.max_seq_len), device="npu", dtype=torch.half)
 
     def init_seq_len_and_token_offset(self, seq_len):
         self.token_offset = seq_len
@@ -464,14 +466,20 @@ class KVAttentionManager:
     def token_offset_list(self):
         return [self.token_offset] * self.batch_size
 
-    def trans_data(self, tensor):
+    def trans_data(self, tensor, trans_type="full"):
         """
         :param tensor:
+        :param trans_type:full or inc
         :return:
         """
-        return torch_npu.npu_format_cast(tensor.view(
-            self.batch_size, self.max_seq_len,
-            self.max_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
+        if trans_type == "full":
+            return torch_npu.npu_format_cast(tensor.view(
+                self.batch_size, self.max_seq_len,
+                self.max_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
+        else:
+            return torch_npu.npu_format_cast(tensor.view(
+                self.batch_size, self.nz_dim,
+                self.max_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
 
     def get_attention_mask(self, attention_mask=None):
         if not self.is_full:
@@ -481,13 +489,11 @@ class KVAttentionManager:
                 self.attention_mask_max[i][:self.token_offset, :self.token_offset] = attention_mask[i]
                 ori_len = self.ori_len_list[i].item()
                 # 左padding
-                # self.attention_mask_max_inc[i][:, :self.token_offset - ori_len] = self.min_cache[:, :self.token_offset - ori_len]
-                # 右padding
-                self.attention_mask_max_inc[i][:, ori_len:self.token_offset] = \
-                    self.min_cache[:, ori_len:self.token_offset]
+                self.attention_mask_max_inc[i][:, :self.token_offset - ori_len] = self.min_cache[:,
+                                                                                  :self.token_offset - ori_len]
             if not IS_ND:
-                self.attention_mask_max_inc = self.trans_data(self.attention_mask_max_inc)
-                return self.trans_data(self.attention_mask_max)
+                self.attention_mask_max_inc = self.trans_data(self.attention_mask_max_inc, "inc")
+                return self.trans_data(self.attention_mask_max, "full")
             else:
                 return self.attention_mask_max
 
@@ -600,7 +606,7 @@ class BaichuanModel(BaichuanPreTrainedModel):
         self.batch_size = 0
         self.kv_attention_manager = None
         self.min_cache = torch.full(
-            (self.max_position_embeddings, self.max_position_embeddings),
+            (MASK_INC_DIM1, self.max_position_embeddings),
             torch.finfo(torch.half).min, dtype=torch.half).npu()
         self.in_beta = torch.zeros(config.hidden_size).half().npu()
 

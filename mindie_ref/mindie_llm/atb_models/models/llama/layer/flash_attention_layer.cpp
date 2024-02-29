@@ -139,8 +139,8 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT, IN_NORM_BIAS };
         inputNormNode.outTensorIds = { INTERMIDATE_INPUTNORMOUT };
 
-        atb::infer::LinearQuantParam quantQkvLinearParam;
-        quantQkvLinearParam.transposeB = true;
+        atb::infer::LinearParam quantQkvLinearParam;
+        quantQkvLinearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
         CREATE_OPERATION(quantQkvLinearParam, &mixdQLinearNode.operation);
         mixdQLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_QMIXDWEIGHT, IN_QMIXD_BIAS, IN_QMIXD_DEQSCALE };
         mixdQLinearNode.outTensorIds = { INTERMIDATE_MIXEDQ };
@@ -187,7 +187,11 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         CREATE_OPERATION(rmsNormParam, &inputNormNode.operation);
         inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT };
         inputNormNode.outTensorIds = { INTERMIDATE_INPUTNORMOUT };
-        atb::infer::LinearParam linearParam = { false, false, false };
+        atb::infer::LinearParam linearParam;
+        linearParam.hasBias = false;
+        if (param.isBF16) {
+            linearParam.linearType = atb::infer::LINEAR_BF16BF16_FP32_BF16;
+        }
         CREATE_OPERATION(linearParam, &mixdQLinearNode.operation);
         mixdQLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_QMIXDWEIGHT };
         mixdQLinearNode.outTensorIds = { INTERMIDATE_MIXEDQ };
@@ -275,6 +279,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         selfOutLinearParam.isBias = true;
         selfOutLinearParam.isQuant = true;
         selfOutLinearParam.transposeB = true;
+        selfOutLinearParam.isBF16 = param.isBF16;
         selfOutLinearParam.quantParam.quantType = atb::infer::QUANT_INT8;
         selfOutLinearParam.quantParam.isQuantOp = true;
         selfOutLinearParam.quantParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_QUANT;
@@ -295,6 +300,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         selfOutLinearParam.isQuant = true;
         selfOutLinearParam.isSparse = true;
         selfOutLinearParam.transposeB = true;
+        selfOutLinearParam.isBF16 = param.isBF16;
         selfOutLinearParam.quantParam.quantType = atb::infer::QUANT_INT8;
         selfOutLinearParam.quantParam.isQuantOp = true;
         selfOutLinearParam.quantParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_QUANT;
@@ -312,6 +318,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         selfOutLinearParam.commParam.rankSize = param.rankSize;
         selfOutLinearParam.commParam.backend = param.backend;
         selfOutLinearParam.isBias = false;
+        selfOutLinearParam.isBF16 = param.isBF16;
         atb_speed::common::RowParallelLinearV2(selfOutLinearParam, &selfOutLinearNode.operation);
 
         selfOutLinearNode.inTensorIds = {
@@ -354,6 +361,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         mlpParam.isPack = false;
         mlpParam.isQuant = true;
         mlpParam.transposeB = true;
+        mlpParam.isBF16 = param.isBF16;
         mlpParam.commDownParam.rank = param.rank;
         mlpParam.commDownParam.rankSize = param.rankSize;
         mlpParam.commDownParam.backend = param.backend;
@@ -395,6 +403,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         mlpParam.isQuant = true;
         mlpParam.isSparse = true;
         mlpParam.transposeB = true;
+        mlpParam.isBF16 = param.isBF16;
         mlpParam.commDownParam.rank = param.rank;
         mlpParam.commDownParam.rankSize = param.rankSize;
         mlpParam.commDownParam.backend = param.backend;
@@ -429,9 +438,10 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         mlpParam.commDownParam.rankSize = param.rankSize;
         mlpParam.commDownParam.backend = param.backend;
         mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
-        mlpParam.transposeB = false;
+        mlpParam.transposeB = true;
         mlpParam.isBias = false;
         mlpParam.isPack = false;
+        mlpParam.isBF16 = param.isBF16;
         atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);
         mlpNode.inTensorIds = { INTERMIDATE_SELFNORMOUT,
                                 IN_MLPUPWEIGHT, IN_MLPGATEWEIGHT, IN_MLPDOWNWEIGHT,

@@ -31,7 +31,8 @@ struct ParallelLmHeadParam {
     bool unpadInputs = false;
     bool gatherAhead = false;
     bool transposeA = false;
-    bool transposeB = false;
+    bool transposeB = true;
+    bool isBF16 = false;
 };
 
 class ParallelLmHeadConfig : public CommonOpBase {

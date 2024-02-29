@@ -27,12 +27,13 @@ namespace atb_speed {
 namespace common {
 struct MlpGateParamV2 {
     atb::infer::ActivationType activationType;
-    bool transposeB = false;
+    bool transposeB = true;
     bool isBias = false;
     bool isPack = false;
     bool isQuant = false;
     bool isSparse = false;
     bool noGate = false;
+    bool isBF16 = false;
     CommParam commDownParam;
     QuantParam quantUpParam;
     QuantParam quantGateParam;

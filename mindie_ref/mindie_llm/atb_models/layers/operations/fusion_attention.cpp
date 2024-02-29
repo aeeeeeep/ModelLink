@@ -384,7 +384,7 @@ void unSqueezeLayerAxis(const atb::Dims &oldShape, atb::Dims &newShape)
 {
     newShape.dimNum = oldShape.dimNum + 1;
     newShape.dims[0] = 1;  // Layer Axis
-    for (auto i = 0; i < oldShape.dimNum; i++) {
+    for (uint32_t i = 0; i < oldShape.dimNum; i++) {
         newShape.dims[i + 1] = oldShape.dims[i];
     }
 }

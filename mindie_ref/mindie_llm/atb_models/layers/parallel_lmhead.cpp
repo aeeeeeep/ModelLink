@@ -53,6 +53,7 @@ atb::Status CreateParallelLmHeadBase(const ParallelLmHeadParam &param, atb::Oper
     parallelParam.rankSize = param.rankSize;
     parallelParam.isBias = false;
     parallelParam.backend = param.backend;
+    parallelParam.isBF16 = param.isBF16;
     atb_speed::common::ColumnParallelLinear(parallelParam, &parallelLinearNode.operation);
     parallelLinearNode.inTensorIds = {param.gatherAhead ? config.INTERMIDATE_GATHER_OUT_ID : config.IN_HIDDENSTATES_ID,
                                       config.IN_WEIGHT_ID};

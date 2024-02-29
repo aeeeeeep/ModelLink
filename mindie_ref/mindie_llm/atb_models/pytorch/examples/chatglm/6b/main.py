@@ -19,6 +19,7 @@ import torch
 import torch.distributed as dist
 import torch_npu
 from torch_npu.contrib import transfer_to_npu
+from atb_speed.common.timer import Timer
 
 
 def override_topp_and_topk():
@@ -79,23 +80,6 @@ def parse_args():
         default='',
         help="The path to ceval dataset"
     )
-
-    parser.add_argument(
-        "--set_case_pair",
-        type=int,
-        default=0,
-        help="set specified case_pair if 1",
-    )
-    parser.add_argument(
-        "--seqlen_in_range",
-        default=[5, 10],
-        help="input seqlen ranges from 2^5 to 2^10",
-    )
-    parser.add_argument(
-        "--seqlen_out_range",
-        default=[5, 10],
-        help="output seqlen ranges from 2^5 to 2^10",
-    )
     parser.add_argument(
         "--seqlen_in_pair",
         default=[256, 512, 1024],
@@ -103,7 +87,7 @@ def parse_args():
     )
     parser.add_argument(
         "--seqlen_out_pair",
-        default=[64, 128, 256],
+        default=[256, 512, 1024],
         help="specified case",
     )
     parser.add_argument(
@@ -121,7 +105,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def get_is_format_nz():
+def is_format_nz():
     soc_version = torch_npu._C._npu_get_soc_version()
     if soc_version in [200, 201, 202, 203]:
         return True
@@ -162,11 +146,8 @@ def get_model(args):
     # 推理模式
     model = model.eval()
 
-    # 确认配置
-    is_format_nz = get_is_format_nz()
-
     # 浮点模型适配
-    if is_format_nz:
+    if is_format_nz():
         for name, module in model.named_modules():
             if isinstance(module, torch.nn.Linear):
                 module.weight.data = torch_npu.npu_format_cast(module.weight.data, 29)
@@ -265,18 +246,10 @@ def performance(args, tokenizer, model):
             f.write(
                 f"Batch,InputSeqLen(Encoding),OutputSeqLen(Decoding),TimeTotal(s),TimeOfFirstToken(ms),TimePerToken(ms),Throughput(tokens/s),ThroughputE2E(tokens/s)\n")
 
-    if args.set_case_pair:
-        seq_len_in_level = check_lists(args.seqlen_in_pair)
-        seq_len_out_level = check_lists(args.seqlen_out_pair)
-        assert len(seq_len_in_level) == len(seq_len_out_level)
-        seq_lens = list(zip(seq_len_in_level, seq_len_out_level))
-    else:
-        seq_len_in_level = check_lists(args.seqlen_in_range)
-        seq_len_out_level = check_lists(args.seqlen_out_range)
-        seq_lens = []
-        for i in range(seq_len_in_level[0], seq_len_in_level[1] + 1):
-            for j in range(seq_len_out_level[0], seq_len_out_level[1] + 1):
-                seq_lens.append((2 ** i, 2 ** j))
+    seq_len_in_level = check_lists(args.seqlen_in_pair)
+    seq_len_out_level = check_lists(args.seqlen_out_pair)
+    assert len(seq_len_in_level) == len(seq_len_out_level)
+    seq_lens = list(zip(seq_len_in_level, seq_len_out_level))
 
     texts = [
         "中国的首都在哪里",
@@ -308,18 +281,9 @@ def performance(args, tokenizer, model):
         inputs = tokenizer(
             prompts, return_tensors="pt", padding="max_length", truncation=True, max_length=seq_len_in).to("npu")
 
-        start_time = time.time()
         with torch.no_grad():
-            torch.npu.synchronize()
-            first_token_start = time.time()
-            outputs = model.generate(
-                **inputs,
-                eos_token_id=model.config.vocab_size * 2,
-                max_new_tokens=1,
-            )
-            torch.npu.synchronize()
-            first_token_end = time.time()
-
+            Timer.reset()
+            Timer.sync = torch.npu.synchronize
             torch.npu.synchronize()
             total_start = time.time()
             outputs = model.generate(
@@ -331,23 +295,24 @@ def performance(args, tokenizer, model):
             total_end = time.time()
 
         # time analysis
-        time_of_first_token = (first_token_end - first_token_start)
         time_total = total_end - total_start
-        time_tensor = torch.tensor([time_of_first_token, time_total], device="npu")
+        time_tensor = torch.tensor([Timer.timeit_res.first_token_delay, Timer.timeit_res.next_token_avg_delay, time_total], device="npu")
 
         if args.tp_size > 1:
             # 首token和总时间取双芯的较大值
             dist.all_reduce(time_tensor, dist.ReduceOp.MAX)
 
         if local_rank == 0:
-            time_per_token = (time_tensor[1] - time_tensor[0]) / (seq_len_out - 1)
-            throughput = args.batch * (seq_len_out - 1) / (time_tensor[1] - time_tensor[0])
+            time_of_first_token = time_tensor[0] / 1000
+            time_per_token = time_tensor[1] / 1000
+            time_total = time_tensor[2]
+            throughput = args.batch / time_per_token
             throughput_e2e = args.batch * seq_len_out / time_total
 
             print(
                 f"batch: {args.batch}, seq_len_in: {seq_len_in}, seq_len_out: {seq_len_out}, "
                 f"time_of_first_token: {time_of_first_token * 1000:.2f}ms, time_per_token: {time_per_token * 1000:.2f}ms, time_total: {time_total:.2f}s, "
-                f"througput: {throughput:.2f}tokens/s, throughput_e2e: {throughput_e2e:.2f}tokens/s"
+                f"throughput: {throughput:.2f}tokens/s, throughput_e2e: {throughput_e2e:.2f}tokens/s"
                 )
 
             with open(args.performance_output_file, 'a', encoding='utf-8') as f:
@@ -400,7 +365,6 @@ def cli_demo(args, tokenizer, model):
 
 
 def webUI(args, tokenizer, model):
-    # 跟precision类似，从github代码仓上下载，先跑通功能（符合预期），然后再尝试优化
     raise NotImplementedError
 
 

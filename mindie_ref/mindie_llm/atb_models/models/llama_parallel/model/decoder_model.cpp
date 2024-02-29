@@ -44,6 +44,7 @@ void DecoderModel::Param::FromString(const std::string &param)
     isPack = paramJson["isPack"].get<bool>();
     isEmbeddingParallel = paramJson["isEmbeddingParallel"].get<bool>();
     isLmHeadParallel = paramJson["isLmHeadParallel"].get<bool>();
+    supportSwiGLU = paramJson["supportSwiGLU"].get<bool>();
     quantType = paramJson["quantType"].get<int>();
     rmsNormEps = paramJson["rmsNormEps"].get<float>();
     numAttentionHeadsPerRank = paramJson["numAttentionHeadsPerRank"].get<int>();
@@ -53,6 +54,9 @@ void DecoderModel::Param::FromString(const std::string &param)
     rank = paramJson["rank"].get<int>();
     worldSize = paramJson["worldSize"].get<int>();
     backend = paramJson["backend"].get<std::string>();
+    if (paramJson.contains("rankTableFile")) {
+        rankTableFile = paramJson["rankTableFile"].get<std::string>();
+    }
     for (auto item : paramJson["tokenOffset"]) {
         tokenOffset.push_back(item.get<int>());
     }
@@ -62,13 +66,13 @@ void DecoderModel::Param::FromString(const std::string &param)
     ATB_LOG(INFO) << "DecoderModel param" << ", isFA:" << isFA << ", isPrefill:" << isPrefill
                   << ", isBF16:" << isBF16 << ", isPack:" << isPack
                   << ", isEmbeddingParallel: " << isEmbeddingParallel << ", isLmHeadParallel: "
-                  << isLmHeadParallel
+                  << isLmHeadParallel << ", supportSwiGLU: " << supportSwiGLU
                   << ", quantType:" << quantType << ", rmsNormEps:" << rmsNormEps << ", numAttentionHeadsPerRank:"
                   << numAttentionHeadsPerRank << ", hiddenSizePerAttentionHead:" << hiddenSizePerAttentionHead
                   << ", numHiddenLayers:" << numHiddenLayers
                   << ", numKeyValueHeadsPerRank:" << numKeyValueHeadsPerRank
                   << ", rank:" << rank << ", worldSize:" << worldSize << ", backend:" << backend
-                  << ", tokenOffset:" << tokenOffset << ", seqLen:" << seqLen;
+                  << ", tokenOffset:" << tokenOffset << ", seqLen:" << seqLen << ", rankTableFile" << rankTableFile;
 }
 
 DecoderModel::DecoderModel(const std::string &param) : Model("DecoderModel", param)
@@ -194,6 +198,7 @@ int64_t DecoderModel::BuildGraph()
         embeddingParam.worldSize = param_.worldSize;
     };
     embeddingParam.backend = param_.backend;
+    embeddingParam.rankTableFile = param_.rankTableFile;
     atb_speed::common::Embedding(embeddingParam, &op);
     embeddingNode.operation.reset(op);
     embeddingNode.inTensors = {&graph_.weightTensors.at(0),                    // shape: [vocabSize + 1, hiddenSize]
@@ -213,6 +218,7 @@ int64_t DecoderModel::BuildGraph()
         layerParam.isPrefill = param_.isPrefill;
         layerParam.isBF16 = param_.isBF16;
         layerParam.isPack = param_.isPack;
+        layerParam.supportSwiGLU = param_.supportSwiGLU;
         layerParam.quantType = param_.quantType;
         layerParam.rmsNormEps = param_.rmsNormEps;
         layerParam.numAttentionHeadsPerRank = param_.numAttentionHeadsPerRank;
@@ -221,6 +227,7 @@ int64_t DecoderModel::BuildGraph()
         layerParam.rank = param_.rank;
         layerParam.worldSize = param_.worldSize;
         layerParam.backend = param_.backend;
+        layerParam.rankTableFile = param_.rankTableFile;
         atb_speed::llama_parallel::DecoderLayer(layerParam, &op);
 
         layerNode.operation.reset(op);
@@ -271,13 +278,14 @@ int64_t DecoderModel::BuildGraph()
     lmHeadParam.unpadInputs = !param_.isFA;
     lmHeadParam.gatherAhead = param_.isPrefill;
     lmHeadParam.hiddenSizePerAttentionHead = param_.hiddenSizePerAttentionHead;
-    lmHeadParam.linearParallelParam.fusionLinearParam.quantType = false;  // LmHead未接入量化
+    lmHeadParam.linearParallelParam.fusionLinearParam.isBF16 = param_.isBF16;
     lmHeadParam.linearParallelParam.unpadInputs = !param_.isFA;
     if (param_.isLmHeadParallel) {
         lmHeadParam.linearParallelParam.parallelType = atb_speed::common::COLUMN_PARALLEL;
         lmHeadParam.linearParallelParam.rank = param_.rank;
         lmHeadParam.linearParallelParam.worldSize = param_.worldSize;
         lmHeadParam.linearParallelParam.backend = param_.backend;
+        lmHeadParam.linearParallelParam.rankTableFile = param_.rankTableFile;
     }
     LmHead(lmHeadParam, &op);
     lmHeadNode.operation.reset(op);
@@ -324,7 +332,7 @@ atb::Status DecoderModel::BindParamHostTensor(uint32_t nodeId)
     ATB_LOG(INFO) << "BindParamHostTensor";
     ATB_LOG(INFO) << "nodeId = " << nodeId;
 
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.numHiddenLayers) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.numHiddenLayers)) {
         return atb::NO_ERROR;
     }
 

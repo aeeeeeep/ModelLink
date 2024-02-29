@@ -2,16 +2,11 @@
 
 import json
 import math
-import os
 from typing import Optional, List, Tuple
 
 import torch
 import torch.distributed
 import torch_npu
-from torch import nn
-from transformers.activations import ACT2FN
-
-from atb_llm.utils.log import logger
 from atb_llm.utils.initial import NPUSocInfo, load_atb_speed
 from atb_llm.utils.layers import (
     TensorParallelColumnLinear,
@@ -22,6 +17,9 @@ from atb_llm.utils.layers import (
     load_column_multi,
     load_row
 )
+from atb_llm.utils.log import logger
+from torch import nn
+from transformers.activations import ACT2FN
 
 
 class RMSNorm(nn.Module):
@@ -107,7 +105,6 @@ class MLP(nn.Module):
             raise ZeroDivisionError from e
 
 
-
 class FlashDecoderLayer(nn.Module):
     def __init__(self, layer_id, config, weights):
         super().__init__()
@@ -158,7 +155,7 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
         self.config = config
         self.soc_info = NPUSocInfo()
         self.model = FlashBaichuanModel(config, weights)
-        self.parallel_lm_head = not self.soc_info.need_nz
+        self.parallel_lm_head = True
 
         if self.parallel_lm_head:
             self.lm_head = load_column_multi(
@@ -167,13 +164,14 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
                 weights=weights,
                 head_size=1,
                 lm_head=True,
+                norm=self.config.vocab_size == 125696
             )
         else:
             self.lm_head = TensorParallelHead.load_weight(
                 config,
                 prefix="lm_head",
                 weights=weights,
-                is_norm=True
+                is_norm=True  # 不生效的配置
             )
 
         # for ascend init
@@ -184,7 +182,7 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
         process_group = weights.process_group
         self.tp_rank = process_group.rank()
         self.tp_world_size = process_group.size()
-        
+
         try:
             self.num_heads = math.ceil(self.num_heads / weights.process_group.size())
             self.num_key_value_heads = math.ceil(config.num_key_value_heads / weights.process_group.size())
@@ -203,6 +201,9 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
         self.num_layers = config.num_hidden_layers
         self.lm_head_weight = None
         self.is_prefill = True
+        self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
+        transdata_param = json.dumps({})
+        self.transdata_operation.set_param(transdata_param)
 
     def maybe_format_cast(self, tensor):
         """
@@ -223,7 +224,7 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
             "rank": self.tp_rank,
             "rankSize": self.tp_world_size,
             "isPrefill": True,
-            "backend": os.getenv("BACKEND", "hccl"),
+            "backend": "hccl" if self.soc_info.need_nz else "lccl",
             "isLmHeadParallel": self.parallel_lm_head
         })
         self.acl_param_decoder = json.dumps({
@@ -234,7 +235,7 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
             "rank": self.tp_rank,
             "rankSize": self.tp_world_size,
             "isPrefill": False,
-            "backend": os.getenv("BACKEND", "hccl"),
+            "backend": "hccl" if self.soc_info.need_nz else "lccl",
             "isLmHeadParallel": self.parallel_lm_head
         })
         self.max_position_embeddings = config.max_position_embeddings
@@ -252,6 +253,7 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
         self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64, device="npu")
 
         self.ascend_atten_mask = AttentionMask.static(config.max_position_embeddings)
+        self.ascend_atten_mask_fake = self.ascend_atten_mask.get_attn_mask(1, dtype=torch.float16, device="npu")
 
     def init_ascend_weight(self):
         weights = [self.model.state_dict()["embed_tokens.weight"]]
@@ -302,16 +304,18 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
                                   max_s: int,
                                   lm_head_indices: Optional[torch.Tensor] = None):
         cos_embed, sin_embed = self.ascend_rotary_embedding.get_cos_sin_total(
-            position_ids, max_s, torch.float32
+            position_ids, self.max_position_embeddings, torch.float32
         )
-        if self.soc_info.need_nz:
-            pad_maxs = math.ceil(max_s / 16) * 16
-            atten_mask = self.ascend_atten_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
-            atten_mask = atten_mask.view(1, pad_maxs, pad_maxs // 16, 16).transpose(1, 2)
-            torch_npu.npu_format_cast_(atten_mask, 29)
+        if self.is_prefill:
+            if self.soc_info.need_nz:
+                pad_maxs = math.ceil(self.max_position_embeddings / 16) * 16
+                atten_mask = self.ascend_atten_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
+                atten_mask = self.transdata_operation.execute([atten_mask])[0]
+            else:
+                atten_mask = self.ascend_atten_mask.get_attn_mask(self.max_position_embeddings, kv_cache[0][0].dtype,
+                                                                  kv_cache[0][0].device)
         else:
-            atten_mask = self.ascend_atten_mask.get_attn_mask(max_s, kv_cache[0][0].dtype, kv_cache[0][0].device)
-
+            atten_mask = self.ascend_atten_mask_fake
         if self.is_prefill:  # prefill
             if lm_head_indices is None:
                 lm_head_indices = torch.tensor(range(input_ids.shape[0]), dtype=torch.int64, device=input_ids.device)
@@ -343,8 +347,8 @@ class FlashBaichuanForCausalLM(torch.nn.Module):
                                 max_s: int,
                                 lm_head_indices: Optional[torch.Tensor] = None):
         acl_inputs = self.prepare_inputs_for_ascend(input_ids, position_ids, is_prefill, kv_cache,
-                                                               block_tables, slots, input_lengths, max_s,
-                                                               lm_head_indices)
+                                                    block_tables, slots, input_lengths, max_s,
+                                                    lm_head_indices)
         acl_param = json.dumps({
             "seqLen": input_lengths.tolist()
         })

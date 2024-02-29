@@ -32,7 +32,10 @@ class ModelRunner:
         self.dtype = dtype
         self.revision = revision
         if ENV.bind_cpu:
-            bind_cpus(world_size, rank, ratio=1.0)
+            try:
+                bind_cpus(world_size, rank, ratio=1.0)
+            except Exception as err:
+                logger.error(f"Binding CPU failed\n{err}\n skip.")
         self.model_cls, self.config, self.tokenizer = \
             get_model(model_name_or_path, quantize, max_position_embeddings, is_flash_causal_lm,
                       revision, trust_remote_code, use_refactor)

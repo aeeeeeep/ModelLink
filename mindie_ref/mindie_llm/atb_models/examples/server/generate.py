@@ -41,9 +41,10 @@ def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length
         logits = logits[batch.lm_head_indices]
 
     next_token = next_token_chooser(logits)
+    next_token_list = next_token.tolist()
 
     for i, req in enumerate(batch.req_list):
-        req.out_token_list.append(int(next_token[i]))
+        req.out_token_list.append(next_token_list[i])
 
     batch.batch_input_ids = next_token.to(torch.int64)
     batch.batch_position_ids = batch.context_length.to(torch.long)
@@ -91,7 +92,8 @@ def generate_req(req_list, model, tokenizer,
                 cur_need_blocks = req_list[req_idx].need_blocks
                 cur_context_len = req_list[req_idx].input_length
                 if total_need_blocks + cur_need_blocks > free_block:
-                    break
+                    raise Exception(f"req: {req_idx} out of memory, need block:" +
+                                 f"{total_need_blocks + cur_need_blocks} is more than free block {free_block}")
                 if cur_context_len > max_prefill_tokens:
                     logger.error(f"req: {req_idx} input length: {cur_context_len} is too long," +
                                  f" max_prefill_tokens: {max_prefill_tokens}")
@@ -168,7 +170,7 @@ def generate_req(req_list, model, tokenizer,
     if rank == 0:
         print("max_generate_batch_size", max_generate_batch_size)
     if ENV.benchmark_enable:
-        prefill_time = sum(prefill_benchmark_timelist) / len(prefill_benchmark_timelist)
+        prefill_time = sum(prefill_benchmark_timelist)
         e2e_time = sum(prefill_benchmark_timelist) + sum(decoder_benchmark_timelist)
         try:
             decode_token_time = sum(decoder_benchmark_timelist) / (max_out_length - 1)
@@ -204,7 +206,7 @@ def generate_req(req_list, model, tokenizer,
                 'max_generate_batch_size': [max_generate_batch_size],
             }
             df = pd.DataFrame(stat_data)
-            df.to_csv(benchmark_filepath, mode="a", index=False)
+            df.to_csv(benchmark_filepath, index=False)
             logger.info('-------------------performance dumped------------------------')
             df = df.drop('prefill_token_times', axis=1)
             df = df.drop('decode_token_times', axis=1)

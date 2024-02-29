@@ -37,6 +37,7 @@ struct LinearParallelParam {
     int worldSize = 1;
     int rankRoot = 0;
     std::string backend = "hccl";
+    std::string rankTableFile = "";
 };
 
 atb::Status LinearParallel(const LinearParallelParam &param, atb::Operation **operation);

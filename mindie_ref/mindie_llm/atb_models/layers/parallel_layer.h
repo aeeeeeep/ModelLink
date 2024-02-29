@@ -31,8 +31,9 @@ struct ParallelParam {
     void *hcclComm = nullptr;
     bool isBias = false;
     bool transposeA = false;
-    bool transposeB = false;
+    bool transposeB = true;
     std::string backend = "hccl";
+    bool isBF16 = false;
 };
 
 class LinearWithBiasAndParallel : public CommonOpBase {

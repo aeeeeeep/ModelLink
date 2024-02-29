@@ -27,7 +27,6 @@
 
 namespace atb_speed {
 namespace common {
-static uint64_t g_operationId = 0;
 const size_t HOST_TILING_BUFFER_DEFAULT_SIZE = 10240;
 constexpr uint32_t MAX_PROFILING_FUNC_NAME = 2;
 static constexpr int32_t DIM_1 = 1;
@@ -120,8 +119,7 @@ aclTensor *CreateTensor(const atb::VariantPack &variantPack, int64_t index, bool
     }
 }
 
-atb::Status MatMulCompressDequantOperation::Setup(const atb::VariantPack &variantPack, uint64_t &workspaceSize,
-    atb::Context *context)
+atb::Status MatMulCompressDequantOperation::Setup(uint64_t &workspaceSize)
 {
     workspaceSize = 0;
     return 0;
@@ -163,9 +161,11 @@ atb::Status MatMulCompressDequantOperation::Execute(const atb::VariantPack &vari
     int ret1 = aclnnMatmulCompressDequantGetWorkspaceSize(x1_, x2_, compressIndex_, bias_, deqScale_, nullptr, *offsetX,
         compressInfo, output, &workspaceSize, &m_executor);
 
-    ATB_LOG(INFO) << "start to execute aclnnMatmulCompressDequant..";
+    ATB_LOG(INFO) << "start to execute aclnnMatmulCompressDequant.., ret1: " << ret1;
 
     int ret2 = aclnnMatmulCompressDequant(workspace, workspaceSize, m_executor, context->GetExecuteStream());
+
+    ATB_LOG(INFO) << "ret2: " << ret2;
 
     return 0;
 }

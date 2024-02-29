@@ -45,17 +45,18 @@ struct CommParam {
 struct ParallelParamV2 {
     bool isBias = false;
     bool transposeA = false;
-    bool transposeB = false;
+    bool transposeB = true;
     bool isQuant = false;
     bool isSparse = false;
     bool isAllGatherTranspose = false;
+    bool isBF16 = false;
     CommParam commParam;
     QuantParam quantParam;
 };
 
 atb::Status RowParallelLinearV2(const ParallelParamV2 &param, atb::Operation **operation);
 atb::Status ColumnParallelLinearV2(const ParallelParamV2 &param, atb::Operation **operation);
-atb::Status VocabParallelEmbeddingV2(const ParallelParamV2 &param, atb::Operation **operation);
+atb::Status VocabParallelEmbeddingV2(atb::Operation **operation);
 } // namespace common
 } // namespace atb_speed
 

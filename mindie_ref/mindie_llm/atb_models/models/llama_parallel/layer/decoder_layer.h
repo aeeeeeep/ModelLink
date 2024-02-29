@@ -29,6 +29,7 @@ struct DecoderLayerParam {
     bool isPrefill = false;
     bool isBF16 = false;
     bool isPack = true;
+    bool supportSwiGLU = false;
     int quantType = 0;
     float rmsNormEps = 0;
     int numAttentionHeadsPerRank = 0;
@@ -37,6 +38,7 @@ struct DecoderLayerParam {
     int rank = 0;
     int worldSize = 1;
     std::string backend = "hccl";
+    std::string rankTableFile = "";
     std::vector<int> seqLen;
     std::vector<int> tokenOffset;
 };

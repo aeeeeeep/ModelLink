@@ -322,7 +322,13 @@ int64_t ChatGlmCommonModelFa::BuildGraph()
     sliceNode.outTensors = {&graph_.internalTensors.at(internalTensorId)};
 
     auto &lmNode = graph_.nodes.at(nodeId++);
-    atb_speed::common::ParallelParamV2 lmParam = {false, false, false, param_.quantmodel, param_.isSparse};
+    atb_speed::common::ParallelParamV2 lmParam;
+    lmParam.isBias = false;
+    lmParam.transposeA = false;
+    lmParam.transposeB = true;
+    lmParam.isQuant = param_.quantmodel;
+    lmParam.isSparse = param_.isSparse;
+
     lmParam.isAllGatherTranspose = true;
     lmParam.commParam.rank = param_.rank;
     lmParam.commParam.rankSize = param_.rankSize;
@@ -363,7 +369,7 @@ atb::Status ChatGlmCommonModelFa::ParseParam(const std::string &param)
  
 atb::Status ChatGlmCommonModelFa::BindParamHostTensor(uint32_t nodeId)
 {
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
     const uint32_t index_bind = 4;
@@ -379,7 +385,7 @@ atb::Status ChatGlmCommonModelFa::BindParamHostTensor(uint32_t nodeId)
         std::vector<int32_t> nodeOffsetXIds = {16, 19, 22, 25};
         std::vector<int32_t> nodeCompressInfoIds = {17, 20, 23, 26};
 
-        int32_t i = 0;
+        uint32_t i = 0;
         int32_t j = (nodeId-2)*index_bind+i; // 第2个node开始
         for (i=0; i < nodeOffsetXIds.size(); i++, j++) {
             node.variantPack.inTensors.at(nodeOffsetXIds[i]).hostData = &param_.offsetX.at(j);

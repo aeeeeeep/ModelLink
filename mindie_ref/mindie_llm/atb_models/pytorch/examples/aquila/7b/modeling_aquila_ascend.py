@@ -38,6 +38,9 @@ from transformers.utils import add_start_docstrings, add_start_docstrings_to_mod
 
 import torch_npu
 
+from atb_speed.common.timer import Timer
+from atb_speed.common.utils import load_atb_speed
+
 from .configuration_aquila import AquilaConfig
 
 
@@ -64,19 +67,7 @@ RANK, WORLD_SIZE = get_rank_and_world_size()
 print(f"RANK = {RANK} | WORLD_SIZE = {WORLD_SIZE}")
 
 
-def load_acl_transformer():
-    """
-    加载acl transformers
-    :return:
-    """
-    acl_transformer_home_path = os.getenv("ATB_SPEED_HOME_PATH", "")
-    if not acl_transformer_home_path or not os.path.exists(acl_transformer_home_path):
-        raise RuntimeError("env ACLTRANSFORMER_HOME_PATH not exist, source set_env.sh")
-    lib_path = os.path.join(acl_transformer_home_path, "lib/libatb_speed_torch.so")
-    torch.classes.load_library(lib_path)
-
-
-load_acl_transformer()
+load_atb_speed()
 
 logger = logging.get_logger(__name__)
 
@@ -713,6 +704,7 @@ class AquilaModel(AquilaPreTrainedModel):
         position_ids = position_ids.npu()
         cos_embed = torch.nn.functional.embedding(position_ids, cos_table)
         sin_embed = torch.nn.functional.embedding(position_ids, sin_table)
+        seqlen_max = torch.tensor([self.kv_attention_manager.seq_len_tensor[0] - 1], dtype=torch.int64, device="npu")
 
         inputs = [
                      input_ids,  # IN_TENSOR_INPUTIDS
@@ -723,7 +715,8 @@ class AquilaModel(AquilaPreTrainedModel):
                      self.kv_attention_manager.v_cache_input,  # IN_TENSOR_PAST_VALUE
                      self.kv_attention_manager.token_offset_tensor,  # IN_TENSOR_TOKENOFFSET
                      self.kv_attention_manager.seq_len_tensor,  # IN_TENSOR_SEQLEN
-                     self.place_holder
+                     self.place_holder,
+                     seqlen_max
                  ] + self.layer_id_list
 
         return inputs
@@ -896,7 +889,7 @@ class AquilaForCausalLM(AquilaPreTrainedModel):
         self.world_size = 1
         if hasattr(config, 'world_size'):
             self.world_size = config.world_size
-        self.lm_head = nn.Linear(config.hidden_size // self.world_size, config.vocab_size, bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size // self.world_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
@@ -924,6 +917,7 @@ class AquilaForCausalLM(AquilaPreTrainedModel):
 
     @add_start_docstrings_to_model_forward(AQUILA_INPUTS_DOCSTRING)
     @replace_return_docstrings(output_type=CausalLMOutputWithPast, config_class=_CONFIG_FOR_DOC)
+    @Timer.timing
     def forward(
             self,
             input_ids: torch.LongTensor = None,

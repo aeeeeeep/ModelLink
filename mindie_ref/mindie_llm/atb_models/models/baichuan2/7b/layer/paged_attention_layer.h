@@ -31,7 +31,7 @@ struct PALayerParam {
     int rank = 0;
     int rankSize = 1;
     bool isPrefill = false;
-    bool transposedWeight = false;
+    bool transposedWeight = true;
     std::string backend = "hccl";
     std::string model = "baichuan2_7b";
 };
@@ -39,14 +39,6 @@ struct PALayerParam {
 void from_json(const nlohmann::json &paramJson, PALayerParam &param);
 
 atb::Status PALayer(const PALayerParam &param, atb::Operation **operation);
-
-static atb::Operation *CreatePALayer(const nlohmann::json &paramJson)
-{
-    ATB_LOG(INFO) << GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
-    atb::Operation *op;
-    PALayer(paramJson.get<PALayerParam>(), &op);
-    return op;
-}
 
 class FlashAttentionHostBinder : public HostTensorBinder {
 public:
