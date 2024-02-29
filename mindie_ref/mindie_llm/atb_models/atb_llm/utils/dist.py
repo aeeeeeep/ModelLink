@@ -51,15 +51,16 @@ def set_device_from_rankTable(rank, rank_table):
                 if int(device["rank_id"]) == rank:
                     device_id = int(device["device_id"])
                     device = torch.device(f"npu:{device_id}")
-                    device_found_flag = True
-                    break
-            if not device_found_flag:
-                raise ValueError(
-                    f"ERROR: Rank id is not in the RankTable, the input rank is "
-                    f" {rank}"
-                )
-            return device
-
+                    device_found_flag = True                    
+                    break            
+            if device_found_flag:
+                break    
+    if not device_found_flag:
+        raise ValueError(
+            f"ERROR: Rank id is not in the rankTableFile, the input rank is "
+            f" {rank}"
+        )
+    return device
 
 
 def initialize_torch_distributed(rank, world_size):
