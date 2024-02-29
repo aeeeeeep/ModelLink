@@ -4,7 +4,8 @@ from enum import Enum
 
 class PackType(Enum):
     ALL_FP = 1
-    ALL_INT = 2
-    ALL_ANTI = 3
-    MIX_FP_INT = 4
-    MIX_FP_ANTI = 5
+    ALL_W8A8 = 2
+    ALL_W8A8_ANTI = 3
+    MIX_W8A8 = 4
+    MIX_W8A8_ANTI = 5,
+    ALL_W8A16 = 6,

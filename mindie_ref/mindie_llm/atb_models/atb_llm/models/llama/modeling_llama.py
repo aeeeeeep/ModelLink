@@ -130,9 +130,10 @@ class LlamaRMSNormBias(nn.Module):
         super().__init__()
 
         weight = weights.get_tensor(f"{prefix}.weight")
-        bias = weights.get_tensor(f"{prefix}.bias")
-            #if f"{prefix}.bias" in weights else \
-            #torch.tensor(weight.shape, dtype=torch.float16)
+        try:
+            bias = weights.get_tensor(f"{prefix}.bias")
+        except AssertionError:
+            bias = torch.zeros(weight.shape, dtype=torch.float16)
         self.weight = nn.Parameter(weight)
         self.bias = nn.Parameter(bias)
         self.variance_epsilon = eps
@@ -163,7 +164,14 @@ class LlamaMLP(nn.Module):
                 else "none",
             )
         )
-
+        if weights.quantize == 'w8a8':
+            self.pack_type = calc_mlp_pack_type(prefix, weights)
+        elif weights.quantize == 'w8a16':
+            self.pack_type = PackType.ALL_W8A16
+        elif weights.quantize == "smooth_quant":
+            self.pack_type = PackType.ALL_W8A8
+        else:
+            self.pack_type = PackType.ALL_FP
         no_refactor_no_pack = not config.use_refactor and config.num_attention_heads != config.num_key_value_heads
         if no_refactor_no_pack:
             self.gate_proj = TensorParallelColumnLinear.load(
@@ -179,14 +187,7 @@ class LlamaMLP(nn.Module):
                 bias=False,
             )
         else:
-            if weights.quantize == 'w8a8':
-                self.pack_type = calc_mlp_pack_type(prefix, weights)
-            elif weights.quantize == 'w8a16' or weights.quantize == "smooth_quant":
-                self.pack_type = PackType.ALL_INT
-            else:
-                self.pack_type = PackType.ALL_FP
-
-            if self.pack_type in [PackType.ALL_FP, PackType.ALL_INT, PackType.ALL_ANTI]:
+            if self.pack_type in [PackType.ALL_FP, PackType.ALL_W8A8, PackType.ALL_W8A8_ANTI, PackType.ALL_W8A16]:
                 self.gate_up_proj = load_column_multi(
                     config,
                     prefixes=[f"{prefix}.gate_proj", f"{prefix}.up_proj"],
@@ -253,6 +254,14 @@ class FlashLlamaAttention(torch.nn.Module):
             self.num_key_value_heads = self.num_key_value_heads // weights.process_group.size()
         else:
             self.num_key_value_heads = self.num_heads
+        if weights.quantize == 'w8a8':
+            self.pack_type = calc_attn_pack_type(prefix, weights)
+        elif weights.quantize == 'w8a16':
+            self.pack_type = PackType.ALL_W8A16
+        elif weights.quantize == "smooth_quant":
+            self.pack_type = PackType.ALL_W8A8
+        else:
+            self.pack_type = PackType.ALL_FP
         no_refactor_no_pack = not config.use_refactor and config.num_attention_heads != config.num_key_value_heads
         if no_refactor_no_pack:
             self.q_proj = TensorParallelColumnLinear.load(
@@ -274,14 +283,7 @@ class FlashLlamaAttention(torch.nn.Module):
                 bias=False,
             )
         else:
-            if weights.quantize == 'w8a8':
-                self.pack_type = calc_attn_pack_type(prefix, weights)
-            elif weights.quantize == 'w8a16' or weights.quantize == "smooth_quant":
-                self.pack_type = PackType.ALL_INT
-            else:
-                self.pack_type = PackType.ALL_FP
-
-            if self.pack_type in [PackType.ALL_FP, PackType.ALL_INT, PackType.ALL_ANTI]:
+            if self.pack_type in [PackType.ALL_FP, PackType.ALL_W8A8, PackType.ALL_W8A8_ANTI, PackType.ALL_W8A16]:
                 self.query_key_value = load_column_multi(
                     config,
                     prefixes=[f"{prefix}.q_proj", f"{prefix}.k_proj", f"{prefix}.v_proj"],
@@ -389,11 +391,11 @@ class FlashLlamaLayer(nn.Module):
             prefix=f"{prefix}.self_attn", config=config, weights=weights
         )
         self.mlp = LlamaMLP(prefix=f"{prefix}.mlp", config=config, weights=weights)
-        if self.self_attn.pack_type == PackType.ALL_FP:
+        if self.self_attn.pack_type in [PackType.ALL_FP, PackType.ALL_W8A16]:
             self.input_layernorm = LlamaRMSNorm(
                 prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.rms_norm_eps
             )
-        elif self.self_attn.pack_type in [PackType.ALL_INT, PackType.MIX_FP_INT]:
+        elif self.self_attn.pack_type in [PackType.ALL_W8A8, PackType.MIX_W8A8]:
             self.input_layernorm = LlamaRMSNormBias(
                 prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.rms_norm_eps
             )
@@ -401,13 +403,13 @@ class FlashLlamaLayer(nn.Module):
             self.input_layernorm = LlamaRMSNormWrapper(
                 prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.rms_norm_eps
             )
-        if self.mlp.pack_type == PackType.ALL_FP:
+        if self.mlp.pack_type in [PackType.ALL_FP, PackType.ALL_W8A16]:
             self.post_attention_layernorm = LlamaRMSNorm(
                 prefix=f"{prefix}.post_attention_layernorm",
                 weights=weights,
                 eps=config.rms_norm_eps,
             )
-        elif self.mlp.pack_type in [PackType.ALL_INT, PackType.MIX_FP_INT]:
+        elif self.mlp.pack_type in [PackType.ALL_W8A8, PackType.MIX_W8A8]:
             self.post_attention_layernorm = LlamaRMSNormBias(
                 prefix=f"{prefix}.post_attention_layernorm",
                 weights=weights,

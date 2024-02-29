@@ -24,15 +24,15 @@ def calc_attn_pack_type(prefix, weights):
 
     if is_q_w8a8 and is_k_w8a8 and is_v_w8a8:
         if is_anti:
-            return PackType.ALL_ANTI
+            return PackType.ALL_W8A8_ANTI
         else:
-            return PackType.ALL_INT
+            return PackType.ALL_W8A8
     elif not is_q_w8a8 and not is_k_w8a8 and not is_v_w8a8:
         return PackType.ALL_FP
     elif is_anti:
-        return PackType.MIX_FP_ANTI
+        return PackType.MIX_W8A8_ANTI
     else:
-        return PackType.MIX_FP_INT
+        return PackType.MIX_W8A8
 
 
 def calc_mlp_pack_type(prefix, weights):
@@ -45,15 +45,15 @@ def calc_mlp_pack_type(prefix, weights):
 
     if is_up_w8a8 and is_gate_w8a8:
         if is_anti:
-            return PackType.ALL_ANTI
+            return PackType.ALL_W8A8_ANTI
         else:
-            return PackType.ALL_INT
+            return PackType.ALL_W8A8
     elif not is_up_w8a8 and not is_gate_w8a8:
         return PackType.ALL_FP
     elif is_anti:
-        return PackType.MIX_FP_ANTI
+        return PackType.MIX_W8A8_ANTI
     else:
-        return PackType.MIX_FP_INT
+        return PackType.MIX_W8A8
 
 
 class W8A8LinearStatic(nn.Module):
@@ -62,23 +62,21 @@ class W8A8LinearStatic(nn.Module):
         self.in_features = weight.shape[1]
         self.out_features = weight.shape[0]
         self.register_buffer('weight', weight.to(torch.int8))
-        self.weight_quant_name = 'per_channel'
 
         self.act_quant_name = 'per_tensor'
-        self.register_buffer('input_scale', input_scale.reshape(1).to(torch.float16))
+        self.register_buffer('input_scale', (1 / input_scale).to(torch.float16))
 
         if input_offset is not None:
-            self.register_buffer('input_offset', input_offset)
+            self.register_buffer('input_offset', input_offset.to(torch.int8))
         else:
             self.register_buffer('input_offset', torch.tensor([], dtype=torch.int8))
 
         self.weight_quant_name = 'per_channel'
 
-        deq_scale = torch.frombuffer(deq_scale.to(torch.float32).numpy(), dtype=torch.int32)
-        self.register_buffer('deq_scale', deq_scale.to(torch.int64))
+        self.register_buffer('deq_scale', deq_scale)
 
         if quant_bias is not None:
-            self.register_buffer('quant_bias', quant_bias.to(torch.int32))
+            self.register_buffer('quant_bias', quant_bias)
         else:
             self.quant_bias = None
 
