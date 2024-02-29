@@ -9,9 +9,8 @@ import torch_npu
 
 from .modeling_llama import FlashLlamaModel, LlamaConfig
 from ..base.flash_causal_lm import FlashForCausalLM
-from atb_llm.utils.data.weight_wrapper import WeightWrapper
+from atb_llm.utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
 from atb_llm.utils.layers import load_column_multi
-from atb_llm.utils.quantize.pack_type import PackType
 
 
 class FlashLlamaForCausalLM(FlashForCausalLM):
@@ -158,37 +157,34 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
 
     def init_ascend_weight(self):
         if self.use_refactor:
+            attn_module_names = AttnModuleNames(
+                norm_name='input_layernorm',
+                pack_name='self_attn.query_key_value',
+                q_name='self_attn.q_proj',
+                k_name='self_attn.k_proj',
+                v_name='self_attn.v_proj',
+                o_name='self_attn.o_proj'
+            )
+            mlp_module_names = MlpModuleNames(
+                norm_name='post_attention_layernorm',
+                pack_name='mlp.gate_up_proj',
+                gate_name='mlp.gate_proj',
+                up_name='mlp.up_proj',
+                down_name='mlp.down_proj'
+            )
             weight_wrapper = WeightWrapper(self.soc_info, self.tp_rank)
             weight_wrapper.register_embedding(self.model.state_dict(), 'embed_tokens')
             for i in range(self.num_layers):
                 layer = self.model.layers[i]
                 layer_dict = layer.state_dict()
-                if layer.self_attn.pack_type in [PackType.ALL_FP, PackType.ALL_INT, PackType.ALL_ANTI]:
-                    weight_wrapper.register_layer_linear_pack(layer_dict, 'input_layernorm',
-                                                              'self_attn.query_key_value',
-                                                              layer.self_attn.pack_type)
-                else:
-                    if layer.self_attn.pack_type == PackType.MIX_FP_INT:
-                        weight_wrapper.register_layer_norm_bias(layer_dict, 'input_layernorm')
-                    else:
-                        weight_wrapper.register_layer_norm_wrapper(layer_dict, 'input_layernorm')
-                    weight_wrapper.register_layer_linear(layer_dict, 'self_attn.q_proj')
-                    weight_wrapper.register_layer_linear(layer_dict, 'self_attn.k_proj')
-                    weight_wrapper.register_layer_linear(layer_dict, 'self_attn.v_proj')
-                weight_wrapper.register_layer_linear(layer_dict, 'self_attn.o_proj')
-
-                if layer.mlp.pack_type in [PackType.ALL_FP, PackType.ALL_INT, PackType.ALL_ANTI]:
-                    weight_wrapper.register_layer_linear_pack(layer_dict, 'post_attention_layernorm',
-                                                              'mlp.gate_up_proj',
-                                                              layer.mlp.pack_type)
-                else:
-                    if layer.mlp.pack_type == PackType.MIX_FP_INT:
-                        weight_wrapper.register_layer_norm_bias(layer_dict, 'post_attention_layernorm')
-                    else:
-                        weight_wrapper.register_layer_norm_wrapper(layer_dict, 'post_attention_layernorm')
-                    weight_wrapper.register_layer_linear(layer_dict, 'mlp.gate_proj')
-                    weight_wrapper.register_layer_linear(layer_dict, 'mlp.up_proj')
-                weight_wrapper.register_layer_linear(layer_dict, 'mlp.down_proj')
+                weight_wrapper.register_layer_attn(layer_dict,
+                                                   layer.self_attn.pack_type,
+                                                   self.quantize,
+                                                   attn_module_names)
+                weight_wrapper.register_layer_mlp(layer_dict,
+                                                  layer.mlp.pack_type,
+                                                  self.quantize,
+                                                  mlp_module_names)
                 if self.soc_info.need_nz:
                     del layer.self_attn
                     del layer.post_attention_layernorm
@@ -247,7 +243,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
             self.ascend_weight = weights
             self.acl_encoder_operation.set_weight(weights)
             self.acl_decoder_operation.set_weight(weights)
-            
+
     def prepare_inputs_for_ascend(self, input_ids: torch.Tensor,
                                   position_ids: torch.Tensor,
                                   is_prefill: bool,

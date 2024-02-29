@@ -8,6 +8,7 @@ from atb_llm.utils.log import logger
 from .fast_linear import FastLinear
 from ...quantize.smooth_quant.quant_linear import SmoothQuantLinearStatic
 from ...quantize.w8a8 import W8A8LinearStatic
+from ...quantize.w8a16 import W8A16LinearStatic
 
 
 def get_linear(weight, bias, quantize, is_norm=False):
@@ -46,6 +47,13 @@ def get_linear(weight, bias, quantize, is_norm=False):
                 quant_bias=quant_bias,
                 input_offset=input_offset
             )
+    elif quantize == "w8a16":
+        qweight, weight_scale, weight_offset = weight
+        linear = W8A16LinearStatic(
+            weight=qweight,
+            weight_scale=weight_scale,
+            weight_offset=weight_offset,
+        )
     else:
         logger.error(f"Quantization `{quantize}` is not implemented yet.")
         raise AssertionError
