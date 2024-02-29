@@ -252,11 +252,11 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
             if is_prefill:
                 if self.soc_info.need_nz:
                     pad_maxs = math.ceil(self.max_position_embeddings / 16) * 16
-                    atten_mask = self.ascend_atten_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype,
+                    atten_mask = self.attn_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype,
                                                                       kv_cache[0][0].device)
                     atten_mask = self.transdata_operation.execute([atten_mask])[0]
                 else:
-                    atten_mask = self.ascend_atten_mask.get_attn_mask(self.max_position_embeddings, kv_cache[0][0].dtype,
+                    atten_mask = self.attn_mask.get_attn_mask(self.max_position_embeddings, kv_cache[0][0].dtype,
                                                                       kv_cache[0][0].device)
                 if lm_head_indices is None:
                     lm_head_indices = torch.tensor(range(input_ids.shape[0]),
@@ -296,7 +296,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                                                                         dtype=self.dtype,
                                                                         device=input_ids.device)
                 else:
-                    self.acl_decoder_operation_inputs[4] = self.ascend_atten_mask_fake
+                    self.acl_decoder_operation_inputs[4] = self.attn_mask_fake
                 self.acl_decoder_operation_inputs[5] = block_tables.to(torch.int32)
                 self.acl_decoder_operation_inputs[6] = slots.to(torch.int32)
                 self.acl_decoder_operation_inputs[7] = self.placeholder
