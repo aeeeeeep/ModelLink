@@ -46,6 +46,11 @@ bash run.sh pa_fp16 [performance|full_CEval|full_MMLU|full_BoolQ] ([case_pair]) 
 2. model_name:
     Llama-65B, Llama2-7B, Llama2-13B, Llama2-70B: llama
     Starcoder-15.5B: starcoder
+    Chatglm2-6b: chatglm2_6b
+    CodegeeX2-6b: codegeex2_6b
+    Baichuan2-7b: baichuan2_7b
+    Baichuan2-13b: baichuan2_13b
+    Qwen-14b, Qwen-72b: qwen
 3. 当model_name为llama时，须指定use_refactor为True或者False（llama2-7b/13b 模型下，use_refactor为False使用的是浮点量化归一版本，可测试量化）
 4. weight_dir: 权重路径
 5. chip_num: 使用的卡数
