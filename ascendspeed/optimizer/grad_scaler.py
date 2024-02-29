@@ -30,7 +30,7 @@ class MegatronGradScaler(ABC):
         """Initialize scale value with the input initial scale."""
         ensure_valid(initial_scale > 0.0)
         self._scale = get_accelerator().FloatTensor([initial_scale])
-        if int(os.getenv('NPU_DETECT', '0')):
+        if int(os.getenv('NPU_ADS_ENABLE', '0')):
             from torch_npu.utils import set_loss_scale
             set_loss_scale(self._scale)
 
@@ -122,7 +122,7 @@ class DynamicGradScaler(MegatronGradScaler):
                 # and scale up the loss scale.
                 self._scale = self._scale * self.growth_factor
 
-        if int(os.getenv('NPU_DETECT', '0')):
+        if int(os.getenv('NPU_ADS_ENABLE', '0')):
             from torch_npu.utils import set_loss_scale
             set_loss_scale(self._scale)
 
