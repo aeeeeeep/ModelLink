@@ -184,10 +184,13 @@ class PARunner:
             if not os.path.exists(profiling_path):
                 os.makedirs(profiling_path)
             torch.npu.synchronize()
+            e2e_start = time.time()
             with torch.npu.profile(profiling_path):
                 generate_req(req_list, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
                              max_output_length, self.cache_manager, self.rank, ignore_eos)
             torch.npu.synchronize()
+            e2e_end = time.time()
+            e2e_time = e2e_end - e2e_start
 
         generate_text_list, token_num_list = decode_token(req_list, self.tokenizer)
         print_log(self.rank, logger.info, "---------------end inference---------------")

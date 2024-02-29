@@ -120,6 +120,11 @@ function fn_run_single()
     --case_pair "$case_pair" \
     --use_refactor "$use_refactor" \
     --max_position_embedding "$max_position_embedding"
+
+    if [ $? -ne 0 ]; then
+        echo "something wrong marked for CI"
+        echo "performance test end marked for CI"
+    fi
 }
 
 function fn_run_all()
