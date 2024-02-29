@@ -217,7 +217,7 @@ class Weights:
             block_size = gqa_size
             start = (rank // (world_size // group_size)) * block_size
             stop = ((rank // (world_size // group_size)) + 1) * block_size
-        
+
         if "c_attn.bias" in tensor_name:
             b = slice_[:]
             single_size = b.shape[0] // 3
@@ -310,7 +310,7 @@ class Weights:
         if torch.allclose(tensor, tensor[0]):
             tensor = tensor[:1]
         else:
-            raise ValueError( f"`{tensor_name}` are not equal: {tensor}")
+            raise ValueError(f"`{tensor_name}` are not equal: {tensor}")
         return tensor
 
     def get_smooth_quant_sharded(self, tensor_name: str, idx: int, dim: int, gqa_size: int = 1):
@@ -470,7 +470,8 @@ class Weights:
                 [self.get_sharded(f"{p}.scales", dim=0, gqa_size=gqa_size) for p in prefixes], dim=dim
             )
             weight_zeros = None
-            act_scales_temp = [self.get_smooth_quant_sharded(f"{p}", idx=0, dim=0, gqa_size=gqa_size).reshape(1) for p in prefixes]
+            act_scales_temp = [self.get_smooth_quant_sharded(f"{p}", idx=0, dim=0, gqa_size=gqa_size).reshape(1) for p
+                               in prefixes]
             for one_act_scale in act_scales_temp[1:]:
                 if not torch.equal(act_scales_temp[0], one_act_scale):
                     raise ValueError(
@@ -567,7 +568,8 @@ class Weights:
             query_list = torch.chunk(query_layer, world_size, dim=0)
             key_list = torch.chunk(key_layer, kv_tp_size, dim=0)
             value_list = torch.chunk(value_layer, kv_tp_size, dim=0)
-            weight = torch.cat([query_list[rank], key_list[rank * kv_tp_size // world_size], value_list[rank * kv_tp_size // world_size]], dim=0)
+            weight = torch.cat([query_list[rank], key_list[rank * kv_tp_size // world_size],
+                                value_list[rank * kv_tp_size // world_size]], dim=0)
             weight = weight.to(device=self.device)
         return weight
 

@@ -9,8 +9,8 @@ import torch_npu
 
 from .modeling_llama import FlashLlamaModel, LlamaConfig
 from ..base.flash_causal_lm import FlashForCausalLM
-from atb_llm.utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
-from atb_llm.utils.layers import load_column_multi
+from ...utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
+from ...utils.layers import load_column_multi
 
 
 class FlashLlamaForCausalLM(FlashForCausalLM):
