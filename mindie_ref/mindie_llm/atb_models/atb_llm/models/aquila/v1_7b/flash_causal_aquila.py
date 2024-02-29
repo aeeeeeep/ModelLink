@@ -414,10 +414,11 @@ class AquilaModel(AquilaPreTrainedModel):
         acl_param = json.dumps({
             "seqLen": input_lengths.tolist()
         })
-        if self.is_prefill:
-            acl_model_out = self.acl_encoder_operation.execute(acl_inputs, acl_param)
-        else:
-            acl_model_out = self.acl_decoder_operation.execute(acl_inputs, acl_param)
+        acl_model_out = acl_model.execute(acl_inputs, acl_param)
+        # if self.is_prefill:
+        #     acl_model_out = self.acl_encoder_operation.execute(acl_inputs, acl_param)
+        # else:
+        #     acl_model_out = self.acl_decoder_operation.execute(acl_inputs, acl_param)
         acl_hidden_state = acl_model_out[0]
         return acl_hidden_state
 
