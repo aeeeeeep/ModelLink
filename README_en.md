@@ -34,7 +34,7 @@ Currently, the following models has been supported:
 * <a href="https://huggingface.co/docs/transformers/main/model_doc/llama" style="color:green">LLaMA</a>-[[README: 7B/13B/33B/65B]](examples/llama/README.md)
 * <a href="https://huggingface.co/docs/transformers/main/model_doc/llama2" style="color:green">LLaMA2</a>-[[README: 7B/13B/34B/70B]](examples/llama2/README.md)
 * <a href="https://github.com/baichuan-inc" style="color:green">Baichuan2</a>-[[README: 7B/13B]](examples/baichuan2/README.md)
-* <a href="https://huggingface.co/Qwen/Qwen-7B" style="color:green">Qwen</a>-[[README: 7B/14B]](examples/qwen/README.md)
+* <a href="https://huggingface.co/Qwen/Qwen-7B" style="color:green">Qwen</a>-[[README: 7B/14B/72B]](examples/qwen/README.md)
 
 ### Downstream Tasks
 Currently, the following downstream tasks have been supported:
@@ -241,9 +241,18 @@ Currently, the following downstream tasks have been supported:
       <td>1x8</td>
       <td>BF16 </td>
       <td> 1560 </td>
-      <td> -- </td>
+      <td> 1578 </td>
       <td> -- </td>
       <td> <a href="examples/qwen/pretrain_qwen_14b_ptd.sh">Train</a> </td>
+    </tr>
+    <tr>
+      <td>72B</td>
+      <td>16x8</td>
+      <td>BF16 </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/qwen/pretrain_qwen_72b_ptd.sh">Train</a> </td>
     </tr>
   </tbody>
 </table>
@@ -408,6 +417,13 @@ Currently, the following downstream tasks have been supported:
     </tr>
     <tr>
       <td>14B</td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+    </tr>
+    <tr>
+      <td>72B</td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
