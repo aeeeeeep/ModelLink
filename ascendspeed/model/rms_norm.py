@@ -34,7 +34,7 @@ class RMSNorm(torch.nn.Module):
         return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
 
     def forward(self, x):
-        if int(os.getenv('NPU_ADS_ENABLE', '0')):
+        if int(os.getenv('NPU_ASD_ENABLE', '0')):
             from torch_npu.utils import register_asd_hook
             register_asd_hook(x, self.weight)
 
