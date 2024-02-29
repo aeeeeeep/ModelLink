@@ -69,6 +69,7 @@ atb::Status Embedding(const EmbeddingParam &param, atb::Operation **operation)
         allGatherParam.rankSize = param.worldSize;
         allGatherParam.rankRoot = param.rankRoot;
         allGatherParam.backend = param.backend;
+        allGatherParam.rankTableFile = param.rankTableFile;
         CREATE_OPERATION(allGatherParam, &allGatherNode.operation);
         allGatherNode.inTensorIds = {LayerEmbeddingTensorIdx::INTERMEDIATE_GATHER};
         allGatherNode.outTensorIds = {LayerEmbeddingTensorIdx::INTERMEDIATE_ALLGATHER_OUT_ID};
