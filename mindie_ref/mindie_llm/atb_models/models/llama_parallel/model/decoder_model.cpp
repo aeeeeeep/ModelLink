@@ -198,6 +198,7 @@ int64_t DecoderModel::BuildGraph()
         embeddingParam.worldSize = param_.worldSize;
     };
     embeddingParam.backend = param_.backend;
+    embeddingParam.rankTableFile = param_.rankTableFile;
     atb_speed::common::Embedding(embeddingParam, &op);
     embeddingNode.operation.reset(op);
     embeddingNode.inTensors = {&graph_.weightTensors.at(0),                    // shape: [vocabSize + 1, hiddenSize]
