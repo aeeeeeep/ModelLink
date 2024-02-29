@@ -1,0 +1,62 @@
+{
+    "NETWORK_SIZE": [
+        "--num-layers", "40",
+        "--hidden-size", "5120",
+        "--ffn-hidden-size", "13696",
+        "--num-attention-heads", "40",
+        "--position-embedding-type", "alibi",
+        "--make-vocab-size-divisible-by", "8",
+        "--max-position-embeddings", "4096",
+        "--normalization", "RMSNorm",
+        "--swiglu",
+        "--square-alibi-mask",
+        "--fill-neg-inf",
+        "--untie-embeddings-and-output-weights",
+        "--load", "./baichuan2-13B-tp8-pp1/"
+    ],
+
+    "TOKENIZER_PARAM": [
+        "--tokenizer-type", "PretrainedFromHF",
+        "--tokenizer-name-or-path", "./baichuan2-13B-hf"
+    ],
+
+    "PROCESS_PRETRAIN_DATA_PARAM": [
+        "--input", "./train-00000-of-00001-a09b74b3ef9c3b56.parquet",
+        "--output-prefix", "./pretrain-dataset-baichuan2-13B/alpaca",
+        "--workers", "4",
+        "--log-interval", "1000"
+    ],
+
+    "INFERENCE_PARAM": [
+        "--tokenizer-not-use-fast",
+        "--max-new-tokens", "256",
+        "--exit-on-missing-checkpoint"
+    ],
+
+    "EVALUATION_PARAM": [
+        "--tokenizer-not-use-fast",
+        "--task-data-path", "./boolq/test",
+        "--task", "boolq",
+        "--max-new-tokens", "1",
+        "--exit-on-missing-checkpoint"
+    ],
+
+    "DISTRIBUTED_PARAM": [
+        "--tensor-model-parallel-size", "8",
+        "--pipeline-model-parallel-size", "1"
+    ],
+
+    "AUXILIARY_PARAM": [
+        "--micro-batch-size", "1",
+        "--global-batch-size", "32",
+        "--disable-bias-linear",
+        "--no-gradient-accumulation-fusion",
+        "--fp16",
+        "--seed", "42",
+        "--attention-softmax-in-fp32",
+        "--use-fused-rmsnorm",
+        "--no-load-optim",
+        "--no-load-rng",
+        "--seq-length", "4096"
+    ]
+}
