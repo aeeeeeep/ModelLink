@@ -162,6 +162,7 @@ int64_t PagedAttentionRopeModel::BuildGraph()
                                    &graph_.inTensors.at(IN_TENSOR_INPUT_IDS)};
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(FIRST_INTERNAL_TENSORS)};
 
+    ATB_LOG(ERROR) << "===================== Model wordEmbeddingNode done"
     atb::Tensor *firstInTensor = &graph_.internalTensors.at(FIRST_INTERNAL_TENSORS);
 
     for (int layerId = 0; layerId < param_.layerNum; ++layerId) {
@@ -201,6 +202,7 @@ int64_t PagedAttentionRopeModel::BuildGraph()
 
         firstInTensor = layerNode.outTensors.at(LAYER_FIRST_OUT_TENSORS);
     }
+    ATB_LOG(ERROR) << "===================== Model layer done"
 
     auto &finalNormNode = graph_.nodes.at(nodeId++);
     atb::infer::RmsNormParam finalNormParam;
@@ -213,6 +215,8 @@ int64_t PagedAttentionRopeModel::BuildGraph()
     const int finalLayerNormOutTensorId = internalTensorSize - 1;
     finalNormNode.inTensors = {firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId)};
     finalNormNode.outTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId)};
+
+    ATB_LOG(ERROR) << "===================== Model finalNormNode done"
 
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
     atb_speed::common::ParallelLmHeadParam lmHeadParam;
@@ -235,6 +239,7 @@ int64_t PagedAttentionRopeModel::BuildGraph()
                                 &graph_.weightTensors.at(finalLinearWeightTensorId)};
     }
     lmHeadNode.outTensors = {&graph_.outTensors.at(0)};
+    ATB_LOG(ERROR) << "===================== Model lmHead done"
 
     return atb::NO_ERROR;
 }
