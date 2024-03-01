@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """Megatron optimizer."""
-
+import os
 from abc import ABC
 from abc import abstractmethod
 
@@ -33,6 +33,31 @@ from deepspeed.accelerator import get_accelerator
 from ascendspeed.model.lora_utils import is_enable_lora, get_lora_model_classes
 from ascendspeed.error_utils import check_equal, ensure_valid, check_divisible_by_zero
 from .clip_grads import clip_grad_norm_fp32, count_zeros_fp32
+
+
+def clear_silent_check():
+    if int(os.getenv('NPU_DETECT', '0')):
+        from torch_npu.utils.silent_error import clear_hookmodule_list
+        clear_hookmodule_list()
+
+
+def exec_silent_check(loss_scale):
+    if int(os.getenv('NPU_DETECT', '0')):
+        from torch_npu.utils.silent_error import silent_fault_check
+        silent_fault_check(loss_scale)
+
+
+def get_silent_check_flag():
+    if int(os.getenv('NPU_DETECT', '0')):
+        from torch_npu.utils.silent_error import get_silent_check
+        return get_silent_check()
+    return False
+
+
+def print_silent_check_log():
+    import torch_npu
+    if hasattr(torch_npu.npu, "print_error_plog"):
+        torch_npu.npu.print_error_plog("NPUCheckEvent:AICore Numerical error happen, skip this step!")
 
 
 def _zero_grad_group_helper(group, set_to_none):
@@ -154,6 +179,10 @@ class MegatronOptimizer(ABC):
                 grad_norm = torch.norm(fp32_unscale_grad, norm_type)
                 total_norm += grad_norm ** norm_type
         # Sum across all model-parallel GPUs.
+        if int(os.getenv('NPU_DETECT', '0')):
+            from torch_npu.utils.silent_error import get_silent_check
+            total_norm = torch.Tensor([total_norm, float(get_silent_check())]).npu()
+
         torch.distributed.all_reduce(total_norm,
                                     op=torch.distributed.ReduceOp.SUM,
                                     group=parallel_state.get_model_parallel_group())
@@ -161,6 +190,11 @@ class MegatronOptimizer(ABC):
             torch.distributed.all_reduce(total_norm,
                                          op=torch.distributed.ReduceOp.SUM,
                                          group=parallel_state.get_data_parallel_group())
+
+        if int(os.getenv('NPU_DETECT', '0')):
+            from torch_npu.utils.silent_error import set_silent_check
+            set_silent_check(total_norm[1].item())
+            total_norm = total_norm[0]
 
         total_norm = total_norm.item() ** (check_divisible_by_zero(1.0, norm_type))
         clip_coeff = min(1.0, check_divisible_by_zero(max_norm, total_norm + 1.0e-6))
@@ -464,7 +498,11 @@ class MixedPrecisionOptimizer(MegatronOptimizer):
 
             # If we found inf/nan, skip the update.
             if found_inf_flag:
+                clear_silent_check()
                 return False, None, None
+
+        loss_scale = 1.0 if self.grad_scaler is None else self.grad_scaler.inv_scale.item()
+        exec_silent_check(loss_scale)
 
         # Clip the main gradients.
         timers('optimizer-clip-main-grad', log_level=1).start(
@@ -474,24 +512,31 @@ class MixedPrecisionOptimizer(MegatronOptimizer):
             grad_norm = self.clip_grad_norm(self.clip_grad)
         timers('optimizer-clip-main-grad').stop()
 
-        # Count the zeros in the grads.
-        timers('optimizer-count-zeros', log_level=1).start(
-            barrier=args.barrier_with_L1_time)
-        num_zeros_in_grad = self.count_zeros() if \
-            self.log_num_zeros_in_grad else None
-        timers('optimizer-count-zeros').stop()
+        found_silent_flag = get_silent_check_flag()
+        if not found_silent_flag or not (int(os.getenv('NPU_RECOVERY', '0'))):
+            # Count the zeros in the grads.
+            timers('optimizer-count-zeros', log_level=1).start(
+                barrier=args.barrier_with_L1_time)
+            num_zeros_in_grad = self.count_zeros() if \
+                self.log_num_zeros_in_grad else None
+            timers('optimizer-count-zeros').stop()
 
-        # Step the optimizer.
-        timers('optimizer-inner-step', log_level=1).start(
-            barrier=args.barrier_with_L1_time)
-        self.optimizer.step()
-        timers('optimizer-inner-step').stop()
+            # Step the optimizer.
+            timers('optimizer-inner-step', log_level=1).start(
+                barrier=args.barrier_with_L1_time)
+            self.optimizer.step()
+            timers('optimizer-inner-step').stop()
 
-        # Update params from main params.
-        timers('optimizer-copy-main-to-model-params', log_level=1).start(
-            barrier=args.barrier_with_L1_time)
-        self._copy_main_params_to_model_params()
-        timers('optimizer-copy-main-to-model-params').stop()
+            # Update params from main params.
+            timers('optimizer-copy-main-to-model-params', log_level=1).start(
+                barrier=args.barrier_with_L1_time)
+            self._copy_main_params_to_model_params()
+            timers('optimizer-copy-main-to-model-params').stop()
+
+        else:
+            # The silent error is found, and skip the step, then call print_error_plog api to print log in plog.
+            print_silent_check_log()
+            return False, None, None
 
         # Successful update.
         return True, grad_norm, num_zeros_in_grad
@@ -726,7 +771,11 @@ class Float16OptimizerWithFloat16Params(MegatronOptimizer):
 
             # If we found inf/nan, skip the update.
             if found_inf_flag:
+                clear_silent_check()
                 return False, None, None
+
+        loss_scale = 1.0 if self.grad_scaler is None else self.grad_scaler.inv_scale.item()
+        exec_silent_check(loss_scale)
 
         # Clip the main gradients.
         timers('optimizer-clip-main-grad', log_level=1).start()
@@ -735,17 +784,23 @@ class Float16OptimizerWithFloat16Params(MegatronOptimizer):
             grad_norm = self.clip_grad_norm(self.clip_grad)
         timers('optimizer-clip-main-grad').stop()
 
-        # count the zeros in the grads
-        num_zeros_in_grad = self.count_zeros() if \
-            self.log_num_zeros_in_grad else None
+        found_silent_flag = get_silent_check_flag()
+        if not found_silent_flag or not (int(os.getenv('NPU_RECOVERY', '0'))):
+            # count the zeros in the grads
+            num_zeros_in_grad = self.count_zeros() if \
+                self.log_num_zeros_in_grad else None
 
-        # Step the optimizer.
-        self.optimizer.step()
+            # Step the optimizer.
+            self.optimizer.step()
 
-        # Update params from main params.
-        timers('optimizer-copy-main-to-model-params', log_level=1).start()
-        self._copy_main_params_to_model_params()
-        timers('optimizer-copy-main-to-model-params').stop()
+            # Update params from main params.
+            timers('optimizer-copy-main-to-model-params', log_level=1).start()
+            self._copy_main_params_to_model_params()
+            timers('optimizer-copy-main-to-model-params').stop()
+        else:
+            # The silent error is found, and skip the step, then call print_error_plog api to print log in plog.
+            print_silent_check_log()
+            return False, None, None
 
         # Successful update.
         return True, grad_norm, num_zeros_in_grad
@@ -860,21 +915,34 @@ class Float16OptimizerWithoutFp32Grad(Float16OptimizerWithFloat16Params):
             timers('optimizer-check-inf-and-nan').stop()
             self.grad_scaler.update(found_inf_flag)
             if found_inf_flag:
+                clear_silent_check()
                 return False, None, None
         timers('optimizer-get-clip-grad-norm', log_level=1).start()
         grad_norm = None
+
+        loss_scale = 1.0 if self.grad_scaler is None else self.grad_scaler.inv_scale.item()
+        exec_silent_check(loss_scale)
+
         norm_coeff_scale = self.grad_scaler.inv_scale if self.grad_scaler else self.inv_scale
         if self.clip_grad > 0.0:
             grad_norm, clip_coeff = self.get_clip_grad_norm(self.clip_grad)
             norm_coeff_scale = norm_coeff_scale * clip_coeff
-        timers('optimizer-get-clip-grad-norm').stop()
-        self.optimizer.step(norm_coeff_scale=norm_coeff_scale)
-        # Update params from main params.
-        timers('optimizer-copy-main-to-model-params', log_level=1).start()
-        self._copy_main_params_to_model_params()
-        timers('optimizer-copy-main-to-model-params').stop()
-        # Successful update.
-        return True, grad_norm, None
+
+        found_silent_flag = get_silent_check_flag()
+        if not found_silent_flag or not (int(os.getenv('NPU_RECOVERY', '0'))):
+
+            timers('optimizer-get-clip-grad-norm').stop()
+            self.optimizer.step(norm_coeff_scale=norm_coeff_scale)
+            # Update params from main params.
+            timers('optimizer-copy-main-to-model-params', log_level=1).start()
+            self._copy_main_params_to_model_params()
+            timers('optimizer-copy-main-to-model-params').stop()
+            # Successful update.
+            return True, grad_norm, None
+        else:
+            # The silent error is found, and skip the step, then call print_error_plog api to print log in plog.
+            print_silent_check_log()
+            return False, None, None
 
 
 class FP32Optimizer(MegatronOptimizer):
@@ -914,17 +982,24 @@ class FP32Optimizer(MegatronOptimizer):
                 for param in param_group['params']:
                     param.grad = param.main_grad
 
+        exec_silent_check(1.0)
         # Clip gradients.
         grad_norm = None
         if self.clip_grad > 0.0:
             grad_norm = self.clip_grad_norm(self.clip_grad)
 
-        # count the zeros in the grads
-        num_zeros_in_grad = self.count_zeros() if \
-            self.log_num_zeros_in_grad else None
+        found_silent_flag = get_silent_check_flag()
+        if not found_silent_flag or not (int(os.getenv('NPU_RECOVERY', '0'))):
+            # count the zeros in the grads
+            num_zeros_in_grad = self.count_zeros() if \
+                self.log_num_zeros_in_grad else None
 
-        # Update parameters.
-        self.optimizer.step()
+            # Update parameters.
+            self.optimizer.step()
+        else:
+            # The silent error is found, and skip the step, then call print_error_plog api to print log in plog.
+            print_silent_check_log()
+            return False, None, None
 
         # No overflow for FP32 optimizer.
         return True, grad_norm, num_zeros_in_grad
