@@ -218,6 +218,8 @@ class AquilaModel(AquilaPreTrainedModel):
         self.is_prefill = True
         self.ascend_kcache_id = None
         self.ascend_vcache_id = None
+        self.ascend_rotary_embedding = PositionRotaryEmbedding.static(
+            dim=self.head_size, base=10000.0, device="cpu").to(weights.device)
 
         self.ascend_atten_mask = AttentionMask.static(config.max_position_embeddings)
         self.place_holder = torch.tensor([1], dtype=torch.float16, device='npu')
