@@ -239,7 +239,7 @@ int64_t PagedAttentionRopeModel::BuildGraph()
                                 &graph_.weightTensors.at(finalLinearWeightTensorId)};
     }
     lmHeadNode.outTensors = {&graph_.outTensors.at(0)};
-    ATB_LOG(ERROR) << "===================== Model lmHead done";
+    ATB_LOG(ERROR) << "===================== Model lmHead done, graph_.nodes=" << graph_.nodes.size();
 
     return atb::NO_ERROR;
 }
