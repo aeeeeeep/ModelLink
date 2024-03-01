@@ -338,10 +338,14 @@ class FlashGpt_neoxForCausalLM(FlashGPTNeoXPreTrainedModel):
             weights_t.append(self.maybe_format_cast(weights_layer['attention.dense.weight']))
             weights_t.append(weights_layer['attention.dense.bias'])
             weights_t.append(self.maybe_format_cast(weights_layer['mlp.dense_h_to_4h.linear.weight']))
-            weights_t.append(self.maybe_format_cast(weights_layer['mlp.dense_h_to_4h.linear.bias']))
+            weights_t.append(weights_layer['mlp.dense_h_to_4h.linear.bias'])
             weights_t.append(self.maybe_format_cast(weights_layer['mlp.dense_4h_to_h.weight']))
-            weights_t.append(self.maybe_format_cast(weights_layer['mlp.dense_4h_to_h.bias']))
+            weights_t.append(weights_layer['mlp.dense_4h_to_h.bias'])
             weights.extend(weights_t)
+            if self.soc_info.need_nz:
+                del self.gpt_neox.layers[i].attention
+                del self.gpt_neox.layers[i].mlp
+
 
         weights.append(self.gpt_neox.state_dict()["final_layer_norm.weight"])
         weights.append(self.gpt_neox.state_dict()["final_layer_norm.bias"])
