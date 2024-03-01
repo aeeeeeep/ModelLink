@@ -94,7 +94,7 @@ Qwen-7B 训练的硬件配置:
    cd ..
    ```
    
-  将权重从 huggingface 格式转化为 magatron 格式
+  将权重从 huggingface 格式转化为 megatron 格式
 
   ```bash
     cd ModelLink
@@ -246,7 +246,7 @@ Qwen-14B 训练的硬件配置:
    cd ..
    ```
    
-  将权重从 huggingface 格式转化为 magatron 格式
+  将权重从 huggingface 格式转化为 megatron 格式
 
   ```bash
     cd ModelLink
@@ -377,7 +377,7 @@ Qwen-72B 训练的硬件配置:
    cd ..
    ```
    
-  将权重从 huggingface 格式转化为 magatron 格式
+  将权重从 huggingface 格式转化为 megatron 格式
 
   ```bash
     cd ModelLink

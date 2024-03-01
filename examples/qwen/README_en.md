@@ -117,7 +117,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
     cd .. 
 	```
 
-   Convert weights from huggingface format to magatron format
+   Convert weights from huggingface format to megatron format
 
     ```bash
     cd ModelLink
@@ -246,7 +246,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
    cd ..
    ```
 
-   Convert weights from huggingface format to magatron format
+   Convert weights from huggingface format to megatron format
 
     ```bash
     cd ModelLink
@@ -378,7 +378,7 @@ Here's a hardware summary of pre-training  Qwen-72B:
    cd ..
    ```
    
-   Convert weights from huggingface format to magatron format
+   Convert weights from huggingface format to megatron format
 
     ```bash
     cd ModelLink
