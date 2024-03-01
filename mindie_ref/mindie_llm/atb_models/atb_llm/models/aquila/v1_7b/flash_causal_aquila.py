@@ -314,6 +314,7 @@ class AquilaModel(AquilaPreTrainedModel):
         self.acl_decoder_operation.set_weight(weights)
 
     def init_ascend_kvcache(self, kv_cache):
+        print(f'===================init_ascend_kvcache kv_cache: {kv_cache}')
         kcache_id = not self.ascend_kcache_id or self.ascend_kcache_id != id(kv_cache[0][0])
         vcache_id = not self.ascend_vcache_id or self.ascend_vcache_id != id(kv_cache[0][1])
         if kcache_id or vcache_id:
@@ -423,7 +424,7 @@ class AquilaModel(AquilaPreTrainedModel):
         # add acl model
         if not self.ascend_weight:
             self.init_ascend_weight()
-
+        print(f'===================model kv_cache: {kv_cache}')
         self.init_ascend_kvcache(kv_cache)
         if is_prefill:
             operation = self.acl_encoder_operation
