@@ -415,8 +415,8 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td rowspan="4"><a href="examples/qwen/README.md">Qwen</a></td>
       <td>7B</td>
       <td> -- </td>
-      <td> -- </td>
-      <td> -- </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_qwen_7b_ptd.sh">对话 </a></td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_70B_ptd.sh">评估 </a></td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
