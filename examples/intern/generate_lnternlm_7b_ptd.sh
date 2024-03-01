@@ -5,7 +5,7 @@ export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib:/root/miniconda3/lib:$LD_LI
 export HCCL_CONNECT_TIMEOUT=1200
 export COMBINED_ENABLE=1
 export CUDA_DEVICE_MAX_CONNECTIONS=1
-export NPU_DETECT=0
+export NPU_ASD_ENABLE=0
 
 # please fill these path configurations
 CHECKPOINT="your model path"
