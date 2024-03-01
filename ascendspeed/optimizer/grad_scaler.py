@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """Megatron grad scaler."""
-
+import os
 from abc import ABC
 from abc import abstractmethod
 
@@ -30,6 +30,9 @@ class MegatronGradScaler(ABC):
         """Initialize scale value with the input initial scale."""
         ensure_valid(initial_scale > 0.0)
         self._scale = get_accelerator().FloatTensor([initial_scale])
+        if int(os.getenv('NPU_ASD_ENABLE', '0')):
+            from torch_npu.utils import set_loss_scale
+            set_loss_scale(self._scale)
 
     @property
     def scale(self):
@@ -118,6 +121,10 @@ class DynamicGradScaler(MegatronGradScaler):
                 self._hysteresis_tracker = self.hysteresis
                 # and scale up the loss scale.
                 self._scale = self._scale * self.growth_factor
+
+        if int(os.getenv('NPU_ASD_ENABLE', '0')):
+            from torch_npu.utils import set_loss_scale
+            set_loss_scale(self._scale)
 
 
     def state_dict(self):
