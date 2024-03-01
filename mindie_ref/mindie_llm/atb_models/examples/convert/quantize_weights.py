@@ -1,10 +1,7 @@
 # 一般情况下，模型权重、校准数据集和quant_config需要修改
 
 # 导入相关依赖
-import os
-import argparse
 import torch
-import numpy as np
 import torch.utils.data
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig # 导入量化配置接口
