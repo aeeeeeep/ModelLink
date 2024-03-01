@@ -43,8 +43,8 @@ function fn_main()
     case "${CUT_OPTION}" in
     "--float")
         echo "cutting the float weight..."
-        if [[ "${is_gqa}" -eq 1]]; then
-            cp $script_dir/../codellama/34b/modeling_llama_cut.py $transformers_package_path/models/llama/modeling_llama.py
+        if [[ "${is_gqa}" -eq 1 ]]; then
+            cp $script_dir/../codellama/34b/modeling_codellama_cut.py $transformers_package_path/models/llama/modeling_llama.py
         else
             cp $script_dir/modeling_llama_cut.py $transformers_package_path/models/llama/modeling_llama.py
         fi
