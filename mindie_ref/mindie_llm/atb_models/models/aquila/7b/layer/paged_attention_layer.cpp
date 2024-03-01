@@ -166,7 +166,7 @@ atb::Status PagedAttentionRopeLayer(const PagedAttentionRopeLayerParam &param, a
     ATB_LOG(INFO) << "==================================QK Rope called.";
 
     atb::infer::ReshapeAndCacheParam reshapeCacheParm;
-    CreateOperation(reshapeCacheParm, &reshapeAndCacheNode.operation);
+    CREATE_OPERATION(reshapeCacheParm, &reshapeAndCacheNode.operation);
     reshapeAndCacheNode.inTensorIds = {INTERNAL_K_EMBED, INTERNAL_V_LINEAR_OUT, IN_K_CACHE, IN_V_CACHE, IN_SLOTS};
     reshapeAndCacheNode.outTensorIds = {};
     reshapeAndCacheNode.inTensorReshapeFuncs.resize(reshapeAndCacheNode.inTensorIds.size());
@@ -202,7 +202,7 @@ atb::Status PagedAttentionRopeLayer(const PagedAttentionRopeLayerParam &param, a
         paDeParam.headNum = param.headNum;
         paDeParam.qkScale = 1.0 / sqrt(param.dk);
         paDeParam.kvHeadNum = param.headNum;
-        CreateOperation(paDeParam, &attentionNode.operation);
+        CREATE_OPERATION(paDeParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERNAL_Q_EMBED, IN_K_CACHE, IN_V_CACHE, IN_BLOCK_TABLES, IN_INPUT_LENGTHS};
         attentionNode.outTensorIds = {INTERNAL_ATTENTION_OUT};
         attentionNode.inTensorReshapeFuncs.resize(attentionNode.inTensorIds.size());
