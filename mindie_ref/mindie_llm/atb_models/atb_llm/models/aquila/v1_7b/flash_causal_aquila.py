@@ -323,7 +323,7 @@ class AquilaModel(AquilaPreTrainedModel):
             print(f'===================kv_cache: {kv_cache}')
             print(f'===================zip(*kv_cache): {zip(*kv_cache)}')
             print(list(tmp))
-            k_caches, v_caches = map(list, zip(*kv_cache))
+            k_caches, v_caches, tmps = map(list, zip(*kv_cache))
             logger.debug(f"<<<<<<< ori {k_caches[0].shape=}")
             if self.soc_info.need_nz:
                 k_caches = [torch_npu.npu_format_cast_(k_cache, 29) for k_cache in k_caches]
