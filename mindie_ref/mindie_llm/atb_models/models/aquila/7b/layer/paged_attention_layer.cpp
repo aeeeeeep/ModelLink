@@ -125,6 +125,7 @@ atb::Status PagedAttentionRopeLayer(const PagedAttentionRopeLayerParam &param, a
     atb::Node &selfNormNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpResidualAddNode = opGraph.nodes.at(nodeId++);
+    ATB_LOG(INFO) << "==================================Node set, nodeId = " << nodeId;
 
     // input_layernorm
     atb::infer::RmsNormParam rmsNormParam;
@@ -133,6 +134,7 @@ atb::Status PagedAttentionRopeLayer(const PagedAttentionRopeLayerParam &param, a
     CREATE_OPERATION(rmsNormParam, &inputNormNode.operation);
     inputNormNode.inTensorIds = {IN_HIDDEN_STATES, IN_NORM_WEIGHT};
     inputNormNode.outTensorIds = {INTERNAL_INPUT_NORM_OUT};
+    ATB_LOG(INFO) << "==================================RmsNorm called.";
 
     // q_proj
     atb::infer::LinearParam linearParam;
@@ -140,24 +142,28 @@ atb::Status PagedAttentionRopeLayer(const PagedAttentionRopeLayerParam &param, a
     CREATE_OPERATION(linearParam, &qLinearNode.operation);
     qLinearNode.inTensorIds = {INTERNAL_INPUT_NORM_OUT, IN_Q_LINEAR_WEIGHT};
     qLinearNode.outTensorIds = {INTERNAL_Q_LINEAR_OUT};
+    ATB_LOG(INFO) << "==================================Q LinearNode called.";
 
     // k_proj
     CREATE_OPERATION(linearParam, &kLinearNode.operation);
     kLinearNode.inTensorIds = {INTERNAL_INPUT_NORM_OUT, IN_K_LINEAR_WEIGHT};
     kLinearNode.outTensorIds = {INTERNAL_K_LINEAR_OUT};
+    ATB_LOG(INFO) << "==================================K LinearNode called.";
 
     // v_proj
     CREATE_OPERATION(linearParam, &vLinearNode.operation);
     vLinearNode.inTensorIds = {INTERNAL_INPUT_NORM_OUT, IN_V_LINEAR_WEIGHT};
     vLinearNode.outTensorIds = {INTERNAL_V_LINEAR_OUT};
+    ATB_LOG(INFO) << "==================================V LinearNode called.";
 
     // rope (q_embedding + k_embedding)
     atb::infer::RopeParam ropeParam;
     ropeParam.rotaryCoeff = 2;
     // ropeParam.headNum = param.headNum;
     CREATE_OPERATION(ropeParam, &ropeNode.operation);
-    ropeNode.inTensorIds = {INTERNAL_Q_LINEAR_OUT, INTERNAL_K_LINEAR_OUT, IN_COS_EMBED, IN_SIN_EMBED};
+    ropeNode.inTensorIds = {INTERNAL_Q_LINEAR_OUT, INTERNAL_K_LINEAR_OUT, IN_COS_EMBED, IN_SIN_EMBED, IN_INPUT_LENGTHS};
     ropeNode.outTensorIds = {INTERNAL_Q_EMBED, INTERNAL_K_EMBED};
+    ATB_LOG(INFO) << "==================================QK Rope called.";
 
     atb::infer::ReshapeAndCacheParam reshapeCacheParm;
     CreateOperation(reshapeCacheParm, &reshapeAndCacheNode.operation);
