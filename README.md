@@ -46,10 +46,6 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
 强化学习，多专家网络等特性持续研发中....
 
 
-### 融合算子
-即将上线 ...
-
-
 
 ## 大语言模型
 
