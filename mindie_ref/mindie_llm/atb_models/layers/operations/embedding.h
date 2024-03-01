@@ -30,6 +30,7 @@ struct EmbeddingParam {
     int worldSize = 1;
     int rankRoot = 0;
     std::string backend = "hccl";
+    std::string rankTableFile = "";
 };
 
 atb::Status Embedding(const EmbeddingParam &param, atb::Operation **operation);
