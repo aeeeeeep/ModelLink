@@ -178,7 +178,7 @@ class WeightWrapper:
                 if pack_type == PackType.MIX_W8A8:
                     self.register_layer_norm_bias(layer_dict, mlp_module_names.norm_name)
                 else:
-                    pack_type.register_layer_norm_wrapper(layer_dict, mlp_module_names.norm_name)
+                    self.register_layer_norm_wrapper(layer_dict, mlp_module_names.norm_name)
                 self.register_layer_linear(layer_dict, mlp_module_names.gate_name, quantize_type)
                 self.register_layer_linear(layer_dict, mlp_module_names.up_name, quantize_type)
         self.register_layer_linear(layer_dict, mlp_module_names.down_name, quantize_type)
