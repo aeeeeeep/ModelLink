@@ -322,8 +322,7 @@ class AquilaModel(AquilaPreTrainedModel):
             tmp = map(list, zip(*kv_cache))
             print(f'===================kv_cache: {kv_cache}')
             print(f'===================zip(*kv_cache): {zip(*kv_cache)}')
-            tmplist = list(tmp)
-            print(f'===================tmplist: {tmplist}')
+            print(list(tmp))
             k_caches, v_caches = map(list, zip(*kv_cache))
             logger.debug(f"<<<<<<< ori {k_caches[0].shape=}")
             if self.soc_info.need_nz:
