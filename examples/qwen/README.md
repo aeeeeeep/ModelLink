@@ -93,6 +93,26 @@ Qwen-7B 训练的硬件配置:
 
    cd ..
    ```
+   
+  将权重从 huggingface 格式转化为 magatron 格式
+
+  ```bash
+    cd ModelLink
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    
+    python tools/checkpoint/util.py --model-type GPT \
+                                    --loader qwen_hf \
+                                    --saver megatron \
+                                    --target-tensor-parallel-size 8 \
+                                    --load-dir ../qwen-7b-hf \
+                                    --save-dir {your megatron ckpt save path} \
+                                    --tokenizer-model ../qwen-7b-hf/qwen.tiktoken \
+                                    --add-qkv-bias
+    
+    cd ..
+  ```
+
 4. 准备数据集
 
    下载 Qwen-7B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
@@ -128,7 +148,7 @@ Qwen-7B 训练的硬件配置:
     CKPT_SAVE_DIR="your model ckpt save path"
     TOKENIZER_MODEL="./qwen-7b-hf/"  #词表路径
     DATA_PATH="./dataset_qwen-7b/alpaca_text_document"  #数据集路径
-    CKPT_LOAD_DIR="./qwen-7b-mt/"
+    CKPT_LOAD_DIR="your megatron ckpt save path"
    ```
 
    启动 Qwen-7B 微调脚本: examples/qwen/pretrain_qwen_7b_ptd.sh
@@ -225,6 +245,26 @@ Qwen-14B 训练的硬件配置:
 
    cd ..
    ```
+   
+  将权重从 huggingface 格式转化为 magatron 格式
+
+  ```bash
+    cd ModelLink
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    
+    python tools/checkpoint/util.py --model-type GPT \
+                                    --loader qwen_hf \
+                                    --saver megatron \
+                                    --target-tensor-parallel-size 8 \
+                                    --load-dir ../qwen-14b-hf \
+                                    --save-dir {your megatron ckpt save path} \
+                                    --tokenizer-model ../qwen-14b-hf/qwen.tiktoken \
+                                    --add-qkv-bias
+    
+    cd ..
+  ```
+
 4. 准备数据集
 
    下载 Qwen-14B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
@@ -260,7 +300,7 @@ Qwen-14B 训练的硬件配置:
     CKPT_SAVE_DIR="your model ckpt save path"
     TOKENIZER_MODEL="./qwen-14b-hf/"  #词表路径
     DATA_PATH="./dataset_qwen-14b/alpaca_text_document"  #数据集路径
-    CKPT_LOAD_DIR="./qwen-14b-mt/"
+    CKPT_LOAD_DIR="your megatron ckpt save path"
    ```
 
    启动 Qwen-14B 微调脚本: examples/qwen/pretrain_qwen_14b_ptd.sh
@@ -336,6 +376,26 @@ Qwen-72B 训练的硬件配置:
    ...
    cd ..
    ```
+   
+  将权重从 huggingface 格式转化为 magatron 格式
+
+  ```bash
+    cd ModelLink
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    
+    python tools/checkpoint/util.py --model-type GPT \
+                                    --loader qwen_hf \
+                                    --saver megatron \
+                                    --target-tensor-parallel-size 8 \
+                                    --load-dir ../qwen-72b-hf \
+                                    --save-dir {your megatron ckpt save path} \
+                                    --tokenizer-model ../qwen-72b-hf/qwen.tiktoken \
+                                    --add-qkv-bias
+    
+    cd ..
+  ```
+
 4. 准备数据集
 
    下载 Qwen-72B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
@@ -371,7 +431,7 @@ Qwen-72B 训练的硬件配置:
     CKPT_SAVE_DIR="your model ckpt save path"
     TOKENIZER_MODEL="./qwen-72b-hf/"  #词表路径
     DATA_PATH="./dataset_qwen-72b/alpaca_text_document"  #数据集路径
-    CKPT_LOAD_DIR="./qwen-72b-mt/"
+    CKPT_LOAD_DIR="your megatron ckpt save path"
    ```
 
    启动 Qwen-72B 微调脚本: examples/qwen/pretrain_qwen_72b_ptd.sh

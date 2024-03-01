@@ -117,6 +117,25 @@ Here's a hardware summary of pre-training  Qwen-7B:
     cd .. 
 	```
 
+   Convert weights from huggingface format to magatron format
+
+    ```bash
+    cd ModelLink
+    # modify the script according to your own ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    
+    python tools/checkpoint/util.py --model-type GPT \
+                                    --loader qwen_hf \
+                                    --saver megatron \
+                                    --target-tensor-parallel-size 8 \
+                                    --load-dir ../qwen-7b-hf \
+                                    --save-dir {your megatron ckpt save path} \
+                                    --tokenizer-model ../qwen-7b-hf/qwen.tiktoken \
+                                    --add-qkv-bias
+    
+    cd ..
+    ```
+
 5. fine-tuning
 
 	Config Qwen-7B fine-tuning script: examples/qwen/pretrain_qwen_7b_ptd.sh 
@@ -128,7 +147,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
     CKPT_SAVE_DIR="your model ckpt save path"
     TOKENIZER_MODEL="./qwen-7b-hf/"  #tokenizer path
     DATA_PATH="./dataset_qwen-7b/alpaca_text_document"  #processed dataset
-    CKPT_LOAD_DIR="./qwen-7b-mt/"
+    CKPT_LOAD_DIR="your megatron ckpt save path"
    ```
 
 	Launch Qwen-7B fine-tuning script: examples/qwen/pretrain_qwen_7b_ptd.sh
@@ -226,6 +245,26 @@ Here's a hardware summary of pre-training  Qwen-14B:
 
    cd ..
    ```
+
+   Convert weights from huggingface format to magatron format
+
+    ```bash
+    cd ModelLink
+    # modify the script according to your own ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    
+    python tools/checkpoint/util.py --model-type GPT \
+                                    --loader qwen_hf \
+                                    --saver megatron \
+                                    --target-tensor-parallel-size 8 \
+                                    --load-dir ../qwen-14b-hf \
+                                    --save-dir {your megatron ckpt save path} \
+                                    --tokenizer-model ../qwen-14b-hf/qwen.tiktoken \
+                                    --add-qkv-bias
+    
+    cd ..
+    ```
+
 4. Prepare dataset
 
 	Download the Qwen-14B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
@@ -260,7 +299,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
     CKPT_SAVE_DIR="your model ckpt save path"
     TOKENIZER_MODEL="./qwen-14b-hf/"  #tokenizer path
     DATA_PATH="./dataset_qwen-14b/alpaca_text_document"  #processed dataset
-    CKPT_LOAD_DIR="./qwen-14b-mt/"
+    CKPT_LOAD_DIR="your megatron ckpt save path"
    ```
 
 	Launch Qwen-14B fine-tuning script: examples/qwen/pretrain_qwen_14b_ptd.sh
@@ -338,6 +377,26 @@ Here's a hardware summary of pre-training  Qwen-72B:
    ...
    cd ..
    ```
+   
+   Convert weights from huggingface format to magatron format
+
+    ```bash
+    cd ModelLink
+    # modify the script according to your own ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    
+    python tools/checkpoint/util.py --model-type GPT \
+                                    --loader qwen_hf \
+                                    --saver megatron \
+                                    --target-tensor-parallel-size 8 \
+                                    --load-dir ../qwen-72b-hf \
+                                    --save-dir {your megatron ckpt save path} \
+                                    --tokenizer-model ../qwen-72b-hf/qwen.tiktoken \
+                                    --add-qkv-bias
+    
+    cd ..
+    ```
+
 4. Prepare dataset
 
 	Download the Qwen-72B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
@@ -372,7 +431,7 @@ Here's a hardware summary of pre-training  Qwen-72B:
     CKPT_SAVE_DIR="your model ckpt save path"
     TOKENIZER_MODEL="./qwen-72b-hf/"  #tokenizer path
     DATA_PATH="./dataset_qwen-72b/alpaca_text_document"  #processed dataset
-    CKPT_LOAD_DIR="./qwen-72b-mt/"
+    CKPT_LOAD_DIR="your megatron ckpt save path"
    ```
 
 	Launch Qwen-72B fine-tuning script: examples/qwen/pretrain_qwen_72b_ptd.sh
