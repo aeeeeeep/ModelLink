@@ -58,7 +58,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
     pip install -r requirements.txt
-    pip3 install -e .
+    pip install -e .
     cd ..
    
     # install other packages
@@ -183,7 +183,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
     pip install -r requirements.txt
-    pip3 install -e .
+    pip install -e .
     cd ..
    
     # install other packages
@@ -315,7 +315,7 @@ Here's a hardware summary of pre-training  Qwen-72B:
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
     pip install -r requirements.txt
-    pip3 install -e .
+    pip install -e .
     cd ..
    
     # install other packages

@@ -59,7 +59,7 @@ Qwen-7B 训练的硬件配置:
    git clone https://gitee.com/ascend/AscendSpeed.git
    cd AscendSpeed
    pip install -r requirements.txt
-   pip3 install -e .
+   pip install -e .
    cd ..
    
    # 安装其余依赖库
@@ -184,7 +184,7 @@ Qwen-14B 训练的硬件配置:
    git clone https://gitee.com/ascend/AscendSpeed.git
    cd AscendSpeed
    pip install -r requirements.txt
-   pip3 install -e .
+   pip install -e .
    cd ..
    
    # 安装其余依赖库
@@ -315,7 +315,7 @@ Qwen-72B 训练的硬件配置:
    git clone https://gitee.com/ascend/AscendSpeed.git
    cd AscendSpeed
    pip install -r requirements.txt
-   pip3 install -e .
+   pip install -e .
    cd ..
    
    # 安装其余依赖库
