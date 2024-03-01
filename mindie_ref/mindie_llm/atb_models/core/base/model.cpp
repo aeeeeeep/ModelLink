@@ -210,7 +210,6 @@ int64_t Model::SetKVCache(const std::vector<atb::Tensor> &kCacheTensors, const s
 atb::Status Model::Execute(atb::Context *context, std::vector<atb::Tensor> &inTensors,
                            std::vector<atb::Tensor> &outTensors, const std::string &param)
 {
-    ATB_LOG(INFO) << "=======================Enter Model::Execute";
     if (graph_.inTensors.size() != inTensors.size() || graph_.outTensors.size() != outTensors.size()) {
         ATB_LOG(ERROR) << modelName_ << " graph.inTensors.size:" << graph_.inTensors.size() 
                        << ", inTensors.size:" << inTensors.size() 

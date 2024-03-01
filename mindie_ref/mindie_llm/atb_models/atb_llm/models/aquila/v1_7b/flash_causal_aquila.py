@@ -282,8 +282,6 @@ class AquilaModel(AquilaPreTrainedModel):
         self.ascend_atten_mask = AttentionMask.static(config.max_position_embeddings)
 
     def init_ascend_weight(self):
-        # print(f'=====================weights_layer: {self.state_dict()}')
-
         weights = [self.state_dict()["embed_tokens.weight"]]
         for i in range(self.num_layers):
             weights_t = []
@@ -314,15 +312,10 @@ class AquilaModel(AquilaPreTrainedModel):
         self.acl_decoder_operation.set_weight(weights)
 
     def init_ascend_kvcache(self, kv_cache):
-        print(f'===================init_ascend_kvcache kv_cache: {kv_cache}')
         kcache_id = not self.ascend_kcache_id or self.ascend_kcache_id != id(kv_cache[0][0])
         vcache_id = not self.ascend_vcache_id or self.ascend_vcache_id != id(kv_cache[0][1])
         if kcache_id or vcache_id:
             # k_cache shape [num_blocks, block_size, k_head_num, head_size] [36, 128, 40, 128]
-            tmp = map(list, zip(*kv_cache))
-            print(f'===================kv_cache: {kv_cache}')
-            print(f'===================zip(*kv_cache): {zip(*kv_cache)}')
-            print(list(tmp))
             k_caches, v_caches = map(list, zip(*kv_cache))
             logger.debug(f"<<<<<<< ori {k_caches[0].shape=}")
             if self.soc_info.need_nz:
@@ -476,14 +469,12 @@ class FlashAquilaForCausalLM(torch.nn.Module):
             max_seq_len: int,  # 最长的request长度
             lm_head_indices: Optional[torch.Tensor] = None,  # prefill阶段使用，取的生成token的偏移
     ) -> Union[Tuple, CausalLMOutputWithPast]:
-        print(f'===================model causal kv_cache: {kv_cache}')
         if self.model.lm_head_weight is None:
             self.lm_head_weight = self.state_dict()["lm_head.linear.weight"]
             if self.soc_info.need_nz:
                 self.model.lm_head_weight = torch_npu.npu_format_cast(self.lm_head.linear.weight.data, 29)
             self.model.lm_head_weight = self.lm_head.linear.weight.data
 
-        print(f'===================model causal kv_cache 1: {kv_cache}')
         outputs = self.model(
             input_ids,  # input id, 拉平的
             position_ids,

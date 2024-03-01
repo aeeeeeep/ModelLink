@@ -169,7 +169,6 @@ int64_t ModelTorch::SetKVCache(std::vector<torch::Tensor> atKCacheTensors, std::
 
 std::vector<torch::Tensor> ModelTorch::Execute(std::vector<torch::Tensor> atInTensors, std::string param)
 {
-    ATB_LOG(INFO) << "=======================Enter ModelTorch::Execute";
     atInternalTensors_.clear();
     for (size_t i = 0; i < atInTensors.size(); ++i) {
         const torch::Tensor &atTensor = atInTensors.at(i);
@@ -242,7 +241,6 @@ int64_t ModelTorch::ExecuteOut(std::vector<torch::Tensor> atInTensors, std::vect
 int64_t ModelTorch::ExecuteOutImpl(std::vector<atb::Tensor> &inTensors, std::vector<atb::Tensor> &outTensors,
                                    const std::string &param)
 {
-    ATB_LOG(INFO) << "=======================Enter ModelTorch::ExecuteOutImpl";
     int64_t atbStatus = model_->Execute(context_.get(), inTensors, outTensors, param);
     executeCount_++;
     return atbStatus;

@@ -19,7 +19,7 @@
 #include "nlohmann/json.hpp"
 
 #include "models/aquila/7b/layer/paged_attention_layer.h"
-#include "operations/lmhead.h"
+#include "parallel_lmhead.h"
 
 namespace atb_speed {
 namespace aquila_7b {
@@ -34,7 +34,6 @@ enum InTensorId : int {
     IN_TENSOR_INPUT_LENGTHS,
     IN_TENSOR_LOGTIS_INDICES,
     IN_HOLDER,
-    IN_FINAL_NORM_SLICE_OFFSET,
     IN_TENSOR_MAX, // 10
 };
 
@@ -216,24 +215,26 @@ int64_t PagedAttentionRopeModel::BuildGraph()
     finalNormNode.outTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId)};
 
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
-    atb_speed::common::LmHeadParam lmHeadParam;
+    atb_speed::common::ParallelLmHeadParam lmHeadParam;
+    if (param_.isLmHeadParallel) {
+        lmHeadParam.rank = param_.rank;
+        lmHeadParam.rankSize = param_.rankSize;
+    }
     lmHeadParam.unpadInputs = true;
     lmHeadParam.gatherAhead = param_.isPrefill;
-    lmHeadParam.linearParallelParam.fusionLinearParam.quantType = false; // LmHead未接入量化
-    if (param_.rankSize > 1) {
-        lmHeadParam.linearParallelParam.parallelType = atb_speed::common::COLUMN_PARALLEL;
-        lmHeadParam.linearParallelParam.rank = param_.rank;
-        lmHeadParam.linearParallelParam.worldSize = param_.rankSize;
-        lmHeadParam.linearParallelParam.backend = param_.backend;
-    }
-    LmHead(lmHeadParam, &op);
+    lmHeadParam.backend = param_.backend;
+    ParallelLmHead(lmHeadParam, &op);
     lmHeadNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
-    lmHeadNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
-                            &graph_.weightTensors.at(finalLinearWeightTensorId),
-                            &graph_.inTensors.at(IN_HOLDER), &graph_.inTensors.at(IN_HOLDER),
-                            &graph_.inTensors.at(IN_HOLDER), &graph_.inTensors.at(IN_FINAL_NORM_SLICE_OFFSET)};
-    lmHeadNode.outTensors = {&graph_.outTensors.at(OUT_TENSOR_HIDDENSTATES)};
+    if (param_.isPrefill) {
+        lmHeadNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
+                                &graph_.weightTensors.at(finalLinearWeightTensorId),
+                                &graph_.inTensors.at(IN_TENSOR_LOGTIS_INDICES)};
+    } else {
+        lmHeadNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
+                                &graph_.weightTensors.at(finalLinearWeightTensorId)};
+    }
+    lmHeadNode.outTensors = {&graph_.outTensors.at(0)};
 
     return atb::NO_ERROR;
 }
