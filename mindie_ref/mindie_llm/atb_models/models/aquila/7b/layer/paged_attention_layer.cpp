@@ -31,6 +31,7 @@ enum PagedAttentionRopeLayerTensorId : int {
     IN_MLP_GATE_WEIGHT,
     IN_MLP_DOWN_WEIGHT,
     IN_MLP_UP_WEIGHT,
+    IN_POSITION_IDS, // inputs
     IN_COS_EMBED, // 目前只支持FP16
     IN_SIN_EMBED,
     IN_ATTENTION_MASK,
@@ -54,7 +55,7 @@ enum PagedAttentionRopeLayerTensorId : int {
     INTERNAL_MLP_OUT,
 };
 
-static const uint64_t IN_TENSOR_COUNT = 19;
+static const uint64_t IN_TENSOR_COUNT = 20;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 11;
 static const uint64_t NODE_COUNT = 12;
