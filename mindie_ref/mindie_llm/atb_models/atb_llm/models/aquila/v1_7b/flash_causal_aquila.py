@@ -318,6 +318,8 @@ class AquilaModel(AquilaPreTrainedModel):
         vcache_id = not self.ascend_vcache_id or self.ascend_vcache_id != id(kv_cache[0][1])
         if kcache_id or vcache_id:
             # k_cache shape [num_blocks, block_size, k_head_num, head_size] [36, 128, 40, 128]
+            tmp = map(list, zip(*kv_cache))
+            print(f'===================map: {tmp}')
             k_caches, v_caches = map(list, zip(*kv_cache))
             logger.debug(f"<<<<<<< ori {k_caches[0].shape=}")
             if self.soc_info.need_nz:
