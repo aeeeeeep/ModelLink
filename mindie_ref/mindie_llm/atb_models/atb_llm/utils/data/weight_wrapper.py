@@ -49,6 +49,13 @@ class WeightWrapper:
     def register_embedding(self, model_dict, embedding_name):
         self.weights.append(model_dict[f"{embedding_name}.weight"])
 
+    def register_linear(self, layer_dict, linear_name):
+        self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.weight']))
+        if f'{linear_name}.linear.bias' in layer_dict:
+            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.bias']))
+        else:
+            self.weights.append(self.placeholder)
+
     def register_layer_norm(self, layer_dict, norm_name):
         self.weights.append(self.weight_format_cast(layer_dict[f'{norm_name}.weight']))
         self.weights.extend([self.placeholder] * 2)  # for anti
@@ -63,13 +70,13 @@ class WeightWrapper:
         self.weights.append(self.weight_format_cast(layer_dict[f'{norm_name}.anti.weight']))
         self.weights.append(self.weight_format_cast(layer_dict[f'{norm_name}.anti.bias']))
 
-    def register_layer_linear_pack_fp16(self, layer_dict, norm_name, pack_linear_name, linear_type='attn'):
+    def register_layer_linear_pack_fp(self, layer_dict, norm_name, pack_linear_name, linear_type='attn'):
         self.register_layer_norm(layer_dict, norm_name)
-        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.weight']))
+        self.register_linear(layer_dict, pack_linear_name)
         if linear_type == 'attn':
-            self.weights.extend([self.placeholder] * 14)
+            self.weights.extend([self.placeholder] * 13)
         else:
-            self.weights.extend([self.placeholder] * 9)
+            self.weights.extend([self.placeholder] * 8)
 
     def register_layer_linear_pack_w8a8(self, layer_dict, norm_name, pack_linear_name, pack_type, linear_type='attn'):
         if pack_type == PackType.ALL_W8A8:
@@ -88,17 +95,17 @@ class WeightWrapper:
 
     def register_layer_linear_pack_w8a16(self, layer_dict, norm_name, pack_linear_name, linear_type='attn'):
         self.register_layer_norm(layer_dict, norm_name)
-        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.weight']))
+        self.register_linear(layer_dict, pack_linear_name)
         self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.weight_scale']))
         self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.weight_offset']))
         if linear_type == 'attn':
-            self.weights.extend([self.placeholder] * 12)
+            self.weights.extend([self.placeholder] * 11)
         else:
-            self.weights.extend([self.placeholder] * 7)
+            self.weights.extend([self.placeholder] * 6)
 
     def register_layer_linear_pack(self, layer_dict, norm_name, pack_linear_name, pack_type, linear_type='attn'):
         if pack_type == PackType.ALL_FP:
-            self.register_layer_linear_pack_fp16(layer_dict, norm_name, pack_linear_name, linear_type)
+            self.register_layer_linear_pack_fp(layer_dict, norm_name, pack_linear_name, linear_type)
         elif pack_type == PackType.ALL_W8A16:
             self.register_layer_linear_pack_w8a16(layer_dict, norm_name, pack_linear_name, linear_type)
         else:
@@ -119,11 +126,11 @@ class WeightWrapper:
 
     def register_layer_linear(self, layer_dict, linear_name, quantize_type):
         if layer_dict[f'{linear_name}.linear.weight'].dtype in [torch.float16, torch.bfloat16]:
-            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.weight']))
-            self.weights.extend([self.placeholder] * 4)
+            self.register_linear(layer_dict, linear_name)
+            self.weights.extend([self.placeholder] * 3)
             return
         if quantize_type == 'w8a16':
-            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.weight']))
+            self.register_linear(layer_dict, linear_name)
             self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.weight_scale']))
             self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.weight_offset']))
             self.weights.extend([self.placeholder] * 2)

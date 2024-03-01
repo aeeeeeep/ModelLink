@@ -183,6 +183,12 @@ class TensorParallelColumnLinear(SuperLayer):
         weight = weights.get_weights_col_packed_qkv(
             prefix, quantize=config.quantize, head_size=head_size
         )
+        weight = weights.load_column_multi(
+            config,
+            prefixes=[prefix],
+            weights=weights,
+            head_size=head_size
+        )
         if bias:
             # raise NotImplementedError("packed_qkv only implemented for baichuan")
             bias = weights.get_sharded(f"{prefix}.bias", dim=0)
