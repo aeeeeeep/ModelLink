@@ -225,7 +225,6 @@ def _load_checkpoint(queue, args):
                 print(f"Checkpoint does not specify the argument {arg_name}. Exiting.")
                 print(f"Arguments: {margs}")
                 queue.put("exit")
-                exit(1)
 
     check_for_arg('tensor_model_parallel_size')
     check_for_arg('pipeline_model_parallel_size')
