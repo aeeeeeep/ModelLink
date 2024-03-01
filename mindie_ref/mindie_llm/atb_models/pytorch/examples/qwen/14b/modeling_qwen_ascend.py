@@ -731,6 +731,17 @@ class QWenPreTrainedModel(PreTrainedModel):
             module.gradient_checkpointing = value
 
 
+def get_pad_s(seq_len):
+    """
+    NZ需要16对齐
+    :param seq_len:
+    :return:
+    """
+    if IS_ND:
+        return seq_len
+    return math.ceil(seq_len / 16) * 16
+
+
 class KVAttentionManager:
     def __init__(self, config, batch_size):
         self.nz_dim = 16
@@ -745,6 +756,7 @@ class KVAttentionManager:
         self.min_cache = None
         self.long_seq_mask_len = 128
         self.dtype = torch.float16
+        self.pad_seq_len = get_pad_s(self.max_seq_len)
         if not IS_ND:
             self.k_cache_input = torch.zeros(self.num_layers,
                                              self.batch_size,  # batch
@@ -781,14 +793,14 @@ class KVAttentionManager:
 
         if not LONG_SEQ_ENABLE:
             self.attention_mask_max_full = torch.zeros(
-                (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
+                (self.batch_size, self.pad_seq_len, self.pad_seq_len), device="npu", dtype=torch.half)
         else:
             self.attention_mask_max_full = self.get_triumask(self.long_seq_mask_len).npu()
         self.attention_mask_max_inc = torch.zeros(
-            (self.batch_size, MASK_INC_DIM1, self.max_seq_len), device="npu", dtype=torch.half)
+            (self.batch_size, MASK_INC_DIM1, self.pad_seq_len), device="npu", dtype=torch.half)
         if not LONG_SEQ_ENABLE:
             self.registered_causal_mask = torch.tril(torch.ones(
-                (batch_size, 1, self.max_seq_len, self.max_seq_len),
+                (batch_size, 1, self.pad_seq_len, self.pad_seq_len),
                 dtype=torch.bool, device="npu"))
         else:
             self.registered_causal_mask = torch.tril(torch.ones(
@@ -810,7 +822,7 @@ class KVAttentionManager:
             self.attention_mask_max_inc.zero_()
         else:
             self.attention_mask_max_inc = torch.zeros(
-                (self.batch_size, self.nz_dim, self.max_seq_len), dtype=torch.half, device="npu")
+                (self.batch_size, MASK_INC_DIM1, self.pad_seq_len), dtype=torch.half, device="npu")
 
     def init_seq_len_and_token_offset(self, seq_len):
         self.token_offset = seq_len
@@ -997,7 +1009,7 @@ class QWenModel(QWenPreTrainedModel):
         self.kv_attention_manager = None
         self.nz_dim = 16
         self.min_cache = torch.full(
-            (MASK_INC_DIM1, self.max_position_embeddings),
+            (MASK_INC_DIM1, get_pad_s(self.max_position_embeddings)),
             torch.finfo(torch.half).min,
             dtype=torch.half, device="npu"
         )
