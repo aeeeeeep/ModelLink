@@ -133,7 +133,8 @@ atb::Status PagedAttentionRopeModel::InferShape(const std::vector<atb::TensorDes
         outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(IN_TENSOR_LOGTIS_INDICES).shape.dims[0];
     }
 
-    return atb::NO_ERROR;}
+    return atb::NO_ERROR;
+}
 
 int64_t PagedAttentionRopeModel::BuildGraph()
 {
