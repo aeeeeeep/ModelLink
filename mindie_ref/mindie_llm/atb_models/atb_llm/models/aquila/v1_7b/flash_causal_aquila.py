@@ -484,6 +484,7 @@ class FlashAquilaForCausalLM(torch.nn.Module):
             max_seq_len: int,  # 最长的request长度
             lm_head_indices: Optional[torch.Tensor] = None,  # prefill阶段使用，取的生成token的偏移
     ) -> Union[Tuple, CausalLMOutputWithPast]:
+        print(f'===================model causal kv_cache: {kv_cache}')
         if self.model.lm_head_weight is None:
             self.lm_head_weight = self.state_dict()["lm_head.linear.weight"]
             if self.soc_info.need_nz:
