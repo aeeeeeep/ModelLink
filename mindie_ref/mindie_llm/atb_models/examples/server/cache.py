@@ -83,6 +83,7 @@ class CacheManager:
                 for _ in range(self.num_layers)
             ]
             print(f'===============cache: kv_cache: {self.kv_cache}')
+            print(f'===================self.kv_cache.kv_cache.shape: {self.kv_cache.shape}')
 
         random_block_allocate = os.getenv("RANDOM_BLOCK_ALLOCATE", '0') == '1'
         if random_block_allocate:

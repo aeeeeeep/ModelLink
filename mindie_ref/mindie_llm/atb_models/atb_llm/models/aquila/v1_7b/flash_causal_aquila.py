@@ -27,7 +27,7 @@ from torch import nn
 import torch_npu
 
 from transformers.activations import ACT2FN
-from transformers.modeling_outputs import  CausalLMOutputWithPast
+from transformers.modeling_outputs import CausalLMOutputWithPast
 from transformers.modeling_utils import PreTrainedModel
 
 from atb_llm.models.aquila.v1_7b.config import AquilaConfig
@@ -319,9 +319,11 @@ class AquilaModel(AquilaPreTrainedModel):
         if kcache_id or vcache_id:
             # k_cache shape [num_blocks, block_size, k_head_num, head_size] [36, 128, 40, 128]
             tmp = map(list, zip(*kv_cache))
+            print(f'===================kv_cache.shape: {kv_cache.shape}')
             print(f'===================kv_cache: {kv_cache}')
             print(f'===================zip(*kv_cache): {zip(*kv_cache)}')
-            print(f'===================map: {tmp}')
+            tmplist = list(tmp)
+            print(f'===================tmplist: {tmplist}')
             k_caches, v_caches = map(list, zip(*kv_cache))
             logger.debug(f"<<<<<<< ori {k_caches[0].shape=}")
             if self.soc_info.need_nz:
