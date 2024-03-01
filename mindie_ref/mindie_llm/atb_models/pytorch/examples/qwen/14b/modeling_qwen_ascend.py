@@ -856,12 +856,12 @@ class KVAttentionManager:
         """
         if trans_type == "full":
             return torch_npu.npu_format_cast(tensor.view(
-                self.batch_size, self.max_seq_len,
-                self.max_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
+                self.batch_size, self.pad_seq_len,
+                self.pad_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
         else:
             return torch_npu.npu_format_cast(tensor.view(
                 self.batch_size, self.nz_dim,
-                self.max_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
+                self.pad_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
 
     def get_attention_mask(self, attention_mask=None):
         if LONG_SEQ_ENABLE:
