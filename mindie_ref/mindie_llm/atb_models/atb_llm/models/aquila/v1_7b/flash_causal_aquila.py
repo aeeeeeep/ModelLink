@@ -282,7 +282,7 @@ class AquilaModel(AquilaPreTrainedModel):
         self.ascend_atten_mask = AttentionMask.static(config.max_position_embeddings)
 
     def init_ascend_weight(self):
-        print(f'=====================weights_layer: {self.state_dict()}')
+        # print(f'=====================weights_layer: {self.state_dict()}')
 
         weights = [self.state_dict()["embed_tokens.weight"]]
         for i in range(self.num_layers):
