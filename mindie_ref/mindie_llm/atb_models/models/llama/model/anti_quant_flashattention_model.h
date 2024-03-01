@@ -60,8 +60,6 @@ private:
     std::vector<int32_t> seqLen_;
 };
 
-
-
 } // namespace llama
 } // namespace atb_speed
 #endif
