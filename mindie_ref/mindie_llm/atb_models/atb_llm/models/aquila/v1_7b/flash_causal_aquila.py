@@ -419,12 +419,13 @@ class AquilaModel(AquilaPreTrainedModel):
             max_seq_len: int,  # 最长的request长度
             lm_head_indices: Optional[torch.Tensor] = None,  # prefill阶段使用，取的生成token的偏移
     ):
+        print(f'===================model kv_cache: {kv_cache}')
         self.is_prefill = is_prefill
 
         # add acl model
         if not self.ascend_weight:
             self.init_ascend_weight()
-        print(f'===================model kv_cache: {kv_cache}')
+        print(f'===================model kv_cache 1: {kv_cache}')
         self.init_ascend_kvcache(kv_cache)
         if is_prefill:
             operation = self.acl_encoder_operation
@@ -492,6 +493,7 @@ class FlashAquilaForCausalLM(torch.nn.Module):
                 self.model.lm_head_weight = torch_npu.npu_format_cast(self.lm_head.linear.weight.data, 29)
             self.model.lm_head_weight = self.lm_head.linear.weight.data
 
+        print(f'===================model causal kv_cache 1: {kv_cache}')
         outputs = self.model(
             input_ids,  # input id, 拉平的
             is_prefill,  # prefill 阶段使用，不同prompt的offset
