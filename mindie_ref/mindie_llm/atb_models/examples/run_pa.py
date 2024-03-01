@@ -105,7 +105,8 @@ class PARunner:
         cache_config = CacheConfig(self.warm_up_num_blocks)
         self.cache_manager = CacheManager(cache_config, self.model_config)
         print(f'===============self.cache_manager.kv_cache: {self.cache_manager.kv_cache}')
-        print(f'===================self.cache_manager.kv_cache.shape: {self.cache_manager.kv_cache.shape}')
+        print(f'===================self.cache_manager.kv_cache[0].shape: {self.cache_manager.kv_cache[0].shape}')
+        print(f'===================self.cache_manager.kv_cache[1].shape: {self.cache_manager.kv_cache[1].shape}')
         logits = self.model.forward(
             input_ids=input_ids,
             position_ids=position_ids,

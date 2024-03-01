@@ -319,7 +319,6 @@ class AquilaModel(AquilaPreTrainedModel):
         if kcache_id or vcache_id:
             # k_cache shape [num_blocks, block_size, k_head_num, head_size] [36, 128, 40, 128]
             tmp = map(list, zip(*kv_cache))
-            print(f'===================kv_cache.shape: {kv_cache.shape}')
             print(f'===================kv_cache: {kv_cache}')
             print(f'===================zip(*kv_cache): {zip(*kv_cache)}')
             tmplist = list(tmp)
