@@ -119,7 +119,7 @@ atb::Status PagedAttentionRopeModel::InferShape(const std::vector<atb::TensorDes
     const int64_t outDim = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.shape.dims[0];
     outTensorDescs.at(0) = graph_.weightTensors.at(0).desc;
     auto outDimNum = inTensorDescs.at(0).shape.dimNum + 1;
-    for (int i = 0; i < outDimNum - 1; i++) {
+    for (uint i = 0; i < outDimNum - 1; i++) {
         outTensorDescs.at(0).shape.dims[i] = inTensorDescs.at(0).shape.dims[i];
     }
     if (param_.isLmHeadParallel) {
@@ -254,7 +254,7 @@ atb::Status PagedAttentionRopeModel::ParseParam(const std::string &param)
 
 atb::Status PagedAttentionRopeModel::BindParamHostTensor(uint32_t nodeId)
 {
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
     auto &node = graph_.nodes.at(nodeId);
