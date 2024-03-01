@@ -320,6 +320,7 @@ class AquilaModel(AquilaPreTrainedModel):
             # k_cache shape [num_blocks, block_size, k_head_num, head_size] [36, 128, 40, 128]
             tmp = map(list, zip(*kv_cache))
             print(f'===================kv_cache: {kv_cache}')
+            print(f'===================zip(*kv_cache): {zip(*kv_cache)}')
             print(f'===================map: {tmp}')
             k_caches, v_caches = map(list, zip(*kv_cache))
             logger.debug(f"<<<<<<< ori {k_caches[0].shape=}")
