@@ -18,18 +18,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """ PyTorch Aquila model."""
+import json
 import math
 from typing import List, Optional, Tuple, Union
-import json
 
 import torch
-from torch import nn
 import torch_npu
-
-from transformers.activations import ACT2FN
-from transformers.modeling_outputs import CausalLMOutputWithPast
-from transformers.modeling_utils import PreTrainedModel
-
 from atb_llm.models.aquila.v1_7b.config import AquilaConfig
 from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
 from atb_llm.utils.layers import (
@@ -41,6 +35,10 @@ from atb_llm.utils.layers import (
     AttentionMask
 )
 from atb_llm.utils.log import logger
+from torch import nn
+from transformers.activations import ACT2FN
+from transformers.modeling_outputs import CausalLMOutputWithPast
+from transformers.modeling_utils import PreTrainedModel
 
 _CONFIG_FOR_DOC = "AquilaConfig"
 
@@ -323,7 +321,7 @@ class AquilaModel(AquilaPreTrainedModel):
             print(f'===================kv_cache: {kv_cache}')
             print(f'===================zip(*kv_cache): {zip(*kv_cache)}')
             print(list(tmp))
-            k_caches, v_caches, tmps = map(list, zip(*kv_cache))
+            k_caches, v_caches, tmps1, tmps2, tmps3, tmps4, tmps5, tmps6 = map(list, zip(*kv_cache))
             logger.debug(f"<<<<<<< ori {k_caches[0].shape=}")
             if self.soc_info.need_nz:
                 k_caches = [torch_npu.npu_format_cast_(k_cache, 29) for k_cache in k_caches]
