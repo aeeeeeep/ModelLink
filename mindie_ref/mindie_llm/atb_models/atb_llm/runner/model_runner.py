@@ -1,8 +1,6 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 from typing import Optional
 
-import torch
-
 from ..models import get_model
 from ..utils import bind_cpus, initialize_torch_distributed, Weights
 from ..utils.env import ENV
@@ -46,7 +44,7 @@ class ModelRunner:
 
         self.process_group, self.device = initialize_torch_distributed(rank, world_size)
 
-        print_log(rank, logger.info, f'init tokenizer done: {self.tokenizer}')
+        print_log(self.rank, logger.info, f'init tokenizer done: {self.tokenizer}')
 
     def load_weights(self):
         weights = Weights(
@@ -56,11 +54,8 @@ class ModelRunner:
             revision=self.revision,
             extension=".safetensors"
         )
-        if self.quantize == 'smooth_quant':
-            weights._set_smooth_quant_params(self.model_name_or_path)
         self.model = self.model_cls(self.config, weights)
-        if self.dtype in [torch.float16, torch.bfloat16]:
-            self.model.to(self.dtype)
+
         self.model.to(weights.device)
 
         self.soc_info = self.model.soc_info
@@ -68,6 +63,8 @@ class ModelRunner:
         self.num_heads = self.model.num_attention_heads
         self.num_kv_heads = self.model.num_key_value_heads
         self.num_layers = self.model.num_layers
+
+        print_log(self.rank, logger.info, f'model:\n {self.model}')
 
     def forward(self, **kwargs):
         return self.model.forward(**kwargs)
