@@ -31,7 +31,7 @@ public:
         float qkScale = 1.0;
         int rank = 0;
         int rankSize = 1;
-        bool transposedWeight = false;
+        bool transposedWeight = true;
         bool isPrefill = false;
         bool isLmHeadParallel = true;
         std::string backend = "hccl";
