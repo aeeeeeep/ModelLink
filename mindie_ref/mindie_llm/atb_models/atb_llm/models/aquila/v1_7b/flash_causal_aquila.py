@@ -321,7 +321,7 @@ class AquilaModel(AquilaPreTrainedModel):
             print(f'===================kv_cache: {kv_cache}')
             print(f'===================zip(*kv_cache): {zip(*kv_cache)}')
             print(list(tmp))
-            k_caches, v_caches, tmps1, tmps2, tmps3, tmps4, tmps5, tmps6 = map(list, zip(*kv_cache))
+            k_caches, v_caches = map(list, zip(*kv_cache))
             logger.debug(f"<<<<<<< ori {k_caches[0].shape=}")
             if self.soc_info.need_nz:
                 k_caches = [torch_npu.npu_format_cast_(k_cache, 29) for k_cache in k_caches]
@@ -493,6 +493,7 @@ class FlashAquilaForCausalLM(torch.nn.Module):
         print(f'===================model causal kv_cache 1: {kv_cache}')
         outputs = self.model(
             input_ids,  # input id, 拉平的
+            position_ids,
             is_prefill,  # prefill 阶段使用，不同prompt的offset
             kv_cache,  # kv cache,
             block_tables,  # 每个requests 所有的block tables
