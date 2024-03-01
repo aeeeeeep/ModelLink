@@ -1,7 +1,7 @@
 # Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
 
 """Megatron distributed optimizer."""
-import os
+
 import math
 import torch
 from deepspeed.accelerator import get_accelerator
@@ -13,8 +13,7 @@ from ascendspeed.error_utils import (
     check_equal,
     ensure_valid
 )
-from .optimizer import MixedPrecisionOptimizer, _zero_grad_group_helper, clear_silent_check, exec_silent_check, \
-    get_silent_check_flag, print_silent_check_log
+from .optimizer import MixedPrecisionOptimizer, _zero_grad_group_helper
 
 
 class Range:
@@ -1091,10 +1090,7 @@ class DistributedOptimizerWithoutFP32Grad(DistributedOptimizer):
             timers('optimizer-unscale-and-check-inf').stop()
             self.grad_scaler.update(found_inf_flag)
             if found_inf_flag:
-                clear_silent_check()
                 return False, None, None
-        loss_scale = 1.0 if self.grad_scaler is None else self.grad_scaler.inv_scale.item()
-        exec_silent_check(loss_scale)
         timers('optimizer-clip-main-grad', log_level=1).start(
             barrier=args.barrier_with_L1_time)
         grad_norm = None
@@ -1104,24 +1100,17 @@ class DistributedOptimizerWithoutFP32Grad(DistributedOptimizer):
             norm_coeff_scale = norm_coeff_scale * clip_coeff
         timers('optimizer-clip-main-grad').stop()
 
-        found_silent_flag = get_silent_check_flag()
-        if not found_silent_flag or not (int(os.getenv('NPU_RECOVERY', '0'))):
-            # Step the optimizer.
-            timers('optimizer-inner-step', log_level=1).start(
-                barrier=args.barrier_with_L1_time)
-            self.optimizer.step(norm_coeff_scale=norm_coeff_scale)
-            timers('optimizer-inner-step').stop()
+        # Step the optimizer.
+        timers('optimizer-inner-step', log_level=1).start(
+            barrier=args.barrier_with_L1_time)
+        self.optimizer.step(norm_coeff_scale=norm_coeff_scale)
+        timers('optimizer-inner-step').stop()
 
-            # Update params from main params.
-            timers('optimizer-copy-main-to-model-params', log_level=1).start(
-                barrier=args.barrier_with_L1_time)
-            self._copy_main_params_to_model_params()
-            timers('optimizer-copy-main-to-model-params').stop()
-
-        else:
-            # The silent error is found, and skip the step, then call print_error_plog api to print log in plog.
-            print_silent_check_log()
-            return False, None, None
+        # Update params from main params.
+        timers('optimizer-copy-main-to-model-params', log_level=1).start(
+            barrier=args.barrier_with_L1_time)
+        self._copy_main_params_to_model_params()
+        timers('optimizer-copy-main-to-model-params').stop()
 
         # Successful update.
         return True, grad_norm, None
