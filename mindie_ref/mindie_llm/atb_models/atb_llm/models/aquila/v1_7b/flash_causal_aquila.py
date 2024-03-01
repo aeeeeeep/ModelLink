@@ -375,7 +375,6 @@ class AquilaModel(AquilaPreTrainedModel):
         return self.acl_operation_inputs
 
     def execute_ascend_operator(self,
-                                acl_model,
                                 input_ids: torch.Tensor,
                                 position_ids: torch.Tensor,
                                 is_prefill: bool,
@@ -398,11 +397,10 @@ class AquilaModel(AquilaPreTrainedModel):
         acl_param = json.dumps({
             "seqLen": input_lengths.tolist()
         })
-        acl_model_out = acl_model.execute(acl_inputs, acl_param)
-        # if self.is_prefill:
-        #     acl_model_out = self.acl_encoder_operation.execute(acl_inputs, acl_param)
-        # else:
-        #     acl_model_out = self.acl_decoder_operation.execute(acl_inputs, acl_param)
+        if self.is_prefill:
+            acl_model_out = self.acl_encoder_operation.execute(acl_inputs, acl_param)
+        else:
+            acl_model_out = self.acl_decoder_operation.execute(acl_inputs, acl_param)
         acl_hidden_state = acl_model_out[0]
         return acl_hidden_state
 
@@ -418,21 +416,14 @@ class AquilaModel(AquilaPreTrainedModel):
             max_seq_len: int,  # 最长的request长度
             lm_head_indices: Optional[torch.Tensor] = None,  # prefill阶段使用，取的生成token的偏移
     ):
-        print(f'===================model kv_cache: {kv_cache}')
         self.is_prefill = is_prefill
 
         # add acl model
         if not self.ascend_weight:
             self.init_ascend_weight()
-        print(f'===================model kv_cache 1: {kv_cache}')
         self.init_ascend_kvcache(kv_cache)
-        if is_prefill:
-            operation = self.acl_encoder_operation
-        else:
-            operation = self.acl_decoder_operation
 
         hidden_states = self.execute_ascend_operator(
-            operation,
             input_ids,
             position_ids,
             is_prefill,
