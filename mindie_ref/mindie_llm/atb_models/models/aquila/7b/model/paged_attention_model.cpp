@@ -260,7 +260,7 @@ atb::Status PagedAttentionRopeModel::BindParamHostTensor(uint32_t nodeId)
     }
     auto &node = graph_.nodes.at(nodeId);
 
-    const uint32_t seqLenTensorId = FA_ROPE_LAYER_IN_SEQLEN_ID;
+    const uint32_t seqLenTensorId = 18; // atb_speed::aquila_7b::PagedAttentionRopeLayerTensorId::IN_INPUT_LENGTHS;
     node.variantPack.inTensors.at(seqLenTensorId).hostData = seqLen_.data();
     ATB_LOG(INFO) << "BindParamHostTensor end";
     return atb::NO_ERROR;
