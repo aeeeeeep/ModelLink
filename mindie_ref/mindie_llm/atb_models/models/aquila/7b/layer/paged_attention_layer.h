@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef AQUILA_7B_PAGED_ATTENTION_ROPE_LAYER_H
-#define AQUILA_7B_PAGED_ATTENTION_ROPE_LAYER_H
+#ifndef AQUILA_7B_PAGED_ATTENTION_LAYER_H
+#define AQUILA_7B_PAGED_ATTENTION_LAYER_H
 
 #include <atb/atb_infer.h>
 #include <nlohmann/json.hpp>
