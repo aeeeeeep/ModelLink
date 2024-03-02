@@ -85,7 +85,6 @@ int64_t ModelTorch::SetParam(std::string param)
     ATB_LOG(INFO) << "ModelTorch set param start, modelName:" << modelName_ << ", param:" << param;
 
     model_ = atb_speed::ModelFactory::CreateInstance(modelName_, param);
-
     if (model_ != nullptr) {
         ATB_LOG(INFO) << "Get model from the ModelFactory, " << modelName_
                         << ". If other models also want to be obtained from the ModelFactory, "
@@ -111,7 +110,7 @@ int64_t ModelTorch::SetParam(std::string param)
     } else {
         atbStatus = model_->Init(getWorkspaceFunc, createInternalTensorFromDescFunc, nullptr);
     }
-    ATB_LOG(INFO) << "ModelTorch set param end, modelName_ = " << modelName_;
+    ATB_LOG(INFO) << "ModelTorch set param end";
     return atbStatus;
 }
 

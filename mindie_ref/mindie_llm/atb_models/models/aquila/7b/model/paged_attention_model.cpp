@@ -49,13 +49,9 @@ const int OUT_LM_HEAD_WEIGHT_COUNT = 1;
 const int OPERATION_COUNT_BEFORE_LAYER = 1;
 const int INTERMEDIATETENSOR_COUNT_BEFORE_LAYER = 1;
 const int OPERATION_COUNT_AFTER_LAYER = 2;
-const int OUT_TENSOR_HIDDENSTATES_ID = 0;
-const int IN_TENSOR_INPUTIDS_ID = 0;
 const int WORDEMBEDDINGNODE_WEIGHT_ID = 0;
 const int FIRST_INTERNAL_TENSORS = 0;
 const int LAYER_FIRST_OUT_TENSORS = 0;
-const int FA_ROPE_LAYER_IN_SEQLEN_ID = 16;
-const int OUT_TENSOR_HIDDENSTATES_ID_DIM_NUM = 3;
 
 void PagedAttentionRopeModel::Param::FromString(const std::string &param)
 {
@@ -100,7 +96,6 @@ PagedAttentionRopeModel::PagedAttentionRopeModel(const std::string &param) : Mod
 {
     param_.FromString(param);
     modelName_ += param_.isPrefill ? "_Prefill" : "_Decoder";
-    ATB_LOG(INFO) << "==========================PagedAttentionRopeModel::modelName_=" << modelName_;
 }
 
 PagedAttentionRopeModel::~PagedAttentionRopeModel() = default;
@@ -237,7 +232,6 @@ int64_t PagedAttentionRopeModel::BuildGraph()
                                 &graph_.weightTensors.at(finalLinearWeightTensorId)};
     }
     lmHeadNode.outTensors = {&graph_.outTensors.at(0)};
-    ATB_LOG(INFO) << "===================== Model lmHead done, graph_.nodes=" << graph_.nodes.size();
 
     return atb::NO_ERROR;
 }
