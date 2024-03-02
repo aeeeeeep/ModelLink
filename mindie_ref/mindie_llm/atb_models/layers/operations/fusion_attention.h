@@ -17,36 +17,46 @@
 #ifndef ATB_SPEED_MODELS_COMMON_ATTENTION_H
 #define ATB_SPEED_MODELS_COMMON_ATTENTION_H
 
+#include <vector>
 #include <atb/atb_infer.h>
 #include "atb_speed/log.h"
 #include "layers/operations/linear.h"
 #include "layers/operations/linear_parallel.h"
+#include "layers/operations/norm_linear.h"
 
 namespace atb_speed {
 namespace common {
+
+template <typename NormParamType>
 struct FusionAttentionParam {
-    bool isFA = true;
     // QKV linear param
-    bool isPack = true;
+    bool isPack = false;
     int isGroupedQueryAttention = false;
-    atb_speed::common::FusionLinearParam qkvLinearParam;
+    bool isBF16 = false;
+    bool isAnti = false;
+    bool hasBias = false;
+    int packQuantType = atb_speed::common::PackQuantType::ALL_FP;
+    std::vector<int> layerLinearQuantType;
+    NormParamType normParamType;
+    NormParamType normQuantParamType;
     // rope param
     int rotaryCoeff = 2;
     // self attention param
+    bool isFA = true;
     bool isPrefill = false;
-    bool isBF16 = false;
+    int headDim = 0;
     atb::infer::SelfAttentionParam selfAttentionParam;
     atb::infer::PagedAttentionParam pageAttentionParam;
     // self out linear param
-    atb_speed::common::LinearParallelParam selfOutLinearParallelParam;
+    atb_speed::common::TensorParallelInfo selfOutLinearTensorParallelInfo;
 };
 
-class FusionAttention {
-public:
-    static atb::Status Attention(const FusionAttentionParam &param, atb::Operation **operation);
-    static atb::Status QKVLinearSplit(const FusionAttentionParam &param, atb::Operation **operation);
-    static atb::Status SelfAttention(const FusionAttentionParam &param, atb::Operation **operation);
-};
+template <typename NormParamType>
+atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Operation **operation);
+template <typename NormParamType>
+atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb::Operation **operation);
+template <typename NormParamType>
+atb::Status SelfAttention(const FusionAttentionParam<NormParamType> &param, atb::Operation **operation);
 } // namespace common
 } // namespace atb_speed
 #endif

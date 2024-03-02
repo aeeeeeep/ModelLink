@@ -28,20 +28,25 @@ enum LinearTensorIdx : uint32_t {
     IN_SCALE,    // Quant所需权重
     IN_OFFSET,   // Quant所需权重
     IN_DESCALE,  // Quant所需权重
-    OUT_LINEAR
+    IN_BIAS,
+    OUT_LINEAR,
+    INTERMIDATE_INPUT  // 仅LINEAR_QUANT场景下使用
 };
 
-static const uint64_t IN_TENSOR_COUNT = 5;
+static const uint64_t IN_TENSOR_COUNT = 6;
 static const uint64_t OUT_TENSOR_COUNT = 1;
+static const uint64_t QUANT_DEQUANT_INTERMEDIATE_TENSOR_COUNT = 1;
+static const uint64_t QUANT_DEQUANT_NODE_COUNT = 2;
+static const uint64_t DEFAULT_INTERMEDIATE_TENSOR_COUNT = 0;
+static const uint64_t DEFAULT_NODE_COUNT = 1;
 
-template <class T>
-atb::Status CreateFusionLinear(const FusionLinearParam &param, atb::Operation **operation, T config)
+atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operation)
 {
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
-    opGraph.internalTensorNum = config.INTERMEDIATE_TENSOR_COUNT;
-    opGraph.nodes.resize(config.NODE_COUNT);
+    opGraph.internalTensorNum = param.quantType == LINEAR_QUANT ? QUANT_DEQUANT_INTERMEDIATE_TENSOR_COUNT : DEFAULT_INTERMEDIATE_TENSOR_COUNT;
+    opGraph.nodes.resize(param.quantType == LINEAR_QUANT ? QUANT_DEQUANT_NODE_COUNT : DEFAULT_NODE_COUNT);
     opGraph.name = param.quantType == NO_QUANT ? "LinearNoQuant" : \
         param.quantType == RMS_NORM_QUANT_LINEAR_DEQUANT ? "LinearDequantOnly" : "LinearQuant";
 
@@ -54,27 +59,31 @@ atb::Status CreateFusionLinear(const FusionLinearParam &param, atb::Operation **
         inputQuantParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_QUANT_PER_CHANNEL;
         CREATE_OPERATION(inputQuantParam, &inputQuantNode.operation);
         inputQuantNode.inTensorIds = {LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_SCALE, LinearTensorIdx::IN_OFFSET};
-        inputQuantNode.outTensorIds = {config.INTERMIDATE_INPUT};
+        inputQuantNode.outTensorIds = {LinearTensorIdx::INTERMIDATE_INPUT};
     }
 
     atb::Node &linearNode = opGraph.nodes.at(nodeId++);
     atb::infer::LinearParam linearParam;
-    linearParam.hasBias = false;
     if (param.quantType != NO_QUANT && !param.isBF16) {
         linearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
     } else if (param.quantType == NO_QUANT && param.isBF16) {
         linearParam.linearType = atb::infer::LinearType::LINEAR_BF16BF16_FP32_BF16;
     }
-    CREATE_OPERATION(linearParam, &linearNode.operation);
-    if (param.quantType == NO_QUANT) {
+
+    if (param.quantType == NO_QUANT && param.hasBias) {
+        linearParam.hasBias = true;
+        CREATE_OPERATION(linearParam, &linearNode.operation);
+        linearNode.inTensorIds = {LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_BIAS};
+    } else if (param.quantType == NO_QUANT && !param.hasBias) {
+        linearParam.hasBias = false;
+        CREATE_OPERATION(linearParam, &linearNode.operation);
         linearNode.inTensorIds = {LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT};
-    } else if (param.quantType == RMS_NORM_QUANT_LINEAR_DEQUANT) {
-        linearNode.inTensorIds = {
-            LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_DESCALE
-        };
     } else {
+        linearParam.hasBias = true;
+        CREATE_OPERATION(linearParam, &linearNode.operation);
         linearNode.inTensorIds = {
-            config.INTERMIDATE_INPUT, LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_DESCALE
+            param.quantType == RMS_NORM_QUANT_LINEAR_DEQUANT ? LinearTensorIdx::IN_INPUT : LinearTensorIdx::INTERMIDATE_INPUT,
+            LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_BIAS, LinearTensorIdx::IN_DESCALE
         };
     }
     linearNode.outTensorIds = {LinearTensorIdx::OUT_LINEAR};
@@ -82,7 +91,7 @@ atb::Status CreateFusionLinear(const FusionLinearParam &param, atb::Operation **
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0).format = inTensorDescs.at(0).format;
-        outTensorDescs.at(0).dtype = inTensorDescs.at(0).dtype;
+        outTensorDescs.at(0).dtype = param.isBF16 ? ACL_BF16 : ACL_FLOAT16;
         outTensorDescs.at(0).shape = inTensorDescs.at(0).shape;
         auto outDimSize = outTensorDescs.at(0).shape.dimNum;
         outTensorDescs.at(0).shape.dims[outDimSize - 1] = inTensorDescs.at(1).shape.dims[0];
@@ -91,53 +100,6 @@ atb::Status CreateFusionLinear(const FusionLinearParam &param, atb::Operation **
 
     CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
-}
-
-class LinearNoQuantConfig {
-public:
-    uint64_t INTERMEDIATE_TENSOR_COUNT = 0;
-    uint64_t NODE_COUNT = 1;
-
-    enum LinearNoQuantTensorIdx : uint32_t {
-        INTERMIDATE_INPUT = OUT_LINEAR + 1  // no usage
-    };
-};
-
-class LinearDequantOnlyConfig {
-public:
-    uint64_t INTERMEDIATE_TENSOR_COUNT = 0;
-    uint64_t NODE_COUNT = 1;
-
-    enum LinearDequantOnlyTensorIdx : uint32_t {
-        INTERMIDATE_INPUT = OUT_LINEAR + 1  // no usage
-    };
-};
-
-class LinearQuantConfig {
-public:
-    uint64_t INTERMEDIATE_TENSOR_COUNT = 1;
-    uint64_t NODE_COUNT = 2;
-
-    enum LinearQuantTensorIdx : uint32_t {
-        INTERMIDATE_INPUT = OUT_LINEAR + 1,
-    };
-};
-
-atb::Status FusionLinear(const FusionLinearParam &param_, atb::Operation **operation)
-{
-    if (param_.quantType == NO_QUANT) {
-        LinearNoQuantConfig linearNoQuantConfig;
-        return CreateFusionLinear(param_, operation, linearNoQuantConfig);
-    } else if (param_.quantType == RMS_NORM_QUANT_LINEAR_DEQUANT) {
-        LinearDequantOnlyConfig linearDequantOnlyConfig;
-        return CreateFusionLinear(param_, operation, linearDequantOnlyConfig);
-    } else if (param_.quantType == LINEAR_QUANT) {
-        LinearQuantConfig linearQuantConfig;
-        return CreateFusionLinear(param_, operation, linearQuantConfig);
-    } else {
-        ATB_LOG(ERROR) << "FusionLinear operation doesn't support quantType: " << param_.quantType;
-        return atb::ERROR_INVALID_PARAM;
-    }
 }
 
 } // namespace common

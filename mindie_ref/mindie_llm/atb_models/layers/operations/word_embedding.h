@@ -13,35 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_COMMON_LINEAR_H
-#define ATB_SPEED_MODELS_COMMON_LINEAR_H
+#ifndef ATB_SPEED_MODELS_COMMON_LAYER_WORD_EMBEDDING_H
+#define ATB_SPEED_MODELS_COMMON_LAYER_WORD_EMBEDDING_H
 
 #include "nlohmann/json.hpp"
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
+#include "layers/operations/linear_parallel.h"
 
 namespace atb_speed {
 namespace common {
-
-enum LinearQuantType : unsigned int {
-    NO_QUANT = 0,
-    RMS_NORM_QUANT_LINEAR_DEQUANT = 1,  // QUANT在RMS_NORM中执行，DEQUANT在此operaion中执行
-    LINEAR_QUANT = 2,         // QUANT和DEQUANT操作都在此Operation中执行
+struct WordEmbeddingParam {
+    bool unpadInputs = false;
+    int axis = 0;
+    // 若embedding权重按列切分，则需调用all gather算子并传入rank相关的信息
+    atb_speed::common::TensorParallelInfo tensorParallelInfo;
 };
 
-enum LinearType : unsigned int {
-    INVALID = 0,
-    FP = 1,
-    INT = 2,
-};
-
-struct FusionLinearParam {
-    int quantType = NO_QUANT;
-    bool isBF16 = false;
-    bool hasBias = false;
-};
-
-atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operation);
-} // namespace common
-} // namespace atb_speed
+atb::Status WordEmbedding(const WordEmbeddingParam &param, atb::Operation **operation);
+}  // namespace common
+}  // namespace atb_speed
 #endif
