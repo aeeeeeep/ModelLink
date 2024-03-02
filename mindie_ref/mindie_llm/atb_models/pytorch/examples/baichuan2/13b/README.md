@@ -55,6 +55,7 @@ https://huggingface.co/baichuan-inc/Baichuan2-13B-Chat/tree/main
 #### 1. 将开源模型拷贝到模型工作目录，bin文件使用软链接即可,同时将modeling文件拷贝到模型，并修改开源的config.json,
 
 ```shell
+cd ${model_path}
 cp ${model_download_path}/*.py ${model_path}/
 cp ${model_download_path}/*.json ${model_path}/
 cp ${model_download_path}/*.model ${model_path}/

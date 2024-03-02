@@ -11,10 +11,9 @@ class W8A16LinearStatic(nn.Module):
         self.register_buffer('weight', weight.to(torch.int8))
         self.weight_quant_name = 'per_channel'
 
-        weight_scale = torch.frombuffer(weight_scale.to(torch.float32).numpy(), dtype=torch.int32)
-        self.register_buffer('weight_scale', weight_scale.to(torch.int64))
+        self.register_buffer('weight_scale', weight_scale.to(torch.float16))
 
         if weight_offset is not None:
-            self.register_buffer('weight_offset', weight_offset.to(torch.int32))
+            self.register_buffer('weight_offset', (-weight_offset).to(torch.float16))
         else:
             self.weight_offset = None
