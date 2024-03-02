@@ -277,7 +277,6 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
             newShape.dims[2] = param.kvHeadNum;
             newShape.dims[3] = oldShape.dims[2] / param.kvHeadNum;
         };
-        
     } else {
         selfAttentionKvCacheNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
             newShape.dimNum = ATTENTION_DIM_NUM;

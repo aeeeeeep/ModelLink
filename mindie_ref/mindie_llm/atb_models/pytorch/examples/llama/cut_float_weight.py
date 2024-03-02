@@ -14,9 +14,9 @@
 import os
 import argparse
 import torch
+import json
 from transformers import LlamaForCausalLM, LlamaTokenizer
 from transformers.models.llama.configuration_llama import LlamaConfig
-import json
 
 
 # cut float weights

@@ -17,10 +17,10 @@ import warnings
 import os
 import torch
 import torch_npu
+import json
 from atb_speed.common.cpu_binding import CPUBinder
 from torch_npu.contrib import transfer_to_npu
 from transformers import AutoTokenizer, AutoModelForCausalLM
-import json
 
 BIND_CPU = int(os.getenv("BIND_CPU", "0"))
 
