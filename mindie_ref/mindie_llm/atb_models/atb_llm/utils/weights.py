@@ -422,8 +422,8 @@ class Weights:
             qweight = self.get_tensor_col_packed_qkv(f"{prefix}.weight", num_heads, num_kv_heads)
             deq_scale = self.get_tensor_col_packed_qkv(f"{prefix}.deq_scale", num_heads, num_kv_heads)
             quant_bias = self.get_tensor_col_packed_qkv(f"{prefix}.quant_bias", num_heads, num_kv_heads)
-            input_scale = self.get_per_tensor_sharded(prefixes, dim, 'input_scale')
-            input_offset = self.get_per_tensor_sharded(prefixes, dim, 'input_offset')
+            input_scale = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_scale')
+            input_offset = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_offset')
             weight = (qweight, deq_scale, quant_bias, input_scale, input_offset)
         elif quantize == "w8a16":
             qweight = self.get_tensor_col_packed_qkv(f"{prefix}.weight", num_heads, num_kv_heads)
@@ -456,8 +456,8 @@ class Weights:
             qweight = self.get_tensor_col_packed_mlp(f"{prefix}.weight")
             deq_scale = self.get_tensor_col_packed_mlp(f"{prefix}.deq_scale")
             quant_bias = self.get_tensor_col_packed_mlp(f"{prefix}.quant_bias")
-            input_scale = self.get_per_tensor_sharded(prefixes, dim, 'input_scale')
-            input_offset = self.get_per_tensor_sharded(prefixes, dim, 'input_offset')
+            input_scale = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_scale')
+            input_offset = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_offset')
             weight = (qweight, deq_scale, quant_bias, input_scale, input_offset)
         elif quantize == "w8a16":
             qweight = self.get_tensor_col_packed_mlp(f"{prefix}.weight")
