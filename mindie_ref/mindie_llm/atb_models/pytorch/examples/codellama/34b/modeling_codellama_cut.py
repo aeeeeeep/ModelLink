@@ -268,10 +268,10 @@ class LlamaMLP(nn.Module):
     def forward(self, x):
         if self.config.pretraining_tp > 1:
             print("self.config.pretraining_tp > 1")
-            slice = self.intermediate_size // self.config.pretraining_tp
-            gate_proj_slices = self.gate_proj.weight.split(slice, dim=0)
-            up_proj_slices = self.up_proj.weight.split(slice, dim=0)
-            down_proj_slices = self.down_proj.weight.split(slice, dim=1)
+            slice_ = self.intermediate_size // self.config.pretraining_tp
+            gate_proj_slices = self.gate_proj.weight.split(slice_, dim=0)
+            up_proj_slices = self.up_proj.weight.split(slice_, dim=0)
+            down_proj_slices = self.down_proj.weight.split(slice_, dim=1)
 
             gate_proj = torch.cat(
                 [
@@ -288,7 +288,7 @@ class LlamaMLP(nn.Module):
                 dim=-1,
             )
 
-            intermediate_states = (self.act_fn(gate_proj) * up_proj).split(slice, dim=2)
+            intermediate_states = (self.act_fn(gate_proj) * up_proj).split(slice_, dim=2)
             down_proj = [
                 F.linear(intermediate_states[i], down_proj_slices[i])
                 for i in range(self.config.pretraining_tp)
@@ -445,21 +445,21 @@ class LlamaAttention(nn.Module):
         if past_key_value is not None:
             kv_seq_len += past_key_value[0].shape[-2]
         cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
-        query_states, key_states = apply_rotary_pos_emb(
+        query_states_, key_states_ = apply_rotary_pos_emb(
             query_states, key_states, cos, sin, position_ids
         )
 
         if past_key_value is not None:
             # reuse k, v, self_attention
-            key_states = torch.cat([past_key_value[0], key_states], dim=2)
+            key_states_ = torch.cat([past_key_value[0], key_states_], dim=2)
             value_states = torch.cat([past_key_value[1], value_states], dim=2)
 
-        past_key_value = (key_states, value_states) if use_cache else None
-        key_states = repeat_kv(key_states, self.num_key_value_groups)
+        past_key_value = (key_states_, value_states) if use_cache else None
+        key_states_ = repeat_kv(key_states_, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 
         attn_weights = torch.matmul(
-            query_states, key_states.transpose(2, 3)
+            query_states_, key_states_.transpose(2, 3)
         ) / math.sqrt(self.head_dim)
 
         if attn_weights.size() != (bsz, self.num_heads, q_len, kv_seq_len):
@@ -478,7 +478,7 @@ class LlamaAttention(nn.Module):
         # upcast attention to fp32
         attn_weights = nn.functional.softmax(
             attn_weights, dim=-1, dtype=torch.float32
-        ).to(query_states.dtype)
+        ).to(query_states_.dtype)
         attn_output = torch.matmul(attn_weights, value_states)
 
         if attn_output.size() != (bsz, self.num_heads, q_len, self.head_dim):
@@ -863,7 +863,7 @@ class LlamaModel(LlamaPreTrainedModel):
 
             if self.gradient_checkpointing and self.training:
 
-                def create_custom_forward(module):
+                def create_custom_forward(module, past_key_value, output_attentions):
                     def custom_forward(*inputs):
                         # None for past_key_value
                         return module(*inputs, past_key_value, output_attentions)
@@ -871,7 +871,7 @@ class LlamaModel(LlamaPreTrainedModel):
                     return custom_forward
 
                 layer_outputs = torch.utils.checkpoint.checkpoint(
-                    create_custom_forward(decoder_layer),
+                    create_custom_forward(decoder_layer, past_key_value, output_attentions),
                     hidden_states,
                     attention_mask,
                     position_ids,
