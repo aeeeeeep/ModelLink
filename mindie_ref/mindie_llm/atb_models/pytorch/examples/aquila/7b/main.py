@@ -30,7 +30,7 @@ class AquilaLMParallel(ParallelLauncher):
 
         tokenizer_path = os.path.join(self.model_path)
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True,
-                                                  use_fast=True)
+                                                  use_fast=True, padding_side="left")
         tokenizer.add_special_tokens({'pad_token': "<|endoftext|>"})
 
         part_model_path = os.path.join(self.model_path, 'part_model', str(self.local_rank))
@@ -52,7 +52,7 @@ class AquilaLM(Launcher):
         :return:
         """
         tokenizer = AutoTokenizer.from_pretrained(self.model_path, trust_remote_code=True,
-                                                  use_fast=True)
+                                                  use_fast=True, padding_side="left")
         tokenizer.add_special_tokens({'pad_token': "<|endoftext|>"})
         model = AutoModelForCausalLM.from_pretrained(self.model_path, trust_remote_code=True).half().to(self._device)
         model.eval()
