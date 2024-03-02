@@ -2,13 +2,13 @@
 from typing import List
 
 import torch
+from atb_llm.utils.log import logger
 from torch import nn
 
-from atb_llm.utils.log import logger
 from .fast_linear import FastLinear
 from ...quantize.smooth_quant.quant_linear import SmoothQuantLinearStatic
-from ...quantize.w8a8 import W8A8LinearStatic
 from ...quantize.w8a16 import W8A16LinearStatic
+from ...quantize.w8a8 import W8A8LinearStatic
 
 
 def get_linear(weight, bias, quantize, is_norm=False):
@@ -178,8 +178,10 @@ class TensorParallelHead(SuperLayer):
 
 class TensorParallelColumnLinear(SuperLayer):
     @classmethod
-    def load_qkv(cls, config, prefix: str, weights, bias: bool, num_heads, num_kv_heads):
+    def load_qkv(cls, config, prefix: str, weights, bias: bool, num_heads: int, num_kv_heads: int = None):
         """Specific method when the QKV was joined after the fact"""
+        if num_kv_heads is None:
+            num_kv_heads = num_heads
         weight = weights.get_weights_col_packed_qkv(
             prefix, quantize=config.quantize, num_heads=num_heads, num_kv_heads=num_kv_heads
         )
