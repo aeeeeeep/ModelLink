@@ -17,8 +17,10 @@
 
 #include "atb/atb_infer.h"
 #include "nlohmann/json.hpp"
-#include "operations/lmhead.h"
+
+#include "atb_speed/utils/operation_util.h"
 #include "models/baichuan2/7b/layer/flash_attention_rope_layer.h"
+#include "operations/lmhead.h"
 
 namespace atb_speed {
 namespace baichuan2_7b {
@@ -88,7 +90,7 @@ atb::Status FlashAttentionRopeModel::InferShape(const std::vector<atb::TensorDes
     outTensorDescs.at(0) = graph_.weightTensors.at(0).desc;
     outTensorDescs.at(0).shape.dimNum = 3;
     outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
-    outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[1];
+    outTensorDescs.at(0).shape.dims[1] = 1; // inTensorDescs.at(0).shape.dims[1];
     outTensorDescs.at(0).shape.dims[2] = outDim * param_.rankSize;
 
     return atb::NO_ERROR;
@@ -111,9 +113,10 @@ int64_t FlashAttentionRopeModel::BuildGraph()
 
     int nodeId = 0;
     auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
-    atb::infer::GatherParam wordEmbeddingParam;
     atb::Operation *op = nullptr;
-    atb::CreateOperation(wordEmbeddingParam, &op);
+
+    atb::infer::GatherParam wordEmbeddingParam;
+    CREATE_OPERATION(wordEmbeddingParam, &op);
     wordEmbeddingNode.operation.reset(op);
     wordEmbeddingNode.inTensors = {&graph_.weightTensors.at(0), &graph_.inTensors.at(IN_TENSOR_INPUTIDS)};
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(0)};
@@ -159,7 +162,7 @@ int64_t FlashAttentionRopeModel::BuildGraph()
     atb::infer::RmsNormParam finalNormParam;
     finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     finalNormParam.normParam.epsilon = param_.rmsNormEps;
-    atb::CreateOperation(finalNormParam, &op);
+    CREATE_OPERATION(finalNormParam, &op);
     finalNormNode.operation.reset(op);
     const int finalLayerNormWeightTensorId =
         graph_.weightTensors.size() - FINALNORMNODE_WEIGHT_COUNT - OUT_LM_HEAD_WEIGHT_COUNT;
@@ -172,12 +175,10 @@ int64_t FlashAttentionRopeModel::BuildGraph()
     lmHeadParam.unpadInputs = !param_.isFA;
     lmHeadParam.gatherAhead = param_.isPrefill;
     lmHeadParam.linearParallelParam.fusionLinearParam.quantType = false; // LmHead未接入量化
-    if (param_.rankSize > 1) {
-        lmHeadParam.linearParallelParam.parallelType = atb_speed::common::COLUMN_PARALLEL;
-        lmHeadParam.linearParallelParam.rank = param_.rank;
-        lmHeadParam.linearParallelParam.worldSize = param_.rankSize;
-        lmHeadParam.linearParallelParam.backend = param_.backend;
-    }
+    lmHeadParam.linearParallelParam.parallelType = atb_speed::common::COLUMN_PARALLEL;
+    lmHeadParam.linearParallelParam.rank = param_.rank;
+    lmHeadParam.linearParallelParam.worldSize = param_.rankSize;
+    lmHeadParam.linearParallelParam.backend = param_.backend;
     LmHead(lmHeadParam, &op);
     lmHeadNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
@@ -209,7 +210,8 @@ atb::Status FlashAttentionRopeModel::ParseParam(const std::string &param)
 
 atb::Status FlashAttentionRopeModel::BindParamHostTensor(uint32_t nodeId)
 {
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER ||
+        nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
     auto &node = graph_.nodes.at(nodeId);
