@@ -325,7 +325,7 @@ class AquilaModel(AquilaPreTrainedModel):
         if self.soc_info.need_nz:
             pad_maxs = math.ceil(max_s / 16) * 16
             atten_mask = self.ascend_atten_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
-            atten_mask = self.transdata_operation.execute([atten_mask])[0]
+            atten_mask = atten_mask.view(1, pad_maxs, pad_maxs // 16, 16).transpose(1, 2)
         else:
             atten_mask = self.ascend_atten_mask.get_attn_mask(max_s, kv_cache[0][0].dtype, kv_cache[0][0].device)
 
