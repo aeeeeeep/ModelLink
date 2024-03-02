@@ -15,6 +15,7 @@ PA模型支持：
 4. CodegeeX2-6b
 5. Baichuan2 (Baichuan2-7B, Baichuan2-13B)
 6. Qwen (Qwen-14B, Qwen-72B) 
+7. Aquila (Aquila-7B)
 
 # 使用说明
 

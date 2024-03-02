@@ -13,36 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_AQUILA_7B_FLASH_ATTENTION_MODEL_H
-#define ATB_SPEED_MODELS_AQUILA_7B_FLASH_ATTENTION_MODEL_H
+#ifndef ATB_SPEED_MODELS_AQUILA_7B_PAGED_ATTENTION_MODEL_H
+#define ATB_SPEED_MODELS_AQUILA_7B_PAGED_ATTENTION_MODEL_H
+
 #include "atb_speed/base/model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace aquila_7b {
-class FlashAttentionRopeModel : public Model {
+class PagedAttentionRopeModel : public Model {
 public:
     struct Param {
-        double rmsNormEps = 0.0;
+        float rmsNormEps = 0.0;
         int headNum = 0;
         int dk = 0;
         int layerNum = 0;
         float qkScale = 1.0;
         int rank = 0;
         int rankSize = 1;
+        bool transposedWeight = true;
+        bool isPrefill = false;
+        bool isLmHeadParallel = true;
         std::string backend = "hccl";
-        // isFA为true则使用Flash Attention; 反之，则使用Paged Attention
-        bool isFA = true;
-        // isPrefill为true时为全量阶段，encoder的isPrefill参数应为true;
-        // isPrefill为false时为增量阶段，decoder的isPrefill参数应为false
-        bool isPrefill = true;
-        // isPack为true时QKV和MLP中的gate和up权重合并; 反之，则权重不合并
-        bool isPack = false;
         void FromString(const std::string &param);
     };
 
-    explicit FlashAttentionRopeModel(const std::string &param);
+    explicit PagedAttentionRopeModel(const std::string &param);
 
-    ~FlashAttentionRopeModel();
+    ~PagedAttentionRopeModel();
 
     uint32_t GetInputNum() const override;
 
@@ -54,16 +52,17 @@ public:
 private:
     virtual int64_t BuildGraph() override;
 
-    Param param_;
-
     atb::Status ParseParam(const std::string &param) override;
 
     atb::Status BindParamHostTensor(uint32_t nodeId) override;
 
-    std::vector<int32_t> tokenOffset_;
+private:
+    Param param_;
 
     std::vector<int32_t> seqLen_;
 };
+
+REGISTER_MODEL(aquila_7b, PagedAttentionRopeModel);
 
 } // namespace aquila_7b
 } // namespace atb_speed

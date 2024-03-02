@@ -13,32 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "models/aquila/7b/model/flash_attention_model.h"
+#include "models/aquila/7b/model/paged_attention_model.h"
 
 #include "atb/atb_infer.h"
 #include "nlohmann/json.hpp"
 
-#include "models/aquila/7b/layer/flash_attention_layer.h"
-#include "operations/lmhead.h"
-#include "atb_speed/utils/model_factory.h"
+#include "models/aquila/7b/layer/paged_attention_layer.h"
+#include "parallel_lmhead.h"
 
 namespace atb_speed {
 namespace aquila_7b {
-
-REGISTER_MODEL(aquila_7b, FlashAttentionRopeModel);
-
 enum InTensorId : int {
-    IN_TENSOR_INPUTIDS = 0,
-    IN_TENSOR_COSEMBED,
-    IN_TENSOR_SINEMBED,
-    IN_TENSOR_ATTENTIONMASK,
-    IN_TENSOR_PAST_KEY,
-    IN_TENSOR_PAST_VALUE,
-    IN_TENSOR_TOKENOFFSET,
-    IN_TENSOR_SEQLEN,
+    IN_TENSOR_INPUT_IDS = 0,
+    IN_TENSOR_POSITION_ID,
+    IN_TENSOR_COS_EMBED,
+    IN_TENSOR_SIN_EMBED,
+    IN_TENSOR_ATTENTION_MASK,
+    IN_TENSOR_BLOCK_TABLES,
+    IN_TENSOR_SLOTS,
+    IN_TENSOR_INPUT_LENGTHS,
+    IN_TENSOR_LOGTIS_INDICES,
     IN_HOLDER,
-    IN_FINAL_NORM_SLICE_OFFSET,
-    IN_TENSOR_MAX,  // 10
+    IN_TENSOR_MAX, // 10
 };
 
 enum OutTensorId : int {
@@ -53,16 +49,11 @@ const int OUT_LM_HEAD_WEIGHT_COUNT = 1;
 const int OPERATION_COUNT_BEFORE_LAYER = 1;
 const int INTERMEDIATETENSOR_COUNT_BEFORE_LAYER = 1;
 const int OPERATION_COUNT_AFTER_LAYER = 2;
-const int OUT_TENSOR_HIDDENSTATES_ID = 0;
-const int IN_TENSOR_INPUTIDS_ID = 0;
 const int WORDEMBEDDINGNODE_WEIGHT_ID = 0;
 const int FIRST_INTERNAL_TENSORS = 0;
 const int LAYER_FIRST_OUT_TENSORS = 0;
-const int FA_ROPE_LAYER_IN_TOKENOFFSET_ID = 15;
-const int FA_ROPE_LAYER_IN_SEQLEN_ID = 16;
-const int OUT_TENSOR_HIDDENSTATES_ID_DIM_NUM = 3;
 
-void FlashAttentionRopeModel::Param::FromString(const std::string &param)
+void PagedAttentionRopeModel::Param::FromString(const std::string &param)
 {
     nlohmann::json paramJson = nlohmann::json::parse(param);
     rmsNormEps = paramJson["rmsNormEps"].get<double>();
@@ -78,47 +69,78 @@ void FlashAttentionRopeModel::Param::FromString(const std::string &param)
     if (paramJson.contains("backend")) {
         backend = paramJson["backend"];
     }
+    if (paramJson.contains("transposedWeight")) {
+        transposedWeight = paramJson["transposedWeight"].get<bool>();
+    }
+    if (paramJson.contains("isPrefill")) {
+        isPrefill = paramJson["isPrefill"].get<bool>();
+    }
+    if (paramJson.contains("isLmHeadParallel")) {
+        isLmHeadParallel = paramJson["isLmHeadParallel"].get<bool>();
+    }
+
+    ATB_LOG(INFO) << "Aquila_7B Paged Attention Model params: \n"
+                  << "  rmsNormEps:      " << rmsNormEps << ", \n"
+                  << "  headNum:         " << headNum << ", \n"
+                  << "  dk:              " << dk << ", \n"
+                  << "  layerNum:        " << layerNum << ", \n"
+                  << "  rank:            " << rank << ", \n"
+                  << "  rankSize:        " << rankSize << ", \n"
+                  << "  backend:         " << backend << ", \n"
+                  << "  transposedWeight:" << transposedWeight << ", \n"
+                  << "  isPrefill:       " << isPrefill << ", \n"
+                  << "  isLmHeadParallel:" << isLmHeadParallel;
 }
 
-FlashAttentionRopeModel::FlashAttentionRopeModel(const std::string &param) : Model("FlashAttentionModel", param)
+PagedAttentionRopeModel::PagedAttentionRopeModel(const std::string &param) : Model("PagedAttentionModel", param)
 {
     param_.FromString(param);
+    modelName_ += param_.isPrefill ? "_Prefill" : "_Decoder";
 }
 
-FlashAttentionRopeModel::~FlashAttentionRopeModel() = default;
+PagedAttentionRopeModel::~PagedAttentionRopeModel() = default;
 
-uint32_t FlashAttentionRopeModel::GetInputNum() const { return graph_.inTensors.size(); }
+uint32_t PagedAttentionRopeModel::GetInputNum() const { return graph_.inTensors.size(); }
 
-uint32_t FlashAttentionRopeModel::GetOutputNum() const { return graph_.outTensors.size(); }
+uint32_t PagedAttentionRopeModel::GetOutputNum() const { return graph_.outTensors.size(); }
 
-atb::Status FlashAttentionRopeModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
+atb::Status PagedAttentionRopeModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
                                                 std::vector<atb::TensorDesc> &outTensorDescs)
 {
     if (outTensorDescs.size() != GetOutputNum()) {
         return atb::ERROR_INVALID_GRAPH;
     }
+
     const int64_t outDim = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.shape.dims[0];
-    outTensorDescs.at(OUT_TENSOR_HIDDENSTATES_ID) = graph_.weightTensors.at(WORDEMBEDDINGNODE_WEIGHT_ID).desc;
-    outTensorDescs.at(OUT_TENSOR_HIDDENSTATES_ID).shape.dimNum = OUT_TENSOR_HIDDENSTATES_ID_DIM_NUM;
+    outTensorDescs.at(0) = graph_.weightTensors.at(0).desc;
+    auto outDimNum = inTensorDescs.at(0).shape.dimNum + 1;
+    for (uint i = 0; i < outDimNum - 1; i++) {
+        outTensorDescs.at(0).shape.dims[i] = inTensorDescs.at(0).shape.dims[i];
+    }
+    if (param_.isLmHeadParallel) {
+        outTensorDescs.at(0).shape.dims[outDimNum - 1] = outDim * param_.rankSize;
+    } else {
+        outTensorDescs.at(0).shape.dims[outDimNum - 1] = outDim;
+    }
 
-    size_t outTensorShapeDimIndex = 0;
-    size_t inTensorShapeDimIndex = 0;
-
-    outTensorDescs.at(OUT_TENSOR_HIDDENSTATES_ID).shape.dims[outTensorShapeDimIndex++] =
-        inTensorDescs.at(IN_TENSOR_INPUTIDS_ID).shape.dims[inTensorShapeDimIndex++];
-    outTensorDescs.at(OUT_TENSOR_HIDDENSTATES_ID).shape.dims[outTensorShapeDimIndex++] = 1;
-    outTensorDescs.at(OUT_TENSOR_HIDDENSTATES_ID).shape.dims[outTensorShapeDimIndex++] = outDim * param_.rankSize;
+    // change first dim
+    if (param_.isPrefill) {
+        outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(IN_TENSOR_LOGTIS_INDICES).shape.dims[0];
+    }
 
     return atb::NO_ERROR;
 }
 
-int64_t FlashAttentionRopeModel::BuildGraph()
+int64_t PagedAttentionRopeModel::BuildGraph()
 {
     const int weightTensorSize = WORDEMBEDDINGNODE_WEIGHT_COUNT + WEIGHT_COUNT_PER_LAYER * param_.layerNum +
                                  FINALNORMNODE_WEIGHT_COUNT + OUT_LM_HEAD_WEIGHT_COUNT;
     graph_.weightTensors.resize(weightTensorSize);
 
-    graph_.inTensors.resize(IN_TENSOR_MAX + param_.layerNum);
+    graph_.kCacheTensors.resize(param_.layerNum);
+    graph_.vCacheTensors.resize(param_.layerNum);
+
+    graph_.inTensors.resize(IN_TENSOR_MAX);
     graph_.outTensors.resize(OUT_TENSOR_MAX);
 
     const int nodeSize = param_.layerNum + OPERATION_COUNT_BEFORE_LAYER + OPERATION_COUNT_AFTER_LAYER;
@@ -134,7 +156,7 @@ int64_t FlashAttentionRopeModel::BuildGraph()
     CREATE_OPERATION(wordEmbeddingParam, &op);
     wordEmbeddingNode.operation.reset(op);
     wordEmbeddingNode.inTensors = {&graph_.weightTensors.at(WORDEMBEDDINGNODE_WEIGHT_ID),
-                                   &graph_.inTensors.at(IN_TENSOR_INPUTIDS)};
+                                   &graph_.inTensors.at(IN_TENSOR_INPUT_IDS)};
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(FIRST_INTERNAL_TENSORS)};
 
     atb::Tensor *firstInTensor = &graph_.internalTensors.at(FIRST_INTERNAL_TENSORS);
@@ -142,16 +164,18 @@ int64_t FlashAttentionRopeModel::BuildGraph()
     for (int layerId = 0; layerId < param_.layerNum; ++layerId) {
         auto &layerNode = graph_.nodes.at(nodeId++);
 
-        atb_speed::aquila_7b::FlashAttentionRopeLayerParam opParam;
+        atb_speed::aquila_7b::PagedAttentionRopeLayerParam opParam;
         opParam.rmsNormEps = param_.rmsNormEps;
         opParam.headNum = param_.headNum;
         opParam.dk = param_.dk;
         opParam.rank = param_.rank;
         opParam.rankSize = param_.rankSize;
         opParam.backend = param_.backend;
-        atb_speed::aquila_7b::FlashAttentionRopeLayer(opParam, &op);
+        opParam.transposedWeight = param_.transposedWeight;
+        opParam.isPrefill = param_.isPrefill;
+        atb_speed::aquila_7b::PagedAttentionRopeLayer(opParam, &op);
         layerNode.operation.reset(op);
-        layerNode.inTensors.resize(layerNode.operation->GetInputNum()); // .at 需要resize，直接赋值不需要
+        layerNode.inTensors.resize(layerNode.operation->GetInputNum());
 
         size_t inTensorId = 0;
         layerNode.inTensors.at(inTensorId++) = firstInTensor;
@@ -159,15 +183,16 @@ int64_t FlashAttentionRopeModel::BuildGraph()
             layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(
                 layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId + WORDEMBEDDINGNODE_WEIGHT_COUNT);
         }
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_COSEMBED);
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SINEMBED);
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_ATTENTIONMASK);
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_PAST_KEY);
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_PAST_VALUE);
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_TOKENOFFSET);
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SEQLEN);
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_POSITION_ID);    // positionIdTensor
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_COS_EMBED);
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SIN_EMBED);
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_ATTENTION_MASK);
+        layerNode.inTensors.at(inTensorId++) = &graph_.kCacheTensors.at(layerId);
+        layerNode.inTensors.at(inTensorId++) = &graph_.vCacheTensors.at(layerId);
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_BLOCK_TABLES);
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SLOTS);
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_INPUT_LENGTHS);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MAX + layerId);
 
         layerNode.outTensors = {&graph_.internalTensors.at(INTERMEDIATETENSOR_COUNT_BEFORE_LAYER + layerId)};
 
@@ -187,38 +212,33 @@ int64_t FlashAttentionRopeModel::BuildGraph()
     finalNormNode.outTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId)};
 
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
-    atb_speed::common::LmHeadParam lmHeadParam;
-    lmHeadParam.unpadInputs = !param_.isFA;
-    lmHeadParam.gatherAhead = param_.isPrefill;
-    lmHeadParam.linearParallelParam.fusionLinearParam.quantType = false; // LmHead未接入量化
-    if (param_.rankSize > 1) {
-        lmHeadParam.linearParallelParam.parallelType = atb_speed::common::COLUMN_PARALLEL;
-        lmHeadParam.linearParallelParam.rank = param_.rank;
-        lmHeadParam.linearParallelParam.worldSize = param_.rankSize;
-        lmHeadParam.linearParallelParam.backend = param_.backend;
+    atb_speed::common::ParallelLmHeadParam lmHeadParam;
+    if (param_.isLmHeadParallel) {
+        lmHeadParam.rank = param_.rank;
+        lmHeadParam.rankSize = param_.rankSize;
     }
-    LmHead(lmHeadParam, &op);
+    lmHeadParam.unpadInputs = true;
+    lmHeadParam.gatherAhead = param_.isPrefill;
+    lmHeadParam.backend = param_.backend;
+    ParallelLmHead(lmHeadParam, &op);
     lmHeadNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
-    lmHeadNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
-                            // shape: [vocabSizePerRank, hiddenSize]
-                            &graph_.weightTensors.at(finalLinearWeightTensorId),
-                            // LmHead未接入量化，量化权重使用placeholder代替
-                            &graph_.inTensors.at(IN_HOLDER), &graph_.inTensors.at(IN_HOLDER),
-                            &graph_.inTensors.at(IN_HOLDER), &graph_.inTensors.at(IN_FINAL_NORM_SLICE_OFFSET)};
-    // shape: FA: [batchSize, seqLen, vocabSize] PA: [seqLen, vocabSize]
-    lmHeadNode.outTensors = {&graph_.outTensors.at(OUT_TENSOR_HIDDENSTATES)};
+    if (param_.isPrefill) {
+        lmHeadNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
+                                &graph_.weightTensors.at(finalLinearWeightTensorId),
+                                &graph_.inTensors.at(IN_TENSOR_LOGTIS_INDICES)};
+    } else {
+        lmHeadNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
+                                &graph_.weightTensors.at(finalLinearWeightTensorId)};
+    }
+    lmHeadNode.outTensors = {&graph_.outTensors.at(0)};
 
     return atb::NO_ERROR;
 }
 
-atb::Status FlashAttentionRopeModel::ParseParam(const std::string &param)
+atb::Status PagedAttentionRopeModel::ParseParam(const std::string &param)
 {
     nlohmann::json paramJson = nlohmann::json::parse(param);
-    tokenOffset_.clear();
-    for (auto item : paramJson["tokenOffset"]) {
-        tokenOffset_.push_back(item.get<int>());
-    }
     seqLen_.clear();
     for (auto item : paramJson["seqLen"]) {
         seqLen_.push_back(item.get<int>());
@@ -227,17 +247,14 @@ atb::Status FlashAttentionRopeModel::ParseParam(const std::string &param)
     return atb::NO_ERROR;
 }
 
-atb::Status FlashAttentionRopeModel::BindParamHostTensor(uint32_t nodeId)
+atb::Status PagedAttentionRopeModel::BindParamHostTensor(uint32_t nodeId)
 {
     if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
     auto &node = graph_.nodes.at(nodeId);
 
-    const uint32_t tokenOffsetTensorId = FA_ROPE_LAYER_IN_TOKENOFFSET_ID;
-    const uint32_t seqLenTensorId = FA_ROPE_LAYER_IN_SEQLEN_ID;
-
-    node.variantPack.inTensors.at(tokenOffsetTensorId).hostData = tokenOffset_.data();
+    const uint32_t seqLenTensorId = 18; // atb_speed::aquila_7b::PagedAttentionRopeLayerTensorId::IN_INPUT_LENGTHS;
     node.variantPack.inTensors.at(seqLenTensorId).hostData = seqLen_.data();
     ATB_LOG(INFO) << "BindParamHostTensor end";
     return atb::NO_ERROR;
