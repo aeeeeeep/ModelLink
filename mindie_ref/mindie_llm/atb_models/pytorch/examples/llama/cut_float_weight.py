@@ -14,7 +14,7 @@
 import os
 import argparse
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
+from transformers import LlamaForCausalLM, LlamaTokenizer
 from transformers.models.llama.configuration_llama import LlamaConfig
 import json
 
@@ -85,10 +85,10 @@ if __name__ == "__main__":
     with open(tokenizer_config_path) as f:
         tokenizer_config = json.load(f)
         use_fast = tokenizer_config.get('use_fast', True)
-    tokenizer = AutoTokenizer.from_pretrained(args.input_path, use_fast=use_fast)
+    tokenizer = LlamaTokenizer.from_pretrained(args.input_path, use_fast=use_fast)
     tokenizer.save_pretrained(os.path.join(args.output_path, 'tokenizer'))
     
-    model = AutoModelForCausalLM.from_pretrained(args.input_path, torch_dtype=torch.float16)
+    model = LlamaForCausalLM.from_pretrained(args.input_path, torch_dtype=torch.float16)
     state_dict_list = cut_weights(model, args.world_size, args.cut_row_keys, args.cut_col_keys, args.is_yi6b)
     model_config = model.config
     # create new model config, add the world size parameter
@@ -139,7 +139,7 @@ if __name__ == "__main__":
             transformers_version=model_config.transformers_version
     )
     # create new model according to the model config
-    creat_model = AutoModelForCausalLM(create_config)
+    creat_model = LlamaForCausalLM(create_config)
     for i in range(args.world_size):
         creat_model.load_state_dict(state_dict_list[i]) # load the weights to the model
         creat_model.save_pretrained(os.path.join(args.output_path, 'part_model', str(i))) # save model
