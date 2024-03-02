@@ -233,7 +233,6 @@ void AntiFloatLayerBinder::BindTensor(atb::VariantPack &variantPack)
 {
     const uint32_t tokenOffsetTensorId = IN_TOKENOFFSET;
     const uint32_t seqLenTensorId = IN_SEQLEN;
-    const uint32_t layerIdTensorId = IN_LAYERID;
     variantPack.inTensors.at(tokenOffsetTensorId).hostData = tokenOffset_.data();
     variantPack.inTensors.at(seqLenTensorId).hostData = seqLen_.data();
 }

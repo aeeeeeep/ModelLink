@@ -17,7 +17,6 @@
 #define ATB_SPEED_MODELS_BAICHUAN2_13B_PA_QUANT_MODEL_H
 
 #include "atb_speed/base/model.h"
-#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace baichuan2_13b {
@@ -72,8 +71,6 @@ private:
     Param param_;
     std::vector<int32_t> seqLen_;
 };
-
-REGISTER_MODEL(baichuan2_13b, PagedAttentionQuantModel);
 
 } // namespace baichuan2_13b
 } // namespace atb_speed

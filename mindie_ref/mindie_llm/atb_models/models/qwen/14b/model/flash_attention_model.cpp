@@ -20,9 +20,13 @@
 
 #include "models/qwen/14b/layer/flash_attention_layer.h"
 #include "operations/lmhead.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace qwen_14b {
+
+REGISTER_MODEL(qwen_14b, FlashAttentionModel);
+
 enum InTensorId : int {
     IN_TENSOR_INPUTIDS = 0,
     IN_TENSOR_COSEMBED,
@@ -255,7 +259,7 @@ atb::Status FlashAttentionModel::ParseParam(const std::string &param)
 
 atb::Status FlashAttentionModel::BindParamHostTensor(uint32_t nodeId)
 {
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
     auto &node = graph_.nodes.at(nodeId);

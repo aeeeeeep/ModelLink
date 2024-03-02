@@ -17,7 +17,6 @@
 #define ATB_SPEED_MODELS_VICUNA_7B_ENCODER_WITH_FUSION_MODEL_H
 
 #include "atb_speed/base/model.h"
-#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace minigpt4_vicuna_7b {
@@ -66,8 +65,6 @@ private:
    std::vector<int32_t> tokenOffset_;
    std::vector<int32_t> seqLen_;
 };
-
-REGISTER_MODEL(minigpt4_vicuna_7b, FlashAttentionEncoderModel);
 
 } // namespace minigpt4_vicuna_7b
 } // namespace atb_speed

@@ -21,9 +21,13 @@
 #include "models/starcoder/layer/flash_attention_layer.h"
 
 #include "flash_attention_model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace star_coder {
+
+REGISTER_MODEL(star_coder, FlashAttentionModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 12;
 const int INPUT_TENSOR_COUNT_BEFORE_KEY = 2;
 const int OUTPUT_TENSOR_COUNT_BEFORE_KEY = 1;
@@ -243,7 +247,7 @@ atb::Status FlashAttentionModel::ParseParam(const std::string &param)
 atb::Status FlashAttentionModel::BindParamHostTensor(uint32_t nodeId)
 {
     ATB_LOG(INFO) << "BindParamHostTensor";
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
     auto &node = graph_.nodes.at(nodeId);

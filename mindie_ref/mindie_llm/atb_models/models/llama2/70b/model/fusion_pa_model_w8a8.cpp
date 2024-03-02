@@ -21,9 +21,13 @@
 #include "models/llama2/70b/operation/pa_layer_embedding.h"
 #include "nlohmann/json.hpp"
 #include "parallel_lmhead.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama2_70b {
+
+REGISTER_MODEL(llama2_70b, FusionPAModelW8A8);
+
 const int WEIGHT_COUNT_PER_LAYER = 30;
 const int OPERATION_COUNT_BEFORE_LAYER = 1;
 const int OPERATION_COUNT_AFTER_LAYER = 2;
@@ -107,7 +111,7 @@ atb::Status FusionPAModelW8A8::InferShape(const std::vector<atb::TensorDesc> &in
     const int64_t outDim = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.shape.dims[0];
     outTensorDescs.at(0) = graph_.weightTensors.at(0).desc;
     auto outDimNum = inTensorDescs.at(0).shape.dimNum + 1;
-    for (int i = 0; i < outDimNum - 1; i++) {
+    for (uint i = 0; i < outDimNum - 1; i++) {
         outTensorDescs.at(0).shape.dims[i] = inTensorDescs.at(0).shape.dims[i];
     }
     outTensorDescs.at(0).shape.dims[outDimNum - 1] = outDim * param_.rankSize;
@@ -249,7 +253,7 @@ atb::Status FusionPAModelW8A8::BindParamHostTensor(uint32_t nodeId)
     ATB_LOG(INFO) << "nodeId = " << nodeId;
     ATB_LOG(INFO) << "param_.layerNum = " << param_.layerNum;
 
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
     auto &node = graph_.nodes.at(nodeId);

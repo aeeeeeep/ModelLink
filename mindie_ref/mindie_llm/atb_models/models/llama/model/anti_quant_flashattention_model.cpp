@@ -19,9 +19,13 @@
 #include "models/llama/layer/anti_float_layer.h"
 #include "models/llama/layer/anti_quant_layer.h"
 #include "anti_quant_flashattention_model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama {
+
+REGISTER_MODEL(llama, AntiQuantFlashAttentionModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 25;
 const int ROLLBACK_WEIGHT_COUNT_PER_LAYER = 16;
 const int OUTPUT_TENSOR_COUNT_BEFORE_KEY = 1;
@@ -301,7 +305,7 @@ atb::Status AntiQuantFlashAttentionModel::ParseParam(const std::string &param)
 atb::Status AntiQuantFlashAttentionModel::BindParamHostTensor(uint32_t nodeId)
 {
     ATB_LOG(INFO) << "BindParamHostTensor";
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
 

@@ -77,46 +77,6 @@ enum FusionPALayerTensorId : int {
 
 atb::Status FusionPALayer(const FusionPALayerParam &param, atb::Operation **operation);
 
-static atb::Operation *CreateFusionPALayer(const nlohmann::json &paramJson)
-{
-    FusionPALayerParam param;
-    if (paramJson.find("rmsNormEps") != paramJson.end()) {
-        param.rmsNormEps = paramJson["rmsNormEps"].get<float>();
-    }
-    if (paramJson.find("headNum") != paramJson.end()) {
-        param.headNum = paramJson["headNum"].get<int>();
-    }
-    if (paramJson.find("dk") != paramJson.end()) {
-        param.dk = paramJson["dk"].get<int>();
-    }
-    if (paramJson.find("rank") != paramJson.end()) {
-        param.rank = paramJson["rank"].get<int>();
-    }
-    if (paramJson.find("rankSize") != paramJson.end()) {
-        param.rankSize = paramJson["rankSize"].get<int>();
-    }
-    if (paramJson.find("backend") != paramJson.end()) {
-        param.backend = paramJson["backend"].get<std::string>();
-    }
-    if (paramJson.find("model") != paramJson.end()) {
-        param.model = paramJson["model"].get<std::string>();
-    }
-    if (paramJson.contains("numHeadsPerPartition")) {
-        param.numHeadsPerPartition = paramJson["numHeadsPerPartition"].get<int>();
-    }
-    if (paramJson.contains("rotaryCoeff")) {
-        param.rotaryCoeff = paramJson["rotaryCoeff"].get<int>();
-    }
-
-    ATB_LOG(INFO) << "FusionPALayerParam params headNum:" << param.headNum << ", rmsNormEps:" << param.rmsNormEps
-                  << ", dk:" << param.dk << ", model:" << param.model << ", rank:" << param.rank
-                  << ", rankSize:" << param.rankSize << ", backend:" << param.backend
-                  << ", numHeadsPerPartition:" << param.numHeadsPerPartition;
-    atb::Operation *op;
-    FusionPALayer(param, &op);
-    return op;
-}
-
 class FusionPALayerBinder : public HostTensorBinder {
 public:
     FusionPALayerBinder();

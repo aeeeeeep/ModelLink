@@ -18,9 +18,13 @@
 #include <atb/atb_infer.h>
 #include "atb_speed/log.h"
 #include "visualglm/6b/layer/flash_attention_layer.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace visualglm_6b {
+
+REGISTER_MODEL(visualglm_6b, FlashAttentionModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 12;
 const int WORDEMBEDDINGNODE_WEIGHT_COUNT = 1;
 const int FINALNORMNODE_WEIGHT_COUNT = 2;
@@ -216,7 +220,7 @@ atb::Status FlashAttentionModel::ParseParam(const std::string &param)
 
 atb::Status FlashAttentionModel::BindParamHostTensor(uint32_t nodeId)
 {
-    if (nodeId < param_.operationCountBeforeLayers || nodeId >= param_.operationCountBeforeLayers + param_.layerNum) {
+    if (nodeId < static_cast<uint32_t>(param_.operationCountBeforeLayers) || nodeId >= static_cast<uint32_t>(param_.operationCountBeforeLayers + param_.layerNum)) {
         return atb::NO_ERROR;
     }
 

@@ -23,9 +23,13 @@
 #include "models/baichuan2/13b/layer/flash_attention_layer.h"
 #include "models/baichuan2/13b/layer/flash_attention_quant_layer.h"
 #include "models/baichuan2/13b/layer/flash_attention_quant_oper_layer.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace baichuan2_13b {
+
+REGISTER_MODEL(baichuan2_13b, FlashAttentionQuantModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 17;
 const int WORD_EMBEDDING_NODE_WEIGHT_COUNT = 1;
 const int FINAL_NORM_NODE_WEIGHT_COUNT = 1;
@@ -336,7 +340,7 @@ atb::Status FlashAttentionQuantModel::ParseParam(const std::string &param)
 
 atb::Status FlashAttentionQuantModel::BindParamHostTensor(uint32_t nodeId)
 {
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
     auto &node = graph_.nodes.at(nodeId);

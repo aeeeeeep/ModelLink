@@ -56,7 +56,7 @@ struct ParallelParamV2 {
 
 atb::Status RowParallelLinearV2(const ParallelParamV2 &param, atb::Operation **operation);
 atb::Status ColumnParallelLinearV2(const ParallelParamV2 &param, atb::Operation **operation);
-atb::Status VocabParallelEmbeddingV2(const ParallelParamV2 &param, atb::Operation **operation);
+atb::Status VocabParallelEmbeddingV2(atb::Operation **operation);
 } // namespace common
 } // namespace atb_speed
 

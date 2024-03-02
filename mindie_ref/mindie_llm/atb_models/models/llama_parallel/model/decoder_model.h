@@ -18,7 +18,6 @@
 
 #include <vector>
 #include "atb_speed/base/model.h"
-#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama_parallel {
@@ -49,6 +48,7 @@ public:
         int rank = 0;
         int worldSize = 1;
         std::string backend = "hccl";
+        std::string rankTableFile = "";
         std::vector<int> tokenOffset = {};
         std::vector<int> seqLen = {};
         void FromString(const std::string &param);
@@ -70,8 +70,6 @@ private:
     std::vector<int> seqLen_;
     int32_t layerId_ = 0;
 };
-
-REGISTER_MODEL(llama_parallel, DecoderModel);
 
 }  // namespace llama_parallel
 }  // namespace atb_speed

@@ -20,9 +20,13 @@
 #include "models/llama_adapter/layer/layer.h"
 
 #include "adapter_model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama_adapter {
+
+REGISTER_MODEL(llama_adapter, DecoderAdapterModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 15;
 
 enum InTensorId : int {
@@ -75,12 +79,11 @@ atb::Status DecoderAdapterModel::InferShape(const std::vector<atb::TensorDesc> &
     }
 
     const atb::TensorDesc &keyTensorDesc = inTensorDescs.at(IN_TENSOR_PASTKV_START);
-    const atb::TensorDesc &valueTensorDesc = inTensorDescs.at(IN_TENSOR_PASTKV_START + param_.layerNum);
 
     outTensorDescs.at(0) = inTensorDescs.at(IN_TENSOR_HIDDENSTATES);
 
     ATB_LOG(INFO) << "DecoderAdapterModel InferShape Looping";
-    for (size_t idx = 0; idx < param_.layerNum; ++idx) {
+    for (size_t idx = 0; idx < static_cast<uint32_t>(param_.layerNum); ++idx) {
         outTensorDescs.at(OUT_TENSOR_MAX + idx) = keyTensorDesc;
         outTensorDescs.at(OUT_TENSOR_MAX + idx).shape.dims[1] += 1;
         outTensorDescs.at(OUT_TENSOR_MAX + param_.layerNum + idx) = keyTensorDesc;

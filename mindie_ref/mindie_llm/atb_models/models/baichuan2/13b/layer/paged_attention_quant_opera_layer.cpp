@@ -268,14 +268,28 @@ atb::Status PAQuantOperaLayer(const PAQuantOperaLayerParam &param, atb::Operatio
     selfNormNode.outTensorIds = {INTERNAL_SELF_NORM_OUT};
 
     // up quant
-    atb_speed::common::ParallelParamV2 linearUpParam = {true, false, true, true, false};
+    // atb_speed::common::ParallelParamV2 linearUpParam = {true, false, true, true, false};
+    atb_speed::common::ParallelParamV2 linearUpParam;
+    linearUpParam.isBias = true;
+    linearUpParam.transposeA = false;
+    linearUpParam.transposeB = true;
+    linearUpParam.isQuant = true;
+    linearUpParam.isSparse = false;
+
     atb_speed::common::RowParallelLinearV2(linearUpParam, &matmulUpNode.operation);
     matmulUpNode.inTensorIds = {
         INTERNAL_SELF_NORM_OUT, IN_MLP_UP_WEIGHT, IN_MLP_UP_BIAS, IN_MLP_UP_DEQSCALE, IN_HOLDER, IN_HOLDER, IN_HOLDER};
     matmulUpNode.outTensorIds = {INTERNAL_MATMUL_UP_OUT};
 
     // gata quant
-    atb_speed::common::ParallelParamV2 linearGateParam = {true, false, true, true, false};
+    // atb_speed::common::ParallelParamV2 linearGateParam = {true, false, true, true, false};
+    atb_speed::common::ParallelParamV2 linearGateParam;
+    linearGateParam.isBias = true;
+    linearGateParam.transposeA = false;
+    linearGateParam.transposeB = true;
+    linearGateParam.isQuant = true;
+    linearGateParam.isSparse = false;
+
     atb_speed::common::RowParallelLinearV2(linearGateParam, &matmulGateNode.operation);
     matmulGateNode.inTensorIds = {INTERNAL_SELF_NORM_OUT,
                                   IN_MLP_GATE_WEIGHT,

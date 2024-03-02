@@ -19,9 +19,13 @@
 #include "models/llama/operation/layer_embedding.h"
 #include "models/llama/layer/flash_attention_layer.h"
 #include "flash_attention_model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama {
+
+REGISTER_MODEL(llama, FlashAttentionModel);
+
 const int QUANT_WEIGHT_COUNT_PER_LAYER = 25;
 const int SPARSE_WEIGHT_COUNT_PER_LAYER = 32;
 const int FLOAT_WEIGHT_COUNT_PER_LAYER = 9;
@@ -255,10 +259,12 @@ int64_t FlashAttentionModel::BuildGraph()
             atb_speed::llama::FlashAttentionLayerParam quantModelParam;
             quantModelParam.rmsNormEps = param_.rmsNormEps;
             quantModelParam.headNum = param_.headNum;
+            quantModelParam.kvHeadNum = param_.kvHeadNum;
             quantModelParam.dk = param_.dk;
             quantModelParam.model = "llama13b";
             quantModelParam.rank = param_.rank;
             quantModelParam.rankSize = param_.rankSize;
+            quantModelParam.isTriuMask = param_.isTriuMask;
             quantModelParam.backend = param_.backend;
             quantModelParam.quantModel = true;
             quantModelParam.isEncoder = param_.isEncoder;
@@ -308,10 +314,12 @@ int64_t FlashAttentionModel::BuildGraph()
             atb_speed::llama::FlashAttentionLayerParam sparseModelParam;
             sparseModelParam.rmsNormEps = param_.rmsNormEps;
             sparseModelParam.headNum = param_.headNum;
+            sparseModelParam.kvHeadNum = param_.kvHeadNum;
             sparseModelParam.dk = param_.dk;
             sparseModelParam.model = "llama13b";
             sparseModelParam.rank = param_.rank;
             sparseModelParam.rankSize = param_.rankSize;
+            sparseModelParam.isTriuMask = param_.isTriuMask;
             sparseModelParam.backend = param_.backend;
             sparseModelParam.sparseModel = true;
             sparseModelParam.isEncoder = param_.isEncoder;
@@ -411,7 +419,7 @@ atb::Status FlashAttentionModel::ParseParam(const std::string &param)
 atb::Status FlashAttentionModel::BindParamHostTensor(uint32_t nodeId)
 {
     ATB_LOG(INFO) << "BindParamHostTensor";
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
 

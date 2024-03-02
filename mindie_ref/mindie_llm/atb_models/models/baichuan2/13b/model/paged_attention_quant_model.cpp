@@ -23,9 +23,13 @@
 #include "models/baichuan2/13b/layer/paged_attention_quant_layer.h"
 #include "models/baichuan2/13b/layer/paged_attention_quant_opera_layer.h"
 #include "parallel_lmhead.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace baichuan2_13b {
+
+REGISTER_MODEL(baichuan2_13b, PagedAttentionQuantModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 17;
 const int WORD_EMBEDDING_NODE_WEIGHT_COUNT = 1;
 const int FINAL_NORM_NODE_WEIGHT_COUNT = 1;
@@ -142,7 +146,7 @@ atb::Status PagedAttentionQuantModel::InferShape(const std::vector<atb::TensorDe
     const int64_t outDim = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.shape.dims[0];
     outTensorDescs.at(0) = graph_.weightTensors.at(0).desc;
     auto outDimNum = inTensorDescs.at(0).shape.dimNum + 1;
-    for (int i = 0; i < outDimNum - 1; i++) {
+    for (uint i = 0; i < outDimNum - 1; i++) {
         outTensorDescs.at(0).shape.dims[i] = inTensorDescs.at(0).shape.dims[i];
     }
     if (param_.isLmHeadParallel) {
@@ -348,7 +352,7 @@ atb::Status PagedAttentionQuantModel::ParseParam(const std::string &param)
 
 atb::Status PagedAttentionQuantModel::BindParamHostTensor(uint32_t nodeId)
 {
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
 

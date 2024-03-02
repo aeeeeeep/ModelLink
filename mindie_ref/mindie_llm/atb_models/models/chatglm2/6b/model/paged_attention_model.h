@@ -17,7 +17,6 @@
 #define ATB_SPEED_MODELS_CHATGLM2_6B_DECODER_PA_MODEL_H
 
 #include "atb_speed/base/model.h"
-#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace chatglm2_6b {
@@ -63,8 +62,6 @@ private:
     Param param_;
     std::vector<int32_t> seqLen_;
 };
-
-REGISTER_MODEL(chatglm2_6b, PagedAttentionModel);
 
 } // namespace chatglm2_6b
 } // namespace atb_speed
