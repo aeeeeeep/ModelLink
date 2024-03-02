@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef AQUILA_7B_FLASH_ATTENTION_ROPE_LAYER_H
-#define AQUILA_7B_FLASH_ATTENTION_ROPE_LAYER_H
+#ifndef AQUILA_7B_PAGED_ATTENTION_LAYER_H
+#define AQUILA_7B_PAGED_ATTENTION_LAYER_H
 
 #include <atb/atb_infer.h>
-#include <atb/svector.h>
+#include <nlohmann/json.hpp>
 
 #include "atb_speed/base/hosttensor_binder.h"
 #include "atb_speed/log.h"
@@ -25,31 +25,37 @@
 
 namespace atb_speed {
 namespace aquila_7b {
-struct FlashAttentionRopeLayerParam {
+struct PagedAttentionRopeLayerParam {
     float rmsNormEps = 0;
     int headNum = 0;
     int dk = 0;
     int rank = 0;
     int rankSize = 1;
+    bool isPrefill = false;
+    bool transposedWeight = true;
     std::string backend = "hccl";
     std::string model = "aquila_7b";
 };
 
-void from_json(const nlohmann::json &paramJson, FlashAttentionRopeLayerParam &param);
+void from_json(const nlohmann::json &paramJson, PagedAttentionRopeLayerParam &param);
 
-atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, atb::Operation **operation);
+void reshapeHeads(const atb::Dims &oldShape, atb::Dims &newShape, int headNum);
 
-atb::Operation *CreateFlashAttentionRopeLayer(const nlohmann::json &paramJson);
+atb::Operation *CreatePagedAttentionRopeLayer(const nlohmann::json &paramJson);
 
-class FlashAttentionRopeLayerBinder : public HostTensorBinder {
+atb::Status PagedAttentionRopeLayer(const PagedAttentionRopeLayerParam &param, atb::Operation **operation);
+
+class PagedAttentionRopeLayerBinder : public HostTensorBinder {
 public:
-    FlashAttentionRopeLayerBinder();
-    ~FlashAttentionRopeLayerBinder() override;
+    PagedAttentionRopeLayerBinder();
+
+    ~PagedAttentionRopeLayerBinder() override;
+
     void ParseParam(const nlohmann::json &paramJson) override;
+
     void BindTensor(atb::VariantPack &variantPack) override;
 
 private:
-    std::vector<int32_t> tokenOffset_;
     std::vector<int32_t> seqLen_;
 };
 } // namespace aquila_7b
