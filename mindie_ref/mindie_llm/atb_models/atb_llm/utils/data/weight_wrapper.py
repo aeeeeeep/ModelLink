@@ -84,10 +84,10 @@ class WeightWrapper:
         else:
             self.register_layer_norm_wrapper(layer_dict, f'{norm_name}')
         self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.weight']))
-        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.input_scale']))
-        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.input_offset']))
-        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.deq_scale']))
         self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.quant_bias']))
+        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.deq_scale']))
+        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.input_offset']))
+        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.input_scale']))
         if linear_type == 'attn':
             self.weights.extend([self.placeholder] * 10)
         else:
@@ -115,10 +115,10 @@ class WeightWrapper:
                                                linear_type='attn'):
         self.register_layer_norm_bias(layer_dict, norm_name)
         self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.weight']))
-        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.act_scales']))
-        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.act_zeros']))
-        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.output_scales']))
         self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.output_zeros']))
+        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.output_scales']))
+        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.act_zeros']))
+        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.act_scales']))
         if linear_type == 'attn':
             self.weights.extend([self.placeholder] * 10)
         else:
@@ -136,10 +136,10 @@ class WeightWrapper:
             self.weights.extend([self.placeholder] * 2)
         else:
             self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.weight']))
-            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.input_scale']))
-            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.input_offset']))
-            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.deq_scale']))
             self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.quant_bias']))
+            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.deq_scale']))
+            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.input_offset']))
+            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.input_scale']))
 
     def register_layer_attn(self, layer_dict, pack_type, quantize_type, attn_module_names):
         if quantize_type == 'smooth_quant':

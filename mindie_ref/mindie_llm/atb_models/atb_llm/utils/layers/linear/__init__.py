@@ -178,20 +178,28 @@ class TensorParallelHead(SuperLayer):
 
 class TensorParallelColumnLinear(SuperLayer):
     @classmethod
-    def load_qkv(cls, config, prefix: str, weights, bias: bool, head_size=None):
+    def load_qkv(cls, config, prefix: str, weights, bias: bool, num_heads, num_kv_heads):
         """Specific method when the QKV was joined after the fact"""
         weight = weights.get_weights_col_packed_qkv(
-            prefix, quantize=config.quantize, head_size=head_size
-        )
-        weight = weights.load_column_multi(
-            config,
-            prefixes=[prefix],
-            weights=weights,
-            head_size=head_size
+            prefix, quantize=config.quantize, num_heads=num_heads, num_kv_heads=num_kv_heads
         )
         if bias:
-            # raise NotImplementedError("packed_qkv only implemented for baichuan")
-            bias = weights.get_sharded(f"{prefix}.bias", dim=0)
+            bias = weights.get_tensor_col_packed_qkv(
+                f"{prefix}.bias", num_heads=num_heads, num_kv_heads=num_kv_heads
+            )
+        else:
+            bias = None
+        linear = get_linear(weight, bias, config.quantize)
+        return cls(linear)
+
+    @classmethod
+    def load_gate_up(cls, config, prefix: str, weights, bias: bool):
+        """Specific method when the QKV was joined after the fact"""
+        weight = weights.get_weights_col_packed_mlp(
+            prefix, quantize=config.quantize
+        )
+        if bias:
+            bias = weights.get_tensor_col_packed_mlp(f"{prefix}.bias")
         else:
             bias = None
         linear = get_linear(weight, bias, config.quantize)
