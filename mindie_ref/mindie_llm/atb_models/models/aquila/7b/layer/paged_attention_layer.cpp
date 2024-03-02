@@ -106,7 +106,6 @@ atb::Status PagedAttentionRopeLayer(const PagedAttentionRopeLayerParam &param, a
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
     opGraph.internalTensorNum = INTERMEDIATE_TENSOR_COUNT;
     opGraph.nodes.resize(NODE_COUNT);
-    // opGraph.name = GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
     if (param.isPrefill) {
         opGraph.name = "Prefill_transformer_layer";
     } else {
@@ -155,7 +154,6 @@ atb::Status PagedAttentionRopeLayer(const PagedAttentionRopeLayerParam &param, a
     // rope (q_embedding + k_embedding)
     atb::infer::RopeParam ropeParam;
     ropeParam.rotaryCoeff = 2;
-    // ropeParam.headNum = param.headNum;
     CREATE_OPERATION(ropeParam, &ropeNode.operation);
     ropeNode.inTensorIds = {INTERNAL_Q_LINEAR_OUT, INTERNAL_K_LINEAR_OUT, IN_COS_EMBED, IN_SIN_EMBED, IN_INPUT_LENGTHS};
     ropeNode.outTensorIds = {INTERNAL_Q_EMBED, INTERNAL_K_EMBED};

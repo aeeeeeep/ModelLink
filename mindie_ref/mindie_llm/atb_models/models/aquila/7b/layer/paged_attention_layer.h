@@ -46,7 +46,6 @@ atb::Operation *CreatePagedAttentionRopeLayer(const nlohmann::json &paramJson);
 atb::Status PagedAttentionRopeLayer(const PagedAttentionRopeLayerParam &param, atb::Operation **operation);
 
 class PagedAttentionRopeLayerBinder : public HostTensorBinder {
-
 public:
     PagedAttentionRopeLayerBinder();
 
