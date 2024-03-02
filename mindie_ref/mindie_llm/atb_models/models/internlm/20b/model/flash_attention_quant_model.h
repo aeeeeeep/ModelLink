@@ -17,7 +17,6 @@
 #define ATB_SPEED_MODELS_INTERNLM_20B_FLASH_ATTENTION_QUANT_MODEL_H
 
 #include "atb_speed/base/model.h"
-#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace internlm_20b {
@@ -71,8 +70,6 @@ private:
 
     std::vector<int32_t> seqLen_;
 };
-
-REGISTER_MODEL(internlm_20b, FlashAttentionQuantModel);
 
 } // namespace internlm_20b
 } // namespace atb_speed

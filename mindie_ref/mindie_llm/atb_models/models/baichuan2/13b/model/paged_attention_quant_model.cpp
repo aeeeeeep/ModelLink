@@ -23,9 +23,13 @@
 #include "models/baichuan2/13b/layer/paged_attention_quant_layer.h"
 #include "models/baichuan2/13b/layer/paged_attention_quant_opera_layer.h"
 #include "parallel_lmhead.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace baichuan2_13b {
+
+REGISTER_MODEL(baichuan2_13b, PagedAttentionQuantModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 17;
 const int WORD_EMBEDDING_NODE_WEIGHT_COUNT = 1;
 const int FINAL_NORM_NODE_WEIGHT_COUNT = 1;

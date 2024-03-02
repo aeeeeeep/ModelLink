@@ -21,9 +21,13 @@
 #include "atb_speed/log.h"
 #include "models/gptneox/20b/layer/pa_layer.h"
 #include "parallel_lmhead.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace gptneox_20b {
+
+REGISTER_MODEL(gptneox_20b, PAModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 12;
 const int WORDEMBEDDINGNODE_WEIGHT_COUNT = 1;
 const int FINALNORMNODE_WEIGHT_COUNT = 2;

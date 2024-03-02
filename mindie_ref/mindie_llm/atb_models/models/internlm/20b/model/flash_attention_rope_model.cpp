@@ -19,9 +19,13 @@
 #include "nlohmann/json.hpp"
 
 #include "models/internlm/20b/layer/flash_attention_rope_layer.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace internlm_20b {
+
+REGISTER_MODEL(internlm_20b, FlashAttentionRopeModel);
+
 enum InTensorId : int {
     IN_TENSOR_INPUTIDS = 0,
     IN_TENSOR_COSEMBED,
