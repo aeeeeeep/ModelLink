@@ -39,7 +39,7 @@ from atb_llm.utils.layers import (
 )
 
 from atb_llm.utils.quantize.pack_type import PackType
-from atb_llm.utils.quantize.w8a8 import calc_attn_pack_type, calc_mlp_pack_type
+from atb_llm.utils.quantize.w8a8 import calc_linear_pack_type
 
 
 class LlamaConfig(PretrainedConfig):
@@ -164,8 +164,11 @@ class LlamaMLP(nn.Module):
                 else "none",
             )
         )
+        linear_names = [f'{prefix}.up_proj', f'{prefix}.gate_proj']
+        layer_prefix = '.'.join(prefix.split('.')[:-1])
+        norm_name = f'{layer_prefix}.post_attention_layernorm'
         if weights.quantize == 'w8a8':
-            self.pack_type = calc_mlp_pack_type(prefix, weights)
+            self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
         elif weights.quantize == 'w8a16':
             self.pack_type = PackType.ALL_W8A16
         elif weights.quantize == "smooth_quant":
@@ -254,8 +257,11 @@ class FlashLlamaAttention(torch.nn.Module):
             self.num_key_value_heads = self.num_key_value_heads // weights.process_group.size()
         else:
             self.num_key_value_heads = self.num_heads
+        linear_names = [f'{prefix}.q_proj', f'{prefix}.k_proj', f'{prefix}.v_proj']
+        layer_prefix = '.'.join(prefix.split('.')[:-1])
+        norm_name = f'{layer_prefix}.input_layernorm'
         if weights.quantize == 'w8a8':
-            self.pack_type = calc_attn_pack_type(prefix, weights)
+            self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
         elif weights.quantize == 'w8a16':
             self.pack_type = PackType.ALL_W8A16
         elif weights.quantize == "smooth_quant":
