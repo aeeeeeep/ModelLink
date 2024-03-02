@@ -42,7 +42,7 @@ class W8A8LinearStatic(nn.Module):
         self.register_buffer('weight', weight.to(torch.int8))
 
         self.act_quant_name = 'per_tensor'
-        self.register_buffer('input_scale', (1 / input_scale).to(torch.float16))
+        self.register_buffer('input_scale', input_scale.to(torch.float16))
 
         if input_offset is not None:
             self.register_buffer('input_offset', input_offset.to(torch.int8))
@@ -51,10 +51,10 @@ class W8A8LinearStatic(nn.Module):
 
         self.weight_quant_name = 'per_channel'
 
-        self.register_buffer('deq_scale', deq_scale)
+        self.register_buffer('deq_scale', deq_scale.to(torch.int64))
 
         if quant_bias is not None:
-            self.register_buffer('quant_bias', quant_bias)
+            self.register_buffer('quant_bias', quant_bias.to(torch.int32))
         else:
             self.quant_bias = None
 

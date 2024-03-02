@@ -68,7 +68,7 @@ class SmoothQuantLinearStatic(nn.Module):
         if weight_zeros:
             self.register_buffer('output_zeros', weight_zeros.to(torch.int32))
         else:
-            self.register_buffer('output_zeros', torch.zeros(self.out_features, dtype=torch.float16))
+            self.register_buffer('output_zeros', torch.zeros(self.out_features, dtype=torch.int32))
 
         self.output_quant_name = 'per_channel'
 

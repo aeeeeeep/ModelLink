@@ -181,7 +181,7 @@ class Weights:
         filename, tensor_name = self.get_filename(tensor_name)
         f = self._get_handle(filename)
         tensor = f.get_tensor(tensor_name)
-        if tensor.dtype not in [torch.int8, torch.int32, torch.int64]:
+        if tensor.dtype not in [torch.int8, torch.int32, torch.int64] and "quant_bias" not in tensor_name:
             tensor = tensor.to(dtype=self.dtype)
         return tensor
 
@@ -247,7 +247,7 @@ class Weights:
         else:
             logger.error("Let's make that generic when needed")
             raise AssertionError
-        if tensor.dtype not in [torch.int8, torch.int32, torch.int64]:
+        if tensor.dtype not in [torch.int8, torch.int32, torch.int64] and "input_scale" not in tensor_name and "quant_bias" not in tensor_name:
             tensor = tensor.to(dtype=self.dtype)
         return tensor
 

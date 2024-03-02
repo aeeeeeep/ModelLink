@@ -2,7 +2,7 @@
 import torch
 import torch_npu
 
-from ..quantize.pack_type import PackType
+from ..quantize.pack_type import PackType, LinearType
 from ..log import logger, print_log
 
 
@@ -35,6 +35,8 @@ class MlpModuleNames:
 class WeightWrapper:
     def __init__(self, soc_info, tp_rank):
         self.weights = []
+        self.layer_linear_type = []
+        self.linear_type = []
         self.soc_info = soc_info
         self.tp_rank = tp_rank
         self.placeholder = torch.zeros(1, dtype=torch.float16, device="npu")
@@ -75,8 +77,10 @@ class WeightWrapper:
         self.register_linear(layer_dict, pack_linear_name)
         if linear_type == 'attn':
             self.weights.extend([self.placeholder] * 13)
+            self.layer_linear_type.extend([LinearType.FP.value, LinearType.INVALID.value, LinearType.INVALID.value])
         else:
             self.weights.extend([self.placeholder] * 8)
+            self.layer_linear_type.extend([LinearType.FP.value, LinearType.INVALID.value])
 
     def register_layer_linear_pack_w8a8(self, layer_dict, norm_name, pack_linear_name, pack_type, linear_type='attn'):
         if pack_type == PackType.ALL_W8A8:
@@ -90,8 +94,10 @@ class WeightWrapper:
         self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.input_scale']))
         if linear_type == 'attn':
             self.weights.extend([self.placeholder] * 10)
+            self.layer_linear_type.extend([LinearType.INT.value, LinearType.INVALID.value, LinearType.INVALID.value])
         else:
             self.weights.extend([self.placeholder] * 5)
+            self.layer_linear_type.extend([LinearType.INT.value, LinearType.INVALID.value])
 
     def register_layer_linear_pack_w8a16(self, layer_dict, norm_name, pack_linear_name, linear_type='attn'):
         self.register_layer_norm(layer_dict, norm_name)
@@ -100,8 +106,10 @@ class WeightWrapper:
         self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.weight_offset']))
         if linear_type == 'attn':
             self.weights.extend([self.placeholder] * 11)
+            self.layer_linear_type.extend([LinearType.INT.value, LinearType.INVALID.value, LinearType.INVALID.value])
         else:
             self.weights.extend([self.placeholder] * 6)
+            self.layer_linear_type.extend([LinearType.INT.value, LinearType.INVALID.value])
 
     def register_layer_linear_pack(self, layer_dict, norm_name, pack_linear_name, pack_type, linear_type='attn'):
         if pack_type == PackType.ALL_FP:
@@ -121,25 +129,36 @@ class WeightWrapper:
         self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.act_scales']))
         if linear_type == 'attn':
             self.weights.extend([self.placeholder] * 10)
+            self.layer_linear_type.extend([LinearType.INT.value, LinearType.INVALID.value, LinearType.INVALID.value])
         else:
             self.weights.extend([self.placeholder] * 5)
+            self.layer_linear_type.extend([LinearType.INT.value, LinearType.INVALID.value])
 
     def register_layer_linear(self, layer_dict, linear_name, quantize_type):
         if layer_dict[f'{linear_name}.linear.weight'].dtype in [torch.float16, torch.bfloat16]:
             self.register_linear(layer_dict, linear_name)
             self.weights.extend([self.placeholder] * 3)
-            return
-        if quantize_type == 'w8a16':
+            self.layer_linear_type.append(LinearType.FP.value)
+        elif quantize_type == 'w8a16':
             self.register_linear(layer_dict, linear_name)
             self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.weight_scale']))
             self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.weight_offset']))
             self.weights.extend([self.placeholder] * 2)
+            self.layer_linear_type.append(LinearType.INT.value)
+        elif quantize_type == 'smooth_quant':
+            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.weight']))
+            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.act_scales']))
+            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.act_zeros']))
+            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.output_scales']))
+            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.output_zeros']))
+            self.layer_linear_type.append(LinearType.INT.value)
         else:
             self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.weight']))
             self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.quant_bias']))
             self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.deq_scale']))
             self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.input_offset']))
             self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.input_scale']))
+            self.layer_linear_type.append(LinearType.INT.value)
 
     def register_layer_attn(self, layer_dict, pack_type, quantize_type, attn_module_names):
         if quantize_type == 'smooth_quant':
@@ -195,3 +214,9 @@ class WeightWrapper:
 
     def register_model_lmhead(self, model_dict, lmhead_name):
         self.weights.append(model_dict[f'{lmhead_name}.linear.weight'])
+    
+    def register_layer(self, layer_dict, attn_pack_type, attn_module_names, mlp_pack_type, mlp_module_names, quantize_type):
+        self.layer_linear_type.clear()
+        self.register_layer_attn(layer_dict, attn_pack_type, quantize_type, attn_module_names)
+        self.register_layer_mlp(layer_dict, mlp_pack_type, quantize_type, mlp_module_names)
+        self.linear_type.append(self.layer_linear_type.copy())
