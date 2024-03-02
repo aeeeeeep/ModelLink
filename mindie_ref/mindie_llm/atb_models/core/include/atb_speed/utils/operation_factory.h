@@ -41,7 +41,7 @@ private:
         struct Register##_##nameSpace##_##operationCreateFunc {                                              \
             inline Register##_##nameSpace##_##operationCreateFunc()                                          \
             {                                                                                                \
-                ATB_LOG(INFO) << "register " << #nameSpace << "_" << #operationCreateFunc;                   \
+                ATB_LOG(INFO) << "register operation " << #nameSpace << "_" << #operationCreateFunc;                   \
                 OperationFactory::Register(OPERATION_NAMESPACE_STRINGIFY(nameSpace##_##operationCreateFunc), \
                     &(operationCreateFunc));                                                                 \
             }                                                                                                \
