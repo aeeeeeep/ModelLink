@@ -19,6 +19,8 @@
   - [Script](#script)
   - [Performance](#performance)
     - [Machine performance](#machine-performance)
+  - [Inference](#Inference)
+  - [Evaluation](#Evaluation)
 
 - [Qwen-72B](#Qwen-72B)
   - [Training](#training)
@@ -371,7 +373,57 @@ The performance of Qwen-14B in **Ascend NPU** and **Reference**:
 |   NPUs    | Qwen-14B |             1560             |
 | Reference | Qwen-14B |             1578             |
 
+## Inference
 
+Config qwen-14b inference script: tasks/inference/generate_qwen_14b_ptd.sh
+
+```bash
+# ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+ 
+# modify script model path and tokenizer path
+CHECKPOINT="your model directory path"
+TOKENIZER_PATH=./qwen-14b-hf
+```
+
+Launch qwen-14b inference script: tasks/inference/generate_qwen_14b_ptd.sh
+```bash
+bash tasks/inference/generate_qwen_7b_ptd.sh
+```
+
+Some inference samples are as follows:
+![Inference](../../sources/images/qwen/qwen_14b_inference.png)
+
+
+## Evaluation
+
+We use the [CEval benchmark](https://huggingface.co/datasets/ceval/ceval-exam) and [MMLU benchmark](https://huggingface.co/datasets/cais/mmlu) to evaluate our model. 
+
+Config qwen-14b evaluation script: tasks/evaluation/evaluate_qwen_14b_ptd.sh
+
+```bash
+# ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+# Modify the model parameter path and vocabulary path
+TOKENIZER_PATH=./qwen-14b-hf  # vocabulary path
+CHECKPOINT="your model directory path"  # parameter path
+
+# Configure the task type and dataset path
+DATA_PATH="./mmlu/data/test/"  # "./ceval/val/" for ceval task
+TASK="mmlu"  # "ceval" for ceval task
+```
+
+Launch qwen-14b evaluation
+
+```bash
+bash ./tasks/evaluation/evaluate_qwen_14b_ptd.sh
+```
+
+| Task | Subset | Question | OpenSource | NPU |
+|:---:|:---:|:---:|:---:|:---:|
+| CEval | 52 | 1346 | 72.1 | 71.1 |
+| MMLU | 57 | 14042 | 66.3 | 66.1 |
 # Qwen-72B
 
 ## Training
