@@ -12,38 +12,44 @@
         "--untie-embeddings-and-output-weights"
     ],
 
-    "INFERENCE_PARAM": [
+    "INFERENCE_AUX": [
         "--tokenizer-type", "PretrainedFromHF",
-        "--tokenizer-model", "./tokenizer.model",
-        "--tokenizer-name-or-path", "./llama2-7B",
+        "--tokenizer-model", "./llama2-7B-hf/tokenizer.model",
+        "--tokenizer-name-or-path", "./llama2-7B-hf",
         "--load", "./llama2-7B-tp8-pp1",
-        "--max-new-tokens", "256",
         "--seed", "42",
         "--tokenizer-not-use-fast",
         "--exit-on-missing-checkpoint"
     ],
 
+    "INFERENCE_PARAM": [
+        "--max-new-tokens", "256"
+    ],
+
     "EVALUATION_PARAM": [
-        "--use-checkpoint-args",
-        "--task-data-path", "./eval_dataset/boolq/test/", "./eval_dataset/mmlu/test/",
-        "--task", "boolq",
+        "--task-data-path", "./boolq/test/", "./mmlu/test/",
         "--max-new-tokens", "2"
     ],
 
     "LORA_PARAM": [
         "--finetune",
+        "--is-instruction-dataset",
+        "--tokenizer-type", "PretrainedFromHF",
+        "--tokenizer-name-or-path", "./llama2-7B-hf",
         "--lora-r", "16",
         "--lora-alpha", "32",
         "--lora-target-modules", "query_key_value", "dense", "dense_h_to_4h", "dense_4h_to_h",
         "--load", "./llama2-7B-tp8-pp1",
-        "--save", "./lora_weight",
-        "--data-path", "./alpaca_text_document",
+        "--save", "./lora-save-weight/llama2-7B",
+        "--data-path", "./tune-dataset-llama2-7B/alpaca",
         "--train-iters", "10"
     ],
 
     "TRAINING_PARAM": [
-        "--save", "./save_weight",
-        "--data-path", "./alpaca_text_document",
+        "--tokenizer-type", "Llama2Tokenizer",
+        "--tokenizer-model", "./llama2-7B-hf/tokenizer.model",
+        "--save", "./save-weight-llama2-7B",
+        "--data-path", "./pretrain-dataset-llama2-7B/alpaca_text_document",
         "--train-iters", "15"
     ],
 
@@ -93,8 +99,36 @@
         "--eval-interval", "1000",
         "--eval-iters", "0",
         "--num-workers", "0",
-        "--distributed-backend", "nccl",
-        "--tokenizer-type", "Llama2Tokenizer",
-        "--tokenizer-model", "./tokenizer.model"
+        "--distributed-backend", "nccl"
+    ],
+
+    "PROCESS_PRETRAIN_DATA": [
+        "--input", "./train-00000-of-00001-a09b74b3ef9c3b56.parquet",
+        "--tokenizer-type", "PretrainedFromHF",
+        "--output-prefix", "./pretrain-dataset-llama2-7B/alpaca",
+        "--tokenizer-name-or-path", "./llama2-7B-hf",
+        "--workers", "4",
+        "--log-interval", "1000"
+    ],
+
+    "PROCESS_INSTRUCTION_DATA": [
+        "--input", "./train-00000-of-00001-a09b74b3ef9c3b56.parquet",
+        "--tokenizer-type", "PretrainedFromHF",
+        "--handler-name", "GeneralInstructionHandler",
+        "--output-prefix", "./tune-dataset-llama2-7B/alpaca",
+        "--tokenizer-name-or-path", "./llama2-7B-hf",
+        "--workers", "4",
+        "--log-interval", "1000",
+        "--append-eod"
+    ],
+
+    "CONVERT_CKPT_FROM_HF": [
+        "--model-type", "GPT",
+        "--loader", "llama2_hf",
+        "--saver", "megatron",
+        "--target-tensor-parallel-size", "8",
+        "--load-dir", "./llama2-7B-hf",
+        "--save-dir", "./llama2-7B-tp8-pp1",
+        "--tokenizer-model", "./llama2-7B-hf/tokenizer.model"
     ]
 }

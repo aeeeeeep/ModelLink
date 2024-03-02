@@ -4,6 +4,7 @@ import os
 import subprocess
 import glob
 from pathlib import Path
+from utils import ParamConfig
 import torch
 
 from ascendspeed import megatron_adaptor
@@ -11,26 +12,18 @@ import modellink
 
 
 class TestConvertCkptFromHuggingface(unittest.TestCase):
-    def setUp(self):
+    def setUp(self, config=ParamConfig):
         # configure params, the index starts from 1
-        sys.argv = [
-            sys.argv[0],
-            "--model-type", "GPT",
-            "--loader", "llama2_hf",
-            "--saver", "megatron",
-            "--target-tensor-parallel-size", "8",
-            "--load-dir", "./llama-2-7b-hf",
-            "--save-dir", "./llama2-7B-tp8-pp1",
-            "--tokenizer-model", "./llama-2-7b-hf/tokenizer.model"
-        ]
+        self.config = config
+        sys.argv = [sys.argv[0]] + self.config.convert_ckpt_param
     
     def test_file_exsit(self):
         """
         Test if the file in the `--load-dir` exsit, including `.bin`, `.json`...
         """
-        bin_file = glob.glob(os.path.join(sys.argv[10], "*.bin"))
+        bin_file = glob.glob(os.path.join(self.config.convert_ckpt_param[9], "*.bin"))
         self.assertEqual(len(bin_file), 2)
-        self.assertTrue(os.path.exists(os.path.join(sys.argv[10], "pytorch_model.bin.index.json")))
+        self.assertTrue(os.path.exists(os.path.join(self.config.convert_ckpt_param[9], "pytorch_model.bin.index.json")))
     
     def test_convert_weights_form_huggingface(self):
         """
@@ -42,12 +35,12 @@ class TestConvertCkptFromHuggingface(unittest.TestCase):
         file_path = os.path.join(base_dir, "tools/checkpoint/util.py")
         arguments = sys.argv[1:]
         subprocess.run(["python", file_path] + arguments)
-        output_dir = os.path.join(sys.argv[12], "iter_0000001")
+        output_dir = os.path.join(self.config.convert_ckpt_param[11], "iter_0000001")
         weight_content = torch.load(os.path.join(output_dir, "mp_rank_00/model_optim_rng.pt"))
         weight_common_content = weight_content['model']['language_model'] # extract commmon content
 
         # embedding, encoder, output_layer is three out layers.
-        self.assertEqual(len(os.listdir(output_dir)), int(sys.argv[8]))
+        self.assertEqual(len(os.listdir(output_dir)), int(self.config.convert_ckpt_param[7]))
         self.assertEqual(weight_common_content['embedding']['word_embeddings']['weight'].size(), torch.Size([4000, 4096]))
         self.assertEqual(weight_common_content['encoder']['final_norm.weight'].size(), torch.Size([4096]))
 
