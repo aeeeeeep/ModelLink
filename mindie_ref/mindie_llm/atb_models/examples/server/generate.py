@@ -40,6 +40,8 @@ def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length
             raise AssertionError
         logits = logits[batch.lm_head_indices]
 
+    if ENV.logits_save_enable:
+        torch.save(logits.cpu(), ENV.logits_save_filepath + len(batch.req_list[0].out_token_list) + ".pth")
     next_token = next_token_chooser(logits)
     next_token_list = next_token.tolist()
 
