@@ -79,7 +79,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
     atb_speed::common::NormLinearParam<NormParamType> qNormLinearParam;
     qNormLinearParam.isAnti = param.isAnti;
     qNormLinearParam.fusionLinearParam.quantType \
-        = param.layerLinearQuantType[0] == atb_speed::common::LinearType::FP ? NO_QUANT : RMS_NORM_QUANT_LINEAR_DEQUANT;
+        = param.layerLinearQuantType[0] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
     qNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
     qNormLinearParam.fusionLinearParam.hasBias = param.hasBias;
     qNormLinearParam.normParamType = param.normParamType;
@@ -144,7 +144,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         atb_speed::common::NormLinearParam<NormParamType> kNormLinearParam;
         kNormLinearParam.isAnti = param.isAnti;
         kNormLinearParam.fusionLinearParam.quantType \
-            = param.layerLinearQuantType[1] == atb_speed::common::LinearType::FP ? NO_QUANT : RMS_NORM_QUANT_LINEAR_DEQUANT;
+            = param.layerLinearQuantType[1] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
         kNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         kNormLinearParam.fusionLinearParam.hasBias = param.hasBias;
         kNormLinearParam.normParamType = param.normParamType;
@@ -163,7 +163,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         atb_speed::common::NormLinearParam<NormParamType> vNormLinearParam;
         vNormLinearParam.isAnti = param.isAnti;
         vNormLinearParam.fusionLinearParam.quantType \
-            = param.layerLinearQuantType[2] == atb_speed::common::LinearType::FP ? NO_QUANT : RMS_NORM_QUANT_LINEAR_DEQUANT;
+            = param.layerLinearQuantType[2] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
         vNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         vNormLinearParam.fusionLinearParam.hasBias = param.hasBias;
         vNormLinearParam.normParamType = param.normParamType;

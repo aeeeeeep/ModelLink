@@ -23,11 +23,7 @@
 
 namespace atb_speed {
 namespace common {
-struct PositionalEmbeddingParam {
-    bool unpadInputs = false;
-};
-
-atb::Status PositionalEmbedding(const PositionalEmbeddingParam &param, atb::Operation **operation);
+atb::Status PositionalEmbedding(atb::Operation **operation);
 }  // namespace common
 }  // namespace atb_speed
 #endif

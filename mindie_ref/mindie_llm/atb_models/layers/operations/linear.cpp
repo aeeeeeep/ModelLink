@@ -48,7 +48,7 @@ atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operat
     opGraph.internalTensorNum = param.quantType == LINEAR_QUANT ? QUANT_DEQUANT_INTERMEDIATE_TENSOR_COUNT : DEFAULT_INTERMEDIATE_TENSOR_COUNT;
     opGraph.nodes.resize(param.quantType == LINEAR_QUANT ? QUANT_DEQUANT_NODE_COUNT : DEFAULT_NODE_COUNT);
     opGraph.name = param.quantType == NO_QUANT ? "LinearNoQuant" : \
-        param.quantType == RMS_NORM_QUANT_LINEAR_DEQUANT ? "LinearDequantOnly" : "LinearQuant";
+        param.quantType == NORM_QUANT_LINEAR_DEQUANT ? "LinearDequantOnly" : "LinearQuant";
 
     size_t nodeId = 0;
 
@@ -82,7 +82,7 @@ atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operat
         linearParam.hasBias = true;
         CREATE_OPERATION(linearParam, &linearNode.operation);
         linearNode.inTensorIds = {
-            param.quantType == RMS_NORM_QUANT_LINEAR_DEQUANT ? LinearTensorIdx::IN_INPUT : LinearTensorIdx::INTERMIDATE_INPUT,
+            param.quantType == NORM_QUANT_LINEAR_DEQUANT ? LinearTensorIdx::IN_INPUT : LinearTensorIdx::INTERMIDATE_INPUT,
             LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_BIAS, LinearTensorIdx::IN_DESCALE
         };
     }

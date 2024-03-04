@@ -105,11 +105,10 @@ atb::Status DecoderModel::InferShape(
     outTensorDescs.at(0).format = graph_.weightTensors.at(0).desc.format;
     outTensorDescs.at(0).shape.dimNum = inTensorDescs.at(0).shape.dimNum + 1;
 
-    if (param_.isFA) {
-        outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
-        outTensorDescs.at(0).shape.dims[1] = 1;
-    } else {
-        outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
+    outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
+    if (param_.isFA) {  // unpadInputs = false
+        outTensorDescs.at(0).shape.dims[1] = param_.isPrefill ? inTensorDescs.at(graph_.inTensors.size() - 1).shape.dims[0] : 1;
+    } else {  // unpadInputs = true
         if (param_.isPrefill) {
             outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(graph_.inTensors.size() - 1).shape.dims[0];
         }
@@ -205,9 +204,7 @@ int64_t DecoderModel::BuildGraph()
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)};
 
     auto &positionalEmbeddingNode = graph_.nodes.at(nodeId++);
-    atb_speed::common::PositionalEmbeddingParam positionalEmbeddingParam;
-    positionalEmbeddingParam.unpadInputs = !param_.isFA;
-    atb_speed::common::PositionalEmbedding(positionalEmbeddingParam, &op);
+    atb_speed::common::PositionalEmbedding(&op);
     positionalEmbeddingNode.operation.reset(op);
     positionalEmbeddingNode.inTensors = {
         &graph_.inTensors.at(IN_TENSOR_POSITION_IDS),

@@ -33,13 +33,15 @@ class MlpModuleNames:
 
 
 class WeightWrapper:
-    def __init__(self, soc_info, tp_rank):
+    def __init__(self, soc_info, tp_rank, attn_module_names, mlp_module_names):
         self.weights = []
         self.layer_linear_type = []
         self.linear_type = []
         self.soc_info = soc_info
         self.tp_rank = tp_rank
         self.placeholder = torch.zeros(1, dtype=torch.float16, device="npu")
+        self.attn_module_names = attn_module_names
+        self.mlp_module_names = mlp_module_names
 
     def weight_format_cast(self, tensor):
         if not self.soc_info.need_nz:
@@ -215,8 +217,8 @@ class WeightWrapper:
     def register_model_lmhead(self, model_dict, lmhead_name):
         self.weights.append(model_dict[f'{lmhead_name}.linear.weight'])
     
-    def register_layer(self, layer_dict, attn_pack_type, attn_module_names, mlp_pack_type, mlp_module_names, quantize_type):
+    def register_layer(self, layer_dict, attn_pack_type, mlp_pack_type, quantize_type):
         self.layer_linear_type.clear()
-        self.register_layer_attn(layer_dict, attn_pack_type, quantize_type, attn_module_names)
-        self.register_layer_mlp(layer_dict, mlp_pack_type, quantize_type, mlp_module_names)
+        self.register_layer_attn(layer_dict, attn_pack_type, quantize_type, self.attn_module_names)
+        self.register_layer_mlp(layer_dict, mlp_pack_type, quantize_type, self.mlp_module_names)
         self.linear_type.append(self.layer_linear_type.copy())

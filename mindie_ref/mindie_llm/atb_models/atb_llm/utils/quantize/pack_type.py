@@ -7,15 +7,11 @@ class PackType(Enum):
     ALL_W8A8 = 2
     ALL_W8A8_ANTI = 3
     MIX_W8A8 = 4
-    MIX_W8A8_ANTI = 5,
-    ALL_W8A16 = 6,
+    MIX_W8A8_ANTI = 5
+    ALL_W8A16 = 6
 
-class LinearQuantType(Enum):
-    NO_QUANT = 0
-    RMS_NORM_QUANT_LINEAR_DEQUANT = 1
-    LINEAR_QUANT = 2
 
 class LinearType(Enum):
-    INVALID = 0
-    FP = 1
-    INT = 2
+    INVALID = -1
+    FP = 0
+    INT = 1

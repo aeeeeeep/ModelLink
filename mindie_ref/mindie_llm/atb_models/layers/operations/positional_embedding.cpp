@@ -62,10 +62,9 @@ atb::Status PositionalEmbedding(const PositionalEmbeddingParam &param, atb::Oper
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(1);
         outTensorDescs.at(0).shape.dimNum = 2;
-        if (param.unpadInputs) {
-            outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
-        } else {
-            outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0] * inTensorDescs.at(0).shape.dims[1];
+        outTensorDescs.at(0).shape.dims[0] = 1;
+        for (uint64_t i = 0; i < inTensorDescs.at(0).shape.dimNum; i++) {
+            outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[i];
         }
 
         outTensorDescs.at(1) = outTensorDescs.at(0);

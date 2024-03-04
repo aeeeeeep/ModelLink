@@ -62,8 +62,13 @@ atb::Status CreateLmHead(const LmHeadParam &param, atb::Operation **operation, T
     if (parallelType == ROW_PARALLEL) {
         atb::Node &sliceNode = opGraph.nodes.at(nodeId++);
         atb::infer::SliceParam slicePassParam;
-        slicePassParam.offsets = {0, 0, param.hiddenSizePerAttentionHead * param.linearParallelParam.tensorParallelInfo.rank};
-        slicePassParam.size = {-1, -1, param.hiddenSizePerAttentionHead};
+        if (param.unpadInputs) {
+            slicePassParam.offsets = {0, param.hiddenSizePerAttentionHead * param.linearParallelParam.tensorParallelInfo.rank};
+            slicePassParam.size = {-1, param.hiddenSizePerAttentionHead};
+        } else {
+            slicePassParam.offsets = {0, 0, param.hiddenSizePerAttentionHead * param.linearParallelParam.tensorParallelInfo.rank};
+            slicePassParam.size = {-1, -1, param.hiddenSizePerAttentionHead};
+        }
         CREATE_OPERATION(slicePassParam, &sliceNode.operation);
         if (param.gatherAhead) {
             sliceNode.inTensorIds = {config.INTERMEDIATE_GATHER_OUT};

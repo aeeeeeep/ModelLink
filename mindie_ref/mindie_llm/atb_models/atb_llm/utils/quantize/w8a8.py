@@ -51,10 +51,10 @@ class W8A8LinearStatic(nn.Module):
 
         self.weight_quant_name = 'per_channel'
 
-        self.register_buffer('deq_scale', deq_scale.to(torch.int64))
+        self.register_buffer('deq_scale', deq_scale)
 
         if quant_bias is not None:
-            self.register_buffer('quant_bias', quant_bias.to(torch.int32))
+            self.register_buffer('quant_bias', quant_bias)
         else:
             self.quant_bias = None
 

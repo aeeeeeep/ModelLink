@@ -51,7 +51,7 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
     size_t nodeId = 0;
 
     atb::Node &normNode = opGraph.nodes.at(nodeId++);
-    if (param.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::RMS_NORM_QUANT_LINEAR_DEQUANT) {
+    if (param.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::NORM_QUANT_LINEAR_DEQUANT) {
         CREATE_OPERATION(param.normQuantParamType, &normNode.operation);
         normNode.inTensorIds = {
             NormLinearTensorIdx::IN_INPUT,

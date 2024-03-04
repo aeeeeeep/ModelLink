@@ -138,14 +138,12 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
             up_name='mlp.up_proj',
             down_name='mlp.down_proj'
         )
-        weight_wrapper = WeightWrapper(self.soc_info, self.tp_rank)
+        weight_wrapper = WeightWrapper(self.soc_info, self.tp_rank, attn_module_names, mlp_module_names)
         weight_wrapper.register_embedding(self.model.state_dict(), 'embed_tokens')
         for i in range(self.num_layers):
             layer = self.model.layers[i]
             layer_dict = layer.state_dict()
-            weight_wrapper.register_layer(
-                layer_dict, layer.self_attn.pack_type, attn_module_names,
-                layer.mlp.pack_type, mlp_module_names, self.quantize)
+            weight_wrapper.register_layer(layer_dict, layer.self_attn.pack_type, layer.mlp.pack_type, self.quantize)
             if self.soc_info.need_nz:
                 del layer.self_attn
                 del layer.post_attention_layernorm
