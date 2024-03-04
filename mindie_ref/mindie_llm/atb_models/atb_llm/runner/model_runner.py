@@ -35,7 +35,7 @@ class ModelRunner:
         self.world_size = world_size
         if ENV.bind_cpu:
             try:
-                bind_cpus(world_size, rank, ratio=1.0)
+                bind_cpus(world_size, self.npu_id, ratio=1.0)
             except Exception as err:
                 logger.error(f"Binding CPU failed\n{err}\n skip.")
         self.model_cls, self.config, self.tokenizer = \
@@ -48,8 +48,11 @@ class ModelRunner:
         self.quantize = self.config.quantize
         self.dtype = self.config.torch_dtype
 
+        print_log(rank, logger.info, f'model_runner.quantize: {self.quantize}\n, '
+                                     f'model_runner.dytpe: {self.dtype}')
+
         if self.dtype not in [torch.float16, torch.bfloat16]:
-            raise ValueError(f'unsupported type: {self.torch_type}')
+            raise ValueError(f'unsupported type: {self.dtype}')
 
         self.process_group, self.device = initialize_distributed(self.rank, self.npu_id, world_size)
 
