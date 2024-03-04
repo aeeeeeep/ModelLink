@@ -20,16 +20,17 @@
 import json
 import math
 import os
+from typing import Optional, List, Tuple
 
 import torch
 import torch.distributed
 import torch_npu
 from loguru import logger
 from torch import nn
+
 from transformers.activations import ACT2FN
 from transformers.modeling_utils import PreTrainedModel
 from atb_llm.models.gpt_neox.config import GPTNeoXConfig
-from typing import Optional, List, Tuple
 
 from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
 from atb_llm.utils.layers import (
