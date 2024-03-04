@@ -2,6 +2,7 @@
 import json
 from abc import abstractmethod
 from typing import Optional, List, Tuple, Union
+import os
 
 import math
 import torch
@@ -10,6 +11,7 @@ from torch.nn import CrossEntropyLoss
 from transformers.configuration_utils import PretrainedConfig
 from transformers.modeling_outputs import CausalLMOutputWithPast
 from transformers.modeling_utils import PreTrainedModel
+import torch.nn.functional as F
 
 from atb_llm.utils.log import logger
 from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
@@ -98,9 +100,13 @@ class CausalLM(PreTrainedModel):
         self.mask_full = None
         self.mask_inc = None
 
+        self.rotary_half = hasattr(config, "rotary_half") or None
         self.ascend_rotary_embedding = PositionRotaryEmbedding.static(dim=self.head_size, base=10000.0,
-                                                                      device="cpu").to(weights.device)
+                                                                      device="cpu", rotary_half=self.rotary_half).to(weights.device)
         self.max_position_embeddings = config.max_position_embeddings
+        self.max_rope_position_embeddings = self.max_position_embeddings
+        if hasattr(config, "max_position_embeddings_for_npu"):
+            self.max_position_embeddings = config.max_position_embeddings_for_npu
         self.quantize = config.quantize
 
         self.init_ascend_operations(config)
@@ -113,6 +119,9 @@ class CausalLM(PreTrainedModel):
         self.v_cache = None
         self.past_key_values_length = 0
         self.nz_dim = 16
+        self.left_padding_mask = False
+        self.left_padding_mask = hasattr(config, "left_padding_mask") or False
+        self.max_seq_len = int(os.environ.get("MAX_SEQ_LEN", default=2048))
 
     def weight_format_cast(self, tensor):
         if not self.soc_info.need_nz:
@@ -184,6 +193,83 @@ class CausalLM(PreTrainedModel):
         else:
             position_ids = position_ids.view(-1, seq_length).long()
         return position_ids
+
+
+    def get_masks(self, input_ids, past_key_values, padding_mask=None):
+        batch_size, seq_length = input_ids.shape
+        full_attention_mask = torch.ones(batch_size, seq_length, seq_length, device=input_ids.device)
+        full_attention_mask.tril_()
+        if self.past_key_values_length:
+
+            full_attention_mask = torch.cat((torch.ones(batch_size, seq_length, self.patt_key_values_length - 1,
+                                                        device=input_ids.device), full_attention_mask), dim=-1)
+        if padding_mask is not None:
+            full_attention_mask = full_attention_mask * padding_mask.unsqueeze(1)
+        if not past_key_values and padding_mask is not None:
+            full_attention_mask -= padding_mask.unsqueeze(-1) - 1
+        full_attention_mask = (full_attention_mask < 0.5).unsqueeze(1)
+        full_attention_mask.unsqueeze_(1)
+        return full_attention_mask
+
+    def init_left_padding_mask(self, input_ids, attention_mask, past_key_values):
+        batch_size, seq_length = input_ids.shape
+        full_flag = seq_length > 1
+        if full_flag:
+            if (attention_mask is not None and not attention_mask.all()) or (past_key_values and seq_length != 1):
+                attention_mask_acl = self.get_masks(
+                    input_ids, past_key_values, padding_mask=attention_mask)
+            else:
+                attention_mask_acl = torch.ones(
+                    batch_size, 1, seq_length, seq_length, device=input_ids.device, dtype=torch.bool)
+                attention_mask_acl = attention_mask_acl.tril()
+                attention_mask_acl = ~attention_mask_acl
+
+                # attention_mask for flashattention
+            self.mask_full = torch.zeros(
+                (self.batch_num, self.max_seq_len, self.max_seq_len), device='npu', dtype=torch.half
+            )
+
+            if attention_mask_acl is not None:
+                attention_mask_acl = attention_mask_acl[:, 0, :, :].to(torch.half)
+                self.mask_full[:self.batch_num, :seq_length, :attention_mask_acl.size()[-1]] -= 10000 * (
+                    attention_mask_acl)
+            if self.soc_info.need_nz:
+                self.mask_full = torch_npu.npu_format_cast(
+                    self.mask_full.view(self.batch_num, self.max_seq_len, self.max_seq_len // self.nz_dim,
+                                                    self.nz_dim).transpose(1, 2).contiguous(), 29)
+        else:
+
+            if self.mask_full is None:
+                if (attention_mask is not None and not attention_mask.all()) or (past_key_values and seq_length != 1):
+
+                    attention_mask_acl = self.get_masks(
+                        input_ids, past_key_values, padding_mask=tttention_mask)
+                else:
+
+                    attention_mask_acl = torch.zeros(batch_size, 1, 1, seq_length, device='npu', dtype=torch.bool)
+
+                # flashattention inputs
+                if attention_mask_acl is not None:
+
+                    attention_mask_acl = attention_mask_acl[:, 0, 0, :].to(torch.half)
+                    if self.soc_info.need_nz:
+                        self.mask_full = torch.zeros(
+                            (self.batch_num, self.nz_dim, self.max_seq_len), device='npu', dtype=torch.half
+                        )
+                        self.mask_full[:self.batch_num, :self.nz_dim, :attention_mask_acl.size()[-1]] -= 10000 * (
+                            F.pad(attention_mask_acl.unsqueeze(-2), (0, 0, 0, 15)))
+                    else:
+                        self.mask_full = torch.zeros(
+                            (self.batch_num, 1, self.max_seq_len), device='npu', dtype=torch.half
+                        )
+                        self.mask_full[:self.batch_num, :1, :attention_mask_acl.size()[-1]] -= 10000 * (
+                            attention_mask_acl.unsqueeze(-2))
+
+                if self.soc_info.need_nz:
+                    self.mask_full = torch_npu.npu_format_cast(
+                        self.mask_full.view(self.batch_num, self.nz_dim, self.max_seq_len // self.nz_dim, self.nz_dim
+                    ).transpose(1, 2).contiguous(), 29)
+
 
     def init_mask(self, input_ids, attention_mask):
         batch_size, seq_length = input_ids.shape
@@ -264,6 +350,8 @@ class CausalLM(PreTrainedModel):
                                 cu_seqlen_prefill):
         if cu_seqlen_prefill:
             acl_model_out = self.acl_encoder_operation.execute(acl_inputs, acl_param)
+            if self.left_padding_mask:
+                self.mask_full = None
         else:
             acl_model_out = self.acl_decoder_operation.execute(acl_inputs, acl_param)
         acl_hidden_state = acl_model_out[0]
@@ -292,14 +380,17 @@ class CausalLM(PreTrainedModel):
 
         self.init_kvcache(input_ids, past_key_values)
         position_ids = self.init_position_ids(input_ids, position_ids)
-        self.init_mask(input_ids, attention_mask)
+        if self.left_padding_mask:
+            self.init_left_padding_mask(input_ids, attention_mask, past_key_values)
+        else:
+            self.init_mask(input_ids, attention_mask)
 
         cu_seqlen_prefill = True if not past_key_values else False
         acl_inputs, acl_param = self.prepare_inputs_for_ascend(
             input_ids,
             position_ids,
             cu_seqlen_prefill,
-            self.max_position_embeddings,
+            self.max_rope_position_embeddings,
         )
         logits = self.execute_ascend_operator(acl_inputs, acl_param, cu_seqlen_prefill)
 
@@ -334,7 +425,10 @@ class CausalLM(PreTrainedModel):
         position_ids = kwargs.get("position_ids", None)
         if attention_mask is not None and position_ids is None:
             position_ids = attention_mask.long().cumsum(-1) - 1
-            position_ids.masked_fill_(attention_mask == 0, 1)
+            if self.left_padding_mask:
+                position_ids.masked_fill_(attention_mask == 0, 0)
+            else:
+                position_ids.masked_fill_(attention_mask == 0, 1)
             if past_key_values:
                 position_ids = position_ids[:, -1].unsqueeze(-1)
 
