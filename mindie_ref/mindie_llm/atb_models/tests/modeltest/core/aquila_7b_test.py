@@ -11,11 +11,11 @@ from transformers.generation.utils import GenerationConfig
 
 MODEL_FILE = os.path.join(
     model_test.ATB_SPEED_HOME_PATH,
-    "pytorch/examples/baichuan2/13b/modeling_baichuan_ascend.py",
+    "pytorch/examples/aquila/7b/modeling_aquila_ascend.py",
 )
 
 
-class Baichuan213BModelTest(model_test.ModelTest):
+class Aquila7BModelTest(model_test.ModelTest):
     def __init__(self, *args) -> None:
         super().__init__(*args)
         self.weight_dir = args[12]
@@ -52,14 +52,13 @@ class Baichuan213BModelTest(model_test.ModelTest):
         os.environ['LCCL_ENABLE_FALLBACK'] = "1"
         os.environ['ATB_LAUNCH_KERNEL_WITH_TILING'] = "1"
         os.environ['PYTORCH_NPU_ALLOC_CONF'] = 'max_split_size_mb:2048'
-        os.environ['ATB_WORKSPACE_MEM_ALLOC_GLOBAL'] = '1'
 
     def get_dataset_list(self):
         return ["BoolQ", "CEval"]
 
 
 def main():
-    Baichuan213BModelTest.create_instance()
+    Aquila7BModelTest.create_instance()
 
 
 if __name__ == "__main__":

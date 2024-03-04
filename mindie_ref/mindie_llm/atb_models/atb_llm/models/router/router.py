@@ -226,3 +226,33 @@ class QwenRouter(BaseRouter):
             padding_side='left',
             trust_remote_code=True
         )
+
+
+@dataclass
+class AquilaRouter(BaseRouter):
+
+    @property
+    def model_version(self):
+        """
+        次级模型名称
+        :return:
+        """
+        return "v1_7b"
+
+    @property
+    def config(self):
+        config_cls = self.get_config_cls()
+        config = config_cls.from_pretrained(self.model_name_or_path,
+                                            revision=self.revision,
+                                            trust_remote_code=True)
+        if self.max_position_embeddings:
+            config.model_max_length = self.max_position_embeddings
+        return config
+
+    def get_tokenizer(self):
+        return AutoTokenizer.from_pretrained(
+            self.model_name_or_path,
+            pad_token='<|endoftext|>',
+            trust_remote_code=True,
+            use_fast=True
+        )
