@@ -1,0 +1,75 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef ATB_SPEED_MODELS_TELECHAT_COMMON_PA_LAYER_H
+#define ATB_SPEED_MODELS_TELECHAT_COMMON_PA_LAYER_H
+
+#include <atb/atb_infer.h>
+#include <nlohmann/json.hpp>
+
+#include "atb_speed/base/hosttensor_binder.h"
+#include "atb_speed/log.h"
+#include "atb_speed/utils/str_split.h"
+
+namespace atb_speed {
+namespace telechat {
+struct PaCommonLayerParam {
+    int rank = 0;
+    int rankSize = 1;
+    float rmsNormEps = 0;
+    int headNum = 0;
+    int dk = 0; // headDim
+    bool transposedWeight = false;
+    bool isPrefill = false;
+    std::string backend = "hccl";
+    std::string model = "telechat_7B_pa";
+    bool isBF16 = false;
+    bool isQuant = false;   // 量化开关
+    // 量化参数
+    bool isFloatQueryLayer = false;
+    bool isFloatKVLayer = false;
+    bool isFloatDownLayer = false;
+    float inputScale_qkv = 1;
+    int inputOffset_qkv = 0;
+    float inputScale_dense = 1;
+    int inputOffset_dense = 0;
+    float inputScale_gate_up = 1;
+    int inputOffset_gate_up = 0;
+    float inputScale_down_proj = 1;
+    int inputOffset_down_proj = 0;
+};
+
+void from_json(const nlohmann::json &paramJson, PaCommonLayerParam &param);
+
+atb::Status PaCommonLayer(const PaCommonLayerParam &param, atb::Operation **operation);
+
+class CommonFlashAttentionHostBinder : public HostTensorBinder {
+public:
+    CommonFlashAttentionHostBinder();
+
+    virtual ~CommonFlashAttentionHostBinder();
+
+    void ParseParam(const nlohmann::json &paramJson) override;
+
+    void BindTensor(atb::VariantPack &variantPack) override;
+
+private:
+    atb::SVector<int32_t> seqLen_;
+};
+
+} // namespace telechat
+} // namespace atb_speed
+#endif
