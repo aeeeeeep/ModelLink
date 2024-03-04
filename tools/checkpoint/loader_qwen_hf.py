@@ -39,6 +39,9 @@ def add_arguments(parser):
     parser.add_argument('--add-qkv-bias', action='store_true',
                         help='Add bias for attention qkv like Intern and Qwen',
                         default=False)
+    parser.add_argument('--add-dense-bias', action='store_true',
+                        help='Add bias for attention dense like Intern',
+                        default=False)
 
 
 def verify_transformers_version():
