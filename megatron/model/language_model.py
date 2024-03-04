@@ -5,6 +5,7 @@
 import torch
 import torch.nn.functional as F
 
+from megatron import get_tokenizer
 from megatron import get_args
 from megatron.core import mpu, tensor_parallel
 from megatron.core.enums import ModelType
@@ -424,6 +425,7 @@ class TransformerLanguageModel(MegatronModule):
                     init_method=self.init_method,
                     bias=False) # Setting bias to False always to keep it consistent with embedding tying that also does not have a bias.
                 self._output_layer_key = 'output_layer'
+        self.tokenizer = get_tokenizer()
 
     def set_input_tensor(self, input_tensor):
         """ See megatron.model.transformer.set_input_tensor()"""
@@ -463,6 +465,10 @@ class TransformerLanguageModel(MegatronModule):
                 pooling_sequence_index=0,
                 enc_hidden_states=None, output_enc_hidden=False):
 
+        seq_lengths = torch.sum(enc_input_ids.ne(self.tokenizer.eod), 1)
+        seq_lengths = seq_lengths.cpu().tolist()
+        seq_lengths = [(s+15)//16*16 for s in seq_lengths]
+
         # Encoder embedding.
         if self.pre_process:
             encoder_input = self.embedding(enc_input_ids, enc_position_ids,
@@ -496,7 +502,8 @@ class TransformerLanguageModel(MegatronModule):
                     retriever_input=retriever_input,
                     retriever_attn_mask=retriever_attn_mask,
                     inference_params=inference_params,
-                    rotary_pos_emb=rotary_pos_emb)
+                    rotary_pos_emb=rotary_pos_emb,
+                    seq_lengths=seq_lengths)
             else:
                 encoder_output = self.encoder_hidden_state
         else:
@@ -530,7 +537,8 @@ class TransformerLanguageModel(MegatronModule):
             encoder_output=encoder_output,
             enc_dec_attn_mask=enc_dec_attn_mask,
             inference_params=inference_params,
-            rotary_pos_emb=rotary_pos_emb)
+            rotary_pos_emb=rotary_pos_emb,
+            seq_lengths=seq_lengths)
 
         if self.add_pooler and self.post_process:
             return decoder_output, encoder_output, pooled_output
