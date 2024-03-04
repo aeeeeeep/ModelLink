@@ -212,7 +212,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/llama2/pretrain_llama2_70b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
-      <td rowspan="4"><a href="examples/qwen/README.md">Qwen</a></td>
+      <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
       <td>7B</td>
       <td>1x8</td>
       <td>BF16 </td>
@@ -237,7 +237,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/qwen/pretrain_qwen_72b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</td>
+      <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
       <td>8x7B</td>
       <td>2x8</td>
       <td>BF16 </td>
@@ -400,7 +400,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>  <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
-      <td rowspan="4"><a href="examples/qwen/README.md">Qwen</a></td>
+      <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
       <td>7B</td>
       <td> -- </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_qwen_7b_ptd.sh">对话 </a></td>
