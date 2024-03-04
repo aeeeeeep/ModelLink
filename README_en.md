@@ -36,7 +36,7 @@ Currently, the following models has been supported:
 * <a href="https://github.com/baichuan-inc" style="color:green">Baichuan2</a>-[[README: 7B/13B]](examples/baichuan2/README.md)
 * <a href="https://huggingface.co/Qwen/Qwen-7B" style="color:green">Qwen</a>-[[README: 7B]](examples/qwen/README.md)
 * <a href="https://huggingface.co/Qwen/Qwen-7B" style="color:green">Qwen</a>-[[README: 7B/14B/72B]](examples/qwen/README.md)
-* <a href="https://mistral.ai/news/mixtral-of-experts/" style="color:green">Mixtral</a>-[[README: 8x7B]](examples/mixtral/README.md)
+* <a href="https://mistral.ai/news/mixtral-of-experts/" style="color:green">Mixtral</a>-[[README: 8x7B]](examples/mixtral/README_en.md)
 
 ### Downstream Tasks
 Currently, the following downstream tasks have been supported:
@@ -210,7 +210,7 @@ Currently, the following downstream tasks have been supported:
       <td> <a href="examples/llama2/pretrain_llama2_70b_ptd.sh">Train</a> </td>
     </tr>
     <tr>
-      <td rowspan="4"><a href="examples/qwen/README.md">Qwen</a></td>
+      <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
       <td>7B</td>
       <td>1x8</td>
       <td>BF16 </td>
@@ -235,7 +235,7 @@ Currently, the following downstream tasks have been supported:
       <td> <a href="examples/qwen/pretrain_qwen_72b_ptd.sh">Train</a> </td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/mixtral/README_en.md">Mixtral 8x7B</td>
+      <td rowspan="1"><a href="examples/mixtral/README_en.md">Mixtral</a></td>
       <td>8x7B</td>
       <td>2x8</td>
       <td>BF16 </td>
@@ -397,7 +397,7 @@ Currently, the following downstream tasks have been supported:
       <td>  <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
-      <td rowspan="4"><a href="examples/qwen/README.md">Qwen</a></td>
+      <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
       <td>7B</td>
       <td> -- </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_qwen_7b_ptd.sh">inference </a> </td>
