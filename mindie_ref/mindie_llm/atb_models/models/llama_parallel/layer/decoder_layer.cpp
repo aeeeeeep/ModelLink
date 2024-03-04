@@ -68,17 +68,18 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     fusionAttentionParam.isBF16 = param.isBF16;
     fusionAttentionParam.selfAttentionParam.headNum = param.numAttentionHeadsPerRank;
     fusionAttentionParam.selfAttentionParam.kvHeadNum = param.numKeyValueHeadsPerRank;
-    fusionAttentionParam.selfAttentionParam.headDim = param.hiddenSizePerAttentionHead;
+    fusionAttentionParam.faHeadDim = param.hiddenSizePerAttentionHead;
     if (param.hiddenSizePerAttentionHead == 0) {
         return atb::ERROR_INVALID_GRAPH;
     }
     fusionAttentionParam.selfAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
     if (param.isFA) {
         fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
-        fusionAttentionParam.selfAttentionParam.coderType = param.isPrefill ? \
-            atb::infer::SelfAttentionParam::CoderType::ENCODER : atb::infer::SelfAttentionParam::CoderType::DECODER;
+        fusionAttentionParam.selfAttentionParam.calcType = param.isPrefill ? \
+            atb::infer::SelfAttentionParam::CalcType::ENCODER : atb::infer::SelfAttentionParam::CalcType::DECODER;
     } else {
-        fusionAttentionParam.selfAttentionParam.isEncoder = param.isPrefill;
+        fusionAttentionParam.selfAttentionParam.calcType = param.isPrefill ?
+            atb::infer::SelfAttentionParam::CalcType::PA_ENCODER : atb::infer::SelfAttentionParam::CalcType::UNDEFINED;
     }
     fusionAttentionParam.pageAttentionParam.headNum = param.numAttentionHeadsPerRank;
     fusionAttentionParam.pageAttentionParam.kvHeadNum = param.numKeyValueHeadsPerRank;

@@ -241,7 +241,7 @@ atb::Status PaCommonLayer(const PaCommonLayerParam &param, atb::Operation **oper
     CREATE_OPERATION(reshapeCacheParm, &reshapeAndCacheNode.operation);
     reshapeAndCacheNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_MIXEDV, IN_K_CACHE, IN_V_CACHE,
                                        IN_SLOTS};
-    reshapeAndCacheNode.outTensorIds = {};
+    reshapeAndCacheNode.outTensorIds = {IN_K_CACHE, IN_V_CACHE};
     reshapeAndCacheNode.inTensorReshapeFuncs.resize(reshapeAndCacheNode.inTensorIds.size());
     reshapeAndCacheNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         CommonReshapeHeads(oldShape, newShape, param.headNum);
@@ -255,7 +255,7 @@ atb::Status PaCommonLayer(const PaCommonLayerParam &param, atb::Operation **oper
         faEnParam.headNum = param.headNum;
         faEnParam.qkScale = 1.0 / sqrt(param.dk);
         faEnParam.kvHeadNum = param.headNum;
-        faEnParam.isEncoder = true;
+        faEnParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
         CREATE_OPERATION(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_MIXEDV,
                                      IN_ATTENTIONMASK, IN_INPUT_LENGTHS};

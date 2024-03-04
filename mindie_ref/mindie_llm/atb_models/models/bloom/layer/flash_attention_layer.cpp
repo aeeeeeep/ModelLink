@@ -167,11 +167,10 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
     };
 
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0f / std::sqrt(param.dk);
     selfAttentionParam.qkScale = 1.0f;
-    selfAttentionParam.isSupportAlibi = true;
+    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MASK_TYPE_ALIBI;
     CREATE_OPERATION(selfAttentionParam, &selfAttentionFusionNode.operation);
     selfAttentionFusionNode.inTensorIds = {
         INTERMIDATE_QUERY, INTERMIDATE_KEY, INTERMIDATE_VALUE, IN_CACHED_K,

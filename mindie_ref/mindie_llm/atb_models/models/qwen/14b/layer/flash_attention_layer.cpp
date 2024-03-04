@@ -152,14 +152,13 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
 
     // flash attention
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qkScale = 1.0 / sqrt(param.dk);
     if (param.coderType == 1) {
-        selfAttentionParam.coderType = atb::infer::SelfAttentionParam::CoderType::ENCODER;
+        selfAttentionParam.calcType = atb::infer::SelfAttentionParam::CalcType::ENCODER;
         selfAttentionParam.isTriuMask = param.isTriuMask;
     } else if (param.coderType == 2) {
-        selfAttentionParam.coderType = atb::infer::SelfAttentionParam::CoderType::DECODER;
+        selfAttentionParam.calcType = atb::infer::SelfAttentionParam::CalcType::DECODER;
     }
     CREATE_OPERATION(selfAttentionParam, &flashAttentionNode.operation);
     flashAttentionNode.inTensorIds = {INTERNAL_Q_EMBED_AFTER_LOGN,
