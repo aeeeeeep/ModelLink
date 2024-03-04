@@ -111,6 +111,7 @@ class FlashChatglmAttention(torch.nn.Module):
             prefix=f"{prefix}.query_key_value",
             weights=weights,
             bias=True,
+            hidden_size=config.hidden_size,
             num_heads=config.num_attention_heads,
             num_kv_heads=config.multi_query_group_num
         )

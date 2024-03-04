@@ -178,16 +178,16 @@ class TensorParallelHead(SuperLayer):
 
 class TensorParallelColumnLinear(SuperLayer):
     @classmethod
-    def load_qkv(cls, config, prefix: str, weights, bias: bool, num_heads: int, num_kv_heads: int = None):
+    def load_qkv(cls, config, prefix: str, weights, bias: bool, hidden_size, num_heads, num_kv_heads=None):
         """Specific method when the QKV was joined after the fact"""
         if num_kv_heads is None:
             num_kv_heads = num_heads
         weight = weights.get_weights_col_packed_qkv(
-            prefix, quantize=config.quantize, num_heads=num_heads, num_kv_heads=num_kv_heads
+            prefix, quantize=config.quantize, hidden_size=hidden_size, num_heads=num_heads, num_kv_heads=num_kv_heads
         )
         if bias:
             bias = weights.get_tensor_col_packed_qkv(
-                f"{prefix}.bias", num_heads=num_heads, num_kv_heads=num_kv_heads
+                f"{prefix}.bias", hidden_size=hidden_size, num_heads=num_heads, num_kv_heads=num_kv_heads
             )
         else:
             bias = None
