@@ -178,7 +178,6 @@ int64_t FlashAttentionRopeModel::BuildGraph()
     atb_speed::common::LmHeadParam lmHeadParam;
     lmHeadParam.unpadInputs = !param_.isFA;
     lmHeadParam.gatherAhead = param_.isPrefill;
-    lmHeadParam.linearParallelParam.fusionLinearParam.quantType = false; // LmHead未接入量化
     lmHeadParam.linearParallelParam.parallelType = atb_speed::common::COLUMN_PARALLEL;
     lmHeadParam.linearParallelParam.tensorParallelInfo.rank = param_.rank;
     lmHeadParam.linearParallelParam.tensorParallelInfo.worldSize = param_.rankSize;
