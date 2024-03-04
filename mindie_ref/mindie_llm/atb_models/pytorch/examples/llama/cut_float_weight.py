@@ -13,8 +13,9 @@
 # limitations under the License.
 import os
 import argparse
+import json
 import torch
-from transformers import LlamaTokenizer, pipeline, LlamaForCausalLM, AutoTokenizer
+from transformers import LlamaForCausalLM, LlamaTokenizer
 from transformers.models.llama.configuration_llama import LlamaConfig
 
 
@@ -80,7 +81,11 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     args.world_size = int(args.world_size) 
-    tokenizer = LlamaTokenizer.from_pretrained(args.input_path, use_fast=False)
+    tokenizer_config_path = os.path.join(args.input_path, 'tokenizer_config.json')
+    with open(tokenizer_config_path) as f:
+        tokenizer_config = json.load(f)
+        use_fast = tokenizer_config.get('use_fast', True)
+    tokenizer = LlamaTokenizer.from_pretrained(args.input_path, use_fast=use_fast)
     tokenizer.save_pretrained(os.path.join(args.output_path, 'tokenizer'))
     
     model = LlamaForCausalLM.from_pretrained(args.input_path, torch_dtype=torch.float16)
