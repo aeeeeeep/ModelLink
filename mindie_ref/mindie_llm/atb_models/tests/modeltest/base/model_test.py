@@ -421,6 +421,7 @@ class ModelTest:
         self.logger.info("performance test end")
 
     def __run_precision(self):
+        self.logger.info("precision test start")
         input_dict = {
             'rank': self.local_rank,
             'world_size': self.world_size,
@@ -455,6 +456,7 @@ class ModelTest:
         else:
             self.logger.error(self.test_mode + " not support")
             raise RuntimeError(f"{self.test_mode} not support")
+        self.logger.info("precision test end")
 
     def __run_simplified_dataset(self):
         if self.dataset_name not in prompt_map.keys():
@@ -570,7 +572,12 @@ class ModelTest:
                         answer_texts = [text + intermediate + "\n" + extraction_prompt for text, intermediate in
                             zip(texts, generate_text_list)]
                         input_tokens = [build_prompt(answer_text) for answer_text in answer_texts]
-                        ########
+                        logits_save_folder = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}")
+                        os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "1"
+                        os.environ['ATB_LLM_LOGITS_SAVE_FOLDER'] = logits_Save_folder
+                        _, _, _ = self.pa_runner.infer(input_tokens, self.batch_size, 1, False)
+                        os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "0"
+                        logits = torch.load(logits_save_folder + '/logits_1.pth')
                         logits = outputs.logits[:, -1]
                         logits = logits[:, choice_tokens]
                         preds = logits.argmax(dim=-1)

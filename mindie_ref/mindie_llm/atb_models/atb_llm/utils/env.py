@@ -35,7 +35,7 @@ class EnvVar:
     benchmark_filepath = os.getenv("ATB_LLM_BENCHMARK_FILEPATH", None)
 
     logits_save_enable = os.getenv("ATB_LLM_LOGITS_SAVE_ENABLE", "0") == "1"
-    logits_save_filepath = os.getenv("ATB_LLM_LOGITS_SAV_FILEPATH", None)
+    logits_save_folder = os.getenv("ATB_LLM_LOGITS_SAVE_FOLDER", './')
 
     def __post_init__(self):
         logger.info(self.dict())

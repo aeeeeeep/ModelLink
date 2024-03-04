@@ -2,6 +2,7 @@
 import pandas as pd
 import torch
 
+from importlib import reload
 from atb_llm.utils.env import ENV
 from atb_llm.utils.log import logger, print_log
 from .batch import Batch
@@ -41,7 +42,10 @@ def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length
         logits = logits[batch.lm_head_indices]
 
     if ENV.logits_save_enable:
-        torch.save(logits.cpu(), ENV.logits_save_filepath + len(batch.req_list[0].out_token_list) + ".pth")
+        import os
+        reload(ENV)
+        logits_save_filename = "logits_" + str(len(batch.req_list[0].out_token_list)) + ".pth"
+        torch.save(logits.cpu(), os.path.join(ENV.logits_save_folder, logits_save_filename))
     next_token = next_token_chooser(logits)
     next_token_list = next_token.tolist()
 
