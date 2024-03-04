@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "atb_speed/base/model.h"
 #include <nlohmann/json.hpp>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wtype-limits"
+#include "atb_speed/base/model.h"
 #pragma GCC diagnostic pop
 #include <acl/acl.h>
 #include <atb/types.h>
