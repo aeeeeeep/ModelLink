@@ -31,6 +31,7 @@ struct FusionAttentionParam {
     int isGroupedQueryAttention = false;
     atb_speed::common::FusionLinearParam qkvLinearParam;
     // rope param
+    bool isHalfRotary = false; // 是否只对向量的一半做旋转
     int rotaryCoeff = 2;
     // self attention param
     bool isPrefill = false;
@@ -41,11 +42,29 @@ struct FusionAttentionParam {
     atb_speed::common::LinearParallelParam selfOutLinearParallelParam;
 };
 
+enum class PositionEmbeddingTensorId : int {
+    IN_QUERY = 0,
+    IN_KEY,
+    IN_ROPE_COS,
+    IN_ROPE_SIN,
+    IN_SEQLEN,
+
+    OUT_QUERY,
+    OUT_KEY,
+
+    INTERMEDIATE_QCHUNK0,
+    INTERMEDIATE_QCHUNK1,
+    INTERMEDIATE_KCHUNK0,
+    INTERMEDIATE_KCHUNK1,
+    INTERMEDIATE_QOUT,
+    INTERMEDIATE_KOUT,
+};
 class FusionAttention {
 public:
     static atb::Status Attention(const FusionAttentionParam &param, atb::Operation **operation);
     static atb::Status QKVLinearSplit(const FusionAttentionParam &param, atb::Operation **operation);
     static atb::Status SelfAttention(const FusionAttentionParam &param, atb::Operation **operation);
+    static atb::Status PositionEmbedding(const FusionAttentionParam &param, atb::Operation **operation);
 };
 } // namespace common
 } // namespace atb_speed

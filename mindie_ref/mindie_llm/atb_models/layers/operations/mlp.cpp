@@ -22,21 +22,24 @@ namespace common {
 enum MlpTensorIdx : uint32_t {
     IN_INPUT = 0,
     IN_WEIGHT_0,  // gate weight or gate up weight
+    IN_HOLDER_0,
     IN_SCALE_0,
     IN_OFFSET_0,
     IN_DESCALE_0,
     IN_WEIGHT_1,  // up weight
+    IN_HOLDER_1,
     IN_SCALE_1,
     IN_OFFSET_1,
     IN_DESCALE_1,
     IN_WEIGHT_2,  // down weight
+    IN_HOLDER_2,
     IN_SCALE_2,
     IN_OFFSET_2,
     IN_DESCALE_2,
     OUT_RESULT,
 };
 
-static const uint64_t IN_TENSOR_COUNT = 13;
+static const uint64_t IN_TENSOR_COUNT = 16;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t NODE_COUNT = 5;
 
@@ -59,6 +62,7 @@ atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation, T confi
         linearGateUpNode.inTensorIds = {
             MlpTensorIdx::IN_INPUT,
             MlpTensorIdx::IN_WEIGHT_0,
+            MlpTensorIdx::IN_HOLDER_0,
             MlpTensorIdx::IN_SCALE_0,
             MlpTensorIdx::IN_OFFSET_0,
             MlpTensorIdx::IN_DESCALE_0
@@ -79,6 +83,7 @@ atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation, T confi
         linearGateNode.inTensorIds = {
             MlpTensorIdx::IN_INPUT,
             MlpTensorIdx::IN_WEIGHT_0,
+            MlpTensorIdx::IN_HOLDER_0,
             MlpTensorIdx::IN_SCALE_0,
             MlpTensorIdx::IN_OFFSET_0,
             MlpTensorIdx::IN_DESCALE_0
@@ -90,6 +95,7 @@ atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation, T confi
         linearUpNode.inTensorIds = {
             MlpTensorIdx::IN_INPUT,
             MlpTensorIdx::IN_WEIGHT_1,
+            MlpTensorIdx::IN_HOLDER_1,
             MlpTensorIdx::IN_SCALE_1,
             MlpTensorIdx::IN_OFFSET_1,
             MlpTensorIdx::IN_DESCALE_1
@@ -117,6 +123,7 @@ atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation, T confi
     linearDownNode.inTensorIds = {
         config.INTERMIDATE_MUL_OUT,
         MlpTensorIdx::IN_WEIGHT_2,
+        MlpTensorIdx::IN_HOLDER_2,
         MlpTensorIdx::IN_SCALE_2,
         MlpTensorIdx::IN_OFFSET_2,
         MlpTensorIdx::IN_DESCALE_2
