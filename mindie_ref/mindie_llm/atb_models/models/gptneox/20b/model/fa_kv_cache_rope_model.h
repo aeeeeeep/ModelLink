@@ -17,7 +17,6 @@
 #define ATB_SPEED_MODELS_GPTNEOX_20B_FA_KVCACHE_ROPE_MODEL_H
 
 #include "atb_speed/base/model.h"
-#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace gptneox_20b {
@@ -63,8 +62,6 @@ private:
     atb::SVector<int32_t> tokenOffset_;
     atb::SVector<int32_t> seqLen_;
 };
-
-REGISTER_MODEL(gptneox_20b, FaKvCacheRopeModel);
 
 } // namespace gptneox_20b
 } // namespace atb_speed

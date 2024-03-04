@@ -1,0 +1,57 @@
+# 特性矩阵
+
+- 此矩阵罗列了各Aquila模型支持的特性
+
+| 模型及参数量        | 800I A2 Tensor Parallelism | 300I DUO Tensor Parallelism | FP16 | Flash Attention | Paged Attention | W8A8量化 |
+|---------------|----------------------------|-----------------------------|------|-----------------|-----------------|--------|
+| Aquila-7B     | 支持world size 1,2,4,8       | 支持world size 2              | 是    | 是               | 是               | 否      |
+
+# Paged Attention 推理使用说明
+
+## 路径变量解释
+
+| 变量名         | 含义                                                                                                                             |
+|-------------|--------------------------------------------------------------------------------------------------------------------------------|
+| working_dir | 加速库及模型库下载后放置的目录                                                                                                                |
+| llm_path    | 模型仓所在路径。若使用编译好的包，则路径为`${working_dir}/ModelLink/`；若使用gitee下载的代码，则路径为`${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models` |
+| script_path | 脚本所在路径。Baichuan系列模型的工作脚本所在路径为${llm_path}/examples/models/aquila                                                                |
+| weight_path | 模型权重路径                                                                                                                         |
+
+## 权重转换
+
+Paged Attention 场景下需要.safetensors 格式的权重，如果没有，参考[此README文件](../../README.md)转换
+
+## 操作说明
+
+### 推理
+
+在`${llm_path}`目录下执行以下指令
+
+```shell
+bash examples/models/aquila/run_pa.sh ${weight_path}
+```
+
+根据硬件设备不同请参考下表修改run_pa.sh再运行
+
+### run_pa.sh 参数说明
+
+| 参数名称                      | 含义                                  | 800I A2推荐值 | 300I DUO推荐值 |
+|---------------------------|-------------------------------------|------------|-------------|
+| BIND_CPU                  | 绑定CPU核心开关,默认进行绑核                    | 1          | 1           |
+| ASCEND_RT_VISIBLE_DEVICES | 使用的硬件卡号，多个卡间使用逗号相连                  | 根据实际情况设置   | 根据实际情况设置    |
+| MAX_MEMORY_GB             | 每张卡上的预计使用的最大显存，若出现显存不足导致的异常，请将该参数改小 | 30         | 40          |
+| MASTER_PORT               | 卡间通信端口,通常不用修改，有冲突时再改                |            |             |
+
+## 精度测试
+
+- 参考[此README文件](../../../tests/modeltest/README.md)
+
+## 性能测试
+
+- 参考[此README文件](../../../tests/modeltest/README.md)
+
+# Flash Attention推理使用说明
+
+| 模型名称          | readme地址                                                |
+|---------------|---------------------------------------------------------|
+| Aquila-7B     | [README](../../../pytorch/examples/aquila/7b/README.md) |
