@@ -650,9 +650,11 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
 
     def __init__(self, config):
         super().__init__(config)
-
+        self.world_size = 1
+        if hasattr(config, 'world_size'):
+            self.world_size = config.world_size
         self.gpt_neox = GPTNeoXModel(config)
-        self.embed_out = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+        self.embed_out = nn.Linear(config.hidden_size, config.vocab_size // self.world_size, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
