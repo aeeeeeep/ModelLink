@@ -40,7 +40,7 @@ private:
         struct Register##_##nameSpace##_##modelName {                                             \
             inline Register##_##nameSpace##_##modelName()                                         \
             {                                                                                     \
-                ATB_LOG(INFO) << "register " << #nameSpace << "_" << #modelName;                  \
+                ATB_LOG(INFO) << "register model " << #nameSpace << "_" << #modelName;                  \
                 ModelFactory::Register(MODEL_NAMESPACE_STRINGIFY(nameSpace##_##modelName),        \
                     [](const std::string &param) { return std::make_shared<modelName>(param); }); \
             }                                                                                     \
