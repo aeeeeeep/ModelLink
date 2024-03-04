@@ -128,7 +128,7 @@ atb::Status FlashAttentionModel::InferShape(const std::vector<atb::TensorDesc> &
     const int64_t outDim = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.shape.dims[0];
     outTensorDescs.at(0) = graph_.weightTensors.at(0).desc;
     outTensorDescs.at(0).shape.dimNum = MODEL_OUT_DIM_NUM;
-    outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
+    outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(IN_TENSOR_PAST_KEY).shape.dims[1];
     outTensorDescs.at(0).shape.dims[1] = 1; // output shape is [batch, 1, logits]
     outTensorDescs.at(0).shape.dims[MODEL_OUT_DIM2] = outDim;
 
@@ -371,7 +371,7 @@ int64_t FlashAttentionModel::BuildGraph()
 
     auto &gatherNode = graph_.nodes.at(nodeId++);
     atb::infer::GatherParam gatherParam;
-    gatherParam.axis = 1;
+    gatherParam.axis = 0;
     CREATE_OPERATION(gatherParam, &op);
     gatherNode.operation.reset(op);
     const int gatherOutTensorId = internalTensorSize - 1; // the last 1 internel tensor

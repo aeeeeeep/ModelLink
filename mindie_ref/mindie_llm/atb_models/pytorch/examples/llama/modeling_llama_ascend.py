@@ -146,6 +146,22 @@ def _expand_mask(mask: torch.Tensor, dtype: torch.dtype, tgt_len: Optional[int] 
     return inverted_mask.masked_fill(inverted_mask.to(torch.bool), torch.finfo(dtype).min)
 
 
+def get_unpad_length(input_ids, pad_token_id):
+    """
+    Obtains the input length before padding.
+    """
+    batch_size, _ = input_ids.shape
+    unpad_input_ids = torch.tensor([], dtype=torch.int32, device=input_ids.device)
+    input_len_list = torch.full((batch_size,), 1, dtype=torch.int32, device=input_ids.device)
+
+    for i in range(batch_size):
+        unpad_tensor = input_ids[i][input_ids[i] != pad_token_id]
+        input_len_list[i] = len(unpad_tensor)
+        unpad_input_ids = torch.cat((unpad_input_ids, unpad_tensor), 0)
+
+    return unpad_input_ids.unsqueeze(1), input_len_list
+
+
 class LlamaRMSNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-6):
         """
@@ -783,6 +799,7 @@ class LlamaModel(LlamaPreTrainedModel):
         self.token_offset = None
         self.seq_len = None
         self.seq_index = None
+        self.unpad_input_ids = None
 
         self.float_layers = FLOAT_LAYERS
         self.in_beta = torch.zeros(config.hidden_size, dtype=self.dtype).npu()
@@ -874,9 +891,6 @@ class LlamaModel(LlamaPreTrainedModel):
 
         cosTable = self.cosTable
         sinTable = self.sinTable
-        self.token_offset = torch.full((self.batch_num,), self.token_num, dtype=torch.int32, device=self.k_cache_input.device)
-        self.seq_len = torch.tensor([seq_length] * self.batch_num, dtype=torch.int32, device=self.k_cache_input.device)
-        self.seq_index = torch.tensor([seq_length - 1], dtype=torch.int32, device=self.k_cache_input.device)
         self.acl_operation_inputs[0] = input_ids
         self.acl_operation_inputs[1] = position_ids
         self.acl_operation_inputs[2] = cosTable
@@ -1085,8 +1099,6 @@ class LlamaModel(LlamaPreTrainedModel):
                 if self.format_nz:
                     soc_version = torch_npu._C._npu_get_soc_version()
                     raise ValueError(f"{soc_version=} not supports LONG_SEQ_ENABLE=1")
-                if self.batch_num > 1:
-                    raise ValueError(f"batch_size must be 1, but got {self.batch_num}")
             return
         if self.full_flag:
             self.attention_mask_max = torch.zeros(
@@ -1094,6 +1106,7 @@ class LlamaModel(LlamaPreTrainedModel):
             if attention_mask is not None:
                 attention_mask_acl = attention_mask[:, 0, :, :].to(self.dtype)
                 self.attention_mask_max[:self.batch_num, :seq_length, :attention_mask_acl.size()[-1]] += attention_mask_acl
+            self.attention_mask_max = self.get_triumask(self.max_sequence_length)
             if self.format_nz:
                 self.attention_mask_max = torch_npu.npu_format_cast(
                     self.attention_mask_max.view(self.batch_num, self.max_sequence_length,
@@ -1114,7 +1127,6 @@ class LlamaModel(LlamaPreTrainedModel):
                 else:
                     self.attention_mask_max_incre = torch.zeros(
                         (self.batch_num, 1, self.max_sequence_length), device='npu', dtype=self.dtype)
-                    self.attention_mask_max_incre[:self.batch_num, :1, :attention_mask_acl.size()[-1]] += attention_mask_acl.unsqueeze(-2)
                 self.attention_mask_max_incre = self.get_bf16_mask(self.attention_mask_max_incre)
                 self.decoder_mask = True
         return
@@ -1241,9 +1253,21 @@ class LlamaModel(LlamaPreTrainedModel):
         past_key_values_length = 0
 
         if past_key_values is None:
+            self.unpad_input_ids, self.token_offset = get_unpad_length(input_ids, self.config.pad_token_ids)
+            self.seq_len = self.token_offset
+            self.seq_index = torch.full((batch_size), 1, dtype=torch.int32, device=input_ids.device)
+            offset = 0
+            for i in range(batch_size):
+                self.seq_index[i] = offset + self.token_offset[i] - 1
+                offset += self.token_offset[i]
+            position_ids = torch.arange(0, max(self.token_offset), dtype=torch.int32, device=input_ids.device)
+            position_ids = torch.concat([position_ids.unsqueeze(0)] * batch_size, dim=0)
             self.token_num = input_ids.shape[1]
 
         if past_key_values is not None:
+            self.token_offset += 1
+            self.seq_len = torch.tensor([seq_length] * batch_size, dtype=torch.int32, device=input_ids.device)
+            self.seq_index = torch.arange(0, batch_size, dtype=torch.int32, device=input_ids.device)
             past_key_values_length = self.token_num
             seq_length_with_past = seq_length_with_past + past_key_values_length
             self.token_num = self.token_num + 1
@@ -1284,11 +1308,17 @@ class LlamaModel(LlamaPreTrainedModel):
         if self.weightFlag is False:
             self.set_ascend_weight()
 
-        # set ascend inputs
-        self.prepare_inputs_for_ascend(batch_size, seq_length, input_ids, position_ids, attention_mask)
-
-        # update ascend parameters
-        param = json.dumps({"tokenOffset": [self.token_num] * self.batch_num, "seqLen": [seq_length] * self.batch_num})
+        if past_key_values is None:
+            input_ids = self.unpad_input_ids
+            # set ascend inputs
+            self.prepare_inputs_for_ascend(batch_size, seq_length, input_ids, position_ids, attention_mask)
+            # update ascend parameters
+            param = json.dumps({"tokenOffset": [int(self.token_offset[i]) for i in range(batch_size)], 
+                                "seqLen": [int(self.token_offset[i]) for i in range(batch_size)]})
+        else:
+            self.prepare_inputs_for_ascend(batch_size, seq_length, input_ids, position_ids, attention_mask)
+            param = json.dumps({"tokenOffset": [int(self.token_offset[i]) for i in range(batch_size)], 
+                                "seqLen": [1] * batch_size})
 
         # run ascend inference
         if self.full_flag:
