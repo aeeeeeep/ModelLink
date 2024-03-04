@@ -117,10 +117,9 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
     splitQKVNode.outTensorIds = {INTERNAL_MIXED_Q, INTERNAL_MIXED_K, INTERNAL_MIXED_V};
 
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / sqrt(param.dk);
-    selfAttentionParam.isSupportAlibi = true;
+    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MASK_TYPE_ALIBI;
     CREATE_OPERATION(selfAttentionParam, &selfAttentionKvCacheNode.operation);
     selfAttentionKvCacheNode.inTensorIds = {INTERNAL_MIXED_Q, INTERNAL_MIXED_K, INTERNAL_MIXED_V,
                                             IN_PAST_KEY,      IN_PAST_VALUE,    IN_ATTENTION_MASK,

@@ -233,16 +233,15 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         ropeNode.outTensorIds = { INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK };
     }
     atb::infer::SelfAttentionParam selfAttentionKvCacheParam;
-    selfAttentionKvCacheParam.headDim = param.dk;
     selfAttentionKvCacheParam.headNum = param.headNum;
     selfAttentionKvCacheParam.kvHeadNum = param.kvHeadNum;
     selfAttentionKvCacheParam.qkScale = 1.0 / sqrt(param.dk);
     selfAttentionKvCacheParam.qScale = 1.0;
     if (param.isEncoder) {
-        selfAttentionKvCacheParam.coderType = atb::infer::SelfAttentionParam::ENCODER;
+        selfAttentionKvCacheParam.calcType = atb::infer::SelfAttentionParam::ENCODER;
         selfAttentionKvCacheParam.isTriuMask = param.isTriuMask;
     } else {
-        selfAttentionKvCacheParam.coderType = atb::infer::SelfAttentionParam::DECODER;
+        selfAttentionKvCacheParam.calcType = atb::infer::SelfAttentionParam::DECODER;
     }
     CREATE_OPERATION(selfAttentionKvCacheParam, &selfAttentionKvCacheNode.operation);
     selfAttentionKvCacheNode.inTensorIds = { INTERMIDATE_POSITIONEMBEDQ,

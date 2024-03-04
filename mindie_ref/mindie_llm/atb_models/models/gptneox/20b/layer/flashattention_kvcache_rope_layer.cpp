@@ -117,7 +117,6 @@ atb::Status FlashAttentionKvCacheRopeLayer(const FlashAttentionKvCacheRopeParam 
     positionEmbeddingFusionNode.outTensorIds = { INTERMEDIATE_QUERYEMBED, INTERMEDIATE_KEYEMBED, INTERMEDIATE_VALUE };
 
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = param.qScale;
     selfAttentionParam.qkScale = param.qkScale;

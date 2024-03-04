@@ -113,15 +113,15 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
     atb_speed::common::FTWithROPEParam faWithROPEParam;
     // self attention param
     faWithROPEParam.isGroupedQueryAttention = true;
-    faWithROPEParam.selfAttentionKvCacheParam.headDim = param.hiddenSizePerHead;
+    faWithROPEParam.faHeadDim = param.hiddenSizePerHead;
     faWithROPEParam.selfAttentionKvCacheParam.headNum = param.numHeadsPerPartition;
     faWithROPEParam.selfAttentionKvCacheParam.kvHeadNum = param.numGroupsPerPartition;
     faWithROPEParam.selfAttentionKvCacheParam.qScale = param.preScale;
     faWithROPEParam.selfAttentionKvCacheParam.qkScale = param.postScale;
     if (param.isEncoder) {
-        faWithROPEParam.selfAttentionKvCacheParam.coderType = atb::infer::SelfAttentionParam::ENCODER;
+        faWithROPEParam.selfAttentionKvCacheParam.calcType = atb::infer::SelfAttentionParam::ENCODER;
     } else {
-        faWithROPEParam.selfAttentionKvCacheParam.coderType = atb::infer::SelfAttentionParam::DECODER;
+        faWithROPEParam.selfAttentionKvCacheParam.calcType = atb::infer::SelfAttentionParam::DECODER;
     }
     // RoPE param
     faWithROPEParam.rotaryCoeff = param.hiddenSizePerHead / 2;
