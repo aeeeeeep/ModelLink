@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "layers/operations/positional_embedding.h"
+#include "layers/operations/pe_gather.h"
 
 namespace atb_speed {
 namespace common {
 
-enum PositionalEmbeddingTensorIdx : uint32_t {
+enum PEGatherTensorIdx : uint32_t {
     IN_POSITION_IDS = 0,
     IN_COS_TABLE,
     IN_SIN_TABLE,
@@ -31,14 +31,14 @@ static const uint64_t OUT_TENSOR_COUNT = 2;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 0;
 static const uint64_t NODE_COUNT = 2;
 
-atb::Status PositionalEmbedding(const PositionalEmbeddingParam &param, atb::Operation **operation)
+atb::Status PEGather(const PEGatherParam &param, atb::Operation **operation)
 {
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
     opGraph.internalTensorNum = INTERMEDIATE_TENSOR_COUNT;
     opGraph.nodes.resize(NODE_COUNT);
-    opGraph.name = "PositionalEmbedding";
+    opGraph.name = "PEGather";
 
     size_t nodeId = 0;
 
@@ -46,17 +46,17 @@ atb::Status PositionalEmbedding(const PositionalEmbeddingParam &param, atb::Oper
     atb::infer::GatherParam cosEmbeddingGatherParam;
     CREATE_OPERATION(cosEmbeddingGatherParam, &cosEmbeddingNode.operation);
     cosEmbeddingNode.inTensorIds = {
-        PositionalEmbeddingTensorIdx::IN_COS_TABLE, PositionalEmbeddingTensorIdx::IN_POSITION_IDS
+        PEGatherTensorIdx::IN_COS_TABLE, PEGatherTensorIdx::IN_POSITION_IDS
     };
-    cosEmbeddingNode.outTensorIds = {PositionalEmbeddingTensorIdx::OUT_COS_EMBEDDING};
+    cosEmbeddingNode.outTensorIds = {PEGatherTensorIdx::OUT_COS_EMBEDDING};
 
     auto &sinEmbeddingNode = opGraph.nodes.at(nodeId++);
     atb::infer::GatherParam sinEmbeddingGatherParam;
     CREATE_OPERATION(sinEmbeddingGatherParam, &sinEmbeddingNode.operation);
     sinEmbeddingNode.inTensorIds = {
-        PositionalEmbeddingTensorIdx::IN_SIN_TABLE, PositionalEmbeddingTensorIdx::IN_POSITION_IDS
+        PEGatherTensorIdx::IN_SIN_TABLE, PEGatherTensorIdx::IN_POSITION_IDS
     };
-    sinEmbeddingNode.outTensorIds = {PositionalEmbeddingTensorIdx::OUT_SIN_EMBEDDING};
+    sinEmbeddingNode.outTensorIds = {PEGatherTensorIdx::OUT_SIN_EMBEDDING};
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {

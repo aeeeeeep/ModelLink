@@ -23,7 +23,7 @@
 
 namespace atb_speed {
 namespace common {
-atb::Status PositionalEmbedding(atb::Operation **operation);
+atb::Status PEGather(atb::Operation **operation);
 }  // namespace common
 }  // namespace atb_speed
 #endif
