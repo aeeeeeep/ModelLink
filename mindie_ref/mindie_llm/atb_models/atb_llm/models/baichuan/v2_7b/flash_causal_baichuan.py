@@ -56,7 +56,9 @@ class FlashBaichuanAttention(torch.nn.Module):
         except ZeroDivisionError as e:
             raise ZeroDivisionError from e
         self.query_key_value = TensorParallelColumnLinear.load_qkv(
-            config, prefix=f"{prefix}.W_pack", weights=weights, bias=False, num_heads=config.num_attention_heads
+            config, prefix=f"{prefix}.W_pack", weights=weights, bias=False,
+            hidden_size=config.hidden_size,
+            num_heads=config.num_attention_heads,
         )
 
         self.o_proj = load_row(
