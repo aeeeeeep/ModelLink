@@ -180,9 +180,9 @@ int64_t FlashAttentionRopeModel::BuildGraph()
     lmHeadParam.gatherAhead = param_.isPrefill;
     lmHeadParam.linearParallelParam.fusionLinearParam.quantType = false; // LmHead未接入量化
     lmHeadParam.linearParallelParam.parallelType = atb_speed::common::COLUMN_PARALLEL;
-    lmHeadParam.linearParallelParam.rank = param_.rank;
-    lmHeadParam.linearParallelParam.worldSize = param_.rankSize;
-    lmHeadParam.linearParallelParam.backend = param_.backend;
+    lmHeadParam.linearParallelParam.tensorParallelInfo.rank = param_.rank;
+    lmHeadParam.linearParallelParam.tensorParallelInfo.worldSize = param_.rankSize;
+    lmHeadParam.linearParallelParam.tensorParallelInfo.backend = param_.backend;
     LmHead(lmHeadParam, &op);
     lmHeadNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
@@ -191,7 +191,8 @@ int64_t FlashAttentionRopeModel::BuildGraph()
                             &graph_.weightTensors.at(finalLinearWeightTensorId),
                             // LmHead未接入量化，量化权重使用placeholder代替
                             &graph_.inTensors.at(IN_HOLDER), &graph_.inTensors.at(IN_HOLDER),
-                            &graph_.inTensors.at(IN_HOLDER), &graph_.inTensors.at(IN_FINAL_NORM_SLICE_OFFSET)};
+                            &graph_.inTensors.at(IN_HOLDER), &graph_.inTensors.at(IN_HOLDER),
+                            &graph_.inTensors.at(IN_FINAL_NORM_SLICE_OFFSET)};
     // shape: FA: [batchSize, seqLen, vocabSize] PA: [seqLen, vocabSize]
     lmHeadNode.outTensors = {&graph_.outTensors.at(OUT_TENSOR_HIDDENSTATES)};
 
