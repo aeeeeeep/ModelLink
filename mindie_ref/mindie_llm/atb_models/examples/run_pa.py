@@ -82,27 +82,28 @@ class PARunner:
 
     def warm_up(self):
         if self.max_prefill_tokens == -1:
-            self.max_prefill_tokens = self.max_batch_size * self.max_input_length
-        input_ids = torch.ones(self.max_prefill_tokens, dtype=torch.int64).to(self.device)
+            self.max_prefill_tokens = self.max_batch_size * (self.max_input_length + self.max_output_length)
+            self.all_input_length = self.max_batch_size * self.max_input_length
+        input_ids = torch.ones(self.all_input_length, dtype=torch.int64).to(self.device)
         position_ids = torch.arange(self.max_input_length, dtype=torch.int32).repeat(self.max_batch_size).to(
             self.device)
         cu_seqlen_prefill = torch.tensor([1])
         try:
-            block_num = math.ceil(self.max_prefill_tokens / self.block_size)
+            block_num = math.ceil(self.all_input_length / self.block_size)
         except ZeroDivisionError as e:
             raise ZeroDivisionError from e
         block_tables_tensor = torch.arange(block_num, dtype=torch.int32).view(1, -1).to(self.device)
-        slots = torch.arange(self.max_prefill_tokens, dtype=torch.int32).to(self.device)
+        slots = torch.arange(self.all_input_length, dtype=torch.int32).to(self.device)
         input_lengths_tensor = torch.tensor(
             [self.max_input_length] * self.max_batch_size, dtype=torch.int64
         ).to(self.device)
-        prefill_head_indices = torch.tensor([self.max_prefill_tokens - 1], dtype=torch.int64).to(self.device)
+        prefill_head_indices = torch.tensor([self.all_input_length - 1], dtype=torch.int64).to(self.device)
         print_log(self.rank, logger.info, "---------------begin warm_up---------------")
         try:
             self.warm_up_num_blocks = math.ceil(self.max_prefill_tokens / self.block_size)
         except ZeroDivisionError as e:
             raise ZeroDivisionError from e
-        cache_config = CacheConfig(self.warm_up_num_blocks)
+        cache_config = CacheConfig(self.warm_up_num_blocks, self.block_size)
         self.cache_manager = CacheManager(cache_config, self.model_config)
         logits = self.model.forward(
             input_ids=input_ids,
@@ -118,9 +119,6 @@ class PARunner:
         self.warm_up_memory = int(
             self.max_memory * NpuHbmInfo.get_hbm_usage(self.rank, self.world_size, self.model.soc_info.need_nz))
         print_log(self.rank, logger.info, f'warmup_memory(GB): {self.warm_up_memory / (1024 ** 3): .2f}')
-        del self.cache_manager
-        self.cache_manager = None
-        torch.npu.empty_cache()
         print_log(self.rank, logger.info, "---------------end warm_up---------------")
 
     def infer(self, input_texts, batch_size, max_output_length, ignore_eos, input_ids=None):
@@ -162,10 +160,10 @@ class PARunner:
             cache_config = CacheConfig(num_blocks, self.block_size)
             self.cache_manager = CacheManager(cache_config, self.model_config)
 
-            if ENV.benchmark_enable:
-                req_list_dummy = copy.deepcopy(req_list)
-                generate_req(req_list_dummy, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                             2, self.cache_manager, self.rank, ignore_eos)
+        if ENV.benchmark_enable:
+            req_list_dummy = copy.deepcopy(req_list)
+            generate_req(req_list_dummy, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
+                         2, self.cache_manager, self.rank, ignore_eos)
 
         if not ENV.profiling_enable:
             print_log(self.rank, logger.debug, "no profiling")
