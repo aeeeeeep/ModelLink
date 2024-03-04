@@ -31,7 +31,7 @@ static const uint64_t OUT_TENSOR_COUNT = 2;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 0;
 static const uint64_t NODE_COUNT = 2;
 
-atb::Status PEGather(const PEGatherParam &param, atb::Operation **operation)
+atb::Status PEGather(atb::Operation **operation)
 {
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;

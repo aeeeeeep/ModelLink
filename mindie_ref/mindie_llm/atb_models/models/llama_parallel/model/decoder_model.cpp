@@ -203,15 +203,15 @@ int64_t DecoderModel::BuildGraph()
     };
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)};
 
-    auto &positionalEmbeddingNode = graph_.nodes.at(nodeId++);
+    auto &peGatherNode = graph_.nodes.at(nodeId++);
     atb_speed::common::PEGather(&op);
-    positionalEmbeddingNode.operation.reset(op);
-    positionalEmbeddingNode.inTensors = {
+    peGatherNode.operation.reset(op);
+    peGatherNode.inTensors = {
         &graph_.inTensors.at(IN_TENSOR_POSITION_IDS),
         &graph_.inTensors.at(IN_TENSOR_COS_TABLE),
         &graph_.inTensors.at(IN_TENSOR_SIN_TABLE),
     };
-    positionalEmbeddingNode.outTensors = {
+    peGatherNode.outTensors = {
         &graph_.internalTensors.at(INTERNEL_TENSOR_COS_EMB),
         &graph_.internalTensors.at(INTERNEL_TENSOR_SIN_EMB)
     };
