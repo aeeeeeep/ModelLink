@@ -34,6 +34,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
 * <a href="https://huggingface.co/docs/transformers/main/model_doc/llama2" style="color:green">LLaMA2</a>-[[使用说明: 7B/13B/34B/70B]](examples/llama2/README.md)
 * <a href="https://github.com/baichuan-inc" style="color:green">Baichuan2</a>-[[使用说明: 7B/13B]](examples/baichuan2/README.md)
 * <a href="https://huggingface.co/Qwen/Qwen-7B" style="color:green">Qwen</a>-[[使用说明: 7B/14B/72B]](examples/qwen/README.md)
+* <a href="https://mistral.ai/news/mixtral-of-experts/" style="color:green">Mixtral</a>-[[使用说明: 8x7B]](examples/mixtral/README.md)
 
 
 ### 下游任务
@@ -61,7 +62,6 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <th>模式</th>
       <th>昇腾 </th>
       <th>参考 </th>
-      <th>Loss</th>
       <th>脚本</th>
     </tr>
   </thead>
@@ -73,7 +73,6 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> BF16 </td>
       <td> 2849 </td>
       <td> 4078 </td>
-      <td> <a href="./sources/images/aquila/aquila_comp0122.png">Loss</a> </td>
       <td> <a href="examples/aquila/pretrain_aquila_7b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
@@ -83,7 +82,6 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> FP16 </td>
       <td> 2643 </td>
       <td> 2036 </td>
-      <td> <a href="./sources/images/baichuan/baichuan7B_compare.png">Loss</a> </td>
       <td> <a href="examples/baichuan/pretrain_baichuan_ptd_7B.sh">训练</a> </td>
     </tr>
     <tr>
@@ -92,7 +90,6 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> FP16 </td>
       <td> 1213 </td>
       <td> 824 </td>
-      <td> <a href="./sources/images/baichuan/baichuan13B_compare.png">Loss</a> </td>
       <td> <a href="examples/baichuan/pretrain_baichuan_ptd_13B.sh">训练</a> </td>
     </tr>
     <tr>
@@ -102,7 +99,6 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> BF16 </td>
       <td> 2598 </td>
       <td> 3936 </td>
-      <td> <a href="./sources/images/baichuan2/baichuan2_7B_compare.png">Loss</a> </td>
       <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_7B.sh">训练</a> </td>
     </tr>
     <tr>
@@ -111,7 +107,6 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> BF16 </td>
       <td> 880 </td>
       <td> 872 </td>
-      <td> <a href="./sources/images/baichuan2/baichuan2_13B_compare.png">Loss</a> </td>
       <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_13B.sh">训练</a> </td>
     </tr>
     <tr>
@@ -121,7 +116,6 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> FP16 </td>
       <td> 2611 </td>
       <td> 2525 </td>
-      <td>  <a href="sources/images/bloom7B1_loss.png">Loss</a> </td>
       <td> <a href="examples/bloom/pretrain_bloom_7b1.sh">训练</a> </td>
     </tr>
     <tr>
@@ -130,7 +124,6 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> BF16 </td>
       <td> 112 </td>
       <td> 107 </td>
-      <td> <a href="examples/bloom/images/bloom176b_lm_loss_compare.PNG">Loss</a> </td>
       <td> <a href="examples/bloom/pretrain_bloom_176b.sh">训练</a> </td>
     </tr>
     <tr>
@@ -140,7 +133,6 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>BF16</td>
       <td> 2943 </td>
       <td> 4078 </td>
-      <td>  <a href="sources/images/intern7b_loss.png">Loss</a>  </td>
       <td> <a href="examples/intern/pretrain_internlm_7b_zero.sh">训练</a> </td>
     </tr>
     <tr>
@@ -149,7 +141,6 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> BF16 </td>
       <td> 342 </td>
       <td> 414 </td>
-      <td> <a href="sources/images/intern65b_loss.png">Loss</a> </td>
       <td> <a href="examples/intern/pretrain_internlm_65b_ptd_32p.sh">训练</a> </td>
     </tr>
     <tr>
@@ -159,7 +150,6 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>FP16</td>
       <td> 3763 </td>
       <td> 3804 </td>
-      <td> <a href="sources/images/llama/llama7b-loss-with-weight.png">Loss</a> </td>
       <td> <a href="examples/llama/pretrain_llama_7b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
@@ -168,7 +158,6 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>FP16</td>
       <td> 1894 </td>
       <td> 2012 </td>
-      <td> <a href="sources/images/llama/llama13b-loss-with-weight.png">Loss</a> </td>
       <td> <a href="examples/llama/pretrain_llama_13b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
@@ -177,8 +166,6 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
         <td>FP16</td>
         <td>621</td>
         <td>776</td>
-        <td>
-        <a href="sources/images/llama/llama33b-layer20-loss-with-weight.png">Loss</a> </td>
         <td><a href="examples/llama/pretrain_llama_33B_ptd_32p.sh">训练</a> </td>
     </tr>
     <tr>
@@ -189,7 +176,6 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>BF16 </td>
       <td> 348 </td>
       <td> 426 </td>
-      <td> <a href="sources/images/llama/llama65b-shape_layer10_loss-with-weight.png">Loss</a> </td>
       <td> <a href="examples/llama/pretrain_llama_65b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
@@ -199,7 +185,6 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>BF16 </td>
       <td> 2662 </td>
       <td> 2884 </td>
-      <td> <a href="sources/images/llama2/llama2-7b-tp8pp1mbs4gbs16-cann1115-Megatron-GPU-loss-releative.png">Loss</a> </td>
       <td> <a href="examples/llama2/pretrain_llama2_7b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
@@ -208,7 +193,6 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>BF16 </td>
       <td> 1550 </td>
       <td> 1750 </td>
-      <td> <a href="/sources/images/llama2/llama2_13b_bf16_loss_absolute.png">Loss</a> </td>
       <td> <a href="examples/llama2/pretrain_llama2_13B_ptd_8p.sh">训练</a> </td>
     </tr>
     <tr>
@@ -217,7 +201,6 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>BF16 </td>
       <td> 690 </td>
       <td> 796 </td>
-      <td> <a href="sources/images/llama2/llama2_34b_bf16_layer12_loss_compare.png">Loss</a> </td>
       <td> <a href="examples/llama2/pretrain_llama2_34B_ptd_16p.sh">训练</a> </td>
     </tr>
     <tr>
@@ -226,17 +209,15 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>BF16 </td>
       <td> 350 </td>
       <td> 339 </td>
-      <td> <a href="sources/images/llama2/llama2_70b_bf16_layer12_loss_compare.png">Loss</a> </td>
       <td> <a href="examples/llama2/pretrain_llama2_70b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
-      <td rowspan="4"><a href="examples/qwen/README.md">Qwen</a></td>
+      <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
       <td>7B</td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2499 </td>
       <td> 2867 </td>
-      <td> -- </td>
       <td> <a href="examples/qwen/pretrain_qwen_7b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
@@ -245,7 +226,6 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>BF16 </td>
       <td> 1560 </td>
       <td> 1578 </td>
-      <td> -- </td>
       <td> <a href="examples/qwen/pretrain_qwen_14b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
@@ -254,8 +234,16 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>BF16 </td>
       <td> -- </td>
       <td> -- </td>
-      <td> -- </td>
       <td> <a href="examples/qwen/pretrain_qwen_72b_ptd.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
+      <td>8x7B</td>
+      <td>2x8</td>
+      <td>BF16 </td>
+      <td> 1054 </td>
+      <td> 1139 </td>
+      <td> <a href="examples/mixtral/pretrain_mixtral_8x7b_ptd.sh">训练</a> </td>
     </tr>
   </tbody>
 </table>
@@ -412,7 +400,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>  <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
-      <td rowspan="4"><a href="examples/qwen/README.md">Qwen</a></td>
+      <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
       <td>7B</td>
       <td> -- </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_qwen_7b_ptd.sh">对话 </a></td>
@@ -431,6 +419,14 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
+      <td>8x7B</td>
+      <td> -- </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_mixtral_8x7b_ptd.sh">对话 </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_mixtral_8x7b_ptd.sh">评估 </a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
   </tbody>

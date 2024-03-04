@@ -1,4 +1,4 @@
-# Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+# Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
 from ascendspeed import megatron_adaptor
 
 import modellink
@@ -12,7 +12,6 @@ from tasks.inference.infer_base import task_factory, add_text_generate_args
 def model_provider(pre_process=True, post_process=True):
     """Build the model."""
     config = core_transformer_config_from_args(get_args())
-
     init_model = GPTModel(
         config,
         parallel_output=False,
@@ -34,4 +33,8 @@ if __name__ == "__main__":
         pretrained_model_name_or_path=args.load
     )
 
-    task_factory(args, model)
+    system_template = "<s>"
+    dialog_template = "[INST] {instruction} [/INST] "
+    template = system_template + dialog_template
+
+    task_factory(args, model, system_template=system_template, dialog_template=dialog_template)
