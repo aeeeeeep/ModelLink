@@ -67,6 +67,7 @@ GPT_ARGS="
     --adam-beta2 0.95 \
     --no-gradient-accumulation-fusion \
     --use-flash-attn \
+    --finetune \
     --bf16
 "
 
