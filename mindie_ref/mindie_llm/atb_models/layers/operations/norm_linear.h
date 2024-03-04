@@ -33,7 +33,7 @@ enum PackQuantType : unsigned int {
 
 template <typename NormParamType>
 struct NormLinearParam {
-    bool isAnti = false;
+    bool isAntiOutlier = false;
     NormParamType normParamType;
     NormParamType normQuantParamType;
     atb_speed::common::FusionLinearParam fusionLinearParam;

@@ -69,7 +69,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
     if (param.mlpPackType != atb_speed::common::GATE_UP_WEIGHT_NO_PACK) { // Gate Up weight权重合并或者没有Gate weight
         atb::Node &normLinearGateUpNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> gateUpNormLinearParam;
-        gateUpNormLinearParam.isAnti = param.isAnti;
+        gateUpNormLinearParam.isAntiOutlier = param.isAntiOutlier;
         gateUpNormLinearParam.fusionLinearParam.quantType \
             = param.layerLinearQuantType[4] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
         gateUpNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
@@ -92,7 +92,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
     } else {
         atb::Node &normLinearGateNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> gateNormLinearParam;
-        gateNormLinearParam.isAnti = param.isAnti;
+        gateNormLinearParam.isAntiOutlier = param.isAntiOutlier;
         gateNormLinearParam.fusionLinearParam.quantType \
             = param.layerLinearQuantType[4] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
         gateNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
@@ -115,7 +115,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
 
         atb::Node &normLinearUpNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> upNormLinearParam;
-        upNormLinearParam.isAnti = param.isAnti;
+        upNormLinearParam.isAntiOutlier = param.isAntiOutlier;
         upNormLinearParam.fusionLinearParam.quantType \
             = param.layerLinearQuantType[5] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
         upNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;

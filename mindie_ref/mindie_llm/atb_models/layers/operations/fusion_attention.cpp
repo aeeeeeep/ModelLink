@@ -77,7 +77,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
 
     atb::Node &qNormLinearNode = opGraph.nodes.at(nodeId++);
     atb_speed::common::NormLinearParam<NormParamType> qNormLinearParam;
-    qNormLinearParam.isAnti = param.isAnti;
+    qNormLinearParam.isAntiOutlier = param.isAntiOutlier;
     qNormLinearParam.fusionLinearParam.quantType \
         = param.layerLinearQuantType[0] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
     qNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
@@ -142,7 +142,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
     } else {  // isPack: false
         atb::Node &kNormLinearNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> kNormLinearParam;
-        kNormLinearParam.isAnti = param.isAnti;
+        kNormLinearParam.isAntiOutlier = param.isAntiOutlier;
         kNormLinearParam.fusionLinearParam.quantType \
             = param.layerLinearQuantType[1] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
         kNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
@@ -161,7 +161,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
 
         atb::Node &vNormLinearNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> vNormLinearParam;
-        vNormLinearParam.isAnti = param.isAnti;
+        vNormLinearParam.isAntiOutlier = param.isAntiOutlier;
         vNormLinearParam.fusionLinearParam.quantType \
             = param.layerLinearQuantType[2] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
         vNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;

@@ -55,7 +55,7 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
         CREATE_OPERATION(param.normQuantParamType, &normNode.operation);
         normNode.inTensorIds = {
             NormLinearTensorIdx::IN_INPUT,
-            param.isAnti ? NormLinearTensorIdx::IN_NORM_QUANT_WEIGHT : NormLinearTensorIdx::IN_NORM_WEIGHT,
+            param.isAntiOutlier ? NormLinearTensorIdx::IN_NORM_QUANT_WEIGHT : NormLinearTensorIdx::IN_NORM_WEIGHT,
             NormLinearTensorIdx::IN_NOMR_QUANT_BIAS,
             NormLinearTensorIdx::IN_SCALE, NormLinearTensorIdx::IN_OFFSET
         };

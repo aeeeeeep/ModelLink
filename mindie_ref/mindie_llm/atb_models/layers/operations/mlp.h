@@ -31,7 +31,7 @@ enum MlpPackType : unsigned int {
 
 template <typename NormParamType>
 struct MlpParam {
-    bool isAnti = false;
+    bool isAntiOutlier = false;
     bool isBF16 = false;
     bool hasBias = false;
     MlpPackType mlpPackType = GATE_UP_WEIGHT_PACK;

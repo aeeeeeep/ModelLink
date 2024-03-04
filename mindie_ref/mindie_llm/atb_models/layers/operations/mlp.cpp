@@ -77,7 +77,7 @@ atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation
 
     atb::Node &normLinearGateUpNode = opGraph.nodes.at(nodeId++);
     atb_speed::common::NormLinearParam<NormParamType> gateUpNormLinearParam;
-    gateUpNormLinearParam.isAnti = param.isAnti;
+    gateUpNormLinearParam.isAntiOutlier = param.isAntiOutlier;
     gateUpNormLinearParam.fusionLinearParam.quantType \
         = param.layerLinearQuantType[4] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
     gateUpNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
@@ -111,7 +111,7 @@ atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation
     if (param.mlpPackType == MlpPackType::GATE_UP_WEIGHT_NO_PACK) {
         atb::Node &normLinearUpNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> upNormLinearParam;
-        upNormLinearParam.isAnti = param.isAnti;
+        upNormLinearParam.isAntiOutlier = param.isAntiOutlier;
         upNormLinearParam.fusionLinearParam.quantType \
             = param.layerLinearQuantType[5] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
         upNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
