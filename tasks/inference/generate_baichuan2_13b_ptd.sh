@@ -50,5 +50,5 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference
        --no-masked-softmax-fusion \
        --no-gradient-accumulation-fusion \
        --exit-on-missing-checkpoint \
-       --make-vocab-size-divisible-by 8
+       --make-vocab-size-divisible-by 32
 

@@ -42,7 +42,7 @@ GPT_ARGS="
     --micro-batch-size 1 \
     --global-batch-size 32 \
     --untie-embeddings-and-output-weights \
-    --make-vocab-size-divisible-by 128 \
+    --make-vocab-size-divisible-by 64 \
     --lr 1e-5 \
     --no-gradient-accumulation-fusion \
     --load ${CHECKPOINT} \

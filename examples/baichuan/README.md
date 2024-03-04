@@ -41,7 +41,6 @@ Baichuan-7B 训练的硬件配置如下：
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
 cd ModeLlink 
-git checkout modellink
 mkdir logs
 mkdir ckpt
 ```
@@ -94,19 +93,22 @@ wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/tokenizer_conf
 cd ..
 ```
 
-接着将hf格式的权重转化为AscendSpeed可以加载的形式：
+接着将hf格式的权重转化为megatron可以加载的形式：
 ```shell
 mkdir baichuan-7B-mt
 
-SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
-python $SCRIPT_PATH \
-    --input-model-dir ./baichuan-7B-hf \
-    --output-model-dir ./baichuan-7B-mt \
-    --tensor-model-parallel-size 8 \
-    --pipeline-model-parallel-size 1 \
-    --type 7B \
-    --pse \
-    --merge-mlp
+# 修改 ascend-toolkit 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+   
+python tools/checkpoint/util.py \
+    --model-type GPT \
+    --loader llama2_hf \
+    --saver megatron \
+    --target-tensor-parallel-size 8 \
+    --load-dir ./baichuan-7B-hf \
+    --save-dir ./baichuan-7B-mt \
+    --tokenizer-model ./baichuan-7B-hf/tokenizer.model \
+    --w-pack True    
 ```
 
 
@@ -116,16 +118,16 @@ python $SCRIPT_PATH \
 
 ```shell
 # 下载数据集
-mkdir dataset_baichuan7B
-cd ./dataset_baichuan7B
+mkdir dataset-baichuan-7B
+cd ./dataset-baichuan-7B
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
 
 # 准备数据集                              
 python ./tools/preprocess_data.py \
---input ./dataset_baichuan7B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+--input ./dataset-baichuan-7B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
 --tokenizer-name-or-path ./baichuan-7B-hf \
---output-prefix ./dataset_baichuan7B/alpaca \
+--output-prefix ./dataset-baichuan-7B/alpaca \
 --workers 4 \
 --log-interval 1000 \
 --tokenizer-type PretrainedFromHF
@@ -139,7 +141,7 @@ python ./tools/preprocess_data.py \
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 CKPT_SAVE_DIR="./ckpt"
-DATA_PATH="./dataset_baichuan7B/alpaca_text_document"
+DATA_PATH="./dataset-baichuan-7B/alpaca_text_document"
 TOKENIZER_MODEL="./baichuan-7B-hf/tokenizer.model"
 CKPT_LOAD_DIR="./baichuan-7B-mt"
 ```
@@ -158,7 +160,7 @@ Baichuan-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 |  设备  |    模型     | 迭代数  | 样本吞吐 (samples/s) | tokens吞吐 (tokens/s/p) | 单步迭代时间 (s/step) | 
 |:----:|:---------:|:----:|:---------------------:|:---------------:|:----------------:|
-| NPUs | Baichuan-7B | 1000 | 5.16 | 2643.00 | 6.199| 
+| NPUs | Baichuan-7B | 1000 | 5.24 | 2685 | 6.1| 
 |  参考  | Baichuan-7B | - | - |  2036 | - | 
 
 
@@ -244,7 +246,6 @@ Baichuan-13B 训练的硬件配置如下:
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
 cd ModeLlink 
-git checkout modellink
 mkdir logs
 mkdir ckpt
 mkdir ckpt_lora
@@ -274,7 +275,14 @@ cd ..
 
 # 安装其余依赖库
 pip install -r requirements.txt 
+
 ```
+**注意：**在后面的任务执行过程中如果出现报错：`AttributeError: 'BaichuanTokenizer’ object has no attribute 'sp_model'`，请执行下面命令解决这个问题：
+
+```shell
+pip install transformers==4.32.0 --force
+```
+
 
 3. （可选的）准备预训练权重
 
@@ -298,19 +306,22 @@ wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/tokenize
 cd ..
 ```
 
-将 BaiChuan-13B 模型权重从 huggingface 格式转换为 AscendSpeed 格式
+将 BaiChuan-13B 模型权重从 huggingface 格式转换为 megatron 格式
 ```shell
 mkdir baichuan-13B-mt
 
-SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
-python $SCRIPT_PATH \
-    --input-model-dir ./baichuan-13B-hf \
-    --output-model-dir ./baichuan-13B-mt \
-    --tensor-model-parallel-size 8 \
-    --pipeline-model-parallel-size 1 \
-    --type 13B \
-    --pse  \
-    --merge-mlp   
+# 修改 ascend-toolkit 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+   
+python tools/checkpoint/util.py \
+    --model-type GPT \
+    --loader llama2_hf \
+    --saver megatron \
+    --target-tensor-parallel-size 8 \
+    --load-dir ./baichuan-13B-hf \
+    --save-dir ./baichuan-13B-mt \
+    --tokenizer-model ./baichuan-13B-hf/tokenizer.model \
+    --w-pack True      
 ```
 
 4. 准备数据集
@@ -318,15 +329,15 @@ python $SCRIPT_PATH \
 下载 Baichuan-13B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
 
 ```shell
-mkdir dataset_baichuan13B
-cd ./dataset_baichuan13B
+mkdir dataset-baichuan-13B
+cd ./dataset-baichuan-13B
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
 
 python ./tools/preprocess_data.py \
-    --input ./dataset_baichuan13B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+    --input ./dataset-baichuan-13B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./baichuan-13B-hf \
-    --output-prefix ./dataset_baichuan13B/alpaca \
+    --output-prefix ./dataset-baichuan-13B/alpaca \
     --workers 4 \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF 
@@ -341,7 +352,7 @@ python ./tools/preprocess_data.py \
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 CKPT_SAVE_DIR="./ckpt"
-DATA_PATH="./dataset_baichuan13B/alpaca_text_document"
+DATA_PATH="./dataset-baichuan-13B/alpaca_text_document"
 TOKENIZER_MODEL="./baichuan-13B-hf/tokenizer.model"
 CKPT_LOAD_DIR="./baichuan-13B-mt" 
 ```
@@ -412,7 +423,9 @@ bash ./tasks/inference/generate_baichuan_13b_lora_ptd.sh
 
 ## 推理
 
-首先需要配置baichuan-13B的推理脚本: tasks/inference/generate_baichuan_13b_ptd.sh
+
+
+配置baichuan-13B的推理脚本: tasks/inference/generate_baichuan_13b_ptd.sh
 
 ```bash
 # 根据您自己的 ascend-toolkit 路径，执行set_env.sh

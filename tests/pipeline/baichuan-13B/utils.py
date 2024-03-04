@@ -39,7 +39,8 @@ class ParamConfig:
     process_instruction_data_param = config_file["PROCESS_INSTRUCTION_DATA_PARAM"]
     process_data_input_path = config_file["PROCESS_DATA_INPUT_PATH"]
     lora_inference_param = config_file["LORA_INFERENCE_PARAM"]
-
+    convert_weight_param = config_file["CONVERT_WEIGHT_PARAM"]
+    
 
 def assert_judge(expression):
     if not expression:

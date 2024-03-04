@@ -5,7 +5,7 @@
         "--ffn-hidden-size", "13696",
         "--num-attention-heads", "40",
         "--position-embedding-type", "alibi",
-        "--make-vocab-size-divisible-by", "128",
+        "--make-vocab-size-divisible-by", "64",
         "--max-position-embeddings", "4096",
         "--normalization", "RMSNorm",
         "--swiglu",
@@ -121,5 +121,16 @@
         "--eval-iters", "0",
         "--distributed-backend", "nccl",
         "--num-workers", "0"
+    ],
+	
+    "CONVERT_WEIGHT_PARAM": [
+        "--model-type", "GPT",
+        "--loader", "llama2_hf",
+        "--saver", "megatron",
+        "--target-tensor-parallel-size", "8",
+        "--load-dir", "/home/dataset/baichuan-13B-hf",
+        "--save-dir", "/home/dataset/baichuan-13B-tp8-pp1",
+        "--tokenizer-model", "None",
+        "--w-pack", "True"
     ]
 }

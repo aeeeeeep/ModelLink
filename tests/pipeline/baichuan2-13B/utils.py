@@ -31,7 +31,7 @@ class ParamConfig:
     auxiliary_param = config_file["AUXILIARY_PARAM"]
     tokenizer_param = config_file["TOKENIZER_PARAM"]
     process_pretrain_data_param = config_file["PROCESS_PRETRAIN_DATA_PARAM"]
-
+    convert_weight_param = config_file["CONVERT_WEIGHT_PARAM"]
 
 
 def assert_judge(expression):
