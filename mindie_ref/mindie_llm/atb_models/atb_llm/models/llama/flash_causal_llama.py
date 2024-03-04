@@ -27,8 +27,9 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
         self.use_refactor = config.use_refactor
         if self.use_refactor:
             self.config = config
-            self.acl_encoder_operation_inputs = [None] * 12
-            self.acl_decoder_operation_inputs = [None] * 12
+            self.in_tensor_length = 12
+            self.acl_encoder_operation_inputs = [None] * self.in_tensor_length
+            self.acl_decoder_operation_inputs = [None] * self.in_tensor_length
 
             self.placeholder = torch.zeros(1, dtype=self.dtype, device="npu")
             self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64, device="npu")
