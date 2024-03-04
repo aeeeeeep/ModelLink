@@ -17,7 +17,6 @@
 #define ATB_SPEED_MODELS_LLAMA_FLASHATTENTION_MODEL_H
 
 #include "atb_speed/base/model.h"
-#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama {
@@ -67,8 +66,6 @@ private:
     std::vector<int32_t> tokenOffset_;
     std::vector<int32_t> seqLen_;
 };
-
-REGISTER_MODEL(llama, FlashAttentionModel);
 
 } // namespace llama
 } // namespace atb_speed

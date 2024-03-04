@@ -17,7 +17,6 @@
 #define ATB_SPEED_MODELS_LLAMA_ADAPTER_MODEL_H
 
 #include "atb_speed/base/model.h"
-#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama_adapter {
@@ -75,9 +74,6 @@ private:
 
     Param param_;
 };
-
-REGISTER_MODEL(llama_adapter, EncoderAdapterModel);
-REGISTER_MODEL(llama_adapter, DecoderAdapterModel);
 
 } // namespace llama_adapter
 } // namespace atb_speed

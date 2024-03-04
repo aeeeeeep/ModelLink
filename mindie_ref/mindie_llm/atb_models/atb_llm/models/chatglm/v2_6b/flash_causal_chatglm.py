@@ -106,12 +106,14 @@ class FlashChatglmAttention(torch.nn.Module):
                 f"and `num_shards`: {weights.process_group.size()}"
             )
         self.num_heads = self.num_heads // weights.process_group.size()
-        self.query_key_value = load_qkv(
+        self.query_key_value = TensorParallelColumnLinear.load_qkv(
             config,
             prefix=f"{prefix}.query_key_value",
-            weights=weights
+            weights=weights,
+            bias=True,
+            num_heads=config.num_attention_heads,
+            num_kv_heads=config.multi_query_group_num
         )
-
         self.dense = TensorParallelRowLinear.load(
             config,
             prefix=f"{prefix}.dense",
@@ -188,11 +190,11 @@ class MLP(nn.Module):
             )
         )
         # Fuse gate and up proj
-        self.gate_up_proj = load_gate_up_proj(
+        self.gate_up_proj = TensorParallelColumnLinear.load_gate_up(
             config,
             prefix=f"{prefix}.dense_h_to_4h",
             weights=weights,
-            size=2
+            bias=False,
         )
         self.down_proj = TensorParallelRowLinear.load(
             config,
@@ -408,7 +410,7 @@ class FlashChatglmModel(torch.nn.Module):
         self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64)
         # self.lm_head_weight = None
 
-        self.ascend_atten_mask = AttentionMask.static(config.seq_length)
+        self.attn_mask = AttentionMask.static(config.seq_length)
 
     def weight_format_cast(self, weight):
         if not self.soc_info.need_nz:
@@ -479,10 +481,10 @@ class FlashChatglmModel(torch.nn.Module):
                 self.transdata_operation.set_param(self.transdata_param)
 
                 pad_maxs = math.ceil(max_seq_len / 16) * 16
-                atten_mask = self.ascend_atten_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
+                atten_mask = self.attn_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
                 atten_mask = self.transdata_operation.execute([atten_mask])[0]
             else:
-                atten_mask = self.ascend_atten_mask.get_attn_mask(max_seq_len, kv_cache[0][0].dtype, kv_cache[0][0].device)
+                atten_mask = self.attn_mask.get_attn_mask(max_seq_len, kv_cache[0][0].dtype, kv_cache[0][0].device)
             self.acl_param_encoder = json.dumps({
                 "seqLen" : input_lengths.tolist()
             })

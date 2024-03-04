@@ -47,7 +47,7 @@ def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length
         req.out_token_list.append(next_token_list[i])
 
     batch.batch_input_ids = next_token.to(torch.int64)
-    batch.batch_position_ids = batch.context_length.to(torch.long)
+    batch.batch_position_ids = batch.context_length.clone().to(torch.long)
     if batch.cu_seqlen_prefill is not None:
         batch.batch_slot_indices = batch.batch_slot_indices[batch.lm_head_indices]
         batch.cu_seqlen_prefill = None

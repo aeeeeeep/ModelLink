@@ -1032,7 +1032,7 @@ class LlamaModel(LlamaPreTrainedModel):
 
     def init_ascend_kvcache(self):
         if self.format_nz:
-            self.hidden_size_nz = math.ceil(self.hidden_size // self.world_size / self.nz_dim)
+            self.hidden_size_nz = math.ceil(self.kv_head_num * self.headSize // self.world_size / self.nz_dim)
             self.k_cache_input = torch.zeros(self.num_layers,
                                         self.batch_num,  # batch
                                         self.hidden_size_nz,

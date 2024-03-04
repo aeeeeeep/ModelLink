@@ -322,7 +322,7 @@ class QWenAttention(nn.Module):
             prefix=f"{prefix}.c_attn",
             weights=weights,
             bias=True,
-            head_size=self.head_dim
+            num_heads=config.num_attention_heads
         )
         self.c_proj = TensorParallelRowLinear.load(
             config,

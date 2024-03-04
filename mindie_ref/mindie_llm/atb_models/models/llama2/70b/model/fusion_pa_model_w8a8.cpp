@@ -21,9 +21,13 @@
 #include "models/llama2/70b/operation/pa_layer_embedding.h"
 #include "nlohmann/json.hpp"
 #include "parallel_lmhead.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama2_70b {
+
+REGISTER_MODEL(llama2_70b, FusionPAModelW8A8);
+
 const int WEIGHT_COUNT_PER_LAYER = 30;
 const int OPERATION_COUNT_BEFORE_LAYER = 1;
 const int OPERATION_COUNT_AFTER_LAYER = 2;

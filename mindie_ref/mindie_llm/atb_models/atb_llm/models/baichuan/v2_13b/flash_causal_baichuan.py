@@ -92,7 +92,7 @@ class BaichuanAttention(torch.nn.Module):
             )
         self.num_heads = self.num_heads // weights.process_group.size()
         self.query_key_value = TensorParallelColumnLinear.load_qkv(
-            config, prefix=f"{prefix}.W_pack", weights=weights, bias=False
+            config, prefix=f"{prefix}.W_pack", weights=weights, bias=False, num_heads=config.num_attention_heads
         )
 
         self.o_proj = TensorParallelRowLinear.load(
@@ -268,7 +268,6 @@ class BaichuanModel(BaichuanPreTrainedModel):
         return self.transdata_operation.execute(
             [tensor.view(tensor.shape[0] * tensor.shape[1], tensor.shape[2], tensor.shape[3])]
         )[0]
-
 
     def init_ascend_weight(self):
         torch.npu.synchronize()
