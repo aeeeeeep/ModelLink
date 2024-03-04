@@ -14,7 +14,6 @@ from ..gpt_neox.config import GPTNeoXConfig
 @dataclass
 class BaseRouter:
     model_name_or_path: str = ""
-    quantize: Optional[str] = None
     max_position_embeddings: Optional[int] = None,
     is_flash_causal_lm: bool = True
     revision: Optional[str] = None
