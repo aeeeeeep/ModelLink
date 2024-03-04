@@ -6,7 +6,6 @@ from .router import router
 
 
 def get_model(model_name_or_path: str,
-              quantize: Optional[str] = None,
               max_position_embeddings: Optional[int] = None,
               is_flash_causal_lm: bool = True,
               revision: Optional[str] = None,
@@ -19,7 +18,6 @@ def get_model(model_name_or_path: str,
     router_cls = getattr(router, f"{config.model_type.capitalize()}Router")
     router_ins = router_cls(
         model_name_or_path,
-        quantize,
         max_position_embeddings,
         is_flash_causal_lm,
         revision,
@@ -27,6 +25,6 @@ def get_model(model_name_or_path: str,
         use_refactor,
         config)
     config = router_ins.config
-
-    config.quantize = quantize
+    if not hasattr(config, 'quantize'):
+        setattr(config, 'quantize', None)
     return router_ins.model_cls, config, router_ins.tokenizer

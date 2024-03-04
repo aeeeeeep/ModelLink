@@ -121,7 +121,7 @@ if __name__ == '__main__':
     rank = int(os.getenv("RANK", "0"))
     world_size = int(os.getenv("WORLD_SIZE", "1"))
 
-    model = ModelRunner(model_path, rank=rank, world_size=world_size, quantize=None, dtype=dtype,
+    model = ModelRunner(model_path, rank=rank, world_size=world_size,
                         is_flash_causal_lm=is_flash_causal_lm, use_refactor=use_refactor)
 
     tokenizer = model.tokenizer

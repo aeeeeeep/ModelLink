@@ -92,7 +92,9 @@ class BaichuanAttention(torch.nn.Module):
             )
         self.num_heads = self.num_heads // weights.process_group.size()
         self.query_key_value = TensorParallelColumnLinear.load_qkv(
-            config, prefix=f"{prefix}.W_pack", weights=weights, bias=False, num_heads=config.num_attention_heads
+            config, prefix=f"{prefix}.W_pack", weights=weights, bias=False,
+            hidden_size=config.hidden_size,
+            num_heads=config.num_attention_heads,
         )
 
         self.o_proj = TensorParallelRowLinear.load(
