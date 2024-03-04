@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,13 @@
 
 #include "models/aquila/7b/layer/flash_attention_layer.h"
 #include "operations/lmhead.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace aquila_7b {
+
+REGISTER_MODEL(aquila_7b, FlashAttentionRopeModel);
+
 enum InTensorId : int {
     IN_TENSOR_INPUTIDS = 0,
     IN_TENSOR_COSEMBED,

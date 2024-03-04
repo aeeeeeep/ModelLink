@@ -14,8 +14,8 @@ link_directories(
 )
 
 add_library(atb_speed_torch SHARED ${SOURCE_FILES})
-target_compile_options(atb_speed_torch PUBLIC "-Wno-unused-function" "-Wno-unused-variable" "-Wno-unused-parameter" "-Wno-attributes")
-target_link_libraries(atb_speed_torch PUBLIC
+target_compile_options(atb_speed_torch PRIVATE "-Wno-unused-function" "-Wno-unused-variable" "-Wno-unused-parameter" "-Wno-attributes")
+target_link_libraries(atb_speed_torch PRIVATE
     atb atb_speed_core atb_speed_models atb_speed_layers torch c10
     torch_cpu torch_python torch_npu)
 install(TARGETS atb_speed_torch DESTINATION lib)

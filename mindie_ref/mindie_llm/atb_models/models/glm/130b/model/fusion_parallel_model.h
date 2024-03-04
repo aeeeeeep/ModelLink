@@ -18,7 +18,6 @@
 #include <atb/svector.h>
 #include <vector>
 #include "atb_speed/base/model.h"
-#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace glm130b {
@@ -58,8 +57,6 @@ private:
     atb::SVector<int32_t> tokenOffset_;
     atb::SVector<int32_t> seqLen_;
 };
-
-REGISTER_MODEL(glm130b, FusionParallelModel);
 
 } // namespace glm130b
 } // namespace atb_speed

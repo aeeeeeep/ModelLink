@@ -20,9 +20,13 @@
 #include "models/gptneox/20b/layer/flashattention_kvcache_layer.h"
 #include "layers/parallel_layer_v2.h"
 #include "nlohmann/json.hpp"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace gptneox_20b {
+
+REGISTER_MODEL(gptneox_20b, FaKvCacheModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 12;
 const int WORDEMBEDDINGNODE_WEIGHT_COUNT = 1;
 const int FINALNORMNODE_WEIGHT_COUNT = 2;
