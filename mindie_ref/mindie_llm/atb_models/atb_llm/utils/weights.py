@@ -395,7 +395,7 @@ class Weights:
             weight = weight.to(dtype=self.dtype)
         return weight
 
-    def get_tensor_col_packed_qkv_mha(self, tensor_name: str, head_size: int):
+    def get_tensor_col_packed_qkv_mha(self, tensor_name: str, head_size: int = None):
         slice_ = self._get_slice(tensor_name)
         total_size = slice_.get_shape()[0]
         if total_size % 3 != 0:
@@ -476,7 +476,7 @@ class Weights:
         if not num_kv_heads:
             num_kv_heads = num_heads
         if num_heads == num_kv_heads:
-            return self.get_tensor_col_packed_qkv_mha(tensor_name, hidden_size)
+            return self.get_tensor_col_packed_qkv_mha(tensor_name)
         else:
             return self.get_tensor_col_packed_qkv_gqa(tensor_name, num_heads, num_kv_heads)
 

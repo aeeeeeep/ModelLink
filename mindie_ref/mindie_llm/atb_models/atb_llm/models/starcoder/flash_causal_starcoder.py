@@ -389,7 +389,7 @@ class FlashStarcoderForCausalLM(torch.nn.Module):
             block_tables,
             slots,
             input_lengths,
-            self.max_seq_len_every_batch,,
+            self.max_seq_len_every_batch,
             lm_head_indices
         )
 
