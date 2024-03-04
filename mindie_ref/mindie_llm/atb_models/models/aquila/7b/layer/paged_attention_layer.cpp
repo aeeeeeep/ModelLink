@@ -161,7 +161,7 @@ atb::Status PagedAttentionRopeLayer(const PagedAttentionRopeLayerParam &param, a
     atb::infer::ReshapeAndCacheParam reshapeCacheParm;
     CREATE_OPERATION(reshapeCacheParm, &reshapeAndCacheNode.operation);
     reshapeAndCacheNode.inTensorIds = {INTERNAL_K_EMBED, INTERNAL_V_LINEAR_OUT, IN_K_CACHE, IN_V_CACHE, IN_SLOTS};
-    reshapeAndCacheNode.outTensorIds = {};
+    reshapeAndCacheNode.outTensorIds = {IN_K_CACHE, IN_V_CACHE};
     reshapeAndCacheNode.inTensorReshapeFuncs.resize(reshapeAndCacheNode.inTensorIds.size());
     reshapeAndCacheNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         reshapeHeads(oldShape, newShape, param.headNum);
@@ -175,7 +175,7 @@ atb::Status PagedAttentionRopeLayer(const PagedAttentionRopeLayerParam &param, a
         selfAttentionParam.headNum = param.headNum;
         selfAttentionParam.qkScale = 1.0 / sqrt(param.dk);
         selfAttentionParam.kvHeadNum = param.headNum;
-        selfAttentionParam.isEncoder = true;
+        selfAttentionParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
         CREATE_OPERATION(selfAttentionParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERNAL_Q_EMBED, INTERNAL_K_EMBED, INTERNAL_V_LINEAR_OUT, IN_ATTENTION_MASK,
                                      IN_INPUT_LENGTHS};

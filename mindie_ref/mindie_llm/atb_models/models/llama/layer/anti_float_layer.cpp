@@ -143,7 +143,6 @@ atb::Status AntiFloatLayer(const AntiFloatLayerParam  &param,
     ropeNode.outTensorIds = {INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK};
 
     atb::infer::SelfAttentionParam selfAttentionKvCacheParam;
-    selfAttentionKvCacheParam.headDim = param.dk;
     selfAttentionKvCacheParam.headNum = param.headNum;
     selfAttentionKvCacheParam.qScale = 1.0 / sqrt(param.dk);
     CREATE_OPERATION(selfAttentionKvCacheParam, &selfAttentionKvCacheNode.operation);

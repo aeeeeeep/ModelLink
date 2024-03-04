@@ -35,8 +35,8 @@ export CACHE_DIR=$CODE_ROOT/build
 export OUTPUT_DIR=$CODE_ROOT/output
 THIRD_PARTY_DIR=$CODE_ROOT/3rdparty
 PACKAGE_NAME="1.0.RC1"
-MindIE_ATB_VERSION_FOR_CI="1.0.RC1.B021" # only for ci build
-MindIE_ATB_TAG="v1.1.2" # current MindIE-ATB sourcecode tag for ATB-Models
+MindIE_ATB_VERSION_FOR_CI="1.0.RC1.B032" # only for ci build
+MindIE_ATB_TAG_BRANCH=master # current MindIE-ATB sourcecode tag/branch for ATB-Models
 ATB_MODELS_VERSION=""
 README_DIR=$CODE_ROOT
 COMPILE_OPTIONS=""
@@ -268,7 +268,7 @@ function fn_build_version_info()
     current_time=$(date +"%Y-%m-%d %r %Z")
     touch $OUTPUT_DIR/atb_speed/version.info
     cat > $OUTPUT_DIR/atb_speed/version.info <<EOF
-MindIE-ATB Tag : ${MindIE_ATB_TAG}
+MindIE-ATB Tag/Branch : ${MindIE_ATB_TAG_BRANCH}
 MindIE-ATB Version : ${ATB_VERSION}
 ATB-Models Version : ${ATB_MODELS_VERSION}
 Commit id : ${commit_id}

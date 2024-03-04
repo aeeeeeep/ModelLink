@@ -160,7 +160,6 @@ atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param,
 
     // self attention
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / sqrt(param.dk);
     CREATE_OPERATION(selfAttentionParam, &selfAttentionKvCacheNode.operation);
