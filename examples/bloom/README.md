@@ -136,15 +136,7 @@ Bloom-7B
 | NPUs | Bloom 7b | 1000 | 7.95 | 2034 | 64.55
 |  参考  | Bloom 7B | 1000 | 9.894 |  2525 | 19.40 
 
-#### 精度
 
-NPU与参考精度比对：
-
-![NPU-LOSS](../../sources/images/bloom/7b_lm_loss.png)
-
-NPU VS Reference 相对误差
-
-![relative_error](../../sources/images/bloom/relative_error.png)
 
 ## Bloom-7B推理
 首先配置Bloom-7B 推理脚本: tasks/inference/generate_bloom_ptd_7B.sh 
@@ -336,15 +328,7 @@ Bloom-176B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 | NPUs | Bloom-176B | 1000     | 108                     |
 | 参考 | Bloom-176B | NA       | 107                     |
 
-### 精度
 
-NPU vs 参考 loss 
-
-![bloom176b_lm_loss_compare](../../sources/images/bloom/bloom176b_lm_loss_compare.PNG)
-
-单节点loss对比
-
-![bloom176b_1node_lm_loss_compare](../../sources/images/bloom/bloom176b_lm_loss_1node_compare.PNG)
 
 ## 推理
 

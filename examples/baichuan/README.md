@@ -14,13 +14,15 @@
     - [脚本](#脚本)
     - [性能](#性能)
         - [吞吐](#吞吐)
-        - [精度](#精度)
+  - [推理](#推理)
+  - [评估](#评估)
+
 - [Baichuan-13B](#Baichuan-13B)
   - [训练](#训练)
     - [脚本](#脚本)
     - [性能](#性能)
         - [吞吐](#吞吐)
-        - [精度](#精度)
+  - [Lora微调](#Lora微调)
   - [推理](#推理)
   - [评估](#评估)
 
@@ -159,15 +161,68 @@ Baichuan-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 | NPUs | Baichuan-7B | 1000 | 5.16 | 2643.00 | 6.199| 
 |  参考  | Baichuan-7B | - | - |  2036 | - | 
 
-#### 精度
 
-NPU vs 参考 loss.
 
-![NPU-LOSS](../../sources/images/baichuan/baichuan7B-loss-compare.png)
+## 推理
 
-NPU vs 参考 loss 相对误差.
+首先需要配置baichuan-7B的推理脚本: tasks/inference/generate_baichuan_7b_ptd.sh
 
-![NPU-Relative-Error](../../sources/images/baichuan/baichuan7B-loss-relative-error.png)
+```bash
+# 根据您自己的 ascend-toolkit 路径，执行set_env.sh
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+ 
+# 修改模型权重路径和词表路径
+CHECKPOINT="your model directory path"
+TOKENIZER_PATH="your tokenizer directory path"
+```
+
+然后可直接启动generate_baichuan_7b_ptd.sh
+
+```bash
+bash tasks/inference/generate_baichuan_7b_ptd.sh
+```
+
+推理的示例如下:
+![Inference](../../sources/images/baichuan/baichuan_7B_inference.png)
+
+## 评估
+
+我们使用boolq基准来评估我们的模型。基准[下载](https://huggingface.co/datasets/boolq).
+
+```shell
+# 配置原始权重与词表的路径
+CHECKPOINT=<origin-ckpt-path>
+TOKENIZER_PATH=<tokenizer-path>
+# 配置任务以及数据路径
+DATA_PATH="./boolq/"
+TASK="boolq"
+```
+
+
+```shell
+bash ./tasks/evaluation/evaluate_baichuan_7B_ptd.sh
+```
+
+<table>
+  <thead>
+    <tr>
+      <th>任务</th>
+      <th>验证集</th>
+      <th>模型</th>
+      <th>昇腾值</th>
+      <th>社区值</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="https://huggingface.co/datasets/boolq">Boolq</a></td>
+      <td>test</td>
+      <th>Baichuan 7B</th>
+      <td>0.69</td>
+      <td><a href="https://hub.opencompass.org.cn/dataset-detail/BoolQ">0.67</a></td>
+    </tr>
+  </tbody>
+</table>
 
 
 # Baichuan-13B
@@ -192,6 +247,7 @@ cd ModeLlink
 git checkout modellink
 mkdir logs
 mkdir ckpt
+mkdir ckpt_lora
 ```
 
 2. 搭建环境
@@ -309,16 +365,49 @@ Baichuan-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 |  参考  | Baichuan-13B | - |  -   |         862          |     -   |    
 
 
-#### 精度
 
-NPU vs 参考 loss.
+## Lora微调
+我们支持使用 Baichuan-13B 进行lora微调。
+微调时使用`指令微调数据集`，制作过程如下，注意添加`--handler-name GeneralInstructionHandler`
 
+```python
+mkdir alpaca_preprocessed
+python tools/preprocess_data.py \
+    --input ./dataset_baichuan13B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+    --output-prefix ./alpaca_preprocessed/alpaca \
+    --tokenizer-type PretrainedFromHF \
+    --tokenizer-name-or-path ./baichuan-13B-hf \
+    --tokenizer-not-use-fast \
+    --handler-name GeneralInstructionHandler \
+    --append-eod
+```
+配置 Baichuan-13B 的lora脚本:`examples/baichuan/tune_baichuan_ptd_13B.sh`
 
-![NPU-LOSS](../../sources/images/baichuan/baichuan13B-loss-compare.png)
+```shell
+# 配置保存权重的路径、数据集路径、权重路径以及词表路径
+CKPT_SAVE_DIR="./ckpt_lora"
+DATA_PATH="./alpaca_preprocessed/alpaca"
+CHECKPOINT="./baichuan-13B-mt"
+TOKENIZER_PATH="./baichuan-13B-hf"
+```
+启动 Baichuan-13B lora微调脚本: `examples/baichuan/tune_baichuan_ptd_13B.sh`
+```shell
+bash ./examples/baichuan/tune_baichuan_ptd_13B.sh
+```
+再使用微调后的权重进行推理:
+```shell
+# 配置权重路径、lora权重的路径以及词表路径
+CHECKPOINT="./baichuan-13B-mt"
+LORA_CHECKPOINT="./ckpt_lora"
+TOKENIZER_PATH="./baichuan-13B-hf"
+```
 
-NPU vs 参考 loss 相对误差.
+```shell
+bash ./tasks/inference/generate_baichuan_13b_lora_ptd.sh
+```
 
-![NPU-Relative-Error](../../sources/images/baichuan/baichuan13B-loss-relative-error.png)
+使用lora进行微调后的推理功能：
+![13B-lora-inference.png](../../sources/images/baichuan/baichuan_13B_inference_lora.png)
 
 
 ## 推理
@@ -345,15 +434,7 @@ bash tasks/inference/generate_baichuan_13b_ptd.sh
 
 ## 评估
 
-我们使用boolq基准来评估我们的模型。基准[下载](https://super.gluebenchmark.com/tasks).
-1. 准备数据集
-```shell
- mkdir boolq
- cd boolq
- wget https://storage.googleapis.com/boolq/dev.jsonl
- cd ..
-```
-2. 配置Baichuan-13B评估脚本: tasks/evaluation/eval_baichuan_13B.sh
+我们使用boolq基准来评估我们的模型。基准[下载](https://huggingface.co/datasets/boolq).
 
 ```shell
 # 配置原始权重与词表的路径
@@ -363,10 +444,10 @@ TOKENIZER_PATH=<tokenizer-path>
 DATA_PATH="./boolq/"
 TASK="boolq"
 ```
-3. 执行Baichuan-13B评估脚本: tasks/evaluation/eval_baichuan_13B.sh
+
 
 ```shell
-bash ./tasks/evaluation/eval_baichuan_13B.sh
+bash ./tasks/evaluation/evaluate_baichuan_13B_ptd.sh
 ```
 
 <table>

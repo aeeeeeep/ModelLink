@@ -1,0 +1,106 @@
+{
+    "NETWORK_SIZE": [
+        "--num-layers", "32",
+        "--hidden-size", "4096",
+        "--ffn-hidden-size", "11008",
+        "--num-attention-heads", "32",
+        "--max-position-embeddings", "2048",
+        "--position-embedding-type", "rope",
+        "--make-vocab-size-divisible-by", "1",
+        "--normalization", "RMSNorm",
+        "--swiglu",
+        "--untie-embeddings-and-output-weights",
+        "--add-qkv-bias",
+        "--add-dense-bias",
+        "--skip-bias-add"
+    ],
+
+    "INFERENCE_AUX": [
+        "--tokenizer-type", "PretrainedFromHF",
+        "--tokenizer-model", "./intern-hf/tokenizer.model",
+        "--tokenizer-name-or-path", "./intern-hf/",
+        "--load", "./intern-tp8-pp1/",
+        "--seed", "42",
+        "--tokenizer-not-use-fast",
+        "--exit-on-missing-checkpoint"
+    ],
+
+    "INFERENCE_PARAM": [
+        "--max-new-tokens", "64"
+    ],
+
+    "EVALUATION_PARAM": [
+        "--task-data-path", "./mmlu/test/",
+        "--task", "mmlu",
+        "--max-new-tokens", "2"
+    ],
+
+    "TRAINING_PARAM": [
+        "--save", "./save-weight-intern",
+        "--data-path", "./pretrain-dataset-intern/alpaca_text_document",
+        "--train-iters", "15"
+    ],
+
+    "REGULARIZATION": [
+        "--attention-dropout", "0.0",
+        "--hidden-dropout", "0.0",
+        "--weight-decay", "1e-1",
+        "--clip-grad", "1.0",
+        "--adam-beta1", "0.9",
+        "--adam-beta2", "0.95"
+    ],
+
+    "LEARNING_RATE": [
+        "--lr", "1.25e-6",
+        "--lr-decay-style", "cosine",
+        "--lr-warmup-fraction", "0.01",
+        "--min-lr", "1.25e-7"
+    ],
+
+    "DISTRIBUTED_PARAM": [
+        "--tensor-model-parallel-size", "8",
+        "--pipeline-model-parallel-size", "1"
+    ],
+
+    "AUXILIARY_PARAM": [
+        "--micro-batch-size", "8",
+        "--global-batch-size", "64",
+        "--no-masked-softmax-fusion",
+        "--disable-bias-linear",
+        "--no-gradient-accumulation-fusion",
+        "--bf16",
+        "--attention-softmax-in-fp32",
+        "--no-load-optim",
+        "--no-load-rng",
+        "--seq-length", "2048"
+    ],
+
+    "TRAINING_AUX": [
+        "--sequence-parallel",
+        "--initial-loss-scale", "65536",
+        "--use-flash-attn",
+        "--use-fused-rmsnorm",
+        "--init-method-std", "0.01",
+        "--split", "100,0,0",
+        "--log-interval", "1",
+        "--save-interval", "10",
+        "--eval-interval", "1000",
+        "--eval-iters", "0",
+        "--num-workers", "0",
+        "--distributed-backend", "nccl",
+        "--tokenizer-type", "Llama2Tokenizer",
+        "--tokenizer-model", "./intern-hf/tokenizer.model"
+    ],
+
+    "PROCESS_PRETRAIN_DATA":[
+        "--input", "./train-00000-of-00001-a09b74b3ef9c3b56.parquet",
+        "--tokenizer-type", "PretrainedFromHF",
+        "--output-prefix", "./pretrain-dataset-intern/alpaca",
+        "--tokenizer-name-or-path", "./intern-hf",
+        "--workers", "4",
+        "--log-interval", "1000",
+        "--handler-name", "AlpacaPretrainHandler",
+        "--tokenizer-not-use-fast",
+        "--append-eod"
+    ]
+}

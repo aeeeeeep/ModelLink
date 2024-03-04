@@ -1,6 +1,6 @@
 # LLaMA
 <p align="left">
-        <b><a href="https://gitee.com/ascend/AscendSpeed/blob/master/examples/llama2/README.md">简体中文</a></b> |
+        <b><a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/README.md">简体中文</a></b> |
         <b>English</b> 
 </p>
 
@@ -11,7 +11,6 @@
   - [Script](#script)
   - [Performance](#performance)
     - [Machine performance](#machine-performance)
-    - [Accuracy of the loss](#accuracy-of-the-loss)
   - [Inference](#Inference-7B)
   - [Evaluation](#Evaluation-7B)
 
@@ -20,7 +19,6 @@
     - [Script](#script)
     - [Performance](#performance)
       - [Machine performance](#machine-performance)
-      - [Accuracy of the loss](#accuracy-of-the-loss)
     - [Inference](#Inference)
     - [Evaluation](#Evaluation)
 
@@ -29,7 +27,6 @@
     - [Script](#script-2)
     - [Performance](#performance-2)
       - [Machine performance](#machine-performance-2)
-      - [Accuracy of the loss](#accuracy-of-the-loss-2)
   - [Inference](#inference-2)
   - [Evaluation](#Evaluation-2)
 
@@ -227,22 +224,6 @@ The performance of LLaMA2-7B in **Ascend NPU** and **Reference**:
 | NPUs   | LLaMA2-7B | 1024             | 5.19                      | 2662                      | 3.08                   | 122.39                         |
 | Reference   | LLaMA2-7B | 1024             | 5.63                      | 2884                       | 2.84                   | 131.96                         |
 
-
-#### Accuracy of the loss
-
-NPU vs Reference loss.
-
-The NPU runs smoothly, the resource usage is stable, no errors are reported in the middle of the process, the Loss is on a decreasing trend, and the convergence speed is as expected. 
-The precision meets the requirements.
-
-
-The relative error ：0.23% < 2%
-
-![NPU-LOSS](../../sources/images/llama2/llama2-7b-tp8pp1mbs4gbs16-cann1115-Megatron-GPU-loss-releative.png)
-
-The absolute error: 0.00326<0.005
-
-![NPU-LOSS and NPU-Absolute-Error](../../sources/images/llama2/llama2-7b-tp8pp1mbs4gbs16-cann1115-Megatron-GPU-loss-absolute.png)
 
 
 ## Inference-7B
@@ -529,18 +510,10 @@ The performance of LLaMA2-13B in **Ascend NPU** and **Reference**:
 | Reference | LLaMA2-13B |        --        |              --               |             1750             |            --             |                 --                  |
 
 
-#### Accuracy of the loss
-
-NPU vs Reference loss.
-
-The NPU runs smoothly, the resource usage is stable, no errors are reported in the middle of the process, the Loss is on a decreasing trend, and the convergence speed is as expected. 
-The precision meets the requirements.The absolute error of the average loss is 0.0011, less than 0.5%. 
-
-![NPU-LOSS](../../sources/images/llama2/llama2_13b_bf16_loss_absolute.png)
 
 ## Inference
 
-We support AscendSpeed Inference for text generation with Llama2 13B.
+We support Inference for text generation with Llama2 13B.
 Inference different from pre-training, such as we need to Load pre-training checkpoint and the length of the output samples:
 
 Config Llama2-13B inference script: tasks/inference/generate_llama2_13b_ptd.sh
@@ -900,25 +873,6 @@ The performance of LLaMA2-34B/70B in **Ascend NPU** and **Reference**
 |    Reference    | LLaMA2-70B |          339          |
 
 
-#### Accuracy of the loss-2
-
-NPU vs Reference loss of LLaMA2-34B with 12 layers in 8 devices.
-
-![NPU-LOSS](../../sources/images/llama2/llama2_34b_bf16_layer12_loss_compare.png)
-
-The relative error.
-
-![NPU-LOSS and NPU-Relative-Error](../../sources/images/llama2/llama2_34b_bf16_layer12_loss_relative.png)
-
-
-NPU vs Reference lossof LLaMA2-70B.
-
-The NPU runs smoothly, the resource usage is stable, no errors are reported in the middle of the process, the Loss is on a decreasing trend, and the convergence speed is as expected. 
-The precision meets the requirements.
-
-![NPU-LOSS](../../sources/images/llama2/llama2_70b_bf16_layer12_loss_compare.png)
-
-The relative error of the average loss is less than 2%.
 
 
 ## Inference-2
@@ -1024,7 +978,7 @@ Evaluation results with BoolQ dataset:
       <td>dev</td>
       <th>Llama2-34b</th>
       <td>0.651</td>
-      <td><a href="https://opencompass.org.cn/dataset-detail/BoolQ">(AquilaChat2-34B test) 0.571</a></td>
+      <td><a href="https://hub.opencompass.org.cn/dataset-detail/BoolQ">(AquilaChat2-34B test) 0.571</a></td>
     </tr>
   </tbody>
 </table>

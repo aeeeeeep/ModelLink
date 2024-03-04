@@ -35,6 +35,7 @@ Currently, the following models has been supported:
 * <a href="https://huggingface.co/docs/transformers/main/model_doc/llama2" style="color:green">LLaMA2</a>-[[README: 7B/13B/34B/70B]](examples/llama2/README.md)
 * <a href="https://github.com/baichuan-inc" style="color:green">Baichuan2</a>-[[README: 7B/13B]](examples/baichuan2/README.md)
 * <a href="https://huggingface.co/Qwen/Qwen-7B" style="color:green">Qwen</a>-[[README: 7B]](examples/qwen/README.md)
+* <a href="https://huggingface.co/Qwen/Qwen-7B" style="color:green">Qwen</a>-[[README: 7B/14B/72B]](examples/qwen/README.md)
 * <a href="https://mistral.ai/news/mixtral-of-experts/" style="color:green">Mixtral</a>-[[README: 8x7B]](examples/mixtral/README.md)
 
 ### Downstream Tasks
@@ -43,28 +44,6 @@ Currently, the following downstream tasks have been supported:
 * [Low-parameter fine-tuning](#jump12)
 * [Inference: human-machine dialogue](#jump13)
 * [Evaluation with numerous benchmarks](#jump14)
-
-
-### Acceleration Features
-Currently, the following acceleration features for LLMs have been supported:
-
-* [Tensor parallelism](#jump1)
-* [(Virtual & Optimized) Pipeline parallelism](#jump2)
-* [Fold-3D](#jump3)
-* [Recomputation](#jump4)
-* [Sequence parallelism](#jump5)
-* [ZeRO-1/2](#jump6)
-* [Inverted triangle acceleration](#jump7)
-* [Optimizers](#jump8)
-* [Merged feed-forward network](#jump9)
-* [Gradient accumulation](#jump9)
-* [Memory overcommitment](#jump10)
-
-More novel and useful features are developing for LLMs training on Ascend ...
-
-### Fused Kernels
-Coming soon ...
-
 
 
 ## Quick Start For Model Training
@@ -99,16 +78,16 @@ Coming soon ...
       <td>7B</td>
       <td> 1x8</td>
       <td> FP16 </td>
-      <td> 2350 </td>
+      <td> 2643 </td>
       <td> 2036 </td>
-      <td> <a href="examples/baichuan/pretrain_baichuan_zero_7B.sh">Train</a> </td>
+      <td> <a href="examples/baichuan/pretrain_baichuan_ptd_7B.sh">Train</a> </td>
     </tr>
     <tr>
       <td>13B</td>
       <td> 1x8</td>
       <td> FP16 </td>
-      <td> 1016 </td>
-      <td> 824  </td>
+      <td> 1213 </td>
+      <td> 824 </td>
       <td> <a href="examples/baichuan/pretrain_baichuan_ptd_13B.sh">Train</a> </td>
     </tr>
     <tr>
@@ -116,15 +95,15 @@ Coming soon ...
       <td>7B</td>
       <td> 1x8</td>
       <td> BF16 </td>
-      <td> 2607 </td>
+      <td> 2598 </td>
       <td> 3936 </td>
       <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_7B.sh">Train</a> </td>
     </tr>
     <tr>
       <td>13B</td>
-      <td> 2x8</td>
+      <td> 1x8</td>
       <td> BF16 </td>
-      <td> 852 </td>
+      <td> 880 </td>
       <td> 872 </td>
       <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_13B.sh">Train</a> </td>
     </tr>
@@ -240,6 +219,22 @@ Coming soon ...
       <td> <a href="examples/qwen/pretrain_qwen_7b_ptd.sh">Train</a> </td>
     </tr>
     <tr>
+      <td>14B</td>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 1560 </td>
+      <td> 1578 </td>
+      <td> <a href="examples/qwen/pretrain_qwen_14b_ptd.sh">Train</a> </td>
+    </tr>
+    <tr>
+      <td>72B</td>
+      <td>16x8</td>
+      <td>BF16 </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/qwen/pretrain_qwen_72b_ptd.sh">Train</a> </td>
+    </tr>
+    <tr>
       <td rowspan="1"><a href="examples/mixtral/README_en.md">Mixtral 8x7B</td>
       <td>8x7B</td>
       <td>2x8</td>
@@ -294,15 +289,30 @@ Coming soon ...
       <td rowspan="2"> <a href="examples/baichuan/README.md">Baichuan</a> </td>
       <td> 7B </td>
       <td> -- </td>
-      <td> -- </td>
-      <td> -- </td>
+      <td> <a href="tasks/inference/generate_baichuan_7b_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_baichuan_7B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td> 13B </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/baichuan/tune_baichuan_ptd_13B.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/baichuan/generate_baichuan_13B_tp8_pp1.sh">inference</a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/eval_baichuan_13B.sh">evaluation</a> </td>
+      <td> <a href="examples/baichuan/tune_baichuan_ptd_13B.sh">lora</a> </td>
+      <td> <a href="tasks/inference/generate_baichuan_13b_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_baichuan_13B_ptd.sh">evaluation</a> </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="2"> <a href="examples/baichuan/README.md">Baichuan2</a> </td>
+      <td> 7B </td>
+      <td> -- </td>
+      <td> <a href="tasks/inference/generate_baichuan2_7b_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_baichuan2_7B_ptd.sh">evaluation</a> </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+    </tr>
+    <tr>
+      <td> 13B </td>
+      <td> -- </td>
+      <td> <a href="tasks/inference/generate_baichuan2_13b_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_baichuan2_13B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
@@ -346,7 +356,7 @@ Coming soon ...
     <tr>
       <td>33B</td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_33b_ptd.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/generate_llama_33B_ptd.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_33B_ptd.sh">inference </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_33B_ptd.sh">evaluation </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
@@ -354,28 +364,28 @@ Coming soon ...
       <td > 65B </td>
       <td > <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_65b_ptd.sh">lora</a>  </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_65b_lora_ptd.sh">inference </a> </td>
-      <td> -- </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_65B_ptd.sh">evaluation </a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</a></td>
       <td>7B</td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_7b_ptd.sh">lora</a>  </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/generate_llama2_7b_ptd.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_7b_ptd.sh">inference </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_7B_ptd.sh">evaluation </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>13B</td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_13b_ptd.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/generate_llama2_13B_ptd.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_13B_ptd.sh">inference </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_13B_ptd.sh">evaluation </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td> 34B </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_34b_ptd.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/generate_llama2_34B_ptd.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_34B_ptd.sh">inference </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_34B_ptd.sh">evaluation </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
@@ -389,6 +399,20 @@ Coming soon ...
     <tr>
       <td rowspan="4"><a href="examples/qwen/README.md">Qwen</a></td>
       <td>7B</td>
+      <td> -- </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_qwen_7b_ptd.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_qwen_7b_ptd.sh">evaluation </a> </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+    </tr>
+    <tr>
+      <td>14B</td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+    </tr>
+    <tr>
+      <td>72B</td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
@@ -508,7 +532,7 @@ python tools/preprocess_data.py --input WORKSPACE/alpaca/train-00000-of-00001-a0
 After preprocessing, there will be three `bin` files and three `idx` files in the `WORKSPACE/alpaca_preprocessed` dictionary. Then, we can train a model with `--data-path WORKSPACE/alpaca_preprocessed/alpaca` and `--is-instruction-dataset` flags.
 In addition, we have developed the dynamic padding function based on the instruction dataset, which can be implemented using the `--variable-seq-lengths` flag.
 
-Note that instruction dataset has a `--handler-name GeneralInstructionHandler` flag which will choose `GeneralInstructionHandler` class to create prompt in `ascendspeed/data/data_handler.py`.
+Note that instruction dataset has a `--handler-name GeneralInstructionHandler` flag which will choose `GeneralInstructionHandler` class to create prompt in `modellink/data/data_handler.py`.
 If you have an alpaca-style dataset which have `instruction`, `input` and `output` columns, just use `GeneralInstructionHandler`.
 In addition, `BelleMultiTurnInstructionHandler` is used to handle [belle dataset](https://huggingface.co/datasets/BelleGroup/multiturn_chat_0.8M),
 `MOSSInstructionHandler` is used to handle [MOSS dataset](https://huggingface.co/datasets/fnlp/moss-003-sft-data) and `LeetcodePythonInstructionHandler` is used to handle [Leetcode dataset](https://huggingface.co/datasets/mhhmm/leetcode-solutions-python).
@@ -558,7 +582,7 @@ After using Lora to fine-tune the Llama model, the instruction dialogue effect i
 ```shell
 You >> Give three tips for staying healthy.
 
-AscendSpeed:
+ModelLink:
 
 - Start exercising regularly and eat healthy food.
 - Get a good eight hours of sleep each night.
@@ -570,8 +594,6 @@ If after completing lora fine-tuning, we need a model without lora structure, th
 ### <span id="jump13"> Inference: human-machine dialogue </span>
 Currently, we support the following four cases of inference:
 - PTD only
-- DeepSpeed ZeRO only
-- DeepSpeed ZeRO in PIPELINE with TP
 - Model fine-tuned with lora
 
 #### Quick Start
@@ -584,38 +606,25 @@ Here are some example scripts in different mode mentioned above for you to launc
       - PTD only
 
            ```bash
-           python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir llama-7b-hf \
-                                                                               --output-model-dir llama-7b-tp2-pp2 \
-                                                                               --tensor-model-parallel-size 2 \
-                                                                               --pipeline-model-parallel-size 2 \
-                                                                               --type 7B
+           python tools/checkpoint/util.py --model-type GPT \
+                                --loader llama2_hf \
+                                --saver megatron \
+                                --target-tensor-parallel-size 2 \
+                                --target-pipeline-parallel-size 2 \
+                                --load-dir ./model_from_hf/llama-7b-hf \
+                                --save-dir ./model_weights/llama-7b-tp2-pp2 \
+                                --tokenizer-model ./model_from_hf/llama-7b-hf/tokenizer.model
            ```
-
-    - DeepSpeed ZeRO only
-        ```bash
-        python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir llama-7b-hf \
-                                                                            --output-model-dir llama-7b-deepspeed \
-                                                                            --type 7B \
-                                                                            --deepspeed
-        ```
 
 2. You need to modify some variables in the shell script such as **model weight path** and **vocab path**.
 
     - **PTD only:** In this mode, the model is split by pipeline parallel and tensor parallel mode in megatron ways.
         ```bash
-        sh examples/llama/generate_llama_7B_tp2_pp2.sh
-        ```
-    - **Deepspeed ZeRO only:** In this mode, the model uses DeepSpeed ZeRO 1, 2 or 3 definition with tp=1, pp=1.
-        ```bash
-        sh examples/alpaca/generate_alpaca_13B_deepspeed.sh
-        ```
-    - **Deepspeed ZeRO in Pipe with TP:** In this mode, the model uses pipe model definition in DeepSpeed ZeRO 1, 2 or 3 with tp>1, pp=1.
-        ```bash
-        sh examples/llama/generate_llama_7B_deepspeed_pipeline.sh
+        sh tasks/inference/generate_llama_7B_ptd.sh
         ```
     - **If you want to use lora model**, for details, refer to:
         ```bash
-        sh examples/alpaca/generate_alpaca_13B_lora_deepspeed.sh
+        sh tasks/inference/generate_llama_7b_lora_ptd.sh
         ```
 
 ***Some examples with [Chinese-LLaMA-Alpaca-13B weights](https://github.com/ymcui/Chinese-LLaMA-Alpaca) is as below***
@@ -907,106 +916,6 @@ TASK="boolq"
 # configure generation parameters
 ```
 
-## Introduction For Acceleration Features
-
----
-
-### <span id="jump1"> Tensor Parallelism </span>
-Tensor parallelism (TP) is a kind of model parallelism strategy, which splits execution of a single transformer module over multiple devices.
-The basic principle of PP is:<div align=center>
-<img src="sources/images/tp_in_mlp.png" height="280px" width="500px">
-<img src="sources/images/tp_in_sa.png" height="280px" width="500px"></div>
-To use tensor model parallelism in ModelLink, add the `--tensor-model-parallel-size` flag to specify the number of GPUs among which to split the model.
-
-### <span id="jump2">  (Virtual & Optimized) Pipeline Parallelism  </span>
-Pipeline parallelism (PP) is a kind of model parallelism strategy, which shards the transformer modules into stages
-with an equal number of transformer modules on each stage and then pipelines execution by breaking the batch into
-smaller microbatches. Virtual pipeline (VP) parallelism optimizes PP by add virtual stages to reduce pipeline bubble time. Optimized Pipline Parallelism (OPP) is an enhanced version of VP, which further reduces the bubble time by reasonably setting the size of each microbatch. The basic principle of PP and VP is:<div align=center>
-<img src="sources/images/pp_vp.png" height="350px" width="800px"></div>
-
-To enable pipeline model parallelism, use the `--pipeline-model-parallel-size` flag to specify the number of stages to split the model into (e.g., splitting a model with 24 transformer layers across 4 stages would mean each stage gets 6 transformer layers each).
-To enable virtual pipeline parallelism, additionally use `--num-layers-per-virtual-pipeline-stage` flag to decide number of layers per virtual stage. Currently, the repository supports VP in the form of VP + no-overlap-p2p, and when you want to enable VP, you need to add the --no-overlap-p2p-communication parameter to disable overlap-p2p.
-To enable optimized pipeline parallelism, additionally use `--optimized-pipeline` and `--manual-mbs example-config-1` flag based on PP. Note that both VP and OPP reduce bubble time, but increase communication time.
-
-### <span id="jump3"> Fold3D </span>
-Fold3D hides the commutation time of data parallelism in VP. The basic principle of Fold3D is:<div align=center>
-<img src="sources/images/fold3d.png" height="350px" width="800px"></div>
-To enable pipeline model parallelism, use the `--fold-mode "aiao"` flag to choose strategy.
-
-### <span id="jump4"> (Selective) Recomputation </span>
-To reduce NPU memory usage so deploy a large model to a training system, we support activation checkpointing and recomputation.
-We support two levels of recompute granularity: full and selective. To enable full recomputation, please use `--checkpoint-activations` flag, and to enable selective recomputation, please use `--checkpoint-policy` flag to
-decide the strategy of selective recomputation. Note that the selective strategy is customized and optimized for Ascend chips.
-
-To improve the performance of model training while maximizing the use of NPU memory, we support [auto selective recomputing](https://gitee.com/ascend/AscendSpeed/wikis/Algorithm%20Introduction/Auto%20Selective%20Recomputing) strategy by manually adjusting the training memory size.
-To enable auto selective recomputing, please use `--auto-recompute-device-size` flag to specify the memory size for auto selective recomputing strategy(unit: MB).
-Note that if you want to use `--auto-recompute-device-size` flag, please remove `--checkpoint-activations`.
-If OOM occurs, you need to reselect a new memory size to restart model training. You can also find the optimal solution through [dichotomy](https://gitee.com/ascend/AscendSpeed/wikis/Algorithm%20Introduction/Auto%20Selective%20Recomputing).
-Auto selective recomputing selects a strategy based on the training memory information of the first N steps of profiling. You can set the number of steps to [stop profiling](https://gitee.com/ascend/AscendSpeed/wikis/Algorithm%20Introduction/Auto%20Selective%20Recomputing) by using the `--auto-recompute-profiling-step` flag.
-By default, profiling is stopped in step 10, with a minimum setting of 5 steps. It is recommended to stop profiling after the training memory is stable, in order to obtain a better choice of recalculation strategy.
-
-### <span id="jump5"> Sequence Parallelism </span>
-Sequence parallelism (SP) is a kind of model parallelism strategy, which splits the sequence axis in dropout and layernorm layers. SP depends on TP in our implementation.
-The allreduce operation in TP is split to reduce-scatter and allgather by SP, which reduces the memory occupation in model training. The basic principle of SP is:<div align=center>
-<img src="sources/images/sp.png" height="250px" width="800px"></div>
-To enable sequence parallelism (SP), `--tensor-model-parallel-size` flag should be lager than 1, and set `--sequence-parallel` flag.
-
-### <span id="jump6"> ZeRO-1/2/3 </span>
-Zero Redundancy Optimizer (ZeRO) is a kind of memory-optimization strategy in data parallelism proposed by MicroSoft.
-ModelLink supports ZeRO-1/2/3 by adding a deepspeed branch. The basic principle of ZeRO is:<div align=center>
-<img src="sources/images/ZeRO.png" height="250px" width="600px"></div>
-To enable ZeRO-1/2/3, a deepspeed config is required and an [example](examples/llama/pretrain_llama_7B_zero_8p.sh) could be referred.
-Notably, if only the ZeRO-1 is supposed, deepspeed is not necessary, and simply set the `--use-distributed-optimizer` flag.
-
-### <span id="jump7"> Inverted Triangle Acceleration </span>
-
-Inverted triangle acceleration is an acceleration module for attention calculation, which implements flash attention with python. Basically, the calculation of self-attention takes all of the attention mask into consideration. For this scenario, inverted triangle attention acceleration algorithm is used to avoid
-blocks that do not need to be calculated in the upper triangle position in the attention mask, thereby reducing the amount of calculation. The calculation process is:<div align=center>
-<img src="sources/images/triangle.png" height="600px" width="600px"></div>
-To enable inverted triangle acceleration, set `--triangle-attn` flag.
-
-### <span id="jump8"> Optimizer </span>
-For LLMs, Ascend chips support various fused kernels, such as `scaled_masked_softmax` and `rotary_pos_emb`. The related examples can be found by searching in this project, and more detailed information is coming soon.
-For fused optimizer, two kinds of fused adam optimizers are provided by `--optimizer`. Specifically, the choice `--optimizer adam` saves more memory, and the choice `--optimizer fused_adam` trains faster.
-
-### <span id="jump9">  Merged Feed-Forward Network & Gradient Accumulation </span>
-For llama and other LLMs without bias in FFN, the linear transformation in FFN could be merged to save communication in tensor parallelism. To enable this feature, please set `--mlp-layer-fusion` flag. Gradient accumulation uses gradient of N rounds to make an optimizer step and update parameters. Here, N = global batchsize / micro batchsize / DP, and DP = device nums / tp / pp.
-
-### <span id="jump10"> Memory Overcommitment </span>
-In mix precision training, multiple state tensors, such as parameter copies, gradient copies, and optimizer states, occupy a large amount of static memory (16N, where N is the number of parameters). However, in fact, parameters and gradients (4N, N is the number of parameters) that participate in forward and reverse calculation account for a small proportion, and optimizing the preceding state tensors can bring great video memory benefits. By analyzing the actual use of each part of the state tensor, the memory reuse mechanism of the mechanism is obtained, and a multilevel optimizer memory optimization scheme integrating multiple algorithm modules is finally obtained.
-
-- Memory Overcommitment O1 ——  **Relase FP32 Gradient**
-    - Advantages: Completely equivalent; Support for multiple optimizers; lossless performance.
-    - Algorithm principle: The static memory of the FP32 gradient copy that needs to be permanently stored is reused. The memory of the FP16 gradient is converted into the FP32 format by performing the Foreach+Cast operation when necessary, saving 4N space.
-    - Usage: This equivalent algorithm is applicable to all optimizers and can be triggered by specifying  `--release-fp32-grad` in the script.
-    - Restrictions: Currently, only the Adam optimizer is applicable. For other optimizers, see the Adam optimizer implementation.
-
-Mix precision training process:
-
-<div align=center>
-<img src="https://foruda.gitee.com/images/1700028272497165508/7fbb164b_7943704.png" height="545px" width="461px"></div>
-
-Memory overcommitment training process:
-
-<div align=center>
-<img src="https://foruda.gitee.com/images/1700028261897403802/74ba37b6_7943704.png" height="570px" width="655px"></div>
-
-Test Result Table:
-
-| Model    | Algorithm            | Performance     | Compress HBM | Performance Error | Precision Error | Hardware |
-|----------|----------------------|-----------------|---------------|-------------------|-----------------|----------|
-| LLama-7B | baseline             | 5.39s/iteration | --            | --                | --              | 910B*8P  |
-|          | O1 algorithm         | 5.40s/iteration | ↓ 13.5%       | ↓ 0.17%           | < 0.05%         | 910B*8P  |
-| LLama-13B| baseline             | 8.95s/iteration | --            | --                | --              | 910B*8P  |
-|          | O1 algorithm         | 8.92s/iteration | ↓ 14.90%      | ↑ 0.34%           | < 0.2%          | 910B*8P  |
-| LLama2-7B| baseline             | 6.48s/iteration | --            | --                | --              | 910B*8P  |
-|          | O1 algorithm         | 6.48s/iteration | ↓ 10.87%      | ↓ 0.00%           | < 0.2%          | 910B*8P  |
-| Bloom-7B | baseline             | 5.45s/iteration | --            | --                | --              | 910B*8P  |
-|          | O1 algorithm         | 5.49s/iteration | ↓ 12.68%      | ↓ 0.7%            | < 0.01%         | 910B*8P  |
-| LLama-32B| baseline             | 5.23s/iteration | --            | --                | --              | 910B*16P |
-|          | O1 argorithm         | 5.28s/iteration | ↓ 15.93%      | ↓ 0.95%           | < 0.02%         | 910B*16P |
-| LLama-7B | distributed baseline | 5.18s/iteration | --            | --                | --              | 910B*8P  |
-|          | O1 distributed algorithm | 5.19s/iteration | ↓ 9.50%       | ↓ 0.2%            | < 0.1%          | 910B*8P  |
 
 ## Acknowledgments
 

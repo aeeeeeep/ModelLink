@@ -1,8 +1,8 @@
 CONVERT_ARGS="
     --no-checking \
     --model-type GPT \
-    --loader loader_bloom_mg \
-    --saver saver_huggingface \
+    --loader loader_llama2_hf \
+    --saver saver_megatron \
     --target-tensor-parallel-size 4 \
     --load-dir ./ckpt \
     --save-dir ./save_dir \
