@@ -518,12 +518,6 @@ class ModelTest:
         def build_prompt(text):
             return "[Round {}]\n\n问：{}\n\n答：".format(1, text)
 
-        def process_before_extraction(gen, choice_dict):
-            for key, val in sorted(choice_dict.items(), key=lambda x: len(x[1]), reverse=True):
-                pattern = re.compile(re.escape(val.rstrip(".")), re.IGNORECASE)
-                gen = pattern.sub(key, gen)
-            return gen
-
         correct_total = 0
         sum_total = 0
         result_total = []
@@ -531,7 +525,8 @@ class ModelTest:
         if torch.distributed.get_rank() == 0:
             is_result = True
         with torch.no_grad():
-            for entry in glob.glob(self.dataset_path + "val/**/*.jsonl", recursive=True):
+            for entry in glob.glob((Path(self.dataset_path) / "val/**/*.jsonl").as_posix(),
+                                        recursive=True):
                 correct = 0
                 dataset = []
 
@@ -574,16 +569,14 @@ class ModelTest:
                         input_tokens = [build_prompt(answer_text) for answer_text in answer_texts]
                         logits_save_folder = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}")
                         os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "1"
-                        os.environ['ATB_LLM_LOGITS_SAVE_FOLDER'] = logits_Save_folder
+                        os.environ['ATB_LLM_LOGITS_SAVE_FOLDER'] = logits_save_folder
                         _, _, _ = self.pa_runner.infer(input_tokens, self.batch_size, 1, False)
                         os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "0"
-                        logits = torch.load(logits_save_folder + '/logits_1.pth')
-                        logits = outputs.logits[:, -1]
+                        logits = torch.load(logits_save_folder + '/logits_0.pth')
                         logits = logits[:, choice_tokens]
                         preds = logits.argmax(dim=-1)
                         correct += (preds.cpu() == batch["label"]).sum().item()            
                         
-
                 filename = os.path.basename(entry)
                 result = [filename, correct / sum, correct, sum]
                 self.result_logger.debug(f"result:{result}")

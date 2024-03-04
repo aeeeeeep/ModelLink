@@ -43,5 +43,9 @@ class EnvVar:
     def dict(self):
         return self.__dict__
 
+    def update(self):
+        self.logits_save_enable = os.getenv("ATB_LLM_LOGITS_SAVE_ENABLE", "0") == "1"
+        self.logits_save_folder = os.getenv("ATB_LLM_LOGITS_SAVE_FOLDER", './')
+
 
 ENV = EnvVar()
