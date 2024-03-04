@@ -23,6 +23,7 @@
 #include "nlohmann/json.hpp"
 #include "operations/lmhead.h"
 #include "atb_speed/utils/model_factory.h"
+#include "operations/lmhead.h"
 
 namespace atb_speed {
 namespace gptneox_20b {
