@@ -415,11 +415,13 @@ class ModelTest:
                     self.batch_size) + " result saved in " + csv_performance_path)
                 self.logger.info(self.model_name + " " + " batch" + str(
                     self.batch_size) + " formatted result saved in " + csv_performance_formatted_path)
-
+        
+        warmup()
         run_performance_test()
         self.logger.info("performance test end")
 
     def __run_precision(self):
+        self.logger.info("precision test start")
         input_dict = {
             'rank': self.local_rank,
             'world_size': self.world_size,
@@ -430,7 +432,7 @@ class ModelTest:
             'max_position_embeddings': self.max_position_embedding if self.max_position_embedding != -1 else None,
             'max_batch_size': self.batch_size,
             'use_refactor': self.use_refactor,
-            'max_input_length': 1024,
+            'max_input_length': 2048,
             'max_output_length': 512,
         }
         self.pa_runner = PARunner(**input_dict)
@@ -439,8 +441,10 @@ class ModelTest:
         if self.test_mode == "simplified":
             self.__run_simplified_dataset()
         elif self.test_mode == "full":
-            if self.dataset_name == 'MMLU' or self.dataset_name == 'CEval':
-                self.__run_full_dataset_mmlu_or_ceval()
+            if self.dataset_name == 'CEval':
+                self.__run_full_dataset_ceval()
+            elif self.dataset_name == 'MMLU':
+                self.__run_full_dataset_mmlu()
             elif self.dataset_name == 'GSM8K':
                 self.__run_full_dataset_gsm8k()
             elif self.dataset_name == 'TruthfulQA':
@@ -452,6 +456,7 @@ class ModelTest:
         else:
             self.logger.error(self.test_mode + " not support")
             raise RuntimeError(f"{self.test_mode} not support")
+        self.logger.info("precision test end")
 
     def __run_simplified_dataset(self):
         if self.dataset_name not in prompt_map.keys():
@@ -504,16 +509,90 @@ class ModelTest:
                             self.logger.info(f'Answer: {generate_text}')
                             self.logger.info(f'Generate token num: {token_num_list[i]}')
                 epoch_id += 1
+    
+    def __run_full_dataset_ceval(self):
+        choices = ["A", "B", "C", "D"]
+        choice_tokens = [self.pa_runner.tokenizer.encode(choice, add_special_tokens=False)[0] for choice in choices]
+        extraction_prompt = '综上所述，ABCD中正确的选项是：'
 
-    def __run_full_dataset_mmlu_or_ceval(self):
+        def build_prompt(text):
+            return "[Round {}]\n\n问：{}\n\n答：".format(1, text)
+
+        correct_total = 0
+        sum_total = 0
+        result_total = []
+        is_result = False
+        if torch.distributed.get_rank() == 0:
+            is_result = True
+        with torch.no_grad():
+            for entry in glob.glob((Path(self.dataset_path) / "val/**/*.jsonl").as_posix(),
+                                        recursive=True):
+                correct = 0
+                dataset = []
+
+                with open(entry, encoding='utf-8') as file:
+                    for line in file:
+                        dataset.append(json.loads(line))
+
+                sum = len(dataset)
+
+                dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size)
+                for batch in tqdm(dataloader):
+                    texts = batch["inputs_pretokenized"]
+                    queries = [build_prompt(query) for query in texts]
+                    if self.model_type == "fa":
+                        inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
+                                                max_length=2048).to(self.model.device)
+                        tokenizer_out_ids = inputs.input_ids.to(self.model.device)
+                        attention_mask = inputs.attention_mask.to(self.model.device)
+                        outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
+                                                      do_sample=False, max_new_tokens=512)
+                        intermediate_outputs = []
+                        for idx in range(len(outputs)):
+                            output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
+                            response = self.tokenizer.decode(output)
+                            intermediate_outputs.append(response)
+                        answer_texts = [text + intermediate + "\n" + extraction_prompt for text, intermediate in
+                                        zip(texts, intermediate_outputs)]
+                        input_tokens = [build_prompt(answer_text) for answer_text in answer_texts]
+                        inputs = self.tokenizer(input_tokens, padding=True, return_tensors="pt", truncation=True, max_length=2048).to('cuda')
+                        outputs = self.model(**inputs, return_last_logit=True)
+                        logits = outputs.logits[:, -1]
+                        logits = logits[:, choice_tokens]
+                        preds = logits.argmax(dim=-1)
+                        correct += (preds.cpu() == batch["label"]).sum().item()
+
+                    else:
+                        generate_text_list, _, _ = self.pa_runner.infer(queries, self.batch_size, 512, False)
+                        answer_texts = [text + intermediate + "\n" + extraction_prompt for text, intermediate in
+                            zip(texts, generate_text_list)]
+                        input_tokens = [build_prompt(answer_text) for answer_text in answer_texts]
+                        logits_save_folder = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}")
+                        os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "1"
+                        os.environ['ATB_LLM_LOGITS_SAVE_FOLDER'] = logits_save_folder
+                        _, _, _ = self.pa_runner.infer(input_tokens, self.batch_size, 1, False)
+                        os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "0"
+                        logits = torch.load(logits_save_folder + '/logits_0.pth')
+                        logits = logits[:, choice_tokens]
+                        preds = logits.argmax(dim=-1)
+                        correct += (preds.cpu() == batch["label"]).sum().item()            
+                        
+                filename = os.path.basename(entry)
+                result = [filename, correct / sum, correct, sum]
+                self.result_logger.debug(f"result:{result}")
+                result_total.append(result)
+                correct_total += correct
+                sum_total += sum
+            total = ["total", correct_total / sum_total, correct_total, sum_total]
+            result_total.insert(0, total)
+        if is_result:
+            self.__save_result(result_total)
+
+    def __run_full_dataset_mmlu(self):
         choices = ["A", "B", "C", "D"]
 
-        def format_example(dataset_type, query, answer):
-            if dataset_type == "MMLU":
-                prompt = "The following is a multiple-choice question. Please choose the most suitable one among A, B, C and D as the answer to this question.\n\n"
-            elif dataset_type == "CEval":
-                prompt = "下面是一道选择题。请在A、B、C、D中选择一个最合适的答案作为本题的答案。\n\n"
-
+        def format_example(query, answer):
+            prompt = "The following is a multiple-choice question. Please choose the most suitable one among A, B, C and D as the answer to this question.\n\n"
             example = (prompt + query + "\n")
             for choice, ans in zip(choices, answer):
                 example += f'{choice}. {ans}\n'
@@ -543,32 +622,11 @@ class ModelTest:
                 return choices[choice_list.index(process.extractOne(gen, choice_list)[0])]
             return res.group(1)
 
-        def extract_choice_ceval(gen, choice_list):
-            res = re.search(
-                r"(?:(?:选|选择|选定)[：:]?\s*|(?:(?:答案|选项)(?![^ABCD]{0,10}?(?:不|非)[^ABCD]{0,10}?(?:是|选|为|：|:|】))[^ABCD]{0,10}?(?:是|选|为|：|:|】))[^ABCD]{0,10}?)(A|B|C|D)(?:选项)?(?:\)|。|\.|，|,|．|、|A|B|C|D|$|：|:|\)|）)",
-                gen,
-            )
-            if res is None:
-                res = re.search(
-                    r"(A|B|C|D)(?:选?项)?(?![^ABCD]{0,4}?(?:不|非)[^ABCD]{0,4}?(?:正确|对[的，。：]|符合))[^ABCD]{0,4}?(?:正确|对[的，。：]|符合)",
-                    gen,
-                )
-            if res is None:
-                res = re.search(r"^[\(（]?(A|B|C|D)(?:。|\)|）|\.|，|,|．|：|:|$)", gen)
-            if res is None:
-                res = re.search(r"(?<![a-zA-Z])(A|B|C|D)(?![a-zA-Z=])", gen)
-            if res is None:
-                return choices[choice_list.index(process.extractOne(gen, choice_list)[0])]
-            return res.group(1)
-
-        def extract_answer(dataset_type, response, ansList):
+        def extract_answer(response, ansList):
             gen = process_before_extraction(
                 response, {choice: ans for choice, ans in zip(choices, ansList)}
             )
-            if dataset_type == "MMLU":
-                pred = extract_choice_mmlu(gen, ansList)
-            elif dataset_type == "CEval":
-                pred = extract_choice_ceval(gen, ansList)
+            pred = extract_choice_mmlu(gen, ansList)
             return pred
 
         correct_total = 0
@@ -580,11 +638,8 @@ class ModelTest:
         with torch.no_grad():
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.csv").as_posix(),
                                         recursive=True), desc='global'):
-                if self.dataset_name == "MMLU":
-                    val_df = pd.read_csv(entry, names=['question', 'A', 'B', 'C', 'D', 'answer']).astype(str)
-                elif self.dataset_name == "CEval":
-                    val_df = pd.read_csv(entry).astype(str)
-
+                val_df = pd.read_csv(entry, names=['question', 'A', 'B', 'C', 'D', 'answer']).astype(str)
+               
                 correct = 0
                 sum = len(val_df)
                 dataset = []
@@ -594,7 +649,7 @@ class ModelTest:
 
                 dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size)
                 for batch in tqdm(dataloader):
-                    queries = [format_example(self.dataset_name, query, [ansA, ansB, ansC, ansD]) \
+                    queries = [format_example(query, [ansA, ansB, ansC, ansD]) \
                                for query, ansA, ansB, ansC, ansD in
                                zip(batch["question"], batch["A"], batch["B"], batch["C"], batch["D"])]
                     if self.model_type == "fa":
@@ -609,7 +664,7 @@ class ModelTest:
                                     zip(batch['A'], batch['B'], batch['C'], batch['D'], batch['answer'])):
                                 output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
                                 response = self.tokenizer.decode(output)
-                                pred = extract_answer(self.dataset_name, response, [ansA, ansB, ansC, ansD])
+                                pred = extract_answer(response, [ansA, ansB, ansC, ansD])
                                 if pred == ans:
                                     correct += 1
                     else:
@@ -618,7 +673,7 @@ class ModelTest:
                             for idx, (ansA, ansB, ansC, ansD, ans) in enumerate(
                                     zip(batch['A'], batch['B'], batch['C'], batch['D'], batch['answer'])):
                                 response = generate_text_list[idx]
-                                pred = extract_answer(self.dataset_name, response, [ansA, ansB, ansC, ansD])
+                                pred = extract_answer(response, [ansA, ansB, ansC, ansD])
                                 if pred == ans:
                                     correct += 1
 
@@ -823,6 +878,7 @@ class ModelTest:
         def build_prompt(text, passage):
             prompt = "The following is a true or false question. Please judge the \"question\" based on the \"passage\". The answer should only provide \"true\" or \"false\".\n"
             prompt = prompt + f"passage:{passage}\nquestion:{text}?\nAnswer:"
+            prompt = f"{passage}\nQuestion: {text}?\nAnswer:"
             return prompt
 
         def is_correct(completion, answer):
