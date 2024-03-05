@@ -72,8 +72,8 @@ class WeightWrapper:
         self.weights.extend([self.placeholder] * 2)
 
     def register_layer_norm_wrapper(self, layer_dict, norm_name):
-        self.register_layer_norm(layer_dict, f'{norm_name}.ori')
-        self.register_layer_norm(layer_dict, f'{norm_name}.anti')
+        self.register_norm(layer_dict, f'{norm_name}.ori')
+        self.register_norm(layer_dict, f'{norm_name}.anti')
 
     def register_layer_linear_pack_fp(self, layer_dict, norm_name, pack_linear_name, linear_type='attn'):
         self.register_layer_norm(layer_dict, norm_name)

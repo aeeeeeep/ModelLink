@@ -49,8 +49,9 @@ struct DecoderLayerParam {
 enum DecoderLayerTensorIdx : uint32_t {
     IN_HIDDEN_STATES = 0,               // shape: FA: [batchSize, seqLen, maxPositionEmbeddings] PA: [seqLen, hiddenSize]
     IN_INPUT_NORM_WEIGHT,               // shape: [hiddenSize]
-    IN_INPUT_NORM_QUANT_WEIGHT,
-    IN_INPUT_NORM_QUANT_BIAS,
+    IN_INPUT_NORM_BIAS,
+    IN_INPUT_NORM_NEW_WEIGHT,
+    IN_INPUT_NORM_NEW_BIAS,
     IN_QKV_WEIGHT_0,                    // Pack: shape: MHA [3 * numAttentionHeadsPerRank * hiddenSizePerAttentionHead, hiddenSize] GQA [(numAttentionHeadsPerRank + 2 * numKeyValueHeadsPerRank) * hiddenSizePerAttentionHead, hiddenSize]
                                         // No pack: (Q) shape: [numAttentionHeadsPerRank * hiddenSizePerAttentionHead, hiddenSize]
     IN_QKV_DEOFFSET_0,                  // Quant所需权重
@@ -73,8 +74,9 @@ enum DecoderLayerTensorIdx : uint32_t {
     IN_ATTENTION_OUT_OFFSET,            // Quant所需权重
     IN_ATTENTION_OUT_SCALE,             // Quant所需权重
     IN_ATTENTION_NORM_WEIGHT,           // shape: [hiddenSize]
-    IN_ATTENTION_NORM_QUANT_WEIGHT,
-    IN_ATTENTION_NORM_QUANT_BIAS,
+    IN_ATTENTION_NORM_BIAS,
+    IN_ATTENTION_NORM_NEW_WEIGHT,
+    IN_ATTENTION_NORM_NEW_BIAS,
     IN_MLP_WEIGHT_0,                    // Pack: shape: [2 * intermediateSizePerRank, hiddenSize]
                                         // No pack: (Gate) shape: [intermediateSizePerRank, hiddenSize]
     IN_MLP_DEOFFSET_0,                  // Quant所需权重

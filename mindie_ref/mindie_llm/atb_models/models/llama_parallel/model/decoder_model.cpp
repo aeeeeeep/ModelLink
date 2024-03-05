@@ -27,7 +27,7 @@ namespace atb_speed {
 namespace llama_parallel {
 
 // Weight count
-const int WEIGHT_COUNT_PER_LAYER = 41;
+const int WEIGHT_COUNT_PER_LAYER = 43;
 const int WEIGHT_COUNT_WORD_EMBEDDINGNODE = 1;
 const int WEIGHT_COUNT_POST_NORM = 1;
 const int WEIGHT_COUNT_LM_HEAD = 1;

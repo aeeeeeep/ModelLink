@@ -22,8 +22,9 @@ namespace common {
 enum MlpTensorIdx : uint32_t {
     IN_INPUT = 0,
     IN_NORM_WEIGHT,
-    IN_NORM_QUANT_WEIGHT,
-    IN_NORM_QUANT_BIAS,
+    IN_NORM_BIAS,
+    IN_NORM_NEW_WEIGHT,
+    IN_NORM_NEW_BIAS,
     IN_WEIGHT_0,  // gate weight or gate up weight or up only weight
     IN_SCALE_0,
     IN_OFFSET_0,
@@ -47,7 +48,7 @@ enum MlpTensorIdx : uint32_t {
     INTERMIDATE_GATE_OUT,
 };
 
-static const uint64_t IN_TENSOR_COUNT = 19;
+static const uint64_t IN_TENSOR_COUNT = 20;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t GATE_UP_WEIGHT_PACK_INTERMEDIATE_TENSOR_COUNT = 5;
 static const uint64_t GATE_UP_WEIGHT_NO_PACK_INTERMEDIATE_TENSOR_COUNT = 4;
@@ -88,8 +89,9 @@ atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation
     normLinearGateUpNode.inTensorIds = {
         MlpTensorIdx::IN_INPUT,
         MlpTensorIdx::IN_NORM_WEIGHT,
-        MlpTensorIdx::IN_NORM_QUANT_WEIGHT,
-        MlpTensorIdx::IN_NORM_QUANT_BIAS,
+        MlpTensorIdx::IN_NORM_BIAS,
+        MlpTensorIdx::IN_NORM_NEW_WEIGHT,
+        MlpTensorIdx::IN_NORM_NEW_BIAS,
         MlpTensorIdx::IN_WEIGHT_0,
         MlpTensorIdx::IN_SCALE_0,
         MlpTensorIdx::IN_OFFSET_0,
@@ -122,8 +124,9 @@ atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation
         normLinearUpNode.inTensorIds = {
             MlpTensorIdx::IN_INPUT,
             MlpTensorIdx::IN_NORM_WEIGHT,
-            MlpTensorIdx::IN_NORM_QUANT_WEIGHT,
-            MlpTensorIdx::IN_NORM_QUANT_BIAS,
+            MlpTensorIdx::IN_NORM_BIAS,
+            MlpTensorIdx::IN_NORM_NEW_WEIGHT,
+            MlpTensorIdx::IN_NORM_NEW_BIAS,
             MlpTensorIdx::IN_WEIGHT_1,
             MlpTensorIdx::IN_SCALE_1,
             MlpTensorIdx::IN_OFFSET_1,

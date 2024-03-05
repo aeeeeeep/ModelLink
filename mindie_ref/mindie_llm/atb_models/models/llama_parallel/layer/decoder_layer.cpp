@@ -25,7 +25,7 @@
 namespace atb_speed {
 namespace llama_parallel {
 
-static const uint64_t IN_TENSOR_COUNT = 53;
+static const uint64_t IN_TENSOR_COUNT = 55;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 3;
 static const uint64_t NODE_COUNT = 4;
@@ -93,8 +93,9 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     attentionNode.inTensorIds = {
         IN_HIDDEN_STATES,
         IN_INPUT_NORM_WEIGHT,
-        IN_INPUT_NORM_QUANT_WEIGHT,
-        IN_INPUT_NORM_QUANT_BIAS,
+        IN_INPUT_NORM_BIAS,
+        IN_INPUT_NORM_NEW_WEIGHT,
+        IN_INPUT_NORM_NEW_BIAS,
         IN_QKV_WEIGHT_0,
         IN_QKV_SCALE_0,
         IN_QKV_OFFSET_0,
@@ -168,8 +169,9 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     mlpParallelNode.inTensorIds = {
         INTERMEDIATE_RESIDUAL_ADD_OUT,
         IN_ATTENTION_NORM_WEIGHT,
-        IN_ATTENTION_NORM_QUANT_WEIGHT,
-        IN_ATTENTION_NORM_QUANT_BIAS,
+        IN_ATTENTION_NORM_BIAS,
+        IN_ATTENTION_NORM_NEW_WEIGHT,
+        IN_ATTENTION_NORM_NEW_BIAS,
         IN_MLP_WEIGHT_0,
         IN_MLP_SCALE_0,
         IN_MLP_OFFSET_0,

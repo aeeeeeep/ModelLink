@@ -19,7 +19,7 @@
 namespace atb_speed {
 namespace common {
 
-static const uint64_t IN_TENSOR_COUNT = 9;
+static const uint64_t IN_TENSOR_COUNT = 10;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 1;
 static const uint64_t NODE_COUNT = 2;
@@ -27,8 +27,9 @@ static const uint64_t NODE_COUNT = 2;
 enum NormLinearTensorIdx : uint32_t {
     IN_INPUT = 0,
     IN_NORM_WEIGHT,
-    IN_NORM_QUANT_WEIGHT,
-    IN_NOMR_QUANT_BIAS,
+    IN_NORM_BIAS,
+    IN_NORM_NEW_WEIGHT,
+    IN_NOMR_NEW_BIAS,
     IN_LINEAR_WEIGHT,
     IN_SCALE,
     IN_OFFSET,
@@ -51,16 +52,20 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
     size_t nodeId = 0;
 
     atb::Node &normNode = opGraph.nodes.at(nodeId++);
-    if (param.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::NORM_QUANT_LINEAR_DEQUANT) {
+    if (param.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::NORM_QUANT_LINEAR_DEQUANT) {  // W8A8
         CREATE_OPERATION(param.normQuantParamType, &normNode.operation);
         normNode.inTensorIds = {
             NormLinearTensorIdx::IN_INPUT,
-            param.isAntiOutlier ? NormLinearTensorIdx::IN_NORM_QUANT_WEIGHT : NormLinearTensorIdx::IN_NORM_WEIGHT,
-            NormLinearTensorIdx::IN_NOMR_QUANT_BIAS,
+            param.isAntiOutlier ? NormLinearTensorIdx::IN_NORM_NEW_WEIGHT : NormLinearTensorIdx::IN_NORM_WEIGHT,
+            param.isAntiOutlier ? NormLinearTensorIdx::IN_NORM_NEW_BIAS : NormLinearTensorIdx::IN_NORM_BIAS,
             NormLinearTensorIdx::IN_SCALE, NormLinearTensorIdx::IN_OFFSET
         };
         normNode.outTensorIds = {INTERMEDIATE_NORM};
-    } else {
+    } else if (param.fpHasBias) {  // FP
+        CREATE_OPERATION(param.normParamType, &normNode.operation);
+        normNode.inTensorIds = {NormLinearTensorIdx::IN_INPUT, NormLinearTensorIdx::IN_NORM_WEIGHT, NormLinearTensorIdx::IN_NORM_NEW_BIAS};
+        normNode.outTensorIds = {INTERMEDIATE_NORM};
+    } else {  // FP
         CREATE_OPERATION(param.normParamType, &normNode.operation);
         normNode.inTensorIds = {NormLinearTensorIdx::IN_INPUT, NormLinearTensorIdx::IN_NORM_WEIGHT};
         normNode.outTensorIds = {INTERMEDIATE_NORM};
@@ -85,7 +90,7 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
         }
         outTensorDescs.at(0).shape = inTensorDescs.at(0).shape;
         auto outDimSize = outTensorDescs.at(0).shape.dimNum;
-        outTensorDescs.at(0).shape.dims[outDimSize - 1] = inTensorDescs.at(4).shape.dims[0];
+        outTensorDescs.at(0).shape.dims[outDimSize - 1] = inTensorDescs.at(5).shape.dims[0];
         return atb::NO_ERROR;
     };
 
