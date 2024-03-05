@@ -39,8 +39,8 @@ GPT_ARGS="
     --tokenizer-name-or-path ${TOKENIZER_MODEL} \
     --seq-length 2048 \
     --max-position-embeddings 8192 \
-    --micro-batch-size 1 \
-    --global-batch-size 16 \
+    --micro-batch-size 4 \
+    --global-batch-size 64 \
     --make-vocab-size-divisible-by 32 \
     --lr 1.25e-6 \
     --train-iters 2000 \

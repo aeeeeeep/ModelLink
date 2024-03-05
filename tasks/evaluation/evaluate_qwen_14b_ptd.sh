@@ -25,25 +25,25 @@ TASK="mmlu"
 # Different task needs different max_new_tokens value, please follow the instruction in readme.
 torchrun $DISTRIBUTED_ARGS ./tasks/evaluation/evaluation_llama.py   \
        --task-data-path $DATA_PATH \
-       --task ${TASK}\
-       --seq-length 8192 \
+       --task $TASK\
+       --seq-length 2048 \
        --max-new-tokens 1 \
-       --max-position-embeddings 32768 \
+       --max-position-embeddings 8192 \
        --tensor-model-parallel-size 8  \
        --pipeline-model-parallel-size 1  \
-       --num-layers 32  \
-       --hidden-size 4096  \
-       --ffn-hidden-size 11008 \
-       --num-attention-heads 32  \
+       --num-layers 40  \
+       --hidden-size 5120  \
+       --ffn-hidden-size 13696 \
+       --num-attention-heads 40  \
        --disable-bias-linear \
        --swiglu \
        --position-embedding-type rope \
        --load $CHECKPOINT \
        --normalization RMSNorm \
        --tokenizer-type PretrainedFromHF  \
-       --tokenizer-name-or-path ${TOKENIZER_PATH} \
+       --tokenizer-name-or-path $TOKENIZER_PATH \
        --tokenizer-not-use-fast \
-       --bf16  \
+       --bf16 \
        --micro-batch-size 1  \
        --exit-on-missing-checkpoint \
        --no-load-rng \
@@ -51,5 +51,5 @@ torchrun $DISTRIBUTED_ARGS ./tasks/evaluation/evaluation_llama.py   \
        --untie-embeddings-and-output-weights \
        --add-qkv-bias \
        --tokenizer-kwargs 'eos_token' '<|endoftext|>' 'pad_token' '<|extra_0|>' \
-       --make-vocab-size-divisible-by 16 \
-       --seed 42 | tee ./eval_qwen_7b_${TASK}.log
+       --make-vocab-size-divisible-by 32 \
+       --seed 42 | tee ./eval_qwen_14b_${TASK}.log
