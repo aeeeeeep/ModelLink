@@ -49,8 +49,6 @@ atb::Status FusionRmsNorm(const FusionRmsNormParam &param, atb::Operation **oper
         atb::Node &rmsNormQuantNode = opGraph.nodes.at(nodeId++);
         rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
         rmsNormParam.normParam.epsilon = param.rmsNormEps;
-        rmsNormParam.normParam.quantInputScale = param.quantInputScale;
-        rmsNormParam.normParam.quantInputOffset = param.quantInputOffset;
         rmsNormParam.normParam.quantType = atb::infer::QUANT_INT8;
         CREATE_OPERATION(rmsNormParam, &rmsNormQuantNode.operation);
         rmsNormQuantNode.inTensorIds = {

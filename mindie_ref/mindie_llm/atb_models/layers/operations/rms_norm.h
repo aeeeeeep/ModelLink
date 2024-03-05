@@ -27,8 +27,6 @@ namespace common {
 struct FusionRmsNormParam {
     int quantType = atb_speed::common::NO_QUANT;
     float rmsNormEps = 0;
-    float quantInputScale = 1.0f;
-    int quantInputOffset = 0;
 };
 
 atb::Status FusionRmsNorm(const FusionRmsNormParam &param, atb::Operation **operation);

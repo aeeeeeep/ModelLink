@@ -115,8 +115,6 @@ atb::Status AntiQuantLayer(const AntiQuantLayerParam &param,
     // RMSNORM量化
     atb::infer::RmsNormParam rmsNormParam;
     rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    rmsNormParam.normParam.quantInputScale = param.qkvInputScale;
-    rmsNormParam.normParam.quantInputOffset = param.qkvInputOffset;
     rmsNormParam.normParam.quantType = atb::infer::QUANT_INT8;
     CREATE_OPERATION(rmsNormParam, &inputNormNode.operation);
     inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT, IN_BETA};
@@ -195,8 +193,6 @@ atb::Status AntiQuantLayer(const AntiQuantLayerParam &param,
     // RMSNORM量化
     atb::infer::RmsNormParam selfNormParam;
     selfNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    selfNormParam.normParam.quantInputScale = param.selfLnInputScale;
-    selfNormParam.normParam.quantInputOffset = param.selfLnInputOffset;
     selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
     CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
     selfNormNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_SELFOUTBETA};

@@ -126,8 +126,6 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
     layerNormQuantParam.normParam.beginParamsAxis = 1;
     if (param.quantmodel) {
         layerNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
-        layerNormQuantParam.normParam.quantInputScale = param.qkvInputScale;
-        layerNormQuantParam.normParam.quantInputOffset = param.qkvInputOffset;
     }
     CREATE_OPERATION(layerNormQuantParam, &inputNormNode.operation);
     inputNormNode.inTensorIds = {IN_HIDDEN_STATES, IN_NORM_WEIGHT, IN_NORM_BIAS};
@@ -224,8 +222,6 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
     if (param.quantmodel) {
         atb::infer::LayerNormParam selfNormParam;
         selfNormParam.layerType = atb::infer::LayerNormParam::LAYER_NORM_NORM;
-        selfNormParam.normParam.quantInputScale = param.selfLnInputScale;
-        selfNormParam.normParam.quantInputOffset = param.selfLnInputOffset;
         selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
         selfNormParam.normParam.epsilon = param.layerNormEps;
         selfNormParam.normParam.beginNormAxis = beginParamsAxis;
