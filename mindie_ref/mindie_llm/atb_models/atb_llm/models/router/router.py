@@ -124,6 +124,13 @@ class LlamaRouter(BaseRouter):
 
 
 @dataclass
+class TelechatRouter(BaseRouter):
+
+    @property
+    def config(self):
+        pass
+
+@dataclass
 class StarcoderRouter(BaseRouter):
 
     @property
