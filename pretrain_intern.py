@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Pretrain InternLM"""
+import os
 import logging
 
 import torch
@@ -86,7 +87,8 @@ def model_provider(pre_process=True, post_process=True):
 
 
 if __name__ == "__main__":
-    torch.npu.set_compile_mode(jit_compile=True)
+    jit_compile = False if os.environ.get("WITHOUT_JIT_COMPILE") else True
+    torch_npu.npu.set_compile_mode(jit_compile=jit_compile)
     pretrain(train_valid_test_datasets_provider, model_provider, ModelType.encoder_or_decoder, forward_step,
              args_defaults={'tokenizer_type': 'PretrainedFromHF'},
              data_post_process=data_post_process)
