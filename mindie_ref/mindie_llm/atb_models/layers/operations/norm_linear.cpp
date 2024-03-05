@@ -29,7 +29,7 @@ enum NormLinearTensorIdx : uint32_t {
     IN_NORM_WEIGHT,
     IN_NORM_BIAS,
     IN_NORM_NEW_WEIGHT,
-    IN_NOMR_NEW_BIAS,
+    IN_NORM_NEW_BIAS,
     IN_LINEAR_WEIGHT,
     IN_SCALE,
     IN_OFFSET,
