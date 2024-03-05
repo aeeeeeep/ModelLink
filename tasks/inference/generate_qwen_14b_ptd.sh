@@ -35,8 +35,8 @@ torchrun $DISTRIBUTED_ARGS inference_qwen.py \
        --swiglu \
        --disable-bias-linear \
        --tokenizer-type PretrainedFromHF  \
-       --tokenizer-name-or-path "${TOKENIZER_PATH}" \
-       --load "${CHECKPOINT}"  \
+       --tokenizer-name-or-path ${TOKENIZER_PATH} \
+       --load ${CHECKPOINT}  \
        --normalization RMSNorm \
        --position-embedding-type rope \
        --norm-epsilon 1e-6 \
