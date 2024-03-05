@@ -16,7 +16,10 @@
 #include "flash_attention_rope_model.h"
 
 #include "atb/atb_infer.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 
 #include "models/internlm/7b/layer/flash_attention_rope_layer.h"
 #include "atb_speed/utils/model_factory.h"

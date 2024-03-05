@@ -16,7 +16,10 @@
 #include "operation_creator.h"
 
 #include <functional>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 
 #include "atb_speed/log.h"
 #include "atb_speed/utils/operation_factory.h"

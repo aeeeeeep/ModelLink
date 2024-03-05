@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 #include "quant_model.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 #include <atb/atb_infer.h>
 #include "telechat/layer/embedding_layer.h"
 #include "telechat/layer/quant_layer.h"
