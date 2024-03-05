@@ -203,7 +203,6 @@ class AquilaModel(AquilaPreTrainedModel):
         self.ascend_rotary_embedding = PositionRotaryEmbedding.static(
             dim=self.head_size, base=10000.0, device="cpu").to(weights.device)
 
-        self.ascend_atten_mask = AttentionMask.static(config.max_position_embeddings)
         self.place_holder = torch.tensor([1], dtype=torch.float16, device='npu')
 
         self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
@@ -320,14 +319,14 @@ class AquilaModel(AquilaPreTrainedModel):
                                   max_s: int,
                                   lm_head_indices: Optional[torch.Tensor] = None):
         cos_embed, sin_embed = self.ascend_rotary_embedding.get_cos_sin_total(
-            position_ids, max_s, torch.float32
+            position_ids, self.max_position_embeddings, torch.float32
         )
         if self.soc_info.need_nz:
-            pad_maxs = math.ceil(max_s / 16) * 16
+            pad_maxs = math.ceil(self.max_position_embeddings / 16) * 16
             atten_mask = self.ascend_atten_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
-            atten_mask = atten_mask.view(1, pad_maxs, pad_maxs // 16, 16).transpose(1, 2)
+            atten_mask = self.transdata_operation.execute([atten_mask])[0]
         else:
-            atten_mask = self.ascend_atten_mask.get_attn_mask(max_s, kv_cache[0][0].dtype, kv_cache[0][0].device)
+            atten_mask = self.ascend_atten_mask.get_attn_mask(self.max_position_embeddings, kv_cache[0][0].dtype, kv_cache[0][0].device)
 
         if self.is_prefill:  # prefill
             if lm_head_indices is None:
