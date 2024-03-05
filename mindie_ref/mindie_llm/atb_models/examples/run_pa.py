@@ -137,7 +137,6 @@ class PARunner:
             else:
                 req_list = [request_from_text(input_text, self.tokenizer, max_output_length, self.block_size, req_idx=i) \
                             for i, input_text in enumerate(input_texts)]
-
         print_log(self.rank, logger.debug, f'req_list[0].input_ids: {req_list[0].input_ids}')
 
         if not self.cache_manager:

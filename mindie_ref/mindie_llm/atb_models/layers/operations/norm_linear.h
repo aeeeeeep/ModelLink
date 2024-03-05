@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef ASCEND_SPEED_INFERENCE_COMMON_LINEAR_PARALLEL_H
-#define ASCEND_SPEED_INFERENCE_COMMON_LINEAR_PARALLEL_H
+#ifndef ASCEND_SPEED_INFERENCE_COMMON_NORM_LINEAR_H
+#define ASCEND_SPEED_INFERENCE_COMMON_NORM_LINEAR_H
 
 #include <atb/atb_infer.h>
 #include "layers/operations/linear.h"
@@ -23,27 +23,26 @@
 namespace atb_speed {
 namespace common {
 
-enum LinearParallelType : uint32_t {
-    UNDEFINED = 0,
-    ROW_PARALLEL,     // all reduce
-    COLUMN_PARALLEL,  // all gather
+enum PackQuantType : unsigned int {
+    ALL_FP = 1,
+    ALL_W8A8 = 2,
+    ALL_W8A8_ANTI = 3,
+    MIX_W8A8 = 4,
+    MIX_W8A8_ANTI = 5,
 };
 
-struct TensorParallelInfo {
-    int rank = 0;
-    int worldSize = 1;
-    std::string backend = "hccl";
-};
-
-struct LinearParallelParam {
+template <typename NormParamType>
+struct NormLinearParam {
+    bool isAntiOutlier = false;
+    bool fpHasBias = false;
+    NormParamType normParamType;
+    NormParamType normQuantParamType;
     atb_speed::common::FusionLinearParam fusionLinearParam;
-    int parallelType = UNDEFINED;
-    bool biasAfterSync = false;
-    bool unpadInputs = false;  // all reduce时不会使用到此参数
-    TensorParallelInfo tensorParallelInfo;
 };
 
-atb::Status LinearParallel(const LinearParallelParam &param, atb::Operation **operation);
+template <typename NormParamType>
+atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operation **operation);
+
 } // namespace common
 } // namespace atb_speed
 
