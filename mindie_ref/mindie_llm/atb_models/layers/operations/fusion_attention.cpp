@@ -15,7 +15,7 @@
  */
 
 #include "layers/operations/fusion_attention.h"
-
+#include "pe_gather.h"
 namespace atb_speed {
 namespace common {
 
@@ -82,7 +82,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
     qNormLinearParam.fusionLinearParam.quantType \
         = param.layerLinearQuantType[0] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
     qNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
-    qNormLinearParam.fusionLinearParam.hasBias = param.hasBias;
+    qNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
     qNormLinearParam.normParamType = param.normParamType;
     qNormLinearParam.normQuantParamType = param.normQuantParamType;
     NormLinear<NormParamType>(qNormLinearParam, &qNormLinearNode.operation);
@@ -147,7 +147,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         kNormLinearParam.fusionLinearParam.quantType \
             = param.layerLinearQuantType[1] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
         kNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
-        kNormLinearParam.fusionLinearParam.hasBias = param.hasBias;
+        kNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
         kNormLinearParam.normParamType = param.normParamType;
         kNormLinearParam.normQuantParamType = param.normQuantParamType;
         NormLinear<NormParamType>(kNormLinearParam, &kNormLinearNode.operation);
@@ -166,7 +166,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         vNormLinearParam.fusionLinearParam.quantType \
             = param.layerLinearQuantType[2] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
         vNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
-        vNormLinearParam.fusionLinearParam.hasBias = param.hasBias;
+        vNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
         vNormLinearParam.normParamType = param.normParamType;
         vNormLinearParam.normQuantParamType = param.normQuantParamType;
         NormLinear<NormParamType>(vNormLinearParam, &vNormLinearNode.operation);
@@ -411,7 +411,11 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
     opGraph.inTensorNum = ATTENTION_IN_TENSOR_COUNT;
     opGraph.outTensorNum = ATTENTION_OUT_TENSOR_COUNT;
     opGraph.internalTensorNum = ATTENTION_INTERMEDIATE_TENSOR_COUNT;
-    opGraph.nodes.resize(ATTENTION_NODE_COUNT);
+    if (param.needRope) {
+        opGraph.nodes.resize(ATTENTION_NODE_COUNT);
+    } else {
+        opGraph.nodes.resize(ATTENTION_NODE_COUNT - 1);
+    }
 
     size_t nodeId = 0;
 
@@ -430,25 +434,33 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
     qkvLinearSplitNode.outTensorIds = {
         AttentionTensorIdx::INTERMIDATE_Q, AttentionTensorIdx::INTERMIDATE_K, AttentionTensorIdx::INTERMIDATE_V
     };
+    if (param.needRope) {
+        atb::Node &ropeNode = opGraph.nodes.at(nodeId++);
+        RotaryPositionEmbeddingParam ropeParam;
+        ropeParam.isHalfRotary = param.isHalfRotary;
+        ropeParam.isFA = param.isFA;
+        ropeParam.headDim = param.headDim;
+        ropeParam.headNum = param.selfAttentionParam.headNum;
+        ropeParam.kvHeadNum = param.selfAttentionParam.kvHeadNum;
+        ropeParam.rotaryCoeff = param.rotaryCoeff;
 
-    atb::Node &ropeNode = opGraph.nodes.at(nodeId++);
-    atb::infer::RopeParam ropeparam;
-    ropeparam.rotaryCoeff = param.rotaryCoeff;
-    CREATE_OPERATION(ropeparam, &ropeNode.operation);
-    ropeNode.inTensorIds = {
-        AttentionTensorIdx::INTERMIDATE_Q, AttentionTensorIdx::INTERMIDATE_K, AttentionTensorIdx::IN_COS_TABLE,
-        AttentionTensorIdx::IN_SIN_TABLE, AttentionTensorIdx::IN_SEQ_LEN
-    };
-    ropeNode.outTensorIds = {
-        AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_Q, AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_K
-    };
-    if (param.isFA) {
-        ropeNode.inTensorReshapeFuncs.resize(ropeNode.inTensorIds.size());
-        ropeNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            *batchSizePtr = oldShape.dims[0];
-            squeezeBatchSize(oldShape, newShape);
+        RotaryPositionEmbedding(ropeParam, &ropeNode.operation);
+
+        ropeNode.inTensorIds = {
+            AttentionTensorIdx::INTERMIDATE_Q, AttentionTensorIdx::INTERMIDATE_K, AttentionTensorIdx::IN_COS_TABLE,
+            AttentionTensorIdx::IN_SIN_TABLE, AttentionTensorIdx::IN_SEQ_LEN
         };
-        ropeNode.inTensorReshapeFuncs.at(1) = &squeezeBatchSize;
+        ropeNode.outTensorIds = {
+            AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_Q, AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_K
+        };
+        if (param.isFA && !param.isHalfRotary) {
+            ropeNode.inTensorReshapeFuncs.resize(ropeNode.inTensorIds.size());
+            ropeNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+                *batchSizePtr = oldShape.dims[0];
+                squeezeBatchSize(oldShape, newShape);
+            };
+            ropeNode.inTensorReshapeFuncs.at(1) = &squeezeBatchSize;
+        }
     }
 
     atb::Node &selfAttentionNode = opGraph.nodes.at(nodeId++);
@@ -470,6 +482,9 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
     selfAttentionNode.inTensorReshapeFuncs.resize(selfAttentionNode.inTensorIds.size());
     if (param.isFA) {
         selfAttentionNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            if (*batchSizePtr == 0) {
+                *batchSizePtr = oldShape.dims[0];
+            }
             unsqueezeByHeadNumAndBatchSize(oldShape, newShape, (*batchSizePtr),
                                            param.selfAttentionParam.headNum, param.headDim);
         };
@@ -507,9 +522,9 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
         atb_speed::common::LinearQuantType::NO_QUANT : atb_speed::common::LinearQuantType::LINEAR_QUANT;
     selfOutLinearParam.biasAfterSync = param.selfOutLinearTensorParallelInfo.worldSize > 1 \
         && selfOutLinearParam.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::NO_QUANT \
-        && param.hasBias;
+        && param.selfAttnHasBias;
     selfOutLinearParam.fusionLinearParam.isBF16 = param.isBF16;
-    selfOutLinearParam.fusionLinearParam.hasBias = param.hasBias && !selfOutLinearParam.biasAfterSync;
+    selfOutLinearParam.fusionLinearParam.hasBias = param.selfAttnHasBias && !selfOutLinearParam.biasAfterSync;
     selfOutLinearParam.tensorParallelInfo = param.selfOutLinearTensorParallelInfo;
     LinearParallel(selfOutLinearParam, &selfOutLinearParallelNode.operation);
     selfOutLinearParallelNode.inTensorIds = {
