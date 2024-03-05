@@ -36,7 +36,6 @@ GPT_ARGS="
     --tokenizer-type Llama2Tokenizer \
     --tokenizer-model ${TOKENIZER_MODEL} \
     --load ${CKPT_LOAD_DIR} \
-    --finetune \
     --add-qkv-bias \
     --add-dense-bias \
     --skip-bias-add \
@@ -45,7 +44,7 @@ GPT_ARGS="
     --max-position-embeddings 2048 \
     --micro-batch-size 8 \
     --global-batch-size 64 \
-    --make-vocab-size-divisible-by 128 \
+    --make-vocab-size-divisible-by 32 \
     --lr 1.25e-6 \
     --train-iters 5000 \
     --lr-decay-style cosine \

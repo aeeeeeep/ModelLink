@@ -1,7 +1,7 @@
 # Intern-LM
 <p align="left">
         <b>简体中文</b> |
-        <b><a href="https://gitee.com/ascend/AscendSpeed/blob/master/examples/intern/README_en.md">English</a> </b> 
+        <b><a href="https://gitee.com/ascend/Modellink/blob/modellink/examples/intern/README_en.md">English</a> </b> 
     </p>
 </p>
 
@@ -37,7 +37,6 @@ InternLM-7B 训练的硬件配置如下:
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
 cd ModeLlink 
-git checkout modellink 
 mkdir logs
 mkdir ckpt
 ```
@@ -122,15 +121,16 @@ cd ..
 将模型权重从 huggingface 格式转换为 ModelLink 可以处理的格式
 ```shell
 mkdir model_weights
-SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
-python $SCRIPT_PATH \
-    --input-model-dir ./model_from_hf/internlm-7b/ \
-    --output-model-dir ./model_weights \
-    --tensor-model-parallel-size 8 \
-    --pipeline-model-parallel-size 1 \
-    --type 7B \
-    --bias \
-    --merge-mlp
+python tools/checkpoint/util.py --model-type GPT \
+                                --loader llama2_hf \
+                                --saver megatron \
+                                --target-tensor-parallel-size 8 \
+                                --target-pipeline-parallel-size 1 \
+                                --load-dir ./model_from_hf/internlm-7b/ \
+                                --save-dir ./model_weights \
+                                --tokenizer-model ./model_from_hf/internlm-7b/tokenizer.model \
+                                --add-qkv-bias \
+                                --add-dense-bias
 ```
 
 6. 配置 Internlm-7B 预训练脚本
@@ -140,8 +140,9 @@ python $SCRIPT_PATH \
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # 修改数据集，词表，权重等路径
 CKPT_SAVE_DIR="your model ckpt save path"
-TOKENIZER_PATH="your tokenizer path"#词表路径
-DATA_PATH="your data path" #数据集路径
+CKPT_LOAD_DIR="your init model load path"
+TOKENIZER_PATH="./model_from_hf/internlm-7b/tokenizer.model"#词表路径
+DATA_PATH="./dataset/alpaca/alpaca_text_document" #数据集路径
 ```
 
 7. 启动 Internlm-7B 预训练脚本
@@ -159,23 +160,21 @@ Internlm-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 | 设备 | 模型          | 总迭代数 | 样本吞吐 (samples/s) | token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 
 |----|-------------|------|--------------------|----------------------|-----------------|
-| NPUs | Internlm-7B | 1000 | 11.18             | 2864                 | 5.72        |
-| 参考 | Internlm-7B | - | -              | 4078                 |  -            | 
-
-
+| NPUs | Internlm-7B | 1000 | 10.85            | 2776                 | 5.90       |
+| 参考 | Internlm-7B | 1000 | 11.14              | 2854                 |  5.74             | 
 
 
 #### 推理
-<a href="https://gitee.com/ascend/AscendSpeed/blob/master/examples/intern/generate_internlm_7b_deepspeed.sh">推理脚本</a>：
-examples/intern/generate_internlm_7b_ptd.sh 
+推理脚本</a>：
+tasks/inference/generate_lnternlm_7b_ptd.sh
 ```
-bash examples/intern/generate_lnternlm_7b_ptd.sh
+bash ./tasks/inference/generate_lnternlm_7b_ptd.sh
 ```
 推理举例：
-![Internlm-7b-inference](../../sources/images/internlm7b-inference.png)
+![Internlm-7b-inference](../../sources/images/intern/intern_7B_inference.png)
 
 #### 评估
-<a href="https://gitee.com/ascend/AscendSpeed/blob/master/tasks/evaluation/eval_internlm.sh">评估脚本</a>:
+评估脚本</a>:
 tasks/evaluation/eval_internlm.sh 
 ```
 bash  tasks/evaluation/eval_internlm.sh
@@ -203,7 +202,6 @@ InternLM-65B 训练的硬件配置如下:
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
 cd ModeLlink 
-git checkout modellink 
 mkdir logs
 mkdir ckpt
 cd ..
@@ -299,7 +297,5 @@ Internlm-65B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 | 设备 | 模型          | 总迭代数 | 样本吞吐 (samples/p/s) | token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 
 |----|-------------|------|--------------------|----------------------|-----------------|
-| NPUs | Internlm-65B |  |      5.25      |            336    |     24.4     | 
+| NPUs | Internlm-65B |  |      5.33      |            341    |     48     | 
 | Reference | Internlm-65B | - | -              | 414                 | -            | 
-
-
