@@ -38,7 +38,6 @@ Baichuan2-7B 训练的硬件配置如下：
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
 cd ModeLlink 
-git checkout modellink 
 mkdir logs
 mkdir ckpt
 ```
@@ -91,20 +90,22 @@ wget https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/resolve/main/tokenize
 cd ..
 ```
 
-接着将hf格式的权重转化为AscendSpeed可以加载的形式：
+接着将hf格式的权重转化为megatron可以加载的形式：
 ```shell
 mkdir baichuan2-7B-mt
 
-SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
-# for ptd
-python $SCRIPT_PATH \
-    --input-model-dir ./baichuan2-7B-hf \
-    --output-model-dir ./baichuan2-7B-mt \
-    --tensor-model-parallel-size 8 \
-    --pipeline-model-parallel-size 1 \
-    --type 7B \
-    --merge-mlp \
-    --pse  
+# 修改 ascend-toolkit 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+   
+python tools/checkpoint/util.py \
+    --model-type GPT \
+    --loader llama2_hf \
+    --saver megatron \
+    --target-tensor-parallel-size 8 \
+    --load-dir ./baichuan2-7B-hf \
+    --save-dir ./baichuan2-7B-mt \
+    --tokenizer-model ./baichuan2-7B-hf/tokenizer.model \
+    --w-pack True 
 ```
 
 
@@ -114,16 +115,16 @@ python $SCRIPT_PATH \
 
 ```shell
 # 下载数据集
-mkdir dataset_baichuan2-7B
-cd ./dataset_baichuan2-7B
+mkdir dataset-baichuan2-7B
+cd ./dataset-baichuan2-7B
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
 
 # 准备数据集                              
 python ./tools/preprocess_data.py \
---input ./dataset_baichuan2-7B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+--input ./dataset-baichuan2-7B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
 --tokenizer-name-or-path ./baichuan2-7B-hf \
---output-prefix ./dataset_baichuan2-7B/alpaca \
+--output-prefix ./dataset-baichuan2-7B/alpaca \
 --workers 4 \
 --log-interval 1000 \
 --tokenizer-type PretrainedFromHF
@@ -138,7 +139,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 修改数据集，权重，词表等路径
 CKPT_SAVE_DIR="./ckpt"
-DATA_PATH="./dataset_baichuan2-7B/alpaca_text_document"
+DATA_PATH="./dataset-baichuan2-7B/alpaca_text_document"
 TOKENIZER_MODEL="./baichuan2-7B-hf/tokenizer.model"
 CKPT_LOAD_DIR="./baichuan2-7B-mt"
 ```
@@ -157,7 +158,7 @@ Baichuan2-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 |  设备  |    模型     | 迭代数  | 样本吞吐 (samples/s) | tokens吞吐 (tokens/s/p) | 单步迭代时间 (s/step) | 
 |:----:|:---------:|:----:|:---------------------:|:---------------:|:----------------:|
-| NPUs | Baichuan2-7B | 1000 | 5.07 | 2598 | 6.305| 
+| NPUs | Baichuan2-7B | 1000 | 5.2 | 2664 | 12.3| 
 |  参考  | Baichuan2-7B | 1000 | -- |  3969 | --   | 
 
 
@@ -236,7 +237,6 @@ Baichuan2-13B 训练的硬件配置如下:
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
 cd ModeLlink 
-git checkout modellink 
 mkdir logs
 mkdir ckpt
 ```
@@ -271,11 +271,11 @@ pip install -r requirements.txt
 
 从 [huggingface](https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/tree/main) 下载预训练权重
 ```shell
-mkdir Baichuan2-13B-Base
-cd ./Baichuan2-13B-Base
+mkdir baichuan2-13B-hf
+cd ./baichuan2-13B-hf
 wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/config.json
 wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/configuration_baichuan.py
-wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/generation_config.json
+wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/generation_utils.py
 wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/modeling_baichuan.py
 wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/pytorch_model-00001-of-00003.bin
 wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/pytorch_model-00002-of-00003.bin
@@ -289,20 +289,22 @@ wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/tokeniz
 cd ..
 ```
 
-将 Baichuan2-13B 模型权重从 huggingface 格式转换为 AscendSpeed 格式
+接着将hf格式的权重转化为megatron可以加载的形式：
 ```shell
-mkdir baichuan2-13b-merge
+mkdir baichuan2-13b-mt
 
-SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
-python $SCRIPT_PATH \
-    --input-model-dir ./Baichuan2-13B-Base \
-    --output-model-dir ./baichuan2-13b-merge \
-    --tensor-model-parallel-size 8 \
-    --pipeline-model-parallel-size 1 \
-    --make-vocab-size-divisible-by 8 \
-    --merge-mlp \
-    --type 13B \
-    --pse     
+# 修改 ascend-toolkit 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+   
+python tools/checkpoint/util.py \
+    --model-type GPT \
+    --loader llama2_hf \
+    --saver megatron \
+    --target-tensor-parallel-size 8 \
+    --load-dir ./baichuan2-13B-hf \
+    --save-dir ./baichuan2-13b-mt \
+    --tokenizer-model ./baichuan2-13B-hf/tokenizer.model \
+    --w-pack True    
 ```
 
 4. 准备数据集
@@ -310,15 +312,15 @@ python $SCRIPT_PATH \
 下载 Baichuan2-13B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
 
 ```shell
-mkdir dataset_baichuan2_13B
-cd ./dataset_baichuan2_13B
+mkdir dataset-baichuan2-13B
+cd ./dataset-baichuan2-13B
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
 
 python ./tools/preprocess_data.py \
-    --input ./dataset_baichuan13B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ./Baichuan2-13B-Base \
-    --output-prefix ./dataset_baichuan2_13B/alpaca \
+    --input ./dataset-baichuan2-13B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+    --tokenizer-name-or-path ./baichuan2-13B-hf \
+    --output-prefix ./dataset-baichuan2-13B/alpaca \
     --workers 4 \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF 
@@ -333,9 +335,9 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 修改词表，数据集, 权重等路径等路径
 CKPT_SAVE_DIR="./ckpt"
-DATA_PATH="./dataset_baichuan2_13B/alpaca_text_document"
-TOKENIZER_MODEL="./Baichuan2-13B-Base/tokenizer.model"
-CKPT_LOAD_DIR="./baichuan2-13b-merge" 
+DATA_PATH="./dataset-baichuan2-13B/alpaca_text_document"
+TOKENIZER_MODEL="./baichuan2-13B-hf/tokenizer.model"
+CKPT_LOAD_DIR="./baichuan2-13b-mt" 
 ```
 
 
@@ -353,7 +355,7 @@ Baichuan2-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 
 |  设备  |            模型          | 迭代数  | 样本吞吐 (samples/s) | token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 
 |:----:|:-------------------------:|:----:|:------------------:|:--------------------:|:---------------:|
-| NPUs | Baichuan2-13B | 1000 |1.72| 880    | 4.647 |
+| NPUs | Baichuan2-13B | 1000 |1.83| 940    | 4.35 |
 |  参考  | Baichuan2-13B | - | - | 872|- |
 
 

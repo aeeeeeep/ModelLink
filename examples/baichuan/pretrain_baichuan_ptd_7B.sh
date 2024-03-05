@@ -1,7 +1,7 @@
 #!/bin/bash
 
 export CUDA_DEVICE_MAX_CONNECTIONS=1
-export NPU_DETECT=0
+export NPU_ASD_ENABLE=0
 
 GPUS_PER_NODE=8
 MASTER_ADDR=localhost
@@ -41,9 +41,9 @@ GPT_ARGS="
     --max-position-embeddings 4096 \
     --micro-batch-size 4 \
     --global-batch-size 32 \
-    --make-vocab-size-divisible-by 128 \
+    --make-vocab-size-divisible-by 64 \
     --lr 1e-5 \
-    --train-iters 5000 \
+    --train-iters 1000 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
     --disable-bias-linear \
@@ -62,7 +62,7 @@ GPT_ARGS="
     --lr-warmup-fraction 0.1 \
     --clip-grad 1.0 \
     --adam-beta1 0.9 \
-    --initial-loss-scale 8188.0 \
+    --initial-loss-scale 1024.0 \
     --adam-beta2 0.95 \
     --no-gradient-accumulation-fusion \
     --no-load-optim \

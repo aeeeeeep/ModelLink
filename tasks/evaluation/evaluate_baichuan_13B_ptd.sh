@@ -51,5 +51,5 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation
        --no-load-optim \
        --untie-embeddings-and-output-weights \
        --no-masked-softmax-fusion \
-       --make-vocab-size-divisible-by 128 \
+       --make-vocab-size-divisible-by 64 \
        --seed 42 | tee logs/eval_baichuan_13b_${TASK}.log

@@ -56,6 +56,7 @@ def build_pretraining_data_loader(dataset, consumed_samples):
     tokenizer = get_tokenizer().tokenizer
 
     if args.is_instruction_dataset:
+        tokenizer.padding_side = args.tokenizer_padding_side
         collator = DataCollatorForSeq2Seq(
             tokenizer,
             pad_to_multiple_of=32 if args.variable_seq_lengths else args.seq_length,

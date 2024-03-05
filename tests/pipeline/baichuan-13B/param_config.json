@@ -1,0 +1,136 @@
+{
+    "NETWORK_SIZE": [
+        "--num-layers", "40",
+        "--hidden-size", "5120",
+        "--ffn-hidden-size", "13696",
+        "--num-attention-heads", "40",
+        "--position-embedding-type", "alibi",
+        "--make-vocab-size-divisible-by", "64",
+        "--max-position-embeddings", "4096",
+        "--normalization", "RMSNorm",
+        "--swiglu",
+        "--untie-embeddings-and-output-weights",
+        "--load", "./baichuan-13B-tp8-pp1/"
+    ],
+
+    "TOKENIZER_PARAM": [
+        "--tokenizer-type", "PretrainedFromHF",
+        "--tokenizer-name-or-path", "./baichuan-13B-hf"
+    ],
+
+    "PROCESS_DATA_INPUT_PATH": [
+        "--input", "./train-00000-of-00001-a09b74b3ef9c3b56.parquet"
+    ],
+
+    "PROCESS_PRETRAIN_DATA_PARAM": [
+        "--output-prefix", "./pretrain-dataset-baichuan-13B/alpaca",
+        "--workers", "4",
+        "--log-interval", "1000"
+    ],
+
+    "PROCESS_INSTRUCTION_DATA_PARAM": [
+        "--output-prefix", "./tune-dataset-baichuan-13B/alpaca",
+        "--tokenizer-not-use-fast",
+        "--handler-name", "GeneralInstructionHandler",
+        "--append-eod"
+    ],
+
+    "INFERENCE_PARAM": [
+        "--max-new-tokens", "256",
+        "--tokenizer-not-use-fast",
+        "--exit-on-missing-checkpoint"
+    ],
+
+    "EVALUATION_PARAM": [
+        "--tokenizer-not-use-fast",
+        "--task-data-path", "./boolq/test",
+        "--task", "boolq",
+        "--max-new-tokens", "1"
+    ],
+
+    "LORA_PARAM": [
+        "--finetune",
+        "--lora-r", "16",
+        "--lora-alpha", "32",
+        "--lora-target-modules", "query_key_value", "dense", "gate_proj","dense_h_to_4h", "dense_4h_to_h",
+        "--is-instruction-dataset",
+        "--tokenizer-not-use-fast",
+        "--save", "./lora-weight",
+        "--data-path", "./tune-dataset-baichuan-13B/alpaca",
+        "--train-iters", "10"
+    ],
+
+    "LORA_INFERENCE_PARAM": [
+        "--lora-r", "16",
+        "--lora-alpha", "32",
+        "--lora-target-modules", "query_key_value", "dense", "gate_proj","dense_h_to_4h", "dense_4h_to_h",
+        "--tokenizer-not-use-fast",
+        "--lora-load", "./lora-save-weight-baichuan-13B"
+    ],
+    "TRAINING_PARAM": [
+        "--tokenizer-type", "Llama2Tokenizer",
+        "--tokenizer-model", "./baichuan-13B-hf/tokenizer.model",
+        "--save", "./save-weight-baichuan-13B",
+        "--data-path", "./pretrain-dataset-baichuan-13B/alpaca_text_document",
+        "--train-iters", "15"
+    ],
+
+    "REGULARIZATION": [
+        "--attention-dropout", "0.0",
+        "--hidden-dropout", "0.0",
+        "--weight-decay", "1e-1",
+        "--clip-grad", "1.0",
+        "--adam-beta1", "0.9",
+        "--adam-beta2", "0.95",
+        "--adam-eps","1.0e-5"
+    ],
+
+    "LEARNING_RATE": [
+        "--lr", "1e-5",
+        "--lr-decay-style", "cosine",
+        "--min-lr", "1e-7"
+    ],
+
+    "DISTRIBUTED_PARAM": [
+        "--tensor-model-parallel-size", "8",
+        "--pipeline-model-parallel-size", "1"
+    ],
+
+    "AUXILIARY_PARAM": [
+        "--micro-batch-size", "1",
+        "--global-batch-size", "8",
+        "--disable-bias-linear",
+        "--no-gradient-accumulation-fusion",
+        "--fp16",
+        "--attention-softmax-in-fp32",
+        "--no-load-optim",
+        "--no-load-rng",
+        "--seq-length", "4096",
+        "--seed", "42"
+    ],
+
+    "TRAINING_AUX": [
+        "--sequence-parallel",
+        "--initial-loss-scale", "1024.0",
+        "--use-fused-rmsnorm",
+        "--init-method-std", "0.01",
+        "--split", "100,0,0",
+        "--log-interval", "1",
+        "--save-interval", "10",
+        "--eval-interval", "1000",
+        "--eval-iters", "0",
+        "--distributed-backend", "nccl",
+        "--num-workers", "0"
+    ],
+	
+    "CONVERT_WEIGHT_PARAM": [
+        "--model-type", "GPT",
+        "--loader", "llama2_hf",
+        "--saver", "megatron",
+        "--target-tensor-parallel-size", "8",
+        "--load-dir", "/home/dataset/baichuan-13B-hf",
+        "--save-dir", "/home/dataset/baichuan-13B-tp8-pp1",
+        "--tokenizer-model", "None",
+        "--w-pack", "True"
+    ]
+}

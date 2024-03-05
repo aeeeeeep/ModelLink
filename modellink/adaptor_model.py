@@ -12,6 +12,7 @@ from megatron.model.language_model import parallel_lm_logits
 from megatron.model.fused_layer_norm import MixedFusedLayerNorm
 from megatron.model.language_model import get_language_model
 
+from .model.moe import SwitchMLP
 from .model.module import MegatronModuleForCausalLM
 
 
@@ -34,6 +35,9 @@ def apply_model_patch():
     megatron.model.GPTModel = GPTModel
     megatron.model.language_model.TransformerLanguageModel.forward = (seq_length_wrapper(
         megatron.model.language_model.TransformerLanguageModel.forward))
+
+    # moe
+    megatron.model.transformer.SwitchMLP = SwitchMLP
 
     # bloom
     megatron.core.tensor_parallel.layers.VocabParallelEmbedding.__init__ = norm_wrapper(

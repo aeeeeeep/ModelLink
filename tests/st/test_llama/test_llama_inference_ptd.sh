@@ -18,7 +18,7 @@ basepath=$(cd `dirname $0`; cd ../../..; pwd)
 export PYTHONPATH=${basepath}:$PYTHONPATH
 
 python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS ${basepath}/tasks/inference/inference_llama.py \
-       --task 1 2 3 4 5 \
+       --task greedy do_sample beam_search beam_search_with_sampling return_output_log_probs \
        --tensor-model-parallel-size 2  \
        --pipeline-model-parallel-size 4  \
        --num-layers 32  \

@@ -34,6 +34,7 @@ def process_args(parser):
     parser = _add_network_size_args(parser)
     parser = _add_lora_args(parser)
     parser = _add_data_args(parser)
+    parser = _add_moe_args(parser)
     return parser
 
 
@@ -53,9 +54,31 @@ def _add_lora_args(parser):
     group.add_argument('--lora-register-forward-hook', nargs='+', type=str,
                        default=['word_embeddings', 'input_layernorm'],
                        help='Lora register forward hook.')
-    group.add_argument('--lora-adapter-name', type=str, default='default',
-                       help='Lora adapter name.')
 
+    return parser
+
+
+def _add_moe_args(parser):
+    group = parser.add_argument_group(title='moe')
+    group.add_argument('--moe-router-topk', type=int, default=2,
+                       help='Number of experts to route to for each token. The default is 2.')
+    group.add_argument('--moe-router-load-balancing-type', type=str,
+                       choices=['aux_loss', ],
+                       default='aux_loss',
+                       help='Determines the load balancing strategy for the router. "aux_loss" corresponds '
+                            'to the load balancing loss used in GShard and SwitchTransformer, "sinkhorn" corresponds '
+                            'to the balancing algorithm used in S-BASE, and "None" implies no load balancing. '
+                            'The default is "aux_loss".')
+    group.add_argument('--expert-interval', type=int, default=1,
+                       help='Use experts in every "expert-interval" layers')
+    group.add_argument('--moe-aux-loss-coeff', type=float, default=0.0,
+                       help='Scaling coefficient for the aux loss: a starting value of 1e-2 is recommended.')
+    group.add_argument('--moe-z-loss-coeff', type=float, default=0.0,
+                       help='Scaling coefficient for the z-loss: a starting value of 1e-3 is recommended.')
+    group.add_argument('--moe-train-capacity-factor', type=float, default=1.0,
+                       help='The capacity of the MoE expert at training time')
+    group.add_argument('--noisy_gate_policy', type=str, default=None,
+                       help="noisy gate policy, valid options are 'Jitter', 'RSample' or 'None'.")
     return parser
 
 
@@ -65,6 +88,8 @@ def _add_data_args(parser):
     group.add_argument('--variable-seq-lengths', action='store_true', help='Use variable seq lengths or not.')
     group.add_argument("--tokenizer-kwargs", type=str, nargs='+', default=None,
                        help="Kwargs of the huggingface tokenizer.")
+    group.add_argument('--tokenizer-padding-side', type=str, default='right',
+            help="tokenizer padding side")
 
     return parser
 

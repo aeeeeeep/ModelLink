@@ -1,7 +1,7 @@
 #!/bin/bash
 
 export CUDA_DEVICE_MAX_CONNECTIONS=1
-export NPU_DETECT=0
+export NPU_ASD_ENABLE=0
 
 GPUS_PER_NODE=8
 MASTER_ADDR=localhost
@@ -44,7 +44,7 @@ GPT_ARGS="
     --global-batch-size 8 \
     --untie-embeddings-and-output-weights \
     --no-gradient-accumulation-fusion \
-    --make-vocab-size-divisible-by 8 \
+    --make-vocab-size-divisible-by 32 \
     --lr 1e-5 \
     --load ${CKPT_LOAD_DIR} \
     --train-iters 1000 \
@@ -65,7 +65,6 @@ GPT_ARGS="
     --weight-decay 1e-4 \
     --clip-grad 1.0 \
     --seed 1234 \
-    --use-distributed-optimizer \
     --adam-beta1 0.9 \
     --initial-loss-scale 8188.0 \
     --adam-beta2 0.98 \

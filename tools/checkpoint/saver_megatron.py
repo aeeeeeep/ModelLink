@@ -386,16 +386,15 @@ def save_model_checkpoint(queue, args):
             if md.linear_bias:
                 dense_bias = msg.pop("dense bias")
                 mlp_l1_bias = msg.pop("mlp l1 bias")
-            tp = args.target_tensor_parallel_size
-            np = margs.num_attention_heads // tp
-            gp = (margs.num_query_groups if margs.group_query_attention else margs.num_attention_heads) // tp
-            repeats = np // gp
-            hn = margs.kv_channels
-            qkv_weight_tuple = torch.chunk(msg.pop("qkv weight"), args.target_tensor_parallel_size, dim=0)
-            qkv_weight = ()
-            for i in range(len(qkv_weight_tuple)):
-                w_s0, w_s1 = qkv_weight_tuple[i].shape
-                qkv_weight += (qkv_weight_tuple[i].reshape(repeats + 2, gp, hn, qkv_weight_tuple[i].shape[1]).contiguous().permute(1, 0, 2, 3).reshape(w_s0, w_s1).contiguous(),)
+
+            if args.add_qkv_bias:
+                qkv_bias = torch.chunk(msg.pop("qkv bias"), args.target_tensor_parallel_size, dim=0)
+            if args.add_dense_bias:
+                dense_bias = msg.pop("dense bias")
+
+            qkv_org = msg.pop("qkv weight")
+            qkv_weight = torch.chunk(qkv_org, args.target_tensor_parallel_size, dim=0)
+
             # Split up the parallel tensors
             dense_weight = torch.chunk(msg.pop("dense weight"), args.target_tensor_parallel_size, dim=1)
             mlp_l1_weight = torch.chunk(msg.pop("mlp l1 weight"), args.target_tensor_parallel_size, dim=1)
@@ -435,10 +434,14 @@ def save_model_checkpoint(queue, args):
                     l.self_attention.dense.bias.data.copy_(dense_bias)
                     l.mlp.dense_h_to_4h.bias.data.copy_(mlp_l0_bias[tp_rank])
                     l.mlp.dense_4h_to_h.bias.data.copy_(mlp_l1_bias)
+                    
+                if args.add_qkv_bias:
+                    l.self_attention.query_key_value.bias.data.copy_(qkv_bias[tp_rank])
+                if args.add_dense_bias:
+                    l.self_attention.dense.bias.data.copy_(dense_bias)
 
             total_layer_num = total_layer_num + 1
             check_message(msg)
-
 
         if post_process:
             msg = queue_get("final norm")
