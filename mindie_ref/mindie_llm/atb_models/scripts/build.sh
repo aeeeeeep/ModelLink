@@ -324,9 +324,7 @@ function fn_build()
         exit -1
     fi
     fn_build_3rdparty
-    if [ -z $ATB_HOME_PATH ];then
-        source /usr/local/Ascend/atb/set_env.sh
-    fi
+    
     if [ ! -d "$OUTPUT_DIR" ];then
         mkdir -p $OUTPUT_DIR
     fi
