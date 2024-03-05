@@ -230,8 +230,8 @@ Currently, the following downstream tasks have been supported:
       <td>72B</td>
       <td>16x8</td>
       <td>BF16 </td>
-      <td> -- </td>
-      <td> -- </td>
+      <td> 285 </td>
+      <td> 345 </td>
       <td> <a href="examples/qwen/pretrain_qwen_72b_ptd.sh">Train</a> </td>
     </tr>
     <tr>
@@ -414,8 +414,8 @@ Currently, the following downstream tasks have been supported:
     <tr>
       <td>72B</td>
       <td> -- </td>
-      <td> -- </td>
-      <td> -- </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_qwen_72b_ptd.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_qwen_72b_ptd.sh">evaluation </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>

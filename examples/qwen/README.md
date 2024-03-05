@@ -28,6 +28,8 @@
   - [脚本](#脚本)
   - [性能](#性能)
     - [吞吐](#吞吐)
+  - [推理](#推理)
+  - [评估](#评估)
 
 # Qwen-7B
 
@@ -559,3 +561,56 @@ Qwen-72B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 |:----:|:--------:|:-----------------------:|:-----------------------:|
 | NPUs | Qwen-72B |           285           |           --            |
 |  参考  | Qwen-72B |           345           |           --            |
+
+
+## 推理
+
+配置 qwen-72b 推理脚本：tasks/inference/generate_qwen_72b_ptd.sh
+
+```bash
+# ascend-toolkit 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+# 修改模型权重路径和此表路径
+CHECKPOINT="your model directory path"
+TOKENIZER_PATH=./qwen-72b-hf
+```
+
+启动qwen-72b推理脚本
+```bash
+bash tasks/inference/generate_qwen_72b_ptd.sh
+```
+
+推理示例如下：
+![Inference](../../sources/images/qwen/qwen_72b_inference.png)
+
+
+## 评估
+
+使用[CEval数据集](https://huggingface.co/datasets/ceval/ceval-exam)和[MMLU数据集](https://huggingface.co/datasets/cais/mmlu)评估模型.
+
+配置qwen-72b评估脚本: tasks/evaluation/evaluate_qwen_72b_ptd.sh
+
+```bash
+# ascend-toolkit 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+# 修改模型参数路径和词表路径
+TOKENIZER_PATH=./qwen-72b-hf  #词表路径
+CHECKPOINT="your model directory path"  #模型路径
+
+# 配置任务和数据集路径
+DATA_PATH="./mmlu/data/test/"  # ceval任务配置为 "./ceval/val/"
+TASK="mmlu"  # ceval任务配置为 "ceval"
+```
+
+启动评估
+
+```bash
+bash tasks/evaluation/evaluate_qwen_72b_ptd.sh
+```
+
+| 数据集 | 总学科数 | 总问题数 | 参考准确率 | NPU准确率 |
+|:---:|:---:|:---:|:---:|:---:|
+| CEval | 52 | 1346 | 83.3 | 81.8 |
+| MMLU | 57 | 14042 | 77.4 | 74.6 |
