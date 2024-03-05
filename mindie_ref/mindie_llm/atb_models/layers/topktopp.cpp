@@ -151,13 +151,11 @@ atb::Status Topktopp(const TopktoppParam &param, atb::Operation **operation)
         outTensorDescs.at(0) = inTensorDescs.at(0);
         outTensorDescs.at(0).shape.dimNum = 1;
         outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
-        // outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[0];
 
         outTensorDescs.at(1) = inTensorDescs.at(0);
         outTensorDescs.at(1).dtype=ACL_INT32;
         outTensorDescs.at(1).shape.dimNum = 1;
         outTensorDescs.at(1).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
-        // outTensorDescs.at(1).shape.dims[1] = inTensorDescs.at(0).shape.dims[0];
 
         return atb::NO_ERROR;
     };
