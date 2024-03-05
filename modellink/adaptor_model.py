@@ -6,6 +6,8 @@ from megatron.model import transformer
 from megatron import get_args
 from megatron.core import tensor_parallel
 from megatron.core import parallel_state
+from megatron.core.enums import ModelType
+from megatron.core import mpu
 from megatron.model.module import MegatronModule
 from megatron.model.enums import AttnMaskType
 from megatron.model.language_model import parallel_lm_logits
