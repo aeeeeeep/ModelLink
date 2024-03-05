@@ -135,7 +135,8 @@ function fn_build_atb()
     cd $CODE_ROOT
     mindie_atb_package="MindIE_ATB/$MindIE_ATB_VERSION_FOR_CI/Ascend-mindie-atb_${PACKAGE_NAME}_linux-${ARCH}_${abi}.run"
     chmod 755 ./$mindie_atb_package
-    ./$mindie_atb_package --extract=./MindIE_ATB
+    ./$mindie_atb_package --extract=./MindIE_ATB/latest
+    mv ./MindIE_ATB/latest/set_env.sh ./MindIE_ATB/latest
     source ./MindIE_ATB/set_env.sh
 }
 
