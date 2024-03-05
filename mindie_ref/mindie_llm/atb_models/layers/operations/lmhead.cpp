@@ -26,6 +26,7 @@ namespace common {
 enum LmHeadTensorIdx : uint32_t {
     IN_HIDDENSTATES = 0,
     IN_WEIGHT,
+    IN_HOLDER,
     IN_SCALE,
     IN_OFFSET,
     IN_DESCALE,
@@ -33,7 +34,7 @@ enum LmHeadTensorIdx : uint32_t {
     OUT_LOGITS,
 };
 
-static const uint64_t IN_TENSOR_COUNT = 6;
+static const uint64_t IN_TENSOR_COUNT = 7;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 
 template <class T>
@@ -76,17 +77,17 @@ atb::Status CreateLmHead(const LmHeadParam &param, atb::Operation **operation, T
     LinearParallel(param.linearParallelParam, &linearParallelNode.operation);
     if (parallelType == ROW_PARALLEL) {
         linearParallelNode.inTensorIds = {
-            config.INTERMEDIATE_SLICE_OUT, LmHeadTensorIdx::IN_WEIGHT, LmHeadTensorIdx::IN_SCALE,
+            config.INTERMEDIATE_SLICE_OUT, LmHeadTensorIdx::IN_WEIGHT, LmHeadTensorIdx::IN_HOLDER, LmHeadTensorIdx::IN_SCALE,
             LmHeadTensorIdx::IN_OFFSET, LmHeadTensorIdx::IN_DESCALE
         };
     } else if (param.gatherAhead) {
         linearParallelNode.inTensorIds = {
-            config.INTERMEDIATE_GATHER_OUT, LmHeadTensorIdx::IN_WEIGHT, LmHeadTensorIdx::IN_SCALE,
+            config.INTERMEDIATE_GATHER_OUT, LmHeadTensorIdx::IN_WEIGHT, LmHeadTensorIdx::IN_HOLDER, LmHeadTensorIdx::IN_SCALE,
             LmHeadTensorIdx::IN_OFFSET, LmHeadTensorIdx::IN_DESCALE
         };
     } else {
         linearParallelNode.inTensorIds = {
-            LmHeadTensorIdx::IN_HIDDENSTATES, LmHeadTensorIdx::IN_WEIGHT, LmHeadTensorIdx::IN_SCALE,
+            LmHeadTensorIdx::IN_HIDDENSTATES, LmHeadTensorIdx::IN_WEIGHT, LmHeadTensorIdx::IN_HOLDER, LmHeadTensorIdx::IN_SCALE,
             LmHeadTensorIdx::IN_OFFSET, LmHeadTensorIdx::IN_DESCALE
         };
     }

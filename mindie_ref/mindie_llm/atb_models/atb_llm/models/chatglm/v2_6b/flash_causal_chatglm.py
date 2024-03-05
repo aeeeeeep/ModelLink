@@ -69,7 +69,35 @@ class RMSNorm(nn.Module):
         return self.weight * hidden_states, residual
 
 
+# for parallel weight cut
+def cut_fp_tensors(model_cfg, tensor, tp_size):
+    cut_tensor_list = []
+    hidden_size_per_attention_head = model_cfg.hidden_size // model_cfg.num_attention_heads
+    num_attention_heads_per_partition = model_cfg.num_attention_heads
+    num_multi_query_groups_per_partition = model_cfg.multi_query_group_num
+    query_layer, key_layer, value_layer = tensor.split(
+        [
+            hidden_size_per_attention_head * num_attention_heads_per_partition,
+            hidden_size_per_attention_head * num_multi_query_groups_per_partition,
+            hidden_size_per_attention_head * num_multi_query_groups_per_partition
+        ],
+        dim=0
+    )
+    query_list = torch.chunk(query_layer, tp_size, dim=0)
+    key_list = torch.chunk(key_layer, tp_size, dim=0)
+    value_list = torch.chunk(value_layer, tp_size, dim=0)
+    cut_tensor_litt = torch.stack([torch.cat([query_list[i], key_list[i], value_list[i]], dim=0)
+                            for i in range(tp_size)], dim=0)
+    return cut_tensor_list
+
+
 def load_qkv(config, prefix: str, weights):
+    hidden_size_per_attention_head = config.hidden_size // config.num_attention_heads
+    num_attention_heads_per_partition = config.num_attention_heads
+    num_multi_query_groups_per_partition = config.multi_query_group_num
+    q_size = hidden_size_per_attention_head * num_attention_heads_per_partition
+    kv_size = hidden_size_per_attention_head * num_multi_query_groups_per_partition
+
     weight = weights.get_weights_col_packed_qkv_glm(config, prefix, None, False)
     bias = weights.get_weights_col_packed_qkv_glm(config, prefix, None, True)
     linear = get_linear(weight, bias, config.quantize)
@@ -362,52 +390,49 @@ class FlashChatglmModel(torch.nn.Module):
                                               device=weights.device,
                                               dtype=config.torch_dtype)
         self.cos_embed, self.sin_embed = self.rotary_pos_emb(config.seq_length)
+        self.placeholder = torch.zeros(1, dtype=config.torch_dtype, device="npu")
+        self.in_beta = torch.zeros(config.hidden_size, dtype=torch.float16).npu()
 
     def init_ascend_operations(self, config: ChatglmConfig):
-        self.acl_param_encoder = json.dumps({
-            "rmsNormEps": config.layernorm_epsilon,
-            "headNum": config.num_attention_heads // self.tp_world_size,
-            "dk": config.hidden_size // config.num_attention_heads,
-            "isPrefill": True,
-            "numHeadsPerPartition": config.num_attention_heads // self.tp_world_size,
-            "hiddenSizePerHead": config.kv_channels,
-            "numGroupsPerPartition": max(config.multi_query_group_num // self.tp_world_size, 1),
-            "transKey": False,
-            "layerNum": config.num_layers,
-            "residualAddScale": 1,
-            "rank": self.tp_rank,
-            "rankSize": self.tp_world_size,
-            "isLmHeadParallel": not self.soc_info.need_nz,
-        })
-        self.acl_param_decoder = json.dumps({
-            "rmsNormEps": config.layernorm_epsilon,
-            "headNum": config.num_attention_heads // self.tp_world_size,
-            "dk": config.hidden_size // config.num_attention_heads,
-            "isPrefill": False,
-            "numHeadsPerPartition": config.num_attention_heads // self.tp_world_size,
-            "hiddenSizePerHead": config.kv_channels,
-            "numGroupsPerPartition": max(config.multi_query_group_num // self.tp_world_size, 1),
-            "transKey": False,
-            "layerNum": config.num_layers,
-            "residualAddScale": 1,
-            "rank": self.tp_rank,
-            "rankSize": self.tp_world_size,
-            "isLmHeadParallel": not self.soc_info.need_nz,
-        })
         self.seq_length = config.seq_length
 
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm2_6b_PagedAttentionModel")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm2_6b_PagedAttentionModel")
-
-        self.acl_encoder_operation.set_param(self.acl_param_encoder)
-        self.acl_decoder_operation.set_param(self.acl_param_decoder)
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("glm_v2_6b_DecoderModel")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("glm_v2_6b_DecoderModel")
+        pre_scale = []
+        for layer_id in range(1, config.num_layers + 1):
+            pre_scale.append(layer_id / (math.sqrt(config.kv_channels) * layer_id))
+        post_scale = [1.0] * config.num_layers
+        coder_param = {
+            "isFA": False,
+            "isBF16": False,
+            "isPack": True,
+            "isEmbeddingParallel": False,
+            "isLmHeadParallel": True,  # 310P 暂不支持all-gather
+            "quantType":  0,
+            "rmsNormEps": config.rms_norm_eps,
+            "numAttentionHeadsPerRank": config.num_attention_heads // self.tp_world_size,
+            "hiddenSizePerAttentionHead": self.head_size,
+            "numKeyValueHeadsPerRank": config.num_key_value_heads // self.tp_world_size,
+            "numHiddenLayers": config.num_layers,
+            "rank": self.tp_rank,
+            "worldSize": self.tp_world_size,
+            "backend": "hccl" if self.soc_info.need_nz else "lccl",
+            "tokenOffset": [0],
+            "seqLen": [1],
+            "preScale": pre_scale,
+            "postScale": post_scale,
+        }
+        encoder_param = {**coder_param, "isPrefill": True}
+        decoder_param = {**coder_param, "isPrefill": False}
+        self.acl_encoder_operation.set_param(json.dumps({**encoder_param}))
+        self.acl_decoder_operation.set_param(json.dumps({**decoder_param}))
 
         self.weight_flag = False
         self.num_layers = config.num_layers
         self.hidden_size = config.hidden_size
 
-        self.acl_encoder_operation_inputs = [None] * 8
-        self.acl_decoder_operation_inputs = [None] * 8
+        self.acl_encoder_operation_inputs = [None] * 13
+        self.acl_decoder_operation_inputs = [None] * 13
         self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64)
         # self.lm_head_weight = None
 
@@ -428,10 +453,15 @@ class FlashChatglmModel(torch.nn.Module):
             weights_t.append(weights_layer["input_layernorm.weight"])
             weights_t.append(self.weight_format_cast(weights_layer["self_attention.query_key_value.linear.weight"]))
             weights_t.append(self.weight_format_cast(weights_layer["self_attention.query_key_value.linear.bias"]))
+
+            weights_t.extend([self.placeholder] * 11)
             weights_t.append(self.weight_format_cast(weights_layer["self_attention.dense.linear.weight"]))
+            weights_t.extend([self.placeholder] * 4)
             weights_t.append(weights_layer["post_attention_layernorm.weight"])
             weights_t.append(self.weight_format_cast(weights_layer["mlp.gate_up_proj.linear.weight"]))
+            weights_t.extend([self.placeholder] * 9)
             weights_t.append(self.weight_format_cast(weights_layer["mlp.down_proj.linear.weight"]))
+            weights_t.extend([self.placeholder] * 4)
             if self.soc_info.need_nz:
                 del self.layers[i].self_attention
                 del self.layers[i].post_attention_layernorm
@@ -490,25 +520,42 @@ class FlashChatglmModel(torch.nn.Module):
                 "seqLen" : input_lengths.tolist()
             })
             self.acl_encoder_operation_inputs[0] = input_ids
-            self.acl_encoder_operation_inputs[1] = cos_embed
-            self.acl_encoder_operation_inputs[2] = sin_embed
-            self.acl_encoder_operation_inputs[3] = atten_mask
-            self.acl_encoder_operation_inputs[4] = block_tables.to(torch.int32)
-            self.acl_encoder_operation_inputs[5] = slots.to(torch.int32)
-            self.acl_encoder_operation_inputs[6] = input_lengths.to(torch.int32)
-            self.acl_encoder_operation_inputs[7] = lm_head_indices.to(torch.int64)
+            self.acl_encoder_operation_inputs[1] = position_ids.to(torch.int64)
+
+            self.acl_encoder_operation_inputs[2] = cos_embed
+            self.acl_encoder_operation_inputs[3] = sin_embed
+
+            self.acl_encoder_operation_inputs[4] = atten_mask
+            self.acl_encoder_operation_inputs[5] = block_tables.to(torch.int32)
+            self.acl_encoder_operation_inputs[6] = slots.to(torch.int32)
+            self.acl_encoder_operation_inputs[7] = self.placeholder
+            self.acl_encoder_operation_inputs[8] = self.placeholder
+            self.acl_encoder_operation_inputs[9] = self.placeholder
+            self.acl_encoder_operation_inputs[10] = self.in_beta
+            self.acl_encoder_operation_inputs[11] = input_lengths.to(torch.int32)
+            self.acl_encoder_operation_inputs[12] = lm_head_indices.to(torch.int64)
+    
 
             return self.acl_encoder_operation_inputs, self.acl_param_encoder
         else:
             atten_mask = torch.tensor([1], device=input_ids.device, dtype=kv_cache[0][0].dtype)
+            self.acl_param = json.dumps({
+                    "seqLen": input_lengths.tolist()
+                })
             self.acl_decoder_operation_inputs[0] = input_ids
-            self.acl_decoder_operation_inputs[1] = cos_embed
-            self.acl_decoder_operation_inputs[2] = sin_embed
-            self.acl_decoder_operation_inputs[3] = atten_mask
-            self.acl_decoder_operation_inputs[4] = block_tables.to(torch.int32)
-            self.acl_decoder_operation_inputs[5] = slots.to(torch.int32)
-            self.acl_decoder_operation_inputs[6] = input_lengths.to(torch.int32)
-            self.acl_decoder_operation_inputs[7] = self.lm_head_indices_fake
+            self.acl_decoder_operation_inputs[1] = position_ids.to(torch.int64)
+
+            self.acl_decoder_operation_inputs[2] = cos_embed
+            self.acl_decoder_operation_inputs[3] = sin_embed
+            self.acl_decoder_operation_inputs[4] = atten_mask
+            self.acl_decoder_operation_inputs[5] = block_tables.to(torch.int32)
+            self.acl_decoder_operation_inputs[6] = slots.to(torch.int32)
+            self.acl_decoder_operation_inputs[7] = self.placeholder
+            self.acl_decoder_operation_inputs[8] = self.placeholder
+            self.acl_decoder_operation_inputs[9] = self.placeholder
+            self.acl_decoder_operation_inputs[10] = self.in_beta
+            self.acl_decoder_operation_inputs[11] = input_lengths.to(torch.int32)
+            self.acl_decoder_operation_inputs[12] = self.lm_head_indices_fake
 
             return self.acl_decoder_operation_inputs, self.acl_param_decoder
 

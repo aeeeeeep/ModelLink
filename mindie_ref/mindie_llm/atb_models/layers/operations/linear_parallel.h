@@ -36,6 +36,7 @@ struct LinearParallelParam {
     int rank = 0;
     int worldSize = 1;
     int rankRoot = 0;
+    bool hasBias = false;
     std::string backend = "hccl";
     std::string rankTableFile = "";
 };

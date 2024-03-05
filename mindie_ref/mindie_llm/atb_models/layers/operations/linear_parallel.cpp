@@ -21,16 +21,18 @@
 namespace atb_speed {
 namespace common {
 
-static const uint64_t IN_TENSOR_COUNT = 5;
+static const uint64_t IN_TENSOR_COUNT = 6;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 
 enum LinearParallelTensorIdx : uint32_t {
     IN_INPUT = 0,
     IN_WEIGHT,
+    IN_BIAS,
     IN_SCALE,
     IN_OFFSET,
     IN_DESCALE,
     OUT_LINEAR_PARALLEL,
+    INTER_ID
 };
 
 template <class T>
@@ -44,12 +46,12 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
     opGraph.name = param.parallelType == ROW_PARALLEL ? "LinearRowParallel" : "LinearColumnParallel";
 
     size_t nodeId = 0;
-
+    int inteId = INTER_ID;
     atb::Node &linearNode = opGraph.nodes.at(nodeId++);
     atb_speed::common::FusionLinearParam linearParam = param.fusionLinearParam;
     FusionLinear(linearParam, &linearNode.operation);
     linearNode.inTensorIds = {
-        LinearParallelTensorIdx::IN_INPUT, LinearParallelTensorIdx::IN_WEIGHT, LinearParallelTensorIdx::IN_SCALE,
+        LinearParallelTensorIdx::IN_INPUT, LinearParallelTensorIdx::IN_WEIGHT, LinearParallelTensorIdx::IN_BIAS, LinearParallelTensorIdx::IN_SCALE,
         LinearParallelTensorIdx::IN_OFFSET, LinearParallelTensorIdx::IN_DESCALE
     };
     linearNode.outTensorIds = {config.INTERMIDATE_LINEAR_OUT};
@@ -63,7 +65,11 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
         allReduceParam.rankTableFile = param.rankTableFile;
         CREATE_OPERATION(allReduceParam, &allReduceNode.operation);
         allReduceNode.inTensorIds = {config.INTERMIDATE_LINEAR_OUT};
-        allReduceNode.outTensorIds = {LinearParallelTensorIdx::OUT_LINEAR_PARALLEL};
+        if (param.hasBias && param.fusionLinearParam.quantType == NO_QUANT) {
+            allReduceNode.outTensorIds = {static_cast<uint32_t>(inteId)};
+        } else {
+            allReduceNode.outTensorIds = {LinearParallelTensorIdx::OUT_LINEAR_PARALLEL};
+        }
     } else {
         atb::Node &allGatherNode = opGraph.nodes.at(nodeId++);
         atb::infer::AllGatherParam allGatherParam;
@@ -73,7 +79,11 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
         allGatherParam.rankTableFile = param.rankTableFile;
         CREATE_OPERATION(allGatherParam, &allGatherNode.operation);
         allGatherNode.inTensorIds = {config.INTERMIDATE_LINEAR_OUT};
-        allGatherNode.outTensorIds = {config.INTERMIDATE_ALL_GATHER_OUT};
+        if (param.hasBias && param.fusionLinearParam.quantType == NO_QUANT) {
+            allGatherNode.outTensorIds = {static_cast<uint32_t>(inteId)};
+        } else {
+            allGatherNode.outTensorIds = {config.INTERMIDATE_ALL_GATHER_OUT};
+        }
     }
 
     if (param.parallelType == COLUMN_PARALLEL) {
@@ -88,7 +98,14 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
         transposeNode.inTensorIds = {config.INTERMIDATE_ALL_GATHER_OUT};
         transposeNode.outTensorIds = {LinearParallelTensorIdx::OUT_LINEAR_PARALLEL};
     }
-
+    if (param.hasBias && param.fusionLinearParam.quantType == NO_QUANT) {
+        atb::Node &addNode = opGraph.nodes.at(nodeId++);
+        atb::infer::ElewiseParam addParam;
+        addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
+        CREATE_OPERATION(addParam, &addNode.operation);
+        addNode.inTensorIds = {static_cast<uint32_t>(inteId), IN_BIAS};
+        addNode.outTensorIds = {LinearParallelTensorIdx::OUT_LINEAR_PARALLEL};
+    }
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(0);

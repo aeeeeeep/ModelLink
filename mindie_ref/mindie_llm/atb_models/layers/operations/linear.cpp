@@ -25,13 +25,14 @@ namespace common {
 enum LinearTensorIdx : uint32_t {
     IN_INPUT = 0,
     IN_WEIGHT,
+    IN_BIAS,
     IN_SCALE,    // Quant所需权重
     IN_OFFSET,   // Quant所需权重
     IN_DESCALE,  // Quant所需权重
     OUT_LINEAR
 };
 
-static const uint64_t IN_TENSOR_COUNT = 5;
+static const uint64_t IN_TENSOR_COUNT = 6;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 
 template <class T>
@@ -65,9 +66,16 @@ atb::Status CreateFusionLinear(const FusionLinearParam &param, atb::Operation **
     } else if (param.quantType == NO_QUANT && param.isBF16) {
         linearParam.linearType = atb::infer::LinearType::LINEAR_BF16BF16_FP32_BF16;
     }
+    if (param.worldSize <= 1 && param.hasBias) {
+            linearParam.hasBias = true;
+    }
     CREATE_OPERATION(linearParam, &linearNode.operation);
     if (param.quantType == NO_QUANT) {
-        linearNode.inTensorIds = {LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT};
+        if (linearParam.hasBias) {
+            linearNode.inTensorIds = {LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_BIAS};
+        } else {
+            linearNode.inTensorIds = {LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT};
+        }
     } else if (param.quantType == RMS_NORM_QUANT_LINEAR_DEQUANT) {
         linearNode.inTensorIds = {
             LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_DESCALE
