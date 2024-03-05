@@ -34,11 +34,18 @@ class EnvVar:
     benchmark_enable = os.getenv("ATB_LLM_BENCHMARK_ENABLE", "0") == "1"
     benchmark_filepath = os.getenv("ATB_LLM_BENCHMARK_FILEPATH", None)
 
+    logits_save_enable = os.getenv("ATB_LLM_LOGITS_SAVE_ENABLE", "0") == "1"
+    logits_save_folder = os.getenv("ATB_LLM_LOGITS_SAVE_FOLDER", './')
+
     def __post_init__(self):
         logger.info(self.dict())
 
     def dict(self):
         return self.__dict__
+
+    def update(self):
+        self.logits_save_enable = os.getenv("ATB_LLM_LOGITS_SAVE_ENABLE", "0") == "1"
+        self.logits_save_folder = os.getenv("ATB_LLM_LOGITS_SAVE_FOLDER", './')
 
 
 ENV = EnvVar()

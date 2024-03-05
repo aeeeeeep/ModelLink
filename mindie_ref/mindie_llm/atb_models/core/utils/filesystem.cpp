@@ -60,7 +60,7 @@ bool FileSystem::IsDir(const std::string &path)
 std::string FileSystem::Join(const std::vector<std::string> &paths)
 {
     std::string retPath;
-    for (const auto path : paths) {
+    for (const auto &path : paths) {
         if (retPath.empty()) {
             retPath.append(path);
         } else {

@@ -17,9 +17,13 @@
 
 #include "layers/mlp_gate_v2.h"
 #include "layers/parallel_layer_v2.h"
+#include "atb_speed/utils/operation_factory.h"
 
 namespace atb_speed {
 namespace baichuan2_13b {
+
+REGISTER_OPERATION(baichuan2_13b, CreateFlashAttentionLayer);
+
 enum FlashAttentionLayerTensorId : int {
     IN_HIDDEN_STATES = 0,
     IN_NORM_WEIGHT,

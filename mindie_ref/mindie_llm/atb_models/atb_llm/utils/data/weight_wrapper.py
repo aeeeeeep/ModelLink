@@ -60,19 +60,20 @@ class WeightWrapper:
         else:
             self.weights.append(self.placeholder)
 
-    def register_layer_norm(self, layer_dict, norm_name):
+    def register_norm(self, layer_dict, norm_name):
         self.weights.append(self.weight_format_cast(layer_dict[f'{norm_name}.weight']))
-        self.weights.extend([self.placeholder] * 2)  # for anti
+        if f'{norm_name}.bias' in layer_dict:
+            self.weights.append(self.weight_format_cast(layer_dict[f'{norm_name}.bias']))
+        else:
+            self.weights.append(self.placeholder)
 
-    def register_layer_norm_bias(self, layer_dict, norm_name):
-        self.weights.append(self.weight_format_cast(layer_dict[f'{norm_name}.weight']))
-        self.weights.append(self.placeholder)
-        self.weights.append(self.weight_format_cast(layer_dict[f'{norm_name}.bias']))
+    def register_layer_norm(self, layer_dict, norm_name):
+        self.register_norm(layer_dict, f'{norm_name}')
+        self.weights.extend([self.placeholder] * 2)
 
     def register_layer_norm_wrapper(self, layer_dict, norm_name):
-        self.weights.append(self.weight_format_cast(layer_dict[f'{norm_name}.ori.weight']))
-        self.weights.append(self.weight_format_cast(layer_dict[f'{norm_name}.anti.weight']))
-        self.weights.append(self.weight_format_cast(layer_dict[f'{norm_name}.anti.bias']))
+        self.register_layer_norm(layer_dict, f'{norm_name}.ori')
+        self.register_layer_norm(layer_dict, f'{norm_name}.anti')
 
     def register_layer_linear_pack_fp(self, layer_dict, norm_name, pack_linear_name, linear_type='attn'):
         self.register_layer_norm(layer_dict, norm_name)
@@ -86,7 +87,7 @@ class WeightWrapper:
 
     def register_layer_linear_pack_w8a8(self, layer_dict, norm_name, pack_linear_name, pack_type, linear_type='attn'):
         if pack_type == PackType.ALL_W8A8:
-            self.register_layer_norm_bias(layer_dict, norm_name)
+            self.register_layer_norm(layer_dict, norm_name)
         else:
             self.register_layer_norm_wrapper(layer_dict, f'{norm_name}')
         self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.weight']))
@@ -123,7 +124,7 @@ class WeightWrapper:
 
     def register_layer_linear_pack_smoothquant(self, layer_dict, norm_name, pack_linear_name, pack_type,
                                                linear_type='attn'):
-        self.register_layer_norm_bias(layer_dict, norm_name)
+        self.register_layer_norm(layer_dict, norm_name)
         self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.weight']))
         self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.output_zeros']))
         self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.output_scales']))
@@ -179,7 +180,7 @@ class WeightWrapper:
                                                 'attn')
             else:
                 if pack_type == PackType.MIX_W8A8:
-                    self.register_layer_norm_bias(layer_dict, attn_module_names.norm_name)
+                    self.register_layer_norm(layer_dict, attn_module_names.norm_name)
                 else:
                     self.register_layer_norm_wrapper(layer_dict, attn_module_names.norm_name)
                 self.register_layer_linear(layer_dict, attn_module_names.q_name, quantize_type)
@@ -204,7 +205,7 @@ class WeightWrapper:
                                                 'mlp')
             else:
                 if pack_type == PackType.MIX_W8A8:
-                    self.register_layer_norm_bias(layer_dict, mlp_module_names.norm_name)
+                    self.register_layer_norm(layer_dict, mlp_module_names.norm_name)
                 else:
                     self.register_layer_norm_wrapper(layer_dict, mlp_module_names.norm_name)
                 self.register_layer_linear(layer_dict, mlp_module_names.gate_name, quantize_type)

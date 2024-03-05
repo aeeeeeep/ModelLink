@@ -39,41 +39,101 @@ CodeLlama及其变体旨在用于英语和相关编程语言的商业和研究�
 
 CodeLlama及其变体是一种新技术，使用时存在风险。迄今为止进行的测试是用英语进行的，没有涵盖，也不能涵盖所有情况。由于这些原因，与所有LLM一样，CodeLlama的潜在输出无法提前预测，并且在某些情况下，该模型可能会对用户提示产生不准确或令人反感的响应。因此，在部署CodeLlama的任何应用程序之前，开发人员应执行针对其模型的特定应用程序量身定制的安全测试和调整。
 
-## 加速库接入（暂不支持model级）
+## 加速库接入
 
-### 代码结构：
+目前加速库代码已归一至llama
+> 工作目录和llama一致,  `cd ./pytorch/examples/llama`
 
-#### 加速库
-model/codellama/34b
-|---operation
-    |---position_embedding.h
-    |---position_embedding.cpp
-    |---self_attention.h
-    |---self_attention.cpp
-    |---self_attention_kv_cache.cpp
-|---layer
-    |---layer_parallel.h
-    |---encoder_parallel_layer.cpp
-    |---decoder_parallel_layer.cpp
+## 模型推理
+1. 如果跑多卡多芯推理，需要先切分模型权重，切分方法如下：
 
-#### 模型脚本
-pytorch/examples/codellama_34b
-|---patches
-    |---modelling_llama_layer_performance.py
-    |---modelling_llama_layer_precision.py
-|---cut_model_and_run_code_llama.sh
-|---cut_model_util.py
-|---modeling_llama_parallel.py
-|---run_codellama_half_parallel.py
+- 修改代码
 
-### 比较加速库精度（单层）
-modelling_llama_layer_precision.py替换modeling_llama_parallel.py
->>bash cut_model_and_run_code_llama.sh
+  1. 修改`cut_weight.sh`中`input_dir`为实际存放模型权重的路径
+  
+  2. 修改`cut_weight.sh`中`output_dir`为自定义路径，用于存放切分后的模型权重
+  
 
-### 加速库替换及性能测试
-modelling_llama_layer_performance.py替换modeling_llama_parallel.py
->>bash cut_model_and_run_code_llama.sh
-（测试模型性能时需注意cpu和npu的争用问题）
+- 执行切分
+
+  ```
+  # 切分模型权重2份，切分好的权重会存放在自定义的output_dir
+  bash cut_weight.sh --float 2 --is_gqa
+  # 切分模型权重4份
+  bash cut_weight.sh --float 4 --is_gqa
+  ```
+
+2. **执行模型推理**
+- 开启CPU Performance模式以提高模型推理性能（首次开启时，根据提示安装依赖）
+  ```
+  cpupower frequency-set -g performance
+  ```
+
+- 在800I A2执行推理时，可以通过**绑核**以达到最佳性能
+  ```
+  # 进入./pytorch/examples/atb_speed_sdk/，安装sdk依赖
+  cd ../atb_speed_sdk/
+  pip install .
+
+  # 进入run.sh，设置环境变量BIND_CPU为1（默认为0，不绑核）
+  export BIND_CPU=1
+  ```
+
+- 配置必选参数：最大输入输出长度
+  修改run.sh中环境变量**MAX_SEQ_LENGTH**为：**期望的最大输入长度 + 最大输出长度**，默认值为2048
+
+- 修改配置参数
+当前支持单case推理和多case推理。
+multicase=0时，单case推理；
+multicase=1时，多case推理；支持用例排列组合，set_case_pair=1时生效。
+
+  ```
+  # 双芯模型权重路径
+  input_dir="./CodeLlama-34b-Instruct-hf_parallel"
+  # 指定芯片，默认为0,1
+  device_id=0
+  multi_batch_size=[1,4,8,16,32]
+
+  # 单case生效
+  seqlen_in=128
+  seqlen_out=128
+  
+  # 多case生效
+  # 单case推理(0) or 多case(1)
+  multicase=1
+  # 多case推理配置参数，默认执行[1,4,8,16,32]的推理
+  set_case_pair=0
+  # 以下两个变量set_case_pair=0生效，推理默认case，即输入输出分别为[32,64,128,256,512,1024]组合的36组case;
+  # 默认输入长度从2^5到2^10
+  seqlen_in_range=[5,11]
+  # 默认输出长度从2^5到2^10
+  seqlen_out_range=[5,11]
+  # 以下两个变量set_case_pair=1生效，推理特定case，默认推理(输入长度，输出长度)分别为(256,64),(256,256),(512,512),(1024,1024)4组case;
+  seqlen_in_pair=[256,256,512,1024]
+  seqlen_out_pair=[64,256,512,1024]
+  # LLAMA2-7B or LLAMA2-13B, 为输出文件名字的后缀
+  model_name="LLAMA2-7B"
+  ```
+> 单case: 推理用例为[batch_size, seqlen_in, seqlen_out]；
+> 多case: 默认测试batch=1/4/8/16/32，输入32-1024，输出32-1024多case的性能；当set_case_pair=1时，测试seqlen_in_pair/seqlen_out_pair中的用例排列组合；
+> 推理完成后性能数据保存在./multibatch_performance_{model_name}_{device_id}.csv，包括用例配置、首token、非首token处理时延等;
+
+- 执行推理
+  指令：bash run.sh --[RUN_OPTION] [WORLD_SIZE] [DEVICE_TYPE]  
+  ```
+  # 800I A2环境执行单卡推理
+  bash run.sh --performance 1 d9
+  # 800I A2环境执行双卡推理
+  bash run.sh --performance 2 d9
+  # 300I DUO环境执行单卡双芯推理
+  bash run.sh --performance 2 d3
+  # 300I DUO环境执行双卡四芯推理
+  bash run.sh --performance 4 d3
+  ```
+  > WORLD_SIZE: 指定芯片数量，实现单卡和多卡推理（默认1）
+  > DEVICE_TYPE: d9/d3, 分别适配800I A2和300I DUO芯片型号 (默认d3，支持300I DUO推理)
+
+  该命令会运行一次简单的推理实例warm up，并启动后续的推理；自定义运行可参考`main.py`
 
 ## 竞品对比
 

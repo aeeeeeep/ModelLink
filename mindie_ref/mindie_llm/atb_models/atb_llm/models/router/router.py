@@ -8,12 +8,12 @@ from transformers import AutoTokenizer
 from ..llama.modeling_llama import LlamaConfig
 from ..qwen.config import QWenConfig
 from ..starcoder.flash_causal_starcoder import StarcoderConfig
+from ..gpt_neox.config import GPTNeoXConfig
 
 
 @dataclass
 class BaseRouter:
     model_name_or_path: str = ""
-    quantize: Optional[str] = None
     max_position_embeddings: Optional[int] = None,
     is_flash_causal_lm: bool = True
     revision: Optional[str] = None
@@ -255,4 +255,25 @@ class AquilaRouter(BaseRouter):
             pad_token='<|endoftext|>',
             trust_remote_code=True,
             use_fast=True
+        )
+
+
+@dataclass
+class Gpt_neoxRouter(BaseRouter):
+
+    @property
+    def config(self):
+        config = GPTNeoXConfig.from_pretrained(self.model_name_or_path,
+                                               revision=self.revision,
+                                               trust_remote_code=self.trust_remote_code)
+        if self.max_position_embeddings:
+            config.model_max_length = self.max_position_embeddings
+        return config
+
+    def get_tokenizer(self):
+        return AutoTokenizer.from_pretrained(
+            self.model_name_or_path,
+            truncation_side="left",
+            padding_side="left",
+            trust_remote_code=True,
         )
