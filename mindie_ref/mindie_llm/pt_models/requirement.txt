@@ -1,0 +1,4 @@
+deepspeed
+SentencePiece
+accelerate
+protobuf
