@@ -40,7 +40,7 @@ enum LinearParallelTensorIdx : uint32_t {
     INTERMIDATE_SYNC_OUT
 };
 
-atb::Status LinearParallel(const LinearParallelParam &param, atb::Operation **operation)
+atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operation **operation)
 {
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;
@@ -123,6 +123,20 @@ atb::Status LinearParallel(const LinearParallelParam &param, atb::Operation **op
 
     CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
+}
+
+atb::Status LinearParallel(const LinearParallelParam &param_, atb::Operation **operation)
+{
+    if (param_.tensorParallelInfo.worldSize <= 1) {
+        return FusionLinear(param_.fusionLinearParam, operation);
+    } else if (param_.parallelType == ROW_PARALLEL) {
+        return CreateLinearParallel(param_, operation);
+    } else if (param_.parallelType == COLUMN_PARALLEL) {
+        return CreateLinearParallel(param_, operation);
+    } else {
+        ATB_LOG(ERROR) << "LinearParallel operation doesn't support parallelType: " << param_.parallelType;
+        return atb::ERROR_INVALID_PARAM;
+    }
 }
 
 } // namespace common
