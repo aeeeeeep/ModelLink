@@ -24,7 +24,6 @@ Here's a hardware summary of pre-training Bloom-7B:
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
 cd ModeLlink 
-git checkout modellink
 mkdir logs
 mkdir ckpt
 ```
@@ -69,45 +68,40 @@ cd ..
 ```
 In order to adapt to the Bloom-7B model, the following script is used to convert the model pre-training weights.
 ```shell
-mkdir bloom-7b
-
-SCRIPT_PATH=./tools/ckpt_convert/bloom/convert_weights_from_huggingface.py
 python tools/checkpoint/util.py --model-type GPT \
-                                --loader bloom-7b \
-                                --saver megatron \
+                                --loader loader_bloom_hf \
+                                --saver saver_megatron \
                                 --target-tensor-parallel-size 8 \
-                                --load-dir ../bloom-7b-hf \
-                                --save-dir bloom-7b \
-                                --tokenizer-model ../bloom-7b-hf/tokenizer.model
+                                --target-pipeline-parallel-size 1 \
+                                --load-dir /bloom-7b \
+                                --save-dir /{your save dir} \
+                                --tokenizer-model None
 ```
 
 
 4. Prepare dataset
 
-Download the Bloom-7B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
+Download the Bloom-7B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
 ```shell
 # download datasets
-mkdir enwiki_100k_datasets
-cd enwiki_100k_datasets
-wget https://huggingface.co/datasets/teven/enwiki_100k/resolve/main/data/train-00000-of-00006-67bcc7d401923db0.parquet
-wget https://huggingface.co/datasets/teven/enwiki_100k/resolve/main/data/train-00001-of-00006-6b8562cbb05789a4.parquet
-wget https://huggingface.co/datasets/teven/enwiki_100k/resolve/main/data/train-00002-of-00006-62d2b426a93b0912.parquet
-wget https://huggingface.co/datasets/teven/enwiki_100k/resolve/main/data/train-00003-of-00006-36c3d6da04c724b6.parquet
-wget https://huggingface.co/datasets/teven/enwiki_100k/resolve/main/data/train-00004-of-00006-48bdf99256dcfa5d.parquet
-wget https://huggingface.co/datasets/teven/enwiki_100k/resolve/main/data/train-00005-of-00006-bcb3b3af8d7a4140.parquet
-cd ..
+ mkdir dataset_bloom7b
+     cd ./dataset_bloom7b
+     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+     cd ..
+     cd ModelLink
 ```
 
 ```shell
 # prepare datasets
 python ./tools/preprocess_data.py \
-  --input ./enwiki_100k_datasets/ \
-  --tokenizer-name-or-path ./tokenizer \
-  --output-prefix ./enwiki_100k_datasets/enwiki-100k \
-  --worker 4 \
-  --log-interval 1000 \
-  --tokenizer-type PretrainedFromHF
+       --input ../dataset_bloom7b/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+       --tokenizer-name-or-path ../bloom-7b-hf \
+       --output-prefix ../dataset_bloom7b/alpaca \
+       --workers 4 \
+       --log-interval 1000 \
+       --tokenizer-type PretrainedFromHF
+    cd .. 
 ```
 
 5. Config Bloom-7B pre-training script : examples/bloom/pretrain_bloom_ptd_7B.sh 
@@ -159,6 +153,7 @@ Launch Bloom-7B inference script: tasks/inference/generate_bloom_7b_ptd.sh
 bash tasks/inference/generate_bloom_7b_ptd.sh
 ```
 Some inference samples are as follows:
+
 ![Inference](../../sources/images/bloom/bloom7b-generate.png)
 
 ## Evaluation Bloom-7B
@@ -252,45 +247,37 @@ cd ..
 In order to adapt to the Bloom-176B model, the following script is used to convert the model pre-training weights.
 
 ```shell
-#!/bin/bash
-
-SCRIPT_PATH=./tools/ckpt_convert/bloom/convert_weights_from_huggingface.py
-python $SCRIPT_PATH \
-    --input-model-dir "your huggingface checkpoint path" \
-    --output-model-dir "your megatron checkpoint path" \
-    --tensor-model-parallel-size 8 \
-    --pipeline-model-parallel-size 12 \
-    --type 176B \
-    --deepspeed \
-    --partition-layers 6,6,6,6,6,6,6,6,6,6,6,4
+python tools/checkpoint/util.py --model-type GPT \
+                                --loader loader_bloom_hf \
+                                --saver saver_megatron \
+                                --target-tensor-parallel-size 8 \
+                                --target-pipeline-parallel-size 12 \
+                                --load-dir /bloom-176b \
+                                --save-dir /{your save dir} \
+                                --tokenizer-model None
 ```
+
 4. Prepare dataset
 
-Download the Bloom-176B datasets from [here](https://huggingface.co/datasets/teven/enwiki_100k). The downloaded dataset is in the parquet format by default.
-You need to convert the dataset to the loose json format and preprocess the dataset.
-
+Download the bloom-176b datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
 ```shell
 # download datasets
-mkdir enwiki_100k_datasets
-cd enwiki_100k_datasets
-wget https://huggingface.co/datasets/teven/enwiki_100k/resolve/main/data/train-00000-of-00006-67bcc7d401923db0.parquet
-wget https://huggingface.co/datasets/teven/enwiki_100k/resolve/main/data/train-00001-of-00006-6b8562cbb05789a4.parquet
-wget https://huggingface.co/datasets/teven/enwiki_100k/resolve/main/data/train-00002-of-00006-62d2b426a93b0912.parquet
-wget https://huggingface.co/datasets/teven/enwiki_100k/resolve/main/data/train-00003-of-00006-36c3d6da04c724b6.parquet
-wget https://huggingface.co/datasets/teven/enwiki_100k/resolve/main/data/train-00004-of-00006-48bdf99256dcfa5d.parquet
-wget https://huggingface.co/datasets/teven/enwiki_100k/resolve/main/data/train-00005-of-00006-bcb3b3af8d7a4140.parquet
-cd ..
-
-# preprocess datasets
+mkdir dataset_bloom176b
+     cd ./dataset_bloom176b
+     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+     cd ..
+     cd ModelLink
+	
+# process datasets                              
 python ./tools/preprocess_data.py \
-  --input ./enwiki_100k_datasets/ \
-  --tokenizer-name-or-path ./tokenizer \
-  --output-prefix ./enwiki_100k_datasets/enwiki-100k \
-  --worker 4 \
-  --log-interval 1000 \
-  --tokenizer-type PretrainedFromHF
+       --input ../dataset_bloom176b/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+       --tokenizer-name-or-path ../bloom-176b-hf \
+       --output-prefix ../dataset_bloom176b/alpaca \
+       --workers 4 \
+       --log-interval 1000 \
+       --tokenizer-type PretrainedFromHF
+    cd .. 
 ```
-
 5. Config Bloom-176B pre-training script: examples/bloom/pretrain_bloom_176b.sh
 
 ```shell
@@ -314,10 +301,6 @@ Run the examples/bloom/pretrain_bloom_176b.sh on all nodes in the cluster.
 bash examples/bloom/pretrain_bloom_176b.sh
 ```
 
-```text
-When enable the FA, add '--use-flash-attn' and '--square-alibion-mask' to the script, and do not 
-use '--is-instruction-dataset'.
-```
 
 ## Performance
 
@@ -327,12 +310,51 @@ The performance of Bloom-176B in **Ascend NPU** and **Reference**:
 
 | Devices   | Model      | total iterations | throughput rate (tokens/s/p) |
 | --------- | ---------- | ---------------- | ---------------------------- |
-| NPUs      | Bloom-176B | 1000             | 108                          |
+| NPUs      | Bloom-176B | 1000             | 100                         |
 | Reference | Bloom-176B | NA               | 107                          |
 
 
-## Inference
+## Inference Bloom 176B
+Config Bloom-176B inference script: tasks/inference/generate_bloom_176b_ptd.sh
+```bash
+# modify the script according to your own ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+ 
+# modify script model path and tokenizer path
+CHECKPOINT="your model save ckpt path"
+TOKENIZER_PATH="your tokenizer path"
+```
+Launch Bloom-176B inference script: tasks/inference/generate_bloom_176b_ptd.sh
+Bloom-176b needs 5 machines to inference, so you need to convert a new model, set
+tp=8, pp=5
+```bash
+bash tasks/inference/generate_bloom_176b_ptd.sh
+```
+Some inference samples are as follows:
 
+![Inference](../../sources/images/bloom/bloom176b-generate.png)
 
+## Evaluation Bloom 176B
+Config Bloom-176B evaluation script: tasks/evaluation/evaluate_bloom_176B_ptd.sh
 
-## Evaluation 
+```bash
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+# modify script model path and tokenizer path
+CHECKPOINT="your model save ckpt path"
+TOKENIZER_PATH="your tokenizer path"
+# configure task and data path
+DATA_PATH="your dataset path"
+TASK="your task"
+```
+Launch Bloom-176B evaluation script:
+
+```bash
+bash tasks/evaluation/evaluate_bloom_176B_ptd.sh
+```
+
+Evaluation results
+
+|  dataset |reference_acc |NPU acc|
+|:---:|:-------------:|:---:|
+| boolq |  /    |0.645|

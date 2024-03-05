@@ -13,7 +13,7 @@ TOKENIZER_PATH="your tokenizer path"
 # Change for multinode config
 MASTER_ADDR=localhost
 MASTER_PORT=6001
-NNODES=1
+NNODES=5
 NODE_RANK=0
 NPUS_PER_NODE=8
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
@@ -22,14 +22,13 @@ DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $
 
 python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference_llama.py \
     --tensor-model-parallel-size 8 \
-    --pipeline-model-parallel-size 1 \
-    --sequence-parallel \
-    --num-layers 30 \
+    --pipeline-model-parallel-size 5 \
+    --num-layers 70 \
     --embed-layernorm \
-    --hidden-size 4096 \
+    --hidden-size 14336 \
     --padded-vocab-size 250880 \
     --load ${CHECKPOINT} \
-    --num-attention-heads 32 \
+    --num-attention-heads 112 \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
     --vocab-file ${TOKENIZER_MODEL} \
@@ -43,8 +42,6 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference
     --hidden-dropout 0.0 \
     --position-embedding-type alibi \
     --normalization LayerNorm \
-    --use-flash-attn \
-    --no-masked-softmax-fusion \
     --attention-softmax-in-fp32 \
     --weight-decay 1e-1 \
     --lr-warmup-fraction 0.01 \

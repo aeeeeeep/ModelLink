@@ -43,22 +43,25 @@ GPT_ARGS="
     --vocab-file ${TOKENIZER_MODEL} \
     --seq-length 2048 \
     --max-position-embeddings 2048 \
-    --micro-batch-size 4 \
-    --global-batch-size 16 \
-    --embed-layernorm \
-    --padded-vocab-size 250880 \
+    --micro-batch-size 2 \
+    --global-batch-size 2048 \
+    --num-layer-list 5,6,6,6,6,6,6,6,6,6,6,5 \
     --make-vocab-size-divisible-by 1 \
     --attention-softmax-in-fp32 \
     --apply-query-key-layer-scaling \
     --lr 1.2e-4 \
-    --train-iters 200 \
+    --train-iters 5000 \
     --init-method-std 0.0048 \
+    --optimize-recomp-communication-level 2 \
     --hidden-dropout 0.0 \
     --position-embedding-type alibi \
     --normalization LayerNorm \
-    --no-masked-softmax-fusion \
     --min-lr 6e-6 \
+    --no-masked-softmax-fusion \
     --lr-decay-iters 200 \
+    --recompute-granularity full \
+    --recompute-method block \
+    --recompute-num-layers 70 \
     --weight-decay 1e-1 \
     --clip-grad 1.0 \
     --adam-beta1 0.9 \
@@ -83,7 +86,7 @@ OUTPUT_ARGS="
     --eval-iters 1 \
 "
 
-torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
+python -m torch.distributed.launch $DISTRIBUTED_ARGS pretrain_gpt.py \
     $GPT_ARGS \
     $DATA_ARGS \
     $OUTPUT_ARGS \
