@@ -19,7 +19,10 @@
 #include "models/internlm/20b/model/flash_attention_quant_model.h"
 
 #include "atb/atb_infer.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 
 #include "models/internlm/20b/layer/flash_attention_quant_layer.h"
 #include "models/internlm/20b/layer/flash_attention_rope_antioutlier_layer.h"

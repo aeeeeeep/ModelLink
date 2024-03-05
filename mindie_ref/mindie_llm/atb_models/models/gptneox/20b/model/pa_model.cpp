@@ -16,7 +16,10 @@
 #include "pa_model.h"
 
 #include <atb/atb_infer.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 
 #include "atb_speed/log.h"
 #include "models/gptneox/20b/layer/pa_layer.h"
