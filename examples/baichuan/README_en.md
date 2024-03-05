@@ -42,7 +42,6 @@ Here's a hardware summary of pre-training Baichuan-7B:
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
 cd ModeLlink 
-git checkout modellink
 mkdir logs
 mkdir ckpt
 ```
@@ -93,17 +92,20 @@ cd ..
 ```
 In order to adapt to the baichuan-7B model, the following script is used to convert the model pre-training weights.
 ```shell
-mkdir weight
+mkdir baichuan-7B-mt
 
-SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
-python $SCRIPT_PATH \
-    --input-model-dir ./baichuan-7B-hf \
-    --output-model-dir ./weight \
-    --tensor-model-parallel-size 8 \
-    --pipeline-model-parallel-size 1 \
-    --type 7B \
-    --pse \
-    --merge-mlp
+# modify the ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+   
+python tools/checkpoint/util.py \
+    --model-type GPT \
+    --loader llama2_hf \
+    --saver megatron \
+    --target-tensor-parallel-size 8 \
+    --load-dir ./baichuan-7B-hf \
+    --save-dir ./baichuan-7B-mt \
+    --tokenizer-model ./baichuan-7B-hf/tokenizer.model \
+    --w-pack True  
 ```
 
 
@@ -113,16 +115,16 @@ Download the Baichuan-7B datasets from [here](https://huggingface.co/datasets/ta
 
 ```shell
 # download datasets
-mkdir dataset_baichuan7B
-cd ./dataset_baichuan7B
+mkdir dataset-baichuan-7B
+cd ./dataset-baichuan-7B
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
 
 # process datasets                              
 python ./tools/preprocess_data.py \
---input ./dataset_baichuan7B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+--input ./dataset-baichuan-7B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
 --tokenizer-name-or-path ./baichuan-7B-hf \
---output-prefix ./dataset_baichuan7B/alpaca \
+--output-prefix ./dataset-baichuan-7B/alpaca \
 --workers 4 \
 --log-interval 1000 \
 --tokenizer-type PretrainedFromHF
@@ -136,7 +138,7 @@ python ./tools/preprocess_data.py \
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 CKPT_SAVE_DIR="./ckpt"
-DATA_PATH="./dataset_baichuan7B/alpaca_text_document"
+DATA_PATH="./dataset-baichuan-7B/alpaca_text_document"
 TOKENIZER_MODEL="./baichuan-7B-hf/tokenizer.model"
 CKPT_LOAD_DIR="./baichuan-7B-mt"
 ```
@@ -158,7 +160,7 @@ The performance of Baichuan-7B in **Ascend NPU** and **Reference**:
 
 | Device | Model       | total Iterations | throughput rate (samples/s) | throughput rate (tokens/s/p) | single-step time (s/step) | 
 |:----:|:---------:|:----:|:---------------------:|:---------------:|:----------------:|
-| NPUs | Baichuan-7B | 1000 | 5.16 | 2643.00 | 6.199| 
+| NPUs | Baichuan-7B | 1000 |  5.24 | 2685 | 6.1| 
 |  Reference  | Baichuan-7B | - | - |  2036 | - | 
 
 
@@ -237,7 +239,6 @@ Here's a hardware summary of pre-training Baichuan-13B:
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
 cd ModeLlink 
-git checkout modellink
 mkdir logs
 mkdir ckpt
 ```
@@ -265,6 +266,12 @@ cd ..
 
 # install other packages
 pip install -r requirements.txt 
+```
+
+**Note:** If the error message "'AttributeError: 'BaichuanTokenizer' object has no attribute'sp_model'" is displayed during the script execution, run the following command to rectify the error:
+
+```shell
+pip install transformers==4.32.0 --force
 ```
 
 3. Prepare pretrained weights
@@ -296,30 +303,33 @@ In order to adapt to the baichuan-13B model, the following script is used to con
 ```shell
 mkdir baichuan-13B-mt
 
-SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
-python $SCRIPT_PATH \
-    --input-model-dir ./baichuan-13B-hf \
-    --output-model-dir ./baichuan-13B-mt \
-    --tensor-model-parallel-size 8 \
-    --pipeline-model-parallel-size 1 \
-    --type 13B \
-    --pse  \
-    --merge-mlp   
+# modify the ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+   
+python tools/checkpoint/util.py \
+    --model-type GPT \
+    --loader llama2_hf \
+    --saver megatron \
+    --target-tensor-parallel-size 8 \
+    --load-dir ./baichuan-13B-hf \
+    --save-dir ./baichuan-13B-mt \
+    --tokenizer-model ./baichuan-13B-hf/tokenizer.model \
+    --w-pack True  
 ```
 
 4. Prepare dataset
 Download the Baichuan-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
 
 ```python
-mkdir dataset_baichuan13B
-cd ./dataset_baichuan13B
+mkdir dataset-baichuan-13B
+cd ./dataset-baichuan-13B
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
 
 python ./tools/preprocess_data.py \
-    --input ./dataset_baichuan13B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+    --input ./dataset-baichuan-13B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./baichuan-13B-hf \
-    --output-prefix ./dataset_baichuan13B/alpaca \
+    --output-prefix ./dataset-baichuan-13B/alpaca \
     --workers 4 \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF 
