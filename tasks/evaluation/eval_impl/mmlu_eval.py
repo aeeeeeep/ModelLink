@@ -75,7 +75,7 @@ class MmluEval(DatasetEval):
                                     match_flag = False
                                     for template in self.output_template:
                                         try:
-                                            result = re.match(template, answer)
+                                            result = re.match(template, answer.strip(" "))
                                             logger.info(f"correct: {corrects[index]}, AI: {result.group('answer')}")
                                             subject_result[str(idx - len(chat_results) + index + 1)] = result.group(
                                                 "answer")
