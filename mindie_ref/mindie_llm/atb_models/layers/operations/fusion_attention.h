@@ -40,7 +40,9 @@ struct FusionAttentionParam {
     NormParamType normParamType;
     NormParamType normQuantParamType;
     // rope param
+    bool needRope = true;
     int rotaryCoeff = 2;
+    bool isHalfRotary = false;
     // self attention param
     bool isFA = true;
     bool isPrefill = false;

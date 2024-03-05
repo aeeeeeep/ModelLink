@@ -23,6 +23,18 @@
 
 namespace atb_speed {
 namespace common {
+
+struct RotaryPositionEmbeddingParam {
+    bool isHalfRotary = false;
+    bool isFA = true;
+    int headNum = 0;
+    int headDim = 0;
+    int kvHeadNum = 0;
+    int rotaryCoeff = 2;
+
+};
+atb::Status RotaryPositionEmbeding(const RotaryPositionEmbeddingParam &param, atb::Operation **operation);
+
 atb::Status PEGather(atb::Operation **operation);
 }  // namespace common
 }  // namespace atb_speed
