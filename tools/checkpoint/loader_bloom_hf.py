@@ -27,8 +27,8 @@ def load_args_from_checkpoint_bloom(args):
         llama_args = json.load(f)
 
     # Update Megatron args.
-    args.seq_length = 4096
-    args.max_position_embeddings = 4096
+    args.seq_length = 2048
+    args.max_position_embeddings = 2048
     args.hidden_size = llama_args["hidden_size"]
     args.num_attention_heads = llama_args["n_head"]
     args.num_layers = llama_args["n_layer"]
@@ -38,7 +38,7 @@ def load_args_from_checkpoint_bloom(args):
     args.add_position_embedding = True
     args.use_rotary_position_embeddings = True
     args.swiglu = False
-    args.tokenizer_type = "Llama2Tokenizer"
+    args.tokenizer_type = "PretrainedFromHF"
     args.fp16 = True
     args.normalization = "LayerNorm"
     args.add_bias_linear = True
@@ -48,10 +48,13 @@ def load_args_from_checkpoint_bloom(args):
     args.llama = llama_args
     args.ffn_hidden_size = 16384
     args.gradient_accumulation_fusion = False
+    args.make_vocab_size_divisible_by = 1
 
     if "num_key_value_heads" in llama_args:
         args.group_query_attention = True
         args.num_query_groups = llama_args["num_key_value_heads"]
+
+    setattr(args, 'embed_layernorm', True)
 
 
 def load_checkpoint_to_model_bloom(args):
@@ -60,7 +63,7 @@ def load_checkpoint_to_model_bloom(args):
     from transformers import BloomForCausalLM
 
     # Load Huggingface model.
-    hf_model = BloomForCausalLM.from_pretrained(args.load, device_map="cpu")
+    hf_model = BloomForCausalLM.from_pretrained(args.load, device_map="cpu", torch_dtype="auto")
 
     # Init Megatron model.
     model = model_provider(True, True).to(args.params_dtype)

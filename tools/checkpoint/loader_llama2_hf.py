@@ -36,6 +36,15 @@ def add_arguments(parser):
                        help='Sentencepiece tokenizer model.')
     group.add_argument('--megatron-path', type=str, default=None,
                        help='Base directory of deepspeed repository')
+    group.add_argument("--w-pack", type=bool,
+                       help='True is w_pack weight for llm like baichuan',
+                       default=False)
+    parser.add_argument('--add-qkv-bias', action='store_true',
+                    help='Add bias for attention qkv like Intern and Qwen',
+                    default=False)
+    parser.add_argument('--add-dense-bias', action='store_true',
+                    help='Add bias for attention dense like Intern',
+                    default=False)
 
 
 def verify_transformers_version():
@@ -73,8 +82,12 @@ def load_args_from_checkpoint(args):
     args.llama = llama_args
     args.ffn_hidden_size = llama_args["intermediate_size"]
     args.gradient_accumulation_fusion = False
+    if args.add_dense_bias:
+        args.skip_bias_add = False
 
-    if "num_key_value_heads" in llama_args:
+    if "num_key_value_heads" in llama_args \
+            and llama_args["num_attention_heads"] != llama_args["num_key_value_heads"] \
+            and llama_args["num_key_value_heads"] != 1:
         args.group_query_attention = True
         args.num_query_groups = llama_args["num_key_value_heads"]
 
@@ -99,21 +112,42 @@ def set_attn_state(args, layer, hf_layer):
     hf_attn = hf_layer.self_attn
 
     # Reshape loaded weights.
-    tp = args.tensor_model_parallel_size
-    nh = args.num_attention_heads // tp
+    nh = args.num_attention_heads
     ng = (args.num_query_groups if args.group_query_attention \
-        else args.num_attention_heads) // tp
+        else args.num_attention_heads)
     dim = args.kv_channels
     if not nh % ng == 0:
         raise ValueError("nh % ng should equal 0")
 
-    # Copy weights (re-order dimensions for Megatron).
-    attn.query_key_value.weight.data.copy_(torch.cat([
-        hf_attn.q_proj.weight.reshape((ng, dim * nh // ng, -1)),
-        hf_attn.k_proj.weight.reshape((ng, dim, -1)),
-        hf_attn.v_proj.weight.reshape((ng, dim, -1)),
-    ], dim=1).reshape((-1, args.hidden_size)))
+    if args.w_pack:
+        w_pack = hf_attn.W_pack.weight
+        wq, wk, wv = w_pack.chunk(3, dim=0)
+        attn.query_key_value.weight.data.copy_(torch.cat([
+                wq.reshape((ng, dim * nh // ng, -1)),
+                wk.reshape((ng, dim, -1)),
+                wv.reshape((ng, dim, -1)),
+            ], dim=1).reshape((-1, args.hidden_size)))
+
+    else:
+        attn.query_key_value.weight.data.copy_(torch.cat([
+                hf_attn.q_proj.weight.reshape((ng, dim * nh // ng, -1)),
+                hf_attn.k_proj.weight.reshape((ng, dim, -1)),
+                hf_attn.v_proj.weight.reshape((ng, dim, -1)),
+            ], dim=1).reshape((-1, args.hidden_size)))
+           
+    if args.add_qkv_bias:
+        attn.query_key_value.bias.data.copy_(torch.cat([
+            hf_attn.q_proj.bias.reshape((ng, dim * nh // ng)),
+            hf_attn.k_proj.bias.reshape((ng, dim)),
+            hf_attn.v_proj.bias.reshape((ng, dim)),
+        ], dim=1).reshape((-1)))
+        
+    if args.add_dense_bias:
+        attn.dense.bias.data.copy_(hf_attn.o_proj.bias)
+
     attn.dense.weight.data.copy_(hf_attn.o_proj.weight)
+
+        
 
 
 def set_mlp_state(args, layer, hf_layer):
@@ -145,10 +179,10 @@ def load_checkpoint_to_model(args):
     '''Set model params.'''
 
     from pretrain_gpt import model_provider
-    from transformers import LlamaForCausalLM
+    from transformers import AutoModelForCausalLM
 
     # Load Huggingface model.
-    hf_model = LlamaForCausalLM.from_pretrained(args.load, device_map="cpu")
+    hf_model = AutoModelForCausalLM.from_pretrained(args.load, device_map="cpu", trust_remote_code=True)
 
     # Init Megatron model.
     model = model_provider(True, True).to(args.params_dtype)
@@ -200,6 +234,9 @@ def _load_checkpoint(queue, args):
                 ]
 
     margs = parse_args()
+    margs.w_pack = args.w_pack
+    margs.add_qkv_bias = args.add_qkv_bias
+    margs.add_dense_bias = args.add_dense_bias
     margs.tokenizer_model = args.tokenizer_model
     load_args_from_checkpoint(margs)
 
@@ -280,6 +317,11 @@ def _load_checkpoint(queue, args):
     md.checkpoint_args = margs
     md.consumed_train_samples = 0
     md.consumed_valid_samples = 0
+    if hasattr(margs, 'embed_layernorm'):
+        md.embed_layernorm = margs.embed_layernorm
+    else:
+        setattr(margs, 'embed_layernorm', False)
+        md.embed_layernorm = False
 
     # Get first pipe stage.
     mpu.set_tensor_model_parallel_rank(0)
@@ -341,7 +383,10 @@ def _load_checkpoint(queue, args):
         if md.linear_bias:
             qkv_bias.append(layer.self_attention.query_key_value.bias.data)
             mlp_l0_bias.append(layer.mlp.dense_h_to_4h.bias.data)
-
+        if args.add_qkv_bias:
+            message["qkv bias"] = layer.self_attention.query_key_value.bias.data
+        if args.add_dense_bias:    
+            message["dense bias"] = layer.self_attention.dense.bias.data
         # Handle gated linear units.
         if md.swiglu:
             # Concat all the first halves ('W's) and all the second halves ('V's).

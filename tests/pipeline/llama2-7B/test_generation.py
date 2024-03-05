@@ -19,8 +19,8 @@ class TestGeneration(DistributedTest):
         """
         initialize the environment and arguments
         """
-        sys.argv = [sys.argv[0]] + config.distributed_param + config.network_size + \
-                   config.inference_param + config.auxiliary_param
+        sys.argv = [sys.argv[0]] + config.distributed_param + config.network_size + config.auxiliary_param +\
+                   config.inference_aux + config.inference_param
         from megatron.initialize import initialize_megatron
         os.environ.update({"CUDA_DEVICE_MAX_CONNECTIONS": "1"})
         initialize_megatron(extra_args_provider=add_text_generate_args,

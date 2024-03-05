@@ -9,7 +9,6 @@
     - [脚本](#脚本)
     - [性能](#性能)
       - [吞吐](#吞吐)
-      - [精度](#精度)
     - [推理](#推理)
       - [脚本](#脚本)
     - [使用基线数据集进行评估](#使用基线数据集进行评估)
@@ -19,7 +18,6 @@
     - [脚本](#脚本)
     - [性能](#性能)
       - [吞吐](#吞吐)
-      - [精度](#精度)
     - [推理](#推理)
       - [脚本](#脚本)
     - [使用基线数据集进行评估](#使用基线数据集进行评估)
@@ -294,16 +292,6 @@ LLaMA-7B/13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 
 
-#### 精度
-
-LLama-7b NPU vs 参考 loss.
-
-![NPU-Loss-with-weight-and-Relative-Error](../../sources/images/llama/llama7b-loss-with-weight.png)
-
-LLama-13b NPU vs 参考 loss.
-
-![NPU-Loss-with-weight-and-Relative-Error](../../sources/images/llama/llama13b-loss-with-weight.png)
-
 ## 推理
 
 我们支持使用 LLaMA-7B 和 LLaMA-13B 进行文本生成的推理。
@@ -389,8 +377,8 @@ LLaMA-7B/13B在**Ascend NPU**中的评测表现：
 
 | 任务                                                  | 模型        | 昇腾值  | 社区值  |
 |-----------------------------------------------------|-----------|------|------|
-| [Boolq](https://huggingface.co/datasets/boolq) | LLaMA-7B  | 74.6 | [75.4](https://opencompass.org.cn/dataset-detail/BoolQ) | 
-| [Boolq](https://huggingface.co/datasets/boolq) | LLaMA-13B | 79.6 | [78.7](https://opencompass.org.cn/dataset-detail/BoolQ) |
+| [Boolq](https://huggingface.co/datasets/boolq) | LLaMA-7B  | 74.6 | [75.4](https://hub.opencompass.org.cn/dataset-detail/BoolQ) | 
+| [Boolq](https://huggingface.co/datasets/boolq) | LLaMA-13B | 79.6 | [78.7](https://hub.opencompass.org.cn/dataset-detail/BoolQ) |
 
 # LLaMA-33B/65B
 
@@ -682,23 +670,6 @@ LLaMA-33B/65B在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 |  参考  | llama-65B |          426          |
 | NPUs | llama-65B |          348          |
 
-
-#### 精度
-
-NPU vs 参考 loss 和相对误差：
-
-LLaMa-33B
-
-![NPU-LOSS](../../sources/images/llama/llama33B_loss.png)
-
-
-![NPU-Relative-Error](../../sources/images/llama/llama33B_relative_error.png)
-
-
-
-LLaMa-65B
-
-![NPU-Loss-with-weight-and-Relative-Error](../../sources/images/llama/llama65b-shape_layer10_loss-with-weight.png)
 
 
 ## 推理

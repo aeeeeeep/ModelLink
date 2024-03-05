@@ -2,6 +2,7 @@ import unittest
 import sys
 import os
 import glob
+from utils import ParamConfig
 
 from ascendspeed import megatron_adaptor
 import modellink
@@ -14,17 +15,10 @@ from tools.preprocess_data import get_args, build_splitter
 
 
 class TestProcessPretrainData(unittest.TestCase):
-    def setUp(self):
+    def setUp(self, config=ParamConfig):
         # configure params, the index starts from 1
-        sys.argv = [
-            sys.argv[0],
-            "--input", "./train-00000-of-00001-a09b74b3ef9c3b56.parquet",
-            "--tokenizer-type", "PretrainedFromHF",
-            "--output-prefix", "./pretrain_dataset/alpaca",
-            "--tokenizer-name-or-path", "./llama-2-7b-hf",
-            "--workers", "4",
-            "--log-interval", "1000"
-        ]
+        self.config = config
+        sys.argv = [sys.argv[0]] + self.config.pretrain_data_param
         self.args = get_args()
         self.tokenizer = build_tokenizer(self.args)
         self.splitter = build_splitter(self.args)
@@ -73,7 +67,7 @@ class TestProcessPretrainData(unittest.TestCase):
         Test generate pretrain object files and files are not None(MB).
         """
         self.handler.serialize_to_disk()
-        folder_path = sys.argv[6].replace("/alpaca", "")
+        folder_path = self.config.pretrain_data_param[5].replace("/alpaca", "")
         bin_file = glob.glob(os.path.join(folder_path, "*.bin"))
         idx_file = glob.glob(os.path.join(folder_path, "*.idx"))
         total_size = 0
@@ -83,7 +77,7 @@ class TestProcessPretrainData(unittest.TestCase):
                 total_size += os.path.getsize(file_path)
         self.assertEqual(len(bin_file), 1)
         self.assertEqual(len(idx_file), 1)
-        self.assertAlmostEqual((total_size / (1024 * 1024)), 13, delta=1)
+        self.assertAlmostEqual((total_size / (1024 * 1024)), 26, delta=1)
 
 
 if __name__ == "__main__":

@@ -12,7 +12,6 @@
     - [脚本](#脚本)
     - [性能](#性能)
       - [吞吐](#吞吐)
-      - [精度](#精度)
     - [推理](#推理)
     - [评估](#评估)
 - [Internlm-65B](#internlm-65b)
@@ -20,7 +19,6 @@
     - [脚本](#脚本)
     - [性能](#性能)
       - [吞吐](#吞吐)
-      - [精度](#精度)
 
 # InternLM-7B
 
@@ -166,13 +164,6 @@ Internlm-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 
 
-#### 精度
-
-NPU vs 参考 （无预训练权重） loss 对比和相对误差
-![NPU-Loss-and-Relative-Error](../../sources/images/intern7b_loss.png)
-
-NPU vs 参考 （有预训练权重） loss 对比和相对误差
-![NPU-Loss-with-weight-and-Relative-Error](../../sources/images/intern7b_loss_with_weights.png)
 
 #### 推理
 <a href="https://gitee.com/ascend/AscendSpeed/blob/master/examples/intern/generate_internlm_7b_deepspeed.sh">推理脚本</a>：
@@ -312,8 +303,3 @@ Internlm-65B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 | Reference | Internlm-65B | - | -              | 414                 | -            | 
 
 
-
-#### 精度
-
-NPU vs 参考 （无预训练权重） loss 对比和相对误差
-![NPU-Loss-and-Relative-Error](../../sources/images/intern65b_loss.png)

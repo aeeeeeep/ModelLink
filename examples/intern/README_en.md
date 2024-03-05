@@ -13,7 +13,6 @@
     - [Script](#script)
     - [Performance](#performance)
       - [Machine performance](#machine-performance)
-      - [Accuracy of the loss](#accuracy-of-the-loss)
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
 - [Contents](#contents)
@@ -22,7 +21,6 @@
     - [Script](#script)
     - [Performance](#performance)
       - [Machine performance](#machine-performance)
-      - [Accuracy of the loss](#accuracy-of-the-loss)
 
 # InternLM-7B
 
@@ -166,18 +164,6 @@ The performance of Internlm-7B in **Ascend NPU** and **Reference**:
 
 
 
-#### Accuracy of the loss
-
-NPU vs GPU loss.
-
-The NPU runs smoothly, the resource usage is stable, no errors are reported in the middle of the process, the Loss is on a decreasing trend, and the convergence speed is as expected. The relative error of the average loss is 0.007, less than 2%, the maximum relative error is 0.09, and the maximum absolute error is 0.4859. The precision meets the requirements.
-
-NPU vs GPU without weights loss and relative error.
-![NPU-Loss-and-Relative-Error](../../sources/images/intern7b_loss.png)
-
-NPU vs GPU with weights loss and relative error.
-![NPU-Loss-with-weight-and-Relative-Error](../../sources/images/intern7b_loss_with_weights.png)
-
 #### Inference
 <a href="https://gitee.com/ascend/AscendSpeed/blob/master/examples/intern/generate_internlm_7b_deepspeed.sh">Inference script</a>：
 examples/intern/generate_internlm_7b_ptd.sh 
@@ -316,10 +302,6 @@ The performance of Internlm-65B in **Ascend NPU** and **Reference**:
 
 
 
-#### Accuracy of the loss
-
-NPU vs GPU without weights loss and relative error.
-![NPU-Loss-and-Relative-Error](../../sources/images/intern65b_loss.png)
 \
 \
 <font size=1>If the download of the file fails using 'wget' , you can download it manually while ensuring website security.</font>
