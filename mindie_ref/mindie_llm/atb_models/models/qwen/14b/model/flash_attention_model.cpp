@@ -16,7 +16,10 @@
 #include "models/qwen/14b/model/flash_attention_model.h"
 
 #include "atb/atb_infer.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 
 #include "models/qwen/14b/layer/flash_attention_layer.h"
 #include "operations/lmhead.h"
