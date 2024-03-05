@@ -1,0 +1,122 @@
+{
+    "INFERENCE_PARAM": [
+        "--finetune",
+        "--seq-length", "2048",
+        "--max-position-embeddings", "2048"
+    ],
+
+    "INFERENCE_AUX": [
+        "--load", "/home/dataset/bloom-7B-tp8-pp1",
+        "--tokenizer-type", "PretrainedFromHF",
+        "--tokenizer-model", "/home/dataset/bloom-7B-hf/tokenizer.model",
+        "--tokenizer-name-or-path", "/home/dataset/bloom-7B-hf",
+        "--vocab-file", "/home/dataset/bloom-7B-hf/tokenizer.model",
+        "--sequence-parallel",
+        "--initial-loss-scale", "65536",
+        "--init-method-std", "0.01",
+        "--lr-warmup-fraction", "0.01"
+    ],
+
+    "REGULARIZATION": [
+        "--attention-dropout", "0.0",
+        "--hidden-dropout", "0.0",
+        "--weight-decay", "1e-1",
+        "--clip-grad", "1.0",
+        "--adam-beta1", "0.9",
+        "--adam-beta2", "0.95"
+    ],
+
+    "DISTRIBUTED_PARAM": [
+        "--tensor-model-parallel-size", "8",
+        "--pipeline-model-parallel-size", "1",
+        "--sequence-parallel",
+        "--micro-batch-size", "1",
+        "--global-batch-size", "1"
+    ],
+
+    "NETWORK_SIZE": [
+        "--num-layers", "30",
+        "--hidden-size", "4096",
+        "--num-attention-heads", "32",
+        "--position-embedding-type", "alibi",
+        "--make-vocab-size-divisible-by", "1",
+        "--normalization", "LayerNorm"
+    ],
+
+    "LEARNING_RATE": [
+        "--lr", "1.2e-4",
+        "--lr-warmup-fraction", "0.01",
+        "--min-lr", "6e-6",
+        "--lr-decay-iters", "200",
+        "--train-iters", "15"
+    ],
+
+    "TRAINING_PARAM": [
+        "--data-path", "/home/dataset/pretrain-dataset-bloom/enwiki_100k_trans_text_document",
+        "--save", "/home/dataset/bloom-7b-ckpt",
+        "--apply-query-key-layer-scaling",
+        "--seq-length", "2048",
+        "--max-position-embeddings", "2048",
+        "--tensor-model-parallel-size", "8",
+        "--pipeline-model-parallel-size", "1",
+        "--micro-batch-size", "4",
+        "--global-batch-size", "16"
+    ],
+
+    "TRAINING_AUX": [
+        "--tokenizer-type", "PretrainedFromHF",
+        "--tokenizer-model", "/home/dataset/bloom-7B-hf/tokenizer.model",
+        "--tokenizer-name-or-path", "/home/dataset/bloom-7B-hf",
+        "--sequence-parallel",
+        "--initial-loss-scale", "4096",
+        "--seed", "42",
+        "--init-method-std", "0.0048",
+        "--distributed-backend", "nccl",
+        "--split", "100,0,0",
+        "--log-interval", "1",
+        "--save-interval", "10",
+        "--eval-interval", "1000",
+        "--eval-iters", "1",
+        "--num-workers", "0"
+    ],
+
+    "PROCESS_PRETRAIN_DATA": [
+        "--input", "/home/dataset/enwiki_100k_dataset/teven_enwiki_100k/data",
+        "--tokenizer-type", "PretrainedFromHF",
+        "--output-prefix", "/home/dataset/pretrain-dataset-bloom/enwiki_100k_trans",
+        "--tokenizer-name-or-path", "/home/dataset/bloom-7B-hf",
+        "--workers", "4",
+        "--log-interval", "1000"
+    ],
+
+    "CONVERT_CKPT": [
+        "--model-type", "GPT",
+        "--loader", "bloom_hf",
+        "--target-tensor-parallel-size", "8",
+        "--load-dir", "/home/dataset/bloom-7B-hf",
+        "--save-dir", "/home/dataset/bloom-7B-tp8-pp1",
+        "--tokenizer-model", "None"
+    ],
+
+    "AUXILIARY_PARAM": [
+        "--no-load-optim",
+        "--no-load-rng",
+        "--no-masked-softmax-fusion",
+        "--no-gradient-accumulation-fusion",
+        "--bf16",
+        "--attention-softmax-in-fp32",
+        "--embed-layernorm",
+        "--padded-vocab-size", "250880"
+    ],
+
+    "EVALUATION_PARAM": [
+        "--finetune",
+        "--task-data-path", "/home/dataset/eval_dataset/mmlu/test",
+        "--task", "mmlu",
+        "--max-new-tokens", "1",
+        "--lr-warmup-fraction", "0.01",
+        "--initial-loss-scale", "65536",
+        "--max-position-embeddings", "4096",
+        "--seq-length", "4096"
+    ]
+}
