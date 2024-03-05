@@ -242,7 +242,6 @@ atb::Status CreateGlm6BLayerDecoderFlashAttentionOperation(const Glm6BLayerDecod
                                      &RopeCosSinReshapeFunc};
 
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.headDim;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = param.qScale;
     selfAttentionParam.qkScale = param.qkScale;
