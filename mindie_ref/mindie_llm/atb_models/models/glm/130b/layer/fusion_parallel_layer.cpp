@@ -75,17 +75,16 @@ atb::Status CreateFusionParallelLayer(const FusionParallelLayerParam &param, atb
                                           INTERMEDIATE_VALUE_ID}; // [bs, seq_len, headNum / rankSize, head_size]
 
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.headDim;
     selfAttentionParam.headNum = param.headNum / param.rankSize;
     selfAttentionParam.qScale = param.qScale;
     selfAttentionParam.qkScale = param.qkScale;
 
     if (param.coderType == int(CoderTypes::UNDEFINED_TYPE)) {
-        selfAttentionParam.coderType = atb::infer::SelfAttentionParam::CoderType::UNDEFINED;
+        selfAttentionParam.calcType = atb::infer::SelfAttentionParam::CalcType::UNDEFINED;
     } else if (param.coderType == int(CoderTypes::ENCODER_TYPE)) {
-        selfAttentionParam.coderType = atb::infer::SelfAttentionParam::CoderType::ENCODER;
+        selfAttentionParam.calcType = atb::infer::SelfAttentionParam::CalcType::ENCODER;
     } else if (param.coderType == int(CoderTypes::DECODER_TYPE)) {
-        selfAttentionParam.coderType = atb::infer::SelfAttentionParam::CoderType::DECODER;
+        selfAttentionParam.calcType = atb::infer::SelfAttentionParam::CalcType::DECODER;
     }
 
     CreateOperation(selfAttentionParam, &selfAttentionKvCacheNode.operation);
