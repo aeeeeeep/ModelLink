@@ -876,7 +876,6 @@ class ModelTest:
             self.__save_result(result_total)
 
     def __run_full_dataset_boolq(self):
-        answer_map = {"yes": 0, "no": 1}
         def build_prompt(title, text, passage):
             prompt = f"{title} -- {passage}\nQuestion: {text}?\nAnswer:"
             return prompt
@@ -924,9 +923,6 @@ class ModelTest:
                                 if acc:
                                     correct += 1
                     else:
-                        cont_tokens = self.pa_runner.tokenizer.convert_tokens_to_ids(['yes', 'no'])
-                        answer_map["yes"] = cont_tokens[0]
-                        answer_map["no"] = cont_tokens[1]
                         logits_save_folder = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}")
                         os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "1"
                         os.environ['ATB_LLM_LOGITS_SAVE_FOLDER'] = logits_save_folder
@@ -937,7 +933,7 @@ class ModelTest:
                         greedy_tokens = logits_softmax.argmax(dim=-1)
                         if is_result:
                             for idx, ans in enumerate(batch['answer']):
-                                acc = greedy_tokens[idx] == answer_map[ans]
+                                acc = self.pa_runner.tokenizer.decode(greedy_tokens[idx]) == ans
                                 if acc:
                                     correct += 1
                                 curnum += 1
