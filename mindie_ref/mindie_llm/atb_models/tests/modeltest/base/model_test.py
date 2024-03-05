@@ -924,7 +924,7 @@ class ModelTest:
                                 if acc:
                                     correct += 1
                     else:
-                        cont_tokens = self.pa_runner.tokenizer.convert_tokens_to_id('yes', 'no')
+                        cont_tokens = self.pa_runner.tokenizer.convert_tokens_to_ids(['yes', 'no'])
                         answer_map["yes"] = cont_tokens[0]
                         answer_map["no"] = cont_tokens[1]
                         logits_save_folder = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}")
@@ -933,7 +933,7 @@ class ModelTest:
                         _, _, _ = self.pa_runner.infer(queries, self.batch_size, 1, False)
                         os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "0"
                         logits = torch.load(logits_save_folder + '/logits_0.pth')
-                        logits_softmax = F.log_softmax(logits, dim=-1)
+                        logits_softmax = F.log_softmax(logits.float(), dim=-1)
                         greedy_tokens = logits_softmax.argmax(dim=-1)
                         if is_result:
                             for idx, ans in enumerate(batch['answer']):
