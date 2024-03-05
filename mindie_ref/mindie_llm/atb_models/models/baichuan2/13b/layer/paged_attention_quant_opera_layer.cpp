@@ -153,8 +153,6 @@ atb::Status PAQuantOperaLayer(const PAQuantOperaLayerParam &param, atb::Operatio
     atb::infer::RmsNormParam inputNormParam;
     inputNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     inputNormParam.normParam.epsilon = param.rmsNormEps;
-    inputNormParam.normParam.quantInputScale = param.wPackInputScale;   //
-    inputNormParam.normParam.quantInputOffset = param.wPackInputOffset; //
     inputNormParam.normParam.quantType = atb::infer::QUANT_INT8;
     CREATE_OPERATION(inputNormParam, &inputNormNode.operation);
     inputNormNode.inTensorIds = {IN_HIDDEN_STATES, IN_NORM_WEIGHT, IN_BETA};
@@ -259,8 +257,6 @@ atb::Status PAQuantOperaLayer(const PAQuantOperaLayerParam &param, atb::Operatio
 
     atb::infer::RmsNormParam selfNormParam;
     selfNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    selfNormParam.normParam.quantInputScale = param.gateProjInputScale;   // gate up
-    selfNormParam.normParam.quantInputOffset = param.gateProjInputOffset; // gate up
     selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
     CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
     selfNormNode.inTensorIds = {INTERNAL_SELF_RESIDUAL_ADD_OUT, IN_SELF_OUT_NORM_WEIGHT, IN_BETA}; // quant
