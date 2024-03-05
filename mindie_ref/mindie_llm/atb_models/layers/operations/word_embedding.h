@@ -13,27 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_COMMON_LAYER_EMBEDDING_H
-#define ATB_SPEED_MODELS_COMMON_LAYER_EMBEDDING_H
+#ifndef ATB_SPEED_MODELS_COMMON_LAYER_WORD_EMBEDDING_H
+#define ATB_SPEED_MODELS_COMMON_LAYER_WORD_EMBEDDING_H
 
 #include "nlohmann/json.hpp"
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
+#include "layers/operations/linear_parallel.h"
 
 namespace atb_speed {
 namespace common {
-struct EmbeddingParam {
+struct WordEmbeddingParam {
     bool unpadInputs = false;
     int axis = 0;
     // 若embedding权重按列切分，则需调用all gather算子并传入rank相关的信息
-    int rank = 0;
-    int worldSize = 1;
-    int rankRoot = 0;
-    std::string backend = "hccl";
-    std::string rankTableFile = "";
+    atb_speed::common::TensorParallelInfo tensorParallelInfo;
 };
 
-atb::Status Embedding(const EmbeddingParam &param, atb::Operation **operation);
+atb::Status WordEmbedding(const WordEmbeddingParam &param, atb::Operation **operation);
 }  // namespace common
 }  // namespace atb_speed
 #endif

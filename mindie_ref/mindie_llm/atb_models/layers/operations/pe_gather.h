@@ -13,25 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_COMMON_RMS_NORM_H
-#define ATB_SPEED_MODELS_COMMON_RMS_NORM_H
+#ifndef ATB_SPEED_MODELS_COMMON_LAYER_POSITIONAL_EMBEDDING_H
+#define ATB_SPEED_MODELS_COMMON_LAYER_POSITIONAL_EMBEDDING_H
 
 #include "nlohmann/json.hpp"
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
-#include "layers/operations/linear.h"
+#include "layers/operations/linear_parallel.h"
 
 namespace atb_speed {
 namespace common {
-
-struct FusionRmsNormParam {
-    int quantType = atb_speed::common::NO_QUANT;
-    float rmsNormEps = 0;
-    float quantInputScale = 1.0f;
-    int quantInputOffset = 0;
-};
-
-atb::Status FusionRmsNorm(const FusionRmsNormParam &param, atb::Operation **operation);
-} // namespace common
-} // namespace atb_speed
+atb::Status PEGather(atb::Operation **operation);
+}  // namespace common
+}  // namespace atb_speed
 #endif

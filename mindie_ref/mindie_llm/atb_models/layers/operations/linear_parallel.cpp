@@ -21,8 +21,12 @@
 namespace atb_speed {
 namespace common {
 
-static const uint64_t IN_TENSOR_COUNT = 5;
+static const uint64_t IN_TENSOR_COUNT = 6;
 static const uint64_t OUT_TENSOR_COUNT = 1;
+static const uint64_t ROW_PARALLEL_NO_ADD_INTERMEDIATE_TENSOR_COUNT = 1;
+static const uint64_t ROW_PARALLEL_NO_ADD_NODE_COUNT = 2;
+static const uint64_t DEFAULT_INTERMEDIATE_TENSOR_COUNT = 2;
+static const uint64_t DEFAULT_NODE_COUNT = 3;
 
 enum LinearParallelTensorIdx : uint32_t {
     IN_INPUT = 0,
@@ -30,18 +34,26 @@ enum LinearParallelTensorIdx : uint32_t {
     IN_SCALE,
     IN_OFFSET,
     IN_DESCALE,
+    IN_BIAS,
     OUT_LINEAR_PARALLEL,
+    INTERMIDATE_LINEAR_OUT,
+    INTERMIDATE_SYNC_OUT
 };
 
-template <class T>
-atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operation **operation, T config)
+atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operation **operation)
 {
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
-    opGraph.internalTensorNum = config.INTERMEDIATE_TENSOR_COUNT;
-    opGraph.nodes.resize(config.NODE_COUNT);
-    opGraph.name = param.parallelType == ROW_PARALLEL ? "LinearRowParallel" : "LinearColumnParallel";
+    if (param.parallelType == ROW_PARALLEL && !param.biasAfterSync) {
+        opGraph.internalTensorNum = ROW_PARALLEL_NO_ADD_INTERMEDIATE_TENSOR_COUNT;
+        opGraph.nodes.resize(ROW_PARALLEL_NO_ADD_NODE_COUNT);
+        opGraph.name = "LinearRowParallelNoAdd";
+    } else {
+        opGraph.internalTensorNum = DEFAULT_INTERMEDIATE_TENSOR_COUNT;
+        opGraph.nodes.resize(DEFAULT_NODE_COUNT);
+        opGraph.name = param.parallelType == COLUMN_PARALLEL ?  "LinearColumnParallel" : "LinearRowParallelAndAdd";
+    }
 
     size_t nodeId = 0;
 
@@ -50,33 +62,40 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
     FusionLinear(linearParam, &linearNode.operation);
     linearNode.inTensorIds = {
         LinearParallelTensorIdx::IN_INPUT, LinearParallelTensorIdx::IN_WEIGHT, LinearParallelTensorIdx::IN_SCALE,
-        LinearParallelTensorIdx::IN_OFFSET, LinearParallelTensorIdx::IN_DESCALE
+        LinearParallelTensorIdx::IN_OFFSET, LinearParallelTensorIdx::IN_DESCALE, LinearParallelTensorIdx::IN_BIAS
     };
-    linearNode.outTensorIds = {config.INTERMIDATE_LINEAR_OUT};
+    linearNode.outTensorIds = {LinearParallelTensorIdx::INTERMIDATE_LINEAR_OUT};
 
     if (param.parallelType == ROW_PARALLEL) {
         atb::Node &allReduceNode = opGraph.nodes.at(nodeId++);
         atb::infer::AllReduceParam allReduceParam;
-        allReduceParam.rank = param.rank;
-        allReduceParam.rankSize = param.worldSize;
-        allReduceParam.backend = param.backend;
-        allReduceParam.rankTableFile = param.rankTableFile;
+        allReduceParam.rank = param.tensorParallelInfo.rank;
+        allReduceParam.rankSize = param.tensorParallelInfo.worldSize;
+        allReduceParam.backend = param.tensorParallelInfo.backend;
         CREATE_OPERATION(allReduceParam, &allReduceNode.operation);
-        allReduceNode.inTensorIds = {config.INTERMIDATE_LINEAR_OUT};
-        allReduceNode.outTensorIds = {LinearParallelTensorIdx::OUT_LINEAR_PARALLEL};
+        allReduceNode.inTensorIds = {LinearParallelTensorIdx::INTERMIDATE_LINEAR_OUT};
+        allReduceNode.outTensorIds = {
+            param.biasAfterSync ? LinearParallelTensorIdx::INTERMIDATE_SYNC_OUT : LinearParallelTensorIdx::OUT_LINEAR_PARALLEL
+        };
+
+        if (param.biasAfterSync) {
+            atb::Node &addNode = opGraph.nodes.at(nodeId++);
+            atb::infer::ElewiseParam addParam;
+            addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
+            CREATE_OPERATION(addParam, &addNode.operation);
+            addNode.inTensorIds = {LinearParallelTensorIdx::INTERMIDATE_SYNC_OUT, LinearParallelTensorIdx::IN_BIAS};
+            addNode.outTensorIds = {LinearParallelTensorIdx::OUT_LINEAR_PARALLEL};
+        }
     } else {
         atb::Node &allGatherNode = opGraph.nodes.at(nodeId++);
         atb::infer::AllGatherParam allGatherParam;
-        allGatherParam.rank = param.rank;
-        allGatherParam.rankSize = param.worldSize;
-        allGatherParam.backend = param.backend;
-        allGatherParam.rankTableFile = param.rankTableFile;
+        allGatherParam.rank = param.tensorParallelInfo.rank;
+        allGatherParam.rankSize = param.tensorParallelInfo.worldSize;
+        allGatherParam.backend = param.tensorParallelInfo.backend;
         CREATE_OPERATION(allGatherParam, &allGatherNode.operation);
-        allGatherNode.inTensorIds = {config.INTERMIDATE_LINEAR_OUT};
-        allGatherNode.outTensorIds = {config.INTERMIDATE_ALL_GATHER_OUT};
-    }
+        allGatherNode.inTensorIds = {LinearParallelTensorIdx::INTERMIDATE_LINEAR_OUT};
+        allGatherNode.outTensorIds = {LinearParallelTensorIdx::INTERMIDATE_SYNC_OUT};
 
-    if (param.parallelType == COLUMN_PARALLEL) {
         atb::Node &transposeNode = opGraph.nodes.at(nodeId++);
         atb::infer::TransposeParam transposeParam;
         if (param.unpadInputs) {
@@ -85,7 +104,7 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
             transposeParam.perm = {1, 2, 0, 3};
         }
         CREATE_OPERATION(transposeParam, &transposeNode.operation);
-        transposeNode.inTensorIds = {config.INTERMIDATE_ALL_GATHER_OUT};
+        transposeNode.inTensorIds = {LinearParallelTensorIdx::INTERMIDATE_SYNC_OUT};
         transposeNode.outTensorIds = {LinearParallelTensorIdx::OUT_LINEAR_PARALLEL};
     }
 
@@ -95,7 +114,7 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
         auto dimLast = inTensorDescs.at(0).shape.dimNum - 1;
         if (param.parallelType == COLUMN_PARALLEL) {
             outTensorDescs.at(0).shape.dims[dimLast] \
-                = inTensorDescs.at(1).shape.dims[0] * param.worldSize;
+                = inTensorDescs.at(1).shape.dims[0] * param.tensorParallelInfo.worldSize;
         } else {
             outTensorDescs.at(0).shape.dims[dimLast] = inTensorDescs.at(1).shape.dims[0];
         }
@@ -106,40 +125,14 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
     return atb::NO_ERROR;
 }
 
-class LinearRowParallelConfig {
-public:
-
-    uint64_t NODE_COUNT = 2;
-    uint64_t INTERMEDIATE_TENSOR_COUNT = 1;
-
-    enum LinearRowParallelTensorIdx : uint32_t {
-        INTERMIDATE_LINEAR_OUT = LinearParallelTensorIdx::OUT_LINEAR_PARALLEL + 1,
-        INTERMIDATE_ALL_GATHER_OUT,  // no usage
-    };
-};
-
-class LinearColumnParallelConfig {
-public:
-
-    uint64_t NODE_COUNT = 3;
-    uint64_t INTERMEDIATE_TENSOR_COUNT = 2;
-
-    enum LinearColumnParallelTensorIdx : uint32_t {
-        INTERMIDATE_LINEAR_OUT = LinearParallelTensorIdx::OUT_LINEAR_PARALLEL + 1,
-        INTERMIDATE_ALL_GATHER_OUT,
-    };
-};
-
 atb::Status LinearParallel(const LinearParallelParam &param_, atb::Operation **operation)
 {
-    if (param_.worldSize <= 1) {
+    if (param_.tensorParallelInfo.worldSize <= 1) {
         return FusionLinear(param_.fusionLinearParam, operation);
     } else if (param_.parallelType == ROW_PARALLEL) {
-        LinearRowParallelConfig linearRowParallelConfig;
-        return CreateLinearParallel(param_, operation, linearRowParallelConfig);
+        return CreateLinearParallel(param_, operation);
     } else if (param_.parallelType == COLUMN_PARALLEL) {
-        LinearColumnParallelConfig linearColumnParallelConfig;
-        return CreateLinearParallel(param_, operation, linearColumnParallelConfig);
+        return CreateLinearParallel(param_, operation);
     } else {
         ATB_LOG(ERROR) << "LinearParallel operation doesn't support parallelType: " << param_.parallelType;
         return atb::ERROR_INVALID_PARAM;
