@@ -153,7 +153,7 @@ enum class RotaryPositionEmbeddingTensorId : int {
     INTERMEDIATE_KOUT,
 };
 #define POS_EMB_CAST(x) static_cast<int>(RotaryPositionEmbeddingTensorId::x)
-atb::Status RotaryPositionEmbeding(const RotaryPositionEmbeddingParam &param, atb::Operation **operation)
+atb::Status RotaryPositionEmbedding(const RotaryPositionEmbeddingParam &param, atb::Operation **operation)
 {
     atb::GraphParam opGraph;
     opGraph.name = "RotaryPositionEmbedding";

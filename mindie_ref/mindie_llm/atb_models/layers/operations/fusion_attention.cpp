@@ -444,7 +444,7 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
         ropeParam.kvHeadNum = param.selfAttentionParam.kvHeadNum;
         ropeParam.rotaryCoeff = param.rotaryCoeff;
 
-        RotaryPositionEmbeding(ropeParam, &ropeNode.operation);
+        RotaryPositionEmbedding(ropeParam, &ropeNode.operation);
 
         ropeNode.inTensorIds = {
             AttentionTensorIdx::INTERMIDATE_Q, AttentionTensorIdx::INTERMIDATE_K, AttentionTensorIdx::IN_COS_TABLE,

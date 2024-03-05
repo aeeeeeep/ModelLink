@@ -32,7 +32,7 @@ struct RotaryPositionEmbeddingParam {
     int kvHeadNum = 0;
     int rotaryCoeff = 2;
 };
-atb::Status RotaryPositionEmbeding(const RotaryPositionEmbeddingParam &param, atb::Operation **operation);
+atb::Status RotaryPositionEmbedding(const RotaryPositionEmbeddingParam &param, atb::Operation **operation);
 
 atb::Status PEGather(atb::Operation **operation);
 }  // namespace common
