@@ -31,7 +31,6 @@ struct RotaryPositionEmbeddingParam {
     int headDim = 0;
     int kvHeadNum = 0;
     int rotaryCoeff = 2;
-
 };
 atb::Status RotaryPositionEmbeding(const RotaryPositionEmbeddingParam &param, atb::Operation **operation);
 

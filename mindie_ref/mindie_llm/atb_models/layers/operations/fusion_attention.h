@@ -34,7 +34,8 @@ struct FusionAttentionParam {
     int isGroupedQueryAttention = false;
     bool isBF16 = false;
     bool isAntiOutlier = false;
-    bool hasBias = false;
+    bool qkvHasBias = false;
+    bool selfAttnHasBias = false;
     int packQuantType = atb_speed::common::PackQuantType::ALL_FP;
     std::vector<int> layerLinearQuantType;
     NormParamType normParamType;

@@ -54,7 +54,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     fusionAttentionParam.isGroupedQueryAttention = param.numAttentionHeadsPerRank != param.numKeyValueHeadsPerRank;
     fusionAttentionParam.isBF16 = param.isBF16;
     fusionAttentionParam.layerLinearQuantType = param.linearQuantType;
-    fusionAttentionParam.hasBias = true;
+    fusionAttentionParam.qkvHasBias = true;
 
     // rmsNorm param
     atb::infer::RmsNormParam attenRmsNormParam;

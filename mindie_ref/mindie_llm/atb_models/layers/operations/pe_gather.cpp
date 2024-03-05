@@ -215,13 +215,10 @@ atb::Status RotaryPositionEmbeding(const RotaryPositionEmbeddingParam &param, at
         atb::infer::RopeParam ropeParam;
         ropeParam.rotaryCoeff = param.rotaryCoeff;
         CREATE_OPERATION(ropeParam, &ropeNode.operation);
-        ropeNode.inTensorIds = {POS_EMB_CAST(INTERMEDIATE_QCHUNK0), 
-                                POS_EMB_CAST(INTERMEDIATE_KCHUNK0),
-                                POS_EMB_CAST(IN_ROPE_COS), 
-                                POS_EMB_CAST(IN_ROPE_SIN), 
+        ropeNode.inTensorIds = {POS_EMB_CAST(INTERMEDIATE_QCHUNK0), POS_EMB_CAST(INTERMEDIATE_KCHUNK0),
+                                POS_EMB_CAST(IN_ROPE_COS), POS_EMB_CAST(IN_ROPE_SIN),
                                 POS_EMB_CAST(IN_SEQLEN)};
-        ropeNode.outTensorIds = {POS_EMB_CAST(INTERMEDIATE_QOUT), 
-                                POS_EMB_CAST(INTERMEDIATE_KOUT)};
+        ropeNode.outTensorIds = {POS_EMB_CAST(INTERMEDIATE_QOUT), POS_EMB_CAST(INTERMEDIATE_KOUT)};
         ropeNode.inTensorReshapeFuncs.resize(ropeNode.inTensorIds.size());
         if (param.isFA) {
             ropeNode.inTensorReshapeFuncs.at(DIM_2) = &squeezeRopeIntensor;
@@ -237,8 +234,7 @@ atb::Status RotaryPositionEmbeding(const RotaryPositionEmbeddingParam &param, at
         atb::infer::ConcatParam cat1Param;
         cat1Param.concatDim = DIM_LAST;
         CREATE_OPERATION(cat1Param, &cat1Node.operation);
-        cat1Node.inTensorIds = {POS_EMB_CAST(INTERMEDIATE_QOUT), 
-                                POS_EMB_CAST(INTERMEDIATE_QCHUNK1)};
+        cat1Node.inTensorIds = {POS_EMB_CAST(INTERMEDIATE_QOUT), POS_EMB_CAST(INTERMEDIATE_QCHUNK1)};
         cat1Node.outTensorIds = {POS_EMB_CAST(OUT_QUERY)};
         if (!param.isFA) {
             cat1Node.inTensorReshapeFuncs.resize(cat1Node.inTensorIds.size());
@@ -251,8 +247,7 @@ atb::Status RotaryPositionEmbeding(const RotaryPositionEmbeddingParam &param, at
         atb::infer::ConcatParam cat2Param;
         cat2Param.concatDim = DIM_LAST;
         CREATE_OPERATION(cat2Param, &cat2Node.operation);
-        cat2Node.inTensorIds = {POS_EMB_CAST(INTERMEDIATE_KOUT), 
-                            POS_EMB_CAST(INTERMEDIATE_KCHUNK1)};
+        cat2Node.inTensorIds = {POS_EMB_CAST(INTERMEDIATE_KOUT), POS_EMB_CAST(INTERMEDIATE_KCHUNK1)};
         cat2Node.outTensorIds = {POS_EMB_CAST(OUT_KEY)};
         if (!param.isFA) {
             cat2Node.inTensorReshapeFuncs.resize(cat2Node.inTensorIds.size());
@@ -265,12 +260,9 @@ atb::Status RotaryPositionEmbeding(const RotaryPositionEmbeddingParam &param, at
         atb::infer::RopeParam ropeParam;
         ropeParam.rotaryCoeff = param.rotaryCoeff; // 设置旋转系数
         CREATE_OPERATION(ropeParam, &ropeNode.operation);
-        ropeNode.inTensorIds = {POS_EMB_CAST(IN_QUERY), POS_EMB_CAST(IN_KEY), 
-                                POS_EMB_CAST(IN_ROPE_COS),
-                                POS_EMB_CAST(IN_ROPE_SIN), 
-                                POS_EMB_CAST(IN_SEQLEN)};
-        ropeNode.outTensorIds = {POS_EMB_CAST(OUT_QUERY), 
-                                POS_EMB_CAST(OUT_KEY)};
+        ropeNode.inTensorIds = {POS_EMB_CAST(IN_QUERY), POS_EMB_CAST(IN_KEY), POS_EMB_CAST(IN_ROPE_COS),
+                                POS_EMB_CAST(IN_ROPE_SIN), POS_EMB_CAST(IN_SEQLEN)};
+        ropeNode.outTensorIds = {POS_EMB_CAST(OUT_QUERY), POS_EMB_CAST(OUT_KEY)};
         ropeNode.inTensorReshapeFuncs = {&squeezeRopeIntensor, &squeezeRopeIntensor, &squeezeRopeIntensor,
                                          &squeezeRopeIntensor};
     }

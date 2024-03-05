@@ -27,7 +27,7 @@ namespace atb_speed {
 namespace glm_v2_6b {
 
 // Weight count
-const int WEIGHT_COUNT_PER_LAYER = 43; 
+const int WEIGHT_COUNT_PER_LAYER = 43;
 const int WEIGHT_COUNT_WORD_EMBEDDINGNODE = 1;
 const int WEIGHT_COUNT_POST_NORM = 1;
 const int WEIGHT_COUNT_LM_HEAD = 1;
@@ -166,10 +166,6 @@ int64_t DecoderModel::BuildGraph()
     int internelTensorIdx = 0;
     // idx: 0, shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
     int INTERNEL_TENSOR_HIDDEN_STATES = internelTensorIdx++;
-   // idx: 1, shape: [batchSize * seqLen, hiddenSizePerAttentionHead]
-    // int INTERNEL_TENSOR_COS_EMB = internelTensorIdx++;
-    // // idx: 2, shape: [batchSize * seqLen, hiddenSizePerAttentionHead]
-    // int INTERNEL_TENSOR_SIN_EMB = internelTensorIdx++;
     // idx: [3, 3 + numHiddenLayers), shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
     int INTERNEL_TENSOR_LAYER_OUT_BASE = internelTensorIdx++;
     internelTensorIdx = internelTensorIdx + param_.numHiddenLayers - 1;

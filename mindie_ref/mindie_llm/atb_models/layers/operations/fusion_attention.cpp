@@ -82,7 +82,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
     qNormLinearParam.fusionLinearParam.quantType \
         = param.layerLinearQuantType[0] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
     qNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
-    qNormLinearParam.fusionLinearParam.hasBias = param.hasBias;
+    qNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
     qNormLinearParam.normParamType = param.normParamType;
     qNormLinearParam.normQuantParamType = param.normQuantParamType;
     NormLinear<NormParamType>(qNormLinearParam, &qNormLinearNode.operation);
@@ -147,7 +147,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         kNormLinearParam.fusionLinearParam.quantType \
             = param.layerLinearQuantType[1] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
         kNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
-        kNormLinearParam.fusionLinearParam.hasBias = param.hasBias;
+        kNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
         kNormLinearParam.normParamType = param.normParamType;
         kNormLinearParam.normQuantParamType = param.normQuantParamType;
         NormLinear<NormParamType>(kNormLinearParam, &kNormLinearNode.operation);
@@ -166,7 +166,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         vNormLinearParam.fusionLinearParam.quantType \
             = param.layerLinearQuantType[2] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
         vNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
-        vNormLinearParam.fusionLinearParam.hasBias = param.hasBias;
+        vNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
         vNormLinearParam.normParamType = param.normParamType;
         vNormLinearParam.normQuantParamType = param.normQuantParamType;
         NormLinear<NormParamType>(vNormLinearParam, &vNormLinearNode.operation);
@@ -522,9 +522,9 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
         atb_speed::common::LinearQuantType::NO_QUANT : atb_speed::common::LinearQuantType::LINEAR_QUANT;
     selfOutLinearParam.biasAfterSync = param.selfOutLinearTensorParallelInfo.worldSize > 1 \
         && selfOutLinearParam.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::NO_QUANT \
-        && param.hasBias;
+        && param.selfAttnHasBias;
     selfOutLinearParam.fusionLinearParam.isBF16 = param.isBF16;
-    selfOutLinearParam.fusionLinearParam.hasBias = param.hasBias && !selfOutLinearParam.biasAfterSync;
+    selfOutLinearParam.fusionLinearParam.hasBias = param.selfAttnHasBias && !selfOutLinearParam.biasAfterSync;
     selfOutLinearParam.tensorParallelInfo = param.selfOutLinearTensorParallelInfo;
     LinearParallel(selfOutLinearParam, &selfOutLinearParallelNode.operation);
     selfOutLinearParallelNode.inTensorIds = {
