@@ -46,7 +46,7 @@ def load_args_from_checkpoint_bloom(args):
     args.vocab_size = llama_args["vocab_size"]
     args.padded_vocab_size = llama_args["vocab_size"]
     args.llama = llama_args
-    args.ffn_hidden_size = 16384
+    args.ffn_hidden_size = args.hidden_size * 4
     args.gradient_accumulation_fusion = False
     args.make_vocab_size_divisible_by = 1
 
@@ -63,7 +63,7 @@ def load_checkpoint_to_model_bloom(args):
     from transformers import BloomForCausalLM
 
     # Load Huggingface model.
-    hf_model = BloomForCausalLM.from_pretrained(args.load, device_map="cpu", torch_dtype="auto")
+    hf_model = BloomForCausalLM.from_pretrained(args.load, device_map="cpu", trust_remote_code=True, torch_dtype="auto")
 
     # Init Megatron model.
     model = model_provider(True, True).to(args.params_dtype)
