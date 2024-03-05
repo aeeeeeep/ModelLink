@@ -159,7 +159,7 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     atb::infer::ReshapeAndCacheParam reshapeCacheParm;
     CreateOperation(reshapeCacheParm, &reshapeAndCacheNode.operation);
     reshapeAndCacheNode.inTensorIds = {INTERMEDIATE_K, INTERMEDIATE_V, IN_K_CACHE, IN_V_CACHE, IN_SLOTS};
-    reshapeAndCacheNode.outTensorIds = {};
+    reshapeAndCacheNode.outTensorIds = {IN_K_CACHE, IN_V_CACHE};
     reshapeAndCacheNode.inTensorReshapeFuncs.resize(reshapeAndCacheNode.inTensorIds.size());
     reshapeAndCacheNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         reshapeQuantHeads(oldShape, newShape, param.kvHead);
@@ -170,11 +170,10 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
 
     if (param.isPrefill) {
         atb::infer::SelfAttentionParam faEnParam;
-        faEnParam.headDim = param.dk;
         faEnParam.headNum = param.headNum;
         faEnParam.qScale = 1.0 / sqrt(param.dk);
         faEnParam.kvHeadNum = param.kvHead;
-        faEnParam.isEncoder = true;
+        faEnParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
         CreateOperation(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERMEDIATE_Q, INTERMEDIATE_K, INTERMEDIATE_V, IN_ATTENTIONMASK, IN_INPUT_LENGTHS};
         attentionNode.outTensorIds = {INTERMEDIATE_SELF_OUT};

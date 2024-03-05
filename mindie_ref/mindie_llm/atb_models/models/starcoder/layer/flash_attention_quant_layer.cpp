@@ -144,14 +144,13 @@ atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param,
     splitKVNode.outTensorIds = {INTERNAL_K, INTERNAL_V};
 
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / sqrt(param.dk);
     selfAttentionParam.kvHeadNum = param.kvHead;
     if (param.isEncoder) {
-        selfAttentionParam.coderType = atb::infer::SelfAttentionParam::ENCODER;
+        selfAttentionParam.calcType = atb::infer::SelfAttentionParam::ENCODER;
     } else {
-        selfAttentionParam.coderType = atb::infer::SelfAttentionParam::DECODER;
+        selfAttentionParam.calcType = atb::infer::SelfAttentionParam::DECODER;
     }
     CreateOperation(selfAttentionParam, &selfAttentionFaNode.operation);
     selfAttentionFaNode.inTensorIds = {INTERNAL_Q,

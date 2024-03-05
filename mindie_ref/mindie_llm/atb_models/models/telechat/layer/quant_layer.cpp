@@ -176,7 +176,6 @@ atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operat
     ATB_LOG(INFO) << "KV Cache";
     atb::infer::SelfAttentionParam selfAttentionKvCacheParam;
     selfAttentionKvCacheParam.headNum = param.headNum;
-    selfAttentionKvCacheParam.headDim = param.dk;
     selfAttentionKvCacheParam.qScale = 1.0f;
     selfAttentionKvCacheParam.qkScale = 1.0f / std::sqrt(param.dk);
     CreateOperation(selfAttentionKvCacheParam, &selfAttentionKvCacheFusedNode.operation);
