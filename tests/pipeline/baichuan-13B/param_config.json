@@ -10,26 +10,26 @@
         "--normalization", "RMSNorm",
         "--swiglu",
         "--untie-embeddings-and-output-weights",
-        "--load", "./baichuan-13B-tp8-pp1/"
+        "--load", "/home/dataset/baichuan-13B-tp8-pp1/"
     ],
 
     "TOKENIZER_PARAM": [
         "--tokenizer-type", "PretrainedFromHF",
-        "--tokenizer-name-or-path", "./baichuan-13B-hf"
+        "--tokenizer-name-or-path", "/home/dataset/baichuan-13B-hf"
     ],
 
     "PROCESS_DATA_INPUT_PATH": [
-        "--input", "./train-00000-of-00001-a09b74b3ef9c3b56.parquet"
+        "--input", "/home/dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet"
     ],
 
     "PROCESS_PRETRAIN_DATA_PARAM": [
-        "--output-prefix", "./pretrain-dataset-baichuan-13B/alpaca",
+        "--output-prefix", "/home/dataset/pretrain-dataset-baichuan-13B/alpaca",
         "--workers", "4",
         "--log-interval", "1000"
     ],
 
     "PROCESS_INSTRUCTION_DATA_PARAM": [
-        "--output-prefix", "./tune-dataset-baichuan-13B/alpaca",
+        "--output-prefix", "/home/dataset/tune-dataset-baichuan-13B/alpaca",
         "--tokenizer-not-use-fast",
         "--handler-name", "GeneralInstructionHandler",
         "--append-eod"
@@ -43,7 +43,7 @@
 
     "EVALUATION_PARAM": [
         "--tokenizer-not-use-fast",
-        "--task-data-path", "./boolq/test",
+        "--task-data-path", "/home/dataset/eval_dataset/boolq/test",
         "--task", "boolq",
         "--max-new-tokens", "1"
     ],
@@ -55,8 +55,8 @@
         "--lora-target-modules", "query_key_value", "dense", "gate_proj","dense_h_to_4h", "dense_4h_to_h",
         "--is-instruction-dataset",
         "--tokenizer-not-use-fast",
-        "--save", "./lora-weight",
-        "--data-path", "./tune-dataset-baichuan-13B/alpaca",
+        "--save", "/home/dataset/lora-save-weight-baichuan-13B",
+        "--data-path", "/home/dataset/tune-dataset-baichuan-13B/alpaca",
         "--train-iters", "10"
     ],
 
@@ -65,13 +65,13 @@
         "--lora-alpha", "32",
         "--lora-target-modules", "query_key_value", "dense", "gate_proj","dense_h_to_4h", "dense_4h_to_h",
         "--tokenizer-not-use-fast",
-        "--lora-load", "./lora-save-weight-baichuan-13B"
+        "--lora-load", "/home/dataset/lora-save-weight-baichuan-13B"
     ],
     "TRAINING_PARAM": [
         "--tokenizer-type", "Llama2Tokenizer",
-        "--tokenizer-model", "./baichuan-13B-hf/tokenizer.model",
-        "--save", "./save-weight-baichuan-13B",
-        "--data-path", "./pretrain-dataset-baichuan-13B/alpaca_text_document",
+        "--tokenizer-model", "/home/dataset/baichuan-13B-hf/tokenizer.model",
+        "--save", "/home/dataset/save-weight-baichuan-13B",
+        "--data-path", "/home/dataset/pretrain-dataset-baichuan-13B/alpaca_text_document",
         "--train-iters", "15"
     ],
 

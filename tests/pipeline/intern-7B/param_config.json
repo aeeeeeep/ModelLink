@@ -17,9 +17,9 @@
 
     "INFERENCE_AUX": [
         "--tokenizer-type", "PretrainedFromHF",
-        "--tokenizer-model", "./intern-hf/tokenizer.model",
-        "--tokenizer-name-or-path", "./intern-hf/",
-        "--load", "./intern-tp8-pp1/",
+        "--tokenizer-model", "/home/dataset/intern-hf/tokenizer.model",
+        "--tokenizer-name-or-path", "/home/dataset/intern-hf/",
+        "--load", "/home/dataset/intern-tp8-pp1/",
         "--seed", "42",
         "--tokenizer-not-use-fast",
         "--exit-on-missing-checkpoint"
@@ -30,14 +30,14 @@
     ],
 
     "EVALUATION_PARAM": [
-        "--task-data-path", "./mmlu/test/",
+        "--task-data-path", "/home/dataset/eval_dataset/mmlu/test/",
         "--task", "mmlu",
         "--max-new-tokens", "2"
     ],
 
     "TRAINING_PARAM": [
-        "--save", "./save-weight-intern",
-        "--data-path", "./pretrain-dataset-intern/alpaca_text_document",
+        "--save", "/home/dataset/save-weight-intern",
+        "--data-path", "/home/dataset/pretrain-dataset-intern/alpaca_text_document",
         "--train-iters", "15"
     ],
 
@@ -89,14 +89,14 @@
         "--num-workers", "0",
         "--distributed-backend", "nccl",
         "--tokenizer-type", "Llama2Tokenizer",
-        "--tokenizer-model", "./intern-hf/tokenizer.model"
+        "--tokenizer-model", "/home/dataset/intern-hf/tokenizer.model"
     ],
 
     "PROCESS_PRETRAIN_DATA":[
-        "--input", "./train-00000-of-00001-a09b74b3ef9c3b56.parquet",
+        "--input", "/home/dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet",
         "--tokenizer-type", "PretrainedFromHF",
-        "--output-prefix", "./pretrain-dataset-intern/alpaca",
-        "--tokenizer-name-or-path", "./intern-hf",
+        "--output-prefix", "/home/dataset/pretrain-dataset-intern/alpaca",
+        "--tokenizer-name-or-path", "/home/dataset/intern-hf",
         "--workers", "4",
         "--log-interval", "1000",
         "--handler-name", "AlpacaPretrainHandler",
