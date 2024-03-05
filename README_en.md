@@ -112,7 +112,7 @@ Currently, the following downstream tasks have been supported:
       <td>7B1</td>
       <td> 1x8</td>
       <td> FP16 </td>
-      <td> 2611 </td>
+      <td> 2034 </td>
       <td> 2525 </td>
       <td> <a href="examples/bloom/pretrain_bloom_7b1.sh">Train</a> </td>
     </tr>
@@ -120,7 +120,7 @@ Currently, the following downstream tasks have been supported:
       <td >176B</td>
       <td >12x8</td>
       <td> BF16 </td>
-      <td> 112 </td>
+      <td> 100 </td>
       <td> 107 </td>
       <td> <a href="examples/bloom/pretrain_bloom_176b.sh">Train</a> </td>
     </tr>

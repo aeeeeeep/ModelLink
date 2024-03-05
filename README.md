@@ -114,7 +114,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>7B1</td>
       <td> 1x8</td>
       <td> FP16 </td>
-      <td> 2611 </td>
+      <td> 2034 </td>
       <td> 2525 </td>
       <td> <a href="examples/bloom/pretrain_bloom_7b1.sh">训练</a> </td>
     </tr>
@@ -122,7 +122,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td >176B</td>
       <td >12x8</td>
       <td> BF16 </td>
-      <td> 112 </td>
+      <td> 100 </td>
       <td> 107 </td>
       <td> <a href="examples/bloom/pretrain_bloom_176b.sh">训练</a> </td>
     </tr>
