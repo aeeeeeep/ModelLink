@@ -6,7 +6,7 @@
         "--num-attention-heads", "32",
         "--max-position-embeddings", "2048",
         "--position-embedding-type", "rope",
-        "--make-vocab-size-divisible-by", "1",
+        "--make-vocab-size-divisible-by", "32",
         "--normalization", "RMSNorm",
         "--swiglu",
         "--untie-embeddings-and-output-weights",
@@ -102,5 +102,17 @@
         "--handler-name", "AlpacaPretrainHandler",
         "--tokenizer-not-use-fast",
         "--append-eod"
+    ],
+
+    "CONVERT_CKPT_PARAM":[
+        "--model-type", "GPT",
+        "--loader", "llama2_hf",
+        "--saver", "megatron",
+        "--target-tensor-parallel-size", "8",
+        "--load-dir", "/home/dataset/intern-hf",
+        "--save-dir", "/home/dataset/intern-tp8-pp1",
+        "--tokenizer-model", "/home/dataset/intern-hf/tokenizer.model",
+        "--add-qkv-bias",
+        "--add-dense-bias"
     ]
 }
