@@ -109,8 +109,6 @@ atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operat
     } else {
         atb::infer::RmsNormParam rmsNormParam;
         rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-        rmsNormParam.normParam.quantInputScale = param.inputScale_qkv;
-        rmsNormParam.normParam.quantInputOffset = param.inputOffset_qkv;
         rmsNormParam.normParam.quantType = atb::infer::QUANT_INT8;
 
         rmsNormParam.normParam.epsilon = param.rmsNormEps;
@@ -176,7 +174,6 @@ atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operat
     ATB_LOG(INFO) << "KV Cache";
     atb::infer::SelfAttentionParam selfAttentionKvCacheParam;
     selfAttentionKvCacheParam.headNum = param.headNum;
-    selfAttentionKvCacheParam.headDim = param.dk;
     selfAttentionKvCacheParam.qScale = 1.0f;
     selfAttentionKvCacheParam.qkScale = 1.0f / std::sqrt(param.dk);
     CreateOperation(selfAttentionKvCacheParam, &selfAttentionKvCacheFusedNode.operation);
@@ -216,8 +213,6 @@ atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operat
 
     atb::infer::RmsNormParam rmsMlpNormParam;
     rmsMlpNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    rmsMlpNormParam.normParam.quantInputScale = param.inputScale_gate_up;
-    rmsMlpNormParam.normParam.quantInputOffset = param.inputOffset_gate_up;
     rmsMlpNormParam.normParam.quantType = atb::infer::QUANT_INT8;
     CreateOperation(rmsMlpNormParam, &selfNormNode.operation);
     selfNormNode.inTensorIds = { INTERNAL_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_SELFOUTNORMBIAS };

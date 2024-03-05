@@ -35,6 +35,7 @@ struct FusionAttentionParam {
     // self attention param
     bool isPrefill = false;
     bool isBF16 = false;
+    int faHeadDim = 0;
     atb::infer::SelfAttentionParam selfAttentionParam;
     atb::infer::PagedAttentionParam pageAttentionParam;
     // self out linear param
