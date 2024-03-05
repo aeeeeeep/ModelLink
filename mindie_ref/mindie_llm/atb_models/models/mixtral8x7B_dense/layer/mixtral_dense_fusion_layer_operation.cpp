@@ -105,17 +105,16 @@ atb::Status MixtralDenseLayerFusionOperation(const MixtralDenseLayerFusionParam 
     ATB_LOG(INFO) << "create input PositionEmbedding";
 
     atb::infer::SelfAttentionParam selfAttentionKvCacheParam;
-    selfAttentionKvCacheParam.headDim = param.dk;
     selfAttentionKvCacheParam.kvHeadNum = param.kvHeadNum;
     selfAttentionKvCacheParam.headNum = param.headNum;
     selfAttentionKvCacheParam.qkScale = param.qkScale;
     selfAttentionKvCacheParam.isTriuMask = param.isTriMask;
     if (param.coderType == 0) {
-        selfAttentionKvCacheParam.coderType = atb::infer::SelfAttentionParam::CoderType::UNDEFINED;
+        selfAttentionKvCacheParam.calcType = atb::infer::SelfAttentionParam::CalcType::UNDEFINED;
     } else if (param.coderType == 1) {
-        selfAttentionKvCacheParam.coderType = atb::infer::SelfAttentionParam::CoderType::ENCODER;
+        selfAttentionKvCacheParam.calcType = atb::infer::SelfAttentionParam::CalcType::ENCODER;
     } else if (param.coderType == 2) {
-        selfAttentionKvCacheParam.coderType = atb::infer::SelfAttentionParam::CoderType::DECODER;
+        selfAttentionKvCacheParam.calcType = atb::infer::SelfAttentionParam::CalcType::DECODER;
     }
     CreateOperation(selfAttentionKvCacheParam, &selfAttentionKvCacheNode.operation);
     if (mixdQKVLinearNode.operation == nullptr) {

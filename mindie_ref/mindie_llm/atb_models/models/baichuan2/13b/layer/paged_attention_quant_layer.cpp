@@ -141,8 +141,6 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     atb::infer::RmsNormParam inputNormParam;
     inputNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     inputNormParam.normParam.epsilon = param.rmsNormEps;
-    inputNormParam.normParam.quantInputScale = param.wPackInputScale;
-    inputNormParam.normParam.quantInputOffset = param.wPackInputOffset;
     inputNormParam.normParam.quantType = atb::infer::QUANT_INT8;
     CREATE_OPERATION(inputNormParam, &inputNormNode.operation);
     inputNormNode.inTensorIds = {IN_HIDDEN_STATES, IN_NORM_WEIGHT, IN_BETA};
@@ -165,7 +163,7 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     atb::infer::ReshapeAndCacheParam reshapeCacheParm;
     CREATE_OPERATION(reshapeCacheParm, &reshapeAndCacheNode.operation);
     reshapeAndCacheNode.inTensorIds = {INTERNAL_MIXED_K, INTERNAL_MIXED_V, IN_K_CACHE, IN_V_CACHE, IN_SLOTS};
-    reshapeAndCacheNode.outTensorIds = {};
+    reshapeAndCacheNode.outTensorIds = {IN_K_CACHE, IN_V_CACHE};
     reshapeAndCacheNode.inTensorReshapeFuncs.resize(reshapeAndCacheNode.inTensorIds.size());
     reshapeAndCacheNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         reshapeHeads(oldShape, newShape, param.headNum);
@@ -179,8 +177,7 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
         faEnParam.headNum = param.headNum;
         faEnParam.qkScale = 1.0 / sqrt(param.dk);
         faEnParam.kvHeadNum = param.headNum;
-        faEnParam.isEncoder = true;
-        faEnParam.isSupportAlibi = true;
+        faEnParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
         faEnParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_ALIBI;
         CREATE_OPERATION(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERNAL_MIXED_Q, INTERNAL_MIXED_K, INTERNAL_MIXED_V, IN_ATTENTION_MASK,
@@ -248,8 +245,6 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
 
     atb::infer::RmsNormParam selfNormParam;
     selfNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    selfNormParam.normParam.quantInputScale = param.gateProjInputScale;   // gate up
-    selfNormParam.normParam.quantInputOffset = param.gateProjInputOffset; // gate up
     selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
     CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
     selfNormNode.inTensorIds = {INTERNAL_SELF_RESIDUAL_ADD_OUT, IN_SELF_OUT_NORM_WEIGHT, IN_BETA}; // quant
