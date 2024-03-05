@@ -34,13 +34,16 @@ struct FusionAttentionParam {
     int isGroupedQueryAttention = false;
     bool isBF16 = false;
     bool isAntiOutlier = false;
-    bool hasBias = false;
+    bool qkvHasBias = false;
+    bool selfAttnHasBias = false;
     int packQuantType = atb_speed::common::PackQuantType::ALL_FP;
     std::vector<int> layerLinearQuantType;
     NormParamType normParamType;
     NormParamType normQuantParamType;
     // rope param
+    bool needRope = true;
     int rotaryCoeff = 2;
+    bool isHalfRotary = false;
     // self attention param
     bool isFA = true;
     bool isPrefill = false;
