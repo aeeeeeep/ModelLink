@@ -58,7 +58,7 @@ class BoolqEval(DatasetEval):
                     chat_results, rank = chat.chat(instruction=instructions, history=[])
                     if chat_results:
                         for idx, chat_result in enumerate(chat_results):
-                            answer = chat_result[1]
+                            answer = chat_result[1].lstrip()
                             try:
                                 if rank == 0:
                                     logger.info(f"correct: {str(targets[idx])[0]}, AI: {answer}")

@@ -64,7 +64,7 @@ class Gsm8kEval(DatasetEval):
 
                     if chat_results:
                         for idx, chat_result in enumerate(chat_results):
-                            answer = chat_result[0]
+                            answer = chat_result[0].lstrip()
                             answer = answer.split('Q:')[0]
                             answer_result = answer.replace('$', '').replace(',', '') + '  '
                             answer_result = answer_result.replace('.', ' ', -1)
