@@ -39,9 +39,9 @@ GPT_ARGS="
     --load ${CKPT_LOAD_DIR} \
     --seq-length 4096 \
     --max-position-embeddings 4096 \
-    --micro-batch-size 2 \
-    --global-batch-size 32 \
-    --make-vocab-size-divisible-by 128 \
+    --micro-batch-size 4 \
+    --global-batch-size 64 \
+    --make-vocab-size-divisible-by 32 \
     --lr 1e-6 \
     --train-iters 1000 \
     --lr-decay-style cosine \

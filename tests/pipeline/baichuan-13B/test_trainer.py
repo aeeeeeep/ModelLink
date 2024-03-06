@@ -14,10 +14,10 @@ from tests.pipeline.common import DistributedTest
 class TestTraining(DistributedTest):
     world_size = 8
 
-    def init(self):
-        sys.argv = [sys.argv[0]] + ParamConfig.network_size + ParamConfig.auxiliary_param \
-                   + ParamConfig.regularization + ParamConfig.learning_rate_param \
-                   + ParamConfig.training_aux + ParamConfig.distributed_param + ParamConfig.training_param
+    def init(self, config=ParamConfig):
+        sys.argv = [sys.argv[0]] + config.network_size + config.auxiliary_param \
+                   + config.regularization + config.learning_rate_param \
+                   + config.training_aux + config.distributed_param + config.training_param
         from megatron.initialize import initialize_megatron
         os.environ.update({"CUDA_DEVICE_MAX_CONNECTIONS": "1"})
         initialize_megatron(extra_args_provider=None,
@@ -27,7 +27,7 @@ class TestTraining(DistributedTest):
         self.args = get_args()
 
     def test_training(self):
-        self.init()
+        self.init(config=ParamConfig)
         torch.npu.set_compile_mode(jit_compile=True)
         from pretrain_gpt import model_provider, forward_step
         from pretrain_gpt import train_valid_test_datasets_provider
@@ -95,7 +95,7 @@ class TestTraining(DistributedTest):
                     assert_judge(len(os.listdir(file_path)) == self.args.tensor_model_parallel_size)
 
     def test_breakpoint_renewal_training(self):
-        self.init()
+        self.init(config=ParamConfig)
         self.args.load = self.args.save
         torch.npu.set_compile_mode(jit_compile=True)
         from pretrain_gpt import model_provider, forward_step

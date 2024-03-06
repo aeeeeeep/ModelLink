@@ -361,12 +361,6 @@ TASK="boolq"
 --max-new-tokens 1 
 ```
 
-```text
-# 请注意，评估时需要修改一个deepspeed的bug：
-# 将 `<deepspeed-installed-path>/runtime/pipe/engine.py` 文件里的第671行注释掉：
-# self.total_loss += self.loss.detach()
-```
-
 开始评估：
 ```shell
 bash tasks/evaluation/evaluate_llama_7B_ptd.sh

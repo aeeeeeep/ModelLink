@@ -5,24 +5,24 @@
         "--ffn-hidden-size", "13696",
         "--num-attention-heads", "40",
         "--position-embedding-type", "alibi",
-        "--make-vocab-size-divisible-by", "8",
+        "--make-vocab-size-divisible-by", "32",
         "--max-position-embeddings", "4096",
         "--normalization", "RMSNorm",
         "--swiglu",
         "--square-alibi-mask",
         "--fill-neg-inf",
         "--untie-embeddings-and-output-weights",
-        "--load", "./baichuan2-13B-tp8-pp1/"
+        "--load", "/home/dataset/baichuan2-13B-tp8-pp1/"
     ],
 
     "TOKENIZER_PARAM": [
         "--tokenizer-type", "PretrainedFromHF",
-        "--tokenizer-name-or-path", "./baichuan2-13B-hf"
+        "--tokenizer-name-or-path", "/home/dataset/baichuan2-13B-hf"
     ],
 
     "PROCESS_PRETRAIN_DATA_PARAM": [
-        "--input", "./train-00000-of-00001-a09b74b3ef9c3b56.parquet",
-        "--output-prefix", "./pretrain-dataset-baichuan2-13B/alpaca",
+        "--input", "/home/dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet",
+        "--output-prefix", "/home/dataset/pretrain-dataset-baichuan2-13B/alpaca",
         "--workers", "4",
         "--log-interval", "1000"
     ],
@@ -35,7 +35,7 @@
 
     "EVALUATION_PARAM": [
         "--tokenizer-not-use-fast",
-        "--task-data-path", "./boolq/test",
+        "--task-data-path", "/home/dataset/eval_dataset/boolq/test",
         "--task", "boolq",
         "--max-new-tokens", "1",
         "--exit-on-missing-checkpoint"
@@ -58,5 +58,16 @@
         "--no-load-optim",
         "--no-load-rng",
         "--seq-length", "4096"
+    ],
+	
+    "CONVERT_WEIGHT_PARAM": [
+        "--model-type", "GPT",
+        "--loader", "llama2_hf",
+        "--saver", "megatron",
+        "--target-tensor-parallel-size", "8",
+        "--load-dir", "/home/dataset/baichuan2-13B-hf",
+        "--save-dir", "/home/dataset/baichuan2-13B-tp8-pp1",
+        "--tokenizer-model", "None",
+        "--w-pack", "True"
     ]
 }
