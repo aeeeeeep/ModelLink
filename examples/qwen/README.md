@@ -546,8 +546,11 @@ Qwen-72B 训练的硬件配置:
     CKPT_LOAD_DIR="your megatron ckpt save path"
    ```
    
-   若使用32k长序列，需开启重计算，配置如下参数：
-   ```
+   若使用32k长序列，需要开启重计算特性并修改seq-length参数值为32768，参数配置如下：
+
+   ```shell
+   --seq-length 32768 \
+
     --recompute-granularity full \
     --recompute-method block \
     --recompute-num-layers 2 \

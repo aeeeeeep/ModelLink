@@ -540,9 +540,11 @@ Here's a hardware summary of pre-training  Qwen-72B:
     DATA_PATH="./dataset_qwen-72b/alpaca_text_document"  #processed dataset
     CKPT_LOAD_DIR="your megatron ckpt save path"
    ```
-    
-    To use a 32K sequence, enable re-computation and set the following parameters:
-   ```
+   
+    To use a 32K sequence, turn on the re-computation feature and change the value of seq-length to 32768. The parameter configuration is as follows:
+   ```shell
+   --seq-length 32768 \
+
     --recompute-granularity full \
     --recompute-method block \
     --recompute-num-layers 2 \
