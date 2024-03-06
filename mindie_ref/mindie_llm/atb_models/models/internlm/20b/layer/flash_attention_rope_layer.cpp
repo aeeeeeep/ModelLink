@@ -116,7 +116,7 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
         IN_SEQLEN };
     ropeNode.outTensorIds = { INTERMIDATE_Q_POSITIONEMBED, INTERMIDATE_K_POSITIONEMBED };
 
-    atb::infer::SelfAttentionParam selfAttentionParam;
+    atb_speed::internlm_20b::SelfAttentionParam selfAttentionParam;
     selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / sqrt(param.dk);
