@@ -114,13 +114,16 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
     # convert to ptd weights
-    python tools/ckpt_convert/llama/convert_weights_from_huggingface.py --input-model-dir llama-2-7b-hf \
-                                                                        --output-model-dir ./llama2-7b-tp8pp1 \
-                                                                        --tensor-model-parallel-size 8 \
-                                                                        --pipeline-model-parallel-size 1 \
-                                                                        --type 7B \
-                                                                        --merge-mlp
+    python tools/checkpoint/util.py --model-type GPT \
+                                    --loader llama2_hf \
+                                    --saver megatron \
+                                    --target-tensor-parallel-size 8 \
+                                    --target-pipeline-parallel-size 1 \
+                                    --load-dir ../llama-2-7b-hf \
+                                    --save-dir {your megatron ckpt save path} \
+                                    --tokenizer-model ../llama-2-7b-hf/tokenizer.model
    ```
+   Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
 4. pre-training
 
 	4.1 Prepare dataset
@@ -185,9 +188,12 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     ```
    5.2 Full Parameters Fine-Tuning
    The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_7b_ptd.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
+
+   Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
    
+   --finetune \
    --is-instruction-dataset \
    ```
    5.3 Lora Fine-Tuning
@@ -401,10 +407,12 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
         --loader llama2_hf \
         --saver megatron \
         --target-tensor-parallel-size 8 \
+        --target-pipeline-parallel-size 1 \
         --load-dir ./llama2-13b-hf \
         --save-dir ./llama2-13b-hf-tp8 \
         --tokenizer-model ./llama2-13b-hf/tokenizer.model
     ```
+   Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
 
 4. pre-training
 
@@ -470,9 +478,12 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
     ```
    5.2 Full Parameters Fine-Tuning
    The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_7b_ptd.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
+
+   Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
    
+   --finetune \
    --is-instruction-dataset \
    ```
    5.3 Lora Fine-Tuning
@@ -521,7 +532,7 @@ Config Llama2-13B inference script: tasks/inference/generate_llama2_13b_ptd.sh
 ```shell
 # modify the model weight path and tokenizer path
 CHECKPOINT=./llama2-13b-tp8-pp1/
-VOCAB_FILE=./llama2-13b-hf/
+TOKENIZER_PATH=./llama2-13b-hf/
 ```
 
 Config Llama2-13B lora inference script: tasks/inference/generate_llama2_13b_lora_ptd.sh
@@ -550,7 +561,7 @@ We use boolq benchmark to evaluate our model. Benchmark Download [here](https://
 ```shell
     # modify the model weight path and tokenizer path
     CHECKPOINT=./llama2-13b-tp8-pp1/
-    VOCAB_FILE=./llama2-13b-hf/
+    TOKENIZER_PATH=./llama2-13b-hf/
 ```
 
 ```shell
@@ -719,6 +730,7 @@ pip install -r requirements.txt
      --save-dir ./load_ckpt \
      --tokenizer-model ./llama2-70b-hf/tokenizer.model                                                               
     ```
+    Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
 
 4. pre-training
 
@@ -825,9 +837,12 @@ pip install -r requirements.txt
     ```
    5.2 Full Parameters Fine-Tuning
    The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_7b_ptd.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
+
+   Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
    
+   --finetune \
    --is-instruction-dataset \
    ```
    5.3 Lora Fine-Tuning
@@ -877,24 +892,18 @@ The performance of LLaMA2-34B/70B in **Ascend NPU** and **Reference**
 
 ## Inference-2
 
-The pretrained HuggingFace model weights can be converted to inference with 8 NPUs, 
-which is similar to section "Prepare pretrained weights and tokenizer", 
-and the "pipeline-model-parallel-size" parameter need to be set to 1.
-
-The model weights of 64 NPUs can be converted to 8 NPUs with the follow shell.
-
 Models could generate with 8 NPUs, for example:
 
 Config inference script:
 
 LLaMA2-34B:`tasks/inference/generate_llama2_34B_ptd.sh`.
 
-LLaMA2-70B:`task/inference/generate_llama2_70B_ptd.sh`.
+LLaMA2-70B:`tasks/inference/generate_llama2_70B_ptd.sh`.
 
 ```shell
 # Modify checkpoint path and vocabfile path.
 CHECKPOINT=<checkpoint-path>
-VOCAB_FILE=<vocabfile-path>
+TOKENIZER_PATH=<tokenizer-path>
 ```
 
 Config lora inference script:
@@ -913,11 +922,11 @@ bash ./tasks/inference/generate_llama2_34b_lora_ptd.sh
 ```
 Launch LLaMA2-70B inference:
 ```shell
-bash ./task/llama2/generate_llama2_70B_ptd.sh
+bash ./tasks/llama2/generate_llama2_70B_ptd.sh
 ```
 Launch LLaMA2-70B lora inference:
 ```shell
-bash ./task/llama2/generate_llama2_70b_lora_ptd.sh
+bash ./tasks/llama2/generate_llama2_70b_lora_ptd.sh
 ```
 
 Some inference samples of LLaMA2-34B are as follows:
@@ -941,7 +950,7 @@ LLaMA2-70B:`tasks/evaluation/evaluate_llama2_70B_ptd.sh`.
 ```shell
 # Modify checkpoint path and vocabfile path.
 CHECKPOINT=<checkpoint-path>
-VOCAB_FILE=<vocabfile-path>
+TOKENIZER_PATH=<tokenizer-path>
 ```
 
 Launch LLaMA2-34B evaluation:

@@ -18,7 +18,7 @@ TP=8
 PP=2
 
 DISTRIBUTED_ARGS="
-    --nproc_per_node $GPUS_PER_NODE \
+    --nproc_per_node $NPUS_PER_NODE \
     --nnodes $NNODES \
     --node_rank $NODE_RANK \
     --master_addr $MASTER_ADDR \
@@ -53,7 +53,6 @@ GPT_ARGS="
     --use-fused-rmsnorm \
     --swiglu \
     --use-flash-attn \
-    --use-distributed-optimizer \
     --group-query-attention \
     --num-query-groups 8 \
     --no-masked-softmax-fusion \
