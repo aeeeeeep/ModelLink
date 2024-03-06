@@ -99,7 +99,7 @@ class PARunner:
         prefill_head_indices = torch.tensor([self.all_input_length - 1], dtype=torch.int64).to(self.device)
         print_log(self.rank, logger.info, "---------------begin warm_up---------------")
         try:
-            self.warm_up_num_blocks = math.ceil(self.max_prefill_tokens / self.block_size)
+            self.warm_up_num_blocks = math.ceil((self.max_input_length + self.max_output_length) / self.block_size) * self.max_batch_size
         except ZeroDivisionError as e:
             raise ZeroDivisionError from e
         cache_config = CacheConfig(self.warm_up_num_blocks, self.block_size)

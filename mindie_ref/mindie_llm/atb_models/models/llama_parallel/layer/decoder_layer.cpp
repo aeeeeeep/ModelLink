@@ -52,6 +52,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     fusionAttentionParam.isGroupedQueryAttention = param.numAttentionHeadsPerRank != param.numKeyValueHeadsPerRank;
     fusionAttentionParam.isBF16 = param.isBF16;
     fusionAttentionParam.layerLinearQuantType = param.linearQuantType;
+    fusionAttentionParam.supportLcoc = param.supportLcoc;
     atb::infer::RmsNormParam attenRmsNormParam;
     attenRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     attenRmsNormParam.normParam.epsilon = param.rmsNormEps;
@@ -159,7 +160,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     mlpParam.normQuantParamType = mlpRmsNormQuantParam;
     // down
     mlpParam.downLinearTensorParallelInfo = {param.rank, param.worldSize, param.backend};
-
+    mlpParam.supportLcoc = param.supportLcoc;
     if (param.supportSwiGLU) {
         MlpSwiGLU(mlpParam, &mlpParallelNode.operation);
     } else {

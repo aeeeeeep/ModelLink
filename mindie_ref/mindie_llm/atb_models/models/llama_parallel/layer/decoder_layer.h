@@ -34,6 +34,7 @@ struct DecoderLayerParam {
     bool isBF16 = false;
     bool isPack = true;
     bool supportSwiGLU = false;
+    bool supportLcoc = false;
     int quantType = 0;
     float rmsNormEps = 0;
     int numAttentionHeadsPerRank = 0;
