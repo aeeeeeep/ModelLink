@@ -432,9 +432,10 @@ bash ./tasks/evaluation/evaluate_qwen_14b_ptd.sh
 
 Here's a hardware summary of pre-training  Qwen-72B:
 
-| Hardware |       Value       |
-| :------: |:-----------------:|
-|   NPU    | 128 x Ascend NPUs |
+| Hardware | Seq-length |       Value       |
+| :------: |:----------:|:-----------------:|
+|   NPU    |     8k     | 64 x Ascend NPUs  |
+|   NPU    |    32k     | 320 x Ascend NPUs |
 
 ### Script
 
@@ -519,7 +520,7 @@ Here's a hardware summary of pre-training  Qwen-72B:
     --tokenizer-name-or-path ../qwen-72b-hf \
     --output-prefix ../dataset_qwen-72b/alpaca \
     --tokenizer-type PretrainedFromHF \
-    --seq-length 32768 \
+    --seq-length 8192 \
     --workers 4 \
     --log-interval 1000 \
  
@@ -538,6 +539,13 @@ Here's a hardware summary of pre-training  Qwen-72B:
     TOKENIZER_MODEL="./qwen-72b-hf/"  #tokenizer path
     DATA_PATH="./dataset_qwen-72b/alpaca_text_document"  #processed dataset
     CKPT_LOAD_DIR="your megatron ckpt save path"
+   ```
+    
+    To use a 32K sequence, enable re-computation and set the following parameters:
+   ```
+    --recompute-granularity full \
+    --recompute-method block \
+    --recompute-num-layers 2 \
    ```
 
 	Launch Qwen-72B pre-training script: examples/qwen/pretrain_qwen_72b_ptd.sh

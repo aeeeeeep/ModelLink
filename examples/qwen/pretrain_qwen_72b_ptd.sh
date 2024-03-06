@@ -6,7 +6,7 @@ export NPU_ASD_ENABLE=0
 NPUS_PER_NODE=8
 MASTER_ADDR=localhost
 MASTER_PORT=6000
-NNODES=1
+NNODES=8
 NODE_RANK=0
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
@@ -16,7 +16,7 @@ TOKENIZER_MODEL="your tokenizer path"
 CKPT_LOAD_DIR="your model load ckpt path"
 
 TP=8
-PP=1
+PP=8
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $NPUS_PER_NODE \
@@ -37,7 +37,7 @@ GPT_ARGS="
     --tokenizer-type PretrainedFromHF \
     --load ${CKPT_LOAD_DIR} \
     --tokenizer-name-or-path ${TOKENIZER_MODEL} \
-    --seq-length 32768 \
+    --seq-length 8192 \
     --max-position-embeddings 32768 \
     --micro-batch-size 1 \
     --global-batch-size 16 \

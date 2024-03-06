@@ -438,9 +438,10 @@ bash tasks/evaluation/evaluate_qwen_14b_ptd.sh
 
 Qwen-72B 训练的硬件配置:
 
-| 硬件 |        配置         |
-| :--: |:-----------------:|
-| NPU | 128 x Ascend NPUs |
+| 硬件  | 序列长度 |        配置         |
+|:---:|:----:|:-----------------:|
+| NPU |  8k  | 64 x Ascend NPUs  |
+| NPU | 32k  | 320 x Ascend NPUs |
 
 ### 脚本
 
@@ -524,7 +525,7 @@ Qwen-72B 训练的硬件配置:
         --tokenizer-name-or-path ../qwen-72b-hf \
         --output-prefix ../dataset_qwen-72b/alpaca \
         --tokenizer-type PretrainedFromHF \
-        --seq-length 32768 \
+        --seq-length 8192 \
         --workers 4 \
         --log-interval 1000 \
     
@@ -543,6 +544,13 @@ Qwen-72B 训练的硬件配置:
     TOKENIZER_MODEL="./qwen-72b-hf/"  #词表路径
     DATA_PATH="./dataset_qwen-72b/alpaca_text_document"  #数据集路径
     CKPT_LOAD_DIR="your megatron ckpt save path"
+   ```
+   
+   若使用32k长序列，需开启重计算，配置如下参数：
+   ```
+    --recompute-granularity full \
+    --recompute-method block \
+    --recompute-num-layers 2 \
    ```
 
    启动 Qwen-72B 预训练脚本: examples/qwen/pretrain_qwen_72b_ptd.sh
