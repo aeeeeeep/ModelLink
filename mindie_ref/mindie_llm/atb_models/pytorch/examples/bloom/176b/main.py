@@ -456,62 +456,18 @@ def performance_test(args):
 
 
 def precision_test(args):
-    # from llmtask import TaskGenerator
-    # TG = TaskGenerator("ceval", max_shot=3)
-    # for task in TG:
-    #     generate_text_list, _, _ = self.pa_runner.infer([task], self.batch_size, 4, True)
-    #     # pred = extract_answer("CEval", generate_text_list[0], [])
-    #     TG.feedback(generate_text_list[0])
-    #     if self.local_rank == 0:
-    #         print("++++++++++ Start prompt:")
-    #         print(task)
-    #         print("++++++++++ End prompt")
-    #         print("========== Start Answer")
-    #         print(generate_text_list[0])
-    #         print("========== End Answer")
-    #         print(TG.summary())
-    # print(TG.summary())
-
-    with open("/home/caoyi/new_w8a16/ModelLink/mindie_ref/mindie_llm/atb_models/tests/modeltest/dump_tensor_prompt.txt", "r", encoding="utf-8") as f:
-        prompt = f.read()
+    from llmtask import TaskGenerator
     model, tokenizer = load_model(args)
     local_rank = torch.distributed.get_rank()
-
-    inputs = tokenizer([prompt], return_tensors="pt")
-    len_task = len(prompt)
-    generate_ids = model.generate(inputs.input_ids.npu(), attention_mask=inputs.attention_mask.npu(), max_new_tokens=4)
-    res = tokenizer.batch_decode(generate_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False)[0][len_task:]
-
-    # generate_text_list, _, _ = self.pa_runner.infer([prompt], self.batch_size, 4, True)
-    print("++++++++++ Start prompt:")
-    print(prompt)
-    print("++++++++++ End prompt")
-    print("========== Start Answer")
-    print(res)
-    print("========== End Answer")
-
-    # from llmtask import TaskGenerator
-    
-    
-    # model, tokenizer = load_model(args)
-    # local_rank = torch.distributed.get_rank()
-    # TG = TaskGenerator("ceval", max_shot=3)
-    # for task in TG:
-    #     inputs = tokenizer([task], return_tensors="pt")
-    #     len_task = len(task)
-    #     generate_ids = model.generate(inputs.input_ids.npu(), attention_mask=inputs.attention_mask.npu(), max_new_tokens=4)
-    #     res = tokenizer.batch_decode(generate_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False)[0][len_task:]
-    #     TG.feedback(res)
-    #     if local_rank == 0:
-    #         print("++++++++++ Start prompt:")
-    #         print(task)
-    #         print("++++++++++ End prompt")
-    #         print("========== Start Answer")
-    #         print(res)
-    #         print("========== End Answer")
-    #         print(TG.summary())
-    #     torch.npu.empty_cache()
-    # print(TG.summary())
+    TG = TaskGenerator("ceval", max_shot=5)
+    for task in TG:
+        inputs = tokenizer([task], return_tensors="pt")
+        len_task = len(task)
+        generate_ids = model.generate(inputs.input_ids.npu(), attention_mask=inputs.attention_mask.npu(), max_new_tokens=4)
+        res = tokenizer.batch_decode(generate_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False)[0][len_task:]
+        TG.feedback(res)
+        torch.npu.empty_cache()
+    print(TG.summary())
 
 def main(args):
     if args.mode == "performance":

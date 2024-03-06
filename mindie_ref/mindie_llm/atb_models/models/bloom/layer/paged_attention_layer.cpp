@@ -159,7 +159,7 @@ atb::Status PagedLayer(const Bloom7bPagedLayerParam &param, atb::Operation **ope
     } else if (param.quantMode == 2) {
         mixdQkvLinearNode.operation = new atb_speed::common::W8A16BiasOperation("mixdQkvLinearNode");
         // INPUT, WEIGHT, SCALE, OFFSET, BIAS
-        mixdQkvLinearNode.inTensorIds = {INTERMEDIATE_INPUTNORM_OUT, IN_QKVMIXED_WEIGHT,  
+        mixdQkvLinearNode.inTensorIds = {INTERMEDIATE_INPUTNORM_OUT, IN_QKVMIXED_WEIGHT,
                                          IN_QKVMIXED_DEQSCALE, IN_QKVMIXED_OFFSET, IN_QKVMIXED_BIAS};
     } else {
         atb::infer::LinearParam mixdQkvLinearParam;

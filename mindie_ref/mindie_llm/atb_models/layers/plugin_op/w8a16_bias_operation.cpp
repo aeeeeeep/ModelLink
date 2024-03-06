@@ -41,7 +41,7 @@ W8A16BiasOperation::W8A16BiasOperation(const std::string &name) : AclNnOperation
 W8A16BiasOperation::~W8A16BiasOperation() {}
 
 atb::Status W8A16BiasOperation::InferShape(const atb::SVector<atb::TensorDesc> &inTensorDescs,
-                                       atb::SVector<atb::TensorDesc> &outTensorDescs) const
+                                           atb::SVector<atb::TensorDesc> &outTensorDescs) const
 {
     ATB_LOG(INFO) << opName_ << " infer shape start";
     outTensorDescs.at(0).format = inTensorDescs.at(0).format;
@@ -97,7 +97,7 @@ int W8A16BiasOperation::CreateAclTensors(const atb::VariantPack &variantPack, Ac
 }
 
 int W8A16BiasOperation::CallAclGetWorkspace(const atb::VariantPack &variantPack, AclNnTask &task,
-                                        uint64_t &workspaceSize)
+                                            uint64_t &workspaceSize)
 {
     ATB_LOG(INFO) << opName_ << " aclnnWeightQuantBatchMatmulV2GetWorkspaceSize start";
 
@@ -112,7 +112,7 @@ int W8A16BiasOperation::CallAclGetWorkspace(const atb::VariantPack &variantPack,
 }
 
 int W8A16BiasOperation::CallAclExecute(uint8_t *workspace, uint64_t workspaceSize,
-                                   aclOpExecutor *aclExecutor, aclrtStream stream)
+                                       aclOpExecutor *aclExecutor, aclrtStream stream)
 {
     ATB_LOG(INFO) << opName_ << " aclnnWeightQuantBatchMatmulV2 start";
     int ret = aclnnWeightQuantBatchMatmulV2(workspace, workspaceSize, aclExecutor, stream);

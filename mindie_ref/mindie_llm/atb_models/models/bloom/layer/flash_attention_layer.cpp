@@ -161,7 +161,7 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
     } else if (param.quantMode == 2) {
         mixdQkvLinearNode.operation = new atb_speed::common::W8A16BiasOperation("mixdQkvLinearNode");
         // INPUT, WEIGHT, SCALE, OFFSET, BIAS
-        mixdQkvLinearNode.inTensorIds = {INTERMEDIATE_INPUTNORM_OUT, IN_QKVMIXED_WEIGHT,  
+        mixdQkvLinearNode.inTensorIds = {INTERMEDIATE_INPUTNORM_OUT, IN_QKVMIXED_WEIGHT,
                                          IN_QKVMIXED_DEQSCALE, IN_QKVMIXED_OFFSET, IN_QKVMIXED_BIAS};
     } else {
         atb::infer::LinearParam mixdQkvLinearParam;
@@ -194,7 +194,7 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0f / std::sqrt(param.dk);
     selfAttentionParam.qkScale = 1.0f;
-    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MASK_TYPE_ALIBI; 
+    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MASK_TYPE_ALIBI;
     CREATE_OPERATION(selfAttentionParam, &selfAttentionFusionNode.operation);
     selfAttentionFusionNode.inTensorIds = {
         INTERMEDIATE_QUERY, INTERMEDIATE_KEY, INTERMEDIATE_VALUE, IN_CACHED_K,
@@ -295,7 +295,6 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
                             IN_PLACE_HOLDER};
         mlpNode.outTensorIds = {INTERMEDIATE_MLPOUT};
     } else if (param.quantMode == 2) {
-
         atb::infer::LayerNormParam selfNormParam;
         selfNormParam.layerType = atb::infer::LayerNormParam::LAYER_NORM_NORM;
         selfNormParam.normParam.epsilon = param.layerNormEps;

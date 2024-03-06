@@ -66,11 +66,11 @@ def print_rank_0(*args, **kwargs):
     if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
         print(*args, **kwargs)
 
+
 def log_rank_0(msg):
     if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
         with open("bloom_log.txt", "a") as f:
             f.write(f"{msg}\n")
-
 
 
 def record_npu_memory(name):
@@ -176,6 +176,7 @@ def build_alibi_tensor(attention_mask: torch.Tensor, num_heads: int, dtype: torc
 
 QUANT_MODE_MAPPING = {"fp16": 0, "int8": 1, "w8a8": 1, "w8a16": 2}
 
+
 class BloomCommonForCausalLM(BloomPreTrainedModel):
     _keys_to_ignore_on_load_missing = [r"h.*.self_attention.scale_mask_softmax.causal_mask", r"lm_head.weight"]
 
@@ -256,9 +257,6 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
         for i in range(self.num_hidden_layers):
             self.inputs_acl[i + 7] = torch.tensor([i], dtype=torch.int32).npu()
         
-        # self.bias_dtype = torch.int32
-        # self.weight_scale_dtype = torch.int64
-
         # set weight
         self.weights = self._init_weights_mine()
         self.acl_model.set_weight(self.weights)
@@ -344,7 +342,6 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
         
         for weight_name, weight_values in weight_kwargs.items():
             setattr(self, weight_name, weight_values)
-        
 
         float_weight_dict = torch.load(model_path + "/float_layers_weights.pt")
 
@@ -357,20 +354,9 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
                 print(_k_)
                 if "bias" in _k_:
                     self.bias_dict[_k_] = float_weight_dict[_k_]
-                    # del float_weight_dict[_k_]
-        print("self.bias_dict.keys(): ", self.bias_dict.keys())
-
         float_layers = []
         weights_keys = float_weight_dict.keys()
-        print("weights_keys:", weights_keys)
-        # for weights_key in weights_keys:
-        #     key_split = weights_key.split('.')
-        #     if 'h' in key_split and 'dense' in key_split:
-        #         float_layers.append(int(key_split[2]))
-
-        print("float_layers: ", float_layers)
         return float_weight_dict, list(set(float_layers))
-    
 
     def _init_weights_mine(self):
         prefix = '' if self.world_size == 1 and self.is_float else 'transformer.'
@@ -403,7 +389,6 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
                 ]
                 weights_t = []
                 for name in weights_name_t:
-                    # transformer.h.0.self_attention.query_key_value.weight
                     weight = self.model_weights[name].to(torch.float16).npu()
                     if "weight" in name and "layernorm" not in name:
                         weight = self.maybe_formatcast(weight)
