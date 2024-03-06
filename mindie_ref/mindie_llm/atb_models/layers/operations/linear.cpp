@@ -74,6 +74,7 @@ atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operat
 
     if (param.quantType == W8A16) {
         linearNode.operation = new atb_speed::common::W8A16Operation("LinearNode");
+        linearNode.inTensorIds = {LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_SCALE, LinearTensorIdx::IN_OFFSET};
     } else if (param.quantType == NO_QUANT && param.hasBias) {
         linearParam.hasBias = true;
         CREATE_OPERATION(linearParam, &linearNode.operation);
