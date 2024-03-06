@@ -15,76 +15,76 @@
  */
 #include "layers/mlp_gate_v2.h"
 #include "layers/parallel_layer_v2.h"
-#include "models/bloom/layer/flash_attention_layer.h"
+#include "models/bloom/layer/paged_attention_layer.h"
 #include "layers/plugin_op/w8a16_bias_operation.h"
+
 
 namespace atb_speed {
 namespace bloom_7b {
+enum Bloom7BPALayerInTensorId : int {
+    IN_NORM_WEIGHT = 0,              // 0
+    IN_NORM_BIAS,
 
-enum Bloom7BLayerInTensorId : int {
-    IN_NORM_WEIGHT = 0,            // 0
-    IN_NORM_BIAS,                  // 1
+    IN_QKVMIXED_WEIGHT,
+    IN_QKVMIXED_BIAS,
+    IN_QKVMIXED_DEQSCALE,
+    IN_QKVMIXED_OFFSET,              // w8a16
+    IN_QKVMIXED_INPUT_SCALE,
+    IN_QKVMIXED_INPUT_OFFSET,
 
-    IN_QKVMIXED_WEIGHT,            // 2
-    IN_QKVMIXED_BIAS,              // 3
-    IN_QKVMIXED_DEQSCALE,          // 4
-    IN_QKVMIXED_OFFSET,            // 5
-    IN_QKVMIXED_INPUT_SCALE,       // 6
-    IN_QKVMIXED_INPUT_OFFSET,      // 7
+    IN_SELFOUTLINEAR_WEIGHT,
+    IN_SELFOUTLINEAR_BIAS,
+    IN_SELFOUTLINEAR_DEQSCALE,
+    IN_SELFOUTLINEAR_OFFSET,         // w8a16
+    IN_SELFOUTLINEAR_INPUT_SCALE,
+    IN_SELFOUTLINEAR_INPUT_OFFSET,
 
-    IN_SELFOUTLINEAR_WEIGHT,       // 8
-    IN_SELFOUTLINEAR_BIAS,         // 9
-    IN_SELFOUTLINEAR_DEQSCALE,     // 10
-    IN_SELFOUTLINEAR_OFFSET,       // 11
-    IN_SELFOUTLINEAR_INPUT_SCALE,  // 12
-    IN_SELFOUTLINEAR_INPUT_OFFSET, // 13
+    IN_SELFOUTNORM_WEIGHT,
+    IN_SELFOUTNORM_BIAS,
 
-    IN_SELFOUTNORM_WEIGHT,     // 14
-    IN_SELFOUTNORM_BIAS,       // 15
+    IN_HTO4H_WEIGHT,
+    IN_HTO4H_BIAS,
+    IN_HTO4H_DEQSCALE,
+    IN_HTO4H_OFFSET,                 // w8a16
+    IN_HTO4H_INPUT_SCALE,
+    IN_HTO4H_INPUT_OFFSET,
 
-    IN_HTO4H_WEIGHT,           // 16
-    IN_HTO4H_BIAS,             // 17
-    IN_HTO4H_DEQSCALE,         // 18
-    IN_HTO4H_OFFSET,           // 19
-    IN_HTO4H_INPUT_SCALE,      // 20
-    IN_HTO4H_INPUT_OFFSET,     // 21
+    IN_4HTOH_WEIGHT,
+    IN_4HTOH_BIAS,
+    IN_4HTOH_DEQSCALE,
+    IN_4HTOH_OFFSET,                 // w8a16
+    IN_4HTOH_INPUT_SCALE,
+    IN_4HTOH_INPUT_OFFSET,
 
-    IN_4HTOH_WEIGHT,           // 22
-    IN_4HTOH_BIAS,             // 23
-    IN_4HTOH_DEQSCALE,         // 24
-    IN_4HTOH_OFFSET,           // 25
-    IN_4HTOH_INPUT_SCALE,      // 26
-    IN_4HTOH_INPUT_OFFSET,     // 27
+    IN_HIDDEN_STATES,                // PA
+    IN_ATTENTION_MASK,               // PA
+    IN_BLOCK_TABLES,                 // PA
+    IN_SLOTS,                        // PA
+    IN_INPUT_LENGTHS,                // PA
+    IN_PLACE_HOLDER,                 // PA
+    IN_K_CACHE,                      // PA
+    IN_V_CACHE,                      // PA
 
-    IN_HIDDEN_STATES,          // 28
-    IN_ATTENTION_MASK,         // 29
-    IN_CACHED_K,               // 30
-    IN_CACHED_V,               // 31
-    IN_TOKENOFFSET,            // 32
-    IN_SEQLEN,                 // 33
-    IN_PLACE_HOLDER,           // 34
-    IN_LAYERID,                // 35
-
-    IN_TENSOR_MAX              // 36
+    IN_TENSOR_MAX
 };
 
 enum Bloom7BLayerOutTensorId : int {
-    OUT_LAYEROUT = IN_TENSOR_MAX, // 36
-    OUT_TENSOR_MAX                // 37
+    OUT_LAYEROUT = IN_TENSOR_MAX,
+    OUT_TENSOR_MAX
 };
 
-enum Bloom7BLayerINTERMEDIATETensorId : int {
-    INTERMEDIATE_INPUTNORM_OUT = OUT_TENSOR_MAX,  // 37
-    INTERMEDIATE_MIXEDLINEAROUTQKV,               // 38
-    INTERMEDIATE_QUERY,                           // 39
-    INTERMEDIATE_KEY,                             // 40
-    INTERMEDIATE_VALUE,                           // 41
+enum Bloom7BLayerIntermidateTensorId : int {
+    INTERMEDIATE_INPUTNORM_OUT = OUT_TENSOR_MAX,
+    INTERMEDIATE_MIXEDLINEAROUTQKV,
+    INTERMEDIATE_QUERY,
+    INTERMEDIATE_KEY,
+    INTERMEDIATE_VALUE,
 
-    INTERMEDIATE_SELFOUT,                         // 42
-    INTERMEDIATE_SELFLINEAROUT,                   // 43
-    INTERMEDIATE_SELFADDOUT,                      // 44
-    INTERMEDIATE_SELFNORMOUT,                     // 45
-    INTERMEDIATE_MLPOUT,                          // 46
+    INTERMEDIATE_SELFOUT,
+    INTERMEDIATE_SELFLINEAROUT,
+    INTERMEDIATE_SELFADDOUT,
+    INTERMEDIATE_SELFNORMOUT,
+    INTERMEDIATE_MLPOUT,
 
     INTERMEDIATE_SELFLINEAROUT_BEFOREREDUCE,      // w8a16
     INTERMEDIATE_MATMULUP,                        // w8a16
@@ -97,49 +97,45 @@ enum Bloom7BLayerINTERMEDIATETensorId : int {
 static const uint64_t IN_TENSOR_COUNT = IN_TENSOR_MAX;
 static const uint64_t OUT_TENSOR_COUNT = OUT_TENSOR_MAX - IN_TENSOR_MAX;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = INTERMEDIATE_TENSOR_MAX - OUT_TENSOR_MAX;
-static const uint64_t HIDDEN_STATES_DIM = 3;
+static const uint64_t NODE_COUNT = 10;
 
-void SqueezeThirdDim(const atb::Dims &oldShape, atb::Dims &newShape)
+void reshapeHeads(const atb::Dims &oldShape, atb::Dims &newShape, int headNum)
 {
-    newShape.dimNum = oldShape.dimNum - 1;
-    // ATB_LOG(INFO) << "[+] SqueezeThirdDim: oldShape.dimNum: " <<  oldShape.dimNum << ", newShape.dimNum: " << newShape.dimNum;
-    std::copy(std::begin(oldShape.dims), std::end(oldShape.dims), std::begin(newShape.dims));
-    newShape.dims[newShape.dimNum - 1] = oldShape.dims[oldShape.dimNum - 1]; // squeeze second last dim
+    newShape.dimNum = 3; // dimNum: 3
+    newShape.dims[0] = oldShape.dims[0]; // 0 dim: n tokens
+    newShape.dims[1] = oldShape.dims[1];  // 1 dim: head num
+    newShape.dims[2] = oldShape.dims[3];  // 1 dim: head size
 }
 
-
-atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **operation)
+atb::Status PagedLayer(const Bloom7bPagedLayerParam &param, atb::Operation **operation)
 {
-    ATB_LOG(INFO) << "[+] Enter bloom model layer...  IN_TENSOR_COUNT: " << IN_TENSOR_COUNT; // 24
-    ATB_LOG(INFO) << "[+] param.quantMode: " << param.quantMode;
-    
-
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
     opGraph.internalTensorNum = INTERMEDIATE_TENSOR_COUNT;
+
     if (param.quantMode == 0) {         // fp16
-        opGraph.nodes.resize(9);
+        opGraph.nodes.resize(NODE_COUNT);
         opGraph.internalTensorNum -= 4;
     } else if (param.quantMode == 1) {  // w8a8
-        opGraph.nodes.resize(9);
+        opGraph.nodes.resize(NODE_COUNT);
         opGraph.internalTensorNum -= 4;
     } else if (param.quantMode == 2) {  // w8a16
-        opGraph.nodes.resize(13);
+        opGraph.nodes.resize(NODE_COUNT + 4);
     }
 
-    ATB_LOG(INFO) << "[+] Bloom layer: inTensorNum: " << opGraph.inTensorNum;
-    ATB_LOG(INFO) << "[+] Bloom layer: outTensorNum: " << opGraph.outTensorNum;
-    ATB_LOG(INFO) << "[+] Bloom layer: internalTensorNum: " << opGraph.internalTensorNum;
-    
-    opGraph.name = "Bloom7bCommonLayer";
+    if (param.isPrefill) {
+        opGraph.name = "Prefill_Bloom7bPALayer";
+    } else {
+        opGraph.name = "Decode_Bloom7bPALayer";
+    }
 
     size_t nodeId = 0;
 
     atb::Node &inputNormNode = opGraph.nodes.at(nodeId++);
     atb::infer::LayerNormParam layerNormQuantParam;
     layerNormQuantParam.layerType = atb::infer::LayerNormParam::LAYER_NORM_NORM;
-    const int32_t beginParamsAxis = 2;
+    const int32_t beginParamsAxis = 1;
     layerNormQuantParam.normParam.epsilon = param.layerNormEps;
     layerNormQuantParam.normParam.beginNormAxis = beginParamsAxis;
     layerNormQuantParam.normParam.beginParamsAxis = 1;
@@ -148,17 +144,18 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
         // layerNormQuantParam.normParam.quantInputScale = param.qkvInputScale;
         // layerNormQuantParam.normParam.quantInputOffset = param.qkvInputOffset;
     }
-    ATB_LOG(INFO) << "[+] Bloom layer: LayerNormParam ";
+    ATB_LOG(INFO) << "[+] Bloom layer: param.quantMode: " << param.quantMode;
+
     CREATE_OPERATION(layerNormQuantParam, &inputNormNode.operation);
     inputNormNode.inTensorIds = {IN_HIDDEN_STATES, IN_NORM_WEIGHT, IN_NORM_BIAS};
     inputNormNode.outTensorIds = {INTERMEDIATE_INPUTNORM_OUT};
 
-    ATB_LOG(INFO) << "[+] Bloom layer: inputNormNode ";
-
     atb::Node &mixdQkvLinearNode = opGraph.nodes.at(nodeId++);
     if (param.quantMode == 1) {
+        // atb::infer::LinearQuantParam mixdQkvLinearParam;
         atb::infer::LinearParam mixdQkvLinearParam;
         mixdQkvLinearParam.linearType = atb::infer::LINEAR_INT8INT8_INT32_FP16;
+
         CREATE_OPERATION(mixdQkvLinearParam, &mixdQkvLinearNode.operation);
         mixdQkvLinearNode.inTensorIds = {
             INTERMEDIATE_INPUTNORM_OUT, IN_QKVMIXED_WEIGHT, IN_QKVMIXED_BIAS, IN_QKVMIXED_DEQSCALE};
@@ -175,45 +172,75 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
     }
     mixdQkvLinearNode.outTensorIds = {INTERMEDIATE_MIXEDLINEAROUTQKV};
 
-    ATB_LOG(INFO) << "[+] Bloom layer: mixdQkvLinearNode ";
-
     atb::Node &splitNode = opGraph.nodes.at(nodeId++);
-    atb::infer::SplitParam splitParam = {3, 3};
+    atb::infer::SplitParam splitParam = {2, 3};
     CREATE_OPERATION(splitParam, &splitNode.operation);
     splitNode.inTensorIds = {INTERMEDIATE_MIXEDLINEAROUTQKV};
     splitNode.outTensorIds = {INTERMEDIATE_QUERY, INTERMEDIATE_KEY, INTERMEDIATE_VALUE};
     splitNode.inTensorReshapeFuncs.resize(splitNode.inTensorIds.size());
     splitNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         size_t dim = 0;
-        newShape.dims[dim++] = oldShape.dims[0]; // batch
-        newShape.dims[dim++] = oldShape.dims[1]; // seq_len
+        newShape.dims[dim++] = oldShape.dims[0]; // ntokens
         newShape.dims[dim++] = param.headNum;    // head_num
         newShape.dims[dim++] = 3;                // 3 -> q, k, v
         newShape.dims[dim++] = param.dk;         // dk
-        newShape.dimNum = dim;                   // [batch, seq_len, head_num, 3, dk]
+        newShape.dimNum = dim;                   // [ntokens, head_num, 3, dk]
     };
 
-    atb::Node &selfAttentionFusionNode = opGraph.nodes.at(nodeId++);
-    atb::infer::SelfAttentionParam selfAttentionParam;
-    // selfAttentionParam.headDim = param.dk;
-    selfAttentionParam.headNum = param.headNum;
-    selfAttentionParam.qScale = 1.0f / std::sqrt(param.dk);
-    selfAttentionParam.qkScale = 1.0f;
-    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MASK_TYPE_ALIBI; 
-    // selfAttentionParam.isSupportAlibi = true;
-    CREATE_OPERATION(selfAttentionParam, &selfAttentionFusionNode.operation);
-    selfAttentionFusionNode.inTensorIds = {
-        INTERMEDIATE_QUERY, INTERMEDIATE_KEY, INTERMEDIATE_VALUE, IN_CACHED_K,
-        IN_CACHED_V, IN_ATTENTION_MASK, IN_TOKENOFFSET, IN_SEQLEN, IN_LAYERID
+    atb::Node &reshapeAndCacheNode = opGraph.nodes.at(nodeId++);  //PA
+    atb::infer::ReshapeAndCacheParam reshapeCacheParm;
+    CREATE_OPERATION(reshapeCacheParm, &reshapeAndCacheNode.operation);
+    reshapeAndCacheNode.inTensorIds = {INTERMEDIATE_KEY, INTERMEDIATE_VALUE, IN_K_CACHE, IN_V_CACHE, IN_SLOTS};
+    reshapeAndCacheNode.outTensorIds = {IN_K_CACHE, IN_V_CACHE};
+    reshapeAndCacheNode.inTensorReshapeFuncs.resize(reshapeAndCacheNode.inTensorIds.size());
+    reshapeAndCacheNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+        reshapeHeads(oldShape, newShape, param.headNum);
+    };
+    reshapeAndCacheNode.inTensorReshapeFuncs[1] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+        reshapeHeads(oldShape, newShape, param.headNum);
+    };
+    
+    atb::Node &attentionNode = opGraph.nodes.at(nodeId++);
+    if (param.isPrefill) {
+        atb::infer::SelfAttentionParam selfAttentionParam;
+        // selfAttentionParam.headDim = param.dk;
+        selfAttentionParam.headNum = param.headNum;
+        // selfAttentionParam.kvHeadNum = param.headNum;
+        selfAttentionParam.qScale = 1.0f / std::sqrt(param.dk);
+        selfAttentionParam.qkScale = 1.0f;
+        // selfAttentionParam.isEncoder = true;
+        // selfAttentionParam.isSupportAlibi = true;
+        selfAttentionParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
+        selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_ALIBI;
+        CREATE_OPERATION(selfAttentionParam, &attentionNode.operation);
+        attentionNode.inTensorIds = {
+            INTERMEDIATE_QUERY, INTERMEDIATE_KEY, INTERMEDIATE_VALUE, IN_ATTENTION_MASK, IN_INPUT_LENGTHS
         };
-    selfAttentionFusionNode.outTensorIds = {INTERMEDIATE_SELFOUT};
-    selfAttentionFusionNode.inTensorReshapeFuncs.resize(selfAttentionFusionNode.inTensorIds.size());
-    selfAttentionFusionNode.inTensorReshapeFuncs[0] = &SqueezeThirdDim;
-    selfAttentionFusionNode.inTensorReshapeFuncs[1] = &SqueezeThirdDim;
-    selfAttentionFusionNode.inTensorReshapeFuncs[2] = &SqueezeThirdDim;
+        attentionNode.outTensorIds = {INTERMEDIATE_SELFOUT};
+        attentionNode.inTensorReshapeFuncs.resize(attentionNode.inTensorIds.size());
+        attentionNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            reshapeHeads(oldShape, newShape, param.headNum);
+        };
+        attentionNode.inTensorReshapeFuncs[1] = attentionNode.inTensorReshapeFuncs[0];
+        attentionNode.inTensorReshapeFuncs[2] = attentionNode.inTensorReshapeFuncs[0];
+    } else {
+        atb::infer::PagedAttentionParam paDeParam;
+        paDeParam.headNum = param.headNum;
+        paDeParam.qkScale = 1.0 / sqrt(param.dk);
+        paDeParam.kvHeadNum = param.headNum;
+        paDeParam.maskType = atb::infer::PagedAttentionParam::MaskType::MASK_TYPE_ALIBI;
+        CREATE_OPERATION(paDeParam, &attentionNode.operation);
+        attentionNode.inTensorIds = {INTERMEDIATE_QUERY, IN_K_CACHE, IN_V_CACHE,
+                                     IN_BLOCK_TABLES,  IN_INPUT_LENGTHS, IN_ATTENTION_MASK};
+        attentionNode.outTensorIds = {INTERMEDIATE_SELFOUT};
+        attentionNode.inTensorReshapeFuncs.resize(attentionNode.inTensorIds.size());
+        attentionNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            reshapeHeads(oldShape, newShape, param.headNum);
+        };
+    }
 
     atb::Node &selfOutLinearNode = opGraph.nodes.at(nodeId++);
-    if (param.quantMode == 1) {
+    if (param.quantmodel == 1) {
         atb_speed::common::ParallelParamV2 selfOutLinearParam;
         selfOutLinearParam.commParam.rank = param.rank;
         selfOutLinearParam.commParam.rankSize = param.rankSize;
@@ -230,11 +257,23 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
                                         IN_SELFOUTLINEAR_BIAS, IN_SELFOUTLINEAR_DEQSCALE,
                                         IN_PLACE_HOLDER, IN_PLACE_HOLDER, IN_PLACE_HOLDER};
         selfOutLinearNode.outTensorIds = {INTERMEDIATE_SELFLINEAROUT};
+        selfOutLinearNode.inTensorReshapeFuncs.resize(selfOutLinearNode.inTensorIds.size());
+        selfOutLinearNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            newShape.dimNum = 2;
+            newShape.dims[0] = oldShape.dims[0];  // ntokens
+            newShape.dims[1] = oldShape.dims[1] * oldShape.dims[2];    // head_num
+        };
     } else if (param.quantMode == 2) {
         selfOutLinearNode.operation = new atb_speed::common::W8A16BiasOperation("selfOutLinearNode");
         selfOutLinearNode.inTensorIds = {INTERMEDIATE_SELFOUT, IN_SELFOUTLINEAR_WEIGHT, IN_SELFOUTLINEAR_DEQSCALE,
                                          IN_SELFOUTLINEAR_OFFSET, IN_SELFOUTLINEAR_BIAS};
         selfOutLinearNode.outTensorIds = {INTERMEDIATE_SELFLINEAROUT_BEFOREREDUCE};
+        selfOutLinearNode.inTensorReshapeFuncs.resize(selfOutLinearNode.inTensorIds.size());
+        selfOutLinearNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            newShape.dimNum = 2;
+            newShape.dims[0] = oldShape.dims[0];  // ntokens
+            newShape.dims[1] = oldShape.dims[1] * oldShape.dims[2];    // head_num
+        };
         
         atb::Node &selfOutLinearAllReduceNode = opGraph.nodes.at(nodeId++);
         atb::infer::AllReduceParam selfOutLinearAllReduceParam;
@@ -255,8 +294,12 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
                                         IN_SELFOUTLINEAR_BIAS, IN_PLACE_HOLDER, IN_PLACE_HOLDER,
                                         IN_PLACE_HOLDER, IN_PLACE_HOLDER};
         selfOutLinearNode.outTensorIds = {INTERMEDIATE_SELFLINEAROUT};
-        ATB_LOG(INFO) << "RowParallelLinearV2 " << selfOutLinearParam.commParam.rankSize<< "-";
-        ATB_LOG(INFO) << selfOutLinearParam.transposeB;
+        selfOutLinearNode.inTensorReshapeFuncs.resize(selfOutLinearNode.inTensorIds.size());
+        selfOutLinearNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            newShape.dimNum = 2;
+            newShape.dims[0] = oldShape.dims[0]; // ntokens
+            newShape.dims[1] = oldShape.dims[1] * oldShape.dims[2];    // head_num
+        };
     }
 
     atb::Node &selfOutAddNode = opGraph.nodes.at(nodeId++);
@@ -265,7 +308,6 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
     CREATE_OPERATION(selfAddParam, &selfOutAddNode.operation);
     selfOutAddNode.inTensorIds = {INTERMEDIATE_SELFLINEAROUT, IN_HIDDEN_STATES};
     selfOutAddNode.outTensorIds = {INTERMEDIATE_SELFADDOUT};
-
 
     atb::Node &selfNormNode = opGraph.nodes.at(nodeId++);
     if (param.quantMode == 1) {
@@ -334,7 +376,7 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
         matmulDownNode.operation = new atb_speed::common::W8A16BiasOperation("matmulDownNode");
         matmulDownNode.inTensorIds = {INTERMEDIATE_ACTIVATION_OUT, IN_4HTOH_WEIGHT, IN_4HTOH_DEQSCALE, IN_4HTOH_OFFSET, IN_4HTOH_BIAS};
         matmulDownNode.outTensorIds = {INTERMEDIATE_MATMULDOWN};
-
+        
         // Node: Matmul down 4h -> h  all reduce
         atb::Node &matmulDownAllReduceNode = opGraph.nodes.at(nodeId++);
         atb::infer::AllReduceParam matmulDownAllReduceParam;
@@ -408,5 +450,6 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
     CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
 }
+
 } // namespace bloom_7b
 } // namespace atb_speed
