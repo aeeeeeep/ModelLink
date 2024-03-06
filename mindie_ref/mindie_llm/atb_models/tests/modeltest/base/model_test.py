@@ -928,12 +928,13 @@ class ModelTest:
                         os.environ['ATB_LLM_LOGITS_SAVE_FOLDER'] = logits_save_folder
                         _, _, _ = self.pa_runner.infer(queries, self.batch_size, 1, False)
                         os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "0"
+                        time.sleep(0.01)
                         logits = torch.load(logits_save_folder + '/logits_0.pth')
                         logits_softmax = F.log_softmax(logits.float(), dim=-1)
                         greedy_tokens = logits_softmax.argmax(dim=-1)
                         if is_result:
                             for idx, ans in enumerate(batch['answer']):
-                                acc = self.pa_runner.tokenizer.decode(greedy_tokens[idx]) == ans
+                                acc = self.pa_runner.tokenizer.decode(greedy_tokens[idx]).lower() == ans
                                 if acc:
                                     correct += 1
                                 curnum += 1
