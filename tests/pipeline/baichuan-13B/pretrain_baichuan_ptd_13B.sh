@@ -10,10 +10,9 @@ NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
-CKPT_SAVE_DIR="your model save ckpt path"
-DATA_PATH="your data path"
-TOKENIZER_MODEL="your tokenizer model path"
-CKPT_LOAD_DIR="your model load ckpt path"
+DATA_PATH="/home/dataset/pretrain-dataset-baichuan-13B/alpaca_text_document"
+TOKENIZER_MODEL="/home/dataset/baichuan-13B-hf/tokenizer.model"
+CKPT_LOAD_DIR="/home/dataset/baichuan-13B-tp8-pp1"
 
 TP=8
 PP=1
@@ -43,7 +42,6 @@ GPT_ARGS="
     --global-batch-size 32 \
     --untie-embeddings-and-output-weights \
     --make-vocab-size-divisible-by 64 \
-    --finetune \
     --lr 1e-5 \
     --no-gradient-accumulation-fusion \
     --load ${CKPT_LOAD_DIR} \
@@ -75,8 +73,8 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 1000 \
-    --eval-interval 1000 \
+    --save-interval 10000 \
+    --eval-interval 10000 \
     --eval-iters 1 
 "
 
@@ -84,4 +82,4 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $GPT_ARGS \
     $DATA_ARGS \
     $OUTPUT_ARGS \
-    --distributed-backend nccl | tee baichuan13B-2000step.log
+    --distributed-backend nccl 2>&1 | tee new_baichuan13B.log

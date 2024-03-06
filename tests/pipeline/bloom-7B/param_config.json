@@ -53,7 +53,7 @@
 
     "TRAINING_PARAM": [
         "--data-path", "/home/dataset/pretrain-dataset-bloom/enwiki_100k_trans_text_document",
-        "--save", "/home/dataset/bloom-7b-ckpt",
+        "--save", "/home/dataset/save-weight-bloom-7B",
         "--apply-query-key-layer-scaling",
         "--seq-length", "2048",
         "--max-position-embeddings", "2048",
