@@ -31,9 +31,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation
        --padded-vocab-size 250880 \
        --embed-layernorm \
        --tokenizer-type PretrainedFromHF \
-       --tokenizer-model ${TOKENIZER_MODEL} \
        --tokenizer-name-or-path ${TOKENIZER_PATH} \
-       --vocab-file ${TOKENIZER_MODEL} \
        --seq-length 1024 \
        --max-position-embeddings 1024 \
        --micro-batch-size 1 \
@@ -44,7 +42,6 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation
        --hidden-dropout 0.0 \
        --position-embedding-type alibi \
        --normalization LayerNorm \
-       --use-flash-attn \
        --no-masked-softmax-fusion \
        --attention-softmax-in-fp32 \
        --weight-decay 1e-1 \
