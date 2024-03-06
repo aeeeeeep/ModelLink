@@ -123,7 +123,11 @@ function fn_run_single()
 
     if [ $? -ne 0 ]; then
         echo "something wrong marked for CI"
-        echo "performance test end marked for CI"
+        if [ "$test_modes" == "performance" ]; then
+            echo "performance test end marked for CI"
+        else
+            echo "precision test end marked for CI"
+        fi
     fi
 }
 

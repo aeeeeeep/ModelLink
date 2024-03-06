@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 #include "flash_attention_model.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 #include <atb/atb_infer.h>
 #include "atb_speed/log.h"
 #include "visualglm/6b/layer/flash_attention_layer.h"

@@ -17,7 +17,10 @@
 #define AQUILA_7B_PAGED_ATTENTION_LAYER_H
 
 #include <atb/atb_infer.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 
 #include "atb_speed/base/hosttensor_binder.h"
 #include "atb_speed/log.h"

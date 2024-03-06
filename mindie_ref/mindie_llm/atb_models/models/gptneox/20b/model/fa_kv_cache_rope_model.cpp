@@ -20,7 +20,10 @@
 #include "models/gptneox/20b/layer/embedding_layer.h"
 #include "models/gptneox/20b/layer/flashattention_kvcache_layer.h"
 #include "layers/parallel_layer_v2.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 #include "operations/lmhead.h"
 #include "atb_speed/utils/model_factory.h"
 #include "operations/lmhead.h"
@@ -218,12 +221,11 @@ int64_t FaKvCacheRopeModel::BuildGraph()
     atb_speed::common::LmHeadParam lmHeadParam;
     lmHeadParam.unpadInputs = !param_.isFA;
     lmHeadParam.gatherAhead = param_.isPrefill;
-    lmHeadParam.linearParallelParam.fusionLinearParam.quantType = false; // LmHead未接入量化
     if (param_.rankSize > 1) {
         lmHeadParam.linearParallelParam.parallelType = atb_speed::common::COLUMN_PARALLEL;
-        lmHeadParam.linearParallelParam.rank = param_.rank;
-        lmHeadParam.linearParallelParam.worldSize = param_.rankSize;
-        lmHeadParam.linearParallelParam.backend = param_.backend;
+        lmHeadParam.linearParallelParam.tensorParallelInfo.rank = param_.rank;
+        lmHeadParam.linearParallelParam.tensorParallelInfo.worldSize = param_.rankSize;
+        lmHeadParam.linearParallelParam.tensorParallelInfo.backend = param_.backend;
     }
     LmHead(lmHeadParam, &op);
     lmHeadNode.operation.reset(op);

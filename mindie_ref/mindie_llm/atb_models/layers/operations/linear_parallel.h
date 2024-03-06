@@ -29,15 +29,18 @@ enum LinearParallelType : uint32_t {
     COLUMN_PARALLEL,  // all gather
 };
 
+struct TensorParallelInfo {
+    int rank = 0;
+    int worldSize = 1;
+    std::string backend = "hccl";
+};
+
 struct LinearParallelParam {
     atb_speed::common::FusionLinearParam fusionLinearParam;
     int parallelType = UNDEFINED;
+    bool biasAfterSync = false;
     bool unpadInputs = false;  // all reduce时不会使用到此参数
-    int rank = 0;
-    int worldSize = 1;
-    int rankRoot = 0;
-    std::string backend = "hccl";
-    std::string rankTableFile = "";
+    TensorParallelInfo tensorParallelInfo;
 };
 
 atb::Status LinearParallel(const LinearParallelParam &param, atb::Operation **operation);

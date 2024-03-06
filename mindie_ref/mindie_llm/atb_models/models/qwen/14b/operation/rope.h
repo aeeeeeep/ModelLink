@@ -16,7 +16,10 @@
 #ifndef ATB_SPEED_MODELS_QWEN_14B_ROPE_H
 #define ATB_SPEED_MODELS_QWEN_14B_ROPE_H
 #include <atb/atb_infer.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 
 #include "atb_speed/log.h"
 #include "atb_speed/utils/str_split.h"

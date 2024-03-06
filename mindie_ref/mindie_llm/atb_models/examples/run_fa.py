@@ -132,6 +132,3 @@ if __name__ == '__main__':
     warm_up(model, batch_size, max_input_length, max_output_length, rank)
 
     infer(model, tokenizer, input_text, batch_size, max_input_length, max_output_length, rank)
-
-    if world_size > 1:
-        torch.distributed.destroy_process_group()

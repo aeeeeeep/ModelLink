@@ -16,7 +16,10 @@
 #include "parallel_layer.h"
 
 #include <atb/atb_infer.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 
 #include "atb_speed/log.h"
 
