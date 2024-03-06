@@ -9,7 +9,6 @@ import torch_npu
 import numpy as np
 import torch.distributed
 
-from loguru import logger
 from torch import nn
 from transformers.activations import ACT2FN
 from transformers.configuration_utils import PretrainedConfig
@@ -25,6 +24,8 @@ from atb_llm.utils.layers import (
     get_linear,
     AttentionMask,
 )
+from atb_llm.utils.log import logger
+
 
 # 模型入参个数
 INPUT_NUM = 10

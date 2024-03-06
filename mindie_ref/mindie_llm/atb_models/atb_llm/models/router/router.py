@@ -115,8 +115,7 @@ class LlamaRouter(BaseRouter):
 
     @property
     def config(self):
-        config = LlamaConfig.from_pretrained(self.model_name_or_path,
-                                             revision=self.revision)
+        config = LlamaConfig.from_pretrained(self.model_name_or_path)
         if self.max_position_embeddings:
             config.max_position_embeddings = self.max_position_embeddings
         return config
@@ -127,9 +126,7 @@ class StarcoderRouter(BaseRouter):
 
     @property
     def config(self):
-        config = StarcoderConfig.from_pretrained(self.model_name_or_path,
-                                                 revision=self.revision,
-                                                 trust_remote_code=self.trust_remote_code)
+        config = StarcoderConfig.from_pretrained(self.model_name_or_path)
         if self.max_position_embeddings:
             config.seq_length = self.max_position_embeddings
         return config
@@ -153,9 +150,7 @@ class BaichuanRouter(BaseRouter):
     @property
     def config(self):
         config_cls = self.get_config_cls()
-        config = config_cls.from_pretrained(self.model_name_or_path,
-                                            revision=self.revision,
-                                            trust_remote_code=self.trust_remote_code)
+        config = config_cls.from_pretrained(self.model_name_or_path)
         if self.max_position_embeddings:
             config.model_max_length = self.max_position_embeddings  # 13b
             config.max_position_embeddings = self.max_position_embeddings
@@ -189,9 +184,7 @@ class ChatglmRouter(BaseRouter):
     @property
     def config(self):
         config_cls = self.get_config_cls()
-        config = config_cls.from_pretrained(self.model_name_or_path,
-                                            revision=self.revision,
-                                            trust_remote_code=self.trust_remote_code)
+        config = config_cls.from_pretrained(self.model_name_or_path)
         if self.max_position_embeddings:
             config.seq_length = self.max_position_embeddings
         return config
@@ -211,11 +204,7 @@ class ChatglmRouter(BaseRouter):
 class QwenRouter(BaseRouter):
     @property
     def config(self):
-        return QWenConfig.from_pretrained(
-            self.model_name_or_path,
-            revision=self.revision,
-            trust_remote_code=self.trust_remote_code
-        )
+        return QWenConfig.from_pretrained(self.model_name_or_path)
 
     def get_tokenizer(self):
         return AutoTokenizer.from_pretrained(
@@ -241,9 +230,7 @@ class AquilaRouter(BaseRouter):
     @property
     def config(self):
         config_cls = self.get_config_cls()
-        config = config_cls.from_pretrained(self.model_name_or_path,
-                                            revision=self.revision,
-                                            trust_remote_code=True)
+        config = config_cls.from_pretrained(self.model_name_or_path)
         if self.max_position_embeddings:
             config.model_max_length = self.max_position_embeddings
         return config
@@ -261,9 +248,7 @@ class AquilaRouter(BaseRouter):
 class Gpt_neoxRouter(BaseRouter):
     @property
     def config(self):
-        config = GPTNeoXConfig.from_pretrained(self.model_name_or_path,
-                                               revision=self.revision,
-                                               trust_remote_code=self.trust_remote_code)
+        config = GPTNeoXConfig.from_pretrained(self.model_name_or_path)
         if self.max_position_embeddings:
             config.model_max_length = self.max_position_embeddings
         return config
@@ -290,10 +275,7 @@ class InternlmRouter(BaseRouter):
 
     @property
     def config(self):
-        config = InternLMConfig.from_pretrained(
-            self.model_name_or_path,
-            revision=self.revision,
-            trust_remote_code=self.trust_remote_code)
+        config = InternLMConfig.from_pretrained(self.model_name_or_path)
         if self.max_position_embeddings:
             config.max_position_embeddings = self.max_position_embeddings
         return config
