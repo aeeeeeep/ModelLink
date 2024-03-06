@@ -280,7 +280,7 @@ class Gpt_neoxRouter(BaseRouter):
 
 
 @dataclass
-class InternLMRouter(BaseRouter):
+class InternlmRouter(BaseRouter):
 
     @property
     def model_version(self):
