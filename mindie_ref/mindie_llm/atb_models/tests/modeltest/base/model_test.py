@@ -18,6 +18,7 @@ from datetime import datetime, timedelta, timezone
 from importlib import reload
 from pathlib import Path
 import torch
+import torch.nn.functional as F
 try:
     import torch_npu
 except ModuleNotFoundError:
@@ -494,7 +495,7 @@ class ModelTest:
                     for idx in range(len(outputs)):
                         output = outputs.tolist()[idx][len(tokenizer_out["input_ids"][idx]):]
                         response = self.tokenizer.decode(output)
-                        if torch.distributed.get_rank() == 0:
+                        if self.pa_runner.rank == 0:
                             self.logger.info(response)
                 else:
                     req_list = [
@@ -522,7 +523,7 @@ class ModelTest:
         sum_total = 0
         result_total = []
         is_result = False
-        if torch.distributed.get_rank() == 0:
+        if self.pa_runner.rank == 0:
             is_result = True
         with torch.no_grad():
             for entry in glob.glob((Path(self.dataset_path) / "val/**/*.jsonl").as_posix(),
@@ -633,7 +634,7 @@ class ModelTest:
         sum_total = 0
         result_total = []
         is_result = False
-        if torch.distributed.get_rank() == 0:
+        if self.pa_runner.rank == 0:
             is_result = True
         with torch.no_grad():
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.csv").as_posix(),
@@ -722,7 +723,7 @@ class ModelTest:
         sum_total = 0
         result_total = []
         is_result = False
-        if torch.distributed.get_rank() == 0:
+        if self.pa_runner.rank == 0:
             is_result = True
         with torch.no_grad():
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.jsonl").as_posix(),
@@ -848,7 +849,7 @@ class ModelTest:
         device = self.model.device
         result_total = []
         is_result = False
-        if torch.distributed.get_rank() == 0:
+        if self.pa_runner.rank == 0:
             is_result = True
         with torch.no_grad():
             frame = pd.read_csv((Path(self.dataset_path) / "TruthfulQA.csv").as_posix())
@@ -875,23 +876,15 @@ class ModelTest:
             self.__save_result(result_total)
 
     def __run_full_dataset_boolq(self):
-        def build_prompt(text, passage):
-            prompt = "The following is a true or false question. Please judge the \"question\" based on the \"passage\". The answer should only provide \"true\" or \"false\".\n"
-            prompt = prompt + f"passage:{passage}\nquestion:{text}?\nAnswer:"
-            prompt = f"{passage}\nQuestion: {text}?\nAnswer:"
+        def build_prompt(title, text, passage):
+            prompt = f"{title} -- {passage}\nQuestion: {text}?\nAnswer:"
             return prompt
-
-        def is_correct(completion, answer):
-            first_word = re.split(r'[^a-zA-Z]', completion)[0]
-            if first_word == answer:
-                return True
-            return False
 
         correct_total = 0
         sum_total = 0
         result_total = []
         is_result = False
-        if torch.distributed.get_rank() == 0:
+        if self.pa_runner.rank == 0:
             is_result = True
         with torch.no_grad():
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.jsonl").as_posix(),
@@ -901,9 +894,9 @@ class ModelTest:
                     for line in f:
                         line_json = json.loads(line)
                         if line_json['answer'] == True:
-                            line_json['answer'] = 'True'
+                            line_json['answer'] = 'yes'
                         elif line_json['answer'] == False:
-                            line_json['answer'] = 'False'
+                            line_json['answer'] = 'no'
                         dataset.append(line_json)
 
                 curnum = 0
@@ -911,9 +904,10 @@ class ModelTest:
                 sum = len(dataset)
                 dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size)
                 for batch in tqdm(dataloader):
+                    titles = batch["title"]
                     texts = batch["question"]
                     passages = batch["passage"]
-                    queries = [build_prompt(query, passage) for query, passage in zip(texts, passages)]
+                    queries = [build_prompt(title, query, passage) for title, query, passage in zip(titles, texts, passages)]
                     if self.model_type == "fa":
                         inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
                                                 max_length=2048).to(self.model.device)
@@ -929,11 +923,18 @@ class ModelTest:
                                 if acc:
                                     correct += 1
                     else:
-                        generate_text_list, _, _ = self.pa_runner.infer(queries, self.batch_size, 512, True)
+                        logits_save_folder = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}")
+                        os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "1"
+                        os.environ['ATB_LLM_LOGITS_SAVE_FOLDER'] = logits_save_folder
+                        _, _, _ = self.pa_runner.infer(queries, self.batch_size, 1, False)
+                        os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "0"
+                        time.sleep(0.01)
+                        logits = torch.load(os.path.join(logits_save_folder, 'logits_0.pth'))
+                        logits_softmax = F.log_softmax(logits.float(), dim=-1)
+                        greedy_tokens = logits_softmax.argmax(dim=-1)
                         if is_result:
                             for idx, ans in enumerate(batch['answer']):
-                                response = generate_text_list[idx]
-                                acc = is_correct(response, ans)
+                                acc = self.pa_runner.tokenizer.decode(greedy_tokens[idx]).lower() == ans
                                 if acc:
                                     correct += 1
                                 curnum += 1
@@ -959,7 +960,7 @@ class ModelTest:
             return text.replace("\t", "    ")
 
         is_result = False
-        if torch.distributed.get_rank() == 0:
+        if self.pa_runner.rank == 0:
             is_result = True
         with torch.no_grad():
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.jsonl").as_posix(),
@@ -1010,7 +1011,7 @@ class ModelTest:
             self.result_logger.debug(results)
 
     def __compare_results(self):
-        if self.test_mode != "performance" and self.hardware_type == "NPU" and torch.distributed.get_rank() == 0:
+        if self.test_mode != "performance" and self.hardware_type == "NPU" and self.pa_runner.rank == 0:
             if self.test_mode == "simplified":
                 self.__compare_simplified_dataset_results()
             elif self.test_mode == "full":
