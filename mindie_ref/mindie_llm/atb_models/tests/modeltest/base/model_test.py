@@ -495,7 +495,7 @@ class ModelTest:
                     for idx in range(len(outputs)):
                         output = outputs.tolist()[idx][len(tokenizer_out["input_ids"][idx]):]
                         response = self.tokenizer.decode(output)
-                        if torch.distributed.get_rank() == 0:
+                        if self.pa_runner.rank == 0:
                             self.logger.info(response)
                 else:
                     req_list = [
@@ -523,7 +523,7 @@ class ModelTest:
         sum_total = 0
         result_total = []
         is_result = False
-        if torch.distributed.get_rank() == 0:
+        if self.pa_runner.rank == 0:
             is_result = True
         with torch.no_grad():
             for entry in glob.glob((Path(self.dataset_path) / "val/**/*.jsonl").as_posix(),
@@ -634,7 +634,7 @@ class ModelTest:
         sum_total = 0
         result_total = []
         is_result = False
-        if torch.distributed.get_rank() == 0:
+        if self.pa_runner.rank == 0:
             is_result = True
         with torch.no_grad():
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.csv").as_posix(),
@@ -723,7 +723,7 @@ class ModelTest:
         sum_total = 0
         result_total = []
         is_result = False
-        if torch.distributed.get_rank() == 0:
+        if self.pa_runner.rank == 0:
             is_result = True
         with torch.no_grad():
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.jsonl").as_posix(),
@@ -849,7 +849,7 @@ class ModelTest:
         device = self.model.device
         result_total = []
         is_result = False
-        if torch.distributed.get_rank() == 0:
+        if self.pa_runner.rank == 0:
             is_result = True
         with torch.no_grad():
             frame = pd.read_csv((Path(self.dataset_path) / "TruthfulQA.csv").as_posix())
@@ -884,7 +884,7 @@ class ModelTest:
         sum_total = 0
         result_total = []
         is_result = False
-        if torch.distributed.get_rank() == 0:
+        if self.pa_runner.rank == 0:
             is_result = True
         with torch.no_grad():
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.jsonl").as_posix(),
@@ -929,7 +929,7 @@ class ModelTest:
                         _, _, _ = self.pa_runner.infer(queries, self.batch_size, 1, False)
                         os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "0"
                         time.sleep(0.01)
-                        logits = torch.load(logits_save_folder + '/logits_0.pth')
+                        logits = torch.load(os.path.join(logits_save_folder, 'logits_0.pth'))
                         logits_softmax = F.log_softmax(logits.float(), dim=-1)
                         greedy_tokens = logits_softmax.argmax(dim=-1)
                         if is_result:
@@ -960,7 +960,7 @@ class ModelTest:
             return text.replace("\t", "    ")
 
         is_result = False
-        if torch.distributed.get_rank() == 0:
+        if self.pa_runner.rank == 0:
             is_result = True
         with torch.no_grad():
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.jsonl").as_posix(),
@@ -1011,7 +1011,7 @@ class ModelTest:
             self.result_logger.debug(results)
 
     def __compare_results(self):
-        if self.test_mode != "performance" and self.hardware_type == "NPU" and torch.distributed.get_rank() == 0:
+        if self.test_mode != "performance" and self.hardware_type == "NPU" and self.pa_runner.rank == 0:
             if self.test_mode == "simplified":
                 self.__compare_simplified_dataset_results()
             elif self.test_mode == "full":
