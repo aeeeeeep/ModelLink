@@ -12,10 +12,8 @@ def get_model(model_name_or_path: str,
               trust_remote_code: bool = True,
               use_refactor: bool = False,
               ):
-    config = PretrainedConfig.from_pretrained(model_name_or_path,
-                                              revision=revision,
-                                              trust_remote_code=trust_remote_code)
-    router_cls = getattr(router, f"{config.model_type.capitalize()}Router")
+    config_dict, kwargs = PretrainedConfig.get_config_dict(model_name_or_path)
+    router_cls = getattr(router, f"{config_dict['model_type'].capitalize()}Router")
     router_ins = router_cls(
         model_name_or_path,
         max_position_embeddings,
@@ -23,7 +21,7 @@ def get_model(model_name_or_path: str,
         revision,
         trust_remote_code,
         use_refactor,
-        config)
+        config_dict)
     config = router_ins.config
     if not hasattr(config, 'quantize'):
         setattr(config, 'quantize', None)

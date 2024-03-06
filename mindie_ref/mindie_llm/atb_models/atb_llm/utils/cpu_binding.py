@@ -1,12 +1,23 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 import os
 from dataclasses import dataclass
+import subprocess
 from typing import List, Dict, Union
 
 import psutil
 
 from .env import ENV
 from .log import logger
+
+
+def execute_command(cmd_list):
+    with subprocess.Popen(cmd_list,
+                          shell=False,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE) as p:
+        out, err = p.communicate(timeout=5)
+    res = out.decode()
+    return res
 
 
 @dataclass
@@ -52,8 +63,7 @@ class NpuHbmInfo:
         if not cls.visible_npu_ids:
             cls.set_visible_devices(world_size)
         npu_id = cls.visible_npu_ids[rank]
-        with os.popen(f"npu-smi info -i {npu_id} -t memory") as r:
-            memory_info = r.read().strip().split("\n")[1:]
+        memory_info = execute_command(["npu-smi", "info", "-i", f"{npu_id}", "-t", "memory"]).split("\n")[1:]
         if not need_nz:
             hbm_capacity_key = 'HBM Capacity(MB)'
         else:
@@ -75,8 +85,7 @@ class NpuHbmInfo:
         if not cls.visible_npu_ids:
             cls.set_visible_devices(world_size)
         npu_id = cls.visible_npu_ids[rank]
-        with os.popen(f"npu-smi info -i {npu_id} -t usages") as r:
-            usage_info = r.read().strip().split("\n")[1:]
+        usage_info = execute_command(["npu-smi", "info", "-i", f"{npu_id}", "-t", "usages"]).split("\n")[1:]
         if not need_nz:
             hbm_capacity_key = 'HBM Usage Rate(%)'
         else:
@@ -94,8 +103,7 @@ class NpuHbmInfo:
 
 def _get_device_map_info() -> Dict[int, DeviceInfo]:
     device_map_info = {}
-    with os.popen(f"npu-smi info -t board -m") as r:
-        device_map = r.read().strip().split("\n")[1:]
+    device_map = execute_command([f"npu-smi", "info", "-t", "board", "-m"]).strip().split("\n")[1:]
     for line in device_map:
         device_info = DeviceInfo(line.strip())
         if isinstance(device_info.chip_logic_id, int):
@@ -110,10 +118,8 @@ def _get_pcie_info(devices: List[int], keyword="PCIeBusInfo"):
         device_info = device_map_info.get(device)
         if not device_info:
             raise RuntimeError("Can not get device info, you can use BIND_CPU=0 to skip.")
-        with os.popen(
-                f"npu-smi info -t board -i {device_info.npu_id} -c {device_info.chip_id}"
-        ) as r:
-            pcie_info = r.read().strip().split("\n")
+        pcie_info = execute_command(["npu-smi", "info", "-t", "board", "-i", f"{device_info.npu_id}",
+                                     "-c", f"{device_info.chip_id}"]).strip().split("\n")
         for _ in pcie_info:
             line = ''.join(_.split())  # 此处是因为310P的关键字是 PCIe Bus Info 910是 PCIeBusInfo，故去掉空格以此兼容
             if line.startswith(keyword):
@@ -128,8 +134,7 @@ def _get_numa_info(pcie_tbl, keyword="NUMAnode"):
     numa_devices_tbl = dict()  # key is numa id, value is device id list
 
     for device, pcie_no in pcie_tbl.items():
-        with os.popen(f"lspci -s {pcie_no} -vvv") as r:
-            numa_info = r.read().strip().split("\n")
+        numa_info = execute_command(["lspci", "-s", f"{pcie_no}", "-vvv"]).split("\n")
         for _ in numa_info:
             line = ''.join(_.split())
             if line.startswith(keyword):
@@ -149,8 +154,7 @@ def _get_numa_info(pcie_tbl, keyword="NUMAnode"):
 def _get_cpu_info(numa_ids, keyword1="NUMAnode", keyword2="CPU(s)"):
     cpu_idx_tbl = dict()
     numa_keywords = [keyword1 + str(idx) + keyword2 for idx in numa_ids]
-    with os.popen(f"lscpu") as r:
-        cpu_info = r.read().strip().split("\n")
+    cpu_info = execute_command(["lscpu"]).split("\n")
     for _ in cpu_info:
         line = ''.join(_.split())
         if any(line.startswith(word) for word in numa_keywords):
