@@ -216,7 +216,7 @@ class WeightWrapper:
         self.weights.append(model_dict[f'{norm_name}.weight'])
 
     def register_model_lmhead(self, model_dict, lmhead_name):
-        self.weights.append(model_dict[f'{lmhead_name}.linear.weight'])
+        self.weights.append(self.weight_format_cast(model_dict[f'{lmhead_name}.linear.weight']))
     
     def register_layer(self, layer_dict, attn_pack_type, mlp_pack_type, quantize_type):
         self.layer_linear_type.clear()
