@@ -120,7 +120,7 @@ class PARunner:
         print_log(self.rank, logger.info, f'warmup_memory(GB): {self.warm_up_memory / (1024 ** 3): .2f}')
         print_log(self.rank, logger.info, "---------------end warm_up---------------")
 
-    def infer(self, input_texts, batch_size, max_output_length, ignore_eos, input_ids=None):
+    def infer(self, input_texts, batch_size, max_output_length, ignore_eos, temperature, top_k, top_p, min_tokens_to_keep, input_ids=None):
         print_log(self.rank, logger.info, "---------------begin inference---------------")
         if input_ids:
             if len(input_ids) == 1:
@@ -137,6 +137,7 @@ class PARunner:
             else:
                 req_list = [request_from_text(input_text, self.tokenizer, max_output_length, self.block_size, req_idx=i) \
                             for i, input_text in enumerate(input_texts)]
+
         print_log(self.rank, logger.debug, f'req_list[0].input_ids: {req_list[0].input_ids}')
 
         if not self.cache_manager:
@@ -161,14 +162,14 @@ class PARunner:
         if ENV.benchmark_enable:
             req_list_dummy = copy.deepcopy(req_list)
             generate_req(req_list_dummy, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                         2, self.cache_manager, self.rank, ignore_eos)
+                         2, self.cache_manager, self.rank, ignore_eos, temperature, top_k, top_p, min_tokens_to_keep)
 
         if not ENV.profiling_enable:
             print_log(self.rank, logger.debug, "no profiling")
             torch.npu.synchronize()
             e2e_start = time.time()
             generate_req(req_list, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                         max_output_length, self.cache_manager, self.rank, ignore_eos)
+                         max_output_length, self.cache_manager, self.rank, ignore_eos, temperature, top_k, top_p, min_tokens_to_keep)
             _, _ = decode_token(req_list, self.tokenizer)
             torch.npu.synchronize()
             e2e_end = time.time()
@@ -183,7 +184,7 @@ class PARunner:
             e2e_start = time.time()
             with torch.npu.profile(profiling_path):
                 generate_req(req_list, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                             max_output_length, self.cache_manager, self.rank, ignore_eos)
+                             max_output_length, self.cache_manager, self.rank, ignore_eos, temperature, top_k, top_p, min_tokens_to_keep)
             torch.npu.synchronize()
             e2e_end = time.time()
             e2e_time = e2e_end - e2e_start
@@ -220,7 +221,7 @@ def parse_arguments():
         default=None)
     parser.add_argument('--max_position_embeddings', type=int, default=None)
     parser.add_argument('--max_input_length', type=int, default=1024)
-    parser.add_argument('--max_output_length', type=int, default=20)
+    parser.add_argument('--max_output_length', type=int, default=200)
     parser.add_argument('--max_prefill_tokens', type=int, default=-1)
     parser.add_argument("--max_batch_size", type=int, default=1)
     parser.add_argument("--block_size", type=int, default=128)
@@ -232,8 +233,9 @@ def parse_arguments():
                         help="Use beam search if num_beams >1",
                         default=1)
     parser.add_argument('--temperature', type=float, default=1.0)
-    parser.add_argument('--top_k', type=int, default=1)
-    parser.add_argument('--top_p', type=float, default=0.0)
+    parser.add_argument('--top_k', type=int, default=3)
+    parser.add_argument('--top_p', type=float, default=0.9)
+    parser.add_argument('--min_tokens_to_keep', type=int, default=1)
     parser.add_argument('--length_penalty', type=float, default=1.0)
     parser.add_argument('--repetition_penalty', type=float, default=1.0)
     parser.add_argument('--presence_penalty', type=float, default=0.0)
@@ -260,7 +262,7 @@ if __name__ == '__main__':
     pa_runner.warm_up()
 
     generate_texts, token_nums, _ = pa_runner.infer(args.input_texts, args.max_batch_size, args.max_output_length,
-                                                    args.ignore_eos, args.input_ids)
+                                                    args.ignore_eos, args.temperature, args.top_k, args.top_p, args.min_tokens_to_keep, args.input_ids)
 
     for i, generate_text in enumerate(generate_texts):
         length = len(args.input_ids) if args.input_ids else len(args.input_texts)
