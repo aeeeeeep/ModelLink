@@ -72,7 +72,7 @@ def nd2nz(model):
                     # eliminate TransData op before lm_head calculation
                     module.weight = torch.nn.parameter.Parameter(module.weight.data)
                 module.weight.data = torch_npu.npu_format_cast(
-                    module.weight.data.transpose(0, 1).contiguous(), 29
+                    module.weight.data, 29
                 )
 
     for name, module in model.named_modules():
