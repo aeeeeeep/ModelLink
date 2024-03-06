@@ -17,9 +17,9 @@ class TestLora(DistributedTest):
     world_size = 8
 
     def init(self, config=ParamConfig):
-        sys.argv = [sys.argv[0]] + ParamConfig.network_size + ParamConfig.tokenizer_param \
-                   + ParamConfig.auxiliary_param + ParamConfig.lora_param + ParamConfig.regularization \
-                   + ParamConfig.learning_rate_param + ParamConfig.training_aux + ParamConfig.distributed_param
+        sys.argv = [sys.argv[0]] + config.network_size + config.tokenizer_param \
+                   + config.auxiliary_param + config.lora_param + config.regularization \
+                   + config.learning_rate_param + config.training_aux + config.distributed_param
         from megatron.initialize import initialize_megatron
         os.environ.update({"CUDA_DEVICE_MAX_CONNECTIONS": "1"})
         initialize_megatron(extra_args_provider=None,

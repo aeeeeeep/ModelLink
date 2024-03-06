@@ -43,7 +43,7 @@ torchrun $DISTRIBUTED_ARGS ./tasks/evaluation/evaluation_llama.py   \
        --tokenizer-type PretrainedFromHF  \
        --tokenizer-name-or-path ${TOKENIZER_PATH} \
        --tokenizer-not-use-fast \
-       --bp16  \
+       --bf16  \
        --micro-batch-size 1  \
        --exit-on-missing-checkpoint \
        --no-load-rng \

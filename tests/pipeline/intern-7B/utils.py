@@ -35,7 +35,8 @@ class ParamConfig:
     auxiliary_param = config_file["AUXILIARY_PARAM"]
     process_pretrain_data = config_file["PROCESS_PRETRAIN_DATA"]
     inference_aux = config_file["INFERENCE_AUX"]
-    
+    convert_ckpt_param = config_file["CONVERT_CKPT_PARAM"]
+
     
 def assert_judge(expression):
     if not expression:

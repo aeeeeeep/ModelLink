@@ -1,20 +1,22 @@
 # Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+import sys
 import time
+import shutil
 import logging
 import subprocess
- 
+
 import torch
 from torch import distributed as dist
 
 logging.basicConfig(format="")
 logging.getLogger().setLevel(logging.INFO)
- 
- 
+
+
 def add_text_generate_args(parser):
     group = parser.add_argument_group(title='text generation')
     group.add_argument("--task",
                        nargs='*',
-                       default=[1, 2, 3, 4, 5, 6], help='The task id to run.')
+                       default=None, help='The task id to run.')
     group.add_argument("--top-p", type=float, default=0.95, help='Top p sampling.')
     group.add_argument("--top-k", type=int, default=50, help='Top k sampling.')
     group.add_argument("--temperature", type=float, default=0.7, help='Sampling temperature.')
@@ -23,11 +25,52 @@ def add_text_generate_args(parser):
     return parser
 
 
+def print_flush(prev_str, curr_str):
+    difference = ''.join([char2 for char1, char2 in zip(prev_str, curr_str) if char1 != char2])
+
+    if len(prev_str) < len(curr_str):
+        difference += curr_str[len(prev_str):]
+
+    sys.stdout.write(difference)
+
+
+def task_factory(args, model, tokenizer=None, system_template="", dialog_template="{instruction}"):
+    task_map = {
+        "greedy": task_greedy_search,
+        "do_sample": task_do_sample,
+        "beam_search": task_beam_search,
+        "beam_search_with_sampling": task_beam_search_with_sampling,
+        "return_output_log_probs": task_return_output_log_probs,
+        "chat": task_chat,
+    }
+
+    total_tasks = args.task
+
+    if total_tasks is None:
+        total_tasks = [
+            "greedy",
+            "do_sample",
+            "beam_search",
+            "beam_search_with_sampling",
+            "return_output_log_probs",
+            "chat"
+        ]
+
+    for task in total_tasks:
+        if task not in task_map.keys():
+            raise ValueError("Task name incorrect.")
+
+        task_map.get(task)(
+            args,
+            model,
+            tokenizer,
+            system_template=system_template,
+            dialog_template=dialog_template
+        )
+
+
 def task_greedy_search(args, model, tokenizer=None, system_template="", dialog_template="{instruction}"):
     """Greedy Search"""
-    if 1 not in list(map(int, args.task)):
-        return
-
     prompt = "how are you?"
     template = system_template + dialog_template
     instruction = template.format(instruction=prompt)
@@ -51,9 +94,6 @@ def task_greedy_search(args, model, tokenizer=None, system_template="", dialog_t
 
 def task_do_sample(args, model, tokenizer=None, system_template="", dialog_template="{instruction}"):
     """Do Sample"""
-    if 2 not in list(map(int, args.task)):
-        return
-
     prompt = "how are you?"
     template = system_template + dialog_template
     instruction = template.format(instruction=prompt)
@@ -80,9 +120,6 @@ def task_do_sample(args, model, tokenizer=None, system_template="", dialog_templ
 
 def task_beam_search(args, model, tokenizer=None, system_template="", dialog_template="{instruction}"):
     """Beam Search"""
-    if 3 not in list(map(int, args.task)):
-        return
-
     prompt = "how are you?"
     template = system_template + dialog_template
     instruction = template.format(instruction=prompt)
@@ -109,9 +146,6 @@ def task_beam_search(args, model, tokenizer=None, system_template="", dialog_tem
 
 def task_beam_search_with_sampling(args, model, tokenizer=None, system_template="", dialog_template="{instruction}"):
     """Beam Search with sampling"""
-    if 4 not in list(map(int, args.task)):
-        return
-
     prompt = "how are you?"
     template = system_template + dialog_template
     instruction = template.format(instruction=prompt)
@@ -139,9 +173,6 @@ def task_beam_search_with_sampling(args, model, tokenizer=None, system_template=
 
 def task_return_output_log_probs(args, model, tokenizer=None, system_template="", dialog_template="{instruction}"):
     """Returns the probability distribution of tokens"""
-    if 5 not in list(map(int, args.task)):
-        return
-
     prompt = "how are you?"
     template = system_template + dialog_template
     instruction = template.format(instruction=prompt)
@@ -187,8 +218,6 @@ def task_return_output_log_probs(args, model, tokenizer=None, system_template=""
 
 def task_chat(args, model, tokenizer=None, system_template="", dialog_template="{instruction}"):
     """Interactive dialog mode with multiple rounds of conversation"""
-    if 6 not in list(map(int, args.task)):
-        return
 
     def get_context(content):
         res = system_template
@@ -200,32 +229,30 @@ def task_chat(args, model, tokenizer=None, system_template="", dialog_template="
         return res
 
     histories = []
+    columns, rows = shutil.get_terminal_size()
     output, prompt, instruction = "", "", ""
-    input_template, response_template = "You >> ", "ModelLink:"
+    input_template, response_template = "\n\nYou >> ", "\nModelLink:\n"
     command_clear = ["clear"]
-    command_back = ["tput", "cup", "4", "0"]
     while True:
         terminate_runs = torch.zeros(1, dtype=torch.int64, device=torch.cuda.current_device())
 
         if dist.get_rank() == 0:
             if not histories:
-                subprocess.call(command_clear)
                 logging.info("===========================================================")
                 logging.info("1. If you want to quit, please entry one of [q, quit, exit]")
                 logging.info("2. To create new title, please entry one of [clear, new]")
-                logging.info("===========================================================\n")
+                logging.info("===========================================================")
 
             prompt = input(input_template)
-            sanitized_prompt = prompt.strip()
-            if sanitized_prompt in ["q", "exit", "quit"]:
+            if prompt.strip() in ["q", "exit", "quit"]:
                 terminate_runs += 1
 
-            if sanitized_prompt in ["clear", "new"]:
+            if prompt.strip() in ["clear", "new"]:
                 subprocess.call(command_clear)
                 histories = []
                 continue
 
-            if not sanitized_prompt:
+            if not prompt.strip():
                 continue
 
             histories.append((prompt, None))
@@ -247,13 +274,14 @@ def task_chat(args, model, tokenizer=None, system_template="", dialog_template="
             stream=True
         )
 
-        context = "\n"
-        for q, r in histories:
-            context += f"{input_template}{q}\n\n{response_template}\n{r}\n\n"
+        if dist.get_rank() == 0:
+            sys.stdout.write(response_template)
 
+        prev = ""
         for output in responses:
             if dist.get_rank() == 0:
-                subprocess.call(command_back)
-                logging.info("%s\n\n%s\n%s\n", context, response_template, output)
+                curr = output.replace("�", "")
+                print_flush(prev, curr)
+                prev = curr
 
         histories.append((prompt, output))

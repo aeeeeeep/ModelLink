@@ -31,7 +31,6 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference
     --load ${CHECKPOINT} \
     --num-attention-heads 32 \
     --tokenizer-type PretrainedFromHF \
-    --tokenizer-model ${TOKENIZER_MODEL} \
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
     --vocab-file ${TOKENIZER_MODEL} \
     --seq-length 2048 \
