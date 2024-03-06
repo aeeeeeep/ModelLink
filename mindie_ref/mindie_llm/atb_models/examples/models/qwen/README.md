@@ -34,6 +34,11 @@ bash examples/models/qwen/run_pa.sh -m ${weight_path}
 
 根据硬件设备不同请参考下表修改run_pa.sh再运行
 
+注：启动qwen需要安装三方依赖tiktoken，若环境中没有该依赖可使用以下命令安装：
+```shell
+pip install tiktoken
+```
+
 ### run_pa.sh 参数说明
 
 | 参数名称                      | 含义                    | 800I A2推荐值 | 300I DUO推荐值 |
