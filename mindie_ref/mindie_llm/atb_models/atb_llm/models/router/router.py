@@ -9,6 +9,7 @@ from ..llama.modeling_llama import LlamaConfig
 from ..qwen.config import QWenConfig
 from ..starcoder.flash_causal_starcoder import StarcoderConfig
 from ..gpt_neox.config import GPTNeoXConfig
+from ..internlm.configuration_internlm import InternLMConfig
 
 
 @dataclass
@@ -260,7 +261,6 @@ class AquilaRouter(BaseRouter):
 
 @dataclass
 class Gpt_neoxRouter(BaseRouter):
-
     @property
     def config(self):
         config = GPTNeoXConfig.from_pretrained(self.model_name_or_path,
@@ -276,4 +276,35 @@ class Gpt_neoxRouter(BaseRouter):
             truncation_side="left",
             padding_side="left",
             trust_remote_code=True,
+        )
+
+
+@dataclass
+class InternlmRouter(BaseRouter):
+
+    @property
+    def model_version(self):
+        """
+        次级模型名称
+        :return:
+        """
+        return "20b"
+
+    @property
+    def config(self):
+        config = InternLMConfig.from_pretrained(
+            self.model_name_or_path,
+            revision=self.revision,
+            trust_remote_code=self.trust_remote_code)
+        if self.max_position_embeddings:
+            config.max_position_embeddings = self.max_position_embeddings
+        return config
+
+    def get_tokenizer(self):
+        return AutoTokenizer.from_pretrained(
+            self.model_name_or_path,
+            revision=self.revision,
+            padding_side="left",
+            trust_remote_code=self.trust_remote_code,
+            use_fast=False
         )

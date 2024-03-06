@@ -2,7 +2,6 @@
 # 参数配置以及启动指令的说明见同级目录下的README.md文件
 export BIND_CPU=1
 export IS_QUANT=0
-export MAX_MEMORY_GB=15
 export ASCEND_RT_VISIBLE_DEVICES=0,1
 export TP_WORLD_SIZE=2
 export MASTER_PORT=20030
