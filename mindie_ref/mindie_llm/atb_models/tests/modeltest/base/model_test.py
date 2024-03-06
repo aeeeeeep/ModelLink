@@ -959,6 +959,23 @@ class ModelTest:
         def fix_indents(text: str) -> str:
             return text.replace("\t", "    ")
 
+        def cleanup_code(code: str) -> str:
+            code_splits = code.split("\n")
+            is_empty_line = False
+            ind_empty_line = None
+            for i, line in enumerate(code_splits):
+                if len(line.strip()) > 0 and line[0] != ' ' and line[0] != '\t':
+                    is_empty_line = True                    
+                    ind_empty_line = i                    
+                    break            
+            if is_empty_line:
+                code = "\n".join(code_splits[:ind_empty_line])
+            else:
+                end_words = ["\ndef", "\nclass", "\n#", "\nassert", '\n"""', "\nprint", "\nif", "\n\n\n"]
+                for w in end_words:
+                    if w in code:
+                        code = code[:code.rfind(w)]
+
         is_result = False
         if self.pa_runner.rank == 0:
             is_result = True
@@ -994,7 +1011,8 @@ class ModelTest:
                     else:
                         generate_text_list, _, _ = self.pa_runner.infer(queries, self.batch_size, 512, True)
 
-                        generate_text_list = [filter_code(fix_indents(completion)) for completion in generate_text_list]
+                        # generate_text_list = [filter_code(fix_indents(completion)) for completion in generate_text_list]
+                        generate_text_list = [cleanup_code(completion) for completion in generate_text_list]
                         if is_result:
                             print("generate_text_list_1: ", generate_text_list)
                         for sample in generate_text_list:
