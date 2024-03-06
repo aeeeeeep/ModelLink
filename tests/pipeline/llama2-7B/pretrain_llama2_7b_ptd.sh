@@ -5,15 +5,13 @@ export NPU_ASD_ENABLE=0
 
 GPUS_PER_NODE=8
 MASTER_ADDR=localhost
-MASTER_PORT=6001
+MASTER_PORT=6000
 NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
-CKPT_SAVE_DIR="your model save ckpt path"
-DATA_PATH="your data path"
-TOKENIZER_MODEL="your tokenizer path"
-CKPT_LOAD_DIR="your model directory path"
+DATA_PATH=/home/dataset/pretrain-dataset-llama2-7B/alpaca_text_document
+TOKENIZER_MODEL=/home/dataset/llama2-7B/tokenizer.model
 TP=8
 PP=1
 
@@ -35,30 +33,24 @@ GPT_ARGS="
     --num-attention-heads 32 \
     --tokenizer-type Llama2Tokenizer \
     --tokenizer-model ${TOKENIZER_MODEL} \
-    --load ${CKPT_LOAD_DIR} \
-    --add-qkv-bias \
-    --add-dense-bias \
-    --skip-bias-add \
-    --disable-bias-linear \
-    --seq-length 2048 \
-    --max-position-embeddings 2048 \
-    --micro-batch-size 8 \
-    --global-batch-size 64 \
-    --make-vocab-size-divisible-by 32 \
+    --seq-length 4096 \
+    --max-position-embeddings 4096 \
+    --micro-batch-size 4 \
+    --global-batch-size 16 \
+    --make-vocab-size-divisible-by 1 \
     --lr 1.25e-6 \
-    --train-iters 5000 \
+    --train-iters 2000 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
+    --disable-bias-linear \
     --attention-dropout 0.0 \
     --init-method-std 0.01 \
     --hidden-dropout 0.0 \
     --position-embedding-type rope \
     --normalization RMSNorm \
     --use-fused-rmsnorm \
-    --use-flash-attn \
-    --use-fused-rotary-pos-emb \
-    --use-rotary-position-embeddings \
     --swiglu \
+    --use-flash-attn \
     --no-masked-softmax-fusion \
     --attention-softmax-in-fp32 \
     --min-lr 1.25e-7 \
@@ -81,14 +73,13 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 50000 \
-    --eval-interval 1000 \
-    --eval-iters 10 \
+    --save-interval 10000 \
+    --eval-interval 5000 \
+    --eval-iters 0 \
 "
 
 torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $GPT_ARGS \
     $DATA_ARGS \
     $OUTPUT_ARGS \
-    --distributed-backend nccl \
-    --save ${CKPT_SAVE_DIR} | tee train_internlm_7b.log
+    --distributed-backend nccl 2>&1 | tee /home/dataset/new_llama2-7B.log
