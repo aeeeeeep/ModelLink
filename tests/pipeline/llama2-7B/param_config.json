@@ -106,7 +106,7 @@
         "--input", "/home/dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet",
         "--tokenizer-type", "PretrainedFromHF",
         "--output-prefix", "/home/dataset/pretrain-dataset-llama2-7B/alpaca",
-        "--tokenizer-name-or-path", "./llama2-7B",
+        "--tokenizer-name-or-path", "/home/dataset/llama2-7B",
         "--workers", "4",
         "--log-interval", "1000"
     ],
