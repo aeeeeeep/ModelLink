@@ -132,7 +132,7 @@ atb::Status PagedAttentionLayer(const PagedAttentionLayerParam &param, atb::Oper
     CREATE_OPERATION(reshapeCacheParm, &reshapeAndCacheNode.operation);
     reshapeAndCacheNode.inTensorIds = {INTERMIDATE_K_POSITIONEMBED, INTERMIDATE_V_MIXEDLINEAROUT, IN_K_CACHE,
                                        IN_V_CACHE, IN_SLOTS};
-    reshapeAndCacheNode.outTensorIds = {};
+    reshapeAndCacheNode.outTensorIds = {IN_K_CACHE, IN_V_CACHE};
     reshapeAndCacheNode.inTensorReshapeFuncs.resize(reshapeAndCacheNode.inTensorIds.size());
     reshapeAndCacheNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         reshapeHeads(oldShape, newShape, param.headNum);
@@ -143,11 +143,10 @@ atb::Status PagedAttentionLayer(const PagedAttentionLayerParam &param, atb::Oper
 
     if (param.isPrefill) {
         atb::infer::SelfAttentionParam selfAttentionParam;
-        selfAttentionParam.headDim = param.dk;
         selfAttentionParam.headNum = param.headNum;
         selfAttentionParam.kvHeadNum = param.headNum;
         selfAttentionParam.qkScale = 1.0 / sqrt(param.dk);
-        selfAttentionParam.isEncoder = true;
+        selfAttentionParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
         CREATE_OPERATION(selfAttentionParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERMIDATE_Q_POSITIONEMBED, INTERMIDATE_K_POSITIONEMBED,
                                      INTERMIDATE_V_MIXEDLINEAROUT, IN_ATTENTION_MASK, IN_INPUT_LENGTHS};

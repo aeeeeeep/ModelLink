@@ -25,6 +25,9 @@ Paged Attention 场景下需要.safetensors 格式的权重，如果没有，参
 
 ### 推理
 
+在模型路径下找到config.json文件
+然后将config.json中的键值对 "torch_dtype": "bfloat16" 改为 "torch_dtype": "float16"
+
 在`${llm_path}`目录下执行以下指令
 
 ```shell

@@ -39,7 +39,7 @@ from transformers.utils import add_start_docstrings, add_start_docstrings_to_mod
     replace_return_docstrings
 
 from atb_llm.models.internlm.configuration_internlm import InternLMConfig
-from atb_llm.common.log.logging import logger
+from atb_llm.utils.log.logging import logger
 from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
 from atb_llm.utils.layers import (
     TensorParallelRowLinear,
