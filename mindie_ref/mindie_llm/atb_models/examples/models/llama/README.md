@@ -79,7 +79,6 @@
     - `export USE_REFACTOR=true`
       - 是否使用新版模型组图
       - 默认使用
-      - 运行LLaMa2-7b和LLaMa2-13b时`use_refactor`参数需设置为False，其余模型运行时需设置为True
     - 以下环境变量与性能和内存优化相关，通常情况下无需修改
       ```shell
       export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
@@ -132,7 +131,6 @@
   - `export USE_REFACTOR=true`
     - 是否使用新版模型组图
     - 默认使用
-    - 运行LLaMa2-7b和LLaMa2-13b时`use_refactor`参数需设置为False，其余模型运行时需设置为True
   - 以下环境变量与性能和内存优化相关，通常情况下无需修改
     ```shell
     export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
@@ -168,7 +166,6 @@
 
 ## 精度测试
 - 参考[此README文件](../../../tests/modeltest/README.md)
-  - 运行llama2-7b和llama2-13b时`use_refactor`参数需设置为False，其余模型运行时需设置为True
   - 示例
     ```shell
     cd ${llm_path}/tests/modeltest
@@ -184,7 +181,6 @@
 
 ## 性能测试
 - 参考[此README文件](../../../tests/modeltest/README.md)
-  - 运行llama2-7b和llama2-13b时`use_refactor`参数需设置为False，其余模型运行时需设置为True
   - 示例
     ```shell
     cd ${llm_path}/tests/modeltest

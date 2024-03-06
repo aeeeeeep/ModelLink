@@ -79,8 +79,12 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
     atb::Node &qNormLinearNode = opGraph.nodes.at(nodeId++);
     atb_speed::common::NormLinearParam<NormParamType> qNormLinearParam;
     qNormLinearParam.isAntiOutlier = param.isAntiOutlier;
-    qNormLinearParam.fusionLinearParam.quantType \
-        = param.layerLinearQuantType[0] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+    if (param.packQuantType == atb_speed::common::ALL_W8A16) {
+        qNormLinearParam.fusionLinearParam.quantType = W8A16;
+    } else {
+        qNormLinearParam.fusionLinearParam.quantType \
+            = param.layerLinearQuantType[0] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+    }
     qNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
     qNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
     qNormLinearParam.normParamType = param.normParamType;
@@ -144,8 +148,12 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         atb::Node &kNormLinearNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> kNormLinearParam;
         kNormLinearParam.isAntiOutlier = param.isAntiOutlier;
-        kNormLinearParam.fusionLinearParam.quantType \
-            = param.layerLinearQuantType[1] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+        if (param.packQuantType == atb_speed::common::ALL_W8A16) {
+            kNormLinearParam.fusionLinearParam.quantType = W8A16;
+        } else {
+            kNormLinearParam.fusionLinearParam.quantType \
+                = param.layerLinearQuantType[1] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+        }
         kNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         kNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
         kNormLinearParam.normParamType = param.normParamType;
@@ -163,8 +171,12 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         atb::Node &vNormLinearNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> vNormLinearParam;
         vNormLinearParam.isAntiOutlier = param.isAntiOutlier;
-        vNormLinearParam.fusionLinearParam.quantType \
-            = param.layerLinearQuantType[2] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+        if (param.packQuantType == atb_speed::common::ALL_W8A16) {
+            vNormLinearParam.fusionLinearParam.quantType = W8A16;
+        } else {
+            vNormLinearParam.fusionLinearParam.quantType \
+                = param.layerLinearQuantType[2] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+        }
         vNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         vNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
         vNormLinearParam.normParamType = param.normParamType;
@@ -348,11 +360,11 @@ enum AttentionTensorIdx : uint32_t {
     // shape: FA: [batchSize, seqLen, numKeyValueHeadsPerRank * hiddenSizePerAttentionHead]
     INTERMIDATE_K,
     INTERMIDATE_V,  // same as INTERMIDATE_K
+    INTERMIDATE_SELF_ATTENTION  // shape: PA: [seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
     // shape: PA: [unpadSeqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
     // shape: FA: [batchSize * seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
     INTERMIDATE_POSITION_EMBED_Q,
     INTERMIDATE_POSITION_EMBED_K,  // same as INTERMIDATE_POSITION_EMBED_Q
-    INTERMIDATE_SELF_ATTENTION  // shape: PA: [seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
 };
 
 static const uint64_t ATTENTION_IN_TENSOR_COUNT = 35;
@@ -410,10 +422,11 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
     opGraph.name = "Attention";
     opGraph.inTensorNum = ATTENTION_IN_TENSOR_COUNT;
     opGraph.outTensorNum = ATTENTION_OUT_TENSOR_COUNT;
-    opGraph.internalTensorNum = ATTENTION_INTERMEDIATE_TENSOR_COUNT;
     if (param.needRope) {
+        opGraph.internalTensorNum = ATTENTION_INTERMEDIATE_TENSOR_COUNT;
         opGraph.nodes.resize(ATTENTION_NODE_COUNT);
     } else {
+        opGraph.internalTensorNum = ATTENTION_INTERMEDIATE_TENSOR_COUNT - 2;
         opGraph.nodes.resize(ATTENTION_NODE_COUNT - 1);
     }
 
@@ -466,8 +479,8 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
     atb::Node &selfAttentionNode = opGraph.nodes.at(nodeId++);
     SelfAttention(param, &selfAttentionNode.operation);
     selfAttentionNode.inTensorIds = {
-        AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_Q,
-        AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_K,
+        param.needRope ? AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_Q : AttentionTensorIdx::INTERMIDATE_Q,
+        param.needRope ? AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_K : AttentionTensorIdx::INTERMIDATE_K,
         AttentionTensorIdx::INTERMIDATE_V,
         AttentionTensorIdx::IN_K_CACHE,
         AttentionTensorIdx::IN_V_CACHE,
@@ -517,9 +530,13 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
     atb::Node &selfOutLinearParallelNode = opGraph.nodes.at(nodeId++);
     atb_speed::common::LinearParallelParam selfOutLinearParam;
     selfOutLinearParam.parallelType = atb_speed::common::ROW_PARALLEL;
-    selfOutLinearParam.fusionLinearParam.quantType \
-        = param.layerLinearQuantType[3] == atb_speed::common::LinearType::FP ? \
-        atb_speed::common::LinearQuantType::NO_QUANT : atb_speed::common::LinearQuantType::LINEAR_QUANT;
+    if (param.packQuantType == atb_speed::common::ALL_W8A16) {
+        selfOutLinearParam.fusionLinearParam.quantType = W8A16;
+    } else {
+        selfOutLinearParam.fusionLinearParam.quantType \
+            = param.layerLinearQuantType[3] == atb_speed::common::LinearType::FP ? \
+            atb_speed::common::LinearQuantType::NO_QUANT : atb_speed::common::LinearQuantType::LINEAR_QUANT;
+    }
     selfOutLinearParam.biasAfterSync = param.selfOutLinearTensorParallelInfo.worldSize > 1 \
         && selfOutLinearParam.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::NO_QUANT \
         && param.selfAttnHasBias;
