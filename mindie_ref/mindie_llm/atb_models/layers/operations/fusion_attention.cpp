@@ -360,11 +360,11 @@ enum AttentionTensorIdx : uint32_t {
     // shape: FA: [batchSize, seqLen, numKeyValueHeadsPerRank * hiddenSizePerAttentionHead]
     INTERMIDATE_K,
     INTERMIDATE_V,  // same as INTERMIDATE_K
+    INTERMIDATE_SELF_ATTENTION  // shape: PA: [seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
     // shape: PA: [unpadSeqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
     // shape: FA: [batchSize * seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
     INTERMIDATE_POSITION_EMBED_Q,
     INTERMIDATE_POSITION_EMBED_K,  // same as INTERMIDATE_POSITION_EMBED_Q
-    INTERMIDATE_SELF_ATTENTION  // shape: PA: [seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
 };
 
 static const uint64_t ATTENTION_IN_TENSOR_COUNT = 35;
@@ -422,10 +422,11 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
     opGraph.name = "Attention";
     opGraph.inTensorNum = ATTENTION_IN_TENSOR_COUNT;
     opGraph.outTensorNum = ATTENTION_OUT_TENSOR_COUNT;
-    opGraph.internalTensorNum = ATTENTION_INTERMEDIATE_TENSOR_COUNT;
     if (param.needRope) {
+        opGraph.internalTensorNum = ATTENTION_INTERMEDIATE_TENSOR_COUNT;
         opGraph.nodes.resize(ATTENTION_NODE_COUNT);
     } else {
+        opGraph.internalTensorNum = ATTENTION_INTERMEDIATE_TENSOR_COUNT - 2;
         opGraph.nodes.resize(ATTENTION_NODE_COUNT - 1);
     }
 
@@ -478,8 +479,8 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
     atb::Node &selfAttentionNode = opGraph.nodes.at(nodeId++);
     SelfAttention(param, &selfAttentionNode.operation);
     selfAttentionNode.inTensorIds = {
-        AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_Q,
-        AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_K,
+        param.needRope ? AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_Q : AttentionTensorIdx::INTERMIDATE_Q,
+        param.needRope ? AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_K : AttentionTensorIdx::INTERMIDATE_K,
         AttentionTensorIdx::INTERMIDATE_V,
         AttentionTensorIdx::IN_K_CACHE,
         AttentionTensorIdx::IN_V_CACHE,
