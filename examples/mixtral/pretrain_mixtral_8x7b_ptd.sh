@@ -27,8 +27,8 @@ CKPT_LOAD_DIR="your model ckpt path"
 
 
 TP=1
-PP=2
-EP=8
+PP=8
+EP=2
 NUM_LAYERS=32
 
 MOE_ARGS="
