@@ -85,7 +85,7 @@ def cut_weights(state_dict, world_size, config, recuce_bias=False, cut_row_keys=
                     cut_tensor_list = torch.chunk(tensor, world_size, dim=1)
                 elif key_type == "bias":
                     if recuce_bias:
-                        tensor = tensor / world_size
+                        tensor = tensor / max(1, world_size)
                     cut_tensor_list = [tensor] * world_size
             else:
                 cut_tensor_list = [tensor] * world_size
@@ -205,7 +205,7 @@ def build_alibi_tensor(attention_mask: torch.Tensor, num_heads: int, dtype: torc
     else:
         world_size = 1
     alibi = slopes[..., None] * arange_tensor
-    return alibi.reshape(batch_size * num_heads // world_size , 1, seq_length).to(dtype)
+    return alibi.reshape(batch_size * num_heads // max(1, world_size), 1, seq_length).to(dtype)
 
 
 def _get_interleave(n):
@@ -251,11 +251,11 @@ def _gen_alibi_mask(tensor, n_head, max_pos):
 
 def ntokens_trans_data_attention_mask(tensor, is_prefill=False):
     """
-    prefill: [batch , head_num,max_s,max_s] -> [batch * head_num, maxS/16, maxS, 16]
+    prefill: [batch, head_num,max_s,max_s] -> [batch * head_num, maxS/16, maxS, 16]
     prefill: [4, 40, 1024, 1024]  ->  [160, 64, 1024, 16]
     max_s不够16整除的要pad 如[4,40,17,17] -> [4, 40, 17, 32] -> [160,2,17,16]
 
-    decode: [batch , head_num,1,max_s] -> [batch * head_num, max_s/16, 16, 16]
+    decode: [batch, head_num,1,max_s] -> [batch * head_num, max_s/16, 16, 16]
     max_s不够16整除的要pad 如[1,40,1,17] -> [1, 40, 1, 32] -> [1, 40, 16, 32] ->[40,2,16,16]
     """
     logger.debug(f"shape of tensor in {is_prefill=} before transdata  is {tensor.shape}")
@@ -331,13 +331,13 @@ class FlashBloomForCausalLM(BloomPreTrainedModel):
             dense_name = f"transformer.h.{layer_count}.self_attention.dense"
             dense_h_to_4h_name = f"transformer.h.{layer_count}.mlp.dense_h_to_4h"
             dense_4h_to_h_name = f"transformer.h.{layer_count}.mlp.dense_4h_to_h"
-            self.quant_param.get("qkvInputScale")[layer_count] = float(1/self.input_scale_dict[query_key_value_name]) if config.quant_mode == 1 else 0.0
+            self.quant_param.get("qkvInputScale")[layer_count] = float(1 / self.input_scale_dict[query_key_value_name]) if config.quant_mode == 1 else 0.0
             self.quant_param.get("qkvInputOffset")[layer_count] = int(self.input_offset_dict[query_key_value_name]) if config.quant_mode == 1 else 0
-            self.quant_param.get("denseInputScale")[layer_count] = float(1/self.input_scale_dict[dense_name]) if config.quant_mode == 1 else 0.0
+            self.quant_param.get("denseInputScale")[layer_count] = float(1 / self.input_scale_dict[dense_name]) if config.quant_mode == 1 else 0.0
             self.quant_param.get("denseInputOffset")[layer_count] = int(self.input_offset_dict[dense_name]) if config.quant_mode == 1 else 0
-            self.quant_param.get("selfLnInputScale")[layer_count] = float(1/self.input_scale_dict[dense_h_to_4h_name]) if config.quant_mode == 1 else 0.0
+            self.quant_param.get("selfLnInputScale")[layer_count] = float(1 / self.input_scale_dict[dense_h_to_4h_name]) if config.quant_mode == 1 else 0.0
             self.quant_param.get("selfLnInputOffset")[layer_count] = int(self.input_offset_dict[dense_h_to_4h_name]) if config.quant_mode == 1 else 0
-            self.quant_param.get("ffnOutInputScale")[layer_count] = float(1/self.input_scale_dict[dense_4h_to_h_name]) if config.quant_mode == 1 else 0.0
+            self.quant_param.get("ffnOutInputScale")[layer_count] = float(1 / self.input_scale_dict[dense_4h_to_h_name]) if config.quant_mode == 1 else 0.0
             self.quant_param.get("ffnOutInputOffset")[layer_count] = int(self.input_offset_dict[dense_4h_to_h_name]) if config.quant_mode == 1 else 0
 
         param_dict = {
@@ -351,10 +351,6 @@ class FlashBloomForCausalLM(BloomPreTrainedModel):
         self.acl_enc_model = torch.classes.ModelTorch.ModelTorch("bloom_7b_PagedAttentionModel")
         self.acl_dec_model = torch.classes.ModelTorch.ModelTorch("bloom_7b_PagedAttentionModel")
         
-        # self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
-
-        # transdata_param = json.dumps({})
-        # self.transdata_operation.set_param(transdata_param)
 
         param_dict['isPrefill'] = False
         self.param = json.dumps(param_dict)
@@ -372,8 +368,6 @@ class FlashBloomForCausalLM(BloomPreTrainedModel):
         self.total_seqlen = 2048
         self.seq_len = 0
         
-        self.maybe_transdata = lambda x: self.transdata_operation.execute([x])[0] if not self.is_910b else x
-        self.maybe_formatcast = lambda x: torch_npu.npu_format_cast(x, 29) if not self.is_910b else x
         self.bias_dtype = torch.int32
         self.deq_scale_dtype = torch.int64
 
@@ -393,7 +387,13 @@ class FlashBloomForCausalLM(BloomPreTrainedModel):
             self.acl_dec_model.set_weight(self.weights)
             torch.npu.empty_cache()
             self.weight_flag = False
-    
+
+    def maybe_transdata(self, x):
+        return self.transdata_operation.execute([x])[0] if not self.is_910b else x
+
+    def maybe_formatcast(self, x):
+        return torch_npu.npu_format_cast(x, 29) if not self.is_910b else x
+
     def load_model(self, config):
         if config.quant_mode == 0:
             return self.load_model_fp16(config)
@@ -439,8 +439,8 @@ class FlashBloomForCausalLM(BloomPreTrainedModel):
         
         for weight_name, weight_values in weight_kwargs.items():
             setattr(self, weight_name, weight_values)
-        
-        float_weight_dict = torch.load(model_path + "/float_layers_weights.pt")
+
+        float_weight_dict = torch.load(os.path.join(model_path, "/float_layers_weights.pt"))
 
         float_layers = []
         weights_keys = float_weight_dict.keys()
@@ -464,7 +464,7 @@ class FlashBloomForCausalLM(BloomPreTrainedModel):
         for weight_name, weight_values in weight_kwargs.items():
             setattr(self, weight_name, weight_values)
 
-        float_weight_dict = torch.load(model_path + "/float_layers_weights.pt")
+        float_weight_dict = torch.load(os.path.join(model_path, "/float_layers_weights.pt"))
 
         import copy
         if config.quant_mode == 2:
@@ -508,20 +508,18 @@ class FlashBloomForCausalLM(BloomPreTrainedModel):
                 ]
                 weights_t = []
                 for name in weights_name_t:
-                    # transformer.h.0.self_attention.query_key_value.weight
                     weight = self.model_weights[name].to(torch.float16).npu()
                     if "weight" in name and "layernorm" not in name:
                         weight = self.maybe_formatcast(weight)
                     weights_t.append(weight)
                 weights.extend(weights_t)
             else:
-                # transformer.h.0.self_attention.query_key_value
                 query_key_value_name = f"transformer.h.{layer_num}.self_attention.query_key_value"
                 dense_name = f"transformer.h.{layer_num}.self_attention.dense"
                 dense_h_to_4h_name = f"transformer.h.{layer_num}.mlp.dense_h_to_4h"
                 dense_4h_to_h_name = f"transformer.h.{layer_num}.mlp.dense_4h_to_h"
 
-                weights_t = [ # 
+                weights_t = [
                     self.model_weights[f'{prefix}h.{layer_num}.input_layernorm.weight'].to(torch.float16).npu(),  # transformer.h.0.input_layernorm.weight
                     self.model_weights[f'{prefix}h.{layer_num}.input_layernorm.bias'].to(torch.float16).npu(),    # transformer.h.0.input_layernorm.bias
 
@@ -533,7 +531,7 @@ class FlashBloomForCausalLM(BloomPreTrainedModel):
                     torch.zeros((1, 1), dtype=torch.float16).npu(),
 
                     self.quant_weight_dict[dense_name].t().contiguous().to(torch.int8).npu(),                  # transformer.h.0.self_attention.dense.weight
-                    self.bias_dict[dense_name + ".bias"].to(torch.float16).t().contiguous().npu()/8,                               # transformer.h.0.self_attention.dense.bias
+                    self.bias_dict[dense_name + ".bias"].to(torch.float16).t().contiguous().npu() / 8,                               # transformer.h.0.self_attention.dense.bias
                     self.weight_scale_dict[dense_name].to(torch.float16).t().contiguous().npu(),                                 # weight_scale of dense.weight
                     torch.zeros(self.weight_scale_dict[dense_name].t().shape, dtype=torch.float16).npu(),
                     torch.zeros((1, 1), dtype=torch.float16).npu(),
@@ -550,7 +548,7 @@ class FlashBloomForCausalLM(BloomPreTrainedModel):
                     torch.zeros((1, 1), dtype=torch.float16).npu(),
  
                     self.quant_weight_dict[dense_4h_to_h_name].t().contiguous().to(torch.int8).npu(),           # transformer.h.0.mlp.dense_4h_to_h.weight
-                    self.bias_dict[dense_4h_to_h_name + ".bias"].to(torch.float16).t().contiguous().npu()/8,                        # transformer.h.0.mlp.dense_4h_to_h.bias
+                    self.bias_dict[dense_4h_to_h_name + ".bias"].to(torch.float16).t().contiguous().npu() / 8,                        # transformer.h.0.mlp.dense_4h_to_h.bias
                     self.weight_scale_dict[dense_4h_to_h_name].to(torch.float16).t().contiguous().npu(),                          # weight_scale of dense_4h_to_h.weight
                     torch.zeros(self.weight_scale_dict[dense_4h_to_h_name].t().shape, dtype=torch.float16).npu(),
                     torch.zeros((1, 1), dtype=torch.float16).npu(),
@@ -562,11 +560,6 @@ class FlashBloomForCausalLM(BloomPreTrainedModel):
         weights.append(self.model_weights[f'{prefix}ln_f.bias'].to(torch.float16).npu())
         # cut weights
         weights.append(self.model_weights[f'{prefix}word_embeddings.weight'].to(torch.float16).npu())
-        # weights.append(self.maybe_formatcast(torch.chunk(self.model_weights[f'{prefix}word_embeddings.weight'].to(torch.float16), self.world_size, dim=1)[self.rank].npu()))
-        # if self.rank == 0:
-        #     for tmp_tensor in weights:
-        #         log_rank_0(f"{tmp_tensor.shape}, {tmp_tensor.dtype}")
-                
         return weights
 
     def _prepare_attn_mask(
@@ -602,7 +595,7 @@ class FlashBloomForCausalLM(BloomPreTrainedModel):
         input_ids: torch.LongTensor,
         past: Optional[torch.Tensor] = None,
         attention_mask: Optional[torch.Tensor] = None,
-        past_key_values = None,
+        past_key_values=None,
         **kwargs
     ) -> dict:
         # only last token for input_ids if past is not None
@@ -688,7 +681,7 @@ class FlashBloomForCausalLM(BloomPreTrainedModel):
         pad_max_s = max_s
         if self.soc_info.need_nz:
             nz_dim = 16
-            nz_pad = math.ceil(max_s / nz_dim) * nz_dim - max_s
+            nz_pad = math.ceil(max_s / max(1, nz_dim)) * nz_dim - max_s
             pad_max_s = max_s + nz_pad
         attention_mask = self.ascend_atten_mask.get_attn_mask(pad_max_s, kv_cache[0][0].dtype, kv_cache[0][0].device)
 

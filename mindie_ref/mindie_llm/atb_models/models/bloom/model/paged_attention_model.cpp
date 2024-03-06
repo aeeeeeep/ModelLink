@@ -23,7 +23,7 @@
 
 namespace atb_speed {
 namespace bloom_7b {
-const int WEIGHT_COUNT_PER_LAYER = 20+8;
+const int WEIGHT_COUNT_PER_LAYER = 28;
 const int EMBEDDING_WEIGHT_COUNT = 1;
 const int EMBEDDING_WEIGHT_NORM_COUNT = 2;
 const int FINAL_LINEAR_WEIGHT_COUNT = 1;
@@ -120,10 +120,6 @@ atb::Status PagedAttentionModel::InferShape(
     outTensorDescs.at(1) = outTensorDescs.at(0);
     outTensorDescs.at(1).shape.dims[dimAll - 1] = vocabSize;           // 长度vocab_size
 
-    // for (int i = 2; i < GetOutputNum(); i++) {
-    //     outTensorDescs.at(i) = outTensorDescs.at(0);
-    // }
-
     if (param_.isPrefill) {
         outTensorDescs.at(1).shape.dims[0] = inTensorDescs.at(IN_TENSOR_LOGTIS_INDICES).shape.dims[0];
     }
@@ -190,8 +186,6 @@ int64_t PagedAttentionModel::BuildGraph()
         if (std::find(param_.floatLayers.begin(), param_.floatLayers.end(), layerId) != param_.floatLayers.end()) {
             isFloatLayer = true;
         }
-
-        // ATB_LOG(INFO) << "isFloatLayer: "<<isFloatLayer << ", layerId: "<< layerId ;
 
         atb_speed::bloom_7b::Bloom7bPagedLayerParam opParam;
         opParam.layerNormEps = param_.layerNormEps;
@@ -272,14 +266,6 @@ int64_t PagedAttentionModel::BuildGraph()
     finalLinearNode.operation.reset(op);
     const int finalLinearNodeWeightTensorId = graph_.weightTensors.size() - FINAL_LINEAR_WEIGHT_COUNT;
     if (param_.isPrefill) {
-        // IN_HIDDENSTATES, IN_WEIGHT, IN_SCALE, IN_OFFSET, IN_DESCALE, IN_INDICES
-    //         IN_HIDDENSTATES = 0,
-    // IN_WEIGHT,
-    // IN_SCALE,
-    // IN_OFFSET,
-    // IN_DESCALE,
-    // IN_DEOFFSET,
-    // IN_INDICES,
         finalLinearNode.inTensors = {&graph_.internalTensors.at(internalTensorCnt++),
                                     &graph_.weightTensors.at(finalLinearNodeWeightTensorId),
                                     &graph_.inTensors.at(IN_PLACE_HOLDER),
@@ -323,7 +309,7 @@ atb::Status PagedAttentionModel::BindParamHostTensor(uint32_t nodeId)
         return atb::NO_ERROR;
     }
 
-    const uint32_t IntseqLenTensorId = 24+8;
+    const uint32_t IntseqLenTensorId = 32;
 
     auto &node = graph_.nodes.at(nodeId);
     node.variantPack.inTensors.at(IntseqLenTensorId).hostData = seqLen_.data();

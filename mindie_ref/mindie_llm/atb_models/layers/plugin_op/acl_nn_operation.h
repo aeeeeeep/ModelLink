@@ -30,7 +30,6 @@ struct AclNnTensor {
     aclTensor *tensor = nullptr;
     bool needUpdateTensorDataPtr = false;
     int CreateTensor(const std::string &opName);
-    // int InitTensor(void *executor, const std::string &opName, const size_t index, bool isInput);
     int InitTensor(const std::string &opName);
 };
 

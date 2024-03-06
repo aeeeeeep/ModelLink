@@ -102,7 +102,6 @@ static const uint64_t HIDDEN_STATES_DIM = 3;
 void SqueezeThirdDim(const atb::Dims &oldShape, atb::Dims &newShape)
 {
     newShape.dimNum = oldShape.dimNum - 1;
-    // ATB_LOG(INFO) << "[+] SqueezeThirdDim: oldShape.dimNum: " <<  oldShape.dimNum << ", newShape.dimNum: " << newShape.dimNum;
     std::copy(std::begin(oldShape.dims), std::end(oldShape.dims), std::begin(newShape.dims));
     newShape.dims[newShape.dimNum - 1] = oldShape.dims[oldShape.dimNum - 1]; // squeeze second last dim
 }
@@ -113,7 +112,6 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
     ATB_LOG(INFO) << "[+] Enter bloom model layer...  IN_TENSOR_COUNT: " << IN_TENSOR_COUNT; // 24
     ATB_LOG(INFO) << "[+] param.quantMode: " << param.quantMode;
     
-
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
@@ -145,8 +143,6 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
     layerNormQuantParam.normParam.beginParamsAxis = 1;
     if (param.quantMode == 1) {
         layerNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
-        // layerNormQuantParam.normParam.quantInputScale = param.qkvInputScale;
-        // layerNormQuantParam.normParam.quantInputOffset = param.qkvInputOffset;
     }
     ATB_LOG(INFO) << "[+] Bloom layer: LayerNormParam ";
     CREATE_OPERATION(layerNormQuantParam, &inputNormNode.operation);
@@ -195,12 +191,10 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
 
     atb::Node &selfAttentionFusionNode = opGraph.nodes.at(nodeId++);
     atb::infer::SelfAttentionParam selfAttentionParam;
-    // selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0f / std::sqrt(param.dk);
     selfAttentionParam.qkScale = 1.0f;
     selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MASK_TYPE_ALIBI; 
-    // selfAttentionParam.isSupportAlibi = true;
     CREATE_OPERATION(selfAttentionParam, &selfAttentionFusionNode.operation);
     selfAttentionFusionNode.inTensorIds = {
         INTERMEDIATE_QUERY, INTERMEDIATE_KEY, INTERMEDIATE_VALUE, IN_CACHED_K,
@@ -266,13 +260,10 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
     selfOutAddNode.inTensorIds = {INTERMEDIATE_SELFLINEAROUT, IN_HIDDEN_STATES};
     selfOutAddNode.outTensorIds = {INTERMEDIATE_SELFADDOUT};
 
-
     atb::Node &selfNormNode = opGraph.nodes.at(nodeId++);
     if (param.quantMode == 1) {
         atb::infer::LayerNormParam selfNormParam;
         selfNormParam.layerType = atb::infer::LayerNormParam::LAYER_NORM_NORM;
-        // selfNormParam.normParam.quantInputScale = param.selfLnInputScale;
-        // selfNormParam.normParam.quantInputOffset = param.selfLnInputOffset;
         selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
         selfNormParam.normParam.epsilon = param.layerNormEps;
         selfNormParam.normParam.beginNormAxis = beginParamsAxis;
@@ -378,30 +369,10 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
     CREATE_OPERATION(mlpResidualAddParam, &mlpResidualAddNode.operation);
     mlpResidualAddNode.inTensorIds = {INTERMEDIATE_MLPOUT, INTERMEDIATE_SELFADDOUT};
     mlpResidualAddNode.outTensorIds = {OUT_LAYEROUT};
-
-    // if (param.quantMode == 0 || param.quantMode == 2) {
-    //     atb::Node &placeHolderNode1 = opGraph.nodes.at(nodeId++);
-    //     atb::Node &placeHolderNode2 = opGraph.nodes.at(nodeId++);
-
-    //     atb::infer::ElewiseParam fillPlaceHolderParam;
-    //     fillPlaceHolderParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_MULS;
-    //     fillPlaceHolderParam.mulsParam.varAttr = 1.0;
-
-    //     CREATE_OPERATION(fillPlaceHolderParam, &placeHolderNode1.operation);
-    //     placeHolderNode1.inTensorIds = {OUT_LAYEROUT};
-    //     placeHolderNode1.outTensorIds = {OUT_PLACEHOLDER_1};
-
-    //     CREATE_OPERATION(fillPlaceHolderParam, &placeHolderNode2.operation);
-    //     placeHolderNode2.inTensorIds = {OUT_LAYEROUT};
-    //     placeHolderNode2.outTensorIds = {OUT_PLACEHOLDER_2};
-    // }
-
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
         size_t dim = 0;
         outTensorDescs.at(dim++) = inTensorDescs.at(IN_HIDDEN_STATES);
-        // outTensorDescs.at(dim++) = inTensorDescs.at(IN_HIDDEN_STATES);
-        // outTensorDescs.at(dim++) = inTensorDescs.at(IN_HIDDEN_STATES);
         return atb::NO_ERROR;
     };
 

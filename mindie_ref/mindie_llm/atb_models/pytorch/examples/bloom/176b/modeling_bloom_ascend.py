@@ -428,7 +428,7 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
                     torch.zeros(self.weight_scale_dict[dense_4h_to_h_name].t().shape, dtype=torch.float16).npu(),
                     
                     self.quant_weight_dict[dense_name].t().contiguous().to(torch.int8).npu(),                  # transformer.h.0.self_attention.dense.weight
-                    self.bias_dict[dense_name + ".bias"].to(torch.float16).t().contiguous().npu()/8,                               # transformer.h.0.self_attention.dense.bias
+                    self.bias_dict[dense_name + ".bias"].to(torch.float16).t().contiguous().npu() / 8,                               # transformer.h.0.self_attention.dense.bias
                     self.weight_scale_dict[dense_name].to(torch.float16).t().contiguous().npu(),                                 # weight_scale of dense.weight
                     torch.zeros(self.weight_scale_dict[dense_name].t().shape, dtype=torch.float16).npu(),
                     torch.zeros(self.weight_scale_dict[dense_4h_to_h_name].t().shape, dtype=torch.float16).npu(),
@@ -445,7 +445,7 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
                     torch.zeros(self.weight_scale_dict[dense_4h_to_h_name].t().shape, dtype=torch.float16).npu(),
  
                     self.quant_weight_dict[dense_4h_to_h_name].t().contiguous().to(torch.int8).npu(),           # transformer.h.0.mlp.dense_4h_to_h.weight
-                    self.bias_dict[dense_4h_to_h_name + ".bias"].to(torch.float16).t().contiguous().npu()/8,                        # transformer.h.0.mlp.dense_4h_to_h.bias
+                    self.bias_dict[dense_4h_to_h_name + ".bias"].to(torch.float16).t().contiguous().npu() / 8,                        # transformer.h.0.mlp.dense_4h_to_h.bias
                     self.weight_scale_dict[dense_4h_to_h_name].to(torch.float16).t().contiguous().npu(),                          # weight_scale of dense_4h_to_h.weight
                     torch.zeros(self.weight_scale_dict[dense_4h_to_h_name].t().shape, dtype=torch.float16).npu(),
                     torch.zeros(self.weight_scale_dict[dense_4h_to_h_name].t().shape, dtype=torch.float16).npu(),

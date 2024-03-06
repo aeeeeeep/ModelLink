@@ -31,7 +31,7 @@
 
 namespace atb_speed {
 namespace bloom_7b {
-const int WEIGHT_COUNT_PER_LAYER = 20+8;
+const int WEIGHT_COUNT_PER_LAYER = 28;
 const int EMBEDDING_WEIGHT_COUNT = 1;
 const int EMBEDDING_WEIGHT_NORM_COUNT = 2;
 const int FINAL_LINEAR_WEIGHT_COUNT = 1;
@@ -145,13 +145,6 @@ atb::Status FlashAttentionModel::InferShape(
     outTensorDescs.at(1).shape.dims[dim++] = 1;                        // 长度seq_len
     outTensorDescs.at(1).shape.dims[dim++] = vocabSize;                // 长度vocab_size
     outTensorDescs.at(1).dtype = inTensorDescs.at(IN_ATTENTION_MASK).dtype;
-
-    // for (int i = 2; i < GetOutputNum(); i++) {
-    //     outTensorDescs.at(i) = inputIds;
-    //     outTensorDescs.at(i).shape.dimNum = dimAll;
-    //     outTensorDescs.at(i).shape.dims[dimAll - 1] = hiddenSize;
-    //     outTensorDescs.at(i).dtype = inTensorDescs.at(IN_ATTENTION_MASK).dtype;
-    // }
 
     return atb::NO_ERROR;
 }
@@ -340,8 +333,8 @@ atb::Status FlashAttentionModel::BindParamHostTensor(uint32_t nodeId)
         return atb::NO_ERROR;
     }
 
-    const uint32_t InttokenOffsetTensorId = 24+8;
-    const uint32_t IntseqLenTensorId = 25+8;
+    const uint32_t InttokenOffsetTensorId = 32;
+    const uint32_t IntseqLenTensorId = 33;
 
     auto &node = graph_.nodes.at(nodeId);
     node.variantPack.inTensors.at(InttokenOffsetTensorId).hostData = tokenOffset_.data();
