@@ -14,7 +14,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def convert_pt2st(model_path):
+def convert_bin2st(model_path):
     local_pt_files = weight_files(model_path, revision=None, extension=".bin")
     local_st_files = [
         p.parent / f"{p.stem.lstrip('pytorch_')}.safetensors"
@@ -27,4 +27,4 @@ def convert_pt2st(model_path):
 if __name__ == '__main__':
     args = parse_arguments()
 
-    convert_pt2st(args.model_path)
+    convert_bin2st(args.model_path)

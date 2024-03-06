@@ -52,6 +52,7 @@ class AttentionMask(torch.nn.Module):
 
 
 class StarcoderConfig(PretrainedConfig):
+    model_type: str = "starcoder"
 
     def __init__(
             self,
