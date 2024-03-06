@@ -43,6 +43,8 @@ from atb_llm.utils.quantize.w8a8 import calc_linear_pack_type
 
 
 class LlamaConfig(PretrainedConfig):
+    model_type: str = "llama"
+
     def __init__(
             self,
             vocab_size=32000,
