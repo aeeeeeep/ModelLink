@@ -53,9 +53,9 @@
   - `export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3`
     - 指定当前机器上可用的逻辑NPU核心，多个核心间使用逗号相连
     - 核心ID查阅方式见[此README文件](../../README.md)的【启动脚本相关环境变量】章节
-  - `export MAX_MEMORY_GB=15`
+  - `export MAX_MEMORY_GB=29`
     - 限制最大显存
-    - 默认设置最大显存为15GB
+    - 默认设置最大显存为29GB
     - 若出现显存不足导致的异常，请将该参数改小
   - `export TP_WORLD_SIZE=2`
     - 指定模型运行时的TP数，即world size
@@ -70,8 +70,15 @@
   - `export PYTHONPATH=${llm_path}:$PYTHONPATH`
     - 将模型仓路径加入Python查询模块和包的搜索路径中
     - 将${llm_path}替换为实际路径
-  - `export HCCL_BUFFSIZE=110`
-  - `export ATB_USE_TILING_COPY_STREAM=1`
+  - - 以下环境变量与性能和内存优化相关，通常情况下无需修改
+    ```shell
+    export HCCL_OP_BASE_FFTS_MODE_ENABLE=TRUE
+    export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
+    export ATB_OPERATION_EXECUTE_ASYNC=1
+    export ATB_USE_TILING_COPY_STREAM=1
+    export TASK_QUEUE_ENABLE=1
+    export HCCL_BUFFSIZE=110
+    ```
 
 
 ## 800I A2 运行操作说明
@@ -145,3 +152,7 @@
 
 ## 性能测试
 - 参考[此README文件](../../../../tests/modeltest/README.md)
+
+## FAQ
+- `import torch_npu`遇到`xxx/libgomp.so.1: cannot allocate memory in static TLS block`报错，可通过配置`LD_PRELOAD`解决。
+  - 示例：`export LD_PRELOAD=/lib/aarch64-linux-gnu/libgomp.so.1:$LD_PRELOAD`
