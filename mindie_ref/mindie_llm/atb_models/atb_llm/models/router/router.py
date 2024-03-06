@@ -6,7 +6,7 @@ from typing import Optional, Any
 from transformers import AutoTokenizer
 
 from ..llama.modeling_llama import LlamaConfig
-from ..qwen.config import QWenConfig
+from ..qwen.modeling_qwen import QwenConfig
 from ..starcoder.flash_causal_starcoder import StarcoderConfig
 from ..gpt_neox.config import GPTNeoXConfig
 from ..internlm.configuration_internlm import InternLMConfig
@@ -213,7 +213,7 @@ class ChatglmRouter(BaseRouter):
 class QwenRouter(BaseRouter):
     @property
     def config(self):
-        return QWenConfig.from_pretrained(
+        return QwenConfig.from_pretrained(
             self.model_name_or_path,
             revision=self.revision,
             trust_remote_code=self.trust_remote_code
