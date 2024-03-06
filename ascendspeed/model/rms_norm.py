@@ -27,16 +27,6 @@ class RMSNorm(torch.nn.Module):
         self.use_fused_rmsnorm = args.use_fused_rmsnorm
         self.eps = eps
         self.weight = nn.Parameter(torch.ones(dim))
-        if int(os.getenv('NPU_DETECT', '0')):
-            from torch_npu.hook_module.hook_module import HOOKModule
-
-            def norm_hook(grad):
-                if HOOKModule.collect_flag:
-                    if grad.dtype == torch.float16:
-                        grad = grad.float()
-                    HOOKModule.layernorm_list.append(torch.norm(grad))
-
-            self.weight.register_hook(norm_hook)
 
         setattr(self.weight, 'sequence_parallel', sequence_parallel)
 
@@ -44,6 +34,10 @@ class RMSNorm(torch.nn.Module):
         return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
 
     def forward(self, x):
+        if int(os.getenv('NPU_ASD_ENABLE', '0')):
+            from torch_npu.utils import register_asd_hook
+            register_asd_hook(x, self.weight)
+
         if self.use_fused_rmsnorm:
             return torch_npu.npu_rms_norm(x, self.weight, epsilon=self.eps)[0]
         output = self._norm(x.float()).type_as(x)
