@@ -142,9 +142,9 @@ Qwen-7B 训练的硬件配置:
     
     cd .. 
    ```
-5. 微调
+5. 预训练
 
-    配置Qwen-7B 微调脚本: examples/qwen/pretrain_qwen_7b_ptd.sh
+    配置Qwen-7B 预训练脚本: examples/qwen/pretrain_qwen_7b_ptd.sh
 
    ```shell
     # 设置 ascend-toolkit 路径
@@ -157,7 +157,7 @@ Qwen-7B 训练的硬件配置:
     CKPT_LOAD_DIR="your megatron ckpt save path"
    ```
 
-   启动 Qwen-7B 微调脚本: examples/qwen/pretrain_qwen_7b_ptd.sh
+   启动 Qwen-7B 预训练脚本: examples/qwen/pretrain_qwen_7b_ptd.sh
 
    ```shell
     bash examples/qwen/pretrain_qwen_7b_ptd.sh
@@ -347,9 +347,9 @@ Qwen-14B 训练的硬件配置:
     
     cd .. 
    ```
-5. 微调
+5. 预训练
 
-    配置Qwen-14B 微调脚本: examples/qwen/pretrain_qwen_14b_ptd.sh
+    配置Qwen-14B 预训练脚本: examples/qwen/pretrain_qwen_14b_ptd.sh
 
    ```shell
     # 设置 ascend-toolkit 路径
@@ -362,7 +362,7 @@ Qwen-14B 训练的硬件配置:
     CKPT_LOAD_DIR="your megatron ckpt save path"
    ```
 
-   启动 Qwen-14B 微调脚本: examples/qwen/pretrain_qwen_14b_ptd.sh
+   启动 Qwen-14B 预训练脚本: examples/qwen/pretrain_qwen_14b_ptd.sh
 
    ```shell
     bash examples/qwen/pretrain_qwen_14b_ptd.sh
@@ -530,9 +530,9 @@ Qwen-72B 训练的硬件配置:
     
     cd .. 
    ```
-5. 微调
+5. 预训练
 
-    配置Qwen-72B 微调脚本: examples/qwen/pretrain_qwen_72b_ptd.sh
+    配置Qwen-72B 预训练脚本: examples/qwen/pretrain_qwen_72b_ptd.sh
 
    ```shell
     # 设置 ascend-toolkit 路径
@@ -545,7 +545,7 @@ Qwen-72B 训练的硬件配置:
     CKPT_LOAD_DIR="your megatron ckpt save path"
    ```
 
-   启动 Qwen-72B 微调脚本: examples/qwen/pretrain_qwen_72b_ptd.sh
+   启动 Qwen-72B 预训练脚本: examples/qwen/pretrain_qwen_72b_ptd.sh
 
    ```shell
     bash examples/qwen/pretrain_qwen_72b_ptd.sh

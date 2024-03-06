@@ -142,9 +142,9 @@ Here's a hardware summary of pre-training  Qwen-7B:
     cd ..
     ```
 
-5. fine-tuning
+5. pre-training
 
-	Config Qwen-7B fine-tuning script: examples/qwen/pretrain_qwen_7b_ptd.sh 
+	Config Qwen-7B pre-training script: examples/qwen/pretrain_qwen_7b_ptd.sh 
    ```shell
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -156,7 +156,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
     CKPT_LOAD_DIR="your megatron ckpt save path"
    ```
 
-	Launch Qwen-7B fine-tuning script: examples/qwen/pretrain_qwen_7b_ptd.sh
+	Launch Qwen-7B pre-training script: examples/qwen/pretrain_qwen_7b_ptd.sh
    
    ```shell
     bash examples/qwen/pretrain_qwen_7b_ptd.sh 
@@ -344,9 +344,9 @@ Here's a hardware summary of pre-training  Qwen-14B:
     cd .. 
 	```
 
-5. fine-tuning
+5. pre-training
 
-	Config Qwen-14B fine-tuning script: examples/qwen/pretrain_qwen_14b_ptd.sh 
+	Config Qwen-14B pre-training script: examples/qwen/pretrain_qwen_14b_ptd.sh 
    ```shell
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -358,7 +358,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
     CKPT_LOAD_DIR="your megatron ckpt save path"
    ```
 
-	Launch Qwen-14B fine-tuning script: examples/qwen/pretrain_qwen_14b_ptd.sh
+	Launch Qwen-14B pre-training script: examples/qwen/pretrain_qwen_14b_ptd.sh
    
    ```shell
     bash examples/qwen/pretrain_qwen_14b_ptd.sh 
@@ -526,9 +526,9 @@ Here's a hardware summary of pre-training  Qwen-72B:
     cd .. 
 	```
 
-5. fine-tuning
+5. pre-training
 
-	Config Qwen-72B fine-tuning script: examples/qwen/pretrain_qwen_72b_ptd.sh 
+	Config Qwen-72B pre-training script: examples/qwen/pretrain_qwen_72b_ptd.sh 
    ```shell
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -540,7 +540,7 @@ Here's a hardware summary of pre-training  Qwen-72B:
     CKPT_LOAD_DIR="your megatron ckpt save path"
    ```
 
-	Launch Qwen-72B fine-tuning script: examples/qwen/pretrain_qwen_72b_ptd.sh
+	Launch Qwen-72B pre-training script: examples/qwen/pretrain_qwen_72b_ptd.sh
    
    ```shell
     bash examples/qwen/pretrain_qwen_72b_ptd.sh 
