@@ -31,7 +31,6 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference
     --num-attention-heads 112 \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
-    --vocab-file ${TOKENIZER_MODEL} \
     --seq-length 2048 \
     --max-position-embeddings 2048 \
     --micro-batch-size 1 \
