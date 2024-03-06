@@ -1,4 +1,4 @@
-# Mixtral 8x7B
+# Mixtral
 
 <p align="left">
         <b>简体中文</b> |
@@ -7,7 +7,7 @@
 
 # 目录
 
-- [Mixtral-8x7B](#Mixtral-8x7B)
+- [8x7B](#8x7B)
   - [硬件要求](#硬件要求)
   - [准备工作](#准备工作)
   - [数据处理](#数据处理)
@@ -15,12 +15,11 @@
   - [模型训练](#模型训练)
   - [模型性能](#模型性能)
     - [吞吐](#吞吐)
-    - [精度](#精度)
   - [模型推理](#模型推理)
   - [模型评估](#模型评估)
 
 
-# Mixtral-8x7B
+# 8x7B
 
 ## 硬件要求
 
@@ -36,7 +35,7 @@
 | :--: | :-------------: |
 | NPU | 8 x Ascend NPUs |
 
-### 准备工作
+## 准备工作
 
 1. 拷贝代码仓到本地服务器
 
@@ -94,7 +93,7 @@
    cd ..
    ```
 
-### 数据处理
+## 数据处理
 
 1. 准备数据集
 
@@ -124,7 +123,7 @@ python ./tools/preprocess_data.py \
     --workers 4
 ```
 
-### 模型转换
+## 模型转换
 1. HuggingFace权重 --> 任意并行切分策略的Megatron权重
     ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
     ```bash
@@ -173,7 +172,7 @@ python ./tools/preprocess_data.py \
         --save-dir ../Mixtral-8x7B-v0.1 \    # <-- 需要填入原始HF模型路径，新权重会存于../Mixtral-8x7B-v0.1/mg2hg
     ```
 
-### 模型训练
+## 模型训练
 配置 Mixtral-8x7B 预训练脚本: ***examples/mixtral/pretrain_mixtral_8x7b_ptd.sh***
 
 1. 预训练
@@ -225,9 +224,9 @@ python ./tools/preprocess_data.py \
     --load ${CKPT_LOAD_DIR}
     ```
 
-### 模型性能
+## 模型性能
 
-#### 吞吐
+### 吞吐
 
 Mixtral-8x7B 在双机16卡上(ep2 pp8) **昇腾芯片** 和 **参考芯片** 上的性能对比：
 *(当节点够多的情况下，ep越大吞吐越大，这里并非为最佳性能，仅供参考)*

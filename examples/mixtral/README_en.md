@@ -1,4 +1,4 @@
-# Mixtral 8x7B
+# Mixtral
 
 <p align="left">
         <b><a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/mixtral/README.md">简体中文</a> </b> |
@@ -7,7 +7,7 @@
 
 # Table of Contents
 
-- [Mixtral-8x7B](#Mixtral-8x7B)
+- [8x7B](#8x7B)
   - [Hardware Requirements](#Hardware-Requirements)
   - [Preparation](#Preparation)
   - [Data Processing](#Data-Processing)
@@ -15,12 +15,11 @@
   - [Model Training](#Model-Training)
   - [Model Performance](#Model-Performance)
     - [Throughput](#Throughput)
-    - [Accuracy](#Accuracy)
   - [Model Inference](#Model-Inference)
   - [Model Evaluation](#Model-Evaluation)
 
 
-# Mixtral-8x7B
+# 8x7B
 
 ## Hardware-Requirements
 
@@ -36,7 +35,7 @@ Recommended hardware configuration for inference:
 | :--: | :-------------: |
 | NPU | 8 x Ascend NPUs |
 
-### Preparation
+## Preparation
 
 1. Clone the code repository to the local server
 
@@ -93,7 +92,7 @@ Recommended hardware configuration for inference:
     cd ..
    ```
 
-### Data-Processing
+## Data-Processing
 
 1. Prepare dataset
 
@@ -123,7 +122,7 @@ python ./tools/preprocess_data.py \
     --workers 4
 ```
 
-### Model-Conversion
+## Model-Conversion
 1. HuggingFace weights --> Megatron weights with any parallel slicing strategy
 ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
     ```bash
@@ -172,7 +171,7 @@ python ./tools/preprocess_data.py \
         --save-dir ../Mixtral-8x7B-v0.1 \    # <-- Fill in the original HF model path here, new weights will be saved in ../Mixtral-8x7B-v0.1/mg2hg
     ```
 
-### Model-Training
+## Model-Training
 Configure Mixtral-8x7B pre-training script: ***examples/mixtral/pretrain_mixtral_8x7b_ptd.sh***
 
 1. Pre-training
@@ -223,9 +222,9 @@ Configure Mixtral-8x7B pre-training script: ***examples/mixtral/pretrain_mixtral
     --load ${CKPT_LOAD_DIR}
     ```
 
-### Model-Performance
+## Model-Performance
 
-#### Throughput
+### Throughput
 
 Comparison of Mixtral-8x7B performance on 2 nodes and 16 chips with ep2 pp8:
 **(When there are enough nodes, the larger the ep, the higher the throughput. This is not the optimal performance here, just for reference)**
