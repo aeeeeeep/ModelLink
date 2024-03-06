@@ -43,7 +43,7 @@ class ChatglmConfig(PretrainedConfig):
         self.intermediate_size = intermediate_size
         self.num_layers = num_layers
         self.multi_query_group_num = multi_query_group_num
-        self.num_key_value_head = multi_query_group_num
+        self.num_key_value_heads = multi_query_group_num
         self.num_attention_heads = num_attention_heads
         self.hidden_act = hidden_act
         self.initializer_range = initializer_range
