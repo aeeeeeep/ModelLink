@@ -16,19 +16,12 @@
 #include "flash_attention_rope_model.h"
 
 #include "atb/atb_infer.h"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
-#pragma GCC diagnostic pop
 
 #include "models/internlm/20b/layer/flash_attention_rope_layer.h"
-#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace internlm_20b {
-
-REGISTER_MODEL(internlm_20b, FlashAttentionRopeModel);
-
 enum InTensorId : int {
     IN_TENSOR_INPUTIDS = 0,
     IN_TENSOR_COSEMBED,
@@ -38,6 +31,7 @@ enum InTensorId : int {
     IN_TENSOR_PAST_VALUE,
     IN_TENSOR_TOKENOFFSET,
     IN_TENSOR_SEQLEN,
+    IN_HOLDER,
     IN_TENSOR_MAX, // 8
 };
 
@@ -49,7 +43,6 @@ enum OutTensorId : int {
 const int WEIGHT_COUNT_PER_LAYER = 9;
 const int WORDEMBEDDINGNODE_WEIGHT_COUNT = 1;
 const int FINALNORMNODE_WEIGHT_COUNT = 1;
-const int OUT_LM_HEAD_WEIGHT_COUNT = 1;
 const int OPERATION_COUNT_BEFORE_LAYER = 1;
 const int INTERMEDIATETENSOR_COUNT_BEFORE_LAYER = 1;
 const int OPERATION_COUNT_AFTER_LAYER = 2;
@@ -62,6 +55,7 @@ const int LAYER_FIRST_OUT_TENSORS = 0;
 const int FA_ROPE_LAYER_IN_TOKENOFFSET_ID = 15;
 const int FA_ROPE_LAYER_IN_SEQLEN_ID = 16;
 const int OUT_TENSOR_HIDDENSTATES_ID_DIM_NUM = 3;
+const int OUT_LM_HEAD_WEIGHT_COUNT = 1;
 
 void FlashAttentionRopeModel::Param::FromString(const std::string &param)
 {
@@ -170,6 +164,7 @@ int64_t FlashAttentionRopeModel::BuildGraph()
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_PAST_VALUE);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_TOKENOFFSET);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SEQLEN); // seqLen
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MAX + layerId);
 
         layerNode.outTensors = { &graph_.internalTensors.at(INTERMEDIATETENSOR_COUNT_BEFORE_LAYER + layerId) };
@@ -198,6 +193,7 @@ int64_t FlashAttentionRopeModel::BuildGraph()
     outLinearNode.inTensors = { &graph_.internalTensors.at(finalLayerNormOutTensorId),
         &graph_.weightTensors.at(finalLinearWeightTensorId) };
     outLinearNode.outTensors = { &graph_.outTensors.at(OUT_TENSOR_HIDDENSTATES_ID) };
+    
     return atb::NO_ERROR;
 }
 

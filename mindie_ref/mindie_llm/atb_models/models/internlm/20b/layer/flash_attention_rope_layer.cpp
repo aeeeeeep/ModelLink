@@ -15,8 +15,8 @@
  */
 #include "flash_attention_rope_layer.h"
 
-#include "layers/mlp_gate.h"
-#include "layers/parallel_layer.h"
+#include "layers/mlp_gate_v2.h"
+#include "layers/parallel_layer_v2.h"
 #include "models/internlm/7b/operation/rope.h"
 
 namespace atb_speed {
@@ -39,6 +39,7 @@ enum FlashAttentionRopeLayerTensorId : int {
     IN_PASTVALUE,
     IN_TOKENOFFSET,
     IN_SEQLEN,
+    IN_HOLDER,
     IN_LAYERID,
     OUT_LAYEROUT,
     INTERMIDATE_INPUTNORMOUT,
@@ -54,7 +55,7 @@ enum FlashAttentionRopeLayerTensorId : int {
     INTERMIDATE_MLPOUT,
 };
 
-static const uint64_t IN_TENSOR_COUNT = 18;
+static const uint64_t IN_TENSOR_COUNT = 19;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 11;
 static const uint64_t NODE_COUNT = 11;
@@ -116,6 +117,7 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     ropeNode.outTensorIds = { INTERMIDATE_Q_POSITIONEMBED, INTERMIDATE_K_POSITIONEMBED };
 
     atb::infer::SelfAttentionParam selfAttentionParam;
+    selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / sqrt(param.dk);
     CREATE_OPERATION(selfAttentionParam, &selfAttentionKvCacheNode.operation);
@@ -141,11 +143,13 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
         newShape.dims[newShapeDimIndex++] = oldShape.dims[oldShapeDimIndex++] / param.headNum;
     };
 
-    atb_speed::common::ParallelParam selfOutLinearParam;
-    selfOutLinearParam.rank = param.rank;
-    selfOutLinearParam.rankSize = param.rankSize;
-    atb_speed::common::RowParallelLinear(selfOutLinearParam, &selfOutLinearNode.operation);
-    selfOutLinearNode.inTensorIds = { INTERMIDATE_SELFOUT, IN_SELFOUTLINEARWEIGHT };
+    atb_speed::common::ParallelParamV2 selfOutLinearParam;
+    selfOutLinearParam.commParam.rank = param.rank;
+    selfOutLinearParam.commParam.rankSize = param.rankSize;
+    selfOutLinearParam.commParam.backend = param.backend;
+    atb_speed::common::RowParallelLinearV2(selfOutLinearParam, &selfOutLinearNode.operation);
+    selfOutLinearNode.inTensorIds = { 
+        INTERMIDATE_SELFOUT, IN_SELFOUTLINEARWEIGHT, IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_HOLDER };
     selfOutLinearNode.outTensorIds = { INTERMIDATE_SELFLINEAROUT };
 
     atb::infer::ElewiseParam addParam;
@@ -158,15 +162,36 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     selfNormNode.inTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT };
     selfNormNode.outTensorIds = { INTERMIDATE_SELFNORMOUT };
 
-    atb_speed::common::MlpGateParam mlpParam;
-    mlpParam.rank = param.rank;
-    mlpParam.rankSize = param.rankSize;
+    atb_speed::common::MlpGateParamV2 mlpParam;
+    mlpParam.commDownParam.rank = param.rank;
+    mlpParam.commDownParam.rankSize = param.rankSize;
+    mlpParam.commDownParam.backend = param.backend;
     mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
     mlpParam.transposeB = true;
     mlpParam.isBias = false;
     mlpParam.isPack = false;
-    atb_speed::common::MlpGateLayer(mlpParam, &mlpNode.operation);
-    mlpNode.inTensorIds = { INTERMIDATE_SELFNORMOUT, IN_MLPUPWEIGHT, IN_MLPGATEWEIGHT, IN_MLPDOWNWEIGHT };
+    atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);
+    mlpNode.inTensorIds = { 
+        INTERMIDATE_SELFNORMOUT, 
+        IN_MLPUPWEIGHT, 
+        IN_MLPGATEWEIGHT, 
+        IN_MLPDOWNWEIGHT,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER,
+        IN_HOLDER
+    };
     mlpNode.outTensorIds = { INTERMIDATE_MLPOUT };
 
     CREATE_OPERATION(addParam, &mlpResidualAddNode.operation);

@@ -31,6 +31,7 @@ struct FlashAttentionRopeLayerParam {
     int dk = 0;
     int rank = 0;
     int rankSize = 1;
+    std::string backend = "hccl";
     std::string model = "internlm_20b";
 };
 
