@@ -16,258 +16,29 @@
 </p>
 <p align="center">
         <b>简体中文</b> |
-        <b><a href="https://gitee.com/fengliangjun66/AscendSpeed/blob/master/README_en.md">English</a> </b>
+        <b><a href="https://gitee.com/ascend/ModelLink/blob/modellink/README_en.md">English</a> </b>
 </p>
 
-ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) 上的大语言模型提供端到端的解决方案, 包含模型，算法，算子，以及下游任务。
+ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) 上的大语言模型提供端到端的解决方案, 包含模型，算法，以及下游任务。
 
 ## ModelLink解决方案概览
 
 ---
-### 大语言模型
-当前ModelLink支持下列模型的预训练以及全参微调:
-* <a href="https://huggingface.co/BAAI/Aquila-7B/tree/main" style="color:green">Aquila</a>-[[使用说明: 7B]](examples/aquila/README.md)
-* <a href="https://github.com/baichuan-inc" style="color:green">Baichuan</a>-[[使用说明: 7B/13B]](examples/baichuan/README.md)
-* <a href="https://arxiv.org/pdf/2108.12409.pdf" style="color:green">Bloom</a>-[[使用说明: 7B/176B]](examples/bloom/README.md)
-* <a href="https://internlm.intern-ai.org.cn/" style="color:green">InternLM</a>-[[使用说明: 7B/65B]](examples/intern/README.md)
-* <a href="https://huggingface.co/docs/transformers/main/model_doc/llama" style="color:green">LLaMA</a>-[[使用说明: 7B/13B/33B/65B]](examples/llama/README.md)
-* <a href="https://huggingface.co/docs/transformers/main/model_doc/llama2" style="color:green">LLaMA2</a>-[[使用说明: 7B/13B/34B/70B]](examples/llama2/README.md)
-* <a href="https://github.com/baichuan-inc" style="color:green">Baichuan2</a>-[[使用说明: 7B/13B]](examples/baichuan2/README.md)
-* <a href="https://huggingface.co/Qwen/Qwen-7B" style="color:green">Qwen</a>-[[使用说明: 7B/14B/72B]](examples/qwen/README.md)
-* <a href="https://mistral.ai/news/mixtral-of-experts/" style="color:green">Mixtral</a>-[[使用说明: 8x7B]](examples/mixtral/README.md)
 
 
-### 下游任务
-当前ModelLink为大模型提供以下周边应用:
-* [指令/预训练数据集](#jump11)
-* [低参微调方法](#jump12)
-* [推理：人机对话](#jump13)
-* [基线数据集评估](#jump14)
+## 【支持功能】
+当前ModelLink支撑大模型使用功能:
+* [制作预训练数据集](#jump11)/[制作指令微调数据集](#jump12)
+* [预训练](#jump13)/[全参微调](#jump14)/[低参微调](#jump15)
+* [推理(人机对话)](#jump16)
+* [评估基线数据集(Benchmark)](#jump17)
+* [使用加速特性（加速算法+融合算子）](#jump18)
 
-强化学习，多专家网络等特性持续研发中....
+强化学习等特性持续研发中....
 
+## 【支持模型】
+当前ModelLink支持下列模型的预训练以及微调:
 
-
-## 大语言模型
-
----
-
-### 模型性能
-<table>
-  <thead>
-    <tr>
-      <th>模型</th>
-      <th>参数</th>
-      <th>节点</th>
-      <th>模式</th>
-      <th>昇腾 </th>
-      <th>参考 </th>
-      <th>脚本</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td rowspan="1"><a href="examples/aquila/README.md">Aquila</a></td>
-      <td>7B</td>
-      <td> 1x8</td>
-      <td> BF16 </td>
-      <td> 2849 </td>
-      <td> 4078 </td>
-      <td> <a href="examples/aquila/pretrain_aquila_7b_ptd.sh">训练</a> </td>
-    </tr>
-    <tr>
-      <td rowspan="2"><a href="examples/baichuan/README.md">Baichuan</a></td>
-      <td>7B</td>
-      <td> 1x8</td>
-      <td> FP16 </td>
-      <td> 2643 </td>
-      <td> 2036 </td>
-      <td> <a href="examples/baichuan/pretrain_baichuan_ptd_7B.sh">训练</a> </td>
-    </tr>
-    <tr>
-      <td>13B</td>
-      <td> 1x8</td>
-      <td> FP16 </td>
-      <td> 1213 </td>
-      <td> 824 </td>
-      <td> <a href="examples/baichuan/pretrain_baichuan_ptd_13B.sh">训练</a> </td>
-    </tr>
-    <tr>
-      <td rowspan="2"><a href="examples/baichuan2/README.md">Baichuan2</a></td>
-      <td>7B</td>
-      <td> 1x8</td>
-      <td> BF16 </td>
-      <td> 2598 </td>
-      <td> 3936 </td>
-      <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_7B.sh">训练</a> </td>
-    </tr>
-    <tr>
-      <td>13B</td>
-      <td> 1x8</td>
-      <td> BF16 </td>
-      <td> 880 </td>
-      <td> 872 </td>
-      <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_13B.sh">训练</a> </td>
-    </tr>
-    <tr>
-      <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
-      <td>7B1</td>
-      <td> 1x8</td>
-      <td> FP16 </td>
-      <td> 2034 </td>
-      <td> 2525 </td>
-      <td> <a href="examples/bloom/pretrain_bloom_7b1.sh">训练</a> </td>
-    </tr>
-    <tr>
-      <td >176B</td>
-      <td >12x8</td>
-      <td> BF16 </td>
-      <td> 100 </td>
-      <td> 107 </td>
-      <td> <a href="examples/bloom/pretrain_bloom_176b.sh">训练</a> </td>
-    </tr>
-    <tr>
-      <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>
-      <td>7B</td>
-      <td>1x8</td>
-      <td>BF16</td>
-      <td> 2943 </td>
-      <td> 4078 </td>
-      <td> <a href="examples/intern/pretrain_internlm_7b_zero.sh">训练</a> </td>
-    </tr>
-    <tr>
-      <td >65B</td>
-      <td >4x8</td>
-      <td> BF16 </td>
-      <td> 342 </td>
-      <td> 414 </td>
-      <td> <a href="examples/intern/pretrain_internlm_65b_ptd_32p.sh">训练</a> </td>
-    </tr>
-    <tr>
-      <td rowspan="5"><a href="examples/llama/README.md">LLaMA</td>
-      <td>7B</td>
-      <td>1x8</td>
-      <td>FP16</td>
-      <td> 3763 </td>
-      <td> 3804 </td>
-      <td> <a href="examples/llama/pretrain_llama_7b_ptd.sh">训练</a> </td>
-    </tr>
-    <tr>
-      <td>13B</td>
-      <td>1x8</td>
-      <td>FP16</td>
-      <td> 1894 </td>
-      <td> 2012 </td>
-      <td> <a href="examples/llama/pretrain_llama_13b_ptd.sh">训练</a> </td>
-    </tr>
-    <tr>
-        <td>33B</td>
-        <td>4x8</td>
-        <td>FP16</td>
-        <td>621</td>
-        <td>776</td>
-        <td><a href="examples/llama/pretrain_llama_33B_ptd_32p.sh">训练</a> </td>
-    </tr>
-    <tr>
-      <td rowspan="2">65B</td>
-      <td rowspan="2">4x8</td>
-    </tr>
-    <tr>
-      <td>BF16 </td>
-      <td> 348 </td>
-      <td> 426 </td>
-      <td> <a href="examples/llama/pretrain_llama_65b_ptd.sh">训练</a> </td>
-    </tr>
-    <tr>
-      <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</td>
-      <td>7B</td>
-      <td>1x8</td>
-      <td>BF16 </td>
-      <td> 2662 </td>
-      <td> 2884 </td>
-      <td> <a href="examples/llama2/pretrain_llama2_7b_ptd.sh">训练</a> </td>
-    </tr>
-    <tr>
-      <td>13B</td>
-      <td>1x8</td>
-      <td>BF16 </td>
-      <td> 1550 </td>
-      <td> 1750 </td>
-      <td> <a href="examples/llama2/pretrain_llama2_13B_ptd_8p.sh">训练</a> </td>
-    </tr>
-    <tr>
-      <td>34B</td>
-      <td>2x8</td>
-      <td>BF16 </td>
-      <td> 690 </td>
-      <td> 796 </td>
-      <td> <a href="examples/llama2/pretrain_llama2_34B_ptd_16p.sh">训练</a> </td>
-    </tr>
-    <tr>
-      <td>70B</td>
-      <td>8x8</td>
-      <td>BF16 </td>
-      <td> 350 </td>
-      <td> 339 </td>
-      <td> <a href="examples/llama2/pretrain_llama2_70b_ptd.sh">训练</a> </td>
-    </tr>
-    <tr>
-      <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
-      <td>7B</td>
-      <td>1x8</td>
-      <td>BF16 </td>
-      <td> 2499 </td>
-      <td> 2867 </td>
-      <td> <a href="examples/qwen/pretrain_qwen_7b_ptd.sh">训练</a> </td>
-    </tr>
-    <tr>
-      <td>14B</td>
-      <td>1x8</td>
-      <td>BF16 </td>
-      <td> 1560 </td>
-      <td> 1578 </td>
-      <td> <a href="examples/qwen/pretrain_qwen_14b_ptd.sh">训练</a> </td>
-    </tr>
-    <tr>
-      <td>72B</td>
-      <td>16x8</td>
-      <td>BF16 </td>
-      <td> 285 </td>
-      <td> 345 </td>
-      <td> <a href="examples/qwen/pretrain_qwen_72b_ptd.sh">训练</a> </td>
-    </tr>
-    <tr>
-      <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
-      <td>8x7B</td>
-      <td>2x8</td>
-      <td>BF16 </td>
-      <td> 1054 </td>
-      <td> 1139 </td>
-      <td> <a href="examples/mixtral/pretrain_mixtral_8x7b_ptd.sh">训练</a> </td>
-    </tr>
-  </tbody>
-</table>
-
-
-### 模型训练软件配套
-
-|            软件             |                                                  [版本](https://www.hiascend.com/zh/)                                                  |
-|:-------------------------:|:------------------------------------------------------------------------------------------------------------------------------------:|
-|          Python           |                                                                3.8.18                                                                |
-|          driver           |                                                               2023Q4商发                                                               |
-|         firmware          |                                                               2023Q4商发                                                               |
-|           CANN            |                                                               2023Q4商发                                                               |
-| binary arithmetic package |                                                               2023Q4商发                                                               |
-|           torch           |                                                                2.1.0                                                                 |
-|         torch_npu         |                                                               2023Q4商发                                                               |
-
-
-
-## 下游任务
-
----
-
-### 内容列表
 <table>
   <thead>
     <tr>
@@ -433,10 +204,240 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
 </table>
 
 
+## 【脚本命名规则】
+|            脚本             |    规则    |
+|:-------------------------:|:--------:|
+|      pretrain_xxx.sh      |  预训练脚本   |
+|        tune_xxx.sh        |   微调脚本   |
+|      generate_xxx.sh      |   推理脚本   |
+|     evaluation_xxx.sh     |   评估脚本   |
 
 
-### <span id="jump11"> 指令/预训练数据集 </span>
+---
+
+# 模型使用指导与版本说明
+
+上述列表中支持的模型，我们在[examples](./examples/)文件夹中提供了各模型的训练脚本和readme说明，里面有详细的模型训练、推理、评估流程。
+
+【需要注意模型使用时的配套环境版本，参考如下】
+
+|           软件            | [版本](https://www.hiascend.com/zh/) |
+| :-----------------------: |:----------------------------------:|
+|          Python           |                3.8                 |
+|          driver           |              Ascend HDK 23.0.0              |
+|         firmware          |              Ascend HDK 23.0.0              |
+|           CANN            |              CANN 7.0.0              |
+|           torch           |               2.1.0                |
+|         torch_npu         |              release v5.0.0               |
+
+当前仓库使用的megatron commitId为[bcce6f54](https://github.com/NVIDIA/Megatron-LM/tree/bcce6f54e075e3c3374ea67adefe54f3f2da2b07)
+
+【基于最新版本我们实测的性能情况统计如下】
+
+<table>
+  <thead>
+    <tr>
+      <th>模型</th>
+      <th>参数</th>
+      <th>集群规模</th>
+      <th>精度模式</th>
+      <th>性能 </th>
+      <th>参考性能 </th>
+      <th>脚本</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td rowspan="1"><a href="examples/aquila/README.md">Aquila</a></td>
+      <td>7B</td>
+      <td> 1x8</td>
+      <td> BF16 </td>
+      <td> 2849 </td>
+      <td> 2874 </td>
+      <td> <a href="examples/aquila/pretrain_aquila_7b_ptd.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="2"><a href="examples/baichuan/README.md">Baichuan</a></td>
+      <td>7B</td>
+      <td> 1x8</td>
+      <td> FP16 </td>
+      <td> 2685 </td>
+      <td> 2036 </td>
+      <td> <a href="examples/baichuan/pretrain_baichuan_ptd_7B.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td>13B</td>
+      <td> 1x8</td>
+      <td> FP16 </td>
+      <td> 1213 </td>
+      <td> 862 </td>
+      <td> <a href="examples/baichuan/pretrain_baichuan_ptd_13B.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="2"><a href="examples/baichuan2/README.md">Baichuan2</a></td>
+      <td>7B</td>
+      <td> 1x8</td>
+      <td> BF16 </td>
+      <td> 2664 </td>
+      <td> 3969 </td>
+      <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_7B.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td>13B</td>
+      <td> 1x8</td>
+      <td> BF16 </td>
+      <td> 940 </td>
+      <td> 872 </td>
+      <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_13B.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
+      <td>7B1</td>
+      <td> 1x8</td>
+      <td> FP16 </td>
+      <td> 2034 </td>
+      <td> 2525 </td>
+      <td> <a href="examples/bloom/pretrain_bloom_7b1.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td >176B</td>
+      <td >12x8</td>
+      <td> BF16 </td>
+      <td> 100 </td>
+      <td> 107 </td>
+      <td> <a href="examples/bloom/pretrain_bloom_176b.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>
+      <td>7B</td>
+      <td>1x8</td>
+      <td>BF16</td>
+      <td> 2776 </td>
+      <td> 2854 </td>
+      <td> <a href="examples/intern/pretrain_internlm_7b_zero.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td >65B</td>
+      <td >4x8</td>
+      <td> BF16 </td>
+      <td> 341 </td>
+      <td> 414 </td>
+      <td> <a href="examples/intern/pretrain_internlm_65b_ptd_32p.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="5"><a href="examples/llama/README.md">LLaMA</td>
+      <td>7B</td>
+      <td>1x8</td>
+      <td>FP16</td>
+      <td> 3600 </td>
+      <td> 3804 </td>
+      <td> <a href="examples/llama/pretrain_llama_7b_ptd.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td>13B</td>
+      <td>1x8</td>
+      <td>FP16</td>
+      <td> 1895 </td>
+      <td> 2012 </td>
+      <td> <a href="examples/llama/pretrain_llama_13b_ptd.sh">训练</a> </td>
+    </tr>
+    <tr>
+        <td>33B</td>
+        <td>4x8</td>
+        <td>FP16</td>
+        <td>621</td>
+        <td>776</td>
+        <td><a href="examples/llama/pretrain_llama_33B_ptd_32p.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="2">65B</td>
+      <td rowspan="2">4x8</td>
+    </tr>
+    <tr>
+      <td>BF16 </td>
+      <td> 348 </td>
+      <td> 426 </td>
+      <td> <a href="examples/llama/pretrain_llama_65b_ptd.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</td>
+      <td>7B</td>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 2884 </td>
+      <td> 2884 </td>
+      <td> <a href="examples/llama2/pretrain_llama2_7b_ptd.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td>13B</td>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 1550 </td>
+      <td> 1750 </td>
+      <td> <a href="examples/llama2/pretrain_llama2_13B_ptd_8p.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td>34B</td>
+      <td>2x8</td>
+      <td>BF16 </td>
+      <td> 690 </td>
+      <td> 796 </td>
+      <td> <a href="examples/llama2/pretrain_llama2_34B_ptd_16p.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td>70B</td>
+      <td>8x8</td>
+      <td>BF16 </td>
+      <td> 350 </td>
+      <td> 339 </td>
+      <td> <a href="examples/llama2/pretrain_llama2_70b_ptd.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
+      <td>7B</td>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 2499 </td>
+      <td> 2867 </td>
+      <td> <a href="examples/qwen/pretrain_qwen_7b_ptd.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td>14B</td>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 1560 </td>
+      <td> 1578 </td>
+      <td> <a href="examples/qwen/pretrain_qwen_14b_ptd.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td>72B</td>
+      <td>16x8</td>
+      <td>BF16 </td>
+      <td> 285 </td>
+      <td> 345 </td>
+      <td> <a href="examples/qwen/pretrain_qwen_72b_ptd.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
+      <td>8x7B</td>
+      <td>2x8</td>
+      <td>BF16 </td>
+      <td> 1054 </td>
+      <td> 1139 </td>
+      <td> <a href="examples/mixtral/pretrain_mixtral_8x7b_ptd.sh">训练</a> </td>
+    </tr>
+  </tbody>
+</table>
+
+
+
+
+# 功能使用指导
+
+## 【制作】指令/预训练数据集 </span>
+
 #### 快速开始
+使用[preprocess_data.py](tools/preprocess_data.py)数据预处理工具将raw数据处理为用于训练的二进制格式数据，下面是一个处理alpaca数据集的样例：
 
 ```bash
 # 对于llama, 可以下载alpaca数据集, 比如
@@ -453,8 +454,9 @@ python tools/preprocess_data.py --input train-00000-of-00001-a09b74b3ef9c3b56.pa
                                 --tokenizer-not-use-fast \
                                 --handler-name GeneralInstructionHandler
 ```
+输出将是两个文件，在本例中名为alpaca_packed_input_ids_document.bin和alpaca_packed_input_ids_document.idx，后面的训练中指定--data-path的是完整路径和新文件名，但不带文件扩展名。使用--tokenizer-type指定模型对应的数据预处理方法，使用--tokenizer-name-or-path指定tokenizer模型路径，通常是与开源项目中的预训练权重一起下载，--handler-name指定数据集的指令数据构造方法。
 
-#### 处理预训练数据集
+#### <span id="jump11"> 制作预训练数据集
 
 ##### wikipedia 数据集
 
@@ -508,7 +510,7 @@ python tools/preprocess_data.py --input WORKSPACE/train-00000-of-00001-a09b74b3e
 ```
 
 
-#### 处理指令微调数据集
+#### <span id="jump12"> 制作指令微调数据集
 ##### alpaca 数据集
 ```bash
 # 数据集：wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
@@ -530,7 +532,34 @@ python tools/preprocess_data.py --input WORKSPACE/alpaca/train-00000-of-00001-a0
 请注意，使用 `--handler-name GeneralInstructionHandler` 标志的指令数据集，在处理时会从 `modellink/data/data_handler.py` 中选择 `GeneralInstructionHandler` 类来制作prompt。如果你处理的是 alpaca 格式风格的数据集，即包含 `instruction`, `input` 和 `output` 列的数据集，可以直接使用 `--handler-name GeneralInstructionHandler` 标志。
 此外，`BelleMultiTurnInstructionHandler` 可以被用于处理 [belle](https://huggingface.co/datasets/BelleGroup/multiturn_chat_0.8M) 格式的数据集，`MOSSInstructionHandler` 可以被用于处理 [MOSS](https://huggingface.co/datasets/fnlp/moss-003-sft-data) 格式的数据集，`LeetcodePythonInstructionHandler` 可以被用于处理 [Leetcode](https://huggingface.co/datasets/mhhmm/leetcode-solutions-python) 风格的数据集
 
-### <span id="jump12"> 低参微调 </span>
+### <span id="jump13"> 预训练 </span>
+```shell
+ # 配置LLaMA-7B 预训练脚本: pretrain_llama_7b.sh
+ # 根据实际情况配置词表、数据集、模型参数保存路径
+ TOKENIZER_PATH=WORKSPACE/llama-7b-hf/tokenizer.model  #词表路径
+ DATA_PATH=WORKSPACE/alpaca_preprocessed/alpaca_text_document  #预训练数据集路径
+```
+
+启动 LLaMA-7B 预训练脚本: examples/llama/pretrain_llama_7b_ptd.sh
+```shell
+ bash examples/llama2/pretrain_llama_7b_ptd.sh
+```
+
+### <span id="jump14"> 全参微调 </span>
+```shell
+ # 在预训练脚本的基础上，给出预训练权重路径，数据集使用指令数据集路径，使能微调开关--finetune
+ LOAD_CHECKPOINT_PATH="your init model weight load path"
+ DATA_PATH=WORKSPACE/alpaca_preprocessed/alpaca_text_document  #指令微调数据集路径
+ 
+ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
+     --load ${LOAD_CHECKPOINT_PATH} \
+     --finetune \
+     ... \
+     ...
+```
+
+
+### <span id="jump15"> 低参微调 </span>
 #### Lora
 
 当前 ModelLink基于 peft 仓库支持对大模型的 Lora 微调功能：
@@ -580,30 +609,29 @@ ModelLink:
 - Take medications regularly.
 ```
 
-如果在完成lora微调后，需要一个不带lora结构的模型，那么我们只需运行这个 [脚本](tools/lora/merge_lora_llama_ptd_13B.sh)，即可将`--load`和`--lora-load`这两个模型文件合并，生成的不带lora结构的新权重模型文件存在`--save`路径里。
-
-### <span id="jump13"> 推理: 人机对话 </span>
+### <span id="jump16"> 推理（ 人机对话） </span>
+当前，我们支持使用如下策略训练的模型进行推理:
 当前，我们支持使用如下并行策略训练的模型进行推理:
 - 仅仅使用 PTD 策略训练的模型
 - 使用 Lora 策略微调的模型
 
+【同时对于已经支持的模型，我们提供了样例，请参考下列快速开始】
+
 #### 快速开始
 
-这里有一些使用不同模式的样例脚本可以尝试运行，***请注意：***
-1. 如果你尝试使用 huggingface 的模型权重，请首先进行权重转换， 以 Llama-7B 为例:
-
+1.  如果你尝试使用 huggingface 的模型权重，请首先进行权重转换， 以 Llama-7B 为例:
       - PTD 策略的转换
-
            ```bash
-           python tools/checkpoint/util.py --model-type GPT \
-                                --loader llama2_hf \
-                                --saver megatron \
-                                --target-tensor-parallel-size 2 \
-                                --target-pipeline-parallel-size 2 \
-                                --load-dir ./model_from_hf/llama-7b-hf \
-                                --save-dir ./model_weights/llama-7b-tp2-pp2 \
-                                --tokenizer-model ./model_from_hf/llama-7b-hf/tokenizer.model
+            python tools/checkpoint/util.py --model-type GPT \
+                                            --loader llama2_hf \
+                                            --saver megatron \
+                                            --target-tensor-parallel-size 1 \
+                                            --target-pipeline-parallel-size 8 \
+                                            --load-dir ./model_from_hf/llama-7b-hf \
+                                            --save-dir ./model_weights/llama-7b-tp1-pp8 \
+                                            --tokenizer-model ./model_from_hf/llama-7b-hf/tokenizer.model
            ```
+
 
 5. 下面脚本中的一些路径需要修改，比如：模型权重路径 和 词表路径.
 
@@ -713,8 +741,11 @@ pretrained_model_name_or_path(`str`, *optional*, defaults to None):
     ```
     <img src="sources/images/beam_search_sampling.png">
 
-### <span id="jump14"> 使用基线数据集进行评估 </span>
-#### 评估样例
+### <span id="jump17"> 【评估】 基线数据集（Benchmark）</span>
+
+
+
+#### 【数据集评估结果参考】
 
 <table>
   <thead>
@@ -821,8 +852,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation_llama.py   \
 bash tasks/evaluation/eval_llama.sh
 ```
 
-#### 任务介绍
-最重要的评估参数是 `--max-new-tokens`, 它表示模型输出的生成长度，比如，多项选择问题的输出长度就会明显比编码任务的输出长度小，该参数也很大程度上影响了模型的生成速度。
+最重要的评估参数是 `--max-new-tokens`, 它表示模型输出的生成长度，比如，多项选择问题的输出长度就会明显比编码任务的输出长度小，该参数也很大程度上影响了模型的评估性能。通过--evaluation-batch-size参数可以设置多batch推理，提升模型评估性能。
 
 ```bash
 python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation_llama.py   \
@@ -846,8 +876,21 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation_llama.py   \
        --micro-batch-size 1  \
        --seed 42 | tee logs/train.log
 ```
+#### 评估脚本说明
+
+#### 【基线数据集介绍】
+
+
+##### AGIEval
+AGIEval 是一个用于评估大模型在人类认知和问题解决能力方面生成能力的基准数据集，它源于20个面向普通考生的官方、公开和高标准的入学和资格考试，相关参数可以设置为 `TASK="agieval"`,  `--max-new-token=5`。
+
+##### HumanEval
+HumanEval 是一个用于挑战代码生成问题的数据集，具有164个编程问题，包含函数签名，文档，函数主体和单元测试等。该数据的所有问题都是手写的，以确保它们不在训练集中，由于答案包含长代码，相关参数可以设置为 `TASK="human_eval"`, `--max-new-token=200`。
+
+
 ##### BoolQ
-BoolQ 是一个 yes/no 的问答数据集， 每一个问题包含了一个（问题，文章，答案）三元组，同时有文章的标题作为额外的选择性输入。BoolQ 数据集的评估相对简单，只需要配置 `TASK="boolq"`, `--max-new-token=1`。
+
+BoolQ 是一个 yes/no 的问答数据集， 每一个问题包含了一个（问题，文章，答案）三元组，同时有文章的标题作为额外的选择性输入。BoolQ 数据集的评估相对简单，只需要配置 `TASK="boolq"`, `--seq-length=512`, `--max-position-embeddings=512`, `--max-new-token=1`。
 零样本评估的结果通常会被给定的 prompt 影响，可以尝试通过在 `tasks/evaluation/evaluation.py` 中设置合适的 prompt 得到更高的分数，
 
 ```bash
@@ -855,25 +898,56 @@ BoolQ 是一个 yes/no 的问答数据集， 每一个问题包含了一个（�
 template = {instruction}
 ```
 
-##### MMLU
-由于 MMLU 是一项多学科任务，并且需要进行 5-shot 评估，因此每个学科问题的长度差异很大。如果你想同时跑57个学科任务，可以尝试设置 `TASK="mmlu"`, `--max-new-token=1` 。
-在很多网站，MMLU 的精度会依据学科进行评估，57个学科主要属于四个大类， 因此该数据集也可以基于四个大类进行打分，[网站](https://github.com/hendrycks/test/blob/master/categories.py) 给出了具体的57个类别。
-
+##### Big-Bench-Hard
+Big-bench-hard 数据集是 BIG-Bench 的一个子集，专注于有挑战性的23个 BIG-Bench 任务， 涵盖文本理解、推理、逻辑推理、数学推理和常识推理等多个领域，相关参数可以设置为 `TASK="bbh"`, `--max-new-token=32`,`--evaluation-batch-size=4`。
 
 ##### GSM8K
 GSM8K 是一个有8.5k高质量小学数学应用题文本的数据集，每一个问题的回答是具体的数字。由于该数据集通常采用 few-shot 的形式进行评估，GSM8K的问题长度相对是比较长的，输出答案包含一整个思维链路，相关入参应该设置为 `TASK="gsm8k"`, `--max-new-token=200`.
 
-##### HumanEval
-HumanEval 是一个用于挑战代码生成问题的数据集，具有164个编程问题，包含函数签名，文档，函数主体和单元测试等。该数据的所有问题都是手写的，以确保它们不在训练集中，由于答案包含长代码，相关参数可以设置为 `TASK="human_eval"`, `--max-new-token=200`。
-
-##### AGIEval
-AGIEval 是一个用于评估大模型在人类认知和问题解决能力方面生成能力的基准数据集，它源于20个面向普通考生的官方、公开和高标准的入学和资格考试，相关参数可以设置为 `TASK="agieval"`,  `--max-new-token=5`。
-
-##### Big-Bench-Hard
-Big-bench-hard 数据集是 BIG-Bench 的一个子集，专注于有挑战性的23个 BIG-Bench 任务， 涵盖文本理解、推理、逻辑推理、数学推理和常识推理等多个领域，相关参数可以设置为 `TASK="bbh"`, `--max-new-token=32`,`--evaluation-batch-size=4`。
-
 ##### CEval
 如 [C-Eval](https://cevalbenchmark.com/) 展示的, C-Eval 是一个针对大模型的综合中文评估数据集， 它由13948道多项选择题组成，涵盖52个不同学科和4个难度级别，划分为验证和测试集，验证集包含标签用于个人评估，测试集合的标签没有公开，如果想要知道模型得分，需要将结果 邮件发送给 [C-Eval](https://cevalbenchmark.com/)，相关参数可以设置为 `TASK="ceval"`, `--max-new-token=1`。
+
+##### MMLU
+由于 MMLU 是一项多学科任务，并且需要进行 5-shot 评估，因此每个学科问题的长度差异很大。如果你想同时跑57个学科任务，可以尝试设置 `TASK="mmlu"`, `--max-new-token=1` 。
+在很多网站，MMLU 的精度会依据学科进行评估，57个学科主要属于四个大类， 因此该数据集也可以基于四个大类进行打分，[网站](https://github.com/hendrycks/test/blob/master/categories.py) 给出了具体的57个类别。
+
+### <span id="jump18">【使用加速特性】
+ModelLink支持张量并行、流水线并行、序列并行、重计算、分布式优化器、等多种加速算法，下表为各种加速特性对应的使能开关：
+
+|   加速特性    |   使能参数   |
+|:---------:|:--------:|
+|   张量并行    |  --tensor-model-parallel-size  |
+|   流水线并行   | --pipeline-model-parallel-size |
+|   序列并行    | --sequence-parallel |
+|    重计算    | --recompute-granularity |
+|  分布式优化器   | --use-distributed-optimizer |
+
+```bash
+torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
+    --tensor-model-parallel-size ${TP} \
+    --pipeline-model-parallel-size ${PP} \
+    --sequence-parallel \
+    --recompute-granularity full \
+    --recompute-method block \
+    --recompute-num-layers 72 \
+    --use-distributed-optimizer \
+    ... \
+    ...
+```
+在模型训练和下游任务中，可以使用--tensor-model-parallel-size和--pipeline-model-parallel-size将模型切分到不同的设备上，降低单设备内存占用。
+使用--sequence-parallel对数据进行切分，使得模型可以训练超长序列数据。recompute-granularity或者use-distributed-optimizer也能降低单设备内存占用。
+
+ModelLink支持attn、rmsnorm、swiglu、rotary-pos-emb、mlp等多个融合算子，提升模型训练性能：
+```bash
+torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
+    --use-flash-attn \
+    --use-fused-rmsnorm \
+    --use-fused-swiglu \
+    --use-fused-rotary-pos-emb \
+    --mlp-layer-fusion \
+    ... \
+    ...
+```
 
 
 ## 致谢
