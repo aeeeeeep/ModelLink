@@ -99,7 +99,7 @@ static const uint64_t OUT_TENSOR_COUNT = OUT_TENSOR_MAX - IN_TENSOR_MAX;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = INTERMEDIATE_TENSOR_MAX - OUT_TENSOR_MAX;
 static const uint64_t NODE_COUNT = 10;
 
-void reshapeHeads(const atb::Dims &oldShape, atb::Dims &newShape, int headNum)
+void reshapeHeads(const atb::Dims &oldShape, atb::Dims &newShape)
 {
     newShape.dimNum = 3; // dimNum: 3
     newShape.dims[0] = oldShape.dims[0]; // 0 dim: n tokens
@@ -191,10 +191,10 @@ atb::Status PagedLayer(const Bloom7bPagedLayerParam &param, atb::Operation **ope
     reshapeAndCacheNode.outTensorIds = {IN_K_CACHE, IN_V_CACHE};
     reshapeAndCacheNode.inTensorReshapeFuncs.resize(reshapeAndCacheNode.inTensorIds.size());
     reshapeAndCacheNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        reshapeHeads(oldShape, newShape, param.headNum);
+        reshapeHeads(oldShape, newShape);
     };
     reshapeAndCacheNode.inTensorReshapeFuncs[1] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        reshapeHeads(oldShape, newShape, param.headNum);
+        reshapeHeads(oldShape, newShape);
     };
     
     atb::Node &attentionNode = opGraph.nodes.at(nodeId++);
@@ -212,7 +212,7 @@ atb::Status PagedLayer(const Bloom7bPagedLayerParam &param, atb::Operation **ope
         attentionNode.outTensorIds = {INTERMEDIATE_SELFOUT};
         attentionNode.inTensorReshapeFuncs.resize(attentionNode.inTensorIds.size());
         attentionNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            reshapeHeads(oldShape, newShape, param.headNum);
+            reshapeHeads(oldShape, newShape);
         };
         attentionNode.inTensorReshapeFuncs[1] = attentionNode.inTensorReshapeFuncs[0];
         attentionNode.inTensorReshapeFuncs[2] = attentionNode.inTensorReshapeFuncs[0];
@@ -228,7 +228,7 @@ atb::Status PagedLayer(const Bloom7bPagedLayerParam &param, atb::Operation **ope
         attentionNode.outTensorIds = {INTERMEDIATE_SELFOUT};
         attentionNode.inTensorReshapeFuncs.resize(attentionNode.inTensorIds.size());
         attentionNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            reshapeHeads(oldShape, newShape, param.headNum);
+            reshapeHeads(oldShape, newShape);
         };
     }
 
