@@ -96,8 +96,7 @@ int W8A16BiasOperation::CreateAclTensors(const atb::VariantPack &variantPack, Ac
     return 0;
 }
 
-int W8A16BiasOperation::CallAclGetWorkspace(const atb::VariantPack &variantPack, AclNnTask &task,
-                                            uint64_t &workspaceSize)
+int W8A16BiasOperation::CallAclGetWorkspace(AclNnTask &task, uint64_t &workspaceSize)
 {
     ATB_LOG(INFO) << opName_ << " aclnnWeightQuantBatchMatmulV2GetWorkspaceSize start";
 

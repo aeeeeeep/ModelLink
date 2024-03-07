@@ -30,7 +30,7 @@ public:
 
 private:
     int CreateAclTensors(const atb::VariantPack &variantPack, AclNnTask &task) override;
-    int CallAclGetWorkspace(const atb::VariantPack &variantPack, AclNnTask &task, uint64_t &workspaceSize)override;
+    int CallAclGetWorkspace(AclNnTask &task, uint64_t &workspaceSize)override;
     int CallAclExecute(uint8_t *workspace, uint64_t workspaceSize, aclOpExecutor *aclExecutor,
                                aclrtStream stream) override;
     AclNnTensor CreateTensor(atb::Tensor atbTensor);
