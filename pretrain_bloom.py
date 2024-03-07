@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Pretrain BLOOM"""
+import os
 import ast
 from functools import partial
 import math
@@ -316,8 +317,8 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
 
 
 if __name__ == "__main__":
-    torch_npu.npu.set_compile_mode(jit_compile=True)
-
+    jit_compile = False if os.environ.get("WITHOUT_JIT_COMPILE") else True
+    torch_npu.npu.set_compile_mode(jit_compile=jit_compile)
     pretrain(train_valid_test_datasets_provider, model_provider, ModelType.encoder_or_decoder,
              forward_step,
              args_defaults={'tokenizer_type': 'GPT2BPETokenizer'}

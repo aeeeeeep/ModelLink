@@ -15,6 +15,7 @@
 
 """Pretrain GPT"""
 
+import os
 import math
 from functools import partial
 
@@ -325,6 +326,8 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
 
 
 if __name__ == "__main__":
+    jit_compile = False if os.environ.get("WITHOUT_JIT_COMPILE") else True
+    torch_npu.npu.set_compile_mode(jit_compile=jit_compile)
     pretrain(train_valid_test_datasets_provider, model_provider, ModelType.encoder_or_decoder, forward_step,
              args_defaults={'tokenizer_type': 'GPT2BPETokenizer'},
              data_post_process=data_post_process)
