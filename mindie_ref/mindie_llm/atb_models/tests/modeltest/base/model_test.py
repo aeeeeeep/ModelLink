@@ -993,7 +993,7 @@ class ModelTest:
                 samples = []
                 dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
                 for batch in tqdm(dataloader):
-                    queries = [prompt.replace("    ", "\t") for prompt in batch["prompt"]]
+                    queries = [prompt.strip() for prompt in batch["prompt"]]
                     if self.model_type == "fa":
                         inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
                                                 max_length=2048).to(self.model.device)
