@@ -7,11 +7,13 @@ from typing import Optional, List, Tuple
 import torch
 import torch_npu
 
+from atb_llm.utils.layers import load_column_multi
+from atb_llm.utils.log import logger
+
 from .modeling_qwen import FlashQwenModel, QwenConfig
 from ..base.flash_causal_lm import FlashForCausalLM
 from ...utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
-from atb_llm.utils.layers import load_column_multi
-from atb_llm.utils.log import logger
+
 
 class FlashQwenForCausalLM(FlashForCausalLM):
     def __init__(self, config, weights):
@@ -224,7 +226,7 @@ class FlashQwenForCausalLM(FlashForCausalLM):
             weight_wrapper.register_model_norm(self.model.state_dict(), 'norm')
             weight_wrapper.register_model_lmhead(self.state_dict(), 'lm_head')
             self.ascend_weight = weight_wrapper.weights
-            exit()
+
             self.acl_encoder_operation.set_weight(weight_wrapper.weights)
             self.acl_decoder_operation.set_weight(weight_wrapper.weights)
         else:
