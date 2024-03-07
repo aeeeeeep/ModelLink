@@ -15,261 +15,35 @@
     </a>
 </p>
 <p align="center">
-        <b><a href="https://gitee.com/fengliangjun66/AscendSpeed/blob/master/README.md"> 简体中文</a></b> |
-        <b> English </b>
-    </p>
+        <b>简体中文</b> |
+        <b><a href="https://gitee.com/fengliangjun66/AscendSpeed/blob/master/README_en.md">English</a> </b>
 </p>
 
-ModelLink provides end-to-end solutions for large language models on [Ascend](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) chips, including models, algorithms, kernels, and tasks.
+ModelLink provides end-to-end solutions for large language models on Ascend chips, including models, algorithms and tasks.
 
-## Why ModelLink?
-
----
-### Prepared Models
-Currently, the following models has been supported:
-* <a href="https://huggingface.co/BAAI/Aquila-7B/tree/main" style="color:green">Aquila</a>-[[README: 7B]](examples/aquila/README.md)
-* <a href="https://github.com/baichuan-inc" style="color:green">Baichuan</a>-[[README: 7B/13B]](examples/baichuan/README.md)
-* <a href="https://arxiv.org/pdf/2108.12409.pdf" style="color:green">Bloom</a>-[[README: 7B/176B]](examples/bloom/README.md)
-* <a href="https://internlm.intern-ai.org.cn/" style="color:green">InternLM</a>-[[README: 7B/65B]](examples/intern/README.md)
-* <a href="https://huggingface.co/docs/transformers/main/model_doc/llama" style="color:green">LLaMA</a>-[[README: 7B/13B/33B/65B]](examples/llama/README.md)
-* <a href="https://huggingface.co/docs/transformers/main/model_doc/llama2" style="color:green">LLaMA2</a>-[[README: 7B/13B/34B/70B]](examples/llama2/README.md)
-* <a href="https://github.com/baichuan-inc" style="color:green">Baichuan2</a>-[[README: 7B/13B]](examples/baichuan2/README.md)
-* <a href="https://huggingface.co/Qwen/Qwen-7B" style="color:green">Qwen</a>-[[README: 7B]](examples/qwen/README.md)
-* <a href="https://huggingface.co/Qwen/Qwen-7B" style="color:green">Qwen</a>-[[README: 7B/14B/72B]](examples/qwen/README.md)
-* <a href="https://mistral.ai/news/mixtral-of-experts/" style="color:green">Mixtral</a>-[[README: 8x7B]](examples/mixtral/README_en.md)
-
-### Downstream Tasks
-Currently, the following downstream tasks have been supported:
-* [Instruction/Pretraining dataset support](#jump11)
-* [Low-parameter fine-tuning](#jump12)
-* [Inference: human-machine dialogue](#jump13)
-* [Evaluation with numerous benchmarks](#jump14)
-
-
-## Quick Start For Model Training
+## ModelLink Solution Overview
 
 ---
 
-### Model Performance
+
+## 【supported features】
+Current ModelLink supported features for large model usage:
+* [Dataset Preparation for Pre-training](#jump11)/[Fine-tuning Instruction Dataset Preparation](#jump12)
+* [Pre-training](#jump13)/[Full-parameter Fine-tuning](#jump14)/[Low-parameter Fine-tuning](#jump15)
+* [Inference: human-machine dialogue](#jump16)
+* [Evaluation with numerous benchmarks](#jump17)
+* [Utilizing Acceleration Features (Acceleration Algorithms + Fusion Operators)](#jump18)
+
+More novel and useful features are developing for LLMs training on Ascend ...
+
+## 【Supported Models】
+Current ModelLink supports pre-training and fine-tuning for the following models:
+
 <table>
   <thead>
     <tr>
       <th>Model</th>
-      <th>Size</th>
-      <th>Node</th>
-      <th>Mode</th>
-      <th>NPU </th>
-      <th>Ref. </th>
-      <th>Scripts</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td rowspan="1"><a href="examples/aquila/README.md">Aquila</a></td>
-      <td>7B</td>
-      <td> 1x8</td>
-      <td> BF16 </td>
-      <td> 2849 </td>
-      <td> 4078 </td>
-      <td> <a href="examples/aquila/pretrain_aquila_7b_ptd.sh">Train</a> </td>
-    </tr>
-    <tr>
-      <td rowspan="2"><a href="examples/baichuan/README.md">Baichuan</a></td>
-      <td>7B</td>
-      <td> 1x8</td>
-      <td> FP16 </td>
-      <td> 2643 </td>
-      <td> 2036 </td>
-      <td> <a href="examples/baichuan/pretrain_baichuan_ptd_7B.sh">Train</a> </td>
-    </tr>
-    <tr>
-      <td>13B</td>
-      <td> 1x8</td>
-      <td> FP16 </td>
-      <td> 1213 </td>
-      <td> 824 </td>
-      <td> <a href="examples/baichuan/pretrain_baichuan_ptd_13B.sh">Train</a> </td>
-    </tr>
-    <tr>
-      <td rowspan="2"><a href="examples/baichuan2/README.md">Baichuan2</a></td>
-      <td>7B</td>
-      <td> 1x8</td>
-      <td> BF16 </td>
-      <td> 2598 </td>
-      <td> 3936 </td>
-      <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_7B.sh">Train</a> </td>
-    </tr>
-    <tr>
-      <td>13B</td>
-      <td> 1x8</td>
-      <td> BF16 </td>
-      <td> 880 </td>
-      <td> 872 </td>
-      <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_13B.sh">Train</a> </td>
-    </tr>
-    <tr>
-      <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
-      <td>7B1</td>
-      <td> 1x8</td>
-      <td> FP16 </td>
-      <td> 2611 </td>
-      <td> 2525 </td>
-      <td> <a href="examples/bloom/pretrain_bloom_7b1.sh">Train</a> </td>
-    </tr>
-    <tr>
-      <td >176B</td>
-      <td >12x8</td>
-      <td> BF16 </td>
-      <td> 112 </td>
-      <td> 107 </td>
-      <td> <a href="examples/bloom/pretrain_bloom_176b.sh">Train</a> </td>
-    </tr>
-    <tr>
-      <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>
-      <td>7B</td>
-      <td>1x8</td>
-      <td>BF16</td>
-      <td> 2943 </td>
-      <td> 4078 </td>
-      <td> <a href="examples/intern/pretrain_internlm_7b_zero.sh">Train</a> </td>
-    </tr>
-    <tr>
-      <td >65B</td>
-      <td >4x8</td>
-      <td> BF16 </td>
-      <td> 342 </td>
-      <td> 414 </td>
-      <td> <a href="examples/intern/pretrain_internlm_65b_ptd_32p.sh">Train</a> </td>
-    </tr>
-    <tr>
-      <td rowspan="5"><a href="examples/llama/README.md">LLaMA</td>
-      <td>7B</td>
-      <td>1x8</td>
-      <td>FP16</td>
-      <td> 3763 </td>
-      <td> 3804 </td>
-      <td> <a href="examples/llama/pretrain_llama_7b_ptd.sh">Train</a> </td>
-    </tr>
-    <tr>
-      <td>13B</td>
-      <td>1x8</td>
-      <td>FP16</td>
-      <td> 1894 </td>
-      <td> 2012 </td>
-      <td> <a href="examples/llama/pretrain_llama_13b_ptd.sh">Train</a> </td>
-    </tr>
-    <tr>
-        <td>33B</td>
-        <td>4x8</td>
-        <td>FP16</td>
-        <td>621 </td>
-        <td>776 </td>
-        <td><a href="examples/llama/pretrain_llama_33B_ptd_32p.sh">Train</a> </td>
-    </tr>
-    <tr>
-      <td rowspan="2">65B</td>
-      <td rowspan="2">4x8</td>
-    </tr>
-    <tr>
-      <td>BF16 </td>
-      <td> 348 </td>
-      <td> 426 </td>
-      <td> <a href="examples/llama/pretrain_llama_65b_ptd.sh">Train</a> </td>
-    </tr>
-    <tr>
-      <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</td>
-      <td>7B</td>
-      <td>1x8</td>
-      <td>BF16 </td>
-      <td> 2662</td>
-      <td> 2884 </td>
-      <td> <a href="examples/llama2/pretrain_llama2_7b_ptd.sh">Train</a> </td>
-    </tr>
-    <tr>
-      <td>13B</td>
-      <td>1x8</td>
-      <td>BF16 </td>
-      <td> 1550 </td>
-      <td> 1750 </td>
-      <td> <a href="examples/llama2/pretrain_llama2_13B_ptd_8p.sh">Train</a> </td>
-    </tr>
-    <tr>
-      <td>34B</td>
-      <td>2x8</td>
-      <td>BF16 </td>
-      <td> 690 </td>
-      <td> 796 </td>
-      <td> <a href="examples/llama2/pretrain_llama2_34B_ptd_16p.sh">Train</a> </td>
-    </tr>
-    <tr>
-      <td>70B</td>
-      <td>8x8</td>
-      <td>BF16 </td>
-      <td> 350  </td>
-      <td> 339 </td>
-      <td> <a href="examples/llama2/pretrain_llama2_70b_ptd.sh">Train</a> </td>
-    </tr>
-    <tr>
-      <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
-      <td>7B</td>
-      <td>1x8</td>
-      <td>BF16 </td>
-      <td> 2499 </td>
-      <td> 2867 </td>
-      <td> <a href="examples/qwen/pretrain_qwen_7b_ptd.sh">Train</a> </td>
-    </tr>
-    <tr>
-      <td>14B</td>
-      <td>1x8</td>
-      <td>BF16 </td>
-      <td> 1560 </td>
-      <td> 1578 </td>
-      <td> <a href="examples/qwen/pretrain_qwen_14b_ptd.sh">Train</a> </td>
-    </tr>
-    <tr>
-      <td>72B</td>
-      <td>16x8</td>
-      <td>BF16 </td>
-      <td> -- </td>
-      <td> -- </td>
-      <td> <a href="examples/qwen/pretrain_qwen_72b_ptd.sh">Train</a> </td>
-    </tr>
-    <tr>
-      <td rowspan="1"><a href="examples/mixtral/README_en.md">Mixtral</a></td>
-      <td>8x7B</td>
-      <td>2x8</td>
-      <td>BF16 </td>
-      <td> 1054 </td>
-      <td> 1139 </td>
-      <td> <a href="examples/mixtral/pretrain_mixtral_8x7b_ptd.sh">Train</a> </td>
-    </tr>
-  </tbody>
-</table>
-
-
-### Model Training Software
-
-|         Software          | [config](https://www.hiascend.com/zh/) |
-|:-------------------------:|:--------------------------------------:|
-|          Python           |                 3.8.18                 |
-|          driver           |       2023Q4 Commercial Version        |
-|         firmware          |       2023Q4 Commercial Version        |
-|           CANN            |       2023Q4 Commercial Version        |
-| binary arithmetic package |       2023Q4 Commercial Version        |
-|           torch           |                 2.1.0                  |
-|         torch_npu         |       2023Q4 Commercial Version        |
-
-
-## Downstream Tasks
-
----
-
-### Content List
-<table>
-  <thead>
-    <tr>
-      <th>Model</th>
-      <th>Size</th>
+      <th>Parameters</th>
       <th>Fine-tuning</th>
       <th>Inference</th>
       <th>Evaluation</th>
@@ -289,53 +63,53 @@ Currently, the following downstream tasks have been supported:
       <td rowspan="2"> <a href="examples/baichuan/README.md">Baichuan</a> </td>
       <td> 7B </td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_baichuan_7b_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_baichuan_7B_ptd.sh">evaluation</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_baichuan_7b_ptd.sh">inference</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_baichuan_7B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td> 13B </td>
       <td> <a href="examples/baichuan/tune_baichuan_ptd_13B.sh">lora</a> </td>
-      <td> <a href="tasks/inference/generate_baichuan_13b_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_baichuan_13B_ptd.sh">evaluation</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_baichuan_13b_ptd.sh">inference</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_baichuan_13B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td rowspan="2"> <a href="examples/baichuan/README.md">Baichuan2</a> </td>
       <td> 7B </td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_baichuan2_7b_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_baichuan2_7B_ptd.sh">evaluation</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_baichuan2_7b_ptd.sh">inference</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_baichuan2_7B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td> 13B </td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_baichuan2_13b_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_baichuan2_13B_ptd.sh">evaluation</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_baichuan2_13b_ptd.sh">inference</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_baichuan2_13B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
       <td> 7B1 </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/bloom/tune_bloom_7b1.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/bloom/generate_bloom_7B_tp8_pp1.sh">inference</a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/evaluate_bloom_7b1.sh">evaluation</a> </td>
+      <td> -- </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_bloom_7B_tp8_pp1.sh">inference</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_bloom_7b1.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td> 176B </td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/bloom/generate_176b_2nodes.sh">inference</a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/evaluate_bloom_176b.sh">evaluation</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/bloom/generate_176b_2nodes.sh">inference</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_bloom_176b.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td><a href="examples/intern/README.md">InternLM</a></td>
       <td>7B</td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/intern/generate_internlm_7b_deepspeed.sh">inference</a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/blob/master/tasks/evaluation/eval_internlm.sh">evaluation</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/intern/generate_internlm_7b_deepspeed.sh">inference</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/eval_internlm.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
@@ -343,14 +117,14 @@ Currently, the following downstream tasks have been supported:
       <td>7B</td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_7b_ptd.sh">lora</a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_7b_lora_ptd.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_7b_ptd.sh">evaluation</a>  </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_7B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>13B</td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_13b_ptd.sh">lora</a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_13b_lora_ptd.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_13b_ptd.sh">evaluation</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_13B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
@@ -362,36 +136,36 @@ Currently, the following downstream tasks have been supported:
     </tr>
     <tr>
       <td > 65B </td>
-      <td > <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_65b_ptd.sh">lora</a>  </td>
+      <td > <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_65b_ptd.sh">lora</a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_65b_lora_ptd.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_65B_ptd.sh">evaluation </a>  </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_65B_ptd.sh">evaluation </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</a></td>
       <td>7B</td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_7b_ptd.sh">lora</a>  </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_7b_ptd.sh">lora </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_7b_ptd.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_7B_ptd.sh">evaluation </a> </td>
-      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_7B_ptd.sh">evaluation </a>  </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td>13B</td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_13b_ptd.sh">lora</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_13b_ptd.sh">lora </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_13B_ptd.sh">inference </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_13B_ptd.sh">evaluation </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td> 34B </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_34b_ptd.sh">lora</a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_13b_ptd.sh">lora </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_34B_ptd.sh">inference </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_34B_ptd.sh">evaluation </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td > 70B </td>
-      <td > <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_70b_ptd.sh">lora</a>  </td>
+      <td > <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_70b_ptd.sh">lora</a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_70b_lora_ptd.sh">inference </a> </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_70B_ptd.sh">evaluation </a> </td>
       <td>  <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
@@ -400,8 +174,8 @@ Currently, the following downstream tasks have been supported:
       <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
       <td>7B</td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_qwen_7b_ptd.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_qwen_7b_ptd.sh">evaluation </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_qwen_7b_ptd.sh">inference </a></td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_qwen_7b_ptd.sh">evaluation </a></td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
@@ -414,12 +188,12 @@ Currently, the following downstream tasks have been supported:
     <tr>
       <td>72B</td>
       <td> -- </td>
-      <td> -- </td>
-      <td> -- </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_qwen_72b_ptd.sh">inference </a> </td>
+      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_qwen_72b_ptd.sh">evaluation </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/mixtral/README_en.md">Mixtral</a></td>
+      <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
       <td>8x7B</td>
       <td> -- </td>
       <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_mixtral_8x7b_ptd.sh">inference </a> </td>
@@ -430,10 +204,241 @@ Currently, the following downstream tasks have been supported:
 </table>
 
 
+## 【Script Naming Rules】
+|            Script             |    Rule    |
+|:-------------------------:|:--------:|
+|      pretrain_xxx.sh      |  Pre-training Script   |
+|        tune_xxx.sh        |   Fine-tuning Script   |
+|      generate_xxx.sh      |   Inference Script   |
+|     evaluation_xxx.sh     |   Evaluation Script   |
+
+---
+
+# Model Usage Guide and Version Notes
 
 
-### <span id="jump11"> Instruction/Pretraining dataset support </span>
+Model Usage Guide and Version Notes
+For the supported models listed above, we provide training scripts and readme instructions in the examples folder, which contain detailed processes for model training, inference, and evaluation.
+
+【Please note the corresponding environment versions for model usage, as follows】
+
+|           Software            | [Version](https://www.hiascend.com/zh/) |
+| :-----------------------: |:----------------------------------:|
+|          Python           |                3.8                 |
+|          driver           |              Ascend HDK 23.0.0              |
+|         firmware          |              Ascend HDK 23.0.0              |
+|           CANN            |              CANN 7.0.0              |
+|           torch           |               2.1.0                |
+|         torch_npu         |              release v5.0.0               |
+
+The current repository uses Megatron commitId [bcce6f54](https://github.com/NVIDIA/Megatron-LM/tree/bcce6f54e075e3c3374ea67adefe54f3f2da2b07)
+
+【Based on the latest version, the performance statistics from our testing are as follows】
+
+<table>
+  <thead>
+    <tr>
+      <th>Model</th>
+      <th>Parameters</th>
+      <th>Cluster Scale</th>
+      <th>Precision Mode</th>
+      <th>Performance </th>
+      <th>Reference Performance </th>
+      <th>Scripts</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td rowspan="1"><a href="examples/aquila/README.md">Aquila</a></td>
+      <td>7B</td>
+      <td> 1x8</td>
+      <td> BF16 </td>
+      <td> 2849 </td>
+      <td> 2874 </td>
+      <td> <a href="examples/aquila/pretrain_aquila_7b_ptd.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="2"><a href="examples/baichuan/README.md">Baichuan</a></td>
+      <td>7B</td>
+      <td> 1x8</td>
+      <td> FP16 </td>
+      <td> 2685 </td>
+      <td> 2036 </td>
+      <td> <a href="examples/baichuan/pretrain_baichuan_ptd_7B.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td>13B</td>
+      <td> 1x8</td>
+      <td> FP16 </td>
+      <td> 1213 </td>
+      <td> 862 </td>
+      <td> <a href="examples/baichuan/pretrain_baichuan_ptd_13B.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="2"><a href="examples/baichuan2/README.md">Baichuan2</a></td>
+      <td>7B</td>
+      <td> 1x8</td>
+      <td> BF16 </td>
+      <td> 2664 </td>
+      <td> 3969 </td>
+      <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_7B.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td>13B</td>
+      <td> 1x8</td>
+      <td> BF16 </td>
+      <td> 940 </td>
+      <td> 872 </td>
+      <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_13B.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
+      <td>7B1</td>
+      <td> 1x8</td>
+      <td> FP16 </td>
+      <td> 2034 </td>
+      <td> 2525 </td>
+      <td> <a href="examples/bloom/pretrain_bloom_7b1.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td >176B</td>
+      <td >12x8</td>
+      <td> BF16 </td>
+      <td> 100 </td>
+      <td> 107 </td>
+      <td> <a href="examples/bloom/pretrain_bloom_176b.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>
+      <td>7B</td>
+      <td>1x8</td>
+      <td>BF16</td>
+      <td> 2776 </td>
+      <td> 2854 </td>
+      <td> <a href="examples/intern/pretrain_internlm_7b_zero.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td >65B</td>
+      <td >4x8</td>
+      <td> BF16 </td>
+      <td> 341 </td>
+      <td> 414 </td>
+      <td> <a href="examples/intern/pretrain_internlm_65b_ptd_32p.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="5"><a href="examples/llama/README.md">LLaMA</a></td>
+      <td>7B</td>
+      <td>1x8</td>
+      <td>FP16</td>
+      <td> 3600 </td>
+      <td> 3804 </td>
+      <td> <a href="examples/llama/pretrain_llama_7b_ptd.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td>13B</td>
+      <td>1x8</td>
+      <td>FP16</td>
+      <td> 1895 </td>
+      <td> 2012 </td>
+      <td> <a href="examples/llama/pretrain_llama_13b_ptd.sh">train</a> </td>
+    </tr>
+    <tr>
+        <td>33B</td>
+        <td>4x8</td>
+        <td>FP16</td>
+        <td>621</td>
+        <td>776</td>
+        <td><a href="examples/llama/pretrain_llama_33B_ptd_32p.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="2">65B</td>
+      <td rowspan="2">4x8</td>
+    </tr>
+    <tr>
+      <td>BF16 </td>
+      <td> 348 </td>
+      <td> 426 </td>
+      <td> <a href="examples/llama/pretrain_llama_65b_ptd.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</a></td>
+      <td>7B</td>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 2884 </td>
+      <td> 2884 </td>
+      <td> <a href="examples/llama2/pretrain_llama2_7b_ptd.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td>13B</td>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 1550 </td>
+      <td> 1750 </td>
+      <td> <a href="examples/llama2/pretrain_llama2_13B_ptd_8p.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td>34B</td>
+      <td>2x8</td>
+      <td>BF16 </td>
+      <td> 690 </td>
+      <td> 796 </td>
+      <td> <a href="examples/llama2/pretrain_llama2_34B_ptd_16p.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td>70B</td>
+      <td>8x8</td>
+      <td>BF16 </td>
+      <td> 350 </td>
+      <td> 339 </td>
+      <td> <a href="examples/llama2/pretrain_llama2_70b_ptd.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
+      <td>7B</td>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 2499 </td>
+      <td> 2867 </td>
+      <td> <a href="examples/qwen/pretrain_qwen_7b_ptd.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td>14B</td>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 1560 </td>
+      <td> 1578 </td>
+      <td> <a href="examples/qwen/pretrain_qwen_14b_ptd.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td>72B</td>
+      <td>16x8</td>
+      <td>BF16 </td>
+      <td> 285 </td>
+      <td> 345 </td>
+      <td> <a href="examples/qwen/pretrain_qwen_72b_ptd.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
+      <td>8x7B</td>
+      <td>2x8</td>
+      <td>BF16 </td>
+      <td> 1054 </td>
+      <td> 1139 </td>
+      <td> <a href="examples/mixtral/pretrain_mixtral_8x7b_ptd.sh">train</a> </td>
+    </tr>
+  </tbody>
+</table>
+
+
+
+
+# Function Usage Guide
+
+## Instruction/Pretraining dataset support
+
 #### Quick Start
+Use the [preprocess_data.py](tools/preprocess_data.py) data preprocessing tool to process raw data into binary format data for training. Below is an example of processing the Alpaca dataset:
 
 ```bash
 # for llama, download alpaca dataset, like
@@ -451,7 +456,9 @@ python tools/preprocess_data.py --input train-00000-of-00001-a09b74b3ef9c3b56.pa
                                 --handler-name GeneralInstructionHandler
 ```
 
-#### Preprocessing pretraining dataset
+The output will be two files, named alpaca_packed_input_ids_document.bin and alpaca_packed_input_ids_document.idx. In subsequent training, specify --data-path with the full path and new filename, but without the file extension. Use --tokenizer-type to specify the data preprocessing method corresponding to the model, --tokenizer-name-or-path to specify the tokenizer model path, usually downloaded along with the pre-trained weights in the open-source project, and --handler-name to specify the data set's instruction data construction method.
+
+#### <span id="jump11"> reprocessing pretraining dataset </span>
 
 ##### wikipedia dataset
 
@@ -508,7 +515,7 @@ python tools/preprocess_data.py --input WORKSPACE/train-00000-of-00001-a09b74b3e
 ```
 
 
-#### Preprocessing instruction dataset
+#### <span id="jump12"> Preprocessing instruction dataset </span>
 ##### alpaca dataset
 ```bash
 # for llama, download alpaca dataset, like
@@ -536,9 +543,34 @@ Note that instruction dataset has a `--handler-name GeneralInstructionHandler` f
 If you have an alpaca-style dataset which have `instruction`, `input` and `output` columns, just use `GeneralInstructionHandler`.
 In addition, `BelleMultiTurnInstructionHandler` is used to handle [belle dataset](https://huggingface.co/datasets/BelleGroup/multiturn_chat_0.8M),
 `MOSSInstructionHandler` is used to handle [MOSS dataset](https://huggingface.co/datasets/fnlp/moss-003-sft-data) and `LeetcodePythonInstructionHandler` is used to handle [Leetcode dataset](https://huggingface.co/datasets/mhhmm/leetcode-solutions-python).
+### <span id="jump13"> Pre-training </span>
+```shell
+ # Configure LLaMA-7B pre-training script: pretrain_llama_7b.sh
+ # Configure vocabulary, dataset, and model parameter saving path according to actual conditions
+ TOKENIZER_PATH=WORKSPACE/llama-7b-hf/tokenizer.model  # Path to the vocabulary
+ DATA_PATH=WORKSPACE/alpaca_preprocessed/alpaca_text_document  # Path to pre-training dataset
+```
+
+Launch LLaMA-7B pre-training script: examples/llama/pretrain_llama_7b_ptd.sh
+```shell
+ bash examples/llama2/pretrain_llama_7b_ptd.sh
+```
+
+### <span id="jump14"> Full-parameter Fine-tuning </span>
+```shell
+ # Based on the pre-training script, provide the pre-training weight path, use instruction dataset path, and enable fine-tuning switch --finetune
+ LOAD_CHECKPOINT_PATH="your init model weight load path"
+ DATA_PATH=WORKSPACE/alpaca_preprocessed/alpaca_text_document  # Instruction fine-tuning dataset path
+ 
+ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
+     --load ${LOAD_CHECKPOINT_PATH} \
+     --finetune \
+     ... \
+     ...
+```
 
 
-### <span id="jump12"> Low-parameter fine-tuning </span>
+### <span id="jump15"> Low-parameter fine-tuning </span>
 #### Lora
 
 Now, we support Lora to fine-tune your models.
@@ -589,48 +621,44 @@ ModelLink:
 - Take medications regularly.
 ```
 
-If after completing lora fine-tuning, we need a model without lora structure, then we only need to run this [script](tools/lora/merge_lora_llama_ptd_13B.sh) to merge the two model files `--load` and `--lora-load`, and generate a model without lora structure. The new weight model file is stored in the `--save` path.
-
-### <span id="jump13"> Inference: human-machine dialogue </span>
+### <span id="jump16"> Inference: human-machine dialogue </span>
 Currently, we support the following four cases of inference:
-- PTD only
+- PTD
 - Model fine-tuned with lora
 
+【For supported models, we also provide examples. Please refer to the following quick start】
+
 #### Quick Start
-Here are some example scripts in different mode mentioned above for you to launch directly.
 
 ***Please Note that:***
 1. If you want to use the weight from huggingface, please run the weight conversion script first.
     Take Llama-7B, for example:
 
       - PTD only
-
            ```bash
-           python tools/checkpoint/util.py --model-type GPT \
-                                --loader llama2_hf \
-                                --saver megatron \
-                                --target-tensor-parallel-size 2 \
-                                --target-pipeline-parallel-size 2 \
-                                --load-dir ./model_from_hf/llama-7b-hf \
-                                --save-dir ./model_weights/llama-7b-tp2-pp2 \
-                                --tokenizer-model ./model_from_hf/llama-7b-hf/tokenizer.model
+            python tools/checkpoint/util.py --model-type GPT \
+                                            --loader llama2_hf \
+                                            --saver megatron \
+                                            --target-tensor-parallel-size 1 \
+                                            --target-pipeline-parallel-size 8 \
+                                            --load-dir ./model_from_hf/llama-7b-hf \
+                                            --save-dir ./model_weights/llama-7b-tp1-pp8 \
+                                            --tokenizer-model ./model_from_hf/llama-7b-hf/tokenizer.model
            ```
 
-2. You need to modify some variables in the shell script such as **model weight path** and **vocab path**.
+5. You need to modify some variables in the shell script such as **model weight path** and **vocab path**.
 
     - **PTD only:** In this mode, the model is split by pipeline parallel and tensor parallel mode in megatron ways.
         ```bash
-        sh tasks/inference/generate_llama_7B_ptd.sh
+        sh examples/llama/generate_llama_7B_tp2_pp2.sh
         ```
     - **If you want to use lora model**, for details, refer to:
         ```bash
         sh tasks/inference/generate_llama_7b_lora_ptd.sh
         ```
 
-***Some examples with [Chinese-LLaMA-Alpaca-13B weights](https://github.com/ymcui/Chinese-LLaMA-Alpaca) is as below***
-
 #### Usage Guide
-Follow these steps to write your own inference code:
+***Some examples with [Chinese-LLaMA-Alpaca-13B weights](https://github.com/ymcui/Chinese-LLaMA-Alpaca) is as below***:
 
 ##### Initializing the Distributed Environment
 ```python
@@ -725,8 +753,11 @@ pretrained_model_name_or_path(`str`, *optional*, defaults to None):
     ```
     <img src="sources/images/beam_search_sampling.png">
 
-### <span id="jump14"> Evaluation with Numerous Benchmarks </span>
-#### Quick Show
+### <span id="jump17"> Evaluation with Numerous Benchmarks </span>
+
+
+
+#### 【Dataset Evaluation Results】
 
 <table>
   <thead>
@@ -734,7 +765,7 @@ pretrained_model_name_or_path(`str`, *optional*, defaults to None):
       <th>Task</th>
       <th>Subset</th>
       <th>Model</th>
-      <th>NPU</th>
+      <th>Ascend</th>
       <th>Reference</th>
       <th>Benchmark</th>
     </tr>
@@ -814,7 +845,6 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation_llama.py   \
        --task $TASK\
        --seq-length 512 \
        --max-new-tokens 1 \
-       --evaluation-batch-size 1 \
        --max-position-embeddings 512 \
        --tensor-model-parallel-size 2  \
        --pipeline-model-parallel-size 4  \
@@ -836,6 +866,7 @@ bash tasks/evaluation/eval_llama.sh
 #### Task Introduction
 The most important evaluation parameters must be `--max-new-tokens`, which means the output length of model generation. For example, multiple-choice
 questions' output length is obviously shorter than coding tasks. Besides, this parameter largely decides the speed of model generation.
+
 ```bash
 python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation_llama.py   \
        --task-data-path $DATA_PATH \
@@ -858,62 +889,71 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation_llama.py   \
        --micro-batch-size 1  \
        --seed 42 | tee logs/train.log
 ```
-##### BoolQ
-BoolQ is a question answering dataset for yes/no questions. Each question contains a triplet of (question, passage, answer), with the title of the page as optional additional context.
-The evaluation of the BoolQ data set is relatively simple, just configure `TASK="boolq"`,  `--max-new-token=1`.
-The zero-shot results are usually affected by the given prompt, and a higher score can be obtained by a suitable prompt.
-The prompt can be modified in `tasks/evaluation/evaluation.py`
+#### Evaluation Script Instructions
 
-```bash
-# Update new prompt by changing the template
-template = {instruction}
-```
+#### 【Baseline Dataset Introduction】
+
 
 ##### MMLU
-Since MMLU is a multidisciplinary task and 5 shots are performed, the length of each subject question varies greatly. If you want to run 57 subjects at the same time, you need to set `TASK="mmlu"`,  `--max-new-token=1`.
+Since MMLU is a multidisciplinary task and 5 shots are performed, the length of each subject question varies greatly. If you want to run 57 subjects at the same time, you need to set `TASK="mmlu"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=2`. (`--max-new-tokens` can be set to between 2-4).
 On many websites, the accuracy of the MMLU is evaluated according to disciplines. The 57 categories of single subjects belong to four main categories. Therefore, the statistics should be summarized according to the major categories of the subjects. The [website](https://github.com/hendrycks/test/blob/master/categories.py) gives the major categories of subjects for 57 categories of subjects.
 
 
 ##### GSM8K
-GSM8K is a dataset of 8.5K high quality linguistically diverse grade school math word problems created by human problem writers. The answer of each question is a specific number. Since few shots are performed,  the question length is relatively long in GSM8K, and the output answer contains a chain of thoughts, it is necessary to configure `TASK="gsm8k"`，`--max-new-token=200`.
+GSM8K is a dataset of 8.5K high quality linguistically diverse grade school math word problems created by human problem writers. The answer of each question is a specific number. Since few shots are performed,  the question length is relatively long in GSM8K, and the output answer contains a chain of thoughts, it is necessary to configure `TASK="gsm8k"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=128`. (`--max-new-tokens` can be set between 256-512).
 
 ##### HumanEval
 HumanEval dataset is a handcrafted set of 164 programming problems designed to challenge code generation models. The problems include a function signature, docstring, body, and several unit tests, all handwritten to ensure they're not included in the training set of code generation models.
-Since the answer of HumanEval dataset contains long codes, it is necessary to configure `TASK="human_eval"`, `--max-new-token=200`.
+Since the answer of HumanEval dataset contains long codes, it is necessary to configure `TASK="human_eval"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=1024`.
 
 ##### AGIEval
 AGIEval is a human-centric benchmark specifically designed to evaluate the general
-abilities of foundation models in tasks pertinent to human cognition and problem-solving. This benchmark is derived from 20 official, public, and high-standard admission and qualification exams intended for general human test-takers, such as general college admission tests (e.g., Chinese College Entrance Exam (Gaokao) and American SAT), law school admission tests, math competitions, lawyer qualification tests, and national civil service exams.Since the length of answers to different type of questions varies, we have to configure `TASK="agieval"`, `--max-new-token=5` to fit the longest answer.
+abilities of foundation models in tasks pertinent to human cognition and problem-solving. This benchmark is derived from 20 official, public, and high-standard admission and qualification exams intended for general human test-takers, such as general college admission tests (e.g., Chinese College Entrance Exam (Gaokao) and American SAT), law school admission tests, math competitions, lawyer qualification tests, and national civil service exams.Since the length of answers to different type of questions varies, we have to configure `TASK="agieval"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=1024` to fit the longest answer.
 
 ##### Big-Bench-Hard
 Big-bench-hard dataset is a subset of big bench, which is a diverse evaluation suite that focuses on a suite of 23 challenging BIG-Bench tasks. These are the task for which prior language model evaluations did not outperform the average human-rater. This dataset covers multiple areas including text understanding, reasoning, logical reasoning, mathematical reasoning, and common sense reasoning.
-Except word_sorting, all datasets are multiple-choice questions. So we can set `TASK="bbh"`, `--max-new-token=32`,`--evaluation-batch-size=4`.
+Except word_sorting, all datasets are multiple-choice questions. So we can set `TASK="bbh"`, `--seq-length=2048`, `--max-position-embeddings=2048`, `--max-new-token=32`. (`--max-new-tokens` can be set between 32-64).
 
 ##### CEval
 As [C-Eval](https://cevalbenchmark.com/) shows, C-Eval is a comprehensive Chinese evaluation suite for foundation models. It consists of 13948 multi-choice questions spanning 52 diverse disciplines and four difficulty levels, as shown below. You may explore our dataset examples at Explore, or check our paper for more details. The dataset contains validation and test data, however, only validation data has label for auto-evaluation. If
-you want to evaluate on test data, you should email your results to [C-Eval](https://cevalbenchmark.com/). We can set `TASK="ceval"`, `--max-new-token=1`.
+you want to evaluate on test data, you should email your results to [C-Eval](https://cevalbenchmark.com/).
 
+### <span id="jump18">【Acceleration Features】
+ModelLink supports various acceleration algorithms such as tensor parallelism, pipeline parallelism, sequence parallelism, recomputation, distributed optimizer, and more. The table below shows the enable switches corresponding to each acceleration feature:
 
-#### Configuration of models and datasets
-As the example shown below, we want to use llama7b model for BoolQ dataset evaluation, so the model path and vocab file should correspond to llama7b model. Model can be segmented with suitable segmentation parameters: the following example set tensor-model-parallel-size(tp) = 2 and pipeline-model-parallel-size(pp) = 4. Segmentation example shows as followed:
+|   Acceleration Feature    |   Enable Parameter   |
+|:---------:|:--------:|
+|   Tensor Parallel    |  --tensor-model-parallel-size  |
+|   Pipeline Parallel   | --pipeline-model-parallel-size |
+|   Sequence Parallel    | --sequence-parallel |
+|    Recomputation    | --recompute-granularity |
+|  Distributed Optimizer   | --use-distributed-optimizer |
+
 ```bash
-python convert_weights_from_huggingface.py \
-        --input-model-dir /home/w425040/models/llama-7b-hf \
-        --output-model-dir /home/w425040/models/llama-7b-tp2-pp4 \
-        --type 7B \
-        --tensor-model-parallel-size 2 \
-        --pipeline-model-parallel-size 4
+torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
+    --tensor-model-parallel-size ${TP} \
+    --pipeline-model-parallel-size ${PP} \
+    --sequence-parallel \
+    --recompute-granularity full \
+    --recompute-method block \
+    --recompute-num-layers 72 \
+    --use-distributed-optimizer \
+    ... \
+    ...
 ```
-Then, configure dataset path and task.  Note: since the evaluation parameters of different datasets are not totally same, it is not recommended to evaluate two or more different datasets together. Evaluation parameters such as `--seq-length`, `--max-new-tokens` and `--max-position-embeddings` need to be adjusted to datasets. The recommended parameters for each dataset will be given in the following instruction.
+In model training and downstream tasks, you can use --tensor-model-parallel-size and --pipeline-model-parallel-size to distribute the model across different devices, reducing memory usage per device.
+Using --sequence-parallel to split the data enables the model to train on extremely long sequences. The options recompute-granularity or use-distributed-optimizer can also reduce memory usage per device.
 
+ModelLink supports multiple fused operators such as attn, rmsnorm, swiglu, rotary-pos-emb, mlp, etc., to improve model training performance:
 ```bash
-# configure model path and vocab_file path
-CHECKPOINT=../models/llama-7b-tp2-pp4/
-VOCAB_FILE=../models/llama7b-hf/
-# configure task and data path
-DATA_PATH="dataset/boolq/test"
-TASK="boolq"
-# configure generation parameters
+torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
+    --use-flash-attn \
+    --use-fused-rmsnorm \
+    --use-fused-swiglu \
+    --use-fused-rotary-pos-emb \
+    --mlp-layer-fusion \
+    ... \
+    ...
 ```
 
 
@@ -938,4 +978,3 @@ We appreciate every PR from community, and welcome to contribute to ModelLink.
 - Permission Description: It is recommended that the umask value of Linux be greater than or eqaul to 027. Before running the program, you are advised to take security measures such as permission control for files required for training, such as ckpt, logs and so on. You are advised to run the program or execute commands as a regular user not as root or super user. Also, you are advised to set the folder permission to 750 and the file permission to 640. When multiple users share datasets, set the read and write permissions for folders and files based on the minimum permissions to avoid security problems such as unauthorized access.
 - Path Description: When you're using interface such as `torch.load`, unless weights_only parameter is set to True, uses pickle module implicitly, which is known to be insecure. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling. We don't suggest you load data that could have come from an untrusted source in an unsafe mode, or that could have been tampered with. Please load data you trust. Moreover, when you need to read data from outside or your specified path you'd better make it trusted and safe, including but not limited to weights path, dataset path.
 - Communication Matrix: Please refer to this [link](https://gitee.com/ascend/AscendSpeed/wikis/Communition%20Matrix/AscendSpeed%20Communication%20Matrix?sort_id=8855822) to check the communication matrix.
-- Public Network Address: Here is the [Public Network Address](public_address_statement.md).
