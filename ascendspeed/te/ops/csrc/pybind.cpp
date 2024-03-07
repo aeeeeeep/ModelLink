@@ -21,4 +21,8 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("npu_fusion_attention", &npu_flash_attention, "fusion attention forward");
     m.def("npu_fusion_attention_grad", &npu_flash_attention_grad, "fusion attention backward");
     m.def("npu_dropout_add_layer_norm", &npu_dropout_add_layer_norm, "Run Dropout + Add + LayerNorm forward kernel");
+    m.def("npu_multi_head_attention_forward", &flash_attention, "the fast realization of self-attention forward-function on ascend device");
+    m.def("npu_multi_head_attention_backward", &flash_attention_grad, "the fast realization of self-attention backward-function on ascend device");
+    m.def("npu_gen_mask", &gen_mask, "generate random mask on ascend device");
+    m.def("npu_gen_mask_by_seed", &exist_gen_mask, "generate random mask by seed on ascend device");
 }

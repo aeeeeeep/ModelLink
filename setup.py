@@ -18,6 +18,7 @@
 import sys
 import setuptools
 
+
 if sys.version_info < (3,):
     raise Exception("Python 2 is not supported by AscendSpeed.")
 
@@ -40,7 +41,6 @@ with open("README.md", "r") as fh:
 #                             Dependency Loading                              #
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
 
-
 def req_file(filename):
     with open(filename) as f:
         content = f.readlines()
@@ -61,6 +61,7 @@ try:
     op_files = []
     op_files += glob.glob("ascendspeed/te/ops/csrc/*.cpp")
     op_files += glob.glob("ascendspeed/te/ops/csrc/cann/*.cpp")
+    op_files += glob.glob("ascendspeed/te/ops/csrc/transformer_boost/*.cpp")
     ext_ops = cpp_extension.NpuExtension(
         name="ascendspeed_te_ops",
         sources=op_files,
@@ -73,7 +74,33 @@ try:
         '-I' + ASCEND_TOOLKIT_HOME + '/include/',
     ],
     )
-    exts.append(ext_ops)
+    if os.getenv('ENABLE_ATB', '0') == '1':
+        ATB_HOME_PATH = os.environ.get("ATB_HOME_PATH")
+        if ATB_HOME_PATH == None:
+            print('Can not find env : ATB_HOME_PATH, will not compile TE')
+            exts.append(ext_ops)
+        else:
+            op_files += glob.glob("ascendspeed/te/ops/csrc/transformer_boost/utils/*.cpp")
+            ext_ops = cpp_extension.NpuExtension(
+                name="ascendspeed_te_ops",
+                sources=op_files,
+                extra_compile_args=[
+                '-Wno-sign-compare',
+                '-Wno-deprecated-declarations',
+                '-Wno-return-type',
+                '-D__FILENAME__=\"$(notdir $(abspath $<))\"',
+                '-I' + imp.find_module('torch_npu')[1] + "/include/third_party/acl/inc",
+                '-I' + ASCEND_TOOLKIT_HOME + '/include/',
+                '-I' + ATB_HOME_PATH + '/include/', '-D ENABLE_ATB',
+            ],
+                extra_link_args = [
+                '-L' + ATB_HOME_PATH + '/lib/',
+                '-latb'
+            ],
+            )
+            exts.append(ext_ops)
+    else:
+        exts.append(ext_ops)
     cmd_class = {"build_ext": BuildExtension.with_options(use_ninja=False)}
 except Exception:
     print('Can not find env : ASCEND_TOOLKIT_HOME or ATB_HOME_PATH, ops setup failed')

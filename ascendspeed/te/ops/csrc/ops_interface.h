@@ -71,17 +71,17 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor> npu_dropout_add_layer_norm(
     bool is_rms_norm,
     bool return_dropout_mask);
 
-std::tuple<at::Tensor, at::Tensor> fa(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
-                                      const c10::optional<at::Tensor> &atten_mask, const c10::optional<at::Tensor> &alibi_mask,
-                                      const c10::optional<at::Tensor> &drop_mask, float scale_value, int64_t head_num,
-                                      int64_t io_layout, float keep_prob, int64_t pre_tokens, int64_t next_tokens,
-                                      int64_t precise_mode, int64_t groups);
-
-std::tuple<at::Tensor, at::Tensor, at::Tensor> fag(const at::Tensor &dy, const at::Tensor &softmax_log_max_sum, const at::Tensor &attention_out,
-                                                   const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+std::tuple<at::Tensor, at::Tensor> flash_attention(const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
                                                    const c10::optional<at::Tensor> &atten_mask, const c10::optional<at::Tensor> &alibi_mask,
-                                                   const c10::optional<at::Tensor> &drop_mask, float scale_value, int64_t head_num, int64_t io_layout,
-                                                   float keep_prob, int64_t pre_tokens, int64_t next_tokens, int64_t precise_mode, int64_t groups);
+                                                   const c10::optional<at::Tensor> &drop_mask, float scale_value, int64_t head_num,
+                                                   int64_t io_layout, float keep_prob, int64_t pre_tokens, int64_t next_tokens,
+                                                   int64_t precise_mode, int64_t groups);
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor> flash_attention_grad(const at::Tensor &dy, const at::Tensor &softmax_log_max_sum, const at::Tensor &attention_out,
+                                                                    const at::Tensor &query, const at::Tensor &key, const at::Tensor &value,
+                                                                    const c10::optional<at::Tensor> &atten_mask, const c10::optional<at::Tensor> &alibi_mask,
+                                                                    const c10::optional<at::Tensor> &drop_mask, float scale_value, int64_t head_num, int64_t io_layout,
+                                                                    float keep_prob, int64_t pre_tokens, int64_t next_tokens, int64_t precise_mode, int64_t groups);
                                                    
 std::tuple<at::Tensor, int64_t, int64_t, int64_t> gen_mask(const at::Tensor &self, double keep_prob,
     int64_t head_num, std::string input_layout, bool gen_mask_parallel, bool sync);
