@@ -951,14 +951,6 @@ class ModelTest:
             self.__save_result(result_total)
 
     def __run_full_dataset_humaneval(self):
-
-        def filter_code(completion: str) -> str:
-            completion = completion.lstrip("\n")
-            return completion.split("\n\n")[0]
-
-        def fix_indents(text: str) -> str:
-            return text.replace("\t", "    ")
-
         def cleanup_code(code: str) -> str:
             code_splits = code.split("\n")
             is_empty_line = False
@@ -975,6 +967,7 @@ class ModelTest:
                 for w in end_words:
                     if w in code:
                         code = code[:code.rfind(w)]
+            return code
 
         is_result = False
         if self.pa_runner.rank == 0:
@@ -990,7 +983,7 @@ class ModelTest:
 
                 correct = 0
                 samples = []
-                dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
+                dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size)
                 for batch in tqdm(dataloader):
                     task_ids = [task_id.split('/')[1] for task_id in batch["task_id"]]
                     queries = [prompt.strip() for prompt in batch["prompt"]]
@@ -1010,11 +1003,9 @@ class ModelTest:
                                     correct += 1
                     else:
                         generate_text_list, _, _ = self.pa_runner.infer(queries, self.batch_size, 512, True)
-
-                        # generate_text_list = [filter_code(fix_indents(completion)) for completion in generate_text_list]
                         generate_text_list = [cleanup_code(completion) for completion in generate_text_list]
                         if is_result:
-                            print("generate_text_list_1: ", generate_text_list)
+                            self.logger.info("generate_text_list: ", generate_text_list)
                         for idx, sample in enumerate(generate_text_list):
                             result = dict(
                                 task_id="HumanEval/" + task_ids[idx],
