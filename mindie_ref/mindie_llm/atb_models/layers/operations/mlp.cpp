@@ -137,9 +137,7 @@ atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation
     }
 
     atb::Node &activationNode = opGraph.nodes.at(nodeId++);
-    atb::infer::ActivationParam activationParam;
-    activationParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
-    CREATE_OPERATION(activationParam, &activationNode.operation);
+    CREATE_OPERATION(param.activationParam, &activationNode.operation);
     activationNode.inTensorIds = {
         param.mlpPackType == MlpPackType::UP_WEIGHT_ONLY ? MlpTensorIdx::INTERMIDATE_GATE_UP_OUT_0 : MlpTensorIdx::INTERMIDATE_GATE_OUT
     };
@@ -166,6 +164,7 @@ atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation
     downLinearParallelParam.fusionLinearParam.hasBias = param.hasBias && !downLinearParallelParam.biasAfterSync;
     downLinearParallelParam.fusionLinearParam.isBF16 = param.isBF16;
     downLinearParallelParam.tensorParallelInfo = param.downLinearTensorParallelInfo;
+    downLinearParallelParam.supportLcoc = param.supportLcoc;
     LinearParallel(downLinearParallelParam, &linearDownNode.operation);
     linearDownNode.inTensorIds = {
         param.mlpPackType == MlpPackType::UP_WEIGHT_ONLY ? MlpTensorIdx::INTERMIDATE_SWISH_OUT : MlpTensorIdx::INTERMIDATE_MUL_OUT,
