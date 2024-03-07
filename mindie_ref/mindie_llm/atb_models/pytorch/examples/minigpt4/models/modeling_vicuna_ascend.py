@@ -845,6 +845,7 @@ class LlamaModel(LlamaPreTrainedModel):
             "quantModel": self.quant_model,
             "sparseModel": self.sparse_model,
             "isEncoder": isEncoder,
+            "isBF16": False,
             "qkvInputScale": self.qkv_input_scale, "qkvInputOffset": self.qkv_input_offset,
             "denseInputScale": self.dense_input_scale, "denseInputOffset": self.dense_input_offset,
             "selfLnInputScale": self.self_ln_input_scale, "selfLnInputOffset": self.self_ln_input_offset,
