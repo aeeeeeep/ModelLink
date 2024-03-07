@@ -15,4 +15,3 @@ torchvision==0.16.0
 protobuf
 peft==0.7.1
 tiktoken
-deepspeed

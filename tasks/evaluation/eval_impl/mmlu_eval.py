@@ -68,14 +68,14 @@ class MmluEval(DatasetEval):
                     chat_results, rank = chat.chat(instruction=instructions, history=[])
                     if chat_results:
                         for index, chat_result in enumerate(chat_results):
-                            answer = chat_result[0]
+                            answer = chat_result[0].lstrip()
                             try:
                                 if rank == 0:
                                     logger.info(instruction)
                                     match_flag = False
                                     for template in self.output_template:
                                         try:
-                                            result = re.match(template, answer.strip(" "))
+                                            result = re.match(template, answer)
                                             logger.info(f"correct: {corrects[index]}, AI: {result.group('answer')}")
                                             subject_result[str(idx - len(chat_results) + index + 1)] = result.group(
                                                 "answer")
