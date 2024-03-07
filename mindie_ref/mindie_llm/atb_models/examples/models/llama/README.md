@@ -86,6 +86,7 @@
       export ATB_LAUNCH_KERNEL_WITH_TILING=0
       export ATB_OPSRUNNER_KERNEL_CACHE_GLOABL_COUNT=1
       export ATB_OPSRUNNER_KERNEL_CACHE_LOCAL_COUNT=0
+
       ```
 
 **运行Flash Attention BF16**
@@ -135,6 +136,8 @@
     export TASK_QUEUE_ENABLE=1
     export ATB_CONVERT_NCHW_TO_ND=1
     export LCCL_ENABLE_FALLBACK=1
+    export ATB_WORKSPACE_MEM_ALLOC_GLOBAL=1
+    export ATB_CONTEXT_WORKSPACE_SIZE=0
     ```
 
 **运行Paged Attention BF16**
