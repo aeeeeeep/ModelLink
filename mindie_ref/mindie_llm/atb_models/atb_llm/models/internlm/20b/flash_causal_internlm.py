@@ -138,13 +138,6 @@ class InternLMMLP(nn.Module):
     def __init__(self, prefix, config, weights):
         super().__init__()
 
-        # self.gate_up_proj = TensorParallelColumnLinear.load_multi(
-        #     config,
-        #     prefixes=[f"{prefix}.gate_proj", f"{prefix}.up_proj"],
-        #     weights=weights,
-        #     dim=0,
-        #     bias=False,
-        # )
         self.gate_proj = TensorParallelColumnLinear.load(
             config,
             prefix=f"{prefix}.gate_proj",
@@ -297,14 +290,6 @@ class InternLMModel(InternLMPreTrainedModel):
         self.parallel_lm_head = True
 
         if self.parallel_lm_head:
-            # self.lm_head = load_column_multi(
-            #     config,
-            #     prefixes=["lm_head"],
-            #     weights=weights,
-            #     head_size=1,
-            #     lm_head=True,
-            #     norm=self.config.vocab_size == 103168
-            # )
             self.lm_head = TensorParallelHead.load(
                 config,
                 prefix="lm_head",
@@ -430,7 +415,6 @@ class InternLMModel(InternLMPreTrainedModel):
             weights_t.append(self.maybe_format_cast(weights_layer["self_attn.v_proj.linear.weight"]))
             weights_t.append(self.maybe_format_cast(weights_layer["self_attn.o_proj.linear.weight"]))
             weights_t.append(weights_layer["post_attention_layernorm.weight"])
-            # weights_t.append(self.maybe_format_cast(weights_layer["mlp.gate_up_proj.linear.weight"]))
             weights_t.append(self.maybe_format_cast(weights_layer["mlp.gate_proj.linear.weight"]))
             weights_t.append(self.maybe_format_cast(weights_layer["mlp.down_proj.linear.weight"]))
             weights_t.append(self.maybe_format_cast(weights_layer["mlp.up_proj.linear.weight"]))
@@ -637,33 +621,6 @@ class FlashInternlmForCausalLM(InternLMPreTrainedModel):
         logger.info(self.soc_info)
         # Initialize weights and apply final processing
         self.lm_head_weight = None
-        # self.parallel_lm_head = True
-
-        # if self.parallel_lm_head:
-        #     self.lm_head = load_column_multi(
-        #         config,
-        #         prefixes=["lm_head"],
-        #         weights=weights,
-        #         head_size=1,
-        #         lm_head=True,
-        #         norm=self.config.vocab_size == 103168
-        #     )
-        # else:
-        #     self.lm_head = TensorParallelHead.load_weight(
-        #         config,
-        #         prefix="lm_head",
-        #         weights=weights,
-        #         is_norm=True  # 不生效的配置
-        #     )
-
-        # self.model.parallel_lm_head = self.parallel_lm_head
-        # self.lm_head = (TensorParallelHead.load if self.parallel_lm_head else TensorParallelHead.load_weight)(
-        #     config,
-        #     prefix="lm_head",
-        #     weights=weights,
-        #     is_norm=True
-        # )
-
         self.num_heads = self.model.num_heads
         self.num_key_value_heads = self.model.num_key_value_heads
         self.num_attention_heads = self.num_heads
@@ -702,12 +659,6 @@ class FlashInternlmForCausalLM(InternLMPreTrainedModel):
             lm_head_indices: Optional[torch.Tensor] = None,  # prefill阶段使用，取的生成token的偏移
             **kwargs,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
-        # if self.model.lm_head_weight is None:
-        #     if self.soc_info.need_nz:
-        #         self.lm_head.linear.weight.data = torch_npu.npu_format_cast(self.lm_head.linear.weight.data, 29)
-        #     self.model.lm_head_weight = self.lm_head.linear.weight
-
-        # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
         outputs = self.model(
             input_ids,  # input id, 拉平的
             position_ids,
