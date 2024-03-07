@@ -72,7 +72,13 @@ atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operat
         linearParam.linearType = atb::infer::LinearType::LINEAR_BF16BF16_FP32_BF16;
     }
 
-    if (param.quantType == W8A16) {
+    if (param.quantType == W8A16 && param.hasBias) {
+        linearNode.operation = new atb_speed::common::W8A16Operation("LinearNode");
+        linearNode.inTensorIds = {
+            LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT,
+            LinearTensorIdx::IN_SCALE, LinearTensorIdx::IN_OFFSET, LinearTensorIdx::IN_BIAS
+        };
+    } else if (param.quantType == W8A16 && !param.hasBias) {
         linearNode.operation = new atb_speed::common::W8A16Operation("LinearNode");
         linearNode.inTensorIds = {LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_SCALE, LinearTensorIdx::IN_OFFSET};
     } else if (param.quantType == NO_QUANT && param.hasBias) {

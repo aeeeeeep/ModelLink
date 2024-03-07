@@ -172,7 +172,7 @@ atb::Status AclNnOperation::UpdateAclTensorDataPtr(const atb::VariantPack &varia
         AclNnTensor &aclNnTensor = aclNnTask_.aclInTensors[i];
         if (aclNnTensor.needUpdateTensorDataPtr) {
             aclNnTensor.atbTensor.deviceData = variantPack.inTensors.at(i).deviceData;
-            int ret = aclNnTensor.InitTensor(aclNnTask_.aclExecutor, opName_, i, true);
+            int ret = aclNnTensor.InitTensor(aclNnTask_.aclExecutor, opName_, i == 4 ? i + 2 : i, true);
             if (ret != 0) {
                 ATB_LOG(ERROR) << opName_ << " call InitTensor fail, error:" << ret;
                 return atb::ERROR_CANN_ERROR;
