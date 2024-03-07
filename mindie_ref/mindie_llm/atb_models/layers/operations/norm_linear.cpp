@@ -90,7 +90,8 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
         }
         outTensorDescs.at(0).shape = inTensorDescs.at(0).shape;
         auto outDimSize = outTensorDescs.at(0).shape.dimNum;
-        outTensorDescs.at(0).shape.dims[outDimSize - 1] = inTensorDescs.at(5).shape.dims[0];
+        outTensorDescs.at(0).shape.dims[outDimSize - 1] = param.fusionLinearParam.quantType == W8A16 \
+            ? inTensorDescs.at(5).shape.dims[1] : inTensorDescs.at(5).shape.dims[0];
         return atb::NO_ERROR;
     };
 

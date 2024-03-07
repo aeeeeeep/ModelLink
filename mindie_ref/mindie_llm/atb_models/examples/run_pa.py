@@ -112,7 +112,7 @@ class PARunner:
             kv_cache=self.cache_manager.kv_cache,
             slots=slots,
             input_lengths=input_lengths_tensor,
-            max_seq_len=self.max_prefill_tokens,
+            max_seq_len=self.max_input_length,
             lm_head_indices=prefill_head_indices
         )
         self.warm_up_memory = int(

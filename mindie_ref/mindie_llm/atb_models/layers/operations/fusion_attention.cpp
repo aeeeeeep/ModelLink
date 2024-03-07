@@ -79,8 +79,12 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
     atb::Node &qNormLinearNode = opGraph.nodes.at(nodeId++);
     atb_speed::common::NormLinearParam<NormParamType> qNormLinearParam;
     qNormLinearParam.isAntiOutlier = param.isAntiOutlier;
-    qNormLinearParam.fusionLinearParam.quantType \
-        = param.layerLinearQuantType[0] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+    if (param.packQuantType == atb_speed::common::ALL_W8A16) {
+        qNormLinearParam.fusionLinearParam.quantType = W8A16;
+    } else {
+        qNormLinearParam.fusionLinearParam.quantType \
+            = param.layerLinearQuantType[0] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+    }
     qNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
     qNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
     qNormLinearParam.normParamType = param.normParamType;
@@ -143,8 +147,12 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         atb::Node &kNormLinearNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> kNormLinearParam;
         kNormLinearParam.isAntiOutlier = param.isAntiOutlier;
-        kNormLinearParam.fusionLinearParam.quantType \
-            = param.layerLinearQuantType[1] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+        if (param.packQuantType == atb_speed::common::ALL_W8A16) {
+            kNormLinearParam.fusionLinearParam.quantType = W8A16;
+        } else {
+            kNormLinearParam.fusionLinearParam.quantType \
+                = param.layerLinearQuantType[1] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+        }
         kNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         kNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
         kNormLinearParam.normParamType = param.normParamType;
@@ -162,8 +170,12 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         atb::Node &vNormLinearNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> vNormLinearParam;
         vNormLinearParam.isAntiOutlier = param.isAntiOutlier;
-        vNormLinearParam.fusionLinearParam.quantType \
-            = param.layerLinearQuantType[2] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+        if (param.packQuantType == atb_speed::common::ALL_W8A16) {
+            vNormLinearParam.fusionLinearParam.quantType = W8A16;
+        } else {
+            vNormLinearParam.fusionLinearParam.quantType \
+                = param.layerLinearQuantType[2] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+        }
         vNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         vNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
         vNormLinearParam.normParamType = param.normParamType;
@@ -517,9 +529,13 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
     atb::Node &selfOutLinearParallelNode = opGraph.nodes.at(nodeId++);
     atb_speed::common::LinearParallelParam selfOutLinearParam;
     selfOutLinearParam.parallelType = atb_speed::common::ROW_PARALLEL;
-    selfOutLinearParam.fusionLinearParam.quantType \
-        = param.layerLinearQuantType[3] == atb_speed::common::LinearType::FP ? \
-        atb_speed::common::LinearQuantType::NO_QUANT : atb_speed::common::LinearQuantType::LINEAR_QUANT;
+    if (param.packQuantType == atb_speed::common::ALL_W8A16) {
+        selfOutLinearParam.fusionLinearParam.quantType = W8A16;
+    } else {
+        selfOutLinearParam.fusionLinearParam.quantType \
+            = param.layerLinearQuantType[3] == atb_speed::common::LinearType::FP ? \
+            atb_speed::common::LinearQuantType::NO_QUANT : atb_speed::common::LinearQuantType::LINEAR_QUANT;
+    }
     selfOutLinearParam.biasAfterSync = param.selfOutLinearTensorParallelInfo.worldSize > 1 \
         && selfOutLinearParam.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::NO_QUANT \
         && param.selfAttnHasBias;
