@@ -25,10 +25,10 @@ namespace common {
 enum LinearTensorIdx : uint32_t {
     IN_INPUT = 0,
     IN_WEIGHT,
-    IN_SCALE,    // Quant所需权重
-    IN_OFFSET,   // Quant所需权重
+    IN_BIAS,     // FP场景下部分模型会使用到此权重；Quant场景下W8A8或W8A8 antiouliner会使用到此权重
     IN_DESCALE,  // Quant所需权重
-    IN_BIAS,
+    IN_OFFSET,   // Quant所需权重
+    IN_SCALE,    // Quant所需权重
     OUT_LINEAR,
     INTERMIDATE_INPUT  // 仅LINEAR_QUANT场景下使用
 };

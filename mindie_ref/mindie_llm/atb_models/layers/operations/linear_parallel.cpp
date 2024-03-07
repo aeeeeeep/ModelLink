@@ -31,10 +31,10 @@ static const uint64_t DEFAULT_NODE_COUNT = 3;
 enum LinearParallelTensorIdx : uint32_t {
     IN_INPUT = 0,
     IN_WEIGHT,
-    IN_SCALE,
-    IN_OFFSET,
-    IN_DESCALE,
     IN_BIAS,
+    IN_DESCALE,
+    IN_OFFSET,
+    IN_SCALE,
     OUT_LINEAR_PARALLEL,
     INTERMIDATE_LINEAR_OUT,
     INTERMIDATE_SYNC_OUT
@@ -61,8 +61,8 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
     atb_speed::common::FusionLinearParam linearParam = param.fusionLinearParam;
     FusionLinear(linearParam, &linearNode.operation);
     linearNode.inTensorIds = {
-        LinearParallelTensorIdx::IN_INPUT, LinearParallelTensorIdx::IN_WEIGHT, LinearParallelTensorIdx::IN_SCALE,
-        LinearParallelTensorIdx::IN_OFFSET, LinearParallelTensorIdx::IN_DESCALE, LinearParallelTensorIdx::IN_BIAS
+        LinearParallelTensorIdx::IN_INPUT, LinearParallelTensorIdx::IN_WEIGHT, LinearParallelTensorIdx::IN_BIAS,
+        LinearParallelTensorIdx::IN_DESCALE, LinearParallelTensorIdx::IN_OFFSET, LinearParallelTensorIdx::IN_SCALE
     };
     linearNode.outTensorIds = {LinearParallelTensorIdx::INTERMIDATE_LINEAR_OUT};
 

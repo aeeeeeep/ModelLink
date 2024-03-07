@@ -15,7 +15,7 @@
  */
 
 #include "layers/operations/fusion_attention.h"
-#include "pe_gather.h"
+#include "layers/operations/positional_embedding.h"
 namespace atb_speed {
 namespace common {
 
@@ -26,20 +26,20 @@ enum QKVLinearSplitTensorIdx : uint32_t {
     IN_QKV_NORM_NEW_WEIGHT,
     IN_QKV_NORM_NEW_BIAS,
     IN_QKV_WEIGHT_0,
-    IN_QKV_SCALE_0,
-    IN_QKV_OFFSET_0,
+    IN_QKV_BIAS_0,
     IN_QKV_DESCALE_0,
-    IN_QKV_DEOFFSET_0,
+    IN_QKV_OFFSET_0,
+    IN_QKV_SCALE_0,
     IN_QKV_WEIGHT_1,
-    IN_QKV_SCALE_1,
-    IN_QKV_OFFSET_1,
+    IN_QKV_BIAS_1,
     IN_QKV_DESCALE_1,
-    IN_QKV_DEOFFSET_1,
+    IN_QKV_OFFSET_1,
+    IN_QKV_SCALE_1,
     IN_QKV_WEIGHT_2,
-    IN_QKV_SCALE_2,
-    IN_QKV_OFFSET_2,
+    IN_QKV_BIAS_2,
     IN_QKV_DESCALE_2,
-    IN_QKV_DEOFFSET_2,
+    IN_QKV_OFFSET_2,
+    IN_QKV_SCALE_2,
     OUT_Q,
     OUT_K,
     OUT_V,
@@ -89,9 +89,8 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
     qNormLinearNode.inTensorIds = {
         QKVLinearSplitTensorIdx::IN_QKV_INPUT, QKVLinearSplitTensorIdx::IN_QKV_NORM_WEIGHT, QKVLinearSplitTensorIdx::IN_QKV_NORM_BIAS,
         QKVLinearSplitTensorIdx::IN_QKV_NORM_NEW_WEIGHT, QKVLinearSplitTensorIdx::IN_QKV_NORM_NEW_BIAS,
-        QKVLinearSplitTensorIdx::IN_QKV_WEIGHT_0,
-        QKVLinearSplitTensorIdx::IN_QKV_SCALE_0, QKVLinearSplitTensorIdx::IN_QKV_OFFSET_0,
-        QKVLinearSplitTensorIdx::IN_QKV_DESCALE_0, QKVLinearSplitTensorIdx::IN_QKV_DEOFFSET_0
+        QKVLinearSplitTensorIdx::IN_QKV_WEIGHT_0, QKVLinearSplitTensorIdx::IN_QKV_BIAS_0, QKVLinearSplitTensorIdx::IN_QKV_DESCALE_0,
+        QKVLinearSplitTensorIdx::IN_QKV_OFFSET_0, QKVLinearSplitTensorIdx::IN_QKV_SCALE_0
     };
     qNormLinearNode.outTensorIds = {param.isPack ? QKVLinearSplitTensorIdx::INTERMEDIATE_MIXED_QKV : QKVLinearSplitTensorIdx::OUT_Q};
 
@@ -154,9 +153,9 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         kNormLinearNode.inTensorIds = {
             QKVLinearSplitTensorIdx::IN_QKV_INPUT, QKVLinearSplitTensorIdx::IN_QKV_NORM_WEIGHT, QKVLinearSplitTensorIdx::IN_QKV_NORM_BIAS,
             QKVLinearSplitTensorIdx::IN_QKV_NORM_NEW_WEIGHT, QKVLinearSplitTensorIdx::IN_QKV_NORM_NEW_BIAS,
-            QKVLinearSplitTensorIdx::IN_QKV_WEIGHT_1,
-            QKVLinearSplitTensorIdx::IN_QKV_SCALE_1, QKVLinearSplitTensorIdx::IN_QKV_OFFSET_1,
-            QKVLinearSplitTensorIdx::IN_QKV_DESCALE_1, QKVLinearSplitTensorIdx::IN_QKV_DEOFFSET_1
+            QKVLinearSplitTensorIdx::IN_QKV_WEIGHT_1, QKVLinearSplitTensorIdx::IN_QKV_BIAS_1,
+            QKVLinearSplitTensorIdx::IN_QKV_DESCALE_1, QKVLinearSplitTensorIdx::IN_QKV_OFFSET_1,
+            QKVLinearSplitTensorIdx::IN_QKV_SCALE_1
         };
         kNormLinearNode.outTensorIds = {QKVLinearSplitTensorIdx::OUT_K};
 
@@ -173,9 +172,9 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         vNormLinearNode.inTensorIds = {
             QKVLinearSplitTensorIdx::IN_QKV_INPUT, QKVLinearSplitTensorIdx::IN_QKV_NORM_WEIGHT, QKVLinearSplitTensorIdx::IN_QKV_NORM_BIAS,
             QKVLinearSplitTensorIdx::IN_QKV_NORM_NEW_WEIGHT, QKVLinearSplitTensorIdx::IN_QKV_NORM_NEW_BIAS,
-            QKVLinearSplitTensorIdx::IN_QKV_WEIGHT_2,
-            QKVLinearSplitTensorIdx::IN_QKV_SCALE_2, QKVLinearSplitTensorIdx::IN_QKV_OFFSET_2,
-            QKVLinearSplitTensorIdx::IN_QKV_DESCALE_2, QKVLinearSplitTensorIdx::IN_QKV_DEOFFSET_2
+            QKVLinearSplitTensorIdx::IN_QKV_WEIGHT_2, QKVLinearSplitTensorIdx::IN_QKV_BIAS_2,
+            QKVLinearSplitTensorIdx::IN_QKV_DESCALE_2, QKVLinearSplitTensorIdx::IN_QKV_OFFSET_2,
+            QKVLinearSplitTensorIdx::IN_QKV_SCALE_2,
         };
         vNormLinearNode.outTensorIds = {QKVLinearSplitTensorIdx::OUT_V};
     }
@@ -314,17 +313,17 @@ enum AttentionTensorIdx : uint32_t {
     IN_SCALE_0,
     IN_OFFSET_0,
     IN_DESCALE_0,
-    IN_DEOFFSET_0,
+    IN_BIAS_0,
     IN_WEIGHT_1,  // k
     IN_SCALE_1,
     IN_OFFSET_1,
     IN_DESCALE_1,
-    IN_DEOFFSET_1,
+    IN_BIAS_1,
     IN_WEIGHT_2,  // v
     IN_SCALE_2,
     IN_OFFSET_2,
     IN_DESCALE_2,
-    IN_DEOFFSET_2,
+    IN_BIAS_2,
     IN_COS_TABLE,
     IN_SIN_TABLE,
     IN_SEQ_LEN,
@@ -425,12 +424,12 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
     qkvLinearSplitNode.inTensorIds = {
         AttentionTensorIdx::IN_INPUT, AttentionTensorIdx::IN_NORM_WEIGHT, AttentionTensorIdx::IN_NORM_BIAS,
         AttentionTensorIdx::IN_NORM_NEW_WEIGHT,  AttentionTensorIdx::IN_NORM_NEW_BIAS,
-        AttentionTensorIdx::IN_WEIGHT_0, AttentionTensorIdx::IN_SCALE_0, AttentionTensorIdx::IN_OFFSET_0,
-        AttentionTensorIdx::IN_DESCALE_0, AttentionTensorIdx::IN_DEOFFSET_0,
-        AttentionTensorIdx::IN_WEIGHT_1, AttentionTensorIdx::IN_SCALE_1, AttentionTensorIdx::IN_OFFSET_1,
-        AttentionTensorIdx::IN_DESCALE_1, AttentionTensorIdx::IN_DEOFFSET_1,
-        AttentionTensorIdx::IN_WEIGHT_2, AttentionTensorIdx::IN_SCALE_2, AttentionTensorIdx::IN_OFFSET_2,
-        AttentionTensorIdx::IN_DESCALE_2, AttentionTensorIdx::IN_DEOFFSET_2
+        AttentionTensorIdx::IN_WEIGHT_0, AttentionTensorIdx::IN_BIAS_0, AttentionTensorIdx::IN_DESCALE_0,
+        AttentionTensorIdx::IN_OFFSET_0, AttentionTensorIdx::IN_SCALE_0,
+        AttentionTensorIdx::IN_WEIGHT_1, AttentionTensorIdx::IN_BIAS_1, AttentionTensorIdx::IN_DESCALE_1,
+        AttentionTensorIdx::IN_OFFSET_1, AttentionTensorIdx::IN_SCALE_1,
+        AttentionTensorIdx::IN_WEIGHT_2, AttentionTensorIdx::IN_BIAS_2, AttentionTensorIdx::IN_DESCALE_2,
+        AttentionTensorIdx::IN_OFFSET_2, AttentionTensorIdx::IN_SCALE_2,
     };
     qkvLinearSplitNode.outTensorIds = {
         AttentionTensorIdx::INTERMIDATE_Q, AttentionTensorIdx::INTERMIDATE_K, AttentionTensorIdx::INTERMIDATE_V

@@ -18,7 +18,7 @@
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
 #include "layers/operations/word_embedding.h"
-#include "layers/operations/pe_gather.h"
+#include "layers/operations/positional_embedding.h"
 #include "layers/operations/lmhead.h"
 #include "models/glm/v2_6b/layer/decoder_layer.h"
 #include "models/glm/v2_6b/model/decoder_model.h"

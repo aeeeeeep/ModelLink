@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "layers/operations/pe_gather.h"
+#include "layers/operations/positional_embedding.h"
 
 namespace atb_speed {
 namespace common {
