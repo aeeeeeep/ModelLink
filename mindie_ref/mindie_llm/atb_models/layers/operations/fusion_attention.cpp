@@ -527,6 +527,7 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
     selfOutLinearParam.fusionLinearParam.isBF16 = param.isBF16;
     selfOutLinearParam.fusionLinearParam.hasBias = param.selfAttnHasBias && !selfOutLinearParam.biasAfterSync;
     selfOutLinearParam.tensorParallelInfo = param.selfOutLinearTensorParallelInfo;
+    selfOutLinearParam.supportLcoc = param.supportLcoc;
     LinearParallel(selfOutLinearParam, &selfOutLinearParallelNode.operation);
     selfOutLinearParallelNode.inTensorIds = {
         AttentionTensorIdx::INTERMIDATE_SELF_ATTENTION, AttentionTensorIdx::IN_WEIGHT_OUT,

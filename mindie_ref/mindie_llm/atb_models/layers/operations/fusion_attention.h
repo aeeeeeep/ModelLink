@@ -52,6 +52,7 @@ struct FusionAttentionParam {
     atb::infer::PagedAttentionParam pageAttentionParam;
     // self out linear param
     atb_speed::common::TensorParallelInfo selfOutLinearTensorParallelInfo;
+    bool supportLcoc = false;
 };
 
 template <typename NormParamType>
