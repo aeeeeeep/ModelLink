@@ -121,6 +121,8 @@ python tools/checkpoint/util.py --model-type GPT \
                                 --tokenizer-model ./model_from_hf/llama-13b-hf/tokenizer.model
 ```
 
+权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
+
 4. 预训练
 
 4.1 准备预训练数据集
@@ -263,6 +265,8 @@ LOAD_CHECKPOINT_PATH="your init model load path"
 SAVE_CHECKPOINT_PATH="your model ckpt save path"
 ```
 
+增加微调参数--finetune，使微调从第一步开始。
+
 5.3 启动 LLaMA-7B/13B 微调脚本
 
 LLaMA-7B
@@ -302,7 +306,7 @@ LLaMA-7B/13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 ```shell
 # 修改模型权重路径和分词器路径
 CHECKPOINT=<checkpoint-path>
-VOCAB_FILE=<vocabfile-path>
+TOKENIZER_PATH=<tokenizer-path>
 ```
 
 LLaMA-7B:
@@ -351,7 +355,7 @@ LLaMA-13B:
 修改权重路径, 词表路径和数据集任务路径：
 ```shell
 CHECKPOINT=<checkpoint-path>
-VOCAB_FILE=<vocabfile-path>
+TOKENIZER_PATH=<tokenizer-path>
 DATA_PATH="./boolq/data/test/"
 TASK="boolq"
 ```
@@ -479,6 +483,8 @@ python tools/checkpoint/util.py --model-type GPT \
                                 --save-dir ./model_weights/llama-65b-tp8-pp4 \
                                 --tokenizer-model ./model_from_hf/llama-65b-hf/tokenizer.model
 ```
+
+权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
 
 5. 预训练
 
@@ -638,6 +644,8 @@ LOAD_CHECKPOINT_PATH="your init model load path"
 SAVE_CHECKPOINT_PATH="your model ckpt save path"
 ```
 
+增加微调参数--finetune，使微调从第一步开始。
+
 6.3 启动 LLaMA-33B/65B 微调脚本
 
 LLaMA-33B
@@ -678,7 +686,7 @@ LLaMA-33B/65B在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 ```shell
 # 修改模型权重路径和分词器路径
 CHECKPOINT=<checkpoint-path>
-VOCAB_FILE=<vocabfile-path>
+TOKENIZER_PATH=<tokenizer-path>
 ```
 
 LLaMA-33B:
@@ -722,42 +730,27 @@ LLaMA-65B:
 
 我们使用 Boolq benchmark 来评估我们的模型。Benchmark下载[此处](https://huggingface.co/datasets/boolq)。
 
-配置LLaMA-33B评估脚本：
+配置LLaMA-33B评估脚本：tasks/evaluation/evaluate_llama_33B_ptd.sh
 
+配置LLaMA-65B评估脚本：tasks/evaluation/evaluate_llama_65B_ptd.sh
+
+修改权重路径, 词表路径和数据集任务路径：
 ```shell
-    CHECKPOINT=./llama-33b-tp4-pp2/
-    VOCAB_FILE=./llama-33b-hf/
-    # 配置任务和数据路径
-    DATA_PATH="./boolq/data/test/"
-    TASK="boolq"
-    # 配置生成参数
-    python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/evaluation/evaluation_llama.py   \
-         --task-data-path $DATA_PATH \
-         --task $TASK\
-         --seq-length 1024 \
-         --max-new-tokens 2 \
-         --max-position-embeddings 1024 \
-         --tensor-model-parallel-size 4  \
-         --pipeline-model-parallel-size 2  \
-         --num-layers 60 \
-         --hidden-size 6656  \
-         --ffn-hidden-size 17920 \
-         --load ${CHECKPOINT}  \
-         --num-attention-heads 52  \
-         --tokenizer-type PretrainedFromHF  \
-         --tokenizer-name-or-path ${VOCAB_FILE} \
-         --tokenizer-not-use-fast \
-         --fp16  \
-         --micro-batch-size 1  \
-         --position-embedding-type rope \
-         --normalization RMSNorm \
-         --mlp-layer-fusion \
-         --seed 42
+CHECKPOINT=<checkpoint-path>
+TOKENIZER_PATH=<tokenizer-path>
+DATA_PATH="./boolq/data/test/"
+TASK="boolq"
 ```
 
+修改最大生成词参数：
+```shell
+--max-new-tokens 1 
+```
 开始评估
 
 ```shell
+# llama-33B评估
+bash tasks/evaluation/evaluate_llama_33B_ptd.sh
 # llama-65B评估
 bash tasks/evaluation/evaluate_llama_65B_ptd.sh
 ```
