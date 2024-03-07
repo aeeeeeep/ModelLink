@@ -59,6 +59,7 @@ class FlashQwenForCausalLM(FlashForCausalLM):
                 self.sin_embed = self.rotary_embedding.get_sin_cached_total()
 
     def init_ascend_operations(self, config: QwenConfig):
+        config.use_refactor = False
         if config.use_refactor:
             # 初始化模型
             self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_DecoderModel")
