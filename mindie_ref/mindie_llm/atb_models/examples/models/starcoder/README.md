@@ -15,6 +15,7 @@ https://huggingface.co/bigcode/starcoder
 https://huggingface.co/bigcode/starcoder/tree/main
 ```
 - 进入刚才下载的权重文件夹中将config.json文件中的 "model_type": "gpt_bigcode" 修改为 "model_type": "starcoder" 
+- 权重文件夹中将config.json文件中的 "torch_type": "float32" 修改为 "torch_type": "float16" 
 
 ## 权重转换
 - 参考[此README文件](../../README.md)
