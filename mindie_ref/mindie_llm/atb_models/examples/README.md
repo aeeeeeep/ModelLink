@@ -59,6 +59,7 @@
     cd ${llm_path}
     python examples/convert/convert_weights.py --model_path ${weight_path}
     ```
+  - 注意：必须先进入`${llm_path}`路径下执行以上命令，否则由于脚本中存在相对路径，会导致moudle not found的问题
 - 输出结果会保存在bin权重同目录下
 
 ## 启动脚本
