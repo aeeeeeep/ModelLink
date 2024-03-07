@@ -74,8 +74,8 @@ pip install tiktoken
   ```
 
 示例：
-　```shell
-  bash run.sh pa_fp16 performanc　[［２５６，２５６]) １ qwen ／ｄａｔａ／ｍｏｄｅｌｓ／ｑｗｅｎ－１４ｂ／ ８
+  ```shell
+  bash run.sh pa_fp16 performance　[[256,256]] １ qwen /data/models/qwen-14b/ 8
   ```
 
 - 参考[此README文件](../../../tests/modeltest/README.md)
