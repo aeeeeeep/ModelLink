@@ -37,10 +37,10 @@ def add_arguments(parser):
     group.add_argument('--megatron-path', type=str, default=None,
                        help='Base directory of deepspeed repository')
     parser.add_argument('--add-qkv-bias', action='store_true',
-                        help='Add bias for attention qkv like Intern and Qwen',
+                        help='Add bias for attention qkv',
                         default=False)
     parser.add_argument('--add-dense-bias', action='store_true',
-                        help='Add bias for attention dense like Intern',
+                        help='Add bias for attention dense',
                         default=False)
 
 
@@ -211,6 +211,7 @@ def _load_checkpoint(queue, args):
 
     margs = parse_args()
     margs.add_qkv_bias = args.add_qkv_bias
+    margs.add_dense_bias = args.add_dense_bias
     margs.tokenizer_model = args.tokenizer_model
     load_args_from_checkpoint(margs)
 

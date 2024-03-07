@@ -39,7 +39,6 @@ def load_args_from_checkpoint_bloom(args):
     args.use_rotary_position_embeddings = True
     args.swiglu = False
     args.tokenizer_type = "PretrainedFromHF"
-    args.fp16 = True
     args.normalization = "LayerNorm"
     args.add_bias_linear = True
     args.untie_embeddings_and_output_weights = False
@@ -49,12 +48,11 @@ def load_args_from_checkpoint_bloom(args):
     args.ffn_hidden_size = args.hidden_size * 4
     args.gradient_accumulation_fusion = False
     args.make_vocab_size_divisible_by = 1
+    args.embed_layernorm = True
 
     if "num_key_value_heads" in llama_args:
         args.group_query_attention = True
         args.num_query_groups = llama_args["num_key_value_heads"]
-
-    setattr(args, 'embed_layernorm', True)
 
 
 def load_checkpoint_to_model_bloom(args):

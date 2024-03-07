@@ -37,15 +37,17 @@ def add_arguments(parser):
     group.add_argument('--megatron-path', type=str, default=None,
                        help='Base directory of deepspeed repository')
     group.add_argument("--w-pack", type=bool,
-                       help='True is w_pack weight for llm like baichuan',
+                       help='True is w_pack weight for llm',
                        default=False)
     parser.add_argument('--add-qkv-bias', action='store_true',
-                    help='Add bias for attention qkv like Intern and Qwen',
+                    help='Add bias for attention qkv',
                     default=False)
     parser.add_argument('--add-dense-bias', action='store_true',
-                    help='Add bias for attention dense like Intern',
+                    help='Add bias for attention dense',
                     default=False)
-
+    parser.add_argument('--params-dtype', type=str,
+                    help='Set weight dtype',
+                    default='fp16')
 
 def verify_transformers_version():
     major, minor, patch = map(int, transformers.__version__.split('.'))
@@ -234,10 +236,15 @@ def _load_checkpoint(queue, args):
                 ]
 
     margs = parse_args()
+    setattr(margs, "embed_layernorm", False)
     margs.w_pack = args.w_pack
     margs.add_qkv_bias = args.add_qkv_bias
     margs.add_dense_bias = args.add_dense_bias
     margs.tokenizer_model = args.tokenizer_model
+    if args.params_dtype == 'bf16':
+        margs.bf16 = True
+    elif args.params_dtype == 'fp16':
+        margs.fp16 = True
     load_args_from_checkpoint(margs)
 
     # Arguments do sanity checks on the world size, but we don't care,
@@ -317,11 +324,7 @@ def _load_checkpoint(queue, args):
     md.checkpoint_args = margs
     md.consumed_train_samples = 0
     md.consumed_valid_samples = 0
-    if hasattr(margs, 'embed_layernorm'):
-        md.embed_layernorm = margs.embed_layernorm
-    else:
-        setattr(margs, 'embed_layernorm', False)
-        md.embed_layernorm = False
+    md.embed_layernorm = margs.embed_layernorm
 
     # Get first pipe stage.
     mpu.set_tensor_model_parallel_rank(0)
@@ -385,7 +388,7 @@ def _load_checkpoint(queue, args):
             mlp_l0_bias.append(layer.mlp.dense_h_to_4h.bias.data)
         if args.add_qkv_bias:
             message["qkv bias"] = layer.self_attention.query_key_value.bias.data
-        if args.add_dense_bias:    
+        if args.add_dense_bias:
             message["dense bias"] = layer.self_attention.dense.bias.data
         # Handle gated linear units.
         if md.swiglu:
