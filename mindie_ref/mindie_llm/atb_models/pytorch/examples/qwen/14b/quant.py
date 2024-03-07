@@ -8,7 +8,6 @@ from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 
 
 def load_tokenizer_and_model(fp16_path):
-    # fp16_path = '/data/models/Qwen-14B-Chat'
     tokenizer = AutoTokenizer.from_pretrained(
         pretrained_model_name_or_path=fp16_path,
         pad_token='<|extra_0|>',
