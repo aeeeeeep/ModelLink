@@ -23,7 +23,7 @@ class Test_data:
     top_k: int
     top_p: float
     min_tokens_to_keep: int
-    
+
 class PARunner:        
     def __init__(self, **kwargs):
         self.rank = kwargs.get('rank', '0')
@@ -222,9 +222,7 @@ def parse_arguments():
         '--input_texts',
         type=str,
         nargs='+',
-        # default=["What's deep learning?"])
-        # default=["<structure>Please answer from given information, do not make up answers. If you cannot learn from given information, please answer\"cannot answer according to given information\". Do not add other informations. Please answer in English.<given information>mabaoguo is chief of Britich wushu association.<answer>who is mabaoguo"])
-        default=["Write a bubble sort algorithm in C++"])
+        default=["What's deep learning?"])
     parser.add_argument(
         '--input_ids',
         type=parse_ids,

@@ -12,10 +12,10 @@ def next_token_chooser(logits: torch.Tensor):
     return torch.argmax(logits, dim=-1)
 
 def next_token_topktopp(test_data, logits: torch.Tensor):
-    topktopp_OP_NAME = torch.classes.OperationTorch.OperationTorch("Layerstopktopp")
-    topktopp_PARAM = json.dumps({"axes": 1, "headNum": 0, "topk": test_data.top_k, "vocsize": logits.size()[1], "row":logits.size()[0],"randseed":test_data.random_seed,"min_tokens_to_keep": test_data.min_tokens_to_keep})
-    topktopp_OP_NAME.set_param(topktopp_PARAM)
-    next_logits, next_token=topktopp_OP_NAME.execute([logits,torch.HalfTensor([test_data.top_p]).npu(),torch.HalfTensor([test_data.temperature]).npu()])
+    topktopp_op_name = torch.classes.OperationTorch.OperationTorch("Layerstopktopp")
+    topktopp_param = json.dumps({"axes": 1, "headNum": 0, "topk": test_data.top_k, "vocsize": logits.size()[1], "row":logits.size()[0],"randseed":test_data.random_seed,"min_tokens_to_keep": test_data.min_tokens_to_keep})
+    topktopp_op_name.set_param(topktopp_param)
+    next_logits, next_token=topktopp_op_name.execute([logits,torch.HalfTensor([test_data.top_p]).npu(),torch.HalfTensor([test_data.temperature]).npu()])
     return next_token
 
 def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length, rank, ignore_eos, test_data, do_sample):
