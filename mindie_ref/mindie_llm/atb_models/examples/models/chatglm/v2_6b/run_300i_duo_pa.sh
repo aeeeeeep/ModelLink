@@ -15,4 +15,4 @@ export HCCL_BUFFSIZE=110
 export ATB_USE_TILING_COPY_STREAM=1
 
 export PYTHONPATH=${llm_path}:$PYTHONPATH
-torchrun --nproc_per_node $TP_WORLD_SIZE --master_port $MASTER_PORT -m ../../examples.run_pa --model_path $1
+torchrun --nproc_per_node $TP_WORLD_SIZE --master_port $MASTER_PORT -m examples.run_pa --model_path $1

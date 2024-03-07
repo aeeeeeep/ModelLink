@@ -523,11 +523,11 @@ class FlashChatglmModel(torch.nn.Module):
                                           layer.self_attention.pack_type,
                                           layer.mlp.pack_type,
                                           self.quantize)
+            quant_type.append([layer.self_attention.pack_type.value, layer.mlp.pack_type.value])
             if self.soc_info.need_nz:
                 del layer.self_attention
                 del layer.post_attention_layernorm
                 del layer.mlp
-            quant_type.append([layer.self_attention.pack_type.value, layer.mlp.pack_type.value])
         weight_wrapper.register_model_norm(self.state_dict(), 'norm')
         weight_wrapper.weights.append(self.weight_format_cast(self.lm_head_weight))
         return weight_wrapper.weights, weight_wrapper.linear_type, quant_type
@@ -567,11 +567,11 @@ class FlashChatglmModel(torch.nn.Module):
                 self.transdata_param = json.dumps({})
                 self.transdata_operation.set_param(self.transdata_param)
 
-                pad_maxs = math.ceil(max_seq_len / 16) * 16
+                pad_maxs = math.ceil(self.seq_length / 16) * 16
                 atten_mask = self.attn_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
                 atten_mask = self.transdata_operation.execute([atten_mask])[0]
             else:
-                atten_mask = self.attn_mask.get_attn_mask(max_seq_len, kv_cache[0][0].dtype, kv_cache[0][0].device)
+                atten_mask = self.attn_mask.get_attn_mask(self.seq_length, kv_cache[0][0].dtype, kv_cache[0][0].device)
             self.acl_param_encoder = json.dumps({
                 "seqLen" : input_lengths.tolist()
             })
