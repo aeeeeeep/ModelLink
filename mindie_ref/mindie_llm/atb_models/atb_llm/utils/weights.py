@@ -466,7 +466,6 @@ class Weights:
         query_list = torch.chunk(query_layer, world_size, dim=0)
         key_list = torch.chunk(key_layer, kv_tp_size, dim=0)
         value_list = torch.chunk(value_layer, kv_tp_size, dim=0)
-        rank * kv_tp_size // world_size
         tensor = torch.cat([query_list[rank],
                             key_list[rank * kv_tp_size // world_size],
                             value_list[rank * kv_tp_size // world_size]], dim=0)

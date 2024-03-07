@@ -290,7 +290,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                                                                         self.num_attention_heads,
                                                                         1, input_lengths.max(),
                                                                         dtype=self.dtype,
-                                                                        device=input_ids.device)
+                                                                        device=self.device)
                 else:
                     self.acl_decoder_operation_inputs[4] = self.attn_mask_fake
                 self.acl_decoder_operation_inputs[5] = block_tables.to(torch.int32)

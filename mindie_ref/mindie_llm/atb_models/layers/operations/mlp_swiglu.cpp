@@ -71,8 +71,12 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
         atb::Node &normLinearGateUpNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> gateUpNormLinearParam;
         gateUpNormLinearParam.isAntiOutlier = param.isAntiOutlier;
-        gateUpNormLinearParam.fusionLinearParam.quantType \
-            = param.layerLinearQuantType[4] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+        if (param.packQuantType == atb_speed::common::ALL_W8A16) {
+            gateUpNormLinearParam.fusionLinearParam.quantType = W8A16;
+        } else {
+            gateUpNormLinearParam.fusionLinearParam.quantType \
+                = param.layerLinearQuantType[4] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+        }
         gateUpNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         gateUpNormLinearParam.fusionLinearParam.hasBias = param.hasBias;
         gateUpNormLinearParam.normParamType = param.normParamType;
@@ -95,8 +99,12 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
         atb::Node &normLinearGateNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> gateNormLinearParam;
         gateNormLinearParam.isAntiOutlier = param.isAntiOutlier;
-        gateNormLinearParam.fusionLinearParam.quantType \
-            = param.layerLinearQuantType[4] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+        if (param.packQuantType == atb_speed::common::ALL_W8A16) {
+            gateNormLinearParam.fusionLinearParam.quantType = W8A16;
+        } else {
+            gateNormLinearParam.fusionLinearParam.quantType \
+                = param.layerLinearQuantType[4] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+        }
         gateNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         gateNormLinearParam.fusionLinearParam.hasBias = param.hasBias;
         gateNormLinearParam.normParamType = param.normParamType;
@@ -119,8 +127,12 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
         atb::Node &normLinearUpNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> upNormLinearParam;
         upNormLinearParam.isAntiOutlier = param.isAntiOutlier;
-        upNormLinearParam.fusionLinearParam.quantType \
-            = param.layerLinearQuantType[5] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+        if (param.packQuantType == atb_speed::common::ALL_W8A16) {
+            upNormLinearParam.fusionLinearParam.quantType = W8A16;
+        } else {
+            upNormLinearParam.fusionLinearParam.quantType \
+                = param.layerLinearQuantType[5] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+        }
         upNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         upNormLinearParam.fusionLinearParam.hasBias = param.hasBias;
         upNormLinearParam.normParamType = param.normParamType;
@@ -156,9 +168,13 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
     atb::Node &linearDownNode = opGraph.nodes.at(nodeId++);
     atb_speed::common::LinearParallelParam downLinearParallelParam;
     downLinearParallelParam.parallelType = atb_speed::common::ROW_PARALLEL;
-    downLinearParallelParam.fusionLinearParam.quantType \
-        = param.layerLinearQuantType[6] == atb_speed::common::LinearType::FP ? \
-        atb_speed::common::LinearQuantType::NO_QUANT : atb_speed::common::LinearQuantType::LINEAR_QUANT;
+    if (param.packQuantType == atb_speed::common::ALL_W8A16) {
+        downLinearParallelParam.fusionLinearParam.quantType = W8A16;
+    } else {
+        downLinearParallelParam.fusionLinearParam.quantType \
+            = param.layerLinearQuantType[6] == atb_speed::common::LinearType::FP ? \
+            atb_speed::common::LinearQuantType::NO_QUANT : atb_speed::common::LinearQuantType::LINEAR_QUANT;
+    }
     downLinearParallelParam.biasAfterSync = param.downLinearTensorParallelInfo.worldSize > 1 \
         && downLinearParallelParam.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::NO_QUANT \
         && param.hasBias;

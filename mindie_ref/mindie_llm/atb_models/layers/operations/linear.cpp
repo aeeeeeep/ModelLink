@@ -18,6 +18,7 @@
 #include <numeric>
 #include "atb_speed/log.h"
 #include "layers/operations/linear.h"
+#include "layers/plugin_op/w8a16_operation.h"
 
 namespace atb_speed {
 namespace common {
@@ -48,7 +49,8 @@ atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operat
     opGraph.internalTensorNum = param.quantType == LINEAR_QUANT ? QUANT_DEQUANT_INTERMEDIATE_TENSOR_COUNT : DEFAULT_INTERMEDIATE_TENSOR_COUNT;
     opGraph.nodes.resize(param.quantType == LINEAR_QUANT ? QUANT_DEQUANT_NODE_COUNT : DEFAULT_NODE_COUNT);
     opGraph.name = param.quantType == NO_QUANT ? "LinearNoQuant" : \
-        param.quantType == NORM_QUANT_LINEAR_DEQUANT ? "LinearDequantOnly" : "LinearQuant";
+        param.quantType == NORM_QUANT_LINEAR_DEQUANT ? "LinearDequantOnly" : \
+        param.quantType == W8A16 ? "LinearW8A16" : "LinearQuant";
 
     size_t nodeId = 0;
 
@@ -70,7 +72,16 @@ atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operat
         linearParam.linearType = atb::infer::LinearType::LINEAR_BF16BF16_FP32_BF16;
     }
 
-    if (param.quantType == NO_QUANT && param.hasBias) {
+    if (param.quantType == W8A16 && param.hasBias) {
+        linearNode.operation = new atb_speed::common::W8A16Operation("LinearNode");
+        linearNode.inTensorIds = {
+            LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT,
+            LinearTensorIdx::IN_SCALE, LinearTensorIdx::IN_OFFSET, LinearTensorIdx::IN_BIAS
+        };
+    } else if (param.quantType == W8A16 && !param.hasBias) {
+        linearNode.operation = new atb_speed::common::W8A16Operation("LinearNode");
+        linearNode.inTensorIds = {LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_SCALE, LinearTensorIdx::IN_OFFSET};
+    } else if (param.quantType == NO_QUANT && param.hasBias) {
         linearParam.hasBias = true;
         CREATE_OPERATION(linearParam, &linearNode.operation);
         linearNode.inTensorIds = {LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_BIAS};
@@ -94,7 +105,8 @@ atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operat
         outTensorDescs.at(0).dtype = param.isBF16 ? ACL_BF16 : ACL_FLOAT16;
         outTensorDescs.at(0).shape = inTensorDescs.at(0).shape;
         auto outDimSize = outTensorDescs.at(0).shape.dimNum;
-        outTensorDescs.at(0).shape.dims[outDimSize - 1] = inTensorDescs.at(1).shape.dims[0];
+        outTensorDescs.at(0).shape.dims[outDimSize - 1] = param.quantType == W8A16 \
+            ? inTensorDescs.at(1).shape.dims[1] : inTensorDescs.at(1).shape.dims[0];
         return atb::NO_ERROR;
     };
 
