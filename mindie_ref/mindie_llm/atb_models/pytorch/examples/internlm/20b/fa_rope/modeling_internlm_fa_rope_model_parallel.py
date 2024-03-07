@@ -950,13 +950,9 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
         >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         "Hey, are you consciours? Can you talk to me?\nI'm not consciours, but I can talk to you."
         ```"""
-        # if self.model.lm_head_weight is None:
-        #     soc_version = torch_npu._C._npu_get_soc_version()
-        #     if soc_version not in [104, 220, 221, 222, 223, 224]:
-        #         self.model.lm_head_weight = torch_npu.npu_format_cast(self.lm_head.weight.data, 29)
-        #     self.model.lm_head_weight = self.lm_head.weight.data
+
         if self.lm_head_weight is None:
-            self.lm_head_weight = nn.functional.normalize(self.state_dict()["lm_head.weight"])
+            self.lm_head_weight = self.state_dict()["lm_head.weight"]
             if not IS_ND:
                 self.lm_head_weight.data = torch_npu.npu_format_cast(self.lm_head_weight.data, 29)
             self.model.lm_head_weight = self.lm_head_weight
