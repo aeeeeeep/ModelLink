@@ -52,96 +52,107 @@ atb::Status Topktopp(const TopktoppParam &param, atb::Operation **operation)
     opGraph.name = "topktopp";
 
     size_t nodeId = 0;
-    auto &realdivNode = opGraph.nodes.at(nodeId++);
-    auto &sortNode = opGraph.nodes.at(nodeId++);
-    auto &softmaxNode = opGraph.nodes.at(nodeId++);
-    auto &cumsumNode = opGraph.nodes.at(nodeId++);
-    auto &greaterNode = opGraph.nodes.at(nodeId++);
-    auto &fillMaskNode = opGraph.nodes.at(nodeId++);
-    auto &slice2Node = opGraph.nodes.at(nodeId++);
-    auto &setvalueNode = opGraph.nodes.at(nodeId++);
-    auto &softmax2Node = opGraph.nodes.at(nodeId++);
-    auto &multinomialNode = opGraph.nodes.at(nodeId++);
-    auto &gatherprobsNode = opGraph.nodes.at(nodeId++);
-    auto &gatherindicesNode = opGraph.nodes.at(nodeId++);
+    // auto &realdivNode = opGraph.nodes.at(nodeId++);
+    // auto &sortNode = opGraph.nodes.at(nodeId++);
+    // auto &softmaxNode = opGraph.nodes.at(nodeId++);
+    // auto &cumsumNode = opGraph.nodes.at(nodeId++);
+    // auto &greaterNode = opGraph.nodes.at(nodeId++);
+    // auto &fillMaskNode = opGraph.nodes.at(nodeId++);
+    // auto &slice2Node = opGraph.nodes.at(nodeId++);
+    // auto &setvalueNode = opGraph.nodes.at(nodeId++);
+    // auto &softmax2Node = opGraph.nodes.at(nodeId++);
+    // auto &multinomialNode = opGraph.nodes.at(nodeId++);
+    // auto &gatherprobsNode = opGraph.nodes.at(nodeId++);
+    // auto &gatherindicesNode = opGraph.nodes.at(nodeId++);
 
-
+    atb::Node &realdivNode = opGraph.nodes.at(nodeId++);
     atb::infer::ElewiseParam realdivParam;
     realdivParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_REALDIV;
-    CreateOperation(realdivParam, &realdivNode.operation);
+    CREATE_OPERATION(realdivParam, &realdivNode.operation);
     realdivNode.inTensorIds = {probsTensor,temeraturetensor};
     realdivNode.outTensorIds = {probsdivededTensor};
 
+    atb::Node &sortNode = opGraph.nodes.at(nodeId++);
     atb::infer::SortParam sortParam;
     sortParam.num = {param.topk};
-    CreateOperation(sortParam, &sortNode.operation);
+    CREATE_OPERATION(sortParam, &sortNode.operation);
     sortNode.inTensorIds = {probsdivededTensor};
     sortNode.outTensorIds = {probsSortededTensor,indicesSortedTensor};
 
+    atb::Node &softmaxNode = opGraph.nodes.at(nodeId++);
     atb::infer::SoftmaxParam softmaxParam;
     softmaxParam.axes = {-1};
-    atb::CreateOperation(softmaxParam, &softmaxNode.operation);
+    CREATE_OPERATION(softmaxParam, &softmaxNode.operation);
     softmaxNode.inTensorIds = { probsSortededTensor };
     softmaxNode.outTensorIds = { probssoftmaxdedTensor };
 
+    atb::Node &cumsumNode = opGraph.nodes.at(nodeId++);
     atb::infer::CumsumParam cumsumParam;
     cumsumParam.axes = {param.axes};
     cumsumParam.exclusive = false;
     cumsumParam.reverse = false;
-    atb::CreateOperation(cumsumParam, &cumsumNode.operation);
+    CREATE_OPERATION(cumsumParam, &cumsumNode.operation);
     cumsumNode.inTensorIds = { probssoftmaxdedTensor };
     cumsumNode.outTensorIds = { probscumsumedTensor };
 
+    atb::Node &greaterNode = opGraph.nodes.at(nodeId++);
     atb::infer::ElewiseParam greaterParam;
     greaterParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_GREATER;
-    CreateOperation(greaterParam, &greaterNode.operation);
+    CREATE_OPERATION(greaterParam, &greaterNode.operation);
     greaterNode.inTensorIds = {probscumsumedTensor, pTensor};
     greaterNode.outTensorIds = {probsgreatedTensor};
 
+    atb::Node &fillMaskNode = opGraph.nodes.at(nodeId++);
     atb::infer::FillParam fillParam;
     fillParam.value = {param.filter_value};
-    CreateOperation(fillParam, &fillMaskNode.operation);
+    CREATE_OPERATION(fillParam, &fillMaskNode.operation);
     fillMaskNode.inTensorIds = {probsSortededTensor, probsgreatedTensor};
     fillMaskNode.outTensorIds = {probsSortedNormedFilteredTensor};
     
+    atb::Node &slice2Node = opGraph.nodes.at(nodeId++);
     atb::infer::SliceParam slice2Param;
     slice2Param.offsets = {0, 0};
     slice2Param.size = {-1, param.min_tokens_to_keep};
-    CreateOperation(slice2Param, &slice2Node.operation);
+    CREATE_OPERATION(slice2Param, &slice2Node.operation);
     slice2Node.inTensorIds = {probsSortededTensor};
     slice2Node.outTensorIds = {probssoftmaxslicededTensor};
 
+    atb::Node &setvalueNode = opGraph.nodes.at(nodeId++);
     atb::infer::SetValueParam setvalueParam;
     setvalueParam.starts = {0,0};
     setvalueParam.ends = {param.row,param.min_tokens_to_keep};
     setvalueParam.strides = {1,1};
-    CreateOperation(setvalueParam, &setvalueNode.operation);
+    CREATE_OPERATION(setvalueParam, &setvalueNode.operation);
     setvalueNode.inTensorIds = {probsSortedNormedFilteredTensor, probssoftmaxslicededTensor};
 
+    atb::Node &softmax2Node = opGraph.nodes.at(nodeId++);
     atb::infer::SoftmaxParam softmax2Param;
     softmax2Param.axes = {-1};
-    atb::CreateOperation(softmax2Param, &softmax2Node.operation);
+    CREATE_OPERATION(softmax2Param, &softmax2Node.operation);
     softmax2Node.inTensorIds = { probsSortedNormedFilteredTensor };
     softmax2Node.outTensorIds = { probsSortedNormedFilteredsoftmaxedTensor };
 
+    atb::Node &multinomialNode = opGraph.nodes.at(nodeId++);
     atb::infer::MultinomialParam multinomialParam;
     multinomialParam.numSamples = 1;
     multinomialParam.randSeed = param.randseed;
-    atb::CreateOperation(multinomialParam, &multinomialNode.operation);
+    CREATE_OPERATION(multinomialParam, &multinomialNode.operation);
     multinomialNode.inTensorIds = { probsSortedNormedFilteredsoftmaxedTensor };
     multinomialNode.outTensorIds = { probsmultinomialedTensor };
 
+    atb::Node &gatherprobsNode = opGraph.nodes.at(nodeId++);
     atb::infer::GatherParam gatherprobsParam;
     gatherprobsParam.axis = 1;
     gatherprobsParam.batchDims = 1;
-    CreateOperation(gatherprobsParam, &gatherprobsNode.operation);
+    CREATE_OPERATION(gatherprobsParam, &gatherprobsNode.operation);
     gatherprobsNode.inTensorIds = {probsSortededTensor, probsmultinomialedTensor};
     gatherprobsNode.outTensorIds = {probsSampledTensor};
 
+    atb::Node &gatherindicesNode = opGraph.nodes.at(nodeId++);
     atb::infer::GatherParam gatherindicesParam;
     gatherindicesParam.axis = 1;
     gatherindicesParam.batchDims = 1;
-    CreateOperation(gatherindicesParam, &gatherindicesNode.operation);
+    CREATE_OPERATION(gatherindicesParam, &gatherindicesNode.operation);
     gatherindicesNode.inTensorIds = {indicesSortedTensor, probsmultinomialedTensor};
     gatherindicesNode.outTensorIds = {indicesSampledTensor};
 
@@ -160,7 +171,7 @@ atb::Status Topktopp(const TopktoppParam &param, atb::Operation **operation)
         return atb::NO_ERROR;
     };
 
-    atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
 }
 } 
