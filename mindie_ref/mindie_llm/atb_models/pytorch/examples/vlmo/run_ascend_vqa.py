@@ -28,9 +28,9 @@ def label_2_ans(path):
 
 @ex.automain
 def main(_config):
-    DEVICE_ID = 4
-    VQA_ARROW_DIR = "/data1/models/vlmo/arrow/"
-    BERT_VOCAB = "./vocab.txt"
+    DEVICE_ID = 3
+    VQA_ARROW_DIR = "/data1/g30047100/vlmo/arrow"
+    BERT_VOCAB = "/data1/g30047100/vocab.txt"
     _config = copy.deepcopy(_config)
     database = VQAv2Dataset(
         image_size=_config["image_size"],
