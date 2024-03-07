@@ -59,6 +59,7 @@ ModelLink旨在为华为 [昇腾芯片](https://www.hiascend.com/zh/) 上的大�
 * [前向网络合并](#jump9)
 * [梯度累积](#jump9)
 * [混精内存复用](#jump10)
+* [计算通信并行](#jump11)
 
 更多高效的加速算法正在为昇腾芯片上的大语言模型研发中...
 
@@ -959,6 +960,11 @@ Cadam是基于谷歌提出的[Lion优化器](https://arxiv.org/abs/2302.06675)�
 |          | O1 argorithm         | 5.28s/iteration | ↓ 15.93%      | ↓ 0.95%           | < 0.02%         | 910B*16P |
 | LLama-7B | distributed baseline | 5.18s/iteration | --            | --                | --              | 910B*8P  |
 |          | O1 distributed algorithm | 5.19s/iteration | ↓ 9.50%       | ↓ 0.2%            | < 0.1%          | 910B*8P  |
+
+
+### <span id="jump11"> Communication over computation (CoC)
+For LLMs, there are certain linear (matmul+add) operations in both forward and backward when model tensor parallelism in enabled. These computations can be overlapped with certain communications by cutting the parallelized tensor even further to enable a pipeline throughout each part of the tensor. To enable this feature, please set environment variable `CC_PARALLEL_NUM=4` (could be set to 2/4/8 as a tuning parameter, or 1 if disable CoC). Notice that the benefits introduced by this optimization highly depends on the shape of matmul and the communication burden, thus further tuning might be required, following the detailed tutorials README.md and README_ch.md under directory `./ascendspeed/core/tensor_parallel/min_comm/`.
+
 
 
 ## 致谢
