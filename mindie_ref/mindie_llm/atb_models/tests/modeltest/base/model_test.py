@@ -1005,7 +1005,7 @@ class ModelTest:
                         generate_text_list, _, _ = self.pa_runner.infer(queries, self.batch_size, 512, True)
                         generate_text_list = [cleanup_code(completion) for completion in generate_text_list]
                         if is_result:
-                            self.logger.info("generate_text_list: ", generate_text_list)
+                            self.logger.info("generate_text_list: %s", generate_text_list)
                         for idx, sample in enumerate(generate_text_list):
                             result = dict(
                                 task_id="HumanEval/" + task_ids[idx],
