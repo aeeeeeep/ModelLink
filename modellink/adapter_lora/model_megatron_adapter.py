@@ -12,6 +12,17 @@ ALL_MODULE_WRAPPER_CLASSNAMES = (DDP, Float16Module, PeftModel, LoraModel)
 
 
 def get_model_megatron_patch(*args_input):
+    def _hook(_module, _x_in, _x_out):
+        """ Extract the feature map of model"""
+        _x_out.requires_grad_(True)
+
+    def _create_hooks(_model, layer):
+        """ Make the hooks function"""
+        for name, module in _model.named_modules():
+            _name = name.split('.')[-1]
+            if _name in layer:
+                module.register_forward_hook(_hook)
+
     model = get_model(*args_input)
     args = get_args()
 
@@ -29,6 +40,7 @@ def get_model_megatron_patch(*args_input):
 
         for model_item in model:
             model_item = get_peft_model(model_item, lora_config)
+            _create_hooks(model_item, args.lora_register_forward_hook)
             model_item.print_trainable_parameters()
 
     return model
