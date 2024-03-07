@@ -53,16 +53,12 @@ class WeightWrapper:
     def register_embedding(self, model_dict, embedding_name):
         self.weights.append(model_dict[f"{embedding_name}.weight"])
 
-    def register_linear(self, layer_dict, linear_name, transpose=False):
-        weight = layer_dict[f'{linear_name}.linear.weight']
-        bias = layer_dict.get(f'{linear_name}.linear.bias', self.placeholder)
-
-        if transpose:
-            weight = weight.T.contiguous()
-            bias = bias.T.contiguous()
-
-        self.weights.append(self.weight_format_cast(weight))
-        self.weights.append(self.weight_format_cast(bias))
+    def register_linear(self, layer_dict, linear_name):
+        self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.weight']))
+        if f'{linear_name}.linear.bias' in layer_dict:
+            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.bias']))
+        else:
+            self.weights.append(self.placeholder)
 
     def register_norm(self, layer_dict, norm_name):
         self.weights.append(self.weight_format_cast(layer_dict[f'{norm_name}.weight']))
@@ -108,10 +104,10 @@ class WeightWrapper:
 
     def register_layer_linear_pack_w8a16(self, layer_dict, norm_name, pack_linear_name, linear_type='attn'):
         self.register_layer_norm(layer_dict, norm_name)
-        self.register_linear(layer_dict, pack_linear_name, transpose=True)
+        self.register_linear(layer_dict, pack_linear_name)
         self.weights.append(self.placeholder)
-        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.weight_offset'].transpose(1, 0).contiguous()))
-        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.weight_scale'].transpose(1, 0).contiguous()))
+        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.weight_offset']))
+        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.weight_scale']))
         if linear_type == 'attn':
             self.weights.extend([self.placeholder] * 10)
             self.layer_linear_type.extend([LinearType.INT.value, LinearType.INVALID.value, LinearType.INVALID.value])
@@ -148,10 +144,10 @@ class WeightWrapper:
             self.weights.extend([self.placeholder] * 3)
             self.layer_linear_type.append(LinearType.FP.value)
         elif quantize_type == 'w8a16':
-            self.register_linear(layer_dict, linear_name, transpose=True)
+            self.register_linear(layer_dict, linear_name)
             self.weights.append(self.placeholder)
-            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.weight_offset'].transpose(1, 0).contiguous()))
-            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.weight_scale'].transpose(1, 0).contiguous()))
+            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.weight_offset']))
+            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.weight_scale']))
             self.layer_linear_type.append(LinearType.INT.value)
         elif quantize_type == 'smooth_quant':
             self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.weight']))
