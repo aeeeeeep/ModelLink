@@ -40,7 +40,7 @@ struct PAW8A8LayerParam {
     int worldSize = 1;
     std::string backend = "hccl";
     std::vector<int> seqLen;
-    // std::vector<int> tokenOffset;
+    std::vector<int> tokenOffset;
     std::vector<int> packQuantType = {};  // 两个元素，第一个元素代表QKV pack的量化类型，第二个元素代表MLP pack的量化类型
     // 七个元素，分别代表q，k，v，self attention out，gate，up，down linear的类型
     std::vector<int> linearQuantType = {};
