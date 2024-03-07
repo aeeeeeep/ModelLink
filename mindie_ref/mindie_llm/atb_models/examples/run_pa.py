@@ -23,6 +23,7 @@ class Test_data:
     top_k: int
     top_p: float
     min_tokens_to_keep: int
+    
 class PARunner:        
     def __init__(self, **kwargs):
         self.rank = kwargs.get('rank', '0')
