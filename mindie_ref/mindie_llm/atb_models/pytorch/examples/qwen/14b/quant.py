@@ -1,8 +1,8 @@
 import os
 import json
 import torch
-import inspect
 import time
+import inspect
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 
@@ -130,7 +130,7 @@ def main():
     dataset_calib = get_calib_dataset(tokenizer, data_list)
     print(">>>> Calibrator dataset is ready.")
 
-    disable_names=['lm_head']
+    disable_names = ['lm_head']
     print(f">>>> Disable layers: {disable_names}")
 
     quant_config = QuantConfig(
