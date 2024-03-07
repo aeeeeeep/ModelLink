@@ -108,11 +108,11 @@ class HumanEval(DatasetEval):
             chat_result, rank = chat.beam_search_chat(instruction=instruction, history=[])
             answer = None
             if chat_result:
-                answer = chat_result[0]
+                answer = chat_result[0].lstrip()
             try:
                 if rank == 0:
                     python_execute = sys.executable
-                    answer = task['prompt'] + '  ' + answer
+                    answer = task['prompt'] + '    ' + answer
                     logger.info(f'answer: {answer}')
                     test_file = extract_answer_code(answer, task)
                     result = subprocess.run([python_execute, test_file], capture_output=True, timeout=10)
