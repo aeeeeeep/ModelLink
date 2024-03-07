@@ -116,7 +116,6 @@ class BaichuanMLP(nn.Module):
         linear_names = [f'{prefix}.up_proj', f'{prefix}.gate_proj']
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{layer_prefix}.post_attention_layernorm'
-        #print(f"查看线性层的名字:{linear_names}")
         
         if weights.quantize == 'w8a8':
             self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
@@ -254,8 +253,6 @@ class FlashBaichuanLayer(nn.Module):
             self.post_attention_layernorm = BaichuanRMSNormWrapper(
                 prefix=f"{prefix}.post_attention_layernorm", weights=weights, eps=config.rms_norm_eps
             )
-
-
 
 
 class FlashBaichuanModel(torch.nn.Module):
