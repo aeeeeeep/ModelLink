@@ -38,6 +38,7 @@ struct MlpParam {
     std::vector<int> layerLinearQuantType;
     NormParamType normParamType;
     NormParamType normQuantParamType;
+    atb::infer::ActivationParam activationParam;
     atb_speed::common::TensorParallelInfo downLinearTensorParallelInfo;
 };
 

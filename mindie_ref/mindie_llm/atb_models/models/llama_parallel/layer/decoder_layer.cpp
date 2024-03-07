@@ -161,8 +161,11 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     mlpParam.downLinearTensorParallelInfo = {param.rank, param.worldSize, param.backend};
 
     if (param.supportSwiGLU) {
+        mlpParam.activationParam.activationType = atb::infer::ActivationType::ACTIVATION_SWIGLU_FORWARD;
+        mlpParam.activationParam.dim = -1;
         MlpSwiGLU(mlpParam, &mlpParallelNode.operation);
     } else {
+        mlpParam.activationParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
         Mlp(mlpParam, &mlpParallelNode.operation);
     }
 
