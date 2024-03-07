@@ -989,10 +989,10 @@ class ModelTest:
                         dataset.append(line_json)
 
                 correct = 0
-                task_id = 0
                 samples = []
                 dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
                 for batch in tqdm(dataloader):
+                    task_ids = [task_id.split('/')[1] for task_id in batch["task_id"]]
                     queries = [prompt.strip() for prompt in batch["prompt"]]
                     if self.model_type == "fa":
                         inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
@@ -1015,13 +1015,12 @@ class ModelTest:
                         generate_text_list = [cleanup_code(completion) for completion in generate_text_list]
                         if is_result:
                             print("generate_text_list_1: ", generate_text_list)
-                        for sample in generate_text_list:
+                        for idx, sample in enumerate(generate_text_list):
                             result = dict(
-                                task_id="HumanEval/" + str(task_id),
+                                task_id="HumanEval/" + task_ids[idx],
                                 completion=sample,
                             )
                             samples += [result]
-                    task_id += 1
                 if is_result:
                     self.__save_result(samples)
         if is_result:
