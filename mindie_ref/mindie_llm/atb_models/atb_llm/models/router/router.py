@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from typing import Optional, Any
 
 from transformers import AutoTokenizer, AutoConfig
+from transformers import AutoTokenizer
+from transformers.configuration_utils import PretrainedConfig
 
 from ..llama.modeling_llama import LlamaConfig
 from ..qwen.config import QWenConfig
@@ -22,14 +24,14 @@ class BaseRouter:
     use_refactor: bool = False
 
     # 初始化默认读取的autoconfig，各个模型可能会自定义，self.config会返回后续使用的config，注意不要循环依赖
-    ori_config: Any = None
+    config_dict: Any = None
     _config: Any = None
     _tokenizer: Any = None
     _model_cls: Any = None
     is_inited: bool = False
 
     def __post_init__(self):
-        self.model_type = self.ori_config.model_type
+        self.model_type = self.config_dict['model_type']
         self.model_type_cap = self.model_type.capitalize()
 
     @property
@@ -57,11 +59,9 @@ class BaseRouter:
         if self._config is None:
             try:
                 config_cls = self.get_config_cls()
-                self._config = config_cls.from_pretrained(self.model_name_or_path,
-                                                          revision=self.revision,
-                                                          trust_remote_code=self.trust_remote_code)
+                self._config = config_cls.from_dict(self.config_dict)
             except Exception:
-                self._config = self.ori_config
+                self._config = PretrainedConfig.from_dict(self.config_dict)
         return self._config
 
     def get_tokenizer(self):
@@ -108,7 +108,7 @@ class LlamaRouter(BaseRouter):
         """
         次级模型:此处用于区分7b、13b,以small为浮点量化归一版本的tag
         """
-        if not self.use_refactor and self.ori_config.num_hidden_layers in [32, 40]:
+        if not self.use_refactor and self.config_dict['num_hidden_layers'] in [32, 40]:
             model_ver = "small"
         else:
             model_ver = ""
@@ -116,9 +116,7 @@ class LlamaRouter(BaseRouter):
 
     @property
     def config(self):
-        config = LlamaConfig.from_pretrained(self.model_name_or_path,
-                                             revision=self.revision,
-                                             trust_remote_code=self.trust_remote_code)
+        config = LlamaConfig.from_pretrained(self.model_name_or_path)
         if self.max_position_embeddings:
             config.max_position_embeddings = self.max_position_embeddings
         return config
@@ -129,9 +127,7 @@ class StarcoderRouter(BaseRouter):
 
     @property
     def config(self):
-        config = StarcoderConfig.from_pretrained(self.model_name_or_path,
-                                                 revision=self.revision,
-                                                 trust_remote_code=self.trust_remote_code)
+        config = StarcoderConfig.from_pretrained(self.model_name_or_path)
         if self.max_position_embeddings:
             config.seq_length = self.max_position_embeddings
         return config
@@ -146,7 +142,7 @@ class BaichuanRouter(BaseRouter):
         次级模型名称，比如v2_13b
         :return:
         """
-        if self.ori_config.num_hidden_layers == 40:  # 只有13b才是40层，同时兼容 v1 v2
+        if self.config_dict['num_hidden_layers'] == 40:  # 只有13b才是40层，同时兼容 v1 v2
             model_ver = "v2_13b"
         else:
             model_ver = "v2_7b"
@@ -155,9 +151,7 @@ class BaichuanRouter(BaseRouter):
     @property
     def config(self):
         config_cls = self.get_config_cls()
-        config = config_cls.from_pretrained(self.model_name_or_path,
-                                            revision=self.revision,
-                                            trust_remote_code=self.trust_remote_code)
+        config = config_cls.from_pretrained(self.model_name_or_path)
         if self.max_position_embeddings:
             config.model_max_length = self.max_position_embeddings  # 13b
             config.max_position_embeddings = self.max_position_embeddings
@@ -183,7 +177,7 @@ class ChatglmRouter(BaseRouter):
         次级模型名称，比如v2_13b
         :return:
         """
-        if self.ori_config.multi_query_attention:
+        if self.config_dict['multi_query_attention']:
             model_ver = "v2_6b"
 
         return model_ver
@@ -191,9 +185,7 @@ class ChatglmRouter(BaseRouter):
     @property
     def config(self):
         config_cls = self.get_config_cls()
-        config = config_cls.from_pretrained(self.model_name_or_path,
-                                            revision=self.revision,
-                                            trust_remote_code=self.trust_remote_code)
+        config = config_cls.from_pretrained(self.model_name_or_path)
         if self.max_position_embeddings:
             config.seq_length = self.max_position_embeddings
         return config
@@ -213,11 +205,7 @@ class ChatglmRouter(BaseRouter):
 class QwenRouter(BaseRouter):
     @property
     def config(self):
-        return QWenConfig.from_pretrained(
-            self.model_name_or_path,
-            revision=self.revision,
-            trust_remote_code=self.trust_remote_code
-        )
+        return QWenConfig.from_pretrained(self.model_name_or_path)
 
     def get_tokenizer(self):
         return AutoTokenizer.from_pretrained(
@@ -243,9 +231,7 @@ class AquilaRouter(BaseRouter):
     @property
     def config(self):
         config_cls = self.get_config_cls()
-        config = config_cls.from_pretrained(self.model_name_or_path,
-                                            revision=self.revision,
-                                            trust_remote_code=True)
+        config = config_cls.from_pretrained(self.model_name_or_path)
         if self.max_position_embeddings:
             config.model_max_length = self.max_position_embeddings
         return config
@@ -263,9 +249,7 @@ class AquilaRouter(BaseRouter):
 class Gpt_neoxRouter(BaseRouter):
     @property
     def config(self):
-        config = GPTNeoXConfig.from_pretrained(self.model_name_or_path,
-                                               revision=self.revision,
-                                               trust_remote_code=self.trust_remote_code)
+        config = GPTNeoXConfig.from_pretrained(self.model_name_or_path)
         if self.max_position_embeddings:
             config.model_max_length = self.max_position_embeddings
         return config
@@ -292,10 +276,7 @@ class InternlmRouter(BaseRouter):
 
     @property
     def config(self):
-        config = InternLMConfig.from_pretrained(
-            self.model_name_or_path,
-            revision=self.revision,
-            trust_remote_code=self.trust_remote_code)
+        config = InternLMConfig.from_pretrained(self.model_name_or_path)
         if self.max_position_embeddings:
             config.max_position_embeddings = self.max_position_embeddings
         return config
@@ -319,7 +300,7 @@ class BloomRouter(BaseRouter):
         次级模型名称，比如 7b 176b
         :return:
         """
-        if self.ori_config.n_layer == 30:  # 7b 30层, 176b 70层
+        if self.config_dict['n_layer'] == 30:  # 7b 30层, 176b 70层
             model_ver = "7b"
         else:
             model_ver = "176b"
