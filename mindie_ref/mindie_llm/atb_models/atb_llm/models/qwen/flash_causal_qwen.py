@@ -17,7 +17,6 @@ class FlashQwenForCausalLM(FlashForCausalLM):
     def __init__(self, config, weights):
         super().__init__(config, weights)
         self.transformer = FlashQwenModel(config, weights)
-        logger.info(f">>>> {self.transformer.h[0].attn.c_attn.linear.weight}")
         self.lm_head = load_column_multi(
             config,
             prefixes=["lm_head"],
@@ -183,7 +182,6 @@ class FlashQwenForCausalLM(FlashForCausalLM):
                 del layer.ln_2
                 del layer.mlp
             quant_type.append([layer.attn.pack_type.value, layer.mlp.pack_type.value])
-            logger.info(f">>>> {len(weight_wrapper.weights) = }")
         weight_wrapper.register_model_norm(self.transformer.state_dict(), 'ln_f')
         weight_wrapper.register_model_lmhead(self.state_dict(), 'lm_head')
         return weight_wrapper.weights, weight_wrapper.linear_type, quant_type
@@ -245,13 +243,6 @@ class FlashQwenForCausalLM(FlashForCausalLM):
                 for i in range(self.num_layers):
                     weights_t = []
                     weights_layer = self.transformer.h[i].state_dict()
-                    # for k in weights_layer:
-                    #     logger.info(f"{k} {weights_layer[k].dtype}")
-                    # logger.info(f"{weights_layer['attn.c_attn.linear.quant_bias'] = }")
-                    # logger.info(f"{weights_layer['attn.c_proj.linear.quant_bias'] = }")
-                    # logger.info(f"{weights_layer['mlp.w2_w1.linear.quant_bias'] = }")
-                    # logger.info(f"{weights_layer['mlp.c_proj.linear.quant_bias'] = }")
-                    # exit()
                     if self.num_attention_heads != self.num_key_value_heads:
                         weights_t.append(weights_layer["ln_1.weight"])
                         for layer_weight_name in attn_layer_weight_names:
@@ -292,13 +283,6 @@ class FlashQwenForCausalLM(FlashForCausalLM):
                 logger.info(f">>>> quant-{self.quantize}")
                 self.ascend_weight, self.linear_type, self.pack_quant_config = self.get_weights()
                 logger.info(f">>>> {len(self.ascend_weight) = }")
-                # logger.info(f">>>> {len(self.linear_type) = } | {self.linear_type = }")
-                # logger.info(f">>>> {len(self.pack_quant_config) = } | {self.pack_quant_config = }")
-                # weight_dict = self.transformer.h[0].state_dict()
-                # for k in weight_dict:
-                #     if self.tp_rank == 0:
-                #         logger.info(k)
-                # exit()
                 if self.quantize == "w8a8":
                     self.acl_param_encoder = json.dumps({
                         "isFA": False,
@@ -374,8 +358,6 @@ class FlashQwenForCausalLM(FlashForCausalLM):
                         "linearQuantType": self.linear_type,
                     })
                 
-                # logger.info(f">>>> {self.acl_param_encoder = }")
-                # logger.info(f">>>> {self.acl_param_decoder = }")
                 self.acl_encoder_operation.set_param(self.acl_param_encoder)
                 self.acl_decoder_operation.set_param(self.acl_param_decoder)
                 logger.info(">>>> qwen_14b_PAW8A8Model is called.")
@@ -460,9 +442,6 @@ class FlashQwenForCausalLM(FlashForCausalLM):
                 "seqLen": input_lengths.tolist()
             })
             
-            # cos_embed, sin_embed = self.rotary_embedding.get_cos_sin_total(
-            #     position_ids, max_seq_len, dtype=torch.float32
-            # )
             self.init_position_rotary_embedding(position_ids, max_seq_len)
             if is_prefill:
                 if lm_head_indices is None:
@@ -493,7 +472,3 @@ class FlashQwenForCausalLM(FlashForCausalLM):
             ]
 
             return self.acl_operation_inputs, self.acl_param
-            
-            # return super().prepare_inputs_for_ascend(input_ids, position_ids, is_prefill,
-            #                                          kv_cache, block_tables, slots, input_lengths,
-            #                                          max_seq_len, lm_head_indices)
