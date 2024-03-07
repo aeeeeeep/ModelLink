@@ -27,6 +27,8 @@
   - [Script](#script)
   - [Performance](#performance)
     - [Machine performance](#machine-performance)
+  - [Inference](#Inference)
+  - [Evaluation](#Evaluation)
 
 # Qwen-7B
 
@@ -140,9 +142,9 @@ Here's a hardware summary of pre-training  Qwen-7B:
     cd ..
     ```
 
-5. fine-tuning
+5. pre-training
 
-	Config Qwen-7B fine-tuning script: examples/qwen/pretrain_qwen_7b_ptd.sh 
+	Config Qwen-7B pre-training script: examples/qwen/pretrain_qwen_7b_ptd.sh 
    ```shell
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -154,7 +156,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
     CKPT_LOAD_DIR="your megatron ckpt save path"
    ```
 
-	Launch Qwen-7B fine-tuning script: examples/qwen/pretrain_qwen_7b_ptd.sh
+	Launch Qwen-7B pre-training script: examples/qwen/pretrain_qwen_7b_ptd.sh
    
    ```shell
     bash examples/qwen/pretrain_qwen_7b_ptd.sh 
@@ -342,9 +344,9 @@ Here's a hardware summary of pre-training  Qwen-14B:
     cd .. 
 	```
 
-5. fine-tuning
+5. pre-training
 
-	Config Qwen-14B fine-tuning script: examples/qwen/pretrain_qwen_14b_ptd.sh 
+	Config Qwen-14B pre-training script: examples/qwen/pretrain_qwen_14b_ptd.sh 
    ```shell
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -356,7 +358,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
     CKPT_LOAD_DIR="your megatron ckpt save path"
    ```
 
-	Launch Qwen-14B fine-tuning script: examples/qwen/pretrain_qwen_14b_ptd.sh
+	Launch Qwen-14B pre-training script: examples/qwen/pretrain_qwen_14b_ptd.sh
    
    ```shell
     bash examples/qwen/pretrain_qwen_14b_ptd.sh 
@@ -430,9 +432,10 @@ bash ./tasks/evaluation/evaluate_qwen_14b_ptd.sh
 
 Here's a hardware summary of pre-training  Qwen-72B:
 
-| Hardware |       Value       |
-| :------: |:-----------------:|
-|   NPU    | 128 x Ascend NPUs |
+| Hardware | Seq-length |       Value       |
+| :------: |:----------:|:-----------------:|
+|   NPU    |     8k     | 64 x Ascend NPUs  |
+|   NPU    |    32k     | 320 x Ascend NPUs |
 
 ### Script
 
@@ -517,16 +520,16 @@ Here's a hardware summary of pre-training  Qwen-72B:
     --tokenizer-name-or-path ../qwen-72b-hf \
     --output-prefix ../dataset_qwen-72b/alpaca \
     --tokenizer-type PretrainedFromHF \
-    --seq-length 32768 \
+    --seq-length 8192 \
     --workers 4 \
     --log-interval 1000 \
  
     cd .. 
 	```
 
-5. fine-tuning
+5. pre-training
 
-	Config Qwen-72B fine-tuning script: examples/qwen/pretrain_qwen_72b_ptd.sh 
+	Config Qwen-72B pre-training script: examples/qwen/pretrain_qwen_72b_ptd.sh 
    ```shell
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -537,8 +540,17 @@ Here's a hardware summary of pre-training  Qwen-72B:
     DATA_PATH="./dataset_qwen-72b/alpaca_text_document"  #processed dataset
     CKPT_LOAD_DIR="your megatron ckpt save path"
    ```
+   
+    To use a 32K sequence, turn on the re-computation feature and change the value of seq-length to 32768. The parameter configuration is as follows:
+   ```shell
+   --seq-length 32768 \
 
-	Launch Qwen-72B fine-tuning script: examples/qwen/pretrain_qwen_72b_ptd.sh
+    --recompute-granularity full \
+    --recompute-method block \
+    --recompute-num-layers 2 \
+   ```
+
+	Launch Qwen-72B pre-training script: examples/qwen/pretrain_qwen_72b_ptd.sh
    
    ```shell
     bash examples/qwen/pretrain_qwen_72b_ptd.sh 
@@ -554,3 +566,54 @@ The performance of Qwen-72B in **Ascend NPU** and **Reference**:
 |:---------:|:-------:|:--------------------------------:|:---------------------------------:|
 |   NPUs    | Qwen-7B |               285                |                --                 |
 | Reference | Qwen-7B |               345                |                --                 |
+
+
+## Inference
+Config qwen-72b inference script: tasks/inference/generate_qwen_72b_ptd.sh
+
+```bash
+# ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+ 
+# modify script model path and tokenizer path
+CHECKPOINT="your model directory path"
+TOKENIZER_PATH=./qwen-72b-hf
+```
+
+Launch qwen-72b inference script: tasks/inference/generate_qwen_72b_ptd.sh
+```bash
+bash tasks/inference/generate_qwen_72b_ptd.sh
+```
+
+Some inference samples are as follows:
+![Inference](../../sources/images/qwen/qwen_72b_inference.png)
+
+
+## Evaluation
+We use the [CEval benchmark](https://huggingface.co/datasets/ceval/ceval-exam) and [MMLU benchmark](https://huggingface.co/datasets/cais/mmlu) to evaluate our model. 
+
+Config qwen-72b evaluation script: tasks/evaluation/evaluate_qwen_72b_ptd.sh
+
+```bash
+# ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+# Modify the model parameter path and vocabulary path
+TOKENIZER_PATH=./qwen-72b-hf  # vocabulary path
+CHECKPOINT="your model directory path"  # parameter path
+
+# Configure the task type and dataset path
+DATA_PATH="./mmlu/data/test/"  # "./ceval/val/" for ceval task
+TASK="mmlu"  # "ceval" for ceval task
+```
+
+Launch qwen-72b evaluation
+
+```bash
+bash ./tasks/evaluation/evaluate_qwen_72b_ptd.sh
+```
+
+| Task | Subset | Question | OpenSource | NPU |
+|:---:|:---:|:---:|:---:|:---:|
+| CEval | 52 | 1346 | 83.3 | 81.8 |
+| MMLU | 57 | 14042 | 77.4 | 74.6 |

@@ -43,7 +43,7 @@ GPT_ARGS="
     --global-batch-size 64 \
     --make-vocab-size-divisible-by 32 \
     --lr 1.25e-6 \
-    --train-iters 2000 \
+    --train-iters 1000 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
     --disable-bias-linear \

@@ -68,7 +68,7 @@ class MmluEval(DatasetEval):
                     chat_results, rank = chat.chat(instruction=instructions, history=[])
                     if chat_results:
                         for index, chat_result in enumerate(chat_results):
-                            answer = chat_result[0]
+                            answer = chat_result[0].lstrip()
                             try:
                                 if rank == 0:
                                     logger.info(instruction)

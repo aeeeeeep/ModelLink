@@ -116,6 +116,8 @@ python tools/checkpoint/util.py --model-type GPT \
     --tokenizer-model ./model_from_hf/llama-13b-hf/tokenizer.model
 ```
 
+Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
+
 4. Pretrain
 
 4.1 Prepare pretrain dataset
@@ -257,6 +259,7 @@ LORA_CHECKPOINT="your lora weight"
 LOAD_CHECKPOINT_PATH="your init model load path"
 SAVE_CHECKPOINT_PATH="your model ckpt save path"
 ```
+Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
 
 5.3 Launch LLaMA-7B/13B fine-tune script.
 
@@ -297,7 +300,7 @@ Config LLaMA-7B inference script `tasks/inference/generate_llama_7B_ptd.sh` and 
 ```shell
 # modify the model weight path and tokenizer path
 CHECKPOINT=<checkpoint-path>
-VOCAB_FILE=<vocabfile-path>
+TOKENIZER_PATH=<tokenizer-path>
 ```
 
 LLaMA-7B:
@@ -331,7 +334,7 @@ Modify checkpoint path, vocab path, dataset path and task:
 
 ```shell
 CHECKPOINT=<checkpoint-path>
-VOCAB_FILE=<vocabfile-path>
+TOKENIZER_PATH=<tokenizer-path>
 DATA_PATH="./boolq/data/test/"
 TASK="boolq"
 ```
@@ -466,6 +469,8 @@ python tools/checkpoint/util.py --model-type GPT \
                                 --save-dir ./model_weights/llama-65b-tp8-pp4 \
                                 --tokenizer-model ./model_from_hf/llama-65b-hf/tokenizer.model
 ```
+
+Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
 
 4. Pretrain
 
@@ -614,6 +619,7 @@ LORA_CHECKPOINT="your lora weight"
 LOAD_CHECKPOINT_PATH="your init model load path"
 SAVE_CHECKPOINT_PATH="your model ckpt save path"
 ```
+Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
 
 5.3 Launch fine-tune script:
 
@@ -662,7 +668,7 @@ Config LLaMA-65B inference script `tasks/inference/generate_llama_65B_ptd.sh`.
 ```shell
 # modify the model weight path and tokenizer path
 CHECKPOINT=<checkpoint-path>
-VOCAB_FILE=<vocabfile-path>
+TOKENIZER_PATH=<tokenizer-path>
 ```
 
 LLaMA-33B:
@@ -689,41 +695,27 @@ LLaMA-65B:
 
 We use Boolq benchmark to evaluate our model. Benchmark Download [here](https://huggingface.co/datasets/boolq).
 
-Config LLaMA-33B evaluation script:
+Config LLaMA-33B evaluation script: tasks/evaluation/evaluate_llama_33B_ptd.sh
+
+Config LLaMA-65B evaluation script: tasks/evaluation/evaluate_llama_65B_ptd.sh
+
+Modify checkpoint path, vocab path, dataset path and task:
 
 ```shell
-    CHECKPOINT=./llama-33b-tp4-pp2/
-    VOCAB_FILE=./llama-33b-hf/
-    # 配置任务和数据路径
-    DATA_PATH="./boolq/data/test/"
-    TASK="boolq"
-    # 配置生成参数
-    python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/evaluation/evaluation_llama.py   \
-         --task-data-path $DATA_PATH \
-         --task $TASK\
-         --seq-length 1024 \
-         --max-new-tokens 2 \
-         --max-position-embeddings 1024 \
-         --tensor-model-parallel-size 4  \
-         --pipeline-model-parallel-size 2  \
-         --num-layers 60 \
-         --hidden-size 6656  \
-         --ffn-hidden-size 17920 \
-         --load ${CHECKPOINT}  \
-         --num-attention-heads 52  \
-         --tokenizer-type PretrainedFromHF  \
-         --tokenizer-name-or-path ${VOCAB_FILE} \
-         --tokenizer-not-use-fast \
-         --fp16  \
-         --micro-batch-size 1  \
-         --position-embedding-type rope \
-         --normalization RMSNorm \
-         --mlp-layer-fusion \
-         --seed 42
+CHECKPOINT=<checkpoint-path>
+TOKENIZER_PATH=<tokenizer-path>
+DATA_PATH="./boolq/data/test/"
+TASK="boolq"
+```
+Change the max new tokens:
+```shell
+--max-new-tokens 1 
 ```
 
 ```shell
 # start evaluation
+# evaluate llama-33B
+bash tasks/evaluation/evaluate_llama_33B_ptd.sh
 # evaluate llama-65B
 bash tasks/evaluation/evaluate_llama_65B_ptd.sh
 ```

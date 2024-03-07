@@ -107,11 +107,15 @@ LLAMA2-7B 训练的硬件配置:
                                     --loader llama2_hf \
                                     --saver megatron \
                                     --target-tensor-parallel-size 8 \
+                                    --target-pipeline-parallel-size 1 \
                                     --load-dir ../llama-2-7b-hf \
                                     --save-dir {your megatron ckpt save path} \
                                     --tokenizer-model ../llama-2-7b-hf/tokenizer.model
    cd ..
    ```
+
+   权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
+
 4. 预训练
 
 
@@ -180,9 +184,12 @@ LLAMA2-7B 训练的硬件配置:
    5.2 全参微调
    全参微调的配置脚本基本和预训练脚本一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
 
+   增加微调参数--finetune，使微调从第一步开始。
+
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
    
+   --finetune \
    --is-instruction-dataset \
    ```
 
@@ -413,11 +420,12 @@ python tools/checkpoint/util.py --model-type GPT \
     --loader llama2_hf \
     --saver megatron \
     --target-tensor-parallel-size 8 \
-    --load-dir ./llama2-13b-hf \
+    --target-pipeline-parallel-size 1 \
     --save-dir ./llama2-13b-hf-tp8 \
     --tokenizer-model ./llama2-13b-hf/tokenizer.model
 ```
 
+   权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
 
 4. 预训练
 
@@ -487,9 +495,12 @@ python tools/checkpoint/util.py --model-type GPT \
    5.2 全参微调
    全参微调的配置脚本基本和预训练脚本一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
 
+   增加微调参数--finetune，使微调从第一步开始。
+
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
    
+   --finetune \
    --is-instruction-dataset \
    ```
 
@@ -544,7 +555,7 @@ LLaMA2-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 ```shell
 # 修改模型权重路径以及词表路径
 CHECKPOINT=./llama2-13b-tp8-pp1/
-VOCAB_FILE=./llama2-13b-hf/
+TOKENIZER_PATH=./llama2-13b-hf/
 ```
 配置 LLaMA2-13B lora推理脚本: tasks/inference/generate_llama2_13b_lora_ptd.sh
 
@@ -571,7 +582,7 @@ bash ./tasks/inference/generate_llama2_13b_lora_ptd.sh
 ```shell
     # 配置权重以及词表路径
     CHECKPOINT=./llama2-13b-tp8-pp1/
-    VOCAB_FILE=./llama2-13b-hf/
+    TOKENIZER_PATH=./llama2-13b-hf/
 ```
 
 ```shell
@@ -742,6 +753,8 @@ pip install -r requirements.txt
      --tokenizer-model ./llama2-70b-hf/tokenizer.model
     ```
 
+    权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
+
 4. 预训练
 
     4.1 准备预训练数据集
@@ -850,9 +863,12 @@ pip install -r requirements.txt
    5.2 全参微调
    全参微调的配置脚本基本和预训练脚本一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
 
+   增加微调参数--finetune，使微调从第一步开始。
+
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
    
+   --finetune \
    --is-instruction-dataset \
    ```
 
@@ -907,29 +923,25 @@ LLaMA2-34B/70B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比
 
 ## 推理-2
 
-可以直接使用HuggingFace预训练权重转换，参考“准备预训练权重和词表”章节，将pipeline-model-parallel-size设为1即可。
-
-也可以将训练后的权重转为单机8卡可以运行的格式
-
 我们支持使用 LLaMA2-34B/70B 进行文本生成的推理，我们需要加载预训练权重：
 
 配置推理脚本
 
 LLaMA2-34B:`tasks/inference/generate_llama2_34B_ptd.sh`。
 
-LLaMA2-70B:`task/inference/generate_llama2_70B_ptd.sh`。
+LLaMA2-70B:`tasks/inference/generate_llama2_70B_ptd.sh`。
 
 ```shell
 # 修改模型权重路径和分词器路径
 CHECKPOINT=<checkpoint-path>
-VOCAB_FILE=<vocabfile-path>
+TOKENIZER_PATH=<tokenizer-path>
 ```
 
 配置lora推理脚本
 
 LLaMA2-34B:`tasks/inference/generate_llama2_34b_lora_ptd.sh`。
 
-LLaMA2-70B:`task/inference/generate_llama2_70b_lora_ptd.sh`。
+LLaMA2-70B:`tasks/inference/generate_llama2_70b_lora_ptd.sh`。
 
 ```bash
 # 修改lora权重路径
@@ -946,11 +958,11 @@ bash ./tasks/inference/generate_llama2_34b_lora_ptd.sh
 ```
 LLaMA2-70B启动推理:
 ```shell
-bash ./task/inference/generate_llama2_70B_ptd.sh
+bash ./tasks/inference/generate_llama2_70B_ptd.sh
 ```
 LLaMA2-70B启动lora推理:
 ```shell
-bash ./task/inference/generate_llama2_70b_lora_ptd.sh
+bash ./tasks/inference/generate_llama2_70b_lora_ptd.sh
 ```
 
 LLaMA2-34B推理样例:
@@ -974,7 +986,7 @@ LLaMA2-70B:`tasks/evaluation/evaluate_llama2_70B_ptd.sh`.
 ```shell
 # 修改模型权重路径和分词器路径
 CHECKPOINT=<checkpoint-path>
-VOCAB_FILE=<vocabfile-path>
+TOKENIZER_PATH=<tokenizer-path>
 ```
 
 LLaMA2-34B评估:
