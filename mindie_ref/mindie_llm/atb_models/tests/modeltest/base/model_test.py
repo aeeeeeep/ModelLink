@@ -951,13 +951,23 @@ class ModelTest:
             self.__save_result(result_total)
 
     def __run_full_dataset_humaneval(self):
-
-        def filter_code(completion: str) -> str:
-            completion = completion.lstrip("\n")
-            return completion.split("\n\n")[0]
-
-        def fix_indents(text: str) -> str:
-            return text.replace("\t", "    ")
+        def cleanup_code(code: str) -> str:
+            code_splits = code.split("\n")
+            is_empty_line = False
+            ind_empty_line = None
+            for i, line in enumerate(code_splits):
+                if len(line.strip()) > 0 and line[0] != ' ' and line[0] != '\t':
+                    is_empty_line = True                    
+                    ind_empty_line = i                    
+                    break            
+            if is_empty_line:
+                code = "\n".join(code_splits[:ind_empty_line])
+            else:
+                end_words = ["\ndef", "\nclass", "\n#", "\nassert", '\n"""', "\nprint", "\nif", "\n\n\n"]
+                for w in end_words:
+                    if w in code:
+                        code = code[:code.rfind(w)]
+            return code
 
         is_result = False
         if self.pa_runner.rank == 0:
@@ -972,11 +982,11 @@ class ModelTest:
                         dataset.append(line_json)
 
                 correct = 0
-                task_id = 0
                 samples = []
-                dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
+                dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size)
                 for batch in tqdm(dataloader):
-                    queries = [prompt.replace("    ", "\t") for prompt in batch["prompt"]]
+                    task_ids = [task_id.split('/')[1] for task_id in batch["task_id"]]
+                    queries = [prompt.strip() for prompt in batch["prompt"]]
                     if self.model_type == "fa":
                         inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
                                                 max_length=2048).to(self.model.device)
@@ -993,17 +1003,15 @@ class ModelTest:
                                     correct += 1
                     else:
                         generate_text_list, _, _ = self.pa_runner.infer(queries, self.batch_size, 512, True)
-
-                        generate_text_list = [filter_code(fix_indents(completion)) for completion in generate_text_list]
+                        generate_text_list = [cleanup_code(completion) for completion in generate_text_list]
                         if is_result:
-                            print("generate_text_list_1: ", generate_text_list)
-                        for sample in generate_text_list:
+                            self.logger.info("generate_text_list: %s", generate_text_list)
+                        for idx, sample in enumerate(generate_text_list):
                             result = dict(
-                                task_id="HumanEval/" + str(task_id),
+                                task_id="HumanEval/" + task_ids[idx],
                                 completion=sample,
                             )
                             samples += [result]
-                    task_id += 1
                 if is_result:
                     self.__save_result(samples)
         if is_result:
