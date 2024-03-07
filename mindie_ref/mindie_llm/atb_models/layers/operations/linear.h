@@ -30,6 +30,7 @@ enum LinearQuantType : unsigned int {
     NO_QUANT = 0,
     NORM_QUANT_LINEAR_DEQUANT = 1,  // QUANT在RMS_NORM中执行，DEQUANT在此operaion中执行
     LINEAR_QUANT = 2,         // QUANT和DEQUANT操作都在此Operation中执行
+    W8A16 = 3,
 };
 
 enum LinearType : int {

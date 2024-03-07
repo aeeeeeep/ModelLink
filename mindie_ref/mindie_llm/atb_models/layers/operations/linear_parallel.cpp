@@ -116,7 +116,8 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
             outTensorDescs.at(0).shape.dims[dimLast] \
                 = inTensorDescs.at(1).shape.dims[0] * param.tensorParallelInfo.worldSize;
         } else {
-            outTensorDescs.at(0).shape.dims[dimLast] = inTensorDescs.at(1).shape.dims[0];
+            outTensorDescs.at(0).shape.dims[dimLast] = param.fusionLinearParam.quantType == W8A16 \
+                ? inTensorDescs.at(1).shape.dims[1] : inTensorDescs.at(1).shape.dims[0];
         }
         return atb::NO_ERROR;
     };
