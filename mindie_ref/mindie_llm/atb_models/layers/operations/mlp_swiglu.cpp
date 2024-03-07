@@ -161,10 +161,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
     }
 
     atb::Node &activationNode = opGraph.nodes.at(nodeId++);
-    atb::infer::ActivationParam activationParam;
-    activationParam.activationType = atb::infer::ActivationType::ACTIVATION_SWIGLU_FORWARD;
-    activationParam.dim = -1;
-    CREATE_OPERATION(activationParam, &activationNode.operation);
+    CREATE_OPERATION(param.activationParam, &activationNode.operation);
     activationNode.inTensorIds = {MlpTensorIdx::INTERMIDATE_GATE_UP_OUT};
     activationNode.outTensorIds = {MlpTensorIdx::INTERMIDATE_SWISH_OUT};
 
@@ -184,6 +181,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
     downLinearParallelParam.fusionLinearParam.hasBias = param.hasBias && !downLinearParallelParam.biasAfterSync;
     downLinearParallelParam.fusionLinearParam.isBF16 = param.isBF16;
     downLinearParallelParam.tensorParallelInfo = param.downLinearTensorParallelInfo;
+    downLinearParallelParam.supportLcoc = param.supportLcoc;
     LinearParallel(downLinearParallelParam, &linearDownNode.operation);
     linearDownNode.inTensorIds = {
         MlpTensorIdx::INTERMIDATE_SWISH_OUT,

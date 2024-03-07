@@ -1,6 +1,5 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 # 参数配置以及启动指令的说明见同级目录下的README.md文件
-export IS_QUANT=0
 export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 export MASTER_PORT=20030
 export USE_REFACTOR=true
