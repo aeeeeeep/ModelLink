@@ -395,13 +395,12 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
                     weights_t.append(weight)
                 weights.extend(weights_t)
             else:
-                # transformer.h.0.self_attention.query_key_value
                 query_key_value_name = f"transformer.h.{layer_num}.self_attention.query_key_value"
                 dense_name = f"transformer.h.{layer_num}.self_attention.dense"
                 dense_h_to_4h_name = f"transformer.h.{layer_num}.mlp.dense_h_to_4h"
                 dense_4h_to_h_name = f"transformer.h.{layer_num}.mlp.dense_4h_to_h"
 
-                weights_t = [ # 
+                weights_t = [
                     self.model_weights[f'{prefix}h.{layer_num}.input_layernorm.weight'].to(torch.float16).npu(),  # transformer.h.0.input_layernorm.weight
                     self.model_weights[f'{prefix}h.{layer_num}.input_layernorm.bias'].to(torch.float16).npu(),    # transformer.h.0.input_layernorm.bias
 
@@ -591,32 +590,10 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
         param_token_offset = token_offset.cpu().tolist()
         run_param = json.dumps({"tokenOffset": param_token_offset, "seqLen": param_seqlen})
         
-        # input_placeholder = torch.tensor(0.0, dtype=torch.float16, device=device)
         input_placeholder = torch.zeros(1, 1, dtype=torch.float16, device=device)
         self.inputs_acl[:7] = [input_ids.npu(), self.attn_mask_in, self.cache_k, self.cache_v, token_offset, seqlen, input_placeholder]
-
-        # for i in self.inputs_acl:
-        #     with open("inputs_acl_type.txt", "a") as f:
-        #         f.write(f"{i.dtype}\n")
-
-        # self.count = 1 if getattr(self, "count", None) is None else self.count + 1
-        # if self.count == 20:
-        #     stream = torch.npu.current_stream()
-        #     stream.synchronize()
-        #     profile_config = torch.npu.profileConfig(TORCH_CALL_STACK=True)
-        #     with torch.npu.profile("./profile0226/", use_e2e_profiler=True, config=profile_config) as prof:
-        #         torch.npu.synchronize()
-        #         outputs_acl = self.acl_model.execute(self.inputs_acl, run_param)
-        #         torch.npu.synchronize()
-        #         stream = torch.npu.current_stream()
-        #         stream.synchronize()
-        #     exit(0)
-
         outputs_acl = self.acl_model.execute(self.inputs_acl, run_param)
         
-        # if self.rank == 0:
-        #     print("=====outputs_acl=====")
-        #     print(outputs_acl)
         hidden_states = outputs_acl[0]
         lm_logits = outputs_acl[1]
         presents = ((None, None),) # transformer_outputs.past_key_values
