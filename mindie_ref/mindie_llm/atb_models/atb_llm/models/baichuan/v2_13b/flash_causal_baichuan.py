@@ -88,6 +88,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
         if not hasattr(config, 'max_position_embeddings'):
             config.max_position_embeddings = config.model_max_length
         super().__init__(config, weights)
+        del self.rotary_embedding
         self.model = FlashBaichuanModel(config, weights)
         self.lm_head_weight = None
         self.lm_head = load_column_multi(
