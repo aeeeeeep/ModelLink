@@ -13,15 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 #include "atb/atb_infer.h"
 #include "models/llama/operation/layer_embedding.h"
 #include "models/llama/layer/anti_float_layer.h"
 #include "models/llama/layer/anti_quant_layer.h"
 #include "anti_quant_flashattention_model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama {
+
+REGISTER_MODEL(llama, AntiQuantFlashAttentionModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 25;
 const int ROLLBACK_WEIGHT_COUNT_PER_LAYER = 16;
 const int OUTPUT_TENSOR_COUNT_BEFORE_KEY = 1;

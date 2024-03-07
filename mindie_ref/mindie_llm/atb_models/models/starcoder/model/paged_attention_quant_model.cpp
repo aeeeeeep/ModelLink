@@ -15,14 +15,20 @@
  */
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 
 #include "models/starcoder/layer/paged_attention_quant_layer.h"
 #include "models/starcoder/layer/paged_attention_layer.h"
 #include "paged_attention_quant_model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace star_coder {
+
+REGISTER_MODEL(star_coder, PAQuantModel);
 
 const int WEIGHT_QUANT_COUNT_PER_LAYER = 19;
 const int WEIGHT_FLOAT_COUNT_PER_LAYER = 12;

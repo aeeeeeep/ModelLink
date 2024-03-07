@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,20 @@
 #include "models/aquila/7b/model/flash_attention_model.h"
 
 #include "atb/atb_infer.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 
 #include "models/aquila/7b/layer/flash_attention_layer.h"
 #include "operations/lmhead.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace aquila_7b {
+
+REGISTER_MODEL(aquila_7b, FlashAttentionRopeModel);
+
 enum InTensorId : int {
     IN_TENSOR_INPUTIDS = 0,
     IN_TENSOR_COSEMBED,
@@ -186,12 +193,11 @@ int64_t FlashAttentionRopeModel::BuildGraph()
     atb_speed::common::LmHeadParam lmHeadParam;
     lmHeadParam.unpadInputs = !param_.isFA;
     lmHeadParam.gatherAhead = param_.isPrefill;
-    lmHeadParam.linearParallelParam.fusionLinearParam.quantType = false; // LmHead未接入量化
     if (param_.rankSize > 1) {
         lmHeadParam.linearParallelParam.parallelType = atb_speed::common::COLUMN_PARALLEL;
-        lmHeadParam.linearParallelParam.rank = param_.rank;
-        lmHeadParam.linearParallelParam.worldSize = param_.rankSize;
-        lmHeadParam.linearParallelParam.backend = param_.backend;
+        lmHeadParam.linearParallelParam.tensorParallelInfo.rank = param_.rank;
+        lmHeadParam.linearParallelParam.tensorParallelInfo.worldSize = param_.rankSize;
+        lmHeadParam.linearParallelParam.tensorParallelInfo.backend = param_.backend;
     }
     LmHead(lmHeadParam, &op);
     lmHeadNode.operation.reset(op);
@@ -201,7 +207,8 @@ int64_t FlashAttentionRopeModel::BuildGraph()
                             &graph_.weightTensors.at(finalLinearWeightTensorId),
                             // LmHead未接入量化，量化权重使用placeholder代替
                             &graph_.inTensors.at(IN_HOLDER), &graph_.inTensors.at(IN_HOLDER),
-                            &graph_.inTensors.at(IN_HOLDER), &graph_.inTensors.at(IN_FINAL_NORM_SLICE_OFFSET)};
+                            &graph_.inTensors.at(IN_HOLDER), &graph_.inTensors.at(IN_HOLDER),
+                            &graph_.inTensors.at(IN_FINAL_NORM_SLICE_OFFSET)};
     // shape: FA: [batchSize, seqLen, vocabSize] PA: [seqLen, vocabSize]
     lmHeadNode.outTensors = {&graph_.outTensors.at(OUT_TENSOR_HIDDENSTATES)};
 

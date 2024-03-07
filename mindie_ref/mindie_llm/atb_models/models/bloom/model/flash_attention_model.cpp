@@ -17,15 +17,22 @@
 
 #include <algorithm>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 #include <atb/atb_infer.h>
 
 #include "atb_speed/log.h"
 #include "layers/parallel_layer.h"
 #include "models/bloom/layer/flash_attention_layer.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace bloom_7b {
+
+REGISTER_MODEL(bloom_7b, FlashAttentionModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 16;
 const int EMBEDDING_WEIGHT_COUNT = 1;
 const int EMBEDDING_WEIGHT_NORM_COUNT = 2;

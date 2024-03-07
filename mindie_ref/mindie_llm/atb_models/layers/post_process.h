@@ -18,9 +18,11 @@
 #define ATB_SPEED_LAYERS_POST_PROCESS_LAYER_H
 
 #include "atb_speed/log.h"
-#include "atb_speed/utils/operation_factory.h"
 #include "common.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 #include <atb/atb_infer.h>
 
 namespace atb_speed {
@@ -34,20 +36,7 @@ struct PostProcessParam {
 
 atb::Status Sample(const PostProcessParam &param, atb::Operation **operation);
 
-static atb::Operation *SampleLayerCreate(const nlohmann::json &paramJson)
-{
-    atb_speed::common::PostProcessParam param;
-    param.temperature = paramJson["temperature"].get<double>();
-    param.topK = paramJson["topK"].get<uint32_t>();
-    param.randSeed = paramJson["randSeed"].get<uint32_t>();
-    ATB_LOG(INFO) << "SampleLayerCreate: temperature:" << param.temperature << ", topK:" << param.topK
-                  << ", randSeed:" << param.randSeed;
-    atb::Operation *op;
-    Sample(param, &op);
-    return op;
-}
-
-REGISTER_OPERATION(common, SampleLayerCreate);
+atb::Operation *SampleLayerCreate(const nlohmann::json &paramJson);
 
 } // namespace common
 } // namespace atb_speed

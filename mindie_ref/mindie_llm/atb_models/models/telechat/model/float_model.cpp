@@ -14,13 +14,19 @@
  * limitations under the License.
  */
 #include "float_model.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 #include <atb/atb_infer.h>
 #include "telechat/layer/embedding_layer.h"
 #include "telechat/layer/float_layer.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace telechat {
+
+REGISTER_MODEL(telechat, FloatFAModel);
 
 const int WEIGHT_COUNT_PER_LAYER = 10;
 const int WORD_EMBEDDING_WEIGHT_COUNT = 1;
@@ -86,7 +92,7 @@ atb::Status FloatFAModel::InferShape(const std::vector<atb::TensorDesc> &inTenso
     outTensorDescs.at(0).shape.dimNum = 3;
     outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(IN_TENSOR_INPUT_IDS).shape.dims[0];
     outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(IN_TENSOR_INPUT_IDS).shape.dims[1];
-    outTensorDescs.at(0).shape.dims[2] = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.shape.dims[1];
+    outTensorDescs.at(0).shape.dims[2] = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.shape.dims[0];
 
     return atb::NO_ERROR;
 }

@@ -1,7 +1,7 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 from typing import List
 import torch
-from loguru import logger
+from atb_llm.utils.log import logger
 from .request import Request
 
 

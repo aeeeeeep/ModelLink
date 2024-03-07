@@ -17,11 +17,18 @@
 
 #include "atb/atb_infer.h"
 #include "models/llama_pa/layer/paged_attention_common_layer.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 #include "parallel_lmhead.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama_pa {
+
+REGISTER_MODEL(llama_pa, CommonPAModel);
+
 const int QUANT_WEIGHT_COUNT_PER_LAYER = 25;
 const int FLOAT_WEIGHT_COUNT_PER_LAYER = 9;
 

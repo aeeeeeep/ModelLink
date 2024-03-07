@@ -16,13 +16,20 @@
 #include "paged_attention_model.h"
 
 #include "atb/atb_infer.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 
 #include "models/qwen/14b/layer/paged_attention_layer.h"
 #include "parallel_lmhead.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace qwen_14b {
+
+REGISTER_MODEL(qwen_14b, PagedAttentionModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 7;
 const int WORDEMBEDDINGNODE_WEIGHT_COUNT = 1;
 const int FINALNORMNODE_WEIGHT_COUNT = 1;

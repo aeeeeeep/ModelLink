@@ -16,16 +16,23 @@
 #include "flash_attention_quant_model.h"
 
 #include "atb/atb_infer.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 
 #include "atb_speed/utils/operation_util.h"
 #include "layers/parallel_layer_v2.h"
 #include "models/baichuan2/13b/layer/flash_attention_layer.h"
 #include "models/baichuan2/13b/layer/flash_attention_quant_layer.h"
 #include "models/baichuan2/13b/layer/flash_attention_quant_oper_layer.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace baichuan2_13b {
+
+REGISTER_MODEL(baichuan2_13b, FlashAttentionQuantModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 17;
 const int WORD_EMBEDDING_NODE_WEIGHT_COUNT = 1;
 const int FINAL_NORM_NODE_WEIGHT_COUNT = 1;

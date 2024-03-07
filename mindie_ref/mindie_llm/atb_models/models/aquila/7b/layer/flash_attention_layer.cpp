@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -142,12 +142,11 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
 
     // flash attention
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / sqrt(param.dk);
     selfAttentionParam.clampMin = -1024.0;
     selfAttentionParam.clampMax = 1024.0;
-    selfAttentionParam.isClamp = 1;
+    selfAttentionParam.clampType = atb::infer::SelfAttentionParam::CLAMP_TYPE_MIN_MAX;
     CREATE_OPERATION(selfAttentionParam, &flashAttentionNode.operation);
     flashAttentionNode.inTensorIds = {INTERNAL_QEMBED,
                                       INTERNAL_KEMBED,

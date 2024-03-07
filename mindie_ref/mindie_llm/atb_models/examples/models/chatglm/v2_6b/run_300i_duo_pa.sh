@@ -2,7 +2,6 @@
 # 参数配置以及启动指令的说明见同级目录下的README.md文件
 export BIND_CPU=1
 export IS_QUANT=0
-export MAX_MEMORY_GB=15
 export ASCEND_RT_VISIBLE_DEVICES=0,1
 export TP_WORLD_SIZE=2
 export MASTER_PORT=20030
@@ -16,4 +15,4 @@ export HCCL_BUFFSIZE=110
 export ATB_USE_TILING_COPY_STREAM=1
 
 export PYTHONPATH=${llm_path}:$PYTHONPATH
-torchrun --nproc_per_node $TP_WORLD_SIZE --master_port $MASTER_PORT -m ../../examples.run_pa --model_path $1
+torchrun --nproc_per_node $TP_WORLD_SIZE --master_port $MASTER_PORT -m examples.run_pa --model_path $1

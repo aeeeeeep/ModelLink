@@ -20,7 +20,10 @@
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
 #include <functional>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 
 namespace atb_speed {
 namespace telechat {

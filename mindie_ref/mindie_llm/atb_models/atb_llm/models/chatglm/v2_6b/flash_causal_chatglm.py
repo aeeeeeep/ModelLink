@@ -40,6 +40,10 @@ from atb_llm.utils.layers import (
     get_linear,
 )
 from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
+from atb_llm.utils.quantize.pack_type import PackType
+from atb_llm.utils.quantize.w8a8 import calc_linear_pack_type
+from atb_llm.utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
+from atb_llm.utils.layers import load_column_multi
 
 from .config import ChatglmConfig
 
@@ -67,6 +71,29 @@ class RMSNorm(nn.Module):
             hidden_states = hidden_states.to(self.weight.dtype)
 
         return self.weight * hidden_states, residual
+
+
+class RMSNormBias(nn.Module):
+    def __init__(self, prefix, weights, eps=1e-6):
+        super().__init__()
+
+        weight = weights.get_tensor(f"{prefix}.weight")
+        try:
+            bias = weights.get_tensor(f"{prefix}.bias")
+        except AssertionError:
+            bias = torch.zeros(weight.shape, dtype=torch.float16)
+        self.weight = nn.Parameter(weight)
+        self.bias = nn.Parameter(bias)
+        self.variance_epsilon = eps
+
+
+class RMSNormWrapper(nn.Module):
+    def __init__(self, prefix, weights, eps=1e-6):
+        super().__init__()
+
+        self.ori = RMSNorm(prefix, weights, eps)
+        self.anti = RMSNormBias(f'{prefix}.module', weights, eps)
+
 
 
 def load_qkv(config, prefix: str, weights):
@@ -106,12 +133,28 @@ class FlashChatglmAttention(torch.nn.Module):
                 f"and `num_shards`: {weights.process_group.size()}"
             )
         self.num_heads = self.num_heads // weights.process_group.size()
-        self.query_key_value = load_qkv(
+
+        linear_names = [f'{prefix}.query_key_value']
+        layer_prefix = '.'.join(prefix.split('.')[:-1])
+        norm_name = f'{layer_prefix}.input_layernorm'
+        if weights.quantize == 'w8a8':
+            self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
+        elif weights.quantize == 'w8a16':
+            self.pack_type = PackType.ALL_W8A16
+        elif weights.quantize == "smooth_quant":
+            self.pack_type = PackType.ALL_W8A8
+        else:
+            self.pack_type = PackType.ALL_FP
+
+        self.query_key_value = TensorParallelColumnLinear.load_qkv(
             config,
             prefix=f"{prefix}.query_key_value",
-            weights=weights
+            weights=weights,
+            bias=True,
+            hidden_size=config.hidden_size,
+            num_heads=config.num_attention_heads,
+            num_kv_heads=config.multi_query_group_num
         )
-
         self.dense = TensorParallelRowLinear.load(
             config,
             prefix=f"{prefix}.dense",
@@ -187,12 +230,25 @@ class MLP(nn.Module):
                 else "none",
             )
         )
+
+        linear_names = [f'{prefix}.dense_h_to_4h']
+        layer_prefix = '.'.join(prefix.split('.')[:-1])
+        norm_name = f'{layer_prefix}.post_attention_layernorm'
+        if weights.quantize == 'w8a8':
+            self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
+        elif weights.quantize == 'w8a16':
+            self.pack_type = PackType.ALL_W8A16
+        elif weights.quantize == "smooth_quant":
+            self.pack_type = PackType.ALL_W8A8
+        else:
+            self.pack_type = PackType.ALL_FP
+
         # Fuse gate and up proj
-        self.gate_up_proj = load_gate_up_proj(
+        self.gate_up_proj = TensorParallelColumnLinear.load_gate_up(
             config,
             prefix=f"{prefix}.dense_h_to_4h",
             weights=weights,
-            size=2
+            bias=False,
         )
         self.down_proj = TensorParallelRowLinear.load(
             config,
@@ -268,14 +324,35 @@ class FlashDecoderLayer(nn.Module):
         )
         self.mlp = MLP(prefix=f"{prefix}.mlp", config=config, weights=weights)
 
-        self.input_layernorm = RMSNorm(
-            prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.layernorm_epsilon
-        )
-        self.post_attention_layernorm = RMSNorm(
-            prefix=f"{prefix}.post_attention_layernorm",
-            weights=weights,
-            eps=config.layernorm_epsilon,
-        )
+        if self.self_attention.pack_type in [PackType.ALL_FP, PackType.ALL_W8A16]:
+            self.input_layernorm = RMSNorm(
+                prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.layernorm_epsilon
+            )
+        elif self.self_attention.pack_type in [PackType.ALL_W8A8, PackType.MIX_W8A8]:
+            self.input_layernorm = RMSNormBias(
+                prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.layernorm_epsilon
+            )
+        else:
+            self.input_layernorm = RMSNormWrapper(
+                prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.layernorm_epsilon
+            )
+
+        if self.mlp.pack_type in [PackType.ALL_FP, PackType.ALL_W8A16]:
+            self.post_attention_layernorm = RMSNorm(
+                prefix=f"{prefix}.post_attention_layernorm",
+                weights=weights,
+                eps=config.layernorm_epsilon,
+            )
+        elif self.mlp.pack_type in [PackType.ALL_W8A8, PackType.MIX_W8A8]:
+            self.post_attention_layernorm = RMSNormBias(
+                prefix=f"{prefix}.post_attention_layernorm",
+                weights=weights,
+                eps=config.layernorm_epsilon,
+            )
+        else:
+            self.post_attention_layernorm = RMSNormWrapper(
+                prefix=f"{prefix}.post_attention_layernorm", weights=weights, eps=config.layernorm_epsilon
+            )
 
     def forward(
         self,
@@ -322,6 +399,8 @@ class FlashChatglmModel(torch.nn.Module):
         process_group = weights.process_group
         self.tp_rank = process_group.rank()
         self.tp_world_size = process_group.size()
+        self.config = config
+        self.dtype = weights.dtype
         self.embed_tokens = TensorEmbedding(
             prefix="transformer.embedding.word_embeddings", weights=weights
         )
@@ -359,56 +438,25 @@ class FlashChatglmModel(torch.nn.Module):
                                               device=weights.device,
                                               dtype=config.torch_dtype)
         self.cos_embed, self.sin_embed = self.rotary_pos_emb(config.seq_length)
+        self.placeholder = torch.zeros(1, dtype=config.torch_dtype, device="npu")
 
     def init_ascend_operations(self, config: ChatglmConfig):
-        self.acl_param_encoder = json.dumps({
-            "rmsNormEps": config.layernorm_epsilon,
-            "headNum": config.num_attention_heads // self.tp_world_size,
-            "dk": config.hidden_size // config.num_attention_heads,
-            "isPrefill": True,
-            "numHeadsPerPartition": config.num_attention_heads // self.tp_world_size,
-            "hiddenSizePerHead": config.kv_channels,
-            "numGroupsPerPartition": max(config.multi_query_group_num // self.tp_world_size, 1),
-            "transKey": False,
-            "layerNum": config.num_layers,
-            "residualAddScale": 1,
-            "rank": self.tp_rank,
-            "rankSize": self.tp_world_size,
-            "isLmHeadParallel": not self.soc_info.need_nz,
-        })
-        self.acl_param_decoder = json.dumps({
-            "rmsNormEps": config.layernorm_epsilon,
-            "headNum": config.num_attention_heads // self.tp_world_size,
-            "dk": config.hidden_size // config.num_attention_heads,
-            "isPrefill": False,
-            "numHeadsPerPartition": config.num_attention_heads // self.tp_world_size,
-            "hiddenSizePerHead": config.kv_channels,
-            "numGroupsPerPartition": max(config.multi_query_group_num // self.tp_world_size, 1),
-            "transKey": False,
-            "layerNum": config.num_layers,
-            "residualAddScale": 1,
-            "rank": self.tp_rank,
-            "rankSize": self.tp_world_size,
-            "isLmHeadParallel": not self.soc_info.need_nz,
-        })
+        self.quantize = config.quantize
         self.seq_length = config.seq_length
 
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm2_6b_PagedAttentionModel")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm2_6b_PagedAttentionModel")
-
-        self.acl_encoder_operation.set_param(self.acl_param_encoder)
-        self.acl_decoder_operation.set_param(self.acl_param_decoder)
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("glm_v2_6b_DecoderModel")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("glm_v2_6b_DecoderModel")
 
         self.weight_flag = False
         self.num_layers = config.num_layers
         self.hidden_size = config.hidden_size
 
-        self.acl_encoder_operation_inputs = [None] * 8
-        self.acl_decoder_operation_inputs = [None] * 8
+        self.acl_encoder_operation_inputs = [None] * 12
+        self.acl_decoder_operation_inputs = [None] * 12
         self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64)
         # self.lm_head_weight = None
 
-        self.ascend_atten_mask = AttentionMask.static(config.seq_length)
+        self.attn_mask = AttentionMask.static(config.seq_length)
 
     def weight_format_cast(self, weight):
         if not self.soc_info.need_nz:
@@ -418,30 +466,71 @@ class FlashChatglmModel(torch.nn.Module):
         return weight
 
     def init_ascend_weight(self):
-        weights = [self.state_dict()["embed_tokens.weight"]]
-        for i in range(self.num_layers):
-            weights_t = []
-            weights_layer = self.layers[i].state_dict()
-            weights_t.append(weights_layer["input_layernorm.weight"])
-            weights_t.append(self.weight_format_cast(weights_layer["self_attention.query_key_value.linear.weight"]))
-            weights_t.append(self.weight_format_cast(weights_layer["self_attention.query_key_value.linear.bias"]))
-            weights_t.append(self.weight_format_cast(weights_layer["self_attention.dense.linear.weight"]))
-            weights_t.append(weights_layer["post_attention_layernorm.weight"])
-            weights_t.append(self.weight_format_cast(weights_layer["mlp.gate_up_proj.linear.weight"]))
-            weights_t.append(self.weight_format_cast(weights_layer["mlp.down_proj.linear.weight"]))
-            if self.soc_info.need_nz:
-                del self.layers[i].self_attention
-                del self.layers[i].post_attention_layernorm
-                del self.layers[i].mlp
+        self.ascend_weight, self.linear_type, self.pack_quant_config = self.get_weights()
+        pre_scale = []
+        for layer_id in range(1, self.config.num_layers + 1):
+            pre_scale.append(layer_id / (math.sqrt(self.config.kv_channels) * layer_id))
+        post_scale = [1.0] * self.config.num_layers
+        coder_param = {
+            "isFA": False,
+            "isBF16": self.dtype == torch.bfloat16,
+            "isEmbeddingParallel": False,
+            "supportSwiGLU": False if self.soc_info.need_nz else True,
+            "rmsNormEps": self.config.layernorm_epsilon,
+            "numAttentionHeadsPerRank": self.config.num_attention_heads // self.tp_world_size,
+            "hiddenSizePerAttentionHead": self.config.hidden_size // self.config.num_attention_heads,
+            "numHiddenLayers": self.config.num_layers,
+            "numKeyValueHeadsPerRank": max(self.config.multi_query_group_num // self.tp_world_size, 1),
+            "rank": self.tp_rank,
+            "worldSize": self.tp_world_size,
+            "backend": "hccl" if self.soc_info.need_nz else "lccl",
+            "isLmHeadParallel": True,
+            "packQuantType": self.pack_quant_config,
+            "linearQuantType": self.linear_type,
+            "tokenOffset": [0],
+            "seqLen": [1],
+            "preScale": pre_scale,
+            "postScale": post_scale,
+        }
+        encoder_param = {**coder_param, "isPrefill": True}
+        decoder_param = {**coder_param, "isPrefill": False}
+        self.acl_encoder_operation.set_param(json.dumps({**encoder_param}))
+        self.acl_decoder_operation.set_param(json.dumps({**decoder_param}))
 
-            weights.extend(weights_t)
-        weights.append(self.state_dict()["norm.weight"])
-        weights.append(self.weight_format_cast(self.lm_head_weight))
+        self.acl_encoder_operation.set_weight(self.ascend_weight)
+        self.acl_decoder_operation.set_weight(self.ascend_weight)
 
-        self.ascend_weight = weights
-        self.acl_encoder_operation.set_weight(weights)
-        self.acl_decoder_operation.set_weight(weights)
         self.lm_head_indices_fake = self.lm_head_indices_fake.to(self.state_dict()["embed_tokens.weight"].device)
+
+    def get_weights(self):
+        quant_type = []
+        attn_module_names = AttnModuleNames(
+            norm_name='input_layernorm',
+            pack_name='self_attention.query_key_value',
+            o_name='self_attention.dense'
+        )
+        mlp_module_names = MlpModuleNames(
+            norm_name='post_attention_layernorm',
+            pack_name='mlp.gate_up_proj',
+            down_name='mlp.down_proj'
+        )
+        weight_wrapper = WeightWrapper(self.soc_info, self.tp_rank, attn_module_names, mlp_module_names)
+        weight_wrapper.register_embedding(self.state_dict(), 'embed_tokens')
+        for i in range(self.num_layers):
+            layer = self.layers[i]
+            layer_dict = layer.state_dict()
+            weight_wrapper.register_layer(layer_dict,
+                                          layer.self_attention.pack_type,
+                                          layer.mlp.pack_type,
+                                          self.quantize)
+            quant_type.append([layer.self_attention.pack_type.value, layer.mlp.pack_type.value])
+            if self.soc_info.need_nz:
+                del layer.self_attention
+                del layer.post_attention_layernorm
+                del layer.mlp
+        weight_wrapper.register_model_norm(self.state_dict(), 'norm')
+        weight_wrapper.weights.append(self.weight_format_cast(self.lm_head_weight))
+        return weight_wrapper.weights, weight_wrapper.linear_type, quant_type
 
     def init_ascend_kvcache(self, kv_cache):
         kv_cache_exist = self.ascend_kcache_id and self.ascend_vcache_id
@@ -478,34 +567,42 @@ class FlashChatglmModel(torch.nn.Module):
                 self.transdata_param = json.dumps({})
                 self.transdata_operation.set_param(self.transdata_param)
 
-                pad_maxs = math.ceil(max_seq_len / 16) * 16
-                atten_mask = self.ascend_atten_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
+                pad_maxs = math.ceil(self.seq_length / 16) * 16
+                atten_mask = self.attn_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
                 atten_mask = self.transdata_operation.execute([atten_mask])[0]
             else:
-                atten_mask = self.ascend_atten_mask.get_attn_mask(max_seq_len, kv_cache[0][0].dtype, kv_cache[0][0].device)
+                atten_mask = self.attn_mask.get_attn_mask(self.seq_length, kv_cache[0][0].dtype, kv_cache[0][0].device)
             self.acl_param_encoder = json.dumps({
                 "seqLen" : input_lengths.tolist()
             })
             self.acl_encoder_operation_inputs[0] = input_ids
-            self.acl_encoder_operation_inputs[1] = cos_embed
-            self.acl_encoder_operation_inputs[2] = sin_embed
-            self.acl_encoder_operation_inputs[3] = atten_mask
-            self.acl_encoder_operation_inputs[4] = block_tables.to(torch.int32)
-            self.acl_encoder_operation_inputs[5] = slots.to(torch.int32)
-            self.acl_encoder_operation_inputs[6] = input_lengths.to(torch.int32)
-            self.acl_encoder_operation_inputs[7] = lm_head_indices.to(torch.int64)
+            self.acl_encoder_operation_inputs[1] = position_ids.to(torch.int64)
+            self.acl_encoder_operation_inputs[2] = cos_embed
+            self.acl_encoder_operation_inputs[3] = sin_embed
+            self.acl_encoder_operation_inputs[4] = atten_mask
+            self.acl_encoder_operation_inputs[5] = block_tables.to(torch.int32)
+            self.acl_encoder_operation_inputs[6] = slots.to(torch.int32)
+            self.acl_encoder_operation_inputs[7] = self.placeholder
+            self.acl_encoder_operation_inputs[8] = self.placeholder
+            self.acl_encoder_operation_inputs[9] = self.placeholder
+            self.acl_encoder_operation_inputs[10] = input_lengths.to(torch.int32)
+            self.acl_encoder_operation_inputs[11] = lm_head_indices.to(torch.int64)
 
             return self.acl_encoder_operation_inputs, self.acl_param_encoder
         else:
             atten_mask = torch.tensor([1], device=input_ids.device, dtype=kv_cache[0][0].dtype)
             self.acl_decoder_operation_inputs[0] = input_ids
-            self.acl_decoder_operation_inputs[1] = cos_embed
-            self.acl_decoder_operation_inputs[2] = sin_embed
-            self.acl_decoder_operation_inputs[3] = atten_mask
-            self.acl_decoder_operation_inputs[4] = block_tables.to(torch.int32)
-            self.acl_decoder_operation_inputs[5] = slots.to(torch.int32)
-            self.acl_decoder_operation_inputs[6] = input_lengths.to(torch.int32)
-            self.acl_decoder_operation_inputs[7] = self.lm_head_indices_fake
+            self.acl_decoder_operation_inputs[1] = position_ids.to(torch.int64)
+            self.acl_decoder_operation_inputs[2] = cos_embed
+            self.acl_decoder_operation_inputs[3] = sin_embed
+            self.acl_decoder_operation_inputs[4] = atten_mask
+            self.acl_decoder_operation_inputs[5] = block_tables.to(torch.int32)
+            self.acl_decoder_operation_inputs[6] = slots.to(torch.int32)
+            self.acl_decoder_operation_inputs[7] = self.placeholder
+            self.acl_decoder_operation_inputs[8] = self.placeholder
+            self.acl_decoder_operation_inputs[9] = self.placeholder
+            self.acl_decoder_operation_inputs[10] = input_lengths.to(torch.int32)
+            self.acl_decoder_operation_inputs[11] = lm_head_indices.to(torch.int64)
 
             return self.acl_decoder_operation_inputs, self.acl_param_decoder
 
@@ -559,11 +656,12 @@ class FlashChatglmForCausalLM(torch.nn.Module):
         load_atb_speed()
 
         self.transformer = FlashChatglmModel(config, weights)
-        self.lm_head = TensorParallelHead.load_weight(
+        self.lm_head = load_column_multi(
             config,
-            prefix="transformer.output_layer",
+            prefixes=["transformer.output_layer"],
             weights=weights,
-            is_norm=True
+            head_size=1,
+            lm_head=True
         )
 
         # for ascend

@@ -40,6 +40,11 @@ def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length
             raise AssertionError
         logits = logits[batch.lm_head_indices]
 
+    ENV.update()
+    if ENV.logits_save_enable:
+        import os
+        logits_save_filename = "logits_" + str(len(batch.req_list[0].out_token_list)) + ".pth"
+        torch.save(logits.cpu(), os.path.join(ENV.logits_save_folder, logits_save_filename))
     next_token = next_token_chooser(logits)
     next_token_list = next_token.tolist()
 
@@ -47,7 +52,7 @@ def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length
         req.out_token_list.append(next_token_list[i])
 
     batch.batch_input_ids = next_token.to(torch.int64)
-    batch.batch_position_ids = batch.context_length.to(torch.long)
+    batch.batch_position_ids = batch.context_length.clone().to(torch.long)
     if batch.cu_seqlen_prefill is not None:
         batch.batch_slot_indices = batch.batch_slot_indices[batch.lm_head_indices]
         batch.cu_seqlen_prefill = None

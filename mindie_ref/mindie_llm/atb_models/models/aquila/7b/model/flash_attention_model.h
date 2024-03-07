@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 #ifndef ATB_SPEED_MODELS_AQUILA_7B_FLASH_ATTENTION_MODEL_H
 #define ATB_SPEED_MODELS_AQUILA_7B_FLASH_ATTENTION_MODEL_H
 #include "atb_speed/base/model.h"
-#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace aquila_7b {
@@ -65,8 +64,6 @@ private:
 
     std::vector<int32_t> seqLen_;
 };
-
-REGISTER_MODEL(aquila_7b, FlashAttentionRopeModel);
 
 } // namespace aquila_7b
 } // namespace atb_speed

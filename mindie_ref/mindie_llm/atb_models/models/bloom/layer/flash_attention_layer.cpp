@@ -126,8 +126,6 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
     layerNormQuantParam.normParam.beginParamsAxis = 1;
     if (param.quantmodel) {
         layerNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
-        layerNormQuantParam.normParam.quantInputScale = param.qkvInputScale;
-        layerNormQuantParam.normParam.quantInputOffset = param.qkvInputOffset;
     }
     CREATE_OPERATION(layerNormQuantParam, &inputNormNode.operation);
     inputNormNode.inTensorIds = {IN_HIDDEN_STATES, IN_NORM_WEIGHT, IN_NORM_BIAS};
@@ -167,11 +165,10 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
     };
 
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0f / std::sqrt(param.dk);
     selfAttentionParam.qkScale = 1.0f;
-    selfAttentionParam.isSupportAlibi = true;
+    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MASK_TYPE_ALIBI;
     CREATE_OPERATION(selfAttentionParam, &selfAttentionFusionNode.operation);
     selfAttentionFusionNode.inTensorIds = {
         INTERMIDATE_QUERY, INTERMIDATE_KEY, INTERMIDATE_VALUE, IN_CACHED_K,
@@ -224,8 +221,6 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
     if (param.quantmodel) {
         atb::infer::LayerNormParam selfNormParam;
         selfNormParam.layerType = atb::infer::LayerNormParam::LAYER_NORM_NORM;
-        selfNormParam.normParam.quantInputScale = param.selfLnInputScale;
-        selfNormParam.normParam.quantInputOffset = param.selfLnInputOffset;
         selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
         selfNormParam.normParam.epsilon = param.layerNormEps;
         selfNormParam.normParam.beginNormAxis = beginParamsAxis;

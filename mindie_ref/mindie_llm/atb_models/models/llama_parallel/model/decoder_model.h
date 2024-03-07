@@ -31,8 +31,6 @@ public:
         bool isPrefill = false;
         // isBF16为true时采用BF16精度; 反之，则采用FP16精度
         bool isBF16 = false;
-        // isPack为true时QKV和MLP中的gate和up权重合并; 反之，则权重不合并
-        bool isPack = true;
         // isEmbeddingParallel为true时，embedding的权重在hiddenSize维度进行切分; 反之，则不对权重进行切分; 测试表明embedding切分并不会带来性能提升
         bool isEmbeddingParallel = false;
         // isLmHeadParallel为true时，LmHead的权重在vacobSize维度进行切分; 反之，则不对权重进行切分
@@ -40,7 +38,6 @@ public:
         // 0 - No quant; 1- Quant in RmsNorm，dequant in Linear; 2 - Both quant and dequant in Linear
         bool supportSwiGLU = false;
         // MLP是否使用SwiGLU，若为true时，则使用；反之，使用swish
-        int quantType = 0;
         float rmsNormEps = 0;
         int numAttentionHeadsPerRank = 0;
         int hiddenSizePerAttentionHead = 0;
@@ -49,9 +46,10 @@ public:
         int rank = 0;
         int worldSize = 1;
         std::string backend = "hccl";
-        std::string rankTableFile = "";
         std::vector<int> tokenOffset = {};
         std::vector<int> seqLen = {};
+        std::vector<std::vector<int>> packQuantType = {};
+        std::vector<std::vector<int>> linearQuantType = {};
         void FromString(const std::string &param);
     };
 

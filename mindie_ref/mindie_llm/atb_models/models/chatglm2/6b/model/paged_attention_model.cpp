@@ -17,11 +17,18 @@
 #include "atb_speed/utils/operation_util.h"
 #include <atb/atb_infer.h>
 #include "models/chatglm2/6b/layer/paged_attention_layer.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 #include "parallel_lmhead.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace chatglm2_6b {
+
+REGISTER_MODEL(chatglm2_6b, PagedAttentionModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 7;
 const int FINALNORMNODE_WEIGHT_COUNT = 1;
 const int OPERATION_COUNT_AFTER_LAYER = 2;

@@ -42,7 +42,7 @@ SUPPORT_BF16 = SUPPORT_CUDA and torch.cuda.is_bf16_supported()
 SUPPORT_FP16 = SUPPORT_CUDA and torch.cuda.get_device_capability(0)[0] >= 7
 SUPPORT_TORCH2 = hasattr(torch, '__version__') and int(torch.__version__.split(".")[0]) >= 2
 
-from atb_llm.common.log.logging import logger
+from atb_llm.utils.log.logging import logger
 from atb_llm.models.qwen.config import QWenConfig
 from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
 from atb_llm.utils.layers import (
@@ -322,7 +322,9 @@ class QWenAttention(nn.Module):
             prefix=f"{prefix}.c_attn",
             weights=weights,
             bias=True,
-            head_size=self.head_dim
+            hidden_size=config.hidden_size,
+            num_heads=config.num_attention_heads,
+            num_kv_heads=config.num_key_value_heads
         )
         self.c_proj = TensorParallelRowLinear.load(
             config,

@@ -173,7 +173,7 @@ pip install torch*_aarch64.whl
 | llm_path            | 加速库及模型库下载后放置目录                                                   |
 | model_path          | 工作时模型所在的目录，可以和model_download_path相同，但一般模型是公共的，为了避免影响其他用户，单独建一个模型工作目录 |
 | script_path         | 工作脚本所在路径，本文为${llm_path}/pytorch/examples/gptneox20b              |
-| ceval_work_dir      | ceval数据集、及结果保存所在目录，不必和模型脚本在相同目录                                  |
+| mmlu_work_dir      | mmlu数据集、及结果保存所在目录，不必和模型脚本在相同目录                                  |
 
 #### 2.1 推理环境准备
 
@@ -229,7 +229,7 @@ source /usr/local/Ascend/atb/set_env.sh
  source set_env.sh
  ```
 
-4. 下载CEval数据集
+4. 下载mmlu数据集
 
    若需执行精度测试，请参考附录中的精度测试指南 进行下载
 
@@ -409,9 +409,11 @@ LD_PRELOAD=/root/miniconda3/envs/wqh39/bin/../lib/libgomp.so.1 MAX_SEQ_LEN=2048 
 
 # 精度测试指南
 
+由于gpt-neox是英文模型，选用mmlu数据集进行精度测试
+
 ## 配置说明
 
-参考 [SDK精度测试指南CEVAL章节](../../atb_speed_sdk/README.md)
+参考 [SDK精度测试指南章节](../../atb_speed_sdk/README.md)
 
 ## 运行脚本
 
@@ -430,7 +432,7 @@ cd ${script_path}
 bash cut_model_and_run.sh precision
 ```
 
-结束后在${ceval_work_dir}/test_result目录下查看测试结果。[双芯结果每个两份，只需看其中一份即可]。
+结束后在${mmlu_work_dir}/test_result目录下查看测试结果。[双芯结果每个两份，只需看其中一份即可]。
 
 | 文件                        | 用途                   | 
 |---------------------------|----------------------| 

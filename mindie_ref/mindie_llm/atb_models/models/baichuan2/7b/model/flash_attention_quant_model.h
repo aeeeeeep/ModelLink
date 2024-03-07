@@ -60,8 +60,6 @@ private:
     std::vector<int32_t> seqLen_;
 };
 
-REGISTER_MODEL(baichuan2_7b, FlashAttentionQuantModel);
-
 } // namespace baichuan2_13b
 } // namespace atb_speed
 #endif

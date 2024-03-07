@@ -16,7 +16,10 @@
 #ifndef ATB_SPEED_MODELS_LLAMA_POSITION_EMBEDDING_1DSPLIT_FUSION_OPERATION_H
 #define ATB_SPEED_MODELS_LLAMA_POSITION_EMBEDDING_1DSPLIT_FUSION_OPERATION_H
 #include <atb/atb_infer.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 
 namespace atb_speed {
 namespace llama2_70b {

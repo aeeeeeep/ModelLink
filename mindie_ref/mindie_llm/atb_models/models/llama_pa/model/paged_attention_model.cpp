@@ -16,14 +16,21 @@
 #include "paged_attention_model.h"
 
 #include "atb/atb_infer.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 
 #include "parallel_lmhead.h"
 #include "layers/parallel_layer.h"
 #include "models/llama_pa/layer/paged_attention_layer.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama_pa {
+
+REGISTER_MODEL(llama_pa, PAModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 6;
 const int WORDEMBEDDINGNODE_WEIGHT_COUNT = 1;
 const int FINALNORMNODE_WEIGHT_COUNT = 1;

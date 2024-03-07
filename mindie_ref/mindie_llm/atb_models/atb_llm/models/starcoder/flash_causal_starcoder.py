@@ -52,6 +52,7 @@ class AttentionMask(torch.nn.Module):
 
 
 class StarcoderConfig(PretrainedConfig):
+    model_type: str = "starcoder"
 
     def __init__(
             self,
@@ -156,6 +157,10 @@ class FlashStarCoderModel(torch.nn.Module):
 
         self.acl_encoder_operation.set_param(self.acl_param_encoder)
         self.acl_decoder_operation.set_param(self.acl_param_decoder)
+
+        self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
+        self.transdata_param = json.dumps({})
+        self.transdata_operation.set_param(self.transdata_param)
 
         self.weight_flag = False
         self.num_layers = config.num_layers
@@ -266,8 +271,7 @@ class FlashStarCoderModel(torch.nn.Module):
             if self.soc_info.need_nz:
                 pad_maxs = math.ceil(max_seq_len / 16) * 16
                 atten_mask = self.ascend_atten_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
-                atten_mask = atten_mask.view(1, pad_maxs, pad_maxs // 16, 16).transpose(1, 2)
-                torch_npu.npu_format_cast_(atten_mask, 29)
+                atten_mask = self.transdata_operation.execute([atten_mask])[0]
             else:
                 atten_mask = self.ascend_atten_mask.get_attn_mask(max_seq_len, kv_cache[0][0].dtype,
                                                                   kv_cache[0][0].device)
@@ -362,6 +366,7 @@ class FlashStarcoderForCausalLM(torch.nn.Module):
         self.num_attention_heads = self.num_heads
         self.hidden_size = config.hidden_size
         self.num_layers = self.model.layer_num
+        self.max_seq_len_every_batch = config.seq_length
 
     def forward(
             self,
@@ -385,7 +390,7 @@ class FlashStarcoderForCausalLM(torch.nn.Module):
             block_tables,
             slots,
             input_lengths,
-            max_seq_len,
+            self.max_seq_len_every_batch,
             lm_head_indices
         )
 

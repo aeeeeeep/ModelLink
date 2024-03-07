@@ -2,13 +2,13 @@
 from typing import List
 
 import torch
+from atb_llm.utils.log import logger
 from torch import nn
 
-from atb_llm.utils.log import logger
 from .fast_linear import FastLinear
 from ...quantize.smooth_quant.quant_linear import SmoothQuantLinearStatic
-from ...quantize.w8a8 import W8A8LinearStatic
 from ...quantize.w8a16 import W8A16LinearStatic
+from ...quantize.w8a8 import W8A8LinearStatic
 
 
 def get_linear(weight, bias, quantize, is_norm=False):
@@ -178,14 +178,30 @@ class TensorParallelHead(SuperLayer):
 
 class TensorParallelColumnLinear(SuperLayer):
     @classmethod
-    def load_qkv(cls, config, prefix: str, weights, bias: bool, head_size=None):
+    def load_qkv(cls, config, prefix: str, weights, bias: bool, hidden_size, num_heads, num_kv_heads=None):
         """Specific method when the QKV was joined after the fact"""
+        if num_kv_heads is None:
+            num_kv_heads = num_heads
         weight = weights.get_weights_col_packed_qkv(
-            prefix, quantize=config.quantize, head_size=head_size
+            prefix, quantize=config.quantize, hidden_size=hidden_size, num_heads=num_heads, num_kv_heads=num_kv_heads
         )
         if bias:
-            # raise NotImplementedError("packed_qkv only implemented for baichuan")
-            bias = weights.get_sharded(f"{prefix}.bias", dim=0)
+            bias = weights.get_tensor_col_packed_qkv(
+                f"{prefix}.bias", hidden_size=hidden_size, num_heads=num_heads, num_kv_heads=num_kv_heads
+            )
+        else:
+            bias = None
+        linear = get_linear(weight, bias, config.quantize)
+        return cls(linear)
+
+    @classmethod
+    def load_gate_up(cls, config, prefix: str, weights, bias: bool):
+        """Specific method when the QKV was joined after the fact"""
+        weight = weights.get_weights_col_packed_mlp(
+            prefix, quantize=config.quantize
+        )
+        if bias:
+            bias = weights.get_tensor_col_packed_mlp(f"{prefix}.bias")
         else:
             bias = None
         linear = get_linear(weight, bias, config.quantize)
