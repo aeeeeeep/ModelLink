@@ -1,0 +1,113 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+#include <atb/atb_infer.h>
+#include <memory>
+#include "linear_parallel_w8a8.h"
+#include "linear_w8a8.h"
+#include "mlp_w8a8.h"
+
+namespace atb_speed {
+namespace llama2_70b {
+
+enum MlpW8A8TensorId {
+    IN_INPUT = 0,
+    IN_MLPUPWEIGHT,
+    IN_MLPUPSCALE,
+    IN_MLPUPOFFSET,
+    IN_MLPUPDESCALE,
+    IN_MLPGATEWEIGHT,
+    IN_MLPGATESCALE,
+    IN_MLPGATEOFFSET,
+    IN_MLPGATEDESCALE,
+    IN_MLPDOWNWEIGHT,
+    IN_MLPDOWNSCALE,
+    IN_MLPDOWNOFFSET,
+    IN_MLPDOWNDESCALE,
+
+    OUT_MLPRESULT,
+
+    INTERMIDATE_GATE_OUT,
+    INTERMIDATE_UP_OUT,
+    INTERMIDATE_SWISH_OUT,
+    INTERMIDATE_MUL_OUT,
+};
+
+static const uint64_t IN_TENSOR_COUNT = 13;
+static const uint64_t OUT_TENSOR_COUNT = 1;
+static const uint64_t INTERMEDIATE_TENSOR_COUNT = 4;
+static const uint64_t NODE_COUNT = 5;
+
+atb::Status CreateMlpW8A8Operation(const MlpW8A8Param &param, atb::Operation **operation)
+{
+    atb::GraphParam opGraph;
+    opGraph.inTensorNum = IN_TENSOR_COUNT;
+    opGraph.outTensorNum = OUT_TENSOR_COUNT;
+    opGraph.internalTensorNum = INTERMEDIATE_TENSOR_COUNT;
+    opGraph.nodes.resize(NODE_COUNT);
+    opGraph.name = "MlpW8A8";
+
+    size_t nodeId = 0;
+    atb::Node &linearUpNode = opGraph.nodes.at(nodeId++);
+    atb::Node &linearGateNode = opGraph.nodes.at(nodeId++);
+    atb::Node &swishNode = opGraph.nodes.at(nodeId++);
+    atb::Node &mulNode = opGraph.nodes.at(nodeId++);
+    atb::Node &linearDownNode = opGraph.nodes.at(nodeId++);
+
+    atb_speed::llama2_70b::LinearW8A8Param linearParam = {true};
+    CreateLinearW8A8(linearParam, &linearUpNode.operation, atb_speed::llama2_70b::COLUMN_PARALLEL);
+    linearUpNode.inTensorIds = {IN_INPUT, IN_MLPUPWEIGHT, IN_MLPUPSCALE, IN_MLPUPOFFSET, IN_MLPUPDESCALE};
+    linearUpNode.outTensorIds = {INTERMIDATE_UP_OUT};
+
+    CreateLinearW8A8(linearParam, &linearGateNode.operation, atb_speed::llama2_70b::COLUMN_PARALLEL);
+    linearGateNode.inTensorIds = {IN_INPUT, IN_MLPGATEWEIGHT, IN_MLPGATESCALE, IN_MLPGATEOFFSET, IN_MLPGATEDESCALE};
+    linearGateNode.outTensorIds = {INTERMIDATE_GATE_OUT};
+
+    atb::infer::ActivationParam activationParam;
+    activationParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
+    CreateOperation(activationParam, &swishNode.operation);
+    swishNode.inTensorIds = {INTERMIDATE_GATE_OUT};
+    swishNode.outTensorIds = {INTERMIDATE_SWISH_OUT};
+
+    atb::infer::ElewiseParam elewiseParam;
+    elewiseParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_MUL;
+    CreateOperation(elewiseParam, &mulNode.operation);
+    mulNode.inTensorIds = {INTERMIDATE_SWISH_OUT, INTERMIDATE_UP_OUT};
+    mulNode.outTensorIds = {INTERMIDATE_MUL_OUT};
+
+    atb_speed::llama2_70b::LinearParallelW8A8Param linearParallelParam;
+    linearParallelParam.transWeight = param.transposeB;
+    linearParallelParam.rank = param.rank;
+    linearParallelParam.rankSize = param.rankSize;
+    linearParallelParam.rankRoot = param.rankRoot;
+    linearParallelParam.bias = param.isBias;
+    linearParallelParam.parallelType = "RowParallel";
+    linearParallelParam.backend = param.backend;
+    CreateLinearParallelW8A8(linearParallelParam, &linearDownNode.operation);
+    linearDownNode.inTensorIds = {INTERMIDATE_MUL_OUT, IN_MLPDOWNWEIGHT, IN_MLPDOWNSCALE, IN_MLPDOWNOFFSET,
+                                  IN_MLPDOWNDESCALE};
+    linearDownNode.outTensorIds = {OUT_MLPRESULT};
+
+    opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
+                                 atb::SVector<atb::TensorDesc> &outTensorDescs) {
+        outTensorDescs.at(0) = inTensorDescs.at(0);
+        return atb::NO_ERROR;
+    };
+
+    atb::CreateOperation(opGraph, operation);
+    return atb::NO_ERROR;
+}
+} // namespace llama2_70b
+} // namespace atb_speed
