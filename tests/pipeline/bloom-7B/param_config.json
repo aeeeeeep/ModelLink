@@ -10,7 +10,6 @@
         "--tokenizer-type", "PretrainedFromHF",
         "--tokenizer-model", "/home/dataset/bloom-7B-hf/tokenizer.model",
         "--tokenizer-name-or-path", "/home/dataset/bloom-7B-hf",
-        "--vocab-file", "/home/dataset/bloom-7B-hf/tokenizer.model",
         "--sequence-parallel",
         "--initial-loss-scale", "65536",
         "--init-method-std", "0.01",
