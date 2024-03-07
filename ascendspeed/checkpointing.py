@@ -159,7 +159,7 @@ def save_checkpoint(iteration, model, optimizer, lr_scheduler):
     checkpoint_name = get_checkpoint_name(args.save, iteration)
 
     # Save distributed optimizer's custom parameter state.
-    if args.use_distributed_optimizer:
+    if args.use_distributed_optimizer and not args.no_save_optim:
         optim_checkpoint_name = \
             get_distributed_optimizer_checkpoint_name(checkpoint_name)
         if parallel_state.get_data_parallel_rank() == 0:
