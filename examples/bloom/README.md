@@ -254,8 +254,9 @@ python tools/checkpoint/util.py --model-type GPT \
                                 --target-pipeline-parallel-size 12 \
                                 --load-dir /bloom-176b \
                                 --save-dir /{your save dir} \
+                                --params-dtype bf16 \
                                 --tokenizer-model None
-# config.json中的n_embed改为hidden_size， 将num_attention_heads修改为n_head
+# config.json中同字段对应的key值与其他模型不一致，将文件中的n_embed改为hidden_size， 将num_attention_heads修改为n_head。
 ```
 4. 准备数据集
 

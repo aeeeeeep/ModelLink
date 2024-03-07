@@ -18,7 +18,18 @@ def add_arguments(parser):
                        'trim padding from the embedding table.')
     group.add_argument('--megatron-path', type=str, default=None,
                        help='Base directory of deepspeed repository')
-
+    parser.add_argument('--add-qkv-bias', action='store_true',
+                       help='Add bias for attention qkv', default=False,
+    )
+    parser.add_argument('--add-dense-bias', action='store_true',
+                       help='Add bias for attention dense', default=False,
+    )
+    parser.add_argument('--embed-layernorm', action='store_true',
+                       help='Add embed layernorm for word embedding', default=False,
+    )
+    parser.add_argument('--params-dtype', type=str,
+                       help='Set weight dtype', default='fp16',
+    )
 
 def _load_checkpoint(queue, args):
 
@@ -59,7 +70,17 @@ def _load_checkpoint(queue, args):
                 ]
 
     margs = parse_args()
+    setattr(margs, 'embed_layernorm', False)
+    margs.embed_layernorm = args.embed_layernorm
     margs, checkpoint_args = load_args_from_checkpoint(margs)
+    margs.add_qkv_bias = args.add_qkv_bias
+    margs.add_dense_bias = args.add_dense_bias
+    if args.add_dense_bias:
+        margs.skip_bias_add = False
+    if args.params_dtype == 'bf16':
+        margs.bf16 = True
+    elif args.params_dtype == 'fp16':
+        margs.fp16 = True
 
     # Arguments do sanity checks on the world size, but we don't care,
     # so trick it into thinking we are plenty of processes
@@ -208,6 +229,7 @@ def _load_checkpoint(queue, args):
     md.true_vocab_size = true_vocab_size
     md.make_vocab_size_divisible_by = margs.make_vocab_size_divisible_by
     md.checkpoint_args = checkpoint_args
+    md.embed_layernorm = margs.embed_layernorm
 
     # Get first pipe stage
     mpu.set_pipeline_model_parallel_rank(0)
@@ -231,7 +253,9 @@ def _load_checkpoint(queue, args):
     }
     if md.position_embedding_type == 'learned_absolute':
         message["position embeddings"] = models[0].language_model.embedding.position_embeddings.weight.data
-
+    if md.embed_layernorm:
+        message["word embeddings norm_w"] = models[0].language_model.embedding.word_embeddings.norm.weight.data
+        message["word embeddings norm_b"] = models[0].language_model.embedding.word_embeddings.norm.bias.data
     queue_put("embeddings", message)
 
     total_layer_num = 0
@@ -257,6 +281,8 @@ def _load_checkpoint(queue, args):
                 if md.linear_bias:
                     message["dense bias"] = layer.self_attention.dense.bias.data
                     message["mlp l1 bias"] = layer.mlp.dense_4h_to_h.bias.data
+                if args.add_dense_bias:
+                    message["dense bias"] = layer.self_attention.dense.bias.data
 
                 # Grab all parallel tensors for this layer
                 qkv_weight = []
@@ -274,6 +300,8 @@ def _load_checkpoint(queue, args):
                     if md.linear_bias:
                         qkv_bias.append(layer.self_attention.query_key_value.bias.data)
                         mlp_l0_bias.append(layer.mlp.dense_h_to_4h.bias.data)
+                    if args.add_qkv_bias:
+                        qkv_bias.append(layer.self_attention.query_key_value.bias.data)
 
                 # Handle gated linear units
                 if md.swiglu:
@@ -298,6 +326,8 @@ def _load_checkpoint(queue, args):
                         message["mlp l0 bias V"] = torch.cat([b[1] for b in mlp_l0_bias], dim=0)
                     else:
                         message["mlp l0 bias"] = torch.cat(mlp_l0_bias, dim=0)
+                if args.add_qkv_bias:
+                    message["qkv bias"] = torch.cat(qkv_bias, dim=0)
 
                 queue_put(f"transformer layer {total_layer_num}", message)
 
@@ -323,7 +353,7 @@ def _load_checkpoint(queue, args):
     if md.model_type == 'BERT':
         message = {
             "weight": models[0].language_model.pooler.dense.weight.data,
-            "bias": models[0].language_model.pooler.dense.bias.data
+            "bias": models[0].language_model.pooler.dense.bias.data,
         }
         queue_put("pooler", message)
 
@@ -339,7 +369,7 @@ def _load_checkpoint(queue, args):
         if md.bert_binary_head:
             message = {
                 "weight": models[0].binary_head.weight.data,
-                "bias": models[0].binary_head.bias.data
+                "bias": models[0].binary_head.bias.data,
             }
             queue_put("binary head", message)
     queue.put("done")
