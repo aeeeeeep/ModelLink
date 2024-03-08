@@ -52,6 +52,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     fusionAttentionParam.isGroupedQueryAttention = param.numAttentionHeadsPerRank != param.numKeyValueHeadsPerRank;
     fusionAttentionParam.isBF16 = param.isBF16;
     fusionAttentionParam.layerLinearQuantType = param.linearQuantType;
+    fusionAttentionParam.packQuantType = param.packQuantType[0];
     fusionAttentionParam.supportLcoc = param.supportLcoc;
     atb::infer::RmsNormParam attenRmsNormParam;
     attenRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
@@ -101,17 +102,17 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
         IN_QKV_SCALE_0,
         IN_QKV_OFFSET_0,
         IN_QKV_DESCALE_0,
-        IN_QKV_DEOFFSET_0,
+        IN_QKV_BIAS_0,
         IN_QKV_WEIGHT_1,
         IN_QKV_SCALE_1,
         IN_QKV_OFFSET_1,
         IN_QKV_DESCALE_1,
-        IN_QKV_DEOFFSET_1,
+        IN_QKV_BIAS_1,
         IN_QKV_WEIGHT_2,
         IN_QKV_SCALE_2,
         IN_QKV_OFFSET_2,
         IN_QKV_DESCALE_2,
-        IN_QKV_DEOFFSET_2,
+        IN_QKV_BIAS_2,
         IN_COS_TABLE,
         IN_SIN_TABLE,
         IN_SEQ_LEN,
@@ -126,7 +127,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
         IN_ATTENTION_OUT_SCALE,
         IN_ATTENTION_OUT_OFFSET,
         IN_ATTENTION_OUT_DESCALE,
-        IN_ATTENTION_OUT_DEOFFSET,
+        IN_ATTENTION_OUT_BIAS,
     };
     attentionNode.outTensorIds = {INTERMEDIATE_ATTENTION_OUT};
 
@@ -143,6 +144,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     mlpParam.isBF16 = param.isBF16;
     mlpParam.isAntiOutlier = param.packQuantType[1] == atb_speed::common::MIX_W8A8_ANTI || param.packQuantType[1] == atb_speed::common::ALL_W8A8_ANTI;
     mlpParam.layerLinearQuantType = param.linearQuantType;
+    mlpParam.packQuantType = param.packQuantType[1];
     // gate up
     if (param.packQuantType[1] == atb_speed::common::MIX_W8A8 || param.packQuantType[1] == atb_speed::common::MIX_W8A8_ANTI) {
         mlpParam.mlpPackType = atb_speed::common::GATE_UP_WEIGHT_NO_PACK;
@@ -180,17 +182,17 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
         IN_MLP_SCALE_0,
         IN_MLP_OFFSET_0,
         IN_MLP_DESCALE_0,
-        IN_MLP_DEOFFSET_0,
+        IN_MLP_BIAS_0,
         IN_MLP_WEIGHT_1,
         IN_MLP_SCALE_1,
         IN_MLP_OFFSET_1,
         IN_MLP_DESCALE_1,
-        IN_MLP_DEOFFSET_1,
+        IN_MLP_BIAS_1,
         IN_MLP_DOWN_WEIGHT,
         IN_MLP_DOWN_SCALE,
         IN_MLP_DOWN_OFFSET,
         IN_MLP_DOWN_DESCALE,
-        IN_MLP_DOWN_DEOFFSET,
+        IN_MLP_DOWN_BIAS,
     };
     mlpParallelNode.outTensorIds = {INTERMEDIATE_MLP_OUT};
 

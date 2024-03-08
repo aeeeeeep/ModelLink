@@ -29,7 +29,7 @@ enum LmHeadTensorIdx : uint32_t {
     IN_SCALE,
     IN_OFFSET,
     IN_DESCALE,
-    IN_DEOFFSET,
+    IN_BIAS,
     IN_INDICES,
     OUT_LOGITS,
 };
@@ -83,17 +83,17 @@ atb::Status CreateLmHead(const LmHeadParam &param, atb::Operation **operation, T
     if (parallelType == ROW_PARALLEL) {
         linearParallelNode.inTensorIds = {
             config.INTERMEDIATE_SLICE_OUT, LmHeadTensorIdx::IN_WEIGHT, LmHeadTensorIdx::IN_SCALE,
-            LmHeadTensorIdx::IN_OFFSET, LmHeadTensorIdx::IN_DESCALE, LmHeadTensorIdx::IN_DEOFFSET
+            LmHeadTensorIdx::IN_OFFSET, LmHeadTensorIdx::IN_DESCALE, LmHeadTensorIdx::IN_BIAS
         };
     } else if (param.gatherAhead) {
         linearParallelNode.inTensorIds = {
             config.INTERMEDIATE_GATHER_OUT, LmHeadTensorIdx::IN_WEIGHT, LmHeadTensorIdx::IN_SCALE,
-            LmHeadTensorIdx::IN_OFFSET, LmHeadTensorIdx::IN_DESCALE, LmHeadTensorIdx::IN_DEOFFSET
+            LmHeadTensorIdx::IN_OFFSET, LmHeadTensorIdx::IN_DESCALE, LmHeadTensorIdx::IN_BIAS
         };
     } else {
         linearParallelNode.inTensorIds = {
             LmHeadTensorIdx::IN_HIDDENSTATES, LmHeadTensorIdx::IN_WEIGHT, LmHeadTensorIdx::IN_SCALE,
-            LmHeadTensorIdx::IN_OFFSET, LmHeadTensorIdx::IN_DESCALE, LmHeadTensorIdx::IN_DEOFFSET
+            LmHeadTensorIdx::IN_OFFSET, LmHeadTensorIdx::IN_DESCALE, LmHeadTensorIdx::IN_BIAS
         };
     }
     linearParallelNode.outTensorIds = {LmHeadTensorIdx::OUT_LOGITS};
