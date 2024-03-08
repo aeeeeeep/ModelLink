@@ -66,7 +66,12 @@ wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer_config.json
 ...
 cd ..
 ```
-In order to adapt to the Bloom-7B model, the following script is used to convert the model pre-training weights.
+
+4. Weights convert
+
+HuggingFace weights --> Megatron weights
+***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
+
 ```shell
 python tools/checkpoint/util.py --model-type GPT \
                                 --loader loader_bloom_hf \
@@ -75,11 +80,27 @@ python tools/checkpoint/util.py --model-type GPT \
                                 --target-pipeline-parallel-size 1 \
                                 --load-dir /bloom-7b \
                                 --save-dir /{your save dir} \
-                                --tokenizer-model None
+                                --tokenizer-model None 
 ```
 
+Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+```shell
+cd ModelLink/
+# Modify the ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ../HF_Bloom7B-v0.1-pt8-pp1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --embed-layernorm \
+    --save-dir ../HF_Bloom7B_downloaded   # <-- Fill in the original HF model path here, new weights will be saved in ../HF_Bloom7B_downloaded/mg2hg
+```
 
-4. Prepare dataset
+5. Prepare dataset
 
 Download the Bloom-7B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
@@ -104,7 +125,7 @@ python ./tools/preprocess_data.py \
     cd .. 
 ```
 
-5. Config Bloom-7B pre-training script : examples/bloom/pretrain_bloom_ptd_7B.sh 
+6. Config Bloom-7B pre-training script : examples/bloom/pretrain_bloom_ptd_7B.sh 
 
 ```shell
 # modify the script according to your own  ascend-toolkit path
@@ -117,7 +138,7 @@ CKPT_LOAD_DIR="./bloom-7b"
 ```
 
 
-6. Launch Bloom-7B  pre-training script: examples/bloom/pretrain_bloom_ptd_7B.sh 
+7. Launch Bloom-7B  pre-training script: examples/bloom/pretrain_bloom_ptd_7B.sh 
 
 ```shell
 bash examples/bloom/pretrain_bloom_ptd_7B.sh 
@@ -244,20 +265,43 @@ wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer.json
 wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer_config.json
 cd ..
 ```
-In order to adapt to the Bloom-176B model, the following script is used to convert the model pre-training weights.
+
+4. Weights convert
+
+HuggingFace weights --> Megatron weights
+***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 
 ```shell
 python tools/checkpoint/util.py --model-type GPT \
                                 --loader loader_bloom_hf \
                                 --saver saver_megatron \
                                 --target-tensor-parallel-size 8 \
-                                --target-pipeline-parallel-size 12 \
+                                --target-pipeline-parallel-size 5 \
                                 --load-dir /bloom-176b \
                                 --save-dir /{your save dir} \
-                                --tokenizer-model None
+                                --tokenizer-model None \
+                                --params-dtype bf16 
 ```
 
-4. Prepare dataset
+Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+```shell
+cd ModelLink/
+# Modify the ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ../HF_Bloom176B-v0.1-pt8-pp1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --embed-layernorm \
+    --params-dtype bf16 \
+    --save-dir ../HF_Bloom176B_downloaded   # <-- Fill in the original HF model path here, new weights will be saved in ../HF_Bloom176B_downloaded/mg2hg
+```
+
+5. Prepare dataset
 
 Download the bloom-176b datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
 ```shell
@@ -278,7 +322,7 @@ python ./tools/preprocess_data.py \
        --tokenizer-type PretrainedFromHF
     cd .. 
 ```
-5. Config Bloom-176B pre-training script: examples/bloom/pretrain_bloom_176b.sh
+6. Config Bloom-176B pre-training script: examples/bloom/pretrain_bloom_176b.sh
 
 ```shell
 # modify MASTER_ADDR to the IP address of the master node in the cluster.
@@ -293,7 +337,7 @@ TOKENIZER_NAME_OR_PATH=/home/bloom_data/vocab_file/
 DATA_PATH=/home/bloom_data/enwiki_100k/enwiki-100k_text_document
 ```
 
-6. Launch Bloom-176B pre-training script: examples/bloom/pretrain_bloom_176b.sh
+7. Launch Bloom-176B pre-training script: examples/bloom/pretrain_bloom_176b.sh
 
 Run the examples/bloom/pretrain_bloom_176b.sh on all nodes in the cluster.
 

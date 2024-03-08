@@ -95,7 +95,10 @@ LLAMA2-7B 训练的硬件配置:
      cd ..
    ```
 
-   将权重从 huggingface 格式转化为 magatron 格式 
+4. 权重转换
+
+   4.1 将权重从 huggingface 格式转化为 magatron 格式
+   ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
    ```bash
     cd ModelLink
@@ -114,12 +117,28 @@ LLAMA2-7B 训练的硬件配置:
    cd ..
    ```
 
+   4.2 任意并行切分策略的 Megatron 权重 格式转化为 HuggingFace权重
+   ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+```shell
+cd ModelLink/
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ../llama27B-v0.1-pt8-pp1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --save-dir ../llama27B_downloaded     # <-- 需要填入原始HF模型路径，新权重会存于../llama27B_downloaded/mg2hg
+```
+
    权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
 
-4. 预训练
+5. 预训练
 
 
-   4.1 准备数据集
+   5.1 准备数据集
 
    下载 LLaMA2-7B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
@@ -140,7 +159,7 @@ LLAMA2-7B 训练的硬件配置:
        --tokenizer-type PretrainedFromHF
     cd .. 
    ```
-   4.2 预训练
+   5.2 预训练
    ```shell
     cd ModelLink
     # 设置 ascend-toolkit 路径
@@ -157,9 +176,9 @@ LLAMA2-7B 训练的硬件配置:
    ```shell
     bash examples/llama2/pretrain_llama2_7b_ptd.sh
    ```
-5. 微调
+6. 微调
 
-   5.1 准备微调数据集
+   6.1 准备微调数据集
    下载微调数据集 [这里](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
    ```shell
@@ -181,7 +200,7 @@ LLAMA2-7B 训练的硬件配置:
      --append-eod
    ```
 
-   5.2 全参微调
+   6.2 全参微调
    全参微调的配置脚本基本和预训练脚本一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
 
    增加微调参数--finetune，使微调从第一步开始。
@@ -193,7 +212,7 @@ LLAMA2-7B 训练的硬件配置:
    --is-instruction-dataset \
    ```
 
-   5.3 Lora微调
+   6.3 Lora微调
    Lora微调的脚本配置是在预训练脚本基础上加上lora参数，如下所示:
 
    ```bash
@@ -409,8 +428,10 @@ LLaMA2-13B 训练的硬件配置:
     git clone https://huggingface.co/NousResearch/Llama-2-13b-hf
     ```
 
+4. 权重转换
 
-将权重从 huggingface 格式转化为 magatron 格式
+   4.1 将权重从 huggingface 格式转化为 magatron 格式
+   ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 ```bash
 # 修改 ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
@@ -420,16 +441,32 @@ python tools/checkpoint/util.py --model-type GPT \
     --loader llama2_hf \
     --saver megatron \
     --target-tensor-parallel-size 8 \
+    --load-dir ./llama2-13b-hf \
     --target-pipeline-parallel-size 1 \
     --save-dir ./llama2-13b-hf-tp8 \
     --tokenizer-model ./llama2-13b-hf/tokenizer.model
 ```
+  4.2 任意并行切分策略的 Megatron 权重 格式转化为 HuggingFace权重
+  ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+```shell
+cd ModelLink/
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ../llama213B-v0.1-pt8-pp1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --save-dir ../llama213B_downloaded     # <-- 需要填入原始HF模型路径，新权重会存于../llama213B_downloaded/mg2hg
+```
 
    权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
 
-4. 预训练
+5. 预训练
 
-4.1 准备数据集 
+5.1 准备数据集
 
 下载 LLaMA2-13B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
    
@@ -449,7 +486,7 @@ python tools/checkpoint/util.py --model-type GPT \
        --log-interval 1000 \
        --tokenizer-type PretrainedFromHF
    ```
-   4.2 用ptd模式预训练
+   5.2 用ptd模式预训练
    配置LLaMA2-13B PTD 预训练脚本: examples/llama2/pretrain_llama2_13B_ptd_8p.sh
 
    ```shell
@@ -468,9 +505,9 @@ python tools/checkpoint/util.py --model-type GPT \
    ```shell
     bash examples/llama2/pretrain_llama2_13B_ptd_8p.sh
    ```
-5. 微调
+6. 微调
 
-   5.1 准备微调数据集 \
+   6.1 准备微调数据集 \
    下载微调数据集 [这里](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
    ```shell
@@ -479,8 +516,8 @@ python tools/checkpoint/util.py --model-type GPT \
    cd ./finetune_dataset
    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
    cd ..
-   
-   # 处理微调数据集                            
+
+   # 处理微调数据集
    python ./tools/preprocess_data.py \
      --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
      --tokenizer-name-or-path ./llama-2-13b-hf \
@@ -492,7 +529,7 @@ python tools/checkpoint/util.py --model-type GPT \
      --append-eod
    ```
 
-   5.2 全参微调
+   6.2 全参微调
    全参微调的配置脚本基本和预训练脚本一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
 
    增加微调参数--finetune，使微调从第一步开始。
@@ -504,7 +541,7 @@ python tools/checkpoint/util.py --model-type GPT \
    --is-instruction-dataset \
    ```
 
-   5.3 Lora微调
+   6.3 Lora微调
    Lora微调的脚本配置是在预训练脚本基础上加上lora参数，如下所示:
 
    ```bash
@@ -627,7 +664,7 @@ LLaMA2-34B/70B 训练的硬件配置:
 1. 拷贝仓库到本地服务器:
     ```shell
     git clone -b modellink https://gitee.com/ascend/ModelLink.git 
-    cd ModelLink 
+    cd ModelLink
     mkdir logs
     mkdir ckpt
     ```
@@ -721,11 +758,14 @@ pip install -r requirements.txt
     cd ..
     ```
 
-    将Llama-2-70B权重从huggingface格式转换为Megatron格式
-    ```bash
+4. 权重转换
+
+4.1 将Llama-2-70B权重从huggingface格式转换为Megatron格式
+***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
+  ```bash
     # 配置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    
+
     # 权重格式转换
     python tools/checkpoint/util.py \
     --model-type GPT \
@@ -735,9 +775,11 @@ pip install -r requirements.txt
     --target-pipeline-parallel-size 4 \
     --load-dir ./llama2-70b-hf/ \
     --save-dir ./load_ckpt \
-    --tokenizer-model ./llama2-70b-hf/tokenizer.model                                                                  
-    ```
-    将Llama-2-34B权重从huggingface格式转换为megatron格式
+    --tokenizer-model ./llama2-70b-hf/tokenizer.model
+  ```
+
+4.2 将Llama-2-34B权重从huggingface格式转换为megatron格式
+***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
     ```bash
     # 配置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
@@ -753,11 +795,42 @@ pip install -r requirements.txt
      --tokenizer-model ./llama2-70b-hf/tokenizer.model
     ```
 
+4.3 将Llama-2-70B权重从megatron格式转换为huggingface格式
+***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+```shell
+cd ModelLink/
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ../llama270B-v0.1-pt8-pp1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --save-dir ../llama270B_downloaded     # <-- 需要填入原始HF模型路径，新权重会存于../llama270B_downloaded/mg2hg
+```
+4.4 将Llama-2-34B权重从megatron格式转换为huggingface格式
+***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+```shell
+cd ModelLink/
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ../llama234B-v0.1-pt8-pp1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --save-dir ../llama234B_downloaded     # <-- 需要填入原始HF模型路径，新权重会存于../llama234B_downloaded/mg2hg
+```
+
     权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
 
-4. 预训练
+5. 预训练
 
-    4.1 准备预训练数据集
+    5.1 准备预训练数据集
 
     有两个数据集可以使用: Alpaca 和 Moss. 
 
@@ -836,9 +909,9 @@ pip install -r requirements.txt
     bash examples/llama2/pretrain_llama2_70B_ptd.sh
     ```
 
-5. 微调
+6. 微调
 
-   5.1 准备微调数据集
+   6.1 准备微调数据集
    下载微调数据集 [这里](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
    ```shell
@@ -860,7 +933,7 @@ pip install -r requirements.txt
      --append-eod
    ```
 
-   5.2 全参微调
+   6.2 全参微调
    全参微调的配置脚本基本和预训练脚本一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
 
    增加微调参数--finetune，使微调从第一步开始。
@@ -872,7 +945,7 @@ pip install -r requirements.txt
    --is-instruction-dataset \
    ```
 
-   5.3 Lora微调
+   6.3 Lora微调
    Lora微调的脚本配置是在预训练脚本基础上加上lora参数，如下所示:
 
    ```bash
