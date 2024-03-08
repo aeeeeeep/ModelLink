@@ -45,13 +45,11 @@ enum EncoderLayerTensorId : int {
     IN_MLPVLDOWNWEIGHT,
     IN_MPLVLBIASUP,
     IN_MPLVLBIASDOWN,
-    IN_RELATIVE_POSITION_BIAS,
     OUT_LAYEROUT,
     INTERMIDATE_INPUTNORMOUT,
     INTERMIDATE_QKVBIAS_OUT,
     INTERMIDATE_QKVMIXEDLINEAROUT,
     INTERMIDATE_SELFOUT,
-    INTERMIDATE_MASKEDBIAS,
     INTERMIDATE_QKBIAS_OUT,
     INTERMIDATE_QKVTRANSROUT,
     INTERMIDATE_MIXEDQ,
@@ -65,10 +63,10 @@ enum EncoderLayerTensorId : int {
     INTERMIDATE_GAMMA2_VL_OUT,
 };
 
-static const uint64_t IN_TENSOR_COUNT = 25;
+static const uint64_t IN_TENSOR_COUNT = 24;
 static const uint64_t OUT_TENSOR_COUNT = 1;
-static const uint64_t INTERMEDIATE_TENSOR_COUNT = 16;
-static const uint64_t NODE_COUNT = 15;
+static const uint64_t INTERMEDIATE_TENSOR_COUNT = 15;
+static const uint64_t NODE_COUNT = 14;
 
 atb::Status EncoderVlLayer(const EncoderVllayerParam &param, atb::Operation **operation)
 {
@@ -81,7 +79,6 @@ atb::Status EncoderVlLayer(const EncoderVllayerParam &param, atb::Operation **op
     opGraph.name = GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
 
     size_t nodeId = 0;
-    atb::Node &maskFillBiasNode = opGraph.nodes.at(nodeId++);
     atb::Node &inputNormNode = opGraph.nodes.at(nodeId++);
     atb::Node &catQKNode = opGraph.nodes.at(nodeId++);
     atb::Node &catKVNode = opGraph.nodes.at(nodeId++);
@@ -96,37 +93,6 @@ atb::Status EncoderVlLayer(const EncoderVllayerParam &param, atb::Operation **op
     atb::Node &mlpVlNode = opGraph.nodes.at(nodeId++);
     atb::Node &gama2MultVlNode = opGraph.nodes.at(nodeId++);
     atb::Node &selfResidualVlAddNode = opGraph.nodes.at(nodeId++);
-
-    atb::infer::FillParam maskfillParam;
-    maskfillParam.value = {-10000};
-    maskfillParam.withMask = true;
-    CREATE_OPERATION(maskfillParam, &maskFillBiasNode.operation);
-    maskFillBiasNode.inTensorIds = {IN_RELATIVE_POSITION_BIAS, IN_ATTENTIONMASK};
-    maskFillBiasNode.outTensorIds = {INTERMIDATE_MASKEDBIAS};
-    maskFillBiasNode.inTensorReshapeFuncs.resize(maskFillBiasNode.inTensorIds.size());
-    maskFillBiasNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        if (oldShape.dimNum == 3) {
-            newShape.dimNum = 4;
-            newShape.dims[0] = 1;
-            newShape.dims[1] = oldShape.dims[0];
-            newShape.dims[2] = oldShape.dims[1];
-            newShape.dims[3] = oldShape.dims[2];
-        } else {
-            newShape = oldShape;
-        }
-    };
-
-    maskFillBiasNode.inTensorReshapeFuncs.at(1) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        if (oldShape.dimNum == 2) {
-            newShape.dimNum = 4;
-            newShape.dims[0] = 1;
-            newShape.dims[1] = 1;
-            newShape.dims[2] = oldShape.dims[0];
-            newShape.dims[3] = oldShape.dims[1];
-        } else {
-            newShape = oldShape;
-        }
-    };
 
     atb::infer::LayerNormParam layerNormParam;
     layerNormParam.layerType = atb::infer::LayerNormParam::LayerNormType::LAYER_NORM_NORM;
@@ -179,7 +145,7 @@ atb::Status EncoderVlLayer(const EncoderVllayerParam &param, atb::Operation **op
     selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MASK_TYPE_ALIBI;
     CREATE_OPERATION(selfAttentionParam, &selfAttentionNode.operation);
     selfAttentionNode.inTensorIds = {INTERMIDATE_MIXEDQ, INTERMIDATE_MIXEDK, INTERMIDATE_MIXEDV,
-                                     IN_PASTKEY,         IN_PASTVALUE,       INTERMIDATE_MASKEDBIAS,
+                                     IN_PASTKEY,         IN_PASTVALUE,       IN_ATTENTIONMASK,
                                      IN_TOKENOFFSET,     IN_SEQLEN,          IN_LAYERID};
     selfAttentionNode.outTensorIds = {INTERMIDATE_SELFOUT};
     selfAttentionNode.inTensorReshapeFuncs.resize(selfAttentionNode.inTensorIds.size());
