@@ -131,8 +131,7 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
         faWithROPEParam.selfAttentionKvCacheParam.calcType = atb::infer::SelfAttentionParam::DECODER;
     }
     // RoPE param
-    faWithROPEParam.rotaryCoeff = 2;
-    faWithROPEParam.isHalfRotary = true;
+    faWithROPEParam.rotaryCoeff = 4;
     // self out linear param
     faWithROPEParam.selfOutLinearParam.commParam.rank = param.rank;
     faWithROPEParam.selfOutLinearParam.commParam.rankSize = param.rankSize;
@@ -217,7 +216,7 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
     mlpParam.commDownParam.rank = param.rank;
     mlpParam.commDownParam.rankSize = param.rankSize;
     mlpParam.commDownParam.backend = param.backend;
-    mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_GELU;
+    mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_FAST_GELU;
     if (param.quantmodel) {
         mlpParam.quantUpParam.quantType = atb::infer::QUANT_INT8;
         mlpParam.quantUpParam.isQuantOp = false;
