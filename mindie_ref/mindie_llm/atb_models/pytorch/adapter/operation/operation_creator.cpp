@@ -23,6 +23,7 @@
 
 #include "atb_speed/log.h"
 #include "atb_speed/utils/operation_factory.h"
+#include "layers/topktopp.h"
 
 using OperationCreateFunc = std::function<atb::Operation *(const nlohmann::json &paramJson)>;
 
@@ -227,7 +228,32 @@ static atb::Operation *ActivationOperationCreate(const nlohmann::json &paramJson
     return op;
 }
 
+static atb::Operation *CreateTopktopp(const nlohmann::json &paramJson)
+{
+    atb_speed::layers::TopktoppParam param;
+    // for (auto item : paramJson["axes"]) {
+    //     param.axes.push_back(item.get<int64_t>());
+    //     }
+    param.axes = paramJson["axes"];
+    param.headNum = paramJson["headNum"].get<uint32_t>();
+    param.topk = paramJson["topk"].get<uint32_t>();
+    param.vocsize = paramJson["vocsize"].get<uint32_t>();
+    param.row = paramJson["row"].get<uint32_t>();
+    param.randseed = paramJson["randseed"].get<uint32_t>();
+    param.min_tokens_to_keep = paramJson["min_tokens_to_keep"].get<uint32_t>();
+    if (paramJson.find("filter_value") != paramJson.end()){
+        param.filter_value = paramJson["filter_value"].get<float>();
+    }
+    // param.filter_value = paramJson["filter_value"].get<float>();
+    ATB_LOG(INFO) << "axes:" << param.axes << "headNum:" << param.headNum << "topk:" << param.topk << "vocsize:" << param.vocsize << "row:" << param.row
+    << "min_tokens_to_keep:" << param.min_tokens_to_keep;
+    atb::Operation *op;
+    atb_speed::layers::Topktopp(param, &op);
+    return op;
+}
+
 std::map<std::string, OperationCreateFunc> g_funcMap = {
+    {"Layerstopktopp", &CreateTopktopp},
     {"RmsPreNormQuantOperation", &RmsPreNormQuantOperationCreate},
     {"RmsNormQuantOperation", &RmsNormQuantOperationCreate},
     {"AllReduceOperation", &AllReduceOperationCreate},

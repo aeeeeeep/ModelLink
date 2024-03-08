@@ -6,6 +6,8 @@ import os
 import time
 
 import torch
+import random
+from dataclasses import dataclass
 from atb_llm.runner import ModelRunner
 from atb_llm.utils.cpu_binding import NpuHbmInfo
 from atb_llm.utils.env import ENV
@@ -14,8 +16,15 @@ from examples.server.cache import CacheConfig, ModelConfig, CacheManager
 from examples.server.generate import decode_token, generate_req
 from examples.server.request import request_from_text, request_from_token
 
+@dataclass
+class Test_data:
+    random_seed: int
+    temperature:float
+    top_k: int
+    top_p: float
+    min_tokens_to_keep: int
 
-class PARunner:
+class PARunner:        
     def __init__(self, **kwargs):
         self.rank = kwargs.get('rank', '0')
         self.world_size = kwargs.get('world_size', '1')
@@ -120,7 +129,7 @@ class PARunner:
         print_log(self.rank, logger.info, f'warmup_memory(GB): {self.warm_up_memory / (1024 ** 3): .2f}')
         print_log(self.rank, logger.info, "---------------end warm_up---------------")
 
-    def infer(self, input_texts, batch_size, max_output_length, ignore_eos, input_ids=None):
+    def infer(self, input_texts, batch_size, max_output_length, ignore_eos, test_data, input_ids=None, do_sample=False):
         print_log(self.rank, logger.info, "---------------begin inference---------------")
         if input_ids:
             if len(input_ids) == 1:
@@ -137,6 +146,7 @@ class PARunner:
             else:
                 req_list = [request_from_text(input_text, self.tokenizer, max_output_length, self.block_size, req_idx=i) \
                             for i, input_text in enumerate(input_texts)]
+
         print_log(self.rank, logger.debug, f'req_list[0].input_ids: {req_list[0].input_ids}')
 
         if not self.cache_manager:
@@ -163,14 +173,14 @@ class PARunner:
         if ENV.benchmark_enable:
             req_list_dummy = copy.deepcopy(req_list)
             generate_req(req_list_dummy, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                         2, self.cache_manager, self.rank, ignore_eos)
+                         2, self.cache_manager, self.rank, ignore_eos, test_data, do_sample)
 
         if not ENV.profiling_enable:
             print_log(self.rank, logger.debug, "no profiling")
             torch.npu.synchronize()
             e2e_start = time.time()
             generate_req(req_list, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                         max_output_length, self.cache_manager, self.rank, ignore_eos)
+                         max_output_length, self.cache_manager, self.rank, ignore_eos, test_data, do_sample)
             _, _ = decode_token(req_list, self.tokenizer)
             torch.npu.synchronize()
             e2e_end = time.time()
@@ -185,7 +195,7 @@ class PARunner:
             e2e_start = time.time()
             with torch.npu.profile(profiling_path):
                 generate_req(req_list, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                             max_output_length, self.cache_manager, self.rank, ignore_eos)
+                             max_output_length, self.cache_manager, self.rank, ignore_eos, test_data, do_sample)
             torch.npu.synchronize()
             e2e_end = time.time()
             e2e_time = e2e_end - e2e_start
@@ -221,8 +231,8 @@ def parse_arguments():
         help='CSV or Numpy file containing tokenized input. Alternative to text input.',
         default=None)
     parser.add_argument('--max_position_embeddings', type=int, default=None)
-    parser.add_argument('--max_input_length', type=int, default=1024)
-    parser.add_argument('--max_output_length', type=int, default=20)
+    parser.add_argument('--max_input_length', type=int, default=102)
+    parser.add_argument('--max_output_length', type=int, default=200)
     parser.add_argument('--max_prefill_tokens', type=int, default=-1)
     parser.add_argument("--max_batch_size", type=int, default=1)
     parser.add_argument("--block_size", type=int, default=128)
@@ -233,9 +243,11 @@ def parse_arguments():
                         type=int,
                         help="Use beam search if num_beams >1",
                         default=1)
+    parser.add_argument('--random_seed', type=int, default=random.randint(1,100))
     parser.add_argument('--temperature', type=float, default=1.0)
-    parser.add_argument('--top_k', type=int, default=1)
-    parser.add_argument('--top_p', type=float, default=0.0)
+    parser.add_argument('--top_k', type=int, default=2)
+    parser.add_argument('--top_p', type=float, default=0.9)
+    parser.add_argument('--min_tokens_to_keep', type=int, default=1)
     parser.add_argument('--length_penalty', type=float, default=1.0)
     parser.add_argument('--repetition_penalty', type=float, default=1.0)
     parser.add_argument('--presence_penalty', type=float, default=0.0)
@@ -258,11 +270,12 @@ if __name__ == '__main__':
     }
 
     pa_runner = PARunner(**input_dict)
+    test_data = Test_data(args.random_seed, args.temperature, args.top_k, args.top_p, args.min_tokens_to_keep)
     print_log(rank, logger.info, f'pa_runner: {pa_runner}')
     pa_runner.warm_up()
 
     generate_texts, token_nums, _ = pa_runner.infer(args.input_texts, args.max_batch_size, args.max_output_length,
-                                                    args.ignore_eos, args.input_ids)
+                                                    args.ignore_eos, test_data, args.input_ids, do_sample=True)
 
     for i, generate_text in enumerate(generate_texts):
         length = len(args.input_ids) if args.input_ids else len(args.input_texts)
