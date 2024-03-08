@@ -13,6 +13,15 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BloomTokenizerFast
 
 from modeling_bloom_ascend import BloomCommonForCausalLM as BloomForCausalLM
 
+class CutWeightsConfig:
+    def __init__(self, state_dict, world_size, config):
+        self.state_dict = state_dict
+        self.world_size = world_size
+        self.config = config
+        self.recuce_bias = False
+        self.cut_row_keys = ('dense_h_to_4h',)
+        self.cut_col_keys = ('dense', 'dense_4h_to_h', 'word_embeddings')
+        
 
 def get_args():
     parser = argparse.ArgumentParser(description="Bloom info.")
@@ -65,7 +74,10 @@ def get_calib_dataset(tokenizer):
 
 
 def bias_correction(fp_bias, quant_weight, weight_scale):
-    bias_out = fp_bias / weight_scale - quant_weight.to(torch.float32).sum(dim=1)
+    try:
+        bias_out = fp_bias / weight_scale - quant_weight.to(torch.float32).sum(dim=1)
+    except:
+        raise Exception("bias correction failed.")
     return bias_out
 
 
@@ -106,7 +118,7 @@ def quant_model(args_quant, verbose=False):
     saved_float_keys = []
     weights_keys = model.state_dict().keys()
     for weights_key in weights_keys:
-        print(weights_key, "."*(80-len(str(weights_key))), model.state_dict()[weights_key].shape)
+        print(weights_key, "." * ( 80 - len(str(weights_key))), model.state_dict()[weights_key].shape)
 
         key_split = weights_key.split('.')
         is_split_layer = any(_n in key_split for _n in ('input_layernorm', 'post_attention_layernorm', 'bias'))
@@ -145,42 +157,45 @@ def quant_model(args_quant, verbose=False):
 
 
 
-def cut_weights(state_dict, world_size, config, recuce_bias=False, cut_row_keys=('dense_h_to_4h',), cut_col_keys=('dense', 'dense_4h_to_h', 'word_embeddings')):
-    state_dict_list = [{} for i in range(world_size)]
-    for key, tensor in state_dict.items():
-        if "lm_head" in key: continue
+def cut_weights(cfg):
+    state_dict_list = [{} for i in range(cfg.world_size)]
+    for key, tensor in cfg.state_dict.items():
+        if "lm_head" in key:
+            continue
 
         key_short = key.split('.')[-2]
         key_type = key.split('.')[-1]
 
         if key_short == 'query_key_value':
-            num_heads, head_dim = config.n_head, config.hidden_size // config.n_head
+            num_heads, head_dim = cfg.config.n_head, cfg.config.hidden_size // cfg.config.n_head
             dst_shape = list(tensor.shape)
-            dst_shape[0] //= world_size
+            dst_shape[0] //= cfg.world_size
 
             tensor = tensor.view(num_heads, 3, head_dim, -1)
             tensor_list = torch.unbind(tensor, dim=1)
-            chunk_tensor_list = [torch.chunk(item, world_size, dim=0) for item in tensor_list]
+            chunk_tensor_list = [torch.chunk(item, cfg.world_size, dim=0) for item in tensor_list]
             cut_tensor_list = [torch.cat(item, 1).reshape(*dst_shape) for item in zip(*chunk_tensor_list)]
         else:
-            if key_short in cut_row_keys:
-                cut_tensor_list = torch.chunk(tensor, world_size, dim=0)
-            elif key_short in cut_col_keys:
+            if key_short in cfg.cut_row_keys:
+                cut_tensor_list = torch.chunk(tensor, cfg.world_size, dim=0)
+            elif key_short in cfg.cut_col_keys:
                 if key_type == "weight":
-                    cut_tensor_list = torch.chunk(tensor, world_size, dim=1)
+                    cut_tensor_list = torch.chunk(tensor, cfg.world_size, dim=1)
                 elif key_type == "bias":
-                    cut_tensor_list = [tensor] * world_size
+                    cut_tensor_list = [tensor] * cfg.world_size
             else:
-                cut_tensor_list = [tensor] * world_size
+                cut_tensor_list = [tensor] * cfg.world_size
 
-        for i in range(world_size):
+        for i in range(cfg.world_size):
             state_dict_list[i][key] = torch.clone(cut_tensor_list[i].contiguous())
     return state_dict_list
 
 
 def cut_weights_quant(weight_type, state_dict, world_size, config, recuce_bias=False):
     state_dict = {k + "." + weight_type: v for k, v in state_dict.items()}
-    state_dict_list = cut_weights(state_dict, world_size, config, recuce_bias)
+    cut_weights_config = CutWeightsConfig(state_dict, world_size, config)
+    cut_weights_config.recuce_bias = recuce_bias
+    state_dict_list = cut_weights(cut_weights_config)
     state_dict_list = [{k.rstrip(weight_type)[:-1]: v for k, v in state_dict_tmp.items()} for state_dict_tmp in state_dict_list]
     return state_dict_list
 
@@ -191,8 +206,8 @@ def cut_model_float(args_float):
     model = model.half().to(device)
     
     tokenizer.save_pretrained(os.path.join(args_float.output_path, 'tokenizer'))
-
-    state_dict_list = cut_weights(model.state_dict(), args_float.world_size, model.config)
+    cut_weights_config = CutWeightsConfig(model.state_dict(), args_float.world_size, model.config)
+    state_dict_list = cut_weights(cut_weights_config)
     model_config = model.config
     model_config.world_size = args_float.world_size
     create_model = BloomForCausalLM(model_config).half().to(device)
@@ -217,8 +232,8 @@ def cut_model_quant(args_quant):
 
     state_quant_weight_dict_list = cut_weights_quant("weight", quant_weight_dict, args_quant.world_size, config)
     state_weight_scale_dict_list = cut_weights_quant("bias", weight_scale_dict, args_quant.world_size, config)
-
-    float_weight_dict_list = cut_weights(float_weight_dict, args_quant.world_size, config)
+    cut_weights_config = CutWeightsConfig(float_weight_dict, args_quant.world_size, config)
+    float_weight_dict_list = cut_weights(cut_weights_config)
 
     save_path = os.path.join(args_quant.output_path, 'part_model')
     print(f"=========part quant weight path:{save_path} ==========")
