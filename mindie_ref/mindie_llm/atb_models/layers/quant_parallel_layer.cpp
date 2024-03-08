@@ -165,7 +165,5 @@ atb::Status QuantColumnParallelLinear(const QuantParallelParam &param_, atb::Ope
     return QuantParallelLinear(param_, operation, COLUMN_PARALLEL);
 }
 
-atb::Status QuantVocabParallelEmbedding(const QuantParallelParam &param_, atb::Operation **operation) { return 0; }
-
 } // namespace common
 } // namespace atb_speed

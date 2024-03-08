@@ -100,7 +100,6 @@ public:
 
 atb::Status QuantRowParallelLinear(const QuantParallelParam &param, atb::Operation **operation);
 atb::Status QuantColumnParallelLinear(const QuantParallelParam &param, atb::Operation **operation);
-atb::Status QuantVocabParallelEmbedding(const QuantParallelParam &param, atb::Operation **operation);
 } // namespace common
 } // namespace atb_speed
 
