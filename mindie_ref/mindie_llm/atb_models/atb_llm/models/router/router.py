@@ -8,7 +8,7 @@ from transformers import AutoTokenizer
 from ..llama.modeling_llama import LlamaConfig
 from ..qwen.config import QWenConfig
 from ..starcoder.flash_causal_starcoder import StarcoderConfig
-
+from ..telechat.config import TelechatConfig
 
 @dataclass
 class BaseRouter:
@@ -128,7 +128,12 @@ class TelechatRouter(BaseRouter):
 
     @property
     def config(self):
-        pass
+        config = TelechatConfig.from_pretrained(self.model_name_or_path,
+                                             revision=self.revision,
+                                             trust_remote_code=self.trust_remote_code)
+        if self.max_position_embeddings:
+            config.max_position_embeddings = self.max_position_embeddings
+        return config
 
 @dataclass
 class StarcoderRouter(BaseRouter):
