@@ -20,5 +20,3 @@ class W8A16LinearStatic(nn.Module):
 
         if bias is not None:
             self.register_buffer('bias', bias)
-        else:
-            self.bias = None
