@@ -571,7 +571,7 @@ class BaseTransformer(torch.nn.Module):
             # print(real_weight.keys())
             offset_weight = torch.load(offset_path)['module']
             scale_weight = torch.load(scale_path)['module']
-            cut_col_keys=["attention.dense", "4h_to_h"]
+            cut_col_keys = ["attention.dense", "4h_to_h"]
             for key in offset_weight.keys():
                 if cut_col_keys[0] in key or cut_col_keys[1] in key:
                     continue

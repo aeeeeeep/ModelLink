@@ -35,12 +35,12 @@ struct FusionMlpParam {
     bool transposeB = false;
     bool isBias = false;
     bool isPack = false;
-    std::string backend = "hccl";    
+    std::string backend = "hccl";
 };
 
 atb::Status FusionMlp(const FusionMlpParam &param, atb::Operation **operation);
 
-static atb::Operation *CreateFusionMlp(const nlohmann::json &paramJson)
+atb::Operation *CreateFusionMlp(const nlohmann::json &paramJson)
 {
     FusionMlpParam param;
     if (paramJson.contains("transpose")) {

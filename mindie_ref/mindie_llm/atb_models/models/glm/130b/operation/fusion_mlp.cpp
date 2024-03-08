@@ -40,8 +40,6 @@ enum MlpTensorId : int {
     INTERMEDIATE_SPLIT_OUTPUTB_ID,
     INTERMEDIATE_GELU_OUTPUT_ID,
     INTERMEDIATE_GEGLU_OUTPUT_ID,
-
-    
 };
 
 atb::Status FusionMlpBase(const FusionMlpParam &param, atb::Operation **operation)
@@ -52,7 +50,6 @@ atb::Status FusionMlpBase(const FusionMlpParam &param, atb::Operation **operatio
     opGraph.internalTensorNum = 5;
     opGraph.nodes.resize(5);
     opGraph.name = "fusion_mlp";
-
 
     size_t nodeId = 0;
     auto &matmulGateUpNode = opGraph.nodes.at(nodeId++);
@@ -76,7 +73,6 @@ atb::Status FusionMlpBase(const FusionMlpParam &param, atb::Operation **operatio
         newShape.dims[1] = oldShape.dims[2];
     };
     
-
     atb::infer::SplitParam splitParam;
     splitParam.splitDim = 2; // 2: 在第三维上进行切分
     splitParam.splitNum = 2; // 2: 进行二等分
@@ -113,11 +109,11 @@ atb::Status FusionMlpBase(const FusionMlpParam &param, atb::Operation **operatio
     if (matmulDownParam.isBias) {
         matmulDownNode.inTensorIds = {INTERMEDIATE_GEGLU_OUTPUT_ID, IN_WEIGHT_DOWN_ID,
                                       IN_ANTIQUQNT_SCALE_6, IN_ANTIQUQNT_OFFSET_6, IN_BIAS_DOWN_ID};
-    } else{
+    } else {
         matmulDownNode.inTensorIds = {INTERMEDIATE_GEGLU_OUTPUT_ID, IN_WEIGHT_DOWN_ID,
                                       IN_ANTIQUQNT_SCALE_6, IN_ANTIQUQNT_OFFSET_6};
     }
-	matmulDownNode.outTensorIds = {OUT_TRANSPOSED_RESULT_ID};
+    matmulDownNode.outTensorIds = {OUT_TRANSPOSED_RESULT_ID};
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {

@@ -185,7 +185,7 @@ atb::Status CreateFusionParallelLayer(const FusionParallelLayerParam &param, atb
     mlpParam.isBias = true;
     mlpParam.backend = param.backend;
     atb_speed::common::FusionMlp(mlpParam, &mlpNode.operation);
-    mlpNode.inTensorIds = {INTERMEDIATE_SELFNORMOUT_ID, 
+    mlpNode.inTensorIds = {INTERMEDIATE_SELFNORMOUT_ID,
                            IN_MLPLINEARWEIGHT_ID, IN_MLPOUTLINEARWEIGHT_ID,
                            IN_MLPLINEARBIAS_ID, IN_MLPOUTLINEARBIAS_ID,
                            IN_ANTIQUQNT_SCALE_MLPUP, IN_ANTIQUQNT_OFFSET_MLPUP,

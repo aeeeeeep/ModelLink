@@ -49,7 +49,8 @@ def get_tokenized_input(item, key):
         return item[key]
     tokenizer = get_tokenizer()
     pretokenized_key = key + "_pretokenized"
-    assert pretokenized_key in item
+    if pretokenized_key not in item:
+        raise(f'{pretokenized_key}not in item')
     if isinstance(item[pretokenized_key], list):
         result = []
         for raw in item[pretokenized_key]:
