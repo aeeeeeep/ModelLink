@@ -75,8 +75,8 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
         return atb::ERROR_INVALID_GRAPH;
     }
     fusionAttentionParam.selfAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
+    fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
     if (param.isFA) {
-        fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
         fusionAttentionParam.selfAttentionParam.calcType = param.isPrefill ? \
             atb::infer::SelfAttentionParam::CalcType::ENCODER : atb::infer::SelfAttentionParam::CalcType::DECODER;
     } else {
