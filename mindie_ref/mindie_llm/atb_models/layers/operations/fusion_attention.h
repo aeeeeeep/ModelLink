@@ -35,6 +35,7 @@ struct FusionAttentionParam {
     bool isBF16 = false;
     bool isAntiOutlier = false;
     bool qkvHasBias = false;
+    bool normHasBias = false;
     int packQuantType = atb_speed::common::PackQuantType::ALL_FP;
     std::vector<int> layerLinearQuantType;
     NormParamType normParamType;

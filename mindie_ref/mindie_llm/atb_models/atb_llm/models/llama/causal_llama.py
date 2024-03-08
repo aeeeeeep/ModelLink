@@ -93,8 +93,8 @@ class LlamaForCausalLM(CausalLM):
             "worldSize": self.tp_world_size,
             "backend": "hccl" if self.soc_info.need_nz else "lccl"
         }
-        encoder_param = {**coder_param, "isPrefill": True}
-        decoder_param = {**coder_param, "isPrefill": False}
+        encoder_param = {**coder_param, "isPrefill": True, "supportLcoc": False if self.soc_info.need_nz else True}
+        decoder_param = {**coder_param, "isPrefill": False, "supportLcoc": False}
         self.acl_encoder_operation.set_param(json.dumps({**encoder_param}))
         self.acl_decoder_operation.set_param(json.dumps({**decoder_param}))
 
