@@ -142,7 +142,7 @@ atb::Status PAW8A8Model::InferShape(
 int64_t PAW8A8Model::BuildGraph()
 {
     // set size
-    const int weightTensorSize = WEIGHT_COUNT_WORD_EMBEDDINGNODE + WEIGHT_COUNT_PER_LAYER * param_.numHiddenLayers + 
+    const int weightTensorSize = WEIGHT_COUNT_WORD_EMBEDDINGNODE + WEIGHT_COUNT_PER_LAYER * param_.numHiddenLayers +
                                  WEIGHT_COUNT_POST_NORM + WEIGHT_COUNT_LM_HEAD;
     graph_.weightTensors.resize(weightTensorSize);
 
