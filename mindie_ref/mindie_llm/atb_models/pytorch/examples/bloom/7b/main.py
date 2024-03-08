@@ -439,7 +439,7 @@ def performance_test(args):
         test_cases = [(args.batch, seq_len_in, seq_len_out) for seq_len_in, seq_len_out in zip(args.seqlen_in_pair, args.seqlen_out_pair)]
     else:
         assert len(args.seqlen_in_range) == len(args.seqlen_out_range) == 2, "length for seqlen_in_range and seqlen_out_range which is [begin, end]!"
-        batch_sizes = [args.batch]
+        batch_sizes = list(range(16, 1280, 2))
         seq_lens_in = [2**x for x in range(args.seqlen_in_range[0], args.seqlen_in_range[1] + 1)]
         seq_lens_out = [2**x for x in range(args.seqlen_out_range[0], args.seqlen_out_range[1] + 1)]
         test_cases = product(*[batch_sizes, seq_lens_in, seq_lens_out])

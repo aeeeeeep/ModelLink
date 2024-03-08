@@ -3,6 +3,7 @@ import importlib
 from dataclasses import dataclass
 from typing import Optional, Any
 
+from transformers import AutoTokenizer, AutoConfig
 from transformers import AutoTokenizer
 from transformers.configuration_utils import PretrainedConfig
 
@@ -288,3 +289,30 @@ class InternlmRouter(BaseRouter):
             trust_remote_code=self.trust_remote_code,
             use_fast=False
         )
+
+
+@dataclass
+class BloomRouter(BaseRouter):
+
+    @property
+    def model_version(self):
+        """
+        次级模型名称，比如 7b 176b
+        :return:
+        """
+        if self.config_dict['n_layer'] == 30:  # 7b 30层, 176b 70层
+            model_ver = "7b"
+        else:
+            model_ver = "176b"
+        return model_ver
+
+    @property
+    def config(self):
+        config = AutoConfig.from_pretrained(
+            self.model_name_or_path,
+            revision=self.revision,
+            trust_remote_code=self.trust_remote_code
+            )
+        if self.max_position_embeddings:
+            config.seq_length = self.max_position_embeddings
+        return config
