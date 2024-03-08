@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 #include "paged_attention_model.h"
-
 #include <atb/atb_infer.h>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wtype-limits"
