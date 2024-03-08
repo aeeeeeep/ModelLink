@@ -275,9 +275,6 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
         生成mask
         """
         pad_max_s = max_s
-        if self.soc_info.need_nz:
-            nz_pad = math.ceil(max_s / 16) * 16 - max_s
-            pad_max_s = max_s + nz_pad
         attention_mask = self.ascend_atten_mask.get_attn_mask(pad_max_s, kv_cache[0][0].dtype, kv_cache[0][0].device)
 
         total_alibi_mask = self.get_alibi_mask(self.place_holder, pad_max_s)
@@ -290,11 +287,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             attention_mask = total_alibi_mask  # [40, 1024, 1024] [head_num,max_s,max_s]
             attention_mask = attention_mask[:, -1:, :]
             logger.debug(f"final attention_mask shape in {self.is_prefill=} is {attention_mask.shape}")
-        if self.soc_info.need_nz:
-            attention_mask = attention_mask.unsqueeze(0)
-            attention_mask = attention_mask.repeat(self.batch_size, 1, 1, 1)
-            attention_mask = self.ntoken_transdata(attention_mask)
-            logger.debug(f"final attention_mask shape after transdata is {attention_mask.shape}")
+        
         return attention_mask
 
     # attention_mask
