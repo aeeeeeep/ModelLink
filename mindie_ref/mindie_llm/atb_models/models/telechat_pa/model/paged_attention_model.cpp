@@ -1,4 +1,4 @@
-/*quant_layer
+/* quant_layer
  * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -95,7 +95,7 @@ uint32_t PAModel::GetOutputNum() const
 {return graph_.outTensors.size(); }
 
 atb::Status PAModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
-                                      std::vector<atb::TensorDesc> &outTensorDescs)
+                                std::vector<atb::TensorDesc> &outTensorDescs)
 {
     if (outTensorDescs.size() != GetOutputNum()) {
         return atb::ERROR_INVALID_GRAPH;
