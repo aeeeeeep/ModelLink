@@ -35,7 +35,6 @@ struct FusionAttentionParam {
     bool isBF16 = false;
     bool isAntiOutlier = false;
     bool qkvHasBias = false;
-    bool selfAttnHasBias = false;
     int packQuantType = atb_speed::common::PackQuantType::ALL_FP;
     std::vector<int> layerLinearQuantType;
     NormParamType normParamType;
@@ -51,8 +50,9 @@ struct FusionAttentionParam {
     atb::infer::SelfAttentionParam selfAttentionParam;
     atb::infer::PagedAttentionParam pageAttentionParam;
     // self out linear param
-    atb_speed::common::TensorParallelInfo selfOutLinearTensorParallelInfo;
+    bool selfAttnHasBias = false;
     bool supportLcoc = false;
+    atb_speed::common::TensorParallelInfo selfOutLinearTensorParallelInfo;
 };
 
 template <typename NormParamType>

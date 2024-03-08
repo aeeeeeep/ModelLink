@@ -78,7 +78,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
                 = param.layerLinearQuantType[4] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
         }
         gateUpNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
-        gateUpNormLinearParam.fusionLinearParam.hasBias = param.hasBias;
+        gateUpNormLinearParam.fusionLinearParam.hasBias = param.gateUpHasBias;
         gateUpNormLinearParam.normParamType = param.normParamType;
         gateUpNormLinearParam.normQuantParamType = param.normQuantParamType;
         NormLinear<NormParamType>(gateUpNormLinearParam, &normLinearGateUpNode.operation);
@@ -106,7 +106,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
                 = param.layerLinearQuantType[4] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
         }
         gateNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
-        gateNormLinearParam.fusionLinearParam.hasBias = param.hasBias;
+        gateNormLinearParam.fusionLinearParam.hasBias = param.gateUpHasBias;
         gateNormLinearParam.normParamType = param.normParamType;
         gateNormLinearParam.normQuantParamType = param.normQuantParamType;
         NormLinear<NormParamType>(gateNormLinearParam, &normLinearGateNode.operation);
@@ -134,7 +134,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
                 = param.layerLinearQuantType[5] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
         }
         upNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
-        upNormLinearParam.fusionLinearParam.hasBias = param.hasBias;
+        upNormLinearParam.fusionLinearParam.hasBias = param.gateUpHasBias;
         upNormLinearParam.normParamType = param.normParamType;
         upNormLinearParam.normQuantParamType = param.normQuantParamType;
         NormLinear<NormParamType>(upNormLinearParam, &normLinearUpNode.operation);
@@ -177,8 +177,8 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
     }
     downLinearParallelParam.biasAfterSync = param.downLinearTensorParallelInfo.worldSize > 1 \
         && downLinearParallelParam.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::NO_QUANT \
-        && param.hasBias;
-    downLinearParallelParam.fusionLinearParam.hasBias = param.hasBias && !downLinearParallelParam.biasAfterSync;
+        && param.downHasBias;
+    downLinearParallelParam.fusionLinearParam.hasBias = param.downHasBias && !downLinearParallelParam.biasAfterSync;
     downLinearParallelParam.fusionLinearParam.isBF16 = param.isBF16;
     downLinearParallelParam.tensorParallelInfo = param.downLinearTensorParallelInfo;
     downLinearParallelParam.supportLcoc = param.supportLcoc;
