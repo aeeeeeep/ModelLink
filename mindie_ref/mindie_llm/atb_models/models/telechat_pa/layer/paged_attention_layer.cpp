@@ -38,12 +38,12 @@ enum PALayerTensorId {
     IN_COSEMBED,
     IN_SINEMBED,
     IN_ATTENTIONMASK,
-    IN_HOLDER,
     IN_K_CACHE,
     IN_V_CACHE,
     IN_BLOCK_TABLES,
     IN_SLOTS,
     IN_INPUT_LENGTHS,   // 33
+    IN_HOLDER,
 
     OUT_TELECHATLAYEROUT,
 
@@ -76,6 +76,28 @@ void ReshapeHeads(const atb::Dims &oldShape, atb::Dims &newShape, int headNum)
     newShape.dims[2] = oldShape.dims[1] / headNum;
 }
 
+void from_json(const nlohmann::json &paramJson, PALayerParam &param)
+{
+    paramJson.at("rmsNormEps").get_to(param.rmsNormEps);
+    paramJson.at("headNum").get_to(param.headNum);
+    paramJson.at("dk").get_to(param.dk);
+    if (paramJson.contains("rank")) {
+        paramJson.at("rank").get_to(param.rank);
+    }
+    if (paramJson.contains("rankSize")) {
+        paramJson.at("rankSize").get_to(param.rankSize);
+    }
+    if (paramJson.contains("transposedWeight")) {
+        paramJson.at("transposedWeight").get_to(param.transposedWeight);
+    }
+    if (paramJson.contains("isPrefill")) {
+        paramJson.at("isPrefill").get_to(param.isPrefill);
+    }
+    if (paramJson.contains("backend")) {
+        paramJson.at("backend").get_to(param.backend);
+    }
+}
+
 atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
 {
     ATB_LOG(INFO) << __func__ << " called, headNum: " << param.headNum;
@@ -96,7 +118,9 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     atb::Node &mixedKVLinearNode = opGraph.nodes.at(nodeId++);
     atb::Node &splitKVNode = opGraph.nodes.at(nodeId++);
     atb::Node &ropeNode = opGraph.nodes.at(nodeId++);
+    atb::Node &reshapeAndCacheNode = opGraph.nodes.at(nodeId++);
     atb::Node &attentionNode = opGraph.nodes.at(nodeId++);
+    atb::Node &selfOutLinearNode = opGraph.nodes.at(nodeId++);
     atb::Node &selfResidualAddNode = opGraph.nodes.at(nodeId++);
     atb::Node &selfNormNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpNode = opGraph.nodes.at(nodeId++);
@@ -107,7 +131,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     atb::infer::RmsNormParam rmsNormParam;
     rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     rmsNormParam.normParam.epsilon = param.rmsNormEps;
-    CreateOperation(rmsNormParam, &inputNormNode.operation);
+    CREATE_OPERATION(rmsNormParam, &inputNormNode.operation);
     inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT };
     inputNormNode.outTensorIds = { INTERNAL_INPUTNORMOUT };
 
@@ -116,7 +140,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     atb::infer::LinearParam linearQParam;
     linearQParam.hasBias = false;
     linearQParam.transposeB = param.transposedWeight;
-    CreateOperation(linearQParam, &mixedQLinearNode.operation);
+    CREATE_OPERATION(linearQParam, &mixedQLinearNode.operation);
     mixedQLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_QMIXEDWEIGHT };
     mixedQLinearNode.outTensorIds = { INTERNAL_QMIXEDLINEAROUT };
 
@@ -125,7 +149,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     atb::infer::LinearParam linearKVParam;
     linearKVParam.hasBias = false;
     linearKVParam.transposeB = param.transposedWeight;
-    CreateOperation(linearKVParam, &mixedKVLinearNode.operation);
+    CREATE_OPERATION(linearKVParam, &mixedKVLinearNode.operation);
     mixedKVLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_KVMIXEDWEIGHT };
     mixedKVLinearNode.outTensorIds = { INTERNAL_KVMIXEDLINEAROUT };
 
@@ -133,7 +157,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     atb::infer::SplitParam splitParam;
     splitParam.splitDim = 3;
     splitParam.splitNum = 2;
-    CreateOperation(splitParam, &splitKVNode.operation);
+    CREATE_OPERATION(splitParam, &splitKVNode.operation);
     splitKVNode.inTensorIds = { INTERNAL_KVMIXEDLINEAROUT };
     splitKVNode.outTensorIds = { INTERNAL_KMIXEDLINEAROUT, INTERNAL_VMIXEDLINEAROUT };
     splitKVNode.inTensorReshapeFuncs.resize(splitKVNode.inTensorIds.size());
@@ -145,17 +169,16 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
         newShape.dims[3] = oldShape.dims[2] / param.headNum;
     };
 
-    atb::Node &reshapeAndCacheNode = opGraph.nodes.at(nodeId++);
     ATB_LOG(INFO) << "ROPE";
     atb_speed::telechat::RopeParam ropeParam;
     ropeParam.rotaryCoeff = ROTARY_COEFF;
     ropeParam.headNum = param.headNum;
-    CreateOperation(ropeParam, &ropeNode.operation);
+    CREATE_OPERATION(ropeParam, &ropeNode.operation);
     ropeNode.inTensorIds = { INTERNAL_QMIXEDLINEAROUT, INTERNAL_KMIXEDLINEAROUT, IN_COSEMBED, IN_SINEMBED, IN_INPUT_LENGTHS };
     ropeNode.outTensorIds = { INTERNAL_POSITIONEMBEDQ, INTERNAL_POSITIONEMBEDK };
 
     atb::infer::ReshapeAndCacheParam reshapeCacheParm;
-    CreateOperation(reshapeCacheParm, &reshapeAndCacheNode.operation);
+    CREATE_OPERATION(reshapeCacheParm, &reshapeAndCacheNode.operation);
     reshapeAndCacheNode.inTensorIds = { INTERNAL_POSITIONEMBEDK, INTERNAL_VMIXEDLINEAROUT, IN_K_CACHE, IN_V_CACHE,
                                        IN_SLOTS };
     reshapeAndCacheNode.outTensorIds = { IN_K_CACHE, IN_V_CACHE };
@@ -172,7 +195,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
         faEnParam.headNum = param.headNum;
         faEnParam.qkScale = 1.0 / sqrt(param.dk);
         faEnParam.kvHeadNum = param.headNum;
-        CreateOperation(faEnParam, &attentionNode.operation);
+        CREATE_OPERATION(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERNAL_POSITIONEMBEDQ, INTERNAL_POSITIONEMBEDK, INTERNAL_VMIXEDLINEAROUT,
                                      IN_ATTENTIONMASK, IN_INPUT_LENGTHS};
         attentionNode.outTensorIds = {INTERNAL_SELFOUT};
@@ -191,7 +214,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
         paDeParam.headNum = param.headNum;
         paDeParam.qkScale = 1.0 / sqrt(param.dk);
         paDeParam.kvHeadNum = param.headNum;
-        CreateOperation(paDeParam, &attentionNode.operation);
+        CREATE_OPERATION(paDeParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERNAL_POSITIONEMBEDQ, IN_K_CACHE, IN_V_CACHE, IN_BLOCK_TABLES,
                                      IN_INPUT_LENGTHS};
         attentionNode.outTensorIds = {INTERNAL_SELFOUT};
@@ -201,16 +224,33 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
         };
     }
     
+    atb_speed::common::ParallelParamV2 selfOutLinearParam;
+    selfOutLinearParam.commParam.rank = param.rank;
+    selfOutLinearParam.commParam.rankSize = param.rankSize;
+    selfOutLinearParam.isBias = true;
+    selfOutLinearParam.isQuant = false;
+    selfOutLinearParam.transposeB = param.transposedWeight;
+    atb_speed::common::RowParallelLinearV2(selfOutLinearParam, &selfOutLinearNode.operation);
+    selfOutLinearNode.inTensorIds = {
+        INTERNAL_SELFOUT, IN_SELFOUTLINEARWEIGHT, IN_SELFOUTLINEARBIAS, IN_HOLDER, IN_HOLDER, IN_HOLDER};
+    selfOutLinearNode.outTensorIds = { INTERNAL_SELFLINEAROUT };
+    selfOutLinearNode.inTensorReshapeFuncs.resize(selfOutLinearNode.inTensorIds.size());
+    selfOutLinearNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+        newShape.dimNum = 2;                                    // 2: dim num
+        newShape.dims[0] = oldShape.dims[0];                    // 0: dim 0, n tokens
+        newShape.dims[1] = oldShape.dims[1] * oldShape.dims[2]; // 1 hidden size: old 1, head num , old 2 head size
+    };
+
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CreateOperation(addParam, &selfResidualAddNode.operation);
+    CREATE_OPERATION(addParam, &selfResidualAddNode.operation);
     selfResidualAddNode.inTensorIds = { IN_HIDDENSTATES, INTERNAL_SELFLINEAROUT };
     selfResidualAddNode.outTensorIds = { INTERNAL_SELFRESIDUALADDOUT };
     
     atb::infer::RmsNormParam rmsMlpNormParam;
     rmsMlpNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     rmsMlpNormParam.normParam.epsilon = param.rmsNormEps;
-    CreateOperation(rmsMlpNormParam, &selfNormNode.operation);
+    CREATE_OPERATION(rmsMlpNormParam, &selfNormNode.operation);
     selfNormNode.inTensorIds = { INTERNAL_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT };
     selfNormNode.outTensorIds = { INTERNAL_SELFNORMOUT };
 
@@ -246,7 +286,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     mlpNode.outTensorIds = { INTERNAL_MLPOUT };
 
     ATB_LOG(INFO) << "residual add";
-    CreateOperation(addParam, &mlpResidualAddNode.operation);
+    CREATE_OPERATION(addParam, &mlpResidualAddNode.operation);
     mlpResidualAddNode.inTensorIds = { INTERNAL_SELFRESIDUALADDOUT, INTERNAL_MLPOUT };
     mlpResidualAddNode.outTensorIds = { OUT_TELECHATLAYEROUT };
 

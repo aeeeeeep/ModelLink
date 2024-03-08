@@ -20,6 +20,7 @@
 #include "models/telechat_pa/layer/paged_attention_layer.h"
 #include "telechat/layer/embedding_layer.h"
 #include "paged_attention_model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace telechat {
@@ -50,6 +51,8 @@ enum InTensorId {
     IN_HOLDER,
     IN_TENSOR_MAX,
 };
+
+REGISTER_MODEL(telechat, PAModel);
 
 int64_t PAModel::Param::FromString(const std::string &param)
 {
@@ -139,15 +142,14 @@ int64_t PAModel::BuildGraph()
     graph_.internalTensors.resize(internalTensorSize);
 
     int nodeId = 0;
+    auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
+    atb::infer::GatherParam wordEmbeddingParam;
     atb::Operation *op = nullptr;
-
-    auto &embeddingNode = graph_.nodes.at(nodeId++);
-    EmbeddingLayerParam embeddingLayerParam;
-    EmbeddingLayer(embeddingLayerParam, &op);
-    embeddingNode.operation.reset(op);
-    embeddingNode.inTensors = { &graph_.weightTensors.at(0), &graph_.inTensors.at(IN_TENSOR_INPUT_IDS) };
-    embeddingNode.outTensors = { &graph_.internalTensors.at(0), &graph_.internalTensors.at(1),
-                                 &graph_.internalTensors.at(2) };
+    atb::CreateOperation(wordEmbeddingParam, &op);
+    wordEmbeddingNode.operation.reset(op);
+    wordEmbeddingNode.inTensors = {&graph_.weightTensors.at(0), &graph_.inTensors.at(IN_TENSOR_INPUT_IDS)};
+    wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(0)};
+    
     atb::Tensor *firstInTensor = &graph_.internalTensors.at(0);
 
     for (int layerId = 0; layerId < param_.layerNum; ++layerId) {
@@ -175,7 +177,6 @@ int64_t PAModel::BuildGraph()
                 WORD_EMBEDDING_WEIGHT_COUNT + layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId);
         }
         
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_POSITIONID);    // positionIdTensor
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_COSEMBED);      // cosEmbed
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SINEMBED);      // sinEmbed
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_ATTENTIONMASK);  // attentionMaskTensor
@@ -245,10 +246,7 @@ atb::Status  PAModel::BindParamHostTensor(uint32_t nodeId)
     }
 
     auto &node = graph_.nodes.at(nodeId);
-    const uint32_t tokenOffsetTensorId = 16;
-    const uint32_t seqLenTensorId = 17;
-
-    node.variantPack.inTensors.at(tokenOffsetTensorId).hostData = tokenOffset_.data();
+    const uint32_t seqLenTensorId = 19;
     node.variantPack.inTensors.at(seqLenTensorId).hostData = seqLen_.data();
 
     return atb::NO_ERROR;
