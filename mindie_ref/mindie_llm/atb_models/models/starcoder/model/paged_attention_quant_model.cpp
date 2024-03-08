@@ -24,7 +24,6 @@
 #include "paged_attention_quant_model.h"
 #include "atb_speed/utils/model_factory.h"
 #include "layers/operations/word_embedding.h"
-#include "layers/operations/pe_gather.h"
 #include "layers/operations/lmhead.h"
 
 namespace atb_speed {
