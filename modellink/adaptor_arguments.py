@@ -35,6 +35,7 @@ def process_args(parser):
     parser = _add_lora_args(parser)
     parser = _add_data_args(parser)
     parser = _add_moe_args(parser)
+    parser = _add_num_layer_allocation(parser)
     return parser
 
 
@@ -93,6 +94,12 @@ def _add_data_args(parser):
 
     return parser
 
+def _add_num_layer_allocation(parser):
+    group = parser.add_argument_group(title='num_layer_allocation')
+    group.add_argument('--num-layer-list',
+                       type=str, help='a list of number of layers, '
+                                'seperated by comma; e.g., 4,4,4,4')
+    return parser
 
 def _add_network_size_args(parser):
     group = parser.add_argument_group(title='network_size_args')
