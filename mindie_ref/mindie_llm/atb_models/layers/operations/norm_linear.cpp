@@ -31,10 +31,10 @@ enum NormLinearTensorIdx : uint32_t {
     IN_NORM_NEW_WEIGHT,
     IN_NORM_NEW_BIAS,
     IN_LINEAR_WEIGHT,
-    IN_SCALE,
-    IN_OFFSET,
+    IN_BIAS,
     IN_DESCALE,
-    IN_DEOFFSET,
+    IN_OFFSET,
+    IN_SCALE,
     OUT_LINEAR,
     INTERMEDIATE_NORM,
 };
@@ -75,8 +75,8 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
     atb_speed::common::FusionLinearParam linearParam = param.fusionLinearParam;
     FusionLinear(linearParam, &linearNode.operation);
     linearNode.inTensorIds = {
-        NormLinearTensorIdx::INTERMEDIATE_NORM, NormLinearTensorIdx::IN_LINEAR_WEIGHT, NormLinearTensorIdx::IN_SCALE,
-        NormLinearTensorIdx::IN_OFFSET, NormLinearTensorIdx::IN_DESCALE, NormLinearTensorIdx::IN_DEOFFSET
+        NormLinearTensorIdx::INTERMEDIATE_NORM, NormLinearTensorIdx::IN_LINEAR_WEIGHT, NormLinearTensorIdx::IN_BIAS,
+        NormLinearTensorIdx::IN_DESCALE, NormLinearTensorIdx::IN_OFFSET, NormLinearTensorIdx::IN_SCALE,
     };
     linearNode.outTensorIds = {OUT_LINEAR};
 
