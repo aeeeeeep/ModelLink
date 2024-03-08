@@ -33,10 +33,10 @@ template <typename NormParamType>
 struct MlpParam {
     bool isAntiOutlier = false;
     bool isBF16 = false;
-    bool normHasBias = false;
     bool gateUpHasBias = false;
     bool downHasBias = false;
     bool supportLcoc = false;
+    bool normHasBias = false;
     MlpPackType mlpPackType = GATE_UP_WEIGHT_PACK;
     std::vector<int> layerLinearQuantType;
     int packQuantType = atb_speed::common::PackQuantType::ALL_FP;

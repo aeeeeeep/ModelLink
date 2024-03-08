@@ -28,7 +28,7 @@ class PARunner:
         self.max_output_length = kwargs.get('max_output_length', None)
         self.is_flash_model = kwargs.get('is_flash_model', None)
         self.max_batch_size = kwargs.get('max_batch_size', None)
-        self.use_refactor = kwargs.get('use_refactor', None)
+        self.use_refactor = kwargs.get('use_refactor', False)
 
         self.block_size = kwargs.get('block_size', None)
 

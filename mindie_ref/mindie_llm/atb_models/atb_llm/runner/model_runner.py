@@ -22,7 +22,7 @@ class ModelRunner:
                  kv_cache_dtype=None,
                  max_position_embeddings=None,
                  is_flash_causal_lm: bool = True,
-                 use_refactor: bool = False,
+                 use_refactor: bool = True,
                  ):
         self.model_name_or_path = model_name_or_path
         self.rank = rank

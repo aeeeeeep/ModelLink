@@ -215,7 +215,9 @@ class WeightWrapper:
 
     def register_model_norm(self, model_dict, norm_name):
         self.weights.append(model_dict[f'{norm_name}.weight'])
-
+        if f'{norm_name}.bias' in model_dict:
+            self.weights.append(model_dict[f'{norm_name}.bias'])
+            
     def register_model_lmhead(self, model_dict, lmhead_name):
         self.weights.append(self.weight_format_cast(model_dict[f'{lmhead_name}.linear.weight']))
     
