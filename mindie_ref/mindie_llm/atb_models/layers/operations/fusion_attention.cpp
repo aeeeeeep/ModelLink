@@ -15,7 +15,7 @@
  */
 
 #include "layers/operations/fusion_attention.h"
-#include "pe_gather.h"
+#include "positional_embedding.h"
 namespace atb_speed {
 namespace common {
 
