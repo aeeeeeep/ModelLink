@@ -93,7 +93,10 @@ wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/tokenizer_conf
 cd ..
 ```
 
-接着将hf格式的权重转化为megatron可以加载的形式：
+4. 数据转换
+
+将模型权重文件从 HuggingFace权重 格式转化为 Megatron 权重
+***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 ```shell
 mkdir baichuan-7B-mt
 
@@ -111,8 +114,26 @@ python tools/checkpoint/util.py \
     --w-pack True    
 ```
 
+任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
+***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+```shell
+cd ModelLink/
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ../Baichuan7B-v0.1-pt8-pp1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --w-pack True \
+    --save-dir ../Baichuan7B_downloaded     # <-- 需要填入原始HF模型路径，新权重会存于../Baichuan7B_downloaded/mg2hg
+```
 
-4. 准备数据集
+
+
+5. 准备数据集
 
 从 [这里](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 下载 BaiChuan-7B 的数据集：
 
@@ -134,7 +155,7 @@ python ./tools/preprocess_data.py \
 ```
 
 
-5. 配置 Baichuan-7B 预训练脚本: examples/baichuan/pretrain_baichuan_ptd_7B.sh 
+6. 配置 Baichuan-7B 预训练脚本: examples/baichuan/pretrain_baichuan_ptd_7B.sh 
 
 ```shell
 # 修改 ascend-toolkit 路径
@@ -146,7 +167,7 @@ TOKENIZER_MODEL="./baichuan-7B-hf/tokenizer.model"
 CKPT_LOAD_DIR="./baichuan-7B-mt"
 ```
 
-6. 启动 Baichuan-7B 预训练脚本: examples/baichuan/pretrain_baichuan_ptd_7B.sh 
+7. 启动 Baichuan-7B 预训练脚本: examples/baichuan/pretrain_baichuan_ptd_7B.sh 
 
 ```shell
 bash examples/baichuan/pretrain_baichuan_ptd_7B.sh 
@@ -306,7 +327,10 @@ wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/tokenize
 cd ..
 ```
 
+4. 权重转换
+
 将 BaiChuan-13B 模型权重从 huggingface 格式转换为 megatron 格式
+***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 ```shell
 mkdir baichuan-13B-mt
 
@@ -324,7 +348,24 @@ python tools/checkpoint/util.py \
     --w-pack True      
 ```
 
-4. 准备数据集
+任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
+***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+```shell
+cd ModelLink/
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ../Baichuan13B-v0.1-pt8-pp1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --w-pack True \
+    --save-dir ../Baichuan13B_downloaded     # <-- 需要填入原始HF模型路径，新权重会存于../Baichuan13B_downloaded/mg2hg
+```
+
+5. 准备数据集
 
 下载 Baichuan-13B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
 
@@ -344,7 +385,7 @@ python ./tools/preprocess_data.py \
 ```
 
 
-5. 配置 Baichuan-13B 训练脚本: examples/baichuan/pretrain_baichuan_ptd_13B.sh
+6. 配置 Baichuan-13B 训练脚本: examples/baichuan/pretrain_baichuan_ptd_13B.sh
 
 
 ```shell
@@ -357,7 +398,7 @@ TOKENIZER_MODEL="./baichuan-13B-hf/tokenizer.model"
 CKPT_LOAD_DIR="./baichuan-13B-mt" 
 ```
 
-6. 启动 Baichuan-13B 训练脚本: examples/baichuan/pretrain_baichuan_ptd_13B.sh
+7. 启动 Baichuan-13B 训练脚本: examples/baichuan/pretrain_baichuan_ptd_13B.sh
 
 ```bash
 bash examples/baichuan/pretrain_baichuan_ptd_13B.sh

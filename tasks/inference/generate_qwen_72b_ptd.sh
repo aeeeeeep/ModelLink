@@ -20,7 +20,7 @@ WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
 DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 
-torchrun $DISTRIBUTED_ARGS inference_qwen.py \
+torchrun $DISTRIBUTED_ARGS ./tasks/inference/inference_llama.py \
        --tensor-model-parallel-size 8  \
        --pipeline-model-parallel-size 1  \
        --num-layers 80 \

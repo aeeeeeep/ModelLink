@@ -83,7 +83,10 @@ or
   cd ..
 ```
 
-将模型权重文件从 huggingface 格式转化为 megatron 格式
+4.权重转换
+
+4.1 将模型权重文件从 huggingface 格式转化为 megatron 格式
+***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
 LLaMA-7B
 ```shell
@@ -120,12 +123,43 @@ python tools/checkpoint/util.py --model-type GPT \
                                 --save-dir ./model_weights/llama-13b-tp1-pp8 \
                                 --tokenizer-model ./model_from_hf/llama-13b-hf/tokenizer.model
 ```
+4.2 将模型权重文件从 megatron 格式转化为 huggingface 格式
+***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
 
+LLaMA-7B
+```shell
+cd ModelLink/
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ../llama7B-v0.1-pt8-pp1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --save-dir ../llama7B_downloaded  # <-- 需要填入原始HF模型路径，新权重会存于../llama7B_downloaded/mg2hg
+```
+
+LLaMA-13B
+```shell
+cd ModelLink/
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ../llama13B-v0.1-pt8-pp1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --save-dir ../llama13B_downloaded  # <-- 需要填入原始HF模型路径，新权重会存于../llama13B_downloaded/mg2hg
+```
 权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
 
-4. 预训练
+5. 预训练
 
-4.1 准备预训练数据集
+5.1 准备预训练数据集
 
 下载 LLaMA-7B/13B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
 
@@ -161,7 +195,7 @@ python ./tools/preprocess_data.py \
     --tokenizer-type PretrainedFromHF  
 ```
 
-4.2 配置 LLaMA-7B/13B 预训练脚本
+5.2 配置 LLaMA-7B/13B 预训练脚本
 
 LLaMA-7B
 ```shell
@@ -185,7 +219,7 @@ LOAD_CHECKPOINT_PATH="your init model load path"
 SAVE_CHECKPOINT_PATH="your model ckpt save path"
 ```
 
-4.3 启动 LLaMA-7B/13B 预训练脚本
+5.3 启动 LLaMA-7B/13B 预训练脚本
 
 LLaMA-7B
 ```shell
@@ -198,9 +232,9 @@ LLaMA-13B
 bash examples/llama/pretrain_llama_13b_ptd.sh 
 ```
 
-5. 微调
+6. 微调
 
-5.1 准备微调数据集
+6.1 准备微调数据集
 
 下载 LLaMA-7B/13B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
 
@@ -239,7 +273,7 @@ python ./tools/preprocess_data.py \
   --append-eod
 ```
 
-5.2 配置 LLaMA-7B/13B 微调脚本
+6.2 配置 LLaMA-7B/13B 微调脚本
 
 LLaMA-7B
 ```shell
@@ -266,8 +300,7 @@ SAVE_CHECKPOINT_PATH="your model ckpt save path"
 ```
 
 增加微调参数--finetune，使微调从第一步开始。
-
-5.3 启动 LLaMA-7B/13B 微调脚本
+6.3 启动 LLaMA-7B/13B 微调脚本
 
 LLaMA-7B
 ```shell
@@ -455,7 +488,10 @@ cd ..
 # 将 tokenizer_config.json 中的 "LLaMATokenizer" 修改为 "LLaMTokenizer" （这是hf的一个bug）
 ```
 
-4. 预训练权重从 huggingface 格式转换为 megatron 格式
+4. 权重转换
+
+4.1 预训练权重从 huggingface 格式转换为 megatron 格式
+***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
 llama-33B
 ```shell
@@ -482,6 +518,38 @@ python tools/checkpoint/util.py --model-type GPT \
                                 --load-dir ./model_from_hf/llama-65b-hf \
                                 --save-dir ./model_weights/llama-65b-tp8-pp4 \
                                 --tokenizer-model ./model_from_hf/llama-65b-hf/tokenizer.model
+```
+4.2 预训练权重从 megatron 格式转换为 huggingface 格式
+***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+
+llama-33B
+```shell
+cd ModelLink/
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ../llama33B-v0.1-pt8-pp1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --save-dir ../llama33B_downloaded    # <-- 需要填入原始HF模型路径，新权重会存于../llama33B_downloaded/mg2hg
+```
+
+llama-65B
+```shell
+cd ModelLink/
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ../llama65B-v0.1-pt8-pp1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --save-dir ../llama65B_downloaded    # <-- 需要填入原始HF模型路径，新权重会存于../llama65B_downloaded/mg2hg
 ```
 
 权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。

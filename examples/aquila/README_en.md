@@ -84,7 +84,8 @@ python ./tools/preprocess_data.py \
 
 5. Weights convert
 
-convert the model pre-training weights.
+HuggingFace weights --> Megatron weights
+***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 
 ```shell
 cd ModelLink
@@ -100,6 +101,22 @@ python tools/checkpoint/util.py \
     --saver megatron \
     --target-tensor-parallel-size 8 \
     --tokenizer-model ./HF_Aquila7B_downloaded/tokenizer.json
+```
+
+Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+```shell
+cd ModelLink/
+# Modify the ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ../HF_Aquila7B-v0.1-pt8-pp1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --save-dir ../HF_Aquila7B_downloaded   # <-- Fill in the original HF model path here, new weights will be saved in ../HF_Aquila7B_downloaded/mg2hg
 ```
 
 
@@ -135,7 +152,7 @@ The performance of Aquila-7B in Ascend NPU and reference device:
 | Device | Hardware           | Model       | Iterations | throughput rate (tokens/p/s) | single iteration step time (s/step) |
 |------|---------------|------------|------|------------------------|----------------------|
 | NPU  | 910b 1node*8p | Aquila-7B  | 1000 | 2849                  | 5.75                  |
-| 参考  |              | Aquila-7B  | 1000 | 2874                   |    5.70               |
+| Reference  |              | Aquila-7B  | 1000 | 2874                   |    5.70               |
 
 
 

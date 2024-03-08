@@ -86,7 +86,8 @@ python ./tools/preprocess_data.py \
 
 5. 权重转换
 
-将模型权重文件从 huggingface 格式转化为 AscendSpeed 格式
+将模型权重文件从 HuggingFace权重 格式转化为 Megatron 权重
+***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
 ```shell
 cd ModelLink/
@@ -103,6 +104,21 @@ python tools/checkpoint/util.py \
     --tokenizer-model ./HF_Aquila7B_downloaded/tokenizer.json
 ```
 
+任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
+***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+```shell
+cd ModelLink/
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ../HF_Aquila7B-v0.1-pt8-pp1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --save-dir ../HF_Aquila7B_downloaded     # <-- 需要填入原始HF模型路径，新权重会存于../HF_Aquila7B_downloaded/mg2hg
+```
 
 6. 配置 Aquila-7B 预训练脚本
 

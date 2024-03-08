@@ -122,8 +122,9 @@ Here's a hardware summary of pre-training  Qwen-7B:
  
     cd .. 
 	```
-
+5. Weights convert
    Convert weights from huggingface format to megatron format
+   ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 
     ```bash
     cd ModelLink
@@ -143,6 +144,22 @@ Here's a hardware summary of pre-training  Qwen-7B:
     ```
 
 5. pre-training
+    Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+    ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+    ```shell
+    cd ModelLink/
+    # Modify the ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/util.py --model-type GPT \
+      --loader megatron \
+      --saver megatron \
+      --save-model-type save_huggingface_llama \
+      --load-dir ../Qwen7B-v0.1-pt8-pp1 \
+      --target-tensor-parallel-size 1 \
+      --target-pipeline-parallel-size 1 \
+      --add-qkv-bias \
+      --save-dir ../Qwen7B_downloaded     # <-- Fill in the original HF model path here, new weights will be saved in ../Qwen7B_downloaded/mg2hg
+    ```
 
 	Config Qwen-7B pre-training script: examples/qwen/pretrain_qwen_7b_ptd.sh 
    ```shell
@@ -156,7 +173,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
     CKPT_LOAD_DIR="your megatron ckpt save path"
    ```
 
-	Launch Qwen-7B pre-training script: examples/qwen/pretrain_qwen_7b_ptd.sh
+    Config Qwen-7B pre-training script: examples/qwen/pretrain_qwen_7b_ptd.sh 
    
    ```shell
     bash examples/qwen/pretrain_qwen_7b_ptd.sh 
@@ -301,8 +318,9 @@ Here's a hardware summary of pre-training  Qwen-14B:
 
    cd ..
    ```
-
+4. Weights convert
    Convert weights from huggingface format to megatron format
+   ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 
     ```bash
     cd ModelLink
@@ -320,8 +338,25 @@ Here's a hardware summary of pre-training  Qwen-14B:
     
     cd ..
     ```
+    Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+    ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+    ```shell
+    cd ModelLink/
+    # Modify the ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/util.py --model-type GPT \
+      --loader megatron \
+      --saver megatron \
+      --save-model-type save_huggingface_llama \
+      --load-dir ../Qwen14B-v0.1-pt8-pp1 \
+      --target-tensor-parallel-size 1 \
+      --target-pipeline-parallel-size 1 \
+      --add-qkv-bias \
+      --save-dir ../Qwen14B_downloaded     # <-- Fill in the original HF model path here, new weights will be saved in ../Qwen14B_downloaded/mg2hg
+    ```
 
-4. Prepare dataset
+
+5. Prepare dataset
 
 	Download the Qwen-14B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
 	```shell
@@ -345,7 +380,6 @@ Here's a hardware summary of pre-training  Qwen-14B:
 	```
 
 5. pre-training
-
 	Config Qwen-14B pre-training script: examples/qwen/pretrain_qwen_14b_ptd.sh 
    ```shell
     # modify the script according to your own ascend-toolkit path
@@ -484,8 +518,9 @@ Here's a hardware summary of pre-training  Qwen-72B:
    ...
    cd ..
    ```
-   
+4. Weights convert
    Convert weights from huggingface format to megatron format
+   ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 
     ```bash
     cd ModelLink
@@ -504,7 +539,24 @@ Here's a hardware summary of pre-training  Qwen-72B:
     cd ..
     ```
 
-4. Prepare dataset
+    Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+    ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+    ```shell
+    cd ModelLink/
+    # Modify the ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/util.py --model-type GPT \
+      --loader megatron \
+      --saver megatron \
+      --save-model-type save_huggingface_llama \
+      --load-dir ../Qwen72B-v0.1-pt8-pp1 \
+      --target-tensor-parallel-size 1 \
+      --target-pipeline-parallel-size 1 \
+      --add-qkv-bias \
+      --save-dir ../Qwen72B_downloaded     # <-- Fill in the original HF model path here, new weights will be saved in ../Qwen72B_downloaded/mg2hg
+    ```
+
+5. Prepare dataset
 
 	Download the Qwen-72B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
 	```shell
