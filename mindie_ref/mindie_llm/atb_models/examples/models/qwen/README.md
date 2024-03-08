@@ -10,6 +10,10 @@
 
 # Paged Attention 推理使用说明
 
+注意：
+- 模型权重所在路径中的config.json文件需添加字段`torch_dtype`，例如`"torch_dtype": "float16"`
+- 执行量化推理时，须在量化权重所在路径的config.json文件中添加字段`quantize`，值为当前量化权重的量化方式，例如`"quantize": "w8a8"`、`"quantize": "w8a16"`
+
 ## 路径变量解释
 
 | 变量名称        | 含义                                                                                                                             |
