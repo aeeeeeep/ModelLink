@@ -107,12 +107,13 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
       cd ..
     ```
 
-   weight conversion in ptd mode
+   4. weight conversion in ptd mode
+
    *Note that if you want to use the weight from huggingface, please run the weight conversion script first. The following uses llama-2-7b model weight conversion in ptd as an example.*
    ```bash
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    
+
     # convert to ptd weights
     python tools/checkpoint/util.py --model-type GPT \
                                     --loader llama2_hf \
@@ -122,11 +123,28 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
                                     --load-dir ../llama-2-7b-hf \
                                     --save-dir {your megatron ckpt save path} \
                                     --tokenizer-model ../llama-2-7b-hf/tokenizer.model
-   ```
-   Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
-4. pre-training
+    ```
+    
+    Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+    ```shell
+    cd ModelLink/
+    # Modify the ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/util.py --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_llama \
+        --load-dir ../llama27B-v0.1-pt8-pp1 \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --save-dir ../llama27B_downloaded  # <-- Fill in the original HF model path here, new weights will be saved in ../llama27B_downloaded/mg2hg
+    ```
+    
+    Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
 
-	4.1 Prepare dataset
+5. pre-training
+
+	5.1 Prepare dataset
 
 	Download the LLAMA2-7B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
 	```shell
@@ -146,7 +164,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
 		 --tokenizer-type PretrainedFromHF
 	```
 
-	4.2 pre-training using ptd mode
+	5.2 pre-training using ptd mode
 	Config LLAMA2-7B pre-training script: examples/llama2/pretrain_llama2_7b_ptd.sh 
    ```shell
     # modify the script according to your own ascend-toolkit path
@@ -164,9 +182,9 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
    ```shell
     bash examples/llama2/pretrain_llama2_7b_ptd.sh 
    ```
-5. fine-tuning
+6. fine-tuning
 
-	5.1 Prepare fine-tuning dataset 
+	6.1 Prepare fine-tuning dataset
 	Download the LLAMA2-7B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
     ```shell
 	# download datasets
@@ -186,7 +204,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
 		  --handler-name GeneralInstructionHandler \
 		  --append-eod
     ```
-   5.2 Full Parameters Fine-Tuning
+   6.2 Full Parameters Fine-Tuning
    The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_7b_ptd.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
 
    Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
@@ -196,7 +214,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
    --finetune \
    --is-instruction-dataset \
    ```
-   5.3 Lora Fine-Tuning
+   6.3 Lora Fine-Tuning
    The Lora fine-tuning script is configured by adding the following lora parameters to the pretrain_llama2_7b_ptd.sh script:
    ```bash
        --lora-target-modules query_key_value dense proj dense_4h_to_h \
@@ -396,7 +414,9 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
     git lfs install
     git clone https://huggingface.co/NousResearch/Llama-2-13b-hf
     ```
-    
+
+4. Weights convert
+
    *Note that if you want to use the weight from huggingface, please run the weight conversion script first. The following uses llama-2-13b model weight conversion as an example.*
     ```bash
     # modify the script according to your own ascend-toolkit path
@@ -412,11 +432,26 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
         --save-dir ./llama2-13b-hf-tp8 \
         --tokenizer-model ./llama2-13b-hf/tokenizer.model
     ```
-   Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
+    Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
 
-4. pre-training
+    Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+    ```shell
+    cd ModelLink/
+    # Modify the ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/util.py --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_llama \
+        --load-dir ../llama213B-v0.1-pt8-pp1 \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --save-dir ../llama213B_downloaded  # <-- Fill in the original HF model path here, new weights will be saved in ../llama213B_downloaded/mg2hg
+    ```
 
-	4.1 Prepare dataset
+5. pre-training
+
+	5.1 Prepare dataset
 
 	Download the LLAMA2-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
 	```shell
@@ -436,7 +471,7 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
 		 --tokenizer-type PretrainedFromHF
 	```
 
-	4.2 pre-training using ptd mode
+	5.2 pre-training using ptd mode
 	Config LLAMA2-13B pre-training script: examples/llama2/pretrain_llama2_13B_ptd_8p.sh 
    ```shell
     # modify the script according to your own ascend-toolkit path
@@ -454,9 +489,9 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
    ```shell
     bash examples/llama2/pretrain_llama2_13B_ptd_8p.sh
    ```
-5. fine-tuning
+6. fine-tuning
 
-	5.1 Prepare fine-tuning dataset 
+	6.1 Prepare fine-tuning dataset
 	Download the LLAMA2-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
     ```shell
 	# download datasets
@@ -476,7 +511,7 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
 		  --handler-name GeneralInstructionHandler \
 		  --append-eod
     ```
-   5.2 Full Parameters Fine-Tuning
+   6.2 Full Parameters Fine-Tuning
    The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_7b_ptd.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
 
    Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
@@ -486,7 +521,7 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
    --finetune \
    --is-instruction-dataset \
    ```
-   5.3 Lora Fine-Tuning
+   6.3 Lora Fine-Tuning
    The Lora fine-tuning script is configured by adding the following lora parameters to the pretrain_llama2_7b_ptd.sh script:
    ```bash
        --lora-target-modules query_key_value dense proj dense_4h_to_h \
@@ -697,6 +732,7 @@ pip install -r requirements.txt
     wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer_config.json
     cd ..
     ```
+4. Weights convert
 
    *Note that if you want to use the weight from huggingface, please run the weight conversion script first. *
     The following converts llama-2-70b model weight.
@@ -730,11 +766,42 @@ pip install -r requirements.txt
      --save-dir ./load_ckpt \
      --tokenizer-model ./llama2-70b-hf/tokenizer.model                                                               
     ```
+
+    Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy.
+    * The following converts llama-2-70b model weight.
+    ```shell
+    cd ModelLink/
+    # Modify the ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/util.py --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_llama \
+        --load-dir ../llama270B-v0.1-pt8-pp1 \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --save-dir ../llama270B_downloaded  # <-- Fill in the original HF model path here, new weights will be saved in ../llama270B_downloaded/mg2hg
+    ```
+    * The following converts llama-2-34b model weight.
+    ```shell
+    cd ModelLink/
+    # Modify the ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/util.py --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_llama \
+        --load-dir ../llama234B-v0.1-pt8-pp1 \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --save-dir ../llama234B_downloaded  # <-- Fill in the original HF model path here, new weights will be saved in ../llama234B_downloaded/mg2hg
+    ```
+
     Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
 
-4. pre-training
+5. pre-training
 
-	4.1 Prepare dataset
+	5.1 Prepare dataset
 
     There are two dataset examples: Alpaca and Moss. 
 
@@ -779,8 +846,8 @@ pip install -r requirements.txt
     --tokenizer-not-use-fast \
     --handler-name MOSSInstructionHandler
     ```
-   
-	4.2 pre-training using ptd mode
+
+	5.2 pre-training using ptd mode
 
     LLaMA2-34B: examples/llama2/pretrain_llama2_34B_ptd_16p.sh
     ```shell
@@ -813,9 +880,9 @@ pip install -r requirements.txt
     bash examples/llama2/pretrain_llama2_70B_ptd.sh
     ```
 
-5. fine-tuning
+6. fine-tuning
 
-	5.1 Prepare fine-tuning dataset 
+	6.1 Prepare fine-tuning dataset
 	Download the LLAMA2-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
     ```shell
 	# download datasets
@@ -835,7 +902,7 @@ pip install -r requirements.txt
 		  --handler-name GeneralInstructionHandler \
 		  --append-eod
     ```
-   5.2 Full Parameters Fine-Tuning
+   6.2 Full Parameters Fine-Tuning
    The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_7b_ptd.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
 
    Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
@@ -845,7 +912,7 @@ pip install -r requirements.txt
    --finetune \
    --is-instruction-dataset \
    ```
-   5.3 Lora Fine-Tuning
+   6.3 Lora Fine-Tuning
    The Lora fine-tuning script is configured by adding the following lora parameters to the pretrain_llama2_7b_ptd.sh script:
    ```bash
        --lora-target-modules query_key_value dense proj dense_4h_to_h \

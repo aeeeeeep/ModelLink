@@ -119,6 +119,7 @@ cd ..
 ```
 
 In order to adapt to the internlm-7B model, the following script is used to convert the model pre-training weights.
+***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 ```shell
 mkdir model_weights
 python tools/checkpoint/util.py --model-type GPT \
@@ -131,6 +132,24 @@ python tools/checkpoint/util.py --model-type GPT \
                                 --tokenizer-model ./intern-7b-hf/tokenizer.model \
                                 --add-qkv-bias \
                                 --add-dense-bias
+```
+
+Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+```shell
+cd ModelLink/
+# Modify the ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ../HF_internlm7B-v0.1-pt8-pp1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --add-qkv-bias \
+    --add-dense-bias \
+    --save-dir ../HF_internlm7B_downloaded    # <-- Fill in the original HF model path here, new weights will be saved in ../HF_internlm7B_downloaded/mg2hg
 ```
 
 6. Config Internlm-7B pre-training script.

@@ -90,7 +90,11 @@ wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/tokenizer.mode
 wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/tokenizer_config.json
 cd ..
 ```
+
+4. Weights convert
+
 In order to adapt to the baichuan-7B model, the following script is used to convert the model pre-training weights.
+***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 ```shell
 mkdir baichuan-7B-mt
 
@@ -107,9 +111,24 @@ python tools/checkpoint/util.py \
     --tokenizer-model ./baichuan-7B-hf/tokenizer.model \
     --w-pack True  
 ```
+Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+```shell
+cd ModelLink/
+# Modify the ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ../Baichuan7B-v0.1-pt8-pp1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --w-pack True \
+    --save-dir ../Baichuan7B_downloaded   # <-- Fill in the original HF model path here, new weights will be saved in ../Baichuan7B_downloaded/mg2hg
+```
 
-
-4. Prepare dataset
+5. Prepare dataset
 
 Download the Baichuan-7B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
 
@@ -131,7 +150,7 @@ python ./tools/preprocess_data.py \
 ```
 
 
-5. Config Baichuan-7B pre-training script : examples/baichuan/pretrain_baichuan_ptd_7B.sh 
+6. Config Baichuan-7B pre-training script : examples/baichuan/pretrain_baichuan_ptd_7B.sh 
 
 ```shell
 # modify the script according to your own  ascend-toolkit path
@@ -144,7 +163,7 @@ CKPT_LOAD_DIR="./baichuan-7B-mt"
 ```
 
 
-6. Launch Baichuan-7B  pre-training script: examples/baichuan/pretrain_baichuan_ptd_7B.sh 
+7. Launch Baichuan-7B  pre-training script: examples/baichuan/pretrain_baichuan_ptd_7B.sh 
 
 ```shell
 bash examples/baichuan/pretrain_baichuan_ptd_7B.sh 
@@ -298,7 +317,11 @@ wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/tokenize
 cd ..
 ```
 
+4. Weights convert
+
 In order to adapt to the baichuan-13B model, the following script is used to convert the model pre-training weights.
+
+***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 
 ```shell
 mkdir baichuan-13B-mt
@@ -317,7 +340,24 @@ python tools/checkpoint/util.py \
     --w-pack True  
 ```
 
-4. Prepare dataset
+Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+```shell
+cd ModelLink/
+# Modify the ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ../Baichuan13B-v0.1-pt8-pp1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --w-pack True \
+    --save-dir ../Baichuan13B_downloaded   # <-- Fill in the original HF model path here, new weights will be saved in ../Baichuan13B_downloaded/mg2hg
+```
+
+5. Prepare dataset
 Download the Baichuan-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
 
 ```python
@@ -336,7 +376,7 @@ python ./tools/preprocess_data.py \
 ```
 
 
-5. Config Baichuan-13B pre-training script: examples/baichuan/pretrain_baichuan_ptd_13B.sh
+6. Config Baichuan-13B pre-training script: examples/baichuan/pretrain_baichuan_ptd_13B.sh
 
 
 ```shell
@@ -349,7 +389,7 @@ TOKENIZER_MODEL="./baichuan-13B-hf/tokenizer.model"
 CKPT_LOAD_DIR="./baichuan-13B-mt" 
 ```
 
-6. Launch Baichuan-13B pre-training script: examples/baichuan/pretrain_baichuan_ptd_13B.sh
+7. Launch Baichuan-13B pre-training script: examples/baichuan/pretrain_baichuan_ptd_13B.sh
 
 ```bash
 bash examples/baichuan/pretrain_baichuan_ptd_13B.sh

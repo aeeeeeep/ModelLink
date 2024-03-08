@@ -53,7 +53,7 @@ cd ..
 pip install -r requirements.txt 
 ```
 
-3.准备预训练权重
+3. 准备预训练权重
 
 首先下载 Bloom-7B 的 [权重](https://huggingface.co/bigscience/bloom-7b1/tree/main)
 
@@ -66,8 +66,10 @@ wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer_config.json
 ...
 cd ..
 ```
+4. 权重转换
 
-接着将hf格式的权重转化为megatron的形式：
+将模型权重文件从 HuggingFace权重 格式转化为 Megatron 权重
+***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 ```shell
 python tools/checkpoint/util.py --model-type GPT \
                                 --loader loader_bloom_hf \
@@ -76,10 +78,28 @@ python tools/checkpoint/util.py --model-type GPT \
                                 --target-pipeline-parallel-size 1 \
                                 --load-dir /bloom-7b \
                                 --save-dir /{your save dir} \
-                                --tokenizer-model None
+                                --tokenizer-model None 
 ```
 
-4. 准备数据集
+任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
+***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+```shell
+cd ModelLink/
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ../HF_Bloom7B-v0.1-pt8-pp1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --embed-layernorm \
+    --save-dir ../HF_Bloom7B_downloaded     # <-- 需要填入原始HF模型路径，新权重会存于../HF_Bloom7B_downloaded/mg2hg
+```
+
+
+5. 准备数据集
 
 下载 Bloom 7B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
@@ -102,7 +122,7 @@ python tools/checkpoint/util.py --model-type GPT \
    ```
 
 
-5. 配置 Bloom-7B 预训练脚本: examples/bloom/pretrain_bloom_ptd_7B.sh 
+6. 配置 Bloom-7B 预训练脚本: examples/bloom/pretrain_bloom_ptd_7B.sh 
 
 ```shell
 # 修改 ascend-toolkit 路径
@@ -114,7 +134,7 @@ TOKENIZER_PATH="./bloom-7B-hf/"
 CKPT_LOAD_DIR="./bloom-7b"
 ```
 
-6. 启动 Bloom-7B 预训练脚本: examples/bloom/pretrain_bloom_ptd_7B.sh 
+7. 启动 Bloom-7B 预训练脚本: examples/bloom/pretrain_bloom_ptd_7B.sh 
 
 ```shell
 bash examples/bloom/pretrain_bloom_ptd_7B.sh 
@@ -243,22 +263,42 @@ wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer_config.json
 ...
 cd ..
 ```
-
-将权重格式从 huggingface 格式转换为megatron格式：
-
+4. 权重转换
+将模型权重文件从 HuggingFace权重 格式转化为 Megatron 权重
+***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 ```shell
 python tools/checkpoint/util.py --model-type GPT \
                                 --loader loader_bloom_hf \
                                 --saver saver_megatron \
                                 --target-tensor-parallel-size 8 \
-                                --target-pipeline-parallel-size 12 \
+                                --target-pipeline-parallel-size 5 \
                                 --load-dir /bloom-176b \
                                 --save-dir /{your save dir} \
-                                --params-dtype bf16 \
-                                --tokenizer-model None
-# config.json中同字段对应的key值与其他模型不一致，将文件中的n_embed改为hidden_size， 将num_attention_heads修改为n_head。
+                                --tokenizer-model None \
+                                --params-dtype bf16  
+                                # config.json中同字段对应的key值与其他模型不一致，将文件中的n_embed改为hidden_size， 将num_attention_heads修改为n_head。
 ```
-4. 准备数据集
+
+
+任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
+***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+```shell
+cd ModelLink/
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ../HF_Bloom176B-v0.1-pt8-pp1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --embed-layernorm \
+    --params-dtype bf16 \
+    --save-dir ../HF_Bloom176B_downloaded     # <-- 需要填入原始HF模型路径，新权重会存于../HF_Bloom176B_downloaded/mg2hg
+```
+
+5. 准备数据集
 
 下载 Bloom 176B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
@@ -280,7 +320,7 @@ python tools/checkpoint/util.py --model-type GPT \
     cd .. 
    ```
 
-5. 配置 Bloom-176B 预训练脚本: examples/bloom/pretrain_bloom_176b.sh
+6. 配置 Bloom-176B 预训练脚本: examples/bloom/pretrain_bloom_176b.sh
 
 ```shell
 # 修改 MASTER_ADDR 为主节点 IP，比如, 90.90.2.166
@@ -294,7 +334,7 @@ TOKENIZER_NAME_OR_PATH=/home/bloom_data/vocab_file/
 DATA_PATH=/home/bloom_data/enwiki_100k/enwiki-100k_text_document
 ```
 
-6. 启动 Bloom-176B 预训练脚本: examples/bloom/pretrain_bloom_176b.sh
+7. 启动 Bloom-176B 预训练脚本: examples/bloom/pretrain_bloom_176b.sh
 
 在集群中的每个节点上启动 examples/bloom/pretrain_bloom_176b.sh 脚本
 
