@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef OPS_COMMON_BLOOM7BLAYER_OPERATION_H
-#define OPS_COMMON_BLOOM7BLAYER_OPERATION_H
+#ifndef OPS_PAGED_BLOOM7BLAYER_OPERATION_H
+#define OPS_PAGED_BLOOM7BLAYER_OPERATION_H
 #include <atb/atb_infer.h>
 #include "atb_speed/base/hosttensor_binder.h"
 
 namespace atb_speed {
 namespace bloom_7b {
-struct Bloom7bCommonLayerParam {
+struct Bloom7bPagedLayerParam {
     double layerNormEps = 0;
     int headNum = 0;
     int dk = 0;
@@ -29,9 +29,9 @@ struct Bloom7bCommonLayerParam {
     std::string backend = "lccl";
     int rank = 0;
     int rankSize = 1;
-    bool quantmodel = true;
+    bool quantmodel = false;
+    bool isPrefill = false;
     int quantMode = -1;   // 0:not quant, 1:w8a8, 2:w8a16
-
     float qkvInputScale = 1;
     int qkvInputOffset = 0;
     float denseInputScale = 1;
@@ -42,7 +42,7 @@ struct Bloom7bCommonLayerParam {
     int ffnOutInputOffset = 0;
 };
 
-atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **operation);
+atb::Status PagedLayer(const Bloom7bPagedLayerParam &param, atb::Operation **operation);
 
 void SqueezeThirdDim(const atb::Dims &oldShape, atb::Dims &newShape);
 
