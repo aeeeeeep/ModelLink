@@ -29,17 +29,17 @@ enum MlpTensorIdx : uint32_t {
     IN_SCALE_0,
     IN_OFFSET_0,
     IN_DESCALE_0,
-    IN_DEOFFSET_0,
+    IN_BIAS_0,
     IN_WEIGHT_1,  // up weight
     IN_SCALE_1,
     IN_OFFSET_1,
     IN_DESCALE_1,
-    IN_DEOFFSET_1,
+    IN_BIAS_1,
     IN_WEIGHT_2,  // down weight
     IN_SCALE_2,
     IN_OFFSET_2,
     IN_DESCALE_2,
-    IN_DEOFFSET_2,
+    IN_BIAS_2,
     OUT_RESULT,
     INTERMIDATE_SWISH_OUT,
     INTERMIDATE_GATE_UP_OUT,
@@ -92,7 +92,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
             MlpTensorIdx::IN_SCALE_0,
             MlpTensorIdx::IN_OFFSET_0,
             MlpTensorIdx::IN_DESCALE_0,
-            MlpTensorIdx::IN_DEOFFSET_0
+            MlpTensorIdx::IN_BIAS_0
         };
         normLinearGateUpNode.outTensorIds = {MlpTensorIdx::INTERMIDATE_GATE_UP_OUT};
     } else {
@@ -120,7 +120,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
             MlpTensorIdx::IN_SCALE_0,
             MlpTensorIdx::IN_OFFSET_0,
             MlpTensorIdx::IN_DESCALE_0,
-            MlpTensorIdx::IN_DEOFFSET_0
+            MlpTensorIdx::IN_BIAS_0
         };
         normLinearGateNode.outTensorIds = {MlpTensorIdx::INTERMIDATE_GATE_OUT};
 
@@ -148,7 +148,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
             MlpTensorIdx::IN_SCALE_1,
             MlpTensorIdx::IN_OFFSET_1,
             MlpTensorIdx::IN_DESCALE_1,
-            MlpTensorIdx::IN_DEOFFSET_1
+            MlpTensorIdx::IN_BIAS_1
         };
         normLinearUpNode.outTensorIds = {MlpTensorIdx::INTERMIDATE_UP_OUT};
 
@@ -189,7 +189,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
         MlpTensorIdx::IN_SCALE_2,
         MlpTensorIdx::IN_OFFSET_2,
         MlpTensorIdx::IN_DESCALE_2,
-        MlpTensorIdx::IN_DEOFFSET_2
+        MlpTensorIdx::IN_BIAS_2
     };
     linearDownNode.outTensorIds = {MlpTensorIdx::OUT_RESULT};
 
