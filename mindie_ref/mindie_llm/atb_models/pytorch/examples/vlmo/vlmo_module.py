@@ -16,10 +16,11 @@ from scipy import interpolate
 from timm.models import create_model
 
 def is_nd():
-    return False
-
-print("soc_version: ",torch_npu._C._npu_get_soc_version())
-IS_ND = is_nd()
+    soc_version = torch_npu._C._npu_get_soc_version()
+    print("**********soc_version:",soc_version)
+    return soc_version in [104, 220, 221, 222, 223, 224]
+IS_ND = False
+print(f"{IS_ND = }")
 
 def get_rank_and_world_size():
     try:
@@ -265,6 +266,9 @@ def convert_deepspeed_ckpt(state_dict):
 class VLMo(pl.LightningModule):
     def __init__(self, config):
         print("VLMo init 0")
+        global IS_ND
+        IS_ND = is_nd()
+        print(f"{IS_ND = }")
         super().__init__()
         self.save_hyperparameters()
         print("VLMo init")
