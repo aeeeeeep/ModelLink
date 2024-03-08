@@ -69,11 +69,6 @@ class PARunner:
         self.warm_up_memory = 0
         self.warm_up_num_blocks = 0
         self.cache_manager = None
-        # self.temperature = temperature
-        # self.top_k = top_k
-        # self.top_p = top_p
-        # self.min_tokens_to_keep = min_tokens_to_keep
-
 
     def __repr__(self):
         return (
