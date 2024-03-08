@@ -125,6 +125,7 @@ atb::Status PAW8A8Layer(const PAW8A8LayerParam &param, atb::Operation **operatio
     fusionAttentionParam.isBF16 = param.isBF16;
     fusionAttentionParam.qkvHasBias = true;
     fusionAttentionParam.layerLinearQuantType = param.linearQuantType;
+    fusionAttentionParam.packQuantType = param.packQuantType[0];
     atb::infer::RmsNormParam attenRmsNormParam;
     attenRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     attenRmsNormParam.normParam.epsilon = param.rmsNormEps;
@@ -217,6 +218,7 @@ atb::Status PAW8A8Layer(const PAW8A8LayerParam &param, atb::Operation **operatio
     mlpParam.isBF16 = param.isBF16;
     mlpParam.isAntiOutlier = param.packQuantType[1] == atb_speed::common::MIX_W8A8_ANTI || param.packQuantType[1] == atb_speed::common::ALL_W8A8_ANTI;
     mlpParam.layerLinearQuantType = param.linearQuantType;
+    mlpParam.packQuantType = param.packQuantType[1];
     // w2_w1(gate_up)
     mlpParam.mlpPackType = atb_speed::common::GATE_UP_WEIGHT_PACK;
     atb::infer::RmsNormParam mlpRmsNormParam;
