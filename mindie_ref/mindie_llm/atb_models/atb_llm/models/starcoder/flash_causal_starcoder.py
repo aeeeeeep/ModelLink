@@ -224,13 +224,14 @@ class FlashStarcoderForCausalLM(torch.nn.Module):
     def init_ascend_weight(self):
 
         if self.use_refactor == 1:
-            self.ascend_weight, linear_types, pack_quant_configs = self.get_weights()
+            self.ascend_weight, self.linear_type, self.pack_quant_config = self.get_weights()
             coder_param = {
                 "isFA": False,
                 "isBF16": self.dtype == torch.bfloat16,
                 "isEmbeddingParallel": False,
                 "isLmHeadParallel": True,
                 "supportSwiGLU": False if self.soc_info.need_nz else True,
+                "rank": self.tp_rank,
                 "worldSize": self.tp_world_size,
                 "backend": "hccl" if self.soc_info.need_nz else "lccl",
                 "LayerNormEps": self.layer_norm_epsilon,
@@ -238,8 +239,9 @@ class FlashStarcoderForCausalLM(torch.nn.Module):
                 "hiddenSizePerAttentionHead": self.head_size,
                 "numHiddenLayers": self.num_layers,
                 "numKeyValueHeadsPerRank": self.num_key_value_heads,
-                "packQuantType": pack_quant_configs,
-                "linearQuantType": linear_types,
+                "packQuantType": self.pack_quant_config,
+                "linearQuantType": self.linear_type,
+                "layerNormEps": self.layer_norm_epsilon,
                 "headNum": self.num_heads,
                 "dk": self.head_dim,
                 "kvHead": 1,
