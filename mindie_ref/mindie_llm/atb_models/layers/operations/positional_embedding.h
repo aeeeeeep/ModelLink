@@ -37,7 +37,7 @@ struct RotaryPositionEmbeddingParam {
 };
 atb::Status RotaryPositionEmbedding(const RotaryPositionEmbeddingParam &param, atb::Operation **operation);
 
-atb::Status PEGather(atb::Operation **operation);
+atb::Status PositionalEmbeddingGather(atb::Operation **operation);
 }  // namespace common
 }  // namespace atb_speed
 #endif
