@@ -22,6 +22,7 @@
 #include <nlohmann/json.hpp>
 #pragma GCC diagnostic pop
 
+#include <vector>
 #include "atb_speed/base/hosttensor_binder.h"
 #include "atb_speed/log.h"
 #include "atb_speed/utils/str_split.h"
@@ -29,45 +30,104 @@
 namespace atb_speed {
 namespace baichuan2_13b {
 struct PAQuantLayerParam {
-    float rmsNormEps = 0;
-    int headNum = 0;
     int dk = 0;
-    int rank = 0;
+    int headNum = 0;
     int rankSize = 1;
+    bool isFA = true;
     bool isPrefill = false;
+    bool isBF16 = false;
+    bool isPack = true;
+    bool supportSwiGLU = true;  // baichuan2-13b默认为true
+    int quantType = 0;
+    float rmsNormEps = 0;
+    int numAttentionHeadsPerRank = 0;
+    int hiddenSizePerAttentionHead = 0;
+    int numKeyValueHeadsPerRank = 0;
+
     bool transposedWeight = true;
     std::string backend = "hccl";
     std::string model = "baichuan2_13b";
-    float wPackInputScale = 1;
-    int wPackInputOffset = 0;
-    float oProjInputScale = 1;
-    int oProjInputOffset = 0;
-    float gateProjInputScale = 1;
-    int gateProjInputOffset = 0;
-    float downProjInputScale = 1;
-    int downProjInputOffset = 0;
-    float upProjInputScale = 1;
-    int upProjInputOffset = 0;
+
+    int rank = 0;
+    int worldSize = 1;
+    std::vector<int> seqLen;
+    std::vector<int> packQuantType = {};  // 两个元素，第一个元素代表QKV pack的量化类型，第二个元素代表MLP pack的量化类型
+    // 七个元素，分别代表q，k，v，self attention out，gate，up，down linear的类型
+    std::vector<int> linearQuantType = {};
 };
 
-void from_json(const nlohmann::json &paramJson, PAQuantLayerParam &param);
+enum LayerQuantPATensorId : int {
+    IN_HIDDEN_STATES = 0,               // shape: FA: [batchSize, seqLen, maxPositionEmbeddings] PA: [seqLen, hiddenSize]
+    IN_INPUT_NORM_WEIGHT,               // shape: [hiddenSize]
+    IN_INPUT_NORM_BIAS,
+    IN_INPUT_NORM_NEW_WEIGHT,
+    IN_INPUT_NORM_NEW_BIAS,
+    IN_QKV_WEIGHT_0,                    // Pack: shape: MHA [3 * numAttentionHeadsPerRank * hiddenSizePerAttentionHead, hiddenSize] GQA [(numAttentionHeadsPerRank + 2 * numKeyValueHeadsPerRank) * hiddenSizePerAttentionHead, hiddenSize]
+    IN_QKV_DEOFFSET_0,                  // Quant所需权重
+    IN_QKV_DESCALE_0,                   // Quant所需权重
+    IN_QKV_OFFSET_0,                    // Quant所需权重
+    IN_QKV_SCALE_0,                     // Quant所需权重
+    IN_QKV_WEIGHT_1,                    // Pack: no usage; No pack: (K) shape: [numKeyValueHeadsPerRank * hiddenSizePerAttentionHead, hiddenSize]
+    IN_QKV_DEOFFSET_1,                  // Quant所需权重
+    IN_QKV_DESCALE_1,                   // Quant所需权重
+    IN_QKV_OFFSET_1,                    // Quant所需权重
+    IN_QKV_SCALE_1,                     // Quant所需权重
+    IN_QKV_WEIGHT_2,                    // Pack: no usage; No pack: (V) shape: [numKeyValueHeadsPerRank * hiddenSizePerAttentionHead, hiddenSize]
+    IN_QKV_DEOFFSET_2,                  // Quant所需权重
+    IN_QKV_DESCALE_2,                   // Quant所需权重
+    IN_QKV_OFFSET_2,                    // Quant所需权重
+    IN_QKV_SCALE_2,                     // Quant所需权重
+    IN_ATTENTION_OUT_WEIGHT,            // shape: [hiddenSize, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
+    IN_ATTENTION_OUT_DEOFFSET,          // Quant所需权重
+    IN_ATTENTION_OUT_DESCALE,           // Quant所需权重
+    IN_ATTENTION_OUT_OFFSET,            // Quant所需权重
+    IN_ATTENTION_OUT_SCALE,             // Quant所需权重
+    IN_ATTENTION_NORM_WEIGHT,           // shape: [hiddenSize]
+    IN_ATTENTION_NORM_BIAS,
+    IN_ATTENTION_NORM_NEW_WEIGHT,
+    IN_ATTENTION_NORM_NEW_BIAS,
+    IN_MLP_WEIGHT_0,                    // Pack: shape: [2 * intermediateSizePerRank, hiddenSize]
+    IN_MLP_DEOFFSET_0,                  // Quant所需权重
+    IN_MLP_DESCALE_0,                   // Quant所需权重
+    IN_MLP_OFFSET_0,                    // Quant所需权重
+    IN_MLP_SCALE_0,                     // Quant所需权重
+    IN_MLP_WEIGHT_1,                    // Pack: no usage; No pack: (Up) shape: [intermediateSizePerRank, hiddenSize]
+    IN_MLP_DEOFFSET_1,                  // Quant所需权重
+    IN_MLP_DESCALE_1,                   // Quant所需权重
+    IN_MLP_OFFSET_1,                    // Quant所需权重
+    IN_MLP_SCALE_1,                     // Quant所需权重
+    IN_MLP_DOWN_WEIGHT,                 // shape: [hiddenSize, intermediateSizePerRank]
+    IN_MLP_DOWN_DEOFFSET,               // Quant所需权重
+    IN_MLP_DOWN_DESCALE,                // Quant所需权重
+    IN_MLP_DOWN_OFFSET,                 // Quant所需权重
+    IN_MLP_DOWN_SCALE,                  // Quant所需权重
+    IN_ATTENTION_MASK,                  // shape: FA: [batchSize, maxPositionEmbeddings, maxPositionEmbeddings] PA: [seqLen, seqLen]
+    IN_K_CACHE,                         // shape: FA: [batchSize, maxPositionEmbeddings, numKeyValueHeadsPerRank * hiddenSizePerAttentionHead] PA: [2622, hiddenSizePerAttentionHead, numAttentionHeadsPerRank, hiddenSizePerAttentionHead]
+    IN_V_CACHE,                         // shape: FA: [batchSize, maxPositionEmbeddings, numKeyValueHeadsPerRank * hiddenSizePerAttentionHead] PA: [2622, hiddenSizePerAttentionHead, numAttentionHeadsPerRank, hiddenSizePerAttentionHead]
+    IN_INPUT_LENGTHS,
+    IN_BLOCK_TABLES,                    // shape: [seqLen, seqLen]; PA所需参数
+    IN_SLOTS,  
+    IN_PLACE_HOLDER,                    // shape: [1]
+    OUT_DECODER_LAYER,                  // shape: FA: [batchSize, seqLen, maxPositionEmbeddings] PA: [seqLen, hiddenSize]
+    INTERMEDIATE_ATTENTION_OUT,         // shape: PA: [seqLen, hiddenSize]
+    INTERMEDIATE_RESIDUAL_ADD_OUT,      // shape: PA: [seqLen, hiddenSize]
+    INTERMEDIATE_MLP_OUT,               // shape: PA: [seqLen, hiddenSize]
+};
+
 
 atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operation);
 
-atb::Operation *CreatePAQuantLayer(const nlohmann::json &paramJson);
 
 class PAQuantLayerHostBinder : public HostTensorBinder {
 public:
     PAQuantLayerHostBinder();
-
-    ~PAQuantLayerHostBinder() override;
-
+    virtual ~PAQuantLayerHostBinder();
     void ParseParam(const nlohmann::json &paramJson) override;
-
     void BindTensor(atb::VariantPack &variantPack) override;
 
 private:
-    std::vector<int32_t> seqLen_;
+    std::vector<int> seqLen_;
+    int32_t layerId_ = 0;
 };
 } // namespace baichuan2_13b
 } // namespace atb_speed
