@@ -29,12 +29,13 @@ enum PackQuantType : unsigned int {
     ALL_W8A8_ANTI = 3,
     MIX_W8A8 = 4,
     MIX_W8A8_ANTI = 5,
+    ALL_W8A16 = 6,
 };
 
 template <typename NormParamType>
 struct NormLinearParam {
     bool isAntiOutlier = false;
-    bool fpHasBias = false;
+    bool normHasBias = false;
     NormParamType normParamType;
     NormParamType normQuantParamType;
     atb_speed::common::FusionLinearParam fusionLinearParam;

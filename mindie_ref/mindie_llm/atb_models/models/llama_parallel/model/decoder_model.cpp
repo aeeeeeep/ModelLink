@@ -21,7 +21,7 @@
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
 #include "layers/operations/word_embedding.h"
-#include "layers/operations/pe_gather.h"
+#include "layers/operations/positional_embedding.h"
 #include "layers/operations/lmhead.h"
 #include "models/llama_parallel/layer/decoder_layer.h"
 #include "models/llama_parallel/model/decoder_model.h"
@@ -48,6 +48,7 @@ void DecoderModel::Param::FromString(const std::string &param)
     isEmbeddingParallel = paramJson["isEmbeddingParallel"].get<bool>();
     isLmHeadParallel = paramJson["isLmHeadParallel"].get<bool>();
     supportSwiGLU = paramJson["supportSwiGLU"].get<bool>();
+    supportLcoc = paramJson["supportLcoc"].get<bool>();
     rmsNormEps = paramJson["rmsNormEps"].get<float>();
     numAttentionHeadsPerRank = paramJson["numAttentionHeadsPerRank"].get<int>();
     hiddenSizePerAttentionHead = paramJson["hiddenSizePerAttentionHead"].get<int>();
@@ -71,7 +72,7 @@ void DecoderModel::Param::FromString(const std::string &param)
     ATB_LOG(INFO) << "DecoderModel param" << ", isFA:" << isFA << ", isPrefill:" << isPrefill
                   << ", isBF16:" << isBF16
                   << ", isEmbeddingParallel: " << isEmbeddingParallel << ", isLmHeadParallel: "
-                  << isLmHeadParallel << ", supportSwiGLU: " << supportSwiGLU
+                  << isLmHeadParallel << ", supportSwiGLU: " << supportSwiGLU << "supportLcoc" << supportLcoc
                   << ", rmsNormEps:" << rmsNormEps << ", numAttentionHeadsPerRank:"
                   << numAttentionHeadsPerRank << ", hiddenSizePerAttentionHead:" << hiddenSizePerAttentionHead
                   << ", numHiddenLayers:" << numHiddenLayers
@@ -207,7 +208,7 @@ int64_t DecoderModel::BuildGraph()
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)};
 
     auto &peGatherNode = graph_.nodes.at(nodeId++);
-    atb_speed::common::PEGather(&op);
+    atb_speed::common::PositionalEmbeddingGather(&op);
     peGatherNode.operation.reset(op);
     peGatherNode.inTensors = {
         &graph_.inTensors.at(IN_TENSOR_POSITION_IDS),
@@ -227,6 +228,7 @@ int64_t DecoderModel::BuildGraph()
         layerParam.isPrefill = param_.isPrefill;
         layerParam.isBF16 = param_.isBF16;
         layerParam.supportSwiGLU = param_.supportSwiGLU;
+        layerParam.supportLcoc = param_.supportLcoc;
         layerParam.packQuantType = param_.packQuantType[layerId];
         layerParam.linearQuantType = param_.linearQuantType[layerId];
         layerParam.rmsNormEps = param_.rmsNormEps;

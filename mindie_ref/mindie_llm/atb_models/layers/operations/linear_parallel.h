@@ -40,6 +40,7 @@ struct LinearParallelParam {
     int parallelType = UNDEFINED;
     bool biasAfterSync = false;
     bool unpadInputs = false;  // all reduce时不会使用到此参数
+    bool supportLcoc = false;
     TensorParallelInfo tensorParallelInfo;
 };
 

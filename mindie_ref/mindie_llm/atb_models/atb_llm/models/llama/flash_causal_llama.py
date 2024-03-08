@@ -145,11 +145,11 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
             layer = self.model.layers[i]
             layer_dict = layer.state_dict()
             weight_wrapper.register_layer(layer_dict, layer.self_attn.pack_type, layer.mlp.pack_type, self.quantize)
+            quant_type.append([layer.self_attn.pack_type.value, layer.mlp.pack_type.value])
             if self.soc_info.need_nz:
                 del layer.self_attn
                 del layer.post_attention_layernorm
                 del layer.mlp
-            quant_type.append([layer.self_attn.pack_type.value, layer.mlp.pack_type.value])
         weight_wrapper.register_model_norm(self.model.state_dict(), 'norm')
         weight_wrapper.register_model_lmhead(self.state_dict(), 'lm_head')
         return weight_wrapper.weights, weight_wrapper.linear_type, quant_type
@@ -175,8 +175,8 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                 "worldSize": self.tp_world_size,
                 "backend": "hccl" if self.soc_info.need_nz else "lccl"
             }
-            encoder_param = {**coder_param, "isPrefill": True}
-            decoder_param = {**coder_param, "isPrefill": False}
+            encoder_param = {**coder_param, "isPrefill": True, "supportLcoc": False if self.soc_info.need_nz else True}
+            decoder_param = {**coder_param, "isPrefill": False, "supportLcoc": False}
             self.acl_encoder_operation.set_param(json.dumps({**encoder_param}))
             self.acl_decoder_operation.set_param(json.dumps({**decoder_param}))
 
@@ -290,7 +290,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                                                                         self.num_attention_heads,
                                                                         1, input_lengths.max(),
                                                                         dtype=self.dtype,
-                                                                        device=input_ids.device)
+                                                                        device=self.device)
                 else:
                     self.acl_decoder_operation_inputs[4] = self.attn_mask_fake
                 self.acl_decoder_operation_inputs[5] = block_tables.to(torch.int32)

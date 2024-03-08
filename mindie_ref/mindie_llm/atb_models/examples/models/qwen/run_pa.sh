@@ -1,6 +1,5 @@
 #!/bin/bash
 export BIND_CPU=1
-export IS_QUANT=0
 export RESERVED_MEMORY_GB=3
 export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3
 export MASTER_PORT=12347

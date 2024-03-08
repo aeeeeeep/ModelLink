@@ -105,13 +105,14 @@ class WeightWrapper:
     def register_layer_linear_pack_w8a16(self, layer_dict, norm_name, pack_linear_name, linear_type='attn'):
         self.register_layer_norm(layer_dict, norm_name)
         self.register_linear(layer_dict, pack_linear_name)
-        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.weight_scale']))
+        self.weights.append(self.placeholder)
         self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.weight_offset']))
+        self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.weight_scale']))
         if linear_type == 'attn':
-            self.weights.extend([self.placeholder] * 11)
+            self.weights.extend([self.placeholder] * 10)
             self.layer_linear_type.extend([LinearType.INT.value, LinearType.INVALID.value, LinearType.INVALID.value])
         else:
-            self.weights.extend([self.placeholder] * 6)
+            self.weights.extend([self.placeholder] * 5)
             self.layer_linear_type.extend([LinearType.INT.value, LinearType.INVALID.value])
 
     def register_layer_linear_pack(self, layer_dict, norm_name, pack_linear_name, pack_type, linear_type='attn'):
@@ -144,9 +145,9 @@ class WeightWrapper:
             self.layer_linear_type.append(LinearType.FP.value)
         elif quantize_type == 'w8a16':
             self.register_linear(layer_dict, linear_name)
-            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.weight_scale']))
+            self.weights.append(self.placeholder)
             self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.weight_offset']))
-            self.weights.extend([self.placeholder] * 2)
+            self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.weight_scale']))
             self.layer_linear_type.append(LinearType.INT.value)
         elif quantize_type == 'smooth_quant':
             self.weights.append(self.weight_format_cast(layer_dict[f'{linear_name}.linear.weight']))
@@ -216,7 +217,7 @@ class WeightWrapper:
         self.weights.append(model_dict[f'{norm_name}.weight'])
 
     def register_model_lmhead(self, model_dict, lmhead_name):
-        self.weights.append(model_dict[f'{lmhead_name}.linear.weight'])
+        self.weights.append(self.weight_format_cast(model_dict[f'{lmhead_name}.linear.weight']))
     
     def register_layer(self, layer_dict, attn_pack_type, mlp_pack_type, quantize_type):
         self.layer_linear_type.clear()

@@ -5,7 +5,7 @@ ModelTest为大模型的性能和精度提供测试功能。
 目前支持：PA场景，float16
 
 功能：
-1. 性能测试：指定batch，指定输入输出长度的e2e性能、吞吐，首Token以及非首Token性能。吞吐。
+1. 性能测试：指定batch，指定输入输出长度的e2e性能、吞吐，首Token以及非首Token性能，吞吐。
 2. 精度测试：CEval, MMLU, BoolQ, HumanEval下游数据集
 
 PA模型支持：
@@ -40,7 +40,7 @@ pip install -r requirements.txt
 
 ### 运行指令
 ```
-bash run.sh pa_fp16 [performance|full_CEval|full_MMLU|full_BoolQ] ([case_pair]) [batch_size] [model_name] ([use_refactor]) [weight_dir] [chip_num] ([max_position_embedding/max_sequence_length])
+bash run.sh pa_fp16 [performance|full_CEval|full_MMLU|full_BoolQ|full_HumanEval] ([case_pair]) [batch_size] [model_name] ([use_refactor]) [weight_dir] [chip_num] ([max_position_embedding/max_sequence_length])
 
 说明:
 1. case_pair只在performance场景下接受输入，接收一组或多组输入，格式为[[seq_in_1,seq_out_1],...,[seq_in_n,seq_out_n]], 如[[256,256],[512,512]]
@@ -52,6 +52,7 @@ bash run.sh pa_fp16 [performance|full_CEval|full_MMLU|full_BoolQ] ([case_pair]) 
     Baichuan2-7b: baichuan2_7b
     Baichuan2-13b: baichuan2_13b
     Qwen-14b, Qwen-72b: qwen
+    Aquila-7B: aquila_7b
 3. 当model_name为llama时，须指定use_refactor为True或者False（llama2-7b/13b 模型下，use_refactor为False使用的是浮点量化归一版本，可测试量化）
 4. weight_dir: 权重路径
 5. chip_num: 使用的卡数
@@ -67,10 +68,6 @@ bash run.sh pa_fp16 full_BoolQ 1 starcoder /path 8
  
 
 ## startcoder 特别运行操作说明
-- 修改base/model_test.py 第 `211` 行 
-```
-self.max_prefill_tokens = 8192
-```
 - 对于300I DUO设置环境变量，修改core/starcoder.py中prepare_environ函数。
 ```shell
 os.environ['ATB_LAUNCH_KERNEL_WITH_TILING'] = "1"

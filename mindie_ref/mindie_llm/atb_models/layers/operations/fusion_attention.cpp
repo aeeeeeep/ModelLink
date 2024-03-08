@@ -15,7 +15,7 @@
  */
 
 #include "layers/operations/fusion_attention.h"
-#include "pe_gather.h"
+#include "positional_embedding.h"
 namespace atb_speed {
 namespace common {
 
@@ -29,17 +29,17 @@ enum QKVLinearSplitTensorIdx : uint32_t {
     IN_QKV_SCALE_0,
     IN_QKV_OFFSET_0,
     IN_QKV_DESCALE_0,
-    IN_QKV_DEOFFSET_0,
+    IN_QKV_BIAS_0,
     IN_QKV_WEIGHT_1,
     IN_QKV_SCALE_1,
     IN_QKV_OFFSET_1,
     IN_QKV_DESCALE_1,
-    IN_QKV_DEOFFSET_1,
+    IN_QKV_BIAS_1,
     IN_QKV_WEIGHT_2,
     IN_QKV_SCALE_2,
     IN_QKV_OFFSET_2,
     IN_QKV_DESCALE_2,
-    IN_QKV_DEOFFSET_2,
+    IN_QKV_BIAS_2,
     OUT_Q,
     OUT_K,
     OUT_V,
@@ -79,10 +79,15 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
     atb::Node &qNormLinearNode = opGraph.nodes.at(nodeId++);
     atb_speed::common::NormLinearParam<NormParamType> qNormLinearParam;
     qNormLinearParam.isAntiOutlier = param.isAntiOutlier;
-    qNormLinearParam.fusionLinearParam.quantType \
-        = param.layerLinearQuantType[0] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+    if (param.packQuantType == atb_speed::common::ALL_W8A16) {
+        qNormLinearParam.fusionLinearParam.quantType = W8A16;
+    } else {
+        qNormLinearParam.fusionLinearParam.quantType \
+            = param.layerLinearQuantType[0] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+    }
     qNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
     qNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
+    qNormLinearParam.normHasBias = param.normHasBias;
     qNormLinearParam.normParamType = param.normParamType;
     qNormLinearParam.normQuantParamType = param.normQuantParamType;
     NormLinear<NormParamType>(qNormLinearParam, &qNormLinearNode.operation);
@@ -91,7 +96,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         QKVLinearSplitTensorIdx::IN_QKV_NORM_NEW_WEIGHT, QKVLinearSplitTensorIdx::IN_QKV_NORM_NEW_BIAS,
         QKVLinearSplitTensorIdx::IN_QKV_WEIGHT_0,
         QKVLinearSplitTensorIdx::IN_QKV_SCALE_0, QKVLinearSplitTensorIdx::IN_QKV_OFFSET_0,
-        QKVLinearSplitTensorIdx::IN_QKV_DESCALE_0, QKVLinearSplitTensorIdx::IN_QKV_DEOFFSET_0
+        QKVLinearSplitTensorIdx::IN_QKV_DESCALE_0, QKVLinearSplitTensorIdx::IN_QKV_BIAS_0
     };
     qNormLinearNode.outTensorIds = {param.isPack ? QKVLinearSplitTensorIdx::INTERMEDIATE_MIXED_QKV : QKVLinearSplitTensorIdx::OUT_Q};
 
@@ -144,10 +149,15 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         atb::Node &kNormLinearNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> kNormLinearParam;
         kNormLinearParam.isAntiOutlier = param.isAntiOutlier;
-        kNormLinearParam.fusionLinearParam.quantType \
-            = param.layerLinearQuantType[1] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+        if (param.packQuantType == atb_speed::common::ALL_W8A16) {
+            kNormLinearParam.fusionLinearParam.quantType = W8A16;
+        } else {
+            kNormLinearParam.fusionLinearParam.quantType \
+                = param.layerLinearQuantType[1] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+        }
         kNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         kNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
+        kNormLinearParam.normHasBias = param.normHasBias;
         kNormLinearParam.normParamType = param.normParamType;
         kNormLinearParam.normQuantParamType = param.normQuantParamType;
         NormLinear<NormParamType>(kNormLinearParam, &kNormLinearNode.operation);
@@ -156,17 +166,22 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
             QKVLinearSplitTensorIdx::IN_QKV_NORM_NEW_WEIGHT, QKVLinearSplitTensorIdx::IN_QKV_NORM_NEW_BIAS,
             QKVLinearSplitTensorIdx::IN_QKV_WEIGHT_1,
             QKVLinearSplitTensorIdx::IN_QKV_SCALE_1, QKVLinearSplitTensorIdx::IN_QKV_OFFSET_1,
-            QKVLinearSplitTensorIdx::IN_QKV_DESCALE_1, QKVLinearSplitTensorIdx::IN_QKV_DEOFFSET_1
+            QKVLinearSplitTensorIdx::IN_QKV_DESCALE_1, QKVLinearSplitTensorIdx::IN_QKV_BIAS_1
         };
         kNormLinearNode.outTensorIds = {QKVLinearSplitTensorIdx::OUT_K};
 
         atb::Node &vNormLinearNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> vNormLinearParam;
         vNormLinearParam.isAntiOutlier = param.isAntiOutlier;
-        vNormLinearParam.fusionLinearParam.quantType \
-            = param.layerLinearQuantType[2] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+        if (param.packQuantType == atb_speed::common::ALL_W8A16) {
+            vNormLinearParam.fusionLinearParam.quantType = W8A16;
+        } else {
+            vNormLinearParam.fusionLinearParam.quantType \
+                = param.layerLinearQuantType[2] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
+        }
         vNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         vNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
+        vNormLinearParam.normHasBias = param.normHasBias;
         vNormLinearParam.normParamType = param.normParamType;
         vNormLinearParam.normQuantParamType = param.normQuantParamType;
         NormLinear<NormParamType>(vNormLinearParam, &vNormLinearNode.operation);
@@ -175,7 +190,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
             QKVLinearSplitTensorIdx::IN_QKV_NORM_NEW_WEIGHT, QKVLinearSplitTensorIdx::IN_QKV_NORM_NEW_BIAS,
             QKVLinearSplitTensorIdx::IN_QKV_WEIGHT_2,
             QKVLinearSplitTensorIdx::IN_QKV_SCALE_2, QKVLinearSplitTensorIdx::IN_QKV_OFFSET_2,
-            QKVLinearSplitTensorIdx::IN_QKV_DESCALE_2, QKVLinearSplitTensorIdx::IN_QKV_DEOFFSET_2
+            QKVLinearSplitTensorIdx::IN_QKV_DESCALE_2, QKVLinearSplitTensorIdx::IN_QKV_BIAS_2
         };
         vNormLinearNode.outTensorIds = {QKVLinearSplitTensorIdx::OUT_V};
     }
@@ -272,7 +287,7 @@ atb::Status SelfAttention(const FusionAttentionParam<NormParamType> &param, atb:
         };
         selfAttentionNode.outTensorIds = {SelfAttentionTensorIdx::OUT_SELF_ATTENTION};
     } else {  // PA Decode
-        if (param.isBF16) {
+        if (param.pageAttentionParam.maskType == atb::infer::PagedAttentionParam::MaskType::MASK_TYPE_ALIBI) {
             selfAttentionNode.inTensorIds = {
                 SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_Q, SelfAttentionTensorIdx::IN_SELF_ATTENTION_K_CACHE,
                 SelfAttentionTensorIdx::IN_SELF_ATTENTION_V_CACHE, SelfAttentionTensorIdx::IN_SELF_ATTENTION_BLOCK_TABLES,
@@ -314,17 +329,17 @@ enum AttentionTensorIdx : uint32_t {
     IN_SCALE_0,
     IN_OFFSET_0,
     IN_DESCALE_0,
-    IN_DEOFFSET_0,
+    IN_BIAS_0,
     IN_WEIGHT_1,  // k
     IN_SCALE_1,
     IN_OFFSET_1,
     IN_DESCALE_1,
-    IN_DEOFFSET_1,
+    IN_BIAS_1,
     IN_WEIGHT_2,  // v
     IN_SCALE_2,
     IN_OFFSET_2,
     IN_DESCALE_2,
-    IN_DEOFFSET_2,
+    IN_BIAS_2,
     IN_COS_TABLE,
     IN_SIN_TABLE,
     IN_SEQ_LEN,
@@ -339,7 +354,7 @@ enum AttentionTensorIdx : uint32_t {
     IN_SCALE_OUT,
     IN_OFFSET_OUT,
     IN_DESCALE_OUT,
-    IN_DEOFFSET_OUT,
+    IN_BIAS_OUT,
     OUT_ATTENTION,
     // shape: PA: [seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
     // shape: FA: [batchSize, seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
@@ -348,11 +363,11 @@ enum AttentionTensorIdx : uint32_t {
     // shape: FA: [batchSize, seqLen, numKeyValueHeadsPerRank * hiddenSizePerAttentionHead]
     INTERMIDATE_K,
     INTERMIDATE_V,  // same as INTERMIDATE_K
+    INTERMIDATE_SELF_ATTENTION,  // shape: PA: [seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
     // shape: PA: [unpadSeqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
     // shape: FA: [batchSize * seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
     INTERMIDATE_POSITION_EMBED_Q,
     INTERMIDATE_POSITION_EMBED_K,  // same as INTERMIDATE_POSITION_EMBED_Q
-    INTERMIDATE_SELF_ATTENTION  // shape: PA: [seqLen, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
 };
 
 static const uint64_t ATTENTION_IN_TENSOR_COUNT = 35;
@@ -410,10 +425,11 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
     opGraph.name = "Attention";
     opGraph.inTensorNum = ATTENTION_IN_TENSOR_COUNT;
     opGraph.outTensorNum = ATTENTION_OUT_TENSOR_COUNT;
-    opGraph.internalTensorNum = ATTENTION_INTERMEDIATE_TENSOR_COUNT;
     if (param.needRope) {
+        opGraph.internalTensorNum = ATTENTION_INTERMEDIATE_TENSOR_COUNT;
         opGraph.nodes.resize(ATTENTION_NODE_COUNT);
     } else {
+        opGraph.internalTensorNum = ATTENTION_INTERMEDIATE_TENSOR_COUNT - 2;
         opGraph.nodes.resize(ATTENTION_NODE_COUNT - 1);
     }
 
@@ -425,11 +441,11 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
         AttentionTensorIdx::IN_INPUT, AttentionTensorIdx::IN_NORM_WEIGHT, AttentionTensorIdx::IN_NORM_BIAS,
         AttentionTensorIdx::IN_NORM_NEW_WEIGHT,  AttentionTensorIdx::IN_NORM_NEW_BIAS,
         AttentionTensorIdx::IN_WEIGHT_0, AttentionTensorIdx::IN_SCALE_0, AttentionTensorIdx::IN_OFFSET_0,
-        AttentionTensorIdx::IN_DESCALE_0, AttentionTensorIdx::IN_DEOFFSET_0,
+        AttentionTensorIdx::IN_DESCALE_0, AttentionTensorIdx::IN_BIAS_0,
         AttentionTensorIdx::IN_WEIGHT_1, AttentionTensorIdx::IN_SCALE_1, AttentionTensorIdx::IN_OFFSET_1,
-        AttentionTensorIdx::IN_DESCALE_1, AttentionTensorIdx::IN_DEOFFSET_1,
+        AttentionTensorIdx::IN_DESCALE_1, AttentionTensorIdx::IN_BIAS_1,
         AttentionTensorIdx::IN_WEIGHT_2, AttentionTensorIdx::IN_SCALE_2, AttentionTensorIdx::IN_OFFSET_2,
-        AttentionTensorIdx::IN_DESCALE_2, AttentionTensorIdx::IN_DEOFFSET_2
+        AttentionTensorIdx::IN_DESCALE_2, AttentionTensorIdx::IN_BIAS_2
     };
     qkvLinearSplitNode.outTensorIds = {
         AttentionTensorIdx::INTERMIDATE_Q, AttentionTensorIdx::INTERMIDATE_K, AttentionTensorIdx::INTERMIDATE_V
@@ -466,8 +482,8 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
     atb::Node &selfAttentionNode = opGraph.nodes.at(nodeId++);
     SelfAttention(param, &selfAttentionNode.operation);
     selfAttentionNode.inTensorIds = {
-        AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_Q,
-        AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_K,
+        param.needRope ? AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_Q : AttentionTensorIdx::INTERMIDATE_Q,
+        param.needRope ? AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_K : AttentionTensorIdx::INTERMIDATE_K,
         AttentionTensorIdx::INTERMIDATE_V,
         AttentionTensorIdx::IN_K_CACHE,
         AttentionTensorIdx::IN_V_CACHE,
@@ -517,20 +533,25 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
     atb::Node &selfOutLinearParallelNode = opGraph.nodes.at(nodeId++);
     atb_speed::common::LinearParallelParam selfOutLinearParam;
     selfOutLinearParam.parallelType = atb_speed::common::ROW_PARALLEL;
-    selfOutLinearParam.fusionLinearParam.quantType \
-        = param.layerLinearQuantType[3] == atb_speed::common::LinearType::FP ? \
-        atb_speed::common::LinearQuantType::NO_QUANT : atb_speed::common::LinearQuantType::LINEAR_QUANT;
+    if (param.packQuantType == atb_speed::common::ALL_W8A16) {
+        selfOutLinearParam.fusionLinearParam.quantType = W8A16;
+    } else {
+        selfOutLinearParam.fusionLinearParam.quantType \
+            = param.layerLinearQuantType[3] == atb_speed::common::LinearType::FP ? \
+            atb_speed::common::LinearQuantType::NO_QUANT : atb_speed::common::LinearQuantType::LINEAR_QUANT;
+    }
     selfOutLinearParam.biasAfterSync = param.selfOutLinearTensorParallelInfo.worldSize > 1 \
         && selfOutLinearParam.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::NO_QUANT \
         && param.selfAttnHasBias;
     selfOutLinearParam.fusionLinearParam.isBF16 = param.isBF16;
     selfOutLinearParam.fusionLinearParam.hasBias = param.selfAttnHasBias && !selfOutLinearParam.biasAfterSync;
     selfOutLinearParam.tensorParallelInfo = param.selfOutLinearTensorParallelInfo;
+    selfOutLinearParam.supportLcoc = param.supportLcoc;
     LinearParallel(selfOutLinearParam, &selfOutLinearParallelNode.operation);
     selfOutLinearParallelNode.inTensorIds = {
         AttentionTensorIdx::INTERMIDATE_SELF_ATTENTION, AttentionTensorIdx::IN_WEIGHT_OUT,
         AttentionTensorIdx::IN_SCALE_OUT, AttentionTensorIdx::IN_OFFSET_OUT,
-        AttentionTensorIdx::IN_DESCALE_OUT, AttentionTensorIdx::IN_DEOFFSET_OUT
+        AttentionTensorIdx::IN_DESCALE_OUT, AttentionTensorIdx::IN_BIAS_OUT
     };
     selfOutLinearParallelNode.outTensorIds = {AttentionTensorIdx::OUT_ATTENTION};
 
@@ -547,6 +568,10 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
 template atb::Status QKVLinearSplit(const FusionAttentionParam<atb::infer::RmsNormParam> &param, atb::Operation **operation);
 template atb::Status SelfAttention(const FusionAttentionParam<atb::infer::RmsNormParam> &param, atb::Operation **operation);
 template atb::Status Attention(const FusionAttentionParam<atb::infer::RmsNormParam> &param, atb::Operation **operation);
+
+template atb::Status QKVLinearSplit(const FusionAttentionParam<atb::infer::LayerNormParam> &param, atb::Operation **operation);
+template atb::Status SelfAttention(const FusionAttentionParam<atb::infer::LayerNormParam> &param, atb::Operation **operation);
+template atb::Status Attention(const FusionAttentionParam<atb::infer::LayerNormParam> &param, atb::Operation **operation);
 
 } // namespace common
 } // namespace atb_speed

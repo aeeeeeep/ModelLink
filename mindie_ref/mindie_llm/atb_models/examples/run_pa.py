@@ -82,24 +82,24 @@ class PARunner:
     def warm_up(self):
         if self.max_prefill_tokens == -1:
             self.max_prefill_tokens = self.max_batch_size * (self.max_input_length + self.max_output_length)
-            self.all_input_length = self.max_batch_size * self.max_input_length
-        input_ids = torch.ones(self.all_input_length, dtype=torch.int64).to(self.device)
+        all_input_length = self.max_batch_size * self.max_input_length
+        input_ids = torch.ones(all_input_length, dtype=torch.int64).to(self.device)
         position_ids = torch.arange(self.max_input_length, dtype=torch.int32).repeat(self.max_batch_size).to(
             self.device)
         cu_seqlen_prefill = torch.tensor([1])
         try:
-            block_num = math.ceil(self.all_input_length / self.block_size)
+            block_num = math.ceil(all_input_length / self.block_size)
         except ZeroDivisionError as e:
             raise ZeroDivisionError from e
         block_tables_tensor = torch.arange(block_num, dtype=torch.int32).view(1, -1).to(self.device)
-        slots = torch.arange(self.all_input_length, dtype=torch.int32).to(self.device)
+        slots = torch.arange(all_input_length, dtype=torch.int32).to(self.device)
         input_lengths_tensor = torch.tensor(
             [self.max_input_length] * self.max_batch_size, dtype=torch.int64
         ).to(self.device)
-        prefill_head_indices = torch.tensor([self.all_input_length - 1], dtype=torch.int64).to(self.device)
+        prefill_head_indices = torch.tensor([all_input_length - 1], dtype=torch.int64).to(self.device)
         print_log(self.rank, logger.info, "---------------begin warm_up---------------")
         try:
-            self.warm_up_num_blocks = math.ceil(self.max_prefill_tokens / self.block_size)
+            self.warm_up_num_blocks = math.ceil((self.max_input_length + self.max_output_length) / self.block_size) * self.max_batch_size
         except ZeroDivisionError as e:
             raise ZeroDivisionError from e
         cache_config = CacheConfig(self.warm_up_num_blocks, self.block_size)
@@ -112,7 +112,7 @@ class PARunner:
             kv_cache=self.cache_manager.kv_cache,
             slots=slots,
             input_lengths=input_lengths_tensor,
-            max_seq_len=self.max_prefill_tokens,
+            max_seq_len=self.max_input_length,
             lm_head_indices=prefill_head_indices
         )
         self.warm_up_memory = int(
@@ -140,6 +140,8 @@ class PARunner:
         print_log(self.rank, logger.debug, f'req_list[0].input_ids: {req_list[0].input_ids}')
 
         if not self.cache_manager:
+            if self.max_prefill_tokens == -1:
+                self.max_prefill_tokens = self.max_batch_size * (self.max_input_length + self.max_output_length)
             cache_block_size = self.block_size * self.model.num_kv_heads * self.model.head_size
             dtype_size = CacheManager.get_dtype_size(self.dtype)
             total_cache_size = self.model.num_layers * cache_block_size * 2 * dtype_size
@@ -178,7 +180,7 @@ class PARunner:
             import os
             profiling_path = ENV.profiling_filepath
             if not os.path.exists(profiling_path):
-                os.makedirs(profiling_path)
+                os.makedirs(profiling_path, exist_ok=True)
             torch.npu.synchronize()
             e2e_start = time.time()
             with torch.npu.profile(profiling_path):
