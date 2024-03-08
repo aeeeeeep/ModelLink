@@ -116,6 +116,7 @@ class StarcoderMLP(nn.Module):
             prefix=f"{prefix}.c_proj",
             weights=weights,
             bias=True,
+            bias_pre_add=True
         )
 
 
@@ -151,6 +152,7 @@ class FlashStarcoderAttention(torch.nn.Module):
             prefix=f"{prefix}.c_proj",
             weights=weights,
             bias=True,
+            bias_pre_add=True
         )
 
 
