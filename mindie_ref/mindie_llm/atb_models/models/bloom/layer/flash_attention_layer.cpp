@@ -18,9 +18,9 @@
 #include "models/bloom/layer/flash_attention_layer.h"
 #include "layers/plugin_op/w8a16_bias_operation.h"
 
+
 namespace atb_speed {
 namespace bloom_7b {
-
 enum Bloom7BLayerInTensorId : int {
     IN_NORM_WEIGHT = 0,            // 0
     IN_NORM_BIAS,                  // 1
