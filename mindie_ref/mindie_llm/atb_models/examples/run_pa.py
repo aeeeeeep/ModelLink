@@ -142,21 +142,11 @@ class PARunner:
         if not self.cache_manager:
             if self.max_prefill_tokens == -1:
                 self.max_prefill_tokens = self.max_batch_size * (self.max_input_length + self.max_output_length)
-            cache_block_size = self.block_size * self.model.num_kv_heads * self.model.head_size
-            dtype_size = CacheManager.get_dtype_size(self.dtype)
-            total_cache_size = self.model.num_layers * cache_block_size * 2 * dtype_size
-
-            max_memory = ENV.memory_fraction * self.max_memory \
-                if not ENV.max_memory_gb else int(ENV.max_memory_gb) * (1 << 30)
-            free_memory = max_memory - ENV.reserved_memory_gb * (1 << 30) - (
-                self.warm_up_memory if self.warm_up_memory != 0 else self.init_memory)
-            print_log(self.rank, logger.info,
-                      f"infer max_memory(GB): {max_memory / (1024 ** 3): .2f}, "
-                      f"warm_up_memory(GB): {self.warm_up_memory / (1024 ** 3): .2f}, "
-                      f"free_memory(GB): {free_memory / (1024 ** 3): .2f}")
-
-            num_blocks = int(free_memory // total_cache_size)
-            print_log(self.rank, logger.info, f"num_blocks: {num_blocks}, free_memory: {free_memory}")
+            try:
+                num_blocks = math.ceil((self.max_input_length + self.max_output_length) / self.block_size) \
+                    * self.max_batch_size
+            except ZeroDivisionError as e:
+                raise ZeroDivisionError from e
             cache_config = CacheConfig(num_blocks, self.block_size)
             self.cache_manager = CacheManager(cache_config, self.model_config)
 
