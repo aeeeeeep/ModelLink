@@ -63,6 +63,11 @@ LIB_PATH = os.path.join(ATB_SPEED_HOME_PATH,
 torch.classes.load_library(LIB_PATH)
 
 
+def is_nd():
+    soc_version = torch_npu._C._npu_get_soc_version()
+    return soc_version in [104, 220, 221, 222, 223, 224]
+
+
 def print_rank_0(*args, **kwargs):
     if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
         print(*args, **kwargs)
@@ -219,7 +224,7 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
             "layerNormEps": config.layer_norm_epsilon, "headNum": self.num_heads, "dk": config.hidden_size // config.n_head,
             "invNormFactorvarAttr": 1.0 / math.sqrt(config.hidden_size // config.n_head), "activationFuncType": 1,
             "layerNum": self.num_hidden_layers, "rank":self.rank, "rankSize":self.world_size, "floatLayers": self.float_layers,
-            "backend": "lccl" if self.is_910b else "hccl"
+            "backend": "lccl" if IS_ND else "hccl"
             }
         param_dict.update(self.quant_param)
         
