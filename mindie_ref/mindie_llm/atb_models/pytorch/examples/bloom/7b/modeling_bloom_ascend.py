@@ -68,6 +68,9 @@ def is_nd():
     return soc_version in [104, 220, 221, 222, 223, 224]
 
 
+IS_ND = is_nd()
+
+
 def print_rank_0(*args, **kwargs):
     if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
         print(*args, **kwargs)
