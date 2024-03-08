@@ -44,7 +44,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
 
 1. Clone the repository to your local server:
     ```shell
-    git clone -b modellink https://gitee.com/ascend/ModelLink.git 
+    git clone https://gitee.com/ascend/ModelLink.git 
     cd ModelLink 
     mkdir logs
     mkdir ckpt
@@ -375,7 +375,7 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
 
 1. Clone the repository to your local server:
     ```shell
-    git clone -b modellink https://gitee.com/ascend/ModelLink.git 
+    git clone https://gitee.com/ascend/ModelLink.git 
     cd ModelLink 
     mkdir logs
     mkdir ckpt
@@ -639,7 +639,7 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
 
 1. Clone the repository to your local server:
 ```shell
-git clone -b modellink https://gitee.com/ascend/ModelLink.git 
+git clone https://gitee.com/ascend/ModelLink.git 
 cd ModeLlink 
 mkdir logs
 mkdir ckpt

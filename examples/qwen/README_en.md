@@ -44,7 +44,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
 
 1. Clone the repository to your local server:
     ```shell
-    git clone -b modellink https://gitee.com/ascend/ModelLink.git 
+    git clone https://gitee.com/ascend/ModelLink.git 
     cd ModelLink
     ```
 
@@ -255,7 +255,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
 
 1. Clone the repository to your local server:
     ```shell
-    git clone -b modellink https://gitee.com/ascend/ModelLink.git 
+    git clone https://gitee.com/ascend/ModelLink.git 
     cd ModelLink
     ```
 
@@ -475,7 +475,7 @@ Here's a hardware summary of pre-training  Qwen-72B:
 
 1. Clone the repository to your local server:
     ```shell
-    git clone -b modellink https://gitee.com/ascend/ModelLink.git 
+    git clone https://gitee.com/ascend/ModelLink.git 
     cd ModelLink
     ```
 

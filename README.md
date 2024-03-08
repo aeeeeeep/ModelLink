@@ -5,6 +5,7 @@
         <img alt="Docs" src="https://readthedocs.org/projects/internlm/badge/?version=latest">
     </a>
     <a href="https://gitee.com/ascend/AscendSpeed/blob/master/LICENSE">
+    <a href="https://gitee.com/ascend/AscendSpeed/blob/master/LICENSE">
         <img alt="GitHub" src="https://img.shields.io/github/license/huggingface/transformers.svg?color=blue">
     </a>
     <a href="https://gitee.com/ascend/AscendSpeed">
@@ -16,7 +17,7 @@
 </p>
 <p align="center">
         <b>简体中文</b> |
-        <b><a href="https://gitee.com/ascend/ModelLink/blob/modellink/README_en.md">English</a> </b>
+        <b><a href="README_en.md">English</a> </b>
 </p>
 
 ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) 上的大语言模型提供端到端的解决方案, 包含模型，算法，以及下游任务。
@@ -26,7 +27,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
 ---
 
 
-## 【支持功能】
+## 支持功能
 当前ModelLink支撑大模型使用功能:
 * [制作预训练数据集](#jump11)/[制作指令微调数据集](#jump12)
 * [预训练](#jump13)/[全参微调](#jump14)/[低参微调](#jump15)
@@ -36,7 +37,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
 
 强化学习等特性持续研发中....
 
-## 【支持模型】
+## 支持模型
 当前ModelLink支持下列模型的预训练以及微调:
 
 <table>
@@ -55,8 +56,8 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td rowspan="1"> <a href="examples/aquila/README.md">Aquila</a> </td>
       <td> 7B </td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_aquila_7b_ptd.sh">对话</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_aquila_7b_ptd.sh">评估</a> </td>
+      <td> <a href="tasks/inference/generate_aquila_7b_ptd.sh">对话</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_aquila_7b_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
@@ -92,119 +93,126 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
       <td> 7B1 </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/bloom/tune_bloom_7b1.sh">--</a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/bloom/generate_bloom_7B_tp8_pp1.sh">对话</a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/evaluate_bloom_7b1.sh">评估</a> </td>
+      <td> -- </td>
+      <td> <a href="tasks/inference/generate_bloom_7b_ptd.sh">对话</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_baichuan_7B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td> 176B </td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/bloom/generate_176b_2nodes.sh">对话</a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/tasks/evaluation/evaluate_bloom_176b.sh">评估</a> </td>
+      <td> <a href="tasks/inference/generate_bloom_176b_ptd.sh">对话</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_bloom_176b_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
-      <td><a href="examples/intern/README.md">InternLM</a></td>
+      <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>
       <td>7B</td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/tree/master/examples/intern/generate_internlm_7b_deepspeed.sh">对话</a> </td>
-      <td> <a href="https://gitee.com/ascend/AscendSpeed/blob/master/tasks/evaluation/eval_internlm.sh">评估</a> </td>
+      <td> <a href="tasks/inference/generate_lnternlm_7b_ptd.sh">对话</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_internlm_7B_ptd.sh">评估</a> </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+    </tr>
+    <tr>
+      <td>65B</td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama/README.md">LLaMA</a></td>
       <td>7B</td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_7b_ptd.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_7b_lora_ptd.sh">对话 </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_7B_ptd.sh">评估</a> </td>
+      <td> <a href="examples/llama/tune_llama_7b_ptd.sh">lora</a> </td>
+      <td> <a href="tasks/inference/generate_llama_7b_lora_ptd.sh">对话 </a> </td>
+      <td> <a href="tasks/evaluation/evaluate_llama_7B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>13B</td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_13b_ptd.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_13b_lora_ptd.sh">对话 </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_13B_ptd.sh">评估</a> </td>
+      <td> <a href="examples/llama/tune_llama_13b_ptd.sh">lora</a> </td>
+      <td> <a href="tasks/inference/generate_llama_13b_lora_ptd.sh">对话 </a> </td>
+      <td> <a href="tasks/evaluation/evaluate_llama_13B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>33B</td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_33b_ptd.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_33B_ptd.sh">对话 </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_33B_ptd.sh">评估 </a> </td>
+      <td> <a href="examples/llama/tune_llama_33b_ptd.sh">lora</a> </td>
+      <td> <a href="tasks/inference/generate_llama_33b_ptd.sh">对话 </a> </td>
+      <td> <a href="tasks/evaluation/evaluate_llama_33B_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td > 65B </td>
-      <td > <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_65b_ptd.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_65b_lora_ptd.sh">对话 </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_65B_ptd.sh">评估 </a> </td>
+      <td > <a href="examples/llama/tune_llama_65b_ptd.sh">lora</a> </td>
+      <td> <a href="tasks/inference/generate_llama_65b_lora_ptd.sh">对话 </a> </td>
+      <td> <a href="tasks/evaluation/evaluate_llama_65B_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</a></td>
       <td>7B</td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_7b_ptd.sh">lora </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_7b_ptd.sh">对话 </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_7B_ptd.sh">评估 </a>  </td>
+      <td> <a href="examples/llama2/tune_llama2_7b_ptd.sh">lora </a> </td>
+      <td> <a href="tasks/inference/generate_llama2_7b_ptd.sh">对话 </a> </td>
+      <td> <a href="tasks/evaluation/evaluate_llama2_7B_ptd.sh">评估 </a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td>13B</td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_13b_ptd.sh">lora </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_13B_ptd.sh">对话 </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_13B_ptd.sh">评估 </a> </td>
+      <td> <a href="examples/llama2/tune_llama2_13b_ptd.sh">lora </a> </td>
+      <td> <a href="tasks/inference/generate_llama2_13b_ptd.sh">对话 </a> </td>
+      <td> <a href="tasks/evaluation/evaluate_llama2_13B_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td> 34B </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_13b_ptd.sh">lora </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_34B_ptd.sh">对话 </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_34B_ptd.sh">评估 </a> </td>
+      <td> <a href="examples/llama2/tune_llama2_13b_ptd.sh">lora </a> </td>
+      <td> <a href="tasks/inference/generate_llama2_34B_ptd.sh">对话 </a> </td>
+      <td> <a href="tasks/evaluation/evaluate_llama2_34B_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td > 70B </td>
-      <td > <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_70b_ptd.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_70b_lora_ptd.sh">对话 </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_70B_ptd.sh">评估 </a> </td>
+      <td > <a href="examples/llama2/tune_llama2_70b_ptd.sh">lora</a> </td>
+      <td> <a href="tasks/inference/generate_llama2_70b_lora_ptd.sh">对话 </a> </td>
+      <td> <a href="tasks/evaluation/evaluate_llama2_70B_ptd.sh">评估 </a> </td>
       <td>  <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
       <td>7B</td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_qwen_7b_ptd.sh">对话 </a></td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_qwen_7b_ptd.sh">评估 </a></td>
+      <td> <a href="tasks/inference/generate_qwen_7b_ptd.sh">对话 </a></td>
+      <td> <a href="tasks/evaluation/evaluate_qwen_7b_ptd.sh">评估 </a></td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td>14B</td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_qwen_14b_ptd.sh">对话 </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_qwen_14b_ptd.sh">评估 </a> </td>
+      <td> <a href="tasks/inference/generate_qwen_14b_ptd.sh">对话 </a> </td>
+      <td> <a href="tasks/evaluation/evaluate_qwen_14b_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td>72B</td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_qwen_72b_ptd.sh">对话 </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_qwen_72b_ptd.sh">评估 </a> </td>
+      <td> <a href="tasks/inference/generate_qwen_72b_ptd.sh">对话 </a> </td>
+      <td> <a href="tasks/evaluation/evaluate_qwen_72b_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
       <td>8x7B</td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_mixtral_8x7b_ptd.sh">对话 </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_mixtral_8x7b_ptd.sh">评估 </a>  </td>
+      <td> <a href="tasks/inference/generate_mixtral_8x7b_ptd.sh">对话 </a> </td>
+      <td> <a href="tasks/evaluation/evaluate_mixtral_8x7b_ptd.sh">评估 </a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
   </tbody>
 </table>
 
 
-## 【脚本命名规则】
+## 脚本命名规则
 |            脚本             |    规则    |
 |:-------------------------:|:--------:|
 |      pretrain_xxx.sh      |  预训练脚本   |
@@ -297,7 +305,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> FP16 </td>
       <td> 2034 </td>
       <td> 2525 </td>
-      <td> <a href="examples/bloom/pretrain_bloom_7b1.sh">训练</a> </td>
+      <td> <a href="examples/bloom/pretrain_bloom_ptd_7B.sh">训练</a> </td>
     </tr>
     <tr>
       <td >176B</td>
@@ -314,7 +322,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>BF16</td>
       <td> 2776 </td>
       <td> 2854 </td>
-      <td> <a href="examples/intern/pretrain_internlm_7b_zero.sh">训练</a> </td>
+      <td> <a href="examples/intern/pretrain_internlm_7b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
       <td >65B</td>
@@ -322,7 +330,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> BF16 </td>
       <td> 341 </td>
       <td> 414 </td>
-      <td> <a href="examples/intern/pretrain_internlm_65b_ptd_32p.sh">训练</a> </td>
+      <td> <a href="examples/intern/pretrain_internlm_65b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
       <td rowspan="5"><a href="examples/llama/README.md">LLaMA</td>
@@ -434,7 +442,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
 
 # 功能使用指导
 
-## 【制作】指令/预训练数据集 </span>
+## 制作预训练数据集/制作指令微调数据集
 
 #### 快速开始
 使用[preprocess_data.py](tools/preprocess_data.py)数据预处理工具将raw数据处理为用于训练的二进制格式数据，下面是一个处理alpaca数据集的样例：
@@ -741,11 +749,11 @@ pretrained_model_name_or_path(`str`, *optional*, defaults to None):
     ```
     <img src="sources/images/beam_search_sampling.png">
 
-### <span id="jump17"> 【评估】 基线数据集（Benchmark）</span>
+### <span id="jump17"> 评估基线数据集（Benchmark）</span>
 
 
 
-#### 【数据集评估结果参考】
+#### 数据集评估结果参考
 
 <table>
   <thead>
@@ -878,7 +886,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation_llama.py   \
 ```
 #### 评估脚本说明
 
-#### 【基线数据集介绍】
+#### 基线数据集介绍
 
 
 ##### AGIEval
@@ -911,7 +919,7 @@ GSM8K 是一个有8.5k高质量小学数学应用题文本的数据集，每一�
 由于 MMLU 是一项多学科任务，并且需要进行 5-shot 评估，因此每个学科问题的长度差异很大。如果你想同时跑57个学科任务，可以尝试设置 `TASK="mmlu"`, `--max-new-token=1` 。
 在很多网站，MMLU 的精度会依据学科进行评估，57个学科主要属于四个大类， 因此该数据集也可以基于四个大类进行打分，[网站](https://github.com/hendrycks/test/blob/master/categories.py) 给出了具体的57个类别。
 
-### <span id="jump18">【使用加速特性】
+### <span id="jump18">使用加速特性
 ModelLink支持张量并行、流水线并行、序列并行、重计算、分布式优化器、等多种加速算法，下表为各种加速特性对应的使能开关：
 
 |   加速特性    |   使能参数   |
@@ -974,3 +982,4 @@ ModelLink由华为公司的下列部门联合贡献
 - 路径描述: 当你使用 `torch.load` 接口时，除非 weights_only 参数被设置为 True， 否则请隐式的使用 pickle 模块，我们不建议您加载和使用任何来源未知或不可信任的数据
 - 通信矩阵: [通信矩阵](https://gitee.com/ascend/AscendSpeed/wikis/Communition%20Matrix/AscendSpeed%20Communication%20Matrix?sort_id=8855822)
 - 公网地址: [公网地址](public_address_statement.md)
+- 安全说明: [公网地址](https://gitee.com/ascend/ModelLink/wikis/%E5%AE%89%E5%85%A8%E8%AF%B4%E6%98%8E)

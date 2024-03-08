@@ -15,8 +15,8 @@
     </a>
 </p>
 <p align="center">
-        <b>简体中文</b> |
-        <b><a href="https://gitee.com/fengliangjun66/AscendSpeed/blob/master/README_en.md">English</a> </b>
+        <b><a href="README.md">简体中文</a> </b> |
+        <b>English</b>
 </p>
 
 ModelLink provides end-to-end solutions for large language models on Ascend chips, including models, algorithms and tasks.
@@ -26,7 +26,7 @@ ModelLink provides end-to-end solutions for large language models on Ascend chip
 ---
 
 
-## 【supported features】
+## supported features
 Current ModelLink supported features for large model usage:
 * [Dataset Preparation for Pre-training](#jump11)/[Fine-tuning Instruction Dataset Preparation](#jump12)
 * [Pre-training](#jump13)/[Full-parameter Fine-tuning](#jump14)/[Low-parameter Fine-tuning](#jump15)
@@ -36,7 +36,8 @@ Current ModelLink supported features for large model usage:
 
 More novel and useful features are developing for LLMs training on Ascend ...
 
-## 【Supported Models】
+
+## Supported Models
 Current ModelLink supports pre-training and fine-tuning for the following models:
 
 <table>
@@ -55,156 +56,163 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td rowspan="1"> <a href="examples/aquila/README.md">Aquila</a> </td>
       <td> 7B </td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_aquila_7b_ptd.sh">inference</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_aquila_7b_ptd.sh">evaluation</a> </td>
+      <td> <a href="tasks/inference/generate_aquila_7b_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_aquila_7b_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td rowspan="2"> <a href="examples/baichuan/README.md">Baichuan</a> </td>
       <td> 7B </td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_baichuan_7b_ptd.sh">inference</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_baichuan_7B_ptd.sh">evaluation</a> </td>
+      <td> <a href="tasks/inference/generate_baichuan_7b_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_baichuan_7B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td> 13B </td>
       <td> <a href="examples/baichuan/tune_baichuan_ptd_13B.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_baichuan_13b_ptd.sh">inference</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_baichuan_13B_ptd.sh">evaluation</a> </td>
+      <td> <a href="tasks/inference/generate_baichuan_13b_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_baichuan_13B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td rowspan="2"> <a href="examples/baichuan/README.md">Baichuan2</a> </td>
       <td> 7B </td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_baichuan2_7b_ptd.sh">inference</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_baichuan2_7B_ptd.sh">evaluation</a> </td>
+      <td> <a href="tasks/inference/generate_baichuan2_7b_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_baichuan2_7B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td> 13B </td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_baichuan2_13b_ptd.sh">inference</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_baichuan2_13B_ptd.sh">evaluation</a> </td>
+      <td> <a href="tasks/inference/generate_baichuan2_13b_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_baichuan2_13B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
       <td> 7B1 </td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_bloom_7B_tp8_pp1.sh">inference</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_bloom_7b1.sh">evaluation</a> </td>
+      <td> <a href="tasks/inference/generate_bloom_7b_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_baichuan_7B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td> 176B </td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/bloom/generate_176b_2nodes.sh">inference</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_bloom_176b.sh">evaluation</a> </td>
+      <td> <a href="tasks/inference/generate_bloom_176b_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_bloom_176b_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
-      <td><a href="examples/intern/README.md">InternLM</a></td>
+      <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>
       <td>7B</td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/intern/generate_internlm_7b_deepspeed.sh">inference</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/eval_internlm.sh">evaluation</a> </td>
+      <td> <a href="tasks/inference/generate_lnternlm_7b_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_internlm_7B_ptd.sh">evaluation</a> </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+    </tr>
+    <tr>
+      <td>65B</td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama/README.md">LLaMA</a></td>
       <td>7B</td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_7b_ptd.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_7b_lora_ptd.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_7B_ptd.sh">evaluation</a> </td>
+      <td> <a href="examples/llama/tune_llama_7b_ptd.sh">lora</a> </td>
+      <td> <a href="tasks/inference/generate_llama_7b_lora_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_llama_7B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>13B</td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_13b_ptd.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_13b_lora_ptd.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_13B_ptd.sh">evaluation</a> </td>
+      <td> <a href="examples/llama/tune_llama_13b_ptd.sh">lora</a> </td>
+      <td> <a href="tasks/inference/generate_llama_13b_lora_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_llama_13B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>33B</td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_33b_ptd.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_33B_ptd.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_33B_ptd.sh">evaluation </a> </td>
+      <td> <a href="examples/llama/tune_llama_33b_ptd.sh">lora</a> </td>
+      <td> <a href="tasks/inference/generate_llama_33b_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_llama_33B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td > 65B </td>
-      <td > <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/tune_llama_65b_ptd.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama_65b_lora_ptd.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama_65B_ptd.sh">evaluation </a> </td>
+      <td > <a href="examples/llama/tune_llama_65b_ptd.sh">lora</a> </td>
+      <td> <a href="tasks/inference/generate_llama_65b_lora_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_llama_65B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</a></td>
       <td>7B</td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_7b_ptd.sh">lora </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_7b_ptd.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_7B_ptd.sh">evaluation </a>  </td>
+      <td> <a href="examples/llama2/tune_llama2_7b_ptd.sh">lora </a> </td>
+      <td> <a href="tasks/inference/generate_llama2_7b_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_llama2_7B_ptd.sh">evaluation</a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td>13B</td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_13b_ptd.sh">lora </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_13B_ptd.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_13B_ptd.sh">evaluation </a> </td>
+      <td> <a href="examples/llama2/tune_llama2_13b_ptd.sh">lora </a> </td>
+      <td> <a href="tasks/inference/generate_llama2_13b_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_llama2_13B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td> 34B </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_13b_ptd.sh">lora </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_34B_ptd.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_34B_ptd.sh">evaluation </a> </td>
+      <td> <a href="examples/llama2/tune_llama2_13b_ptd.sh">lora </a> </td>
+      <td> <a href="tasks/inference/generate_llama2_34B_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_llama2_34B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td > 70B </td>
-      <td > <a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama2/tune_llama2_70b_ptd.sh">lora</a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_llama2_70b_lora_ptd.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_llama2_70B_ptd.sh">evaluation </a> </td>
+      <td > <a href="examples/llama2/tune_llama2_70b_ptd.sh">lora</a> </td>
+      <td> <a href="tasks/inference/generate_llama2_70b_lora_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_llama2_70B_ptd.sh">evaluation</a> </td>
       <td>  <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
       <td>7B</td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_qwen_7b_ptd.sh">inference </a></td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_qwen_7b_ptd.sh">evaluation </a></td>
+      <td> <a href="tasks/inference/generate_qwen_7b_ptd.sh">inference</a></td>
+      <td> <a href="tasks/evaluation/evaluate_qwen_7b_ptd.sh">evaluation</a></td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td>14B</td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_qwen_14b_ptd.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_qwen_14b_ptd.sh">evaluation </a> </td>
+      <td> <a href="tasks/inference/generate_qwen_14b_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_qwen_14b_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td>72B</td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_qwen_72b_ptd.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_qwen_72b_ptd.sh">evaluation </a> </td>
+      <td> <a href="tasks/inference/generate_qwen_72b_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_qwen_72b_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
       <td>8x7B</td>
       <td> -- </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/inference/generate_mixtral_8x7b_ptd.sh">inference </a> </td>
-      <td> <a href="https://gitee.com/ascend/ModelLink/blob/modellink/tasks/evaluation/evaluate_mixtral_8x7b_ptd.sh">evaluation </a>  </td>
+      <td> <a href="tasks/inference/generate_mixtral_8x7b_ptd.sh">inference</a> </td>
+      <td> <a href="tasks/evaluation/evaluate_mixtral_8x7b_ptd.sh">evaluation</a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
   </tbody>
 </table>
 
 
-## 【Script Naming Rules】
+## Script Naming Rules
 |            Script             |    Rule    |
 |:-------------------------:|:--------:|
 |      pretrain_xxx.sh      |  Pre-training Script   |
@@ -298,7 +306,7 @@ The current repository uses Megatron commitId [bcce6f54](https://github.com/NVID
       <td> FP16 </td>
       <td> 2034 </td>
       <td> 2525 </td>
-      <td> <a href="examples/bloom/pretrain_bloom_7b1.sh">train</a> </td>
+      <td> <a href="examples/bloom/pretrain_bloom_ptd_7B.sh">train</a> </td>
     </tr>
     <tr>
       <td >176B</td>
@@ -315,7 +323,7 @@ The current repository uses Megatron commitId [bcce6f54](https://github.com/NVID
       <td>BF16</td>
       <td> 2776 </td>
       <td> 2854 </td>
-      <td> <a href="examples/intern/pretrain_internlm_7b_zero.sh">train</a> </td>
+      <td> <a href="examples/intern/pretrain_internlm_7b_ptd.sh">train</a> </td>
     </tr>
     <tr>
       <td >65B</td>
@@ -323,7 +331,7 @@ The current repository uses Megatron commitId [bcce6f54](https://github.com/NVID
       <td> BF16 </td>
       <td> 341 </td>
       <td> 414 </td>
-      <td> <a href="examples/intern/pretrain_internlm_65b_ptd_32p.sh">train</a> </td>
+      <td> <a href="examples/intern/pretrain_internlm_65b_ptd.sh">train</a> </td>
     </tr>
     <tr>
       <td rowspan="5"><a href="examples/llama/README.md">LLaMA</a></td>
@@ -757,7 +765,7 @@ pretrained_model_name_or_path(`str`, *optional*, defaults to None):
 
 
 
-#### 【Dataset Evaluation Results】
+#### Dataset Evaluation Results
 
 <table>
   <thead>
@@ -891,7 +899,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation_llama.py   \
 ```
 #### Evaluation Script Instructions
 
-#### 【Baseline Dataset Introduction】
+#### Baseline Dataset Introduction
 
 
 ##### MMLU
@@ -918,7 +926,7 @@ Except word_sorting, all datasets are multiple-choice questions. So we can set `
 As [C-Eval](https://cevalbenchmark.com/) shows, C-Eval is a comprehensive Chinese evaluation suite for foundation models. It consists of 13948 multi-choice questions spanning 52 diverse disciplines and four difficulty levels, as shown below. You may explore our dataset examples at Explore, or check our paper for more details. The dataset contains validation and test data, however, only validation data has label for auto-evaluation. If
 you want to evaluate on test data, you should email your results to [C-Eval](https://cevalbenchmark.com/).
 
-### <span id="jump18">【Acceleration Features】
+### <span id="jump18">Acceleration Features
 ModelLink supports various acceleration algorithms such as tensor parallelism, pipeline parallelism, sequence parallelism, recomputation, distributed optimizer, and more. The table below shows the enable switches corresponding to each acceleration feature:
 
 |   Acceleration Feature    |   Enable Parameter   |
@@ -978,3 +986,4 @@ We appreciate every PR from community, and welcome to contribute to ModelLink.
 - Permission Description: It is recommended that the umask value of Linux be greater than or eqaul to 027. Before running the program, you are advised to take security measures such as permission control for files required for training, such as ckpt, logs and so on. You are advised to run the program or execute commands as a regular user not as root or super user. Also, you are advised to set the folder permission to 750 and the file permission to 640. When multiple users share datasets, set the read and write permissions for folders and files based on the minimum permissions to avoid security problems such as unauthorized access.
 - Path Description: When you're using interface such as `torch.load`, unless weights_only parameter is set to True, uses pickle module implicitly, which is known to be insecure. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling. We don't suggest you load data that could have come from an untrusted source in an unsafe mode, or that could have been tampered with. Please load data you trust. Moreover, when you need to read data from outside or your specified path you'd better make it trusted and safe, including but not limited to weights path, dataset path.
 - Communication Matrix: Please refer to this [link](https://gitee.com/ascend/AscendSpeed/wikis/Communition%20Matrix/AscendSpeed%20Communication%20Matrix?sort_id=8855822) to check the communication matrix.
+- Safety Statement: [Safety Statement](https://gitee.com/ascend/ModelLink/wikis/%E5%AE%89%E5%85%A8%E8%AF%B4%E6%98%8E)
