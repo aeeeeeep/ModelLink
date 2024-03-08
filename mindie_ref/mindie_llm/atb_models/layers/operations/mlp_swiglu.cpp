@@ -79,6 +79,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
         }
         gateUpNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         gateUpNormLinearParam.fusionLinearParam.hasBias = param.gateUpHasBias;
+        gateUpNormLinearParam.normHasBias = param.normHasBias;
         gateUpNormLinearParam.normParamType = param.normParamType;
         gateUpNormLinearParam.normQuantParamType = param.normQuantParamType;
         NormLinear<NormParamType>(gateUpNormLinearParam, &normLinearGateUpNode.operation);
@@ -107,6 +108,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
         }
         gateNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         gateNormLinearParam.fusionLinearParam.hasBias = param.gateUpHasBias;
+        gateNormLinearParam.normHasBias = param.normHasBias;
         gateNormLinearParam.normParamType = param.normParamType;
         gateNormLinearParam.normQuantParamType = param.normQuantParamType;
         NormLinear<NormParamType>(gateNormLinearParam, &normLinearGateNode.operation);
@@ -135,6 +137,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
         }
         upNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         upNormLinearParam.fusionLinearParam.hasBias = param.gateUpHasBias;
+        upNormLinearParam.normHasBias = param.normHasBias;
         upNormLinearParam.normParamType = param.normParamType;
         upNormLinearParam.normQuantParamType = param.normQuantParamType;
         NormLinear<NormParamType>(upNormLinearParam, &normLinearUpNode.operation);
