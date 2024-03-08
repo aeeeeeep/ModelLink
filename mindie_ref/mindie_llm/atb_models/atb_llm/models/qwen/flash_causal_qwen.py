@@ -143,11 +143,11 @@ class FlashQwenForCausalLM(FlashForCausalLM):
             layer = self.transformer.h[i]
             layer_dict = layer.state_dict()
             weight_wrapper.register_layer(layer_dict, layer.attn.pack_type, layer.mlp.pack_type, self.quantize)
+            quant_type.append([layer.attn.pack_type.value, layer.mlp.pack_type.value])
             if self.soc_info.need_nz:
                 del layer.attn
                 del layer.ln_2
                 del layer.mlp
-            quant_type.append([layer.attn.pack_type.value, layer.mlp.pack_type.value])
         weight_wrapper.register_model_norm(self.transformer.state_dict(), 'ln_f')
         weight_wrapper.register_model_lmhead(self.state_dict(), 'lm_head')
         return weight_wrapper.weights, weight_wrapper.linear_type, quant_type
