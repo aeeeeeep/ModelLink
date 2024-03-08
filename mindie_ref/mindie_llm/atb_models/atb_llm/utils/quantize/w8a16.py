@@ -4,7 +4,7 @@ from torch import nn
 
 
 class W8A16LinearStatic(nn.Module):
-    def __init__(self, weight, weight_scale, weight_offset):
+    def __init__(self, weight, weight_scale, weight_offset, bias=None):
         super().__init__()
         self.in_features = weight.shape[1]
         self.out_features = weight.shape[0]
@@ -17,3 +17,8 @@ class W8A16LinearStatic(nn.Module):
             self.register_buffer('weight_offset', (-weight_offset).T.contiguous().to(torch.float16))
         else:
             self.weight_offset = None
+
+        if bias is not None:
+            self.register_buffer('bias', bias)
+        else:
+            self.bias = None
