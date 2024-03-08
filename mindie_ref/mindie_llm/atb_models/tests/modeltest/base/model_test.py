@@ -578,15 +578,17 @@ class ModelTest:
                             logits = logits[:, choice_tokens]
                             preds = logits.argmax(dim=-1)
                             correct += (preds.cpu() == batch["label"]).sum().item()            
-                        
-                filename = os.path.basename(entry)
-                result = [filename, correct / sum, correct, sum]
-                self.result_logger.debug(f"result:{result}")
-                result_total.append(result)
-                correct_total += correct
-                sum_total += sum
-            total = ["total", correct_total / sum_total, correct_total, sum_total]
-            result_total.insert(0, total)
+                
+                if is_result:        
+                    filename = os.path.basename(entry)
+                    result = [filename, correct / sum, correct, sum]
+                    self.result_logger.debug(f"result:{result}")
+                    result_total.append(result)
+                    correct_total += correct
+                    sum_total += sum
+            if is_result:
+                total = ["total", correct_total / sum_total, correct_total, sum_total]
+                result_total.insert(0, total)
         if is_result:
             self.__save_result(result_total)
 
@@ -938,15 +940,16 @@ class ModelTest:
                                 if acc:
                                     correct += 1
                                 curnum += 1
-
-                filename = os.path.basename(entry)
-                result = [filename, correct / sum, correct, sum]
-                self.result_logger.debug(f"result:{result}")
-                result_total.append(result)
-                correct_total += correct
-                sum_total += sum
-            total = ["total", correct_total / sum_total, correct_total, sum_total]
-            result_total.insert(0, total)
+                if is_result:
+                    filename = os.path.basename(entry)
+                    result = [filename, correct / sum, correct, sum]
+                    self.result_logger.debug(f"result:{result}")
+                    result_total.append(result)
+                    correct_total += correct
+                    sum_total += sum
+            if is_result:
+                total = ["total", correct_total / sum_total, correct_total, sum_total]
+                result_total.insert(0, total)
         if is_result:
             self.__save_result(result_total)
 
