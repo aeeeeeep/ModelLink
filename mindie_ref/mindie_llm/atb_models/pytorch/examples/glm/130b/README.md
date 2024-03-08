@@ -43,7 +43,10 @@ export ATB_TESTDATA=/data/acltransformer_testdata
             ├── 49300/
             └── latest
 ```
-
+使用量化工具生成量化权重（待补充）
+```
+export QUANT_PATH=/quant_path
+```
 ### 模型代码
 ```shell
 git clone https://github.com/THUDM/GLM-130B.git && cd GLM-130B
@@ -62,15 +65,6 @@ cp ../main.sh ../main.py ../input.txt ./
 
 
 ## 模型推理
-
-### 文本生成
-```shell
-bash main.sh --generate --mode inference --seed 1234  \
-    --sampling-strategy BaseStrategy --out-seq-length 256 --min-gen-length 0 \
-    --num-beams 4 --length-penalty 1.0 --no-repeat-ngram-size 3 \
-    --temperature 1.0 --top_k 40 --top_p 0.7 --output-path samples \
-    --input-source ./input.txt
-```
 
 ### 精度评估
 ```shell

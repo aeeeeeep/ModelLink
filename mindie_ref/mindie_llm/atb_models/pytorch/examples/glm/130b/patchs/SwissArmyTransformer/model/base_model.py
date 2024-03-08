@@ -82,7 +82,6 @@ class BaseModel(torch.nn.Module):
                 skip_init=args.skip_init,
                 device=torch.cuda.current_device(
                 ) if args.use_gpu_initialization else torch.device('cpu'),
-                atb_backend=args.atb_backend,
                 **kwargs
             )
 
