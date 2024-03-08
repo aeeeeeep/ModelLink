@@ -285,7 +285,6 @@ wget https://people.eecs.berkeley.edu/~hendrycks/data.tar
 tar -xvf data.tar
 ```
 > 先测试C-EVAL
-
 > 再测MMLU，需修改`pytorch/examples/atb_speed_sdk/atb_speed/common/precision/base.py` 132行为test数据集，重安装atb-speed
 
 ```python3
@@ -326,8 +325,8 @@ bash run_sdk_test.sh 8 d9 precision
 | summary_classes_acc.json | 测试数据下按不同维度统计准确率      |
 | summary_subject_acc.json | 测试数据下按不同学科统计准确率      |
 
-- CEVAL test数据集golden未公开，因此使用dev作为few-shot来源，val作为测试数据
-- MMLU 使用dev作为few-shot来源，test作为测试数据
+> CEVAL test数据集golden未公开，因此使用dev作为few-shot来源，val作为测试数据
+> MMLU 使用dev作为few-shot来源，test作为测试数据
 
 ### LONGBENCH
 > [LongBench](https://github.com/THUDM/LongBench)是第一个多任务、中英双语、针对大语言模型长文本理解能力的评测基准，包含14个英文任务、5个中文任务和2个代码任务，多数任务的平均长度在5k-15k之间，共包含4750条测试数据，以此来对大模型在长文本下的多语言能力进行更全面的评估。
