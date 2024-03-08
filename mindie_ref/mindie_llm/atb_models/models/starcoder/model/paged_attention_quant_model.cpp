@@ -189,7 +189,7 @@ int64_t PAQuantModel::BuildGraph()
     atb_speed::common::WordEmbedding(wordEmbeddingParam, &op);
     wordEmbeddingNode.operation.reset(op);
     wordEmbeddingNode.inTensors = {
-        &graph_.weightTensors.at(INTERNEL_TENSOR_HIDDEN_STATES ),
+        &graph_.weightTensors.at(INTERNEL_TENSOR_HIDDEN_STATES),
         &graph_.inTensors.at(IN_TENSOR_INPUT_IDS)
     };
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)};
