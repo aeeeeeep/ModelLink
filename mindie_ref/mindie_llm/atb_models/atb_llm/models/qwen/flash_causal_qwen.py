@@ -121,9 +121,9 @@ class FlashQwenForCausalLM(FlashForCausalLM):
                     self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama2_70b_FusionPAModel")
                     self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama2_70b_FusionPAModel")
             else:
-                self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("qwen_14b_PagedAttentionModel")
-                self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("qwen_14b_PagedAttentionModel")
-                logger.info(">>>> qwen_14b_PagedAttentionModel is called.")
+                self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("qwen_14b_PAW8A8Model")
+                self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("qwen_14b_PAW8A8Model")
+                logger.info(">>>> qwen_14b_PAW8A8Model is called.")
 
     def get_weights(self):
         quant_type = []
