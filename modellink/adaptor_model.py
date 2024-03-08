@@ -289,7 +289,7 @@ def parallel_transformer_init(self, config,
 
         del version, packaging
 
-        assert not args.squared_relu, "TransformerEngine does not support squared relu activation."
+        assert_judge(not args.squared_relu)
 
     self.use_fp8 = args.fp8 is not None
     self.fp8_recipe = None
