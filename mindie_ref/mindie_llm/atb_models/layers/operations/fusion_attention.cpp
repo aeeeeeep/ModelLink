@@ -87,6 +87,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
     }
     qNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
     qNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
+    qNormLinearParam.normHasBias = param.normHasBias;
     qNormLinearParam.normParamType = param.normParamType;
     qNormLinearParam.normQuantParamType = param.normQuantParamType;
     NormLinear<NormParamType>(qNormLinearParam, &qNormLinearNode.operation);
@@ -156,6 +157,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         }
         kNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         kNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
+        kNormLinearParam.normHasBias = param.normHasBias;
         kNormLinearParam.normParamType = param.normParamType;
         kNormLinearParam.normQuantParamType = param.normQuantParamType;
         NormLinear<NormParamType>(kNormLinearParam, &kNormLinearNode.operation);
@@ -179,6 +181,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         }
         vNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         vNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
+        vNormLinearParam.normHasBias = param.normHasBias;
         vNormLinearParam.normParamType = param.normParamType;
         vNormLinearParam.normQuantParamType = param.normQuantParamType;
         NormLinear<NormParamType>(vNormLinearParam, &vNormLinearNode.operation);

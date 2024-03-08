@@ -61,9 +61,9 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
             NormLinearTensorIdx::IN_SCALE, NormLinearTensorIdx::IN_OFFSET
         };
         normNode.outTensorIds = {INTERMEDIATE_NORM};
-    } else if (param.fpHasBias) {  // FP
+    } else if (param.normHasBias) {  // FP
         CREATE_OPERATION(param.normParamType, &normNode.operation);
-        normNode.inTensorIds = {NormLinearTensorIdx::IN_INPUT, NormLinearTensorIdx::IN_NORM_WEIGHT, NormLinearTensorIdx::IN_NORM_NEW_BIAS};
+        normNode.inTensorIds = {NormLinearTensorIdx::IN_INPUT, NormLinearTensorIdx::IN_NORM_WEIGHT, NormLinearTensorIdx::IN_NORM_BIAS};
         normNode.outTensorIds = {INTERMEDIATE_NORM};
     } else {  // FP
         CREATE_OPERATION(param.normParamType, &normNode.operation);
