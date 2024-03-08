@@ -287,7 +287,7 @@ atb::Status SelfAttention(const FusionAttentionParam<NormParamType> &param, atb:
         };
         selfAttentionNode.outTensorIds = {SelfAttentionTensorIdx::OUT_SELF_ATTENTION};
     } else {  // PA Decode
-        if (param.isBF16) {
+        if (param.pageAttentionParam.maskType == atb::infer::PagedAttentionParam::MaskType::MASK_TYPE_ALIBI) {
             selfAttentionNode.inTensorIds = {
                 SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_Q, SelfAttentionTensorIdx::IN_SELF_ATTENTION_K_CACHE,
                 SelfAttentionTensorIdx::IN_SELF_ATTENTION_V_CACHE, SelfAttentionTensorIdx::IN_SELF_ATTENTION_BLOCK_TABLES,
