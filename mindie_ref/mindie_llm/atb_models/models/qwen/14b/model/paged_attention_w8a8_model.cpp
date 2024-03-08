@@ -17,8 +17,6 @@
 #include "nlohmann/json.hpp"
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
-#include "layers/operations/word_embedding.h"
-#include "layers/operations/pe_gather.h"
 #include "layers/operations/lmhead.h"
 #include "models/qwen/14b/layer/paged_attention_w8a8_layer.h"
 #include "models/qwen/14b/model/paged_attention_w8a8_model.h"
