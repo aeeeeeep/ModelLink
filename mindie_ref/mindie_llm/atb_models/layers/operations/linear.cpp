@@ -19,6 +19,7 @@
 #include "atb_speed/log.h"
 #include "layers/operations/linear.h"
 #include "layers/plugin_op/w8a16_operation.h"
+#include "layers/plugin_op/w8a16_bias_operation.h"
 
 namespace atb_speed {
 namespace common {
@@ -73,7 +74,7 @@ atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operat
     }
 
     if (param.quantType == W8A16 && param.hasBias) {
-        linearNode.operation = new atb_speed::common::W8A16Operation("LinearNode");
+        linearNode.operation = new atb_speed::common::W8A16BiasOperation("LinearBiasNode");
         linearNode.inTensorIds = {
             LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT,
             LinearTensorIdx::IN_SCALE, LinearTensorIdx::IN_OFFSET, LinearTensorIdx::IN_BIAS
