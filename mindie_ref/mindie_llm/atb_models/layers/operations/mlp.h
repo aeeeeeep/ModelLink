@@ -33,7 +33,6 @@ template <typename NormParamType>
 struct MlpParam {
     bool isAntiOutlier = false;
     bool isBF16 = false;
-    bool normHasBias = false;
     bool gateUpHasBias = false;
     bool downHasBias = false;
     bool supportLcoc = false;
