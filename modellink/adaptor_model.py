@@ -237,6 +237,7 @@ def get_num_layers(args, model_type, is_decoder=False):
             num_layers = args.decoder_num_layers
     return num_layers
 
+
 def parallel_transformer_init(self, config,
                  model_type, layer_type=LayerType.encoder,
                  self_attn_mask_type=AttnMaskType.padding,
@@ -294,8 +295,7 @@ def parallel_transformer_init(self, config,
     self.fp8_recipe = None
     self.fp8_group = None
     if self.use_fp8:
-        assert args.transformer_impl == 'transformer_engine', \
-            'transformer-engine required for fp8 training and inference'
+        assert_judge(args.transformer_impl == 'transformer_engine')
         self.fp8_group = mpu.get_amax_reduction_group()
         if args.fp8 == "e4m3":
             fp8_format = transformer_engine.common.recipe.Format.E4M3
@@ -318,11 +318,11 @@ def parallel_transformer_init(self, config,
 
     # Number of layers.
     self.num_layers = get_num_layers(args, model_type,
-                                      layer_type==LayerType.decoder)
+                                      layer_type == LayerType.decoder)
 
-    self.drop_path_rates = [
-        rate.item() for rate in
-        torch.linspace(0, self.drop_path_rate, config.num_layers)]
+    self.drop_path_rates = []
+    for rate in torch.linspace(0, self.drop_path_rate, config.num_layers):
+        self.drop_path_rates.append(rate.item())
 
     self.retro_layer_numbers = None
     if model_type == ModelType.retro_decoder:
@@ -334,10 +334,9 @@ def parallel_transformer_init(self, config,
 
     # Transformer layers.
     if args.retro_add_retriever:
-        assert self.recompute_granularity != 'full', \
-            "Full recompute not supported for Retro."
-        assert args.transformer_impl == 'local', \
-            "Transformer engine does not support Retro layers."
+        assert_judge(self.recompute_granularity != 'full')
+        assert_judge(args.transformer_impl == 'local')
+
     def build_layer(layer_number):
         if args.transformer_impl == 'local':
             current_layer_type = _get_layer_type(
@@ -388,10 +387,8 @@ def parallel_transformer_init(self, config,
                 **extra_transformer_engine_kwargs)
 
     if config.virtual_pipeline_model_parallel_size is not None:
-        assert config.num_layers % config.virtual_pipeline_model_parallel_size == 0, \
-            'num_layers_per_stage must be divisible by ' \
-            'virtual_pipeline_model_parallel_size'
-        assert args.model_type != ModelType.encoder_and_decoder
+        assert_judge(config.num_layers % config.virtual_pipeline_model_parallel_size == 0)
+        assert_judge(args.model_type != ModelType.encoder_and_decoder)
         # Number of layers in each model chunk is the number of layers in the stage,
         # divided by the number of model chunks in a stage.
         self.num_layers = self.num_layers // config.virtual_pipeline_model_parallel_size
@@ -429,7 +426,7 @@ def parallel_transformer_init(self, config,
         # this, we assign a 'no-op' layer on these ranks, which will
         # disconnect the input tensor from the output tensor.
         self.num_layers = 1
-        self.layers = torch.nn.ModuleList([ NoopTransformerLayer(1) ])
+        self.layers = torch.nn.ModuleList([NoopTransformerLayer(1)])
     else:
         # Build the layers
         self.layers = []
