@@ -82,7 +82,7 @@ def get_args():
     parser.add_argument(
         "--data_dtype",
         default="int8",
-        choices=['fp16', 'int8'],
+        choices=['fp16', 'int8', 'w8a8', 'w8a16'],
         help="Data dtype",
     )
 
@@ -174,7 +174,11 @@ def _get_cpu_info(numa_ids, keyword1="NUMAnode", keyword2="CPU(s)"):
 def bind_cpus(world_size, local_rank, ratio=0.5):
     # docker中npu亲和性查询会失效，默认是用numa node0
     numa_id = 0
+    
     cpu_idx_tbl = _get_cpu_info([numa_id])
+    print(cpu_idx_tbl)
+    if not cpu_idx_tbl:
+        return
     all_cpus = cpu_idx_tbl[numa_id]
 
     cpu_nums = len(all_cpus)
@@ -335,6 +339,7 @@ def inference(infer_model, infer_tokenizer, prompt, batch, seqlen_in, seqlen_out
     start_time = time.time()
     inputs = infer_tokenizer(prompt[:batch], return_tensors="pt", padding='max_length', truncation=True, max_length=seqlen_in)
     # infer
+    print_rank_0(f"[+] inputs: {inputs}")
     with torch.no_grad():
         torch.npu.synchronize()
         first_token_start = time.time()
@@ -349,8 +354,9 @@ def inference(infer_model, infer_tokenizer, prompt, batch, seqlen_in, seqlen_out
         torch.npu.synchronize()
         generate_end = time.time()
 
+    print_rank_0(f"[+] generate_ids: {generate_ids}")
     # decode
-    res = infer_tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+    res = infer_tokenizer.batch_decode(generate_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False)
     torch.npu.synchronize()
     end_time = time.time()
     total_time = end_time - start_time
@@ -358,8 +364,7 @@ def inference(infer_model, infer_tokenizer, prompt, batch, seqlen_in, seqlen_out
     # time analysis
     time_of_first_token = (first_token_end - first_token_start) * 1000
     time_generate = (generate_end - generate_start) * 1000
-    time_tensor = torch.tensor(
-    [time_of_first_token, time_generate, total_time]).npu()
+    time_tensor = torch.tensor([time_of_first_token, time_generate, total_time]).npu()
 
     if get_world_size() >= 2:
         torch.distributed.all_reduce(time_tensor, torch.distributed.ReduceOp.MAX)
@@ -371,9 +376,18 @@ def inference(infer_model, infer_tokenizer, prompt, batch, seqlen_in, seqlen_out
 
     print_rank_0("\nQ&A results are as follows:")
     for idx, item in enumerate(res):
-        print_rank_0(f"\n[Q&A {idx + 1}]\n", item)
-
-    return time_of_first_token.cpu().tolist(), time_per_token.cpu().tolist(), total_time.cpu().tolist()
+        print_rank_0(f"\n[Q&A {idx + 1}]\n", str(item).encode())
+    print_rank_0("===========================")
+    print_rank_0("time_of_first_token:", time_of_first_token)
+    print_rank_0("time_per_token:", time_per_token)
+    print_rank_0("total_time:", total_time)
+    if not isinstance(time_of_first_token, int):
+        time_of_first_token = time_of_first_token.cpu().tolist()
+    if not isinstance(time_per_token, int):
+        time_per_token = time_per_token.cpu().tolist()
+    if not isinstance(total_time, int):
+        total_time = total_time.cpu().tolist()
+    return time_of_first_token, time_per_token, total_time
 
 
 def random_test(model, tokenizer):
@@ -442,29 +456,18 @@ def performance_test(args):
 
 
 def precision_test(args):
-    try:
-        from atb_speed.common.precision import get_precision_test_cls
-        from atb_speed.common.config import atb_speed_config
-    except ImportError as e:
-        raise Exception("you need to install atb_speed sdk!")
-
-
-    class Bloom176B:
-        def __init__(self, args):
-            self.model, self.tokenizer = load_model(args)
-            self.local_rank = get_rank()
-
-    with NamedTemporaryFile('w+t') as f:
-        # Read/write to the file
-        f.write('[precision]\n')
-        f.write('mode=ceval\n')
-        f.flush()
-
-        atb_speed_config.init_config(f.name)
-    bloom7b = Bloom176B(args)
-    c_t = get_precision_test_cls()(bloom7b, args.dataset_path, batch=args.batch)
-    c_t.run()
-
+    from llmtask import TaskGenerator
+    model, tokenizer = load_model(args)
+    local_rank = torch.distributed.get_rank()
+    TG = TaskGenerator("ceval", max_shot=5)
+    for task in TG:
+        inputs = tokenizer([task], return_tensors="pt")
+        len_task = len(task)
+        generate_ids = model.generate(inputs.input_ids.npu(), attention_mask=inputs.attention_mask.npu(), max_new_tokens=4)
+        res = tokenizer.batch_decode(generate_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False)[0][len_task:]
+        TG.feedback(res)
+        torch.npu.empty_cache()
+    print(TG.summary())
 
 def main(args):
     if args.mode == "performance":

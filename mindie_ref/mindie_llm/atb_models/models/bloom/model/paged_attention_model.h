@@ -13,15 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef BLOOM7B_COMMON_MODEL_H
-#define BLOOM7B_COMMON_MODEL_H
+#ifndef BLOOM7B_PAGED_MODEL_H
+#define BLOOM7B_PAGED_MODEL_H
 
 #include "atb_speed/base/model.h"
 #include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace bloom_7b {
-class FlashAttentionModel : public Model {
+class PagedAttentionModel : public Model {
 public:
     struct Param {
         double layerNormEps = 0;
@@ -33,28 +33,19 @@ public:
         std::string backend = "lccl";
         int quantMode = -1;   // 0:not quant, 1:w8a8, 2:w8a16
         float residualAddScale = 0;
-
-        // for quant layers
-        std::vector<int> floatLayers;
-        std::vector<float> qkvInputScale;
-        std::vector<int> qkvInputOffset;
-        std::vector<float> denseInputScale;
-        std::vector<int> denseInputOffset;
-        std::vector<float> selfLnInputScale;
-        std::vector<int> selfLnInputOffset;
-        std::vector<float> ffnOutInputScale;
-        std::vector<int> ffnOutInputOffset;
+        bool isPrefill = true;
 
         // for multi ranks
         int rank = 0;
         int rankSize = 1;
+        std::vector<int> floatLayers;
 
         void FromString(const std::string &param);
     };
 
-    explicit FlashAttentionModel(const std::string &param);
+    explicit PagedAttentionModel(const std::string &param);
 
-    ~FlashAttentionModel();
+    ~PagedAttentionModel();
 
     uint32_t GetInputNum() const override;
 
@@ -75,7 +66,7 @@ private:
     std::vector<int32_t> seqLen_;
 };
 
-REGISTER_MODEL(bloom_7b, FlashAttentionModel);
+REGISTER_MODEL(bloom_7b, PagedAttentionModel);
 
 } // namespace bloom_7b
 } // namespace atb_speed
