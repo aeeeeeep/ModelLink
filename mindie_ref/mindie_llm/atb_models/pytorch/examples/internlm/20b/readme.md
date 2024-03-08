@@ -206,7 +206,7 @@ cp ${internlm_20b_path}/pytorch/examples/internlm/20b/modeling_internlm_fa_rope_
 vim config.json
 ```
 
-修改config.json中的kv对，改成
+修改config.json中的kv对（需要运行哪张卡就在对应的文件夹下改），改成
 `"AutoModelForCausalLM": "modeling_internlm_fa_rope_model_parallel.InternLMForCausalLM"`
 
 ### 配置 config.ini
