@@ -149,7 +149,8 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     atb_speed::common::MlpParam<atb::infer::LayerNormParam> mlpParam;
     mlpParam.isBF16 = param.isBF16;
     mlpParam.normHasBias = true;
-    mlpParam.hasBias = true;
+    mlpParam.gateUpHasBias = true;
+    mlpParam.downHasBias = true;
     mlpParam.mlpPackType = atb_speed::common::UP_WEIGHT_ONLY;
     mlpParam.activationParam.activationType  = atb::infer::ActivationType::ACTIVATION_GELU;
     mlpParam.isAntiOutlier = param.packQuantType[1] == atb_speed::common::MIX_W8A8_ANTI || param.packQuantType[1] == atb_speed::common::ALL_W8A8_ANTI;

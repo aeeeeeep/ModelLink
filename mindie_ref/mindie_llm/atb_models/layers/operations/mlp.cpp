@@ -126,11 +126,7 @@ atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation
                 = param.layerLinearQuantType[5] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
         }
         upNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
-<<<<<<< HEAD
-        upNormLinearParam.fusionLinearParam.hasBias = param.hasBias;
-=======
         upNormLinearParam.fusionLinearParam.hasBias = param.gateUpHasBias;
->>>>>>> 2738751116f5ca6a54da7f968e53494a332d5651
         upNormLinearParam.normHasBias = param.normHasBias;
         upNormLinearParam.normParamType = param.normParamType;
         upNormLinearParam.normQuantParamType = param.normQuantParamType;
