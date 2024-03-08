@@ -335,7 +335,8 @@ class FlashBloomForCausalLM(BloomPreTrainedModel):
         param_dict = {
             "layerNormEps": config.layer_norm_epsilon, "headNum": self.num_heads, "dk": config.hidden_size // config.n_head,
             "invNormFactorvarAttr": 1.0 / math.sqrt(config.hidden_size // config.n_head), "activationFuncType": 1,
-            "layerNum": self.num_hidden_layers, "rank":self.tp_rank, "rankSize":self.tp_world_size, "floatLayers": self.float_layers
+            "layerNum": self.num_hidden_layers, "rank":self.tp_rank, "rankSize":self.tp_world_size, "floatLayers": self.float_layers,
+            "backend": "lccl" if self.is_910b else "hccl"
             }
         param_dict.update(self.quant_param)
         
@@ -480,10 +481,12 @@ class FlashBloomForCausalLM(BloomPreTrainedModel):
                 for name in weights_name_t:
                     weight = self.safe_weights.get_tensor(name)
                     if "layernorm" not in name:
-                        weight = cut_weights({name: weight}, self.tp_world_size, self.config)[self.tp_rank][name].clone()
+                        weight = cut_weights({name: weight}, self.tp_world_size, self.config)[self.tp_rank][name].clone().to(self.wt_device)
                         if "weight" in name:
                             weight = self.maybe_formatcast(weight)
-                    weights_t.append(weight.to(self.wt_device))
+                    else:
+                        weight = weight.to(self.wt_device)
+                    weights_t.append(weight)
                 weights.extend(weights_t)
             else:
                 query_key_value_name = f"transformer.h.{layer_num}.self_attention.query_key_value"

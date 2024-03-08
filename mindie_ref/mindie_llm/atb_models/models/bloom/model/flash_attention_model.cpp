@@ -73,6 +73,9 @@ void FlashAttentionModel::Param::FromString(const std::string &param)
     if (paramJson.contains("quantMode")) {
         quantMode = paramJson["quantMode"].get<int>();
     }
+    if (paramJson.contains("backend")) {
+        backend = paramJson["backend"].get<std::string>();
+    }
     for (auto item : paramJson["floatLayers"]) {
         floatLayers.push_back(item.get<int>());
     }
