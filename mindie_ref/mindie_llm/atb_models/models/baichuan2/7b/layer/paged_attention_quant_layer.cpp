@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 #include "paged_attention_quant_layer.h"
-#include "layers/parallel_layer_v2.h"
+#include "layers/operations/linear.h"
 #include "layers/operations/linear.h"
 #include "layers/operations/linear_parallel.h"
 #include "layers/operations/norm_linear.h"
@@ -23,22 +23,47 @@
 #include "layers/operations/mlp_swiglu.h"
 
 namespace atb_speed {
-namespace star_coder {
-static const uint64_t IN_TENSOR_COUNT = 51;
+namespace baichuan2_7b {
+static const uint64_t IN_TENSOR_COUNT = 55;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 3;
 static const uint64_t NODE_COUNT = 4;
-static const uint64_t LAYER_NORM_AXIS_COUNT = 1;
+
+void from_json(const nlohmann::json &paramJson, PAQuantLayerParam &param)
+{
+    paramJson.at("rmsNormEps").get_to(param.rmsNormEps);
+    paramJson.at("headNum").get_to(param.headNum);
+    paramJson.at("dk").get_to(param.dk);
+    if (paramJson.contains("rank")) {
+        paramJson.at("rank").get_to(param.rank);
+    }
+    if (paramJson.contains("rankSize")) {
+        paramJson.at("rankSize").get_to(param.rankSize);
+    }
+    if (paramJson.contains("transposedWeight")) {
+        paramJson.at("transposedWeight").get_to(param.transposedWeight);
+    }
+    if (paramJson.contains("isPrefill")) {
+        paramJson.at("isPrefill").get_to(param.isPrefill);
+    }
+    if (paramJson.contains("backend")) {
+        paramJson.at("backend").get_to(param.backend);
+    }
+}
 
 atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operation)
 {
-    ATB_LOG(INFO) << "layer start";
+    ATB_LOG(INFO) << __func__ << " called, headNum: " << param.headNum;
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
     opGraph.internalTensorNum = INTERMEDIATE_TENSOR_COUNT;
     opGraph.nodes.resize(NODE_COUNT);
-    opGraph.name = param.isPrefill ? "Prefill_layer" : "Decoder_layer";
+    if (param.isPrefill) {
+        opGraph.name = "Prefill_transformer_layer";
+    } else {
+        opGraph.name = "Decoder_transformer_layer";
+    }
 
     size_t nodeId = 0;
     atb::Node &attentionNode = opGraph.nodes.at(nodeId++);
@@ -46,41 +71,34 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     atb::Node &mlpParallelNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpResidualAddNode = opGraph.nodes.at(nodeId++);
 
-    atb_speed::common::FusionAttentionParam<atb::infer::LayerNormParam> fusionAttentionParam;
+    atb_speed::common::FusionAttentionParam<atb::infer::RmsNormParam> fusionAttentionParam;
+    // QKV linear param
     fusionAttentionParam.isAntiOutlier = param.packQuantType[0] == atb_speed::common::MIX_W8A8_ANTI || param.packQuantType[0] == atb_speed::common::ALL_W8A8_ANTI;
     fusionAttentionParam.isPack = param.packQuantType[0] != atb_speed::common::MIX_W8A8 && param.packQuantType[0] != atb_speed::common::MIX_W8A8_ANTI;
     fusionAttentionParam.isGroupedQueryAttention = param.numAttentionHeadsPerRank != param.numKeyValueHeadsPerRank;
     fusionAttentionParam.isBF16 = param.isBF16;
-    fusionAttentionParam.qkvHasBias = true;
-    fusionAttentionParam.normHasBias = true;
-    fusionAttentionParam.needRope = false;
     fusionAttentionParam.layerLinearQuantType = param.linearQuantType;
-
-    atb::infer::LayerNormParam attnLayerNormParam;
-    attnLayerNormParam.layerType = atb::infer::LayerNormParam::LayerNormType::LAYER_NORM_NORM;
-    attnLayerNormParam.normParam.epsilon = param.layerNormEps;
-    attnLayerNormParam.normParam.beginNormAxis = LAYER_NORM_AXIS_COUNT;
-    attnLayerNormParam.normParam.beginParamsAxis = LAYER_NORM_AXIS_COUNT;
-    fusionAttentionParam.normParamType = attnLayerNormParam;
-    
-    atb::infer::LayerNormParam attnLayerNormQuantParam;
-    attnLayerNormQuantParam.layerType = atb::infer::LayerNormParam::LayerNormType::LAYER_NORM_NORM;
-    attnLayerNormQuantParam.normParam.epsilon = param.layerNormEps;
-    attnLayerNormQuantParam.normParam.beginNormAxis = LAYER_NORM_AXIS_COUNT;
-    attnLayerNormQuantParam.normParam.beginParamsAxis = LAYER_NORM_AXIS_COUNT;
-    attnLayerNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
-    fusionAttentionParam.normQuantParamType = attnLayerNormQuantParam;
-
+    atb::infer::RmsNormParam attenRmsNormParam;
+    attenRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+    attenRmsNormParam.normParam.epsilon = param.rmsNormEps;
+    fusionAttentionParam.normParamType = attenRmsNormParam;
+    atb::infer::RmsNormParam attenRmsNormQuantParam;
+    attenRmsNormQuantParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+    attenRmsNormQuantParam.normParam.epsilon = param.rmsNormEps;
+    attenRmsNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
+    fusionAttentionParam.normQuantParamType = attenRmsNormQuantParam;
+    // rope param
+    fusionAttentionParam.rotaryCoeff = 2;
+    // self attention param
     fusionAttentionParam.isFA = param.isFA;
     fusionAttentionParam.isPrefill = param.isPrefill;
     fusionAttentionParam.headDim = param.hiddenSizePerAttentionHead;
-    fusionAttentionParam.selfAttnHasBias = true;
     fusionAttentionParam.selfAttentionParam.headNum = param.numAttentionHeadsPerRank;
     fusionAttentionParam.selfAttentionParam.kvHeadNum = param.numKeyValueHeadsPerRank;
     if (param.hiddenSizePerAttentionHead == 0) {
         return atb::ERROR_INVALID_GRAPH;
     }
-    fusionAttentionParam.selfAttentionParam.qScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
+    fusionAttentionParam.selfAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
     if (param.isFA) {
         fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
         fusionAttentionParam.selfAttentionParam.calcType = param.isPrefill ? \
@@ -96,7 +114,7 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     } else {
         fusionAttentionParam.pageAttentionParam.maskType = atb::infer::PagedAttentionParam::MaskType::UNDEFINED;
     }
-    fusionAttentionParam.selfOutLinearTensorParallelInfo = {param.rank, param.worldSize, param.backend};
+    fusionAttentionParam.selfOutLinearTensorParallelInfo = {param.rank, param.rankSize, param.backend};
     Attention(fusionAttentionParam, &attentionNode.operation);
     attentionNode.inTensorIds = {
         IN_HIDDEN_STATES,
@@ -119,16 +137,14 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
         IN_QKV_OFFSET_2,
         IN_QKV_DESCALE_2,
         IN_QKV_DEOFFSET_2,
-        IN_PLACE_HOLDER,
-        IN_PLACE_HOLDER,
+        IN_COS_TABLE,
+        IN_SIN_TABLE,
         IN_SEQ_LEN,
         IN_K_CACHE,
         IN_V_CACHE,
         IN_ATTENTION_MASK,
-        // IN_TOKEN_OFFSET,
-        IN_PLACE_HOLDER,
-        // IN_LAYER_ID,
-        IN_PLACE_HOLDER,
+        IN_TOKEN_OFFSET,
+        IN_LAYER_ID,
         IN_BLOCK_TABLES,
         IN_SLOTS,
         IN_ATTENTION_OUT_WEIGHT,
@@ -136,39 +152,49 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
         IN_ATTENTION_OUT_OFFSET,
         IN_ATTENTION_OUT_DESCALE,
         IN_ATTENTION_OUT_DEOFFSET,
-        // IN_PLACE_HOLDER, // layernorm暂时修改
     };
     attentionNode.outTensorIds = {INTERMEDIATE_ATTENTION_OUT};
+
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CreateOperation(addParam, &selfResidualAddNode.operation);
-    selfResidualAddNode.inTensorIds = {IN_HIDDEN_STATES, INTERMEDIATE_ATTENTION_OUT};
+    CREATE_OPERATION(addParam, &selfResidualAddNode.operation);
+    selfResidualAddNode.inTensorIds = {
+        IN_HIDDEN_STATES,
+        INTERMEDIATE_ATTENTION_OUT
+    };
     selfResidualAddNode.outTensorIds = {INTERMEDIATE_RESIDUAL_ADD_OUT};
 
-    atb_speed::common::MlpParam<atb::infer::LayerNormParam> mlpParam;
+    atb_speed::common::MlpParam<atb::infer::RmsNormParam> mlpParam;
     mlpParam.isBF16 = param.isBF16;
-    mlpParam.normHasBias = true;
-    mlpParam.gateUpHasBias = true;
-    mlpParam.downHasBias = true;
-    mlpParam.mlpPackType = atb_speed::common::UP_WEIGHT_ONLY;
-    mlpParam.activationParam.activationType  = atb::infer::ActivationType::ACTIVATION_GELU;
     mlpParam.isAntiOutlier = param.packQuantType[1] == atb_speed::common::MIX_W8A8_ANTI || param.packQuantType[1] == atb_speed::common::ALL_W8A8_ANTI;
     mlpParam.layerLinearQuantType = param.linearQuantType;
-    atb::infer::LayerNormParam mlpLayerNormParam;
-    mlpLayerNormParam.layerType = atb::infer::LayerNormParam::LayerNormType::LAYER_NORM_NORM;
-    mlpLayerNormParam.normParam.beginNormAxis = LAYER_NORM_AXIS_COUNT;
-    mlpLayerNormParam.normParam.beginParamsAxis = LAYER_NORM_AXIS_COUNT;
-    mlpLayerNormParam.normParam.epsilon = param.layerNormEps;
-    mlpParam.normParamType = mlpLayerNormParam;
-    atb::infer::LayerNormParam mlpLayerNormQuantParam;
-    mlpLayerNormQuantParam.layerType = atb::infer::LayerNormParam::LayerNormType::LAYER_NORM_NORM;
-    mlpLayerNormQuantParam.normParam.beginNormAxis = LAYER_NORM_AXIS_COUNT;
-    mlpLayerNormQuantParam.normParam.beginParamsAxis = LAYER_NORM_AXIS_COUNT;
-    mlpLayerNormQuantParam.normParam.epsilon = param.layerNormEps;
-    mlpLayerNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
-    mlpParam.normQuantParamType = mlpLayerNormQuantParam;
-    mlpParam.downLinearTensorParallelInfo = {param.rank, param.worldSize, param.backend};
-    Mlp(mlpParam, &mlpParallelNode.operation);
+    // gate up
+    if (param.packQuantType[1] == atb_speed::common::MIX_W8A8 || param.packQuantType[1] == atb_speed::common::MIX_W8A8_ANTI) {
+        mlpParam.mlpPackType = atb_speed::common::GATE_UP_WEIGHT_NO_PACK;
+    } else {
+        mlpParam.mlpPackType = atb_speed::common::GATE_UP_WEIGHT_PACK;
+    }
+    atb::infer::RmsNormParam mlpRmsNormParam;
+    mlpRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+    mlpRmsNormParam.normParam.epsilon = param.rmsNormEps;
+    mlpParam.normParamType = mlpRmsNormParam;
+    atb::infer::RmsNormParam mlpRmsNormQuantParam;
+    mlpRmsNormQuantParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+    mlpRmsNormQuantParam.normParam.epsilon = param.rmsNormEps;
+    mlpRmsNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
+    mlpParam.normQuantParamType = mlpRmsNormQuantParam;
+    // down
+    mlpParam.downLinearTensorParallelInfo = {param.rank, param.rankSize, param.backend};
+
+    if (param.supportSwiGLU) {
+        mlpParam.activationParam.activationType = atb::infer::ActivationType::ACTIVATION_SWIGLU_FORWARD;
+        mlpParam.activationParam.dim = -1;
+        MlpSwiGLU(mlpParam, &mlpParallelNode.operation);
+    } else {
+        mlpParam.activationParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
+        Mlp(mlpParam, &mlpParallelNode.operation);
+    }
+
     mlpParallelNode.inTensorIds = {
         INTERMEDIATE_RESIDUAL_ADD_OUT,
         IN_ATTENTION_NORM_WEIGHT,
@@ -190,7 +216,6 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
         IN_MLP_DOWN_OFFSET,
         IN_MLP_DOWN_DESCALE,
         IN_MLP_DOWN_DEOFFSET,
-        // IN_PLACE_HOLDER, // layernorm暂时修改
     };
     mlpParallelNode.outTensorIds = {INTERMEDIATE_MLP_OUT};
 
@@ -200,6 +225,7 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
         INTERMEDIATE_MLP_OUT
     };
     mlpResidualAddNode.outTensorIds = {OUT_DECODER_LAYER};
+
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(0);
@@ -210,22 +236,31 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     return atb::NO_ERROR;
 }
 
-StarCoderPAQuantHostBinder::StarCoderPAQuantHostBinder() {}
+PagedAttentionQuantHostBinder::PagedAttentionQuantHostBinder() = default;
 
-StarCoderPAQuantHostBinder::~StarCoderPAQuantHostBinder() {}
+PagedAttentionQuantHostBinder::~PagedAttentionQuantHostBinder() = default;
 
-void StarCoderPAQuantHostBinder::ParseParam(const nlohmann::json &paramJson)
+void PagedAttentionQuantHostBinder::ParseParam(const nlohmann::json &paramJson)
 {
+    ATB_LOG(INFO) << "enter DecoderLayerBinder ParseParam tokenOffset";
     seqLen_.clear();
-    for (auto item : paramJson["seqLen"]) {
+    for (const auto &item : paramJson["seqLen"]) {
         seqLen_.push_back(item.get<int32_t>());
     }
+
+     tokenOffset_.clear();
+    for (auto item : paramJson["tokenOffset"]) {
+        tokenOffset_.push_back(item.get<int>());
+    }
+
+    layerId_ = paramJson["layerId"].get<int>();
 }
 
-void StarCoderPAQuantHostBinder::BindTensor(atb::VariantPack &variantPack)
+void PagedAttentionQuantHostBinder::BindTensor(atb::VariantPack &variantPack)
 {
     variantPack.inTensors.at(IN_SEQ_LEN).hostData = seqLen_.data();
+    variantPack.inTensors.at(IN_TOKEN_OFFSET).hostData = tokenOffset_.data();
+    variantPack.inTensors.at(IN_LAYER_ID).hostData = &layerId_;
 }
-
-} // namespace star_coder
+} // namespace baichuan2_7b
 } // namespace atb_speed
