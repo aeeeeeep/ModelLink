@@ -16,23 +16,16 @@
 #include "flash_attention_model.h"
 
 #include "atb/atb_infer.h"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
-#pragma GCC diagnostic pop
 
 #include "layers/parallel_layer_v2.h"
 #include "models/vlmo/2b/layer/encoder_layer.h"
 #include "models/vlmo/2b/layer/encoder_vl_layer.h"
-#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace vlmo {
-
-REGISTER_MODEL(vlmo, FlashAttentionModel);
-
-const int WEIGHT_COUNT_PER_LAYER = 23;
-const int WEIGHT_COUNT_PER_VL_LAYER = 17;
+const int WEIGHT_COUNT_PER_LAYER = 22;
+const int WEIGHT_COUNT_PER_VL_LAYER = 16;
 
 const int FINALNORMNODE_WEIGHT_COUNT = 2;
 const int OUT_LM_HEAD_WEIGHT_COUNT = 2;
@@ -42,7 +35,7 @@ const int OPERATION_COUNT_BEFORE_LAYER = 0;
 
 enum InTensorId : int {
     IN_TENSOR_X = 0,
-    IN_TENSOR_MASK,
+    //IN_TENSOR_MASK,
     IN_TENSOR_PAST_KEY,
     IN_TENSOR_PAST_VALUE,
     IN_TENSOR_TOKENOFFSET,
@@ -107,7 +100,7 @@ int64_t FlashAttentionModel::BuildGraph()
                                  WEIGHT_COUNT_PER_VL_LAYER * (param_.layerNum - param_.vlLayerIndex);
     graph_.weightTensors.resize(weightTensorSize);
 
-    graph_.inTensors.resize(IN_TENSOR_MAX + param_.layerNum);
+    graph_.inTensors.resize(IN_TENSOR_MAX + param_.layerNum * 2);
     graph_.outTensors.resize(OUT_TENSOR_MAX);
 
     const int nodeSize = OPERATION_COUNT_BEFORE_LAYER + param_.layerNum + OPERATION_COUNT_AFTER_LAYER;
@@ -141,7 +134,7 @@ int64_t FlashAttentionModel::BuildGraph()
 
         size_t inTensorId = 0;
         layerNode.inTensors.at(inTensorId++) = firstInTensor;
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MASK);
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MAX + layerId + param_.layerNum);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_PAST_KEY);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_PAST_VALUE);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_TOKENOFFSET);
@@ -180,7 +173,7 @@ int64_t FlashAttentionModel::BuildGraph()
 
         size_t inTensorId = 0;
         layerNode.inTensors.at(inTensorId++) = firstInTensor;
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MASK);
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MAX + layerId + param_.layerNum);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_PAST_KEY);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_PAST_VALUE);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_TOKENOFFSET);
@@ -225,7 +218,7 @@ atb::Status FlashAttentionModel::ParseParam(const std::string &param)
 
 atb::Status FlashAttentionModel::BindParamHostTensor(uint32_t nodeId)
 {
-    if (nodeId >= static_cast<uint32_t>(param_.layerNum)) {
+    if (nodeId >= param_.layerNum) {
         return atb::NO_ERROR;
     }
 
