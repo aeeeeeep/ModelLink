@@ -22,7 +22,6 @@
 
 #include "atb_speed/log.h"
 #include "layers/operations/word_embedding.h"
-#include "layers/operations/pe_gather.h"
 #include "layers/operations/lmhead.h"
 
 #include "models/baichuan2/13b/layer/paged_attention_quant_layer.h"
