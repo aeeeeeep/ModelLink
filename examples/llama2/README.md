@@ -47,7 +47,7 @@ LLAMA2-7B 训练的硬件配置:
 1. 拷贝代码仓到本地服务器
 
    ```shell
-   git clone -b modellink https://gitee.com/ascend/ModelLink.git 
+   git clone https://gitee.com/ascend/ModelLink.git 
    cd ModelLink 
    pip install -r requirements.txt
    cd ..
@@ -389,7 +389,7 @@ LLaMA2-13B 训练的硬件配置:
 
 1. 拷贝代码仓到本地服务器
     ```shell
-    git clone -b modellink https://gitee.com/ascend/ModelLink.git 
+    git clone https://gitee.com/ascend/ModelLink.git 
     cd ModelLink 
     mkdir logs
     mkdir ckpt
@@ -663,8 +663,8 @@ LLaMA2-34B/70B 训练的硬件配置:
 
 1. 拷贝仓库到本地服务器:
     ```shell
-    git clone -b modellink https://gitee.com/ascend/ModelLink.git 
-    cd ModelLink
+    git clone https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink 
     mkdir logs
     mkdir ckpt
     ```
