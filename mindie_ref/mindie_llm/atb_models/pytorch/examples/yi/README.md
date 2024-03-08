@@ -1,4 +1,4 @@
-#  Yi-34B模型-推理指导（800I A2）
+#  Yi-6B-200K/34B模型-推理指导（800I A2）
 
 - [概述](#概述)
 - [输入输出数据](#输入输出数据)
@@ -9,7 +9,7 @@
 
 # 概述
 
-[Yi](https://huggingface.co/01-ai/Yi-34B) 系列模型是由 01.AI 从头开始训练的新一代开源大型语言模型。[Yi](https://huggingface.co/01-ai/Yi-34B) 模型以双语语言模型为目标，在 3T 多语种语料库上进行训练，已成为全球最强大的 LLM 之一，在语言理解、常识推理、阅读理解等方面展示出良好的前景。
+[Yi](https://huggingface.co/01-ai/Yi-6B-200K) 系列模型是由 01.AI 从头开始训练的新一代开源大型语言模型。[Yi](https://huggingface.co/01-ai/Yi-6B-200K) 模型以双语语言模型为目标，在 3T 多语种语料库上进行训练，已成为全球最强大的 LLM 之一，在语言理解、常识推理、阅读理解等方面展示出良好的前景。
 
 # 输入输出数据
 
@@ -39,13 +39,14 @@
 | 包名                                   |
 |--------------------------------------|
 | Ascend-hdk-910b-npu-firmware_{version}.run |
+| Ascend-hdk-310p-npu-firmware_{version}.run |
 
-选择相应版本的安装包安装
+根据芯片型号选择相应的安装包安装
 
 ```bash
 # 安装firmwire
-chmod +x Ascend-hdk-910b-npu-firmware_{version}.run
-./Ascend-hdk-910b-npu-firmware_{version}.run --full
+chmod +x Ascend-hdk-310p-npu-firmware_{version}.run
+./Ascend-hdk-310p-npu-firmware_{version}.run --full
 ```
 
 #### 1.2 安装driver
@@ -56,11 +57,13 @@ chmod +x Ascend-hdk-910b-npu-firmware_{version}.run
 |---------|--------------------------------------------------|
 | aarch64 | Ascend-hdk-910b-npu-driver_{version}_linux-aarch64.run |
 | x86     | Ascend-hdk-910b-npu-driver_{version}_linux-x86_64.run  |
+| aarch64 | Ascend-hdk-310p-npu-driver_{version}_linux-aarch64.run |
+| x86     | Ascend-hdk-310p-npu-driver_{version}_linux-x86-64.run  |
 
 ```bash
 # 根据CPU架构 以及npu型号 安装对应的 driver
-chmod +x Ascend-hdk-910b-npu-driver_{version}_*.run
-./Ascend-hdk-910b-npu-driver_{version}_*.run --full
+chmod +x Ascend-hdk-310p-npu-driver_{version}_*.run
+./Ascend-hdk-310p-npu-driver_{version}_*.run --full
 ```
 
 ### 2 安装CANN
@@ -90,11 +93,12 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 | 包名                                         |
 |--------------------------------------------|
 | Ascend-cann-kernels-910b_{version}_linux.run |
+| Ascend-cann-kernels-310p_{version}_linux.run |
 
 ```bash
-# 安装 kernel
-chmod +x Ascend-cann-kernels-910b_{version}_linux.run
-./Ascend-cann-kernels-910b_{version}_linux.run --install
+# 安装 kernel 以310P 为例
+chmod +x Ascend-cann-kernels-310p_{version}_linux.run
+./Ascend-cann-kernels-310p_{version}_linux.run --install
 ```
 
 ### 3 安装PytorchAdapter
@@ -142,9 +146,10 @@ pip install torch*_aarch64.whl
 ```
 # 安装配套版本
 
-#### 1. 下载Yi-34B模型权重，放置到自定义`input_dir`
+#### 1. 下载Yi-6B-200K/Yi-34B模型权重，放置到自定义`input_dir`
 
    ```
+   https://huggingface.co/01-ai/Yi-6B-200K
    https://huggingface.co/01-ai/Yi-34B
    ```
 
@@ -195,7 +200,6 @@ pip install torch*_aarch64.whl
 
 # 快速上手
 
-> 
 > 工作目录和llama一致,  `cd ./pytorch/examples/llama`
 
 #### 1. 跑多卡推理，需要先切分模型权重，切分方法如下：
@@ -205,7 +209,7 @@ pip install torch*_aarch64.whl
   1. 修改`cut_weight.sh`中`input_dir`为实际存放模型权重的路径
   
   2. 修改`cut_weight.sh`中`output_dir`为自定义路径，用于存放切分后的模型权重
-  3. 修改`cut_weight.sh`中`yi6b=0`
+  3. 修改`cut_weight.sh`中`yi6b=1`(yi-6B-200K设置yi6b=1，yi-34B设置yi6b=0)
 
 - 执行切分
 
@@ -240,7 +244,7 @@ pip install torch*_aarch64.whl
     > 注意：正常推理时，**MAX_SEQ_LENGTH**必须大于或者等于**输入长度 + 输出长度**, 否则会出现精度问题; 最大吞吐测试时，**MAX_SEQ_LENGTH**必须等于**输入长度 + 输出长度**，否则会影响内存申请
 
 - 配置输入输出长度
-  - 修改sdk_config.ini中`performance.model_name=Yi-34B-200`
+  - 修改sdk_config.ini中`performance.model_name=Yi-6B-200K`
   - 修改sdk_config.ini中`performance.batch_size=16`
   - 修改sdk_config.ini中`performance.case_pair=[[256,256]]`
 
@@ -254,6 +258,17 @@ pip install torch*_aarch64.whl
   > WORLD_SIZE: 指定芯片数量，实现单卡和多卡推理（默认1）
   > DEVICE_TYPE: d9, 对应800I A2
   > TASK: 可选'run', 'performance', 'precision'
+
+#### 3. **yi-6B-200K长序列推理**
+- 配置必选参数
+  - 修改run_sdk_test.sh中`MAX_SEQ_LENGTH=200128`
+  - 修改run_sdk_test.sh中`LOG_SEQ_ENABLE=1`
+- 配置输入输出长度
+  - 修改sdk_config.ini中`performance.model_name=Yi-6B-200K`
+  - 修改sdk_config.ini中`performance.batch_size=1`
+  - 修改sdk_config.ini中`performance.case_pair=[[200000,128]]`
+- 执行推理，此时执行batch_size=1，输入200000, 输出128的性能测试
+  - bash run_sdk_test.sh 8 d9 performance
 
 # 精度验证指南
 
@@ -271,7 +286,7 @@ tar -xvf data.tar
 ```
 > 先测试C-EVAL
 
-> 再测MMLU，修改 `pytorch/examples/atb_speed_sdk/atb_speed/common/precision/base.py` 132行为test数据集，重安装atb-speed，再测试MMLU
+> 再测MMLU，需修改`pytorch/examples/atb_speed_sdk/atb_speed/common/precision/base.py` 132行为test数据集，重安装atb-speed
 
 ```python3
 val_df = pd.read_csv(os.path.join(self.data_dir, "test", task_name + "_test.csv"), header=None)
@@ -311,5 +326,36 @@ bash run_sdk_test.sh 8 d9 precision
 | summary_classes_acc.json | 测试数据下按不同维度统计准确率      |
 | summary_subject_acc.json | 测试数据下按不同学科统计准确率      |
 
-> CEVAL test数据集golden未公开，因此使用dev作为few-shot来源，val作为测试数据
-> MMLU 使用dev作为few-shot来源，test作为测试数据
+- CEVAL test数据集golden未公开，因此使用dev作为few-shot来源，val作为测试数据
+- MMLU 使用dev作为few-shot来源，test作为测试数据
+
+### LONGBENCH
+> [LongBench](https://github.com/THUDM/LongBench)是第一个多任务、中英双语、针对大语言模型长文本理解能力的评测基准，包含14个英文任务、5个中文任务和2个代码任务，多数任务的平均长度在5k-15k之间，共包含4750条测试数据，以此来对大模型在长文本下的多语言能力进行更全面的评估。
+
+####  1.下载数据集和相关代码
+1.1 下载数据集, 存放在${dataset_dir}
+```bash
+wget https://huggingface.co/datasets/THUDM/LongBench/resolve/main/data.zip
+unzip data.zip
+```
+
+1.2 下载数据集映射信息和评测代码, 存放在./pytorch/examples/llama
+https://github.com/THUDM/LongBench/blob/main/config/dataset2maxlen.json
+https://github.com/THUDM/LongBench/blob/main/config/dataset2prompt.json
+https://github.com/THUDM/LongBench/blob/main/eval.py
+https://github.com/THUDM/LongBench/blob/main/metrics.py
+
+####  2. 运行并查看结果
+```bash
+cd ./pytorch/examples/llama
+transformers_package_path=$(python3 -c 'import transformers; import os; print(os.path.dirname(transformers.__file__))')
+cp ./modeling_llama_ascend.py $transformers_package_path/models/llama/modeling_llama.py
+MAX_SEQ_LENGTH=16000 torchrun --nproc_per_node 8 --master_port 25641 longbench.py --model_path ${output_dir} --dataset_path ${dataset_dir} --e
+```
+运行结束后，可以在`pred_e/对应模型名称`的文件夹下得到模型在LongBench-E所有数据集下的输出，此后运行eval.py的评测代码：
+```bash
+python eval.py --model yi_6b_200k --e
+export RESULT_DIR=./pred_e/yi_6b_200k
+python3 -c "from longbench import get_result_scores; get_result_scores()"
+```
+可以在存储模型输出文件夹下的result.json和result.csv中得到模型在LongBench-E各数据集上的评测结果。
