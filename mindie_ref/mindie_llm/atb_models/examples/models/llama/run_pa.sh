@@ -11,6 +11,8 @@ export ATB_OPERATION_EXECUTE_ASYNC=1
 export TASK_QUEUE_ENABLE=1
 export ATB_CONVERT_NCHW_TO_ND=1
 export LCCL_ENABLE_FALLBACK=1
+export ATB_WORKSPACE_MEM_ALLOC_GLOBAL=1
+export ATB_CONTEXT_WORKSPACE_SIZE=0
 
 extra_param=""
 world_size=$(($(echo "${ASCEND_RT_VISIBLE_DEVICES}" | grep -o , | wc -l) +1))

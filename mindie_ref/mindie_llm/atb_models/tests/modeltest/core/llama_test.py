@@ -20,6 +20,8 @@ class LlamaModelTest(model_test.ModelTest):
         os.environ['ATB_CONVERT_NCHW_TO_ND'] = "1"
         os.environ['TASK_QUEUE_ENABLE'] = "1"
         os.environ['LCCL_ENABLE_FALLBACK'] = "1"
+        os.environ['ATB_WORKSPACE_MEM_ALLOC_GLOBAL'] = "1"
+        os.environ['ATB_CONTEXT_WORKSPACE_SIZE'] = "0"
 
     def get_dataset_list(self):
         return ["CEval", "BoolQ"]
