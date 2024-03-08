@@ -205,26 +205,17 @@ class FlashStarcoderForCausalLM(torch.nn.Module):
             down_name='mlp.down_proj'
         )
         weight_wrapper = WeightWrapper(self.soc_info, self.tp_rank, attn_module_names, mlp_module_names)
-        count = 0
         weight_wrapper.register_embedding(self.model.state_dict(), 'wte')
         weight_wrapper.register_embedding(self.model.state_dict(), 'wpe')
-        # print(f"------after embbeding ---------------{len(weight_wrapper.weights)}")
         for i in range(self.num_layers):
             layer = self.model.layers[i]
             layer_dict = layer.state_dict()
             weight_wrapper.register_layer(layer_dict, layer.self_attn.pack_type, layer.mlp.pack_type, self.quantize)
-
+            quant_type.append([layer.self_attn.pack_type.value, layer.mlp.pack_type.value])
             if self.soc_info.need_nz:
                 del layer.self_attn
                 del layer.post_attention_layernorm
                 del layer.mlp
-            quant_type.append([layer.self_attn.pack_type.value, layer.mlp.pack_type.value])
-            # if self.tp_rank == 0:
-            #     print("-----------------------------------------------------------")
-            #     for i in weight_wrapper.weights:
-            #         print(i.shape)
-            #     print("-----------------------------------------------------------")
-            #     exit()
         weight_wrapper.register_model_norm(self.model.state_dict(), 'norm')
         weight_wrapper.register_model_lmhead(self.state_dict(), 'lm_head')
 
