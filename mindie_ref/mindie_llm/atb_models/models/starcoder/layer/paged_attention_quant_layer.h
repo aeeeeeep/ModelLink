@@ -93,7 +93,7 @@ enum PAQuantLayerTensorId : int {
     IN_MLP_DESCALE_1,                   // Quant所需权重
     IN_MLP_OFFSET_1,                    // Quant所需权重
     IN_MLP_SCALE_1,                     // Quant所需权重
-    IN_MLP_DOWN_WEIGHT,                 // [6144, 3072] 
+    IN_MLP_DOWN_WEIGHT,                 // [6144, 3072]
     IN_MLP_DOWN_DEOFFSET,               // [6144]
     IN_MLP_DOWN_DESCALE,                // Quant所需权重
     IN_MLP_DOWN_OFFSET,                 // Quant所需权重
@@ -111,8 +111,6 @@ enum PAQuantLayerTensorId : int {
     INTERMEDIATE_ATTENTION_OUT,         // shape: PA: [seqLen, hiddenSize]
     INTERMEDIATE_RESIDUAL_ADD_OUT,      // shape: PA: [seqLen, hiddenSize]
     INTERMEDIATE_MLP_OUT,               // shape: PA: [seqLen, hiddenSize]
-
-    
 };
 
 atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operation);

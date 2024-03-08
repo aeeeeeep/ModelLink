@@ -94,11 +94,10 @@ void PAQuantModel::Param::FromString(const std::string &param)
                   << ", numHiddenLayers:" << numHiddenLayers
                   << ", numKeyValueHeadsPerRank:" << numKeyValueHeadsPerRank
                   << ", rank:" << rank << ", worldSize:" << worldSize << ", backend:" << backend;
-
 }
 
 PAQuantModel::PAQuantModel(const std::string &param) : Model("PAQuantModel", param)
-{   
+{
     ATB_LOG(INFO) << "start loading json config from python";
     param_.FromString(param);
     modelName_ += param_.isPrefill ? "_Prefill" : "_Decoder";
@@ -167,14 +166,10 @@ int64_t PAQuantModel::BuildGraph()
                                  WEIGHT_COUNT_PER_LAYER * param_.numHiddenLayers +
                                  WEIGHT_COUNT_POST_NORM + WEIGHT_COUNT_LM_HEAD;
 
-
     graph_.weightTensors.resize(weightTensorSize);
     graph_.inTensors.resize(IN_TENSOR_MAX);
-    // graph_.inTensors.resize(inTensorIdx);
     graph_.outTensors.resize(1);
-
     
-
     graph_.kCacheTensors.resize(param_.numHiddenLayers);
     graph_.vCacheTensors.resize(param_.numHiddenLayers);
 
@@ -185,7 +180,6 @@ int64_t PAQuantModel::BuildGraph()
     int nodeId = 0;
     atb::Operation *op = nullptr;
 
-
     auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
     atb_speed::common::WordEmbeddingParam wordEmbeddingParam;
     wordEmbeddingParam.unpadInputs = !param_.isFA;
@@ -195,7 +189,7 @@ int64_t PAQuantModel::BuildGraph()
     atb_speed::common::WordEmbedding(wordEmbeddingParam, &op);
     wordEmbeddingNode.operation.reset(op);
     wordEmbeddingNode.inTensors = {
-        &graph_.weightTensors.at(INTERNEL_TENSOR_HIDDEN_STATES ),                    // shape: [vocabSize + 1, hiddenSize]
+        &graph_.weightTensors.at(INTERNEL_TENSOR_HIDDEN_STATES ),
         &graph_.inTensors.at(IN_TENSOR_INPUT_IDS)
     };
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)};
@@ -209,7 +203,7 @@ int64_t PAQuantModel::BuildGraph()
     atb_speed::common::WordEmbedding(posEmbeddingParam, &op);
     posEmbeddingNode.operation.reset(op);
     posEmbeddingNode.inTensors = {
-        &graph_.weightTensors.at(INTERNEL_TENSOR_POSITION_EMB),                    // shape: [vocabSize + 1, hiddenSize]
+        &graph_.weightTensors.at(INTERNEL_TENSOR_POSITION_EMB),
         &graph_.inTensors.at(IN_TENSOR_POSITION_IDS)
     };
     posEmbeddingNode.outTensors = {&graph_.internalTensors.at(INTERNEL_TENSOR_POSITION_EMB)};

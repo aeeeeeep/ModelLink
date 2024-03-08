@@ -31,7 +31,7 @@ static const uint64_t NODE_COUNT = 4;
 static const uint64_t LAYER_NORM_AXIS_COUNT = 1;
 
 atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operation)
-{   
+{
     ATB_LOG(INFO) << "layer start";
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;
@@ -144,7 +144,6 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     CreateOperation(addParam, &selfResidualAddNode.operation);
     selfResidualAddNode.inTensorIds = {IN_HIDDEN_STATES, INTERMEDIATE_ATTENTION_OUT};
     selfResidualAddNode.outTensorIds = {INTERMEDIATE_RESIDUAL_ADD_OUT};
-
 
     atb_speed::common::MlpParam<atb::infer::LayerNormParam> mlpParam;
     mlpParam.isBF16 = param.isBF16;

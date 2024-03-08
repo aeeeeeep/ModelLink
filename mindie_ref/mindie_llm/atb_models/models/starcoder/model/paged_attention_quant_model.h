@@ -42,9 +42,6 @@ public:
         int numHiddenLayers = 0;
         int numKeyValueHeadsPerRank = 0;
         int headNum = 0;
-        // int dk = 0;
-        // int kvHead = 1;
-        // int layerNum = 0;
         int rank = 0;
         int worldSize = 1;
         std::string backend = "hccl";
