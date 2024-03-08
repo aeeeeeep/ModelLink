@@ -53,6 +53,7 @@ def get_linear(weight, bias, quantize, is_norm=False):
             weight=qweight,
             weight_scale=weight_scale,
             weight_offset=weight_offset,
+            bias=bias
         )
     else:
         logger.error(f"Quantization `{quantize}` is not implemented yet.")
