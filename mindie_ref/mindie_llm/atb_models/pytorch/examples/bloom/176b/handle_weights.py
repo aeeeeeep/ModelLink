@@ -13,6 +13,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BloomTokenizerFast
 
 from modeling_bloom_ascend import BloomCommonForCausalLM as BloomForCausalLM
 
+
 class CutWeightsConfig:
     def __init__(self, state_dict, world_size, config):
         self.state_dict = state_dict
@@ -21,7 +22,7 @@ class CutWeightsConfig:
         self.recuce_bias = False
         self.cut_row_keys = ('dense_h_to_4h',)
         self.cut_col_keys = ('dense', 'dense_4h_to_h', 'word_embeddings')
-        
+
 
 def get_args():
     parser = argparse.ArgumentParser(description="Bloom info.")
@@ -73,25 +74,6 @@ def get_calib_dataset(tokenizer):
     return calib_dataset
 
 
-def bias_correction(fp_bias, quant_weight, weight_scale):
-    try:
-        bias_out = fp_bias / weight_scale - quant_weight.to(torch.float32).sum(dim=1)
-    except:
-        raise Exception("bias correction failed.")
-    return bias_out
-
-
-def process_weight_scale(weight_scale_dict):
-    # weight_scale: int32 to int64
-    new_weight_scale_dict = {}
-    for key, weight_scale in weight_scale_dict.items():
-        weight_scale = weight_scale.numpy()
-        new_weight_scale = np.frombuffer(weight_scale.tobytes(), dtype=np.int32)
-        new_weight_scale_dict.setdefault(key, torch.tensor(new_weight_scale.astype(np.int64)))
-    return new_weight_scale_dict
-
-
-
 def quant_model(args_quant, verbose=False):
     if not os.environ.get("ASCEND_TOOLKIT_HOME"):
         raise Exception("Environment variable ASCEND_TOOLKIT_HOME not found. Please source /path/to/cann/set_env.sh")
@@ -118,7 +100,7 @@ def quant_model(args_quant, verbose=False):
     saved_float_keys = []
     weights_keys = model.state_dict().keys()
     for weights_key in weights_keys:
-        print(weights_key, "." * ( 80 - len(str(weights_key))), model.state_dict()[weights_key].shape)
+        print(weights_key, "." * (80 - len(str(weights_key))), model.state_dict()[weights_key].shape)
 
         key_split = weights_key.split('.')
         is_split_layer = any(_n in key_split for _n in ('input_layernorm', 'post_attention_layernorm', 'bias'))
@@ -154,7 +136,6 @@ def quant_model(args_quant, verbose=False):
     if "lm_head" in quant_weight_dict:
         del quant_weight_dict["lm_head"]
     np.save(os.path.join(args_quant.output_path, "quant_weight.npy"), quant_weight_dict)
-
 
 
 def cut_weights(cfg):
