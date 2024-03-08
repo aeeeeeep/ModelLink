@@ -28,7 +28,7 @@ class PARunner:
         self.max_output_length = kwargs.get('max_output_length', None)
         self.is_flash_model = kwargs.get('is_flash_model', None)
         self.max_batch_size = kwargs.get('max_batch_size', None)
-        self.use_refactor = kwargs.get('use_refactor', False)
+        self.use_refactor = kwargs.get('use_refactor', True)
 
         self.block_size = kwargs.get('block_size', None)
 
@@ -240,7 +240,7 @@ def parse_arguments():
     parser.add_argument('--repetition_penalty', type=float, default=1.0)
     parser.add_argument('--presence_penalty', type=float, default=0.0)
     parser.add_argument('--frequency_penalty', type=float, default=0.0)
-    parser.add_argument('--use_refactor', action='store_true')
+    parser.add_argument('--use_refactor', type=bool, default=True)
     parser.add_argument('--ignore_eos', action='store_true')
 
     return parser.parse_args()

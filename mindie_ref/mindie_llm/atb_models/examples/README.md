@@ -120,7 +120,7 @@
 - `--is_flash_causal_lm`
   - 是否使用Paged Attention，默认不使用
 - `--use_refactor`
-    - 若加上`use_refactor`则使用归一后代码，若不开启`use_refactor`，则使用未归一前的代码
+    - 若设置为True则使用归一后代码，若设置为False，则使用未归一的代码；默认开启use_refactor
 - 示例
   ```shell
   # 使用多卡运行Flash Attention，设置模型权重路径，设置输出长度为2048个token，精度使用BF16
