@@ -205,5 +205,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
 
 template atb::Status MlpSwiGLU(const MlpParam<atb::infer::RmsNormParam> &param, atb::Operation **operation);
 
+template atb::Status MlpSwiGLU(const MlpParam<atb::infer::LayerNormParam> &param, atb::Operation **operation);
+
 } // namespace common
 } // namespace atb_speed

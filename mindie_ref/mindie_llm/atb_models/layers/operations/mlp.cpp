@@ -200,5 +200,7 @@ atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation
 
 template atb::Status Mlp(const MlpParam<atb::infer::RmsNormParam> &param, atb::Operation **operation);
 
+template atb::Status Mlp(const MlpParam<atb::infer::LayerNormParam> &param, atb::Operation **operation);
+
 } // namespace common
 } // namespace atb_speed

@@ -566,5 +566,9 @@ template atb::Status QKVLinearSplit(const FusionAttentionParam<atb::infer::RmsNo
 template atb::Status SelfAttention(const FusionAttentionParam<atb::infer::RmsNormParam> &param, atb::Operation **operation);
 template atb::Status Attention(const FusionAttentionParam<atb::infer::RmsNormParam> &param, atb::Operation **operation);
 
+template atb::Status QKVLinearSplit(const FusionAttentionParam<atb::infer::LayerNormParam> &param, atb::Operation **operation);
+template atb::Status SelfAttention(const FusionAttentionParam<atb::infer::LayerNormParam> &param, atb::Operation **operation);
+template atb::Status Attention(const FusionAttentionParam<atb::infer::LayerNormParam> &param, atb::Operation **operation);
+
 } // namespace common
 } // namespace atb_speed
