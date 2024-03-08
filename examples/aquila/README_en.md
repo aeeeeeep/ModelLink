@@ -21,7 +21,7 @@ Here's a hardware summary of pre-training Aquila-7B:
 
 1. Clone the repository to your local server and switch to modellink branch:
 ```shell
-git clone -b modellink https://gitee.com/ascend/ModelLink.git
+git clone https://gitee.com/ascend/ModelLink.git
 cd ModelLink
 mkdir logs
 mkdir ckpt

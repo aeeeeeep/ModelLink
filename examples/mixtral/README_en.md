@@ -40,7 +40,7 @@ Recommended hardware configuration for inference:
 1. Clone the code repository to the local server
 
    ```shell
-    git clone -b modellink https://gitee.com/ascend/ModelLink.git
+    git clone https://gitee.com/ascend/ModelLink.git
    ```
 2. Set up the environment
 

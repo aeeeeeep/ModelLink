@@ -38,7 +38,7 @@ Here's a hardware summary of pre-training LLaMA-7B/13B:
 
 1. Clone the repository to your local server:
 ```shell
-git clone -b modellink https://gitee.com/ascend/ModelLink.git 
+git clone https://gitee.com/ascend/ModelLink.git 
 cd ModelLink
 mkdir logs
 cd ..
@@ -387,7 +387,7 @@ The model was trained using alpaca datasets.
 ### Script
 1. Clone the repository to your local server
 ```shell
-git clone -b modellink https://gitee.com/ascend/ModelLink.git 
+git clone https://gitee.com/ascend/ModelLink.git 
 cd ModelLink
 mkdir logs
 mkdir ckpt

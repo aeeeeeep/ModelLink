@@ -37,7 +37,7 @@ LLaMA-7B/13B 训练的硬件配置如下:
 
 1. 拷贝仓库到个人服务器
    ```shell
-   git clone -b modellink https://gitee.com/ascend/ModelLink.git 
+   git clone https://gitee.com/ascend/ModelLink.git 
    cd ModelLink
    mkdir logs
    cd ..
@@ -398,7 +398,7 @@ LLaMA-33B/65B 训练的硬件配置:
 ### 脚本
 1. 拷贝仓库到个人服务器
    ```shell
-   git clone -b modellink https://gitee.com/ascend/ModelLink.git 
+   git clone https://gitee.com/ascend/ModelLink.git 
    cd ModelLink
    mkdir logs
    cd ..
