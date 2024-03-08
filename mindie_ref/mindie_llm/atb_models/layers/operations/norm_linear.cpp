@@ -34,7 +34,7 @@ enum NormLinearTensorIdx : uint32_t {
     IN_SCALE,
     IN_OFFSET,
     IN_DESCALE,
-    IN_DEOFFSET,
+    IN_BIAS,
     OUT_LINEAR,
     INTERMEDIATE_NORM,
 };
@@ -76,7 +76,7 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
     FusionLinear(linearParam, &linearNode.operation);
     linearNode.inTensorIds = {
         NormLinearTensorIdx::INTERMEDIATE_NORM, NormLinearTensorIdx::IN_LINEAR_WEIGHT, NormLinearTensorIdx::IN_SCALE,
-        NormLinearTensorIdx::IN_OFFSET, NormLinearTensorIdx::IN_DESCALE, NormLinearTensorIdx::IN_DEOFFSET
+        NormLinearTensorIdx::IN_OFFSET, NormLinearTensorIdx::IN_DESCALE, NormLinearTensorIdx::IN_BIAS
     };
     linearNode.outTensorIds = {OUT_LINEAR};
 
@@ -100,6 +100,8 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
 }
 
 template atb::Status NormLinear(const NormLinearParam<atb::infer::RmsNormParam> &param, atb::Operation **operation);
+
+template atb::Status NormLinear(const NormLinearParam<atb::infer::LayerNormParam> &param, atb::Operation **operation);
 
 } // namespace common
 } // namespace atb_speed

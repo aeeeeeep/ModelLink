@@ -21,7 +21,7 @@
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
 #include "layers/operations/word_embedding.h"
-#include "layers/operations/pe_gather.h"
+#include "layers/operations/positional_embedding.h"
 #include "layers/operations/lmhead.h"
 #include "models/llama_parallel/layer/decoder_layer.h"
 #include "models/llama_parallel/model/decoder_model.h"
@@ -208,7 +208,7 @@ int64_t DecoderModel::BuildGraph()
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)};
 
     auto &peGatherNode = graph_.nodes.at(nodeId++);
-    atb_speed::common::PEGather(&op);
+    atb_speed::common::PositionalEmbeddingGather(&op);
     peGatherNode.operation.reset(op);
     peGatherNode.inTensors = {
         &graph_.inTensors.at(IN_TENSOR_POSITION_IDS),
