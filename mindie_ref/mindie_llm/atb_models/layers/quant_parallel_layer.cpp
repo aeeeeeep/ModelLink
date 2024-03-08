@@ -31,7 +31,7 @@ enum ParallelType : int {
 
 template <class T>
 atb::Status QuantParallelLinearBase(const QuantParallelParam &param_, atb::Operation **operation, T config,
-                               const ParallelType parallelType)
+                                    const ParallelType parallelType)
 {
     atb::GraphParam opGraph;
     opGraph.name = "ParallelLinearBase";
@@ -143,13 +143,13 @@ atb::Status QuantParallelLinear(const QuantParallelParam &param_, atb::Operation
 {
     if (param_.isBias && (param_.rankSize > 1)) {
         return QuantParallelLinearBase(param_, operation, QuantLinearWithBiasAndParallel(5, 1, 2, 3),
-                                parallelType); // 5:in 1:out 2:inter 3:node
+                                        parallelType); // 5:in 1:out 2:inter 3:node
     } else if (param_.isBias) {
         return QuantParallelLinearBase(param_, operation, QuantLinearWithBias(5, 1, 1, 2),
-                                parallelType); // 5:in 1:out 1:inter 2:node
+                                        parallelType); // 5:in 1:out 1:inter 2:node
     } else if (param_.rankSize > 1) {
         return QuantParallelLinearBase(param_, operation, QuantLinearWithParallel(4, 1, 1, 2),
-                                parallelType); // 2:in 1:out 1:inter 2:node
+                                        parallelType); // 2:in 1:out 1:inter 2:node
     } else {
         return QuantParallelLinearBase(param_, operation, QuantLinearOnly(4, 1, 0, 1), parallelType); // 4:in 1:out 0:inter 1:node
     }
