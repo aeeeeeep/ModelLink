@@ -522,7 +522,6 @@ class FlashChatglmModel(torch.nn.Module):
                                           layer.self_attention.pack_type,
                                           layer.mlp.pack_type,
                                           self.quantize)
-            quant_type.append([layer.self_attention.pack_type.value, layer.mlp.pack_type.value])
             if self.soc_info.need_nz:
                 del layer.self_attention
                 del layer.post_attention_layernorm

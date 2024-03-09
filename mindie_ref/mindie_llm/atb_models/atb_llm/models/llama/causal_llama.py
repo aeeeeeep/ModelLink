@@ -67,7 +67,6 @@ class LlamaForCausalLM(CausalLM):
                 del layer.self_attn
                 del layer.post_attention_layernorm
                 del layer.mlp
-            quant_type.append([layer.self_attn.pack_type.value, layer.mlp.pack_type.value])
         weight_wrapper.register_model_norm(self.model.state_dict(), 'norm')
         weight_wrapper.register_model_lmhead(self.state_dict(), 'lm_head')
         return weight_wrapper.weights, weight_wrapper.linear_type, weight_wrapper.pack_quant_type
