@@ -193,7 +193,6 @@ class FlashStarcoderForCausalLM(torch.nn.Module):
         return weight
 
     def get_weights(self):
-        quant_type = []
         attn_module_names = AttnModuleNames(
             norm_name='input_layernorm',
             pack_name='self_attn.qkv',
@@ -219,7 +218,7 @@ class FlashStarcoderForCausalLM(torch.nn.Module):
         weight_wrapper.register_model_norm(self.model.state_dict(), 'norm')
         weight_wrapper.register_model_lmhead(self.state_dict(), 'lm_head')
 
-        return weight_wrapper.weights, weight_wrapper.linear_type, quant_type
+        return weight_wrapper.weights, weight_wrapper.linear_type, weight_wrapper.pack_quant_type
 
     def init_ascend_weight(self):
 

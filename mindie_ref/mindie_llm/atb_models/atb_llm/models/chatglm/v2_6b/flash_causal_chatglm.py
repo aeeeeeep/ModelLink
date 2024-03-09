@@ -503,7 +503,6 @@ class FlashChatglmModel(torch.nn.Module):
         self.lm_head_indices_fake = self.lm_head_indices_fake.to(self.state_dict()["embed_tokens.weight"].device)
 
     def get_weights(self):
-        quant_type = []
         attn_module_names = AttnModuleNames(
             norm_name='input_layernorm',
             pack_name='self_attention.query_key_value',
@@ -530,7 +529,7 @@ class FlashChatglmModel(torch.nn.Module):
                 del layer.mlp
         weight_wrapper.register_model_norm(self.state_dict(), 'norm')
         weight_wrapper.weights.append(self.weight_format_cast(self.lm_head_weight))
-        return weight_wrapper.weights, weight_wrapper.linear_type, quant_type
+        return weight_wrapper.weights, weight_wrapper.linear_type, weight_wrapper.pack_quant_type
 
     def init_ascend_kvcache(self, kv_cache):
         kv_cache_exist = self.ascend_kcache_id and self.ascend_vcache_id

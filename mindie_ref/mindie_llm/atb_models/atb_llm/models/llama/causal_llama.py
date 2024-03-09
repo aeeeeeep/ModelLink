@@ -42,7 +42,6 @@ class LlamaForCausalLM(CausalLM):
         self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_DecoderModel")
 
     def get_weights(self):
-        quant_type = []
         attn_module_names = AttnModuleNames(
             norm_name='input_layernorm',
             pack_name='self_attn.query_key_value',
@@ -71,7 +70,7 @@ class LlamaForCausalLM(CausalLM):
             quant_type.append([layer.self_attn.pack_type.value, layer.mlp.pack_type.value])
         weight_wrapper.register_model_norm(self.model.state_dict(), 'norm')
         weight_wrapper.register_model_lmhead(self.state_dict(), 'lm_head')
-        return weight_wrapper.weights, weight_wrapper.linear_type, quant_type
+        return weight_wrapper.weights, weight_wrapper.linear_type, weight_wrapper.pack_quant_type
 
     def init_ascend_weight(self):
         self.ascend_weight, self.linear_type, self.pack_quant_config = self.get_weights()

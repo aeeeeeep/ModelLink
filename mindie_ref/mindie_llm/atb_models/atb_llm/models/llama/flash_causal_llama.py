@@ -123,7 +123,6 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
             self.acl_decoder_operation.set_param(self.acl_param_decoder)
     
     def get_weights(self):
-        quant_type = []
         attn_module_names = AttnModuleNames(
             norm_name='input_layernorm',
             pack_name='self_attn.query_key_value',
@@ -152,7 +151,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                 del layer.mlp
         weight_wrapper.register_model_norm(self.model.state_dict(), 'norm')
         weight_wrapper.register_model_lmhead(self.state_dict(), 'lm_head')
-        return weight_wrapper.weights, weight_wrapper.linear_type, quant_type
+        return weight_wrapper.weights, weight_wrapper.linear_type, weight_wrapper.pack_quant_type
 
     def init_ascend_weight(self):
         if self.use_refactor:
