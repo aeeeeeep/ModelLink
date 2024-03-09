@@ -312,7 +312,6 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
 
    
     def get_weights(self):
-        quant_type = []
         attn_module_names = AttnModuleNames(
             norm_name='input_layernorm',
             pack_name='self_attn.W_pack',
@@ -329,14 +328,13 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             layer = self.model.layers[i]
             layer_dict = layer.state_dict()
             weight_wrapper.register_layer(layer_dict, layer.self_attn.pack_type, layer.mlp.pack_type, self.quantize)
-            quant_type.append([layer.self_attn.pack_type.value, layer.mlp.pack_type.value])
             if self.soc_info.need_nz:
                 del layer.self_attn
                 del layer.post_attention_layernorm
                 del layer.mlp
         weight_wrapper.register_model_norm(self.model.state_dict(), 'norm')
         weight_wrapper.register_model_lmhead(self.state_dict(), 'lm_head')
-        return weight_wrapper.weights, weight_wrapper.linear_type, quant_type
+        return weight_wrapper.weights, weight_wrapper.linear_type, weight_wrapper.pack_quant_type
 
 
     def execute_ascend_operator(self,
