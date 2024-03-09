@@ -36,6 +36,7 @@ class WeightWrapper:
     def __init__(self, soc_info, tp_rank, attn_module_names, mlp_module_names):
         self.weights = []
         self.layer_linear_type = []
+        self.pack_quant_type = []
         self.linear_type = []
         self.soc_info = soc_info
         self.tp_rank = tp_rank
@@ -226,3 +227,4 @@ class WeightWrapper:
         self.register_layer_attn(layer_dict, attn_pack_type, quantize_type, self.attn_module_names)
         self.register_layer_mlp(layer_dict, mlp_pack_type, quantize_type, self.mlp_module_names)
         self.linear_type.append(self.layer_linear_type.copy())
+        self.pack_quant_type.append([attn_pack_type.value, mlp_pack_type.value])

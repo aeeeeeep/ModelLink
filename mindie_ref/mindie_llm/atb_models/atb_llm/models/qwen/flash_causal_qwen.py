@@ -126,7 +126,6 @@ class FlashQwenForCausalLM(FlashForCausalLM):
                 logger.info(">>>> qwen_14b_PAW8A8Model is called.")
 
     def get_weights(self):
-        quant_type = []
         attn_module_names = AttnModuleNames(
             norm_name='ln_1',
             pack_name='attn.c_attn',
@@ -143,14 +142,13 @@ class FlashQwenForCausalLM(FlashForCausalLM):
             layer = self.transformer.h[i]
             layer_dict = layer.state_dict()
             weight_wrapper.register_layer(layer_dict, layer.attn.pack_type, layer.mlp.pack_type, self.quantize)
-            quant_type.append([layer.attn.pack_type.value, layer.mlp.pack_type.value])
             if self.soc_info.need_nz:
                 del layer.attn
                 del layer.ln_2
                 del layer.mlp
         weight_wrapper.register_model_norm(self.transformer.state_dict(), 'ln_f')
         weight_wrapper.register_model_lmhead(self.state_dict(), 'lm_head')
-        return weight_wrapper.weights, weight_wrapper.linear_type, quant_type
+        return weight_wrapper.weights, weight_wrapper.linear_type, weight_wrapper.pack_quant_type
 
     def init_ascend_weight(self):
         if self.use_refactor:
