@@ -1,4 +1,4 @@
-#  Yi-6B-200K/34B模型-推理指导（800I A2）
+#  Yi-6B-200K/Yi-34B模型-推理指导（800I A2）
 
 - [概述](#概述)
 - [输入输出数据](#输入输出数据)
@@ -237,7 +237,7 @@ pip install torch*_aarch64.whl
   - 修改sdk_test.py中`torch.float16`为`torch.bfloat16`
 
 - 配置必选参数
-  - 修改run_sdk_test.sh中环境变量**MAX_SEQ_LENGTH**为：**期望的最大输入长度 + 最大输出长度**，默认值为2048，默认值的设定是根据Ceval数据集的特点确定的
+  - 修改run_sdk_test.sh中环境变量**MAX_SEQ_LENGTH**为：**期望的最大输入长度 + 最大输出长度**，默认值为2048
   - 修改sdk_config.ini中`model.model_path=output_dir`
   - 修改sdk_config.ini中`model.device_ids=0,1,2,3,4,5,6,7`
 
