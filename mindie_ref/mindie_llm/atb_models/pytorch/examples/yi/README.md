@@ -1,4 +1,4 @@
-#  Yi-6B-200K模型-推理指导（800I A2）
+#  Yi-6B-200K/Yi-34B模型-推理指导（800I A2）
 
 - [概述](#概述)
 - [输入输出数据](#输入输出数据)
@@ -146,10 +146,11 @@ pip install torch*_aarch64.whl
 ```
 # 安装配套版本
 
-#### 1. 下载Yi-6B-200K模型权重，放置到自定义`input_dir`
+#### 1. 下载Yi-6B-200K/Yi-34B模型权重，放置到自定义`input_dir`
 
    ```
    https://huggingface.co/01-ai/Yi-6B-200K
+   https://huggingface.co/01-ai/Yi-34B
    ```
 
 #### 2. 根据版本发布链接，安装MindIE-ATB 
@@ -208,7 +209,7 @@ pip install torch*_aarch64.whl
   1. 修改`cut_weight.sh`中`input_dir`为实际存放模型权重的路径
   
   2. 修改`cut_weight.sh`中`output_dir`为自定义路径，用于存放切分后的模型权重
-  3. 修改`cut_weight.sh`中`yi6b=1`
+  3. 修改`cut_weight.sh`中`yi6b=1`(yi-6B-200K设置yi6b=1，yi-34B设置yi6b=0)
 
 - 执行切分
 
@@ -244,10 +245,10 @@ pip install torch*_aarch64.whl
 
 - 配置输入输出长度
   - 修改sdk_config.ini中`performance.model_name=Yi-6B-200K`
-  - 修改sdk_config.ini中`performance.batch_size=300`
+  - 修改sdk_config.ini中`performance.batch_size=16`
   - 修改sdk_config.ini中`performance.case_pair=[[256,256]]`
 
-- 执行推理，此时执行batch_size=300，输入256, 输出256的性能测试
+- 执行推理，此时执行batch_size=16，输入256, 输出256的性能测试
   指令：bash run_sdk_test.sh [WORLD_SIZE] [DEVICE_TYPE] [TASK]
   
   ```
@@ -258,7 +259,7 @@ pip install torch*_aarch64.whl
   > DEVICE_TYPE: d9, 对应800I A2
   > TASK: 可选'run', 'performance', 'precision'
 
-#### 3. **长序列推理**
+#### 3. **yi-6B-200K长序列推理**
 - 配置必选参数
   - 修改run_sdk_test.sh中`MAX_SEQ_LENGTH=200128`
   - 修改run_sdk_test.sh中`LOG_SEQ_ENABLE=1`
@@ -283,7 +284,8 @@ unzip ceval-exam.zip -d data
 wget https://people.eecs.berkeley.edu/~hendrycks/data.tar
 tar -xvf data.tar
 ```
-> 先测试C-EVAL, 修改`pytorch/examples/atb_speed_sdk/atb_speed/common/precision/base.py` 132行为test数据集，重安装atb-speed，再测试MMLU
+> 先测试C-EVAL
+> 再测MMLU，需修改`pytorch/examples/atb_speed_sdk/atb_speed/common/precision/base.py` 132行为test数据集，重安装atb-speed
 
 ```python3
 val_df = pd.read_csv(os.path.join(self.data_dir, "test", task_name + "_test.csv"), header=None)
