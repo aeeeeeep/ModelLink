@@ -46,7 +46,7 @@ Qwen-7B 训练的硬件配置:
 1. 拷贝代码仓到本地服务器
 
    ```shell
-   git clone -b modellink https://gitee.com/ascend/ModelLink.git 
+   git clone https://gitee.com/ascend/ModelLink.git 
    cd ModelLink
    ```
 2. 搭建环境
@@ -262,7 +262,7 @@ Qwen-14B 训练的硬件配置:
 1. 拷贝代码仓到本地服务器
 
    ```shell
-   git clone -b modellink https://gitee.com/ascend/ModelLink.git 
+   git clone https://gitee.com/ascend/ModelLink.git 
    cd ModelLink 
    ```
 2. 搭建环境
@@ -482,7 +482,7 @@ Qwen-72B 训练的硬件配置:
 1. 拷贝代码仓到本地服务器
 
    ```shell
-   git clone -b modellink https://gitee.com/ascend/ModelLink.git 
+   git clone https://gitee.com/ascend/ModelLink.git 
    cd ModelLink
    ```
 2. 搭建环境

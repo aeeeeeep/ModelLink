@@ -40,7 +40,7 @@
 1. 拷贝代码仓到本地服务器
 
    ```shell
-    git clone -b modellink https://gitee.com/ascend/ModelLink.git
+    git clone https://gitee.com/ascend/ModelLink.git
    ```
 2. 搭建环境
 
