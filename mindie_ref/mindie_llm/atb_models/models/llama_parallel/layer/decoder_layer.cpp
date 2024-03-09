@@ -217,29 +217,5 @@ DecoderLayerBinder::DecoderLayerBinder() {}
 
 DecoderLayerBinder::~DecoderLayerBinder() {}
 
-void DecoderLayerBinder::ParseParam(const nlohmann::json &paramJson)
-{
-    ATB_LOG(INFO) << "enter DecoderLayerBinder ParseParam tokenOffset";
-    seqLen_.clear();
-    for (auto item : paramJson["seqLen"]) {
-        seqLen_.push_back(item.get<int>());
-    }
-
-    tokenOffset_.clear();
-    for (auto item : paramJson["tokenOffset"]) {
-        tokenOffset_.push_back(item.get<int>());
-    }
-
-    layerId_ = paramJson["layerId"].get<int>();
-}
-
-void DecoderLayerBinder::BindTensor(atb::VariantPack &variantPack)
-{
-    ATB_LOG(INFO) << "enter DecoderLayerOperation BindTensor";
-    variantPack.inTensors.at(IN_SEQ_LEN).hostData = seqLen_.data();
-    variantPack.inTensors.at(IN_TOKEN_OFFSET).hostData = tokenOffset_.data();
-    variantPack.inTensors.at(IN_LAYER_ID).hostData = &layerId_;
-}
-
 } // namespace llama_parallel
 } // namespace atb_speed
