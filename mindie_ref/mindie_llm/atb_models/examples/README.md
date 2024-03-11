@@ -150,9 +150,9 @@
 - `--is_flash_model`
   - 是否使用Paged Attention，默认使用
 - `--use_refactor`
-    - 若加上`use_refactor`则使用归一后代码，若不开启`use_refactor`，则使用未归一前的代码
+    - 若设置为True则使用归一后代码，若设置为False，则使用未归一的代码；默认开启use_refactor
 - 示例
   ```shell
   # 使用多卡运行Paged Attention，设置模型权重路径，设置输出长度为2048个token，使用归一后代码
-  torchrun --nproc_per_node 2 --master_port 20038 -m examples.run_pa --model_path ${weight_path} --max_output_length 2048 --use_refactor
+  torchrun --nproc_per_node 2 --master_port 20038 -m examples.run_pa --model_path ${weight_path} --max_output_length 2048 --use_refactor True
   ```
