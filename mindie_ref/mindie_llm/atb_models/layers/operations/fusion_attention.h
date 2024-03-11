@@ -23,6 +23,7 @@
 #include "layers/operations/linear.h"
 #include "layers/operations/linear_parallel.h"
 #include "layers/operations/norm_linear.h"
+#include "layers/operations/positional_embedding.h"
 
 namespace atb_speed {
 namespace common {
@@ -30,10 +31,8 @@ namespace common {
 template <typename NormParamType>
 struct FusionAttentionParam {
     // QKV linear param
-    bool isPack = false;
     int isGroupedQueryAttention = false;
     bool isBF16 = false;
-    bool isAntiOutlier = false;
     bool qkvHasBias = false;
     bool normHasBias = false;
     int packQuantType = atb_speed::common::PackQuantType::ALL_FP;
@@ -41,9 +40,8 @@ struct FusionAttentionParam {
     NormParamType normParamType;
     NormParamType normQuantParamType;
     // rope param
-    bool needRope = true;
-    int rotaryCoeff = 2;
-    bool isHalfRotary = false;
+    atb_speed::common::RotaryType rotaryType;
+    atb::infer::RopeParam ropeParam;
     // self attention param
     bool isFA = true;
     bool isPrefill = false;
