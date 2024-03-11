@@ -92,6 +92,15 @@ cp $MODELING_SCRIPT_PATH $weight_dir/part_model/5/modeling_deepseek.py
 cp $MODELING_SCRIPT_PATH $weight_dir/part_model/6/modeling_deepseek.py
 cp $MODELING_SCRIPT_PATH $weight_dir/part_model/7/modeling_deepseek.py
 
+cp $ATB_SPEED_HOME_PATH/pytorch/examples/deepseek16B_densed/configuration_deepseek.py $weight_dir/part_model/0/configuration_deepseek.py
+cp $ATB_SPEED_HOME_PATH/pytorch/examples/deepseek16B_densed/configuration_deepseek.py $weight_dir/part_model/1/configuration_deepseek.py
+cp $ATB_SPEED_HOME_PATH/pytorch/examples/deepseek16B_densed/configuration_deepseek.py $weight_dir/part_model/2/configuration_deepseek.py
+cp $ATB_SPEED_HOME_PATH/pytorch/examples/deepseek16B_densed/configuration_deepseek.py $weight_dir/part_model/3/configuration_deepseek.py
+cp $ATB_SPEED_HOME_PATH/pytorch/examples/deepseek16B_densed/configuration_deepseek.py $weight_dir/part_model/4/configuration_deepseek.py
+cp $ATB_SPEED_HOME_PATH/pytorch/examples/deepseek16B_densed/configuration_deepseek.py $weight_dir/part_model/5/configuration_deepseek.py
+cp $ATB_SPEED_HOME_PATH/pytorch/examples/deepseek16B_densed/configuration_deepseek.py $weight_dir/part_model/6/configuration_deepseek.py
+cp $ATB_SPEED_HOME_PATH/pytorch/examples/deepseek16B_densed/configuration_deepseek.py $weight_dir/part_model/7/configuration_deepseek.py
+
 cp $ATB_SPEED_HOME_PATH/pytorch/examples/deepseek16B_densed/config.json $weight_dir/part_model/0/config.json
 cp $ATB_SPEED_HOME_PATH/pytorch/examples/deepseek16B_densed/config.json $weight_dir/part_model/1/config.json
 cp $ATB_SPEED_HOME_PATH/pytorch/examples/deepseek16B_densed/config.json $weight_dir/part_model/2/config.json
