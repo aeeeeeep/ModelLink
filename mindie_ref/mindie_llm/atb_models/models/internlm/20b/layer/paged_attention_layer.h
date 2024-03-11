@@ -32,6 +32,7 @@ struct PagedAttentionLayerParam {
     int rank = 0;
     int rankSize = 1;
     bool isPrefill = false;
+    bool isNz = false;
     std::string backend = "hccl";
     std::string model = "internlm_20b";
 };
