@@ -87,9 +87,7 @@ void PagedAttentionModel::Param::FromString(const std::string &param)
 
 PagedAttentionModel::PagedAttentionModel(const std::string &param) : Model("InternLM_20B_PagedAttentionModel", param)
 {
-    std::cout << param << std::endl;
     param_.FromString(param);
-    std::cout << "[isNz]: " << param_.isNz << std::endl;
     modelName_ += param_.isPrefill ? "_Prefill" : "_Decoder";
 }
 
