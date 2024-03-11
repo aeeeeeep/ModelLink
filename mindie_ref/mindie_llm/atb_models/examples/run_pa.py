@@ -24,7 +24,7 @@ class Test_data:
     top_p: float
     min_tokens_to_keep: int
 
-class PARunner:        
+class PARunner:
     def __init__(self, **kwargs):
         self.rank = kwargs.get('rank', '0')
         self.world_size = kwargs.get('world_size', '1')
@@ -230,7 +230,7 @@ def parse_arguments():
         default=None)
     parser.add_argument('--max_position_embeddings', type=int, default=None)
     parser.add_argument('--max_input_length', type=int, default=102)
-    parser.add_argument('--max_output_length', type=int, default=200)
+    parser.add_argument('--max_output_length', type=int, default=400)
     parser.add_argument('--max_prefill_tokens', type=int, default=-1)
     parser.add_argument("--max_batch_size", type=int, default=1)
     parser.add_argument("--block_size", type=int, default=128)
@@ -243,7 +243,7 @@ def parse_arguments():
                         default=1)
     parser.add_argument('--random_seed', type=int, default=random.randint(1,100))
     parser.add_argument('--temperature', type=float, default=1.0)
-    parser.add_argument('--top_k', type=int, default=2)
+    parser.add_argument('--top_k', type=int, default=5)
     parser.add_argument('--top_p', type=float, default=0.9)
     parser.add_argument('--min_tokens_to_keep', type=int, default=1)
     parser.add_argument('--length_penalty', type=float, default=1.0)
