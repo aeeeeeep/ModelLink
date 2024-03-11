@@ -59,6 +59,8 @@ static const uint64_t GATE_UP_WEIGHT_NODE_COUNT = 5;
 template <typename NormParamType>
 atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation)
 {
+    bool isAntiOutlier = param.packQuantType == atb_speed::common::MIX_W8A8_ANTI || param.packQuantType == atb_speed::common::ALL_W8A8_ANTI;
+
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
@@ -78,7 +80,7 @@ atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation
 
     atb::Node &normLinearGateUpNode = opGraph.nodes.at(nodeId++);
     atb_speed::common::NormLinearParam<NormParamType> gateUpNormLinearParam;
-    gateUpNormLinearParam.isAntiOutlier = param.isAntiOutlier;
+    gateUpNormLinearParam.isAntiOutlier = isAntiOutlier;
     if (param.packQuantType == atb_speed::common::ALL_W8A16) {
         gateUpNormLinearParam.fusionLinearParam.quantType = W8A16;
     } else {
@@ -118,7 +120,7 @@ atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation
     if (param.mlpPackType == MlpPackType::GATE_UP_WEIGHT_NO_PACK) {
         atb::Node &normLinearUpNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> upNormLinearParam;
-        upNormLinearParam.isAntiOutlier = param.isAntiOutlier;
+        upNormLinearParam.isAntiOutlier = isAntiOutlier;
         if (param.packQuantType == atb_speed::common::ALL_W8A16) {
             upNormLinearParam.fusionLinearParam.quantType = W8A16;
         } else {
