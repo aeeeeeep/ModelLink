@@ -202,8 +202,6 @@ atb::Status PagedAttentionLayer(const PagedAttentionLayerParam &param, atb::Oper
         }
     }
 
-
-
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
     CREATE_OPERATION(addParam, &selfResidualAddNode.operation);
