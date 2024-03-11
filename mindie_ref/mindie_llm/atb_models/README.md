@@ -215,7 +215,6 @@ pip install torch*_aarch64.whl
   # 更新
   pip3 install ./atb_speed_sdk/ --force-reinstall
   ```
-  - 如果环境中已经安装了atb_speed_sdk，
 
 ## 环境变量参考
 
