@@ -16,7 +16,10 @@
 #ifndef ATB_SPEED_MODELS_GPTNEOX_20B_FLASHATTENTION_KVCACHE_ROPE_LAYER_H
 #define ATB_SPEED_MODELS_GPTNEOX_20B_FLASHATTENTION_KVCACHE_ROPE_LAYER_H
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 #include <atb/atb_infer.h>
 #include "atb_speed/log.h"
 #include "atb_speed/base/hosttensor_binder.h"
@@ -35,6 +38,7 @@ struct FlashAttentionKvCacheRopeParam {
     bool isPrefill = false;
     int rank = 0;
     int rankSize = 1;
+    std::string backend = "hccl";
 };
 
 atb::Status FlashAttentionKvCacheRopeLayer(const FlashAttentionKvCacheRopeParam &param, atb::Operation **operation);

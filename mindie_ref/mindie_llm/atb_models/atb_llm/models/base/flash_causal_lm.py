@@ -73,8 +73,9 @@ class FlashForCausalLM(torch.nn.Module):
         self.ascend_kcache_id = None
         self.ascend_vcache_id = None
 
-        self.acl_encoder_operation_inputs = [None] * 9
-        self.acl_decoder_operation_inputs = [None] * 9
+        self.in_tensor_length = 9
+        self.acl_encoder_operation_inputs = [None] * self.in_tensor_length
+        self.acl_decoder_operation_inputs = [None] * self.in_tensor_length
 
         self.device = weights.device
         self.cu_seqlen_tensor_fake = torch.tensor([0], dtype=torch.int).to(self.device)

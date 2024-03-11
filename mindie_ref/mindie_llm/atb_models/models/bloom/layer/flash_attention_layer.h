@@ -26,9 +26,11 @@ struct Bloom7bCommonLayerParam {
     int dk = 0;
     float invNormFactorvarAttr = 0;
     std::string model = "bloom_7b";
+    std::string backend = "lccl";
     int rank = 0;
     int rankSize = 1;
     bool quantmodel = true;
+    int quantMode = -1;   // 0:not quant, 1:w8a8, 2:w8a16
 
     float qkvInputScale = 1;
     int qkvInputOffset = 0;

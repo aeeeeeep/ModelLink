@@ -16,17 +16,13 @@ import torch
 from transformers import AutoModelForCausalLM
 
 
-def cut_weights(model, world_size, cut_row_keys=['query_key_value', 'dense_h_to_4h'],
-                cut_col_keys=['dense', 'dense_4h_to_h']):
-    state_dict_list = [{} for i in range(world_size)]
+def cut_weights(model, world_size, cut_row_keys, cut_col_keys):
+    tensor_dict_list = [{} for i in range(world_size)]
     for key, tensor in model.state_dict().items():
         key_short = key.split('.')[-2]
         cut_tensor_list_t = []
         if key_short in cut_row_keys:
-            if key.split('.')[-1] == "weight":
-                cut_tensor_list = torch.chunk(tensor, world_size, dim=0)
-            else:
-                cut_tensor_list = torch.chunk(tensor, world_size, dim=0)
+            cut_tensor_list = torch.chunk(tensor, world_size, dim=0)
         elif key_short in cut_col_keys:
             if key.split('.')[-1] == "weight":
                 cut_tensor_list = torch.chunk(tensor, world_size, dim=1)
@@ -37,9 +33,9 @@ def cut_weights(model, world_size, cut_row_keys=['query_key_value', 'dense_h_to_
             cut_tensor_list = [tensor] * world_size
         for cut_tensor in cut_tensor_list:
             cut_tensor_list_t.append(cut_tensor.clone())
-        for i in range(world_size):
-            state_dict_list[i][key] = cut_tensor_list_t[i]
-    return state_dict_list
+        for j in range(world_size):
+            tensor_dict_list[j][key] = cut_tensor_list_t[j]
+    return tensor_dict_list
 
 
 if __name__ == "__main__":
@@ -62,7 +58,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--cut_row_keys",
-        default=['query_key_value', 'dense_h_to_4h'],
+        default=['query_key_value', 'dense_h_to_4h', 'embed_out'],
         help="cut_row_keys",
     )
     parser.add_argument(
@@ -76,9 +72,9 @@ if __name__ == "__main__":
     args.world_size = int(args.world_size)
 
     model_path = args.input_path
-    model = AutoModelForCausalLM.from_pretrained(model_path, trust_remote_code=True).half()  # 都加载模型和权重
-    state_dict_list = cut_weights(model, args.world_size, args.cut_row_keys, args.cut_col_keys)
-    model_config = model.config
+    origin_model = AutoModelForCausalLM.from_pretrained(model_path, trust_remote_code=True).half()  # 都加载模型和权重
+    state_dict_list = cut_weights(origin_model, args.world_size, args.cut_row_keys, args.cut_col_keys)
+    model_config = origin_model.config
     model_config.world_size = args.world_size
 
     creat_model = AutoModelForCausalLM.from_config(model_config, trust_remote_code=True)

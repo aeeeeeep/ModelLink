@@ -6,27 +6,23 @@ from .router import router
 
 
 def get_model(model_name_or_path: str,
-              quantize: Optional[str] = None,
               max_position_embeddings: Optional[int] = None,
               is_flash_causal_lm: bool = True,
               revision: Optional[str] = None,
               trust_remote_code: bool = True,
               use_refactor: bool = False,
               ):
-    config = PretrainedConfig.from_pretrained(model_name_or_path,
-                                              revision=revision,
-                                              trust_remote_code=trust_remote_code)
-    router_cls = getattr(router, f"{config.model_type.capitalize()}Router")
+    config_dict, kwargs = PretrainedConfig.get_config_dict(model_name_or_path)
+    router_cls = getattr(router, f"{config_dict['model_type'].capitalize()}Router")
     router_ins = router_cls(
         model_name_or_path,
-        quantize,
         max_position_embeddings,
         is_flash_causal_lm,
         revision,
         trust_remote_code,
         use_refactor,
-        config)
+        config_dict)
     config = router_ins.config
-
-    config.quantize = quantize
+    if not hasattr(config, 'quantize'):
+        setattr(config, 'quantize', None)
     return router_ins.model_cls, config, router_ins.tokenizer

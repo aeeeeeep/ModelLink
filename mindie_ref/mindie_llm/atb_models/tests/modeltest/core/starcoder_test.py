@@ -37,7 +37,7 @@ class StarcoderModelTest(model_test.ModelTest):
         return tokenizer, model
 
     def prepare_environ(self):
-        os.environ['ATB_LAUNCH_KERNEL_WITH_TILING'] = "0" # 310P开启，800I A2关闭
+        os.environ['ATB_LAUNCH_KERNEL_WITH_TILING'] = "1" 
         os.environ['ATB_LAYER_INTERNAL_TENSOR_REUSE'] = "1"
         os.environ['ATB_OPERATION_EXECUTE_ASYNC'] = "1"
         os.environ['TASK_QUEUE_ENABLE'] = "1"

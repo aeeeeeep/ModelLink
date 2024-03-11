@@ -180,10 +180,10 @@ pip install .
 #### 3. 张量并行模型切分（多卡并行时使用）
 
 ```shell
-cp ${internlm_20b_path}/pytorch/examples/internlm/20b/modeling_internlm_cut.py ${model_path}
+cp ${internlm_20b_path}/pytorch/examples/internlm/20b/fa_rope/modeling_internlm_cut.py ${model_path}
 ```
 
-修改 ${model_path}里的config.json中的kv对，改成
+修改 ${model_path}里的config.json中的kv对（需要运行哪张卡就在对应的文件夹下改），改成
 `"AutoModel": "modeling_internlm_cut.InternLMForCausalLM"`
 `"AutoModelForCausalLM": "modeling_internlm_cut.InternLMForCausalLM"`
 
