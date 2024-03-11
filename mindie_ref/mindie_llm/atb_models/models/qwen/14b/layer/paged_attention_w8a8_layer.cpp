@@ -119,8 +119,6 @@ atb::Status PAW8A8Layer(const PAW8A8LayerParam &param, atb::Operation **operatio
     // attention
     atb_speed::common::FusionAttentionParam<atb::infer::RmsNormParam> fusionAttentionParam;
     // QKV linear param
-    fusionAttentionParam.isAntiOutlier = param.packQuantType[0] == atb_speed::common::MIX_W8A8_ANTI || param.packQuantType[0] == atb_speed::common::ALL_W8A8_ANTI;
-    fusionAttentionParam.isPack = param.packQuantType[0] != atb_speed::common::MIX_W8A8 && param.packQuantType[0] != atb_speed::common::MIX_W8A8_ANTI;
     fusionAttentionParam.isGroupedQueryAttention = param.numAttentionHeadsPerRank != param.numKeyValueHeadsPerRank;
     fusionAttentionParam.isBF16 = param.isBF16;
     fusionAttentionParam.qkvHasBias = true;
@@ -136,7 +134,8 @@ atb::Status PAW8A8Layer(const PAW8A8LayerParam &param, atb::Operation **operatio
     attenRmsNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
     fusionAttentionParam.normQuantParamType = attenRmsNormQuantParam;
     // rope param
-    fusionAttentionParam.rotaryCoeff = 2;
+    fusionAttentionParam.rotaryType = atb_speed::common::RotaryType::ALL_ROTARY;
+    fusionAttentionParam.ropeParam.rotaryCoeff = 2;
     // self attention param
     fusionAttentionParam.isFA = param.isFA;
     fusionAttentionParam.isPrefill = param.isPrefill;
@@ -216,7 +215,6 @@ atb::Status PAW8A8Layer(const PAW8A8LayerParam &param, atb::Operation **operatio
     // mlp
     atb_speed::common::MlpParam<atb::infer::RmsNormParam> mlpParam;
     mlpParam.isBF16 = param.isBF16;
-    mlpParam.isAntiOutlier = param.packQuantType[1] == atb_speed::common::MIX_W8A8_ANTI || param.packQuantType[1] == atb_speed::common::ALL_W8A8_ANTI;
     mlpParam.layerLinearQuantType = param.linearQuantType;
     mlpParam.packQuantType = param.packQuantType[1];
     // w2_w1(gate_up)

@@ -47,14 +47,13 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     atb::Node &mlpResidualAddNode = opGraph.nodes.at(nodeId++);
 
     atb_speed::common::FusionAttentionParam<atb::infer::LayerNormParam> fusionAttentionParam;
-    fusionAttentionParam.isAntiOutlier = param.packQuantType[0] == atb_speed::common::MIX_W8A8_ANTI || param.packQuantType[0] == atb_speed::common::ALL_W8A8_ANTI;
-    fusionAttentionParam.isPack = param.packQuantType[0] != atb_speed::common::MIX_W8A8 && param.packQuantType[0] != atb_speed::common::MIX_W8A8_ANTI;
     fusionAttentionParam.isGroupedQueryAttention = param.numAttentionHeadsPerRank != param.numKeyValueHeadsPerRank;
     fusionAttentionParam.isBF16 = param.isBF16;
     fusionAttentionParam.qkvHasBias = true;
     fusionAttentionParam.normHasBias = true;
-    fusionAttentionParam.needRope = false;
+    fusionAttentionParam.packQuantType = param.packQuantType[0];
     fusionAttentionParam.layerLinearQuantType = param.linearQuantType;
+    fusionAttentionParam.rotaryType = atb_speed::common::RotaryType::NO_ROTARY;
 
     atb::infer::LayerNormParam attnLayerNormParam;
     attnLayerNormParam.layerType = atb::infer::LayerNormParam::LayerNormType::LAYER_NORM_NORM;
@@ -152,7 +151,7 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     mlpParam.downHasBias = true;
     mlpParam.mlpPackType = atb_speed::common::UP_WEIGHT_ONLY;
     mlpParam.activationParam.activationType  = atb::infer::ActivationType::ACTIVATION_GELU;
-    mlpParam.isAntiOutlier = param.packQuantType[1] == atb_speed::common::MIX_W8A8_ANTI || param.packQuantType[1] == atb_speed::common::ALL_W8A8_ANTI;
+    mlpParam.packQuantType = param.packQuantType[1];
     mlpParam.layerLinearQuantType = param.linearQuantType;
     atb::infer::LayerNormParam mlpLayerNormParam;
     mlpLayerNormParam.layerType = atb::infer::LayerNormParam::LayerNormType::LAYER_NORM_NORM;
