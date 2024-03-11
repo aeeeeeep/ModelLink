@@ -74,6 +74,9 @@ void PagedAttentionModel::Param::FromString(const std::string &param)
     if (paramJson.contains("isPrefill")) {
         isPrefill = paramJson["isPrefill"].get<bool>();
     }
+    if (paramJson.contains("isNz")) {
+        isNz = paramJson["isNz"].get<bool>();
+    }
     if (paramJson.contains("backend")) {
         backend = paramJson["backend"];
     }
@@ -84,7 +87,9 @@ void PagedAttentionModel::Param::FromString(const std::string &param)
 
 PagedAttentionModel::PagedAttentionModel(const std::string &param) : Model("InternLM_20B_PagedAttentionModel", param)
 {
+    std::cout << param << std::endl;
     param_.FromString(param);
+    std::cout << "[isNz]: " << param_.isNz << std::endl;
     modelName_ += param_.isPrefill ? "_Prefill" : "_Decoder";
 }
 
@@ -163,6 +168,7 @@ int64_t PagedAttentionModel::BuildGraph()
         opParam.rank = param_.rank;
         opParam.rankSize = param_.rankSize;
         opParam.isPrefill = param_.isPrefill;
+        opParam.isNz = param_.isNz;
         opParam.backend = param_.backend;
         atb_speed::internlm_20b::PagedAttentionLayer(opParam, &op);
         layerNode.operation.reset(op);

@@ -336,12 +336,14 @@ class InternLMModel(InternLMPreTrainedModel):
         transdata_param = json.dumps({})
 
         self.transdata_operation.set_param(transdata_param)
+        
 
     def maybe_format_cast(self, tensor):
         """
         maybe_format_cast
         """
         if not self.soc_info.need_nz:  # transdata 会额外占资源
+            print(f"[NOTE] self.soc_info.need_nz: {self.soc_info.need_nz}")
             return tensor
         torch_npu.npu_format_cast_(tensor, 29)
         logger.info(f"trans to {torch_npu.get_npu_format(tensor)}")
@@ -356,6 +358,7 @@ class InternLMModel(InternLMPreTrainedModel):
             "rank": self.tp_rank,
             "rankSize": self.tp_world_size,
             "isPrefill": True,
+            "isNz": not IS_ND,
             "backend": "hccl" if self.soc_info.need_nz else "lccl",
             "isLmHeadParallel": True
         })
@@ -367,6 +370,7 @@ class InternLMModel(InternLMPreTrainedModel):
             "rank": self.tp_rank,
             "rankSize": self.tp_world_size,
             "isPrefill": False,
+            "isNz": not IS_ND,
             "backend": "hccl" if self.soc_info.need_nz else "lccl",
             "isLmHeadParallel": True
         })
