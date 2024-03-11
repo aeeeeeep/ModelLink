@@ -343,7 +343,6 @@ class InternLMModel(InternLMPreTrainedModel):
         maybe_format_cast
         """
         if not self.soc_info.need_nz:  # transdata 会额外占资源
-            print(f"[NOTE] self.soc_info.need_nz: {self.soc_info.need_nz}")
             return tensor
         torch_npu.npu_format_cast_(tensor, 29)
         logger.info(f"trans to {torch_npu.get_npu_format(tensor)}")
