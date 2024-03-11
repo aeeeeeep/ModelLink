@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
+
 #include "layers/operations/fusion_attention.h"
-#include "positional_embedding.h"
+
 namespace atb_speed {
 namespace common {
 
@@ -59,14 +60,17 @@ static const uint64_t QKV_PACK_GQA_NODE_COUNT = 4;
 template <typename NormParamType>
 atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb::Operation **operation)
 {
+    bool isPack = param.packQuantType != atb_speed::common::MIX_W8A8 && param.packQuantType != atb_speed::common::MIX_W8A8_ANTI;
+    bool isAntiOutlier = param.packQuantType == atb_speed::common::MIX_W8A8_ANTI || param.packQuantType == atb_speed::common::ALL_W8A8_ANTI;
+
     atb::GraphParam opGraph;
-    opGraph.name = param.isPack ? "QKVLinearSplitPack" : "QKVLinearSplitNoPack";
+    opGraph.name = isPack ? "QKVLinearSplitPack" : "QKVLinearSplitNoPack";
     opGraph.inTensorNum = QKV_IN_TENSOR_COUNT;
     opGraph.outTensorNum = QKV_OUT_TENSOR_COUNT;
-    if (param.isPack && param.isGroupedQueryAttention) {  // Pack + GQA
+    if (isPack && param.isGroupedQueryAttention) {  // Pack + GQA
         opGraph.internalTensorNum = QKV_PACK_GQA_INTERMEDIATE_TENSOR_COUNT;
         opGraph.nodes.resize(QKV_PACK_GQA_NODE_COUNT);
-    } else if (param.isPack && !param.isGroupedQueryAttention) {  // Pack + MHA
+    } else if (isPack && !param.isGroupedQueryAttention) {  // Pack + MHA
         opGraph.internalTensorNum = QKV_PACK_MHA_INTERMEDIATE_TENSOR_COUNT;
         opGraph.nodes.resize(QKV_PACK_MHA_NODE_COUNT);
     } else {  // No Pack
@@ -78,7 +82,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
 
     atb::Node &qNormLinearNode = opGraph.nodes.at(nodeId++);
     atb_speed::common::NormLinearParam<NormParamType> qNormLinearParam;
-    qNormLinearParam.isAntiOutlier = param.isAntiOutlier;
+    qNormLinearParam.isAntiOutlier = isAntiOutlier;
     if (param.packQuantType == atb_speed::common::ALL_W8A16) {
         qNormLinearParam.fusionLinearParam.quantType = W8A16;
     } else {
@@ -98,9 +102,9 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         QKVLinearSplitTensorIdx::IN_QKV_SCALE_0, QKVLinearSplitTensorIdx::IN_QKV_OFFSET_0,
         QKVLinearSplitTensorIdx::IN_QKV_DESCALE_0, QKVLinearSplitTensorIdx::IN_QKV_BIAS_0
     };
-    qNormLinearNode.outTensorIds = {param.isPack ? QKVLinearSplitTensorIdx::INTERMEDIATE_MIXED_QKV : QKVLinearSplitTensorIdx::OUT_Q};
+    qNormLinearNode.outTensorIds = {isPack ? QKVLinearSplitTensorIdx::INTERMEDIATE_MIXED_QKV : QKVLinearSplitTensorIdx::OUT_Q};
 
-    if (param.isPack && param.isGroupedQueryAttention) {  // Split GQA
+    if (isPack && param.isGroupedQueryAttention) {  // Split GQA
         auto &sliceQNode = opGraph.nodes[nodeId++];
         atb::infer::SliceParam sliceQNodeParam;
         if (param.isFA) {  // FA相比于PA多了一个batchSize维度
@@ -134,7 +138,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         CREATE_OPERATION(splitKVParam, &splitKVNode.operation);
         splitKVNode.inTensorIds = {QKVLinearSplitTensorIdx::INTERMEDIATE_KV};
         splitKVNode.outTensorIds = {QKVLinearSplitTensorIdx::OUT_K, QKVLinearSplitTensorIdx::OUT_V};
-    } else if (param.isPack && !param.isGroupedQueryAttention) {  // Split MHA
+    } else if (isPack && !param.isGroupedQueryAttention) {  // Split MHA
         auto &splitMixedQKVNode = opGraph.nodes[nodeId++];
         atb::infer::SplitParam splitMixedQKVParam;
         splitMixedQKVParam.splitDim = -1;
@@ -148,7 +152,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
     } else {  // isPack: false
         atb::Node &kNormLinearNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> kNormLinearParam;
-        kNormLinearParam.isAntiOutlier = param.isAntiOutlier;
+        kNormLinearParam.isAntiOutlier = isAntiOutlier;
         if (param.packQuantType == atb_speed::common::ALL_W8A16) {
             kNormLinearParam.fusionLinearParam.quantType = W8A16;
         } else {
@@ -172,7 +176,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
 
         atb::Node &vNormLinearNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> vNormLinearParam;
-        vNormLinearParam.isAntiOutlier = param.isAntiOutlier;
+        vNormLinearParam.isAntiOutlier = isAntiOutlier;
         if (param.packQuantType == atb_speed::common::ALL_W8A16) {
             vNormLinearParam.fusionLinearParam.quantType = W8A16;
         } else {
@@ -425,12 +429,12 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
     opGraph.name = "Attention";
     opGraph.inTensorNum = ATTENTION_IN_TENSOR_COUNT;
     opGraph.outTensorNum = ATTENTION_OUT_TENSOR_COUNT;
-    if (param.needRope) {
-        opGraph.internalTensorNum = ATTENTION_INTERMEDIATE_TENSOR_COUNT;
-        opGraph.nodes.resize(ATTENTION_NODE_COUNT);
-    } else {
+    if (param.rotaryType == RotaryType::NO_ROTARY) {
         opGraph.internalTensorNum = ATTENTION_INTERMEDIATE_TENSOR_COUNT - 2;
         opGraph.nodes.resize(ATTENTION_NODE_COUNT - 1);
+    } else {
+        opGraph.internalTensorNum = ATTENTION_INTERMEDIATE_TENSOR_COUNT;
+        opGraph.nodes.resize(ATTENTION_NODE_COUNT);
     }
 
     size_t nodeId = 0;
@@ -450,15 +454,15 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
     qkvLinearSplitNode.outTensorIds = {
         AttentionTensorIdx::INTERMIDATE_Q, AttentionTensorIdx::INTERMIDATE_K, AttentionTensorIdx::INTERMIDATE_V
     };
-    if (param.needRope) {
+    if (param.rotaryType != RotaryType::NO_ROTARY) {
         atb::Node &ropeNode = opGraph.nodes.at(nodeId++);
-        RotaryPositionEmbeddingParam ropeParam;
-        ropeParam.isHalfRotary = param.isHalfRotary;
+        atb_speed::common::RotaryPositionEmbeddingParam ropeParam;
+        ropeParam.rotaryType = param.rotaryType;
         ropeParam.isFA = param.isFA;
         ropeParam.headDim = param.headDim;
         ropeParam.headNum = param.selfAttentionParam.headNum;
         ropeParam.kvHeadNum = param.selfAttentionParam.kvHeadNum;
-        ropeParam.rotaryCoeff = param.rotaryCoeff;
+        ropeParam.ropeParam = param.ropeParam;
 
         RotaryPositionEmbedding(ropeParam, &ropeNode.operation);
 
@@ -469,7 +473,7 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
         ropeNode.outTensorIds = {
             AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_Q, AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_K
         };
-        if (param.isFA && !param.isHalfRotary) {
+        if (param.isFA && param.rotaryType == RotaryType::ALL_ROTARY) {
             ropeNode.inTensorReshapeFuncs.resize(ropeNode.inTensorIds.size());
             ropeNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
                 *batchSizePtr = oldShape.dims[0];
@@ -482,8 +486,8 @@ atb::Status Attention(const FusionAttentionParam<NormParamType> &param, atb::Ope
     atb::Node &selfAttentionNode = opGraph.nodes.at(nodeId++);
     SelfAttention(param, &selfAttentionNode.operation);
     selfAttentionNode.inTensorIds = {
-        param.needRope ? AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_Q : AttentionTensorIdx::INTERMIDATE_Q,
-        param.needRope ? AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_K : AttentionTensorIdx::INTERMIDATE_K,
+        param.rotaryType == RotaryType::NO_ROTARY ? AttentionTensorIdx::INTERMIDATE_Q : AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_Q,
+        param.rotaryType == RotaryType::NO_ROTARY ? AttentionTensorIdx::INTERMIDATE_K : AttentionTensorIdx::INTERMIDATE_POSITION_EMBED_K,
         AttentionTensorIdx::INTERMIDATE_V,
         AttentionTensorIdx::IN_K_CACHE,
         AttentionTensorIdx::IN_V_CACHE,

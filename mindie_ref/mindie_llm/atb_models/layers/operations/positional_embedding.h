@@ -27,13 +27,19 @@
 namespace atb_speed {
 namespace common {
 
+enum RotaryType : uint32_t {
+    NO_ROTARY = 0,
+    HALF_ROTARY,
+    ALL_ROTARY,
+};
+
 struct RotaryPositionEmbeddingParam {
-    bool isHalfRotary = false;
+    atb_speed::common::RotaryType rotaryType = ALL_ROTARY;
     bool isFA = true;
     int headNum = 0;
     int headDim = 0;
     int kvHeadNum = 0;
-    int rotaryCoeff = 2;
+    atb::infer::RopeParam ropeParam;
 };
 atb::Status RotaryPositionEmbedding(const RotaryPositionEmbeddingParam &param, atb::Operation **operation);
 
