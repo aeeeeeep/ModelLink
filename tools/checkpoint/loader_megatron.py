@@ -42,7 +42,8 @@ def _load_checkpoint(queue, args):
 
     try:
         from ascendspeed import megatron_adaptor
-        from megatron.arguments import parse_args, validate_args
+        from megatron.arguments import validate_args
+        from modellink.adaptor_model import parse_args
         from megatron.global_vars import set_args, set_global_variables
         from megatron.checkpointing import load_args_from_checkpoint
         from megatron.checkpointing import load_checkpoint as load_checkpoint_mg
@@ -70,7 +71,6 @@ def _load_checkpoint(queue, args):
                 ]
 
     margs = parse_args()
-    setattr(margs, 'embed_layernorm', False)
     margs.embed_layernorm = args.embed_layernorm
     margs, checkpoint_args = load_args_from_checkpoint(margs)
     margs.add_qkv_bias = args.add_qkv_bias

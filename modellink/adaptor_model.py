@@ -21,6 +21,10 @@ from .model.moe import SwitchMLP
 from .model.module import MegatronModuleForCausalLM
 
 
+def parse_args():
+    return megatron.arguments.parse_args()
+
+
 def seq_length_wrapper(fn):
     @wraps(fn)
     def wrapper(self, *args, **kwargs):
