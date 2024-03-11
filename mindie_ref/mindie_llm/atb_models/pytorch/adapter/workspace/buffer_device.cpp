@@ -61,26 +61,11 @@ torch::Tensor BufferDevice::CreateAtTensor(uint64_t bufferSize)
     atb::TensorDesc tensorDesc;
     tensorDesc.dtype = ACL_UINT8;
     tensorDesc.format = ACL_FORMAT_ND;
-    if (bufferSize <= KB_1) {
-        tensorDesc.shape.dimNum = 1;
-        tensorDesc.shape.dims[0] = bufferSize;
-    } else if (bufferSize <= MB_1) {
-        tensorDesc.shape.dimNum = 2;
-        tensorDesc.shape.dims[0] = KB_1;
-        tensorDesc.shape.dims[1] = bufferSize / KB_1 + 1;
-    } else if (bufferSize <= GB_1) {
-        tensorDesc.shape.dimNum = 3;
-        tensorDesc.shape.dims[0] = KB_1;
-        tensorDesc.shape.dims[1] = KB_1;     
-        tensorDesc.shape.dims[2] = bufferSize / MB_1 + 1;        
-    } else {
-        tensorDesc.shape.dimNum = 4;
-        tensorDesc.shape.dims[0] = KB_1;
-        tensorDesc.shape.dims[1] = KB_1;  
-        tensorDesc.shape.dims[2] = KB_1;    
-        tensorDesc.shape.dims[3] = bufferSize / GB_1 + 1;   
-    }
-    
+
+    tensorDesc.shape.dimNum = 2;
+    tensorDesc.shape.dims[0] = KB_1;
+    tensorDesc.shape.dims[1] = bufferSize / KB_1 + 1;
+
     return Utils::CreateAtTensorFromTensorDesc(tensorDesc);
 }
 } // namespace atb_speed

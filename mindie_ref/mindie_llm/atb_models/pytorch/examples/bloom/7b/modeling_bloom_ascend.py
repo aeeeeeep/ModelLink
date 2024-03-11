@@ -63,6 +63,14 @@ LIB_PATH = os.path.join(ATB_SPEED_HOME_PATH,
 torch.classes.load_library(LIB_PATH)
 
 
+def is_nd():
+    soc_version = torch_npu._C._npu_get_soc_version()
+    return soc_version in [104, 220, 221, 222, 223, 224]
+
+
+IS_ND = is_nd()
+
+
 def print_rank_0(*args, **kwargs):
     if not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0:
         print(*args, **kwargs)
@@ -218,7 +226,8 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
         param_dict = {
             "layerNormEps": config.layer_norm_epsilon, "headNum": self.num_heads, "dk": config.hidden_size // config.n_head,
             "invNormFactorvarAttr": 1.0 / math.sqrt(config.hidden_size // config.n_head), "activationFuncType": 1,
-            "layerNum": self.num_hidden_layers, "rank":self.rank, "rankSize":self.world_size, "floatLayers": self.float_layers
+            "layerNum": self.num_hidden_layers, "rank":self.rank, "rankSize":self.world_size, "floatLayers": self.float_layers,
+            "backend": "lccl" if IS_ND else "hccl"
             }
         param_dict.update(self.quant_param)
         
@@ -293,7 +302,7 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
         else:
             model_path = config.model_path
         weight_list = [
-            'quant_weight', 'bias', 'deq_scale',
+            'quant_weight', 'quant_bias', 'deq_scale',
             'input_scale', 'input_offset'
             ]
         
@@ -321,6 +330,8 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
             self.model_weights[f'{prefix}word_embeddings_layernorm.weight'].to(torch.float16).npu(),
             self.model_weights[f'{prefix}word_embeddings_layernorm.bias'].to(torch.float16).npu()
         ]
+        weights[0] = torch.chunk(self.model_weights[f'{prefix}word_embeddings.weight'].to(torch.float16), self.world_size, dim=1)[self.rank].npu()
+        
         for layer_num in range(self.num_hidden_layers):
             if layer_num in self.float_layers:
                 weights_name_t = [
@@ -329,7 +340,13 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
                     f'{prefix}h.{layer_num}.self_attention.query_key_value.weight',
                     f'{prefix}h.{layer_num}.self_attention.query_key_value.bias',
                     f'{prefix}h.{layer_num}.self_attention.query_key_value.bias',
+                    f'{prefix}h.{layer_num}.self_attention.query_key_value.bias',
+                    f'{prefix}h.{layer_num}.self_attention.query_key_value.bias',
+                    f'{prefix}h.{layer_num}.self_attention.query_key_value.bias',
                     f'{prefix}h.{layer_num}.self_attention.dense.weight',
+                    f'{prefix}h.{layer_num}.self_attention.dense.bias',
+                    f'{prefix}h.{layer_num}.self_attention.dense.bias',
+                    f'{prefix}h.{layer_num}.self_attention.dense.bias',
                     f'{prefix}h.{layer_num}.self_attention.dense.bias',
                     f'{prefix}h.{layer_num}.self_attention.dense.bias',
                     f'{prefix}h.{layer_num}.post_attention_layernorm.weight',
@@ -337,7 +354,13 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
                     f'{prefix}h.{layer_num}.mlp.dense_h_to_4h.weight',
                     f'{prefix}h.{layer_num}.mlp.dense_h_to_4h.bias',
                     f'{prefix}h.{layer_num}.mlp.dense_h_to_4h.bias',
+                    f'{prefix}h.{layer_num}.mlp.dense_h_to_4h.bias',
+                    f'{prefix}h.{layer_num}.mlp.dense_h_to_4h.bias',
+                    f'{prefix}h.{layer_num}.mlp.dense_h_to_4h.bias',
                     f'{prefix}h.{layer_num}.mlp.dense_4h_to_h.weight',
+                    f'{prefix}h.{layer_num}.mlp.dense_4h_to_h.bias',
+                    f'{prefix}h.{layer_num}.mlp.dense_4h_to_h.bias',
+                    f'{prefix}h.{layer_num}.mlp.dense_4h_to_h.bias',
                     f'{prefix}h.{layer_num}.mlp.dense_4h_to_h.bias',
                     f'{prefix}h.{layer_num}.mlp.dense_4h_to_h.bias'
                 ]
@@ -358,23 +381,35 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
                     self.model_weights[f'{prefix}h.{layer_num}.input_layernorm.bias'].to(torch.float16).npu(),
 
                     self.maybe_transdata(self.quant_weight_dict[query_key_value_name].to(torch.int8).npu()),
-                    self.bias_dict[query_key_value_name].to(self.bias_dtype).npu(),
+                    self.quant_bias_dict[query_key_value_name].to(self.bias_dtype).npu(),
                     self.deq_scale_dict[query_key_value_name].to(self.deq_scale_dtype).npu(),
+                    torch.zeros((1, 1), dtype=torch.float16).npu(),
+                    torch.zeros((1, 1), dtype=torch.float16).npu(),
+                    torch.zeros((1, 1), dtype=torch.float16).npu(),
 
                     self.maybe_transdata(self.quant_weight_dict[dense_name].to(torch.int8).npu()), 
-                    self.bias_dict[dense_name].to(self.bias_dtype).npu(),
+                    self.quant_bias_dict[dense_name].to(self.bias_dtype).npu(),
                     self.deq_scale_dict[dense_name].to(self.deq_scale_dtype).npu(),
+                    torch.zeros((1, 1), dtype=torch.float16).npu(),
+                    torch.zeros((1, 1), dtype=torch.float16).npu(),
+                    torch.zeros((1, 1), dtype=torch.float16).npu(),
 
                     self.model_weights[f'{prefix}h.{layer_num}.post_attention_layernorm.weight'].to(torch.float16).npu(),
                     self.model_weights[f'{prefix}h.{layer_num}.post_attention_layernorm.bias'].to(torch.float16).npu(),
 
                     self.maybe_transdata(self.quant_weight_dict[dense_h_to_4h_name].to(torch.int8).npu()),
-                    self.bias_dict[dense_h_to_4h_name].to(self.bias_dtype).npu(),
+                    self.quant_bias_dict[dense_h_to_4h_name].to(self.bias_dtype).npu(),
                     self.deq_scale_dict[dense_h_to_4h_name].to(self.deq_scale_dtype).npu(),
+                    torch.zeros((1, 1), dtype=torch.float16).npu(),
+                    torch.zeros((1, 1), dtype=torch.float16).npu(),
+                    torch.zeros((1, 1), dtype=torch.float16).npu(),
 
                     self.maybe_transdata(self.quant_weight_dict[dense_4h_to_h_name].to(torch.int8).npu()),
-                    self.bias_dict[dense_4h_to_h_name].to(self.bias_dtype).npu(),
-                    self.deq_scale_dict[dense_4h_to_h_name].to(self.deq_scale_dtype).npu()
+                    self.quant_bias_dict[dense_4h_to_h_name].to(self.bias_dtype).npu(),
+                    self.deq_scale_dict[dense_4h_to_h_name].to(self.deq_scale_dtype).npu(),
+                    torch.zeros((1, 1), dtype=torch.float16).npu(),
+                    torch.zeros((1, 1), dtype=torch.float16).npu(),
+                    torch.zeros((1, 1), dtype=torch.float16).npu()
                 ]
                 weights.extend(weights_t)
 

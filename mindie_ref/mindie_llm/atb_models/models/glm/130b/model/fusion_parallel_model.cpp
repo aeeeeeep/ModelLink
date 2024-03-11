@@ -13,7 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 #include <atb/atb_infer.h>
 #include "atb_speed/log.h"
 #include "glm/130b/layer/fusion_parallel_layer.h"

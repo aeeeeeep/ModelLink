@@ -199,7 +199,6 @@ atb::Status LayerParallelFlashAttentionOperation(const LayerParallelFlashAttenti
 
     // RoPE 这边输出得到的 shape 是 batch_size, query_length, num_heads, head_dim
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim  = param.headDim;
     selfAttentionParam.headNum  = param.headNum;
     selfAttentionParam.qScale   = param.qScale;
     selfAttentionParam.qkScale  = param.qkScale;

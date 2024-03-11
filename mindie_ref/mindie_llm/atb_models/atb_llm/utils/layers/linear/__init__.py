@@ -53,6 +53,7 @@ def get_linear(weight, bias, quantize, is_norm=False):
             weight=qweight,
             weight_scale=weight_scale,
             weight_offset=weight_offset,
+            bias=bias
         )
     else:
         logger.error(f"Quantization `{quantize}` is not implemented yet.")
@@ -178,16 +179,16 @@ class TensorParallelHead(SuperLayer):
 
 class TensorParallelColumnLinear(SuperLayer):
     @classmethod
-    def load_qkv(cls, config, prefix: str, weights, bias: bool, num_heads: int, num_kv_heads: int = None):
+    def load_qkv(cls, config, prefix: str, weights, bias: bool, hidden_size, num_heads, num_kv_heads=None):
         """Specific method when the QKV was joined after the fact"""
         if num_kv_heads is None:
             num_kv_heads = num_heads
         weight = weights.get_weights_col_packed_qkv(
-            prefix, quantize=config.quantize, num_heads=num_heads, num_kv_heads=num_kv_heads
+            prefix, quantize=config.quantize, hidden_size=hidden_size, num_heads=num_heads, num_kv_heads=num_kv_heads
         )
         if bias:
             bias = weights.get_tensor_col_packed_qkv(
-                f"{prefix}.bias", num_heads=num_heads, num_kv_heads=num_kv_heads
+                f"{prefix}.bias", hidden_size=hidden_size, num_heads=num_heads, num_kv_heads=num_kv_heads
             )
         else:
             bias = None
@@ -232,10 +233,11 @@ class TensorParallelRowLinear(SuperLayer):
         self.process_group = process_group
 
     @classmethod
-    def load(cls, config, prefix: str, weights, bias: bool):
+    def load(cls, config, prefix: str, weights, bias: bool, bias_pre_add=False):
         weight = weights.get_multi_weights_row(prefix, quantize=config.quantize)
-
-        if bias and weights.process_group.rank() == 0:
+        if bias and bias_pre_add:
+            bias = weights.get_tensor(f"{prefix}.bias")
+        elif bias and weights.process_group.rank() == 0:
             # Rank is only on the first rank process
             bias = weights.get_tensor(f"{prefix}.bias")
         else:

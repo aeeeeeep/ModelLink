@@ -177,7 +177,6 @@ atb::Status FusionLayerOperation(const LayerFusionParam &param, atb::Operation *
     
     atb::Node &selfAttentionFusionNode = opGraph.nodes.at(nodeId++);
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.hiddenSize;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = param.preScale;
     selfAttentionParam.qkScale = param.postScale;

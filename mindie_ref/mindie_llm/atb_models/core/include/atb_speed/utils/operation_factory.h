@@ -23,7 +23,10 @@
 
 #include "atb/operation.h"
 #include "atb_speed/log.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 
 namespace atb_speed {
 using CreateOperationFuncPtr = std::function<atb::Operation *(const nlohmann::json &)>;
@@ -41,7 +44,7 @@ private:
         struct Register##_##nameSpace##_##operationCreateFunc {                                              \
             inline Register##_##nameSpace##_##operationCreateFunc()                                          \
             {                                                                                                \
-                ATB_LOG(INFO) << "register " << #nameSpace << "_" << #operationCreateFunc;                   \
+                ATB_LOG(INFO) << "register operation " << #nameSpace << "_" << #operationCreateFunc;                   \
                 OperationFactory::Register(OPERATION_NAMESPACE_STRINGIFY(nameSpace##_##operationCreateFunc), \
                     &(operationCreateFunc));                                                                 \
             }                                                                                                \

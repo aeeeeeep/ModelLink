@@ -9,13 +9,13 @@
 
 | 模型及参数量 | 800I A2 Tensor Parallelism | 300I DUO Tensor Parallelism | FP16 | BF16 | Flash Attention | Paged Attention | W8A8量化 | KV cache量化 | 稀疏量化 | MOE量化 | MindIE | TGI |
 |-------------|-------------------------|-------------------------|------|------|-----------------|-----------------|---------|--------------|----------|--------|--------|-----|
-| LLaMa-7B    | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 否       | 否           | 否       | 否     | 是     | 否  |
-| LLaMa-13B   | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 否       | 否           | 否       | 否     | 是     | 否  |
-| LLaMa-33B   | 支持world size 4,8       | 否                      | 是   | 是   | 是              | 是              | 否       | 否           | 否       | 否     | 否     | 否  |
-| LLaMa-65B   | 支持world size 8         | 否                      | 是   | 是   | 是              | 是              | 否       | 否           | 否       | 否     | 是     | 否  |
-| LLaMa2-7B   | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 是       | 否           | 是       | 否     | 是     | 否  |
-| LLaMa2-13B  | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 是       | 否           | 是       | 否     | 是     | 否  |
-| LLaMa2-70B  | 支持world size 8         | 否                      | 是   | 是   | 是              | 是              | 否       | 否           | 否       | 否     | 是     | 否  |
+| LLaMa-7B    | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 是       | 否           | 否       | 否     | 是     | 否  |
+| LLaMa-13B   | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 是       | 否           | 否       | 否     | 是     | 否  |
+| LLaMa-33B   | 支持world size 4,8       | 否                      | 是   | 是   | 是              | 否              | 否       | 否           | 否       | 否     | 否     | 否  |
+| LLaMa-65B   | 支持world size 8         | 否                      | 是   | 是   | 是              | 是              | 是       | 否           | 否       | 否     | 是     | 否  |
+| LLaMa2-7B   | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 是       | 否           | 否       | 否     | 是     | 否  |
+| LLaMa2-13B  | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 是       | 否           | 否       | 否     | 是     | 否  |
+| LLaMa2-70B  | 支持world size 8         | 否                      | 是   | 是   | 是              | 是              | 是       | 否           | 否       | 否     | 是     | 否  |
 
 - 此模型仓已适配的模型版本
   - [LLaMa系列](https://github.com/facebookresearch/llama/tree/llama_v1)
@@ -28,7 +28,7 @@
 |--------|--------------------------------------------------|
 | working_dir | 加速库及模型库下载后放置的目录                  |
 | llm_path | 模型仓所在路径。若使用编译好的包，则路径为`${working_dir}/ModelLink/`；若使用gitee下载的代码，则路径为`${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models`    |
-| script_path | 脚本所在路径；LLaMa和LLaMa2的工作脚本所在路径为${llm_path}/examples/models/llama                            |
+| script_path | 脚本所在路径；LLaMa和LLaMa2的工作脚本所在路径为`${llm_path}/examples/models/llama`                            |
 | weight_path | 模型权重路径                            |
 
 ## 权重
@@ -44,17 +44,13 @@
 **权重装换**
 - 参考[此README文件](../../README.md)
 
-## 设置通用环境变量
-- 将模型仓路径加入Python查询模块和包的搜索路径中
-  ```shell
-  export PYTHONPATH=${llm_path}:$PYTHONPATH
-  ```
+**基础环境变量**
+- 参考[此README文件](../../../README.md)
 
 ## 推理
 
 ### 对话测试
 **运行Flash Attention FP16**
-- LLaMa2-7B和LLaMa2-13B参考[此README文档](../../../pytorch/examples/llama/README.md)
 - 其余LLaMa模型参考以下运行方式
   - 运行启动脚本
     - 在\${llm_path}目录下执行以下指令
@@ -67,10 +63,6 @@
       - 核心ID查阅方式见[此README文件](../../README.md)的【启动脚本相关环境变量】章节
       - 对于300I DUO卡而言，若要使用单卡双芯，请指定至少两个可见核心；若要使用双卡四芯，请指定至少四个可见核心
       - 各模型支持的核心数参考“特性矩阵”
-    - `export MAX_MEMORY_GB=29`
-      - 限制最大显存
-      - 默认设置最大显存为29GB
-      - 若出现显存不足导致的异常，请将该参数改小
     - `export MASTER_PORT=20030`
       - 设置卡间通信端口
       - 默认使用20030端口
@@ -79,7 +71,6 @@
     - `export USE_REFACTOR=true`
       - 是否使用新版模型组图
       - 默认使用
-      - 运行LLaMa2-7b和LLaMa2-13b时`use_refactor`参数需设置为False，其余模型运行时需设置为True
     - 以下环境变量与性能和内存优化相关，通常情况下无需修改
       ```shell
       export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
@@ -95,10 +86,27 @@
       export ATB_LAUNCH_KERNEL_WITH_TILING=0
       export ATB_OPSRUNNER_KERNEL_CACHE_GLOABL_COUNT=1
       export ATB_OPSRUNNER_KERNEL_CACHE_LOCAL_COUNT=0
+
       ```
 
 **运行Flash Attention BF16**
 - 暂不支持
+
+**运行Flash Attention W8A8**
+- 运行启动脚本
+  - 与“运行Flash Attention FP16”的启动方式相同
+- 环境变量说明
+  - 参见“运行Flash Attention FP16”中的环境变量说明
+- 相比于FP16，运行量化时需修改W8A8量化权重`${weight_path}/config.json`中的`quantize`字段，将此字段对应的值修改为`w8a8`
+  - 若config.json中无此字段，则新增
+
+**运行Flash Attention W8A16**
+- 运行启动脚本
+  - 与“运行Flash Attention FP16”的启动方式相同
+- 环境变量说明
+  - 参见“运行Flash Attention FP16”中的环境变量说明
+- 相比于FP16，运行量化时需修改W8A16量化权重`${weight_path}/config.json`中的`quantize`字段，将此字段对应的值修改为`w8a16`
+  - 若config.json中无此字段，则新增
 
 **运行Paged Attention FP16**
 - 运行启动脚本
@@ -107,32 +115,19 @@
     bash ${script_path}/run_pa.sh ${weight_path}
     ```
 - 环境变量说明
-  - `export IS_QUANT=0`
-    - 量化开关；仅在300I DUO卡上生效
-    - 默认非量化
-    - 若需要开启请参照[文档](../../../atb_llm/models/llama/small/readme.md)
   - `export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7`
     - 指定当前机器上可用的逻辑NPU核心，多个核心间使用逗号相连
     - 核心ID查阅方式见[此README文件](../../README.md)的【启动脚本相关环境变量】章节
     - 对于300I DUO卡而言，若要使用单卡双芯，请指定至少两个可见核心；若要使用双卡四芯，请指定至少四个可见核心
     - 各模型支持的核心数参考“特性矩阵”
-  - `export MAX_MEMORY_GB=29`
-    - 限制最大显存
-    - 默认设置最大显存为29GB
-    - 若出现显存不足导致的异常，请将该参数改小
-    - 300I DUO卡推荐值40GB，800I A2推荐值29GB
   - `export MASTER_PORT=20030`
     - 设置卡间通信端口
     - 默认使用20030端口
     - 目的是为了避免同一台机器同时运行多个多卡模型时出现通信冲突
     - 设置时端口建议范围为：20000-20050
-  - `export IS_BF16=false`
-    - 是否使用BF16精度进行推理
-    - 默认使用FP16
   - `export USE_REFACTOR=true`
     - 是否使用新版模型组图
     - 默认使用
-    - 运行LLaMa2-7b和LLaMa2-13b时`use_refactor`参数需设置为False，其余模型运行时需设置为True
   - 以下环境变量与性能和内存优化相关，通常情况下无需修改
     ```shell
     export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
@@ -141,6 +136,8 @@
     export TASK_QUEUE_ENABLE=1
     export ATB_CONVERT_NCHW_TO_ND=1
     export LCCL_ENABLE_FALLBACK=1
+    export ATB_WORKSPACE_MEM_ALLOC_GLOBAL=1
+    export ATB_CONTEXT_WORKSPACE_SIZE=0
     ```
 
 **运行Paged Attention BF16**
@@ -148,14 +145,24 @@
   - 与“运行Paged Attention FP16”的启动方式相同
 - 环境变量说明
   - 参见“运行Paged Attention FP16”中的环境变量说明
-  - 相比于FP16，运行BF16时需修改以下环境变量
-    - `export IS_BF16=true`
-      - 是否使用BF16精度进行推理
-      - 默认使用FP16，运行BF16时需将此环境变量的值设置为true
+- 相比于FP16，运行BF16时需修改${weight_path}/config.json中的`torch_dtype`字段，将此字段对应的值修改为`bfloat16`
 - 300I DUO卡暂不支持BF16特性
 
-**运行W8A8量化**
-- 待补充
+**运行Paged Attention W8A8**
+- 运行启动脚本
+  - 与“运行Paged Attention FP16”的启动方式相同
+- 环境变量说明
+  - 参见“运行Paged Attention FP16”中的环境变量说明
+- 相比于FP16，运行量化时需修改W8A8量化权重`${weight_path}/config.json`中的`quantize`字段，将此字段对应的值修改为`w8a8`
+  - 若config.json中无此字段，则新增
+
+**运行Paged Attention W8A16**
+- 运行启动脚本
+  - 与“运行Paged Attention FP16”的启动方式相同
+- 环境变量说明
+  - 参见“运行Paged Attention FP16”中的环境变量说明
+- 相比于FP16，运行量化时需修改W8A16量化权重`${weight_path}/config.json`中的`quantize`字段，将此字段对应的值修改为`w8a16`
+  - 若config.json中无此字段，则新增
 
 **运行KV cache量化**
 - 待补充
@@ -168,38 +175,38 @@
 
 ## 精度测试
 - 参考[此README文件](../../../tests/modeltest/README.md)
-  - 运行llama2-7b和llama2-13b时`use_refactor`参数需设置为False，其余模型运行时需设置为True
   - 示例
     ```shell
     cd ${llm_path}/tests/modeltest
     export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
     export MAX_MEMORY_GB=29
-    bash run.sh pa_fp16 full_CEval 1 llama False ${llama2-7b权重路径} 8
-    bash run.sh pa_fp16 full_CEval 1 llama False ${llama2-13b权重路径} 8
-    bash run.sh pa_fp16 full_CEval 1 llama True ${llama2-70b权重路径} 8
-    bash run.sh pa_fp16 full_CEval 1 llama True ${llama-7b权重路径} 8
-    bash run.sh pa_fp16 full_CEval 1 llama True ${llama-13b权重路径} 8
-    bash run.sh pa_fp16 full_CEval 1 llama True ${llama-65b权重路径} 8
+    bash run.sh pa_fp16 full_BoolQ 1 llama True ${llama2-7b权重路径} 8
+    bash run.sh pa_fp16 full_BoolQ 1 llama True ${llama2-13b权重路径} 8
+    bash run.sh pa_fp16 full_BoolQ 1 llama True ${llama2-70b权重路径} 8
+    bash run.sh pa_fp16 full_BoolQ 1 llama True ${llama-7b权重路径} 8
+    bash run.sh pa_fp16 full_BoolQ 1 llama True ${llama-13b权重路径} 8
+    bash run.sh pa_fp16 full_BoolQ 1 llama True ${llama-65b权重路径} 8
     ```
+- 运行量化权重和BF16时需注意`${weight_path}/config.json`中的`quantize`字段是否与权重匹配
 
 ## 性能测试
 - 参考[此README文件](../../../tests/modeltest/README.md)
-  - 运行llama2-7b和llama2-13b时`use_refactor`参数需设置为False，其余模型运行时需设置为True
   - 示例
     ```shell
     cd ${llm_path}/tests/modeltest
     export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
     export MAX_MEMORY_GB=29
     export ATB_LLM_BENCHMARK_ENABLE=1
-    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama False ${llama2-7b权重路径} 8
-    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama False ${llama2-13b权重路径} 8
+    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${llama2-7b权重路径} 8
+    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${llama2-13b权重路径} 8
     bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${llama2-70b权重路径} 8
     bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${llama-7b权重路径} 8
     bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${llama-13b权重路径} 8
     bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${llama-65b权重路径} 8
     ```
+- 运行量化权重和BF16时需注意`${weight_path}/config.json`中的`quantize`字段是否与权重匹配
 
 ## FAQ
 - 更多环境变量见[此README文件](../../README.md)
 - 对话测试实际执行的Python文件为`${llm_path}/examples/run_fa.py`和`${llm_path}/examples/run_pa.py`；这两个文件的参数说明见[此README文件](../../README.md)
-- 跑LLaMA2-7B/13B时，需要通过指令pip list｜grep protobuf确认protobuf版本，如果版本高于3.20.x，请运行指令pip install protobuf==3.20.0进行更新
+- 运行时，需要通过指令pip list｜grep protobuf确认protobuf版本，如果版本高于3.20.x，请运行指令pip install protobuf==3.20.0进行更新

@@ -20,10 +20,10 @@ VLMo 是由微软提出的一种多模态 Transformer 模型，Mixture-of-Modali
 
 | 配套                 | 版本          | 下载链接 |
 |--------------------|-------------|------|
-| Ascend HDK         | 23.0.0.B060 |      |
-| CANN               | 7.0.0.B060  |      |
+| Ascend HDK         | 23.0.RC3.B082 |      |
+| CANN               | 7.0.RC1.B082  |      |
 | python             | 3.9.18      |      |           
-| FrameworkPTAdapter | 5.0.0.B060  |      |
+| FrameworkPTAdapter | 6.0.RC1  |      |
 
 **表 2** 推理引擎依赖
 
@@ -37,6 +37,7 @@ VLMo 是由微软提出的一种多模态 Transformer 模型，Mixture-of-Modali
 | CPU     | Device |
 |---------|--------|
 | aarch64 | 910B3  |
+| aarch64 | 310P   |
 
 
 # 快速上手
@@ -62,8 +63,8 @@ VLMo 是由微软提出的一种多模态 Transformer 模型，Mixture-of-Modali
 
 ```bash
 # 安装firmwire
-chmod +x Ascend-hdk-310p-npu-firmware_xxx.run
-./Ascend-hdk-310p-npu-firmware_xxx.run --full
+  chmod +x Ascend-hdk-310p-npu-driver_23.0.rc3.b082_*.run
+  ./Ascend-hdk-310p-npu-driver_23.0.rc3.b082_*.run --full
 ```
 
 ##### 1.1.2 安装driver
@@ -79,8 +80,8 @@ chmod +x Ascend-hdk-310p-npu-firmware_xxx.run
 
 ```bash
 # 根据CPU架构 以及npu型号 安装对应的 driver
-chmod +x Ascend-hdk-310p-npu-driver_23.0.rc3.b060_*.run
-./Ascend-hdk-310p-npu-driver_23.0.rc3.b060_*.run --full
+chmod +x Ascend-hdk-310p*_*.run
+./Ascend-hdk-310p*_*.run --full
 ```
 
 #### 1.2 安装CANN
@@ -186,7 +187,10 @@ pip install torch*_aarch64.whl
 | opencv-python |4.9.0.80|
 | opencv-python-headless| 4.5.3.56|
 | psutil |5.9.8|
+| torchvision |0.16.2|
+如torchvision版本安装失败，则说明需要从Huawei源下载，需要将pip源修改为华为源http://cmc-cd-mirror.rnd.huawei.com/pypi/simple/
 
+##### 注：安装完毕部分依赖后可能会修改torch版本，请确保运行时torch版本为2.0.1
 
 
 
@@ -340,21 +344,22 @@ pip install torch*_aarch64.whl
 #### 1. 将大模型加速库中 vlmo 相关的 文件替换至 model_path 中的指定路径
 
 ```shell
-cd ${llm_path}/atb_speed/pytorch/examples/models/vlmo/
+cd ${llm_path}/pytorch/examples/models/vlmo/
 cp multiway_transformer.py ${model_path}/unilm/vlmo/vlmo/modules
 cp vlmo_module.py ${model_path}/unilm/vlmo/vlmo/modules
-cp run_om_ascend_vqa.py ${model_path}/unilm/vlmo/vlmo/
-cp run_om_ascend_vqa.sh ${model_path}/unilm/vlmo/vlmo/
+cp run_ascend_vqa.py ${model_path}/unilm/vlmo/
+cp run_ascend_vqa.sh ${model_path}/unilm/vlmo/
 ```
 
 #### 2.修改配置
 
 以VQA v2 task_finetune_vqa_base_image480 微调评估为例。\
 打开 `${model_path}`/unilm/vlmo/run_om_ascend_vqa.sh \
-修改 `<Finetuned_VLMo_WEIGHT>`  为 `${model_download_path}` ；修改 `<CONFIG_NAME>` 为 task_finetune_vqa_base_image480
+修改 `<Finetuned_VLMo_WEIGHT>`  为 `${model_download_path}`/vlmo_base_patch16_480_vqa.pt ；修改 `<CONFIG_NAME>` 为 task_finetune_vqa_base_image480
 
 打开 `${model_path}`/unilm/vlmo/run_om_ascend_vqa.py \
 修改 `VQA_ARROW_DIR`  路径为 '`${data_download_path}`/vqa_arrow' ；修改 `<BERT_VOCAB>` 为 '`${model_download_path}`/vocab.txt'
+修改 DEVICE_ID 后的值可选择在哪张卡上运行
  
 # CPU高性能模式
 

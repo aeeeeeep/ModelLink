@@ -17,7 +17,10 @@
 #define OPS_CHATGML_6B_COMMON_FA_OPERATION_H
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 #include "atb_speed/base/hosttensor_binder.h"
 
 namespace atb_speed {

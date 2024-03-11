@@ -18,6 +18,7 @@
 
 # 使用说明
 
+- 执行推理前需要将权重目录下的config.json中的`torch_dtype`改为`"float16"`
 - 参考[此README文件](../../chatglm/v2_6b/README.md)
 
 ## 精度测试
@@ -25,3 +26,7 @@
 
 ## 性能测试
 - 参考[此README文件](../../../../tests/modeltest/README.md)
+
+## FAQ
+- `import torch_npu`遇到`xxx/libgomp.so.1: cannot allocate memory in static TLS block`报错，可通过配置`LD_PRELOAD`解决。
+  - 示例：`export LD_PRELOAD=/lib/aarch64-linux-gnu/libgomp.so.1:$LD_PRELOAD`

@@ -1,0 +1,103 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+#include "layers/operations/word_embedding.h"
+
+namespace atb_speed {
+namespace common {
+
+enum WordEmbeddingTensorIdx : uint32_t {
+    IN_EMBEDDING_WEIGHTS = 0,
+    IN_INPUT_IDS,
+    OUT_HIDDEN_STATES,
+    INTERMEDIATE_GATHER,
+    INTERMEDIATE_ALLGATHER_OUT_ID,
+};
+
+static const uint64_t IN_TENSOR_COUNT = 2;
+static const uint64_t OUT_TENSOR_COUNT = 1;
+static const uint64_t INTERMEDIATE_TENSOR_NO_ALL_GATHER_COUNT = 0;
+static const uint64_t INTERMEDIATE_TENSOR_ALL_GATHER_COUNT = 2;
+static const uint64_t NODE_NO_ALL_GATHER_COUNT = 1;
+static const uint64_t NODE_ALL_GATHER_COUNT = 3;
+
+atb::Status WordEmbedding(const WordEmbeddingParam &param, atb::Operation **operation)
+{
+    atb::GraphParam opGraph;
+    opGraph.inTensorNum = IN_TENSOR_COUNT;
+    opGraph.outTensorNum = OUT_TENSOR_COUNT;
+    // 若权重按列切分，则需使用all gather方式收集完整的hidden states
+    // 相比不使用all gather会多两个internalTensor和两个node
+    opGraph.internalTensorNum \
+        = param.tensorParallelInfo.worldSize > 1 ? INTERMEDIATE_TENSOR_ALL_GATHER_COUNT : INTERMEDIATE_TENSOR_NO_ALL_GATHER_COUNT;
+    opGraph.nodes.resize(param.tensorParallelInfo.worldSize > 1 ? NODE_ALL_GATHER_COUNT : NODE_NO_ALL_GATHER_COUNT);
+    opGraph.name = "WordEmbedding";
+
+    size_t nodeId = 0;
+    auto &inputIdEmbeddingNode = opGraph.nodes.at(nodeId++);
+    atb::infer::GatherParam inputembedinggatherparam;
+    inputembedinggatherparam.axis = param.axis;
+    CREATE_OPERATION(inputembedinggatherparam, &inputIdEmbeddingNode.operation);
+    inputIdEmbeddingNode.inTensorIds = {
+        WordEmbeddingTensorIdx::IN_EMBEDDING_WEIGHTS, WordEmbeddingTensorIdx::IN_INPUT_IDS
+    };
+    inputIdEmbeddingNode.outTensorIds = {
+        param.tensorParallelInfo.worldSize > 1 ? WordEmbeddingTensorIdx::INTERMEDIATE_GATHER : WordEmbeddingTensorIdx::OUT_HIDDEN_STATES
+    };
+
+    if (param.tensorParallelInfo.worldSize > 1) {
+        auto &allGatherNode = opGraph.nodes[nodeId++];
+        atb::infer::AllGatherParam allGatherParam;
+        allGatherParam.rank = param.tensorParallelInfo.rank;
+        allGatherParam.rankSize = param.tensorParallelInfo.worldSize;
+        allGatherParam.backend = param.tensorParallelInfo.backend;
+        CREATE_OPERATION(allGatherParam, &allGatherNode.operation);
+        allGatherNode.inTensorIds = {WordEmbeddingTensorIdx::INTERMEDIATE_GATHER};
+        allGatherNode.outTensorIds = {WordEmbeddingTensorIdx::INTERMEDIATE_ALLGATHER_OUT_ID};
+    
+        auto &transposeNode = opGraph.nodes[nodeId++];
+        atb::infer::TransposeParam transposeParam;
+        if (param.unpadInputs) {
+            transposeParam.perm = {1, 0, 2};
+        } else {
+            transposeParam.perm = {1, 2, 0, 3};
+        }
+        CREATE_OPERATION(transposeParam, &transposeNode.operation);
+        transposeNode.inTensorIds = {WordEmbeddingTensorIdx::INTERMEDIATE_ALLGATHER_OUT_ID};
+        transposeNode.outTensorIds = {WordEmbeddingTensorIdx::OUT_HIDDEN_STATES};
+    }
+
+    opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
+                                 atb::SVector<atb::TensorDesc> &outTensorDescs) {
+        outTensorDescs.at(0).dtype = inTensorDescs.at(0).dtype;
+        outTensorDescs.at(0).format = inTensorDescs.at(0).format;
+        if (param.unpadInputs) {
+            outTensorDescs.at(0).shape.dimNum = 2;
+            outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(1).shape.dims[0];
+            outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(0).shape.dims[1] * param.tensorParallelInfo.worldSize;
+        } else {
+            outTensorDescs.at(0).shape.dimNum = 3;
+            outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(1).shape.dims[0];
+            outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(1).shape.dims[1];
+            outTensorDescs.at(0).shape.dims[2] = inTensorDescs.at(0).shape.dims[1] * param.tensorParallelInfo.worldSize;
+        }
+        return atb::NO_ERROR;
+    };
+
+    CREATE_OPERATION(opGraph, operation);
+    return atb::NO_ERROR;
+}
+}  // namespace common
+}  // namespace atb_speed

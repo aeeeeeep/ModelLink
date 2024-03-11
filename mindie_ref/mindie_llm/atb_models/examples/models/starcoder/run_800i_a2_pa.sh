@@ -12,4 +12,4 @@ export ATB_OPERATION_EXECUTE_ASYNC=1
 export TASK_QUEUE_ENABLE=1
 export LCCL_ENABLE_FALLBACK=1
 
-torchrun --nproc_per_node $TP_WORLD_SIZE --master_port $MASTER_PORT -m examples.run_pa --model_path $1 $extra_param --max_batch_size 1 --max_input_length 256 --max_output_length 256
+torchrun --nproc_per_node $TP_WORLD_SIZE --master_port $MASTER_PORT -m examples.run_pa --model_path $1 $extra_param --max_batch_size 1 --max_input_length 256 --max_output_length 256 --use_refactor
