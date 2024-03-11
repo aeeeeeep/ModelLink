@@ -136,6 +136,7 @@ static void squeezeRopeIntensor(const atb::Dims &oldShape, atb::Dims &newShape)
         newShape = oldShape;
     }
 }
+
 enum class RotaryPositionEmbeddingTensorId : int {
     IN_QUERY = 0,
     IN_KEY,
@@ -153,6 +154,7 @@ enum class RotaryPositionEmbeddingTensorId : int {
     INTERMEDIATE_QOUT,
     INTERMEDIATE_KOUT,
 };
+
 #define POS_EMB_CAST(x) static_cast<int>(RotaryPositionEmbeddingTensorId::x)
 atb::Status RotaryPositionEmbedding(const RotaryPositionEmbeddingParam &param, atb::Operation **operation)
 {
@@ -160,15 +162,15 @@ atb::Status RotaryPositionEmbedding(const RotaryPositionEmbeddingParam &param, a
     opGraph.name = "RotaryPositionEmbedding";
     opGraph.inTensorNum = POS_EMB_IN_TENSOR_COUNT;
     opGraph.outTensorNum = POS_EMB_OUT_TENSOR_COUNT;
-    opGraph.internalTensorNum = param.isHalfRotary ?
+    opGraph.internalTensorNum = param.rotaryType == HALF_ROTARY ?
                                      POS_EMB_INTERMEDIATE_TENSOR_2D_COUNT : POS_EMB_INTERMEDIATE_TENSOR_1D_COUNT;
-    int nodeCount = param.isHalfRotary ?
+    int nodeCount = param.rotaryType == HALF_ROTARY ?
                          POS_EMB_NODE_2D_COUNT : POS_EMB_NODE_1D_COUNT;
     opGraph.nodes.resize(nodeCount);
 
     size_t nodeId = 0;
 
-    if (param.isHalfRotary) {
+    if (param.rotaryType == HALF_ROTARY) {
         // split q and k to half
         auto &splitQNode = opGraph.nodes[nodeId++];
         atb::infer::SplitParam splitQParam;
@@ -213,9 +215,7 @@ atb::Status RotaryPositionEmbedding(const RotaryPositionEmbeddingParam &param, a
         }
 
         auto &ropeNode = opGraph.nodes[nodeId++];
-        atb::infer::RopeParam ropeParam;
-        ropeParam.rotaryCoeff = param.rotaryCoeff;
-        CREATE_OPERATION(ropeParam, &ropeNode.operation);
+        CREATE_OPERATION(param.ropeParam, &ropeNode.operation);
         ropeNode.inTensorIds = {POS_EMB_CAST(INTERMEDIATE_QCHUNK0), POS_EMB_CAST(INTERMEDIATE_KCHUNK0),
                                 POS_EMB_CAST(IN_ROPE_COS), POS_EMB_CAST(IN_ROPE_SIN),
                                 POS_EMB_CAST(IN_SEQLEN)};
@@ -258,9 +258,7 @@ atb::Status RotaryPositionEmbedding(const RotaryPositionEmbeddingParam &param, a
         }
     } else {
         auto &ropeNode = opGraph.nodes[nodeId++];
-        atb::infer::RopeParam ropeParam;
-        ropeParam.rotaryCoeff = param.rotaryCoeff; // 设置旋转系数
-        CREATE_OPERATION(ropeParam, &ropeNode.operation);
+        CREATE_OPERATION(param.ropeParam, &ropeNode.operation);
         ropeNode.inTensorIds = {POS_EMB_CAST(IN_QUERY), POS_EMB_CAST(IN_KEY), POS_EMB_CAST(IN_ROPE_COS),
                                 POS_EMB_CAST(IN_ROPE_SIN), POS_EMB_CAST(IN_SEQLEN)};
         ropeNode.outTensorIds = {POS_EMB_CAST(OUT_QUERY), POS_EMB_CAST(OUT_KEY)};
