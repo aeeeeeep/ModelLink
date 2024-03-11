@@ -251,7 +251,8 @@ def save_model_checkpoint(queue, args):
         sys.path.insert(0, args.megatron_path)
 
     from ascendspeed import megatron_adaptor
-    from megatron.arguments import (parse_args, validate_args)
+    from megatron.arguments import validate_args
+    from modellink.adaptor_model import parse_args
     from megatron.checkpointing import save_checkpoint
     from megatron.global_vars import set_global_variables, get_args
     from megatron.core.enums import ModelType
@@ -405,8 +406,6 @@ def save_model_checkpoint(queue, args):
         margs.model_type = ModelType.encoder_or_decoder
     else:
         raise Exception(f'unrecognized model type: {args.model_type}')
-
-    setattr(margs, 'embed_layernorm', md.embed_layernorm)
 
     def get_models(count, dtype, pre_process, post_process):
         models = [model_provider(pre_process, post_process).to(dtype) for _ in range(count)]
