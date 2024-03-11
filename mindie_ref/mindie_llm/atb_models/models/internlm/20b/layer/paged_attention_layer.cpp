@@ -120,7 +120,7 @@ atb::Status PagedAttentionLayer(const PagedAttentionLayerParam &param, atb::Oper
     CREATE_OPERATION(linearParam, &vLinearNode.operation);
     vLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_V_LINEARWEIGHT};
     vLinearNode.outTensorIds = {INTERMIDATE_V_MIXEDLINEAROUT};
-
+  
     atb::infer::RopeParam ropeParam;
     ropeParam.rotaryCoeff = ROTARY_COEFF; // 旋转系数
     CreateOperation(ropeParam, &ropeNode.operation);
@@ -151,6 +151,18 @@ atb::Status PagedAttentionLayer(const PagedAttentionLayerParam &param, atb::Oper
         attentionNode.inTensorIds = {INTERMIDATE_Q_POSITIONEMBED, INTERMIDATE_K_POSITIONEMBED,
                                      INTERMIDATE_V_MIXEDLINEAROUT, IN_ATTENTION_MASK, IN_INPUT_LENGTHS};
         attentionNode.outTensorIds = {INTERMIDATE_SELFOUT};
+        if (param.isNz) {
+            attentionNode.inTensorReshapeFuncs.resize(attentionNode.inTensorIds.size());
+            attentionNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+                reshapeHeads(oldShape, newShape, param.headNum);
+            };
+            attentionNode.inTensorReshapeFuncs[1] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+                reshapeHeads(oldShape, newShape, param.headNum);
+            };
+            attentionNode.inTensorReshapeFuncs[2] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+                reshapeHeads(oldShape, newShape, param.headNum);
+            };
+        }
     } else {
         atb::infer::PagedAttentionParam pagedAttentionDeParam;
         pagedAttentionDeParam.headNum = param.headNum;
@@ -165,20 +177,29 @@ atb::Status PagedAttentionLayer(const PagedAttentionLayerParam &param, atb::Oper
             reshapeHeads(oldShape, newShape, param.headNum);
         };
     }
-
     atb_speed::common::ParallelParam selfOutLinearParam;
     selfOutLinearParam.rank = param.rank;
     selfOutLinearParam.rankSize = param.rankSize;
     atb_speed::common::RowParallelLinear(selfOutLinearParam, &selfOutLinearNode.operation);
     selfOutLinearNode.inTensorIds = {INTERMIDATE_SELFOUT, IN_SELFOUTLINEARWEIGHT};
     selfOutLinearNode.outTensorIds = {INTERMIDATE_SELFLINEAROUT};
-    if (!param.isPrefill) {
+    
+    if (param.isNz) {
         selfOutLinearNode.inTensorReshapeFuncs.resize(selfOutLinearNode.inTensorIds.size());
         selfOutLinearNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
             newShape.dimNum = 2;                                    // 2: dim num
             newShape.dims[0] = oldShape.dims[0];                    // 0: dim 0, n tokens
             newShape.dims[1] = oldShape.dims[1] * oldShape.dims[2]; // 1 hidden size: old 1, head num , old 2 head size
         };
+    } else {
+        if (!param.isPrefill) {
+            selfOutLinearNode.inTensorReshapeFuncs.resize(selfOutLinearNode.inTensorIds.size());
+            selfOutLinearNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+                newShape.dimNum = 2;                                    // 2: dim num
+                newShape.dims[0] = oldShape.dims[0];                    // 0: dim 0, n tokens
+                newShape.dims[1] = oldShape.dims[1] * oldShape.dims[2]; // 1 hidden size: old 1, head num , old 2 head size
+            };
+        }
     }
 
     atb::infer::ElewiseParam addParam;
@@ -245,6 +266,9 @@ void from_json(const nlohmann::json &paramJson, PagedAttentionLayerParam &param)
     }
     if (paramJson.contains("isPrefill")) {
         paramJson.at("isPrefill").get_to(param.isPrefill);
+    }
+    if (paramJson.contains("isNz")) {
+        paramJson.at("isNz").get_to(param.isNz);
     }
     if (paramJson.contains("backend")) {
         paramJson.at("backend").get_to(param.backend);
