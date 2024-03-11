@@ -209,13 +209,12 @@ pip install torch*_aarch64.whl
 - 安装 sdk
 
   ```
-  cd ${working_dir}/ModelLink/pytorch/examples/atb_speed_sdk
+  cd ${working_dir}/ModelLink/pytorch/examples/
   # 首次安装
-  pip3 install .
+  pip3 install ./atb_speed_sdk/
   # 更新
-  pip3 install . --force-reinstall
+  pip3 install ./atb_speed_sdk/ --force-reinstall
   ```
-  - 如果环境中已经安装了atb_speed_sdk，
 
 ## 环境变量参考
 
