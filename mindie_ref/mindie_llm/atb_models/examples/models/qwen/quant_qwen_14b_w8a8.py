@@ -1,9 +1,9 @@
 import os
 import sys
 import json
-import torch
 import inspect
 import time
+import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 from modelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
@@ -25,26 +25,26 @@ def load_tokenizer_and_model(fp16_path):
 
 
 def infer(tokenizer, model, query, model_params=None):
-        """
-        推理代码
-        :param query:
-        :param model_params:
-        :return:
-        """
-        inputs = tokenizer(query, return_tensors='pt')
-        inputs = inputs.to(model.device)
-        with torch.no_grad():
-            start_time = time.time()
-            model_params = model_params if model_params is not None else {}
-            pred = model.generate(**inputs, **model_params)
-            end_time = time.time()
-            time_cost = end_time - start_time
-        output = tokenizer.decode(pred.cpu()[0], skip_special_tokens=True)
-        print(output)
-        print(f"cost {time_cost}s")
-        new_tokens = len(pred[0]) - len(inputs.input_ids[0])
-        print(f"generate {new_tokens} new tokens, ({new_tokens / time_cost:.2f} tokens/s)")
-        return output
+    """
+    推理代码
+    :param query:
+    :param model_params:
+    :return:
+    """
+    inputs = tokenizer(query, return_tensors='pt')
+    inputs = inputs.to(model.device)
+    with torch.no_grad():
+        start_time = time.time()
+        model_params = model_params if model_params is not None else {}
+        pred = model.generate(**inputs, **model_params)
+        end_time = time.time()
+        time_cost = end_time - start_time
+    output = tokenizer.decode(pred.cpu()[0], skip_special_tokens=True)
+    print(output)
+    print(f"cost {time_cost}s")
+    new_tokens = len(pred[0]) - len(inputs.input_ids[0])
+    print(f"generate {new_tokens} new tokens, ({new_tokens / time_cost:.2f} tokens/s)")
+    return output
 
 
 def get_calib_dataset(tokenizer, calib_list):
@@ -99,7 +99,7 @@ def main(fp16_path, quant_save_path):
     dataset_calib = get_calib_dataset(tokenizer, data_list)
     print(">>>> Calibrator dataset is ready.")
 
-    disable_names=[
+    disable_names = [
         'transformer.h.0.mlp.c_proj',
         'transformer.h.1.mlp.c_proj',
         'transformer.h.2.mlp.c_proj',
