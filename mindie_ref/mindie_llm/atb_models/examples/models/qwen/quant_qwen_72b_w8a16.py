@@ -1,9 +1,9 @@
 import os
 import sys
 import json
-import torch
 import inspect
 import time
+import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 
