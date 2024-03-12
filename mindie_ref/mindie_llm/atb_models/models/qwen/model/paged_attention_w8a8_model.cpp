@@ -18,8 +18,8 @@
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
 #include "layers/operations/lmhead.h"
-#include "models/qwen/14b/layer/paged_attention_w8a8_layer.h"
-#include "models/qwen/14b/model/paged_attention_w8a8_model.h"
+#include "models/qwen/layer/paged_attention_w8a8_layer.h"
+#include "models/qwen/model/paged_attention_w8a8_model.h"
 
 namespace atb_speed {
 namespace qwen_14b {
