@@ -53,7 +53,7 @@ bash examples/models/qwen/run_pa.sh -m ${weight_path}
 
 注：
 
-1.推理支持浮点和量化，若启动浮点推理则在`${weight_path}`中传入浮点权重路径，若启动量化则传入量化权重路径（现已支持qwen-14b的w8a8量化推理）
+1.推理支持浮点和量化，若启动浮点推理则在`${weight_path}`中传入浮点权重路径，若启动量化则传入量化权重路径
 
 2.执行量化推理时，请在权重路径的config.json文件中添加(或修改)`quantize`字段，值为相应量化方式，如`w8a8`
 
