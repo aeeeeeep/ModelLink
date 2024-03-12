@@ -13,7 +13,7 @@
 ## 权重
 
 ### 权重设置
-- `${weight_path}/config.json`文件中需设置`dtype`和`quantize`类型来标识量化类型和精度
+- `${weight_path}/config.json`文件中需设置`dtype`和`quantize`类型来标识权重的量化类型和精度
   - 若`dtype`和`quantize`字段不存在，需新增
 
 - 配置
@@ -25,7 +25,7 @@
   | W8A16          | "float16"   | "w8a16"  |
 
 - 示例
-  - LLaMa模型使用BF16精度，非量化
+  - LLaMa模型的权重使用BF16精度，非量化
     ```json
     {
       "architectures": [
@@ -37,7 +37,7 @@
       "quantize": "",
     }
     ```
-  - LLaMa模型使用FP16精度，W8A16量化
+  - LLaMa模型的权重使用FP16精度，W8A16量化
     ```json
     {
       "architectures": [
