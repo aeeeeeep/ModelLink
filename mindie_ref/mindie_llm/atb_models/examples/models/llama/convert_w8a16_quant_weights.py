@@ -10,6 +10,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 
 from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('--fp16_model_path',
@@ -21,6 +22,7 @@ def parse_arguments():
                         default='/data/acltransformer_testdata/weights/llama2/llama-2-70b_w8a16',
                         )
     return parser.parse_args()
+
 
 def convert_2_w8a16_weight(fp16_model_path, w8a16_model_path):
     model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=fp16_model_path, trust_remote_code=True).float().cpu()
@@ -40,6 +42,7 @@ def convert_2_w8a16_weight(fp16_model_path, w8a16_model_path):
     calibrator = Calibrator(model, quant_config, calib_data=None, disable_level='L0')
     calibrator.run()
     calibrator.save(w8a16_model_path, save_type=["safe_tensor"])
+
 
 def copy_config_tokenizer(fp16_model_path, w8a16_model_path):
     with open(os.path.join(fp16_model_path, "config.json"), 'r') as f:
