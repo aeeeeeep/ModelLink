@@ -10,9 +10,10 @@ from modelslim.pytorch.llm_ptq.anti_outlier import AntiOutlier, AntiOutlierConfi
 from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig # 导入量化配置接口
 
 IN_MODEL_PATH = './llama2-7b' # 浮点权重输入路径
-OUT_MODEL_PATH = './llama2-7b_quant' #量化权重生成路径
+OUT_MODEL_PATH = './llama2-7b_quant' # 量化权重生成路径
 NUM_LAYERS = 32 # 模型层数
 ANTI_METHOD = "m1" # anti-outlier算法配置
+
 
 #获取校准数据函数定义
 def get_calib_dataset(_tokenizer, _calib_list):
