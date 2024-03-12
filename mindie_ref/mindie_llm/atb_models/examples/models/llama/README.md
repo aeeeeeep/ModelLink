@@ -55,7 +55,7 @@
   pip uninstall transformers
   pip install transformers=={指定版本}
   ```
-  - 打开量化脚本convert_w8a16_quant_weights.py，配置量化参数
+  - 打开量化脚本convert_w8a8_quant_weights.py，配置量化参数
   ```shell
   IN_MODEL_PATH = './llama2-7b' # 浮点权重输入路径
   OUT_MODEL_PATH = './llama2-7b_quant' #量化权重生成路径
@@ -64,7 +64,7 @@
   ```
   - 执行量化脚本
   ```shell
-  python convert_w8a16_quant_weights.py 
+  python convert_w8a8_quant_weights.py 
   ```
 - W8A16量化权重请使用以下指令生成
   - 当前仅LLaMa-65B和LLaMa2-70B支持W8A16量化
