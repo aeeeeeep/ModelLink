@@ -197,7 +197,7 @@ class FlashQwenForCausalLM(FlashForCausalLM):
                 "isFA": False,
                 "isBF16": False,
                 "isEmbeddingParallel": False,
-                "isLmHeadParallel": not self.soc_info.need_nz,
+                "isLmHeadParallel": True,
                 "supportSwiGLU": False if self.soc_info.need_nz else True,
                 "rmsNormEps": self.config.layer_norm_epsilon,
                 "numAttentionHeadsPerRank": self.num_attention_heads,
