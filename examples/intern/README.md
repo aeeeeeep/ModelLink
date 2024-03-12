@@ -1,7 +1,7 @@
 # Intern-LM
 <p align="left">
         <b>简体中文</b> |
-        <b><a href="https://gitee.com/ascend/Modellink/blob/modellink/examples/intern/README_en.md">English</a> </b> 
+        <b><a href="README_en.md">English</a> </b> 
     </p>
 </p>
 

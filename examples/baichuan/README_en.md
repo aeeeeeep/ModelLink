@@ -1,6 +1,6 @@
 # BaiChuan
 <p align="left">
-        <b><a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/baichuan/README.md">简体中文</a></b> |
+        <b><a href="README.md">简体中文</a></b> |
         <b>English</b> 
     </p>
 </p>
@@ -198,6 +198,7 @@ Launch baichuan-7B inference script: tasks/inference/generate_baichuan_7b_ptd.sh
 bash tasks/inference/generate_baichuan_7b_ptd.sh
 ```
 Some inference samples are as follows:
+
 ![Inference](../../sources/images/baichuan/baichuan_7B_inference.png)
 
 
@@ -417,7 +418,7 @@ pay attention to add ` --handler-name GeneralInstructionHandler `
 ```python
 mkdir alpaca_preprocessed
 python tools/preprocess_data.py \
-    --input ./dataset_baichuan13B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+    --input ./dataset-baichuan-13B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --output-prefix ./alpaca_preprocessed/alpaca \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ./baichuan-13B-hf \

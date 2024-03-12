@@ -1,7 +1,7 @@
 # LLaMA
 <p align="left">
         <b>简体中文</b> |
-        <b><a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/llama/README_en.md">English</a></b>
+        <b><a href="README_en.md">English</a></b>
 </p>
 
 - [LLaMA-7B/13B](#llama-7b13b)

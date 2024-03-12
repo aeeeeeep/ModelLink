@@ -1,7 +1,7 @@
 # Mixtral
 
 <p align="left">
-        <b><a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/mixtral/README.md">简体中文</a> </b> |
+        <b><a href="README.md">简体中文</a> </b> |
         <b>English</b> 
 </p>
 

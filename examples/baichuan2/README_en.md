@@ -1,6 +1,6 @@
 # BaiChuan2
 <p align="left">
-        <b><a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/baichuan2/README.md">简体中文</a></b> |
+        <b><a href="README.md">简体中文</a></b> |
         <b>English</b> 
     </p>
 </p>
@@ -154,7 +154,7 @@ python ./tools/preprocess_data.py \
 ```
 
 
-6. Config Baichuan2-7B pre-training script : examples/baichuan/pretrain_baichuan2_ptd_7B.sh 
+6. Config Baichuan2-7B pre-training script : examples/baichuan2/pretrain_baichuan2_ptd_7B.sh 
 
 ```shell
 # modify the script according to your own  ascend-toolkit path
