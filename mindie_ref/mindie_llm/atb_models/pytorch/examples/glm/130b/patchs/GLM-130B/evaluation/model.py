@@ -131,12 +131,10 @@ class ModelForEvaluation(torch.nn.Module):
             del attention_mask
             del output_per_layers
             gc.collect()
-            torch.npu.empty_cache()
 
             logits_batch = torch.nn.functional.log_softmax(logits, dim=-1)
             del logits
             gc.collect()
-            torch.npu.empty_cache()
 
         # output: [b, sq, vocab]
         log_probs = []
