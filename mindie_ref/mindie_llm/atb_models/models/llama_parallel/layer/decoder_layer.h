@@ -122,8 +122,6 @@ class DecoderLayerBinder : public HostTensorBinder {
 public:
     DecoderLayerBinder();
     virtual ~DecoderLayerBinder();
-    void ParseParam(const nlohmann::json &paramJson) override;
-    void BindTensor(atb::VariantPack &variantPack) override;
 
 private:
     std::vector<int> tokenOffset_;

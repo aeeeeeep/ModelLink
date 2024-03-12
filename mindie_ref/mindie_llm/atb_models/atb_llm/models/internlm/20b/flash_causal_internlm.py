@@ -336,6 +336,7 @@ class InternLMModel(InternLMPreTrainedModel):
         transdata_param = json.dumps({})
 
         self.transdata_operation.set_param(transdata_param)
+        
 
     def maybe_format_cast(self, tensor):
         """
@@ -356,6 +357,7 @@ class InternLMModel(InternLMPreTrainedModel):
             "rank": self.tp_rank,
             "rankSize": self.tp_world_size,
             "isPrefill": True,
+            "isNz": not IS_ND,
             "backend": "hccl" if self.soc_info.need_nz else "lccl",
             "isLmHeadParallel": True
         })
@@ -367,6 +369,7 @@ class InternLMModel(InternLMPreTrainedModel):
             "rank": self.tp_rank,
             "rankSize": self.tp_world_size,
             "isPrefill": False,
+            "isNz": not IS_ND,
             "backend": "hccl" if self.soc_info.need_nz else "lccl",
             "isLmHeadParallel": True
         })

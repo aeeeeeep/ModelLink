@@ -32,6 +32,7 @@ public:
         int rankSize = 1;
         bool isLmHeadParallel = true;
         bool isPrefill = false;
+        bool isNz = false;
         std::string backend = "hccl";
         void FromString(const std::string &param);
     };
