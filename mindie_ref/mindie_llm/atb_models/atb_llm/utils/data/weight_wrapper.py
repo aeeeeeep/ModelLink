@@ -36,6 +36,7 @@ class WeightWrapper:
     def __init__(self, soc_info, tp_rank, attn_module_names, mlp_module_names):
         self.weights = []
         self.layer_linear_type = []
+        self.pack_quant_type = []
         self.linear_type = []
         self.soc_info = soc_info
         self.tp_rank = tp_rank
@@ -215,7 +216,9 @@ class WeightWrapper:
 
     def register_model_norm(self, model_dict, norm_name):
         self.weights.append(model_dict[f'{norm_name}.weight'])
-
+        if f'{norm_name}.bias' in model_dict:
+            self.weights.append(model_dict[f'{norm_name}.bias'])
+            
     def register_model_lmhead(self, model_dict, lmhead_name):
         self.weights.append(self.weight_format_cast(model_dict[f'{lmhead_name}.linear.weight']))
     
@@ -224,3 +227,4 @@ class WeightWrapper:
         self.register_layer_attn(layer_dict, attn_pack_type, quantize_type, self.attn_module_names)
         self.register_layer_mlp(layer_dict, mlp_pack_type, quantize_type, self.mlp_module_names)
         self.linear_type.append(self.layer_linear_type.copy())
+        self.pack_quant_type.append([attn_pack_type.value, mlp_pack_type.value])

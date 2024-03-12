@@ -183,7 +183,10 @@ pip install torch*_aarch64.whl
   - 安装atb_llm whl包
     ```
     cd ${working_dir}/ModelLink
+    # 首次安装
     pip install atb_llm-0.0.1-py3-none-any.whl
+    # 更新
+    pip install atb_llm-0.0.1-py3-none-any.whl --force-reinstall
     ```
 - 场景二：手动编译模型仓
   - 获取模型仓代码
@@ -206,8 +209,11 @@ pip install torch*_aarch64.whl
 - 安装 sdk
 
   ```
-  cd ${working_dir}/ModelLink/pytorch/examples/atb_speed_sdk
-  pip3 install .
+  cd ${working_dir}/ModelLink/pytorch/examples/
+  # 首次安装
+  pip3 install ./atb_speed_sdk/
+  # 更新
+  pip3 install ./atb_speed_sdk/ --force-reinstall
   ```
 
 ## 环境变量参考
@@ -220,7 +226,7 @@ source ${working_dir}/atb/set_env.sh
 source ${working_dir}/ModelLink/set_env.sh
 export PYTHONPATH=${working_dir}/ModelLink/:$PYTHONPATH
 # 若使用gitee上的源码进行编译（即1.5章节的场景二），则执行以下两个指令
-source ${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models/scripts/set_env.sh
+source ${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models/output/atb_speed/set_env.sh
 export PYTHONPATH=${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models/:$PYTHONPATH
 ```
 

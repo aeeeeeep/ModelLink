@@ -13,7 +13,7 @@
 ## 权重
 
 ### 权重设置
-- `${weight_path}/config.json`文件中需设置`dtype`和`quantize`类型来标识量化类型和精度
+- `${weight_path}/config.json`文件中需设置`dtype`和`quantize`类型来标识权重的量化类型和精度
   - 若`dtype`和`quantize`字段不存在，需新增
 
 - 配置
@@ -25,7 +25,7 @@
   | W8A16          | "float16"   | "w8a16"  |
 
 - 示例
-  - LLaMa模型使用BF16精度，非量化
+  - LLaMa模型的权重使用BF16精度，非量化
     ```json
     {
       "architectures": [
@@ -37,7 +37,7 @@
       "quantize": "",
     }
     ```
-  - LLaMa模型使用FP16精度，W8A16量化
+  - LLaMa模型的权重使用FP16精度，W8A16量化
     ```json
     {
       "architectures": [
@@ -120,7 +120,7 @@
 - `--is_flash_causal_lm`
   - 是否使用Paged Attention，默认不使用
 - `--use_refactor`
-    - 若加上`use_refactor`则使用归一后代码，若不开启`use_refactor`，则使用未归一前的代码
+    - 若设置为True则使用归一后代码，若设置为False，则使用未归一的代码；默认开启use_refactor
 - 示例
   ```shell
   # 使用多卡运行Flash Attention，设置模型权重路径，设置输出长度为2048个token，精度使用BF16
@@ -150,9 +150,9 @@
 - `--is_flash_model`
   - 是否使用Paged Attention，默认使用
 - `--use_refactor`
-    - 若加上`use_refactor`则使用归一后代码，若不开启`use_refactor`，则使用未归一前的代码
+    - 若设置为True则使用归一后代码，若设置为False，则使用未归一的代码；默认开启use_refactor
 - 示例
   ```shell
   # 使用多卡运行Paged Attention，设置模型权重路径，设置输出长度为2048个token，使用归一后代码
-  torchrun --nproc_per_node 2 --master_port 20038 -m examples.run_pa --model_path ${weight_path} --max_output_length 2048 --use_refactor
+  torchrun --nproc_per_node 2 --master_port 20038 -m examples.run_pa --model_path ${weight_path} --max_output_length 2048 --use_refactor True
   ```

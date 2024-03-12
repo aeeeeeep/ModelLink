@@ -23,7 +23,7 @@ extra_param=""
 world_size=$(($(echo "${ASCEND_RT_VISIBLE_DEVICES}" | grep -o , | wc -l) +1))
 
 if [ "$USE_REFACTOR" = true ]; then
-    extra_param="${extra_param} --use_refactor"
+    extra_param="${extra_param} --use_refactor True"
 fi
 
 if [ "$TP_WORLD_SIZE" == "1" ]; then

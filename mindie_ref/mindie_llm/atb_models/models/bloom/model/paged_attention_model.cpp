@@ -62,6 +62,10 @@ void PagedAttentionModel::Param::FromString(const std::string &param)
     if (paramJson.contains("rank")) {
         rank = paramJson["rank"].get<int>();
     }
+    if (paramJson.contains("backend")) {
+        backend = paramJson["backend"].get<std::string>();
+    }
+    
     if (paramJson.contains("rankSize")) {
         rankSize = paramJson["rankSize"].get<int>();
     }

@@ -573,19 +573,22 @@ class ModelTest:
                         os.environ['ATB_LLM_LOGITS_SAVE_FOLDER'] = logits_save_folder
                         _, _, _ = self.pa_runner.infer(input_tokens, self.batch_size, 1, False)
                         os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "0"
-                        logits = torch.load(logits_save_folder + '/logits_0.pth')
-                        logits = logits[:, choice_tokens]
-                        preds = logits.argmax(dim=-1)
-                        correct += (preds.cpu() == batch["label"]).sum().item()            
-                        
-                filename = os.path.basename(entry)
-                result = [filename, correct / sum, correct, sum]
-                self.result_logger.debug(f"result:{result}")
-                result_total.append(result)
-                correct_total += correct
-                sum_total += sum
-            total = ["total", correct_total / sum_total, correct_total, sum_total]
-            result_total.insert(0, total)
+                        if is_result:
+                            logits = torch.load(os.path.join(logits_save_folder, 'logits_0.pth'))
+                            logits = logits[:, choice_tokens]
+                            preds = logits.argmax(dim=-1)
+                            correct += (preds.cpu() == batch["label"]).sum().item()            
+                
+                if is_result:        
+                    filename = os.path.basename(entry)
+                    result = [filename, correct / sum, correct, sum]
+                    self.result_logger.debug(f"result:{result}")
+                    result_total.append(result)
+                    correct_total += correct
+                    sum_total += sum
+            if is_result:
+                total = ["total", correct_total / sum_total, correct_total, sum_total]
+                result_total.insert(0, total)
         if is_result:
             self.__save_result(result_total)
 
@@ -928,25 +931,25 @@ class ModelTest:
                         os.environ['ATB_LLM_LOGITS_SAVE_FOLDER'] = logits_save_folder
                         _, _, _ = self.pa_runner.infer(queries, self.batch_size, 1, False)
                         os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "0"
-                        time.sleep(0.01)
-                        logits = torch.load(os.path.join(logits_save_folder, 'logits_0.pth'))
-                        logits_softmax = F.log_softmax(logits.float(), dim=-1)
-                        greedy_tokens = logits_softmax.argmax(dim=-1)
                         if is_result:
+                            logits = torch.load(os.path.join(logits_save_folder, 'logits_0.pth'))
+                            logits_softmax = F.log_softmax(logits.float(), dim=-1)
+                            greedy_tokens = logits_softmax.argmax(dim=-1)
                             for idx, ans in enumerate(batch['answer']):
                                 acc = self.pa_runner.tokenizer.decode(greedy_tokens[idx]).lower() == ans
                                 if acc:
                                     correct += 1
                                 curnum += 1
-
-                filename = os.path.basename(entry)
-                result = [filename, correct / sum, correct, sum]
-                self.result_logger.debug(f"result:{result}")
-                result_total.append(result)
-                correct_total += correct
-                sum_total += sum
-            total = ["total", correct_total / sum_total, correct_total, sum_total]
-            result_total.insert(0, total)
+                if is_result:
+                    filename = os.path.basename(entry)
+                    result = [filename, correct / sum, correct, sum]
+                    self.result_logger.debug(f"result:{result}")
+                    result_total.append(result)
+                    correct_total += correct
+                    sum_total += sum
+            if is_result:
+                total = ["total", correct_total / sum_total, correct_total, sum_total]
+                result_total.insert(0, total)
         if is_result:
             self.__save_result(result_total)
 

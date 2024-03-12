@@ -20,6 +20,34 @@ https://huggingface.co/bigcode/starcoder/tree/main
 ## 权重转换
 - 参考[此README文件](../../README.md)
 
+## 量化权重转换（W8A8）
+- 转换量化权重时需先将原权重下config.json中的的"model_type": "starcoder" 修改回 "model_type": "gpt_bigcode" 
+- 将当前目录下的convert_w8a8_quant_weights.py文件中的第29行和30行修改为自己的权重路径，将67行修改为输出权重路径
+- 执行
+```
+python convert_w8a8_quant_weights.py
+```
+- 将原权重文件夹下所有json文件拷贝到新的量化权重文件下
+- `${weight_path}/config.json`文件中需设置`dtype`和`quantize`类型来标识量化类型和精度
+- 若`dtype`和`quantize`字段不存在，需新增
+
+- 配置
+  | 量化类型及精度  | torch_dtype | quantize |
+  |----------------|-------------|----------|
+  | FP16           | "float16"   | ""       |
+  | BF16           | "bfloat16"  | ""       |
+  | W8A8           | "float16"   | "w8a8"   |
+  | W8A16          | "float16"   | "w8a16"  |
+
+- 示例
+  - starcoder模型使用FP16精度，W8A8量化
+    ```json
+    {
+      "torch_dtype": "float16",
+      "quantize": "w8a8",
+    }
+    ```
+
 ## 路径变量解释
 | 变量名  | 含义                                             |
 |--------|--------------------------------------------------|
@@ -119,7 +147,7 @@ https://huggingface.co/bigcode/starcoder/tree/main
 - 待补充
 
 **运行W8A8量化**
-- 待补充
+- 获取量化权重后操作步骤同上
 
 **运行KV cache量化**
 - 待补充
