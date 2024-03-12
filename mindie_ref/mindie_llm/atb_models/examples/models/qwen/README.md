@@ -30,8 +30,10 @@ Paged Attention 场景需要.safetensors格式的权重，如果没有，参考[
 
 ## 量化权重导出
 量化权重可通过ModelSlim（昇腾压缩加速工具）实现。
+
 #### 环境准备
 环境配置可参考ModelSlim官网：https://www.hiascend.com/document/detail/zh/canncommercial/70RC1/devtools/auxiliarydevtool/modelslim_0002.html
+
 #### 导出量化权重
 通过`${llm_path}/examples/models/qwen/quant_qwen_14b_w8a8.py`和`${llm_path}/examples/models/qwen/quant_qwen_72b_w8a16.py`文件导出目标模型的量化权重：
 ```shell
