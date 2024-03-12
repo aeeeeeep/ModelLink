@@ -17,7 +17,7 @@
 
 #include "layers/mlp_gate_v2.h"
 #include "layers/parallel_layer_v2.h"
-#include "models/qwen/14b/operation/rope.h"
+#include "models/qwen/operation/rope.h"
 
 namespace atb_speed {
 namespace qwen_14b {
