@@ -7,15 +7,15 @@
 # 特性矩阵
 - 此矩阵罗列了各LLaMa模型支持的特性
 
-| 模型及参数量 | 800I A2 Tensor Parallelism | 300I DUO Tensor Parallelism | FP16 | BF16 | Flash Attention | Paged Attention | W8A8量化 | KV cache量化 | 稀疏量化 | MOE量化 | MindIE | TGI |
-|-------------|-------------------------|-------------------------|------|------|-----------------|-----------------|---------|--------------|----------|--------|--------|-----|
-| LLaMa-7B    | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 是       | 否           | 否       | 否     | 是     | 否  |
-| LLaMa-13B   | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 是       | 否           | 否       | 否     | 是     | 否  |
-| LLaMa-33B   | 支持world size 4,8       | 否                      | 是   | 是   | 是              | 否              | 否       | 否           | 否       | 否     | 否     | 否  |
-| LLaMa-65B   | 支持world size 8         | 否                      | 是   | 是   | 是              | 是              | 是       | 否           | 否       | 否     | 是     | 否  |
-| LLaMa2-7B   | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 是       | 否           | 否       | 否     | 是     | 否  |
-| LLaMa2-13B  | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 是       | 否           | 否       | 否     | 是     | 否  |
-| LLaMa2-70B  | 支持world size 8         | 否                      | 是   | 是   | 是              | 是              | 是       | 否           | 否       | 否     | 是     | 否  |
+| 模型及参数量 | 800I A2 Tensor Parallelism | 300I DUO Tensor Parallelism | FP16 | BF16 | Flash Attention | Paged Attention | W8A8量化 | W8A16量化 | KV cache量化 | 稀疏量化 | MOE量化 | MindIE | TGI |
+|-------------|-------------------------|-------------------------|------|------|-----------------|-----------------|---------|---------|--------------|----------|--------|--------|-----|
+| LLaMa-7B    | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 否       | 否       | 否           | 否       | 否     | 是     | 否  |
+| LLaMa-13B   | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 否       | 否       | 否           | 否       | 否     | 是     | 否  |
+| LLaMa-33B   | 支持world size 4,8       | 否                      | 是   | 是   | 是              | 是              | 否       | 否       | 是           | 否       | 否     | 否     | 否  |
+| LLaMa-65B   | 支持world size 8         | 否                      | 是   | 是   | 是              | 是              | 否       | 是       | 否           | 否       | 否     | 是     | 否  |
+| LLaMa2-7B   | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 是       | 否       | 否           | 否       | 否     | 是     | 否  |
+| LLaMa2-13B  | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 是       | 否       | 否           | 否       | 否     | 是     | 否  |
+| LLaMa2-70B  | 支持world size 8         | 否                      | 是   | 是   | 是              | 是              | 是       | 是      | 否       | 否       | 否     | 是     | 否  |
 
 - 此模型仓已适配的模型版本
   - [LLaMa系列](https://github.com/facebookresearch/llama/tree/llama_v1)
@@ -41,8 +41,31 @@
 - [LLaMa2-13B](https://huggingface.co/NousResearch/Llama-2-13b-hf)
 - [LLaMa2-70B](https://huggingface.co/NousResearch/Llama-2-70b-hf)
 
-**权重装换**
+**权重转换**
 - 参考[此README文件](../../README.md)
+
+**量化权重生成**
+- 基于原始的FP16的权重，生成量化权重
+- W8A16量化权重请使用以下指令生成
+  - 当前仅LLaMa-65B和LLaMa2-70B支持W8A16量化
+  ```shell
+  # 设置CANN包的环境变量
+  source /usr/local/Ascend/ascend-toolkit/set_env.sh
+  cd ${llm_path}
+  python examples/models/llama/convert_w8a16_quant_weight.py --fp16_model_path {浮点权重路径} --w8a16_model_path {W8A16量化权重路径}
+  ```
+    - 注意：`fp16_model_path`和`w8a16_model_path`请勿使用同一个文件夹，避免浮点权重和量化权重混淆
+  - 示例
+    ```shell
+    python examples/models/llama/convert_w8a16_quant_weight.py --fp16_model_path /home/weights/llama2-70b --w8a16_model_path /home/weights/llama2-70b_w8a16
+    ```
+  - 推荐使用transformers 4.36.2版本进行权重转换，transformers 4.36.2版本会大大加快权重生成的速度，但执行模型推理时transformers的版本仍需为4.30.2
+    ```shell
+    # 卸载
+    pip uninstall transformers
+    # 安装
+    pip install transformers=={指定版本}
+    ```
 
 **基础环境变量**
 - 参考[此README文件](../../../README.md)
@@ -95,6 +118,7 @@
 **运行Flash Attention W8A8**
 - 运行启动脚本
   - 与“运行Flash Attention FP16”的启动方式相同
+  - `${weight_path}`为W8A8量化权重的路径
 - 环境变量说明
   - 参见“运行Flash Attention FP16”中的环境变量说明
 - 相比于FP16，运行量化时需修改W8A8量化权重`${weight_path}/config.json`中的`quantize`字段，将此字段对应的值修改为`w8a8`
@@ -103,10 +127,9 @@
 **运行Flash Attention W8A16**
 - 运行启动脚本
   - 与“运行Flash Attention FP16”的启动方式相同
+  - `${weight_path}`为W8A16量化权重的路径
 - 环境变量说明
   - 参见“运行Flash Attention FP16”中的环境变量说明
-- 相比于FP16，运行量化时需修改W8A16量化权重`${weight_path}/config.json`中的`quantize`字段，将此字段对应的值修改为`w8a16`
-  - 若config.json中无此字段，则新增
 
 **运行Paged Attention FP16**
 - 运行启动脚本
@@ -151,6 +174,7 @@
 **运行Paged Attention W8A8**
 - 运行启动脚本
   - 与“运行Paged Attention FP16”的启动方式相同
+  - `${weight_path}`为W8A8量化权重的路径
 - 环境变量说明
   - 参见“运行Paged Attention FP16”中的环境变量说明
 - 相比于FP16，运行量化时需修改W8A8量化权重`${weight_path}/config.json`中的`quantize`字段，将此字段对应的值修改为`w8a8`
@@ -159,10 +183,9 @@
 **运行Paged Attention W8A16**
 - 运行启动脚本
   - 与“运行Paged Attention FP16”的启动方式相同
+  - `${weight_path}`为W8A16量化权重的路径
 - 环境变量说明
   - 参见“运行Paged Attention FP16”中的环境变量说明
-- 相比于FP16，运行量化时需修改W8A16量化权重`${weight_path}/config.json`中的`quantize`字段，将此字段对应的值修改为`w8a16`
-  - 若config.json中无此字段，则新增
 
 **运行KV cache量化**
 - 待补充
