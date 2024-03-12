@@ -20,7 +20,7 @@
 #include "layers/operations/fusion_attention.h"
 #include "layers/operations/mlp.h"
 #include "layers/operations/mlp_swiglu.h"
-#include "models/qwen/14b/layer/paged_attention_w8a8_layer.h"
+#include "models/qwen/layer/paged_attention_w8a8_layer.h"
 
 namespace atb_speed {
 namespace qwen_14b {

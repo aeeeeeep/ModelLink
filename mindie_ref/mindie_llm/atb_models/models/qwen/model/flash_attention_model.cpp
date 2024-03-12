@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "models/qwen/14b/model/flash_attention_model.h"
+#include "models/qwen/model/flash_attention_model.h"
 
 #include "atb/atb_infer.h"
 #pragma GCC diagnostic push
@@ -21,7 +21,7 @@
 #include "nlohmann/json.hpp"
 #pragma GCC diagnostic pop
 
-#include "models/qwen/14b/layer/flash_attention_layer.h"
+#include "models/qwen/layer/flash_attention_layer.h"
 #include "operations/lmhead.h"
 #include "atb_speed/utils/model_factory.h"
 

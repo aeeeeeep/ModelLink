@@ -46,6 +46,26 @@
 
 **量化权重生成**
 - 基于原始的FP16的权重，生成量化权重
+- W8A8量化权重请使用以下指令生成
+  - 设置环境变量
+  ```shell
+  # 设置CANN包的环境变量
+  source /usr/local/Ascend/ascend-toolkit/set_env.sh
+  # 推荐使用transformers 4.36.2版本进行权重转换，但执行模型推理时transformers的版本仍需为4.30.2
+  pip uninstall transformers
+  pip install transformers=={指定版本}
+  ```
+  - 打开量化脚本convert_w8a8_quant_weights.py，配置量化参数
+  ```shell
+  IN_MODEL_PATH = './llama2-7b' # 浮点权重输入路径
+  OUT_MODEL_PATH = './llama2-7b_quant' #量化权重生成路径
+  NUM_LAYERS = 32 # 模型层数，LLaMA2-7B配置为32，13B配置为40
+  ANTI_METHOD = "m1" # anti-outlier算法配置，LLaMA2-7B配置为m1，13B配置为m2
+  ```
+  - 执行量化脚本
+  ```shell
+  python convert_w8a8_quant_weights.py 
+  ```
 - W8A16量化权重请使用以下指令生成
   - 当前仅LLaMa-65B和LLaMa2-70B支持W8A16量化
   ```shell

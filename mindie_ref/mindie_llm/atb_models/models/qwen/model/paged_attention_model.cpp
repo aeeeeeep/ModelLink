@@ -21,7 +21,7 @@
 #include "nlohmann/json.hpp"
 #pragma GCC diagnostic pop
 
-#include "models/qwen/14b/layer/paged_attention_layer.h"
+#include "models/qwen/layer/paged_attention_layer.h"
 #include "parallel_lmhead.h"
 #include "atb_speed/utils/model_factory.h"
 
