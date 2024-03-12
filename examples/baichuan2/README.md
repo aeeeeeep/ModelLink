@@ -1,7 +1,7 @@
 # BaiChuan2
 <p align="left">
         <b>简体中文</b> |
-        <b><a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/baichuan2/README_en.md">English</a> </b> 
+        <b><a href="README_en.md">English</a> </b> 
     </p>
 </p>
 
@@ -151,7 +151,7 @@ python ./tools/preprocess_data.py \
 ```
 
 
-6. 配置 Baichuan2-7B 预训练脚本: examples/baichuan/pretrain_baichuan2_ptd_7B.sh 
+6. 配置 Baichuan2-7B 预训练脚本: examples/baichuan2/pretrain_baichuan2_ptd_7B.sh 
 
 ```shell
 # 修改 ascend-toolkit 路径

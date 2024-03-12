@@ -1,6 +1,6 @@
 # Bloom
 <p align="left">
-        <b><a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/bloom/README.md">简体中文</a></b> |
+        <b><a href="README.md">简体中文</a></b> |
         <b>English</b> 
     </p>
 </p>

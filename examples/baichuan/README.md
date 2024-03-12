@@ -1,7 +1,7 @@
 # BaiChuan
 <p align="left">
         <b>简体中文</b> |
-        <b><a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/baichuan/README_en.md">English</a> </b> 
+        <b><a href="README_en.md">English</a> </b> 
     </p>
 </p>
 
@@ -206,6 +206,7 @@ bash tasks/inference/generate_baichuan_7b_ptd.sh
 ```
 
 推理的示例如下:
+
 ![Inference](../../sources/images/baichuan/baichuan_7B_inference.png)
 
 ## 评估
@@ -425,7 +426,7 @@ Baichuan-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 ```python
 mkdir alpaca_preprocessed
 python tools/preprocess_data.py \
-    --input ./dataset_baichuan13B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+    --input ./dataset-baichuan-13B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --output-prefix ./alpaca_preprocessed/alpaca \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ./baichuan-13B-hf \
