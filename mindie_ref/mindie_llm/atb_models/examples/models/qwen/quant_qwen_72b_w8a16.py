@@ -1,7 +1,8 @@
 import os
+import sys
 import json
-import time
 import inspect
+import time
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
@@ -49,15 +50,11 @@ def get_calib_dataset(tokenizer, calib_list):
     calib_dataset = []
     for calib_data in calib_list:
         inputs = tokenizer(calib_data, return_tensors='pt').to("cpu")
-        print(inputs)
         calib_dataset.append([inputs.data['input_ids']])
     return calib_dataset
 
 
-def main():
-    fp16_path = ""  # 浮点权重路径
-    quant_save_path = ""  # 量化权重保存路径
-    
+def main(fp16_path, quant_save_path):    
     tokenizer, model = load_tokenizer_and_model(fp16_path)
     print(f">>>> Load model from {os.path.basename(inspect.getmodule(model).__file__)} successfully.")
 
@@ -174,4 +171,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    fp16_path = sys.argv[1]
+    quant_save_path = sys.argv[2]
+    main(fp16_path, quant_save_path)
