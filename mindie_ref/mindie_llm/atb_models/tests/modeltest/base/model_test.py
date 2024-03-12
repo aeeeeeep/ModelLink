@@ -26,17 +26,21 @@ except ModuleNotFoundError:
 import numpy as np
 import pandas as pd
 import transformers
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from thefuzz import process
 from tqdm import tqdm
-ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
-sys.path.append(os.path.join(ATB_SPEED_HOME_PATH, "../.."))
-sys.path.append(ATB_SPEED_HOME_PATH)
-from atb_llm.utils import env
-from atb_llm.utils.cpu_binding import NpuHbmInfo
-from examples.server.cache import CacheConfig, CacheManager, ModelConfig
-from examples.server.generate import decode_token, generate_req
-from examples.server.request import request_from_text, request_from_token
-from examples.run_pa import PARunner
+try:
+    ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
+    sys.path.append(os.path.join(ATB_SPEED_HOME_PATH, "../.."))
+    sys.path.append(ATB_SPEED_HOME_PATH)
+    from atb_llm.utils import env
+    from atb_llm.utils.cpu_binding import NpuHbmInfo
+    from examples.server.cache import CacheConfig, CacheManager, ModelConfig
+    from examples.server.generate import decode_token, generate_req
+    from examples.server.request import request_from_text, request_from_token
+    from examples.run_pa import PARunner
+except TypeError:
+    pass
 from .human_eval import evaluate_functional_correctness
 
 
@@ -177,8 +181,7 @@ class ModelTest:
         pass
 
     def prepare_environ(self):
-        if self.hardware_type == "NPU":
-            torch.npu.set_compile_mode(jit_compile=False)
+        pass
 
     def get_dataset_list(self):
         return ["GSM8K", "TruthfulQA", "MMLU", "CEval", "BoolQ"]
@@ -189,7 +192,6 @@ class ModelTest:
         os.unsetenv("tensor_folder")
 
     def __prepare_and_check(self):
-        reload(env)
         max_csv_limit = sys.maxsize
         while True:
             try:
@@ -197,13 +199,15 @@ class ModelTest:
                 break
             except OverflowError:
                 max_csv_limit = int(max_csv_limit / 10)
+        if self.hardware_type == "NPU":
+            reload(env)
         if self.model_type == "fa" and self.test_mode != "full":
             self.__patch_hf_transformers_utils()
         os.environ['test_mode'] = self.test_mode
         if self.test_mode == "full":
             self.dataset_list = self.get_dataset_list()
             if self.dataset_name not in self.dataset_list:
-                self.logger.info(f"{self.model_name} not support {self.dataset_name}, skip")
+                self.logger.info(f"{self.model_name} not support {self.dataset_name}, please check")
         if self.test_mode != "performance":
             folder_path = f"{self.data_dir}/{self.hardware_type}/{self.dataset_name}/batch{self.batch_size}"
             if os.path.exists(folder_path):
@@ -219,14 +223,9 @@ class ModelTest:
             os.environ['HCCL_DETERMINISTIC'] = "1"
         os.environ['core_type'] = self.core_type
         self.local_rank, self.world_size = int(os.getenv("RANK", "0")), int(os.getenv("WORLD_SIZE", "1"))
-        if self.hardware_type == "GPU":
-            self.__setup_model_parallel()
-            self.tokenizer, self.model = self.get_model(self.hardware_type, self.model_type, self.data_type)
-            self.device = self.model.device
-
+       
         torch.manual_seed(1)
         self.device_type = self.__get_device_type()
-        self.logger.info("tokenizer and model get success.")
 
         if self.hardware_type == "NPU":
             if ATB_HOME_PATH is None:
@@ -423,22 +422,35 @@ class ModelTest:
 
     def __run_precision(self):
         self.logger.info("precision test start")
-        input_dict = {
-            'rank': self.local_rank,
-            'world_size': self.world_size,
-            'max_prefill_tokens': -1,
-            'block_size': 128,
-            'model_path': self.weight_dir,
-            'is_bf16': True if self.data_type == "bf16" else False,
-            'max_position_embeddings': self.max_position_embedding if self.max_position_embedding != -1 else None,
-            'max_batch_size': self.batch_size,
-            'use_refactor': self.use_refactor,
-            'max_input_length': 2048,
-            'max_output_length': 512,
-        }
-        self.pa_runner = PARunner(**input_dict)
-        self.logger.info(str(self.local_rank) + f'pa_runner: {self.pa_runner}')
-        self.pa_runner.warm_up()
+        if self.hardware_type == "NPU":
+            input_dict = {
+                'rank': self.local_rank,
+                'world_size': self.world_size,
+                'max_prefill_tokens': -1,
+                'block_size': 128,
+                'model_path': self.weight_dir,
+                'is_bf16': True if self.data_type == "bf16" else False,
+                'max_position_embeddings': self.max_position_embedding if self.max_position_embedding != -1 else None,
+                'max_batch_size': self.batch_size,
+                'use_refactor': self.use_refactor,
+                'max_input_length': 2048,
+                'max_output_length': 512,
+            }
+            self.pa_runner = PARunner(**input_dict)
+            self.logger.info(str(self.local_rank) + f'pa_runner: {self.pa_runner}')
+            self.pa_runner.warm_up()
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(self.weight_dir, use_fast=False, trust_remote_code=True)
+            if self.model_name == "qwen":
+                self.tokenizer.pad_token_id = self.tokenizer.eod_id
+                self.tokenizer.bos_token_id = self.tokenizer.eod_id
+                self.tokenizer.eos_token_id = self.tokenizer.eod_id
+            if self.model_name == "starcoder":
+                self.tokenizer.pad_token = "[PAD]" 
+
+            self.model = AutoModelForCausalLM.from_pretrained(self.weight_dir, device_map="auto", trust_remote_code=True)
+            self.device = self.model.device
+
         if self.test_mode == "simplified":
             self.__run_simplified_dataset()
         elif self.test_mode == "full":
@@ -513,7 +525,11 @@ class ModelTest:
     
     def __run_full_dataset_ceval(self):
         choices = ["A", "B", "C", "D"]
-        choice_tokens = [self.pa_runner.tokenizer.encode(choice, add_special_tokens=False)[0] for choice in choices]
+        if self.hardware_type == "NPU":
+            choice_tokens = [self.pa_runner.tokenizer.encode(choice, add_special_tokens=False)[0] for choice in choices]
+        else:
+            choice_tokens = [self.tokenizer.encode(choice, add_special_tokens=False)[0] for choice in choices]
+            
         extraction_prompt = '综上所述，ABCD中正确的选项是：'
 
         def build_prompt(text):
@@ -523,7 +539,7 @@ class ModelTest:
         sum_total = 0
         result_total = []
         is_result = False
-        if self.pa_runner.rank == 0:
+        if self.__get_rank() == 0:
             is_result = True
         with torch.no_grad():
             for entry in glob.glob((Path(self.dataset_path) / "val/**/*.jsonl").as_posix(),
@@ -543,9 +559,9 @@ class ModelTest:
                     queries = [build_prompt(query) for query in texts]
                     if self.model_type == "fa":
                         inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
-                                                max_length=2048).to(self.model.device)
-                        tokenizer_out_ids = inputs.input_ids.to(self.model.device)
-                        attention_mask = inputs.attention_mask.to(self.model.device)
+                                                max_length=2048).to(0)
+                        tokenizer_out_ids = inputs.input_ids.to(0)
+                        attention_mask = inputs.attention_mask.to(0)
                         outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
                                                       do_sample=False, max_new_tokens=512)
                         intermediate_outputs = []
@@ -556,9 +572,9 @@ class ModelTest:
                         answer_texts = [text + intermediate + "\n" + extraction_prompt for text, intermediate in
                                         zip(texts, intermediate_outputs)]
                         input_tokens = [build_prompt(answer_text) for answer_text in answer_texts]
-                        inputs = self.tokenizer(input_tokens, padding=True, return_tensors="pt", truncation=True, max_length=2048).to('cuda')
-                        outputs = self.model(**inputs, return_last_logit=True)
-                        logits = outputs.logits[:, -1]
+                        inputs = self.tokenizer(input_tokens, padding=True, return_tensors="pt", truncation=True, max_length=2048).to(0)
+                        outputs = self.model(**inputs)
+                        logits = outputs.logits[:, -1, :]
                         logits = logits[:, choice_tokens]
                         preds = logits.argmax(dim=-1)
                         correct += (preds.cpu() == batch["label"]).sum().item()
@@ -887,7 +903,7 @@ class ModelTest:
         sum_total = 0
         result_total = []
         is_result = False
-        if self.pa_runner.rank == 0:
+        if self.__get_rank() == 0:
             is_result = True
         with torch.no_grad():
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.jsonl").as_posix(),
@@ -902,7 +918,6 @@ class ModelTest:
                             line_json['answer'] = 'no'
                         dataset.append(line_json)
 
-                curnum = 0
                 correct = 0
                 sum = len(dataset)
                 dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size)
@@ -913,16 +928,14 @@ class ModelTest:
                     queries = [build_prompt(title, query, passage) for title, query, passage in zip(titles, texts, passages)]
                     if self.model_type == "fa":
                         inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
-                                                max_length=2048).to(self.model.device)
-                        tokenizer_out_ids = inputs.input_ids.to(self.model.device)
-                        attention_mask = inputs.attention_mask.to(self.model.device)
-                        outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
-                                                      do_sample=False, max_new_tokens=512)
+                                                max_length=2048).to(0)
+                        outputs = self.model(**inputs)
+                        logits = outputs.logits[:, -1, :]
+                        logits_softmax = F.log_softmax(logits.float(), dim=-1)
+                        greedy_tokens = logits_softmax.argmax(dim=-1)
                         if is_result:
                             for idx, ans in enumerate(batch['answer']):
-                                output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
-                                response = self.tokenizer.decode(output)
-                                acc = is_correct(response, ans)
+                                acc = self.tokenizer.decode(greedy_tokens[idx]).lower() == ans
                                 if acc:
                                     correct += 1
                     else:
@@ -939,7 +952,7 @@ class ModelTest:
                                 acc = self.pa_runner.tokenizer.decode(greedy_tokens[idx]).lower() == ans
                                 if acc:
                                     correct += 1
-                                curnum += 1
+
                 if is_result:
                     filename = os.path.basename(entry)
                     result = [filename, correct / sum, correct, sum]
@@ -973,7 +986,7 @@ class ModelTest:
             return code
 
         is_result = False
-        if self.pa_runner.rank == 0:
+        if self.__get_rank() == 0:
             is_result = True
         with torch.no_grad():
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.jsonl").as_posix(),
@@ -992,23 +1005,27 @@ class ModelTest:
                     queries = [prompt.strip() for prompt in batch["prompt"]]
                     if self.model_type == "fa":
                         inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
-                                                max_length=2048).to(self.model.device)
-                        tokenizer_out_ids = inputs.input_ids.to(self.model.device)
-                        attention_mask = inputs.attention_mask.to(self.model.device)
+                                                max_length=2048).to(0)
+                        tokenizer_out_ids = inputs.input_ids.to(0)
+                        attention_mask = inputs.attention_mask.to(0)
                         outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
                                                       do_sample=False, max_new_tokens=512)
                         if is_result:
-                            for idx, ans in enumerate(batch['answer']):
-                                output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
+                            for idx, output in enumerate(outputs.tolist()):
+                                output = output[len(inputs["input_ids"][idx]):]
                                 response = self.tokenizer.decode(output)
-                                acc = is_correct(response, ans)
-                                if acc:
-                                    correct += 1
+                                response_cleaned_up = cleanup_code(response)
+                                self.logger.info("response_cleaned_up: %s", response_cleaned_up)
+                                result = dict(
+                                    task_id="HumanEval/" + task_ids[idx],
+                                    completion=response_cleaned_up,
+                                )
+                                samples += [result]
                     else:
                         generate_text_list, _, _ = self.pa_runner.infer(queries, self.batch_size, 512, True)
                         generate_text_list = [cleanup_code(completion) for completion in generate_text_list]
                         if is_result:
-                            self.logger.info("generate_text_list: %s", generate_text_list)
+                            self.logger.info("generate_text_list_cleaned_up: %s", generate_text_list)
                         for idx, sample in enumerate(generate_text_list):
                             result = dict(
                                 task_id="HumanEval/" + task_ids[idx],
@@ -1237,6 +1254,12 @@ class ModelTest:
             csv_writer.writerow(csv_result)
             self.logger.info(self.model_name + " " + self.dataset_name + " batch" + str(
                 self.batch_size) + " result saved in result/full_test_result.csv")
+
+    def __get_rank(self):
+        if self.hardware_type == "GPU":
+            return torch.cuda.current_device()
+        else:
+            return self.pa_runner.rank
 
     def __get_device_type(self):
         if self.hardware_type == "NPU":

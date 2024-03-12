@@ -18,7 +18,7 @@ class CodegeeX26BModelTest(model_test.ModelTest):
         super().__init__(*args)
 
     def get_dataset_list(self):
-        return ["GSM8K", "MMLU", "CEval"]
+        return ["HumanEval"]
 
 
 def main():

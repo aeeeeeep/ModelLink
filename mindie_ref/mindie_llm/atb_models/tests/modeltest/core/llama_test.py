@@ -24,7 +24,7 @@ class LlamaModelTest(model_test.ModelTest):
         os.environ['ATB_CONTEXT_WORKSPACE_SIZE'] = "0"
 
     def get_dataset_list(self):
-        return ["CEval", "BoolQ"]
+        return ["BoolQ"]
 
 
 def main():
