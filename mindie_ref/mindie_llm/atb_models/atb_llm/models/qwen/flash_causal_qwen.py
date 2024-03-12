@@ -1,4 +1,3 @@
-# Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 import json
 import math
 import os
@@ -196,7 +195,7 @@ class FlashQwenForCausalLM(FlashForCausalLM):
             acl_param_dict = {
                 "isFA": False,
                 "isBF16": False,
-                "isEmbeddingParallel": False,
+                "isEmbeddingParallel": True,
                 "isLmHeadParallel": True,
                 "supportSwiGLU": False if self.soc_info.need_nz else True,
                 "rmsNormEps": self.config.layer_norm_epsilon,
@@ -210,8 +209,8 @@ class FlashQwenForCausalLM(FlashForCausalLM):
                 "packQuantType": self.pack_quant_config,
                 "linearQuantType": self.linear_type,
             }
-            self.acl_param_encoder = json.dumps({**acl_param_dict, "isPrefill": True})
-            self.acl_param_decoder = json.dumps({**acl_param_dict, "isPrefill": False})
+            self.acl_param_encoder = json.dumps({**acl_param_dict, "isPrefill": True, "supportLcoc": False if self.soc_info.need_nz else True})
+            self.acl_param_decoder = json.dumps({**acl_param_dict, "isPrefill": False, "supportLcoc": False})
             
             self.acl_encoder_operation.set_param(self.acl_param_encoder)
             self.acl_decoder_operation.set_param(self.acl_param_decoder)

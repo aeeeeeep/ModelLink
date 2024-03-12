@@ -167,14 +167,19 @@ int64_t PAW8A8Model::BuildGraph()
     ATB_LOG(INFO) << "PAW8A8Model build graph begin";
     int nodeId = 0;
 
+    atb::Operation *op = nullptr;
+
     // wte
     auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
-    atb::infer::GatherParam wordEmbeddingParam;
-    atb::Operation *op = nullptr;
-    atb::CreateOperation(wordEmbeddingParam, &op);
+    atb_speed::common::WordEmbeddingParam wordEmbeddingParam;
+    wordEmbeddingParam.unpadInputs = !param_.isFA;
+    if (param_.isEmbeddingParallel) {
+        wordEmbeddingParam.tensorParallelInfo = {param_.rank, param_.worldSize, param_.backend};
+    };
+    atb_speed::common::WordEmbedding(wordEmbeddingParam, &op);
     wordEmbeddingNode.operation.reset(op);
     wordEmbeddingNode.inTensors = {
-        &graph_.weightTensors.at(0),
+        &graph_.weightTensors.at(0),                    // shape: [vocabSize + 1, hiddenSize]
         &graph_.inTensors.at(IN_TENSOR_INPUTIDS)
     };
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(0)};
