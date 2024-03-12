@@ -127,7 +127,7 @@ def main(fp16_path, quant_save_path):
     dataset_calib = get_calib_dataset(tokenizer, data_list)
     print(">>>> Calibrator dataset is ready.")
 
-    disable_names=['lm_head']
+    disable_names = ['lm_head']
     print(f">>>> Disable layers: {disable_names}")
 
     quant_config = QuantConfig(
