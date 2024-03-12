@@ -24,7 +24,6 @@ import os
 
 from deepspeed.runtime.activation_checkpointing.checkpointing import checkpoint
 import torch
-import torch_npu
 import torch.nn.functional as F
 
 from SwissArmyTransformer import mpu
@@ -46,7 +45,6 @@ if ATB_SPEED_HOME_PATH is None:
 LIB_PATH = os.path.join(ATB_SPEED_HOME_PATH,
                         "lib/libatb_speed_torch.so")
 torch.classes.load_library(LIB_PATH)
-QUANT_PATH = os.environ.get("QUANT_PATH")
 
 
 class SelfAttention(torch.nn.Module):
@@ -450,7 +448,6 @@ class BaseTransformer(torch.nn.Module):
 
         self.layers = torch.nn.ModuleList(
             [get_layer(layer_id) for layer_id in range(num_layers)])
-        # self.layers = [None for _ in range(num_layers)]
 
         # Final layer norm before output.
         self.use_final_layernorm = use_final_layernorm
@@ -503,17 +500,15 @@ class BaseTransformer(torch.nn.Module):
             "residualAddScale": (2 * num_layers) ** 0.5,
             "layerNormEps": self.layernorm_epsilon
         }
-        print('#' * 200)
-        print(f'atb_param: {atb_param}')
         atb_decoder_param = atb_param.copy()
         atb_decoder_param.update({"coderType": 2})
         atb_encoder_param = atb_param.copy()
         atb_encoder_param.update({"coderType": 1})
         self.atb_decoder_operation = torch.classes.ModelTorch.ModelTorch(
-            "glm130b_FusionParallelModel")
+            "glm_130b_fusion_parallel_model")
         self.atb_decoder_operation.set_param(json.dumps(atb_decoder_param))
         self.atb_encoder_operation = torch.classes.ModelTorch.ModelTorch(
-            "glm130b_FusionParallelModel")
+            "glm_130b_fusion_parallel_model")
         self.atb_encoder_operation.set_param(json.dumps(atb_encoder_param))
         # ATB code---------------------------------------------------------------
 
@@ -537,9 +532,9 @@ class BaseTransformer(torch.nn.Module):
                                         self.head_size,
                                         device=torch.cuda.current_device(), dtype=torch.half).contiguous()
             self.k_cache_input = self.kv_cache[0].view(
-                self.num_layers, self.batch_num, self.max_sequence_length, self.hidden_size // self.rankSize).contiguous()
+                self.num_layers, self.batch_num, self.max_sequence_length, self.hidden_size // self.rankSize)
             self.v_cache_input = self.kv_cache[1].view(
-                self.num_layers, self.batch_num, self.max_sequence_length, self.hidden_size // self.rankSize).contiguous()
+                self.num_layers, self.batch_num, self.max_sequence_length, self.hidden_size // self.rankSize)
             
             self.tokens_offset = torch.full(
                 (self.batch_num,), 0, dtype=torch.int32, device=self.kv_cache.device)
@@ -559,71 +554,13 @@ class BaseTransformer(torch.nn.Module):
                 self, input_ids, output_cross_layer=output_cross_layer, **kw_args)
 
         # atb code
-        for layer in self.layers:
-            del layer
-
         if self.weight_flag:
-            real_path = os.path.join(QUANT_PATH, 'merged/49300/mp_rank_0{}_model_states.pt'.format(self.rank))
-            offset_path = os.path.join(QUANT_PATH, 'offset_full/49300/mp_rank_00_model_states.pt')
-            scale_path = os.path.join(QUANT_PATH, 'scale_full/49300/mp_rank_00_model_states.pt')
-
-            real_weight = torch.load(real_path)['module']
-            # print(real_weight.keys())
-            offset_weight = torch.load(offset_path)['module']
-            scale_weight = torch.load(scale_path)['module']
-            cut_col_keys = ["attention.dense", "4h_to_h"]
-            for key in offset_weight.keys():
-                if cut_col_keys[0] in key or cut_col_keys[1] in key:
-                    continue
-                offset_weight[key] = torch.chunk(offset_weight[key], self.rankSize, dim=0)[self.rank]
-                scale_weight[key] = torch.chunk(scale_weight[key], self.rankSize, dim=0)[self.rank]
-
-
             atb_weights = []
-            
-            for i in range(self.num_layers):
-                weights_keys = ['transformer.layers.{}.input_layernorm.weight'.format(i), 'transformer.layers.{}.input_layernorm.bias'.format(i),\
-                                'transformer.layers.{}.attention.query_key_value.weight'.format(i),\
-                                'transformer.layers.{}.attention.query_key_value.bias'.format(i), 'transformer.layers.{}.attention.dense.weight'.format(i),\
-                                'transformer.layers.{}.attention.dense.bias'.format(i),\
-                                'transformer.layers.{}.post_attention_layernorm.weight'.format(i), 'transformer.layers.{}.post_attention_layernorm.bias'.format(i),\
-                                'transformer.layers.{}.mlp.dense_4h_to_h.weight'.format(i), 'transformer.layers.{}.mlp.dense_4h_to_h.bias'.format(i),\
-                                'transformer.layers.{}.mlp.dense_h_to_4h.weight'.format(i),\
-                                'transformer.layers.{}.mlp.dense_h_to_4h.bias'.format(i)]
-
-                qkv_name = 'transformer.layers.{}.attention.query_key_value'.format(i)
-                attention_dense_name = 'transformer.layers.{}.attention.dense'.format(i)
-                down_name = 'transformer.layers.{}.mlp.dense_4h_to_h'.format(i)
-                up_name = 'transformer.layers.{}.mlp.dense_h_to_4h'.format(i)
-
-                tmp_weight = []
-
-                tmp_weight.append(real_weight[weights_keys[0]].npu())
-                tmp_weight.append(real_weight[weights_keys[1]].npu())
-
-                tmp_weight.append(real_weight[weights_keys[2]].transpose(0, 1).contiguous().to(torch.int8).npu())
-                tmp_weight.append(real_weight[weights_keys[3]].npu())
-                tmp_weight.append(real_weight[weights_keys[4]].transpose(0, 1).contiguous().to(torch.int8).npu())
-
-                tmp_weight.append(real_weight[weights_keys[5]].npu())
-                tmp_weight.append(real_weight[weights_keys[6]].npu())
-                tmp_weight.append(real_weight[weights_keys[7]].npu())
-
-                tmp_weight.append(real_weight[weights_keys[10]].transpose(0, 1).contiguous().to(torch.int8).npu())
-                tmp_weight.append(real_weight[weights_keys[11]].npu())
-                tmp_weight.append(real_weight[weights_keys[8]].transpose(0, 1).contiguous().to(torch.int8).npu())
-
-                tmp_weight.append(real_weight[weights_keys[9]].npu())
-                tmp_weight.append(scale_weight[qkv_name].reshape(1, -1).contiguous().to(torch.float16).npu())
-                tmp_weight.append(offset_weight[qkv_name].reshape(1, -1).contiguous().to(torch.float16).npu())
-                tmp_weight.append(scale_weight[attention_dense_name].reshape(1, -1).contiguous().to(torch.float16).npu())
-                tmp_weight.append(offset_weight[attention_dense_name].reshape(1, -1).contiguous().to(torch.float16).npu())
-                tmp_weight.append(scale_weight[up_name].reshape(1, -1).contiguous().to(torch.float16).npu())
-                tmp_weight.append(offset_weight[up_name].reshape(1, -1).contiguous().to(torch.float16).npu())
-                tmp_weight.append(scale_weight[down_name].reshape(1, -1).contiguous().to(torch.float16).npu())
-                tmp_weight.append(offset_weight[down_name].reshape(1, -1).contiguous().to(torch.float16).npu())
-
-                atb_weights.extend(tmp_weight)
+            for layer in self.layers:
+                atb_layer_weights = list(layer.state_dict().values())
+                atb_weights.extend(atb_layer_weights[0:8])
+                atb_weights.extend(atb_layer_weights[10:12])
+                atb_weights.extend(atb_layer_weights[8:10])
 
             atb_model_weights = list(self.state_dict().values())
             atb_weights.append(
@@ -639,6 +576,10 @@ class BaseTransformer(torch.nn.Module):
 
             self.cos_table, self.sin_table = self.rotary_emb(
                 hidden_states, seq_len=self.max_sequence_length + 1)
+
+            del atb_weights
+            gc.collect()
+            torch.npu.empty_cache()
 
         logits_atb = None
         output_per_layers = []
@@ -671,7 +612,6 @@ class BaseTransformer(torch.nn.Module):
             "tokenOffset": self.tokens_offset.tolist(),
             "seqLen": self.seq_lens.tolist()
         })
-
         atb_model_inputs = [
             hidden_states.transpose(0, 1),  # change to [bs,seq_len,...]
             position_ids,
@@ -685,7 +625,6 @@ class BaseTransformer(torch.nn.Module):
         ]
         atb_model_out = operation.execute(atb_model_inputs + self.layer_indexes, atb_param)
         logits_atb = atb_model_out[0]
-
         self.tokens_offset.add_(1)
 
         if query_length > 1:
@@ -699,13 +638,13 @@ class BaseTransformer(torch.nn.Module):
         # we can find a critical point where OOM occurs, when sequence length greater
         # than the point, we need to deallocate memory of intermediate variables. Of
         # course, there may be a little decrease in performance.
-        # if query_length > 1536:
-        del atb_model_inputs
-        del self.kv_cache
-        del self.k_cache_input
-        del self.v_cache_input
-        del self.tokens_offset
-        del self.attention_mask_max
-        # torch.npu.empty_cache()
+        if query_length > 1536:
+            del atb_model_inputs
+            del self.kv_cache
+            del self.k_cache_input
+            del self.v_cache_input
+            del self.tokens_offset
+            del self.attention_mask_max
+            torch.npu.empty_cache()
     
         return outputs
