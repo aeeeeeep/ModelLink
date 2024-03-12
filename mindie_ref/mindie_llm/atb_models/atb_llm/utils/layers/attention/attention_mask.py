@@ -15,7 +15,7 @@ class AttentionMask(nn.Module):
         bias_cache = torch.tril(torch.ones((max_seq_len, max_seq_len), dtype=torch.bool)).view(max_seq_len,
                                                                                                max_seq_len)
         bias_cache = ~bias_cache
-        if dtype == torch.float16
+        if dtype == torch.float16:
             mask_value = torch.finfo(torch.float32).min
         else:
             mask_value = 1
@@ -29,7 +29,7 @@ class AttentionMask(nn.Module):
             self._seq_len_cached = seqlen
             bias_cache = torch.tril(torch.ones((seqlen, seqlen), dtype=torch.bool)).view(seqlen, seqlen)
             bias_cache = ~bias_cache
-            if dtype == torch.float16
+            if dtype == torch.float16:
                 mask_value = torch.finfo(torch.float32).min
             else:
                 mask_value = 1
