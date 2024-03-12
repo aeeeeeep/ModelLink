@@ -52,12 +52,12 @@
   # 设置CANN包的环境变量
   source /usr/local/Ascend/ascend-toolkit/set_env.sh
   cd ${llm_path}
-  python examples/models/llama/convert_w8a16_quant_weight.py --fp16_model_path {浮点权重路径} --w8a16_model_path {W8A16量化权重路径}
+  python examples/models/llama/convert_w8a16_quant_weights.py --fp16_model_path {浮点权重路径} --w8a16_model_path {W8A16量化权重路径}
   ```
     - 注意：`fp16_model_path`和`w8a16_model_path`请勿使用同一个文件夹，避免浮点权重和量化权重混淆
   - 示例
     ```shell
-    python examples/models/llama/convert_w8a16_quant_weight.py --fp16_model_path /home/weights/llama2-70b --w8a16_model_path /home/weights/llama2-70b_w8a16
+    python examples/models/llama/convert_w8a16_quant_weights.py --fp16_model_path /home/weights/llama2-70b --w8a16_model_path /home/weights/llama2-70b_w8a16
     ```
   - 推荐使用transformers 4.36.2版本进行权重转换，transformers 4.36.2版本会大大加快权重生成的速度，但执行模型推理时transformers的版本仍需为4.30.2
     ```shell
