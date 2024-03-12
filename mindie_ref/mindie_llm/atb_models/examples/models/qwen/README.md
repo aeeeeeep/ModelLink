@@ -23,10 +23,23 @@
 | script_path | 脚本所在路径。QWen系列模型的工作脚本所在路径为`${llm_path}/examples/models/qwen`                                                                      |
 | weight_path | 模型权重路径                                                                                                                         |
 
-## 权重转换
+## 权重格式转换
 
 Paged Attention 场景需要.safetensors格式的权重，如果没有，参考[此README文件](../../README.md)转换
 注：huggingface官网给出的QWen模型权重为.safetensors格式
+
+## 量化权重导出
+量化权重可通过ModelSlim（昇腾压缩加速工具）实现。
+#### 环境准备
+环境配置可参考ModelSlim官网：https://www.hiascend.com/document/detail/zh/canncommercial/70RC1/devtools/auxiliarydevtool/modelslim_0002.html
+#### 导出量化权重
+通过`${llm_path}/examples/models/qwen/quant_qwen_14b_w8a8.py`和`${llm_path}/examples/models/qwen/quant_qwen_72b_w8a16.py`文件导出目标模型的量化权重：
+```shell
+python quant_qwen_14b_w8a8.py ${浮点权重路径} ${量化权重保存路径}
+```
+导出量化权重后应生成`quant_model_weight.safetensors`和`quant_model_description.json`两个文件。
+
+注：quant_qwen_14b_w8a8.py和quant_qwen_72b_w8a16.py文件中已配置好较优的量化策略，导出量化权重时可直接使用，也可修改为其它策略。
 
 ## 推理
 
