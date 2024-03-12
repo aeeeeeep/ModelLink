@@ -58,10 +58,8 @@ calibrator = Calibrator(model, quant_config, calib_data=dataset_calib, disable_l
 #执行量化
 calibrator.run() 
 
-print('*****************************')
 # 可选
 # inference(model, tokenizer)
-print('*****************************')
 
 # calibrator.save('/home/data/starcoder_quant_new', save_type=["numpy", "safe_tensor"]) # save()保存模型量化参数
 calibrator.save('/home/data/starcoder_quant_new', save_type=["safe_tensor"]) # save()保存模型量化参数
