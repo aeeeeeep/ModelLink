@@ -1,6 +1,5 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 import argparse
-import os.path
 
 from atb_llm.utils.convert import convert_files
 from atb_llm.utils.hub import weight_files
