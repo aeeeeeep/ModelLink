@@ -18,6 +18,8 @@
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
 #include "layers/operations/lmhead.h"
+#include "layers/operations/word_embedding.h"
+#include "layers/operations/positional_embedding.h"
 #include "models/qwen/layer/paged_attention_w8a8_layer.h"
 #include "models/qwen/model/paged_attention_w8a8_model.h"
 
@@ -31,13 +33,14 @@ const int WEIGHT_COUNT_POST_NORM = 1;
 const int WEIGHT_COUNT_LM_HEAD = 1;
 
 // Operation count
-const int OPERATION_COUNT_BEFORE_LAYER = 1;  // wte(wordEmbed)
+const int OPERATION_COUNT_BEFORE_LAYER = 2;  // wte(wordEmbed) + gather(cos/sin embedding)
 const int OPERATION_COUNT_AFTER_LAYER = 2;  // RmsNorm + LmHead
 
 enum InTensorId : int {
     IN_TENSOR_INPUTIDS = 0,
-    IN_TENSOR_COSEMBED,
-    IN_TENSOR_SINEMBED,
+    IN_TENSOR_POSITIONIDS,
+    IN_TENSOR_COSTABLE,
+    IN_TENSOR_SINTABLE,
     IN_TENSOR_ATTENTIONMASK,
     IN_TENSOR_BLOCK_TABLES,
     IN_TENSOR_SLOTS,
@@ -45,6 +48,13 @@ enum InTensorId : int {
     IN_TENSOR_LOGTIS_INDICES,
     IN_PLACEHOLDER,
     IN_TENSOR_MAX,
+};
+
+enum InternalTensorId : int {
+    INTERNAL_HIDDENSTATES = 0,
+    INTERNAL_COSEMBED,
+    INTERNAL_SINEMBED,
+    INTERNAL_TENSOR_MAX,
 };
 
 enum OutTensorId : int {
@@ -155,7 +165,7 @@ int64_t PAW8A8Model::BuildGraph()
     const int nodeSize = param_.numHiddenLayers + OPERATION_COUNT_BEFORE_LAYER + OPERATION_COUNT_AFTER_LAYER;
     graph_.nodes.resize(nodeSize);
 
-    const int internalTensorSize = graph_.nodes.size() - 1;
+    const int internalTensorSize = graph_.nodes.size();
     graph_.internalTensors.resize(internalTensorSize);
 
     ATB_LOG(INFO) << "weightTensors.size=" << graph_.weightTensors.size()
@@ -182,10 +192,25 @@ int64_t PAW8A8Model::BuildGraph()
         &graph_.weightTensors.at(0),                    // shape: [vocabSize + 1, hiddenSize]
         &graph_.inTensors.at(IN_TENSOR_INPUTIDS)
     };
-    wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(0)};
+    wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(INTERNAL_HIDDENSTATES)};
     ATB_LOG(INFO) << "[+] wordEmbeddingNode";
 
-    atb::Tensor *firstInTensor = &graph_.internalTensors.at(0);
+    // gather
+    auto &peGatherNode = graph_.nodes.at(nodeId++);
+    atb_speed::common::PositionalEmbeddingGather(&op);
+    peGatherNode.operation.reset(op);
+    peGatherNode.inTensors = {
+        &graph_.inTensors.at(IN_TENSOR_POSITIONIDS),
+        &graph_.inTensors.at(IN_TENSOR_COSTABLE),
+        &graph_.inTensors.at(IN_TENSOR_SINTABLE),
+    };
+    peGatherNode.outTensors = {
+        &graph_.internalTensors.at(INTERNAL_COSEMBED),
+        &graph_.internalTensors.at(INTERNAL_SINEMBED)
+    };
+    ATB_LOG(INFO) << "[+] peGatherNode";
+
+    atb::Tensor *firstInTensor = &graph_.internalTensors.at(INTERNAL_HIDDENSTATES);
 
     // layers
     for (int layerId = 0; layerId < param_.numHiddenLayers; ++layerId) {
@@ -214,8 +239,8 @@ int64_t PAW8A8Model::BuildGraph()
             layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(
                 layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId + WEIGHT_COUNT_WORD_EMBEDDINGNODE);
         }
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_COSEMBED);
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SINEMBED);
+        layerNode.inTensors.at(inTensorId++) = &graph_.internalTensors.at(INTERNAL_COSEMBED);
+        layerNode.inTensors.at(inTensorId++) = &graph_.internalTensors.at(INTERNAL_SINEMBED);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_ATTENTIONMASK);
         layerNode.inTensors.at(inTensorId++) = &graph_.kCacheTensors.at(layerId);
         layerNode.inTensors.at(inTensorId++) = &graph_.vCacheTensors.at(layerId);
@@ -224,7 +249,7 @@ int64_t PAW8A8Model::BuildGraph()
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_INPUT_LENGTHS);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_PLACEHOLDER);
 
-        layerNode.outTensors = {&graph_.internalTensors.at(1 + layerId)};
+        layerNode.outTensors = {&graph_.internalTensors.at(INTERNAL_TENSOR_MAX + layerId)};
         ATB_LOG(INFO) << "[+] layerNode_" << layerId;
         firstInTensor = layerNode.outTensors.at(0);
     }
