@@ -604,6 +604,7 @@ class ModelTest:
                     sum_total += sum
             if is_result:
                 total = ["total", correct_total / sum_total, correct_total, sum_total]
+                self.result_logger.debug(f"total result:{total}")
                 result_total.insert(0, total)
         if is_result:
             self.__save_result(result_total)
