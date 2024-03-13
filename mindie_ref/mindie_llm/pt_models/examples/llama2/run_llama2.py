@@ -50,7 +50,7 @@ def generate_model(model_config):
     if backend == "npu":
         torch.npu.set_device(device)
 
-    is_logging = (len(device_list) > 1 and (local_rank == 0 or local_rank == device_list[0])) or (len(device_list) == 1)
+    is_logging = (local_rank == 0 or local_rank == device_list[0])
     if is_logging:
         logging.info("Try to load pretrained model in path: %s", model_path)
 
