@@ -6,6 +6,7 @@ import os
 import time
 
 import torch
+import torch_npu
 from atb_llm.runner import ModelRunner
 from atb_llm.utils.cpu_binding import NpuHbmInfo
 from atb_llm.utils.env import ENV
