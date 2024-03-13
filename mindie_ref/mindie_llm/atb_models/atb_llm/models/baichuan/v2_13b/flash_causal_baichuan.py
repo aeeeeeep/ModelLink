@@ -320,6 +320,8 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
         mlp_module_names = MlpModuleNames(
             norm_name='post_attention_layernorm',
             pack_name='mlp.gate_up_proj',
+            gate_name='mlp.gate_proj',
+            up_name='mlp.up_proj',
             down_name='mlp.down_proj'
         )
         weight_wrapper = WeightWrapper(self.soc_info, self.tp_rank, attn_module_names, mlp_module_names)
