@@ -171,7 +171,8 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                 "supportSwiGLU": False if self.soc_info.need_nz else True,
                 "rank": self.tp_rank,
                 "worldSize": self.tp_world_size,
-                "backend": "hccl" if self.soc_info.need_nz else "lccl"
+                "backend": "hccl" if self.soc_info.need_nz or str(os.getenv("RANKTABLEFILE", "")) else "lccl",
+                "rankTableFile": os.getenv("RANKTABLEFILE", "")
             }
             encoder_param = {**coder_param, "isPrefill": True, "supportLcoc": False if self.soc_info.need_nz else True}
             decoder_param = {**coder_param, "isPrefill": False, "supportLcoc": False}

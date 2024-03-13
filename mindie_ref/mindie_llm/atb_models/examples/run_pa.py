@@ -183,7 +183,24 @@ class PARunner:
                 os.makedirs(profiling_path, exist_ok=True)
             torch.npu.synchronize()
             e2e_start = time.time()
-            with torch.npu.profile(profiling_path):
+            experimental_config = torch_npu.profiler._ExperimentalConfig(
+                aic_metrics=torch_npu.profiler.AiCMetrics.PipeUtilization,
+                profiler_level=torch_npu.profiler.ProfilerLevel.Level1,
+                l2_cache=False,
+                data_simplification=False
+            )
+            with torch_npu.profiler.profile(
+                activities=[
+                    torch_npu.profiler.ProfilerActivity.CPU,
+                    torch_npu.profiler.ProfilerActivity.NPU
+                ],
+                on_trace_ready=torch_npu.profiler.tensorboard_trace_handler(profiling_path),
+                record_shapes=True,
+                profile_memory=True,
+                with_stack=True,
+                with_flops=False,
+                with_modules=False,
+                experimental_config=experimental_config) as prof:
                 generate_req(req_list, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
                              max_output_length, self.cache_manager, self.rank, ignore_eos)
             torch.npu.synchronize()

@@ -29,7 +29,7 @@ class EnvVar:
     memory_fraction = float(os.getenv("CUDA_MEMORY_FRACTION", "1.0"))
 
     profiling_enable = os.getenv("ATB_PROFILING_ENABLE", "0") == "1"
-    profiling_filepath = os.getenv("PROFILING_FILEPATH", './profiling')
+    profiling_filepath = os.getenv("PROFILING_FILEPATH", os.path.join(os.getcwd(), "profiling"))
 
     benchmark_enable = os.getenv("ATB_LLM_BENCHMARK_ENABLE", "0") == "1"
     benchmark_filepath = os.getenv("ATB_LLM_BENCHMARK_FILEPATH", None)
