@@ -1,5 +1,6 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 import argparse
+import os.path
 
 from atb_llm.utils.convert import convert_files
 from atb_llm.utils.hub import weight_files
@@ -11,6 +12,7 @@ def parse_arguments():
                         help="model and tokenizer path",
                         default='/data/acltransformer_testdata/weights/llama2/llama-2-70b',
                         )
+    parser.add_argument('--from_pretrained', type=bool, default=True)
     return parser.parse_args()
 
 
@@ -24,7 +26,19 @@ def convert_bin2st(model_path):
     found_st_files = weight_files(model_path)
 
 
+def convert_bin2st_loaded_weight(model_path):
+    from transformers import AutoModelForCausalLM
+    model = AutoModelForCausalLM.from_pretrained(
+        pretrained_model_name_or_path=model_path,
+        low_cpu_mem_usage=True,
+        torch_dtype="auto")
+    model.save_pretrained(model_path, safe_serialization=True)
+
+
 if __name__ == '__main__':
     args = parse_arguments()
 
-    convert_bin2st(args.model_path)
+    if args.from_pretrained:
+        convert_bin2st_loaded_weight(args.model_path)
+    else:
+        convert_bin2st(args.model_path)
