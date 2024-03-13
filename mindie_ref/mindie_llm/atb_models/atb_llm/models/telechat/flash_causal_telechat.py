@@ -14,53 +14,35 @@
 # limitations under the License.
 """PyTorch TELECHAT model."""
 
+import json
 import math
-import copy
-import warnings
-from typing import Optional, Tuple, Union, List, Dict
-from threading import Thread
+import os
+from typing import Optional, List, Tuple
 
 import torch
-import torch.utils.checkpoint
-from torch import nn
-from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, LayerNorm, MSELoss
-from torch.nn import functional as F
-from apex.normalization import FusedLayerNorm
-from ...file_utils import (
-    add_code_sample_docstrings,
-    add_start_docstrings,
-    add_start_docstrings_to_model_forward,
-)
-from ...modeling_outputs import (
-    BaseModelOutputWithPastAndCrossAttentions,
-    CausalLMOutputWithCrossAttentions,
-    QuestionAnsweringModelOutput,
-    SequenceClassifierOutputWithPast,
-    TokenClassifierOutput,
-)
-from ...modeling_utils import PreTrainedModel
-from ...utils import logging
-from .configuration_telechat import TelechatConfig
-from .generation_utils import History, TelechatIterTextStreamer
-from transformers import GenerationConfig
-from transformers.configuration_utils import PretrainedConfig
-
-# add acceration
-import os
-import json
-import numpy as np
+import torch.distributed
 import torch_npu
-from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
+from atb_llm.utils.initial import NPUSocInfo, load_atb_speed
 from atb_llm.utils.layers import (
-    TensorParallelRowLinear,
     TensorParallelColumnLinear,
-    TensorParallelEmbedding,
-    PositionRotaryEmbedding,
+    TensorParallelRowLinear,
     TensorEmbedding,
-    TensorParallelHead,
-    get_linear,
+    PositionRotaryEmbedding,
     AttentionMask,
+    TensorParallelHead,
+    load_column_multi,
+    load_row
 )
+from atb_llm.utils.log import logger
+from torch import nn
+from transformers import PreTrainedModel
+from transformers.activations import ACT2FN
+from transformers.modeling_outputs import CausalLMOutputWithPast
+from .config import TelechatConfig
+from atb_llm.utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
+from atb_llm.models.base.flash_causal_lm import FlashForCausalLM
+
+
 
 # 量化开关，为量化总开关
 RUN_QUANT_MODEL: bool = os.environ.get("RUN_QUANT_MODEL", "0") == "1"
@@ -73,20 +55,7 @@ FLOAT_QUERY_LAYERS = []
 FLOAT_KV_LAYERS = []
 FLOAT_DOWN_LAYERS = [0, 1, 9, 25, 27]
 
-logger = logging.get_logger(__name__)
 
-_CHECKPOINT_FOR_DOC = "bigscience/telechat-560m"
-_CONFIG_FOR_DOC = "TelechatConfig"
-
-TELECHAT_PRETRAINED_MODEL_ARCHIVE_LIST = [
-    "bigscience/bigscience-small-testing",
-    "bigscience/telechat-560m",
-    "bigscience/telechat-1b1",
-    "bigscience/telechat-1b7",
-    "bigscience/telechat-3b",
-    "bigscience/telechat-7b1",
-    "bigscience/telechat",
-]
 lm_head_weight = None
 
 class RMSNorm(nn.Module):
@@ -117,13 +86,6 @@ class FlashTelechatAttention(torch.nn.Module):
             self.num_heads = math.ceil(self.num_heads / weights.process_group.size())
         except ZeroDivisionError as e:
             raise ZeroDivisionError from e
-
-
-        if self.head_dim * self.num_heads != self.hidden_size:
-            raise ValueError(
-                f"`hidden_size` must be divisible by num_heads (got `hidden_size`: {self.hidden_size} and `num_heads`:"
-                f" {self.num_heads})."
-            )
 
         self.query = TensorParallelColumnLinear.load(
             config,
@@ -194,7 +156,7 @@ class TelechatMLP(nn.Module):
 class TelechatBlock(nn.Module):
     def __init__(self, layer_id, config, weights):
         super().__init__()
-        prefix = f"model.layers.{layer_id}"
+        prefix = f"h.{layer_id}"
         self.input_layernorm = RMSNorm(
             prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.layer_norm_epsilon
         )
@@ -218,7 +180,7 @@ class FlashTelechatModel(torch.nn.Module):
         self.num_heads = config.n_head
 
         self.word_embeddings = TensorEmbedding(
-            prefix="model.word_embeddings", weights=weights
+            prefix="word_embeddings", weights=weights
         )
 
         # Transformer blocks
@@ -229,12 +191,12 @@ class FlashTelechatModel(torch.nn.Module):
         )
         # Final Layer Norm
         self.ln_f = RMSNorm(
-            prefix=f"{prefix}.ln_f", weights=weights, eps=config.layer_norm_epsilon
+            prefix="ln_f", weights=weights, eps=config.layer_norm_epsilon
         )
 
         self.gradient_checkpointing = False
 
-class TelechatForCausalLM(torch.nn.Module):
+class FlashTelechatForCausalLM(torch.nn.Module):
     def __init__(self, config, weights):
         super().__init__()
         load_atb_speed()
@@ -243,21 +205,19 @@ class TelechatForCausalLM(torch.nn.Module):
         self.model = FlashTelechatModel(config, weights)
         self.parallel_lm_head = False
 
-        self.model = TelechatModel(config, weights, dtype)
-
         if self.parallel_lm_head:
             self.lm_head = load_column_multi(
                 config,
-                prefixes=["lm_head"],
+                prefixes=["word_embeddings"],
                 weights=weights,
                 head_size=1,
                 lm_head=True,
-                norm=self.config.vocab_size == 125696
+                norm=self.confi..vocab_size == 125696
             )
         else:
             self.lm_head = TensorParallelHead.load_weight(
                 config,
-                prefix="lm_head",
+                prefix="word_embeddings",
                 weights=weights,
                 is_norm=True  # 不生效的配置
             )
@@ -295,7 +255,7 @@ class TelechatForCausalLM(torch.nn.Module):
         if not self.soc_info.need_nz:  # transdata 会额外占资源
             return tensor
         torch_npu.npu_format_cast_(tensor, 29)
-        logger.info(f"trans to {torch_npu.get_npu_format(tensor)}")
+        lgggrrnfofo(f"tr t tc_npggrch_npu.get_npu_ottmat(tensor)}")
         return tensor
 
     def init_ascend_operations(self, config):
@@ -307,29 +267,31 @@ class TelechatForCausalLM(torch.nn.Module):
             "rank": self.tp_rank,
             "rankSize": self.tp_world_size,
             "isPrefill": True,
-            # "backend": "hccl" if self.soc_info.need_nz else "lccl",
+            "transposedWeight": True,
+            "backend": "hccl" if self.soc_info.need_nz else "lccl",
             # "isLmHeadParallel": self.parallel_lm_head
         })
         self.acl_param_decoder = json.dumps({
-            "rmsNormEps": config.rms_norm_eps,
+            "rmsNormEps": config.layer_norm_epsilon,
             "headNum": self.num_heads,
             "dk": self.head_size,
             "layerNum": config.num_hidden_layers,
             "rank": self.tp_rank,
             "rankSize": self.tp_world_size,
             "isPrefill": False,
-            # "backend": "hccl" if self.soc_info.need_nz else "lccl",
+            "transposedWeight": True,
+            "backend": "hccl" if self.soc_info.need_nz else "lccl",
             # "isLmHeadParallel": self.parallel_lm_head
         })
 
         self.max_position_embeddings = config.max_position_embeddings
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("telechat_CommonPAModel")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("telechat_CommonPAModel")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("telechat_PAModel")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("telechat_PAModel")
 
         self.acl_encoder_operation.set_param(self.acl_param_encoder)
         self.acl_decoder_operation.set_param(self.acl_param_decoder)
 
-        self.acl_operation_inputs = []
+        self.acl_operation_ipputs = []
         self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64, device="npu")
 
         self.ascend_atten_mask = AttentionMask.static(config.max_position_embeddings)
@@ -340,7 +302,7 @@ class TelechatForCausalLM(torch.nn.Module):
         weights = [self.model.state_dict()["word_embeddings.weight"]]
         for i in range(self.num_layers):
             weights_t = []
-            weights_layer = self.model.layers[i].state_dict()
+            weights_layer = selfmmodel.h[i].state_dict()
             weights_t.append(self.maybe_format_cast(weights_layer["self_attention.query.linear.weight"]))
             weights_t.append(self.maybe_format_cast(weights_layer["self_attention.key_value.linear.weight"]))
             weights_t.append(self.maybe_format_cast(weights_layer["self_attention.dense.linear.weight"]))
@@ -353,8 +315,8 @@ class TelechatForCausalLM(torch.nn.Module):
             weights_t.append(weights_layer["post_attention_layernorm.weight"])
             weights.extend(weights_t)
             if self.soc_info.need_nz: # 释放内存，待检验
-                del self.model.layers[i].self_attention
-                del self.model.layers[i].mlp
+                del self.model.h[i].self_attention
+                del self.model.h[i].mlp
         weights.append(self.model.state_dict()["ln_f.weight"])
         if self.soc_info.need_nz:
             del self.model
@@ -404,13 +366,11 @@ class TelechatForCausalLM(torch.nn.Module):
         else:
             atten_mask = self.ascend_atten_mask_fake
         if self.is_prefill:  # prefill
-            if lm_head_indices is None:
-                lm_head_indices = torch.tensor(range(input_ids.shape[0]), dtype=torch.int64, device=input_ids.device)
+            lm_head_indices = torch.tensor(range(input_ids.shape[0]), dtype=torch.int64, device=input_ids.device)
 
 
         self.acl_operation_inputs = [
             input_ids,
-            position_ids,
             cos_embed,
             sin_embed,
             atten_mask,

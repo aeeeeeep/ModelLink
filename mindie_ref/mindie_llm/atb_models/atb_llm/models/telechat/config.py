@@ -47,6 +47,7 @@ class TelechatConfig(PretrainedConfig):
             attention_dropout=0.0,
             ffn_hidden_size=12288,
             training_seqlen=8192,
+            intermediate_size=1,
             logn=True,
             embed_layernorm=False,
             **kwargs,
@@ -70,5 +71,6 @@ class TelechatConfig(PretrainedConfig):
         self.embed_layernorm = embed_layernorm
         self.hidden_act = hidden_act
         self.max_position_embeddings = max_position_embeddings
+        self.intermediate_size = intermediate_size
 
         super().__init__(bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
