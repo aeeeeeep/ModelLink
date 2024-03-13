@@ -379,7 +379,7 @@ def evaluate_functional_correctness(
             sample["passed"] = result[1]["passed"]
             yield sample
 
-    out_file = sample_file.split('.')[0] + "_results.jsonl"
+    out_file = sample_file.split('.jsonl')[0] + "_results.jsonl"
     print(f"Writing results to {out_file}.")
     write_jsonl(out_file, tqdm.tqdm(combine_results(), total=n_samples))
     with open(out_file, "ab") as fp:

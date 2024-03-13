@@ -46,7 +46,7 @@ class Chatglm26BModelTest(model_test.ModelTest):
             return tokenizer, model
 
     def get_dataset_list(self):
-        return ["GSM8K", "MMLU", "CEval"]
+        return ["BoolQ", "CEval"]
 
 
 def main():

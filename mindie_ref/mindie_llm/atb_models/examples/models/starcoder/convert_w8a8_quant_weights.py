@@ -51,7 +51,7 @@ for i in disabled_layers:
     disabled_names.append(f"transformer.h.{i}.mlp.c_proj")
 # 配置量化参数，并返回量化配置实例
 quant_config = QuantConfig(disable_names=disabled_names, w_bit=8, dev_type='cpu', 
-                            act_method=3, pr=0.5, mm_tensor=False, w_hessian=False)
+                            act_method=3, pr=0.5, mm_tensor=False)
 # 输入加载的原模型、量化配置和校准数据，定义校准
 calibrator = Calibrator(model, quant_config, calib_data=dataset_calib, disable_level='L0')
 

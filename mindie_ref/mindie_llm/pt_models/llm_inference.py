@@ -22,51 +22,41 @@ import torch_npu
 from common.utils import init_resource
 import examples
 
+_TO_TORCH_TENSOR = {
+    "fp16": torch.float16,
+    "fp32": torch.float32,
+    "bf16": torch.bfloat16
+}
+
+
+def update_model_config(config):
+    config["local_rank"] = int(os.getenv("LOCAL_RANK", "0"))
+    config["world_size"] = int(os.getenv("WORLD_SIZE", "1"))
+    config["device_list"] = list(map(lambda x: int(x), config["device_list"].split(",")))
+
+
 if __name__ == "__main__":
     with open("config/llm_inference.json", "r") as cf:
         model_config = json.load(cf)
 
-    local_rank = int(os.getenv("LOCAL_RANK", "0"))
-    world_size = int(os.getenv("WORLD_SIZE", "1"))
-    model_config["local_rank"] = local_rank
-    model_config["world_size"] = world_size
-    model_name = model_config["model"]
+    update_model_config(model_config)
 
-    #modify configurations
-    device_list = list(map(lambda x: int(x), model_config["device_list"].split(",")))
-    model_config["device_list"] = device_list
     if model_config["model_path"] == "":
         logging.error("model_path can not be empty")
         exit(1)
 
     init_resource(model_config)
 
-    is_logging = (len(device_list) > 1 and (local_rank == 0 or local_rank == device_list[0])) or (len(device_list) == 1)
+    device_list = model_config["device_list"]
+    local_rank = model_config["local_rank"]
+    is_logging = (local_rank == 0 or local_rank == device_list[0])
     if is_logging:
         logging.info("Model execution configuration is: \n%s", json.dumps(model_config, indent=4))
 
-    if model_config["dtype"] == "fp16":
-        model_config["dtype"] = torch.float16
-    elif model_config["dtype"] == "fp32":
-        model_config["dtype"] = torch.float32
-    elif model_config["dtype"] == "bf16":
-        model_config["dtype"] = torch.bfloat16
-    else:
-        model_config["dtype"] = torch.float16
+    model_config["dtype"] = _TO_TORCH_TENSOR[model_config["dtype"]]
 
-    run_model = getattr(examples, "run_%s" % model_name)
-    try:
-        result = run_model(model_config)
-    except Exception as e:
-        if is_logging:
-            logging.error("model run failed, %s", e)
-        result = 1
+    run_model = getattr(examples, "run_%s" % model_config["model"])
+    result = run_model(model_config)
 
-    if result == 0:
-        if is_logging:
-            logging.info("model run success")
-        exit(0)
-    else:
-        if is_logging:
-            logging.error("model run failed")
-        exit(1)
+    if (result == 0) and is_logging:
+        logging.info("model run success")
