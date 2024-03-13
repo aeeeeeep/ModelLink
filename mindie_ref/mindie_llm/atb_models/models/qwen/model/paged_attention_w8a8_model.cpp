@@ -18,6 +18,7 @@
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
 #include "layers/operations/lmhead.h"
+#include "layers/operations/word_embedding.h"
 #include "models/qwen/layer/paged_attention_w8a8_layer.h"
 #include "models/qwen/model/paged_attention_w8a8_model.h"
 
