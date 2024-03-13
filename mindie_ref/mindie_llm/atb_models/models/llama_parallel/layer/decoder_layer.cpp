@@ -81,8 +81,6 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     fusionAttentionParam.pageAttentionParam.headNum = param.numAttentionHeadsPerRank;
     fusionAttentionParam.pageAttentionParam.kvHeadNum = param.numKeyValueHeadsPerRank;
     fusionAttentionParam.pageAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
-    fusionAttentionParam.pageAttentionParam.maskType = param.isBF16 ? \
-        atb::infer::PagedAttentionParam::MaskType::MASK_TYPE_ALIBI : atb::infer::PagedAttentionParam::MaskType::UNDEFINED;
     fusionAttentionParam.selfOutLinearTensorParallelInfo = {param.rank, param.worldSize, param.backend};
     Attention(fusionAttentionParam, &attentionNode.operation);
     attentionNode.inTensorIds = {
