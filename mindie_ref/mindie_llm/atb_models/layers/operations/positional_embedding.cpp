@@ -61,13 +61,17 @@ atb::Status PositionalEmbeddingGather(atb::Operation **operation)
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(1);
-        outTensorDescs.at(0).shape.dimNum = 2;
+        if (inTensorDescs.at(1).shape.dimNum >= 3) {
+            outTensorDescs.at(0).shape.dimNum = 3;
+        } else {
+            outTensorDescs.at(0).shape.dimNum = 2;
+        }
         outTensorDescs.at(0).shape.dims[0] = 1;
         // unpadInputs=True场景下，for loop只循环一次；unpadInputs=False场景下，for loop循环两次，将bsz和seqLen合轴
         for (uint64_t i = 0; i < inTensorDescs.at(0).shape.dimNum; i++) {
             outTensorDescs.at(0).shape.dims[0] = outTensorDescs.at(0).shape.dims[0] * inTensorDescs.at(0).shape.dims[i];
         }
-
+        
         outTensorDescs.at(1) = outTensorDescs.at(0);
         return atb::NO_ERROR;
     };

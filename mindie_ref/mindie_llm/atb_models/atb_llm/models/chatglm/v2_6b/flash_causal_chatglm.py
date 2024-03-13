@@ -423,7 +423,7 @@ class FlashChatglmModel(torch.nn.Module):
 
         self.head_size = self.layers[0].self_attention.head_size
         self.num_heads = self.layers[0].self_attention.num_heads
-
+        self.device = weights.device
         # for ascend init
         self.init_ascend_operations(config)
         self.ascend_weight = []
@@ -453,10 +453,12 @@ class FlashChatglmModel(torch.nn.Module):
 
         self.acl_encoder_operation_inputs = [None] * 12
         self.acl_decoder_operation_inputs = [None] * 12
-        self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64)
-        # self.lm_head_weight = None
+        self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64, device="npu")
 
         self.attn_mask = AttentionMask.static(config.seq_length)
+        self.attn_mask_fake = self.attn_mask \
+            .get_attn_mask(1, dtype=self.dtype, device="cpu") \
+            .to(self.device)
 
     def weight_format_cast(self, weight):
         if not self.soc_info.need_nz:
@@ -554,9 +556,8 @@ class FlashChatglmModel(torch.nn.Module):
                                   max_seq_len: int,
                                   lm_head_indices: Optional[torch.Tensor] = None
     ):
-        cos_embed, sin_embed = self.cos_embed[position_ids.long()], self.sin_embed[position_ids.long()]
 
-        if is_prefill is not None:  # prefill
+        if is_prefill:  # prefill
             if lm_head_indices is None:
                 lm_head_indices = torch.tensor(range(input_ids.shape[0]), dtype=torch.int64, device=input_ids.device)
             
@@ -575,8 +576,8 @@ class FlashChatglmModel(torch.nn.Module):
             })
             self.acl_encoder_operation_inputs[0] = input_ids
             self.acl_encoder_operation_inputs[1] = position_ids.to(torch.int64)
-            self.acl_encoder_operation_inputs[2] = cos_embed
-            self.acl_encoder_operation_inputs[3] = sin_embed
+            self.acl_encoder_operation_inputs[2] = self.cos_embed
+            self.acl_encoder_operation_inputs[3] = self.sin_embed
             self.acl_encoder_operation_inputs[4] = atten_mask
             self.acl_encoder_operation_inputs[5] = block_tables.to(torch.int32)
             self.acl_encoder_operation_inputs[6] = slots.to(torch.int32)
@@ -588,19 +589,21 @@ class FlashChatglmModel(torch.nn.Module):
 
             return self.acl_encoder_operation_inputs, self.acl_param_encoder
         else:
-            atten_mask = torch.tensor([1], device=input_ids.device, dtype=kv_cache[0][0].dtype)
+            self.acl_param_decoder = json.dumps({
+                "seqLen" : input_lengths.tolist()
+            })
             self.acl_decoder_operation_inputs[0] = input_ids
             self.acl_decoder_operation_inputs[1] = position_ids.to(torch.int64)
-            self.acl_decoder_operation_inputs[2] = cos_embed
-            self.acl_decoder_operation_inputs[3] = sin_embed
-            self.acl_decoder_operation_inputs[4] = atten_mask
+            self.acl_decoder_operation_inputs[2] = self.cos_embed
+            self.acl_decoder_operation_inputs[3] = self.sin_embed
+            self.acl_decoder_operation_inputs[4] = self.attn_mask_fake
             self.acl_decoder_operation_inputs[5] = block_tables.to(torch.int32)
             self.acl_decoder_operation_inputs[6] = slots.to(torch.int32)
             self.acl_decoder_operation_inputs[7] = self.placeholder
             self.acl_decoder_operation_inputs[8] = self.placeholder
             self.acl_decoder_operation_inputs[9] = self.placeholder
             self.acl_decoder_operation_inputs[10] = input_lengths.to(torch.int32)
-            self.acl_decoder_operation_inputs[11] = lm_head_indices.to(torch.int64)
+            self.acl_decoder_operation_inputs[11] = self.lm_head_indices_fake
 
             return self.acl_decoder_operation_inputs, self.acl_param_decoder
 
