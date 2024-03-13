@@ -25,7 +25,7 @@ def convert_bin2st(model_path):
     found_st_files = weight_files(model_path)
 
 
-def convert_bin2st_loaded_weight(model_path):
+def convert_bin2st_from_pretrained(model_path):
     from transformers import AutoModelForCausalLM
     model = AutoModelForCausalLM.from_pretrained(
         pretrained_model_name_or_path=model_path,
@@ -38,6 +38,6 @@ if __name__ == '__main__':
     args = parse_arguments()
 
     if args.from_pretrained:
-        convert_bin2st_loaded_weight(args.model_path)
+        convert_bin2st_from_pretrained(args.model_path)
     else:
         convert_bin2st(args.model_path)
