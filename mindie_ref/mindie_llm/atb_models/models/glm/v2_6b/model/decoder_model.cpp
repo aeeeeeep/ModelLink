@@ -33,7 +33,7 @@ const int WEIGHT_COUNT_POST_NORM = 1;
 const int WEIGHT_COUNT_LM_HEAD = 1;
 
 // Operation count
-const int OPERATION_COUNT_BEFORE_LAYER = 1;
+const int OPERATION_COUNT_BEFORE_LAYER = 2;
 const int OPERATION_COUNT_AFTER_LAYER = 2;  // RmsNorm + LmHead
 
 void DecoderModel::Param::FromString(const std::string &param)
@@ -136,7 +136,6 @@ int64_t DecoderModel::BuildGraph()
     int IN_TENSOR_INPUT_IDS = inTensorIdx++;
     // idx: 1, shape: FA: [batchSize, seqLen] PA: [seqLen]
     int IN_TENSOR_POSITION_IDS = inTensorIdx++;
-    (void)IN_TENSOR_POSITION_IDS;
 
     // idx: 2, shape: FA: [maxPositionEmbeddings, hiddenSizePerAttentionHead]
     // PA: [maxInputLength, hiddenSizePerAttentionHead]
@@ -166,6 +165,10 @@ int64_t DecoderModel::BuildGraph()
     int internelTensorIdx = 0;
     // idx: 0, shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
     int INTERNEL_TENSOR_HIDDEN_STATES = internelTensorIdx++;
+    // idx: 1, shape: [batchSize * seqLen, hiddenSizePerAttentionHead]
+    int INTERNEL_TENSOR_COS_EMB = internelTensorIdx++;
+    // idx: 2, shape: [batchSize * seqLen, hiddenSizePerAttentionHead]
+    int INTERNEL_TENSOR_SIN_EMB = internelTensorIdx++;
     // idx: [3, 3 + numHiddenLayers), shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
     int INTERNEL_TENSOR_LAYER_OUT_BASE = internelTensorIdx++;
     internelTensorIdx = internelTensorIdx + param_.numHiddenLayers - 1;
@@ -209,6 +212,19 @@ int64_t DecoderModel::BuildGraph()
 
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)};
 
+    auto &peGatherNode = graph_.nodes.at(nodeId++);
+    atb_speed::common::PositionalEmbeddingGather(&op);
+    peGatherNode.operation.reset(op);
+    peGatherNode.inTensors = {
+        &graph_.inTensors.at(IN_TENSOR_POSITION_IDS),
+        &graph_.inTensors.at(IN_TENSOR_COS_TABLE),
+        &graph_.inTensors.at(IN_TENSOR_SIN_TABLE),
+    };
+    peGatherNode.outTensors = {
+        &graph_.internalTensors.at(INTERNEL_TENSOR_COS_EMB),
+        &graph_.internalTensors.at(INTERNEL_TENSOR_SIN_EMB)
+    };
+    
     atb::Tensor *firstInTensor = &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES);
 
     for (int layerId = 0; layerId < param_.numHiddenLayers; ++layerId) {
@@ -245,8 +261,8 @@ int64_t DecoderModel::BuildGraph()
                 layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId + WEIGHT_COUNT_WORD_EMBEDDINGNODE);
         }
 
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_COS_TABLE);
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SIN_TABLE);
+        layerNode.inTensors.at(inTensorId++) = &graph_.internalTensors.at(INTERNEL_TENSOR_COS_EMB);
+        layerNode.inTensors.at(inTensorId++) = &graph_.internalTensors.at(INTERNEL_TENSOR_SIN_EMB);
 
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_ATTENTION_MASK);
         layerNode.inTensors.at(inTensorId++) = &graph_.kCacheTensors.at(layerId);
