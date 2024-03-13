@@ -40,6 +40,10 @@
 
 **运行Paged Attention BF16**
 - 运行启动脚本
+  - 将`${llm_path}`加入`PYTHONPATH`搜索目录
+    ```shell
+    export PYTHONPATH=${llm_path}:${PYTHONPATH}
+    ```
   - 在\${llm_path}目录下执行以下指令
     ```shell
     bash ${script_path}/run_pa.sh ${weight_path}
