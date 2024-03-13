@@ -29,7 +29,7 @@ def get_calib_dataset(tokenizer, calib_list, device="cpu"):  # device="npu:0" å¦
     return calib_dataset
 
 
-disable_names=['transformer.encoder.layers.0.self_attention.query_key_value',
+disable_names = ['transformer.encoder.layers.0.self_attention.query_key_value',
 'transformer.encoder.layers.0.mlp.dense_4h_to_h',
 'transformer.encoder.layers.1.self_attention.query_key_value',
 'transformer.encoder.layers.1.mlp.dense_h_to_4h',
@@ -60,6 +60,7 @@ quant_config = QuantConfig(
     w_sym=True, 
     mm_tensor=False
 )
+
 
 def main():
     args = parse_args()

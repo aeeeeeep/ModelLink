@@ -6,6 +6,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from modelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
 from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Creating quant weights for ChatGLM2-6B")
     parser.add_argument("--model_path", type=str, required=True, help="The path to model float weights")
@@ -52,7 +53,7 @@ calib_set = [
 ]
 
 
-disable_names=['transformer.encoder.layers.15.self_attention.query_key_value',
+disable_names = ['transformer.encoder.layers.15.self_attention.query_key_value',
 'transformer.encoder.layers.10.self_attention.query_key_value',
 'transformer.encoder.layers.13.self_attention.query_key_value',
 'transformer.encoder.layers.19.self_attention.query_key_value',
