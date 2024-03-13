@@ -17,6 +17,7 @@
 #define BLOOM7B_COMMON_MODEL_H
 
 #include "atb_speed/base/model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace bloom_7b {
@@ -29,7 +30,8 @@ public:
         int layerNum = 0;
         int activationFuncType = 1;
         float invNormFactorvarAttr = 0;
-        std::string backend = "hccl";
+        std::string backend = "lccl";
+        int quantMode = -1;   // 0:not quant, 1:w8a8, 2:w8a16
         float residualAddScale = 0;
 
         // for quant layers
@@ -72,6 +74,9 @@ private:
     std::vector<int32_t> tokenOffset_;
     std::vector<int32_t> seqLen_;
 };
+
+REGISTER_MODEL(bloom_7b, FlashAttentionModel);
+
 } // namespace bloom_7b
 } // namespace atb_speed
 #endif

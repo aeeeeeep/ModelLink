@@ -34,6 +34,7 @@ public:
 
         int rank = 0;
         int rankSize = 1;
+        std::string backend = "hccl";
 
         void FromString(const std::string &param);
     };
@@ -61,6 +62,7 @@ private:
     atb::SVector<int32_t> tokenOffset_;
     atb::SVector<int32_t> seqLen_;
 };
+
 } // namespace gptneox_20b
 } // namespace atb_speed
 #endif

@@ -17,7 +17,10 @@
 #define ATB_SPEED_MODELS_GPTNEOX_20B_PA_LAYER_H
 
 #include <atb/atb_infer.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 
 #include "atb_speed/log.h"
 
@@ -30,7 +33,7 @@ struct PALayerParam {
     float rotaryPct = 0.0;
     float qScale = 1.0;
     float qkScale = 1.0;
-    bool transposedWeight = false;
+    bool transposedWeight = true;
     std::string model = "gptneox_20b";
     bool isPrefill = false;
     int rank = 0;

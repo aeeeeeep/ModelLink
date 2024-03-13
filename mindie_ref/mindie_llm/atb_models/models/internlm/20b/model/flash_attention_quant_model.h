@@ -70,6 +70,7 @@ private:
 
     std::vector<int32_t> seqLen_;
 };
+
 } // namespace internlm_20b
 } // namespace atb_speed
 #endif

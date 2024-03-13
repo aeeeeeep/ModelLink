@@ -74,6 +74,7 @@ private:
 
     Param param_;
 };
+
 } // namespace llama_adapter
 } // namespace atb_speed
 #endif

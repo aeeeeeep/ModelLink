@@ -81,8 +81,15 @@ atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operati
 
     auto &matmulUpNode = opGraph.nodes.at(nodeId++);
 
-    atb_speed::common::ParallelParamV2 linearUpParam = {param.isBias, false, param.transposeB, param.isQuant,
-                                                        param.isSparse};
+    atb_speed::common::ParallelParamV2 linearUpParam;
+    linearUpParam.isBias = param.isBias;
+    linearUpParam.transposeA = false;
+    linearUpParam.transposeB = param.transposeB;
+    linearUpParam.isQuant = param.isQuant;
+    linearUpParam.isSparse = param.isSparse;
+    linearUpParam.isAllGatherTranspose = false;
+    linearUpParam.isBF16 = param.isBF16;
+
     linearUpParam.quantParam = param.quantUpParam;
     atb_speed::common::RowParallelLinearV2(linearUpParam, &matmulUpNode.operation);
     matmulUpNode.inTensorIds = {IN_HIDDENSTATES_ID, IN_WEIGHT_UP_ID, IN_BIAS_UP_ID,     IN_DEQSCALE_UP,
@@ -99,8 +106,15 @@ atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operati
             splitNode.outTensorIds = {INTERMEDIATE_MATMUL_OUT_ID, INTERMEDIATE_SPLIT_OUT_ID};
         } else {
             auto &matmulGateNode = opGraph.nodes.at(nodeId++);
-            atb_speed::common::ParallelParamV2 linearGateParam = {param.isBias, false, param.transposeB, param.isQuant,
-                                                                  param.isSparse};
+            atb_speed::common::ParallelParamV2 linearGateParam;
+            linearGateParam.isBias = param.isBias;
+            linearGateParam.transposeA = false;
+            linearGateParam.transposeB = param.transposeB;
+            linearGateParam.isQuant = param.isQuant;
+            linearGateParam.isSparse = param.isSparse;
+            linearGateParam.isAllGatherTranspose = false;
+            linearGateParam.isBF16 = param.isBF16;
+            
             linearGateParam.quantParam = param.quantGateParam;
             atb_speed::common::RowParallelLinearV2(linearGateParam, &matmulGateNode.operation);
             matmulGateNode.inTensorIds = {IN_HIDDENSTATES_ID, IN_WEIGHT_GATE_ID, IN_BIAS_GATE_ID,     IN_DEQSCALE_GATE,
@@ -130,8 +144,17 @@ atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operati
     }
 
     auto &matmulDownNode = opGraph.nodes.at(nodeId++);
-    atb_speed::common::ParallelParamV2 linearDownParam = {param.isBias, false, param.transposeB, param.isQuant,
-                                                          param.isSparse};
+    // atb_speed::common::ParallelParamV2 linearDownParam = {param.isBias, false, param.transposeB, param.isQuant,
+    //                                                       param.isSparse, false, param.isBF16};
+    atb_speed::common::ParallelParamV2 linearDownParam;
+    linearDownParam.isBias = param.isBias;
+    linearDownParam.transposeA = false;
+    linearDownParam.transposeB = param.transposeB;
+    linearDownParam.isQuant = param.isQuant;
+    linearDownParam.isSparse = param.isSparse;
+    linearDownParam.isAllGatherTranspose = false;
+    linearDownParam.isBF16 = param.isBF16;
+
     linearDownParam.commParam = param.commDownParam;
     linearDownParam.quantParam = param.quantDownParam;
     linearDownParam.quantParam.isQuantOp = true;
@@ -148,7 +171,9 @@ atb::Status MlpGateLayerV2(const MlpGateParamV2 &param, atb::Operation **operati
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(0);
-        outTensorDescs.at(0).dtype = ACL_FLOAT16;
+        if (inTensorDescs.at(0).dtype == ACL_INT8) {
+            outTensorDescs.at(0).dtype = ACL_FLOAT16;
+        }
         return atb::NO_ERROR;
     };
 

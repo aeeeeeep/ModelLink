@@ -16,7 +16,10 @@
 #ifndef ATB_SPEED_MODELS_BAICHUAN2_13B_PA_LAYER_H
 #define ATB_SPEED_MODELS_BAICHUAN2_13B_PA_LAYER_H
 #include <atb/atb_infer.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 
 #include "atb_speed/base/hosttensor_binder.h"
 #include "atb_speed/log.h"
@@ -31,44 +34,14 @@ struct PALayerParam {
     int rank = 0;
     int rankSize = 1;
     bool isPrefill = false;
-    bool transposedWeight = false;
+    bool transposedWeight = true;
     std::string backend = "hccl";
     std::string model = "baichuan2_13b";
 };
 
-static void from_json(const nlohmann::json &paramJson, PALayerParam &param)
-{
-    paramJson.at("rmsNormEps").get_to(param.rmsNormEps);
-    paramJson.at("headNum").get_to(param.headNum);
-    paramJson.at("dk").get_to(param.dk);
-    if (paramJson.contains("rank")) {
-        paramJson.at("rank").get_to(param.rank);
-    }
-    if (paramJson.contains("rankSize")) {
-        paramJson.at("rankSize").get_to(param.rankSize);
-    }
-    if (paramJson.contains("transposedWeight")) {
-        paramJson.at("transposedWeight").get_to(param.transposedWeight);
-    }
-    if (paramJson.contains("isPrefill")) {
-        paramJson.at("isPrefill").get_to(param.isPrefill);
-    }
-    if (paramJson.contains("backend")) {
-        paramJson.at("backend").get_to(param.backend);
-    }
-}
-
 atb::Status PALayer(const PALayerParam &param, atb::Operation **operation);
 
 void reshapeHeads(const atb::Dims &oldShape, atb::Dims &newShape, int headNum);
-
-static atb::Operation *CreatePALayer(const nlohmann::json &paramJson)
-{
-    ATB_LOG(INFO) << GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
-    atb::Operation *op;
-    PALayer(paramJson.get<PALayerParam>(), &op);
-    return op;
-}
 
 class FlashAttentionHostBinder : public HostTensorBinder {
 public:

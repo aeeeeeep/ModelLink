@@ -19,7 +19,10 @@
 
 #include <atb/atb_infer.h>
 #include "atb_speed/log.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 
 #include "common_base.h"
 
@@ -115,7 +118,7 @@ struct MlpGateParam {
     int rankRoot = 0;
     void *hcclComm = nullptr;
     atb::infer::ActivationType activationType;
-    bool transposeB = false;
+    bool transposeB = true;
     bool isBias = false;
     bool isPack = false;
     std::string backend = "hccl";

@@ -15,9 +15,10 @@
  */
 
 #ifndef ASCEND_SPEED_INFERENCE_COMMON_LINEAR_PARALLEL_H
-#define ASCEND_SPEED_INFERENCE_COMMON_LINEAR_PARALLE_H
+#define ASCEND_SPEED_INFERENCE_COMMON_LINEAR_PARALLEL_H
 
 #include <atb/atb_infer.h>
+#include "layers/operations/linear.h"
 
 namespace atb_speed {
 namespace common {
@@ -28,13 +29,19 @@ enum LinearParallelType : uint32_t {
     COLUMN_PARALLEL,  // all gather
 };
 
+struct TensorParallelInfo {
+    int rank = 0;
+    int worldSize = 1;
+    std::string backend = "hccl";
+};
+
 struct LinearParallelParam {
     atb_speed::common::FusionLinearParam fusionLinearParam;
     int parallelType = UNDEFINED;
-    int rank = 0;
-    int worldSize = 1;
-    int rankRoot = 0;
-    std::string backend = "hccl";
+    bool biasAfterSync = false;
+    bool unpadInputs = false;  // all reduce时不会使用到此参数
+    bool supportLcoc = false;
+    TensorParallelInfo tensorParallelInfo;
 };
 
 atb::Status LinearParallel(const LinearParallelParam &param, atb::Operation **operation);

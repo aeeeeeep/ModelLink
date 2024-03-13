@@ -97,7 +97,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
     inputLayerNormNode.inTensorIds = {IN_HIDDENSTATES, IN_LN_1_WEIGTH, IN_LN_1_BIAS};
     inputLayerNormNode.outTensorIds = {INTERMIDATE_INPUTNORMOUT};
 
-    atb::infer::LinearParam linearBiasParam = { false, false, true };
+    atb::infer::LinearParam linearBiasParam;
     CreateOperation(linearBiasParam, &cAttnLinearNode.operation);
     cAttnLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_C_ATTN_WEIGHT, IN_C_ATTN_BIAS };
     cAttnLinearNode.outTensorIds = { INTERMIDATE_QKV };
@@ -124,14 +124,13 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
     splitKVNode.outTensorIds = {INTERNAL_K, INTERNAL_V};
 
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / sqrt(param.dk);
     selfAttentionParam.kvHeadNum = param.kvHead;
     if (param.isEncoder) {
-        selfAttentionParam.coderType = atb::infer::SelfAttentionParam::ENCODER;
+        selfAttentionParam.calcType = atb::infer::SelfAttentionParam::ENCODER;
     } else {
-        selfAttentionParam.coderType = atb::infer::SelfAttentionParam::DECODER;
+        selfAttentionParam.calcType = atb::infer::SelfAttentionParam::DECODER;
     }
     CreateOperation(selfAttentionParam, &selfAttentionFaNode.operation);
     selfAttentionFaNode.inTensorIds = {INTERNAL_Q,
@@ -190,7 +189,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
     mlpParam.commDownParam.rank = param.rank;
     mlpParam.commDownParam.rankSize = param.rankSize;
     mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_GELU;
-    mlpParam.transposeB = false;
+    mlpParam.transposeB = true;
     mlpParam.isBias = true;
     mlpParam.isPack = false;
     mlpParam.noGate = true;

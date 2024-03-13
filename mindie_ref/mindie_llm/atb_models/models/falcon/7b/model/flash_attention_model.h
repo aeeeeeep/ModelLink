@@ -58,6 +58,7 @@ private:
     std::vector<int> seqLen_;
     int32_t layerId_ = 0;
 };
+
 } // namespace falcon_7b
 } // namespace atb_speed
 #endif

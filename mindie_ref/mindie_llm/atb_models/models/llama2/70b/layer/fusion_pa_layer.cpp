@@ -71,7 +71,8 @@ atb::Status FusionPALayer(const FusionPALayerParam &param, atb::Operation **oper
     inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT};
     inputNormNode.outTensorIds = {INTERMIDATE_INPUTNORMOUT};
 
-    atb::infer::LinearParam linearParam = {false, false, false};
+    atb::infer::LinearParam linearParam;
+    linearParam.hasBias = false;
     CreateOperation(linearParam, &mixdQLinearNode.operation);
     mixdQLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_QMIXDWEIGHT};
     mixdQLinearNode.outTensorIds = {INTERMIDATE_MIXEDQ};
@@ -96,7 +97,7 @@ atb::Status FusionPALayer(const FusionPALayerParam &param, atb::Operation **oper
     CreateOperation(reshapeCacheParm, &reshapeAndCacheNode.operation);
     reshapeAndCacheNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_MIXEDV, IN_K_CACHE, IN_V_CACHE,
                                        IN_SLOTS};
-    reshapeAndCacheNode.outTensorIds = {};
+    reshapeAndCacheNode.outTensorIds = {IN_K_CACHE, IN_V_CACHE};
     reshapeAndCacheNode.inTensorReshapeFuncs.resize(reshapeAndCacheNode.inTensorIds.size());
     reshapeAndCacheNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         reshapeHeads(oldShape, newShape, param.numHeadsPerPartition);
@@ -109,9 +110,8 @@ atb::Status FusionPALayer(const FusionPALayerParam &param, atb::Operation **oper
         atb::infer::SelfAttentionParam faEnParam;
         faEnParam.headNum = param.headNum;
         faEnParam.kvHeadNum = param.numHeadsPerPartition;
-        faEnParam.headDim = param.dk;
         faEnParam.qkScale = 1.0 / sqrt(param.dk);
-        faEnParam.isEncoder = true;
+        faEnParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
         CreateOperation(faEnParam, &attentionNode.operation);
 
         attentionNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_MIXEDV,
@@ -173,8 +173,9 @@ atb::Status FusionPALayer(const FusionPALayerParam &param, atb::Operation **oper
     mlpParallelParam.rank = param.rank;
     mlpParallelParam.rankSize = param.rankSize;
     mlpParallelParam.rankRoot = 0;
-    mlpParallelParam.transposeB = false;
+    mlpParallelParam.transposeB = true;
     mlpParallelParam.hcclComm = nullptr;
+    mlpParallelParam.backend = param.backend;
     mlpParallelParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
     atb_speed::common::MlpGateLayer(mlpParallelParam, &mlpParallelNode.operation);
     mlpParallelNode.inTensorIds = {INTERMIDATE_SELFNORMOUT, IN_MLPUPWEIGHT, IN_MLPGATEWEIGHT, IN_MLPDOWNWEIGHT};

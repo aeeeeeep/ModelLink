@@ -26,6 +26,7 @@ class Weights:
             aliases: Optional[Dict[str, List[str]]] = None
     ):
         self.filenames = weight_files(model_name_or_path, revision=revision, extension=extension)
+        self.quantize = quantize
         routing = {}
         for filename in self.filenames:
             with safe_open(filename, framework="pytorch") as f:
@@ -46,10 +47,6 @@ class Weights:
         self._handles = {}
 
         self.init_quant_params(quantize, model_name_or_path)
-
-        self.gptq_bits = None
-        self.gptq_groupsize = None
-        self.smooth_quant_act_scales = None
 
     @staticmethod
     def cut_weights(
@@ -161,9 +158,10 @@ class Weights:
     def init_quant_params(self, quantize, model_name_or_path):
         if quantize == "gptq":
             self._set_gptq_params(model_name_or_path)
-
-        if quantize == "smooth_quant":
+        elif quantize == "smooth_quant":
             self._set_smooth_quant_params(model_name_or_path)
+        elif quantize == 'w8a8':
+            self._set_w8a8_quant_params(model_name_or_path)
 
     def get_filename(self, tensor_name: str) -> (str, str):
         filename = self.routing.get(tensor_name, None)
@@ -173,8 +171,7 @@ class Weights:
                 filename = self.routing.get(alias, None)
                 if filename is not None:
                     return str(filename), alias
-            logger.error(f"weight {tensor_name} does not exist")
-            raise AssertionError
+            raise AssertionError(f"weight {tensor_name} does not exist")
         return str(filename), tensor_name
 
     def get_shape(self, tensor_name: str):
@@ -184,8 +181,8 @@ class Weights:
         filename, tensor_name = self.get_filename(tensor_name)
         f = self._get_handle(filename)
         tensor = f.get_tensor(tensor_name)
-
-        tensor = tensor.to(device=self.device)
+        if tensor.dtype not in [torch.int8, torch.int32, torch.int64]:
+            tensor = tensor.to(dtype=self.dtype)
         return tensor
 
     def get_whole_tensor(self, tensor_name: str, dim: int):
@@ -201,6 +198,8 @@ class Weights:
         else:
             logger.error("Let's make that generic when needed")
             raise AssertionError
+        if tensor.dtype not in [torch.int8, torch.int32, torch.int64]:
+            tensor = tensor.to(dtype=self.dtype)
         return tensor
 
     def get_partial_sharded(self, tensor_name: str, dim: int, gqa_size: int = 1):
@@ -209,7 +208,6 @@ class Weights:
 
         slice_ = self._get_slice(tensor_name)
         size = slice_.get_shape()[dim]
-
         group_size = size // gqa_size
         if group_size >= world_size:
             block_size = size // world_size
@@ -220,6 +218,28 @@ class Weights:
             start = (rank // (world_size // group_size)) * block_size
             stop = ((rank // (world_size // group_size)) + 1) * block_size
 
+        if "c_attn.bias" in tensor_name:
+            b = slice_[:]
+            single_size = b.shape[0] // 3
+            head_size = 128
+            head_num = single_size // head_size
+            rank_heads = math.ceil(head_num / world_size)
+            if rank != world_size - 1:
+                start = rank * (rank_heads * head_size)
+                stop = (rank + 1) * (rank_heads * head_size)
+                bq = slice_[start:stop]
+                bk = slice_[start + single_size:stop + single_size]
+                bv = slice_[start + 2 * single_size:stop + 2 * single_size]
+            else:
+                # last rank
+                start = rank * (rank_heads * head_size)
+                stop = head_num * head_size
+                bq = slice_[start:stop]
+                bk = slice_[start + single_size:stop + single_size]
+                bv = slice_[start + 2 * single_size:stop + 2 * single_size]
+            b_ = torch.cat([bq, bk, bv], dim=0)
+            return b_
+
         if dim == 0:
             tensor = slice_[start:stop]
         elif dim == 1:
@@ -227,6 +247,8 @@ class Weights:
         else:
             logger.error("Let's make that generic when needed")
             raise AssertionError
+        if tensor.dtype not in [torch.int8, torch.int32, torch.int64]:
+            tensor = tensor.to(dtype=self.dtype)
         return tensor
 
     def get_partial_sharded_padding(self, tensor_name: str, dim: int, gqa_size=1):
@@ -281,11 +303,21 @@ class Weights:
         else:
             return self.get_partial_sharded_padding(tensor_name, dim, gqa_size)
 
+    def get_per_tensor_sharded(self, prefixes, dim, tensor_name):
+        tensor = torch.cat(
+            [self.get_whole_tensor(f"{p}.{tensor_name}", dim=0) for p in prefixes], dim=dim
+        )
+        if torch.allclose(tensor, tensor[0]):
+            tensor = tensor[:1]
+        else:
+            raise ValueError(f"`{tensor_name}` are not equal: {tensor}")
+        return tensor
+
     def get_smooth_quant_sharded(self, tensor_name: str, idx: int, dim: int, gqa_size: int = 1):
         slice_ = self.smooth_quant_act_scales[tensor_name][idx]
         return slice_
 
-    def get_weights_col_packed_qkv(self, prefix: str, quantize: str, head_size: int):
+    def get_weights_col_packed_qkv_bak(self, prefix: str, quantize: str, head_size: int):
         """
         Highly specific when the underlying tensor is a simple cat of Q,K,V instead of being
         already alternating Q,K,V within the main tensor
@@ -363,46 +395,145 @@ class Weights:
             weight = weight.to(dtype=self.dtype)
         return weight
 
-    def get_weights_packed_qkv_starcoder(self, prefix: str, quantize: str, q_size, kv_size, bias):
-        """
-        Highly specific when the underlying tensor is a simple cat of Q,K,V instead of being
-        already alternating Q,K,V within the main tensor
-        """
-        if quantize == "gptq":
+    def get_tensor_col_packed_qkv_mha(self, tensor_name: str, head_size: int = None):
+        slice_ = self._get_slice(tensor_name)
+        total_size = slice_.get_shape()[0]
+        if total_size % 3 != 0:
+            raise ValueError("Prepacked qkv is not divisible by 3")
+        single_size = total_size // 3
+        world_size = self.process_group.size()
+        rank = self.process_group.rank()
+
+        if head_size is None:
+            if single_size % world_size != 0:
+                raise RuntimeError(f"Prepacked qkv cannot be sharded across {world_size} shards")
             try:
-                qweight = self._get_qweight(f"{prefix}.qweight")
-            except RuntimeError as err:
-                logger.error(
-                    f"Cannot load `gptq` weight, make sure the model is already quantized, "
-                    f"or quantize it with `text-generation-server quantize ORIGINAL_MODEL_ID NEW_MODEL_ID`"
-                )
-                raise AssertionError from err
-
-            qzeros = self._get_qweight(f"{prefix}.qzeros")
-            scales = self._get_qweight(f"{prefix}.scales")
-            g_idx = self.get_tensor(f"{prefix}.g_idx")
-
-            bits, groupsize = self._get_gptq_params()
-            weight = (qweight, qzeros, scales, g_idx, bits, groupsize, False)
+                block_size = single_size // world_size
+            except ZeroDivisionError as e:
+                raise ZeroDivisionError from e
+            start = rank * block_size
+            stop = (rank + 1) * block_size
+            q = slice_[start:stop]
+            k = slice_[start + single_size:stop + single_size]
+            v = slice_[start + 2 * single_size:stop + 2 * single_size]
+            tensor = torch.cat([q, k, v], dim=0)
         else:
-            if bias:
-                slice_ = self.get_tensor(f"{prefix}.bias")
+            try:
+                head_num = single_size // head_size
+                rank_heads = math.ceil(head_num / world_size)
+            except ZeroDivisionError as e:
+                raise ZeroDivisionError from e
+            if rank != world_size - 1:
+                start = rank * (rank_heads * head_size)
+                stop = (rank + 1) * (rank_heads * head_size)
+                q = slice_[start:stop]
+                k = slice_[start + single_size:stop + single_size]
+                v = slice_[start + 2 * single_size:stop + 2 * single_size]
+                tensor = torch.cat([q, k, v], dim=0)
             else:
-                slice_ = self.get_tensor(f"{prefix}.weight")
-            total_size = slice_.shape[0]
-            q_single_size = q_size  # 6144
-            kv_single_size = kv_size  # 256
-            world_size = self.process_group.size()
-            rank = self.process_group.rank()
+                # last rank
+                start = rank * (rank_heads * head_size)
+                stop = head_num * head_size
+                q = slice_[start:stop]
+                k = slice_[start + single_size:stop + single_size]
+                v = slice_[start + 2 * single_size:stop + 2 * single_size]
 
-            if q_single_size % world_size != 0:
-                logger.error(f"Prepacked q cannot be sharded across {world_size} shards")
-                raise AssertionError
+                # padding
+                q_zero = torch.zeros(size=(rank_heads * head_size, slice_.get_shape()[1]))
+                k_zero = torch.zeros(size=(rank_heads * head_size, slice_.get_shape()[1]))
+                v_zero = torch.zeros(size=(rank_heads * head_size, slice_.get_shape()[1]))
+                q_zero[:q.shape[0], :q.shape[1]] = q
+                k_zero[:k.shape[0], :k.shape[1]] = k
+                v_zero[:v.shape[0], :v.shape[1]] = v
+                tensor = torch.cat([q_zero, k_zero, v_zero], dim=0)
+        if tensor.dtype not in [torch.int8, torch.int32, torch.int64]:
+            tensor = tensor.to(dtype=self.dtype)
+        return tensor
 
-            query_layer, kv_layer = slice_.split((q_single_size, kv_single_size), dim=0)
-            query_list = torch.chunk(query_layer, world_size, dim=0)
-            weight = torch.cat([query_list[rank], kv_layer], dim=0)
-            weight = weight.to(device=self.device)
+    def get_tensor_col_packed_qkv_gqa(self, tensor_name: str, num_heads, num_kv_heads):
+        slice_ = self.get_tensor(tensor_name)
+        total_size = slice_.shape[0]
+        if total_size % (num_heads + num_kv_heads * 2) != 0:
+            raise AssertionError(f"Prepacked qkv is not divisible by q,k,v")
+        q_single_size = total_size * num_heads // (num_heads + num_kv_heads * 2)
+        kv_single_size = total_size * num_kv_heads // (num_heads + num_kv_heads * 2)
+        world_size = self.process_group.size()
+        rank = self.process_group.rank()
+        if q_single_size % world_size != 0:
+            raise AssertionError(f"Prepacked qkv cannot be sharded across {world_size} shards")
+        query_layer, key_layer, value_layer = slice_.split((q_single_size, kv_single_size, kv_single_size), dim=0)
+        kv_tp_size = min(world_size, num_kv_heads)
+        query_list = torch.chunk(query_layer, world_size, dim=0)
+        key_list = torch.chunk(key_layer, kv_tp_size, dim=0)
+        value_list = torch.chunk(value_layer, kv_tp_size, dim=0)
+        tensor = torch.cat([query_list[rank],
+                            key_list[rank * kv_tp_size // world_size],
+                            value_list[rank * kv_tp_size // world_size]], dim=0)
+        return tensor
+
+    def get_tensor_col_packed_qkv(self, tensor_name: str, hidden_size, num_heads, num_kv_heads=None):
+        if not num_kv_heads:
+            num_kv_heads = num_heads
+        if num_heads == num_kv_heads:
+            return self.get_tensor_col_packed_qkv_mha(tensor_name)
+        else:
+            return self.get_tensor_col_packed_qkv_gqa(tensor_name, num_heads, num_kv_heads)
+
+    def get_weights_col_packed_qkv(self, prefix: str, quantize: str, hidden_size, num_heads, num_kv_heads=None):
+        if quantize == "w8a8":
+            qweight = self.get_tensor_col_packed_qkv(f"{prefix}.weight", hidden_size, num_heads, num_kv_heads)
+            if qweight.dtype in [torch.float16, torch.bfloat16]:
+                return qweight
+            deq_scale = self.get_tensor_col_packed_qkv(f"{prefix}.deq_scale", hidden_size, num_heads, num_kv_heads)
+            quant_bias = self.get_tensor_col_packed_qkv(f"{prefix}.quant_bias", hidden_size, num_heads, num_kv_heads)
+            input_scale = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_scale')
+            input_offset = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_offset')
+            weight = (qweight, deq_scale, quant_bias, input_scale, input_offset)
+        elif quantize == "w8a16":
+            qweight = self.get_tensor_col_packed_qkv(f"{prefix}.weight", hidden_size, num_heads, num_kv_heads)
+            weight_scale = self.get_tensor_col_packed_qkv(f"{prefix}.weight_scale", hidden_size, num_heads,
+                                                          num_kv_heads)
+            weight_offset = self.get_tensor_col_packed_qkv(f"{prefix}.weight_offset", hidden_size, num_heads,
+                                                           num_kv_heads)
+            weight = (qweight, weight_scale, weight_offset)
+        else:
+            weight = self.get_tensor_col_packed_qkv(f"{prefix}.weight", hidden_size, num_heads, num_kv_heads)
+        return weight
+
+    def get_tensor_col_packed_mlp(self, tensor_name, head_types=2):
+        slice_ = self.get_tensor(tensor_name)
+        total_size = slice_.shape[0]
+        if total_size % head_types != 0:
+            raise AssertionError(f"Prepacked mlp is not divisible by up,gate")
+        up_single_size = total_size // head_types
+        gate_single_size = total_size // head_types
+        world_size = self.process_group.size()
+        rank = self.process_group.rank()
+        if up_single_size % world_size != 0:
+            raise AssertionError(f"Prepacked mlp cannot be sharded across {world_size} shards")
+        gate_layer, up_layer = slice_.split((up_single_size, gate_single_size), dim=0)
+        gate_list = torch.chunk(gate_layer, world_size, dim=0)
+        up_list = torch.chunk(up_layer, world_size, dim=0)
+        tensor = torch.cat([gate_list[rank], up_list[rank]], dim=0)
+        return tensor
+
+    def get_weights_col_packed_mlp(self, prefix: str, quantize: str):
+        if quantize == "w8a8":
+            qweight = self.get_tensor_col_packed_mlp(f"{prefix}.weight")
+            if qweight.dtype in [torch.float16, torch.bfloat16]:
+                return qweight
+            deq_scale = self.get_tensor_col_packed_mlp(f"{prefix}.deq_scale")
+            quant_bias = self.get_tensor_col_packed_mlp(f"{prefix}.quant_bias")
+            input_scale = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_scale')
+            input_offset = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_offset')
+            weight = (qweight, deq_scale, quant_bias, input_scale, input_offset)
+        elif quantize == "w8a16":
+            qweight = self.get_tensor_col_packed_mlp(f"{prefix}.weight")
+            weight_scale = self.get_tensor_col_packed_mlp(f"{prefix}.weight_scale")
+            weight_offset = self.get_tensor_col_packed_mlp(f"{prefix}.weight_offset")
+            weight = (qweight, weight_scale, weight_offset)
+        else:
+            weight = self.get_tensor_col_packed_mlp(f"{prefix}.weight")
         return weight
 
     def get_multi_weights_col(self, prefixes: List[str], quantize: str, dim: int, gqa_size: int = 1):
@@ -430,30 +561,67 @@ class Weights:
 
             bits, groupsize = self._get_gptq_params()
             weight = (qweight, qzeros, scales, g_idx, bits, groupsize, False)
-        if quantize == "smooth_quant":
+        elif quantize == "smooth_quant":
             qweight = torch.cat(
-                [self.get_sharded(f"{p}.weight", dim=0) for p in prefixes], dim=1
+                [self.get_sharded(f"{p}.weight", dim=0, gqa_size=gqa_size) for p in prefixes], dim=dim
             )
             weight_scales = torch.cat(
-                [self.get_sharded(f"{p}.scales", dim=0) for p in prefixes], dim=1
+                [self.get_sharded(f"{p}.scales", dim=0, gqa_size=gqa_size) for p in prefixes], dim=dim
             )
             weight_zeros = None
-            act_scales = (lambda x: x if None in x else torch.cat(x))(
-                [self.get_smooth_quant_sharded(f"{p}", idx=0, dim=0).reshape(1) for p in prefixes]
-            )
-            act_zeros = (lambda x: None if None in x else torch.cat(x))(
-                [self.get_smooth_quant_sharded(f"{p}", idx=1, dim=0) for p in prefixes])
+            act_scales_temp = [self.get_smooth_quant_sharded(f"{p}", idx=0, dim=0, gqa_size=gqa_size).reshape(1) for p
+                               in prefixes]
+            for one_act_scale in act_scales_temp[1:]:
+                if not torch.equal(act_scales_temp[0], one_act_scale):
+                    raise ValueError(
+                        f"`act_scales` are not equal: {act_scales_temp}"
+                    )
+            act_scales = (lambda x: x if None in x else x[0])(act_scales_temp)
+            act_zeros = (lambda x: None if None in x else x[0])(
+                [self.get_smooth_quant_sharded(f"{p}", idx=1, dim=0, gqa_size=gqa_size) for p in prefixes])
             weight = (qweight, weight_scales, weight_zeros, act_scales, act_zeros)
+        elif quantize == 'w8a8':
+            qweight = torch.cat(
+                [self.get_sharded(f"{p}.weight", dim=0, gqa_size=gqa_size) for p in prefixes], dim=dim
+            )
+            if qweight.dtype in [torch.float16, torch.bfloat16]:
+                return qweight
+            deq_scale = torch.cat(
+                [self.get_sharded(f"{p}.deq_scale", dim=0, gqa_size=gqa_size) for p in prefixes], dim=dim
+            )
+            quant_bias = torch.cat(
+                [self.get_sharded(f"{p}.quant_bias", dim=0, gqa_size=gqa_size) for p in prefixes], dim=dim
+            )
+            input_scale = self.get_per_tensor_sharded(prefixes, dim, 'input_scale')
+            input_offset = self.get_per_tensor_sharded(prefixes, dim, 'input_offset')
+            weight = (qweight, deq_scale, quant_bias, input_scale, input_offset)
+        elif quantize == 'w8a16':
+            qweight = torch.cat(
+                [self.get_sharded(f"{p}.weight", dim=0, gqa_size=gqa_size) for p in prefixes], dim=dim
+            )
+            weight_scale = torch.cat(
+                [self.get_sharded(f"{p}.weight_scale", dim=0, gqa_size=gqa_size) for p in prefixes], dim=dim
+            )
+            weight_offset = torch.cat(
+                [self.get_sharded(f"{p}.weight_offset", dim=0, gqa_size=gqa_size) for p in prefixes], dim=dim
+            )
+            weight = (qweight, weight_scale, weight_offset)
         else:
             w = [self.get_sharded(f"{p}.weight", dim=0, gqa_size=gqa_size) for p in prefixes]
             weight = torch.cat(w, dim=dim)
         return weight
 
-    def get_weights_col_packed_qkv_glm(self, prefix: str, quantize: str, q_size, kv_size, bias):
+    def get_weights_col_packed_qkv_glm(self, config, prefix: str, quantize: str, is_bias):
         """
         Highly specific when the underlying tensor is a simple cat of Q,K,V instead of being
         already alternating Q,K,V within the main tensor
         """
+        hidden_size_per_attention_head = config.hidden_size // config.num_attention_heads
+        num_attention_heads_per_partition = config.num_attention_heads
+        num_multi_query_groups_per_partition = config.multi_query_group_num
+        q_size = hidden_size_per_attention_head * num_attention_heads_per_partition
+        kv_size = hidden_size_per_attention_head * num_multi_query_groups_per_partition
+
         if quantize == "gptq":
             try:
                 qweight = self._get_qweight(f"{prefix}.qweight")
@@ -470,7 +638,7 @@ class Weights:
             bits, groupsize = self._get_gptq_params()
             weight = (qweight, qzeros, scales, g_idx, bits, groupsize, False)
         else:
-            if bias:
+            if is_bias:
                 slice_ = self.get_tensor(f"{prefix}.bias")
             else:
                 slice_ = self.get_tensor(f"{prefix}.weight")
@@ -482,17 +650,10 @@ class Weights:
             kv_single_size = kv_size
             world_size = self.process_group.size()
             rank = self.process_group.rank()
-
             if q_single_size % world_size != 0:
                 logger.error(f"Prepacked qkv cannot be sharded across {world_size} shards")
                 raise AssertionError
-            q_block_size = q_single_size // world_size
-            q_start = rank * q_block_size
-            q_stop = (rank + 1) * q_block_size
 
-            kv_block_size = kv_single_size // world_size
-            kv_start = rank * 2 * q_block_size
-            kv_stop = (rank + 1) * kv_block_size
             query_layer, key_layer, value_layer = slice_.split(
                 [
                     q_single_size,
@@ -501,11 +662,12 @@ class Weights:
                 ],
                 dim=0
             )
+            kv_tp_size = min(world_size, num_multi_query_groups_per_partition)
             query_list = torch.chunk(query_layer, world_size, dim=0)
-            key_list = torch.chunk(key_layer, world_size, dim=0)
-            value_list = torch.chunk(value_layer, world_size, dim=0)
-            q, k, v = query_list[rank], key_list[rank], value_list[rank]
-            weight = torch.cat([q, k, v], dim=0)
+            key_list = torch.chunk(key_layer, kv_tp_size, dim=0)
+            value_list = torch.chunk(value_layer, kv_tp_size, dim=0)
+            weight = torch.cat([query_list[rank], key_list[rank * kv_tp_size // world_size],
+                                value_list[rank * kv_tp_size // world_size]], dim=0)
             weight = weight.to(device=self.device)
         return weight
 
@@ -587,6 +749,21 @@ class Weights:
             act_scales = self.get_smooth_quant_sharded(f"{prefix}", idx=0, dim=1)
             act_zeros = self.get_smooth_quant_sharded(f"{prefix}", idx=1, dim=1)
             weight = (qweight, weight_scales, weight_zeros, act_scales, act_zeros)
+        elif quantize == "w8a8":
+            qweight = self.get_sharded(f"{prefix}.weight", dim=1)
+            if qweight.dtype in [torch.float16, torch.bfloat16]:
+                return qweight
+            deq_scale = self.get_tensor(f"{prefix}.deq_scale")
+            quant_bias = self.get_tensor(f"{prefix}.quant_bias")
+            quant_bias = quant_bias // self.process_group.size()
+            input_scale = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_scale')
+            input_offset = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_offset')
+            weight = (qweight, deq_scale, quant_bias, input_scale, input_offset)
+        elif quantize == "w8a16":
+            qweight = self.get_sharded(f"{prefix}.weight", dim=1)
+            weight_scale = self.get_sharded(f"{prefix}.weight_scale", dim=1)
+            weight_offset = self.get_sharded(f"{prefix}.weight_offset", dim=1)
+            weight = (qweight, weight_scale, weight_offset)
         else:
             weight = self.get_sharded(f"{prefix}.weight", dim=1)
         return weight
@@ -631,5 +808,14 @@ class Weights:
             filename = os.path.join(model_id, 'act_scales_zero.pt')
             act_scales = torch.load(filename)
             self.smooth_quant_act_scales = act_scales
+        except Exception as err:
+            raise AssertionError from err
+
+    def _set_w8a8_quant_params(self, model_id):
+        try:
+            filename = os.path.join(model_id, 'quant_model_description.json')
+            with open(filename, "r") as f:
+                data = json.load(f)
+            self.w8a8_desc = data
         except Exception as err:
             raise AssertionError from err

@@ -31,7 +31,7 @@ public:
         int rank = 0;
         int rankSize = 1;
         bool isPrefill = false;
-        bool transposedWeight = false;
+        bool transposedWeight = true;
         std::string backend = "hccl";
         void FromString(const std::string &param);
     };
@@ -54,6 +54,7 @@ private:
     atb::Status BindParamHostTensor(uint32_t nodeId) override;
     std::vector<int32_t> seqLen_;
 };
+
 } // namespace star_coder
 } // namespace atb_speed
 #endif

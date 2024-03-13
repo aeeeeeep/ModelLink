@@ -16,7 +16,10 @@
 #ifndef ATB_SPEED_MODELS_COMMON_LINEAR_H
 #define ATB_SPEED_MODELS_COMMON_LINEAR_H
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
 
@@ -25,12 +28,21 @@ namespace common {
 
 enum LinearQuantType : unsigned int {
     NO_QUANT = 0,
-    RMS_NORM_QUANT_LINEAR_DEQUANT = 1,  // QUANT在RMS_NORM中执行，DEQUANT在此operaion中执行
+    NORM_QUANT_LINEAR_DEQUANT = 1,  // QUANT在RMS_NORM中执行，DEQUANT在此operaion中执行
     LINEAR_QUANT = 2,         // QUANT和DEQUANT操作都在此Operation中执行
+    W8A16 = 3,
+};
+
+enum LinearType : int {
+    INVALID = -1,
+    FP = 0,
+    INT = 1,
 };
 
 struct FusionLinearParam {
-    int quantType = NO_QUANT;
+    LinearQuantType quantType = NO_QUANT;
+    bool isBF16 = false;
+    bool hasBias = false;
 };
 
 atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operation);

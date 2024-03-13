@@ -73,6 +73,9 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     atb::infer::LinearParam linearParam;
     linearParam.transposeB = param.transposedWeight;
     linearParam.hasBias = false;
+    if (param.isBF16) {
+        linearParam.linearType = atb::infer::LinearType::LINEAR_BF16BF16_FP32_BF16;
+    }
     CREATE_OPERATION(linearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_QKVMIXEDLINEARWEIGHT};
     qkvLinearNode.outTensorIds = {INTERMIDATE_QKVMIXEDLINEAROUT};
@@ -94,7 +97,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     CREATE_OPERATION(reshapeCacheParm, &reshapeAndCacheNode.operation);
     reshapeAndCacheNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_MIXEDV, IN_K_CACHE, IN_V_CACHE,
                                        IN_SLOTS};
-    reshapeAndCacheNode.outTensorIds = {};
+    reshapeAndCacheNode.outTensorIds = {IN_K_CACHE, IN_V_CACHE};
     reshapeAndCacheNode.inTensorReshapeFuncs.resize(reshapeAndCacheNode.inTensorIds.size());
     reshapeAndCacheNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         ReshapeHeads(oldShape, newShape, param.headNum);
@@ -108,7 +111,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
         faEnParam.headNum = param.headNum;
         faEnParam.qkScale = 1.0 / sqrt(param.dk);
         faEnParam.kvHeadNum = param.headNum;
-        faEnParam.isEncoder = true;
+        faEnParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
         CREATE_OPERATION(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_MIXEDV,
                                      IN_ATTENTIONMASK, IN_INPUT_LENGTHS};
@@ -136,7 +139,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
             attentionNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ, IN_K_CACHE, IN_V_CACHE, IN_BLOCK_TABLES,
                                          IN_INPUT_LENGTHS};
         }
-        
+       
         CREATE_OPERATION(paDeParam, &attentionNode.operation);
         attentionNode.outTensorIds = {INTERMIDATE_ATTENTIONOUT};
         attentionNode.inTensorReshapeFuncs.resize(attentionNode.inTensorIds.size());
@@ -151,6 +154,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     selfOutLinearParam.isBias = false;
     selfOutLinearParam.transposeB = param.transposedWeight;
     selfOutLinearParam.backend = param.backend;
+    selfOutLinearParam.isBF16 = param.isBF16;
     atb_speed::common::RowParallelLinear(selfOutLinearParam, &selfOutLinearNode.operation);
     selfOutLinearNode.inTensorIds = {INTERMIDATE_ATTENTIONOUT, IN_SELFOUTLINEARWEIGHT};
     selfOutLinearNode.outTensorIds = {INTERMIDATE_SELFLINEAROUT};
@@ -179,6 +183,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     mlpParam.isBias = false;
     mlpParam.isPack = true;
     mlpParam.backend = param.backend;
+    mlpParam.isBF16 = param.isBF16;
     atb_speed::common::MlpGateLayer(mlpParam, &mlpNode.operation);
     mlpNode.inTensorIds = {INTERMIDATE_SELFNORMOUT, IN_MLPGATEUPWEIGHT, IN_MLPDOWNWEIGHT};
     mlpNode.outTensorIds = {INTERMIDATE_MLPOUT};

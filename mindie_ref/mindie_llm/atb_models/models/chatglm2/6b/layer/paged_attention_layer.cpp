@@ -206,7 +206,7 @@ atb::Status DecoderPALayer(const LayerParamPa &param, atb::Operation **operation
     CREATE_OPERATION(reshapeCacheParm, &reshapeAndCacheNode.operation);
     reshapeAndCacheNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_VALUE,
                                         IN_K_CACHE, IN_V_CACHE, IN_SLOTS};
-    reshapeAndCacheNode.outTensorIds = {};
+    reshapeAndCacheNode.outTensorIds = {IN_K_CACHE, IN_V_CACHE};
     reshapeAndCacheNode.inTensorReshapeFuncs.resize(reshapeAndCacheNode.inTensorIds.size());
     reshapeAndCacheNode.inTensorReshapeFuncs[1] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         reshapeHeads(oldShape, newShape, param.numGroupsPerPartition);
@@ -217,7 +217,7 @@ atb::Status DecoderPALayer(const LayerParamPa &param, atb::Operation **operation
         faEnParam.headNum = param.headNum;
         faEnParam.qkScale = 1.0 / sqrt(param.dk);
         faEnParam.kvHeadNum = param.numGroupsPerPartition;
-        faEnParam.isEncoder = true;
+        faEnParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
         CREATE_OPERATION(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_VALUE,
                                      IN_ATTENTION_MASK, IN_INPUT_LENGTHS};
@@ -269,7 +269,7 @@ atb::Status DecoderPALayer(const LayerParamPa &param, atb::Operation **operation
     mlpParam.rank = param.rank;
     mlpParam.rankSize = param.rankSize;
     mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
-    mlpParam.transposeB = false;
+    mlpParam.transposeB = true;
     mlpParam.isBias = false;
     mlpParam.isPack = true;
     atb_speed::common::MlpGateLayer(mlpParam, &mlpNode.operation);

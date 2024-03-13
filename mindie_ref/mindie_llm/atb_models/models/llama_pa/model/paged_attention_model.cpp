@@ -16,14 +16,21 @@
 #include "paged_attention_model.h"
 
 #include "atb/atb_infer.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 
 #include "parallel_lmhead.h"
 #include "layers/parallel_layer.h"
 #include "models/llama_pa/layer/paged_attention_layer.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama_pa {
+
+REGISTER_MODEL(llama_pa, PAModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 6;
 const int WORDEMBEDDINGNODE_WEIGHT_COUNT = 1;
 const int FINALNORMNODE_WEIGHT_COUNT = 1;
@@ -115,7 +122,7 @@ atb::Status PAModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDesc
     const int64_t outDim = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.shape.dims[0];
     outTensorDescs.at(0) = graph_.weightTensors.at(0).desc;
     auto outDimNum = inTensorDescs.at(0).shape.dimNum + 1;
-    for (int i = 0; i < outDimNum - 1; i++) {
+    for (uint i = 0; i < outDimNum - 1; i++) {
         outTensorDescs.at(0).shape.dims[i] = inTensorDescs.at(0).shape.dims[i];
     }
     if (param_.isLmHeadParallel) {
@@ -222,6 +229,7 @@ int64_t PAModel::BuildGraph()
     lmHeadParam.unpadInputs = true;
     lmHeadParam.gatherAhead = param_.isPrefill;
     lmHeadParam.backend = param_.backend;
+    lmHeadParam.isBF16 = param_.isBF16;
     ParallelLmHead(lmHeadParam, &op);
     lmHeadNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
@@ -253,7 +261,7 @@ atb::Status PAModel::ParseParam(const std::string &param)
 
 atb::Status PAModel::BindParamHostTensor(uint32_t nodeId)
 {
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
 

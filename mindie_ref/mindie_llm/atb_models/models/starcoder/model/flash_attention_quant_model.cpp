@@ -15,15 +15,22 @@
  */
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 
 #include "models/starcoder/layer/flash_attention_layer.h"
 #include "models/starcoder/layer/flash_attention_quant_layer.h"
 
 #include "flash_attention_quant_model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace star_coder {
+
+REGISTER_MODEL(star_coder, FlashAttentionQuantModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 16;
 const int WEIGHT_FLOAT_COUNT_PER_LAYER = 12;
 const int INPUT_TENSOR_COUNT_BEFORE_KEY = 2;
@@ -280,7 +287,8 @@ int64_t FlashAttentionQuantModel::BuildGraph()
     finalNormNode.outTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId)};
 
     auto &outLinearNode = graph_.nodes.at(nodeId++);
-    atb::infer::LinearParam outLinearParm = {false, false, false};
+    atb::infer::LinearParam outLinearParm;
+    outLinearParm.hasBias = false;
     CREATE_OPERATION(outLinearParm, &op);
     outLinearNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
@@ -309,7 +317,7 @@ atb::Status FlashAttentionQuantModel::ParseParam(const std::string &param)
 atb::Status FlashAttentionQuantModel::BindParamHostTensor(uint32_t nodeId)
 {
     ATB_LOG(INFO) << "BindParamHostTensor";
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         ATB_LOG(INFO) << "No bind";
         return atb::NO_ERROR;
     }

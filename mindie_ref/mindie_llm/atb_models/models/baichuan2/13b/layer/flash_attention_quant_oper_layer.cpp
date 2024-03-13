@@ -142,15 +142,13 @@ atb::Status FlashAttentionQuantOperLayer(const FlashAttentionQuantOperLayerParam
     atb::infer::RmsNormParam inputNormParam;
     inputNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     inputNormParam.normParam.epsilon = param.rmsNormEps;
-    inputNormParam.normParam.quantInputScale = param.wPackInputScale;
-    inputNormParam.normParam.quantInputOffset = param.wPackInputOffset;
     inputNormParam.normParam.quantType = atb::infer::QUANT_INT8;
     CREATE_OPERATION(inputNormParam, &inputNormNode.operation);
     inputNormNode.inTensorIds = {IN_HIDDEN_STATES, IN_NORM_WEIGHT, IN_BETA};
     inputNormNode.outTensorIds = {INTERNAL_INPUT_NORM_OUT}; // int8
 
-    atb::infer::LinearQuantParam mixedQkvLinearParam;
-    mixedQkvLinearParam.transposeB = true;
+    atb::infer::LinearParam mixedQkvLinearParam;
+    mixedQkvLinearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
     CREATE_OPERATION(mixedQkvLinearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = {INTERNAL_INPUT_NORM_OUT, IN_QKV_MIXED_LINEAR_WEIGHT, IN_QKV_MIXED_BIAS,
                                  IN_QKV_MIXED_DEQSCALE};
@@ -162,10 +160,9 @@ atb::Status FlashAttentionQuantOperLayer(const FlashAttentionQuantOperLayerParam
     splitQKVNode.outTensorIds = {INTERNAL_MIXED_Q, INTERNAL_MIXED_K, INTERNAL_MIXED_V};
 
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / std::sqrt(float(param.dk));
-    selfAttentionParam.isSupportAlibi = true;
+    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MASK_TYPE_ALIBI;
     CREATE_OPERATION(selfAttentionParam, &selfAttentionKvCacheNode.operation);
     selfAttentionKvCacheNode.inTensorIds = {INTERNAL_MIXED_Q, INTERNAL_MIXED_K, INTERNAL_MIXED_V,
                                             IN_PAST_KEY,      IN_PAST_VALUE,    IN_ATTENTION_MASK,
@@ -225,22 +222,31 @@ atb::Status FlashAttentionQuantOperLayer(const FlashAttentionQuantOperLayerParam
 
     atb::infer::RmsNormParam selfNormParam;
     selfNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    selfNormParam.normParam.quantInputScale = param.gateProjInputScale;   // gate up
-    selfNormParam.normParam.quantInputOffset = param.gateProjInputOffset; // gate up
     selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
     CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
     selfNormNode.inTensorIds = {INTERNAL_SELF_RESIDUAL_ADD_OUT, IN_SELF_OUT_NORM_WEIGHT, IN_BETA}; // quant
     selfNormNode.outTensorIds = {INTERNAL_SELF_NORM_OUT};
 
     // up quant
-    atb_speed::common::ParallelParamV2 linearUpParam = {true, false, true, true, false};
+    atb_speed::common::ParallelParamV2 linearUpParam;
+    linearUpParam.isBias = true;
+    linearUpParam.transposeA = false;
+    linearUpParam.transposeB = true;
+    linearUpParam.isQuant = true;
+    linearUpParam.isSparse = false;
+
     atb_speed::common::RowParallelLinearV2(linearUpParam, &matmulUpNode.operation);
     matmulUpNode.inTensorIds = {
         INTERNAL_SELF_NORM_OUT, IN_MLP_UP_WEIGHT, IN_MLP_UP_BIAS, IN_MLP_UP_DEQSCALE, IN_HOLDER, IN_HOLDER, IN_HOLDER};
     matmulUpNode.outTensorIds = {INTERNAL_MATMUL_UP_OUT};
 
     // gate quant
-    atb_speed::common::ParallelParamV2 linearGateParam = {true, false, true, true, false};
+    atb_speed::common::ParallelParamV2 linearGateParam;
+    linearGateParam.isBias = true;
+    linearGateParam.transposeA = false;
+    linearGateParam.transposeB = true;
+    linearGateParam.isQuant = true;
+    linearGateParam.isSparse = false;
     atb_speed::common::RowParallelLinearV2(linearGateParam, &matmulGateNode.operation);
     matmulGateNode.inTensorIds = {INTERNAL_SELF_NORM_OUT,
                                   IN_MLP_GATE_WEIGHT,

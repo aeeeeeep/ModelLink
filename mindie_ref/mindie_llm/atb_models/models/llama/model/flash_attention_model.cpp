@@ -13,15 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 #include "atb/atb_infer.h"
 #include "layers/parallel_layer_v2.h"
 #include "models/llama/operation/layer_embedding.h"
 #include "models/llama/layer/flash_attention_layer.h"
 #include "flash_attention_model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama {
+
+REGISTER_MODEL(llama, FlashAttentionModel);
+
 const int QUANT_WEIGHT_COUNT_PER_LAYER = 25;
 const int SPARSE_WEIGHT_COUNT_PER_LAYER = 32;
 const int FLOAT_WEIGHT_COUNT_PER_LAYER = 9;
@@ -71,6 +78,7 @@ void FlashAttentionModel::Param::FromString(const std::string &param)
     quantModel = paramJson["quantModel"].get<bool>();
     sparseModel = paramJson["sparseModel"].get<bool>();
     isEncoder = paramJson["isEncoder"].get<bool>();
+    isBF16 = paramJson["isBF16"].get<bool>();
     
     for (auto item : paramJson["qkvInputScale"]) {
         qkvInputScale.push_back(item.get<float>());
@@ -101,8 +109,8 @@ void FlashAttentionModel::Param::FromString(const std::string &param)
     }
 
     ATB_LOG(INFO) << "Llama FlashAttentionModel param rmsNormEps:" << rmsNormEps << ", headNum:" << headNum
-                  << ", kvHeadNum:" << kvHeadNum << ", dk:" << dk << ", layerNum:" << layerNum << ", rank:" 
-                  << rank << ", rankSize:" << rankSize;
+                  << ", kvHeadNum:" << kvHeadNum << ", dk:" << dk << ", layerNum:" << layerNum << ", rank:"
+                  << rank << ", rankSize:" << rankSize << ", isBF16:" << isBF16;
 }
 
 FlashAttentionModel::FlashAttentionModel(
@@ -213,10 +221,11 @@ int64_t FlashAttentionModel::BuildGraph()
             floatModelParam.model = "llama13b";
             floatModelParam.rank = param_.rank;
             floatModelParam.rankSize = param_.rankSize;
-            floatModelParam.rankSize = param_.rankSize;
+            floatModelParam.isTriuMask = param_.isTriuMask;
             floatModelParam.backend = param_.backend;
             floatModelParam.quantModel = false;
             floatModelParam.isEncoder = param_.isEncoder;
+            floatModelParam.isBF16 = param_.isBF16;
 
             atb_speed::llama::FlashAttentionLayer(floatModelParam, &op);
             layerNode.operation.reset(op);
@@ -253,13 +262,16 @@ int64_t FlashAttentionModel::BuildGraph()
             atb_speed::llama::FlashAttentionLayerParam quantModelParam;
             quantModelParam.rmsNormEps = param_.rmsNormEps;
             quantModelParam.headNum = param_.headNum;
+            quantModelParam.kvHeadNum = param_.kvHeadNum;
             quantModelParam.dk = param_.dk;
             quantModelParam.model = "llama13b";
             quantModelParam.rank = param_.rank;
             quantModelParam.rankSize = param_.rankSize;
+            quantModelParam.isTriuMask = param_.isTriuMask;
             quantModelParam.backend = param_.backend;
             quantModelParam.quantModel = true;
             quantModelParam.isEncoder = param_.isEncoder;
+            quantModelParam.isBF16 = param_.isBF16;
             // 量化适配
             quantModelParam.qkvInputScale = param_.qkvInputScale[layerId];
             quantModelParam.qkvInputOffset = param_.qkvInputOffset[layerId];
@@ -305,13 +317,16 @@ int64_t FlashAttentionModel::BuildGraph()
             atb_speed::llama::FlashAttentionLayerParam sparseModelParam;
             sparseModelParam.rmsNormEps = param_.rmsNormEps;
             sparseModelParam.headNum = param_.headNum;
+            sparseModelParam.kvHeadNum = param_.kvHeadNum;
             sparseModelParam.dk = param_.dk;
             sparseModelParam.model = "llama13b";
             sparseModelParam.rank = param_.rank;
             sparseModelParam.rankSize = param_.rankSize;
+            sparseModelParam.isTriuMask = param_.isTriuMask;
             sparseModelParam.backend = param_.backend;
             sparseModelParam.sparseModel = true;
             sparseModelParam.isEncoder = param_.isEncoder;
+            sparseModelParam.isBF16 = param_.isBF16;
             // 量化适配
             sparseModelParam.qkvInputScale = param_.qkvInputScale[layerId];
             sparseModelParam.qkvInputOffset = param_.qkvInputOffset[layerId];
@@ -372,7 +387,11 @@ int64_t FlashAttentionModel::BuildGraph()
     gatherNode.outTensors = {&graph_.internalTensors.at(gatherOutTensorId)};
 
     auto &outLinearNode = graph_.nodes.at(nodeId++);
-    atb::infer::LinearParam outLinearParm = {false, false, false};
+    atb::infer::LinearParam outLinearParm;
+    outLinearParm.hasBias = false;
+    if (param_.isBF16) {
+        outLinearParm.linearType = atb::infer::LINEAR_BF16BF16_FP32_BF16;
+    }
     CREATE_OPERATION(outLinearParm, &op);
     outLinearNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
@@ -403,7 +422,7 @@ atb::Status FlashAttentionModel::ParseParam(const std::string &param)
 atb::Status FlashAttentionModel::BindParamHostTensor(uint32_t nodeId)
 {
     ATB_LOG(INFO) << "BindParamHostTensor";
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
 

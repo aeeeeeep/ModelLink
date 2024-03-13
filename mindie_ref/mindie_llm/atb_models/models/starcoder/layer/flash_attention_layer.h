@@ -16,7 +16,10 @@
 #ifndef ATB_SPEED_MODELS_STAR_CODER_PARALLEL_FA_LAYER_H
 #define ATB_SPEED_MODELS_STAR_CODER_PARALLEL_FA_LAYER_H
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 #include <atb/atb_infer.h>
 #include "atb_speed/log.h"
 #include "atb_speed/base/hosttensor_binder.h"
@@ -36,31 +39,6 @@ struct FlashAttentionLayerParam {
 };
 
 atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Operation **operation);
-
-static atb::Operation *CreateFlashAttentionLayer(const nlohmann::json &paramJson)
-{
-    FlashAttentionLayerParam param;
-    param.layerNormEps = paramJson["layerNormEps"].get<float>();
-    param.headNum = paramJson["headNum"].get<int>();
-    param.dk = paramJson["dk"].get<int>();
-    param.model = paramJson["model"].get<std::string>();
-    param.isEncoder = paramJson["isEncoder"].get<bool>();
-    if (paramJson.contains("qScale")) {
-        param.qScale = paramJson["qScale"].get<float>();
-    }
-    if (paramJson.contains("rank")) {
-        param.rank = paramJson["rank"].get<int>();
-    }
-    if (paramJson.contains("rankSize")) {
-        param.rankSize = paramJson["rankSize"].get<int>();
-    }
-
-    ATB_LOG(INFO) << __func__ << " layerNormEps:" << param.layerNormEps << ", headNum:" << param.headNum << ", dk:" <<
-        param.dk << ", model:" << param.model;
-    atb::Operation *op;
-    FlashAttentionLayer(param, &op);
-    return op;
-}
 
 class FlashAttentionHostBinder : public HostTensorBinder {
 public:

@@ -135,7 +135,7 @@ atb::Status FlashAttentionRopeAntiOutlierLayer(const FlashAttentionRopeAntiOutli
     inputNormAddNode.outTensorIds = { INTERMIDATE_INPUTNORM_ADD_OUT };
 
     // q_proj
-    atb::infer::LinearParam linearParam = { false, false, true };
+    atb::infer::LinearParam linearParam;
     CREATE_OPERATION(linearParam, &qLinearNode.operation);
     qLinearNode.inTensorIds = { INTERMIDATE_INPUTNORM_ADD_OUT, IN_Q_LINEARWEIGHT, IN_Q_LINEARBIAS };
     qLinearNode.outTensorIds = { INTERMIDATE_Q_MIXEDLINEAROUT };
@@ -161,7 +161,6 @@ atb::Status FlashAttentionRopeAntiOutlierLayer(const FlashAttentionRopeAntiOutli
 
     // 浮点self attn
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / sqrt(param.dk);
     CREATE_OPERATION(selfAttentionParam, &selfAttentionKvCacheNode.operation);
@@ -215,7 +214,7 @@ atb::Status FlashAttentionRopeAntiOutlierLayer(const FlashAttentionRopeAntiOutli
     mlpParam.rank = param.rank;
     mlpParam.rankSize = param.rankSize;
     mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
-    mlpParam.transposeB = false;
+    mlpParam.transposeB = true;
     mlpParam.backend = param.backend;
     mlpParam.isBias = true;
     mlpParam.isPack = false;

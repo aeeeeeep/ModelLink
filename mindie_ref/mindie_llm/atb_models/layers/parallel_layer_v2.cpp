@@ -15,7 +15,10 @@
  */
 
 #include <atb/atb_infer.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 #include "parallel_layer_v2.h"
 
 
@@ -79,10 +82,15 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
 
     if (!param_.isQuant) {
         atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
-        atb::infer::LinearParam matmulParam = {param_.transposeA, param_.transposeB, false};
+        atb::infer::LinearParam matmulParam;
+        if (param_.isBF16) {
+            matmulParam = {param_.transposeA, param_.transposeB, false, atb::infer::LinearType::LINEAR_BF16BF16_FP32_BF16};
+        } else {
+            matmulParam = {param_.transposeA, param_.transposeB, false};
+        }
         CREATE_OPERATION(matmulParam, &matmulNode.operation);
         matmulNode.inTensorIds = {IN_INPUT, IN_WEIGHT};
-        matmulNode.outTensorIds = {(param_.commParam.rankSize > 1 || param_.isBias) ? inteId : OUT_LINEAR};
+        matmulNode.outTensorIds = {(param_.commParam.rankSize > 1 || param_.isBias) ? inteId : static_cast<uint32_t>(OUT_LINEAR)};
     } else {
         if (param_.quantParam.isQuantOp) {
             atb::Node &quantNode = opGraph.nodes.at(nodeId++);
@@ -99,16 +107,19 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
             atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
             atb::infer::LinearSparseParam linearSparseParam = {false, true, 8, 8};
             CREATE_OPERATION(linearSparseParam, &matmulNode.operation);
-            matmulNode.inTensorIds = {param_.quantParam.isQuantOp ? inteId++ : IN_INPUT, IN_WEIGHT,
-                                      IN_BIAS, IN_DEQSCALE, IN_INDEX_IDS};
-            matmulNode.outTensorIds = {param_.commParam.rankSize > 1 ? inteId : OUT_LINEAR};
+            matmulNode.inTensorIds = {param_.quantParam.isQuantOp ? inteId++ : static_cast<uint32_t>(IN_INPUT), static_cast<uint32_t>(IN_WEIGHT),
+                                      static_cast<uint32_t>(IN_BIAS), static_cast<uint32_t>(IN_DEQSCALE), static_cast<uint32_t>(IN_INDEX_IDS)};
+            matmulNode.outTensorIds = {param_.commParam.rankSize > 1 ? inteId : static_cast<uint32_t>(OUT_LINEAR)};
         } else {
             atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
-            atb::infer::LinearQuantParam matmulParam = {param_.transposeA, param_.transposeB, true};
+            atb::infer::LinearParam matmulParam;
+            matmulParam.transposeA = param_.transposeA;
+            matmulParam.transposeB = param_.transposeB;
+            matmulParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
             CREATE_OPERATION(matmulParam, &matmulNode.operation);
-            matmulNode.inTensorIds = {param_.quantParam.isQuantOp ? inteId++ : IN_INPUT,
-                                      IN_WEIGHT, IN_BIAS, IN_DEQSCALE};
-            matmulNode.outTensorIds = {param_.commParam.rankSize > 1 ? inteId : OUT_LINEAR};
+            matmulNode.inTensorIds = {param_.quantParam.isQuantOp ? inteId++ : static_cast<uint32_t>(IN_INPUT),
+                                      static_cast<uint32_t>(IN_WEIGHT), static_cast<uint32_t>(IN_BIAS), static_cast<uint32_t>(IN_DEQSCALE)};
+            matmulNode.outTensorIds = {param_.commParam.rankSize > 1 ? inteId : static_cast<uint32_t>(OUT_LINEAR)};
         }
     }
 
@@ -122,7 +133,7 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
             allReduceParam.backend = param_.commParam.backend;
             CREATE_OPERATION(allReduceParam, &parallelNode.operation);
             parallelNode.inTensorIds = {inteId++};
-            parallelNode.outTensorIds = {param_.isBias && !param_.isQuant ? inteId : OUT_LINEAR};
+            parallelNode.outTensorIds = {param_.isBias && !param_.isQuant ? inteId : static_cast<uint32_t>(OUT_LINEAR)};
         } else {
             atb::infer::AllGatherParam allGatherParam;
             allGatherParam.rank = param_.commParam.rank;
@@ -130,7 +141,7 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
             allGatherParam.backend = param_.commParam.backend;
             CREATE_OPERATION(allGatherParam, &parallelNode.operation);
             parallelNode.inTensorIds = {inteId++};
-            parallelNode.outTensorIds = {(param_.isBias && !param_.isQuant) || param_.isAllGatherTranspose ? inteId : OUT_LINEAR};
+            parallelNode.outTensorIds = {(param_.isBias && !param_.isQuant) || param_.isAllGatherTranspose ? inteId : static_cast<uint32_t>(OUT_LINEAR)};
 
             // (world_size,bs,seq,vocab_size//world_size)
             // -> (bs,seq,world_size,vocab_size//world_size)
@@ -141,7 +152,7 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
                 gatherTransposeParam.perm = {1, 2, 0, 3};
                 CREATE_OPERATION(gatherTransposeParam, &gatherTransposeNode.operation);
                 gatherTransposeNode.inTensorIds = {inteId++};
-                gatherTransposeNode.outTensorIds = {param_.isBias && !param_.isQuant ? inteId : OUT_LINEAR};
+                gatherTransposeNode.outTensorIds = {param_.isBias && !param_.isQuant ? inteId : static_cast<uint32_t>(OUT_LINEAR)};
             }
         }
     }
@@ -239,6 +250,10 @@ atb::Status ColumnParallelLinearV2(const ParallelParamV2 &param_, atb::Operation
     return ParallelLinearV2(param_, operation, COLUMN_PARALLEL);
 }
 
-atb::Status VocabParallelEmbeddingV2(const ParallelParamV2 &param_, atb::Operation **operation) { return 0; }
+atb::Status VocabParallelEmbeddingV2(atb::Operation **operation)
+{
+    (void)operation;
+    return 0;
+}
 } // namespace common
 } // namespace atb_speed

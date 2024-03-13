@@ -16,12 +16,19 @@
 #include "flash_attention_rope_model.h"
 
 #include "atb/atb_infer.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 
 #include "models/internlm/7b/layer/flash_attention_rope_layer.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace internlm_7b {
+
+REGISTER_MODEL(internlm_7b, FlashAttentionRopeModel);
+
 enum InTensorId : int {
     IN_TENSOR_INPUTIDS = 0,
     IN_TENSOR_COSEMBED,
@@ -183,7 +190,8 @@ int64_t FlashAttentionRopeModel::BuildGraph()
     finalNormNode.outTensors = { &graph_.internalTensors.at(finalLayerNormOutTensorId) };
 
     auto &outLinearNode = graph_.nodes.at(nodeId++);
-    atb::infer::LinearParam outLinearParm = { false, false, false };
+    atb::infer::LinearParam outLinearParm;
+    outLinearParm.hasBias = false;
     CREATE_OPERATION(outLinearParm, &op);
     outLinearNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
@@ -210,7 +218,7 @@ atb::Status FlashAttentionRopeModel::ParseParam(const std::string &param)
 
 atb::Status FlashAttentionRopeModel::BindParamHostTensor(uint32_t nodeId)
 {
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
     auto &node = graph_.nodes.at(nodeId);

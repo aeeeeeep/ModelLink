@@ -18,7 +18,10 @@
 
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 
 namespace atb_speed {
 namespace llama2_70b {
@@ -31,18 +34,6 @@ struct PALayerEmbeddingParam {
 };
 
 atb::Status PALayerEmbedding(const PALayerEmbeddingParam &param, atb::Operation **operation);
-
-static atb::Operation *CreatePALayerEmbedding(const nlohmann::json &paramJson)
-{
-    PALayerEmbeddingParam param;
-    param.axis = paramJson["axis"].get<int>();
-    param.rank = paramJson["rank"].get<int>();
-    param.rankSize = paramJson["rankSize"].get<int>();
-    ATB_LOG(INFO) << "axis is " << param.axis << ", rank is" << param.rank << ", rankSize is" << param.rankSize;
-    atb::Operation *op;
-    PALayerEmbedding(param, &op);
-    return op;
-}
 } // namespace llama2_70b
 } // namespace atb_speed
 #endif

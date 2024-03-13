@@ -18,7 +18,10 @@
 
 #include <atb/atb_infer.h>
 #include <atb/svector.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 #include "atb_speed/base/hosttensor_binder.h"
 
 namespace atb_speed {
@@ -37,6 +40,7 @@ struct FlashAttentionLayerParam {
     bool quantModel = false;
     bool sparseModel = false;
     bool isEncoder = false;
+    bool isBF16 = false;
     // 量化参数
     float qkvInputScale = 1;
     int qkvInputOffset = 0;
@@ -49,38 +53,6 @@ struct FlashAttentionLayerParam {
 };
 
 atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Operation **operation);
-
-static atb::Operation *CreateFlashAttentionLayer(const nlohmann::json &paramJson)
-{
-    FlashAttentionLayerParam param;
-    param.rmsNormEps = paramJson["rmsNormEps"].get<float>();
-    param.headNum = paramJson["headNum"].get<int>();
-    param.kvHeadNum = paramJson["kvHeadNum"].get<int>();
-    param.dk = paramJson["dk"].get<int>();
-    param.rank = paramJson["rank"].get<int>();
-    param.rankSize = paramJson["rankSize"].get<int>();
-    param.isTriuMask = paramJson["isTriuMask"].get<int>();
-    param.model = paramJson["model"].get<std::string>();
-    param.quantModel = paramJson["quantModel"].get<bool>();
-    param.sparseModel = paramJson["sparseModel"].get<bool>();
-    param.isEncoder = paramJson["isEncoder"].get<bool>();
-    // 量化参数
-    param.qkvInputScale = paramJson["qkvInputScale"].get<float>();
-    param.qkvInputOffset = paramJson["qkvInputOffset"].get<int>();
-    param.denseInputScale = paramJson["denseInputScale"].get<float>();
-    param.denseInputOffset = paramJson["denseInputOffset"].get<int>();
-    param.selfLnInputScale = paramJson["selfLnInputScale"].get<float>();
-    param.selfLnInputOffset = paramJson["selfLnInputOffset"].get<int>();
-    param.ffnOutInputScale = paramJson["ffnOutInputScale"].get<float>();
-    param.ffnOutInputOffset = paramJson["ffnOutInputOffset"].get<int>();
-
-    ATB_LOG(INFO) << "LLaMA FlashAttentionLayer headNum:" << param.headNum << ", kvHeadNum:" << param.kvHeadNum
-                  << ", rmsNormEps:" << param.rmsNormEps << ", dk:" << param.dk << ", model:" << param.model 
-                  << ", rank:" << param.rank << ", rankSize:" << param.rankSize << ", isTriuMask: " << param.isTriuMask;
-    atb::Operation *op;
-    FlashAttentionLayer(param, &op);
-    return op;
-}
 
 class FlashAttentionLayerBinder : public HostTensorBinder {
 public:

@@ -16,16 +16,38 @@
 #ifndef ATB_SPEED_MODELS_COMMON_MLP_OPERATION_H
 #define ATB_SPEED_MODELS_COMMON_MLP_OPERATION_H
 #include <atb/atb_infer.h>
+#include "layers/operations/linear.h"
+#include "layers/operations/linear_parallel.h"
+#include "layers/operations/norm_linear.h"
 
 namespace atb_speed {
 namespace common {
-struct MlpParam {
-    bool isPack = false;
-    atb_speed::common::FusionLinearParam gateUpLinearParam;
-    atb_speed::common::LinearParallelParam downLinearParallelParam;
+
+enum MlpPackType : unsigned int {
+    GATE_UP_WEIGHT_PACK = 0,
+    GATE_UP_WEIGHT_NO_PACK = 1,
+    UP_WEIGHT_ONLY = 2,
 };
 
-atb::Status Mlp(const MlpParam &param, atb::Operation **operation);
+template <typename NormParamType>
+struct MlpParam {
+    bool isBF16 = false;
+    bool gateUpHasBias = false;
+    bool downHasBias = false;
+    bool supportLcoc = false;
+    bool normHasBias = false;
+    MlpPackType mlpPackType = GATE_UP_WEIGHT_PACK;
+    std::vector<int> layerLinearQuantType;
+    int packQuantType = atb_speed::common::PackQuantType::ALL_FP;
+    NormParamType normParamType;
+    NormParamType normQuantParamType;
+    atb::infer::ActivationParam activationParam;
+    atb_speed::common::TensorParallelInfo downLinearTensorParallelInfo;
+};
+
+template <typename NormParamType>
+atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation);
+
 } // namespace common
 } // namespace atb_speed
 #endif

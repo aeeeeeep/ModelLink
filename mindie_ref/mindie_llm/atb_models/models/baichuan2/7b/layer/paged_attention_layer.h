@@ -16,7 +16,10 @@
 #ifndef ATB_SPEED_MODELS_BAICHUAN2_7B_PA_LAYER_H
 #define ATB_SPEED_MODELS_BAICHUAN2_7B_PA_LAYER_H
 #include <atb/atb_infer.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 
 #include "atb_speed/base/hosttensor_binder.h"
 #include "atb_speed/log.h"
@@ -31,7 +34,7 @@ struct PALayerParam {
     int rank = 0;
     int rankSize = 1;
     bool isPrefill = false;
-    bool transposedWeight = false;
+    bool transposedWeight = true;
     std::string backend = "hccl";
     std::string model = "baichuan2_7b";
 };
@@ -39,14 +42,6 @@ struct PALayerParam {
 void from_json(const nlohmann::json &paramJson, PALayerParam &param);
 
 atb::Status PALayer(const PALayerParam &param, atb::Operation **operation);
-
-static atb::Operation *CreatePALayer(const nlohmann::json &paramJson)
-{
-    ATB_LOG(INFO) << GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
-    atb::Operation *op;
-    PALayer(paramJson.get<PALayerParam>(), &op);
-    return op;
-}
 
 class FlashAttentionHostBinder : public HostTensorBinder {
 public:

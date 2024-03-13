@@ -58,11 +58,11 @@ Bloom7B 是由BigScience训练的开源语言模型，BLOOM 通过 46 种自然�
      conda activate bloom_llm
      # 安装指定torch&torch_npu
      依次安装如下依赖
-     transformers==4.30.2
-     te==0.4.0
-     pandas
-     sympy
-     accelerate
+  transformers==4.30.2
+  te==0.4.0
+  pandas
+  sympy
+  accelerate
      ```
 
    - 安装CANN
@@ -126,7 +126,8 @@ Bloom7B 是由BigScience训练的开源语言模型，BLOOM 通过 46 种自然�
 
     执行权重切分命令
     ```Shell
-    python3 handle_weights.py --input-path {WORKSPACE}/bloom --output-path {WORKSPACE}/bloom_cut --handle-type cut_float
+    # world-size 支持2 4 8
+    python3 handle_weights.py --input-path {WORKSPACE}/bloom --output-path {WORKSPACE}/bloom_cut --handle-type cut_float --world-size n
     ```
 
     切分权重会模型保存在`{WORKSPACE}/bloom_cut`
@@ -149,7 +150,8 @@ Bloom7B 是由BigScience训练的开源语言模型，BLOOM 通过 46 种自然�
 
     ```shell
     # 执行量化权重切分
-    python3 handle_weights.py --input-path {WORKSPACE}/bloom_quant --output-path {WORKSPACE}/bloom_quant_cut --handle-type cut_quant
+    # world-size 支持2 4 8
+    python3 handle_weights.py --input-path {WORKSPACE}/bloom_quant --output-path {WORKSPACE}/bloom_quant_cut --handle-type cut_quant --world-size n
     ```
     量化切分权重会保存在`{WORKSPACE}/bloom_quant_cut`
 
@@ -190,13 +192,13 @@ cpupower frequency-set -g performance
   1. 测试推理性能
 
       ```shell
-      # 浮点推理(双芯)
-      torchrun --nproc_per_node 2 --master_port 39682 main.py --model_path {WORKSPACE}/bloom_cut --device 0 1 --data_dtype fp16 --hardware 310
-      # 量化推理(双芯)
-      torchrun --nproc_per_node 2 --master_port 39682 main.py --model_path {WORKSPACE}/bloom_quant_cut --device 0 1 --data_dtype int8 --hardware 310
-      # 浮点推理(单芯)
+      # 浮点推理(多卡/芯)
+      torchrun --nproc_per_node 4 --master_port 39682 main.py --model_path {WORKSPACE}/bloom_cut --device 2 3 4 5 --data_dtype fp16 --hardware 310
+      # 量化推理(多卡/芯)
+      torchrun --nproc_per_node 4 --master_port 39682 main.py --model_path {WORKSPACE}/bloom_quant_cut --device 2 3 4 5 --data_dtype int8 --hardware 310
+      # 浮点推理(单卡/芯)
       python3 main.py --model_path {WORKSPACE}/bloom --device 0 --data_dtype fp16 --hardware 310
-      # 量化推理(单芯)
+      # 量化推理(单卡/芯)
       python3 main.py --model_path {WORKSPACE}/bloom_quant --device 0 --data_dtype int8 --hardware 310
 
       # 注：
@@ -212,7 +214,7 @@ cpupower frequency-set -g performance
 
       ```shell
       # 安装sdk
-      cd ../atb_speed_sdk
+      cd ../../atb_speed_sdk
       pip install .
       cd -
       # 准备ceval数据集
@@ -241,8 +243,8 @@ cpupower frequency-set -g performance
 |    模型     | ceval  |
 | :---------: | :----: |
 |     GPU     | 0.2415 |
-|  NPU(W8A8)  | 0.2511 |
 | NPU(W16A16) | 0.2422 |
+| NPU(910B4) | 0.2370 |
 
 ### 模型性能(参考)
 

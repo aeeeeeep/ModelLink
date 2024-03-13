@@ -17,11 +17,18 @@
 #include "atb_speed/utils/operation_util.h"
 #include <atb/atb_infer.h>
 #include "models/chatglm2/6b/layer/paged_attention_layer.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 #include "parallel_lmhead.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace chatglm2_6b {
+
+REGISTER_MODEL(chatglm2_6b, PagedAttentionModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 7;
 const int FINALNORMNODE_WEIGHT_COUNT = 1;
 const int OPERATION_COUNT_AFTER_LAYER = 2;
@@ -93,7 +100,7 @@ atb::Status PagedAttentionModel::InferShape(const std::vector<atb::TensorDesc> &
     const int64_t outDim = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.shape.dims[0];
     outTensorDescs.at(0) = graph_.weightTensors.at(0).desc;
     auto outDimNum = inTensorDescs.at(0).shape.dimNum + 1;
-    for (int i = 0; i < outDimNum - 1; i++) {
+    for (uint32_t i = 0; i < outDimNum - 1; i++) {
         outTensorDescs.at(0).shape.dims[i] = inTensorDescs.at(0).shape.dims[i];
     }
     if (param_.isLmHeadParallel) {
@@ -234,7 +241,7 @@ atb::Status PagedAttentionModel::ParseParam(const std::string &param)
 
 atb::Status PagedAttentionModel::BindParamHostTensor(uint32_t nodeId)
 {
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
 

@@ -18,10 +18,18 @@
 #include "atb_speed/log.h"
 #include "models/gptneox/20b/layer/embedding_layer.h"
 #include "models/gptneox/20b/layer/flashattention_kvcache_layer.h"
+#include "layers/parallel_layer_v2.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace gptneox_20b {
+
+REGISTER_MODEL(gptneox_20b, FaKvCacheModel);
+
 const int WEIGHT_COUNT_PER_LAYER = 12;
 const int WORDEMBEDDINGNODE_WEIGHT_COUNT = 1;
 const int FINALNORMNODE_WEIGHT_COUNT = 2;
@@ -42,6 +50,7 @@ enum InTensorId : int {
     IN_TENSOR_VALUECACHE,
     IN_TENSOR_TOKENOFFSET,
     IN_TENSOR_SEQLEN,
+    IN_HOLDER,
     IN_TENSOR_MAX
 };
 
@@ -71,6 +80,9 @@ void FaKvCacheModel::Param::FromString(const std::string &param)
     }
     if (paramJson.contains("qkScale")) {
         qkScale = paramJson["qkScale"].get<float>();
+    }
+    if (paramJson.contains("backend")) {
+        backend = paramJson["backend"];
     }
 
     ATB_LOG(INFO) << "GptNeox20BModel param layerNormEps:" << layerNormEps << ", headNum:" << headNum << ", dk:" <<
@@ -156,6 +168,7 @@ int64_t FaKvCacheModel::BuildGraph()
         opParam.qScale = param_.qScale;
         opParam.qkScale = param_.qkScale;
         opParam.rank = param_.rank;
+        opParam.backend = param_.backend;
         opParam.rankSize = param_.rankSize;
         atb_speed::gptneox_20b::FlashAttentionKvCacheLayer(opParam, &op);
         layerNode.operation.reset(op);
@@ -175,6 +188,7 @@ int64_t FaKvCacheModel::BuildGraph()
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_VALUECACHE);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_TOKENOFFSET);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SEQLEN);
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_MAX + layerId);
 
         layerNode.outTensors = { &graph_.internalTensors.at(INTERMEDIATETENSOR_COUNT_BEFORE_LAYER + layerId) };
@@ -200,7 +214,8 @@ int64_t FaKvCacheModel::BuildGraph()
     finalNormNode.outTensors = { &graph_.internalTensors.at(finalLayerNormOutTensorId) };
 
     auto &outLinearNode = graph_.nodes.at(nodeId++);
-    atb::infer::LinearParam outLinearParm = { false, false, false };
+    atb::infer::LinearParam outLinearParm;
+    outLinearParm.hasBias = false;
     CREATE_OPERATION(outLinearParm, &op);
     outLinearNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
@@ -230,7 +245,7 @@ atb::Status FaKvCacheModel::ParseParam(const std::string &param)
 
 atb::Status FaKvCacheModel::BindParamHostTensor(uint32_t nodeId)
 {
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
 

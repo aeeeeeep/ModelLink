@@ -17,7 +17,10 @@
 #ifndef ATB_SPEED_TELECHAT_PARALLEL_LAYER_V2_H
 #define ATB_SPEED_TELECHAT_PARALLEL_LAYER_V2_H
 #include "atb_speed/log.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 #include <atb/atb_infer.h>
 
 namespace atb_speed {
@@ -44,7 +47,7 @@ struct CommParam {
 struct ParallelParamV2 {
     bool isBias = false;
     bool transposeA = false;
-    bool transposeB = false;
+    bool transposeB = true;
     bool isQuant = false;
     bool isSparse = false;
     CommParam commParam;

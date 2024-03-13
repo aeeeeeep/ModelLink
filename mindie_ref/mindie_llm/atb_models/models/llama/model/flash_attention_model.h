@@ -36,6 +36,7 @@ public:
         bool quantModel = false;
         bool sparseModel = false;
         bool isEncoder = false;
+        bool isBF16 = false;
         // 量化参数
         std::vector<float> qkvInputScale;
         std::vector<int> qkvInputOffset;
@@ -65,6 +66,7 @@ private:
     std::vector<int32_t> tokenOffset_;
     std::vector<int32_t> seqLen_;
 };
+
 } // namespace llama
 } // namespace atb_speed
 #endif

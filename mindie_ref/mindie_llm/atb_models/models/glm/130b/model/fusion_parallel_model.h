@@ -57,6 +57,7 @@ private:
     atb::SVector<int32_t> tokenOffset_;
     atb::SVector<int32_t> seqLen_;
 };
+
 } // namespace glm130b
 } // namespace atb_speed
 #endif

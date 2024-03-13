@@ -5,17 +5,19 @@
 
 import copy
 import importlib
+import json
 import math
+import os
 import pathlib
 import warnings
 from typing import TYPE_CHECKING, Optional, Tuple, Union, Callable, List, Any, Generator
-import os
-import json
-import torch_npu
 
 import torch
 import torch.nn.functional as F
 import torch.utils.checkpoint
+import torch_npu
+from atb_speed.common.timer import Timer
+from atb_speed.common.utils import load_atb_speed
 from torch.nn import CrossEntropyLoss
 from transformers import PreTrainedTokenizer, GenerationConfig, StoppingCriteriaList
 from transformers.generation.logits_process import LogitsProcessorList
@@ -57,7 +59,9 @@ def is_nd():
 
 
 IS_ND = is_nd()
-print(f"IS_ND = {IS_ND}")
+print(f"{IS_ND=}")
+MASK_INC_DIM1 = 1 if IS_ND else 16  # 增量attention mask shape的第二维
+LONG_SEQ_ENABLE = int(os.getenv("LONG_SEQ_ENABLE", "0"))
 
 
 def get_rank_and_world_size():
@@ -73,20 +77,7 @@ def get_rank_and_world_size():
 RANK, WORLD_SIZE = get_rank_and_world_size()
 print(f"RANK = {RANK} | WORLD_SIZE = {WORLD_SIZE}")
 
-
-def load_acl_transformer():
-    """
-    加载acl transformers
-    :return:
-    """
-    acl_transformer_home_path = os.getenv("ATB_SPEED_HOME_PATH", "")
-    if not acl_transformer_home_path or not os.path.exists(acl_transformer_home_path):
-        raise RuntimeError("env ACLTRANSFORMER_HOME_PATH not exist, source set_env.sh")
-    lib_path = os.path.join(acl_transformer_home_path, "lib/libatb_speed_torch.so")
-    torch.classes.load_library(lib_path)
-
-
-load_acl_transformer()
+load_atb_speed()
 
 logger = logging.get_logger(__name__)
 
@@ -740,6 +731,17 @@ class QWenPreTrainedModel(PreTrainedModel):
             module.gradient_checkpointing = value
 
 
+def get_pad_s(seq_len):
+    """
+    NZ需要16对齐
+    :param seq_len:
+    :return:
+    """
+    if IS_ND:
+        return seq_len
+    return math.ceil(seq_len / 16) * 16
+
+
 class KVAttentionManager:
     def __init__(self, config, batch_size):
         self.nz_dim = 16
@@ -752,6 +754,9 @@ class KVAttentionManager:
         self.token_offset = 1
         self.ori_len_list = []
         self.min_cache = None
+        self.long_seq_mask_len = 128
+        self.dtype = torch.float16
+        self.pad_seq_len = get_pad_s(self.max_seq_len)
         if not IS_ND:
             self.k_cache_input = torch.zeros(self.num_layers,
                                              self.batch_size,  # batch
@@ -786,23 +791,38 @@ class KVAttentionManager:
                                              dtype=torch.half)
         torch.npu.empty_cache()
 
-        self.attention_mask_max_full = torch.zeros(
-            (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
+        if not LONG_SEQ_ENABLE:
+            self.attention_mask_max_full = torch.zeros(
+                (self.batch_size, self.pad_seq_len, self.pad_seq_len), device="npu", dtype=torch.half)
+        else:
+            self.attention_mask_max_full = self.get_triumask(self.long_seq_mask_len).npu()
         self.attention_mask_max_inc = torch.zeros(
-            (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
+            (self.batch_size, MASK_INC_DIM1, self.pad_seq_len), device="npu", dtype=torch.half)
+        if not LONG_SEQ_ENABLE:
+            self.registered_causal_mask = torch.tril(torch.ones(
+                (batch_size, 1, self.pad_seq_len, self.pad_seq_len),
+                dtype=torch.bool, device="npu"))
+        else:
+            self.registered_causal_mask = torch.tril(torch.ones(
+                (batch_size, 1, self.long_seq_mask_len, self.long_seq_mask_len),
+                dtype=torch.bool, device="npu"))
 
-        self.registered_causal_mask = torch.tril(torch.ones(
-            (batch_size, 1, self.max_seq_len, self.max_seq_len),
-            dtype=torch.bool
-        ).npu())
+    def get_triumask(self, mask_block_size):
+        bias_cache = torch.tril(torch.ones((mask_block_size, mask_block_size), dtype=torch.bool)).view(mask_block_size,
+                                                                                                       mask_block_size)
+        bias_cache = ~bias_cache
+        mask_value = torch.finfo(self.dtype).min
+        attn_mask = torch.masked_fill(torch.zeros(size=(mask_block_size, mask_block_size)), bias_cache, mask_value)
+        return attn_mask.to(dtype=self.dtype)
 
     def init_attention_mask(self):
         if IS_ND:
-            self.attention_mask_max_full.zero_()
+            if not LONG_SEQ_ENABLE:
+                self.attention_mask_max_full.zero_()
             self.attention_mask_max_inc.zero_()
         else:
             self.attention_mask_max_inc = torch.zeros(
-            (self.batch_size, self.max_seq_len, self.max_seq_len), dtype=torch.half, device="npu")
+                (self.batch_size, MASK_INC_DIM1, self.pad_seq_len), dtype=torch.half, device="npu")
 
     def init_seq_len_and_token_offset(self, seq_len):
         self.token_offset = seq_len
@@ -828,16 +848,32 @@ class KVAttentionManager:
     def token_offset_list(self):
         return [self.token_offset] * self.batch_size
 
-    def trans_data(self, tensor):
+    def trans_data(self, tensor, trans_type="full"):
         """
         :param tensor:
+        :param trans_type:full or inc
         :return:
         """
-        return torch_npu.npu_format_cast(tensor.view(
-            self.batch_size, self.max_seq_len,
-            self.max_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
+        if trans_type == "full":
+            return torch_npu.npu_format_cast(tensor.view(
+                self.batch_size, self.pad_seq_len,
+                self.pad_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
+        else:
+            return torch_npu.npu_format_cast(tensor.view(
+                self.batch_size, self.nz_dim,
+                self.pad_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
 
     def get_attention_mask(self, attention_mask=None):
+        if LONG_SEQ_ENABLE:
+            if not IS_ND:
+                raise ValueError(f"This SOC does not supports LONG_SEQ_ENABLE=1")
+            if self.batch_size > 1:
+                raise ValueError(f"batch_size must be 1, but got {self.batch_size} when LONG_SEQ_ENABLE=1")
+            if self.is_full:
+                return self.attention_mask_max_full
+            else:
+                return self.attention_mask_max_inc
+
         if not self.is_full:
             return self.attention_mask_max_inc
         else:
@@ -859,8 +895,8 @@ class KVAttentionManager:
                 # self.attention_mask_max_inc[i][:, ori_len:self.token_offset] = \
                 #     self.min_cache[:, ori_len:self.token_offset]
             if not IS_ND:
-                self.attention_mask_max_inc = self.trans_data(self.attention_mask_max_inc)
-                return self.trans_data(self.attention_mask_max_full)
+                self.attention_mask_max_inc = self.trans_data(self.attention_mask_max_inc, "inc")
+                return self.trans_data(self.attention_mask_max_full, "full")
             else:
                 return self.attention_mask_max_full
 
@@ -933,22 +969,22 @@ class QWenModel(QWenPreTrainedModel):
             "layerNum": config.num_hidden_layers,
             "rank": self.rank,
             "rankSize": self.rank_size,
-            "backend": os.getenv("BACKEND", "hccl"),
-            "coderType": 0
+            "backend": "lccl" if IS_ND else "hccl",
+            "coderType": 0,
+            "isTriuMask": LONG_SEQ_ENABLE
         }
 
         self.max_position_embeddings = int(os.getenv("MAX_SEQ_LEN", config.max_position_embeddings))
 
         param_dict["coderType"] = 1
         self.acl_param_encoder = json.dumps(param_dict)
-        self.acl_operation_encoder = torch.classes.ModelTorch.ModelTorch("qwen_14b_flash_attention_rope_model")
+        self.acl_operation_encoder = torch.classes.ModelTorch.ModelTorch("qwen_14b_FlashAttentionModel")
         self.acl_operation_encoder.set_param(self.acl_param_encoder)
 
         param_dict["coderType"] = 2
         self.acl_param_decoder = json.dumps(param_dict)
-        self.acl_operation_decoder = torch.classes.ModelTorch.ModelTorch("qwen_14b_flash_attention_rope_model")
+        self.acl_operation_decoder = torch.classes.ModelTorch.ModelTorch("qwen_14b_FlashAttentionModel")
         self.acl_operation_decoder.set_param(self.acl_param_decoder)
-
 
         if config.rotary_pct == 1.0:
             self.rotary_ndims = None
@@ -971,11 +1007,12 @@ class QWenModel(QWenPreTrainedModel):
         self.lm_head_weight = None
         self.batch_size = 0
         self.kv_attention_manager = None
+        self.nz_dim = 16
         self.min_cache = torch.full(
-            (self.max_position_embeddings, self.max_position_embeddings),
+            (MASK_INC_DIM1, get_pad_s(self.max_position_embeddings)),
             torch.finfo(torch.half).min,
-            dtype=torch.half
-        ).npu()
+            dtype=torch.half, device="npu"
+        )
 
         self.use_logn_attn = config.use_logn_attn
         logn_list = [
@@ -1018,7 +1055,7 @@ class QWenModel(QWenPreTrainedModel):
         seq_end = self.kv_attention_manager.token_offset
         logn_tensor = self.logn_tensor[:, seq_start: seq_end, :, :]
         logn_tensor = logn_tensor.repeat(input_ids.shape[0], 1, self.num_attention_heads, self.head_size_ori)
-
+        seqlen_max = torch.tensor([self.kv_attention_manager.seq_len_tensor[0] - 1], dtype=torch.int64, device="npu")
         inputs = [
                      input_ids,  # IN_TENSOR_INPUTIDS
                      cos_embed,  # IN_TENSOR_COSEMBED
@@ -1030,6 +1067,7 @@ class QWenModel(QWenPreTrainedModel):
                      self.kv_attention_manager.seq_len_tensor,  # IN_TENSOR_SEQLEN
                      logn_tensor,
                      self.place_holder,
+                     seqlen_max,
                  ] + self.layer_id_list
 
         return inputs
@@ -1059,6 +1097,7 @@ class QWenModel(QWenPreTrainedModel):
         ntk_alpha = max(ntk_alpha, 1)
         return ntk_alpha
 
+    @Timer.timing
     def forward(
             self,
             input_ids: Optional[torch.LongTensor] = None,
@@ -1110,8 +1149,6 @@ class QWenModel(QWenPreTrainedModel):
             self.batch_size = batch_size
             self.kv_attention_manager = KVAttentionManager(self.config, batch_size)
             self.kv_attention_manager.min_cache = self.min_cache
-            self.attention_mask_max_inc = torch.zeros(
-                (self.batch_size, self.max_position_embeddings, self.max_position_embeddings), dtype=torch.half).npu()
 
         if past_key_values is None:
             past_length = 0
@@ -1266,7 +1303,7 @@ class QWenLMHeadModel(QWenPreTrainedModel):
             _import_flash_attn()
 
         self.transformer = QWenModel(config)
-        self.lm_head = nn.Linear(config.hidden_size // WORLD_SIZE, config.vocab_size, bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size // WORLD_SIZE, bias=False)
 
         if config.bf16:
             self.transformer.bfloat16()

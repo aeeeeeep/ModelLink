@@ -17,9 +17,13 @@
 
 #include "layers/mlp_gate_v2.h"
 #include "layers/parallel_layer_v2.h"
+#include "atb_speed/utils/operation_factory.h"
 
 namespace atb_speed {
 namespace baichuan2_13b {
+
+REGISTER_OPERATION(baichuan2_13b, CreateFlashAttentionLayer);
+
 enum FlashAttentionLayerTensorId : int {
     IN_HIDDEN_STATES = 0,
     IN_NORM_WEIGHT,
@@ -105,7 +109,8 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
     inputNormNode.inTensorIds = {IN_HIDDEN_STATES, IN_NORM_WEIGHT};
     inputNormNode.outTensorIds = {INTERNAL_INPUT_NORM_OUT};
 
-    atb::infer::LinearParam linearParam = {false, false, false};
+    atb::infer::LinearParam linearParam;
+    linearParam.hasBias = false;
     CREATE_OPERATION(linearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = {INTERNAL_INPUT_NORM_OUT, IN_QKV_MIXED_LINEAR_WEIGHT};
     qkvLinearNode.outTensorIds = {INTERNAL_QKV_MIXED_LINEAR_OUT};
@@ -116,10 +121,9 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
     splitQKVNode.outTensorIds = {INTERNAL_MIXED_Q, INTERNAL_MIXED_K, INTERNAL_MIXED_V};
 
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / sqrt(param.dk);
-    selfAttentionParam.isSupportAlibi = true;
+    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MASK_TYPE_ALIBI;
     CREATE_OPERATION(selfAttentionParam, &selfAttentionKvCacheNode.operation);
     selfAttentionKvCacheNode.inTensorIds = {INTERNAL_MIXED_Q, INTERNAL_MIXED_K, INTERNAL_MIXED_V,
                                             IN_PAST_KEY,      IN_PAST_VALUE,    IN_ATTENTION_MASK,
@@ -174,7 +178,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
     mlpParam.commDownParam.rankSize = param.rankSize;
     mlpParam.commDownParam.backend = param.backend;
     mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
-    mlpParam.transposeB = false;
+    mlpParam.transposeB = true;
     mlpParam.isBias = false;
     mlpParam.isPack = false;
     atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);

@@ -65,6 +65,7 @@ private:
     std::vector<int32_t> seqLen_;
     int32_t layerId_ = 0;
 };
+
 } // namespace star_coder
 } // namespace atb_speed
 #endif

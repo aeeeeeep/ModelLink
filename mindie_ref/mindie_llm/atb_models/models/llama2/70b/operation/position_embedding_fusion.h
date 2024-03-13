@@ -16,7 +16,10 @@
 #ifndef ATB_SPEED_MODELS_LLAMA_POSITION_EMBEDDING_1DSPLIT_FUSION_OPERATION_H
 #define ATB_SPEED_MODELS_LLAMA_POSITION_EMBEDDING_1DSPLIT_FUSION_OPERATION_H
 #include <atb/atb_infer.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 
 namespace atb_speed {
 namespace llama2_70b {
@@ -28,16 +31,6 @@ struct PositionEmbedding1dFusionParam {
 
 atb::Status PositionEmbeddingFusionOperation(const PositionEmbedding1dFusionParam &param,
                                              atb::Operation **operation);
-
-static atb::Operation *CreatePositionEmbeddingFusionOperation(const nlohmann::json &paramJson)
-{
-    atb_speed::llama2_70b::PositionEmbedding1dFusionParam param;
-    param.rotaryCoeff = paramJson["rotaryCoeff"].get<int>();
-    param.headNum = paramJson["headNum"].get<int>();
-    atb::Operation *op;
-    atb_speed::llama2_70b::PositionEmbeddingFusionOperation(param, &op);
-    return op;
-}
 
 } // namespace llama2_70b
 } // namespace atb_speed

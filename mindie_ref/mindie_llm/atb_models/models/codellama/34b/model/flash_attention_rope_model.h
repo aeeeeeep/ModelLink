@@ -57,6 +57,7 @@ private:
 
     std::vector<int32_t> seqLen_;
 };
+
 } // namespace codellama_34b
 } // namespace atb_speed
 #endif

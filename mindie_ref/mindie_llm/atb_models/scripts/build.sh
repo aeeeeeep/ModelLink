@@ -34,9 +34,10 @@ export CODE_ROOT=`pwd`
 export CACHE_DIR=$CODE_ROOT/build
 export OUTPUT_DIR=$CODE_ROOT/output
 THIRD_PARTY_DIR=$CODE_ROOT/3rdparty
-PACKAGE_NAME="7.0.T800"
-ASCEND_SPEED_VERSION=""
-VERSION_B=""
+PACKAGE_NAME="1.0.RC1"
+MindIE_ATB_VERSION_FOR_CI="1.0.RC1.B032" # only for ci build
+MindIE_ATB_TAG_BRANCH=v1.1.3 # current MindIE-ATB sourcecode tag/branch for ATB-Models
+ATB_MODELS_VERSION=""
 README_DIR=$CODE_ROOT
 COMPILE_OPTIONS=""
 INCREMENTAL_SWITCH=OFF
@@ -46,8 +47,8 @@ USE_VERBOSE=OFF
 IS_RELEASE=0
 BUILD_OPTION_LIST="3rdparty download_testdata unittest unittest_and_run pythontest pythontest_and_run debug release help python_unittest_and_run master"
 BUILD_CONFIGURE_LIST=("--output=.*" "--cache=.*" "--verbose" "--incremental" "--gcov" "--no_hostbin" "--no_devicebin" "--use_cxx11_abi=0"
-    "--use_cxx11_abi=1" "--build_config=.*" "--optimize_off" "--use_torch_runner" "--use_lccl_runner" "--use_hccl_runner" "--doxygen" "--no_warn" 
-    "--ascend_speed_version=.*" "--release_b_version=.*")
+    "--use_cxx11_abi=1" "--build_config=.*" "--optimize_off" "--use_torch_runner" "--use_lccl_runner" "--use_hccl_runner" "--doxygen"  
+    "--ascend_speed_version=.*")
 
 function export_speed_env()
 {
@@ -118,6 +119,27 @@ function fn_build_3rdparty_for_test()
     cd ..
 }
 
+function fn_build_atb()
+{
+    if [ $ATB_HOME_PATH ]; then
+        echo "MindIE-ATB is ready"
+        return 0
+    fi
+
+    #belows are for ci build
+    if [ "$USE_CXX11_ABI" == "OFF" ]; then
+        abi="abi0"
+    else
+        abi="abi1"
+    fi
+    cd $CODE_ROOT
+    mindie_atb_package="MindIE_ATB/$MindIE_ATB_VERSION_FOR_CI/Ascend-mindie-atb_${PACKAGE_NAME}_linux-${ARCH}_${abi}.run"
+    chmod 755 ./$mindie_atb_package
+    ./$mindie_atb_package --extract=./MindIE_ATB/latest
+    mv ./MindIE_ATB/latest/set_env.sh ./MindIE_ATB
+    source ./MindIE_ATB/set_env.sh
+}
+
 function fn_build_nlohmann_json()
 {
     NLOHMANN_DIR=$THIRD_PARTY_DIR/nlohmannJson/include
@@ -144,6 +166,7 @@ function fn_build_3rdparty()
     rm -rf $CACHE_DIR
     mkdir $CACHE_DIR
     cd $CACHE_DIR
+    fn_build_atb
     fn_build_nlohmann_json
     cd ..
 }
@@ -239,14 +262,17 @@ function fn_build_version_info()
 {
     if [ -f "$CODE_ROOT"/../../../../CI/config/version.ini ]; then
         PACKAGE_NAME=$(cat $CODE_ROOT/../../../../CI/config/version.ini | grep "PackageName" | cut -d "=" -f 2)
-        VERSION=$(cat "$CODE_ROOT"/../../../../CI/config/version.ini | grep "ATBVersion" | cut -d "=" -f 2)
-        ASCEND_SPEED_VERSION=$(cat $CODE_ROOT/../../../../CI/config/version.ini | grep "ATB-ModelsVersion" | cut -d "=" -f 2)
+        ATB_VERSION=$(cat "$CODE_ROOT"/../../../../CI/config/version.ini | grep "ATBVersion" | cut -d "=" -f 2)
+        ATB_MODELS_VERSION=$(cat $CODE_ROOT/../../../../CI/config/version.ini | grep "ATB-ModelsVersion" | cut -d "=" -f 2)
     fi
+    commit_id=$(git rev-parse HEAD)
     current_time=$(date +"%Y-%m-%d %r %Z")
     touch $OUTPUT_DIR/atb_speed/version.info
     cat > $OUTPUT_DIR/atb_speed/version.info <<EOF
-ATBVersion : ${VERSION_B}
-ModelsVersion : ${ASCEND_SPEED_VERSION}
+MindIE-ATB Tag/Branch : ${MindIE_ATB_TAG_BRANCH}
+MindIE-ATB Version : ${ATB_VERSION}
+ATB-Models Version : ${ATB_MODELS_VERSION}
+Commit id : ${commit_id}
 Platform : ${ARCH}
 Time: ${current_time}
 EOF
@@ -257,6 +283,11 @@ function fn_build_for_ci()
 {
     cd $OUTPUT_DIR/atb_speed
     rm -rf ./*.tar.gz
+    cp $CODE_ROOT/dist/atb_llm*.whl .
+    cp -r $CODE_ROOT/atb_llm .
+    cp $CODE_ROOT/setup.py .
+    cp -r $CODE_ROOT/examples .
+    cp -r $CODE_ROOT/tests .
     cp $README_DIR/README.md .
     fn_build_version_info
 
@@ -285,14 +316,14 @@ function fn_make_whl() {
     echo "make atb_llm whl package"
     cd $CODE_ROOT
     python3 $CODE_ROOT/setup.py bdist_wheel
-    cp $CODE_ROOT/dist/atb_llm*.whl $OUTPUT_DIR/atb_speed/
-    cp -r $CODE_ROOT/atb_llm $OUTPUT_DIR/atb_speed/
-    cp $CODE_ROOT/setup.py $OUTPUT_DIR/atb_speed/
-    cp -r $CODE_ROOT/examples $OUTPUT_DIR/atb_speed/
 }
 
 function fn_build()
 {
+    if [ -z $ASCEND_HOME_PATH ]; then
+        echo "env ASCEND_HOME_PATH not exist, please source cann's set_env.sh"
+        exit -1
+    fi
     fn_build_3rdparty
     if [ ! -d "$OUTPUT_DIR" ];then
         mkdir -p $OUTPUT_DIR
@@ -331,16 +362,6 @@ function fn_build()
 
 function fn_main()
 {
-    if [ -z $ATB_HOME_PATH ];then
-        echo "env ATB_HOME_PATH not exist, please source atb's set_env.sh"
-        exit -1
-    fi
-
-    PYTORCH_VERSION="$(python3 -c 'import torch; print(torch.__version__)')"
-    if [ ${PYTORCH_VERSION:0:5} == "1.8.0" ] || [ ${PYTORCH_VERSION:0:4} == "1.11" ];then
-        COMPILE_OPTIONS="${COMPILE_OPTIONS} -DTORCH_18=ON"
-    fi
-
     if [[ "$BUILD_OPTION_LIST" =~ "$1" ]];then
         if [[ -z "$1" ]];then
             arg1="master"
@@ -373,15 +394,7 @@ function fn_main()
             if [ -z $arg2 ];then
                 echo "the ascend_speed_version is not set. This should be set like --ascend_speed_version=<version>"
             else
-                ASCEND_SPEED_VERSION=$arg2
-            fi
-            ;;
-        --release_b_version=*)
-            arg2=${arg2#*=}
-            if [ -z $arg2 ];then
-                echo "the release_b_version is not set. This should be set like --release_b_version=<version>"
-            else
-                VERSION_B=$arg2
+                ATB_MODELS_VERSION=$arg2
             fi
             ;;
         --output=*)
@@ -415,10 +428,6 @@ function fn_main()
         "--use_cxx11_abi=0")
             USE_CXX11_ABI=OFF
             COMPILE_OPTIONS="${COMPILE_OPTIONS} -DUSE_CXX11_ABI=OFF"
-            ;;
-        "--no_warn")
-            ENABLE_WARNINGS=OFF
-            COMPILE_OPTIONS="${COMPILE_OPTIONS} -DENABLE_WARNINGS=OFF"
             ;;
         "--verbose")
             USE_VERBOSE=ON

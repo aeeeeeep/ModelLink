@@ -63,6 +63,7 @@ private:
     atb::SVector<int32_t> tokenOffset_;
     atb::SVector<int32_t> seqLen_;
 };
+
 }  // namespace telechat
 }  // namespace atb_speed
 #endif

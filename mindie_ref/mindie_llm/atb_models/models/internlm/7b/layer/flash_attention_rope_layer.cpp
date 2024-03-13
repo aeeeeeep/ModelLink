@@ -97,7 +97,7 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT };
     inputNormNode.outTensorIds = { INTERMIDATE_INPUTNORMOUT };
 
-    atb::infer::LinearParam linearParam = { false, false, true };
+    atb::infer::LinearParam linearParam;
     CREATE_OPERATION(linearParam, &qLinearNode.operation);
     qLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_Q_LINEARWEIGHT, IN_Q_LINEARBIAS };
     qLinearNode.outTensorIds = { INTERMIDATE_Q_MIXEDLINEAROUT };
@@ -119,7 +119,6 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     ropeNode.outTensorIds = { INTERMIDATE_Q_POSITIONEMBED, INTERMIDATE_K_POSITIONEMBED };
 
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / sqrt(param.dk);
     CREATE_OPERATION(selfAttentionParam, &selfAttentionKvCacheNode.operation);
@@ -167,7 +166,7 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     mlpParam.rank = param.rank;
     mlpParam.rankSize = param.rankSize;
     mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
-    mlpParam.transposeB = false;
+    mlpParam.transposeB = true;
     mlpParam.isBias = false;
     mlpParam.isPack = false;
     atb_speed::common::MlpGateLayer(mlpParam, &mlpNode.operation);

@@ -60,12 +60,17 @@ class FlashForCausalLM(torch.nn.Module):
         self.num_attention_heads = (self.num_attention_heads + self.tp_world_size - 1) // self.tp_world_size
         self.num_key_value_heads = self.num_key_value_heads // self.tp_world_size
 
-        self.ascend_rotary_embedding = PositionRotaryEmbedding.static(dim=self.head_size, base=10000.0,
-                                                                      device="cpu").to(weights.device)
+        self.rotary_embedding = PositionRotaryEmbedding.static(dim=self.head_size, base=10000.0,
+                                                               device="cpu").to(weights.device)
         self.max_position_embeddings = config.max_position_embeddings
-        self.ascend_atten_mask = AttentionMask.static(config.max_position_embeddings)
         self.quantize = config.quantize
         self.dtype = weights.dtype
+
+        self.max_base_len = 128
+        if self.soc_info.need_nz:
+            self.attn_mask = AttentionMask.static(config.max_position_embeddings, dtype=self.dtype)
+        else:
+            self.attn_mask = AttentionMask.static(self.max_base_len, dtype=self.dtype)
 
         # for ascend init
         self.init_ascend_operations(config)
@@ -73,13 +78,14 @@ class FlashForCausalLM(torch.nn.Module):
         self.ascend_kcache_id = None
         self.ascend_vcache_id = None
 
-        self.acl_encoder_operation_inputs = [None] * 9
-        self.acl_decoder_operation_inputs = [None] * 9
+        self.in_tensor_length = 9
+        self.acl_encoder_operation_inputs = [None] * self.in_tensor_length
+        self.acl_decoder_operation_inputs = [None] * self.in_tensor_length
 
         self.device = weights.device
         self.cu_seqlen_tensor_fake = torch.tensor([0], dtype=torch.int).to(self.device)
         self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64).to(self.device)
-        self.ascend_atten_mask_fake = self.ascend_atten_mask \
+        self.attn_mask_fake = self.attn_mask \
             .get_attn_mask(1, dtype=self.dtype, device="cpu") \
             .to(self.device)
 
@@ -103,12 +109,12 @@ class FlashForCausalLM(torch.nn.Module):
         pass
 
     def init_position_rotary_embedding(self, position_ids: torch.Tensor, max_seq_len: int):
-        self.ascend_rotary_embedding.update_cos_sin_cache_total(self.dtype, self.device, max_seq_len)
+        self.rotary_embedding.update_cos_sin_cache_total(self.dtype, self.device, max_seq_len)
         if self.num_attention_heads == self.num_key_value_heads:
-            self.cos_embed, self.sin_embed = self.ascend_rotary_embedding.get_cos_sin_cached_total(position_ids)
+            self.cos_embed, self.sin_embed = self.rotary_embedding.get_cos_sin_cached_total(position_ids)
         else:
-            self.cos_embed = self.ascend_rotary_embedding.get_cos_cached_total()
-            self.sin_embed = self.ascend_rotary_embedding.get_sin_cached_total()
+            self.cos_embed = self.rotary_embedding.get_cos_cached_total()
+            self.sin_embed = self.rotary_embedding.get_sin_cached_total()
 
     def init_kvcache(self, kv_cache):
         kcache_id = not self.ascend_kcache_id or self.ascend_kcache_id != id(kv_cache[0][0])
@@ -139,14 +145,13 @@ class FlashForCausalLM(torch.nn.Module):
         self.init_position_rotary_embedding(position_ids, max_seq_len)
         if is_prefill:
             if self.soc_info.need_nz:
-                pad_maxs = math.ceil(max_seq_len / 16) * 16
-                atten_mask = self.ascend_atten_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
+                pad_maxs = math.ceil(self.max_position_embeddings / 16) * 16
+                atten_mask = self.attn_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
                 atten_mask = atten_mask.view(1, pad_maxs, pad_maxs // 16, 16).transpose(1, 2)
                 torch_npu.npu_format_cast_(atten_mask, 29)
             else:
-                atten_mask = self.ascend_atten_mask.get_attn_mask(max_seq_len, kv_cache[0][0].dtype,
+                atten_mask = self.attn_mask.get_attn_mask(self.max_position_embeddings, kv_cache[0][0].dtype,
                                                                   kv_cache[0][0].device)
-
             if lm_head_indices is None:
                 lm_head_indices = torch.tensor(range(input_ids.shape[0]), dtype=torch.int64, device=input_ids.device)
             self.acl_param = json.dumps({
@@ -156,7 +161,10 @@ class FlashForCausalLM(torch.nn.Module):
             self.acl_encoder_operation_inputs[1] = position_ids.to(torch.int64)
             self.acl_encoder_operation_inputs[2] = self.cos_embed
             self.acl_encoder_operation_inputs[3] = self.sin_embed
-            self.acl_encoder_operation_inputs[4] = atten_mask
+            if self.dtype == torch.bfloat16:
+                self.acl_encoder_operation_inputs[4] = torch.where(atten_mask == -torch.inf, 1, atten_mask)
+            else:
+                self.acl_encoder_operation_inputs[4] = atten_mask
             self.acl_encoder_operation_inputs[5] = block_tables.to(torch.int32)
             self.acl_encoder_operation_inputs[6] = slots.to(torch.int32)
             self.acl_encoder_operation_inputs[7] = input_lengths.to(torch.int32)
@@ -170,7 +178,14 @@ class FlashForCausalLM(torch.nn.Module):
             self.acl_decoder_operation_inputs[1] = position_ids.to(torch.int64)
             self.acl_decoder_operation_inputs[2] = self.cos_embed
             self.acl_decoder_operation_inputs[3] = self.sin_embed
-            self.acl_decoder_operation_inputs[4] = self.ascend_atten_mask_fake
+            if self.dtype == torch.bfloat16:
+                self.acl_decoder_operation_inputs[4] = torch.zeros(input_lengths.size(0),
+                                                                    self.num_attention_heads,
+                                                                    1, input_lengths.max(),
+                                                                    dtype=self.dtype,
+                                                                    device=input_ids.device)
+            else:
+                self.acl_decoder_operation_inputs[4] = self.attn_mask_fake
             self.acl_decoder_operation_inputs[5] = block_tables.to(torch.int32)
             self.acl_decoder_operation_inputs[6] = slots.to(torch.int32)
             self.acl_decoder_operation_inputs[7] = input_lengths.to(torch.int32)

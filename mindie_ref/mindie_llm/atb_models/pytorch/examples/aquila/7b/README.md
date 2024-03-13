@@ -33,10 +33,10 @@ Aquila 系列模型的源代码基于 Apache 2.0 协议，而模型权重基于 
 
 **表 3** 硬件形态
 
-| CPU     | Device |
-|---------|--------|
-| aarch64 | 910B3  |
-| aarch64 | 310P3  |
+| CPU     | Device         |
+|---------|----------------|
+| aarch64 | Atlas 800I A2  |
+| aarch64 | Atlas 300I DUO |
 
 # 快速上手
 
@@ -54,15 +54,14 @@ Aquila 系列模型的源代码基于 Apache 2.0 协议，而模型权重基于 
 
 | 包名                                   |
 |--------------------------------------|
-| Ascend-hdk-910b-npu-firmware_xxx.run |
-| Ascend-hdk-310p-npu-firmware_xxx.run |
+| Ascend-hdk-xxxx-npu-firmware_xxx.run |
 
 根据芯片型号选择相应的安装包安装
 
 ```bash
 # 安装firmwire
-chmod +x Ascend-hdk-310p-npu-firmware_xxx.run
-./Ascend-hdk-310p-npu-firmware_xxx.run --full
+chmod +x Ascend-hdk-xxxx-npu-firmware_xxx.run
+./Ascend-hdk-xxxx-npu-firmware_xxx.run --full
 ```
 
 ##### 1.1.2 安装driver
@@ -71,15 +70,13 @@ chmod +x Ascend-hdk-310p-npu-firmware_xxx.run
 
 | cpu     | 包名                                               | 
 |---------|--------------------------------------------------|
-| aarch64 | Ascend-hdk-910b-npu-driver_xxx_linux-aarch64.run |
-| x86     | Ascend-hdk-910b-npu-driver_xxx_linux-x86_64.run  |
-| aarch64 | Ascend-hdk-310p-npu-driver_xxx_linux-aarch64.run |
-| x86     | Ascend-hdk-310p-npu-driver_xxx_linux-x86-64.run  |
+| aarch64 | Ascend-hdk-xxxx-npu-driver_xxx_linux-aarch64.run |
+| x86     | Ascend-hdk-xxxx-npu-driver_xxx_linux-x86_64.run  |
 
 ```bash
 # 根据CPU架构 以及npu型号 安装对应的 driver
-chmod +x Ascend-hdk-910b-npu-driver_xxx_*.run
-./Ascend-hdk-910b-npu-driver_xxx_*.run --full
+chmod +x Ascend-hdk-xxxx-npu-driver_xxx_*.run
+./Ascend-hdk-xxxx-npu-driver_xxx_*.run --full
 ```
 
 #### 1.2 安装CANN
@@ -90,15 +87,15 @@ chmod +x Ascend-hdk-910b-npu-driver_xxx_*.run
 
 安装方法：
 
-| cpu     | 包名                                            |
-|---------|-----------------------------------------------|
-| aarch64 | Ascend-cann-toolkit_8.0.RC1_linux-aarch64.run |
-| x86     | Ascend-cann-toolkit_8.0.RC1_linux-aarch64.run |
+| cpu     | 包名                                       |
+|---------|------------------------------------------|
+| aarch64 | Ascend-cann-toolkit_xxx_linux-aarch64.run |
+| x86     | Ascend-cann-toolkit_xxx_linux-x86_64.run |
 
 ```bash
 # 安装toolkit  以arm为例
-chmod +x Ascend-cann-toolkit_8.0.RC1_linux-aarch64.run
-./Ascend-cann-toolkit_8.0.RC1_linux-aarch64.run --install
+chmod +x Ascend-cann-toolkit_xxx_linux-aarch64.run
+./Ascend-cann-toolkit_xxx_linux-aarch64.run --install
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 ```
 
@@ -106,15 +103,14 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 安装方法：
 
-| 包名                                         |
-|--------------------------------------------|
-| Ascend-cann-kernels-910b_8.0.RC1_linux.run |
-| Ascend-cann-kernels-310b_8.0.RC1_linux.run |
+| 包名                                     |
+|----------------------------------------|
+| Ascend-cann-kernels-xxxx_xxx_linux.run |
 
 ```bash
-# 安装 kernel 以910B 为例
-chmod +x Ascend-cann-kernels-910b_8.0.RC1_linux.run
-./Ascend-cann-kernels-910b_8.0.RC1_linux.run --install
+# 安装 kernel 以Atlas 800I A2 为例
+chmod +x Ascend-cann-kernels-xxxx_xxx_linux.run
+./Ascend-cann-kernels-xxxx_xxx_linux.run --install
 ```
 
 #### 1.3 安装PytorchAdapter
@@ -193,14 +189,14 @@ pip install torch*_aarch64.whl
 2. 根据版本发布链接，安装加速库
    将加速库下载至 `${llm_path}` 目录
 
-| 加速库包名                                                 |
-|-------------------------------------------------------|
-| Ascend-cann-atb_{version}_cxx11abi0_linux-aarch64.run |
-| Ascend-cann-atb_{version}_cxx11abi1_linux-aarch64.run |
-| Ascend-cann-atb_{version}_cxx11abi1_linux-x86_64.run  |
-| Ascend-cann-atb_{version}_cxx11abi0_linux-x86_64.run  |
+| 加速库包名                                              |
+|----------------------------------------------------|
+| Ascend-mindie-atb_{version}_linux-aarch64_abi0.run |
+| Ascend-mindie-atb_{version}_linux-aarch64_abi1.run |
+| Ascend-mindie-atb_{version}_linux-x86_64_abi0.run  |
+| Ascend-mindie-atb_{version}_linux-x86_64_abi1.run  |
 
-具体使用cxx11abi0 还是cxx11abi1 可通过python命令查询
+具体使用abi0还是abi1可通过python命令查询
 
 ```python
 import torch
@@ -212,7 +208,7 @@ torch.compiled_with_cxx11_abi()
 
 ```bash
 # 安装atb 
-chmod +x Ascend-cann-atb_*.run
+chmod +x Ascend-mindie-atb_*.run
 ./Ascend-cann-atb_*.run --install
 source /usr/local/Ascend/atb/set_env.sh
 ```
@@ -220,19 +216,19 @@ source /usr/local/Ascend/atb/set_env.sh
 3. 根据版本发布链接，安装加速库
    将加速库下载至 `${llm_path}` 目录
 
-| 大模型包名                                                             |
-|-------------------------------------------------------------------|
-| Ascend-cann-llm_{version_id}_linux-x86_64_torch2.0.1-abi0.tar.gz  |
-| Ascend-cann-llm_{version_id}_linux-x86_64_torch2.0.1-abi1.tar.gz  |
-| Ascend-cann-llm_{version_id}_linux-aarch64_torch2.0.1-abi0.tar.gz |
-| Ascend-cann-llm_{version_id}_linux-aarch64_torch2.0.1-abi1.tar.gz |
+| 大模型包名                                                                      |
+|----------------------------------------------------------------------------|
+| Ascend-mindie-atb-models_{version_id}_linux-x86_64_torch2.0.1-abi0.tar.gz  |
+| Ascend-mindie-atb_models_{version_id}_linux-x86_64_torch2.0.1-abi1.tar.gz  |
+| Ascend-mindie-atb_models_{version_id}_linux-aarch64_torch2.0.1-abi0.tar.gz |
+| Ascend-mindie-atb_models_{version_id}_linux-aarch64_torch2.0.1-abi1.tar.gz |
 
-具体使用cxx11abi0 还是cxx11abi1 方法同安装atb
+具体使用abi0还是abi1方法同安装atb
 
  ```bash
  # 安装大模型加速库
  cd ${llm_path}
- tar -xzvf Ascend-cann-llm_*.tar.gz
+ tar -xzvf Ascend-mindie-atb-models_*.tar.gz
  source set_env.sh
  ```
 
@@ -259,7 +255,7 @@ source /usr/local/Ascend/atb/set_env.sh
 cp ${model_download_path}/*.py ${model_path}/
 cp ${model_download_path}/*.json ${model_path}/
 cp ${model_download_path}/*.model ${model_path}/
-ln -s ${model_download_path}/*.bin ${model_path}/
+cp -s ${model_download_path}/*.bin ${model_path}/
 ```
 
 ### 安装 atb_speed_sdk
@@ -321,6 +317,11 @@ bash cut_model_and_run_aquila.sh
 
 ##### 单卡
 
+拷贝修改后的modeling
+```shell
+cp ${script_path}/modeling_aquila_ascend.py ${model_path}
+```
+
 修改${model_path}/config.json中的kv对，改成
 
 ```
@@ -367,18 +368,20 @@ task_name可选inference、precision、performance。
   修改 ${model_path}里的config.json中的kv对，改成`"AutoModelForCausalLM": "modeling_aquila_ascend.AquilaForCausalLM"`
 
 ```shell
+cd ${script_path}
 python main.py --task ${task_name}
 ```
 
 - 多芯
 
 ```shell
+cd ${script_path}
 bash cut_model_and_run_aquila.sh ${task_name}
 ```
 
 #### cut_model_and_run_aquila.sh
 
-- 910B
+- Atlas 800I A2
   需要去掉run_cmd中的${atb_stream}参数
   
 ```shell
@@ -400,11 +403,11 @@ MAX_SEQ_LEN=2048 bash cut_model_and_run_aquila.sh ${task_name}
 
 # 竞品对比
 
-# 910B
+# Atlas 800I A2
 
 ## 精度
 
-| 精度             | 910B3(313T)         | A100                | 对比                   |
+| 精度             | Atlas 800I A2       | A100                | 对比                   |
 |----------------|---------------------|---------------------|----------------------| 
 | STEM           | 0.3767441860465116  | 0.3813953488372093  | -0.0046511627906977  |
 | Social Science | 0.48363636363636364 | 0.48363636363636364 | 0                    |
@@ -414,18 +417,18 @@ MAX_SEQ_LEN=2048 bash cut_model_and_run_aquila.sh ${task_name}
 
 ## 性能
 
-| 芯片型号  | batch_size | 首token推理速度(token/s) | 增量推理速度(token/s) |
-|-------|------------|---------------------|-----------------|
-| A100  | 1          | 22.68088002         | 88.88888889     |
-| 910B3 | 1          | 24.20406347         | 67.56546904     |
-| 对比    | 1          | 1.067157158         | 0.760111527     |
+| 芯片型号          | batch_size | 首token推理速度(token/s) | 增量推理速度(token/s) |
+|---------------|------------|---------------------|-----------------|
+| A100          | 1          | 22.68088002         | 88.88888889     |
+| Atlas 800I A2 | 1          | 24.20406347         | 67.56546904     |
+| 对比            | 1          | 1.067157158         | 0.760111527     |
 
 
-# 310P
+# Atlas 300I DUO
 
 ## 精度
 
-| 精度             | 310P                | 
+| 精度             | Atlas 300I DUO      | 
 |----------------|---------------------|
 | STEM           | 0.3627906976744186  |
 | Social Science | 0.49818181818181817 |
@@ -437,9 +440,9 @@ MAX_SEQ_LEN=2048 bash cut_model_and_run_aquila.sh ${task_name}
 
 浮点
 
-| 硬件形态  | 批大小 | 输入长度     | 输出长度     | 首次推理（ms/token） | 非首次推理(ms/token) |
-|-------|-----|----------|----------|----------------|-----------------|
-| Duo双芯 | 1   | 2^5~2^10 | 2^5~2^10 | 235.0490424    | 91.39817598     |
+| 硬件形态           | 批大小 | 输入长度     | 输出长度     | 首次推理（ms/token） | 非首次推理(ms/token) |
+|----------------|-----|----------|----------|----------------|-----------------|
+| Atlas 300I DUO | 1   | 2^5~2^10 | 2^5~2^10 | 235.0490424    | 91.39817598     |
 
 
 # 附录：
@@ -501,17 +504,17 @@ bash cut_model_and_run_aquila.sh precision
 
 ```shell
 cd ${script_path}
-RETURN_PERF_DETAIL=1 python main.py --task performance
+TIMEIT=1 python main.py --task performance
 ```
 
 - 多芯
 
 ```shell
 cd ${script_path}
-RETURN_PERF_DETAIL=1 bash cut_model_and_run_aquila.sh performance
+TIMEIT=1 bash cut_model_and_run_aquila.sh performance
 ```
 
-将`RETURN_PERF_DETAIL`设置成1来返回具体的性能测试的值，默认是0  
+将`TIMEIT`设置成1来返回具体的性能测试的值，默认是0  
 上述多芯场景参数
 
 * performance表示性能测试。

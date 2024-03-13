@@ -31,9 +31,10 @@ public:
         float qkScale = 1.0;
         bool isPrefill = false;
         int layerNum = 0;
-
+        bool isFA = true;
         int rank = 0;
         int rankSize = 1;
+        std::string backend = "hccl";
 
         void FromString(const std::string &param);
     };
@@ -61,6 +62,7 @@ private:
     atb::SVector<int32_t> tokenOffset_;
     atb::SVector<int32_t> seqLen_;
 };
+
 } // namespace gptneox_20b
 } // namespace atb_speed
 #endif // ATB_SPEED_MODELS_GPTNEOX_20B_FA_KVCACHE_ROPE_MODEL_H

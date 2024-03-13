@@ -1,25 +1,30 @@
 # coding=utf-8
 # Copyright Huawei Technologies Co., Ltd. 2023-2031. All rights reserved
 
-import argparse
+import os
 import glob
 import math
-import os
-import platform
 import shutil
 import json
 import time
+import argparse
+import platform
 from pathlib import Path
+from enum import Enum
 
-from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModel
 import transformers
-from transformers.utils import check_min_version
 import torch
 import torch.distributed as dist
 import torch_npu
+from tqdm import tqdm
+from transformers import AutoTokenizer, AutoModel
+from transformers.utils import check_min_version
 from torch_npu.contrib import transfer_to_npu
+from atb_speed.common.timer import Timer
 
+class Model(Enum):
+    CHATGLM2 = 'chatglm2'
+    CHATGLM3 = 'chatglm3'
 
 def override_topp_and_topk():
     # 修改transformers的TopKLogitsWarper
@@ -55,7 +60,8 @@ def override_topp_and_topk():
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Adapting ChatGLM2-6B on Ascend")
+    parser = argparse.ArgumentParser(description="Adapting ChatGLM2-6B/ChatGLM3-6b on Ascend")
+    parser.add_argument("--model", type=str, default="chatglm2", help="Model name")
     parser.add_argument(
         "--mode",
         type=str,
@@ -104,7 +110,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def get_is_format_nz():
+def is_format_nz():
     soc_version = torch_npu._C._npu_get_soc_version()
     if soc_version in [200, 201, 202, 203]:
         return True
@@ -128,7 +134,6 @@ def check_lists(arg):
 
 
 def get_model(args):
-
     # 加载 tokenizer 和 model
     tokenizer = AutoTokenizer.from_pretrained(args.model_path, trust_remote_code=True)
     if args.tp_size > 1:
@@ -154,14 +159,8 @@ def get_model(args):
     # 推理模式
     model = model.eval()
 
-    # 确认配置
-    ENABLE_QUANT = os.environ.get("ENABLE_QUANT", "0") == "1"
-    is_format_nz = get_is_format_nz()
-    if ENABLE_QUANT:
-        QUANT_WEIGHT_PATH = os.environ.get("QUANT_WEIGHT_PATH")
-
     # 浮点模型适配
-    if is_format_nz:
+    if is_format_nz():
         for name, module in model.named_modules():
             if isinstance(module, torch.nn.Linear):
                 module.weight.data = torch_npu.npu_format_cast(module.weight.data, 29)
@@ -309,14 +308,11 @@ def performance(args, tokenizer, model):
             torch.npu.synchronize()
             first_token_end = time.time()
 
+            Timer.reset()
+            Timer.sync = torch.npu.synchronize
             torch.npu.synchronize()
             total_start = time.time()
-            outputs, \
-                time_of_first_token, \
-                time_per_token, \
-                per_next_token_time, \
-                post_next_token_time \
-                = model.generate(
+            outputs = model.generate(
                     **inputs,
                     eos_token_id=model.config.vocab_size * 2,
                     max_new_tokens=seq_len_out,
@@ -326,7 +322,7 @@ def performance(args, tokenizer, model):
 
         # time analysis
         time_total = total_end - total_start
-        time_tensor = torch.tensor([time_of_first_token, time_per_token, time_total], device="npu")
+        time_tensor = torch.tensor([Timer.timeit_res.first_token_delay, Timer.timeit_res.next_token_avg_delay, time_total], device="npu")
 
         if args.tp_size > 1:
             # 首token和总时间取双芯的较大值
@@ -365,7 +361,10 @@ def cli_demo(args, tokenizer, model):
     is_rank_0 = (args.tp_size == 1) or (torch.distributed.get_rank() == 0)
 
     if is_rank_0:
-        print("欢迎使用 ChatGLM2-6B 模型，输入内容即可进行对话，clear 清空对话历史，stop 终止程序")
+        if args.model == Model.CHATGLM2.value:
+            print("欢迎使用 ChatGLM2-6B 模型，输入内容即可进行对话，clear 清空对话历史，stop 终止程序")
+        elif args.model == Model.CHATGLM3.value:
+            print("欢迎使用 ChatGLM3-6B 模型，输入内容即可进行对话，clear 清空对话历史，stop 终止程序")
 
     while True:
         if is_rank_0:
@@ -386,12 +385,21 @@ def cli_demo(args, tokenizer, model):
             continue
 
         current_length = 0
-        for response, history, past_key_values in model.stream_chat(tokenizer, query, history=history,
-                                                                    past_key_values=past_key_values,
-                                                                    return_past_key_values=True):
-            if is_rank_0:
-                print(response[current_length:], end="", flush=True)
-                current_length = len(response)
+        if args.model == Model.CHATGLM2.value:
+            for response, history, past_key_values in model.stream_chat(tokenizer, query, history=history,
+                                                                        past_key_values=past_key_values,
+                                                                        return_past_key_values=True):
+                if is_rank_0:
+                    print(response[current_length:], end="", flush=True)
+                    current_length = len(response)
+        elif args.model == Model.CHATGLM3.value:
+            for response, history, past_key_values in model.stream_chat_chatglm3(tokenizer, query, history=history,
+                                                                        top_p=1, temperature=0.01,
+                                                                        past_key_values=past_key_values,
+                                                                        return_past_key_values=True):
+                if is_rank_0:
+                    print(response[current_length:], end="", flush=True)
+                    current_length = len(response)
         if is_rank_0:
             print("")
 

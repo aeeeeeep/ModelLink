@@ -1,4 +1,4 @@
-# Copyright (c) 2022 MIT HAN Lab.
+# Copyright (c) 2022 MIT HAN Lab
 from functools import partial
 
 import torch
@@ -44,7 +44,7 @@ def quantize_activation_per_tensor_absmax(t, n_bits=8):
     return t
 
 
-class W8A8LinearStatic(nn.Module):
+class SmoothQuantLinearStatic(nn.Module):
     def __init__(self, weight, weight_scales, act_scales, weight_zeros=None, act_zeros=None):
         super().__init__()
         self.in_features = weight.shape[1]
@@ -53,29 +53,24 @@ class W8A8LinearStatic(nn.Module):
         self.weight_quant_name = 'per_channel'
 
         self.act_quant_name = 'per_tensor'
-        self.register_buffer('act_scales', act_scales.reshape(1).to(torch.float16))
+        self.register_buffer('act_scales', act_scales.reshape(-1).to(torch.float16))
 
         if act_zeros:
-            self.register_buffer('act_zeros', act_zeros.to(torch.int8), requires_grad=False)
+            self.register_buffer('act_zeros', act_zeros.to(torch.int8))
         else:
-            self.register_buffer('act_zeros', torch.tensor([], dtype=torch.int8))
+            self.register_buffer('act_zeros', torch.zeros([1], dtype=torch.int8))
 
         self.weight_quant_name = 'per_channel'
-        output_scales = torch.frombuffer((torch.mul(weight_scales, act_scales)).to(torch.float32).numpy().tobytes(),
+        output_scales = torch.frombuffer((torch.mul(weight_scales, act_scales)).to(torch.float32).numpy(),
                                          dtype=torch.int32)
-
         self.register_buffer('output_scales', output_scales.to(torch.int64))
 
         if weight_zeros:
-            self.register_buffer('output_zeros', weight_zeros.to(torch.int32), requires_grad=False)
+            self.register_buffer('output_zeros', weight_zeros.to(torch.int32))
         else:
-            self.output_zeros = None
+            self.register_buffer('output_zeros', torch.zeros(self.out_features, dtype=torch.int32))
 
         self.output_quant_name = 'per_channel'
-
-        self.losses = None
-        self.weight = None
-        self.bias = None
 
     def __repr__(self):
         return (f'W8A8LinearStatic({self.in_features}, {self.out_features}, '
@@ -100,7 +95,7 @@ class W8A8LinearStatic(nn.Module):
         return q_y
 
     def to(self, *args, **kwargs):
-        super(W8A8LinearStatic, self).to(*args, **kwargs)
+        super(SmoothQuantLinearStatic, self).to(*args, **kwargs)
         self.weight = self.weight.to(*args, **kwargs)
         if self.bias is not None:
             self.bias = self.bias.to(*args, **kwargs)

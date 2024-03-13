@@ -30,6 +30,7 @@ from transformers.utils import logging
 from transformers.generation.logits_process import LogitsProcessor
 from transformers.generation.utils import LogitsProcessorList, StoppingCriteriaList, GenerationConfig
 
+from atb_speed.common.timer import Timer
 from manager import ModeManager
 from .configuration_chatglm import ChatGLMConfig
 
@@ -986,8 +987,8 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         self.max_seq_len = int(os.environ.get("MAX_SEQ_LEN", default=2048))
 
         # get acl model_operation
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm_6b_flash_attention_model")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm_6b_flash_attention_model")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm_6b_ChatGlmCommonModelFa")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("chatglm_6b_ChatGlmCommonModelFa")
 
         # get mode manager
         self.mode = ENABLE_SPARSE and "sparse" or ENABLE_QUANT and "quant" or "float"
@@ -1082,6 +1083,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
                 "attention_mask": attention_mask
             }
 
+    @Timer.timing
     def forward(
             self,
             input_ids: Optional[torch.Tensor] = None,
@@ -1134,9 +1136,18 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             self.rotary_flag = True
             self.model_rotary_pos_emb_cos, self.model_rotary_pos_emb_sin = \
                 self.transformer.layers[0].attention.rotary_emb(input_ids, seq_len=2048)
-        position_ids = position_ids[:, 0, :].expand(batch_size, seq_length)
-        rope_cos = self.model_rotary_pos_emb_cos[position_ids]
-        rope_sin = self.model_rotary_pos_emb_sin[position_ids]
+
+        seq_len = position_ids.max() + 1
+        cos, sin = self.model_rotary_pos_emb_cos[:seq_len, ...], self.model_rotary_pos_emb_sin[:seq_len, ...]
+        position_ids, block_position_ids = position_ids[:, 0, :].transpose(0, 1).contiguous(), \
+                position_ids[:, 1, :].transpose(0, 1).contiguous()
+        cos0, sin0 = F.embedding(position_ids, cos.squeeze(1)).unsqueeze(2), \
+        F.embedding(position_ids, sin.squeeze(1)).unsqueeze(2)
+        cos1, sin1 = F.embedding(block_position_ids, cos.squeeze(1)).unsqueeze(2), \
+        F.embedding(block_position_ids, sin.squeeze(1)).unsqueeze(2)
+        rope_cos = torch.cat((cos0, cos1), dim=-1).squeeze(1)
+        rope_sin = torch.cat((sin0, sin1), dim=-1).squeeze(1)
+        
 
         if batch_size != self.batch:
             self.batch = batch_size
@@ -1158,11 +1169,11 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             else:
                 self.k_cache_input = torch.zeros(self.num_layers, self.batch,
                                                  self.max_seq_len,
-                                                 self.config.kv_channels * self.multi_query_group_num,
+                                                 self.config.hidden_size // self.world_size,
                                                  dtype=torch.float16, device="npu").contiguous()
                 self.v_cache_input = torch.zeros(self.num_layers, self.batch,
                                                  self.max_seq_len,
-                                                 self.config.kv_channels * self.multi_query_group_num,
+                                                 self.config.hidden_size // self.world_size,
                                                  dtype=torch.float16, device="npu").contiguous()
         
         if full_flag:  # 首token

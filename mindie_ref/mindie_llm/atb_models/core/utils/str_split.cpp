@@ -31,7 +31,7 @@ std::string GetFuncNameAndNameSpace(const std::string &inputStr)
     int spaceInd = 0;
     int leftBracketInd = 0;
     std::string extractStr;
-    for (int i = 0; i < inputStr.size(); i++) {
+    for (uint64_t i = 0; i < inputStr.size(); i++) {
         if (inputStr.at(i) == ' ') {
             spaceInd = i;
         } else if (inputStr.at(i) == '(') {

@@ -1,13 +1,12 @@
 """ PyTorch ChatGLM model. """
 
+import os
+import sys
 import math
 import copy
-import warnings
-import re
-import sys
-from typing import Optional, Tuple, Union, List, Callable, Dict, Any
 import json
-import os
+import warnings
+from typing import Optional, Tuple, Union, List, Callable, Dict, Any
 
 import torch
 import torch.utils.checkpoint
@@ -17,7 +16,6 @@ from torch import nn
 from torch.nn import CrossEntropyLoss, LayerNorm
 from torch.nn.utils import skip_init
 
-from atb_speed.common.arch.post_process.sample import SampleForModelsBase
 from transformers.modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
@@ -31,6 +29,8 @@ from transformers.generation.logits_process import (
     TopKLogitsWarper,
     TopPLogitsWarper,
 )
+from atb_speed.common.timer import Timer
+from atb_speed.common.arch.post_process.sample import SampleForModelsBase
 from manager import ModeManager
 
 from .configuration_chatglm import ChatGLMConfig
@@ -1070,6 +1070,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         self.acl_encoder_operation.set_weight(self.weights_list)
         self.acl_decoder_operation.set_weight(self.weights_list)
 
+    @Timer.timing
     def forward(
             self,
             input_ids: Optional[torch.Tensor] = None,
@@ -1175,7 +1176,6 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             acl_model_out = self.acl_encoder_operation.execute(input_full, acl_param)
             lm_logits = acl_model_out[0]
 
-            # recover presents/past_key_values
             self.attention_mask_max = None
 
         else:  # 非首token
@@ -1278,6 +1278,31 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         response = response.replace("[[训练时间]]", "2023年")
         return response
 
+    def process_response_chatglm3(self, output, history):
+        content = ""
+        history = copy.deepcopy(history)
+        for response in output.split("<|assistant|>"):
+            if "\n" in response:
+                metadata, content = response.split("\n", maxsplit=1)
+            else:
+                metadata, content = "", response
+            if not metadata.strip():
+                content = content.strip()
+                history.append({"role": "assistant", "metadata": metadata, "content": content})
+                content = content.replace("[[训练时间]]", "2023年")
+            else:
+                history.append({"role": "assistant", "metadata": metadata, "content": content})
+                if history[0]["role"] == "system" and "tools" in history[0]:
+                    content = "\n".join(content.split("\n")[1:-1])
+
+                    def tool_call(**kwargs):
+                        return kwargs
+                    parameters = eval(content)
+                    content = {"name": metadata.strip(), "parameters": parameters}
+                else:
+                    content = {"name": metadata.strip(), "content": content}
+        return content, history
+
     def build_inputs(self, tokenizer, query: str, history: List[Tuple[str, str]] = None):
         prompt = tokenizer.build_prompt(query, history=history)
         inputs = tokenizer([prompt], return_tensors="pt")
@@ -1312,6 +1337,28 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         response = tokenizer.decode(outputs)
         response = self.process_response(response)
         history = history + [(query, response)]
+        return response, history
+    
+    @torch.inference_mode()
+    def chat_chatglm3(self, tokenizer, query: str, history: List[Dict] = None, role: str = "user",
+             max_length: int = 8192, num_beams=1, do_sample=True, top_p=0.8, temperature=0.8, logits_processor=None,
+             **kwargs):
+        if history is None:
+            history = []
+        if logits_processor is None:
+            logits_processor = LogitsProcessorList()
+        logits_processor.append(InvalidScoreLogitsProcessor())
+        gen_kwargs = {"max_length": max_length, "num_beams": num_beams, "do_sample": do_sample, "top_p": top_p,
+                      "temperature": temperature, "logits_processor": logits_processor, **kwargs}
+        inputs = tokenizer.build_chat_input(query, history=history, role=role)
+        inputs = inputs.to(self.device)
+        eos_token_id = [tokenizer.eos_token_id, tokenizer.get_command("<|user|>"),
+                        tokenizer.get_command("<|observation|>")]
+        outputs = self.generate(**inputs, **gen_kwargs, eos_token_id=eos_token_id)
+        outputs = outputs.tolist()[0][len(inputs["input_ids"][0]):-1]
+        response = tokenizer.decode(outputs)
+        history.append({"role": role, "content": query})
+        response, history = self.process_response_chatglm3(response, history)
         return response, history
 
     @torch.no_grad()
@@ -1351,6 +1398,47 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
                 else:
                     yield response, new_history
 
+    @torch.inference_mode()
+    def stream_chat_chatglm3(self, tokenizer, query: str, history: List[Dict] = None, role: str = "user",
+                    past_key_values=None, max_length: int = 8192, do_sample=True, top_p=0.8, temperature=0.8,
+                    logits_processor=None, return_past_key_values=False, **kwargs):
+        if history is None:
+            history = []
+        if logits_processor is None:
+            logits_processor = LogitsProcessorList()
+        logits_processor.append(InvalidScoreLogitsProcessor())
+        eos_token_id = [tokenizer.eos_token_id, tokenizer.get_command("<|user|>"),
+                        tokenizer.get_command("<|observation|>")]
+        gen_kwargs = {"max_length": max_length, "do_sample": do_sample, "top_p": top_p,
+                      "temperature": temperature, "logits_processor": logits_processor, **kwargs}
+        if past_key_values is None:
+            inputs = tokenizer.build_chat_input(query, history=history, role=role)
+        else:
+            inputs = tokenizer.build_chat_input(query, role=role)
+        inputs = inputs.to(self.device)
+        if past_key_values is not None:
+            past_length = past_key_values
+            if self.transformer.pre_seq_len is not None:
+                past_length -= self.transformer.pre_seq_len
+            inputs.position_ids += past_length
+            attention_mask = inputs.attention_mask
+            attention_mask = torch.cat((attention_mask.new_ones(1, past_length), attention_mask), dim=1)
+            inputs['attention_mask'] = attention_mask
+        history.append({"role": role, "content": query})
+        for outputs in self.stream_generate(**inputs, past_key_values=past_key_values,
+                                            eos_token_id=eos_token_id, return_past_key_values=return_past_key_values,
+                                            **gen_kwargs):
+            if return_past_key_values:
+                outputs, past_key_values = outputs
+            outputs = outputs.tolist()[0][len(inputs["input_ids"][0]):-1]
+            response = tokenizer.decode(outputs)
+            if response and response[-1] != "�":
+                response, new_history = self.process_response_chatglm3(response, history)
+                if return_past_key_values:
+                    yield response, new_history, past_key_values
+                else:
+                    yield response, new_history
+
     @torch.no_grad()
     def stream_generate(
             self,
@@ -1372,6 +1460,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
 
         if isinstance(eos_token_id, int):
             eos_token_id = [eos_token_id]
+        eos_token_id_tensor = torch.tensor(eos_token_id).to(input_ids.device) if eos_token_id is not None else None
 
         has_default_max_length = kwargs.get("max_length") is None and generation_config.max_length is not None
         if has_default_max_length and generation_config.max_new_tokens is None:
@@ -1452,7 +1541,9 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             model_kwargs = self._update_model_kwargs_for_generation(
                 outputs, model_kwargs, is_encoder_decoder=self.config.is_encoder_decoder
             )
-            unfinished_sequences = unfinished_sequences.mul((sum(next_tokens != i for i in eos_token_id)).long())
+            unfinished_sequences = unfinished_sequences.mul(
+                next_tokens.tile(eos_token_id_tensor.shape[0], 1).ne(eos_token_id_tensor.unsqueeze(1)).prod(dim=0)
+            )
             torch.npu.synchronize()
 
             if return_past_key_values:
@@ -1481,7 +1572,7 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
                                             **kwargs)
         return self
 
-    def sample(
+    def _sample(
         self,
         input_ids: torch.LongTensor,
         logits_processor: Optional[LogitsProcessorList] = None,

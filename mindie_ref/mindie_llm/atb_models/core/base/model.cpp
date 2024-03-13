@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "atb_speed/base/model.h"
 #include <nlohmann/json.hpp>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wtype-limits"
+#include "atb_speed/base/model.h"
 #pragma GCC diagnostic pop
 #include <acl/acl.h>
 #include <atb/types.h>
@@ -28,6 +29,7 @@
 #include "atb_speed/utils/statistic.h"
 #include "atb_speed/utils/tensor_util.h"
 #include "atb_speed/utils/timer.h"
+#include "atb_speed/utils/speed_probe.h"
 
 namespace atb_speed {
 static bool IsTensorDimsEqual(const atb::Dims &left, const atb::Dims &other)
@@ -238,6 +240,11 @@ atb::Status Model::Execute(atb::Context *context, std::vector<atb::Tensor> &inTe
         }
     }
 
+    if (atb_speed::SpeedProbe::IsReportModelTopoInfo(modelName_)) {
+        std::string modelTopo = GetModelTopoInfo();
+        atb_speed::SpeedProbe::ReportModelTopoInfo(modelName_, modelTopo);
+    }
+
     WaitAsyncPlanExecuteFinish();
 
     GetSingleton<Statistic>().totalTime += timer_.ElapsedMicroSecond();
@@ -250,9 +257,17 @@ atb::Status Model::Execute(atb::Context *context, std::vector<atb::Tensor> &inTe
     return atb::NO_ERROR;
 }
 
-atb::Status Model::ParseParam(const std::string &param) { return atb::NO_ERROR; }
+atb::Status Model::ParseParam(const std::string &param)
+{
+    (void)param;
+    return atb::NO_ERROR;
+}
 
-atb::Status Model::BindParamHostTensor(uint32_t nodeId) { return atb::NO_ERROR; }
+atb::Status Model::BindParamHostTensor(uint32_t nodeId)
+{
+    (void)nodeId;
+    return atb::NO_ERROR;
+}
 
 void Model::BuildNodeVariantPack(int nodeId)
 {
@@ -475,4 +490,88 @@ void Model::FreeInternalTensor(void *tensorDeviceData)
         }
     }
 }
+
+void Model::GetModelTensorNameList(nlohmann::json &modelJson, std::map<atb::Tensor *, std::string> &tensorNameMap)
+{
+    std::string tensorName;
+    for (size_t i = 0; i < graph_.weightTensors.size(); i++) {
+        tensorName = modelName_ + "_weight_" + std::to_string(i);
+        modelJson["weightTensors"].emplace_back(tensorName);
+        atb::Tensor &weightTensor = graph_.weightTensors[i];
+        tensorNameMap[&weightTensor] = tensorName;
+    }
+    
+    for (size_t i = 0; i < graph_.inTensors.size(); i++) {
+        tensorName = modelName_ + "_input_" + std::to_string(i);
+        modelJson["inTensors"].emplace_back(tensorName);
+        atb::Tensor &inTensor = graph_.inTensors[i];
+        tensorNameMap[&inTensor] = tensorName;
+    }
+
+    for (size_t i = 0; i < graph_.outTensors.size(); i++) {
+        tensorName = modelName_ + "_output_" + std::to_string(i);
+        modelJson["outTensors"].emplace_back(tensorName);
+        atb::Tensor &outTensor = graph_.outTensors[i];
+        tensorNameMap[&outTensor] = tensorName;
+    }
+
+    for (size_t i = 0; i < graph_.internalTensors.size(); i++) {
+        tensorName = modelName_ + "_internal_" + std::to_string(i);
+        modelJson["internalTensors"].emplace_back(tensorName);
+        atb::Tensor &internalTensor = graph_.internalTensors[i];
+        tensorNameMap[&internalTensor] = tensorName;
+    }
+
+    for (size_t i = 0; i < graph_.kCacheTensors.size(); i++) {
+        tensorName = modelName_ + "_kCache_" + std::to_string(i);
+        modelJson["kCacheTensors"].emplace_back(tensorName);
+        atb::Tensor &kCacheTensor = graph_.kCacheTensors[i];
+        tensorNameMap[&kCacheTensor] = tensorName;
+    }
+        
+    for (size_t i = 0; i < graph_.vCacheTensors.size(); i++) {
+        tensorName = modelName_ + "_vCache_" + std::to_string(i);
+        modelJson["vCacheTensors"].emplace_back(tensorName);
+        atb::Tensor &vCacheTensor = graph_.vCacheTensors[i];
+        tensorNameMap[&vCacheTensor] = tensorName;
+    }
+}
+
+void Model::GetNodeTopoInfo(nlohmann::json &nodeJson, const Node &opNode,
+    const std::map<atb::Tensor *, std::string> tensorNameMap)
+{
+    nodeJson["opName"] = opNode.operation->GetName();
+
+    for (auto inTensor : opNode.inTensors) {
+        auto it = tensorNameMap.find(inTensor);
+        if (it != tensorNameMap.end()) {
+            nodeJson["inTensors"].emplace_back(it->second);
+        }
+    }
+
+    for (auto outTensor : opNode.outTensors) {
+        auto it = tensorNameMap.find(outTensor);
+        if (it != tensorNameMap.end()) {
+            nodeJson["outTensors"].emplace_back(it->second);
+        }
+    }
+}
+
+std::string Model::GetModelTopoInfo()
+{
+    nlohmann::json modelJson;
+    modelJson["modelName"] = modelName_;
+
+    std::map<atb::Tensor *, std::string> tensorNameMap;
+    GetModelTensorNameList(modelJson, tensorNameMap);
+
+    for (size_t nodeId = 0; nodeId < graph_.nodes.size(); nodeId++) {
+        const auto &opNode = graph_.nodes.at(nodeId);
+        nlohmann::json nodeJson;
+        GetNodeTopoInfo(nodeJson, opNode, tensorNameMap);
+        modelJson["nodes"].emplace_back(nodeJson);
+    }
+    return modelJson.dump();
+}
+
 } // namespace atb_speed

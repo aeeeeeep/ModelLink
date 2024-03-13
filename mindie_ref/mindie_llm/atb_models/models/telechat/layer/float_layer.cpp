@@ -95,13 +95,15 @@ atb::Status FloatFALayer(const FloatFALayerParam &param, atb::Operation **operat
     inputNormNode.outTensorIds = { INTERNAL_INPUTNORMOUT };
 
     ATB_LOG(INFO) << "Linear Q";
-    atb::infer::LinearParam linearQParam = { false, true, false };
+    atb::infer::LinearParam linearQParam;
+    linearQParam.hasBias = false;
     CreateOperation(linearQParam, &mixedQLinearNode.operation);
     mixedQLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_QMIXEDWEIGHT };
     mixedQLinearNode.outTensorIds = { INTERNAL_QMIXEDLINEAROUT };
 
     ATB_LOG(INFO) << "Linear KV";
-    atb::infer::LinearParam linearKVParam = { false, true, false };
+    atb::infer::LinearParam linearKVParam;
+    linearKVParam.hasBias = false;
     CreateOperation(linearKVParam, &mixedKVLinearNode.operation);
     mixedKVLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_KVMIXEDWEIGHT };
     mixedKVLinearNode.outTensorIds = { INTERNAL_KVMIXEDLINEAROUT };
@@ -133,7 +135,6 @@ atb::Status FloatFALayer(const FloatFALayerParam &param, atb::Operation **operat
     ATB_LOG(INFO) << "KV Cache";
     atb::infer::SelfAttentionParam selfAttentionKvCacheParam;
     selfAttentionKvCacheParam.headNum = param.headNum;
-    selfAttentionKvCacheParam.headDim = param.dk;
     selfAttentionKvCacheParam.qScale = 1.0f;
     selfAttentionKvCacheParam.qkScale = 1.0f / std::sqrt(param.dk);
     CreateOperation(selfAttentionKvCacheParam, &selfAttentionKvCacheFusedNode.operation);
@@ -210,8 +211,6 @@ atb::Status FloatFALayer(const FloatFALayerParam &param, atb::Operation **operat
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
-        const atb::TensorDesc &keyTensorDesc = inTensorDescs.at(IN_PASTKEY);
-        const atb::TensorDesc &valueTensorDesc = inTensorDescs.at(IN_PASTVALUE);
         outTensorDescs.at(0) = inTensorDescs.at(0);
         return atb::NO_ERROR;
     };

@@ -17,7 +17,10 @@
 #define ATB_SPEED_MODELS_LLAMA_7B_SELF_ATTETNTION_H
 
 #include "atb/atb_infer.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 #include "atb_speed/log.h"
 
 namespace atb_speed {
@@ -52,91 +55,6 @@ struct SelfAttentionParam {
 atb::Status SelfAttentionKvCache(const SelfAttentionKvCacheParam &param, atb::Operation **operation);
 
 atb::Status SelfAttention(const SelfAttentionParam &param, atb::Operation **operation);
-
-static atb::Operation *CreateSelfAttention(const nlohmann::json &paramJson)
-{
-    SelfAttentionParam param;
-    if (paramJson.contains("transKey")) {
-        param.transKey = paramJson["transKey"].get<bool>();
-    }
-    if (paramJson.contains("headNum")) {
-        param.headNum = paramJson["headNum"].get<int>();
-    }
-    if (paramJson.contains("layerId")) {
-        param.layerId = paramJson["layerId"].get<int>();
-    }
-    if (paramJson.contains("dk")) {
-        param.dk = paramJson["dk"].get<int>();
-    }
-    if (paramJson.contains("model")) {
-        param.model = paramJson["model"].get<std::string>();
-    }
-    if (paramJson.contains("preScale")) {
-        param.preScale = paramJson["preScale"].get<float>();
-    }
-    if (paramJson.contains("postScale")) {
-        param.postScale = paramJson["postScale"].get<float>();
-    }
-    if (paramJson.contains("numHeadsPerPartition")) {
-        param.numHeadsPerPartition = paramJson["numHeadsPerPartition"].get<int64_t>();
-    }
-    if (paramJson.contains("hiddenSizePerHead")) {
-        param.hiddenSizePerHead = paramJson["hiddenSizePerHead"].get<int64_t>();
-    }
-    if (paramJson.contains("numGroupsPerPartition")) {
-        param.numGroupsPerPartition = paramJson["numGroupsPerPartition"].get<int64_t>();
-    }
-    ATB_LOG(INFO) << "LLaMA2_70B_SelfAttentionParam transKey:" << param.transKey << ", headNum:" << param.headNum
-                  << ", layerId:" << param.layerId << ", dk:" << param.dk << ", preScale" << param.preScale
-                  << ", postScale" << param.postScale << ", model" << param.model << ", hiddenSizePerHead"
-                  << param.hiddenSizePerHead;
-    atb::Operation *op;
-    SelfAttention(param, &op);
-    return op;
-}
-
-static atb::Operation *CreateSelfAttentionKVCache(const nlohmann::json &paramJson)
-{
-    SelfAttentionKvCacheParam param;
-    if (paramJson.contains("transKey")) {
-        param.transKey = paramJson["transKey"].get<bool>();
-    }
-    if (paramJson.contains("headNum")) {
-        param.headNum = paramJson["headNum"].get<int>();
-    }
-    if (paramJson.contains("layerId")) {
-        param.layerId = paramJson["layerId"].get<int>();
-    }
-    if (paramJson.contains("dk")) {
-        param.dk = paramJson["dk"].get<int>();
-    }
-    if (paramJson.contains("model")) {
-        param.model = paramJson["model"].get<std::string>();
-    }
-    if (paramJson.contains("preScale")) {
-        param.preScale = paramJson["preScale"].get<float>();
-    }
-    if (paramJson.contains("postScale")) {
-        param.postScale = paramJson["postScale"].get<float>();
-    }
-    if (paramJson.contains("numHeadsPerPartition")) {
-        param.numHeadsPerPartition = paramJson["numHeadsPerPartition"].get<int64_t>();
-    }
-    if (paramJson.contains("hiddenSizePerHead")) {
-        param.hiddenSizePerHead = paramJson["hiddenSizePerHead"].get<int64_t>();
-    }
-    if (paramJson.contains("numGroupsPerPartition")) {
-        param.numGroupsPerPartition = paramJson["numGroupsPerPartition"].get<int64_t>();
-    }
-    ATB_LOG(INFO) << "LLaMA2_70B_SelfAttentionKvCacheParam transKey:" << param.transKey << ", headNum:" << param.headNum
-                  << ", layerId:" << param.layerId << ", dk:" << param.dk << ", preScale" << param.preScale
-                  << ", postScale" << param.postScale << ", model" << param.model << ", hiddenSizePerHead"
-                  << param.hiddenSizePerHead;
-    atb::Operation *op;
-    SelfAttentionKvCache(param, &op);
-    return op;
-}
 } // namespace llama2_70b
-
 } // namespace atb_speed
 #endif

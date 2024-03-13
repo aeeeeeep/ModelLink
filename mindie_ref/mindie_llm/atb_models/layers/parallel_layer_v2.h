@@ -18,7 +18,10 @@
 #define ATB_SPEED_LAYER_PARALLEL_LAYER_V2_H
 #include <atb/atb_infer.h>
 #include "atb_speed/utils/operation_util.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 #include "plugin_op/matmul_compress_dequant_operation.h"
 
 namespace atb_speed {
@@ -45,17 +48,18 @@ struct CommParam {
 struct ParallelParamV2 {
     bool isBias = false;
     bool transposeA = false;
-    bool transposeB = false;
+    bool transposeB = true;
     bool isQuant = false;
     bool isSparse = false;
     bool isAllGatherTranspose = false;
+    bool isBF16 = false;
     CommParam commParam;
     QuantParam quantParam;
 };
 
 atb::Status RowParallelLinearV2(const ParallelParamV2 &param, atb::Operation **operation);
 atb::Status ColumnParallelLinearV2(const ParallelParamV2 &param, atb::Operation **operation);
-atb::Status VocabParallelEmbeddingV2(const ParallelParamV2 &param, atb::Operation **operation);
+atb::Status VocabParallelEmbeddingV2(atb::Operation **operation);
 } // namespace common
 } // namespace atb_speed
 

@@ -60,6 +60,7 @@ private:
     Param param_;
     std::vector<int32_t> seqLen_;
 };
+
 } // namespace gptneox_20b
 } // namespace atb_speed
 #endif // ATB_SPEED_MODELS_GPTNEOX_20B_PA_MODEL_H

@@ -34,6 +34,8 @@ from transformers.modeling_outputs import (
     SequenceClassifierOutputWithPast,
     TokenClassifierOutput,
 )
+
+from transformers.configuration_utils import PretrainedConfig
 from transformers.modeling_utils import PreTrainedModel
 from transformers.utils import add_code_sample_docstrings, add_start_docstrings, add_start_docstrings_to_model_forward, logging
 
@@ -168,7 +170,6 @@ class FalconConfig(PretrainedConfig):
         self.max_position_embeddings = max_position_embeddings
         self.rope_theta = rope_theta
         self.rope_scaling = rope_scaling
-        self._rope_scaling_validation()
 
         super().__init__(bos_token_id=bos_token_id, eos_token_id=eos_token_id, **kwargs)
 
@@ -1051,7 +1052,7 @@ class FalconForCausalLM(FalconPreTrainedModel):
                                  "kvHeadNum": 1, "preScale": 1.0 / math.sqrt(self.head_dim), "postScale": 1.0, "model": "falcon_7b",
                                  "layerNum": self.hidden_layers})
         self.falcon_model = torch.classes.ModelTorch.ModelTorch(
-            "falcon_7b_model")
+            "falcon_7b_FlashAttentionModel")
         self.falcon_model.set_param(self.param)
 
         self.flag = True

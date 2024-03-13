@@ -1,11 +1,9 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 from typing import Optional
-
 import torch
-
 from ..models import get_model
-from ..utils import bind_cpus, initialize_torch_distributed, Weights
 from ..utils.env import ENV
+from ..utils import bind_cpus, initialize_distributed, Weights
 from ..utils.log import logger, print_log
 
 
@@ -20,28 +18,43 @@ class ModelRunner:
     dtype = None,
 
     def __init__(self, model_name_or_path, rank, world_size,
-                 quantize=None, dtype=None, kv_cache_dtype=None,
+                 npu_id=None,
+                 kv_cache_dtype=None,
                  max_position_embeddings=None,
                  is_flash_causal_lm: bool = True,
-                 revision: Optional[str] = None,
-                 trust_remote_code: bool = True,
-                 use_refactor: bool = False,
+                 use_refactor: bool = True,
                  ):
         self.model_name_or_path = model_name_or_path
         self.rank = rank
+        self.npu_id = npu_id if npu_id is not None else rank
         self.world_size = world_size
-        self.quantize = quantize
-        self.dtype = dtype
-        self.revision = revision
+
+        self.model_name_or_path = model_name_or_path
+        self.rank = rank
+        self.npu_id = npu_id if npu_id is not None else rank
+        self.world_size = world_size
         if ENV.bind_cpu:
-            bind_cpus(world_size, rank, ratio=1.0)
+            try:
+                bind_cpus(world_size, self.npu_id, ratio=1.0)
+            except Exception as err:
+                logger.error(f"Binding CPU failed\n{err}\n skip.")
         self.model_cls, self.config, self.tokenizer = \
-            get_model(model_name_or_path, quantize, max_position_embeddings, is_flash_causal_lm,
-                      revision, trust_remote_code, use_refactor)
+            get_model(model_name_or_path, max_position_embeddings, is_flash_causal_lm,
+                      revision=None,
+                      trust_remote_code=True,
+                      use_refactor=use_refactor)
 
         setattr(self.config, "use_refactor", use_refactor)
+        self.quantize = self.config.quantize
+        self.dtype = self.config.torch_dtype
 
-        self.process_group, self.device = initialize_torch_distributed(rank, world_size)
+        print_log(rank, logger.info, f'model_runner.quantize: {self.quantize}\n, '
+                                     f'model_runner.dytpe: {self.dtype}')
+
+        if self.dtype not in [torch.float16, torch.bfloat16]:
+            raise ValueError(f'unsupported type: {self.dtype}')
+
+        self.process_group, self.device = initialize_distributed(self.rank, self.npu_id, world_size)
 
         print_log(rank, logger.info, f'init tokenizer done: {self.tokenizer}')
 
@@ -50,19 +63,20 @@ class ModelRunner:
             self.model_name_or_path, self.device, self.dtype,
             process_group=self.process_group,
             quantize=self.quantize,
-            revision=self.revision,
+            revision=None,
             extension=".safetensors"
         )
         self.model = self.model_cls(self.config, weights)
+
         self.model.to(weights.device)
-        if self.dtype in [torch.float16, torch.bfloat16]:
-            self.model.to(self.dtype)
 
         self.soc_info = self.model.soc_info
         self.head_size = self.model.head_size
         self.num_heads = self.model.num_attention_heads
         self.num_kv_heads = self.model.num_key_value_heads
         self.num_layers = self.model.num_layers
+
+        print_log(self.rank, logger.info, f'model:\n {self.model}')
 
     def forward(self, **kwargs):
         return self.model.forward(**kwargs)

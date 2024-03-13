@@ -1,8 +1,26 @@
 # MiniGPT-4
 
+## 目录
+
+- [概述](#概述)
+- [环境准备](#环境准备)
+    - [NPU 环境准备（HDK、CANN、PTA）](#NPU 环境准备（HDK、CANN、PTA）)
+    - [推理环境准备（加速库、模型库）](#推理环境准备（加速库、模型库）)
+- [模型文件（源码与权重）准备](#模型文件（源码与权重）准备)
+    - [模型文件（源码与权重）下载及配置修改](#模型文件（源码与权重）下载及配置修改)
+    - [视觉模型的 om 转换与其他的源码修改](#视觉模型的 om 转换与其他的源码修改)
+- [模型推理](#模型推理)
+- [测试](#测试)
+    - [图像处理时间测试](#图像处理时间测试)
+    - [精度测试](#精度测试)
+    - [性能测试](#性能测试)
+- [附录](#附录)
+    - [视觉模型的 om 转换](#视觉模型的 om 转换)
+    - [源码修改清单](#源码修改清单)
+
 ## 概述
 
-MiniGPT-4使用先进的大型语言模型增强视觉语言理解，将语言能力与图像能力结合。其利用视觉编码器BLIP-2和大语言模型Vicuna进行结合训练，共同提供了新兴视觉语言能力。
+MiniGPT-4 是兼具语言与图像理解能力的多模态模型，使用了先进的大语言模型强化了机器的视觉理解能力。具体来说，它结合了大语言模型 Vicuna 和视觉编码器 BLIP-2，具备强大的新型视觉语言能力。
 
 - 参考实现：
 
@@ -12,178 +30,151 @@ MiniGPT-4使用先进的大型语言模型增强视觉语言理解，将语言�
 
 ## 环境准备
 
-- 该模型需要以下插件与驱动
+该模型的软硬件依赖如下
 
-  **表 1** 版本配套表
-
-| 配套                 | 版本          | 下载链接 |
-|--------------------|-------------|------|
-| Ascend HDK         | 23.0.0.B070 | -    |
-| CANN               | 7.0.0.B070  | -    |
-| python             | 3.9.18      | -    |
-| FrameworkPTAdapter | 5.0.0.B070  | -    |
-
-**表 2** 推理引擎依赖
-
-| 软件    | 版本要求     |
-|-------|----------|
-| glibc | >= 2.27  |
-| gcc   | >= 7.5.0 |
-
-**表 3** 硬件形态
+**表 1** 硬件要求（任一）
 
 | CPU     | Device |
 |---------|--------|
-| aarch64 | 910B3  |
+| aarch64 | 310P   |
+| aarch64 | 910B   |
 
-### 安装NPU环境
+**表 2** 推理引擎依赖
 
-#### 安装HDK
+| 软件    | 版本要求      |
+|-------|-----------|
+| glibc | > = 2.27  |
+| gcc   | > = 7.5.0 |
 
-先安装firmwire，再安装driver
+**表 3** Ascend 版本配套表
 
-##### 安装firmwire
+| 配套                 | 版本     | 下载链接 |
+|--------------------|--------|------|
+| Ascend HDK         | -      | -    |
+| CANN               | -      | -    |
+| python             | 3.9.18 | -    |
+| FrameworkPTAdapter | 2.0.1  | -    |
 
-安装方法:
+### NPU 环境准备（HDK、CANN、PTA）
+
+#### 安装 HDK
+
+先安装 firmware，再安装 driver
+
+##### 安装 firmware
+
+安装方法（例）:
 
 | 包名                                             |
 |------------------------------------------------|
 | Ascend-hdk-910b-npu-firmware_7.0.t9.0.b221.run |
 
-根据芯片型号选择相应的安装包安装
-
 ```bash
-# 安装firmwire 以910b为例
+# 安装 firmware（以 910b 为例）
 chmod +x Ascend-hdk-910b-npu-firmware_7.0.t9.0.b221.run
 ./Ascend-hdk-910b-npu-firmware_7.0.t9.0.b221.run --full
 ```
 
-##### 安装driver
+##### 安装 driver
 
-安装方法：
+安装方法（例）：
 
-| cpu     | 包名                                                         |
-|---------|------------------------------------------------------------|
-| aarch64 | Ascend-hdk-910b-npu-driver_23.0.rc3.b060_linux-aarch64.run |
-| x86     | Ascend-hdk-910b-npu-driver_23.0.rc3.b060_linux-x86_64.run  |
-| aarch64 | Ascend-hdk-310p-npu-driver_23.0.rc3.b060_linux-aarch64.run |
-| x86     | Ascend-hdk-310p-npu-driver_23.0.rc3.b060_linux-x86-64.run  |
+| 包名                                                         |
+|------------------------------------------------------------|
+| Ascend-hdk-910b-npu-driver_23.0.rc3.b060_linux-aarch64.run |
 
 ```bash
-# 根据CPU架构 以及npu型号 安装对应的 driver
-chmod +x Ascend-hdk-910b-npu-driver_23.0.rc3.b060_*.run
-./Ascend-hdk-910b-npu-driver_23.0.rc3.b060_*.run --full
+# 安装 driver（以 arm、910b 为例）
+chmod +x Ascend-hdk-910b-npu-driver_23.0.rc3.b060_linux-aarch64.run
+./Ascend-hdk-910b-npu-driver_23.0.rc3.b060_linux-aarch64.run --full
 ```
 
-#### 安装CANN
+#### 安装 CANN
 
-先安装toolkit 再安装kernel
+先安装 toolkit，再安装 kernel
 
-##### 安装toolkit
+##### 安装 toolkit
 
-安装方法：
+安装方法（例）：
 
-| cpu     | 包名                                            |
-|---------|-----------------------------------------------|
-| aarch64 | Ascend-cann-toolkit_7.0.T10_linux-aarch64.run |
-| x86     | Ascend-cann-toolkit_7.0.T10_linux-x86_64.run  |
+| 包名                                            |
+|-----------------------------------------------|
+| Ascend-cann-toolkit_7.0.T10_linux-aarch64.run |
 
 ```bash
-# 安装toolkit  以arm为例
+# 安装 toolkit（以 arm 为例）
 chmod +x Ascend-cann-toolkit_7.0.T10_linux-aarch64.run
 ./Ascend-cann-toolkit_7.0.T10_linux-aarch64.run --install
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 ```
 
-##### 安装kernel
+##### 安装 kernel
 
-安装方法：
+安装方法（例）：
 
 | 包名                                         |
 |--------------------------------------------|
 | Ascend-cann-kernels-910b_7.0.T10_linux.run |
 
 ```bash
-# 安装 kernel 以910B 为例
+# 安装 kernel（以 910b 为例）
 chmod +x Ascend-cann-kernels-910b_7.0.T10_linux.run
 ./Ascend-cann-kernels-910b_7.0.T10_linux.run --install
 ```
 
-#### 安装PytorchAdapter
+#### 安装 python 三方件（参见 requirements.txt）
 
-先安装torch 再安装torch_npu
+```bash
+pip install -r requirements.txt
+```
 
-##### 安装torch
+此外，还需要安装 aclruntime 和 ais_bench 这两个三方件（为了支持 om 格式的模型）。请参考https:
+//gitee.com/ascend/tools/tree/master/ais-bench_workload/tool/ais_bench 中的安装方式进行安装。
 
-安装方法：
+#### 安装 PytorchAdapter
+
+先安装 torch，再安装 torch_npu
+
+##### 安装 torch
+
+安装方法（例）：
 
 | 包名                                           |
 |----------------------------------------------|
-| torch-2.0.1+cpu-cp38-cp38-linux_x86_64.whl   |
-| torch-2.0.1+cpu-cp39-cp39-linux_x86_64.whl   |
-| torch-2.0.1+cpu-cp310-cp310-linux_x86_64.whl |
-| torch-2.0.1-cp310-cp310-linux_aarch64.whl    |
-| torch-2.0.1-cp38-cp38-linux_aarch64.whl      |
 | torch-2.0.1-cp39-cp39-linux_aarch64.whl      |
-| ...                                          |
-
-根据所使用的环境中的python版本以及cpu类型，选择torch-2.0.1相应的安装包。
 
 ```bash
-# 安装torch 2.0.1 的python 3.9 的arm版本为例
+# 安装 torch 2.0.1（以适配 arm、python 3.9 的版本为例）
 pip install torch-2.0.1-cp39-cp39-linux_aarch64.whl
 ```
 
-##### 安装torch_npu
+##### 安装 torch_npu
 
-安装方法：
+安装方法（例）：
 
 | 包名                          |
 |-----------------------------|
-| pytorch_v2.0.1_py38.tar.gz  |
 | pytorch_v2.0.1_py39.tar.gz  |
-| pytorch_v2.0.1_py310.tar.gz |
-| ...                         |
-
-- 安装选择与torch版本 以及 python版本 一致的npu_torch版本
 
 ```bash
-# 安装 torch_npu 以torch 2.0.1 的python 3.9的版本为例
+# 安装 torch_npu（以适配 python 3.9、torch 2.0.1 的版本为例）
 tar -zxvf pytorch_v2.0.1_py39.tar.gz
-pip install torch*_aarch64.whl
+pip install torch_npu-2.0.1.post1_20240222-cp39-cp39-linux_aarch64.whl
 ```
 
-#### requirements
+### 推理环境准备（加速库、模型库）
 
-|          包名           |    推荐版本    |
-|:---------------------:|:----------:|
-|         torch         |   2.0.1    |
-|      torchaudio       |   2.0.1    |
-|      torchvision      |   0.15.1   |
-|    huggingface-hub    |   0.18.0   |
-|      matplotlib       |   3.7.0    |
-|        psutil         |   5.9.4    |
-|        iopath         |   0.1.10   |
-|        pyyaml         |    6.0     |
-|         regex         | 2022.10.31 |
-|      tokenizers       |   0.13.2   |
-|         tqdm          |   4.64.1   |
-|     transformers      |   4.30.0   |
-|         timm          |   0.6.13   |
-|      webdataset       |   0.2.48   |
-|       omegaconf       |   2.3.0    |
-|     opencv-python     |  4.7.0.72  |
-| sentence-transformers |   2.2.2    |
-|      accelerate       |   0.20.3   |
-|     scikit-image      |   0.22.0   |
-|     visual-genome     |   1.1.1    |
-|         wandb         |   0.16.1   |
-|         attrs         |   23.1.0   |
-|       decorator       |   5.1.1    |
+#### 路径变量解释
 
-另外，使用om格式模型进行推理需要aclruntime和ais_bench两个三方库，可参考https://gitee.com/ascend/tools/tree/master/ais-bench_workload/tool/ais_bench 中的工具安装方式进行安装。
+| 变量名         | 含义                                              |  
+|-------------|-------------------------------------------------|
+| llm_path    | 加速库及模型库下载后放置在此目录                                |
+| work_space  | 主工作目录                                           |
+| model_path  | 开源权重等必要材料放置在此目录                                 | 
+| script_path | 与精度、性能测试有关的工作脚本放置在此目录                           |
+| image_path  | 推理所需的图片放置在此目录（我们用的是`${work_space}/examples_v2`） |
 
-### 推理环境准备
+#### 安装加速库
 
 根据版本发布链接，安装加速库，将加速库下载至 `${llm_path}` 目录
 
@@ -194,7 +185,7 @@ pip install torch*_aarch64.whl
 | Ascend-cann-atb_{version}_cxx11abi1_linux-x86_64.run  |
 | Ascend-cann-atb_{version}_cxx11abi0_linux-x86_64.run  |
 
-具体使用cxx11abi0 还是cxx11abi1 可通过python命令查询
+具体使用 cxx11abi0 还是 cxx11abi1，可通过如下 python 命令查询
 
 ```python
 import torch
@@ -211,7 +202,9 @@ chmod +x Ascend-cann-atb_*.run
 source /usr/local/Ascend/atb/set_env.sh
 ```
 
-根据版本发布链接，下载模型仓至 `${llm_path}` 目录
+#### 安装模型库
+
+根据版本发布链接，下载模型库至 `${llm_path}` 目录
 
 | 大模型包名                                                                     |
 |---------------------------------------------------------------------------|
@@ -220,7 +213,7 @@ source /usr/local/Ascend/atb/set_env.sh
 | Ascend-cann-llm_{version_id}_linux-aarch64_torch{pta_version}-abi0.tar.gz |
 | Ascend-cann-llm_{version_id}_linux-aarch64_torch{pta_version}-abi1.tar.gz |
 
-具体使用cxx11abi0 还是cxx11abi1 方法同安装atb
+具体使用 cxx11abi0 还是 cxx11abi1，判断方法与安装加速库时相同
 
  ```bash
  # 安装模型仓
@@ -229,116 +222,157 @@ source /usr/local/Ascend/atb/set_env.sh
  source set_env.sh
  ```
 
-### 文件下载和配置
+#### 安装模型库中的 atb_speed_sdk
 
-#### 文件下载
-1. 下载MiniGPT-4源码，下载地址为： https://github.com/Vision-CAIR/MiniGPT-4 ，将源码保存在 `${work_space}` 路径下。
+打开下载好的模型库，进入`ModelLink\mindie_ref\mindie_llm\atb_models\pytorch\examples\atb_speed_sdk`目录，
+执行`pip install .`。
 
-2. 下载Vicuna-7b的模型权重，下载地址：https://hf-mirror.com//Vision-CAIR/vicuna-7b/tree/main
-。下载完成后，保存在路径：`${model_path}/weights/`.
+## 模型文件（源码与权重）准备
 
-3. 下载好Vicuna-7b模型权重后，在配置文件将`llama_model`参数的值设置为Vicuna-7b权重的路径，配置文件路径为：
-`${work_space}/minigpt4/configs/models/minigpt4_vicuna0.yaml`，参考配置`llama_model: "${model_path}/weights/"`.
+### 模型文件（源码与权重）下载及配置修改
 
-4. 下载MiniGPT-4模型的预训练checkpoint，用于模型推理。下载地址：https://drive.google.com/file/d/1RY9jV0dyqLX-o38LrumkKRh6Jtaop58R/view?usp=sharing ，
-文件名为`prerained_minigpt4_7b.pth`，保存在路径`${model_path}/pretrain/`.
+1. 下载 MiniGPT-4 的源码。
 
-5. 在配置文件中将`ckpt`参数的值设置为checkpoint文件所在路径, 配置文件路径为：`${work_space}/eval_configs/minigpt4_eval.yaml`
-参考配置`ckpt: "${model_path}/pretrain/prerained_minigpt4_7b.pth"`.
+   下载地址：https://github.com/Vision-CAIR/MiniGPT-4 。
 
-6. 下载图像处理相关模型VIT(eva_vit_g.pth)及Qformer(blip2_pretrained_flant5xxl.pth)，下载地址分别是：https://storage.googleapis.com/sfr-vision-language-research/LAVIS/models/BLIP2/eva_vit_g.pth
-，https://storage.googleapis.com/sfr-vision-language-research/LAVIS/models/BLIP2/blip2_pretrained_flant5xxl.pth
-下载完成后保存在路径：`${model_path}/othfiles/`. 下载Bert(bert-base-uncased)的Tokenizer：https://hf-mirror.com//bert-base-uncased
-同样保存在路径：`${model_path}/othfiles/`. 全部下载完成后`${model_path}/othfiles/`文件夹内所有文件如下：
+   下载完成后，得到目录 `/xx/xx/MiniGPT-4-main`，此即为主工作目录`${work_space}`。
 
-```bash
-> ls -al /data/model/MiniGPT-4/othfiles --block-size=K
-> total 2401128K
-> drwxr-xr-x 2 root root 4K May 5 02:09 .
-> drwxr-xr-x 3 root root 4K May 7 02:34 ..
-> drw------- 2 root root 4K Dec 1 14:31 bert-base-uncased
-> -rw------- 1 root root 423322K May 5 02:09 blip2_pretrained_flant5xxl.pth
-> -rw------- 1 root root 1977783K May 5 02:08 eva_vit_g.pth
-```
+2. 下载 MiniGPT-4 的权重`prerained_minigpt4_7b.pth`。
 
-bert-base-uncased文件夹内文件清单如下：
+   下载地址：https://drive.google.com/file/d/1RY9jV0dyqLX-o38LrumkKRh6Jtaop58R/view?usp=sharing ，
 
-```bash
-> ls -al bert-base-uncased --block-size=K                
-total 244K
-drwxr-xr-x 2 root root   4K May  7 09:03 .
-drwxrwxrwx 9 root root   4K May  7 09:02 ..
--rw-r--r-- 1 root root   1K May  7 09:03 config.json
--rw-r--r-- 1 root root   1K May  7 09:03 tokenizer_config.json
--rw-r--r-- 1 root root 227K May  7 09:03 vocab.txt
-```
+   下载完成后，保存到路径`${model_path}/pretrain/`下。
 
-修改eva_vit.py文件的相关配置（用于om模型转换），路径为 `${work_space}/minigpt4/models/eva_vit.py`
+   须修改配置文件`${work_space}/eval_configs/minigpt4_eval.yaml`以声明此路径。
 
-```bash
-state_dict = torch.load("${model_path}/othfiles/eva_vit_g.pth", map_location="cpu")
-```
+   参考：`ckpt: "${model_path}/pretrain/prerained_minigpt4_7b.pth"`。
 
-以及minigpt4.py文件的相关配置，路径为 `${work_space}/minigpt4/models/minigpt4.py`
+3. 下载大语言模型 Vicuna-7b 的权重。
 
-```bash
-q_former_model = "${model_path}/othfiles/blip2_pretrained_flant5xxl.pth",
-```
+   下载地址：https://hf-mirror.com//Vision-CAIR/vicuna-7b/tree/main 。
 
-```bash
-encoder_config = BertConfig.from_pretrained("${model_path}/othfiles/bert-base-uncased")
-```
+   下载完成后，保存到路径`${model_path}/weights/`下。
 
-```bash
-q_former_model = cfg.get("q_former_model", "${model_path}/othfiles/blip2_pretrained_flant5xxl.pth")",
-```
+   须修改配置文件`${work_space}/minigpt4/configs/models/minigpt4_vicuna0.yaml`以声明此路径。
 
-模型推理需要三个类型的外部文件：分别为原始模型文件、图像部分离线模型eva_vit_g.om以及测试图片。
+   参考：`llama_model: "${model_path}/weights/"`。
 
-1. 模型相关文件可在huggingface官网下载：https://huggingface.co/Vision-CAIR/vicuna-7b/tree/main
+4. 下载图像模型 VIT、Qformer 的权重 eva_vit_g.pth、blip2_pretrained_flant5xxl.pth，
+   以及 Bert(bert-base-uncased) 的 Tokenizer。
 
-2. eva_vit_g.om为将minigpt4中图像模型eva_vit_g.pth的权重导出转换为适合NPU使用的om模型，具体的转换方式见本文件底部附录。
+   下载地址分别是：
 
-3. 测试图片可使用源代码仓的example图片，测试过程使用了下面链接中的三张图片：
+   https://storage.googleapis.com/sfr-vision-language-research/LAVIS/models/BLIP2/eva_vit_g.pth ，
 
-https://github.com/Vision-CAIR/MiniGPT-4/blob/main/examples_v2/2000x1372_wmkn_0012149409555.jpg
+   https://storage.googleapis.com/sfr-vision-language-research/LAVIS/models/BLIP2/blip2_pretrained_flant5xxl.pth ，
 
-https://github.com/Vision-CAIR/MiniGPT-4/blob/main/examples_v2/KFC-20-for-20-Nuggets.jpg
+   https://hf-mirror.com//bert-base-uncased 。
 
-https://github.com/Vision-CAIR/MiniGPT-4/blob/main/examples_v2/office.jpg
+   下载完成后，保存到路径`${model_path}/othfiles/`下。
 
-下载图片后存放到`${image_path}`目录下.
+   此路径下所需的全部文件如下：
 
-### 模型推理
+   ```bash
+   eva_vit_g.pth
+   blip2_pretrained_flant5xxl.pth
+   bert-base-uncased
+     config.json
+     tokenizer_config.json
+     vocab.txt
+   ```
 
-1. 将models目录下的全部文件拷贝到下载好的MiniGPT-4源码 `${work_space}/minigpt4/models` 目录下；将 onnx_model_export.py 和 run_predict.py拷贝到 `${work_space}` 目录中。
+   须作相应的配置修改：
 
-2. 根据附录中代码修改清单，修改对应的代码配置，保证模型推理功能正常。
+   `${work_space}/minigpt4/models/eva_vit.py`，
 
-3. 根据附录中om模型构造过程部分将图像处理模型转换为离线模型eva_vit_g.om文件，将生成的om文件存放在 `${om_model_path}` 目录下。
+   ```python
+   state_dict = torch.load("${model_path}/othfiles/eva_vit_g.pth", map_location="cpu")
+   ```
 
-4. 安装ais_bench和aclruntime包，参考 https://gitee.com/ascend/tools/tree/master/ais-bench_workload/tool/ais_bench ，保证om模型可正常推理。
+   `${work_space}/minigpt4/models/minigpt4.py`
 
-5. 完成上述步骤后，即可进行模型推理任务。在 `${work_space}` 目录下，执行如下命令：
+   ```python
+   q_former_model = "${model_path}/othfiles/blip2_pretrained_flant5xxl.pth",
+   ```
 
-`python run_predict.py --cfg-path eval_configs/minigpt4_eval.yaml --image-path ${image_path}/office.jpg  --npu-id ${npu-id}`
+   ```python
+   q_former_model = cfg.get("q_former_model", "${model_path}/othfiles/blip2_pretrained_flant5xxl.pth")",
+   ```
+
+   ```python
+   encoder_config = BertConfig.from_pretrained("${model_path}/othfiles/bert-base-uncased")
+   ```
+
+   `${work_space}/minigpt4/models/eva_vit_model.py`
+
+   ```python
+   encoder_config = BertConfig.from_pretrained("${model_path}/othfiles/bert-base-uncased")
+   ```
+
+### 视觉模型的 om 转换与其他的源码修改
+
+见[附录](#附录)。
+
+## 模型推理
+
+1. 将本项目的 models 目录下的`modeling_vicuna_ascend.py`、`image_encoder.py`拷贝到`${work_space}/minigpt4/models`目录下；
+
+   将`run_predict.py`拷贝到`${work_space}`目录下。
+
+5. 在`${work_space}`目录下，执行如下命令：
+
+   ```bash
+   python run_predict.py --cfg-path eval_configs/minigpt4_eval.yaml --image-path ${image_path}/office.jpg --npu-id ${npu-id}
+   ```
 
 ## 测试
-
-### 精度测试
-
-在 `${work_space}` 目录下执行以下脚本：
-
-`python run_predict.py --cfg-path eval_configs/minigpt4_eval.yaml --image-path ${image_path}/office.jpg  --npu-id ${npu-id}`
-
-执行完成后模型的回答会打印在终端。
-
 
 ### 图像处理时间测试
 
 将图像处理部分转换为OM模型后，图像处理时间约为0.018s；GPU图像处理时间约为1.185s
 
+### 精度测试
+
+#### 方案
+
+我们采用的精度测试方案是这样的：使用同样的一组图片，分别在 GPU 和 NPU 上执行推理，得到两组图片描述。
+再使用 open_clip 模型作为裁判，对两组结果分别进行评分，以判断优劣。
+
+#### 实施
+
+1. <a href="https://huggingface.co/laion/CLIP-ViT-H-14-laion2B-s32B-b79K/tree/main" style="color:blue">下载 open_clip 的权重
+   open_clip_pytorch_model.bin</a>
+2. 收集 GPU 和 NPU 的推理结果，整理成类似 `./precision/GPU_NPU_result_example.json` 的形式。
+3. 执行脚本 `./precision/clip_score_minigpt4.py`，参考命令：
+   ```bash
+   python clip_score_minigpt4.py --device 0 --model_weights_path open_clip_pytorch_model.bin --image_info GPU_NPU_result_example.json
+   ```
+   若得分比值>1，则说明 NPU 上表现更优。
+
 ### 性能测试
+
+#### 方案
+
+我们使用 atb_speed_sdk 进行性能测试。
+
+#### 实施
+
+1. 先将 `./performance/modeling_vicuna_ascend_performance.py` 复制到 `${model_path}/weights/` 下。
+   再修改 `${model_path}/weights/config.json`，新增或修改以下键值对：
+   ```json
+   "auto_map": {
+    "AutoModelForCausalLM": "modeling_vicuna_ascend_performance.LlamaForCausalLM"
+    }
+   ```
+
+2. 配置 `./performance/config.ini`（注意确保 `model_path=${model_path}/weights/`）
+
+3. 执行脚本 `./performance/main.py`，参考命令：
+   ```bash
+   python main.py
+   ```
+
+### 性能测试（旧）
 
 在功能运行正常的基础上，执行以下步骤进行性能测试。
 
@@ -359,6 +393,7 @@ https://github.com/Vision-CAIR/MiniGPT-4/blob/main/examples_v2/office.jpg
 （2）将pytorch/examples/atb_speed_sdk/atb_speed/common/transformers_patch/4.30.2/utils_performance_test_npu_greedy.py拷贝到当前目录下，并重命名为utils.py
 
 #### 2. 替换权重路径下的modeling文件
+
 1. 将pytorch/examples/minigpt4/models/modeling_vicuna_ascend_performance.py拷贝到权重目录`${model_path}/weights/`下
 2. 修改config.json , 将第5行 `"bos_token_id": 1,` 前的内容修改如下:
 
@@ -367,7 +402,9 @@ https://github.com/Vision-CAIR/MiniGPT-4/blob/main/examples_v2/office.jpg
       "AutoModelForCausalLM":"modeling_vicuna_ascend_performance.LlamaForCausalLM"
    },
    ```
+
 #### 3. 修改性能测试脚本内容
+
 将`run_performance.py`的第188行修改为对应的输入输出长度：`temp = [[${input_length}, ${output_length}]]`
 
 #### 4. 执行性能测试
@@ -378,166 +415,141 @@ https://github.com/Vision-CAIR/MiniGPT-4/blob/main/examples_v2/office.jpg
 
 为了不影响正常使用，将RETURN_PERF_DETAIL设置成1来返回具体的性能测试的值，默认是0
 
-测试了batch_size为1，输入输出长度分别为[[256, 64], [512, 128], [1024, 256], [3584, 512]]，输出 `multi_batch_performance.csv`
+测试了batch_size为1，输入输出长度分别为[[256, 64], [512, 128], [1024, 256], [3584, 512]]
+，输出 `multi_batch_performance.csv`
 
 NPU性能测试结果如下：
 
-| batch_size | input_length | output_length | reponse_time(ms) | 首token耗时（ms） | 非首token平均耗时（ms） | E2E吞吐（token/s） |
-|:----------:|:------------:|:-------------:|:----------------:|:---------------------:|:-------------------:|:--------------:|
-|     1      |     256      |      64       | 847.203969955444 |   5.98406791687011    |  13.3526968577551   |  75.54261107   |
-|     1      |     512      |      128      | 1736.02199554443 |   11.7170810699462    |  13.5772040509802   |  73.73178469   |
-|     1      |     1024     |      256      | 3599.91073608398 |   35.1405143737792    |  13.9794910655302   |  71.11287439   |
-|     1      |     3584     |      512      | 8483.46471786499 |   344.723224639892    |  15.9270870708906   |  60.35269987   |
-
-
-### 结果验证
-
-加速库代码与GPU版本代码精度的对比，因为MiniGPT-4 GPU的实现没有数据集的精度测试，精度验证使用了github源代码仓的example图片，进行图文问答并比较问答结果。
-
-#### 结果展示
-
-图片 + 问题：Describe this image in detail.
-
-使用三张图片进行测试，每次实验随机生成的文本不尽相同。
-
-GPU输出结果：
-
-1. The image shows a group of men holding up the World Cup trophy while standing in front of a crowded stadium. The
-   players are wearing blue and white jerseys and have their hands raised in the air, holding the trophy up to the
-   camera. In the background, there is a large crowd of people cheering and waving flags. There are also fireworks going
-   off in the sky, adding to the celebratory atmosphere. The image was taken during a soccer match where one team won
-   the World Cup trophy.
-2. This image shows a person holding two pieces of fried chicken in their hand, which are placed inside a cardboard
-   container with the logo "20 for $10" on it. The container is placed on a table, and there are various dipping sauces
-   visible in the background.
-   The image depicts an individual enjoying a meal of fried chicken at a low price. The cardboard container suggests
-   that the food is being offered as a bargain or deal. The dipping sauces add flavor to the chicken, making it more
-   enjoyable to eat. Overall, the image suggests affordability and deliciousness.
-3. This image shows a group of men holding up a trophy, all wearing the same blue and white striped jerseys. They are
-   standing on a field with fireworks in the background. Some of the players are raising their arms in the air, while
-   others are holding the trophy with both hands. The team's logo is on the front of the jersey, and they all have
-   smiles on their faces. It seems to be a celebratory moment, with the players and crowd sharing in the joy of winning
-   the trophy.
-
-NPU输出结果：
-
-1. This image shows the Argentina soccer team holding up the World Cup trophy in celebration. The team is dressed in
-   blue and white jerseys, with some players holding up their arms in the air while others hold up the trophy. Fireworks
-   are exploding behind them, creating a colorful display of light and smoke.
-2. The image is a box of fried dough balls, or tempura, sitting on a table next to a bowl of sauce. The box has the logo
-   for KFC written on it in red and white letters. There are four balls of tempura in the box, each one a different
-   color. One of the balls has been taken out and is being held by a hand in the foreground.
-   The background of the image is a plain white with a few shadows and reflections visible from the lighting. The plate
-   and
-   sauce are also plain white. The colors used in the tempura add visual interest to the image, making it more dynamic
-   and
-   appetizing.
-
-3. The image shows a man in a business suit sitting at a desk with a laptop in front of him. He is looking down at the
-   screen and seems to be typing on the keyboard. There are several other computers and pieces of office equipment
-   visible in the background, including a printer and a phone. The room is brightly lit, and there are shadows on the
-   wall behind the man's head. The image has a professional and modern feel to it.
+| batch_size | input_length | output_length | reponse_time(ms) |   首token耗时（ms）   | 非首token平均耗时（ms）  | E2E吞吐（token/s） |
+|:----------:|:------------:|:-------------:|:----------------:|:----------------:|:----------------:|:--------------:|
+|     1      |     256      |      64       | 847.203969955444 | 5.98406791687011 | 13.3526968577551 |  75.54261107   |
+|     1      |     512      |      128      | 1736.02199554443 | 11.7170810699462 | 13.5772040509802 |  73.73178469   |
+|     1      |     1024     |      256      | 3599.91073608398 | 35.1405143737792 | 13.9794910655302 |  71.11287439   |
+|     1      |     3584     |      512      | 8483.46471786499 | 344.723224639892 | 15.9270870708906 |  60.35269987   |
 
 ## 附录
 
-### om模型构造过程
+### 视觉模型的 om 转换
 
-适用情况：需要拆分出一部分模型在NPU上做离线推理;
+MiniGPT-4 为多模态模型，其中图像处理部分的逻辑是固定的，比较适合转换为离线模型以提高性能
 
-整体过程分为两步，第一步使用torch.onnx.export把需要转换的模型部分转换为onnx模型，第二步使用昇腾ATC工具将onnx转换为om.
+整个过程分为两步，第一步使用 `torch.onnx.export` 把需要转换的模型转成 onnx 格式，
+第二步使用昇腾 ATC 工具将 onnx 模型转换为 om 模型。
 
-#### ONNX转换
+#### onnx 转换
 
-1. MiniGPT-4为多模态模型，其中图像部分每次推理时仅使用一次，比较适合转换为离线模型;
+1. 首先，识别出图像处理部分的代码。即原始代码中`minigpt4.py`的第 125 行的 `image_embeds = self.ln_vision(self.visual_encoder(image)).to(device)`
+   及其配套代码。将这一部分单独写成一个文件，即为`eva_vit_model.py`。
+   将它拷贝到`${work_space}/minigpt4/models`目录下。
 
-2. 首先识别图像部分代码进行分离；即原始代码中minigpt4.py的第125行的 `image_embeds = self.ln_vision(self.visual_encoder(image)).to(device)` 及其配套代码;
 
-3. 将图像部分逻辑分离后整合为一个单独的模型，详情见eva_vit_model.py;
+2. 基于这部分模型代码，使用 `torch.onnx.export` 将相应的权重转换为 onnx 格式，详见 onnx_model_export.py。
+   运行该文件，即可得到 onnx 模型。
+   参考运行命令:
+   ```bash
+   python onnx_model_export.py --onnx-model-dir onnx模型的输出路径 --image-path 图片输入的路径（建议使用${image_path}中的图片）
+   ```
 
-4. 使用torch.onnx.export将该部分模型与权重转换为onnx，详情见onnx_model_export.py. 运行该文件，可生成对应的onnx中间模型。
-参考运行命令: `python onnx_model_export.py --onnx-model-dir /data/model/MiniGPT-4/onnx_model --image-path ../test_image/01.jpg`
+#### om 转换
 
-#### OM转换
+om 转换需使用昇腾 ATC 工具，参考
+https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/inferapplicationdev/atctool/atctool_000005.html
 
-OM模型转换使用昇腾ATC工具，使用流程参考该链接https://www.hiascend.com/document/detail/zh/canncommercial/63RC1/inferapplicationdev/atctool/atctool_000005.html
+1. 环境准备：安装 CANN 并 source 相应的环境变量；可参考上述链接中环境搭建的部分；
 
-1. 环境准备：安装并source CANN包；可参考上述链接中环境搭建的部分；
+2. 模型转换：参考快速入门中 onnx 网络模型转换成离线模型章节，或参考执行下面的转换命令
+   （要进入到已转换好的 onnx 模型目录中去执行上述命令，否则会找不到权重文件）：
+   ```bash
+   atc --model=eva_vit_g.onnx --framework=5 --output=${output_path}/eva_vit_g --soc_version=Ascend910B3 --input_shape="input:1,3,224,224"
+   ```
 
-2. 模型转换：参考快速入门中ONNX网络模型转换成离线模型章节，或下面执行参考转换命令。
+### 源码修改清单
 
-参考转换命令： `atc --model=eva_vit_g.onnx --framework=5 --output=${output_path}/eva_vit_g --soc_version=Ascend910B3 --input_shape="input:1,3,224,224"`
+1. `${work_space}/minigpt4/models/base_model.py`文件，具体修改如下：
 
-注：om模型转换时，要进入到已转换好的onnx模型目录中执行转成om模型的命令，否则会找不到权重文件。
+   （1）删除不必要的三方件引入（训练才需要）
 
-### 代码修改清单
+   删除
+   ```python
+   from peft import (
+       LoraConfig,
+       get_peft_model,
+       prepare_model_for_int8_training,
+   )
+   ```
 
-由于minigpt4是为多模态模型，比其他语言模型多了图像部分，且源码较复杂，需对代码做出如下修改：
+   （2）改变 modeling 文件指向
 
-1. `${work_space}/minigpt4/models/base_model.py` 文件，具体修改如下：
+   将
+   ```python
+   from minigpt4.models.modeling_llama import LlamaForCausalLM
+   ```
+   替换为
+   ```python
+   from minigpt4.models.modeling_vicuna_ascend import LlamaForCausalLM
+   ```
 
-（1）删除训练部分需用到的三方件引入
+2. `${work_space}/minigpt4/models/minigpt_base.py`文件，具体修改如下：
 
-```python
-from peft import (
-   LoraConfig,
-   get_peft_model,
-   prepare_model_for_int8_training,
-)
-```
-（2）modeling文件导入修改为已适配加速库的新加速库modeling文件
-```python
-from minigpt4.models.modeling_llama import LlamaForCausalLM
-```
-替换为
-```python
-from minigpt4.models.modeling_vicuna_ascend import LlamaForCausalLM
-```
+   （1）在文件开头导入图像 om 模型推理类
 
-2. `${work_space}/minigpt4/models/minigpt_base.py` 文件，具体修改如下：
+   ```python
+   from minigpt4.models.image_encoder import IMAGE_ENCODER_OM
+   ```
 
-（1）在文件头导入图像OM模型推理类
-```python
-from minigpt4.models.image_encoder import IMAGE_ENCODER_OM
-```
-（2）在40行新增如下代码，初始化加载om模型
-```python
-self.image_encoder = IMAGE_ENCODER_OM("${om_model_path}/", device_8bit)
-```
-(3) 注释或删除原始图像处理部分代码
-```python
-self.visual_encoder, self.ln_vision = self.init_vision_encoder(
-    vit_model, img_size, drop_path_rate, use_grad_checkpoint, vit_precision, freeze_vit
-)
-```
+   （2）在第 40 行新增如下代码，初始化加载 om 模型
 
-3. `${work_space}/minigpt4/models/minigpt4.py` 文件，具体修改如下：
+   ```python
+   self.image_encoder = IMAGE_ENCODER_OM("${om_model_path}/", device_8bit)
+   ```
 
-（1）在文件头导入om模型推理类
-```python
-from ais_bench.infer.interface import InferSession
-```
-（2）原文件第63行和70行，将 `self.visual_encoder.num_features` 修改为 VisionTransformer 类入参embed_dim的固定值1408.
-```python
-self.Qformer, self.query_tokens = self.init_Qformer(num_query_token, 1408, freeze_qformer)
-```
+   （3）删除原来的图像处理代码
 
-```python
-img_f_dim = 1408 * 4
-```
-（3）原文件第125行，图像embedding的计算不再走原始逻辑，而使用转换后的om模型计算
-```python
-image_embeds = torch.tensor(self.image_encoder.image_encoder_om.infer(image.cpu().numpy())[0]).to(device)
-```
+   ```python
+   self.visual_encoder, self.ln_vision = self.init_vision_encoder(
+       vit_model, img_size, drop_path_rate, use_grad_checkpoint, vit_precision, freeze_vit
+   )
+   ```
 
-4. `${work_space}/minigpt4/datasets/data_utils.py` 文件，具体修改如下：
+3. `${work_space}/minigpt4/models/minigpt4.py`文件，具体修改如下：
 
-（1）删除原文件18、19行
-```python
-import decord
-from decord import VideoReader
-```
-（2）删除原文件29行
-```python
-decord.bridge.set_bridge("torch")
-```
-5. 由于无法使用CUDA的8位优化器，需将 `${work_space}/eval_configs/minigpt4_eval.yaml` 中 `low_resource` 参数值设置为False。
+   （1）在文件开头导入 om 模型推理类
+
+   ```python
+   from ais_bench.infer.interface import InferSession
+   ```
+
+   （2）在原文件的第 63 行和 70 行，将`self.visual_encoder.num_features`修改为 VisionTransformer 类的入参 embed_dim 的固定值 1408.
+
+   ```python
+   self.Qformer, self.query_tokens = self.init_Qformer(num_query_token, 1408, freeze_qformer)
+   ```
+
+   ```python
+   img_f_dim = 1408 * 4
+   ```
+
+   （3）修改原文件第 125 行，图像 embedding 的计算不再走原始逻辑，改用转换后的 om 模型进行计算
+
+   ```python
+   image_embeds = torch.tensor(self.image_encoder.image_encoder_om.infer(image.cpu().numpy())[0]).to(device)
+   ```
+
+4. `${work_space}/minigpt4/datasets/data_utils.py`文件，具体修改如下：
+
+   （1）删除原文件第 18、19 行
+
+   ```python
+   import decord
+   from decord import VideoReader
+   ```
+
+   （2）删除原文件第 29 行
+
+   ```python
+   decord.bridge.set_bridge("torch")
+   ```
+
+5. `${work_space}/eval_configs/minigpt4_eval.yaml`文件，具体修改如下：
+
+   （1）由于无法使用 CUDA 的 8 位优化器，需将`low_resource`参数值设置为`False`。

@@ -14,13 +14,19 @@
  * limitations under the License.
  */
 #include "quant_model.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 #include <atb/atb_infer.h>
 #include "telechat/layer/embedding_layer.h"
 #include "telechat/layer/quant_layer.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace telechat {
+
+REGISTER_MODEL(telechat, QuantFAModel);
 
 const int WEIGHT_COUNT_PER_LAYER = 22;
 const int WORD_EMBEDDING_WEIGHT_COUNT = 1;
@@ -114,13 +120,11 @@ atb::Status QuantFAModel::InferShape(const std::vector<atb::TensorDesc> &inTenso
         return atb::ERROR_INVALID_GRAPH;
     }
 
-    const atb::TensorDesc &keyTensorDesc = inTensorDescs.at(IN_TENSOR_PAST_KEY);
-    const atb::TensorDesc &valueTensorDesc = inTensorDescs.at(IN_TENSOR_PAST_KEY + param_.layerNum);
     outTensorDescs.at(0) = graph_.weightTensors.at(0).desc;
     outTensorDescs.at(0).shape.dimNum = 3;
     outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(IN_TENSOR_INPUT_IDS).shape.dims[0];
     outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(IN_TENSOR_INPUT_IDS).shape.dims[1];
-    outTensorDescs.at(0).shape.dims[2] = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.shape.dims[1];
+    outTensorDescs.at(0).shape.dims[2] = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.shape.dims[0];
 
     return atb::NO_ERROR;
 }
@@ -231,7 +235,8 @@ int64_t QuantFAModel::BuildGraph()
     finalRmsNormNode.outTensors = { &graph_.internalTensors.at(finalRmsNormOutTensorId) };
 
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
-    atb::infer::LinearParam linearParam = { false, true, false };
+    atb::infer::LinearParam linearParam;
+    linearParam.hasBias = false;
     CREATE_OPERATION(linearParam, &op);
     lmHeadNode.operation.reset(op);
     const int lmHeadWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
@@ -261,7 +266,7 @@ atb::Status QuantFAModel::ParseParam(const std::string &param)
 
 atb::Status QuantFAModel::BindParamHostTensor(uint32_t nodeId)
 {
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
 

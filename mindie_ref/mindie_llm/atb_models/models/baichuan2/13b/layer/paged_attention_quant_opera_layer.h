@@ -17,7 +17,10 @@
 #define ATB_SPEED_MODELS_BAICHUAN2_13B_PA_QUANT_OPERA_LAYER_H
 
 #include <atb/atb_infer.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 
 #include "atb_speed/base/hosttensor_binder.h"
 #include "atb_speed/log.h"
@@ -32,7 +35,7 @@ struct PAQuantOperaLayerParam {
     int rank = 0;
     int rankSize = 1;
     bool isPrefill = false;
-    bool transposedWeight = false;
+    bool transposedWeight = true;
     std::string backend = "hccl";
     float wPackInputScale = 1;
     int wPackInputOffset = 0;

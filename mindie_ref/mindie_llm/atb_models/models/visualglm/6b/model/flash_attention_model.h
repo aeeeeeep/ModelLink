@@ -54,6 +54,7 @@ private:
     std::vector<int> tokenOffset_;
     std::vector<int> seqLen_;
 };
+
 } // namespace visualglm_6b
 } // namespace atb_speed
 #endif

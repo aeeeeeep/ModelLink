@@ -59,7 +59,7 @@ atb::Status FlashAttentionWithPosEmbedding::FlashAttentionWithPositionEmbeddingL
                                                                                      atb::Operation **operation)
 {
     g_headNum = param.selfAttentionKvCacheParam.headNum;
-    g_hiddenSizePerHead = param.selfAttentionKvCacheParam.headDim;
+    g_hiddenSizePerHead = param.faHeadDim;
     g_kvHeadNum = param.selfAttentionKvCacheParam.kvHeadNum;
 
     atb::GraphParam opGraph;
@@ -68,7 +68,8 @@ atb::Status FlashAttentionWithPosEmbedding::FlashAttentionWithPositionEmbeddingL
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
     opGraph.internalTensorNum = param.isGroupedQueryAttention ?
                                     INTERMEDIATE_TENSOR_COUNT_GQA : INTERMEDIATE_TENSOR_COUNT_MHA;
-    size_t posEmbNodeCount = param.selfAttentionKvCacheParam.isSupportAlibi ? NODE_COUNT_NO_ROPE : NODE_COUNT_ROPE;
+    size_t posEmbNodeCount = param.selfAttentionKvCacheParam.maskType == atb::infer::SelfAttentionParam::MASK_TYPE_ALIBI ?
+                                    NODE_COUNT_NO_ROPE : NODE_COUNT_ROPE;
     size_t splitNodeCount = param.isGroupedQueryAttention ? NODE_COUNT_SPLIT_GQA : NODE_COUNT_SPLIT_MHA;
     size_t nodeCount = NODE_COUNT_BASE + posEmbNodeCount + splitNodeCount;
     opGraph.nodes.resize(nodeCount);
@@ -102,7 +103,7 @@ atb::Status FlashAttentionWithPosEmbedding::FlashAttentionWithPositionEmbeddingL
 
         auto &splitKVNode = opGraph.nodes[nodeId++];
         atb::infer::SplitParam splitKVParam;
-        splitKVParam.splitDim = DIM_2;
+        splitKVParam.splitDim = DIM_LAST;
         splitKVParam.splitNum = SPLIT_NUM_2;
         CREATE_OPERATION(splitKVParam, &splitKVNode.operation);
         splitKVNode.inTensorIds = {INTERMEDIATE_KV};
@@ -110,7 +111,7 @@ atb::Status FlashAttentionWithPosEmbedding::FlashAttentionWithPositionEmbeddingL
     } else {
         auto &splitMixedQKVNode = opGraph.nodes[nodeId++];
         atb::infer::SplitParam splitMixedQKVParam;
-        splitMixedQKVParam.splitDim = DIM_2;
+        splitMixedQKVParam.splitDim = DIM_LAST;
         splitMixedQKVParam.splitNum = SPLIT_NUM_3;
         CREATE_OPERATION(splitMixedQKVParam, &splitMixedQKVNode.operation);
         splitMixedQKVNode.inTensorIds = {INTERMEDIATE_MIXED_QKV};
@@ -120,7 +121,7 @@ atb::Status FlashAttentionWithPosEmbedding::FlashAttentionWithPositionEmbeddingL
         }
     }
 
-    if (!param.selfAttentionKvCacheParam.isSupportAlibi) {
+    if (param.selfAttentionKvCacheParam.maskType != atb::infer::SelfAttentionParam::MASK_TYPE_ALIBI) {
         atb::Node &positionEmbeddingNode = opGraph.nodes.at(nodeId++);
         PositionEmbedding(param, &positionEmbeddingNode.operation);
         positionEmbeddingNode.inTensorIds = {INTERMEDIATE_QUERY, INTERMEDIATE_KEY, IN_ROPE_COS, IN_ROPE_SIN, IN_SEQLEN};

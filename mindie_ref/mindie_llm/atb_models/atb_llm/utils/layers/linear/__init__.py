@@ -2,11 +2,13 @@
 from typing import List
 
 import torch
+from atb_llm.utils.log import logger
 from torch import nn
 
-from atb_llm.utils.log import logger
 from .fast_linear import FastLinear
-from ...quantize.smooth_quant.quant_linear import W8A8LinearStatic
+from ...quantize.smooth_quant.quant_linear import SmoothQuantLinearStatic
+from ...quantize.w8a16 import W8A16LinearStatic
+from ...quantize.w8a8 import W8A8LinearStatic
 
 
 def get_linear(weight, bias, quantize, is_norm=False):
@@ -20,12 +22,38 @@ def get_linear(weight, bias, quantize, is_norm=False):
                 f"The passed weight is not `smooth_quant` compatible, loader needs to be updated."
             )
             raise AssertionError from err
-        linear = W8A8LinearStatic(
+        linear = SmoothQuantLinearStatic(
             weight=qweight,
             weight_scales=weight_scales,
             weight_zeros=weight_zeros,
             act_scales=act_scales,
             act_zeros=act_zeros
+        )
+    elif quantize == "w8a8":
+        if isinstance(weight, torch.Tensor):
+            linear = FastLinear(weight, bias, is_norm)
+        else:
+            try:
+                qweight, deq_scale, quant_bias, input_scale, input_offset = weight
+            except Exception as err:
+                logger.error(
+                    f"The passed weight is not `w8a8` compatible, loader needs to be updated."
+                )
+                raise AssertionError from err
+            linear = W8A8LinearStatic(
+                weight=qweight,
+                deq_scale=deq_scale,
+                input_scale=input_scale,
+                quant_bias=quant_bias,
+                input_offset=input_offset
+            )
+    elif quantize == "w8a16":
+        qweight, weight_scale, weight_offset = weight
+        linear = W8A16LinearStatic(
+            weight=qweight,
+            weight_scale=weight_scale,
+            weight_offset=weight_offset,
+            bias=bias
         )
     else:
         logger.error(f"Quantization `{quantize}` is not implemented yet.")
@@ -151,13 +179,30 @@ class TensorParallelHead(SuperLayer):
 
 class TensorParallelColumnLinear(SuperLayer):
     @classmethod
-    def load_qkv(cls, config, prefix: str, weights, bias: bool, head_size=None):
+    def load_qkv(cls, config, prefix: str, weights, bias: bool, hidden_size, num_heads, num_kv_heads=None):
         """Specific method when the QKV was joined after the fact"""
+        if num_kv_heads is None:
+            num_kv_heads = num_heads
         weight = weights.get_weights_col_packed_qkv(
-            prefix, quantize=config.quantize, head_size=head_size
+            prefix, quantize=config.quantize, hidden_size=hidden_size, num_heads=num_heads, num_kv_heads=num_kv_heads
         )
         if bias:
-            raise NotImplementedError("packed_qkv only implemented for baichuan")
+            bias = weights.get_tensor_col_packed_qkv(
+                f"{prefix}.bias", hidden_size=hidden_size, num_heads=num_heads, num_kv_heads=num_kv_heads
+            )
+        else:
+            bias = None
+        linear = get_linear(weight, bias, config.quantize)
+        return cls(linear)
+
+    @classmethod
+    def load_gate_up(cls, config, prefix: str, weights, bias: bool):
+        """Specific method when the QKV was joined after the fact"""
+        weight = weights.get_weights_col_packed_mlp(
+            prefix, quantize=config.quantize
+        )
+        if bias:
+            bias = weights.get_tensor_col_packed_mlp(f"{prefix}.bias")
         else:
             bias = None
         linear = get_linear(weight, bias, config.quantize)
@@ -188,10 +233,11 @@ class TensorParallelRowLinear(SuperLayer):
         self.process_group = process_group
 
     @classmethod
-    def load(cls, config, prefix: str, weights, bias: bool):
+    def load(cls, config, prefix: str, weights, bias: bool, bias_pre_add=False):
         weight = weights.get_multi_weights_row(prefix, quantize=config.quantize)
-
-        if bias and weights.process_group.rank() == 0:
+        if bias and bias_pre_add:
+            bias = weights.get_tensor(f"{prefix}.bias")
+        elif bias and weights.process_group.rank() == 0:
             # Rank is only on the first rank process
             bias = weights.get_tensor(f"{prefix}.bias")
         else:

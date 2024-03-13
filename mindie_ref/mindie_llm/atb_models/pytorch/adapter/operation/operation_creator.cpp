@@ -16,23 +16,13 @@
 #include "operation_creator.h"
 
 #include <functional>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 
 #include "atb_speed/log.h"
 #include "atb_speed/utils/operation_factory.h"
-#include "baichuan2/13b/layer/flash_attention_layer.h"
-#include "baichuan2/13b/layer/flash_attention_quant_layer.h"
-#include "baichuan2/13b/layer/flash_attention_quant_oper_layer.h"
-#include "codellama/34b/layer/flash_attention_rope_layer.h"
-#include "codellama/34b/operation/rope.h"
-#include "gptneox/20b/layer/flashattention_kvcache_rope_layer.h"
-#include "gptneox/20b/layer/embedding_layer.h"
-#include "gptneox/20b/layer/flashattention_kvcache_layer.h"
-#include "gptneox/20b/operation/position_embedding_fusion.h"
-#include "internlm/20b/layer/flash_attention_quant_layer.h"
-#include "internlm/20b/layer/flash_attention_rope_antioutlier_layer.h"
-#include "internlm/20b/layer/flash_attention_rope_layer.h"
-#include "internlm/7b/layer/flash_attention_rope_layer.h"
 
 using OperationCreateFunc = std::function<atb::Operation *(const nlohmann::json &paramJson)>;
 
@@ -108,13 +98,20 @@ static atb::Operation *NormOperationCreate(const nlohmann::json &paramJson) { re
 static atb::Operation *LinearOperationCreate(const nlohmann::json &paramJson)
 {
     atb::infer::LinearParam param;
-    param.transposeA = paramJson["transposeA"].get<bool>();
-    param.transposeB = paramJson["transposeB"].get<bool>();
+    if (paramJson.contains("transposeA")) {
+        param.transposeA = paramJson["transposeA"].get<bool>();
+    }
+    if (paramJson.contains("transposeB")) {
+        param.transposeB = paramJson["transposeB"].get<bool>();
+    }
     if (paramJson.contains("hasBias")) {
         param.hasBias = paramJson["hasBias"].get<bool>();
     }
+    if (paramJson.contains("linearType")) {
+        param.linearType = atb::infer::LinearType(paramJson["linearType"].get<int32_t>());
+    }
     ATB_LOG(INFO) << "LinearParam transposeA:" << param.transposeA << ", transposeB:" << param.transposeB
-                  << ", hasBias:" << param.hasBias;
+                  << ", hasBias:" << param.hasBias << ", linearType:" << param.linearType;
     atb::Operation *op;
     CreateOperation(param, &op);
     return op;
@@ -174,16 +171,24 @@ static atb::Operation *TransposeOperationCreate(const nlohmann::json &paramJson)
 static atb::Operation *LinearActivationOperationCreate(const nlohmann::json &paramJson)
 {
     atb::infer::LinearActivationParam param;
-    param.transposeA = paramJson["transposeA"].get<bool>();
-    param.transposeB = paramJson["transposeB"].get<bool>();
+    if (paramJson.contains("transposeA")) {
+        param.transposeA = paramJson["transposeA"].get<bool>();
+    }
+    if (paramJson.contains("transposeB")) {
+        param.transposeB = paramJson["transposeB"].get<bool>();
+    }
     if (paramJson.contains("hasBias")) {
         param.hasBias = paramJson["hasBias"].get<bool>();
+    }
+    if (paramJson.contains("linearType")) {
+        param.linearType = atb::infer::LinearType(paramJson["linearType"].get<int32_t>());
     }
     if (paramJson.contains("activationFuncType")) {
         param.activationFuncType = atb::infer::ActivationType(paramJson["activationFuncType"].get<int32_t>());
     }
     ATB_LOG(INFO) << "LinearActivationParam transposeA:" << param.transposeA << ", transposeB:" << param.transposeB
-                  << ", hasBias:" << param.hasBias << ", activationFuncType:" << param.activationFuncType;
+                  << ", hasBias:" << param.hasBias << ", linearType:" << param.linearType
+                  << ", activationFuncType:" << param.activationFuncType;
     atb::Operation *op;
     CreateOperation(param, &op);
     return op;
@@ -253,20 +258,8 @@ std::map<std::string, OperationCreateFunc> g_funcMap = {
     {"LmHeadParallelOperation", &LmHeadParallelOperationCreate},
     {"WordEmbeddingParallelOperation", &WordEmbeddingParallelOperationCreate},
     {"ActivationOperation", &ActivationOperationCreate},
-    {"baichuan2_13b_flash_attention_layer", &atb_speed::baichuan2_13b::CreateFlashAttentionLayer},
-    {"baichuan2_13b_flash_attention_quant_layer", &atb_speed::baichuan2_13b::CreateFlashAttentionQuantLayer},
-    {"baichuan2_13b_flash_attention_quant_oper_layer", &atb_speed::baichuan2_13b::CreateFlashAttentionQuantOperLayer},
-    {"codellama_34b_rope", &atb_speed::codellama_34b::CreateRope},
-    {"codellama_34b_flash_attention_rope_layer", &atb_speed::codellama_34b::CreateFlashAttentionRopeLayer},
-    {"internlm_7b_flash_attention_rope_layer", &atb_speed::internlm_7b::CreateFlashAttentionRopeLayer},
-    {"internlm_20b_flash_attention_rope_layer", &atb_speed::internlm_20b::CreateFlashAttentionRopeLayer},
-    {"internlm_20b_flash_attention_quant_layer", &atb_speed::internlm_20b::CreateFlashAttentionQuantLayer},
-    {"internlm_20b_flash_attention_rope_antioutlier_layer",
-     &atb_speed::internlm_20b::CreateFlashAttentionRopeAntiOutlierLayer},
-    {"gptneox_20b_flash_attention_kv_cache_layer", &atb_speed::gptneox_20b::CreateFlashAttentionKvCacheLayer},
-    {"gptneox_20b_embedding_layer", &atb_speed::gptneox_20b::CreateEmbeddingLayer},
-    {"gptneox_20b_position_embedding_fusion", &atb_speed::gptneox_20b::CreatePositionEmbeddingFusionOperation},
-    {"gptneox_20b_flash_attention_kv_cache_rope_layer", &atb_speed::gptneox_20b::CreateFlashAttentionKvCacheRopeLayer},
+    // Do not register operations or layers here, expect atb's operations;
+    // Please register them in files `.cpp`, such as `models/baichuan2/13b/layer/flash_attention_layer.cpp`;
 };
 
 atb::Operation *CreateOperation(const std::string &opName, const std::string &param)

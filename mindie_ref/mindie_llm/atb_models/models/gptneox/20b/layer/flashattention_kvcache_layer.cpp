@@ -15,7 +15,7 @@
  */
 #include "flashattention_kvcache_layer.h"
 #include "layers/mlp_gate.h"
-#include "layers/parallel_layer.h"
+#include "layers/parallel_layer_v2.h"
 #include "models/gptneox/20b/operation/position_embedding.h"
 
 namespace atb_speed {
@@ -42,6 +42,7 @@ enum LayerTensorId : int {
     IN_CACHEV,
     IN_TOKENOFFSET,
     IN_SEQLEN,
+    IN_HOLDER,
     IN_LAYERID,
 
     OUT_GPTNEOXLAYEROUT,
@@ -60,7 +61,7 @@ enum LayerTensorId : int {
     INTERMEDIATE_ATTNRESIDUALADDOUT,
 };
 
-static const uint64_t IN_TENSOR_COUNT = 22;
+static const uint64_t IN_TENSOR_COUNT = 23;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 12;
 static const uint64_t NODE_COUNT = 11;
@@ -101,7 +102,7 @@ atb::Status FlashAttentionKvCacheLayer(const LayerParam &param, atb::Operation *
     inputLayerNormNode.outTensorIds = { INTERMEDIATE_INPUTLAYERNORMOUT };
 
     // qkv  [1, n_tokens, hidden_size] to [1, n_tokens, 3 * hidden_size]
-    atb::infer::LinearParam linearParam = { false, false, true };
+    atb::infer::LinearParam linearParam;
     CREATE_OPERATION(linearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = { INTERMEDIATE_INPUTLAYERNORMOUT, IN_QKVWEIGHT, IN_QKVBIAS };
     qkvLinearNode.outTensorIds = { INTERMEDIATE_MIXEDQKVLINEAROUT };
@@ -116,7 +117,6 @@ atb::Status FlashAttentionKvCacheLayer(const LayerParam &param, atb::Operation *
     positionEmbeddingNode.outTensorIds = { INTERMEDIATE_QUERYEMBED, INTERMEDIATE_KEYEMBED, INTERMEDIATE_VALUE };
 
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = param.qScale;
     selfAttentionParam.qkScale = param.qkScale;
@@ -127,10 +127,14 @@ atb::Status FlashAttentionKvCacheLayer(const LayerParam &param, atb::Operation *
     };
     selfAttentionKvCacheFusionNode.outTensorIds = { INTERMEDIATE_SELFATTNOUT };
 
-    // different parallel linear
-    CREATE_OPERATION(linearParam, &selfAttnLinearNode.operation);
-    selfAttnLinearNode.inTensorIds = { INTERMEDIATE_SELFATTNOUT, IN_SELFOUTLINEARWEIGHT, IN_SELFOUTLINEARBIAS };
-    selfAttnLinearNode.outTensorIds = { INTERMEDIATE_SELFATTNLINEAROUT };
+    atb_speed::common::ParallelParamV2 selfAttnLinearParam;
+    selfAttnLinearParam.commParam.rank = param.rank;
+    selfAttnLinearParam.commParam.rankSize = param.rankSize;
+    selfAttnLinearParam.commParam.backend = param.backend;
+    selfAttnLinearParam.isBias = true;
+    atb_speed::common::RowParallelLinearV2(selfAttnLinearParam, &selfAttnLinearNode.operation);
+    selfAttnLinearNode.inTensorIds = {INTERMEDIATE_SELFATTNOUT, IN_SELFOUTLINEARWEIGHT, IN_SELFOUTLINEARBIAS,IN_HOLDER,IN_HOLDER,IN_HOLDER,IN_HOLDER};
+    selfAttnLinearNode.outTensorIds = {INTERMEDIATE_SELFATTNLINEAROUT};
 
     CREATE_OPERATION(layerNormParam, &postAttnLayerNormNode.operation);
     postAttnLayerNormNode.inTensorIds = { IN_HIDDENSTATES, IN_POSTATTNLAYERNORMWEIGHT, IN_POSTATTNLAYERNORMBIAS };
@@ -146,9 +150,14 @@ atb::Status FlashAttentionKvCacheLayer(const LayerParam &param, atb::Operation *
     ffnActNode.inTensorIds = { INTERMEDIATE_FFNLINEAROUT };
     ffnActNode.outTensorIds = { INTERMEDIATE_FFNACTOUT };
 
-    CREATE_OPERATION(linearParam, &ffnOutLinearNode.operation);
-    ffnOutLinearNode.inTensorIds = { INTERMEDIATE_FFNACTOUT, IN_FFNOUTLINEARWEIGHT, IN_FFNOUTLINEARBIAS };
-    ffnOutLinearNode.outTensorIds = { INTERMEDIATE_FFNOUTLINEAROUT };
+    atb_speed::common::ParallelParamV2 mlpLinearParam;
+    mlpLinearParam.commParam.rank = param.rank;
+    mlpLinearParam.commParam.rankSize = param.rankSize;
+    mlpLinearParam.commParam.backend = param.backend;
+    mlpLinearParam.isBias = true;
+    atb_speed::common::RowParallelLinearV2(mlpLinearParam, &ffnOutLinearNode.operation);
+    ffnOutLinearNode.inTensorIds = {INTERMEDIATE_FFNACTOUT, IN_FFNOUTLINEARWEIGHT, IN_FFNOUTLINEARBIAS,IN_HOLDER,IN_HOLDER,IN_HOLDER,IN_HOLDER};
+    ffnOutLinearNode.outTensorIds = {INTERMEDIATE_FFNOUTLINEAROUT};
 
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ELEWISE_ADD;
@@ -196,6 +205,10 @@ atb::Operation *CreateFlashAttentionKvCacheLayer(const nlohmann::json &paramJson
     }
     if (paramJson.contains("qkScale")) {
         param.qkScale = paramJson["qkScale"].get<int>();
+    }
+
+    if (paramJson.contains("backend")) {
+        paramJson.at("backend").get_to(param.backend);
     }
 
     ATB_LOG(INFO) << __func__ << " layerNormEps:" << param.layerNormEps << ", headNum:" << param.headNum << ", dk:" <<

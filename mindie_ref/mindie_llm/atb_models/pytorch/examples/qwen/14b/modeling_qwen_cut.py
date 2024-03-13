@@ -1027,7 +1027,7 @@ class QWenLMHeadModel(QWenPreTrainedModel):
         self.rank_size = 1
         if hasattr(config, 'rank_size'):
             self.rank_size = config.rank_size
-        self.lm_head = nn.Linear(config.hidden_size // self.rank_size, config.vocab_size, bias=False)
+        self.lm_head = nn.Linear(config.hidden_size, config.vocab_size // self.rank_size, bias=False)
         #####################################################
         
 

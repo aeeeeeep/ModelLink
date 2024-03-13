@@ -18,7 +18,10 @@
 #define ATB_SPEED_LAYER_MLP_GATE_V2_H
 
 #include <atb/atb_infer.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 #include "atb_speed/log.h"
 #include "atb_speed/utils/operation_util.h"
 #include "parallel_layer_v2.h"
@@ -27,12 +30,13 @@ namespace atb_speed {
 namespace common {
 struct MlpGateParamV2 {
     atb::infer::ActivationType activationType;
-    bool transposeB = false;
+    bool transposeB = true;
     bool isBias = false;
     bool isPack = false;
     bool isQuant = false;
     bool isSparse = false;
     bool noGate = false;
+    bool isBF16 = false;
     CommParam commDownParam;
     QuantParam quantUpParam;
     QuantParam quantGateParam;

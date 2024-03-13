@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -116,7 +116,8 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     inputNormNode.outTensorIds = {INTERNAL_INPUTNORMOUT};
 
     // q_proj
-    atb::infer::LinearParam linearParam = {false, false, false};
+    atb::infer::LinearParam linearParam;
+    linearParam.hasBias = false;
     CREATE_OPERATION(linearParam, &qLinearNode.operation);
     qLinearNode.inTensorIds = {INTERNAL_INPUTNORMOUT, IN_QLINEARWEIGHT};
     qLinearNode.outTensorIds = {INTERNAL_QLINEAROUT};
@@ -141,12 +142,11 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
 
     // flash attention
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / sqrt(param.dk);
     selfAttentionParam.clampMin = -1024.0;
     selfAttentionParam.clampMax = 1024.0;
-    selfAttentionParam.isClamp = 1;
+    selfAttentionParam.clampType = atb::infer::SelfAttentionParam::CLAMP_TYPE_MIN_MAX;
     CREATE_OPERATION(selfAttentionParam, &flashAttentionNode.operation);
     flashAttentionNode.inTensorIds = {INTERNAL_QEMBED,
                                       INTERNAL_KEMBED,
@@ -196,7 +196,7 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     mlpParam.commDownParam.rankSize = param.rankSize;
     mlpParam.commDownParam.backend = param.backend;
     mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
-    mlpParam.transposeB = false;
+    mlpParam.transposeB = true;
     mlpParam.isBias = false;
     mlpParam.isPack = false;
     atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);

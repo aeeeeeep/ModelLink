@@ -27,6 +27,8 @@ from typing import List, Optional, Tuple, Union
 import torch
 import torch.utils.checkpoint
 import torch_npu
+from atb_speed.common.timer import Timer
+from atb_speed.common.utils import load_atb_speed
 from torch import nn
 from torch.nn import CrossEntropyLoss
 from transformers import PreTrainedModel, PretrainedConfig
@@ -45,6 +47,8 @@ def is_nd():
 
 
 IS_ND = is_nd()
+print(f"{IS_ND=}")
+MASK_INC_DIM1 = 1 if IS_ND else 16  # 增量attention mask shape的第二维
 
 
 def get_rank_and_world_size():
@@ -59,20 +63,7 @@ def get_rank_and_world_size():
 
 RANK, WORLD_SIZE = get_rank_and_world_size()
 
-
-def load_acl_transformer():
-    """
-    加载acl transformers
-    :return:
-    """
-    acl_transformer_home_path = os.getenv("ATB_SPEED_HOME_PATH", "")
-    if not acl_transformer_home_path or not os.path.exists(acl_transformer_home_path):
-        raise RuntimeError("env ACLTRANSFORMER_HOME_PATH not exist, source set_env.sh")
-    lib_path = os.path.join(acl_transformer_home_path, "lib/libatb_speed_torch.so")
-    torch.classes.load_library(lib_path)
-
-
-load_acl_transformer()
+load_atb_speed()
 
 logger = logging.get_logger(__name__)
 
@@ -439,7 +430,7 @@ class KVAttentionManager:
         self.attention_mask_max = torch.zeros(
             (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
         self.attention_mask_max_inc = torch.zeros(
-            (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
+            (self.batch_size, MASK_INC_DIM1, self.max_seq_len), device="npu", dtype=torch.half)
 
     def init_attention_mask(self):
         if IS_ND:
@@ -448,7 +439,7 @@ class KVAttentionManager:
         else:
             self.attention_mask_max.zero_()
             self.attention_mask_max_inc = torch.zeros(
-            (self.batch_size, self.max_seq_len, self.max_seq_len), device="npu", dtype=torch.half)
+                (self.batch_size, MASK_INC_DIM1, self.max_seq_len), device="npu", dtype=torch.half)
 
     def init_seq_len_and_token_offset(self, seq_len):
         self.token_offset = seq_len
@@ -474,14 +465,20 @@ class KVAttentionManager:
     def token_offset_list(self):
         return [self.token_offset] * self.batch_size
 
-    def trans_data(self, tensor):
+    def trans_data(self, tensor, trans_type="full"):
         """
         :param tensor:
+        :param trans_type:full or inc
         :return:
         """
-        return torch_npu.npu_format_cast(tensor.view(
-            self.batch_size, self.max_seq_len,
-            self.max_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
+        if trans_type == "full":
+            return torch_npu.npu_format_cast(tensor.view(
+                self.batch_size, self.max_seq_len,
+                self.max_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
+        else:
+            return torch_npu.npu_format_cast(tensor.view(
+                self.batch_size, self.nz_dim,
+                self.max_seq_len // self.nz_dim, self.nz_dim).transpose(1, 2).contiguous(), 29)
 
     def get_attention_mask(self, attention_mask=None):
         if not self.is_full:
@@ -491,13 +488,11 @@ class KVAttentionManager:
                 self.attention_mask_max[i][:self.token_offset, :self.token_offset] = attention_mask[i]
                 ori_len = self.ori_len_list[i].item()
                 # 左padding
-                # self.attention_mask_max_inc[i][:, :self.token_offset - ori_len] = self.min_cache[:, :self.token_offset - ori_len]
-                # 右padding
-                self.attention_mask_max_inc[i][:, ori_len:self.token_offset] = \
-                    self.min_cache[:, ori_len:self.token_offset]
+                self.attention_mask_max_inc[i][:, :self.token_offset - ori_len] = self.min_cache[:,
+                                                                                  :self.token_offset - ori_len]
             if not IS_ND:
-                self.attention_mask_max_inc = self.trans_data(self.attention_mask_max_inc)
-                return self.trans_data(self.attention_mask_max)
+                self.attention_mask_max_inc = self.trans_data(self.attention_mask_max_inc, "inc")
+                return self.trans_data(self.attention_mask_max, "full")
             else:
                 return self.attention_mask_max
 
@@ -532,10 +527,10 @@ class BaichuanModel(BaichuanPreTrainedModel):
             "layerNum": config.num_hidden_layers,
             "rank": self.rank,
             "rankSize": self.world_size,
-            "backend": os.getenv("BACKEND", "hccl")
+            "backend": "lccl" if IS_ND else "hccl"
         })
         self.max_position_embeddings = int(os.getenv("MAX_SEQ_LEN", config.max_position_embeddings))
-        self.acl_fa_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_flash_attention_rope_model")
+        self.acl_fa_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_FlashAttentionRopeModel")
 
         self.acl_fa_operation.set_param(self.acl_param)
 
@@ -549,7 +544,7 @@ class BaichuanModel(BaichuanPreTrainedModel):
         self.batch_size = 0
         self.kv_attention_manager = None
         self.min_cache = torch.full(
-            (self.max_position_embeddings, self.max_position_embeddings),
+            (MASK_INC_DIM1, self.max_position_embeddings),
             torch.finfo(torch.half).min, dtype=torch.half).npu()
 
     def init_ascend_weight(self):
@@ -578,6 +573,7 @@ class BaichuanModel(BaichuanPreTrainedModel):
         cos_table, sin_table = self.ascend_rotary_embedding(input_ids, self.kv_attention_manager.token_offset)
         cos_embed = torch.nn.functional.embedding(position_ids, cos_table)
         sin_embed = torch.nn.functional.embedding(position_ids, sin_table)
+        seqlen_max = torch.tensor([self.kv_attention_manager.seq_len_tensor[0] - 1], dtype=torch.int64, device="npu")
 
         inputs = [input_ids,
                   cos_embed,
@@ -587,7 +583,8 @@ class BaichuanModel(BaichuanPreTrainedModel):
                   self.kv_attention_manager.v_cache_input,
                   self.kv_attention_manager.token_offset_tensor,
                   self.kv_attention_manager.seq_len_tensor,
-                  self.place_holder
+                  self.place_holder,
+                  seqlen_max
                   ] + self.layer_id_list
 
         return inputs
@@ -784,7 +781,7 @@ class BaichuanForCausalLM(BaichuanPreTrainedModel):
         self.world_size = 1
         if hasattr(config, 'world_size'):
             self.world_size = config.world_size
-        self.lm_head = NormHead(config.hidden_size // self.world_size, config.vocab_size, bias=False)
+        self.lm_head = NormHead(config.hidden_size, config.vocab_size // self.world_size, bias=False)
         if hasattr(config, "quantization_config") and config.quantization_config['load_in_4bit']:
             try:
                 from .quantizer import quantize_offline, init_model_weight_int4
@@ -924,6 +921,7 @@ class BaichuanForCausalLM(BaichuanPreTrainedModel):
                                                                revision=revision,
                                                                use_safetensors=use_safetensors, **kwargs)
 
+    @Timer.timing
     def forward(
             self,
             input_ids: torch.LongTensor = None,

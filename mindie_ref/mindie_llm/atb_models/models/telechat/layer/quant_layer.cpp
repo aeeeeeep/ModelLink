@@ -109,8 +109,6 @@ atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operat
     } else {
         atb::infer::RmsNormParam rmsNormParam;
         rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-        rmsNormParam.normParam.quantInputScale = param.inputScale_qkv;
-        rmsNormParam.normParam.quantInputOffset = param.inputOffset_qkv;
         rmsNormParam.normParam.quantType = atb::infer::QUANT_INT8;
 
         rmsNormParam.normParam.epsilon = param.rmsNormEps;
@@ -121,12 +119,14 @@ atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operat
 
     ATB_LOG(INFO) << "Linear Q";
     if (param.isFloatQueryLayer) {
-        atb::infer::LinearParam linearQParam = { false, true, false };
+        atb::infer::LinearParam linearQParam;
+        linearQParam.hasBias = false;
         CreateOperation(linearQParam, &mixedQLinearNode.operation);
         mixedQLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_QMIXEDWEIGHT };
         mixedQLinearNode.outTensorIds = { INTERNAL_QMIXEDLINEAROUT };
     } else {
-        atb::infer::LinearQuantParam linearQParam = { false, true, true };
+        atb::infer::LinearParam linearQParam;
+        linearQParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
         CreateOperation(linearQParam, &mixedQLinearNode.operation);
         mixedQLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_QMIXEDWEIGHT, IN_QMIXEDBIAS, IN_QMIXEDDEQSCALE };
         mixedQLinearNode.outTensorIds = { INTERNAL_QMIXEDLINEAROUT };
@@ -134,12 +134,14 @@ atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operat
 
     ATB_LOG(INFO) << "Linear KV";
     if (param.isFloatKVLayer) {
-        atb::infer::LinearParam linearKVParam = { false, true, false };
+        atb::infer::LinearParam linearKVParam;
+        linearKVParam.hasBias = false;
         CreateOperation(linearKVParam, &mixedKVLinearNode.operation);
         mixedKVLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_KVMIXEDWEIGHT };
         mixedKVLinearNode.outTensorIds = { INTERNAL_KVMIXEDLINEAROUT };
     } else {
-        atb::infer::LinearQuantParam linearKVParam = { false, true, true };
+        atb::infer::LinearParam linearKVParam;
+        linearKVParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
         CreateOperation(linearKVParam, &mixedKVLinearNode.operation);
         mixedKVLinearNode.inTensorIds = { INTERNAL_INPUTNORMOUT, IN_KVMIXEDWEIGHT, IN_KVMIXEDBIAS, IN_KVMIXEDDEQSCALE };
         mixedKVLinearNode.outTensorIds = { INTERNAL_KVMIXEDLINEAROUT };
@@ -172,7 +174,6 @@ atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operat
     ATB_LOG(INFO) << "KV Cache";
     atb::infer::SelfAttentionParam selfAttentionKvCacheParam;
     selfAttentionKvCacheParam.headNum = param.headNum;
-    selfAttentionKvCacheParam.headDim = param.dk;
     selfAttentionKvCacheParam.qScale = 1.0f;
     selfAttentionKvCacheParam.qkScale = 1.0f / std::sqrt(param.dk);
     CreateOperation(selfAttentionKvCacheParam, &selfAttentionKvCacheFusedNode.operation);
@@ -212,8 +213,6 @@ atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operat
 
     atb::infer::RmsNormParam rmsMlpNormParam;
     rmsMlpNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    rmsMlpNormParam.normParam.quantInputScale = param.inputScale_gate_up;
-    rmsMlpNormParam.normParam.quantInputOffset = param.inputOffset_gate_up;
     rmsMlpNormParam.normParam.quantType = atb::infer::QUANT_INT8;
     CreateOperation(rmsMlpNormParam, &selfNormNode.operation);
     selfNormNode.inTensorIds = { INTERNAL_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_SELFOUTNORMBIAS };
@@ -264,8 +263,6 @@ atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operat
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
-        const atb::TensorDesc &keyTensorDesc = inTensorDescs.at(IN_PASTKEY);
-        const atb::TensorDesc &valueTensorDesc = inTensorDescs.at(IN_PASTVALUE);
         outTensorDescs.at(0) = inTensorDescs.at(0);
         return atb::NO_ERROR;
     };

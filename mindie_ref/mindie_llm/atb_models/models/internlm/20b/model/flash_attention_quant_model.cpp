@@ -19,13 +19,20 @@
 #include "models/internlm/20b/model/flash_attention_quant_model.h"
 
 #include "atb/atb_infer.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 
 #include "models/internlm/20b/layer/flash_attention_quant_layer.h"
 #include "models/internlm/20b/layer/flash_attention_rope_antioutlier_layer.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace internlm_20b {
+
+REGISTER_MODEL(internlm_20b, FlashAttentionQuantModel);
+
 enum InTensorId : int {
     IN_TENSOR_INPUT_IDS = 0,
     IN_TENSOR_COSEMBED,
@@ -283,7 +290,8 @@ int64_t FlashAttentionQuantModel::BuildGraph()
 
     // self.lm_head operation
     auto &outLinearNode = graph_.nodes.at(nodeId++);
-    atb::infer::LinearParam outLinearParm = { false, false, false };
+    atb::infer::LinearParam outLinearParm;
+    outLinearParm.hasBias = false;
     CREATE_OPERATION(outLinearParm, &op);
     outLinearNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
@@ -310,7 +318,7 @@ atb::Status FlashAttentionQuantModel::ParseParam(const std::string &param)
 // layer中的tokenOffset和seqLen绑定id
 atb::Status FlashAttentionQuantModel::BindParamHostTensor(uint32_t nodeId)
 {
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= OPERATION_COUNT_BEFORE_LAYER + param_.layerNum) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
     auto &node = graph_.nodes.at(nodeId);

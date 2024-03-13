@@ -20,7 +20,10 @@
 #include <atb/atb_infer.h>
 #include "atb_speed/log.h"
 #include "atb_speed/utils/operation_util.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 
 #include "common.h"
 
@@ -117,10 +120,11 @@ struct MlpGateParam {
     int rankRoot = 0;
     void *hcclComm = nullptr;
     atb::infer::ActivationType activationType;
-    bool transposeB = false;
+    bool transposeB = true;
     bool isBias = false;
     bool isPack = false;
     std::string backend = "hccl";
+    bool isBF16 = false;
 };
 
 atb::Status MlpGateLayer(const MlpGateParam &param, atb::Operation **operation);

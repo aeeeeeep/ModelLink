@@ -104,8 +104,8 @@ atb::Status FusionLayerOperation(const LayerFusionParam &param, atb::Operation *
     // [bsz,seq_len,hidden_size]
     atb::Node &mixedQKVLinearNode = opGraph.nodes.at(nodeId++);
     atb::infer::LinearParam fusedQKVParam;
-    fusedQKVParam.hasBias = false;
     fusedQKVParam.transposeB = true;
+    fusedQKVParam.hasBias = false;
     CreateOperation(fusedQKVParam, &mixedQKVLinearNode.operation);
     mixedQKVLinearNode.inTensorIds = {INTERNAL_INPUT_NORM_OUT, IN_MIXED_QKV_LINEAR_WEIGHT};
     mixedQKVLinearNode.outTensorIds = {INTERNAL_MIXED_QKV_LINEAR_OUT};
@@ -177,7 +177,6 @@ atb::Status FusionLayerOperation(const LayerFusionParam &param, atb::Operation *
     
     atb::Node &selfAttentionFusionNode = opGraph.nodes.at(nodeId++);
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.hiddenSize;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = param.preScale;
     selfAttentionParam.qkScale = param.postScale;
@@ -197,8 +196,8 @@ atb::Status FusionLayerOperation(const LayerFusionParam &param, atb::Operation *
     // [bsz,seq_len,hidden_size]
     atb::Node &finalDenseNode = opGraph.nodes.at(nodeId++);
     atb::infer::LinearParam denseParam;
-    denseParam.hasBias = false;
     denseParam.transposeB = true;
+    denseParam.hasBias = false;
     CreateOperation(denseParam, &finalDenseNode.operation);
     finalDenseNode.inTensorIds = {INTERNAL_ATTN_OUT, IN_DENSE_WEIGHT};
     finalDenseNode.outTensorIds = {INTERNAL_DENSE_OUT};

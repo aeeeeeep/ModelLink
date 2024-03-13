@@ -24,6 +24,17 @@ const int ATTENTION_DIM_NUM = 4;
 const int ATTENTION_DIM_2 = 2;
 const int ATTENTION_DIM_3 = 3;
 
+void ReshapeHeads(const atb::Dims &oldShape, atb::Dims &newShape)
+{
+    newShape.dimNum = 2;
+    newShape.dims[0] = oldShape.dims[0] * oldShape.dims[1];
+    if (oldShape.dimNum == 3) {
+        newShape.dims[1] = oldShape.dims[2];
+    } else {
+        newShape.dims[1] = oldShape.dims[2] * oldShape.dims[3];
+    }
+}
+
 enum FlashAttentionLayerTensorId : int {
     IN_HIDDENSTATES = 0,
     // float weights
@@ -96,6 +107,8 @@ static const uint64_t NODE_COUNT = 11;
 
 atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Operation **operation)
 {
+    std::shared_ptr<int64_t> batchNumPtr = std::make_shared<int64_t>(0);
+
     atb::GraphParam opGraph;
     opGraph.name = "FlashAttentionLayer";
     opGraph.inTensorNum = IN_TENSOR_COUNT;
@@ -119,15 +132,13 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         atb::infer::RmsNormParam rmsNormParam;
         rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
         rmsNormParam.normParam.epsilon = param.rmsNormEps;
-        rmsNormParam.normParam.quantInputScale = param.qkvInputScale;
-        rmsNormParam.normParam.quantInputOffset = param.qkvInputOffset;
         rmsNormParam.normParam.quantType = atb::infer::QUANT_INT8;
         CREATE_OPERATION(rmsNormParam, &inputNormNode.operation);
         inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT, IN_NORM_BIAS };
         inputNormNode.outTensorIds = { INTERMIDATE_INPUTNORMOUT };
 
-        atb::infer::LinearQuantParam quantQkvLinearParam;
-        quantQkvLinearParam.transposeB = true;
+        atb::infer::LinearParam quantQkvLinearParam;
+        quantQkvLinearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
         CREATE_OPERATION(quantQkvLinearParam, &mixdQLinearNode.operation);
         mixdQLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_QMIXDWEIGHT, IN_QMIXD_BIAS, IN_QMIXD_DEQSCALE };
         mixdQLinearNode.outTensorIds = { INTERMIDATE_MIXEDQ };
@@ -144,8 +155,6 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         atb::infer::RmsNormParam rmsNormParam;
         rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
         rmsNormParam.normParam.epsilon = param.rmsNormEps;
-        rmsNormParam.normParam.quantInputScale = param.qkvInputScale;
-        rmsNormParam.normParam.quantInputOffset = param.qkvInputOffset;
         rmsNormParam.normParam.quantType = atb::infer::QUANT_INT8;
         CREATE_OPERATION(rmsNormParam, &inputNormNode.operation);
         inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT, IN_NORM_BIAS };
@@ -174,7 +183,11 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         CREATE_OPERATION(rmsNormParam, &inputNormNode.operation);
         inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT };
         inputNormNode.outTensorIds = { INTERMIDATE_INPUTNORMOUT };
-        atb::infer::LinearParam linearParam = { false, false, false };
+        atb::infer::LinearParam linearParam;
+        linearParam.hasBias = false;
+        if (param.isBF16) {
+            linearParam.linearType = atb::infer::LINEAR_BF16BF16_FP32_BF16;
+        }
         CREATE_OPERATION(linearParam, &mixdQLinearNode.operation);
         mixdQLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_QMIXDWEIGHT };
         mixdQLinearNode.outTensorIds = { INTERMIDATE_MIXEDQ };
@@ -185,24 +198,46 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         mixdVLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_VMIXDWEIGHT };
         mixdVLinearNode.outTensorIds = { INTERMIDATE_MIXEDV };
     }
-    atb_speed::llama::RopeFusionParam ropeFusionParam;
-    ropeFusionParam.headNum = param.headNum;
-    atb_speed::llama::RopeFusionOperation(ropeFusionParam, &ropeNode.operation);
-    ropeNode.inTensorIds = {
-        INTERMIDATE_MIXEDQ, INTERMIDATE_MIXEDK, IN_POSITIONIDS, IN_COSTABLE, IN_SINTABLE, IN_SEQLEN
-    };
-    ropeNode.outTensorIds = { INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK };
+    // GQA reshape -> [b*s, hd]
+    if (param.kvHeadNum < param.headNum) {
+        atb::infer::RopeParam ropeFusionParam;
+        ropeFusionParam.rotaryCoeff = 2;
+        CREATE_OPERATION(ropeFusionParam, &ropeNode.operation);
+        ropeNode.inTensorIds = { INTERMIDATE_MIXEDQ, INTERMIDATE_MIXEDK, IN_COSTABLE, IN_SINTABLE, IN_SEQLEN };
+        ropeNode.outTensorIds = { INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK };
+        ropeNode.inTensorReshapeFuncs.resize(ropeNode.inTensorIds.size());
+        ropeNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            *batchNumPtr = oldShape.dims[0];
+            ReshapeHeads(oldShape, newShape);
+        };
+        ropeNode.inTensorReshapeFuncs.at(1) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            ReshapeHeads(oldShape, newShape);
+        };
+        ropeNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            ReshapeHeads(oldShape, newShape);
+        };
+        ropeNode.inTensorReshapeFuncs.at(3) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            ReshapeHeads(oldShape, newShape);
+        };
+    } else {
+        atb_speed::llama::RopeFusionParam ropeFusionParam;
+        ropeFusionParam.headNum = param.headNum;
+        atb_speed::llama::RopeFusionOperation(ropeFusionParam, &ropeNode.operation);
+        ropeNode.inTensorIds = {
+            INTERMIDATE_MIXEDQ, INTERMIDATE_MIXEDK, IN_POSITIONIDS, IN_COSTABLE, IN_SINTABLE, IN_SEQLEN
+        };
+        ropeNode.outTensorIds = { INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK };
+    }
     atb::infer::SelfAttentionParam selfAttentionKvCacheParam;
-    selfAttentionKvCacheParam.headDim = param.dk;
     selfAttentionKvCacheParam.headNum = param.headNum;
     selfAttentionKvCacheParam.kvHeadNum = param.kvHeadNum;
     selfAttentionKvCacheParam.qkScale = 1.0 / sqrt(param.dk);
     selfAttentionKvCacheParam.qScale = 1.0;
     if (param.isEncoder) {
-        selfAttentionKvCacheParam.coderType = atb::infer::SelfAttentionParam::ENCODER;
+        selfAttentionKvCacheParam.calcType = atb::infer::SelfAttentionParam::ENCODER;
         selfAttentionKvCacheParam.isTriuMask = param.isTriuMask;
     } else {
-        selfAttentionKvCacheParam.coderType = atb::infer::SelfAttentionParam::DECODER;
+        selfAttentionKvCacheParam.calcType = atb::infer::SelfAttentionParam::DECODER;
     }
     CREATE_OPERATION(selfAttentionKvCacheParam, &selfAttentionKvCacheNode.operation);
     selfAttentionKvCacheNode.inTensorIds = { INTERMIDATE_POSITIONEMBEDQ,
@@ -216,13 +251,40 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         IN_LAYERID };
     selfAttentionKvCacheNode.outTensorIds = { INTERMIDATE_SELFOUT };
     selfAttentionKvCacheNode.inTensorReshapeFuncs.resize(selfAttentionKvCacheNode.inTensorIds.size());
-    selfAttentionKvCacheNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        newShape.dimNum = ATTENTION_DIM_NUM;
-        newShape.dims[0] = oldShape.dims[0];
-        newShape.dims[1] = oldShape.dims[1];
-        newShape.dims[ATTENTION_DIM_2] = param.headNum;
-        newShape.dims[ATTENTION_DIM_3] = oldShape.dims[ATTENTION_DIM_2] / param.headNum;
-    };
+    // GQA reshape -> [b, s, headnum, headdim]]
+    if (param.kvHeadNum < param.headNum) {
+        selfAttentionKvCacheNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            int batchSize = *batchNumPtr;
+            newShape.dimNum = 4;
+            newShape.dims[0] = batchSize;
+            newShape.dims[1] = oldShape.dims[0] / batchSize;
+            newShape.dims[2] = param.headNum;
+            newShape.dims[3] = oldShape.dims[1] / param.headNum;
+        };
+        selfAttentionKvCacheNode.inTensorReshapeFuncs.at(1) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            int batchSize = *batchNumPtr;
+            newShape.dimNum = 4;
+            newShape.dims[0] = batchSize;
+            newShape.dims[1] = oldShape.dims[0] / batchSize;
+            newShape.dims[2] = param.kvHeadNum;
+            newShape.dims[3] = oldShape.dims[1] / param.kvHeadNum;
+        };
+        selfAttentionKvCacheNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            newShape.dimNum = 4;
+            newShape.dims[0] = oldShape.dims[0];
+            newShape.dims[1] = oldShape.dims[1];
+            newShape.dims[2] = param.kvHeadNum;
+            newShape.dims[3] = oldShape.dims[2] / param.kvHeadNum;
+        };
+    } else {
+        selfAttentionKvCacheNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            newShape.dimNum = ATTENTION_DIM_NUM;
+            newShape.dims[0] = oldShape.dims[0];
+            newShape.dims[1] = oldShape.dims[1];
+            newShape.dims[ATTENTION_DIM_2] = param.headNum;
+            newShape.dims[ATTENTION_DIM_3] = oldShape.dims[ATTENTION_DIM_2] / param.headNum;
+        };
+    }
     if (param.quantModel) {
         // W8A8量化
         atb_speed::common::ParallelParamV2 selfOutLinearParam;
@@ -232,6 +294,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         selfOutLinearParam.isBias = true;
         selfOutLinearParam.isQuant = true;
         selfOutLinearParam.transposeB = true;
+        selfOutLinearParam.isBF16 = param.isBF16;
         selfOutLinearParam.quantParam.quantType = atb::infer::QUANT_INT8;
         selfOutLinearParam.quantParam.isQuantOp = true;
         selfOutLinearParam.quantParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_QUANT;
@@ -252,6 +315,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         selfOutLinearParam.isQuant = true;
         selfOutLinearParam.isSparse = true;
         selfOutLinearParam.transposeB = true;
+        selfOutLinearParam.isBF16 = param.isBF16;
         selfOutLinearParam.quantParam.quantType = atb::infer::QUANT_INT8;
         selfOutLinearParam.quantParam.isQuantOp = true;
         selfOutLinearParam.quantParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_QUANT;
@@ -269,6 +333,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         selfOutLinearParam.commParam.rankSize = param.rankSize;
         selfOutLinearParam.commParam.backend = param.backend;
         selfOutLinearParam.isBias = false;
+        selfOutLinearParam.isBF16 = param.isBF16;
         atb_speed::common::RowParallelLinearV2(selfOutLinearParam, &selfOutLinearNode.operation);
 
         selfOutLinearNode.inTensorIds = {
@@ -282,14 +347,11 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
     CREATE_OPERATION(addParam, &selfResidualAddNode.operation);
     selfResidualAddNode.inTensorIds = { IN_HIDDENSTATES, INTERMIDATE_SELFLINEAROUT };
     selfResidualAddNode.outTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT };
-
     if (param.quantModel) {
         // W8A8量化
         atb::infer::RmsNormParam selfNormParam;
         selfNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
         selfNormParam.normParam.epsilon = param.rmsNormEps;
-        selfNormParam.normParam.quantInputScale = param.selfLnInputScale;
-        selfNormParam.normParam.quantInputOffset = param.selfLnInputOffset;
         selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
 
         CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
@@ -301,6 +363,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         mlpParam.isPack = false;
         mlpParam.isQuant = true;
         mlpParam.transposeB = true;
+        mlpParam.isBF16 = param.isBF16;
         mlpParam.commDownParam.rank = param.rank;
         mlpParam.commDownParam.rankSize = param.rankSize;
         mlpParam.commDownParam.backend = param.backend;
@@ -328,8 +391,6 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         atb::infer::RmsNormParam selfNormParam;
         selfNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
         selfNormParam.normParam.epsilon = param.rmsNormEps;
-        selfNormParam.normParam.quantInputScale = param.selfLnInputScale;
-        selfNormParam.normParam.quantInputOffset = param.selfLnInputOffset;
         selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
 
         CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
@@ -342,6 +403,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         mlpParam.isQuant = true;
         mlpParam.isSparse = true;
         mlpParam.transposeB = true;
+        mlpParam.isBF16 = param.isBF16;
         mlpParam.commDownParam.rank = param.rank;
         mlpParam.commDownParam.rankSize = param.rankSize;
         mlpParam.commDownParam.backend = param.backend;
@@ -376,9 +438,10 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         mlpParam.commDownParam.rankSize = param.rankSize;
         mlpParam.commDownParam.backend = param.backend;
         mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
-        mlpParam.transposeB = false;
+        mlpParam.transposeB = true;
         mlpParam.isBias = false;
         mlpParam.isPack = false;
+        mlpParam.isBF16 = param.isBF16;
         atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);
         mlpNode.inTensorIds = { INTERMIDATE_SELFNORMOUT,
                                 IN_MLPUPWEIGHT, IN_MLPGATEWEIGHT, IN_MLPDOWNWEIGHT,
