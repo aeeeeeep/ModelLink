@@ -976,10 +976,4 @@ ModelLink由华为公司的下列部门联合贡献
 ## 备注
 
 ---
-- 内部函数说明:  [内部函数](https://gitee.com/ascend/AscendSpeed/wikis/Inner%20API%20Description/Some%20inner%20interface%20description?sort_id=8824096)
-- 参数说明: [参数说明](https://gitee.com/ascend/AscendSpeed/wikis/Home)
-- 许可描述: 在运行程序之前，建议您对训练所需的文件（如ckpt、日志等）采取权限控制（普通用户而不是root权限）等安全措施
-- 路径描述: 当你使用 `torch.load` 接口时，除非 weights_only 参数被设置为 True， 否则请隐式的使用 pickle 模块，我们不建议您加载和使用任何来源未知或不可信任的数据
-- 通信矩阵: [通信矩阵](https://gitee.com/ascend/AscendSpeed/wikis/Communition%20Matrix/AscendSpeed%20Communication%20Matrix?sort_id=8855822)
-- 公网地址: [公网地址](public_address_statement.md)
-- 安全说明: [安全说明](https://gitee.com/ascend/ModelLink/wikis/%E5%AE%89%E5%85%A8%E8%AF%B4%E6%98%8E)
+- 安全声明: [安全声明](https://gitee.com/ascend/ModelLink/wikis/%E5%AE%89%E5%85%A8%E5%A3%B0%E6%98%8E)
