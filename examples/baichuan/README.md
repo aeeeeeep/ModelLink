@@ -434,7 +434,7 @@ python tools/preprocess_data.py \
     --handler-name GeneralInstructionHandler \
     --append-eod
 ```
-配置 Baichuan-13B 的lora脚本:`examples/baichuan/tune_baichuan_ptd_13B.sh`
+配置 Baichuan-13B 的lora脚本:`tasks/finetune/tune_baichuan_ptd_13B.sh`
 
 ```shell
 # 配置保存权重的路径、数据集路径、权重路径以及词表路径
@@ -445,7 +445,7 @@ TOKENIZER_PATH="./baichuan-13B-hf"
 ```
 启动 Baichuan-13B lora微调脚本: `examples/baichuan/tune_baichuan_ptd_13B.sh`
 ```shell
-bash ./examples/baichuan/tune_baichuan_ptd_13B.sh
+bash ./tasks/finetune/tune_baichuan_ptd_13B.sh
 ```
 再使用微调后的权重进行推理:
 ```shell

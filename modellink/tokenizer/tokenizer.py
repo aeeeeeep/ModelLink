@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright (c) 2020, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2024, HUAWEI CORPORATION.  All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,13 +16,8 @@
 """Megatron tokenizers. just using huggingface implementation."""
 
 from transformers import AutoTokenizer
-import megatron
 from megatron.tokenizer import build_tokenizer as megatron_build_tokenizer
 from megatron.tokenizer.tokenizer import AbstractTokenizer, _vocab_size_with_padding
-
-
-def apply_tokenizer_patch():
-    megatron.global_vars.build_tokenizer = build_tokenizer
 
 
 def build_tokenizer(args):
@@ -55,7 +50,7 @@ def build_tokenizer(args):
         # Add vocab size (if not already set from a checkpoint).
         if getattr(args, "padded_vocab_size", None) is None:
             args.padded_vocab_size = _vocab_size_with_padding(tokenizer.vocab_size,
-                                                          args)
+                                                              args)
     else:
         tokenizer = TokenizerAdaptor(megatron_build_tokenizer(args))
 
@@ -129,7 +124,7 @@ class _AutoTokenizer(AbstractTokenizer):
     @property
     def eod(self):
         return self.eos
-    
+
     @property
     def eos_token_id(self):
         return self.tokenizer.eos_token_id

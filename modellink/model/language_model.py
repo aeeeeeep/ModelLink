@@ -13,5 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from functools import wraps
 
-from .tokenizer import build_tokenizer
+from megatron import get_args
+
+
+def seq_length_wrapper(fn):
+    @wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        self.seq_length = get_args().seq_length
+        return fn(self, *args, **kwargs)
+
+    return wrapper
