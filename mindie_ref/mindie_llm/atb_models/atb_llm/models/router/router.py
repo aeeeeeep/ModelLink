@@ -141,6 +141,7 @@ class TelechatRouter(BaseRouter):
             trust_remote_code=self.trust_remote_code,
         )
 
+
 @dataclass
 class StarcoderRouter(BaseRouter):
 
