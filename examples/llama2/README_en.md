@@ -231,10 +231,10 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
        --lora-load ${LORA_CHECKPOINT} \
    ```
    
-   Launch LLAMA2-7B lora fine tune script: examples/llama2/tune_llama2_7b_ptd.sh
+   Launch LLAMA2-7B lora fine tune script: tasks/finetune/tune_llama2_7b_ptd.sh
    
    ```shell
-    bash examples/llama2/tune_llama2_7b_ptd.sh 
+    bash tasks/finetune/tune_llama2_7b_ptd.sh 
    ```
 
 ### Performance
@@ -538,10 +538,10 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
        --lora-load ${LORA_CHECKPOINT} \
    ```
    
-   Launch LLAMA2-13B lora fine tune script: examples/llama2/tune_llama2_13b_ptd.sh
+   Launch LLAMA2-13B lora fine tune script: tasks/finetune/tune_llama2_13b_ptd.sh
    
    ```shell
-    bash examples/llama2/tune_llama2_13b_ptd.sh 
+    bash tasks/finetune/tune_llama2_13b_ptd.sh 
    ```
 
 ### Performance
@@ -929,16 +929,16 @@ pip install -r requirements.txt
        --lora-load ${LORA_CHECKPOINT} \
    ```
    
-   Launch LLAMA2-34B lora fine tune script: examples/llama2/tune_llama2_34b_ptd.sh
+   Launch LLAMA2-34B lora fine tune script: tasks/finetune/tune_llama2_34b_ptd.sh
    
    ```shell
-    bash examples/llama2/tune_llama2_34b_ptd.sh 
+    bash tasks/finetune/tune_llama2_34b_ptd.sh 
    ```
    
-   Launch LLAMA2-70B lora fine tune script: examples/llama2/tune_llama2_70b_ptd.sh
+   Launch LLAMA2-70B lora fine tune script: tasks/finetune/tune_llama2_70b_ptd.sh
    
    ```shell
-    bash examples/llama2/tune_llama2_70b_ptd.sh 
+    bash tasks/finetune/tune_llama2_70b_ptd.sh 
    ```
 
 ### Performance-2

@@ -304,13 +304,13 @@ SAVE_CHECKPOINT_PATH="your model ckpt save path"
 
 LLaMA-7B
 ```shell
-bash examples/llama/tune_llama_7b_ptd.sh
+bash tasks/finetune/tune_llama_7b_ptd.sh
 ```
 
 LLaMA-13B
 ```shell
 # 单机8卡
-bash examples/llama/tune_llama_13b_ptd.sh 
+bash tasks/finetune/tune_llama_13b_ptd.sh 
 ```
 
 ### 性能
@@ -718,13 +718,13 @@ SAVE_CHECKPOINT_PATH="your model ckpt save path"
 
 LLaMA-33B
 ```shell
-bash examples/llama/tune_llama_33b_ptd.sh
+bash tasks/finetune/tune_llama_33b_ptd.sh
 ```
 
 LLaMA-65B
 ```shell
 # 双机16卡
-bash examples/llama/tune_llama_65b_ptd.sh 
+bash tasks/finetune/tune_llama_65b_ptd.sh 
 ```
 
 ### 性能

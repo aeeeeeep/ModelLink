@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright (c) 2020, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2024, HUAWEI CORPORATION.  All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,9 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import sys
+
 import logging
-import torch
 
 try:
     import torch_npu
@@ -22,15 +21,8 @@ try:
 except Exception as e:
     logging.warning("Warning: You did not install torch_npu")
 
-from .tokenizer import apply_tokenizer_patch
-from .adaptor_arguments import apply_arguments_patch
-from .adaptor_model import apply_model_patch
-from .adapter_lora import apply_lora_patch
-from .adaptor_data import apply_data_patch
+
+from .model_adaptor import exe_adaptor
 
 
-apply_arguments_patch()
-apply_model_patch()
-apply_tokenizer_patch()
-apply_lora_patch()
-apply_data_patch()
+exe_adaptor()

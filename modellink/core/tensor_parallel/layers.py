@@ -13,5 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from functools import wraps
 
-from .tokenizer import build_tokenizer
+
+def vocab_embedding_wrapper(fn):
+    @wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        output = fn(self, *args, **kwargs)
+        if hasattr(self, 'norm'):
+            output = self.norm(output)
+        return output
+    return wrapper

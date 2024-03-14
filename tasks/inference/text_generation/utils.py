@@ -1,7 +1,19 @@
-# Copyright (c) Huawei Technologies Co., Ltd. 2023-2023. All rights reserved.
+# coding=utf-8
+# Copyright (c) 2024, HUAWEI CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """Utilities for generating text."""
-import re
 import time
 import math
 
@@ -20,8 +32,8 @@ from megatron.core.distributed import DistributedDataParallel as LocalDDP
 from megatron.model import Float16Module
 from megatron.core.utils import get_model_config
 
-from modellink.text_generation.communication import broadcast_tensor
-from modellink.model.lora_utils import is_enable_lora, get_lora_model_classes
+from tasks.inference.text_generation.communication import broadcast_tensor
+from tasks.finetune.lora.utils import is_enable_lora, get_lora_model_classes
 
 
 def get_batch(context_tokens):

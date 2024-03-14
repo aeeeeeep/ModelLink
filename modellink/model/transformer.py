@@ -1,206 +1,62 @@
+# coding=utf-8
+# Copyright (c) 2024, HUAWEI CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from functools import wraps
+
 import torch
-import megatron
-from megatron.model import GPTModel
-from megatron.model import transformer
 from megatron import get_args
 from megatron.core import mpu
 from megatron.core import tensor_parallel
 from megatron.core import parallel_state
 from megatron.core.enums import ModelType
-from megatron.model.module import MegatronModule
+
 from megatron.model.enums import AttnMaskType, LayerType
-from megatron.model.language_model import parallel_lm_logits
-from megatron.model.fused_layer_norm import MixedFusedLayerNorm
-from megatron.model.language_model import get_language_model
 from megatron.model.transformer import _get_layer_type
 from megatron.model.transformer import ParallelTransformer, ParallelTransformerLayer
 from megatron.model.utils import get_norm
 
-from .model.moe import SwitchMLP
-from .model.module import MegatronModuleForCausalLM
+from modellink.error_utils import ensure_valid
+from tasks.finetune.lora.utils import is_enable_lora
 
 
-def parse_args():
-    return megatron.arguments.parse_args()
+def state_dict_for_save_checkpoint(state_dict):
+    state_dict_ = dict()
+    for key in state_dict:
+        if 'lora' in key:
+            state_dict_[key] = state_dict[key]
+    return state_dict_
 
 
-def seq_length_wrapper(fn):
+def state_dict_for_save_checkpoint_wrapper(fn):
     @wraps(fn)
-    def wrapper(self, *args, **kwargs):
-        self.seq_length = get_args().seq_length
-        return fn(self, *args, **kwargs)
+    def wrapper(self, prefix='', keep_vars=False):
+        if is_enable_lora():
+            return state_dict_for_save_checkpoint(self.state_dict(prefix=prefix, keep_vars=keep_vars))
+        return fn(self, prefix='', keep_vars=False)
 
     return wrapper
 
 
-class BaseModel(GPTModel, MegatronModuleForCausalLM):
-    def __init__(self, config, num_tokentypes=0, parallel_output=True, pre_process=True, post_process=True):
-        super(BaseModel, self).__init__(config=config, num_tokentypes=num_tokentypes, parallel_output=parallel_output,
-                                        pre_process=pre_process, post_process=post_process)
-
-
-def apply_model_patch():
-    megatron.model.GPTModel = GPTModel
-    megatron.model.language_model.TransformerLanguageModel.forward = (seq_length_wrapper(
-        megatron.model.language_model.TransformerLanguageModel.forward))
-
-    # moe
-    megatron.model.transformer.SwitchMLP = SwitchMLP
-
-    # bloom
-    megatron.core.tensor_parallel.layers.VocabParallelEmbedding.__init__ = norm_wrapper(
-        megatron.core.tensor_parallel.layers.VocabParallelEmbedding.__init__
-    )
-    megatron.core.tensor_parallel.layers.VocabParallelEmbedding.forward = vocab_embedding_wrapper(
-        megatron.core.tensor_parallel.layers.VocabParallelEmbedding.forward
-    )
-    megatron.model.transformer.ParallelTransformer.__init__ = parallel_transformer_init
-
-
-def post_language_model_processing(lm_output, labels, logit_weights,
-                                   parallel_output,
-                                   fp16_lm_cross_entropy):
-    # Output. Format [s b h]
-    output = parallel_lm_logits(
-        lm_output,
-        logit_weights,
-        parallel_output)
-
-    if labels is None:
-        # [s b h] => [b s h]
-        return output.transpose(0, 1).contiguous()
-    else:
-        # [b s] => [s b]
-        labels = labels.transpose(0, 1).contiguous()
-        if fp16_lm_cross_entropy:
-            if output.dtype != torch.half:
-                raise ValueError("Wrong output dtype when fp16_lm_cross_entropy.")
-            loss = tensor_parallel.vocab_parallel_cross_entropy(output, labels)
-        else:
-            loss = tensor_parallel.vocab_parallel_cross_entropy(output.float(), labels)
-
-        # [s b] => [b, s]
-        loss = loss.transpose(0, 1).contiguous()
-        return loss
-
-
-class GPTModel(MegatronModule, MegatronModuleForCausalLM):
-    """GPT-2 Language model."""
-
-    def __init__(self,
-                 config,
-                 num_tokentypes=0,
-                 parallel_output=True,
-                 pre_process=True,
-                 post_process=True):
-        args = get_args()
-        super().__init__(config=config,
-                         share_embeddings_and_output_weights=not args.untie_embeddings_and_output_weights)
-
-        self.parallel_output = parallel_output
-        self.pre_process = pre_process
-        self.post_process = post_process
-        self.fp16_lm_cross_entropy = args.fp16_lm_cross_entropy
-        self.untie_embeddings_and_output_weights = args.untie_embeddings_and_output_weights
-
-        self.language_model, self._language_model_key = get_language_model(
-            config=config,
-            num_tokentypes=num_tokentypes,
-            add_pooler=False,
-            encoder_attn_mask_type=AttnMaskType.causal,
-            pre_process=self.pre_process,
-            post_process=self.post_process)
-
-        if not args.untie_embeddings_and_output_weights:
-            self.initialize_word_embeddings()
-
-    def set_input_tensor(self, input_tensor):
-        """See megatron.model.transformer.set_input_tensor()"""
-        self.language_model.set_input_tensor(input_tensor)
-
-    def forward(self, input_ids, position_ids, attention_mask,
-                retriever_input_ids=None,
-                retriever_position_ids=None,
-                retriever_attn_mask=None,
-                labels=None, tokentype_ids=None, inference_params=None):
-
-        lm_output = self.language_model(
-            input_ids,
-            position_ids,
-            attention_mask,
-            retriever_input_ids=retriever_input_ids,
-            retriever_position_ids=retriever_position_ids,
-            retriever_attn_mask=retriever_attn_mask,
-            inference_params=inference_params)
-
-        if self.post_process:
-            return post_language_model_processing(
-                lm_output, labels,
-                self.language_model.output_layer.weight if self.untie_embeddings_and_output_weights else self.shared_embedding_or_output_weight(),
-                self.parallel_output,
-                self.fp16_lm_cross_entropy)
-        else:
-            return lm_output
-
-    def state_dict_for_save_checkpoint(self, prefix='', keep_vars=False):
-        state_dict_ = {}
-        state_dict_[self._language_model_key] \
-            = self.language_model.state_dict_for_save_checkpoint(
-            prefix=prefix, keep_vars=keep_vars)
-        # Save word_embeddings.
-        if self.post_process and not self.pre_process and not self.untie_embeddings_and_output_weights:
-            state_dict_[self._word_embeddings_for_head_key] \
-                = self.word_embeddings.state_dict(prefix=prefix,
-                                                  keep_vars=keep_vars)
-        return state_dict_
-
-    def load_state_dict(self, state_dict, strict=True):
-        """Customized load."""
-
-        # Load word_embeddings.
-        if self.post_process and not self.pre_process and not self.untie_embeddings_and_output_weights:
-            self.word_embeddings.load_state_dict(
-                state_dict[self._word_embeddings_for_head_key], strict=strict)
-        if self._language_model_key in state_dict:
-            state_dict = state_dict[self._language_model_key]
-        self.language_model.load_state_dict(state_dict, strict=strict)
-
-
-def norm_wrapper(fn):
-    @wraps(fn)
-    def wrapper(self, *args, **kwargs):
-        fn(self, *args, **kwargs)
-        args = get_args()
-        if parallel_state.is_pipeline_first_stage() and args.embed_layernorm:
-            norm = MixedFusedLayerNorm(args.hidden_size)
-            self.norm = norm
-    return wrapper
-
-
-def vocab_embedding_wrapper(fn):
-    @wraps(fn)
-    def wrapper(self, *args, **kwargs):
-        output = fn(self, *args, **kwargs)
-        if hasattr(self, 'norm'):
-            output = self.norm(output)
-        return output
-    return wrapper
-
-
-def assert_judge(expression):
-    if not expression:
-        raise AssertionError
-
-
-def get_num_layers(args, model_type, is_decoder=False):
+def _get_num_layers(args, model_type, is_decoder=False):
     """Compute the number of transformer layers resident on the current rank."""
     is_encoder_and_decoder_model = (model_type == ModelType.encoder_and_decoder)
     if model_type == ModelType.retro_encoder:
         num_layers = args.retro_encoder_layers
     elif mpu.get_pipeline_model_parallel_world_size() > 1:
         if is_encoder_and_decoder_model:
-            assert_judge(args.pipeline_model_parallel_split_rank is not None)
+            ensure_valid(args.pipeline_model_parallel_split_rank is not None)
             # When a standalone embedding stage is used, a rank is taken from
             # the encoder's ranks, to be used for the encoder's embedding
             # layer. This way, the rank referenced by the 'split rank' remains
@@ -211,8 +67,8 @@ def get_num_layers(args, model_type, is_decoder=False):
                 args.pipeline_model_parallel_split_rank
             )
             num_ranks_in_decoder = args.transformer_pipeline_model_parallel_size - num_ranks_in_encoder
-            assert_judge(args.encoder_num_layers % num_ranks_in_encoder == 0)
-            assert_judge(args.decoder_num_layers % num_ranks_in_decoder == 0)
+            ensure_valid(args.encoder_num_layers % num_ranks_in_encoder == 0)
+            ensure_valid(args.decoder_num_layers % num_ranks_in_decoder == 0)
             if mpu.is_pipeline_stage_before_split():
                 num_layers = (
                     0
@@ -223,7 +79,7 @@ def get_num_layers(args, model_type, is_decoder=False):
             else:
                 num_layers = args.decoder_num_layers // num_ranks_in_decoder
         else:
-            assert_judge(args.num_layers == args.encoder_num_layers)
+            ensure_valid(args.num_layers == args.encoder_num_layers)
             # When a standalone embedding stage is used, all transformer layers
             # are divided among pipeline rank >= 1, while on pipeline rank 0,
             # ranks either contain the input embedding layer (virtual pp rank 0),
@@ -293,13 +149,13 @@ def parallel_transformer_init(self, config,
 
         del version, packaging
 
-        assert_judge(not args.squared_relu)
+        ensure_valid(not args.squared_relu)
 
     self.use_fp8 = args.fp8 is not None
     self.fp8_recipe = None
     self.fp8_group = None
     if self.use_fp8:
-        assert_judge(args.transformer_impl == 'transformer_engine')
+        ensure_valid(args.transformer_impl == 'transformer_engine')
         self.fp8_group = mpu.get_amax_reduction_group()
         if args.fp8 == "e4m3":
             fp8_format = transformer_engine.common.recipe.Format.E4M3
@@ -321,7 +177,7 @@ def parallel_transformer_init(self, config,
     self.checkpoint_core_attention = config.recompute_granularity == 'selective'
 
     # Number of layers.
-    self.num_layers = get_num_layers(args, model_type,
+    self.num_layers = _get_num_layers(args, model_type,
                                       layer_type == LayerType.decoder)
 
     self.drop_path_rates = []
@@ -338,8 +194,8 @@ def parallel_transformer_init(self, config,
 
     # Transformer layers.
     if args.retro_add_retriever:
-        assert_judge(self.recompute_granularity != 'full')
-        assert_judge(args.transformer_impl == 'local')
+        ensure_valid(self.recompute_granularity != 'full')
+        ensure_valid(args.transformer_impl == 'local')
 
     def build_layer(layer_number):
         if args.transformer_impl == 'local':
@@ -391,8 +247,8 @@ def parallel_transformer_init(self, config,
                 **extra_transformer_engine_kwargs)
 
     if config.virtual_pipeline_model_parallel_size is not None:
-        assert_judge(config.num_layers % config.virtual_pipeline_model_parallel_size == 0)
-        assert_judge(args.model_type != ModelType.encoder_and_decoder)
+        ensure_valid(config.num_layers % config.virtual_pipeline_model_parallel_size == 0)
+        ensure_valid(args.model_type != ModelType.encoder_and_decoder)
         # Number of layers in each model chunk is the number of layers in the stage,
         # divided by the number of model chunks in a stage.
         self.num_layers = self.num_layers // config.virtual_pipeline_model_parallel_size

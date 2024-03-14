@@ -234,10 +234,10 @@ python tools/checkpoint/util.py --model-type GPT \
        --lora-load ${LORA_CHECKPOINT} \   # lora参数checkpoint
    ```
    
-   启动Lora微调脚本: examples/llama2/tune_llama2_7b_ptd.sh
+   启动Lora微调脚本: tasks/finetune/tune_llama2_7b_ptd.sh
 
    ```shell
-    bash examples/llama2/tune_llama2_7b_ptd.sh
+    bash tasks/finetune/tune_llama2_7b_ptd.sh
    ```
 
 ### 性能
@@ -563,10 +563,10 @@ python tools/checkpoint/util.py --model-type GPT \
        --lora-load ${LORA_CHECKPOINT} \   # lora参数checkpoint
    ```
    
-   启动Lora微调脚本: examples/llama2/tune_llama2_13b_ptd.sh
+   启动Lora微调脚本: tasks/finetune/tune_llama2_13b_ptd.sh
 
    ```shell
-    bash examples/llama2/tune_llama2_13b_ptd.sh
+    bash tasks/finetune/tune_llama2_13b_ptd.sh
    ```
 
 ### 性能
@@ -967,16 +967,16 @@ python tools/checkpoint/util.py --model-type GPT \
        --lora-load ${LORA_CHECKPOINT} \   # lora参数checkpoint
    ```
    
-   启动llama2-34B Lora微调脚本: examples/llama2/tune_llama2_34b_ptd.sh
+   启动llama2-34B Lora微调脚本: tasks/finetune/tune_llama2_34b_ptd.sh
 
    ```shell
-    bash examples/llama2/tune_llama2_34b_ptd.sh
+    bash tasks/finetune/tune_llama2_34b_ptd.sh
    ```
    
-   启动llama2-70B Lora微调脚本: examples/llama2/tune_llama2_70b_ptd.sh
+   启动llama2-70B Lora微调脚本: tasks/finetune/tune_llama2_70b_ptd.sh
 
    ```shell
-    bash examples/llama2/tune_llama2_70b_ptd.sh
+    bash tasks/finetune/tune_llama2_70b_ptd.sh
    ```
 
 ### 性能-2
