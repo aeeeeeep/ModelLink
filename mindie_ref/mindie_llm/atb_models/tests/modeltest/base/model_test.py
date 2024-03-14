@@ -909,8 +909,8 @@ class ModelTest:
             choice_tokens = [self.tokenizer([sample_yes], return_tensors="pt", max_length=2048, add_special_tokens=None).input_ids[0, -1].item(),
                              self.tokenizer([sample_no], return_tensors="pt", max_length=2048, add_special_tokens=None).input_ids[0, -1].item()]
         else:
-            choice_tokens = [self.pa_runner.tokenizer([sample_yes], return_tensors="pt", max_length=2048, add_special_tokens=None).input_ids[0, -1].item(),
-                             self.pa_runner.tokenizer([sample_no], return_tensors="pt", max_length=2048, add_special_tokens=None).input_ids[0, -1].item()]
+            choice_tokens = [self.pa_runner.tokenizer([sample_yes], return_tensors="pt", max_length=2048, add_special_tokens=False).input_ids[0, -1].item(),
+                             self.pa_runner.tokenizer([sample_no], return_tensors="pt", max_length=2048, add_special_tokens=False).input_ids[0, -1].item()]
         
         def build_prompt(title, text, passage):
             prompt = f"{title} -- {passage}\nQuestion: {text}?\nAnswer:"
@@ -929,10 +929,6 @@ class ModelTest:
                 with open(entry, encoding='utf-8') as f:
                     for line in f:
                         line_json = json.loads(line)
-                        if line_json['answer'] == True:
-                            line_json['answer'] = 'yes'
-                        elif line_json['answer'] == False:
-                            line_json['answer'] = 'no'
                         dataset.append(line_json)
 
                 correct = 0
@@ -945,15 +941,14 @@ class ModelTest:
                     queries = [build_prompt(title, query, passage) for title, query, passage in zip(titles, texts, passages)]
                     if self.model_type == "fa":
                         inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
-                                                max_length=2048, add_special_tokens=None).to(0)
+                                                max_length=2048).to(0)
                         outputs = self.model(**inputs)
                         logits = outputs.logits[:, -1, :]
                         logits_softmax = F.log_softmax(logits.float(), dim=-1)
-                        greedy_tokens = logits_softmax.argmax(dim=-1)
+                        logits_softmax = logits_softmax[:, choice_tokens]
                         if is_result:
                             for idx, ans in enumerate(batch['answer']):
-                                choice = (logits_softmax[0, 0] > logits_softmax[0, 1]).cpu()
-                                logits_softmax = logits_softmax[:, choice_tokens]
+                                choice = (logits_softmax[idx, 0] > logits_softmax[idx, 1]).cpu()
                                 acc = choice == ans
                                 if acc:
                                     correct += 1
@@ -966,10 +961,9 @@ class ModelTest:
                         if is_result:
                             logits = torch.load(os.path.join(logits_save_folder, 'logits_0.pth'))
                             logits_softmax = F.log_softmax(logits.float(), dim=-1)
-                            greedy_tokens = logits_softmax.argmax(dim=-1)
+                            logits_softmax = logits_softmax[:, choice_tokens]
                             for idx, ans in enumerate(batch['answer']):
-                                choice = (logits_softmax[0, 0] > logits_softmax[0, 1]).cpu()
-                                logits_softmax = logits_softmax[:, choice_tokens]
+                                choice = (logits_softmax[idx, 0] > logits_softmax[idx, 1]).cpu()
                                 acc = choice == ans
                                 if acc:
                                     correct += 1
