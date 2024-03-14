@@ -11,11 +11,14 @@ class AttentionMask(nn.Module):
         self.atten_mask_cache = atten_mask
 
     @classmethod
-    def static(cls, max_seq_len):
+    def static(cls, max_seq_len, dtype=torch.float16):
         bias_cache = torch.tril(torch.ones((max_seq_len, max_seq_len), dtype=torch.bool)).view(max_seq_len,
                                                                                                max_seq_len)
         bias_cache = ~bias_cache
-        mask_value = torch.finfo(torch.float32).min
+        if dtype == torch.float16:
+            mask_value = torch.finfo(torch.float32).min
+        else:
+            mask_value = 1
         attn_mask = torch.masked_fill(torch.zeros(size=(max_seq_len, max_seq_len)), bias_cache, mask_value)
         return cls(attn_mask)
 
@@ -26,7 +29,10 @@ class AttentionMask(nn.Module):
             self._seq_len_cached = seqlen
             bias_cache = torch.tril(torch.ones((seqlen, seqlen), dtype=torch.bool)).view(seqlen, seqlen)
             bias_cache = ~bias_cache
-            mask_value = torch.finfo(torch.float32).min
+            if dtype == torch.float16:
+                mask_value = torch.finfo(torch.float32).min
+            else:
+                mask_value = 1
             mask_atten_cache = torch.masked_fill(torch.zeros(size=(seqlen, seqlen)), bias_cache, mask_value)
             self.atten_mask_cache = mask_atten_cache.to(dtype).to(device)
         if self.atten_mask_cache.device != device or self.atten_mask_cache.dtype != dtype:

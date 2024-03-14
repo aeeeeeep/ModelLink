@@ -42,7 +42,7 @@ def parse_arguments():
     parser.add_argument('--repetition_penalty', type=float, default=1.0)
     parser.add_argument('--presence_penalty', type=float, default=0.0)
     parser.add_argument('--frequency_penalty', type=float, default=0.0)
-    parser.add_argument('--use_refactor', action='store_true')
+    parser.add_argument('--use_refactor', type=bool, default=True)
 
     return parser.parse_args()
 

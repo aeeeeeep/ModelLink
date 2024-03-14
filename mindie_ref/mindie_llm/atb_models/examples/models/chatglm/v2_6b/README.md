@@ -28,6 +28,34 @@
 ## 权重转换
 - 参考[此README文件](../../../README.md)
 
+## 量化权重导出
+量化权重可通过ModelSlim（昇腾压缩加速工具）实现。
+
+#### 环境准备
+环境配置可参考ModelSlim官网：https://www.hiascend.com/document/detail/zh/canncommercial/70RC1/devtools/auxiliarydevtool/modelslim_0002.html
+
+#### 导出量化权重
+通过`${llm_path}/examples/models/chatglm/v2_6b/quant_chatglm2_6b_w8a8.py`文件导出模型的量化权重（注意量化权重不要和浮点权重放在同一个目录下）：
+```shell
+python quant_chatglm2_6b_w8a8.py --model_path ${浮点权重路径} --save_path ${量化权重保存路径}
+```
+导出量化权重后应生成`quant_model_weight.safetensors`和`quant_model_description.json`两个文件。
+
+注：
+
+1.quant_chatglm2_6b_w8a8.py文件中已配置好较优的量化策略，导出量化权重时可直接使用，也可修改为其它策略。
+
+2.启动量化推理时，需要将config.json等相关文件复制到量化权重路径中，可执行以下指令进行复制：
+```shell
+cp ${浮点权重路径}/config* ${量化权重路径}
+cp ${浮点权重路径}/tokeniz* ${量化权重路径}
+cp ${浮点权重路径}/modeling* ${量化权重路径}
+```
+
+3.启动量化推理时，请在权重路径的config.json文件中添加(或修改)`quantize`字段，值为相应量化方式，当前仅支持`w8a8`。
+
+4.执行完以上步骤后，执行量化模型只需要替换权重路径。
+
 ## 300I DUO 运行操作说明
 - 可开启CPU Performance模式以提高模型推理性能
 

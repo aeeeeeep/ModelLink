@@ -48,32 +48,28 @@ def _make_causal_mask(
     Make causal mask used for bi-directional self-attention.
     """
     bsz, tgt_len = input_ids_shape
-    mask = torch.full((tgt_len, tgt_len), torch.finfo(dtype).min, device=device)
+    mask = torch.full((tgt_len, tgt_len), 1, device=device)
     mask_cond = torch.arange(mask.size(-1), device=device)
     mask.masked_fill_(mask_cond < (mask_cond + 1).view(mask.size(-1), 1), 0)
     mask = mask.to(dtype)
 
-    if past_key_values_length > 0:
-        mask = torch.cat([torch.zeros(tgt_len, past_key_values_length, dtype=dtype, device=device), mask], dim=-1)
-    return mask[None, None, :, :].expand(bsz, 1, tgt_len, tgt_len + past_key_values_length)
+    return mask
 
 
 # Copied from transformers.models.bart.modeling_bart._expand_mask
-def _expand_mask(mask: torch.Tensor, past_key_values_length, dtype: torch.dtype, tgt_len: Optional[int] = None):
+def _expand_mask(mask: torch.Tensor, dtype: torch.dtype, tgt_len: Optional[int] = None):
     """
     Expands attention_mask from `[bsz, seq_len]` to `[bsz, 1, tgt_seq_len, src_seq_len]`.
     """
     bsz, src_len = mask.size()
-    if past_key_values_length > 0:
-        mask = torch.cat([mask, torch.zeros(bsz, past_key_values_length - src_len, dtype=dtype, device=mask.device)], dim=-1)
-        src_len = past_key_values_length
+
     tgt_len = tgt_len if tgt_len is not None else src_len
 
     expanded_mask = mask[:, None, None, :].expand(bsz, 1, tgt_len, src_len).to(dtype)
 
     inverted_mask = 1.0 - expanded_mask
 
-    return inverted_mask.masked_fill(inverted_mask.to(torch.bool), torch.finfo(dtype).min)
+    return inverted_mask.masked_fill(inverted_mask.to(torch.bool), 1).to(dtype)
 
 
 class LlamaRMSNorm(nn.Module):
@@ -118,10 +114,10 @@ class LlamaRotaryEmbedding(torch.nn.Module):
         self.register_buffer("cos_cached", emb.cos()[None, None, :, :].to(dtype), persistent=False)
         self.register_buffer("sin_cached", emb.sin()[None, None, :, :].to(dtype), persistent=False)
 
-    def forward(self, x, seq_len=None):
+    def forward(self, x=None, seq_len=None):
         # x: [bs, num_attention_heads, seq_len, head_size]
-        if seq_len > self.max_seq_len_cached:
-            self._set_cos_sin_cache(seq_len=seq_len, device=x.device, dtype=x.dtype)
+        if x is None and seq_len is None:
+            return self.cos_cached, self.sin_cached
 
         return (
             self.cos_cached[:, :, :seq_len, ...].to(dtype=x.dtype),
@@ -181,14 +177,9 @@ def rotate_half(x):
     return torch.cat((-x2, x1), dim=-1)
 
 
-def apply_rotary_pos_emb(q, k, cos, sin, position_ids):
-    # The first two dimensions of cos and sin are always 1, so we can `squeeze` them.
-    cos = cos.squeeze(1).squeeze(0)  # [seq_len, dim]
-    sin = sin.squeeze(1).squeeze(0)  # [seq_len, dim]
-    cos = cos[position_ids].unsqueeze(1)  # [bs, 1, seq_len, dim]
-    sin = sin[position_ids].unsqueeze(1)  # [bs, 1, seq_len, dim]
-    q_embed = (q * cos) + (rotate_half(q) * sin)
-    k_embed = (k * cos) + (rotate_half(k) * sin)
+def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None):
+    q_embed = torch_npu.npu_rotary_mul(q, cos, sin)
+    k_embed = torch_npu.npu_rotary_mul(k, cos, sin)
     return q_embed, k_embed
 
 
@@ -248,6 +239,8 @@ class LlamaAttention(nn.Module):
         self.pretraining_tp = config.pretraining_tp
         self.max_position_embeddings = config.max_position_embeddings
 
+        self.scale_value = 1 / math.sqrt(self.head_dim)
+
         if (self.head_dim * self.num_heads) != self.hidden_size:
             raise ValueError(
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
@@ -257,24 +250,6 @@ class LlamaAttention(nn.Module):
         self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=False)
         self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=False)
         self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=False)
-        self._init_rope()
-
-    def _init_rope(self):
-        if self.config.rope_scaling is None:
-            self.rotary_emb = LlamaRotaryEmbedding(self.head_dim, max_position_embeddings=self.max_position_embeddings)
-        else:
-            scaling_type = self.config.rope_scaling["type"]
-            scaling_factor = self.config.rope_scaling["factor"]
-            if scaling_type == "linear":
-                self.rotary_emb = LlamaLinearScalingRotaryEmbedding(
-                    self.head_dim, max_position_embeddings=self.max_position_embeddings, scaling_factor=scaling_factor
-                )
-            elif scaling_type == "dynamic":
-                self.rotary_emb = LlamaDynamicNTKScalingRotaryEmbedding(
-                    self.head_dim, max_position_embeddings=self.max_position_embeddings, scaling_factor=scaling_factor
-                )
-            else:
-                raise ValueError(f"Unknown RoPE scaling type {scaling_type}")
 
     def _shape(self, tensor: torch.Tensor, seq_len: int, bsz: int):
         return tensor.view(bsz, seq_len, self.num_heads, self.head_dim).transpose(1, 2).contiguous()
@@ -284,6 +259,8 @@ class LlamaAttention(nn.Module):
         hidden_states: torch.Tensor,
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
+        rotary_emb_cos: Optional[torch.Tensor] = None,
+        rotary_emb_sin: Optional[torch.Tensor] = None,
         past_key_value: Optional[Tuple[torch.Tensor]] = None,
         output_attentions: bool = False,
         use_cache: bool = False,
@@ -310,60 +287,46 @@ class LlamaAttention(nn.Module):
             key_states = self.k_proj(hidden_states)
             value_states = self.v_proj(hidden_states)
 
-        query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
-        key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
-        value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
+        # format BSND
+        query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim)
+        key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim)
+        value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim)
 
-        if q_len == 1:
-            kv_seq_len = self.max_position_embeddings
-        else:
-            kv_seq_len = key_states.shape[-2]
+        query_states, key_states = apply_rotary_pos_emb(query_states, key_states,
+                                                        rotary_emb_cos.to(value_states.dtype),
+                                                        rotary_emb_sin.to(value_states.dtype))
 
-        cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
-        query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
-
+        # 更新指定位置上的kv cache，position_ids在全量图执行时从seq_len 0的位置更新，在增量图执行时从seq_len位置更新
         if q_len > 1:
             tmp_ids = torch.zeros(bsz, dtype=torch.int64, device=position_ids.device)
         else:
             tmp_ids = position_ids.reshape(-1) + 1
-        torch_npu.scatter_update_(past_key_value[0], tmp_ids, key_states, -2)
-        torch_npu.scatter_update_(past_key_value[1], tmp_ids, value_states, -2)
+        # format BSND, 1 means seq_len dim index
+        torch_npu.scatter_update_(past_key_value[0], tmp_ids, key_states, 1)
+        torch_npu.scatter_update_(past_key_value[1], tmp_ids, value_states, 1)
 
         key_states1 = past_key_value[0] if q_len == 1 else key_states
         value_states1 = past_key_value[1] if q_len == 1 else value_states
 
         past_key_value = past_key_value if use_cache else None
 
-        # repeat k/v heads if n_kv_heads < n_heads
-        key_states1 = repeat_kv(key_states1, self.num_key_value_groups)
-        value_states1 = repeat_kv(value_states1, self.num_key_value_groups)
+        attention_mask = attention_mask.to(torch.bool)
+        if q_len > 1:
+            attn_output = torch_npu.npu_prompt_flash_attention(query_states, key_states1.contiguous(),
+                                                               value_states1.contiguous(), num_heads=self.num_heads,
+                                                               input_layout="BSND",
+                                                               scale_value=self.scale_value,
+                                                               pre_tokens=65535, next_tokens=65535,
+                                                               atten_mask=attention_mask,
+                                                               num_key_value_heads=self.num_key_value_heads)
+        else:
+            attn_output = torch_npu.npu_incre_flash_attention(query_states, key_states1.contiguous(),
+                                                               value_states1.contiguous(), num_heads=self.num_heads,
+                                                               input_layout="BSND",
+                                                               scale_value=self.scale_value,
+                                                               atten_mask=attention_mask,
+                                                               num_key_value_heads=self.num_key_value_heads)
 
-        attn_weights = torch.matmul(query_states, key_states1.transpose(2, 3)) / math.sqrt(self.head_dim)
-
-        if attn_weights.size() != (bsz, self.num_heads, q_len, kv_seq_len):
-            raise ValueError(
-                f"Attention weights should be of size {(bsz, self.num_heads, q_len, kv_seq_len)}, but is"
-                f" {attn_weights.size()}"
-            )
-
-        if attention_mask is not None:
-            if attention_mask.size() != (bsz, 1, q_len, kv_seq_len):
-                raise ValueError(
-                    f"Attention mask should be of size {(bsz, 1, q_len, kv_seq_len)}, but is {attention_mask.size()}"
-                )
-            attn_weights = attn_weights + attention_mask
-
-        # upcast attention to fp32
-        attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
-        attn_output = torch.matmul(attn_weights, value_states1)
-
-        if attn_output.size() != (bsz, self.num_heads, q_len, self.head_dim):
-            raise ValueError(
-                f"`attn_output` should be of size {(bsz, self.num_heads, q_len, self.head_dim)}, but is"
-                f" {attn_output.size()}"
-            )
-
-        attn_output = attn_output.transpose(1, 2).contiguous()
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
 
         if self.pretraining_tp > 1:
@@ -393,6 +356,8 @@ class LlamaDecoderLayer(nn.Module):
         hidden_states: torch.Tensor,
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
+        rotary_emb_cos: Optional[torch.Tensor] = None,
+        rotary_emb_sin: Optional[torch.Tensor] = None,
         past_key_value: Optional[Tuple[torch.Tensor]] = None,
         output_attentions: Optional[bool] = False,
         use_cache: Optional[bool] = False,
@@ -420,6 +385,8 @@ class LlamaDecoderLayer(nn.Module):
             hidden_states=hidden_states,
             attention_mask=attention_mask,
             position_ids=position_ids,
+            rotary_emb_cos=rotary_emb_cos,
+            rotary_emb_sin=rotary_emb_sin,
             past_key_value=past_key_value,
             output_attentions=output_attentions,
             use_cache=use_cache,
@@ -580,6 +547,11 @@ class LlamaModel(LlamaPreTrainedModel):
         self.num_hidden_layers = config.num_hidden_layers
         self.torch_dtype = config.torch_dtype
 
+        self.config = config
+        self.num_heads = config.num_attention_heads
+        self.head_dim = self.hidden_size // self.num_heads
+        self._init_rope()
+
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
@@ -589,6 +561,34 @@ class LlamaModel(LlamaPreTrainedModel):
 
     def set_input_embeddings(self, value):
         self.embed_tokens = value
+
+    def _init_rope(self):
+        if self.config.rope_scaling is None:
+            self.rotary_emb = LlamaRotaryEmbedding(self.head_dim, max_position_embeddings=self.max_position_embeddings)
+        else:
+            scaling_type = self.config.rope_scaling["type"]
+            scaling_factor = self.config.rope_scaling["factor"]
+            if scaling_type == "linear":
+                self.rotary_emb = LlamaLinearScalingRotaryEmbedding(
+                    self.head_dim, max_position_embeddings=self.max_position_embeddings, scaling_factor=scaling_factor
+                )
+            elif scaling_type == "dynamic":
+                self.rotary_emb = LlamaDynamicNTKScalingRotaryEmbedding(
+                    self.head_dim, max_position_embeddings=self.max_position_embeddings, scaling_factor=scaling_factor
+                )
+            else:
+                raise ValueError(f"Unknown RoPE scaling type {scaling_type}")
+
+    def _prepare_decoder_rotary_cos_sin(self, position_ids):
+        cos, sin = self.rotary_emb()
+        cos = cos.squeeze(1).squeeze(0)
+        sin = sin.squeeze(1).squeeze(0)
+        f_position_ids = position_ids.flatten()
+        cos = torch.index_select(cos, 0, f_position_ids)
+        sin = torch.index_select(sin, 0, f_position_ids)
+        cos = cos.reshape(position_ids.size(0), position_ids.size(1), -1).unsqueeze(2)
+        sin = sin.reshape(position_ids.size(0), position_ids.size(1), -1).unsqueeze(2)
+        return cos, sin
 
     # Copied from transformers.models.bart.modeling_bart.BartDecoder._prepare_decoder_attention_mask
     def _prepare_decoder_attention_mask(self, attention_mask, input_shape, inputs_embeds, past_key_values_length):
@@ -605,7 +605,7 @@ class LlamaModel(LlamaPreTrainedModel):
 
         if attention_mask is not None:
             # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
-            expanded_attn_mask = _expand_mask(attention_mask, past_key_values_length, inputs_embeds.dtype, tgt_len=input_shape[-1]).to(
+            expanded_attn_mask = _expand_mask(attention_mask, inputs_embeds.dtype, tgt_len=input_shape[-1]).to(
                 inputs_embeds.device
             )
             combined_attention_mask = (
@@ -663,16 +663,11 @@ class LlamaModel(LlamaPreTrainedModel):
 
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
-        # embed positions
-        if attention_mask is None:
-            attention_mask = torch.ones(
-                (batch_size, seq_length_with_past), dtype=torch.bool, device=inputs_embeds.device
-            )
-        attention_mask = self._prepare_decoder_attention_mask(
-            attention_mask, (batch_size, seq_length), inputs_embeds, past_key_values_length
-        )
 
         hidden_states = inputs_embeds
+
+        # 此处处理cos， sin是为了不在每层里面重复计算
+        rotary_emb_cos, rotary_emb_sin = self._prepare_decoder_rotary_cos_sin(position_ids)
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
@@ -713,6 +708,8 @@ class LlamaModel(LlamaPreTrainedModel):
                     hidden_states,
                     attention_mask=attention_mask,
                     position_ids=position_ids,
+                    rotary_emb_cos=rotary_emb_cos,
+                    rotary_emb_sin=rotary_emb_sin,
                     past_key_value=past_key_value,
                     output_attentions=output_attentions,
                     use_cache=use_cache,
@@ -896,11 +893,36 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         if past_key_values is None:
             past_key_values = ()
             for i in range(self.model.num_hidden_layers):
-                kv_shape = (batch_size, self.model.num_key_value_heads // self.world_size, self.model.max_position_embeddings, 
+                kv_shape = (
+                    batch_size, self.model.max_position_embeddings, self.model.num_key_value_heads // self.world_size,
                     self.model.hidden_size // self.model.num_attention_heads)
                 k_cache = torch.zeros(kv_shape, dtype=use_dtype, device=input_ids.device)
                 v_cache = torch.zeros(kv_shape, dtype=use_dtype, device=input_ids.device)
                 past_key_values += ((k_cache, v_cache),)
+
+        # 增量图attention_mask padding到最大长度
+        past_key_values_length = 0
+        if seq_length > 1:
+            if attention_mask is None:
+                attention_mask = torch.ones((batch_size, seq_length), dtype=torch.bool, device=input_ids.device)
+            self.padding_mask = torch.zeros(batch_size, self.model.max_position_embeddings, device=input_ids.device)
+        else:
+            bsz, src_len = attention_mask.size()
+            padding_mask = self.padding_mask
+            padding_mask[:, :src_len] = attention_mask
+            attention_mask = padding_mask
+            past_key_values_length = self.model.max_position_embeddings
+
+        attention_mask = self.model._prepare_decoder_attention_mask(
+            attention_mask, (batch_size, seq_length), past_key_values[0][0], past_key_values_length
+        )
+        position_ids = position_ids.clone()
+        if seq_length <= 1:
+            torch._dynamo.mark_static(position_ids)
+            torch._dynamo.mark_static(attention_mask)
+            for i in range(self.model.num_hidden_layers):
+                torch._dynamo.mark_static(past_key_values[i][0])
+                torch._dynamo.mark_static(past_key_values[i][1])
 
         model_inputs.update(
             {

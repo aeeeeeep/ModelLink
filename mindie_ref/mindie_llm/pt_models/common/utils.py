@@ -38,6 +38,7 @@ def set_options(model_config):
 
 def generate_prompts(model_config):
     batch_prompts = []
+    # 导入实际的数据集
     batch_prompts.append(prompts)
     model_config["batch_prompts"] = batch_prompts
 
@@ -79,7 +80,7 @@ def generate_answer(model_config):
     with torch.no_grad():
         _ = model.generate(**kwargs_params)
     elapse = time.time() - start_time
-    is_logging = (len(device_list) > 1 and (local_rank == 0 or local_rank == device_list[0])) or (len(device_list) == 1)
+    is_logging = (local_rank == 0 or local_rank == device_list[0])
     if is_logging:
         logging.info("Execution of warmup is finished, time cost: %.2fs", elapse)
 

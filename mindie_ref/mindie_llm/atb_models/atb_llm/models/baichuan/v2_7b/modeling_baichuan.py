@@ -114,7 +114,6 @@ class BaichuanMLP(nn.Module):
         linear_names = [f'{prefix}.up_proj', f'{prefix}.gate_proj']
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{layer_prefix}.post_attention_layernorm'
-        # print(f"查看线性层的名字:{linear_names}")
 
         if weights.quantize == 'w8a8':
             self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
@@ -124,13 +123,27 @@ class BaichuanMLP(nn.Module):
             self.pack_type = PackType.ALL_W8A8
         else:
             self.pack_type = PackType.ALL_FP
-        self.gate_up_proj = TensorParallelColumnLinear.load_multi(
+        if self.pack_type in [PackType.ALL_FP, PackType.ALL_W8A8, PackType.ALL_W8A8_ANTI, PackType.ALL_W8A16]:
+            self.gate_up_proj = load_column_multi(
+                config,
+                prefixes=[f"{prefix}.gate_proj", f"{prefix}.up_proj"],
+                weights=weights,
+                head_size=1,
+            )
+        else:
+            self.gate_proj = TensorParallelColumnLinear.load(
+                config,
+                prefix=f"{prefix}.gate_proj",
+                weights=weights,
+                bias=False,
+            )
+            self.up_proj = TensorParallelColumnLinear.load(
             config,
-            prefixes=[f"{prefix}.gate_proj", f"{prefix}.up_proj"],
+            prefix=f"{prefix}.up_proj",
             weights=weights,
-            dim=0,
             bias=False,
-        )
+            )
+
         self.down_proj = TensorParallelRowLinear.load(
             config,
             prefix=f"{prefix}.down_proj",

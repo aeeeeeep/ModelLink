@@ -57,6 +57,8 @@ static const uint64_t PACK_NODE_COUNT = 3;
 template <typename NormParamType>
 atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **operation)
 {
+    bool isAntiOutlier = param.packQuantType == atb_speed::common::MIX_W8A8_ANTI || param.packQuantType == atb_speed::common::ALL_W8A8_ANTI;
+
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
@@ -70,7 +72,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
     if (param.mlpPackType != atb_speed::common::GATE_UP_WEIGHT_NO_PACK) { // Gate Up weight权重合并或者没有Gate weight
         atb::Node &normLinearGateUpNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> gateUpNormLinearParam;
-        gateUpNormLinearParam.isAntiOutlier = param.isAntiOutlier;
+        gateUpNormLinearParam.isAntiOutlier = isAntiOutlier;
         if (param.packQuantType == atb_speed::common::ALL_W8A16) {
             gateUpNormLinearParam.fusionLinearParam.quantType = W8A16;
         } else {
@@ -99,7 +101,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
     } else {
         atb::Node &normLinearGateNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> gateNormLinearParam;
-        gateNormLinearParam.isAntiOutlier = param.isAntiOutlier;
+        gateNormLinearParam.isAntiOutlier = isAntiOutlier;
         if (param.packQuantType == atb_speed::common::ALL_W8A16) {
             gateNormLinearParam.fusionLinearParam.quantType = W8A16;
         } else {
@@ -128,7 +130,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
 
         atb::Node &normLinearUpNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> upNormLinearParam;
-        upNormLinearParam.isAntiOutlier = param.isAntiOutlier;
+        upNormLinearParam.isAntiOutlier = isAntiOutlier;
         if (param.packQuantType == atb_speed::common::ALL_W8A16) {
             upNormLinearParam.fusionLinearParam.quantType = W8A16;
         } else {

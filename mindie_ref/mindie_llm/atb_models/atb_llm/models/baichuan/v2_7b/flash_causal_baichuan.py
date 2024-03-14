@@ -69,6 +69,8 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
         mlp_module_names = MlpModuleNames(
             norm_name='post_attention_layernorm',
             pack_name='mlp.gate_up_proj',
+            gate_name='mlp.gate_proj',
+            up_name='mlp.up_proj',
             down_name='mlp.down_proj'
         )
         weight_wrapper = WeightWrapper(self.soc_info, self.tp_rank, attn_module_names, mlp_module_names)
@@ -104,8 +106,8 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             "rankSize": self.tp_world_size,
             "backend": "hccl" if self.soc_info.need_nz else "lccl"
         }
-        encoder_param = {**coder_param, "isPrefill": True}
-        decoder_param = {**coder_param, "isPrefill": False}
+        encoder_param = {**coder_param, "isPrefill": True, "supportLcoc": False if self.soc_info.need_nz else True}
+        decoder_param = {**coder_param, "isPrefill": False, "supportLcoc": False}
         self.acl_encoder_operation.set_param(json.dumps({**encoder_param}))
         self.acl_decoder_operation.set_param(json.dumps({**decoder_param}))
 
