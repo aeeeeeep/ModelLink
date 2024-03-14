@@ -122,6 +122,7 @@ dtype_map = {"bf16": torch.bfloat16, "fp16": torch.float16}
 core_map = {"NPU": "npu", "GPU": "cuda"}
 prompt_map = {"GSM8K": "", "TruthfulQA": QA_PRIMER}
 question_num = {"GSM8K": 11, "TruthfulQA": 12}
+CEval_0_shot = {"chatglm2_6b"}
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -136,10 +137,6 @@ class ModelTest:
         self.script_path = os.path.dirname(os.path.abspath(__file__))
         self.data_dir = data_dir
         self.dataset_name = dataset_name
-        if test_mode == 'simplified':
-            self.dataset_path = os.path.join(self.script_path, "../dataset/simplified", self.dataset_name + ".jsonl")
-        elif test_mode == 'full':
-            self.dataset_path = os.path.join(self.script_path, "../dataset/full", self.dataset_name)
         self.batch_size = batch_size
         self.device_id = device_id
         self.result_dir = result_dir
@@ -452,10 +449,17 @@ class ModelTest:
             self.device = self.model.device
 
         if self.test_mode == "simplified":
+            self.dataset_path = os.path.join(self.script_path, "../dataset/simplified", self.dataset_name + ".jsonl")
             self.__run_simplified_dataset()
         elif self.test_mode == "full":
+            self.dataset_path = os.path.join(self.script_path, "../dataset/full", self.dataset_name)
             if self.dataset_name == 'CEval':
-                self.__run_full_dataset_ceval()
+                if self.model_name in CEval_0_shot:
+                    self.dataset_path += "_0_shot"
+                    self.__run_full_dataset_ceval_0_shot()
+                else:
+                    self.dataset_path += "_5_shot"
+                    self.__run_full_dataset_ceval_5_shot()
             elif self.dataset_name == 'MMLU':
                 self.__run_full_dataset_mmlu()
             elif self.dataset_name == 'GSM8K':
@@ -523,7 +527,7 @@ class ModelTest:
                             self.logger.info(f'Generate token num: {token_num_list[i]}')
                 epoch_id += 1
     
-    def __run_full_dataset_ceval(self):
+    def __run_full_dataset_ceval_0_shot(self):
         choices = ["A", "B", "C", "D"]
         if self.hardware_type == "NPU":
             choice_tokens = [self.pa_runner.tokenizer.encode(choice, add_special_tokens=False)[0] for choice in choices]
@@ -608,6 +612,9 @@ class ModelTest:
                 result_total.insert(0, total)
         if is_result:
             self.__save_result(result_total)
+    
+    def __run_full_dataset_ceval_5_shot(self):
+        pass
 
     def __run_full_dataset_mmlu(self):
         choices = ["A", "B", "C", "D"]
@@ -896,6 +903,15 @@ class ModelTest:
             self.__save_result(result_total)
 
     def __run_full_dataset_boolq(self):
+        sample_yes = "How can we learning machine learning: yes"
+        sample_no = "How can we learning machine learning: no"
+        if self.model_type == "fa":
+            choice_tokens = [self.tokenizer([sample_yes], return_tensors="pt", max_length=2048, add_special_tokens=None).input_ids[0, -1].item(),
+                             self.tokenizer([sample_no], return_tensors="pt", max_length=2048, add_special_tokens=None).input_ids[0, -1].item()]
+        else:
+            choice_tokens = [self.pa_runner.tokenizer([sample_yes], return_tensors="pt", max_length=2048, add_special_tokens=False).input_ids[0, -1].item(),
+                             self.pa_runner.tokenizer([sample_no], return_tensors="pt", max_length=2048, add_special_tokens=False).input_ids[0, -1].item()]
+        
         def build_prompt(title, text, passage):
             prompt = f"{title} -- {passage}\nQuestion: {text}?\nAnswer:"
             return prompt
@@ -913,10 +929,6 @@ class ModelTest:
                 with open(entry, encoding='utf-8') as f:
                     for line in f:
                         line_json = json.loads(line)
-                        if line_json['answer'] == True:
-                            line_json['answer'] = 'yes'
-                        elif line_json['answer'] == False:
-                            line_json['answer'] = 'no'
                         dataset.append(line_json)
 
                 correct = 0
@@ -933,10 +945,11 @@ class ModelTest:
                         outputs = self.model(**inputs)
                         logits = outputs.logits[:, -1, :]
                         logits_softmax = F.log_softmax(logits.float(), dim=-1)
-                        greedy_tokens = logits_softmax.argmax(dim=-1)
+                        logits_softmax = logits_softmax[:, choice_tokens]
                         if is_result:
                             for idx, ans in enumerate(batch['answer']):
-                                acc = self.tokenizer.decode(greedy_tokens[idx]).lower() == ans
+                                choice = (logits_softmax[idx, 0] > logits_softmax[idx, 1]).cpu()
+                                acc = choice == ans
                                 if acc:
                                     correct += 1
                     else:
@@ -948,9 +961,10 @@ class ModelTest:
                         if is_result:
                             logits = torch.load(os.path.join(logits_save_folder, 'logits_0.pth'))
                             logits_softmax = F.log_softmax(logits.float(), dim=-1)
-                            greedy_tokens = logits_softmax.argmax(dim=-1)
+                            logits_softmax = logits_softmax[:, choice_tokens]
                             for idx, ans in enumerate(batch['answer']):
-                                acc = self.pa_runner.tokenizer.decode(greedy_tokens[idx]).lower() == ans
+                                choice = (logits_softmax[idx, 0] > logits_softmax[idx, 1]).cpu()
+                                acc = choice == ans
                                 if acc:
                                     correct += 1
 
