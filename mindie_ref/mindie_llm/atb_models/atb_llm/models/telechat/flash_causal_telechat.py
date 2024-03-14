@@ -43,21 +43,6 @@ from atb_llm.utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, W
 from atb_llm.models.base.flash_causal_lm import FlashForCausalLM
 
 
-
-# 量化开关，为量化总开关
-RUN_QUANT_MODEL: bool = os.environ.get("RUN_QUANT_MODEL", "0") == "1"
-# 量化权重路径
-QUANT_WEIGHT_PATH = os.environ.get("QUANT_WEIGHT_PATH", "")
-# 自定义最大输入输出长度，默认值2048
-MAX_SEQ_LEN = os.environ.get("MAX_SEQ_LEN", 2048)
-# 量化回退层选择
-FLOAT_QUERY_LAYERS = []
-FLOAT_KV_LAYERS = []
-FLOAT_DOWN_LAYERS = [0, 1, 9, 25, 27]
-
-
-lm_head_weight = None
-
 class RMSNorm(nn.Module):
     def __init__(self, prefix, weights, eps=1e-6):
         super().__init__()
