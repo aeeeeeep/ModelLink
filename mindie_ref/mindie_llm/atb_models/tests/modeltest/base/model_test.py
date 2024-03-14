@@ -600,8 +600,7 @@ class ModelTest:
                             correct += (preds.cpu() == batch["label"]).sum().item()            
                 
                 if is_result:        
-                    filename = os.path.basename(entry)
-                    result = [filename, correct / sum, correct, sum]
+                    result = [taskname, correct / sum, correct, sum]
                     self.result_logger.debug(f"result:{result}")
                     result_total.append(result)
                     correct_total += correct
@@ -630,6 +629,13 @@ class ModelTest:
             dev_df = dev_df.iloc[1:, 1:]
             val_df = val_df.iloc[1:, 1:]
             return dev_df, val_df
+        
+        def format_subject(subject):
+            l = subject.split("_")
+            s = ""
+            for entry in l:
+                s += " " + entry    
+            return s
             
         def format_example(df, idx, include_answer=True):
             prompt = df.iloc[idx, 0]
@@ -648,8 +654,6 @@ class ModelTest:
             for i in range(k):
                 prompt += format_example(train_df, i)
             return prompt
-        
-
 
         correct_total = 0
         sum_total = 0
@@ -658,8 +662,11 @@ class ModelTest:
         if self.__get_rank() == 0:
             is_result = True
 
-        for task_name in subject_mapping:
-            dev_df, val_df = load_csv_by_task_name(task_name, DATASET_DIR)
+        subject_mapping = get_subject_mapping()
+        index = 1
+        for task_name in tqdm(subject_mapping):
+            self.logger.info(f"dataset {index} start, task name: {task_name}")
+            dev_df, val_df = load_csv_by_task_name(task_name, self.dataset_path)
             prompt = None
             label = None
             correct = 0
@@ -674,7 +681,7 @@ class ModelTest:
                 if self.model_type == "fa":
                     pass
                 else:
-                    generate_texts, token_nums, _ = pa_runner.infer(prompt, self.batch_size, 20, False)
+                    generate_texts, token_nums, _ = self.pa_runner.infer(prompt, self.batch_size, 20, False)
 
                     for j, generate_text in enumerate(generate_texts):
                         length = len(prompt)
@@ -692,7 +699,7 @@ class ModelTest:
 
                     answer_result = answer[0].lstrip()[0] if answer else "-1"
                     is_correct = "Correct" if answer_result == label else "Wrong"
-                    if is_correct:
+                    if is_correct == "Correct":
                         correct += 1
                     if is_result and is_correct != "Correct":
                         self.logger.debug(f">>>原始题目 is : {prompt}")
@@ -700,12 +707,12 @@ class ModelTest:
                         self.logger.debug(f">>>真实结果 is : {label}")
             
             if is_result:        
-                filename = os.path.basename(entry)
-                result = [filename, correct / task_len, correct, task_len]
-                self.result_logger.debug(f"result:{result}")
+                result = [task_name, correct / task_len, correct, task_len]
+                self.logger.info(f"dataset {index} finish, result:{result}")
                 result_total.append(result)
                 correct_total += correct
                 sum_total += task_len
+            index += 1
 
         if is_result:
                 total = ["total", correct_total / sum_total, correct_total, sum_total]
