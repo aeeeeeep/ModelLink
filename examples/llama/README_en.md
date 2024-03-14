@@ -300,13 +300,13 @@ Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the f
 
 LLaMA-7B
 ```shell
-bash examples/llama/tune_llama_7b_ptd.sh
+bash tasks/finetune/tune_llama_7b_ptd.sh
 ```
 
 LLaMA-13B
 ```shell
 # 8p
-bash examples/llama/tune_llama_13b_ptd.sh 
+bash tasks/finetune/tune_llama_13b_ptd.sh 
 ```
 
 
@@ -696,12 +696,12 @@ Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the f
 
 Launch llama-33B pre-training script : ModelLink/examples/llama/tune_llama_33B_ptd_32p.sh
 ```bash
-bash examples/llama/tune_llama_33B_ptd_32p.sh
+bash tasks/finetune/tune_llama_33B_ptd_32p.sh
 ```
 
 Launch llama-65B pre-training script : ModelLink/examples/llama/tune_llama_65b_ptd.sh
 ```bash
-bash examples/llama/tune_llama_65b_ptd.sh
+bash tasks/finetune/tune_llama_65b_ptd.sh
 ```
 Config llama-33B/65B pre-training script for multinode (Launch llama-65B pre-training script on each machine):
 

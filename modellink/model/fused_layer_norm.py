@@ -13,5 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from functools import wraps
 
-from .tokenizer import build_tokenizer
+from megatron.model.fused_layer_norm import MixedFusedLayerNorm
+from megatron.core import parallel_state
+from megatron import get_args
+
+
+def norm_wrapper(fn):
+    @wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        fn(self, *args, **kwargs)
+        args = get_args()
+        if parallel_state.is_pipeline_first_stage() and args.embed_layernorm:
+            norm = MixedFusedLayerNorm(args.hidden_size)
+            self.norm = norm
+    return wrapper

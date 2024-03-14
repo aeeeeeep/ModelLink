@@ -1,5 +1,7 @@
 # coding=utf-8
+# Copyright (c) 2024, HUAWEI CORPORATION.  All rights reserved.
 #
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -11,11 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-from .model_megatron_adapter import apply_model_patch
-from .checkpointing_megatron_adapter import apply_checkpointing_patch
-
-
-def apply_lora_patch():
-    apply_model_patch()
-    apply_checkpointing_patch()
+from .gpt_model import GPTModel
+from .transformer import parallel_transformer_init, state_dict_for_save_checkpoint_wrapper
+from .language_model import seq_length_wrapper
+from .fused_layer_norm import norm_wrapper
+from .moe import SwitchMLP

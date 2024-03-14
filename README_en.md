@@ -70,7 +70,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     </tr>
     <tr>
       <td> 13B </td>
-      <td> <a href="examples/baichuan/tune_baichuan_ptd_13B.sh">lora</a> </td>
+      <td> <a href="tasks/finetune/tune_baichuan_ptd_13B.sh">lora</a> </td>
       <td> <a href="tasks/inference/generate_baichuan_13b_ptd.sh">inference</a> </td>
       <td> <a href="tasks/evaluation/evaluate_baichuan_13B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
@@ -123,28 +123,28 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     <tr>
       <td rowspan="4"><a href="examples/llama/README.md">LLaMA</a></td>
       <td>7B</td>
-      <td> <a href="examples/llama/tune_llama_7b_ptd.sh">lora</a> </td>
+      <td> <a href="tasks/finetune/tune_llama_7b_ptd.sh">lora</a> </td>
       <td> <a href="tasks/inference/generate_llama_7b_lora_ptd.sh">inference</a> </td>
       <td> <a href="tasks/evaluation/evaluate_llama_7B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>13B</td>
-      <td> <a href="examples/llama/tune_llama_13b_ptd.sh">lora</a> </td>
+      <td> <a href="tasks/finetune/tune_llama_13b_ptd.sh">lora</a> </td>
       <td> <a href="tasks/inference/generate_llama_13b_lora_ptd.sh">inference</a> </td>
       <td> <a href="tasks/evaluation/evaluate_llama_13B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>33B</td>
-      <td> <a href="examples/llama/tune_llama_33b_ptd.sh">lora</a> </td>
+      <td> <a href="tasks/finetune/tune_llama_33b_ptd.sh">lora</a> </td>
       <td> <a href="tasks/inference/generate_llama_33b_ptd.sh">inference</a> </td>
       <td> <a href="tasks/evaluation/evaluate_llama_33B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td > 65B </td>
-      <td > <a href="examples/llama/tune_llama_65b_ptd.sh">lora</a> </td>
+      <td > <a href="tasks/finetune/tune_llama_65b_ptd.sh">lora</a> </td>
       <td> <a href="tasks/inference/generate_llama_65b_lora_ptd.sh">inference</a> </td>
       <td> <a href="tasks/evaluation/evaluate_llama_65B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
@@ -152,28 +152,28 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     <tr>
       <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</a></td>
       <td>7B</td>
-      <td> <a href="examples/llama2/tune_llama2_7b_ptd.sh">lora </a> </td>
+      <td> <a href="tasks/finetune/tune_llama2_7b_ptd.sh">lora </a> </td>
       <td> <a href="tasks/inference/generate_llama2_7b_ptd.sh">inference</a> </td>
       <td> <a href="tasks/evaluation/evaluate_llama2_7B_ptd.sh">evaluation</a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td>13B</td>
-      <td> <a href="examples/llama2/tune_llama2_13b_ptd.sh">lora </a> </td>
+      <td> <a href="tasks/finetune/tune_llama2_13b_ptd.sh">lora </a> </td>
       <td> <a href="tasks/inference/generate_llama2_13b_ptd.sh">inference</a> </td>
       <td> <a href="tasks/evaluation/evaluate_llama2_13B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td> 34B </td>
-      <td> <a href="examples/llama2/tune_llama2_13b_ptd.sh">lora </a> </td>
+      <td> <a href="tasks/finetune/tune_llama2_34b_ptd.sh">lora </a> </td>
       <td> <a href="tasks/inference/generate_llama2_34B_ptd.sh">inference</a> </td>
       <td> <a href="tasks/evaluation/evaluate_llama2_34B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td > 70B </td>
-      <td > <a href="examples/llama2/tune_llama2_70b_ptd.sh">lora</a> </td>
+      <td > <a href="tasks/finetune/tune_llama2_70b_ptd.sh">lora</a> </td>
       <td> <a href="tasks/inference/generate_llama2_70b_lora_ptd.sh">inference</a> </td>
       <td> <a href="tasks/evaluation/evaluate_llama2_70B_ptd.sh">evaluation</a> </td>
       <td>  <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>

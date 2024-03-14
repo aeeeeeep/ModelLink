@@ -55,4 +55,3 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference
        --lora-alpha 32 \
        --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
        --make-vocab-size-divisible-by 1
-

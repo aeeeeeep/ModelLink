@@ -427,7 +427,7 @@ python tools/preprocess_data.py \
     --append-eod
 ```
 
-Configure Baichuan-13B lora script `examples/baichuan/tune_baichuan_ptd_13B.sh`
+Configure Baichuan-13B lora script `tasks/finetune/tune_baichuan_ptd_13B.sh`
 
 ```shell
 # configure the path to save the lora weights and the dataset path, initial megatron weight and tokenizer path 
@@ -436,7 +436,7 @@ DATA_PATH="./alpaca_preprocessed/alpaca"
 CHECKPOINT="./baichuan-13B-mt"
 TOKENIZER_PATH="./baichuan-13B-hf"
 ```
-Launch Baichuan-13B fine-tuned with lora script: examples/baichuan/tune_baichuan_ptd_13B.sh
+Launch Baichuan-13B fine-tuned with lora script: tasks/finetune/tune_baichuan_ptd_13B.sh
 Baichuan-13B:
 ```shell
 bash ./examples/baichuan/tune_baichuan_ptd_13B.sh
