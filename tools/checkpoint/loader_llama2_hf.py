@@ -213,7 +213,7 @@ def _load_checkpoint(queue, args):
 
     from ascendspeed import megatron_adaptor
     from megatron.arguments import validate_args
-    from modellink.adaptor_model import parse_args
+    from modellink.utils import parse_args
     from megatron.global_vars import set_args, set_global_variables
     from megatron.model import module
     from megatron.core import mpu
