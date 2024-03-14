@@ -322,6 +322,7 @@ class FlashLlamaAttention(torch.nn.Module):
             prefix=f"{prefix}.o_proj",
             weights=weights,
             bias=False,
+            gqa_size=self.head_size,
         )
         self.num_groups = self.num_heads // self.num_key_value_heads
         self.kv_head_mapping = torch.arange(
