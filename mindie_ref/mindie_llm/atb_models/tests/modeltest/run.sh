@@ -107,7 +107,7 @@ function fn_run_single()
             for ((i=0; i<chip_num-1; i++)); do
                 devices+="$i,"
             done
-            devices+="$$((chip_num-1))"
+            devices+="$((chip_num-1))"
             export ASCEND_RT_VISIBLE_DEVICES="$devices"
         fi
     
