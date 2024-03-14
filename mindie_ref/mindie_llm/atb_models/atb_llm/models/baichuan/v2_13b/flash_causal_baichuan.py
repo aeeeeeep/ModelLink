@@ -1,31 +1,24 @@
 # Copyright (c) 2023, Baichuan Intelligent Technology. All rights reserved.
-import os
 import json
 import math
+import os
 from contextlib import contextmanager
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 import torch
 import torch_npu
 from atb_llm.models.baichuan.v2_13b.config import BaichuanConfig
-from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
 from atb_llm.utils.layers import (
-    TensorParallelRowLinear,
-    TensorParallelColumnLinear,
-    TensorEmbedding,
-    TensorParallelHead,
     AttentionMask
 )
 from atb_llm.utils.log import logger
 from torch import nn
-from transformers import PreTrainedModel
-from transformers.activations import ACT2FN
-from transformers.modeling_outputs import CausalLMOutputWithPast
-from .modeling_baichuan import FlashBaichuanModel
-from ....utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
-from ...base.flash_causal_lm import FlashForCausalLM
 
+from .modeling_baichuan import FlashBaichuanModel
+from ...base.flash_causal_lm import FlashForCausalLM
+from ....utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
 from ....utils.layers import load_column_multi
+
 
 def _get_interleave(n):
     def _get_interleave_power_of_2(n):
@@ -99,12 +92,12 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             head_size=1,
             lm_head=True,
             norm=config.vocab_size == 125696
-            
+
         )
         self.ascend_atten_mask = AttentionMask.static(config.model_max_length)
         self.config = config  # for quantize
         self.place_holder = torch.tensor([1], dtype=torch.float16, device='npu')
-        
+
         # for alibi
         self.training = False
         self.first_run = True
@@ -114,7 +107,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
         self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
         transdata_param = json.dumps({})
         self.transdata_operation.set_param(transdata_param)
-        
+
     def init_ascend_weight(self):
         if not self.use_refactor:  # fp16
             torch.npu.synchronize()
@@ -168,11 +161,11 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             decoder_param = {**coder_param, "isPrefill": False, "supportLcoc": False}
             self.acl_encoder_operation.set_param(json.dumps({**encoder_param}))
             self.acl_decoder_operation.set_param(json.dumps({**decoder_param}))
-            
+
             logger.info(">>>> baichuan2_13b_PagedAttentionParam is inited.")
             self.acl_encoder_operation.set_weight(self.ascend_weight)
             self.acl_decoder_operation.set_weight(self.ascend_weight)
-    
+
     def init_ascend_kvcache(self, kv_cache):
         kcache_id = not self.ascend_kcache_id or self.ascend_kcache_id != id(kv_cache[0][0])
         vcache_id = not self.ascend_vcache_id or self.ascend_vcache_id != id(kv_cache[0][1])
@@ -223,7 +216,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             logger.info(self.acl_param_encoder)
             logger.info(self.acl_param_decoder)
             logger.info("using flash_baichuan2_13b_modeling_ascend")
-            
+
             self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_13b_PagedAttentionModel")
             self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_13b_PagedAttentionModel")
             self.acl_encoder_operation.set_param(self.acl_param_encoder)
@@ -253,14 +246,15 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             self.place_holder
         ]
         return self.acl_operation_inputs
-    
+
     def generate_mask(self, max_s, kv_cache):
         """
         生成mask
         """
         pad_max_s = max_s
         if self.is_prefill:
-            self.attention_mask = self.ascend_atten_mask.get_attn_mask(pad_max_s, kv_cache[0][0].dtype, kv_cache[0][0].device)
+            self.attention_mask = self.ascend_atten_mask.get_attn_mask(pad_max_s, kv_cache[0][0].dtype,
+                                                                       kv_cache[0][0].device)
         total_alibi_mask = self.get_alibi_mask(self.place_holder, pad_max_s)  #
         if self.tp_world_size > 1:
             total_alibi_mask = total_alibi_mask[self.tp_rank]
@@ -271,7 +265,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             self.attention_mask = total_alibi_mask  # [40, 1024, 1024] [head_num,max_s,max_s]
             self.attention_mask = self.attention_mask[:, -1:, :]
             logger.debug(f"final attention_mask shape in {self.is_prefill=} is {self.attention_mask.shape}")
-        
+
     def ntoken_transdata(self, tensor):
         """
         prefill: [batch , head_num,max_s,max_s] -> [batch * head_num, maxS/16, maxS, 16]
@@ -284,14 +278,13 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
         return self.transdata_operation.execute(
             [tensor.view(tensor.shape[0] * tensor.shape[1], tensor.shape[2], tensor.shape[3])]
         )[0]
-        
+
     def weight_format_cast(self, tensor):
         if not self.soc_info.need_nz:
             return tensor
         torch_npu.npu_format_cast_(tensor, 29)
         return tensor
 
-   
     def get_weights(self):
         attn_module_names = AttnModuleNames(
             norm_name='input_layernorm',
@@ -343,7 +336,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
         acl_param = json.dumps({
             "seqLen": input_lengths.tolist()
         })
-        
+
         acl_model_out = acl_model.execute(acl_inputs, acl_param)
         acl_hidden_state = acl_model_out[0]
         return acl_hidden_state
@@ -353,7 +346,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
 
     def set_input_embeddings(self, value):
         self.embed_tokens = value
-    
+
     def get_alibi_mask(self, tensor, seq_length_with_past):
         if self.training:
             slopes = torch.Tensor(_get_interleave(self.n_head))
@@ -396,7 +389,6 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
                 mask = mask.chunk(self.tp_world_size, dim=0)
         return mask
 
-    
     def forward(
             self,
             input_ids: torch.Tensor,  # input id, 拉平的
@@ -421,10 +413,10 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             self.model.lm_head_weight = self.lm_head_weight
         self.is_prefill = is_prefill
         self.batch_size = len(input_lengths)
-        
+
         # generate self.attention_mask
         self.generate_mask(max_seq_len, kv_cache)
-        
+
         # add acl model
         if not self.ascend_weight:
             self.init_ascend_weight()
