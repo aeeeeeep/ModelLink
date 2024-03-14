@@ -133,7 +133,12 @@ TOKENIZER_PATH=./HF_Aquila7B_downloaded  #tokenizer 路径
 DATA_PATH=./dataset/aquila_text_document  #数据集 路径
 CKPT_LOAD_DIR=./model_weights/aquila
 CKPT_SAVE_DIR=./ckpt
-# 如果不需要加载权重，就不需要设置CKPT_SAVE_DIR, 并且启动脚本里应不使用 `--load` 参数
+# 如果不需要保存权重，就不需要设置CKPT_SAVE_DIR, 并且启动脚本里应不使用 `--save` 参数
+# 如果需要保存权重，则需要设置CKPT_SAVE_DIR, 并且启动脚本里应使用 `--save $CKPT_SAVE_DIR` 进行类似配置。
+
+# 如果不需要加载权重，就不需要设置CKPT_LOAD_DIR, 并且启动脚本里应不使用 `--load` 参数
+# 如果需要加载权重，则需要设置CKPT_LOAD_DIR, 并且启动脚本里应使用 `--load $CKPT_LOAD_DIR` 进行类似配置。
+# 进行断点续训时，应先按以上save的场景配置，待完成ckpt保存后，再修改相应参数，按以上load的场景加载已保存的ckpt。
 ```
 
 7. 启动 Aquila-7B 预训练脚本

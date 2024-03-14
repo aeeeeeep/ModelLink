@@ -134,7 +134,9 @@ DATA_PATH=./dataset/aquila_text_document  #processed dataset
 CKPT_LOAD_DIR=./model_weights/aquila   # pointing to the converted model weights
 CKPT_SAVE_DIR=./ckpt                   # pointing to the path to save checkpoints
 ```
-*Note that if you do not load weights for pre-training, you can ignore CKPT_SAVE_DIR, and remove the `--load` parameter from the training script*
+*Note that if you do not load weights for pre-training, you can ignore CKPT_LOAD_DIR, and remove the `--load` parameter from the training script, and vice versa*
+*If you do not want to save weights during pre-training, you can ignore CKPT_SAVE_DIR, and remove the `--save $CKPT_SAVE_DIR` parameter from the training script, and vice versa*
+*When you want to save checkpoint and load it in future pre-training, just follow the above "save" and "load" suggestions.*
 
 7. Launch Aquila-7B pre-training script.
 
