@@ -23,27 +23,18 @@ from typing import Optional, List, Tuple
 
 import torch
 import torch.distributed
-from torch import nn
-from transformers import PreTrainedModel
-from transformers.activations import ACT2FN
-from transformers.configuration_utils import PretrainedConfig
-
 from atb_llm.utils.layers import (
     TensorParallelRowLinear,
     TensorParallelColumnLinear,
     PositionRotaryEmbedding,
     TensorEmbedding,
-    load_column_multi,
-    paged_attn,
-    flash_attn,
-    reshape_and_cache,
-    TensorParallelHead,
-    AttentionMask
+    TensorParallelEmbedding,
+    load_column_multi
 )
-
 from atb_llm.utils.quantize.pack_type import PackType
 from atb_llm.utils.quantize.w8a8 import calc_linear_pack_type
-from atb_llm.models.baichuan.v2_13b.config import BaichuanConfig
+from torch import nn
+from transformers.activations import ACT2FN
 
 
 class BaichuanRMSNorm(nn.Module):
@@ -138,10 +129,10 @@ class BaichuanMLP(nn.Module):
                 bias=False,
             )
             self.up_proj = TensorParallelColumnLinear.load(
-            config,
-            prefix=f"{prefix}.up_proj",
-            weights=weights,
-            bias=False,
+                config,
+                prefix=f"{prefix}.up_proj",
+                weights=weights,
+                bias=False,
             )
 
         self.down_proj = TensorParallelRowLinear.load(
@@ -252,7 +243,7 @@ class FlashBaichuanModel(torch.nn.Module):
         self.tp_rank = process_group.rank()
         self.tp_world_size = process_group.size()
 
-        self.embed_tokens = TensorEmbedding(
+        self.embed_tokens = (TensorParallelEmbedding if config.vocab_size == 125696 else TensorEmbedding)(
             prefix="model.embed_tokens", weights=weights
         )
         self.layers = nn.ModuleList(
@@ -470,7 +461,7 @@ class BaichuanModel(torch.nn.Module):
         process_group = weights.process_group
         self.tp_rank = process_group.rank()
         self.tp_world_size = process_group.size()
-        self.embed_tokens = TensorEmbedding(
+        self.embed_tokens = (TensorParallelEmbedding if config.vocab_size == 125696 else TensorEmbedding)(
             prefix="model.embed_tokens", weights=weights
         )
         self.layers = nn.ModuleList(
