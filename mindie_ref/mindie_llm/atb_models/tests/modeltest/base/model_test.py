@@ -667,44 +667,42 @@ class ModelTest:
         for task_name in tqdm(subject_mapping):
             self.logger.info(f"dataset {index} start, task name: {task_name}")
             dev_df, val_df = load_csv_by_task_name(task_name, self.dataset_path)
-            prompt = None
-            label = None
             correct = 0
             task_len = val_df.shape[0]
-            for i in range(task_len):
-                prompt_end = format_example(val_df, i, include_answer=False)
-                train_prompt = gen_prompt(dev_df, task_name, SHOT)
-                prompt = train_prompt + prompt_end
-                label = val_df.iloc[i, val_df.shape[1] - 1]
-                prompt = [prompt.encode().decode(encoding="utf8")]
-
+            for i in range(math.ceil(task_len / self.batch_size)):
+                q_num = self.batch_size if (i + 1) * self.batch_size <= task_len else task_len - i * self.batch_size
+                prompt_ends = [format_example(val_df, i * self.batch_size + j, include_answer=False) for j in range(q_num)]
+                train_prompts = [gen_prompt(dev_df, task_name, SHOT) * q_num]
+                prompt = [t + p for t, p in zip(train_prompts, prompt_ends)]
+                labels = [val_df.iloc[i * self.batch_size + j, val_df.shape[1] - 1] for j in range(q_num)]
+                prompts = [prpt.encode().decode(encoding="utf8") for prpt in prompt]
+                # if is_result:
+                #     print(prompts)
                 if self.model_type == "fa":
                     pass
                 else:
-                    generate_texts, token_nums, _ = self.pa_runner.infer(prompt, self.batch_size, 20, False)
+                    generate_texts, token_nums, _ = self.pa_runner.infer(prompts, self.batch_size, 20, False)
 
-                    for j, generate_text in enumerate(generate_texts):
-                        length = len(prompt)
-                        inputs = prompt
-                        if j < length and is_result:
-                            self.logger.debug(f'Question[{i}]: {inputs[j]}')
+                    for idx, generate_text in enumerate(generate_texts):
                         if is_result:
-                            self.logger.debug(f'Answer[{i}]: {generate_text}')
-                            self.logger.debug(f'Generate[{i}] token num: {token_nums[j]}')
+                            self.logger.debug(f'Question[{i * self.batch_size + idx}]: {prompts[idx]}')
+                            self.logger.debug(f'Answer[{i * self.batch_size + idx}]: {generate_text}')
+                            self.logger.debug(f'Generate[{i * self.batch_size + idx}] token num: {token_nums[idx]}')
 
-                    answer = None
+                    answers = None
 
                     if len(generate_texts) > 0:
-                        answer = generate_texts
+                        answers = generate_texts
 
-                    answer_result = answer[0].lstrip()[0] if answer else "-1"
-                    is_correct = "Correct" if answer_result == label else "Wrong"
-                    if is_correct == "Correct":
-                        correct += 1
-                    if is_result and is_correct != "Correct":
-                        self.logger.debug(f">>>原始题目 is : {prompt}")
-                        self.logger.debug(f">>>推理结果 is : {answer_result}")
-                        self.logger.debug(f">>>真实结果 is : {label}")
+                    answer_results = [answer.lstrip()[0] if answer else "-1" for answer in answers]
+                    is_correct = ["Correct" if answer_result == label else "Wrong" for answer_result, label in zip(answer_results, labels)]
+                    
+                    correct += is_correct.count("Correct")
+                    for i in range(len(is_correct)):
+                        if is_result and is_correct[i] != "Correct":
+                            self.logger.debug(f">>>原始题目 is : {prompts[i]}")
+                            self.logger.debug(f">>>推理结果 is : {answer_results[i]}")
+                            self.logger.debug(f">>>真实结果 is : {labels[i]}")
             
             if is_result:        
                 result = [task_name, correct / task_len, correct, task_len]
