@@ -10,6 +10,7 @@ from transformers.configuration_utils import PretrainedConfig
 from ..llama.modeling_llama import LlamaConfig
 from ..qwen.modeling_qwen import QwenConfig
 from ..starcoder.flash_causal_starcoder import StarcoderConfig
+from ..telechat.config import TelechatConfig
 from ..gpt_neox.config import GPTNeoXConfig
 from ..internlm.configuration_internlm import InternLMConfig
 
@@ -121,6 +122,24 @@ class LlamaRouter(BaseRouter):
             config.max_position_embeddings = self.max_position_embeddings
         return config
 
+
+@dataclass
+class TelechatRouter(BaseRouter):
+
+    @property
+    def config(self):
+        config = TelechatConfig.from_pretrained(self.model_name_or_path,
+                                             revision=self.revision,
+                                             trust_remote_code=self.trust_remote_code)
+        if self.max_position_embeddings:
+            config.max_position_embeddings = self.max_position_embeddings
+        return config
+
+    def get_tokenizer(self):
+        return AutoTokenizer.from_pretrained(
+            self.model_name_or_path,
+            trust_remote_code=self.trust_remote_code,
+        )
 
 @dataclass
 class StarcoderRouter(BaseRouter):
