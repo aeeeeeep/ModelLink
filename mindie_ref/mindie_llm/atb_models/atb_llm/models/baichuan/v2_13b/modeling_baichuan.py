@@ -33,6 +33,7 @@ from atb_llm.utils.layers import (
     TensorParallelColumnLinear,
     PositionRotaryEmbedding,
     TensorEmbedding,
+    TensorParallelEmbedding,
     load_column_multi,
     paged_attn,
     flash_attn,
@@ -265,7 +266,7 @@ class FlashBaichuanModel(torch.nn.Module):
         self.tp_rank = process_group.rank()
         self.tp_world_size = process_group.size()
         
-        self.embed_tokens = TensorEmbedding(
+        self.embed_tokens = TensorParallelEmbedding(
             prefix="model.embed_tokens", weights=weights
         )
         self.layers = nn.ModuleList(
@@ -483,7 +484,7 @@ class BaichuanModel(torch.nn.Module):
         process_group = weights.process_group
         self.tp_rank = process_group.rank()
         self.tp_world_size = process_group.size()
-        self.embed_tokens = TensorEmbedding(
+        self.embed_tokens = TensorParallelEmbedding(
             prefix="model.embed_tokens", weights=weights
         )
         self.layers = nn.ModuleList(
@@ -550,4 +551,5 @@ class BaichuanModel(torch.nn.Module):
         hidden_states, _ = self.norm(hidden_states, residual)
 
         return hidden_states
+
 
