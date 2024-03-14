@@ -265,6 +265,8 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             self.attention_mask = total_alibi_mask  # [40, 1024, 1024] [head_num,max_s,max_s]
             self.attention_mask = self.attention_mask[:, -1:, :]
             logger.debug(f"final attention_mask shape in {self.is_prefill=} is {self.attention_mask.shape}")
+        if self.soc_info.need_nz:
+            self.attention_mask = self.ntoken_transdata(self.attention_mask)
 
     def ntoken_transdata(self, tensor):
         """
@@ -275,9 +277,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
         decode: [batch,head_num,1,max_s] -> [batch * head_num, max_s/16, 16, 16]
         max_s不够16整除的要pad 如[1,40,1,17] -> [1, 40, 1, 32] -> [1, 40, 16, 32] ->[40,2,16,16]
         """
-        return self.transdata_operation.execute(
-            [tensor.view(tensor.shape[0] * tensor.shape[1], tensor.shape[2], tensor.shape[3])]
-        )[0]
+        return self.transdata_operation.execute([tensor])[0]
 
     def weight_format_cast(self, tensor):
         if not self.soc_info.need_nz:
@@ -412,7 +412,6 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
                 self.lm_head_weight.data = torch_npu.npu_format_cast(self.lm_head_weight.data, 29)
             self.model.lm_head_weight = self.lm_head_weight
         self.is_prefill = is_prefill
-        self.batch_size = len(input_lengths)
 
         # generate self.attention_mask
         self.generate_mask(max_seq_len, kv_cache)
