@@ -57,6 +57,9 @@ void DecoderModel::Param::FromString(const std::string &param)
     rank = paramJson["rank"].get<int>();
     worldSize = paramJson["worldSize"].get<int>();
     backend = paramJson["backend"].get<std::string>();
+    if (paramJson.contains("rankTableFile")) {
+        rankTableFile = paramJson["rankTableFile"].get<std::string>();
+    }
     for (auto item : paramJson["tokenOffset"]) {
         tokenOffset.push_back(item.get<int>());
     }
@@ -78,7 +81,7 @@ void DecoderModel::Param::FromString(const std::string &param)
                   << ", numHiddenLayers:" << numHiddenLayers
                   << ", numKeyValueHeadsPerRank:" << numKeyValueHeadsPerRank
                   << ", rank:" << rank << ", worldSize:" << worldSize << ", backend:" << backend
-                  << ", tokenOffset:" << tokenOffset << ", seqLen:" << seqLen;
+                  << ", tokenOffset:" << tokenOffset << ", seqLen:" << seqLen << ", rankTableFile" << rankTableFile;
 }
 
 DecoderModel::DecoderModel(const std::string &param) : Model("DecoderModel", param)
@@ -197,7 +200,7 @@ int64_t DecoderModel::BuildGraph()
     atb_speed::common::WordEmbeddingParam wordEmbeddingParam;
     wordEmbeddingParam.unpadInputs = !param_.isFA;
     if (param_.isEmbeddingParallel) {
-        wordEmbeddingParam.tensorParallelInfo = {param_.rank, param_.worldSize, param_.backend};
+        wordEmbeddingParam.tensorParallelInfo = {param_.rank, param_.worldSize, param_.backend, param_.rankTableFile};
     };
     atb_speed::common::WordEmbedding(wordEmbeddingParam, &op);
     wordEmbeddingNode.operation.reset(op);
@@ -235,9 +238,7 @@ int64_t DecoderModel::BuildGraph()
         layerParam.numAttentionHeadsPerRank = param_.numAttentionHeadsPerRank;
         layerParam.hiddenSizePerAttentionHead = param_.hiddenSizePerAttentionHead;
         layerParam.numKeyValueHeadsPerRank = param_.numKeyValueHeadsPerRank;
-        layerParam.rank = param_.rank;
-        layerParam.worldSize = param_.worldSize;
-        layerParam.backend = param_.backend;
+        layerParam.tensorParallelInfo = {param_.rank, param_.worldSize, param_.backend, param_.rankTableFile};
         atb_speed::llama_parallel::DecoderLayer(layerParam, &op);
 
         layerNode.operation.reset(op);
@@ -287,9 +288,7 @@ int64_t DecoderModel::BuildGraph()
     lmHeadParam.linearParallelParam.unpadInputs = !param_.isFA;
     if (param_.isLmHeadParallel) {
         lmHeadParam.linearParallelParam.parallelType = atb_speed::common::COLUMN_PARALLEL;
-        lmHeadParam.linearParallelParam.tensorParallelInfo.rank = param_.rank;
-        lmHeadParam.linearParallelParam.tensorParallelInfo.worldSize = param_.worldSize;
-        lmHeadParam.linearParallelParam.tensorParallelInfo.backend = param_.backend;
+        lmHeadParam.linearParallelParam.tensorParallelInfo = {param_.rank, param_.worldSize, param_.backend, param_.rankTableFile};
     }
     LmHead(lmHeadParam, &op);
     lmHeadNode.operation.reset(op);

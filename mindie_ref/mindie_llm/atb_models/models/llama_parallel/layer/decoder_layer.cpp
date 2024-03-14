@@ -81,7 +81,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     fusionAttentionParam.pageAttentionParam.headNum = param.numAttentionHeadsPerRank;
     fusionAttentionParam.pageAttentionParam.kvHeadNum = param.numKeyValueHeadsPerRank;
     fusionAttentionParam.pageAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
-    fusionAttentionParam.selfOutLinearTensorParallelInfo = {param.rank, param.worldSize, param.backend};
+    fusionAttentionParam.selfOutLinearTensorParallelInfo = param.tensorParallelInfo;
     Attention(fusionAttentionParam, &attentionNode.operation);
     attentionNode.inTensorIds = {
         IN_HIDDEN_STATES,
@@ -151,7 +151,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     mlpRmsNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
     mlpParam.normQuantParamType = mlpRmsNormQuantParam;
     // down
-    mlpParam.downLinearTensorParallelInfo = {param.rank, param.worldSize, param.backend};
+    mlpParam.downLinearTensorParallelInfo = param.tensorParallelInfo;
     mlpParam.supportLcoc = param.supportLcoc;
     if (param.supportSwiGLU) {
         mlpParam.activationParam.activationType = atb::infer::ActivationType::ACTIVATION_SWIGLU_FORWARD;
