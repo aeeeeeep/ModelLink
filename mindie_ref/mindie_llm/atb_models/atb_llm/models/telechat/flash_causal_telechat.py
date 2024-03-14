@@ -255,7 +255,7 @@ class FlashTelechatForCausalLM(torch.nn.Module):
         if not self.soc_info.need_nz:  # transdata 会额外占资源
             return tensor
         torch_npu.npu_format_cast_(tensor, 29)
-        lgggrrnfofo(f"tr t tc_npggrch_npu.get_npu_ottmat(tensor)}")
+        logger.info(f"trans to {torch_npu.get_npu_format(tensor)}")
         return tensor
 
     def init_ascend_operations(self, config):
