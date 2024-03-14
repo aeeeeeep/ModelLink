@@ -64,15 +64,6 @@ def get_tune_attention_mask(attention_mask_1d, reset_attention_mask=True):
     return attention_mask
 
 
-def convert_args_to_strs(args):
-    args_c = copy.deepcopy(args)
-    for name in dir(args_c):
-        v = getattr(args_c, name)
-        if isinstance(v, enum.Enum):
-            setattr(args_c, name, v.name)
-    return args_c
-
-
 def _load_base_checkpoint(load_dir, rank0=False):
     """ Load the base state_dict from the given directory
 
@@ -200,18 +191,3 @@ def load_args_from_checkpoint(args, load_arg='load'):
         _set_arg('virtual_pipeline_model_parallel_size', force=True)
         _set_arg('num_layers_per_virtual_pipeline_stage')
     return args, checkpoint_args
-
-
-@contextmanager
-def cpu_tensor_reduce_context(enable=False):
-    def cpu_reduce_ex(self, proto):
-        self = self.cpu()
-        return torch_npu.utils.storage._reduce_ex(self, proto)
-
-    org_reduce_ex = torch.Tensor.__reduce_ex__
-    try:
-        if enable:
-            torch.Tensor.__reduce_ex__ = cpu_reduce_ex
-        yield
-    finally:
-        torch.Tensor.__reduce_ex__ = org_reduce_ex
