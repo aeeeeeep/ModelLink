@@ -614,7 +614,133 @@ class ModelTest:
             self.__save_result(result_total)
     
     def __run_full_dataset_ceval_5_shot(self):
-        pass
+        choices = ["A", "B", "C", "D"]
+        SHOT = 5
+
+        def get_subject_mapping():
+            SUBJECT_MAPPING_PATH = os.path.join(self.dataset_path, "subject_mapping.json")
+            with open(SUBJECT_MAPPING_PATH) as f:
+                subject_mapping = json.load(f)
+            return subject_mapping
+        
+        def load_csv_by_task_name(task_name, dataset_path):
+            dev_df = pd.read_csv(os.path.join(dataset_path, "dev", task_name + "_dev.csv"), header=None)[:SHOT + 1]
+            val_df = pd.read_csv(os.path.join(dataset_path, "val", task_name + "_val.csv"), header=None)
+
+            dev_df = dev_df.iloc[1:, 1:]
+            val_df = val_df.iloc[1:, 1:]
+            return dev_df, val_df
+            
+        def format_example(df, idx, include_answer=True):
+            prompt = df.iloc[idx, 0]
+            k = len(choices)
+            for j in range(k):
+                prompt += "\n{}. {}".format(choices[j], df.iloc[idx, j + 1])
+            prompt += "\nAnswer:"
+            if include_answer:
+                prompt += " {}\n\n".format(df.iloc[idx, k + 1])
+            return prompt
+        
+        def gen_prompt(train_df, subject, k=-1):
+            prompt = "The following are multiple choice questions (with answers) about {}.\n\n".format(format_subject(subject))
+            if k == -1:
+                k = train_df.shape[0]
+            for i in range(k):
+                prompt += format_example(train_df, i)
+            return prompt
+        
+
+
+        correct_total = 0
+        sum_total = 0
+        result_total = []
+        is_result = False
+        if self.__get_rank() == 0:
+            is_result = True
+
+        for task_name in subject_mapping:
+            dev_df, val_df = load_csv_by_task_name(task_name, DATASET_DIR)
+            prompt = None
+            label = None
+            correct = 0
+            task_len = val_df.shape[0]
+            for i in range(task_len):
+                prompt_end = format_example(val_df, i, include_answer=False)
+                train_prompt = gen_prompt(dev_df, task_name, SHOT)
+                prompt = train_prompt + prompt_end
+                label = val_df.iloc[i, val_df.shape[1] - 1]
+                prompt = [prompt.encode().decode(encoding="utf8")]
+
+                if self.model_type == "fa":
+                    pass
+                else:
+                    generate_texts, token_nums, _ = pa_runner.infer(prompt, self.batch_size, 20, False)
+
+                    for j, generate_text in enumerate(generate_texts):
+                        length = len(prompt)
+                        inputs = prompt
+                        if j < length and is_result:
+                            self.logger.debug(f'Question[{i}]: {inputs[j]}')
+                        if is_result:
+                            self.logger.debug(f'Answer[{i}]: {generate_text}')
+                            self.logger.debug(f'Generate[{i}] token num: {token_nums[j]}')
+
+                    answer = None
+
+                    if len(generate_texts) > 0:
+                        answer = generate_texts
+
+                    answer_result = answer[0].lstrip()[0] if answer else "-1"
+                    is_correct = "Correct" if answer_result == label else "Wrong"
+                    if is_correct:
+                        correct += 1
+                    if is_result and is_correct != "Correct":
+                        self.logger.debug(f">>>原始题目 is : {prompt}")
+                        self.logger.debug(f">>>推理结果 is : {answer_result}")
+                        self.logger.debug(f">>>真实结果 is : {label}")
+            
+            if is_result:        
+                filename = os.path.basename(entry)
+                result = [filename, correct / task_len, correct, task_len]
+                self.result_logger.debug(f"result:{result}")
+                result_total.append(result)
+                correct_total += correct
+                sum_total += task_len
+
+        if is_result:
+                total = ["total", correct_total / sum_total, correct_total, sum_total]
+                self.result_logger.debug(f"total result:{total}")
+                result_total.insert(0, total)
+                self.__save_result(result_total)
+
+                
+
+
+        
+
+                    # if self.model_type == "fa":
+                    #     inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
+                    #                             max_length=2048).to(0)
+                    #     tokenizer_out_ids = inputs.input_ids.to(0)
+                    #     attention_mask = inputs.attention_mask.to(0)
+                    #     outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
+                    #                                   do_sample=False, max_new_tokens=512)
+                    #     intermediate_outputs = []
+                    #     for idx in range(len(outputs)):
+                    #         output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
+                    #         response = self.tokenizer.decode(output)
+                    #         intermediate_outputs.append(response)
+                    #     answer_texts = [text + intermediate + "\n" + extraction_prompt for text, intermediate in
+                    #                     zip(texts, intermediate_outputs)]
+                    #     input_tokens = [build_prompt(answer_text) for answer_text in answer_texts]
+                    #     inputs = self.tokenizer(input_tokens, padding=True, return_tensors="pt", truncation=True, max_length=2048).to(0)
+                    #     outputs = self.model(**inputs)
+                    #     logits = outputs.logits[:, -1, :]
+                    #     logits = logits[:, choice_tokens]
+                    #     preds = logits.argmax(dim=-1)
+                    #     correct += (preds.cpu() == batch["label"]).sum().item()
+
+           
 
     def __run_full_dataset_mmlu(self):
         choices = ["A", "B", "C", "D"]
