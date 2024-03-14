@@ -21,6 +21,7 @@ import torch
 
 from peft import PeftModel, LoraModel
 import megatron
+from megatron.checkpointing import get_checkpoint_tracker_filename, read_metadata, find_checkpoint_rank_0, get_checkpoint_name
 from megatron.core import DistributedDataParallel as DDP
 from megatron.model import Float16Module
 
