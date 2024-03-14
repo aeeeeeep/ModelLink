@@ -134,7 +134,7 @@ def save_model_checkpoint(queue, args):
         from ascendspeed import megatron_adaptor
         import modellink
         from megatron.arguments import validate_args
-        from modellink.adaptor_model import parse_args
+        from modellink.utils import parse_args
         from megatron.checkpointing import save_checkpoint
         from megatron.global_vars import set_global_variables, get_args
         from megatron.core.enums import ModelType
