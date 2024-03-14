@@ -87,7 +87,7 @@ def _load_checkpoint(queue, args):
         from megatron.arguments import validate_args
         from modellink.adaptor_model import parse_args
         from megatron.global_vars import set_args, set_global_variables
-        from megatron.checkpointing import load_args_from_checkpoint
+        from modellink.utils import load_args_from_checkpoint
         from megatron.checkpointing import load_checkpoint as load_checkpoint_mg
         from megatron.model import module
         from megatron.core import mpu
