@@ -747,9 +747,9 @@ LLaMA-33B/65B在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 我们支持使用 LLaMA-33B 和 LLaMA-65B 进行文本生成的推理。
 推理与预训练不同，比如我们需要加载预训练权重和输出样本的长度：
 
-配置LLaMA-33B推理脚本`tasks/inference/generate_llama_33B_ptd.sh`。
+配置LLaMA-33B推理脚本`tasks/inference/generate_llama_33b_ptd.sh`。
 
-配置LLaMA-65B推理脚本`tasks/inference/generate_llama_65B_ptd.sh`。
+配置LLaMA-65B推理脚本`tasks/inference/generate_llama_65b_ptd.sh`。
 
 ```shell
 # 修改模型权重路径和分词器路径
@@ -759,11 +759,11 @@ TOKENIZER_PATH=<tokenizer-path>
 
 LLaMA-33B:
 ```shell
-bash ./tasks/inference/generate_llama_33B_ptd.sh
+bash ./tasks/inference/generate_llama_33b_ptd.sh
 ```
 LLaMA-65B:
 ```shell
-bash ./tasks/inference/generate_llama_65B_ptd.sh
+bash ./tasks/inference/generate_llama_65b_ptd.sh
 ```
 
 配置LLaMA-33B lora推理脚本`tasks/inference/generate_llama_33B_lora_ptd.sh`。

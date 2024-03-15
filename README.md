@@ -645,7 +645,7 @@ ModelLink:
 
     - 仅仅使用 PTD 策略训练的模型：在这种模式下，模型以 Megatron-LM 的风格被 流水并行 和 张量并行 切分
         ```bash
-        sh tasks/inference/generate_llama_7B_ptd.sh
+        sh tasks/inference/generate_llama_7b_ptd.sh
         ```
     - 如果你仅仅使用 Lora, 可以参考:
         ```bash
