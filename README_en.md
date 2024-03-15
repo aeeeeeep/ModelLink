@@ -868,7 +868,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation_llama.py   \
        --micro-batch-size 1  \
        --seed 42 | tee logs/train.log
 # start evaluation
-bash tasks/evaluation/eval_llama.sh
+bash tasks/evaluation/evaluate_llama_7B_ptd.sh
 ```
 
 #### Task Introduction

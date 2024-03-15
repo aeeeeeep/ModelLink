@@ -245,7 +245,7 @@ The performance of LLaMA2-7B in **Ascend NPU** and **Reference**:
 
 | Device | Model       | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
 | :------: | :-----------: | :----------------: | :-----------------------------: | :----------------------------: | :-------------------------: | :-----------------------------------: |
-| NPUs   | LLaMA2-7B | 1024             | 5.19                      | 2662                      | 3.08                   | 122.39                         |
+| NPUs   | LLaMA2-7B | 1024             | 5.19                      | 2730                      | 3.08                   | 122.39                         |
 | Reference   | LLaMA2-7B | 1024             | 5.63                      | 2884                       | 2.84                   | 131.96                         |
 
 

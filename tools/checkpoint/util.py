@@ -18,89 +18,18 @@ import argparse
 import importlib
 import os
 import sys
+from functools import wraps
 import torch.multiprocessing as mp
+from ascendspeed import megatron_adaptor
+import modellink
 
-# A loader is a python file with at least two functions
-# - add_arguments - takes in a parser and adds any arguments needed
-# - load_checkpoint - takes in the queue and parsed arguments
 
-# A saver is similar but has save_checkpoint instead of
-# load_checkpoint
+def is_enable_lora_wrapper(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        return False
 
-# The loader and saver process are each given a queue, the loader
-# should load the checkpoint and send the weights in messages in the
-# following order, the saver should receive them in this order and
-# save the checkpoints. A message consists of a python dictionary with
-# a "name" for error checking and an entry for each tensor as
-# indicated below. Note that the weight sent over the queue are the
-# full model weights, nothing split.
-
-# If the loader ever sends "exit" to the queue, that means something
-# went wrong and it is exiting.
-
-# - Metadata Namespace with the following attributes:
-#     model_type - GPT, BERT, T5, etc.  (Part of protocol to allow this to be deduced later instead of given on command line)
-#     num_layers - Number of transformer layers
-#     hidden_size
-#     seq_length
-#     num_attention_heads
-#     max_position_embeddings
-#     tokenizer_type
-#     iteration
-#     params_dtype
-#     bert_binary_head - Used only if model_type is BERT
-#     previous_tensor_parallel_size - Optional
-#     previous_pipeline_parallel_size - Optional
-#     true_vocab_size
-#     make_vocab_size_divisble_by
-#     consumed_train_samples
-#     consumed_valid_samples
-# messages
-# {
-#   "name": "embeddings"
-#   "position embeddings"
-#   "word embeddings"
-# }
-# (for each transformer layer):
-# {
-#   "name": "transformer layer N"
-#   "input layernorm weight"
-#   "input layernorm bias"
-#   "qkv weight"
-#   "qkv bias"
-#   "dense weight"
-#   "dense bias"
-#   "post layernorm weight"
-#   "post layernorm bias"
-#   "mlp l0 weight"
-#   "mlp l0 bias"
-#   "mlp l1 weight"
-#   "mlp l1 bias"
-# }
-# {
-#   "name": "final layer norm"
-#   "weight"
-#   "bias"
-# }
-# if present (i.e. for BERT):
-# {
-#   "name": "pooler"
-#   "weight"
-#   "bias"
-# }
-# {
-#   "name": "lm head"
-#   "dense weight"
-#   "dense bias"
-#   "layernorm weight"
-#   "layernorm bias"
-# }
-# {
-#   "name": "binary head"
-#   "weight"
-#   "bias"
-# }
-# - "done"
+    return wrapper
 
 
 def load_plugin(plugin_type, name):
@@ -142,7 +71,7 @@ def main():
     parser.add_argument('--no-checking', action='store_false',
                         help='Do not perform checking on the name and ordering of weights',
                         dest='checking')
-
+    modellink.checkpointing.is_enable_lora = is_enable_lora_wrapper(modellink.checkpointing.is_enable_lora)
     known_args, _ = parser.parse_known_args()
     loader = load_plugin('loader', known_args.loader)
     saver = load_plugin('saver', known_args.saver)

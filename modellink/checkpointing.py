@@ -26,8 +26,8 @@ def _load_base_checkpoint_wrapper(fn):
     def wrapper(*args, **kwargs):
         state_dict, checkpoint_name, release = fn(*args, **kwargs)
         rank0 = kwargs.pop('rank0')
-        args_ = get_args()
         if is_enable_lora() and state_dict is not None:
+            args_ = get_args()
             words_to_match = {'weight': 'base_layer.weight', 'bias': 'base_layer.bias'}
             exclude_words = ['base_layer', 'lora_', 'norm']
             state_dict = modify_keys_with_dict(state_dict, words_to_match, exclude_words)

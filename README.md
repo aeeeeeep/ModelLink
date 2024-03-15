@@ -857,7 +857,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation_llama.py   \
        --micro-batch-size 1  \
        --seed 42 | tee logs/train.log
 # 开启评估
-bash tasks/evaluation/eval_llama.sh
+bash tasks/evaluation/evaluate_llama_7B_ptd.sh
 ```
 
 最重要的评估参数是 `--max-new-tokens`, 它表示模型输出的生成长度，比如，多项选择问题的输出长度就会明显比编码任务的输出长度小，该参数也很大程度上影响了模型的评估性能。通过--evaluation-batch-size参数可以设置多batch推理，提升模型评估性能。
