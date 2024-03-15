@@ -48,7 +48,9 @@ LLAMA2-7B 训练的硬件配置:
 
    ```shell
    git clone https://gitee.com/ascend/ModelLink.git 
-   cd ModelLink 
+   cd ModelLink
+    mkdir logs
+    mkdir ckpt
    pip install -r requirements.txt
    cd ..
    ```
@@ -248,7 +250,7 @@ LLaMA2-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 | 设备 |   模型   | 迭代数 | 样本吞吐 (samples/step) | tokens吞吐 (tokens/s/p) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
 | :--: | :-------: | :----: |:-------------------:|:---------------------:|:---------------:| :-------------------: |
-| NPUs | LLaMA2-7B |  1024  |        5.63         |         2884          |      2.84       |        131.96        |
+| NPUs | LLaMA2-7B |  1024  |        5.63         |         2730          |      2.84       |        131.96        |
 | 参考 | LLaMA2-7B |  1024  |        5.63         |         2884          |      2.84       |        131.96        |
 
 
