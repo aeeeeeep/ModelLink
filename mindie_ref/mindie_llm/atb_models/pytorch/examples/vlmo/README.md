@@ -12,34 +12,6 @@ VLMo 是由微软提出的一种多模态 Transformer 模型，Mixture-of-Modali
   https://github.com/microsoft/unilm/tree/master/vlmo
   ```
 
-# 推理环境准备
-
-- 该模型需要以下插件与驱动
-
-  **表 1** 版本配套表
-
-| 配套                 | 版本          | 下载链接 |
-|--------------------|-------------|------|
-| Ascend HDK         | 23.0.RC3.B082 |      |
-| CANN               | 7.0.RC1.B082  |      |
-| python             | 3.9.18      |      |           
-| FrameworkPTAdapter | 6.0.RC1  |      |
-
-**表 2** 推理引擎依赖
-
-| 软件    | 版本要求     |
-|-------|----------|
-| glibc | >= 2.27  |
-| gcc   | >= 7.5.0 |
-
-**表 3** 硬件形态
-
-| CPU     | Device |
-|---------|--------|
-| aarch64 | 910B3  |
-| aarch64 | 310P   |
-
-
 # 快速上手
 
 ## 获取源码及依赖
@@ -282,61 +254,6 @@ pip install torch*_aarch64.whl
    ```
    在Files and versions 页签中找到 vocab.txt 下载后放入 `${model_download_path}` 中备用。
    
-5. 根据版本发布链接，安装加速库
-   将加速库下载至 `${llm_path}` 目录
-
-   | 加速库包名                                                 |
-   |-------------------------------------------------------|
-   | Ascend-cann-atb_{version}_cxx11abi0_linux-aarch64.run |
-   | Ascend-cann-atb_{version}_cxx11abi1_linux-aarch64.run |
-   | Ascend-cann-atb_{version}_cxx11abi1_linux-x86_64.run  |
-   | Ascend-cann-atb_{version}_cxx11abi0_linux-x86_64.run  |
-
-   具体使用cxx11abi0 还是cxx11abi1 可通过python命令查询
-
-   ```python
-   import torch
-   torch.compiled_with_cxx11_abi()
-   ```
-
-   若返回True 则使用 cxx11abi1，否则相反。
-
-   ```bash
-   # 安装atb 
-   chmod +x Ascend-cann-atb_*.run
-   ./Ascend-cann-atb_*.run --install
-   source /usr/local/Ascend/atb/set_env.sh
-   ```
-
-6. 根据版本发布链接，安装加速库
-   将加速库下载至 `${llm_path}` 目录
-
-   | 大模型包名                                                             |
-   |-------------------------------------------------------------------|
-   | Ascend-cann-llm_{version_id}_linux-x86_64_torch2.0.1-abi0.tar.gz  |
-   | Ascend-cann-llm_{version_id}_linux-x86_64_torch2.0.1-abi1.tar.gz  |
-   | Ascend-cann-llm_{version_id}_linux-aarch64_torch2.0.1-abi0.tar.gz |
-   | Ascend-cann-llm_{version_id}_linux-aarch64_torch2.0.1-abi1.tar.gz |
-
-   具体使用cxx11abi0 还是cxx11abi1 方法同安装atb
-
-   ```bash
-   # 安装大模型加速库
-   cd ${llm_path}
-   tar -xzvf Ascend-cann-llm_*.tar.gz
-   source set_env.sh
-   ```
-
-
-7. 设置环境变量
-
-   ```
-   source /usr/local/Ascend/ascend-toolkit/set_env.sh
-   source /usr/local/Ascend/atb/set_env.sh
-   source ${llm_path}/set_env.sh
-   ```
-   > 注： 每次运行前都需要 source CANN， 加速库，大模型
-
 ### 拷贝文件
 
 ### 准备
@@ -354,10 +271,10 @@ cp run_ascend_vqa.sh ${model_path}/unilm/vlmo/
 #### 2.修改配置
 
 以VQA v2 task_finetune_vqa_base_image480 微调评估为例。\
-打开 `${model_path}`/unilm/vlmo/run_om_ascend_vqa.sh \
+打开 `${model_path}`/unilm/vlmo/run_ascend_vqa.sh \
 修改 `<Finetuned_VLMo_WEIGHT>`  为 `${model_download_path}`/vlmo_base_patch16_480_vqa.pt ；修改 `<CONFIG_NAME>` 为 task_finetune_vqa_base_image480
 
-打开 `${model_path}`/unilm/vlmo/run_om_ascend_vqa.py \
+打开 `${model_path}`/unilm/vlmo/run_ascend_vqa.py \
 修改 `VQA_ARROW_DIR`  路径为 '`${data_download_path}`/vqa_arrow' ；修改 `<BERT_VOCAB>` 为 '`${model_download_path}`/vocab.txt'
 修改 DEVICE_ID 后的值可选择在哪张卡上运行
  
@@ -371,12 +288,12 @@ cpupower frequency-set -g performance
 
 ### 执行推理
 
-#### run_inf_ascend_vqa.sh
+#### run_ascend_vqa.sh
 
 用于执行已经基于VQA v2 数据集微调好的权重，执行图片分类任务。输入为一张图片以及一个问题，推理结果为一个特征值，通过分类器可将其从3129个备选答案中选出一个结果。
 
 ```shell
-bash run_inf_ascend_vqa
+bash run_ascend_vqa.sh
 ```
 
 #### FAQ
