@@ -888,7 +888,7 @@ python tools/checkpoint/util.py --model-type GPT \
     DATA_PATH=./dataset_llama2/alpaca_text_document  #数据集路径
     ```
 
-    LLaMA2-70B: examples/llama2/pretrain_llama2_70B_ptd.sh
+    LLaMA2-70B: examples/llama2/pretrain_llama2_70b_ptd.sh
     ```shell
     # 配置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -904,9 +904,9 @@ python tools/checkpoint/util.py --model-type GPT \
     ```shell
     bash examples/llama2/pretrain_llama2_34B_ptd_16p.sh
     ```
-    LLaMA2-70B: examples/llama2/pretrain_llama2_70B_ptd.sh
+    LLaMA2-70B: examples/llama2/pretrain_llama2_70b_ptd.sh
     ```shell
-    bash examples/llama2/pretrain_llama2_70B_ptd.sh
+    bash examples/llama2/pretrain_llama2_70b_ptd.sh
     ```
 
 6. 微调
@@ -1002,7 +1002,7 @@ LLaMA2-34B/70B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比
 
 LLaMA2-34B:`tasks/inference/generate_llama2_34B_ptd.sh`。
 
-LLaMA2-70B:`tasks/inference/generate_llama2_70B_ptd.sh`。
+LLaMA2-70B:`tasks/inference/generate_llama2_70b_ptd.sh`。
 
 ```shell
 # 修改模型权重路径和分词器路径
@@ -1031,7 +1031,7 @@ bash ./tasks/inference/generate_llama2_34b_lora_ptd.sh
 ```
 LLaMA2-70B启动推理:
 ```shell
-bash ./tasks/inference/generate_llama2_70B_ptd.sh
+bash ./tasks/inference/generate_llama2_70b_ptd.sh
 ```
 LLaMA2-70B启动lora推理:
 ```shell

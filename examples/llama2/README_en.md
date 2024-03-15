@@ -859,7 +859,7 @@ pip install -r requirements.txt
     DATA_PATH=./dataset_llama2/alpaca_text_document  #processed dataset
     ``` 
    
-    LLaMA2-70B: examples/llama2/pretrain_llama2_70B_ptd.sh
+    LLaMA2-70B: examples/llama2/pretrain_llama2_70b_ptd.sh
     ```shell
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -875,9 +875,9 @@ pip install -r requirements.txt
     ```shell
     bash examples/llama2/pretrain_llama2_34B_ptd_16p.sh
     ```
-    LLaMA2-70B: examples/llama2/pretrain_llama2_70B_ptd.sh
+    LLaMA2-70B: examples/llama2/pretrain_llama2_70b_ptd.sh
     ```shell
-    bash examples/llama2/pretrain_llama2_70B_ptd.sh
+    bash examples/llama2/pretrain_llama2_70b_ptd.sh
     ```
 
 6. fine-tuning
@@ -965,7 +965,7 @@ Config inference script:
 
 LLaMA2-34B:`tasks/inference/generate_llama2_34B_ptd.sh`.
 
-LLaMA2-70B:`tasks/inference/generate_llama2_70B_ptd.sh`.
+LLaMA2-70B:`tasks/inference/generate_llama2_70b_ptd.sh`.
 
 ```shell
 # Modify checkpoint path and vocabfile path.
@@ -989,7 +989,7 @@ bash ./tasks/inference/generate_llama2_34b_lora_ptd.sh
 ```
 Launch LLaMA2-70B inference:
 ```shell
-bash ./tasks/llama2/generate_llama2_70B_ptd.sh
+bash ./tasks/llama2/generate_llama2_70b_ptd.sh
 ```
 Launch LLaMA2-70B lora inference:
 ```shell

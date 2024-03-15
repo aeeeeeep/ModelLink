@@ -330,7 +330,7 @@ The performance of LLaMA-7B/13B in **Ascend NPU** and **Reference**:
 We support ModelLink Inference for text generation with LLaMA-7B and LLaMA-13B.
 Inference different from pre-training, such as we need to Load pre-training checkpoint and the length of the output samples:
 
-Config LLaMA-7B inference script `tasks/inference/generate_llama_7B_ptd.sh` and LLaMA-13B inference script `tasks/inference/generate_llama_13B_ptd.sh`.
+Config LLaMA-7B inference script `tasks/inference/generate_llama_7b_ptd.sh` and LLaMA-13B inference script `tasks/inference/generate_llama_13b_ptd.sh`.
 
 ```shell
 # modify the model weight path and tokenizer path
@@ -340,12 +340,12 @@ TOKENIZER_PATH=<tokenizer-path>
 
 LLaMA-7B:
 ```shell
-bash ./tasks/inference/generate_llama_7B_ptd.sh
+bash ./tasks/inference/generate_llama_7b_ptd.sh
 ```
 
 LLaMA-13B:
 ```shell
-bash ./tasks/inference/generate_llama_13B_ptd.sh
+bash ./tasks/inference/generate_llama_13b_ptd.sh
 ```
 
 Some inference samples are as follows:
@@ -732,9 +732,9 @@ The performance of the NPUs in **Ascend** and Reference:
 We support ModelLink Inference for text generation with LLaMA-33B and LLaMA-65B.
 Inference different from pre-training, such as we need to Load pre-training checkpoint and the length of the output samples:
 
-Config LLaMA-33B inference script `tasks/inference/generate_llama_33B_ptd.sh`.
+Config LLaMA-33B inference script `tasks/inference/generate_llama_33b_ptd.sh`.
 
-Config LLaMA-65B inference script `tasks/inference/generate_llama_65B_ptd.sh`.
+Config LLaMA-65B inference script `tasks/inference/generate_llama_65b_ptd.sh`.
 
 ```shell
 # modify the model weight path and tokenizer path
@@ -744,11 +744,11 @@ TOKENIZER_PATH=<tokenizer-path>
 
 LLaMA-33B:
 ```shell
-bash ./tasks/inference/generate_llama_33B_ptd.sh
+bash ./tasks/inference/generate_llama_33b_ptd.sh
 ```
 LLaMA-65B:
 ```shell
-bash ./tasks/inference/generate_llama_65B_ptd.sh
+bash ./tasks/inference/generate_llama_65b_ptd.sh
 ```
 
 Some inference samples are as follows:
