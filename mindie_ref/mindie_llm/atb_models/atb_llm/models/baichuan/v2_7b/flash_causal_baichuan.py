@@ -1,27 +1,16 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 import json
 import math
-import os
 from typing import Optional, List, Tuple
 
 import torch
 import torch.distributed
-import torch_npu
-from atb_llm.utils.initial import NPUSocInfo, load_atb_speed
 from atb_llm.utils.layers import (
     TensorParallelColumnLinear,
-    TensorEmbedding,
-    PositionRotaryEmbedding,
-    AttentionMask,
-    TensorParallelHead,
     load_column_multi,
     load_row
 )
 from atb_llm.utils.log import logger
-from torch import nn
-from transformers import PreTrainedModel
-from transformers.activations import ACT2FN
-from transformers.modeling_outputs import CausalLMOutputWithPast
 from .modeling_baichuan import FlashBaichuanModel
 from atb_llm.utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
 from atb_llm.models.base.flash_causal_lm import FlashForCausalLM
@@ -99,7 +88,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             "isBF16": self.dtype == torch.bfloat16,
             "packQuantType": self.pack_quant_config,
             "linearQuantType": self.linear_type,
-            "isEmbeddingParallel": False,
+            "isEmbeddingParallel": True,
             "isLmHeadParallel": True,
             "supportSwiGLU": False if self.soc_info.need_nz else True,
             "rank": self.tp_rank,

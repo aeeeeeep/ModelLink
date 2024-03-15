@@ -58,7 +58,7 @@ class FlashForCausalLM(torch.nn.Module):
         print_log(self.tp_rank, logger.info, self.soc_info)
 
         self.num_attention_heads = (self.num_attention_heads + self.tp_world_size - 1) // self.tp_world_size
-        self.num_key_value_heads = self.num_key_value_heads // self.tp_world_size
+        self.num_key_value_heads = (self.num_key_value_heads + self.tp_world_size - 1) // self.tp_world_size
 
         self.rotary_embedding = PositionRotaryEmbedding.static(dim=self.head_size, base=10000.0,
                                                                device="cpu").to(weights.device)
