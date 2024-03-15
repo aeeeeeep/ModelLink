@@ -672,16 +672,26 @@ class ModelTest:
             for i in range(math.ceil(task_len / self.batch_size)):
                 q_num = self.batch_size if (i + 1) * self.batch_size <= task_len else task_len - i * self.batch_size
                 prompt_ends = [format_example(val_df, i * self.batch_size + j, include_answer=False) for j in range(q_num)]
-                train_prompts = [gen_prompt(dev_df, task_name, SHOT) * q_num]
+                train_prompts = [gen_prompt(dev_df, task_name, SHOT)] * q_num
                 prompt = [t + p for t, p in zip(train_prompts, prompt_ends)]
                 labels = [val_df.iloc[i * self.batch_size + j, val_df.shape[1] - 1] for j in range(q_num)]
                 prompts = [prpt.encode().decode(encoding="utf8") for prpt in prompt]
-                # if is_result:
-                #     print(prompts)
+
                 if self.model_type == "fa":
-                    pass
+                    inputs = self.tokenizer(prompts, padding=True, return_tensors="pt", truncation=True, max_length=2048).to(0)
+                    tokenizer_out_ids = inputs.input_ids.to(0)
+                    attention_mask = inputs.attention_mask.to(0)
+                    outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask, do_sample=False, max_new_tokens=20)
+                    answers = []
+                    for idx in range(len(outputs)):
+                        output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
+                        response = self.tokenizer.decode(output)
+                        answers.append(response)
                 else:
                     generate_texts, token_nums, _ = self.pa_runner.infer(prompts, self.batch_size, 20, False)
+
+                    if len(prompts) == 1:
+                        generate_texts = [generate_texts[0]]
 
                     for idx, generate_text in enumerate(generate_texts):
                         if is_result:
@@ -694,16 +704,16 @@ class ModelTest:
                     if len(generate_texts) > 0:
                         answers = generate_texts
 
-                    answer_results = [answer.lstrip()[0] if answer else "-1" for answer in answers]
-                    is_correct = ["Correct" if answer_result == label else "Wrong" for answer_result, label in zip(answer_results, labels)]
-                    
-                    correct += is_correct.count("Correct")
-                    for i in range(len(is_correct)):
-                        if is_result and is_correct[i] != "Correct":
-                            self.logger.debug(f">>>原始题目 is : {prompts[i]}")
-                            self.logger.debug(f">>>推理结果 is : {answer_results[i]}")
-                            self.logger.debug(f">>>真实结果 is : {labels[i]}")
-            
+                answer_results = [answer.lstrip()[0] if answer else "-1" for answer in answers]
+                is_correct = ["Correct" if answer_result == label else "Wrong" for answer_result, label in zip(answer_results, labels)]
+                
+                correct += is_correct.count("Correct")
+                for i in range(len(is_correct)):
+                    if is_result and is_correct[i] != "Correct":
+                        self.logger.debug(f">>>原始题目 is : {prompts[i]}")
+                        self.logger.debug(f">>>推理结果 is : {answer_results[i]}")
+                        self.logger.debug(f">>>真实结果 is : {labels[i]}")
+        
             if is_result:        
                 result = [task_name, correct / task_len, correct, task_len]
                 self.logger.info(f"dataset {index} finish, result:{result}")
