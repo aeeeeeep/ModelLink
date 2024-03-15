@@ -42,7 +42,6 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference
     --hidden-dropout 0.0 \
     --position-embedding-type alibi \
     --normalization LayerNorm \
-    --use-flash-attn \
     --no-masked-softmax-fusion \
     --attention-softmax-in-fp32 \
     --weight-decay 1e-1 \

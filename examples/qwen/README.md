@@ -44,7 +44,6 @@ Qwen-7B 训练的硬件配置:
 ### 脚本
 
 1. 拷贝代码仓到本地服务器
-
    ```shell
    git clone https://gitee.com/ascend/ModelLink.git 
    cd ModelLink
@@ -96,46 +95,52 @@ Qwen-7B 训练的硬件配置:
    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/qwen_generation_utils.py
    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/tokenization_qwen.py
    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/tokenizer_config.json
-
+   
    cd ..
+   ```
+   修改modelling_qwen.py文件第39行，将：
+   ```python
+   SUPPORT_FP16 = SUPPORT_CUDA and torch.cuda.get_device_capability(0)[0] >= 7
+   ```
+   修改为：
+   ```python
+   SUPPORT_FP16 = True
    ```
 4. 权重转换
 
-  将权重从 huggingface 格式转化为 megatron 格式
+   将权重从 huggingface 格式转化为 megatron 格式
   ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
-  ```bash
-    cd ModelLink
-    # 修改 ascend-toolkit 路径
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    
-    python tools/checkpoint/util.py --model-type GPT \
-                                    --loader qwen_hf \
-                                    --saver megatron \
-                                    --target-tensor-parallel-size 8 \
-                                    --load-dir ../qwen-7b-hf \
-                                    --save-dir {your megatron ckpt save path} \
-                                    --tokenizer-model ../qwen-7b-hf/qwen.tiktoken \
-                                    --add-qkv-bias
-    
-    cd ..
-  ```
-
-  任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
-  ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
    ```shell
+   # 修改 ascend-toolkit 路径
+   source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    
+   python tools/checkpoint/util.py --model-type GPT \
+                                   --loader qwen_hf \
+                                   --saver megatron \
+                                   --target-tensor-parallel-size 8 \
+                                   --load-dir ./qwen-7b-hf \
+                                   --save-dir {your megatron ckpt save path} \
+                                   --tokenizer-model ./qwen-7b-hf/qwen.tiktoken \
+                                   --add-qkv-bias
+   ```
+
+   任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
+  ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+   
+   ```bash
    cd ModelLink/
    # 请按照您的真实环境修改 set_env.sh 路径
    source /usr/local/Ascend/ascend-toolkit/set_env.sh
    python tools/checkpoint/util.py --model-type GPT \
-      --loader megatron \
-      --saver megatron \
-      --save-model-type save_huggingface_qwen \
-      --load-dir ../Qwen7B-v0.1-pt8-pp1 \
-      --target-tensor-parallel-size 1 \
-      --target-pipeline-parallel-size 1 \
-      --add-qkv-bias \
-      --save-dir ../Qwen7B_downloaded     # <-- 需要填入原始HF模型路径，新权重会存于../Qwen7B_downloaded/mg2hg
+                                   --loader megatron \
+                                   --saver megatron \
+                                   --save-model-type save_huggingface_qwen \
+                                   --load-dir ../Qwen7B-v0.1-pt8-pp1 \
+                                   --target-tensor-parallel-size 1 \
+                                   --target-pipeline-parallel-size 1 \
+                                   --add-qkv-bias \
+                                   --save-dir ./qwen-7b-hf     # 需要填入原始HF模型路径，新权重会存于./qwen-7b-hf/mg2hg
    ```
 
 5. 准备数据集
@@ -151,17 +156,16 @@ Qwen-7B 训练的硬件配置:
      
     # 处理数据                           
     python ./tools/preprocess_data.py \
-        --input ../dataset_qwen-7b/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-        --tokenizer-name-or-path ../qwen-7b-hf \
-        --output-prefix ../dataset_qwen-7b/alpaca \
+        --input ./dataset_qwen-7b/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./qwen-7b-hf \
+        --output-prefix ./dataset_qwen-7b/alpaca \
         --tokenizer-type PretrainedFromHF \
         --seq-length 8192 \
         --workers 4 \
-        --log-interval 1000 \
-    
-    cd .. 
+        --log-interval 1000
    ```
-5. 预训练
+   
+6. 预训练
     配置Qwen-7B 预训练脚本: examples/qwen/pretrain_qwen_7b_ptd.sh
 
    ```shell
@@ -202,7 +206,7 @@ Qwen-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 # ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-# 修改模型权重路径和此表路径
+# 修改模型权重路径和词表路径
 CHECKPOINT="your model directory path"
 TOKENIZER_PATH="your tokenizer directory path"
 ```
@@ -234,7 +238,6 @@ CHECKPOINT="your model directory path"  #模型路径
 DATA_PATH="./mmlu/data/test/"  # ceval任务配置为 "./ceval/val/"
 TASK="mmlu"  # ceval任务配置为 "ceval"
 ```
-
 
 启动评估
 
@@ -322,27 +325,33 @@ Qwen-14B 训练的硬件配置:
 
    cd ..
    ```
+   修改modelling_qwen.py文件第39行，将：
+   ```python
+   SUPPORT_FP16 = SUPPORT_CUDA and torch.cuda.get_device_capability(0)[0] >= 7
+   ```
+   修改为：
+   ```python
+   SUPPORT_FP16 = True
+   ```
 4. 权重转换
-  将权重从 huggingface 格式转化为 megatron 格式
+
+   将权重从 huggingface 格式转化为 megatron 格式
   ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
-  ```bash
-    cd ModelLink
-    # 修改 ascend-toolkit 路径
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+   ```bash
+   # 修改 ascend-toolkit 路径
+   source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
-    python tools/checkpoint/util.py --model-type GPT \
-                                    --loader qwen_hf \
-                                    --saver megatron \
-                                    --target-tensor-parallel-size 8 \
-                                    --load-dir ../qwen-14b-hf \
-                                    --save-dir {your megatron ckpt save path} \
-                                    --tokenizer-model ../qwen-14b-hf/qwen.tiktoken \
-                                    --add-qkv-bias
-    
-    cd ..
-  ```
-  任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
+   python tools/checkpoint/util.py --model-type GPT \
+                                   --loader qwen_hf \
+                                   --saver megatron \
+                                   --target-tensor-parallel-size 8 \
+                                   --load-dir ./qwen-14b-hf \
+                                   --save-dir {your megatron ckpt save path} \
+                                   --tokenizer-model ./qwen-14b-hf/qwen.tiktoken \
+                                   --add-qkv-bias
+   ```
+   任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
   ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
    ```shell
    cd ModelLink/
@@ -356,7 +365,7 @@ Qwen-14B 训练的硬件配置:
       --target-tensor-parallel-size 1 \
       --target-pipeline-parallel-size 1 \
       --add-qkv-bias \
-      --save-dir ../Qwen14B_downloaded     # <-- 需要填入原始HF模型路径，新权重会存于../Qwen14B_downloaded/mg2hg
+      --save-dir ./qwen-14b-hf     # 需要填入原始HF模型路径，新权重会存于./qwen-14b-hf/mg2hg
    ```
 
 5. 准备数据集
@@ -372,17 +381,16 @@ Qwen-14B 训练的硬件配置:
      
     # 处理数据                           
     python ./tools/preprocess_data.py \
-        --input ../dataset_qwen-14b/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-        --tokenizer-name-or-path ../qwen-14b-hf \
-        --output-prefix ../dataset_qwen-14b/alpaca \
+        --input ./dataset_qwen-14b/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./qwen-14b-hf \
+        --output-prefix ./dataset_qwen-14b/alpaca \
         --tokenizer-type PretrainedFromHF \
         --seq-length 2048 \
         --workers 4 \
-        --log-interval 1000 \
-    
-    cd .. 
+        --log-interval 1000
    ```
-5. 预训练
+6. 预训练
+
     配置Qwen-14B 预训练脚本: examples/qwen/pretrain_qwen_14b_ptd.sh
 
    ```shell
@@ -422,7 +430,7 @@ Qwen-14B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 # ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-# 修改模型权重路径和此表路径
+# 修改模型权重路径和词表路径
 CHECKPOINT="your model directory path"
 TOKENIZER_PATH=./qwen-14b-hf
 ```
@@ -522,26 +530,31 @@ Qwen-72B 训练的硬件配置:
    ...
    cd ..
    ```
+   修改modelling_qwen.py文件第39行，将：
+   ```python
+   SUPPORT_FP16 = SUPPORT_CUDA and torch.cuda.get_device_capability(0)[0] >= 7
+   ```
+   修改为：
+   ```python
+   SUPPORT_FP16 = True
+   ```
 4. 权重转换
 
    将权重从 huggingface 格式转化为 megatron 格式
    ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
    ```bash
-      cd ModelLink
-      # 修改 ascend-toolkit 路径
-      source /usr/local/Ascend/ascend-toolkit/set_env.sh
+   # 修改 ascend-toolkit 路径
+   source /usr/local/Ascend/ascend-toolkit/set_env.sh
       
-      python tools/checkpoint/util.py --model-type GPT \
-                                       --loader qwen_hf \
-                                       --saver megatron \
-                                       --target-tensor-parallel-size 8 \
-                                       --load-dir ../qwen-72b-hf \
-                                       --save-dir {your megatron ckpt save path} \
-                                       --tokenizer-model ../qwen-72b-hf/qwen.tiktoken \
-                                       --add-qkv-bias
-      
-      cd ..
+   python tools/checkpoint/util.py --model-type GPT \
+                                   --loader qwen_hf \
+                                   --saver megatron \
+                                   --target-tensor-parallel-size 8 \
+                                   --load-dir ./qwen-72b-hf \
+                                   --save-dir {your megatron ckpt save path} \
+                                   --tokenizer-model ./qwen-72b-hf/qwen.tiktoken \
+                                   --add-qkv-bias
    ```
    
    任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
@@ -558,13 +571,12 @@ Qwen-72B 训练的硬件配置:
       --target-tensor-parallel-size 1 \
       --target-pipeline-parallel-size 1 \
       --add-qkv-bias \
-      --save-dir ../Qwen72B_downloaded     # <-- 需要填入原始HF模型路径，新权重会存于../Qwen72B_downloaded/mg2hg
+      --save-dir ./qwen-72b-hf     # 需要填入原始HF模型路径，新权重会存于./qwen-72b-hf/mg2hg
    ```
 
-4. 准备数据集
+5. 准备数据集
 
    下载 Qwen-72B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
-
    ```shell
     # 下载数据
     mkdir dataset_qwen-72b
@@ -574,17 +586,16 @@ Qwen-72B 训练的硬件配置:
      
     # 处理数据                           
     python ./tools/preprocess_data.py \
-        --input ../dataset_qwen-72b/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-        --tokenizer-name-or-path ../qwen-72b-hf \
-        --output-prefix ../dataset_qwen-72b/alpaca \
+        --input ./dataset_qwen-72b/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./qwen-72b-hf \
+        --output-prefix ./dataset_qwen-72b/alpaca \
         --tokenizer-type PretrainedFromHF \
         --seq-length 8192 \
         --workers 4 \
-        --log-interval 1000 \
-    
-    cd .. 
+        --log-interval 1000
    ```
-5. 预训练
+   
+6. 预训练
 
     配置Qwen-72B 预训练脚本: examples/qwen/pretrain_qwen_72b_ptd.sh
 
@@ -635,7 +646,7 @@ Qwen-72B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 # ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-# 修改模型权重路径和此表路径
+# 修改模型权重路径和词表路径
 CHECKPOINT="your model directory path"
 TOKENIZER_PATH=./qwen-72b-hf
 ```
