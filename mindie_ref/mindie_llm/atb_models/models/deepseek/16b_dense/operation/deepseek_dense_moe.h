@@ -25,6 +25,7 @@ struct DeepseekDenseMoeParam {
     atb::SVector<int64_t> axes = {1};
     atb::SVector<int32_t> num = {6}; // num of selected experts
     int numOfExperts = 64;            // num of total experts
+    int expertParallelDegree = 1;
     bool transpose = true;
 };
 

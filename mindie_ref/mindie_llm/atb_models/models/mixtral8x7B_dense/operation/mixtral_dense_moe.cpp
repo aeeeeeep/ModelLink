@@ -121,7 +121,10 @@ atb::Status CreateMixtralDenseMoeOperation(const MixtralDenseMoeParam &param, at
     // In_tensor[0]: hiddesn_state: Batch; seq_len; hidden_dim, reshaped to Batch * Seq; hidden_dim
     // In_tensor[1]: Gate_weight: num_experts(8); hidden_dim
     // Out_tensor[0]: router_logits: Batch * Seq; num_experts
-    atb::infer::MatmulParam moeGateParam = {false, param.transpose};
+    atb::infer::LinearParam moeGateParam;
+    moeGateParam.transposeA = false;
+    moeGateParam.transposeB = param.transpose;
+    moeGateParam.hasBias = false;
     CreateOperation(moeGateParam, &linearNode.operation);
     linearNode.inTensorIds = {IN_HIDDEN_STATE, IN_GATE_WEIGHT};
     linearNode.outTensorIds = {INTERMIDATE_ROUTER_LOGITS};
