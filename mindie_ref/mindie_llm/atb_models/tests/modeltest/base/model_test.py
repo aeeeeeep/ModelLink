@@ -708,11 +708,11 @@ class ModelTest:
                 is_correct = ["Correct" if answer_result == label else "Wrong" for answer_result, label in zip(answer_results, labels)]
                 
                 correct += is_correct.count("Correct")
-                for i in range(len(is_correct)):
-                    if is_result and is_correct[i] != "Correct":
-                        self.logger.debug(f">>>原始题目 is : {prompts[i]}")
-                        self.logger.debug(f">>>推理结果 is : {answer_results[i]}")
-                        self.logger.debug(f">>>真实结果 is : {labels[i]}")
+                for idx in range(len(is_correct)):
+                    if is_result and is_correct[idx] != "Correct":
+                        self.logger.debug(f">>>原始题目 is : {prompts[idx]}")
+                        self.logger.debug(f">>>推理结果 is : {answer_results[idx]}")
+                        self.logger.debug(f">>>真实结果 is : {labels[idx]}")
         
             if is_result:        
                 result = [task_name, correct / task_len, correct, task_len]
@@ -723,40 +723,12 @@ class ModelTest:
             index += 1
 
         if is_result:
-                total = ["total", correct_total / sum_total, correct_total, sum_total]
-                self.result_logger.debug(f"total result:{total}")
-                result_total.insert(0, total)
-                self.__save_result(result_total)
+            total = ["total", correct_total / sum_total, correct_total, sum_total]
+            self.result_logger.debug(f"total result:{total}")
+            result_total.insert(0, total)
+            self.__save_result(result_total)
 
                 
-
-
-        
-
-                    # if self.model_type == "fa":
-                    #     inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
-                    #                             max_length=2048).to(0)
-                    #     tokenizer_out_ids = inputs.input_ids.to(0)
-                    #     attention_mask = inputs.attention_mask.to(0)
-                    #     outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
-                    #                                   do_sample=False, max_new_tokens=512)
-                    #     intermediate_outputs = []
-                    #     for idx in range(len(outputs)):
-                    #         output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
-                    #         response = self.tokenizer.decode(output)
-                    #         intermediate_outputs.append(response)
-                    #     answer_texts = [text + intermediate + "\n" + extraction_prompt for text, intermediate in
-                    #                     zip(texts, intermediate_outputs)]
-                    #     input_tokens = [build_prompt(answer_text) for answer_text in answer_texts]
-                    #     inputs = self.tokenizer(input_tokens, padding=True, return_tensors="pt", truncation=True, max_length=2048).to(0)
-                    #     outputs = self.model(**inputs)
-                    #     logits = outputs.logits[:, -1, :]
-                    #     logits = logits[:, choice_tokens]
-                    #     preds = logits.argmax(dim=-1)
-                    #     correct += (preds.cpu() == batch["label"]).sum().item()
-
-           
-
     def __run_full_dataset_mmlu(self):
         choices = ["A", "B", "C", "D"]
 
