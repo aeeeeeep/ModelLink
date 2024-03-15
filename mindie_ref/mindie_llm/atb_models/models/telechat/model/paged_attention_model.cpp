@@ -110,7 +110,7 @@ atb::Status PAModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDesc
     for (uint i = 0; i < outDimNum - 1; i++) {
         outTensorDescs.at(0).shape.dims[i] = inTensorDescs.at(IN_TENSOR_INPUT_IDS).shape.dims[i];
     }
-    outTensorDescs.at(0).shape.dims[outDimNum - 1] = outDim; 
+    outTensorDescs.at(0).shape.dims[outDimNum - 1] = outDim;
 
     if (param_.isPrefill) {
         outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(IN_TENSOR_LOGTIS_INDICES).shape.dims[0];

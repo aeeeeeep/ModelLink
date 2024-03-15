@@ -160,7 +160,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     splitKVNode.inTensorIds = { INTERNAL_KVMIXEDLINEAROUT };
     splitKVNode.outTensorIds = { INTERNAL_KMIXEDLINEAROUT, INTERNAL_VMIXEDLINEAROUT };
     splitKVNode.inTensorReshapeFuncs.resize(splitKVNode.inTensorIds.size());
-    splitKVNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) { 
+    splitKVNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         ReshapeHeads(oldShape, newShape, param.headNum);
     };
 
