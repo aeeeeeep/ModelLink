@@ -105,9 +105,13 @@ atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation
         MlpTensorIdx::IN_DESCALE_0,
         MlpTensorIdx::IN_BIAS_0,
     };
-    normLinearGateUpNode.outTensorIds = {
-        param.mlpPackType == MlpPackType::GATE_UP_WEIGHT_PACK ? MlpTensorIdx::INTERMIDATE_GATE_UP_OUT : MlpTensorIdx::INTERMIDATE_GATE_OUT
-    };
+    if (param.mlpPackType == MlpPackType::GATE_UP_WEIGHT_PACK) {
+        normLinearGateUpNode.outTensorIds = {MlpTensorIdx::INTERMIDATE_GATE_UP_OUT};
+    } else if (param.mlpPackType == MlpPackType::GATE_UP_WEIGHT_NO_PACK) {
+        normLinearGateUpNode.outTensorIds = {MlpTensorIdx::INTERMIDATE_GATE_OUT};
+    } else {
+        normLinearGateUpNode.outTensorIds = {MlpTensorIdx::INTERMIDATE_UP_OUT};
+    }
 
     if (param.mlpPackType == MlpPackType::GATE_UP_WEIGHT_PACK) {
         atb::Node &splitNode = opGraph.nodes.at(nodeId++);
