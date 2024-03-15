@@ -680,7 +680,7 @@ class Weights:
                            for i in range(world_size)]
         return cut_tensor_list[rank]
 
-    def get_multi_weights_row(self, prefix: str, quantize: str):
+    def get_multi_weights_row(self, prefix: str, quantize: str, gqa_size=1):
         if quantize == "gptq":
             use_exllama = True
             bits, groupsize = self._get_gptq_params()
@@ -760,12 +760,12 @@ class Weights:
             input_offset = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_offset')
             weight = (qweight, deq_scale, quant_bias, input_scale, input_offset)
         elif quantize == "w8a16":
-            qweight = self.get_sharded(f"{prefix}.weight", dim=1)
-            weight_scale = self.get_sharded(f"{prefix}.weight_scale", dim=1)
-            weight_offset = self.get_sharded(f"{prefix}.weight_offset", dim=1)
+            qweight = self.get_sharded(f"{prefix}.weight", dim=1, gqa_size=gqa_size)
+            weight_scale = self.get_sharded(f"{prefix}.weight_scale", dim=1, gqa_size=gqa_size)
+            weight_offset = self.get_sharded(f"{prefix}.weight_offset", dim=1, gqa_size=gqa_size)
             weight = (qweight, weight_scale, weight_offset)
         else:
-            weight = self.get_sharded(f"{prefix}.weight", dim=1)
+            weight = self.get_sharded(f"{prefix}.weight", dim=1, gqa_size=gqa_size)
         return weight
 
     def _get_handle(self, filename):

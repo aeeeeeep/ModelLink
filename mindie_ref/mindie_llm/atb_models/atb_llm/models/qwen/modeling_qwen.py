@@ -32,6 +32,7 @@ from atb_llm.utils.layers import (
     TensorParallelColumnLinear,
     PositionRotaryEmbedding,
     TensorEmbedding,
+    TensorParallelEmbedding,
     load_column_multi,
     paged_attn,
     flash_attn,
@@ -406,7 +407,7 @@ class FlashQwenModel(torch.nn.Module):
         process_group = weights.process_group
         self.tp_rank = process_group.rank()
         self.tp_world_size = process_group.size()
-        self.wte = TensorEmbedding(
+        self.wte = TensorParallelEmbedding(
             prefix="transformer.wte", weights=weights
         )
         self.h = nn.ModuleList(

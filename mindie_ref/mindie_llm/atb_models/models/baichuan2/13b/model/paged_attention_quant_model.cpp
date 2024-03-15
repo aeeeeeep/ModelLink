@@ -159,7 +159,7 @@ int64_t PagedAttentionQuantModel::BuildGraph()
     
     int nodeId = 0;
     atb::Operation *op = nullptr;
-    // node 0： wordEmbedding
+    // node 0： wordEmbedding,多卡权重按照hidden_state进行切分
     auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
     atb_speed::common::WordEmbeddingParam wordEmbeddingParam;
     wordEmbeddingParam.unpadInputs = !param_.isFA;

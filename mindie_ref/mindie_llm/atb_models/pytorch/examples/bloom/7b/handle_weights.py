@@ -105,7 +105,7 @@ def quant_model(args_quant, verbose=False):
 
     print("model loaded, starting quant model...")
     dataset_calib = get_calib_dataset(tokenizer)
-    quant_config = QuantConfig(w_bit=8, disable_names=[], dev_type='cpu', act_method=3, pr=1.0, mm_tensor=False, w_hessian=False)
+    quant_config = QuantConfig(w_bit=8, disable_names=[], dev_type='cpu', act_method=3, pr=1.0, mm_tensor=False)
     calibrator = Calibrator(model, quant_config, calib_data=dataset_calib, disable_level='L1')
     calibrator.run()
 
