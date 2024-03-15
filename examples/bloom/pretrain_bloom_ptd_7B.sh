@@ -10,13 +10,10 @@ NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
-
 CKPT_SAVE_DIR="your model save ckpt path"
 DATA_PATH="your data path"
 TOKENIZER_PATH="your tokenizer path"
 CKPT_LOAD_DIR="your model load ckpt path"
-
-
 
 TP=8
 PP=1
@@ -42,7 +39,7 @@ GPT_ARGS="
     --seq-length 2048 \
     --max-position-embeddings 2048 \
     --micro-batch-size 4 \
-    --global-batch-size 16 \
+    --global-batch-size 512 \
     --embed-layernorm \
     --padded-vocab-size 250880 \
     --make-vocab-size-divisible-by 1 \
@@ -54,7 +51,6 @@ GPT_ARGS="
     --hidden-dropout 0.0 \
     --position-embedding-type alibi \
     --normalization LayerNorm \
-    --no-masked-softmax-fusion \
     --min-lr 6e-6 \
     --lr-decay-iters 200 \
     --weight-decay 1e-1 \
