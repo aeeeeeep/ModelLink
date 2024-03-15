@@ -437,13 +437,15 @@ class ModelTest:
             self.logger.info(str(self.local_rank) + f'pa_runner: {self.pa_runner}')
             self.pa_runner.warm_up()
         else:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.weight_dir, use_fast=False, trust_remote_code=True)
+            self.tokenizer = AutoTokenizer.from_pretrained(self.weight_dir, use_fast=False, padding_side="left", truncation_side="left", trust_remote_code=True)
             if self.model_name == "qwen":
                 self.tokenizer.pad_token_id = self.tokenizer.eod_id
                 self.tokenizer.bos_token_id = self.tokenizer.eod_id
                 self.tokenizer.eos_token_id = self.tokenizer.eod_id
             if self.model_name == "starcoder":
-                self.tokenizer.pad_token = "[PAD]" 
+                self.tokenizer.pad_token = "[PAD]"
+            if self.model_name == "llama":
+                self.tokenizer.pad_token_id = 0
 
             self.model = AutoModelForCausalLM.from_pretrained(self.weight_dir, device_map="auto", trust_remote_code=True)
             self.device = self.model.device
@@ -600,8 +602,7 @@ class ModelTest:
                             correct += (preds.cpu() == batch["label"]).sum().item()            
                 
                 if is_result:        
-                    filename = os.path.basename(entry)
-                    result = [filename, correct / sum, correct, sum]
+                    result = [taskname, correct / sum, correct, sum]
                     self.result_logger.debug(f"result:{result}")
                     result_total.append(result)
                     correct_total += correct
@@ -614,8 +615,122 @@ class ModelTest:
             self.__save_result(result_total)
     
     def __run_full_dataset_ceval_5_shot(self):
-        pass
+        choices = ["A", "B", "C", "D"]
+        SHOT = 5
 
+        def get_subject_mapping():
+            SUBJECT_MAPPING_PATH = os.path.join(self.dataset_path, "subject_mapping.json")
+            with open(SUBJECT_MAPPING_PATH) as f:
+                subject_mapping = json.load(f)
+            return subject_mapping
+        
+        def load_csv_by_task_name(task_name, dataset_path):
+            dev_df = pd.read_csv(os.path.join(dataset_path, "dev", task_name + "_dev.csv"), header=None)[:SHOT + 1]
+            val_df = pd.read_csv(os.path.join(dataset_path, "val", task_name + "_val.csv"), header=None)
+
+            dev_df = dev_df.iloc[1:, 1:]
+            val_df = val_df.iloc[1:, 1:]
+            return dev_df, val_df
+        
+        def format_subject(subject):
+            l = subject.split("_")
+            s = ""
+            for entry in l:
+                s += " " + entry    
+            return s
+            
+        def format_example(df, idx, include_answer=True):
+            prompt = df.iloc[idx, 0]
+            k = len(choices)
+            for j in range(k):
+                prompt += "\n{}. {}".format(choices[j], df.iloc[idx, j + 1])
+            prompt += "\nAnswer:"
+            if include_answer:
+                prompt += " {}\n\n".format(df.iloc[idx, k + 1])
+            return prompt
+        
+        def gen_prompt(train_df, subject, k=-1):
+            prompt = "The following are multiple choice questions (with answers) about {}.\n\n".format(format_subject(subject))
+            if k == -1:
+                k = train_df.shape[0]
+            for i in range(k):
+                prompt += format_example(train_df, i)
+            return prompt
+
+        correct_total = 0
+        sum_total = 0
+        result_total = []
+        is_result = False
+        if self.__get_rank() == 0:
+            is_result = True
+
+        subject_mapping = get_subject_mapping()
+        index = 1
+        for task_name in tqdm(subject_mapping):
+            self.logger.info(f"dataset {index} start, task name: {task_name}")
+            dev_df, val_df = load_csv_by_task_name(task_name, self.dataset_path)
+            correct = 0
+            task_len = val_df.shape[0]
+            for i in range(math.ceil(task_len / self.batch_size)):
+                q_num = self.batch_size if (i + 1) * self.batch_size <= task_len else task_len - i * self.batch_size
+                prompt_ends = [format_example(val_df, i * self.batch_size + j, include_answer=False) for j in range(q_num)]
+                train_prompts = [gen_prompt(dev_df, task_name, SHOT)] * q_num
+                prompt = [t + p for t, p in zip(train_prompts, prompt_ends)]
+                labels = [val_df.iloc[i * self.batch_size + j, val_df.shape[1] - 1] for j in range(q_num)]
+                prompts = [prpt.encode().decode(encoding="utf8") for prpt in prompt]
+
+                if self.model_type == "fa":
+                    inputs = self.tokenizer(prompts, padding=True, return_tensors="pt", truncation=True, max_length=2048).to(0)
+                    tokenizer_out_ids = inputs.input_ids.to(0)
+                    attention_mask = inputs.attention_mask.to(0)
+                    outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask, do_sample=False, max_new_tokens=20)
+                    answers = []
+                    for idx in range(len(outputs)):
+                        output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
+                        response = self.tokenizer.decode(output)
+                        answers.append(response)
+                else:
+                    generate_texts, token_nums, _ = self.pa_runner.infer(prompts, self.batch_size, 20, False)
+
+                    if len(prompts) == 1:
+                        generate_texts = [generate_texts[0]]
+
+                    for idx, generate_text in enumerate(generate_texts):
+                        if is_result:
+                            self.logger.debug(f'Question[{i * self.batch_size + idx}]: {prompts[idx]}')
+                            self.logger.debug(f'Answer[{i * self.batch_size + idx}]: {generate_text}')
+                            self.logger.debug(f'Generate[{i * self.batch_size + idx}] token num: {token_nums[idx]}')
+
+                    answers = None
+
+                    if len(generate_texts) > 0:
+                        answers = generate_texts
+
+                answer_results = [answer.lstrip()[0] if answer else "-1" for answer in answers]
+                is_correct = ["Correct" if answer_result == label else "Wrong" for answer_result, label in zip(answer_results, labels)]
+                
+                correct += is_correct.count("Correct")
+                for idx in range(len(is_correct)):
+                    if is_result and is_correct[idx] != "Correct":
+                        self.logger.debug(f">>>原始题目 is : {prompts[idx]}")
+                        self.logger.debug(f">>>推理结果 is : {answer_results[idx]}")
+                        self.logger.debug(f">>>真实结果 is : {labels[idx]}")
+        
+            if is_result:        
+                result = [task_name, correct / task_len, correct, task_len]
+                self.logger.info(f"dataset {index} finish, result:{result}")
+                result_total.append(result)
+                correct_total += correct
+                sum_total += task_len
+            index += 1
+
+        if is_result:
+            total = ["total", correct_total / sum_total, correct_total, sum_total]
+            self.result_logger.debug(f"total result:{total}")
+            result_total.insert(0, total)
+            self.__save_result(result_total)
+
+                
     def __run_full_dataset_mmlu(self):
         choices = ["A", "B", "C", "D"]
 
