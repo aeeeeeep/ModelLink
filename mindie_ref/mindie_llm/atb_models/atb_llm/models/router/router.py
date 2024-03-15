@@ -121,6 +121,21 @@ class LlamaRouter(BaseRouter):
         if self.max_position_embeddings:
             config.max_position_embeddings = self.max_position_embeddings
         return config
+    
+    def get_tokenizer(self):
+        if self.config_dict['num_hidden_layers'] in [60]:
+            # LLaMa 33B use_fast需要使用False
+            use_fast = False
+        else:
+            use_fast = True
+        return AutoTokenizer.from_pretrained(
+            self.model_name_or_path,
+            revision=self.revision,
+            padding_side="left",
+            truncation_side="left",
+            trust_remote_code=self.trust_remote_code,
+            use_fast=use_fast
+        )
 
 
 @dataclass
