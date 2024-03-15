@@ -94,7 +94,6 @@
     "add_bos_token": true,
     "add_eos_token": false,
     "bos_token": {
-      "__type": "AddedToken",
       "content": "<s>",
       "lstrip": false,
       "normalized": true,
@@ -103,7 +102,6 @@
     },
     "clean_up_tokenization_spaces": false,
     "eos_token": {
-      "__type": "AddedToken",
       "content": "</s>",
       "lstrip": false,
       "normalized": true,
@@ -115,7 +113,6 @@
     "sp_model_kwargs": {},
     "tokenizer_class": "LlamaTokenizer",
     "unk_token": {
-      "__type": "AddedToken",
       "content": "<unk>",
       "lstrip": false,
       "normalized": true,
