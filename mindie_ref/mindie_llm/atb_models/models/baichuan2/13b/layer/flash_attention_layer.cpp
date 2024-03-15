@@ -17,9 +17,13 @@
 
 #include "layers/mlp_gate_v2.h"
 #include "layers/parallel_layer_v2.h"
+#include "atb_speed/utils/operation_factory.h"
 
 namespace atb_speed {
 namespace baichuan2_13b {
+
+REGISTER_OPERATION(baichuan2_13b, CreateFlashAttentionLayer);
+
 enum FlashAttentionLayerTensorId : int {
     IN_HIDDEN_STATES = 0,
     IN_NORM_WEIGHT,
@@ -117,10 +121,9 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
     splitQKVNode.outTensorIds = {INTERNAL_MIXED_Q, INTERNAL_MIXED_K, INTERNAL_MIXED_V};
 
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / sqrt(param.dk);
-    selfAttentionParam.isSupportAlibi = true;
+    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MASK_TYPE_ALIBI;
     CREATE_OPERATION(selfAttentionParam, &selfAttentionKvCacheNode.operation);
     selfAttentionKvCacheNode.inTensorIds = {INTERNAL_MIXED_Q, INTERNAL_MIXED_K, INTERNAL_MIXED_V,
                                             IN_PAST_KEY,      IN_PAST_VALUE,    IN_ATTENTION_MASK,

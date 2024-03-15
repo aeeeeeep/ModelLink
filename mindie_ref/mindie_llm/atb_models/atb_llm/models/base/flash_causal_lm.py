@@ -58,14 +58,19 @@ class FlashForCausalLM(torch.nn.Module):
         print_log(self.tp_rank, logger.info, self.soc_info)
 
         self.num_attention_heads = (self.num_attention_heads + self.tp_world_size - 1) // self.tp_world_size
-        self.num_key_value_heads = self.num_key_value_heads // self.tp_world_size
+        self.num_key_value_heads = (self.num_key_value_heads + self.tp_world_size - 1) // self.tp_world_size
 
         self.rotary_embedding = PositionRotaryEmbedding.static(dim=self.head_size, base=10000.0,
                                                                device="cpu").to(weights.device)
         self.max_position_embeddings = config.max_position_embeddings
-        self.attn_mask = AttentionMask.static(config.max_position_embeddings)
         self.quantize = config.quantize
         self.dtype = weights.dtype
+
+        self.max_base_len = 128
+        if self.soc_info.need_nz:
+            self.attn_mask = AttentionMask.static(config.max_position_embeddings, dtype=self.dtype)
+        else:
+            self.attn_mask = AttentionMask.static(self.max_base_len, dtype=self.dtype)
 
         # for ascend init
         self.init_ascend_operations(config)
@@ -73,8 +78,9 @@ class FlashForCausalLM(torch.nn.Module):
         self.ascend_kcache_id = None
         self.ascend_vcache_id = None
 
-        self.acl_encoder_operation_inputs = [None] * 9
-        self.acl_decoder_operation_inputs = [None] * 9
+        self.in_tensor_length = 9
+        self.acl_encoder_operation_inputs = [None] * self.in_tensor_length
+        self.acl_decoder_operation_inputs = [None] * self.in_tensor_length
 
         self.device = weights.device
         self.cu_seqlen_tensor_fake = torch.tensor([0], dtype=torch.int).to(self.device)

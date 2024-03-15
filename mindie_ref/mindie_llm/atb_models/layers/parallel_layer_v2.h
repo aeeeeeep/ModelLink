@@ -18,7 +18,10 @@
 #define ATB_SPEED_LAYER_PARALLEL_LAYER_V2_H
 #include <atb/atb_infer.h>
 #include "atb_speed/utils/operation_util.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 #include "plugin_op/matmul_compress_dequant_operation.h"
 
 namespace atb_speed {

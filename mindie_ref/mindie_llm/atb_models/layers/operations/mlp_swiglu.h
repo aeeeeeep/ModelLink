@@ -18,16 +18,14 @@
 #include <atb/atb_infer.h>
 #include "layers/operations/linear.h"
 #include "layers/operations/linear_parallel.h"
+#include "layers/operations/norm_linear.h"
+#include "layers/operations/mlp.h"
 
 namespace atb_speed {
 namespace common {
-struct MlpSwiGLUParam {
-    bool isPack = false;
-    atb_speed::common::FusionLinearParam gateUpLinearParam;
-    atb_speed::common::LinearParallelParam downLinearParallelParam;
-};
 
-atb::Status MlpSwiGLU(const MlpSwiGLUParam &param, atb::Operation **operation);
+template <typename NormParamType>
+atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **operation);
 } // namespace common
 } // namespace atb_speed
 #endif

@@ -42,6 +42,9 @@ function fn_prepare()
         fi
     fi
 
+    export PYTHONPATH="${PYTHONPATH}:$(dirname "$(readlink -f "$0")")"
+    export PYTHONPATH="${PYTHONPATH}:$(dirname "$(dirname "$(dirname "$(readlink -f "$0")")")")"
+
     IFS="_"
     read -ra parts <<< "$1"
     model_type="${parts[0]}"
@@ -98,32 +101,56 @@ function fn_run_single()
         fi
     fi
 
-    if ! [ -n "$ASCEND_RT_VISIBLE_DEVICES" ]; then
-        devices=""
-        for ((i=0; i<chip_num-1; i++)); do
-            devices+="$i,"
-        done
-        devices+="$((chip_num-1))"
-        export ASCEND_RT_VISIBLE_DEVICES="$devices"
+    if [ "$hardware_type" == "NPU" ]; then
+        if ! [ -n "$ASCEND_RT_VISIBLE_DEVICES" ]; then
+            devices=""
+            for ((i=0; i<chip_num-1; i++)); do
+                devices+="$i,"
+            done
+            devices+="$((chip_num-1))"
+            export ASCEND_RT_VISIBLE_DEVICES="$devices"
+        fi
+    
+        random_port=$(( RANDO  % 9999 + 10001 ))
+        torchrun --nproc_per_node "$chip_num" --master_port $random_port "$test_path" \
+        --model_type "$model_type" \
+        --data_type "$data_type" \
+        --test_mode "$test_mode" \
+        --batch_size "$batch_size" \
+        --model_name "$model_name" \
+        --weight_dir "$weight_dir" \
+        --dataset_name "$dataset" \
+        --hardware_type $hardware_type \
+        --case_pair "$case_pair" \
+        --use_refactor "$use_refactor" \
+        --max_position_embedding "$max_position_embedding"
+    else
+        if ! [ -n "$CUDA_VISIBLE_DEVICES" ]; then
+            world_size_str=$(seq -s, 0 $((chip_num-1)))
+            export CUDA_VISIBLE_DEVICES=$world_size_str
+        fi
+        echo "using cuda device $CUDA_VISIBLE_DEVICES"
+        python3 "$test_path" \
+        --model_type "$model_type" \
+        --data_type "$data_type" \
+        --test_mode "$test_mode" \
+        --batch_size "$batch_size" \
+        --model_name "$model_name" \
+        --weight_dir "$weight_dir" \
+        --dataset_name "$dataset" \
+        --hardware_type $hardware_type \
+        --case_pair "$case_pair" \
+        --use_refactor "$use_refactor" \
+        --max_position_embedding "$max_position_embedding"
     fi
-
-    random_port=$(( RANDOM % 9999 + 10001 ))
-    torchrun --nproc_per_node "$chip_num" --master_port $random_port "$test_path" \
-    --model_type "$model_type" \
-    --data_type "$data_type" \
-    --test_mode "$test_mode" \
-    --batch_size "$batch_size" \
-    --model_name "$model_name" \
-    --weight_dir "$weight_dir" \
-    --dataset_name "$dataset" \
-    --hardware_type $hardware_type \
-    --case_pair "$case_pair" \
-    --use_refactor "$use_refactor" \
-    --max_position_embedding "$max_position_embedding"
 
     if [ $? -ne 0 ]; then
         echo "something wrong marked for CI"
-        echo "performance test end marked for CI"
+        if [ "$test_modes" == "performance" ]; then
+            echo "performance test end marked for CI"
+        else
+            echo "precision test end marked for CI"
+        fi
     fi
 }
 

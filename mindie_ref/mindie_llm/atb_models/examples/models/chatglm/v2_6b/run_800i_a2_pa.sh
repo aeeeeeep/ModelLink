@@ -1,6 +1,5 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 # 参数配置以及启动指令的说明见同级目录下的README.md文件
-export MAX_MEMORY_GB=29
 export ASCEND_RT_VISIBLE_DEVICES=0
 export TP_WORLD_SIZE=1
 export MASTER_PORT=20030
@@ -8,8 +7,10 @@ export PYTHONPATH=${llm_path}:$PYTHONPATH
 export IS_BF16=false
 
 # 以下环境变量与性能和内存优化相关，通常情况下无需修改
-export HCCL_OP_BASE_FFTS_MODE_ENABLE=TRUE
 export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
+export ATB_WORKSPACE_MEM_ALLOC_GLOBAL=1
+
+export HCCL_OP_BASE_FFTS_MODE_ENABLE=TRUE
 export ATB_OPERATION_EXECUTE_ASYNC=1
 export TASK_QUEUE_ENABLE=1
 export LCCL_ENABLE_FALLBACK=1

@@ -40,7 +40,11 @@ class FakeGroup:
         return self._rank
 
 
-def set_device_from_rankTable(rank, rank_table):
+def get_rank_table_file():
+    return str(os.getenv("RANKTABLEFILE", ""))
+
+
+def set_device_from_ranktable(rank, rank_table):
     device_found_flag = False
     print_log(rank, logger.info, f'Rank table given, devices selected from json')
     with open(rank_table, 'r', encoding='utf-8') as device_file:
@@ -51,16 +55,30 @@ def set_device_from_rankTable(rank, rank_table):
                 if int(device["rank_id"]) == rank:
                     device_id = int(device["device_id"])
                     device = torch.device(f"npu:{device_id}")
-                    device_found_flag = True                    
-                    break            
+                    device_found_flag = True
+                    break
             if device_found_flag:
-                break    
+                break
     if not device_found_flag:
         raise ValueError(
             f"ERROR: Rank id is not in the rankTableFile, the input rank is "
             f" {rank}"
         )
     return device
+
+
+def initialize_distributed(rank, npu_id, world_size):
+    if npu_id is None:
+        npu_id = rank
+    rank_table = str(os.getenv("RANKTABLEFILE", ""))
+    print_log(rank, logger.info, f'Rank table file location: {rank_table}')
+    if rank_table:
+        device = set_device_from_ranktable(rank, rank_table)
+    else:
+        device = torch.device(f"npu:{npu_id}")
+    torch.npu.set_device(device)
+    logger.info(f"initialize_distributed has been Set")
+    return FakeGroup(rank, world_size), device
 
 
 def initialize_torch_distributed(rank, world_size):
@@ -70,7 +88,7 @@ def initialize_torch_distributed(rank, world_size):
         rank_table = str(os.getenv("RANKTABLEFILE", ""))
         print_log(rank, logger.info, f'Rank table file location: {rank_table}')
         if rank_table:
-            device = set_device_from_rankTable(rank, rank_table)
+            device = set_device_from_ranktable(rank, rank_table)
             torch.npu.set_device(device)
             return FakeGroup(rank, world_size), device
 

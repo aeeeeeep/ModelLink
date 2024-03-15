@@ -27,6 +27,8 @@ class FastLinear(nn.Module):
             is_norm=False,
     ) -> None:
         super().__init__()
+        if not isinstance(weight, torch.Tensor) or weight.dtype not in [torch.float16, torch.bfloat16]:
+            raise ValueError("linear type not matched, please check `config.json` `quantize` parameter")
         self.weight = nn.Parameter(weight)
         if bias is not None:
             self.bias = nn.Parameter(bias)

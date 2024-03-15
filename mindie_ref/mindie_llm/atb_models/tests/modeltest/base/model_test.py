@@ -18,6 +18,7 @@ from datetime import datetime, timedelta, timezone
 from importlib import reload
 from pathlib import Path
 import torch
+import torch.nn.functional as F
 try:
     import torch_npu
 except ModuleNotFoundError:
@@ -25,17 +26,21 @@ except ModuleNotFoundError:
 import numpy as np
 import pandas as pd
 import transformers
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from thefuzz import process
 from tqdm import tqdm
-ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
-sys.path.append(os.path.join(ATB_SPEED_HOME_PATH, "../.."))
-sys.path.append(ATB_SPEED_HOME_PATH)
-from atb_llm.utils import env
-from atb_llm.utils.cpu_binding import NpuHbmInfo
-from examples.server.cache import CacheConfig, CacheManager, ModelConfig
-from examples.server.generate import decode_token, generate_req
-from examples.server.request import request_from_text, request_from_token
-from examples.run_pa import PARunner
+try:
+    ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
+    sys.path.append(os.path.join(ATB_SPEED_HOME_PATH, "../.."))
+    sys.path.append(ATB_SPEED_HOME_PATH)
+    from atb_llm.utils import env
+    from atb_llm.utils.cpu_binding import NpuHbmInfo
+    from examples.server.cache import CacheConfig, CacheManager, ModelConfig
+    from examples.server.generate import decode_token, generate_req
+    from examples.server.request import request_from_text, request_from_token
+    from examples.run_pa import PARunner
+except TypeError:
+    pass
 from .human_eval import evaluate_functional_correctness
 
 
@@ -117,6 +122,7 @@ dtype_map = {"bf16": torch.bfloat16, "fp16": torch.float16}
 core_map = {"NPU": "npu", "GPU": "cuda"}
 prompt_map = {"GSM8K": "", "TruthfulQA": QA_PRIMER}
 question_num = {"GSM8K": 11, "TruthfulQA": 12}
+CEval_0_shot = {"chatglm2_6b"}
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -131,10 +137,6 @@ class ModelTest:
         self.script_path = os.path.dirname(os.path.abspath(__file__))
         self.data_dir = data_dir
         self.dataset_name = dataset_name
-        if test_mode == 'simplified':
-            self.dataset_path = os.path.join(self.script_path, "../dataset/simplified", self.dataset_name + ".jsonl")
-        elif test_mode == 'full':
-            self.dataset_path = os.path.join(self.script_path, "../dataset/full", self.dataset_name)
         self.batch_size = batch_size
         self.device_id = device_id
         self.result_dir = result_dir
@@ -176,8 +178,7 @@ class ModelTest:
         pass
 
     def prepare_environ(self):
-        if self.hardware_type == "NPU":
-            torch.npu.set_compile_mode(jit_compile=False)
+        pass
 
     def get_dataset_list(self):
         return ["GSM8K", "TruthfulQA", "MMLU", "CEval", "BoolQ"]
@@ -188,7 +189,6 @@ class ModelTest:
         os.unsetenv("tensor_folder")
 
     def __prepare_and_check(self):
-        reload(env)
         max_csv_limit = sys.maxsize
         while True:
             try:
@@ -196,13 +196,15 @@ class ModelTest:
                 break
             except OverflowError:
                 max_csv_limit = int(max_csv_limit / 10)
+        if self.hardware_type == "NPU":
+            reload(env)
         if self.model_type == "fa" and self.test_mode != "full":
             self.__patch_hf_transformers_utils()
         os.environ['test_mode'] = self.test_mode
         if self.test_mode == "full":
             self.dataset_list = self.get_dataset_list()
             if self.dataset_name not in self.dataset_list:
-                self.logger.info(f"{self.model_name} not support {self.dataset_name}, skip")
+                self.logger.info(f"{self.model_name} not support {self.dataset_name}, please check")
         if self.test_mode != "performance":
             folder_path = f"{self.data_dir}/{self.hardware_type}/{self.dataset_name}/batch{self.batch_size}"
             if os.path.exists(folder_path):
@@ -218,14 +220,9 @@ class ModelTest:
             os.environ['HCCL_DETERMINISTIC'] = "1"
         os.environ['core_type'] = self.core_type
         self.local_rank, self.world_size = int(os.getenv("RANK", "0")), int(os.getenv("WORLD_SIZE", "1"))
-        if self.hardware_type == "GPU":
-            self.__setup_model_parallel()
-            self.tokenizer, self.model = self.get_model(self.hardware_type, self.model_type, self.data_type)
-            self.device = self.model.device
-
+       
         torch.manual_seed(1)
         self.device_type = self.__get_device_type()
-        self.logger.info("tokenizer and model get success.")
 
         if self.hardware_type == "NPU":
             if ATB_HOME_PATH is None:
@@ -415,32 +412,56 @@ class ModelTest:
                     self.batch_size) + " result saved in " + csv_performance_path)
                 self.logger.info(self.model_name + " " + " batch" + str(
                     self.batch_size) + " formatted result saved in " + csv_performance_formatted_path)
-
+        
+        warmup()
         run_performance_test()
         self.logger.info("performance test end")
 
     def __run_precision(self):
-        input_dict = {
-            'rank': self.local_rank,
-            'world_size': self.world_size,
-            'max_prefill_tokens': -1,
-            'block_size': 128,
-            'model_path': self.weight_dir,
-            'is_bf16': True if self.data_type == "bf16" else False,
-            'max_position_embeddings': self.max_position_embedding if self.max_position_embedding != -1 else None,
-            'max_batch_size': self.batch_size,
-            'use_refactor': self.use_refactor,
-            'max_input_length': 1024,
-            'max_output_length': 512,
-        }
-        self.pa_runner = PARunner(**input_dict)
-        self.logger.info(str(self.local_rank) + f'pa_runner: {self.pa_runner}')
-        self.pa_runner.warm_up()
+        self.logger.info("precision test start")
+        if self.hardware_type == "NPU":
+            input_dict = {
+                'rank': self.local_rank,
+                'world_size': self.world_size,
+                'max_prefill_tokens': -1,
+                'block_size': 128,
+                'model_path': self.weight_dir,
+                'is_bf16': True if self.data_type == "bf16" else False,
+                'max_position_embeddings': self.max_position_embedding if self.max_position_embedding != -1 else None,
+                'max_batch_size': self.batch_size,
+                'use_refactor': self.use_refactor,
+                'max_input_length': 2048,
+                'max_output_length': 512,
+            }
+            self.pa_runner = PARunner(**input_dict)
+            self.logger.info(str(self.local_rank) + f'pa_runner: {self.pa_runner}')
+            self.pa_runner.warm_up()
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(self.weight_dir, use_fast=False, trust_remote_code=True)
+            if self.model_name == "qwen":
+                self.tokenizer.pad_token_id = self.tokenizer.eod_id
+                self.tokenizer.bos_token_id = self.tokenizer.eod_id
+                self.tokenizer.eos_token_id = self.tokenizer.eod_id
+            if self.model_name == "starcoder":
+                self.tokenizer.pad_token = "[PAD]" 
+
+            self.model = AutoModelForCausalLM.from_pretrained(self.weight_dir, device_map="auto", trust_remote_code=True)
+            self.device = self.model.device
+
         if self.test_mode == "simplified":
+            self.dataset_path = os.path.join(self.script_path, "../dataset/simplified", self.dataset_name + ".jsonl")
             self.__run_simplified_dataset()
         elif self.test_mode == "full":
-            if self.dataset_name == 'MMLU' or self.dataset_name == 'CEval':
-                self.__run_full_dataset_mmlu_or_ceval()
+            self.dataset_path = os.path.join(self.script_path, "../dataset/full", self.dataset_name)
+            if self.dataset_name == 'CEval':
+                if self.model_name in CEval_0_shot:
+                    self.dataset_path += "_0_shot"
+                    self.__run_full_dataset_ceval_0_shot()
+                else:
+                    self.dataset_path += "_5_shot"
+                    self.__run_full_dataset_ceval_5_shot()
+            elif self.dataset_name == 'MMLU':
+                self.__run_full_dataset_mmlu()
             elif self.dataset_name == 'GSM8K':
                 self.__run_full_dataset_gsm8k()
             elif self.dataset_name == 'TruthfulQA':
@@ -452,6 +473,7 @@ class ModelTest:
         else:
             self.logger.error(self.test_mode + " not support")
             raise RuntimeError(f"{self.test_mode} not support")
+        self.logger.info("precision test end")
 
     def __run_simplified_dataset(self):
         if self.dataset_name not in prompt_map.keys():
@@ -489,7 +511,7 @@ class ModelTest:
                     for idx in range(len(outputs)):
                         output = outputs.tolist()[idx][len(tokenizer_out["input_ids"][idx]):]
                         response = self.tokenizer.decode(output)
-                        if torch.distributed.get_rank() == 0:
+                        if self.pa_runner.rank == 0:
                             self.logger.info(response)
                 else:
                     req_list = [
@@ -504,16 +526,101 @@ class ModelTest:
                             self.logger.info(f'Answer: {generate_text}')
                             self.logger.info(f'Generate token num: {token_num_list[i]}')
                 epoch_id += 1
+    
+    def __run_full_dataset_ceval_0_shot(self):
+        choices = ["A", "B", "C", "D"]
+        if self.hardware_type == "NPU":
+            choice_tokens = [self.pa_runner.tokenizer.encode(choice, add_special_tokens=False)[0] for choice in choices]
+        else:
+            choice_tokens = [self.tokenizer.encode(choice, add_special_tokens=False)[0] for choice in choices]
+            
+        extraction_prompt = '综上所述，ABCD中正确的选项是：'
 
-    def __run_full_dataset_mmlu_or_ceval(self):
+        def build_prompt(text):
+            return "[Round {}]\n\n问：{}\n\n答：".format(1, text)
+
+        correct_total = 0
+        sum_total = 0
+        result_total = []
+        is_result = False
+        if self.__get_rank() == 0:
+            is_result = True
+        with torch.no_grad():
+            for entry in glob.glob((Path(self.dataset_path) / "val/**/*.jsonl").as_posix(),
+                                        recursive=True):
+                correct = 0
+                dataset = []
+
+                with open(entry, encoding='utf-8') as file:
+                    for line in file:
+                        dataset.append(json.loads(line))
+
+                sum = len(dataset)
+
+                dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size)
+                for batch in tqdm(dataloader):
+                    texts = batch["inputs_pretokenized"]
+                    queries = [build_prompt(query) for query in texts]
+                    if self.model_type == "fa":
+                        inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
+                                                max_length=2048).to(0)
+                        tokenizer_out_ids = inputs.input_ids.to(0)
+                        attention_mask = inputs.attention_mask.to(0)
+                        outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
+                                                      do_sample=False, max_new_tokens=512)
+                        intermediate_outputs = []
+                        for idx in range(len(outputs)):
+                            output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
+                            response = self.tokenizer.decode(output)
+                            intermediate_outputs.append(response)
+                        answer_texts = [text + intermediate + "\n" + extraction_prompt for text, intermediate in
+                                        zip(texts, intermediate_outputs)]
+                        input_tokens = [build_prompt(answer_text) for answer_text in answer_texts]
+                        inputs = self.tokenizer(input_tokens, padding=True, return_tensors="pt", truncation=True, max_length=2048).to(0)
+                        outputs = self.model(**inputs)
+                        logits = outputs.logits[:, -1, :]
+                        logits = logits[:, choice_tokens]
+                        preds = logits.argmax(dim=-1)
+                        correct += (preds.cpu() == batch["label"]).sum().item()
+
+                    else:
+                        generate_text_list, _, _ = self.pa_runner.infer(queries, self.batch_size, 512, False)
+                        answer_texts = [text + intermediate + "\n" + extraction_prompt for text, intermediate in
+                            zip(texts, generate_text_list)]
+                        input_tokens = [build_prompt(answer_text) for answer_text in answer_texts]
+                        logits_save_folder = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}")
+                        os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "1"
+                        os.environ['ATB_LLM_LOGITS_SAVE_FOLDER'] = logits_save_folder
+                        _, _, _ = self.pa_runner.infer(input_tokens, self.batch_size, 1, False)
+                        os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "0"
+                        if is_result:
+                            logits = torch.load(os.path.join(logits_save_folder, 'logits_0.pth'))
+                            logits = logits[:, choice_tokens]
+                            preds = logits.argmax(dim=-1)
+                            correct += (preds.cpu() == batch["label"]).sum().item()            
+                
+                if is_result:        
+                    filename = os.path.basename(entry)
+                    result = [filename, correct / sum, correct, sum]
+                    self.result_logger.debug(f"result:{result}")
+                    result_total.append(result)
+                    correct_total += correct
+                    sum_total += sum
+            if is_result:
+                total = ["total", correct_total / sum_total, correct_total, sum_total]
+                self.result_logger.debug(f"total result:{total}")
+                result_total.insert(0, total)
+        if is_result:
+            self.__save_result(result_total)
+    
+    def __run_full_dataset_ceval_5_shot(self):
+        pass
+
+    def __run_full_dataset_mmlu(self):
         choices = ["A", "B", "C", "D"]
 
-        def format_example(dataset_type, query, answer):
-            if dataset_type == "MMLU":
-                prompt = "The following is a multiple-choice question. Please choose the most suitable one among A, B, C and D as the answer to this question.\n\n"
-            elif dataset_type == "CEval":
-                prompt = "下面是一道选择题。请在A、B、C、D中选择一个最合适的答案作为本题的答案。\n\n"
-
+        def format_example(query, answer):
+            prompt = "The following is a multiple-choice question. Please choose the most suitable one among A, B, C and D as the answer to this question.\n\n"
             example = (prompt + query + "\n")
             for choice, ans in zip(choices, answer):
                 example += f'{choice}. {ans}\n'
@@ -543,48 +650,24 @@ class ModelTest:
                 return choices[choice_list.index(process.extractOne(gen, choice_list)[0])]
             return res.group(1)
 
-        def extract_choice_ceval(gen, choice_list):
-            res = re.search(
-                r"(?:(?:选|选择|选定)[：:]?\s*|(?:(?:答案|选项)(?![^ABCD]{0,10}?(?:不|非)[^ABCD]{0,10}?(?:是|选|为|：|:|】))[^ABCD]{0,10}?(?:是|选|为|：|:|】))[^ABCD]{0,10}?)(A|B|C|D)(?:选项)?(?:\)|。|\.|，|,|．|、|A|B|C|D|$|：|:|\)|）)",
-                gen,
-            )
-            if res is None:
-                res = re.search(
-                    r"(A|B|C|D)(?:选?项)?(?![^ABCD]{0,4}?(?:不|非)[^ABCD]{0,4}?(?:正确|对[的，。：]|符合))[^ABCD]{0,4}?(?:正确|对[的，。：]|符合)",
-                    gen,
-                )
-            if res is None:
-                res = re.search(r"^[\(（]?(A|B|C|D)(?:。|\)|）|\.|，|,|．|：|:|$)", gen)
-            if res is None:
-                res = re.search(r"(?<![a-zA-Z])(A|B|C|D)(?![a-zA-Z=])", gen)
-            if res is None:
-                return choices[choice_list.index(process.extractOne(gen, choice_list)[0])]
-            return res.group(1)
-
-        def extract_answer(dataset_type, response, ansList):
+        def extract_answer(response, ansList):
             gen = process_before_extraction(
                 response, {choice: ans for choice, ans in zip(choices, ansList)}
             )
-            if dataset_type == "MMLU":
-                pred = extract_choice_mmlu(gen, ansList)
-            elif dataset_type == "CEval":
-                pred = extract_choice_ceval(gen, ansList)
+            pred = extract_choice_mmlu(gen, ansList)
             return pred
 
         correct_total = 0
         sum_total = 0
         result_total = []
         is_result = False
-        if torch.distributed.get_rank() == 0:
+        if self.pa_runner.rank == 0:
             is_result = True
         with torch.no_grad():
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.csv").as_posix(),
                                         recursive=True), desc='global'):
-                if self.dataset_name == "MMLU":
-                    val_df = pd.read_csv(entry, names=['question', 'A', 'B', 'C', 'D', 'answer']).astype(str)
-                elif self.dataset_name == "CEval":
-                    val_df = pd.read_csv(entry).astype(str)
-
+                val_df = pd.read_csv(entry, names=['question', 'A', 'B', 'C', 'D', 'answer']).astype(str)
+               
                 correct = 0
                 sum = len(val_df)
                 dataset = []
@@ -594,7 +677,7 @@ class ModelTest:
 
                 dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size)
                 for batch in tqdm(dataloader):
-                    queries = [format_example(self.dataset_name, query, [ansA, ansB, ansC, ansD]) \
+                    queries = [format_example(query, [ansA, ansB, ansC, ansD]) \
                                for query, ansA, ansB, ansC, ansD in
                                zip(batch["question"], batch["A"], batch["B"], batch["C"], batch["D"])]
                     if self.model_type == "fa":
@@ -609,7 +692,7 @@ class ModelTest:
                                     zip(batch['A'], batch['B'], batch['C'], batch['D'], batch['answer'])):
                                 output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
                                 response = self.tokenizer.decode(output)
-                                pred = extract_answer(self.dataset_name, response, [ansA, ansB, ansC, ansD])
+                                pred = extract_answer(response, [ansA, ansB, ansC, ansD])
                                 if pred == ans:
                                     correct += 1
                     else:
@@ -618,7 +701,7 @@ class ModelTest:
                             for idx, (ansA, ansB, ansC, ansD, ans) in enumerate(
                                     zip(batch['A'], batch['B'], batch['C'], batch['D'], batch['answer'])):
                                 response = generate_text_list[idx]
-                                pred = extract_answer(self.dataset_name, response, [ansA, ansB, ansC, ansD])
+                                pred = extract_answer(response, [ansA, ansB, ansC, ansD])
                                 if pred == ans:
                                     correct += 1
 
@@ -667,7 +750,7 @@ class ModelTest:
         sum_total = 0
         result_total = []
         is_result = False
-        if torch.distributed.get_rank() == 0:
+        if self.pa_runner.rank == 0:
             is_result = True
         with torch.no_grad():
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.jsonl").as_posix(),
@@ -793,7 +876,7 @@ class ModelTest:
         device = self.model.device
         result_total = []
         is_result = False
-        if torch.distributed.get_rank() == 0:
+        if self.pa_runner.rank == 0:
             is_result = True
         with torch.no_grad():
             frame = pd.read_csv((Path(self.dataset_path) / "TruthfulQA.csv").as_posix())
@@ -820,22 +903,24 @@ class ModelTest:
             self.__save_result(result_total)
 
     def __run_full_dataset_boolq(self):
-        def build_prompt(text, passage):
-            prompt = "The following is a true or false question. Please judge the \"question\" based on the \"passage\". The answer should only provide \"true\" or \"false\".\n"
-            prompt = prompt + f"passage:{passage}\nquestion:{text}?\nAnswer:"
+        sample_yes = "How can we learning machine learning: yes"
+        sample_no = "How can we learning machine learning: no"
+        if self.model_type == "fa":
+            choice_tokens = [self.tokenizer([sample_yes], return_tensors="pt", max_length=2048, add_special_tokens=None).input_ids[0, -1].item(),
+                             self.tokenizer([sample_no], return_tensors="pt", max_length=2048, add_special_tokens=None).input_ids[0, -1].item()]
+        else:
+            choice_tokens = [self.pa_runner.tokenizer([sample_yes], return_tensors="pt", max_length=2048, add_special_tokens=False).input_ids[0, -1].item(),
+                             self.pa_runner.tokenizer([sample_no], return_tensors="pt", max_length=2048, add_special_tokens=False).input_ids[0, -1].item()]
+        
+        def build_prompt(title, text, passage):
+            prompt = f"{title} -- {passage}\nQuestion: {text}?\nAnswer:"
             return prompt
-
-        def is_correct(completion, answer):
-            first_word = re.split(r'[^a-zA-Z]', completion)[0]
-            if first_word == answer:
-                return True
-            return False
 
         correct_total = 0
         sum_total = 0
         result_total = []
         is_result = False
-        if torch.distributed.get_rank() == 0:
+        if self.__get_rank() == 0:
             is_result = True
         with torch.no_grad():
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.jsonl").as_posix(),
@@ -844,66 +929,79 @@ class ModelTest:
                 with open(entry, encoding='utf-8') as f:
                     for line in f:
                         line_json = json.loads(line)
-                        if line_json['answer'] == True:
-                            line_json['answer'] = 'True'
-                        elif line_json['answer'] == False:
-                            line_json['answer'] = 'False'
                         dataset.append(line_json)
 
-                curnum = 0
                 correct = 0
                 sum = len(dataset)
                 dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size)
                 for batch in tqdm(dataloader):
+                    titles = batch["title"]
                     texts = batch["question"]
                     passages = batch["passage"]
-                    queries = [build_prompt(query, passage) for query, passage in zip(texts, passages)]
+                    queries = [build_prompt(title, query, passage) for title, query, passage in zip(titles, texts, passages)]
                     if self.model_type == "fa":
                         inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
-                                                max_length=2048).to(self.model.device)
-                        tokenizer_out_ids = inputs.input_ids.to(self.model.device)
-                        attention_mask = inputs.attention_mask.to(self.model.device)
-                        outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
-                                                      do_sample=False, max_new_tokens=512)
+                                                max_length=2048).to(0)
+                        outputs = self.model(**inputs)
+                        logits = outputs.logits[:, -1, :]
+                        logits_softmax = F.log_softmax(logits.float(), dim=-1)
+                        logits_softmax = logits_softmax[:, choice_tokens]
                         if is_result:
                             for idx, ans in enumerate(batch['answer']):
-                                output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
-                                response = self.tokenizer.decode(output)
-                                acc = is_correct(response, ans)
+                                choice = (logits_softmax[idx, 0] > logits_softmax[idx, 1]).cpu()
+                                acc = choice == ans
                                 if acc:
                                     correct += 1
                     else:
-                        generate_text_list, _, _ = self.pa_runner.infer(queries, self.batch_size, 512, True)
+                        logits_save_folder = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}")
+                        os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "1"
+                        os.environ['ATB_LLM_LOGITS_SAVE_FOLDER'] = logits_save_folder
+                        _, _, _ = self.pa_runner.infer(queries, self.batch_size, 1, False)
+                        os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "0"
                         if is_result:
+                            logits = torch.load(os.path.join(logits_save_folder, 'logits_0.pth'))
+                            logits_softmax = F.log_softmax(logits.float(), dim=-1)
+                            logits_softmax = logits_softmax[:, choice_tokens]
                             for idx, ans in enumerate(batch['answer']):
-                                response = generate_text_list[idx]
-                                acc = is_correct(response, ans)
+                                choice = (logits_softmax[idx, 0] > logits_softmax[idx, 1]).cpu()
+                                acc = choice == ans
                                 if acc:
                                     correct += 1
-                                curnum += 1
 
-                filename = os.path.basename(entry)
-                result = [filename, correct / sum, correct, sum]
-                self.result_logger.debug(f"result:{result}")
-                result_total.append(result)
-                correct_total += correct
-                sum_total += sum
-            total = ["total", correct_total / sum_total, correct_total, sum_total]
-            result_total.insert(0, total)
+                if is_result:
+                    filename = os.path.basename(entry)
+                    result = [filename, correct / sum, correct, sum]
+                    self.result_logger.debug(f"result:{result}")
+                    result_total.append(result)
+                    correct_total += correct
+                    sum_total += sum
+            if is_result:
+                total = ["total", correct_total / sum_total, correct_total, sum_total]
+                result_total.insert(0, total)
         if is_result:
             self.__save_result(result_total)
 
     def __run_full_dataset_humaneval(self):
-
-        def filter_code(completion: str) -> str:
-            completion = completion.lstrip("\n")
-            return completion.split("\n\n")[0]
-
-        def fix_indents(text: str) -> str:
-            return text.replace("\t", "    ")
+        def cleanup_code(code: str) -> str:
+            code_splits = code.split("\n")
+            is_empty_line = False
+            ind_empty_line = None
+            for i, line in enumerate(code_splits):
+                if len(line.strip()) > 0 and line[0] != ' ' and line[0] != '\t':
+                    is_empty_line = True                    
+                    ind_empty_line = i                    
+                    break            
+            if is_empty_line:
+                code = "\n".join(code_splits[:ind_empty_line])
+            else:
+                end_words = ["\ndef", "\nclass", "\n#", "\nassert", '\n"""', "\nprint", "\nif", "\n\n\n"]
+                for w in end_words:
+                    if w in code:
+                        code = code[:code.rfind(w)]
+            return code
 
         is_result = False
-        if torch.distributed.get_rank() == 0:
+        if self.__get_rank() == 0:
             is_result = True
         with torch.no_grad():
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.jsonl").as_posix(),
@@ -915,38 +1013,40 @@ class ModelTest:
                         dataset.append(line_json)
 
                 correct = 0
-                task_id = 0
                 samples = []
-                dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
+                dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size)
                 for batch in tqdm(dataloader):
-                    queries = [prompt.replace("    ", "\t") for prompt in batch["prompt"]]
+                    task_ids = [task_id.split('/')[1] for task_id in batch["task_id"]]
+                    queries = [prompt.strip() for prompt in batch["prompt"]]
                     if self.model_type == "fa":
                         inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
-                                                max_length=2048).to(self.model.device)
-                        tokenizer_out_ids = inputs.input_ids.to(self.model.device)
-                        attention_mask = inputs.attention_mask.to(self.model.device)
+                                                max_length=2048).to(0)
+                        tokenizer_out_ids = inputs.input_ids.to(0)
+                        attention_mask = inputs.attention_mask.to(0)
                         outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
                                                       do_sample=False, max_new_tokens=512)
                         if is_result:
-                            for idx, ans in enumerate(batch['answer']):
-                                output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
+                            for idx, output in enumerate(outputs.tolist()):
+                                output = output[len(inputs["input_ids"][idx]):]
                                 response = self.tokenizer.decode(output)
-                                acc = is_correct(response, ans)
-                                if acc:
-                                    correct += 1
+                                response_cleaned_up = cleanup_code(response)
+                                self.logger.info("response_cleaned_up: %s", response_cleaned_up)
+                                result = dict(
+                                    task_id="HumanEval/" + task_ids[idx],
+                                    completion=response_cleaned_up,
+                                )
+                                samples += [result]
                     else:
                         generate_text_list, _, _ = self.pa_runner.infer(queries, self.batch_size, 512, True)
-
-                        generate_text_list = [filter_code(fix_indents(completion)) for completion in generate_text_list]
+                        generate_text_list = [cleanup_code(completion) for completion in generate_text_list]
                         if is_result:
-                            print("generate_text_list_1: ", generate_text_list)
-                        for sample in generate_text_list:
+                            self.logger.info("generate_text_list_cleaned_up: %s", generate_text_list)
+                        for idx, sample in enumerate(generate_text_list):
                             result = dict(
-                                task_id="HumanEval/" + str(task_id),
+                                task_id="HumanEval/" + task_ids[idx],
                                 completion=sample,
                             )
                             samples += [result]
-                    task_id += 1
                 if is_result:
                     self.__save_result(samples)
         if is_result:
@@ -954,7 +1054,7 @@ class ModelTest:
             self.result_logger.debug(results)
 
     def __compare_results(self):
-        if self.test_mode != "performance" and self.hardware_type == "NPU" and torch.distributed.get_rank() == 0:
+        if self.test_mode != "performance" and self.hardware_type == "NPU" and self.pa_runner.rank == 0:
             if self.test_mode == "simplified":
                 self.__compare_simplified_dataset_results()
             elif self.test_mode == "full":
@@ -1169,6 +1269,12 @@ class ModelTest:
             csv_writer.writerow(csv_result)
             self.logger.info(self.model_name + " " + self.dataset_name + " batch" + str(
                 self.batch_size) + " result saved in result/full_test_result.csv")
+
+    def __get_rank(self):
+        if self.hardware_type == "GPU":
+            return torch.cuda.current_device()
+        else:
+            return self.pa_runner.rank
 
     def __get_device_type(self):
         if self.hardware_type == "NPU":
