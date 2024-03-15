@@ -437,13 +437,15 @@ class ModelTest:
             self.logger.info(str(self.local_rank) + f'pa_runner: {self.pa_runner}')
             self.pa_runner.warm_up()
         else:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.weight_dir, use_fast=False, trust_remote_code=True)
+            self.tokenizer = AutoTokenizer.from_pretrained(self.weight_dir, use_fast=False, padding_side="left", truncation_side="left", trust_remote_code=True)
             if self.model_name == "qwen":
                 self.tokenizer.pad_token_id = self.tokenizer.eod_id
                 self.tokenizer.bos_token_id = self.tokenizer.eod_id
                 self.tokenizer.eos_token_id = self.tokenizer.eod_id
             if self.model_name == "starcoder":
-                self.tokenizer.pad_token = "[PAD]" 
+                self.tokenizer.pad_token = "[PAD]"
+            if self.model_name == "llama":
+                self.tokenizer.pad_token_id = 0
 
             self.model = AutoModelForCausalLM.from_pretrained(self.weight_dir, device_map="auto", trust_remote_code=True)
             self.device = self.model.device
