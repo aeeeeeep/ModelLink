@@ -113,21 +113,9 @@ def quant_model(args_quant, verbose=False):
 
     print("model loaded, starting quant model...")
     dataset_calib = get_calib_dataset(tokenizer)
-    quant_config = QuantConfig(w_bit=8, a_bit=16, disable_names=[], dev_type='cpu', act_method=3, pr=1.0, mm_tensor=False, w_hessian=False)
-    calibrator = Calibrator(model, quant_config, calib_data=dataset_calib, disable_level='L0')
+    quant_config = QuantConfig(w_bit=8, a_bit=16, disable_names=[], dev_type='cpu', act_method=3, pr=1.0, mm_tensor=False)
+    calibrator = Calibrator(model, quant_config, calib_data=None, disable_level='L0')
     calibrator.run()
-
-    if verbose:
-        for item in dataset_calib:
-            with torch.no_grad():
-                output = model.generate(
-                    item[0],
-                    max_new_tokens=32,
-                    attention_mask=item[2],
-                    use_cache=True,
-                )
-                res = tokenizer.batch_decode(output, skip_special_tokens=True, clean_up_tokenization_spaces=False)
-                print(res)
     
     print("starting saving model...")
     calibrator.save(args_quant.output_path)

@@ -201,8 +201,8 @@ atb::Status PagedLayer(const Bloom7bPagedLayerParam &param, atb::Operation **ope
     if (param.isPrefill) {
         atb::infer::SelfAttentionParam selfAttentionParam;
         selfAttentionParam.headNum = param.headNum;
-        selfAttentionParam.qScale = 1.0f / std::sqrt(param.dk);
-        selfAttentionParam.qkScale = 1.0f;
+        selfAttentionParam.kvHeadNum = param.headNum;
+        selfAttentionParam.qkScale = 1.0f / std::sqrt(param.dk);
         selfAttentionParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
         selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_ALIBI;
         CREATE_OPERATION(selfAttentionParam, &attentionNode.operation);
