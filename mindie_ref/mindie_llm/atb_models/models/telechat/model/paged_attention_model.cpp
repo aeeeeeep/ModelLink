@@ -1,5 +1,4 @@
-/* 
- * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
+/* Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +20,7 @@
 #include "telechat/layer/embedding_layer.h"
 #include "paged_attention_model.h"
 #include "atb_speed/utils/model_factory.h"
+#include "parallel_lmhead.h"
 
 namespace atb_speed {
 namespace telechat {
@@ -29,24 +29,19 @@ const int WEIGHT_COUNT_PER_LAYER = 10;
 const int WORD_EMBEDDING_WEIGHT_COUNT = 1;
 const int FINAL_RMSNORM_WEIGHT_COUNT = 1;
 const int OUT_LM_HEAD_WEIGHT_COUNT = 1;
-const int INTERNAL_TENSOR_COUNT_BEFORE_LAYER = 3;
+const int INTERNAL_TENSOR_COUNT_BEFORE_LAYER = 1;
 const int OPERATION_COUNT_BEFORE_LAYER = 1;
 const int OPERATION_COUNT_AFTER_LAYER = 2;
 const int OUT_TENSOR_NUM = 1;
 
 enum InTensorId {
     IN_TENSOR_INPUT_IDS = 0,
-    IN_TENSOR_POSITIONID,
     IN_TENSOR_COSEMBED,
     IN_TENSOR_SINEMBED,
     IN_TENSOR_ATTENTIONMASK,
     IN_TENSOR_BLOCK_TABLES,
     IN_TENSOR_SLOTS,
     IN_TENSOR_INPUT_LENGTHS,
-    IN_TENSOR_PAST_KEY,
-    IN_TENSOR_PAST_VALUE,
-    IN_TOKENOFFSET,
-    IN_SEQLEN,
     IN_TENSOR_LOGTIS_INDICES,
     IN_HOLDER,
     IN_TENSOR_MAX,
@@ -108,11 +103,14 @@ atb::Status PAModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDesc
         return atb::ERROR_INVALID_GRAPH;
     }
 
+    const int64_t outDim = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.shape.dims[0];
     outTensorDescs.at(0) = graph_.weightTensors.at(0).desc;
-    outTensorDescs.at(0).shape.dimNum = 3;
-    outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(IN_TENSOR_INPUT_IDS).shape.dims[0];
-    outTensorDescs.at(0).shape.dims[1] = inTensorDescs.at(IN_TENSOR_INPUT_IDS).shape.dims[1];
-    outTensorDescs.at(0).shape.dims[2] = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.shape.dims[1];
+    auto outDimNum = inTensorDescs.at(IN_TENSOR_INPUT_IDS).shape.dimNum + 1;
+    outTensorDescs.at(0).shape.dimNum = outDimNum;
+    for (uint i = 0; i < outDimNum - 1; i++) {
+        outTensorDescs.at(0).shape.dims[i] = inTensorDescs.at(IN_TENSOR_INPUT_IDS).shape.dims[i];
+    }
+    outTensorDescs.at(0).shape.dims[outDimNum - 1] = outDim; 
 
     if (param_.isPrefill) {
         outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(IN_TENSOR_LOGTIS_INDICES).shape.dims[0];
@@ -132,8 +130,7 @@ int64_t PAModel::BuildGraph()
     graph_.kCacheTensors.resize(param_.layerNum);
     graph_.vCacheTensors.resize(param_.layerNum);
 
-    const int inTensorSize = IN_TENSOR_MAX + param_.layerNum;
-    graph_.inTensors.resize(inTensorSize);
+    graph_.inTensors.resize(IN_TENSOR_MAX);
 
     const int outTensorSize = OUT_TENSOR_NUM;
     graph_.outTensors.resize(outTensorSize);
@@ -142,7 +139,7 @@ int64_t PAModel::BuildGraph()
     ATB_LOG(INFO) << "TeleChat_7b_PAModel nodeSize is " << nodeSize;
     graph_.nodes.resize(nodeSize);
 
-    const int internalTensorSize = graph_.nodes.size() + 1;
+    const int internalTensorSize = graph_.nodes.size() - 1;
     graph_.internalTensors.resize(internalTensorSize);
 
     int nodeId = 0;
@@ -208,10 +205,17 @@ int64_t PAModel::BuildGraph()
     finalRmsNormNode.outTensors = { &graph_.internalTensors.at(finalRmsNormOutTensorId) };
 
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
-    atb::infer::LinearParam linearParam;
-    linearParam.hasBias = false;
-    CREATE_OPERATION(linearParam, &op);
+    atb_speed::common::ParallelLmHeadParam linearParam;
+    if (param_.isLmHeadParallel) {
+        linearParam.rank = param_.rank;
+        linearParam.rankSize = param_.rankSize;
+    }
+    linearParam.unpadInputs = true;
+    linearParam.gatherAhead = param_.isPrefill;
+    linearParam.backend = param_.backend;
+    ParallelLmHead(linearParam, &op);
     lmHeadNode.operation.reset(op);
+
     const int finalLmHeadWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
     
     if (param_.isPrefill) {
@@ -229,11 +233,6 @@ int64_t PAModel::BuildGraph()
 atb::Status PAModel::ParseParam(const std::string &param)
 {
     nlohmann::json paramJson = nlohmann::json::parse(param);
-    tokenOffset_.clear();
-    for (auto item : paramJson["tokenOffset"]) {
-        tokenOffset_.push_back(item.get<int>());
-    }
-
     seqLen_.clear();
     for (auto item : paramJson["seqLen"]) {
         seqLen_.push_back(item.get<int>());
@@ -251,7 +250,7 @@ atb::Status  PAModel::BindParamHostTensor(uint32_t nodeId)
     }
 
     auto &node = graph_.nodes.at(nodeId);
-    const uint32_t seqLenTensorId = 19;
+    const uint32_t seqLenTensorId = 18;
     node.variantPack.inTensors.at(seqLenTensorId).hostData = seqLen_.data();
 
     return atb::NO_ERROR;

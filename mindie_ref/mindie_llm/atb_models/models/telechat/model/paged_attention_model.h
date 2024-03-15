@@ -33,6 +33,7 @@ public:
         bool transposedWeight = false;
         bool isPrefill = false;
         std::string backend = "hccl";
+        bool isLmHeadParallel = false;
         int64_t FromString(const std::string &param);
     };
 

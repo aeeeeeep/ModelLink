@@ -17,7 +17,6 @@
 #include "paged_attention_layer.h"
 #include "layers/mlp_gate_v2.h"
 #include "layers/parallel_layer_v2.h"
-#include "models/telechat/operation/rope.h"
 #include "models/telechat/operation/mlp_gate_v2.h"
 #include "models/telechat/operation/parallel_layer_v2.h"
 
@@ -42,7 +41,7 @@ enum PALayerTensorId {
     IN_V_CACHE,
     IN_BLOCK_TABLES,
     IN_SLOTS,
-    IN_INPUT_LENGTHS,   // 33
+    IN_INPUT_LENGTHS,   // 18
     IN_HOLDER,
 
     OUT_TELECHATLAYEROUT,
@@ -64,7 +63,7 @@ enum PALayerTensorId {
 static const uint64_t IN_TENSOR_COUNT = 20;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 12;
-static const uint64_t NODE_COUNT = 11;
+static const uint64_t NODE_COUNT = 12;
 static const uint64_t REASHAPE_DIMNUM = 3;
 static const uint64_t ROTARY_COEFF = 2;
 
@@ -104,7 +103,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
-    opGraph.internalTensorNum = IN_TENSOR_COUNT;
+    opGraph.internalTensorNum = INTERMEDIATE_TENSOR_COUNT;
     opGraph.nodes.resize(NODE_COUNT);
     if (param.isPrefill) {
         opGraph.name = "Prefill_Pa_Layer";
@@ -155,27 +154,28 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
 
     ATB_LOG(INFO) << "Split";
     atb::infer::SplitParam splitParam;
-    splitParam.splitDim = 3;
+    splitParam.splitDim = -1;
     splitParam.splitNum = 2;
     CREATE_OPERATION(splitParam, &splitKVNode.operation);
     splitKVNode.inTensorIds = { INTERNAL_KVMIXEDLINEAROUT };
     splitKVNode.outTensorIds = { INTERNAL_KMIXEDLINEAROUT, INTERNAL_VMIXEDLINEAROUT };
     splitKVNode.inTensorReshapeFuncs.resize(splitKVNode.inTensorIds.size());
-    splitKVNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        newShape.dimNum = 4;
-        newShape.dims[0] = oldShape.dims[0];
-        newShape.dims[1] = oldShape.dims[1];
-        newShape.dims[2] = param.headNum;
-        newShape.dims[3] = oldShape.dims[2] / param.headNum;
+    splitKVNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) { 
+        ReshapeHeads(oldShape, newShape, param.headNum);
     };
 
     ATB_LOG(INFO) << "ROPE";
-    atb_speed::telechat::RopeParam ropeParam;
+    atb::infer::RopeParam ropeParam;
     ropeParam.rotaryCoeff = ROTARY_COEFF;
-    ropeParam.headNum = param.headNum;
     atb_speed::telechat::Rope(ropeParam, &ropeNode.operation);
     ropeNode.inTensorIds = { INTERNAL_QMIXEDLINEAROUT, INTERNAL_KMIXEDLINEAROUT, IN_COSEMBED, IN_SINEMBED, IN_INPUT_LENGTHS };
     ropeNode.outTensorIds = { INTERNAL_POSITIONEMBEDQ, INTERNAL_POSITIONEMBEDK };
+    ropeNode.inTensorReshapeFuncs.resize(ropeNode.inTensorIds.size());
+    ropeNode.inTensorReshapeFuncs[1] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+        newShape.dimNum = 2;
+        newShape.dims[0] = oldShape.dims[0];
+        newShape.dims[1] = oldShape.dims[1] * oldShape.dims[2];
+    };
 
     atb::infer::ReshapeAndCacheParam reshapeCacheParm;
     CREATE_OPERATION(reshapeCacheParm, &reshapeAndCacheNode.operation);
@@ -186,15 +186,14 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     reshapeAndCacheNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         ReshapeHeads(oldShape, newShape, param.headNum);
     };
-    reshapeAndCacheNode.inTensorReshapeFuncs[1] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        ReshapeHeads(oldShape, newShape, param.headNum);
-    };
 
     if (param.isPrefill) {
         atb::infer::SelfAttentionParam faEnParam;
         faEnParam.headNum = param.headNum;
+        faEnParam.qScale = 1.0f;
         faEnParam.qkScale = 1.0 / sqrt(param.dk);
         faEnParam.kvHeadNum = param.headNum;
+        faEnParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
         CREATE_OPERATION(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERNAL_POSITIONEMBEDQ, INTERNAL_POSITIONEMBEDK, INTERNAL_VMIXEDLINEAROUT,
                                      IN_ATTENTIONMASK, IN_INPUT_LENGTHS};
@@ -204,9 +203,6 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
             ReshapeHeads(oldShape, newShape, param.headNum);
         };
         attentionNode.inTensorReshapeFuncs[1] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            ReshapeHeads(oldShape, newShape, param.headNum);
-        };
-        attentionNode.inTensorReshapeFuncs[2] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
             ReshapeHeads(oldShape, newShape, param.headNum);
         };
     } else {
@@ -232,7 +228,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     selfOutLinearParam.transposeB = param.transposedWeight;
     atb_speed::common::RowParallelLinearV2(selfOutLinearParam, &selfOutLinearNode.operation);
     selfOutLinearNode.inTensorIds = {
-        INTERNAL_SELFOUT, IN_SELFOUTLINEARWEIGHT, IN_SELFOUTLINEARBIAS, IN_HOLDER, IN_HOLDER, IN_HOLDER};
+        INTERNAL_SELFOUT, IN_SELFOUTLINEARWEIGHT, IN_SELFOUTLINEARBIAS, IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_HOLDER};
     selfOutLinearNode.outTensorIds = { INTERNAL_SELFLINEAROUT };
     selfOutLinearNode.inTensorReshapeFuncs.resize(selfOutLinearNode.inTensorIds.size());
     selfOutLinearNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
