@@ -3,11 +3,14 @@ import importlib
 from dataclasses import dataclass
 from typing import Optional, Any
 
+import torch
+
 from transformers import AutoTokenizer, AutoConfig
 from transformers import AutoTokenizer
 from transformers.configuration_utils import PretrainedConfig
 
 from ..llama.modeling_llama import LlamaConfig
+from ..deepseek.flash_causal_deepseek import DeepseekConfig
 from ..qwen.modeling_qwen import QwenConfig
 from ..starcoder.flash_causal_starcoder import StarcoderConfig
 from ..telechat.config import TelechatConfig
@@ -156,6 +159,24 @@ class TelechatRouter(BaseRouter):
             trust_remote_code=self.trust_remote_code,
         )
 
+
+@dataclass
+class DeepseekRouter(BaseRouter):
+    @property
+    def config(self):
+        config = DeepseekConfig.from_pretrained(self.model_name_or_path, torch_dtype=torch.float16)
+        if self.max_position_embeddings:
+            config.max_position_embeddings = self.max_position_embeddings
+        return config
+    
+    def get_tokenizer(self):
+        return AutoTokenizer.from_pretrained(
+            self.model_name_or_path,
+            padding_side="left",
+            trust_remote_code=True,
+            use_fast=False
+        )
+    
 
 @dataclass
 class StarcoderRouter(BaseRouter):
