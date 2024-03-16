@@ -125,7 +125,7 @@ python ./tools/preprocess_data.py \
     cd .. 
 ```
 
-6. Config Bloom-7B pre-training script : examples/bloom/pretrain_bloom_ptd_7B.sh 
+6. Config Bloom-7B pre-training script(Bloom-7B does not support Flash Attention) : examples/bloom/pretrain_bloom_ptd_7B.sh 
 
 ```shell
 # modify the script according to your own  ascend-toolkit path
@@ -322,7 +322,7 @@ python ./tools/preprocess_data.py \
        --tokenizer-type PretrainedFromHF
     cd .. 
 ```
-6. Config Bloom-176B pre-training script: examples/bloom/pretrain_bloom_176b.sh
+6. Config Bloom-176B pre-training script(Bloom-176B does not support Flash Attention): examples/bloom/pretrain_bloom_176b.sh
 
 ```shell
 # modify MASTER_ADDR to the IP address of the master node in the cluster.

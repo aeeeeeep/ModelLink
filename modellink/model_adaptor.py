@@ -24,6 +24,7 @@ from .arguments import parse_args_decorator
 from .training import get_model_wrapper
 from .utils import ALL_MODULE_WRAPPER_CLASSNAMES
 from .checkpointing import _load_base_checkpoint_wrapper, load_checkpoint_wrapper
+from .core.datasets.gpt_dataset import _build_document_sample_shuffle_indices
 
 
 def exe_adaptor():
@@ -46,6 +47,8 @@ def exe_adaptor():
     megatron.model.language_model.TransformerLanguageModel.forward = (seq_length_wrapper(
         megatron.model.language_model.TransformerLanguageModel.forward))
 
+    from megatron.core.datasets.gpt_dataset import GPTDataset
+    GPTDataset._build_document_sample_shuffle_indices = _build_document_sample_shuffle_indices
     megatron.core.tensor_parallel.layers.VocabParallelEmbedding.forward = vocab_embedding_wrapper(
         megatron.core.tensor_parallel.layers.VocabParallelEmbedding.forward)
     megatron.core.tensor_parallel.layers.VocabParallelEmbedding.__init__ = norm_wrapper(

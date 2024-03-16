@@ -386,7 +386,7 @@ python ./tools/preprocess_data.py \
 ```
 
 
-6. 配置 Baichuan-13B 训练脚本: examples/baichuan/pretrain_baichuan_ptd_13B.sh
+6. 配置 Baichuan-13B 训练脚本(Baichuan-13B暂不支持Flash Attention): examples/baichuan/pretrain_baichuan_ptd_13B.sh
 
 
 ```shell

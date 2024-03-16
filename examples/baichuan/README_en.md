@@ -377,7 +377,7 @@ python ./tools/preprocess_data.py \
 ```
 
 
-6. Config Baichuan-13B pre-training script: examples/baichuan/pretrain_baichuan_ptd_13B.sh
+6. Config Baichuan-13B pre-training script(Baichuan-13B does not support Flash Attention): examples/baichuan/pretrain_baichuan_ptd_13B.sh
 
 
 ```shell
