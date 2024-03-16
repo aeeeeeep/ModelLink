@@ -88,8 +88,8 @@
     cd ${llm_path}/tests/modeltest
     export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
     export MAX_MEMORY_GB=29
-    bash run.sh pa_bf16 full_BoolQ 1 llama True ${Yi-6B-200K权重路径} 8
-    bash run.sh pa_bf16 full_BoolQ 1 llama True ${Yi-34B权重路径} 8
+    bash run.sh pa_bf16 full_CEval 1 llama True ${Yi-6B-200K权重路径} 8
+    bash run.sh pa_bf16 full_CEval 1 llama True ${Yi-34B权重路径} 8
     ```
 
 ## 性能测试
