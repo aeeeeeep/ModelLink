@@ -367,7 +367,7 @@ python ./tools/preprocess_data.py \
 ```
 
 
-6. 配置 Baichuan2-13B 训练脚本: examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
+6. 配置 Baichuan2-13B 训练脚本((Baichuan2-13B暂不支持Flash Attention)): examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
 
 ```shell
 # 修改 ascend-toolkit 路径

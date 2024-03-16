@@ -370,7 +370,7 @@ python ./tools/preprocess_data.py \
     --tokenizer-type PretrainedFromHF 
 ```
 
-6. Config Baichuan2-13B pre-training script: examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
+6. Config Baichuan2-13B pre-training script(Baichuan2-13B does not support Flash Attention): examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
 
 ```shell
 # modify the script according to your own  ascend-toolkit path

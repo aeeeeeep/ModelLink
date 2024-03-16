@@ -13,6 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+def check_condition(cond):
+    if not cond:
+        raise RuntimeError
+
+
 class NotDivisibleError(Exception):
     def __init__(self, denominator, molecule, error_info):
         super().__init__()

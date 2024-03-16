@@ -14,3 +14,4 @@
 # limitations under the License.
 
 from .tensor_parallel.layers import vocab_embedding_wrapper
+from .datasets.gpt_dataset import _build_document_sample_shuffle_indices
