@@ -36,6 +36,8 @@ public:
         bool isLmHeadParallel = true;
         bool supportSwiGLU = true;
         
+        // support lcoc
+        bool supportLcoc = false;
         int numAttentionHeadsPerRank = 0;
         int hiddenSizePerAttentionHead = 0;
         int numHiddenLayers = 0;
