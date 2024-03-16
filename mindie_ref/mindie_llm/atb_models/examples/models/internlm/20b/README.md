@@ -31,7 +31,7 @@ Paged Attention 场景下需要.safetensors 格式的权重，如果没有，参
 在`${llm_path}`目录下执行以下指令
 
 ```shell
-bash examples/models/internlm/run_pa.sh ${weight_path}
+bash examples/models/internlm/20b/run_pa.sh -m ${weight_path}
 ```
 
 根据硬件设备不同请参考下表修改run_pa.sh再运行
