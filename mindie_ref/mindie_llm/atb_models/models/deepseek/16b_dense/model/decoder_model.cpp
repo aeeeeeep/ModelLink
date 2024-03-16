@@ -114,10 +114,10 @@ atb::Status DecoderModel::InferShape(
 
     outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
     if (param_.isFA) {  // unpadInputs = false
-        outTensorDescs.at(0).shape.dims[1] = param_.isPrefill ? inTensorDescs.at(graph_.inTensors.size() - 1).shape.dims[0] : 1;
+        outTensorDescs.at(0).shape.dims[1] = param_.isPrefill ? inTensorDescs.at(graph_.inTensors.size() - 4).shape.dims[0] : 1;
     } else {  // unpadInputs = true
         if (param_.isPrefill) {
-            outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(graph_.inTensors.size() - 1).shape.dims[0];
+            outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(graph_.inTensors.size() - 4).shape.dims[0];
         }
     }
 
