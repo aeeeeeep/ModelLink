@@ -90,7 +90,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     fusionAttentionParam.pageAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
     fusionAttentionParam.pageAttentionParam.maskType = param.isBF16 ? \
         atb::infer::PagedAttentionParam::MaskType::MASK_TYPE_ALIBI : atb::infer::PagedAttentionParam::MaskType::UNDEFINED;
-    fusionAttentionParam.selfOutLinearTensorParallelInfo = {param.rank, param.worldSize, param.backend};
+    fusionAttentionParam.selfOutLinearTensorParallelInfo = {param.rank, param.worldSize, param.backend, param.rankTableFile};
     Attention(fusionAttentionParam, &attentionNode.operation);
     attentionNode.inTensorIds = {
         IN_HIDDEN_STATES,
@@ -333,6 +333,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     allReduceParam.rank = param.rank;
     allReduceParam.rankSize = param.worldSize;
     allReduceParam.backend = param.backend;
+    allReduceParam.rankTableFile = param.rankTableFile;
     CreateOperation(allReduceParam, &moeAllReduceNode.operation);
     if (moeAllReduceNode.operation == nullptr) {
         ATB_LOG(ERROR) << "moeAllReduceNode op is nullptr: ";

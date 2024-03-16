@@ -46,6 +46,7 @@ struct DecoderLayerParam {
     int rank = 0;
     int worldSize = 1;
     std::string backend = "hccl";
+    std::string rankTableFile = "";
     std::vector<int> seqLen;
     std::vector<int> tokenOffset;
     std::vector<int> packQuantType = {};  // 两个元素，第一个元素代表QKV pack的量化类型，第二个元素代表MLP pack的量化类型
