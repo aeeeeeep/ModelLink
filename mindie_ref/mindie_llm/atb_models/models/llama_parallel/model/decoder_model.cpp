@@ -114,10 +114,10 @@ atb::Status DecoderModel::InferShape(
 
     outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
     if (param_.isFA) {  // unpadInputs = false
-        outTensorDescs.at(0).shape.dims[1] = param_.isPrefill ? inTensorDescs.at(graph_.inTensors.size() - 1).shape.dims[0] : 1;
+        outTensorDescs.at(0).shape.dims[1] = param_.isPrefill ? inTensorDescs.at(IN_TENSOR_LOGTIS_INDICES).shape.dims[0] : 1;
     } else {  // unpadInputs = true
         if (param_.isPrefill) {
-            outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(graph_.inTensors.size() - 1).shape.dims[0];
+            outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(IN_TENSOR_LOGTIS_INDICES).shape.dims[0];
         }
     }
 
@@ -130,38 +130,11 @@ atb::Status DecoderModel::InferShape(
     return atb::NO_ERROR;
 }
 
+static const uint64_t IN_TENSOR_COUNT = 12;
+static const uint64_t OUT_TENSOR_COUNT = 1;
+
 int64_t DecoderModel::BuildGraph()
 {
-    // define inTensor
-    int inTensorIdx = 0;
-    // idx: 0, shape: FA: [batchSize, seqLen] PA: [seqLen]
-    int IN_TENSOR_INPUT_IDS = inTensorIdx++;
-    // idx: 1, shape: FA: [batchSize, seqLen] PA: [seqLen]
-    int IN_TENSOR_POSITION_IDS = inTensorIdx++;
-    // idx: 2, shape: FA: [maxPositionEmbeddings, hiddenSizePerAttentionHead]
-    // PA: [maxInputLength, hiddenSizePerAttentionHead]
-    int IN_TENSOR_COS_TABLE = inTensorIdx++;
-    // idx: 3, shape: FA: [maxPositionEmbeddings, hiddenSizePerAttentionHead]
-    // PA: [maxInputLength, hiddenSizePerAttentionHead]
-    int IN_TENSOR_SIN_TABLE = inTensorIdx++;
-    // idx: 4, shape: FA: [batchSize, maxPositionEmbeddings, maxPositionEmbeddings]
-    // PA: [maxInputLength, maxInputLength]
-    int IN_TENSOR_ATTENTION_MASK = inTensorIdx++;
-    // idx: 5, shape: [4, 9]; PA所需入参
-    int IN_TENSOR_BLOCK_TABLES = inTensorIdx++;
-    // idx: 6, shape: [seqLen]; PA所需入参
-    int IN_TENSOR_SLOTS = inTensorIdx++;
-    // idx: 7, shape: [1]; FA所需入参
-    int IN_TENSOR_KV_CACHE_IDX = inTensorIdx++;
-    // idx: 8, shape: [batchSize]; FA所需入参
-    int IN_TENSOR_TOKEN_OFFSET = inTensorIdx++;
-    // idx: 9, shape: [1]
-    int IN_TENSOR_PLACE_HOLDER = inTensorIdx++;
-    // idx: 10, shape: FA: [batchSize] PA: [4]
-    int IN_TENSOR_SEQ_LEN = inTensorIdx++;
-    // idx: 11, shape: FA: [batchSize]  PA: [4]
-    int IN_TENSOR_LOGTIS_INDICES = inTensorIdx++;
-
     // define internelTensor
     int internelTensorIdx = 0;
     // idx: 0, shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
@@ -182,8 +155,8 @@ int64_t DecoderModel::BuildGraph()
         + WEIGHT_COUNT_POST_NORM + WEIGHT_COUNT_LM_HEAD;
     graph_.weightTensors.resize(weightTensorSize);
 
-    graph_.inTensors.resize(inTensorIdx);
-    graph_.outTensors.resize(1);
+    graph_.inTensors.resize(IN_TENSOR_COUNT);
+    graph_.outTensors.resize(OUT_TENSOR_COUNT);
     graph_.internalTensors.resize(internelTensorIdx);
 
     graph_.kCacheTensors.resize(param_.numHiddenLayers);

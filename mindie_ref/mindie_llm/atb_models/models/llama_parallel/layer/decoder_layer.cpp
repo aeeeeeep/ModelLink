@@ -203,9 +203,5 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     return atb::NO_ERROR;
 }
 
-DecoderLayerBinder::DecoderLayerBinder() {}
-
-DecoderLayerBinder::~DecoderLayerBinder() {}
-
 } // namespace llama_parallel
 } // namespace atb_speed
