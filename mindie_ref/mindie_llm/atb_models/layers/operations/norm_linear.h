@@ -35,6 +35,7 @@ enum PackQuantType : unsigned int {
 template <typename NormParamType>
 struct NormLinearParam {
     bool isAntiOutlier = false;
+    bool skipNorm = false;
     bool normHasBias = false;
     NormParamType normParamType;
     NormParamType normQuantParamType;
