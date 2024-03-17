@@ -52,7 +52,7 @@ enum DecoderModelTensorIdx : uint32_t {
     IN_TENSOR_SEQ_LEN,
     // idx: 11, shape: FA: [batchSize]  PA: [4]
     IN_TENSOR_LOGTIS_INDICES,
-}
+};
 
 class DecoderModel : public Model {
 public:
