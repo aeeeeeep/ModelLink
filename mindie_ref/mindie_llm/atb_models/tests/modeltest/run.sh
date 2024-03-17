@@ -111,7 +111,7 @@ function fn_run_single()
             export ASCEND_RT_VISIBLE_DEVICES="$devices"
         fi
     
-        random_port=$(( RANDO  % 9999 + 10001 ))
+        random_port=$(( RANDOM  % 9999 + 10001 ))
         torchrun --nproc_per_node "$chip_num" --master_port $random_port "$test_path" \
         --model_type "$model_type" \
         --data_type "$data_type" \

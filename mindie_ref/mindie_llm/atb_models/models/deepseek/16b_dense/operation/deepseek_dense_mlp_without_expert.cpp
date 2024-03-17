@@ -55,29 +55,18 @@ atb::Status CreateDeepseekDenseMlpWithoutExpertOperation(
     atb::Node &mulNode = opGraph.nodes.at(nodeId++);
     atb::Node &linearDownNode = opGraph.nodes.at(nodeId++);
 
-    atb::infer::MatmulParam linearParam = {false, param.transpose};
+    atb::infer::LinearParam linearParam;
+    linearParam.transposeA = false;
+    linearParam.transposeB = param.transpose;
+    linearParam.hasBias = false;
     CreateOperation(linearParam, &linearNode.operation);
     linearNode.inTensorIds = {IN_HIDDENSTATUS, IN_MLP_GATE_UP_WEIGHTTENSOR};
     linearNode.outTensorIds = {INTERMIDATE_MATMUL_GATE_UP_OUT};
-    linearNode.inTensorReshapeFuncs.resize(linearNode.inTensorIds.size());
-    linearNode.inTensorReshapeFuncs[0] = [batchDimPtr](const atb::Dims &oldShape, atb::Dims &newShape) {
-        newShape.dimNum = 2; // dimNum: 2
-        *batchDimPtr = oldShape.dims[0];
-        newShape.dims[0] = oldShape.dims[0] * oldShape.dims[1];
-        newShape.dims[1] = oldShape.dims[2];
-    };
 
-    atb::infer::SplitParam splitParam = {2, 2};
+    atb::infer::SplitParam splitParam = {1, 2};
     CreateOperation(splitParam, &splitNode.operation);
     splitNode.inTensorIds = {INTERMIDATE_MATMUL_GATE_UP_OUT};
     splitNode.outTensorIds = {INTERMIDATE_MATMUL_GATE_OUT, INTERMIDATE_MATMUL_UP_OUT};
-    splitNode.inTensorReshapeFuncs.resize(splitNode.inTensorIds.size());
-    splitNode.inTensorReshapeFuncs[0] = [batchDimPtr](const atb::Dims &oldShape, atb::Dims &newShape) {
-        newShape.dimNum = 3; // dimNum: 3
-        newShape.dims[0] = (*batchDimPtr);
-        newShape.dims[1] = oldShape.dims[0] / (*batchDimPtr);
-        newShape.dims[2] = oldShape.dims[1];
-    };
 
     atb::infer::ActivationParam activationParam;
     activationParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
@@ -91,7 +80,10 @@ atb::Status CreateDeepseekDenseMlpWithoutExpertOperation(
     mulNode.inTensorIds = {INTERMIDATE_SWISH_OUT, INTERMIDATE_MATMUL_UP_OUT};
     mulNode.outTensorIds = {INTERMIDATE_HIDDENSTATUS};
 
-    atb::infer::MatmulParam linearDownParam = {false, param.transpose};
+    atb::infer::LinearParam linearDownParam;
+    linearDownParam.transposeA = false;
+    linearDownParam.transposeB = param.transpose;
+    linearDownParam.hasBias = false;
     CreateOperation(linearDownParam, &linearDownNode.operation);
     linearDownNode.inTensorIds = {INTERMIDATE_HIDDENSTATUS, IN_MLP_DOWN_WEIGHTTENSOR};
     linearDownNode.outTensorIds = {OUT_MLP_OUT_TENSOR};
