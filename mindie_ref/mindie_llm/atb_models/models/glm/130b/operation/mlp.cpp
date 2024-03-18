@@ -82,8 +82,7 @@ atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation)
     linearParallelParam.rank = param.rank;
     linearParallelParam.rankSize = param.rankSize;
     linearParallelParam.rankRoot = 0;
-    linearParallelParam.bias = "yes";
-    linearParallelParam.parallelType = "RowParallel";
+    linearParallelParam.hasResidual = true;
     linearParallelParam.backend = param.backend;
     CreateOperation(linearParallelParam, &mlpLinearParallelNode.operation);
     mlpLinearParallelNode.inTensorIds = {INTERMEDIATE_GEGLU_OUTPUT_ID, IN_DENSE_4H_TO_H_WEIGHT_ID,
