@@ -110,7 +110,6 @@ class LLMChat(Chat):
             instruction_temp,
             do_sample=False,
             max_new_tokens=max_new_tokens,
-            tokenizer=tokenizer,
             stream=False,
             return_output_log_probs=True
         )
@@ -122,7 +121,6 @@ class LLMChat(Chat):
             instruction_temp,
             do_sample=False,
             max_new_tokens=max_new_tokens,
-            tokenizer=tokenizer,
             stream=False,
             num_beams=4,
             top_k=50,
