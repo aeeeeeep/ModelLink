@@ -39,7 +39,7 @@ Here's a hardware summary of pre-training Baichuan2-7B:
 1. Clone the repository to your local server:
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
-cd ModeLlink 
+cd ModelLink 
 mkdir logs
 mkdir ckpt
 ```
@@ -259,7 +259,7 @@ Here's a hardware summary of pre-training Baichuan2-13B:
 1. Clone the repository to your local server:
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
-cd ModeLlink 
+cd ModelLink 
 mkdir logs
 mkdir ckpt
 ```

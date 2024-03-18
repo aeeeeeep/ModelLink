@@ -37,7 +37,7 @@ Baichuan2-7B 训练的硬件配置如下：
 1. 拷贝仓库到你的个人服务器：
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
-cd ModeLlink 
+cd ModelLink 
 mkdir logs
 mkdir ckpt
 ```
@@ -256,7 +256,7 @@ Baichuan2-13B 训练的硬件配置如下:
 1. 拷贝仓库到你的个人服务器：
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
-cd ModeLlink 
+cd ModelLink 
 mkdir logs
 mkdir ckpt
 ```

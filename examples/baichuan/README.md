@@ -40,7 +40,7 @@ Baichuan-7B 训练的硬件配置如下：
 1. 拷贝仓库到你的个人服务器：
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
-cd ModeLlink 
+cd ModelLink 
 mkdir logs
 mkdir ckpt
 ```
@@ -267,10 +267,9 @@ Baichuan-13B 训练的硬件配置如下:
 
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
-cd ModeLlink 
+cd ModelLink 
 mkdir logs
 mkdir ckpt
-mkdir ckpt_lora
 ```
 
 2. 搭建环境
@@ -419,53 +418,8 @@ Baichuan-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 
 
 
-## Lora微调
-我们支持使用 Baichuan-13B 进行lora微调。
-微调时使用`指令微调数据集`，制作过程如下，注意添加`--handler-name GeneralInstructionHandler`
-
-```python
-mkdir alpaca_preprocessed
-python tools/preprocess_data.py \
-    --input ./dataset-baichuan-13B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --output-prefix ./alpaca_preprocessed/alpaca \
-    --tokenizer-type PretrainedFromHF \
-    --tokenizer-name-or-path ./baichuan-13B-hf \
-    --tokenizer-not-use-fast \
-    --handler-name GeneralInstructionHandler \
-    --append-eod
-```
-配置 Baichuan-13B 的lora脚本:`tasks/finetune/tune_baichuan_ptd_13B.sh`
-
-```shell
-# 配置保存权重的路径、数据集路径、权重路径以及词表路径
-CKPT_SAVE_DIR="./ckpt_lora"
-DATA_PATH="./alpaca_preprocessed/alpaca"
-CHECKPOINT="./baichuan-13B-mt"
-TOKENIZER_PATH="./baichuan-13B-hf"
-```
-启动 Baichuan-13B lora微调脚本: `examples/baichuan/tune_baichuan_ptd_13B.sh`
-```shell
-bash ./tasks/finetune/tune_baichuan_ptd_13B.sh
-```
-再使用微调后的权重进行推理:
-```shell
-# 配置权重路径、lora权重的路径以及词表路径
-CHECKPOINT="./baichuan-13B-mt"
-LORA_CHECKPOINT="./ckpt_lora"
-TOKENIZER_PATH="./baichuan-13B-hf"
-```
-
-```shell
-bash ./tasks/inference/generate_baichuan_13b_lora_ptd.sh
-```
-
-使用lora进行微调后的推理功能：
-![13B-lora-inference.png](../../sources/images/baichuan/baichuan_13B_inference_lora.png)
-
 
 ## 推理
-
-
 
 配置baichuan-13B的推理脚本: tasks/inference/generate_baichuan_13b_ptd.sh
 
