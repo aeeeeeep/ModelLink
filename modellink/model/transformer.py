@@ -402,6 +402,7 @@ class FlashSelfAttention(torch.nn.Module):
         if self.apply_query_key_layer_scaling:
             self.beta = 1.0 / self.layer_number
 
+        self.alibi = None
         if args.position_embedding_type == 'alibi':
             self.get_alibi()
 
