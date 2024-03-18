@@ -196,6 +196,26 @@ class ModelTest:
                 break
             except OverflowError:
                 max_csv_limit = int(max_csv_limit / 10)
+
+        csv_path = os.path.join(self.script_path, 'result', self.model_name, f"{self.model_type}_{self.data_type}_test_result_formatted.csv")
+        os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+        with open(csv_path, 'w') as f:
+            if self.test_mode == "performance":
+                f.write("{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<25s}|{:<25s}|{:<36s}|{:<25s}|{:<45s}|{:<35s}\n".format(
+                    "Model", "Batchsize", "In_seq", "Out_seq", "Total time(s)", "First token time(ms)", 
+                    "Non-first token time(ms)", "Non-first token Throughout(Tokens/s)", "E2E Throughout(Tokens/s)", 
+                    "Non-first token Throughout Average(Tokens/s)", "E2E Throughout Average(Tokens/s)"
+                ))
+            elif self.test_mode == "simplified":
+                f.write("Standard: [1] KL loss <= 1e-3. [2] rate of KL loss > 1e-4 <= 0.5%.\n")
+                f.write("{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<15s}\n".format(
+                    "Model", "Dataset", "Batchsize", "Logits Num", "Greatest KLL", "Error Rate", "Result"
+                ))
+            else:
+                f.write("{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<15s}\n".format(
+                    "Model", "Dataset", "Batchsize", "Golden", "NPU", "Result"
+                ))
+
         if self.hardware_type == "NPU":
             reload(env)
         if self.model_type == "fa" and self.test_mode != "full":
@@ -390,8 +410,8 @@ class ModelTest:
                     [str(round(non_first_token_throughput_average, 10)).ljust(45),
                      str(round(e2e_throughput_average, 10)).ljust(35)])
                 folder_name = self.model_name
-                csv_name = self.model_type + "_" + self.data_type + "_performance_test_result.csv" if self.data_type != "" else self.model_type
-                csv_formatted_name = self.model_type + "_" + self.data_type + "_performance_test_result_formatted.csv" if self.data_type != "" else self.model_type
+                csv_name = self.model_type + "_" + self.data_type + "_performance_test_result.csv"
+                csv_formatted_name = self.model_type + "_" + self.data_type + "_performance_test_result_formatted.csv"
                 csv_performance_path = os.path.join(self.script_path, "../result", folder_name, csv_name)
                 csv_performance_formatted_path = os.path.join(self.script_path, "../result", folder_name, csv_formatted_name)
                 if not os.path.exists(csv_performance_formatted_path):

@@ -18,10 +18,6 @@ class LlamaModelTest(model_test.ModelTest):
                 elif config_data["num_hidden_layers"] == 40:
                     model_name = "qwen_14b"
         updated_args = args[:3] + (model_name,) + args[4:]
-        source_dir  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "result", "qwen")
-        destination_dir  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "result", model_name)
-        if int(os.getenv("RANK", "0")) == 0:
-            os.rename(source_dir, destination_dir)
         super().__init__(*updated_args)
     
     def get_model(self, hardware_type, model_type, data_type):
