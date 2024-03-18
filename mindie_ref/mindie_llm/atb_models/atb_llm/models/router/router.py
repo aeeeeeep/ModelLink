@@ -3,11 +3,14 @@ import importlib
 from dataclasses import dataclass
 from typing import Optional, Any
 
+import torch
+
 from transformers import AutoTokenizer, AutoConfig
 from transformers import AutoTokenizer
 from transformers.configuration_utils import PretrainedConfig
 
 from ..llama.modeling_llama import LlamaConfig
+from ..deepseek.flash_causal_deepseek import DeepseekConfig
 from ..qwen.modeling_qwen import QwenConfig
 from ..starcoder.flash_causal_starcoder import StarcoderConfig
 from ..telechat.config import TelechatConfig
@@ -121,6 +124,21 @@ class LlamaRouter(BaseRouter):
         if self.max_position_embeddings:
             config.max_position_embeddings = self.max_position_embeddings
         return config
+    
+    def get_tokenizer(self):
+        if self.config_dict['num_hidden_layers'] in [60]:
+            # LLaMa 33B use_fast需要使用False
+            use_fast = False
+        else:
+            use_fast = True
+        return AutoTokenizer.from_pretrained(
+            self.model_name_or_path,
+            revision=self.revision,
+            padding_side="left",
+            truncation_side="left",
+            trust_remote_code=self.trust_remote_code,
+            use_fast=use_fast
+        )
 
 
 @dataclass
@@ -141,6 +159,24 @@ class TelechatRouter(BaseRouter):
             trust_remote_code=self.trust_remote_code,
         )
 
+
+@dataclass
+class DeepseekRouter(BaseRouter):
+    @property
+    def config(self):
+        config = DeepseekConfig.from_pretrained(self.model_name_or_path, torch_dtype=torch.float16)
+        if self.max_position_embeddings:
+            config.max_position_embeddings = self.max_position_embeddings
+        return config
+    
+    def get_tokenizer(self):
+        return AutoTokenizer.from_pretrained(
+            self.model_name_or_path,
+            padding_side="left",
+            trust_remote_code=True,
+            use_fast=False
+        )
+    
 
 @dataclass
 class StarcoderRouter(BaseRouter):

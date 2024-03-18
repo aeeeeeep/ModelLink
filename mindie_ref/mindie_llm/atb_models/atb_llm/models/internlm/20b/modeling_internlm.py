@@ -42,8 +42,8 @@ from atb_llm.utils.quantize.pack_type import PackType
 from atb_llm.utils.quantize.w8a8 import calc_linear_pack_type
 
 
-class LlamaConfig(PretrainedConfig):
-    model_type: str = "llama"
+class InternlmConfig(PretrainedConfig):
+    model_type: str = "internlm"
 
     def __init__(
             self,
@@ -94,10 +94,10 @@ class LlamaConfig(PretrainedConfig):
         )
 
 
-class LlamaRMSNorm(nn.Module):
+class InternlmRMSNorm(nn.Module):
     def __init__(self, prefix, weights, eps=1e-6):
         """
-        LlamaRMSNorm is equivalent to T5LayerNorm
+        InternlmRMSNorm is equivalent to T5LayerNorm
         """
         super().__init__()
 
@@ -124,10 +124,10 @@ class LlamaRMSNorm(nn.Module):
         return self.weight * hidden_states, residual
 
 
-class LlamaRMSNormBias(nn.Module):
+class InternlmRMSNormBias(nn.Module):
     def __init__(self, prefix, weights, eps=1e-6):
         """
-        LlamaRMSNorm is equivalent to T5LayerNorm
+        InternlmRMSNorm is equivalent to T5LayerNorm
         """
         super().__init__()
 
@@ -141,18 +141,18 @@ class LlamaRMSNormBias(nn.Module):
         self.variance_epsilon = eps
 
 
-class LlamaRMSNormWrapper(nn.Module):
+class InternlmRMSNormWrapper(nn.Module):
     def __init__(self, prefix, weights, eps=1e-6):
         """
-        LlamaRMSNorm is equivalent to T5LayerNorm
+        InternlmRMSNorm is equivalent to T5LayerNorm
         """
         super().__init__()
 
-        self.ori = LlamaRMSNorm(prefix, weights, eps)
-        self.anti = LlamaRMSNormBias(f'{prefix}.module', weights, eps)
+        self.ori = InternlmRMSNorm(prefix, weights, eps)
+        self.anti = InternlmRMSNormBias(f'{prefix}.module', weights, eps)
 
 
-class LlamaMLP(nn.Module):
+class InternlmMLP(nn.Module):
     def __init__(self, prefix, config, weights):
         super().__init__()
         act = config.hidden_act
@@ -228,7 +228,7 @@ class LlamaMLP(nn.Module):
         return self.down_proj(self.act(gate_up_states[:, 0]) * gate_up_states[:, 1])
 
 
-class FlashLlamaAttention(torch.nn.Module):
+class FlashInternlmAttention(torch.nn.Module):
     def __init__(
             self,
             prefix: str,
@@ -245,21 +245,17 @@ class FlashLlamaAttention(torch.nn.Module):
 
         self.softmax_scale = self.head_size ** -0.5
 
-        # can not support self.num_heads % weights.process_group.size() != 0
+        # can support self.num_heads % weights.process_group.size() != 0
         if (config.num_attention_heads != config.num_key_value_heads
                 and (self.num_heads % weights.process_group.size() != 0)):
             raise ValueError(
                 f"`num_heads` must be divisible by `num_shards` (got `num_heads`: {self.num_heads} "
                 f"and `num_shards`: {weights.process_group.size()}"
             )
-        if config.num_key_value_heads < weights.process_group.size():
-            repeat_times = weights.process_group.size() // config.num_key_value_heads
-        else:
-            repeat_times = 1
 
         self.num_heads = (self.num_heads + weights.process_group.size() - 1) // weights.process_group.size()
         if config.num_key_value_heads != config.num_attention_heads:
-            self.num_key_value_heads = config.num_key_value_heads * repeat_times
+            self.num_key_value_heads = config.num_key_value_heads
             self.num_key_value_heads = self.num_key_value_heads // weights.process_group.size()
         else:
             self.num_key_value_heads = self.num_heads
@@ -326,7 +322,6 @@ class FlashLlamaAttention(torch.nn.Module):
             prefix=f"{prefix}.o_proj",
             weights=weights,
             bias=False,
-            gqa_size=self.head_size,
         )
         self.num_groups = self.num_heads // self.num_key_value_heads
         self.kv_head_mapping = torch.arange(
@@ -396,40 +391,40 @@ class FlashLlamaAttention(torch.nn.Module):
         return self.o_proj(attn_output.view(-1, self.num_heads * self.head_size))
 
 
-class FlashLlamaLayer(nn.Module):
+class FlashInternlmLayer(nn.Module):
     def __init__(self, layer_id, config, weights):
         super().__init__()
         prefix = f"model.layers.{layer_id}"
-        self.self_attn = FlashLlamaAttention(
+        self.self_attn = FlashInternlmAttention(
             prefix=f"{prefix}.self_attn", config=config, weights=weights
         )
-        self.mlp = LlamaMLP(prefix=f"{prefix}.mlp", config=config, weights=weights)
+        self.mlp = InternlmMLP(prefix=f"{prefix}.mlp", config=config, weights=weights)
         if self.self_attn.pack_type in [PackType.ALL_FP, PackType.ALL_W8A16]:
-            self.input_layernorm = LlamaRMSNorm(
+            self.input_layernorm = InternlmRMSNorm(
                 prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.rms_norm_eps
             )
         elif self.self_attn.pack_type in [PackType.ALL_W8A8, PackType.MIX_W8A8]:
-            self.input_layernorm = LlamaRMSNormBias(
+            self.input_layernorm = InternlmRMSNormBias(
                 prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.rms_norm_eps
             )
         else:
-            self.input_layernorm = LlamaRMSNormWrapper(
+            self.input_layernorm = InternlmRMSNormWrapper(
                 prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.rms_norm_eps
             )
         if self.mlp.pack_type in [PackType.ALL_FP, PackType.ALL_W8A16]:
-            self.post_attention_layernorm = LlamaRMSNorm(
+            self.post_attention_layernorm = InternlmRMSNorm(
                 prefix=f"{prefix}.post_attention_layernorm",
                 weights=weights,
                 eps=config.rms_norm_eps,
             )
         elif self.mlp.pack_type in [PackType.ALL_W8A8, PackType.MIX_W8A8]:
-            self.post_attention_layernorm = LlamaRMSNormBias(
+            self.post_attention_layernorm = InternlmRMSNormBias(
                 prefix=f"{prefix}.post_attention_layernorm",
                 weights=weights,
                 eps=config.rms_norm_eps,
             )
         else:
-            self.post_attention_layernorm = LlamaRMSNormWrapper(
+            self.post_attention_layernorm = InternlmRMSNormWrapper(
                 prefix=f"{prefix}.post_attention_layernorm", weights=weights, eps=config.rms_norm_eps
             )
 
@@ -471,7 +466,7 @@ class FlashLlamaLayer(nn.Module):
         return mlp_output, attn_res
 
 
-class FlashLlamaModel(torch.nn.Module):
+class FlashInternlmModel(torch.nn.Module):
     def __init__(self, config, weights):
         super().__init__()
 
@@ -483,7 +478,7 @@ class FlashLlamaModel(torch.nn.Module):
         )
         self.layers = nn.ModuleList(
             [
-                FlashLlamaLayer(
+                FlashInternlmLayer(
                     layer_id,
                     config,
                     weights,
@@ -491,7 +486,7 @@ class FlashLlamaModel(torch.nn.Module):
                 for layer_id in range(config.num_hidden_layers)
             ]
         )
-        self.norm = LlamaRMSNorm(
+        self.norm = InternlmRMSNorm(
             prefix="model.norm", weights=weights, eps=config.rms_norm_eps
         )
 
@@ -551,7 +546,7 @@ def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
     return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
-class LlamaAttention(torch.nn.Module):
+class InternlmAttention(torch.nn.Module):
     def __init__(
             self,
             prefix: str,
@@ -696,19 +691,19 @@ class LlamaAttention(torch.nn.Module):
         return attn_output
 
 
-class LlamaLayer(nn.Module):
+class InternlmLayer(nn.Module):
     def __init__(self, layer_id, config, weights):
         super().__init__()
         prefix = f"model.layers.{layer_id}"
-        self.self_attn = FlashLlamaAttention(
+        self.self_attn = FlashInternlmAttention(
             prefix=f"{prefix}.self_attn", config=config, weights=weights
         )
-        self.mlp = LlamaMLP(prefix=f"{prefix}.mlp", config=config, weights=weights)
+        self.mlp = InternlmMLP(prefix=f"{prefix}.mlp", config=config, weights=weights)
 
-        self.input_layernorm = LlamaRMSNorm(
+        self.input_layernorm = InternlmRMSNorm(
             prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.rms_norm_eps
         )
-        self.post_attention_layernorm = LlamaRMSNorm(
+        self.post_attention_layernorm = InternlmRMSNorm(
             prefix=f"{prefix}.post_attention_layernorm",
             weights=weights,
             eps=config.rms_norm_eps,
@@ -750,7 +745,7 @@ class LlamaLayer(nn.Module):
         return mlp_output, attn_res
 
 
-class LlamaModel(torch.nn.Module):
+class InternlmModel(torch.nn.Module):
     def __init__(self, config, weights):
         super().__init__()
 
@@ -762,7 +757,7 @@ class LlamaModel(torch.nn.Module):
         )
         self.layers = nn.ModuleList(
             [
-                FlashLlamaLayer(
+                FlashInternlmLayer(
                     layer_id,
                     config,
                     weights,
@@ -770,7 +765,7 @@ class LlamaModel(torch.nn.Module):
                 for layer_id in range(config.num_hidden_layers)
             ]
         )
-        self.norm = LlamaRMSNorm(
+        self.norm = InternlmRMSNorm(
             prefix="model.norm", weights=weights, eps=config.rms_norm_eps
         )
 

@@ -755,14 +755,17 @@ class Weights:
                 return qweight
             deq_scale = self.get_tensor(f"{prefix}.deq_scale")
             quant_bias = self.get_tensor(f"{prefix}.quant_bias")
-            quant_bias = quant_bias // self.process_group.size()
+            if self.process_group.rank() == 0:
+                quant_bias = quant_bias
+            else:
+                quant_bias = torch.zeros_like(quant_bias, dtype=quant_bias.dtype, device=quant_bias.device)
             input_scale = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_scale')
             input_offset = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_offset')
             weight = (qweight, deq_scale, quant_bias, input_scale, input_offset)
         elif quantize == "w8a16":
             qweight = self.get_sharded(f"{prefix}.weight", dim=1, gqa_size=gqa_size)
-            weight_scale = self.get_sharded(f"{prefix}.weight_scale", dim=1, gqa_size=gqa_size)
-            weight_offset = self.get_sharded(f"{prefix}.weight_offset", dim=1, gqa_size=gqa_size)
+            weight_scale = self.get_sharded(f"{prefix}.weight_scale", dim=1, gqa_size=1)
+            weight_offset = self.get_sharded(f"{prefix}.weight_offset", dim=1, gqa_size=1)
             weight = (qweight, weight_scale, weight_offset)
         else:
             weight = self.get_sharded(f"{prefix}.weight", dim=1, gqa_size=gqa_size)
