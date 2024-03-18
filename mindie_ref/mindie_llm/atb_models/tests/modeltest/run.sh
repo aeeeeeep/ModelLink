@@ -63,24 +63,6 @@ function fn_prepare()
         export ATB_LLM_BENCHMARK_ENABLE=1
         export ATB_LLM_BENCHMARK_FILEPATH="${SCRIPT_DIR}/benchmark.csv"
     fi
-
-    # csv_path=$SCRIPT_DIR/result/"$model_name"/"$1"_"$2"_test_result_formatted.csv
-    # mkdir -p "$(dirname "$csv_path")"
-    # touch "$csv_path" > "$csv_path"
-    # if [ "$test_mode" == "performance" ]; then
-    #     export ATB_LLM_BENCHMARK_ENABLE=1
-    #     export ATB_LLM_BENCHMARK_FILEPATH="${SCRIPT_DIR}/benchmark.csv"
-    #     printf "%-15s|%-15s|%-15s|%-15s|%-15s|%-25s|%-25s|%-36s|%-25s|%-45s|%-35s\n" \
-    #     "Model" "Batchsize" "In_seq" "Out_seq" "Total time(s)" "First token time(ms)" "Non-first token time(ms)" "Non-first token Throughout(Tokens/s)" \
-    #     "E2E Throughout(Tokens/s)" "Non-first token Throughout Average(Tokens/s)" "E2E Throughout Average(Tokens/s)" > "$csv_path"
-    # elif [ "$test_mode" == "simplified" ]; then
-    #     echo "Standard: [1] KL loss <= 1e-3. [2] rate of KL loss > 1e-4 <= 0.5%". > "$csv_path"
-    #     printf "%-15s|%-15s|%-15s|%-15s|%-15s|%-15s|%-15s\n" \
-    #     "Model" "Dataset" "Batchsize" "Logits Num" "Greatest KLL" "Error Rate" "Result" >> "$csv_path"
-    # else
-    #     printf "%-15s|%-15s|%-15s|%-15s|%-15s|%-15s\n" \
-    #     "Model" "Dataset" "Batchsize" "Golden" "NPU" "Result" > "$csv_path"
-    # fi
 }
 
 function fn_run_single()
