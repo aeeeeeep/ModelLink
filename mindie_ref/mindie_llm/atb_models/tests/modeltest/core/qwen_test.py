@@ -13,9 +13,9 @@ class LlamaModelTest(model_test.ModelTest):
             config_data = json.load(f)
             if "num_hidden_layers" in config_data:
                 if config_data["num_hidden_layers"] == 2:
-                    model_name == "qwen_72b"
+                    model_name = "qwen_72b"
                 elif config_data["num_hidden_layers"] == 40:
-                    model_name == "qwen_14b"
+                    model_name = "qwen_14b"
         updated_args = args[:3] + (model_name,) + args[4:]
         super().__init__(*updated_args)
     
