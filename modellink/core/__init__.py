@@ -15,3 +15,8 @@
 
 from .tensor_parallel.layers import vocab_embedding_wrapper
 from .datasets.gpt_dataset import _build_document_sample_shuffle_indices
+from .parallel_state import (initialize_model_parallel_decorator, destroy_model_parallel_decorator,
+                             get_expert_model_parallel_rank,
+                             get_expert_model_parallel_world_size, get_expert_parallel_group,
+                             get_expert_parallel_rank, get_expert_parallel_world_size,
+                             set_expert_model_parallel_world_size, set_expert_model_parallel_rank)
