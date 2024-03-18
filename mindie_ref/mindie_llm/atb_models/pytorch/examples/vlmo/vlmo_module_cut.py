@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
 import numpy as np
-import vlmo.modules.multiway_transformer
+import vlmo.modules.multiway_transformer_cut
 from transformers.models.bert.modeling_bert import BertConfig, BertEmbeddings
 from vlmo.modules import heads, objectives, vlmo_utils
 from pytorch_lightning.utilities.distributed import rank_zero_info
@@ -19,7 +19,6 @@ from timm.models import create_model
 def is_nd():
     soc_version = torch_npu._C._npu_get_soc_version()
     return soc_version in [104, 220, 221, 222, 223, 224]
-
 
 IS_ND = False
 
@@ -74,7 +73,7 @@ class KVAttentionManager:
         self.seq_length = seq_length  # 当前输入的最大长度，注意区分max_sequence_length
         self.batch_size = batch_size
         self.num_layers = num_hidden_layers
-        self.num_head = num_head
+        self.num_head = num_head // 2
         self.hidden_size = hidden_size
         self.max_sequence_length = max_sequence_length
         self.attention_mask_max_full = torch.full(
@@ -138,6 +137,7 @@ class KVAttentionManager:
         torch.npu.empty_cache()
         self.token_offset = 1
 
+
     def init_seq_len_and_token_offset(self, seq_len):
         self.token_offset = seq_len
         self.seq_len_list_full = [self.token_offset] * self.batch_size
@@ -153,11 +153,13 @@ class KVAttentionManager:
             (self.batch_size,), self.token_offset, dtype=torch.int32
         ).npu()
 
+
     @property
     def seq_len_list(self):
         if self.is_full:
             return self.seq_len_list_full
         return self.seq_len_list_inc
+
 
     @property
     def seq_len_tensor(self):
@@ -165,9 +167,11 @@ class KVAttentionManager:
             return self.seq_len_tensor_full
         return self.seq_len_tensor_inc
 
+
     @property
     def token_offset_list(self):
         return [self.token_offset] * self.batch_size
+
 
     def get_len_tensor(self, length):
         """
@@ -397,6 +401,7 @@ class VLMo(pl.LightningModule):
             rank_zero_info(
                 "Load ckpt from: {}".format(self.hparams.config["load_path"])
             )
+            print('load_path**+*+*+*+', self.hparams.config["load_path"])
             ckpt = torch.load(self.hparams.config["load_path"], map_location="npu")
 
             state_dict = None
@@ -439,6 +444,7 @@ class VLMo(pl.LightningModule):
         ]
         self.place_holder = torch.ones(1).npu()
     
+
     def trans_data(self, tensor):
         # print("******************transing Data********************")
         # print("shape",tensor.shape)
@@ -520,6 +526,7 @@ class VLMo(pl.LightningModule):
         self.kv_attention_manager_vl = None
         self.kv_attention_manager_text = None
         self.kv_attention_manager_image = None
+
 
     def load_pretrained_weight(self):
         if (
@@ -667,6 +674,7 @@ class VLMo(pl.LightningModule):
             rank_zero_info("missing_keys: {}".format(missing_keys))
             rank_zero_info("unexpected_keys: {}".format(unexpected_keys))
 
+
     def get_rel_pos_bias(self, relative_position_index):
         if self.relative_position_embed:
             print("--->self.relative_position_embed True")
@@ -687,6 +695,7 @@ class VLMo(pl.LightningModule):
         else:
             print("--->self.relative_position_embed False")
             return [None] * self.num_layers
+
 
     def build_relative_position_embed(self, config):
         if not self.transformer.need_relative_position_embed:
@@ -781,7 +790,7 @@ class VLMo(pl.LightningModule):
         weights = []
 
         empty_k_bias = torch.zeros(
-            self.transformer.embed_dim, device="npu", dtype=torch.float16
+            self.transformer.embed_dim // 2, device="npu", dtype=torch.float16
         )
         weights_layer = self.state_dict()
         if modality_type == "vl":
@@ -890,6 +899,7 @@ class VLMo(pl.LightningModule):
             self.acl_fa_text_operation.set_weight(weights)
         # print("init weight finished")
 
+
     def init_acl_encoder_param(self, x, mask=None, modality_type="vl"):
         x = x.half().npu()
         maskBool = mask.to(dtype=bool, device=x.device)
@@ -946,6 +956,7 @@ class VLMo(pl.LightningModule):
             ] + self.layer_id_list + maskList
             return inputs
 
+
     def execute_acl_encoder(self, x, mask, modality_type):
         acl_input = self.init_acl_encoder_param(x, mask, modality_type)
 
@@ -961,6 +972,7 @@ class VLMo(pl.LightningModule):
             )
             
             acl_model_out = self.acl_fa_vl_operation.execute(acl_input, tmp_param)
+            print('acl_model_out', acl_model_out)
             acl_model_out = acl_model_out[0]
             return acl_model_out
         elif modality_type == "image":
@@ -984,6 +996,7 @@ class VLMo(pl.LightningModule):
             acl_model_out = self.acl_fa_text_operation.execute(acl_input, tmp_param)
             acl_model_out = acl_model_out[0]
             return acl_model_out
+
 
     def infer(
         self,
@@ -1017,7 +1030,6 @@ class VLMo(pl.LightningModule):
         # TAG1 text embedding
         # BertEmbeddings
         text_embeds = self.text_embeddings(text_ids)
-
         img = batch[imgkey][0].half()
 
         # text = 'Is the picture black and white?'
@@ -1040,6 +1052,13 @@ class VLMo(pl.LightningModule):
 
         # print("------->   visual_embed img device: ",image_masks.device)
         # nn.Embedding
+        # print('************ token_type_embeddings **********')
+        # print(self.token_type_embeddings(
+        #         torch.full_like(image_masks, image_token_type_idx)
+        #     ).shape)
+        # print('************ image_embeds *********')
+        # print(image_embeds.shape)
+
         text_embeds, image_embeds = (
             text_embeds + self.token_type_embeddings(torch.zeros_like(text_masks)),
             image_embeds
@@ -1060,6 +1079,7 @@ class VLMo(pl.LightningModule):
         batch_size = x.shape[0]
         input_shape = x.shape[1]
         # print("batch_size",batch_size)
+        # print('x ',x.shape)
 
         # if batch_size != self.batch_size:
         #     self.batch_size = batch_size
@@ -1076,13 +1096,17 @@ class VLMo(pl.LightningModule):
         # Mlp nn.GELU
         # Attention F.linear
         for i, blk in enumerate(self.transformer.blocks):
-            
             maskbool = ~co_masks.bool()
             maskbool = maskbool.npu()
             relative_position_bias_list_vl = self.relative_position_bias_list_vl[i].unsqueeze(0).npu()
             relative_position_bias_list_vl = relative_position_bias_list_vl.masked_fill(maskbool[:, None, None, :], float("-inf"))
             
             relative_position_bias = relative_position_bias_list_vl.npu()
+            
+            # print("relative_position_bias shape",relative_position_bias.shape)
+            relative_position_bias = torch.chunk(relative_position_bias, 2, dim=1)[torch.distributed.get_rank()]
+            
+            # print('**************RANK :',torch.distributed.get_rank())
             # print("relative_position_bias shape",relative_position_bias.shape)
             # print("self.relative_position_bias_list[i]",self.relative_position_bias_list[i])
             # print("relative_position_bias_list[i]",relative_position_bias_list[i])
@@ -1126,6 +1150,7 @@ class VLMo(pl.LightningModule):
 
         return ret
 
+
     def infer_ascend(
         self,
         batch,
@@ -1135,6 +1160,7 @@ class VLMo(pl.LightningModule):
         image_embeds=None,
         image_masks=None,
     ):
+        print("vlmo module infer")
         for k, v in batch.items():
             if k == "text_ids" or k == "text_masks" or k == "text_labels":
                 batch[k] = v.npu()
@@ -1226,6 +1252,7 @@ class VLMo(pl.LightningModule):
 
         return ret
 
+
     def infer_text(
         self,
         batch,
@@ -1297,6 +1324,7 @@ class VLMo(pl.LightningModule):
 
         return ret
 
+
     def infer_text_ft(
         self,
         batch,
@@ -1354,6 +1382,7 @@ class VLMo(pl.LightningModule):
         }
 
         return ret
+
 
     def infer_text_ft_ascend(
         self,
@@ -1423,6 +1452,7 @@ class VLMo(pl.LightningModule):
 
         return ret
 
+
     def infer_text_mlm(
         self,
         batch,
@@ -1477,6 +1507,7 @@ class VLMo(pl.LightningModule):
         }
 
         return ret
+
 
     def infer_image(
         self,
@@ -1556,6 +1587,7 @@ class VLMo(pl.LightningModule):
 
         return ret
 
+
     def infer_image_ft(
         self,
         batch,
@@ -1620,6 +1652,7 @@ class VLMo(pl.LightningModule):
         }
 
         return ret
+
 
     def infer_image_ft_ascend(
         self,
@@ -1698,6 +1731,7 @@ class VLMo(pl.LightningModule):
 
         return ret
 
+
     def forward(self, batch):
         # print("VLMo forward")
 
@@ -1738,8 +1772,12 @@ class VLMo(pl.LightningModule):
         # Natural Language for Visual Reasoning 2
         if "nlvr2" in self.current_tasks:
             ret.update(objectives.compute_nlvr2(self, batch))
+        
+        if self.world_size >= 2:
+            torch.distributed.all_reduce(ret, op=torch.distributed.ReduceOp.SUM)
 
         return ret
+
 
     def training_step(self, batch, batch_idx):
         vlmo_utils.set_task(self)
@@ -1748,15 +1786,19 @@ class VLMo(pl.LightningModule):
 
         return total_loss
 
+
     def training_epoch_end(self, outs):
         vlmo_utils.epoch_wrapup(self)
+
 
     def validation_step(self, batch, batch_idx):
         vlmo_utils.set_task(self)
         output = self(batch)
 
+
     def validation_epoch_end(self, outs):
         vlmo_utils.epoch_wrapup(self)
+
 
     def test_step(self, batch, batch_idx):
         vlmo_utils.set_task(self)
@@ -1768,12 +1810,14 @@ class VLMo(pl.LightningModule):
 
         return ret
 
+
     def test_epoch_end(self, outs):
         model_name = self.hparams.config["load_path"].split("/")[-1][:-5]
 
         if self.hparams.config["loss_names"]["vqa"] > 0:
             objectives.vqa_test_wrapup(outs, model_name, self.hparams.config["log_dir"])
         vlmo_utils.epoch_wrapup(self)
+
 
     def configure_optimizers(self):
         return vlmo_utils.set_schedule(self)
