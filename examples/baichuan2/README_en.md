@@ -370,7 +370,7 @@ python ./tools/preprocess_data.py \
     --tokenizer-type PretrainedFromHF 
 ```
 
-6. Config Baichuan2-13B pre-training script(Baichuan2-13B does not support Flash Attention): examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
+6. Config Baichuan2-13B pre-training script: examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
 
 ```shell
 # modify the script according to your own  ascend-toolkit path
@@ -396,9 +396,9 @@ bash examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
 The performance of the Baichuan2-13B in **Ascend NPU** and **Reference**:
 
 | Device |     Model     | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | 
-|:----:|:-------------------------:|:----:|:------------------:|:--------------------:|:---------------:|
-| NPUs | Baichuan2-13B |1000 |1.83| 940    | 4.35 |
-|  Reference  | Baichuan2-13B |-|-| 872|- |
+|:----:|:-------------------------:|:----:|:------------------:|:----------------------------:|:---------------:|
+| NPUs | Baichuan2-13B |1000 |1.83|             1346             | 4.35 |
+|  Reference  | Baichuan2-13B |-|-|             872              |- |
 
 
 

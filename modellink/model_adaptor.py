@@ -15,7 +15,9 @@
 
 from .model import (
     GPTModel, parallel_transformer_init, seq_length_wrapper,
-    norm_wrapper, SwitchMLP, state_dict_for_save_checkpoint_wrapper
+    norm_wrapper, SwitchMLP, state_dict_for_save_checkpoint_wrapper,
+    core_attention_wrapper, core_attention_forward, FlashSelfAttention,
+    ParallelAttention_wrapper
 )
 from .core import vocab_embedding_wrapper
 from .data import build_pretraining_data_loader
@@ -34,6 +36,7 @@ def exe_adaptor():
     megatron.arguments.parse_args = parse_args_decorator(megatron.arguments.parse_args)
     megatron.global_vars.build_tokenizer = build_tokenizer
 
+
     import megatron.training
     megatron.training.get_model = get_model_wrapper(megatron.training.get_model)
     megatron.training.build_pretraining_data_loader = build_pretraining_data_loader
@@ -46,6 +49,14 @@ def exe_adaptor():
         megatron.model.transformer.ParallelTransformer.state_dict_for_save_checkpoint)
     megatron.model.language_model.TransformerLanguageModel.forward = (seq_length_wrapper(
         megatron.model.language_model.TransformerLanguageModel.forward))
+
+    megatron.model.transformer.ParallelAttention.__init__ = ParallelAttention_wrapper(
+        megatron.model.transformer.ParallelAttention.__init__)
+    megatron.model.transformer.CoreAttention.__init__ = core_attention_wrapper(
+        megatron.model.transformer.CoreAttention.__init__)
+    megatron.model.transformer.CoreAttention.forward = core_attention_forward
+    megatron.model.transformer.FlashSelfAttention = FlashSelfAttention
+
 
     from megatron.core.datasets.gpt_dataset import GPTDataset
     GPTDataset._build_document_sample_shuffle_indices = _build_document_sample_shuffle_indices

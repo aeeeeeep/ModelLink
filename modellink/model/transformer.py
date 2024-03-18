@@ -15,20 +15,31 @@
 
 from functools import wraps
 
+import math
 import torch
-from megatron import get_args
+import torch_npu
+
+from megatron import get_args, core
 from megatron.core import mpu
 from megatron.core import tensor_parallel
 from megatron.core import parallel_state
 from megatron.core.enums import ModelType
 
-from megatron.model.enums import AttnMaskType, LayerType
+from megatron.model.enums import AttnMaskType, LayerType, AttnType
 from megatron.model.transformer import _get_layer_type
-from megatron.model.transformer import ParallelTransformer, ParallelTransformerLayer
+from megatron.model.transformer import (
+    ParallelTransformer, ParallelTransformerLayer, ParallelAttention, CoreAttention
+)
 from megatron.model.utils import get_norm
 
 from modellink.error_utils import ensure_valid
+from modellink.model.alibi import Alibi, _build_alibi_tensor, _get_inverted_mask
 from tasks.finetune.lora.utils import is_enable_lora
+
+try:
+    from einops import rearrange
+except ImportError:
+    rearrange = None
 
 
 def state_dict_for_save_checkpoint(state_dict):
@@ -318,3 +329,315 @@ def parallel_transformer_init(self, config,
     if self.post_process and self.post_norm:
         # Final layer norm before output.
         self.final_norm = get_norm(config)
+
+
+def ParallelAttention_wrapper(fn):
+    @wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        fn(self, *args, **kwargs)
+        config = args[0]
+        query_projection_size = config.kv_channels * config.num_attention_heads
+        _args = get_args()
+        if _args.group_query_attention:
+            kv_projection_size = _args.kv_channels * _args.num_query_groups
+        else:
+            kv_projection_size = _args.kv_channels * _args.num_attention_heads
+        # qkv bias
+        bias = _args.add_qkv_bias or _args.add_bias_linear
+        self.query_key_value = tensor_parallel.ColumnParallelLinear(
+            config.hidden_size,
+            query_projection_size + 2 * kv_projection_size,
+            config=config,
+            init_method=config.init_method,
+            bias=bias,
+            gather_output=False)
+        # dense bias
+        bias = _args.add_dense_bias or _args.add_bias_linear
+        skip_bias_add = _args.skip_bias_add
+        # Output.
+        self.dense = tensor_parallel.RowParallelLinear(
+            query_projection_size,
+            config.hidden_size,
+            config=config,
+            init_method=config.output_layer_init_method,
+            bias=bias,
+            input_is_parallel=True,
+            skip_bias_add=skip_bias_add)
+
+        if self.use_flash_attn:
+            self.core_attention_flash = FlashSelfAttention(
+                causal=True, attention_dropout=config.attention_dropout,
+                layer_number=self.layer_number
+            )
+    return wrapper
+
+
+class FlashSelfAttention(torch.nn.Module):
+    """ Ascend Flash Attention, support Alibi
+    Implement the scaled dot product attention with softmax.
+    Arguments
+    ---------
+        softmax_scale: The temperature to use for the softmax attention.
+                      (default: 1/sqrt(d_keys) where d_keys is computed at
+                      runtime)
+        attention_dropout: The dropout rate to apply to the attention
+                           (default: 0.0)
+    """
+    def __init__(self, causal=False, softmax_scale=None, attention_dropout=0.0,
+                 layer_number=None, device=None, dtype=None):
+        super().__init__()
+        args = get_args()
+        self.causal = causal
+        self.softmax_scale = softmax_scale
+        self.dropout_p = attention_dropout
+        self.pre_tockens = args.pre_tockens
+        self.next_tockens = args.next_tockens
+
+        self.square_alibi_mask = args.square_alibi_mask
+        self.apply_query_key_layer_scaling = args.apply_query_key_layer_scaling
+        self.layer_number = layer_number
+        self.fill_neg_inf = args.fill_neg_inf
+
+        self.beta = 1.0
+        if self.apply_query_key_layer_scaling:
+            self.beta = 1.0 / self.layer_number
+
+        if args.position_embedding_type == 'alibi':
+            self.get_alibi()
+
+    def forward(self, q, k, v, pse=None):
+        """Implements the multihead softmax attention.
+        Arguments
+        ---------
+            q, k, v: The tensor containing the query, key, and value. (B, S, H, D)
+        """
+        args = get_args()
+
+        batch_size, seq_length, head_num, head_dim = q.shape[0], q.shape[1], q.shape[2], q.shape[3]
+
+        if not hasattr(self, 'attention_mask'):
+            self.attention_mask = torch.triu(torch.ones(seq_length, seq_length), 1).bool().npu()
+
+        if args.shape_order == 'BSH':
+            q, k, v = [rearrange(x, 'b s h d -> b s (h d)') for x in [q, k, v]]
+        elif args.shape_order == 'SBH':
+            q, k, v = [rearrange(x, 'b s h d -> s b (h d)') for x in [q, k, v]]
+        elif args.shape_order != 'BSND':
+            raise ValueError('Invalid shape-order: {}, shape-order must be SBH or BSH or BSND'.format(args.shape_order))
+
+        try:
+            if not hasattr(self, 'num_factor'):
+                self.norm_factor = math.sqrt(head_dim)
+
+            if self.apply_query_key_layer_scaling:
+                coeff = self.layer_number
+                self.norm_factor *= coeff
+
+            scale = 1.0 / self.norm_factor if self.softmax_scale is None else self.softmax_scale
+        except Exception as e:
+            raise ValueError('Invalid head_dim: {}'.format(head_dim)) from e
+
+        size_record = q.shape
+        if self.alibi is not None and (self.alibi.output_size != size_record) and pse is None:
+            if args.shape_order != 'SBH':
+                raise ValueError(
+                    'FlashAttention with Alibi requires for SBH shape_order, but is {}.'.format(args.shape_order))
+
+            self.alibi.output_size = size_record
+            self.get_alibi()
+            if self.fill_neg_inf:
+                _alibi = self.alibi.alibi[:, :seq_length, :seq_length]
+                self.attention_mask = \
+                    self.attention_mask.unsqueeze(0).unsqueeze(0).repeat(batch_size, 1, 1, 1)[:batch_size, :, :, :]
+                self.alibi.matmul_result = _get_inverted_mask(self.attention_mask, _alibi).view(-1, seq_length, seq_length)
+            else:
+                self.alibi.matmul_result = self.alibi.alibi[:, :, :seq_length].repeat(batch_size, 1, 1)
+
+        if self.alibi and pse is None:
+            pse = self.alibi.matmul_result.reshape(batch_size, head_num, seq_length,
+                                                   seq_length) * self.beta * self.norm_factor
+            self.pre_tockens = seq_length
+
+        output = torch_npu.npu_fusion_attention( \
+            q, k, v, head_num, args.shape_order, \
+            pse=pse, \
+            padding_mask=None, \
+            atten_mask=self.attention_mask, \
+            scale=scale, \
+            pre_tockens=self.pre_tockens, \
+            next_tockens=self.next_tockens, \
+            keep_prob=1 - self.dropout_p, \
+            inner_precise=0
+        )[0]
+
+        if args.shape_order == 'BSH':
+            output = rearrange(output, 'b s (h d) -> b s h d', h=head_num)
+        elif args.shape_order == 'SBH':
+            output = rearrange(output, 's b (h d) -> b s h d', h=head_num)
+        elif args.shape_order != 'BSND':
+            raise ValueError('Invalid shape-order: {}, shape-order must be SBH or BSH or BSND'.format(args.shape_order))
+
+        return output
+
+    def get_alibi(self):
+        args = get_args()
+        self.alibi = Alibi()
+        alibi = _build_alibi_tensor(args.seq_length,
+                                    args.num_attention_heads,
+                                    args.square_alibi_mask,
+                                    args.fill_neg_inf,
+                                    ).to(torch.cuda.current_device())
+        if args.params_dtype == torch.float16:
+            alibi = alibi.to(torch.float16)
+        elif args.params_dtype == torch.bfloat16:
+            alibi = alibi.to(torch.bfloat16)
+        self.alibi.alibi = alibi
+
+
+
+def core_attention_wrapper(fn):
+    @wraps(fn)
+    def wrapper(self, *arg, **kwargs):
+        fn(self, *arg, **kwargs)
+
+        args = get_args()
+        self.square_alibi_mask = args.square_alibi_mask
+        self.fill_neg_inf = args.fill_neg_inf
+        self.beta = 1.0
+        if self.apply_query_key_layer_scaling:
+            self.beta = 1.0 / self.layer_number
+        if args.position_embedding_type == 'alibi':
+            self.alibi = Alibi()
+            alibi = _build_alibi_tensor(args.seq_length,
+                                        args.num_attention_heads,
+                                        args.square_alibi_mask,
+                                        args.fill_neg_inf
+                                        ).to(torch.cuda.current_device())
+            if args.params_dtype == torch.float16:
+                alibi = alibi.to(torch.float16)
+            elif args.params_dtype == torch.bfloat16:
+                alibi = alibi.to(torch.bfloat16)
+            self.alibi.alibi = alibi
+        else:
+            self.alibi = None
+
+    return wrapper
+
+
+def core_attention_forward(self, query_layer, key_layer, value_layer, attention_mask):
+    # ===================================
+    # Raw attention scores. [b, np, s, s]
+    # ===================================
+
+    # [b, np, sq, sk]
+    output_size = (query_layer.size(1),
+                   query_layer.size(2),
+                   query_layer.size(0),
+                   key_layer.size(0))
+
+    # [sq, b, np, hn] -> [sq, b * np, hn]
+    query_layer = query_layer.reshape(output_size[2],
+                                      output_size[0] * output_size[1], -1)
+    # [sk, b, np, hn] -> [sk, b * np, hn]
+    key_layer = key_layer.view(output_size[3],
+                               output_size[0] * output_size[1], -1)
+
+    if self.alibi is None:
+        matmul_input_buffer = mpu.get_global_memory_buffer().get_tensor(
+            (output_size[0] * output_size[1], output_size[2], output_size[3]),
+            query_layer.dtype, "mpu")
+
+        matmul_result = torch.baddbmm(
+            matmul_input_buffer,
+            query_layer.transpose(0, 1),
+            key_layer.transpose(0, 1).transpose(1, 2),
+            beta=0.0, alpha=(1.0 / self.norm_factor))
+    else:
+        if self.alibi.matmul_result is None or self.alibi.output_size != output_size:
+            args = get_args()
+
+            self.alibi.output_size = output_size
+            alibi = _build_alibi_tensor(args.seq_length,
+                                        args.num_attention_heads,
+                                        args.square_alibi_mask,
+                                        args.fill_neg_inf
+                                        ).to(torch.cuda.current_device())
+            if args.params_dtype == torch.float16:
+                alibi = alibi.to(torch.float16)
+            elif args.params_dtype == torch.bfloat16:
+                alibi = alibi.to(torch.bfloat16)
+            self.alibi.alibi = alibi
+
+            if self.fill_neg_inf:
+                _alibi = self.alibi.alibi[:, :output_size[3], :output_size[3]]
+                attention_mask = attention_mask.repeat(output_size[0], 1, 1, 1)[:output_size[0], :, :, :]
+                self.alibi.matmul_result = _get_inverted_mask(attention_mask, _alibi).view(-1, output_size[2],
+                                                                                           output_size[2]).contiguous()
+            else:
+                self.alibi.matmul_result = self.alibi.alibi[:, :, :output_size[3]].repeat(output_size[0], 1, 1)
+
+        q_trans = query_layer.transpose(0, 1).contiguous()
+        k_trans = key_layer.transpose(0, 1).transpose(1, 2).contiguous()
+        matmul_result = self.beta * self.alibi.matmul_result + torch.bmm(q_trans, k_trans) * (1.0 / self.norm_factor)
+
+        # change view to [b, np, sq, sk]
+    attention_scores = matmul_result.view(*output_size)
+
+    # ===========================
+    # Attention probs and dropout
+    # ===========================
+
+    # attention scores and attention mask [b, np, sq, sk]
+    if self.square_alibi_mask:
+        attention_scores = torch.max(
+            attention_scores, torch.tensor(torch.finfo(attention_scores.dtype).min)
+        )
+        attention_probs = torch.nn.functional.softmax(attention_scores, -1)
+    else:
+        attention_probs = self.scale_mask_softmax(attention_scores,
+                                                  attention_mask)
+
+    # This is actually dropping out entire tokens to attend to, which might
+    # seem a bit unusual, but is taken from the original Transformer paper.
+    if not self.sequence_parallel:
+        with tensor_parallel.get_cuda_rng_tracker().fork():
+            attention_probs = self.attention_dropout(attention_probs)
+    else:
+        attention_probs = self.attention_dropout(attention_probs)
+
+    # =========================
+    # Context layer. [sq, b, hp]
+    # =========================
+
+    # value_layer -> context layer.
+    # [sk, b, np, hn] --> [b, np, sq, hn]
+
+    # context layer shape: [b, np, sq, hn]
+    output_size = (value_layer.size(1),
+                   value_layer.size(2),
+                   query_layer.size(0),
+                   value_layer.size(3))
+
+    # change view [sk, b * np, hn]
+    value_layer = value_layer.view(value_layer.size(0),
+                                   output_size[0] * output_size[1], -1)
+
+    # change view [b * np, sq, sk]
+    attention_probs = attention_probs.view(output_size[0] * output_size[1],
+                                           output_size[2], -1)
+
+    # matmul: [b * np, sq, hn]
+    context_layer = torch.bmm(attention_probs, value_layer.transpose(0, 1))
+
+    # change view [b, np, sq, hn]
+    context_layer = context_layer.view(*output_size)
+
+    # [b, np, sq, hn] --> [sq, b, np, hn]
+    context_layer = context_layer.permute(2, 0, 1, 3).contiguous()
+
+    # [sq, b, np, hn] --> [sq, b, hp]
+    new_context_layer_shape = context_layer.size()[:-2] + \
+                              (self.hidden_size_per_partition,)
+    context_layer = context_layer.view(*new_context_layer_shape)
+
+    return context_layer
