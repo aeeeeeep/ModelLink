@@ -23,7 +23,6 @@ class LlamaModelTest(model_test.ModelTest):
         args[3] = model_name
         super().__init__(*args)
         
-
     def get_chip_num(self):
         return 8
     
