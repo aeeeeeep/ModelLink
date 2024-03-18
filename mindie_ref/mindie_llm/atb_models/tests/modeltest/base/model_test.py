@@ -197,7 +197,7 @@ class ModelTest:
             except OverflowError:
                 max_csv_limit = int(max_csv_limit / 10)
 
-        csv_path = os.path.join(self.script_path, 'result', self.model_name, f"{self.model_type}_{self.data_type}_test_result_formatted.csv")
+        csv_path = os.path.join(os.path.dirname(self.script_path), 'result', self.model_name, f"{self.model_type}_{self.data_type}_test_result_formatted.csv")
         os.makedirs(os.path.dirname(csv_path), exist_ok=True)
         with open(csv_path, 'w') as f:
             if self.test_mode == "performance":
