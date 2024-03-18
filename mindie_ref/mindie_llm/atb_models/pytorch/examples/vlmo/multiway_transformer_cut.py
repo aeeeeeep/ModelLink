@@ -41,6 +41,7 @@ from pytorch_lightning.utilities.distributed import rank_zero_info
 
 
 # load_ascend_transformer()
+WORLD_SIZE = 1
 
 
 class Mlp(nn.Module):
@@ -55,9 +56,9 @@ class Mlp(nn.Module):
         super().__init__()
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
-        self.fc1 = nn.Linear(in_features, hidden_features)
+        self.fc1 = nn.Linear(in_features, hidden_features // WORLD_SIZE)
         self.act = act_layer()
-        self.fc2 = nn.Linear(hidden_features, out_features)
+        self.fc2 = nn.Linear(hidden_features // WORLD_SIZE, out_features)
         # self.drop = nn.Dropout(drop)
 
     def forward(self, x):
@@ -66,6 +67,10 @@ class Mlp(nn.Module):
         # x = self.drop(x)
         x = self.fc2(x)
         # x = self.drop(x)
+        # print('mlp x shape',x.shape)
+        # print('mlp final x shape', x.shape)
+        torch.distributed.all_reduce(x, op=torch.distributed.ReduceOp.SUM)
+        # print('mlp_x',x)
         return x
 
 
@@ -80,61 +85,55 @@ class Attention(nn.Module):
         proj_drop=0.0,
     ):
         super().__init__()
-        self.num_heads = num_heads
         head_dim = dim // num_heads
+        self.num_heads = num_heads // WORLD_SIZE
         # NOTE scale factor was wrong in my original version, can set manually to be compat with prev weights
         self.scale = qk_scale or head_dim**-0.5
 
-        self.qkv = nn.Linear(dim, dim * 3, bias=False)
+        self.qkv = nn.Linear(dim, head_dim * self.num_heads * 3, bias=False)
         if qkv_bias:
-            self.q_bias = nn.Parameter(torch.zeros(dim))
-            self.v_bias = nn.Parameter(torch.zeros(dim))
+            self.q_bias = nn.Parameter(torch.zeros(head_dim * self.num_heads))
+            self.v_bias = nn.Parameter(torch.zeros(head_dim * self.num_heads))
         else:
             self.q_bias = None
             self.v_bias = None
 
         # self.attn_drop = attn_drop
-        self.proj = nn.Linear(dim, dim)
+        self.proj = nn.Linear(head_dim * self.num_heads, dim)
         # self.proj_drop = proj_drop
+
 
     def forward(self, x, mask=None, relative_position_bias=None):
         # print("multiway transformer attention forward")
         # print("x.shape ",x.shape)
         # x.shape  torch.Size([1, 941, 768])
-
         B, N, C = x.shape
+        C = C // WORLD_SIZE
 
         qkv_bias = None
         if self.q_bias is not None:
             qkv_bias = torch.cat(
                 (
-                    self.q_bias, # 768
+                    self.q_bias,
                     torch.zeros_like(self.v_bias, requires_grad=False),
-                    self.v_bias, # 768
+                    self.v_bias,
                 )
             )
-        # x.shape  torch.Size([1, 941, 768])
-        # qkv.w   torch.Size([2304, 768])
-        # qkv bias 768*3 = 2304
-        
         qkv = F.linear(input=x, weight=self.qkv.weight, bias=qkv_bias)
+       # print('qkv_we')
 
-        # torch.Size([1, 941, 2304])
         # 1 941 2304
         # 1 941 3 12 64
         # 3 1 12 941 64
-        
         qkv = qkv.reshape(B, N, 3, self.num_heads, -1).permute(
             2, 0, 3, 1, 4
         )  # 3 batchSize numHeads N -1
-        # print(torch.allclose(qkvc, qkv, rtol=1e-4))
         q, k, v = (
             qkv[0],
             qkv[1],
             qkv[2],
         )  # make torchscript happy (cannot use tensor as tuple)
 
-        # q.shape 1 12 941 64
         # 相当于有个rope操作。
 
         # print("q  k  v.shape ",q.shape)
@@ -147,28 +146,28 @@ class Attention(nn.Module):
         # 1 12 941 941
 
         attn = q.float() @ k.float().transpose(-2, -1)
-        # print("1 attn shape",attn.shape)
         # 移动到外面，加到mask上面
+        # print('attn_shape',attn.shape)
+        # print('bias.shape',relative_position_bias.unsqueeze(0).shape)
+        # print('bias.shape_ori',relative_position_bias.shape)
+        # print('attn_v', attn)
         # if relative_position_bias is not None:
+
         #     attn = attn + relative_position_bias.unsqueeze(0)
         #     # 1  12  941 941
         # if mask is not None:
         #     mask = mask.bool()  # 1 1 1 941
         #     # print("~mask[:, None, None, :]",~mask[:, None, None, :])
         #     attn = attn.masked_fill(~mask[:, None, None, :], float("-inf"))
-
         attn = attn + relative_position_bias
+
         attn = attn.softmax(dim=-1).type_as(x)
+
         # attn = self.attn_drop(attn)
-
         x = (attn @ v).transpose(1, 2).reshape(B, N, C)
-
-        # 768 384
-        # 768 
-        # proj: [768,768]
         x = self.proj(x)
-        # print("final x shape ",x.shape)
-        # x = self.proj_drop(x)
+        #all reduce
+        torch.distributed.all_reduce(x, op=torch.distributed.ReduceOp.SUM)
         return x
 
 
@@ -245,6 +244,7 @@ class Block(nn.Module):
 
         self.max_text_len = max_text_len
 
+
     def forward(self, x, mask=None, modality_type=None, relative_position_bias=None):
 
         norm = self.norm1(x)
@@ -269,12 +269,12 @@ class Block(nn.Module):
             else:
                 x = x + self.gamma_2 * self.mlp_vl(self.norm2_vl(x))
         # print("org x shape",x.shape)
-
         return x
 
 
 class PatchEmbed(nn.Module):
     """Image to Patch Embedding"""
+
 
     def __init__(
         self,
@@ -301,6 +301,7 @@ class PatchEmbed(nn.Module):
             bias=False if no_patch_embed_bias else True,
         )
 
+
     def forward(self, x):
         # print("multiway transformer PatchEmbed forward")
 
@@ -315,6 +316,7 @@ class MultiWayTransformer(nn.Module):
     A PyTorch impl of : `An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale`  -
         https://arxiv.org/abs/2010.11929
     """
+
 
     def __init__(
         self,
@@ -428,6 +430,7 @@ class MultiWayTransformer(nn.Module):
         trunc_normal_(self.cls_token, std=0.02)
         self.apply(self._init_weights)
 
+
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
             trunc_normal_(m.weight, std=0.02)
@@ -437,9 +440,11 @@ class MultiWayTransformer(nn.Module):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
+
     @torch.jit.ignore
     def no_weight_decay(self):
         return {"pos_embed", "cls_token"}
+
 
     def visual_embed(self, _x):
 
@@ -462,6 +467,8 @@ class MultiWayTransformer(nn.Module):
 # VLMo base/p16
 @register_model
 def vlmo_base_patch16(pretrained=False, **kwargs):
+    global WORLD_SIZE
+    WORLD_SIZE = 2
     img_size = kwargs.pop("img_size", 224)
     model = MultiWayTransformer(
         img_size=img_size,

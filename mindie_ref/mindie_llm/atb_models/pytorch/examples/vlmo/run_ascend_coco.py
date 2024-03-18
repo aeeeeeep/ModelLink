@@ -32,7 +32,7 @@ def label_2_ans(path):
 def main(_config):
 
     DEVICE_ID = 4
-    COCO_ARROW_DIR = "/data1/models/vlmo/cocoarrow/"
+    COCO_ARROW_DIR = "./vlmo/cocoarrow/"
     BERT_VOCAB = "./vocab.txt"
     _config = copy.deepcopy(_config)
     database = CocoCaptionKarpathyDataset(
