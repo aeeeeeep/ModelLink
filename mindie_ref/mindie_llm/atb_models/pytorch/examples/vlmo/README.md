@@ -18,84 +18,11 @@ VLMo 是由微软提出的一种多模态 Transformer 模型，Mixture-of-Modali
 
 ### 1. 环境部署
 
-#### 1.1 安装HDK
-
-先安装firmwire，再安装driver
-
-##### 1.1.1 安装firmwire
-
-安装方法: xxx代表具体版本
-
-| 包名                                   |
-|--------------------------------------|
-| Ascend-hdk-910b-npu-firmware_xxx.run |
-| Ascend-hdk-310p-npu-firmware_xxx.run |
-
-根据芯片型号选择相应的安装包安装
-
-```bash
-# 安装firmwire
-  chmod +x Ascend-hdk-310p-npu-driver_23.0.rc3.b082_*.run
-  ./Ascend-hdk-310p-npu-driver_23.0.rc3.b082_*.run --full
-```
-
-##### 1.1.2 安装driver
-
-安装方法：
-
-| cpu     | 包名                                               | 
-|---------|--------------------------------------------------|
-| aarch64 | Ascend-hdk-910b-npu-driver_xxx_linux-aarch64.run |
-| x86     | Ascend-hdk-910b-npu-driver_xxx_linux-x86_64.run  |
-| aarch64 | Ascend-hdk-310p-npu-driver_xxx_linux-aarch64.run |
-| x86     | Ascend-hdk-310p-npu-driver_xxx_linux-x86-64.run  |
-
-```bash
-# 根据CPU架构 以及npu型号 安装对应的 driver
-chmod +x Ascend-hdk-310p*_*.run
-./Ascend-hdk-310p*_*.run --full
-```
-
-#### 1.2 安装CANN
-
-先安装toolkit 再安装kernel
-
-##### 1.2.1 安装toolkit
-
-安装方法：xxx代表具体的版本
-
-| cpu     | 包名                                        |
-|---------|-------------------------------------------|
-| aarch64 | Ascend-cann-toolkit_xxx_linux-aarch64.run |
-| x86     | Ascend-cann-toolkit_xxx_linux-x86_64.run  |
-
-```bash
-# 安装toolkit  以arm为例
-chmod +x Ascend-cann-toolkit_xxx_linux-aarch64.run
-./Ascend-cann-toolkit_xxx_linux-aarch64.run --install
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-```
-
-##### 1.2.2 安装kernel
-
-安装方法：xxx代表具体的版本
-
-| 包名                                     |
-|----------------------------------------|
-| Ascend-cann-kernels-910b_xxx_linux.run |
-| Ascend-cann-kernels-310p_xxx_linux.run |
-
-```bash
-# 安装 kernel 以310P 为例
-chmod +x Ascend-cann-kernels-310p_xxx_linux.run
-./Ascend-cann-kernels-310p_xxx_linux.run --install
-```
-
-#### 1.3 安装PytorchAdapter
+#### 1.1 安装PytorchAdapter
 
 首先安装torch，其次安装torch_npu，支持torch1.11.1、2.0.1，下面以torch2.0.1为例进行说明
 
-##### 1.3.1 安装torch
+##### 1.1.1 安装torch
 
 安装方法：
 
@@ -114,7 +41,7 @@ chmod +x Ascend-cann-kernels-310p_xxx_linux.run
 pip install torch-2.0.1-cp39-cp39-manylinux2014_aarch64.whl
 ```
 
-##### 1.3.2 安装torch_npu
+##### 1.1.2 安装torch_npu
 
 安装方法：
 
@@ -132,7 +59,7 @@ tar -zxvf pytorch_v2.0.1_py39.tar.gz
 pip install torch*_aarch64.whl
 ```
 
-#### 1.3.3 requirements
+#### 1.1.3 requirements
 
 | 包名               | 推荐版本   |  
 |-----------------|--------|
@@ -261,11 +188,17 @@ pip install torch*_aarch64.whl
 #### 1. 将大模型加速库中 vlmo 相关的 文件替换至 model_path 中的指定路径
 
 ```shell
-cd ${llm_path}/pytorch/examples/models/vlmo/
+cd ${llm_path}/pytorch/examples/vlmo/
 cp multiway_transformer.py ${model_path}/unilm/vlmo/vlmo/modules
 cp vlmo_module.py ${model_path}/unilm/vlmo/vlmo/modules
+cp multiway_transformer_cut.py ${model_path}/unilm/vlmo/vlmo/modules
+cp config.py ${model_path}/unilm/vlmo/vlmo/
+cp vlmo_module_cut.py ${model_path}/unilm/vlmo/vlmo/modules
 cp run_ascend_vqa.py ${model_path}/unilm/vlmo/
 cp run_ascend_vqa.sh ${model_path}/unilm/vlmo/
+cp cut_model_util.py ${model_path}/unilm/vlmo/
+cp cut_ascend_vqa.py ${model_path}/unilm/vlmo/
+cp cut_model_and_run.sh ${model_path}/unilm/vlmo/
 ```
 
 #### 2.修改配置
@@ -277,6 +210,12 @@ cp run_ascend_vqa.sh ${model_path}/unilm/vlmo/
 打开 `${model_path}`/unilm/vlmo/run_ascend_vqa.py \
 修改 `VQA_ARROW_DIR`  路径为 '`${data_download_path}`/vqa_arrow' ；修改 `<BERT_VOCAB>` 为 '`${model_download_path}`/vocab.txt'
 修改 DEVICE_ID 后的值可选择在哪张卡上运行
+
+##### 修改双芯推理配置
+打开 `${model_path}/unilm/vlmo/cut_model_and_run.sh` 修改input_path为`${model_download_path}`/vlmo_base_patch16_480_vqa.pt, output_path为`${model_download_path}`/part_model
+打开`${model_path}/unilm/vlmo/vlmo/modules/config.py` 在device处可以选择所用芯片，请输入两个芯片的编号。
+打开 `${model_path}/unilm/vlmo/cut_ascend_vqa.py` \
+修改 `VQA_ARROW_DIR`  路径为 '`${data_download_path}`/vqa_arrow' ；修改 `<BERT_VOCAB>` 为 '`${model_download_path}`/vocab.txt' ；修改 `LOAD_PATH` 路径为`${model_download_path}`。
  
 # CPU高性能模式
 
@@ -296,6 +235,12 @@ cpupower frequency-set -g performance
 bash run_ascend_vqa.sh
 ```
 
+### 执行双芯推理
+#### cut_model_and_run.sh
+第一次执行为切分权重，第二次执行为进行双芯推理。
+```shell
+bash cut_model_and_run.sh
+```
 #### FAQ
 
 

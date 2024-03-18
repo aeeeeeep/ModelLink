@@ -1,3 +1,4 @@
+import argparse
 import os
 import copy
 import time
@@ -7,7 +8,7 @@ from transformers import BertTokenizer
 import torch
 import torch_npu
 from vlmo.config import ex
-from vlmo.modules.vlmo_module import VLMo
+from vlmo.modules.vlmo_module_cut import VLMo
 from vlmo.datasets import VQAv2Dataset
 
 
@@ -28,10 +29,13 @@ def label_2_ans(path):
 
 @ex.automain
 def main(_config):
-    DEVICE_ID = 4
-    VQA_ARROW_DIR = "./vlmo/arrow/"
-    BERT_VOCAB = "./vocab.txt"
     _config = copy.deepcopy(_config)
+    device_Id = _config["device"]
+    VQA_ARROW_DIR = "./vlmo/arrow/"
+    BERT_VOCAB = "./vlmo/vocab.txt"
+    LOAD_PATH = "./vlmo/"
+    PT_NAME = "cut_VQA_weights.pt"
+    local_rank = 0
     database = VQAv2Dataset(
         image_size=_config["image_size"],
         data_dir=VQA_ARROW_DIR,
@@ -40,10 +44,22 @@ def main(_config):
     )
     database.tokenizer = BertTokenizer.from_pretrained(BERT_VOCAB)
 
-    torch_npu.npu.set_device(DEVICE_ID)
-
-    model = VLMo(_config).npu().half()
-    model.eval()
+    if len(device_Id) == 1:
+        torch_npu.npu.set_device(device_Id[0])
+        _config["load_path"] = os.path.join(LOAD_PATH, PT_NAME)
+        model = VLMo(_config).npu().half()
+        model.eval()
+    else:
+        torch.distributed.init_process_group("hccl")
+        local_rank = torch.distributed.get_rank()
+        world_size = torch.distributed.get_world_size()
+        part_model_path = os.path.join(LOAD_PATH, 'part_model', str(local_rank), PT_NAME)
+        _config["load_path"] = part_model_path
+        _config["test_only"] = True
+        print(_config["load_path"])
+        torch_npu.npu.set_device(device_Id[local_rank])
+        model = VLMo(_config).npu().half()
+        model.eval()
 
     textlables = torch.full((database.max_text_len,), -101, dtype=torch.int)
     label2ans = label_2_ans(VQA_ARROW_DIR)
@@ -66,10 +82,9 @@ def main(_config):
         imageTensor = []
         imageTensor.append(torch.tensor(image[0].reshape(1, 3, 480, 480)).npu())
         batch["image"] = imageTensor
-
         with torch.no_grad():
             start_time_org = time.time()
-            infer = model.infer_ascend(batch, mask_text=False, mask_image=False)
+            infer = model.infer(batch, mask_text=False, mask_image=False)
             end_time_org = time.time()
             vqa_logits = model.vqa_classifier(infer["cls_feats"])
             _, preds = vqa_logits.max(-1)
