@@ -124,12 +124,12 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
 
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CREATE_OPERATION(addParam, &selfResidualAddNode.operation);
-    selfResidualAddNode.inTensorIds = {
-        IN_HIDDEN_STATES,
-        INTERMEDIATE_ATTENTION_OUT
-    };
-    selfResidualAddNode.outTensorIds = {INTERMEDIATE_RESIDUAL_ADD_OUT};
+    // CREATE_OPERATION(addParam, &selfResidualAddNode.operation);
+    // selfResidualAddNode.inTensorIds = {
+    //     IN_HIDDEN_STATES,
+    //     INTERMEDIATE_ATTENTION_OUT
+    // };
+    // selfResidualAddNode.outTensorIds = {INTERMEDIATE_RESIDUAL_ADD_OUT};
 
     atb_speed::common::MlpParam<atb::infer::RmsNormParam> mlpParam;
     mlpParam.isBF16 = param.isBF16;
@@ -141,8 +141,9 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     } else {
         mlpParam.mlpPackType = atb_speed::common::GATE_UP_WEIGHT_PACK;
     }
+    mlpParam.useFusionNorm = true;
     atb::infer::RmsNormParam mlpRmsNormParam;
-    mlpRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+    mlpRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_PRENORM;
     mlpRmsNormParam.normParam.epsilon = param.rmsNormEps;
     mlpParam.normParamType = mlpRmsNormParam;
     atb::infer::RmsNormParam mlpRmsNormQuantParam;
@@ -163,7 +164,8 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     }
 
     mlpParallelNode.inTensorIds = {
-        INTERMEDIATE_RESIDUAL_ADD_OUT,
+        IN_HIDDEN_STATES,
+        INTERMEDIATE_ATTENTION_OUT,
         IN_ATTENTION_NORM_WEIGHT,
         IN_ATTENTION_NORM_BIAS,
         IN_ATTENTION_NORM_NEW_WEIGHT,
@@ -184,7 +186,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
         IN_MLP_DOWN_DESCALE,
         IN_MLP_DOWN_BIAS,
     };
-    mlpParallelNode.outTensorIds = {INTERMEDIATE_MLP_OUT};
+    mlpParallelNode.outTensorIds = {INTERMEDIATE_MLP_OUT, INTERMEDIATE_RESIDUAL_ADD_OUT};
 
     CREATE_OPERATION(addParam, &mlpResidualAddNode.operation);
     mlpResidualAddNode.inTensorIds = {

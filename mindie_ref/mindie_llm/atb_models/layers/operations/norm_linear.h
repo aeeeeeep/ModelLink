@@ -37,6 +37,7 @@ struct NormLinearParam {
     bool isAntiOutlier = false;
     bool skipNorm = false;
     bool normHasBias = false;
+    bool useFusionNorm;
     NormParamType normParamType;
     NormParamType normQuantParamType;
     atb_speed::common::FusionLinearParam fusionLinearParam;
