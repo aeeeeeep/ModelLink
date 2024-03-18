@@ -135,12 +135,12 @@ class ModelTest:
         self.test_mode = test_mode
         self.model_name = model_name
         self.script_path = os.path.dirname(os.path.abspath(__file__))
-        self.data_dir = data_dir
+        self.data_dir = os.path.join(data_dir, self.model_name, "data")
         self.dataset_name = dataset_name
         self.batch_size = batch_size
         self.device_id = device_id
-        self.result_dir = result_dir
-        self.log_dir = log_dir
+        self.result_dir = os.path.join(result_dir, self.model_name, "results")
+        self.log_dir = os.path.join(log_dir, self.model_name, "logs")
         self.hardware_type = hardware_type
         self.case_pair = ast.literal_eval(case_pair) if case_pair != "[]" else [[256, 256], [512, 512], [1024, 1024],
                                                                                 [2048, 2048]]
@@ -1571,7 +1571,7 @@ def get_args():
     if ATB_TESTDATA_PATH is None:
         base_path = os.path.join(os.path.dirname(__file__), "../")
     if args.data_dir is None:
-        data_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode, args.model_name, "data")
+        data_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode)
     else:
         data_dir = args.data_dir
     if args.result_dir is None:
