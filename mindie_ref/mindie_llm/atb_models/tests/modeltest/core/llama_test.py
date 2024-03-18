@@ -23,7 +23,7 @@ class LlamaModelTest(model_test.ModelTest):
         updated_args = args[:3] + (model_name,) + args[4:]
         source_dir  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "result", "llama")
         destination_dir  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "result", model_name)
-        if os.getenv("RANK", "0") == 0:
+        if int(os.getenv("RANK", "0")) == 0:
             os.rename(source_dir, destination_dir)
         super().__init__(*updated_args)
         
