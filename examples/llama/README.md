@@ -300,6 +300,7 @@ SAVE_CHECKPOINT_PATH="your model ckpt save path"
 ```
 
 增加微调参数--finetune，使微调从第一步开始。
+
 6.3 启动 LLaMA-7B/13B 微调脚本
 
 LLaMA-7B

@@ -13,13 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import megatron
 from .model import (
     GPTModel, parallel_transformer_init, seq_length_wrapper,
     norm_wrapper, SwitchMLP, state_dict_for_save_checkpoint_wrapper,
     core_attention_wrapper, core_attention_forward, FlashSelfAttention,
     ParallelAttention_wrapper
 )
-from .core import vocab_embedding_wrapper
+from .core import (vocab_embedding_wrapper, initialize_model_parallel_decorator,
+                   destroy_model_parallel_decorator, get_expert_parallel_group,
+                   get_expert_parallel_rank, get_expert_model_parallel_rank,
+                   get_expert_parallel_world_size, get_expert_model_parallel_world_size,
+                   set_expert_model_parallel_rank, set_expert_model_parallel_world_size)
 from .data import build_pretraining_data_loader
 from .tokenizer import build_tokenizer
 from .arguments import parse_args_decorator
@@ -65,7 +70,31 @@ def exe_adaptor():
     megatron.core.tensor_parallel.layers.VocabParallelEmbedding.__init__ = norm_wrapper(
         megatron.core.tensor_parallel.layers.VocabParallelEmbedding.__init__)
 
+    set_moe_attr()
+    megatron.core.parallel_state.initialize_model_parallel = initialize_model_parallel_decorator(
+        megatron.core.parallel_state.initialize_model_parallel)
+    megatron.core.parallel_state.destroy_model_parallel = destroy_model_parallel_decorator(
+        megatron.core.parallel_state.destroy_model_parallel)
+    megatron.core.mpu = megatron.core.parallel_state
+
     megatron.checkpointing._load_base_checkpoint = _load_base_checkpoint_wrapper(
         megatron.checkpointing._load_base_checkpoint)
     megatron.training.load_checkpoint = load_checkpoint_wrapper(
         megatron.checkpointing.load_checkpoint)
+
+
+def set_moe_attr():
+    setattr(megatron.core.parallel_state,
+            "get_expert_parallel_group", get_expert_parallel_group)
+    setattr(megatron.core.parallel_state,
+            "get_expert_parallel_rank", get_expert_parallel_rank)
+    setattr(megatron.core.parallel_state,
+            "get_expert_model_parallel_rank", get_expert_model_parallel_rank)
+    setattr(megatron.core.parallel_state,
+            "get_expert_parallel_world_size", get_expert_parallel_world_size)
+    setattr(megatron.core.parallel_state,
+            "get_expert_model_parallel_world_size", get_expert_model_parallel_world_size)
+    setattr(megatron.core.parallel_state,
+            "set_expert_model_parallel_rank", set_expert_model_parallel_rank)
+    setattr(megatron.core.parallel_state,
+            "set_expert_model_parallel_world_size", set_expert_model_parallel_world_size)
