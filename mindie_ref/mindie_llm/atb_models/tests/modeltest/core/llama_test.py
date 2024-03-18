@@ -1,7 +1,6 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 import os
 import json
-import shutil
 from base import model_test
 
 
@@ -24,9 +23,7 @@ class LlamaModelTest(model_test.ModelTest):
         updated_args = args[:3] + (model_name,) + args[4:]
         source_dir  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "result", "llama")
         destination_dir  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "result", model_name)
-        if os.path.exists(destination_dir):
-            shutil.rmtree(destination_dir)
-        shutil.move(source_dir, destination_dir)
+        os.rename(source_dir, destination_dir)
         super().__init__(*updated_args)
         
     def get_chip_num(self):
