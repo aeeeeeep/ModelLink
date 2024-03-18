@@ -601,8 +601,9 @@ class ModelTest:
                             preds = logits.argmax(dim=-1)
                             correct += (preds.cpu() == batch["label"]).sum().item()            
                 
-                if is_result:        
-                    result = [taskname, correct / sum, correct, sum]
+                if is_result:
+                    filename = os.path.basename(entry)
+                    result = [filename, correct / sum, correct, sum]
                     self.result_logger.debug(f"result:{result}")
                     result_total.append(result)
                     correct_total += correct
