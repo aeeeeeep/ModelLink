@@ -237,9 +237,8 @@ class TensorParallelRowLinear(SuperLayer):
         weight = weights.get_multi_weights_row(prefix, quantize=config.quantize, gqa_size=gqa_size)
         if bias and bias_pre_add:
             bias = weights.get_tensor(f"{prefix}.bias")
-        elif bias and weights.process_group.rank() == 0:
-            # Rank is only on the first rank process
-            bias = weights.get_tensor(f"{prefix}.bias")
+        elif bias:
+            bias = weights.get_tensor(f"{prefix}.bias") / weights.process_group.size()
         else:
             bias = None
         return cls(
