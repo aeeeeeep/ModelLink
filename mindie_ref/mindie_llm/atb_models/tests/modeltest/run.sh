@@ -181,7 +181,7 @@ function fn_main()
     fi
 
     if [ $# -eq 0 ]; then
-        echo "Error: require parameter. Usage: bash run.sh [test_mode] ([model_name] [chip_num]) "
+        echo "Error: require parameter. Please refer to README."
         exit 1
     fi
 
