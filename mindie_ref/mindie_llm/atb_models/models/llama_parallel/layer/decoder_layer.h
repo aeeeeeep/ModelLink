@@ -116,17 +116,6 @@ enum DecoderLayerTensorIdx : uint32_t {
 
 atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operation);
 
-class DecoderLayerBinder : public HostTensorBinder {
-public:
-    DecoderLayerBinder();
-    virtual ~DecoderLayerBinder();
-
-private:
-    std::vector<int> tokenOffset_;
-    std::vector<int> seqLen_;
-    int32_t layerId_ = 0;
-};
-
 }  // namespace llama_parallel
 }  // namespace atb_speed
 #endif
