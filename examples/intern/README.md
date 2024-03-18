@@ -194,16 +194,18 @@ bash ./tasks/inference/generate_lnternlm_7b_ptd.sh
 ![Internlm-7b-inference](../../sources/images/intern/intern_7B_inference.png)
 
 #### 评估
+使用MMLU数据集评估模型。数据集[下载](https://huggingface.co/datasets/cais/mmlu)
+
 评估脚本</a>:
-tasks/evaluation/eval_internlm.sh 
+tasks/evaluation/evaluate_internlm_7B_ptd.sh 
 ```
-bash  tasks/evaluation/eval_internlm.sh
+bash  tasks/evaluation/evaluate_internlm_7B_ptd.sh
 ```
 InternLM-7B在**Ascend NPU**中的评测表现：
 
 | 任务                                                  | 模型        | 昇腾值  | 社区值  |
 |-----------------------------------------------------|-----------|------|------|
-| [MMLU](https://huggingface.co/datasets/cais/mmlu) | Internlm-7B  | 48.7 | [51.0](https://huggingface.co/internlm/internlm-7b) | 
+| MMLU | Internlm-7B  | 48.7 | [51.0](https://huggingface.co/internlm/internlm-7b) | 
 
 # InternLM-65B
 
@@ -224,7 +226,6 @@ git clone https://gitee.com/ascend/ModelLink.git
 cd ModeLlink 
 mkdir logs
 mkdir ckpt
-cd ..
 ```
 
 2. 搭建环境
