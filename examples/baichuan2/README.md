@@ -367,7 +367,7 @@ python ./tools/preprocess_data.py \
 ```
 
 
-6. 配置 Baichuan2-13B 训练脚本((Baichuan2-13B暂不支持Flash Attention)): examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
+6. 配置 Baichuan2-13B 训练脚本: examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
 
 ```shell
 # 修改 ascend-toolkit 路径
@@ -395,8 +395,8 @@ Baichuan2-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 
 |  设备  |            模型          | 迭代数  | 样本吞吐 (samples/s) | token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 
 |:----:|:-------------------------:|:----:|:------------------:|:--------------------:|:---------------:|
-| NPUs | Baichuan2-13B | 1000 |1.83| 940    | 4.35 |
-|  参考  | Baichuan2-13B | - | - | 872|- |
+| NPUs | Baichuan2-13B | 1000 |1.83|         1346         | 4.35 |
+|  参考  | Baichuan2-13B | - | - |         872          |- |
 
 
 

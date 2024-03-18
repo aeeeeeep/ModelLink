@@ -295,7 +295,7 @@ The current repository uses Megatron commitId [bcce6f54](https://github.com/NVID
       <td>13B</td>
       <td> 1x8</td>
       <td> BF16 </td>
-      <td> 940 </td>
+      <td> 1346 </td>
       <td> 872 </td>
       <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_13B.sh">train</a> </td>
     </tr>
