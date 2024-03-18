@@ -1,6 +1,7 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 import os
 import json
+import shutil
 from base import model_test
 
 
@@ -17,6 +18,9 @@ class LlamaModelTest(model_test.ModelTest):
                 elif config_data["num_hidden_layers"] == 40:
                     model_name = "qwen_14b"
         updated_args = args[:3] + (model_name,) + args[4:]
+        source_dir  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "result", "llama")
+        destination_dir  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "result", model_name)
+        shutil.move(source_dir, destination_dir)
         super().__init__(*updated_args)
     
     def get_model(self, hardware_type, model_type, data_type):
