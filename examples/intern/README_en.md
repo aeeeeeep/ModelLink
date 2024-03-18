@@ -194,16 +194,18 @@ Inference case:
 ![Internlm-7b-inference](../../sources/images/intern/intern_7B_inference.png)
 
 #### Evaluation
+Evaluating the model using the MMLU dataset. dataset [download](https://huggingface.co/datasets/cais/mmlu)
+
 Evaluation script</a>:
-tasks/evaluation/eval_internlm.sh 
+tasks/evaluation/evaluate_internlm_7B_ptd.sh 
 ```
-bash  tasks/evaluation/eval_internlm.sh
+bash  tasks/evaluation/evaluate_internlm_7B_ptd.sh
 ```
 The evaluation performance of LLaMA-7B/13B in **Ascend NPU**:
 
 | Task    | Model     | NPU  | Benchmark |
 |-----------------------------------------------------|-----------|------|------|
-| [MMLU](https://huggingface.co/datasets/cais/mmlu) | Internlm-7B  | 48.7 | [51.0](https://huggingface.co/internlm/internlm-7b) | 
+| MMLU | Internlm-7B  | 48.7 | [51.0](https://huggingface.co/internlm/internlm-7b) | 
 
 # InternLM-65B
 
