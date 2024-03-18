@@ -20,8 +20,8 @@ class LlamaModelTest(model_test.ModelTest):
                     model_name == "llama2_13b"
                 elif config_data["num_hidden_layers"] == 80:
                     model_name == "llama2_70b"
-        args[3] = model_name
-        super().__init__(*args)
+        updated_args = args[:2] + (model_name,) + args[3:]
+        super().__init__(updated_args)
         
     def get_chip_num(self):
         return 8

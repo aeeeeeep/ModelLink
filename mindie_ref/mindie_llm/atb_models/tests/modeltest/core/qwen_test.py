@@ -16,8 +16,8 @@ class LlamaModelTest(model_test.ModelTest):
                     model_name == "qwen_72b"
                 elif config_data["num_hidden_layers"] == 40:
                     model_name == "qwen_14b"
-        args[3] = model_name
-        super().__init__(*args)
+        updated_args = args[:2] + (model_name,) + args[3:]
+        super().__init__(updated_args)
     
     def get_model(self, hardware_type, model_type, data_type):
         pass
