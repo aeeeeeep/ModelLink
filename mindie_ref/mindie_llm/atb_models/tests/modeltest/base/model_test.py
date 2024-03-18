@@ -1595,11 +1595,11 @@ def get_args():
     else:
         data_dir = args.data_dir
     if args.result_dir is None:
-        result_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode, args.model_name, "results")
+        result_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode)
     else:
         result_dir = args.result_dir
     if args.log_dir is None:
-        log_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode, args.model_name, "logs")
+        log_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode)
     else:
         log_dir = args.log_dir
     case_pair = args.case_pair
