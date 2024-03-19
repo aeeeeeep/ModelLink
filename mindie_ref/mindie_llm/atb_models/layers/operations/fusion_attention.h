@@ -35,12 +35,13 @@ struct FusionAttentionParam {
     bool isBF16 = false;
     bool splitWithStride = false;
     bool qkvHasBias = false;
-    bool skipNorm = false;
-    bool normHasBias = false;
-    int packQuantType = atb_speed::common::PackQuantType::ALL_FP;
-    std::vector<int> layerLinearQuantType;
     NormParamType normParamType;
     NormParamType normQuantParamType;
+    AddNormType addNormType = atb_speed::common::AddNormType::ADD_NORM;
+    bool normHasBias = false;
+    NextResidualAddInType nextResidualAddIn = ADD_OUT;
+    int packQuantType = atb_speed::common::PackQuantType::ALL_FP;
+    std::vector<int> layerLinearQuantType;
     // rope param
     atb_speed::common::RotaryType rotaryType;
     atb::infer::RopeParam ropeParam;
