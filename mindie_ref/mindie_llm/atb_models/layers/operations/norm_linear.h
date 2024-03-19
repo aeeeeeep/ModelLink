@@ -49,6 +49,7 @@ struct NormLinearParam {
 
 NormQuantType GetNormQuantType(const int &packQuantType);
 LinearQuantType GetLinearQuantType(const int &packQuantType, const int &linearType, bool hasNorm);
+NormQuantType GetNormQuantType(const int &packQuantType);
 template <typename NormParamType>
 atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operation **operation);
 
