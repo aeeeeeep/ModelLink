@@ -45,7 +45,7 @@ private:
                           atb::VariantPack &variantPack);
     std::string GetSaveTensorDir();
     void RunTask(std::string taskName, std::function<int()> task);
-    void ExecutePlan();
+    atb::Status ExecutePlan();
     void Clear();
     void ExecutePlanASync();
 
@@ -62,7 +62,7 @@ private:
     std::shared_ptr<atb::Context> context_;
     atb::VariantPack variantPack_;
     uint64_t workspaceSize_ = 0;
-    void *workspace = nullptr;
+    void *workspace_ = nullptr;
     RunTaskFunc runTaskFunc_ = nullptr;
 };
 #endif

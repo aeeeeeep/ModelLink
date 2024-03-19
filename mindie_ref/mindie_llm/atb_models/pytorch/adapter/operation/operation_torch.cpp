@@ -18,6 +18,8 @@
 #pragma GCC diagnostic ignored "-Wunused-function"
 #pragma GCC diagnostic pop
 #include <acl/acl.h>
+#include <torch/torch.h>
+#include <torch_npu/csrc/framework/OpCommand.h>
 #include <atb_speed/utils/timer.h>
 #include <atb_speed/utils/singleton.h>
 #include <atb_speed/base/context_factory.h>
@@ -191,7 +193,7 @@ void OperationTorch::ExecuteOutImpl(std::vector<torch::Tensor> &atInTensors, std
 atb::Status OperationTorch::ExecutePlan()
 {
     atb_speed::Timer timer;
-    Status st = operation_->Execute(variantPack_, (uint8_t*)workspace_, workspaceSize_, context_.get());
+    atb::Status st = operation_->Execute(variantPack_, (uint8_t*)workspace_, workspaceSize_, context_.get());
     atb_speed::GetSingleton<atb_speed::Statistic>().planExecuteTime += timer.ElapsedMicroSecond();
     ATB_LOG_IF(st != 0, ERROR) << name_ << " execute plan fail, error code: " << st;
 
@@ -217,7 +219,7 @@ void OperationTorch::Clear()
     variantPack_.inTensors.clear();
     variantPack_.outTensors.clear();
     workspaceSize_ = 0;
-    workspace = nullptr;
+    workspace_ = nullptr;
 }
 
 void OperationTorch::CreateAtOutTensors(const std::vector<torch::Tensor> &atInTensors,
