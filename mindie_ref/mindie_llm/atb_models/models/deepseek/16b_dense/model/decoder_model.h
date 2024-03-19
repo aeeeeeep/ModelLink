@@ -47,12 +47,16 @@ public:
         int numKeyValueHeadsPerRank = 0;
         int rank = 0;
         int worldSize = 1;
+        int numOfExperts = 64;            // num of total experts
+        int expertParallelDegree = 1;
+        int maskStartIdx = 0;
         std::string backend = "hccl";
         std::string rankTableFile = "";
         std::vector<int> tokenOffset = {};
         std::vector<int> seqLen = {};
         std::vector<std::vector<int>> packQuantType = {};
         std::vector<std::vector<int>> linearQuantType = {};
+        atb::SVector<int32_t> numOfSelectedExperts = {6}; // num of selected experts
         void FromString(const std::string &param);
     };
 

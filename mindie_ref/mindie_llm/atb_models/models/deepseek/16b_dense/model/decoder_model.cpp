@@ -60,11 +60,23 @@ void DecoderModel::Param::FromString(const std::string &param)
     if (paramJson.contains("rankTableFile")) {
         rankTableFile = paramJson["rankTableFile"].get<std::string>();
     }
+    if (paramJson.contains("numOfExperts")) {
+        numOfExperts = paramJson["numOfExperts"].get<int>();
+    }
+    if (paramJson.contains("expertParallelDegree")) {
+        expertParallelDegree = paramJson["expertParallelDegree"].get<int>();
+    }
+    if (paramJson.contains("maskStartIdx")) {
+        maskStartIdx = paramJson["maskStartIdx"].get<int>();
+    }
     for (auto item : paramJson["tokenOffset"]) {
         tokenOffset.push_back(item.get<int>());
     }
     for (auto item : paramJson["seqLen"]) {
         seqLen.push_back(item.get<int>());
+    }
+    for (auto item : paramJson["numOfSelectedExperts"]) {
+        numOfSelectedExperts.push_back(item.get<int>());
     }
     for (auto item : paramJson["packQuantType"]) {
         packQuantType.push_back(item.get<std::vector<int>>());
@@ -81,7 +93,9 @@ void DecoderModel::Param::FromString(const std::string &param)
                   << ", numHiddenLayers:" << numHiddenLayers
                   << ", numKeyValueHeadsPerRank:" << numKeyValueHeadsPerRank
                   << ", rank:" << rank << ", worldSize:" << worldSize << ", backend:" << backend
-                  << ", tokenOffset:" << tokenOffset << ", seqLen:" << seqLen << ", rankTableFile:" << rankTableFile;
+                  << ", tokenOffset:" << tokenOffset << ", seqLen:" << seqLen << ", rankTableFile:" << rankTableFile
+                  << ", numOfExperts:" << numOfExperts << ", expertParallelDegree:" << expertParallelDegree
+                  << ", maskStartIdx:" << maskStartIdx << ", numOfSelectedExperts:" << numOfSelectedExperts;
 }
 
 DecoderModel::DecoderModel(const std::string &param) : Model("DecoderModel", param)
@@ -249,6 +263,10 @@ int64_t DecoderModel::BuildGraph()
         layerParam.backend = param_.backend;
         layerParam.rankTableFile = param_.rankTableFile;
         layerParam.layerId = layerId;
+        layerParam.numOfSelectedExperts = param_.numOfSelectedExperts;
+        layerParam.expertParallelDegree = param_.expertParallelDegree;
+        layerParam.numOfExperts = param_.numOfExperts;
+        layerParam.maskStartIdx = param_.maskStartIdx;
     
         atb_speed::deepseekDense::DecoderLayer(layerParam, &op);
 

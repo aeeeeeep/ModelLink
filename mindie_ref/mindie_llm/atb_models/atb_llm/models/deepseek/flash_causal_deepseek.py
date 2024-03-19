@@ -49,6 +49,13 @@ class FlashDeepseekForCausalLM(FlashForCausalLM):
         self.final_hidden_states = []
         self.one_hot_one = torch.ones(1, dtype=torch.int32, device="npu")
         self.one_hot_zero = torch.zeros(1, dtype=torch.int32, device="npu")
+        self.tp = False
+        if self.tp:
+            self.expert_parallel_degree = 1
+            self.maskStartIdx = 0
+        else:
+            self.expert_parallel_degree = self.tp_world_size
+            self.maskStartIdx = self.tp_rank
 
     # called by super().prepare_inputs_for_ascend
     def init_position_rotary_embedding(self,
@@ -155,23 +162,41 @@ class FlashDeepseekForCausalLM(FlashForCausalLM):
 
                 # add common experts
                 COMMON_EXPERTS_NUM = 64
-                for j in range(COMMON_EXPERTS_NUM):
-                    experts_gate_up = load_column_multi(
-                        self.config,
-                        prefixes=[f"model.layers.{i}.mlp.experts.{j}.gate_proj",
-                                  f"model.layers.{i}.mlp.experts.{j}.up_proj"],
-                        weights=self.weights,
-                        head_size=1
-                    ).npu()
-                    weights_t.append(experts_gate_up.linear.weight)
+                if self.tp:
+                    for j in range(COMMON_EXPERTS_NUM):
+                        experts_gate_up = load_column_multi(
+                            self.config,
+                            prefixes=[f"model.layers.{i}.mlp.experts.{j}.gate_proj",
+                                    f"model.layers.{i}.mlp.experts.{j}.up_proj"],
+                            weights=self.weights,
+                            head_size=1
+                        ).npu()
+                        weights_t.append(experts_gate_up.linear.weight)
 
-                    experts_down_proj = TensorParallelRowLinear.load(
-                        self.config,
-                        prefix=f"model.layers.{i}.mlp.experts.{j}.down_proj",
-                        weights=self.weights,
-                        bias=False,
-                    ).npu()
-                    weights_t.append(experts_down_proj.linear.weight)
+                        experts_down_proj = TensorParallelRowLinear.load(
+                            self.config,
+                            prefix=f"model.layers.{i}.mlp.experts.{j}.down_proj",
+                            weights=self.weights,
+                            bias=False,
+                        ).npu()
+                        weights_t.append(experts_down_proj.linear.weight)
+                else:
+                    if self.expert_parallel_degree == 0:
+                        raise ValueError(
+                            f"ERROR: Expert parallel degree is zero which is invalid "
+                        )
+                    else:
+                        expert_per_rank = COMMON_EXPERTS_NUM / self.expert_parallel_degree
+                    for j in range(COMMON_EXPERTS_NUM):
+                        if j < expert_per_rank:
+                            exprt_id = int(j + self.tp_rank * expert_per_rank)
+                            weights_t.append(torch.cat([self.weights.get_tensor(f"model.layers.{i}.mlp.experts.{exprt_id}.gate_proj.weight"),
+                                                        self.weights.get_tensor(f"model.layers.{i}.mlp.experts.{exprt_id}.up_proj.weight")]).npu())
+
+                            weights_t.append(self.weights.get_tensor(f"model.layers.{i}.mlp.experts.{exprt_id}.down_proj.weight").npu())
+                        else:   
+                            weights_t.append(self.placeholder)
+                            weights_t.append(self.placeholder)
 
             # add layer weights
             weights.extend(weights_t)
@@ -193,6 +218,8 @@ class FlashDeepseekForCausalLM(FlashForCausalLM):
             "isLmHeadParallel": True,
             "supportSwiGLU": False if self.soc_info.need_nz else True,
             "rank": self.tp_rank,
+            "expertParallelDegree": self.expert_parallel_degree,
+            "maskStartIdx": self.maskStartIdx,
             "worldSize": self.tp_world_size,
             "backend": "hccl" if self.soc_info.need_nz or str(os.getenv("RANKTABLEFILE", "")) else "lccl",
             "rankTableFile": str(os.getenv("RANKTABLEFILE", ""))
