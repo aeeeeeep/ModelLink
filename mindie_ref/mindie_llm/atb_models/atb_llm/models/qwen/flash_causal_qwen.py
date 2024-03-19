@@ -42,6 +42,10 @@ class FlashQwenForCausalLM(FlashForCausalLM):
         self.attn_mask_fake = self.attn_mask.get_attn_mask(1, dtype=torch.float16, device="npu")
         self.place_holder = torch.tensor([1], dtype=torch.float16, device='npu')
 
+        self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
+        self.transdata_param = json.dumps({})
+        self.transdata_operation.set_param(self.transdata_param)
+
     def init_position_rotary_embedding(self,
                                        position_ids: torch.Tensor,
                                        max_seq_len: int):
@@ -309,8 +313,7 @@ class FlashQwenForCausalLM(FlashForCausalLM):
                 if self.soc_info.need_nz:
                     pad_maxs = math.ceil(self.max_position_embeddings / 16) * 16
                     attention_mask = self.attn_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
-                    attention_mask = attention_mask.view(1, pad_maxs, pad_maxs // 16, 16).transpose(1, 2)
-                    torch_npu.npu_format_cast_(attention_mask, 29)
+                    attention_mask = self.transdata_operation.execute([attention_mask])[0]
                 else:
                     attention_mask = self.attn_mask.get_attn_mask(self.max_position_embeddings, kv_cache[0][0].dtype,
                                                                         kv_cache[0][0].device)

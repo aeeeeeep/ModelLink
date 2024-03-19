@@ -36,6 +36,7 @@ struct PAW8A8LayerParam {
     int numAttentionHeadsPerRank = 0;
     int hiddenSizePerAttentionHead = 0;
     int numKeyValueHeadsPerRank = 0;
+    bool supportLcoc = false;
     int rank = 0;
     int worldSize = 1;
     std::string backend = "hccl";
