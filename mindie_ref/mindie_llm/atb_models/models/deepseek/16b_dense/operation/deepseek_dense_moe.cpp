@@ -303,7 +303,7 @@ enum DeepseekDenseMoeTensorId {
 
 static const uint64_t IN_TENSOR_COUNT = 133;
 static const uint64_t OUT_TENSOR_COUNT = 1;
-static const uint64_t INTERMEDIATE_TENSOR_COUNT = 80;
+static const uint64_t INTERMEDIATE_TENSOR_COUNT_BEFORE_MLP = 80;
 static const uint64_t OPERATION_COUNT_BEFORE_MLP = 16;
 
 atb::Status CreateDeepseekDenseMoeOperation(const DeepseekDenseMoeParam &param, atb::Operation **operation)

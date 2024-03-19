@@ -41,7 +41,6 @@ struct DecoderLayerParam {
     int numOfExperts = 64;            // num of total experts
     int expertParallelDegree = 1;
     int maskStartIdx = 0;
-    int numOfExperts = 64;
     int layerId = 0;
     int numAttentionHeadsPerRank = 0;
     int hiddenSizePerAttentionHead = 0;
