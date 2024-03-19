@@ -38,6 +38,9 @@ struct DecoderLayerParam {
     int quantType = 0;
     float rmsNormEps = 0;
     bool transpose = true;
+    int numOfExperts = 64;            // num of total experts
+    int expertParallelDegree = 1;
+    int maskStartIdx = 0;
     int numOfExperts = 64;
     int layerId = 0;
     int numAttentionHeadsPerRank = 0;
@@ -52,6 +55,7 @@ struct DecoderLayerParam {
     std::vector<int> packQuantType = {};  // 两个元素，第一个元素代表QKV pack的量化类型，第二个元素代表MLP pack的量化类型
     // 七个元素，分别代表q，k，v，self attention out，gate，up，down linear的类型
     std::vector<int> linearQuantType = {};
+    atb::SVector<int32_t> numOfSelectedExperts = {6}; // num of selected experts
 };
 
 enum DecoderLayerTensorIdx : uint32_t {

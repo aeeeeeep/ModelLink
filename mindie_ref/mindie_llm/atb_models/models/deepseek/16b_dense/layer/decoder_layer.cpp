@@ -168,6 +168,9 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
         atb_speed::deepseekDense::DeepseekDenseMoeParam deepseekDenseMoeParam;
         deepseekDenseMoeParam.transpose = param.transpose;
         deepseekDenseMoeParam.numOfExperts = param.numOfExperts;
+        deepseekDenseMoeParam.num = param.numOfSelectedExperts;
+        deepseekDenseMoeParam.expertParallelDegree = param.expertParallelDegree;
+        deepseekDenseMoeParam.maskStartIdx = param.maskStartIdx;
         deepseekDense::CreateDeepseekDenseMoeOperation(deepseekDenseMoeParam, &moeNode.operation);
         if (moeNode.operation == nullptr) {
             ATB_LOG(ERROR) << "DeepseekDenseMoe op is nullptr: ";
