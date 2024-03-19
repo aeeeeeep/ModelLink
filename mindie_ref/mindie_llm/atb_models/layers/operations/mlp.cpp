@@ -41,11 +41,11 @@ enum MlpTensorIdx : uint32_t {
     IN_DESCALE_2,
     IN_BIAS_2,
     OUT_RESULT,
-    INTERMIDATE_GATE_UP_OUT_0,
-    INTERMIDATE_SWISH_OUT,
     INTERMIDATE_UP_OUT,
-    INTERMIDATE_MUL_OUT,
+    INTERMIDATE_SWISH_OUT,
     INTERMIDATE_GATE_OUT,
+    INTERMIDATE_MUL_OUT,
+    INTERMIDATE_GATE_UP_OUT,
 };
 
 static const uint64_t IN_TENSOR_COUNT = 20;
@@ -89,6 +89,7 @@ atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation
     }
     gateUpNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
     gateUpNormLinearParam.fusionLinearParam.hasBias = param.gateUpHasBias;
+    gateUpNormLinearParam.skipNorm = param.skipNorm;
     gateUpNormLinearParam.normHasBias = param.normHasBias;
     gateUpNormLinearParam.normParamType = param.normParamType;
     gateUpNormLinearParam.normQuantParamType = param.normQuantParamType;
@@ -105,7 +106,13 @@ atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation
         MlpTensorIdx::IN_DESCALE_0,
         MlpTensorIdx::IN_BIAS_0,
     };
-    normLinearGateUpNode.outTensorIds = {MlpTensorIdx::INTERMIDATE_GATE_UP_OUT_0};
+    if (param.mlpPackType == MlpPackType::GATE_UP_WEIGHT_PACK) {
+        normLinearGateUpNode.outTensorIds = {MlpTensorIdx::INTERMIDATE_GATE_UP_OUT};
+    } else if (param.mlpPackType == MlpPackType::GATE_UP_WEIGHT_NO_PACK) {
+        normLinearGateUpNode.outTensorIds = {MlpTensorIdx::INTERMIDATE_GATE_OUT};
+    } else {
+        normLinearGateUpNode.outTensorIds = {MlpTensorIdx::INTERMIDATE_UP_OUT};
+    }
 
     if (param.mlpPackType == MlpPackType::GATE_UP_WEIGHT_PACK) {
         atb::Node &splitNode = opGraph.nodes.at(nodeId++);
@@ -113,7 +120,7 @@ atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation
         splitParam.splitDim = -1; // [batchSize, seqLen, 2 * hiddenSize]
         splitParam.splitNum = 2;  // 进行二等分
         CREATE_OPERATION(splitParam, &splitNode.operation);
-        splitNode.inTensorIds = {MlpTensorIdx::INTERMIDATE_GATE_UP_OUT_0};
+        splitNode.inTensorIds = {MlpTensorIdx::INTERMIDATE_GATE_UP_OUT};
         splitNode.outTensorIds = {MlpTensorIdx::INTERMIDATE_GATE_OUT, MlpTensorIdx::INTERMIDATE_UP_OUT};
     }
 
@@ -129,6 +136,7 @@ atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation
         }
         upNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         upNormLinearParam.fusionLinearParam.hasBias = param.gateUpHasBias;
+        upNormLinearParam.skipNorm = param.skipNorm;
         upNormLinearParam.normHasBias = param.normHasBias;
         upNormLinearParam.normParamType = param.normParamType;
         upNormLinearParam.normQuantParamType = param.normQuantParamType;
@@ -151,7 +159,7 @@ atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation
     atb::Node &activationNode = opGraph.nodes.at(nodeId++);
     CREATE_OPERATION(param.activationParam, &activationNode.operation);
     activationNode.inTensorIds = {
-        param.mlpPackType == MlpPackType::UP_WEIGHT_ONLY ? MlpTensorIdx::INTERMIDATE_GATE_UP_OUT_0 : MlpTensorIdx::INTERMIDATE_GATE_OUT
+        param.mlpPackType == MlpPackType::UP_WEIGHT_ONLY ? MlpTensorIdx::INTERMIDATE_UP_OUT : MlpTensorIdx::INTERMIDATE_GATE_OUT
     };
     activationNode.outTensorIds = {MlpTensorIdx::INTERMIDATE_SWISH_OUT};
 

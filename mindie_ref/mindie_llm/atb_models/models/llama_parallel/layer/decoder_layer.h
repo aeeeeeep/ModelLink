@@ -40,9 +40,7 @@ struct DecoderLayerParam {
     int numAttentionHeadsPerRank = 0;
     int hiddenSizePerAttentionHead = 0;
     int numKeyValueHeadsPerRank = 0;
-    int rank = 0;
-    int worldSize = 1;
-    std::string backend = "hccl";
+    atb_speed::common::TensorParallelInfo tensorParallelInfo;
     std::vector<int> seqLen;
     std::vector<int> tokenOffset;
     std::vector<int> packQuantType = {};  // 两个元素，第一个元素代表QKV pack的量化类型，第二个元素代表MLP pack的量化类型
@@ -117,17 +115,6 @@ enum DecoderLayerTensorIdx : uint32_t {
 };
 
 atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operation);
-
-class DecoderLayerBinder : public HostTensorBinder {
-public:
-    DecoderLayerBinder();
-    virtual ~DecoderLayerBinder();
-
-private:
-    std::vector<int> tokenOffset_;
-    std::vector<int> seqLen_;
-    int32_t layerId_ = 0;
-};
 
 }  // namespace llama_parallel
 }  // namespace atb_speed

@@ -16,24 +16,39 @@
 #include "paged_attention_model.h"
 
 #include "atb/atb_infer.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 
-#include "models/internlm/20b/layer/paged_attention_layer.h"
 #include "parallel_lmhead.h"
+#include "layers/parallel_layer.h"
+#include "models/internlm/20b/layer/paged_attention_layer.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace internlm_20b {
+// internlm_20b_PAModel
+REGISTER_MODEL(internlm_20b, PAModel);
+
+const int WEIGHT_COUNT_PER_LAYER = 6;
+const int WORDEMBEDDINGNODE_WEIGHT_COUNT = 1;
+const int FINALNORMNODE_WEIGHT_COUNT = 1;
+const int OUT_LM_HEAD_WEIGHT_COUNT = 1;
+const int OPERATION_COUNT_BEFORE_LAYER = 1;
+const int INTERMEDIATETENSOR_COUNT_BEFORE_LAYER = 1;
+const int OPERATION_COUNT_AFTER_LAYER = 2;
+
 enum InTensorId : int {
     IN_TENSOR_INPUTIDS = 0,
     IN_TENSOR_POSITIONID,
     IN_TENSOR_COSEMBED,
     IN_TENSOR_SINEMBED,
-    IN_TENSOR_ATTENTION_MASK,
+    IN_TENSOR_ATTENTIONMASK,
     IN_TENSOR_BLOCK_TABLES,
     IN_TENSOR_SLOTS,
     IN_TENSOR_INPUT_LENGTHS,
     IN_TENSOR_LOGTIS_INDICES,
-    IN_HOLDER,
     IN_TENSOR_MAX,
 };
 
@@ -42,40 +57,24 @@ enum OutTensorId : int {
     OUT_TENSOR_MAX,
 };
 
-const int WEIGHT_COUNT_PER_LAYER = 9;
-const int WORDEMBEDDINGNODE_WEIGHT_COUNT = 1;
-const int FINALNORMNODE_WEIGHT_COUNT = 1;
-const int OUT_LM_HEAD_WEIGHT_COUNT = 1;
-const int OPERATION_COUNT_BEFORE_LAYER = 1;
-const int INTERMEDIATETENSOR_COUNT_BEFORE_LAYER = 1;
-const int OPERATION_COUNT_AFTER_LAYER = 2;
-const int OUT_TENSOR_HIDDENSTATES_ID = 0;
-const int OUT_TENSOR_MAX_ID = 1;
-const int IN_TENSOR_INPUTIDS_ID = 0;
-const int WORDEMBEDDINGNODE_WEIGHT_ID = 0;
-const int FIRST_INTERNAL_TENSORS = 0;
-const int LAYER_FIRST_OUT_TENSORS = 0;
-const int PA_ROPE_LAYER_IN_SEQLEN_ID = 18;
-const int OUT_TENSOR_HIDDENSTATES_ID_DIM_NUM = 3;
-
-void PagedAttentionModel::Param::FromString(const std::string &param)
+int64_t PAModel::Param::FromString(const std::string &param)
 {
     nlohmann::json paramJson = nlohmann::json::parse(param);
     rmsNormEps = paramJson["rmsNormEps"].get<double>();
     headNum = paramJson["headNum"].get<int>();
     dk = paramJson["dk"].get<int>();
     layerNum = paramJson["layerNum"].get<int>();
+    if (paramJson.contains("transposedWeight")) {
+        transposedWeight = paramJson["transposedWeight"].get<bool>();
+    }
+    if (paramJson.contains("isPrefill")) {
+        isPrefill = paramJson["isPrefill"].get<bool>();
+    }
     if (paramJson.contains("rank")) {
         rank = paramJson["rank"].get<int>();
     }
     if (paramJson.contains("rankSize")) {
         rankSize = paramJson["rankSize"].get<int>();
-    }
-    if (paramJson.contains("isPrefill")) {
-        isPrefill = paramJson["isPrefill"].get<bool>();
-    }
-    if (paramJson.contains("isNz")) {
-        isNz = paramJson["isNz"].get<bool>();
     }
     if (paramJson.contains("backend")) {
         backend = paramJson["backend"];
@@ -83,34 +82,49 @@ void PagedAttentionModel::Param::FromString(const std::string &param)
     if (paramJson.contains("isLmHeadParallel")) {
         isLmHeadParallel = paramJson["isLmHeadParallel"].get<bool>();
     }
+    if (paramJson.contains("isBF16")) {
+        isBF16 = paramJson["isBF16"].get<bool>();
+    }
+    if (headNum == 0) {
+        ATB_LOG(ERROR) << "param.headNum is 0, please input a correct value";
+        return atb::ERROR_INVALID_PARAM;
+    }
+    if (dk == 0) {
+        ATB_LOG(ERROR) << "param.dk is 0, please input a correct value";
+        return atb::ERROR_INVALID_PARAM;
+    }
+    ATB_LOG(INFO) << "Internlm_20BPAModel param rmsNormEps:" << rmsNormEps << ", headNum:" << headNum << ", dk:" << dk
+                  << ", layerNum:" << layerNum << ", transposedWeight:" << transposedWeight << ", rank:" << rank
+                  << ", rankSize:" << rankSize << ", backend: " << backend << ", isLmHeadParallel:" << isLmHeadParallel
+                  << ", isBF16:" << isBF16;
+    return atb::NO_ERROR;
 }
 
-PagedAttentionModel::PagedAttentionModel(const std::string &param) : Model("InternLM_20B_PagedAttentionModel", param)
+PAModel::PAModel(const std::string &param) : Model("Internlm_20BPAModel", param)
 {
     param_.FromString(param);
     modelName_ += param_.isPrefill ? "_Prefill" : "_Decoder";
 }
 
-PagedAttentionModel::~PagedAttentionModel() = default;
+PAModel::~PAModel() {}
 
-uint32_t PagedAttentionModel::GetInputNum() const { return graph_.inTensors.size(); }
+uint32_t PAModel::GetInputNum() const { return graph_.inTensors.size(); }
 
-uint32_t PagedAttentionModel::GetOutputNum() const { return graph_.outTensors.size(); }
+uint32_t PAModel::GetOutputNum() const { return graph_.outTensors.size(); }
 
-atb::Status PagedAttentionModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
-                                            std::vector<atb::TensorDesc> &outTensorDescs)
+atb::Status PAModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
+                                std::vector<atb::TensorDesc> &outTensorDescs)
 {
     if (outTensorDescs.size() != GetOutputNum()) {
         return atb::ERROR_INVALID_GRAPH;
     }
-    const int64_t outDim = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.shape.dims[0];
-    outTensorDescs.at(OUT_TENSOR_HIDDENSTATES_ID) = graph_.weightTensors.at(WORDEMBEDDINGNODE_WEIGHT_ID).desc;
 
+    const int64_t outDim = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.shape.dims[0];
+    outTensorDescs.at(0) = graph_.weightTensors.at(0).desc;
     auto outDimNum = inTensorDescs.at(0).shape.dimNum + 1;
     for (uint i = 0; i < outDimNum - 1; i++) {
         outTensorDescs.at(0).shape.dims[i] = inTensorDescs.at(0).shape.dims[i];
     }
-
     if (param_.isLmHeadParallel) {
         outTensorDescs.at(0).shape.dims[outDimNum - 1] = outDim * param_.rankSize;
     } else {
@@ -125,7 +139,7 @@ atb::Status PagedAttentionModel::InferShape(const std::vector<atb::TensorDesc> &
     return atb::NO_ERROR;
 }
 
-int64_t PagedAttentionModel::BuildGraph()
+int64_t PAModel::BuildGraph()
 {
     const int weightTensorSize = WORDEMBEDDINGNODE_WEIGHT_COUNT + WEIGHT_COUNT_PER_LAYER * param_.layerNum +
                                  FINALNORMNODE_WEIGHT_COUNT + OUT_LM_HEAD_WEIGHT_COUNT;
@@ -138,7 +152,7 @@ int64_t PagedAttentionModel::BuildGraph()
     graph_.outTensors.resize(OUT_TENSOR_MAX);
 
     const int nodeSize = param_.layerNum + OPERATION_COUNT_BEFORE_LAYER + OPERATION_COUNT_AFTER_LAYER;
-    ATB_LOG(INFO) << "InternLM 20B PA Model nodeSize is " << nodeSize;
+    ATB_LOG(INFO) << "Internlm_20B_PAModel nodeSize is " << nodeSize;
     graph_.nodes.resize(nodeSize);
 
     const int internalTensorSize = graph_.nodes.size() - 1;
@@ -150,25 +164,26 @@ int64_t PagedAttentionModel::BuildGraph()
     atb::Operation *op = nullptr;
     CREATE_OPERATION(wordEmbeddingParam, &op);
     wordEmbeddingNode.operation.reset(op);
-    wordEmbeddingNode.inTensors = {&graph_.weightTensors.at(WORDEMBEDDINGNODE_WEIGHT_ID),
-                                   &graph_.inTensors.at(IN_TENSOR_INPUTIDS)};
-    wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(FIRST_INTERNAL_TENSORS)};
+    wordEmbeddingNode.inTensors = {&graph_.weightTensors.at(0), &graph_.inTensors.at(IN_TENSOR_INPUTIDS)};
+    wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(0)};
 
-    atb::Tensor *firstInTensor = &graph_.internalTensors.at(FIRST_INTERNAL_TENSORS);
+    atb::Tensor *firstInTensor = &graph_.internalTensors.at(0);
 
     for (int layerId = 0; layerId < param_.layerNum; ++layerId) {
         auto &layerNode = graph_.nodes.at(nodeId++);
 
-        atb_speed::internlm_20b::PagedAttentionLayerParam opParam;
+        PALayerParam opParam;
         opParam.rmsNormEps = param_.rmsNormEps;
         opParam.headNum = param_.headNum;
         opParam.dk = param_.dk;
+        opParam.transposedWeight = param_.transposedWeight;
+        opParam.model = "internlm_20b";
+        opParam.isPrefill = param_.isPrefill;
         opParam.rank = param_.rank;
         opParam.rankSize = param_.rankSize;
-        opParam.isPrefill = param_.isPrefill;
-        opParam.isNz = param_.isNz;
         opParam.backend = param_.backend;
-        atb_speed::internlm_20b::PagedAttentionLayer(opParam, &op);
+        opParam.isBF16 = param_.isBF16;
+        PALayer(opParam, &op);
         layerNode.operation.reset(op);
         layerNode.inTensors.resize(layerNode.operation->GetInputNum());
 
@@ -178,20 +193,19 @@ int64_t PagedAttentionModel::BuildGraph()
             layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(
                 layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId + WORDEMBEDDINGNODE_WEIGHT_COUNT);
         }
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_POSITIONID);     // positionIdTensor
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_COSEMBED);       // cosEmbed
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SINEMBED);       // sinEmbed
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_ATTENTION_MASK); // attentionMaskTensor
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_POSITIONID);    // positionIdTensor
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_COSEMBED);      // cosEmbed
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SINEMBED);      // sinEmbed
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_ATTENTIONMASK); // attentionMaskTensor
         layerNode.inTensors.at(inTensorId++) = &graph_.kCacheTensors.at(layerId);
         layerNode.inTensors.at(inTensorId++) = &graph_.vCacheTensors.at(layerId);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_BLOCK_TABLES);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SLOTS);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_INPUT_LENGTHS);
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);
 
         layerNode.outTensors = {&graph_.internalTensors.at(INTERMEDIATETENSOR_COUNT_BEFORE_LAYER + layerId)};
 
-        firstInTensor = layerNode.outTensors.at(LAYER_FIRST_OUT_TENSORS);
+        firstInTensor = layerNode.outTensors.at(0);
     }
 
     auto &finalNormNode = graph_.nodes.at(nodeId++);
@@ -211,10 +225,11 @@ int64_t PagedAttentionModel::BuildGraph()
     if (param_.isLmHeadParallel) {
         lmHeadParam.rank = param_.rank;
         lmHeadParam.rankSize = param_.rankSize;
-    }
+    };
     lmHeadParam.unpadInputs = true;
     lmHeadParam.gatherAhead = param_.isPrefill;
     lmHeadParam.backend = param_.backend;
+    lmHeadParam.isBF16 = param_.isBF16;
     ParallelLmHead(lmHeadParam, &op);
     lmHeadNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
@@ -227,33 +242,33 @@ int64_t PagedAttentionModel::BuildGraph()
                                 &graph_.weightTensors.at(finalLinearWeightTensorId)};
     }
     lmHeadNode.outTensors = {&graph_.outTensors.at(0)};
-
     return atb::NO_ERROR;
 }
 
-atb::Status PagedAttentionModel::ParseParam(const std::string &param)
+atb::Status PAModel::ParseParam(const std::string &param)
 {
     nlohmann::json paramJson = nlohmann::json::parse(param);
+
     seqLen_.clear();
-    for (const auto &item : paramJson["seqLen"]) {
+    for (auto item : paramJson["seqLen"]) {
         seqLen_.push_back(item.get<int>());
     }
 
+    ATB_LOG(INFO) << "PAModel ParseParam seqLen: " << seqLen_.capacity();
+
     return atb::NO_ERROR;
 }
 
-atb::Status PagedAttentionModel::BindParamHostTensor(uint32_t nodeId)
+atb::Status PAModel::BindParamHostTensor(uint32_t nodeId)
 {
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER ||
-        nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
         return atb::NO_ERROR;
     }
+
     auto &node = graph_.nodes.at(nodeId);
-
-    const uint32_t seqLenTensorId = PA_ROPE_LAYER_IN_SEQLEN_ID;
-
+    const uint32_t seqLenTensorId = LayerPATensorId::IN_INPUT_LENGTHS;
     node.variantPack.inTensors.at(seqLenTensorId).hostData = seqLen_.data();
-    ATB_LOG(INFO) << "BindParamHostTensor end";
+
     return atb::NO_ERROR;
 }
 } // namespace internlm_20b

@@ -122,6 +122,7 @@ dtype_map = {"bf16": torch.bfloat16, "fp16": torch.float16}
 core_map = {"NPU": "npu", "GPU": "cuda"}
 prompt_map = {"GSM8K": "", "TruthfulQA": QA_PRIMER}
 question_num = {"GSM8K": 11, "TruthfulQA": 12}
+CEval_0_shot = {"chatglm2_6b"}
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -136,10 +137,6 @@ class ModelTest:
         self.script_path = os.path.dirname(os.path.abspath(__file__))
         self.data_dir = data_dir
         self.dataset_name = dataset_name
-        if test_mode == 'simplified':
-            self.dataset_path = os.path.join(self.script_path, "../dataset/simplified", self.dataset_name + ".jsonl")
-        elif test_mode == 'full':
-            self.dataset_path = os.path.join(self.script_path, "../dataset/full", self.dataset_name)
         self.batch_size = batch_size
         self.device_id = device_id
         self.result_dir = result_dir
@@ -440,22 +437,31 @@ class ModelTest:
             self.logger.info(str(self.local_rank) + f'pa_runner: {self.pa_runner}')
             self.pa_runner.warm_up()
         else:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.weight_dir, use_fast=False, trust_remote_code=True)
+            self.tokenizer = AutoTokenizer.from_pretrained(self.weight_dir, use_fast=False, padding_side="left", truncation_side="left", trust_remote_code=True)
             if self.model_name == "qwen":
                 self.tokenizer.pad_token_id = self.tokenizer.eod_id
                 self.tokenizer.bos_token_id = self.tokenizer.eod_id
                 self.tokenizer.eos_token_id = self.tokenizer.eod_id
             if self.model_name == "starcoder":
-                self.tokenizer.pad_token = "[PAD]" 
+                self.tokenizer.pad_token = "[PAD]"
+            if self.model_name == "llama":
+                self.tokenizer.pad_token_id = 0
 
             self.model = AutoModelForCausalLM.from_pretrained(self.weight_dir, device_map="auto", trust_remote_code=True)
             self.device = self.model.device
 
         if self.test_mode == "simplified":
+            self.dataset_path = os.path.join(self.script_path, "../dataset/simplified", self.dataset_name + ".jsonl")
             self.__run_simplified_dataset()
         elif self.test_mode == "full":
+            self.dataset_path = os.path.join(self.script_path, "../dataset/full", self.dataset_name)
             if self.dataset_name == 'CEval':
-                self.__run_full_dataset_ceval()
+                if self.model_name in CEval_0_shot:
+                    self.dataset_path += "_0_shot"
+                    self.__run_full_dataset_ceval_0_shot()
+                else:
+                    self.dataset_path += "_5_shot"
+                    self.__run_full_dataset_ceval_5_shot()
             elif self.dataset_name == 'MMLU':
                 self.__run_full_dataset_mmlu()
             elif self.dataset_name == 'GSM8K':
@@ -523,7 +529,7 @@ class ModelTest:
                             self.logger.info(f'Generate token num: {token_num_list[i]}')
                 epoch_id += 1
     
-    def __run_full_dataset_ceval(self):
+    def __run_full_dataset_ceval_0_shot(self):
         choices = ["A", "B", "C", "D"]
         if self.hardware_type == "NPU":
             choice_tokens = [self.pa_runner.tokenizer.encode(choice, add_special_tokens=False)[0] for choice in choices]
@@ -596,8 +602,7 @@ class ModelTest:
                             correct += (preds.cpu() == batch["label"]).sum().item()            
                 
                 if is_result:        
-                    filename = os.path.basename(entry)
-                    result = [filename, correct / sum, correct, sum]
+                    result = [taskname, correct / sum, correct, sum]
                     self.result_logger.debug(f"result:{result}")
                     result_total.append(result)
                     correct_total += correct
@@ -608,7 +613,124 @@ class ModelTest:
                 result_total.insert(0, total)
         if is_result:
             self.__save_result(result_total)
+    
+    def __run_full_dataset_ceval_5_shot(self):
+        choices = ["A", "B", "C", "D"]
+        SHOT = 5
 
+        def get_subject_mapping():
+            SUBJECT_MAPPING_PATH = os.path.join(self.dataset_path, "subject_mapping.json")
+            with open(SUBJECT_MAPPING_PATH) as f:
+                subject_mapping = json.load(f)
+            return subject_mapping
+        
+        def load_csv_by_task_name(task_name, dataset_path):
+            dev_df = pd.read_csv(os.path.join(dataset_path, "dev", task_name + "_dev.csv"), header=None)[:SHOT + 1]
+            val_df = pd.read_csv(os.path.join(dataset_path, "val", task_name + "_val.csv"), header=None)
+
+            dev_df = dev_df.iloc[1:, 1:]
+            val_df = val_df.iloc[1:, 1:]
+            return dev_df, val_df
+        
+        def format_subject(subject):
+            l = subject.split("_")
+            s = ""
+            for entry in l:
+                s += " " + entry    
+            return s
+            
+        def format_example(df, idx, include_answer=True):
+            prompt = df.iloc[idx, 0]
+            k = len(choices)
+            for j in range(k):
+                prompt += "\n{}. {}".format(choices[j], df.iloc[idx, j + 1])
+            prompt += "\nAnswer:"
+            if include_answer:
+                prompt += " {}\n\n".format(df.iloc[idx, k + 1])
+            return prompt
+        
+        def gen_prompt(train_df, subject, k=-1):
+            prompt = "The following are multiple choice questions (with answers) about {}.\n\n".format(format_subject(subject))
+            if k == -1:
+                k = train_df.shape[0]
+            for i in range(k):
+                prompt += format_example(train_df, i)
+            return prompt
+
+        correct_total = 0
+        sum_total = 0
+        result_total = []
+        is_result = False
+        if self.__get_rank() == 0:
+            is_result = True
+
+        subject_mapping = get_subject_mapping()
+        index = 1
+        for task_name in tqdm(subject_mapping):
+            self.logger.info(f"dataset {index} start, task name: {task_name}")
+            dev_df, val_df = load_csv_by_task_name(task_name, self.dataset_path)
+            correct = 0
+            task_len = val_df.shape[0]
+            for i in range(math.ceil(task_len / self.batch_size)):
+                q_num = self.batch_size if (i + 1) * self.batch_size <= task_len else task_len - i * self.batch_size
+                prompt_ends = [format_example(val_df, i * self.batch_size + j, include_answer=False) for j in range(q_num)]
+                train_prompts = [gen_prompt(dev_df, task_name, SHOT)] * q_num
+                prompt = [t + p for t, p in zip(train_prompts, prompt_ends)]
+                labels = [val_df.iloc[i * self.batch_size + j, val_df.shape[1] - 1] for j in range(q_num)]
+                prompts = [prpt.encode().decode(encoding="utf8") for prpt in prompt]
+
+                if self.model_type == "fa":
+                    inputs = self.tokenizer(prompts, padding=True, return_tensors="pt", truncation=True, max_length=2048).to(0)
+                    tokenizer_out_ids = inputs.input_ids.to(0)
+                    attention_mask = inputs.attention_mask.to(0)
+                    outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask, do_sample=False, max_new_tokens=20)
+                    answers = []
+                    for idx in range(len(outputs)):
+                        output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
+                        response = self.tokenizer.decode(output)
+                        answers.append(response)
+                else:
+                    generate_texts, token_nums, _ = self.pa_runner.infer(prompts, self.batch_size, 20, False)
+
+                    if len(prompts) == 1:
+                        generate_texts = [generate_texts[0]]
+
+                    for idx, generate_text in enumerate(generate_texts):
+                        if is_result:
+                            self.logger.debug(f'Question[{i * self.batch_size + idx}]: {prompts[idx]}')
+                            self.logger.debug(f'Answer[{i * self.batch_size + idx}]: {generate_text}')
+                            self.logger.debug(f'Generate[{i * self.batch_size + idx}] token num: {token_nums[idx]}')
+
+                    answers = None
+
+                    if len(generate_texts) > 0:
+                        answers = generate_texts
+
+                answer_results = [answer.lstrip()[0] if answer else "-1" for answer in answers]
+                is_correct = ["Correct" if answer_result == label else "Wrong" for answer_result, label in zip(answer_results, labels)]
+                
+                correct += is_correct.count("Correct")
+                for idx in range(len(is_correct)):
+                    if is_result and is_correct[idx] != "Correct":
+                        self.logger.debug(f">>>原始题目 is : {prompts[idx]}")
+                        self.logger.debug(f">>>推理结果 is : {answer_results[idx]}")
+                        self.logger.debug(f">>>真实结果 is : {labels[idx]}")
+        
+            if is_result:        
+                result = [task_name, correct / task_len, correct, task_len]
+                self.logger.info(f"dataset {index} finish, result:{result}")
+                result_total.append(result)
+                correct_total += correct
+                sum_total += task_len
+            index += 1
+
+        if is_result:
+            total = ["total", correct_total / sum_total, correct_total, sum_total]
+            self.result_logger.debug(f"total result:{total}")
+            result_total.insert(0, total)
+            self.__save_result(result_total)
+
+                
     def __run_full_dataset_mmlu(self):
         choices = ["A", "B", "C", "D"]
 
@@ -896,6 +1018,15 @@ class ModelTest:
             self.__save_result(result_total)
 
     def __run_full_dataset_boolq(self):
+        sample_yes = "How can we learning machine learning: yes"
+        sample_no = "How can we learning machine learning: no"
+        if self.model_type == "fa":
+            choice_tokens = [self.tokenizer([sample_yes], return_tensors="pt", max_length=2048, add_special_tokens=None).input_ids[0, -1].item(),
+                             self.tokenizer([sample_no], return_tensors="pt", max_length=2048, add_special_tokens=None).input_ids[0, -1].item()]
+        else:
+            choice_tokens = [self.pa_runner.tokenizer([sample_yes], return_tensors="pt", max_length=2048, add_special_tokens=False).input_ids[0, -1].item(),
+                             self.pa_runner.tokenizer([sample_no], return_tensors="pt", max_length=2048, add_special_tokens=False).input_ids[0, -1].item()]
+        
         def build_prompt(title, text, passage):
             prompt = f"{title} -- {passage}\nQuestion: {text}?\nAnswer:"
             return prompt
@@ -913,10 +1044,6 @@ class ModelTest:
                 with open(entry, encoding='utf-8') as f:
                     for line in f:
                         line_json = json.loads(line)
-                        if line_json['answer'] == True:
-                            line_json['answer'] = 'yes'
-                        elif line_json['answer'] == False:
-                            line_json['answer'] = 'no'
                         dataset.append(line_json)
 
                 correct = 0
@@ -933,10 +1060,11 @@ class ModelTest:
                         outputs = self.model(**inputs)
                         logits = outputs.logits[:, -1, :]
                         logits_softmax = F.log_softmax(logits.float(), dim=-1)
-                        greedy_tokens = logits_softmax.argmax(dim=-1)
+                        logits_softmax = logits_softmax[:, choice_tokens]
                         if is_result:
                             for idx, ans in enumerate(batch['answer']):
-                                acc = self.tokenizer.decode(greedy_tokens[idx]).lower() == ans
+                                choice = (logits_softmax[idx, 0] > logits_softmax[idx, 1]).cpu()
+                                acc = choice == ans
                                 if acc:
                                     correct += 1
                     else:
@@ -948,9 +1076,10 @@ class ModelTest:
                         if is_result:
                             logits = torch.load(os.path.join(logits_save_folder, 'logits_0.pth'))
                             logits_softmax = F.log_softmax(logits.float(), dim=-1)
-                            greedy_tokens = logits_softmax.argmax(dim=-1)
+                            logits_softmax = logits_softmax[:, choice_tokens]
                             for idx, ans in enumerate(batch['answer']):
-                                acc = self.pa_runner.tokenizer.decode(greedy_tokens[idx]).lower() == ans
+                                choice = (logits_softmax[idx, 0] > logits_softmax[idx, 1]).cpu()
+                                acc = choice == ans
                                 if acc:
                                     correct += 1
 

@@ -1,35 +1,24 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 import json
 import math
-import os
 from typing import Optional, List, Tuple
 
 import torch
 import torch.distributed
-import torch_npu
-from atb_llm.utils.initial import NPUSocInfo, load_atb_speed
+from atb_llm.models.base.flash_causal_lm import FlashForCausalLM
+from atb_llm.utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
 from atb_llm.utils.layers import (
-    TensorParallelColumnLinear,
-    TensorEmbedding,
-    PositionRotaryEmbedding,
-    AttentionMask,
-    TensorParallelHead,
-    load_column_multi,
-    load_row
+    load_column_multi
 )
 from atb_llm.utils.log import logger
-from torch import nn
-from transformers import PreTrainedModel
-from transformers.activations import ACT2FN
-from transformers.modeling_outputs import CausalLMOutputWithPast
+
 from .modeling_baichuan import FlashBaichuanModel
-from atb_llm.utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
-from atb_llm.models.base.flash_causal_lm import FlashForCausalLM
 
 
 class FlashBaichuanForCausalLM(FlashForCausalLM):
     def __init__(self, config, weights):
         super().__init__(config, weights)
+        self.use_refactor = getattr(config, "use_refactor", True)
         self.model = FlashBaichuanModel(config, weights)
         self.lm_head = load_column_multi(
             config,
@@ -99,14 +88,14 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             "isBF16": self.dtype == torch.bfloat16,
             "packQuantType": self.pack_quant_config,
             "linearQuantType": self.linear_type,
-            "isEmbeddingParallel": False,
+            "isEmbeddingParallel": self.model.parallel_embedding,
             "isLmHeadParallel": True,
-            "supportSwiGLU": False if self.soc_info.need_nz else True,
+            "supportSwiGLU": not self.soc_info.need_nz,
             "rank": self.tp_rank,
             "rankSize": self.tp_world_size,
             "backend": "hccl" if self.soc_info.need_nz else "lccl"
         }
-        encoder_param = {**coder_param, "isPrefill": True, "supportLcoc": False if self.soc_info.need_nz else True}
+        encoder_param = {**coder_param, "isPrefill": True, "supportLcoc": not self.soc_info.need_nz}
         decoder_param = {**coder_param, "isPrefill": False, "supportLcoc": False}
         self.acl_encoder_operation.set_param(json.dumps({**encoder_param}))
         self.acl_decoder_operation.set_param(json.dumps({**decoder_param}))

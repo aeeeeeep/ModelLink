@@ -19,8 +19,8 @@
 - 配置
   | 量化类型及精度  | torch_dtype | quantize |
   |----------------|-------------|----------|
-  | FP16           | "float16"   | ""       |
-  | BF16           | "bfloat16"  | ""       |
+  | FP16           | "float16"   | 无       |
+  | BF16           | "bfloat16"  | 无       |
   | W8A8           | "float16"   | "w8a8"   |
   | W8A16          | "float16"   | "w8a16"  |
 
@@ -34,7 +34,6 @@
       ...
       "torch_dtype": "bfloat16",
       ...
-      "quantize": "",
     }
     ```
   - LLaMa模型的权重使用FP16精度，W8A16量化
