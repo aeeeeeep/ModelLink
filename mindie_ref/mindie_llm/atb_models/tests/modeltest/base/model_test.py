@@ -410,8 +410,8 @@ class ModelTest:
                     [str(round(non_first_token_throughput_average, 10)).ljust(45),
                      str(round(e2e_throughput_average, 10)).ljust(35)])
                 folder_name = self.model_name
-                csv_name = self.model_type + "_" + self.data_type + "batch" + self.batch_size + "_performance_test_result.csv"
-                csv_formatted_name = self.model_type + "_" + self.data_type + "batch" + self.batch_size + "_performance_test_result_formatted.csv"
+                csv_name = self.model_type + "_" + self.data_type + "batch" + str(self.batch_size) + "_performance_test_result.csv"
+                csv_formatted_name = self.model_type + "_" + self.data_type + "batch" + str(self.batch_size) + "_performance_test_result_formatted.csv"
                 csv_performance_path = os.path.join(self.script_path, "../result", folder_name, csv_name)
                 csv_performance_formatted_path = os.path.join(self.script_path, "../result", folder_name, csv_formatted_name)
                 if not os.path.exists(csv_performance_formatted_path):
@@ -1491,14 +1491,14 @@ class ModelTest:
         date_str = now.strftime("%Y_%m_%d_%H_%M_%S")
 
         if self.dataset_name == "HumanEval":
-            result_name = "_".join([self.model_type, self.data_type, self.test_mode, self.dataset_name, "batch" + self.batch_size]) + '_test_result.jsonl'
+            result_name = "_".join([self.model_type, self.data_type, self.test_mode, self.dataset_name, "batch" + str(self.batch_size)]) + '_test_result.jsonl'
             result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}",
                                    result_name)
             with open(result_path, 'wb') as fp:
                 for x in result:
                     fp.write((json.dumps(x) + "\n").encode('utf-8'))
         else:
-            result_name = "_".join([self.model_type, self.data_type, self.test_mode, self.dataset_name + "batch" + self.batch_size]) + '_test_result.csv'
+            result_name = "_".join([self.model_type, self.data_type, self.test_mode, self.dataset_name + "batch" + str(self.batch_size)]) + '_test_result.csv'
             result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}",
                                    result_name)
             if self.dataset_name == "TruthfulQA":
