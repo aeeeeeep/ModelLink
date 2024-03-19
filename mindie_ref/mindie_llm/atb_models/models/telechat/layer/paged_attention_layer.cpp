@@ -167,7 +167,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     ATB_LOG(INFO) << "ROPE";
     atb::infer::RopeParam ropeParam;
     ropeParam.rotaryCoeff = ROTARY_COEFF;
-    atb_speed::telechat::Rope(ropeParam, &ropeNode.operation);
+    CREATE_OPERATION(ropeParam, &ropeNode.operation);
     ropeNode.inTensorIds = { INTERNAL_QMIXEDLINEAROUT, INTERNAL_KMIXEDLINEAROUT, IN_COSEMBED, IN_SINEMBED, IN_INPUT_LENGTHS };
     ropeNode.outTensorIds = { INTERNAL_POSITIONEMBEDQ, INTERNAL_POSITIONEMBEDK };
     ropeNode.inTensorReshapeFuncs.resize(ropeNode.inTensorIds.size());
