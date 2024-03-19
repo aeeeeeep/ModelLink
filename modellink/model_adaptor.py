@@ -32,12 +32,14 @@ from .training import get_model_wrapper
 from .utils import ALL_MODULE_WRAPPER_CLASSNAMES
 from .checkpointing import _load_base_checkpoint_wrapper, load_checkpoint_wrapper
 from .core.datasets.gpt_dataset import _build_document_sample_shuffle_indices
+from .initialize import _compile_dependencies
 
 
 def exe_adaptor():
     import megatron
     megatron.utils.ALL_MODULE_WRAPPER_CLASSNAMES = ALL_MODULE_WRAPPER_CLASSNAMES
     megatron.initialize.parse_args = parse_args_decorator(megatron.initialize.parse_args)
+    megatron.initialize._compile_dependencies = _compile_dependencies
     megatron.arguments.parse_args = parse_args_decorator(megatron.arguments.parse_args)
     megatron.global_vars.build_tokenizer = build_tokenizer
 
