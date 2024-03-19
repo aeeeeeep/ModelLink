@@ -41,7 +41,7 @@ Here's a hardware summary of pre-training Baichuan-7B:
 1. Clone the repository to your local server:
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
-cd ModeLlink 
+cd ModelLink 
 mkdir logs
 mkdir ckpt
 ```
@@ -258,7 +258,7 @@ Here's a hardware summary of pre-training Baichuan-13B:
 1. Clone the repository to your local server:
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
-cd ModeLlink 
+cd ModelLink 
 mkdir logs
 mkdir ckpt
 ```
@@ -409,53 +409,6 @@ The performance of the Baichuan-13B in **Ascend NPU** and **Reference**:
 |  Reference | Baichuan-13B |  - |  -   | 862  |  -   |    
 
 
-
-## Lora
-We support AscendSpeed Lora fine-tuning with Baichuan-13B.
-When Fine-tuning using `instruction fine-tuning data set`, the production process is as follows, 
-pay attention to add ` --handler-name GeneralInstructionHandler `
-
-```python
-mkdir alpaca_preprocessed
-python tools/preprocess_data.py \
-    --input ./dataset-baichuan-13B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --output-prefix ./alpaca_preprocessed/alpaca \
-    --tokenizer-type PretrainedFromHF \
-    --tokenizer-name-or-path ./baichuan-13B-hf \
-    --tokenizer-not-use-fast \
-    --handler-name GeneralInstructionHandler \
-    --append-eod
-```
-
-Configure Baichuan-13B lora script `tasks/finetune/tune_baichuan_ptd_13B.sh`
-
-```shell
-# configure the path to save the lora weights and the dataset path, initial megatron weight and tokenizer path 
-CKPT_SAVE_DIR="./ckpt_lora"
-DATA_PATH="./alpaca_preprocessed/alpaca"
-CHECKPOINT="./baichuan-13B-mt"
-TOKENIZER_PATH="./baichuan-13B-hf"
-```
-Launch Baichuan-13B fine-tuned with lora script: tasks/finetune/tune_baichuan_ptd_13B.sh
-Baichuan-13B:
-```shell
-bash ./examples/baichuan/tune_baichuan_ptd_13B.sh
-```
-Then use the fine-tuned weights for inference:
-```shell
-# configure the initial megatron weight path, lora weight path and tokenizer path 
-CHECKPOINT="./baichuan-13B-mt"
-LORA_CHECKPOINT="./ckpt_lora"
-TOKENIZER_PATH="./baichuan-13B-hf"
-```
-
-Baichuan-13B:
-```shell
-bash ./tasks/inference/generate_baichuan_13b_lora_ptd.sh
-```
-
-FineTune with lora and operate inference
-![13B-lora-inference.png](../../sources/images/baichuan/baichuan_13B_inference_lora.png)
 
 ## Inference
 Config baichuan-13B inference script: tasks/inference/generate_baichuan_13b_ptd.sh
