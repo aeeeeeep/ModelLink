@@ -27,6 +27,7 @@ struct DeepseekDenseMoeParam {
     int numOfExperts = 64;            // num of total experts
     int expertParallelDegree = 1;
     bool transpose = true;
+    int maskStartIdx = 0;
 };
 
 atb::Status CreateDeepseekDenseMoeOperation(const DeepseekDenseMoeParam &param, atb::Operation **operation);

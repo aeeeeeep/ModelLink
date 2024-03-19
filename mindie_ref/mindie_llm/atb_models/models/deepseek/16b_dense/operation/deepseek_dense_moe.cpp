@@ -303,7 +303,7 @@ enum DeepseekDenseMoeTensorId {
 
 static const uint64_t IN_TENSOR_COUNT = 133;
 static const uint64_t OUT_TENSOR_COUNT = 1;
-static const uint64_t INTERMEDIATE_TENSOR_COUNT = 143;
+static const uint64_t INTERMEDIATE_TENSOR_COUNT_BEFORE_MLP = 80;
 static const uint64_t OPERATION_COUNT_BEFORE_MLP = 16;
 
 atb::Status CreateDeepseekDenseMoeOperation(const DeepseekDenseMoeParam &param, atb::Operation **operation)
@@ -314,7 +314,7 @@ atb::Status CreateDeepseekDenseMoeOperation(const DeepseekDenseMoeParam &param, 
     opGraph.name = "DeepseekDenseMoe";
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
-    opGraph.internalTensorNum = INTERMEDIATE_TENSOR_COUNT;
+    opGraph.internalTensorNum = INTERMEDIATE_TENSOR_COUNT_BEFORE_MLP + param.numOfExperts / param.expertParallelDegree - 1;
     const int nodeSize = param.numOfExperts / param.expertParallelDegree + OPERATION_COUNT_BEFORE_MLP;
     opGraph.nodes.resize(nodeSize);
 
@@ -530,14 +530,14 @@ atb::Status CreateDeepseekDenseMoeOperation(const DeepseekDenseMoeParam &param, 
         deepseekDense::CreateDeepseekDenseMlpOperation(mlpExpertParam, &expertNode.operation);
         uint mlpGateUpWeightIdx = IN_MLPGATEUPWEIGHT_EXPERT_ZERO + expertId * 2;
         uint mlpDownWeightIdx = IN_MLPDOWNWEIGHT_EXPERT_ZERO + expertId * 2;
-        uint finalHiddenStateIdx = INTERMIDATE_FINAL_HIDDEN_STATE_ZERO + (expertId - 1) * 1;
+        uint finalHiddenStateIdx = INTERMIDATE_FINAL_HIDDEN_STATE_ZERO + expertId - 1;
         if (expertId == 0) {
             finalHiddenStateIdx = IN_FINAL_HIDDEN_STATE;
         }
-        uint expertMaskIdx = INTERMIDATE_EXPERT_MASK_ZERO + expertId * 1;
-        uint outTensorIdx = INTERMIDATE_FINAL_HIDDEN_STATE_ZERO + expertId * 1;
-        if (expertId == (param.numOfExperts / param.expertParallelDegree - 1)) {
-            outTensorIdx = OUT_DEEPSEEK_DENSE_MOE_ROUT;
+        uint expertMaskIdx = INTERMIDATE_EXPERT_MASK_ZERO + expertId + param.maskStartIdx * param.numOfExperts / param.expertParallelDegree;
+        uint outTensorIdx = OUT_DEEPSEEK_DENSE_MOE_ROUT;
+        if (expertId != (param.numOfExperts / param.expertParallelDegree - 1)) {
+            outTensorIdx = INTERMIDATE_FINAL_HIDDEN_STATE_ZERO + expertId;
         }
         expertNode.inTensorIds = {
             IN_HIDDEN_STATE,

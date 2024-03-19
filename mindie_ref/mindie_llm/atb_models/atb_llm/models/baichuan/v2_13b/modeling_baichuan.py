@@ -251,8 +251,8 @@ class FlashBaichuanModel(torch.nn.Module):
         process_group = weights.process_group
         self.tp_rank = process_group.rank()
         self.tp_world_size = process_group.size()
-
-        self.embed_tokens = (TensorParallelEmbedding if config.vocab_size == 125696 else TensorEmbedding)(
+        self.parallel_embedding = config.vocab_size == 125696
+        self.embed_tokens = (TensorParallelEmbedding if self.parallel_embedding else TensorEmbedding)(
             prefix="model.embed_tokens", weights=weights
         )
         self.layers = nn.ModuleList(
@@ -470,7 +470,8 @@ class BaichuanModel(torch.nn.Module):
         process_group = weights.process_group
         self.tp_rank = process_group.rank()
         self.tp_world_size = process_group.size()
-        self.embed_tokens = (TensorParallelEmbedding if config.vocab_size == 125696 else TensorEmbedding)(
+        self.parallel_embedding = config.vocab_size == 125696
+        self.embed_tokens = (TensorParallelEmbedding if self.parallel_embedding else TensorEmbedding)(
             prefix="model.embed_tokens", weights=weights
         )
         self.layers = nn.ModuleList(

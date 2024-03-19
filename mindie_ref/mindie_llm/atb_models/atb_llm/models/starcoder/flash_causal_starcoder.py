@@ -43,6 +43,9 @@ class FlashStarcoderForCausalLM(torch.nn.Module):
         self.num_attention_heads = (self.num_attention_heads + self.tp_world_size - 1) // self.tp_world_size
         self.num_key_value_heads = config.multi_query_group_num
         self.max_position_embeddings = config.seq_length
+        self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
+        self.transdata_param = json.dumps({})
+        self.transdata_operation.set_param(self.transdata_param)
         # self.attn_mask = AttentionMask.static(config.seq_length)
         self.quantize = config.quantize
         self.dtype = weights.dtype
@@ -298,8 +301,7 @@ class FlashStarcoderForCausalLM(torch.nn.Module):
             if self.soc_info.need_nz:
                 pad_maxs = math.ceil(self.max_position_embeddings / 16) * 16
                 atten_mask = self.attn_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
-                atten_mask = atten_mask.view(1, pad_maxs, pad_maxs // 16, 16).transpose(1, 2)
-                torch_npu.npu_format_cast_(atten_mask, 29)
+                atten_mask = self.transdata_operation.execute([atten_mask])[0]
             else:
                 atten_mask = self.attn_mask.get_attn_mask(self.max_position_embeddings, kv_cache[0][0].dtype,
                                                           kv_cache[0][0].device)
