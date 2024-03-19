@@ -1491,14 +1491,14 @@ class ModelTest:
         date_str = now.strftime("%Y_%m_%d_%H_%M_%S")
 
         if self.dataset_name == "HumanEval":
-            result_name = "_".join([self.model_type, self.data_type, self.test_mode]) + '_test_result.jsonl'
+            result_name = "_".join([self.model_type, self.data_type, self.test_mode, self.dataset_name, "batch" + self.batch_size]) + '_test_result.jsonl'
             result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}",
                                    result_name)
             with open(result_path, 'wb') as fp:
                 for x in result:
                     fp.write((json.dumps(x) + "\n").encode('utf-8'))
         else:
-            result_name = "_".join([self.model_type, self.data_type, self.test_mode]) + '_test_result.csv'
+            result_name = "_".join([self.model_type, self.data_type, self.test_mode, self.dataset_name + "batch" + self.batch_size]) + '_test_result.csv'
             result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}",
                                    result_name)
             if self.dataset_name == "TruthfulQA":
