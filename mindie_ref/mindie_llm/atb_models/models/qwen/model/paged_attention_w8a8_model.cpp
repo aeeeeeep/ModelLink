@@ -76,6 +76,7 @@ void PAW8A8Model::Param::FromString(const std::string &param)
     hiddenSizePerAttentionHead = paramJson["hiddenSizePerAttentionHead"].get<int>();
     numHiddenLayers = paramJson["numHiddenLayers"].get<int>();
     numKeyValueHeadsPerRank = paramJson["numKeyValueHeadsPerRank"].get<int>();
+    supportLcoc = paramJson["supportLcoc"].get<bool>();
     rank = paramJson["rank"].get<int>();
     worldSize = paramJson["worldSize"].get<int>();
     backend = paramJson["backend"].get<std::string>();
@@ -99,8 +100,8 @@ void PAW8A8Model::Param::FromString(const std::string &param)
                   << numAttentionHeadsPerRank << ", hiddenSizePerAttentionHead:" << hiddenSizePerAttentionHead
                   << ", numHiddenLayers:" << numHiddenLayers
                   << ", numKeyValueHeadsPerRank:" << numKeyValueHeadsPerRank
-                  << ", rank:" << rank << ", worldSize:" << worldSize << ", backend:" << backend
-                  << ", tokenOffset:" << tokenOffset << ", seqLen:" << seqLen;
+                  << ", supportLcoc:" << supportLcoc << ", rank:" << rank << ", worldSize:" << worldSize
+                  << ", backend:" << backend << ", tokenOffset:" << tokenOffset << ", seqLen:" << seqLen;
 }
 
 PAW8A8Model::PAW8A8Model(const std::string &param) : Model("PAW8A8Model", param)
@@ -222,6 +223,7 @@ int64_t PAW8A8Model::BuildGraph()
         layerParam.supportSwiGLU = param_.supportSwiGLU;
         layerParam.packQuantType = param_.packQuantType[layerId];
         layerParam.linearQuantType = param_.linearQuantType[layerId];
+        layerParam.supportLcoc = param_.supportLcoc;
         layerParam.rmsNormEps = param_.rmsNormEps;
         layerParam.numAttentionHeadsPerRank = param_.numAttentionHeadsPerRank;
         layerParam.hiddenSizePerAttentionHead = param_.hiddenSizePerAttentionHead;
