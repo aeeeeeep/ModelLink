@@ -144,12 +144,12 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     mlpParam.useFusionNorm = true;
     atb::infer::RmsNormParam mlpRmsNormParam;
     mlpRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_PRENORM;
-    mlpRmsNormParam.normParam.epsilon = param.rmsNormEps;
+    mlpRmsNormParam.preNormParam.epsilon = param.rmsNormEps;
     mlpParam.normParamType = mlpRmsNormParam;
     atb::infer::RmsNormParam mlpRmsNormQuantParam;
-    mlpRmsNormQuantParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    mlpRmsNormQuantParam.normParam.epsilon = param.rmsNormEps;
-    mlpRmsNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
+    mlpRmsNormQuantParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_PRENORM;
+    mlpRmsNormQuantParam.preNormParam.epsilon = param.rmsNormEps;
+    mlpRmsNormQuantParam.preNormParam.quantType = atb::infer::QUANT_INT8;
     mlpParam.normQuantParamType = mlpRmsNormQuantParam;
     // down
     mlpParam.downLinearTensorParallelInfo = param.tensorParallelInfo;

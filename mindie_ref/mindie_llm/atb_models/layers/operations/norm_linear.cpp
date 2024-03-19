@@ -64,14 +64,25 @@ atb::Status CreateNormLinear(const NormLinearParam<NormParamType> &param, atb::O
     if (!param.skipNorm) {
         atb::Node &normNode = opGraph.nodes.at(nodeId++);
         if (param.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::NORM_QUANT_LINEAR_DEQUANT) {  // W8A8
-            CREATE_OPERATION(param.normQuantParamType, &normNode.operation);
-            normNode.inTensorIds = {
-                config.IN_INPUT,
-                param.isAntiOutlier ? config.IN_NORM_NEW_WEIGHT : config.IN_NORM_WEIGHT,
-                param.isAntiOutlier ? config.IN_NORM_NEW_BIAS : config.IN_NORM_BIAS,
-                config.IN_SCALE, config.IN_OFFSET
-            };
-            normNode.outTensorIds = {config.INTERMEDIATE_NORM};
+            if (param.useFusionNorm) {
+                CREATE_OPERATION(param.normQuantParamType, &normNode.operation);
+                normNode.inTensorIds = {
+                    config.IN_INPUT, config.IN_RESIDUAL_ADD,
+                    param.isAntiOutlier ? config.IN_NORM_NEW_WEIGHT : config.IN_NORM_WEIGHT,
+                    param.isAntiOutlier ? config.IN_NORM_NEW_BIAS : config.IN_NORM_BIAS,
+                    config.IN_SCALE, config.IN_OFFSET
+                };
+                normNode.outTensorIds = {config.INTERMEDIATE_NORM, config.OUT_RESIDUAL_ADD};
+            } else {
+                CREATE_OPERATION(param.normQuantParamType, &normNode.operation);
+                normNode.inTensorIds = {
+                    config.IN_INPUT,
+                    param.isAntiOutlier ? config.IN_NORM_NEW_WEIGHT : config.IN_NORM_WEIGHT,
+                    param.isAntiOutlier ? config.IN_NORM_NEW_BIAS : config.IN_NORM_BIAS,
+                    config.IN_SCALE, config.IN_OFFSET
+                };
+                normNode.outTensorIds = {config.INTERMEDIATE_NORM};
+            }
         } else if (param.normHasBias) {  // FP
             CREATE_OPERATION(param.normParamType, &normNode.operation);
             normNode.inTensorIds = {config.IN_INPUT, config.IN_NORM_WEIGHT, config.IN_NORM_BIAS};
