@@ -7,16 +7,10 @@ from atb_llm.utils.log import logger, print_log
 from .batch import Batch
 import json
 from torch import nn
+from ..git_processor import sample_search
 
 def next_token_chooser(logits: torch.Tensor):
     return torch.argmax(logits, dim=-1)
-
-def next_token_topktopp(test_data, logits: torch.Tensor):
-    topktopp_op_name = torch.classes.OperationTorch.OperationTorch("Layerstopktopp")
-    topktopp_param = json.dumps({"axes": 1, "headNum": 0, "topk": test_data.top_k, "vocsize": logits.size()[1], "row":logits.size()[0],"randseed":test_data.random_seed,"min_tokens_to_keep": test_data.min_tokens_to_keep})
-    topktopp_op_name.set_param(topktopp_param)
-    next_logits, next_token=topktopp_op_name.execute([logits,torch.HalfTensor([test_data.top_p]).npu(),torch.HalfTensor([test_data.temperature]).npu()])
-    return next_token
 
 def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length, rank, ignore_eos, test_data, do_sample):
     input_ids = batch.batch_input_ids.npu()
@@ -53,7 +47,7 @@ def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length
         logits_save_filename = "logits_" + str(len(batch.req_list[0].out_token_list)) + ".pth"
         torch.save(logits.cpu(), os.path.join(ENV.logits_save_folder, logits_save_filename))
     if do_sample:
-        next_token = next_token_topktopp(test_data, logits)
+        next_token = sample_search(test_data, logits)
     else:
         next_token = next_token_chooser(logits)
     next_token_list = next_token.tolist()

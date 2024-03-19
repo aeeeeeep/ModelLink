@@ -7,22 +7,14 @@ import time
 
 import torch
 import random
-from dataclasses import dataclass
 from atb_llm.runner import ModelRunner
 from atb_llm.utils.cpu_binding import NpuHbmInfo
 from atb_llm.utils.env import ENV
 from atb_llm.utils.log import logger, print_log
+from examples.git_processor import next_token_param
 from examples.server.cache import CacheConfig, ModelConfig, CacheManager
 from examples.server.generate import decode_token, generate_req
 from examples.server.request import request_from_text, request_from_token
-
-@dataclass
-class Test_data:
-    random_seed: int
-    temperature:float
-    top_k: int
-    top_p: float
-    min_tokens_to_keep: int
 
 class PARunner:
     def __init__(self, **kwargs):
@@ -268,7 +260,7 @@ if __name__ == '__main__':
     }
 
     pa_runner = PARunner(**input_dict)
-    test_data = Test_data(args.random_seed, args.temperature, args.top_k, args.top_p, args.min_tokens_to_keep)
+    test_data = next_token_param(args.random_seed, args.temperature, args.top_k, args.top_p, args.min_tokens_to_keep)
     print_log(rank, logger.info, f'pa_runner: {pa_runner}')
     pa_runner.warm_up()
 
