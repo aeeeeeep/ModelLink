@@ -222,6 +222,8 @@ Bloom-176B 训练的硬件配置:
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git
 cd ModelLink
+mkdir logs
+mkdir ckpt
 ```
 
 2. 搭建环境

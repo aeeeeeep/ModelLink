@@ -47,6 +47,7 @@ Qwen-7B 训练的硬件配置:
    ```shell
    git clone https://gitee.com/ascend/ModelLink.git 
    cd ModelLink
+   mkdir logs
    ```
 2. 搭建环境
 
@@ -266,7 +267,8 @@ Qwen-14B 训练的硬件配置:
 
    ```shell
    git clone https://gitee.com/ascend/ModelLink.git 
-   cd ModelLink 
+   cd ModelLink
+   mkdir logs 
    ```
 2. 搭建环境
 
@@ -492,6 +494,7 @@ Qwen-72B 训练的硬件配置:
    ```shell
    git clone https://gitee.com/ascend/ModelLink.git 
    cd ModelLink
+   mkdir logs
    ```
 2. 搭建环境
 

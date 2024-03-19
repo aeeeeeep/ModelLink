@@ -55,6 +55,7 @@
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 
     cd ModelLink
+    mkdir logs
     pip install -r requirements.txt
     cd ..
 
