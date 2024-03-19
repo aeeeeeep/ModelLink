@@ -14,40 +14,37 @@
  * limitations under the License.
  */
 
-#ifndef ASCEND_SPEED_INFERENCE_COMMON_NORM_LINEAR_H
-#define ASCEND_SPEED_INFERENCE_COMMON_NORM_LINEAR_H
+#ifndef ASCEND_SPEED_INFERENCE_COMMON_ADD_NORM_H
+#define ASCEND_SPEED_INFERENCE_COMMON_ADD_NORM_H
 
 #include <atb/atb_infer.h>
-#include "layers/operations/add_norm.h"
-#include "layers/operations/linear.h"
 
 namespace atb_speed {
 namespace common {
 
-enum PackQuantType : unsigned int {
-    ALL_FP = 1,
-    ALL_W8A8 = 2,
-    ALL_W8A8_ANTI = 3,
-    MIX_W8A8 = 4,
-    MIX_W8A8_ANTI = 5,
-    ALL_W8A16 = 6,
+enum AddNormType : unsigned int {
+    FUSION_ADD_NORM = 0,
+    ADD_NORM,
+    NORM_ONLY,
 };
 
-enum NextResidualAddInType : unsigned int {
-    NORM_OUT = 0,
-    ADD_OUT,
+enum NormQuantType : unsigned int {
+    NORM_NO_QUANT = 0,
+    NORM_QUANT,
+    NORM_ANTI_OUTLIER_QUANT,
 };
 
 template <typename NormParamType>
-struct NormLinearParam {
-    NextResidualAddInType nextResidualAddIn = ADD_OUT;
-    atb_speed::common::AddNormParam<NormParamType> addNormParam;
-    atb_speed::common::FusionLinearParam fusionLinearParam;
+struct AddNormParam {
+    bool normHasBias = false;
+    AddNormType addNormType = ADD_NORM;
+    NormQuantType normQuantType = NORM_NO_QUANT;
+    NormParamType normParamType;
+    NormParamType normQuantParamType;
 };
 
-NormQuantType GetNormQuantType(const int &packQuantType);
 template <typename NormParamType>
-atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operation **operation);
+atb::Status AddNorm(const AddNormParam<NormParamType> &param, atb::Operation **operation);
 
 } // namespace common
 } // namespace atb_speed
