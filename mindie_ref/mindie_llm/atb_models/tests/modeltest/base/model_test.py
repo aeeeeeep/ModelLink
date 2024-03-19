@@ -1507,7 +1507,7 @@ class ModelTest:
                 df = pd.DataFrame(result, columns=['file_name', 'value', 'correct', 'sum'])
             df = align_columns(df)
             df = align_headers(df)
-            df.to_csv(result_path, sep='|', index=False)
+            df.to_csv(result_path, index=False)
         self.logger.info(f"{self.dataset_name} result saved to: {result_path}")
         self.current_result_path = result_path
 
