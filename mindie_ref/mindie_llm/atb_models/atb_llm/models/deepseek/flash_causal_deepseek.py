@@ -55,7 +55,7 @@ class FlashDeepseekForCausalLM(FlashForCausalLM):
             self.maskStartIdx = 0
         else:
             self.expert_parallel_degree = self.tp_world_size
-            self.maskStartIdx = self.tp_rank
+            self.maskStartIdx = self.tp_rankcccccccccccccccccccddddddd
 
     # called by super().prepare_inputs_for_ascend
     def init_position_rotary_embedding(self,
