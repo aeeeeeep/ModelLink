@@ -62,6 +62,15 @@
   NUM_LAYERS = 32 # 模型层数，LLaMA2-7B配置为32，13B配置为40
   ANTI_METHOD = "m1" # anti-outlier算法配置，LLaMA2-7B配置为m1，13B配置为m2
   ```
+  - 打开量化脚本convert_w8a8_quant_weights.py，配置校准数据集
+  ```shell
+  # 跳转到脚本第33行，从 https://github.com/google-research-datasets/boolean-questions 下载BoolQ Development数据集，从数据集中选取50条问题，填入calib_list中
+  calib_list = [
+    # 选取50条数据填入
+    "Question1: xxx",
+    "Question2: xxx",
+  ]
+  ```
   - 执行量化脚本
   ```shell
   python convert_w8a8_quant_weights.py 
