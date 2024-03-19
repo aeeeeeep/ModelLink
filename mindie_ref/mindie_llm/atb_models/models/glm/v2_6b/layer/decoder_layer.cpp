@@ -97,6 +97,8 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
         fusionAttentionParam.selfAttentionParam.calcType = atb::infer::SelfAttentionParam::CalcType::PA_ENCODER;
     }
 
+    fusionAttentionParam.selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
+
     fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
 
     fusionAttentionParam.pageAttentionParam.headNum = param.numAttentionHeadsPerRank;
