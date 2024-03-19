@@ -143,7 +143,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         auto &splitMixedQKVNode = opGraph.nodes[nodeId++];
         atb::infer::SplitParam splitMixedQKVParam;
         if (param.splitWithStride) {
-            splitMixedQKVParam = {2, 3};
+            splitMixedQKVParam = {-2, 3};
         } else {
             splitMixedQKVParam = {-1, 3};
         }
@@ -157,11 +157,14 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
             splitMixedQKVNode.inTensorReshapeFuncs.resize(splitMixedQKVNode.inTensorIds.size());
             splitMixedQKVNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
                 size_t dim = 0;
-                newShape.dims[dim++] = oldShape.dims[0];                 // ntokens
+                newShape.dims[dim++] = oldShape.dims[0];                 // PA ntokens | FA batch
+                if (param.isFA) {
+                    newShape.dims[dim++] = oldShape.dims[1];             // FA seqlen    
+                }
                 newShape.dims[dim++] = param.selfAttentionParam.headNum; // head_num
                 newShape.dims[dim++] = 3;                                // 3 -> q, k, v
                 newShape.dims[dim++] = param.headDim;                    // dk
-                newShape.dimNum = dim;                                   // [ntokens, head_num, 3, dk]
+                newShape.dimNum = dim;
             };
         }
     } else {  // isPack: false
