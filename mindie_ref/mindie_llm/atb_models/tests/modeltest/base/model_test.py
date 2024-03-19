@@ -122,7 +122,7 @@ dtype_map = {"bf16": torch.bfloat16, "fp16": torch.float16}
 core_map = {"NPU": "npu", "GPU": "cuda"}
 prompt_map = {"GSM8K": "", "TruthfulQA": QA_PRIMER}
 question_num = {"GSM8K": 11, "TruthfulQA": 12}
-CEval_0_shot = {"chatglm2_6b"}
+CEval_0_shot = {}
 
 logging.basicConfig(level=logging.DEBUG)
 
