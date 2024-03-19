@@ -46,6 +46,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
     ```shell
     git clone https://gitee.com/ascend/ModelLink.git 
     cd ModelLink
+    mkdir logs
     ```
 
 2. Build environment
@@ -261,6 +262,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
     ```shell
     git clone https://gitee.com/ascend/ModelLink.git 
     cd ModelLink
+    mkdir logs
     ```
 
 2. Build environment
@@ -483,6 +485,7 @@ Here's a hardware summary of pre-training  Qwen-72B:
     ```shell
     git clone https://gitee.com/ascend/ModelLink.git 
     cd ModelLink
+    mkdir logs
     ```
 
 2. Build environment

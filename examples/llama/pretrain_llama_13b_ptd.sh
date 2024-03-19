@@ -86,4 +86,5 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
-    --save ${SAVE_CHECKPOINT_PATH}
+    --save ${SAVE_CHECKPOINT_PATH} \
+    | tee logs/train_llama_13b.log

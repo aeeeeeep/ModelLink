@@ -1,4 +1,3 @@
-apex
 numpy
 transformers==4.36.0
 transformers_stream_generator

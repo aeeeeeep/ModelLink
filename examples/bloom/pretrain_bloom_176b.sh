@@ -89,4 +89,5 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
-    --save $CKPT_SAVE_DIR
+    --save $CKPT_SAVE_DIR \
+    | tee logs/train_bloom_176b.log

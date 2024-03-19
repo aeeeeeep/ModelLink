@@ -86,4 +86,5 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
     --load $CKPT_LOAD_DIR \
-    --save $CKPT_SAVE_DIR
+    --save $CKPT_SAVE_DIR \
+    | tee logs/train_llama2_7b.log

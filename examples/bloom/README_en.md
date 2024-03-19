@@ -226,6 +226,8 @@ Here's a hardware summary of pre-training Bloom-176B:
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git
 cd ModelLink
+mkdir logs
+mkdir ckpt
 ```
 
 2. Build enviroment
