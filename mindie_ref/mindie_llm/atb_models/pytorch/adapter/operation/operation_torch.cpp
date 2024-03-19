@@ -63,6 +63,10 @@ void OperationTorch::SetParam(std::string param)
     ATB_LOG(INFO) << name_ << " set param start, param:" << param;
     param_ = param;
 
+    if (isTaskQueueEnable_) {
+        runTaskFunc_ = std::bind(&OperationTorch::RunTask, this, std::placeholders::_1, std::placeholders::_2);
+    }
+
     atb::Operation *operation = CreateOperation(opName_, param_);
     if (operation == nullptr) {
         ATB_LOG(FATAL) << name_ << " create operation fail, opName:" << opName_ << ", param:" << param_;
@@ -149,6 +153,7 @@ void OperationTorch::ExecuteOut(std::vector<torch::Tensor> atInTensors, std::vec
 void OperationTorch::ExecuteOutImpl(std::vector<torch::Tensor> &atInTensors, std::vector<torch::Tensor> &atOutTensors,
                                     const std::string &varaintPackParam)
 {
+    Clear();
     ATB_LOG(INFO) << name_ << " execute impl execCount:" << executeCount_;
     atb_speed::Timer timer;
     if (hostTensorBinder_) {
@@ -156,41 +161,63 @@ void OperationTorch::ExecuteOutImpl(std::vector<torch::Tensor> &atInTensors, std
         hostTensorBinder_->ParseParam(paramJson);
     }
 
-    atb::VariantPack variantPack;
-    BuildVariantPack(atInTensors, atOutTensors, variantPack);
+    BuildVariantPack(atInTensors, atOutTensors, variantPack_);
 
     if (hostTensorBinder_) {
-        hostTensorBinder_->BindTensor(variantPack);
+        hostTensorBinder_->BindTensor(variantPack_);
     }
 
-    uint64_t workspaceSize = 0;
-
     atb_speed::Timer timer1;
-    atb::Status st = operation_->Setup(variantPack, workspaceSize, context_.get());
+    atb::Status st = operation_->Setup(variantPack_, workspaceSize_, context_.get());
     atb_speed::GetSingleton<atb_speed::Statistic>().planSetupTime += timer1.ElapsedMicroSecond();
     if (st != 0) {
         ATB_LOG(ERROR) << name_ << " setup fail, not call execute, error code: " << st;
         return;
     }
 
-    ATB_LOG(INFO) << name_ << " get plan workspace size:" << workspaceSize;
+    ATB_LOG(INFO) << name_ << " get plan workspace size:" << workspaceSize_;
 
-    void *workspace = nullptr;
-    if (workspaceSize > 0) {
-        workspace = atb_speed::GetSingleton<atb_speed::Workspace>().GetWorkspaceBuffer(workspaceSize);
+    if (workspaceSize_ > 0) {
+        workspace_ = atb_speed::GetSingleton<atb_speed::Workspace>().GetWorkspaceBuffer(workspaceSize_);
     }
 
-    atb_speed::Timer timer2;
-    st = operation_->Execute(variantPack, (uint8_t*)workspace, workspaceSize, context_.get());
-    atb_speed::GetSingleton<atb_speed::Statistic>().planExecuteTime += timer2.ElapsedMicroSecond();
+    if (runTaskFunc_) {
+        ExecutePlanASync();
+    } else {
+        ExecutePlan();
+    }
+}
+
+atb::Status OperationTorch::ExecutePlan()
+{
+    atb_speed::Timer timer;
+    Status st = operation_->Execute(variantPack_, (uint8_t*)workspace_, workspaceSize_, context_.get());
+    atb_speed::GetSingleton<atb_speed::Statistic>().planExecuteTime += timer.ElapsedMicroSecond();
     ATB_LOG_IF(st != 0, ERROR) << name_ << " execute plan fail, error code: " << st;
 
     atb_speed::GetSingleton<atb_speed::Statistic>().totalTime += timer.ElapsedMicroSecond();
     ATB_LOG(FATAL) << name_ << " executeCount:" << executeCount_ << ", statistic:[" 
                    << atb_speed::GetSingleton<atb_speed::Statistic>().ToString() << "]";
     atb_speed::GetSingleton<atb_speed::Statistic>().Reset();
-
     executeCount_++;
+    return st;
+}
+
+void OperationTorch::ExecutePlanASync()
+{
+    if (runTaskFunc_) {
+        runTaskFunc_(name_, [=]() {
+            return ExecutePlan();
+        });
+    }
+}
+
+void OperationTorch::Clear()
+{
+    variantPack_.inTensors.clear();
+    variantPack_.outTensors.clear();
+    workspaceSize_ = 0;
+    workspace = nullptr;
 }
 
 void OperationTorch::CreateAtOutTensors(const std::vector<torch::Tensor> &atInTensors,
@@ -263,6 +290,18 @@ std::string OperationTorch::GetSaveTensorDir()
     const char *envStr = std::getenv("AIT_CMP_TASK_ID");
     std::string dir = envStr ? std::string(envStr) : std::to_string(executeCount_);
     return atb_speed::Config::GetSaveTensorDir() + "/" + dir + "/" + std::to_string(opId_) + "_OperationTorch";
+}
+
+void OperationTorch::RunTask(std::string taskName, std::function<int()> task)
+{
+#ifdef TORCH_SETCUSTOMHANDLER
+    at_npu::native::OpCommand cmd;
+    cmd.Name(taskName);
+    cmd.SetCustomHandler(task);
+    cmd.Run();
+#else
+    ATB_LOG(FATAL) << modelName_ << "torch_npu is low, can't support SetCustomHandler";
+#endif
 }
 
 TORCH_LIBRARY(OperationTorch, m)

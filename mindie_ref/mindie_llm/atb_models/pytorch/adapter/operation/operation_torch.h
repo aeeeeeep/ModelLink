@@ -24,6 +24,8 @@
 
 class OperationTorch : public torch::CustomClassHolder {
 public:
+    using Task = std::function<int()>;
+    using RunTaskFunc = std::function<void(const std::string &taskName, Task task)>;
     explicit OperationTorch(std::string opName);
     ~OperationTorch();
     void SetName(std::string name);
@@ -42,6 +44,10 @@ private:
     void BuildVariantPack(std::vector<torch::Tensor> &inTensors, std::vector<torch::Tensor> &outTensor,
                           atb::VariantPack &variantPack);
     std::string GetSaveTensorDir();
+    void RunTask(std::string taskName, std::function<int()> task);
+    void ExecutePlan();
+    void Clear();
+    void ExecutePlanASync();
 
 private:
     std::string opName_;
@@ -54,5 +60,9 @@ private:
     bool isTaskQueueEnable_ = false;
     std::unique_ptr<atb_speed::HostTensorBinder> hostTensorBinder_;
     std::shared_ptr<atb::Context> context_;
+    atb::VariantPack variantPack_;
+    uint64_t workspaceSize_ = 0;
+    void *workspace = nullptr;
+    RunTaskFunc runTaskFunc_ = nullptr;
 };
 #endif
