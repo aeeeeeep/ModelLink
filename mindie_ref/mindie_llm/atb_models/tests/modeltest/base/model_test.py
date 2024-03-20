@@ -1506,9 +1506,9 @@ class ModelTest:
         date_str = now.strftime("%Y_%m_%d_%H_%M_%S")
 
         if self.quantize:
-                result_name = "_".join([self.model_type, self.data_type, self.quantize, "_batch" + str(self.batch_size), self.test_mode, self.dataset_name]) + '_test_result'
-            else:
-                result_name = "_".join([self.model_type, self.data_type, "_batch" + str(self.batch_size), self.test_mode, self.dataset_name]) + '_test_result'
+            result_name = "_".join([self.model_type, self.data_type, self.quantize, "_batch" + str(self.batch_size), self.test_mode, self.dataset_name]) + '_test_result'
+        else:
+            result_name = "_".join([self.model_type, self.data_type, "_batch" + str(self.batch_size), self.test_mode, self.dataset_name]) + '_test_result'
 
         if self.dataset_name == "HumanEval":
             result_name += ".jsonl"
