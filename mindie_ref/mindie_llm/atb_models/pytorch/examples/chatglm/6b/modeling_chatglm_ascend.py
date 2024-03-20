@@ -1145,8 +1145,8 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         F.embedding(position_ids, sin.squeeze(1)).unsqueeze(2)
         cos1, sin1 = F.embedding(block_position_ids, cos.squeeze(1)).unsqueeze(2), \
         F.embedding(block_position_ids, sin.squeeze(1)).unsqueeze(2)
-        rope_cos = torch.cat((cos0, cos1), dim=-1).squeeze(1)
-        rope_sin = torch.cat((sin0, sin1), dim=-1).squeeze(1)
+        rope_cos = torch.cat((cos0, cos1), dim=-1).squeeze(1).transpose(0,1).expand(batch_size, -1, -1)
+        rope_sin = torch.cat((sin0, sin1), dim=-1).squeeze(1).transpose(0,1).expand(batch_size, -1, -1)
         
 
         if batch_size != self.batch:
