@@ -60,4 +60,5 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference
        --lora-alpha 32 \
        --make-vocab-size-divisible-by 1 \
        --group-query-attention \
-       --num-query-groups 8
+       --num-query-groups 8 \
+       | tee logs/generate_llama2_34b_lora.log

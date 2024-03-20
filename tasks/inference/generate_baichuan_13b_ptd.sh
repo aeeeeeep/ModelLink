@@ -48,5 +48,6 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference
        --no-masked-softmax-fusion \
        --no-gradient-accumulation-fusion \
        --exit-on-missing-checkpoint \
-       --make-vocab-size-divisible-by 64
+       --make-vocab-size-divisible-by 64 \
+       | tee logs/generate_baichuan_13b.log
 

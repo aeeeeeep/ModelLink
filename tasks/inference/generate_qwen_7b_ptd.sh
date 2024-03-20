@@ -47,4 +47,5 @@ torchrun $DISTRIBUTED_ARGS ./tasks/inference/inference_llama.py \
        --tokenizer-kwargs 'eos_token' '<|endoftext|>' 'pad_token' '<|extra_0|>' \
        --max-new-tokens 256 \
        --seed 42 \
-       --bf16
+       --bf16 \
+       | tee logs/generate_qwen_7b.log

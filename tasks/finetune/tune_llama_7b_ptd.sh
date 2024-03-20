@@ -94,4 +94,5 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
-    --save ${SAVE_CHECKPOINT_PATH} 
+    --save ${SAVE_CHECKPOINT_PATH} \
+    | tee logs/tune_llama_7b.log

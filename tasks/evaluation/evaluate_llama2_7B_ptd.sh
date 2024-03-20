@@ -52,7 +52,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation
        --untie-embeddings-and-output-weights \
        --no-masked-softmax-fusion \
        --make-vocab-size-divisible-by 1 \
-       --seed 42 | tee logs/mmlu.log
+       --seed 42 | tee logs/evaluation_llama2_7b_${TASK}.log
 
 
 

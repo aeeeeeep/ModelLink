@@ -51,4 +51,5 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference
     --no-gradient-accumulation-fusion \
     --no-load-optim \
     --no-load-rng \
-    --bf16
+    --bf16 \
+    | tee logs/generate_bloom_176b.log

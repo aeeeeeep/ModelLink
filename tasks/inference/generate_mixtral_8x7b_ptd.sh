@@ -65,4 +65,5 @@ MOE_ARGS="
 torchrun $DISTRIBUTED_ARGS tasks/inference/inference_llama.py \
     $GPT_ARGS \
     $MOE_ARGS \
-    --distributed-backend nccl
+    --distributed-backend nccl \
+    | tee logs/generate_mixtral.log
