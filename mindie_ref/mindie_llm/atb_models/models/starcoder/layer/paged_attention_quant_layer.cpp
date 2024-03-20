@@ -42,9 +42,7 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
 
     size_t nodeId = 0;
     atb::Node &attentionNode = opGraph.nodes.at(nodeId++);
-    // atb::Node &selfResidualAddNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpParallelNode = opGraph.nodes.at(nodeId++);
-    // atb::Node &mlpResidualAddNode = opGraph.nodes.at(nodeId++);
 
     atb_speed::common::FusionAttentionParam<atb::infer::LayerNormParam> fusionAttentionParam;
     fusionAttentionParam.isGroupedQueryAttention = param.numAttentionHeadsPerRank != param.numKeyValueHeadsPerRank;
@@ -128,9 +126,7 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
         IN_K_CACHE,
         IN_V_CACHE,
         IN_ATTENTION_MASK,
-        // IN_TOKEN_OFFSET,
         IN_PLACE_HOLDER,
-        // IN_LAYER_ID,
         IN_PLACE_HOLDER,
         IN_BLOCK_TABLES,
         IN_SLOTS,
@@ -139,14 +135,8 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
         IN_ATTENTION_OUT_OFFSET,
         IN_ATTENTION_OUT_DESCALE,
         IN_ATTENTION_OUT_DEOFFSET,
-        // IN_PLACE_HOLDER, // layernorm暂时修改
     };
     attentionNode.outTensorIds = {IN_RESIDUAL_ADD_OUT, INTERMEDIATE_ATTENTION_OUT};
-    // atb::infer::ElewiseParam addParam;
-    // addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    // CreateOperation(addParam, &selfResidualAddNode.operation);
-    // selfResidualAddNode.inTensorIds = {IN_HIDDEN_STATES, INTERMEDIATE_ATTENTION_OUT};
-    // selfResidualAddNode.outTensorIds = {INTERMEDIATE_RESIDUAL_ADD_OUT};
 
     atb_speed::common::MlpParam<atb::infer::LayerNormParam> mlpParam;
     mlpParam.isBF16 = param.isBF16;
@@ -173,7 +163,6 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     mlpParam.downLinearTensorParallelInfo = {param.rank, param.worldSize, param.backend};
     Mlp(mlpParam, &mlpParallelNode.operation);
     mlpParallelNode.inTensorIds = {
-        // INTERMEDIATE_RESIDUAL_ADD_OUT,
         param.layerId == 0 ? IN_HIDDEN_STATES : IN_RESIDUAL_ADD_OUT,
         INTERMEDIATE_ATTENTION_OUT,
         IN_ATTENTION_NORM_WEIGHT,
@@ -195,20 +184,11 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
         IN_MLP_DOWN_OFFSET,
         IN_MLP_DOWN_DESCALE,
         IN_MLP_DOWN_DEOFFSET,
-        // IN_PLACE_HOLDER, // layernorm暂时修改
     };
     mlpParallelNode.outTensorIds = {OUT_ATTENTION_RESIDUAL_ADD, OUT_MLP};
 
-    // CREATE_OPERATION(addParam, &mlpResidualAddNode.operation);
-    // mlpResidualAddNode.inTensorIds = {
-    //     INTERMEDIATE_RESIDUAL_ADD_OUT,
-    //     INTERMEDIATE_MLP_OUT
-    // };
-    // mlpResidualAddNode.outTensorIds = {OUT_DECODER_LAYER};
-
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
-        // outTensorDescs.at(0) = inTensorDescs.at(0);
         outTensorDescs.at(0) = inTensorDescs.at(IN_HIDDEN_STATES);
         outTensorDescs.at(1) = inTensorDescs.at(IN_HIDDEN_STATES);
         return atb::NO_ERROR;
