@@ -205,6 +205,7 @@ class ModelTest:
                 self.quantize = config_data["quantize"]
 
         if self.quantize:
+            self.model_name += "_quant"
             csv_path = os.path.join(os.path.dirname(self.script_path), 'result', self.model_name, f"{self.model_type}_{self.data_type}_{self.quantize}_batch{self.batch_size}_{self.test_mode}_test_result_formatted.csv")
         else:
             csv_path = os.path.join(os.path.dirname(self.script_path), 'result', self.model_name, f"{self.model_type}_{self.data_type}_batch{self.batch_size}_{self.test_mode}_test_result_formatted.csv")
@@ -473,13 +474,13 @@ class ModelTest:
             self.pa_runner.warm_up()
         else:
             self.tokenizer = AutoTokenizer.from_pretrained(self.weight_dir, use_fast=False, padding_side="left", truncation_side="left", trust_remote_code=True)
-            if self.model_name == "qwen":
+            if "qwen" in self.model_name:
                 self.tokenizer.pad_token_id = self.tokenizer.eod_id
                 self.tokenizer.bos_token_id = self.tokenizer.eod_id
                 self.tokenizer.eos_token_id = self.tokenizer.eod_id
-            if self.model_name == "starcoder":
+            if "starcoder" in self.model_name:
                 self.tokenizer.pad_token = "[PAD]"
-            if self.model_name == "llama":
+            if "llama" in self.model_name:
                 self.tokenizer.pad_token_id = 0
 
             self.model = AutoModelForCausalLM.from_pretrained(self.weight_dir, device_map="auto", trust_remote_code=True)
