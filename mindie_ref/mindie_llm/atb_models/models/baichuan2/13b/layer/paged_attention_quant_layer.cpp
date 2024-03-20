@@ -23,10 +23,10 @@
 
 namespace atb_speed {
 namespace baichuan2_13b {
-static const uint64_t IN_TENSOR_COUNT = 51;  // 部分冗余tensor预先保留，
-static const uint64_t OUT_TENSOR_COUNT = 1;
-static const uint64_t INTERNAL_TENSOR_COUNT = 3;
-static const uint64_t NODE_COUNT = 4;
+static const uint64_t IN_TENSOR_COUNT = 52;
+static const uint64_t OUT_TENSOR_COUNT = 2;
+static const uint64_t INTERNAL_TENSOR_COUNT = 1;
+static const uint64_t NODE_COUNT = 2;
 
 
 atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operation)
@@ -46,9 +46,27 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
 
     size_t nodeId = 0;
     atb::Node &attentionNode = opGraph.nodes.at(nodeId++);
-    atb::Node &selfResidualAddNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpParallelNode = opGraph.nodes.at(nodeId++);
-    atb::Node &mlpResidualAddNode = opGraph.nodes.at(nodeId++);
+
+    // rmsNormparam的参数初始化
+    atb::infer::RmsNormParam attenRmsNormParam;
+    if (param.layerId == 0) {
+        attenRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+        attenRmsNormParam.normParam.epsilon = param.rmsNormEps;
+    } else {
+        attenRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_PRENORM;
+        attenRmsNormParam.preNormParam.epsilon = param.rmsNormEps;
+    }
+    atb::infer::RmsNormParam attenRmsNormQuantParam;
+    if (param.layerId == 0) {
+        attenRmsNormQuantParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+        attenRmsNormQuantParam.normParam.epsilon = param.rmsNormEps;
+        attenRmsNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
+    } else {
+        attenRmsNormQuantParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_PRENORM;
+        attenRmsNormQuantParam.preNormParam.epsilon = param.rmsNormEps;
+        attenRmsNormQuantParam.preNormParam.quantType = atb::infer::QUANT_INT8;
+    }
 
     // 步骤1：.attentionNode。功能：rmsNorm+qkv+attention+o_proj(对于baichuan而言，没有rope。位置编码信息从python传来)。注意：attention根据不同芯片类型shape有所区分
     atb_speed::common::FusionAttentionParam<atb::infer::RmsNormParam> fusionAttentionParam;
@@ -57,17 +75,10 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     fusionAttentionParam.isBF16 = param.isBF16;
     fusionAttentionParam.packQuantType = param.packQuantType[0];
     fusionAttentionParam.layerLinearQuantType = param.linearQuantType;
-    fusionAttentionParam.supportLcoc = param.supportLcoc;
-    atb::infer::RmsNormParam attenRmsNormParam; 
-    attenRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    attenRmsNormParam.normParam.epsilon = param.rmsNormEps;
     fusionAttentionParam.normParamType = attenRmsNormParam;
-    atb::infer::RmsNormParam attenRmsNormQuantParam;
-    attenRmsNormQuantParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    attenRmsNormQuantParam.normParam.epsilon = param.rmsNormEps;
-    attenRmsNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
     fusionAttentionParam.normQuantParamType = attenRmsNormQuantParam;
-    // rope这一块如何设置
+    fusionAttentionParam.addNormType = param.layerId == 0 ? \
+        atb_speed::common::AddNormType::NORM_ONLY : atb_speed::common::AddNormType::FUSION_ADD_NORM;
     fusionAttentionParam.rotaryType = atb_speed::common::RotaryType::NO_ROTARY;
     // self attention param
     fusionAttentionParam.isFA = param.isFA;
@@ -80,6 +91,7 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     }
     fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
     fusionAttentionParam.selfAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
+    fusionAttentionParam.supportLcoc = param.supportLcoc;
     if (param.isFA) {
         fusionAttentionParam.selfAttentionParam.calcType = param.isPrefill ? \
             atb::infer::SelfAttentionParam::CalcType::ENCODER : atb::infer::SelfAttentionParam::CalcType::DECODER;
@@ -95,7 +107,8 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     fusionAttentionParam.selfOutLinearTensorParallelInfo = {param.rank, param.worldSize, param.backend};
     Attention(fusionAttentionParam, &attentionNode.operation);
     attentionNode.inTensorIds = {
-        LayerQuantPATensorId::IN_HIDDEN_STATES,
+        IN_RESIDUAL_ADD_OUT,
+        IN_HIDDEN_STATES,
         IN_INPUT_NORM_WEIGHT,
         IN_INPUT_NORM_BIAS,
         IN_INPUT_NORM_NEW_WEIGHT,
@@ -131,17 +144,18 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
         IN_ATTENTION_OUT_DESCALE,
         IN_ATTENTION_OUT_DEOFFSET,
     };
-    attentionNode.outTensorIds = {INTERMEDIATE_ATTENTION_OUT};
-    // 步骤2：残差结构
-    atb::infer::ElewiseParam addParam;
-    addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CREATE_OPERATION(addParam, &selfResidualAddNode.operation);
-    selfResidualAddNode.inTensorIds = {
-        IN_HIDDEN_STATES,
-        INTERMEDIATE_ATTENTION_OUT
-    };
-    selfResidualAddNode.outTensorIds = {INTERMEDIATE_RESIDUAL_ADD_OUT};
-    // 步骤3：mlp操作
+    attentionNode.outTensorIds = {IN_RESIDUAL_ADD_OUT, INTERMEDIATE_ATTENTION_OUT};
+
+    atb::infer::RmsNormParam mlpRmsNormParam;
+    mlpRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_PRENORM;
+    mlpRmsNormParam.preNormParam.epsilon = param.rmsNormEps;
+
+    atb::infer::RmsNormParam mlpRmsNormQuantParam;
+    mlpRmsNormQuantParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_PRENORM;
+    mlpRmsNormQuantParam.preNormParam.epsilon = param.rmsNormEps;
+    mlpRmsNormQuantParam.preNormParam.quantType = atb::infer::QUANT_INT8;
+
+    // 步骤2：mlp操作
     atb_speed::common::MlpParam<atb::infer::RmsNormParam> mlpParam;
     mlpParam.isBF16 = param.isBF16;
     mlpParam.packQuantType = param.packQuantType[1];
@@ -153,15 +167,10 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     } else {
         mlpParam.mlpPackType = atb_speed::common::GATE_UP_WEIGHT_PACK;
     }
-    atb::infer::RmsNormParam mlpRmsNormParam;
-    mlpRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    mlpRmsNormParam.normParam.epsilon = param.rmsNormEps; 
+    
     mlpParam.normParamType = mlpRmsNormParam;
-    atb::infer::RmsNormParam mlpRmsNormQuantParam;
-    mlpRmsNormQuantParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    mlpRmsNormQuantParam.normParam.epsilon = param.rmsNormEps;
-    mlpRmsNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
     mlpParam.normQuantParamType = mlpRmsNormQuantParam;
+    mlpParam.addNormType = atb_speed::common::AddNormType::FUSION_ADD_NORM;
     // down（与attention后的linear一致）
     mlpParam.downLinearTensorParallelInfo = {param.rank, param.worldSize, param.backend};
 
@@ -175,7 +184,8 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     }
 
     mlpParallelNode.inTensorIds = {
-        INTERMEDIATE_RESIDUAL_ADD_OUT,
+        param.layerId == 0 ? IN_HIDDEN_STATES : IN_RESIDUAL_ADD_OUT,
+        INTERMEDIATE_ATTENTION_OUT,
         IN_ATTENTION_NORM_WEIGHT,
         IN_ATTENTION_NORM_BIAS,
         IN_ATTENTION_NORM_NEW_WEIGHT,
@@ -196,18 +206,12 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
         IN_MLP_DOWN_DESCALE,
         IN_MLP_DOWN_DEOFFSET,
     };
-    mlpParallelNode.outTensorIds = {INTERMEDIATE_MLP_OUT};
-    // 步骤4：残差结构
-    CREATE_OPERATION(addParam, &mlpResidualAddNode.operation);
-    mlpResidualAddNode.inTensorIds = {
-        INTERMEDIATE_RESIDUAL_ADD_OUT,
-        INTERMEDIATE_MLP_OUT
-    };
-    mlpResidualAddNode.outTensorIds = {OUT_DECODER_LAYER};
+    mlpParallelNode.outTensorIds = {OUT_ATTENTION_RESIDUAL_ADD, OUT_MLP};
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
-        outTensorDescs.at(0) = inTensorDescs.at(0);
+        outTensorDescs.at(0) = inTensorDescs.at(IN_HIDDEN_STATES);
+        outTensorDescs.at(1) = inTensorDescs.at(IN_HIDDEN_STATES);
         return atb::NO_ERROR;
     };
     CREATE_OPERATION(opGraph, operation);
