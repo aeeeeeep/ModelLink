@@ -1,17 +1,16 @@
 import argparse
 import os
+import json
 import time
-import shutil
-from itertools import product
-
-import numpy as np
+import tqdm
 import torch
 import torch_npu
-import transformers
-from torch_npu.contrib import transfer_to_npu
 from transformers import AutoModelForCausalLM, AutoTokenizer, BloomTokenizerFast, AutoConfig
 
 from modeling_bloom_ascend import BloomCommonForCausalLM as BloomForCausalLM
+
+from safetensors import safe_open
+from safetensors.torch import save_file
 
 
 class CutWeightsConfig:
@@ -47,34 +46,7 @@ def load_model(in_args):
     return model, tokenizer
 
 
-def get_calib_dataset(tokenizer):
-    calib_list = [
-        "Common sense questions and answers\n\nQuestion: How to learn a new language\nFactual answer:",
-        "Common sense questions and answers\n\nQuestion: Why do we need to learn a new language\nFactual answer:",
-        "Common sense questions and answers\n\nQuestion: What is the best way to study\nFactual answer:",
-        "Common sense questions and answers\n\nQuestion: What is the capital of France\nFactual answer:",
-        "Common sense questions and answers\n\nQuestion: Should I take notes during class\nFactual answer:",
-        "Common sense questions and answers\n\nQuestion: How to use photoshop\nFactual answer:",
-        "Common sense questions and answers\n\nQuestion: What is depression\nFactual answer:",
-        "Common sense questions and answers\n\nQuestion: Who was the first president of the United States\nFactual answer:",
-        "Common sense questions and answers\n\nQuestion: What is the name of the vice president of the United States\nFactual answer:",
-        "Common sense questions and answers\n\nQuestion: How to learn programming\nFactual answer:",
-        "Common sense questions and answers\n\nQuestion: How does artificial intelligence work\nFactual answer:",
-        "Common sense questions and answers\n\nQuestion: Why should we learn math\nFactual answer:",
-        "Common sense questions and answers\n\nQuestion: How does machine learning work\nFactual answer:",
-        "Common sense questions and answers\n\nQuestion: How to live a happy life\nFactual answer:",
-        "Common sense questions and answers\n\nQuestion: How to run a company\nFactual answer:",
-        "Common sense questions and answers\n\nQuestion: Who is the CEO of Google\nFactual answer:"
-        ]
-    calib_dataset = []
-    for calib_data in calib_list:
-        inputs = tokenizer([calib_data], return_tensors="pt", max_length=32, padding='max_length', truncation=True)
-        print(inputs)
-        calib_dataset.append([inputs.data['input_ids'].cpu(), None, inputs.data['attention_mask'].cpu()])
-    return calib_dataset
-
-
-def quant_model(args_quant, verbose=False):
+def quant_model(args_quant):
     if not os.environ.get("ASCEND_TOOLKIT_HOME"):
         raise Exception("Environment variable ASCEND_TOOLKIT_HOME not found. Please source /path/to/cann/set_env.sh")
     
@@ -86,86 +58,58 @@ def quant_model(args_quant, verbose=False):
     print("[~] loading model...")
     t0 = time.time()
     model, tokenizer = load_model(args_quant)
-    print(f"[+] load model: {time.time() - t0:.1f}s")
+    print(f"[+] load model: {time.time() - t0:.1f}s")  # load model: 1792.4s
     os.makedirs(args_quant.output_path, exist_ok=True)
 
     tokenizer.save_pretrained(args_quant.output_path)
     model.config.to_json_file(os.path.join(args_quant.output_path, "config.json"))
+    print("[~] model loaded, starting quant model...")
 
-    for name, module in model.named_modules():
-        print(name, module)
-
-    # 保存非量化的部分权重
-    float_layer_ids = []
-    saved_float_keys = []
-    weights_keys = model.state_dict().keys()
-    for weights_key in weights_keys:
-        print(weights_key, "." * (80 - len(str(weights_key))), model.state_dict()[weights_key].shape)
-
-        key_split = weights_key.split('.')
-        is_split_layer = any(_n in key_split for _n in ('input_layernorm', 'post_attention_layernorm', 'bias'))
-        if 'h' in key_split and (int(key_split[2]) in float_layer_ids or is_split_layer):
-            saved_float_keys.append(weights_key)
-        elif "h" not in key_split:
-            saved_float_keys.append(weights_key)
-    saved_float_weights = {key: model.state_dict()[key] for key in saved_float_keys}
-    torch.save(saved_float_weights, os.path.join(args_quant.output_path, "float_layers_weights.pt"))
-
-    print("model loaded, starting quant model...")
-    dataset_calib = get_calib_dataset(tokenizer)
     quant_config = QuantConfig(w_bit=8, a_bit=16, disable_names=[], dev_type='cpu', act_method=3, pr=1.0, mm_tensor=False)
     calibrator = Calibrator(model, quant_config, calib_data=None, disable_level='L0')
     calibrator.run()
-    
-    print("starting saving model...")
-    calibrator.save(args_quant.output_path)
-
-    quant_weight_dict = np.load(os.path.join(args_quant.output_path, "quant_weight.npy"), allow_pickle=True).item()
-    if "lm_head" in quant_weight_dict:
-        del quant_weight_dict["lm_head"]
-    np.save(os.path.join(args_quant.output_path, "quant_weight.npy"), quant_weight_dict)
+    print("[~] starting saving model...")
+    calibrator.save(args_quant.output_path, save_type=["safe_tensor"])
 
 
 def cut_weights(cfg):
-    state_dict_list = [{} for i in range(cfg.world_size)]
+    state_dict_list = [{} for _ in range(cfg.world_size)]
     for key, tensor in cfg.state_dict.items():
         if "lm_head" in key:
             continue
 
         key_short = key.split('.')[-2]
         key_type = key.split('.')[-1]
-
         if key_short == 'query_key_value':
             num_heads, head_dim = cfg.config.n_head, cfg.config.hidden_size // cfg.config.n_head
             dst_shape = list(tensor.shape)
             dst_shape[0] //= cfg.world_size
-
             tensor = tensor.view(num_heads, 3, head_dim, -1)
             tensor_list = torch.unbind(tensor, dim=1)
             chunk_tensor_list = [torch.chunk(item, cfg.world_size, dim=0) for item in tensor_list]
             cut_tensor_list = [torch.cat(item, 1).reshape(*dst_shape) for item in zip(*chunk_tensor_list)]
-        else:
-            if key_short in cfg.cut_row_keys:
-                cut_tensor_list = torch.chunk(tensor, cfg.world_size, dim=0)
-            elif key_short in cfg.cut_col_keys:
-                if key_type == "weight":
-                    cut_tensor_list = torch.chunk(tensor, cfg.world_size, dim=1)
-                elif key_type == "bias":
-                    cut_tensor_list = [tensor] * cfg.world_size
+        elif key_short in cfg.cut_row_keys:
+            cut_tensor_list = torch.chunk(tensor, cfg.world_size, dim=0)
+        elif key_short in cfg.cut_col_keys:
+            if key_type == "weight":
+                cut_tensor_list = torch.chunk(tensor, cfg.world_size, dim=1)
+            elif key_type == "bias":
+                cut_tensor_list = [tensor] * cfg.world_size
             else:
                 cut_tensor_list = [tensor] * cfg.world_size
+        else:
+            cut_tensor_list = [tensor] * cfg.world_size
 
         for i in range(cfg.world_size):
             state_dict_list[i][key] = torch.clone(cut_tensor_list[i].contiguous())
     return state_dict_list
 
 
-def cut_weights_quant(weight_type, state_dict, world_size, config, recuce_bias=False):
-    state_dict = {k + "." + weight_type: v for k, v in state_dict.items()}
+def cut_weights_quant(state_dict, world_size, config):
+    state_dict = {k: v for k, v in state_dict.items()}
     cut_weights_config = CutWeightsConfig(state_dict, world_size, config)
-    cut_weights_config.recuce_bias = recuce_bias
     state_dict_list = cut_weights(cut_weights_config)
-    state_dict_list = [{k.rstrip(weight_type)[:-1]: v for k, v in state_dict_tmp.items()} for state_dict_tmp in state_dict_list]
+    state_dict_list = [{k: v for k, v in state_dict_tmp.items()} for state_dict_tmp in state_dict_list]
     return state_dict_list
 
 
@@ -188,34 +132,76 @@ def cut_model_float(args_float):
 
 
 def cut_model_quant(args_quant):
+    print("================================================================================")
+    # The path to save the weights.
     weight_path = args_quant.input_path
+    print(f"[+] quant weight dir: {weight_path}")
 
+    # Save the tokenizer to the output path.
     tokenizer = BloomTokenizerFast.from_pretrained(args_quant.input_path, use_fast=False)
     tokenizer.save_pretrained(os.path.join(args_quant.output_path, 'tokenizer'))
+    print(f"[+] The tokenizer has been saved successfully.")
 
     config = AutoConfig.from_pretrained(args_quant.input_path)
-    print(f"=========quant weight path:{weight_path} ==========")
-    quant_weight_dict = np.load(os.path.join(weight_path, "quant_weight.npy"), allow_pickle=True).item()
-    weight_scale_dict = np.load(os.path.join(weight_path, "weight_scale.npy"), allow_pickle=True).item()
-    float_weight_dict = torch.load(os.path.join(weight_path, "float_layers_weights.pt"))
+    quant_model_weight_path = os.path.join(args_quant.input_path, "quant_model_weight.safetensors")
 
-    state_quant_weight_dict_list = cut_weights_quant("weight", quant_weight_dict, args_quant.world_size, config)
-    state_weight_scale_dict_list = cut_weights_quant("bias", weight_scale_dict, args_quant.world_size, config)
+    with open(os.path.join(args_quant.input_path, "quant_model_description.json"), "r") as f:
+        quant_model_description = json.load(f)
+    
+    with open(os.path.join(args_quant.output_path, "quant_model_description.json"), "w") as f:
+        f.write(json.dumps(quant_model_description, indent=4))
+
+    model_layer_names = list(quant_model_description.keys())
+    float_weight_dict = dict()
+
+    quant_weight_dict = dict()
+    for quant_param in ("weight", "weight_scale", "weight_offset"):
+        quant_weight_dict[quant_param] = dict()
+    
+    print("[~] Loading weights onto CPU...")
+    with safe_open(quant_model_weight_path, framework="pt", device="cpu") as f:
+        model_layer_names = f.keys()
+        for i in tqdm.tqdm(range(len(model_layer_names))):
+            layer_name = model_layer_names[i]
+            is_float = quant_model_description[layer_name] == "FLOAT"
+            if is_float:
+                float_weight_dict[layer_name] = f.get_tensor(layer_name)
+            else:
+                quant_param = layer_name.split(".")[-1]
+                quant_weight_dict[quant_param][layer_name] = f.get_tensor(layer_name)
+    print("[+] Weights loaded successfully.")
+
     cut_weights_config = CutWeightsConfig(float_weight_dict, args_quant.world_size, config)
-    float_weight_dict_list = cut_weights(cut_weights_config)
+    float_weight_parts = cut_weights(cut_weights_config)
 
-    save_path = os.path.join(args_quant.output_path, 'part_model')
-    print(f"=========part quant weight path:{save_path} ==========")
-    for i in range(args_quant.world_size):
-        base_path = os.path.join(save_path, str(i))
-        os.makedirs(base_path, exist_ok=True)
-        config.to_json_file(os.path.join(base_path, "config.json"))
-        np.save(os.path.join(base_path, "quant_weight.npy"), state_quant_weight_dict_list[i])
-        np.save(os.path.join(base_path, "weight_scale.npy"), state_weight_scale_dict_list[i])
-        torch.save(float_weight_dict_list[i], os.path.join(base_path, "float_layers_weights.pt"))
+    quant_weight_parts = dict()
+    for quant_param in ("weight", "weight_scale", "weight_offset"):
+        quant_weight_parts[quant_param] = cut_weights_quant(quant_weight_dict[quant_param],
+                                                            args_quant.world_size,
+                                                            config)
+
+    save_dir_base = os.path.join(args_quant.output_path, 'part_model')
+    print(f"[~] Saving the weights of the {args_quant.world_size} parts...")
+    for i in tqdm.tqdm(range(args_quant.world_size)):
+        save_dir = os.path.join(save_dir_base, str(i))
+        os.makedirs(save_dir, exist_ok=True)
+        config.to_json_file(os.path.join(save_dir, "config.json"))
+
+        part_tensors = dict()
+        for layer_name in model_layer_names:
+            if "lm_head" in layer_name:
+                continue
+            is_float = quant_model_description[layer_name] == "FLOAT"
+            if is_float:
+                part_tensors[layer_name] = float_weight_parts[i][layer_name]
+            else:
+                quant_param = layer_name.split(".")[-1]
+                part_tensors[layer_name] = quant_weight_parts[quant_param][i][layer_name]
+            print(f"{layer_name:90} -- {part_tensors[layer_name].shape}")
+        save_file(part_tensors, os.path.join(save_dir, "quant_model_weight.safetensors"))
 
     print("Tensor parallelism weights have been successfully saved.")
-    print("the location of parallel quant weight is {}".format(save_path))
+    print(f"the location of parallel quant weight is {args_quant.output_path}")
 
 
 if __name__ == "__main__":
