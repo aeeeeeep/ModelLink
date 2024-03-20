@@ -205,13 +205,17 @@ class ModelTest:
                 self.quantize = config_data["quantize"]
 
         if self.quantize:
+            torch.npu.set_compile_mode(jit_compile=False)
             self.model_name += "_quant"
             csv_path = os.path.join(os.path.dirname(self.script_path), 'result', self.model_name, f"{self.model_type}_{self.data_type}_{self.quantize}_batch{self.batch_size}_{self.test_mode}_test_result_formatted.csv")
         else:
+            torch.npu.set_compile_mode(jit_compile=True)
             csv_path = os.path.join(os.path.dirname(self.script_path), 'result', self.model_name, f"{self.model_type}_{self.data_type}_batch{self.batch_size}_{self.test_mode}_test_result_formatted.csv")
+        
         self.data_dir = os.path.join(self.data_dir, self.model_name, "data")
         self.result_dir = os.path.join(self.result_dir, self.model_name, "results")
         self.log_dir = os.path.join(self.log_dir, self.model_name, "logs")
+        
         os.makedirs(os.path.dirname(csv_path), exist_ok=True)
         with open(csv_path, 'w') as f:
             if self.test_mode == "performance":
@@ -486,7 +490,7 @@ class ModelTest:
             if "llama" in self.model_name:
                 self.tokenizer.pad_token_id = 0
 
-            self.model = AutoModelForCausalLM.from_pretrained(self.weight_dir, device_map="auto", trust_remote_code=True)
+            self.model = AutoModelForCausalLM.from_pretrained(self.weight_dir, device_map="auto", torch_dtype="auto", trust_remote_code=True)
             self.device = self.model.device
 
         if self.test_mode == "simplified":
