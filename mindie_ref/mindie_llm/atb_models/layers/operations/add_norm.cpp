@@ -110,7 +110,7 @@ atb::Status AddNorm(const AddNormParam<NormParamType> &param, atb::Operation **o
     if (param.addNormType == FUSION_ADD_NORM) {
         atb::Node &normNode = opGraph.nodes.at(nodeId++);
         if (param.normQuantType != NORM_NO_QUANT) {  // W8A8 or W8A8 anti-outlier
-            CREATE_OPERATION(param.normParamType, &normNode.operation);
+            CREATE_OPERATION(param.normQuantParamType, &normNode.operation);
             normNode.inTensorIds = {
                 AddNormTensorIdx::IN_RESIDUAL_INPUT, AddNormTensorIdx::IN_INPUT,
                 param.normQuantType == NORM_ANTI_OUTLIER_QUANT ? AddNormTensorIdx::IN_NORM_NEW_WEIGHT : AddNormTensorIdx::IN_NORM_WEIGHT,
@@ -137,7 +137,9 @@ atb::Status AddNorm(const AddNormParam<NormParamType> &param, atb::Operation **o
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(IN_INPUT);
-        outTensorDescs.at(0).dtype = inTensorDescs.at(IN_NORM_WEIGHT).dtype;
+        if (param.normQuantType != NORM_NO_QUANT) {
+            outTensorDescs.at(0).dtype = ACL_INT8;
+        }
         outTensorDescs.at(1) = inTensorDescs.at(IN_RESIDUAL_INPUT);
         return atb::NO_ERROR;
     };

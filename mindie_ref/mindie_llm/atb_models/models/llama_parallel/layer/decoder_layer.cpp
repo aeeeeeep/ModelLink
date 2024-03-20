@@ -54,12 +54,12 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
 
     atb::infer::RmsNormParam attenRmsNormQuantParam;
     if (param.layerId == 0) {
-        attenRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-        attenRmsNormParam.normParam.epsilon = param.rmsNormEps;
+        attenRmsNormQuantParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+        attenRmsNormQuantParam.normParam.epsilon = param.rmsNormEps;
         attenRmsNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
     } else {
-        attenRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_PRENORM;
-        attenRmsNormParam.preNormParam.epsilon = param.rmsNormEps;
+        attenRmsNormQuantParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_PRENORM;
+        attenRmsNormQuantParam.preNormParam.epsilon = param.rmsNormEps;
         attenRmsNormQuantParam.preNormParam.quantType = atb::infer::QUANT_INT8;
     }
 
