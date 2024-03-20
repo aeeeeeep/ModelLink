@@ -66,7 +66,7 @@ GPT_ARGS="
     --load ${LOAD_CHECKPOINT_PATH}  \
     --no-load-optim \
     --no-load-rng \
-    --bf16
+    --fp16
 "
 
 DATA_ARGS="
