@@ -149,6 +149,7 @@ class ModelTest:
         self.max_position_embedding = max_position_embedding
         self.core_type = core_map[self.hardware_type] if hardware_type in core_map.keys() else "npu"
         self.is_format_nz = False
+        self.quantize = None
         self.current_result_path = ''
         self.logger = self.__get_log("log")
         self.result_logger = self.__get_log("result")
@@ -197,7 +198,16 @@ class ModelTest:
             except OverflowError:
                 max_csv_limit = int(max_csv_limit / 10)
 
-        csv_path = os.path.join(os.path.dirname(self.script_path), 'result', self.model_name, f"{self.model_type}_{self.data_type}_{self.test_mode}_batch{self.batch_size}_test_result_formatted.csv")
+        config_path = os.path.join(self.weight_dir, "config.json")
+        with open(config_path, 'r') as f:
+            config_data = json.load(f)
+            if "quantize" in config_data:
+                self.quantize = config_data["quantize"]
+
+        if self.quantize:
+            csv_path = os.path.join(os.path.dirname(self.script_path), 'result', self.model_name, f"{self.model_type}_{self.data_type}_{self.quantize}_batch{self.batch_size}_{self.test_mode}_test_result_formatted.csv")
+        else:
+            csv_path = os.path.join(os.path.dirname(self.script_path), 'result', self.model_name, f"{self.model_type}_{self.data_type}_batch{self.batch_size}_{self.test_mode}_test_result_formatted.csv")
         os.makedirs(os.path.dirname(csv_path), exist_ok=True)
         with open(csv_path, 'w') as f:
             if self.test_mode == "performance":
@@ -411,7 +421,12 @@ class ModelTest:
                      str(round(e2e_throughput_average, 10)).ljust(35)])
                 folder_name = self.model_name
                 csv_name = self.model_type + "_" + self.data_type + "_" + self.test_mode + "_batch" + str(self.batch_size) + "_test_result.csv"
-                csv_formatted_name = self.model_type + "_" + self.data_type + "_" + self.test_mode + "_batch" + str(self.batch_size) + "_test_result_formatted.csv"
+                if self.quantize:
+                    csv_name = self.model_type + "_" + self.data_type + "_" + self.quantize + "_batch" + str(self.batch_size) + "_" + self.test_mode + "_test_result.csv"
+                    csv_formatted_name = self.model_type + "_" + self.data_type + "_" + self.quantize + "_batch" + str(self.batch_size) + "_" + self.test_mode + "_test_result_formatted.csv"
+                else:
+                    csv_name = self.model_type + "_" + self.data_type + "_batch" + str(self.batch_size) + "_" + self.test_mode + "_test_result.csv"
+                    csv_formatted_name = self.model_type + "_" + self.data_type + "_" + "_batch" + str(self.batch_size) + "_" + self.test_mode + "_test_result_formatted.csv"
                 csv_performance_path = os.path.join(self.script_path, "../result", folder_name, csv_name)
                 csv_performance_formatted_path = os.path.join(self.script_path, "../result", folder_name, csv_formatted_name)
                 if not os.path.exists(csv_performance_formatted_path):
@@ -1490,17 +1505,21 @@ class ModelTest:
         now = datetime.now()
         date_str = now.strftime("%Y_%m_%d_%H_%M_%S")
 
+        if self.quantize:
+                result_name = "_".join([self.model_type, self.data_type, self.quantize, "_batch" + str(self.batch_size), self.test_mode, self.dataset_name]) + '_test_result'
+            else:
+                result_name = "_".join([self.model_type, self.data_type, "_batch" + str(self.batch_size), self.test_mode, self.dataset_name]) + '_test_result'
+
         if self.dataset_name == "HumanEval":
-            result_name = "_".join([self.model_type, self.data_type, self.test_mode, self.dataset_name, "_batch" + str(self.batch_size)]) + '_test_result.jsonl'
+            result_name += ".jsonl"
             result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}",
                                    result_name)
             with open(result_path, 'wb') as fp:
                 for x in result:
                     fp.write((json.dumps(x) + "\n").encode('utf-8'))
         else:
-            result_name = "_".join([self.model_type, self.data_type, self.test_mode, self.dataset_name + "_batch" + str(self.batch_size)]) + '_test_result.csv'
-            result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}",
-                                   result_name)
+            result_name += ".csv"
+            result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}", result_name)
             if self.dataset_name == "TruthfulQA":
                 df = pd.DataFrame(result, columns=['idx', 'MC1', 'MC2', 'MC3'])
             else:
