@@ -135,12 +135,12 @@ class ModelTest:
         self.test_mode = test_mode
         self.model_name = model_name
         self.script_path = os.path.dirname(os.path.abspath(__file__))
-        self.data_dir = os.path.join(data_dir, self.model_name, "data")
+        self.data_dir = data_dir
         self.dataset_name = dataset_name
         self.batch_size = batch_size
         self.device_id = device_id
-        self.result_dir = os.path.join(result_dir, self.model_name, "results")
-        self.log_dir = os.path.join(log_dir, self.model_name, "logs")
+        self.result_dir = result_dir
+        self.log_dir = log_dir
         self.hardware_type = hardware_type
         self.case_pair = ast.literal_eval(case_pair) if case_pair != "[]" else [[256, 256], [512, 512], [1024, 1024],
                                                                                 [2048, 2048]]
@@ -209,6 +209,9 @@ class ModelTest:
             csv_path = os.path.join(os.path.dirname(self.script_path), 'result', self.model_name, f"{self.model_type}_{self.data_type}_{self.quantize}_batch{self.batch_size}_{self.test_mode}_test_result_formatted.csv")
         else:
             csv_path = os.path.join(os.path.dirname(self.script_path), 'result', self.model_name, f"{self.model_type}_{self.data_type}_batch{self.batch_size}_{self.test_mode}_test_result_formatted.csv")
+        self.data_dir = os.path.join(self.data_dir, self.model_name, "data")
+        self.result_dir = os.path.join(self.result_dir, self.model_name, "results")
+        self.log_dir = os.path.join(self.log_dir, self.model_name, "logs")
         os.makedirs(os.path.dirname(csv_path), exist_ok=True)
         with open(csv_path, 'w') as f:
             if self.test_mode == "performance":
