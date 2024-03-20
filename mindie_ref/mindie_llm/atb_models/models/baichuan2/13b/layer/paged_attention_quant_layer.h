@@ -44,7 +44,7 @@ struct PAQuantLayerParam {
     int hiddenSizePerAttentionHead = 0;
     int numKeyValueHeadsPerRank = 0;
     bool supportLcoc = false;
-
+    int layerId = 0;
     bool transposedWeight = true;
     std::string backend = "hccl";
     std::string model = "baichuan2_13b";
@@ -57,8 +57,9 @@ struct PAQuantLayerParam {
     std::vector<int> linearQuantType = {};
 };
 
-enum LayerQuantPATensorId : int {
-    IN_HIDDEN_STATES = 0,               // shape: FA: [batchSize, seqLen, maxPositionEmbeddings] PA: [seqLen, hiddenSize]
+enum LayerQuantPATensorId : uint32_t {
+    IN_RESIDUAL_ADD_OUT = 0,    
+    IN_HIDDEN_STATES,       
     IN_INPUT_NORM_WEIGHT,               // shape: [hiddenSize]
     IN_INPUT_NORM_BIAS,
     IN_INPUT_NORM_NEW_WEIGHT,
@@ -109,10 +110,9 @@ enum LayerQuantPATensorId : int {
     IN_BLOCK_TABLES,                    // shape: [seqLen, seqLen]; PA所需参数
     IN_SLOTS,  
     IN_PLACE_HOLDER,                    // shape: [1]
-    OUT_DECODER_LAYER,                  // shape: FA: [batchSize, seqLen, maxPositionEmbeddings] PA: [seqLen, hiddenSize]
+    OUT_ATTENTION_RESIDUAL_ADD,  // 当前layer的attention out输出
+    OUT_MLP,  // 当前layer的mlp输出
     INTERMEDIATE_ATTENTION_OUT,         // shape: PA: [seqLen, hiddenSize]
-    INTERMEDIATE_RESIDUAL_ADD_OUT,      // shape: PA: [seqLen, hiddenSize]
-    INTERMEDIATE_MLP_OUT,               // shape: PA: [seqLen, hiddenSize]
 };
 
 
