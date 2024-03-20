@@ -426,7 +426,7 @@ class ModelTest:
                     csv_formatted_name = self.model_type + "_" + self.data_type + "_" + self.quantize + "_batch" + str(self.batch_size) + "_" + self.test_mode + "_test_result_formatted.csv"
                 else:
                     csv_name = self.model_type + "_" + self.data_type + "_batch" + str(self.batch_size) + "_" + self.test_mode + "_test_result.csv"
-                    csv_formatted_name = self.model_type + "_" + self.data_type + "_" + "_batch" + str(self.batch_size) + "_" + self.test_mode + "_test_result_formatted.csv"
+                    csv_formatted_name = self.model_type + "_" + self.data_type + "_batch" + str(self.batch_size) + "_" + self.test_mode + "_test_result_formatted.csv"
                 csv_performance_path = os.path.join(self.script_path, "../result", folder_name, csv_name)
                 csv_performance_formatted_path = os.path.join(self.script_path, "../result", folder_name, csv_formatted_name)
                 if not os.path.exists(csv_performance_formatted_path):
