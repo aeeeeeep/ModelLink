@@ -198,7 +198,7 @@ atb::Status OperationTorch::ExecutePlan()
     ATB_LOG_IF(st != 0, ERROR) << name_ << " execute plan fail, error code: " << st;
 
     atb_speed::GetSingleton<atb_speed::Statistic>().totalTime += timer.ElapsedMicroSecond();
-    ATB_LOG(FATAL) << name_ << " executeCount:" << executeCount_ << ", statistic:[" 
+    ATB_LOG(FATAL) << name_ << " executeCount:" << executeCount_ << ", statistic:["
                    << atb_speed::GetSingleton<atb_speed::Statistic>().ToString() << "]";
     atb_speed::GetSingleton<atb_speed::Statistic>().Reset();
     executeCount_++;
