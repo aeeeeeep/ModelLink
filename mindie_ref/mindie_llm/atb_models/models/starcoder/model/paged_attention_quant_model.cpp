@@ -232,7 +232,7 @@ int64_t PAQuantModel::BuildGraph()
         layerParam.packQuantType = param_.packQuantType[layerId];
         layerParam.linearQuantType = param_.linearQuantType[layerId];
         layerParam.layerNormEps = param_.layerNormEps;
-        layerParam.layerId = layerId; // TODO
+        layerParam.layerId = layerId;
         layerParam.numAttentionHeadsPerRank = param_.numAttentionHeadsPerRank;
         layerParam.hiddenSizePerAttentionHead = param_.hiddenSizePerAttentionHead;
         layerParam.numKeyValueHeadsPerRank = param_.numKeyValueHeadsPerRank;
