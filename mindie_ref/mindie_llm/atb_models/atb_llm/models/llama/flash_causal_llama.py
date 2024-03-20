@@ -28,7 +28,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
         self.use_refactor = config.use_refactor
         if self.use_refactor:
             self.config = config
-            self.in_tensor_length = 12
+            self.in_tensor_length = 13
             self.acl_encoder_operation_inputs = [None] * self.in_tensor_length
             self.acl_decoder_operation_inputs = [None] * self.in_tensor_length
 
@@ -164,6 +164,7 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                 "hiddenSizePerAttentionHead": self.head_size,
                 "numHiddenLayers": self.config.num_hidden_layers,
                 "numKeyValueHeadsPerRank": self.num_key_value_heads,
+                "skipWordEmbedding": False,
                 "isFA": False,
                 "isBF16": self.dtype == torch.bfloat16,
                 "packQuantType": self.pack_quant_config,
@@ -263,34 +264,36 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                     "seqLen": input_lengths.tolist()
                 })
                 self.acl_encoder_operation_inputs[0] = input_ids
-                self.acl_encoder_operation_inputs[1] = position_ids.to(torch.int64)
-                self.acl_encoder_operation_inputs[2] = self.cos_embed
-                self.acl_encoder_operation_inputs[3] = self.sin_embed
-                self.acl_encoder_operation_inputs[4] = atten_mask
-                self.acl_encoder_operation_inputs[5] = block_tables.to(torch.int32)
-                self.acl_encoder_operation_inputs[6] = slots.to(torch.int32)
-                self.acl_encoder_operation_inputs[7] = self.placeholder
+                self.acl_encoder_operation_inputs[1] = self.placeholder
+                self.acl_encoder_operation_inputs[2] = position_ids.to(torch.int64)
+                self.acl_encoder_operation_inputs[3] = self.cos_embed
+                self.acl_encoder_operation_inputs[4] = self.sin_embed
+                self.acl_encoder_operation_inputs[5] = atten_mask
+                self.acl_encoder_operation_inputs[6] = block_tables.to(torch.int32)
+                self.acl_encoder_operation_inputs[7] = slots.to(torch.int32)
                 self.acl_encoder_operation_inputs[8] = self.placeholder
                 self.acl_encoder_operation_inputs[9] = self.placeholder
-                self.acl_encoder_operation_inputs[10] = input_lengths.to(torch.int32)
-                self.acl_encoder_operation_inputs[11] = lm_head_indices.to(torch.int64)
+                self.acl_encoder_operation_inputs[10] = self.placeholder
+                self.acl_encoder_operation_inputs[11] = input_lengths.to(torch.int32)
+                self.acl_encoder_operation_inputs[12] = lm_head_indices.to(torch.int64)
                 return self.acl_encoder_operation_inputs, self.acl_param
             else:
                 self.acl_param = json.dumps({
                     "seqLen": input_lengths.tolist()
                 })
                 self.acl_decoder_operation_inputs[0] = input_ids
-                self.acl_decoder_operation_inputs[1] = position_ids.to(torch.int64)
-                self.acl_decoder_operation_inputs[2] = self.cos_embed
-                self.acl_decoder_operation_inputs[3] = self.sin_embed
-                self.acl_decoder_operation_inputs[4] = self.attn_mask_fake
-                self.acl_decoder_operation_inputs[5] = block_tables.to(torch.int32)
-                self.acl_decoder_operation_inputs[6] = slots.to(torch.int32)
-                self.acl_decoder_operation_inputs[7] = self.placeholder
+                self.acl_decoder_operation_inputs[1] = self.placeholder
+                self.acl_decoder_operation_inputs[2] = position_ids.to(torch.int64)
+                self.acl_decoder_operation_inputs[3] = self.cos_embed
+                self.acl_decoder_operation_inputs[4] = self.sin_embed
+                self.acl_decoder_operation_inputs[5] = self.attn_mask_fake
+                self.acl_decoder_operation_inputs[6] = block_tables.to(torch.int32)
+                self.acl_decoder_operation_inputs[7] = slots.to(torch.int32)
                 self.acl_decoder_operation_inputs[8] = self.placeholder
                 self.acl_decoder_operation_inputs[9] = self.placeholder
-                self.acl_decoder_operation_inputs[10] = input_lengths.to(torch.int32)
-                self.acl_decoder_operation_inputs[11] = self.lm_head_indices_fake
+                self.acl_decoder_operation_inputs[10] = self.placeholder
+                self.acl_decoder_operation_inputs[11] = input_lengths.to(torch.int32)
+                self.acl_decoder_operation_inputs[12] = self.lm_head_indices_fake
                 return self.acl_decoder_operation_inputs, self.acl_param
         else:
             return super().prepare_inputs_for_ascend(input_ids, position_ids, is_prefill,

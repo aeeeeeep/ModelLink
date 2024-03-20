@@ -36,12 +36,14 @@ const int WEIGHT_COUNT_POST_NORM = 1;
 const int WEIGHT_COUNT_LM_HEAD = 1;
 
 // Operation count
-const int OPERATION_COUNT_BEFORE_LAYER = 2;  // Word Embedding + Positional Embedding
+const int OPERATION_COUNT_BEFORE_LAYER_DEFAULT = 2;  // Word Embedding + Positional Embedding
+const int OPERATION_COUNT_BEFORE_LAYER_SKIP_WORD_EMBEDDING = 1;  // Positional Embedding
 const int OPERATION_COUNT_AFTER_LAYER = 2;  // RmsNorm + LmHead
 
 void DecoderModel::Param::FromString(const std::string &param)
 {
     nlohmann::json paramJson = nlohmann::json::parse(param);
+    skipWordEmbedding = paramJson["skipWordEmbedding"].get<bool>();
     isFA = paramJson["isFA"].get<bool>();
     isPrefill = paramJson["isPrefill"].get<bool>();
     isBF16 = paramJson["isBF16"].get<bool>();
@@ -72,7 +74,7 @@ void DecoderModel::Param::FromString(const std::string &param)
     for (auto item : paramJson["linearQuantType"]) {
         linearQuantType.push_back(item.get<std::vector<int>>());
     }
-    ATB_LOG(INFO) << "DecoderModel param" << ", isFA:" << isFA << ", isPrefill:" << isPrefill
+    ATB_LOG(INFO) << "DecoderModel param" << ", skipWordEmbedding:" << skipWordEmbedding << ", isFA:" << isFA << ", isPrefill:" << isPrefill
                   << ", isBF16:" << isBF16
                   << ", isEmbeddingParallel: " << isEmbeddingParallel << ", isLmHeadParallel: "
                   << isLmHeadParallel << ", supportSwiGLU: " << supportSwiGLU << "supportLcoc" << supportLcoc
@@ -130,7 +132,7 @@ atb::Status DecoderModel::InferShape(
     return atb::NO_ERROR;
 }
 
-static const uint64_t IN_TENSOR_COUNT = 12;
+static const uint64_t IN_TENSOR_COUNT = 13;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 
 int64_t DecoderModel::BuildGraph()
@@ -162,41 +164,46 @@ int64_t DecoderModel::BuildGraph()
     graph_.kCacheTensors.resize(param_.numHiddenLayers);
     graph_.vCacheTensors.resize(param_.numHiddenLayers);
 
-    const int nodeSize = param_.numHiddenLayers + OPERATION_COUNT_BEFORE_LAYER + OPERATION_COUNT_AFTER_LAYER;
+    const int operationCountBeforeLayer = param_.skipWordEmbedding ? \
+        OPERATION_COUNT_BEFORE_LAYER_SKIP_WORD_EMBEDDING : OPERATION_COUNT_BEFORE_LAYER_DEFAULT;
+    const int nodeSize = param_.numHiddenLayers + operationCountBeforeLayer + OPERATION_COUNT_AFTER_LAYER;
     graph_.nodes.resize(nodeSize);
 
     ATB_LOG(INFO) << "DecoderModel build graph begin";
     int nodeId = 0;
     atb::Operation *op = nullptr;
 
-    auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
-    atb_speed::common::WordEmbeddingParam wordEmbeddingParam;
-    wordEmbeddingParam.unpadInputs = !param_.isFA;
-    if (param_.isEmbeddingParallel) {
-        wordEmbeddingParam.tensorParallelInfo = {param_.rank, param_.worldSize, param_.backend, param_.rankTableFile};
-    };
-    atb_speed::common::WordEmbedding(wordEmbeddingParam, &op);
-    wordEmbeddingNode.operation.reset(op);
-    wordEmbeddingNode.inTensors = {
-        &graph_.weightTensors.at(0),                    // shape: [vocabSize + 1, hiddenSize]
-        &graph_.inTensors.at(IN_TENSOR_INPUT_IDS)
-    };
-    wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)};
+    if (!param_.skipWordEmbedding) {
+        auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
+        atb_speed::common::WordEmbeddingParam wordEmbeddingParam;
+        wordEmbeddingParam.unpadInputs = !param_.isFA;
+        if (param_.isEmbeddingParallel) {
+            wordEmbeddingParam.tensorParallelInfo = {param_.rank, param_.worldSize, param_.backend, param_.rankTableFile};
+        };
+        atb_speed::common::WordEmbedding(wordEmbeddingParam, &op);
+        wordEmbeddingNode.operation.reset(op);
+        wordEmbeddingNode.inTensors = {
+            &graph_.weightTensors.at(0),                    // shape: [vocabSize + 1, hiddenSize]
+            &graph_.inTensors.at(IN_TENSOR_INPUT_IDS)
+        };
+        wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)};
+    }
 
-    auto &peGatherNode = graph_.nodes.at(nodeId++);
+    auto &positionalEmbeddingGatherNode = graph_.nodes.at(nodeId++);
     atb_speed::common::PositionalEmbeddingGather(&op);
-    peGatherNode.operation.reset(op);
-    peGatherNode.inTensors = {
+    positionalEmbeddingGatherNode.operation.reset(op);
+    positionalEmbeddingGatherNode.inTensors = {
         &graph_.inTensors.at(IN_TENSOR_POSITION_IDS),
         &graph_.inTensors.at(IN_TENSOR_COS_TABLE),
         &graph_.inTensors.at(IN_TENSOR_SIN_TABLE),
     };
-    peGatherNode.outTensors = {
+    positionalEmbeddingGatherNode.outTensors = {
         &graph_.internalTensors.at(INTERNEL_TENSOR_COS_EMB),
         &graph_.internalTensors.at(INTERNEL_TENSOR_SIN_EMB)
     };
 
-    atb::Tensor *firstInTensor = &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES);
+    atb::Tensor *firstInTensor = param_.skipWordEmbedding ? \
+        &graph_.internalTensors.at(IN_TENSOR_INPUT_EMBEDDING) : &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES);
     for (int layerId = 0; layerId < param_.numHiddenLayers; ++layerId) {
         auto &layerNode = graph_.nodes.at(nodeId++);
         atb_speed::llama_parallel::DecoderLayerParam layerParam;
@@ -309,7 +316,9 @@ atb::Status DecoderModel::BindParamHostTensor(uint32_t nodeId)
     ATB_LOG(INFO) << "BindParamHostTensor";
     ATB_LOG(INFO) << "nodeId = " << nodeId;
 
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.numHiddenLayers)) {
+    const uint32_t operationCountBeforeLayer = param_.skipWordEmbedding ? \
+        OPERATION_COUNT_BEFORE_LAYER_SKIP_WORD_EMBEDDING : OPERATION_COUNT_BEFORE_LAYER_DEFAULT;
+    if (nodeId < operationCountBeforeLayer || nodeId >= static_cast<uint32_t>(operationCountBeforeLayer + param_.numHiddenLayers)) {
         return atb::NO_ERROR;
     }
 

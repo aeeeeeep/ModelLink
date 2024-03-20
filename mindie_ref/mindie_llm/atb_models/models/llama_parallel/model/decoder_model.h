@@ -27,36 +27,40 @@ enum DecoderModelTensorIdx : uint32_t {
     // define inTensor
     // idx: 0, shape: FA: [batchSize, seqLen] PA: [seqLen]
     IN_TENSOR_INPUT_IDS = 0,
-    // idx: 1, shape: FA: [batchSize, seqLen] PA: [seqLen]
+    // idx: 1, shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
+    IN_TENSOR_INPUT_EMBEDDING,
+    // idx: 2, shape: FA: [batchSize, seqLen] PA: [seqLen]
     IN_TENSOR_POSITION_IDS,
-    // idx: 2, shape: FA: [maxPositionEmbeddings, hiddenSizePerAttentionHead]
-    // PA: [maxInputLength, hiddenSizePerAttentionHead]
-    IN_TENSOR_COS_TABLE,
     // idx: 3, shape: FA: [maxPositionEmbeddings, hiddenSizePerAttentionHead]
     // PA: [maxInputLength, hiddenSizePerAttentionHead]
+    IN_TENSOR_COS_TABLE,
+    // idx: 4, shape: FA: [maxPositionEmbeddings, hiddenSizePerAttentionHead]
+    // PA: [maxInputLength, hiddenSizePerAttentionHead]
     IN_TENSOR_SIN_TABLE,
-    // idx: 4, shape: FA: [batchSize, maxPositionEmbeddings, maxPositionEmbeddings]
+    // idx: 5, shape: FA: [batchSize, maxPositionEmbeddings, maxPositionEmbeddings]
     // PA: [maxInputLength, maxInputLength]
     IN_TENSOR_ATTENTION_MASK,
-    // idx: 5, shape: [4, 9]; PA所需入参
+    // idx: 6, shape: [4, 9]; PA所需入参
     IN_TENSOR_BLOCK_TABLES,
-    // idx: 6, shape: [seqLen]; PA所需入参
+    // idx: 7, shape: [seqLen]; PA所需入参
     IN_TENSOR_SLOTS,
-    // idx: 7, shape: [1]; FA所需入参
+    // idx: 8, shape: [1]; FA所需入参
     IN_TENSOR_KV_CACHE_IDX,
-    // idx: 8, shape: [batchSize]; FA所需入参
+    // idx: 9, shape: [batchSize]; FA所需入参
     IN_TENSOR_TOKEN_OFFSET,
-    // idx: 9, shape: [1]
+    // idx: 10, shape: [1]
     IN_TENSOR_PLACE_HOLDER,
-    // idx: 10, shape: FA: [batchSize] PA: [4]
+    // idx: 11, shape: FA: [batchSize] PA: [4]
     IN_TENSOR_SEQ_LEN,
-    // idx: 11, shape: FA: [batchSize]  PA: [4]
+    // idx: 12, shape: FA: [batchSize]  PA: [4]
     IN_TENSOR_LOGTIS_INDICES,
 };
 
 class DecoderModel : public Model {
 public:
     struct Param {
+        // skipWordEmbedding为true会跳过Word Embedding阶段，直接使用入参中的IN_TENSOR_INPUT_EMBEDDING
+        bool skipWordEmbedding = false;
         // isFA为true则使用Flash Attention; 反之，则使用Paged Attention
         bool isFA = true;
         // isPrefill为true时为全量阶段，encoder的isPrefill参数应为true; isPrefill为false时为增量阶段，decoder的isPrefill参数应为false

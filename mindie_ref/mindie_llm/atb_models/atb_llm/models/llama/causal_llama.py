@@ -30,7 +30,7 @@ class LlamaForCausalLM(CausalLM):
         self.kv_cache_idx = torch.zeros(1, dtype=torch.int32).npu()
         self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64).npu()
 
-        self.in_tensor_length = 12
+        self.in_tensor_length = 13
         self.acl_encoder_operation_inputs = [None] * self.in_tensor_length
         self.acl_decoder_operation_inputs = [None] * self.in_tensor_length
 
@@ -82,6 +82,7 @@ class LlamaForCausalLM(CausalLM):
             "hiddenSizePerAttentionHead": self.head_size,
             "numHiddenLayers": self.config.num_hidden_layers,
             "numKeyValueHeadsPerRank": self.num_key_value_heads,
+            "skipWordEmbedding": False,
             "isFA": True,
             "isBF16": self.dtype == torch.bfloat16,
             "packQuantType": self.pack_quant_config,
@@ -125,17 +126,18 @@ class LlamaForCausalLM(CausalLM):
                 "seqLen": [input_ids.shape[1]] * self.batch_num
             })
             self.acl_encoder_operation_inputs[0] = input_ids
-            self.acl_encoder_operation_inputs[1] = position_ids.to(torch.int64)
-            self.acl_encoder_operation_inputs[2] = self.cos_embed
-            self.acl_encoder_operation_inputs[3] = self.sin_embed
-            self.acl_encoder_operation_inputs[4] = self.mask_full
-            self.acl_encoder_operation_inputs[5] = self.placeholder
+            self.acl_encoder_operation_inputs[1] = self.placeholder
+            self.acl_encoder_operation_inputs[2] = position_ids.to(torch.int64)
+            self.acl_encoder_operation_inputs[3] = self.cos_embed
+            self.acl_encoder_operation_inputs[4] = self.sin_embed
+            self.acl_encoder_operation_inputs[5] = self.mask_full
             self.acl_encoder_operation_inputs[6] = self.placeholder
-            self.acl_encoder_operation_inputs[7] = self.kv_cache_idx
-            self.acl_encoder_operation_inputs[8] = self.token_offset
-            self.acl_encoder_operation_inputs[9] = self.placeholder
-            self.acl_encoder_operation_inputs[10] = self.seq_len_encoder
-            self.acl_encoder_operation_inputs[11] = torch.tensor(
+            self.acl_encoder_operation_inputs[7] = self.placeholder
+            self.acl_encoder_operation_inputs[8] = self.kv_cache_idx
+            self.acl_encoder_operation_inputs[9] = self.token_offset
+            self.acl_encoder_operation_inputs[10] = self.placeholder
+            self.acl_encoder_operation_inputs[11] = self.seq_len_encoder
+            self.acl_encoder_operation_inputs[12] = torch.tensor(
                 [self.seq_len_encoder[0] - 1], dtype=torch.int64, device=self.device)
             return self.acl_encoder_operation_inputs, self.acl_param
         else:
@@ -144,15 +146,16 @@ class LlamaForCausalLM(CausalLM):
                 "seqLen": self.acl_param_seq_len_decoder
             })
             self.acl_decoder_operation_inputs[0] = input_ids
-            self.acl_decoder_operation_inputs[1] = position_ids.to(torch.int64)
-            self.acl_decoder_operation_inputs[2] = self.cos_embed
-            self.acl_decoder_operation_inputs[3] = self.sin_embed
-            self.acl_decoder_operation_inputs[4] = self.mask_full
-            self.acl_decoder_operation_inputs[5] = self.placeholder
+            self.acl_decoder_operation_inputs[1] = self.placeholder
+            self.acl_decoder_operation_inputs[2] = position_ids.to(torch.int64)
+            self.acl_decoder_operation_inputs[3] = self.cos_embed
+            self.acl_decoder_operation_inputs[4] = self.sin_embed
+            self.acl_decoder_operation_inputs[5] = self.mask_full
             self.acl_decoder_operation_inputs[6] = self.placeholder
-            self.acl_decoder_operation_inputs[7] = self.kv_cache_idx
-            self.acl_decoder_operation_inputs[8] = self.token_offset
-            self.acl_decoder_operation_inputs[9] = self.placeholder
-            self.acl_decoder_operation_inputs[10] = self.seq_len_decoder
-            self.acl_decoder_operation_inputs[11] = self.lm_head_indices_fake
+            self.acl_decoder_operation_inputs[7] = self.placeholder
+            self.acl_decoder_operation_inputs[8] = self.kv_cache_idx
+            self.acl_decoder_operation_inputs[9] = self.token_offset
+            self.acl_decoder_operation_inputs[10] = self.placeholder
+            self.acl_decoder_operation_inputs[11] = self.seq_len_decoder
+            self.acl_decoder_operation_inputs[12] = self.lm_head_indices_fake
             return self.acl_decoder_operation_inputs, self.acl_param
