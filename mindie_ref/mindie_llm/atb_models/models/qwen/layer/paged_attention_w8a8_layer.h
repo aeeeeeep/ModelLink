@@ -33,6 +33,7 @@ struct PAW8A8LayerParam {
     bool supportSwiGLU = false;
     int quantType = 0;
     float rmsNormEps = 0;
+    int layerId = 0;
     int numAttentionHeadsPerRank = 0;
     int hiddenSizePerAttentionHead = 0;
     int numKeyValueHeadsPerRank = 0;
