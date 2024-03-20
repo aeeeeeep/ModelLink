@@ -216,6 +216,12 @@ pip install torch*_aarch64.whl
   pip3 install ./atb_speed_sdk/ --force-reinstall
   ```
 
+### 2.1 开启CPU Performance模式
+- 开启CPU Performance模式以提高模型推理性能（首次开启时，根据提示安装依赖）
+  ```
+  cpupower -c all frequency-set -g performance
+  ```
+
 ## 环境变量参考
 
 ### CANN、加速库、模型仓的环境变量

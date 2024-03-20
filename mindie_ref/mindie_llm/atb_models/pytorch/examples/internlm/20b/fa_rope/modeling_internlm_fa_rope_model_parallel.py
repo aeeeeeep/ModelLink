@@ -32,6 +32,9 @@ from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from contextlib import contextmanager
 
+from atb_speed.common.timer import Timer
+from atb_speed.common.utils import load_atb_speed
+
 from transformers.activations import ACT2FN
 from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, SequenceClassifierOutputWithPast
 from transformers.modeling_utils import PreTrainedModel
@@ -73,6 +76,7 @@ def get_rank_and_world_size():
 RANK, WORLD_SIZE = get_rank_and_world_size()
 
 load_acl_transformer()
+load_atb_speed()
 
 logger = logging.get_logger(__name__)
 
@@ -760,6 +764,7 @@ class InternLMModel(InternLMPreTrainedModel):
         return combined_attention_mask
 
     @add_start_docstrings_to_model_forward(INTERNLM_INPUTS_DOCSTRING)
+    @Timer.timing
     def forward(
             self,
             input_ids: torch.LongTensor = None,

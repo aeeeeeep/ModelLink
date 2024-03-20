@@ -122,7 +122,7 @@ dtype_map = {"bf16": torch.bfloat16, "fp16": torch.float16}
 core_map = {"NPU": "npu", "GPU": "cuda"}
 prompt_map = {"GSM8K": "", "TruthfulQA": QA_PRIMER}
 question_num = {"GSM8K": 11, "TruthfulQA": 12}
-CEval_0_shot = {"chatglm2_6b"}
+CEval_0_shot = {}
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -149,6 +149,7 @@ class ModelTest:
         self.max_position_embedding = max_position_embedding
         self.core_type = core_map[self.hardware_type] if hardware_type in core_map.keys() else "npu"
         self.is_format_nz = False
+        self.quantize = None
         self.current_result_path = ''
         self.logger = self.__get_log("log")
         self.result_logger = self.__get_log("result")
@@ -196,6 +197,39 @@ class ModelTest:
                 break
             except OverflowError:
                 max_csv_limit = int(max_csv_limit / 10)
+
+        config_path = os.path.join(self.weight_dir, "config.json")
+        with open(config_path, 'r') as f:
+            config_data = json.load(f)
+            if "quantize" in config_data:
+                self.quantize = config_data["quantize"]
+
+        if self.quantize:
+            self.model_name += "_quant"
+            csv_path = os.path.join(os.path.dirname(self.script_path), 'result', self.model_name, f"{self.model_type}_{self.data_type}_{self.quantize}_batch{self.batch_size}_{self.test_mode}_test_result_formatted.csv")
+        else:
+            csv_path = os.path.join(os.path.dirname(self.script_path), 'result', self.model_name, f"{self.model_type}_{self.data_type}_batch{self.batch_size}_{self.test_mode}_test_result_formatted.csv")
+        self.data_dir = os.path.join(self.data_dir, self.model_name, "data")
+        self.result_dir = os.path.join(self.result_dir, self.model_name, "results")
+        self.log_dir = os.path.join(self.log_dir, self.model_name, "logs")
+        os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+        with open(csv_path, 'w') as f:
+            if self.test_mode == "performance":
+                f.write("{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<25s}|{:<25s}|{:<36s}|{:<25s}|{:<45s}|{:<35s}\n".format(
+                    "Model", "Batchsize", "In_seq", "Out_seq", "Total time(s)", "First token time(ms)", 
+                    "Non-first token time(ms)", "Non-first token Throughout(Tokens/s)", "E2E Throughout(Tokens/s)", 
+                    "Non-first token Throughout Average(Tokens/s)", "E2E Throughout Average(Tokens/s)"
+                ))
+            elif self.test_mode == "simplified":
+                f.write("Standard: [1] KL loss <= 1e-3. [2] rate of KL loss > 1e-4 <= 0.5%.\n")
+                f.write("{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<15s}\n".format(
+                    "Model", "Dataset", "Batchsize", "Logits Num", "Greatest KLL", "Error Rate", "Result"
+                ))
+            else:
+                f.write("{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<15s}\n".format(
+                    "Model", "Dataset", "Batchsize", "Golden", "NPU", "Result"
+                ))
+
         if self.hardware_type == "NPU":
             reload(env)
         if self.model_type == "fa" and self.test_mode != "full":
@@ -390,8 +424,13 @@ class ModelTest:
                     [str(round(non_first_token_throughput_average, 10)).ljust(45),
                      str(round(e2e_throughput_average, 10)).ljust(35)])
                 folder_name = self.model_name
-                csv_name = self.model_type + "_" + self.data_type + "_performance_test_result.csv" if self.data_type != "" else self.model_type
-                csv_formatted_name = self.model_type + "_" + self.data_type + "_performance_test_result_formatted.csv" if self.data_type != "" else self.model_type
+                csv_name = self.model_type + "_" + self.data_type + "_" + self.test_mode + "_batch" + str(self.batch_size) + "_test_result.csv"
+                if self.quantize:
+                    csv_name = self.model_type + "_" + self.data_type + "_" + self.quantize + "_batch" + str(self.batch_size) + "_" + self.test_mode + "_test_result.csv"
+                    csv_formatted_name = self.model_type + "_" + self.data_type + "_" + self.quantize + "_batch" + str(self.batch_size) + "_" + self.test_mode + "_test_result_formatted.csv"
+                else:
+                    csv_name = self.model_type + "_" + self.data_type + "_batch" + str(self.batch_size) + "_" + self.test_mode + "_test_result.csv"
+                    csv_formatted_name = self.model_type + "_" + self.data_type + "_batch" + str(self.batch_size) + "_" + self.test_mode + "_test_result_formatted.csv"
                 csv_performance_path = os.path.join(self.script_path, "../result", folder_name, csv_name)
                 csv_performance_formatted_path = os.path.join(self.script_path, "../result", folder_name, csv_formatted_name)
                 if not os.path.exists(csv_performance_formatted_path):
@@ -437,13 +476,15 @@ class ModelTest:
             self.logger.info(str(self.local_rank) + f'pa_runner: {self.pa_runner}')
             self.pa_runner.warm_up()
         else:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.weight_dir, use_fast=False, trust_remote_code=True)
-            if self.model_name == "qwen":
+            self.tokenizer = AutoTokenizer.from_pretrained(self.weight_dir, use_fast=False, padding_side="left", truncation_side="left", trust_remote_code=True)
+            if "qwen" in self.model_name:
                 self.tokenizer.pad_token_id = self.tokenizer.eod_id
                 self.tokenizer.bos_token_id = self.tokenizer.eod_id
                 self.tokenizer.eos_token_id = self.tokenizer.eod_id
-            if self.model_name == "starcoder":
-                self.tokenizer.pad_token = "[PAD]" 
+            if "starcoder" in self.model_name:
+                self.tokenizer.pad_token = "[PAD]"
+            if "llama" in self.model_name:
+                self.tokenizer.pad_token_id = 0
 
             self.model = AutoModelForCausalLM.from_pretrained(self.weight_dir, device_map="auto", trust_remote_code=True)
             self.device = self.model.device
@@ -599,7 +640,7 @@ class ModelTest:
                             preds = logits.argmax(dim=-1)
                             correct += (preds.cpu() == batch["label"]).sum().item()            
                 
-                if is_result:        
+                if is_result:
                     filename = os.path.basename(entry)
                     result = [filename, correct / sum, correct, sum]
                     self.result_logger.debug(f"result:{result}")
@@ -614,8 +655,122 @@ class ModelTest:
             self.__save_result(result_total)
     
     def __run_full_dataset_ceval_5_shot(self):
-        pass
+        choices = ["A", "B", "C", "D"]
+        SHOT = 5
 
+        def get_subject_mapping():
+            SUBJECT_MAPPING_PATH = os.path.join(self.dataset_path, "subject_mapping.json")
+            with open(SUBJECT_MAPPING_PATH) as f:
+                subject_mapping = json.load(f)
+            return subject_mapping
+        
+        def load_csv_by_task_name(task_name, dataset_path):
+            dev_df = pd.read_csv(os.path.join(dataset_path, "dev", task_name + "_dev.csv"), header=None)[:SHOT + 1]
+            val_df = pd.read_csv(os.path.join(dataset_path, "val", task_name + "_val.csv"), header=None)
+
+            dev_df = dev_df.iloc[1:, 1:]
+            val_df = val_df.iloc[1:, 1:]
+            return dev_df, val_df
+        
+        def format_subject(subject):
+            l = subject.split("_")
+            s = ""
+            for entry in l:
+                s += " " + entry    
+            return s
+            
+        def format_example(df, idx, include_answer=True):
+            prompt = df.iloc[idx, 0]
+            k = len(choices)
+            for j in range(k):
+                prompt += "\n{}. {}".format(choices[j], df.iloc[idx, j + 1])
+            prompt += "\nAnswer:"
+            if include_answer:
+                prompt += " {}\n\n".format(df.iloc[idx, k + 1])
+            return prompt
+        
+        def gen_prompt(train_df, subject, k=-1):
+            prompt = "The following are multiple choice questions (with answers) about {}.\n\n".format(format_subject(subject))
+            if k == -1:
+                k = train_df.shape[0]
+            for i in range(k):
+                prompt += format_example(train_df, i)
+            return prompt
+
+        correct_total = 0
+        sum_total = 0
+        result_total = []
+        is_result = False
+        if self.__get_rank() == 0:
+            is_result = True
+
+        subject_mapping = get_subject_mapping()
+        index = 1
+        for task_name in tqdm(subject_mapping):
+            self.logger.info(f"dataset {index} start, task name: {task_name}")
+            dev_df, val_df = load_csv_by_task_name(task_name, self.dataset_path)
+            correct = 0
+            task_len = val_df.shape[0]
+            for i in range(math.ceil(task_len / self.batch_size)):
+                q_num = self.batch_size if (i + 1) * self.batch_size <= task_len else task_len - i * self.batch_size
+                prompt_ends = [format_example(val_df, i * self.batch_size + j, include_answer=False) for j in range(q_num)]
+                train_prompts = [gen_prompt(dev_df, task_name, SHOT)] * q_num
+                prompt = [t + p for t, p in zip(train_prompts, prompt_ends)]
+                labels = [val_df.iloc[i * self.batch_size + j, val_df.shape[1] - 1] for j in range(q_num)]
+                prompts = [prpt.encode().decode(encoding="utf8") for prpt in prompt]
+
+                if self.model_type == "fa":
+                    inputs = self.tokenizer(prompts, padding=True, return_tensors="pt", truncation=True, max_length=2048).to(0)
+                    tokenizer_out_ids = inputs.input_ids.to(0)
+                    attention_mask = inputs.attention_mask.to(0)
+                    outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask, do_sample=False, max_new_tokens=20)
+                    answers = []
+                    for idx in range(len(outputs)):
+                        output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
+                        response = self.tokenizer.decode(output)
+                        answers.append(response)
+                else:
+                    generate_texts, token_nums, _ = self.pa_runner.infer(prompts, self.batch_size, 20, False)
+
+                    if len(prompts) == 1:
+                        generate_texts = [generate_texts[0]]
+
+                    for idx, generate_text in enumerate(generate_texts):
+                        if is_result:
+                            self.logger.debug(f'Question[{i * self.batch_size + idx}]: {prompts[idx]}')
+                            self.logger.debug(f'Answer[{i * self.batch_size + idx}]: {generate_text}')
+                            self.logger.debug(f'Generate[{i * self.batch_size + idx}] token num: {token_nums[idx]}')
+
+                    answers = None
+
+                    if len(generate_texts) > 0:
+                        answers = generate_texts
+
+                answer_results = [answer.lstrip()[0] if answer else "-1" for answer in answers]
+                is_correct = ["Correct" if answer_result == label else "Wrong" for answer_result, label in zip(answer_results, labels)]
+                
+                correct += is_correct.count("Correct")
+                for idx in range(len(is_correct)):
+                    if is_result and is_correct[idx] != "Correct":
+                        self.logger.debug(f">>>原始题目 is : {prompts[idx]}")
+                        self.logger.debug(f">>>推理结果 is : {answer_results[idx]}")
+                        self.logger.debug(f">>>真实结果 is : {labels[idx]}")
+        
+            if is_result:        
+                result = [task_name, correct / task_len, correct, task_len]
+                self.logger.info(f"dataset {index} finish, result:{result}")
+                result_total.append(result)
+                correct_total += correct
+                sum_total += task_len
+            index += 1
+
+        if is_result:
+            total = ["total", correct_total / sum_total, correct_total, sum_total]
+            self.result_logger.debug(f"total result:{total}")
+            result_total.insert(0, total)
+            self.__save_result(result_total)
+
+                
     def __run_full_dataset_mmlu(self):
         choices = ["A", "B", "C", "D"]
 
@@ -1354,24 +1509,28 @@ class ModelTest:
         now = datetime.now()
         date_str = now.strftime("%Y_%m_%d_%H_%M_%S")
 
+        if self.quantize:
+            result_name = "_".join([self.model_type, self.data_type, self.quantize, "batch" + str(self.batch_size), self.test_mode, self.dataset_name]) + '_test_result'
+        else:
+            result_name = "_".join([self.model_type, self.data_type, "batch" + str(self.batch_size), self.test_mode, self.dataset_name]) + '_test_result'
+
         if self.dataset_name == "HumanEval":
-            result_name = "_".join([self.model_name, self.dataset_name]) + '.jsonl'
+            result_name += ".jsonl"
             result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}",
                                    result_name)
             with open(result_path, 'wb') as fp:
                 for x in result:
                     fp.write((json.dumps(x) + "\n").encode('utf-8'))
         else:
-            result_name = "_".join([self.model_name, self.dataset_name, date_str]) + '.csv'
-            result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}",
-                                   result_name)
+            result_name += ".csv"
+            result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}", result_name)
             if self.dataset_name == "TruthfulQA":
                 df = pd.DataFrame(result, columns=['idx', 'MC1', 'MC2', 'MC3'])
             else:
                 df = pd.DataFrame(result, columns=['file_name', 'value', 'correct', 'sum'])
             df = align_columns(df)
             df = align_headers(df)
-            df.to_csv(result_path, sep='|', index=False)
+            df.to_csv(result_path, index=False)
         self.logger.info(f"{self.dataset_name} result saved to: {result_path}")
         self.current_result_path = result_path
 
@@ -1455,15 +1614,15 @@ def get_args():
     if ATB_TESTDATA_PATH is None:
         base_path = os.path.join(os.path.dirname(__file__), "../")
     if args.data_dir is None:
-        data_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode, args.model_name, "data")
+        data_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode)
     else:
         data_dir = args.data_dir
     if args.result_dir is None:
-        result_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode, args.model_name, "results")
+        result_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode)
     else:
         result_dir = args.result_dir
     if args.log_dir is None:
-        log_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode, args.model_name, "logs")
+        log_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode)
     else:
         log_dir = args.log_dir
     case_pair = args.case_pair

@@ -124,6 +124,7 @@ atb::Status PAW8A8Layer(const PAW8A8LayerParam &param, atb::Operation **operatio
     fusionAttentionParam.qkvHasBias = true;
     fusionAttentionParam.layerLinearQuantType = param.linearQuantType;
     fusionAttentionParam.packQuantType = param.packQuantType[0];
+    fusionAttentionParam.supportLcoc = param.supportLcoc;
     atb::infer::RmsNormParam attenRmsNormParam;
     attenRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     attenRmsNormParam.normParam.epsilon = param.rmsNormEps;
@@ -153,6 +154,7 @@ atb::Status PAW8A8Layer(const PAW8A8LayerParam &param, atb::Operation **operatio
     } else {
         fusionAttentionParam.selfAttentionParam.calcType = atb::infer::SelfAttentionParam::CalcType::PA_ENCODER;
     }
+    fusionAttentionParam.selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     fusionAttentionParam.pageAttentionParam.headNum = param.numAttentionHeadsPerRank;
     fusionAttentionParam.pageAttentionParam.kvHeadNum = param.numKeyValueHeadsPerRank;
     fusionAttentionParam.pageAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
@@ -217,6 +219,7 @@ atb::Status PAW8A8Layer(const PAW8A8LayerParam &param, atb::Operation **operatio
     mlpParam.isBF16 = param.isBF16;
     mlpParam.layerLinearQuantType = param.linearQuantType;
     mlpParam.packQuantType = param.packQuantType[1];
+    mlpParam.supportLcoc = param.supportLcoc;
     // w2_w1(gate_up)
     mlpParam.mlpPackType = atb_speed::common::GATE_UP_WEIGHT_PACK;
     atb::infer::RmsNormParam mlpRmsNormParam;

@@ -35,6 +35,7 @@ struct MlpParam {
     bool gateUpHasBias = false;
     bool downHasBias = false;
     bool supportLcoc = false;
+    bool skipNorm = false;
     bool normHasBias = false;
     MlpPackType mlpPackType = GATE_UP_WEIGHT_PACK;
     std::vector<int> layerLinearQuantType;

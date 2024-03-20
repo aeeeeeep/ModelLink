@@ -91,6 +91,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
     }
     qNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
     qNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
+    qNormLinearParam.skipNorm = param.skipNorm;
     qNormLinearParam.normHasBias = param.normHasBias;
     qNormLinearParam.normParamType = param.normParamType;
     qNormLinearParam.normQuantParamType = param.normQuantParamType;
@@ -175,6 +176,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         }
         kNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         kNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
+        kNormLinearParam.skipNorm = param.skipNorm;
         kNormLinearParam.normHasBias = param.normHasBias;
         kNormLinearParam.normParamType = param.normParamType;
         kNormLinearParam.normQuantParamType = param.normQuantParamType;
@@ -199,6 +201,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         }
         vNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         vNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
+        vNormLinearParam.skipNorm = param.skipNorm;
         vNormLinearParam.normHasBias = param.normHasBias;
         vNormLinearParam.normParamType = param.normParamType;
         vNormLinearParam.normQuantParamType = param.normQuantParamType;
@@ -298,11 +301,18 @@ atb::Status SelfAttention(const FusionAttentionParam<NormParamType> &param, atb:
         selfAttentionNode.outTensorIds = {SelfAttentionTensorIdx::OUT_SELF_ATTENTION};
     } else if (!param.isFA && param.isPrefill) {  // PA Prefill
         CREATE_OPERATION(param.selfAttentionParam, &selfAttentionNode.operation);
-        selfAttentionNode.inTensorIds = {
-            SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_Q, SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_K,
-            SelfAttentionTensorIdx::IN_SELF_ATTENTION_V, SelfAttentionTensorIdx::IN_SELF_ATTENTION_ATTENTION_MASK,
-            SelfAttentionTensorIdx::IN_SELF_ATTENTION_SEQ_LEN
-        };
+        if (param.selfAttentionParam.maskType == atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_UNDEFINED) {
+            selfAttentionNode.inTensorIds = {
+                SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_Q, SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_K,
+                SelfAttentionTensorIdx::IN_SELF_ATTENTION_V, SelfAttentionTensorIdx::IN_SELF_ATTENTION_SEQ_LEN
+            };
+        } else {
+            selfAttentionNode.inTensorIds = {
+                SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_Q, SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_K,
+                SelfAttentionTensorIdx::IN_SELF_ATTENTION_V, SelfAttentionTensorIdx::IN_SELF_ATTENTION_ATTENTION_MASK,
+                SelfAttentionTensorIdx::IN_SELF_ATTENTION_SEQ_LEN
+            };
+        }
         selfAttentionNode.outTensorIds = {SelfAttentionTensorIdx::OUT_SELF_ATTENTION};
     } else {  // PA Decode
         if (param.pageAttentionParam.maskType == atb::infer::PagedAttentionParam::MaskType::MASK_TYPE_ALIBI) {

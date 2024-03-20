@@ -22,7 +22,9 @@ namespace common {
 static const uint64_t IN_TENSOR_COUNT = 10;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 1;
+static const uint64_t SKIP_NORM_INTERMEDIATE_TENSOR_COUNT = 0;
 static const uint64_t NODE_COUNT = 2;
+static const uint64_t SKIP_NORM_NODE_COUNT = 1;
 
 enum NormLinearTensorIdx : uint32_t {
     IN_INPUT = 0,
@@ -45,37 +47,40 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
-    opGraph.internalTensorNum = INTERMEDIATE_TENSOR_COUNT;
-    opGraph.nodes.resize(NODE_COUNT);
+    opGraph.internalTensorNum = param.skipNorm ? SKIP_NORM_INTERMEDIATE_TENSOR_COUNT : INTERMEDIATE_TENSOR_COUNT;
+    opGraph.nodes.resize(param.skipNorm ? SKIP_NORM_NODE_COUNT : NODE_COUNT);
     opGraph.name = "NormLinear";
 
     size_t nodeId = 0;
 
-    atb::Node &normNode = opGraph.nodes.at(nodeId++);
-    if (param.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::NORM_QUANT_LINEAR_DEQUANT) {  // W8A8
-        CREATE_OPERATION(param.normQuantParamType, &normNode.operation);
-        normNode.inTensorIds = {
-            NormLinearTensorIdx::IN_INPUT,
-            param.isAntiOutlier ? NormLinearTensorIdx::IN_NORM_NEW_WEIGHT : NormLinearTensorIdx::IN_NORM_WEIGHT,
-            param.isAntiOutlier ? NormLinearTensorIdx::IN_NORM_NEW_BIAS : NormLinearTensorIdx::IN_NORM_BIAS,
-            NormLinearTensorIdx::IN_SCALE, NormLinearTensorIdx::IN_OFFSET
-        };
-        normNode.outTensorIds = {INTERMEDIATE_NORM};
-    } else if (param.normHasBias) {  // FP
-        CREATE_OPERATION(param.normParamType, &normNode.operation);
-        normNode.inTensorIds = {NormLinearTensorIdx::IN_INPUT, NormLinearTensorIdx::IN_NORM_WEIGHT, NormLinearTensorIdx::IN_NORM_BIAS};
-        normNode.outTensorIds = {INTERMEDIATE_NORM};
-    } else {  // FP
-        CREATE_OPERATION(param.normParamType, &normNode.operation);
-        normNode.inTensorIds = {NormLinearTensorIdx::IN_INPUT, NormLinearTensorIdx::IN_NORM_WEIGHT};
-        normNode.outTensorIds = {INTERMEDIATE_NORM};
+    if (!param.skipNorm) {
+        atb::Node &normNode = opGraph.nodes.at(nodeId++);
+        if (param.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::NORM_QUANT_LINEAR_DEQUANT) {  // W8A8
+            CREATE_OPERATION(param.normQuantParamType, &normNode.operation);
+            normNode.inTensorIds = {
+                NormLinearTensorIdx::IN_INPUT,
+                param.isAntiOutlier ? NormLinearTensorIdx::IN_NORM_NEW_WEIGHT : NormLinearTensorIdx::IN_NORM_WEIGHT,
+                param.isAntiOutlier ? NormLinearTensorIdx::IN_NORM_NEW_BIAS : NormLinearTensorIdx::IN_NORM_BIAS,
+                NormLinearTensorIdx::IN_SCALE, NormLinearTensorIdx::IN_OFFSET
+            };
+            normNode.outTensorIds = {INTERMEDIATE_NORM};
+        } else if (param.normHasBias) {  // FP
+            CREATE_OPERATION(param.normParamType, &normNode.operation);
+            normNode.inTensorIds = {NormLinearTensorIdx::IN_INPUT, NormLinearTensorIdx::IN_NORM_WEIGHT, NormLinearTensorIdx::IN_NORM_BIAS};
+            normNode.outTensorIds = {INTERMEDIATE_NORM};
+        } else {  // FP
+            CREATE_OPERATION(param.normParamType, &normNode.operation);
+            normNode.inTensorIds = {NormLinearTensorIdx::IN_INPUT, NormLinearTensorIdx::IN_NORM_WEIGHT};
+            normNode.outTensorIds = {INTERMEDIATE_NORM};
+        }
     }
 
     atb::Node &linearNode = opGraph.nodes.at(nodeId++);
     atb_speed::common::FusionLinearParam linearParam = param.fusionLinearParam;
     FusionLinear(linearParam, &linearNode.operation);
     linearNode.inTensorIds = {
-        NormLinearTensorIdx::INTERMEDIATE_NORM, NormLinearTensorIdx::IN_LINEAR_WEIGHT, NormLinearTensorIdx::IN_SCALE,
+        param.skipNorm ? NormLinearTensorIdx::IN_INPUT : NormLinearTensorIdx::INTERMEDIATE_NORM,
+        NormLinearTensorIdx::IN_LINEAR_WEIGHT, NormLinearTensorIdx::IN_SCALE,
         NormLinearTensorIdx::IN_OFFSET, NormLinearTensorIdx::IN_DESCALE, NormLinearTensorIdx::IN_BIAS
     };
     linearNode.outTensorIds = {OUT_LINEAR};

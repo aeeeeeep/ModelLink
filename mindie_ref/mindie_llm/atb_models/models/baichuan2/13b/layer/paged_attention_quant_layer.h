@@ -43,6 +43,7 @@ struct PAQuantLayerParam {
     int numAttentionHeadsPerRank = 0;
     int hiddenSizePerAttentionHead = 0;
     int numKeyValueHeadsPerRank = 0;
+    bool supportLcoc = false;
 
     bool transposedWeight = true;
     std::string backend = "hccl";

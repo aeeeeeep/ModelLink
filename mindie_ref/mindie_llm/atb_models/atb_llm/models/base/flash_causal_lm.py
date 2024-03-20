@@ -49,6 +49,10 @@ class FlashForCausalLM(torch.nn.Module):
             self.num_key_value_heads = config.num_key_value_heads
         else:
             self.num_key_value_heads = self.num_attention_heads
+        if hasattr(config, 'rope_theta'):
+            self.rope_theta = config.rope_theta
+        else:
+            self.rope_theta = 10000.0
         self.hidden_size = config.hidden_size
         self.head_size = self.hidden_size // self.num_attention_heads
         self.num_layers = config.num_hidden_layers
@@ -57,20 +61,22 @@ class FlashForCausalLM(torch.nn.Module):
         self.tp_world_size = process_group.size()
         print_log(self.tp_rank, logger.info, self.soc_info)
 
+        # if num_key_value_heads is nondivisible 
+        if self.num_key_value_heads < self.tp_world_size:
+            repeat_times = self.tp_world_size // self.num_key_value_heads
+        else:
+            repeat_times = 1
         self.num_attention_heads = (self.num_attention_heads + self.tp_world_size - 1) // self.tp_world_size
-        self.num_key_value_heads = (self.num_key_value_heads + self.tp_world_size - 1) // self.tp_world_size
+        self.num_key_value_heads = (self.num_key_value_heads * repeat_times + self.tp_world_size - 1) // self.tp_world_size
 
-        self.rotary_embedding = PositionRotaryEmbedding.static(dim=self.head_size, base=10000.0,
+        self.rotary_embedding = PositionRotaryEmbedding.static(dim=self.head_size, base=self.rope_theta,
                                                                device="cpu").to(weights.device)
         self.max_position_embeddings = config.max_position_embeddings
         self.quantize = config.quantize
         self.dtype = weights.dtype
 
         self.max_base_len = 128
-        if self.soc_info.need_nz:
-            self.attn_mask = AttentionMask.static(config.max_position_embeddings, dtype=self.dtype)
-        else:
-            self.attn_mask = AttentionMask.static(self.max_base_len, dtype=self.dtype)
+        self.attn_mask = AttentionMask.static(self.max_base_len, dtype=self.dtype)
 
         # for ascend init
         self.init_ascend_operations(config)

@@ -53,28 +53,15 @@ function fn_prepare()
     fi
 
     test_mode="$2"
-    if ! [ "$2" == "performance" ]; then
+    if ! [ "$test_mode" == "performance" ]; then
         read -ra parts <<< "$2"
         test_mode="${parts[0]}"
         dataset="${parts[1]}"
     fi
 
-    csv_path=$SCRIPT_DIR/result/"$model_name"/"$1"_"$2"_test_result_formatted.csv
-    mkdir -p "$(dirname "$csv_path")"
-    touch "$csv_path" > "$csv_path"
     if [ "$test_mode" == "performance" ]; then
         export ATB_LLM_BENCHMARK_ENABLE=1
         export ATB_LLM_BENCHMARK_FILEPATH="${SCRIPT_DIR}/benchmark.csv"
-        printf "%-15s|%-15s|%-15s|%-15s|%-15s|%-25s|%-25s|%-36s|%-25s|%-45s|%-35s\n" \
-        "Model" "Batchsize" "In_seq" "Out_seq" "Total time(s)" "First token time(ms)" "Non-first token time(ms)" "Non-first token Throughout(Tokens/s)" \
-        "E2E Throughout(Tokens/s)" "Non-first token Throughout Average(Tokens/s)" "E2E Throughout Average(Tokens/s)" > "$csv_path"
-    elif [ "$test_mode" == "simplified" ]; then
-        echo "Standard: [1] KL loss <= 1e-3. [2] rate of KL loss > 1e-4 <= 0.5%". > "$csv_path"
-        printf "%-15s|%-15s|%-15s|%-15s|%-15s|%-15s|%-15s\n" \
-        "Model" "Dataset" "Batchsize" "Logits Num" "Greatest KLL" "Error Rate" "Result" >> "$csv_path"
-    else
-        printf "%-15s|%-15s|%-15s|%-15s|%-15s|%-15s\n" \
-        "Model" "Dataset" "Batchsize" "Golden" "NPU" "Result" > "$csv_path"
     fi
 }
 
@@ -111,7 +98,7 @@ function fn_run_single()
             export ASCEND_RT_VISIBLE_DEVICES="$devices"
         fi
     
-        random_port=$(( RANDO  % 9999 + 10001 ))
+        random_port=$(( RANDOM  % 9999 + 10001 ))
         torchrun --nproc_per_node "$chip_num" --master_port $random_port "$test_path" \
         --model_type "$model_type" \
         --data_type "$data_type" \
@@ -181,7 +168,7 @@ function fn_main()
     fi
 
     if [ $# -eq 0 ]; then
-        echo "Error: require parameter. Usage: bash run.sh [test_mode] ([model_name] [chip_num]) "
+        echo "Error: require parameter. Please refer to README."
         exit 1
     fi
 

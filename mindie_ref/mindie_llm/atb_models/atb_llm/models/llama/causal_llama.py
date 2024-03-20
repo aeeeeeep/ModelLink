@@ -1,7 +1,9 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
+import os
 import json
 import math
 from typing import Optional
+
 import torch
 
 from atb_llm.utils.layers import load_column_multi

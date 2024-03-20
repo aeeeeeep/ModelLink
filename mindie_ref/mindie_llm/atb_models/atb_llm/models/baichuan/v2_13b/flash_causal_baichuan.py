@@ -80,7 +80,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
     def __init__(self, config, weights):
         if not hasattr(config, 'max_position_embeddings'):
             config.max_position_embeddings = config.model_max_length
-        self.use_refactor = True
+        self.use_refactor = getattr(config, "use_refactor", True)
         super().__init__(config, weights)
         del self.rotary_embedding
         self.model = FlashBaichuanModel(config, weights)
@@ -143,9 +143,9 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             coder_param = {
                 "isFA": False,
                 "isBF16": False,
-                "isEmbeddingParallel": True,
+                "isEmbeddingParallel": self.model.parallel_embedding,
                 "isLmHeadParallel": True,
-                "supportSwiGLU": False if self.soc_info.need_nz else True,
+                "supportSwiGLU": not self.soc_info.need_nz,
                 "rmsNormEps": self.config.rms_norm_eps,
                 "numAttentionHeadsPerRank": self.config.num_attention_heads // self.tp_world_size,
                 "hiddenSizePerAttentionHead": self.config.hidden_size // self.config.num_attention_heads,
@@ -157,7 +157,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
                 "packQuantType": self.pack_quant_config,
                 "linearQuantType": self.linear_type,
             }
-            encoder_param = {**coder_param, "isPrefill": True, "supportLcoc": False if self.soc_info.need_nz else True}
+            encoder_param = {**coder_param, "isPrefill": True, "supportLcoc": not self.soc_info.need_nz}
             decoder_param = {**coder_param, "isPrefill": False, "supportLcoc": False}
             self.acl_encoder_operation.set_param(json.dumps({**encoder_param}))
             self.acl_decoder_operation.set_param(json.dumps({**decoder_param}))
