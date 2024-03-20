@@ -52,6 +52,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference
        --make-vocab-size-divisible-by 1 \
        --vocab-size 32000 \
        --group-query-attention \
-       --num-query-groups 8
+       --num-query-groups 8 \
+       | tee logs/generate_llama2_34b.log
 
 

@@ -54,5 +54,6 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference
        --no-masked-softmax-fusion \
        --no-gradient-accumulation-fusion \
        --exit-on-missing-checkpoint \
-       --make-vocab-size-divisible-by 32
+       --make-vocab-size-divisible-by 32 \
+       | tee logs/generate_internlm_7b.log
 

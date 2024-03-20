@@ -69,4 +69,4 @@ MOE_ARGS="
 torchrun $DISTRIBUTED_ARGS tasks/evaluation/evaluation_llama.py \
     $GPT_ARGS \
     $MOE_ARGS \
-    --distributed-backend nccl | tee eval.log
+    --distributed-backend nccl | tee logs/evaluation_mixtral_${TASK}.log

@@ -58,4 +58,5 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference
        --lora-load ${CHECKPOINT_LORA}  \
        --lora-r 16 \
        --lora-alpha 32 \
-       --make-vocab-size-divisible-by 1
+       --make-vocab-size-divisible-by 1 \
+       | tee logs/generate_llama2_13b_lora.log

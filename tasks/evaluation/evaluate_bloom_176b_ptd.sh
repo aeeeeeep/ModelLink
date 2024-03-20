@@ -56,4 +56,4 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/evaluation/evaluati
     --no-gradient-accumulation-fusion \
     --no-load-optim \
     --no-load-rng \
-    --bf16
+    --bf16 | tee logs/evaluation_bloom_176b_${TASK}.log

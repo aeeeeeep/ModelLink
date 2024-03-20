@@ -50,4 +50,5 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS ./tasks/inference/inference
        --no-gradient-accumulation-fusion \
        --exit-on-missing-checkpoint \
        --make-vocab-size-divisible-by 1 \
-       --seed 42
+       --seed 42 \
+       | tee logs/generate_llama_33b.log

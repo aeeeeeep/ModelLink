@@ -53,4 +53,4 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS tasks/evaluation/evaluation
        --make-vocab-size-divisible-by 1 \
        --group-query-attention \
        --num-query-groups 8 \
-       --seed 42 | tee logs/eval_llama2_34b_boolq.log
+       --seed 42  | tee logs/evaluation_llama2_34b_${TASK}.log
