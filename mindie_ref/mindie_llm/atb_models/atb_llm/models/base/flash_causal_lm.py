@@ -76,10 +76,7 @@ class FlashForCausalLM(torch.nn.Module):
         self.dtype = weights.dtype
 
         self.max_base_len = 128
-        if self.soc_info.need_nz:
-            self.attn_mask = AttentionMask.static(config.max_position_embeddings, dtype=self.dtype)
-        else:
-            self.attn_mask = AttentionMask.static(self.max_base_len, dtype=self.dtype)
+        self.attn_mask = AttentionMask.static(self.max_base_len, dtype=self.dtype)
 
         # for ascend init
         self.init_ascend_operations(config)
