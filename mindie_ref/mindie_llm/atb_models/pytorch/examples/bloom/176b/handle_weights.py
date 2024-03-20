@@ -147,9 +147,6 @@ def cut_model_quant(args_quant):
 
     with open(os.path.join(args_quant.input_path, "quant_model_description.json"), "r") as f:
         quant_model_description = json.load(f)
-    
-    with open(os.path.join(args_quant.output_path, "quant_model_description.json"), "w") as f:
-        f.write(json.dumps(quant_model_description, indent=4))
 
     model_layer_names = list(quant_model_description.keys())
     float_weight_dict = dict()
