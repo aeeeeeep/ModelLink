@@ -52,7 +52,7 @@ struct PAQuantLayerParam {
     std::vector<int> linearQuantType = {};
 };
 
-enum PAQuantLayerTensorId : int {
+enum PAQuantLayerTensorId : uint32_t {
     IN_RESIDUAL_ADD_OUT = 0,
     IN_HIDDEN_STATES,                   // shape: FA: [batchSize, seqLen, maxPositionEmbeddings] PA: [seqLen, hiddenSize]
     IN_INPUT_NORM_WEIGHT,               // 6144
