@@ -177,6 +177,8 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     DATA_PATH=./dataset_llama2/alpaca_text_document  #processed dataset
    ```
 
+	Multi-machine training requires the addition of parameter --overlap-grad-reduce
+
 	Launch LLAMA2-7B  pre-training script: examples/llama2/pretrain_llama2_7b_ptd.sh
    
    ```shell
@@ -483,6 +485,8 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
     TOKENIZER_PATH=./llama-2-13b-hf/  #tokenizer path
     DATA_PATH=./dataset_llama2/alpaca_text_document  #processed dataset
    ```
+
+	Multi-machine training requires the addition of parameter --overlap-grad-reduce
 
 	Launch LLAMA2-13B  pre-training script: examples/llama2/pretrain_llama2_13B_ptd_8p.sh
    

@@ -173,6 +173,8 @@ python tools/checkpoint/util.py --model-type GPT \
     DATA_PATH=usr_local/dataset_llama2/alpaca_text_document  #数据集路径
    ```
 
+   多机运行增加参数--overlap-grad-reduce
+
    启动 LLaMA2-7B 预训练脚本: examples/llama2/pretrain_llama2_7b_ptd.sh
 
    ```shell
@@ -501,6 +503,8 @@ python tools/checkpoint/util.py --model-type GPT \
     TOKENIZER_PATH=./llama-2-13b-hf/  #词表路径
     DATA_PATH=./dataset_llama2/alpaca_text_document  #数据集路径
    ```
+
+   多机运行增加参数--overlap-grad-reduce
 
    启动 LLaMA2-13B PTD预训练脚本: examples/llama2/pretrain_llama2_13B_ptd_8p.sh
 
