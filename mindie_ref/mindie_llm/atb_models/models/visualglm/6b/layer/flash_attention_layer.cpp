@@ -245,6 +245,7 @@ atb::Status CreateGlm6BLayerDecoderFlashAttentionOperation(const Glm6BLayerDecod
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = param.qScale;
     selfAttentionParam.qkScale = param.qkScale;
+    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     CREATE_OPERATION(selfAttentionParam, &selfAttentionFusionNode.operation);
     selfAttentionFusionNode.inTensorIds = {INTERMEDIATE_POSITIONEMBEDQ_ID,
                                            INTERMEDIATE_POSITIONEMBEDK_ID,
