@@ -75,7 +75,6 @@ def load_args_from_checkpoint(args):
     args.use_rotary_position_embeddings = True
     args.swiglu = True
     args.tokenizer_type = "Llama2Tokenizer"
-    args.fp16 = True
     args.normalization = "RMSNorm"
     args.add_bias_linear = False
     args.untie_embeddings_and_output_weights = True
