@@ -7,8 +7,10 @@ from torch import nn
 
 from .fast_linear import FastLinear
 from ...quantize.smooth_quant.quant_linear import SmoothQuantLinearStatic
+from ...quantize.quant_type import QuantType
 from ...quantize.w8a16 import W8A16LinearStatic
 from ...quantize.w8a8 import W8A8LinearStatic
+from ...quantize.w8a8sc import W8A8SparseCompressedLinear
 
 
 def get_linear(weight, bias, quantize, is_norm=False):
@@ -29,7 +31,7 @@ def get_linear(weight, bias, quantize, is_norm=False):
             act_scales=act_scales,
             act_zeros=act_zeros
         )
-    elif quantize == "w8a8":
+    elif quantize in [QuantType.W8A8, QuantType.W8A8S]:
         if isinstance(weight, torch.Tensor):
             linear = FastLinear(weight, bias, is_norm)
         else:
@@ -47,7 +49,7 @@ def get_linear(weight, bias, quantize, is_norm=False):
                 quant_bias=quant_bias,
                 input_offset=input_offset
             )
-    elif quantize == "w8a16":
+    elif quantize == QuantType.W8A16:
         qweight, weight_scale, weight_offset = weight
         linear = W8A16LinearStatic(
             weight=qweight,
@@ -55,9 +57,27 @@ def get_linear(weight, bias, quantize, is_norm=False):
             weight_offset=weight_offset,
             bias=bias
         )
+    elif quantize == QuantType.W8A8SC:
+        if isinstance(weight, torch.Tensor):
+            linear = FastLinear(weight, bias, is_norm)
+        else:
+            try:
+                qweight, deq_scale, quant_bias, input_scale, input_offset, index = weight
+            except Exception as err:
+                logger.error(
+                    f"The passed weight is not `w8a8s` compatible, loader needs to be updated."
+                )
+                raise AssertionError from err
+            linear = W8A8SparseCompressedLinear(
+                weight=qweight,
+                deq_scale=deq_scale,
+                input_scale=input_scale,
+                quant_bias=quant_bias,
+                input_offset=input_offset,
+                index=index
+            )
     else:
-        logger.error(f"Quantization `{quantize}` is not implemented yet.")
-        raise AssertionError
+        raise AssertionError(f"Quantization `{quantize}` is not implemented yet.")
     return linear
 
 

@@ -25,8 +25,7 @@ from atb_llm.utils.layers import (
     TensorParallelColumnLinear,
     TensorEmbedding
 )
-from atb_llm.utils.quantize.pack_type import PackType
-from atb_llm.utils.quantize.w8a8 import calc_linear_pack_type
+from atb_llm.utils.quantize.pack_type import PackType, calc_linear_pack_type
 from torch import nn
 from transformers.configuration_utils import PretrainedConfig
 
@@ -99,12 +98,7 @@ class StarcoderMLP(nn.Module):
         linear_names = [f"{prefix}.c_fc"]
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{layer_prefix}.ln_2'
-        if weights.quantize == 'w8a8':
-            self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
-        elif weights.quantize == 'w8a16':
-            self.pack_type = PackType.ALL_W8A16
-        else:
-            self.pack_type = PackType.ALL_FP
+        self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
         self.up_proj = TensorParallelColumnLinear.load(
             config,
             prefix=f"{prefix}.c_fc",
@@ -132,12 +126,7 @@ class FlashStarcoderAttention(torch.nn.Module):
         linear_names = [f'{prefix}.c_attn']
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{layer_prefix}.ln_1'
-        if weights.quantize == 'w8a8':
-            self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
-        elif weights.quantize == 'w8a16':
-            self.pack_type = PackType.ALL_W8A16
-        else:
-            self.pack_type = PackType.ALL_FP
+        self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
         self.qkv = TensorParallelColumnLinear.load_qkv(
             config,
             prefix=f"{prefix}.c_attn",
@@ -168,18 +157,22 @@ class FlashStarcoderLayer(nn.Module):
             self.input_layernorm = StarcoderLayerNormBias(
                 prefix=f"{prefix}.ln_1", weights=weights
             )
-        else:
+        elif self.self_attn.pack_type in [PackType.ALL_W8A8_ANTI, PackType.MIX_W8A8_ANTI]:
             self.input_layernorm = StarcoderLayerNormWrapper(
                 prefix=f"{prefix}.ln_1", weights=weights
             )
+        else:
+            raise AssertionError(f'self_attn.pack_type: {self.self_attn.pack_type} not supported')
         if self.mlp.pack_type in [PackType.ALL_FP, PackType.ALL_W8A16, PackType.ALL_W8A8, PackType.MIX_W8A8]:
             self.post_attention_layernorm = StarcoderLayerNormBias(
                 prefix=f"{prefix}.ln_2", weights=weights,
             )
-        else:
+        elif self.mlp.pack_type in [PackType.ALL_W8A8_ANTI, PackType.MIX_W8A8_ANTI]:
             self.post_attention_layernorm = StarcoderLayerNormWrapper(
                 prefix=f"{prefix}.ln_2", weights=weights,
             )
+        else:
+            raise AssertionError(f'mlp.pack_type: {self.mlp.pack_type} not supported')
 
 
 class FlashStarcoderModel(torch.nn.Module):

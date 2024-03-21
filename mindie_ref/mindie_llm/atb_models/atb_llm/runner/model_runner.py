@@ -1,5 +1,5 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
-from typing import Optional
+import os
 import torch
 from ..models import get_model
 from ..utils.env import ENV
@@ -30,10 +30,6 @@ class ModelRunner:
         self.npu_id = npu_id if npu_id is not None else local_rank
         self.world_size = world_size
 
-        self.model_name_or_path = model_name_or_path
-        self.rank = rank
-        self.npu_id = npu_id if npu_id is not None else rank
-        self.world_size = world_size
         if ENV.bind_cpu:
             try:
                 bind_cpus(world_size, self.npu_id, ratio=1.0)
@@ -84,3 +80,9 @@ class ModelRunner:
 
     def generate(self, **kwargs):
         return self.model.generate(**kwargs)
+
+    def save_pretrained(self, **kwargs):
+        if 'save_directory' not in kwargs:
+            raise ValueError('save_directory is required')
+        kwargs['save_directory'] = os.path.join(kwargs['save_directory'], f'part{self.rank}')
+        return self.model.save_pretrained(**kwargs)
