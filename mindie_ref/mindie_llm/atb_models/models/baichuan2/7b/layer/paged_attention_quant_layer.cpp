@@ -23,7 +23,6 @@
 #include "layers/operations/mlp_swiglu.h"
 
 namespace atb_speed {
-namespace baichuan2_7b {
 static const uint64_t IN_TENSOR_COUNT = 62;
 static const uint64_t OUT_TENSOR_COUNT = 2;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 1;
