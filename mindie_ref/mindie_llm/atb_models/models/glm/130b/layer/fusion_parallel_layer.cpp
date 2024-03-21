@@ -81,9 +81,7 @@ atb::Status CreateFusionParallelLayer(const FusionParallelLayerParam &param, atb
     mixdQkvLinearNode.outTensorIds = {INTERMEDIATE_MIXEDLINEAROUTQKV_ID}; // [bs, seq_len, 3 * hidden_size / world_size]
     mixdQkvLinearNode.inTensorReshapeFuncs.resize(mixdQkvLinearNode.inTensorIds.size());
     mixdQkvLinearNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        ATB_LOG(INFO) << "bs PTR start";
         *bsPtr = oldShape.dims[0];
-        ATB_LOG(INFO) << "bs PTR end";
         newShape.dimNum = 2; // dimNum is 2
         newShape.dims[0] = oldShape.dims[0] * oldShape.dims[1];
         newShape.dims[1] = oldShape.dims[2];
@@ -98,9 +96,7 @@ atb::Status CreateFusionParallelLayer(const FusionParallelLayerParam &param, atb
     positionEmbeddingNode.inTensorReshapeFuncs.resize(positionEmbeddingNode.inTensorIds.size());
     positionEmbeddingNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         newShape.dimNum = 3; // dimNum is 3
-        ATB_LOG(INFO) << "After bs PTR start";
         newShape.dims[0] = *bsPtr;
-        ATB_LOG(INFO) << "After bs PTR end";
         newShape.dims[1] = oldShape.dims[0] / *bsPtr;
         newShape.dims[2] = oldShape.dims[1];
     };
@@ -139,9 +135,7 @@ atb::Status CreateFusionParallelLayer(const FusionParallelLayerParam &param, atb
     selfOutLinearParallelNode.inTensorReshapeFuncs.resize(selfOutLinearParallelNode.inTensorIds.size());
     selfOutLinearParallelNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         newShape.dimNum = 3; // dimNum is 3
-        ATB_LOG(INFO) << "After bs PTR start";
         newShape.dims[0] = *bsPtr;
-        ATB_LOG(INFO) << "After bs PTR end";
         newShape.dims[1] = oldShape.dims[0] / *bsPtr;
         newShape.dims[2] = oldShape.dims[1];
     };
