@@ -40,7 +40,7 @@ GPT_ARGS="
     --seq-length 8192 \
     --max-position-embeddings 32768 \
     --micro-batch-size 1 \
-    --global-batch-size 16 \
+    --global-batch-size 512 \
     --make-vocab-size-divisible-by 64 \
     --lr 1e-5 \
     --train-iters 2000 \
