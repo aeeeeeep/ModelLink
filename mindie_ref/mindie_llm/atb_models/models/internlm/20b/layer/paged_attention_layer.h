@@ -13,48 +13,85 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef INTERNLM_20B_PAGED_ATTENTION_LAYER_H
-#define INTERNLM_20B_PAGED_ATTENTION_LAYER_H
+#ifndef ATB_SPEED_MODELS_INTERNLM_20B_PA_LAYER_H
+#define ATB_SPEED_MODELS_INTERNLM_20B_PA_LAYER_H
 
 #include <atb/atb_infer.h>
-#include <atb/svector.h>
-
-#include "atb_speed/base/hosttensor_binder.h"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
+#include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 #include "atb_speed/log.h"
+#include "atb_speed/base/hosttensor_binder.h"
 #include "atb_speed/utils/str_split.h"
 
 namespace atb_speed {
 namespace internlm_20b {
-struct PagedAttentionLayerParam {
+struct PALayerParam {
+    int rank = 0;
+    int rankSize = 1;
     float rmsNormEps = 0;
     int headNum = 0;
     int dk = 0;
-    int rank = 0;
-    int rankSize = 1;
+    bool transposedWeight = true;
     bool isPrefill = false;
     std::string backend = "hccl";
     std::string model = "internlm_20b";
+    bool isBF16 = false;
 };
 
-void from_json(const nlohmann::json &paramJson, PagedAttentionLayerParam &param);
+enum LayerPATensorId : int {
+    IN_HIDDENSTATES = 0,
+    // weights
+    IN_NORMWEIGHT,
+    IN_QKVMIXEDLINEARWEIGHT,
+    IN_SELFOUTLINEARWEIGHT,
+    IN_SELFOUTNORMWEIGHT,
+    IN_MLPGATEUPWEIGHT,
+    IN_MLPDOWNWEIGHT,
+    // inputs
+    IN_POSITIONIDS,
+    IN_COSEMBED,
+    IN_SINEMBED,
+    IN_ATTENTIONMASK,
+    IN_K_CACHE,
+    IN_V_CACHE,
+    IN_BLOCK_TABLES,
+    IN_SLOTS,
+    IN_INPUT_LENGTHS,
+    // outputs
+    OUT_LAYEROUT,
+    // intermidate
+    INTERMIDATE_INPUTNORMOUT,
+    INTERMIDATE_QKVMIXEDLINEAROUT,
+    INTERMIDATE_MIXEDQ,
+    INTERMIDATE_MIXEDK,
+    INTERMIDATE_MIXEDV,
+    INTERMIDATE_POSITIONEMBEDQ,
+    INTERMIDATE_POSITIONEMBEDK,
+    INTERMIDATE_ATTENTIONOUT,
+    INTERMIDATE_SELFLINEAROUT,
+    INTERMIDATE_SELFRESIDUALADDOUT,
+    INTERMIDATE_SELFNORMOUT,
+    INTERMIDATE_MLPOUT,
+};
 
-atb::Status PagedAttentionLayer(const PagedAttentionLayerParam &param, atb::Operation **operation);
+atb::Status PALayer(const PALayerParam &param, atb::Operation **operation);
 
-atb::Operation *CreatePagedAttentionLayer(const nlohmann::json &paramJson);
-
-class PagedAttentionLayerBinder : public HostTensorBinder {
+class FlashAttentionHostBinder : public HostTensorBinder {
 public:
-    PagedAttentionLayerBinder();
+    FlashAttentionHostBinder();
 
-    ~PagedAttentionLayerBinder() override;
+    virtual ~FlashAttentionHostBinder();
 
     void ParseParam(const nlohmann::json &paramJson) override;
 
     void BindTensor(atb::VariantPack &variantPack) override;
 
 private:
-    std::vector<int32_t> seqLen_;
+    atb::SVector<int32_t> seqLen_;
 };
+
 } // namespace internlm_20b
 } // namespace atb_speed
 #endif

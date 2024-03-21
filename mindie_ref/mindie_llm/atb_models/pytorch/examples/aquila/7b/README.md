@@ -87,15 +87,15 @@ chmod +x Ascend-hdk-xxxx-npu-driver_xxx_*.run
 
 安装方法：
 
-| cpu     | 包名                                            |
-|---------|-----------------------------------------------|
-| aarch64 | Ascend-cann-toolkit_8.0.RC1_linux-aarch64.run |
-| x86     | Ascend-cann-toolkit_8.0.RC1_linux-x86_64.run |
+| cpu     | 包名                                       |
+|---------|------------------------------------------|
+| aarch64 | Ascend-cann-toolkit_xxx_linux-aarch64.run |
+| x86     | Ascend-cann-toolkit_xxx_linux-x86_64.run |
 
 ```bash
 # 安装toolkit  以arm为例
-chmod +x Ascend-cann-toolkit_8.0.RC1_linux-aarch64.run
-./Ascend-cann-toolkit_8.0.RC1_linux-aarch64.run --install
+chmod +x Ascend-cann-toolkit_xxx_linux-aarch64.run
+./Ascend-cann-toolkit_xxx_linux-aarch64.run --install
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 ```
 
@@ -103,14 +103,14 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 安装方法：
 
-| 包名                                         |
-|--------------------------------------------|
-| Ascend-cann-kernels-xxxx_8.0.RC1_linux.run |
+| 包名                                     |
+|----------------------------------------|
+| Ascend-cann-kernels-xxxx_xxx_linux.run |
 
 ```bash
 # 安装 kernel 以Atlas 800I A2 为例
-chmod +x Ascend-cann-kernels-xxxx_8.0.RC1_linux.run
-./Ascend-cann-kernels-xxxx_8.0.RC1_linux.run --install
+chmod +x Ascend-cann-kernels-xxxx_xxx_linux.run
+./Ascend-cann-kernels-xxxx_xxx_linux.run --install
 ```
 
 #### 1.3 安装PytorchAdapter
@@ -189,14 +189,14 @@ pip install torch*_aarch64.whl
 2. 根据版本发布链接，安装加速库
    将加速库下载至 `${llm_path}` 目录
 
-| 加速库包名                                                 |
-|-------------------------------------------------------|
-| Ascend-cann-atb_{version}_cxx11abi0_linux-aarch64.run |
-| Ascend-cann-atb_{version}_cxx11abi1_linux-aarch64.run |
-| Ascend-cann-atb_{version}_cxx11abi1_linux-x86_64.run  |
-| Ascend-cann-atb_{version}_cxx11abi0_linux-x86_64.run  |
+| 加速库包名                                              |
+|----------------------------------------------------|
+| Ascend-mindie-atb_{version}_linux-aarch64_abi0.run |
+| Ascend-mindie-atb_{version}_linux-aarch64_abi1.run |
+| Ascend-mindie-atb_{version}_linux-x86_64_abi0.run  |
+| Ascend-mindie-atb_{version}_linux-x86_64_abi1.run  |
 
-具体使用cxx11abi0 还是cxx11abi1 可通过python命令查询
+具体使用abi0还是abi1可通过python命令查询
 
 ```python
 import torch
@@ -208,7 +208,7 @@ torch.compiled_with_cxx11_abi()
 
 ```bash
 # 安装atb 
-chmod +x Ascend-cann-atb_*.run
+chmod +x Ascend-mindie-atb_*.run
 ./Ascend-cann-atb_*.run --install
 source /usr/local/Ascend/atb/set_env.sh
 ```
@@ -216,19 +216,19 @@ source /usr/local/Ascend/atb/set_env.sh
 3. 根据版本发布链接，安装加速库
    将加速库下载至 `${llm_path}` 目录
 
-| 大模型包名                                                             |
-|-------------------------------------------------------------------|
-| Ascend-cann-llm_{version_id}_linux-x86_64_torch2.0.1-abi0.tar.gz  |
-| Ascend-cann-llm_{version_id}_linux-x86_64_torch2.0.1-abi1.tar.gz  |
-| Ascend-cann-llm_{version_id}_linux-aarch64_torch2.0.1-abi0.tar.gz |
-| Ascend-cann-llm_{version_id}_linux-aarch64_torch2.0.1-abi1.tar.gz |
+| 大模型包名                                                                      |
+|----------------------------------------------------------------------------|
+| Ascend-mindie-atb-models_{version_id}_linux-x86_64_torch2.0.1-abi0.tar.gz  |
+| Ascend-mindie-atb_models_{version_id}_linux-x86_64_torch2.0.1-abi1.tar.gz  |
+| Ascend-mindie-atb_models_{version_id}_linux-aarch64_torch2.0.1-abi0.tar.gz |
+| Ascend-mindie-atb_models_{version_id}_linux-aarch64_torch2.0.1-abi1.tar.gz |
 
-具体使用cxx11abi0 还是cxx11abi1 方法同安装atb
+具体使用abi0还是abi1方法同安装atb
 
  ```bash
  # 安装大模型加速库
  cd ${llm_path}
- tar -xzvf Ascend-cann-llm_*.tar.gz
+ tar -xzvf Ascend-mindie-atb-models_*.tar.gz
  source set_env.sh
  ```
 
@@ -317,6 +317,11 @@ bash cut_model_and_run_aquila.sh
 
 ##### 单卡
 
+拷贝修改后的modeling
+```shell
+cp ${script_path}/modeling_aquila_ascend.py ${model_path}
+```
+
 修改${model_path}/config.json中的kv对，改成
 
 ```
@@ -363,12 +368,14 @@ task_name可选inference、precision、performance。
   修改 ${model_path}里的config.json中的kv对，改成`"AutoModelForCausalLM": "modeling_aquila_ascend.AquilaForCausalLM"`
 
 ```shell
+cd ${script_path}
 python main.py --task ${task_name}
 ```
 
 - 多芯
 
 ```shell
+cd ${script_path}
 bash cut_model_and_run_aquila.sh ${task_name}
 ```
 

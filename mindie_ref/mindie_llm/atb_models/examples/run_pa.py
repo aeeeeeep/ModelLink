@@ -6,6 +6,7 @@ import os
 import time
 
 import torch
+import torch_npu
 from atb_llm.runner import ModelRunner
 from atb_llm.utils.cpu_binding import NpuHbmInfo
 from atb_llm.utils.env import ENV
@@ -28,7 +29,7 @@ class PARunner:
         self.max_output_length = kwargs.get('max_output_length', None)
         self.is_flash_model = kwargs.get('is_flash_model', None)
         self.max_batch_size = kwargs.get('max_batch_size', None)
-        self.use_refactor = kwargs.get('use_refactor', None)
+        self.use_refactor = kwargs.get('use_refactor', True)
 
         self.block_size = kwargs.get('block_size', None)
 
@@ -99,7 +100,7 @@ class PARunner:
         prefill_head_indices = torch.tensor([all_input_length - 1], dtype=torch.int64).to(self.device)
         print_log(self.rank, logger.info, "---------------begin warm_up---------------")
         try:
-            self.warm_up_num_blocks = math.ceil(self.max_prefill_tokens / self.block_size)
+            self.warm_up_num_blocks = math.ceil((self.max_input_length + self.max_output_length) / self.block_size) * self.max_batch_size
         except ZeroDivisionError as e:
             raise ZeroDivisionError from e
         cache_config = CacheConfig(self.warm_up_num_blocks, self.block_size)
@@ -112,7 +113,7 @@ class PARunner:
             kv_cache=self.cache_manager.kv_cache,
             slots=slots,
             input_lengths=input_lengths_tensor,
-            max_seq_len=self.max_prefill_tokens,
+            max_seq_len=self.max_input_length,
             lm_head_indices=prefill_head_indices
         )
         self.warm_up_memory = int(
@@ -183,7 +184,24 @@ class PARunner:
                 os.makedirs(profiling_path, exist_ok=True)
             torch.npu.synchronize()
             e2e_start = time.time()
-            with torch.npu.profile(profiling_path):
+            experimental_config = torch_npu.profiler._ExperimentalConfig(
+                aic_metrics=torch_npu.profiler.AiCMetrics.PipeUtilization,
+                profiler_level=torch_npu.profiler.ProfilerLevel.Level1,
+                l2_cache=False,
+                data_simplification=False
+            )
+            with torch_npu.profiler.profile(
+                activities=[
+                    torch_npu.profiler.ProfilerActivity.CPU,
+                    torch_npu.profiler.ProfilerActivity.NPU
+                ],
+                on_trace_ready=torch_npu.profiler.tensorboard_trace_handler(profiling_path),
+                record_shapes=True,
+                profile_memory=True,
+                with_stack=True,
+                with_flops=False,
+                with_modules=False,
+                experimental_config=experimental_config) as prof:
                 generate_req(req_list, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
                              max_output_length, self.cache_manager, self.rank, ignore_eos)
             torch.npu.synchronize()
@@ -240,7 +258,7 @@ def parse_arguments():
     parser.add_argument('--repetition_penalty', type=float, default=1.0)
     parser.add_argument('--presence_penalty', type=float, default=0.0)
     parser.add_argument('--frequency_penalty', type=float, default=0.0)
-    parser.add_argument('--use_refactor', action='store_true')
+    parser.add_argument('--use_refactor', type=bool, default=True)
     parser.add_argument('--ignore_eos', action='store_true')
 
     return parser.parse_args()

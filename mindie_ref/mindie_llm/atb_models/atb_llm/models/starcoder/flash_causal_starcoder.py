@@ -8,166 +8,57 @@ from typing import Optional, List, Tuple
 import torch
 import torch.distributed
 import torch_npu
-from safetensors import safe_open
-from transformers.configuration_utils import PretrainedConfig
-
-from atb_llm.utils.log import logger
 from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
+from atb_llm.utils.layers import (
+    AttentionMask,
+    TensorParallelHead,
+)
+from atb_llm.utils.log import logger, print_log
+
+from .modeling_starcoder import StarcoderConfig, FlashStarcoderModel
+from ...utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
 
 
-class AttentionMask(torch.nn.Module):
+class FlashStarcoderForCausalLM(torch.nn.Module):
 
-    def __init__(self, atten_mask):
+    def __init__(self, config, weights):
         super().__init__()
-        self._seq_len_cached = 0
-        self.atten_mask_cache = atten_mask
-
-    @classmethod
-    def static(cls, max_seq_leneq_len):
-        bias_cache = torch.tril(torch.ones((max_seq_leneq_len, max_seq_leneq_len),
-                                           dtype=torch.bool)).view(max_seq_leneq_len, max_seq_leneq_len)
-        bias_cache = ~bias_cache
-        mask_value = torch.finfo(torch.float32).min
-        attn_mask = torch.masked_fill(torch.zeros(size=(max_seq_leneq_len, max_seq_leneq_len)), bias_cache, mask_value)
-        return cls(attn_mask)
-
-    def get_attn_mask(
-            self, max_seq_len: int, dtype: torch.dtype, device: torch.device
-    ):
-        self._update_attn_cache(dtype, device, max_seq_len)
-        return self.atten_mask_cache[:max_seq_len, :max_seq_len]
-
-    def _update_attn_cache(self, dtype, device, seqlen):
-        # Reset the tables if the sequence length has changed,
-        # or if we're on a new device (possibly due to tracing for instance)
-        if seqlen > self._seq_len_cached:
-            self._seq_len_cached = seqlen
-            bias_cache = torch.tril(torch.ones((seqlen, seqlen), dtype=torch.bool)).view(seqlen, seqlen)
-            bias_cache = ~bias_cache
-            mask_value = torch.finfo(torch.float32).min
-            mask_atten_cache = torch.masked_fill(torch.zeros(size=(seqlen, seqlen)), bias_cache, mask_value)
-            self.atten_mask_cache = mask_atten_cache.to(dtype).to(device)
-        if self.atten_mask_cache.device != device or self.atten_mask_cache.dtype != dtype:
-            self.atten_mask_cache = self.atten_mask_cache.to(dtype).to(device)
-
-
-class StarcoderConfig(PretrainedConfig):
-    model_type: str = "starcoder"
-
-    def __init__(
-            self,
-            vocab_size=49152,
-            n_embd=6144,
-            n_head=48,
-            n_inner=24576,
-            n_layer=1,
-            kv_channels=128,
-            intermediate_size=24576,
-            multi_query_group_num=1,
-            num_attention_heads=48,
-            hidden_act="gelu",
-            n_positions=8192,
-            initializer_range=0.02,
-            layer_norm_epsilon=1e-05,
-            use_cache=True,
-            bos_token_id=0,
-            eos_token_id=0,
-            tie_word_embeddings=False,
-            **kwargs,
-    ):
-        self.vocab_size = vocab_size
-        self.head_num = n_head
-        self.seq_length = n_positions
-        self.hidden_size = n_embd
-        self.kv_channels = 128
-        self.intermediate_size = intermediate_size
-        self.num_layers = n_layer
-        self.multi_query_group_num = multi_query_group_num  # kv_head
-        self.num_attention_heads = n_head
-        self.hidden_act = hidden_act
-        self.initializer_range = initializer_range
-        self.layer_norm_epsilon = layer_norm_epsilon
-        self.use_cache = use_cache
-        super().__init__(
-            bos_token_id=bos_token_id,
-            eos_token_id=eos_token_id,
-            tie_word_embeddings=tie_word_embeddings,
-            **kwargs,
-        )
-
-
-class FlashStarCoderModel(torch.nn.Module):
-
-    def __init__(self, config, weights, dtype):
-        super().__init__()
-
+        load_atb_speed()
+        self.use_refactor = 1
+        self.soc_info = NPUSocInfo()
+        self.num_attention_heads = config.num_attention_heads
+        if hasattr(config, 'num_key_value_heads'):
+            self.num_key_value_heads = config.num_key_value_heads
+        else:
+            self.num_key_value_heads = self.num_attention_heads
+        self.hidden_size = config.hidden_size
+        self.head_dim = config.hidden_size // config.num_attention_heads
+        self.head_size = self.hidden_size // self.num_attention_heads
+        self.num_layers = config.num_layers
         process_group = weights.process_group
         self.tp_rank = process_group.rank()
         self.tp_world_size = process_group.size()
-
-        self.num_heads = config.head_num  # 48
-
-        self.head_dim = config.hidden_size // config.num_attention_heads
-        self.n_head = config.num_attention_heads // self.tp_world_size
-        self.layer_norm = config.layer_norm_epsilon
-        self.layer_num = config.num_layers
-        self.kv_head_num = 2
-
-        self.soc_info = NPUSocInfo()  # 判定310p与否，进行NZ转置
-        self.filenames = weights.filenames
-        self.dtype = dtype
-        self.device = weights.device
-
-        # for ascend init
-        self.init_ascend_operations(config)
-        self.ascend_weight = []
-        self.ascend_kcache_id = None
-        self.ascend_vcache_id = None
-        self.weights = self.init_ascend_weight(self.tp_rank, self.tp_world_size, self.num_heads,
-                                               self.kv_head_num, self.head_dim)
-
-    def init_ascend_operations(self, config: StarcoderConfig):
-        self.acl_param_encoder = json.dumps({
-            "layerNormEps": self.layer_norm,
-            "headNum": self.n_head,
-            "dk": self.head_dim,
-            "kvHead": 1,
-            "layerNum": self.layer_num,
-            "rank": self.tp_rank,
-            "rankSize": self.tp_world_size,
-            "isPrefill": True,
-            "backend": os.getenv("BACKEND", "hccl")
-        })
-        self.acl_param_decoder = json.dumps({
-            "layerNormEps": self.layer_norm,
-            "headNum": self.n_head,
-            "dk": self.head_dim,
-            "kvHead": 1,
-            "layerNum": self.layer_num,
-            "rank": self.tp_rank,
-            "rankSize": self.tp_world_size,
-            "isPrefill": False,
-            "backend": os.getenv("BACKEND", "hccl")
-        })
-
-        self.seq_length = config.seq_length  # 8192
-
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("star_coder_PAModel")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("star_coder_PAModel")
-
-        self.acl_encoder_operation.set_param(self.acl_param_encoder)
-        self.acl_decoder_operation.set_param(self.acl_param_decoder)
-
+        self.num_heads = config.head_num // self.tp_world_size  # 48
+        self.max_seq_len_every_batch = config.seq_length
+        self.num_attention_heads = (self.num_attention_heads + self.tp_world_size - 1) // self.tp_world_size
+        self.num_key_value_heads = config.multi_query_group_num
+        self.max_position_embeddings = config.seq_length
         self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
         self.transdata_param = json.dumps({})
         self.transdata_operation.set_param(self.transdata_param)
-
-        self.weight_flag = False
-        self.num_layers = config.num_layers
-        self.hidden_size = config.hidden_size
-
-        self.acl_encoder_operation_inputs = [None] * (8 + 2 * self.num_layers)
-        self.acl_decoder_operation_inputs = [None] * (8 + 2 * self.num_layers)
+        # self.attn_mask = AttentionMask.static(config.seq_length)
+        self.quantize = config.quantize
+        self.dtype = weights.dtype
+        self.layer_norm_epsilon = config.layer_norm_epsilon
+        self.device = weights.device
+        # for ascend init
+        self.init_ascend_operations(config)
+        if self.use_refactor == 1:
+            self.acl_encoder_operation_inputs = [None] * 8
+            self.acl_decoder_operation_inputs = [None] * 8
+        else:
+            self.acl_encoder_operation_inputs = [None] * (8 + self.num_layers * 2)
+            self.acl_decoder_operation_inputs = [None] * (8 + self.num_layers * 2)
 
         self.max_seq_leneqlen_tensor = torch.tensor([0], dtype=torch.int)
         self.cu_seqlen_tensor_fake = torch.tensor([0], dtype=torch.int)
@@ -176,197 +67,58 @@ class FlashStarCoderModel(torch.nn.Module):
         self.attention_mask_max_en = None
         self.attention_mask_max_de = None
 
-        self.ascend_atten_mask = AttentionMask.static(config.seq_length)
+        self.attn_mask = AttentionMask.static(config.seq_length)
+        self.ascend_weight = []
+        self.ascend_kcache_id = None
+        self.ascend_vcache_id = None
+        self.acl_param = None
+        self.model = FlashStarcoderModel(config, weights)
+        self.lm_head = TensorParallelHead.load_weight(
+            config,
+            prefix="lm_head",
+            weights=weights,
+            is_norm=True
+        )
 
-    def weight_format_cast(self, weight):
-        if not self.soc_info.need_nz:
-            return weight
+        self.placeholder = torch.ones(1, dtype=self.dtype, device="npu")
+        self.cu_seqlen_tensor_fake = torch.tensor([0], dtype=torch.int).to(self.device)
+        self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64).to(self.device)
+        self.attn_mask_fake = self.attn_mask \
+            .get_attn_mask(1, dtype=self.dtype, device="cpu") \
+            .to(self.device)
 
-        torch_npu.npu_format_cast_(weight, 29)
-        return weight
-
-    def init_ascend_weight(self, rank, rank_size, q_head_num, kv_head_num, head_dim):
-        tensors = {}
-        weights = []
-        for filename in self.filenames:
-            with safe_open(filename, framework="pytorch") as f:
-                for k in f.keys():
-                    tensors[k] = f.get_tensor(k).to(dtype=self.dtype)
-        try:
-            weights.append(tensors["transformer.wte.weight"].to(device=self.device))
-            weights.append(tensors["transformer.wpe.weight"].to(device=self.device))
-            for i in range(40):
-                pre_fix = f"transformer.h.{i}."
-                weights.append(tensors[pre_fix + "ln_1.weight"].to(device=self.device))
-                weights.append(tensors[pre_fix + "ln_1.bias"].to(device=self.device))
-                q, kv = tensors[pre_fix + "attn.c_attn.weight"].split((q_head_num * head_dim,
-                                                                       kv_head_num * head_dim), dim=0)
-                q_slice = torch.chunk(q, rank_size, dim=0)[rank]
-                q_b, kv_b = tensors[pre_fix + "attn.c_attn.bias"].split((q_head_num * head_dim,
-                                                                         kv_head_num * head_dim), dim=0)
-                q_slice_b = torch.chunk(q_b, rank_size, dim=0)[rank]
-                weights.append(self.weight_format_cast(torch.cat((q_slice, kv), dim=0).contiguous().
-                                           to(device=self.device)))
-                weights.append(torch.cat((q_slice_b, kv_b), dim=0).contiguous().to(device=self.device))
-                weights.append(self.weight_format_cast(torch.chunk(tensors[pre_fix + "attn.c_proj.weight"],
-                                           rank_size, dim=1)[rank].to(device=self.device)))
-                weights.append(tensors[pre_fix + "attn.c_proj.bias"].to(device=self.device))
-                weights.append(tensors[pre_fix + "ln_2.weight"].to(device=self.device))
-                weights.append(tensors[pre_fix + "ln_2.bias"].to(device=self.device))
-                weights.append(self.weight_format_cast(torch.chunk(tensors[pre_fix + "mlp.c_fc.weight"],
-                                           rank_size, dim=0)[rank].to(device=self.device)))
-                weights.append(torch.chunk(tensors[pre_fix + "mlp.c_fc.bias"],
-                                           rank_size, dim=0)[rank].to(device=self.device))
-                weights.append(self.weight_format_cast(torch.chunk(tensors[pre_fix + "mlp.c_proj.weight"],
-                                           rank_size, dim=1)[rank].to(device=self.device)))
-                weights.append(tensors[pre_fix + "mlp.c_proj.bias"].to(device=self.device))
-
-            weights.append(tensors["transformer.ln_f.weight"].to(device=self.device))
-            weights.append(tensors["transformer.ln_f.bias"].to(device=self.device))
-            self.lm_head_weight = self.weight_format_cast(tensors["lm_head.weight"].to(device=self.device))
-            weights.append(self.lm_head_weight)
-        except KeyError:
-            logger.error("Weights Key not found.")
-
-        self.ascend_weight = weights
-        self.acl_encoder_operation.set_weight(weights)
-        self.acl_decoder_operation.set_weight(weights)
-        return weights
-
-    def prepare_inputs_for_ascend(self,
-                                  input_ids: torch.Tensor,
-                                  position_ids: torch.Tensor,
-                                  is_prefill: bool,
-                                  kv_cache: List[Tuple[torch.Tensor, torch.Tensor]],
-                                  block_tables: torch.Tensor,
-                                  slots: torch.Tensor,
-                                  input_lengths: torch.Tensor,
-                                  max_seq_len: int,
-                                  lm_head_indices: Optional[torch.Tensor] = None):
-
-        # init kv_cache
-        kvcache_status = not self.ascend_kcache_id or self.ascend_kcache_id != id(kv_cache[0][0]) \
-                         or not self.ascend_vcache_id or self.ascend_vcache_id != id(kv_cache[0][1])
-        if kvcache_status:
-            k_caches, v_caches = map(list, zip(*kv_cache))
-            if self.soc_info.need_nz:
-                for i in range(self.num_layers):
-                    torch_npu.npu_format_cast_(k_caches[i], 29)
-                    torch_npu.npu_format_cast_(v_caches[i], 29)
-            self.ascend_kcache_id = id(kv_cache[0][0])
-            self.ascend_vcache_id = id(kv_cache[0][1])
-
-            self.acl_encoder_operation_inputs[8: 8 + self.num_layers] = k_caches
-            self.acl_encoder_operation_inputs[8 + self.num_layers: 8 + 2 * self.num_layers] = v_caches
-            self.acl_decoder_operation_inputs[8: 8 + self.num_layers] = k_caches
-            self.acl_decoder_operation_inputs[8 + self.num_layers: 8 + 2 * self.num_layers] = v_caches
-
-        placeholder = torch.ones(1).npu()
-        # init mask and set input
-        if is_prefill is not None:  # prefill
-            if lm_head_indices is None:
-                lm_head_indices = torch.tensor(range(input_ids.shape[0]), dtype=torch.int64, device=input_ids.device)
-
-            # init mask
-            if self.soc_info.need_nz:
-                pad_maxs = math.ceil(max_seq_len / 16) * 16
-                atten_mask = self.ascend_atten_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
-                atten_mask = self.transdata_operation.execute([atten_mask])[0]
-            else:
-                atten_mask = self.ascend_atten_mask.get_attn_mask(max_seq_len, kv_cache[0][0].dtype,
-                                                                  kv_cache[0][0].device)
-            self.acl_param_encoder = json.dumps({
-                "seqLen": input_lengths.tolist()
-            })
-            # set input
-            self.acl_encoder_operation_inputs[0] = input_ids.unsqueeze(0)
-            self.acl_encoder_operation_inputs[1] = position_ids.unsqueeze(0).to(torch.int64)
-            self.acl_encoder_operation_inputs[2] = atten_mask
-            self.acl_encoder_operation_inputs[3] = block_tables.to(torch.int32)
-            self.acl_encoder_operation_inputs[4] = slots.to(torch.int32)
-            self.acl_encoder_operation_inputs[5] = input_lengths.to(torch.int32)
-            self.acl_encoder_operation_inputs[6] = lm_head_indices.to(torch.int64)
-            self.acl_encoder_operation_inputs[7] = placeholder
-
-            return self.acl_encoder_operation_inputs, self.acl_param_encoder
+    def init_kvcache(self, kv_cache):
+        if self.use_refactor == 1:
+            kcache_id = not self.ascend_kcache_id or self.ascend_kcache_id != id(kv_cache[0][0])
+            vcache_id = not self.ascend_vcache_id or self.ascend_vcache_id != id(kv_cache[0][1])
+            if kcache_id or vcache_id:
+                k_caches, v_caches = map(list, zip(*kv_cache))
+                print_log(self.tp_rank, logger.info, f"<<<<<<< ori {k_caches[0].shape=}")
+                if self.soc_info.need_nz:
+                    k_caches = [torch_npu.npu_format_cast_(k_cache, 29) for k_cache in k_caches]
+                    v_caches = [torch_npu.npu_format_cast_(v_cache, 29) for v_cache in v_caches]
+                    logger.info(f"<<<<<<<after transdata {k_caches[0].shape=}")
+                self.acl_encoder_operation.set_kv_cache(k_caches, v_caches)
+                self.acl_decoder_operation.set_kv_cache(k_caches, v_caches)
+                self.ascend_kcache_id = id(kv_cache[0][0])
+                self.ascend_vcache_id = id(kv_cache[0][1])
+                print_log(self.tp_rank, logger.info,
+                          f">>>>>>id of kcache is {self.ascend_kcache_id} id of vcache is {self.ascend_vcache_id}")
         else:
-            atten_mask = torch.tensor([1], device=input_ids.device, dtype=kv_cache[0][0].dtype)
-            self.acl_decoder_operation_inputs[0] = input_ids.unsqueeze(0)
-            self.acl_decoder_operation_inputs[1] = position_ids.unsqueeze(0).to(torch.int64)
-            self.acl_decoder_operation_inputs[2] = atten_mask
-            self.acl_decoder_operation_inputs[3] = block_tables.to(torch.int32)
-            self.acl_decoder_operation_inputs[4] = slots.to(torch.int32)
-            self.acl_decoder_operation_inputs[5] = input_lengths.to(torch.int32)
-            self.acl_decoder_operation_inputs[6] = self.lm_head_indices_fake
-            self.acl_decoder_operation_inputs[7] = placeholder
-
-            return self.acl_decoder_operation_inputs, self.acl_param_decoder
-
-    def execute_ascend_operator(self,
-                                input_ids: torch.Tensor,
-                                position_ids: torch.Tensor,
-                                is_prefill: bool,
-                                kv_cache: List[Tuple[torch.Tensor, torch.Tensor]],
-                                block_tables: torch.Tensor,
-                                slots: torch.Tensor,
-                                input_lengths: torch.Tensor,
-                                max_seq_len: int,
-                                lm_head_indices: Optional[torch.Tensor] = None):
-        acl_inputs, acl_param = self.prepare_inputs_for_ascend(input_ids, position_ids, is_prefill, kv_cache,
-                                                               block_tables, slots, input_lengths, max_seq_len,
-                                                               lm_head_indices)
-
-        if is_prefill:
-            acl_model_out = self.acl_encoder_operation.execute(acl_inputs, acl_param)
-        else:
-            acl_model_out = self.acl_decoder_operation.execute(acl_inputs, acl_param)
-        acl_hidden_state = acl_model_out[0]
-
-        return acl_hidden_state
-
-    def forward(
-            self,
-            input_ids: torch.Tensor,
-            position_ids: torch.Tensor,
-            is_prefill: bool,
-            kv_cache: List[Tuple[torch.Tensor, torch.Tensor]],
-            block_tables: torch.Tensor,
-            slots: torch.Tensor,
-            input_lengths: torch.Tensor,
-            max_seq_len: int,
-            lm_head_indices: Optional[torch.Tensor] = None
-    ) -> torch.Tensor:
-        hidden_states_acl = self.execute_ascend_operator(input_ids, position_ids, is_prefill, kv_cache,
-                                                         block_tables, slots, input_lengths, max_seq_len,
-                                                         lm_head_indices)
-
-        return hidden_states_acl
-
-
-class FlashStarcoderForCausalLM(torch.nn.Module):
-
-    def __init__(self, config, weights, dtype=torch.float16):
-        super().__init__()
-        # for ascend
-        load_atb_speed()
-
-        self.model = FlashStarCoderModel(config, weights, dtype)
-
-        self.soc_info = NPUSocInfo()
-        self.lm_head_weight = self.model.lm_head_weight
-
-        process_group = weights.process_group
-        self.tp_rank = process_group.rank()
-        self.tp_world_size = process_group.size()
-
-        self.gradient_checkpointing = False
-        self.head_size = self.model.head_dim
-        self.num_heads = self.model.num_heads
-        self.num_key_value_heads = 1
-        self.num_attention_heads = self.num_heads
-        self.hidden_size = config.hidden_size
-        self.num_layers = self.model.layer_num
-        self.max_seq_len_every_batch = config.seq_length
+            kvcache_status = not self.ascend_kcache_id or self.ascend_kcache_id != id(kv_cache[0][0]) \
+                             or not self.ascend_vcache_id or self.ascend_vcache_id != id(kv_cache[0][1])
+            if kvcache_status:
+                k_caches, v_caches = map(list, zip(*kv_cache))
+                if self.soc_info.need_nz:
+                    for i in range(self.num_layers):
+                        torch_npu.npu_format_cast_(k_caches[i], 29)
+                        torch_npu.npu_format_cast_(v_caches[i], 29)
+                self.ascend_kcache_id = id(kv_cache[0][0])
+                self.ascend_vcache_id = id(kv_cache[0][1])
+                self.acl_encoder_operation_inputs[8: 8 + self.num_layers] = k_caches
+                self.acl_encoder_operation_inputs[8 + self.num_layers: 8 + 2 * self.num_layers] = v_caches
+                self.acl_decoder_operation_inputs[8: 8 + self.num_layers] = k_caches
+                self.acl_decoder_operation_inputs[8 + self.num_layers: 8 + 2 * self.num_layers] = v_caches
 
     def forward(
             self,
@@ -381,21 +133,235 @@ class FlashStarcoderForCausalLM(torch.nn.Module):
             lm_head_indices: Optional[torch.Tensor] = None,  # prefill阶段使用，取的生成token的偏移
             **kwargs,
     ) -> torch.Tensor:
+        if not self.ascend_weight:
+            self.init_ascend_weight()
 
-        hidden_states = self.model(
-            input_ids,
-            position_ids,
-            is_prefill,
-            kv_cache,
-            block_tables,
-            slots,
-            input_lengths,
-            self.max_seq_len_every_batch,
-            lm_head_indices
-        )
+        self.init_kvcache(kv_cache)
+        acl_inputs, acl_param = self.prepare_inputs_for_ascend(input_ids, position_ids, is_prefill, kv_cache,
+                                                               block_tables, slots, input_lengths, max_seq_len,
+                                                               lm_head_indices)
+        logits = self.execute_ascend_operator(acl_inputs, acl_param, is_prefill)
+        if self.use_refactor == 1:
+            if lm_head_indices is not None:
+                logits = logits[lm_head_indices]
+            else:
+                logits = logits
 
-        if lm_head_indices is not None:
-            logits = hidden_states.squeeze(0)[lm_head_indices]
+            return logits
         else:
-            logits = hidden_states.squeeze(0)
-        return logits
+            if lm_head_indices is not None:
+                logits = logits.squeeze(0)[lm_head_indices]
+            else:
+                logits = logits.squeeze(0)
+            return logits
+
+    def init_ascend_operations(self, config: StarcoderConfig):
+        if self.use_refactor == 1:
+            self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("star_coder_PAQuantModel")
+            self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("star_coder_PAQuantModel")
+        else:
+            self.acl_param_encoder = json.dumps({
+                "layerNormEps": self.layer_norm_epsilon,
+                "headNum": self.num_heads,
+                "dk": self.head_dim,
+                "kvHead": 1,
+                "layerNum": self.num_layers,
+                "rank": self.tp_rank,
+                "rankSize": self.tp_world_size,
+                "numHeadsPerPartition": self.num_key_value_heads,
+                "isPrefill": True,
+                "backend": "hccl" if self.soc_info.need_nz else os.getenv("BACKEND", "lccl"),
+            })
+            self.acl_param_decoder = json.dumps({
+                "layerNormEps": self.layer_norm_epsilon,
+                "headNum": self.num_heads,
+                "dk": self.head_dim,
+                "kvHead": 1,
+                "layerNum": self.num_layers,
+                "rank": self.tp_rank,
+                "rankSize": self.tp_world_size,
+                "numHeadsPerPartition": self.num_key_value_heads,
+                "isPrefill": False,
+                "backend": "hccl" if self.soc_info.need_nz else os.getenv("BACKEND", "lccl"),
+            })
+            self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("star_coder_PAModel")
+            self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("star_coder_PAModel")
+            self.acl_encoder_operation.set_param(self.acl_param_encoder)
+            self.acl_decoder_operation.set_param(self.acl_param_decoder)
+
+    def weight_format_cast(self, weight):
+        if not self.soc_info.need_nz:
+            return weight
+        torch_npu.npu_format_cast_(weight, 29)
+        return weight
+
+    def get_weights(self):
+        attn_module_names = AttnModuleNames(
+            norm_name='input_layernorm',
+            pack_name='self_attn.qkv',
+            o_name='self_attn.o_proj'
+        )
+        mlp_module_names = MlpModuleNames(
+            norm_name='post_attention_layernorm',
+            pack_name='mlp.up_proj',
+            down_name='mlp.down_proj'
+        )
+        weight_wrapper = WeightWrapper(self.soc_info, self.tp_rank, attn_module_names, mlp_module_names)
+        weight_wrapper.register_embedding(self.model.state_dict(), 'wte')
+        weight_wrapper.register_embedding(self.model.state_dict(), 'wpe')
+        for i in range(self.num_layers):
+            layer = self.model.layers[i]
+            layer_dict = layer.state_dict()
+            weight_wrapper.register_layer(layer_dict, layer.self_attn.pack_type, layer.mlp.pack_type, self.quantize)
+            if self.soc_info.need_nz:
+                del layer.self_attn
+                del layer.post_attention_layernorm
+                del layer.mlp
+        weight_wrapper.register_model_norm(self.model.state_dict(), 'norm')
+        weight_wrapper.register_model_lmhead(self.state_dict(), 'lm_head')
+
+        return weight_wrapper.weights, weight_wrapper.linear_type, weight_wrapper.pack_quant_type
+
+    def init_ascend_weight(self):
+
+        if self.use_refactor == 1:
+            self.ascend_weight, self.linear_type, self.pack_quant_config = self.get_weights()
+            coder_param = {
+                "isFA": False,
+                "isBF16": self.dtype == torch.bfloat16,
+                "isEmbeddingParallel": False,
+                "isLmHeadParallel": True,
+                "supportSwiGLU": False if self.soc_info.need_nz else True,
+                "rank": self.tp_rank,
+                "worldSize": self.tp_world_size,
+                "backend": "hccl" if self.soc_info.need_nz else "lccl",
+                "LayerNormEps": self.layer_norm_epsilon,
+                "numAttentionHeadsPerRank": self.num_attention_heads,
+                "hiddenSizePerAttentionHead": self.head_size,
+                "numHiddenLayers": self.num_layers,
+                "numKeyValueHeadsPerRank": self.num_key_value_heads,
+                "packQuantType": self.pack_quant_config,
+                "linearQuantType": self.linear_type,
+                "layerNormEps": self.layer_norm_epsilon,
+                "headNum": self.num_heads,
+                "dk": self.head_dim,
+                "kvHead": 1,
+                "layerNum": self.num_layers,
+                "rank": self.tp_rank,
+                "rankSize": self.tp_world_size,
+                "numHeadsPerPartition": self.num_key_value_heads,
+            }
+            encoder_param = {**coder_param, "isPrefill": True}
+            decoder_param = {**coder_param, "isPrefill": False}
+            self.acl_encoder_operation.set_param(json.dumps({**encoder_param}))
+            self.acl_decoder_operation.set_param(json.dumps({**decoder_param}))
+
+            self.acl_encoder_operation.set_weight(self.ascend_weight)
+            self.acl_decoder_operation.set_weight(self.ascend_weight)
+        else:
+            weights = []
+            weights.append(self.model.state_dict()["wte.weight"])
+            weights.append(self.model.state_dict()["wpe.weight"])
+            for i in range(self.num_layers):
+                weights_t = []
+                weights_layer = self.model.layers[i].state_dict()
+                weights_t.append(weights_layer["input_layernorm.weight"])
+                weights_t.append(weights_layer["input_layernorm.bias"])
+                weights_t.append(self.weight_format_cast(weights_layer["self_attn.qkv.linear.weight"]))
+                weights_t.append(weights_layer["self_attn.qkv.linear.bias"])
+                weights_t.append(self.weight_format_cast(weights_layer["self_attn.o_proj.linear.weight"]))
+                weights_t.append(weights_layer["self_attn.o_proj.linear.bias"])
+                weights_t.append(weights_layer["post_attention_layernorm.weight"])
+                weights_t.append(weights_layer["post_attention_layernorm.bias"])
+                weights_t.append(self.weight_format_cast(weights_layer["mlp.up_proj.linear.weight"]))
+                weights_t.append(weights_layer["mlp.up_proj.linear.bias"])
+                weights_t.append(self.weight_format_cast(weights_layer["mlp.down_proj.linear.weight"]))
+                weights_t.append(weights_layer["mlp.down_proj.linear.bias"])
+                weights.extend(weights_t)
+            weights.append(self.model.state_dict()["norm.weight"])
+            weights.append(self.model.state_dict()["norm.bias"])
+            print((self.state_dict()["lm_head.linear.weight"]).shape)
+            weights.append(self.weight_format_cast(self.state_dict()["lm_head.linear.weight"]))
+
+            self.ascend_weight = weights
+            self.acl_encoder_operation.set_weight(weights)
+            self.acl_decoder_operation.set_weight(weights)
+
+    def prepare_inputs_for_ascend(self, input_ids: torch.Tensor,
+                                  position_ids: torch.Tensor,
+                                  is_prefill: bool,
+                                  kv_cache: List[Tuple[torch.Tensor, torch.Tensor]],
+                                  block_tables: torch.Tensor,
+                                  slots: torch.Tensor,
+                                  input_lengths: torch.Tensor,
+                                  max_seq_len: int,
+                                  lm_head_indices: Optional[torch.Tensor] = None):
+
+        if is_prefill:
+            if self.soc_info.need_nz:
+                pad_maxs = math.ceil(self.max_position_embeddings / 16) * 16
+                atten_mask = self.attn_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
+                atten_mask = self.transdata_operation.execute([atten_mask])[0]
+            else:
+                atten_mask = self.attn_mask.get_attn_mask(self.max_position_embeddings, kv_cache[0][0].dtype,
+                                                          kv_cache[0][0].device)
+            if lm_head_indices is None:
+                lm_head_indices = torch.tensor(range(input_ids.shape[0]), dtype=torch.int64, device=input_ids.device)
+            self.acl_param = json.dumps({
+                "seqLen": input_lengths.tolist()
+            })
+            if self.use_refactor == 1:
+                self.acl_encoder_operation_inputs[0] = input_ids
+                self.acl_encoder_operation_inputs[1] = position_ids.to(torch.int64)
+            else:
+                self.acl_encoder_operation_inputs[0] = input_ids.unsqueeze(0)
+                self.acl_encoder_operation_inputs[1] = position_ids.unsqueeze(0).to(torch.int64)
+            if self.dtype == torch.bfloat16:
+                self.acl_encoder_operation_inputs[2] = torch.where(atten_mask == -torch.inf, 1, atten_mask)
+            else:
+                self.acl_encoder_operation_inputs[2] = atten_mask
+            self.acl_encoder_operation_inputs[3] = block_tables.to(torch.int32)
+            self.acl_encoder_operation_inputs[4] = slots.to(torch.int32)
+            self.acl_encoder_operation_inputs[5] = input_lengths.to(torch.int32)
+            self.acl_encoder_operation_inputs[6] = lm_head_indices.to(torch.int64)
+            self.acl_encoder_operation_inputs[7] = self.placeholder
+            return self.acl_encoder_operation_inputs, self.acl_param
+        else:
+            self.acl_param = json.dumps({
+                "seqLen": input_lengths.tolist()
+            })
+            if self.use_refactor == 1:
+                self.acl_decoder_operation_inputs[0] = input_ids
+                self.acl_decoder_operation_inputs[1] = position_ids.to(torch.int64)
+            else:
+                self.acl_decoder_operation_inputs[0] = input_ids.unsqueeze(0)
+                self.acl_decoder_operation_inputs[1] = position_ids.unsqueeze(0).to(torch.int64)
+            if self.dtype == torch.bfloat16:
+                self.acl_decoder_operation_inputs[2] = torch.zeros(input_lengths.size(0),
+                                                                   self.num_attention_heads,
+                                                                   1, input_lengths.max(),
+                                                                   dtype=self.dtype,
+                                                                   device=input_ids.device)
+            else:
+                self.acl_decoder_operation_inputs[2] = self.attn_mask_fake
+
+            self.acl_decoder_operation_inputs[3] = block_tables.to(torch.int32)
+            self.acl_decoder_operation_inputs[4] = slots.to(torch.int32)
+            self.acl_decoder_operation_inputs[5] = input_lengths.to(torch.int32)
+            self.acl_decoder_operation_inputs[6] = self.lm_head_indices_fake
+            self.acl_decoder_operation_inputs[7] = self.placeholder
+            return self.acl_decoder_operation_inputs, self.acl_param
+
+    def execute_ascend_operator(self,
+                                acl_inputs,
+                                acl_param,
+                                is_prefill: bool
+                                ):
+
+        if is_prefill:
+            acl_model_out = self.acl_encoder_operation.execute(acl_inputs, acl_param)
+        else:
+            acl_model_out = self.acl_decoder_operation.execute(acl_inputs, acl_param)
+        acl_hidden_state = acl_model_out[0]
+
+        return acl_hidden_state

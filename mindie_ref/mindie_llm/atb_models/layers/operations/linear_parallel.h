@@ -33,6 +33,7 @@ struct TensorParallelInfo {
     int rank = 0;
     int worldSize = 1;
     std::string backend = "hccl";
+    std::string rankTableFile = "";
 };
 
 struct LinearParallelParam {
@@ -40,6 +41,7 @@ struct LinearParallelParam {
     int parallelType = UNDEFINED;
     bool biasAfterSync = false;
     bool unpadInputs = false;  // all reduce时不会使用到此参数
+    bool supportLcoc = false;
     TensorParallelInfo tensorParallelInfo;
 };
 

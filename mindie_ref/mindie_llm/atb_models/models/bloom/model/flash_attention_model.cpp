@@ -25,21 +25,19 @@
 
 #include "atb_speed/log.h"
 #include "layers/parallel_layer.h"
+#include "layers/operations/word_embedding.h"
 #include "models/bloom/layer/flash_attention_layer.h"
-#include "atb_speed/utils/model_factory.h"
+
 
 namespace atb_speed {
 namespace bloom_7b {
-
-REGISTER_MODEL(bloom_7b, FlashAttentionModel);
-
-const int WEIGHT_COUNT_PER_LAYER = 16;
+const int WEIGHT_COUNT_PER_LAYER = 28;
 const int EMBEDDING_WEIGHT_COUNT = 1;
 const int EMBEDDING_WEIGHT_NORM_COUNT = 2;
 const int FINAL_LINEAR_WEIGHT_COUNT = 1;
 const int FINAL_NORM_WEIGHT_COUNT = 2;
 const int IN_TENSOR_NUM = 7;
-const int OUT_TENSOR_NUM = 4;         // hidden_state and lm_logits
+const int OUT_TENSOR_NUM = 2;         // hidden_state and lm_logits
 const int EXT_INTERNAL_TENSORS = 4;
 
 enum InTensorId : int {
@@ -71,6 +69,12 @@ void FlashAttentionModel::Param::FromString(const std::string &param)
     }
     if (paramJson.contains("layerNum")) {
         layerNum = paramJson["layerNum"].get<float>();
+    }
+    if (paramJson.contains("quantMode")) {
+        quantMode = paramJson["quantMode"].get<int>();
+    }
+    if (paramJson.contains("backend")) {
+        backend = paramJson["backend"].get<std::string>();
     }
     for (auto item : paramJson["floatLayers"]) {
         floatLayers.push_back(item.get<int>());
@@ -140,17 +144,10 @@ atb::Status FlashAttentionModel::InferShape(
     size_t dim = 0;
     outTensorDescs.at(1) = inputIds;
     outTensorDescs.at(1).shape.dimNum = dimAll;
-    outTensorDescs.at(1).shape.dims[dim++] = inputIds.shape.dims[0]; // batch_size
-    outTensorDescs.at(1).shape.dims[dim++] = 1; // 长度seq_len
+    outTensorDescs.at(1).shape.dims[dim++] = inputIds.shape.dims[0];   // batch_size
+    outTensorDescs.at(1).shape.dims[dim++] = 1;                        // 长度seq_len
     outTensorDescs.at(1).shape.dims[dim++] = vocabSize;                // 长度vocab_size
     outTensorDescs.at(1).dtype = inTensorDescs.at(IN_ATTENTION_MASK).dtype;
-
-    for (uint i = 2; i < GetOutputNum(); i++) {
-        outTensorDescs.at(i) = inputIds;
-        outTensorDescs.at(i).shape.dimNum = dimAll;
-        outTensorDescs.at(i).shape.dims[dimAll - 1] = hiddenSize;
-        outTensorDescs.at(i).dtype = inTensorDescs.at(IN_ATTENTION_MASK).dtype;
-    }
 
     return atb::NO_ERROR;
 }
@@ -176,15 +173,19 @@ int64_t FlashAttentionModel::BuildGraph()
     int nodeId = 0;
     int weightOffset = 0;
     size_t internalTensorCnt = 0;
+    atb::Operation *op = nullptr;
 
     auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
-    atb::infer::GatherParam wordEmbeddingParam;
-    atb::Operation *op = nullptr;
-    CREATE_OPERATION(wordEmbeddingParam, &op);
+    atb_speed::common::WordEmbeddingParam wordEmbeddingParam;
+    wordEmbeddingParam.tensorParallelInfo.rank = param_.rank;
+    wordEmbeddingParam.tensorParallelInfo.worldSize = param_.rankSize;
+    wordEmbeddingParam.tensorParallelInfo.backend = param_.backend;
+    wordEmbeddingParam.unpadInputs = false;
+    atb_speed::common::WordEmbedding(wordEmbeddingParam, &op);
     wordEmbeddingNode.operation.reset(op);
     wordEmbeddingNode.inTensors = {&graph_.weightTensors.at(weightOffset++), &graph_.inTensors.at(0)};
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(internalTensorCnt)};
-    
+
     auto &firstNormNode = graph_.nodes.at(nodeId++);
     atb::infer::LayerNormParam firstNormParam;
     firstNormParam.layerType = atb::infer::LayerNormParam::LAYER_NORM_NORM;
@@ -200,8 +201,6 @@ int64_t FlashAttentionModel::BuildGraph()
 
     atb::Tensor *firstInTensor = &graph_.internalTensors.at(internalTensorCnt++);
 
-    ATB_LOG(INFO) << "First InTensor Set.";
-
     for (int layerId = 0; layerId < param_.layerNum; ++layerId) {
         auto &layerNode = graph_.nodes.at(nodeId++);
         bool isFloatLayer = false;
@@ -214,6 +213,7 @@ int64_t FlashAttentionModel::BuildGraph()
         opParam.headNum = param_.headNum;
         opParam.dk = param_.dk;
         opParam.rank = param_.rank;
+        opParam.backend = param_.backend;
         opParam.rankSize = param_.rankSize;
         opParam.invNormFactorvarAttr = param_.invNormFactorvarAttr;
         opParam.qkvInputScale = param_.qkvInputScale[layerId];
@@ -225,19 +225,21 @@ int64_t FlashAttentionModel::BuildGraph()
         opParam.ffnOutInputScale = param_.ffnOutInputScale[layerId];
         opParam.ffnOutInputOffset = param_.ffnOutInputOffset[layerId];
         if (isFloatLayer) {
-            opParam.quantmodel = false;
+            opParam.quantMode = 0;                              // 0:not quant
+        } else {
+            opParam.quantMode = param_.quantMode == 2 ? 2 : 1;  // 1:w8a8, 2:w8a16
         }
+        
         atb_speed::bloom_7b::CommomLayer(opParam, &op);
         layerNode.operation.reset(op);
         layerNode.inTensors.resize(layerNode.operation->GetInputNum());
-        ATB_LOG(INFO) << "layerNode Set." << layerId;
+
         size_t inTensorId = 0;
 
         size_t weightCount = WEIGHT_COUNT_PER_LAYER ;
         for (size_t weightTensorId = 0; weightTensorId < weightCount; ++weightTensorId) {
             layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(weightOffset++);
         }
-        ATB_LOG(INFO) << "weightTensors Set." << layerId;
 
         for (int i = 0; i < IN_TENSOR_NUM + 1; i++) {
             if (i == 0) {
@@ -249,18 +251,15 @@ int64_t FlashAttentionModel::BuildGraph()
             }
         }
 
-        ATB_LOG(INFO) << "inTensors Set." << layerId;
         if (layerId != param_.layerNum - 1) {
-            layerNode.outTensors = {&graph_.internalTensors.at(internalTensorCnt++),
-                                    &graph_.outTensors.at(2),
-                                    &graph_.outTensors.at(3)};
+            layerNode.outTensors = {&graph_.internalTensors.at(internalTensorCnt++)};
         } else {
-            layerNode.outTensors = {&graph_.outTensors.at(0), &graph_.outTensors.at(2), &graph_.outTensors.at(3)};
+            layerNode.outTensors = {&graph_.outTensors.at(0)};
         }
         firstInTensor = layerNode.outTensors.at(0);
     }
 
-    auto &finalNormNode = graph_.nodes.at(nodeId++);
+    auto &finalNormNode = graph_.nodes.at(nodeId++);  // 4
     atb::infer::LayerNormParam finalNormParam;
     finalNormParam.layerType = atb::infer::LayerNormParam::LAYER_NORM_NORM;
     finalNormParam.normParam.epsilon = param_.layerNormEps;
@@ -276,7 +275,7 @@ int64_t FlashAttentionModel::BuildGraph()
     finalNormNode.outTensors = {&graph_.internalTensors.at(internalTensorCnt)};
 
     // only keep the last token
-    auto &sliceNode = graph_.nodes.at(nodeId++);
+    auto &sliceNode = graph_.nodes.at(nodeId++);  // 5 [1, 32, 14336]->[1, 1, 14336]
     atb::infer::SliceParam sliceParam;
     sliceParam.offsets = {0, -1, 0};
     sliceParam.size = {-1, 1, -1};
@@ -286,7 +285,7 @@ int64_t FlashAttentionModel::BuildGraph()
     sliceNode.outTensors = {&graph_.internalTensors.at(internalTensorCnt)};
 
     const int hiddenSize = param_.headNum * param_.dk;
-    auto &sliceNode2 = graph_.nodes.at(nodeId++);
+    auto &sliceNode2 = graph_.nodes.at(nodeId++);  // 6 [1, 1, 14336] -> [1, 1, 1792]
     atb::infer::SliceParam sliceParam2;
     sliceParam2.offsets = {0, 0, hiddenSize * param_.rank};
     sliceParam2.size = {-1, -1, hiddenSize};
@@ -295,10 +294,11 @@ int64_t FlashAttentionModel::BuildGraph()
     sliceNode2.inTensors = {&graph_.internalTensors.at(internalTensorCnt++)};
     sliceNode2.outTensors = {&graph_.internalTensors.at(internalTensorCnt)};
 
-    auto &finalLinearNode = graph_.nodes.at(nodeId++);
+    auto &finalLinearNode = graph_.nodes.at(nodeId++);  // 7 [1, 1, 1792]->[1, 1, 250880]
     atb_speed::common::ParallelParam finalLinearParam;
     finalLinearParam.rank = param_.rank;
     finalLinearParam.rankSize = param_.rankSize;
+    finalLinearParam.backend = param_.backend;
     finalLinearParam.isBias = false;
     atb_speed::common::RowParallelLinear(finalLinearParam, &op);
     finalLinearNode.operation.reset(op);
@@ -307,7 +307,6 @@ int64_t FlashAttentionModel::BuildGraph()
     finalLinearNode.inTensors = {&graph_.internalTensors.at(internalTensorCnt++),
                                  &graph_.weightTensors.at(finalLinearNodeWeightTensorId)};
     finalLinearNode.outTensors = {&graph_.outTensors.at(1)};
-    ATB_LOG(INFO) << "Build Graph finished.";
 
     return atb::NO_ERROR;
 }
@@ -337,8 +336,8 @@ atb::Status FlashAttentionModel::BindParamHostTensor(uint32_t nodeId)
         return atb::NO_ERROR;
     }
 
-    const uint32_t InttokenOffsetTensorId = 20;
-    const uint32_t IntseqLenTensorId = 21;
+    const uint32_t InttokenOffsetTensorId = 32;
+    const uint32_t IntseqLenTensorId = 33;
 
     auto &node = graph_.nodes.at(nodeId);
     node.variantPack.inTensors.at(InttokenOffsetTensorId).hostData = tokenOffset_.data();

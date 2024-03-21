@@ -13,118 +13,91 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "paged_attention_quant_model.h"
-
-#include <atb/atb_infer.h>
+#include "vector"
+#include "atb/atb_infer.h"
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
 #pragma GCC diagnostic pop
 
-#include "atb_speed/utils/operation_util.h"
-#include "models/baichuan2/13b/layer/paged_attention_layer.h"
+#include "atb_speed/log.h"
+#include "layers/operations/word_embedding.h"
+#include "layers/operations/lmhead.h"
+
 #include "models/baichuan2/13b/layer/paged_attention_quant_layer.h"
-#include "models/baichuan2/13b/layer/paged_attention_quant_opera_layer.h"
-#include "parallel_lmhead.h"
-#include "atb_speed/utils/model_factory.h"
+#include "models/baichuan2/13b/model/paged_attention_quant_model.h"
+
 
 namespace atb_speed {
 namespace baichuan2_13b {
 
 REGISTER_MODEL(baichuan2_13b, PagedAttentionQuantModel);
 
-const int WEIGHT_COUNT_PER_LAYER = 17;
-const int WORD_EMBEDDING_NODE_WEIGHT_COUNT = 1;
-const int FINAL_NORM_NODE_WEIGHT_COUNT = 1;
-const int OUT_LM_HEAD_WEIGHT_COUNT = 1;
-const int OPERATION_COUNT_BEFORE_LAYER = 1;
-const int INTERNAL_TENSOR_COUNT_BEFORE_LAYER = 1;
-const int OPERATION_COUNT_AFTER_LAYER = 2;
-const int ROLLBACK_WEIGHT_COUNT_PER_LAYER = 6;
+// weight count
+const int WEIGHT_COUNT_WORD_EMBEDDINGNODE = 1;
+const int WEIGHT_COUNT_PER_LAYER = 43;  // pre_norm(4) + qkv(15) + o_proj(5) + post_norm(4) + mlp(15)，对于所有模型，该值固定不变，不够补充填充符
+const int WEIGHT_COUNT_POST_NORM = 1;  // 
+const int WEIGHT_COUNT_LM_HEAD = 1;  // 
+
+// operation count
+const int OPERATION_COUNT_BEFORE_LAYER = 1;  // Word Embedding
+const int OPERATION_COUNT_AFTER_LAYER = 2; // final norm 、lm_head
+
 
 enum InTensorId : int {
-    IN_TENSOR_INPUT_IDS = 0,
+    IN_TENSOR_INPUT_IDS = 0,  // [seqLen]
     IN_TENSOR_ATTENTION_MASK,
-    IN_TENSOR_BLOCK_TABLES,
-    IN_TENSOR_SLOTS,
-    IN_TENSOR_INPUT_LENGTHS,
+    IN_TENSOR_BLOCK_TABLES, // pa入参
+    IN_TENSOR_SLOTS,  // pa入参
+    IN_TENSOR_SEQ_LEN,
     IN_TENSOR_LOGTIS_INDICES,
-    IN_BETA,
-    IN_HOLDER,
+    IN_TENSOR_PLACE_HOLDER,
     IN_TENSOR_MAX,
 };
 
 enum OutTensorId : int {
-    OUT_TENSOR_HIDDEN_STATES = 0,
+    OUT_TENSOR_HIDDENSTATES = 0,
     OUT_TENSOR_MAX,
 };
+
 
 void PagedAttentionQuantModel::Param::FromString(const std::string &param)
 {
     nlohmann::json paramJson = nlohmann::json::parse(param);
-    rmsNormEps = paramJson["rmsNormEps"].get<double>();
-    headNum = paramJson["headNum"].get<int>();
-    dk = paramJson["dk"].get<int>();
-    layerNum = paramJson["layerNum"].get<int>();
-    if (paramJson.contains("transposedWeight")) {
-        transposedWeight = paramJson["transposedWeight"].get<bool>();
+    isFA = paramJson["isFA"].get<bool>();
+    isPrefill = paramJson["isPrefill"].get<bool>();
+    isBF16 = paramJson["isBF16"].get<bool>();
+    isEmbeddingParallel = paramJson["isEmbeddingParallel"].get<bool>();
+    isLmHeadParallel = paramJson["isLmHeadParallel"].get<bool>();
+    supportSwiGLU = paramJson["supportSwiGLU"].get<bool>();
+    rmsNormEps = paramJson["rmsNormEps"].get<float>();
+    numAttentionHeadsPerRank = paramJson["numAttentionHeadsPerRank"].get<int>();
+    hiddenSizePerAttentionHead = paramJson["hiddenSizePerAttentionHead"].get<int>();
+    numHiddenLayers = paramJson["numHiddenLayers"].get<int>();
+    numKeyValueHeadsPerRank = paramJson["numKeyValueHeadsPerRank"].get<int>();
+    rank = paramJson["rank"].get<int>();
+    worldSize = paramJson["worldSize"].get<int>();
+    backend = paramJson["backend"].get<std::string>();
+    supportLcoc = paramJson["supportLcoc"].get<bool>();
+    for (auto item : paramJson["seqLen"]) {
+        seqLen.push_back(item.get<int>());
     }
-    if (paramJson.contains("isPrefill")) {
-        isPrefill = paramJson["isPrefill"].get<bool>();
+    for (auto item : paramJson["packQuantType"]) {
+        packQuantType.push_back(item.get<std::vector<int>>());
     }
-    if (paramJson.contains("rank")) {
-        rank = paramJson["rank"].get<int>();
+    for (auto item : paramJson["linearQuantType"]) {
+        linearQuantType.push_back(item.get<std::vector<int>>());
     }
-    if (paramJson.contains("rankSize")) {
-        rankSize = paramJson["rankSize"].get<int>();
-    }
-    if (paramJson.contains("isOpera")) {
-        isOpera = paramJson["isOpera"].get<bool>();
-    }
-    if (paramJson.contains("backend")) {
-        backend = paramJson["backend"];
-    }
-    if (paramJson.contains("isLmHeadParallel")) {
-        isLmHeadParallel = paramJson["isLmHeadParallel"].get<bool>();
-    }
-    for (const auto &item : paramJson["w_packInputScale"]) {
-        wPackInputScale.push_back(item.get<float>());
-    }
-    for (const auto &item : paramJson["w_packInputOffset"]) {
-        wPackInputOffset.push_back(item.get<int>());
-    }
-    for (const auto &item : paramJson["o_projInputScale"]) {
-        oProjInputScale.push_back(item.get<float>());
-    }
-    for (const auto &item : paramJson["o_projInputOffset"]) {
-        oProjInputOffset.push_back(item.get<int>());
-    }
-    for (const auto &item : paramJson["gate_projInputScale"]) {
-        gateProjInputScale.push_back(item.get<float>());
-    }
-    for (const auto &item : paramJson["gate_projInputOffset"]) {
-        gateProjInputOffset.push_back(item.get<int>());
-    }
-    for (const auto &item : paramJson["down_projInputScale"]) {
-        downProjInputScale.push_back(item.get<float>());
-    }
-    for (const auto &item : paramJson["down_projInputOffset"]) {
-        downProjInputOffset.push_back(item.get<int>());
-    }
-    for (const auto &item : paramJson["up_projInputScale"]) {
-        upProjInputScale.push_back(item.get<float>());
-    }
-    for (const auto &item : paramJson["up_projInputOffset"]) {
-        upProjInputOffset.push_back(item.get<int>());
-    }
-    for (const auto &item : paramJson["roll_back_layer"]) {
-        rollBackLayer.push_back(item.get<int>());
-    }
-
-    ATB_LOG(INFO) << "Baichuan2_13BPAQuantModel param rmsNormEps:" << rmsNormEps << ", headNum:" << headNum
-                  << ", dk:" << dk << ", layerNum:" << layerNum << ", transposedWeight:" << transposedWeight
-                  << ", rank:" << rank << ", rankSize:" << rankSize << ", backend: " << backend
-                  << ", isLmHeadParallel:" << isLmHeadParallel << ", isOpera:" << isOpera;
+    ATB_LOG(INFO) << "DecoderModel param" << ", isFA:" << isFA << ", isPrefill:" << isPrefill
+                  << ", isBF16:" << isBF16
+                  << ", isEmbeddingParallel: " << isEmbeddingParallel << ", isLmHeadParallel: "
+                  << isLmHeadParallel << ", supportSwiGLU: " << supportSwiGLU
+                  << ", rmsNormEps:" << rmsNormEps << ", numAttentionHeadsPerRank:"
+                  << numAttentionHeadsPerRank << ", hiddenSizePerAttentionHead:" << hiddenSizePerAttentionHead
+                  << ", numHiddenLayers:" << numHiddenLayers << ", supportLcoc :" << supportLcoc
+                  << ", numKeyValueHeadsPerRank:" << numKeyValueHeadsPerRank
+                  << ", rank:" << rank << ", worldSize:" << worldSize << ", backend:" << backend
+                  << ", seqLen:" << seqLen;
 }
 
 PagedAttentionQuantModel::PagedAttentionQuantModel(const std::string &param) : Model("Baichuan2_13BPAQuantModel", param)
@@ -136,173 +109,115 @@ PagedAttentionQuantModel::PagedAttentionQuantModel(const std::string &param) : M
 PagedAttentionQuantModel::~PagedAttentionQuantModel() = default;
 
 uint32_t PagedAttentionQuantModel::GetInputNum() const { return graph_.inTensors.size(); }
-
 uint32_t PagedAttentionQuantModel::GetOutputNum() const { return graph_.outTensors.size(); }
 
 atb::Status PagedAttentionQuantModel::InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
                                                  std::vector<atb::TensorDesc> &outTensorDescs)
 {
+    ATB_LOG(INFO) << "Enter DecoderModel InferShape";
     if (outTensorDescs.size() != GetOutputNum()) {
         return atb::ERROR_INVALID_GRAPH;
     }
+    const int64_t vocabSizePerRank = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.shape.dims[0];  // 单卡vocabSizePerRank长度
+    // FA: [batchSize, seqLen, vocabSize] PA: [seqLen, vocabSisze]
+    outTensorDescs.at(0).dtype = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.dtype; // dtype取vocabSize
+    outTensorDescs.at(0).format = graph_.weightTensors.at(0).desc.format;  // formate取embedding
+    // ATB_LOG(INFO) << "the shape is inTensorDescs.at(0): " << inTensorDescs.at(0).shape  << inTensorDescs.at(0).shape.dimNum;
+    outTensorDescs.at(0).shape.dimNum = inTensorDescs.at(0).shape.dimNum + 1; 
 
-    const int64_t outDim = graph_.weightTensors.at(graph_.weightTensors.size() - 1).desc.shape.dims[0];
-    outTensorDescs.at(0) = graph_.weightTensors.at(0).desc;
-    auto outDimNum = inTensorDescs.at(0).shape.dimNum + 1;
-    for (uint i = 0; i < outDimNum - 1; i++) {
-        outTensorDescs.at(0).shape.dims[i] = inTensorDescs.at(0).shape.dims[i];
-    }
-    if (param_.isLmHeadParallel) {
-        outTensorDescs.at(0).shape.dims[outDimNum - 1] = outDim * param_.rankSize;
-    } else {
-        outTensorDescs.at(0).shape.dims[outDimNum - 1] = outDim;
-    }
+    outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
 
-    // change first dim
     if (param_.isPrefill) {
-        outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(IN_TENSOR_LOGTIS_INDICES).shape.dims[0];
-    }
+            outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(graph_.inTensors.size() - 2).shape.dims[0];
+        }
 
+    if (param_.isLmHeadParallel) {
+        outTensorDescs.at(0).shape.dims[outTensorDescs.at(0).shape.dimNum - 1] = vocabSizePerRank * param_.worldSize;
+    } else {
+        outTensorDescs.at(0).shape.dims[outTensorDescs.at(0).shape.dimNum - 1] = vocabSizePerRank;
+    }
     return atb::NO_ERROR;
 }
 
 int64_t PagedAttentionQuantModel::BuildGraph()
 {
-    int rollbackLayerLength = param_.rollBackLayer.size();
-    const int weightTensorSize = WORD_EMBEDDING_NODE_WEIGHT_COUNT +
-                                 ROLLBACK_WEIGHT_COUNT_PER_LAYER * rollbackLayerLength +
-                                 WEIGHT_COUNT_PER_LAYER * (param_.layerNum - rollbackLayerLength) +
-                                 FINAL_NORM_NODE_WEIGHT_COUNT + OUT_LM_HEAD_WEIGHT_COUNT; // 1 +17*layerNum + 1 +1
+    
+    const int weightTensorSize = WEIGHT_COUNT_WORD_EMBEDDINGNODE + WEIGHT_COUNT_PER_LAYER * param_.numHiddenLayers
+        + WEIGHT_COUNT_POST_NORM + WEIGHT_COUNT_LM_HEAD;
+    // // set_weights传入
     graph_.weightTensors.resize(weightTensorSize);
-
-    graph_.kCacheTensors.resize(param_.layerNum);
-    graph_.vCacheTensors.resize(param_.layerNum);
 
     graph_.inTensors.resize(IN_TENSOR_MAX);
     graph_.outTensors.resize(OUT_TENSOR_MAX);
-
-    const int nodeSize = param_.layerNum + OPERATION_COUNT_BEFORE_LAYER + OPERATION_COUNT_AFTER_LAYER;
+    const int nodeSize = param_.numHiddenLayers + OPERATION_COUNT_BEFORE_LAYER + OPERATION_COUNT_AFTER_LAYER;
     ATB_LOG(INFO) << "Baichuan2_13BPAQuantModel nodeSize is " << nodeSize;
     graph_.nodes.resize(nodeSize);
 
-    const int internalTensorSize = graph_.nodes.size() - 1;
-    graph_.internalTensors.resize(internalTensorSize);
+    graph_.internalTensors.resize(nodeSize - 1);
 
+    graph_.kCacheTensors.resize(param_.numHiddenLayers);
+    graph_.vCacheTensors.resize(param_.numHiddenLayers);
+    
     int nodeId = 0;
-    auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
-    atb::infer::GatherParam wordEmbeddingParam;
     atb::Operation *op = nullptr;
-    CREATE_OPERATION(wordEmbeddingParam, &op);
+    // node 0： wordEmbedding,多卡权重按照hidden_state进行切分
+    auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
+    atb_speed::common::WordEmbeddingParam wordEmbeddingParam;
+    wordEmbeddingParam.unpadInputs = !param_.isFA;
+    if (param_.isEmbeddingParallel) {
+        wordEmbeddingParam.tensorParallelInfo = {param_.rank, param_.worldSize, param_.backend};
+    };
+    atb_speed::common::WordEmbedding(wordEmbeddingParam, &op);
     wordEmbeddingNode.operation.reset(op);
-    wordEmbeddingNode.inTensors = {&graph_.weightTensors.at(0), &graph_.inTensors.at(IN_TENSOR_INPUT_IDS)};
+    wordEmbeddingNode.inTensors = {
+        &graph_.weightTensors.at(0),                    // shape: [vocabSize + 1, hiddenSize]
+        &graph_.inTensors.at(IN_TENSOR_INPUT_IDS)
+    };
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(0)};
 
+    // node 1-40:layer
     atb::Tensor *firstInTensor = &graph_.internalTensors.at(0);
-    int layerTmpId = 0;
-    for (int layerId = 0; layerId < param_.layerNum; ++layerId) {
+    for (int layerId = 0; layerId < param_.numHiddenLayers; ++layerId) {
         auto &layerNode = graph_.nodes.at(nodeId++);
-        if (std::find(std::begin(param_.rollBackLayer), std::end(param_.rollBackLayer), layerId) !=
-            std::end(param_.rollBackLayer)) {
-            atb_speed::baichuan2_13b::PALayerParam opParam;
-            opParam.rmsNormEps = param_.rmsNormEps;
-            opParam.headNum = param_.headNum;
-            opParam.dk = param_.dk;
-            opParam.transposedWeight = param_.transposedWeight;
-            opParam.isPrefill = param_.isPrefill;
-            opParam.rank = param_.rank;
-            opParam.rankSize = param_.rankSize;
-            opParam.backend = param_.backend;
-            atb_speed::baichuan2_13b::PALayer(opParam, &op);
-            layerNode.operation.reset(op);
-            layerNode.inTensors.resize(layerNode.operation->GetInputNum());
+        atb_speed::baichuan2_13b::PAQuantLayerParam layerParam;
+        layerParam.isFA = param_.isFA;
+        layerParam.isPrefill = param_.isPrefill;
+        layerParam.isBF16 = param_.isBF16;
+        layerParam.supportSwiGLU = param_.supportSwiGLU;
+        layerParam.packQuantType = param_.packQuantType[layerId];
+        layerParam.linearQuantType = param_.linearQuantType[layerId];
+        layerParam.rmsNormEps = param_.rmsNormEps;
+        layerParam.numAttentionHeadsPerRank = param_.numAttentionHeadsPerRank;
+        layerParam.hiddenSizePerAttentionHead = param_.hiddenSizePerAttentionHead;
+        layerParam.numKeyValueHeadsPerRank = param_.numKeyValueHeadsPerRank;
+        layerParam.rank = param_.rank;
+        layerParam.worldSize = param_.worldSize;
+        layerParam.backend = param_.backend;
+        layerParam.supportLcoc = param_.supportLcoc;
+        atb_speed::baichuan2_13b::PAQuantLayer(layerParam, &op);  
 
-            size_t inTensorId = 0;
-            layerNode.inTensors.at(inTensorId++) = firstInTensor;
-            for (size_t weightTensorId = 0; weightTensorId < ROLLBACK_WEIGHT_COUNT_PER_LAYER; ++weightTensorId) {
-                layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(
-                    (layerId - layerTmpId) * WEIGHT_COUNT_PER_LAYER + layerTmpId * ROLLBACK_WEIGHT_COUNT_PER_LAYER +
-                    weightTensorId + WORD_EMBEDDING_NODE_WEIGHT_COUNT);
-            }
-            layerNode.inTensors.at(inTensorId++) =
-                &graph_.inTensors.at(IN_TENSOR_ATTENTION_MASK); // attentionMaskTensor
-            layerNode.inTensors.at(inTensorId++) = &graph_.kCacheTensors.at(layerId);
-            layerNode.inTensors.at(inTensorId++) = &graph_.vCacheTensors.at(layerId);
-            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_BLOCK_TABLES);
-            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SLOTS);
-            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_INPUT_LENGTHS);
-            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);
-            layerNode.outTensors = {&graph_.internalTensors.at(INTERNAL_TENSOR_COUNT_BEFORE_LAYER + layerId)};
-            firstInTensor = layerNode.outTensors.at(0);
-            layerTmpId += 1;
-        } else {
-            if (param_.isOpera) {
-                ATB_LOG(INFO) << "PAQuantOperaLayer Begin";
-                atb_speed::baichuan2_13b::PAQuantOperaLayerParam opParam;
-                // param_ -> 通过param传入
-                opParam.rmsNormEps = param_.rmsNormEps;
-                opParam.headNum = param_.headNum;
-                opParam.dk = param_.dk;
-                opParam.rank = param_.rank;
-                opParam.rankSize = param_.rankSize;
-                opParam.backend = param_.backend;
-                opParam.transposedWeight = param_.transposedWeight;
-                opParam.isPrefill = param_.isPrefill;
-                opParam.wPackInputScale = param_.wPackInputScale[layerId];
-                opParam.wPackInputOffset = param_.wPackInputOffset[layerId];
-                opParam.oProjInputScale = param_.oProjInputScale[layerId];
-                opParam.oProjInputOffset = param_.oProjInputOffset[layerId];
-                opParam.gateProjInputScale = param_.gateProjInputScale[layerId];
-                opParam.gateProjInputOffset = param_.gateProjInputOffset[layerId];
-                opParam.downProjInputScale = param_.downProjInputScale[layerId];
-                opParam.downProjInputOffset = param_.downProjInputOffset[layerId];
-                atb_speed::baichuan2_13b::PAQuantOperaLayer(opParam, &op);
-            } else {
-                ATB_LOG(INFO) << "PAQuantLayer Begin";
-                atb_speed::baichuan2_13b::PAQuantLayerParam opParam;
-                // param_ -> 通过param传入
-                opParam.rmsNormEps = param_.rmsNormEps;
-                opParam.headNum = param_.headNum;
-                opParam.dk = param_.dk;
-                opParam.rank = param_.rank;
-                opParam.rankSize = param_.rankSize;
-                opParam.backend = param_.backend;
-                opParam.transposedWeight = param_.transposedWeight;
-                opParam.isPrefill = param_.isPrefill;
-                opParam.wPackInputScale = param_.wPackInputScale[layerId];
-                opParam.wPackInputOffset = param_.wPackInputOffset[layerId];
-                opParam.oProjInputScale = param_.oProjInputScale[layerId];
-                opParam.oProjInputOffset = param_.oProjInputOffset[layerId];
-                opParam.gateProjInputScale = param_.gateProjInputScale[layerId];
-                opParam.gateProjInputOffset = param_.gateProjInputOffset[layerId];
-                opParam.downProjInputScale = param_.downProjInputScale[layerId];
-                opParam.downProjInputOffset = param_.downProjInputOffset[layerId];
-                atb_speed::baichuan2_13b::PAQuantLayer(opParam, &op);
-            }
-            layerNode.operation.reset(op);
-            layerNode.inTensors.resize(layerNode.operation->GetInputNum());
-            // weightTensors -> 通过setweight传入
-            size_t inTensorId = 0;
-            layerNode.inTensors.at(inTensorId++) = firstInTensor; // IN_HIDDEN_STATES
-            for (size_t weightTensorId = 0; weightTensorId < WEIGHT_COUNT_PER_LAYER;
-                 ++weightTensorId) { // IN_NORM_WEIGHT ->IN_SELF_OUT_NORM_WEIGHT
-                layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(
-                    (layerId - layerTmpId) * WEIGHT_COUNT_PER_LAYER + layerTmpId * ROLLBACK_WEIGHT_COUNT_PER_LAYER +
-                    weightTensorId + WORD_EMBEDDING_NODE_WEIGHT_COUNT);
-            }
-            // inTensors -> 通过 input参数传入
-            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_ATTENTION_MASK);
-            layerNode.inTensors.at(inTensorId++) = &graph_.kCacheTensors.at(layerId);
-            layerNode.inTensors.at(inTensorId++) = &graph_.vCacheTensors.at(layerId);
-            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_BLOCK_TABLES);
-            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SLOTS);
-            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_INPUT_LENGTHS);
-            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_BETA);
-            layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);
-
-            layerNode.outTensors = {&graph_.internalTensors.at(INTERNAL_TENSOR_COUNT_BEFORE_LAYER + layerId)}; //
-            firstInTensor = layerNode.outTensors.at(0);
+        layerNode.operation.reset(op);
+        layerNode.inTensors.resize(layerNode.operation->GetInputNum());
+        size_t inTensorId = 0;
+        layerNode.inTensors.at(inTensorId++) = firstInTensor;
+        for (size_t weightTensorId = 0; weightTensorId < WEIGHT_COUNT_PER_LAYER; ++weightTensorId) {  // weightTensor的输出个数
+            layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(
+                layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId + WEIGHT_COUNT_WORD_EMBEDDINGNODE);
         }
+        // 
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_ATTENTION_MASK);
+        layerNode.inTensors.at(inTensorId++) = &graph_.kCacheTensors.at(layerId);
+        layerNode.inTensors.at(inTensorId++) = &graph_.vCacheTensors.at(layerId);
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SEQ_LEN);
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_BLOCK_TABLES);
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SLOTS);
+        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER);
+
+        layerNode.outTensors = {&graph_.internalTensors.at(1 + layerId)};
+        firstInTensor = layerNode.outTensors.at(0);
     }
+
+    // node41 : final norm
     auto &finalNormNode = graph_.nodes.at(nodeId++);
     atb::infer::RmsNormParam finalNormParam;
     finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
@@ -310,64 +225,74 @@ int64_t PagedAttentionQuantModel::BuildGraph()
     CREATE_OPERATION(finalNormParam, &op);
     finalNormNode.operation.reset(op);
     const int finalLayerNormWeightTensorId =
-        graph_.weightTensors.size() - FINAL_NORM_NODE_WEIGHT_COUNT - OUT_LM_HEAD_WEIGHT_COUNT;
-    const int finalLayerNormOutTensorId = internalTensorSize - 1;
+        graph_.weightTensors.size() - WEIGHT_COUNT_POST_NORM - WEIGHT_COUNT_LM_HEAD;
     finalNormNode.inTensors = {firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId)};
-    finalNormNode.outTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId)};
-
+    finalNormNode.outTensors = {
+        // PA: [seqLen, hiddenSize]
+        &graph_.internalTensors.at(41)
+    };
+    // node42 : lm_head映射
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
-    atb_speed::common::ParallelLmHeadParam lmHeadParam;
-    if (param_.isLmHeadParallel) {
-        lmHeadParam.rank = param_.rank;
-        lmHeadParam.rankSize = param_.rankSize;
-    }
-    lmHeadParam.unpadInputs = true;
+    atb_speed::common::LmHeadParam lmHeadParam;
+    lmHeadParam.unpadInputs = !param_.isFA;
     lmHeadParam.gatherAhead = param_.isPrefill;
-    lmHeadParam.backend = param_.backend;
-    ParallelLmHead(lmHeadParam, &op);
-    lmHeadNode.operation.reset(op);
-    const int finalLinearWeightTensorId = graph_.weightTensors.size() - OUT_LM_HEAD_WEIGHT_COUNT;
-    if (param_.isPrefill) {
-        lmHeadNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
-                                &graph_.weightTensors.at(finalLinearWeightTensorId),
-                                &graph_.inTensors.at(IN_TENSOR_LOGTIS_INDICES)};
-    } else {
-        lmHeadNode.inTensors = {&graph_.internalTensors.at(finalLayerNormOutTensorId),
-                                &graph_.weightTensors.at(finalLinearWeightTensorId)};
+    lmHeadParam.hiddenSizePerAttentionHead = param_.hiddenSizePerAttentionHead;
+    lmHeadParam.linearParallelParam.fusionLinearParam.isBF16 = param_.isBF16;
+    lmHeadParam.linearParallelParam.unpadInputs = !param_.isFA;
+    if (param_.isLmHeadParallel) {
+        lmHeadParam.linearParallelParam.parallelType = atb_speed::common::COLUMN_PARALLEL;
+        lmHeadParam.linearParallelParam.tensorParallelInfo.rank = param_.rank;
+        lmHeadParam.linearParallelParam.tensorParallelInfo.worldSize = param_.worldSize;
+        lmHeadParam.linearParallelParam.tensorParallelInfo.backend = param_.backend;
     }
+    LmHead(lmHeadParam, &op);
+    lmHeadNode.operation.reset(op);
+    const int finalLinearWeightTensorId = graph_.weightTensors.size() - WEIGHT_COUNT_LM_HEAD;
+    lmHeadNode.inTensors = {
+        &graph_.internalTensors.at(41),
+        // shape: [vocabSizePerRank, hiddenSize]
+        &graph_.weightTensors.at(finalLinearWeightTensorId),
+        // LmHead未接入量化，量化权重使用placeholder代替
+        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
+        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
+        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
+        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
+        &graph_.inTensors.at(IN_TENSOR_LOGTIS_INDICES)
+    };
+    // shpae: FA: [batchSize, seqLen, vocabSize] PA: [seqLen, vocabSize]
     lmHeadNode.outTensors = {&graph_.outTensors.at(0)};
+
+    ATB_LOG(INFO) << "PagedAttentionQuantModel build graph success";
     return atb::NO_ERROR;
 }
 
 atb::Status PagedAttentionQuantModel::ParseParam(const std::string &param)
 {
+    ATB_LOG(INFO) << "ParseParam start.";
     nlohmann::json paramJson = nlohmann::json::parse(param);
 
     seqLen_.clear();
-    for (const auto &item : paramJson["seqLen"]) {
+    for (auto item : paramJson["seqLen"]) {
         seqLen_.push_back(item.get<int>());
+        ATB_LOG(INFO) << "Prefill" << paramJson["isPrefill"] << "seqLen value: " << item;
     }
-
-    ATB_LOG(INFO) << "PagedAttentionQuantModel ParseParam seqLen: " << seqLen_.capacity();
-
+    ATB_LOG(INFO) << "ParseParam end.";
     return atb::NO_ERROR;
 }
 
 atb::Status PagedAttentionQuantModel::BindParamHostTensor(uint32_t nodeId)
 {
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.layerNum)) {
+    ATB_LOG(INFO) << "BindParamHostTensor";
+    ATB_LOG(INFO) << "nodeId = " << nodeId;
+
+    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.numHiddenLayers)) {
         return atb::NO_ERROR;
     }
 
     auto &node = graph_.nodes.at(nodeId);
-    const uint32_t floatSeqLenTensorId = 12; // atb_speed::baichuan2_13b::LayerPATensorId::IN_INPUT_LENGTHS
-    const uint32_t quantSeqLenTensorId = 23;
-    if (std::find(std::begin(param_.rollBackLayer), std::end(param_.rollBackLayer), nodeId - 1) !=
-        std::end(param_.rollBackLayer)) {
-        node.variantPack.inTensors.at(floatSeqLenTensorId).hostData = seqLen_.data();
-    } else {
-        node.variantPack.inTensors.at(quantSeqLenTensorId).hostData = seqLen_.data();
-    }
+    const uint32_t seqLenTensorId = 47; // IN_INPUT_LENGTHS
+    node.variantPack.inTensors.at(seqLenTensorId).hostData = seqLen_.data();
+    ATB_LOG(INFO) << "BindParamHostTensor end";
     return atb::NO_ERROR;
 }
 } // namespace baichuan2_13b

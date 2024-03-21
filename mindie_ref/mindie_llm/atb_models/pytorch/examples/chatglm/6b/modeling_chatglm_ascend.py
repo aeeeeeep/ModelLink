@@ -1136,9 +1136,18 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
             self.rotary_flag = True
             self.model_rotary_pos_emb_cos, self.model_rotary_pos_emb_sin = \
                 self.transformer.layers[0].attention.rotary_emb(input_ids, seq_len=2048)
-        position_ids = position_ids[:, 0, :].expand(batch_size, seq_length)
-        rope_cos = self.model_rotary_pos_emb_cos[position_ids]
-        rope_sin = self.model_rotary_pos_emb_sin[position_ids]
+
+        seq_len = position_ids.max() + 1
+        cos, sin = self.model_rotary_pos_emb_cos[:seq_len, ...], self.model_rotary_pos_emb_sin[:seq_len, ...]
+        position_ids, block_position_ids = position_ids[:, 0, :].transpose(0, 1).contiguous(), \
+                position_ids[:, 1, :].transpose(0, 1).contiguous()
+        cos0, sin0 = F.embedding(position_ids, cos.squeeze(1)).unsqueeze(2), \
+        F.embedding(position_ids, sin.squeeze(1)).unsqueeze(2)
+        cos1, sin1 = F.embedding(block_position_ids, cos.squeeze(1)).unsqueeze(2), \
+        F.embedding(block_position_ids, sin.squeeze(1)).unsqueeze(2)
+        rope_cos = torch.cat((cos0, cos1), dim=-1).squeeze(1).transpose(0,1).expand(batch_size, -1, -1)
+        rope_sin = torch.cat((sin0, sin1), dim=-1).squeeze(1).transpose(0,1).expand(batch_size, -1, -1)
+        
 
         if batch_size != self.batch:
             self.batch = batch_size

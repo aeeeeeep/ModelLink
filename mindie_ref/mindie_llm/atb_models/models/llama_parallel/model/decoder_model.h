@@ -22,6 +22,38 @@
 
 namespace atb_speed {
 namespace llama_parallel {
+
+enum DecoderModelTensorIdx : uint32_t {
+    // define inTensor
+    // idx: 0, shape: FA: [batchSize, seqLen] PA: [seqLen]
+    IN_TENSOR_INPUT_IDS = 0,
+    // idx: 1, shape: FA: [batchSize, seqLen] PA: [seqLen]
+    IN_TENSOR_POSITION_IDS,
+    // idx: 2, shape: FA: [maxPositionEmbeddings, hiddenSizePerAttentionHead]
+    // PA: [maxInputLength, hiddenSizePerAttentionHead]
+    IN_TENSOR_COS_TABLE,
+    // idx: 3, shape: FA: [maxPositionEmbeddings, hiddenSizePerAttentionHead]
+    // PA: [maxInputLength, hiddenSizePerAttentionHead]
+    IN_TENSOR_SIN_TABLE,
+    // idx: 4, shape: FA: [batchSize, maxPositionEmbeddings, maxPositionEmbeddings]
+    // PA: [maxInputLength, maxInputLength]
+    IN_TENSOR_ATTENTION_MASK,
+    // idx: 5, shape: [4, 9]; PA所需入参
+    IN_TENSOR_BLOCK_TABLES,
+    // idx: 6, shape: [seqLen]; PA所需入参
+    IN_TENSOR_SLOTS,
+    // idx: 7, shape: [1]; FA所需入参
+    IN_TENSOR_KV_CACHE_IDX,
+    // idx: 8, shape: [batchSize]; FA所需入参
+    IN_TENSOR_TOKEN_OFFSET,
+    // idx: 9, shape: [1]
+    IN_TENSOR_PLACE_HOLDER,
+    // idx: 10, shape: FA: [batchSize] PA: [4]
+    IN_TENSOR_SEQ_LEN,
+    // idx: 11, shape: FA: [batchSize]  PA: [4]
+    IN_TENSOR_LOGTIS_INDICES,
+};
+
 class DecoderModel : public Model {
 public:
     struct Param {
@@ -38,6 +70,8 @@ public:
         // 0 - No quant; 1- Quant in RmsNorm，dequant in Linear; 2 - Both quant and dequant in Linear
         bool supportSwiGLU = false;
         // MLP是否使用SwiGLU，若为true时，则使用；反之，使用swish
+        bool supportLcoc = false;
+        // 是否支持通信计算掩盖
         float rmsNormEps = 0;
         int numAttentionHeadsPerRank = 0;
         int hiddenSizePerAttentionHead = 0;
@@ -46,6 +80,7 @@ public:
         int rank = 0;
         int worldSize = 1;
         std::string backend = "hccl";
+        std::string rankTableFile = "";
         std::vector<int> tokenOffset = {};
         std::vector<int> seqLen = {};
         std::vector<std::vector<int>> packQuantType = {};

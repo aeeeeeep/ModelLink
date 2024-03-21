@@ -13,32 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_INTERNLM_20B_PAGED_ATTENTION_MODEL_H
-#define ATB_SPEED_MODELS_INTERNLM_20B_PAGED_ATTENTION_MODEL_H
+#ifndef ATB_SPEED_MODELS_INTERNLM_20B_PA_MODEL_H
+#define ATB_SPEED_MODELS_INTERNLM_20B_PA_MODEL_H
+
 #include "atb_speed/base/model.h"
-#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace internlm_20b {
-class PagedAttentionModel : public Model {
+class PAModel : public Model {
 public:
     struct Param {
-        double rmsNormEps = 0;
+        float rmsNormEps = 0;
         int headNum = 0;
         int dk = 0;
         int layerNum = 0;
-        float qkScale = 1.0;
+        bool transposedWeight = true;
+        bool isPrefill = false;
         int rank = 0;
         int rankSize = 1;
         bool isLmHeadParallel = true;
-        bool isPrefill = false;
         std::string backend = "hccl";
-        void FromString(const std::string &param);
+        bool isBF16 = false;
+        int64_t FromString(const std::string &param);
     };
 
-    explicit PagedAttentionModel(const std::string &param);
+    explicit PAModel(const std::string &param);
 
-    ~PagedAttentionModel();
+    ~PAModel();
 
     uint32_t GetInputNum() const override;
 
@@ -48,18 +49,16 @@ public:
                            std::vector<atb::TensorDesc> &outTensorDescs) override;
 
 private:
-    int64_t BuildGraph() override;
-
-    Param param_;
+    virtual int64_t BuildGraph() override;
 
     atb::Status ParseParam(const std::string &param) override;
 
     atb::Status BindParamHostTensor(uint32_t nodeId) override;
 
+private:
+    Param param_;
     std::vector<int32_t> seqLen_;
 };
-
-REGISTER_MODEL(internlm_20b, PagedAttentionModel);
 
 } // namespace internlm_20b
 } // namespace atb_speed

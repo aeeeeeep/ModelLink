@@ -1,35 +1,24 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 import json
 import math
-import os
 from typing import Optional, List, Tuple
 
 import torch
 import torch.distributed
-import torch_npu
-from atb_llm.utils.initial import NPUSocInfo, load_atb_speed
+from atb_llm.models.base.flash_causal_lm import FlashForCausalLM
+from atb_llm.utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
 from atb_llm.utils.layers import (
-    TensorParallelColumnLinear,
-    TensorEmbedding,
-    PositionRotaryEmbedding,
-    AttentionMask,
-    TensorParallelHead,
-    load_column_multi,
-    load_row
+    load_column_multi
 )
 from atb_llm.utils.log import logger
-from torch import nn
-from transformers import PreTrainedModel
-from transformers.activations import ACT2FN
-from transformers.modeling_outputs import CausalLMOutputWithPast
+
 from .modeling_baichuan import FlashBaichuanModel
-from ....utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
-from ...base.flash_causal_lm import FlashForCausalLM
 
 
 class FlashBaichuanForCausalLM(FlashForCausalLM):
     def __init__(self, config, weights):
         super().__init__(config, weights)
+        self.use_refactor = getattr(config, "use_refactor", True)
         self.model = FlashBaichuanModel(config, weights)
         self.lm_head = load_column_multi(
             config,
@@ -37,6 +26,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             weights=weights,
             head_size=1,
             lm_head=True,
+            norm=config.vocab_size == 125696
         )
         self.config = config
 
@@ -55,11 +45,10 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
         self.sin_embed = self.rotary_embedding.get_sin_cached_total()
 
     def init_ascend_operations(self, config):
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_PagedAttentionModel")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_PagedAttentionModel")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_PagedAttentionQuantModel")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_7b_PagedAttentionQuantModel")
 
     def get_weights(self):
-        quant_type = []
         attn_module_names = AttnModuleNames(
             norm_name='input_layernorm',
             pack_name='self_attn.W_pack',
@@ -69,6 +58,8 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
         mlp_module_names = MlpModuleNames(
             norm_name='post_attention_layernorm',
             pack_name='mlp.gate_up_proj',
+            gate_name='mlp.gate_proj',
+            up_name='mlp.up_proj',
             down_name='mlp.down_proj'
         )
         weight_wrapper = WeightWrapper(self.soc_info, self.tp_rank, attn_module_names, mlp_module_names)
@@ -81,10 +72,9 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
                 del layer.self_attn
                 del layer.post_attention_layernorm
                 del layer.mlp
-            quant_type.append([layer.self_attn.pack_type.value, layer.mlp.pack_type.value])
         weight_wrapper.register_model_norm(self.model.state_dict(), 'norm')
         weight_wrapper.register_model_lmhead(self.state_dict(), 'lm_head')
-        return weight_wrapper.weights, weight_wrapper.linear_type, quant_type
+        return weight_wrapper.weights, weight_wrapper.linear_type, weight_wrapper.pack_quant_type
 
     def init_ascend_weight(self):
         self.ascend_weight, self.linear_type, self.pack_quant_config = self.get_weights()
@@ -98,15 +88,15 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             "isBF16": self.dtype == torch.bfloat16,
             "packQuantType": self.pack_quant_config,
             "linearQuantType": self.linear_type,
-            "isEmbeddingParallel": False,
+            "isEmbeddingParallel": self.model.parallel_embedding,
             "isLmHeadParallel": True,
-            "supportSwiGLU": False if self.soc_info.need_nz else True,
+            "supportSwiGLU": not self.soc_info.need_nz,
             "rank": self.tp_rank,
             "rankSize": self.tp_world_size,
             "backend": "hccl" if self.soc_info.need_nz else "lccl"
         }
-        encoder_param = {**coder_param, "isPrefill": True}
-        decoder_param = {**coder_param, "isPrefill": False}
+        encoder_param = {**coder_param, "isPrefill": True, "supportLcoc": not self.soc_info.need_nz}
+        decoder_param = {**coder_param, "isPrefill": False, "supportLcoc": False}
         self.acl_encoder_operation.set_param(json.dumps({**encoder_param}))
         self.acl_decoder_operation.set_param(json.dumps({**decoder_param}))
 
@@ -122,7 +112,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
                                   input_lengths: torch.Tensor,
                                   max_seq_len: int,
                                   lm_head_indices: Optional[torch.Tensor] = None):
-        self.rotary_embedding.update_cos_sin_cache_total(self.dtype,
+        self.rotary_embedding.update_cos_sin_cache_total(torch.float32,
                                                          self.device,
                                                          self.max_position_embeddings)
         self.cos_embed = self.rotary_embedding.get_cos_cached_total()
@@ -157,6 +147,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             input_lengths.to(torch.int32),
             lm_head_indices if is_prefill else self.lm_head_indices_fake,
         ]
+
         for ind, item in enumerate(self.acl_operation_inputs):
             logger.debug(f"{ind} {item.device=}")
         return self.acl_operation_inputs, self.acl_param

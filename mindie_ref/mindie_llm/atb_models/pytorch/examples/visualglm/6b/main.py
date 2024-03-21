@@ -97,7 +97,7 @@ def signal_handler(signal_in, frame):
     stop_stream = True
 
 
-def main(model, tokennizer):
+def main(model, tokenizer):
     global stop_stream
     while True:
         history = []
@@ -255,7 +255,7 @@ def performance_test(model):
         file.close()
 
 
-def run_example(args, model):
+def run_example(args, model, tokenizer):
     time1 = time.time()
     image_path = os.path.join(args.model_path, "./examples/1.jpeg")
     response, history = model.chat(tokenizer, image_path, "描述一下这个场景,这个场景是一部电影中的经典桥段", history=[])
@@ -304,9 +304,9 @@ if __name__ == "__main__":
         performance_test(main_model)
     elif args.mode == "precision":
         os.environ["PRECISION_TEST"] = "1"
-        run_example(args, main_model)
+        run_example(args, main_model, main_tokenizer)
     elif args.mode == "predict":
-        run_example(args, main_model)
+        run_example(args, main_model, main_tokenizer)
     elif args.mode == "run":
         main(main_model, main_tokenizer)
     else:

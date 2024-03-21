@@ -14,257 +14,199 @@
  * limitations under the License.
  */
 #include "paged_attention_quant_layer.h"
-#include "layers/mlp_gate_v2.h"
 #include "layers/parallel_layer_v2.h"
+#include "layers/operations/linear.h"
+#include "layers/operations/linear_parallel.h"
+#include "layers/operations/norm_linear.h"
+#include "layers/operations/fusion_attention.h"
+#include "layers/operations/mlp.h"
+#include "layers/operations/mlp_swiglu.h"
 
 namespace atb_speed {
 namespace star_coder {
-static const uint64_t IN_TENSOR_COUNT = 27;
+static const uint64_t IN_TENSOR_COUNT = 51;
 static const uint64_t OUT_TENSOR_COUNT = 1;
-static const uint64_t INTERMEDIATE_TENSOR_COUNT = 11;
-static const uint64_t NODE_COUNT = 12;
-static const uint64_t LAYER_NORM_AXIS_COUNT = 2;
-static const uint64_t ATTENTION_DIM_3 = 3;
-static const uint64_t KV_SPLIT_DIM = 2;
-static const uint64_t KV_SPLIT_NUM = 2;
-
-enum PAQuantLayerTensorId : int {
-    IN_HIDDENSTATES = 0,
-    
-    IN_LAYERNORM_1_WEIGTH,
-    IN_LAYERNORM_1_BIAS,
-    IN_QKV_WEIGHT,
-    IN_QKV_BIAS,
-    IN_QKV_DEQSCALE,
-    IN_SELFOUT_LINEAR_WEIGHT,
-    IN_SELFOUT_LINEAR_BIAS,
-    IN_SELFOUT_LINEAR_DEQSCALE,
-    IN_LAYERNORM_2_WEIGHT,
-    IN_LAYERNORM_2_BIAS,
-    IN_MLP_UP_WEIGHT,
-    IN_MLP_UP_BIAS,
-    IN_MLP_UP_DEQSCALE,
-    IN_MLP_GATE_WEIGHT,
-    IN_MLP_GATE_DEQSCALE,
-    IN_MLP_GATE_BIAS,
-    IN_MLP_DOWN_WEIGHT,
-    IN_MLP_DOWN_BIAS,
-    IN_MLP_DOWN_DEQSCALE,
-
-    IN_ATTENTIONMASK,
-    IN_BLOCK_TABLES,
-    IN_SLOTS,
-    IN_INPUT_LENGTHS,
-    IN_HOLDER,
-    IN_K_CACHE,
-    IN_V_CACHE,
-
-    OUT_LAYEROUT,
-
-    INTERMEDIATE_INPUTNORM_OUT,
-    INTERMEDIATE_INPUTNORM_OUT_QUANT,
-    INTERMEDIATE_QKV,
-    INTERMEDIATE_Q,
-    INTERMEDIATE_KV,
-    INTERMEDIATE_K,
-    INTERMEDIATE_V,
-    INTERMEDIATE_SELF_OUT,
-    INTERMEDIATE_SELF_LINEAR_OUT,
-    INTERMEDIATE_SELF_RESIDUAL_ADD_OUT,
-    INTERMEDIATE_LAYERNORM_2_OUT,
-    INTERMEDIATE_MLP_OUT,
-};
-
-// [bs, seq, kv_hidden_size] -> [n_tokens=bs*seq, head_Num, head_dim] -> [n_tokens, 1, 128]
-void reshapeQuantHeads(const atb::Dims &oldShape, atb::Dims &newShape, int headNum)
-{
-    newShape.dimNum = ATTENTION_DIM_3;
-    newShape.dims[0] = oldShape.dims[0] * oldShape.dims[1];
-    newShape.dims[1] = headNum;
-    newShape.dims[2] = oldShape.dims[2] / headNum; // 1 dim: head size
-}
+static const uint64_t INTERMEDIATE_TENSOR_COUNT = 3;
+static const uint64_t NODE_COUNT = 4;
+static const uint64_t LAYER_NORM_AXIS_COUNT = 1;
 
 atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operation)
 {
+    ATB_LOG(INFO) << "layer start";
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
     opGraph.internalTensorNum = INTERMEDIATE_TENSOR_COUNT;
     opGraph.nodes.resize(NODE_COUNT);
-    if (param.isPrefill) {
-        opGraph.name = "StarCoder_Prefill_PA_Quant_layer";
-    } else {
-        opGraph.name = "StarCoder_Decoder_PA_Quant_layer";
-    }
+    opGraph.name = param.isPrefill ? "Prefill_layer" : "Decoder_layer";
 
     size_t nodeId = 0;
-    atb::Node &inputLayerNormNode = opGraph.nodes.at(nodeId++);
-    atb::Node &qkvLinearNode = opGraph.nodes.at(nodeId++);
-    atb::Node &qPassSliceNode = opGraph.nodes.at(nodeId++);
-    atb::Node &kVPassSliceNode = opGraph.nodes.at(nodeId++);
-    atb::Node &splitKVNode = opGraph.nodes.at(nodeId++);
-    atb::Node &reshapeAndCacheNode = opGraph.nodes.at(nodeId++);
     atb::Node &attentionNode = opGraph.nodes.at(nodeId++);
-    atb::Node &selfOutLinearNode = opGraph.nodes.at(nodeId++);
     atb::Node &selfResidualAddNode = opGraph.nodes.at(nodeId++);
-    atb::Node &postAttnLayerNormNode = opGraph.nodes.at(nodeId++);
-    atb::Node &mlpNode = opGraph.nodes.at(nodeId++);
-    atb::Node &attnResidualAddNode = opGraph.nodes.at(nodeId++);
+    atb::Node &mlpParallelNode = opGraph.nodes.at(nodeId++);
+    atb::Node &mlpResidualAddNode = opGraph.nodes.at(nodeId++);
 
-    atb::SVector<int64_t> sliceOffsetQ = {0, 0, 0};
-    atb::SVector<int64_t> sliceSizeQ = {-1, -1, param.headNum * param.dk};
-    atb::SVector<int64_t> sliceOffsetKV = {0, 0, param.headNum * param.dk};
-    atb::SVector<int64_t> sliceSizeKV = {-1, -1, 2 * param.dk};
+    atb_speed::common::FusionAttentionParam<atb::infer::LayerNormParam> fusionAttentionParam;
+    fusionAttentionParam.isGroupedQueryAttention = param.numAttentionHeadsPerRank != param.numKeyValueHeadsPerRank;
+    fusionAttentionParam.isBF16 = param.isBF16;
+    fusionAttentionParam.qkvHasBias = true;
+    fusionAttentionParam.normHasBias = true;
+    fusionAttentionParam.packQuantType = param.packQuantType[0];
+    fusionAttentionParam.layerLinearQuantType = param.linearQuantType;
+    fusionAttentionParam.rotaryType = atb_speed::common::RotaryType::NO_ROTARY;
 
-    // [n_tokens, hidden_size + k_dim + v_dim] = [n_tokens,6144 + 128 + 128] = [n_tokens, 6400]
-    atb::infer::LayerNormParam layerNormParam;
-    layerNormParam.layerType = atb::infer::LayerNormParam::LayerNormType::LAYER_NORM_NORM;
-    layerNormParam.normParam.epsilon = param.layerNormEps;
-    layerNormParam.normParam.beginNormAxis = LAYER_NORM_AXIS_COUNT;
-    layerNormParam.normParam.beginParamsAxis = LAYER_NORM_AXIS_COUNT;
-    layerNormParam.normParam.quantType = atb::infer::QUANT_INT8;
-    CreateOperation(layerNormParam, &inputLayerNormNode.operation);
-    inputLayerNormNode.inTensorIds = {IN_HIDDENSTATES, IN_LAYERNORM_1_WEIGTH, IN_LAYERNORM_1_BIAS};
-    inputLayerNormNode.outTensorIds = {INTERMEDIATE_INPUTNORM_OUT, INTERMEDIATE_INPUTNORM_OUT_QUANT};
+    atb::infer::LayerNormParam attnLayerNormParam;
+    attnLayerNormParam.layerType = atb::infer::LayerNormParam::LayerNormType::LAYER_NORM_NORM;
+    attnLayerNormParam.normParam.epsilon = param.layerNormEps;
+    attnLayerNormParam.normParam.beginNormAxis = LAYER_NORM_AXIS_COUNT;
+    attnLayerNormParam.normParam.beginParamsAxis = LAYER_NORM_AXIS_COUNT;
+    fusionAttentionParam.normParamType = attnLayerNormParam;
+    
+    atb::infer::LayerNormParam attnLayerNormQuantParam;
+    attnLayerNormQuantParam.layerType = atb::infer::LayerNormParam::LayerNormType::LAYER_NORM_NORM;
+    attnLayerNormQuantParam.normParam.epsilon = param.layerNormEps;
+    attnLayerNormQuantParam.normParam.beginNormAxis = LAYER_NORM_AXIS_COUNT;
+    attnLayerNormQuantParam.normParam.beginParamsAxis = LAYER_NORM_AXIS_COUNT;
+    attnLayerNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
+    fusionAttentionParam.normQuantParamType = attnLayerNormQuantParam;
 
-    atb::infer::LinearParam qkvLinearParam;
-    qkvLinearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
-    CreateOperation(qkvLinearParam, &qkvLinearNode.operation);
-    qkvLinearNode.inTensorIds = {INTERMEDIATE_INPUTNORM_OUT_QUANT, IN_QKV_WEIGHT, IN_QKV_BIAS, IN_QKV_DEQSCALE};
-    qkvLinearNode.outTensorIds = {INTERMEDIATE_QKV};
-
-    atb::infer::SliceParam slicePassParam;
-    slicePassParam.offsets = sliceOffsetQ;
-    slicePassParam.size = sliceSizeQ;
-    CreateOperation(slicePassParam, &qPassSliceNode.operation);
-    qPassSliceNode.inTensorIds = {INTERMEDIATE_QKV};
-    qPassSliceNode.outTensorIds = {INTERMEDIATE_Q};
-
-    atb::infer::SliceParam slicePassKVParam;
-    slicePassKVParam.offsets = sliceOffsetKV;
-    slicePassKVParam.size = sliceSizeKV;
-    CreateOperation(slicePassKVParam, &kVPassSliceNode.operation);
-    kVPassSliceNode.inTensorIds = {INTERMEDIATE_QKV};
-    kVPassSliceNode.outTensorIds = {INTERMEDIATE_KV};
-
-    atb::infer::SplitParam splitParam;
-    splitParam.splitDim = KV_SPLIT_DIM;
-    splitParam.splitNum = KV_SPLIT_NUM;
-    CreateOperation(splitParam, &splitKVNode.operation);
-    splitKVNode.inTensorIds = {INTERMEDIATE_KV};
-    splitKVNode.outTensorIds = {INTERMEDIATE_K, INTERMEDIATE_V};
-
-    atb::infer::ReshapeAndCacheParam reshapeCacheParm;
-    CreateOperation(reshapeCacheParm, &reshapeAndCacheNode.operation);
-    reshapeAndCacheNode.inTensorIds = {INTERMEDIATE_K, INTERMEDIATE_V, IN_K_CACHE, IN_V_CACHE, IN_SLOTS};
-    reshapeAndCacheNode.outTensorIds = {IN_K_CACHE, IN_V_CACHE};
-    reshapeAndCacheNode.inTensorReshapeFuncs.resize(reshapeAndCacheNode.inTensorIds.size());
-    reshapeAndCacheNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        reshapeQuantHeads(oldShape, newShape, param.kvHead);
-    };
-    reshapeAndCacheNode.inTensorReshapeFuncs[1] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        reshapeQuantHeads(oldShape, newShape, param.kvHead);
-    };
-
-    if (param.isPrefill) {
-        atb::infer::SelfAttentionParam faEnParam;
-        faEnParam.headNum = param.headNum;
-        faEnParam.qScale = 1.0 / sqrt(param.dk);
-        faEnParam.kvHeadNum = param.kvHead;
-        faEnParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
-        CreateOperation(faEnParam, &attentionNode.operation);
-        attentionNode.inTensorIds = {INTERMEDIATE_Q, INTERMEDIATE_K, INTERMEDIATE_V, IN_ATTENTIONMASK, IN_INPUT_LENGTHS};
-        attentionNode.outTensorIds = {INTERMEDIATE_SELF_OUT};
-        attentionNode.inTensorReshapeFuncs.resize(attentionNode.inTensorIds.size());
-        attentionNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            reshapeQuantHeads(oldShape, newShape, faEnParam.headNum);
-        };
-        attentionNode.inTensorReshapeFuncs.at(1) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            reshapeQuantHeads(oldShape, newShape, faEnParam.kvHeadNum);
-        };
-        attentionNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            reshapeQuantHeads(oldShape, newShape, faEnParam.kvHeadNum);
-        };
-    } else {
-        atb::infer::PagedAttentionParam paDeParam;
-        paDeParam.headNum = param.headNum;
-        paDeParam.qkScale = 1.0 / sqrt(param.dk);
-        paDeParam.kvHeadNum = param.kvHead;
-        CreateOperation(paDeParam, &attentionNode.operation);
-        attentionNode.inTensorIds = {INTERMEDIATE_Q, IN_K_CACHE, IN_V_CACHE, IN_BLOCK_TABLES, IN_INPUT_LENGTHS}; // 增量直接从kv cache里取值
-        attentionNode.outTensorIds = {INTERMEDIATE_SELF_OUT};
-        attentionNode.inTensorReshapeFuncs.resize(attentionNode.inTensorIds.size());
-        attentionNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-            reshapeQuantHeads(oldShape, newShape, paDeParam.headNum);
-        };
+    fusionAttentionParam.isFA = param.isFA;
+    fusionAttentionParam.isPrefill = param.isPrefill;
+    fusionAttentionParam.headDim = param.hiddenSizePerAttentionHead;
+    fusionAttentionParam.selfAttnHasBias = true;
+    fusionAttentionParam.selfAttentionParam.headNum = param.numAttentionHeadsPerRank;
+    fusionAttentionParam.selfAttentionParam.kvHeadNum = param.numKeyValueHeadsPerRank;
+    if (param.hiddenSizePerAttentionHead == 0) {
+        return atb::ERROR_INVALID_GRAPH;
     }
-
-    atb_speed::common::ParallelParamV2 selfOutLinearParam;
-    selfOutLinearParam.commParam.rank = param.rank;
-    selfOutLinearParam.commParam.rankSize = param.rankSize;
-    selfOutLinearParam.commParam.backend = param.backend;
-    selfOutLinearParam.isBias = true;
-    atb_speed::common::RowParallelLinearV2(selfOutLinearParam, &selfOutLinearNode.operation);
-    selfOutLinearNode.inTensorIds = {INTERMEDIATE_SELF_OUT, IN_SELFOUT_LINEAR_WEIGHT, IN_SELFOUT_LINEAR_BIAS,
-                                    IN_SELFOUT_LINEAR_DEQSCALE, IN_HOLDER, IN_HOLDER, IN_HOLDER};
-    selfOutLinearNode.outTensorIds = {INTERMEDIATE_SELF_LINEAR_OUT};
-    selfOutLinearNode.inTensorReshapeFuncs.resize(selfOutLinearNode.inTensorIds.size());
-    selfOutLinearNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
-        newShape.dimNum = ATTENTION_DIM_3;                      // dim num
-        newShape.dims[0] = 1;
-        newShape.dims[1] = oldShape.dims[0];                    // 1: dim 1, n tokens
-        newShape.dims[2] = oldShape.dims[1] * oldShape.dims[2]; // 2: hidden size: old 1, head num , old 2 head size
+    fusionAttentionParam.selfAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
+    if (param.isFA) {
+        fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
+        fusionAttentionParam.selfAttentionParam.calcType = param.isPrefill ? \
+            atb::infer::SelfAttentionParam::CalcType::ENCODER : atb::infer::SelfAttentionParam::CalcType::DECODER;
+    } else {
+        fusionAttentionParam.selfAttentionParam.calcType = atb::infer::SelfAttentionParam::CalcType::PA_ENCODER;
+    }
+    fusionAttentionParam.selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
+    fusionAttentionParam.pageAttentionParam.headNum = param.numAttentionHeadsPerRank;
+    fusionAttentionParam.pageAttentionParam.kvHeadNum = param.numKeyValueHeadsPerRank;
+    fusionAttentionParam.pageAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
+    if (param.isBF16) {
+        fusionAttentionParam.pageAttentionParam.maskType = atb::infer::PagedAttentionParam::MaskType::MASK_TYPE_ALIBI;
+    } else {
+        fusionAttentionParam.pageAttentionParam.maskType = atb::infer::PagedAttentionParam::MaskType::UNDEFINED;
+    }
+    fusionAttentionParam.selfOutLinearTensorParallelInfo = {param.rank, param.worldSize, param.backend};
+    Attention(fusionAttentionParam, &attentionNode.operation);
+    attentionNode.inTensorIds = {
+        IN_HIDDEN_STATES,
+        IN_INPUT_NORM_WEIGHT,
+        IN_INPUT_NORM_BIAS,
+        IN_INPUT_NORM_NEW_WEIGHT,
+        IN_INPUT_NORM_NEW_BIAS,
+        IN_QKV_WEIGHT_0,
+        IN_QKV_SCALE_0,
+        IN_QKV_OFFSET_0,
+        IN_QKV_DESCALE_0,
+        IN_QKV_DEOFFSET_0,
+        IN_QKV_WEIGHT_1,
+        IN_QKV_SCALE_1,
+        IN_QKV_OFFSET_1,
+        IN_QKV_DESCALE_1,
+        IN_QKV_DEOFFSET_1,
+        IN_QKV_WEIGHT_2,
+        IN_QKV_SCALE_2,
+        IN_QKV_OFFSET_2,
+        IN_QKV_DESCALE_2,
+        IN_QKV_DEOFFSET_2,
+        IN_PLACE_HOLDER,
+        IN_PLACE_HOLDER,
+        IN_SEQ_LEN,
+        IN_K_CACHE,
+        IN_V_CACHE,
+        IN_ATTENTION_MASK,
+        // IN_TOKEN_OFFSET,
+        IN_PLACE_HOLDER,
+        // IN_LAYER_ID,
+        IN_PLACE_HOLDER,
+        IN_BLOCK_TABLES,
+        IN_SLOTS,
+        IN_ATTENTION_OUT_WEIGHT,
+        IN_ATTENTION_OUT_SCALE,
+        IN_ATTENTION_OUT_OFFSET,
+        IN_ATTENTION_OUT_DESCALE,
+        IN_ATTENTION_OUT_DEOFFSET,
+        // IN_PLACE_HOLDER, // layernorm暂时修改
     };
-
+    attentionNode.outTensorIds = {INTERMEDIATE_ATTENTION_OUT};
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
     CreateOperation(addParam, &selfResidualAddNode.operation);
-    selfResidualAddNode.inTensorIds = {IN_HIDDENSTATES, INTERMEDIATE_SELF_LINEAR_OUT};
-    selfResidualAddNode.outTensorIds = {INTERMEDIATE_SELF_RESIDUAL_ADD_OUT};
+    selfResidualAddNode.inTensorIds = {IN_HIDDEN_STATES, INTERMEDIATE_ATTENTION_OUT};
+    selfResidualAddNode.outTensorIds = {INTERMEDIATE_RESIDUAL_ADD_OUT};
 
-    CreateOperation(layerNormParam, &postAttnLayerNormNode.operation);
-    postAttnLayerNormNode.inTensorIds = {INTERMEDIATE_SELF_RESIDUAL_ADD_OUT, IN_LAYERNORM_2_WEIGHT, IN_LAYERNORM_2_BIAS};
-    postAttnLayerNormNode.outTensorIds = {INTERMEDIATE_LAYERNORM_2_OUT};
+    atb_speed::common::MlpParam<atb::infer::LayerNormParam> mlpParam;
+    mlpParam.isBF16 = param.isBF16;
+    mlpParam.normHasBias = true;
+    mlpParam.gateUpHasBias = true;
+    mlpParam.downHasBias = true;
+    mlpParam.mlpPackType = atb_speed::common::UP_WEIGHT_ONLY;
+    mlpParam.activationParam.activationType  = atb::infer::ActivationType::ACTIVATION_GELU;
+    mlpParam.packQuantType = param.packQuantType[1];
+    mlpParam.layerLinearQuantType = param.linearQuantType;
+    atb::infer::LayerNormParam mlpLayerNormParam;
+    mlpLayerNormParam.layerType = atb::infer::LayerNormParam::LayerNormType::LAYER_NORM_NORM;
+    mlpLayerNormParam.normParam.beginNormAxis = LAYER_NORM_AXIS_COUNT;
+    mlpLayerNormParam.normParam.beginParamsAxis = LAYER_NORM_AXIS_COUNT;
+    mlpLayerNormParam.normParam.epsilon = param.layerNormEps;
+    mlpParam.normParamType = mlpLayerNormParam;
+    atb::infer::LayerNormParam mlpLayerNormQuantParam;
+    mlpLayerNormQuantParam.layerType = atb::infer::LayerNormParam::LayerNormType::LAYER_NORM_NORM;
+    mlpLayerNormQuantParam.normParam.beginNormAxis = LAYER_NORM_AXIS_COUNT;
+    mlpLayerNormQuantParam.normParam.beginParamsAxis = LAYER_NORM_AXIS_COUNT;
+    mlpLayerNormQuantParam.normParam.epsilon = param.layerNormEps;
+    mlpLayerNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
+    mlpParam.normQuantParamType = mlpLayerNormQuantParam;
+    mlpParam.downLinearTensorParallelInfo = {param.rank, param.worldSize, param.backend};
+    Mlp(mlpParam, &mlpParallelNode.operation);
+    mlpParallelNode.inTensorIds = {
+        INTERMEDIATE_RESIDUAL_ADD_OUT,
+        IN_ATTENTION_NORM_WEIGHT,
+        IN_ATTENTION_NORM_BIAS,
+        IN_ATTENTION_NORM_NEW_WEIGHT,
+        IN_ATTENTION_NORM_NEW_BIAS,
+        IN_MLP_WEIGHT_0,
+        IN_MLP_SCALE_0,
+        IN_MLP_OFFSET_0,
+        IN_MLP_DESCALE_0,
+        IN_MLP_DEOFFSET_0,
+        IN_MLP_WEIGHT_1,
+        IN_MLP_SCALE_1,
+        IN_MLP_OFFSET_1,
+        IN_MLP_DESCALE_1,
+        IN_MLP_DEOFFSET_1,
+        IN_MLP_DOWN_WEIGHT,
+        IN_MLP_DOWN_SCALE,
+        IN_MLP_DOWN_OFFSET,
+        IN_MLP_DOWN_DESCALE,
+        IN_MLP_DOWN_DEOFFSET,
+        // IN_PLACE_HOLDER, // layernorm暂时修改
+    };
+    mlpParallelNode.outTensorIds = {INTERMEDIATE_MLP_OUT};
 
-    atb_speed::common::MlpGateParamV2 mlpParam;
-    mlpParam.isBias=true;
-    mlpParam.isPack=false;
-    mlpParam.isQuant=true;
-    mlpParam.transposeB=true;
-    mlpParam.commDownParam.rank = param.rank;
-    mlpParam.commDownParam.rankSize = param.rankSize;
-    mlpParam.commDownParam.backend = param.backend;
-    mlpParam.quantUpParam.quantType = atb::infer::QUANT_INT8;
-    mlpParam.quantUpParam.isQuantOp = false;
-    mlpParam.quantGateParam.quantType = atb::infer::QUANT_INT8;
-    mlpParam.quantGateParam.isQuantOp = false;
-    mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_GELU;
-    mlpParam.transposeB = true;
-    mlpParam.quantDownParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_QUANT;
-    mlpParam.quantDownParam.inputScale = param.mlpOutInputScale;
-    mlpParam.quantDownParam.inputOffset = param.mlpOutInputOffset;
-
-    atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);
-    mlpNode.inTensorIds = {INTERMEDIATE_LAYERNORM_2_OUT,
-                            IN_MLP_UP_WEIGHT, IN_MLP_GATE_WEIGHT, IN_MLP_DOWN_WEIGHT,
-                            IN_MLP_UP_DEQSCALE, IN_MLP_GATE_DEQSCALE, IN_MLP_DOWN_DEQSCALE,
-                            IN_MLP_UP_BIAS, IN_MLP_GATE_BIAS, IN_MLP_DOWN_BIAS,
-                            IN_HOLDER, IN_HOLDER, IN_HOLDER,
-                            IN_HOLDER, IN_HOLDER, IN_HOLDER,
-                            IN_HOLDER, IN_HOLDER, IN_HOLDER};
-    mlpNode.outTensorIds = {INTERMEDIATE_MLP_OUT};
-
-    CreateOperation(addParam, &attnResidualAddNode.operation);
-    attnResidualAddNode.inTensorIds = {INTERMEDIATE_SELF_RESIDUAL_ADD_OUT, INTERMEDIATE_MLP_OUT};
-    attnResidualAddNode.outTensorIds = {OUT_LAYEROUT};
-
+    CREATE_OPERATION(addParam, &mlpResidualAddNode.operation);
+    mlpResidualAddNode.inTensorIds = {
+        INTERMEDIATE_RESIDUAL_ADD_OUT,
+        INTERMEDIATE_MLP_OUT
+    };
+    mlpResidualAddNode.outTensorIds = {OUT_DECODER_LAYER};
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
-        atb::SVector<atb::TensorDesc> &outTensorDescs) {
+                                 atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(0);
         return atb::NO_ERROR;
     };
 
-    atb::CreateOperation(opGraph, operation);
+    CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
 }
 
@@ -282,7 +224,7 @@ void StarCoderPAQuantHostBinder::ParseParam(const nlohmann::json &paramJson)
 
 void StarCoderPAQuantHostBinder::BindTensor(atb::VariantPack &variantPack)
 {
-    variantPack.inTensors.at(IN_INPUT_LENGTHS).hostData = seqLen_.data();
+    variantPack.inTensors.at(IN_SEQ_LEN).hostData = seqLen_.data();
 }
 
 } // namespace star_coder

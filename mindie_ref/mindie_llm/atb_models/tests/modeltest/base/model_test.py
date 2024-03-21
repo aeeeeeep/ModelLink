@@ -26,17 +26,21 @@ except ModuleNotFoundError:
 import numpy as np
 import pandas as pd
 import transformers
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from thefuzz import process
 from tqdm import tqdm
-ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
-sys.path.append(os.path.join(ATB_SPEED_HOME_PATH, "../.."))
-sys.path.append(ATB_SPEED_HOME_PATH)
-from atb_llm.utils import env
-from atb_llm.utils.cpu_binding import NpuHbmInfo
-from examples.server.cache import CacheConfig, CacheManager, ModelConfig
-from examples.server.generate import decode_token, generate_req
-from examples.server.request import request_from_text, request_from_token
-from examples.run_pa import PARunner
+try:
+    ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
+    sys.path.append(os.path.join(ATB_SPEED_HOME_PATH, "../.."))
+    sys.path.append(ATB_SPEED_HOME_PATH)
+    from atb_llm.utils import env
+    from atb_llm.utils.cpu_binding import NpuHbmInfo
+    from examples.server.cache import CacheConfig, CacheManager, ModelConfig
+    from examples.server.generate import decode_token, generate_req
+    from examples.server.request import request_from_text, request_from_token
+    from examples.run_pa import PARunner
+except TypeError:
+    pass
 from .human_eval import evaluate_functional_correctness
 
 
@@ -118,6 +122,7 @@ dtype_map = {"bf16": torch.bfloat16, "fp16": torch.float16}
 core_map = {"NPU": "npu", "GPU": "cuda"}
 prompt_map = {"GSM8K": "", "TruthfulQA": QA_PRIMER}
 question_num = {"GSM8K": 11, "TruthfulQA": 12}
+CEval_0_shot = {}
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -132,10 +137,6 @@ class ModelTest:
         self.script_path = os.path.dirname(os.path.abspath(__file__))
         self.data_dir = data_dir
         self.dataset_name = dataset_name
-        if test_mode == 'simplified':
-            self.dataset_path = os.path.join(self.script_path, "../dataset/simplified", self.dataset_name + ".jsonl")
-        elif test_mode == 'full':
-            self.dataset_path = os.path.join(self.script_path, "../dataset/full", self.dataset_name)
         self.batch_size = batch_size
         self.device_id = device_id
         self.result_dir = result_dir
@@ -148,6 +149,7 @@ class ModelTest:
         self.max_position_embedding = max_position_embedding
         self.core_type = core_map[self.hardware_type] if hardware_type in core_map.keys() else "npu"
         self.is_format_nz = False
+        self.quantize = None
         self.current_result_path = ''
         self.logger = self.__get_log("log")
         self.result_logger = self.__get_log("result")
@@ -177,8 +179,7 @@ class ModelTest:
         pass
 
     def prepare_environ(self):
-        if self.hardware_type == "NPU":
-            torch.npu.set_compile_mode(jit_compile=False)
+        pass
 
     def get_dataset_list(self):
         return ["GSM8K", "TruthfulQA", "MMLU", "CEval", "BoolQ"]
@@ -189,7 +190,6 @@ class ModelTest:
         os.unsetenv("tensor_folder")
 
     def __prepare_and_check(self):
-        reload(env)
         max_csv_limit = sys.maxsize
         while True:
             try:
@@ -197,13 +197,51 @@ class ModelTest:
                 break
             except OverflowError:
                 max_csv_limit = int(max_csv_limit / 10)
+
+        config_path = os.path.join(self.weight_dir, "config.json")
+        with open(config_path, 'r') as f:
+            config_data = json.load(f)
+            if "quantize" in config_data:
+                self.quantize = config_data["quantize"]
+
+        if self.quantize:
+            self.model_name += "_quant"
+            csv_path = os.path.join(os.path.dirname(self.script_path), 'result', self.model_name, f"{self.model_type}_{self.data_type}_{self.quantize}_batch{self.batch_size}_{self.test_mode}_test_result_formatted.csv")
+        else:
+            torch.npu.set_compile_mode(jit_compile=False)
+            csv_path = os.path.join(os.path.dirname(self.script_path), 'result', self.model_name, f"{self.model_type}_{self.data_type}_batch{self.batch_size}_{self.test_mode}_test_result_formatted.csv")
+        
+        self.data_dir = os.path.join(self.data_dir, self.model_name, "data")
+        self.result_dir = os.path.join(self.result_dir, self.model_name, "results")
+        self.log_dir = os.path.join(self.log_dir, self.model_name, "logs")
+        
+        os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+        with open(csv_path, 'w') as f:
+            if self.test_mode == "performance":
+                f.write("{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<25s}|{:<25s}|{:<36s}|{:<25s}|{:<45s}|{:<35s}\n".format(
+                    "Model", "Batchsize", "In_seq", "Out_seq", "Total time(s)", "First token time(ms)", 
+                    "Non-first token time(ms)", "Non-first token Throughout(Tokens/s)", "E2E Throughout(Tokens/s)", 
+                    "Non-first token Throughout Average(Tokens/s)", "E2E Throughout Average(Tokens/s)"
+                ))
+            elif self.test_mode == "simplified":
+                f.write("Standard: [1] KL loss <= 1e-3. [2] rate of KL loss > 1e-4 <= 0.5%.\n")
+                f.write("{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<15s}\n".format(
+                    "Model", "Dataset", "Batchsize", "Logits Num", "Greatest KLL", "Error Rate", "Result"
+                ))
+            else:
+                f.write("{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<15s}|{:<15s}\n".format(
+                    "Model", "Dataset", "Batchsize", "Golden", "NPU", "Result"
+                ))
+
+        if self.hardware_type == "NPU":
+            reload(env)
         if self.model_type == "fa" and self.test_mode != "full":
             self.__patch_hf_transformers_utils()
         os.environ['test_mode'] = self.test_mode
         if self.test_mode == "full":
             self.dataset_list = self.get_dataset_list()
             if self.dataset_name not in self.dataset_list:
-                self.logger.info(f"{self.model_name} not support {self.dataset_name}, skip")
+                self.logger.info(f"{self.model_name} not support {self.dataset_name}, please check")
         if self.test_mode != "performance":
             folder_path = f"{self.data_dir}/{self.hardware_type}/{self.dataset_name}/batch{self.batch_size}"
             if os.path.exists(folder_path):
@@ -219,14 +257,9 @@ class ModelTest:
             os.environ['HCCL_DETERMINISTIC'] = "1"
         os.environ['core_type'] = self.core_type
         self.local_rank, self.world_size = int(os.getenv("RANK", "0")), int(os.getenv("WORLD_SIZE", "1"))
-        if self.hardware_type == "GPU":
-            self.__setup_model_parallel()
-            self.tokenizer, self.model = self.get_model(self.hardware_type, self.model_type, self.data_type)
-            self.device = self.model.device
-
+       
         torch.manual_seed(1)
         self.device_type = self.__get_device_type()
-        self.logger.info("tokenizer and model get success.")
 
         if self.hardware_type == "NPU":
             if ATB_HOME_PATH is None:
@@ -394,8 +427,13 @@ class ModelTest:
                     [str(round(non_first_token_throughput_average, 10)).ljust(45),
                      str(round(e2e_throughput_average, 10)).ljust(35)])
                 folder_name = self.model_name
-                csv_name = self.model_type + "_" + self.data_type + "_performance_test_result.csv" if self.data_type != "" else self.model_type
-                csv_formatted_name = self.model_type + "_" + self.data_type + "_performance_test_result_formatted.csv" if self.data_type != "" else self.model_type
+                csv_name = self.model_type + "_" + self.data_type + "_" + self.test_mode + "_batch" + str(self.batch_size) + "_test_result.csv"
+                if self.quantize:
+                    csv_name = self.model_type + "_" + self.data_type + "_" + self.quantize + "_batch" + str(self.batch_size) + "_" + self.test_mode + "_test_result.csv"
+                    csv_formatted_name = self.model_type + "_" + self.data_type + "_" + self.quantize + "_batch" + str(self.batch_size) + "_" + self.test_mode + "_test_result_formatted.csv"
+                else:
+                    csv_name = self.model_type + "_" + self.data_type + "_batch" + str(self.batch_size) + "_" + self.test_mode + "_test_result.csv"
+                    csv_formatted_name = self.model_type + "_" + self.data_type + "_batch" + str(self.batch_size) + "_" + self.test_mode + "_test_result_formatted.csv"
                 csv_performance_path = os.path.join(self.script_path, "../result", folder_name, csv_name)
                 csv_performance_formatted_path = os.path.join(self.script_path, "../result", folder_name, csv_formatted_name)
                 if not os.path.exists(csv_performance_formatted_path):
@@ -423,27 +461,49 @@ class ModelTest:
 
     def __run_precision(self):
         self.logger.info("precision test start")
-        input_dict = {
-            'rank': self.local_rank,
-            'world_size': self.world_size,
-            'max_prefill_tokens': -1,
-            'block_size': 128,
-            'model_path': self.weight_dir,
-            'is_bf16': True if self.data_type == "bf16" else False,
-            'max_position_embeddings': self.max_position_embedding if self.max_position_embedding != -1 else None,
-            'max_batch_size': self.batch_size,
-            'use_refactor': self.use_refactor,
-            'max_input_length': 2048,
-            'max_output_length': 512,
-        }
-        self.pa_runner = PARunner(**input_dict)
-        self.logger.info(str(self.local_rank) + f'pa_runner: {self.pa_runner}')
-        self.pa_runner.warm_up()
+        if self.hardware_type == "NPU":
+            input_dict = {
+                'rank': self.local_rank,
+                'world_size': self.world_size,
+                'max_prefill_tokens': -1,
+                'block_size': 128,
+                'model_path': self.weight_dir,
+                'is_bf16': True if self.data_type == "bf16" else False,
+                'max_position_embeddings': self.max_position_embedding if self.max_position_embedding != -1 else None,
+                'max_batch_size': self.batch_size,
+                'use_refactor': self.use_refactor,
+                'max_input_length': 2048,
+                'max_output_length': 512,
+            }
+            self.pa_runner = PARunner(**input_dict)
+            self.logger.info(str(self.local_rank) + f'pa_runner: {self.pa_runner}')
+            self.pa_runner.warm_up()
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(self.weight_dir, use_fast=False, padding_side="left", truncation_side="left", trust_remote_code=True)
+            if "qwen" in self.model_name:
+                self.tokenizer.pad_token_id = self.tokenizer.eod_id
+                self.tokenizer.bos_token_id = self.tokenizer.eod_id
+                self.tokenizer.eos_token_id = self.tokenizer.eod_id
+            if "starcoder" in self.model_name:
+                self.tokenizer.pad_token = "[PAD]"
+            if "llama" in self.model_name:
+                self.tokenizer.pad_token_id = 0
+
+            self.model = AutoModelForCausalLM.from_pretrained(self.weight_dir, device_map="auto", torch_dtype="auto", trust_remote_code=True)
+            self.device = self.model.device
+
         if self.test_mode == "simplified":
+            self.dataset_path = os.path.join(self.script_path, "../dataset/simplified", self.dataset_name + ".jsonl")
             self.__run_simplified_dataset()
         elif self.test_mode == "full":
+            self.dataset_path = os.path.join(self.script_path, "../dataset/full", self.dataset_name)
             if self.dataset_name == 'CEval':
-                self.__run_full_dataset_ceval()
+                if self.model_name in CEval_0_shot:
+                    self.dataset_path += "_0_shot"
+                    self.__run_full_dataset_ceval_0_shot()
+                else:
+                    self.dataset_path += "_5_shot"
+                    self.__run_full_dataset_ceval_5_shot()
             elif self.dataset_name == 'MMLU':
                 self.__run_full_dataset_mmlu()
             elif self.dataset_name == 'GSM8K':
@@ -511,9 +571,13 @@ class ModelTest:
                             self.logger.info(f'Generate token num: {token_num_list[i]}')
                 epoch_id += 1
     
-    def __run_full_dataset_ceval(self):
+    def __run_full_dataset_ceval_0_shot(self):
         choices = ["A", "B", "C", "D"]
-        choice_tokens = [self.pa_runner.tokenizer.encode(choice, add_special_tokens=False)[0] for choice in choices]
+        if self.hardware_type == "NPU":
+            choice_tokens = [self.pa_runner.tokenizer.encode(choice, add_special_tokens=False)[0] for choice in choices]
+        else:
+            choice_tokens = [self.tokenizer.encode(choice, add_special_tokens=False)[0] for choice in choices]
+            
         extraction_prompt = '综上所述，ABCD中正确的选项是：'
 
         def build_prompt(text):
@@ -523,7 +587,7 @@ class ModelTest:
         sum_total = 0
         result_total = []
         is_result = False
-        if self.pa_runner.rank == 0:
+        if self.__get_rank() == 0:
             is_result = True
         with torch.no_grad():
             for entry in glob.glob((Path(self.dataset_path) / "val/**/*.jsonl").as_posix(),
@@ -543,9 +607,9 @@ class ModelTest:
                     queries = [build_prompt(query) for query in texts]
                     if self.model_type == "fa":
                         inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
-                                                max_length=2048).to(self.model.device)
-                        tokenizer_out_ids = inputs.input_ids.to(self.model.device)
-                        attention_mask = inputs.attention_mask.to(self.model.device)
+                                                max_length=2048).to(0)
+                        tokenizer_out_ids = inputs.input_ids.to(0)
+                        attention_mask = inputs.attention_mask.to(0)
                         outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
                                                       do_sample=False, max_new_tokens=512)
                         intermediate_outputs = []
@@ -556,9 +620,9 @@ class ModelTest:
                         answer_texts = [text + intermediate + "\n" + extraction_prompt for text, intermediate in
                                         zip(texts, intermediate_outputs)]
                         input_tokens = [build_prompt(answer_text) for answer_text in answer_texts]
-                        inputs = self.tokenizer(input_tokens, padding=True, return_tensors="pt", truncation=True, max_length=2048).to('cuda')
-                        outputs = self.model(**inputs, return_last_logit=True)
-                        logits = outputs.logits[:, -1]
+                        inputs = self.tokenizer(input_tokens, padding=True, return_tensors="pt", truncation=True, max_length=2048).to(0)
+                        outputs = self.model(**inputs)
+                        logits = outputs.logits[:, -1, :]
                         logits = logits[:, choice_tokens]
                         preds = logits.argmax(dim=-1)
                         correct += (preds.cpu() == batch["label"]).sum().item()
@@ -573,22 +637,143 @@ class ModelTest:
                         os.environ['ATB_LLM_LOGITS_SAVE_FOLDER'] = logits_save_folder
                         _, _, _ = self.pa_runner.infer(input_tokens, self.batch_size, 1, False)
                         os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "0"
-                        logits = torch.load(logits_save_folder + '/logits_0.pth')
-                        logits = logits[:, choice_tokens]
-                        preds = logits.argmax(dim=-1)
-                        correct += (preds.cpu() == batch["label"]).sum().item()            
-                        
-                filename = os.path.basename(entry)
-                result = [filename, correct / sum, correct, sum]
-                self.result_logger.debug(f"result:{result}")
-                result_total.append(result)
-                correct_total += correct
-                sum_total += sum
-            total = ["total", correct_total / sum_total, correct_total, sum_total]
-            result_total.insert(0, total)
+                        if is_result:
+                            logits = torch.load(os.path.join(logits_save_folder, 'logits_0.pth'))
+                            logits = logits[:, choice_tokens]
+                            preds = logits.argmax(dim=-1)
+                            correct += (preds.cpu() == batch["label"]).sum().item()            
+                
+                if is_result:
+                    filename = os.path.basename(entry)
+                    result = [filename, correct / sum, correct, sum]
+                    self.result_logger.debug(f"result:{result}")
+                    result_total.append(result)
+                    correct_total += correct
+                    sum_total += sum
+            if is_result:
+                total = ["total", correct_total / sum_total, correct_total, sum_total]
+                self.result_logger.debug(f"total result:{total}")
+                result_total.insert(0, total)
         if is_result:
             self.__save_result(result_total)
+    
+    def __run_full_dataset_ceval_5_shot(self):
+        choices = ["A", "B", "C", "D"]
+        SHOT = 5
 
+        def get_subject_mapping():
+            SUBJECT_MAPPING_PATH = os.path.join(self.dataset_path, "subject_mapping.json")
+            with open(SUBJECT_MAPPING_PATH) as f:
+                subject_mapping = json.load(f)
+            return subject_mapping
+        
+        def load_csv_by_task_name(task_name, dataset_path):
+            dev_df = pd.read_csv(os.path.join(dataset_path, "dev", task_name + "_dev.csv"), header=None)[:SHOT + 1]
+            val_df = pd.read_csv(os.path.join(dataset_path, "val", task_name + "_val.csv"), header=None)
+
+            dev_df = dev_df.iloc[1:, 1:]
+            val_df = val_df.iloc[1:, 1:]
+            return dev_df, val_df
+        
+        def format_subject(subject):
+            l = subject.split("_")
+            s = ""
+            for entry in l:
+                s += " " + entry    
+            return s
+            
+        def format_example(df, idx, include_answer=True):
+            prompt = df.iloc[idx, 0]
+            k = len(choices)
+            for j in range(k):
+                prompt += "\n{}. {}".format(choices[j], df.iloc[idx, j + 1])
+            prompt += "\nAnswer:"
+            if include_answer:
+                prompt += " {}\n\n".format(df.iloc[idx, k + 1])
+            return prompt
+        
+        def gen_prompt(train_df, subject, k=-1):
+            prompt = "The following are multiple choice questions (with answers) about {}.\n\n".format(format_subject(subject))
+            if k == -1:
+                k = train_df.shape[0]
+            for i in range(k):
+                prompt += format_example(train_df, i)
+            return prompt
+
+        correct_total = 0
+        sum_total = 0
+        result_total = []
+        is_result = False
+        if self.__get_rank() == 0:
+            is_result = True
+
+        subject_mapping = get_subject_mapping()
+        index = 1
+        for task_name in tqdm(subject_mapping):
+            self.logger.info(f"dataset {index} start, task name: {task_name}")
+            dev_df, val_df = load_csv_by_task_name(task_name, self.dataset_path)
+            correct = 0
+            task_len = val_df.shape[0]
+            for i in range(math.ceil(task_len / self.batch_size)):
+                q_num = self.batch_size if (i + 1) * self.batch_size <= task_len else task_len - i * self.batch_size
+                prompt_ends = [format_example(val_df, i * self.batch_size + j, include_answer=False) for j in range(q_num)]
+                train_prompts = [gen_prompt(dev_df, task_name, SHOT)] * q_num
+                prompt = [t + p for t, p in zip(train_prompts, prompt_ends)]
+                labels = [val_df.iloc[i * self.batch_size + j, val_df.shape[1] - 1] for j in range(q_num)]
+                prompts = [prpt.encode().decode(encoding="utf8") for prpt in prompt]
+
+                if self.model_type == "fa":
+                    inputs = self.tokenizer(prompts, padding=True, return_tensors="pt", truncation=True, max_length=2048).to(0)
+                    tokenizer_out_ids = inputs.input_ids.to(0)
+                    attention_mask = inputs.attention_mask.to(0)
+                    outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask, do_sample=False, max_new_tokens=20)
+                    answers = []
+                    for idx in range(len(outputs)):
+                        output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
+                        response = self.tokenizer.decode(output)
+                        answers.append(response)
+                else:
+                    generate_texts, token_nums, _ = self.pa_runner.infer(prompts, self.batch_size, 20, False)
+
+                    if len(prompts) == 1:
+                        generate_texts = [generate_texts[0]]
+
+                    for idx, generate_text in enumerate(generate_texts):
+                        if is_result:
+                            self.logger.debug(f'Question[{i * self.batch_size + idx}]: {prompts[idx]}')
+                            self.logger.debug(f'Answer[{i * self.batch_size + idx}]: {generate_text}')
+                            self.logger.debug(f'Generate[{i * self.batch_size + idx}] token num: {token_nums[idx]}')
+
+                    answers = None
+
+                    if len(generate_texts) > 0:
+                        answers = generate_texts
+
+                answer_results = [answer.lstrip()[0] if answer else "-1" for answer in answers]
+                is_correct = ["Correct" if answer_result == label else "Wrong" for answer_result, label in zip(answer_results, labels)]
+                
+                correct += is_correct.count("Correct")
+                for idx in range(len(is_correct)):
+                    if is_result and is_correct[idx] != "Correct":
+                        self.logger.debug(f">>>原始题目 is : {prompts[idx]}")
+                        self.logger.debug(f">>>推理结果 is : {answer_results[idx]}")
+                        self.logger.debug(f">>>真实结果 is : {labels[idx]}")
+        
+            if is_result:        
+                result = [task_name, correct / task_len, correct, task_len]
+                self.logger.info(f"dataset {index} finish, result:{result}")
+                result_total.append(result)
+                correct_total += correct
+                sum_total += task_len
+            index += 1
+
+        if is_result:
+            total = ["total", correct_total / sum_total, correct_total, sum_total]
+            self.result_logger.debug(f"total result:{total}")
+            result_total.insert(0, total)
+            self.__save_result(result_total)
+
+                
     def __run_full_dataset_mmlu(self):
         choices = ["A", "B", "C", "D"]
 
@@ -876,6 +1061,15 @@ class ModelTest:
             self.__save_result(result_total)
 
     def __run_full_dataset_boolq(self):
+        sample_yes = "How can we learning machine learning: yes"
+        sample_no = "How can we learning machine learning: no"
+        if self.model_type == "fa":
+            choice_tokens = [self.tokenizer([sample_yes], return_tensors="pt", max_length=2048, add_special_tokens=None).input_ids[0, -1].item(),
+                             self.tokenizer([sample_no], return_tensors="pt", max_length=2048, add_special_tokens=None).input_ids[0, -1].item()]
+        else:
+            choice_tokens = [self.pa_runner.tokenizer([sample_yes], return_tensors="pt", max_length=2048, add_special_tokens=False).input_ids[0, -1].item(),
+                             self.pa_runner.tokenizer([sample_no], return_tensors="pt", max_length=2048, add_special_tokens=False).input_ids[0, -1].item()]
+        
         def build_prompt(title, text, passage):
             prompt = f"{title} -- {passage}\nQuestion: {text}?\nAnswer:"
             return prompt
@@ -884,7 +1078,7 @@ class ModelTest:
         sum_total = 0
         result_total = []
         is_result = False
-        if self.pa_runner.rank == 0:
+        if self.__get_rank() == 0:
             is_result = True
         with torch.no_grad():
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.jsonl").as_posix(),
@@ -893,13 +1087,8 @@ class ModelTest:
                 with open(entry, encoding='utf-8') as f:
                     for line in f:
                         line_json = json.loads(line)
-                        if line_json['answer'] == True:
-                            line_json['answer'] = 'yes'
-                        elif line_json['answer'] == False:
-                            line_json['answer'] = 'no'
                         dataset.append(line_json)
 
-                curnum = 0
                 correct = 0
                 sum = len(dataset)
                 dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size)
@@ -910,16 +1099,15 @@ class ModelTest:
                     queries = [build_prompt(title, query, passage) for title, query, passage in zip(titles, texts, passages)]
                     if self.model_type == "fa":
                         inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
-                                                max_length=2048).to(self.model.device)
-                        tokenizer_out_ids = inputs.input_ids.to(self.model.device)
-                        attention_mask = inputs.attention_mask.to(self.model.device)
-                        outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
-                                                      do_sample=False, max_new_tokens=512)
+                                                max_length=2048).to(0)
+                        outputs = self.model(**inputs)
+                        logits = outputs.logits[:, -1, :]
+                        logits_softmax = F.log_softmax(logits.float(), dim=-1)
+                        logits_softmax = logits_softmax[:, choice_tokens]
                         if is_result:
                             for idx, ans in enumerate(batch['answer']):
-                                output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
-                                response = self.tokenizer.decode(output)
-                                acc = is_correct(response, ans)
+                                choice = (logits_softmax[idx, 0] > logits_softmax[idx, 1]).cpu()
+                                acc = choice == ans
                                 if acc:
                                     correct += 1
                     else:
@@ -928,39 +1116,50 @@ class ModelTest:
                         os.environ['ATB_LLM_LOGITS_SAVE_FOLDER'] = logits_save_folder
                         _, _, _ = self.pa_runner.infer(queries, self.batch_size, 1, False)
                         os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "0"
-                        time.sleep(0.01)
-                        logits = torch.load(os.path.join(logits_save_folder, 'logits_0.pth'))
-                        logits_softmax = F.log_softmax(logits.float(), dim=-1)
-                        greedy_tokens = logits_softmax.argmax(dim=-1)
                         if is_result:
+                            logits = torch.load(os.path.join(logits_save_folder, 'logits_0.pth'))
+                            logits_softmax = F.log_softmax(logits.float(), dim=-1)
+                            logits_softmax = logits_softmax[:, choice_tokens]
                             for idx, ans in enumerate(batch['answer']):
-                                acc = self.pa_runner.tokenizer.decode(greedy_tokens[idx]).lower() == ans
+                                choice = (logits_softmax[idx, 0] > logits_softmax[idx, 1]).cpu()
+                                acc = choice == ans
                                 if acc:
                                     correct += 1
-                                curnum += 1
 
-                filename = os.path.basename(entry)
-                result = [filename, correct / sum, correct, sum]
-                self.result_logger.debug(f"result:{result}")
-                result_total.append(result)
-                correct_total += correct
-                sum_total += sum
-            total = ["total", correct_total / sum_total, correct_total, sum_total]
-            result_total.insert(0, total)
+                if is_result:
+                    filename = os.path.basename(entry)
+                    result = [filename, correct / sum, correct, sum]
+                    self.result_logger.debug(f"result:{result}")
+                    result_total.append(result)
+                    correct_total += correct
+                    sum_total += sum
+            if is_result:
+                total = ["total", correct_total / sum_total, correct_total, sum_total]
+                result_total.insert(0, total)
         if is_result:
             self.__save_result(result_total)
 
     def __run_full_dataset_humaneval(self):
-
-        def filter_code(completion: str) -> str:
-            completion = completion.lstrip("\n")
-            return completion.split("\n\n")[0]
-
-        def fix_indents(text: str) -> str:
-            return text.replace("\t", "    ")
+        def cleanup_code(code: str) -> str:
+            code_splits = code.split("\n")
+            is_empty_line = False
+            ind_empty_line = None
+            for i, line in enumerate(code_splits):
+                if len(line.strip()) > 0 and line[0] != ' ' and line[0] != '\t':
+                    is_empty_line = True                    
+                    ind_empty_line = i                    
+                    break            
+            if is_empty_line:
+                code = "\n".join(code_splits[:ind_empty_line])
+            else:
+                end_words = ["\ndef", "\nclass", "\n#", "\nassert", '\n"""', "\nprint", "\nif", "\n\n\n"]
+                for w in end_words:
+                    if w in code:
+                        code = code[:code.rfind(w)]
+            return code
 
         is_result = False
-        if self.pa_runner.rank == 0:
+        if self.__get_rank() == 0:
             is_result = True
         with torch.no_grad():
             for entry in tqdm(glob.glob((Path(self.dataset_path) / "*.jsonl").as_posix(),
@@ -972,38 +1171,40 @@ class ModelTest:
                         dataset.append(line_json)
 
                 correct = 0
-                task_id = 0
                 samples = []
-                dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
+                dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size)
                 for batch in tqdm(dataloader):
-                    queries = [prompt.replace("    ", "\t") for prompt in batch["prompt"]]
+                    task_ids = [task_id.split('/')[1] for task_id in batch["task_id"]]
+                    queries = [prompt.strip() for prompt in batch["prompt"]]
                     if self.model_type == "fa":
                         inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
-                                                max_length=2048).to(self.model.device)
-                        tokenizer_out_ids = inputs.input_ids.to(self.model.device)
-                        attention_mask = inputs.attention_mask.to(self.model.device)
+                                                max_length=2048).to(0)
+                        tokenizer_out_ids = inputs.input_ids.to(0)
+                        attention_mask = inputs.attention_mask.to(0)
                         outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
                                                       do_sample=False, max_new_tokens=512)
                         if is_result:
-                            for idx, ans in enumerate(batch['answer']):
-                                output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
+                            for idx, output in enumerate(outputs.tolist()):
+                                output = output[len(inputs["input_ids"][idx]):]
                                 response = self.tokenizer.decode(output)
-                                acc = is_correct(response, ans)
-                                if acc:
-                                    correct += 1
+                                response_cleaned_up = cleanup_code(response)
+                                self.logger.info("response_cleaned_up: %s", response_cleaned_up)
+                                result = dict(
+                                    task_id="HumanEval/" + task_ids[idx],
+                                    completion=response_cleaned_up,
+                                )
+                                samples += [result]
                     else:
                         generate_text_list, _, _ = self.pa_runner.infer(queries, self.batch_size, 512, True)
-
-                        generate_text_list = [filter_code(fix_indents(completion)) for completion in generate_text_list]
+                        generate_text_list = [cleanup_code(completion) for completion in generate_text_list]
                         if is_result:
-                            print("generate_text_list_1: ", generate_text_list)
-                        for sample in generate_text_list:
+                            self.logger.info("generate_text_list_cleaned_up: %s", generate_text_list)
+                        for idx, sample in enumerate(generate_text_list):
                             result = dict(
-                                task_id="HumanEval/" + str(task_id),
+                                task_id="HumanEval/" + task_ids[idx],
                                 completion=sample,
                             )
                             samples += [result]
-                    task_id += 1
                 if is_result:
                     self.__save_result(samples)
         if is_result:
@@ -1227,6 +1428,12 @@ class ModelTest:
             self.logger.info(self.model_name + " " + self.dataset_name + " batch" + str(
                 self.batch_size) + " result saved in result/full_test_result.csv")
 
+    def __get_rank(self):
+        if self.hardware_type == "GPU":
+            return torch.cuda.current_device()
+        else:
+            return self.pa_runner.rank
+
     def __get_device_type(self):
         if self.hardware_type == "NPU":
             self.soc_version = torch_npu._C._npu_get_soc_version()
@@ -1305,24 +1512,28 @@ class ModelTest:
         now = datetime.now()
         date_str = now.strftime("%Y_%m_%d_%H_%M_%S")
 
+        if self.quantize:
+            result_name = "_".join([self.model_type, self.data_type, self.quantize, "batch" + str(self.batch_size), self.test_mode, self.dataset_name]) + '_test_result'
+        else:
+            result_name = "_".join([self.model_type, self.data_type, "batch" + str(self.batch_size), self.test_mode, self.dataset_name]) + '_test_result'
+
         if self.dataset_name == "HumanEval":
-            result_name = "_".join([self.model_name, self.dataset_name]) + '.jsonl'
+            result_name += ".jsonl"
             result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}",
                                    result_name)
             with open(result_path, 'wb') as fp:
                 for x in result:
                     fp.write((json.dumps(x) + "\n").encode('utf-8'))
         else:
-            result_name = "_".join([self.model_name, self.dataset_name, date_str]) + '.csv'
-            result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}",
-                                   result_name)
+            result_name += ".csv"
+            result_path = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}", result_name)
             if self.dataset_name == "TruthfulQA":
                 df = pd.DataFrame(result, columns=['idx', 'MC1', 'MC2', 'MC3'])
             else:
                 df = pd.DataFrame(result, columns=['file_name', 'value', 'correct', 'sum'])
             df = align_columns(df)
             df = align_headers(df)
-            df.to_csv(result_path, sep='|', index=False)
+            df.to_csv(result_path, index=False)
         self.logger.info(f"{self.dataset_name} result saved to: {result_path}")
         self.current_result_path = result_path
 
@@ -1406,15 +1617,15 @@ def get_args():
     if ATB_TESTDATA_PATH is None:
         base_path = os.path.join(os.path.dirname(__file__), "../")
     if args.data_dir is None:
-        data_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode, args.model_name, "data")
+        data_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode)
     else:
         data_dir = args.data_dir
     if args.result_dir is None:
-        result_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode, args.model_name, "results")
+        result_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode)
     else:
         result_dir = args.result_dir
     if args.log_dir is None:
-        log_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode, args.model_name, "logs")
+        log_dir = os.path.join(base_path, f"{test_type}_test", args.test_mode)
     else:
         log_dir = args.log_dir
     case_pair = args.case_pair

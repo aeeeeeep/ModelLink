@@ -100,6 +100,7 @@ class Attention(nn.Module):
     def forward(self, x, mask=None, relative_position_bias=None):
         # print("multiway transformer attention forward")
         # print("x.shape ",x.shape)
+        # x.shape  torch.Size([1, 941, 768])
 
         B, N, C = x.shape
 
@@ -107,27 +108,33 @@ class Attention(nn.Module):
         if self.q_bias is not None:
             qkv_bias = torch.cat(
                 (
-                    self.q_bias,
+                    self.q_bias, # 768
                     torch.zeros_like(self.v_bias, requires_grad=False),
-                    self.v_bias,
+                    self.v_bias, # 768
                 )
             )
-
+        # x.shape  torch.Size([1, 941, 768])
+        # qkv.w   torch.Size([2304, 768])
+        # qkv bias 768*3 = 2304
+        
         qkv = F.linear(input=x, weight=self.qkv.weight, bias=qkv_bias)
 
+        # torch.Size([1, 941, 2304])
         # 1 941 2304
         # 1 941 3 12 64
         # 3 1 12 941 64
+        
         qkv = qkv.reshape(B, N, 3, self.num_heads, -1).permute(
             2, 0, 3, 1, 4
         )  # 3 batchSize numHeads N -1
-
+        # print(torch.allclose(qkvc, qkv, rtol=1e-4))
         q, k, v = (
             qkv[0],
             qkv[1],
             qkv[2],
         )  # make torchscript happy (cannot use tensor as tuple)
 
+        # q.shape 1 12 941 64
         # 相当于有个rope操作。
 
         # print("q  k  v.shape ",q.shape)
@@ -142,21 +149,23 @@ class Attention(nn.Module):
         attn = q.float() @ k.float().transpose(-2, -1)
         # print("1 attn shape",attn.shape)
         # 移动到外面，加到mask上面
-        if relative_position_bias is not None:
+        # if relative_position_bias is not None:
+        #     attn = attn + relative_position_bias.unsqueeze(0)
+        #     # 1  12  941 941
+        # if mask is not None:
+        #     mask = mask.bool()  # 1 1 1 941
+        #     # print("~mask[:, None, None, :]",~mask[:, None, None, :])
+        #     attn = attn.masked_fill(~mask[:, None, None, :], float("-inf"))
 
-            attn = attn + relative_position_bias.unsqueeze(0)
-            # 1  12  941 941
-        if mask is not None:
-            mask = mask.bool()  # 1 1 1 941
-            # print("~mask[:, None, None, :]",~mask[:, None, None, :])
-            attn = attn.masked_fill(~mask[:, None, None, :], float("-inf"))
-
+        attn = attn + relative_position_bias
         attn = attn.softmax(dim=-1).type_as(x)
-
         # attn = self.attn_drop(attn)
 
         x = (attn @ v).transpose(1, 2).reshape(B, N, C)
 
+        # 768 384
+        # 768 
+        # proj: [768,768]
         x = self.proj(x)
         # print("final x shape ",x.shape)
         # x = self.proj_drop(x)

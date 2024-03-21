@@ -34,14 +34,13 @@ struct DecoderLayerParam {
     bool isBF16 = false;
     bool isPack = true;
     bool supportSwiGLU = false;
+    bool supportLcoc = false;
     int quantType = 0;
     float rmsNormEps = 0;
     int numAttentionHeadsPerRank = 0;
     int hiddenSizePerAttentionHead = 0;
     int numKeyValueHeadsPerRank = 0;
-    int rank = 0;
-    int worldSize = 1;
-    std::string backend = "hccl";
+    atb_speed::common::TensorParallelInfo tensorParallelInfo;
     std::vector<int> seqLen;
     std::vector<int> tokenOffset;
     std::vector<int> packQuantType = {};  // 两个元素，第一个元素代表QKV pack的量化类型，第二个元素代表MLP pack的量化类型
@@ -57,22 +56,22 @@ enum DecoderLayerTensorIdx : uint32_t {
     IN_INPUT_NORM_NEW_BIAS,
     IN_QKV_WEIGHT_0,                    // Pack: shape: MHA [3 * numAttentionHeadsPerRank * hiddenSizePerAttentionHead, hiddenSize] GQA [(numAttentionHeadsPerRank + 2 * numKeyValueHeadsPerRank) * hiddenSizePerAttentionHead, hiddenSize]
                                         // No pack: (Q) shape: [numAttentionHeadsPerRank * hiddenSizePerAttentionHead, hiddenSize]
-    IN_QKV_DEOFFSET_0,                  // Quant所需权重
+    IN_QKV_BIAS_0,                  // Quant所需权重
     IN_QKV_DESCALE_0,                   // Quant所需权重
     IN_QKV_OFFSET_0,                    // Quant所需权重
     IN_QKV_SCALE_0,                     // Quant所需权重
     IN_QKV_WEIGHT_1,                    // Pack: no usage; No pack: (K) shape: [numKeyValueHeadsPerRank * hiddenSizePerAttentionHead, hiddenSize]
-    IN_QKV_DEOFFSET_1,                  // Quant所需权重
+    IN_QKV_BIAS_1,                  // Quant所需权重
     IN_QKV_DESCALE_1,                   // Quant所需权重
     IN_QKV_OFFSET_1,                    // Quant所需权重
     IN_QKV_SCALE_1,                     // Quant所需权重
     IN_QKV_WEIGHT_2,                    // Pack: no usage; No pack: (V) shape: [numKeyValueHeadsPerRank * hiddenSizePerAttentionHead, hiddenSize]
-    IN_QKV_DEOFFSET_2,                  // Quant所需权重
+    IN_QKV_BIAS_2,                  // Quant所需权重
     IN_QKV_DESCALE_2,                   // Quant所需权重
     IN_QKV_OFFSET_2,                    // Quant所需权重
     IN_QKV_SCALE_2,                     // Quant所需权重
     IN_ATTENTION_OUT_WEIGHT,            // shape: [hiddenSize, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
-    IN_ATTENTION_OUT_DEOFFSET,          // Quant所需权重
+    IN_ATTENTION_OUT_BIAS,          // Quant所需权重
     IN_ATTENTION_OUT_DESCALE,           // Quant所需权重
     IN_ATTENTION_OUT_OFFSET,            // Quant所需权重
     IN_ATTENTION_OUT_SCALE,             // Quant所需权重
@@ -82,17 +81,17 @@ enum DecoderLayerTensorIdx : uint32_t {
     IN_ATTENTION_NORM_NEW_BIAS,
     IN_MLP_WEIGHT_0,                    // Pack: shape: [2 * intermediateSizePerRank, hiddenSize]
                                         // No pack: (Gate) shape: [intermediateSizePerRank, hiddenSize]
-    IN_MLP_DEOFFSET_0,                  // Quant所需权重
+    IN_MLP_BIAS_0,                  // Quant所需权重
     IN_MLP_DESCALE_0,                   // Quant所需权重
     IN_MLP_OFFSET_0,                    // Quant所需权重
     IN_MLP_SCALE_0,                     // Quant所需权重
     IN_MLP_WEIGHT_1,                    // Pack: no usage; No pack: (Up) shape: [intermediateSizePerRank, hiddenSize]
-    IN_MLP_DEOFFSET_1,                  // Quant所需权重
+    IN_MLP_BIAS_1,                  // Quant所需权重
     IN_MLP_DESCALE_1,                   // Quant所需权重
     IN_MLP_OFFSET_1,                    // Quant所需权重
     IN_MLP_SCALE_1,                     // Quant所需权重
     IN_MLP_DOWN_WEIGHT,                 // shape: [hiddenSize, intermediateSizePerRank]
-    IN_MLP_DOWN_DEOFFSET,               // Quant所需权重
+    IN_MLP_DOWN_BIAS,               // Quant所需权重
     IN_MLP_DOWN_DESCALE,                // Quant所需权重
     IN_MLP_DOWN_OFFSET,                 // Quant所需权重
     IN_MLP_DOWN_SCALE,                  // Quant所需权重
@@ -116,19 +115,6 @@ enum DecoderLayerTensorIdx : uint32_t {
 };
 
 atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operation);
-
-class DecoderLayerBinder : public HostTensorBinder {
-public:
-    DecoderLayerBinder();
-    virtual ~DecoderLayerBinder();
-    void ParseParam(const nlohmann::json &paramJson) override;
-    void BindTensor(atb::VariantPack &variantPack) override;
-
-private:
-    std::vector<int> tokenOffset_;
-    std::vector<int> seqLen_;
-    int32_t layerId_ = 0;
-};
 
 }  // namespace llama_parallel
 }  // namespace atb_speed

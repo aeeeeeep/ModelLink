@@ -49,10 +49,9 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     atb_speed::common::FusionAttentionParam<atb::infer::RmsNormParam> fusionAttentionParam;
 
     // QKV linear param
-    fusionAttentionParam.isAntiOutlier = param.packQuantType[0] == atb_speed::common::MIX_W8A8_ANTI || param.packQuantType[0] == atb_speed::common::ALL_W8A8_ANTI;
-    fusionAttentionParam.isPack = param.packQuantType[0] != atb_speed::common::MIX_W8A8 && param.packQuantType[0] != atb_speed::common::MIX_W8A8_ANTI;
     fusionAttentionParam.isGroupedQueryAttention = param.numAttentionHeadsPerRank != param.numKeyValueHeadsPerRank;
     fusionAttentionParam.isBF16 = param.isBF16;
+    fusionAttentionParam.packQuantType = param.packQuantType[0];
     fusionAttentionParam.layerLinearQuantType = param.linearQuantType;
     fusionAttentionParam.qkvHasBias = true;
 
@@ -68,8 +67,8 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     fusionAttentionParam.normQuantParamType = attenRmsNormQuantParam;
 
     // rope param
-    fusionAttentionParam.rotaryCoeff = param.hiddenSizePerAttentionHead / 2;
-    fusionAttentionParam.isHalfRotary = true;
+    fusionAttentionParam.rotaryType = atb_speed::common::RotaryType::HALF_ROTARY;
+    fusionAttentionParam.ropeParam.rotaryCoeff = param.hiddenSizePerAttentionHead / 2;
     // self attention param
     fusionAttentionParam.isFA = param.isFA;
     fusionAttentionParam.isPrefill = param.isPrefill;
@@ -97,6 +96,10 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     } else {
         fusionAttentionParam.selfAttentionParam.calcType = atb::infer::SelfAttentionParam::CalcType::PA_ENCODER;
     }
+
+    fusionAttentionParam.selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
+
+    fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
 
     fusionAttentionParam.pageAttentionParam.headNum = param.numAttentionHeadsPerRank;
     fusionAttentionParam.pageAttentionParam.kvHeadNum = param.numKeyValueHeadsPerRank;
@@ -159,7 +162,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
 
     atb_speed::common::MlpParam<atb::infer::RmsNormParam> mlpParam;
     mlpParam.isBF16 = param.isBF16;
-    mlpParam.isAntiOutlier = param.packQuantType[1] == atb_speed::common::MIX_W8A8_ANTI || param.packQuantType[1] == atb_speed::common::ALL_W8A8_ANTI;
+    mlpParam.packQuantType = param.packQuantType[1];
     mlpParam.layerLinearQuantType = param.linearQuantType;
     // gate up
     if (param.packQuantType[1] == atb_speed::common::MIX_W8A8 || param.packQuantType[1] == atb_speed::common::MIX_W8A8_ANTI) {
@@ -178,8 +181,11 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     mlpParam.normQuantParamType = mlpRmsNormQuantParam;
     mlpParam.downLinearTensorParallelInfo = {param.rank, param.worldSize, param.backend};
     if (param.supportSwiGLU) {
+        mlpParam.activationParam.activationType = atb::infer::ActivationType::ACTIVATION_SWIGLU_FORWARD;
+        mlpParam.activationParam.dim = -1;
         MlpSwiGLU(mlpParam, &mlpParallelNode.operation);
     } else {
+        mlpParam.activationParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
         Mlp(mlpParam, &mlpParallelNode.operation);
     }
 

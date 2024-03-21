@@ -79,33 +79,16 @@ def process_deq_scale(deq_scale_dict):
 
 
 def quant_model(args_quant, verbose=False):
-    from llm_ptq_tools import Calibrator, QuantConfig
+    from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 
     print("loading model...")
     model, tokenizer = load_model(args_quant)
 
     os.makedirs(args_quant.output_path, exist_ok=True)
 
-    tokenizer.save_pretrained(args_quant.output_path)
-    model.config.to_json_file(os.path.join(args_quant.output_path, "config.json"))
-
-    # 保存非量化的部分权重
-    float_layer_ids = [7]
-    saved_float_keys = []
-    weights_keys = model.state_dict().keys()
-    for weights_key in weights_keys:
-        key_split = weights_key.split('.')
-        is_split_layer = 'input_layernorm' in key_split or 'post_attention_layernorm' in key_split
-        if 'h' in key_split and (int(key_split[2]) in float_layer_ids or is_split_layer):
-            saved_float_keys.append(weights_key)
-        elif "h" not in key_split:
-            saved_float_keys.append(weights_key)
-    saved_float_weights = {key: model.state_dict()[key] for key in saved_float_keys}
-    torch.save(saved_float_weights, os.path.join(args_quant.output_path, "float_layers_weights.pt"))
-
     print("model loaded, starting quant model...")
     dataset_calib = get_calib_dataset(tokenizer)
-    quant_config = QuantConfig(w_bit=8, disable_names=[], dev_type='cpu', act_method=3, pr=1.0, mm_tensor=False, w_hessian=False)
+    quant_config = QuantConfig(w_bit=8, disable_names=[], dev_type='cpu', act_method=3, pr=1.0, mm_tensor=False)
     calibrator = Calibrator(model, quant_config, calib_data=dataset_calib, disable_level='L1')
     calibrator.run()
 
@@ -122,26 +105,7 @@ def quant_model(args_quant, verbose=False):
                 print(res)
     
     print("starting saving model...")
-    calibrator.save(args_quant.output_path)
-
-    print("quant model done, correcting bias...")
-
-    input_offset_dict = np.load(os.path.join(args_quant.output_path, "input_offset.npy"), allow_pickle=True).item()
-    quant_weight_dict = np.load(os.path.join(args_quant.output_path, "quant_weight.npy"), allow_pickle=True).item()
-    deq_scale_dict = np.load(os.path.join(args_quant.output_path, "deq_scale.npy"), allow_pickle=True).item()
-    fp_bias_dict = np.load(os.path.join(args_quant.output_path, "fp_bias.npy"), allow_pickle=True).item()
-
-    bias = {}
-    for i in fp_bias_dict.keys():
-        bias[i] = bias_correction(fp_bias_dict[i], 
-                                quant_weight_dict[i], 
-                                int(input_offset_dict[i]), 
-                                deq_scale_dict[i]).cpu()
-    print("correcting deq_scale...")
-    new_deq_scale_dict = process_deq_scale(deq_scale_dict)
-    np.save(os.path.join(args_quant.output_path, "bias.npy"), bias)
-    # 覆写旧的deq_scale
-    np.save(os.path.join(args_quant.output_path, "deq_scale.npy"), new_deq_scale_dict)
+    calibrator.save(args_quant.output_path, save_type=["safe_tensor", "numpy"])
     print("all done!")
 
 
@@ -213,7 +177,7 @@ def cut_model_quant(args_quant):
     print(f"=========quant weight path:{weight_path} ==========")
     quant_weight_dict = np.load(os.path.join(weight_path, "quant_weight.npy"), allow_pickle=True).item()
     deq_scale_dict = np.load(os.path.join(weight_path, "deq_scale.npy"), allow_pickle=True).item()
-    bias_dict = np.load(os.path.join(weight_path, "bias.npy"), allow_pickle=True).item()
+    bias_dict = np.load(os.path.join(weight_path, "quant_bias.npy"), allow_pickle=True).item()
 
     float_weight_dict = torch.load(os.path.join(weight_path, "float_layers_weights.pt"))
 
@@ -230,7 +194,7 @@ def cut_model_quant(args_quant):
         os.makedirs(base_path, exist_ok=True)
         config.to_json_file(os.path.join(base_path, "config.json"))
         np.save(os.path.join(base_path, "quant_weight.npy"), state_quant_weight_dict_list[i])
-        np.save(os.path.join(base_path, "bias.npy"), state_bias_dict_list[i])
+        np.save(os.path.join(base_path, "quant_bias.npy"), state_bias_dict_list[i])
         np.save(os.path.join(base_path, "deq_scale.npy"), state_deq_scale_dict_list[i])
 
         torch.save(float_weight_dict_list[i], os.path.join(base_path, "float_layers_weights.pt"))
