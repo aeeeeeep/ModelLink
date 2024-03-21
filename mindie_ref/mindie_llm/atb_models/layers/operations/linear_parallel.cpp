@@ -21,7 +21,7 @@
 namespace atb_speed {
 namespace common {
 
-static const uint64_t IN_TENSOR_COUNT = 6;
+static const uint64_t IN_TENSOR_COUNT = 7;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t ROW_PARALLEL_NO_ADD_INTERMEDIATE_TENSOR_COUNT = 1;
 static const uint64_t ROW_PARALLEL_NO_ADD_NODE_COUNT = 2;
@@ -35,6 +35,7 @@ enum LinearParallelTensorIdx : uint32_t {
     IN_OFFSET,
     IN_DESCALE,
     IN_BIAS,
+    IN_COMPRESS_IDX,
     OUT_LINEAR_PARALLEL,
     INTERMIDATE_LINEAR_OUT,
     INTERMIDATE_SYNC_OUT
@@ -62,7 +63,8 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
     FusionLinear(linearParam, &linearNode.operation);
     linearNode.inTensorIds = {
         LinearParallelTensorIdx::IN_INPUT, LinearParallelTensorIdx::IN_WEIGHT, LinearParallelTensorIdx::IN_SCALE,
-        LinearParallelTensorIdx::IN_OFFSET, LinearParallelTensorIdx::IN_DESCALE, LinearParallelTensorIdx::IN_BIAS
+        LinearParallelTensorIdx::IN_OFFSET, LinearParallelTensorIdx::IN_DESCALE, LinearParallelTensorIdx::IN_BIAS,
+        LinearParallelTensorIdx::IN_COMPRESS_IDX
     };
     linearNode.outTensorIds = {LinearParallelTensorIdx::INTERMIDATE_LINEAR_OUT};
 

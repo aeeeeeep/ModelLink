@@ -81,7 +81,7 @@ class WeightWrapper:
         self.register_layer_norm(layer_dict, norm_name)
         self.register_linear(layer_dict, pack_linear_name)
         if linear_type == 'attn':
-            self.weights.extend([self.placeholder] * 15)
+            self.weights.extend([self.placeholder] * 16)
             self.layer_linear_type.extend([LinearType.FP.value, LinearType.INVALID.value, LinearType.INVALID.value])
         else:
             self.weights.extend([self.placeholder] * 10)

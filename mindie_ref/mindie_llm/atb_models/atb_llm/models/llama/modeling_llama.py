@@ -168,7 +168,7 @@ class LlamaMLP(nn.Module):
         pack_name = f'{prefix}.gate_up_proj'
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{layer_prefix}.post_attention_layernorm'
-        self.pack_type = calc_linear_pack_type(weights, linear_names, pack_name, norm_name)
+        self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name, pack_name)
         no_refactor_no_pack = not config.use_refactor and config.num_attention_heads != config.num_key_value_heads
         if no_refactor_no_pack:
             self.gate_proj = TensorParallelColumnLinear.load(
@@ -266,7 +266,7 @@ class FlashLlamaAttention(torch.nn.Module):
         pack_name = f'{prefix}.query_key_value'
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{layer_prefix}.input_layernorm'
-        self.pack_type = calc_linear_pack_type(weights, linear_names, pack_name, norm_name)
+        self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name, pack_name)
         no_refactor_no_pack = not config.use_refactor and config.num_attention_heads != config.num_key_value_heads
         if no_refactor_no_pack:
             self.q_proj = TensorParallelColumnLinear.load(
