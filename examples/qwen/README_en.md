@@ -98,8 +98,6 @@ Here's a hardware summary of pre-training  Qwen-7B:
    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/qwen_generation_utils.py
    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/tokenization_qwen.py
    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/tokenizer_config.json
-
-   cd ..
    ```
    Modify line 39 in the modelling_qwen.py file, changing:
    ```python
@@ -108,6 +106,10 @@ Here's a hardware summary of pre-training  Qwen-7B:
    to：
    ```python
    SUPPORT_FP16 = True
+   ```
+   Then execute the following command:
+   ```bash
+   cd ..
    ```
 4. Weights convert
 
@@ -138,7 +140,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
                                     --loader megatron \
                                     --saver megatron \
                                     --save-model-type save_huggingface_llama \
-                                    --load-dir ../Qwen7B-v0.1-pt8-pp1 \
+                                    --load-dir {your model ckpt save path} \
                                     --target-tensor-parallel-size 1 \
                                     --target-pipeline-parallel-size 1 \
                                     --add-qkv-bias \
@@ -321,8 +323,6 @@ Here's a hardware summary of pre-training  Qwen-14B:
    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/qwen_generation_utils.py
    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/tokenization_qwen.py
    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/tokenizer_config.json
-
-   cd ..
    ```
    Modify line 39 in the modelling_qwen.py file, changing:
    ```python
@@ -331,6 +331,10 @@ Here's a hardware summary of pre-training  Qwen-14B:
    to：
    ```python
    SUPPORT_FP16 = True
+   ```
+   Then execute the following command:
+   ```bash
+   cd ..
    ```
 4. Weights convert
 
@@ -360,7 +364,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
                                     --loader megatron \
                                     --saver megatron \
                                     --save-model-type save_huggingface_llama \
-                                    --load-dir ../Qwen14B-v0.1-pt8-pp1 \
+                                    --load-dir {your model ckpt save path} \
                                     --target-tensor-parallel-size 1 \
                                     --target-pipeline-parallel-size 1 \
                                     --add-qkv-bias \
@@ -525,7 +529,6 @@ Here's a hardware summary of pre-training  Qwen-72B:
    wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/generation_config.json
    wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/model-00001-of-000082.safetensors
    ...
-   cd ..
    ```
    Modify line 39 in the modelling_qwen.py file, changing:
    ```python
@@ -534,6 +537,10 @@ Here's a hardware summary of pre-training  Qwen-72B:
    to：
    ```python
    SUPPORT_FP16 = True
+   ```
+   Then execute the following command:
+   ```bash
+   cd ..
    ```
 4. Weights convert
 
@@ -564,7 +571,7 @@ Here's a hardware summary of pre-training  Qwen-72B:
                                     --loader megatron \
                                     --saver megatron \
                                     --save-model-type save_huggingface_llama \
-                                    --load-dir ../Qwen72B-v0.1-pt8-pp1 \
+                                    --load-dir {your model ckpt save path} \
                                     --target-tensor-parallel-size 1 \
                                     --target-pipeline-parallel-size 1 \
                                     --add-qkv-bias \
