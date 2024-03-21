@@ -15,7 +15,7 @@ def execute_command(cmd_list):
                           shell=False,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE) as p:
-        out, err = p.communicate(timeout=5)
+        out, err = p.communicate(timeout=1000)
     res = out.decode()
     return res
 
