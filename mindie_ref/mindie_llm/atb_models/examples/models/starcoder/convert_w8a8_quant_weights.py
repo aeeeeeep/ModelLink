@@ -32,26 +32,44 @@ print(f"loading success!")
 print("start quant...")
 
 # 准备校准数据，请根据实际情况修改
-calib_list = [
-    "def print_hello_world():",
-    "def Fibonacci_sequence(n):",
-]
-
+calib_list = []
+with open('humaneval_python.txt', 'r') as file:
+    for line in file:
+        calib_list.append(line.strip())
 #校准数据获取
 dataset_calib = get_calib_dataset(tokenizer, calib_list) 
 
 # 量化配置
 # 配置回退层数
-disabled_names = []
-disabled_layers = [0, 1, 2, 3, 39]
-for i in disabled_layers:
-    disabled_names.append(f"transformer.h.{i}.attn.c_attn")
-    disabled_names.append(f"transformer.h.{i}.attn.c_proj")
-    disabled_names.append(f"transformer.h.{i}.mlp.c_fc")
-    disabled_names.append(f"transformer.h.{i}.mlp.c_proj")
+disabled_names = ["transformer.h.0.mlp.c_proj",
+"transformer.h.1.attn.c_attn",
+"transformer.h.1.mlp.c_fc",
+"transformer.h.1.mlp.c_proj",
+"transformer.h.2.attn.c_attn",
+"transformer.h.2.mlp.c_proj",
+"transformer.h.3.attn.c_attn",
+"transformer.h.3.mlp.c_proj",
+"transformer.h.4.attn.c_attn",
+"transformer.h.4.mlp.c_proj",
+"transformer.h.11.attn.c_attn",
+"transformer.h.12.mlp.c_fc",
+"transformer.h.13.mlp.c_fc",
+"transformer.h.14.mlp.c_fc",
+"transformer.h.15.mlp.c_fc",
+"transformer.h.16.mlp.c_fc", 
+"transformer.h.17.mlp.c_fc",
+"transformer.h.18.mlp.c_fc",
+"transformer.h.19.mlp.c_fc",
+"transformer.h.20.mlp.c_fc",
+"transformer.h.21.mlp.c_fc",
+"transformer.h.39.attn.c_attn",
+"transformer.h.39.mlp.c_fc",
+"transformer.h.39.mlp.c_proj",
+"lm_head"]
+
 # 配置量化参数，并返回量化配置实例
 quant_config = QuantConfig(disable_names=disabled_names, w_bit=8, dev_type='cpu', 
-                            act_method=3, pr=0.5, mm_tensor=False, w_hessian=False)
+                            act_method=3, pr=1.0, mm_tensor=False)
 # 输入加载的原模型、量化配置和校准数据，定义校准
 calibrator = Calibrator(model, quant_config, calib_data=dataset_calib, disable_level='L0')
 

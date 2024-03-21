@@ -78,6 +78,7 @@ void PagedAttentionQuantModel::Param::FromString(const std::string &param)
     rank = paramJson["rank"].get<int>();
     worldSize = paramJson["worldSize"].get<int>();
     backend = paramJson["backend"].get<std::string>();
+    supportLcoc = paramJson["supportLcoc"].get<bool>();
     for (auto item : paramJson["seqLen"]) {
         seqLen.push_back(item.get<int>());
     }
@@ -93,7 +94,7 @@ void PagedAttentionQuantModel::Param::FromString(const std::string &param)
                   << isLmHeadParallel << ", supportSwiGLU: " << supportSwiGLU
                   << ", rmsNormEps:" << rmsNormEps << ", numAttentionHeadsPerRank:"
                   << numAttentionHeadsPerRank << ", hiddenSizePerAttentionHead:" << hiddenSizePerAttentionHead
-                  << ", numHiddenLayers:" << numHiddenLayers
+                  << ", numHiddenLayers:" << numHiddenLayers << ", supportLcoc :" << supportLcoc
                   << ", numKeyValueHeadsPerRank:" << numKeyValueHeadsPerRank
                   << ", rank:" << rank << ", worldSize:" << worldSize << ", backend:" << backend
                   << ", seqLen:" << seqLen;
@@ -159,7 +160,7 @@ int64_t PagedAttentionQuantModel::BuildGraph()
     
     int nodeId = 0;
     atb::Operation *op = nullptr;
-    // node 0： wordEmbedding
+    // node 0： wordEmbedding,多卡权重按照hidden_state进行切分
     auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
     atb_speed::common::WordEmbeddingParam wordEmbeddingParam;
     wordEmbeddingParam.unpadInputs = !param_.isFA;
@@ -192,6 +193,7 @@ int64_t PagedAttentionQuantModel::BuildGraph()
         layerParam.rank = param_.rank;
         layerParam.worldSize = param_.worldSize;
         layerParam.backend = param_.backend;
+        layerParam.supportLcoc = param_.supportLcoc;
         atb_speed::baichuan2_13b::PAQuantLayer(layerParam, &op);  
 
         layerNode.operation.reset(op);

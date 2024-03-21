@@ -91,6 +91,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
     }
     qNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
     qNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
+    qNormLinearParam.skipNorm = param.skipNorm;
     qNormLinearParam.normHasBias = param.normHasBias;
     qNormLinearParam.normParamType = param.normParamType;
     qNormLinearParam.normQuantParamType = param.normQuantParamType;
@@ -141,14 +142,31 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
     } else if (isPack && !param.isGroupedQueryAttention) {  // Split MHA
         auto &splitMixedQKVNode = opGraph.nodes[nodeId++];
         atb::infer::SplitParam splitMixedQKVParam;
-        splitMixedQKVParam.splitDim = -1;
-        splitMixedQKVParam.splitNum = 3;
+        if (param.splitWithStride) {
+            splitMixedQKVParam = {-2, 3};
+        } else {
+            splitMixedQKVParam = {-1, 3};
+        }
         CREATE_OPERATION(splitMixedQKVParam, &splitMixedQKVNode.operation);
         splitMixedQKVNode.inTensorIds = {QKVLinearSplitTensorIdx::INTERMEDIATE_MIXED_QKV};
         splitMixedQKVNode.outTensorIds = {
             QKVLinearSplitTensorIdx::OUT_Q, QKVLinearSplitTensorIdx::OUT_K,
             QKVLinearSplitTensorIdx::OUT_V
         };
+        if (param.splitWithStride) {
+            splitMixedQKVNode.inTensorReshapeFuncs.resize(splitMixedQKVNode.inTensorIds.size());
+            splitMixedQKVNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+                size_t dim = 0;
+                newShape.dims[dim++] = oldShape.dims[0];                 // PA ntokens | FA batch
+                if (param.isFA) {
+                    newShape.dims[dim++] = oldShape.dims[1];             // FA seqlen
+                }
+                newShape.dims[dim++] = param.selfAttentionParam.headNum; // head_num
+                newShape.dims[dim++] = 3;                                // 3 -> q, k, v
+                newShape.dims[dim++] = param.headDim;                    // dk
+                newShape.dimNum = dim;
+            };
+        }
     } else {  // isPack: false
         atb::Node &kNormLinearNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> kNormLinearParam;
@@ -161,6 +179,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         }
         kNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         kNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
+        kNormLinearParam.skipNorm = param.skipNorm;
         kNormLinearParam.normHasBias = param.normHasBias;
         kNormLinearParam.normParamType = param.normParamType;
         kNormLinearParam.normQuantParamType = param.normQuantParamType;
@@ -185,6 +204,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
         }
         vNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         vNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
+        vNormLinearParam.skipNorm = param.skipNorm;
         vNormLinearParam.normHasBias = param.normHasBias;
         vNormLinearParam.normParamType = param.normParamType;
         vNormLinearParam.normQuantParamType = param.normQuantParamType;
@@ -284,11 +304,18 @@ atb::Status SelfAttention(const FusionAttentionParam<NormParamType> &param, atb:
         selfAttentionNode.outTensorIds = {SelfAttentionTensorIdx::OUT_SELF_ATTENTION};
     } else if (!param.isFA && param.isPrefill) {  // PA Prefill
         CREATE_OPERATION(param.selfAttentionParam, &selfAttentionNode.operation);
-        selfAttentionNode.inTensorIds = {
-            SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_Q, SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_K,
-            SelfAttentionTensorIdx::IN_SELF_ATTENTION_V, SelfAttentionTensorIdx::IN_SELF_ATTENTION_ATTENTION_MASK,
-            SelfAttentionTensorIdx::IN_SELF_ATTENTION_SEQ_LEN
-        };
+        if (param.selfAttentionParam.maskType == atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_UNDEFINED) {
+            selfAttentionNode.inTensorIds = {
+                SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_Q, SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_K,
+                SelfAttentionTensorIdx::IN_SELF_ATTENTION_V, SelfAttentionTensorIdx::IN_SELF_ATTENTION_SEQ_LEN
+            };
+        } else {
+            selfAttentionNode.inTensorIds = {
+                SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_Q, SelfAttentionTensorIdx::IN_SELF_ATTENTION_POSITION_EMBED_K,
+                SelfAttentionTensorIdx::IN_SELF_ATTENTION_V, SelfAttentionTensorIdx::IN_SELF_ATTENTION_ATTENTION_MASK,
+                SelfAttentionTensorIdx::IN_SELF_ATTENTION_SEQ_LEN
+            };
+        }
         selfAttentionNode.outTensorIds = {SelfAttentionTensorIdx::OUT_SELF_ATTENTION};
     } else {  // PA Decode
         if (param.pageAttentionParam.maskType == atb::infer::PagedAttentionParam::MaskType::MASK_TYPE_ALIBI) {

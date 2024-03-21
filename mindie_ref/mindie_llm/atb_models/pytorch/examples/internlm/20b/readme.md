@@ -291,10 +291,10 @@ torchrun --nproc_per_node 2 main.py --task precision
 ## 3. 执行测试脚本
 
 ```
-RETURN_PERF_DETAIL=1 torchrun --nproc_per_node 2 main.py --task performance
+TIMEIT=1 torchrun --nproc_per_node 2 main.py --task performance
 ```
 
-为了不影响正常使用，将`RETURN_PERF_DETAIL`设置成1来返回具体的性能测试的值，默认是0
+为了不影响正常使用，将`TIMEIT`设置成1来返回具体的性能测试的值，默认是0
 
 ### 性能测试结果
 

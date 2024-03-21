@@ -1,31 +1,24 @@
 # Copyright (c) 2023, Baichuan Intelligent Technology. All rights reserved.
-import os
 import json
 import math
+import os
 from contextlib import contextmanager
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 import torch
 import torch_npu
 from atb_llm.models.baichuan.v2_13b.config import BaichuanConfig
-from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
 from atb_llm.utils.layers import (
-    TensorParallelRowLinear,
-    TensorParallelColumnLinear,
-    TensorEmbedding,
-    TensorParallelHead,
     AttentionMask
 )
 from atb_llm.utils.log import logger
 from torch import nn
-from transformers import PreTrainedModel
-from transformers.activations import ACT2FN
-from transformers.modeling_outputs import CausalLMOutputWithPast
-from .modeling_baichuan import FlashBaichuanModel
-from ....utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
-from ...base.flash_causal_lm import FlashForCausalLM
 
+from .modeling_baichuan import FlashBaichuanModel
+from ...base.flash_causal_lm import FlashForCausalLM
+from ....utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
 from ....utils.layers import load_column_multi
+
 
 def _get_interleave(n):
     def _get_interleave_power_of_2(n):
@@ -87,7 +80,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
     def __init__(self, config, weights):
         if not hasattr(config, 'max_position_embeddings'):
             config.max_position_embeddings = config.model_max_length
-        self.use_refactor = True
+        self.use_refactor = getattr(config, "use_refactor", True)
         super().__init__(config, weights)
         del self.rotary_embedding
         self.model = FlashBaichuanModel(config, weights)
@@ -99,12 +92,12 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             head_size=1,
             lm_head=True,
             norm=config.vocab_size == 125696
-            
+
         )
         self.ascend_atten_mask = AttentionMask.static(config.model_max_length)
         self.config = config  # for quantize
         self.place_holder = torch.tensor([1], dtype=torch.float16, device='npu')
-        
+
         # for alibi
         self.training = False
         self.first_run = True
@@ -114,7 +107,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
         self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
         transdata_param = json.dumps({})
         self.transdata_operation.set_param(transdata_param)
-        
+
     def init_ascend_weight(self):
         if not self.use_refactor:  # fp16
             torch.npu.synchronize()
@@ -147,13 +140,12 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
         else:  # fp16 w8a8
             logger.info(f">>>> quant-{self.quantize}")
             self.ascend_weight, self.linear_type, self.pack_quant_config = self.get_weights()
-            self.acl_param_encoder = json.dumps({
+            coder_param = {
                 "isFA": False,
-                "isPrefill": True,
                 "isBF16": False,
-                "isEmbeddingParallel": False,
+                "isEmbeddingParallel": self.model.parallel_embedding,
                 "isLmHeadParallel": True,
-                "supportSwiGLU": False if self.soc_info.need_nz else True,
+                "supportSwiGLU": not self.soc_info.need_nz,
                 "rmsNormEps": self.config.rms_norm_eps,
                 "numAttentionHeadsPerRank": self.config.num_attention_heads // self.tp_world_size,
                 "hiddenSizePerAttentionHead": self.config.hidden_size // self.config.num_attention_heads,
@@ -164,31 +156,16 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
                 "backend": "hccl" if self.soc_info.need_nz else os.getenv("BACKEND", "lccl"),
                 "packQuantType": self.pack_quant_config,
                 "linearQuantType": self.linear_type,
-            })
-            self.acl_param_decoder = json.dumps({
-                "isFA": False,
-                "isPrefill": False,
-                "isBF16": False,
-                "isEmbeddingParallel": False,
-                "isLmHeadParallel": True,
-                "supportSwiGLU": False if self.soc_info.need_nz else True,
-                "rmsNormEps": self.config.rms_norm_eps,
-                "numAttentionHeadsPerRank": self.config.num_attention_heads // self.tp_world_size,
-                "hiddenSizePerAttentionHead": self.config.hidden_size // self.config.num_attention_heads,
-                "numHiddenLayers": self.config.num_hidden_layers,
-                "numKeyValueHeadsPerRank": self.num_key_value_heads,
-                "rank": self.tp_rank,
-                "worldSize": self.tp_world_size,
-                "backend": "hccl" if self.soc_info.need_nz else os.getenv("BACKEND", "lccl"),
-                "packQuantType": self.pack_quant_config,
-                "linearQuantType": self.linear_type,
-            })
-            self.acl_encoder_operation.set_param(self.acl_param_encoder)
-            self.acl_decoder_operation.set_param(self.acl_param_decoder)
+            }
+            encoder_param = {**coder_param, "isPrefill": True, "supportLcoc": not self.soc_info.need_nz}
+            decoder_param = {**coder_param, "isPrefill": False, "supportLcoc": False}
+            self.acl_encoder_operation.set_param(json.dumps({**encoder_param}))
+            self.acl_decoder_operation.set_param(json.dumps({**decoder_param}))
+
             logger.info(">>>> baichuan2_13b_PagedAttentionParam is inited.")
             self.acl_encoder_operation.set_weight(self.ascend_weight)
             self.acl_decoder_operation.set_weight(self.ascend_weight)
-    
+
     def init_ascend_kvcache(self, kv_cache):
         kcache_id = not self.ascend_kcache_id or self.ascend_kcache_id != id(kv_cache[0][0])
         vcache_id = not self.ascend_vcache_id or self.ascend_vcache_id != id(kv_cache[0][1])
@@ -239,7 +216,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             logger.info(self.acl_param_encoder)
             logger.info(self.acl_param_decoder)
             logger.info("using flash_baichuan2_13b_modeling_ascend")
-            
+
             self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_13b_PagedAttentionModel")
             self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("baichuan2_13b_PagedAttentionModel")
             self.acl_encoder_operation.set_param(self.acl_param_encoder)
@@ -269,28 +246,28 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             self.place_holder
         ]
         return self.acl_operation_inputs
-    
+
     def generate_mask(self, max_s, kv_cache):
         """
         生成mask
         """
         pad_max_s = max_s
-        attention_mask = self.ascend_atten_mask.get_attn_mask(pad_max_s, kv_cache[0][0].dtype, kv_cache[0][0].device)
-
-        total_alibi_mask = self.get_alibi_mask(self.place_holder, pad_max_s)
+        if self.is_prefill:
+            self.attention_mask = self.ascend_atten_mask.get_attn_mask(pad_max_s, kv_cache[0][0].dtype,
+                                                                       kv_cache[0][0].device)
+        total_alibi_mask = self.get_alibi_mask(self.place_holder, pad_max_s)  #
         if self.tp_world_size > 1:
             total_alibi_mask = total_alibi_mask[self.tp_rank]
         if self.is_prefill:  # prefill
-            attention_mask = attention_mask + total_alibi_mask  # [4, 40, 1024, 1024] [head_num,max_s,max_s]
-            logger.debug(f"final attention_mask shape in {self.is_prefill=} is {attention_mask.shape}")
+            self.attention_mask = self.attention_mask + total_alibi_mask  # [4, 40, 1024, 1024] [head_num,max_s,max_s]
+            logger.debug(f"final attention_mask shape in {self.is_prefill=} is {self.attention_mask.shape}")
         else:
-            attention_mask = total_alibi_mask  # [40, 1024, 1024] [head_num,max_s,max_s]
-            attention_mask = attention_mask[:, -1:, :]
-            logger.debug(f"final attention_mask shape in {self.is_prefill=} is {attention_mask.shape}")
-        
-        return attention_mask
+            self.attention_mask = total_alibi_mask  # [40, 1024, 1024] [head_num,max_s,max_s]
+            self.attention_mask = self.attention_mask[:, -1:, :]
+            logger.debug(f"final attention_mask shape in {self.is_prefill=} is {self.attention_mask.shape}")
+        if self.soc_info.need_nz:
+            self.attention_mask = self.ntoken_transdata(self.attention_mask)
 
-    # attention_mask
     def ntoken_transdata(self, tensor):
         """
         prefill: [batch , head_num,max_s,max_s] -> [batch * head_num, maxS/16, maxS, 16]
@@ -300,17 +277,14 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
         decode: [batch,head_num,1,max_s] -> [batch * head_num, max_s/16, 16, 16]
         max_s不够16整除的要pad 如[1,40,1,17] -> [1, 40, 1, 32] -> [1, 40, 16, 32] ->[40,2,16,16]
         """
-        return self.transdata_operation.execute(
-            [tensor.view(tensor.shape[0] * tensor.shape[1], tensor.shape[2], tensor.shape[3])]
-        )[0]
-        
+        return self.transdata_operation.execute([tensor])[0]
+
     def weight_format_cast(self, tensor):
         if not self.soc_info.need_nz:
             return tensor
         torch_npu.npu_format_cast_(tensor, 29)
         return tensor
 
-   
     def get_weights(self):
         attn_module_names = AttnModuleNames(
             norm_name='input_layernorm',
@@ -320,7 +294,9 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
         mlp_module_names = MlpModuleNames(
             norm_name='post_attention_layernorm',
             pack_name='mlp.gate_up_proj',
-            down_name='mlp.down_proj'
+            down_name='mlp.down_proj',
+            gate_name='mlp.gate_proj',
+            up_name='mlp.up_proj'
         )
         weight_wrapper = WeightWrapper(self.soc_info, self.tp_rank, attn_module_names, mlp_module_names)
         weight_wrapper.register_embedding(self.model.state_dict(), 'embed_tokens')
@@ -335,7 +311,6 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
         weight_wrapper.register_model_norm(self.model.state_dict(), 'norm')
         weight_wrapper.register_model_lmhead(self.state_dict(), 'lm_head')
         return weight_wrapper.weights, weight_wrapper.linear_type, weight_wrapper.pack_quant_type
-
 
     def execute_ascend_operator(self,
                                 acl_model,
@@ -361,7 +336,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
         acl_param = json.dumps({
             "seqLen": input_lengths.tolist()
         })
-        
+
         acl_model_out = acl_model.execute(acl_inputs, acl_param)
         acl_hidden_state = acl_model_out[0]
         return acl_hidden_state
@@ -371,8 +346,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
 
     def set_input_embeddings(self, value):
         self.embed_tokens = value
-    
-    
+
     def get_alibi_mask(self, tensor, seq_length_with_past):
         if self.training:
             slopes = torch.Tensor(_get_interleave(self.n_head))
@@ -415,7 +389,6 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
                 mask = mask.chunk(self.tp_world_size, dim=0)
         return mask
 
-    
     def forward(
             self,
             input_ids: torch.Tensor,  # input id, 拉平的
@@ -439,8 +412,10 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
                 self.lm_head_weight.data = torch_npu.npu_format_cast(self.lm_head_weight.data, 29)
             self.model.lm_head_weight = self.lm_head_weight
         self.is_prefill = is_prefill
-        self.batch_size = len(input_lengths)
-        attention_mask = self.generate_mask(max_seq_len, kv_cache)
+
+        # generate self.attention_mask
+        self.generate_mask(max_seq_len, kv_cache)
+
         # add acl model
         if not self.ascend_weight:
             self.init_ascend_weight()
@@ -449,7 +424,6 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             operation = self.acl_encoder_operation
         else:
             operation = self.acl_decoder_operation
-
         hidden_states = self.execute_ascend_operator(
             operation,
             input_ids,
@@ -460,7 +434,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
             input_lengths,
             max_seq_len,
             lm_head_indices,
-            attention_mask)
+            self.attention_mask)
         outputs = tuple(v for v in [hidden_states] if v is not None)
         logits = outputs[0]
         return logits

@@ -57,6 +57,7 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     fusionAttentionParam.isBF16 = param.isBF16;
     fusionAttentionParam.packQuantType = param.packQuantType[0];
     fusionAttentionParam.layerLinearQuantType = param.linearQuantType;
+    fusionAttentionParam.supportLcoc = param.supportLcoc;
     atb::infer::RmsNormParam attenRmsNormParam; 
     attenRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     attenRmsNormParam.normParam.epsilon = param.rmsNormEps;
@@ -77,9 +78,9 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     if (param.hiddenSizePerAttentionHead == 0) {
         return atb::ERROR_INVALID_GRAPH;
     }
+    fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
     fusionAttentionParam.selfAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
     if (param.isFA) {
-        fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
         fusionAttentionParam.selfAttentionParam.calcType = param.isPrefill ? \
             atb::infer::SelfAttentionParam::CalcType::ENCODER : atb::infer::SelfAttentionParam::CalcType::DECODER;
     } else {
@@ -145,6 +146,7 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     mlpParam.isBF16 = param.isBF16;
     mlpParam.packQuantType = param.packQuantType[1];
     mlpParam.layerLinearQuantType = param.linearQuantType;
+    mlpParam.supportLcoc = param.supportLcoc;
     // gate up
     if (param.packQuantType[1] == atb_speed::common::MIX_W8A8 || param.packQuantType[1] == atb_speed::common::MIX_W8A8_ANTI) {
         mlpParam.mlpPackType = atb_speed::common::GATE_UP_WEIGHT_NO_PACK;

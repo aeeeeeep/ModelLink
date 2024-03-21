@@ -35,7 +35,7 @@
 **权重下载**
 - [LLaMa-7B](https://huggingface.co/huggyllama/llama-7b)
 - [LLaMa-13B](https://huggingface.co/huggyllama/llama-13b)
-- LLaMa-33B（待补充）
+- [LLaMa-33B](https://huggingface.co/pinkmanlove/llama-33b-hf/tree/main)
 - [LLaMa-65B](https://huggingface.co/huggyllama/llama-65b)
 - [LLaMa2-7B](https://huggingface.co/NousResearch/Llama-2-7b-hf)
 - [LLaMa2-13B](https://huggingface.co/NousResearch/Llama-2-13b-hf)
@@ -62,6 +62,15 @@
   NUM_LAYERS = 32 # 模型层数，LLaMA2-7B配置为32，13B配置为40
   ANTI_METHOD = "m1" # anti-outlier算法配置，LLaMA2-7B配置为m1，13B配置为m2
   ```
+  - 打开量化脚本convert_w8a8_quant_weights.py，配置校准数据集
+  ```shell
+  # 跳转到脚本第33行，从 https://github.com/google-research-datasets/boolean-questions 下载BoolQ Development数据集，从数据集中选取50条问题，填入calib_list中
+  calib_list = [
+    # 选取50条数据填入
+    "Question1: xxx",
+    "Question2: xxx",
+  ]
+  ```
   - 执行量化脚本
   ```shell
   python convert_w8a8_quant_weights.py 
@@ -86,6 +95,42 @@
     # 安装
     pip install transformers=={指定版本}
     ```
+
+**LLaMa 33B权重添加Special token**
+- LLaMa 33B中tokenizer原始的special token为空，需手动将权重文件中的`special_tokens_map.json`文件替换成以下内容
+  ```json
+  {
+    "add_bos_token": true,
+    "add_eos_token": false,
+    "bos_token": {
+      "content": "<s>",
+      "lstrip": false,
+      "normalized": true,
+      "rstrip": false,
+      "single_word": false
+    },
+    "clean_up_tokenization_spaces": false,
+    "eos_token": {
+      "content": "</s>",
+      "lstrip": false,
+      "normalized": true,
+      "rstrip": false,
+      "single_word": false
+    },
+    "model_max_length": 2048,
+    "pad_token": null,
+    "sp_model_kwargs": {},
+    "tokenizer_class": "LlamaTokenizer",
+    "unk_token": {
+      "content": "<unk>",
+      "lstrip": false,
+      "normalized": true,
+      "rstrip": false,
+      "single_word": false
+    }
+  }
+  ```
+
 
 **基础环境变量**
 - 参考[此README文件](../../../README.md)
@@ -230,7 +275,7 @@
     bash run.sh pa_fp16 full_BoolQ 1 llama True ${llama-13b权重路径} 8
     bash run.sh pa_fp16 full_BoolQ 1 llama True ${llama-65b权重路径} 8
     ```
-- 运行量化权重和BF16时需注意`${weight_path}/config.json`中的`quantize`字段是否与权重匹配
+- 运行量化权重和BF16时需注意`${weight_path}/config.json`中的`quantize`字段和`torch_dtype`字段是否与权重匹配，参考[此README文件](../../README.md)
 
 ## 性能测试
 - 参考[此README文件](../../../tests/modeltest/README.md)
@@ -247,7 +292,7 @@
     bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${llama-13b权重路径} 8
     bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${llama-65b权重路径} 8
     ```
-- 运行量化权重和BF16时需注意`${weight_path}/config.json`中的`quantize`字段是否与权重匹配
+- 运行量化权重和BF16时需注意`${weight_path}/config.json`中的`quantize`字段和`torch_dtype`字段是否与权重匹配，参考[此README文件](../../README.md)
 
 ## FAQ
 - 更多环境变量见[此README文件](../../README.md)

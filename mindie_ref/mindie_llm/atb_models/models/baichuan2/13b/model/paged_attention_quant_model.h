@@ -31,12 +31,13 @@ public:
         bool isPrefill = false;
         // isBF16为true时采用BF16精度; 反之，则采用FP16精度
         bool isBF16 = false;
-        // isEmbeddingParallel为true时，embedding的权重在hiddenSize维度进行切分; 反之，则不对权重进行切分; 测试表明embedding切分并不会带来性能提升
-        bool isEmbeddingParallel = false;
+        bool isEmbeddingParallel = true;  // 默认是在hidden_states维度进行切分
         // isLmHeadParallel为true时，LmHead的权重在vacobSize维度进行切分; 反之，则不对权重进行切分
         bool isLmHeadParallel = true;
         bool supportSwiGLU = true;
         
+        // support lcoc
+        bool supportLcoc = false;
         int numAttentionHeadsPerRank = 0;
         int hiddenSizePerAttentionHead = 0;
         int numHiddenLayers = 0;

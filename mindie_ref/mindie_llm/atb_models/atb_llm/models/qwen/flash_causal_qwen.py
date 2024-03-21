@@ -1,4 +1,3 @@
-# Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 import json
 import math
 import os
@@ -42,6 +41,10 @@ class FlashQwenForCausalLM(FlashForCausalLM):
         self.config = config  # for quantize
         self.attn_mask_fake = self.attn_mask.get_attn_mask(1, dtype=torch.float16, device="npu")
         self.place_holder = torch.tensor([1], dtype=torch.float16, device='npu')
+
+        self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
+        self.transdata_param = json.dumps({})
+        self.transdata_operation.set_param(self.transdata_param)
 
     def init_position_rotary_embedding(self,
                                        position_ids: torch.Tensor,
@@ -196,7 +199,7 @@ class FlashQwenForCausalLM(FlashForCausalLM):
             acl_param_dict = {
                 "isFA": False,
                 "isBF16": False,
-                "isEmbeddingParallel": False,
+                "isEmbeddingParallel": True,
                 "isLmHeadParallel": True,
                 "supportSwiGLU": False if self.soc_info.need_nz else True,
                 "rmsNormEps": self.config.layer_norm_epsilon,
@@ -210,8 +213,8 @@ class FlashQwenForCausalLM(FlashForCausalLM):
                 "packQuantType": self.pack_quant_config,
                 "linearQuantType": self.linear_type,
             }
-            self.acl_param_encoder = json.dumps({**acl_param_dict, "isPrefill": True})
-            self.acl_param_decoder = json.dumps({**acl_param_dict, "isPrefill": False})
+            self.acl_param_encoder = json.dumps({**acl_param_dict, "isPrefill": True, "supportLcoc": False if self.soc_info.need_nz else True})
+            self.acl_param_decoder = json.dumps({**acl_param_dict, "isPrefill": False, "supportLcoc": False})
             
             self.acl_encoder_operation.set_param(self.acl_param_encoder)
             self.acl_decoder_operation.set_param(self.acl_param_decoder)
@@ -295,8 +298,13 @@ class FlashQwenForCausalLM(FlashForCausalLM):
             self.acl_param = json.dumps({
                 "seqLen": input_lengths.tolist()
             })
-            
-            self.init_position_rotary_embedding(position_ids, max_seq_len)
+            self.rotary_embedding.update_cos_sin_cache_total(
+                self.dtype,
+                self.device,
+                self.max_position_embeddings
+            )
+            self.cos_table = self.rotary_embedding.get_cos_cached_total()
+            self.sin_table = self.rotary_embedding.get_sin_cached_total()
             if is_prefill:
                 if lm_head_indices is None:
                     lm_head_indices = torch.tensor(range(input_ids.shape[0]), dtype=torch.int64, device=input_ids.device)
@@ -305,8 +313,7 @@ class FlashQwenForCausalLM(FlashForCausalLM):
                 if self.soc_info.need_nz:
                     pad_maxs = math.ceil(self.max_position_embeddings / 16) * 16
                     attention_mask = self.attn_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
-                    attention_mask = attention_mask.view(1, pad_maxs, pad_maxs // 16, 16).transpose(1, 2)
-                    torch_npu.npu_format_cast_(attention_mask, 29)
+                    attention_mask = self.transdata_operation.execute([attention_mask])[0]
                 else:
                     attention_mask = self.attn_mask.get_attn_mask(self.max_position_embeddings, kv_cache[0][0].dtype,
                                                                         kv_cache[0][0].device)
@@ -315,8 +322,9 @@ class FlashQwenForCausalLM(FlashForCausalLM):
             
             self.acl_operation_inputs = [
                 input_ids,  # IN_TENSOR_INPUTIDS
-                self.cos_embed,  # IN_TENSOR_COSEMBED
-                self.sin_embed,  # IN_TENSOR_SINEMBED
+                position_ids, # IN_TENSOR_POSITIONIDS
+                self.cos_table,  # IN_TENSOR_COSEMBED
+                self.sin_table,  # IN_TENSOR_SINEMBED
                 attention_mask,  # IN_TENSOR_ATTENTIONMASK
                 block_tables.to(torch.int32),  # IN_TENSOR_BLOCK_TABLES
                 slots.to(torch.int32),  # IN_TENSOR_SLOTS

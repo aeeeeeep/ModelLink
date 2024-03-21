@@ -245,17 +245,21 @@ class FlashLlamaAttention(torch.nn.Module):
 
         self.softmax_scale = self.head_size ** -0.5
 
-        # can support self.num_heads % weights.process_group.size() != 0
+        # can not support self.num_heads % weights.process_group.size() != 0
         if (config.num_attention_heads != config.num_key_value_heads
                 and (self.num_heads % weights.process_group.size() != 0)):
             raise ValueError(
                 f"`num_heads` must be divisible by `num_shards` (got `num_heads`: {self.num_heads} "
                 f"and `num_shards`: {weights.process_group.size()}"
             )
+        if config.num_key_value_heads < weights.process_group.size():
+            repeat_times = weights.process_group.size() // config.num_key_value_heads
+        else:
+            repeat_times = 1
 
         self.num_heads = (self.num_heads + weights.process_group.size() - 1) // weights.process_group.size()
         if config.num_key_value_heads != config.num_attention_heads:
-            self.num_key_value_heads = config.num_key_value_heads
+            self.num_key_value_heads = config.num_key_value_heads * repeat_times
             self.num_key_value_heads = self.num_key_value_heads // weights.process_group.size()
         else:
             self.num_key_value_heads = self.num_heads
@@ -322,6 +326,7 @@ class FlashLlamaAttention(torch.nn.Module):
             prefix=f"{prefix}.o_proj",
             weights=weights,
             bias=False,
+            gqa_size=self.head_size,
         )
         self.num_groups = self.num_heads // self.num_key_value_heads
         self.kv_head_mapping = torch.arange(

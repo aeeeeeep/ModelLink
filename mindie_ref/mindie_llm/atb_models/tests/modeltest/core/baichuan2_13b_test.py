@@ -1,24 +1,11 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 import os
-
-ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
-import sys
-
-sys.path.append(os.path.join(ATB_SPEED_HOME_PATH, "../.."))
-from atb_llm.runner import ModelRunner
 from base import model_test
-from transformers.generation.utils import GenerationConfig
-
-MODEL_FILE = os.path.join(
-    model_test.ATB_SPEED_HOME_PATH,
-    "pytorch/examples/baichuan2/13b/modeling_baichuan_ascend.py",
-)
 
 
 class Baichuan213BModelTest(model_test.ModelTest):
     def __init__(self, *args) -> None:
         super().__init__(*args)
-        self.weight_dir = args[12]
 
     def remove_part_of_generation_config(self, generation_config):
         ori_gen = GenerationConfig()

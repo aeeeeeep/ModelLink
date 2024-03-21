@@ -40,6 +40,10 @@ class FakeGroup:
         return self._rank
 
 
+def get_rank_table_file():
+    return str(os.getenv("RANKTABLEFILE", ""))
+
+
 def set_device_from_ranktable(rank, rank_table):
     device_found_flag = False
     print_log(rank, logger.info, f'Rank table given, devices selected from json')

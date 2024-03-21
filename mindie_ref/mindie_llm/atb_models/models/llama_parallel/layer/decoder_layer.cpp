@@ -71,19 +71,18 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     fusionAttentionParam.selfAttentionParam.headNum = param.numAttentionHeadsPerRank;
     fusionAttentionParam.selfAttentionParam.kvHeadNum = param.numKeyValueHeadsPerRank;
     fusionAttentionParam.selfAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
-    fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
     if (param.isFA) {
         fusionAttentionParam.selfAttentionParam.calcType = param.isPrefill ? \
             atb::infer::SelfAttentionParam::CalcType::ENCODER : atb::infer::SelfAttentionParam::CalcType::DECODER;
     } else {
+        fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
         fusionAttentionParam.selfAttentionParam.calcType = atb::infer::SelfAttentionParam::CalcType::PA_ENCODER;
     }
+    fusionAttentionParam.selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     fusionAttentionParam.pageAttentionParam.headNum = param.numAttentionHeadsPerRank;
     fusionAttentionParam.pageAttentionParam.kvHeadNum = param.numKeyValueHeadsPerRank;
     fusionAttentionParam.pageAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
-    fusionAttentionParam.pageAttentionParam.maskType = param.isBF16 ? \
-        atb::infer::PagedAttentionParam::MaskType::MASK_TYPE_ALIBI : atb::infer::PagedAttentionParam::MaskType::UNDEFINED;
-    fusionAttentionParam.selfOutLinearTensorParallelInfo = {param.rank, param.worldSize, param.backend};
+    fusionAttentionParam.selfOutLinearTensorParallelInfo = param.tensorParallelInfo;
     Attention(fusionAttentionParam, &attentionNode.operation);
     attentionNode.inTensorIds = {
         IN_HIDDEN_STATES,
@@ -153,7 +152,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     mlpRmsNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
     mlpParam.normQuantParamType = mlpRmsNormQuantParam;
     // down
-    mlpParam.downLinearTensorParallelInfo = {param.rank, param.worldSize, param.backend};
+    mlpParam.downLinearTensorParallelInfo = param.tensorParallelInfo;
     mlpParam.supportLcoc = param.supportLcoc;
     if (param.supportSwiGLU) {
         mlpParam.activationParam.activationType = atb::infer::ActivationType::ACTIVATION_SWIGLU_FORWARD;
@@ -204,10 +203,6 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
 }
-
-DecoderLayerBinder::DecoderLayerBinder() {}
-
-DecoderLayerBinder::~DecoderLayerBinder() {}
 
 } // namespace llama_parallel
 } // namespace atb_speed

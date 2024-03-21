@@ -57,7 +57,10 @@ atb::Status CreateMixtralDenseMultiLayerLinearOperation(const MixtralDenseMultiL
     atb::SVector<int64_t> sliceOffsetKV = {0, 0, param.headNum * param.dk};
     atb::SVector<int64_t> sliceSizeKV = {-1, -1, 2 * param.dk};
 
-    atb::infer::MatmulParam linearParam = {false, param.transpose};
+    atb::infer::LinearParam linearParam;
+    linearParam.transposeA = false;
+    linearParam.transposeB = param.transpose;
+    linearParam.hasBias = false;
     CreateOperation(linearParam, &linearNode.operation);
     linearNode.inTensorIds = {IN_INPUTTENSOR, IN_WEIGHTTENSOR};
     linearNode.outTensorIds = {INTERMIDATE_LINEAR_OUT};

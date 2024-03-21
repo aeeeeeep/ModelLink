@@ -1076,7 +1076,13 @@ class VLMo(pl.LightningModule):
         # Mlp nn.GELU
         # Attention F.linear
         for i, blk in enumerate(self.transformer.blocks):
-            relative_position_bias = self.relative_position_bias_list_vl[i].npu()
+            
+            maskbool = ~co_masks.bool()
+            maskbool = maskbool.npu()
+            relative_position_bias_list_vl = self.relative_position_bias_list_vl[i].unsqueeze(0).npu()
+            relative_position_bias_list_vl = relative_position_bias_list_vl.masked_fill(maskbool[:, None, None, :], float("-inf"))
+            
+            relative_position_bias = relative_position_bias_list_vl.npu()
             # print("relative_position_bias shape",relative_position_bias.shape)
             # print("self.relative_position_bias_list[i]",self.relative_position_bias_list[i])
             # print("relative_position_bias_list[i]",relative_position_bias_list[i])

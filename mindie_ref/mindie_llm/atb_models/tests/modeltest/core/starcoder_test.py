@@ -1,18 +1,10 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 import os
-import ast
-ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
-import sys
-sys.path.append(os.path.join(ATB_SPEED_HOME_PATH, "../.."))
-import torch
 from base import model_test
-from atb_llm.runner import ModelRunner
 
 
 class StarcoderModelTest(model_test.ModelTest):
     def __init__(self, *args) -> None:
-        self.max_position_embeddings = max([pair[0] for pair in ast.literal_eval(args[11])]) + max([pair[1] for pair in ast.literal_eval(args[11])])
-        self.weight_dir = args[12]
         super().__init__(*args)
 
     def get_chip_num(self):
@@ -41,10 +33,11 @@ class StarcoderModelTest(model_test.ModelTest):
         os.environ['ATB_LAYER_INTERNAL_TENSOR_REUSE'] = "1"
         os.environ['ATB_OPERATION_EXECUTE_ASYNC'] = "1"
         os.environ['TASK_QUEUE_ENABLE'] = "1"
-        os.environ['LCCL_ENABLE_FALLBACK'] = "1" # 310P关闭，800I A2开启
+        os.environ['LCCL_ENABLE_FALLBACK'] = "1"
+        os.environ['ATB_WORKSPACE_MEM_ALLOC_GLOBAL'] = "1"
     
     def get_dataset_list(self):
-        return ["GSM8K", "MMLU", "TruthfulQA"]
+        return ["HumanEval"]
 
 
 def main():
