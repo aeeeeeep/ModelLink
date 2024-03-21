@@ -238,7 +238,8 @@ class TensorParallelRowLinear(SuperLayer):
         if bias and bias_pre_add:
             bias = weights.get_tensor(f"{prefix}.bias")
         elif bias:
-            bias = weights.get_tensor(f"{prefix}.bias") / weights.process_group.size()
+            # 加速库浮点的横切需要所有卡都读取完整的bias，因为加速库的算法是先all reduce再加bias
+            bias = weights.get_tensor(f"{prefix}.bias")
         else:
             bias = None
         return cls(
