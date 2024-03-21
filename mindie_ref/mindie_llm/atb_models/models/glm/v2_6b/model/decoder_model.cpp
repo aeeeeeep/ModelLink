@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 #include <vector>
-#include "nlohmann/json.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
+#include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
 #include "layers/operations/word_embedding.h"

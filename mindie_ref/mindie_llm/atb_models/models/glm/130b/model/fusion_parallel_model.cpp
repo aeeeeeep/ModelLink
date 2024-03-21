@@ -22,14 +22,11 @@
 #include "glm/130b/layer/fusion_parallel_layer.h"
 #include "glm/130b/operation/lmhead.h"
 #include "fusion_parallel_model.h"
-#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace glm130b {
 
-REGISTER_MODEL(glm130b, FusionParallelModel);
-
-static const uint64_t WEIGHT_COUNT_PER_LAYER = 12;
+static const uint64_t WEIGHT_COUNT_PER_LAYER = 20;
 static const uint64_t WORDEMBEDDINGNODE_WEIGHT_COUNT = 0;
 static const uint64_t FINALNORMNODE_WEIGHT_COUNT = 3; // change to 3 includes final forward weight
 static const uint64_t OPERATION_COUNT_BEFORE_LAYER = 2;
