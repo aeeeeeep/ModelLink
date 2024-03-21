@@ -262,6 +262,8 @@ def task_chat(args, model, tokenizer=None, system_template="", dialog_template="
                 logging.info("===========================================================")
 
             prompt = input(input_template)
+            # remove non utf-8 characters
+            prompt = prompt.encode('utf-8', errors='ignore').decode('utf-8')
             if prompt.strip() in ["q", "exit", "quit"]:
                 terminate_runs += 1
 

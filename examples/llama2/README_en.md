@@ -518,15 +518,16 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
    6.2 Full Parameters Fine-Tuning
    The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_7b_ptd.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
 
-   Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
+   Add the fine-tuning parameter `--finetune` and add pretrained-weight load parameter `--load`, so that fine-tuning starts from the first step.
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
-   
+   CKPT_PATH=./ckpt
+   --load ${CKPT_PATH} \
    --finetune \
    --is-instruction-dataset \
    ```
    6.3 Lora Fine-Tuning
-   The Lora fine-tuning script is configured by adding the following lora parameters to the pretrain_llama2_7b_ptd.sh script:
+   The Lora fine-tuning script is configured by adding the following lora parameters based on the full-parameter finetune script pretrain_llama2_7b_ptd.sh:
    ```bash
        --lora-target-modules query_key_value dense proj dense_4h_to_h \
        --lora-r 16 \
@@ -536,11 +537,7 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
    ```bash
      --lora-modules-to-save word_embeddings output_layer \
    ```
-   The following parameters are added to the resumable training capability of Lora:
-   ```bash
-       --load ${ORIGIN_CHECKPOINT}  \
-       --lora-load ${LORA_CHECKPOINT} \
-   ```
+   
    
    Launch LLAMA2-13B lora fine tune script: tasks/finetune/tune_llama2_13b_ptd.sh
    
