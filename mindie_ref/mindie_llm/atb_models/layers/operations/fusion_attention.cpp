@@ -159,7 +159,7 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
                 size_t dim = 0;
                 newShape.dims[dim++] = oldShape.dims[0];                 // PA ntokens | FA batch
                 if (param.isFA) {
-                    newShape.dims[dim++] = oldShape.dims[1];             // FA seqlen    
+                    newShape.dims[dim++] = oldShape.dims[1];             // FA seqlen
                 }
                 newShape.dims[dim++] = param.selfAttentionParam.headNum; // head_num
                 newShape.dims[dim++] = 3;                                // 3 -> q, k, v

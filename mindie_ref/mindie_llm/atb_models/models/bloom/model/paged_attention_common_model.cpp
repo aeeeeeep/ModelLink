@@ -162,11 +162,6 @@ int64_t DecoderModel::BuildGraph()
     int INTERNEL_TENSOR_HIDDEN_STATES = internelTensorIdx++;
     // idx: 1, shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
     int INTERNEL_TENSOR_TO_LAYERS = internelTensorIdx++;
-    // // idx: 1, shape: [batchSize * seqLen, hiddenSizePerAttentionHead]
-    // int INTERNEL_TENSOR_COS_EMB = internelTensorIdx++;
-    // // idx: 2, shape: [batchSize * seqLen, hiddenSizePerAttentionHead]
-    // int INTERNEL_TENSOR_SIN_EMB = internelTensorIdx++;
-    // idx: [3, 3 + numHiddenLayers), shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
     int INTERNEL_TENSOR_LAYER_OUT_BASE = internelTensorIdx++;
     internelTensorIdx = internelTensorIdx + param_.numHiddenLayers - 1;
     // idx: 3 + numHiddenLayers, shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
@@ -206,19 +201,6 @@ int64_t DecoderModel::BuildGraph()
         &graph_.inTensors.at(IN_TENSOR_INPUT_IDS)
     };
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)};
-
-    // auto &peGatherNode = graph_.nodes.at(nodeId++);
-    // atb_speed::common::PositionalEmbeddingGather(&op);
-    // peGatherNode.operation.reset(op);
-    // peGatherNode.inTensors = {
-    //     &graph_.inTensors.at(IN_TENSOR_POSITION_IDS),
-    //     &graph_.inTensors.at(IN_TENSOR_COS_TABLE),
-    //     &graph_.inTensors.at(IN_TENSOR_SIN_TABLE),
-    // };
-    // peGatherNode.outTensors = {
-    //     &graph_.internalTensors.at(INTERNEL_TENSOR_COS_EMB),
-    //     &graph_.internalTensors.at(INTERNEL_TENSOR_SIN_EMB)
-    // };
 
     auto &firstNormNode = graph_.nodes.at(nodeId++);
     atb::infer::LayerNormParam firstNormParam;

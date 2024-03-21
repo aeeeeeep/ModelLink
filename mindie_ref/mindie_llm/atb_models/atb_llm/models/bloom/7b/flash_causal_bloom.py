@@ -27,6 +27,7 @@ from ...base.flash_causal_lm import FlashForCausalLM
 from ....utils.layers import load_column_multi
 from ....utils.quantize.pack_type import PackType, LinearType
 
+
 def _get_interleave(n):
     def _get_interleave_power_of_2(n):
         start = 2 ** (-(2 ** -(math.log2(n) - 3)))

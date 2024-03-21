@@ -95,11 +95,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     fusionAttentionParam.pageAttentionParam.headNum = param.numAttentionHeadsPerRank;
     fusionAttentionParam.pageAttentionParam.kvHeadNum = param.numKeyValueHeadsPerRank;
     fusionAttentionParam.pageAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
-    // if (param.isBF16) {
     fusionAttentionParam.pageAttentionParam.maskType = atb::infer::PagedAttentionParam::MaskType::MASK_TYPE_ALIBI;
-    // } else {
-    //     fusionAttentionParam.pageAttentionParam.maskType = atb::infer::PagedAttentionParam::MaskType::UNDEFINED;
-    // }
     fusionAttentionParam.selfOutLinearTensorParallelInfo = {param.rank, param.worldSize, param.backend};
     Attention(fusionAttentionParam, &attentionNode.operation);
     attentionNode.inTensorIds = {
@@ -158,12 +154,6 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     mlpParam.packQuantType = param.packQuantType[1];
     mlpParam.layerLinearQuantType = param.linearQuantType;
     mlpParam.mlpPackType = atb_speed::common::UP_WEIGHT_ONLY;
-    // gate up
-    // if (param.packQuantType[1] == atb_speed::common::MIX_W8A8 || param.packQuantType[1] == atb_speed::common::MIX_W8A8_ANTI) {
-    //     mlpParam.mlpPackType = atb_speed::common::GATE_UP_WEIGHT_NO_PACK;
-    // } else {
-    //     mlpParam.mlpPackType = atb_speed::common::GATE_UP_WEIGHT_PACK;
-    // }
     atb::infer::LayerNormParam mlpLayerNormParam;
     mlpLayerNormParam.layerType = atb::infer::LayerNormParam::LAYER_NORM_NORM;
     mlpLayerNormParam.normParam.epsilon = param.layerNormEps;
