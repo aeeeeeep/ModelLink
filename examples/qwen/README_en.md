@@ -138,7 +138,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
                                     --loader megatron \
                                     --saver megatron \
                                     --save-model-type save_huggingface_llama \
-                                    --load-dir ../Qwen7B-v0.1-pt8-pp1 \
+                                    --load-dir {your megatron ckpt load path} \
                                     --target-tensor-parallel-size 1 \
                                     --target-pipeline-parallel-size 1 \
                                     --add-qkv-bias \

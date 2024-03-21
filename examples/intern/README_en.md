@@ -144,12 +144,12 @@ python tools/checkpoint/util.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ../HF_internlm7B-v0.1-pt8-pp1 \
+    --load-dir ./ckpt/ \ # your magatron ckpt load path
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --add-qkv-bias \
     --add-dense-bias \
-    --save-dir ../HF_internlm7B_downloaded    # <-- Fill in the original HF model path here, new weights will be saved in ../HF_internlm7B_downloaded/mg2hg
+    --save-dir ./model_from_hf/    # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/mg2hg
 ```
 
 6. Config Internlm-7B pre-training script.

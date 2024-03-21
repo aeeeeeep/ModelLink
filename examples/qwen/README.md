@@ -137,7 +137,7 @@ Qwen-7B 训练的硬件配置:
                                    --loader megatron \
                                    --saver megatron \
                                    --save-model-type save_huggingface_qwen \
-                                   --load-dir ../Qwen7B-v0.1-pt8-pp1 \
+                                   --load-dir {megatron权重加载路径} \
                                    --target-tensor-parallel-size 1 \
                                    --target-pipeline-parallel-size 1 \
                                    --add-qkv-bias \
