@@ -55,6 +55,10 @@ def load_ascend_transformer():
     torch.classes.load_library(LIB_PATH)
 
 
+# for ascend init
+load_ascend_transformer()
+
+
 def load_row(config, prefix: str, weights, bias: bool):
     weight = weights.get_multi_weights_row(prefix, quantize=config.quantize)
 
@@ -235,6 +239,10 @@ class FlashGPTNeoXModel(FlashGPTNeoXPreTrainedModel):
         self.head_size = self.layers[0].attention.head_size
         self.num_heads = self.layers[0].attention.num_heads
 
+        self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
+        self.transdata_param = json.dumps({})
+        self.transdata_operation.set_param(self.transdata_param)
+
 
 class FlashGpt_neoxForCausalLM(FlashGPTNeoXPreTrainedModel):
     def __init__(self, config, weights):
@@ -244,8 +252,6 @@ class FlashGpt_neoxForCausalLM(FlashGPTNeoXPreTrainedModel):
         self.embed_out = TensorParallelHead.load(
             config, prefix="embed_out", weights=weights
         )
-        # for ascend init
-        load_ascend_transformer()
 
         self.num_heads = config.num_attention_heads
         self.hidden_size = config.hidden_size
@@ -271,6 +277,10 @@ class FlashGpt_neoxForCausalLM(FlashGPTNeoXPreTrainedModel):
         self.ascend_rotary_embedding = PositionRotaryEmbedding.static(dim=self.rotary_dims, base=config.rotary_emb_base,
                                                                       device="cpu").to(weights.device)
         self.init_ascend_operations(config)
+
+        self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
+        self.transdata_param = json.dumps({})
+        self.transdata_operation.set_param(self.transdata_param)
 
     def maybe_format_cast(self, tensor):
         """
@@ -346,7 +356,7 @@ class FlashGpt_neoxForCausalLM(FlashGPTNeoXPreTrainedModel):
             if self.soc_info.need_nz:
                 del self.gpt_neox.layers[i].attention
                 del self.gpt_neox.layers[i].mlp
-
+                del self.gpt_neox.layers[i].post_attention_layernorm
 
         weights.append(self.gpt_neox.state_dict()["final_layer_norm.weight"])
         weights.append(self.gpt_neox.state_dict()["final_layer_norm.bias"])
@@ -380,17 +390,18 @@ class FlashGpt_neoxForCausalLM(FlashGPTNeoXPreTrainedModel):
                                   input_lengths: torch.Tensor,
                                   max_seq_len: int,
                                   lm_head_indices: Optional[torch.Tensor] = None):
+
         cos_embed, sin_embed = self.ascend_rotary_embedding.get_cos_sin_total(
-            position_ids, max_seq_len, torch.float16
+            position_ids, self.max_position_embeddings, torch.float16
         )
 
         if self.soc_info.need_nz:
-            pad_maxs = math.ceil(max_seq_len / 16) * 16
+            pad_maxs = math.ceil(self.max_position_embeddings / 16) * 16
             atten_mask = self.ascend_atten_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
-            atten_mask = atten_mask.view(1, pad_maxs, pad_maxs // 16, 16).transpose(1, 2)
-            torch_npu.npu_format_cast_(atten_mask, 29)
+            atten_mask = self.transdata_operation.execute([atten_mask])[0]
         else:
-            atten_mask = self.ascend_atten_mask.get_attn_mask(max_seq_len, kv_cache[0][0].dtype, kv_cache[0][0].device)
+            atten_mask = self.ascend_atten_mask.get_attn_mask(self.max_position_embeddings, kv_cache[0][0].dtype,
+                                                              kv_cache[0][0].device)
         if is_prefill:  # prefill
             if lm_head_indices is None:
                 lm_head_indices = torch.tensor(range(input_ids.shape[0]), dtype=torch.int64, device=input_ids.device)
