@@ -19,6 +19,7 @@ class ModelRunner:
 
     def __init__(self, model_name_or_path, rank, world_size,
                  npu_id=None,
+                 local_rank=None,
                  kv_cache_dtype=None,
                  max_position_embeddings=None,
                  is_flash_causal_lm: bool = True,
@@ -26,7 +27,7 @@ class ModelRunner:
                  ):
         self.model_name_or_path = model_name_or_path
         self.rank = rank
-        self.npu_id = npu_id if npu_id is not None else rank
+        self.npu_id = npu_id if npu_id is not None else local_rank
         self.world_size = world_size
 
         self.model_name_or_path = model_name_or_path
