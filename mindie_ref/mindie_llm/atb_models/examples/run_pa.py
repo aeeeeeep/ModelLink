@@ -19,6 +19,7 @@ from examples.server.request import request_from_text, request_from_token
 class PARunner:
     def __init__(self, **kwargs):
         self.rank = kwargs.get('rank', '0')
+        self.local_rank = kwargs.get('local_rank', '0')
         self.world_size = kwargs.get('world_size', '1')
 
         self.model_path = kwargs.get('model_path', None)
@@ -35,6 +36,7 @@ class PARunner:
 
         self.model = ModelRunner(
             self.model_path, rank=self.rank, world_size=self.world_size,
+            local_rank=self.local_rank,
             max_position_embeddings=self.max_position_embeddings,
             use_refactor=self.use_refactor
         )
@@ -52,9 +54,9 @@ class PARunner:
                                         self.model.dtype,
                                         self.model.soc_info)
 
-        self.max_memory = NpuHbmInfo.get_hbm_capacity(self.rank, self.world_size, self.model.soc_info.need_nz)
+        self.max_memory = NpuHbmInfo.get_hbm_capacity(self.local_rank, self.world_size, self.model.soc_info.need_nz)
         self.init_memory = int(
-            self.max_memory * NpuHbmInfo.get_hbm_usage(self.rank, self.world_size, self.model.soc_info.need_nz))
+            self.max_memory * NpuHbmInfo.get_hbm_usage(self.local_rank, self.world_size, self.model.soc_info.need_nz))
         print_log(self.rank, logger.info, f'hbm_capacity(GB): {self.max_memory / (1024 ** 3)}, '
                                           f'init_memory(GB): {self.init_memory / (1024 ** 3)}')
 
@@ -117,7 +119,7 @@ class PARunner:
             lm_head_indices=prefill_head_indices
         )
         self.warm_up_memory = int(
-            self.max_memory * NpuHbmInfo.get_hbm_usage(self.rank, self.world_size, self.model.soc_info.need_nz))
+            self.max_memory * NpuHbmInfo.get_hbm_usage(self.local_rank, self.world_size, self.model.soc_info.need_nz))
         print_log(self.rank, logger.info, f'warmup_memory(GB): {self.warm_up_memory / (1024 ** 3): .2f}')
         print_log(self.rank, logger.info, "---------------end warm_up---------------")
 
@@ -268,10 +270,12 @@ if __name__ == '__main__':
     args = parse_arguments()
 
     rank = int(os.getenv("RANK", "0"))
+    local_rank = int(os.getenv("LOCAL_RANK", "0"))
     world_size = int(os.getenv("WORLD_SIZE", "1"))
     input_dict = {
         'rank': rank,
         'world_size': world_size,
+        'local_rank': local_rank,
         **vars(args)
     }
 
