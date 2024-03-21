@@ -38,6 +38,7 @@ class LlamaModelTest(model_test.ModelTest):
         os.environ['LCCL_ENABLE_FALLBACK'] = "1"
         os.environ['ATB_WORKSPACE_MEM_ALLOC_GLOBAL'] = "1"
         os.environ['ATB_CONTEXT_WORKSPACE_SIZE'] = "0"
+        os.environ['ATB_LAUNCH_KERNEL_WITH_TILING'] = "1"
 
     def get_dataset_list(self):
         return ["BoolQ"]
