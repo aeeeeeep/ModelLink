@@ -82,7 +82,7 @@ atb::Status CreateMlp(const MlpParam &param, atb::Operation **operation)
     linearParallelParam.rank = param.rank;
     linearParallelParam.rankSize = param.rankSize;
     linearParallelParam.rankRoot = 0;
-    linearParallelParam.bias = "yes";
+    linearParallelParam.hasResidual = true;
     linearParallelParam.parallelType = "RowParallel";
     linearParallelParam.backend = param.backend;
     CreateOperation(linearParallelParam, &mlpLinearParallelNode.operation);
