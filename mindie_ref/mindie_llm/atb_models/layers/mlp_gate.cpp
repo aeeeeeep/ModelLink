@@ -36,8 +36,7 @@ template <class T> atb::Status MlpGateLayerBase(const MlpGateParam &param, atb::
     size_t nodeId = 0;
 
     auto &matmulUpNode = opGraph.nodes.at(nodeId++);
-    atb::infer::LinearParam matmulUpParam;
-    matmulUpParam = {false, param.transposeB, param.isBias};
+    atb::infer::LinearParam matmulUpParam = {false, param.transposeB, param.isBias};
     CREATE_OPERATION(matmulUpParam, &matmulUpNode.operation);
     if (param.isBias) {
         matmulUpNode.inTensorIds = {config.IN_HIDDENSTATES_ID, config.IN_WEIGHT_UP_ID, config.IN_BIAS_UP_ID};
