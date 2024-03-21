@@ -202,6 +202,7 @@ atb::Status LayerParallelFlashAttentionOperation(const LayerParallelFlashAttenti
     selfAttentionParam.headNum  = param.headNum;
     selfAttentionParam.qScale   = param.qScale;
     selfAttentionParam.qkScale  = param.qkScale;
+    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     CreateOperation(selfAttentionParam, &selfAttentionFusionNode.operation);
     selfAttentionFusionNode.inTensorIds = {INTERMIDATE_Q_POSITIONEMBED,  // 2
                                            INTERMIDATE_K_POSITIONEMBED,  // 2

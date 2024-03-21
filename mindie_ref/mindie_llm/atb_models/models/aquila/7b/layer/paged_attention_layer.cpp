@@ -176,6 +176,7 @@ atb::Status PagedAttentionRopeLayer(const PagedAttentionRopeLayerParam &param, a
         selfAttentionParam.qkScale = 1.0 / sqrt(param.dk);
         selfAttentionParam.kvHeadNum = param.headNum;
         selfAttentionParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
+        selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
         CREATE_OPERATION(selfAttentionParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERNAL_Q_EMBED, INTERNAL_K_EMBED, INTERNAL_V_LINEAR_OUT, IN_ATTENTION_MASK,
                                      IN_INPUT_LENGTHS};

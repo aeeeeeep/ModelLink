@@ -78,6 +78,7 @@ atb::Status CreateFusionParallelLayer(const FusionParallelLayerParam &param, atb
     selfAttentionParam.headNum = param.headNum / param.rankSize;
     selfAttentionParam.qScale = param.qScale;
     selfAttentionParam.qkScale = param.qkScale;
+    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
 
     if (param.coderType == int(CoderTypes::UNDEFINED_TYPE)) {
         selfAttentionParam.calcType = atb::infer::SelfAttentionParam::CalcType::UNDEFINED;
