@@ -32,17 +32,6 @@ from timm.models.registry import register_model
 from pytorch_lightning.utilities.distributed import rank_zero_info
 
 
-# def load_ascend_transformer():
-#     ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
-#     if ATB_SPEED_HOME_PATH is None:
-#         raise RuntimeError("env ATB_SPEED_HOME_PATH not exist, source set_env.sh")
-#     LIB_PATH = os.path.join(ATB_SPEED_HOME_PATH, "lib/libatb_speed_torch.so")
-#     torch.classes.load_library(LIB_PATH)
-
-
-# load_ascend_transformer()
-
-
 class Mlp(nn.Module):
     def __init__(
         self,
@@ -58,14 +47,11 @@ class Mlp(nn.Module):
         self.fc1 = nn.Linear(in_features, hidden_features)
         self.act = act_layer()
         self.fc2 = nn.Linear(hidden_features, out_features)
-        # self.drop = nn.Dropout(drop)
 
     def forward(self, x):
         x = self.fc1(x)
         x = self.act(x)
-        # x = self.drop(x)
         x = self.fc2(x)
-        # x = self.drop(x)
         return x
 
 
@@ -92,18 +78,10 @@ class Attention(nn.Module):
         else:
             self.q_bias = None
             self.v_bias = None
-
-        # self.attn_drop = attn_drop
         self.proj = nn.Linear(dim, dim)
-        # self.proj_drop = proj_drop
 
     def forward(self, x, mask=None, relative_position_bias=None):
-        # print("multiway transformer attention forward")
-        # print("x.shape ",x.shape)
-        # x.shape  torch.Size([1, 941, 768])
-
         B, N, C = x.shape
-
         qkv_bias = None
         if self.q_bias is not None:
             qkv_bias = torch.cat(
@@ -113,62 +91,21 @@ class Attention(nn.Module):
                     self.v_bias, # 768
                 )
             )
-        # x.shape  torch.Size([1, 941, 768])
-        # qkv.w   torch.Size([2304, 768])
-        # qkv bias 768*3 = 2304
-        
         qkv = F.linear(input=x, weight=self.qkv.weight, bias=qkv_bias)
-
-        # torch.Size([1, 941, 2304])
-        # 1 941 2304
-        # 1 941 3 12 64
-        # 3 1 12 941 64
-        
         qkv = qkv.reshape(B, N, 3, self.num_heads, -1).permute(
             2, 0, 3, 1, 4
         )  # 3 batchSize numHeads N -1
-        # print(torch.allclose(qkvc, qkv, rtol=1e-4))
         q, k, v = (
             qkv[0],
             qkv[1],
             qkv[2],
         )  # make torchscript happy (cannot use tensor as tuple)
-
-        # q.shape 1 12 941 64
-        # 相当于有个rope操作。
-
-        # print("q  k  v.shape ",q.shape)
         q = q * self.scale
-        # 941  768
-        # 768 941
-        #  941 941
-        #  1 12 941 64
-        #   1 12 64 941
-        # 1 12 941 941
-
         attn = q.float() @ k.float().transpose(-2, -1)
-        # print("1 attn shape",attn.shape)
-        # 移动到外面，加到mask上面
-        # if relative_position_bias is not None:
-        #     attn = attn + relative_position_bias.unsqueeze(0)
-        #     # 1  12  941 941
-        # if mask is not None:
-        #     mask = mask.bool()  # 1 1 1 941
-        #     # print("~mask[:, None, None, :]",~mask[:, None, None, :])
-        #     attn = attn.masked_fill(~mask[:, None, None, :], float("-inf"))
-
         attn = attn + relative_position_bias
         attn = attn.softmax(dim=-1).type_as(x)
-        # attn = self.attn_drop(attn)
-
         x = (attn @ v).transpose(1, 2).reshape(B, N, C)
-
-        # 768 384
-        # 768 
-        # proj: [768,768]
         x = self.proj(x)
-        # print("final x shape ",x.shape)
-        # x = self.proj_drop(x)
         return x
 
 
@@ -201,7 +138,6 @@ class Block(nn.Module):
             proj_drop=drop,
         )
         # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
-        # self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
         self.norm2_text = norm_layer(dim)
         self.norm2_imag = norm_layer(dim)
         self.dim = dim
@@ -260,7 +196,6 @@ class Block(nn.Module):
             x = x + self.gamma_2 * self.mlp_text(self.norm2_text(x))
         else:
             if self.mlp_vl is None:
-                # print("self.mlp_vl is None")
                 x_text = x[:, : self.max_text_len]
                 x_imag = x[:, self.max_text_len :]
                 x_text = x_text + self.gamma_2 * self.mlp_text(self.norm2_text(x_text))
@@ -268,8 +203,6 @@ class Block(nn.Module):
                 x = torch.cat([x_text, x_imag], dim=1)
             else:
                 x = x + self.gamma_2 * self.mlp_vl(self.norm2_vl(x))
-        # print("org x shape",x.shape)
-
         return x
 
 
@@ -302,8 +235,6 @@ class PatchEmbed(nn.Module):
         )
 
     def forward(self, x):
-        # print("multiway transformer PatchEmbed forward")
-
         B, C, H, W = x.shape
         x = self.proj(x)
         return x
@@ -400,7 +331,6 @@ class MultiWayTransformer(nn.Module):
         dpr = [
             x.item() for x in torch.linspace(0, drop_path_rate, depth)
         ]  # stochastic depth decay rule
-        # print("self.vlffn_start_layer_index ",self.vlffn_start_layer_index)
         self.blocks = nn.ModuleList(
             [
                 Block(
@@ -452,8 +382,6 @@ class MultiWayTransformer(nn.Module):
 
         if self.pos_embed is not None:
             x = x + self.pos_embed
-        # x = self.pos_drop(x)
-
         x_mask = torch.ones(x.shape[0], x.shape[1])
 
         return x, x_mask
