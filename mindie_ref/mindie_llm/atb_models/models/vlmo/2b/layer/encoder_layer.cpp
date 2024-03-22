@@ -185,9 +185,15 @@ atb::Status EncoderLayer(const EncoderLayerParam &param, atb::Operation **operat
         newShape.dims[1] = oldShape.dims[3] * oldShape.dims[4];
     };
 
-    atb::infer::LinearParam layerParam = {false, true, true};
-    CREATE_OPERATION(layerParam, &selfOutLinearNode.operation);
-    selfOutLinearNode.inTensorIds = {INTERMIDATE_SELFOUT, IN_SELFOUTLINEARWEIGHT, IN_SELFOUTLINEBIASID};
+    atb_speed::common::ParallelParamV2 selfOutLinearParam;
+    selfOutLinearParam.commParam.rank = param.rank;
+    selfOutLinearParam.commParam.rankSize = param.rankSize;
+    selfOutLinearParam.commParam.backend = param.backend;
+    selfOutLinearParam.isBias = true;
+    atb_speed::common::RowParallelLinearV2(selfOutLinearParam, &selfOutLinearNode.operation);
+    selfOutLinearNode.inTensorIds = {
+        INTERMIDATE_SELFOUT, IN_SELFOUTLINEARWEIGHT, IN_SELFOUTLINEBIASID, IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_HOLDER
+    };
     selfOutLinearNode.outTensorIds = {INTERMIDATE_SELFLINEAROUT};
 
     atb::infer::ElewiseParam gamma1MutmalParam;
