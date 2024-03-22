@@ -238,7 +238,7 @@ atb::Status PAModel::ParseParam(const std::string &param)
         seqLen_.push_back(item.get<int>());
     }
 
-    ATB_LOG(INFO) << "ParseParam tokenOffset:" << tokenOffset_ << ", seqLen:" << seqLen_;
+    ATB_LOG(INFO) <<  "ParseParam seqLen:" << seqLen_;
 
     return atb::NO_ERROR;
 }

@@ -109,8 +109,7 @@ class TelechatMLP(nn.Module):
         )
 
         self.gate_and_up_bias = True
-        if not RUN_QUANT_MODEL:
-            gate_and_up_bias = False
+        gate_and_up_bias = False
 
         self.gate_proj = TensorParallelColumnLinear.load(
             config,
@@ -197,7 +196,7 @@ class FlashTelechatForCausalLM(torch.nn.Module):
                 weights=weights,
                 head_size=1,
                 lm_head=True,
-                norm=self.confi..vocab_size == 125696
+                norm=self.config.vocab_size == 125696
             )
         else:
             self.lm_head = TensorParallelHead.load_weight(
@@ -287,7 +286,7 @@ class FlashTelechatForCausalLM(torch.nn.Module):
         weights = [self.model.state_dict()["word_embeddings.weight"]]
         for i in range(self.num_layers):
             weights_t = []
-            weights_layer = selfmmodel.h[i].state_dict()
+            weights_layer = self.model.h[i].state_dict()
             weights_t.append(self.maybe_format_cast(weights_layer["self_attention.query.linear.weight"]))
             weights_t.append(self.maybe_format_cast(weights_layer["self_attention.key_value.linear.weight"]))
             weights_t.append(self.maybe_format_cast(weights_layer["self_attention.dense.linear.weight"]))
