@@ -247,7 +247,7 @@ void PagedAttentionRopeLayerBinder::ParseParam(const nlohmann::json &paramJson)
         seqLen_.push_back(item.get<int32_t>());
     }
 
-     tokenOffset_.clear();
+    tokenOffset_.clear();
     for (auto item : paramJson["tokenOffset"]) {
         tokenOffset_.push_back(item.get<int>());
     }

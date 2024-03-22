@@ -18,6 +18,7 @@ from ..gpt_neox.config import GPTNeoXConfig
 from ..internlm.configuration_internlm import InternLMConfig
 from ..aquila.v1_7b.modeling_aquila import AquilaConfig
 
+
 @dataclass
 class BaseRouter:
     model_name_or_path: str = ""
