@@ -237,9 +237,12 @@ class TensorParallelRowLinear(SuperLayer):
         weight = weights.get_multi_weights_row(prefix, quantize=config.quantize, gqa_size=gqa_size)
         if bias and bias_pre_add:
             bias = weights.get_tensor(f"{prefix}.bias")
-        elif bias and weights.process_group.rank() == 0:
-            # Rank is only on the first rank process
+        elif bias:
+            # 加速库浮点的横切需要所有卡都读取完整的bias，因为加速库的算法是先all reduce再加bias
             bias = weights.get_tensor(f"{prefix}.bias")
+            if weights.process_group.rank() != 0 and quantize is not None:
+                # 量化只需要第一个rank有bias
+                bias *= 0
         else:
             bias = None
         return cls(
