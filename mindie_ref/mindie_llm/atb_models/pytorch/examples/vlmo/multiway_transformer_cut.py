@@ -41,7 +41,7 @@ from pytorch_lightning.utilities.distributed import rank_zero_info
 
 
 # load_ascend_transformer()
-WORLD_SIZE = 1
+WORLD_SIZE = 2
 
 
 class Mlp(nn.Module):
@@ -62,6 +62,7 @@ class Mlp(nn.Module):
         # self.drop = nn.Dropout(drop)
 
     def forward(self, x):
+        self.fc2.bias /= WORLD_SIZE
         x = self.fc1(x)
         x = self.act(x)
         # x = self.drop(x)
@@ -104,12 +105,9 @@ class Attention(nn.Module):
 
 
     def forward(self, x, mask=None, relative_position_bias=None):
-        # print("multiway transformer attention forward")
-        # print("x.shape ",x.shape)
-        # x.shape  torch.Size([1, 941, 768])
         B, N, C = x.shape
         C = C // WORLD_SIZE
-
+        self.proj.bias /= WORLD_SIZE
         qkv_bias = None
         if self.q_bias is not None:
             qkv_bias = torch.cat(
@@ -120,11 +118,6 @@ class Attention(nn.Module):
                 )
             )
         qkv = F.linear(input=x, weight=self.qkv.weight, bias=qkv_bias)
-       # print('qkv_we')
-
-        # 1 941 2304
-        # 1 941 3 12 64
-        # 3 1 12 941 64
         qkv = qkv.reshape(B, N, 3, self.num_heads, -1).permute(
             2, 0, 3, 1, 4
         )  # 3 batchSize numHeads N -1
@@ -133,37 +126,10 @@ class Attention(nn.Module):
             qkv[1],
             qkv[2],
         )  # make torchscript happy (cannot use tensor as tuple)
-
-        # 相当于有个rope操作。
-
-        # print("q  k  v.shape ",q.shape)
         q = q * self.scale
-        # 941  768
-        # 768 941
-        #  941 941
-        #  1 12 941 64
-        #   1 12 64 941
-        # 1 12 941 941
-
         attn = q.float() @ k.float().transpose(-2, -1)
-        # 移动到外面，加到mask上面
-        # print('attn_shape',attn.shape)
-        # print('bias.shape',relative_position_bias.unsqueeze(0).shape)
-        # print('bias.shape_ori',relative_position_bias.shape)
-        # print('attn_v', attn)
-        # if relative_position_bias is not None:
-
-        #     attn = attn + relative_position_bias.unsqueeze(0)
-        #     # 1  12  941 941
-        # if mask is not None:
-        #     mask = mask.bool()  # 1 1 1 941
-        #     # print("~mask[:, None, None, :]",~mask[:, None, None, :])
-        #     attn = attn.masked_fill(~mask[:, None, None, :], float("-inf"))
         attn = attn + relative_position_bias
-
         attn = attn.softmax(dim=-1).type_as(x)
-
-        # attn = self.attn_drop(attn)
         x = (attn @ v).transpose(1, 2).reshape(B, N, C)
         x = self.proj(x)
         #all reduce
@@ -468,7 +434,7 @@ class MultiWayTransformer(nn.Module):
 @register_model
 def vlmo_base_patch16(pretrained=False, **kwargs):
     global WORLD_SIZE
-    WORLD_SIZE = 2
+    WORLD_SIZE = torch.distributed.get_world_size()
     img_size = kwargs.pop("img_size", 224)
     model = MultiWayTransformer(
         img_size=img_size,
