@@ -89,9 +89,6 @@ def initialize_model_and_tokenizer(args):
                 # Quantize model before moving to GPU
                 model = quantize(model, args.quantization_bit_width)
 
-            # Load checkpoint
-            load_checkpoint(model, args)
-
             if args.quantization_bit_width is not None and not args.from_quantized_checkpoint:
                 # Quantize model before moving to GPU
                 model = quantize(model, args.quantization_bit_width)
@@ -120,19 +117,6 @@ def initialize_model_and_tokenizer(args):
     # generate rotary embedding cache
     original_parallel_output = model.transformer.parallel_output
     model.transformer.parallel_output = True
-    # with torch.no_grad():
-    #     _, *_ = model(
-    #         torch.ones(1, args.max_sequence_length, device=torch.cuda.current_device(), dtype=torch.int64),
-    #         torch.arange(args.max_sequence_length, device=torch.cuda.current_device(), dtype=torch.int64).view(1, -1),
-    #         torch.randn(
-    #             1,
-    #             1,
-    #             args.max_sequence_length,
-    #             args.max_sequence_length,
-    #             device=torch.cuda.current_device(),
-    #         )
-    #         < 0.5,
-    #     )
     model.transformer.parallel_output = original_parallel_output
     torch.distributed.barrier()
 
