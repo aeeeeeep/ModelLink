@@ -816,7 +816,7 @@ class Weights:
 
     def _set_w8a8_quant_params(self, model_id):
         try:
-            filename = os.path.join(model_id, 'quant_model_description.json')
+            filename = os.path.join(model_id, f'quant_model_description_{self.quantize}.json')
             with open(filename, "r") as f:
                 data = json.load(f)
             self.w8a8_desc = data
