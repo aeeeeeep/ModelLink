@@ -105,8 +105,7 @@ atb::Status CreateFusionParallelLayer(const FusionParallelLayerParam &param, atb
     selfOutLinearParallelParam.rank = param.rank;
     selfOutLinearParallelParam.rankSize = param.rankSize;
     selfOutLinearParallelParam.rankRoot = param.rankRoot;
-    selfOutLinearParallelParam.bias = "yes";
-    selfOutLinearParallelParam.parallelType = "RowParallel";
+    selfOutLinearParallelParam.hasResidual = true;
     selfOutLinearParallelParam.backend = param.backend;
     CreateOperation(selfOutLinearParallelParam, &selfOutLinearParallelNode.operation);
     selfOutLinearParallelNode.inTensorIds = {INTERMEDIATE_SELFOUT_ID, IN_SELFOUTLINEARWEIGHT_ID,
