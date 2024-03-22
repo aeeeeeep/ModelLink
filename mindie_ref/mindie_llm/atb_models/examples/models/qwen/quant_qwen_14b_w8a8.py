@@ -100,46 +100,6 @@ def main(fp16_path, quant_save_path):
     print(">>>> Calibrator dataset is ready.")
 
     disable_names = [
-        'transformer.h.0.mlp.c_proj',
-        'transformer.h.1.mlp.c_proj',
-        'transformer.h.2.mlp.c_proj',
-        'transformer.h.3.mlp.c_proj',
-        'transformer.h.4.mlp.c_proj',
-        'transformer.h.5.mlp.c_proj',
-        'transformer.h.6.mlp.c_proj',
-        'transformer.h.7.mlp.c_proj',
-        'transformer.h.8.mlp.c_proj',
-        'transformer.h.9.mlp.c_proj',
-        'transformer.h.10.mlp.c_proj',
-        'transformer.h.11.mlp.c_proj',
-        'transformer.h.12.mlp.c_proj',
-        'transformer.h.13.mlp.c_proj',
-        'transformer.h.14.mlp.c_proj',
-        'transformer.h.15.mlp.c_proj',
-        'transformer.h.16.mlp.c_proj',
-        'transformer.h.17.mlp.c_proj',
-        'transformer.h.18.mlp.c_proj',
-        'transformer.h.19.mlp.c_proj',
-        'transformer.h.20.mlp.c_proj',
-        'transformer.h.21.mlp.c_proj',
-        'transformer.h.22.mlp.c_proj',
-        'transformer.h.23.mlp.c_proj',
-        'transformer.h.24.mlp.c_proj',
-        'transformer.h.25.mlp.c_proj',
-        'transformer.h.26.mlp.c_proj',
-        'transformer.h.27.mlp.c_proj',
-        'transformer.h.28.mlp.c_proj',
-        'transformer.h.29.mlp.c_proj',
-        'transformer.h.30.mlp.c_proj',
-        'transformer.h.31.mlp.c_proj',
-        'transformer.h.32.mlp.c_proj',
-        'transformer.h.33.mlp.c_proj',
-        'transformer.h.34.mlp.c_proj',
-        'transformer.h.35.mlp.c_proj',
-        'transformer.h.36.mlp.c_proj',
-        'transformer.h.37.mlp.c_proj',
-        'transformer.h.38.mlp.c_proj',
-        'transformer.h.39.mlp.c_proj',
         'lm_head'
     ]
     print(f">>>> Disable layers: {disable_names}")
@@ -154,7 +114,7 @@ def main(fp16_path, quant_save_path):
         disable_names=disable_names,  # 不做量化的层（通常是空list）
         dev_type='cpu',
         # dev_id=0,
-        act_method=1,  # 激活量化方法，建议方法3（1：min-max；2：histogram；3：自动混合量化）
+        act_method=3,  # 激活量化方法，建议方法3（1：min-max；2：histogram；3：自动混合量化）
         pr=1.0,  # 量化正则百分比，建议0.5
         w_sym=True,  # 对称/非对称量化，True为对称量化，False为非对称量化
         mm_tensor=False  # 权重量化粒度，True为per-tensor量化，False为per-channel量化（大模型场景建议False）
