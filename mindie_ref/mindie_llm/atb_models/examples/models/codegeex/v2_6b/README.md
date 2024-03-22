@@ -33,7 +33,7 @@ python quant_codegeex2_6b_w8a8.py --model_path ${浮点权重路径} --save_path
 ```
 校准数据集从[这里](https://onebox.huawei.com/v/06e3793ab47bbada4ad574e87bac54e1)获取
 
-导出量化权重后应生成`quant_model_weight.safetensors`和`quant_model_description.json`两个文件。
+导出量化权重后应生成`quant_model_weight_w8a8.safetensors`和`quant_model_description_w8a8.json`两个文件。
 
 注：
 
