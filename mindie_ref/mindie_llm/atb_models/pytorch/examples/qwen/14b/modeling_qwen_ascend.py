@@ -999,7 +999,6 @@ class QWenModel(QWenPreTrainedModel):
             else config.kv_channels
         )
         self.rotary_emb = RotaryEmbedding(dim, base=config.rotary_emb_base)
-        self.ascend_rotary_embedding = RotaryEmbedding(dim, base=config.rotary_emb_base)
 
         self.num_layers = config.num_hidden_layers
         self.hidden_size = config.hidden_size
