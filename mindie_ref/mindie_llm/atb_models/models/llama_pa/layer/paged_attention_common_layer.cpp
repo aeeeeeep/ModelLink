@@ -181,7 +181,7 @@ atb::Status PaCommonLayer(const PaCommonLayerParam &param, atb::Operation **oper
 
         atb::Node &mixdQLinearNode = opGraph.nodes.at(nodeId++);
         atb::infer::LinearParam quantQkvLinearParam;
-        quantQkvLinearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
+        quantQkvLinearParam.outDataType = ACL_FLOAT16;
         CREATE_OPERATION(quantQkvLinearParam, &mixdQLinearNode.operation);
         mixdQLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_QMIXDWEIGHT, IN_QMIXD_BIAS, IN_QMIXD_DEQSCALE};
         mixdQLinearNode.outTensorIds = {INTERMIDATE_MIXEDQ};
