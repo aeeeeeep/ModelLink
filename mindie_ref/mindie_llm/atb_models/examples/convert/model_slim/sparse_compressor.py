@@ -19,6 +19,7 @@ class SparseCompressor:
         self.model_path = kwargs.get('model_path', None)
         self.save_directory = kwargs.get('save_directory', None)
         self.multiprocess_num = kwargs.get('multiprocess_num', 16)
+        self.save_split_w8s8s_dir = kwargs.get('save_split_w8s8s_dir', None)
 
         self.model = ModelRunner(self.model_path, rank=self.rank, world_size=self.world_size)
         self.dtype = self.model.dtype
@@ -35,6 +36,10 @@ class SparseCompressor:
         self.warm_up_memory = 0
         self.warm_up_num_blocks = 0
         self.cache_manager = None
+
+        if self.save_split_w8s8s_dir is not None:
+            self.model.save_pretrained(save_directory=f'{self.save_split_w8s8s_dir}_{self.world_size}',
+                                       safe_serialization=True)
 
     def compress(self):
         model_dict = unwrap_model_state_dict(self.model.model.state_dict())
@@ -56,6 +61,7 @@ def parse_arguments():
                         )
     parser.add_argument('--save_directory', type=str, required=True)
     parser.add_argument('--multiprocess_num', type=int, default=16)
+    parser.add_argument('--save_split_w8s8s_dir', type=str, default=None)
 
     return parser.parse_args()
 
@@ -75,6 +81,7 @@ if __name__ == '__main__':
     save_directory = args.save_directory
 
     sparse_compressor = SparseCompressor(**input_dict)
+
     sparse_compressor.compress()
 
     if rank == 0:
