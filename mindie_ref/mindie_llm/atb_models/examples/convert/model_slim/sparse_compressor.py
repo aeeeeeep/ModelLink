@@ -40,6 +40,8 @@ class SparseCompressor:
         if self.save_split_w8s8s_dir is not None:
             self.model.save_pretrained(save_directory=f'{self.save_split_w8s8s_dir}_{self.world_size}',
                                        safe_serialization=True)
+            modify_config(model_path, save_directory, torch.float16, 'w8a8s')
+            copy_tokenizer_files(model_path, save_directory)
 
     def compress(self):
         model_dict = unwrap_model_state_dict(self.model.model.state_dict())
@@ -50,6 +52,7 @@ class SparseCompressor:
         compressor = Compressor(compress_config, weight=model_dict, quant_model_description=quant_desc)
         compressor.run()
         part_save_directory = os.path.join(self.save_directory, f'part{self.rank}')
+        os.makedirs(part_save_directory, exist_ok=True)
         compressor.export_safetensors(part_save_directory)
 
 
@@ -85,5 +88,5 @@ if __name__ == '__main__':
     sparse_compressor.compress()
 
     if rank == 0:
-        modify_config(model_path, save_directory, torch.float16, 'w8a8s')
+        modify_config(model_path, save_directory, torch.float16, 'w8a8sc')
         copy_tokenizer_files(model_path, save_directory)
