@@ -159,6 +159,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
         faEnParam.qScale = 1.0 / sqrt(param.dk);
         faEnParam.kvHeadNum = param.kvHead;         // 1
         faEnParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
+        faEnParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
         CreateOperation(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERNAL_Q, INTERNAL_K, INTERNAL_V, IN_ATTENTIONMASK, IN_INPUT_LENGTHS};
         attentionNode.outTensorIds = {INTERMIDATE_SELFOUT};

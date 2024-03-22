@@ -112,6 +112,7 @@ atb::Status FusionPALayer(const FusionPALayerParam &param, atb::Operation **oper
         faEnParam.kvHeadNum = param.numHeadsPerPartition;
         faEnParam.qkScale = 1.0 / sqrt(param.dk);
         faEnParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
+        faEnParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
         CreateOperation(faEnParam, &attentionNode.operation);
 
         attentionNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_MIXEDV,

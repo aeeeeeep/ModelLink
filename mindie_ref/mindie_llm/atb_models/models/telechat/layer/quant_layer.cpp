@@ -176,6 +176,7 @@ atb::Status QuantFALayer(const QuantFALayerParam &param, atb::Operation **operat
     selfAttentionKvCacheParam.headNum = param.headNum;
     selfAttentionKvCacheParam.qScale = 1.0f;
     selfAttentionKvCacheParam.qkScale = 1.0f / std::sqrt(param.dk);
+    selfAttentionKvCacheParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     CreateOperation(selfAttentionKvCacheParam, &selfAttentionKvCacheFusedNode.operation);
     selfAttentionKvCacheFusedNode.inTensorIds = { INTERNAL_POSITIONEMBEDQ,
                                                   INTERNAL_POSITIONEMBEDK,

@@ -125,6 +125,7 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
     faWithROPEParam.selfAttentionKvCacheParam.kvHeadNum = param.numHeadsPerPartition;
     faWithROPEParam.selfAttentionKvCacheParam.qScale = param.preScale;
     faWithROPEParam.selfAttentionKvCacheParam.qkScale = param.postScale;
+    faWithROPEParam.selfAttentionKvCacheParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     if (param.isEncoder) {
         faWithROPEParam.selfAttentionKvCacheParam.calcType = atb::infer::SelfAttentionParam::ENCODER;
     } else {

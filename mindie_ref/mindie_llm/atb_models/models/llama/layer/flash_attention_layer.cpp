@@ -233,6 +233,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
     selfAttentionKvCacheParam.kvHeadNum = param.kvHeadNum;
     selfAttentionKvCacheParam.qkScale = 1.0 / sqrt(param.dk);
     selfAttentionKvCacheParam.qScale = 1.0;
+    selfAttentionKvCacheParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     if (param.isEncoder) {
         selfAttentionKvCacheParam.calcType = atb::infer::SelfAttentionParam::ENCODER;
         selfAttentionKvCacheParam.isTriuMask = param.isTriuMask;
