@@ -315,7 +315,7 @@ class FlashQwenForCausalLM(FlashForCausalLM):
                     attention_mask = self.attn_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
                     attention_mask = self.transdata_operation.execute([attention_mask])[0]
                 else:
-                    attention_mask = self.attn_mask.get_attn_mask(self.max_position_embeddings, kv_cache[0][0].dtype,
+                    attention_mask = self.attn_mask.get_attn_mask(self.max_base_len, kv_cache[0][0].dtype,
                                                                         kv_cache[0][0].device)
             else:
                 attention_mask = self.attn_mask_fake
