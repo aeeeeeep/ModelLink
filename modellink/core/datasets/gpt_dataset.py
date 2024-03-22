@@ -70,7 +70,8 @@ def _build_document_sample_shuffle_indices(
     device_count = torch.cuda.device_count()
     if device_count == 0:
         raise ZeroDivisionError
-    if not cache_hit and (torch.distributed.get_rank() % device_count) == 0:
+    local_rank = torch.distributed.get_rank() % device_count
+    if not cache_hit and local_rank == 0:
         log_single_rank(
             logger,
             logging.INFO,
@@ -177,6 +178,7 @@ def _build_document_sample_shuffle_indices(
         t_end = time.time()
         log_single_rank(logger, logging.DEBUG, f"\t> time elapsed: {t_end - t_beg:4f} seconds")
 
+    torch.distributed.barrier()
     log_single_rank(
         logger, logging.INFO, f"Load the {type(self).__name__} {self.index_split.name} indices"
     )
