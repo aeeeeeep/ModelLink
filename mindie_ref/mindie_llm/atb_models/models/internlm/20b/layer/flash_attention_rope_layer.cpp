@@ -15,38 +15,85 @@
  */
 #include "flash_attention_rope_layer.h"
 
-#include "layers/mlp_gate.h"
-#include "layers/parallel_layer.h"
-#include "models/internlm/7b/operation/rope.h"
+#include "models/internlm/20b/operation/rope_fusion_operation.h"
+#include "layers/mlp_gate_v2.h"
+#include "layers/parallel_layer_v2.h"
 
 namespace atb_speed {
 namespace internlm_20b {
-enum FlashAttentionRopeLayerTensorId : int {
+const int ATTENTION_DIM_NUM = 4;
+const int ATTENTION_DIM_2 = 2;
+const int ATTENTION_DIM_3 = 3;
+
+void ReshapeHeads(const atb::Dims &oldShape, atb::Dims &newShape)
+{
+    newShape.dimNum = 2;
+    newShape.dims[0] = oldShape.dims[0] * oldShape.dims[1];
+    if (oldShape.dimNum == 3) {
+        newShape.dims[1] = oldShape.dims[2];
+    } else {
+        newShape.dims[1] = oldShape.dims[2] * oldShape.dims[3];
+    }
+}
+
+enum FlashAttentionLayerTensorId : int {
     IN_HIDDENSTATES = 0,
+    // float weights
     IN_NORMWEIGHT,
-    IN_Q_LINEARWEIGHT,
-    IN_K_LINEARWEIGHT,
-    IN_V_LINEARWEIGHT,
+    IN_QMIXDWEIGHT,
+    IN_KMIXDWEIGHT,
+    IN_VMIXDWEIGHT,
     IN_SELFOUTLINEARWEIGHT,
     IN_SELFOUTNORMWEIGHT,
     IN_MLPGATEWEIGHT,
     IN_MLPDOWNWEIGHT,
     IN_MLPUPWEIGHT,
-    IN_COS_EMBED, // 目前只支持FP16
-    IN_SIN_EMBED,
+    // quant weights
+    IN_QMIXD_DEQSCALE,
+    IN_QMIXD_BIAS,
+    IN_KMIXD_DEQSCALE,
+    IN_KMIXD_BIAS,
+    IN_VMIXD_DEQSCALE,
+    IN_VMIXD_BIAS,
+    IN_SELFOUTLINEAR_DEQSCALE,
+    IN_SELFOUTLINEAR_BIAS,
+    IN_MLPGATE_DEQSCALE,
+    IN_MLPGATE_BIAS,
+    IN_MLPDOWN_DEQSCALE,
+    IN_MLPDOWN_BIAS,
+    IN_MLPUP_DEQSCALE,
+    IN_MLPUP_BIAS,
+    // anti-outlier weights
+    IN_NORM_BIAS,
+    IN_SELFOUTNORM_BIAS,
+    // sparse weights
+    IN_QMIXD_INDEX,
+    IN_KMIXD_INDEX,
+    IN_VMIXD_INDEX,
+    IN_SELFOUT_INDEX,
+    IN_MLPGATE_INDEX,
+    IN_MLPUP_INDEX,
+    IN_MLPDOWN_INDEX,
+    // layer inputs
+    IN_POSITIONIDS,
+    IN_COSTABLE,
+    IN_SINTABLE,
     IN_ATTENTIONMASK,
-    IN_PASTKEY,
-    IN_PASTVALUE,
+    IN_CACHEK,
+    IN_CACHEV,
     IN_TOKENOFFSET,
     IN_SEQLEN,
+    IN_HOLDER,
     IN_LAYERID,
-    OUT_LAYEROUT,
+    // layer output
+    OUT_INTERNLM20BLAYEROUT,
+    // intermediate inputs & outputs
     INTERMIDATE_INPUTNORMOUT,
-    INTERMIDATE_Q_MIXEDLINEAROUT,
-    INTERMIDATE_K_MIXEDLINEAROUT,
-    INTERMIDATE_V_MIXEDLINEAROUT,
-    INTERMIDATE_Q_POSITIONEMBED,
-    INTERMIDATE_K_POSITIONEMBED,
+    INTERMIDATE_MIXEDQ,
+    INTERMIDATE_MIXEDK,
+    INTERMIDATE_MIXEDV,
+    INTERMIDATE_POSITIONEMBEDQ,
+    INTERMIDATE_POSITIONEMBEDK,
     INTERMIDATE_SELFOUT,
     INTERMIDATE_SELFLINEAROUT,
     INTERMIDATE_SELFRESIDUALADDOUT,
@@ -54,29 +101,26 @@ enum FlashAttentionRopeLayerTensorId : int {
     INTERMIDATE_MLPOUT,
 };
 
-static const uint64_t IN_TENSOR_COUNT = 18;
+static const uint64_t IN_TENSOR_COUNT = 43;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 11;
 static const uint64_t NODE_COUNT = 11;
-static const uint64_t SELF_ATTENTION_V_INPUT_INDEX = 2;
-static const uint64_t SELF_ATTENTION_V_INPUT_SIZE = 4;
-static const uint64_t ROTARY_COEFF = 2;
 
-atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, atb::Operation **operation)
+atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Operation **operation)
 {
-    ATB_LOG(INFO) << __func__ << " called, headNum: " << param.headNum;
+    std::shared_ptr<int64_t> batchNumPtr = std::make_shared<int64_t>(0);
+
     atb::GraphParam opGraph;
+    opGraph.name = "FlashAttentionLayer";
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
     opGraph.internalTensorNum = INTERMEDIATE_TENSOR_COUNT;
     opGraph.nodes.resize(NODE_COUNT);
-    opGraph.name = GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
-
     size_t nodeId = 0;
     atb::Node &inputNormNode = opGraph.nodes.at(nodeId++);
-    atb::Node &qLinearNode = opGraph.nodes.at(nodeId++);
-    atb::Node &kLinearNode = opGraph.nodes.at(nodeId++);
-    atb::Node &vLinearNode = opGraph.nodes.at(nodeId++);
+    atb::Node &mixdQLinearNode = opGraph.nodes.at(nodeId++);
+    atb::Node &mixdKLinearNode = opGraph.nodes.at(nodeId++);
+    atb::Node &mixdVLinearNode = opGraph.nodes.at(nodeId++);
     atb::Node &ropeNode = opGraph.nodes.at(nodeId++);
     atb::Node &selfAttentionKvCacheNode = opGraph.nodes.at(nodeId++);
     atb::Node &selfOutLinearNode = opGraph.nodes.at(nodeId++);
@@ -84,147 +128,370 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     atb::Node &selfNormNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpResidualAddNode = opGraph.nodes.at(nodeId++);
+    if (param.quantModel) {
+        // W8A8量化
+        atb::infer::RmsNormParam rmsNormParam;
+        rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+        rmsNormParam.normParam.epsilon = param.rmsNormEps;
+        rmsNormParam.normParam.quantType = atb::infer::QUANT_INT8;
+        CREATE_OPERATION(rmsNormParam, &inputNormNode.operation);
+        inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT, IN_NORM_BIAS };
+        inputNormNode.outTensorIds = { INTERMIDATE_INPUTNORMOUT };
 
-    atb::infer::RmsNormParam rmsNormParam;
-    rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    rmsNormParam.normParam.epsilon = param.rmsNormEps;
-    CREATE_OPERATION(rmsNormParam, &inputNormNode.operation);
-    // (bsz,seq_len,hidden_size) - > (bsz,seq_len,hidden_size)
-    inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT };
-    inputNormNode.outTensorIds = { INTERMIDATE_INPUTNORMOUT };
+        atb::infer::LinearParam quantQkvLinearParam;
+        quantQkvLinearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
+        CREATE_OPERATION(quantQkvLinearParam, &mixdQLinearNode.operation);
+        mixdQLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_QMIXDWEIGHT, IN_QMIXD_BIAS, IN_QMIXD_DEQSCALE };
+        mixdQLinearNode.outTensorIds = { INTERMIDATE_MIXEDQ };
 
-    atb::infer::LinearParam linearParam;
-    linearParam.hasBias = false;
-    CREATE_OPERATION(linearParam, &qLinearNode.operation);
-    qLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_Q_LINEARWEIGHT };
-    qLinearNode.outTensorIds = { INTERMIDATE_Q_MIXEDLINEAROUT };
+        CREATE_OPERATION(quantQkvLinearParam, &mixdKLinearNode.operation);
+        mixdKLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_KMIXDWEIGHT, IN_KMIXD_BIAS, IN_KMIXD_DEQSCALE };
+        mixdKLinearNode.outTensorIds = { INTERMIDATE_MIXEDK };
 
-    CREATE_OPERATION(linearParam, &kLinearNode.operation);
-    kLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_K_LINEARWEIGHT };
-    kLinearNode.outTensorIds = { INTERMIDATE_K_MIXEDLINEAROUT };
+        CREATE_OPERATION(quantQkvLinearParam, &mixdVLinearNode.operation);
+        mixdVLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_VMIXDWEIGHT, IN_VMIXD_BIAS, IN_VMIXD_DEQSCALE };
+        mixdVLinearNode.outTensorIds = { INTERMIDATE_MIXEDV };
+    } else if (param.sparseModel) {
+        // 稀疏量化
+        atb::infer::RmsNormParam rmsNormParam;
+        rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+        rmsNormParam.normParam.epsilon = param.rmsNormEps;
+        rmsNormParam.normParam.quantType = atb::infer::QUANT_INT8;
+        CREATE_OPERATION(rmsNormParam, &inputNormNode.operation);
+        inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT, IN_NORM_BIAS };
+        inputNormNode.outTensorIds = { INTERMIDATE_INPUTNORMOUT };
 
-    CREATE_OPERATION(linearParam, &vLinearNode.operation);
-    vLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_V_LINEARWEIGHT };
-    vLinearNode.outTensorIds = { INTERMIDATE_V_MIXEDLINEAROUT };
+        atb::infer::LinearSparseParam linearSparseParam = { false, true, 8, 8 };
+        CREATE_OPERATION(linearSparseParam, &mixdQLinearNode.operation);
+        mixdQLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_QMIXDWEIGHT, IN_QMIXD_BIAS, IN_QMIXD_DEQSCALE,
+            IN_QMIXD_INDEX };
+        mixdQLinearNode.outTensorIds = { INTERMIDATE_MIXEDQ };
 
-    atb_speed::internlm_7b::RopeParam ropeParam;
-    ropeParam.rotaryCoeff = ROTARY_COEFF; // 旋转系数
-    ropeParam.headNum = param.headNum;
-    atb_speed::internlm_7b::Rope(ropeParam, &ropeNode.operation);
-    ropeNode.inTensorIds = { INTERMIDATE_Q_MIXEDLINEAROUT, INTERMIDATE_K_MIXEDLINEAROUT, IN_COS_EMBED, IN_SIN_EMBED,
-        IN_SEQLEN };
-    ropeNode.outTensorIds = { INTERMIDATE_Q_POSITIONEMBED, INTERMIDATE_K_POSITIONEMBED };
+        CREATE_OPERATION(linearSparseParam, &mixdKLinearNode.operation);
+        mixdKLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_KMIXDWEIGHT, IN_KMIXD_BIAS, IN_KMIXD_DEQSCALE,
+            IN_KMIXD_INDEX };
+        mixdKLinearNode.outTensorIds = { INTERMIDATE_MIXEDK };
 
-    atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headNum = param.headNum;
-    selfAttentionParam.qScale = 1.0 / sqrt(param.dk);
-    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
-    CREATE_OPERATION(selfAttentionParam, &selfAttentionKvCacheNode.operation);
-    selfAttentionKvCacheNode.inTensorIds = { INTERMIDATE_Q_POSITIONEMBED,
-        INTERMIDATE_K_POSITIONEMBED,
-        INTERMIDATE_V_MIXEDLINEAROUT,
-        IN_PASTKEY,
-        IN_PASTVALUE,
+        CREATE_OPERATION(linearSparseParam, &mixdVLinearNode.operation);
+        mixdVLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_VMIXDWEIGHT, IN_VMIXD_BIAS, IN_VMIXD_DEQSCALE,
+            IN_VMIXD_INDEX };
+        mixdVLinearNode.outTensorIds = { INTERMIDATE_MIXEDV };
+    } else {
+        // 浮点
+        atb::infer::RmsNormParam rmsNormParam;
+        rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+        rmsNormParam.normParam.epsilon = param.rmsNormEps;
+        CREATE_OPERATION(rmsNormParam, &inputNormNode.operation);
+        inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT };
+        inputNormNode.outTensorIds = { INTERMIDATE_INPUTNORMOUT };
+        atb::infer::LinearParam linearParam;
+        linearParam.hasBias = false;
+        if (param.isBF16) {
+            linearParam.linearType = atb::infer::LINEAR_BF16BF16_FP32_BF16;
+        }
+        CREATE_OPERATION(linearParam, &mixdQLinearNode.operation);
+        mixdQLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_QMIXDWEIGHT };
+        mixdQLinearNode.outTensorIds = { INTERMIDATE_MIXEDQ };
+        CREATE_OPERATION(linearParam, &mixdKLinearNode.operation);
+        mixdKLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_KMIXDWEIGHT };
+        mixdKLinearNode.outTensorIds = { INTERMIDATE_MIXEDK };
+        CREATE_OPERATION(linearParam, &mixdVLinearNode.operation);
+        mixdVLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_VMIXDWEIGHT };
+        mixdVLinearNode.outTensorIds = { INTERMIDATE_MIXEDV };
+    }
+    // GQA reshape -> [b*s, hd]
+    if (param.kvHeadNum < param.headNum) {
+        atb::infer::RopeParam ropeFusionParam;
+        ropeFusionParam.rotaryCoeff = 2;
+        CREATE_OPERATION(ropeFusionParam, &ropeNode.operation);
+        ropeNode.inTensorIds = { INTERMIDATE_MIXEDQ, INTERMIDATE_MIXEDK, IN_COSTABLE, IN_SINTABLE, IN_SEQLEN };
+        ropeNode.outTensorIds = { INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK };
+        ropeNode.inTensorReshapeFuncs.resize(ropeNode.inTensorIds.size());
+        ropeNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            *batchNumPtr = oldShape.dims[0];
+            ReshapeHeads(oldShape, newShape);
+        };
+        ropeNode.inTensorReshapeFuncs.at(1) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            ReshapeHeads(oldShape, newShape);
+        };
+        ropeNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            ReshapeHeads(oldShape, newShape);
+        };
+        ropeNode.inTensorReshapeFuncs.at(3) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            ReshapeHeads(oldShape, newShape);
+        };
+    } else {
+        atb_speed::internlm_20b::RopeFusionParam ropeFusionParam;
+        ropeFusionParam.headNum = param.headNum;
+        atb_speed::internlm_20b::RopeFusionOperation(ropeFusionParam, &ropeNode.operation);
+        ropeNode.inTensorIds = {
+            INTERMIDATE_MIXEDQ, INTERMIDATE_MIXEDK, IN_POSITIONIDS, IN_COSTABLE, IN_SINTABLE, IN_SEQLEN
+        };
+        ropeNode.outTensorIds = { INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK };
+    }
+    atb::infer::SelfAttentionParam selfAttentionKvCacheParam;
+    selfAttentionKvCacheParam.headNum = param.headNum;
+    selfAttentionKvCacheParam.kvHeadNum = param.kvHeadNum;
+    selfAttentionKvCacheParam.qkScale = 1.0 / sqrt(param.dk);
+    selfAttentionKvCacheParam.qScale = 1.0;
+    selfAttentionKvCacheParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
+    if (param.isEncoder) {
+        selfAttentionKvCacheParam.calcType = atb::infer::SelfAttentionParam::ENCODER;
+        selfAttentionKvCacheParam.isTriuMask = param.isTriuMask;
+    } else {
+        selfAttentionKvCacheParam.calcType = atb::infer::SelfAttentionParam::DECODER;
+    }
+    CREATE_OPERATION(selfAttentionKvCacheParam, &selfAttentionKvCacheNode.operation);
+    selfAttentionKvCacheNode.inTensorIds = { INTERMIDATE_POSITIONEMBEDQ,
+        INTERMIDATE_POSITIONEMBEDK,
+        INTERMIDATE_MIXEDV,
+        IN_CACHEK,
+        IN_CACHEV,
         IN_ATTENTIONMASK,
         IN_TOKENOFFSET,
         IN_SEQLEN,
         IN_LAYERID };
     selfAttentionKvCacheNode.outTensorIds = { INTERMIDATE_SELFOUT };
     selfAttentionKvCacheNode.inTensorReshapeFuncs.resize(selfAttentionKvCacheNode.inTensorIds.size());
-    selfAttentionKvCacheNode.inTensorReshapeFuncs.at(SELF_ATTENTION_V_INPUT_INDEX) = [=](const atb::Dims &oldShape,
-        atb::Dims &newShape) {
-        newShape.dimNum = SELF_ATTENTION_V_INPUT_SIZE;
-        size_t newShapeDimIndex = 0;
-        size_t oldShapeDimIndex = 0;
-        newShape.dims[newShapeDimIndex++] = oldShape.dims[oldShapeDimIndex++];
-        newShape.dims[newShapeDimIndex++] = oldShape.dims[oldShapeDimIndex++];
-        newShape.dims[newShapeDimIndex++] = param.headNum;
-        newShape.dims[newShapeDimIndex++] = oldShape.dims[oldShapeDimIndex++] / param.headNum;
-    };
+    // GQA reshape -> [b, s, headnum, headdim]]
+    if (param.kvHeadNum < param.headNum) {
+        selfAttentionKvCacheNode.inTensorReshapeFuncs.at(0) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            int batchSize = *batchNumPtr;
+            newShape.dimNum = 4;
+            newShape.dims[0] = batchSize;
+            newShape.dims[1] = oldShape.dims[0] / batchSize;
+            newShape.dims[2] = param.headNum;
+            newShape.dims[3] = oldShape.dims[1] / param.headNum;
+        };
+        selfAttentionKvCacheNode.inTensorReshapeFuncs.at(1) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            int batchSize = *batchNumPtr;
+            newShape.dimNum = 4;
+            newShape.dims[0] = batchSize;
+            newShape.dims[1] = oldShape.dims[0] / batchSize;
+            newShape.dims[2] = param.kvHeadNum;
+            newShape.dims[3] = oldShape.dims[1] / param.kvHeadNum;
+        };
+        selfAttentionKvCacheNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            newShape.dimNum = 4;
+            newShape.dims[0] = oldShape.dims[0];
+            newShape.dims[1] = oldShape.dims[1];
+            newShape.dims[2] = param.kvHeadNum;
+            newShape.dims[3] = oldShape.dims[2] / param.kvHeadNum;
+        };
+    } else {
+        selfAttentionKvCacheNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+            newShape.dimNum = ATTENTION_DIM_NUM;
+            newShape.dims[0] = oldShape.dims[0];
+            newShape.dims[1] = oldShape.dims[1];
+            newShape.dims[ATTENTION_DIM_2] = param.headNum;
+            newShape.dims[ATTENTION_DIM_3] = oldShape.dims[ATTENTION_DIM_2] / param.headNum;
+        };
+    }
+    if (param.quantModel) {
+        // W8A8量化
+        atb_speed::common::ParallelParamV2 selfOutLinearParam;
+        selfOutLinearParam.commParam.rank = param.rank;
+        selfOutLinearParam.commParam.rankSize = param.rankSize;
+        selfOutLinearParam.commParam.backend = param.backend;
+        selfOutLinearParam.isBias = true;
+        selfOutLinearParam.isQuant = true;
+        selfOutLinearParam.transposeB = true;
+        selfOutLinearParam.isBF16 = param.isBF16;
+        selfOutLinearParam.quantParam.quantType = atb::infer::QUANT_INT8;
+        selfOutLinearParam.quantParam.isQuantOp = true;
+        selfOutLinearParam.quantParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_QUANT;
+        selfOutLinearParam.quantParam.inputScale = param.denseInputScale;
+        selfOutLinearParam.quantParam.inputOffset = param.denseInputOffset;
+        atb_speed::common::RowParallelLinearV2(selfOutLinearParam, &selfOutLinearNode.operation);
+        selfOutLinearNode.inTensorIds = { INTERMIDATE_SELFOUT,
+                                          IN_SELFOUTLINEARWEIGHT, IN_SELFOUTLINEAR_BIAS, IN_SELFOUTLINEAR_DEQSCALE,
+                                          IN_HOLDER, IN_HOLDER, IN_HOLDER };
+        selfOutLinearNode.outTensorIds = { INTERMIDATE_SELFLINEAROUT };
+    } else if (param.sparseModel) {
+        // 稀疏量化
+        atb_speed::common::ParallelParamV2 selfOutLinearParam;
+        selfOutLinearParam.commParam.rank = param.rank;
+        selfOutLinearParam.commParam.rankSize = param.rankSize;
+        selfOutLinearParam.commParam.backend = param.backend;
+        selfOutLinearParam.isBias = true;
+        selfOutLinearParam.isQuant = true;
+        selfOutLinearParam.isSparse = true;
+        selfOutLinearParam.transposeB = true;
+        selfOutLinearParam.isBF16 = param.isBF16;
+        selfOutLinearParam.quantParam.quantType = atb::infer::QUANT_INT8;
+        selfOutLinearParam.quantParam.isQuantOp = true;
+        selfOutLinearParam.quantParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_QUANT;
+        selfOutLinearParam.quantParam.inputScale = param.denseInputScale;
+        selfOutLinearParam.quantParam.inputOffset = param.denseInputOffset;
+        atb_speed::common::RowParallelLinearV2(selfOutLinearParam, &selfOutLinearNode.operation);
+        selfOutLinearNode.inTensorIds = { INTERMIDATE_SELFOUT,
+                                          IN_SELFOUTLINEARWEIGHT, IN_SELFOUTLINEAR_BIAS, IN_SELFOUTLINEAR_DEQSCALE,
+                                          IN_SELFOUT_INDEX, IN_HOLDER, IN_HOLDER };
+        selfOutLinearNode.outTensorIds = { INTERMIDATE_SELFLINEAROUT };
+    } else {
+        // 浮点
+        atb_speed::common::ParallelParamV2 selfOutLinearParam;
+        selfOutLinearParam.commParam.rank = param.rank;
+        selfOutLinearParam.commParam.rankSize = param.rankSize;
+        selfOutLinearParam.commParam.backend = param.backend;
+        selfOutLinearParam.isBias = false;
+        selfOutLinearParam.isBF16 = param.isBF16;
+        atb_speed::common::RowParallelLinearV2(selfOutLinearParam, &selfOutLinearNode.operation);
 
-    atb_speed::common::ParallelParam selfOutLinearParam;
-    selfOutLinearParam.rank = param.rank;
-    selfOutLinearParam.rankSize = param.rankSize;
-    atb_speed::common::RowParallelLinear(selfOutLinearParam, &selfOutLinearNode.operation);
-    selfOutLinearNode.inTensorIds = { INTERMIDATE_SELFOUT, IN_SELFOUTLINEARWEIGHT };
-    selfOutLinearNode.outTensorIds = { INTERMIDATE_SELFLINEAROUT };
-
+        selfOutLinearNode.inTensorIds = {
+            INTERMIDATE_SELFOUT, IN_SELFOUTLINEARWEIGHT, IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_HOLDER, IN_HOLDER
+        };
+        selfOutLinearNode.outTensorIds = { INTERMIDATE_SELFLINEAROUT };
+    }
     atb::infer::ElewiseParam addParam;
     addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
+
     CREATE_OPERATION(addParam, &selfResidualAddNode.operation);
     selfResidualAddNode.inTensorIds = { IN_HIDDENSTATES, INTERMIDATE_SELFLINEAROUT };
     selfResidualAddNode.outTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT };
+    if (param.quantModel) {
+        // W8A8量化
+        atb::infer::RmsNormParam selfNormParam;
+        selfNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+        selfNormParam.normParam.epsilon = param.rmsNormEps;
+        selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
 
-    CREATE_OPERATION(rmsNormParam, &selfNormNode.operation);
-    selfNormNode.inTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT };
-    selfNormNode.outTensorIds = { INTERMIDATE_SELFNORMOUT };
+        CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
+        selfNormNode.inTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_SELFOUTNORM_BIAS };
+        selfNormNode.outTensorIds = { INTERMIDATE_SELFNORMOUT };
 
-    atb_speed::common::MlpGateParam mlpParam;
-    mlpParam.rank = param.rank;
-    mlpParam.rankSize = param.rankSize;
-    mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
-    mlpParam.transposeB = true;
-    mlpParam.isBias = false;
-    mlpParam.isPack = false;
-    atb_speed::common::MlpGateLayer(mlpParam, &mlpNode.operation);
-    mlpNode.inTensorIds = { INTERMIDATE_SELFNORMOUT, IN_MLPUPWEIGHT, IN_MLPGATEWEIGHT, IN_MLPDOWNWEIGHT };
-    mlpNode.outTensorIds = { INTERMIDATE_MLPOUT };
+        atb_speed::common::MlpGateParamV2 mlpParam;
+        mlpParam.isBias = true;
+        mlpParam.isPack = false;
+        mlpParam.isQuant = true;
+        mlpParam.transposeB = true;
+        mlpParam.isBF16 = param.isBF16;
+        mlpParam.commDownParam.rank = param.rank;
+        mlpParam.commDownParam.rankSize = param.rankSize;
+        mlpParam.commDownParam.backend = param.backend;
+        mlpParam.quantUpParam.quantType = atb::infer::QUANT_INT8;
+        mlpParam.quantUpParam.isQuantOp = false;
+        mlpParam.quantGateParam.quantType = atb::infer::QUANT_INT8;
+        mlpParam.quantGateParam.isQuantOp = false;
+        mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
+        mlpParam.quantDownParam.isQuantOp = true;
+        mlpParam.quantDownParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_QUANT;
+        mlpParam.quantDownParam.inputScale = param.ffnOutInputScale;
+        mlpParam.quantDownParam.inputOffset = param.ffnOutInputOffset;
+
+        atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);
+        mlpNode.inTensorIds = { INTERMIDATE_SELFNORMOUT,
+                                IN_MLPUPWEIGHT, IN_MLPGATEWEIGHT, IN_MLPDOWNWEIGHT,
+                                IN_MLPUP_DEQSCALE, IN_MLPGATE_DEQSCALE, IN_MLPDOWN_DEQSCALE,
+                                IN_MLPUP_BIAS, IN_MLPGATE_BIAS, IN_MLPDOWN_BIAS,
+                                IN_HOLDER, IN_HOLDER, IN_HOLDER,
+                                IN_HOLDER, IN_HOLDER, IN_HOLDER,
+                                IN_HOLDER, IN_HOLDER, IN_HOLDER };
+        mlpNode.outTensorIds = { INTERMIDATE_MLPOUT };
+    } else if (param.sparseModel) {
+        // 稀疏量化
+        atb::infer::RmsNormParam selfNormParam;
+        selfNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+        selfNormParam.normParam.epsilon = param.rmsNormEps;
+        selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
+
+        CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
+        selfNormNode.inTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_SELFOUTNORM_BIAS };
+        selfNormNode.outTensorIds = { INTERMIDATE_SELFNORMOUT };
+
+        atb_speed::common::MlpGateParamV2 mlpParam;
+        mlpParam.isBias = true;
+        mlpParam.isPack = false;
+        mlpParam.isQuant = true;
+        mlpParam.isSparse = true;
+        mlpParam.transposeB = true;
+        mlpParam.isBF16 = param.isBF16;
+        mlpParam.commDownParam.rank = param.rank;
+        mlpParam.commDownParam.rankSize = param.rankSize;
+        mlpParam.commDownParam.backend = param.backend;
+        mlpParam.quantUpParam.quantType = atb::infer::QUANT_INT8;
+        mlpParam.quantUpParam.isQuantOp = false;
+        mlpParam.quantGateParam.quantType = atb::infer::QUANT_INT8;
+        mlpParam.quantGateParam.isQuantOp = false;
+        mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
+        mlpParam.quantDownParam.isQuantOp = true;
+        mlpParam.quantDownParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_QUANT;
+        mlpParam.quantDownParam.inputScale = param.ffnOutInputScale;
+        mlpParam.quantDownParam.inputOffset = param.ffnOutInputOffset;
+        atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);
+        mlpNode.inTensorIds = { INTERMIDATE_SELFNORMOUT,
+                                IN_MLPUPWEIGHT, IN_MLPGATEWEIGHT, IN_MLPDOWNWEIGHT,
+                                IN_MLPUP_DEQSCALE, IN_MLPGATE_DEQSCALE, IN_MLPDOWN_DEQSCALE,
+                                IN_MLPUP_BIAS, IN_MLPGATE_BIAS, IN_MLPDOWN_BIAS,
+                                IN_MLPUP_INDEX, IN_MLPGATE_INDEX, IN_MLPDOWN_INDEX,
+                                IN_HOLDER, IN_HOLDER, IN_HOLDER,
+                                IN_HOLDER, IN_HOLDER, IN_HOLDER };
+        mlpNode.outTensorIds = { INTERMIDATE_MLPOUT };
+    } else {
+        // 浮点
+        atb::infer::RmsNormParam selfNormParam;
+        selfNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+        selfNormParam.normParam.epsilon = param.rmsNormEps;
+        CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
+        selfNormNode.inTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT };
+        selfNormNode.outTensorIds = { INTERMIDATE_SELFNORMOUT };
+        atb_speed::common::MlpGateParamV2 mlpParam;
+        mlpParam.commDownParam.rank = param.rank;
+        mlpParam.commDownParam.rankSize = param.rankSize;
+        mlpParam.commDownParam.backend = param.backend;
+        mlpParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
+        mlpParam.transposeB = true;
+        mlpParam.isBias = false;
+        mlpParam.isPack = false;
+        mlpParam.isBF16 = param.isBF16;
+        atb_speed::common::MlpGateLayerV2(mlpParam, &mlpNode.operation);
+        mlpNode.inTensorIds = { INTERMIDATE_SELFNORMOUT,
+                                IN_MLPUPWEIGHT, IN_MLPGATEWEIGHT, IN_MLPDOWNWEIGHT,
+                                IN_HOLDER, IN_HOLDER, IN_HOLDER,
+                                IN_HOLDER, IN_HOLDER, IN_HOLDER,
+                                IN_HOLDER, IN_HOLDER, IN_HOLDER,
+                                IN_HOLDER, IN_HOLDER, IN_HOLDER,
+                                IN_HOLDER, IN_HOLDER, IN_HOLDER };
+        mlpNode.outTensorIds = { INTERMIDATE_MLPOUT };
+    }
 
     CREATE_OPERATION(addParam, &mlpResidualAddNode.operation);
     mlpResidualAddNode.inTensorIds = { INTERMIDATE_SELFRESIDUALADDOUT, INTERMIDATE_MLPOUT };
-    mlpResidualAddNode.outTensorIds = { OUT_LAYEROUT };
+    mlpResidualAddNode.outTensorIds = { OUT_INTERNLM20BLAYEROUT };
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
         atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(0);
         return atb::NO_ERROR;
     };
+
     CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
 }
 
-FlashAttentionRopeLayerBinder::FlashAttentionRopeLayerBinder() = default;
+FlashAttentionRopeLayerBinder::FlashAttentionRopeLayerBinder() {}
 
-FlashAttentionRopeLayerBinder::~FlashAttentionRopeLayerBinder() = default;
+FlashAttentionRopeLayerBinder::~FlashAttentionRopeLayerBinder() {}
 
 void FlashAttentionRopeLayerBinder::ParseParam(const nlohmann::json &paramJson)
 {
     tokenOffset_.clear();
-    for (const auto &item : paramJson["tokenOffset"]) {
+    for (auto item : paramJson["tokenOffset"]) {
         tokenOffset_.push_back(item.get<int>());
     }
 
     seqLen_.clear();
-    for (const auto &item : paramJson["seqLen"]) {
+    for (auto item : paramJson["seqLen"]) {
         seqLen_.push_back(item.get<int>());
     }
 }
 
 void FlashAttentionRopeLayerBinder::BindTensor(atb::VariantPack &variantPack)
 {
-    variantPack.inTensors.at(IN_TOKENOFFSET).hostData = tokenOffset_.data();
-    variantPack.inTensors.at(IN_SEQLEN).hostData = seqLen_.data();
-}
-
-void from_json(const nlohmann::json &paramJson, FlashAttentionRopeLayerParam &param)
-{
-    paramJson.at("rmsNormEps").get_to(param.rmsNormEps);
-    paramJson.at("headNum").get_to(param.headNum);
-    paramJson.at("dk").get_to(param.dk);
-    if (paramJson.contains("rank")) {
-        paramJson.at("rank").get_to(param.rank);
-    }
-    if (paramJson.contains("rankSize")) {
-        paramJson.at("rankSize").get_to(param.rankSize);
-    }
-}
-
-atb::Operation *CreateFlashAttentionRopeLayer(const nlohmann::json &paramJson)
-{
-    ATB_LOG(INFO) << GetFuncNameAndNameSpace(__PRETTY_FUNCTION__);
-    atb::Operation *op;
-    atb_speed::internlm_20b::FlashAttentionRopeLayer(paramJson.get<FlashAttentionRopeLayerParam>(), &op);
-    return op;
+    const uint32_t tokenOffsetTensorId = IN_TOKENOFFSET;
+    const uint32_t seqLenTensorId = IN_SEQLEN;
+    variantPack.inTensors.at(tokenOffsetTensorId).hostData = tokenOffset_.data();
+    variantPack.inTensors.at(seqLenTensorId).hostData = seqLen_.data();
 }
 } // namespace internlm_20b
 } // namespace atb_speed
