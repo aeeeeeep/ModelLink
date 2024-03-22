@@ -96,8 +96,6 @@ Qwen-7B 训练的硬件配置:
    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/qwen_generation_utils.py
    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/tokenization_qwen.py
    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/tokenizer_config.json
-   
-   cd ..
    ```
    修改modelling_qwen.py文件第39行，将：
    ```python
@@ -106,6 +104,10 @@ Qwen-7B 训练的硬件配置:
    修改为：
    ```python
    SUPPORT_FP16 = True
+   ```
+   再执行：
+   ```bash
+   cd ..
    ```
 4. 权重转换
 
@@ -137,7 +139,7 @@ Qwen-7B 训练的硬件配置:
                                    --loader megatron \
                                    --saver megatron \
                                    --save-model-type save_huggingface_qwen \
-                                   --load-dir {megatron权重加载路径} \
+                                   --load-dir {your megatron ckpt save path} \
                                    --target-tensor-parallel-size 1 \
                                    --target-pipeline-parallel-size 1 \
                                    --add-qkv-bias \
@@ -324,8 +326,6 @@ Qwen-14B 训练的硬件配置:
    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/qwen_generation_utils.py
    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/tokenization_qwen.py
    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/tokenizer_config.json
-
-   cd ..
    ```
    修改modelling_qwen.py文件第39行，将：
    ```python
@@ -334,6 +334,10 @@ Qwen-14B 训练的硬件配置:
    修改为：
    ```python
    SUPPORT_FP16 = True
+   ```
+   再执行：
+   ```bash
+   cd ..
    ```
 4. 权重转换
 
@@ -363,7 +367,7 @@ Qwen-14B 训练的硬件配置:
       --loader megatron \
       --saver megatron \
       --save-model-type save_huggingface_qwen \
-      --load-dir ../Qwen14B-v0.1-pt8-pp1 \
+      --load-dir {your megatron ckpt save path} \
       --target-tensor-parallel-size 1 \
       --target-pipeline-parallel-size 1 \
       --add-qkv-bias \
@@ -531,7 +535,6 @@ Qwen-72B 训练的硬件配置:
    wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/generation_config.json
    wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/model-00001-of-000082.safetensors
    ...
-   cd ..
    ```
    修改modelling_qwen.py文件第39行，将：
    ```python
@@ -540,6 +543,10 @@ Qwen-72B 训练的硬件配置:
    修改为：
    ```python
    SUPPORT_FP16 = True
+   ```
+   再执行：
+   ```bash
+   cd ..
    ```
 4. 权重转换
 
@@ -570,7 +577,7 @@ Qwen-72B 训练的硬件配置:
       --loader megatron \
       --saver megatron \
       --save-model-type save_huggingface_qwen \
-      --load-dir ../Qwen72B-v0.1-pt8-pp1 \
+      --load-dir {your model ckpt save path} \
       --target-tensor-parallel-size 1 \
       --target-pipeline-parallel-size 1 \
       --add-qkv-bias \
