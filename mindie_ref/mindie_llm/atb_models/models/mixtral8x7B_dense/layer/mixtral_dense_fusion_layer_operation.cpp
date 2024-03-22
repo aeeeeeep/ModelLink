@@ -144,8 +144,7 @@ atb::Status MixtralDenseLayerFusionOperation(const MixtralDenseLayerFusionParam 
     selfOutLinearParallelParam.rank = param.rank;
     selfOutLinearParallelParam.rankSize = param.rankSize;
     selfOutLinearParallelParam.rankRoot = 0;
-    selfOutLinearParallelParam.bias = "None";
-    selfOutLinearParallelParam.parallelType = "RowParallel";
+    selfOutLinearParallelParam.hasResidual = false;
     selfOutLinearParallelParam.backend = param.backend;
     CreateOperation(selfOutLinearParallelParam, &selfOutLinearParallelNode.operation);
     if (selfOutLinearParallelNode.operation == nullptr) {
