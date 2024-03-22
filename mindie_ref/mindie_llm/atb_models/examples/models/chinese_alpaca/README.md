@@ -91,7 +91,7 @@
     ```shell
     cd ${llm_path}/tests/modeltest
     export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
-    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${YChinese-Alpaca-Lora-13B权重路径} 8
+    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${Chinese-Alpaca-Lora-13B权重路径} 8
     ```
 
 ## FAQ
