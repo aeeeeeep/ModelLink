@@ -42,7 +42,7 @@ class W8A8LinearStatic(nn.Module):
         self.register_buffer('weight', weight.to(torch.int8))
 
         self.act_quant_name = 'per_tensor'
-        self.register_buffer('input_scale', (1 / input_scale).to(torch.float16))
+        self.register_buffer('input_scale', input_scale.to(torch.float16))
 
         if input_offset is not None:
             self.register_buffer('input_offset', input_offset.to(torch.int8))

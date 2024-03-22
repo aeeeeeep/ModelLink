@@ -16,7 +16,10 @@
 #include "parallel_layer.h"
 
 #include <atb/atb_infer.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 
 #include "atb_speed/log.h"
 
@@ -41,12 +44,7 @@ atb::Status ParallelLinearBase(const ParallelParam &param_, atb::Operation **ope
     size_t nodeId = 0;
     atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
 
-    atb::infer::LinearParam matmulParam;
-    if (param_.isBF16) {
-        matmulParam = {param_.transposeA, param_.transposeB, false, atb::infer::LinearType::LINEAR_BF16BF16_FP32_BF16};
-    } else {
-        matmulParam = {param_.transposeA, param_.transposeB, false};
-    }
+    atb::infer::LinearParam matmulParam = {param_.transposeA, param_.transposeB, false};
     CREATE_OPERATION(matmulParam, &matmulNode.operation);
     matmulNode.inTensorIds = {config.IN_INPUT, config.IN_WEIGHT};
     matmulNode.outTensorIds = {config.INTERMIDATE_MATMULOUT};

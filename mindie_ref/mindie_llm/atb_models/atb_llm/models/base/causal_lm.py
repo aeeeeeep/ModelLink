@@ -139,7 +139,7 @@ class CausalLM(PreTrainedModel):
             self.seq_len_decoder = torch.full((self.batch_num,), 1, dtype=torch.int32, device=input_ids.device)
             self.acl_param_seq_len_decoder = [1] * self.batch_num
             self.mask_full = torch.zeros((self.batch_num, self.max_position_embeddings, self.max_position_embeddings),
-                                         dtype=torch.half, device=input_ids.device)
+                                         dtype=self.dtype, device=input_ids.device)
 
         if past_key_value:
             self.k_cache = past_key_value[0]
@@ -151,21 +151,21 @@ class CausalLM(PreTrainedModel):
                 self.k_cache = [torch.zeros(self.batch_num,
                                             self.max_position_embeddings,
                                             self.num_key_value_heads * self.head_size, device=input_ids.device,
-                                            dtype=torch.float16) for _ in range(self.num_layers)]
+                                            dtype=self.dtype) for _ in range(self.num_layers)]
                 self.v_cache = [torch.zeros(self.batch_num,
                                             self.max_position_embeddings,
                                             self.num_key_value_heads * self.head_size, device=input_ids.device,
-                                            dtype=torch.float16) for _ in range(self.num_layers)]
+                                            dtype=self.dtype) for _ in range(self.num_layers)]
             else:
                 self.k_cache = [torch_npu.npu_format_cast_(torch.zeros(self.batch_num,
                                 math.ceil(self.num_key_value_heads * self.head_size / self.nz_dim),
                                 self.max_position_embeddings, self.nz_dim, device=input_ids.device,
-                                dtype=torch.float16), 29) for _ in range(self.num_layers)]
+                                dtype=self.dtype), 29) for _ in range(self.num_layers)]
                 torch.npu.empty_cache()
                 self.v_cache = [torch_npu.npu_format_cast_(torch.zeros(self.batch_num,
                                 math.ceil(self.num_key_value_heads * self.head_size / self.nz_dim),
                                 self.max_position_embeddings, self.nz_dim, device=input_ids.device,
-                                dtype=torch.float16), 29) for _ in range(self.num_layers)]
+                                dtype=self.dtype), 29) for _ in range(self.num_layers)]
                 torch.npu.empty_cache()
             self.past_key_values_length = 0
             self.token_offset[:] = input_ids.shape[1]
@@ -197,19 +197,19 @@ class CausalLM(PreTrainedModel):
         if seq_length > 1:
             combined_attention_mask = _make_causal_mask(
                 input_ids.shape,
-                torch.float16,
+                self.dtype,
                 device=device,
                 past_key_values_length=self.past_key_values_length,
             )
-        attention_mask = _expand_mask(attention_mask, torch.float16, tgt_len=seq_length).to(device)
+        attention_mask = _expand_mask(attention_mask, self.dtype, tgt_len=seq_length).to(device)
         attention_mask = attention_mask if combined_attention_mask is None else attention_mask + combined_attention_mask
         dim_0 = attention_mask.shape[2]
         dim_1 = attention_mask.shape[3]
         if not self.soc_info.need_nz:
             self.mask_full[:batch_size, :dim_0, :dim_1] = attention_mask.squeeze(1)
         else:
-            self.mask_full = torch.zeros((self.batch_num, self.max_position_embeddings, 
-                self.max_position_embeddings), dtype=torch.half, device=input_ids.device)
+            self.mask_full = torch.zeros((self.batch_num, self.max_position_embeddings,
+                self.max_position_embeddings), dtype=self.dtype, device=input_ids.device)
             self.mask_full[:batch_size, :dim_0, :dim_1] = attention_mask.squeeze(1)
             self.mask_full = torch_npu.npu_format_cast_(
                 self.mask_full.view(self.batch_num, self.mask_full.shape[1],
@@ -223,10 +223,10 @@ class CausalLM(PreTrainedModel):
                                   ):
         if self.num_attention_heads == self.num_key_value_heads:
             cos_embed, sin_embed = self.ascend_rotary_embedding.get_cos_sin_total(
-                position_ids, max_seq_len, torch.float16
+                position_ids, max_seq_len, self.dtype
             )
         else:
-            self.ascend_rotary_embedding.update_cos_sin_cache_total(torch.float16, position_ids.device, max_seq_len)
+            self.ascend_rotary_embedding.update_cos_sin_cache_total(self.dtype, position_ids.device, max_seq_len)
             cos_embed = self.ascend_rotary_embedding.get_cos_cached_total()
             sin_embed = self.ascend_rotary_embedding.get_sin_cached_total()
 

@@ -202,11 +202,11 @@ rank_id，表示卡的编号，0,1,2,3.。。，并修改里面的config.json
 
 ```shell
 cd ${model_path}/part_model/{rank_id}
-cp ${internlm_20b_path}/pytorch/examples/internlm/20b/modeling_internlm_fa_rope_model_parallel.py ./
+cp ${internlm_20b_path}/pytorch/examples/internlm/20b/fa_rope/modeling_internlm_fa_rope_model_parallel.py ./
 vim config.json
 ```
 
-修改config.json中的kv对，改成
+修改config.json中的kv对，改成（需要运行哪张卡就在对应的文件夹下改）
 `"AutoModelForCausalLM": "modeling_internlm_fa_rope_model_parallel.InternLMForCausalLM"`
 
 ### 配置 config.ini
@@ -291,10 +291,10 @@ torchrun --nproc_per_node 2 main.py --task precision
 ## 3. 执行测试脚本
 
 ```
-RETURN_PERF_DETAIL=1 torchrun --nproc_per_node 2 main.py --task performance
+TIMEIT=1 torchrun --nproc_per_node 2 main.py --task performance
 ```
 
-为了不影响正常使用，将`RETURN_PERF_DETAIL`设置成1来返回具体的性能测试的值，默认是0
+为了不影响正常使用，将`TIMEIT`设置成1来返回具体的性能测试的值，默认是0
 
 ### 性能测试结果
 

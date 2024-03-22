@@ -142,15 +142,13 @@ atb::Status FlashAttentionQuantOperLayer(const FlashAttentionQuantOperLayerParam
     atb::infer::RmsNormParam inputNormParam;
     inputNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     inputNormParam.normParam.epsilon = param.rmsNormEps;
-    inputNormParam.normParam.quantInputScale = param.wPackInputScale;
-    inputNormParam.normParam.quantInputOffset = param.wPackInputOffset;
     inputNormParam.normParam.quantType = atb::infer::QUANT_INT8;
     CREATE_OPERATION(inputNormParam, &inputNormNode.operation);
     inputNormNode.inTensorIds = {IN_HIDDEN_STATES, IN_NORM_WEIGHT, IN_BETA};
     inputNormNode.outTensorIds = {INTERNAL_INPUT_NORM_OUT}; // int8
 
     atb::infer::LinearParam mixedQkvLinearParam;
-    mixedQkvLinearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
+    mixedQkvLinearParam.outDataType = ACL_FLOAT16;
     CREATE_OPERATION(mixedQkvLinearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = {INTERNAL_INPUT_NORM_OUT, IN_QKV_MIXED_LINEAR_WEIGHT, IN_QKV_MIXED_BIAS,
                                  IN_QKV_MIXED_DEQSCALE};
@@ -162,10 +160,9 @@ atb::Status FlashAttentionQuantOperLayer(const FlashAttentionQuantOperLayerParam
     splitQKVNode.outTensorIds = {INTERNAL_MIXED_Q, INTERNAL_MIXED_K, INTERNAL_MIXED_V};
 
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / std::sqrt(float(param.dk));
-    selfAttentionParam.isSupportAlibi = true;
+    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MASK_TYPE_ALIBI;
     CREATE_OPERATION(selfAttentionParam, &selfAttentionKvCacheNode.operation);
     selfAttentionKvCacheNode.inTensorIds = {INTERNAL_MIXED_Q, INTERNAL_MIXED_K, INTERNAL_MIXED_V,
                                             IN_PAST_KEY,      IN_PAST_VALUE,    IN_ATTENTION_MASK,
@@ -225,8 +222,6 @@ atb::Status FlashAttentionQuantOperLayer(const FlashAttentionQuantOperLayerParam
 
     atb::infer::RmsNormParam selfNormParam;
     selfNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    selfNormParam.normParam.quantInputScale = param.gateProjInputScale;   // gate up
-    selfNormParam.normParam.quantInputOffset = param.gateProjInputOffset; // gate up
     selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
     CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
     selfNormNode.inTensorIds = {INTERNAL_SELF_RESIDUAL_ADD_OUT, IN_SELF_OUT_NORM_WEIGHT, IN_BETA}; // quant

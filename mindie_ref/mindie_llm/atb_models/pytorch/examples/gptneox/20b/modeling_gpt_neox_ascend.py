@@ -660,8 +660,8 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
         self.num_layers = config.num_hidden_layers
         self.num_attention_heads = config.num_attention_heads // WORLD_SIZE
 
-        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("gptneox_20b_FaKvCacheModel")
-        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("gptneox_20b_FaKvCacheModel")
+        self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("gptneox_20b_FaKvCacheRopeModel")
+        self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("gptneox_20b_FaKvCacheRopeModel")
 
         self.acl_encoder_operation.set_param(self.acl_param_encoder)
         self.acl_decoder_operation.set_param(self.acl_param_decoder)
@@ -683,6 +683,7 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
         self.origin_inputs_count = None
 
         self.seq_len_tensor = None
+        self.seqlen_max = None
 
         for i in range(self.num_layers):
             self.layer_id_input.append(torch.tensor([i], dtype=torch.int32).npu())
@@ -692,16 +693,16 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
         self.hidden_size = config.hidden_size
         self.nz_dim = 16
 
-        self.acl_encoder_operation_inputs = [None] * (10 + self.num_layers)
-        self.acl_decoder_operation_inputs = [None] * (10 + self.num_layers)
+        self.acl_encoder_operation_inputs = [None] * (11 + self.num_layers)
+        self.acl_decoder_operation_inputs = [None] * (11 + self.num_layers)
         self.lm_head_weight = None
         self.k_cache_input = None
         self.v_cache_input = None
         self.batch = 0
 
         for i in range(self.num_layers):
-            self.acl_encoder_operation_inputs[10 + i] = torch.tensor([i], dtype=torch.int32).npu()
-            self.acl_decoder_operation_inputs[10 + i] = torch.tensor([i], dtype=torch.int32).npu()
+            self.acl_encoder_operation_inputs[11 + i] = torch.tensor([i], dtype=torch.int32).npu()
+            self.acl_decoder_operation_inputs[11 + i] = torch.tensor([i], dtype=torch.int32).npu()
 
     def init_ascend_weight(self):
         weights = [self.state_dict()["embed_in.weight"]]
@@ -738,6 +739,7 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
             self.token_offset[:] = seq_length
             self.seq_len_tensor = torch.tensor([seq_length] * batch_size,
                                                dtype=torch.int32, device=input_ids.device)
+            self.seqlen_max = torch.tensor([self.seq_len_tensor[0] - 1], dtype=torch.int64, device="npu")
             self.attention_mask_encoder, self.attention_mask_decoder = self.attention_mask_generator.get_attn_mask(
                 self.attention_mask_input,
                 self.origin_inputs_count,
@@ -764,6 +766,7 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
             self.acl_encoder_operation_inputs[7] = self.token_offset
             self.acl_encoder_operation_inputs[8] = self.seq_len_tensor
             self.acl_encoder_operation_inputs[9] = self.place_holder
+            self.acl_encoder_operation_inputs[10] = self.seqlen_max
 
             acl_param_encoder = json.dumps({
                 "tokenOffset": [seq_length] * batch_size,
@@ -775,6 +778,7 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
             self.token_num = self.token_num + 1
             self.token_offset[:] = self.token_num
             self.seq_len_tensor = torch.tensor([1] * batch_size, dtype=torch.int32, device=input_ids.device)
+            self.seqlen_max = torch.tensor([self.seq_len_tensor[0] - 1], dtype=torch.int64, device="npu")
 
 
             self.acl_decoder_operation_inputs[0] = input_ids
@@ -787,6 +791,7 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
             self.acl_decoder_operation_inputs[7] = self.token_offset
             self.acl_decoder_operation_inputs[8] = self.seq_len_tensor
             self.acl_decoder_operation_inputs[9] = self.place_holder
+            self.acl_decoder_operation_inputs[10] = self.seqlen_max
 
             acl_param_decoder = json.dumps({
                 "tokenOffset": [self.token_num] * batch_size,
@@ -866,27 +871,34 @@ class GPTNeoXModel(GPTNeoXPreTrainedModel):
                                                  batch_size,
                                                  self.hidden_size_nz,
                                                  self.max_position_embeddings,
-                                                 self.nz_dim
-                                                 ).half().npu()
+                                                 self.nz_dim,
+                                                 device="npu",
+                                                 dtype=torch.half)
                 self.v_cache_input = torch.zeros(self.num_layers,
                                                  batch_size,
                                                  self.hidden_size_nz,
                                                  self.max_position_embeddings,
-                                                 self.nz_dim
-                                                 ).half().npu()
+                                                 self.nz_dim,
+                                                 device="npu",
+                                                 dtype=torch.half)
                 self.k_cache_input = torch_npu.npu_format_cast(self.k_cache_input, 29)
-                self.v_cache_input = torch_npu.npu_format_cast(self.v_cache_input, 29)
                 torch.npu.empty_cache()
+                self.v_cache_input = torch_npu.npu_format_cast(self.v_cache_input, 29)
             else:
 
                 self.k_cache_input = torch.zeros(self.num_layers,
                                                  batch_size,
                                                  self.max_position_embeddings,
-                                                 self.hidden_size // WORLD_SIZE).half().npu()
+                                                 self.hidden_size // WORLD_SIZE,
+                                                 device="npu",
+                                                 dtype=torch.half)
                 self.v_cache_input = torch.zeros(self.num_layers,
                                                  batch_size,
                                                  self.max_position_embeddings,
-                                                 self.hidden_size // WORLD_SIZE).half().npu()
+                                                 self.hidden_size // WORLD_SIZE,
+                                                 device="npu",
+                                                 dtype=torch.half)
+            torch.npu.empty_cache()
             self.token_num = 0
             self.token_offset = torch.full((batch_size,), 0, dtype=torch.int32, device=self.k_cache_input.device)
 
@@ -1043,7 +1055,7 @@ class GPTNeoXForCausalLM(GPTNeoXPreTrainedModel):
         super().__init__(config)
 
         self.gpt_neox = GPTNeoXModel(config)
-        self.embed_out = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+        self.embed_out = nn.Linear(config.hidden_size, config.vocab_size // WORLD_SIZE, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()

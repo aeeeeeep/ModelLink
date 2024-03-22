@@ -32,6 +32,9 @@ from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from contextlib import contextmanager
 
+from atb_speed.common.timer import Timer
+from atb_speed.common.utils import load_atb_speed
+
 from transformers.activations import ACT2FN
 from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, SequenceClassifierOutputWithPast
 from transformers.modeling_utils import PreTrainedModel
@@ -73,6 +76,7 @@ def get_rank_and_world_size():
 RANK, WORLD_SIZE = get_rank_and_world_size()
 
 load_acl_transformer()
+load_atb_speed()
 
 logger = logging.get_logger(__name__)
 
@@ -760,6 +764,7 @@ class InternLMModel(InternLMPreTrainedModel):
         return combined_attention_mask
 
     @add_start_docstrings_to_model_forward(INTERNLM_INPUTS_DOCSTRING)
+    @Timer.timing
     def forward(
             self,
             input_ids: torch.LongTensor = None,
@@ -950,13 +955,9 @@ class InternLMForCausalLM(InternLMPreTrainedModel):
         >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         "Hey, are you consciours? Can you talk to me?\nI'm not consciours, but I can talk to you."
         ```"""
-        # if self.model.lm_head_weight is None:
-        #     soc_version = torch_npu._C._npu_get_soc_version()
-        #     if soc_version not in [104, 220, 221, 222, 223, 224]:
-        #         self.model.lm_head_weight = torch_npu.npu_format_cast(self.lm_head.weight.data, 29)
-        #     self.model.lm_head_weight = self.lm_head.weight.data
+
         if self.lm_head_weight is None:
-            self.lm_head_weight = nn.functional.normalize(self.state_dict()["lm_head.weight"])
+            self.lm_head_weight = self.state_dict()["lm_head.weight"]
             if not IS_ND:
                 self.lm_head_weight.data = torch_npu.npu_format_cast(self.lm_head_weight.data, 29)
             self.model.lm_head_weight = self.lm_head_weight

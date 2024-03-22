@@ -53,6 +53,7 @@ def get_linear(weight, bias, quantize, is_norm=False):
             weight=qweight,
             weight_scale=weight_scale,
             weight_offset=weight_offset,
+            bias=bias
         )
     else:
         logger.error(f"Quantization `{quantize}` is not implemented yet.")
@@ -232,10 +233,11 @@ class TensorParallelRowLinear(SuperLayer):
         self.process_group = process_group
 
     @classmethod
-    def load(cls, config, prefix: str, weights, bias: bool):
-        weight = weights.get_multi_weights_row(prefix, quantize=config.quantize)
-
-        if bias and weights.process_group.rank() == 0:
+    def load(cls, config, prefix: str, weights, bias: bool, bias_pre_add=False, gqa_size=1):
+        weight = weights.get_multi_weights_row(prefix, quantize=config.quantize, gqa_size=gqa_size)
+        if bias and bias_pre_add:
+            bias = weights.get_tensor(f"{prefix}.bias")
+        elif bias and weights.process_group.rank() == 0:
             # Rank is only on the first rank process
             bias = weights.get_tensor(f"{prefix}.bias")
         else:

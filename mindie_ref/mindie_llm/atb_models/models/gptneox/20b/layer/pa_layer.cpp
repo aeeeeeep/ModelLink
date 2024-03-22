@@ -88,7 +88,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     atb::infer::ReshapeAndCacheParam reshapeCacheParm;
     CREATE_OPERATION(reshapeCacheParm, &reshapeAndCacheNode.operation);
     reshapeAndCacheNode.inTensorIds = { INTERMEDIATE_KEYEMBED, INTERMEDIATE_VALUE, IN_CACHEK, IN_CACHEV, IN_SLOTS };
-    reshapeAndCacheNode.outTensorIds = {};
+    reshapeAndCacheNode.outTensorIds = { IN_CACHEK, IN_CACHEV };
 
     atb::infer::ElewiseParam Mul0Param;
     Mul0Param.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_MULS;
@@ -103,7 +103,8 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
         faEnParam.headNum = param.headNum;
         faEnParam.qkScale = param.qkScale;
         faEnParam.kvHeadNum = param.headNum;
-        faEnParam.isEncoder = true;
+        faEnParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
+        faEnParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
         CREATE_OPERATION(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = { INTERMEDIATE_QUERYEMBED_SCALED, INTERMEDIATE_KEYEMBED, INTERMEDIATE_VALUE,
             IN_ATTENTIONMASK, IN_INPUT_LENGTHS };

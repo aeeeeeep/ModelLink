@@ -242,10 +242,10 @@ atb::Status CreateGlm6BLayerDecoderFlashAttentionOperation(const Glm6BLayerDecod
                                      &RopeCosSinReshapeFunc};
 
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.headDim;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = param.qScale;
     selfAttentionParam.qkScale = param.qkScale;
+    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     CREATE_OPERATION(selfAttentionParam, &selfAttentionFusionNode.operation);
     selfAttentionFusionNode.inTensorIds = {INTERMEDIATE_POSITIONEMBEDQ_ID,
                                            INTERMEDIATE_POSITIONEMBEDK_ID,
@@ -301,7 +301,7 @@ atb::Status CreateGlm6BLayerDecoderFlashAttentionOperation(const Glm6BLayerDecod
     selfNormNode.inTensorIds = {INTERMEDIATE_SELFADDOUT_ID, IN_SELFOUTNORMWEIGHT_ID, IN_SELFOUTNORMBIAS_ID};
     selfNormNode.outTensorIds = {INTERMEDIATE_SELFNORMOUT_ID};
 
-    atb::infer::LinearActivationParam ffnParam;
+    atb::infer::LinearParam ffnParam;
     CREATE_OPERATION(ffnParam, &ffnNode.operation);
     ffnNode.inTensorIds = {INTERMEDIATE_SELFNORMOUT_ID, IN_FFNLINEARWEIGHT_ID, IN_FFNLINEARBIAS_ID};
     ffnNode.outTensorIds = {INTERMEDIATE_FFNOUT};

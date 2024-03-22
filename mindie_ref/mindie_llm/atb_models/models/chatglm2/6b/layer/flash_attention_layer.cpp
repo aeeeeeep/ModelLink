@@ -97,8 +97,6 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
     atb::infer::RmsNormParam inputNormParam;
     inputNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     if (param.quantmodel) {
-        inputNormParam.normParam.quantInputScale = param.qkvInputScale;
-        inputNormParam.normParam.quantInputOffset = param.qkvInputOffset;
         inputNormParam.normParam.quantType = atb::infer::QUANT_INT8;
         CREATE_OPERATION(inputNormParam, &inputNormNode.operation);
         inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT, IN_BETA};
@@ -113,15 +111,16 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
     atb_speed::common::FTWithROPEParam faWithROPEParam;
     // self attention param
     faWithROPEParam.isGroupedQueryAttention = true;
-    faWithROPEParam.selfAttentionKvCacheParam.headDim = param.hiddenSizePerHead;
+    faWithROPEParam.faHeadDim = param.hiddenSizePerHead;
     faWithROPEParam.selfAttentionKvCacheParam.headNum = param.numHeadsPerPartition;
     faWithROPEParam.selfAttentionKvCacheParam.kvHeadNum = param.numGroupsPerPartition;
     faWithROPEParam.selfAttentionKvCacheParam.qScale = param.preScale;
     faWithROPEParam.selfAttentionKvCacheParam.qkScale = param.postScale;
+    faWithROPEParam.selfAttentionKvCacheParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     if (param.isEncoder) {
-        faWithROPEParam.selfAttentionKvCacheParam.coderType = atb::infer::SelfAttentionParam::ENCODER;
+        faWithROPEParam.selfAttentionKvCacheParam.calcType = atb::infer::SelfAttentionParam::ENCODER;
     } else {
-        faWithROPEParam.selfAttentionKvCacheParam.coderType = atb::infer::SelfAttentionParam::DECODER;
+        faWithROPEParam.selfAttentionKvCacheParam.calcType = atb::infer::SelfAttentionParam::DECODER;
     }
     // RoPE param
     faWithROPEParam.rotaryCoeff = param.hiddenSizePerHead / 2;
@@ -183,8 +182,6 @@ atb::Status CommonLayerFa(const CommonLayerParamFa &param, atb::Operation **oper
     atb::infer::RmsNormParam selfNormParam;
     selfNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     if (param.quantmodel) {
-        selfNormParam.normParam.quantInputScale = param.selfLnInputScale;
-        selfNormParam.normParam.quantInputOffset = param.selfLnInputOffset;
         selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
         CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
         selfNormNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_BETA};

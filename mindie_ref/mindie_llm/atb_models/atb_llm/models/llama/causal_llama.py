@@ -1,11 +1,15 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
+import os
 import json
+import math
 from typing import Optional
+
 import torch
 
 from atb_llm.utils.layers import load_column_multi
 from ..base.causal_lm import CausalLM
 from .modeling_llama import LlamaModel, LlamaConfig
+from ...utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
 
 
 class LlamaForCausalLM(CausalLM):
@@ -21,89 +25,82 @@ class LlamaForCausalLM(CausalLM):
             lm_head=True,
         )
 
-        self.placeholder = torch.zeros(1, dtype=torch.float16).npu()
+        self.config = config
+        self.placeholder = torch.zeros(1, dtype=self.dtype).npu()
         self.kv_cache_idx = torch.zeros(1, dtype=torch.int32).npu()
-        self.in_beta = torch.zeros(config.hidden_size, dtype=torch.float16).npu()
         self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64).npu()
+
+        self.in_tensor_length = 12
+        self.acl_encoder_operation_inputs = [None] * self.in_tensor_length
+        self.acl_decoder_operation_inputs = [None] * self.in_tensor_length
+
+        self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
+        self.transdata_param = json.dumps({})
+        self.transdata_operation.set_param(self.transdata_param)
 
     def init_ascend_operations(self, config: LlamaConfig):
         # 初始化模型
         self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_DecoderModel")
         self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("llama_parallel_DecoderModel")
 
+    def get_weights(self):
+        attn_module_names = AttnModuleNames(
+            norm_name='input_layernorm',
+            pack_name='self_attn.query_key_value',
+            q_name='self_attn.q_proj',
+            k_name='self_attn.k_proj',
+            v_name='self_attn.v_proj',
+            o_name='self_attn.o_proj'
+        )
+        mlp_module_names = MlpModuleNames(
+            norm_name='post_attention_layernorm',
+            pack_name='mlp.gate_up_proj',
+            gate_name='mlp.gate_proj',
+            up_name='mlp.up_proj',
+            down_name='mlp.down_proj'
+        )
+        weight_wrapper = WeightWrapper(self.soc_info, self.tp_rank, attn_module_names, mlp_module_names)
+        weight_wrapper.register_embedding(self.model.state_dict(), 'embed_tokens')
+        for i in range(self.num_layers):
+            layer = self.model.layers[i]
+            layer_dict = layer.state_dict()
+            weight_wrapper.register_layer(layer_dict, layer.self_attn.pack_type, layer.mlp.pack_type, self.quantize)
+            if self.soc_info.need_nz:
+                del layer.self_attn
+                del layer.post_attention_layernorm
+                del layer.mlp
+        weight_wrapper.register_model_norm(self.model.state_dict(), 'norm')
+        weight_wrapper.register_model_lmhead(self.state_dict(), 'lm_head')
+        return weight_wrapper.weights, weight_wrapper.linear_type, weight_wrapper.pack_quant_type
+
+    def init_ascend_weight(self):
+        self.ascend_weight, self.linear_type, self.pack_quant_config = self.get_weights()
         # 设置模型参数
         coder_param = {
+            "rmsNormEps": self.config.rms_norm_eps,
+            "numAttentionHeadsPerRank": self.num_attention_heads,
+            "hiddenSizePerAttentionHead": self.head_size,
+            "numHiddenLayers": self.config.num_hidden_layers,
+            "numKeyValueHeadsPerRank": self.num_key_value_heads,
             "isFA": True,
-            "isBF16": False,
-            "isPack": True,
+            "isBF16": self.dtype == torch.bfloat16,
+            "packQuantType": self.pack_quant_config,
+            "linearQuantType": self.linear_type,
             "isEmbeddingParallel": False,
             "isLmHeadParallel": True,
             "supportSwiGLU": False if self.soc_info.need_nz else True,
-            "quantType": 2 if self.quantize == "smooth_quant" else 0,
-            "rmsNormEps": config.rms_norm_eps,
-            "numAttentionHeadsPerRank": self.num_attention_heads,
-            "hiddenSizePerAttentionHead": self.head_size,
-            "numKeyValueHeadsPerRank": self.num_key_value_heads,
-            "numHiddenLayers": self.num_layers,
             "rank": self.tp_rank,
             "worldSize": self.tp_world_size,
-            "backend": "hccl" if self.soc_info.need_nz else "lccl",
-            "tokenOffset": [0],
-            "seqLen": [1],
+            "backend": "hccl" if self.soc_info.need_nz or str(os.getenv("RANKTABLEFILE", "")) else "lccl",
+            "rankTableFile": os.getenv("RANKTABLEFILE", "")
         }
-        encoder_param = {**coder_param, "isPrefill": True}
-        decoder_param = {**coder_param, "isPrefill": False}
+        encoder_param = {**coder_param, "isPrefill": True, "supportLcoc": False if self.soc_info.need_nz else True}
+        decoder_param = {**coder_param, "isPrefill": False, "supportLcoc": False}
         self.acl_encoder_operation.set_param(json.dumps({**encoder_param}))
         self.acl_decoder_operation.set_param(json.dumps({**decoder_param}))
 
-    def init_ascend_weight(self):
-        weights = [self.model.state_dict()["embed_tokens.weight"]]
-        attn_layer_names = [
-            'self_attn.q_proj.linear', 'self_attn.k_proj.linear',
-            'self_attn.v_proj.linear', 'self_attn.o_proj.linear'
-        ]
-        mlp_layer_names = [
-            'mlp.gate_proj.linear', 'mlp.up_proj.linear', 'mlp.down_proj.linear'
-        ]
-        for i in range(self.num_layers):
-            weights_t = []
-            weights_layer = self.model.layers[i].state_dict()
-            if self.quantize == "smooth_quant":
-                weights_t.append(weights_layer["input_layernorm.weight"])
-                for layer_name in attn_layer_names:
-                    weights_t.append(weights_layer[f'{layer_name}.weight'])
-                    weights_t.append(weights_layer[f'{layer_name}.act_scales'])
-                    weights_t.append(weights_layer[f'{layer_name}.act_zeros'])
-                    weights_t.append(weights_layer[f'{layer_name}.output_scales'])
-                weights_t.append(weights_layer["post_attention_layernorm.weight"])
-                for layer_name in mlp_layer_names:
-                    weights_t.append(weights_layer[f'{layer_name}.weight'])
-                    weights_t.append(weights_layer[f'{layer_name}.act_scales'])
-                    weights_t.append(weights_layer[f'{layer_name}.act_zeros'])
-                    weights_t.append(weights_layer[f'{layer_name}.output_scales'])
-            else:
-                weights_t.append(weights_layer["input_layernorm.weight"])
-                weights_t.append(self.weight_format_cast(weights_layer["self_attn.query_key_value.linear.weight"]))
-                weights_t.extend([self.placeholder] * 11)
-                weights_t.append(self.weight_format_cast(weights_layer["self_attn.o_proj.linear.weight"]))
-                weights_t.extend([self.placeholder] * 3)
-                weights_t.append(weights_layer["post_attention_layernorm.weight"])
-                weights_t.append(self.weight_format_cast(weights_layer["mlp.gate_up_proj.linear.weight"]))
-                weights_t.extend([self.placeholder] * 7)
-                weights_t.append(self.weight_format_cast(weights_layer["mlp.down_proj.linear.weight"]))
-                weights_t.extend([self.placeholder] * 3)
-            if self.soc_info.need_nz:
-                del self.model.layers[i].self_attn
-                del self.model.layers[i].post_attention_layernorm
-                del self.model.layers[i].mlp
-            weights.extend(weights_t)
-
-        weights.append(self.model.state_dict()["norm.weight"])
-        weights.append(self.weight_format_cast(self.state_dict()["lm_head.linear.weight"]))
-
-        self.ascend_weight = weights
-        self.acl_encoder_operation.set_weight(weights)
-        self.acl_decoder_operation.set_weight(weights)
+        self.acl_encoder_operation.set_weight(self.ascend_weight)
+        self.acl_decoder_operation.set_weight(self.ascend_weight)
 
     def init_kvcache(self, input_ids, past_key_value):
         super().init_kvcache(input_ids, past_key_value)
@@ -116,21 +113,46 @@ class LlamaForCausalLM(CausalLM):
                                   cu_seqlen_prefill: Optional[bool],
                                   max_seq_len: int,
                                   ):
-        self.ascend_rotary_embedding.update_cos_sin_cache_total(torch.float16, position_ids.device, max_seq_len)
-        cos_embed = self.ascend_rotary_embedding.get_cos_cached_total()
-        sin_embed = self.ascend_rotary_embedding.get_sin_cached_total()
+        self.ascend_rotary_embedding.update_cos_sin_cache_total(self.dtype,
+                                                                self.device,
+                                                                max_seq_len)
+        self.cos_embed = self.ascend_rotary_embedding.get_cos_cached_total()
+        self.sin_embed = self.ascend_rotary_embedding.get_sin_cached_total()
 
-        acl_operation_inputs = [
-            input_ids, position_ids, cos_embed, sin_embed, self.mask_full,
-            self.placeholder, self.placeholder, self.kv_cache_idx, self.token_offset,
-            self.placeholder, self.in_beta,
-            self.seq_len_encoder if cu_seqlen_prefill else self.seq_len_decoder,
-            torch.tensor([self.seq_len_encoder[0] - 1], dtype=torch.int64,
-                         device="npu") if cu_seqlen_prefill else self.lm_head_indices_fake
-        ]
-        acl_param = json.dumps({
-            "tokenOffset": [int(self.token_offset[0])] * self.batch_num,
-            "seqLen": [input_ids.shape[1]] * self.batch_num if cu_seqlen_prefill else self.acl_param_seq_len_decoder
-        })
-
-        return acl_operation_inputs, acl_param
+        if cu_seqlen_prefill:
+            self.acl_param = json.dumps({
+                "tokenOffset": [int(self.token_offset[0])] * self.batch_num,
+                "seqLen": [input_ids.shape[1]] * self.batch_num
+            })
+            self.acl_encoder_operation_inputs[0] = input_ids
+            self.acl_encoder_operation_inputs[1] = position_ids.to(torch.int64)
+            self.acl_encoder_operation_inputs[2] = self.cos_embed
+            self.acl_encoder_operation_inputs[3] = self.sin_embed
+            self.acl_encoder_operation_inputs[4] = self.mask_full
+            self.acl_encoder_operation_inputs[5] = self.placeholder
+            self.acl_encoder_operation_inputs[6] = self.placeholder
+            self.acl_encoder_operation_inputs[7] = self.kv_cache_idx
+            self.acl_encoder_operation_inputs[8] = self.token_offset
+            self.acl_encoder_operation_inputs[9] = self.placeholder
+            self.acl_encoder_operation_inputs[10] = self.seq_len_encoder
+            self.acl_encoder_operation_inputs[11] = torch.tensor(
+                [self.seq_len_encoder[0] - 1], dtype=torch.int64, device=self.device)
+            return self.acl_encoder_operation_inputs, self.acl_param
+        else:
+            self.acl_param = json.dumps({
+                "tokenOffset": [int(self.token_offset[0])] * self.batch_num,
+                "seqLen": self.acl_param_seq_len_decoder
+            })
+            self.acl_decoder_operation_inputs[0] = input_ids
+            self.acl_decoder_operation_inputs[1] = position_ids.to(torch.int64)
+            self.acl_decoder_operation_inputs[2] = self.cos_embed
+            self.acl_decoder_operation_inputs[3] = self.sin_embed
+            self.acl_decoder_operation_inputs[4] = self.mask_full
+            self.acl_decoder_operation_inputs[5] = self.placeholder
+            self.acl_decoder_operation_inputs[6] = self.placeholder
+            self.acl_decoder_operation_inputs[7] = self.kv_cache_idx
+            self.acl_decoder_operation_inputs[8] = self.token_offset
+            self.acl_decoder_operation_inputs[9] = self.placeholder
+            self.acl_decoder_operation_inputs[10] = self.seq_len_decoder
+            self.acl_decoder_operation_inputs[11] = self.lm_head_indices_fake
+            return self.acl_decoder_operation_inputs, self.acl_param

@@ -174,8 +174,6 @@ atb::Status PaCommonLayer(const PaCommonLayerParam &param, atb::Operation **oper
         atb::infer::RmsNormParam rmsNormParam;
         rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
         rmsNormParam.normParam.epsilon = param.rmsNormEps;
-        rmsNormParam.normParam.quantInputScale = param.qkvInputScale;
-        rmsNormParam.normParam.quantInputOffset = param.qkvInputOffset;
         rmsNormParam.normParam.quantType = atb::infer::QUANT_INT8;
         CREATE_OPERATION(rmsNormParam, &inputNormNode.operation);
         inputNormNode.inTensorIds = {IN_HIDDENSTATES, IN_NORMWEIGHT, IN_NORM_BIAS};
@@ -183,7 +181,7 @@ atb::Status PaCommonLayer(const PaCommonLayerParam &param, atb::Operation **oper
 
         atb::Node &mixdQLinearNode = opGraph.nodes.at(nodeId++);
         atb::infer::LinearParam quantQkvLinearParam;
-        quantQkvLinearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
+        quantQkvLinearParam.outDataType = ACL_FLOAT16;
         CREATE_OPERATION(quantQkvLinearParam, &mixdQLinearNode.operation);
         mixdQLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_QMIXDWEIGHT, IN_QMIXD_BIAS, IN_QMIXD_DEQSCALE};
         mixdQLinearNode.outTensorIds = {INTERMIDATE_MIXEDQ};
@@ -241,7 +239,7 @@ atb::Status PaCommonLayer(const PaCommonLayerParam &param, atb::Operation **oper
     CREATE_OPERATION(reshapeCacheParm, &reshapeAndCacheNode.operation);
     reshapeAndCacheNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_MIXEDV, IN_K_CACHE, IN_V_CACHE,
                                        IN_SLOTS};
-    reshapeAndCacheNode.outTensorIds = {};
+    reshapeAndCacheNode.outTensorIds = {IN_K_CACHE, IN_V_CACHE};
     reshapeAndCacheNode.inTensorReshapeFuncs.resize(reshapeAndCacheNode.inTensorIds.size());
     reshapeAndCacheNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         CommonReshapeHeads(oldShape, newShape, param.headNum);
@@ -255,7 +253,8 @@ atb::Status PaCommonLayer(const PaCommonLayerParam &param, atb::Operation **oper
         faEnParam.headNum = param.headNum;
         faEnParam.qkScale = 1.0 / sqrt(param.dk);
         faEnParam.kvHeadNum = param.headNum;
-        faEnParam.isEncoder = true;
+        faEnParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
+        faEnParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
         CREATE_OPERATION(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_MIXEDV,
                                      IN_ATTENTIONMASK, IN_INPUT_LENGTHS};
@@ -342,8 +341,6 @@ atb::Status PaCommonLayer(const PaCommonLayerParam &param, atb::Operation **oper
         atb::infer::RmsNormParam selfNormParam;
         selfNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
         selfNormParam.normParam.epsilon = param.rmsNormEps;
-        selfNormParam.normParam.quantInputScale = param.selfLnInputScale;
-        selfNormParam.normParam.quantInputOffset = param.selfLnInputOffset;
         selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
         CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
         selfNormNode.inTensorIds = {INTERMIDATE_SELFRESIDUALADDOUT, IN_SELFOUTNORMWEIGHT, IN_SELFOUTNORM_BIAS};

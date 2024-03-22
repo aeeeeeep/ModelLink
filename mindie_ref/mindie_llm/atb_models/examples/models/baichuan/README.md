@@ -4,8 +4,8 @@
 
 | 模型及参数量        | 800I A2 Tensor Parallelism | 300I DUO Tensor Parallelism | FP16 | Flash Attention | Paged Attention | W8A8量化 |
 |---------------|----------------------------|-----------------------------|------|-----------------|-----------------|--------|
-| Baichuan2-7B  | 支持world size 1,2,4,8       | 支持world size 2              | 是    | 是               | 是               | 否      |
-| Baichuan2-13B | 支持world size 2,4,8         | 支持world size 2,4            | 是    | 是               | 是               | 否      |
+| Baichuan2-7B  | 支持world size 1,2,4,8       | 支持world size 2              | 是    | 是               | 是               | 是      |
+| Baichuan2-13B | 支持world size 2,4,8         | 支持world size 2,4            | 是    | 是               | 是               | 是      |
 | Baichuan-7B   | 支持world size 1,2,4,8       | 支持world size 2              | 是    | 是               | 是               | 否      |
 | Baichuan-13B  | 支持world size 2,4,8         | 支持world size 2,4            | 是    | 是               | 是               | 否      |
 
@@ -23,6 +23,36 @@
 ## 权重转换
 
 Paged Attention 场景下需要.safetensors 格式的权重，如果没有，参考[此README文件](../../README.md)转换
+
+## 量化权重转换（W8A8）
+
+- 将当前目录下的convert_w8a8_quant_weights.py文件中的input_fp16_path 和output_w8a8_path 修改为自己的权重路径和输出权重路径
+- 如果想用npu转换权重，需要根据注释修改代码将设备设置为npu
+- 备注：建议精度测试使用cpu生成量化权重。npu生成的量化权重可作为调试使用，精度会有损失。
+- 执行
+
+```
+python convert_w8a8_quant_weights.py
+```
+
+- 将原权重文件夹下所有json文件拷贝到新的量化权重文件下
+- `${weight_path}/config.json`文件中需设置`dtype`和`quantize`类型来标识量化类型和精度
+- 若`dtype`和`quantize`字段不存在，需新增
+
+- 配置
+  | 量化类型及精度 | torch_dtype | quantize |
+  |----------------|-------------|----------|
+  | FP16 | "float16"   | ""       |
+  | W8A8 | "float16"   | "w8a8"   |
+
+- 示例
+    - baichuan模型使用FP16精度，W8A8量化
+      ```json
+      {
+        "torch_dtype": "float16",
+        "quantize": "w8a8"
+      }
+      ```
 
 ## 操作说明
 
@@ -46,6 +76,8 @@ bash examples/models/baichuan/run_pa.sh ${weight_path}
 | RESERVED_MEMORY_GB        | 保留内存，通常未加速库需要的内存+通信内存 | 3          | 3           |
 | MASTER_PORT               | 卡间通信端口,通常不用修改，有冲突时再改  |            |             |
 
+注：300I DUO上运行时，请把 `atb_async_options` 从 `run_cmd` 里删掉
+
 ## 精度测试
 
 - 参考[此README文件](../../../tests/modeltest/README.md)
@@ -53,6 +85,7 @@ bash examples/models/baichuan/run_pa.sh ${weight_path}
 ## 性能测试
 
 - 参考[此README文件](../../../tests/modeltest/README.md)
+- 备注：性能测试建议每一轮开始前添加命令：pkill -9 python，用于清理参与进程。
 
 # Flash Attention推理使用说明
 

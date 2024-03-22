@@ -23,28 +23,32 @@ namespace star_coder {
 class PAQuantModel : public Model {
 public:
     struct Param {
-        double layerNormEps = 0;
-        int headNum = 0;
-        int dk = 0;
-        int kvHead = 1;
-        int layerNum = 0;
-        int rank = 0;
-        int rankSize = 1;
+        bool isFA = true;
+        // isPrefill为true时为全量阶段，encoder的isPrefill参数应为true; isPrefill为false时为增量阶段，decoder的isPrefill参数应为false
         bool isPrefill = false;
-        bool transposedWeight = true;
+        // isBF16为true时采用BF16精度; 反之，则采用FP16精度
+        bool isBF16 = false;
+        // isEmbeddingParallel为true时，embedding的权重在hiddenSize维度进行切分; 反之，则不对权重进行切分; 测试表明embedding切分并不会带来性能提升
+        bool isEmbeddingParallel = false;
+        // isLmHeadParallel为true时，LmHead的权重在vacobSize维度进行切分; 反之，则不对权重进行切分
+        bool isLmHeadParallel = true;
+        // 0 - No quant; 1- Quant in RmsNorm，dequant in Linear; 2 - Both quant and dequant in Linear
+        bool supportSwiGLU = false;
+        // MLP是否使用SwiGLU，若为true时，则使用；反之，使用swish
+
+        double layerNormEps = 0;
+        int numAttentionHeadsPerRank = 0;
+        int hiddenSizePerAttentionHead = 0;
+        int numHiddenLayers = 0;
+        int numKeyValueHeadsPerRank = 0;
+        int headNum = 0;
+        int rank = 0;
+        int worldSize = 1;
         std::string backend = "hccl";
 
         // 量化参数
-        std::vector<float> qkvInputScale;
-        std::vector<int> qkvInputOffset;
-        std::vector<float> denseInputScale;
-        std::vector<int> denseInputOffset;
-        std::vector<float> selfLnInputScale;
-        std::vector<int> selfLnInputOffset;
-        std::vector<float> mlpOutInputScale;
-        std::vector<int> mlpOutInputOffset;
-        std::vector<int> floatLayers;
-
+        std::vector<std::vector<int>> packQuantType = {};
+        std::vector<std::vector<int>> linearQuantType = {};
         void FromString(const std::string &param);
     };
 

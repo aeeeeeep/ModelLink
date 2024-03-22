@@ -19,23 +19,21 @@ class ModelRunner:
 
     def __init__(self, model_name_or_path, rank, world_size,
                  npu_id=None,
+                 local_rank=None,
                  kv_cache_dtype=None,
                  max_position_embeddings=None,
                  is_flash_causal_lm: bool = True,
-                 use_refactor: bool = False,
+                 use_refactor: bool = True,
                  ):
         self.model_name_or_path = model_name_or_path
         self.rank = rank
-        self.npu_id = npu_id if npu_id is not None else rank
+        self.local_rank = local_rank if local_rank is not None else rank
+        self.npu_id = npu_id if npu_id is not None else self.local_rank
         self.world_size = world_size
 
-        self.model_name_or_path = model_name_or_path
-        self.rank = rank
-        self.npu_id = npu_id if npu_id is not None else rank
-        self.world_size = world_size
         if ENV.bind_cpu:
             try:
-                bind_cpus(world_size, rank, ratio=1.0)
+                bind_cpus(world_size, self.npu_id, ratio=1.0)
             except Exception as err:
                 logger.error(f"Binding CPU failed\n{err}\n skip.")
         self.model_cls, self.config, self.tokenizer = \
@@ -48,8 +46,11 @@ class ModelRunner:
         self.quantize = self.config.quantize
         self.dtype = self.config.torch_dtype
 
+        print_log(rank, logger.info, f'model_runner.quantize: {self.quantize}\n, '
+                                     f'model_runner.dytpe: {self.dtype}')
+
         if self.dtype not in [torch.float16, torch.bfloat16]:
-            raise ValueError(f'unsupported type: {self.torch_type}')
+            raise ValueError(f'unsupported type: {self.dtype}')
 
         self.process_group, self.device = initialize_distributed(self.rank, self.npu_id, world_size)
 

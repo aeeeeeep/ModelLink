@@ -10,14 +10,55 @@
 | weight_path | 模型权重路径                                 |
 | cur_dir | 运行指令或执行脚本时的路径（当前目录）                  |
 
-## 权重转换
+## 权重
+
+### 权重设置
+- `${weight_path}/config.json`文件中需设置`dtype`和`quantize`类型来标识权重的量化类型和精度
+  - 若`dtype`和`quantize`字段不存在，需新增
+
+- 配置
+  | 量化类型及精度  | torch_dtype | quantize |
+  |----------------|-------------|----------|
+  | FP16           | "float16"   | 无       |
+  | BF16           | "bfloat16"  | 无       |
+  | W8A8           | "float16"   | "w8a8"   |
+  | W8A16          | "float16"   | "w8a16"  |
+
+- 示例
+  - LLaMa模型的权重使用BF16精度，非量化
+    ```json
+    {
+      "architectures": [
+        "LlamaForCausalLM"
+      ],
+      ...
+      "torch_dtype": "bfloat16",
+      ...
+    }
+    ```
+  - LLaMa模型的权重使用FP16精度，W8A16量化
+    ```json
+    {
+      "architectures": [
+        "LlamaForCausalLM"
+      ],
+      ...
+      "torch_dtype": "float16",
+      ...
+      "quantize": "w8a16",
+    }
+    ```
+
+### 权重转换
 > 当前仅支持加载safetensor格式的权重文件，若环境中已有bin格式的权重文件，请按照如下方式进行转换
 > 若当前环境不存在模型权重，请至hugging face官网下载
 - 使用`${llm_path}/examples/convert/convert_weights.py`将bin转成safetensor格式
 - 示例
     ```shell
-    python ${llm_path}/examples/convert/convert_weights.py --model_path ${weight_path}
+    cd ${llm_path}
+    python examples/convert/convert_weights.py --model_path ${weight_path}
     ```
+  - 注意：必须先进入`${llm_path}`路径下执行以上命令，否则由于脚本中存在相对路径，会导致moudle not found的问题
 - 输出结果会保存在bin权重同目录下
 
 ## 启动脚本
@@ -28,10 +69,6 @@
   - `USE_ASCEND`
     - 是否使用昇腾加速库
     - 设置为1使用加速库，设置为0则不使用加速库；默认使用
-  - `FLASH_ATTENTION`
-    - 使用Flash Attention还是使用Paged Attention
-    - 设置为1使用Paged Attention，设置为0则使用Flash Attention
-    - `run_pa.py`和`run_fa.py`脚本已自动适配，无需手动设置此环境变量
   - `MAX_MEMORY_GB`
     - 限制最大显存
     - 默认在服务器最大显存GB的基础上预留3GB显存
@@ -81,10 +118,8 @@
   - 默认单batch
 - `--is_flash_causal_lm`
   - 是否使用Paged Attention，默认不使用
-- `--is_bf16`
-  - 是否使用BF16精度，默认使用FP16，Flash Attention暂不支持BF16
 - `--use_refactor`
-    - 若加上`use_refactor`则使用归一后代码，若不开启`use_refactor`，则使用未归一前的代码
+    - 若设置为True则使用归一后代码，若设置为False，则使用未归一的代码；默认开启use_refactor
 - 示例
   ```shell
   # 使用多卡运行Flash Attention，设置模型权重路径，设置输出长度为2048个token，精度使用BF16
@@ -113,12 +148,10 @@
   - 默认单batch
 - `--is_flash_model`
   - 是否使用Paged Attention，默认使用
-- `--is_bf16`
-  - 是否使用BF16精度，默认使用FP16
 - `--use_refactor`
-    - 若加上`use_refactor`则使用归一后代码，若不开启`use_refactor`，则使用未归一前的代码
+    - 若设置为True则使用归一后代码，若设置为False，则使用未归一的代码；默认开启use_refactor
 - 示例
   ```shell
-  # 使用多卡运行Paged Attention，设置模型权重路径，设置输出长度为2048个token，精度使用BF16
-  torchrun --nproc_per_node 2 --master_port 20038 -m examples.run_pa --model_path ${weight_path} --max_output_length 2048 --is_bf16
+  # 使用多卡运行Paged Attention，设置模型权重路径，设置输出长度为2048个token，使用归一后代码
+  torchrun --nproc_per_node 2 --master_port 20038 -m examples.run_pa --model_path ${weight_path} --max_output_length 2048 --use_refactor True
   ```

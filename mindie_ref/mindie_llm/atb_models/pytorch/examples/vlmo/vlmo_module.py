@@ -16,6 +16,14 @@ from scipy import interpolate
 from timm.models import create_model
 
 
+def is_nd():
+    soc_version = torch_npu._C._npu_get_soc_version()
+    return soc_version in [104, 220, 221, 222, 223, 224]
+
+
+IS_ND = False
+
+
 def get_rank_and_world_size():
     try:
         rank = torch.distributed.get_rank()
@@ -44,21 +52,31 @@ def load_acl_transformer():
 load_acl_transformer()
 
 
+def round_up(x, align):
+    if align == 0:
+        return -1
+    return (x + align - 1) // align * align
+
+
 class KVAttentionManager:
     def __init__(
         self,
         num_hidden_layers,
         hidden_size,
-        max_position_embeddings,
+        max_sequence_length,
         batch_size,
         seq_length,
+        num_head
+        
     ):
+        self.nz_dim = 16
         self.is_full = True
         self.seq_length = seq_length  # 当前输入的最大长度，注意区分max_sequence_length
         self.batch_size = batch_size
         self.num_layers = num_hidden_layers
+        self.num_head = num_head
         self.hidden_size = hidden_size
-        self.max_sequence_length = max_position_embeddings
+        self.max_sequence_length = max_sequence_length
         self.attention_mask_max_full = torch.full(
             (batch_size, self.max_sequence_length, self.max_sequence_length),
             torch.finfo(torch.half).min,
@@ -69,30 +87,55 @@ class KVAttentionManager:
             0,
             dtype=torch.half,
         ).npu()
-        self.k_cache_input = (
-            torch.zeros(
-                self.num_layers,
-                batch_size,
-                self.max_sequence_length,
-                self.hidden_size,
-                device="cpu",
+        if not IS_ND:
+            self.k_cache_input = (
+                torch.zeros(
+                    self.num_layers,
+                    batch_size,
+                    self.hidden_size // self.nz_dim,
+                    round_up(self.max_sequence_length, 16),
+                    self.nz_dim,
+                    device="npu", dtype=torch.half
+                )
             )
-            .npu()
-            .half()
-            .contiguous()
-        )
-        self.v_cache_input = (
-            torch.zeros(
-                self.num_layers,
-                batch_size,
-                self.max_sequence_length,
-                self.hidden_size,
-                device="cpu",
+            self.v_cache_input = (
+                torch.zeros(
+                    self.num_layers,
+                    batch_size,
+                    self.hidden_size // self.nz_dim,
+                    round_up(self.max_sequence_length, 16),
+                    self.nz_dim,
+                    device="npu", dtype=torch.half
+                )
             )
-            .npu()
-            .half()
-            .contiguous()
-        )
+            self.k_cache_input = torch_npu.npu_format_cast(self.k_cache_input, 29)
+            self.v_cache_input = torch_npu.npu_format_cast(self.v_cache_input, 29)
+        else :            
+            self.k_cache_input = (
+                torch.zeros(
+                    self.num_layers,
+                    batch_size,
+                    self.max_sequence_length,
+                    self.hidden_size,
+                    device="cpu",
+                )
+                .npu()
+                .half()
+                .contiguous()
+            )
+            self.v_cache_input = (
+                torch.zeros(
+                    self.num_layers,
+                    batch_size,
+                    self.max_sequence_length,
+                    self.hidden_size,
+                    device="cpu",
+                )
+                .npu()
+                .half()
+                .contiguous()
+            )
+        torch.npu.empty_cache()
         self.token_offset = 1
 
     def init_seq_len_and_token_offset(self, seq_len):
@@ -126,15 +169,8 @@ class KVAttentionManager:
     def token_offset_list(self):
         return [self.token_offset] * self.batch_size
 
-    def get_attention_mask(self, attention_mask=None):
-        # print(f"original attention_mask = {attention_mask}")
-        # if attention_mask is not None:
-        #     print(f"original attention_mask.size = {attention_mask.size()}")
-        return attention_mask
-
     def get_len_tensor(self, length):
         """
-
         :param length:
         :return:
         """
@@ -233,10 +269,13 @@ def convert_deepspeed_ckpt(state_dict):
 
 class VLMo(pl.LightningModule):
     def __init__(self, config):
-        # print("VLMo init 0")
+        print("VLMo init 0")
+        global IS_ND
+        IS_ND = is_nd()
+        print(f"{IS_ND = }")
         super().__init__()
         self.save_hyperparameters()
-        # print("VLMo init")
+        print("VLMo init")
 
         # backbone & patch projection
         self.img_size = config["image_size"]
@@ -389,7 +428,6 @@ class VLMo(pl.LightningModule):
         self.relative_position_bias_list_image = self.get_rel_pos_bias(
             self.relative_position_index
         )
-        # print("<><><><><>< self.relative_position_bias_list shape", self.relative_position_bias_list.shape)
 
         self.world_size = WORLD_SIZE
         self.rank = RANK
@@ -399,6 +437,18 @@ class VLMo(pl.LightningModule):
             for i in range(self.transformer.depth)
         ]
         self.place_holder = torch.ones(1).npu()
+    
+    def trans_data(self, tensor):
+        padding = (
+            0, (round_up(tensor.size(3), 16) - tensor.size(3)), 
+            0, (round_up(tensor.size(2), 16) - tensor.size(2)),
+            0, 0,
+            0, 0,
+        )
+        tensor = torch.nn.functional.pad(tensor, padding)
+        return torch_npu.npu_format_cast(tensor.view(
+            tensor.size(1), tensor.size(2),
+            tensor.size(3) // 16, 16).transpose(1, 2).contiguous(), 29)
 
     def init_ascend_operations(self, config):
         self.acl_vl_param = json.dumps(
@@ -409,7 +459,7 @@ class VLMo(pl.LightningModule):
                 "layerNum": self.transformer.depth,
                 "rank": self.rank,
                 "rankSize": self.world_size,
-                "backend": os.getenv("BACKEND", "hccl"),
+                "backend": "lccl" if IS_ND else "hccl",
                 "maxTextLen": config["max_text_len"],
                 "vlLayerIndex": self.transformer.vlffn_start_layer_index,
             }
@@ -422,7 +472,7 @@ class VLMo(pl.LightningModule):
                 "layerNum": self.transformer.depth,
                 "rank": self.rank,
                 "rankSize": self.world_size,
-                "backend": os.getenv("BACKEND", "hccl"),
+                "backend": "lccl" if IS_ND else "hccl",
                 "maxTextLen": config["max_text_len"],
                 "vlLayerIndex": 0,
             }
@@ -430,19 +480,16 @@ class VLMo(pl.LightningModule):
         self.acl_fa_vl_operation = torch.classes.ModelTorch.ModelTorch(
             "vlmo_FlashAttentionModel"
         )
-        # print("acl param",self.acl_param)
         self.acl_fa_vl_operation.set_param(self.acl_vl_param)
 
         self.acl_fa_text_operation = torch.classes.ModelTorch.ModelTorch(
             "vlmo_FlashAttentionModel"
         )
-        # print("acl param",self.acl_param)
         self.acl_fa_text_operation.set_param(self.acl_others_param)
 
         self.acl_fa_image_operation = torch.classes.ModelTorch.ModelTorch(
             "vlmo_FlashAttentionModel"
         )
-        # print("acl param",self.acl_param)
         self.acl_fa_image_operation.set_param(self.acl_others_param)
 
         self.num_layers = self.transformer.depth
@@ -557,10 +604,6 @@ class VLMo(pl.LightningModule):
                             right = q
                         else:
                             left = q
-
-                    # if q > 1.090307:
-                    #     q = 1.090307
-
                     dis = []
                     cur = 1
                     for i in range(src_size // 2):
@@ -604,7 +647,6 @@ class VLMo(pl.LightningModule):
 
     def get_rel_pos_bias(self, relative_position_index):
         if self.relative_position_embed:
-            # print("--->self.relative_position_embed True")
             relative_position_bias = F.embedding(
                 relative_position_index.long().to(
                     self.relative_position_bias_table.device
@@ -614,13 +656,15 @@ class VLMo(pl.LightningModule):
             all_relative_position_bias = relative_position_bias.permute(
                 2, 0, 1
             ).contiguous()  # nH, x, y
-            # print("all_relative_position_bias shape",all_relative_position_bias.shape)
             relative_position_bias_list = torch.chunk(
                 all_relative_position_bias, self.num_layers, dim=0
             )
-            return relative_position_bias_list
+            res = []
+            for i in range(self.num_layers):
+                res.append(relative_position_bias_list[i].unsqueeze(0).half().npu())
+                
+            return res
         else:
-            # print("--->self.relative_position_embed False")
             return [None] * self.num_layers
 
     def build_relative_position_embed(self, config):
@@ -681,7 +725,6 @@ class VLMo(pl.LightningModule):
             -2
         ) - text_position_ids.unsqueeze(-1)
         min_distance = int(2 - max_text_len_of_initckpt)  # -194
-        # rank_zero_info("min_distance: {}".format(min_distance))
         text_rel_pos_mat = text_rel_pos_mat - min_distance
         text_rel_pos_mat += self.num_relative_distance + 2
         text_relative_position_index = torch.zeros(
@@ -710,7 +753,8 @@ class VLMo(pl.LightningModule):
             (text_row_relative_position_index, imag_row_relative_position_index), 0
         )
         self.text_imag_relative_position_index = text_imag_relative_position_index
-
+        
+    
     def init_acl_weight(self, modality_type="vl"):
         weights = []
 
@@ -752,13 +796,6 @@ class VLMo(pl.LightningModule):
                     weights_t.append(weights_layer[str_keys + "mlp_vl.fc2.weight"])
                     weights_t.append(weights_layer[str_keys + "mlp_vl.fc1.bias"])
                     weights_t.append(weights_layer[str_keys + "mlp_vl.fc2.bias"])
-
-                relative_position_bias = (
-                    self.relative_position_bias_list_vl[i].npu().half()
-                )
-                torch_npu.npu_format_cast(relative_position_bias, 2)
-                weights_t.append(relative_position_bias)
-
                 weights.extend(weights_t)
             self.ascend_weight_vl = weights
             self.acl_fa_vl_operation.set_weight(weights)
@@ -782,12 +819,6 @@ class VLMo(pl.LightningModule):
                 weights_t.append(weights_layer[str_keys + "mlp_imag.fc2.weight"])
                 weights_t.append(weights_layer[str_keys + "mlp_imag.fc1.bias"])
                 weights_t.append(weights_layer[str_keys + "mlp_imag.fc2.bias"])
-
-                relative_position_bias = (
-                    self.relative_position_bias_list_image[i].npu().half()
-                )
-                torch_npu.npu_format_cast(relative_position_bias, 2)
-                weights_t.append(relative_position_bias)
                 weights.extend(weights_t)
 
             self.ascend_weight_image = weights
@@ -797,7 +828,6 @@ class VLMo(pl.LightningModule):
             for i in range(self.transformer.depth):
                 str_keys = f"transformer.blocks.{i}."
                 weights_t = []
-
                 weights_t.append(weights_layer[str_keys + "gamma_1"])
                 weights_t.append(weights_layer[str_keys + "gamma_2"])
                 weights_t.append(weights_layer[str_keys + "norm1.weight"])
@@ -814,61 +844,68 @@ class VLMo(pl.LightningModule):
                 weights_t.append(weights_layer[str_keys + "mlp_text.fc2.weight"])
                 weights_t.append(weights_layer[str_keys + "mlp_text.fc1.bias"])
                 weights_t.append(weights_layer[str_keys + "mlp_text.fc2.bias"])
-                relative_position_bias = (
-                    self.relative_position_bias_list_text[i].npu().half()
-                )
-                torch_npu.npu_format_cast(relative_position_bias, 2)
-                weights_t.append(relative_position_bias)
-
                 weights.extend(weights_t)
             self.ascend_weight_text = weights
             self.acl_fa_text_operation.set_weight(weights)
-        # print("init weight finished")
 
     def init_acl_encoder_param(self, x, mask=None, modality_type="vl"):
         x = x.half().npu()
-
-        maskBool = ~mask.to(dtype=torch.bool)
+        maskBool = mask.to(dtype=bool, device=x.device)
+        maskList = []
         if modality_type == "vl":
+            for i in range(self.transformer.depth):
+                
+                maskBias = self.relative_position_bias_list_vl[i].masked_fill(~maskBool[:, None, None, :], -10000)
+                
+                if not IS_ND:
+                    maskBias = self.trans_data(maskBias)
+                else:
+                    maskBias = maskBias
+                maskList.append(maskBias)
             inputs = [
                 x,
-                maskBool,
                 self.kv_attention_manager_vl.k_cache_input,
                 self.kv_attention_manager_vl.v_cache_input,
                 self.kv_attention_manager_vl.token_offset_tensor,
                 self.kv_attention_manager_vl.seq_len_tensor,
                 self.place_holder,
-            ] + self.layer_id_list
+            ] + self.layer_id_list + maskList
+           
             return inputs
         elif modality_type == "image":
+            for i in range(self.transformer.depth):
+                maskBias = self.relative_position_bias_list_image[i].masked_fill(~maskBool[:, None, None, :], -10000)
+                if not IS_ND:
+                    maskBias = self.trans_data(maskBias)
+                maskList.append(maskBias)
             inputs = [
                 x,
-                maskBool,
                 self.kv_attention_manager_image.k_cache_input,
                 self.kv_attention_manager_image.v_cache_input,
                 self.kv_attention_manager_image.token_offset_tensor,
                 self.kv_attention_manager_image.seq_len_tensor,
                 self.place_holder,
-            ] + self.layer_id_list
+            ] + self.layer_id_list + maskList
             return inputs
         else:
+            for i in range(self.transformer.depth):
+                maskBias = self.relative_position_bias_list_text[i].masked_fill(~maskBool[:, None, None, :], -10000)
+                if not IS_ND:
+                    maskBias = self.trans_data(maskBias)
+                maskList.append(maskBias)
             inputs = [
                 x,
-                maskBool,
                 self.kv_attention_manager_text.k_cache_input,
                 self.kv_attention_manager_text.v_cache_input,
                 self.kv_attention_manager_text.token_offset_tensor,
                 self.kv_attention_manager_text.seq_len_tensor,
                 self.place_holder,
-            ] + self.layer_id_list
+            ] + self.layer_id_list + maskList
             return inputs
 
     def execute_acl_encoder(self, x, mask, modality_type):
         acl_input = self.init_acl_encoder_param(x, mask, modality_type)
 
-        # print("acl_input size ",len(acl_input))
-        # print("acl_input weight size ",len(self.ascend_weight))
-        # print("input",acl_input)
         if modality_type == "vl":
             tmp_param = json.dumps(
                 {
@@ -876,11 +913,11 @@ class VLMo(pl.LightningModule):
                     "seqLen": self.kv_attention_manager_vl.seq_len_list,
                 }
             )
+            
             acl_model_out = self.acl_fa_vl_operation.execute(acl_input, tmp_param)
             acl_model_out = acl_model_out[0]
             return acl_model_out
         elif modality_type == "image":
-            # print("exe image operation")
             tmp_param = json.dumps(
                 {
                     "tokenOffset": self.kv_attention_manager_image.token_offset_list,
@@ -910,7 +947,6 @@ class VLMo(pl.LightningModule):
         image_embeds=None,
         image_masks=None,
     ):
-        # print("vlmo module infer")
         for k, v in batch.items():
             if k == "text_ids" or k == "text_masks" or k == "text_labels":
                 batch[k] = v.npu()
@@ -921,7 +957,6 @@ class VLMo(pl.LightningModule):
             imgkey = f"image_{image_token_type_idx - 1}"
         else:
             imgkey = "image"
-        # print("batch",batch)
 
         do_mlm = "_mlm" if mask_text else ""
         text_ids = batch[f"text_ids{do_mlm}"]
@@ -936,25 +971,12 @@ class VLMo(pl.LightningModule):
 
         img = batch[imgkey][0].half()
 
-        # text = 'Is the picture black and white?'
-
-        # print("------->   visual_embed image masks device: ",img.device)
         # TAG2 image embedding
         # PatchEmbed->nn.Conv2d
-        # img = img.cpu().numpy().astype(np.float32)
-        # x_out=  self.patchembed_model.infer([img])
-        # # print("x_out ",x_out)
-        # image_embeds = torch.from_numpy(x_out[0]).npu()
-
-        # # print("=========> om image_embeds res",image_embeds)
-        # image_masks = torch.ones(image_embeds.shape[0], image_embeds.shape[1],device=image_embeds.device).long()
-        # # image_masks = torch.from_numpy(x_out[1]).npu()
-        # print("=========> image_masks shape",image_masks.shape)
 
         image_embeds, image_masks = self.transformer.visual_embed(img)
         image_masks = image_masks.long().to(device=img.device)
 
-        # print("------->   visual_embed img device: ",image_masks.device)
         # nn.Embedding
         text_embeds, image_embeds = (
             text_embeds + self.token_type_embeddings(torch.zeros_like(text_masks)),
@@ -969,49 +991,26 @@ class VLMo(pl.LightningModule):
 
         x = co_embeds
         # F.embedding
-        # print("self.text_imag_relative_position_index shape",self.text_imag_relative_position_index.shape)
-        # print("self.text_imag_relative_position_index ",self.text_imag_relative_position_index)
-        # relative_position_bias_list = self.get_rel_pos_bias(self.text_imag_relative_position_index)
 
         batch_size = x.shape[0]
         input_shape = x.shape[1]
-        # print("batch_size",batch_size)
-
-        # if batch_size != self.batch_size:
-        #     self.batch_size = batch_size
-        #     self.kv_attention_manager = KVAttentionManager(12,768,941, batch_size, input_shape)
-        # self.kv_attention_manager.init_seq_len_and_token_offset(input_shape)  # for ascend
-
-        # if not self.ascend_weight:
-        #     self.init_acl_weight()
-        # if not weights_t:
-        #     self.init_acl_weight()
-        # h = self.execute_acl_encoder(h, self.adapter_in, freqs_cis_real, mask)
-        # acl_x = self.execute_acl_encoder(co_embeds,co_masks)
 
         # Mlp nn.GELU
         # Attention F.linear
         for i, blk in enumerate(self.transformer.blocks):
-            relative_position_bias = self.relative_position_bias_list_vl[i].npu()
-            # print("relative_position_bias shape",relative_position_bias.shape)
-            # print("self.relative_position_bias_list[i]",self.relative_position_bias_list[i])
-            # print("relative_position_bias_list[i]",relative_position_bias_list[i])
+            
+            maskbool = ~co_masks.bool()
+            maskbool = maskbool.npu()
+            relative_position_bias_list_vl = self.relative_position_bias_list_vl[i].unsqueeze(0).npu()
+            relative_position_bias_list_vl = relative_position_bias_list_vl.masked_fill(maskbool[:, None, None, :], float("-inf"))
+            
+            relative_position_bias = relative_position_bias_list_vl.npu()
             x = blk(
                 x,
                 mask=co_masks,
                 modality_type="vl",
                 relative_position_bias=relative_position_bias,
             )
-
-        # if np.allclose(acl_x.cpu(), x.cpu(), rtol=10, atol=10): # 34.2  25.2
-        #     print("==> model x equal.")
-        # else:
-        #     print("==>!!!model x not equal.")
-        #     print(acl_x)
-        #     print(x)
-        #     exit(0)
-
-        # x = acl_x
 
         x = self.transformer.norm(x)
         text_feats, image_feats = (
@@ -1020,8 +1019,6 @@ class VLMo(pl.LightningModule):
         )
         # nn.Tanh() nn.Linear()
         cls_feats = self.pooler(x)
-        # print("x.shape",x.shape)
-        # print("x Tensor",x)
         ################################################################################################
         ret = {
             "text_feats": text_feats,
@@ -1045,7 +1042,6 @@ class VLMo(pl.LightningModule):
         image_embeds=None,
         image_masks=None,
     ):
-        # print("vlmo module infer")
         for k, v in batch.items():
             if k == "text_ids" or k == "text_masks" or k == "text_labels":
                 batch[k] = v.npu()
@@ -1056,7 +1052,6 @@ class VLMo(pl.LightningModule):
             imgkey = f"image_{image_token_type_idx - 1}"
         else:
             imgkey = "image"
-        # print("batch",batch)
 
         do_mlm = "_mlm" if mask_text else ""
         text_ids = batch[f"text_ids{do_mlm}"]
@@ -1082,21 +1077,19 @@ class VLMo(pl.LightningModule):
 
         x = co_embeds
         # F.embedding
-        # print("self.text_imag_relative_position_index shape",self.text_imag_relative_position_index.shape)
-        # print("self.text_imag_relative_position_index ",self.text_imag_relative_position_index)
-        # relative_position_bias_list = self.get_rel_pos_bias(self.text_imag_relative_position_index)
 
         batch_size = x.shape[0]
         input_shape = x.shape[1]
-        # print("batch_size",batch_size)
         if batch_size != self.batch_size_vl:
             self.batch_size_vl = batch_size
             self.kv_attention_manager_vl = KVAttentionManager(
-                self.transformer.num_heads,
+                self.transformer.depth,
                 self.transformer.embed_dim,
                 input_shape,
                 batch_size,
                 input_shape,
+                self.transformer.num_heads,
+                
             )
         self.kv_attention_manager_vl.init_seq_len_and_token_offset(
             input_shape
@@ -1105,9 +1098,7 @@ class VLMo(pl.LightningModule):
         if not self.ascend_weight_vl:
             self.init_acl_weight(modality_type="vl")
 
-        # if not weights_t:
-        #     self.init_acl_weight()
-        # h = self.execute_acl_encoder(h, self.adapter_in, freqs_cis_real, mask)
+
         acl_x = self.execute_acl_encoder(co_embeds, co_masks, modality_type="vl")
 
         x = acl_x
@@ -1119,8 +1110,6 @@ class VLMo(pl.LightningModule):
         )
         # nn.Tanh() nn.Linear()
         cls_feats = self.pooler(x)
-        # print("x.shape",x.shape)
-        # print("x Tensor",x)
         ################################################################################################
         ret = {
             "text_feats": text_feats,
@@ -1286,16 +1275,16 @@ class VLMo(pl.LightningModule):
 
         batch_size = x.shape[0]
         input_shape = x.shape[1]
-        # print("batch_size",batch_size)
 
         if batch_size != self.batch_size_text:
             self.batch_size_text = batch_size
             self.kv_attention_manager_text = KVAttentionManager(
-                self.transformer.num_heads,
+                self.transformer.depth,
                 self.transformer.embed_dim,
                 input_shape,
                 batch_size,
                 input_shape,
+                self.transformer.num_heads,
             )
         self.kv_attention_manager_text.init_seq_len_and_token_offset(
             input_shape
@@ -1303,9 +1292,6 @@ class VLMo(pl.LightningModule):
 
         if not self.ascend_weight_text:
             self.init_acl_weight(modality_type="text")
-        # if not weights_t:
-        #     self.init_acl_weight()
-        # h = self.execute_acl_encoder(h, self.adapter_in, freqs_cis_real, mask)
         acl_x = self.execute_acl_encoder(co_embeds, co_masks, modality_type="text")
 
         lffn_hiddens = self.transformer.norm(acl_x)
@@ -1472,7 +1458,6 @@ class VLMo(pl.LightningModule):
         image_embeds=None,
         image_masks=None,
     ):
-        # print("vlmo module infer image ft")
         if f"image_{image_token_type_idx - 1}" in batch:
             imgkey = f"image_{image_token_type_idx - 1}"
         else:
@@ -1537,7 +1522,6 @@ class VLMo(pl.LightningModule):
         image_embeds=None,
         image_masks=None,
     ):
-        # print("vlmo module infer image ft ascend")
         if f"image_{image_token_type_idx - 1}" in batch:
             imgkey = f"image_{image_token_type_idx - 1}"
         else:
@@ -1556,20 +1540,18 @@ class VLMo(pl.LightningModule):
         co_masks = image_masks
 
         x = co_embeds
-        # print("x shape",x.shape)
-
         batch_size = x.shape[0]
         input_shape = x.shape[1]
-        # print("batch_size",batch_size)
 
         if batch_size != self.batch_size_image:
             self.batch_size_image = batch_size
             self.kv_attention_manager_image = KVAttentionManager(
-                self.transformer.num_heads,
+                self.transformer.depth,
                 self.transformer.embed_dim,
                 input_shape,
                 batch_size,
                 input_shape,
+                self.transformer.num_heads,
             )
         self.kv_attention_manager_image.init_seq_len_and_token_offset(
             input_shape
@@ -1577,9 +1559,6 @@ class VLMo(pl.LightningModule):
 
         if not self.ascend_weight_image:
             self.init_acl_weight(modality_type="image")
-        # if not weights_t:
-        #     self.init_acl_weight()
-        # h = self.execute_acl_encoder(h, self.adapter_in, freqs_cis_real, mask)
         acl_x = self.execute_acl_encoder(co_embeds, co_masks, modality_type="image")
 
         vffn_hiddens = self.transformer.norm(acl_x)
@@ -1606,9 +1585,6 @@ class VLMo(pl.LightningModule):
         return ret
 
     def forward(self, batch):
-        # print("VLMo forward")
-
-        # print("current tasks ",self.current_tasks)
         ret = dict()
         if len(self.current_tasks) == 0:
             ret.update(self.infer(batch))

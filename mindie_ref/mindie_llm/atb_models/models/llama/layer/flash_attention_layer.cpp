@@ -132,15 +132,13 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         atb::infer::RmsNormParam rmsNormParam;
         rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
         rmsNormParam.normParam.epsilon = param.rmsNormEps;
-        rmsNormParam.normParam.quantInputScale = param.qkvInputScale;
-        rmsNormParam.normParam.quantInputOffset = param.qkvInputOffset;
         rmsNormParam.normParam.quantType = atb::infer::QUANT_INT8;
         CREATE_OPERATION(rmsNormParam, &inputNormNode.operation);
         inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT, IN_NORM_BIAS };
         inputNormNode.outTensorIds = { INTERMIDATE_INPUTNORMOUT };
 
         atb::infer::LinearParam quantQkvLinearParam;
-        quantQkvLinearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
+        quantQkvLinearParam.outDataType = ACL_FLOAT16;
         CREATE_OPERATION(quantQkvLinearParam, &mixdQLinearNode.operation);
         mixdQLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_QMIXDWEIGHT, IN_QMIXD_BIAS, IN_QMIXD_DEQSCALE };
         mixdQLinearNode.outTensorIds = { INTERMIDATE_MIXEDQ };
@@ -157,8 +155,6 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         atb::infer::RmsNormParam rmsNormParam;
         rmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
         rmsNormParam.normParam.epsilon = param.rmsNormEps;
-        rmsNormParam.normParam.quantInputScale = param.qkvInputScale;
-        rmsNormParam.normParam.quantInputOffset = param.qkvInputOffset;
         rmsNormParam.normParam.quantType = atb::infer::QUANT_INT8;
         CREATE_OPERATION(rmsNormParam, &inputNormNode.operation);
         inputNormNode.inTensorIds = { IN_HIDDENSTATES, IN_NORMWEIGHT, IN_NORM_BIAS };
@@ -189,9 +185,6 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         inputNormNode.outTensorIds = { INTERMIDATE_INPUTNORMOUT };
         atb::infer::LinearParam linearParam;
         linearParam.hasBias = false;
-        if (param.isBF16) {
-            linearParam.linearType = atb::infer::LINEAR_BF16BF16_FP32_BF16;
-        }
         CREATE_OPERATION(linearParam, &mixdQLinearNode.operation);
         mixdQLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_QMIXDWEIGHT };
         mixdQLinearNode.outTensorIds = { INTERMIDATE_MIXEDQ };
@@ -233,16 +226,16 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         ropeNode.outTensorIds = { INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK };
     }
     atb::infer::SelfAttentionParam selfAttentionKvCacheParam;
-    selfAttentionKvCacheParam.headDim = param.dk;
     selfAttentionKvCacheParam.headNum = param.headNum;
     selfAttentionKvCacheParam.kvHeadNum = param.kvHeadNum;
     selfAttentionKvCacheParam.qkScale = 1.0 / sqrt(param.dk);
     selfAttentionKvCacheParam.qScale = 1.0;
+    selfAttentionKvCacheParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     if (param.isEncoder) {
-        selfAttentionKvCacheParam.coderType = atb::infer::SelfAttentionParam::ENCODER;
+        selfAttentionKvCacheParam.calcType = atb::infer::SelfAttentionParam::ENCODER;
         selfAttentionKvCacheParam.isTriuMask = param.isTriuMask;
     } else {
-        selfAttentionKvCacheParam.coderType = atb::infer::SelfAttentionParam::DECODER;
+        selfAttentionKvCacheParam.calcType = atb::infer::SelfAttentionParam::DECODER;
     }
     CREATE_OPERATION(selfAttentionKvCacheParam, &selfAttentionKvCacheNode.operation);
     selfAttentionKvCacheNode.inTensorIds = { INTERMIDATE_POSITIONEMBEDQ,
@@ -357,8 +350,6 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         atb::infer::RmsNormParam selfNormParam;
         selfNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
         selfNormParam.normParam.epsilon = param.rmsNormEps;
-        selfNormParam.normParam.quantInputScale = param.selfLnInputScale;
-        selfNormParam.normParam.quantInputOffset = param.selfLnInputOffset;
         selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
 
         CREATE_OPERATION(selfNormParam, &selfNormNode.operation);
@@ -398,8 +389,6 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         atb::infer::RmsNormParam selfNormParam;
         selfNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
         selfNormParam.normParam.epsilon = param.rmsNormEps;
-        selfNormParam.normParam.quantInputScale = param.selfLnInputScale;
-        selfNormParam.normParam.quantInputOffset = param.selfLnInputOffset;
         selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
 
         CREATE_OPERATION(selfNormParam, &selfNormNode.operation);

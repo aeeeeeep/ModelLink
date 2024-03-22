@@ -19,6 +19,7 @@
   - Python
   - PTA
 - 版本配套关系
+  - 当前模型仓需基于CANN包8.0版本及以上，Python 3.10，torch 2.0.1进行环境部署与运行
   - 待正式商发后补充版本链接
 
 ### 1.1 安装HDK
@@ -45,7 +46,7 @@ chmod +x Ascend-hdk-*-npu-firmware_${version}.run
 
 安装方法：
 
-| cpu     | 包名                                               | 
+| cpu     | 包名                                               |
 |---------|--------------------------------------------------|
 | aarch64 | Ascend-hdk-*-npu-driver_${version}_linux-aarch64.run |
 | x86     | Ascend-hdk-*-npu-driver_${version}_linux-x86-64.run  |
@@ -102,17 +103,15 @@ chmod +x Ascend-cann-kernels-*_${version}_linux.run
 
 | 包名                                           |
 |----------------------------------------------|
-| torch-2.0.1+cpu-cp38-cp38-linux_x86_64.whl   |
-| torch-2.0.1+cpu-cp39-cp39-linux_x86_64.whl   |
-| torch-2.0.1-cp38-cp38-linux_aarch64.whl      |
-| torch-2.0.1-cp39-cp39-linux_aarch64.whl      |
+| torch-2.0.1+cpu-cp310-cp310-linux_x86_64.whl   |
+| torch-2.0.1-cp310-cp10-linux_aarch64.whl      |
 | ...                                          |
 
 根据所使用的环境中的python版本以及cpu类型，选择对应版本的torch安装包。
 
 ```bash
-# 安装torch 2.0.1 的python 3.9 的arm版本为例
-pip install torch-2.0.1-cp39-cp39-linux_aarch64.whl
+# 安装torch 2.0.1 的python 3.10 的arm版本为例
+pip install torch-2.0.1-cp310-cp310-linux_aarch64.whl
 ```
 
 #### 1.3.2 安装torch_npu
@@ -121,22 +120,22 @@ pip install torch-2.0.1-cp39-cp39-linux_aarch64.whl
 
 | 包名                          |
 |-----------------------------|
-| pytorch_v2.0.1_py38.tar.gz  |
-| pytorch_v2.0.1_py39.tar.gz  |
+| pytorch_v2.0.1_py310.tar.gz  |
+| pytorch_v2.0.1_py310.tar.gz  |
 | ...                         |
 
 - 安装选择与torch版本 以及 python版本 一致的npu_torch版本
 
 ```bash
-# 安装 torch_npu 以torch 2.0.1 的python 3.9的版本为例
-tar -zxvf pytorch_v2.0.1_py39.tar.gz
+# 安装 torch_npu 以torch 2.0.1 的python 3.10的版本为例
+tar -zxvf pytorch_v2.0.1_py310.tar.gz
 pip install torch*_aarch64.whl
 ```
 
 ### 1.4 安装加速库
 - 下载加速库
   - 加速库下载链接待补充
-  
+ 
   | 包名                          |
   |-----------------------------|
   | Ascend-mindie-atb_1.0.RC1_linux-aarch64_abi0.run  |
@@ -164,7 +163,7 @@ pip install torch*_aarch64.whl
 - 场景一：使用编译好的包进行安装
   - 下载编译好的包
     - 下载链接待补充
-  
+ 
     | 包名                          |
     |-----------------------------|
     | Ascend-mindie-atb-models_1.0.RC1_linux-aarch64_torch1.11.0-abi0.tar.gz  |
@@ -180,6 +179,14 @@ pip install torch*_aarch64.whl
     mkdir ModelLink
     cd ModelLink
     tar -zxvf ../Ascend-mindie-atb-models_*_linux-*_torch*-abi*.tar.gz
+    ```
+  - 安装atb_llm whl包
+    ```
+    cd ${working_dir}/ModelLink
+    # 首次安装
+    pip install atb_llm-0.0.1-py3-none-any.whl
+    # 更新
+    pip install atb_llm-0.0.1-py3-none-any.whl --force-reinstall
     ```
 - 场景二：手动编译模型仓
   - 获取模型仓代码
@@ -202,8 +209,17 @@ pip install torch*_aarch64.whl
 - 安装 sdk
 
   ```
-  cd pytorch/examples/atb_speed_sdk
-  pip3 install .
+  cd ${working_dir}/ModelLink/pytorch/examples/
+  # 首次安装
+  pip3 install ./atb_speed_sdk/
+  # 更新
+  pip3 install ./atb_speed_sdk/ --force-reinstall
+  ```
+
+### 2.1 开启CPU Performance模式
+- 开启CPU Performance模式以提高模型推理性能（首次开启时，根据提示安装依赖）
+  ```
+  cpupower -c all frequency-set -g performance
   ```
 
 ## 环境变量参考
@@ -212,10 +228,12 @@ pip install torch*_aarch64.whl
 ```shell
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 source ${working_dir}/atb/set_env.sh
-# 若使用编译好的包（即1.5章节的场景一），则执行以下指令
+# 若使用编译好的包（即1.5章节的场景一），则执行以下两个指令
 source ${working_dir}/ModelLink/set_env.sh
-# 若使用gitee上的源码进行编译（即1.5章节的场景二），则执行以下指令
-source ${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models/scripts/set_env.sh
+export PYTHONPATH=${working_dir}/ModelLink/:$PYTHONPATH
+# 若使用gitee上的源码进行编译（即1.5章节的场景二），则执行以下两个指令
+source ${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models/output/atb_speed/set_env.sh
+export PYTHONPATH=${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models/:$PYTHONPATH
 ```
 
 ### 日志打印（可选）

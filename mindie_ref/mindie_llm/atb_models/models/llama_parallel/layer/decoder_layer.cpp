@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "layers/operations/rms_norm.h"
 #include "layers/operations/linear.h"
 #include "layers/operations/linear_parallel.h"
+#include "layers/operations/norm_linear.h"
 #include "layers/operations/fusion_attention.h"
 #include "layers/operations/mlp.h"
 #include "layers/operations/mlp_swiglu.h"
@@ -25,10 +25,10 @@
 namespace atb_speed {
 namespace llama_parallel {
 
-static const uint64_t IN_TENSOR_COUNT = 43;
+static const uint64_t IN_TENSOR_COUNT = 55;
 static const uint64_t OUT_TENSOR_COUNT = 1;
-static const uint64_t INTERMEDIATE_TENSOR_COUNT = 5;
-static const uint64_t NODE_COUNT = 6;
+static const uint64_t INTERMEDIATE_TENSOR_COUNT = 3;
+static const uint64_t NODE_COUNT = 4;
 
 atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operation)
 {
@@ -40,78 +40,71 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     opGraph.name = param.isPrefill ? "Prefill_layer" : "Decoder_layer";
 
     size_t nodeId = 0;
-    atb::Node &inputNormNode = opGraph.nodes.at(nodeId++);
     atb::Node &attentionNode = opGraph.nodes.at(nodeId++);
     atb::Node &selfResidualAddNode = opGraph.nodes.at(nodeId++);
-    atb::Node &selfNormNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpParallelNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpResidualAddNode = opGraph.nodes.at(nodeId++);
 
-    atb_speed::common::FusionRmsNormParam fusionRmsNormParam;
-    fusionRmsNormParam.quantType = param.quantType;
-    fusionRmsNormParam.rmsNormEps = param.rmsNormEps;
-    FusionRmsNorm(fusionRmsNormParam, &inputNormNode.operation);
-    inputNormNode.inTensorIds = {IN_HIDDEN_STATES, IN_INPUT_NORM_WEIGHT, IN_BETA};
-    inputNormNode.outTensorIds = {INTERMEDIATE_INPUT_NORM_OUT};
-
-    atb_speed::common::FusionAttentionParam fusionAttentionParam;
+    atb_speed::common::FusionAttentionParam<atb::infer::RmsNormParam> fusionAttentionParam;
     // QKV linear param
-    fusionAttentionParam.isPack = param.isPack;
     fusionAttentionParam.isGroupedQueryAttention = param.numAttentionHeadsPerRank != param.numKeyValueHeadsPerRank;
-    fusionAttentionParam.qkvLinearParam.quantType = param.quantType;
-    fusionAttentionParam.qkvLinearParam.isBF16 = param.isBF16;
+    fusionAttentionParam.isBF16 = param.isBF16;
+    fusionAttentionParam.layerLinearQuantType = param.linearQuantType;
+    fusionAttentionParam.packQuantType = param.packQuantType[0];
+    fusionAttentionParam.supportLcoc = param.supportLcoc;
+    atb::infer::RmsNormParam attenRmsNormParam;
+    attenRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+    attenRmsNormParam.normParam.epsilon = param.rmsNormEps;
+    fusionAttentionParam.normParamType = attenRmsNormParam;
+    atb::infer::RmsNormParam attenRmsNormQuantParam;
+    attenRmsNormQuantParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+    attenRmsNormQuantParam.normParam.epsilon = param.rmsNormEps;
+    attenRmsNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
+    fusionAttentionParam.normQuantParamType = attenRmsNormQuantParam;
     // rope param
-    fusionAttentionParam.rotaryCoeff = 2;
+    fusionAttentionParam.rotaryType = atb_speed::common::RotaryType::ALL_ROTARY;
+    fusionAttentionParam.ropeParam.rotaryCoeff = 2;
     // self attention param
     fusionAttentionParam.isFA = param.isFA;
     fusionAttentionParam.isPrefill = param.isPrefill;
-    fusionAttentionParam.isBF16 = param.isBF16;
+    fusionAttentionParam.headDim = param.hiddenSizePerAttentionHead;
     fusionAttentionParam.selfAttentionParam.headNum = param.numAttentionHeadsPerRank;
     fusionAttentionParam.selfAttentionParam.kvHeadNum = param.numKeyValueHeadsPerRank;
-    fusionAttentionParam.selfAttentionParam.headDim = param.hiddenSizePerAttentionHead;
-    if (param.hiddenSizePerAttentionHead == 0) {
-        return atb::ERROR_INVALID_GRAPH;
-    }
     fusionAttentionParam.selfAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
     if (param.isFA) {
-        fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
-        fusionAttentionParam.selfAttentionParam.coderType = param.isPrefill ? \
-            atb::infer::SelfAttentionParam::CoderType::ENCODER : atb::infer::SelfAttentionParam::CoderType::DECODER;
+        fusionAttentionParam.selfAttentionParam.calcType = param.isPrefill ? \
+            atb::infer::SelfAttentionParam::CalcType::ENCODER : atb::infer::SelfAttentionParam::CalcType::DECODER;
     } else {
-        fusionAttentionParam.selfAttentionParam.isEncoder = param.isPrefill;
+        fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
+        fusionAttentionParam.selfAttentionParam.calcType = atb::infer::SelfAttentionParam::CalcType::PA_ENCODER;
     }
+    fusionAttentionParam.selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     fusionAttentionParam.pageAttentionParam.headNum = param.numAttentionHeadsPerRank;
     fusionAttentionParam.pageAttentionParam.kvHeadNum = param.numKeyValueHeadsPerRank;
     fusionAttentionParam.pageAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
-    if (param.isBF16) {
-        fusionAttentionParam.pageAttentionParam.maskType = atb::infer::PagedAttentionParam::MaskType::MASK_TYPE_ALIBI;
-    } else {
-        fusionAttentionParam.pageAttentionParam.maskType = atb::infer::PagedAttentionParam::MaskType::UNDEFINED;
-    }
-    // self out linear param
-    fusionAttentionParam.selfOutLinearParallelParam.parallelType = atb_speed::common::ROW_PARALLEL;
-    fusionAttentionParam.selfOutLinearParallelParam.fusionLinearParam.quantType = param.quantType;
-    fusionAttentionParam.selfOutLinearParallelParam.fusionLinearParam.isBF16 = param.isBF16;
-    fusionAttentionParam.selfOutLinearParallelParam.rank = param.rank;
-    fusionAttentionParam.selfOutLinearParallelParam.worldSize = param.worldSize;
-    fusionAttentionParam.selfOutLinearParallelParam.backend = param.backend;
-    fusionAttentionParam.selfOutLinearParallelParam.rankTableFile = param.rankTableFile;
-    atb_speed::common::FusionAttention fusionAttentionObj;
-    fusionAttentionObj.Attention(fusionAttentionParam, &attentionNode.operation);
+    fusionAttentionParam.selfOutLinearTensorParallelInfo = param.tensorParallelInfo;
+    Attention(fusionAttentionParam, &attentionNode.operation);
     attentionNode.inTensorIds = {
-        INTERMEDIATE_INPUT_NORM_OUT,
+        IN_HIDDEN_STATES,
+        IN_INPUT_NORM_WEIGHT,
+        IN_INPUT_NORM_BIAS,
+        IN_INPUT_NORM_NEW_WEIGHT,
+        IN_INPUT_NORM_NEW_BIAS,
         IN_QKV_WEIGHT_0,
         IN_QKV_SCALE_0,
         IN_QKV_OFFSET_0,
         IN_QKV_DESCALE_0,
+        IN_QKV_BIAS_0,
         IN_QKV_WEIGHT_1,
         IN_QKV_SCALE_1,
         IN_QKV_OFFSET_1,
         IN_QKV_DESCALE_1,
+        IN_QKV_BIAS_1,
         IN_QKV_WEIGHT_2,
         IN_QKV_SCALE_2,
         IN_QKV_OFFSET_2,
         IN_QKV_DESCALE_2,
+        IN_QKV_BIAS_2,
         IN_COS_TABLE,
         IN_SIN_TABLE,
         IN_SEQ_LEN,
@@ -126,6 +119,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
         IN_ATTENTION_OUT_SCALE,
         IN_ATTENTION_OUT_OFFSET,
         IN_ATTENTION_OUT_DESCALE,
+        IN_ATTENTION_OUT_BIAS,
     };
     attentionNode.outTensorIds = {INTERMEDIATE_ATTENTION_OUT};
 
@@ -138,51 +132,58 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     };
     selfResidualAddNode.outTensorIds = {INTERMEDIATE_RESIDUAL_ADD_OUT};
 
-    FusionRmsNorm(fusionRmsNormParam, &selfNormNode.operation);
-    selfNormNode.inTensorIds = {INTERMEDIATE_RESIDUAL_ADD_OUT, IN_ATTENTION_NORM_WEIGHT, IN_BETA};
-    selfNormNode.outTensorIds = {INTERMEDIATE_ATTENTION_NORM_OUT};
-
+    atb_speed::common::MlpParam<atb::infer::RmsNormParam> mlpParam;
+    mlpParam.isBF16 = param.isBF16;
+    mlpParam.layerLinearQuantType = param.linearQuantType;
+    mlpParam.packQuantType = param.packQuantType[1];
+    // gate up
+    if (param.packQuantType[1] == atb_speed::common::MIX_W8A8 || param.packQuantType[1] == atb_speed::common::MIX_W8A8_ANTI) {
+        mlpParam.mlpPackType = atb_speed::common::GATE_UP_WEIGHT_NO_PACK;
+    } else {
+        mlpParam.mlpPackType = atb_speed::common::GATE_UP_WEIGHT_PACK;
+    }
+    atb::infer::RmsNormParam mlpRmsNormParam;
+    mlpRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+    mlpRmsNormParam.normParam.epsilon = param.rmsNormEps;
+    mlpParam.normParamType = mlpRmsNormParam;
+    atb::infer::RmsNormParam mlpRmsNormQuantParam;
+    mlpRmsNormQuantParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+    mlpRmsNormQuantParam.normParam.epsilon = param.rmsNormEps;
+    mlpRmsNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
+    mlpParam.normQuantParamType = mlpRmsNormQuantParam;
+    // down
+    mlpParam.downLinearTensorParallelInfo = param.tensorParallelInfo;
+    mlpParam.supportLcoc = param.supportLcoc;
     if (param.supportSwiGLU) {
-        atb_speed::common::MlpSwiGLUParam mlpParam;
-        mlpParam.isPack = param.isPack;
-        mlpParam.gateUpLinearParam.quantType = param.quantType;
-        mlpParam.gateUpLinearParam.isBF16 = param.isBF16;
-        mlpParam.downLinearParallelParam.fusionLinearParam.quantType = param.quantType;
-        mlpParam.downLinearParallelParam.fusionLinearParam.isBF16 = param.isBF16;
-        mlpParam.downLinearParallelParam.parallelType = atb_speed::common::ROW_PARALLEL;
-        mlpParam.downLinearParallelParam.rank = param.rank;
-        mlpParam.downLinearParallelParam.worldSize = param.worldSize;
-        mlpParam.downLinearParallelParam.backend = param.backend;
-        mlpParam.downLinearParallelParam.rankTableFile = param.rankTableFile;
+        mlpParam.activationParam.activationType = atb::infer::ActivationType::ACTIVATION_SWIGLU_FORWARD;
+        mlpParam.activationParam.dim = -1;
         MlpSwiGLU(mlpParam, &mlpParallelNode.operation);
     } else {
-        atb_speed::common::MlpParam mlpParam;
-        mlpParam.isPack = param.isPack;
-        mlpParam.gateUpLinearParam.quantType = param.quantType;
-        mlpParam.gateUpLinearParam.isBF16 = param.isBF16;
-        mlpParam.downLinearParallelParam.fusionLinearParam.quantType = param.quantType;
-        mlpParam.downLinearParallelParam.fusionLinearParam.isBF16 = param.isBF16;
-        mlpParam.downLinearParallelParam.parallelType = atb_speed::common::ROW_PARALLEL;
-        mlpParam.downLinearParallelParam.rank = param.rank;
-        mlpParam.downLinearParallelParam.worldSize = param.worldSize;
-        mlpParam.downLinearParallelParam.backend = param.backend;
-        mlpParam.downLinearParallelParam.rankTableFile = param.rankTableFile;
+        mlpParam.activationParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
         Mlp(mlpParam, &mlpParallelNode.operation);
     }
+
     mlpParallelNode.inTensorIds = {
-        INTERMEDIATE_ATTENTION_NORM_OUT,
+        INTERMEDIATE_RESIDUAL_ADD_OUT,
+        IN_ATTENTION_NORM_WEIGHT,
+        IN_ATTENTION_NORM_BIAS,
+        IN_ATTENTION_NORM_NEW_WEIGHT,
+        IN_ATTENTION_NORM_NEW_BIAS,
         IN_MLP_WEIGHT_0,
         IN_MLP_SCALE_0,
         IN_MLP_OFFSET_0,
         IN_MLP_DESCALE_0,
+        IN_MLP_BIAS_0,
         IN_MLP_WEIGHT_1,
         IN_MLP_SCALE_1,
         IN_MLP_OFFSET_1,
         IN_MLP_DESCALE_1,
+        IN_MLP_BIAS_1,
         IN_MLP_DOWN_WEIGHT,
         IN_MLP_DOWN_SCALE,
         IN_MLP_DOWN_OFFSET,
         IN_MLP_DOWN_DESCALE,
+        IN_MLP_DOWN_BIAS,
     };
     mlpParallelNode.outTensorIds = {INTERMEDIATE_MLP_OUT};
 
@@ -201,34 +202,6 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
 
     CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
-}
-
-DecoderLayerBinder::DecoderLayerBinder() {}
-
-DecoderLayerBinder::~DecoderLayerBinder() {}
-
-void DecoderLayerBinder::ParseParam(const nlohmann::json &paramJson)
-{
-    ATB_LOG(INFO) << "enter DecoderLayerBinder ParseParam tokenOffset";
-    seqLen_.clear();
-    for (auto item : paramJson["seqLen"]) {
-        seqLen_.push_back(item.get<int>());
-    }
-
-    tokenOffset_.clear();
-    for (auto item : paramJson["tokenOffset"]) {
-        tokenOffset_.push_back(item.get<int>());
-    }
-
-    layerId_ = paramJson["layerId"].get<int>();
-}
-
-void DecoderLayerBinder::BindTensor(atb::VariantPack &variantPack)
-{
-    ATB_LOG(INFO) << "enter DecoderLayerOperation BindTensor";
-    variantPack.inTensors.at(IN_SEQ_LEN).hostData = seqLen_.data();
-    variantPack.inTensors.at(IN_TOKEN_OFFSET).hostData = tokenOffset_.data();
-    variantPack.inTensors.at(IN_LAYER_ID).hostData = &layerId_;
 }
 
 } // namespace llama_parallel

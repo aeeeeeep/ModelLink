@@ -73,9 +73,6 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     atb::infer::LinearParam linearParam;
     linearParam.transposeB = param.transposedWeight;
     linearParam.hasBias = false;
-    if (param.isBF16) {
-        linearParam.linearType = atb::infer::LinearType::LINEAR_BF16BF16_FP32_BF16;
-    }
     CREATE_OPERATION(linearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_QKVMIXEDLINEARWEIGHT};
     qkvLinearNode.outTensorIds = {INTERMIDATE_QKVMIXEDLINEAROUT};
@@ -97,7 +94,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     CREATE_OPERATION(reshapeCacheParm, &reshapeAndCacheNode.operation);
     reshapeAndCacheNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_MIXEDV, IN_K_CACHE, IN_V_CACHE,
                                        IN_SLOTS};
-    reshapeAndCacheNode.outTensorIds = {};
+    reshapeAndCacheNode.outTensorIds = {IN_K_CACHE, IN_V_CACHE};
     reshapeAndCacheNode.inTensorReshapeFuncs.resize(reshapeAndCacheNode.inTensorIds.size());
     reshapeAndCacheNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         ReshapeHeads(oldShape, newShape, param.headNum);
@@ -111,7 +108,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
         faEnParam.headNum = param.headNum;
         faEnParam.qkScale = 1.0 / sqrt(param.dk);
         faEnParam.kvHeadNum = param.headNum;
-        faEnParam.isEncoder = true;
+        faEnParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
         CREATE_OPERATION(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_MIXEDV,
                                      IN_ATTENTIONMASK, IN_INPUT_LENGTHS};

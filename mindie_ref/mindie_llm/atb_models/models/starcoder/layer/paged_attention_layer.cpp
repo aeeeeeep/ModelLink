@@ -144,7 +144,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     CreateOperation(reshapeCacheParm, &reshapeAndCacheNode.operation);
     reshapeAndCacheNode.inTensorIds = {INTERNAL_K, INTERNAL_V,
                                        IN_PASTK, IN_PASTV, IN_SLOTS};
-    reshapeAndCacheNode.outTensorIds = {};
+    reshapeAndCacheNode.outTensorIds = {IN_PASTK, IN_PASTV};
     reshapeAndCacheNode.inTensorReshapeFuncs.resize(reshapeAndCacheNode.inTensorIds.size());
     reshapeAndCacheNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         reshapeHeads(oldShape, newShape, param.kvHead);
@@ -155,11 +155,11 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
 
     if (param.isPrefill) {
         atb::infer::SelfAttentionParam faEnParam;
-        faEnParam.headDim = param.dk;               // 128
         faEnParam.headNum = param.headNum;          // 48
         faEnParam.qScale = 1.0 / sqrt(param.dk);
         faEnParam.kvHeadNum = param.kvHead;         // 1
-        faEnParam.isEncoder = true;
+        faEnParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
+        faEnParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
         CreateOperation(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERNAL_Q, INTERNAL_K, INTERNAL_V, IN_ATTENTIONMASK, IN_INPUT_LENGTHS};
         attentionNode.outTensorIds = {INTERMIDATE_SELFOUT};

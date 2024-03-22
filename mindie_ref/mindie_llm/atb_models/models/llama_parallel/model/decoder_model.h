@@ -18,9 +18,42 @@
 
 #include <vector>
 #include "atb_speed/base/model.h"
+#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama_parallel {
+
+enum DecoderModelTensorIdx : uint32_t {
+    // define inTensor
+    // idx: 0, shape: FA: [batchSize, seqLen] PA: [seqLen]
+    IN_TENSOR_INPUT_IDS = 0,
+    // idx: 1, shape: FA: [batchSize, seqLen] PA: [seqLen]
+    IN_TENSOR_POSITION_IDS,
+    // idx: 2, shape: FA: [maxPositionEmbeddings, hiddenSizePerAttentionHead]
+    // PA: [maxInputLength, hiddenSizePerAttentionHead]
+    IN_TENSOR_COS_TABLE,
+    // idx: 3, shape: FA: [maxPositionEmbeddings, hiddenSizePerAttentionHead]
+    // PA: [maxInputLength, hiddenSizePerAttentionHead]
+    IN_TENSOR_SIN_TABLE,
+    // idx: 4, shape: FA: [batchSize, maxPositionEmbeddings, maxPositionEmbeddings]
+    // PA: [maxInputLength, maxInputLength]
+    IN_TENSOR_ATTENTION_MASK,
+    // idx: 5, shape: [4, 9]; PA所需入参
+    IN_TENSOR_BLOCK_TABLES,
+    // idx: 6, shape: [seqLen]; PA所需入参
+    IN_TENSOR_SLOTS,
+    // idx: 7, shape: [1]; FA所需入参
+    IN_TENSOR_KV_CACHE_IDX,
+    // idx: 8, shape: [batchSize]; FA所需入参
+    IN_TENSOR_TOKEN_OFFSET,
+    // idx: 9, shape: [1]
+    IN_TENSOR_PLACE_HOLDER,
+    // idx: 10, shape: FA: [batchSize] PA: [4]
+    IN_TENSOR_SEQ_LEN,
+    // idx: 11, shape: FA: [batchSize]  PA: [4]
+    IN_TENSOR_LOGTIS_INDICES,
+};
+
 class DecoderModel : public Model {
 public:
     struct Param {
@@ -30,8 +63,6 @@ public:
         bool isPrefill = false;
         // isBF16为true时采用BF16精度; 反之，则采用FP16精度
         bool isBF16 = false;
-        // isPack为true时QKV和MLP中的gate和up权重合并; 反之，则权重不合并
-        bool isPack = true;
         // isEmbeddingParallel为true时，embedding的权重在hiddenSize维度进行切分; 反之，则不对权重进行切分; 测试表明embedding切分并不会带来性能提升
         bool isEmbeddingParallel = false;
         // isLmHeadParallel为true时，LmHead的权重在vacobSize维度进行切分; 反之，则不对权重进行切分
@@ -39,7 +70,8 @@ public:
         // 0 - No quant; 1- Quant in RmsNorm，dequant in Linear; 2 - Both quant and dequant in Linear
         bool supportSwiGLU = false;
         // MLP是否使用SwiGLU，若为true时，则使用；反之，使用swish
-        int quantType = 0;
+        bool supportLcoc = false;
+        // 是否支持通信计算掩盖
         float rmsNormEps = 0;
         int numAttentionHeadsPerRank = 0;
         int hiddenSizePerAttentionHead = 0;
@@ -51,6 +83,8 @@ public:
         std::string rankTableFile = "";
         std::vector<int> tokenOffset = {};
         std::vector<int> seqLen = {};
+        std::vector<std::vector<int>> packQuantType = {};
+        std::vector<std::vector<int>> linearQuantType = {};
         void FromString(const std::string &param);
     };
 
@@ -70,6 +104,8 @@ private:
     std::vector<int> seqLen_;
     int32_t layerId_ = 0;
 };
+
+REGISTER_MODEL(llama_parallel, DecoderModel);
 
 }  // namespace llama_parallel
 }  // namespace atb_speed

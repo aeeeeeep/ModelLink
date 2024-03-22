@@ -42,7 +42,7 @@ def parse_arguments():
     parser.add_argument('--repetition_penalty', type=float, default=1.0)
     parser.add_argument('--presence_penalty', type=float, default=0.0)
     parser.add_argument('--frequency_penalty', type=float, default=0.0)
-    parser.add_argument('--use_refactor', action='store_true')
+    parser.add_argument('--use_refactor', type=bool, default=True)
 
     return parser.parse_args()
 
@@ -132,6 +132,3 @@ if __name__ == '__main__':
     warm_up(model, batch_size, max_input_length, max_output_length, rank)
 
     infer(model, tokenizer, input_text, batch_size, max_input_length, max_output_length, rank)
-
-    if world_size > 1:
-        torch.distributed.destroy_process_group()

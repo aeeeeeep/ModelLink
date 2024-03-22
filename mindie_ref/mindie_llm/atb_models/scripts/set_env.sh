@@ -39,7 +39,7 @@ if [[ -f "$path" ]] && [[ "$path" =~ 'set_env.sh' ]];then
 	export ATB_TORCH_TENSOR_FORMAT_CAST=1
 	export ATB_CONVERT_NCHW_TO_ND=1
 	export ATB_USE_TILING_COPY_STREAM=0 #是否开启双stream功能
-	export ATB_LAYER_INTERNAL_TENSOR_REUSE=0 # model 调用layer时，layer间的中间tensor是否复用
+	export ATB_LAYER_INTERNAL_TENSOR_REUSE=1 # model 调用layer时，layer间的中间tensor是否复用
 else
 	echo "There is no 'set_env.sh' to import"
 fi

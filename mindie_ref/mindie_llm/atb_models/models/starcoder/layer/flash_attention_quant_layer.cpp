@@ -109,15 +109,13 @@ atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param,
     layerNormParam.normParam.beginNormAxis = LAYER_NORM_AXIS_COUNT;
     layerNormParam.normParam.beginParamsAxis = LAYER_NORM_AXIS_COUNT;
     layerNormParam.normParam.quantType = atb::infer::QUANT_INT8;
-    layerNormParam.normParam.quantInputScale = param.qkvInputScale;
-    layerNormParam.normParam.quantInputOffset = param.qkvInputOffset;
     CreateOperation(layerNormParam, &inputLayerNormNode.operation);
     inputLayerNormNode.inTensorIds = {IN_HIDDENSTATES, IN_LAYERNORN_1_WEIGTH, IN_LAYERNORN_1_BIAS};
     inputLayerNormNode.outTensorIds = {INTERMIDATE_INPUTNORM_OUT, INTERMIDATE_INPUTNORM_OUT_QUANT};
 
     // QKV LINEAR量化
     atb::infer::LinearParam qkvLinearParam;
-    qkvLinearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
+    qkvLinearParam.outDataType = ACL_FLOAT16;
     CreateOperation(qkvLinearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = {INTERMIDATE_INPUTNORM_OUT_QUANT, IN_QKV_WEIGHT, IN_QKV_BIAS, IN_QKV_DEQSCALE};
     qkvLinearNode.outTensorIds = {INTERMIDATE_QKV};
@@ -144,14 +142,14 @@ atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param,
     splitKVNode.outTensorIds = {INTERNAL_K, INTERNAL_V};
 
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim = param.dk;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / sqrt(param.dk);
     selfAttentionParam.kvHeadNum = param.kvHead;
+    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     if (param.isEncoder) {
-        selfAttentionParam.coderType = atb::infer::SelfAttentionParam::ENCODER;
+        selfAttentionParam.calcType = atb::infer::SelfAttentionParam::ENCODER;
     } else {
-        selfAttentionParam.coderType = atb::infer::SelfAttentionParam::DECODER;
+        selfAttentionParam.calcType = atb::infer::SelfAttentionParam::DECODER;
     }
     CreateOperation(selfAttentionParam, &selfAttentionFaNode.operation);
     selfAttentionFaNode.inTensorIds = {INTERNAL_Q,
@@ -218,8 +216,6 @@ atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param,
     selfNormParam.normParam.beginNormAxis = LAYER_NORM_AXIS_COUNT;
     selfNormParam.normParam.beginParamsAxis = LAYER_NORM_AXIS_COUNT;
     selfNormParam.normParam.quantType = atb::infer::QUANT_INT8;
-    selfNormParam.normParam.quantInputScale = param.selfLnInputScale;
-    selfNormParam.normParam.quantInputOffset = param.selfLnInputOffset;
     CreateOperation(selfNormParam, &postAttnLayerNormNode.operation);
     postAttnLayerNormNode.inTensorIds = {INTERMIDATE_SELF_RESIDUAL_ADD_OUT, IN_LAYERNORN_2_WEIGHT, IN_LAYERNORN_2_BIAS};
     postAttnLayerNormNode.outTensorIds = {INTERMEDIATE_LN_2_NORM_OUT, INTERMEDIATE_LN_2_NORM_OUT_QUANT};

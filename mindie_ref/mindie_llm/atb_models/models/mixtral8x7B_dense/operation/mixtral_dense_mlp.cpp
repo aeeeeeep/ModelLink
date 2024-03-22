@@ -69,7 +69,10 @@ atb::Status CreateMixtralDenseMlpOperation(const MixtralDenseMlpParam &param, at
     atb::Node &transposeMlpOutNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpAddNode = opGraph.nodes.at(nodeId++);
 
-    atb::infer::MatmulParam linearParam = {false, param.transpose};
+    atb::infer::LinearParam linearParam;
+    linearParam.transposeA = false;
+    linearParam.transposeB = param.transpose;
+    linearParam.hasBias = false;
     CreateOperation(linearParam, &linearNode.operation);
     linearNode.inTensorIds = {IN_HIDDENSTATUS, IN_MLP_GATE_UP_WEIGHTTENSOR};
     linearNode.outTensorIds = {INTERMIDATE_MATMUL_GATE_UP_OUT};
@@ -105,7 +108,10 @@ atb::Status CreateMixtralDenseMlpOperation(const MixtralDenseMlpParam &param, at
     mulNode.inTensorIds = {INTERMIDATE_SWISH_OUT, INTERMIDATE_MATMUL_UP_OUT};
     mulNode.outTensorIds = {INTERMIDATE_HIDDENSTATUS};
 
-    atb::infer::MatmulParam linearDownParam = {false, param.transpose};
+    atb::infer::LinearParam linearDownParam;
+    linearDownParam.transposeA = false;
+    linearDownParam.transposeB = param.transpose;
+    linearDownParam.hasBias = false;
     CreateOperation(linearDownParam, &linearDownNode.operation);
     linearDownNode.inTensorIds = {INTERMIDATE_HIDDENSTATUS, IN_MLP_DOWN_WEIGHTTENSOR};
     linearDownNode.outTensorIds = {INTERMIDATE_MLP_OUT};

@@ -1,11 +1,24 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 import os
+import json
+import shutil
 from base import model_test
 
 
 class LlamaModelTest(model_test.ModelTest):
     def __init__(self, *args) -> None:
-        super().__init__(*args)
+        weight_dir = args[12]
+        model_name = "qwen"
+        config_path = os.path.join(weight_dir, "config.json")
+        with open(config_path, 'r') as f:
+            config_data = json.load(f)
+            if "num_hidden_layers" in config_data:
+                if config_data["num_hidden_layers"] == 40:
+                    model_name = "qwen_14b"
+                elif config_data["num_hidden_layers"] == 80:
+                    model_name = "qwen_72b"
+        updated_args = args[:3] + (model_name,) + args[4:]
+        super().__init__(*updated_args)
     
     def get_model(self, hardware_type, model_type, data_type):
         pass

@@ -135,9 +135,9 @@ atb::Status FloatFALayer(const FloatFALayerParam &param, atb::Operation **operat
     ATB_LOG(INFO) << "KV Cache";
     atb::infer::SelfAttentionParam selfAttentionKvCacheParam;
     selfAttentionKvCacheParam.headNum = param.headNum;
-    selfAttentionKvCacheParam.headDim = param.dk;
     selfAttentionKvCacheParam.qScale = 1.0f;
     selfAttentionKvCacheParam.qkScale = 1.0f / std::sqrt(param.dk);
+    selfAttentionKvCacheParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     CreateOperation(selfAttentionKvCacheParam, &selfAttentionKvCacheFusedNode.operation);
     selfAttentionKvCacheFusedNode.inTensorIds = { INTERNAL_POSITIONEMBEDQ,
                                                   INTERNAL_POSITIONEMBEDK,

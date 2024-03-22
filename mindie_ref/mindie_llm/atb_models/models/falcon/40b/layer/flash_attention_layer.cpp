@@ -199,10 +199,10 @@ atb::Status LayerParallelFlashAttentionOperation(const LayerParallelFlashAttenti
 
     // RoPE 这边输出得到的 shape 是 batch_size, query_length, num_heads, head_dim
     atb::infer::SelfAttentionParam selfAttentionParam;
-    selfAttentionParam.headDim  = param.headDim;
     selfAttentionParam.headNum  = param.headNum;
     selfAttentionParam.qScale   = param.qScale;
     selfAttentionParam.qkScale  = param.qkScale;
+    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     CreateOperation(selfAttentionParam, &selfAttentionFusionNode.operation);
     selfAttentionFusionNode.inTensorIds = {INTERMIDATE_Q_POSITIONEMBED,  // 2
                                            INTERMIDATE_K_POSITIONEMBED,  // 2

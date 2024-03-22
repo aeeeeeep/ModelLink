@@ -87,6 +87,7 @@ struct FTWithROPEParam {
     atb_speed::common::ParallelParamV2 mixdQkvLinearParam;
     // self attention param
     int isGroupedQueryAttention = false;
+    int faHeadDim = 0;
     atb::infer::SelfAttentionParam selfAttentionKvCacheParam;
     // rotary coeff
     int rotaryCoeff = 2;

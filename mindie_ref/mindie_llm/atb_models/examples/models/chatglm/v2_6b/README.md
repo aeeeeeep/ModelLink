@@ -28,6 +28,34 @@
 ## 权重转换
 - 参考[此README文件](../../../README.md)
 
+## 量化权重导出
+量化权重可通过ModelSlim（昇腾压缩加速工具）实现。
+
+#### 环境准备
+环境配置可参考ModelSlim官网：https://www.hiascend.com/document/detail/zh/canncommercial/70RC1/devtools/auxiliarydevtool/modelslim_0002.html
+
+#### 导出量化权重
+通过`${llm_path}/examples/models/chatglm/v2_6b/quant_chatglm2_6b_w8a8.py`文件导出模型的量化权重（注意量化权重不要和浮点权重放在同一个目录下）：
+```shell
+python quant_chatglm2_6b_w8a8.py --model_path ${浮点权重路径} --save_path ${量化权重保存路径}
+```
+导出量化权重后应生成`quant_model_weight_w8a8.safetensors`和`quant_model_description_w8a8.json`两个文件。
+
+注：
+
+1.quant_chatglm2_6b_w8a8.py文件中已配置好较优的量化策略，导出量化权重时可直接使用，也可修改为其它策略。
+
+2.启动量化推理时，需要将config.json等相关文件复制到量化权重路径中，可执行以下指令进行复制：
+```shell
+cp ${浮点权重路径}/config* ${量化权重路径}
+cp ${浮点权重路径}/tokeniz* ${量化权重路径}
+cp ${浮点权重路径}/modeling* ${量化权重路径}
+```
+
+3.启动量化推理时，请在权重路径的config.json文件中添加(或修改)`quantize`字段，值为相应量化方式，当前仅支持`w8a8`。
+
+4.执行完以上步骤后，执行量化模型只需要替换权重路径。
+
 ## 300I DUO 运行操作说明
 - 可开启CPU Performance模式以提高模型推理性能
 
@@ -53,10 +81,6 @@
   - `export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3`
     - 指定当前机器上可用的逻辑NPU核心，多个核心间使用逗号相连
     - 核心ID查阅方式见[此README文件](../../README.md)的【启动脚本相关环境变量】章节
-  - `export MAX_MEMORY_GB=15`
-    - 限制最大显存
-    - 默认设置最大显存为15GB
-    - 若出现显存不足导致的异常，请将该参数改小
   - `export TP_WORLD_SIZE=2`
     - 指定模型运行时的TP数，即world size
     - 默认为单卡双芯
@@ -70,8 +94,17 @@
   - `export PYTHONPATH=${llm_path}:$PYTHONPATH`
     - 将模型仓路径加入Python查询模块和包的搜索路径中
     - 将${llm_path}替换为实际路径
-  - `export HCCL_BUFFSIZE=110`
-  - `export ATB_USE_TILING_COPY_STREAM=1`
+  - - 以下环境变量与性能和内存优化相关，通常情况下无需修改
+    ```shell
+    # 内存
+    export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
+    export ATB_WORKSPACE_MEM_ALLOC_GLOBAL=1
+    # 性能
+    export HCCL_OP_BASE_FFTS_MODE_ENABLE=TRUE
+    export ATB_OPERATION_EXECUTE_ASYNC=1
+    export TASK_QUEUE_ENABLE=1
+    export HCCL_BUFFSIZE=110
+    ```
 
 
 ## 800I A2 运行操作说明
@@ -95,10 +128,6 @@
   - `export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7`
     - 指定当前机器上可用的逻辑NPU核心，多个核心间使用逗号相连
     - 核心ID查阅方式见[此README文件](../../README.md)的【启动脚本相关环境变量】章节
-  - `export MAX_MEMORY_GB=29`
-    - 限制最大显存
-    - 默认设置最大显存为29GB
-    - 若出现显存不足导致的异常，请将该参数改小
   - `export TP_WORLD_SIZE=1`
     - 指定模型运行时的TP数，即world size
     - 默认为单卡
@@ -116,8 +145,11 @@
     - 默认使用FP16
   - 以下环境变量与性能和内存优化相关，通常情况下无需修改
     ```shell
-    export HCCL_OP_BASE_FFTS_MODE_ENABLE=TRUE
+    # 内存
     export ATB_LAYER_INTERNAL_TENSOR_REUSE=1
+    export ATB_WORKSPACE_MEM_ALLOC_GLOBAL=1
+    # 性能
+    export HCCL_OP_BASE_FFTS_MODE_ENABLE=TRUE
     export ATB_OPERATION_EXECUTE_ASYNC=1
     export TASK_QUEUE_ENABLE=1
     export LCCL_ENABLE_FALLBACK=1
@@ -145,3 +177,7 @@
 
 ## 性能测试
 - 参考[此README文件](../../../../tests/modeltest/README.md)
+
+## FAQ
+- `import torch_npu`遇到`xxx/libgomp.so.1: cannot allocate memory in static TLS block`报错，可通过配置`LD_PRELOAD`解决。
+  - 示例：`export LD_PRELOAD=/lib/aarch64-linux-gnu/libgomp.so.1:$LD_PRELOAD`

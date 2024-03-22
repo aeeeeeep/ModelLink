@@ -395,7 +395,7 @@ class Weights:
             weight = weight.to(dtype=self.dtype)
         return weight
 
-    def get_tensor_col_packed_qkv_mha(self, tensor_name: str, head_size: int):
+    def get_tensor_col_packed_qkv_mha(self, tensor_name: str, head_size: int = None):
         slice_ = self._get_slice(tensor_name)
         total_size = slice_.get_shape()[0]
         if total_size % 3 != 0:
@@ -466,7 +466,6 @@ class Weights:
         query_list = torch.chunk(query_layer, world_size, dim=0)
         key_list = torch.chunk(key_layer, kv_tp_size, dim=0)
         value_list = torch.chunk(value_layer, kv_tp_size, dim=0)
-        rank * kv_tp_size // world_size
         tensor = torch.cat([query_list[rank],
                             key_list[rank * kv_tp_size // world_size],
                             value_list[rank * kv_tp_size // world_size]], dim=0)
@@ -476,7 +475,7 @@ class Weights:
         if not num_kv_heads:
             num_kv_heads = num_heads
         if num_heads == num_kv_heads:
-            return self.get_tensor_col_packed_qkv_mha(tensor_name, hidden_size)
+            return self.get_tensor_col_packed_qkv_mha(tensor_name)
         else:
             return self.get_tensor_col_packed_qkv_gqa(tensor_name, num_heads, num_kv_heads)
 
@@ -681,7 +680,7 @@ class Weights:
                            for i in range(world_size)]
         return cut_tensor_list[rank]
 
-    def get_multi_weights_row(self, prefix: str, quantize: str):
+    def get_multi_weights_row(self, prefix: str, quantize: str, gqa_size=1):
         if quantize == "gptq":
             use_exllama = True
             bits, groupsize = self._get_gptq_params()
@@ -756,17 +755,20 @@ class Weights:
                 return qweight
             deq_scale = self.get_tensor(f"{prefix}.deq_scale")
             quant_bias = self.get_tensor(f"{prefix}.quant_bias")
-            quant_bias = quant_bias // self.process_group.size()
+            if self.process_group.rank() == 0:
+                quant_bias = quant_bias
+            else:
+                quant_bias = torch.zeros_like(quant_bias, dtype=quant_bias.dtype, device=quant_bias.device)
             input_scale = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_scale')
             input_offset = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_offset')
             weight = (qweight, deq_scale, quant_bias, input_scale, input_offset)
         elif quantize == "w8a16":
-            qweight = self.get_sharded(f"{prefix}.weight", dim=1)
-            weight_scale = self.get_sharded(f"{prefix}.weight_scale", dim=1)
-            weight_offset = self.get_sharded(f"{prefix}.weight_offset", dim=1)
+            qweight = self.get_sharded(f"{prefix}.weight", dim=1, gqa_size=gqa_size)
+            weight_scale = self.get_sharded(f"{prefix}.weight_scale", dim=1, gqa_size=1)
+            weight_offset = self.get_sharded(f"{prefix}.weight_offset", dim=1, gqa_size=1)
             weight = (qweight, weight_scale, weight_offset)
         else:
-            weight = self.get_sharded(f"{prefix}.weight", dim=1)
+            weight = self.get_sharded(f"{prefix}.weight", dim=1, gqa_size=gqa_size)
         return weight
 
     def _get_handle(self, filename):
@@ -814,7 +816,7 @@ class Weights:
 
     def _set_w8a8_quant_params(self, model_id):
         try:
-            filename = os.path.join(model_id, 'quant_model_description.json')
+            filename = os.path.join(model_id, f'quant_model_description_{self.quantize}.json')
             with open(filename, "r") as f:
                 data = json.load(f)
             self.w8a8_desc = data

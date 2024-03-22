@@ -1,314 +1,174 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
-""" PyTorch Aquila model."""
 import json
 import math
-from typing import List, Optional, Tuple, Union
+import os
+from typing import Optional, List, Tuple
 
 import torch
 import torch_npu
-from atb_llm.models.aquila.v1_7b.config import AquilaConfig
-from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
-from atb_llm.utils.layers import (
-    TensorParallelRowLinear,
-    TensorParallelColumnLinear,
-    TensorEmbedding,
-    PositionRotaryEmbedding,
-    TensorParallelHead,
-    AttentionMask
-)
-from atb_llm.utils.log import logger
-from torch import nn
-from transformers.activations import ACT2FN
-from transformers.modeling_outputs import CausalLMOutputWithPast
-from transformers.modeling_utils import PreTrainedModel
 
-_CONFIG_FOR_DOC = "AquilaConfig"
+from .modeling_aquila import FlashAquilaModel, AquilaConfig
+from ...base.flash_causal_lm import FlashForCausalLM
+from ....utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
+from ....utils.layers import load_column_multi
+from ....utils.dist import get_rank_table_file
 
 
-# Copied from transformers.models.llama.modeling_llama.LlamaRMSNorm with Llama->Aquila
-class AquilaRMSNorm(nn.Module):
-    def __init__(self, prefix, weights, eps=1e-6):
-        """
-        AquilaRMSNorm is equivalent to T5LayerNorm
-        """
-        super().__init__()
-        weight = weights.get_tensor(f"{prefix}.weight")
-        self.weight = nn.Parameter(weight)
-        self.variance_epsilon = eps
-
-
-# Copied from transformers.models.llama.modeling_llama.LlamaMLP with Llama->Aquila
-class AquilaMLP(nn.Module):
-    def __init__(self, prefix, config, weights):
-        super().__init__()
-
-        self.gate_proj = TensorParallelColumnLinear.load(
+class FlashAquilaForCausalLM(FlashForCausalLM):
+    def __init__(self, config, weights):
+        super().__init__(config, weights)
+        self.model = FlashAquilaModel(config, weights)
+        self.lm_head = load_column_multi(
             config,
-            prefix=f"{prefix}.gate_proj",
+            prefixes=["lm_head"],
             weights=weights,
-            bias=False,
+            head_size=1,
+            lm_head=True,
         )
-        self.down_proj = TensorParallelRowLinear.load(
-            config,
-            prefix=f"{prefix}.down_proj",
-            weights=weights,
-            bias=False,
-        )
-        self.up_proj = TensorParallelColumnLinear.load(
-            config,
-            prefix=f"{prefix}.up_proj",
-            weights=weights,
-            bias=False,
-        )
-        self.intermediate_size = (
-                config.intermediate_size // weights.process_group.size()
-        )
-        self.act_fn = ACT2FN[config.hidden_act]
+        self.use_refactor = config.use_refactor
+        if self.use_refactor:
+            self.config = config
+            self.in_tensor_length = 12
+            self.acl_encoder_operation_inputs = [None] * self.in_tensor_length
+            self.acl_decoder_operation_inputs = [None] * self.in_tensor_length
 
+            self.placeholder = torch.zeros(1, dtype=self.dtype, device="npu")
+            self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64, device="npu")
 
-# Copied from transformers.models.llama.modeling_llama.LlamaAttention with Llama->Aquila
-class AquilaAttention(nn.Module):
-    """Multi-headed attention from 'Attention Is All You Need' paper"""
+            self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
+            self.transdata_param = json.dumps({})
+            self.transdata_operation.set_param(self.transdata_param)
 
-    def __init__(
-            self,
-            prefix: str,
-            config,
-            weights,
-    ):
-        super().__init__()
-        self.num_heads = config.num_attention_heads
-        self.hidden_size = config.hidden_size
-        self.head_size = self.hidden_size // self.num_heads
-
-        self.rotary_emb = PositionRotaryEmbedding.static(dim=self.head_size, base=10000.0, device="cpu").to(
-            weights.device)
-
-        self.softmax_scale = self.head_size ** -0.5
-        # can support self.num_heads % weights.process_group.size() != 0
-        try:
-            self.num_heads = math.ceil(self.num_heads / weights.process_group.size())
-        except ZeroDivisionError as e:
-            raise ZeroDivisionError from e
-        self.q_proj = TensorParallelColumnLinear.load(
-            config,
-            prefix=f"{prefix}.q_proj",
-            weights=weights,
-            bias=False,
-        )
-        self.k_proj = TensorParallelColumnLinear.load(
-            config,
-            prefix=f"{prefix}.k_proj",
-            weights=weights,
-            bias=False,
-        )
-        self.v_proj = TensorParallelColumnLinear.load(
-            config,
-            prefix=f"{prefix}.v_proj",
-            weights=weights,
-            bias=False,
-        )
-        self.o_proj = TensorParallelRowLinear.load(
-            config,
-            prefix=f"{prefix}.o_proj",
-            weights=weights,
-            bias=False,
-        )
-        self.prefix = prefix
-
-
-# Copied from transformers.models.llama.modeling_llama.LlamaDecoderLayer with Llama->Aquila
-class AquilaDecoderLayer(nn.Module):
-    def __init__(self, layer_id, config, weights):
-        super().__init__()
-        prefix = f"model.layers.{layer_id}"
-        self.self_attn = AquilaAttention(
-            prefix=f"{prefix}.self_attn", config=config, weights=weights
-        )
-        self.mlp = AquilaMLP(prefix=f"{prefix}.mlp", config=config, weights=weights)
-
-        self.input_layernorm = AquilaRMSNorm(
-            prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.rms_norm_eps
-        )
-        self.post_attention_layernorm = AquilaRMSNorm(
-            prefix=f"{prefix}.post_attention_layernorm",
-            weights=weights,
-            eps=config.rms_norm_eps,
-        )
-
-
-# Copied from transformers.models.llama.modeling_llama.LlamaPreTrainedModel with Llama->Aquila
-class AquilaPreTrainedModel(PreTrainedModel):
-    config_class = AquilaConfig
-    base_model_prefix = "model"
-    supports_gradient_checkpointing = True
-    _no_split_modules = ["AquilaDecoderLayer"]
-    _skip_keys_device_placement = "past_key_values"
-    _keys_to_ignore_on_load_unexpected = [r"decoder\.version"]
-
-    def _init_weights(self, module):
-        std = self.config.initializer_range
-        if isinstance(module, nn.Linear):
-            module.weight.data.normal_(mean=0.0, std=std)
-            if module.bias is not None:
-                module.bias.data.zero_()
-        elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=std)
-            if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
-
-    def _set_gradient_checkpointing(self, module, value=False):
-        if isinstance(module, AquilaModel):
-            module.gradient_checkpointing = value
-
-
-# Copied from transformers.models.llama.modeling_llama.LlamaModel with LLAMA->AQUILA,Llama->Aquila
-class AquilaModel(AquilaPreTrainedModel):
-    """
-    Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`AquilaDecoderLayer`]
-
-    Args:
-        config: AquilaConfig
-    """
-
-    def __init__(self, config: AquilaConfig, weights):
-        super().__init__(config)
-        self.padding_idx = config.pad_token_id
-        self.vocab_size = config.vocab_size
-
-        self.embed_tokens = TensorEmbedding(prefix="model.embed_tokens", weights=weights)
-        self.layers = nn.ModuleList(
-            [AquilaDecoderLayer(layer_id, config, weights, ) for layer_id in range(config.num_hidden_layers)]
-        )
-        self.norm = AquilaRMSNorm(prefix="model.norm", weights=weights, eps=config.rms_norm_eps)
-
-        # for ascend
-        self.training = False
-        self.num_heads = config.num_attention_heads
-        self.hidden_size = config.hidden_size
-        self.head_size = self.hidden_size // self.num_heads
-        process_group = weights.process_group
-        self.tp_rank = process_group.rank()
-        self.tp_world_size = process_group.size()
-        self.num_heads = self.num_heads // weights.process_group.size()
-        self.num_key_value_heads = config.num_key_value_heads // weights.process_group.size()
-
-        self.soc_info = NPUSocInfo()
-        self.init_ascend_operations(config)
-        self.ascend_weight = []
-        self.lm_head_weight = None
-        self.is_prefill = True
-        self.ascend_kcache_id = None
-        self.ascend_vcache_id = None
-        self.ascend_rotary_embedding = PositionRotaryEmbedding.static(
-            dim=self.head_size, base=10000.0, device="cpu").to(weights.device)
-
-        self.ascend_atten_mask = AttentionMask.static(config.max_position_embeddings)
-        self.place_holder = torch.tensor([1], dtype=torch.float16, device='npu')
-
-        self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
-        transdata_param = json.dumps({})
-        self.transdata_operation.set_param(transdata_param)
-
-    def maybe_format_cast(self, tensor):
-        """
-        maybe_format_cast
-        """
-        if not self.soc_info.need_nz:  # transdata 会额外占资源
-            return tensor
-        torch_npu.npu_format_cast_(tensor, 29)
-        logger.info(f"trans to {torch_npu.get_npu_format(tensor)}")
-        return tensor
+    def init_position_rotary_embedding(self,
+                                       position_ids: torch.Tensor,
+                                       max_seq_len: int):
+        if self.use_refactor:
+            self.rotary_embedding.update_cos_sin_cache_total(self.dtype, position_ids.device, max_seq_len)
+            self.cos_embed = self.rotary_embedding.get_cos_cached_total()
+            self.sin_embed = self.rotary_embedding.get_sin_cached_total()
+        else:
+            if self.num_attention_heads == self.num_key_value_heads:
+                self.cos_embed, self.sin_embed = self.rotary_embedding.get_cos_sin_total(
+                    position_ids, max_seq_len, self.dtype
+                )
+            else:
+                self.rotary_embedding.update_cos_sin_cache_total(self.dtype, position_ids.device, max_seq_len)
+                self.cos_embed = self.rotary_embedding.get_cos_cached_total()
+                self.sin_embed = self.rotary_embedding.get_sin_cached_total()
 
     def init_ascend_operations(self, config: AquilaConfig):
-        self.acl_param_encoder = json.dumps({
-            "rmsNormEps": config.rms_norm_eps,
-            "headNum": config.num_attention_heads // self.tp_world_size,
-            "dk": config.hidden_size // config.num_attention_heads,
-            "layerNum": config.num_hidden_layers,
-            "rank": self.tp_rank,
-            "rankSize": self.tp_world_size,
-            "isPrefill": True,
-            "backend": "hccl" if self.soc_info.need_nz else "lccl",
-            "isLmHeadParallel": True
-        })
-        self.acl_param_decoder = json.dumps({
-            "rmsNormEps": config.rms_norm_eps,
-            "headNum": config.num_attention_heads // self.tp_world_size,
-            "dk": config.hidden_size // config.num_attention_heads,
-            "layerNum": config.num_hidden_layers,
-            "rank": self.tp_rank,
-            "rankSize": self.tp_world_size,
-            "isPrefill": False,
-            "backend": "hccl" if self.soc_info.need_nz else "lccl",
-            "isLmHeadParallel": True
-        })
-        logger.info(self.acl_param_encoder)
-        logger.info(self.acl_param_decoder)
-        logger.info("using aquila_7b_modeling_ascend")
-
-        self.max_position_embeddings = config.max_position_embeddings
+        # 初始化模型
         self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("aquila_7b_PagedAttentionRopeModel")
         self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("aquila_7b_PagedAttentionRopeModel")
 
-        self.acl_encoder_operation.set_param(self.acl_param_encoder)
-        self.acl_decoder_operation.set_param(self.acl_param_decoder)
-
-        self.num_layers = config.num_hidden_layers
-        self.hidden_size = config.hidden_size
-
-        self.acl_operation_inputs = []
-        self.cu_seqlen_tensor_fake = torch.tensor([0], dtype=torch.int)
-        self.lm_head_indices_fake = torch.tensor([0], dtype=torch.int64, device="npu")
-
-        self.ascend_atten_mask = AttentionMask.static(config.max_position_embeddings)
+    def get_weights(self):
+        attn_module_names = AttnModuleNames(
+            norm_name='input_layernorm',
+            pack_name='self_attn.query_key_value',
+            q_name='self_attn.q_proj',
+            k_name='self_attn.k_proj',
+            v_name='self_attn.v_proj',
+            o_name='self_attn.o_proj'
+        )
+        mlp_module_names = MlpModuleNames(
+            norm_name='post_attention_layernorm',
+            pack_name='mlp.gate_up_proj',
+            gate_name='mlp.gate_proj',
+            up_name='mlp.up_proj',
+            down_name='mlp.down_proj'
+        )
+        weight_wrapper = WeightWrapper(self.soc_info, self.tp_rank, attn_module_names, mlp_module_names)
+        weight_wrapper.register_embedding(self.model.state_dict(), 'embed_tokens')
+        for i in range(self.num_layers):
+            layer = self.model.layers[i]
+            layer_dict = layer.state_dict()
+            weight_wrapper.register_layer(layer_dict, layer.self_attn.pack_type, layer.mlp.pack_type, self.quantize)
+            if self.soc_info.need_nz:
+                del layer.self_attn
+                del layer.post_attention_layernorm
+                del layer.mlp
+        weight_wrapper.register_model_norm(self.model.state_dict(), 'norm')
+        weight_wrapper.register_model_lmhead(self.state_dict(), 'lm_head')
+        return weight_wrapper.weights, weight_wrapper.linear_type, weight_wrapper.pack_quant_type
 
     def init_ascend_weight(self):
-        weights = [self.state_dict()["embed_tokens.weight"]]
-        for i in range(self.num_layers):
-            weights_t = []
-            weights_layer = self.layers[i].state_dict()
-            weights_t.append(weights_layer["input_layernorm.weight"])
-            weights_t.append(self.maybe_format_cast(weights_layer["self_attn.q_proj.linear.weight"]))
-            weights_t.append(self.maybe_format_cast(weights_layer["self_attn.k_proj.linear.weight"]))
-            weights_t.append(self.maybe_format_cast(weights_layer["self_attn.v_proj.linear.weight"]))
-            weights_t.append(self.maybe_format_cast(weights_layer["self_attn.o_proj.linear.weight"]))
-            weights_t.append(weights_layer["post_attention_layernorm.weight"])
-            weights_t.append(self.maybe_format_cast(weights_layer["mlp.gate_proj.linear.weight"]))
-            weights_t.append(self.maybe_format_cast(weights_layer["mlp.down_proj.linear.weight"]))
-            weights_t.append(self.maybe_format_cast(weights_layer["mlp.up_proj.linear.weight"]))
-            weights.extend(weights_t)
-            if self.soc_info.need_nz:
-                del self.layers[i].self_attn
-                del self.layers[i].mlp
-            torch.npu.synchronize()
-            peak_memory = torch_npu.npu.max_memory_allocated()
-            logger.warning(f">>>>layer {i} peak_memory {peak_memory / 1024 / 1024} MB")
-            torch.npu.synchronize()
+        if self.use_refactor:
+            self.ascend_weight, self.linear_type, self.pack_quant_config = self.get_weights()
+            # 设置模型参数
+            rank_table_file = get_rank_table_file()
+            coder_param = {
+                "rmsNormEps": self.config.rms_norm_eps,
+                "numAttentionHeadsPerRank": self.num_attention_heads,
+                "hiddenSizePerAttentionHead": self.head_size,
+                "numHiddenLayers": self.config.num_hidden_layers,
+                "numKeyValueHeadsPerRank": self.num_key_value_heads,
+                "isFA": False,
+                "isBF16": self.dtype == torch.bfloat16,
+                "packQuantType": self.pack_quant_config,
+                "linearQuantType": self.linear_type,
+                "isEmbeddingParallel": False,
+                "isLmHeadParallel": True,
+                "supportSwiGLU": False if self.soc_info.need_nz else True,
+                "rank": self.tp_rank,
+                "rankSize": self.tp_world_size,
+                "backend": "hccl" if self.soc_info.need_nz or rank_table_file else "lccl",
+                #"rankTableFile": rank_table_file
+            }
+            encoder_param = {**coder_param, "isPrefill": True, "supportLcoc": False if self.soc_info.need_nz else True}
+            decoder_param = {**coder_param, "isPrefill": False, "supportLcoc": False}
+            self.acl_encoder_operation.set_param(json.dumps({**encoder_param}))
+            self.acl_decoder_operation.set_param(json.dumps({**decoder_param}))
 
-        weights.append(self.state_dict()["norm.weight"])
-        weights.append(self.lm_head_weight)
+            self.acl_encoder_operation.set_weight(self.ascend_weight)
+            self.acl_decoder_operation.set_weight(self.ascend_weight)
+        else:
+            weights = [self.model.state_dict()["embed_tokens.weight"]]
+            attn_layer_names = [
+                'self_attn.q_proj.linear', 'self_attn.k_proj.linear', 'self_attn.v_proj.linear',
+                'self_attn.o_proj.linear'
+            ]
+            mlp_layer_names = ['mlp.gate_proj.linear', 'mlp.up_proj.linear', 'mlp.down_proj.linear']
+            for i in range(self.num_layers):
+                weights_t = []
+                weights_layer = self.model.layers[i].state_dict()
+                if self.num_attention_heads != self.num_key_value_heads:
+                    weights_t.append(weights_layer["input_layernorm.weight"])
+                    for layer_name in attn_layer_names:
+                        weights_t.append(weights_layer[f'{layer_name}.weight'])
+                        if self.quantize == "smooth_quant":
+                            weights_t.append(weights_layer[f'{layer_name}.act_scales'])
+                            weights_t.append(weights_layer[f'{layer_name}.act_zeros'])
+                            weights_t.append(weights_layer[f'{layer_name}.output_scales'])
+                    weights_t.append(weights_layer["post_attention_layernorm.weight"])
+                    for layer_name in mlp_layer_names:
+                        weights_t.append(weights_layer[f'{layer_name}.weight'])
+                        if self.quantize == "smooth_quant":
+                            weights_t.append(weights_layer[f'{layer_name}.act_scales'])
+                            weights_t.append(weights_layer[f'{layer_name}.act_zeros'])
+                            weights_t.append(weights_layer[f'{layer_name}.output_scales'])
+                else:
+                    weights_t.append(weights_layer["input_layernorm.weight"])
+                    weights_t.append(self.weight_format_cast(weights_layer["self_attn.query_key_value.linear.weight"]))
 
-        self.ascend_weight = weights
-        self.acl_encoder_operation.set_weight(weights)
-        self.acl_decoder_operation.set_weight(weights)
+                    weights_t.append(self.weight_format_cast(weights_layer["self_attn.o_proj.linear.weight"]))
 
-    def init_ascend_kvcache(self, kv_cache):
-        kcache_id = not self.ascend_kcache_id or self.ascend_kcache_id != id(kv_cache[0][0])
-        vcache_id = not self.ascend_vcache_id or self.ascend_vcache_id != id(kv_cache[0][1])
-        if kcache_id or vcache_id:
-            # k_cache shape [num_blocks, block_size, k_head_num, head_size] [36, 128, 40, 128]
-            k_caches, v_caches = map(list, zip(*kv_cache))
-            logger.debug(f"<<<<<<< ori {k_caches[0].shape=}")
-            if self.soc_info.need_nz:
-                k_caches = [torch_npu.npu_format_cast_(k_cache, 29) for k_cache in k_caches]
-                v_caches = [torch_npu.npu_format_cast_(v_cache, 29) for v_cache in v_caches]
-                logger.debug(f"<<<<<<<after transdata {k_caches[0].shape=}")
-            self.acl_encoder_operation.set_kv_cache(k_caches, v_caches)
-            self.acl_decoder_operation.set_kv_cache(k_caches, v_caches)
-            self.ascend_kcache_id = id(kv_cache[0][0])
-            self.ascend_vcache_id = id(kv_cache[0][1])
-            logger.warning(f">>>>>>id of kcache is {self.ascend_kcache_id} id of vcache is {self.ascend_vcache_id}")
+                    weights_t.append(weights_layer["post_attention_layernorm.weight"])
+                    weights_t.append(self.weight_format_cast(weights_layer["mlp.gate_up_proj.linear.weight"]))
+
+                    weights_t.append(self.weight_format_cast(weights_layer["mlp.down_proj.linear.weight"]))
+
+                if self.soc_info.need_nz:
+                    del self.model.layers[i].self_attn
+                    del self.model.layers[i].post_attention_layernorm
+                    del self.model.layers[i].mlp
+                weights.extend(weights_t)
+
+            weights.append(self.model.state_dict()["norm.weight"])
+            weights.append(self.weight_format_cast(self.state_dict()["lm_head.linear.weight"]))
+
+            self.ascend_weight = weights
+            self.acl_encoder_operation.set_weight(weights)
+            self.acl_decoder_operation.set_weight(weights)
 
     def prepare_inputs_for_ascend(self, input_ids: torch.Tensor,
                                   position_ids: torch.Tensor,
@@ -317,156 +177,56 @@ class AquilaModel(AquilaPreTrainedModel):
                                   block_tables: torch.Tensor,
                                   slots: torch.Tensor,
                                   input_lengths: torch.Tensor,
-                                  max_s: int,
+                                  max_seq_len: int,
                                   lm_head_indices: Optional[torch.Tensor] = None):
-        cos_embed, sin_embed = self.ascend_rotary_embedding.get_cos_sin_total(
-            position_ids, max_s, torch.float32
-        )
-        if self.soc_info.need_nz:
-            pad_maxs = math.ceil(max_s / 16) * 16
-            atten_mask = self.ascend_atten_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
-            atten_mask = self.transdata_operation.execute([atten_mask])[0]
+        if self.use_refactor:
+            self.rotary_embedding.update_cos_sin_cache_total(self.dtype,
+                                                             self.device,
+                                                             self.max_position_embeddings)
+            self.cos_embed = self.rotary_embedding.get_cos_cached_total()
+            self.sin_embed = self.rotary_embedding.get_sin_cached_total()
+            if is_prefill:
+                atten_mask = self.attn_mask.get_attn_mask(self.max_base_len, kv_cache[0][0].dtype,
+                                                          kv_cache[0][0].device)
+                if self.soc_info.need_nz:
+                    atten_mask = self.transdata_operation.execute([atten_mask])[0]
+                if lm_head_indices is None:
+                    lm_head_indices = torch.tensor(range(input_ids.shape[0]),
+                                                   dtype=torch.int64, device=input_ids.device)
+                self.acl_param = json.dumps({
+                    "seqLen": input_lengths.tolist()
+                })
+                self.acl_encoder_operation_inputs[0] = input_ids
+                self.acl_encoder_operation_inputs[1] = position_ids.to(torch.int64)
+                self.acl_encoder_operation_inputs[2] = self.cos_embed
+                self.acl_encoder_operation_inputs[3] = self.sin_embed
+                self.acl_encoder_operation_inputs[4] = atten_mask
+                self.acl_encoder_operation_inputs[5] = block_tables.to(torch.int32)
+                self.acl_encoder_operation_inputs[6] = slots.to(torch.int32)
+                self.acl_encoder_operation_inputs[7] = self.placeholder
+                self.acl_encoder_operation_inputs[8] = self.placeholder
+                self.acl_encoder_operation_inputs[9] = self.placeholder
+                self.acl_encoder_operation_inputs[10] = input_lengths.to(torch.int32)
+                self.acl_encoder_operation_inputs[11] = lm_head_indices.to(torch.int64)
+                return self.acl_encoder_operation_inputs, self.acl_param
+            else:
+                self.acl_param = json.dumps({
+                    "seqLen": input_lengths.tolist()
+                })
+                self.acl_decoder_operation_inputs[0] = input_ids
+                self.acl_decoder_operation_inputs[1] = position_ids.to(torch.int64)
+                self.acl_decoder_operation_inputs[2] = self.cos_embed
+                self.acl_decoder_operation_inputs[3] = self.sin_embed
+                self.acl_decoder_operation_inputs[4] = self.attn_mask_fake
+                self.acl_decoder_operation_inputs[5] = block_tables.to(torch.int32)
+                self.acl_decoder_operation_inputs[6] = slots.to(torch.int32)
+                self.acl_decoder_operation_inputs[7] = self.placeholder
+                self.acl_decoder_operation_inputs[8] = self.placeholder
+                self.acl_decoder_operation_inputs[9] = self.placeholder
+                self.acl_decoder_operation_inputs[10] = input_lengths.to(torch.int32)
+                self.acl_decoder_operation_inputs[11] = self.lm_head_indices_fake
+                return self.acl_decoder_operation_inputs, self.acl_param
         else:
-            atten_mask = self.ascend_atten_mask.get_attn_mask(max_s, kv_cache[0][0].dtype, kv_cache[0][0].device)
-
-        if self.is_prefill:  # prefill
-            if lm_head_indices is None:
-                lm_head_indices = torch.tensor(range(input_ids.shape[0]), dtype=torch.int64, device=input_ids.device)
-
-        self.acl_operation_inputs = [
-            input_ids,
-            position_ids,
-            cos_embed,
-            sin_embed,
-            atten_mask,
-            block_tables.to(torch.int32),
-            slots.to(torch.int32),
-            input_lengths.to(torch.int32),
-            lm_head_indices if self.is_prefill else self.lm_head_indices_fake,
-            self.place_holder
-        ]
-        for ind, item in enumerate(self.acl_operation_inputs):
-            logger.debug(f"{ind} {item.device=}")
-        return self.acl_operation_inputs
-
-    def execute_ascend_operator(self,
-                                input_ids: torch.Tensor,
-                                position_ids: torch.Tensor,
-                                is_prefill: bool,
-                                kv_cache: List[Tuple[torch.Tensor, torch.Tensor]],
-                                block_tables: torch.Tensor,
-                                slots: torch.Tensor,
-                                input_lengths: torch.Tensor,
-                                max_s: int,
-                                lm_head_indices: Optional[torch.Tensor] = None):
-        acl_inputs = self.prepare_inputs_for_ascend(
-            input_ids,
-            position_ids,
-            is_prefill,
-            kv_cache,
-            block_tables,
-            slots,
-            input_lengths,
-            max_s,
-            lm_head_indices)
-        acl_param = json.dumps({
-            "seqLen": input_lengths.tolist()
-        })
-        if self.is_prefill:
-            acl_model_out = self.acl_encoder_operation.execute(acl_inputs, acl_param)
-        else:
-            acl_model_out = self.acl_decoder_operation.execute(acl_inputs, acl_param)
-        acl_hidden_state = acl_model_out[0]
-        return acl_hidden_state
-
-    def forward(
-            self,
-            input_ids: torch.Tensor,  # input id, 拉平的
-            position_ids: torch.Tensor,  #
-            is_prefill: bool,
-            kv_cache: List[Tuple[torch.Tensor, torch.Tensor]],  # kv cache,
-            block_tables: torch.Tensor,  # 每个requests 所有的block tables
-            slots: torch.Tensor,  # 每个requests 所有的slots
-            input_lengths: torch.Tensor,  # 每个 request的k/v长度
-            max_seq_len: int,  # 最长的request长度
-            lm_head_indices: Optional[torch.Tensor] = None,  # prefill阶段使用，取的生成token的偏移
-    ):
-        self.is_prefill = is_prefill
-
-        # add acl model
-        if not self.ascend_weight:
-            self.init_ascend_weight()
-        self.init_ascend_kvcache(kv_cache)
-
-        hidden_states = self.execute_ascend_operator(
-            input_ids,
-            position_ids,
-            is_prefill,
-            kv_cache,
-            block_tables,
-            slots,
-            input_lengths,
-            max_seq_len,
-            lm_head_indices)
-
-        return tuple(v for v in [hidden_states] if v is not None)
-
-
-# Copied from transformers.models.llama.modeling_llama.LlamaForCausalLM with LLAMA->AQUILA,Llama->Aquila
-class FlashAquilaForCausalLM(torch.nn.Module):
-    def __init__(self, config, weights):
-        super().__init__()
-        self.config = config
-        load_atb_speed()
-        self.model = AquilaModel(config, weights)
-        self.soc_info = NPUSocInfo()
-        logger.info(self.soc_info)
-        # Initialize weights and apply final processing
-        self.lm_head_weight = None
-        self.parallel_lm_head = True
-        self.model.parallel_lm_head = self.parallel_lm_head
-        self.lm_head = (TensorParallelHead.load if self.parallel_lm_head else TensorParallelHead.load_weight)(
-            config,
-            prefix="lm_head",
-            weights=weights,
-            is_norm=True
-        )
-
-        self.num_heads = self.model.num_heads
-        self.num_attention_heads = self.num_heads
-        self.hidden_size = config.hidden_size
-        self.head_size = self.model.head_size
-        self.num_key_value_heads = self.model.num_key_value_heads
-        self.num_layers = config.num_hidden_layers
-
-    def forward(
-            self,
-            input_ids: torch.Tensor,  # input id, 拉平的
-            position_ids: torch.Tensor,  #
-            is_prefill: bool,
-            kv_cache: List[Tuple[torch.Tensor, torch.Tensor]],  # kv cache,
-            block_tables: torch.Tensor,  # 每个requests 所有的block tables
-            slots: torch.Tensor,  # 每个requests 所有的slots
-            input_lengths: torch.Tensor,  # 每个 request的k/v长度
-            max_seq_len: int,  # 最长的request长度
-            lm_head_indices: Optional[torch.Tensor] = None,  # prefill阶段使用，取的生成token的偏移
-    ) -> Union[Tuple, CausalLMOutputWithPast]:
-        if self.model.lm_head_weight is None:
-            self.lm_head_weight = self.state_dict()["lm_head.linear.weight"]
-            if self.soc_info.need_nz:
-                self.model.lm_head_weight = torch_npu.npu_format_cast(self.lm_head.linear.weight.data, 29)
-            self.model.lm_head_weight = self.lm_head.linear.weight.data
-
-        outputs = self.model(
-            input_ids,  # input id, 拉平的
-            position_ids,
-            is_prefill,  # prefill 阶段使用，不同prompt的offset
-            kv_cache,  # kv cache,
-            block_tables,  # 每个requests 所有的block tables
-            slots,  # 每个requests 所有的slots
-            input_lengths,  # 每个 request的k/v长度
-            max_seq_len,  # 最长的request长度
-            lm_head_indices  # prefill阶段使用，取的生成token的偏移
-        )
-        logits = outputs[0]
-        return logits
+            return super().prepare_inputs_for_ascend(input_ids, position_ids, is_prefill,
+                                                     kv_cache, block_tables, slots, input_lengths,
+                                                     max_seq_len, lm_head_indices)

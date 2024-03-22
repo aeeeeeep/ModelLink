@@ -13,29 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "vector"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
-#include "layers/operations/embedding.h"
-#include "layers/operations/rms_norm.h"
+#include "layers/operations/word_embedding.h"
+#include "layers/operations/positional_embedding.h"
 #include "layers/operations/lmhead.h"
 #include "models/llama_parallel/layer/decoder_layer.h"
 #include "models/llama_parallel/model/decoder_model.h"
-#include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
 namespace llama_parallel {
 
-REGISTER_MODEL(llama_parallel, DecoderModel);
-
 // Weight count
-const int WEIGHT_COUNT_PER_LAYER = 30;
+const int WEIGHT_COUNT_PER_LAYER = 43;
 const int WEIGHT_COUNT_WORD_EMBEDDINGNODE = 1;
 const int WEIGHT_COUNT_POST_NORM = 1;
 const int WEIGHT_COUNT_LM_HEAD = 1;
 
 // Operation count
-const int OPERATION_COUNT_BEFORE_LAYER = 1;
+const int OPERATION_COUNT_BEFORE_LAYER = 2;  // Word Embedding + Positional Embedding
 const int OPERATION_COUNT_AFTER_LAYER = 2;  // RmsNorm + LmHead
 
 void DecoderModel::Param::FromString(const std::string &param)
@@ -44,11 +45,10 @@ void DecoderModel::Param::FromString(const std::string &param)
     isFA = paramJson["isFA"].get<bool>();
     isPrefill = paramJson["isPrefill"].get<bool>();
     isBF16 = paramJson["isBF16"].get<bool>();
-    isPack = paramJson["isPack"].get<bool>();
     isEmbeddingParallel = paramJson["isEmbeddingParallel"].get<bool>();
     isLmHeadParallel = paramJson["isLmHeadParallel"].get<bool>();
     supportSwiGLU = paramJson["supportSwiGLU"].get<bool>();
-    quantType = paramJson["quantType"].get<int>();
+    supportLcoc = paramJson["supportLcoc"].get<bool>();
     rmsNormEps = paramJson["rmsNormEps"].get<float>();
     numAttentionHeadsPerRank = paramJson["numAttentionHeadsPerRank"].get<int>();
     hiddenSizePerAttentionHead = paramJson["hiddenSizePerAttentionHead"].get<int>();
@@ -66,11 +66,17 @@ void DecoderModel::Param::FromString(const std::string &param)
     for (auto item : paramJson["seqLen"]) {
         seqLen.push_back(item.get<int>());
     }
+    for (auto item : paramJson["packQuantType"]) {
+        packQuantType.push_back(item.get<std::vector<int>>());
+    }
+    for (auto item : paramJson["linearQuantType"]) {
+        linearQuantType.push_back(item.get<std::vector<int>>());
+    }
     ATB_LOG(INFO) << "DecoderModel param" << ", isFA:" << isFA << ", isPrefill:" << isPrefill
-                  << ", isBF16:" << isBF16 << ", isPack:" << isPack
+                  << ", isBF16:" << isBF16
                   << ", isEmbeddingParallel: " << isEmbeddingParallel << ", isLmHeadParallel: "
-                  << isLmHeadParallel << ", supportSwiGLU: " << supportSwiGLU
-                  << ", quantType:" << quantType << ", rmsNormEps:" << rmsNormEps << ", numAttentionHeadsPerRank:"
+                  << isLmHeadParallel << ", supportSwiGLU: " << supportSwiGLU << "supportLcoc" << supportLcoc
+                  << ", rmsNormEps:" << rmsNormEps << ", numAttentionHeadsPerRank:"
                   << numAttentionHeadsPerRank << ", hiddenSizePerAttentionHead:" << hiddenSizePerAttentionHead
                   << ", numHiddenLayers:" << numHiddenLayers
                   << ", numKeyValueHeadsPerRank:" << numKeyValueHeadsPerRank
@@ -106,13 +112,12 @@ atb::Status DecoderModel::InferShape(
     outTensorDescs.at(0).format = graph_.weightTensors.at(0).desc.format;
     outTensorDescs.at(0).shape.dimNum = inTensorDescs.at(0).shape.dimNum + 1;
 
-    if (param_.isFA) {
-        outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
-        outTensorDescs.at(0).shape.dims[1] = 1;
-    } else {
-        outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
+    outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(0).shape.dims[0];
+    if (param_.isFA) {  // unpadInputs = false
+        outTensorDescs.at(0).shape.dims[1] = param_.isPrefill ? inTensorDescs.at(IN_TENSOR_LOGTIS_INDICES).shape.dims[0] : 1;
+    } else {  // unpadInputs = true
         if (param_.isPrefill) {
-            outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(graph_.inTensors.size() - 1).shape.dims[0];
+            outTensorDescs.at(0).shape.dims[0] = inTensorDescs.at(IN_TENSOR_LOGTIS_INDICES).shape.dims[0];
         }
     }
 
@@ -125,48 +130,19 @@ atb::Status DecoderModel::InferShape(
     return atb::NO_ERROR;
 }
 
+static const uint64_t IN_TENSOR_COUNT = 12;
+static const uint64_t OUT_TENSOR_COUNT = 1;
+
 int64_t DecoderModel::BuildGraph()
 {
-    // define inTensor
-    int inTensorIdx = 0;
-    // idx: 0, shape: FA: [batchSize, seqLen] PA: [seqLen]
-    int IN_TENSOR_INPUT_IDS = inTensorIdx++;
-    // idx: 1, shape: FA: [batchSize, seqLen] PA: [seqLen]
-    int IN_TENSOR_POSITION_IDS = inTensorIdx++;
-    // idx: 2, shape: FA: [maxPositionEmbeddings, hiddenSizePerAttentionHead]
-    // PA: [maxInputLength, hiddenSizePerAttentionHead]
-    int IN_TENSOR_COS_TABLE = inTensorIdx++;
-    // idx: 3, shape: FA: [maxPositionEmbeddings, hiddenSizePerAttentionHead]
-    // PA: [maxInputLength, hiddenSizePerAttentionHead]
-    int IN_TENSOR_SIN_TABLE = inTensorIdx++;
-    // idx: 4, shape: FA: [batchSize, maxPositionEmbeddings, maxPositionEmbeddings]
-    // PA: [maxInputLength, maxInputLength]
-    int IN_TENSOR_ATTENTION_MASK = inTensorIdx++;
-    // idx: 5, shape: [4, 9]; PA所需入参
-    int IN_TENSOR_BLOCK_TABLES = inTensorIdx++;
-    // idx: 6, shape: [seqLen]; PA所需入参
-    int IN_TENSOR_SLOTS = inTensorIdx++;
-    // idx: 7, shape: [1]; FA所需入参
-    int IN_TENSOR_KV_CACHE_IDX = inTensorIdx++;
-    // idx: 8, shape: [batchSize]; FA所需入参
-    int IN_TENSOR_TOKEN_OFFSET = inTensorIdx++;
-    // idx: 9, shape: [1]
-    int IN_TENSOR_PLACE_HOLDER = inTensorIdx++;
-    // idx: 10, shape: [hiddenSize]; Quant所需参数
-    int IN_TENSOR_BETA = inTensorIdx++;
-    // idx: 11, shape: FA: [batchSize] PA: [4]
-    int IN_TENSOR_SEQ_LEN = inTensorIdx++;
-    // idx: 12, shape: FA: [batchSize]  PA: [4]
-    int IN_TENSOR_LOGTIS_INDICES = inTensorIdx++;
-
     // define internelTensor
     int internelTensorIdx = 0;
     // idx: 0, shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
     int INTERNEL_TENSOR_HIDDEN_STATES = internelTensorIdx++;
     // idx: 1, shape: [batchSize * seqLen, hiddenSizePerAttentionHead]
-    int INTERNEL_TENSOR_COS_TABLE = internelTensorIdx++;
+    int INTERNEL_TENSOR_COS_EMB = internelTensorIdx++;
     // idx: 2, shape: [batchSize * seqLen, hiddenSizePerAttentionHead]
-    int INTERNEL_TENSOR_SIN_TABLE = internelTensorIdx++;
+    int INTERNEL_TENSOR_SIN_EMB = internelTensorIdx++;
     // idx: [3, 3 + numHiddenLayers), shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
     int INTERNEL_TENSOR_LAYER_OUT_BASE = internelTensorIdx++;
     internelTensorIdx = internelTensorIdx + param_.numHiddenLayers - 1;
@@ -179,8 +155,8 @@ int64_t DecoderModel::BuildGraph()
         + WEIGHT_COUNT_POST_NORM + WEIGHT_COUNT_LM_HEAD;
     graph_.weightTensors.resize(weightTensorSize);
 
-    graph_.inTensors.resize(inTensorIdx);
-    graph_.outTensors.resize(1);
+    graph_.inTensors.resize(IN_TENSOR_COUNT);
+    graph_.outTensors.resize(OUT_TENSOR_COUNT);
     graph_.internalTensors.resize(internelTensorIdx);
 
     graph_.kCacheTensors.resize(param_.numHiddenLayers);
@@ -193,25 +169,32 @@ int64_t DecoderModel::BuildGraph()
     int nodeId = 0;
     atb::Operation *op = nullptr;
 
-    auto &embeddingNode = graph_.nodes.at(nodeId++);
-    atb_speed::common::EmbeddingParam embeddingParam;
-    embeddingParam.unpadInputs = !param_.isFA;
+    auto &wordEmbeddingNode = graph_.nodes.at(nodeId++);
+    atb_speed::common::WordEmbeddingParam wordEmbeddingParam;
+    wordEmbeddingParam.unpadInputs = !param_.isFA;
     if (param_.isEmbeddingParallel) {
-        embeddingParam.rank = param_.rank;
-        embeddingParam.worldSize = param_.worldSize;
+        wordEmbeddingParam.tensorParallelInfo = {param_.rank, param_.worldSize, param_.backend, param_.rankTableFile};
     };
-    embeddingParam.backend = param_.backend;
-    embeddingParam.rankTableFile = param_.rankTableFile;
-    atb_speed::common::Embedding(embeddingParam, &op);
-    embeddingNode.operation.reset(op);
-    embeddingNode.inTensors = {&graph_.weightTensors.at(0),                    // shape: [vocabSize + 1, hiddenSize]
-                               &graph_.inTensors.at(IN_TENSOR_INPUT_IDS),
-                               &graph_.inTensors.at(IN_TENSOR_COS_TABLE),
-                               &graph_.inTensors.at(IN_TENSOR_SIN_TABLE),
-                               &graph_.inTensors.at(IN_TENSOR_POSITION_IDS)};
-    embeddingNode.outTensors = {&graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES),
-                                &graph_.internalTensors.at(INTERNEL_TENSOR_COS_TABLE),
-                                &graph_.internalTensors.at(INTERNEL_TENSOR_SIN_TABLE)};
+    atb_speed::common::WordEmbedding(wordEmbeddingParam, &op);
+    wordEmbeddingNode.operation.reset(op);
+    wordEmbeddingNode.inTensors = {
+        &graph_.weightTensors.at(0),                    // shape: [vocabSize + 1, hiddenSize]
+        &graph_.inTensors.at(IN_TENSOR_INPUT_IDS)
+    };
+    wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)};
+
+    auto &peGatherNode = graph_.nodes.at(nodeId++);
+    atb_speed::common::PositionalEmbeddingGather(&op);
+    peGatherNode.operation.reset(op);
+    peGatherNode.inTensors = {
+        &graph_.inTensors.at(IN_TENSOR_POSITION_IDS),
+        &graph_.inTensors.at(IN_TENSOR_COS_TABLE),
+        &graph_.inTensors.at(IN_TENSOR_SIN_TABLE),
+    };
+    peGatherNode.outTensors = {
+        &graph_.internalTensors.at(INTERNEL_TENSOR_COS_EMB),
+        &graph_.internalTensors.at(INTERNEL_TENSOR_SIN_EMB)
+    };
 
     atb::Tensor *firstInTensor = &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES);
     for (int layerId = 0; layerId < param_.numHiddenLayers; ++layerId) {
@@ -220,17 +203,15 @@ int64_t DecoderModel::BuildGraph()
         layerParam.isFA = param_.isFA;
         layerParam.isPrefill = param_.isPrefill;
         layerParam.isBF16 = param_.isBF16;
-        layerParam.isPack = param_.isPack;
         layerParam.supportSwiGLU = param_.supportSwiGLU;
-        layerParam.quantType = param_.quantType;
+        layerParam.supportLcoc = param_.supportLcoc;
+        layerParam.packQuantType = param_.packQuantType[layerId];
+        layerParam.linearQuantType = param_.linearQuantType[layerId];
         layerParam.rmsNormEps = param_.rmsNormEps;
         layerParam.numAttentionHeadsPerRank = param_.numAttentionHeadsPerRank;
         layerParam.hiddenSizePerAttentionHead = param_.hiddenSizePerAttentionHead;
         layerParam.numKeyValueHeadsPerRank = param_.numKeyValueHeadsPerRank;
-        layerParam.rank = param_.rank;
-        layerParam.worldSize = param_.worldSize;
-        layerParam.backend = param_.backend;
-        layerParam.rankTableFile = param_.rankTableFile;
+        layerParam.tensorParallelInfo = {param_.rank, param_.worldSize, param_.backend, param_.rankTableFile};
         atb_speed::llama_parallel::DecoderLayer(layerParam, &op);
 
         layerNode.operation.reset(op);
@@ -241,14 +222,13 @@ int64_t DecoderModel::BuildGraph()
             layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(
                 layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId + WEIGHT_COUNT_WORD_EMBEDDINGNODE);
         }
-        layerNode.inTensors.at(inTensorId++) = &graph_.internalTensors.at(INTERNEL_TENSOR_COS_TABLE);
-        layerNode.inTensors.at(inTensorId++) = &graph_.internalTensors.at(INTERNEL_TENSOR_SIN_TABLE);
+        layerNode.inTensors.at(inTensorId++) = &graph_.internalTensors.at(INTERNEL_TENSOR_COS_EMB);
+        layerNode.inTensors.at(inTensorId++) = &graph_.internalTensors.at(INTERNEL_TENSOR_SIN_EMB);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_ATTENTION_MASK);
         layerNode.inTensors.at(inTensorId++) = &graph_.kCacheTensors.at(layerId);
         layerNode.inTensors.at(inTensorId++) = &graph_.vCacheTensors.at(layerId);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SEQ_LEN);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER);
-        layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_BETA);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_TOKEN_OFFSET);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_KV_CACHE_IDX);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_BLOCK_TABLES);
@@ -259,18 +239,14 @@ int64_t DecoderModel::BuildGraph()
     }
 
     auto &finalNormNode = graph_.nodes.at(nodeId++);
-    atb_speed::common::FusionRmsNormParam fusionRmsNormParam;
-    fusionRmsNormParam.quantType = param_.quantType;
-    fusionRmsNormParam.rmsNormEps = param_.rmsNormEps;
-    FusionRmsNorm(fusionRmsNormParam, &op);
+    atb::infer::RmsNormParam finalNormParam;
+    finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+    finalNormParam.normParam.epsilon = param_.rmsNormEps;
+    CREATE_OPERATION(finalNormParam, &op);
     finalNormNode.operation.reset(op);
     const int finalLayerNormWeightTensorId =
         graph_.weightTensors.size() - WEIGHT_COUNT_POST_NORM - WEIGHT_COUNT_LM_HEAD;
-    finalNormNode.inTensors = {
-        firstInTensor,
-        &graph_.weightTensors.at(finalLayerNormWeightTensorId),
-        &graph_.inTensors.at(IN_TENSOR_BETA)  // shape: [hiddenSize]
-    };
+    finalNormNode.inTensors = {firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId)};
     finalNormNode.outTensors = {
         // shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
         &graph_.internalTensors.at(INTERNEL_TENSOR_FINAL_NORM_OUT)
@@ -285,10 +261,7 @@ int64_t DecoderModel::BuildGraph()
     lmHeadParam.linearParallelParam.unpadInputs = !param_.isFA;
     if (param_.isLmHeadParallel) {
         lmHeadParam.linearParallelParam.parallelType = atb_speed::common::COLUMN_PARALLEL;
-        lmHeadParam.linearParallelParam.rank = param_.rank;
-        lmHeadParam.linearParallelParam.worldSize = param_.worldSize;
-        lmHeadParam.linearParallelParam.backend = param_.backend;
-        lmHeadParam.linearParallelParam.rankTableFile = param_.rankTableFile;
+        lmHeadParam.linearParallelParam.tensorParallelInfo = {param_.rank, param_.worldSize, param_.backend, param_.rankTableFile};
     }
     LmHead(lmHeadParam, &op);
     lmHeadNode.operation.reset(op);
@@ -298,6 +271,7 @@ int64_t DecoderModel::BuildGraph()
         // shape: [vocabSizePerRank, hiddenSize]
         &graph_.weightTensors.at(finalLinearWeightTensorId),
         // LmHead未接入量化，量化权重使用placeholder代替
+        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
         &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
         &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
         &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),

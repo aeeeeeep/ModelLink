@@ -23,9 +23,9 @@
 namespace atb_speed {
 namespace common {
 struct LmHeadParam {
-    bool gatherAhead = false;  // Prefill阶段使用gatherAhead，只获取最后最后一个token，以此减少显存占用
+    bool gatherAhead = false;  // Prefill阶段使用gatherAhead，只获取所需的token，以此减少显存占用
     bool unpadInputs = false;
-    int hiddenSizePerAttentionHead = 0;  // 当Parallel的类型为ROW PARALLEL时，需要此参数切分Gather算子的输出结果
+    int hiddenSizePerAttentionHead = 0;  // 当Parallel的类型为ROW PARALLEL时，需要使用此参数对中间tensor进行切分
     atb_speed::common::LinearParallelParam linearParallelParam;
 };
 

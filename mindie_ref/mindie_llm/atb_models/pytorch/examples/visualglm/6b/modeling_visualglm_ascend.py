@@ -122,16 +122,16 @@ class ChatGLMConfig(PretrainedConfig):
 
     def __init__(
             self,
-            vocab_size=150528,
+            vocab_size=130528,
             hidden_size=4096,
             num_layers=28,
             num_attention_heads=32,
             layernorm_epsilon=1e-5,
             use_cache=False,
-            bos_token_id=150004,
-            eos_token_id=150005,
-            mask_token_id=150000,
-            gmask_token_id=150001,
+            bos_token_id=130004,
+            eos_token_id=130005,
+            mask_token_id=130000,
+            gmask_token_id=130001,
             pad_token_id=0,
             max_sequence_length=2048,
             inner_hidden_size=16384,
@@ -942,6 +942,7 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
             "qkScale": qkScale, "layerNum": self.num_layers, "layerNormEps": self.layernorm_epsilon, 
             "residualAddScale": math.sqrt(2 * self.num_layers)
             }
+        param_dict["isEncoder"] = True
         acl_param = json.dumps(param_dict)
 
         self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("visualglm_6b_FlashAttentionModel")
@@ -1188,7 +1189,7 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
             acl_model_out = self.acl_decoder_operation.execute(self.acl_operation_inputs, acl_param)
 
         # hidden_states = acl_model_out[0]
-        hidden_states = hidden_states.transpose(0, 1)
+        # hidden_states = hidden_states.transpose(0, 1)
 
         if os.environ.get("PRECISION_TEST"):
             if not full_flag:
@@ -1231,7 +1232,7 @@ class ChatGLMModel(ChatGLMPreTrainedModel):
                 similarity = F.cosine_similarity(hidden_states.float().flatten(), acl_model_out[0].float().flatten(), dim=0)
                 print("similarity: {:.8f}".format(similarity.item()))
 
-        hidden_states = self.acl_model_out[0]
+        hidden_states = acl_model_out[0]
 
         if output_hidden_states:
             all_hidden_states = all_hidden_states + (hidden_states,)

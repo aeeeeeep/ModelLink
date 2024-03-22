@@ -137,7 +137,7 @@ at::Tensor Utils::CreateAtTensorFromTensorDesc(const atb::TensorDesc &tensorDesc
         ATB_LOG(ERROR) << "not support dtype:" << tensorDesc.dtype;
     }
 
-    options = options.layout(torch::kStrided).requires_grad(false).device(at::DeviceType::XLA);
+    options = options.layout(torch::kStrided).requires_grad(false).device(torch_npu::utils::get_npu_device_type());
 
     ATB_LOG(INFO) << "tensor_with_format stat, " << atb_speed::TensorUtil::TensorDescToString(tensorDesc);
 

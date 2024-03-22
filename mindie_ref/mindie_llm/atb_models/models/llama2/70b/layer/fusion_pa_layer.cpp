@@ -97,7 +97,7 @@ atb::Status FusionPALayer(const FusionPALayerParam &param, atb::Operation **oper
     CreateOperation(reshapeCacheParm, &reshapeAndCacheNode.operation);
     reshapeAndCacheNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_MIXEDV, IN_K_CACHE, IN_V_CACHE,
                                        IN_SLOTS};
-    reshapeAndCacheNode.outTensorIds = {};
+    reshapeAndCacheNode.outTensorIds = {IN_K_CACHE, IN_V_CACHE};
     reshapeAndCacheNode.inTensorReshapeFuncs.resize(reshapeAndCacheNode.inTensorIds.size());
     reshapeAndCacheNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
         reshapeHeads(oldShape, newShape, param.numHeadsPerPartition);
@@ -110,9 +110,9 @@ atb::Status FusionPALayer(const FusionPALayerParam &param, atb::Operation **oper
         atb::infer::SelfAttentionParam faEnParam;
         faEnParam.headNum = param.headNum;
         faEnParam.kvHeadNum = param.numHeadsPerPartition;
-        faEnParam.headDim = param.dk;
         faEnParam.qkScale = 1.0 / sqrt(param.dk);
-        faEnParam.isEncoder = true;
+        faEnParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
+        faEnParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
         CreateOperation(faEnParam, &attentionNode.operation);
 
         attentionNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_MIXEDV,
