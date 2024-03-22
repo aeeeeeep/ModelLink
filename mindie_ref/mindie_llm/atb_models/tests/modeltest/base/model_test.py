@@ -26,7 +26,7 @@ except ModuleNotFoundError:
 import numpy as np
 import pandas as pd
 import transformers
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoModel
 from thefuzz import process
 from tqdm import tqdm
 try:
@@ -122,7 +122,7 @@ dtype_map = {"bf16": torch.bfloat16, "fp16": torch.float16}
 core_map = {"NPU": "npu", "GPU": "cuda"}
 prompt_map = {"GSM8K": "", "TruthfulQA": QA_PRIMER}
 question_num = {"GSM8K": 11, "TruthfulQA": 12}
-CEval_0_shot = {}
+CEval_0_shot = {"chatglm6b", "chatglm2_6b"}
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -208,7 +208,8 @@ class ModelTest:
             self.model_name += "_quant"
             csv_path = os.path.join(os.path.dirname(self.script_path), 'result', self.model_name, f"{self.model_type}_{self.data_type}_{self.quantize}_batch{self.batch_size}_{self.test_mode}_test_result_formatted.csv")
         else:
-            torch.npu.set_compile_mode(jit_compile=False)
+            if self.hardware_type == "NPU":
+                torch.npu.set_compile_mode(jit_compile=False)
             csv_path = os.path.join(os.path.dirname(self.script_path), 'result', self.model_name, f"{self.model_type}_{self.data_type}_batch{self.batch_size}_{self.test_mode}_test_result_formatted.csv")
         
         self.data_dir = os.path.join(self.data_dir, self.model_name, "data")
@@ -491,7 +492,11 @@ class ModelTest:
             if "llama" in self.model_name:
                 self.tokenizer.pad_token_id = 0
 
-            self.model = AutoModelForCausalLM.from_pretrained(self.weight_dir, device_map="auto", torch_dtype="auto", trust_remote_code=True)
+            
+            if "chatglm6b" in self.model_name:
+                self.model = AutoModel.from_pretrained(self.weight_dir, device_map="auto", torch_dtype="auto", trust_remote_code=True)
+            else:
+                self.model = AutoModelForCausalLM.from_pretrained(self.weight_dir, device_map="auto", torch_dtype="auto", trust_remote_code=True)
             self.device = self.model.device
 
         if self.test_mode == "simplified":
@@ -610,10 +615,7 @@ class ModelTest:
                     if self.model_type == "fa":
                         inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
                                                 max_length=2048).to(0)
-                        tokenizer_out_ids = inputs.input_ids.to(0)
-                        attention_mask = inputs.attention_mask.to(0)
-                        outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
-                                                      do_sample=False, max_new_tokens=512)
+                        outputs = self.model.generate(**inputs, do_sample=False, max_new_tokens=512)
                         intermediate_outputs = []
                         for idx in range(len(outputs)):
                             output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
