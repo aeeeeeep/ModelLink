@@ -109,8 +109,13 @@ def register_layer_mlp_bloom(self, layer_dict, pack_type, quantize_type, mlp_mod
     self.register_layer_linear(layer_dict, mlp_module_names.down_name, quantize_type)
 
 
+def register_model_lmhead_bloom(self, model_dict, lmhead_name):
+    self.weights.append(self.weight_format_cast(model_dict[f'{lmhead_name}.weight']))
+
+
 # bloom has no up&gate
 WeightWrapper.register_layer_mlp = register_layer_mlp_bloom
+WeightWrapper.register_model_lmhead = register_model_lmhead_bloom
 
 
 class FlashBloomForCausalLM(FlashForCausalLM):
@@ -377,7 +382,7 @@ class FlashBloomForCausalLM(FlashForCausalLM):
                 del layer.post_attention_layernorm
                 del layer.mlp
         weight_wrapper.register_model_norm(self.model.state_dict(), 'ln_f')
-        weight_wrapper.register_embedding(self.model.state_dict(), 'word_embeddings')  # share or not?
+        weight_wrapper.register_model_lmhead(self.model.state_dict(), 'word_embeddings')  # share or not?
         return weight_wrapper.weights, weight_wrapper.linear_type, quant_type
 
 
