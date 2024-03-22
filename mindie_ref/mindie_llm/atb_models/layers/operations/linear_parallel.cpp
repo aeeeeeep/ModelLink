@@ -182,15 +182,6 @@ atb::Status CreateLinearParallelLcoc(const LinearParallelParam &param, atb::Oper
         addNode.outTensorIds = {LinearParallelTensorIdx::OUT_LINEAR_PARALLEL};
     }
 
-    opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
-                                 atb::SVector<atb::TensorDesc> &outTensorDescs) {
-        outTensorDescs.at(0) = inTensorDescs.at(0);
-        auto dimLast = inTensorDescs.at(0).shape.dimNum - 1;
-        outTensorDescs.at(0).shape.dims[dimLast] \
-            = inTensorDescs.at(1).shape.dims[0] * param.tensorParallelInfo.worldSize;
-        return atb::NO_ERROR;
-    };
-
     CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
 }
