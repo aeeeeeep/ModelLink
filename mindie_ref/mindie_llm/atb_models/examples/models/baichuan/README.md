@@ -28,6 +28,7 @@ Paged Attention 场景下需要.safetensors 格式的权重，如果没有，参
 
 - 将当前目录下的convert_w8a8_quant_weights.py文件中的input_fp16_path 和output_w8a8_path 修改为自己的权重路径和输出权重路径
 - 如果想用npu转换权重，需要根据注释修改代码将设备设置为npu
+- 备注：建议精度测试使用cpu生成量化权重。npu生成的量化权重可作为调试使用，精度会有损失。
 - 执行
 
 ```
@@ -84,6 +85,7 @@ bash examples/models/baichuan/run_pa.sh ${weight_path}
 ## 性能测试
 
 - 参考[此README文件](../../../tests/modeltest/README.md)
+- 备注：性能测试建议每一轮开始前添加命令：pkill -9 python，用于清理参与进程。
 
 # Flash Attention推理使用说明
 

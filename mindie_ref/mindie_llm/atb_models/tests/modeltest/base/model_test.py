@@ -122,7 +122,7 @@ dtype_map = {"bf16": torch.bfloat16, "fp16": torch.float16}
 core_map = {"NPU": "npu", "GPU": "cuda"}
 prompt_map = {"GSM8K": "", "TruthfulQA": QA_PRIMER}
 question_num = {"GSM8K": 11, "TruthfulQA": 12}
-CEval_0_shot = {"chatglm6b", "chatglm2_6b"}
+CEval_0_shot = {"chatglm6b"}
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -728,9 +728,12 @@ class ModelTest:
 
                 if self.model_type == "fa":
                     inputs = self.tokenizer(prompts, padding=True, return_tensors="pt", truncation=True, max_length=2048).to(0)
-                    tokenizer_out_ids = inputs.input_ids.to(0)
-                    attention_mask = inputs.attention_mask.to(0)
-                    outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask, do_sample=False, max_new_tokens=20)
+                    if "chatglm6b" in self.model_name:
+                        outputs = self.model.generate(**inputs, do_sample=False, max_new_tokens=20)
+                    else:
+                        tokenizer_out_ids = inputs.input_ids.to(0)
+                        attention_mask = inputs.attention_mask.to(0)
+                        outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask, do_sample=False, max_new_tokens=20)
                     answers = []
                     for idx in range(len(outputs)):
                         output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
