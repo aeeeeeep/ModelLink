@@ -118,13 +118,10 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
         self.cos_embed = self.rotary_embedding.get_cos_cached_total()
         self.sin_embed = self.rotary_embedding.get_sin_cached_total()
         if is_prefill:
+            atten_mask = self.attn_mask.get_attn_mask(self.max_base_len, kv_cache[0][0].dtype,
+                                                      kv_cache[0][0].device)
             if self.soc_info.need_nz:
-                pad_maxs = math.ceil(self.max_position_embeddings / 16) * 16
-                atten_mask = self.attn_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
                 atten_mask = self.transdata_operation.execute([atten_mask])[0]
-            else:
-                atten_mask = self.attn_mask.get_attn_mask(self.max_position_embeddings, kv_cache[0][0].dtype,
-                                                          kv_cache[0][0].device)
             if lm_head_indices is None:
                 lm_head_indices = torch.tensor(range(input_ids.shape[0]), dtype=torch.int64, device=input_ids.device)
         else:
