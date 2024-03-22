@@ -38,9 +38,9 @@ from torch import nn
 from transformers import PreTrainedModel
 from transformers.activations import ACT2FN
 from transformers.modeling_outputs import CausalLMOutputWithPast
-from .config import TelechatConfig
 from atb_llm.utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
 from atb_llm.models.base.flash_causal_lm import FlashForCausalLM
+from .config import TelechatConfig
 
 
 class RMSNorm(nn.Module):
@@ -50,6 +50,7 @@ class RMSNorm(nn.Module):
         weight = weights.get_tensor(f"{prefix}.weight")
         self.weight = nn.Parameter(weight)
         self.variance_epsilon = eps
+
 
 class FlashTelechatAttention(torch.nn.Module):
     def __init__(
@@ -179,6 +180,7 @@ class FlashTelechatModel(torch.nn.Module):
         )
 
         self.gradient_checkpointing = False
+
 
 class FlashTelechatForCausalLM(torch.nn.Module):
     def __init__(self, config, weights):
