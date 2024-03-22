@@ -1,19 +1,13 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
-from transformers import AutoTokenizer, AutoModel
+
 import os
 import sys
+
 sys.path.append(os.path.join(os.path.dirname(__file__), "../"))
 from base import model_test
-import shutil
-import torch
-try:
-    import torch_npu
-    from torch_npu.contrib import transfer_to_npu
-except ModuleNotFoundError:
-    pass
 
 
-class Chatglm16BModelTest(model_test.ModelTest):
+class Chatglm6BModelTest(model_test.ModelTest):
     def __init__(self, *args) -> None:
         super().__init__(*args)
 
@@ -35,7 +29,7 @@ class Chatglm16BModelTest(model_test.ModelTest):
 
 
 def main():
-    Chatglm16BModelTest.create_instance()
+    Chatglm6BModelTest.create_instance()
 
 if __name__ == "__main__":
     main()
