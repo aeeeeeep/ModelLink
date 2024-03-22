@@ -1,18 +1,18 @@
 import os
 import json
 import torch
-import torch_npu # npu进行量化
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from modelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
 from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
 
-input_fp16_path = 'your model path'
-output_w8a8_path = 'your output path'
-tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=input_fp16_path, trust_remote_code=True) 
+input_fp16_path = 'the path of fp16 model input'
+output_w8a8_path = 'the path of w8a8 model output'
+tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=input_fp16_path, trust_remote_code=True)
 model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=input_fp16_path, trust_remote_code=True).float().cpu()
-# model = model.half().npu() # 如果需要使用npu进行量化
+
+
 # 获取校准数据函数定义
-def get_calib_dataset(tokenizer, calib_list, device="cpu"):  # device="npu:0" 如果需要使用npu进行量化
+def get_calib_dataset(tokenizer, calib_list, device="cpu"):  # 如果需要使用npu进行量化, device="npu:0"。使用cpu,device="cpu"
     calib_dataset = []
     for calib_data in calib_list:
         inputs = tokenizer(calib_data, return_tensors='pt')
@@ -21,6 +21,7 @@ def get_calib_dataset(tokenizer, calib_list, device="cpu"):  # device="npu:0" �
             inputs.data['attention_mask'].to(device)
             ])
     return calib_dataset
+
 calib_set = [
   "The following are multiple choice questions (with answers) about  teacher qualification.\n\n下列对于多动症的说法，不正确的是____\nA. 由多种原因引起的一组综合征\nB. 某种神经递质的缺陷可诱发该病\nC. 神经髓鞘发育落后可诱发该病\nD. 营养不良可诱发该病\nAnswer: D\n\n学习迁移发生的必要条件是两种学习活动之间存在共同原理，学习迁移产生的关键是学习者通过活动能概括出其共同原理。持这种观点的迁移理论被称为____\nA. 形式训练说\nB. 相同要素说\nC. 概括化理论\nD. 关系理论\nAnswer: C\n\nExcel中，通常在单元格内出现“####”符号时，表明____。\nA. 显示的是字符串“####”\nB. 列宽不够，无法显示数值数据\nC. 数值溢出\nD. 计算错误\nAnswer: B\n\n第二次世界大战开始时间是____。\nA. 1914年\nB. 1918年\nC. 1939年\nD. 1945年\nAnswer: C\n\n在日常生活中，我们经常会接触一些民谚、俗语，这些民谚、俗语蕴含着丰富的物理知识。下列民谚、俗语蕴含的物理知识所属领域不同的是____。\nA. 坐井观天，所见甚少\nB. 瑞雪兆丰年\nC. 酒香不怕巷子深\nD. 下雪不寒化雪寒\nAnswer: A\n\n编写中小学教科书的直接依据是____。\nA. 《中华人民共和国教育法》\nB. 课程计划\nC. 课程标准\nD. 课程表\nAnswer:",
   "The following are multiple choice questions (with answers) about  teacher qualification.\n\n下列对于多动症的说法，不正确的是____\nA. 由多种原因引起的一组综合征\nB. 某种神经递质的缺陷可诱发该病\nC. 神经髓鞘发育落后可诱发该病\nD. 营养不良可诱发该病\nAnswer: D\n\n学习迁移发生的必要条件是两种学习活动之间存在共同原理，学习迁移产生的关键是学习者通过活动能概括出其共同原理。持这种观点的迁移理论被称为____\nA. 形式训练说\nB. 相同要素说\nC. 概括化理论\nD. 关系理论\nAnswer: C\n\nExcel中，通常在单元格内出现“####”符号时，表明____。\nA. 显示的是字符串“####”\nB. 列宽不够，无法显示数值数据\nC. 数值溢出\nD. 计算错误\nAnswer: B\n\n第二次世界大战开始时间是____。\nA. 1914年\nB. 1918年\nC. 1939年\nD. 1945年\nAnswer: C\n\n在日常生活中，我们经常会接触一些民谚、俗语，这些民谚、俗语蕴含着丰富的物理知识。下列民谚、俗语蕴含的物理知识所属领域不同的是____。\nA. 坐井观天，所见甚少\nB. 瑞雪兆丰年\nC. 酒香不怕巷子深\nD. 下雪不寒化雪寒\nAnswer: A\n\n下列关于课程的三种文本表现形式说法正确的是____\nA. 课程计划是由当地教育主管部门制订的\nB. 课程标准是依据课程计划制定的\nC. 课程标准的核心是实施建议\nD. 教材编写的基本方式有直线式、螺旋式、交叉式\nAnswer:",
@@ -48,7 +49,7 @@ dataset_calib = get_calib_dataset(tokenizer, calib_set)
 对于linear算子中的激活值如果有表示范围过大，或者“尖刺”的异常值过多，
 需要使用anti outleir功能，使用方法如下
 """
-anti_config = AntiOutlierConfig(anti_method="m2", dev_type="cpu")  # dev_type="npu", dev_id=0  如果需要使用npu进行量化
+anti_config = AntiOutlierConfig(anti_method="m2", dev_type="cpu")  # dev_type="npu", dev_id=0  如果需要使用npu进行量化。
 anti_outlier = AntiOutlier(model, calib_data=dataset_calib, cfg=anti_config, norm_class_name="RMSNorm")
 anti_outlier.process()
 """
@@ -57,23 +58,18 @@ anti_outlier.process()
 """
 
 disable_names=[]
-llama_layers = 32
-disable_idx_lst = list(range(llama_layers))
-for layer_index in disable_idx_lst:
-    down_proj_name = "model.layers.{}.mlp.down_proj".format(layer_index)
-    disable_names.append(down_proj_name)
-# w_sym=True：对称量化，w_sym=False：非对称量化;
 quant_config = QuantConfig(
     a_bit=8, 
     w_bit=8, 
     disable_names=disable_names, 
+    disable_last_linear=False, 
     dev_type='cpu',  # dev_type="npu", dev_id=0  如果需要使用npu进行量化
     act_method=3, 
     pr=1.0, 
     w_sym=True, 
     mm_tensor=False
 )
+
 calibrator = Calibrator(model, quant_config, calib_data=dataset_calib, disable_level='L0')
 calibrator.run()  # 执行PTQ量化校准
 calibrator.save(output_w8a8_path, save_type=["safe_tensor"])  #"safe_tensor"对应safetensors格式权重，"numpy"对应npy格式权重
-

@@ -147,6 +147,7 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     selfAttentionParam.clampMin = -1024.0;
     selfAttentionParam.clampMax = 1024.0;
     selfAttentionParam.clampType = atb::infer::SelfAttentionParam::CLAMP_TYPE_MIN_MAX;
+    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     CREATE_OPERATION(selfAttentionParam, &flashAttentionNode.operation);
     flashAttentionNode.inTensorIds = {INTERNAL_QEMBED,
                                       INTERNAL_KEMBED,

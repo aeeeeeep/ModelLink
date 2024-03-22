@@ -138,7 +138,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         inputNormNode.outTensorIds = { INTERMIDATE_INPUTNORMOUT };
 
         atb::infer::LinearParam quantQkvLinearParam;
-        quantQkvLinearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
+        quantQkvLinearParam.outDataType = ACL_FLOAT16;
         CREATE_OPERATION(quantQkvLinearParam, &mixdQLinearNode.operation);
         mixdQLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_QMIXDWEIGHT, IN_QMIXD_BIAS, IN_QMIXD_DEQSCALE };
         mixdQLinearNode.outTensorIds = { INTERMIDATE_MIXEDQ };
@@ -185,9 +185,6 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
         inputNormNode.outTensorIds = { INTERMIDATE_INPUTNORMOUT };
         atb::infer::LinearParam linearParam;
         linearParam.hasBias = false;
-        if (param.isBF16) {
-            linearParam.linearType = atb::infer::LINEAR_BF16BF16_FP32_BF16;
-        }
         CREATE_OPERATION(linearParam, &mixdQLinearNode.operation);
         mixdQLinearNode.inTensorIds = { INTERMIDATE_INPUTNORMOUT, IN_QMIXDWEIGHT };
         mixdQLinearNode.outTensorIds = { INTERMIDATE_MIXEDQ };
@@ -233,6 +230,7 @@ atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Oper
     selfAttentionKvCacheParam.kvHeadNum = param.kvHeadNum;
     selfAttentionKvCacheParam.qkScale = 1.0 / sqrt(param.dk);
     selfAttentionKvCacheParam.qScale = 1.0;
+    selfAttentionKvCacheParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     if (param.isEncoder) {
         selfAttentionKvCacheParam.calcType = atb::infer::SelfAttentionParam::ENCODER;
         selfAttentionKvCacheParam.isTriuMask = param.isTriuMask;

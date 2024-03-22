@@ -115,7 +115,7 @@ atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param,
 
     // QKV LINEAR量化
     atb::infer::LinearParam qkvLinearParam;
-    qkvLinearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
+    qkvLinearParam.outDataType = ACL_FLOAT16;
     CreateOperation(qkvLinearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = {INTERMIDATE_INPUTNORM_OUT_QUANT, IN_QKV_WEIGHT, IN_QKV_BIAS, IN_QKV_DEQSCALE};
     qkvLinearNode.outTensorIds = {INTERMIDATE_QKV};
@@ -145,6 +145,7 @@ atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param,
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / sqrt(param.dk);
     selfAttentionParam.kvHeadNum = param.kvHead;
+    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     if (param.isEncoder) {
         selfAttentionParam.calcType = atb::infer::SelfAttentionParam::ENCODER;
     } else {

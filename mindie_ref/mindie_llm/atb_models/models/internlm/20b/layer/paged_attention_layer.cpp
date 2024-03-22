@@ -73,9 +73,6 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     atb::infer::LinearParam linearParam;
     linearParam.transposeB = param.transposedWeight;
     linearParam.hasBias = false;
-    if (param.isBF16) {
-        linearParam.linearType = atb::infer::LinearType::LINEAR_BF16BF16_FP32_BF16;
-    }
     CREATE_OPERATION(linearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_QKVMIXEDLINEARWEIGHT};
     qkvLinearNode.outTensorIds = {INTERMIDATE_QKVMIXEDLINEAROUT};
@@ -112,6 +109,7 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
         faEnParam.qkScale = 1.0 / sqrt(param.dk);
         faEnParam.kvHeadNum = param.headNum;
         faEnParam.calcType = atb::infer::SelfAttentionParam::PA_ENCODER;
+        faEnParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
         CREATE_OPERATION(faEnParam, &attentionNode.operation);
         attentionNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ, INTERMIDATE_POSITIONEMBEDK, INTERMIDATE_MIXEDV,
                                      IN_ATTENTIONMASK, IN_INPUT_LENGTHS};
