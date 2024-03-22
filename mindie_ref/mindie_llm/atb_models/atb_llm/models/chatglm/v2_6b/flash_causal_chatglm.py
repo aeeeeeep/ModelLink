@@ -459,6 +459,8 @@ class FlashChatglmModel(torch.nn.Module):
         self.attn_mask_fake = self.attn_mask \
             .get_attn_mask(1, dtype=self.dtype, device="cpu") \
             .to(self.device)
+        #算子Attn Mask优化，只需要[128,128]形状的mask
+        self.max_seq_len_for_attn_mask = 128
 
     def weight_format_cast(self, weight):
         if not self.soc_info.need_nz:
@@ -570,7 +572,7 @@ class FlashChatglmModel(torch.nn.Module):
                 atten_mask = self.attn_mask.get_attn_mask(pad_maxs, kv_cache[0][0].dtype, kv_cache[0][0].device)
                 atten_mask = self.transdata_operation.execute([atten_mask])[0]
             else:
-                atten_mask = self.attn_mask.get_attn_mask(self.seq_length, kv_cache[0][0].dtype, kv_cache[0][0].device)
+                atten_mask = self.attn_mask.get_attn_mask(self.max_seq_len_for_attn_mask, kv_cache[0][0].dtype, kv_cache[0][0].device)
             self.acl_param_encoder = json.dumps({
                 "seqLen" : input_lengths.tolist()
             })
