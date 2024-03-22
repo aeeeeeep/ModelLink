@@ -327,7 +327,7 @@ source /usr/local/Ascend/atb/set_env.sh
 
 ## 测试
 
-### 图像处理时间测试
+### 图像处理时间测试结果
 
 将图像处理部分转换为OM模型后，图像处理时间约为0.018s；GPU图像处理时间约为1.185s
 
@@ -340,14 +340,21 @@ source /usr/local/Ascend/atb/set_env.sh
 
 #### 实施
 
-1. <a href="https://huggingface.co/laion/CLIP-ViT-H-14-laion2B-s32B-b79K/tree/main" style="color:blue">下载 open_clip 的权重
-   open_clip_pytorch_model.bin</a>
-2. 收集 GPU 和 NPU 的推理结果，整理成类似 `./precision/GPU_NPU_result_example.json` 的形式。
-3. 执行脚本 `./precision/clip_score_minigpt4.py`，参考命令：
+1. 下载 open_clip
+   的权重及测试图片：<a href="https://huggingface.co/laion/CLIP-ViT-H-14-laion2B-s32B-b79K/tree/main" style="color:blue">下载
+   open_clip 的权重
+   open_clip_pytorch_model.bin</a>，
+   <a href="https://cocodataset.org/#download" style="color:blue">下载 CoCotest 数据集</a>并随机抽取其中100张图片放入一个文件夹，
+   都放置到`./precision`下。
+2. 收集推理结果：
+   收集脚本参考`./precision/run_predict_walk_dir_NPU.py`，`./precision/run_predict_walk_dir_GPU.py`，
+   将其放到`${work_space}`目录下执行，注意脚本传参（主要是`--image-path`和`--output-path`）。
+   推理结果要整理成类似 `./precision/GPU_NPU_result_example.json` 的形式。
+4. 对结果进行评分：执行脚本 `./precision/clip_score_minigpt4.py`，参考命令：
    ```bash
    python clip_score_minigpt4.py --device 0 --model_weights_path open_clip_pytorch_model.bin --image_info GPU_NPU_result_example.json
    ```
-   若得分比值>1，则说明 NPU 上表现更优。
+   得分高者精度更优。
 
 ### 性能测试
 
@@ -357,19 +364,20 @@ source /usr/local/Ascend/atb/set_env.sh
 
 #### 实施
 
-1. 先将 `./performance/modeling_vicuna_ascend_performance.py` 复制到 `${model_path}/weights/` 下。
-   再修改 `${model_path}/weights/config.json`，新增或修改以下键值对：
+1. 配置测试参数 `./performance/config.ini`（注意确保 `model_path=${model_path}/weights/`）
+
+2. 将 `./performance/modeling_vicuna_ascend_performance.py` 复制到 `${model_path}/weights/` 下，
+   再修改 `${model_path}/weights/config.json`，新增或修改以下键值对，指向此文件：
    ```json
    "auto_map": {
     "AutoModelForCausalLM": "modeling_vicuna_ascend_performance.LlamaForCausalLM"
     }
    ```
-
-2. 配置 `./performance/config.ini`（注意确保 `model_path=${model_path}/weights/`）
+   同时修改 `max_position_embeddings`和`max_sequence_length`，使其值为`./performance/config.ini`中`case_pair`中两数之和。
 
 3. 执行脚本 `./performance/main.py`，参考命令：
    ```bash
-   python main.py
+   RETURN_PERF_DETAIL=1 TIMEIT=1 python main.py
    ```
 
 ### 性能测试（旧）
