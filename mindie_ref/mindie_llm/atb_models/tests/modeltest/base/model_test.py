@@ -256,7 +256,7 @@ class ModelTest:
             os.environ['LCCL_DETERMINISTIC'] = "1"
             os.environ['HCCL_DETERMINISTIC'] = "1"
         os.environ['core_type'] = self.core_type
-        self.local_rank, self.world_size = int(os.getenv("RANK", "0")), int(os.getenv("WORLD_SIZE", "1"))
+        self.rank, self.local_rank, self.world_size = int(os.getenv("RANK", "0")), int(os.getenv("LOCAL_RANK", "0")), int(os.getenv("WORLD_SIZE", "1"))
        
         torch.manual_seed(1)
         self.device_type = self.__get_device_type()
@@ -364,7 +364,8 @@ class ModelTest:
                         e2e_time = e2e_end - e2e_start
                 else:
                     input_dict = {
-                        'rank': self.local_rank,
+                        'rank': self.rank,
+                        'local_rank': self.local_rank,
                         'world_size': self.world_size,
                         'max_prefill_tokens': -1,
                         'block_size': 128,
@@ -377,7 +378,7 @@ class ModelTest:
                         'max_output_length': seq_len_out
                     }
                     pa_runner = PARunner(**input_dict)
-                    self.logger.info(str(self.local_rank) + f'pa_runner: {pa_runner}')
+                    self.logger.info(str(self.rank) + f'pa_runner: {pa_runner}')
                     pa_runner.warm_up()
                     input_ids = torch.randint(0, pa_runner.model.config.vocab_size, [seq_len_in],
                                               dtype=torch.int64)
@@ -385,7 +386,7 @@ class ModelTest:
                     del pa_runner
                     torch.npu.empty_cache()
 
-                if self.local_rank == 0:
+                if self.rank == 0:
                     if self.model_type == "fa":
                         first_token_time_tensor = torch.load(f"{folder_path}/first_token_time.pth").cpu()
                         first_token_time = first_token_time_tensor.item()
@@ -417,7 +418,7 @@ class ModelTest:
                          str(round(non_first_token_throughput, 10)).ljust(36),
                          str(round(e2e_throughput, 10)).ljust(25)])
 
-            if self.local_rank == 0:
+            if self.rank == 0:
                 non_first_token_throughput_average = non_first_token_throughput_total / len(self.case_pair)
                 e2e_throughput_average = e2e_throughput_total / len(self.case_pair)
                 self.logger.info(
@@ -463,7 +464,8 @@ class ModelTest:
         self.logger.info("precision test start")
         if self.hardware_type == "NPU":
             input_dict = {
-                'rank': self.local_rank,
+                'rank': self.rank,
+                'local_rank': self.local_rank,
                 'world_size': self.world_size,
                 'max_prefill_tokens': -1,
                 'block_size': 128,
@@ -476,7 +478,7 @@ class ModelTest:
                 'max_output_length': 512,
             }
             self.pa_runner = PARunner(**input_dict)
-            self.logger.info(str(self.local_rank) + f'pa_runner: {self.pa_runner}')
+            self.logger.info(str(self.rank) + f'pa_runner: {self.pa_runner}')
             self.pa_runner.warm_up()
         else:
             self.tokenizer = AutoTokenizer.from_pretrained(self.weight_dir, use_fast=False, padding_side="left", truncation_side="left", trust_remote_code=True)
@@ -562,9 +564,9 @@ class ModelTest:
                         request_from_text(queries[i], self.tokenizer, 1024, self.cache_config.block_size, req_idx=i) for
                         i in range(len(queries))]
                     generate_req(req_list, self.model, self.tokenizer, self.batch_size, 3072 * self.batch_size, 1024,
-                                 self.cache_manager, self.local_rank)
+                                 self.cache_manager, self.rank)
                     generate_text_list, token_num_list = decode_token(req_list, self.tokenizer)
-                    if self.local_rank == 0:
+                    if self.rank == 0:
                         self.logger.info(f'Question: {queries}')
                         for i, generate_text in enumerate(generate_text_list):
                             self.logger.info(f'Answer: {generate_text}')
@@ -943,7 +945,7 @@ class ModelTest:
                             request_from_text(queries[i], self.tokenizer, 512, self.cache_config.block_size, req_idx=i)
                             for i in range(len(queries))]
                         generate_req(req_list, self.model, self.tokenizer, self.batch_size, 2560 * self.batch_size, 512,
-                                     self.cache_manager, self.local_rank)
+                                     self.cache_manager, self.rank)
                         generate_text_list, _ = decode_token(req_list, self.tokenizer)
                         if is_result:
                             for idx, ans in enumerate(batch['answer']):
@@ -1476,11 +1478,11 @@ class ModelTest:
             raise RuntimeError("unsupported hardware type")
         self.logger.info(f"{communication_map[self.hardware_type]} distributed process init success.")
         if self.hardware_type == "NPU":
-            self.logger.info(f"user npu:{self.local_rank}")
-            torch_npu.npu.set_device(torch.device(f"npu:{self.local_rank}"))
+            self.logger.info(f"user npu:{self.rank}")
+            torch_npu.npu.set_device(torch.device(f"npu:{self.rank}"))
         elif self.hardware_type == "GPU":
-            self.logger.info(f"user gpu:{self.local_rank}")
-            torch.cuda.set_device(self.local_rank)
+            self.logger.info(f"user gpu:{self.rank}")
+            torch.cuda.set_device(self.rank)
         self.logger.info("Device Set Success!")
 
     def __npu_adapt(self):
