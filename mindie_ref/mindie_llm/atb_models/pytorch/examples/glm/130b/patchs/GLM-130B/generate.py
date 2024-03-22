@@ -63,7 +63,7 @@ def get_masks_and_position_ids(seq, mask_position, max_gen_length, gmask=False):
     return tokens, attention_mask, position_ids
 
 
-def fill_blanks(raw_text: str, model, tokenizer, strategy) -> Tuple[List[str], List[str], List[List[str]]]:
+def fill_blanks(raw_text: str, model, tokenizer, strategy, args) -> Tuple[List[str], List[str], List[List[str]]]:
     # add MASK
     generation_mask = "[gMASK]"
     if "[MASK]" in raw_text:
@@ -197,7 +197,7 @@ def generate(model, tokenizer, args):
             query_id, raw_text = raw_text.split("\t")
 
         answers, answers_with_style, blanks = fill_blanks(
-            raw_text, model, tokenizer, strategy)
+            raw_text, model, tokenizer, strategy, args)
 
         # save
         if args.with_id:
