@@ -78,7 +78,6 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     if (param.hiddenSizePerAttentionHead == 0) {
         return atb::ERROR_INVALID_GRAPH;
     }
-    fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
     fusionAttentionParam.selfAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
     if (param.isFA) {
         fusionAttentionParam.selfAttentionParam.calcType = param.isPrefill ? \
