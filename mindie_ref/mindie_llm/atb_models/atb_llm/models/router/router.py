@@ -233,8 +233,10 @@ class ChatglmRouter(BaseRouter):
         次级模型名称，比如v2_13b
         :return:
         """
-        if self.config_dict['multi_query_attention']:
+        if 'multi_query_attention' in self.config_dict:
             model_ver = "v2_6b"
+        else:
+            model_ver = "v1_6b"
 
         return model_ver
 
