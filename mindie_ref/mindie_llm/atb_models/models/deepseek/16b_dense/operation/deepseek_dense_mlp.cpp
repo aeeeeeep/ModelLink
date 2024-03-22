@@ -32,28 +32,14 @@ enum DeepseekDenseMlpTensorId {
     INTERMIDATE_SWISH_OUT,
     INTERMIDATE_HIDDENSTATUS,
     INTERMIDATE_MLP_OUT,
-    INTERMIDATE_MLP_OUT_TRANSPOSED,
-    INTERMIDATE_EXPERT_MASK_ZERO_TWO_TOKENS,
-    INTERMIDATE_EXPERT_MASK_THREE_FIVE_TOKENS,
-    INTERMIDATE_EXPERT_MASK_ZERO_TOKEN,
-    INTERMIDATE_EXPERT_MASK_ONE_TOKEN,
-    INTERMIDATE_EXPERT_MASK_TWO_TOKEN,
-    INTERMIDATE_EXPERT_MASK_THREE_TOKEN,
-    INTERMIDATE_EXPERT_MASK_FOUR_TOKEN,
-    INTERMIDATE_EXPERT_MASK_FIVE_TOKEN,
-    INTERMIDATE_EXPERT_MASK_ZERO_ONE_TOKEN,
-    INTERMIDATE_EXPERT_MASK_ZERO_TWO_SUMED_TOKEN,
-    INTERMIDATE_EXPERT_MASK_ZERO_THREE_TOKEN,
-    INTERMIDATE_EXPERT_MASK_ZERO_FOUR_TOKEN,
     INTERMIDATE_EXPERT_MASK,
     INTERMIDATE_MASKED_MLP_OUT,
-    INTERMIDATE_MASKED_MLP_OUT_TRANSPOSED,
 };
 
 static const uint64_t IN_TENSOR_COUNT = 5;
 static const uint64_t OUT_TENSOR_COUNT = 1;
-static const uint64_t INTERMEDIATE_TENSOR_COUNT = 22;
-static const uint64_t NODE_COUNT = 17;
+static const uint64_t INTERMEDIATE_TENSOR_COUNT = 8;
+static const uint64_t NODE_COUNT = 8;
 
 atb::Status CreateDeepseekDenseMlpOperation(const DeepseekDenseMlpParam &param, atb::Operation **operation)
 {
@@ -72,17 +58,8 @@ atb::Status CreateDeepseekDenseMlpOperation(const DeepseekDenseMlpParam &param, 
     atb::Node &swishNode = opGraph.nodes.at(nodeId++);
     atb::Node &mulNode = opGraph.nodes.at(nodeId++);
     atb::Node &linearDownNode = opGraph.nodes.at(nodeId++);
-    atb::Node &maskSplit0Node = opGraph.nodes.at(nodeId++);
-    atb::Node &maskSplit1Node = opGraph.nodes.at(nodeId++);
-    atb::Node &maskSplit2Node = opGraph.nodes.at(nodeId++);
-    atb::Node &add0Node = opGraph.nodes.at(nodeId++);
-    atb::Node &add1Node = opGraph.nodes.at(nodeId++);
-    atb::Node &add2Node = opGraph.nodes.at(nodeId++);
-    atb::Node &add3Node = opGraph.nodes.at(nodeId++);
-    atb::Node &add4Node = opGraph.nodes.at(nodeId++);
-    atb::Node &transposeMlpInNode = opGraph.nodes.at(nodeId++);
+    atb::Node &maskSumNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpMulNode = opGraph.nodes.at(nodeId++);
-    atb::Node &transposeMlpOutNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpAddNode = opGraph.nodes.at(nodeId++);
 
     atb::infer::LinearParam linearParam;
@@ -118,86 +95,35 @@ atb::Status CreateDeepseekDenseMlpOperation(const DeepseekDenseMlpParam &param, 
     linearDownNode.inTensorIds = {INTERMIDATE_HIDDENSTATUS, IN_MLP_DOWN_WEIGHTTENSOR};
     linearDownNode.outTensorIds = {INTERMIDATE_MLP_OUT};
 
-    atb::infer::SplitParam maskSplitParam = {0, 2};
-    CreateOperation(maskSplitParam, &maskSplit0Node.operation);
-    maskSplit0Node.inTensorIds = {IN_EXPERT_MASK_WITH_WEIGHT};
-    maskSplit0Node.outTensorIds = {
-        INTERMIDATE_EXPERT_MASK_ZERO_TWO_TOKENS,
-        INTERMIDATE_EXPERT_MASK_THREE_FIVE_TOKENS};
-    maskSplit0Node.inTensorReshapeFuncs.resize(maskSplit0Node.inTensorIds.size());
-    maskSplit0Node.inTensorReshapeFuncs[0] = [batchDimPtr](const atb::Dims &oldShape, atb::Dims &newShape) {
+    atb::infer::ReduceParam maskSumParam;
+    maskSumParam.reduceType = atb::infer::ReduceParam::ReduceType::REDUCE_SUM;
+    maskSumParam.axis = {1};
+    CreateOperation(maskSumParam, &maskSumNode.operation);
+    maskSumNode.inTensorIds = {IN_EXPERT_MASK_WITH_WEIGHT};
+    maskSumNode.outTensorIds = {INTERMIDATE_EXPERT_MASK};
+    maskSumNode.inTensorReshapeFuncs.resize(maskSumNode.inTensorIds.size());
+    maskSumNode.inTensorReshapeFuncs[0] = [batchDimPtr](const atb::Dims &oldShape, atb::Dims &newShape) {
         newShape.dimNum = 2; // dimNum: 2
         newShape.dims[0] = oldShape.dims[0] * oldShape.dims[1];
         newShape.dims[1] = oldShape.dims[2];
     };
 
-    maskSplitParam = {0, 3};
-    CreateOperation(maskSplitParam, &maskSplit1Node.operation);
-    maskSplit1Node.inTensorIds = {INTERMIDATE_EXPERT_MASK_ZERO_TWO_TOKENS};
-    maskSplit1Node.outTensorIds = {
-        INTERMIDATE_EXPERT_MASK_ZERO_TOKEN,
-        INTERMIDATE_EXPERT_MASK_ONE_TOKEN,
-        INTERMIDATE_EXPERT_MASK_TWO_TOKEN};
-
-    maskSplitParam = {0, 3};
-    CreateOperation(maskSplitParam, &maskSplit2Node.operation);
-    maskSplit2Node.inTensorIds = {INTERMIDATE_EXPERT_MASK_THREE_FIVE_TOKENS};
-    maskSplit2Node.outTensorIds = {
-        INTERMIDATE_EXPERT_MASK_THREE_TOKEN,
-        INTERMIDATE_EXPERT_MASK_FOUR_TOKEN,
-        INTERMIDATE_EXPERT_MASK_FIVE_TOKEN};
-
-    atb::infer::ElewiseParam addParam;
-    addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CreateOperation(addParam, &add0Node.operation);
-    add0Node.inTensorIds = {INTERMIDATE_EXPERT_MASK_ZERO_TOKEN, INTERMIDATE_EXPERT_MASK_ONE_TOKEN};
-    add0Node.outTensorIds = {INTERMIDATE_EXPERT_MASK_ZERO_ONE_TOKEN};
-
-    CreateOperation(addParam, &add1Node.operation);
-    add1Node.inTensorIds = {INTERMIDATE_EXPERT_MASK_ZERO_ONE_TOKEN, INTERMIDATE_EXPERT_MASK_TWO_TOKEN};
-    add1Node.outTensorIds = {INTERMIDATE_EXPERT_MASK_ZERO_TWO_SUMED_TOKEN};
-
-    CreateOperation(addParam, &add2Node.operation);
-    add2Node.inTensorIds = {INTERMIDATE_EXPERT_MASK_ZERO_TWO_SUMED_TOKEN, INTERMIDATE_EXPERT_MASK_THREE_TOKEN};
-    add2Node.outTensorIds = {INTERMIDATE_EXPERT_MASK_ZERO_THREE_TOKEN};
-
-    CreateOperation(addParam, &add3Node.operation);
-    add3Node.inTensorIds = {INTERMIDATE_EXPERT_MASK_ZERO_THREE_TOKEN, INTERMIDATE_EXPERT_MASK_FOUR_TOKEN};
-    add3Node.outTensorIds = {INTERMIDATE_EXPERT_MASK_ZERO_FOUR_TOKEN};
-
-    CreateOperation(addParam, &add4Node.operation);
-    add4Node.inTensorIds = {INTERMIDATE_EXPERT_MASK_ZERO_FOUR_TOKEN, INTERMIDATE_EXPERT_MASK_FIVE_TOKEN};
-    add4Node.outTensorIds = {INTERMIDATE_EXPERT_MASK};
-
-    atb::infer::TransposeParam transposeMlpInParam;
-    transposeMlpInParam.perm = {1, 0};
-    CreateOperation(transposeMlpInParam, &transposeMlpInNode.operation);
-    transposeMlpInNode.inTensorIds = {INTERMIDATE_MLP_OUT};
-    transposeMlpInNode.outTensorIds = {INTERMIDATE_MLP_OUT_TRANSPOSED};
-    ATB_LOG(INFO) << "transposeMlpInNode success";
-
     atb::infer::ElewiseParam mlpMulParam;
     mlpMulParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_MUL;
     CreateOperation(mlpMulParam, &mlpMulNode.operation);
-    mlpMulNode.inTensorIds = {INTERMIDATE_EXPERT_MASK, INTERMIDATE_MLP_OUT_TRANSPOSED};
+    mlpMulNode.inTensorIds = {INTERMIDATE_MLP_OUT, INTERMIDATE_EXPERT_MASK};
     mlpMulNode.outTensorIds = {INTERMIDATE_MASKED_MLP_OUT};
     mlpMulNode.inTensorReshapeFuncs.resize(mlpMulNode.inTensorIds.size());
-    mlpMulNode.inTensorReshapeFuncs[0] = [batchDimPtr](const atb::Dims &oldShape, atb::Dims &newShape) {
-        newShape.dimNum = 1; // dimNum: 1
-        newShape.dims[0] = oldShape.dims[0] * oldShape.dims[1];
+    mlpMulNode.inTensorReshapeFuncs[1] = [batchDimPtr](const atb::Dims &oldShape, atb::Dims &newShape) {
+        newShape.dimNum = 2; // dimNum: 1
+        newShape.dims[0] = oldShape.dims[0];
+        newShape.dims[1] = 1;
     };
-
-    atb::infer::TransposeParam transposeOutParam;
-    transposeOutParam.perm = {1, 0};
-    CreateOperation(transposeOutParam, &transposeMlpOutNode.operation);
-    transposeMlpOutNode.inTensorIds = {INTERMIDATE_MASKED_MLP_OUT};
-    transposeMlpOutNode.outTensorIds = {INTERMIDATE_MASKED_MLP_OUT_TRANSPOSED};
-    ATB_LOG(INFO) << "Router weights TRANSPOSED success";
 
     atb::infer::ElewiseParam mlpAddParam;
     mlpAddParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
     CreateOperation(mlpAddParam, &mlpAddNode.operation);
-    mlpAddNode.inTensorIds = {INTERMIDATE_MASKED_MLP_OUT_TRANSPOSED, IN_FINAL_HIDDENS_STATE};
+    mlpAddNode.inTensorIds = {INTERMIDATE_MASKED_MLP_OUT, IN_FINAL_HIDDENS_STATE};
     mlpAddNode.outTensorIds = {OUT_MLPRESULTSTENSOR};
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
