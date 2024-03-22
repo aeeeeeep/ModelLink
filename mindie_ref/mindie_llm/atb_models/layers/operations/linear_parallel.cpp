@@ -154,7 +154,7 @@ atb::Status CreateLinearParallelLcoc(const LinearParallelParam &param, atb::Oper
     linearParallelParam.transWeight = true;
     linearParallelParam.rank = param.tensorParallelInfo.rank;
     linearParallelParam.rankSize = param.tensorParallelInfo.worldSize;
-    linearParallelParam.bias = "None";
+    linearParallelParam.hasResidual = false;
     linearParallelParam.backend = "lcoc";
     CREATE_OPERATION(linearParallelParam, &linearParallelNode.operation);
 

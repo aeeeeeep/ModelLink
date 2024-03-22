@@ -67,10 +67,8 @@ atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operat
 
     atb::Node &linearNode = opGraph.nodes.at(nodeId++);
     atb::infer::LinearParam linearParam;
-    if (param.quantType != LINEAR_NO_QUANT && !param.isBF16) {
-        linearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
-    } else if (param.quantType == LINEAR_NO_QUANT && param.isBF16) {
-        linearParam.linearType = atb::infer::LinearType::LINEAR_BF16BF16_FP32_BF16;
+    if (param.quantType != NO_QUANT && !param.isBF16) {
+        linearParam.outDataType = ACL_FLOAT16;
     }
 
     if (param.quantType == LINEAR_W8A16_QUANT && param.hasBias) {
