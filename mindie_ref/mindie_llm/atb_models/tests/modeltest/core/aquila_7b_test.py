@@ -52,6 +52,10 @@ class Aquila7BModelTest(model_test.ModelTest):
         os.environ['LCCL_ENABLE_FALLBACK'] = "1"
         os.environ['ATB_LAUNCH_KERNEL_WITH_TILING'] = "1"
         os.environ['PYTORCH_NPU_ALLOC_CONF'] = 'max_split_size_mb:2048'
+        os.environ['INF_NAN_MODE_ENABLE'] = "0"
+        os.environ['ATB_WORKSPACE_MEM_ALLOC_GLOBAL'] = "1"
+        os.environ['ATB_CONVERT_NCHW_TO_ND'] = "1"
+        os.environ['ATB_CONTEXT_WORKSPACE_SIZE'] = "0"
 
     def get_dataset_list(self):
         return ["BoolQ", "CEval"]

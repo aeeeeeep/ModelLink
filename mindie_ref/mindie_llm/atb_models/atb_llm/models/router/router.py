@@ -295,13 +295,14 @@ class AquilaRouter(BaseRouter):
     def config(self):
         config = AquilaConfig.from_pretrained(self.model_name_or_path)
         if self.max_position_embeddings:
-            config.model_max_length = self.max_position_embeddings
+            config.max_position_embeddings = self.max_position_embeddings
         return config
 
     def get_tokenizer(self):
         return AutoTokenizer.from_pretrained(
             self.model_name_or_path,
             pad_token='<|endoftext|>',
+            padding_side="left",
             trust_remote_code=True,
             use_fast=True
         )
