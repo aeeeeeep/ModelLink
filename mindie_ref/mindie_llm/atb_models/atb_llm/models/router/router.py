@@ -16,6 +16,7 @@ from ..starcoder.flash_causal_starcoder import StarcoderConfig
 from ..telechat.config import TelechatConfig
 from ..gpt_neox.config import GPTNeoXConfig
 from ..internlm.configuration_internlm import InternLMConfig
+from ..aquila.v1_7b.modeling_aquila import AquilaConfig
 
 
 @dataclass
@@ -292,8 +293,7 @@ class AquilaRouter(BaseRouter):
 
     @property
     def config(self):
-        config_cls = self.get_config_cls()
-        config = config_cls.from_pretrained(self.model_name_or_path)
+        config = AquilaConfig.from_pretrained(self.model_name_or_path)
         if self.max_position_embeddings:
             config.model_max_length = self.max_position_embeddings
         return config
