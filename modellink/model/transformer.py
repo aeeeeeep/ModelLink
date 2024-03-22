@@ -28,7 +28,7 @@ from megatron.core.enums import ModelType
 from megatron.model.enums import AttnMaskType, LayerType, AttnType
 from megatron.model.transformer import _get_layer_type
 from megatron.model.transformer import (
-    ParallelTransformer, ParallelTransformerLayer, ParallelAttention, CoreAttention
+    ParallelTransformer, ParallelTransformerLayer, NoopTransformerLayer
 )
 from megatron.model.utils import get_norm
 
