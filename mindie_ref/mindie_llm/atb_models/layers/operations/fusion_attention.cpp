@@ -63,7 +63,9 @@ static const uint64_t QKV_PACK_GQA_NODE_COUNT = 4;
 template <typename NormParamType>
 atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb::Operation **operation)
 {
-    bool isPack = param.packQuantType != atb_speed::common::MIX_W8A8 && param.packQuantType != atb_speed::common::MIX_W8A8_ANTI;
+    bool isPack = param.packQuantType != atb_speed::common::MIX_W8A8 \
+        && param.packQuantType != atb_speed::common::MIX_W8A8_ANTI \
+        && param.packQuantType != atb_speed::common::MIX_W8A8SC;
     bool isAntiOutlier = param.packQuantType == atb_speed::common::MIX_W8A8_ANTI || param.packQuantType == atb_speed::common::ALL_W8A8_ANTI;
 
     atb::GraphParam opGraph;

@@ -24,7 +24,7 @@ def is_w8a8sc(type_desc):
 
 
 def calc_w8a8sc_linear_pack_type(weights, linear_names, pack_name=None):
-    if not pack_name:
+    if pack_name:
         quant_desc = weights.quant_desc.get(f'{pack_name}.weight', None)
         if quant_desc == QuantType.W8A8SC.upper():
             return PackType.ALL_W8A8SC
@@ -51,7 +51,7 @@ def is_w8a8(type_desc):
 
 
 def calc_w8a8_linear_pack_type(weights, linear_names, norm_name, pack_name=None):
-    if not pack_name:
+    if pack_name:
         quant_desc = weights.quant_desc.get(f'{pack_name}.weight', None)
         if quant_desc in QUANT_W8A8_DESC_LIST:
             return PackType.ALL_W8A8

@@ -120,6 +120,13 @@ atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operat
         outTensorDescs.at(0).dtype = param.isBF16 ? ACL_BF16 : ACL_FLOAT16;
         outTensorDescs.at(0).shape = inTensorDescs.at(0).shape;
         auto outDimSize = outTensorDescs.at(0).shape.dimNum;
+        if (param.quantType == W8A16) {
+            outTensorDescs.at(0).shape.dims[outDimSize - 1] = inTensorDescs.at(IN_WEIGHT).shape.dims[1];
+        } else if (param.quantType == LINEAR_W8A8_SC_DEQUANT || param.quantType == LINEAR_W8A8_SC_QUANT) {
+            outTensorDescs.at(0).shape.dims[outDimSize - 1] = inTensorDescs.at(IN_COMPRESS_IDX).shape.dims[0];
+        } else {
+            outTensorDescs.at(0).shape.dims[outDimSize - 1] = inTensorDescs.at(IN_WEIGHT).shape.dims[0];
+        }
         outTensorDescs.at(0).shape.dims[outDimSize - 1] = param.quantType == W8A16 \
             ? inTensorDescs.at(1).shape.dims[1] : inTensorDescs.at(1).shape.dims[0];
         return atb::NO_ERROR;

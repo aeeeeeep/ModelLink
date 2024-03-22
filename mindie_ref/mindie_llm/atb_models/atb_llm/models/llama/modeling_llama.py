@@ -194,7 +194,7 @@ class LlamaMLP(nn.Module):
             elif self.pack_type == PackType.ALL_W8A8SC:
                 self.gate_up_proj = TensorParallelColumnLinear.load(
                     config,
-                    prefix=f"{prefix}.{pack_name}",
+                    prefix=f"{prefix}.gate_up_proj",
                     weights=weights,
                     bias=False,
                 )
@@ -298,7 +298,7 @@ class FlashLlamaAttention(torch.nn.Module):
             elif self.pack_type == PackType.ALL_W8A8SC:
                 self.query_key_value = TensorParallelColumnLinear.load(
                     config,
-                    prefix=f"{prefix}.{pack_name}",
+                    prefix=f"{prefix}.query_key_value",
                     weights=weights,
                     bias=False,
                 )
