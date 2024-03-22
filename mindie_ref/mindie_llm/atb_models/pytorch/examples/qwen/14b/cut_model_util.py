@@ -125,7 +125,7 @@ if __name__ == "__main__":
         creat_model.save_pretrained(target_dir)
         creat_model.config.auto_map["AutoModelForCausalLM"] = "modeling_qwen_ascend.QWenLMHeadModel"
         creat_model.config.save_pretrained(target_dir)
-        for source_file in ["generation_config.json","tokenizer_config.json","configuration_qwen.py", "qwen_generation_utils.py", "cpp_kernels.py", "qwen.tiktoken", "modeling_qwen_ascend.py"]:
+        for source_file in ["generation_config.json", "tokenizer_config.json", "configuration_qwen.py", "qwen_generation_utils.py", "cpp_kernels.py", "qwen.tiktoken", "modeling_qwen_ascend.py"]:
             shutil.copy(os.path.join(model_path, source_file), target_dir)
 
     print('Tensor parallelism weights have been successfully saved.')
