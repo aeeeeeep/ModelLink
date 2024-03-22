@@ -18,32 +18,46 @@
 
 #include <atb/atb_infer.h>
 #include <atb/svector.h>
-
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
+#include "nlohmann/json.hpp"
+#pragma GCC diagnostic pop
 #include "atb_speed/base/hosttensor_binder.h"
-#include "atb_speed/log.h"
-#include "atb_speed/utils/str_split.h"
 
 namespace atb_speed {
 namespace internlm_20b {
-struct FlashAttentionRopeLayerParam {
+struct FlashAttentionLayerParam {
     float rmsNormEps = 0;
     int headNum = 0;
-    int dk = 0;
+    int kvHeadNum = 0;
+    int dk = 0; // headDim
     int rank = 0;
     int rankSize = 1;
-    std::string model = "internlm_20b";
+    int isTriuMask = 0;
+    std::string backend = "hccl";
+    std::string model = "internlm20b";
+    float qScale = 1.0;
+    bool quantModel = false;
+    bool sparseModel = false;
+    bool isEncoder = false;
+    bool isBF16 = false;
+    // 量化参数
+    float qkvInputScale = 1;
+    int qkvInputOffset = 0;
+    float denseInputScale = 1;
+    int denseInputOffset = 0;
+    float selfLnInputScale = 1;
+    int selfLnInputOffset = 0;
+    float ffnOutInputScale = 1;
+    int ffnOutInputOffset = 0;
 };
 
-void from_json(const nlohmann::json &paramJson, FlashAttentionRopeLayerParam &param);
-
-atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, atb::Operation **operation);
-
-atb::Operation *CreateFlashAttentionRopeLayer(const nlohmann::json &paramJson);
+atb::Status FlashAttentionLayer(const FlashAttentionLayerParam &param, atb::Operation **operation);
 
 class FlashAttentionRopeLayerBinder : public HostTensorBinder {
 public:
     FlashAttentionRopeLayerBinder();
-    ~FlashAttentionRopeLayerBinder() override;
+    virtual ~FlashAttentionRopeLayerBinder();
     void ParseParam(const nlohmann::json &paramJson) override;
     void BindTensor(atb::VariantPack &variantPack) override;
 

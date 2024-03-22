@@ -15,6 +15,7 @@
  */
 #ifndef ATB_SPEED_MODELS_INTERNLM_20B_FLASH_ATTENTION_MODEL_H
 #define ATB_SPEED_MODELS_INTERNLM_20B_FLASH_ATTENTION_MODEL_H
+
 #include "atb_speed/base/model.h"
 
 namespace atb_speed {
@@ -24,36 +25,45 @@ public:
     struct Param {
         double rmsNormEps = 0;
         int headNum = 0;
+        int kvHeadNum = 0;
         int dk = 0;
         int layerNum = 0;
         float qkScale = 1.0;
         int rank = 0;
         int rankSize = 1;
+        int isTriuMask = 0;
+        std::string backend = "hccl";
+        bool quantModel = false;
+        bool sparseModel = false;
+        bool isEncoder = false;
+        bool isBF16 = false;
+        // 量化参数
+        std::vector<float> qkvInputScale;
+        std::vector<int> qkvInputOffset;
+        std::vector<float> denseInputScale;
+        std::vector<int> denseInputOffset;
+        std::vector<float> selfLnInputScale;
+        std::vector<int> selfLnInputOffset;
+        std::vector<float> ffnOutInputScale;
+        std::vector<int> ffnOutInputOffset;
+        std::vector<int> floatLayers;
+
         void FromString(const std::string &param);
     };
 
     explicit FlashAttentionRopeModel(const std::string &param);
-
     ~FlashAttentionRopeModel();
-
     uint32_t GetInputNum() const override;
-
     uint32_t GetOutputNum() const override;
-
     atb::Status InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
-        std::vector<atb::TensorDesc> &outTensorDescs) override;
+                           std::vector<atb::TensorDesc> &outTensorDescs) override;
 
 private:
     int64_t BuildGraph() override;
-
     Param param_;
-
     atb::Status ParseParam(const std::string &param) override;
-
     atb::Status BindParamHostTensor(uint32_t nodeId) override;
-
     std::vector<int32_t> tokenOffset_;
-
     std::vector<int32_t> seqLen_;
 };
 
