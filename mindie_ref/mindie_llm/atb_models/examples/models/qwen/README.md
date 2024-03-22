@@ -39,7 +39,7 @@ Paged Attention 场景需要.safetensors格式的权重，如果没有，参考[
 ```shell
 python quant_qwen_14b_w8a8.py ${浮点权重路径} ${量化权重保存路径}
 ```
-导出量化权重后应生成`quant_model_weight.safetensors`和`quant_model_description.json`两个文件。
+导出量化权重后应生成`quant_model_weight_w8a8.safetensors`和`quant_model_description_w8a8.json`两个文件。
 
 注：
 
