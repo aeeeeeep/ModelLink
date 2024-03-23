@@ -13,38 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef ATB_SPEED_MODELS_GLM130B_FUSION_PARALLEL_MODEL_H
-#define ATB_SPEED_MODELS_GLM130B_FUSION_PARALLEL_MODEL_H
+#ifndef ATB_SPEED_MODELS_TELECHAT_COMMON_PA_MODEL_H
+#define ATB_SPEED_MODELS_TELECHAT_COMMON_PA_MODEL_H
 #include <atb/svector.h>
-#include <vector>
 #include "atb_speed/base/model.h"
 #include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {
-namespace glm130b {
-class FusionParallelModel : public Model {
+namespace telechat {
+class PAModel : public Model {
 public:
     struct Param {
-        int layerNum = 0;
+        double rmsNormEps = 0;
         int headNum = 0;
-        int headDim = 0;
+        int dk = 0;
+        int layerNum = 0;
         int rank = 0;
         int rankSize = 1;
-        int rankRoot = 0;
-        int coderType = 0;
-        float residualAddScale = 0;
-        double layerNormEps = 0;
+        bool transposedWeight = false;
+        bool isPrefill = false;
         std::string backend = "hccl";
-        atb::SVector<int32_t> perm = {1, 2, 0, 3};
-        std::vector<float> qScale;
-        std::vector<float> qkScale;
-        void FromString(const std::string &param);
+        bool isLmHeadParallel = false;
+        int64_t FromString(const std::string &param);
     };
 
-    explicit FusionParallelModel(const std::string &param);
-    ~FusionParallelModel();
+    explicit PAModel(const std::string &param);
+
+    ~PAModel();
+
     uint32_t GetInputNum() const override;
+
     uint32_t GetOutputNum() const override;
+
     atb::Status InferShape(const std::vector<atb::TensorDesc> &inTensorDescs,
                            std::vector<atb::TensorDesc> &outTensorDescs) override;
 
@@ -52,15 +52,13 @@ private:
     virtual int64_t BuildGraph() override;
     atb::Status ParseParam(const std::string &param) override;
     atb::Status BindParamHostTensor(uint32_t nodeId) override;
-
-private:
+    
     Param param_;
     atb::SVector<int32_t> tokenOffset_;
     atb::SVector<int32_t> seqLen_;
 };
 
-REGISTER_MODEL(glm130b, FusionParallelModel);
 
-} // namespace glm130b
+} // namespace telechat
 } // namespace atb_speed
 #endif

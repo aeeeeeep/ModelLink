@@ -17,6 +17,7 @@ import importlib
 from datetime import datetime, timedelta, timezone
 from importlib import reload
 from pathlib import Path
+
 import torch
 import torch.nn.functional as F
 try:
@@ -26,9 +27,10 @@ except ModuleNotFoundError:
 import numpy as np
 import pandas as pd
 import transformers
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoModel
 from thefuzz import process
 from tqdm import tqdm
+
 try:
     ATB_SPEED_HOME_PATH = os.environ.get("ATB_SPEED_HOME_PATH")
     sys.path.append(os.path.join(ATB_SPEED_HOME_PATH, "../.."))
@@ -122,7 +124,7 @@ dtype_map = {"bf16": torch.bfloat16, "fp16": torch.float16}
 core_map = {"NPU": "npu", "GPU": "cuda"}
 prompt_map = {"GSM8K": "", "TruthfulQA": QA_PRIMER}
 question_num = {"GSM8K": 11, "TruthfulQA": 12}
-CEval_0_shot = {}
+CEval_0_shot = {"chatglm6b"}
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -208,7 +210,8 @@ class ModelTest:
             self.model_name += "_quant"
             csv_path = os.path.join(os.path.dirname(self.script_path), 'result', self.model_name, f"{self.model_type}_{self.data_type}_{self.quantize}_batch{self.batch_size}_{self.test_mode}_test_result_formatted.csv")
         else:
-            torch.npu.set_compile_mode(jit_compile=False)
+            if self.hardware_type == "NPU":
+                torch.npu.set_compile_mode(jit_compile=False)
             csv_path = os.path.join(os.path.dirname(self.script_path), 'result', self.model_name, f"{self.model_type}_{self.data_type}_batch{self.batch_size}_{self.test_mode}_test_result_formatted.csv")
         
         self.data_dir = os.path.join(self.data_dir, self.model_name, "data")
@@ -256,7 +259,7 @@ class ModelTest:
             os.environ['LCCL_DETERMINISTIC'] = "1"
             os.environ['HCCL_DETERMINISTIC'] = "1"
         os.environ['core_type'] = self.core_type
-        self.local_rank, self.world_size = int(os.getenv("RANK", "0")), int(os.getenv("WORLD_SIZE", "1"))
+        self.rank, self.local_rank, self.world_size = int(os.getenv("RANK", "0")), int(os.getenv("LOCAL_RANK", "0")), int(os.getenv("WORLD_SIZE", "1"))
        
         torch.manual_seed(1)
         self.device_type = self.__get_device_type()
@@ -364,7 +367,8 @@ class ModelTest:
                         e2e_time = e2e_end - e2e_start
                 else:
                     input_dict = {
-                        'rank': self.local_rank,
+                        'rank': self.rank,
+                        'local_rank': self.local_rank,
                         'world_size': self.world_size,
                         'max_prefill_tokens': -1,
                         'block_size': 128,
@@ -377,7 +381,7 @@ class ModelTest:
                         'max_output_length': seq_len_out
                     }
                     pa_runner = PARunner(**input_dict)
-                    self.logger.info(str(self.local_rank) + f'pa_runner: {pa_runner}')
+                    self.logger.info(str(self.rank) + f'pa_runner: {pa_runner}')
                     pa_runner.warm_up()
                     input_ids = torch.randint(0, pa_runner.model.config.vocab_size, [seq_len_in],
                                               dtype=torch.int64)
@@ -385,7 +389,7 @@ class ModelTest:
                     del pa_runner
                     torch.npu.empty_cache()
 
-                if self.local_rank == 0:
+                if self.rank == 0:
                     if self.model_type == "fa":
                         first_token_time_tensor = torch.load(f"{folder_path}/first_token_time.pth").cpu()
                         first_token_time = first_token_time_tensor.item()
@@ -417,7 +421,7 @@ class ModelTest:
                          str(round(non_first_token_throughput, 10)).ljust(36),
                          str(round(e2e_throughput, 10)).ljust(25)])
 
-            if self.local_rank == 0:
+            if self.rank == 0:
                 non_first_token_throughput_average = non_first_token_throughput_total / len(self.case_pair)
                 e2e_throughput_average = e2e_throughput_total / len(self.case_pair)
                 self.logger.info(
@@ -463,7 +467,8 @@ class ModelTest:
         self.logger.info("precision test start")
         if self.hardware_type == "NPU":
             input_dict = {
-                'rank': self.local_rank,
+                'rank': self.rank,
+                'local_rank': self.local_rank,
                 'world_size': self.world_size,
                 'max_prefill_tokens': -1,
                 'block_size': 128,
@@ -476,7 +481,7 @@ class ModelTest:
                 'max_output_length': 512,
             }
             self.pa_runner = PARunner(**input_dict)
-            self.logger.info(str(self.local_rank) + f'pa_runner: {self.pa_runner}')
+            self.logger.info(str(self.rank) + f'pa_runner: {self.pa_runner}')
             self.pa_runner.warm_up()
         else:
             self.tokenizer = AutoTokenizer.from_pretrained(self.weight_dir, use_fast=False, padding_side="left", truncation_side="left", trust_remote_code=True)
@@ -489,7 +494,11 @@ class ModelTest:
             if "llama" in self.model_name:
                 self.tokenizer.pad_token_id = 0
 
-            self.model = AutoModelForCausalLM.from_pretrained(self.weight_dir, device_map="auto", torch_dtype="auto", trust_remote_code=True)
+            
+            if "chatglm6b" in self.model_name:
+                self.model = AutoModel.from_pretrained(self.weight_dir, device_map="auto", torch_dtype="auto", trust_remote_code=True)
+            else:
+                self.model = AutoModelForCausalLM.from_pretrained(self.weight_dir, device_map="auto", torch_dtype="auto", trust_remote_code=True)
             self.device = self.model.device
 
         if self.test_mode == "simplified":
@@ -562,9 +571,9 @@ class ModelTest:
                         request_from_text(queries[i], self.tokenizer, 1024, self.cache_config.block_size, req_idx=i) for
                         i in range(len(queries))]
                     generate_req(req_list, self.model, self.tokenizer, self.batch_size, 3072 * self.batch_size, 1024,
-                                 self.cache_manager, self.local_rank)
+                                 self.cache_manager, self.rank)
                     generate_text_list, token_num_list = decode_token(req_list, self.tokenizer)
-                    if self.local_rank == 0:
+                    if self.rank == 0:
                         self.logger.info(f'Question: {queries}')
                         for i, generate_text in enumerate(generate_text_list):
                             self.logger.info(f'Answer: {generate_text}')
@@ -608,10 +617,7 @@ class ModelTest:
                     if self.model_type == "fa":
                         inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
                                                 max_length=2048).to(0)
-                        tokenizer_out_ids = inputs.input_ids.to(0)
-                        attention_mask = inputs.attention_mask.to(0)
-                        outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
-                                                      do_sample=False, max_new_tokens=512)
+                        outputs = self.model.generate(**inputs, do_sample=False, max_new_tokens=512)
                         intermediate_outputs = []
                         for idx in range(len(outputs)):
                             output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
@@ -724,9 +730,12 @@ class ModelTest:
 
                 if self.model_type == "fa":
                     inputs = self.tokenizer(prompts, padding=True, return_tensors="pt", truncation=True, max_length=2048).to(0)
-                    tokenizer_out_ids = inputs.input_ids.to(0)
-                    attention_mask = inputs.attention_mask.to(0)
-                    outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask, do_sample=False, max_new_tokens=20)
+                    if "chatglm6b" in self.model_name:
+                        outputs = self.model.generate(**inputs, do_sample=False, max_new_tokens=20)
+                    else:
+                        tokenizer_out_ids = inputs.input_ids.to(0)
+                        attention_mask = inputs.attention_mask.to(0)
+                        outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask, do_sample=False, max_new_tokens=20)
                     answers = []
                     for idx in range(len(outputs)):
                         output = outputs.tolist()[idx][len(inputs["input_ids"][idx]):]
@@ -943,7 +952,7 @@ class ModelTest:
                             request_from_text(queries[i], self.tokenizer, 512, self.cache_config.block_size, req_idx=i)
                             for i in range(len(queries))]
                         generate_req(req_list, self.model, self.tokenizer, self.batch_size, 2560 * self.batch_size, 512,
-                                     self.cache_manager, self.local_rank)
+                                     self.cache_manager, self.rank)
                         generate_text_list, _ = decode_token(req_list, self.tokenizer)
                         if is_result:
                             for idx, ans in enumerate(batch['answer']):
@@ -1476,11 +1485,11 @@ class ModelTest:
             raise RuntimeError("unsupported hardware type")
         self.logger.info(f"{communication_map[self.hardware_type]} distributed process init success.")
         if self.hardware_type == "NPU":
-            self.logger.info(f"user npu:{self.local_rank}")
-            torch_npu.npu.set_device(torch.device(f"npu:{self.local_rank}"))
+            self.logger.info(f"user npu:{self.rank}")
+            torch_npu.npu.set_device(torch.device(f"npu:{self.rank}"))
         elif self.hardware_type == "GPU":
-            self.logger.info(f"user gpu:{self.local_rank}")
-            torch.cuda.set_device(self.local_rank)
+            self.logger.info(f"user gpu:{self.rank}")
+            torch.cuda.set_device(self.rank)
         self.logger.info("Device Set Success!")
 
     def __npu_adapt(self):

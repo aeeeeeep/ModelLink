@@ -62,7 +62,7 @@ atb::Status CreateLinearW8A8(const LinearW8A8Param &param, atb::Operation **oper
     linearQuantParam.transposeA = false;
     linearQuantParam.transposeB = param.transWeight;
     linearQuantParam.hasBias = false;
-    linearQuantParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
+    linearQuantParam.outDataType = ACL_FLOAT16;
     CreateOperation(linearQuantParam, &linearQuantNode.operation);
     linearQuantNode.inTensorIds = {INTERMIDATE_INPUT, IN_WEIGHT, IN_DEQSCALE};
     linearQuantNode.outTensorIds = {OUT_LINEAROUT};

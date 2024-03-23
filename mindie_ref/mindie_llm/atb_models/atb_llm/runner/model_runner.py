@@ -27,7 +27,8 @@ class ModelRunner:
                  ):
         self.model_name_or_path = model_name_or_path
         self.rank = rank
-        self.npu_id = npu_id if npu_id is not None else local_rank
+        self.local_rank = local_rank if local_rank is not None else rank
+        self.npu_id = npu_id if npu_id is not None else self.local_rank
         self.world_size = world_size
 
         if ENV.bind_cpu:

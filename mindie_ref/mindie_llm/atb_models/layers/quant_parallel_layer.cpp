@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "parallel_layer.h"
+#include "quant_parallel_layer.h"
 
 #include <atb/atb_infer.h>
 #pragma GCC diagnostic push
@@ -23,6 +23,8 @@
 
 #include "atb_speed/log.h"
 
+#include "layers/plugin_op/w8a16_operation.h"
+
 namespace atb_speed {
 namespace common {
 enum ParallelType : int {
@@ -31,8 +33,8 @@ enum ParallelType : int {
 };
 
 template <class T>
-atb::Status ParallelLinearBase(const ParallelParam &param_, atb::Operation **operation, T config,
-                               const ParallelType parallelType)
+atb::Status QuantParallelLinearBase(const QuantParallelParam &param_, atb::Operation **operation, T config,
+                                    const ParallelType parallelType)
 {
     atb::GraphParam opGraph;
     opGraph.name = "ParallelLinearBase";
@@ -41,13 +43,21 @@ atb::Status ParallelLinearBase(const ParallelParam &param_, atb::Operation **ope
     opGraph.internalTensorNum = config.interTensorNum;
     opGraph.nodes.resize(config.nodeCount);
 
+    std::shared_ptr<int64_t> bsPtr1 = std::make_shared<int64_t>(0);
+
     size_t nodeId = 0;
     atb::Node &matmulNode = opGraph.nodes.at(nodeId++);
 
-    atb::infer::LinearParam matmulParam = {param_.transposeA, param_.transposeB, false};
-    CREATE_OPERATION(matmulParam, &matmulNode.operation);
-    matmulNode.inTensorIds = {config.IN_INPUT, config.IN_WEIGHT};
+    matmulNode.operation = new atb_speed::common::W8A16Operation(opGraph.name);
+    matmulNode.inTensorIds = {config.IN_INPUT, config.IN_WEIGHT, config.IN_DEQUANT_SCALE, config.IN_DEQUANT_OFFSET};
     matmulNode.outTensorIds = {config.INTERMIDATE_MATMULOUT};
+    matmulNode.inTensorReshapeFuncs.resize(matmulNode.inTensorIds.size());
+    matmulNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+        *bsPtr1 = oldShape.dims[0];
+        newShape.dimNum = 2; // dimNum is 2
+        newShape.dims[0] = oldShape.dims[0] * oldShape.dims[1];
+        newShape.dims[1] = oldShape.dims[2];
+    };
 
     if (param_.rankSize > 1) {
         atb::Node &parallelNode = opGraph.nodes.at(nodeId++);
@@ -57,24 +67,31 @@ atb::Status ParallelLinearBase(const ParallelParam &param_, atb::Operation **ope
             allReduceParam.rank = param_.rank;
             allReduceParam.rankSize = param_.rankSize;
             allReduceParam.backend = param_.backend;
-            CREATE_OPERATION(allReduceParam, &parallelNode.operation);
+            atb::CreateOperation(allReduceParam, &parallelNode.operation);
         } else {
             atb::infer::AllGatherParam allGatherParam;
             allGatherParam.rank = param_.rank;
             allGatherParam.rankSize = param_.rankSize;
             allGatherParam.backend = param_.backend;
-            CREATE_OPERATION(allGatherParam, &parallelNode.operation);
+            atb::CreateOperation(allGatherParam, &parallelNode.operation);
         }
 
         parallelNode.inTensorIds = {config.INTERMIDATE_MATMULOUT};
         parallelNode.outTensorIds = {config.INTERMIDATE_ALLREDUCEOUT};
+        parallelNode.inTensorReshapeFuncs.resize(parallelNode.inTensorIds.size());
+        parallelNode.inTensorReshapeFuncs[0] = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+        newShape.dimNum = 3; // dimNum is 3
+        newShape.dims[0] = *bsPtr1;
+        newShape.dims[1] = oldShape.dims[0] / *bsPtr1;
+        newShape.dims[2] = oldShape.dims[1];
+    };
     }
 
     if (param_.isBias) {
         atb::Node &addNode = opGraph.nodes.at(nodeId++);
         atb::infer::ElewiseParam addParam;
         addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-        CREATE_OPERATION(addParam, &addNode.operation);
+        atb::CreateOperation(addParam, &addNode.operation);
         addNode.inTensorIds = {param_.rankSize > 1 ? config.INTERMIDATE_ALLREDUCEOUT : config.INTERMIDATE_MATMULOUT,
                                config.IN_BIAS};
         addNode.outTensorIds = {config.OUT_LINEAROUT};
@@ -121,40 +138,35 @@ atb::Status ParallelLinearBase(const ParallelParam &param_, atb::Operation **ope
         };
     }
 
-    CREATE_OPERATION(opGraph, operation);
+    atb::CreateOperation(opGraph, operation);
     return atb::NO_ERROR;
 }
 
-atb::Status ParallelLinear(const ParallelParam &param_, atb::Operation **operation, const ParallelType parallelType)
+atb::Status QuantParallelLinear(const QuantParallelParam &param_, atb::Operation **operation, const ParallelType parallelType)
 {
     if (param_.isBias && (param_.rankSize > 1)) {
-        return ParallelLinearBase(param_, operation, LinearWithBiasAndParallel(3, 1, 2, 3),
-                                  parallelType); // 3:in 1:out 2:inter 3:node
+        // 5:in 1:out 2:inter 3:node
+        return QuantParallelLinearBase(param_, operation, QuantLinearWithBiasAndParallel(5, 1, 2, 3), parallelType);
     } else if (param_.isBias) {
-        return ParallelLinearBase(param_, operation, LinearWithBias(3, 1, 1, 2),
-                                  parallelType); // 3:in 1:out 1:inter 2:node
+        // 5:in 1:out 1:inter 2:node
+        return QuantParallelLinearBase(param_, operation, QuantLinearWithBias(5, 1, 1, 2), parallelType);
     } else if (param_.rankSize > 1) {
-        return ParallelLinearBase(param_, operation, LinearWithParallel(2, 1, 1, 2),
-                                  parallelType); // 2:in 1:out 1:inter 2:node
+        // 2:in 1:out 1:inter 2:node
+        return QuantParallelLinearBase(param_, operation, QuantLinearWithParallel(4, 1, 1, 2), parallelType);
     } else {
-        return ParallelLinearBase(param_, operation, LinearOnly(2, 1, 0, 1), parallelType); // 2:in 1:out 0:inter 1:node
+        // 4:in 1:out 0:inter 1:node
+        return QuantParallelLinearBase(param_, operation, QuantLinearOnly(4, 1, 0, 1), parallelType);
     }
 }
 
-atb::Status RowParallelLinear(const ParallelParam &param_, atb::Operation **operation)
+atb::Status QuantRowParallelLinear(const QuantParallelParam &param_, atb::Operation **operation)
 {
-    return ParallelLinear(param_, operation, ROW_PARALLEL);
+    return QuantParallelLinear(param_, operation, ROW_PARALLEL);
 }
 
-atb::Status ColumnParallelLinear(const ParallelParam &param_, atb::Operation **operation)
+atb::Status QuantColumnParallelLinear(const QuantParallelParam &param_, atb::Operation **operation)
 {
-    return ParallelLinear(param_, operation, COLUMN_PARALLEL);
-}
-
-atb::Status VocabParallelEmbedding(atb::Operation **operation)
-{
-    (void)&operation;
-    return 0;
+    return QuantParallelLinear(param_, operation, COLUMN_PARALLEL);
 }
 
 } // namespace common
