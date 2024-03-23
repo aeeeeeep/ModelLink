@@ -27,10 +27,12 @@ namespace atb_speed {
 namespace common {
 
 enum LinearQuantType : unsigned int {
-    LINEAR_NO_QUANT = 0,
-    NORM_QUANT_LINEAR_DEQUANT = 1,  // QUANT在RMS_NORM中执行，DEQUANT在此operaion中执行
-    LINEAR_QUANT = 2,         // QUANT和DEQUANT操作都在此Operation中执行
-    LINEAR_W8A16_QUANT = 3,
+    NO_QUANT = 0,
+    LINEAR_W8A8_DEQUANT,  // QUANT在RMS_NORM中执行，DEQUANT在此operaion中执行
+    LINEAR_W8A8_QUANT,         // QUANT和DEQUANT操作都在此Operation中执行
+    W8A16,
+    LINEAR_W8A8_SC_DEQUANT,
+    LINEAR_W8A8_SC_QUANT,
 };
 
 enum LinearType : int {

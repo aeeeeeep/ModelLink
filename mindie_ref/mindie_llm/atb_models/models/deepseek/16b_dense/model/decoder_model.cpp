@@ -30,7 +30,7 @@ namespace atb_speed {
 namespace deepseekDense {
 
 // Weight count
-const int WEIGHT_COUNT_PER_LAYER = 156;
+const int WEIGHT_COUNT_PER_LAYER = 160;
 const int WEIGHT_COUNT_WORD_EMBEDDINGNODE = 1;
 const int WEIGHT_COUNT_POST_NORM = 1;
 const int WEIGHT_COUNT_LM_HEAD = 1;
@@ -338,6 +338,7 @@ int64_t DecoderModel::BuildGraph()
         // shape: [vocabSizePerRank, hiddenSize]
         &graph_.weightTensors.at(finalLinearWeightTensorId),
         // LmHead未接入量化，量化权重使用placeholder代替
+        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
         &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
         &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
         &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),

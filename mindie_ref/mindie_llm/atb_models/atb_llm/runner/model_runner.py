@@ -1,5 +1,5 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
-from typing import Optional
+import os
 import torch
 from ..models import get_model
 from ..utils.env import ENV
@@ -81,3 +81,9 @@ class ModelRunner:
 
     def generate(self, **kwargs):
         return self.model.generate(**kwargs)
+
+    def save_pretrained(self, **kwargs):
+        if 'save_directory' not in kwargs:
+            raise ValueError('save_directory is required')
+        kwargs['save_directory'] = os.path.join(kwargs['save_directory'], f'part{self.rank}')
+        return self.model.save_pretrained(**kwargs)

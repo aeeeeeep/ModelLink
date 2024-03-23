@@ -19,7 +19,7 @@
 namespace atb_speed {
 namespace common {
 
-static const uint64_t IN_TENSOR_COUNT = 11;
+static const uint64_t IN_TENSOR_COUNT = 12;
 static const uint64_t OUT_TENSOR_COUNT = 2;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 1;
 static const uint64_t NODE_COUNT = 2;
@@ -36,6 +36,7 @@ enum NormLinearTensorIdx : uint32_t {
     IN_OFFSET,
     IN_DESCALE,
     IN_BIAS,
+    IN_COMPRESS_IDX,
     OUT_NEXT_RESIDUAL_IN,
     OUT_LINEAR,
     INTERMEDIATE_NORM,
@@ -72,19 +73,10 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
     linearNode.inTensorIds = {
         param.nextResidualAddIn == NORM_OUT ? NormLinearTensorIdx::OUT_NEXT_RESIDUAL_IN : NormLinearTensorIdx::INTERMEDIATE_NORM,
         NormLinearTensorIdx::IN_LINEAR_WEIGHT, NormLinearTensorIdx::IN_SCALE,
-        NormLinearTensorIdx::IN_OFFSET, NormLinearTensorIdx::IN_DESCALE, NormLinearTensorIdx::IN_BIAS
+        NormLinearTensorIdx::IN_OFFSET, NormLinearTensorIdx::IN_DESCALE, NormLinearTensorIdx::IN_BIAS,
+        NormLinearTensorIdx::IN_COMPRESS_IDX
     };
     linearNode.outTensorIds = {NormLinearTensorIdx::OUT_LINEAR};
-
-    opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
-                                 atb::SVector<atb::TensorDesc> &outTensorDescs) {
-        outTensorDescs.at(0) = inTensorDescs.at(IN_RESIDUAL_INPUT);
-        outTensorDescs.at(1) = inTensorDescs.at(IN_INPUT);
-        auto outDimSize = outTensorDescs.at(1).shape.dimNum;
-        outTensorDescs.at(1).shape.dims[outDimSize - 1] = param.fusionLinearParam.quantType == LINEAR_W8A16_QUANT \
-            ? inTensorDescs.at(IN_LINEAR_WEIGHT).shape.dims[1] : inTensorDescs.at(IN_LINEAR_WEIGHT).shape.dims[0];
-        return atb::NO_ERROR;
-    };
 
     CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
@@ -100,6 +92,31 @@ NormQuantType GetNormQuantType(const int &packQuantType)
         return NormQuantType::NORM_ANTI_OUTLIER_QUANT;
     }
 }
+
+LinearQuantType GetLinearQuantType(const int &packQuantType, const int &linearType, bool hasNorm)
+{
+    if (linearType == atb_speed::common::LinearType::FP) {
+        return atb_speed::common::LinearQuantType::NO_QUANT;
+    } else if (packQuantType == atb_speed::common::ALL_W8A16) {
+        return atb_speed::common::LinearQuantType::W8A16;
+    } else {
+        if (packQuantType == atb_speed::common::ALL_W8A8SC || packQuantType == atb_speed::common::MIX_W8A8SC) {
+            if (hasNorm) {
+                return atb_speed::common::LinearQuantType::LINEAR_W8A8_SC_DEQUANT;
+            } else {
+                return atb_speed::common::LinearQuantType::LINEAR_W8A8_SC_QUANT;
+            }
+        } else {
+            if (hasNorm) {
+                return atb_speed::common::LinearQuantType::LINEAR_W8A8_DEQUANT;
+            } else {
+                return atb_speed::common::LinearQuantType::LINEAR_W8A8_QUANT;
+            }
+        }
+    }
+}
+
+template atb::Status NormLinear(const NormLinearParam<atb::infer::RmsNormParam> &param, atb::Operation **operation);
 
 template atb::Status NormLinear(const NormLinearParam<atb::infer::RmsNormParam> &param, atb::Operation **operation);
 template atb::Status NormLinear(const NormLinearParam<atb::infer::LayerNormParam> &param, atb::Operation **operation);

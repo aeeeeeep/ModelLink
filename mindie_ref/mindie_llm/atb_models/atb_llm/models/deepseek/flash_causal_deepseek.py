@@ -75,8 +75,8 @@ class FlashDeepseekForCausalLM(FlashForCausalLM):
         weights = [self.weights.get_tensor("model.embed_tokens.weight").npu()]
 
         IN_INPUT_NORM_PLACEHOLDER_NUM = 3
-        IN_QKV_PLACEHOLDER_NUM = 14
-        IN_ATTENTION_OUT_PLACEHOLDER = 4
+        IN_QKV_PLACEHOLDER_NUM = 17
+        IN_ATTENTION_OUT_PLACEHOLDER = 5
 
         for i in range(self.num_layers):
             weights_t = []

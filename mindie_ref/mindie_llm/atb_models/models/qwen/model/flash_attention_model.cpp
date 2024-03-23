@@ -238,7 +238,7 @@ int64_t FlashAttentionModel::BuildGraph()
                             // LmHead未接入量化，量化权重使用placeholder代替
                             &graph_.inTensors.at(IN_HOLDER), &graph_.inTensors.at(IN_HOLDER),
                             &graph_.inTensors.at(IN_HOLDER), &graph_.inTensors.at(IN_HOLDER),
-                            &graph_.inTensors.at(IN_FINAL_NORM_SLICE_OFFSET)};
+                            &graph_.inTensors.at(IN_HOLDER), &graph_.inTensors.at(IN_FINAL_NORM_SLICE_OFFSET)};
     // shape: FA: [batchSize, seqLen, vocabSize] PA: [seqLen, vocabSize]
     lmHeadNode.outTensors = {&graph_.outTensors.at(OUT_TENSOR_HIDDENSTATES)};
 

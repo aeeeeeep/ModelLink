@@ -36,7 +36,7 @@ REGISTER_MODEL(baichuan2_13b, PagedAttentionQuantModel);
 
 // weight count
 const int WEIGHT_COUNT_WORD_EMBEDDINGNODE = 1;
-const int WEIGHT_COUNT_PER_LAYER = 43;  // pre_norm(4) + qkv(15) + o_proj(5) + post_norm(4) + mlp(15)，对于所有模型，该值固定不变，不够补充填充符
+const int WEIGHT_COUNT_PER_LAYER = 50;  // pre_norm(4) + qkv(15) + o_proj(5) + post_norm(4) + mlp(15)，对于所有模型，该值固定不变，不够补充填充符
 const int WEIGHT_COUNT_POST_NORM = 1;  // 
 const int WEIGHT_COUNT_LM_HEAD = 1;  // 
 
@@ -280,6 +280,7 @@ int64_t PagedAttentionQuantModel::BuildGraph()
         // shape: [vocabSizePerRank, hiddenSize]
         &graph_.weightTensors.at(finalLinearWeightTensorId),
         // LmHead未接入量化，量化权重使用placeholder代替
+        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
         &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
         &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
         &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),

@@ -317,6 +317,7 @@ int64_t PAQuantModel::BuildGraph()
         &graph_.inTensors.at(IN_HOLDER),
         &graph_.inTensors.at(IN_HOLDER),
         &graph_.inTensors.at(IN_HOLDER),
+        &graph_.inTensors.at(IN_HOLDER),
         &graph_.inTensors.at(IN_TENSOR_LOGTIS_INDICES)
     };
     lmHeadNode.outTensors = {&graph_.outTensors.at(0)};
