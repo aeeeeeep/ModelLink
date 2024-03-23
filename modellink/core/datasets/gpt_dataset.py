@@ -14,6 +14,21 @@ from modellink.error_utils import check_condition
 logger = logging.getLogger(__name__)
 
 
+def _cache_hit_check(description, document_index, sample_index, shuffle_index):
+    cache_hit = all(
+        map(
+            os.path.isfile,
+            [
+                description,
+                document_index,
+                sample_index,
+                shuffle_index,
+            ],
+        )
+    )
+    return cache_hit
+
+
 def _build_document_sample_shuffle_indices(
         self,
 ) -> Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]:
@@ -50,17 +65,8 @@ def _build_document_sample_shuffle_indices(
     path_to_document_index = get_path_to("document_index.npy")
     path_to_sample_index = get_path_to("sample_index.npy")
     path_to_shuffle_index = get_path_to("shuffle_index.npy")
-    cache_hit = all(
-        map(
-            os.path.isfile,
-            [
-                path_to_description,
-                path_to_document_index,
-                path_to_sample_index,
-                path_to_shuffle_index,
-            ],
-        )
-    )
+    cache_hit = _cache_hit_check(path_to_description,
+                                 path_to_document_index, path_to_sample_index, path_to_shuffle_index)
 
     num_tokens_per_epoch = _get_num_tokens_per_epoch(self.indexed_dataset, self.indexed_indices)
 
@@ -70,7 +76,10 @@ def _build_document_sample_shuffle_indices(
     device_count = torch.cuda.device_count()
     if device_count == 0:
         raise ZeroDivisionError
-    if not cache_hit and (torch.distributed.get_rank() % device_count) == 0:
+    local_rank = torch.distributed.get_rank() % device_count
+    world_size = torch.distributed.get_world_size()
+    create_data_for_last_stage = (local_rank == device_count - 1) and (world_size > device_count)
+    if not cache_hit and (local_rank == 0 or create_data_for_last_stage):
         log_single_rank(
             logger,
             logging.INFO,
@@ -177,6 +186,10 @@ def _build_document_sample_shuffle_indices(
         t_end = time.time()
         log_single_rank(logger, logging.DEBUG, f"\t> time elapsed: {t_end - t_beg:4f} seconds")
 
+    while not cache_hit:
+        cache_hit = _cache_hit_check(path_to_description,
+                                     path_to_document_index, path_to_sample_index, path_to_shuffle_index)
+        time.sleep(1)
     log_single_rank(
         logger, logging.INFO, f"Load the {type(self).__name__} {self.index_split.name} indices"
     )
