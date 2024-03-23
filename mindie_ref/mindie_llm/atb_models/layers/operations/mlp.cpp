@@ -200,6 +200,20 @@ atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation
     return atb::NO_ERROR;
 }
 
+MlpPackType GetMlpPackType(const int &packQuantType, bool up_weight_only)
+{
+    if (up_weight_only) {
+        return atb_speed::common::UP_WEIGHT_ONLY;
+    }
+    if (packQuantType == atb_speed::common::MIX_W8A8 \
+        || packQuantType == atb_speed::common::MIX_W8A8_ANTI \
+        || packQuantType == atb_speed::common::MIX_W8A8SC) {
+        return atb_speed::common::GATE_UP_WEIGHT_NO_PACK;
+    } else {
+        return atb_speed::common::GATE_UP_WEIGHT_PACK;
+    }
+}
+
 template atb::Status Mlp(const MlpParam<atb::infer::RmsNormParam> &param, atb::Operation **operation);
 
 template atb::Status Mlp(const MlpParam<atb::infer::LayerNormParam> &param, atb::Operation **operation);

@@ -141,13 +141,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     mlpParam.layerLinearQuantType = param.linearQuantType;
     mlpParam.packQuantType = param.packQuantType[1];
     // gate up
-    if (param.packQuantType[1] == atb_speed::common::MIX_W8A8 \
-        || param.packQuantType[1] == atb_speed::common::MIX_W8A8_ANTI \
-        || param.packQuantType[1] == atb_speed::common::MIX_W8A8SC) {
-        mlpParam.mlpPackType = atb_speed::common::GATE_UP_WEIGHT_NO_PACK;
-    } else {
-        mlpParam.mlpPackType = atb_speed::common::GATE_UP_WEIGHT_PACK;
-    }
+    mlpParam.mlpPackType = atb_speed::common::GetMlpPackType(param.packQuantType[1], false);
     atb::infer::RmsNormParam mlpRmsNormParam;
     mlpRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
     mlpRmsNormParam.normParam.epsilon = param.rmsNormEps;

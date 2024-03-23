@@ -69,21 +69,25 @@ enum DecoderLayerTensorIdx : uint32_t {
     IN_QKV_DESCALE_0,                   // Quant所需权重
     IN_QKV_OFFSET_0,                    // Quant所需权重
     IN_QKV_SCALE_0,                     // Quant所需权重
+    IN_QKV_COMPRESS_IDX_0,
     IN_QKV_WEIGHT_1,                    // Pack: no usage; No pack: (K) shape: [numKeyValueHeadsPerRank * hiddenSizePerAttentionHead, hiddenSize]
     IN_QKV_BIAS_1,                  // Quant所需权重
     IN_QKV_DESCALE_1,                   // Quant所需权重
     IN_QKV_OFFSET_1,                    // Quant所需权重
     IN_QKV_SCALE_1,                     // Quant所需权重
+    IN_QKV_COMPRESS_IDX_1,
     IN_QKV_WEIGHT_2,                    // Pack: no usage; No pack: (V) shape: [numKeyValueHeadsPerRank * hiddenSizePerAttentionHead, hiddenSize]
     IN_QKV_BIAS_2,                  // Quant所需权重
     IN_QKV_DESCALE_2,                   // Quant所需权重
     IN_QKV_OFFSET_2,                    // Quant所需权重
     IN_QKV_SCALE_2,                     // Quant所需权重
+    IN_QKV_COMPRESS_IDX_2,
     IN_ATTENTION_OUT_WEIGHT,            // shape: [hiddenSize, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
     IN_ATTENTION_OUT_BIAS,          // Quant所需权重
     IN_ATTENTION_OUT_DESCALE,           // Quant所需权重
     IN_ATTENTION_OUT_OFFSET,            // Quant所需权重
     IN_ATTENTION_OUT_SCALE,             // Quant所需权重
+    IN_ATTENTION_OUT_COMPRESS_IDX,
 
     IN_SELFATTENTION_OUT_NORM_WEIGHT,
     IN_MLP_GATEUP_WEIGHT_SHARED_EXPERT,
