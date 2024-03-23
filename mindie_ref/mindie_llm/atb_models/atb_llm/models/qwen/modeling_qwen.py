@@ -1,22 +1,8 @@
 # coding=utf-8
-# Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
-#
-# This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
-# and OPT implementations in this library. It has been modified from its
-# original forms to accommodate minor architectural differences compared
-# to GPT-NeoX and OPT used by the Meta AI team that trained the model.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Adapted from
+# https://huggingface.co/Qwen/Qwen-7B/blob/main/modeling_qwen.py
+# Copyright (c) Alibaba Cloud.
+# LICENSE: https://huggingface.co/Qwen/Qwen-7B/blob/main/LICENSE
 
 import math
 from typing import Optional, List, Tuple
@@ -39,8 +25,7 @@ from atb_llm.utils.layers import (
     reshape_and_cache
 )
 
-from atb_llm.utils.quantize.pack_type import PackType
-from atb_llm.utils.quantize.w8a8 import calc_linear_pack_type
+from atb_llm.utils.quantize.pack_type import PackType, calc_linear_pack_type
 from atb_llm.utils.log import logger
 
 
@@ -49,34 +34,34 @@ class QwenConfig(PretrainedConfig):
     keys_to_ignore_at_inference = ["past_key_values"]
 
     def __init__(
-        self,
-        vocab_size=151936,
-        hidden_size=4096,
-        num_hidden_layers=32,
-        num_attention_heads=32,
-        emb_dropout_prob=0.0,
-        attn_dropout_prob=0.0,
-        layer_norm_epsilon=1e-6,
-        initializer_range=0.02,
-        max_position_embeddings=8192,
-        scale_attn_weights=True,
-        use_cache=True,
-        bf16=False,
-        fp16=False,
-        fp32=False,
-        kv_channels=128,
-        rotary_pct=1.0,
-        rotary_emb_base=10000,
-        use_dynamic_ntk=True,
-        use_logn_attn=True,
-        use_flash_attn="auto",
-        intermediate_size=22016,
-        no_bias=True,
-        tie_word_embeddings=False,
-        use_cache_quantization=False,
-        use_cache_kernel=False,
-        softmax_in_fp32=False,
-        **kwargs,
+            self,
+            vocab_size=151936,
+            hidden_size=4096,
+            num_hidden_layers=32,
+            num_attention_heads=32,
+            emb_dropout_prob=0.0,
+            attn_dropout_prob=0.0,
+            layer_norm_epsilon=1e-6,
+            initializer_range=0.02,
+            max_position_embeddings=8192,
+            scale_attn_weights=True,
+            use_cache=True,
+            bf16=False,
+            fp16=False,
+            fp32=False,
+            kv_channels=128,
+            rotary_pct=1.0,
+            rotary_emb_base=10000,
+            use_dynamic_ntk=True,
+            use_logn_attn=True,
+            use_flash_attn="auto",
+            intermediate_size=22016,
+            no_bias=True,
+            tie_word_embeddings=False,
+            use_cache_quantization=False,
+            use_cache_kernel=False,
+            softmax_in_fp32=False,
+            **kwargs,
     ):
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size
@@ -103,7 +88,7 @@ class QwenConfig(PretrainedConfig):
         self.use_cache_quantization = use_cache_quantization
         self.use_cache_kernel = use_cache_kernel
         self.softmax_in_fp32 = softmax_in_fp32
-        
+
         self.hidden_act = "silu"
         super().__init__(
             tie_word_embeddings=tie_word_embeddings,
@@ -186,14 +171,7 @@ class QwenMLP(nn.Module):
         linear_names = [f'{prefix}.w1', f'{prefix}.w2']
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{layer_prefix}.ln_2'
-        if weights.quantize == 'w8a8':
-            self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
-        elif weights.quantize == 'w8a16':
-            self.pack_type = PackType.ALL_W8A16
-        elif weights.quantize == "smooth_quant":
-            self.pack_type = PackType.ALL_W8A8
-        else:
-            self.pack_type = PackType.ALL_FP
+        self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name, None)
         self.w2_w1 = load_column_multi(
             config,
             prefixes=[f"{prefix}.w2", f"{prefix}.w1"],  # gate_up_proj
@@ -234,19 +212,11 @@ class FlashQwenAttention(torch.nn.Module):
         self.softmax_scale = self.head_size ** -0.5
 
         # can support self.num_heads % weights.process_group.size() != 0
-        
+
         linear_names = [f'{prefix}.c_attn']
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{layer_prefix}.ln_1'
-        if weights.quantize == 'w8a8':
-            self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
-        elif weights.quantize == 'w8a16':
-            self.pack_type = PackType.ALL_W8A16
-        elif weights.quantize == "smooth_quant":
-            self.pack_type = PackType.ALL_W8A8
-        else:
-            self.pack_type = PackType.ALL_FP
-        
+        self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name, None)
         self.c_attn = TensorParallelColumnLinear.load_qkv(
             config,
             prefix=f"{prefix}.c_attn",
@@ -341,10 +311,12 @@ class FlashQwenLayer(nn.Module):
             self.ln_1 = QwenRMSNormBias(
                 prefix=f"{prefix}.ln_1", weights=weights, eps=config.layer_norm_epsilon
             )
-        else:
+        elif self.attn.pack_type in [PackType.ALL_W8A8_ANTI, PackType.MIX_W8A8_ANTI]:
             self.ln_1 = QwenRMSNormWrapper(
                 prefix=f"{prefix}.ln_1", weights=weights, eps=config.layer_norm_epsilon
             )
+        else:
+            raise AssertionError(f'self_attn.pack_type: {self.self_attn.pack_type} not supported')
         if self.mlp.pack_type in [PackType.ALL_FP, PackType.ALL_W8A16]:
             self.ln_2 = QwenRMSNorm(
                 prefix=f"{prefix}.ln_2",
@@ -357,10 +329,12 @@ class FlashQwenLayer(nn.Module):
                 weights=weights,
                 eps=config.layer_norm_epsilon,
             )
-        else:
+        elif self.mlp.pack_type in [PackType.ALL_W8A8_ANTI, PackType.MIX_W8A8_ANTI]:
             self.ln_2 = QwenRMSNormWrapper(
                 prefix=f"{prefix}.ln_2", weights=weights, eps=config.layer_norm_epsilon
             )
+        else:
+            raise AssertionError(f'mlp.pack_type: {self.mlp.pack_type} not supported')
 
     def forward(
             self,

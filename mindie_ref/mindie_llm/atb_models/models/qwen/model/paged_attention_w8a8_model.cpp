@@ -299,6 +299,7 @@ int64_t PAW8A8Model::BuildGraph()
         &graph_.inTensors.at(IN_PLACEHOLDER),
         &graph_.inTensors.at(IN_PLACEHOLDER),
         &graph_.inTensors.at(IN_PLACEHOLDER),
+        &graph_.inTensors.at(IN_PLACEHOLDER),
         &graph_.inTensors.at(IN_TENSOR_LOGTIS_INDICES)
     };
     // shpae: FA: [batchSize, seqLen, vocabSize] PA: [seqLen, vocabSize]

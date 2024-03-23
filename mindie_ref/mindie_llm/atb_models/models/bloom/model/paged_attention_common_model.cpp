@@ -30,7 +30,7 @@ namespace atb_speed {
 namespace bloom_7b {
 
 // Weight count
-const int WEIGHT_COUNT_PER_LAYER = 43;
+const int WEIGHT_COUNT_PER_LAYER = 50;
 const int WEIGHT_COUNT_WORD_EMBEDDINGNODE = 1;
 const int WEIGHT_COUNT_WORD_EMBEDDINGNODE_LAYERNORM = 2;
 const int WEIGHT_COUNT_POST_NORM = 2;
@@ -296,6 +296,7 @@ int64_t DecoderModel::BuildGraph()
         // shape: [vocabSizePerRank, hiddenSize]
         &graph_.weightTensors.at(finalLinearWeightTensorId),
         // LmHead未接入量化，量化权重使用placeholder代替
+        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
         &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
         &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
         &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),

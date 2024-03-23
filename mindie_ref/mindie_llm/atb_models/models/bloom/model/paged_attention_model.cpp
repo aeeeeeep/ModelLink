@@ -276,10 +276,12 @@ int64_t PagedAttentionModel::BuildGraph()
                                     &graph_.inTensors.at(IN_PLACE_HOLDER),
                                     &graph_.inTensors.at(IN_PLACE_HOLDER),
                                     &graph_.inTensors.at(IN_PLACE_HOLDER),
+                                    &graph_.inTensors.at(IN_PLACE_HOLDER),
                                     &graph_.inTensors.at(IN_TENSOR_LOGTIS_INDICES)};
     } else {
         finalLinearNode.inTensors = {&graph_.internalTensors.at(internalTensorCnt++),
                                     &graph_.weightTensors.at(finalLinearNodeWeightTensorId),
+                                    &graph_.inTensors.at(IN_PLACE_HOLDER),
                                     &graph_.inTensors.at(IN_PLACE_HOLDER),
                                     &graph_.inTensors.at(IN_PLACE_HOLDER),
                                     &graph_.inTensors.at(IN_PLACE_HOLDER),

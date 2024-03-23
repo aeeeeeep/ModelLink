@@ -27,7 +27,7 @@
 namespace atb_speed {
 namespace deepseekDense {
 
-static const uint64_t IN_TENSOR_COUNT = 171;
+static const uint64_t IN_TENSOR_COUNT = 175;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT_NO_EXPERT = 5;
 static const uint64_t NODE_COUNT_NO_EXPERT = 6;
@@ -104,16 +104,19 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
         IN_QKV_OFFSET_0,
         IN_QKV_DESCALE_0,
         IN_QKV_BIAS_0,
+        IN_QKV_COMPRESS_IDX_0,
         IN_QKV_WEIGHT_1,
         IN_QKV_SCALE_1,
         IN_QKV_OFFSET_1,
         IN_QKV_DESCALE_1,
         IN_QKV_BIAS_1,
+        IN_QKV_COMPRESS_IDX_1,
         IN_QKV_WEIGHT_2,
         IN_QKV_SCALE_2,
         IN_QKV_OFFSET_2,
         IN_QKV_DESCALE_2,
         IN_QKV_BIAS_2,
+        IN_QKV_COMPRESS_IDX_2,
         IN_COS_TABLE,
         IN_SIN_TABLE,
         IN_SEQ_LEN,
@@ -129,6 +132,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
         IN_ATTENTION_OUT_OFFSET,
         IN_ATTENTION_OUT_DESCALE,
         IN_ATTENTION_OUT_BIAS,
+        IN_ATTENTION_OUT_COMPRESS_IDX,
     };
     attentionNode.outTensorIds = {INTERMEDIATE_ATTENTION_OUT};
 

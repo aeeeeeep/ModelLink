@@ -19,7 +19,7 @@
 namespace atb_speed {
 namespace common {
 
-static const uint64_t IN_TENSOR_COUNT = 10;
+static const uint64_t IN_TENSOR_COUNT = 11;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 1;
 static const uint64_t SKIP_NORM_INTERMEDIATE_TENSOR_COUNT = 0;
@@ -37,6 +37,7 @@ enum NormLinearTensorIdx : uint32_t {
     IN_OFFSET,
     IN_DESCALE,
     IN_BIAS,
+    IN_COMPRESS_IDX,
     OUT_LINEAR,
     INTERMEDIATE_NORM,
 };
@@ -55,7 +56,8 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
 
     if (!param.skipNorm) {
         atb::Node &normNode = opGraph.nodes.at(nodeId++);
-        if (param.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::NORM_QUANT_LINEAR_DEQUANT) {  // W8A8
+        if (param.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::LINEAR_W8A8_DEQUANT \
+            || param.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::LINEAR_W8A8_SC_DEQUANT) {  // W8A8
             CREATE_OPERATION(param.normQuantParamType, &normNode.operation);
             normNode.inTensorIds = {
                 NormLinearTensorIdx::IN_INPUT,
@@ -81,27 +83,36 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
     linearNode.inTensorIds = {
         param.skipNorm ? NormLinearTensorIdx::IN_INPUT : NormLinearTensorIdx::INTERMEDIATE_NORM,
         NormLinearTensorIdx::IN_LINEAR_WEIGHT, NormLinearTensorIdx::IN_SCALE,
-        NormLinearTensorIdx::IN_OFFSET, NormLinearTensorIdx::IN_DESCALE, NormLinearTensorIdx::IN_BIAS
+        NormLinearTensorIdx::IN_OFFSET, NormLinearTensorIdx::IN_DESCALE, NormLinearTensorIdx::IN_BIAS,
+        NormLinearTensorIdx::IN_COMPRESS_IDX
     };
     linearNode.outTensorIds = {OUT_LINEAR};
 
-    opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
-                                 atb::SVector<atb::TensorDesc> &outTensorDescs) {
-        outTensorDescs.at(0).format = inTensorDescs.at(0).format;
-        if (param.fusionLinearParam.isBF16) {
-            outTensorDescs.at(0).dtype = ACL_BF16;
-        } else {
-            outTensorDescs.at(0).dtype = ACL_FLOAT16;
-        }
-        outTensorDescs.at(0).shape = inTensorDescs.at(0).shape;
-        auto outDimSize = outTensorDescs.at(0).shape.dimNum;
-        outTensorDescs.at(0).shape.dims[outDimSize - 1] = param.fusionLinearParam.quantType == W8A16 \
-            ? inTensorDescs.at(5).shape.dims[1] : inTensorDescs.at(5).shape.dims[0];
-        return atb::NO_ERROR;
-    };
-
     CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
+}
+
+LinearQuantType GetLinearQuantType(const int &packQuantType, const int &linearType, bool hasNorm)
+{
+    if (linearType == atb_speed::common::LinearType::FP) {
+        return atb_speed::common::LinearQuantType::NO_QUANT;
+    } else if (packQuantType == atb_speed::common::ALL_W8A16) {
+        return atb_speed::common::LinearQuantType::W8A16;
+    } else {
+        if (packQuantType == atb_speed::common::ALL_W8A8SC || packQuantType == atb_speed::common::MIX_W8A8SC) {
+            if (hasNorm) {
+                return atb_speed::common::LinearQuantType::LINEAR_W8A8_SC_DEQUANT;
+            } else {
+                return atb_speed::common::LinearQuantType::LINEAR_W8A8_SC_QUANT;
+            }
+        } else {
+            if (hasNorm) {
+                return atb_speed::common::LinearQuantType::LINEAR_W8A8_DEQUANT;
+            } else {
+                return atb_speed::common::LinearQuantType::LINEAR_W8A8_QUANT;
+            }
+        }
+    }
 }
 
 template atb::Status NormLinear(const NormLinearParam<atb::infer::RmsNormParam> &param, atb::Operation **operation);

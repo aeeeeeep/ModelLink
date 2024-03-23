@@ -46,6 +46,7 @@ struct MlpParam {
     atb_speed::common::TensorParallelInfo downLinearTensorParallelInfo;
 };
 
+MlpPackType GetMlpPackType(const int &packQuantType, bool up_weight_only);
 template <typename NormParamType>
 atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation);
 
