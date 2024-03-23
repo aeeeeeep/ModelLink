@@ -15,7 +15,7 @@ TP=8
 PP=1
 
 CHECKPOINT="Your ckpt file path"
-VOCAB_FILE="Your vocab file path"
+TOKENIZER_PATH="Your vocab file path"
 DATA_PATH="Your data path (such as ./mmlu/test/)"
 TASK="mmlu"
 
@@ -40,7 +40,7 @@ GPT_ARGS="
     --group-query-attention \
     --num-query-groups 8 \
     --tokenizer-type PretrainedFromHF \
-    --tokenizer-name-or-path ${VOCAB_FILE} \
+    --tokenizer-name-or-path ${TOKENIZER_PATH} \
     --seq-length 4096 \
     --max-position-embeddings 32768 \
     --micro-batch-size 1 \
