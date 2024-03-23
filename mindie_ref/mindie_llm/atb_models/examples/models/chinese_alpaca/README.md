@@ -18,20 +18,21 @@
 |--------|--------------------------------------------------|
 | working_dir | 加速库及模型库下载后放置的目录                  |
 | llm_path | 模型仓所在路径。若使用编译好的包，则路径为`${working_dir}/ModelLink/`；若使用gitee下载的代码，则路径为`${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models`    |
-| script_path | 脚本所在路径；Chinese-Alpaca-13B的工作脚本所在路径为`${llm_path}/examples/models/yi`                            |
+| script_path | 脚本所在路径；Chinese-Alpaca-13B的工作脚本所在路径为`${llm_path}/examples/models/chinese_alpaca`                            |
 | weight_path | 模型权重路径                            |
 
 ## 权重
 **权重下载**
 
-- [Chinese-Alpaca-Lora-13B](https://pan.baidu.com/s/1wYoSF58SnU9k0Lndd5VEYg?pwd=mm8i)
+- lora权重: [Chinese-Alpaca-Lora-13B](https://pan.baidu.com/s/1wYoSF58SnU9k0Lndd5VEYg?pwd=mm8i)
+- 原模型权重: [LLaMA-13B](https://huggingface.co/huggyllama/llama-13b)
 > 下载后务必检查压缩包中模型文件的SHA256是否一致，请查看[SHA256.md](https://github.com/ymcui/Chinese-LLaMA-Alpaca/blob/main/SHA256.md)
 
 **lora权重合并**
-- 下载lora权重的同时，需要同时下载原版[LLaMA-13B](https://huggingface.co/huggyllama/llama-13b)模型，请参考[合并教程](https://github.com/ymcui/Chinese-LLaMA-Alpaca/wiki/%E6%89%8B%E5%8A%A8%E6%A8%A1%E5%9E%8B%E5%90%88%E5%B9%B6%E4%B8%8E%E8%BD%AC%E6%8D%A2#%E5%A4%9Alora%E6%9D%83%E9%87%8D%E5%90%88%E5%B9%B6%E9%80%82%E7%94%A8%E4%BA%8Echinese-alpaca-plus)
+- 合并lora权重和原模型权重，请参考[合并教程](https://github.com/ymcui/Chinese-LLaMA-Alpaca/wiki/%E6%89%8B%E5%8A%A8%E6%A8%A1%E5%9E%8B%E5%90%88%E5%B9%B6%E4%B8%8E%E8%BD%AC%E6%8D%A2#%E5%A4%9Alora%E6%9D%83%E9%87%8D%E5%90%88%E5%B9%B6%E9%80%82%E7%94%A8%E4%BA%8Echinese-alpaca-plus)
 
 **权重转换**
-- 参考[此README文件](../../README.md)
+- 转换为safetensor格式的权重文件，参考[此README文件](../../README.md)
 
 **基础环境变量**
 - 参考[此README文件](../../../README.md)
@@ -82,7 +83,7 @@
     ```shell
     cd ${llm_path}/tests/modeltest
     export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
-    bash run.sh pa_fp16 full_CEval 1 llama True ${Chinese-Alpaca-Lora-13B权重路径} 8
+    bash run.sh pa_fp16 full_CEval 1 llama True ${Chinese-Alpaca-13B权重路径} 8
     ```
 
 ## 性能测试
@@ -91,7 +92,7 @@
     ```shell
     cd ${llm_path}/tests/modeltest
     export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
-    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${Chinese-Alpaca-Lora-13B权重路径} 8
+    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${Chinese-Alpaca-13B权重路径} 8
     ```
 
 ## FAQ
