@@ -19,34 +19,42 @@
 namespace atb_speed {
 namespace common {
 
-static const uint64_t IN_TENSOR_COUNT = 10;
-static const uint64_t OUT_TENSOR_COUNT = 1;
+// static const uint64_t IN_TENSOR_COUNT = 10;
+// static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 1;
 static const uint64_t SKIP_NORM_INTERMEDIATE_TENSOR_COUNT = 0;
 static const uint64_t NODE_COUNT = 2;
 static const uint64_t SKIP_NORM_NODE_COUNT = 1;
+static const uint64_t FUSION_NORM_GAMMA_DIM_SIZE = 2;
 
-enum NormLinearTensorIdx : uint32_t {
-    IN_INPUT = 0,
-    IN_NORM_WEIGHT,
-    IN_NORM_BIAS,
-    IN_NORM_NEW_WEIGHT,
-    IN_NORM_NEW_BIAS,
-    IN_LINEAR_WEIGHT,
-    IN_SCALE,
-    IN_OFFSET,
-    IN_DESCALE,
-    IN_BIAS,
-    OUT_LINEAR,
-    INTERMEDIATE_NORM,
-};
+// enum NormLinearTensorIdx : uint32_t {
+//     IN_INPUT = 0,
+//     IN_NORM_WEIGHT,
+//     IN_NORM_BIAS,
+//     IN_NORM_NEW_WEIGHT,
+//     IN_NORM_NEW_BIAS,
+//     IN_LINEAR_WEIGHT,
+//     IN_SCALE,
+//     IN_OFFSET,
+//     IN_DESCALE,
+//     IN_BIAS,
+//     OUT_LINEAR,
+//     INTERMEDIATE_NORM,
+// };
 
-template <typename NormParamType>
-atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operation **operation)
+void unsqueezeFusionNorm(const atb::Dims &oldShape, atb::Dims &newShape)
+{
+    newShape.dimNum = FUSION_NORM_GAMMA_DIM_SIZE;
+    newShape.dims[0] = 1;
+    newShape.dims[1] = oldShape.dims[0];
+}
+
+template <class T, typename NormParamType>
+atb::Status CreateNormLinear(const NormLinearParam<NormParamType> &param, atb::Operation **operation, T conifg)
 {
     atb::GraphParam opGraph;
-    opGraph.inTensorNum = IN_TENSOR_COUNT;
-    opGraph.outTensorNum = OUT_TENSOR_COUNT;
+    opGraph.inTensorNum = config.IN_TENSOR_COUNT;
+    opGraph.outTensorNum = config.OUT_TENSOR_COUNT;
     opGraph.internalTensorNum = param.skipNorm ? SKIP_NORM_INTERMEDIATE_TENSOR_COUNT : INTERMEDIATE_TENSOR_COUNT;
     opGraph.nodes.resize(param.skipNorm ? SKIP_NORM_NODE_COUNT : NODE_COUNT);
     opGraph.name = "NormLinear";
@@ -56,22 +64,41 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
     if (!param.skipNorm) {
         atb::Node &normNode = opGraph.nodes.at(nodeId++);
         if (param.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::NORM_QUANT_LINEAR_DEQUANT) {  // W8A8
-            CREATE_OPERATION(param.normQuantParamType, &normNode.operation);
-            normNode.inTensorIds = {
-                NormLinearTensorIdx::IN_INPUT,
-                param.isAntiOutlier ? NormLinearTensorIdx::IN_NORM_NEW_WEIGHT : NormLinearTensorIdx::IN_NORM_WEIGHT,
-                param.isAntiOutlier ? NormLinearTensorIdx::IN_NORM_NEW_BIAS : NormLinearTensorIdx::IN_NORM_BIAS,
-                NormLinearTensorIdx::IN_SCALE, NormLinearTensorIdx::IN_OFFSET
-            };
-            normNode.outTensorIds = {INTERMEDIATE_NORM};
+            if (param.useFusionNorm) {
+                CREATE_OPERATION(param.normQuantParamType, &normNode.operation);
+                normNode.inTensorIds = {
+                    config.IN_INPUT, config.IN_RESIDUAL_ADD,
+                    param.isAntiOutlier ? config.IN_NORM_NEW_WEIGHT : config.IN_NORM_WEIGHT,
+                    param.isAntiOutlier ? config.IN_NORM_NEW_BIAS : config.IN_NORM_BIAS,
+                    config.IN_SCALE, config.IN_OFFSET
+                };
+                normNode.outTensorIds = {config.INTERMEDIATE_NORM, config.OUT_RESIDUAL_ADD};
+            } else {
+                CREATE_OPERATION(param.normQuantParamType, &normNode.operation);
+                normNode.inTensorIds = {
+                    config.IN_INPUT,
+                    param.isAntiOutlier ? config.IN_NORM_NEW_WEIGHT : config.IN_NORM_WEIGHT,
+                    param.isAntiOutlier ? config.IN_NORM_NEW_BIAS : config.IN_NORM_BIAS,
+                    config.IN_SCALE, config.IN_OFFSET
+                };
+                normNode.outTensorIds = {config.INTERMEDIATE_NORM};
+            }
         } else if (param.normHasBias) {  // FP
             CREATE_OPERATION(param.normParamType, &normNode.operation);
-            normNode.inTensorIds = {NormLinearTensorIdx::IN_INPUT, NormLinearTensorIdx::IN_NORM_WEIGHT, NormLinearTensorIdx::IN_NORM_BIAS};
-            normNode.outTensorIds = {INTERMEDIATE_NORM};
+            normNode.inTensorIds = {config.IN_INPUT, config.IN_NORM_WEIGHT, config.IN_NORM_BIAS};
+            normNode.outTensorIds = {config.INTERMEDIATE_NORM};
+        } else if (param.useFusionNorm) { // FP
+            CREATE_OPERATION(param.normParamType, &normNode.operation);
+            normNode.inTensorIds = {config.IN_INPUT, config.IN_RESIDUAL_ADD, config.IN_NORM_WEIGHT};
+            normNode.outTensorIds = {config.INTERMEDIATE_NORM, config.OUT_RESIDUAL_ADD};
+            normNode.inTensorReshapeFuncs.resize(normNode.inTensorIds.size());
+            normNode.inTensorReshapeFuncs.at(2) = [=](const atb::Dims &oldShape, atb::Dims &newShape) {
+                unsqueezeFusionNorm(oldShape, newShape);
+            };
         } else {  // FP
             CREATE_OPERATION(param.normParamType, &normNode.operation);
-            normNode.inTensorIds = {NormLinearTensorIdx::IN_INPUT, NormLinearTensorIdx::IN_NORM_WEIGHT};
-            normNode.outTensorIds = {INTERMEDIATE_NORM};
+            normNode.inTensorIds = {config.IN_INPUT, config.IN_NORM_WEIGHT};
+            normNode.outTensorIds = {config.INTERMEDIATE_NORM};
         }
     }
 
@@ -79,11 +106,11 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
     atb_speed::common::FusionLinearParam linearParam = param.fusionLinearParam;
     FusionLinear(linearParam, &linearNode.operation);
     linearNode.inTensorIds = {
-        param.skipNorm ? NormLinearTensorIdx::IN_INPUT : NormLinearTensorIdx::INTERMEDIATE_NORM,
-        NormLinearTensorIdx::IN_LINEAR_WEIGHT, NormLinearTensorIdx::IN_SCALE,
-        NormLinearTensorIdx::IN_OFFSET, NormLinearTensorIdx::IN_DESCALE, NormLinearTensorIdx::IN_BIAS
+        param.skipNorm ? config.IN_INPUT : config.INTERMEDIATE_NORM,
+        config.IN_LINEAR_WEIGHT, config.IN_SCALE,
+        config.IN_OFFSET, config.IN_DESCALE, config.IN_BIAS
     };
-    linearNode.outTensorIds = {OUT_LINEAR};
+    linearNode.outTensorIds = {config.OUT_LINEAR};
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
@@ -95,13 +122,74 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
         }
         outTensorDescs.at(0).shape = inTensorDescs.at(0).shape;
         auto outDimSize = outTensorDescs.at(0).shape.dimNum;
-        outTensorDescs.at(0).shape.dims[outDimSize - 1] = param.fusionLinearParam.quantType == W8A16 \
-            ? inTensorDescs.at(5).shape.dims[1] : inTensorDescs.at(5).shape.dims[0];
+        if (param.useFusionNorm) {
+            outTensorDescs.at(0).shape.dims[outDimSize - 1] = param.fusionLinearParam.quantType == W8A16 \
+                ? inTensorDescs.at(6).shape.dims[1] : inTensorDescs.at(6).shape.dims[0];
+            outTensorDescs.at(1) = inTensorDescs.at(1);
+        } else {
+            outTensorDescs.at(0).shape.dims[outDimSize - 1] = param.fusionLinearParam.quantType == W8A16 \
+                ? inTensorDescs.at(5).shape.dims[1] : inTensorDescs.at(5).shape.dims[0];
+        }
         return atb::NO_ERROR;
     };
 
     CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
+}
+
+class NormLinearConfig{
+public:
+    uint64_t IN_TENSOR_COUNT = 10;
+    uint64_t OUT_TENSOR_COUNT = 1;
+    enum NormLinearTensorIdx : uint32_t {
+        IN_INPUT = 0,
+        IN_NORM_WEIGHT,
+        IN_NORM_BIAS,
+        IN_NORM_NEW_WEIGHT,
+        IN_NORM_NEW_BIAS,
+        IN_LINEAR_WEIGHT,
+        IN_SCALE,
+        IN_OFFSET,
+        IN_DESCALE,
+        IN_BIAS,
+        OUT_LINEAR,
+        INTERMEDIATE_NORM,
+        IN_RESIDUAL_ADD,
+        OUT_RESIDUAL_ADD,
+    };
+};
+
+class NormLinearFusionConfig{
+public:
+    uint64_t IN_TENSOR_COUNT = 12;
+    uint64_t OUT_TENSOR_COUNT = 2;
+    enum NormLinearFusionTensorIdx : uint32_t {
+        IN_INPUT = 0,
+        IN_RESIDUAL_ADD,
+        IN_NORM_WEIGHT,
+        IN_NORM_BIAS,
+        IN_NORM_NEW_WEIGHT,
+        IN_NORM_NEW_BIAS,
+        IN_LINEAR_WEIGHT,
+        IN_SCALE,
+        IN_OFFSET,
+        IN_DESCALE,
+        IN_BIAS,
+        OUT_LINEAR,
+        OUT_RESIDUAL_ADD,
+        INTERMEDIATE_NORM,
+    };
+};
+
+template <typename NormParamType>
+atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operation **operation) {
+    if (param.useFusionNorm) {
+        NormLinearFusionConfig normLinearFusionConfig;
+        return CreateNormLinear(param, operation, normLinearFusionConfig);
+    } else {
+        NormLinearConfig normLinearConfig;
+        return CreateNormLinear(param, operation, normLinearConfig);
+    }
 }
 
 template atb::Status NormLinear(const NormLinearParam<atb::infer::RmsNormParam> &param, atb::Operation **operation);

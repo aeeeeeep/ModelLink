@@ -21,6 +21,7 @@ namespace common {
 
 enum MlpTensorIdx : uint32_t {
     IN_INPUT = 0,
+    IN_RESIDUAL_ADD,
     IN_NORM_WEIGHT,
     IN_NORM_BIAS,
     IN_NORM_NEW_WEIGHT,
@@ -41,14 +42,15 @@ enum MlpTensorIdx : uint32_t {
     IN_DESCALE_2,
     IN_BIAS_2,
     OUT_RESULT,
+    OUT_RESIDUAL_ADD,
     INTERMIDATE_SWISH_OUT,
     INTERMIDATE_GATE_UP_OUT,
     INTERMIDATE_GATE_OUT,
     INTERMIDATE_UP_OUT
 };
 
-static const uint64_t IN_TENSOR_COUNT = 20;
-static const uint64_t OUT_TENSOR_COUNT = 1;
+static const uint64_t IN_TENSOR_COUNT = 21;
+static const uint64_t OUT_TENSOR_COUNT = 2;
 static const uint64_t NO_PACK_INTERMEDIATE_TENSOR_COUNT = 4;
 static const uint64_t NO_PACK_NODE_COUNT = 5;
 static const uint64_t PACK_INTERMEDIATE_TENSOR_COUNT = 2;
@@ -85,9 +87,11 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
         gateUpNormLinearParam.normHasBias = param.normHasBias;
         gateUpNormLinearParam.normParamType = param.normParamType;
         gateUpNormLinearParam.normQuantParamType = param.normQuantParamType;
+        gateUpNormLinearParam.useFusionNorm = param.useFusionNorm;
         NormLinear<NormParamType>(gateUpNormLinearParam, &normLinearGateUpNode.operation);
         normLinearGateUpNode.inTensorIds = {
             MlpTensorIdx::IN_INPUT,
+            MlpTensorIdx::IN_RESIDUAL_ADD,
             MlpTensorIdx::IN_NORM_WEIGHT,
             MlpTensorIdx::IN_NORM_BIAS,
             MlpTensorIdx::IN_NORM_NEW_WEIGHT,
@@ -98,7 +102,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
             MlpTensorIdx::IN_DESCALE_0,
             MlpTensorIdx::IN_BIAS_0
         };
-        normLinearGateUpNode.outTensorIds = {MlpTensorIdx::INTERMIDATE_GATE_UP_OUT};
+        normLinearGateUpNode.outTensorIds = {MlpTensorIdx::INTERMIDATE_GATE_UP_OUT, MlpTensorIdx::OUT_RESIDUAL_ADD};
     } else {
         atb::Node &normLinearGateNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> gateNormLinearParam;
@@ -204,6 +208,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
         outTensorDescs.at(0) = inTensorDescs.at(0);
+        outTensorDescs.at(1) = inTensorDescs.at(1);
         return atb::NO_ERROR;
     };
 

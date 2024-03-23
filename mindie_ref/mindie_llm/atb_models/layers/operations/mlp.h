@@ -37,6 +37,7 @@ struct MlpParam {
     bool supportLcoc = false;
     bool skipNorm = false;
     bool normHasBias = false;
+    bool useFusionNorm
     MlpPackType mlpPackType = GATE_UP_WEIGHT_PACK;
     std::vector<int> layerLinearQuantType;
     int packQuantType = atb_speed::common::PackQuantType::ALL_FP;
