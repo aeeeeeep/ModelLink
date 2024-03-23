@@ -38,8 +38,7 @@ from atb_llm.utils.layers import (
     reshape_and_cache
 )
 
-from atb_llm.utils.quantize.pack_type import PackType
-from atb_llm.utils.quantize.w8a8 import calc_linear_pack_type
+from atb_llm.utils.quantize.pack_type import PackType, calc_linear_pack_type
 
 
 class InternlmConfig(PretrainedConfig):
@@ -169,14 +168,8 @@ class InternlmMLP(nn.Module):
         linear_names = [f'{prefix}.up_proj', f'{prefix}.gate_proj']
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{layer_prefix}.post_attention_layernorm'
-        if weights.quantize == 'w8a8':
-            self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
-        elif weights.quantize == 'w8a16':
-            self.pack_type = PackType.ALL_W8A16
-        elif weights.quantize == "smooth_quant":
-            self.pack_type = PackType.ALL_W8A8
-        else:
-            self.pack_type = PackType.ALL_FP
+        pack_name = f'{prefix}.gate_up_proj'
+        self.pack_type = calc_linear_pack_type(weights, linear_names, pack_name, norm_name)
         no_refactor_no_pack = not config.use_refactor and config.num_attention_heads != config.num_key_value_heads
         if no_refactor_no_pack:
             self.gate_proj = TensorParallelColumnLinear.load(
@@ -262,14 +255,8 @@ class FlashInternlmAttention(torch.nn.Module):
         linear_names = [f'{prefix}.q_proj', f'{prefix}.k_proj', f'{prefix}.v_proj']
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{layer_prefix}.input_layernorm'
-        if weights.quantize == 'w8a8':
-            self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
-        elif weights.quantize == 'w8a16':
-            self.pack_type = PackType.ALL_W8A16
-        elif weights.quantize == "smooth_quant":
-            self.pack_type = PackType.ALL_W8A8
-        else:
-            self.pack_type = PackType.ALL_FP
+        pack_name = f'{prefix}.gate_up_proj'
+        self.pack_type = calc_linear_pack_type(weights, linear_names, pack_name, norm_name)
         no_refactor_no_pack = not config.use_refactor and config.num_attention_heads != config.num_key_value_heads
         if no_refactor_no_pack:
             self.q_proj = TensorParallelColumnLinear.load(

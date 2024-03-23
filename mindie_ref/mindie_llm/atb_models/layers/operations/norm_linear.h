@@ -30,6 +30,8 @@ enum PackQuantType : unsigned int {
     MIX_W8A8 = 4,
     MIX_W8A8_ANTI = 5,
     ALL_W8A16 = 6,
+    ALL_W8A8SC = 7,
+    MIX_W8A8SC = 8,
 };
 
 template <typename NormParamType>
@@ -42,6 +44,7 @@ struct NormLinearParam {
     atb_speed::common::FusionLinearParam fusionLinearParam;
 };
 
+LinearQuantType GetLinearQuantType(const int &packQuantType, const int &linearType, bool hasNorm);
 template <typename NormParamType>
 atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operation **operation);
 

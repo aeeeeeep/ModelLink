@@ -8,9 +8,10 @@ import torch
 import torch_npu
 from transformers.configuration_utils import PretrainedConfig
 
-from atb_llm.utils.log import logger, print_log
-from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
-from atb_llm.utils.layers import PositionRotaryEmbedding, AttentionMask
+from .model_utils import BaseModel
+from ...utils.log import logger, print_log
+from ...utils.initial import load_atb_speed, NPUSocInfo
+from ...utils.layers import PositionRotaryEmbedding, AttentionMask
 
 
 class FlashModel(torch.nn.Module):
@@ -38,7 +39,7 @@ class FlashModel(torch.nn.Module):
         pass
 
 
-class FlashForCausalLM(torch.nn.Module):
+class FlashForCausalLM(BaseModel):
     def __init__(self, config, weights):
         super().__init__()
         load_atb_speed()

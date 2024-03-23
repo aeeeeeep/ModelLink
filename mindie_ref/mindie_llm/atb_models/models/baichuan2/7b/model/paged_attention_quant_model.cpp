@@ -31,7 +31,7 @@ namespace atb_speed {
 namespace baichuan2_7b {
 REGISTER_MODEL(baichuan2_7b, PagedAttentionQuantModel);
 
-const int WEIGHT_COUNT_PER_LAYER = 43;
+const int WEIGHT_COUNT_PER_LAYER = 50;
 const int WEIGHT_COUNT_WORD_EMBEDDINGNODE = 1;
 const int WEIGHT_COUNT_POST_NORM = 1;
 const int WEIGHT_COUNT_LM_HEAD = 1;
@@ -328,7 +328,7 @@ int64_t PagedAttentionQuantModel::BuildGraph()
         // LmHead未接入量化，量化权重使用placeholder代替
         &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER), &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
         &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER), &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
-        &graph_.inTensors.at(IN_TENSOR_LOGTIS_INDICES) };
+        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER), &graph_.inTensors.at(IN_TENSOR_LOGTIS_INDICES) };
     // shpae: FA: [batchSize, seqLen, vocabSize] PA: [seqLen, vocabSize]
     lmHeadNode.outTensors = { &graph_.outTensors.at(0) };
 

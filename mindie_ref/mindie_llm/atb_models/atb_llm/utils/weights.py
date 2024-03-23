@@ -11,6 +11,10 @@ from safetensors import safe_open, SafetensorError
 
 from .hub import weight_files
 from .log import logger
+from .quantize.quant_type import QuantType
+
+QUANTIZE_DTYPE_LIST = [torch.int8, torch.int32, torch.int64]
+QUANTIZE_DESC_REQUIRED_LIST = [QuantType.W8A8, QuantType.W8A8S, QuantType.W8A8SC]
 
 
 class Weights:
@@ -25,6 +29,8 @@ class Weights:
             extension: Optional[str] = ".safetensors",
             aliases: Optional[Dict[str, List[str]]] = None
     ):
+        if quantize == QuantType.W8A8SC:
+            model_name_or_path = os.path.join(model_name_or_path, f'part{process_group.rank()}')
         self.filenames = weight_files(model_name_or_path, revision=revision, extension=extension)
         self.quantize = quantize
         routing = {}
@@ -156,12 +162,10 @@ class Weights:
         return new_deq_scale_dict
 
     def init_quant_params(self, quantize, model_name_or_path):
-        if quantize == "gptq":
-            self._set_gptq_params(model_name_or_path)
-        elif quantize == "smooth_quant":
+        if quantize == "smooth_quant":
             self._set_smooth_quant_params(model_name_or_path)
-        elif quantize == 'w8a8':
-            self._set_w8a8_quant_params(model_name_or_path)
+        elif quantize in QUANTIZE_DESC_REQUIRED_LIST:
+            self._set_quant_params(model_name_or_path)
 
     def get_filename(self, tensor_name: str) -> (str, str):
         filename = self.routing.get(tensor_name, None)
@@ -480,7 +484,7 @@ class Weights:
             return self.get_tensor_col_packed_qkv_gqa(tensor_name, num_heads, num_kv_heads)
 
     def get_weights_col_packed_qkv(self, prefix: str, quantize: str, hidden_size, num_heads, num_kv_heads=None):
-        if quantize == "w8a8":
+        if quantize in [QuantType.W8A8, QuantType.W8A8S]:
             qweight = self.get_tensor_col_packed_qkv(f"{prefix}.weight", hidden_size, num_heads, num_kv_heads)
             if qweight.dtype in [torch.float16, torch.bfloat16]:
                 return qweight
@@ -489,13 +493,23 @@ class Weights:
             input_scale = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_scale')
             input_offset = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_offset')
             weight = (qweight, deq_scale, quant_bias, input_scale, input_offset)
-        elif quantize == "w8a16":
+        elif quantize == QuantType.W8A16:
             qweight = self.get_tensor_col_packed_qkv(f"{prefix}.weight", hidden_size, num_heads, num_kv_heads)
             weight_scale = self.get_tensor_col_packed_qkv(f"{prefix}.weight_scale", hidden_size, num_heads,
                                                           num_kv_heads)
             weight_offset = self.get_tensor_col_packed_qkv(f"{prefix}.weight_offset", hidden_size, num_heads,
                                                            num_kv_heads)
             weight = (qweight, weight_scale, weight_offset)
+        elif quantize == QuantType.W8A8SC:
+            qweight = self.get_tensor(f"{prefix}.weight")
+            if qweight.dtype in [torch.float16, torch.bfloat16]:
+                return qweight
+            deq_scale = self.get_tensor(f"{prefix}.deq_scale")
+            quant_bias = self.get_tensor(f"{prefix}.quant_bias")
+            input_scale = self.get_tensor(f"{prefix}.input_scale")
+            input_offset = self.get_tensor(f"{prefix}.input_offset")
+            index = self.get_tensor(f"{prefix}.index")
+            weight = (qweight, deq_scale, quant_bias, input_scale, input_offset, index)
         else:
             weight = self.get_tensor_col_packed_qkv(f"{prefix}.weight", hidden_size, num_heads, num_kv_heads)
         return weight
@@ -518,7 +532,7 @@ class Weights:
         return tensor
 
     def get_weights_col_packed_mlp(self, prefix: str, quantize: str):
-        if quantize == "w8a8":
+        if quantize in [QuantType.W8A8, QuantType.W8A8S]:
             qweight = self.get_tensor_col_packed_mlp(f"{prefix}.weight")
             if qweight.dtype in [torch.float16, torch.bfloat16]:
                 return qweight
@@ -527,11 +541,21 @@ class Weights:
             input_scale = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_scale')
             input_offset = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_offset')
             weight = (qweight, deq_scale, quant_bias, input_scale, input_offset)
-        elif quantize == "w8a16":
+        elif quantize == QuantType.W8A16:
             qweight = self.get_tensor_col_packed_mlp(f"{prefix}.weight")
             weight_scale = self.get_tensor_col_packed_mlp(f"{prefix}.weight_scale")
             weight_offset = self.get_tensor_col_packed_mlp(f"{prefix}.weight_offset")
             weight = (qweight, weight_scale, weight_offset)
+        elif quantize == QuantType.W8A8SC:
+            qweight = self.get_tensor(f"{prefix}.weight")
+            if qweight.dtype in [torch.float16, torch.bfloat16]:
+                return qweight
+            deq_scale = self.get_tensor(f"{prefix}.deq_scale")
+            quant_bias = self.get_tensor(f"{prefix}.quant_bias")
+            input_scale = self.get_tensor(f"{prefix}.input_scale")
+            input_offset = self.get_tensor(f"{prefix}.input_offset")
+            index = self.get_tensor(f"{prefix}.index")
+            weight = (qweight, deq_scale, quant_bias, input_scale, input_offset, index)
         else:
             weight = self.get_tensor_col_packed_mlp(f"{prefix}.weight")
         return weight
@@ -580,7 +604,7 @@ class Weights:
             act_zeros = (lambda x: None if None in x else x[0])(
                 [self.get_smooth_quant_sharded(f"{p}", idx=1, dim=0, gqa_size=gqa_size) for p in prefixes])
             weight = (qweight, weight_scales, weight_zeros, act_scales, act_zeros)
-        elif quantize == 'w8a8':
+        elif quantize in [QuantType.W8A8, QuantType.W8A8S]:
             qweight = torch.cat(
                 [self.get_sharded(f"{p}.weight", dim=0, gqa_size=gqa_size) for p in prefixes], dim=dim
             )
@@ -595,7 +619,7 @@ class Weights:
             input_scale = self.get_per_tensor_sharded(prefixes, dim, 'input_scale')
             input_offset = self.get_per_tensor_sharded(prefixes, dim, 'input_offset')
             weight = (qweight, deq_scale, quant_bias, input_scale, input_offset)
-        elif quantize == 'w8a16':
+        elif quantize == QuantType.W8A16:
             qweight = torch.cat(
                 [self.get_sharded(f"{p}.weight", dim=0, gqa_size=gqa_size) for p in prefixes], dim=dim
             )
@@ -606,6 +630,16 @@ class Weights:
                 [self.get_sharded(f"{p}.weight_offset", dim=0, gqa_size=gqa_size) for p in prefixes], dim=dim
             )
             weight = (qweight, weight_scale, weight_offset)
+        elif quantize == QuantType.W8A8SC:
+            qweight = torch.cat([self.get_tensor(f"{p}.weight") for p in prefixes], dim=dim)
+            if qweight.dtype in [torch.float16, torch.bfloat16]:
+                return qweight
+            deq_scale = torch.cat([self.get_tensor(f"{p}.deq_scale") for p in prefixes], dim=dim)
+            quant_bias = torch.cat([self.get_tensor(f"{p}.quant_bias") for p in prefixes], dim=dim)
+            input_scale = torch.cat([self.get_tensor(f"{p}.input_scale") for p in prefixes], dim=dim)
+            input_offset = torch.cat([self.get_tensor(f"{p}.input_offset") for p in prefixes], dim=dim)
+            index = torch.cat([self.get_tensor(f"{p}.index") for p in prefixes], dim=dim)
+            weight = (qweight, deq_scale, quant_bias, input_scale, input_offset, index)
         else:
             w = [self.get_sharded(f"{p}.weight", dim=0, gqa_size=gqa_size) for p in prefixes]
             weight = torch.cat(w, dim=dim)
@@ -681,75 +715,14 @@ class Weights:
         return cut_tensor_list[rank]
 
     def get_multi_weights_row(self, prefix: str, quantize: str, gqa_size=1):
-        if quantize == "gptq":
-            use_exllama = True
-            bits, groupsize = self._get_gptq_params()
-
-            if bits != 4:
-                use_exllama = False
-
-            if self.process_group.size() > 1:
-                g_idx = self.get_tensor(f"{prefix}.g_idx")
-                if g_idx is not None:
-                    if (
-                            not torch.equal(
-                                g_idx.cpu(),
-                                torch.tensor(
-                                    [i // groupsize for i in range(g_idx.shape[0])],
-                                    dtype=torch.int32,
-                                ),
-                            )
-                            and not (g_idx == 0).all()
-                    ):
-                        use_exllama = False
-
-            try:
-                qweight = self.get_sharded(f"{prefix}.qweight", dim=0)
-            except RuntimeError as err:
-                logger.error(
-                    "Cannot load `gptq` weight, make sure the model is already quantized"
-                )
-                raise AssertionError from err
-
-            from text_generation_server.utils.layers import HAS_EXLLAMA
-
-            if use_exllama:
-                if not HAS_EXLLAMA:
-                    logger.warning(
-                        "Exllama GPTQ cuda kernels (which are faster) could have been used, "
-                        "but are not currently installed, try using BUILD_EXTENSIONS=True"
-                    )
-                    use_exllama = False
-                else:
-                    logger.info("Using exllama kernels")
-
-            if use_exllama:
-                if groupsize >= 0:
-                    qzeros = self.get_sharded(f"{prefix}.qzeros", dim=0)
-                    scales = self.get_sharded(f"{prefix}.scales", dim=0)
-                else:
-                    qzeros = self.get_tensor(f"{prefix}.qzeros")
-                    scales = self.get_tensor(f"{prefix}.scales")
-
-                if self.process_group.size() == 1:
-                    g_idx = self.get_tensor(f"{prefix}.g_idx")
-                else:
-                    g_idx = None
-            else:
-                qzeros = self.get_tensor(f"{prefix}.qzeros")
-                scales = self.get_tensor(f"{prefix}.scales")
-                g_idx = self.get_sharded(f"{prefix}.g_idx", dim=0)
-
-            weight = (qweight, qzeros, scales, g_idx, bits, groupsize, use_exllama)
-
-        elif quantize == "smooth_quant":
+        if quantize == "smooth_quant":
             qweight = self.get_sharded(f"{prefix}.weight", dim=1)
             weight_scales = self.get_sharded(f"{prefix}.scales", dim=1)
             weight_zeros = None
             act_scales = self.get_smooth_quant_sharded(f"{prefix}", idx=0, dim=1)
             act_zeros = self.get_smooth_quant_sharded(f"{prefix}", idx=1, dim=1)
             weight = (qweight, weight_scales, weight_zeros, act_scales, act_zeros)
-        elif quantize == "w8a8":
+        elif quantize in [QuantType.W8A8, QuantType.W8A8S]:
             qweight = self.get_sharded(f"{prefix}.weight", dim=1)
             if qweight.dtype in [torch.float16, torch.bfloat16]:
                 return qweight
@@ -762,11 +735,21 @@ class Weights:
             input_scale = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_scale')
             input_offset = self.get_per_tensor_sharded([prefix], dim=0, tensor_name='input_offset')
             weight = (qweight, deq_scale, quant_bias, input_scale, input_offset)
-        elif quantize == "w8a16":
+        elif quantize == QuantType.W8A16:
             qweight = self.get_sharded(f"{prefix}.weight", dim=1, gqa_size=gqa_size)
             weight_scale = self.get_sharded(f"{prefix}.weight_scale", dim=1, gqa_size=1)
             weight_offset = self.get_sharded(f"{prefix}.weight_offset", dim=1, gqa_size=1)
             weight = (qweight, weight_scale, weight_offset)
+        elif quantize == QuantType.W8A8SC:
+            qweight = self.get_tensor(f"{prefix}.weight")
+            if qweight.dtype in [torch.float16, torch.bfloat16]:
+                return qweight
+            deq_scale = self.get_tensor(f"{prefix}.deq_scale")
+            quant_bias = self.get_tensor(f"{prefix}.quant_bias")
+            input_scale = self.get_tensor(f"{prefix}.input_scale")
+            input_offset = self.get_tensor(f"{prefix}.input_offset")
+            index = self.get_tensor(f"{prefix}.index")
+            weight = (qweight, deq_scale, quant_bias, input_scale, input_offset, index)
         else:
             weight = self.get_sharded(f"{prefix}.weight", dim=1, gqa_size=gqa_size)
         return weight
@@ -814,11 +797,11 @@ class Weights:
         except Exception as err:
             raise AssertionError from err
 
-    def _set_w8a8_quant_params(self, model_id):
+    def _set_quant_params(self, model_id):
         try:
             filename = os.path.join(model_id, f'quant_model_description_{self.quantize}.json')
             with open(filename, "r") as f:
                 data = json.load(f)
-            self.w8a8_desc = data
+            self.quant_desc = data
         except Exception as err:
             raise AssertionError from err
