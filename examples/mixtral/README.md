@@ -90,7 +90,8 @@
         --tokenizer-model ../Mixtral-8x7B-v0.1/tokenizer.model \
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 8 \
-        --target-expert-parallel-size 2 
+        --target-expert-parallel-size 2 \
+        --params-dtype bf16 
    cd ..
    ```
 
@@ -140,7 +141,8 @@ python ./tools/preprocess_data.py \
         --tokenizer-model ../Mixtral-8x7B-v0.1/tokenizer.model \
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 8 \
-        --target-expert-parallel-size 2 
+        --target-expert-parallel-size 2 \
+        --params-dtype bf16 
     ```
 2. 任意并行切分策略的Megatron权重 --> 任意并行切分策略的Megatron权重
     ***（该场景一般用于重新配置切分后模型的权重，比如在双机16卡 EP2-PP8策略下训练完了，想在单机8卡 TP8上进行推理）***

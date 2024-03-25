@@ -345,6 +345,7 @@ python tools/checkpoint/util.py \
     --load-dir ./baichuan-13B-hf \
     --save-dir ./baichuan-13B-mt \
     --tokenizer-model ./baichuan-13B-hf/tokenizer.model \
+    --params-dtype bf16 \
     --w-pack True      
 ```
 

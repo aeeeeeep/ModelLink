@@ -765,7 +765,8 @@ pip install -r requirements.txt
      --target-pipeline-parallel-size 4 \
      --load-dir ./codellama-34b-hf \
      --save-dir ./load_ckpt \
-     --tokenizer-model ./llama2-70b-hf/tokenizer.model                                                               
+     --tokenizer-model ./llama2-70b-hf/tokenizer.model \
+     --params-dtype bf16                                                              
     ```
 
     Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy.
