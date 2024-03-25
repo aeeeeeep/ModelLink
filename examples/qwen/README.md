@@ -139,7 +139,7 @@ Qwen-7B 训练的硬件配置:
                                    --loader megatron \
                                    --saver megatron \
                                    --save-model-type save_huggingface_qwen \
-                                   --load-dir {your model ckpt save path} \
+                                   --load-dir {your megatron ckpt save path} \
                                    --target-tensor-parallel-size 1 \
                                    --target-pipeline-parallel-size 1 \
                                    --add-qkv-bias \
@@ -367,7 +367,7 @@ Qwen-14B 训练的硬件配置:
       --loader megatron \
       --saver megatron \
       --save-model-type save_huggingface_qwen \
-      --load-dir {your model ckpt save path} \
+      --load-dir {your megatron ckpt save path} \
       --target-tensor-parallel-size 1 \
       --target-pipeline-parallel-size 1 \
       --add-qkv-bias \

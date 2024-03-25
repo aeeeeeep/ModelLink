@@ -144,12 +144,12 @@ python tools/checkpoint/util.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ../HF_internlm7B-v0.1-pt8-pp1 \
+    --load-dir ./ckpt/ \ # megatron权重加载目录
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --add-qkv-bias \
     --add-dense-bias \
-    --save-dir ../HF_internlm7B_downloaded     # <-- 需要填入原始HF模型路径，新权重会存于../HF_internlm7B_downloaded/mg2hg
+    --save-dir ./model_from_hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/mg2hg
 ```
 
 

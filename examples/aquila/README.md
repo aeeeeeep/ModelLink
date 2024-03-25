@@ -118,10 +118,10 @@ python tools/checkpoint/util.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ../HF_Aquila7B-v0.1-pt8-pp1 \
+    --load-dir ./ckpt/ \ # megatron权重加载路径
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ../HF_Aquila7B_downloaded     # <-- 需要填入原始HF模型路径，新权重会存于../HF_Aquila7B_downloaded/mg2hg
+    --save-dir ./HF_Aquila7B_downloaded/     # <-- 需要填入原始HF模型路径，新权重会存于./HF_Aquila7B_downloaded/mg2hg
 ```
 
 6. 配置 Aquila-7B 预训练脚本
