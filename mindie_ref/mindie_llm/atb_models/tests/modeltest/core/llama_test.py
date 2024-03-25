@@ -10,15 +10,15 @@ class LlamaModelTest(model_test.ModelTest):
         model_name = "llama"
         config_path = os.path.join(weight_dir, "config.json")
         with open(config_path, 'r') as f:
-            config_data = json.load(f)
-            if "max_sequence_length" in config_data:
+            self.config_data = json.load(f)
+            if "max_sequence_length" in self.config_data:
                 model_name = "llama_65b"
-            elif "num_hidden_layers" in config_data:
-                if config_data["num_hidden_layers"] == 32:
+            elif "num_hidden_layers" in self.config_data:
+                if self.config_data["num_hidden_layers"] == 32:
                     model_name = "llama2_7b"
-                elif config_data["num_hidden_layers"] == 40:
+                elif self.config_data["num_hidden_layers"] == 40:
                     model_name = "llama2_13b"
-                elif config_data["num_hidden_layers"] == 80:
+                elif self.config_data["num_hidden_layers"] == 80:
                     model_name = "llama2_70b"
         updated_args = args[:3] + (model_name,) + args[4:]
         super().__init__(*updated_args)
@@ -42,6 +42,18 @@ class LlamaModelTest(model_test.ModelTest):
 
     def get_dataset_list(self):
         return ["BoolQ"]
+    
+    def set_fa_tokenizer_params(self):
+        use_fast = True
+        if self.config_data["num_hidden_layers"] in [60]:
+            use_fast = False
+        self.tokenizer_params = {
+            'revision': None,
+            'use_fast': use_fast,
+            'padding_side': 'left',
+            'truncation_side': 'left',
+            'trust_remote_code': True
+        }
 
 
 def main():

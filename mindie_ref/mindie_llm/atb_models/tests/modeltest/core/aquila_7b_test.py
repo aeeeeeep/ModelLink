@@ -59,6 +59,14 @@ class Aquila7BModelTest(model_test.ModelTest):
 
     def get_dataset_list(self):
         return ["BoolQ", "CEval"]
+    
+    def set_fa_tokenizer_params(self):
+        self.tokenizer_params = {
+            'pad_token': '<|endoftext|>',
+            'use_fast': True,
+            'padding_side': 'left',
+            'trust_remote_code': True
+        }
 
 
 def main():
