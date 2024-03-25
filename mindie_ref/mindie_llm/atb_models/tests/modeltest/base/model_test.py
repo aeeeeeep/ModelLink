@@ -210,8 +210,6 @@ class ModelTest:
             self.model_name += "_quant"
             csv_path = os.path.join(os.path.dirname(self.script_path), 'result', self.model_name, f"{self.model_type}_{self.data_type}_{self.quantize}_batch{self.batch_size}_{self.test_mode}_test_result_formatted.csv")
         else:
-            if self.hardware_type == "NPU":
-                torch.npu.set_compile_mode(jit_compile=False)
             csv_path = os.path.join(os.path.dirname(self.script_path), 'result', self.model_name, f"{self.model_type}_{self.data_type}_batch{self.batch_size}_{self.test_mode}_test_result_formatted.csv")
         
         self.data_dir = os.path.join(self.data_dir, self.model_name, "data")
