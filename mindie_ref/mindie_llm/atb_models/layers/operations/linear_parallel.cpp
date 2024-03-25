@@ -114,7 +114,7 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
-        outTensorDescs.at(0) = inTensorDescs.at(0);
+        outTensorDescs.at(0) = inTensorDescs.at(IN_INPUT);
         auto dimLast = inTensorDescs.at(0).shape.dimNum - 1;
         if (param.parallelType == COLUMN_PARALLEL) {
             outTensorDescs.at(0).shape.dims[dimLast] \
@@ -124,7 +124,7 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
                 outTensorDescs.at(0).shape.dims[dimLast] = inTensorDescs.at(IN_WEIGHT).shape.dims[1];
             } else if (param.fusionLinearParam.quantType == LINEAR_W8A8_SC_DEQUANT \
                 || param.fusionLinearParam.quantType == LINEAR_W8A8_SC_QUANT) {
-                outTensorDescs.at(0).shape.dims[dimLast] = inTensorDescs.at(IN_COMPRESS_IDX).shape.dims[0];
+                outTensorDescs.at(0).shape.dims[dimLast] = inTensorDescs.at(IN_BIAS).shape.dims[0];
             } else {
                 outTensorDescs.at(0).shape.dims[dimLast] = inTensorDescs.at(IN_WEIGHT).shape.dims[0];
             }
