@@ -107,11 +107,11 @@ static atb::Operation *LinearOperationCreate(const nlohmann::json &paramJson)
     if (paramJson.contains("hasBias")) {
         param.hasBias = paramJson["hasBias"].get<bool>();
     }
-    if (paramJson.contains("linearType")) {
-        param.linearType = atb::infer::LinearType(paramJson["linearType"].get<int32_t>());
+    if (paramJson.contains("outDataType")) {
+        param.outDataType = aclDataType(paramJson["outDataType"].get<int32_t>());
     }
     ATB_LOG(INFO) << "LinearParam transposeA:" << param.transposeA << ", transposeB:" << param.transposeB
-                  << ", hasBias:" << param.hasBias << ", linearType:" << param.linearType;
+                  << ", hasBias:" << param.hasBias << ", outDataType:" << param.outDataType;
     atb::Operation *op;
     CreateOperation(param, &op);
     return op;
@@ -126,23 +126,7 @@ static atb::Operation *TransdataOperationCreate(const nlohmann::json &paramJson)
     return op;
 }
 
-static atb::Operation *FfnOldOperationCreate(const nlohmann::json &paramJson)
-{
-    atb::infer::LinearActivationParam param;
-    param.transposeA = paramJson["transposeA"].get<bool>();
-    param.transposeB = paramJson["transposeB"].get<bool>();
-    if (paramJson.contains("hasBias")) {
-        param.hasBias = paramJson["hasBias"].get<bool>();
-    }
-    if (paramJson.contains("activationFuncType")) {
-        param.activationFuncType = atb::infer::ActivationType(paramJson["activationFuncType"].get<int32_t>());
-    }
-    ATB_LOG(INFO) << "FfnParam transposeA:" << param.transposeA << ", transposeB:" << param.transposeB
-                  << ", hasBias:" << param.hasBias << ", activationFuncType:" << param.activationFuncType;
-    atb::Operation *op;
-    CreateOperation(param, &op);
-    return op;
-}
+static atb::Operation *FfnOldOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
 static atb::Operation *MlpOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
@@ -168,31 +152,7 @@ static atb::Operation *TransposeOperationCreate(const nlohmann::json &paramJson)
     return op;
 }
 
-static atb::Operation *LinearActivationOperationCreate(const nlohmann::json &paramJson)
-{
-    atb::infer::LinearActivationParam param;
-    if (paramJson.contains("transposeA")) {
-        param.transposeA = paramJson["transposeA"].get<bool>();
-    }
-    if (paramJson.contains("transposeB")) {
-        param.transposeB = paramJson["transposeB"].get<bool>();
-    }
-    if (paramJson.contains("hasBias")) {
-        param.hasBias = paramJson["hasBias"].get<bool>();
-    }
-    if (paramJson.contains("linearType")) {
-        param.linearType = atb::infer::LinearType(paramJson["linearType"].get<int32_t>());
-    }
-    if (paramJson.contains("activationFuncType")) {
-        param.activationFuncType = atb::infer::ActivationType(paramJson["activationFuncType"].get<int32_t>());
-    }
-    ATB_LOG(INFO) << "LinearActivationParam transposeA:" << param.transposeA << ", transposeB:" << param.transposeB
-                  << ", hasBias:" << param.hasBias << ", linearType:" << param.linearType
-                  << ", activationFuncType:" << param.activationFuncType;
-    atb::Operation *op;
-    CreateOperation(param, &op);
-    return op;
-}
+static atb::Operation *LinearActivationOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 
 static atb::Operation *LinearQuantOperationCreate(const nlohmann::json &paramJson) { return nullptr; }
 

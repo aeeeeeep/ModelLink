@@ -154,7 +154,7 @@ atb::Status CommomLayer(const Bloom7bCommonLayerParam &param, atb::Operation **o
     atb::Node &mixdQkvLinearNode = opGraph.nodes.at(nodeId++);
     if (param.quantMode == 1) {
         atb::infer::LinearParam mixdQkvLinearParam;
-        mixdQkvLinearParam.linearType = atb::infer::LINEAR_INT8INT8_INT32_FP16;
+        mixdQkvLinearParam.outDataType = ACL_FLOAT16;
         CREATE_OPERATION(mixdQkvLinearParam, &mixdQkvLinearNode.operation);
         mixdQkvLinearNode.inTensorIds = {
             INTERMEDIATE_INPUTNORM_OUT, IN_QKVMIXED_WEIGHT, IN_QKVMIXED_BIAS, IN_QKVMIXED_DEQSCALE};

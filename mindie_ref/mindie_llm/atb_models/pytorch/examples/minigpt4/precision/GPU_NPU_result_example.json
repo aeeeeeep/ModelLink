@@ -1,0 +1,10 @@
+{
+  "image_file": [
+    "/xx/01.jpg",
+    "/xx/02.jpg"
+  ],
+  "model_answer": [
+    "image description 01",
+    "image description 02"
+  ]
+}

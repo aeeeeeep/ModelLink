@@ -31,11 +31,12 @@ enum LinearTensorIdx : uint32_t {
     IN_OFFSET,   // Quant所需权重
     IN_DESCALE,  // Quant所需权重
     IN_BIAS,
+    IN_COMPRESS_IDX,
     OUT_LINEAR,
     INTERMIDATE_INPUT  // 仅LINEAR_QUANT场景下使用
 };
 
-static const uint64_t IN_TENSOR_COUNT = 6;
+static const uint64_t IN_TENSOR_COUNT = 7;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t QUANT_DEQUANT_INTERMEDIATE_TENSOR_COUNT = 1;
 static const uint64_t QUANT_DEQUANT_NODE_COUNT = 2;
@@ -47,15 +48,19 @@ atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operat
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
-    opGraph.internalTensorNum = param.quantType == LINEAR_QUANT ? QUANT_DEQUANT_INTERMEDIATE_TENSOR_COUNT : DEFAULT_INTERMEDIATE_TENSOR_COUNT;
-    opGraph.nodes.resize(param.quantType == LINEAR_QUANT ? QUANT_DEQUANT_NODE_COUNT : DEFAULT_NODE_COUNT);
+    opGraph.internalTensorNum = param.quantType == LINEAR_W8A8_QUANT || param.quantType == LINEAR_W8A8_SC_QUANT \
+        ? QUANT_DEQUANT_INTERMEDIATE_TENSOR_COUNT : DEFAULT_INTERMEDIATE_TENSOR_COUNT;
+    opGraph.nodes.resize(
+        param.quantType == LINEAR_W8A8_QUANT || param.quantType == LINEAR_W8A8_SC_QUANT \
+        ? QUANT_DEQUANT_NODE_COUNT : DEFAULT_NODE_COUNT
+    );
     opGraph.name = param.quantType == NO_QUANT ? "LinearNoQuant" : \
-        param.quantType == NORM_QUANT_LINEAR_DEQUANT ? "LinearDequantOnly" : \
+        param.quantType == LINEAR_W8A8_DEQUANT || param.quantType == LINEAR_W8A8_SC_DEQUANT ? "LinearDequantOnly" : \
         param.quantType == W8A16 ? "LinearW8A16" : "LinearQuant";
 
     size_t nodeId = 0;
 
-    if (param.quantType == LINEAR_QUANT) {
+    if (param.quantType == LINEAR_W8A8_QUANT || param.quantType == LINEAR_W8A8_SC_QUANT) {
         // quant
         atb::Node &inputQuantNode = opGraph.nodes.at(nodeId++);
         atb::infer::ElewiseParam inputQuantParam;
@@ -68,12 +73,19 @@ atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operat
     atb::Node &linearNode = opGraph.nodes.at(nodeId++);
     atb::infer::LinearParam linearParam;
     if (param.quantType != NO_QUANT && !param.isBF16) {
-        linearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
-    } else if (param.quantType == NO_QUANT && param.isBF16) {
-        linearParam.linearType = atb::infer::LinearType::LINEAR_BF16BF16_FP32_BF16;
+        linearParam.outDataType = ACL_FLOAT16;
     }
 
-    if (param.quantType == W8A16 && param.hasBias) {
+    if (param.quantType == LINEAR_W8A8_SC_DEQUANT || param.quantType == LINEAR_W8A8_SC_QUANT) {
+        atb::infer::LinearSparseParam linearSparseParam;
+        linearSparseParam.tilingK = 8;
+        linearSparseParam.tilingN = 8;
+        CREATE_OPERATION(linearSparseParam, &linearNode.operation);
+        linearNode.inTensorIds = {
+            param.quantType == LINEAR_W8A8_SC_DEQUANT ? LinearTensorIdx::IN_INPUT : LinearTensorIdx::INTERMIDATE_INPUT,
+            LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_BIAS, LinearTensorIdx::IN_DESCALE, LinearTensorIdx::IN_COMPRESS_IDX
+        };
+    } else if (param.quantType == W8A16 && param.hasBias) {
         linearNode.operation = new atb_speed::common::W8A16BiasOperation("LinearBiasNode");
         linearNode.inTensorIds = {
             LinearTensorIdx::IN_INPUT, LinearTensorIdx::IN_WEIGHT,
@@ -94,22 +106,11 @@ atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operat
         linearParam.hasBias = true;
         CREATE_OPERATION(linearParam, &linearNode.operation);
         linearNode.inTensorIds = {
-            param.quantType == NORM_QUANT_LINEAR_DEQUANT ? LinearTensorIdx::IN_INPUT : LinearTensorIdx::INTERMIDATE_INPUT,
+            param.quantType == LINEAR_W8A8_DEQUANT ? LinearTensorIdx::IN_INPUT : LinearTensorIdx::INTERMIDATE_INPUT,
             LinearTensorIdx::IN_WEIGHT, LinearTensorIdx::IN_BIAS, LinearTensorIdx::IN_DESCALE
         };
     }
     linearNode.outTensorIds = {LinearTensorIdx::OUT_LINEAR};
-
-    opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
-                                 atb::SVector<atb::TensorDesc> &outTensorDescs) {
-        outTensorDescs.at(0).format = inTensorDescs.at(0).format;
-        outTensorDescs.at(0).dtype = param.isBF16 ? ACL_BF16 : ACL_FLOAT16;
-        outTensorDescs.at(0).shape = inTensorDescs.at(0).shape;
-        auto outDimSize = outTensorDescs.at(0).shape.dimNum;
-        outTensorDescs.at(0).shape.dims[outDimSize - 1] = param.quantType == W8A16 \
-            ? inTensorDescs.at(1).shape.dims[1] : inTensorDescs.at(1).shape.dims[0];
-        return atb::NO_ERROR;
-    };
 
     CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;

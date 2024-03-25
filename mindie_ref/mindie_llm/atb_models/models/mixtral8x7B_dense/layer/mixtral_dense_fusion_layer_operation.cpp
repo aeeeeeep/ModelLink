@@ -109,6 +109,7 @@ atb::Status MixtralDenseLayerFusionOperation(const MixtralDenseLayerFusionParam 
     selfAttentionKvCacheParam.headNum = param.headNum;
     selfAttentionKvCacheParam.qkScale = param.qkScale;
     selfAttentionKvCacheParam.isTriuMask = param.isTriMask;
+    selfAttentionKvCacheParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     if (param.coderType == 0) {
         selfAttentionKvCacheParam.calcType = atb::infer::SelfAttentionParam::CalcType::UNDEFINED;
     } else if (param.coderType == 1) {
@@ -143,8 +144,7 @@ atb::Status MixtralDenseLayerFusionOperation(const MixtralDenseLayerFusionParam 
     selfOutLinearParallelParam.rank = param.rank;
     selfOutLinearParallelParam.rankSize = param.rankSize;
     selfOutLinearParallelParam.rankRoot = 0;
-    selfOutLinearParallelParam.bias = "None";
-    selfOutLinearParallelParam.parallelType = "RowParallel";
+    selfOutLinearParallelParam.hasResidual = false;
     selfOutLinearParallelParam.backend = param.backend;
     CreateOperation(selfOutLinearParallelParam, &selfOutLinearParallelNode.operation);
     if (selfOutLinearParallelNode.operation == nullptr) {

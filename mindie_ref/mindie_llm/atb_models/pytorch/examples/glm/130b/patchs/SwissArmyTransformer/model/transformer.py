@@ -24,6 +24,7 @@ import os
 
 from deepspeed.runtime.activation_checkpointing.checkpointing import checkpoint
 import torch
+import torch_npu
 import torch.nn.functional as F
 
 from SwissArmyTransformer import mpu
@@ -45,13 +46,15 @@ if ATB_SPEED_HOME_PATH is None:
 LIB_PATH = os.path.join(ATB_SPEED_HOME_PATH,
                         "lib/libatb_speed_torch.so")
 torch.classes.load_library(LIB_PATH)
+QUANT_PATH = os.environ.get("QUANT_PATH")
 
 
 class SelfAttention(torch.nn.Module):
     def __init__(self, hidden_size, num_attention_heads,
                  attention_dropout_prob, output_dropout_prob,
                  init_method, layer_id, hidden_size_per_attention_head=None, output_layer_init_method=None, bias=True,
-                 hooks={}, transformer_pointer=None, params_dtype=torch.float, skip_init=False, device=torch.device('cpu')):
+                 hooks={}, transformer_pointer=None, params_dtype=torch.float,
+                 skip_init=False, device=torch.device('cpu')):
         super(SelfAttention, self).__init__()
         # Set output layer initialization if not provided.
         if output_layer_init_method is None:
@@ -82,6 +85,7 @@ class SelfAttention(torch.nn.Module):
             init_method=init_method,
             bias=bias,
             params_dtype=params_dtype,
+            # params_dtype=torch.int8,
             module=self,
             name="query_key_value",
             skip_init=skip_init,
@@ -96,6 +100,7 @@ class SelfAttention(torch.nn.Module):
             init_method=output_layer_init_method,
             bias=bias,
             params_dtype=params_dtype,
+            # params_dtype=torch.int8,
             module=self,
             name="dense",
             skip_init=skip_init,
@@ -153,11 +158,15 @@ class CrossAttention(torch.nn.Module):
         # Strided linear layer.
         self.query = ColumnParallelLinear(hidden_size, self.inner_hidden_size,
                                           gather_output=False,
-                                          init_method=init_method, bias=bias, params_dtype=params_dtype, module=self, name="query", skip_init=skip_init, device=device)
+                                          init_method=init_method, bias=bias,
+                                          params_dtype=params_dtype, module=self,
+                                          name="query", skip_init=skip_init, device=device)
         self.key_value = ColumnParallelLinear(hidden_size, 2 * self.inner_hidden_size,
                                               stride=2,
                                               gather_output=False,
-                                              init_method=init_method, bias=bias, params_dtype=params_dtype, module=self, name="key_value",
+                                              init_method=init_method, bias=bias,
+                                              params_dtype=params_dtype,
+                                              module=self, name="key_value",
                                               skip_init=skip_init, device=device)
         # Dropout. Note that for a single iteration, this layer will generate
         # different outputs on different number of parallel partitions but
@@ -169,7 +178,8 @@ class CrossAttention(torch.nn.Module):
             self.inner_hidden_size,
             hidden_size,
             input_is_parallel=True,
-            init_method=output_layer_init_method, bias=bias, params_dtype=params_dtype, module=self, name="dense", skip_init=skip_init,
+            init_method=output_layer_init_method, bias=bias, params_dtype=params_dtype,
+            module=self, name="dense", skip_init=skip_init,
             device=device)
         self.output_dropout = torch.nn.Dropout(output_dropout_prob)
 
@@ -190,14 +200,17 @@ class CrossAttention(torch.nn.Module):
     def forward(self, hidden_states, cross_attention_mask, encoder_outputs, **kw_args):
         # hidden_states: [b, s, h]
         if 'cross_attention_forward' in self.hooks:
-            return self.hooks['cross_attention_forward'](hidden_states, cross_attention_mask, encoder_outputs, **kw_args)
+            return self.hooks['cross_attention_forward'](hidden_states, cross_attention_mask,
+                                                         encoder_outputs, **kw_args)
         else:
-            return HOOKS_DEFAULT['cross_attention_forward'](self, hidden_states, cross_attention_mask, encoder_outputs, **kw_args)
+            return HOOKS_DEFAULT['cross_attention_forward'](self, hidden_states, cross_attention_mask,
+                                                            encoder_outputs, **kw_args)
 
 
 class MLP(torch.nn.Module):
     def __init__(self, hidden_size, output_dropout_prob, init_method, inner_hidden_size=None,
-                 output_layer_init_method=None, layer_id=None, hooks={}, bias=True, activation_func=gelu, transformer_pointer=None, params_dtype=torch.float, skip_init=False, device=torch.device('cpu')):
+                 output_layer_init_method=None, layer_id=None, hooks={}, bias=True, activation_func=gelu,
+                 transformer_pointer=None, params_dtype=torch.float, skip_init=False, device=torch.device('cpu')):
         super(MLP, self).__init__()
         self.layer_id = layer_id
         self.activation_func = activation_func
@@ -337,7 +350,7 @@ class BaseTransformerLayer(torch.nn.Module):
             self.post_cross_attention_layernorm = layernorm(
                 hidden_size, eps=layernorm_epsilon)
 
-        # MLP
+        MLP
         self.mlp = MLP(
             hidden_size,
             output_dropout_prob,
@@ -447,7 +460,8 @@ class BaseTransformer(torch.nn.Module):
             )
 
         self.layers = torch.nn.ModuleList(
-            [get_layer(layer_id) for layer_id in range(num_layers)])
+            [None for layer_id in range(num_layers)])
+        # self.layers = [None for _ in range(num_layers)]
 
         # Final layer norm before output.
         self.use_final_layernorm = use_final_layernorm
@@ -505,12 +519,13 @@ class BaseTransformer(torch.nn.Module):
         atb_encoder_param = atb_param.copy()
         atb_encoder_param.update({"coderType": 1})
         self.atb_decoder_operation = torch.classes.ModelTorch.ModelTorch(
-            "glm_130b_fusion_parallel_model")
+            "glm130b_FusionParallelModel")
         self.atb_decoder_operation.set_param(json.dumps(atb_decoder_param))
         self.atb_encoder_operation = torch.classes.ModelTorch.ModelTorch(
-            "glm_130b_fusion_parallel_model")
+            "glm130b_FusionParallelModel")
         self.atb_encoder_operation.set_param(json.dumps(atb_encoder_param))
         # ATB code---------------------------------------------------------------
+        self.atb_weights = []
 
     def forward(self, input_ids, position_ids, attention_mask, *,
                 output_hidden_states=False, **kw_args):
@@ -532,9 +547,11 @@ class BaseTransformer(torch.nn.Module):
                                         self.head_size,
                                         device=torch.cuda.current_device(), dtype=torch.half).contiguous()
             self.k_cache_input = self.kv_cache[0].view(
-                self.num_layers, self.batch_num, self.max_sequence_length, self.hidden_size // self.rankSize)
+                self.num_layers, self.batch_num, self.max_sequence_length,
+                self.hidden_size // self.rankSize).contiguous()
             self.v_cache_input = self.kv_cache[1].view(
-                self.num_layers, self.batch_num, self.max_sequence_length, self.hidden_size // self.rankSize)
+                self.num_layers, self.batch_num, self.max_sequence_length,
+                self.hidden_size // self.rankSize).contiguous()
             
             self.tokens_offset = torch.full(
                 (self.batch_num,), 0, dtype=torch.int32, device=self.kv_cache.device)
@@ -544,46 +561,103 @@ class BaseTransformer(torch.nn.Module):
 
         # initial output_cross_layer might be generated by word/position_embedding_forward
         output_cross_layer = {}
-
-        # embedding part
-        if 'word_embedding_forward' in self.hooks:
-            hidden_states = self.hooks['word_embedding_forward'](
-                input_ids, output_cross_layer=output_cross_layer, **kw_args)
-        else:  # default
-            hidden_states = HOOKS_DEFAULT['word_embedding_forward'](
-                self, input_ids, output_cross_layer=output_cross_layer, **kw_args)
-
         # atb code
+
         if self.weight_flag:
-            atb_weights = []
-            for layer in self.layers:
-                atb_layer_weights = list(layer.state_dict().values())
-                atb_weights.extend(atb_layer_weights[0:8])
-                atb_weights.extend(atb_layer_weights[10:12])
-                atb_weights.extend(atb_layer_weights[8:10])
+            real_path = os.path.join(QUANT_PATH, 'merged/rank{}.pt'.format(self.rank))
+            offset_path = os.path.join(QUANT_PATH, 'offset_full/49300/mp_rank_00_model_states.pt')
+            scale_path = os.path.join(QUANT_PATH, 'scale_full/49300/mp_rank_00_model_states.pt')
 
-            atb_model_weights = list(self.state_dict().values())
-            atb_weights.append(
-                atb_model_weights[-3])  # final norm weight
-            atb_weights.append(
-                atb_model_weights[-2])  # final norm bias
-            atb_weights.append(
-                atb_model_weights[0])  # final forward weight
+            real_weight = torch.load(real_path)
 
-            self.atb_decoder_operation.set_weight(atb_weights)
-            self.atb_encoder_operation.set_weight(atb_weights)
+            self.word_embeddings.load_state_dict({'weight': real_weight['transformer.word_embeddings.weight']})
+            offset_weight = torch.load(offset_path)['module']
+            scale_weight = torch.load(scale_path)['module']
+            cut_col_keys = ["attention.dense", "4h_to_h"]
+            skip_key = 'h_to_4h'
+            for key in offset_weight.keys():
+                if skip_key in key:
+                    offset = self.rank % self.rankSize
+
+                    # offset
+                    off_chunks = torch.chunk(offset_weight[key], self.rankSize * 2, dim=0)
+                    merged_off = torch.cat([off_chunks[offset], off_chunks[self.rankSize + offset]], dim=0)
+                    offset_weight[key] = -1 * merged_off
+
+                    # scale
+                    scale_chunks = torch.chunk(scale_weight[key], self.rankSize * 2, dim=0)
+                    merged_scale = torch.cat([scale_chunks[offset], scale_chunks[self.rankSize + offset]], dim=0)
+                    scale_weight[key] = merged_scale
+                    continue
+
+                if cut_col_keys[0] in key or cut_col_keys[1] in key:
+                    offset_weight[key] = -1 * offset_weight[key]
+                    continue
+                offset_weight[key] = -1 * torch.chunk(offset_weight[key], self.rankSize, dim=0)[self.rank]
+                scale_weight[key] = torch.chunk(scale_weight[key], self.rankSize, dim=0)[self.rank]
+
+            for i in range(self.num_layers):
+                weights_keys = ['transformer.layers.{}.input_layernorm.weight'.format(i),
+                                'transformer.layers.{}.input_layernorm.bias'.format(i),
+                                'transformer.layers.{}.attention.query_key_value.weight'.format(i),
+                                'transformer.layers.{}.attention.query_key_value.bias'.format(i),
+                                'transformer.layers.{}.attention.dense.weight'.format(i),
+                                'transformer.layers.{}.attention.dense.bias'.format(i),
+                                'transformer.layers.{}.post_attention_layernorm.weight'.format(i),
+                                'transformer.layers.{}.post_attention_layernorm.bias'.format(i),
+                                'transformer.layers.{}.mlp.dense_4h_to_h.weight'.format(i),
+                                'transformer.layers.{}.mlp.dense_4h_to_h.bias'.format(i),
+                                'transformer.layers.{}.mlp.dense_h_to_4h.weight'.format(i),
+                                'transformer.layers.{}.mlp.dense_h_to_4h.bias'.format(i)]
+
+                qkv_name = 'transformer.layers.{}.attention.query_key_value'.format(i)
+                attention_dense_name = 'transformer.layers.{}.attention.dense'.format(i)
+                down_name = 'transformer.layers.{}.mlp.dense_4h_to_h'.format(i)
+                up_name = 'transformer.layers.{}.mlp.dense_h_to_4h'.format(i)
+
+                tmp_weight = []
+
+                tmp_weight.append(real_weight[weights_keys[0]].npu())
+                tmp_weight.append(real_weight[weights_keys[1]].npu())
+                tmp_weight.append(real_weight[weights_keys[2]].transpose(0, 1).contiguous().to(torch.int8).npu())
+                tmp_weight.append(real_weight[weights_keys[3]].npu())
+                tmp_weight.append(real_weight[weights_keys[4]].transpose(0, 1).contiguous().to(torch.int8).npu())
+                tmp_weight.append(real_weight[weights_keys[5]].npu())
+                tmp_weight.append(real_weight[weights_keys[6]].npu())
+                tmp_weight.append(real_weight[weights_keys[7]].npu())
+                tmp_weight.append(real_weight[weights_keys[10]].transpose(0, 1).contiguous().to(torch.int8).npu())
+                tmp_weight.append(real_weight[weights_keys[11]].npu())
+                tmp_weight.append(real_weight[weights_keys[8]].transpose(0, 1).contiguous().to(torch.int8).npu())
+                tmp_weight.append(real_weight[weights_keys[9]].npu())
+                tmp_weight.append(scale_weight[qkv_name].reshape(1, -1).contiguous().to(torch.float16).npu())
+                tmp_weight.append(offset_weight[qkv_name].reshape(1, -1).contiguous().to(torch.float16).npu())
+                tmp_weight.append(scale_weight[attention_dense_name].reshape(1, -1).contiguous().half().npu())
+                tmp_weight.append(offset_weight[attention_dense_name].reshape(1, -1).contiguous().half().npu())
+                tmp_weight.append(scale_weight[up_name].reshape(1, -1).contiguous().to(torch.float16).npu())
+                tmp_weight.append(offset_weight[up_name].reshape(1, -1).contiguous().to(torch.float16).npu())
+                tmp_weight.append(scale_weight[down_name].reshape(1, -1).contiguous().to(torch.float16).npu())
+                tmp_weight.append(offset_weight[down_name].reshape(1, -1).contiguous().to(torch.float16).npu())
+
+                self.atb_weights.extend(tmp_weight)
+
+            self.atb_weights.append(
+                real_weight['transformer.final_layernorm.weight'].npu())  # final norm weight
+            self.atb_weights.append(
+                real_weight['transformer.final_layernorm.bias'].npu())  # final norm bias
+            self.atb_weights.append(
+                real_weight['transformer.word_embeddings.weight'].npu())  # final forward weight
+
+            self.atb_decoder_operation.set_weight(self.atb_weights)
+
+            self.atb_encoder_operation.set_weight(self.atb_weights)
             self.weight_flag = False
-
-            self.cos_table, self.sin_table = self.rotary_emb(
-                hidden_states, seq_len=self.max_sequence_length + 1)
-
-            del atb_weights
-            gc.collect()
-            torch.npu.empty_cache()
 
         logits_atb = None
         output_per_layers = []
         operation = None
+        hidden_states = self.word_embeddings(input_ids)
+        self.cos_table, self.sin_table = self.rotary_emb(
+                hidden_states, seq_len=self.max_sequence_length + 1)
 
         # full
         if query_length > 1:
@@ -607,13 +681,13 @@ class BaseTransformer(torch.nn.Module):
         else:
             operation = self.atb_decoder_operation
 
-
         atb_param = json.dumps({
             "tokenOffset": self.tokens_offset.tolist(),
             "seqLen": self.seq_lens.tolist()
         })
+
         atb_model_inputs = [
-            hidden_states.transpose(0, 1),  # change to [bs,seq_len,...]
+            hidden_states,  # change to [bs,seq_len,...]
             position_ids,
             self.cos_table.squeeze(1),
             self.sin_table.squeeze(1),
@@ -625,6 +699,7 @@ class BaseTransformer(torch.nn.Module):
         ]
         atb_model_out = operation.execute(atb_model_inputs + self.layer_indexes, atb_param)
         logits_atb = atb_model_out[0]
+
         self.tokens_offset.add_(1)
 
         if query_length > 1:

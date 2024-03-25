@@ -103,7 +103,7 @@ class FlashInternlmForCausalLM(FlashForCausalLM):
                     "layerNum": config.num_hidden_layers,
                     "rank": self.tp_rank,
                     "rankSize": self.tp_world_size,
-                    "isLmHeadParallel": not self.soc_info.need_nz,  # 310P 暂不支持all-gather
+                    "isLmHeadParallel": True,  # 310P 暂不支持all-gather
                     "isPrefill": True,
                     "isNz": not self.soc_info.need_nz,
                     "backend": "hccl" if self.soc_info.need_nz else os.getenv("BACKEND", "lccl"),  # 310P 暂不支持lccl,
@@ -116,7 +116,7 @@ class FlashInternlmForCausalLM(FlashForCausalLM):
                     "layerNum": config.num_hidden_layers,
                     "rank": self.tp_rank,
                     "rankSize": self.tp_world_size,
-                    "isLmHeadParallel": not self.soc_info.need_nz,
+                    "isLmHeadParallel": True,
                     "isPrefill": False,
                     "isNz": self.soc_info.need_nz,
                     "backend": "hccl" if self.soc_info.need_nz else os.getenv("BACKEND", "lccl"),

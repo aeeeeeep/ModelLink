@@ -16,6 +16,7 @@ from ..starcoder.flash_causal_starcoder import StarcoderConfig
 from ..telechat.config import TelechatConfig
 from ..gpt_neox.config import GPTNeoXConfig
 from ..internlm.configuration_internlm import InternLMConfig
+from ..aquila.v1_7b.modeling_aquila import AquilaConfig
 
 
 @dataclass
@@ -233,8 +234,10 @@ class ChatglmRouter(BaseRouter):
         次级模型名称，比如v2_13b
         :return:
         """
-        if self.config_dict['multi_query_attention']:
+        if 'multi_query_attention' in self.config_dict:
             model_ver = "v2_6b"
+        else:
+            model_ver = "v1_6b"
 
         return model_ver
 
@@ -290,16 +293,16 @@ class AquilaRouter(BaseRouter):
 
     @property
     def config(self):
-        config_cls = self.get_config_cls()
-        config = config_cls.from_pretrained(self.model_name_or_path)
+        config = AquilaConfig.from_pretrained(self.model_name_or_path)
         if self.max_position_embeddings:
-            config.model_max_length = self.max_position_embeddings
+            config.max_position_embeddings = self.max_position_embeddings
         return config
 
     def get_tokenizer(self):
         return AutoTokenizer.from_pretrained(
             self.model_name_or_path,
             pad_token='<|endoftext|>',
+            padding_side="left",
             trust_remote_code=True,
             use_fast=True
         )

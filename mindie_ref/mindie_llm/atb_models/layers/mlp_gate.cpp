@@ -36,12 +36,7 @@ template <class T> atb::Status MlpGateLayerBase(const MlpGateParam &param, atb::
     size_t nodeId = 0;
 
     auto &matmulUpNode = opGraph.nodes.at(nodeId++);
-    atb::infer::LinearParam matmulUpParam;
-    if (param.isBF16) {
-        matmulUpParam = {false, param.transposeB, param.isBias, atb::infer::LinearType::LINEAR_BF16BF16_FP32_BF16};
-    } else {
-        matmulUpParam = {false, param.transposeB, param.isBias};
-    }
+    atb::infer::LinearParam matmulUpParam = {false, param.transposeB, param.isBias};
     CREATE_OPERATION(matmulUpParam, &matmulUpNode.operation);
     if (param.isBias) {
         matmulUpNode.inTensorIds = {config.IN_HIDDENSTATES_ID, config.IN_WEIGHT_UP_ID, config.IN_BIAS_UP_ID};
@@ -60,12 +55,7 @@ template <class T> atb::Status MlpGateLayerBase(const MlpGateParam &param, atb::
         splitNode.outTensorIds = {config.INTERMEDIATE_MATMUL_GATE_OUT_ND_ID, config.INTERMEDIATE_SPLIT_OUT_ND_ID};
     } else {
         auto &matmulGateNode = opGraph.nodes.at(nodeId++);
-        atb::infer::LinearParam matmulGateParam;
-        if (param.isBF16) {
-            matmulGateParam = {false, param.transposeB, param.isBias, atb::infer::LinearType::LINEAR_BF16BF16_FP32_BF16};
-        } else {
-            matmulGateParam = {false, param.transposeB, param.isBias};
-        }
+        atb::infer::LinearParam matmulGateParam = {false, param.transposeB, param.isBias};
         CREATE_OPERATION(matmulGateParam, &matmulGateNode.operation);
         if (param.isBias) {
             matmulGateNode.inTensorIds = {config.IN_HIDDENSTATES_ID, config.IN_WEIGHT_GATE_ID, config.IN_BIAS_GATE_ID};

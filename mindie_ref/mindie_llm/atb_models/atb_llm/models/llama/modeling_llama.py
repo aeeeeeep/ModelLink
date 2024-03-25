@@ -37,9 +37,7 @@ from atb_llm.utils.layers import (
     flash_attn,
     reshape_and_cache
 )
-
-from atb_llm.utils.quantize.pack_type import PackType
-from atb_llm.utils.quantize.w8a8 import calc_linear_pack_type
+from atb_llm.utils.quantize.pack_type import PackType, calc_linear_pack_type
 
 
 class LlamaConfig(PretrainedConfig):
@@ -167,16 +165,10 @@ class LlamaMLP(nn.Module):
             )
         )
         linear_names = [f'{prefix}.up_proj', f'{prefix}.gate_proj']
+        pack_name = f'{prefix}.gate_up_proj'
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{layer_prefix}.post_attention_layernorm'
-        if weights.quantize == 'w8a8':
-            self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
-        elif weights.quantize == 'w8a16':
-            self.pack_type = PackType.ALL_W8A16
-        elif weights.quantize == "smooth_quant":
-            self.pack_type = PackType.ALL_W8A8
-        else:
-            self.pack_type = PackType.ALL_FP
+        self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name, pack_name)
         no_refactor_no_pack = not config.use_refactor and config.num_attention_heads != config.num_key_value_heads
         if no_refactor_no_pack:
             self.gate_proj = TensorParallelColumnLinear.load(
@@ -198,6 +190,13 @@ class LlamaMLP(nn.Module):
                     prefixes=[f"{prefix}.gate_proj", f"{prefix}.up_proj"],
                     weights=weights,
                     head_size=1,
+                )
+            elif self.pack_type == PackType.ALL_W8A8SC:
+                self.gate_up_proj = TensorParallelColumnLinear.load(
+                    config,
+                    prefix=f"{prefix}.gate_up_proj",
+                    weights=weights,
+                    bias=False,
                 )
             else:
                 self.gate_proj = TensorParallelColumnLinear.load(
@@ -264,16 +263,10 @@ class FlashLlamaAttention(torch.nn.Module):
         else:
             self.num_key_value_heads = self.num_heads
         linear_names = [f'{prefix}.q_proj', f'{prefix}.k_proj', f'{prefix}.v_proj']
+        pack_name = f'{prefix}.query_key_value'
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{layer_prefix}.input_layernorm'
-        if weights.quantize == 'w8a8':
-            self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
-        elif weights.quantize == 'w8a16':
-            self.pack_type = PackType.ALL_W8A16
-        elif weights.quantize == "smooth_quant":
-            self.pack_type = PackType.ALL_W8A8
-        else:
-            self.pack_type = PackType.ALL_FP
+        self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name, pack_name)
         no_refactor_no_pack = not config.use_refactor and config.num_attention_heads != config.num_key_value_heads
         if no_refactor_no_pack:
             self.q_proj = TensorParallelColumnLinear.load(
@@ -301,6 +294,13 @@ class FlashLlamaAttention(torch.nn.Module):
                     prefixes=[f"{prefix}.q_proj", f"{prefix}.k_proj", f"{prefix}.v_proj"],
                     weights=weights,
                     head_size=self.head_size
+                )
+            elif self.pack_type == PackType.ALL_W8A8SC:
+                self.query_key_value = TensorParallelColumnLinear.load(
+                    config,
+                    prefix=f"{prefix}.query_key_value",
+                    weights=weights,
+                    bias=False,
                 )
             else:
                 self.q_proj = TensorParallelColumnLinear.load(
@@ -408,30 +408,36 @@ class FlashLlamaLayer(nn.Module):
             self.input_layernorm = LlamaRMSNorm(
                 prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.rms_norm_eps
             )
-        elif self.self_attn.pack_type in [PackType.ALL_W8A8, PackType.MIX_W8A8]:
+        elif self.self_attn.pack_type in [PackType.ALL_W8A8_ANTI, PackType.MIX_W8A8_ANTI]:
+            self.input_layernorm = LlamaRMSNormWrapper(
+                prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.rms_norm_eps
+            )
+        elif self.self_attn.pack_type in [PackType.ALL_W8A8, PackType.MIX_W8A8, PackType.ALL_W8A8SC,
+                                          PackType.MIX_W8A8SC]:
             self.input_layernorm = LlamaRMSNormBias(
                 prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.rms_norm_eps
             )
         else:
-            self.input_layernorm = LlamaRMSNormWrapper(
-                prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.rms_norm_eps
-            )
+            raise AssertionError(f'self_attn.pack_type: {self.self_attn.pack_type} not supported')
         if self.mlp.pack_type in [PackType.ALL_FP, PackType.ALL_W8A16]:
             self.post_attention_layernorm = LlamaRMSNorm(
                 prefix=f"{prefix}.post_attention_layernorm",
                 weights=weights,
                 eps=config.rms_norm_eps,
             )
-        elif self.mlp.pack_type in [PackType.ALL_W8A8, PackType.MIX_W8A8]:
+        elif self.mlp.pack_type in [PackType.ALL_W8A8_ANTI, PackType.MIX_W8A8_ANTI]:
+            self.post_attention_layernorm = LlamaRMSNormWrapper(
+                prefix=f"{prefix}.post_attention_layernorm", weights=weights, eps=config.rms_norm_eps
+            )
+        elif self.mlp.pack_type in [PackType.ALL_W8A8, PackType.MIX_W8A8, PackType.ALL_W8A8SC,
+                                    PackType.MIX_W8A8SC]:
             self.post_attention_layernorm = LlamaRMSNormBias(
                 prefix=f"{prefix}.post_attention_layernorm",
                 weights=weights,
                 eps=config.rms_norm_eps,
             )
         else:
-            self.post_attention_layernorm = LlamaRMSNormWrapper(
-                prefix=f"{prefix}.post_attention_layernorm", weights=weights, eps=config.rms_norm_eps
-            )
+            raise AssertionError(f'mlp.pack_type: {self.mlp.pack_type} not supported')
 
     def forward(
             self,

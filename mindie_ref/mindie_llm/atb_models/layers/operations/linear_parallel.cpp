@@ -21,7 +21,7 @@
 namespace atb_speed {
 namespace common {
 
-static const uint64_t IN_TENSOR_COUNT = 6;
+static const uint64_t IN_TENSOR_COUNT = 7;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t ROW_PARALLEL_NO_ADD_INTERMEDIATE_TENSOR_COUNT = 1;
 static const uint64_t ROW_PARALLEL_NO_ADD_NODE_COUNT = 2;
@@ -35,6 +35,7 @@ enum LinearParallelTensorIdx : uint32_t {
     IN_OFFSET,
     IN_DESCALE,
     IN_BIAS,
+    IN_COMPRESS_IDX,
     OUT_LINEAR_PARALLEL,
     INTERMIDATE_LINEAR_OUT,
     INTERMIDATE_SYNC_OUT
@@ -62,7 +63,8 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
     FusionLinear(linearParam, &linearNode.operation);
     linearNode.inTensorIds = {
         LinearParallelTensorIdx::IN_INPUT, LinearParallelTensorIdx::IN_WEIGHT, LinearParallelTensorIdx::IN_SCALE,
-        LinearParallelTensorIdx::IN_OFFSET, LinearParallelTensorIdx::IN_DESCALE, LinearParallelTensorIdx::IN_BIAS
+        LinearParallelTensorIdx::IN_OFFSET, LinearParallelTensorIdx::IN_DESCALE, LinearParallelTensorIdx::IN_BIAS,
+        LinearParallelTensorIdx::IN_COMPRESS_IDX
     };
     linearNode.outTensorIds = {LinearParallelTensorIdx::INTERMIDATE_LINEAR_OUT};
 
@@ -118,8 +120,14 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
             outTensorDescs.at(0).shape.dims[dimLast] \
                 = inTensorDescs.at(1).shape.dims[0] * param.tensorParallelInfo.worldSize;
         } else {
-            outTensorDescs.at(0).shape.dims[dimLast] = param.fusionLinearParam.quantType == W8A16 \
-                ? inTensorDescs.at(1).shape.dims[1] : inTensorDescs.at(1).shape.dims[0];
+            if (param.fusionLinearParam.quantType == W8A16) {
+                outTensorDescs.at(0).shape.dims[dimLast] = inTensorDescs.at(IN_WEIGHT).shape.dims[1];
+            } else if (param.fusionLinearParam.quantType == LINEAR_W8A8_SC_DEQUANT \
+                || param.fusionLinearParam.quantType == LINEAR_W8A8_SC_QUANT) {
+                outTensorDescs.at(0).shape.dims[dimLast] = inTensorDescs.at(IN_COMPRESS_IDX).shape.dims[0];
+            } else {
+                outTensorDescs.at(0).shape.dims[dimLast] = inTensorDescs.at(IN_WEIGHT).shape.dims[0];
+            }
         }
         return atb::NO_ERROR;
     };
@@ -154,7 +162,7 @@ atb::Status CreateLinearParallelLcoc(const LinearParallelParam &param, atb::Oper
     linearParallelParam.transWeight = true;
     linearParallelParam.rank = param.tensorParallelInfo.rank;
     linearParallelParam.rankSize = param.tensorParallelInfo.worldSize;
-    linearParallelParam.bias = "None";
+    linearParallelParam.hasResidual = false;
     linearParallelParam.backend = "lcoc";
     CREATE_OPERATION(linearParallelParam, &linearParallelNode.operation);
 
@@ -173,15 +181,6 @@ atb::Status CreateLinearParallelLcoc(const LinearParallelParam &param, atb::Oper
         addNode.inTensorIds = {LinearParallelTensorIdx::INTERMIDATE_LINEAR_OUT, LinearParallelTensorIdx::IN_BIAS};
         addNode.outTensorIds = {LinearParallelTensorIdx::OUT_LINEAR_PARALLEL};
     }
-
-    opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
-                                 atb::SVector<atb::TensorDesc> &outTensorDescs) {
-        outTensorDescs.at(0) = inTensorDescs.at(0);
-        auto dimLast = inTensorDescs.at(0).shape.dimNum - 1;
-        outTensorDescs.at(0).shape.dims[dimLast] \
-            = inTensorDescs.at(1).shape.dims[0] * param.tensorParallelInfo.worldSize;
-        return atb::NO_ERROR;
-    };
 
     CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;

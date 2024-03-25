@@ -133,7 +133,7 @@ atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param,
 
     // q_proj
     atb::infer::LinearParam mixedQkvLinearParam;
-    mixedQkvLinearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
+    mixedQkvLinearParam.outDataType = ACL_FLOAT16;
     CREATE_OPERATION(mixedQkvLinearParam, &qLinearNode.operation);
     qLinearNode.inTensorIds = { INTERNAL_INPUT_NORM_OUT, IN_Q_LINEAR_WEIGHT, IN_Q_LINEAR_BIAS, IN_Q_LINEAR_DEQSCALE };
     qLinearNode.outTensorIds = { INTERNAL_MIXED_Q };
@@ -160,6 +160,7 @@ atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param,
     atb::infer::SelfAttentionParam selfAttentionParam;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qScale = 1.0 / sqrt(param.dk);
+    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     CREATE_OPERATION(selfAttentionParam, &selfAttentionKvCacheNode.operation);
     selfAttentionKvCacheNode.inTensorIds = { INTERMIDATE_Q_MIXEDLINEAROUT,
         INTERMIDATE_K_MIXEDLINEAROUT,
