@@ -328,7 +328,7 @@ python ./tools/preprocess_data.py \
 
 ```shell
 # modify MASTER_ADDR to the IP address of the master node in the cluster.
-# the master node is localhost, and the other nodes are the IP address of the master node, for example, 90.90.2.166
+# the master node is localhost, and the other nodes are the IP address of the master node
 MASTER_ADDR=localhost
 
 # modify the rank number of a node. The rank number of the master node is 0, and the rank number of other nodes increases in ascending order.
