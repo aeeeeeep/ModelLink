@@ -32,18 +32,14 @@ enum MixtralDenseMlpTensorId {
     INTERMIDATE_SWISH_OUT,
     INTERMIDATE_HIDDENSTATUS,
     INTERMIDATE_MLP_OUT,
-    INTERMIDATE_MLP_OUT_TRANSPOSED,
-    INTERMIDATE_EXPERT_MASK_PIROR_TOKENS,
-    INTERMIDATE_EXPERT_SECONDARY_TOKENS,
     INTERMIDATE_EXPERT_MASK,
     INTERMIDATE_MASKED_MLP_OUT,
-    INTERMIDATE_MASKED_MLP_OUT_TRANSPOSED,
 };
 
 static const uint64_t IN_TENSOR_COUNT = 5;
 static const uint64_t OUT_TENSOR_COUNT = 1;
-static const uint64_t INTERMEDIATE_TENSOR_COUNT = 12;
-static const uint64_t NODE_COUNT = 11;
+static const uint64_t INTERMEDIATE_TENSOR_COUNT = 8;
+static const uint64_t NODE_COUNT = 8;
 
 atb::Status CreateMixtralDenseMlpOperation(const MixtralDenseMlpParam &param, atb::Operation **operation)
 {
@@ -62,11 +58,8 @@ atb::Status CreateMixtralDenseMlpOperation(const MixtralDenseMlpParam &param, at
     atb::Node &swishNode = opGraph.nodes.at(nodeId++);
     atb::Node &mulNode = opGraph.nodes.at(nodeId++);
     atb::Node &linearDownNode = opGraph.nodes.at(nodeId++);
-    atb::Node &maskSplitNode = opGraph.nodes.at(nodeId++);
-    atb::Node &addNode = opGraph.nodes.at(nodeId++);
-    atb::Node &transposeMlpInNode = opGraph.nodes.at(nodeId++);
+    atb::Node &maskSumNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpMulNode = opGraph.nodes.at(nodeId++);
-    atb::Node &transposeMlpOutNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpAddNode = opGraph.nodes.at(nodeId++);
 
     atb::infer::LinearParam linearParam;
@@ -76,25 +69,11 @@ atb::Status CreateMixtralDenseMlpOperation(const MixtralDenseMlpParam &param, at
     CreateOperation(linearParam, &linearNode.operation);
     linearNode.inTensorIds = {IN_HIDDENSTATUS, IN_MLP_GATE_UP_WEIGHTTENSOR};
     linearNode.outTensorIds = {INTERMIDATE_MATMUL_GATE_UP_OUT};
-    linearNode.inTensorReshapeFuncs.resize(linearNode.inTensorIds.size());
-    linearNode.inTensorReshapeFuncs[0] = [batchDimPtr](const atb::Dims &oldShape, atb::Dims &newShape) {
-        newShape.dimNum = 2; // dimNum: 2
-        *batchDimPtr = oldShape.dims[0];
-        newShape.dims[0] = oldShape.dims[0] * oldShape.dims[1];
-        newShape.dims[1] = oldShape.dims[2];
-    };
 
-    atb::infer::SplitParam splitParam = {2, 2};
+    atb::infer::SplitParam splitParam = {1, 2};
     CreateOperation(splitParam, &splitNode.operation);
     splitNode.inTensorIds = {INTERMIDATE_MATMUL_GATE_UP_OUT};
     splitNode.outTensorIds = {INTERMIDATE_MATMUL_GATE_OUT, INTERMIDATE_MATMUL_UP_OUT};
-    splitNode.inTensorReshapeFuncs.resize(splitNode.inTensorIds.size());
-    splitNode.inTensorReshapeFuncs[0] = [batchDimPtr](const atb::Dims &oldShape, atb::Dims &newShape) {
-        newShape.dimNum = 3; // dimNum: 3
-        newShape.dims[0] = (*batchDimPtr);
-        newShape.dims[1] = oldShape.dims[0] / (*batchDimPtr);
-        newShape.dims[2] = oldShape.dims[1];
-    };
 
     atb::infer::ActivationParam activationParam;
     activationParam.activationType = atb::infer::ActivationType::ACTIVATION_SWISH;
@@ -116,57 +95,35 @@ atb::Status CreateMixtralDenseMlpOperation(const MixtralDenseMlpParam &param, at
     linearDownNode.inTensorIds = {INTERMIDATE_HIDDENSTATUS, IN_MLP_DOWN_WEIGHTTENSOR};
     linearDownNode.outTensorIds = {INTERMIDATE_MLP_OUT};
 
-    atb::infer::SplitParam maskSplitParam = {0, 2};
-    CreateOperation(maskSplitParam, &maskSplitNode.operation);
-    maskSplitNode.inTensorIds = {IN_EXPERT_MASK_WITH_WEIGHT};
-    maskSplitNode.outTensorIds = {INTERMIDATE_EXPERT_MASK_PIROR_TOKENS, INTERMIDATE_EXPERT_SECONDARY_TOKENS};
-    maskSplitNode.inTensorReshapeFuncs.resize(maskSplitNode.inTensorIds.size());
-    maskSplitNode.inTensorReshapeFuncs[0] = [batchDimPtr](const atb::Dims &oldShape, atb::Dims &newShape) {
+    atb::infer::ReduceParam maskSumParam;
+    maskSumParam.reduceType = atb::infer::ReduceParam::ReduceType::REDUCE_SUM;
+    maskSumParam.axis = {1};
+    CreateOperation(maskSumParam, &maskSumNode.operation);
+    maskSumNode.inTensorIds = {IN_EXPERT_MASK_WITH_WEIGHT};
+    maskSumNode.outTensorIds = {INTERMIDATE_EXPERT_MASK};
+    maskSumNode.inTensorReshapeFuncs.resize(maskSumNode.inTensorIds.size());
+    maskSumNode.inTensorReshapeFuncs[0] = [batchDimPtr](const atb::Dims &oldShape, atb::Dims &newShape) {
         newShape.dimNum = 2; // dimNum: 2
         newShape.dims[0] = oldShape.dims[0] * oldShape.dims[1];
         newShape.dims[1] = oldShape.dims[2];
     };
 
-    atb::infer::ElewiseParam addParam;
-    addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CreateOperation(addParam, &addNode.operation);
-    addNode.inTensorIds = {INTERMIDATE_EXPERT_MASK_PIROR_TOKENS, INTERMIDATE_EXPERT_SECONDARY_TOKENS};
-    addNode.outTensorIds = {INTERMIDATE_EXPERT_MASK};
-
-    atb::infer::TransposeParam transposeMlpInParam;
-    transposeMlpInParam.perm = {2, 0, 1};
-    CreateOperation(transposeMlpInParam, &transposeMlpInNode.operation);
-    transposeMlpInNode.inTensorIds = {INTERMIDATE_MLP_OUT};
-    transposeMlpInNode.outTensorIds = {INTERMIDATE_MLP_OUT_TRANSPOSED};
-    ATB_LOG(INFO) << "transposeMlpInNode success";
-
     atb::infer::ElewiseParam mlpMulParam;
     mlpMulParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_MUL;
     CreateOperation(mlpMulParam, &mlpMulNode.operation);
-    mlpMulNode.inTensorIds = {INTERMIDATE_EXPERT_MASK, INTERMIDATE_MLP_OUT_TRANSPOSED};
+    mlpMulNode.inTensorIds = {INTERMIDATE_MLP_OUT, INTERMIDATE_EXPERT_MASK};
     mlpMulNode.outTensorIds = {INTERMIDATE_MASKED_MLP_OUT};
     mlpMulNode.inTensorReshapeFuncs.resize(mlpMulNode.inTensorIds.size());
-    mlpMulNode.inTensorReshapeFuncs[0] = [batchDimPtr](const atb::Dims &oldShape, atb::Dims &newShape) {
-        newShape.dimNum = 1; // dimNum: 1
-        newShape.dims[0] = oldShape.dims[0] * oldShape.dims[1];
-    };
     mlpMulNode.inTensorReshapeFuncs[1] = [batchDimPtr](const atb::Dims &oldShape, atb::Dims &newShape) {
-        newShape.dimNum = 2; // dimNum: 2
+        newShape.dimNum = 2; // dimNum: 1
         newShape.dims[0] = oldShape.dims[0];
-        newShape.dims[1] = oldShape.dims[2] * oldShape.dims[1];
+        newShape.dims[1] = 1;
     };
 
-    atb::infer::TransposeParam transposeOutParam;
-    transposeOutParam.perm = {1, 0};
-    CreateOperation(transposeOutParam, &transposeMlpOutNode.operation);
-    transposeMlpOutNode.inTensorIds = {INTERMIDATE_MASKED_MLP_OUT};
-    transposeMlpOutNode.outTensorIds = {INTERMIDATE_MASKED_MLP_OUT_TRANSPOSED};
-    ATB_LOG(INFO) << "Router weights TRANSPOSED success";
-
-    atb::infer::ElewiseParam mlpAdParam;
-    mlpAdParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CreateOperation(mlpAdParam, &mlpAddNode.operation);
-    mlpAddNode.inTensorIds = {INTERMIDATE_MASKED_MLP_OUT_TRANSPOSED, IN_FINAL_HIDDENS_STATE};
+    atb::infer::ElewiseParam mlpAddParam;
+    mlpAddParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
+    CreateOperation(mlpAddParam, &mlpAddNode.operation);
+    mlpAddNode.inTensorIds = {INTERMIDATE_MASKED_MLP_OUT, IN_FINAL_HIDDENS_STATE};
     mlpAddNode.outTensorIds = {OUT_MLPRESULTSTENSOR};
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
