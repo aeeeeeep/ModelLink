@@ -207,17 +207,18 @@ python tools/checkpoint/util.py --model-type GPT \
    6.2 全参微调
    全参微调的配置脚本基本和预训练脚本一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
 
-   增加微调参数--finetune，使微调从第一步开始。
+   增加微调参数--finetune，增加预训练权重加载参数--load，使微调从第一步开始。
 
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
-   
+   CKPT_PATH=./ckpt
+   --load ${CKPT_PATH} \
    --finetune \
    --is-instruction-dataset \
    ```
 
    6.3 Lora微调
-   Lora微调的脚本配置是在预训练脚本基础上加上lora参数，如下所示:
+   Lora微调的脚本配置是在全参微调脚本基础上加上lora参数，如下所示:
 
    ```bash
        --lora-target-modules query_key_value dense proj dense_4h_to_h \
@@ -231,13 +232,6 @@ python tools/checkpoint/util.py --model-type GPT \
      --lora-modules-to-save word_embeddings output_layer \
    ```
 
-   Lora微调的断点续训需要加上以下参数：
-
-   ```bash
-       --load ${ORIGIN_CHECKPOINT}  \   # 原始模型参数路径
-       --lora-load ${LORA_CHECKPOINT} \   # lora参数checkpoint
-   ```
-   
    启动Lora微调脚本: tasks/finetune/tune_llama2_7b_ptd.sh
 
    ```shell
@@ -936,17 +930,18 @@ python tools/checkpoint/util.py --model-type GPT \
    6.2 全参微调
    全参微调的配置脚本基本和预训练脚本一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
 
-   增加微调参数--finetune，使微调从第一步开始。
+   增加微调参数--finetune，增加预训练权重加载参数--load，使微调从第一步开始。
 
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
-   
+   CKPT_PATH=./ckpt
+   --load ${CKPT_PATH} \
    --finetune \
    --is-instruction-dataset \
    ```
 
    6.3 Lora微调
-   Lora微调的脚本配置是在预训练脚本基础上加上lora参数，如下所示:
+   Lora微调的脚本配置是在全参微调脚本基础上加上lora参数，如下所示:
 
    ```bash
        --lora-target-modules query_key_value dense proj dense_4h_to_h \
@@ -960,13 +955,6 @@ python tools/checkpoint/util.py --model-type GPT \
      --lora-modules-to-save word_embeddings output_layer \
    ```
 
-   Lora微调的断点续训需要加上以下参数：
-
-   ```bash
-       --load ${ORIGIN_CHECKPOINT}  \   # 原始模型参数路径
-       --lora-load ${LORA_CHECKPOINT} \   # lora参数checkpoint
-   ```
-   
    启动llama2-34B Lora微调脚本: tasks/finetune/tune_llama2_34b_ptd.sh
 
    ```shell
