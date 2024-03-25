@@ -13,24 +13,24 @@
 *  * See the License for the specific language governing permissions and
 *  * limitations under the License.
 *  */
-#ifndef ATB_SPEED_MODELS_MIXTRAL_DENSE_LAYER_EMBEDDING_H
-#define ATB_SPEED_MODELS_MIXTRAL_DENSE_LAYER_EMBEDDING_H
-
-#include "atb/atb_infer.h"
+#ifndef ATB_SPEED_MODELS_MIXTRAL_DENSE_MOE_OPERATION_H
+#define ATB_SPEED_MODELS_MIXTRAL_DENSE_MOE_OPERATION_H
+#include <atb/atb_infer.h>
+#include <atb/svector.h>
 #include "atb_speed/log.h"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
-#include "nlohmann/json.hpp"
-#pragma GCC diagnostic pop
 
 namespace atb_speed {
 namespace mixtralDense {
-struct LayerEmbeddingParam {
-    int axis = 0;
+struct MixtralDenseMoeParam {
+    atb::SVector<int64_t> axes = {1};
+    atb::SVector<int32_t> num = {2}; // num of selected experts
+    int numOfExperts = 8;            // num of total experts
+    int expertParallelDegree = 1;
+    bool transpose = true;
+    int maskStartIdx = 0;
 };
 
-atb::Status LayerEmbedding(const LayerEmbeddingParam &param, atb::Operation **operation);
-
-} // namespace mixtralDense
+atb::Status CreateMixtralDenseMoeOperation(const MixtralDenseMoeParam &param, atb::Operation **operation);
+}
 } // namespace atb_speed
 #endif
