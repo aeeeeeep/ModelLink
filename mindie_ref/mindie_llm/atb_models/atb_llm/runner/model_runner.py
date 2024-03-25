@@ -53,6 +53,8 @@ class ModelRunner:
             raise ValueError(f'unsupported type: {self.dtype}')
 
         self.process_group, self.device = initialize_distributed(self.rank, self.npu_id, world_size)
+        if not self.quantize:
+            torch.npu.set_compile_mode(jit_compile=False)
 
         print_log(rank, logger.info, f'init tokenizer done: {self.tokenizer}')
 
