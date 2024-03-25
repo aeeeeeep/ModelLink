@@ -280,6 +280,7 @@ def task_chat(args, model, tokenizer=None, system_template="", dialog_template="
             histories.pop()
 
         dist.all_reduce(terminate_runs)
+        dist.barrier()
         if terminate_runs > 0:
             break
 
