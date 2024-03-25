@@ -24,10 +24,10 @@
 
 namespace atb_speed {
 namespace star_coder {
-static const uint64_t IN_TENSOR_COUNT = 52;
-static const uint64_t OUT_TENSOR_COUNT = 2;
-static const uint64_t INTERMEDIATE_TENSOR_COUNT = 1;
-static const uint64_t NODE_COUNT = 2;
+static const uint64_t IN_TENSOR_COUNT = 58;
+static const uint64_t OUT_TENSOR_COUNT = 1;
+static const uint64_t INTERMEDIATE_TENSOR_COUNT = 3;
+static const uint64_t NODE_COUNT = 4;
 static const uint64_t LAYER_NORM_AXIS_COUNT = 1;
 
 atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operation)
@@ -81,10 +81,10 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     }
     fusionAttentionParam.selfAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
     if (param.isFA) {
-        fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
         fusionAttentionParam.selfAttentionParam.calcType = param.isPrefill ? \
             atb::infer::SelfAttentionParam::CalcType::ENCODER : atb::infer::SelfAttentionParam::CalcType::DECODER;
     } else {
+        fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
         fusionAttentionParam.selfAttentionParam.calcType = atb::infer::SelfAttentionParam::CalcType::PA_ENCODER;
     }
     fusionAttentionParam.selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
@@ -110,16 +110,19 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
         IN_QKV_OFFSET_0,
         IN_QKV_DESCALE_0,
         IN_QKV_DEOFFSET_0,
+        IN_QKV_COMPRESS_IDX_0,
         IN_QKV_WEIGHT_1,
         IN_QKV_SCALE_1,
         IN_QKV_OFFSET_1,
         IN_QKV_DESCALE_1,
         IN_QKV_DEOFFSET_1,
+        IN_QKV_COMPRESS_IDX_1,
         IN_QKV_WEIGHT_2,
         IN_QKV_SCALE_2,
         IN_QKV_OFFSET_2,
         IN_QKV_DESCALE_2,
         IN_QKV_DEOFFSET_2,
+        IN_QKV_COMPRESS_IDX_2,
         IN_PLACE_HOLDER,
         IN_PLACE_HOLDER,
         IN_SEQ_LEN,
@@ -135,6 +138,8 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
         IN_ATTENTION_OUT_OFFSET,
         IN_ATTENTION_OUT_DESCALE,
         IN_ATTENTION_OUT_DEOFFSET,
+        IN_ATTENTION_OUT_COMPRESS_IDX
+        // IN_PLACE_HOLDER, // layernorm暂时修改
     };
     attentionNode.outTensorIds = {IN_RESIDUAL_ADD_OUT, INTERMEDIATE_ATTENTION_OUT};
 
@@ -143,10 +148,10 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     mlpParam.normHasBias = true;
     mlpParam.gateUpHasBias = true;
     mlpParam.downHasBias = true;
-    mlpParam.mlpPackType = atb_speed::common::UP_WEIGHT_ONLY;
     mlpParam.activationParam.activationType  = atb::infer::ActivationType::ACTIVATION_GELU;
     mlpParam.packQuantType = param.packQuantType[1];
     mlpParam.layerLinearQuantType = param.linearQuantType;
+    mlpParam.mlpPackType = atb_speed::common::GetMlpPackType(param.packQuantType[1], true);
     atb::infer::LayerNormParam mlpLayerNormParam;
     mlpLayerNormParam.layerType = atb::infer::LayerNormParam::LayerNormType::LAYER_NORM_NORM;
     mlpLayerNormParam.normParam.beginNormAxis = LAYER_NORM_AXIS_COUNT;
@@ -174,16 +179,19 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
         IN_MLP_OFFSET_0,
         IN_MLP_DESCALE_0,
         IN_MLP_DEOFFSET_0,
+        IN_MLP_COMPRESS_IDX_0,
         IN_MLP_WEIGHT_1,
         IN_MLP_SCALE_1,
         IN_MLP_OFFSET_1,
         IN_MLP_DESCALE_1,
         IN_MLP_DEOFFSET_1,
+        IN_MLP_COMPRESS_IDX_1,
         IN_MLP_DOWN_WEIGHT,
         IN_MLP_DOWN_SCALE,
         IN_MLP_DOWN_OFFSET,
         IN_MLP_DOWN_DESCALE,
         IN_MLP_DOWN_DEOFFSET,
+        IN_MLP_DOWN_COMPRESS_IDX
     };
     mlpParallelNode.outTensorIds = {OUT_ATTENTION_RESIDUAL_ADD, OUT_MLP};
 
