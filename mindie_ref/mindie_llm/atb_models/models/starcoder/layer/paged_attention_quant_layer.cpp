@@ -81,10 +81,10 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     }
     fusionAttentionParam.selfAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
     if (param.isFA) {
-        fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
         fusionAttentionParam.selfAttentionParam.calcType = param.isPrefill ? \
             atb::infer::SelfAttentionParam::CalcType::ENCODER : atb::infer::SelfAttentionParam::CalcType::DECODER;
     } else {
+        fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
         fusionAttentionParam.selfAttentionParam.calcType = atb::infer::SelfAttentionParam::CalcType::PA_ENCODER;
     }
     fusionAttentionParam.selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
