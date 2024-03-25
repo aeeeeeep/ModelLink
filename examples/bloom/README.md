@@ -325,7 +325,7 @@ python tools/checkpoint/util.py --model-type GPT \
 6. 配置 Bloom-176B 预训练脚本(Bloom-176B暂不支持Flash Attention): examples/bloom/pretrain_bloom_176b.sh
 
 ```shell
-# 修改 MASTER_ADDR 为主节点 IP，比如, 90.90.2.166
+# 修改 MASTER_ADDR 为主节点
 MASTER_ADDR=localhost
 
 # 修改每个节点的节点序号，主节点序号为 0, 其余节点的序号依次增长到集群节点数量-1
