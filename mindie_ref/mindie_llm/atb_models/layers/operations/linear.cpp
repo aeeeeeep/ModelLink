@@ -128,7 +128,6 @@ atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operat
         return atb::NO_ERROR;
     };
 
-
     CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
 }
