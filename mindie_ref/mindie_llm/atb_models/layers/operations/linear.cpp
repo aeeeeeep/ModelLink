@@ -112,6 +112,22 @@ atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operat
     }
     linearNode.outTensorIds = {LinearTensorIdx::OUT_LINEAR};
 
+    opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
+                                 atb::SVector<atb::TensorDesc> &outTensorDescs) {
+        outTensorDescs.at(0).format = inTensorDescs.at(IN_INPUT).format;
+        outTensorDescs.at(0).dtype = param.isBF16 ? ACL_BF16 : ACL_FLOAT16;
+        outTensorDescs.at(0).shape = inTensorDescs.at(IN_INPUT).shape;
+        auto outDimSize = outTensorDescs.at(IN_INPUT).shape.dimNum;
+        if (param.quantType == W8A16) {
+            outTensorDescs.at(0).shape.dims[outDimSize - 1] = inTensorDescs.at(IN_WEIGHT).shape.dims[1];
+        } else if (param.quantType == LINEAR_W8A8_SC_DEQUANT || param.quantType == LINEAR_W8A8_SC_QUANT) {
+            outTensorDescs.at(0).shape.dims[outDimSize - 1] = inTensorDescs.at(IN_BIAS).shape.dims[0];
+        } else {
+            outTensorDescs.at(0).shape.dims[outDimSize - 1] = inTensorDescs.at(IN_WEIGHT).shape.dims[0];
+        }
+        return atb::NO_ERROR;
+    };
+
     CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
 }
