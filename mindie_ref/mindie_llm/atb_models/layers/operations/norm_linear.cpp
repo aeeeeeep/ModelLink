@@ -78,29 +78,8 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
     };
     linearNode.outTensorIds = {NormLinearTensorIdx::OUT_LINEAR};
 
-    opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
-                                 atb::SVector<atb::TensorDesc> &outTensorDescs) {
-        outTensorDescs.at(0) = inTensorDescs.at(IN_RESIDUAL_INPUT);
-        outTensorDescs.at(1) = inTensorDescs.at(IN_INPUT);
-        auto outDimSize = outTensorDescs.at(1).shape.dimNum;
-        outTensorDescs.at(1).shape.dims[outDimSize - 1] = param.fusionLinearParam.quantType == LINEAR_W8A16_QUANT \
-            ? inTensorDescs.at(IN_LINEAR_WEIGHT).shape.dims[1] : inTensorDescs.at(IN_LINEAR_WEIGHT).shape.dims[0];
-        return atb::NO_ERROR;
-    };
-
     CREATE_OPERATION(opGraph, operation);
     return atb::NO_ERROR;
-}
-
-NormQuantType GetNormQuantType(const int &packQuantType)
-{
-    if (packQuantType == PackQuantType::ALL_W8A16 || packQuantType == PackQuantType::ALL_FP) {
-        return NormQuantType::NORM_NO_QUANT;
-    } else if (packQuantType == PackQuantType::ALL_W8A8 || packQuantType == PackQuantType::MIX_W8A8) {
-        return NormQuantType::NORM_QUANT;
-    } else {
-        return NormQuantType::NORM_ANTI_OUTLIER_QUANT;
-    }
 }
 
 LinearQuantType GetLinearQuantType(const int &packQuantType, const int &linearType, bool hasNorm)
@@ -126,7 +105,6 @@ LinearQuantType GetLinearQuantType(const int &packQuantType, const int &linearTy
     }
 }
 
-template atb::Status NormLinear(const NormLinearParam<atb::infer::RmsNormParam> &param, atb::Operation **operation);
 NormQuantType GetNormQuantType(const int &packQuantType)
 {
     if (packQuantType == PackQuantType::ALL_W8A16 || packQuantType == PackQuantType::ALL_FP) {

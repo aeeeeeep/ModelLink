@@ -44,7 +44,6 @@ enum QKVLinearSplitTensorIdx : uint32_t {
     IN_QKV_OFFSET_2,
     IN_QKV_DESCALE_2,
     IN_QKV_BIAS_2,
-    OUT_QKV_ADD,
     IN_QKV_COMPRESS_IDX_2,
     OUT_QKV_ADD,
     OUT_Q,
@@ -99,8 +98,6 @@ atb::Status QKVLinearSplit(const FusionAttentionParam<NormParamType> &param, atb
     qNormLinearParam.nextResidualAddIn = param.nextResidualAddIn;
     qNormLinearParam.addNormParam = addNormParam;
     qNormLinearParam.fusionLinearParam.quantType = GetLinearQuantType(param.packQuantType, param.layerLinearQuantType[0], true);
-    qNormLinearParam.nextResidualAddIn = param.nextResidualAddIn;
-    qNormLinearParam.addNormParam = addNormParam;
     qNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
     qNormLinearParam.fusionLinearParam.hasBias = param.qkvHasBias;
     NormLinear<NormParamType>(qNormLinearParam, &qNormLinearNode.operation);
@@ -393,7 +390,6 @@ enum AttentionTensorIdx : uint32_t {
     IN_OFFSET_OUT,
     IN_DESCALE_OUT,
     IN_BIAS_OUT,
-    OUT_MLP_RESIDUAL_ADD,
     IN_COMPRESS_IDX_OUT,
     OUT_MLP_RESIDUAL_ADD,
     OUT_ATTENTION,
