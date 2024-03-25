@@ -66,7 +66,6 @@ class FlashStarcoderForCausalLM(torch.nn.Module):
         self.attention_mask_max_en = None
         self.attention_mask_max_de = None
 
-        # self.attn_mask = AttentionMask.static(config.seq_length)
         self.max_base_len = 128
         self.attn_mask = AttentionMask.static(self.max_base_len, dtype=self.dtype)
         self.ascend_weight = []
