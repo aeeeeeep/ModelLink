@@ -112,6 +112,7 @@ python tools/checkpoint/util.py \
     --load-dir ./baichuan2-7B-hf \
     --save-dir ./baichuan2-7B-mt \
     --tokenizer-model ./baichuan2-7B-hf/tokenizer.model \
+    --params-dtype bf16 \
     --w-pack True  
 ```
 Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
@@ -331,6 +332,7 @@ python tools/checkpoint/util.py \
     --load-dir ./baichuan2-13B-hf \
     --save-dir ./baichuan2-13B-mt \
     --tokenizer-model ./baichuan2-13B-hf/tokenizer.model \
+    --params-dtype bf16 \
     --w-pack True  
 ```
 

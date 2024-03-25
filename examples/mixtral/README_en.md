@@ -89,7 +89,8 @@ Recommended hardware configuration for inference:
         --tokenizer-model ../Mixtral-8x7B-v0.1/tokenizer.model \
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 8 \
-        --target-expert-parallel-size 2 
+        --target-expert-parallel-size 2 \
+        --params-dtype bf16 
     cd ..
    ```
 
@@ -139,7 +140,8 @@ python ./tools/preprocess_data.py \
         --tokenizer-model ../Mixtral-8x7B-v0.1/tokenizer.model \
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 8 \
-        --target-expert-parallel-size 2 
+        --target-expert-parallel-size 2 \
+        --params-dtype bf16 
     ```
 2. Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
 ***(This scenario is generally used to reconfigure the sliced model weights, such as training on a dual-node 16-card EP2-PP8 strategy, and then wanting to infer on a single-node 8-card TP8)***

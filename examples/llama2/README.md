@@ -769,7 +769,8 @@ pip install -r requirements.txt
     --target-pipeline-parallel-size 4 \
     --load-dir ./llama2-70b-hf/ \
     --save-dir ./load_ckpt \
-    --tokenizer-model ./llama2-70b-hf/tokenizer.model
+    --tokenizer-model ./llama2-70b-hf/tokenizer.model \
+    --params-dtype bf16 
   ```
 
 4.2 将Llama-2-34B权重从huggingface格式转换为megatron格式
@@ -786,7 +787,8 @@ pip install -r requirements.txt
      --target-pipeline-parallel-size 4 \
      --load-dir ./codellama-34b-hf \
      --save-dir ./load_ckpt \
-     --tokenizer-model ./llama2-70b-hf/tokenizer.model
+     --tokenizer-model ./llama2-70b-hf/tokenizer.model \
+     --params-dtype bf16 
     ```
 
 4.3 将Llama-2-70B权重从megatron格式转换为huggingface格式
