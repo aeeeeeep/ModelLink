@@ -116,8 +116,21 @@ def parallel_transformer_init(self, config,
                  pre_process=True,
                  post_process=True,
                  drop_path_rate=0.0):
+    from ascendspeed.ops.unpad_gen_attention_mask import UnpadGenAttentionMask
+    from ascendspeed.ops.unpad_seqlen import UnpadSeqLen
+    from ascendspeed.ops.pad_seqlen import PadSeqLen
+
     super(ParallelTransformer, self).__init__()
     args = get_args()
+
+    self.use_unpad = args.use_unpad
+    self.pad = PadSeqLen(args.seq_length)
+    self.unpad = UnpadSeqLen(args.seq_length)
+
+    world_size = mpu.get_tensor_model_parallel_world_size()
+    self.num_attention_heads_per_partition = core.utils.divide(
+        config.num_attention_heads, world_size)
+    self.genAttentionMask = UnpadGenAttentionMask(self.num_attention_heads_per_partition)
 
     self.layer_type = layer_type
     self.model_type = model_type
