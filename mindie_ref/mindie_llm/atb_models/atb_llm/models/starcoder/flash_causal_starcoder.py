@@ -301,6 +301,8 @@ class FlashStarcoderForCausalLM(torch.nn.Module):
         if is_prefill:
             atten_mask = self.attn_mask.get_attn_mask(self.max_base_len, kv_cache[0][0].dtype,
                                                     kv_cache[0][0].device)
+            if self.soc_info.need_nz:
+                atten_mask = self.transdata_operation.execute([atten_mask])[0]
             if lm_head_indices is None:
                 lm_head_indices = torch.tensor(range(input_ids.shape[0]), dtype=torch.int64, device=input_ids.device)
             self.acl_param = json.dumps({
