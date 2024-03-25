@@ -154,7 +154,6 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
     mlpParam.normHasBias = true;
     mlpParam.gateUpHasBias = true;
     mlpParam.downHasBias = true;
-    // mlpParam.mlpPackType = atb_speed::common::UP_WEIGHT_ONLY;
     mlpParam.activationParam.activationType  = atb::infer::ActivationType::ACTIVATION_GELU;
     mlpParam.packQuantType = param.packQuantType[1];
     mlpParam.layerLinearQuantType = param.linearQuantType;
