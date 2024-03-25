@@ -1,7 +1,7 @@
 /*
 * Copyright (c) Huawei Technologies Co., Ltd. 2023. All rights reserved.
 *
-*  * Licensed under the Apache License, Version 2.0 (the "License");
+* Licensed under the Apache License, Version 2.0 (the "License");
 *  * you may not use this file except in compliance with the License.
 *  * You may obtain a copy of the License at
 *  *
@@ -13,22 +13,19 @@
 *  * See the License for the specific language governing permissions and
 *  * limitations under the License.
 *  */
-#ifndef ATB_SPEED_MODELS_MIXTRAL_DENSE_MOE_OPERATION_H
-#define ATB_SPEED_MODELS_MIXTRAL_DENSE_MOE_OPERATION_H
+#ifndef ATB_SPEED_MODELS_MIXTRAL_DENSE_MASK_SPLIT_OPERATION_H
+#define ATB_SPEED_MODELS_MIXTRAL_DENSE_MASK_SPLIT_OPERATION_H
 #include <atb/atb_infer.h>
-#include <atb/svector.h>
-#include "atb_speed/log.h"
 
 namespace atb_speed {
 namespace mixtralDense {
-struct MixtralDenseMoeParam {
-    atb::SVector<int64_t> axes = {1};
-    atb::SVector<int32_t> num = {2}; // num of selected experts
-    int numOfExperts = 8;            // num of total experts
-    bool transpose = true;
+struct MixtralDenseMaskSplitParam {
+    int splitDim = 0;
+    int splitSize = 2;
 };
 
-atb::Status CreateMixtralDenseMoeOperation(const MixtralDenseMoeParam &param, atb::Operation **operation);
+atb::Status CreateMixtralDenseMaskSplitOperation(
+    const MixtralDenseMaskSplitParam &param, atb::Operation **operation);
 }
 } // namespace atb_speed
 #endif
