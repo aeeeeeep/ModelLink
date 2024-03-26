@@ -618,7 +618,7 @@ Here's a hardware summary of pre-training  Qwen-72B:
 
     --recompute-granularity full \
     --recompute-method block \
-    --recompute-num-layers 2 \
+    --recompute-num-layers 80 \
    ```
 
 	Launch Qwen-72B pre-training script: examples/qwen/pretrain_qwen_72b_ptd.sh
