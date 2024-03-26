@@ -22,9 +22,11 @@ Here's a hardware summary of pre-training Bloom-7B:
 
 1. Clone the repository to your local server:
 ```shell
-git clone https://gitee.com/ascend/ModelLink.git 
-cd ModeLlink 
+git clone https://gitee.com/ascend/ModelLink.git
+cd ModelLink
 mkdir logs
+mkdir model_from_hf
+mkdir dataset
 mkdir ckpt
 ```
 
@@ -58,12 +60,10 @@ pip install -r requirements.txt
 Download the Bloom-7B checkpoint from [here](https://huggingface.co/bigscience/bloom-7b1/tree/main)
 
 ```shell
-mkdir tokenizer
-cd tokenizer
-wget https://huggingface.co/bigscience/bloom/resolve/main/special_tokens_map.json
-wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer.json
-wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer_config.json
-...
+cd ./model_from_hf/
+# 需要安装 git-lfs: git lfs install
+git clone https://huggingface.co/bigscience/bloom
+mv bloom Bloom-7B
 cd ..
 ```
 
@@ -73,13 +73,14 @@ HuggingFace weights --> Megatron weights
 ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 
 ```shell
+```shell
 python tools/checkpoint/util.py --model-type GPT \
                                 --loader loader_bloom_hf \
                                 --saver saver_megatron \
                                 --target-tensor-parallel-size 8 \
                                 --target-pipeline-parallel-size 1 \
-                                --load-dir /bloom-7b \
-                                --save-dir /{your save dir} \
+                                --load-dir ./model_from_hf/Bloom-7B/ \
+                                --save-dir ./model_weights/Bloom-7B-v0.1-tp8-pp1/ \
                                 --tokenizer-model None 
 ```
 
@@ -93,11 +94,11 @@ python tools/checkpoint/util.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ../HF_Bloom7B-v0.1-pt8-pp1 \
+    --load-dir ./model_weights/Bloom-7B-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --embed-layernorm \
-    --save-dir ../HF_Bloom7B_downloaded   # <-- Fill in the original HF model path here, new weights will be saved in ../HF_Bloom7B_downloaded/mg2hg
+    --save-dir ./model_from_hf/Bloom-7B/   # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Bloom-7B/mg2hg
 ```
 
 5. Prepare dataset
@@ -106,23 +107,19 @@ Download the Bloom-7B datasets from [here](https://huggingface.co/datasets/tatsu
 
 ```shell
 # download datasets
- mkdir dataset_bloom7b
-     cd ./dataset_bloom7b
-     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-     cd ..
-     cd ModelLink
-```
+cd dataset/
+wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+cd ..
 
-```shell
 # prepare datasets
 python ./tools/preprocess_data.py \
-       --input ../dataset_bloom7b/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-       --tokenizer-name-or-path ../bloom-7b-hf \
-       --output-prefix ../dataset_bloom7b/alpaca \
-       --workers 4 \
-       --log-interval 1000 \
-       --tokenizer-type PretrainedFromHF
-    cd .. 
+  --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+  --tokenizer-name-or-path ./model_from_hf/Bloom-7B/ \
+  --output-prefix ./dataset/Bloom-7B_alpaca \
+  --workers 4 \
+  --log-interval 1000 \
+  --tokenizer-type PretrainedFromHF
+cd .. 
 ```
 
 6. Config Bloom-7B pre-training script(Bloom-7B does not support Flash Attention) : examples/bloom/pretrain_bloom_ptd_7B.sh 
@@ -131,10 +128,10 @@ python ./tools/preprocess_data.py \
 # modify the script according to your own  ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-CKPT_SAVE_DIR="./ckpt"
-DATA_PATH="./dataset_bloom-7B/bigscience_bloom-7b1_master_text_document"
-TOKENIZER_PATH="./bloom-7B-hf/"
-CKPT_LOAD_DIR="./bloom-7b"
+CKPT_SAVE_DIR="./ckpt/"
+DATA_PATH="./dataset/Bloom-7B_alpaca_text_document"
+TOKENIZER_PATH="./model_from_hf/Bloom-7B/"
+CKPT_LOAD_DIR="./model_weights/Bloom-7B-v0.1-tp8-pp1/"
 ```
 
 
@@ -166,9 +163,10 @@ Config Bloom-7B inference script: tasks/inference/generate_bloom_7b_ptd.sh
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
  
 # modify script model path and tokenizer path
-CHECKPOINT="your model save ckpt path"
-TOKENIZER_PATH="your tokenizer path"
+CHECKPOINT="./model_weights/Bloom-7B-Base-v0.1-tp8-pp1/"
+TOKENIZER_PATH="./model_from_hf/Bloom-7B-Base/"
 ```
+
 Launch Bloom-7B inference script: tasks/inference/generate_bloom_7b_ptd.sh
 ```bash
 bash tasks/inference/generate_bloom_7b_ptd.sh
@@ -184,8 +182,8 @@ Config Bloom-7B evaluation script: tasks/evaluation/evaluate_bloom_7B_ptd.sh
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 # modify script model path and tokenizer path
-CHECKPOINT="your model save ckpt path"
-TOKENIZER_PATH="your tokenizer path"
+CHECKPOINT="./model_weights/Bloom-7B-Base-v0.1-tp8-pp1/"
+TOKENIZER_PATH="./model_from_hf/Bloom-7B-Base/"
 # configure task and data path
 DATA_PATH="your dataset path"
 TASK="your task"
@@ -227,6 +225,8 @@ Here's a hardware summary of pre-training Bloom-176B:
 git clone https://gitee.com/ascend/ModelLink.git
 cd ModelLink
 mkdir logs
+mkdir model_from_hf
+mkdir dataset
 mkdir ckpt
 ```
 
@@ -260,12 +260,12 @@ pip install -r requirements.txt
 Download the Bloom-176B tokensizer from [here](https://huggingface.co/bigscience/bloom/tree/main).
 
 ```shell
-mkdir tokenizer
-cd tokenizer
+mkdir ./model_from_hf/Bloom-176B/
+cd ./model_from_hf/Bloom-176B/
 wget https://huggingface.co/bigscience/bloom/resolve/main/special_tokens_map.json
 wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer.json
 wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer_config.json
-cd ..
+cd ../../
 ```
 
 4. Weights convert
@@ -274,13 +274,14 @@ HuggingFace weights --> Megatron weights
 ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 
 ```shell
+```shell
 python tools/checkpoint/util.py --model-type GPT \
                                 --loader loader_bloom_hf \
                                 --saver saver_megatron \
                                 --target-tensor-parallel-size 8 \
                                 --target-pipeline-parallel-size 5 \
-                                --load-dir /bloom-176b \
-                                --save-dir /{your save dir} \
+                                --load-dir ./model_from_hf/Bloom-176B/ \
+                                --save-dir ./model_weights/Bloom-176B-v0.1-pt8-pp5/ \
                                 --tokenizer-model None \
                                 --params-dtype bf16 
 ```
@@ -295,12 +296,12 @@ python tools/checkpoint/util.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ../HF_Bloom176B-v0.1-pt8-pp1 \
+    --load-dir ./model_weights/Bloom-176B-v0.1-pt8-pp5/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --embed-layernorm \
     --params-dtype bf16 \
-    --save-dir ../HF_Bloom176B_downloaded   # <-- Fill in the original HF model path here, new weights will be saved in ../HF_Bloom176B_downloaded/mg2hg
+    --save-dir ./model_from_hf/Bloom-176B/   # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Bloom-176B/mg2hg
 ```
 
 5. Prepare dataset
@@ -308,21 +309,19 @@ python tools/checkpoint/util.py --model-type GPT \
 Download the bloom-176b datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
 ```shell
 # download datasets
-mkdir dataset_bloom176b
-     cd ./dataset_bloom176b
-     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-     cd ..
-     cd ModelLink
-	
+cd dataset/
+wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+cd ..
+
 # process datasets                              
 python ./tools/preprocess_data.py \
-       --input ../dataset_bloom176b/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-       --tokenizer-name-or-path ../bloom-176b-hf \
-       --output-prefix ../dataset_bloom176b/alpaca \
-       --workers 4 \
-       --log-interval 1000 \
-       --tokenizer-type PretrainedFromHF
-    cd .. 
+  --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+  --tokenizer-name-or-path ./model_from_hf/Bloom-176B/ \
+  --output-prefix ./dataset/Bloom-176B_alpaca \
+  --workers 4 \
+  --log-interval 1000 \
+  --tokenizer-type PretrainedFromHF
+cd .. 
 ```
 6. Config Bloom-176B pre-training script(Bloom-176B does not support Flash Attention): examples/bloom/pretrain_bloom_176b.sh
 
@@ -335,8 +334,9 @@ MASTER_ADDR=localhost
 NODE_RANK=0
 
 # modify the datasets path and tokenizer path
-TOKENIZER_NAME_OR_PATH=/home/bloom_data/vocab_file/
-DATA_PATH=/home/bloom_data/enwiki_100k/enwiki-100k_text_document
+
+TOKENIZER_NAME_OR_PATH=./model_from_hf/Bloom-176B/
+DATA_PATH=./dataset/Bloom-176B_alpaca_text_document
 ```
 
 7. Launch Bloom-176B pre-training script: examples/bloom/pretrain_bloom_176b.sh
@@ -367,9 +367,10 @@ Config Bloom-176B inference script: tasks/inference/generate_bloom_176b_ptd.sh
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
  
 # modify script model path and tokenizer path
-CHECKPOINT="your model save ckpt path"
-TOKENIZER_PATH="your tokenizer path"
+CHECKPOINT="./model_weights/Bloom-176B-v0.1-tp8-pp5/"
+TOKENIZER_PATH="./model_from_hf/Bloom-176B/"
 ```
+
 Launch Bloom-176B inference script: tasks/inference/generate_bloom_176b_ptd.sh
 Bloom-176b needs 5 machines to inference, so you need to convert a new model, set
 tp=8, pp=5
@@ -387,8 +388,8 @@ Config Bloom-176B evaluation script: tasks/evaluation/evaluate_bloom_176B_ptd.sh
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 # modify script model path and tokenizer path
-CHECKPOINT="your model save ckpt path"
-TOKENIZER_PATH="your tokenizer path"
+CHECKPOINT="./model_weights/Bloom-176B-v0.1-tp8-pp5/"
+TOKENIZER_PATH="./model_from_hf/Bloom-176B/"
 # configure task and data path
 DATA_PATH="your dataset path"
 TASK="your task"
