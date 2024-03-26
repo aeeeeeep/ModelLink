@@ -918,7 +918,6 @@ class VLMo(pl.LightningModule):
                 }
             )
             acl_model_out = self.acl_fa_vl_operation.execute(acl_input, tmp_param)
-            print('acl_model_out', acl_model_out)
             acl_model_out = acl_model_out[0]
             return acl_model_out
         elif modality_type == "image":
