@@ -33,6 +33,7 @@ struct DecoderLayerParam {
 
     int quantType = 0;
     float rmsNormEps = 0;
+    int layerId = 0;
     int numAttentionHeadsPerRank = 0;
     int hiddenSizePerAttentionHead = 0;
     int numKeyValueHeadsPerRank = 0;
@@ -49,7 +50,8 @@ struct DecoderLayerParam {
 };
 
 enum DecoderLayerTensorIdx : uint32_t {
-    IN_HIDDEN_STATES = 0,               // shape: FA: [batchSize, seqLen, maxPositionEmbeddings] PA: [seqLen, hiddenSize]
+    IN_RESIDUAL_ADD_OUT = 0,
+    IN_HIDDEN_STATES,                   // shape: FA: [batchSize, seqLen, maxPositionEmbeddings] PA: [seqLen, hiddenSize]
     IN_INPUT_NORM_WEIGHT,               // shape: [hiddenSize]
     IN_INPUT_NORM_BIAS,
     IN_INPUT_NORM_NEW_WEIGHT,
@@ -114,11 +116,11 @@ enum DecoderLayerTensorIdx : uint32_t {
     IN_BLOCK_TABLES,                    // shape: [seqLen, seqLen]; PA所需参数
     IN_SLOTS,                           // shape: [seqLen]; PA所需参数
 
-    OUT_DECODER_LAYER,                  // shape: FA: [batchSize, seqLen, maxPositionEmbeddings] PA: [seqLen, hiddenSize]
+    OUT_ATTENTION_RESIDUAL_ADD,         // shape: FA: [batchSize, seqLen, maxPositionEmbeddings] PA: [seqLen, hiddenSize]
+    OUT_MLP,
 
+    INTERMEDIATE_RESIDUAL_ADD,
     INTERMEDIATE_ATTENTION_OUT,         // shape: PA: [seqLen, hiddenSize]
-    INTERMEDIATE_RESIDUAL_ADD_OUT,      // shape: PA: [seqLen, hiddenSize]
-    INTERMEDIATE_MLP_OUT,               // shape: PA: [seqLen, hiddenSize]
 };
 
 atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operation);
