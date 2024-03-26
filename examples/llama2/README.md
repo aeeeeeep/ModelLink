@@ -44,83 +44,78 @@ LLAMA2-7B 训练的硬件配置:
 
 ### 脚本
 
-1. 拷贝代码仓到本地服务器
+1. 拷贝仓库到你的个人服务器：
+```shell
+git clone https://gitee.com/ascend/ModelLink.git 
+cd ModelLink 
+mkdir logs
+mkdir model_from_hf
+mkdir ckpt
+```
 
-   ```shell
-   git clone https://gitee.com/ascend/ModelLink.git 
-   cd ModelLink
-    mkdir logs
-    mkdir ckpt
-   pip install -r requirements.txt
-   cd ..
-   ```
 2. 搭建环境
 
-   ```bash
-   # python3.8
-   conda create -n test python=3.8
-   conda activate test
-   
-   # 安装 torch 和 torch_npu
-   pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
-   pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
-   pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+```bash
+# python3.8
+conda create -n test python=3.8
+conda activate test
 
-   # 修改 ascend-toolkit 路径
-   source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+# 安装 torch 和 torch_npu 
+pip install torch-2.1.0-cp38-cp38m-linux_aarch64.whl
+pip install torch_npu-2.1.0.XXX-cp38-cp38m-linux_aarch64.whl
+pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+
+# 修改 ascend-toolkit 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
    
-   # 安装加速库
-   git clone https://gitee.com/ascend/AscendSpeed.git
-   cd AscendSpeed
-   pip install -r requirements.txt 
-   pip3 install -e .
-   cd ..
+# 安装加速库
+git clone https://gitee.com/ascend/AscendSpeed.git
+cd AscendSpeed
+pip install -r requirements.txt 
+pip3 install -e .
+cd ..
    
-   # 安装其余依赖库
-   pip install -r requirements.txt 
-   ```
+# 安装其余依赖库
+pip install -r requirements.txt 
+```
+
 3. 下载 LLAMA2-7B 的 [预训练权重和词表](https://huggingface.co/daryl149/llama-2-7b-hf/tree/main)
 
-   ```shell
-     #!/bin/bash
-     mkdir -p llama-2-7b-hf
-     cd llama-2-7b-hf
-     wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/config.json
-     wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/generation_config.json
-     wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/pytorch_model-00001-of-00002.bin
-     wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/pytorch_model-00002-of-00002.bin
-     wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/pytorch_model.bin.index.json
-     wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/special_tokens_map.json
-     wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/tokenizer.json
-     wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/tokenizer.model
-     wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/tokenizer_config.json
-     cd ..
-   ```
+```shell
+  #!/bin/bash
+  mkdir model_from_hf
+  cd ./model_from_hf/
+  # 需要安装 git-lfs
+  git clone https://huggingface.co/daryl149/llama-2-7b-hf
+  cd ..
+```
 
 4. 权重转换
 
-   4.1 将权重从 huggingface 格式转化为 magatron 格式
-   ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
+将模型权重文件从 HuggingFace权重 格式转化为 Megatron 权重
+***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
-   ```bash
-    cd ModelLink
-    # 修改 ascend-toolkit 路径
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh
-   
-    # 权重格式转换
-    python tools/checkpoint/util.py --model-type GPT \
-                                    --loader llama2_hf \
-                                    --saver megatron \
-                                    --target-tensor-parallel-size 8 \
-                                    --target-pipeline-parallel-size 1 \
-                                    --load-dir ../llama-2-7b-hf \
-                                    --save-dir {your megatron ckpt save path} \
-                                    --tokenizer-model ../llama-2-7b-hf/tokenizer.model
-   cd ..
-   ```
+```bash
+cd ModelLink
+# 修改 ascend-toolkit 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-   4.2 任意并行切分策略的 Megatron 权重 格式转化为 HuggingFace权重
-   ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+# 权重格式转换
+python tools/checkpoint/util.py \
+    --model-type GPT \
+    --loader llama2_hf \
+    --saver megatron \
+    --target-tensor-parallel-size 8 \
+    --target-pipeline-parallel-size 1 \
+    --load-dir ./model_from_hf/llama-2-7b-hf/ \
+    --save-dir ./model_weights/llama-2-7b-hf-v0.1-tp8-pp1/ \
+    --tokenizer-model ./model_from_hf/llama-2-7b-hf/tokenizer.model
+cd ..
+```
+
+任意并行切分策略的 Megatron 权重 格式转化为 HuggingFace权重
+***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
 ```shell
 cd ModelLink/
 # 请按照您的真实环境修改 set_env.sh 路径
@@ -129,10 +124,10 @@ python tools/checkpoint/util.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ../llama27B-v0.1-pt8-pp1 \
+    --load-dir ./model_weights/llama-2-7b-hf-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ../llama27B_downloaded     # <-- 需要填入原始HF模型路径，新权重会存于../llama27B_downloaded/mg2hg
+    --save-dir ./model_from_hf/llama-2-7b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-2-7b-hf/mg2hg
 ```
 
    权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
@@ -211,7 +206,7 @@ python tools/checkpoint/util.py --model-type GPT \
 
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
-   CKPT_PATH=./ckpt
+   CKPT_PATH=../../ckpt/
    --load ${CKPT_PATH} \
    --finetune \
    --is-instruction-dataset \
@@ -536,7 +531,7 @@ python tools/checkpoint/util.py --model-type GPT \
 
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
-   CKPT_PATH=./ckpt
+   CKPT_PATH=../../ckpt/
    --load ${CKPT_PATH} \
    --finetune \
    --is-instruction-dataset \
@@ -936,7 +931,7 @@ python tools/checkpoint/util.py --model-type GPT \
 
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
-   CKPT_PATH=./ckpt
+   CKPT_PATH=../../ckpt/
    --load ${CKPT_PATH} \
    --finetune \
    --is-instruction-dataset \
