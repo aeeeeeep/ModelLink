@@ -1,7 +1,7 @@
 import os
 import json
 import torch
-import torch_npu # npu进行量化
+import torch_npu  # npu进行量化
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from modelslim.pytorch.llm_ptq.anti_outlier import AntiOutlierConfig, AntiOutlier
 from modelslim.pytorch.llm_ptq.llm_ptq_tools import Calibrator, QuantConfig
@@ -12,13 +12,15 @@ tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path=input_fp
                                           padding_side='left', trust_remote_code=True)
 model = AutoModelForCausalLM.from_pretrained(pretrained_model_name_or_path=input_fp16_path,
                                              trust_remote_code=True).float().cpu()
+
+
 # model = model.half().npu() # 如果需要使用npu进行量化
 
 # 获取校准数据函数定义
-def get_calib_dataset(tokenizer, calib_list, device="cpu"):  # 如果需要使用npu进行量化, device="npu:0"。使用cpu,device="cpu"
+def get_calib_dataset(auto_tokenizer, calib_list, device="cpu"):  # 如果需要使用npu进行量化, device="npu:0"。使用cpu,device="cpu"
     calib_dataset = []
     for calib_data in calib_list:
-        inputs = tokenizer(calib_data, return_tensors='pt')
+        inputs = auto_tokenizer(calib_data, return_tensors='pt')
         calib_dataset.append([
             inputs.data['input_ids'].to(device),
             inputs.data['attention_mask'].to(device)
