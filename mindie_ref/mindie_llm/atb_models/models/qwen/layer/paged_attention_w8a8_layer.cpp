@@ -37,24 +37,28 @@ enum PAW8A8LayerW8A8TensorId : int {
     IN_Q_DEQSCALE,  // deq_scale
     IN_Q_OFFSET,  // offset
     IN_Q_SCALE,  // scale
+    IN_Q_COMPRESS_IDX,
 
     IN_K_WEIGHT,  // weight
     IN_K_BIAS,  // bias
     IN_K_DEQSCALE,  // deq_scale
     IN_K_OFFSET,  // offset
     IN_K_SCALE,  // scale
+    IN_K_COMPRESS_IDX,
 
     IN_V_WEIGHT,  // weight
     IN_V_BIAS,  // bias
     IN_V_DEQSCALE,  // deq_scale
     IN_V_OFFSET,  // offset
     IN_V_SCALE,  // scale
+    IN_V_COMPRESS_IDX,
 
     IN_ATTENTION_OUT_WEIGHT,  // weight
     IN_ATTENTION_OUT_BIAS,  // bias
     IN_ATTENTION_OUT_DEQSCALE,  // deq_scale
     IN_ATTENTION_OUT_OFFSET,  // offset
     IN_ATTENTION_OUT_SCALE,  // scale
+    IN_ATTENTION_OUT_COMPRESS_IDX,
 
     IN_SELFOUT_NORM_WEIGHT,  // weight
     IN_SELFOUT_NORM_BIAS,  // bias
@@ -66,18 +70,21 @@ enum PAW8A8LayerW8A8TensorId : int {
     IN_MLP_W2_DEQSCALE,  // deq_scale
     IN_MLP_W2_OFFSET,  // offset
     IN_MLP_W2_SCALE,  // scale
+    IN_MLP_W2_COMPRESS_IDX,
 
     IN_MLP_W1_WEIGHT,  // weight
     IN_MLP_W1_BIAS,  // bias
     IN_MLP_W1_DEQSCALE,  // deq_scale
     IN_MLP_W1_OFFSET,  // offset
     IN_MLP_W1_SCALE,  // scale
+    IN_MLP_W1_COMPRESS_IDX,
 
     IN_MLP_CPROJ_WEIGHT,  // weight
     IN_MLP_CPROJ_BIAS,  // bias
     IN_MLP_CPROJ_DEQSCALE,  // deq_scale
     IN_MLP_CPROJ_OFFSET,  // offset
     IN_MLP_CPROJ_SCALE,  // scale
+    IN_MLP_CPROJ_COMPRESS_IDX,
 
     IN_COSEMBED,
     IN_SINEMBED,
@@ -96,7 +103,7 @@ enum PAW8A8LayerW8A8TensorId : int {
     INTERNAL_MLPOUT,
 };
 
-static const uint64_t IN_TENSOR_COUNT = 53;
+static const uint64_t IN_TENSOR_COUNT = 60;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 3;
 static const uint64_t NODE_COUNT = 4;
@@ -176,16 +183,19 @@ atb::Status PAW8A8Layer(const PAW8A8LayerParam &param, atb::Operation **operatio
         IN_Q_OFFSET,  // IN_QKV_OFFSET_0
         IN_Q_DEQSCALE,  // IN_QKV_DESCALE_0
         IN_Q_BIAS,  // IN_QKV_DEOFFSET_0（quant场景下为quant_bias，非quant场景下为bias）
+        IN_Q_COMPRESS_IDX,
         IN_K_WEIGHT,  // IN_QKV_WEIGHT_1
         IN_K_SCALE,  // IN_QKV_SCALE_1
         IN_K_OFFSET,  // IN_QKV_OFFSET_1
         IN_K_DEQSCALE,  // IN_QKV_DESCALE_1
         IN_K_BIAS,  // IN_QKV_DEOFFSET_1（quant场景下为quant_bias，非quant场景下为bias）
+        IN_K_COMPRESS_IDX,
         IN_V_WEIGHT,  // IN_QKV_WEIGHT_2
         IN_V_SCALE,  // IN_QKV_SCALE_2
         IN_V_OFFSET,  // IN_QKV_OFFSET_2
         IN_V_DEQSCALE,  // IN_QKV_DESCALE_2
         IN_V_BIAS,  // IN_QKV_DEOFFSET_2（quant场景下为quant_bias，非quant场景下为bias）
+        IN_V_COMPRESS_IDX,
         IN_COSEMBED,  // IN_COS_TABLE
         IN_SINEMBED,  // IN_SIN_TABLE
         IN_INPUT_LENGTHS,  // IN_SEQ_LEN
@@ -201,6 +211,7 @@ atb::Status PAW8A8Layer(const PAW8A8LayerParam &param, atb::Operation **operatio
         IN_ATTENTION_OUT_OFFSET,  // IN_ATTENTION_OUT_OFFSET
         IN_ATTENTION_OUT_DEQSCALE,  // IN_ATTENTION_OUT_DESCALE
         IN_ATTENTION_OUT_BIAS,  // IN_ATTENTION_OUT_DEOFFSET（quant场景下为quant_bias，非quant场景下为bias）
+        IN_ATTENTION_OUT_COMPRESS_IDX
     };
     attentionNode.outTensorIds = {INTERNAL_ATTENTIONOUT};
 
@@ -252,16 +263,19 @@ atb::Status PAW8A8Layer(const PAW8A8LayerParam &param, atb::Operation **operatio
         IN_MLP_W2_OFFSET,  // IN_MLP_OFFSET_0
         IN_MLP_W2_DEQSCALE,  // IN_MLP_DESCALE_0
         IN_MLP_W2_BIAS,  // IN_MLP_DEOFFSET_0
+        IN_MLP_W2_COMPRESS_IDX,
         IN_MLP_W1_WEIGHT,  // IN_MLP_WEIGHT_1
         IN_MLP_W1_SCALE,  // IN_MLP_SCALE_1
         IN_MLP_W1_OFFSET,  // IN_MLP_OFFSET_1
         IN_MLP_W1_DEQSCALE,  // IN_MLP_DESCALE_1
         IN_MLP_W1_BIAS,  // IN_MLP_DEOFFSET_1
+        IN_MLP_W1_COMPRESS_IDX,
         IN_MLP_CPROJ_WEIGHT,  // IN_MLP_DOWN_WEIGHT
         IN_MLP_CPROJ_SCALE,  // IN_MLP_DOWN_SCALE
         IN_MLP_CPROJ_OFFSET,  // IN_MLP_DOWN_OFFSET
         IN_MLP_CPROJ_DEQSCALE,  // IN_MLP_DOWN_DESCALE
         IN_MLP_CPROJ_BIAS,  // IN_MLP_DOWN_DEOFFSET
+        IN_MLP_CPROJ_COMPRESS_IDX
     };
     mlpParallelNode.outTensorIds = {INTERNAL_MLPOUT};
 
