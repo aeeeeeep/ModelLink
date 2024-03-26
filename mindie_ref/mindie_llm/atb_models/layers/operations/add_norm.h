@@ -18,6 +18,7 @@
 #define ASCEND_SPEED_INFERENCE_COMMON_ADD_NORM_H
 
 #include <atb/atb_infer.h>
+#include "layers/operations/empty_operation.h"
 
 namespace atb_speed {
 namespace common {

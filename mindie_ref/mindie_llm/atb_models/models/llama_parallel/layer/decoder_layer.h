@@ -119,6 +119,7 @@ enum DecoderLayerTensorIdx : uint32_t {
     OUT_ATTENTION_RESIDUAL_ADD,         // shape: FA: [batchSize, seqLen, maxPositionEmbeddings] PA: [seqLen, hiddenSize]
     OUT_MLP,
 
+    INTERMEDIATE_RESIDUAL_ADD,
     INTERMEDIATE_ATTENTION_OUT,         // shape: PA: [seqLen, hiddenSize]
 };
 

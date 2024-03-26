@@ -80,20 +80,22 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
-        outTensorDescs.at(0).format = inTensorDescs.at(IN_INPUT).format;
+        outTensorDescs.at(0) = inTensorDescs.at(IN_RESIDUAL_INPUT);
+
+        outTensorDescs.at(1).format = inTensorDescs.at(IN_INPUT).format;
         if (param.fusionLinearParam.isBF16) {
-            outTensorDescs.at(0).dtype = ACL_BF16;
+            outTensorDescs.at(1).dtype = ACL_BF16;
         } else {
-            outTensorDescs.at(0).dtype = ACL_FLOAT16;
+            outTensorDescs.at(1).dtype = ACL_FLOAT16;
         }
-        outTensorDescs.at(0).shape = inTensorDescs.at(0).shape;
+        outTensorDescs.at(1).shape = inTensorDescs.at(IN_INPUT).shape;
         auto outDimSize = outTensorDescs.at(IN_INPUT).shape.dimNum;
-        if (param.fusionLinearParam.quantType == W8A16) {
-            outTensorDescs.at(0).shape.dims[outDimSize - 1] = inTensorDescs.at(IN_LINEAR_WEIGHT).shape.dims[1];
+        if (param.fusionLinearParam.quantType == LINEAR_W8A16_QUANT) {
+            outTensorDescs.at(1).shape.dims[outDimSize - 1] = inTensorDescs.at(IN_LINEAR_WEIGHT).shape.dims[1];
         } else if (param.fusionLinearParam.quantType == LINEAR_W8A8_SC_DEQUANT || param.fusionLinearParam.quantType == LINEAR_W8A8_SC_QUANT) {
-            outTensorDescs.at(0).shape.dims[outDimSize - 1] = inTensorDescs.at(IN_BIAS).shape.dims[0];
+            outTensorDescs.at(1).shape.dims[outDimSize - 1] = inTensorDescs.at(IN_BIAS).shape.dims[0];
         } else {
-            outTensorDescs.at(0).shape.dims[outDimSize - 1] = inTensorDescs.at(IN_LINEAR_WEIGHT).shape.dims[0];
+            outTensorDescs.at(1).shape.dims[outDimSize - 1] = inTensorDescs.at(IN_LINEAR_WEIGHT).shape.dims[0];
         }
         return atb::NO_ERROR;
     };
@@ -105,9 +107,9 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
 LinearQuantType GetLinearQuantType(const int &packQuantType, const int &linearType, bool hasNorm)
 {
     if (linearType == atb_speed::common::LinearType::FP) {
-        return atb_speed::common::LinearQuantType::NO_QUANT;
+        return atb_speed::common::LinearQuantType::LINEAR_NO_QUANT;
     } else if (packQuantType == atb_speed::common::ALL_W8A16) {
-        return atb_speed::common::LinearQuantType::W8A16;
+        return atb_speed::common::LinearQuantType::LINEAR_W8A16_QUANT;
     } else {
         if (packQuantType == atb_speed::common::ALL_W8A8SC || packQuantType == atb_speed::common::MIX_W8A8SC) {
             if (hasNorm) {

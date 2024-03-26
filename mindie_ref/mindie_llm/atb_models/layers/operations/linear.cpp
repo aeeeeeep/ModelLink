@@ -54,9 +54,9 @@ atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operat
         param.quantType == LINEAR_W8A8_QUANT || param.quantType == LINEAR_W8A8_SC_QUANT \
         ? QUANT_DEQUANT_NODE_COUNT : DEFAULT_NODE_COUNT
     );
-    opGraph.name = param.quantType == NO_QUANT ? "LinearNoQuant" : \
+    opGraph.name = param.quantType == LINEAR_NO_QUANT ? "LinearNoQuant" : \
         param.quantType == LINEAR_W8A8_DEQUANT || param.quantType == LINEAR_W8A8_SC_DEQUANT ? "LinearDequantOnly" : \
-        param.quantType == W8A16 ? "LinearW8A16" : "LinearQuant";
+        param.quantType == LINEAR_W8A16_QUANT ? "LinearW8A16" : "LinearQuant";
 
     size_t nodeId = 0;
 
@@ -72,7 +72,7 @@ atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operat
 
     atb::Node &linearNode = opGraph.nodes.at(nodeId++);
     atb::infer::LinearParam linearParam;
-    if (param.quantType != NO_QUANT && !param.isBF16) {
+    if (param.quantType != LINEAR_NO_QUANT && !param.isBF16) {
         linearParam.outDataType = ACL_FLOAT16;
     }
 
@@ -118,7 +118,7 @@ atb::Status FusionLinear(const FusionLinearParam &param, atb::Operation **operat
         outTensorDescs.at(0).dtype = param.isBF16 ? ACL_BF16 : ACL_FLOAT16;
         outTensorDescs.at(0).shape = inTensorDescs.at(IN_INPUT).shape;
         auto outDimSize = outTensorDescs.at(IN_INPUT).shape.dimNum;
-        if (param.quantType == W8A16) {
+        if (param.quantType == LINEAR_W8A16_QUANT) {
             outTensorDescs.at(0).shape.dims[outDimSize - 1] = inTensorDescs.at(IN_WEIGHT).shape.dims[1];
         } else if (param.quantType == LINEAR_W8A8_SC_DEQUANT || param.quantType == LINEAR_W8A8_SC_QUANT) {
             outTensorDescs.at(0).shape.dims[outDimSize - 1] = inTensorDescs.at(IN_BIAS).shape.dims[0];

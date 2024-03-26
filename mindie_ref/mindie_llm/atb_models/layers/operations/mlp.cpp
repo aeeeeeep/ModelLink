@@ -53,7 +53,7 @@ enum MlpTensorIdx : uint32_t {
     INTERMIDATE_GATE_UP_OUT,
 };
 
-static const uint64_t IN_TENSOR_COUNT = 23;
+static const uint64_t IN_TENSOR_COUNT = 24;
 static const uint64_t OUT_TENSOR_COUNT = 2;
 static const uint64_t GATE_UP_WEIGHT_PACK_INTERMEDIATE_TENSOR_COUNT = 5;
 static const uint64_t GATE_UP_WEIGHT_NO_PACK_INTERMEDIATE_TENSOR_COUNT = 4;
@@ -129,10 +129,17 @@ atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation
     }
 
     if (param.mlpPackType == MlpPackType::GATE_UP_WEIGHT_NO_PACK) {
+        atb_speed::common::AddNormParam<NormParamType> normOnlyParam;
+        addNormParam.normHasBias = param.normHasBias;
+        addNormParam.addNormType = atb_speed::common::AddNormType::NORM_ONLY;
+        addNormParam.normQuantType = GetNormQuantType(param.packQuantType);
+        addNormParam.normParamType = param.normParamType;
+        addNormParam.normQuantParamType = param.normQuantParamType;
+
         atb::Node &normLinearUpNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> upNormLinearParam;
         upNormLinearParam.nextResidualAddIn = param.nextResidualAddIn;
-        upNormLinearParam.addNormParam = addNormParam;
+        upNormLinearParam.addNormParam = normOnlyParam;
         upNormLinearParam.fusionLinearParam.quantType = GetLinearQuantType(param.packQuantType, param.layerLinearQuantType[5], true);
         upNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         upNormLinearParam.fusionLinearParam.hasBias = param.gateUpHasBias;
@@ -151,7 +158,7 @@ atb::Status Mlp(const MlpParam<NormParamType> &param, atb::Operation **operation
             MlpTensorIdx::IN_BIAS_1,
             MlpTensorIdx::IN_COMPRESS_IDX_1,
         };
-        normLinearUpNode.outTensorIds = {MlpTensorIdx::OUT_ATTENTION_RESIDUAL_ADD, MlpTensorIdx::INTERMIDATE_UP_OUT};
+        normLinearUpNode.outTensorIds = {MlpTensorIdx::IN_RESIDUAL_INPUT, MlpTensorIdx::INTERMIDATE_UP_OUT};
     }
 
     atb::Node &activationNode = opGraph.nodes.at(nodeId++);

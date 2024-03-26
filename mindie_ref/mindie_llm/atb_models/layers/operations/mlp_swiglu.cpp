@@ -52,7 +52,7 @@ enum MlpTensorIdx : uint32_t {
     INTERMIDATE_UP_OUT
 };
 
-static const uint64_t IN_TENSOR_COUNT = 23;
+static const uint64_t IN_TENSOR_COUNT = 24;
 static const uint64_t OUT_TENSOR_COUNT = 2;
 static const uint64_t NO_PACK_INTERMEDIATE_TENSOR_COUNT = 4;
 static const uint64_t NO_PACK_NODE_COUNT = 5;
@@ -113,6 +113,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
         gateNormLinearParam.fusionLinearParam.hasBias = param.gateUpHasBias;
         NormLinear<NormParamType>(gateNormLinearParam, &normLinearGateNode.operation);
         normLinearGateNode.inTensorIds = {
+            MlpTensorIdx::IN_RESIDUAL_INPUT,
             MlpTensorIdx::IN_INPUT,
             MlpTensorIdx::IN_NORM_WEIGHT,
             MlpTensorIdx::IN_NORM_BIAS,
@@ -125,17 +126,25 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
             MlpTensorIdx::IN_BIAS_0,
             MlpTensorIdx::IN_COMPRESS_IDX_0
         };
-        normLinearGateNode.outTensorIds = {MlpTensorIdx::OUT_ATTENTION_RESIDUAL_ADD, MlpTensorIdx::INTERMIDATE_GATE_OUT};
+        normLinearGateNode.outTensorIds = {MlpTensorIdx::IN_RESIDUAL_INPUT, MlpTensorIdx::INTERMIDATE_GATE_OUT};
+
+        atb_speed::common::AddNormParam<NormParamType> normOnlyParam;
+        addNormParam.normHasBias = param.normHasBias;
+        addNormParam.addNormType = atb_speed::common::AddNormType::NORM_ONLY;
+        addNormParam.normQuantType = GetNormQuantType(param.packQuantType);
+        addNormParam.normParamType = param.normParamType;
+        addNormParam.normQuantParamType = param.normQuantParamType;
 
         atb::Node &normLinearUpNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> upNormLinearParam;
         upNormLinearParam.nextResidualAddIn = param.nextResidualAddIn;
-        upNormLinearParam.addNormParam = addNormParam;
+        upNormLinearParam.addNormParam = normOnlyParam;
         upNormLinearParam.fusionLinearParam.quantType = GetLinearQuantType(param.packQuantType, param.layerLinearQuantType[5], true);
         upNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         upNormLinearParam.fusionLinearParam.hasBias = param.gateUpHasBias;
         NormLinear<NormParamType>(upNormLinearParam, &normLinearUpNode.operation);
         normLinearUpNode.inTensorIds = {
+            MlpTensorIdx::IN_RESIDUAL_INPUT,
             MlpTensorIdx::IN_INPUT,
             MlpTensorIdx::IN_NORM_WEIGHT,
             MlpTensorIdx::IN_NORM_BIAS,
@@ -148,7 +157,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
             MlpTensorIdx::IN_BIAS_1,
             MlpTensorIdx::IN_COMPRESS_IDX_1
         };
-        normLinearUpNode.outTensorIds = {MlpTensorIdx::OUT_ATTENTION_RESIDUAL_ADD, MlpTensorIdx::INTERMIDATE_UP_OUT};
+        normLinearUpNode.outTensorIds = {MlpTensorIdx::IN_RESIDUAL_INPUT, MlpTensorIdx::INTERMIDATE_UP_OUT};
 
         atb::Node &concatNode = opGraph.nodes.at(nodeId++);
         atb::infer::ConcatParam concatParam;

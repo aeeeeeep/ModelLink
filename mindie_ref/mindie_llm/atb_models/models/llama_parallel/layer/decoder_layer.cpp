@@ -25,9 +25,9 @@
 namespace atb_speed {
 namespace llama_parallel {
 
-static const uint64_t IN_TENSOR_COUNT = 62;
+static const uint64_t IN_TENSOR_COUNT = 63;
 static const uint64_t OUT_TENSOR_COUNT = 2;
-static const uint64_t INTERMEDIATE_TENSOR_COUNT = 1;
+static const uint64_t INTERMEDIATE_TENSOR_COUNT = 2;
 static const uint64_t NODE_COUNT = 2;
 
 atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operation)
@@ -140,7 +140,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
         IN_ATTENTION_OUT_BIAS,
         IN_ATTENTION_OUT_COMPRESS_IDX
     };
-    attentionNode.outTensorIds = {IN_RESIDUAL_ADD_OUT, INTERMEDIATE_ATTENTION_OUT};
+    attentionNode.outTensorIds = {INTERMEDIATE_RESIDUAL_ADD, INTERMEDIATE_ATTENTION_OUT};
 
     atb::infer::RmsNormParam mlpRmsNormParam;
     mlpRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_PRENORM;
@@ -173,7 +173,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     }
 
     mlpParallelNode.inTensorIds = {
-        param.layerId == 0 ? IN_HIDDEN_STATES : IN_RESIDUAL_ADD_OUT,
+        param.layerId == 0 ? IN_HIDDEN_STATES : INTERMEDIATE_RESIDUAL_ADD,
         INTERMEDIATE_ATTENTION_OUT,
         IN_ATTENTION_NORM_WEIGHT,
         IN_ATTENTION_NORM_BIAS,

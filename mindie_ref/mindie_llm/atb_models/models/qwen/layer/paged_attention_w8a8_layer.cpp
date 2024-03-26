@@ -25,7 +25,7 @@
 
 namespace atb_speed {
 namespace qwen_14b {
-enum PAW8A8LayerW8A8TensorId : int {
+enum PAW8A8LayerW8A8TensorId : uint32_t {
     IN_RESIDUAL_ADD_OUT = 0,
     IN_HIDDEN_STATES,
 

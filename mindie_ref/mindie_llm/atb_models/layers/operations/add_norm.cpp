@@ -15,7 +15,7 @@
  */
 
 #include "atb_speed/log.h"
-#include "layers/operations/norm_linear.h"
+#include "layers/operations/add_norm.h"
 
 namespace atb_speed {
 namespace common {
@@ -53,7 +53,7 @@ atb::Status AddNorm(const AddNormParam<NormParamType> &param, atb::Operation **o
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
     opGraph.internalTensorNum = INTERMEDIATE_TENSOR_COUNT;
-    opGraph.nodes.resize(param.addNormType == ADD_NORM ? TWO_NODE : ONE_NODE);
+    opGraph.nodes.resize(param.addNormType == FUSION_ADD_NORM ? ONE_NODE : TWO_NODE);
     if (param.addNormType == NORM_ONLY) {
         opGraph.name = "AddNorm_NORM_ONLY";
     } else if (param.addNormType == FUSION_ADD_NORM) {
@@ -63,9 +63,6 @@ atb::Status AddNorm(const AddNormParam<NormParamType> &param, atb::Operation **o
     }
 
     size_t nodeId = 0;
-
-    ATB_LOG(INFO) << "param.addNormType " << param.addNormType;
-    ATB_LOG(INFO) << "param.normQuantType " << param.normQuantType;
 
     if (param.addNormType == ADD_NORM) {
         atb::Node &addNode = opGraph.nodes.at(nodeId++);
@@ -132,6 +129,12 @@ atb::Status AddNorm(const AddNormParam<NormParamType> &param, atb::Operation **o
             };
             normNode.outTensorIds = {AddNormTensorIdx::OUT_NORM, AddNormTensorIdx::OUT_ADD};
         }
+    }
+
+    if (param.addNormType == NORM_ONLY) {
+        atb::Node &emptyNode = opGraph.nodes.at(nodeId++);
+        emptyNode.operation = new EmptyOperation();
+        emptyNode.outTensorIds = {AddNormTensorIdx::OUT_ADD};
     }
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
