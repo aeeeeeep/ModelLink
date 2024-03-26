@@ -19,11 +19,13 @@ Bloom-7B 训练的硬件配置如下：
 
 ### 脚本
 
-1. 拷贝仓库到你的个人服务器：
+1. 拷贝代码仓到本地服务器
 ```shell
-git clone https://gitee.com/ascend/ModelLink.git 
-cd ModeLlink 
+git clone https://gitee.com/ascend/ModelLink.git
+cd ModelLink
 mkdir logs
+mkdir model_from_hf
+mkdir dataset
 mkdir ckpt
 ```
 
@@ -55,15 +57,17 @@ pip install -r requirements.txt
 
 3. 准备预训练权重
 
-首先下载 Bloom-7B 的 [权重](https://huggingface.co/bigscience/bloom-7b1/tree/main)
+首先下载 Bloom-7B 的 [权重](https://huggingface.co/bigscience/Bloom-7B/tree/main)
 
 ```shell
-mkdir tokenizer
-cd tokenizer
-wget https://huggingface.co/bigscience/bloom/resolve/main/special_tokens_map.json
-wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer.json
-wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer_config.json
-...
+cd ./model_from_hf/
+<<<<<<< HEAD
+# 需要安装 git-lfs: git lfs install
+=======
+# 需要安装 git-lfs
+>>>>>>> 764f95c63f5a1cd192c45172b568aa94200f817a
+git clone https://huggingface.co/bigscience/bloom
+mv bloom Bloom-7B
 cd ..
 ```
 4. 权重转换
@@ -76,8 +80,12 @@ python tools/checkpoint/util.py --model-type GPT \
                                 --saver saver_megatron \
                                 --target-tensor-parallel-size 8 \
                                 --target-pipeline-parallel-size 1 \
-                                --load-dir /bloom-7b \
-                                --save-dir /{your save dir} \
+                                --load-dir ./model_from_hf/Bloom-7B/ \
+<<<<<<< HEAD
+                                --save-dir ./model_weights/Bloom-7B-v0.1-tp8-pp1/ \
+=======
+                                --save-dir ./model_weights/Bloom-7B-v0.1-pt8-pp1/ \
+>>>>>>> 764f95c63f5a1cd192c45172b568aa94200f817a
                                 --tokenizer-model None 
 ```
 
@@ -91,11 +99,15 @@ python tools/checkpoint/util.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ../HF_Bloom7B-v0.1-pt8-pp1 \
+<<<<<<< HEAD
+    --load-dir ./model_weights/Bloom-7B-v0.1-tp8-pp1/ \
+=======
+    --load-dir ./model_weights/Bloom-7B-v0.1-pt8-pp1/ \
+>>>>>>> 764f95c63f5a1cd192c45172b568aa94200f817a
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --embed-layernorm \
-    --save-dir ../HF_Bloom7B_downloaded     # <-- 需要填入原始HF模型路径，新权重会存于../HF_Bloom7B_downloaded/mg2hg
+    --save-dir ./model_from_hf/Bloom-7B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Bloom-7B/mg2hg
 ```
 
 
@@ -103,23 +115,26 @@ python tools/checkpoint/util.py --model-type GPT \
 
 下载 Bloom 7B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
-   ```shell
-     # 下载数据
-     mkdir dataset_bloom7b
-     cd ./dataset_bloom7b
-     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-     cd ..
-     cd ModelLink
-     # 处理数据                           
-     python ./tools/preprocess_data.py \
-       --input ../dataset_bloom7b/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-       --tokenizer-name-or-path ../bloom-7b-hf \
-       --output-prefix ../dataset_bloom7b/alpaca \
-       --workers 4 \
-       --log-interval 1000 \
-       --tokenizer-type PretrainedFromHF
-    cd .. 
-   ```
+```shell
+# 下载数据
+cd dataset/
+wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+cd ..
+
+# 处理数据                           
+python ./tools/preprocess_data.py \
+  --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+  --tokenizer-name-or-path ./model_from_hf/Bloom-7B/ \
+<<<<<<< HEAD
+  --output-prefix ./dataset/Bloom-7B_alpaca \
+=======
+  --output-prefix ./dataset/Bloom-7B \
+>>>>>>> 764f95c63f5a1cd192c45172b568aa94200f817a
+  --workers 4 \
+  --log-interval 1000 \
+  --tokenizer-type PretrainedFromHF
+cd .. 
+```
 
 
 6. 配置 Bloom-7B 预训练脚本(Bloom-7B暂不支持Flash Attention): examples/bloom/pretrain_bloom_ptd_7B.sh
@@ -128,10 +143,17 @@ python tools/checkpoint/util.py --model-type GPT \
 # 修改 ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-CKPT_SAVE_DIR="./ckpt"
-DATA_PATH="./dataset_bloom-7B/bigscience_bloom-7b1_master_text_document"
-TOKENIZER_PATH="./bloom-7B-hf/"
-CKPT_LOAD_DIR="./bloom-7b"
+<<<<<<< HEAD
+CKPT_SAVE_DIR="./ckpt/"
+DATA_PATH="./dataset/Bloom-7B_alpaca_text_document"
+TOKENIZER_PATH="./model_from_hf/Bloom-7B/"
+CKPT_LOAD_DIR="./model_weights/Bloom-7B-v0.1-tp8-pp1/"
+=======
+CKPT_SAVE_DIR="../../ckpt/"
+DATA_PATH="./dataset/Bloom-7B_text_document"
+TOKENIZER_PATH="./model_from_hf/Bloom-7B/"
+CKPT_LOAD_DIR="./model_weights/Bloom-7B-v0.1-pt8-pp1/"
+>>>>>>> 764f95c63f5a1cd192c45172b568aa94200f817a
 ```
 
 7. 启动 Bloom-7B 预训练脚本: examples/bloom/pretrain_bloom_ptd_7B.sh 
@@ -158,9 +180,14 @@ Bloom-7B
 # 根据您自己的 ascend-toolkit 路径，执行set_env.sh
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
  
-# 修改模型权重路径和词表路径
-CHECKPOINT="your model save ckpt path"
-TOKENIZER_PATH="your tokenizer path"
+# 请按实际情况修改模型权重路径和分词器路径
+<<<<<<< HEAD
+CHECKPOINT="./model_weights/Bloom-7B-Base-v0.1-tp8-pp1/"
+TOKENIZER_PATH="./model_from_hf/Bloom-7B-Base/"
+=======
+CHECKPOINT="../../model_weights/Bloom-7B-Base-v0.1-tp8-pp1/"
+TOKENIZER_PATH="../../model_from_hf/Bloom-7B-Base/"
+>>>>>>> 764f95c63f5a1cd192c45172b568aa94200f817a
 ```
 
 然后可直接启动generate_bloom_7b_ptd.sh
@@ -180,9 +207,14 @@ bash tasks/inference/generate_bloom_7b_ptd.sh
 # ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-# 修改模型参数路径和词表路径
-CHECKPOINT="your model save ckpt path"
-TOKENIZER_PATH="your tokenizer path"
+# 请按实际情况修改模型权重路径和分词器路径
+<<<<<<< HEAD
+CHECKPOINT="./model_weights/Bloom-7B-Base-v0.1-tp8-pp1/"
+TOKENIZER_PATH="./model_from_hf/Bloom-7B-Base/"
+=======
+CHECKPOINT="../../model_weights/Bloom-7B-Base-v0.1-tp8-pp1/"
+TOKENIZER_PATH="../../model_from_hf/Bloom-7B-Base/"
+>>>>>>> 764f95c63f5a1cd192c45172b568aa94200f817a
 # 配置任务和数据集路径
 DATA_PATH="your dataset path"
 TASK="your task"
@@ -217,12 +249,17 @@ Bloom-176B 训练的硬件配置:
 
 ## 脚本
 
-1. 将仓库拉取到个人服务器
-
+<<<<<<< HEAD
+1. 拷贝代码仓到本地服务器
+=======
+1. 拷贝仓库到你的个人服务器：
+>>>>>>> 764f95c63f5a1cd192c45172b568aa94200f817a
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git
 cd ModelLink
 mkdir logs
+mkdir model_from_hf
+mkdir dataset
 mkdir ckpt
 ```
 
@@ -257,13 +294,13 @@ pip install -r requirements.txt
 下载 Bloom-176B [权重](https://huggingface.co/bigscience/bloom/tree/main)
 
 ```shell
-mkdir tokenizer
-cd tokenizer
+mkdir ./model_from_hf/Bloom-176B/
+cd ./model_from_hf/Bloom-176B/
 wget https://huggingface.co/bigscience/bloom/resolve/main/special_tokens_map.json
 wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer.json
 wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer_config.json
 ...
-cd ..
+cd ../../
 ```
 4. 权重转换
 将模型权重文件从 HuggingFace权重 格式转化为 Megatron 权重
@@ -274,8 +311,8 @@ python tools/checkpoint/util.py --model-type GPT \
                                 --saver saver_megatron \
                                 --target-tensor-parallel-size 8 \
                                 --target-pipeline-parallel-size 5 \
-                                --load-dir /bloom-176b \
-                                --save-dir /{your save dir} \
+                                --load-dir ./model_from_hf/Bloom-176B/ \
+                                --save-dir ./model_weights/Bloom-176B-v0.1-pt8-pp5/ \
                                 --tokenizer-model None \
                                 --params-dtype bf16  
                                 # config.json中同字段对应的key值与其他模型不一致，将文件中的n_embed改为hidden_size， 将num_attention_heads修改为n_head。
@@ -292,48 +329,55 @@ python tools/checkpoint/util.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ../HF_Bloom176B-v0.1-pt8-pp1 \
+    --load-dir ./model_weights/Bloom-176B-v0.1-pt8-pp5/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --embed-layernorm \
     --params-dtype bf16 \
-    --save-dir ../HF_Bloom176B_downloaded     # <-- 需要填入原始HF模型路径，新权重会存于../HF_Bloom176B_downloaded/mg2hg
+    --save-dir ./model_from_hf/Bloom-176B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Bloom-176B/mg2hg
 ```
 
 5. 准备数据集
 
 下载 Bloom 176B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
-   ```shell
-     # 下载数据
-     mkdir dataset_bloom176b
-     cd ./dataset_bloom176b
-     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-     cd ..
-     cd ModelLink
-     # 处理数据                           
-     python ./tools/preprocess_data.py \
-       --input ../dataset_bloom176b/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-       --tokenizer-name-or-path ../bloom-176b-hf \
-       --output-prefix ../dataset_bloom176b/alpaca \
-       --workers 4 \
-       --log-interval 1000 \
-       --tokenizer-type PretrainedFromHF
-    cd .. 
-   ```
+```shell
+# 下载数据
+cd dataset/
+wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+cd ..
+
+# 处理数据                           
+python ./tools/preprocess_data.py \
+  --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+  --tokenizer-name-or-path ./model_from_hf/Bloom-176B/ \
+<<<<<<< HEAD
+  --output-prefix ./dataset/Bloom-176B_alpaca \
+=======
+  --output-prefix ./dataset/Bloom-176B \
+>>>>>>> 764f95c63f5a1cd192c45172b568aa94200f817a
+  --workers 4 \
+  --log-interval 1000 \
+  --tokenizer-type PretrainedFromHF
+cd .. 
+```
 
 6. 配置 Bloom-176B 预训练脚本(Bloom-176B暂不支持Flash Attention): examples/bloom/pretrain_bloom_176b.sh
 
 ```shell
-# 修改 MASTER_ADDR 为主节点
+# 修改 MASTER_ADDR 为主节点 IP，比如, 90.90.2.166
 MASTER_ADDR=localhost
 
 # 修改每个节点的节点序号，主节点序号为 0, 其余节点的序号依次增长到集群节点数量-1
 NODE_RANK=0
 
 # 修改数据集路径和词表路径
-TOKENIZER_NAME_OR_PATH=/home/bloom_data/vocab_file/
-DATA_PATH=/home/bloom_data/enwiki_100k/enwiki-100k_text_document
+TOKENIZER_NAME_OR_PATH=./model_from_hf/Bloom-176B/
+<<<<<<< HEAD
+DATA_PATH=./dataset/Bloom-176B_alpaca_text_document
+=======
+DATA_PATH=./dataset/Bloom-176B_text_document
+>>>>>>> 764f95c63f5a1cd192c45172b568aa94200f817a
 ```
 
 7. 启动 Bloom-176B 预训练脚本: examples/bloom/pretrain_bloom_176b.sh
@@ -364,9 +408,14 @@ bloom 176b的推理需要5机，因此要用上面的  权重转换脚本重新�
 # 根据您自己的 ascend-toolkit 路径，执行set_env.sh
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
  
-# 修改模型权重路径和词表路径
-CHECKPOINT="your model save ckpt path"
-TOKENIZER_PATH="your tokenizer path"
+# 请按实际情况修改模型权重路径和分词器路径
+<<<<<<< HEAD
+CHECKPOINT="./model_weights/Bloom-176B-v0.1-tp8-pp5/"
+TOKENIZER_PATH="./model_from_hf/Bloom-176B/"
+=======
+CHECKPOINT="../../model_weights/Bloom-176B-v0.1-tp8-pp5/"
+TOKENIZER_PATH="../../model_from_hf/Bloom-176B/"
+>>>>>>> 764f95c63f5a1cd192c45172b568aa94200f817a
 ```
 
 然后可直接启动generate_bloom_176b_ptd.sh
@@ -387,9 +436,14 @@ bash tasks/inference/generate_bloom_176b_ptd.sh
 # ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-# 修改模型参数路径和词表路径
-CHECKPOINT="your model save ckpt path"
-TOKENIZER_PATH="your tokenizer path"
+# 请按实际情况修改模型权重路径和分词器路径
+<<<<<<< HEAD
+CHECKPOINT="./model_weights/Bloom-176B-v0.1-tp8-pp5/"
+TOKENIZER_PATH="./model_from_hf/Bloom-176B/"
+=======
+CHECKPOINT="../../model_weights/Bloom-176B-v0.1-tp8-pp5/"
+TOKENIZER_PATH="../../model_from_hf/Bloom-176B/"
+>>>>>>> 764f95c63f5a1cd192c45172b568aa94200f817a
 # 配置任务和数据集路径
 DATA_PATH="your dataset path"
 TASK="your task"
