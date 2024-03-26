@@ -113,7 +113,8 @@ protected:
     void WaitAsyncPlanExecuteFinish();
     std::string GetSaveTensorDir();
     void ClearInternalTensors();
-    atb::Tensor MallocInternalTensor(size_t nodeId, size_t outTensorId, const atb::TensorDesc &tensorDesc);
+    atb::Tensor MallocInternalTensor(atb::Tensor* outTensor, size_t nodeId, size_t outTensorId,
+        const atb::TensorDesc &tensorDesc);
     void FreeInternalTensor(void *tensorDeviceData);
     void GetModelTensorNameList(nlohmann::json &modelJson,
         std::map<atb::Tensor *, std::string> &tensorNameMap);
@@ -141,6 +142,7 @@ protected:
     std::atomic_bool allTaskFinish_;
     int32_t currentDevId_ = 0;
     std::vector<std::pair<atb::Tensor, bool>> internalTensors_;
+    std::vector<atb::Tensor*> nodeOutTensors_;
 };
 } // namespace atb_speed
 #endif
