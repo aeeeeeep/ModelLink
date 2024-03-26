@@ -43,201 +43,197 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
 ### Script
 
 1. Clone the repository to your local server:
-    ```shell
-    git clone https://gitee.com/ascend/ModelLink.git 
-    cd ModelLink 
-    mkdir logs
-    mkdir ckpt
-    ```
+```shell
+git clone https://gitee.com/ascend/ModelLink.git 
+cd ModelLink
+mkdir logs
+mkdir model_from_hf
+mkdir dataset
+mkdir ckpt
+```
 
 2. Build environment
    
-    ```bash
-    # python3.8
-    conda create -n test python=3.8
-    conda activate test
-    
-    # install torch and torch_npu
-    pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
-    pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
-    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-    
-    # modify ascend-toolkit path
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-   
-    # install AscendSpeed
-    git clone https://gitee.com/ascend/AscendSpeed.git
-    cd AscendSpeed
-    pip install -r requirements.txt 
-    pip3 install -e .
-    cd ..
-    
-    # install other packages
-    pip install -r requirements.txt 
-    ```
-     *Note that if you want to train with the weight from huggingface, please run fix a deepspeed loading checkpointing bug by modified `if zero_sd_list is None` as `if zero_sd_list is None or len(zero_sd_list) == 0` in the `_load_zero_checkpoint` function of `<deepspeed-installed-path>/runtime/engine.py`*
-    
-    ```text
-    # original deepspeed/runtime/engine.py, about #Lines2746-2748
-    zero_sd_list = self._get_all_zero_checkpoints(load_dir, tag)
-    if zero_sd_list is None:
-        return False
-    
-    # modified
-    zero_sd_list = self._get_all_zero_checkpoints(load_dir, tag)
-    if zero_sd_list is None or len(zero_sd_list) == 0:
-        return False
-    ```
+```bash
+# python3.8
+conda create -n test python=3.8
+conda activate test
+
+# install torch and torch_npu
+pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
+pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+
+# modify ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+# install AscendSpeed
+git clone https://gitee.com/ascend/AscendSpeed.git
+cd AscendSpeed
+pip install -r requirements.txt 
+pip3 install -e .
+cd ..
+
+# install other packages
+pip install -r requirements.txt 
+```
+  *Note that if you want to train with the weight from huggingface, please run fix a deepspeed loading checkpointing bug by modified `if zero_sd_list is None` as `if zero_sd_list is None or len(zero_sd_list) == 0` in the `_load_zero_checkpoint` function of `<deepspeed-installed-path>/runtime/engine.py`*
+
+```text
+# original deepspeed/runtime/engine.py, about #Lines2746-2748
+zero_sd_list = self._get_all_zero_checkpoints(load_dir, tag)
+if zero_sd_list is None:
+    return False
+
+# modified
+zero_sd_list = self._get_all_zero_checkpoints(load_dir, tag)
+if zero_sd_list is None or len(zero_sd_list) == 0:
+    return False
+```
 3. Prepare pretrained weights and tokenizer
     Download the LLAMA2-7B checkpoint from [here](https://huggingface.co/daryl149/llama-2-7b-hf/tree/main) 
     
-    ```shell
-      #!/bin/bash
-      mkdir -p llama-2-7b-hf
-      cd llama-2-7b-hf
-      wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/config.json
-      wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/generation_config.json
-      wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/pytorch_model-00001-of-00002.bin
-      wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/pytorch_model-00002-of-00002.bin
-      wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/pytorch_model.bin.index.json
-      wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/special_tokens_map.json
-      wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/tokenizer.json
-      wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/tokenizer.model
-      wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/tokenizer_config.json
-      cd ..
-    ```
+```shell
+  #!/bin/bash
+  cd ./model_from_hf/
+  # 需要安装 git-lfs: git lfs install
+  git clone https://huggingface.co/daryl149/llama-2-7b-hf
+  cd ..
+```
 
-   4. weight conversion in ptd mode
+4. weight conversion in ptd mode
 
-   *Note that if you want to use the weight from huggingface, please run the weight conversion script first. The following uses llama-2-7b model weight conversion in ptd as an example.*
-   ```bash
-    # modify the script according to your own ascend-toolkit path
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+*Note that if you want to use the weight from huggingface, please run the weight conversion script first. The following uses llama-2-7b model weight conversion in ptd as an example.*
+```bash
+# modify the script according to your own ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-    # convert to ptd weights
-    python tools/checkpoint/util.py --model-type GPT \
-                                    --loader llama2_hf \
-                                    --saver megatron \
-                                    --target-tensor-parallel-size 8 \
-                                    --target-pipeline-parallel-size 1 \
-                                    --load-dir ../llama-2-7b-hf \
-                                    --save-dir {your megatron ckpt save path} \
-                                    --tokenizer-model ../llama-2-7b-hf/tokenizer.model
-    ```
-    
-    Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
-    ```shell
-    cd ModelLink/
-    # Modify the ascend-toolkit path
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    python tools/checkpoint/util.py --model-type GPT \
-        --loader megatron \
-        --saver megatron \
-        --save-model-type save_huggingface_llama \
-        --load-dir ../llama27B-v0.1-pt8-pp1 \
-        --target-tensor-parallel-size 1 \
-        --target-pipeline-parallel-size 1 \
-        --save-dir ../llama27B_downloaded  # <-- Fill in the original HF model path here, new weights will be saved in ../llama27B_downloaded/mg2hg
-    ```
-    
-    Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
+# convert to ptd weights
+python tools/checkpoint/util.py \
+    --model-type GPT \
+    --loader llama2_hf \
+    --saver megatron \
+    --target-tensor-parallel-size 8 \
+    --target-pipeline-parallel-size 1 \
+    --load-dir ./model_from_hf/llama-2-7b-hf/ \
+    --save-dir ./model_weights/llama-2-7b-hf-v0.1-tp8-pp1/ \
+    --tokenizer-model ./model_from_hf/llama-2-7b-hf/tokenizer.model
+cd ..
+```
+
+Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+```shell
+# Modify the ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ./model_weights/llama-2-7b-hf-v0.1-tp8-pp1/ \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --save-dir ./model_from_hf/llama-2-7b-hf/mg2hg
+```
+
+Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
 
 5. pre-training
 
-	5.1 Prepare dataset
+5.1 Prepare dataset
 
-	Download the LLAMA2-7B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
-	```shell
-	# download datasets
-	mkdir dataset_llama2
-	cd ./dataset_llama2
-	wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-	cd ..
-	
-	# process datasets                              
-	python ./tools/preprocess_data.py \
-		 --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-		 --tokenizer-name-or-path ./llama-2-7b-hf \
-		 --output-prefix ./dataset_llama2/alpaca \
-		 --workers 4 \
-		 --log-interval 1000 \
-		 --tokenizer-type PretrainedFromHF
-	```
+Download the LLAMA2-7B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
+```shell
+# download datasets
+cd dataset/
+wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+cd ..
 
-	5.2 pre-training using ptd mode
-	Config LLAMA2-7B pre-training script: examples/llama2/pretrain_llama2_7b_ptd.sh 
-   ```shell
-    # modify the script according to your own ascend-toolkit path
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-    
-    # modify config according to your own actual situation
-    LOAD_CHECKPOINT_PATH="your init model load path"
-    SAVE_CHECKPOINT_PATH="your model ckpt save path"
-    TOKENIZER_PATH=./llama-2-7b-hf/  #tokenizer path
-    DATA_PATH=./dataset_llama2/alpaca_text_document  #processed dataset
-   ```
+# process datasets                              
+python ./tools/preprocess_data.py \
+    --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+    --tokenizer-name-or-path ./model_from_hf/llama-2-7b-hf/ \
+    --output-prefix ./dataset/llama-2-7b-hf_alpaca \
+    --workers 4 \
+    --log-interval 1000 \
+    --tokenizer-type PretrainedFromHF
+```
 
-	Multi-machine training requires the addition of parameter --overlap-grad-reduce
+5.2 pre-training using ptd mode
+Config LLAMA2-7B pre-training script: examples/llama2/pretrain_llama2_7b_ptd.sh 
+```shell
+# modify the script according to your own ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-	Launch LLAMA2-7B  pre-training script: examples/llama2/pretrain_llama2_7b_ptd.sh
-   
-   ```shell
-    bash examples/llama2/pretrain_llama2_7b_ptd.sh 
-   ```
+# modify config according to your own actual situation
+CKPT_SAVE_DIR="./ckpt/"
+TOKENIZER_PATH="./model_from_hf/llama-2-7b-hf/tokenizer.model"  #tokenizer path
+DATA_PATH="./dataset/llama-2-7b-hf_alpaca_text_document"  #processed dataset
+```
+
+Multi-machine training requires the addition of parameter --overlap-grad-reduce
+
+Launch LLAMA2-7B  pre-training script: examples/llama2/pretrain_llama2_7b_ptd.sh
+
+```shell
+bash examples/llama2/pretrain_llama2_7b_ptd.sh 
+```
 6. fine-tuning
 
-	6.1 Prepare fine-tuning dataset
-	Download the LLAMA2-7B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
-    ```shell
-	# download datasets
-	mkdir finetune_dataset
-	cd ./finetune_dataset
-	wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-	cd ..
-	
-	# process datasets                              
-	python ./tools/preprocess_data.py \
-		  --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-		  --tokenizer-name-or-path ./llama-2-7b-hf \
-		  --output-prefix ./finetune_dataset/alpaca \
-		  --workers 4 \
-		  --log-interval 1000 \
-		  --tokenizer-type PretrainedFromHF \
-		  --handler-name GeneralInstructionHandler \
-		  --append-eod
-    ```
-   6.2 Full Parameters Fine-Tuning
-   The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_7b_ptd.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
+6.1 Prepare fine-tuning dataset
+Download the LLAMA2-7B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
+```shell
+# download datasets
+mkdir finetune_dataset
+cd ./finetune_dataset
+wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+cd ..
 
-   Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
-   ```bash
-   DATA_PATH=./finetune_dataset/alpaca
-   
-   --finetune \
-   --is-instruction-dataset \
-   ```
-   6.3 Lora Fine-Tuning
-   The Lora fine-tuning script is configured by adding the following lora parameters to the pretrain_llama2_7b_ptd.sh script:
-   ```bash
-       --lora-target-modules query_key_value dense proj dense_4h_to_h \
-       --lora-r 16 \
-       --lora-alpha 32 \
-   ```
-   If the vocabulary is changed, add the following parameters:
-   ```bash
-     --lora-modules-to-save word_embeddings output_layer \
-   ```
-   The following parameters are added to the resumable training capability of Lora:
-   ```bash
-       --load ${ORIGIN_CHECKPOINT}  \
-       --lora-load ${LORA_CHECKPOINT} \
-   ```
-   
-   Launch LLAMA2-7B lora fine tune script: tasks/finetune/tune_llama2_7b_ptd.sh
-   
-   ```shell
-    bash tasks/finetune/tune_llama2_7b_ptd.sh 
-   ```
+# process datasets                              
+python ./tools/preprocess_data.py \
+    --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+    --tokenizer-name-or-path ./model_from_hf/llama-2-7b-hf/ \
+    --output-prefix ./finetune_dataset/llama-2-7b-hf_alpaca \
+    --workers 4 \
+    --log-interval 1000 \
+    --tokenizer-type PretrainedFromHF \
+    --handler-name GeneralInstructionHandler \
+    --append-eod
+```
+6.2 Full Parameters Fine-Tuning
+The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_7b_ptd.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
+
+Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
+
+```bash
+DATA_PATH="./finetune_dataset/llama-2-7b-hf"
+CKPT_PATH="./ckpt/"
+--load ${CKPT_PATH} \
+--finetune \
+--is-instruction-dataset \
+```
+
+6.3 Lora Fine-Tuning
+The Lora fine-tuning script is configured by adding the following lora parameters to the pretrain_llama2_7b_ptd.sh script:
+```bash
+    --lora-target-modules query_key_value dense proj dense_4h_to_h \
+    --lora-r 16 \
+    --lora-alpha 32 \
+```
+If the vocabulary is changed, add the following parameters:
+```bash
+  --lora-modules-to-save word_embeddings output_layer \
+```
+The following parameters are added to the resumable training capability of Lora:
+```bash
+    --load ${ORIGIN_CHECKPOINT}  \
+    --lora-load ${LORA_CHECKPOINT} \
+```
+
+Launch LLAMA2-7B lora fine tune script: tasks/finetune/tune_llama2_7b_ptd.sh
+
+```shell
+bash tasks/finetune/tune_llama2_7b_ptd.sh 
+```
 
 ### Performance
 
@@ -259,8 +255,10 @@ Config llama2-7B inference script: tasks/inference/generate_llama2_7b_ptd.sh
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
  
 # modify script model path and tokenizer path
-TOKENIZER_PATH=./llama2-7b-hf/  #tokenizer path
-CHECKPOINT=./llama2-7b-tp8pp1  #model path
+CHECKPOINT="./model_weights/llama-2-7b-hf-v0.1-tp8-pp1" #model path
+SAVE_CHECKPOINT_PATH="./ckpt/"
+TOKENIZER_PATH="./model_from_hf/llama-2-7b-hf/" #tokenizer path
+TOKENIZER_MODEL="./model_from_hf/llama-2-7b-hf/tokenizer.model"
 ```
 Config llama2-7B lora inference script: tasks/inference/generate_llama2_7b_lora_ptd.sh
 ```bash
@@ -286,8 +284,8 @@ Config llama2-7B evaluation script: tasks/evaluation/evaluate_llama2_7B_ptd.sh
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 # modify script model path and tokenizer path
-TOKENIZER_PATH=./llama2-7b-hf/  #tokenizer path
-CHECKPOINT=./llama2-7b-tp8pp1  #model path
+TOKENIZER_PATH="./model_from_hf/llama-2-7b-hf/"  #tokenizer path
+CHECKPOINT="./model_weights/llama-2-7b-hf-v0.1-tp8-pp1"  #model path
 # configure task and data path
 DATA_PATH="./mmlu/data/test/"
 TASK="mmlu"
@@ -376,174 +374,176 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
 ### Script
 
 1. Clone the repository to your local server:
-    ```shell
-    git clone https://gitee.com/ascend/ModelLink.git 
-    cd ModelLink 
-    mkdir logs
-    mkdir ckpt
-    ```
+```shell
+git clone https://gitee.com/ascend/ModelLink.git 
+cd ModelLink
+mkdir logs
+mkdir model_from_hf
+mkdir dataset
+mkdir ckpt
+```
 
 2. Build environment
    
-    ```bash
-    # python3.8
-    conda create -n test python=3.8
-    conda activate test
-    
-    # install torch 和 torch_npu
-    pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
-    pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
-    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+```bash
+# python3.8
+conda create -n test python=3.8
+conda activate test
 
-    # modify ascend-toolkit path
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+# install torch 和 torch_npu
+pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
+pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 
-    # install AscendSpeed
-    git clone https://gitee.com/ascend/AscendSpeed.git
-    cd AscendSpeed
-    pip install -r requirements.txt 
-    pip3 install -e .
-    cd ..
-    
-    # install other packages
-    pip install -r requirements.txt 
-    ```
+# modify ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+# install AscendSpeed
+git clone https://gitee.com/ascend/AscendSpeed.git
+cd AscendSpeed
+pip install -r requirements.txt 
+pip3 install -e .
+cd ..
+
+# install other packages
+pip install -r requirements.txt 
+```
 
 3. Prepare pretrained weights and tokenizer
-    Download the LLaMA2-13B checkpoint from [here](https://huggingface.co/NousResearch/Llama-2-13b-hf/tree/main) 
-    
-    ```bash
-    git lfs install
-    git clone https://huggingface.co/NousResearch/Llama-2-13b-hf
-    ```
+Download the LLaMA2-13B checkpoint from [here](https://huggingface.co/NousResearch/Llama-2-13b-hf/tree/main) 
+
+```bash
+git lfs install
+git clone https://huggingface.co/NousResearch/Llama-2-13b-hf
+```
 
 4. Weights convert
 
-   *Note that if you want to use the weight from huggingface, please run the weight conversion script first. The following uses llama-2-13b model weight conversion as an example.*
-    ```bash
-    # modify the script according to your own ascend-toolkit path
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    
-    # convert weights
-    python tools/checkpoint/util.py --model-type GPT \
-        --loader llama2_hf \
-        --saver megatron \
-        --target-tensor-parallel-size 8 \
-        --target-pipeline-parallel-size 1 \
-        --load-dir ./llama2-13b-hf \
-        --save-dir ./llama2-13b-hf-tp8 \
-        --tokenizer-model ./llama2-13b-hf/tokenizer.model
-    ```
-    Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
+*Note that if you want to use the weight from huggingface, please run the weight conversion script first. The following uses llama-2-13b model weight conversion as an example.*
+```bash
+# modify the script according to your own ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-    Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
-    ```shell
-    cd ModelLink/
-    # Modify the ascend-toolkit path
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    python tools/checkpoint/util.py --model-type GPT \
-        --loader megatron \
-        --saver megatron \
-        --save-model-type save_huggingface_llama \
-        --load-dir ../llama213B-v0.1-pt8-pp1 \
-        --target-tensor-parallel-size 1 \
-        --target-pipeline-parallel-size 1 \
-        --save-dir ../llama213B_downloaded  # <-- Fill in the original HF model path here, new weights will be saved in ../llama213B_downloaded/mg2hg
-    ```
+# convert weights
+python tools/checkpoint/util.py --model-type GPT \
+    --loader llama2_hf \
+    --saver megatron \
+    --target-tensor-parallel-size 8 \
+    --load-dir ./model_from_hf/Llama-2-13b-hf/ \
+    --target-pipeline-parallel-size 1 \
+    --save-dir ./model_weights/Llama-2-13b-hf-v0.1-tp8-pp1/ \
+    --tokenizer-model ./llama2-13b-hf/tokenizer.model
+```
+
+Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
+
+Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+```shell
+# Modify the ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ./model_weights/Llama-2-13b-hf-v0.1-tp8-pp1/ \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --save-dir ./model_from_hf/Llama-2-13b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Llama-2-13b-hf/mg2hg
+```
 
 5. pre-training
 
-	5.1 Prepare dataset
+5.1 Prepare dataset
 
-	Download the LLAMA2-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
-	```shell
-	# download datasets
-	mkdir dataset_llama2
-	cd ./dataset_llama2
-	wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-	cd ..
-	
-	# process datasets                              
-	python ./tools/preprocess_data.py \
-		 --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-		 --tokenizer-name-or-path ./llama-2-13b-hf \
-		 --output-prefix ./dataset_llama2/alpaca \
-		 --workers 4 \
-		 --log-interval 1000 \
-		 --tokenizer-type PretrainedFromHF
-	```
+Download the LLAMA2-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
+```shell
+# download datasets
+cd dataset/
+wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+cd ..
 
-	5.2 pre-training using ptd mode
-	Config LLAMA2-13B pre-training script: examples/llama2/pretrain_llama2_13B_ptd_8p.sh 
-   ```shell
-    # modify the script according to your own ascend-toolkit path
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-    
-    # modify config according to your own actual situation
-    LOAD_CHECKPOINT_PATH="your init model load path"
-    SAVE_CHECKPOINT_PATH="your model ckpt save path"
-    TOKENIZER_PATH=./llama-2-13b-hf/  #tokenizer path
-    DATA_PATH=./dataset_llama2/alpaca_text_document  #processed dataset
-   ```
+# process datasets                              
+```shell                        
+python ./tools/preprocess_data.py \
+    --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+    --tokenizer-name-or-path ./model_from_hf/Llama-2-13b-hf/ \
+    --output-prefix ./dataset/Llama-2-13b-hf_alpaca \
+    --workers 4 \
+    --log-interval 1000 \
+    --tokenizer-type PretrainedFromHF
+```
 
-	Multi-machine training requires the addition of parameter --overlap-grad-reduce
+5.2 pre-training using ptd mode
+Config LLAMA2-13B pre-training script: examples/llama2/pretrain_llama2_13B_ptd_8p.sh 
+```shell
+# modify the script according to your own ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-	Launch LLAMA2-13B  pre-training script: examples/llama2/pretrain_llama2_13B_ptd_8p.sh
-   
-   ```shell
-    bash examples/llama2/pretrain_llama2_13B_ptd_8p.sh
-   ```
+# modify config according to your own actual situation
+LOAD_CHECKPOINT_PATH="./model_weights/Llama-2-13b-hf-v0.1-tp8-pp1/"
+SAVE_CHECKPOINT_PATH="./ckpt/"
+TOKENIZER_PATH="./model_from_hf/Llama-2-13b-hf/"  #tokenizer path
+DATA_PATH="./dataset/Llama-2-13b-hf_alpaca_text_document" #processed dataset
+```
+
+Multi-machine training requires the addition of parameter --overlap-grad-reduce
+
+Launch LLAMA2-13B  pre-training script: examples/llama2/pretrain_llama2_13B_ptd_8p.sh
+
+```shell
+bash examples/llama2/pretrain_llama2_13B_ptd_8p.sh
+```
 6. fine-tuning
 
-	6.1 Prepare fine-tuning dataset
-	Download the LLAMA2-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
-    ```shell
-	# download datasets
-	mkdir finetune_dataset
-	cd ./finetune_dataset
-	wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-	cd ..
-	
-	# process datasets                              
-	python ./tools/preprocess_data.py \
-		  --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-		  --tokenizer-name-or-path ./llama-2-13b-hf \
-		  --output-prefix ./finetune_dataset/alpaca \
-		  --workers 4 \
-		  --log-interval 1000 \
-		  --tokenizer-type PretrainedFromHF \
-		  --handler-name GeneralInstructionHandler \
-		  --append-eod
-    ```
-   6.2 Full Parameters Fine-Tuning
-   The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_7b_ptd.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
+6.1 Prepare fine-tuning dataset
+Download the LLAMA2-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
+```shell
+# download datasets
+mkdir finetune_dataset
+cd ./finetune_dataset
+wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+cd ..
 
-   Add the fine-tuning parameter `--finetune` and add pretrained-weight load parameter `--load`, so that fine-tuning starts from the first step.
-   ```bash
-   DATA_PATH=./finetune_dataset/alpaca
-   CKPT_PATH=./ckpt
-   --load ${CKPT_PATH} \
-   --finetune \
-   --is-instruction-dataset \
-   ```
-   6.3 Lora Fine-Tuning
-   The Lora fine-tuning script is configured by adding the following lora parameters based on the full-parameter finetune script pretrain_llama2_7b_ptd.sh:
-   ```bash
-       --lora-target-modules query_key_value dense proj dense_4h_to_h \
-       --lora-r 16 \
-       --lora-alpha 32 \
-   ```
-   If the vocabulary is changed, add the following parameters:
-   ```bash
-     --lora-modules-to-save word_embeddings output_layer \
-   ```
-   
-   
-   Launch LLAMA2-13B lora fine tune script: tasks/finetune/tune_llama2_13b_ptd.sh
-   
-   ```shell
-    bash tasks/finetune/tune_llama2_13b_ptd.sh 
-   ```
+# process datasets                              
+python ./tools/preprocess_data.py \
+  --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+  --tokenizer-name-or-path ./model_from_hf/llama-2-13b-hf \
+  --output-prefix ./finetune_dataset/llama-2-13b-hf_alpaca \
+  --workers 4 \
+  --log-interval 1000 \
+  --tokenizer-type PretrainedFromHF \
+  --handler-name GeneralInstructionHandler \
+  --append-eod
+```
+6.2 Full Parameters Fine-Tuning
+The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_7b_ptd.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
+
+Add the fine-tuning parameter `--finetune` and add pretrained-weight load parameter `--load`, so that fine-tuning starts from the first step.
+```bash
+DATA_PATH=./finetune_dataset/alpaca
+CKPT_PATH=./ckpt
+--load ${CKPT_PATH} \
+--finetune \
+--is-instruction-dataset \
+```
+6.3 Lora Fine-Tuning
+The Lora fine-tuning script is configured by adding the following lora parameters based on the full-parameter finetune script pretrain_llama2_7b_ptd.sh:
+```bash
+    --lora-target-modules query_key_value dense proj dense_4h_to_h \
+    --lora-r 16 \
+    --lora-alpha 32 \
+```
+If the vocabulary is changed, add the following parameters:
+```bash
+  --lora-modules-to-save word_embeddings output_layer \
+```
+
+
+Launch LLAMA2-13B lora fine tune script: tasks/finetune/tune_llama2_13b_ptd.sh
+
+```shell
+bash tasks/finetune/tune_llama2_13b_ptd.sh 
+```
 
 ### Performance
 
@@ -567,8 +567,8 @@ Config Llama2-13B inference script: tasks/inference/generate_llama2_13b_ptd.sh
 
 ```shell
 # modify the model weight path and tokenizer path
-CHECKPOINT=./llama2-13b-tp8-pp1/
-TOKENIZER_PATH=./llama2-13b-hf/
+CHECKPOINT="./model_weights/Llama-2-13b-hf-v0.1-tp8-pp1/"
+TOKENIZER_PATH="./model_from_hf/Llama-2-13b-hf/"
 ```
 
 Config Llama2-13B lora inference script: tasks/inference/generate_llama2_13b_lora_ptd.sh
@@ -595,9 +595,9 @@ Some inference samples are as follows:
 We use boolq benchmark to evaluate our model. Benchmark Download [here](https://huggingface.co/datasets/boolq).
 
 ```shell
-    # modify the model weight path and tokenizer path
-    CHECKPOINT=./llama2-13b-tp8-pp1/
-    TOKENIZER_PATH=./llama2-13b-hf/
+# modify the model weight path and tokenizer path
+CHECKPOINT="./model_weights/Llama-2-13b-hf-v0.1-tp8-pp1/"
+TOKENIZER_PATH="./model_from_hf/Llama-2-13b-hf/"
 ```
 
 ```shell
@@ -641,8 +641,10 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
 1. Clone the repository to your local server:
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
-cd ModeLlink 
+cd ModelLink
 mkdir logs
+mkdir model_from_hf
+mkdir dataset
 mkdir ckpt
 ```
 
@@ -674,274 +676,239 @@ pip install -r requirements.txt
 3. Prepare pretrained weights and tokenizer
     Download the LLaMA2-70B checkpoint from [here](https://huggingface.co/meta-llama/Llama-2-70b-hf)
 
-    ```shell
-    #!/bin/bash
-    mkdir -p llama2-70b-hf
-    cd llama2-70b-hf
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/config.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/generation_config.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00001-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00002-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00003-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00004-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00005-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00006-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00007-of-00015.bin   
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00008-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00009-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00010-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00011-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00012-of-00015.bin   
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00013-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00014-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00015-of-00015.bin   
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model.bin.index.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/special_tokens_map.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer.model
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer_config.json
-    cd ..
-    ```
+```shell
+cd ./model_from_hf/
+# 需要安装 git-lfs: git lfs install
+git clone https://huggingface.co/meta-llama/Llama-2-70b-hf
+cd ..
+```
    
-    For LLaMA2-34B, we use CodeLlama-34b weights and LLaMA2-70B tokenizer.
+For LLaMA2-34B, we use CodeLlama-34b weights and LLaMA2-70B tokenizer.
 
-    CodeLlama-34b weights can be downloaded from [here](https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/tree/main),
-    ```bash
-    #!/bin/bash
-    mkdir -p codellama-34b-hf
-    cd codellama-34b-hf
-    wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/config.json
-    wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/generation_config.json
-    wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/pytorch_model-00001-of-00007.bin
-    wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/pytorch_model-00002-of-00007.bin
-    wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/pytorch_model-00003-of-00007.bin
-    wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/pytorch_model-00004-of-00007.bin
-    wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/pytorch_model-00005-of-00007.bin
-    wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/pytorch_model-00006-of-00007.bin
-    wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/pytorch_model-00007-of-00007.bin
-    wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/pytorch_model.bin.index.json
-    cd ..
-    ```
-    LLaMA2-70B tokenizer can be downloaded from [here](https://huggingface.co/meta-llama/Llama-2-70b-hf)
-    ```bash
-    #!/bin/bash
-    mkdir -p llama2-70b-hf
-    cd llama2-70b-hf
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/special_tokens_map.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer.model
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer_config.json
-    cd ..
-    ```
+CodeLlama-34b weights can be downloaded from [here](https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/tree/main),
+```bash
+cd ./model_from_hf/
+git lfs install
+git clone https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf
+cd ..
+```
+LLaMA2-70B tokenizer can be downloaded from [here](https://huggingface.co/meta-llama/Llama-2-70b-hf)
+```bash
+#!/bin/bash
+cd ./model_from_hf/
+git lfs install
+git clone https://huggingface.co/meta-llama/Llama-2-70b-hf
+cd ..
+```
 4. Weights convert
 
-   *Note that if you want to use the weight from huggingface, please run the weight conversion script first. *
-    The following converts llama-2-70b model weight.
-    ```bash
-    # modify the script according to your own ascend-toolkit path
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    
-    # convert to megatron weights
-    python tools/checkpoint/util.py \
-    --model-type GPT \
-    --loader llama2_hf \
+*Note that if you want to use the weight from huggingface, please run the weight conversion script first. *
+The following converts llama-2-70b model weight.
+```bash
+# modify the script according to your own ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+# convert to megatron weights
+  python tools/checkpoint/util.py \
+  --model-type GPT \
+  --loader llama2_hf \
+  --saver megatron \
+  --target-tensor-parallel-size 8 \
+  --target-pipeline-parallel-size 4 \
+  --load-dir ./model_from_hf/Llama-2-70b-hf/ \
+  --save-dir ./model_weights/Llama-2-70b-hf-v0.1-tp8-pp4/ \
+  --tokenizer-model ./model_from_hf/Llama-2-70b-hf/tokenizer.model \
+  --params-dtype bf16 
+```
+
+The following converts llama-2-34b model weight.
+```bash
+# modify the script according to your own ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+# convert to megatron weights
+python tools/checkpoint/util.py --model-type GPT \
+  --loader llama2_hf \
+  --saver megatron \
+  --target-tensor-parallel-size 8 \
+  --target-pipeline-parallel-size 4 \
+  --load-dir ./model_from_hf/CodeLlama-34b-Instruct-hf/ \
+  --save-dir ./model_weights/CodeLlama-34b-Instruct-hf-v0.1-tp8-pp4/ \
+  --tokenizer-model ./model_from_hf/Llama-2-70b-hf/tokenizer.model \
+  --params-dtype bf16 
+```
+
+Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy.
+* The following converts llama-2-70b model weight.
+```shell
+# Modify the ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
     --saver megatron \
-    --target-tensor-parallel-size 8 \
-    --target-pipeline-parallel-size 4 \
-    --load-dir ./llama2-70b-hf/ \
-    --save-dir ./load_ckpt \
-    --tokenizer-model ./llama2-70b-hf/tokenizer.model                                                                    
-    ```
-    The following converts llama-2-34b model weight.
-    ```bash
-    # modify the script according to your own ascend-toolkit path
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    
-    # convert to megatron weights
-    python tools/checkpoint/util.py --model-type GPT \
-     --loader llama2_hf \
-     --saver megatron \
-     --target-tensor-parallel-size 8 \
-     --target-pipeline-parallel-size 4 \
-     --load-dir ./codellama-34b-hf \
-     --save-dir ./load_ckpt \
-     --tokenizer-model ./llama2-70b-hf/tokenizer.model \
-     --params-dtype bf16                                                              
-    ```
+    --save-model-type save_huggingface_llama \
+    --load-dir ./model_weights/Llama-2-70b-hf-v0.1-tp8-pp4/ \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --save-dir ./model_from_hf/Llama-2-70b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Llama-2-70b-hf/mg2hg
+```
+* The following converts llama-2-34b model weight.
+```shell
+# Modify the ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+python tools/checkpoint/util.py --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ./model_weights/CodeLlama-34b-Instruct-hf-v0.1-tp8-pp4/ \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --save-dir ./model_from_hf/CodeLlama-34b-Instruct-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/CodeLlama-34b-Instruct-hf/mg2hg
+```
 
-    Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy.
-    * The following converts llama-2-70b model weight.
-    ```shell
-    cd ModelLink/
-    # Modify the ascend-toolkit path
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    python tools/checkpoint/util.py --model-type GPT \
-        --loader megatron \
-        --saver megatron \
-        --save-model-type save_huggingface_llama \
-        --load-dir ../llama270B-v0.1-pt8-pp1 \
-        --target-tensor-parallel-size 1 \
-        --target-pipeline-parallel-size 1 \
-        --save-dir ../llama270B_downloaded  # <-- Fill in the original HF model path here, new weights will be saved in ../llama270B_downloaded/mg2hg
-    ```
-    * The following converts llama-2-34b model weight.
-    ```shell
-    cd ModelLink/
-    # Modify the ascend-toolkit path
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    python tools/checkpoint/util.py --model-type GPT \
-        --loader megatron \
-        --saver megatron \
-        --save-model-type save_huggingface_llama \
-        --load-dir ../llama234B-v0.1-pt8-pp1 \
-        --target-tensor-parallel-size 1 \
-        --target-pipeline-parallel-size 1 \
-        --save-dir ../llama234B_downloaded  # <-- Fill in the original HF model path here, new weights will be saved in ../llama234B_downloaded/mg2hg
-    ```
-
-    Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
+Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
 
 5. pre-training
 
-	5.1 Prepare dataset
+5.1 Prepare dataset
 
-    There are two dataset examples: Alpaca and Moss. 
+There are two dataset examples: Alpaca and Moss. 
 
-    1. Alpaca Dataset
-        
-       Download the Alpaca datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
-    ```shell
-    # download datasets
-    mkdir dataset_llama2
-    cd ./dataset_llama2
-    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-    cd ..
+1. Alpaca Dataset
     
-    # process datasets                              
-    python ./tools/preprocess_data.py \
-    --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ./llama2-70b-hf \
-    --output-prefix ./dataset_llama2/alpaca \
-    --workers 4 \
-    --log-interval 1000 \
-    --tokenizer-type PretrainedFromHF
-    ```
-   
-    2. Moss Dataset
+    Download the Alpaca datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+```shell
+# download datasets
+cd ./dataset
+wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+cd ..
 
-       Download the Moss datasets from [here](https://huggingface.co/datasets/fnlp/moss-003-sft-data/tree/main) 
-        
-    ```shell
-    # download datasets
-    mkdir dataset_llama2
-    cd ./dataset_llama2
-    wget https://huggingface.co/datasets/fnlp/moss-003-sft-data/resolve/main/moss-003-sft-no-tools.jsonl.zip --no-check-certificate
-    unzip moss-003-sft-no-tools.jsonl.zip
-    cd ..
-    
-    # process datasets                              
-    python tools/preprocess_data.py \
-    --input ./dataset_llama2/moss-003-sft-no-tools.jsonl \
-    --output-prefix ./dataset_llama2/moss \
-    --tokenizer-type PretrainedFromHF \
-    --tokenizer-name-or-path ./llama2-70b-hf \
-    --tokenizer-not-use-fast \
-    --handler-name MOSSInstructionHandler
-    ```
+# process datasets                              
+python ./tools/preprocess_data.py \
+--input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+--tokenizer-name-or-path ./model_from_hf/Llama-2-70b-hf/ \
+--output-prefix ./dataset/Llama-2-70b-hf_alpaca \
+--workers 4 \
+--log-interval 1000 \
+--tokenizer-type PretrainedFromHF
+```
 
-	5.2 pre-training using ptd mode
+2. Moss Dataset
 
-    LLaMA2-34B: examples/llama2/pretrain_llama2_34B_ptd_16p.sh
-    ```shell
-    # modify the script according to your own ascend-toolkit path
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    Download the Moss datasets from [here](https://huggingface.co/datasets/fnlp/moss-003-sft-data/tree/main) 
     
-    # modify script orign dataset path according to your own dataset path
-    TOKENIZER_PATH=./llama2-70b-hf/  #tokenizer path
-    DATA_PATH=./dataset_llama2/alpaca_text_document  #processed dataset
-    ``` 
-   
-    LLaMA2-70B: examples/llama2/pretrain_llama2_70b_ptd.sh
-    ```shell
-    # modify the script according to your own ascend-toolkit path
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-    
-    # modify script orign dataset path according to your own dataset path
-    TOKENIZER_PATH=./llama2-70b-hf/  #tokenizer path
-    DATA_PATH=./dataset_llama2/alpaca_text_document  #processed dataset
-    ``` 
-    
-    Launch pre-training script
-    
-    LLaMA2-34B: examples/llama2/pretrain_llama2_34B_ptd_16p.sh
-    ```shell
-    bash examples/llama2/pretrain_llama2_34B_ptd_16p.sh
-    ```
-    LLaMA2-70B: examples/llama2/pretrain_llama2_70b_ptd.sh
-    ```shell
-    bash examples/llama2/pretrain_llama2_70b_ptd.sh
-    ```
+```shell
+# download datasets
+cd ./dataset
+wget https://huggingface.co/datasets/fnlp/moss-003-sft-data/resolve/main/moss-003-sft-no-tools.jsonl.zip --no-check-certificate
+unzip moss-003-sft-no-tools.jsonl.zip
+cd ..
+
+# process datasets                              
+python tools/preprocess_data.py \
+--input ./dataset/moss-003-sft-no-tools.jsonl \
+--output-prefix ./dataset/Llama-2-70b-hf_moss \
+--tokenizer-type PretrainedFromHF \
+--tokenizer-name-or-path ./model_from_hf/Llama-2-70b-hf/ \
+--tokenizer-not-use-fast \
+--handler-name MOSSInstructionHandler
+```
+
+5.2 pre-training using ptd mode
+
+LLaMA2-34B: examples/llama2/pretrain_llama2_34B_ptd_16p.sh
+```shell
+# modify the script according to your own ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+# modify script orign dataset path according to your own dataset path
+TOKENIZER_PATH="./model_from_hf/Llama-2-70b-hf/"  #tokenizer path
+DATA_PATH="./dataset/Llama-2-70b-hf_alpaca_text_document"  #processed dataset
+``` 
+
+LLaMA2-70B: examples/llama2/pretrain_llama2_70b_ptd.sh
+```shell
+# modify the script according to your own ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+# modify script orign dataset path according to your own dataset path
+TOKENIZER_PATH="./model_from_hf/Llama-2-70b-hf/"  #tokenizer path
+DATA_PATH="./dataset_llama2/alpaca_alpaca_text_document" #processed dataset
+``` 
+
+Launch pre-training script
+
+LLaMA2-34B: examples/llama2/pretrain_llama2_34B_ptd_16p.sh
+```shell
+bash examples/llama2/pretrain_llama2_34B_ptd_16p.sh
+```
+LLaMA2-70B: examples/llama2/pretrain_llama2_70b_ptd.sh
+```shell
+bash examples/llama2/pretrain_llama2_70b_ptd.sh
+```
 
 6. fine-tuning
 
-	6.1 Prepare fine-tuning dataset
-	Download the LLAMA2-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
-    ```shell
-	# download datasets
-	mkdir finetune_dataset
-	cd ./finetune_dataset
-	wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-	cd ..
-	
-	# process datasets                              
-	python ./tools/preprocess_data.py \
-		  --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-		  --tokenizer-name-or-path ./llama-2-70b-hf \
-		  --output-prefix ./finetune_dataset/alpaca \
-		  --workers 4 \
-		  --log-interval 1000 \
-		  --tokenizer-type PretrainedFromHF \
-		  --handler-name GeneralInstructionHandler \
-		  --append-eod
-    ```
-   6.2 Full Parameters Fine-Tuning
-   The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_7b_ptd.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
+6.1 Prepare fine-tuning dataset
+Download the LLAMA2-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
+```shell
+# download datasets
+mkdir finetune_dataset
+cd ./finetune_dataset
+wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+cd ..
 
-   Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
-   ```bash
-   DATA_PATH=./finetune_dataset/alpaca
-   
-   --finetune \
-   --is-instruction-dataset \
-   ```
-   6.3 Lora Fine-Tuning
-   The Lora fine-tuning script is configured by adding the following lora parameters to the pretrain_llama2_7b_ptd.sh script:
-   ```bash
-       --lora-target-modules query_key_value dense proj dense_4h_to_h \
-       --lora-r 16 \
-       --lora-alpha 32 \
-   ```
-   If the vocabulary is changed, add the following parameters:
-   ```bash
-     --lora-modules-to-save word_embeddings output_layer \
-   ```
-   The following parameters are added to the resumable training capability of Lora:
-   ```bash
-       --load ${ORIGIN_CHECKPOINT}  \
-       --lora-load ${LORA_CHECKPOINT} \
-   ```
-   
-   Launch LLAMA2-34B lora fine tune script: tasks/finetune/tune_llama2_34b_ptd.sh
-   
-   ```shell
-    bash tasks/finetune/tune_llama2_34b_ptd.sh 
-   ```
-   
-   Launch LLAMA2-70B lora fine tune script: tasks/finetune/tune_llama2_70b_ptd.sh
-   
-   ```shell
-    bash tasks/finetune/tune_llama2_70b_ptd.sh 
-   ```
+# process datasets                              
+python ./tools/preprocess_data.py \
+  --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+  --tokenizer-name-or-path ./model_from_hf/Llama-2-70b-hf/ \
+  --output-prefix ./finetune_dataset/Llama-2-70b-hf_alpaca \
+  --workers 4 \
+  --log-interval 1000 \
+  --tokenizer-type PretrainedFromHF \
+  --handler-name GeneralInstructionHandler \
+  --append-eod
+```
+6.2 Full Parameters Fine-Tuning
+The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama2_7b_ptd.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
+
+Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
+```bash
+DATA_PATH=./finetune_dataset/Llama-2-70b-hf_alpaca_text_document
+CKPT_PATH="./ckpt/"
+--load ${CKPT_PATH} \
+--finetune \
+--is-instruction-dataset \
+```
+
+6.3 Lora Fine-Tuning
+The Lora fine-tuning script is configured by adding the following lora parameters to the pretrain_llama2_7b_ptd.sh script:
+```bash
+    --lora-target-modules query_key_value dense proj dense_4h_to_h \
+    --lora-r 16 \
+    --lora-alpha 32 \
+```
+If the vocabulary is changed, add the following parameters:
+```bash
+  --lora-modules-to-save word_embeddings output_layer \
+```
+The following parameters are added to the resumable training capability of Lora:
+```bash
+    --load ${ORIGIN_CHECKPOINT}  \
+    --lora-load ${LORA_CHECKPOINT} \
+```
+
+Launch LLAMA2-34B lora fine tune script: tasks/finetune/tune_llama2_34b_ptd.sh
+
+```shell
+bash tasks/finetune/tune_llama2_34b_ptd.sh 
+```
+
+Launch LLAMA2-70B lora fine tune script: tasks/finetune/tune_llama2_70b_ptd.sh
+
+```shell
+bash tasks/finetune/tune_llama2_70b_ptd.sh 
+```
 
 ### Performance-2
 
