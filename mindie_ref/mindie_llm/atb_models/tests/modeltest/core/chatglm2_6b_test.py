@@ -58,6 +58,15 @@ class Chatglm26BModelTest(model_test.ModelTest):
     def get_dataset_list(self):
         return ["BoolQ", "CEval"]
 
+    def set_fa_tokenizer_params(self):
+        self.tokenizer_params = {
+            'revision': None,
+            'use_fast': False,
+            'padding_side': 'left',
+            'truncation_side': 'left',
+            'trust_remote_code': True
+        }
+
 
 def main():
     Chatglm26BModelTest.create_instance()
