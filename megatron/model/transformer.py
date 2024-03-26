@@ -25,14 +25,6 @@ from megatron.core.tensor_parallel import (
 )
 from megatron.core.parallel_state import get_tensor_model_parallel_group, get_tensor_and_expert_parallel_group
 
-from ascendspeed.ops.unpad_gen_attention_mask import UnpadGenAttentionMask
-from ascendspeed.ops.unpad_rope import UnpadRope
-from ascendspeed.ops.unpad_softmax import UnpadSoftMax
-from ascendspeed.ops.unpad_bmm1 import UnpadBmm1
-from ascendspeed.ops.unpad_bmm2 import UnpadBmm2
-from ascendspeed.ops.unpad_seqlen import UnpadSeqLen
-from ascendspeed.ops.pad_seqlen import PadSeqLen
-
 try:
     from einops import rearrange
 except ImportError:
@@ -836,6 +828,15 @@ class UnpadParallelAttention(ParallelAttention):
         super(UnpadParallelAttention, self).__init__(config, layer_number,
                  attention_type=AttnType.self_attn,
                  attn_mask_type=AttnMaskType.padding)
+        
+        from ascendspeed.ops.unpad_gen_attention_mask import UnpadGenAttentionMask
+        from ascendspeed.ops.unpad_rope import UnpadRope
+        from ascendspeed.ops.unpad_softmax import UnpadSoftMax
+        from ascendspeed.ops.unpad_bmm1 import UnpadBmm1
+        from ascendspeed.ops.unpad_bmm2 import UnpadBmm2
+        from ascendspeed.ops.unpad_seqlen import UnpadSeqLen
+        from ascendspeed.ops.pad_seqlen import PadSeqLen
+
         args = get_args()
         self.use_unpad = args.use_unpad
         self.bmm1 = UnpadBmm1(self.num_attention_heads_per_partition)
