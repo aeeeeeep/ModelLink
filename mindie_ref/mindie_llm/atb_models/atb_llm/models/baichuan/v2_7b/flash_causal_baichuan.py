@@ -112,7 +112,7 @@ class FlashBaichuanForCausalLM(FlashForCausalLM):
                                   input_lengths: torch.Tensor,
                                   max_seq_len: int,
                                   lm_head_indices: Optional[torch.Tensor] = None):
-        self.rotary_embedding.update_cos_sin_cache_total(torch.float32,
+        self.rotary_embedding.update_cos_sin_cache_total(torch.float32 if self.config.vocab_size == 125696 else self.dtype,
                                                          self.device,
                                                          self.max_position_embeddings)
         self.cos_embed = self.rotary_embedding.get_cos_cached_total()
