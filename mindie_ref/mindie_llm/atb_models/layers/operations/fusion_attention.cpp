@@ -53,7 +53,7 @@ enum QKVLinearSplitTensorIdx : uint32_t {
     INTERMEDIATE_KV,
 };
 
-static const uint64_t QKV_IN_TENSOR_COUNT = 23;
+static const uint64_t QKV_IN_TENSOR_COUNT = 24;
 static const uint64_t QKV_OUT_TENSOR_COUNT = 4;
 static const uint64_t QKV_NO_PACK_INTERMEDIATE_TENSOR_COUNT = 0;
 static const uint64_t QKV_NO_PACK_NODE_COUNT = 3;
