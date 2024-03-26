@@ -65,6 +65,18 @@ conda activate test
 pip install torch-2.1.0-cp38-cp38m-linux_aarch64.whl
 pip install torch_npu-2.1.0.XXX-cp38-cp38m-linux_aarch64.whl
 pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+```bash
+# python3.8
+conda create -n test python=3.8
+conda activate test
+
+# 安装 torch 和 torch_npu 
+pip install torch-2.1.0-cp38-cp38m-linux_aarch64.whl
+pip install torch_npu-2.1.0.XXX-cp38-cp38m-linux_aarch64.whl
+pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+
+# 修改 ascend-toolkit 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 修改 ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
@@ -76,7 +88,17 @@ cd AscendSpeed
 pip install -r requirements.txt 
 pip3 install -e .
 cd ..
+# 安装加速库
+git clone https://gitee.com/ascend/AscendSpeed.git
+cd AscendSpeed
+pip install -r requirements.txt 
+pip3 install -e .
+cd ..
    
+# 安装其余依赖库
+pip install -r requirements.txt 
+```
+
 # 安装其余依赖库
 pip install -r requirements.txt 
 ```
@@ -93,6 +115,8 @@ pip install -r requirements.txt
 
 4. 权重转换
 
+将模型权重文件从 HuggingFace权重 格式转化为 Megatron 权重
+***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 将模型权重文件从 HuggingFace权重 格式转化为 Megatron 权重
 ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
@@ -114,6 +138,8 @@ python tools/checkpoint/util.py \
 
 任意并行切分策略的 Megatron 权重 格式转化为 HuggingFace权重
 ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+任意并行切分策略的 Megatron 权重 格式转化为 HuggingFace权重
+***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
 ```shell
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
@@ -122,8 +148,10 @@ python tools/checkpoint/util.py --model-type GPT \
     --saver megatron \
     --save-model-type save_huggingface_llama \
     --load-dir ./model_weights/llama-2-7b-hf-v0.1-tp8-pp1/ \
+    --load-dir ./model_weights/llama-2-7b-hf-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
+    --save-dir ./model_from_hf/llama-2-7b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-2-7b-hf/mg2hg
     --save-dir ./model_from_hf/llama-2-7b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-2-7b-hf/mg2hg
 ```
 

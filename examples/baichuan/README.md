@@ -41,7 +41,10 @@ Baichuan-7B 训练的硬件配置如下：
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
 cd ModelLink
+cd ModelLink
 mkdir logs
+mkdir model_from_hf
+mkdir dataset
 mkdir model_from_hf
 mkdir dataset
 mkdir ckpt
@@ -85,6 +88,7 @@ cd ..
 ```
 
 4. 权重转换
+4. 权重转换
 
 将模型权重文件从 HuggingFace权重 格式转化为 Megatron 权重
 ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
@@ -97,6 +101,10 @@ python tools/checkpoint/util.py \
     --loader llama2_hf \
     --saver megatron \
     --target-tensor-parallel-size 8 \
+    --target-pipeline-parallel-size 1 \
+    --load-dir ./model_from_hf/Baichuan-7B/ \
+    --save-dir ./model_weights/Baichuan-7B-v0.1-tp8-pp1/ \
+    --tokenizer-model ./model_from_hf/Baichuan-7B/tokenizer.model \
     --target-pipeline-parallel-size 1 \
     --load-dir ./model_from_hf/Baichuan-7B/ \
     --save-dir ./model_weights/Baichuan-7B-v0.1-tp8-pp1/ \
@@ -114,24 +122,31 @@ python tools/checkpoint/util.py --model-type GPT \
     --saver megatron \
     --save-model-type save_huggingface_llama \
     --load-dir ./model_weights/Baichuan-7B-v0.1-tp8-pp1/ \
+    --load-dir ./model_weights/Baichuan-7B-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --w-pack True \
     --save-dir ./model_from_hf/Baichuan-7B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Baichuan-7B/mg2hg
+    --save-dir ./model_from_hf/Baichuan-7B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Baichuan-7B/mg2hg
 ```
 
 权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
+权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
 
 5. 数据预处理
+5. 数据预处理
 
+从 [这里](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 下载 BaiChuan-7B 的数据集， 保存在ModelLink/dataset/ 目录
 从 [这里](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 下载 BaiChuan-7B 的数据集， 保存在ModelLink/dataset/ 目录
 
 ```shell
 # 下载数据集
 cd dataset/
+cd dataset/
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
 
+# 处理数据                            
 # 处理数据                            
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
@@ -256,7 +271,10 @@ Baichuan-13B 训练的硬件配置如下:
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
 cd ModelLink
+cd ModelLink
 mkdir logs
+mkdir model_from_hf
+mkdir dataset
 mkdir model_from_hf
 mkdir dataset
 mkdir ckpt
@@ -338,6 +356,7 @@ python tools/checkpoint/util.py --model-type GPT \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --w-pack True \
+    --save-dir ./model_from_hf/Baichuan-13B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Baichuan-13B/mg2hg
     --save-dir ./model_from_hf/Baichuan-13B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Baichuan-13B/mg2hg
 ```
 

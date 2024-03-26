@@ -38,7 +38,11 @@ Baichuan2-7B 训练的硬件配置如下：
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git
 cd ModelLink
+git clone https://gitee.com/ascend/ModelLink.git
+cd ModelLink
 mkdir logs
+mkdir model_from_hf
+mkdir dataset
 mkdir model_from_hf
 mkdir dataset
 mkdir ckpt
@@ -71,6 +75,7 @@ pip install -r requirements.txt
 ```
 
 3. 下载 Baichuan2-7B-Base [词表文件](https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/tree/main) 
+3. 下载 Baichuan2-7B-Base [词表文件](https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/tree/main) 
 
 ```shell
 cd ./model_from_hf/
@@ -80,9 +85,11 @@ cd ..
 ```
 
 4. 权重格式转换
+4. 权重格式转换
 
 将模型权重文件从 HuggingFace权重 格式转化为 Megatron 权重
 ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
+
 
 ```shell
 # 修改 ascend-toolkit 路径
@@ -96,12 +103,16 @@ python tools/checkpoint/util.py \
     --load-dir ./model_from_hf/Baichuan2-7B-Base/ \
     --save-dir ./model_weights/Baichuan2-7B-Base-v0.1-tp8-pp1/ \
     --tokenizer-model ./model_from_hf/Baichuan2-7B-Base/tokenizer.model \
+    --load-dir ./model_from_hf/Baichuan2-7B-Base/ \
+    --save-dir ./model_weights/Baichuan2-7B-Base-v0.1-tp8-pp1/ \
+    --tokenizer-model ./model_from_hf/Baichuan2-7B-Base/tokenizer.model \
     --params-dtype bf16 \
     --w-pack True    
 ```
 
 任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
 ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+
 
 ```shell
 # 请按照您的真实环境修改 set_env.sh 路径
@@ -111,19 +122,23 @@ python tools/checkpoint/util.py --model-type GPT \
     --saver megatron \
     --save-model-type save_huggingface_llama \
     --load-dir ./model_weights/Baichuan2-7B-Base-v0.1-tp8-pp1/ \
+    --load-dir ./model_weights/Baichuan2-7B-Base-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --w-pack True \
     --save-dir ./model_from_hf/Baichuan2-7B-Base/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Baichuan2-7B-Base/mg2hg
+    --save-dir ./model_from_hf/Baichuan2-7B-Base/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Baichuan2-7B-Base/mg2hg
 ```
 
 
+5. 数据预处理
 5. 数据预处理
 
 从 [这里](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 下载 Baichuan2-7B-Base 的数据集：
 
 ```shell
 # 下载数据集
+cd ./dataset/
 cd ./dataset/
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
@@ -139,7 +154,9 @@ python ./tools/preprocess_data.py \
 ```
 
 6. 配置 Baichuan2-7B 预训练脚本
+6. 配置 Baichuan2-7B 预训练脚本
 
+需要在预训练脚本中配置相关参数
 需要在预训练脚本中配置相关参数
 ```shell
 # 修改数据集，权重，词表等路径
@@ -149,6 +166,15 @@ TOKENIZER_MODEL="./model_from_hf/Baichuan2-7B-Base/tokenizer.model"
 CKPT_LOAD_DIR="./model_weights/Baichuan2-7B-Base-v0.1-tp8-pp1/"
 ```
 
+7. 启动 Baichuan2-7B 预训练脚本
+
+运行预训练脚本前，需先执行set_env.sh脚本以便设置环境参数，或者也可将其放入预训练脚本中执行。
+```shell
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+```
+
+按以下方式启动Aquila-7B预训练：
 7. 启动 Baichuan2-7B 预训练脚本
 
 运行预训练脚本前，需先执行set_env.sh脚本以便设置环境参数，或者也可将其放入预训练脚本中执行。
@@ -326,6 +352,7 @@ python tools/checkpoint/util.py --model-type GPT \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --w-pack True \
+    --save-dir ./model_from_hf/Baichuan2-13B-Base/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Baichuan2-13B-Base/mg2hg
     --save-dir ./model_from_hf/Baichuan2-13B-Base/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Baichuan2-13B-Base/mg2hg
 ```
 

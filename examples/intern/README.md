@@ -37,7 +37,11 @@ InternLM-7B 训练的硬件配置如下:
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git
 cd ModelLink
+git clone https://gitee.com/ascend/ModelLink.git
+cd ModelLink
 mkdir logs
+mkdir model_from_hf
+mkdir dataset
 mkdir model_from_hf
 mkdir dataset
 mkdir ckpt
@@ -81,7 +85,11 @@ cd ..
 4. 权重格式转换
 
 将模型权重文件从 HuggingFace权重 格式转化为 Megatron 权重
+4. 权重格式转换
+
+将模型权重文件从 HuggingFace权重 格式转化为 Megatron 权重
 ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
+
 
 ```shell
 python tools/checkpoint/util.py \
@@ -99,6 +107,7 @@ python tools/checkpoint/util.py \
 
 任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
 ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+
 
 ```shell
 # 请按照您的真实环境修改 set_env.sh 路径
@@ -209,7 +218,11 @@ InternLM-65B 训练的硬件配置如下:
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git
 cd ModelLink
+git clone https://gitee.com/ascend/ModelLink.git
+cd ModelLink
 mkdir logs
+mkdir model_from_hf
+mkdir dataset
 mkdir model_from_hf
 mkdir dataset
 mkdir ckpt
@@ -245,6 +258,8 @@ pip install -r requirements.txt
 
 ```shell
 #!/bin/bash
+mkdir ./model_from_hf/internlm-7b/
+cd ./model_from_hf/internlm-7b/
 mkdir ./model_from_hf/internlm-7b/
 cd ./model_from_hf/internlm-7b/
 wget https://huggingface.co/internlm/internlm-7b/resolve/main/config.json

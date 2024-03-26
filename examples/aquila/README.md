@@ -31,15 +31,21 @@ cd ModelLink
 mkdir logs
 mkdir model_from_hf
 mkdir dataset
+mkdir model_from_hf
+mkdir dataset
 mkdir ckpt
 ```
 
-2. 搭建conda环境
+2. 搭建环境
 
 ```bash
 # python3.8
 conda create -n test python=3.8
 conda activate test
+
+# 安装 torch 和 torch_npu 
+pip install torch-2.1.0-cp38-cp38m-linux_aarch64.whl
+pip install torch_npu-2.1.0.XXX-cp38-cp38m-linux_aarch64.whl
 
 # 安装 torch 和 torch_npu 
 pip install torch-2.1.0-cp38-cp38m-linux_aarch64.whl
@@ -50,12 +56,22 @@ pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 # 安装加速库
+# 修改 ascend-toolkit 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+# 安装加速库
 git clone https://gitee.com/ascend/AscendSpeed.git
 cd AscendSpeed
 pip install -r requirements.txt 
 pip3 install -e .
 cd ..
+cd AscendSpeed
+pip install -r requirements.txt 
+pip3 install -e .
+cd ..
 
+# 安装其余依赖库
+pip install -r requirements.txt 
 # 安装其余依赖库
 pip install -r requirements.txt 
 ```
@@ -70,6 +86,7 @@ cd ..
 ```
 
 4. 权重转换
+4. 权重转换
 
 将模型权重文件从 HuggingFace权重 格式转化为 Megatron 权重
 ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
@@ -78,13 +95,17 @@ cd ..
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
+
 python tools/checkpoint/util.py \
     --model-type GPT \
+    --load-dir ./model_from_hf/Aquila-7B/ \
+    --save-dir ./model_weights/Aquila-7B-v0.1-tp8-pp1/ \
     --load-dir ./model_from_hf/Aquila-7B/ \
     --save-dir ./model_weights/Aquila-7B-v0.1-tp8-pp1/ \
     --loader llama2_hf \
     --saver megatron \
     --target-tensor-parallel-size 8 \
+    --tokenizer-model ./model_from_hf/Aquila-7B/tokenizer.json
     --tokenizer-model ./model_from_hf/Aquila-7B/tokenizer.json
 ```
 
@@ -97,6 +118,7 @@ python tools/checkpoint/util.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
+    --load-dir ./model_weights/Aquila-7B-v0.1-tp8-pp1/ \
     --load-dir ./model_weights/Aquila-7B-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
@@ -124,6 +146,7 @@ python ./tools/preprocess_data.py \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF
 ```
+
 
 
 6. 配置 Aquila-7B 预训练脚本

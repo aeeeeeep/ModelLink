@@ -102,6 +102,10 @@ python tools/checkpoint/util.py --model-type GPT \
                                 --target-pipeline-parallel-size 1 \
                                 --load-dir ./model_from_hf/llama-7b-hf/ \
                                 --save-dir ./model_weights/llama-7b-hf-v0.1-tp8-pp1/ \
+                                --target-tensor-parallel-size 8 \
+                                --target-pipeline-parallel-size 1 \
+                                --load-dir ./model_from_hf/llama-7b-hf/ \
+                                --save-dir ./model_weights/llama-7b-hf-v0.1-tp8-pp1/ \
                                 --tokenizer-model ./model_from_hf/llama-7b-hf/tokenizer.model
 ```
 
@@ -115,6 +119,10 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 python tools/checkpoint/util.py --model-type GPT \
                                 --loader llama2_hf \
                                 --saver megatron \
+                                --target-tensor-parallel-size 8 \
+                                --target-pipeline-parallel-size 1 \
+                                --load-dir ./model_from_hf/llama-13b-hf/ \
+                                --save-dir ./model_weights/llama-13b-hf-v0.1-tp8-pp1/ \
                                 --target-tensor-parallel-size 8 \
                                 --target-pipeline-parallel-size 1 \
                                 --load-dir ./model_from_hf/llama-13b-hf/ \
@@ -133,8 +141,10 @@ python tools/checkpoint/util.py --model-type GPT \
     --saver megatron \
     --save-model-type save_huggingface_llama \
     --load-dir ./model_weights/llama-7b-hf-v0.1-tp8-pp1/ \
+    --load-dir ./model_weights/llama-7b-hf-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
+    --save-dir ./model_from_hf/llama-7b-hf/  # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-7b-hf/mg2hg
     --save-dir ./model_from_hf/llama-7b-hf/  # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-7b-hf/mg2hg
 ```
 
@@ -147,8 +157,10 @@ python tools/checkpoint/util.py --model-type GPT \
     --saver megatron \
     --save-model-type save_huggingface_llama \
     --load-dir ./model_weights/llama-13b-hf-v0.1-tp8-pp1/ \
+    --load-dir ./model_weights/llama-13b-hf-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
+    --save-dir ./model_from_hf/llama-13b-hf/  # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-13b-hf//mg2hg
     --save-dir ./model_from_hf/llama-13b-hf/  # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-13b-hf//mg2hg
 ```
 权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
@@ -160,6 +172,7 @@ python tools/checkpoint/util.py --model-type GPT \
 下载 LLaMA-7B/13B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
 
 ```shell
+mkdir dataset
 cd dataset/
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
@@ -495,6 +508,8 @@ SCRIPT_PATH=./tools/ckpt_convert/llama/convert_weights_from_huggingface.py
 python $SCRIPT_PATH \
       --input-model-dir ./model_from_hf/llama-33b-hf/ \
       --output-model-dir ./model_weights/llama-33b-hf-v0.1-tp4-pp4/ \
+      --input-model-dir ./model_from_hf/llama-33b-hf/ \
+      --output-model-dir ./model_weights/llama-33b-hf-v0.1-tp4-pp4/ \
       --tensor-model-parallel-size 4 \
       --pipeline-model-parallel-size 4 \
       --merge-mlp \
@@ -504,11 +519,14 @@ python $SCRIPT_PATH \
 llama-65B
 ```shell
 
+
 python tools/checkpoint/util.py --model-type GPT \
                                 --loader llama2_hf \
                                 --saver megatron \
                                 --target-tensor-parallel-size 8 \
                                 --target-pipeline-parallel-size 4 \
+                                --load-dir ./model_from_hf/llama-65b-hf/ \
+                                --save-dir ./model_weights/llama-65b-hf-v0.1-tp8-pp4/ \
                                 --load-dir ./model_from_hf/llama-65b-hf/ \
                                 --save-dir ./model_weights/llama-65b-hf-v0.1-tp8-pp4/ \
                                 --tokenizer-model ./model_from_hf/llama-65b-hf/tokenizer.model
@@ -526,8 +544,10 @@ python tools/checkpoint/util.py --model-type GPT \
     --saver megatron \
     --save-model-type save_huggingface_llama \
     --load-dir /model_weights/llama-33b-hf-v0.1-tp4-pp4/ \
+    --load-dir /model_weights/llama-33b-hf-v0.1-tp4-pp4/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
+    --save-dir  ./model_from_hf/llama-33b-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-33b-hf/mg2hg
     --save-dir  ./model_from_hf/llama-33b-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-33b-hf/mg2hg
 ```
 
@@ -541,8 +561,10 @@ python tools/checkpoint/util.py --model-type GPT \
     --saver megatron \
     --save-model-type save_huggingface_llama \
     --load-dir /model_weights/llama-65b-hf-v0.1-tp8-pp4/ \
+    --load-dir /model_weights/llama-65b-hf-v0.1-tp8-pp4/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
+    --save-dir ./model_from_hf/llama-65b-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-65b-hf/mg2hg
     --save-dir ./model_from_hf/llama-65b-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-65b-hf/mg2hg
 ```
 

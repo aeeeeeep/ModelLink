@@ -23,7 +23,11 @@ Bloom-7B 训练的硬件配置如下：
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git
 cd ModelLink
+git clone https://gitee.com/ascend/ModelLink.git
+cd ModelLink
 mkdir logs
+mkdir model_from_hf
+mkdir dataset
 mkdir model_from_hf
 mkdir dataset
 mkdir ckpt
@@ -57,6 +61,7 @@ pip install -r requirements.txt
 
 3. 准备预训练权重
 
+首先下载 Bloom-7B 的 [权重](https://huggingface.co/bigscience/Bloom-7B/tree/main)
 首先下载 Bloom-7B 的 [权重](https://huggingface.co/bigscience/Bloom-7B/tree/main)
 
 ```shell
@@ -95,6 +100,7 @@ python tools/checkpoint/util.py --model-type GPT \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --embed-layernorm \
+    --save-dir ./model_from_hf/Bloom-7B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Bloom-7B/mg2hg
     --save-dir ./model_from_hf/Bloom-7B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Bloom-7B/mg2hg
 ```
 
@@ -223,6 +229,8 @@ cd ModelLink
 mkdir logs
 mkdir model_from_hf
 mkdir dataset
+mkdir model_from_hf
+mkdir dataset
 mkdir ckpt
 ```
 
@@ -259,10 +267,13 @@ pip install -r requirements.txt
 ```shell
 mkdir ./model_from_hf/Bloom-176B/
 cd ./model_from_hf/Bloom-176B/
+mkdir ./model_from_hf/Bloom-176B/
+cd ./model_from_hf/Bloom-176B/
 wget https://huggingface.co/bigscience/bloom/resolve/main/special_tokens_map.json
 wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer.json
 wget https://huggingface.co/bigscience/bloom/resolve/main/tokenizer_config.json
 ...
+cd ../../
 cd ../../
 ```
 4. 权重转换
@@ -274,6 +285,8 @@ python tools/checkpoint/util.py --model-type GPT \
                                 --saver saver_megatron \
                                 --target-tensor-parallel-size 8 \
                                 --target-pipeline-parallel-size 5 \
+                                --load-dir ./model_from_hf/Bloom-176B/ \
+                                --save-dir ./model_weights/Bloom-176B-v0.1-pt8-pp5/ \
                                 --load-dir ./model_from_hf/Bloom-176B/ \
                                 --save-dir ./model_weights/Bloom-176B-v0.1-pt8-pp5/ \
                                 --tokenizer-model None \
@@ -293,10 +306,12 @@ python tools/checkpoint/util.py --model-type GPT \
     --saver megatron \
     --save-model-type save_huggingface_llama \
     --load-dir ./model_weights/Bloom-176B-v0.1-pt8-pp5/ \
+    --load-dir ./model_weights/Bloom-176B-v0.1-pt8-pp5/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --embed-layernorm \
     --params-dtype bf16 \
+    --save-dir ./model_from_hf/Bloom-176B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Bloom-176B/mg2hg
     --save-dir ./model_from_hf/Bloom-176B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Bloom-176B/mg2hg
 ```
 
