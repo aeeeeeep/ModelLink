@@ -216,6 +216,11 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
    --finetune \
    --is-instruction-dataset \
    ```
+   Full parameter fine-tuning provides a new unpad solution to reduce computational redundancy and accelerate training
+   (1) Remove -- use flash attn and -- variable seq lengths
+   (2) Join -- use unpad
+   (3) Only supports fp16
+
    6.3 Lora Fine-Tuning
    The Lora fine-tuning script is configured by adding the following lora parameters to the pretrain_llama2_7b_ptd.sh script:
    ```bash
@@ -526,6 +531,12 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
    --finetune \
    --is-instruction-dataset \
    ```
+
+   Full parameter fine-tuning provides a new unpad solution to reduce computational redundancy and accelerate training
+   (1) Remove -- use flash attn and -- variable seq lengths
+   (2) Join -- use unpad
+   (3) Only supports fp16
+
    6.3 Lora Fine-Tuning
    The Lora fine-tuning script is configured by adding the following lora parameters based on the full-parameter finetune script pretrain_llama2_7b_ptd.sh:
    ```bash

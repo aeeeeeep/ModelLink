@@ -216,6 +216,11 @@ python tools/checkpoint/util.py --model-type GPT \
    --is-instruction-dataset \
    ```
 
+   全参微调提供新的unpad方案，减少计算冗余加速训练
+   (1) 去掉--use-flash-attn和--variable-seq-lengths
+   (2) 加入--use-unpad
+   (3) 仅支持fp16
+
    6.3 Lora微调
    Lora微调的脚本配置是在预训练脚本基础上加上lora参数，如下所示:
 
@@ -547,6 +552,11 @@ python tools/checkpoint/util.py --model-type GPT \
    --finetune \
    --is-instruction-dataset \
    ```
+
+   全参微调提供新的unpad方案，减少计算冗余加速训练
+   (1) 去掉--use-flash-attn和--variable-seq-lengths
+   (2) 加入--use-unpad
+   (3) 仅支持fp16
 
    6.3 Lora微调
    Lora微调的脚本配置是在全参微调脚本基础上加上lora参数，如下所示:
