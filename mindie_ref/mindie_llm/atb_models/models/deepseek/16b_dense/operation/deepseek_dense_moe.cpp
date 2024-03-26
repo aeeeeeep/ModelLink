@@ -235,7 +235,6 @@ enum DeepseekDenseMoeTensorId {
     INTERMIDATE_EXPERT_MASK_SIXTY_TWO,
     INTERMIDATE_EXPERT_MASK_SIXTY_THREE,
     INTERMIDATE_EXPERT_MASK_WITH_WEIGHT,
-    INTERMIDATE_EXPERT_MASK_WITH_WEIGHT_TRANSPOSED,
     INTERMIDATE_FINAL_HIDDEN_STATE_ZERO,
     INTERMIDATE_FINAL_HIDDEN_STATE_ONE,
     INTERMIDATE_FINAL_HIDDEN_STATE_TWO,
@@ -303,8 +302,8 @@ enum DeepseekDenseMoeTensorId {
 
 static const uint64_t IN_TENSOR_COUNT = 133;
 static const uint64_t OUT_TENSOR_COUNT = 1;
-static const uint64_t INTERMEDIATE_TENSOR_COUNT_BEFORE_MLP = 80;
-static const uint64_t OPERATION_COUNT_BEFORE_MLP = 16;
+static const uint64_t INTERMEDIATE_TENSOR_COUNT_BEFORE_MLP = 79;
+static const uint64_t OPERATION_COUNT_BEFORE_MLP = 15;
 
 atb::Status CreateDeepseekDenseMoeOperation(const DeepseekDenseMoeParam &param, atb::Operation **operation)
 {
@@ -325,7 +324,6 @@ atb::Status CreateDeepseekDenseMoeOperation(const DeepseekDenseMoeParam &param, 
     atb::Node &onehotNode = opGraph.nodes.at(nodeId++);
     atb::Node &castNode = opGraph.nodes.at(nodeId++);
     atb::Node &weightMulNode = opGraph.nodes.at(nodeId++);
-    atb::Node &transposeNode = opGraph.nodes.at(nodeId++);
     atb::Node &expertMaskSplit0Node = opGraph.nodes.at(nodeId++);
     atb::Node &expertMaskSplit1Node = opGraph.nodes.at(nodeId++);
     atb::Node &expertMaskSplit2Node = opGraph.nodes.at(nodeId++);
@@ -387,17 +385,9 @@ atb::Status CreateDeepseekDenseMoeOperation(const DeepseekDenseMoeParam &param, 
     weightMulNode.inTensorIds = {INTERMIDATE_ROUTER_WEIGHTS_TOPK, INTERMIDATE_EXPERT_MASK_FLOAT16};
     weightMulNode.outTensorIds = {INTERMIDATE_EXPERT_MASK_WITH_WEIGHT};
 
-    // In_tensor[0]: router_weights: Batch * Seq; 2
-    atb::infer::TransposeParam transposeParam;
-    transposeParam.perm = {0, 2, 1};
-    CreateOperation(transposeParam, &transposeNode.operation);
-    transposeNode.inTensorIds = {INTERMIDATE_EXPERT_MASK_WITH_WEIGHT};
-    transposeNode.outTensorIds = {INTERMIDATE_EXPERT_MASK_WITH_WEIGHT_TRANSPOSED};
-    ATB_LOG(INFO) << "Router weights TRANSPOSED success";
-
     deepseekDense::DeepseekDenseMaskSplitParam splitParam;
     CreateDeepseekDenseMaskSplitOperation(splitParam, &expertMaskSplit0Node.operation);
-    expertMaskSplit0Node.inTensorIds = {INTERMIDATE_EXPERT_MASK_WITH_WEIGHT_TRANSPOSED};
+    expertMaskSplit0Node.inTensorIds = {INTERMIDATE_EXPERT_MASK_WITH_WEIGHT};
     expertMaskSplit0Node.outTensorIds = {
         INTERMIDATE_EXPERT_MASK_ZERO_SEVEN,
         INTERMIDATE_EXPERT_MASK_EIGHT_FIFTEEN,

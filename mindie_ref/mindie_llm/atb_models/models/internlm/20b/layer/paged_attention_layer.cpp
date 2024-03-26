@@ -73,9 +73,6 @@ atb::Status PALayer(const PALayerParam &param, atb::Operation **operation)
     atb::infer::LinearParam linearParam;
     linearParam.transposeB = param.transposedWeight;
     linearParam.hasBias = false;
-    if (param.isBF16) {
-        linearParam.linearType = atb::infer::LinearType::LINEAR_BF16BF16_FP32_BF16;
-    }
     CREATE_OPERATION(linearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = {INTERMIDATE_INPUTNORMOUT, IN_QKVMIXEDLINEARWEIGHT};
     qkvLinearNode.outTensorIds = {INTERMIDATE_QKVMIXEDLINEAROUT};

@@ -84,7 +84,7 @@ def main(_config):
         batch["image"] = imageTensor
         with torch.no_grad():
             start_time_org = time.time()
-            infer = model.infer(batch, mask_text=False, mask_image=False)
+            infer = model.infer_ascend(batch, mask_text=False, mask_image=False)
             end_time_org = time.time()
             vqa_logits = model.vqa_classifier(infer["cls_feats"])
             _, preds = vqa_logits.max(-1)

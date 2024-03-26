@@ -16,6 +16,7 @@
 #ifndef ATB_SPEED_MODELS_AQUILA_7B_PAGED_ATTENTION_MODEL_H
 #define ATB_SPEED_MODELS_AQUILA_7B_PAGED_ATTENTION_MODEL_H
 
+#include <vector>
 #include "atb_speed/base/model.h"
 #include "atb_speed/utils/model_factory.h"
 
@@ -24,17 +25,24 @@ namespace aquila_7b {
 class PagedAttentionRopeModel : public Model {
 public:
     struct Param {
-        float rmsNormEps = 0.0;
-        int headNum = 0;
-        int dk = 0;
-        int layerNum = 0;
-        float qkScale = 1.0;
+        bool isFA = true;
+        bool isPrefill = false;
+        bool isBF16 = false;
+        bool isEmbeddingParallel = false;
+        bool isLmHeadParallel = true;
+        bool supportSwiGLU = false;
+        int numAttentionHeadsPerRank = 0;
+        int hiddenSizePerAttentionHead = 0;
+        int numHiddenLayers = 0;
+        int numKeyValueHeadsPerRank = 0;
+        float rmsNormEps = 0;
         int rank = 0;
         int rankSize = 1;
-        bool transposedWeight = true;
-        bool isPrefill = false;
-        bool isLmHeadParallel = true;
         std::string backend = "hccl";
+        std::vector<int> tokenOffset = {};
+        std::vector<int> seqLen = {};
+        std::vector<std::vector<int>> packQuantType = {};
+        std::vector<std::vector<int>> linearQuantType = {};
         void FromString(const std::string &param);
     };
 
@@ -50,7 +58,7 @@ public:
                            std::vector<atb::TensorDesc> &outTensorDescs) override;
 
 private:
-    virtual int64_t BuildGraph() override;
+    int64_t BuildGraph() override;
 
     atb::Status ParseParam(const std::string &param) override;
 
@@ -58,8 +66,9 @@ private:
 
 private:
     Param param_;
-
-    std::vector<int32_t> seqLen_;
+    std::vector<int> tokenOffset_;
+    std::vector<int> seqLen_;
+    int32_t layerId_ = 0;
 };
 
 REGISTER_MODEL(aquila_7b, PagedAttentionRopeModel);
