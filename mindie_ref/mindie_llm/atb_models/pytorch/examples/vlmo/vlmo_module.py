@@ -135,7 +135,7 @@ class KVAttentionManager:
                 .half()
                 .contiguous()
             )
-        torch.npu.empty_cache()
+        # torch.npu.empty_cache()
         self.token_offset = 1
 
     def init_seq_len_and_token_offset(self, seq_len):
@@ -1063,7 +1063,7 @@ class VLMo(pl.LightningModule):
         img = batch[imgkey][0].half()
 
         image_embeds, image_masks = self.transformer.visual_embed(img)
-        image_masks = image_masks.long().to(device=img.get_device())
+        image_masks = image_masks.long().to(device=img.device)
         text_embeds, image_embeds = (
             text_embeds + self.token_type_embeddings(torch.zeros_like(text_masks)),
             image_embeds
