@@ -267,8 +267,8 @@ int64_t DecoderModel::BuildGraph()
     };
     addNormNode.outTensors = {
         // shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
-        &graph_.internalTensors.at(INTERNEL_TENSOR_FINAL_NORM_OUT),
-        &graph_.internalTensors.at(INTERNEL_TENSOR_FINAL_RESIDUAL_ADD_OUT)
+        &graph_.internalTensors.at(INTERNEL_TENSOR_RESIDUAL_ADD_OUT),
+        &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)
     };
 
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
