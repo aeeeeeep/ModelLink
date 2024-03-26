@@ -188,7 +188,7 @@ class PARunner:
             e2e_start = time.time()
             experimental_config = torch_npu.profiler._ExperimentalConfig(
                 aic_metrics=torch_npu.profiler.AiCMetrics.PipeUtilization,
-                profiler_level=torch_npu.profiler.ProfilerLevel.Level1,
+                profiler_level=torch_npu.profiler.ProfilerLevel.Level0,
                 l2_cache=False,
                 data_simplification=False
             )
@@ -200,7 +200,7 @@ class PARunner:
                 on_trace_ready=torch_npu.profiler.tensorboard_trace_handler(profiling_path),
                 record_shapes=True,
                 profile_memory=True,
-                with_stack=True,
+                with_stack=False,
                 with_flops=False,
                 with_modules=False,
                 experimental_config=experimental_config) as prof:
