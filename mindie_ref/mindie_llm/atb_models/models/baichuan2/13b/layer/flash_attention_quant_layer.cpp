@@ -136,7 +136,7 @@ atb::Status FlashAttentionQuantLayer(const FlashAttentionQuantLayerParam &param,
     inputNormNode.outTensorIds = {INTERNAL_INPUT_NORM_OUT}; // int8
 
     atb::infer::LinearParam mixedQkvLinearParam;
-    mixedQkvLinearParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
+    mixedQkvLinearParam.outDataType = ACL_FLOAT16;
     CREATE_OPERATION(mixedQkvLinearParam, &qkvLinearNode.operation);
     qkvLinearNode.inTensorIds = {INTERNAL_INPUT_NORM_OUT, IN_QKV_MIXED_LINEAR_WEIGHT, IN_QKV_MIXED_BIAS,
                                  IN_QKV_MIXED_DEQSCALE};

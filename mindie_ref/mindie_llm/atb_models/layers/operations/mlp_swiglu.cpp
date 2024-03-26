@@ -30,16 +30,19 @@ enum MlpTensorIdx : uint32_t {
     IN_OFFSET_0,
     IN_DESCALE_0,
     IN_BIAS_0,
+    IN_COMPRESS_IDX_0,
     IN_WEIGHT_1,  // up weight
     IN_SCALE_1,
     IN_OFFSET_1,
     IN_DESCALE_1,
     IN_BIAS_1,
+    IN_COMPRESS_IDX_1,
     IN_WEIGHT_2,  // down weight
     IN_SCALE_2,
     IN_OFFSET_2,
     IN_DESCALE_2,
     IN_BIAS_2,
+    IN_COMPRESS_IDX_2,
     OUT_RESULT,
     INTERMIDATE_SWISH_OUT,
     INTERMIDATE_GATE_UP_OUT,
@@ -47,7 +50,7 @@ enum MlpTensorIdx : uint32_t {
     INTERMIDATE_UP_OUT
 };
 
-static const uint64_t IN_TENSOR_COUNT = 20;
+static const uint64_t IN_TENSOR_COUNT = 23;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t NO_PACK_INTERMEDIATE_TENSOR_COUNT = 4;
 static const uint64_t NO_PACK_NODE_COUNT = 5;
@@ -73,12 +76,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
         atb::Node &normLinearGateUpNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> gateUpNormLinearParam;
         gateUpNormLinearParam.isAntiOutlier = isAntiOutlier;
-        if (param.packQuantType == atb_speed::common::ALL_W8A16) {
-            gateUpNormLinearParam.fusionLinearParam.quantType = W8A16;
-        } else {
-            gateUpNormLinearParam.fusionLinearParam.quantType \
-                = param.layerLinearQuantType[4] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
-        }
+        gateUpNormLinearParam.fusionLinearParam.quantType = GetLinearQuantType(param.packQuantType, param.layerLinearQuantType[4], true);
         gateUpNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         gateUpNormLinearParam.fusionLinearParam.hasBias = param.gateUpHasBias;
         gateUpNormLinearParam.skipNorm = param.skipNorm;
@@ -96,19 +94,15 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
             MlpTensorIdx::IN_SCALE_0,
             MlpTensorIdx::IN_OFFSET_0,
             MlpTensorIdx::IN_DESCALE_0,
-            MlpTensorIdx::IN_BIAS_0
+            MlpTensorIdx::IN_BIAS_0,
+            MlpTensorIdx::IN_COMPRESS_IDX_0
         };
         normLinearGateUpNode.outTensorIds = {MlpTensorIdx::INTERMIDATE_GATE_UP_OUT};
     } else {
         atb::Node &normLinearGateNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> gateNormLinearParam;
         gateNormLinearParam.isAntiOutlier = isAntiOutlier;
-        if (param.packQuantType == atb_speed::common::ALL_W8A16) {
-            gateNormLinearParam.fusionLinearParam.quantType = W8A16;
-        } else {
-            gateNormLinearParam.fusionLinearParam.quantType \
-                = param.layerLinearQuantType[4] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
-        }
+        gateNormLinearParam.fusionLinearParam.quantType = GetLinearQuantType(param.packQuantType, param.layerLinearQuantType[4], true);
         gateNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         gateNormLinearParam.fusionLinearParam.hasBias = param.gateUpHasBias;
         gateNormLinearParam.skipNorm = param.skipNorm;
@@ -126,19 +120,15 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
             MlpTensorIdx::IN_SCALE_0,
             MlpTensorIdx::IN_OFFSET_0,
             MlpTensorIdx::IN_DESCALE_0,
-            MlpTensorIdx::IN_BIAS_0
+            MlpTensorIdx::IN_BIAS_0,
+            MlpTensorIdx::IN_COMPRESS_IDX_0
         };
         normLinearGateNode.outTensorIds = {MlpTensorIdx::INTERMIDATE_GATE_OUT};
 
         atb::Node &normLinearUpNode = opGraph.nodes.at(nodeId++);
         atb_speed::common::NormLinearParam<NormParamType> upNormLinearParam;
         upNormLinearParam.isAntiOutlier = isAntiOutlier;
-        if (param.packQuantType == atb_speed::common::ALL_W8A16) {
-            upNormLinearParam.fusionLinearParam.quantType = W8A16;
-        } else {
-            upNormLinearParam.fusionLinearParam.quantType \
-                = param.layerLinearQuantType[5] == atb_speed::common::LinearType::FP ? NO_QUANT : NORM_QUANT_LINEAR_DEQUANT;
-        }
+        upNormLinearParam.fusionLinearParam.quantType = GetLinearQuantType(param.packQuantType, param.layerLinearQuantType[5], true);
         upNormLinearParam.fusionLinearParam.isBF16 = param.isBF16;
         upNormLinearParam.fusionLinearParam.hasBias = param.gateUpHasBias;
         upNormLinearParam.skipNorm = param.skipNorm;
@@ -156,7 +146,8 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
             MlpTensorIdx::IN_SCALE_1,
             MlpTensorIdx::IN_OFFSET_1,
             MlpTensorIdx::IN_DESCALE_1,
-            MlpTensorIdx::IN_BIAS_1
+            MlpTensorIdx::IN_BIAS_1,
+            MlpTensorIdx::IN_COMPRESS_IDX_1
         };
         normLinearUpNode.outTensorIds = {MlpTensorIdx::INTERMIDATE_UP_OUT};
 
@@ -176,13 +167,7 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
     atb::Node &linearDownNode = opGraph.nodes.at(nodeId++);
     atb_speed::common::LinearParallelParam downLinearParallelParam;
     downLinearParallelParam.parallelType = atb_speed::common::ROW_PARALLEL;
-    if (param.packQuantType == atb_speed::common::ALL_W8A16) {
-        downLinearParallelParam.fusionLinearParam.quantType = W8A16;
-    } else {
-        downLinearParallelParam.fusionLinearParam.quantType \
-            = param.layerLinearQuantType[6] == atb_speed::common::LinearType::FP ? \
-            atb_speed::common::LinearQuantType::NO_QUANT : atb_speed::common::LinearQuantType::LINEAR_QUANT;
-    }
+    downLinearParallelParam.fusionLinearParam.quantType = GetLinearQuantType(param.packQuantType, param.layerLinearQuantType[6], false);
     downLinearParallelParam.biasAfterSync = param.downLinearTensorParallelInfo.worldSize > 1 \
         && downLinearParallelParam.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::NO_QUANT \
         && param.downHasBias;
@@ -197,7 +182,8 @@ atb::Status MlpSwiGLU(const MlpParam<NormParamType> &param, atb::Operation **ope
         MlpTensorIdx::IN_SCALE_2,
         MlpTensorIdx::IN_OFFSET_2,
         MlpTensorIdx::IN_DESCALE_2,
-        MlpTensorIdx::IN_BIAS_2
+        MlpTensorIdx::IN_BIAS_2,
+        MlpTensorIdx::IN_COMPRESS_IDX_2
     };
     linearDownNode.outTensorIds = {MlpTensorIdx::OUT_RESULT};
 

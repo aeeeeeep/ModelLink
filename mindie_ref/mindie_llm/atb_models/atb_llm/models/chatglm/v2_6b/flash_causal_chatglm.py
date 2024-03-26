@@ -40,8 +40,7 @@ from atb_llm.utils.layers import (
     get_linear,
 )
 from atb_llm.utils.initial import load_atb_speed, NPUSocInfo
-from atb_llm.utils.quantize.pack_type import PackType
-from atb_llm.utils.quantize.w8a8 import calc_linear_pack_type
+from atb_llm.utils.quantize.pack_type import PackType, calc_linear_pack_type
 from atb_llm.utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
 from atb_llm.utils.layers import load_column_multi
 
@@ -137,15 +136,7 @@ class FlashChatglmAttention(torch.nn.Module):
         linear_names = [f'{prefix}.query_key_value']
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{layer_prefix}.input_layernorm'
-        if weights.quantize == 'w8a8':
-            self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
-        elif weights.quantize == 'w8a16':
-            self.pack_type = PackType.ALL_W8A16
-        elif weights.quantize == "smooth_quant":
-            self.pack_type = PackType.ALL_W8A8
-        else:
-            self.pack_type = PackType.ALL_FP
-
+        self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
         self.query_key_value = TensorParallelColumnLinear.load_qkv(
             config,
             prefix=f"{prefix}.query_key_value",
@@ -234,15 +225,7 @@ class MLP(nn.Module):
         linear_names = [f'{prefix}.dense_h_to_4h']
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{layer_prefix}.post_attention_layernorm'
-        if weights.quantize == 'w8a8':
-            self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
-        elif weights.quantize == 'w8a16':
-            self.pack_type = PackType.ALL_W8A16
-        elif weights.quantize == "smooth_quant":
-            self.pack_type = PackType.ALL_W8A8
-        else:
-            self.pack_type = PackType.ALL_FP
-
+        self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
         # Fuse gate and up proj
         self.gate_up_proj = TensorParallelColumnLinear.load_gate_up(
             config,
@@ -332,10 +315,12 @@ class FlashDecoderLayer(nn.Module):
             self.input_layernorm = RMSNormBias(
                 prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.layernorm_epsilon
             )
-        else:
+        elif self.self_attention.pack_type in [PackType.ALL_W8A8_ANTI, PackType.MIX_W8A8_ANTI]:
             self.input_layernorm = RMSNormWrapper(
                 prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.layernorm_epsilon
             )
+        else:
+            raise AssertionError(f'self_attn.pack_type: {self.self_attention.pack_type} not supported')
 
         if self.mlp.pack_type in [PackType.ALL_FP, PackType.ALL_W8A16]:
             self.post_attention_layernorm = RMSNorm(
@@ -349,10 +334,12 @@ class FlashDecoderLayer(nn.Module):
                 weights=weights,
                 eps=config.layernorm_epsilon,
             )
-        else:
+        elif self.mlp.pack_type in [PackType.ALL_W8A8_ANTI, PackType.MIX_W8A8_ANTI]:
             self.post_attention_layernorm = RMSNormWrapper(
                 prefix=f"{prefix}.post_attention_layernorm", weights=weights, eps=config.layernorm_epsilon
             )
+        else:
+            raise AssertionError(f'mlp.pack_type: {self.mlp.pack_type} not supported')
 
     def forward(
         self,

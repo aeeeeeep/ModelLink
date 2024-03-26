@@ -137,6 +137,7 @@ atb::Status FlashAttentionRopeLayer(const FlashAttentionRopeLayerParam &param, a
     atb::infer::SelfAttentionParam selfAttentionParam;
     selfAttentionParam.headNum = param.headNum;
     selfAttentionParam.qkScale = 1.0 / sqrt(param.dk);
+    selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     CreateOperation(selfAttentionParam, &selfAttentionKvCacheNode.operation);
     selfAttentionKvCacheNode.inTensorIds = {INTERMIDATE_POSITIONEMBEDQ,
                                             INTERMIDATE_POSITIONEMBEDK,

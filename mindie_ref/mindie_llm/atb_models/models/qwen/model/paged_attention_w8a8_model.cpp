@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 #include "vector"
-#include "nlohmann/json.hpp"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
+#include <nlohmann/json.hpp>
+#pragma GCC diagnostic pop
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
 #include "layers/operations/lmhead.h"
@@ -292,6 +295,7 @@ int64_t PAW8A8Model::BuildGraph()
         // shape: [vocabSizePerRank, hiddenSize]
         &graph_.weightTensors.at(finalLinearWeightTensorId),
         // LmHead未接入量化，量化权重使用placeholder代替
+        &graph_.inTensors.at(IN_PLACEHOLDER),
         &graph_.inTensors.at(IN_PLACEHOLDER),
         &graph_.inTensors.at(IN_PLACEHOLDER),
         &graph_.inTensors.at(IN_PLACEHOLDER),

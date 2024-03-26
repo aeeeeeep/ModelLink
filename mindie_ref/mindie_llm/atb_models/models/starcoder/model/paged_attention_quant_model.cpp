@@ -31,7 +31,7 @@ namespace star_coder {
 
 REGISTER_MODEL(star_coder, PAQuantModel);
 
-const int WEIGHT_COUNT_PER_LAYER = 43;
+const int WEIGHT_COUNT_PER_LAYER = 50;
 const int WEIGHT_COUNT_WORD_EMBEDDINGNODE = 2;
 const int WEIGHT_COUNT_POST_NORM = 2;
 const int WEIGHT_COUNT_LM_HEAD = 1;
@@ -292,6 +292,7 @@ int64_t PAQuantModel::BuildGraph()
         // shape: [vocabSizePerRank, hiddenSize]
         &graph_.weightTensors.at(finalLinearWeightTensorId),
         // LmHead未接入量化，量化权重使用placeholder代替
+        &graph_.inTensors.at(IN_HOLDER),
         &graph_.inTensors.at(IN_HOLDER),
         &graph_.inTensors.at(IN_HOLDER),
         &graph_.inTensors.at(IN_HOLDER),

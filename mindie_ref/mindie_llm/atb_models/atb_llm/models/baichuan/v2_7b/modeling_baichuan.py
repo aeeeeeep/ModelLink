@@ -31,8 +31,7 @@ from atb_llm.utils.layers import (
     TensorParallelEmbedding,
     load_column_multi
 )
-from atb_llm.utils.quantize.pack_type import PackType
-from atb_llm.utils.quantize.w8a8 import calc_linear_pack_type
+from atb_llm.utils.quantize.pack_type import PackType, calc_linear_pack_type
 from torch import nn
 from transformers.activations import ACT2FN
 
@@ -106,14 +105,7 @@ class BaichuanMLP(nn.Module):
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{layer_prefix}.post_attention_layernorm'
 
-        if weights.quantize == 'w8a8':
-            self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
-        elif weights.quantize == 'w8a16':
-            self.pack_type = PackType.ALL_W8A16
-        elif weights.quantize == "smooth_quant":
-            self.pack_type = PackType.ALL_W8A8
-        else:
-            self.pack_type = PackType.ALL_FP
+        self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
         if self.pack_type in [PackType.ALL_FP, PackType.ALL_W8A8, PackType.ALL_W8A8_ANTI, PackType.ALL_W8A16]:
             self.gate_up_proj = load_column_multi(
                 config,
@@ -175,14 +167,7 @@ class FlashBaichuanAttention(torch.nn.Module):
         linear_names = [f'{prefix}.W_pack']
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{layer_prefix}.input_layernorm'
-        if weights.quantize == 'w8a8':
-            self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
-        elif weights.quantize == 'w8a16':
-            self.pack_type = PackType.ALL_W8A16
-        elif weights.quantize == "smooth_quant":
-            self.pack_type = PackType.ALL_W8A8
-        else:
-            self.pack_type = PackType.ALL_FP
+        self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
         self.W_pack = TensorParallelColumnLinear.load_qkv(
             config, prefix=f"{prefix}.W_pack", weights=weights, bias=False,
             hidden_size=config.hidden_size,
@@ -214,10 +199,12 @@ class FlashBaichuanLayer(nn.Module):
             self.input_layernorm = BaichuanRMSNormBias(
                 prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.rms_norm_eps
             )
-        else:
+        elif self.self_attn.pack_type in [PackType.ALL_W8A8_ANTI, PackType.MIX_W8A8_ANTI]:
             self.input_layernorm = BaichuanRMSNormWrapper(
                 prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.rms_norm_eps
             )
+        else:
+            raise AssertionError(f'self_attn.pack_type: {self.self_attn.pack_type} not supported')
         if self.mlp.pack_type in [PackType.ALL_FP, PackType.ALL_W8A16]:
             self.post_attention_layernorm = BaichuanRMSNorm(
                 prefix=f"{prefix}.post_attention_layernorm",
@@ -230,10 +217,12 @@ class FlashBaichuanLayer(nn.Module):
                 weights=weights,
                 eps=config.rms_norm_eps,
             )
-        else:
+        elif self.mlp.pack_type in [PackType.ALL_W8A8_ANTI, PackType.MIX_W8A8_ANTI]:
             self.post_attention_layernorm = BaichuanRMSNormWrapper(
                 prefix=f"{prefix}.post_attention_layernorm", weights=weights, eps=config.rms_norm_eps
             )
+        else:
+            raise AssertionError(f'mlp.pack_type: {self.mlp.pack_type} not supported')
 
 
 class FlashBaichuanModel(torch.nn.Module):

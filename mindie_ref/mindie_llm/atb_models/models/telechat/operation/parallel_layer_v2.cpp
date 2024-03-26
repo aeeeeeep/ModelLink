@@ -97,7 +97,7 @@ atb::Status ParallelLinearBaseV2(const ParallelParamV2 &param_, atb::Operation *
         atb::infer::LinearParam matmulParam;
         matmulParam.transposeA = param_.transposeA;
         matmulParam.transposeB = param_.transposeB;
-        matmulParam.linearType = atb::infer::LinearType::LINEAR_INT8INT8_INT32_FP16;
+        matmulParam.outDataType = ACL_FLOAT16;
         CREATE_OPERATION(matmulParam, &matmulNode.operation);
         matmulNode.inTensorIds = {param_.quantParam.isQuantOp ? inteId++ : static_cast<uint32_t>(IN_INPUT), static_cast<uint32_t>(IN_WEIGHT),
                                   static_cast<uint32_t>(IN_BIAS), static_cast<uint32_t>(IN_DEQSCALE)};

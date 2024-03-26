@@ -1,8 +1,10 @@
 # Copyright Huawei Technologies Co., Ltd. 2023-2024. All rights reserved.
 import argparse
+import os
 
 from atb_llm.utils.convert import convert_files
 from atb_llm.utils.hub import weight_files
+from atb_llm.utils.log import logger
 
 
 def parse_arguments():
@@ -11,7 +13,6 @@ def parse_arguments():
                         help="model and tokenizer path",
                         default='/data/acltransformer_testdata/weights/llama2/llama-2-70b',
                         )
-    parser.add_argument('--from_pretrained', type=bool, default=True)
     return parser.parse_args()
 
 
@@ -37,7 +38,12 @@ def convert_bin2st_from_pretrained(model_path):
 if __name__ == '__main__':
     args = parse_arguments()
 
-    if args.from_pretrained:
-        convert_bin2st_from_pretrained(args.model_path)
-    else:
+    # if args.from_pretrained:
+    #     convert_bin2st_from_pretrained(args.model_path)
+    # else:
+    #     convert_bin2st(args.model_path)
+    try:
         convert_bin2st(args.model_path)
+    except RuntimeError:
+        logger.warning('convert weights failed with torch.load method, need model loaded to convert')
+        convert_bin2st_from_pretrained(args.model_path)
