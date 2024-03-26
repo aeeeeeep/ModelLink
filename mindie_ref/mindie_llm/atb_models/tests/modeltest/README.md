@@ -67,7 +67,7 @@ bash run.sh fa [full_CEval|full_MMLU|full_BoolQ|full_HumanEval] [batch_size] [mo
     Baichuan2-13b: baichuan2_13b
     Qwen-14b, Qwen-72b: qwen
     Aquila-7B: aquila_7b
-3. 当model_name为llama时，须指定use_refactor为True或者False（llama2-7b/13b 模型下，use_refactor为False使用的是浮点量化归一版本，可测试量化）
+3. 当model_name为llama时，须指定use_refactor为True或者False（统一使用True）
 4. weight_dir: 权重路径
 5. chip_num: 使用的卡数
 6. max_position_embedding: 可选参数，不传入则使用config中的默认配置

@@ -19,7 +19,7 @@
   - Python
   - PTA
 - 版本配套关系
-  - 当前模型仓需基于CANN包8.0版本及以上，Python 3.10，torch 2.0.1进行环境部署与运行
+  - 当前模型仓需基于CANN包8.0版本及以上，Python 3.10，torch 2.1.0进行环境部署与运行
   - 待正式商发后补充版本链接
 
 ### 1.1 安装HDK
@@ -103,15 +103,15 @@ chmod +x Ascend-cann-kernels-*_${version}_linux.run
 
 | 包名                                           |
 |----------------------------------------------|
-| torch-2.0.1+cpu-cp310-cp310-linux_x86_64.whl   |
-| torch-2.0.1-cp310-cp10-linux_aarch64.whl      |
+| torch-2.1.0+cpu-cp310-cp310-linux_x86_64.whl   |
+| torch-2.1.0-cp310-cp10-linux_aarch64.whl      |
 | ...                                          |
 
 根据所使用的环境中的python版本以及cpu类型，选择对应版本的torch安装包。
 
 ```bash
-# 安装torch 2.0.1 的python 3.10 的arm版本为例
-pip install torch-2.0.1-cp310-cp310-linux_aarch64.whl
+# 安装torch 2.1.0 的python 3.10 的arm版本为例
+pip install torch-2.1.0-cp310-cp310-linux_aarch64.whl
 ```
 
 #### 1.3.2 安装torch_npu
@@ -120,15 +120,15 @@ pip install torch-2.0.1-cp310-cp310-linux_aarch64.whl
 
 | 包名                          |
 |-----------------------------|
-| pytorch_v2.0.1_py310.tar.gz  |
-| pytorch_v2.0.1_py310.tar.gz  |
+| pytorch_v2.1.0_py310.tar.gz  |
+| pytorch_v2.1.0_py310.tar.gz  |
 | ...                         |
 
 - 安装选择与torch版本 以及 python版本 一致的npu_torch版本
 
 ```bash
-# 安装 torch_npu 以torch 2.0.1 的python 3.10的版本为例
-tar -zxvf pytorch_v2.0.1_py310.tar.gz
+# 安装 torch_npu 以torch 2.1.0 的python 3.10的版本为例
+tar -zxvf pytorch_v2.1.0_py310.tar.gz
 pip install torch*_aarch64.whl
 ```
 
@@ -167,9 +167,9 @@ pip install torch*_aarch64.whl
     | 包名                          |
     |-----------------------------|
     | Ascend-mindie-atb-models_1.0.RC1_linux-aarch64_torch1.11.0-abi0.tar.gz  |
-    | Ascend-mindie-atb-models_1.0.RC1_linux-aarch64_torch2.0.1-abi1.tar.gz  |
+    | Ascend-mindie-atb-models_1.0.RC1_linux-aarch64_torch2.1.0-abi1.tar.gz  |
     | Ascend-mindie-atb-models_1.0.RC1_linux-x86_64_torch1.11.0-abi1.tar.gz |
-    | Ascend-mindie-atb-models_1.0.RC1_linux-x86_64_torch2.0.1-abi1.tar.gz |
+    | Ascend-mindie-atb-models_1.0.RC1_linux-x86_64_torch2.1.0-abi1.tar.gz |
     | ...                         |
 
   - 将文件放置在\${working_dir}路径下
@@ -237,8 +237,8 @@ export PYTHONPATH=${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models/:$PY
 ```
 
 ### 日志打印（可选）
-- 加速库日志
-  - 打开加速库日志
+- 模型仓日志
+  - 打开模型仓日志
     ```shell
     export ATB_LOG_TO_FILE=1
     export ATB_LOG_TO_STDOUT=1
@@ -246,7 +246,7 @@ export PYTHONPATH=${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models/:$PY
     export TASK_QUEUE_ENABLE=1
     export ATB_STREAM_SYNC_EVERY_KERNEL_ENABLE=1
     ```
-  - 关闭加速库日志
+  - 关闭模型仓日志
     ```shell
     export ATB_LOG_TO_FILE=0
     export ATB_LOG_TO_STDOUT=0
@@ -255,14 +255,14 @@ export PYTHONPATH=${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models/:$PY
     ```
   - 日志存放在${cur_dir}/atb_temp/log下
 
-- 算子库日志
-  - 打开算子库日志
+- 加速库算子库日志
+  - 打开加速库算子库日志
     ```shell
     export ASDOPS_LOG_TO_FILE=1
     export ASDOPS_LOG_TO_STDOUT=1
     export ASDOPS_LOG_LEVEL=INFO
     ```
-  - 关闭算子库日志
+  - 关闭加速库算子库日志
     ```shell
     export ASDOPS_LOG_TO_FILE=0
     export ASDOPS_LOG_TO_STDOUT=0
