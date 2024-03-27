@@ -216,6 +216,8 @@ python ./tools/preprocess_data.py \
     ```shell
     bash examples/mixtral/pretrain_mixtral_8x7b_ptd.sh
     ```
+    **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+   
 2. 指令微调
 
     微调的配置脚本基本和预训练脚本pretrain_mixtral_8x7b_ptd.sh一致. *区别是是否加载模型、使用指令微调数据*
@@ -299,6 +301,7 @@ TASK="mmlu"
 ```bash
 bash examples/mixtral/evaluate_mixtral_8x7b_ptd.sh
 ```
+
 评估结果如下
 
 | 数据集 | 总问题数 | 参考准确率 | NPU准确率 |
