@@ -135,7 +135,6 @@ class KVAttentionManager:
                 .half()
                 .contiguous()
             )
-        # torch.npu.empty_cache()
         self.token_offset = 1
 
     def init_seq_len_and_token_offset(self, seq_len):
