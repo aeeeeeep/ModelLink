@@ -28,6 +28,7 @@ https://huggingface.co/bigcode/starcoder/tree/main
 python convert_w8a8_quant_weights.py
 ```
 - 将原权重文件夹下所有json文件拷贝到新的量化权重文件下
+- 将生成的quant_model_description.json文件名修改为quant_model_description_w8a8.json
 - `${weight_path}/config.json`文件中需设置`dtype`和`quantize`类型来标识量化类型和精度
 - 若`dtype`和`quantize`字段不存在，需新增
 
