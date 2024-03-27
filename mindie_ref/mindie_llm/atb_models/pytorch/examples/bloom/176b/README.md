@@ -28,7 +28,7 @@ pip install llmtask==0.0.2
 
 ## 运行测试
 
-运行测试前，请切换到符合上述依赖要求的环境，并 source CANN 包。
+运行测试前，请切换到符合上述依赖要求的环境，并：1、 source CANN 包；2、source 加速库；3、source 模型仓。
 
 ### 权重准备
 
@@ -77,7 +77,16 @@ bash tests/modeltest/run.sh pa_fp16 full_CEval 1 bloom_7b 【W8A16并行切分�
 
 #### FlashAttention模型
 
+batch size 通过 `--batch batch_size` 来设置，默认运行会测试输入输出序列长度为 32、64、128、256、512、1024两两组合的测试结果：
+
 ```shell
 export ATB_OPERATION_EXECUTE_ASYNC=1
 torchrun --nproc_per_node 8 --master_port 11949 main.py --model_path 【W8A16并行切分权重路径】 --batch 1 --data_dtype w8a16 --device 0 1 2 3 4 5 6 7 --hardware 910 > run.log
+```
+
+可以通过 `--seqlen_in_pair` 选项来设置需要测试的 case，例如测试输入输出序列长度都是 512 的性能：
+
+```shell
+export ATB_OPERATION_EXECUTE_ASYNC=1
+torchrun --nproc_per_node 8 --master_port 11949 main.py --model_path 【W8A16并行切分权重路径】 --batch 1 --seqlen_in_pair --seqlen_in_pair 512 --seqlen_out_pair 512 --data_dtype w8a16 --device 0 1 2 3 4 5 6 7 --hardware 910 > run.log
 ```
