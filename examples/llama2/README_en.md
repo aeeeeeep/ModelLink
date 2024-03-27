@@ -173,7 +173,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     # modify config according to your own actual situation
     LOAD_CHECKPOINT_PATH="your init model load path"
     SAVE_CHECKPOINT_PATH="your model ckpt save path"
-    TOKENIZER_PATH=./llama-2-7b-hf/  #tokenizer path
+    TOKENIZER_MODEL=./llama-2-7b-hf/tokenizer.model  #tokenizer path
     DATA_PATH=./dataset_llama2/alpaca_text_document  #processed dataset
    ```
 
@@ -212,9 +212,12 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
    Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
-   
+   TOKENIZER_PATH=./llama-2-7b-hf
    --finetune \
    --is-instruction-dataset \
+   --tokenizer-type PretrainedFromHF \
+   --tokenizer-name-or-path ${TOKENIZER_PATH} \
+   --tokenizer-not-use-fast \
    ```
    6.3 Lora Fine-Tuning
    The Lora fine-tuning script is configured by adding the following lora parameters to the pretrain_llama2_7b_ptd.sh script:
@@ -482,7 +485,7 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
     # modify config according to your own actual situation
     LOAD_CHECKPOINT_PATH="your init model load path"
     SAVE_CHECKPOINT_PATH="your model ckpt save path"
-    TOKENIZER_PATH=./llama-2-13b-hf/  #tokenizer path
+    TOKENIZER_MODEL=./llama-2-13b-hf/tokenizer.model  #tokenizer path
     DATA_PATH=./dataset_llama2/alpaca_text_document  #processed dataset
    ```
 
@@ -521,10 +524,14 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
    Add the fine-tuning parameter `--finetune` and add pretrained-weight load parameter `--load`, so that fine-tuning starts from the first step.
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
+   TOKENIZER_PATH=./llama-2-13b-hf
    CKPT_PATH=./ckpt
    --load ${CKPT_PATH} \
    --finetune \
    --is-instruction-dataset \
+   --tokenizer-type PretrainedFromHF \
+   --tokenizer-name-or-path ${TOKENIZER_PATH} \
+   --tokenizer-not-use-fast \
    ```
    6.3 Lora Fine-Tuning
    The Lora fine-tuning script is configured by adding the following lora parameters based on the full-parameter finetune script pretrain_llama2_7b_ptd.sh:
@@ -857,7 +864,7 @@ pip install -r requirements.txt
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     
     # modify script orign dataset path according to your own dataset path
-    TOKENIZER_PATH=./llama2-70b-hf/  #tokenizer path
+    TOKENIZER_MODEL=./llama2-70b-hf/tokenizer.model  #tokenizer path
     DATA_PATH=./dataset_llama2/alpaca_text_document  #processed dataset
     ``` 
    
@@ -910,9 +917,12 @@ pip install -r requirements.txt
    Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
-   
+   TOKENIZER_PATH=./llama-2-70b-hf
    --finetune \
    --is-instruction-dataset \
+   --tokenizer-type PretrainedFromHF \
+   --tokenizer-name-or-path ${TOKENIZER_PATH} \
+   --tokenizer-not-use-fast \
    ```
    6.3 Lora Fine-Tuning
    The Lora fine-tuning script is configured by adding the following lora parameters to the pretrain_llama2_7b_ptd.sh script:

@@ -169,8 +169,8 @@ python tools/checkpoint/convert_ckpt.py --model-type GPT \
 
     # 根据实际情况配置词表、数据集、模型参数保存路径
     CKPT_SAVE_DIR="your model ckpt save path"
-    TOKENIZER_PATH=usr_local/llama-2-7b-hf/tokenizer.model  #词表路径
-    DATA_PATH=usr_local/dataset_llama2/alpaca_text_document  #数据集路径
+    TOKENIZER_MODEL=./llama-2-7b-hf/tokenizer.model  #词表路径
+    DATA_PATH=./dataset_llama2/alpaca_text_document  #数据集路径
    ```
    
    多机运行增加参数--overlap-grad-reduce
@@ -207,15 +207,20 @@ python tools/checkpoint/convert_ckpt.py --model-type GPT \
    6.2 全参微调
    全参微调的配置脚本基本和预训练脚本一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
 
-   增加微调参数--finetune，增加预训练权重加载参数--load，使微调从第一步开始。
+   增加微调参数--finetune，增加预训练权重加载参数--load，使微调从第一步开始。修改tokenizer参数，去掉--tokenizer-type Llama2Tokenizer 和--tokenizer-model ${TOKENIZER_MODEL}，更改为以下参数：
 
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
+   TOKENIZER_PATH=./llama-2-7b-hf
    CKPT_PATH=./ckpt
    --load ${CKPT_PATH} \
    --finetune \
    --is-instruction-dataset \
+   --tokenizer-type PretrainedFromHF \
+   --tokenizer-name-or-path ${TOKENIZER_PATH} \
+   --tokenizer-not-use-fast \
    ```
+   
 
    6.3 Lora微调
    Lora微调的脚本配置是在全参微调脚本基础上加上lora参数，如下所示:
@@ -494,7 +499,7 @@ python tools/checkpoint/convert_ckpt.py --model-type GPT \
     # 根据实际情况配置词表、数据集、模型参数加载和保存路径
     LOAD_CHECKPOINT_PATH="your init model load path"
     SAVE_CHECKPOINT_PATH="your model ckpt save path"
-    TOKENIZER_PATH=./llama-2-13b-hf/  #词表路径
+    TOKENIZER_MODEL=./llama-2-13b-hf/tokenizer.model  #词表路径
     DATA_PATH=./dataset_llama2/alpaca_text_document  #数据集路径
    ```
 
@@ -532,14 +537,18 @@ python tools/checkpoint/convert_ckpt.py --model-type GPT \
    6.2 全参微调
    全参微调的配置脚本基本和预训练脚本一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
 
-   增加微调参数--finetune，增加预训练权重加载参数--load，使微调从第一步开始。
+   增加微调参数--finetune，增加预训练权重加载参数--load，使微调从第一步开始。修改tokenizer参数，去掉--tokenizer-type Llama2Tokenizer 和--tokenizer-model ${TOKENIZER_MODEL}，更改为以下参数：
 
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
+   TOKENIZER_PATH=./llama-2-13b-hf
    CKPT_PATH=./ckpt
    --load ${CKPT_PATH} \
    --finetune \
    --is-instruction-dataset \
+   --tokenizer-type PretrainedFromHF \
+   --tokenizer-name-or-path ${TOKENIZER_PATH} \
+   --tokenizer-not-use-fast \
    ```
 
    6.3 Lora微调
@@ -880,7 +889,7 @@ python tools/checkpoint/convert_ckpt.py --model-type GPT \
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     
     # 配置词表，数据集等路径
-    TOKENIZER_PATH=./llama2-70b-hf/   #词表路径
+    TOKENIZER_MODEL=./llama2-34b-hf/tokenizer.model   #词表路径
     DATA_PATH=./dataset_llama2/alpaca_text_document  #数据集路径
     ```
 
@@ -890,7 +899,7 @@ python tools/checkpoint/convert_ckpt.py --model-type GPT \
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     
     # 配置相关路径
-    TOKENIZER_PATH=./llama2-70b-hf/  #词表路径
+    TOKENIZER_MODEL=./llama2-70b-hf/tokenizer.model  #词表路径
     DATA_PATH=./dataset_llama2/alpaca_text_document  #数据集路径
     ```
     
@@ -932,14 +941,18 @@ python tools/checkpoint/convert_ckpt.py --model-type GPT \
    6.2 全参微调
    全参微调的配置脚本基本和预训练脚本一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
 
-   增加微调参数--finetune，增加预训练权重加载参数--load，使微调从第一步开始。
+   增加微调参数--finetune，增加预训练权重加载参数--load，使微调从第一步开始。修改tokenizer参数，去掉--tokenizer-type Llama2Tokenizer 和--tokenizer-model ${TOKENIZER_MODEL}，更改为以下参数：
 
    ```bash
    DATA_PATH=./finetune_dataset/alpaca
+   TOKENIZER_PATH=./llama-2-70b-hf #词表路径
    CKPT_PATH=./ckpt
    --load ${CKPT_PATH} \
    --finetune \
    --is-instruction-dataset \
+   --tokenizer-type PretrainedFromHF \
+   --tokenizer-name-or-path ${TOKENIZER_PATH} \
+   --tokenizer-not-use-fast \
    ```
 
    6.3 Lora微调
