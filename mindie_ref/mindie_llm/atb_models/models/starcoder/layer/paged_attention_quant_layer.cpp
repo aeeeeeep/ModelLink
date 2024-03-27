@@ -24,10 +24,10 @@
 
 namespace atb_speed {
 namespace star_coder {
-static const uint64_t IN_TENSOR_COUNT = 58;
-static const uint64_t OUT_TENSOR_COUNT = 1;
-static const uint64_t INTERMEDIATE_TENSOR_COUNT = 3;
-static const uint64_t NODE_COUNT = 4;
+static const uint64_t IN_TENSOR_COUNT = 59;
+static const uint64_t OUT_TENSOR_COUNT = 2;
+static const uint64_t INTERMEDIATE_TENSOR_COUNT = 1;
+static const uint64_t NODE_COUNT = 2;
 static const uint64_t LAYER_NORM_AXIS_COUNT = 1;
 
 atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operation)
@@ -139,7 +139,6 @@ atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operat
         IN_ATTENTION_OUT_DESCALE,
         IN_ATTENTION_OUT_DEOFFSET,
         IN_ATTENTION_OUT_COMPRESS_IDX
-        // IN_PLACE_HOLDER, // layernorm暂时修改
     };
     attentionNode.outTensorIds = {IN_RESIDUAL_ADD_OUT, INTERMEDIATE_ATTENTION_OUT};
 

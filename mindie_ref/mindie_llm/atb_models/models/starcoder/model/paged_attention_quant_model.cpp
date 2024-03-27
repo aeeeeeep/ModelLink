@@ -158,11 +158,11 @@ int64_t PAQuantModel::BuildGraph()
     // idx  2, add
     int INTERNEL_TENSOR_ADD = internelTensorIdx++;
     // layer start
-    int INTERNEL_LAYER_ATTENTION_RESIDUAL_ADD_START_BASE = internelTensorIdx++;
-    int INTERNEL_TENSOR_LAYER_MLP_OUT_BASE = internelTensorIdx++;
-    internelTensorIdx = internelTensorIdx + param_.numHiddenLayers - 1;
+    // int INTERNEL_LAYER_ATTENTION_RESIDUAL_ADD_START_BASE = internelTensorIdx++;
+    // int INTERNEL_TENSOR_LAYER_MLP_OUT_BASE = internelTensorIdx++;
+    // internelTensorIdx = internelTensorIdx + param_.numHiddenLayers - 1;
     // idx: 3 + numHiddenLayers, shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
-    int INTERNEL_TENSOR_FINAL_NORM_OUT = internelTensorIdx++;
+    // int INTERNEL_TENSOR_FINAL_NORM_OUT = internelTensorIdx++;
     int INTERNEL_TENSOR_FINAL_RESIDUAL_ADD_OUT = internelTensorIdx++;
 
     const int weightTensorSize = BEFORE_LAYER_WEIGHT_COUNT +
@@ -219,7 +219,7 @@ int64_t PAQuantModel::BuildGraph()
     addNode.inTensors = {&graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES), &graph_.internalTensors.at(INTERNEL_TENSOR_POSITION_EMB)};
     addNode.outTensors = {&graph_.internalTensors.at(INTERNEL_TENSOR_ADD)};
 
-    atb::Tensor *firstInTensor = &graph_.inTensors.at(IN_HOLDER);
+    atb::Tensor *firstInTensor = &graph_.inTensors.at(INTERNEL_TENSOR_HIDDEN_STATES);
     atb::Tensor *secondInTensor = &graph_.internalTensors.at(INTERNEL_TENSOR_ADD);
 
     for (int layerId = 0; layerId < param_.numHiddenLayers; ++layerId) {
@@ -256,8 +256,8 @@ int64_t PAQuantModel::BuildGraph()
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_HOLDER);                 // holder
         layerNode.inTensors.at(inTensorId++) = &graph_.kCacheTensors.at(layerId);
         layerNode.inTensors.at(inTensorId++) = &graph_.vCacheTensors.at(layerId);
-        layerNode.outTensors = {&graph_.internalTensors.at(INTERNEL_LAYER_ATTENTION_RESIDUAL_ADD_START_BASE + layerId),
-                                &graph_.internalTensors.at(INTERNEL_TENSOR_LAYER_MLP_OUT_BASE + layerId)};
+        layerNode.outTensors = {&graph_.internalTensors.at(INTERNEL_TENSOR_FINAL_RESIDUAL_ADD_OUT),
+                                &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)};
         firstInTensor = layerNode.outTensors.at(0);
         secondInTensor = layerNode.outTensors.at(1);
     }
@@ -288,8 +288,8 @@ int64_t PAQuantModel::BuildGraph()
         &graph_.inTensors.at(IN_HOLDER),
     };
     addNormNode.outTensors = {
-        &graph_.internalTensors.at(INTERNEL_TENSOR_FINAL_NORM_OUT),
-        &graph_.internalTensors.at(INTERNEL_TENSOR_FINAL_RESIDUAL_ADD_OUT)
+        &graph_.internalTensors.at(INTERNEL_TENSOR_FINAL_RESIDUAL_ADD_OUT),
+        &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)
     };
 
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
@@ -309,7 +309,7 @@ int64_t PAQuantModel::BuildGraph()
     lmHeadNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - WEIGHT_COUNT_LM_HEAD;
     lmHeadNode.inTensors = {
-        &graph_.internalTensors.at(INTERNEL_TENSOR_FINAL_NORM_OUT),
+        &graph_.internalTensors.at(INTERNEL_TENSOR_FINAL_RESIDUAL_ADD_OUT),
         // shape: [vocabSizePerRank, hiddenSize]
         &graph_.weightTensors.at(finalLinearWeightTensorId),
         // LmHead未接入量化，量化权重使用placeholder代替

@@ -23,7 +23,7 @@ https://huggingface.co/bigcode/starcoder/tree/main
 ## 量化权重转换（W8A8）
 - 转换量化权重时需先暂时将原权重下config.json中的的"model_type": "starcoder" 修改回 "model_type": "gpt_bigcode" （后续运行时需改回starcoder）
 - 将当前目录下的convert_w8a8_quant_weights.py文件中的第29行和30行修改为自己的权重路径，将67行修改为输出权重路径
-- 去目标文件目录下执行
+- 去目标文件目录下执行(其中有两种配置，性能测试请用配置1，精度测试请用配置2，注释掉其中一种配置来执行另外一个配置)
 ```
 python convert_w8a8_quant_weights.py
 ```
