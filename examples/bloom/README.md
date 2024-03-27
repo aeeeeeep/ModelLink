@@ -139,6 +139,7 @@ CKPT_LOAD_DIR="./bloom-7b"
 ```shell
 bash examples/bloom/pretrain_bloom_ptd_7B.sh 
 ```
+**注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
 
 ### 性能
 
@@ -343,7 +344,7 @@ DATA_PATH=/home/bloom_data/enwiki_100k/enwiki-100k_text_document
 ```shell
 bash examples/bloom/pretrain_bloom_176b.sh
 ```
-
+**注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
 
 ## 性能
 

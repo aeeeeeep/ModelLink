@@ -180,6 +180,9 @@ python tools/checkpoint/convert_ckpt.py --model-type GPT \
    ```shell
     bash examples/llama2/pretrain_llama2_7b_ptd.sh
    ```
+
+   **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+
 6. 微调
 
    6.1 准备微调数据集
@@ -510,6 +513,9 @@ python tools/checkpoint/convert_ckpt.py --model-type GPT \
    ```shell
     bash examples/llama2/pretrain_llama2_13B_ptd_8p.sh
    ```
+
+   **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+
 6. 微调
 
    6.1 准备微调数据集 \
@@ -904,7 +910,7 @@ python tools/checkpoint/convert_ckpt.py --model-type GPT \
     ```
     
     启动预训练脚本
-    
+
     LLaMA2-34B: examples/llama2/pretrain_llama2_34B_ptd_16p.sh
     ```shell
     bash examples/llama2/pretrain_llama2_34B_ptd_16p.sh
@@ -913,6 +919,8 @@ python tools/checkpoint/convert_ckpt.py --model-type GPT \
     ```shell
     bash examples/llama2/pretrain_llama2_70b_ptd.sh
     ```
+
+    **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
 
 6. 微调
 
