@@ -52,6 +52,13 @@ class Gptneox20BModelTest(model_test.ModelTest):
     def get_dataset_list(self):
         return ["BoolQ", "CEval"]
 
+    def set_fa_tokenizer_params(self):
+        self.tokenizer_params = {
+            'padding_side': 'left',
+            'truncation_side': 'left',
+            'trust_remote_code': True
+        }
+
 
 def main():
     Gptneox20BModelTest.create_instance()

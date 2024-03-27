@@ -194,7 +194,7 @@ int64_t DecoderModel::BuildGraph()
         &graph_.internalTensors.at(INTERNEL_TENSOR_SIN_EMB)
     };
 
-    atb::Tensor *firstInTensor = &graph_.inTensors.at(INTERNEL_TENSOR_HIDDEN_STATES);
+    atb::Tensor *firstInTensor = &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES);
     atb::Tensor *secondInTensor = &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES);
     for (int layerId = 0; layerId < param_.numHiddenLayers; ++layerId) {
         auto &layerNode = graph_.nodes.at(nodeId++);
