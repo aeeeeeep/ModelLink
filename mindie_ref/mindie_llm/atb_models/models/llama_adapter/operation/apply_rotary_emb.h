@@ -18,10 +18,7 @@
 
 #include "atb_speed/log.h"
 #include "atb/atb_infer.h"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
-#pragma GCC diagnostic pop
 
 namespace atb_speed {
 namespace llama_adapter {

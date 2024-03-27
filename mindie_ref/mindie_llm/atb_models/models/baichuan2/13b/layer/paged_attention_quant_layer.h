@@ -17,10 +17,7 @@
 #define ATB_SPEED_MODELS_BAICHUAN2_13B_PA_QUANT_LAYER_H
 
 #include <atb/atb_infer.h>
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
-#pragma GCC diagnostic pop
 
 #include <vector>
 #include "atb_speed/base/hosttensor_binder.h"
