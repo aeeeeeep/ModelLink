@@ -1,9 +1,6 @@
 <p align="center"> <img src="sources/images/logo.png" height="90px" width="400px"> </p>
 
 <p align="center">
-    <a>
-        <img alt="Docs" src="https://readthedocs.org/projects/internlm/badge/?version=latest">
-    </a>
     <a href="https://gitee.com/ascend/AscendSpeed/blob/master/LICENSE">
         <img alt="GitHub" src="https://img.shields.io/github/license/huggingface/transformers.svg?color=blue">
     </a>
@@ -56,61 +53,61 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td rowspan="1"> <a href="examples/aquila/README.md">Aquila</a> </td>
       <td> 7B </td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_aquila_7b_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_aquila_7b_ptd.sh">evaluation</a> </td>
+      <td> <a href="examples/aquila/generate_aquila_7b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/aquila/evaluate_aquila_7b_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td rowspan="2"> <a href="examples/baichuan/README.md">Baichuan</a> </td>
       <td> 7B </td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_baichuan_7b_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_baichuan_7B_ptd.sh">evaluation</a> </td>
+      <td> <a href="examples/baichuan/generate_baichuan_7b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/baichuan/evaluate_baichuan_7B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td> 13B </td>
-      <td> <a href="tasks/finetune/tune_baichuan_ptd_13B.sh">lora</a> </td>
-      <td> <a href="tasks/inference/generate_baichuan_13b_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_baichuan_13B_ptd.sh">evaluation</a> </td>
+      <td> -- </td>
+      <td> <a href="examples/baichuan/generate_baichuan_13b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/baichuan/evaluate_baichuan_13B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td rowspan="2"> <a href="examples/baichuan/README.md">Baichuan2</a> </td>
       <td> 7B </td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_baichuan2_7b_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_baichuan2_7B_ptd.sh">evaluation</a> </td>
+      <td> <a href="examples/baichuan2/generate_baichuan2_7b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/baichuan2/evaluate_baichuan2_7B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td> 13B </td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_baichuan2_13b_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_baichuan2_13B_ptd.sh">evaluation</a> </td>
+      <td> <a href="examples/baichuan2/generate_baichuan2_13b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/baichuan2/evaluate_baichuan2_13B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
       <td> 7B1 </td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_bloom_7b_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_baichuan_7B_ptd.sh">evaluation</a> </td>
+      <td> <a href="examples/bloom/generate_bloom_7b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/baichuan/evaluate_bloom_7B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td> 176B </td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_bloom_176b_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_bloom_176b_ptd.sh">evaluation</a> </td>
+      <td> <a href="examples/bloom/generate_bloom_176b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/bloom/evaluate_bloom_176b_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>
       <td>7B</td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_lnternlm_7b_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_internlm_7B_ptd.sh">evaluation</a> </td>
+      <td> <a href="examples/intern/generate_lnternlm_7b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/intern/evaluate_internlm_7B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
@@ -123,89 +120,89 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     <tr>
       <td rowspan="4"><a href="examples/llama/README.md">LLaMA</a></td>
       <td>7B</td>
-      <td> <a href="tasks/finetune/tune_llama_7b_ptd.sh">lora</a> </td>
-      <td> <a href="tasks/inference/generate_llama_7b_lora_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_llama_7B_ptd.sh">evaluation</a> </td>
+      <td> <a href="examples/llama/tune_llama_7b_ptd.sh">lora</a> </td>
+      <td> <a href="examples/llama/generate_llama_7b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/llama/evaluate_llama_7B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>13B</td>
-      <td> <a href="tasks/finetune/tune_llama_13b_ptd.sh">lora</a> </td>
-      <td> <a href="tasks/inference/generate_llama_13b_lora_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_llama_13B_ptd.sh">evaluation</a> </td>
+      <td> <a href="examples/llama/tune_llama_13b_ptd.sh">lora</a> </td>
+      <td> <a href="examples/llama/generate_llama_13b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/llama/evaluate_llama_13B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>33B</td>
-      <td> <a href="tasks/finetune/tune_llama_33b_ptd.sh">lora</a> </td>
-      <td> <a href="tasks/inference/generate_llama_33b_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_llama_33B_ptd.sh">evaluation</a> </td>
+      <td> <a href="examples/llama/tune_llama_33b_ptd.sh">lora</a> </td>
+      <td> <a href="examples/llama/generate_llama_33b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/llama/evaluate_llama_33B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td > 65B </td>
-      <td > <a href="tasks/finetune/tune_llama_65b_ptd.sh">lora</a> </td>
-      <td> <a href="tasks/inference/generate_llama_65b_lora_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_llama_65B_ptd.sh">evaluation</a> </td>
+      <td > <a href="examples/llama/tune_llama_65b_ptd.sh">lora</a> </td>
+      <td> <a href="examples/llama/generate_llama_65b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/llama/evaluate_llama_65B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</a></td>
       <td>7B</td>
-      <td> <a href="tasks/finetune/tune_llama2_7b_ptd.sh">lora </a> </td>
-      <td> <a href="tasks/inference/generate_llama2_7b_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_llama2_7B_ptd.sh">evaluation</a>  </td>
+      <td> <a href="examples/llama2/tune_llama2_7b_ptd.sh">lora </a> </td>
+      <td> <a href="examples/llama2/generate_llama2_7b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/llama2/evaluate_llama2_7B_ptd.sh">evaluation</a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td>13B</td>
-      <td> <a href="tasks/finetune/tune_llama2_13b_ptd.sh">lora </a> </td>
-      <td> <a href="tasks/inference/generate_llama2_13b_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_llama2_13B_ptd.sh">evaluation</a> </td>
+      <td> <a href="examples/llama2/tune_llama2_13b_ptd.sh">lora </a> </td>
+      <td> <a href="examples/llama2/generate_llama2_13b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/llama2/evaluate_llama2_13B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td> 34B </td>
-      <td> <a href="tasks/finetune/tune_llama2_34b_ptd.sh">lora </a> </td>
-      <td> <a href="tasks/inference/generate_llama2_34B_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_llama2_34B_ptd.sh">evaluation</a> </td>
+      <td> <a href="examples/llama2/tune_llama2_34b_ptd.sh">lora </a> </td>
+      <td> <a href="examples/llama2/generate_llama2_34B_ptd.sh">inference</a> </td>
+      <td> <a href="examples/llama2/evaluate_llama2_34B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td > 70B </td>
-      <td > <a href="tasks/finetune/tune_llama2_70b_ptd.sh">lora</a> </td>
-      <td> <a href="tasks/inference/generate_llama2_70b_lora_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_llama2_70B_ptd.sh">evaluation</a> </td>
+      <td > <a href="examples/llama2/tune_llama2_70b_ptd.sh">lora</a> </td>
+      <td> <a href="examples/llama2/generate_llama2_70b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/llama2/evaluate_llama2_70B_ptd.sh">evaluation</a> </td>
       <td>  <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
       <td>7B</td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_qwen_7b_ptd.sh">inference</a></td>
-      <td> <a href="tasks/evaluation/evaluate_qwen_7b_ptd.sh">evaluation</a></td>
+      <td> <a href="examples/qwen/generate_qwen_7b_ptd.sh">inference</a></td>
+      <td> <a href="examples/qwen/evaluate_qwen_7b_ptd.sh">evaluation</a></td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td>14B</td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_qwen_14b_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_qwen_14b_ptd.sh">evaluation</a> </td>
+      <td> <a href="examples/qwen/generate_qwen_14b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/qwen/evaluate_qwen_14b_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td>72B</td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_qwen_72b_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_qwen_72b_ptd.sh">evaluation</a> </td>
+      <td> <a href="examples/qwen/generate_qwen_72b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/qwen/evaluate_qwen_72b_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
       <td>8x7B</td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_mixtral_8x7b_ptd.sh">inference</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_mixtral_8x7b_ptd.sh">evaluation</a>  </td>
+      <td> <a href="examples/mixtral/generate_mixtral_8x7b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/mixtral/evaluate_mixtral_8x7b_ptd.sh">evaluation</a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
   </tbody>
@@ -644,7 +641,7 @@ Currently, we support the following four cases of inference:
 
       - PTD only
            ```bash
-            python tools/checkpoint/util.py --model-type GPT \
+            python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                             --loader llama2_hf \
                                             --saver megatron \
                                             --target-tensor-parallel-size 1 \
@@ -662,7 +659,7 @@ Currently, we support the following four cases of inference:
         ```
     - **If you want to use lora model**, for details, refer to:
         ```bash
-        sh tasks/inference/generate_llama_7b_lora_ptd.sh
+        sh examples/llama/generate_llama_7b_lora_ptd.sh
         ```
 
 #### Usage Guide
@@ -848,7 +845,7 @@ VOCAB_FILE=../models/llama7b-hf/
 DATA_PATH="dataset/boolq/test"
 TASK="boolq"
 # configure generation parameters
-python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation_llama.py   \
+python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation.py   \
        --task-data-path $DATA_PATH \
        --task $TASK\
        --seq-length 512 \
@@ -868,7 +865,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation_llama.py   \
        --micro-batch-size 1  \
        --seed 42 | tee logs/train.log
 # start evaluation
-bash tasks/evaluation/evaluate_llama_7B_ptd.sh
+bash examples/llama/evaluate_llama_7B_ptd.sh
 ```
 
 #### Task Introduction
@@ -876,7 +873,7 @@ The most important evaluation parameters must be `--max-new-tokens`, which means
 questions' output length is obviously shorter than coding tasks. Besides, this parameter largely decides the speed of model generation.
 
 ```bash
-python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation_llama.py   \
+python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation.py   \
        --task-data-path $DATA_PATH \
        --task $TASK\
        --seq-length 512 \
@@ -929,13 +926,19 @@ you want to evaluate on test data, you should email your results to [C-Eval](htt
 ### <span id="jump18">Acceleration Features
 ModelLink supports various acceleration algorithms such as tensor parallelism, pipeline parallelism, sequence parallelism, recomputation, distributed optimizer, and more. The table below shows the enable switches corresponding to each acceleration feature:
 
-|   Acceleration Feature    |   Enable Parameter   |
-|:---------:|:--------:|
-|   Tensor Parallel    |  --tensor-model-parallel-size  |
-|   Pipeline Parallel   | --pipeline-model-parallel-size |
-|   Sequence Parallel    | --sequence-parallel |
-|    Recomputation    | --recompute-granularity |
-|  Distributed Optimizer   | --use-distributed-optimizer |
+|         Acceleration Feature         |        Enable Parameter        |
+|:------------------------------------:|:------------------------------:|
+|           Tensor Parallel            |  --tensor-model-parallel-size  |
+|          Pipeline Parallel           | --pipeline-model-parallel-size |
+|       Dynamic division for PP        |        --num-layer-list        |
+|          Sequence Parallel           |      --sequence-parallel       |
+|            Recomputation             |    --recompute-granularity     |
+|        Distributed Optimizer         |  --use-distributed-optimizer   |
+|        overlap DDP allreduce         |  --overlap-grad-reduce   |
+|           Flash attention            |        --use-flash-attn        |
+|            Fused rmsnorm             |      --use-fused-rmsnorm       |
+|             Fused swiglu             |            --swiglu            |
+| Fused rotary <br/>position embedding |   --use-fused-rotary-pos-emb   |
 
 ```bash
 torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
@@ -946,24 +949,14 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     --recompute-method block \
     --recompute-num-layers 72 \
     --use-distributed-optimizer \
-    ... \
-    ...
-```
-In model training and downstream tasks, you can use --tensor-model-parallel-size and --pipeline-model-parallel-size to distribute the model across different devices, reducing memory usage per device.
-Using --sequence-parallel to split the data enables the model to train on extremely long sequences. The options recompute-granularity or use-distributed-optimizer can also reduce memory usage per device.
-
-ModelLink supports multiple fused operators such as attn, rmsnorm, swiglu, rotary-pos-emb, mlp, etc., to improve model training performance:
-```bash
-torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     --use-flash-attn \
     --use-fused-rmsnorm \
-    --use-fused-swiglu \
+    --swiglu \
     --use-fused-rotary-pos-emb \
-    --mlp-layer-fusion \
+    --overlap-grad-reduce \
     ... \
     ...
 ```
-
 
 ## Acknowledgments
 

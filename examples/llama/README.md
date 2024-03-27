@@ -95,7 +95,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 权重格式转换
 mkdir model_weights
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                 --loader llama2_hf \
                                 --saver megatron \
                                 --target-tensor-parallel-size 1 \
@@ -114,7 +114,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # 权重格式转换
 # 单机8卡
 mkdir model_weights
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                 --loader llama2_hf \
                                 --saver megatron \
                                 --target-tensor-parallel-size 1 \
@@ -131,7 +131,7 @@ LLaMA-7B
 cd ModelLink/
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -146,7 +146,7 @@ LLaMA-13B
 cd ModelLink/
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -305,13 +305,13 @@ SAVE_CHECKPOINT_PATH="your model ckpt save path"
 
 LLaMA-7B
 ```shell
-bash tasks/finetune/tune_llama_7b_ptd.sh
+bash examples/llama/tune_llama_7b_ptd.sh
 ```
 
 LLaMA-13B
 ```shell
 # 单机8卡
-bash tasks/finetune/tune_llama_13b_ptd.sh 
+bash examples/llama/tune_llama_13b_ptd.sh 
 ```
 
 ### 性能
@@ -335,7 +335,7 @@ LLaMA-7B/13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 我们支持使用 LLaMA-7B 和 LLaMA-13B 进行文本生成的推理。
 推理与预训练不同，比如我们需要加载预训练权重和输出样本的长度：
 
-配置LLaMA-7B推理脚本`tasks/inference/generate_llama_7b_ptd.sh`和LLaMA-13B推理脚本`tasks/inference/generate_llama_13b_ptd.sh`。
+配置LLaMA-7B推理脚本`examples/llama/generate_llama_7b_ptd.sh`和LLaMA-13B推理脚本`examples/llama/generate_llama_13b_ptd.sh`。
 
 ```shell
 # 修改模型权重路径和分词器路径
@@ -345,27 +345,27 @@ TOKENIZER_PATH=<tokenizer-path>
 
 LLaMA-7B:
 ```shell
-bash ./tasks/inference/generate_llama_7b_ptd.sh
+bash ./examples/llama/generate_llama_7b_ptd.sh
 ```
 
 LLaMA-13B:
 ```shell
-bash ./tasks/inference/generate_llama_13b_ptd.sh
+bash ./examples/llama/generate_llama_13b_ptd.sh
 ```
 
-配置LLaMA-7B lora推理脚本`tasks/inference/generate_llama_7b_lora_ptd.sh`和LLaMA-13B lora推理脚本`tasks/inference/generate_llama_13b_lora_ptd.sh`。
+配置LLaMA-7B lora推理脚本`examples/llama/generate_llama_7b_lora_ptd.sh`和LLaMA-13B lora推理脚本`examples/llama/generate_llama_13b_lora_ptd.sh`。
 ```bash
 # 修改lora权重路径
 CHECKPOINT_LORA="your lora model directory path"
 ```
 LLaMA-7B:
 ```shell
-bash ./tasks/inference/generate_llama_7b_lora_ptd.sh
+bash ./examples/llama/generate_llama_7b_lora_ptd.sh
 ```
 
 LLaMA-13B:
 ```shell
-bash ./tasks/inference/generate_llama_13b_lora_ptd.sh
+bash ./examples/llama/generate_llama_13b_lora_ptd.sh
 ```
 
 部分推理样本如下：
@@ -384,7 +384,7 @@ LLaMA-13B:
 我们使用 Boolq benchmark 来评估我们的模型。Benchmark下载[此处](https://huggingface.co/datasets/boolq)。
 
 
-配置LLaMA-7B评估脚本 `tasks/evaluation/evaluate_llama_7B_ptd.sh` 和 LLaMA-13B评估脚本 `tasks/evaluation/evaluate_llama_13B_ptd.sh`：
+配置LLaMA-7B评估脚本 `examples/llama/evaluate_llama_7B_ptd.sh` 和 LLaMA-13B评估脚本 `examples/llama/evaluate_llama_13B_ptd.sh`：
 
 修改权重路径, 词表路径和数据集任务路径：
 ```shell
@@ -401,8 +401,8 @@ TASK="boolq"
 
 开始评估：
 ```shell
-bash tasks/evaluation/evaluate_llama_7B_ptd.sh
-bash tasks/evaluation/evaluate_llama_13B_ptd.sh
+bash examples/llama/evaluate_llama_7B_ptd.sh
+bash examples/llama/evaluate_llama_13B_ptd.sh
 ```
 
 LLaMA-7B/13B在**Ascend NPU**中的评测表现：
@@ -511,7 +511,7 @@ python $SCRIPT_PATH \
 llama-65B
 ```shell
 mkdir model_weights
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                 --loader llama2_hf \
                                 --saver megatron \
                                 --target-tensor-parallel-size 8 \
@@ -528,7 +528,7 @@ llama-33B
 cd ModelLink/
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -543,7 +543,7 @@ llama-65B
 cd ModelLink/
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -719,13 +719,13 @@ SAVE_CHECKPOINT_PATH="your model ckpt save path"
 
 LLaMA-33B
 ```shell
-bash tasks/finetune/tune_llama_33b_ptd.sh
+bash examples/llama/tune_llama_33b_ptd.sh
 ```
 
 LLaMA-65B
 ```shell
 # 双机16卡
-bash tasks/finetune/tune_llama_65b_ptd.sh 
+bash examples/llama/tune_llama_65b_ptd.sh 
 ```
 
 ### 性能
@@ -748,9 +748,9 @@ LLaMA-33B/65B在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 我们支持使用 LLaMA-33B 和 LLaMA-65B 进行文本生成的推理。
 推理与预训练不同，比如我们需要加载预训练权重和输出样本的长度：
 
-配置LLaMA-33B推理脚本`tasks/inference/generate_llama_33b_ptd.sh`。
+配置LLaMA-33B推理脚本`examples/llama/generate_llama_33b_ptd.sh`。
 
-配置LLaMA-65B推理脚本`tasks/inference/generate_llama_65b_ptd.sh`。
+配置LLaMA-65B推理脚本`examples/llama/generate_llama_65b_ptd.sh`。
 
 ```shell
 # 修改模型权重路径和分词器路径
@@ -760,16 +760,16 @@ TOKENIZER_PATH=<tokenizer-path>
 
 LLaMA-33B:
 ```shell
-bash ./tasks/inference/generate_llama_33b_ptd.sh
+bash ./examples/llama/generate_llama_33b_ptd.sh
 ```
 LLaMA-65B:
 ```shell
-bash ./tasks/inference/generate_llama_65b_ptd.sh
+bash ./examples/llama/generate_llama_65b_ptd.sh
 ```
 
-配置LLaMA-33B lora推理脚本`tasks/inference/generate_llama_33B_lora_ptd.sh`。
+配置LLaMA-33B lora推理脚本`examples/llama/generate_llama_33B_lora_ptd.sh`。
 
-配置LLaMA-65B lora推理脚本`tasks/inference/generate_llama_65B_lora_ptd.sh`。
+配置LLaMA-65B lora推理脚本`examples/llama/generate_llama_65B_lora_ptd.sh`。
 
 ```bash
 # 修改lora权重路径
@@ -777,12 +777,12 @@ CHECKPOINT_LORA="your lora model directory path"
 ```
 LLaMA-33B:
 ```shell
-bash ./tasks/inference/generate_llama_33b_lora_ptd.sh
+bash ./examples/llama/generate_llama_33b_lora_ptd.sh
 ```
 
 LLaMA-65B:
 ```shell
-bash ./tasks/inference/generate_llama_65b_lora_ptd.sh
+bash ./examples/llama/generate_llama_65b_lora_ptd.sh
 ```
 
 部分推理样本如下：
@@ -799,9 +799,9 @@ LLaMA-65B:
 
 我们使用 Boolq benchmark 来评估我们的模型。Benchmark下载[此处](https://huggingface.co/datasets/boolq)。
 
-配置LLaMA-33B评估脚本：tasks/evaluation/evaluate_llama_33B_ptd.sh
+配置LLaMA-33B评估脚本：examples/llama/evaluate_llama_33B_ptd.sh
 
-配置LLaMA-65B评估脚本：tasks/evaluation/evaluate_llama_65B_ptd.sh
+配置LLaMA-65B评估脚本：examples/llama/evaluate_llama_65B_ptd.sh
 
 修改权重路径, 词表路径和数据集任务路径：
 ```shell
@@ -819,9 +819,9 @@ TASK="boolq"
 
 ```shell
 # llama-33B评估
-bash tasks/evaluation/evaluate_llama_33B_ptd.sh
+bash examples/llama/evaluate_llama_33B_ptd.sh
 # llama-65B评估
-bash tasks/evaluation/evaluate_llama_65B_ptd.sh
+bash examples/llama/evaluate_llama_65B_ptd.sh
 ```
 
 LLaMA-33B和LLaMA-65B在**Ascend NPU**中的评测表现：

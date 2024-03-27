@@ -1,9 +1,6 @@
 <p align="center"> <img src="sources/images/logo.png" height="90px" width="400px"> </p>
 
 <p align="center">
-    <a>
-        <img alt="Docs" src="https://readthedocs.org/projects/internlm/badge/?version=latest">
-    </a>
     <a href="https://gitee.com/ascend/AscendSpeed/blob/master/LICENSE">
     <a href="https://gitee.com/ascend/AscendSpeed/blob/master/LICENSE">
         <img alt="GitHub" src="https://img.shields.io/github/license/huggingface/transformers.svg?color=blue">
@@ -56,61 +53,61 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td rowspan="1"> <a href="examples/aquila/README.md">Aquila</a> </td>
       <td> 7B </td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_aquila_7b_ptd.sh">对话</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_aquila_7b_ptd.sh">评估</a> </td>
+      <td> <a href="examples/aquila/generate_aquila_7b_ptd.sh">对话</a> </td>
+      <td> <a href="examples/aquila/evaluate_aquila_7b_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td rowspan="2"> <a href="examples/baichuan/README.md">Baichuan</a> </td>
       <td> 7B </td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_baichuan_7b_ptd.sh">对话</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_baichuan_7B_ptd.sh">评估</a> </td>
+      <td> <a href="examples/baichuan/generate_baichuan_7b_ptd.sh">对话</a> </td>
+      <td> <a href="examples/baichuan/evaluate_baichuan_7B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td> 13B </td>
-      <td> <a href="tasks/finetune/tune_baichuan_ptd_13B.sh">lora</a> </td>
-      <td> <a href="tasks/inference/generate_baichuan_13b_ptd.sh">对话</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_baichuan_13B_ptd.sh">评估</a> </td>
+      <td> -- </td>
+      <td> <a href="examples/baichuan/generate_baichuan_13b_ptd.sh">对话</a> </td>
+      <td> <a href="examples/baichuan/evaluate_baichuan_13B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td rowspan="2"> <a href="examples/baichuan/README.md">Baichuan2</a> </td>
       <td> 7B </td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_baichuan2_7b_ptd.sh">对话</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_baichuan2_7B_ptd.sh">评估</a> </td>
+      <td> <a href="examples/baichuan2/generate_baichuan2_7b_ptd.sh">对话</a> </td>
+      <td> <a href="examples/baichuan2/evaluate_baichuan2_7B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td> 13B </td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_baichuan2_13b_ptd.sh">对话</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_baichuan2_13B_ptd.sh">评估</a> </td>
+      <td> <a href="examples/baichuan2/generate_baichuan2_13b_ptd.sh">对话</a> </td>
+      <td> <a href="examples/baichuan2/evaluate_baichuan2_13B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
       <td> 7B1 </td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_bloom_7b_ptd.sh">对话</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_baichuan_7B_ptd.sh">评估</a> </td>
+      <td> <a href="examples/bloom/generate_bloom_7b_ptd.sh">对话</a> </td>
+      <td> <a href="examples/bloom/evaluate_bloom_7B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td> 176B </td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_bloom_176b_ptd.sh">对话</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_bloom_176b_ptd.sh">评估</a> </td>
+      <td> <a href="examples/bloom/generate_bloom_176b_ptd.sh">对话</a> </td>
+      <td> <a href="examples/bloom/evaluate_bloom_176b_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>
       <td>7B</td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_lnternlm_7b_ptd.sh">对话</a> </td>
-      <td> <a href="tasks/evaluation/evaluate_internlm_7B_ptd.sh">评估</a> </td>
+      <td> <a href="examples/intern/generate_lnternlm_7b_ptd.sh">对话</a> </td>
+      <td> <a href="examples/intern/evaluate_internlm_7B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
@@ -123,89 +120,89 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td rowspan="4"><a href="examples/llama/README.md">LLaMA</a></td>
       <td>7B</td>
-      <td> <a href="tasks/finetune/tune_llama_7b_ptd.sh">lora</a> </td>
-      <td> <a href="tasks/inference/generate_llama_7b_lora_ptd.sh">对话 </a> </td>
-      <td> <a href="tasks/evaluation/evaluate_llama_7B_ptd.sh">评估</a> </td>
+      <td> <a href="examples/llama/tune_llama_7b_ptd.sh">lora</a> </td>
+      <td> <a href="examples/llama/generate_llama_7b_ptd.sh">对话 </a> </td>
+      <td> <a href="examples/llama/evaluate_llama_7B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>13B</td>
-      <td> <a href="tasks/finetune/tune_llama_13b_ptd.sh">lora</a> </td>
-      <td> <a href="tasks/inference/generate_llama_13b_lora_ptd.sh">对话 </a> </td>
-      <td> <a href="tasks/evaluation/evaluate_llama_13B_ptd.sh">评估</a> </td>
+      <td> <a href="examples/llama/tune_llama_13b_ptd.sh">lora</a> </td>
+      <td> <a href="examples/llama/generate_llama_13b_ptd.sh">对话 </a> </td>
+      <td> <a href="examples/llama/evaluate_llama_13B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td>33B</td>
-      <td> <a href="tasks/finetune/tune_llama_33b_ptd.sh">lora</a> </td>
-      <td> <a href="tasks/inference/generate_llama_33b_ptd.sh">对话 </a> </td>
-      <td> <a href="tasks/evaluation/evaluate_llama_33B_ptd.sh">评估 </a> </td>
+      <td> <a href="examples/llama/tune_llama_33b_ptd.sh">lora</a> </td>
+      <td> <a href="examples/llama/generate_llama_33b_ptd.sh">对话 </a> </td>
+      <td> <a href="examples/llama/evaluate_llama_33B_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
       <td > 65B </td>
-      <td > <a href="tasks/finetune/tune_llama_65b_ptd.sh">lora</a> </td>
-      <td> <a href="tasks/inference/generate_llama_65b_lora_ptd.sh">对话 </a> </td>
-      <td> <a href="tasks/evaluation/evaluate_llama_65B_ptd.sh">评估 </a> </td>
+      <td > <a href="examples/llama/tune_llama_65b_ptd.sh">lora</a> </td>
+      <td> <a href="examples/llama/generate_llama_65b_ptd.sh">对话 </a> </td>
+      <td> <a href="examples/llama/evaluate_llama_65B_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</a></td>
       <td>7B</td>
-      <td> <a href="tasks/finetune/tune_llama2_7b_ptd.sh">lora </a> </td>
-      <td> <a href="tasks/inference/generate_llama2_7b_ptd.sh">对话 </a> </td>
-      <td> <a href="tasks/evaluation/evaluate_llama2_7B_ptd.sh">评估 </a>  </td>
+      <td> <a href="examples/llama2/tune_llama2_7b_ptd.sh">lora </a> </td>
+      <td> <a href="examples/llama2/generate_llama2_7b_ptd.sh">对话 </a> </td>
+      <td> <a href="examples/llama2/evaluate_llama2_7B_ptd.sh">评估 </a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td>13B</td>
-      <td> <a href="tasks/finetune/tune_llama2_13b_ptd.sh">lora </a> </td>
-      <td> <a href="tasks/inference/generate_llama2_13b_ptd.sh">对话 </a> </td>
-      <td> <a href="tasks/evaluation/evaluate_llama2_13B_ptd.sh">评估 </a> </td>
+      <td> <a href="examples/llama2/tune_llama2_13b_ptd.sh">lora </a> </td>
+      <td> <a href="examples/llama2/generate_llama2_13b_ptd.sh">对话 </a> </td>
+      <td> <a href="examples/llama2/evaluate_llama2_13B_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td> 34B </td>
-      <td> <a href="tasks/finetune/tune_llama2_34b_ptd.sh">lora </a> </td>
-      <td> <a href="tasks/inference/generate_llama2_34B_ptd.sh">对话 </a> </td>
-      <td> <a href="tasks/evaluation/evaluate_llama2_34B_ptd.sh">评估 </a> </td>
+      <td> <a href="examples/llama2/tune_llama2_34b_ptd.sh">lora </a> </td>
+      <td> <a href="examples/llama2/generate_llama2_34B_ptd.sh">对话 </a> </td>
+      <td> <a href="examples/llama2/evaluate_llama2_34B_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td > 70B </td>
-      <td > <a href="tasks/finetune/tune_llama2_70b_ptd.sh">lora</a> </td>
-      <td> <a href="tasks/inference/generate_llama2_70b_lora_ptd.sh">对话 </a> </td>
-      <td> <a href="tasks/evaluation/evaluate_llama2_70B_ptd.sh">评估 </a> </td>
+      <td > <a href="examples/llama2/tune_llama2_70b_ptd.sh">lora</a> </td>
+      <td> <a href="examples/llama2/generate_llama2_70b_ptd.sh">对话 </a> </td>
+      <td> <a href="examples/llama2/evaluate_llama2_70B_ptd.sh">评估 </a> </td>
       <td>  <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
       <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
       <td>7B</td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_qwen_7b_ptd.sh">对话 </a></td>
-      <td> <a href="tasks/evaluation/evaluate_qwen_7b_ptd.sh">评估 </a></td>
+      <td> <a href="examples/qwen/generate_qwen_7b_ptd.sh">对话 </a></td>
+      <td> <a href="examples/qwen/evaluate_qwen_7b_ptd.sh">评估 </a></td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td>14B</td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_qwen_14b_ptd.sh">对话 </a> </td>
-      <td> <a href="tasks/evaluation/evaluate_qwen_14b_ptd.sh">评估 </a> </td>
+      <td> <a href="examples/qwen/generate_qwen_14b_ptd.sh">对话 </a> </td>
+      <td> <a href="examples/qwen/evaluate_qwen_14b_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td>72B</td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_qwen_72b_ptd.sh">对话 </a> </td>
-      <td> <a href="tasks/evaluation/evaluate_qwen_72b_ptd.sh">评估 </a> </td>
+      <td> <a href="examples/qwen/generate_qwen_72b_ptd.sh">对话 </a> </td>
+      <td> <a href="examples/qwen/evaluate_qwen_72b_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
       <td>8x7B</td>
       <td> -- </td>
-      <td> <a href="tasks/inference/generate_mixtral_8x7b_ptd.sh">对话 </a> </td>
-      <td> <a href="tasks/evaluation/evaluate_mixtral_8x7b_ptd.sh">评估 </a>  </td>
+      <td> <a href="examples/mixtral/generate_mixtral_8x7b_ptd.sh">对话 </a> </td>
+      <td> <a href="examples/mixtral/evaluate_mixtral_8x7b_ptd.sh">评估 </a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
   </tbody>
@@ -630,7 +627,7 @@ ModelLink:
 1.  如果你尝试使用 huggingface 的模型权重，请首先进行权重转换， 以 Llama-7B 为例:
       - PTD 策略的转换
            ```bash
-            python tools/checkpoint/util.py --model-type GPT \
+            python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                             --loader llama2_hf \
                                             --saver megatron \
                                             --target-tensor-parallel-size 1 \
@@ -645,11 +642,11 @@ ModelLink:
 
     - 仅仅使用 PTD 策略训练的模型：在这种模式下，模型以 Megatron-LM 的风格被 流水并行 和 张量并行 切分
         ```bash
-        sh tasks/inference/generate_llama_7b_ptd.sh
+        sh examples/llama/generate_llama_7b_ptd.sh
         ```
     - 如果你仅仅使用 Lora, 可以参考:
         ```bash
-        sh tasks/inference/generate_llama_7b_lora_ptd.sh
+        sh examples/llama/generate_llama_7b_lora_ptd.sh
         ```
 
 #### 使用手册
@@ -836,7 +833,7 @@ VOCAB_FILE=../models/llama7b-hf/
 DATA_PATH="dataset/boolq/test"
 TASK="boolq"
 # 配置生成参数
-python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation_llama.py   \
+python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation.py   \
        --task-data-path $DATA_PATH \
        --task $TASK\
        --seq-length 512 \
@@ -857,13 +854,13 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation_llama.py   \
        --micro-batch-size 1  \
        --seed 42 | tee logs/train.log
 # 开启评估
-bash tasks/evaluation/evaluate_llama_7B_ptd.sh
+bash examples/llama/evaluate_llama_7B_ptd.sh
 ```
 
 最重要的评估参数是 `--max-new-tokens`, 它表示模型输出的生成长度，比如，多项选择问题的输出长度就会明显比编码任务的输出长度小，该参数也很大程度上影响了模型的评估性能。通过--evaluation-batch-size参数可以设置多batch推理，提升模型评估性能。
 
 ```bash
-python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation_llama.py   \
+python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation.py   \
        --task-data-path $DATA_PATH \
        --task $TASK\
        --seq-length 512 \
@@ -899,7 +896,7 @@ HumanEval 是一个用于挑战代码生成问题的数据集，具有164个编�
 ##### BoolQ
 
 BoolQ 是一个 yes/no 的问答数据集， 每一个问题包含了一个（问题，文章，答案）三元组，同时有文章的标题作为额外的选择性输入。BoolQ 数据集的评估相对简单，只需要配置 `TASK="boolq"`, `--max-new-token=1`。
-零样本评估的结果通常会被给定的 prompt 影响，可以尝试通过在 `tasks/evaluation/evaluation.py` 中设置合适的 prompt 得到更高的分数，
+零样本评估的结果通常会被给定的 prompt 影响，可以尝试通过在 `evaluation.py` 中设置合适的 prompt 得到更高的分数，
 
 ```bash
 # 通过修改 template 更新prompt
@@ -920,43 +917,41 @@ GSM8K 是一个有8.5k高质量小学数学应用题文本的数据集，每一�
 在很多网站，MMLU 的精度会依据学科进行评估，57个学科主要属于四个大类， 因此该数据集也可以基于四个大类进行打分，[网站](https://github.com/hendrycks/test/blob/master/categories.py) 给出了具体的57个类别。
 
 ### <span id="jump18">使用加速特性
-ModelLink支持张量并行、流水线并行、序列并行、重计算、分布式优化器、等多种加速算法，下表为各种加速特性对应的使能开关：
+ModelLink支持张量并行、流水线并行、序列并行、重计算、分布式优化器等多种加速算法和融合算子，下表为各种加速特性对应的使能开关：
 
-|   加速特性    |   使能参数   |
-|:---------:|:--------:|
-|   张量并行    |  --tensor-model-parallel-size  |
-|   流水线并行   | --pipeline-model-parallel-size |
-|   序列并行    | --sequence-parallel |
-|    重计算    | --recompute-granularity |
-|  分布式优化器   | --use-distributed-optimizer |
+|                 加速特性                 |              使能参数              |
+|:------------------------------------:|:------------------------------:|
+|                 张量并行                 |  --tensor-model-parallel-size  |
+|                流水线并行                 | --pipeline-model-parallel-size |
+|               流水并行动态划分               |        --num-layer-list        |
+|                 序列并行                 |      --sequence-parallel       |
+|                 重计算                  |    --recompute-granularity     |
+|                分布式优化器                |  --use-distributed-optimizer   |
+|           DDP allreduce 掩盖           |  --overlap-grad-reduce   |
+|           Flash attention            |        --use-flash-attn        |
+|            Fused rmsnorm             |      --use-fused-rmsnorm       |
+|             Fused swiglu             |            --swiglu            |
+| Fused rotary <br/>position embedding |   --use-fused-rotary-pos-emb   |
+
 
 ```bash
 torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
+    --num-layer-list 1,2,2,2,1 \
     --sequence-parallel \
     --recompute-granularity full \
     --recompute-method block \
     --recompute-num-layers 72 \
     --use-distributed-optimizer \
-    ... \
-    ...
-```
-在模型训练和下游任务中，可以使用--tensor-model-parallel-size和--pipeline-model-parallel-size将模型切分到不同的设备上，降低单设备内存占用。
-使用--sequence-parallel对数据进行切分，使得模型可以训练超长序列数据。recompute-granularity或者use-distributed-optimizer也能降低单设备内存占用。
-
-ModelLink支持attn、rmsnorm、swiglu、rotary-pos-emb、mlp等多个融合算子，提升模型训练性能：
-```bash
-torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     --use-flash-attn \
     --use-fused-rmsnorm \
-    --use-fused-swiglu \
+    --swiglu \
+    --overlap-grad-reduce \
     --use-fused-rotary-pos-emb \
-    --mlp-layer-fusion \
     ... \
     ...
 ```
-
 
 ## 致谢
 

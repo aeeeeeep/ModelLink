@@ -81,7 +81,7 @@ Recommended hardware configuration for inference:
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
     # Convert weight format
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
         --loader mixtral_hf \
         --saver mixtral \
         --load-dir ../Mixtral-8x7B-v0.1 \
@@ -132,7 +132,7 @@ python ./tools/preprocess_data.py \
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
     # HF to tp1-pp8-ep2
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
         --loader mixtral_hf \
         --saver mixtral \
         --load-dir ../Mixtral-8x7B-v0.1 \
@@ -150,7 +150,7 @@ python ./tools/preprocess_data.py \
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
     # tp1-pp8-ep2 to tp1-pp8-ep1
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
         --loader mixtral_mg \
         --saver mixtral \
         --load-dir ../Mixtral-8x7B-v0.1-ep2-pp8 \
@@ -166,7 +166,7 @@ python ./tools/preprocess_data.py \
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
     # tp1-pp8-ep2 to HF
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
         --loader mixtral_mg \
         --saver mixtral \
         --save-model-type huggingface \
@@ -240,7 +240,7 @@ Comparison of Mixtral-8x7B performance on 2 nodes and 16 chips with ep2 pp8:
 
 ## Model-Inference
 
-First, configure the inference script: ***tasks/inference/generate_mixtral_8x7b_ptd.sh***
+First, configure the inference script: ***examples/mixtral/generate_mixtral_8x7b_ptd.sh***
 
 ```bash
 # Execute set_env.sh according to your own ascend-toolkit path
@@ -263,13 +263,13 @@ PP=1
 The Mixtral-8x7B-v0.1 model used in this document is an L0 model, only with continuation ability, inference does not involve any templates and is prone to repetition or non-stop answering.
 
 If you want to have better human-machine dialogue capabilities, please use the Mixtral-8x7B-Instruct-v0.1 model. This model requires instruction compliance training and needs to be used with templates. The basic operations are the same as above, only the startup entry has changed:
-torchrun $DISTRIBUTED_ARGS tasks/inference/inference_mixtral.py
+torchrun $DISTRIBUTED_ARGS inference.py
 ```
 
 Then you can start it directly
 
 ```bash
-bash tasks/inference/generate_mixtral_8x7b_ptd.sh
+bash examples/mixtral/generate_mixtral_8x7b_ptd.sh
 ```
 
 An example of inference is as follows:
@@ -278,7 +278,7 @@ An example of inference is as follows:
 ## Model-Evaluation
 
 Evaluate the model using the MMLU dataset. Dataset download path [here](https://huggingface.co/datasets/cais/mmlu). 
-Configure the evaluation script: ***tasks/evaluation/evaluate_mixtral_8x7b_ptd.sh***
+Configure the evaluation script: ***examples/mixtral/evaluate_mixtral_8x7b_ptd.sh***
 
 ```bash
 # Ascend-toolkit path
@@ -296,7 +296,7 @@ TASK="mmlu"
 Start the evaluation
 
 ```bash
-bash tasks/evaluation/evaluate_mixtral_8x7b_ptd.sh
+bash examples/mixtral/evaluate_mixtral_8x7b_ptd.sh
 ```
 The evaluation results are as follows
 

@@ -120,7 +120,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                     --loader qwen_hf \
                                     --saver megatron \
                                     --target-tensor-parallel-size 8 \
@@ -136,7 +136,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
     cd ModelLink/
     # Modify the ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                     --loader megatron \
                                     --saver megatron \
                                     --save-model-type save_huggingface_llama \
@@ -198,7 +198,7 @@ The performance of Qwen-7B in **Ascend NPU** and **Reference**:
 | Reference | Qwen-7B |             2867             |
 
 ## Inference
-Config qwen-7b inference script: tasks/inference/generate_qwen_7b_ptd.sh
+Config qwen-7b inference script: examples/qwen/generate_qwen_7b_ptd.sh
 
 ```bash
 # ascend-toolkit path
@@ -209,9 +209,9 @@ CHECKPOINT="your model directory path"
 TOKENIZER_PATH="your tokenizer directory path"
 ```
 
-Launch qwen-7b inference script: tasks/inference/generate_qwen_7b_ptd.sh
+Launch qwen-7b inference script: examples/qwen/generate_qwen_7b_ptd.sh
 ```bash
-bash tasks/inference/generate_qwen_7b_ptd.sh
+bash examples/qwen/generate_qwen_7b_ptd.sh
 ```
 
 Some inference samples are as follows:
@@ -221,7 +221,7 @@ Some inference samples are as follows:
 ## Evaluation
 We use the [CEval benchmark](https://huggingface.co/datasets/ceval/ceval-exam) and [MMLU benchmark](https://huggingface.co/datasets/cais/mmlu) to evaluate our model. 
 
-Config qwen-7b evaluation script: tasks/evaluation/evaluate_qwen_7b_ptd.sh
+Config qwen-7b evaluation script: examples/qwen/evaluate_qwen_7b_ptd.sh
 
 ```bash
 # ascend-toolkit path
@@ -239,7 +239,7 @@ TASK="mmlu"  # "ceval" for ceval task
 Launch qwen-7b evaluation
 
 ```bash
-bash ./tasks/evaluation/evaluate_qwen_7b_ptd.sh
+bash examples/qwen/evaluate_qwen_7b_ptd.sh
 ```
 
 | Task | Subset | Question | OpenSource | NPU |
@@ -345,7 +345,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                     --loader qwen_hf \
                                     --saver megatron \
                                     --target-tensor-parallel-size 8 \
@@ -360,7 +360,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
     cd ModelLink/
     # Modify the ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                     --loader megatron \
                                     --saver megatron \
                                     --save-model-type save_huggingface_llama \
@@ -423,7 +423,7 @@ The performance of Qwen-14B in **Ascend NPU** and **Reference**:
 
 ## Inference
 
-Config qwen-14b inference script: tasks/inference/generate_qwen_14b_ptd.sh
+Config qwen-14b inference script: examples/qwen/generate_qwen_14b_ptd.sh
 
 ```bash
 # ascend-toolkit path
@@ -434,9 +434,9 @@ CHECKPOINT="your model directory path"
 TOKENIZER_PATH=./qwen-14b-hf
 ```
 
-Launch qwen-14b inference script: tasks/inference/generate_qwen_14b_ptd.sh
+Launch qwen-14b inference script: examples/qwen/generate_qwen_14b_ptd.sh
 ```bash
-bash tasks/inference/generate_qwen_7b_ptd.sh
+bash examples/qwen/generate_qwen_7b_ptd.sh
 ```
 
 Some inference samples are as follows:
@@ -447,7 +447,7 @@ Some inference samples are as follows:
 
 We use the [CEval benchmark](https://huggingface.co/datasets/ceval/ceval-exam) and [MMLU benchmark](https://huggingface.co/datasets/cais/mmlu) to evaluate our model. 
 
-Config qwen-14b evaluation script: tasks/evaluation/evaluate_qwen_14b_ptd.sh
+Config qwen-14b evaluation script: examples/qwen/evaluate_qwen_14b_ptd.sh
 
 ```bash
 # ascend-toolkit path
@@ -465,7 +465,7 @@ TASK="mmlu"  # "ceval" for ceval task
 Launch qwen-14b evaluation
 
 ```bash
-bash ./tasks/evaluation/evaluate_qwen_14b_ptd.sh
+bash examples/qwen/evaluate_qwen_14b_ptd.sh
 ```
 
 | Task | Subset | Question | OpenSource | NPU |
@@ -551,7 +551,7 @@ Here's a hardware summary of pre-training  Qwen-72B:
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                     --loader qwen_hf \
                                     --saver megatron \
                                     --target-tensor-parallel-size 8 \
@@ -567,7 +567,7 @@ Here's a hardware summary of pre-training  Qwen-72B:
     cd ModelLink/
     # Modify the ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                     --loader megatron \
                                     --saver megatron \
                                     --save-model-type save_huggingface_llama \
@@ -640,7 +640,7 @@ The performance of Qwen-72B in **Ascend NPU** and **Reference**:
 
 
 ## Inference
-Config qwen-72b inference script: tasks/inference/generate_qwen_72b_ptd.sh
+Config qwen-72b inference script: examples/qwen/generate_qwen_72b_ptd.sh
 
 ```bash
 # ascend-toolkit path
@@ -651,9 +651,9 @@ CHECKPOINT="your model directory path"
 TOKENIZER_PATH=./qwen-72b-hf
 ```
 
-Launch qwen-72b inference script: tasks/inference/generate_qwen_72b_ptd.sh
+Launch qwen-72b inference script: examples/qwen/generate_qwen_72b_ptd.sh
 ```bash
-bash tasks/inference/generate_qwen_72b_ptd.sh
+bash examples/qwen/generate_qwen_72b_ptd.sh
 ```
 
 Some inference samples are as follows:
@@ -663,7 +663,7 @@ Some inference samples are as follows:
 ## Evaluation
 We use the [CEval benchmark](https://huggingface.co/datasets/ceval/ceval-exam) and [MMLU benchmark](https://huggingface.co/datasets/cais/mmlu) to evaluate our model. 
 
-Config qwen-72b evaluation script: tasks/evaluation/evaluate_qwen_72b_ptd.sh
+Config qwen-72b evaluation script: examples/qwen/evaluate_qwen_72b_ptd.sh
 
 ```bash
 # ascend-toolkit path
@@ -681,7 +681,7 @@ TASK="mmlu"  # "ceval" for ceval task
 Launch qwen-72b evaluation
 
 ```bash
-bash ./tasks/evaluation/evaluate_qwen_72b_ptd.sh
+bash examples/qwen/evaluate_qwen_72b_ptd.sh
 ```
 
 | Task | Subset | Question | OpenSource | NPU |

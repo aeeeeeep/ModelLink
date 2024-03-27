@@ -18,7 +18,7 @@ from megatron.model.module import MegatronModule
 from megatron.model.enums import AttnMaskType
 from megatron.model.language_model import get_language_model
 from megatron.model.gpt_model import post_language_model_processing
-from tasks.inference.text_generation import MegatronModuleForCausalLM
+from ..tasks.inference.text_generation import MegatronModuleForCausalLM
 
 
 class GPTModel(MegatronModule, MegatronModuleForCausalLM):

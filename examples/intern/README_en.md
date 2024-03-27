@@ -122,7 +122,7 @@ In order to adapt to the internlm-7B model, the following script is used to conv
 ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 ```shell
 mkdir model_weights
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                 --loader llama2_hf \
                                 --saver megatron \
                                 --target-tensor-parallel-size 8 \
@@ -140,7 +140,7 @@ Any Megatron weights with parallel slicing strategy --> Any Megatron weights wit
 cd ModelLink/
 # Modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -185,9 +185,9 @@ The performance of Internlm-7B in **Ascend NPU** and **Reference**:
 
 #### Inference
 Inference script</a>：
-tasks/inference/generate_lnternlm_7b_ptd.sh
+examples/intern/generate_lnternlm_7b_ptd.sh
 ```
-bash ./tasks/inference/generate_lnternlm_7b_ptd.sh
+bash ./examples/intern/generate_lnternlm_7b_ptd.sh
 ```
 
 Inference case:
@@ -197,9 +197,9 @@ Inference case:
 Evaluating the model using the MMLU dataset. dataset [download](https://huggingface.co/datasets/cais/mmlu)
 
 Evaluation script</a>:
-tasks/evaluation/evaluate_internlm_7B_ptd.sh 
+examples/intern/evaluate_internlm_7B_ptd.sh 
 ```
-bash  tasks/evaluation/evaluate_internlm_7B_ptd.sh
+bash  examples/intern/evaluate_internlm_7B_ptd.sh
 ```
 The evaluation performance of LLaMA-7B/13B in **Ascend NPU**:
 

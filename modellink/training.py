@@ -19,7 +19,7 @@ from functools import wraps
 from peft import LoraConfig, get_peft_model
 from megatron.arguments import core_transformer_config_from_args
 from megatron import get_args
-from tasks.finetune.lora.utils import is_enable_lora
+from .tasks.finetune.lora.utils import is_enable_lora
 
 
 def get_model_wrapper(fn):

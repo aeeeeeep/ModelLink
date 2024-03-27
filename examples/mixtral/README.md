@@ -82,7 +82,7 @@
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
    
     # 权重格式转换
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
         --loader mixtral_hf \
         --saver mixtral \
         --load-dir ../Mixtral-8x7B-v0.1 \
@@ -133,7 +133,7 @@ python ./tools/preprocess_data.py \
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
    
     # HF 转 tp1-pp8-ep2
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
         --loader mixtral_hf \
         --saver mixtral \
         --load-dir ../Mixtral-8x7B-v0.1 \
@@ -151,7 +151,7 @@ python ./tools/preprocess_data.py \
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
    
     # tp1-pp8-ep2 转 tp1-pp8-ep1
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
         --loader mixtral_mg \
         --saver mixtral \
         --load-dir ../Mixtral-8x7B-v0.1-ep2-pp8 \
@@ -167,7 +167,7 @@ python ./tools/preprocess_data.py \
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
    
     # tp1-pp8-ep2 转 HF
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
         --loader mixtral_mg \
         --saver mixtral \
         --save-model-type huggingface \
@@ -233,6 +233,7 @@ python ./tools/preprocess_data.py \
 
 Mixtral-8x7B 在双机16卡上(ep2 pp8) **昇腾芯片** 和 **参考芯片** 上的性能对比：
 *(当节点够多的情况下，ep越大吞吐越大，这里并非为最佳性能，仅供参考)*
+
 | 设备 |   模型   | 迭代数 | 样本吞吐 (samples/step) | tokens吞吐 (tokens/s/p) | 单步迭代时间 (s/step) |
 | :--: | :-------: | :----: |:-------------------:|:---------------------:|:-------------------: |
 | NPUs | Mixtral-8x7B |  1000  |  4.11  |  1053.6  |  31.13  |
@@ -241,7 +242,7 @@ Mixtral-8x7B 在双机16卡上(ep2 pp8) **昇腾芯片** 和 **参考芯片** �
 
 ## 模型推理
 
-首先需要配置推理脚本: ***tasks/inference/generate_mixtral_8x7b_ptd.sh***
+首先需要配置推理脚本: ***examples/mixtral/generate_mixtral_8x7b_ptd.sh***
 
 ```bash
 # 根据您自己的 ascend-toolkit 路径，执行set_env.sh
@@ -264,13 +265,13 @@ PP=1
 该文档中使用的Mixtral-8x7B-v0.1模型为L0模型，只有续写能力，推理不带任何模板并且容易出现重复或回答不停止的情况。
 
 如若想要有较好的人机对话能力，请使用Mixtral-8x7B-Instruct-v0.1模型，该模型为指令遵从度训练后需要配合模板使用，基本操作同上，仅启动入口有变化：
-torchrun $DISTRIBUTED_ARGS tasks/inference/inference_mixtral.py
+torchrun $DISTRIBUTED_ARGS inference.py
 ```
 
 然后可直接启动
 
 ```bash
-bash tasks/inference/generate_mixtral_8x7b_ptd.sh
+bash examples/mixtral/generate_mixtral_8x7b_ptd.sh
 ```
 
 推理的示例如下:
@@ -279,7 +280,7 @@ bash tasks/inference/generate_mixtral_8x7b_ptd.sh
 ## 模型评估
 
 使用 MMLU数据集评估模型. 数据集下载路径 [这里](https://huggingface.co/datasets/cais/mmlu). 
-配置评估脚本: tasks/evaluation/evaluate_mixtral_8x7b_ptd.sh
+配置评估脚本: examples/mixtral/evaluate_mixtral_8x7b_ptd.sh
 
 ```bash
 # ascend-toolkit 路径
@@ -296,7 +297,7 @@ TASK="mmlu"
 启动评估
 
 ```bash
-bash tasks/evaluation/evaluate_mixtral_8x7b_ptd.sh
+bash examples/mixtral/evaluate_mixtral_8x7b_ptd.sh
 ```
 评估结果如下
 
