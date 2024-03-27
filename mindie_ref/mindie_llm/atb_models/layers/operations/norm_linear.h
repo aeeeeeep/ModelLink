@@ -18,6 +18,7 @@
 #define ASCEND_SPEED_INFERENCE_COMMON_NORM_LINEAR_H
 
 #include <atb/atb_infer.h>
+#include "layers/operations/add_norm.h"
 #include "layers/operations/linear.h"
 
 namespace atb_speed {
@@ -34,17 +35,20 @@ enum PackQuantType : unsigned int {
     MIX_W8A8SC = 8,
 };
 
+enum NextResidualAddInType : unsigned int {
+    NORM_OUT = 0,
+    ADD_OUT,
+};
+
 template <typename NormParamType>
 struct NormLinearParam {
-    bool isAntiOutlier = false;
-    bool skipNorm = false;
-    bool normHasBias = false;
-    NormParamType normParamType;
-    NormParamType normQuantParamType;
+    NextResidualAddInType nextResidualAddIn = ADD_OUT;
+    atb_speed::common::AddNormParam<NormParamType> addNormParam;
     atb_speed::common::FusionLinearParam fusionLinearParam;
 };
 
 LinearQuantType GetLinearQuantType(const int &packQuantType, const int &linearType, bool hasNorm);
+NormQuantType GetNormQuantType(const int &packQuantType);
 template <typename NormParamType>
 atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operation **operation);
 

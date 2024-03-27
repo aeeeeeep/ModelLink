@@ -33,16 +33,19 @@ template <typename NormParamType>
 struct MlpParam {
     bool isBF16 = false;
     bool gateUpHasBias = false;
-    bool downHasBias = false;
-    bool supportLcoc = false;
-    bool skipNorm = false;
+    NormParamType normParamType;
+    NormParamType normQuantParamType;
+    AddNormType addNormType = atb_speed::common::AddNormType::ADD_NORM;
     bool normHasBias = false;
+    NextResidualAddInType nextResidualAddIn = ADD_OUT;
     MlpPackType mlpPackType = GATE_UP_WEIGHT_PACK;
     std::vector<int> layerLinearQuantType;
     int packQuantType = atb_speed::common::PackQuantType::ALL_FP;
-    NormParamType normParamType;
-    NormParamType normQuantParamType;
+    // activation
     atb::infer::ActivationParam activationParam;
+    // down
+    bool downHasBias = false;
+    bool supportLcoc = false;
     atb_speed::common::TensorParallelInfo downLinearTensorParallelInfo;
 };
 

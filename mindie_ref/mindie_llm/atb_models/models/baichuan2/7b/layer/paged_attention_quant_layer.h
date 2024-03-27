@@ -39,9 +39,11 @@ struct PAQuantLayerParam {
     bool isPack = true;
     bool supportSwiGLU = false;
     int quantType = 0;
+    int layerId = 0;
     int numAttentionHeadsPerRank = 0;
     int hiddenSizePerAttentionHead = 0;
     int numKeyValueHeadsPerRank = 0;
+    bool supportLcoc = false;
     std::vector<int> seqLen;
     std::vector<int> tokenOffset;
     std::vector<int> packQuantType = {};  // 两个元素，第一个元素代表QKV pack的量化类型，第二个元素代表MLP pack的量化类型
@@ -51,7 +53,8 @@ struct PAQuantLayerParam {
 
 
 enum LayerPATensorId : uint32_t {
-    IN_HIDDEN_STATES = 0, // shape: FA: [batchSize, seqLen, maxPositionEmbeddings] PA: [seqLen, hiddenSize]
+    IN_RESIDUAL_ADD_OUT = 0,
+    IN_HIDDEN_STATES, // shape: FA: [batchSize, seqLen, maxPositionEmbeddings] PA: [seqLen, hiddenSize]
     IN_INPUT_NORM_WEIGHT, // shape: [hiddenSize]
     IN_INPUT_NORM_BIAS,
     IN_INPUT_NORM_NEW_WEIGHT,
@@ -124,11 +127,11 @@ enum LayerPATensorId : uint32_t {
     IN_BLOCK_TABLES, // shape: [seqLen, seqLen]; PA所需参数
     IN_SLOTS,        // shape: [seqLen]; PA所需参数
 
-    OUT_DECODER_LAYER, // shape: FA: [batchSize, seqLen, maxPositionEmbeddings] PA: [seqLen, hiddenSize]
+    OUT_ATTENTION_RESIDUAL_ADD,         // shape: FA: [batchSize, seqLen, maxPositionEmbeddings] PA: [seqLen, hiddenSize]
+    OUT_MLP,
 
-    INTERMEDIATE_ATTENTION_OUT,    // shape: PA: [seqLen, hiddenSize]
-    INTERMEDIATE_RESIDUAL_ADD_OUT, // shape: PA: [seqLen, hiddenSize]
-    INTERMEDIATE_MLP_OUT,          // shape: PA: [seqLen, hiddenSize]
+    INTERMEDIATE_RESIDUAL_ADD,
+    INTERMEDIATE_ATTENTION_OUT,         // shape: PA: [seqLen, hiddenSize]
 };
 
 

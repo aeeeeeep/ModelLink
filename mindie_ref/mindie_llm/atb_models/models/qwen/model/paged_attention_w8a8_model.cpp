@@ -20,6 +20,7 @@
 #include "layers/operations/lmhead.h"
 #include "layers/operations/word_embedding.h"
 #include "layers/operations/positional_embedding.h"
+#include "layers/operations/add_norm.h"
 #include "models/qwen/layer/paged_attention_w8a8_layer.h"
 #include "models/qwen/model/paged_attention_w8a8_model.h"
 
@@ -166,7 +167,7 @@ int64_t PAW8A8Model::BuildGraph()
     const int nodeSize = param_.numHiddenLayers + OPERATION_COUNT_BEFORE_LAYER + OPERATION_COUNT_AFTER_LAYER;
     graph_.nodes.resize(nodeSize);
 
-    const int internalTensorSize = graph_.nodes.size();
+    const int internalTensorSize = 1 + 2 + param_.numHiddenLayers * 2 + 2;
     graph_.internalTensors.resize(internalTensorSize);
 
     ATB_LOG(INFO) << "weightTensors.size=" << graph_.weightTensors.size()
@@ -211,8 +212,8 @@ int64_t PAW8A8Model::BuildGraph()
     };
     ATB_LOG(INFO) << "[+] peGatherNode";
 
-    atb::Tensor *firstInTensor = &graph_.internalTensors.at(INTERNAL_HIDDENSTATES);
-
+    atb::Tensor *firstInTensor = &graph_.inTensors.at(IN_PLACEHOLDER);
+    atb::Tensor *secondInTensor = &graph_.internalTensors.at(INTERNAL_HIDDENSTATES);
     // layers
     for (int layerId = 0; layerId < param_.numHiddenLayers; ++layerId) {
         auto &layerNode = graph_.nodes.at(nodeId++);
@@ -225,6 +226,7 @@ int64_t PAW8A8Model::BuildGraph()
         layerParam.linearQuantType = param_.linearQuantType[layerId];
         layerParam.supportLcoc = param_.supportLcoc;
         layerParam.rmsNormEps = param_.rmsNormEps;
+        layerParam.layerId = layerId;
         layerParam.numAttentionHeadsPerRank = param_.numAttentionHeadsPerRank;
         layerParam.hiddenSizePerAttentionHead = param_.hiddenSizePerAttentionHead;
         layerParam.numKeyValueHeadsPerRank = param_.numKeyValueHeadsPerRank;
@@ -237,6 +239,7 @@ int64_t PAW8A8Model::BuildGraph()
 
         size_t inTensorId = 0;
         layerNode.inTensors.at(inTensorId++) = firstInTensor;
+        layerNode.inTensors.at(inTensorId++) = secondInTensor;
         for (size_t weightTensorId = 0; weightTensorId < WEIGHT_COUNT_PER_LAYER; ++weightTensorId) {
             layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(
                 layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId + WEIGHT_COUNT_WORD_EMBEDDINGNODE);
@@ -251,22 +254,37 @@ int64_t PAW8A8Model::BuildGraph()
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_INPUT_LENGTHS);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_PLACEHOLDER);
 
-        layerNode.outTensors = {&graph_.internalTensors.at(INTERNAL_TENSOR_MAX + layerId)};
+        layerNode.outTensors = {
+            &graph_.internalTensors.at(INTERNAL_TENSOR_MAX + layerId),
+            &graph_.internalTensors.at(INTERNAL_TENSOR_MAX + param_.numHiddenLayers + layerId)
+        };
         ATB_LOG(INFO) << "[+] layerNode_" << layerId;
         firstInTensor = layerNode.outTensors.at(0);
+        secondInTensor = layerNode.outTensors.at(1);
     }
 
-    auto &finalNormNode = graph_.nodes.at(nodeId++);
+    auto &addNormNode = graph_.nodes.at(nodeId++);
     atb::infer::RmsNormParam finalNormParam;
-    finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    finalNormParam.normParam.epsilon = param_.rmsNormEps;
-    CREATE_OPERATION(finalNormParam, &op);
-    finalNormNode.operation.reset(op);
+    finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_PRENORM;
+    finalNormParam.preNormParam.epsilon = param_.rmsNormEps;
+    atb_speed::common::AddNormParam<atb::infer::RmsNormParam> addNormParam;
+    addNormParam.addNormType = atb_speed::common::AddNormType::FUSION_ADD_NORM;
+    addNormParam.normParamType = finalNormParam;
+    AddNorm(addNormParam, &op);
+    addNormNode.operation.reset(op);
     const int finalLayerNormWeightTensorId =
         graph_.weightTensors.size() - WEIGHT_COUNT_POST_NORM - WEIGHT_COUNT_LM_HEAD;
-    finalNormNode.inTensors = {firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId)};
-    finalNormNode.outTensors = {
-        // shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
+    addNormNode.inTensors = {
+        firstInTensor, secondInTensor,
+        &graph_.weightTensors.at(finalLayerNormWeightTensorId),
+        &graph_.inTensors.at(IN_PLACEHOLDER),
+        &graph_.inTensors.at(IN_PLACEHOLDER),
+        &graph_.inTensors.at(IN_PLACEHOLDER),
+        &graph_.inTensors.at(IN_PLACEHOLDER),
+        &graph_.inTensors.at(IN_PLACEHOLDER),
+    };
+    addNormNode.outTensors = {
+        &graph_.internalTensors.at(internalTensorSize - 2),
         &graph_.internalTensors.at(internalTensorSize - 1)
     };
     ATB_LOG(INFO) << "[+] finalNormNode";
@@ -288,7 +306,7 @@ int64_t PAW8A8Model::BuildGraph()
     lmHeadNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - WEIGHT_COUNT_LM_HEAD;
     lmHeadNode.inTensors = {
-        &graph_.internalTensors.at(internalTensorSize - 1),
+        &graph_.internalTensors.at(internalTensorSize - 2),
         // shape: [vocabSizePerRank, hiddenSize]
         &graph_.weightTensors.at(finalLinearWeightTensorId),
         // LmHead未接入量化，量化权重使用placeholder代替
@@ -331,7 +349,7 @@ atb::Status PAW8A8Model::BindParamHostTensor(uint32_t nodeId)
     }
 
     auto &node = graph_.nodes.at(nodeId);
-    const uint32_t seqLenTensorId = 58;
+    const uint32_t seqLenTensorId = 59;
     node.variantPack.inTensors.at(seqLenTensorId).hostData = seqLen_.data();
     ATB_LOG(INFO) << "BindParamHostTensor end";
     return atb::NO_ERROR;

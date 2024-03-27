@@ -120,7 +120,7 @@ atb::Status CreateLinearParallel(const LinearParallelParam &param, atb::Operatio
             outTensorDescs.at(0).shape.dims[dimLast] \
                 = inTensorDescs.at(1).shape.dims[0] * param.tensorParallelInfo.worldSize;
         } else {
-            if (param.fusionLinearParam.quantType == W8A16) {
+            if (param.fusionLinearParam.quantType == LINEAR_W8A16_QUANT) {
                 outTensorDescs.at(0).shape.dims[dimLast] = inTensorDescs.at(IN_WEIGHT).shape.dims[1];
             } else if (param.fusionLinearParam.quantType == LINEAR_W8A8_SC_DEQUANT \
                 || param.fusionLinearParam.quantType == LINEAR_W8A8_SC_QUANT) {
@@ -191,7 +191,9 @@ atb::Status LinearParallel(const LinearParallelParam &param_, atb::Operation **o
     if (param_.tensorParallelInfo.worldSize <= 1) {
         return FusionLinear(param_.fusionLinearParam, operation);
     } else if (param_.parallelType == ROW_PARALLEL) {
-        if (param_.tensorParallelInfo.backend == "lccl" && param_.supportLcoc && param_.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::NO_QUANT) {
+        if (param_.tensorParallelInfo.backend == "lccl" \
+            && param_.supportLcoc \
+            && param_.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::LINEAR_NO_QUANT) {
             return CreateLinearParallelLcoc(param_, operation);
         }
         return CreateLinearParallel(param_, operation);

@@ -18,6 +18,7 @@
 #include <nlohmann/json.hpp>
 
 #include "atb_speed/log.h"
+#include "layers/operations/add_norm.h"
 #include "layers/operations/word_embedding.h"
 #include "layers/operations/lmhead.h"
 
@@ -50,6 +51,11 @@ enum InTensorId : int {
     IN_TENSOR_LOGTIS_INDICES,
     IN_TENSOR_PLACE_HOLDER,
     IN_TENSOR_MAX,
+};
+
+enum InternalTensorId : int {
+    INTERNAL_HIDDENSTATES = 0,
+    INTERNAL_TENSOR_MAX,
 };
 
 enum OutTensorId : int {
@@ -150,8 +156,9 @@ int64_t PagedAttentionQuantModel::BuildGraph()
     ATB_LOG(INFO) << "Baichuan2_13BPAQuantModel nodeSize is " << nodeSize;
     graph_.nodes.resize(nodeSize);
 
-    graph_.internalTensors.resize(nodeSize - 1);
-
+    // intertensor count
+    const int internalTensorSize = 1 + param_.numHiddenLayers * 2 + 2;  // // wordembedding(1) + layer * 2 + finalNorm(2)
+    graph_.internalTensors.resize(internalTensorSize); 
     graph_.kCacheTensors.resize(param_.numHiddenLayers);
     graph_.vCacheTensors.resize(param_.numHiddenLayers);
     
@@ -170,10 +177,11 @@ int64_t PagedAttentionQuantModel::BuildGraph()
         &graph_.weightTensors.at(0),                    // shape: [vocabSize + 1, hiddenSize]
         &graph_.inTensors.at(IN_TENSOR_INPUT_IDS)
     };
-    wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(0)};
+    wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(INTERNAL_HIDDENSTATES)};
 
     // node 1-40:layer
-    atb::Tensor *firstInTensor = &graph_.internalTensors.at(0);
+    atb::Tensor *firstInTensor = &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER);
+    atb::Tensor *secondInTensor = &graph_.internalTensors.at(INTERNAL_HIDDENSTATES);
     for (int layerId = 0; layerId < param_.numHiddenLayers; ++layerId) {
         auto &layerNode = graph_.nodes.at(nodeId++);
         atb_speed::baichuan2_13b::PAQuantLayerParam layerParam;
@@ -191,12 +199,14 @@ int64_t PagedAttentionQuantModel::BuildGraph()
         layerParam.worldSize = param_.worldSize;
         layerParam.backend = param_.backend;
         layerParam.supportLcoc = param_.supportLcoc;
+        layerParam.layerId = layerId;  // layer传入
         atb_speed::baichuan2_13b::PAQuantLayer(layerParam, &op);  
 
         layerNode.operation.reset(op);
         layerNode.inTensors.resize(layerNode.operation->GetInputNum());
         size_t inTensorId = 0;
         layerNode.inTensors.at(inTensorId++) = firstInTensor;
+        layerNode.inTensors.at(inTensorId++) = secondInTensor;
         for (size_t weightTensorId = 0; weightTensorId < WEIGHT_COUNT_PER_LAYER; ++weightTensorId) {  // weightTensor的输出个数
             layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(
                 layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId + WEIGHT_COUNT_WORD_EMBEDDINGNODE);
@@ -210,24 +220,41 @@ int64_t PagedAttentionQuantModel::BuildGraph()
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SLOTS);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER);
 
-        layerNode.outTensors = {&graph_.internalTensors.at(1 + layerId)};
+        layerNode.outTensors = {
+            &graph_.internalTensors.at(INTERNAL_TENSOR_MAX + layerId),   //
+            &graph_.internalTensors.at(INTERNAL_TENSOR_MAX + param_.numHiddenLayers + layerId),  //
+            };
+        ATB_LOG(INFO) << "[+] layerNode_" << layerId;
         firstInTensor = layerNode.outTensors.at(0);
+        secondInTensor = layerNode.outTensors.at(1);
     }
 
-    // node41 : final norm
-    auto &finalNormNode = graph_.nodes.at(nodeId++);
+    // node 41 : add + final Norm
+    auto &addNormNode = graph_.nodes.at(nodeId++);
     atb::infer::RmsNormParam finalNormParam;
-    finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    finalNormParam.normParam.epsilon = param_.rmsNormEps;
-    CREATE_OPERATION(finalNormParam, &op);
-    finalNormNode.operation.reset(op);
+    finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_PRENORM;  //
+    finalNormParam.preNormParam.epsilon = param_.rmsNormEps;
+    atb_speed::common::AddNormParam<atb::infer::RmsNormParam> addNormParam;
+    addNormParam.addNormType = atb_speed::common::AddNormType::FUSION_ADD_NORM;
+    addNormParam.normParamType = finalNormParam;
+    AddNorm(addNormParam, &op);
+    addNormNode.operation.reset(op);
     const int finalLayerNormWeightTensorId =
         graph_.weightTensors.size() - WEIGHT_COUNT_POST_NORM - WEIGHT_COUNT_LM_HEAD;
-    finalNormNode.inTensors = {firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId)};
-    finalNormNode.outTensors = {
-        // PA: [seqLen, hiddenSize]
-        &graph_.internalTensors.at(41)
+    addNormNode.inTensors = {
+        firstInTensor, secondInTensor,  // residual 、add
+        &graph_.weightTensors.at(finalLayerNormWeightTensorId),
+        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
+        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
+        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
+        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
+        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
     };
+    addNormNode.outTensors = {
+        &graph_.internalTensors.at(internalTensorSize - 2),
+        &graph_.internalTensors.at(internalTensorSize - 1)
+    };
+
     // node42 : lm_head映射
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
     atb_speed::common::LmHeadParam lmHeadParam;
@@ -246,7 +273,7 @@ int64_t PagedAttentionQuantModel::BuildGraph()
     lmHeadNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - WEIGHT_COUNT_LM_HEAD;
     lmHeadNode.inTensors = {
-        &graph_.internalTensors.at(41),
+        &graph_.internalTensors.at(internalTensorSize - 1),
         // shape: [vocabSizePerRank, hiddenSize]
         &graph_.weightTensors.at(finalLinearWeightTensorId),
         // LmHead未接入量化，量化权重使用placeholder代替
@@ -259,7 +286,7 @@ int64_t PagedAttentionQuantModel::BuildGraph()
     };
     // shpae: FA: [batchSize, seqLen, vocabSize] PA: [seqLen, vocabSize]
     lmHeadNode.outTensors = {&graph_.outTensors.at(0)};
-
+    ATB_LOG(INFO) << "[+] lmHeadNode";
     ATB_LOG(INFO) << "PagedAttentionQuantModel build graph success";
     return atb::NO_ERROR;
 }
@@ -288,7 +315,7 @@ atb::Status PagedAttentionQuantModel::BindParamHostTensor(uint32_t nodeId)
     }
 
     auto &node = graph_.nodes.at(nodeId);
-    const uint32_t seqLenTensorId = 47; // IN_INPUT_LENGTHS
+    const uint32_t seqLenTensorId = 48; // IN_INPUT_LENGTHS
     node.variantPack.inTensors.at(seqLenTensorId).hostData = seqLen_.data();
     ATB_LOG(INFO) << "BindParamHostTensor end";
     return atb::NO_ERROR;

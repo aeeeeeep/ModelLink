@@ -40,6 +40,8 @@ public:
         // 0 - No quant; 1- Quant in RmsNorm，dequant in Linear; 2 - Both quant and dequant in Linear
         bool supportSwiGLU = false;
         // MLP是否使用SwiGLU，若为true时，则使用；反之，使用swish
+        // support lcoc
+        bool supportLcoc = false;
         int numAttentionHeadsPerRank = 0;
         int hiddenSizePerAttentionHead = 0;
         int numHiddenLayers = 0;

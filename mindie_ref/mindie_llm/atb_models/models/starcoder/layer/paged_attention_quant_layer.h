@@ -35,6 +35,7 @@ struct PAQuantLayerParam {
     int numAttentionHeadsPerRank = 0;
     int hiddenSizePerAttentionHead = 0;
     int numKeyValueHeadsPerRank = 0;
+    int layerId = 0;
     bool isFA = true;
     bool isPrefill = false;
     bool isBF16 = false;
@@ -48,8 +49,9 @@ struct PAQuantLayerParam {
     std::vector<int> linearQuantType = {};
 };
 
-enum PAQuantLayerTensorId : int {
-    IN_HIDDEN_STATES = 0,               // shape: FA: [batchSize, seqLen, maxPositionEmbeddings] PA: [seqLen, hiddenSize]
+enum PAQuantLayerTensorId : uint32_t {
+    IN_RESIDUAL_ADD_OUT = 0,
+    IN_HIDDEN_STATES,                   // shape: FA: [batchSize, seqLen, maxPositionEmbeddings] PA: [seqLen, hiddenSize]
     IN_INPUT_NORM_WEIGHT,               // 6144
     IN_INPUT_NORM_BIAS,                 // 6144
     IN_INPUT_NORM_NEW_WEIGHT,
@@ -110,11 +112,10 @@ enum PAQuantLayerTensorId : int {
     IN_K_CACHE,                         // shape: FA: [batchSize, maxPositionEmbeddings, numKeyValueHeadsPerRank * hiddenSizePerAttentionHead] PA: [2622, hiddenSizePerAttentionHead, numAttentionHeadsPerRank, hiddenSizePerAttentionHead]
     IN_V_CACHE,                         // shape: FA: [batchSize, maxPositionEmbeddings, numKeyValueHeadsPerRank * hiddenSizePerAttentionHead] PA: [2622, hidd
     
-    OUT_DECODER_LAYER,                  // shape: FA: [batchSize, seqLen, maxPositionEmbeddings] PA: [seqLen, hiddenSize]
+    OUT_ATTENTION_RESIDUAL_ADD,         // shape: FA: [batchSize, seqLen, maxPositionEmbeddings] PA: [seqLen, hiddenSize]
+    OUT_MLP,
 
     INTERMEDIATE_ATTENTION_OUT,         // shape: PA: [seqLen, hiddenSize]
-    INTERMEDIATE_RESIDUAL_ADD_OUT,      // shape: PA: [seqLen, hiddenSize]
-    INTERMEDIATE_MLP_OUT,               // shape: PA: [seqLen, hiddenSize]
 };
 
 atb::Status PAQuantLayer(const PAQuantLayerParam &param, atb::Operation **operation);

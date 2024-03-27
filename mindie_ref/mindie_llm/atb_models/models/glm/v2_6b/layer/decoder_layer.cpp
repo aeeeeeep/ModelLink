@@ -26,10 +26,10 @@
 namespace atb_speed {
 namespace glm_v2_6b {
 
-static const uint64_t IN_TENSOR_COUNT = 62;
-static const uint64_t OUT_TENSOR_COUNT = 1;
-static const uint64_t INTERMEDIATE_TENSOR_COUNT = 3;
-static const uint64_t NODE_COUNT = 4;
+static const uint64_t IN_TENSOR_COUNT = 63;
+static const uint64_t OUT_TENSOR_COUNT = 2;
+static const uint64_t INTERMEDIATE_TENSOR_COUNT = 2;
+static const uint64_t NODE_COUNT = 2;
 
 atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operation)
 {
@@ -42,9 +42,27 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
 
     size_t nodeId = 0;
     atb::Node &attentionNode = opGraph.nodes.at(nodeId++);
-    atb::Node &selfResidualAddNode = opGraph.nodes.at(nodeId++);
     atb::Node &mlpParallelNode = opGraph.nodes.at(nodeId++);
-    atb::Node &mlpResidualAddNode = opGraph.nodes.at(nodeId++);
+
+    atb::infer::RmsNormParam attenRmsNormParam;
+    if (param.layerId == 0) {
+        attenRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+        attenRmsNormParam.normParam.epsilon = param.rmsNormEps;
+    } else {
+        attenRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_PRENORM;
+        attenRmsNormParam.preNormParam.epsilon = param.rmsNormEps;
+    }
+
+    atb::infer::RmsNormParam attenRmsNormQuantParam;
+    if (param.layerId == 0) {
+        attenRmsNormQuantParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+        attenRmsNormQuantParam.normParam.epsilon = param.rmsNormEps;
+        attenRmsNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
+    } else {
+        attenRmsNormQuantParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_PRENORM;
+        attenRmsNormQuantParam.preNormParam.epsilon = param.rmsNormEps;
+        attenRmsNormQuantParam.preNormParam.quantType = atb::infer::QUANT_INT8;
+    }
 
     atb_speed::common::FusionAttentionParam<atb::infer::RmsNormParam> fusionAttentionParam;
 
@@ -55,16 +73,10 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     fusionAttentionParam.layerLinearQuantType = param.linearQuantType;
     fusionAttentionParam.qkvHasBias = true;
 
-    // rmsNorm param
-    atb::infer::RmsNormParam attenRmsNormParam;
-    attenRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    attenRmsNormParam.normParam.epsilon = param.rmsNormEps;
     fusionAttentionParam.normParamType = attenRmsNormParam;
-    atb::infer::RmsNormParam attenRmsNormQuantParam;
-    attenRmsNormQuantParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    attenRmsNormQuantParam.normParam.epsilon = param.rmsNormEps;
-    attenRmsNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
     fusionAttentionParam.normQuantParamType = attenRmsNormQuantParam;
+    fusionAttentionParam.addNormType = param.layerId == 0 ? \
+        atb_speed::common::AddNormType::NORM_ONLY : atb_speed::common::AddNormType::FUSION_ADD_NORM;
 
     // rope param
     fusionAttentionParam.rotaryType = atb_speed::common::RotaryType::HALF_ROTARY;
@@ -94,12 +106,11 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
         fusionAttentionParam.selfAttentionParam.calcType = param.isPrefill ? \
             atb::infer::SelfAttentionParam::CalcType::ENCODER : atb::infer::SelfAttentionParam::CalcType::DECODER;
     } else {
+        fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
         fusionAttentionParam.selfAttentionParam.calcType = atb::infer::SelfAttentionParam::CalcType::PA_ENCODER;
     }
 
     fusionAttentionParam.selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
-
-    fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
 
     fusionAttentionParam.pageAttentionParam.headNum = param.numAttentionHeadsPerRank;
     fusionAttentionParam.pageAttentionParam.kvHeadNum = param.numKeyValueHeadsPerRank;
@@ -113,6 +124,7 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     fusionAttentionParam.selfOutLinearTensorParallelInfo = {param.rank, param.worldSize, param.backend};
     Attention(fusionAttentionParam, &attentionNode.operation);
     attentionNode.inTensorIds = {
+        IN_RESIDUAL_ADD_OUT,
         IN_HIDDEN_STATES,
         IN_INPUT_NORM_WEIGHT,
         IN_INPUT_NORM_BIAS,
@@ -153,16 +165,16 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
         IN_ATTENTION_OUT_DEOFFSET,
         IN_ATTENTION_OUT_COMPRESS_IDX,
     };
-    attentionNode.outTensorIds = {INTERMEDIATE_ATTENTION_OUT};
+    attentionNode.outTensorIds = {INTERMEDIATE_RESIDUAL_ADD, INTERMEDIATE_ATTENTION_OUT};
 
-    atb::infer::ElewiseParam addParam;
-    addParam.elewiseType = atb::infer::ElewiseParam::ElewiseType::ELEWISE_ADD;
-    CREATE_OPERATION(addParam, &selfResidualAddNode.operation);
-    selfResidualAddNode.inTensorIds = {
-        IN_HIDDEN_STATES,
-        INTERMEDIATE_ATTENTION_OUT
-    };
-    selfResidualAddNode.outTensorIds = {INTERMEDIATE_RESIDUAL_ADD_OUT};
+    atb::infer::RmsNormParam mlpRmsNormParam;
+    mlpRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_PRENORM;
+    mlpRmsNormParam.preNormParam.epsilon = param.rmsNormEps;
+
+    atb::infer::RmsNormParam mlpRmsNormQuantParam;
+    mlpRmsNormQuantParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_PRENORM;
+    mlpRmsNormQuantParam.preNormParam.epsilon = param.rmsNormEps;
+    mlpRmsNormQuantParam.preNormParam.quantType = atb::infer::QUANT_INT8;
 
     atb_speed::common::MlpParam<atb::infer::RmsNormParam> mlpParam;
     mlpParam.isBF16 = param.isBF16;
@@ -170,15 +182,9 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     mlpParam.layerLinearQuantType = param.linearQuantType;
     // gate up
     mlpParam.mlpPackType = atb_speed::common::GetMlpPackType(param.packQuantType[1], false);
-    atb::infer::RmsNormParam mlpRmsNormParam;
-    mlpRmsNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    mlpRmsNormParam.normParam.epsilon = param.rmsNormEps;
     mlpParam.normParamType = mlpRmsNormParam;
-    atb::infer::RmsNormParam mlpRmsNormQuantParam;
-    mlpRmsNormQuantParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    mlpRmsNormQuantParam.normParam.epsilon = param.rmsNormEps;
-    mlpRmsNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
     mlpParam.normQuantParamType = mlpRmsNormQuantParam;
+    mlpParam.addNormType = atb_speed::common::AddNormType::FUSION_ADD_NORM;
     mlpParam.downLinearTensorParallelInfo = {param.rank, param.worldSize, param.backend};
     if (param.supportSwiGLU) {
         mlpParam.activationParam.activationType = atb::infer::ActivationType::ACTIVATION_SWIGLU_FORWARD;
@@ -190,7 +196,8 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     }
 
     mlpParallelNode.inTensorIds = {
-        INTERMEDIATE_RESIDUAL_ADD_OUT,
+        param.layerId == 0 ? IN_HIDDEN_STATES : INTERMEDIATE_RESIDUAL_ADD,
+        INTERMEDIATE_ATTENTION_OUT,
         IN_ATTENTION_NORM_WEIGHT,
         IN_ATTENTION_NORM_BIAS,
         IN_ATTENTION_NORM_NEW_WEIGHT,
@@ -214,18 +221,12 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
         IN_MLP_DOWN_DEOFFSET,
         IN_MLP_DOWN_COMPRESS_IDX
     };
-    mlpParallelNode.outTensorIds = {INTERMEDIATE_MLP_OUT};
-
-    CREATE_OPERATION(addParam, &mlpResidualAddNode.operation);
-    mlpResidualAddNode.inTensorIds = {
-        INTERMEDIATE_RESIDUAL_ADD_OUT,
-        INTERMEDIATE_MLP_OUT
-    };
-    mlpResidualAddNode.outTensorIds = {OUT_DECODER_LAYER};
+    mlpParallelNode.outTensorIds = {OUT_ATTENTION_RESIDUAL_ADD, OUT_MLP};
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
-        outTensorDescs.at(0) = inTensorDescs.at(0);
+        outTensorDescs.at(0) = inTensorDescs.at(IN_HIDDEN_STATES);
+        outTensorDescs.at(1) = inTensorDescs.at(IN_HIDDEN_STATES);
         return atb::NO_ERROR;
     };
 

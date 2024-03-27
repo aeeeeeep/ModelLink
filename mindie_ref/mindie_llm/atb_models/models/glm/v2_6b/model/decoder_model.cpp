@@ -19,6 +19,7 @@
 #include "atb_speed/log.h"
 #include "layers/operations/word_embedding.h"
 #include "layers/operations/positional_embedding.h"
+#include "layers/operations/add_norm.h"
 #include "layers/operations/lmhead.h"
 #include "models/glm/v2_6b/layer/decoder_layer.h"
 #include "models/glm/v2_6b/model/decoder_model.h"
@@ -170,10 +171,7 @@ int64_t DecoderModel::BuildGraph()
     // idx: 2, shape: [batchSize * seqLen, hiddenSizePerAttentionHead]
     int INTERNEL_TENSOR_SIN_EMB = internelTensorIdx++;
     // idx: [3, 3 + numHiddenLayers), shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
-    int INTERNEL_TENSOR_LAYER_OUT_BASE = internelTensorIdx++;
-    internelTensorIdx = internelTensorIdx + param_.numHiddenLayers - 1;
-    // idx: 3 + numHiddenLayers, shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
-    int INTERNEL_TENSOR_FINAL_NORM_OUT = internelTensorIdx++;
+    int INTERNEL_TENSOR_RESIDUAL_ADD_OUT = internelTensorIdx++;
 
     // set size
     const int weightTensorSize =
@@ -225,7 +223,8 @@ int64_t DecoderModel::BuildGraph()
         &graph_.internalTensors.at(INTERNEL_TENSOR_SIN_EMB)
     };
     
-    atb::Tensor *firstInTensor = &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES);
+    atb::Tensor *firstInTensor = &graph_.inTensors.at(INTERNEL_TENSOR_HIDDEN_STATES);
+    atb::Tensor *secondInTensor = &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES);
 
     for (int layerId = 0; layerId < param_.numHiddenLayers; ++layerId) {
         auto &layerNode = graph_.nodes.at(nodeId++);
@@ -238,6 +237,7 @@ int64_t DecoderModel::BuildGraph()
         layerParam.linearQuantType = param_.linearQuantType[layerId];
 
         layerParam.rmsNormEps = param_.rmsNormEps;
+        layerParam.layerId = layerId;
         layerParam.numAttentionHeadsPerRank = param_.numAttentionHeadsPerRank;
         layerParam.hiddenSizePerAttentionHead = param_.hiddenSizePerAttentionHead;
         layerParam.numKeyValueHeadsPerRank = param_.numKeyValueHeadsPerRank;
@@ -256,6 +256,7 @@ int64_t DecoderModel::BuildGraph()
 
         size_t inTensorId = 0;
         layerNode.inTensors.at(inTensorId++) = firstInTensor;
+        layerNode.inTensors.at(inTensorId++) = secondInTensor;
         for (size_t weightTensorId = 0; weightTensorId < WEIGHT_COUNT_PER_LAYER; ++weightTensorId) {
             layerNode.inTensors.at(inTensorId++) = &graph_.weightTensors.at(
                 layerId * WEIGHT_COUNT_PER_LAYER + weightTensorId + WEIGHT_COUNT_WORD_EMBEDDINGNODE);
@@ -275,23 +276,44 @@ int64_t DecoderModel::BuildGraph()
 
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_BLOCK_TABLES);
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SLOTS);
-        layerNode.outTensors = {&graph_.internalTensors.at(INTERNEL_TENSOR_LAYER_OUT_BASE + layerId)};
+        layerNode.outTensors = {
+            &graph_.internalTensors.at(INTERNEL_TENSOR_RESIDUAL_ADD_OUT),
+            &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES),
+        };
 
         firstInTensor = layerNode.outTensors.at(0);
+        secondInTensor = layerNode.outTensors.at(1);
     }
 
-    auto &finalNormNode = graph_.nodes.at(nodeId++);
+    auto &addNormNode = graph_.nodes.at(nodeId++);
     atb::infer::RmsNormParam finalNormParam;
-    finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
-    finalNormParam.normParam.epsilon = param_.rmsNormEps;
-    CREATE_OPERATION(finalNormParam, &op);
-    finalNormNode.operation.reset(op);
+    // finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_NORM;
+    // finalNormParam.normParam.epsilon = param_.rmsNormEps;
+    // CREATE_OPERATION(finalNormParam, &op);
+    // finalNormNode.operation.reset(op);
+    finalNormParam.layerType = atb::infer::RmsNormParam::RmsNormType::RMS_NORM_PRENORM;
+    finalNormParam.preNormParam.epsilon = param_.rmsNormEps;
+
+    atb_speed::common::AddNormParam<atb::infer::RmsNormParam> addNormParam;
+    addNormParam.addNormType = atb_speed::common::AddNormType::FUSION_ADD_NORM;
+    addNormParam.normParamType = finalNormParam;
+    AddNorm(addNormParam, &op);
+    addNormNode.operation.reset(op);
     const int finalLayerNormWeightTensorId =
         graph_.weightTensors.size() - WEIGHT_COUNT_POST_NORM - WEIGHT_COUNT_LM_HEAD;
-    finalNormNode.inTensors = {firstInTensor, &graph_.weightTensors.at(finalLayerNormWeightTensorId)};
-    finalNormNode.outTensors = {
+    addNormNode.inTensors = {
+        firstInTensor, secondInTensor,
+        &graph_.weightTensors.at(finalLayerNormWeightTensorId),
+        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
+        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
+        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
+        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
+        &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER),
+    };
+    addNormNode.outTensors = {
         // shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
-        &graph_.internalTensors.at(INTERNEL_TENSOR_FINAL_NORM_OUT)
+        &graph_.internalTensors.at(INTERNEL_TENSOR_RESIDUAL_ADD_OUT),
+        &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)
     };
 
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
@@ -312,7 +334,7 @@ int64_t DecoderModel::BuildGraph()
     lmHeadNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - WEIGHT_COUNT_LM_HEAD;
     lmHeadNode.inTensors = {
-        &graph_.internalTensors.at(INTERNEL_TENSOR_FINAL_NORM_OUT),
+        &graph_.internalTensors.at(INTERNEL_TENSOR_RESIDUAL_ADD_OUT),
         // shape: [vocabSizePerRank, hiddenSize]
         &graph_.weightTensors.at(finalLinearWeightTensorId),
         // LmHead未接入量化，量化权重使用placeholder代替

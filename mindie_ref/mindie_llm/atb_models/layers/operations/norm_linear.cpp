@@ -19,15 +19,14 @@
 namespace atb_speed {
 namespace common {
 
-static const uint64_t IN_TENSOR_COUNT = 11;
-static const uint64_t OUT_TENSOR_COUNT = 1;
+static const uint64_t IN_TENSOR_COUNT = 12;
+static const uint64_t OUT_TENSOR_COUNT = 2;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 1;
-static const uint64_t SKIP_NORM_INTERMEDIATE_TENSOR_COUNT = 0;
 static const uint64_t NODE_COUNT = 2;
-static const uint64_t SKIP_NORM_NODE_COUNT = 1;
 
 enum NormLinearTensorIdx : uint32_t {
-    IN_INPUT = 0,
+    IN_RESIDUAL_INPUT = 0,
+    IN_INPUT,
     IN_NORM_WEIGHT,
     IN_NORM_BIAS,
     IN_NORM_NEW_WEIGHT,
@@ -38,6 +37,7 @@ enum NormLinearTensorIdx : uint32_t {
     IN_DESCALE,
     IN_BIAS,
     IN_COMPRESS_IDX,
+    OUT_NEXT_RESIDUAL_IN,
     OUT_LINEAR,
     INTERMEDIATE_NORM,
 };
@@ -48,62 +48,54 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
-    opGraph.internalTensorNum = param.skipNorm ? SKIP_NORM_INTERMEDIATE_TENSOR_COUNT : INTERMEDIATE_TENSOR_COUNT;
-    opGraph.nodes.resize(param.skipNorm ? SKIP_NORM_NODE_COUNT : NODE_COUNT);
+    opGraph.internalTensorNum = param.nextResidualAddIn == NORM_OUT ? 0 : INTERMEDIATE_TENSOR_COUNT;
+    opGraph.nodes.resize(NODE_COUNT);
     opGraph.name = "NormLinear";
 
     size_t nodeId = 0;
 
-    if (!param.skipNorm) {
-        atb::Node &normNode = opGraph.nodes.at(nodeId++);
-        if (param.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::LINEAR_W8A8_DEQUANT \
-            || param.fusionLinearParam.quantType == atb_speed::common::LinearQuantType::LINEAR_W8A8_SC_DEQUANT) {  // W8A8
-            CREATE_OPERATION(param.normQuantParamType, &normNode.operation);
-            normNode.inTensorIds = {
-                NormLinearTensorIdx::IN_INPUT,
-                param.isAntiOutlier ? NormLinearTensorIdx::IN_NORM_NEW_WEIGHT : NormLinearTensorIdx::IN_NORM_WEIGHT,
-                param.isAntiOutlier ? NormLinearTensorIdx::IN_NORM_NEW_BIAS : NormLinearTensorIdx::IN_NORM_BIAS,
-                NormLinearTensorIdx::IN_SCALE, NormLinearTensorIdx::IN_OFFSET
-            };
-            normNode.outTensorIds = {INTERMEDIATE_NORM};
-        } else if (param.normHasBias) {  // FP
-            CREATE_OPERATION(param.normParamType, &normNode.operation);
-            normNode.inTensorIds = {NormLinearTensorIdx::IN_INPUT, NormLinearTensorIdx::IN_NORM_WEIGHT, NormLinearTensorIdx::IN_NORM_BIAS};
-            normNode.outTensorIds = {INTERMEDIATE_NORM};
-        } else {  // FP
-            CREATE_OPERATION(param.normParamType, &normNode.operation);
-            normNode.inTensorIds = {NormLinearTensorIdx::IN_INPUT, NormLinearTensorIdx::IN_NORM_WEIGHT};
-            normNode.outTensorIds = {INTERMEDIATE_NORM};
-        }
+    atb::Node &addNormNode = opGraph.nodes.at(nodeId++);
+    AddNorm(param.addNormParam, &addNormNode.operation);
+    addNormNode.inTensorIds = {
+        NormLinearTensorIdx::IN_RESIDUAL_INPUT, NormLinearTensorIdx::IN_INPUT,
+        NormLinearTensorIdx::IN_NORM_WEIGHT, NormLinearTensorIdx::IN_NORM_BIAS,
+        NormLinearTensorIdx::IN_NORM_NEW_WEIGHT, NormLinearTensorIdx::IN_NORM_NEW_BIAS,
+        NormLinearTensorIdx::IN_SCALE, NormLinearTensorIdx::IN_OFFSET,
+    };
+    if (param.nextResidualAddIn == NORM_OUT) {
+        addNormNode.outTensorIds = {NormLinearTensorIdx::OUT_NEXT_RESIDUAL_IN, NormLinearTensorIdx::IN_RESIDUAL_INPUT};
+    } else {
+        addNormNode.outTensorIds = {NormLinearTensorIdx::INTERMEDIATE_NORM, NormLinearTensorIdx::OUT_NEXT_RESIDUAL_IN};
     }
 
     atb::Node &linearNode = opGraph.nodes.at(nodeId++);
-    atb_speed::common::FusionLinearParam linearParam = param.fusionLinearParam;
-    FusionLinear(linearParam, &linearNode.operation);
+    FusionLinear(param.fusionLinearParam, &linearNode.operation);
     linearNode.inTensorIds = {
-        param.skipNorm ? NormLinearTensorIdx::IN_INPUT : NormLinearTensorIdx::INTERMEDIATE_NORM,
+        param.nextResidualAddIn == NORM_OUT ? NormLinearTensorIdx::OUT_NEXT_RESIDUAL_IN : NormLinearTensorIdx::INTERMEDIATE_NORM,
         NormLinearTensorIdx::IN_LINEAR_WEIGHT, NormLinearTensorIdx::IN_SCALE,
         NormLinearTensorIdx::IN_OFFSET, NormLinearTensorIdx::IN_DESCALE, NormLinearTensorIdx::IN_BIAS,
         NormLinearTensorIdx::IN_COMPRESS_IDX
     };
-    linearNode.outTensorIds = {OUT_LINEAR};
+    linearNode.outTensorIds = {NormLinearTensorIdx::OUT_LINEAR};
 
     opGraph.inferShapeFunc = [=](const atb::SVector<atb::TensorDesc> &inTensorDescs,
                                  atb::SVector<atb::TensorDesc> &outTensorDescs) {
-        outTensorDescs.at(0).format = inTensorDescs.at(IN_INPUT).format;
+        outTensorDescs.at(0) = inTensorDescs.at(IN_RESIDUAL_INPUT);
+
+        outTensorDescs.at(1).format = inTensorDescs.at(IN_INPUT).format;
         if (param.fusionLinearParam.isBF16) {
-            outTensorDescs.at(0).dtype = ACL_BF16;
+            outTensorDescs.at(1).dtype = ACL_BF16;
         } else {
-            outTensorDescs.at(0).dtype = ACL_FLOAT16;
+            outTensorDescs.at(1).dtype = ACL_FLOAT16;
         }
-        outTensorDescs.at(0).shape = inTensorDescs.at(0).shape;
+        outTensorDescs.at(1).shape = inTensorDescs.at(IN_INPUT).shape;
         auto outDimSize = outTensorDescs.at(IN_INPUT).shape.dimNum;
-        if (param.fusionLinearParam.quantType == W8A16) {
-            outTensorDescs.at(0).shape.dims[outDimSize - 1] = inTensorDescs.at(IN_LINEAR_WEIGHT).shape.dims[1];
+        if (param.fusionLinearParam.quantType == LINEAR_W8A16_QUANT) {
+            outTensorDescs.at(1).shape.dims[outDimSize - 1] = inTensorDescs.at(IN_LINEAR_WEIGHT).shape.dims[1];
         } else if (param.fusionLinearParam.quantType == LINEAR_W8A8_SC_DEQUANT || param.fusionLinearParam.quantType == LINEAR_W8A8_SC_QUANT) {
-            outTensorDescs.at(0).shape.dims[outDimSize - 1] = inTensorDescs.at(IN_BIAS).shape.dims[0];
+            outTensorDescs.at(1).shape.dims[outDimSize - 1] = inTensorDescs.at(IN_BIAS).shape.dims[0];
         } else {
-            outTensorDescs.at(0).shape.dims[outDimSize - 1] = inTensorDescs.at(IN_LINEAR_WEIGHT).shape.dims[0];
+            outTensorDescs.at(1).shape.dims[outDimSize - 1] = inTensorDescs.at(IN_LINEAR_WEIGHT).shape.dims[0];
         }
         return atb::NO_ERROR;
     };
@@ -115,9 +107,9 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
 LinearQuantType GetLinearQuantType(const int &packQuantType, const int &linearType, bool hasNorm)
 {
     if (linearType == atb_speed::common::LinearType::FP) {
-        return atb_speed::common::LinearQuantType::NO_QUANT;
+        return atb_speed::common::LinearQuantType::LINEAR_NO_QUANT;
     } else if (packQuantType == atb_speed::common::ALL_W8A16) {
-        return atb_speed::common::LinearQuantType::W8A16;
+        return atb_speed::common::LinearQuantType::LINEAR_W8A16_QUANT;
     } else {
         if (packQuantType == atb_speed::common::ALL_W8A8SC || packQuantType == atb_speed::common::MIX_W8A8SC) {
             if (hasNorm) {
@@ -135,8 +127,18 @@ LinearQuantType GetLinearQuantType(const int &packQuantType, const int &linearTy
     }
 }
 
-template atb::Status NormLinear(const NormLinearParam<atb::infer::RmsNormParam> &param, atb::Operation **operation);
+NormQuantType GetNormQuantType(const int &packQuantType)
+{
+    if (packQuantType == PackQuantType::ALL_W8A16 || packQuantType == PackQuantType::ALL_FP) {
+        return NormQuantType::NORM_NO_QUANT;
+    } else if (packQuantType == PackQuantType::ALL_W8A8 || packQuantType == PackQuantType::MIX_W8A8) {
+        return NormQuantType::NORM_QUANT;
+    } else {
+        return NormQuantType::NORM_ANTI_OUTLIER_QUANT;
+    }
+}
 
+template atb::Status NormLinear(const NormLinearParam<atb::infer::RmsNormParam> &param, atb::Operation **operation);
 template atb::Status NormLinear(const NormLinearParam<atb::infer::LayerNormParam> &param, atb::Operation **operation);
 
 } // namespace common
