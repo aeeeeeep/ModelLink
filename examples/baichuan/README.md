@@ -173,6 +173,8 @@ CKPT_LOAD_DIR="./baichuan-7B-mt"
 bash examples/baichuan/pretrain_baichuan_ptd_7B.sh 
 ```
 
+**注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+
 ### 性能
 
 #### 吞吐
@@ -405,6 +407,7 @@ CKPT_LOAD_DIR="./baichuan-13B-mt"
 bash examples/baichuan/pretrain_baichuan_ptd_13B.sh
 ```
 
+**注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
 
 ### 性能
 

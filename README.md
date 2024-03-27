@@ -973,7 +973,8 @@ ModelLink由华为公司的下列部门联合贡献
 
 感谢来自社区的每一个PR，欢迎贡献 ModelLink
 
-## 备注
-
 ---
-- 安全声明: [安全声明](https://gitee.com/ascend/ModelLink/wikis/%E5%AE%89%E5%85%A8%E5%A3%B0%E6%98%8E)
+
+## 安全声明
+
+[ModelLink安全声明](https://gitee.com/ascend/ModelLink/wikis/%E5%AE%89%E5%85%A8%E5%A3%B0%E6%98%8E)
