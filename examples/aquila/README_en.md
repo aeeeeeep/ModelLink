@@ -28,6 +28,8 @@ Here's a hardware summary of pre-training Aquila-7B:
 git clone https://gitee.com/ascend/ModelLink.git
 cd ModelLink
 mkdir logs
+mkdir model_from_hf
+mkdir dataset
 mkdir ckpt
 ```
 
@@ -76,15 +78,15 @@ step2: use Aquila-7B specified tokenizer to pre-process data:
 
 ```shell
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-cd ModelLink/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ./HF_Aquila7B_downloaded \
-    --output-prefix ./dataset/aquila \
+    --tokenizer-name-or-path ./model_from_hf/Aquila-7B/ \
+    --output-prefix ./dataset/Aquila-7B_alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF
 ```
+
 
 5. Weights convert
 
@@ -92,35 +94,32 @@ HuggingFace weights --> Megatron weights
 ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 
 ```shell
-cd ModelLink
-mkdir model_weights
 # please modify the path to set_env.sh based on your environment.
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 python tools/checkpoint/util.py \
     --model-type GPT \
-    --load-dir ./HF_Aquila7B_downloaded \
-    --save-dir ./model_weights/aquila \
+    --load-dir ./model_from_hf/Aquila-7B/ \
+    --save-dir ./model_weights/Aquila-7B-v0.1-tp8-pp1/ \
     --loader llama2_hf \
     --saver megatron \
     --target-tensor-parallel-size 8 \
-    --tokenizer-model ./HF_Aquila7B_downloaded/tokenizer.json
+    --tokenizer-model ./model_from_hf/Aquila-7B/tokenizer.json
 ```
 
 Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
 ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
 ```shell
-cd ModelLink/
 # Modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 python tools/checkpoint/util.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ../HF_Aquila7B-v0.1-pt8-pp1 \
+    --load-dir ./model_weights/Aquila-7B-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ../HF_Aquila7B_downloaded   # <-- Fill in the original HF model path here, new weights will be saved in ../HF_Aquila7B_downloaded/mg2hg
+    --save-dir ./model_from_hf/Aquila-7B/   # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Aquila-7B/mg2hg
 ```
 
 
@@ -129,10 +128,10 @@ python tools/checkpoint/util.py --model-type GPT \
 Config the environment variables in aquila pretrain script 
 ```shell
 # set dataset path, CKPT load path for loading weights, and the tokenizer path
-TOKENIZER_PATH=./HF_Aquila7B_downloaded  #tokenizer path
-DATA_PATH=./dataset/aquila_text_document  #processed dataset
-CKPT_LOAD_DIR=./model_weights/aquila   # pointing to the converted model weights
-CKPT_SAVE_DIR=./ckpt                   # pointing to the path to save checkpoints
+TOKENIZER_PATH="./model_from_hf/Aquila-7B/"  #tokenizer path
+DATA_PATH="./dataset/Aquila-7B_alpaca_text_document"  #processed dataset
+CKPT_LOAD_DIR="./model_weights/Aquila-7B-v0.1-tp8-pp1/"   # pointing to the converted model weights
+CKPT_SAVE_DIR="./ckpt/"                   # pointing to the path to save checkpoints
 ```
 *Note that if you do not load weights for pre-training, you can ignore CKPT_LOAD_DIR, and remove the `--load` parameter from the training script, and vice versa*
 *If you do not want to save weights during pre-training, you can ignore CKPT_SAVE_DIR, and remove the `--save $CKPT_SAVE_DIR` parameter from the training script, and vice versa*
@@ -170,8 +169,8 @@ Inference is different from pre-training because it requires loading the pre-tra
 
 ```shell
 # please change to actual values
-CKPT_LOAD_DIR="./model_weights/aquila/"
-TOKENIZER_PATH="./HF_Aquila7B_downloaded/"
+CKPT_LOAD_DIR="./model_weights/Aquila-7B-v0.1-tp8-pp1/"
+TOKENIZER_PATH="./model_from_hf/Aquila-7B/"
 ```
 
 Start Aquila-7B Inference:
@@ -193,8 +192,8 @@ Evaluation task is similar to inference task too，it also requires loading the 
 After weight conversion is complete, we configure the Aquila-7B evaluation script `tasks/evaluation/evaluate_aquila_7b_ptd.sh`. We need to correctly specify the path to load weights, the path to tokenizer and vocab, and so on (the following example is for reference only)
 
 ```shell
-    CKPT_LOAD_DIR="./model_weights/aquila/"
-    TOKENIZER_PATH="./HF_Aquila7B_downloaded/"
+    CKPT_LOAD_DIR="./model_weights/Aquila-7B-v0.1-tp8-pp1/"
+    TOKENIZER_PATH="./model_from_hf/Aquila-7B/"
     EVAL_DATA_PATH="./boolq/test"
     TASK="boolq"
 ```
