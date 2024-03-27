@@ -302,8 +302,8 @@ class FlashGpt_neoxForCausalLM(FlashGPTNeoXPreTrainedModel):
             "rank": self.tp_rank,
             "rankSize": self.tp_world_size,
             "isPrefill": True,
-            "qScale": 0.1,
-            "qkScale": 10 / math.sqrt(self.head_size),
+            "qScale": 1 / math.sqrt(self.head_size),
+            "qkScale": 1.0,
             "backend": "hccl" if self.soc_info.need_nz else "lccl",
         })
         self.acl_param_decoder = json.dumps({
@@ -315,8 +315,8 @@ class FlashGpt_neoxForCausalLM(FlashGPTNeoXPreTrainedModel):
             "rank": self.tp_rank,
             "rankSize": self.tp_world_size,
             "isPrefill": False,
-            "qScale": 0.1,
-            "qkScale": 10 / math.sqrt(self.head_size),
+            "qScale": 1 / math.sqrt(self.head_size),
+            "qkScale": 1.0,
             "backend": "hccl" if self.soc_info.need_nz else "lccl",
         })
 
@@ -390,10 +390,14 @@ class FlashGpt_neoxForCausalLM(FlashGPTNeoXPreTrainedModel):
                                   input_lengths: torch.Tensor,
                                   max_seq_len: int,
                                   lm_head_indices: Optional[torch.Tensor] = None):
-
-        cos_embed, sin_embed = self.ascend_rotary_embedding.get_cos_sin_total(
-            position_ids, self.max_position_embeddings, torch.float16
-        )
+        if self.soc_info.need_nz:
+            cos_embed, sin_embed = self.ascend_rotary_embedding.get_cos_sin_total(
+                position_ids, self.max_position_embeddings, torch.float16
+            )
+        else:
+            cos_embed, sin_embed = self.ascend_rotary_embedding.get_cos_sin_total(
+                position_ids, self.max_position_embeddings, torch.float32
+            )
 
         if self.soc_info.need_nz:
             pad_maxs = math.ceil(self.max_position_embeddings / 16) * 16
