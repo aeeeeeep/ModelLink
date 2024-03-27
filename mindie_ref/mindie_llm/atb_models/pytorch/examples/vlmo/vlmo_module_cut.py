@@ -415,6 +415,13 @@ class VLMo(pl.LightningModule):
             if state_dict is None:
                 rank_zero_info("Read state dict from ckpt. ")
                 state_dict = ckpt
+                
+            missing_keys, unexpected_keys = self.load_state_dict(
+                state_dict, strict=False
+            )
+            rank_zero_info("missing_keys: {}".format(missing_keys))
+            rank_zero_info("unexpected_keys: {}".format(unexpected_keys))
+            
         # 把list移到初始化
         self.relative_position_bias_list_vl = self.get_rel_pos_bias(
             self.text_imag_relative_position_index
@@ -664,7 +671,7 @@ class VLMo(pl.LightningModule):
             )
             res = []
             for i in range(self.num_layers):
-                res.append(relative_position_bias_list[i].unsqueeze(0).half().npu())
+                res.append(relative_position_bias_list[i].unsqueeze(0).half().npu().chunk(2, dim=1))
                 
             return res
         else:
@@ -860,7 +867,7 @@ class VLMo(pl.LightningModule):
         maskList = []
         if modality_type == "vl":
             for i in range(self.transformer.depth): 
-                maskBias = self.relative_position_bias_list_vl[i].chunk(2, dim=1)[RANK].masked_fill(~maskBool[:, None, None, :], -10000)
+                maskBias = self.relative_position_bias_list_vl[i][RANK].masked_fill(~maskBool[:, None, None, :], -10000)
                 if not IS_ND:
                     maskBias = self.trans_data(maskBias)
                 else:
@@ -878,7 +885,7 @@ class VLMo(pl.LightningModule):
             return inputs
         elif modality_type == "image":
             for i in range(self.transformer.depth):
-                maskBias = self.relative_position_bias_list_image[i].chunk(2, dim=1)[RANK].masked_fill(~maskBool[:, None, None, :], -10000)
+                maskBias = self.relative_position_bias_list_image[i][RANK].masked_fill(~maskBool[:, None, None, :], -10000)
                 if not IS_ND:
                     maskBias = self.trans_data(maskBias)
                 maskList.append(maskBias)
@@ -893,7 +900,7 @@ class VLMo(pl.LightningModule):
             return inputs
         else:
             for i in range(self.transformer.depth):
-                maskBias = self.relative_position_bias_list_text[i].chunk(2, dim=1)[RANK].masked_fill(~maskBool[:, None, None, :], -10000)
+                maskBias = self.relative_position_bias_list_text[i][RANK].masked_fill(~maskBool[:, None, None, :], -10000)
                 if not IS_ND:
                     maskBias = self.trans_data(maskBias)
                 maskList.append(maskBias)
