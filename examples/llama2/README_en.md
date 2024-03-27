@@ -217,8 +217,8 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
    --is-instruction-dataset \
    ```
    Full parameter fine-tuning provides a new unpad solution to reduce computational redundancy and accelerate training
-   (1) Remove -- use flash attn and -- variable seq lengths
-   (2) Join -- use unpad
+   (1) Do not turn on --use-flash-attn and --sequence-parallel
+   (2) Join --use-unpad
    (3) Only supports fp16
 
    6.3 Lora Fine-Tuning

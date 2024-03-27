@@ -217,7 +217,7 @@ python tools/checkpoint/util.py --model-type GPT \
    ```
 
    全参微调提供新的unpad方案，减少计算冗余加速训练
-   (1) 去掉--use-flash-attn和--variable-seq-lengths
+   (1) 不开启--use-flash-attn和--sequence-parallel
    (2) 加入--use-unpad
    (3) 仅支持fp16
 
