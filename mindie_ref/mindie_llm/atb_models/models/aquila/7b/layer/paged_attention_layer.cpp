@@ -105,6 +105,9 @@ atb::Status PagedAttentionRopeLayer(const PagedAttentionRopeLayerParam &param, a
         fusionAttentionParam.selfAttentionParam.calcType = atb::infer::SelfAttentionParam::CalcType::PA_ENCODER;
     }
     fusionAttentionParam.selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
+    fusionAttentionParam.selfAttentionParam.clampMin = -1024.0;
+    fusionAttentionParam.selfAttentionParam.clampMax = 1024.0;
+    fusionAttentionParam.selfAttentionParam.clampType = atb::infer::SelfAttentionParam::CLAMP_TYPE_MIN_MAX;
     fusionAttentionParam.pageAttentionParam.headNum = param.numAttentionHeadsPerRank;
     fusionAttentionParam.pageAttentionParam.kvHeadNum = param.numKeyValueHeadsPerRank;
     fusionAttentionParam.pageAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
