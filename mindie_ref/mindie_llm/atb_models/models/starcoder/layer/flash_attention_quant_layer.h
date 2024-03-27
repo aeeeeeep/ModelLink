@@ -16,10 +16,7 @@
 #ifndef ATB_SPEED_MODELS_STAR_CODER_PARALLEL_FA_QUANT_LAYER_H
 #define ATB_SPEED_MODELS_STAR_CODER_PARALLEL_FA_QUANT_LAYER_H
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
-#pragma GCC diagnostic pop
 #include <atb/atb_infer.h>
 #include "atb_speed/log.h"
 #include "atb_speed/base/hosttensor_binder.h"

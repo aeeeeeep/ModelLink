@@ -16,10 +16,7 @@
  */
 #include <atb/atb_infer.h>
 #include "atb_speed/log.h"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
-#pragma GCC diagnostic pop
 #include "post_process.h"
 #include "atb_speed/utils/operation_factory.h"
 
