@@ -94,7 +94,8 @@ if __name__ == "__main__":
     print('********got path*********')
 
     # step 4: cut weight
-    state_dict_list = cut_weights(torch.load(args.input_path, map_location='cpu'), args.world_size, args.cut_row_keys, args.cut_col_keys)
+    load_path = os.path.join(args.input_path + '/vlmo_base_patch16_480_vqa.pt')
+    state_dict_list = cut_weights(torch.load(load_path, map_location='cpu'), args.world_size, args.cut_row_keys, args.cut_col_keys)
 
     # step 5: create new model config, add the world size parameter,
     # the model size will be cut according to the world size in the model file
