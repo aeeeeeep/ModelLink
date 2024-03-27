@@ -111,9 +111,10 @@ class WeightWrapper:
     def register_layer_linear_pack_w8a16(self, layer_dict, norm_name, pack_linear_name, linear_type='attn'):
         self.register_layer_norm(layer_dict, norm_name)
         self.register_linear(layer_dict, pack_linear_name)
-        self.weights.append(self.placeholder)
+        self.weights.append(self.placeholder)  # scale
         self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.weight_offset']))
         self.weights.append(self.weight_format_cast(layer_dict[f'{pack_linear_name}.linear.weight_scale']))
+        self.weights.append(self.placeholder)  # compress idx
         if linear_type == 'attn':
             self.weights.extend([self.placeholder] * 12)
             self.layer_linear_type.extend([LinearType.INT.value, LinearType.INVALID.value, LinearType.INVALID.value])
