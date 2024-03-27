@@ -157,12 +157,7 @@ int64_t PAQuantModel::BuildGraph()
     int INTERNEL_TENSOR_POSITION_EMB = internelTensorIdx++;
     // idx  2, add
     int INTERNEL_TENSOR_ADD = internelTensorIdx++;
-    // layer start
-    // int INTERNEL_LAYER_ATTENTION_RESIDUAL_ADD_START_BASE = internelTensorIdx++;
-    // int INTERNEL_TENSOR_LAYER_MLP_OUT_BASE = internelTensorIdx++;
-    // internelTensorIdx = internelTensorIdx + param_.numHiddenLayers - 1;
-    // idx: 3 + numHiddenLayers, shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
-    // int INTERNEL_TENSOR_FINAL_NORM_OUT = internelTensorIdx++;
+
     int INTERNEL_TENSOR_FINAL_RESIDUAL_ADD_OUT = internelTensorIdx++;
 
     const int weightTensorSize = BEFORE_LAYER_WEIGHT_COUNT +
