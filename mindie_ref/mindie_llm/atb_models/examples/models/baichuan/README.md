@@ -36,7 +36,7 @@ python quant_baichuan2_7b_w8a8.py    (baichuan2-7b)
 python convert_w8a8_quant_weights.py (baichuan2-13b)
 ```
 
-- 将原权重文件夹下所有json文件拷贝到新的量化权重文件下
+- 将原权重文件夹下所有文件（除权重文件*。bin）拷贝到新的量化权重文件下
 - `${weight_path}/config.json`文件中需设置`dtype`和`quantize`类型来标识量化类型和精度
 - 若`dtype`和`quantize`字段不存在，需新增
 
