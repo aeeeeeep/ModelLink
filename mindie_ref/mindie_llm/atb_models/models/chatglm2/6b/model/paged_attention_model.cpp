@@ -17,10 +17,7 @@
 #include "atb_speed/utils/operation_util.h"
 #include <atb/atb_infer.h>
 #include "models/chatglm2/6b/layer/paged_attention_layer.h"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
-#pragma GCC diagnostic pop
 #include "parallel_lmhead.h"
 #include "atb_speed/utils/model_factory.h"
 

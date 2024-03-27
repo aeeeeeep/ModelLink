@@ -7,8 +7,9 @@ from transformers import BertTokenizer
 import torch
 import torch_npu
 from vlmo.config import ex
-from vlmo.modules.vlmo_module import VLMo
+from vlmo.modules.vlmo_module_cut import VLMo
 from vlmo.datasets import VQAv2Dataset
+import numpy as np
 
 
 def label_2_ans(path):
@@ -26,18 +27,55 @@ def label_2_ans(path):
     return label2ans
 
 
+def safe_iter(database):
+    it = iter(database)
+    while True:
+        try:
+            yield next(it)
+        except StopIteration:
+            break
+        except Exception as e:
+            print(f"wrong key: {e}")
+            break
+
+
+def get_data(jl1):
+    cost1 = np.array([])
+    
+    count = 0
+    right = 0
+    wrong = 0
+    
+    for j1 in jl1:
+        count += 1
+        if float(j1['cost']) < 1000.0:
+            cost1 = np.append(cost1, j1['cost'])
+        if j1['res'] in j1['answers']:
+            right += 1
+        else:
+            wrong += 1
+            continue
+    accuracy = np.divide(right, count)
+    print("accuracy", accuracy)
+    print("count of questions", count)
+    print("mean of cost:", np.mean(cost1), "ms")
+    print("")
+
+
 @ex.automain
 def main(_config):
-    DEVICE_ID = 4
-    VQA_ARROW_DIR = "./vlmo/arrow/"
+    DEVICE_ID = 2
+    VQA_ARROW_DIR = "./arrow"
     BERT_VOCAB = "./vocab.txt"
     _config = copy.deepcopy(_config)
     database = VQAv2Dataset(
         image_size=_config["image_size"],
         data_dir=VQA_ARROW_DIR,
         transform_keys=_config["val_transform_keys"],
-        split="test",
+        split="val",
     )
+    LOAD_PATH = _config['load_path']
+    _config['load_path'] = LOAD_PATH + 'vlmo_base_patch16_480_vqa.pt'
     database.tokenizer = BertTokenizer.from_pretrained(BERT_VOCAB)
 
     torch_npu.npu.set_device(DEVICE_ID)
@@ -47,11 +85,12 @@ def main(_config):
 
     textlables = torch.full((database.max_text_len,), -101, dtype=torch.int)
     label2ans = label_2_ans(VQA_ARROW_DIR)
-    for res in database:
+    jl = []
+    for res in safe_iter(database):
         qid = res["qid"]
         question, other = res["text"]
         image = res["image"]
-        print(" qid:", qid, " ", question)
+        print("qid:", qid, ",", question)
         
         batch = {}
         batch["text_ids"] = (
@@ -66,7 +105,7 @@ def main(_config):
         imageTensor = []
         imageTensor.append(torch.tensor(image[0].reshape(1, 3, 480, 480)).npu())
         batch["image"] = imageTensor
-
+        answers = res["vqa_answer"]
         with torch.no_grad():
             start_time_org = time.time()
             infer = model.infer_ascend(batch, mask_text=False, mask_image=False)
@@ -76,3 +115,13 @@ def main(_config):
         res = label2ans[preds[0].item()]
         print("cost:", float(end_time_org - start_time_org) * 1000, "ms")
         print("res:", res)
+        print("answers", answers)
+        wd = {
+            "qid": qid,
+            "question": question,
+            "cost": float(end_time_org - start_time_org) * 1000,
+            "res": res,
+            "answers" : answers
+        }
+        jl.append(wd)
+    get_data(jl)

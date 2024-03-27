@@ -67,7 +67,8 @@ quant_config = QuantConfig(
     act_method=3, 
     pr=1.0, 
     w_sym=True, 
-    mm_tensor=False
+    mm_tensor=False,
+    disable_last_linear=False
 )
 
 calibrator = Calibrator(model, quant_config, calib_data=dataset_calib, disable_level='L0')

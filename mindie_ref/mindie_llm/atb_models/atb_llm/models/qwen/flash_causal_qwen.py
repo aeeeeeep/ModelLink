@@ -298,11 +298,18 @@ class FlashQwenForCausalLM(FlashForCausalLM):
             self.acl_param = json.dumps({
                 "seqLen": input_lengths.tolist()
             })
-            self.rotary_embedding.update_cos_sin_cache_total(
-                self.dtype,
-                self.device,
-                self.max_position_embeddings
-            )
+            if self.config.num_hidden_layers == 40:
+                self.rotary_embedding.update_cos_sin_cache_total(
+                    self.dtype,
+                    self.device,
+                    self.max_position_embeddings
+                )
+            else:
+                self.rotary_embedding.update_cos_sin_cache_total(
+                    torch.float32,
+                    self.device,
+                    self.max_position_embeddings
+                ) 
             self.cos_table = self.rotary_embedding.get_cos_cached_total()
             self.sin_table = self.rotary_embedding.get_sin_cached_total()
             if is_prefill:

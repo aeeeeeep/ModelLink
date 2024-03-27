@@ -16,6 +16,12 @@ class Bloom7BModelTest(model_test.ModelTest):
     def get_chip_num(self):
         return 8
 
+    def set_fa_tokenizer_params(self):
+        self.tokenizer_params = {
+            'revision': None,
+            'trust_remote_code': True
+        }
+
 
 def main():
     Bloom7BModelTest.create_instance()

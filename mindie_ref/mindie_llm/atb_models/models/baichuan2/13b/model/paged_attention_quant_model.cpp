@@ -15,10 +15,7 @@
  */
 #include "vector"
 #include "atb/atb_infer.h"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
-#pragma GCC diagnostic pop
 
 #include "atb_speed/log.h"
 #include "layers/operations/word_embedding.h"
@@ -291,7 +288,7 @@ atb::Status PagedAttentionQuantModel::BindParamHostTensor(uint32_t nodeId)
     }
 
     auto &node = graph_.nodes.at(nodeId);
-    const uint32_t seqLenTensorId = 47; // IN_INPUT_LENGTHS
+    const uint32_t seqLenTensorId = LayerQuantPATensorId::IN_INPUT_LENGTHS; // IN_INPUT_LENGTHS
     node.variantPack.inTensors.at(seqLenTensorId).hostData = seqLen_.data();
     ATB_LOG(INFO) << "BindParamHostTensor end";
     return atb::NO_ERROR;

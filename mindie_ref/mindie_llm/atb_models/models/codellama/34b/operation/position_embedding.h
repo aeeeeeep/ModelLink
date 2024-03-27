@@ -17,10 +17,7 @@
 #define ATB_SPEED_MODELS_CODELLAMA_34B_POSITION_EMBEDDING_H
 
 #include <atb/atb_infer.h>
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
-#pragma GCC diagnostic pop
 #include "atb_speed/log.h"
 
 namespace atb_speed {

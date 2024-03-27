@@ -25,7 +25,7 @@
 namespace atb_speed {
 namespace internlm_20b_parallel {
 
-static const uint64_t IN_TENSOR_COUNT = 55;
+static const uint64_t IN_TENSOR_COUNT = 62;
 static const uint64_t OUT_TENSOR_COUNT = 1;
 static const uint64_t INTERMEDIATE_TENSOR_COUNT = 3;
 static const uint64_t NODE_COUNT = 4;

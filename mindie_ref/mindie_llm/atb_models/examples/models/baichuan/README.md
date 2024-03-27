@@ -25,17 +25,18 @@
 Paged Attention 场景下需要.safetensors 格式的权重，如果没有，参考[此README文件](../../README.md)转换
 
 ## 量化权重转换（W8A8）
-
-- 将当前目录下的convert_w8a8_quant_weights.py文件中的input_fp16_path 和output_w8a8_path 修改为自己的权重路径和输出权重路径
+- baichuan2-7b使用quant_baichuan2_7b_w8a8.py,baichuan2-13b使用convert_w8a8_quant_weights.py
+- 根据模型,将当前目录下的quant_baichuan2_7b_w8a8.py或convert_w8a8_quant_weights.py文件中的input_fp16_path 和output_w8a8_path 修改为自己的权重路径和输出权重路径
 - 如果想用npu转换权重，需要根据注释修改代码将设备设置为npu
 - 备注：建议精度测试使用cpu生成量化权重。npu生成的量化权重可作为调试使用，精度会有损失。
 - 执行
 
 ```
-python convert_w8a8_quant_weights.py
+python quant_baichuan2_7b_w8a8.py    (baichuan2-7b)
+python convert_w8a8_quant_weights.py (baichuan2-13b)
 ```
 
-- 将原权重文件夹下所有json文件拷贝到新的量化权重文件下
+- 将原权重文件夹下所有文件（除权重文件*。bin）拷贝到新的量化权重文件下
 - `${weight_path}/config.json`文件中需设置`dtype`和`quantize`类型来标识量化类型和精度
 - 若`dtype`和`quantize`字段不存在，需新增
 

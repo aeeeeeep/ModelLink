@@ -135,7 +135,7 @@ class KVAttentionManager:
                 .half()
                 .contiguous()
             )
-        torch.npu.empty_cache()
+        # torch.npu.empty_cache()
         self.token_offset = 1
 
 
@@ -405,7 +405,6 @@ class VLMo(pl.LightningModule):
             ckpt = torch.load(self.hparams.config["load_path"], map_location="npu")
 
             state_dict = None
-
             for state_dict_key in ("state_dict", "module", "model"):
                 if state_dict_key in ckpt:
                     rank_zero_info("Read state dict from ckpt[%s]. " % state_dict_key)
@@ -416,14 +415,14 @@ class VLMo(pl.LightningModule):
             if state_dict is None:
                 rank_zero_info("Read state dict from ckpt. ")
                 state_dict = ckpt
-
+                
             missing_keys, unexpected_keys = self.load_state_dict(
                 state_dict, strict=False
             )
             rank_zero_info("missing_keys: {}".format(missing_keys))
             rank_zero_info("unexpected_keys: {}".format(unexpected_keys))
+            
         # 把list移到初始化
-
         self.relative_position_bias_list_vl = self.get_rel_pos_bias(
             self.text_imag_relative_position_index
         )
@@ -522,6 +521,7 @@ class VLMo(pl.LightningModule):
             rank_zero_info(
                 "Load ckpt from: {}".format(self.hparams.config["load_path"])
             )
+            
 
             state_dict = None
 
@@ -671,7 +671,7 @@ class VLMo(pl.LightningModule):
             )
             res = []
             for i in range(self.num_layers):
-                res.append(relative_position_bias_list[i].unsqueeze(0).half().npu())
+                res.append(relative_position_bias_list[i].unsqueeze(0).half().npu().chunk(2, dim=1))
                 
             return res
         else:
@@ -867,7 +867,7 @@ class VLMo(pl.LightningModule):
         maskList = []
         if modality_type == "vl":
             for i in range(self.transformer.depth): 
-                maskBias = self.relative_position_bias_list_vl[i].chunk(2, dim=1)[RANK].masked_fill(~maskBool[:, None, None, :], -10000)
+                maskBias = self.relative_position_bias_list_vl[i][RANK].masked_fill(~maskBool[:, None, None, :], -10000)
                 if not IS_ND:
                     maskBias = self.trans_data(maskBias)
                 else:
@@ -885,7 +885,7 @@ class VLMo(pl.LightningModule):
             return inputs
         elif modality_type == "image":
             for i in range(self.transformer.depth):
-                maskBias = self.relative_position_bias_list_image[i].chunk(2, dim=1)[RANK].masked_fill(~maskBool[:, None, None, :], -10000)
+                maskBias = self.relative_position_bias_list_image[i][RANK].masked_fill(~maskBool[:, None, None, :], -10000)
                 if not IS_ND:
                     maskBias = self.trans_data(maskBias)
                 maskList.append(maskBias)
@@ -900,7 +900,7 @@ class VLMo(pl.LightningModule):
             return inputs
         else:
             for i in range(self.transformer.depth):
-                maskBias = self.relative_position_bias_list_text[i].chunk(2, dim=1)[RANK].masked_fill(~maskBool[:, None, None, :], -10000)
+                maskBias = self.relative_position_bias_list_text[i][RANK].masked_fill(~maskBool[:, None, None, :], -10000)
                 if not IS_ND:
                     maskBias = self.trans_data(maskBias)
                 maskList.append(maskBias)
@@ -924,9 +924,7 @@ class VLMo(pl.LightningModule):
                     "seqLen": self.kv_attention_manager_vl.seq_len_list,
                 }
             )
-            
             acl_model_out = self.acl_fa_vl_operation.execute(acl_input, tmp_param)
-            print('acl_model_out', acl_model_out)
             acl_model_out = acl_model_out[0]
             return acl_model_out
         elif modality_type == "image":
@@ -1076,7 +1074,7 @@ class VLMo(pl.LightningModule):
         img = batch[imgkey][0].half()
 
         image_embeds, image_masks = self.transformer.visual_embed(img)
-        image_masks = image_masks.long().to(device=img.get_device())
+        image_masks = image_masks.long().to(device=img.device)
         text_embeds, image_embeds = (
             text_embeds + self.token_type_embeddings(torch.zeros_like(text_masks)),
             image_embeds
@@ -1110,7 +1108,6 @@ class VLMo(pl.LightningModule):
         if not self.ascend_weight_vl:
             self.init_acl_weight(modality_type="vl")
         acl_x = self.execute_acl_encoder(co_embeds, co_masks, modality_type="vl")
-
         x = acl_x
 
         x = self.transformer.norm(x)

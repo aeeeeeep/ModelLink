@@ -17,10 +17,7 @@
 
 #include "atb/atb_infer.h"
 #include "models/llama_pa/layer/paged_attention_common_layer.h"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
-#pragma GCC diagnostic pop
 #include "parallel_lmhead.h"
 #include "atb_speed/utils/model_factory.h"
 

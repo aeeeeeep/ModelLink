@@ -149,7 +149,7 @@ function fn_build_nlohmann_json()
             rm -rf nlohmann
             mkdir nlohmann
             cd nlohmann
-            wget --no-check-certificate https://ascend-cann.obs.cn-north-4.myhuaweicloud.com/include.zip
+            wget --no-check-certificate https://github.com/nlohmann/json/releases/download/v3.11.2/include.zip
         else
             cd $CACHE_DIR/nlohmann
         fi
