@@ -13,12 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
 #include "atb_speed/base/model.h"
-#pragma GCC diagnostic pop
 #include <acl/acl.h>
 #include <atb/types.h>
 #include <atb/utils.h>
@@ -223,6 +219,7 @@ atb::Status Model::Execute(atb::Context *context, std::vector<atb::Tensor> &inTe
 
     timer_.Reset();
     ClearInternalTensors();
+    nodeOutTensors_.clear();
 
     allTaskFinish_ = false;
     context_ = context;
@@ -296,7 +293,7 @@ void Model::BuildNodeVariantPack(int nodeId)
     for (size_t i = 0; i < node.outTensors.size(); ++i) {
         node.variantPack.outTensors.at(i) = *node.outTensors.at(i);
         if (node.outTensorTypes.at(i) == Model::INTERMEDIATE_TENSOR) {
-            node.variantPack.outTensors.at(i) = MallocInternalTensor(nodeId, i, outTensorDescs.at(i));
+            node.variantPack.outTensors.at(i) = MallocInternalTensor(node.outTensors.at(i), nodeId, i, outTensorDescs.at(i));
             *node.outTensors.at(i) = node.variantPack.outTensors.at(i);
         }
         if (!TensorUtil::TensorDescEqual(node.variantPack.outTensors.at(i).desc, outTensorDescs.at(i))) {
@@ -453,9 +450,15 @@ void Model::ClearInternalTensors()
     internalTensors_.clear();
 }
 
-atb::Tensor Model::MallocInternalTensor(size_t nodeId, size_t outTensorId, const atb::TensorDesc &tensorDesc)
+atb::Tensor Model::MallocInternalTensor(atb::Tensor* outTensor, size_t nodeId, size_t outTensorId,
+    const atb::TensorDesc &tensorDesc)
 {
     if (GetSingleton<Config>().IsLayerInternalTensorReuse()) {
+        std::vector<atb::Tensor*>::iterator iter = std::find(nodeOutTensors_.begin(), nodeOutTensors_.end(), outTensor);
+        if (iter != nodeOutTensors_.end()) {
+            ATB_LOG(INFO) << modelName_ << " nodeId: " << nodeId << ", out tensor id: " << outTensorId << " write inplace";
+            return **iter;
+        }
         for (auto &it : internalTensors_) {
             if (it.second) { // Tensor被使用中，不能被分配其他Op
                 continue;
@@ -475,6 +478,7 @@ atb::Tensor Model::MallocInternalTensor(size_t nodeId, size_t outTensorId, const
     atb_speed::GetSingleton<atb_speed::Statistic>().createTensorTime += timer.ElapsedMicroSecond();
     atb_speed::GetSingleton<atb_speed::Statistic>().mallocTorchTensorSize += atb::Utils::GetTensorSize(tensorDesc);
     internalTensors_.push_back(std::make_pair(newTensor, true));
+    nodeOutTensors_.push_back(outTensor);
     return newTensor;
 }
 

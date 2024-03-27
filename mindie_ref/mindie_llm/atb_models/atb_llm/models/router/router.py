@@ -11,6 +11,7 @@ from transformers.configuration_utils import PretrainedConfig
 
 from ..llama.modeling_llama import LlamaConfig
 from ..deepseek.flash_causal_deepseek import DeepseekConfig
+from ..mixtral.flash_causal_mixtral import MixtralConfig
 from ..qwen.modeling_qwen import QwenConfig
 from ..starcoder.flash_causal_starcoder import StarcoderConfig
 from ..telechat.config import TelechatConfig
@@ -166,6 +167,24 @@ class DeepseekRouter(BaseRouter):
     @property
     def config(self):
         config = DeepseekConfig.from_pretrained(self.model_name_or_path, torch_dtype=torch.float16)
+        if self.max_position_embeddings:
+            config.max_position_embeddings = self.max_position_embeddings
+        return config
+    
+    def get_tokenizer(self):
+        return AutoTokenizer.from_pretrained(
+            self.model_name_or_path,
+            padding_side="left",
+            trust_remote_code=True,
+            use_fast=False
+        )
+    
+
+@dataclass
+class MixtralRouter(BaseRouter):
+    @property
+    def config(self):
+        config = MixtralConfig.from_pretrained(self.model_name_or_path, torch_dtype=torch.float16)
         if self.max_position_embeddings:
             config.max_position_embeddings = self.max_position_embeddings
         return config

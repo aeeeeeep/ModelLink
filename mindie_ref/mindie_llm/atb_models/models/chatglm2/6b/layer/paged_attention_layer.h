@@ -16,10 +16,7 @@
 #ifndef ATB_SPEED_MODELS_CHATGLM2_6B_LAYER_PAGE_ATTENTION_H
 #define ATB_SPEED_MODELS_CHATGLM2_6B_LAYER_PAGE_ATTENTION_H
 #include "atb/atb_infer.h"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
-#pragma GCC diagnostic pop
 #include "atb_speed/base/hosttensor_binder.h"
 #include "atb_speed/log.h"
 #include "atb_speed/utils/operation_util.h"

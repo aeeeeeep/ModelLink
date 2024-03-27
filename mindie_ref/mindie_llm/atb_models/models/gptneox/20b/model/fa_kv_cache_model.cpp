@@ -19,10 +19,7 @@
 #include "models/gptneox/20b/layer/embedding_layer.h"
 #include "models/gptneox/20b/layer/flashattention_kvcache_layer.h"
 #include "layers/parallel_layer_v2.h"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
-#pragma GCC diagnostic pop
 #include "atb_speed/utils/model_factory.h"
 
 namespace atb_speed {

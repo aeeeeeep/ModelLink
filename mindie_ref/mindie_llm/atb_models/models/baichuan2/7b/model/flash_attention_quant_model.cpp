@@ -16,10 +16,7 @@
 #include "flash_attention_quant_model.h"
 
 #include "atb/atb_infer.h"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
-#pragma GCC diagnostic pop
 
 #include "layers/parallel_layer_v2.h"
 #include "models/baichuan2/7b/layer/flash_attention_quant_layer.h"

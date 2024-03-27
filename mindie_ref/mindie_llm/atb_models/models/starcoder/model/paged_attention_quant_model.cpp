@@ -15,10 +15,7 @@
  */
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
-#pragma GCC diagnostic pop
 
 #include "models/starcoder/layer/paged_attention_quant_layer.h"
 #include "paged_attention_quant_model.h"
@@ -31,7 +28,7 @@ namespace star_coder {
 
 REGISTER_MODEL(star_coder, PAQuantModel);
 
-const int WEIGHT_COUNT_PER_LAYER = 43;
+const int WEIGHT_COUNT_PER_LAYER = 50;
 const int WEIGHT_COUNT_WORD_EMBEDDINGNODE = 2;
 const int WEIGHT_COUNT_POST_NORM = 2;
 const int WEIGHT_COUNT_LM_HEAD = 1;

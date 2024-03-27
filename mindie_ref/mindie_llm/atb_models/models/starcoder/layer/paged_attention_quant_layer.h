@@ -16,10 +16,7 @@
 #ifndef ATB_SPEED_MODELS_STAR_CODER_PA_QUANT_LAYER_H
 #define ATB_SPEED_MODELS_STAR_CODER_PA_QUANT_LAYER_H
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
-#pragma GCC diagnostic pop
 #include <atb/atb_infer.h>
 #include "atb_speed/log.h"
 #include "atb_speed/base/hosttensor_binder.h"
@@ -63,21 +60,25 @@ enum PAQuantLayerTensorId : int {
     IN_QKV_DESCALE_0,                   // Quant所需权重
     IN_QKV_OFFSET_0,                    // Quant所需权重
     IN_QKV_SCALE_0,                     // Quant所需权重
+    IN_QKV_COMPRESS_IDX_0,
     IN_QKV_WEIGHT_1,                    // Pack: no usage; No pack: (K) shape: [numKeyValueHeadsPerRank * hiddenSizePerAttentionHead, hiddenSize]
     IN_QKV_DEOFFSET_1,                  // Quant所需权重
     IN_QKV_DESCALE_1,                   // Quant所需权重
     IN_QKV_OFFSET_1,                    // Quant所需权重
     IN_QKV_SCALE_1,                     // Quant所需权重
+    IN_QKV_COMPRESS_IDX_1,
     IN_QKV_WEIGHT_2,                    // Pack: no usage; No pack: (V) shape: [numKeyValueHeadsPerRank * hiddenSizePerAttentionHead, hiddenSize]
     IN_QKV_DEOFFSET_2,                  // Quant所需权重
     IN_QKV_DESCALE_2,                   // Quant所需权重
     IN_QKV_OFFSET_2,                    // Quant所需权重
     IN_QKV_SCALE_2,                     // Quant所需权重
+    IN_QKV_COMPRESS_IDX_2,
     IN_ATTENTION_OUT_WEIGHT,            // [6144, 768] shape: [hiddenSize, numAttentionHeadsPerRank * hiddenSizePerAttentionHead]
     IN_ATTENTION_OUT_DEOFFSET,          // [6144] [hiddenSize]
     IN_ATTENTION_OUT_DESCALE,           // Quant所需权重
     IN_ATTENTION_OUT_OFFSET,            // Quant所需权重
     IN_ATTENTION_OUT_SCALE,             // Quant所需权重
+    IN_ATTENTION_OUT_COMPRESS_IDX,
     IN_ATTENTION_NORM_WEIGHT,           // [6144] [hiddenSize]
     IN_ATTENTION_NORM_BIAS,             // [6144] [hiddenSize]
     IN_ATTENTION_NORM_NEW_WEIGHT,
@@ -88,16 +89,19 @@ enum PAQuantLayerTensorId : int {
     IN_MLP_DESCALE_0,                   // Quant所需权重
     IN_MLP_OFFSET_0,                    // Quant所需权重
     IN_MLP_SCALE_0,                     // Quant所需权重
+    IN_MLP_COMPRESS_IDX_0,
     IN_MLP_WEIGHT_1,                    // Pack: no usage; No pack: (Up) shape: [intermediateSizePerRank, hiddenSize]
     IN_MLP_DEOFFSET_1,                  // Quant所需权重
     IN_MLP_DESCALE_1,                   // Quant所需权重
     IN_MLP_OFFSET_1,                    // Quant所需权重
     IN_MLP_SCALE_1,                     // Quant所需权重
+    IN_MLP_COMPRESS_IDX_1,
     IN_MLP_DOWN_WEIGHT,                 // [6144, 3072]
     IN_MLP_DOWN_DEOFFSET,               // [6144]
     IN_MLP_DOWN_DESCALE,                // Quant所需权重
     IN_MLP_DOWN_OFFSET,                 // Quant所需权重
     IN_MLP_DOWN_SCALE,                  // Quant所需权重
+    IN_MLP_DOWN_COMPRESS_IDX,
     IN_ATTENTION_MASK,                  // shape: FA: [batchSize, maxPositionEmbeddings, maxPositionEmbeddings] PA: [seqLen, seqLen]
     IN_BLOCK_TABLES,                    // shape: [seqLen, seqLen]; PA所需参数
     IN_SLOTS,                           // shape: [seqLen]; PA所需参数

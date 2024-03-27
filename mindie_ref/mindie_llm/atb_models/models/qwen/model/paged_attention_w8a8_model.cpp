@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 #include "vector"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
-#pragma GCC diagnostic pop
 #include "atb/atb_infer.h"
 #include "atb_speed/log.h"
 #include "layers/operations/lmhead.h"
@@ -30,7 +27,7 @@ namespace atb_speed {
 namespace qwen_14b {
 
 // Weight count
-const int WEIGHT_COUNT_PER_LAYER = 43;
+const int WEIGHT_COUNT_PER_LAYER = 50;
 const int WEIGHT_COUNT_WORD_EMBEDDINGNODE = 1;
 const int WEIGHT_COUNT_POST_NORM = 1;
 const int WEIGHT_COUNT_LM_HEAD = 1;
@@ -334,7 +331,7 @@ atb::Status PAW8A8Model::BindParamHostTensor(uint32_t nodeId)
     }
 
     auto &node = graph_.nodes.at(nodeId);
-    const uint32_t seqLenTensorId = 51;
+    const uint32_t seqLenTensorId = 58;
     node.variantPack.inTensors.at(seqLenTensorId).hostData = seqLen_.data();
     ATB_LOG(INFO) << "BindParamHostTensor end";
     return atb::NO_ERROR;

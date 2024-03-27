@@ -34,6 +34,14 @@ class LlamaModelTest(model_test.ModelTest):
 
     def get_dataset_list(self):
         return ["CEval", "BoolQ"]
+    
+    def set_fa_tokenizer_params(self):
+        self.tokenizer_params = {
+            'pad_token': '<|extra_0|>',
+            'eos_token': '<|endoftext|>',
+            'padding_side': 'left',
+            'trust_remote_code': True
+        }
 
 
 def main():
