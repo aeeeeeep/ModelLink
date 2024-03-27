@@ -16,10 +16,7 @@
 #include "paged_attention_model.h"
 
 #include <atb/atb_infer.h>
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <nlohmann/json.hpp>
-#pragma GCC diagnostic pop
 
 #include "models/baichuan2/7b/layer/paged_attention_layer.h"
 #include "parallel_lmhead.h"

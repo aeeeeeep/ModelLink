@@ -19,10 +19,7 @@
 #include "models/llama2/70b/layer/fusion_pa_layer_w8a8.h"
 #include "models/llama2/70b/operation/llama_lmhead.h"
 #include "models/llama2/70b/operation/pa_layer_embedding.h"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
-#pragma GCC diagnostic pop
 #include "parallel_lmhead.h"
 #include "atb_speed/utils/model_factory.h"
 

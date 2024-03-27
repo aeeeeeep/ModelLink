@@ -17,10 +17,7 @@
 #define ATB_SPEED_MODELS_DEEPSEEK_DENSE_DECODER_LAYER_H
 
 #include <vector>
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
-#pragma GCC diagnostic pop
 
 #include "atb/atb_infer.h"
 #include "atb_speed/base/hosttensor_binder.h"

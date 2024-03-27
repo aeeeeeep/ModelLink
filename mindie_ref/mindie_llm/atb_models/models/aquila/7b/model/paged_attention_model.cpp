@@ -16,10 +16,7 @@
 #include "models/aquila/7b/model/paged_attention_model.h"
 #include "vector"
 #include "atb/atb_infer.h"
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtype-limits"
 #include "nlohmann/json.hpp"
-#pragma GCC diagnostic pop
 #include "layers/operations/word_embedding.h"
 #include "layers/operations/positional_embedding.h"
 #include "layers/operations/lmhead.h"
