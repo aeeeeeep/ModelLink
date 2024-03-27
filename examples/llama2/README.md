@@ -108,7 +108,7 @@ LLAMA2-7B 训练的硬件配置:
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
    
     # 权重格式转换
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                     --loader llama2_hf \
                                     --saver megatron \
                                     --target-tensor-parallel-size 8 \
@@ -125,7 +125,7 @@ LLAMA2-7B 训练的硬件配置:
 cd ModelLink/
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -232,10 +232,10 @@ python tools/checkpoint/util.py --model-type GPT \
      --lora-modules-to-save word_embeddings output_layer \
    ```
 
-   启动Lora微调脚本: tasks/finetune/tune_llama2_7b_ptd.sh
+   启动Lora微调脚本: examples/llama2/tune_llama2_7b_ptd.sh
 
    ```shell
-    bash tasks/finetune/tune_llama2_7b_ptd.sh
+    bash examples/llama2/tune_llama2_7b_ptd.sh
    ```
 
 ### 性能
@@ -252,7 +252,7 @@ LLaMA2-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 ## 推理-7B
 
-配置llama2-7B 推理脚本: tasks/inference/generate_llama2_7b_ptd.sh
+配置llama2-7B 推理脚本: examples/llama2/generate_llama2_7b_ptd.sh
 
 ```bash
 # 根据您自己的 ascend-toolkit 路径，执行set_env.sh
@@ -264,7 +264,7 @@ TOKENIZER_PATH="your tokenizer directory path"
 TOKENIZER_MODEL="your tokenizer.model file path"
 ```
 
-配置 LLaMA2-7B lora推理脚本: tasks/inference/generate_llama2_7b_lora_ptd.sh
+配置 LLaMA2-7B lora推理脚本: examples/llama2/generate_llama2_7b_lora_ptd.sh
 
 ```bash
 # 修改lora权重路径
@@ -274,12 +274,12 @@ CHECKPOINT_LORA="your lora model directory path"
 启动llama2-7B 推理脚本
 
 ```bash
-bash tasks/inference/generate_llama2_7b_ptd.sh
+bash examples/llama2/generate_llama2_7b_ptd.sh
 ```
 
 启动llama2-7B lora推理脚本
 ```bash
-bash tasks/inference/generate_llama2_7b_lora_ptd.sh
+bash examples/llama2/generate_llama2_7b_lora_ptd.sh
 ```
 
 推理的示例如下:
@@ -288,7 +288,7 @@ bash tasks/inference/generate_llama2_7b_lora_ptd.sh
 ## 评估-7B
 
 使用 MMLU数据集评估模型. 数据集下载路径 [这里](https://huggingface.co/datasets/cais/mmlu). 
-配置llama2-7B 评估脚本: tasks/evaluation/evaluate_llama2_7B_ptd.sh
+配置llama2-7B 评估脚本: examples/llama2/evaluate_llama2_7B_ptd.sh
 
 ```bash
 # ascend-toolkit 路径
@@ -305,7 +305,7 @@ TASK="mmlu"
 启动评估
 
 ```bash
-bash tasks/evaluation/evaluate_llama2_7B_ptd.sh
+bash examples/llama2/evaluate_llama2_7B_ptd.sh
 ```
 评估结果如下
 ```text
@@ -435,7 +435,7 @@ LLaMA2-13B 训练的硬件配置:
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 权重格式转换
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader llama2_hf \
     --saver megatron \
     --target-tensor-parallel-size 8 \
@@ -450,7 +450,7 @@ python tools/checkpoint/util.py --model-type GPT \
 cd ModelLink/
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -557,10 +557,10 @@ python tools/checkpoint/util.py --model-type GPT \
      --lora-modules-to-save word_embeddings output_layer \
    ```
    
-   启动Lora微调脚本: tasks/finetune/tune_llama2_13b_ptd.sh
+   启动Lora微调脚本: examples/llama2/tune_llama2_13b_ptd.sh
 
    ```shell
-    bash tasks/finetune/tune_llama2_13b_ptd.sh
+    bash examples/llama2/tune_llama2_13b_ptd.sh
    ```
 
 ### 性能
@@ -581,14 +581,14 @@ LLaMA2-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 我们在Llama2 13B中支持推理来生成文本。
 推理不同于预训练，比如我们需要加载预训练检查点和输出样本的长度:
 
-配置 LLaMA2-13B 推理脚本: tasks/inference/generate_llama2_13b_ptd.sh
+配置 LLaMA2-13B 推理脚本: examples/llama2/generate_llama2_13b_ptd.sh
 
 ```shell
 # 修改模型权重路径以及词表路径
 CHECKPOINT=./llama2-13b-tp8-pp1/
 TOKENIZER_PATH=./llama2-13b-hf/
 ```
-配置 LLaMA2-13B lora推理脚本: tasks/inference/generate_llama2_13b_lora_ptd.sh
+配置 LLaMA2-13B lora推理脚本: examples/llama2/generate_llama2_13b_lora_ptd.sh
 
 ```bash
 # 修改lora权重路径
@@ -596,11 +596,11 @@ CHECKPOINT_LORA="your lora model directory path"
 ```
 启动推理脚本
 ```shell
-bash ./tasks/inference/generate_llama2_13b_ptd.sh
+bash ./examples/llama2/generate_llama2_13b_ptd.sh
 ```
 启动lora推理脚本
 ```shell
-bash ./tasks/inference/generate_llama2_13b_lora_ptd.sh
+bash ./examples/llama2/generate_llama2_13b_lora_ptd.sh
 ```
 推理结果示例如下:
 ![llama2-13B-generate.png](../../sources/images/llama2/llama2-13B-generate.png)
@@ -617,7 +617,7 @@ bash ./tasks/inference/generate_llama2_13b_lora_ptd.sh
 ```
 
 ```shell
-bash tasks/evaluation/evaluate_llama2_13B_ptd.sh
+bash examples/llama2/evaluate_llama2_13B_ptd.sh
 ```
 
 <table>
@@ -761,7 +761,7 @@ pip install -r requirements.txt
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
     # 权重格式转换
-    python tools/checkpoint/util.py \
+    python tools/checkpoint/convert_ckpt.py \
     --model-type GPT \
     --loader llama2_hf \
     --saver megatron \
@@ -797,7 +797,7 @@ pip install -r requirements.txt
 cd ModelLink/
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -812,7 +812,7 @@ python tools/checkpoint/util.py --model-type GPT \
 cd ModelLink/
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -957,16 +957,16 @@ python tools/checkpoint/util.py --model-type GPT \
      --lora-modules-to-save word_embeddings output_layer \
    ```
 
-   启动llama2-34B Lora微调脚本: tasks/finetune/tune_llama2_34b_ptd.sh
+   启动llama2-34B Lora微调脚本: examples/llama2/tune_llama2_34b_ptd.sh
 
    ```shell
-    bash tasks/finetune/tune_llama2_34b_ptd.sh
+    bash examples/llama2/tune_llama2_34b_ptd.sh
    ```
    
-   启动llama2-70B Lora微调脚本: tasks/finetune/tune_llama2_70b_ptd.sh
+   启动llama2-70B Lora微调脚本: examples/llama2/tune_llama2_70b_ptd.sh
 
    ```shell
-    bash tasks/finetune/tune_llama2_70b_ptd.sh
+    bash examples/llama2/tune_llama2_70b_ptd.sh
    ```
 
 ### 性能-2
@@ -990,9 +990,9 @@ LLaMA2-34B/70B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比
 
 配置推理脚本
 
-LLaMA2-34B:`tasks/inference/generate_llama2_34B_ptd.sh`。
+LLaMA2-34B:`examples/llama2/generate_llama2_34B_ptd.sh`。
 
-LLaMA2-70B:`tasks/inference/generate_llama2_70b_ptd.sh`。
+LLaMA2-70B:`examples/llama2/generate_llama2_70b_ptd.sh`。
 
 ```shell
 # 修改模型权重路径和分词器路径
@@ -1002,9 +1002,9 @@ TOKENIZER_PATH=<tokenizer-path>
 
 配置lora推理脚本
 
-LLaMA2-34B:`tasks/inference/generate_llama2_34b_lora_ptd.sh`。
+LLaMA2-34B:`examples/llama2/generate_llama2_34b_lora_ptd.sh`。
 
-LLaMA2-70B:`tasks/inference/generate_llama2_70b_lora_ptd.sh`。
+LLaMA2-70B:`examples/llama2/generate_llama2_70b_lora_ptd.sh`。
 
 ```bash
 # 修改lora权重路径
@@ -1013,19 +1013,19 @@ CHECKPOINT_LORA="your lora model directory path"
 
 LLaMA2-34B启动推理:
 ```shell
-bash ./tasks/inference/generate_llama2_34B_ptd.sh
+bash ./examples/llama2/generate_llama2_34B_ptd.sh
 ```
 LLaMA2-34B启动lora推理:
 ```shell
-bash ./tasks/inference/generate_llama2_34b_lora_ptd.sh
+bash ./examples/llama2/generate_llama2_34b_lora_ptd.sh
 ```
 LLaMA2-70B启动推理:
 ```shell
-bash ./tasks/inference/generate_llama2_70b_ptd.sh
+bash ./examples/llama2/generate_llama2_70b_ptd.sh
 ```
 LLaMA2-70B启动lora推理:
 ```shell
-bash ./tasks/inference/generate_llama2_70b_lora_ptd.sh
+bash ./examples/llama2/generate_llama2_70b_lora_ptd.sh
 ```
 
 LLaMA2-34B推理样例:
@@ -1042,9 +1042,9 @@ BoolQ数据集评估样例. 数据集[here](https://huggingface.co/datasets/bool
 
 配置评估脚本:
 
-LLaMA2-34B:`tasks/evaluation/evaluate_llama2_34B_ptd.sh`.
+LLaMA2-34B:`examples/llama2/evaluate_llama2_34B_ptd.sh`.
 
-LLaMA2-70B:`tasks/evaluation/evaluate_llama2_70B_ptd.sh`.
+LLaMA2-70B:`examples/llama2/evaluate_llama2_70B_ptd.sh`.
 
 ```shell
 # 修改模型权重路径和分词器路径
@@ -1054,11 +1054,11 @@ TOKENIZER_PATH=<tokenizer-path>
 
 LLaMA2-34B评估:
 ```shell
-bash tasks/evaluation/evaluate_llama2_34B_ptd.sh
+bash examples/llama2/evaluate_llama2_34B_ptd.sh
 ```
 LLaMA2-70B评估:
 ```shell
-bash tasks/evaluation/evaluate_llama2_70B_ptd.sh
+bash examples/llama2/evaluate_llama2_70B_ptd.sh
 ```
 
 BoolQ 数据集评估结果:

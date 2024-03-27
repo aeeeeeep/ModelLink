@@ -41,7 +41,7 @@ class TestConvertCkptFromHuggingface(unittest.TestCase):
         to compose the unique transformer layer and all these layer stack to compose the entity of the model.
         """
         base_dir = Path(__file__).absolute().parent.parent.parent
-        file_path = os.path.join(base_dir, "tools/checkpoint/util.py")
+        file_path = os.path.join(base_dir, "tools/checkpoint/convert_ckpt.py")
         arguments = sys.argv[1:]
         subprocess.run(["python", file_path] + arguments)
         output_dir = os.path.join(sys.argv[12], "iter_0000001")

@@ -98,7 +98,7 @@ cd ModelLink/
 mkdir model_weights
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py \
+python tools/checkpoint/convert_ckpt.py \
     --model-type GPT \
     --load-dir ./HF_Aquila7B_downloaded \
     --save-dir ./model_weights/aquila \
@@ -114,7 +114,7 @@ python tools/checkpoint/util.py \
 cd ModelLink/
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -172,7 +172,7 @@ Aquila-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 推理与预训练不同，我们必须加载预训练权重，请注意：在转换权重时使用的模型结构参数，和运行评估任务时使用的模型结构参数，应保持一致。
 
-权重转换完成后，我们配置Aquila-7B推理脚本`tasks/inference/generate_aquila_7b_ptd.sh`，需要正确指定加载权重的路径，词表路径等（下面样例仅供参考）
+权重转换完成后，我们配置Aquila-7B推理脚本`example/aquila/generate_aquila_7b_ptd.sh`，需要正确指定加载权重的路径，词表路径等（下面样例仅供参考）
 
 ```shell
 # 请按实际情况修改模型权重路径和分词器路径
@@ -182,7 +182,7 @@ TOKENIZER_PATH="./HF_Aquila7B_downloaded/"
 
 启动Aquila-7B推理:
 ```shell
-bash ./tasks/inference/generate_aquila_7b_ptd.sh
+bash examples/aquila/generate_aquila_7b_ptd.sh
 ```
 
 部分推理样本如下：
@@ -198,7 +198,7 @@ Aquila-7B:
 
 评估与推理类似，也必须加载转换后的权重，请注意：在转换权重时使用的模型结构参数，和运行评估任务时使用的模型结构参数，应保持一致。
 
-权重转换完成后，我们配置Aquila-7B评估脚本 `tasks/evaluation/evaluate_aquila_7b_ptd.sh`，需要正确指定加载权重的路径，词表路径，评估数据的路径，以及评估任务的名字等(下面样例仅供参考)：
+权重转换完成后，我们配置Aquila-7B评估脚本 `examples/aquila/evaluate_aquila_7b_ptd.sh`，需要正确指定加载权重的路径，词表路径，评估数据的路径，以及评估任务的名字等(下面样例仅供参考)：
 
 ```shell
 CKPT_LOAD_DIR="./model_weights/aquila/"
@@ -209,7 +209,7 @@ TASK="boolq"
 
 启动Aquila-7B评估
 ```shell
-bash tasks/evaluation/evaluate_aquila_7b_ptd.sh
+bash examples/aquila/evaluate_aquila_7b_ptd.sh
 ```
 
 Aquila-7B在**Ascend NPU**中的评测表现：

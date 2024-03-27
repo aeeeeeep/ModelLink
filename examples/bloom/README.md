@@ -71,7 +71,7 @@ cd ..
 将模型权重文件从 HuggingFace权重 格式转化为 Megatron 权重
 ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 ```shell
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                 --loader loader_bloom_hf \
                                 --saver saver_megatron \
                                 --target-tensor-parallel-size 8 \
@@ -87,7 +87,7 @@ python tools/checkpoint/util.py --model-type GPT \
 cd ModelLink/
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -153,7 +153,7 @@ Bloom-7B
 
 
 ## Bloom-7B推理
-首先配置Bloom-7B 推理脚本: tasks/inference/generate_bloom_ptd_7B.sh 
+首先配置Bloom-7B 推理脚本: examples/bloom/generate_bloom_ptd_7B.sh 
 ```bash
 # 根据您自己的 ascend-toolkit 路径，执行set_env.sh
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -166,7 +166,7 @@ TOKENIZER_PATH="your tokenizer path"
 然后可直接启动generate_bloom_7b_ptd.sh
 
 ```bash
-bash tasks/inference/generate_bloom_7b_ptd.sh
+bash examples/bloom/generate_bloom_7b_ptd.sh
 ```
 推理示例如下：
 
@@ -174,7 +174,7 @@ bash tasks/inference/generate_bloom_7b_ptd.sh
 
 ## Bloom-7B评测
 
-配置Bloom-7B 评估脚本: tasks/evaluation/evaluate_bloom_7b_ptd.sh
+配置Bloom-7B 评估脚本: examples/bloom/evaluate_bloom_7b_ptd.sh
 
 ```bash
 # ascend-toolkit 路径
@@ -191,7 +191,7 @@ TASK="your task"
 启动评估
 
 ```bash
-bash tasks/evaluation/evaluate_bloom_7B_ptd.sh
+bash examples/bloom/evaluate_bloom_7B_ptd.sh
 ```
 MMLU评测得分
 
@@ -269,7 +269,7 @@ cd ..
 将模型权重文件从 HuggingFace权重 格式转化为 Megatron 权重
 ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 ```shell
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                 --loader loader_bloom_hf \
                                 --saver saver_megatron \
                                 --target-tensor-parallel-size 8 \
@@ -288,7 +288,7 @@ python tools/checkpoint/util.py --model-type GPT \
 cd ModelLink/
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -358,7 +358,7 @@ Bloom-176B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 
 
 ## 推理
-首先配置Bloom-176B 推理脚本: tasks/inference/generate_bloom_ptd_176B.sh 
+首先配置Bloom-176B 推理脚本: examples/bloom/generate_bloom_ptd_176B.sh 
 bloom 176b的推理需要5机，因此要用上面的  权重转换脚本重新切分，tp=8，pp=5
 ```bash
 # 根据您自己的 ascend-toolkit 路径，执行set_env.sh
@@ -372,7 +372,7 @@ TOKENIZER_PATH="your tokenizer path"
 然后可直接启动generate_bloom_176b_ptd.sh
 
 ```bash
-bash tasks/inference/generate_bloom_176b_ptd.sh
+bash examples/bloom/generate_bloom_176b_ptd.sh
 ```
 推理示例如下：
 
@@ -381,7 +381,7 @@ bash tasks/inference/generate_bloom_176b_ptd.sh
 
 ## 评估 
 
-配置Bloom-176B 评估脚本: tasks/evaluation/evaluate_bloom_176b_ptd.sh
+配置Bloom-176B 评估脚本: examples/bloom/evaluate_bloom_176b_ptd.sh
 
 ```bash
 # ascend-toolkit 路径
@@ -398,7 +398,7 @@ TASK="your task"
 启动评估
 
 ```bash
-bash tasks/evaluation/evaluate_bloom_176B_ptd.sh
+bash examples/bloom/evaluate_bloom_176B_ptd.sh
 ```
 评测得分
 

@@ -122,7 +122,7 @@ cd ..
 ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 ```shell
 mkdir model_weights
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                 --loader llama2_hf \
                                 --saver megatron \
                                 --target-tensor-parallel-size 8 \
@@ -140,7 +140,7 @@ python tools/checkpoint/util.py --model-type GPT \
 cd ModelLink/
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -186,9 +186,9 @@ Internlm-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 #### 推理
 推理脚本</a>：
-tasks/inference/generate_lnternlm_7b_ptd.sh
+examples/intern/generate_internlm_7b_ptd.sh
 ```
-bash ./tasks/inference/generate_lnternlm_7b_ptd.sh
+bash ./examples/intern/generate_internlm_7b_ptd.sh
 ```
 推理举例：
 ![Internlm-7b-inference](../../sources/images/intern/intern_7B_inference.png)
@@ -197,9 +197,9 @@ bash ./tasks/inference/generate_lnternlm_7b_ptd.sh
 使用MMLU数据集评估模型。数据集[下载](https://huggingface.co/datasets/cais/mmlu)
 
 评估脚本</a>:
-tasks/evaluation/evaluate_internlm_7B_ptd.sh 
+examples/intern/evaluate_internlm_7B_ptd.sh 
 ```
-bash  tasks/evaluation/evaluate_internlm_7B_ptd.sh
+bash  examples/intern/evaluate_internlm_7B_ptd.sh
 ```
 InternLM-7B在**Ascend NPU**中的评测表现：
 

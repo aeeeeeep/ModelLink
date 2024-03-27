@@ -18,7 +18,7 @@ import os
 from functools import wraps
 from megatron.checkpointing import _load_base_checkpoint
 from megatron import get_args
-from tasks.finetune.lora.utils import is_enable_lora, merge_dicts, modify_keys_with_dict
+from .tasks.finetune.lora.utils import is_enable_lora, merge_dicts, modify_keys_with_dict
 
 
 def _load_base_checkpoint_wrapper(fn):

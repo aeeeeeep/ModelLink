@@ -34,7 +34,7 @@ from megatron.model.utils import get_norm
 
 from modellink.error_utils import ensure_valid
 from modellink.model.alibi import Alibi, _build_alibi_tensor, _get_inverted_mask
-from tasks.finetune.lora.utils import is_enable_lora
+from ..tasks.finetune.lora.utils import is_enable_lora
 
 try:
     from einops import rearrange

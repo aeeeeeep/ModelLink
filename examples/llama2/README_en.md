@@ -115,7 +115,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
     # convert to ptd weights
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                     --loader llama2_hf \
                                     --saver megatron \
                                     --target-tensor-parallel-size 8 \
@@ -130,7 +130,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     cd ModelLink/
     # Modify the ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
         --loader megatron \
         --saver megatron \
         --save-model-type save_huggingface_llama \
@@ -233,10 +233,10 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
        --lora-load ${LORA_CHECKPOINT} \
    ```
    
-   Launch LLAMA2-7B lora fine tune script: tasks/finetune/tune_llama2_7b_ptd.sh
+   Launch LLAMA2-7B lora fine tune script: examples/finetune/tune_llama2_7b_ptd.sh
    
    ```shell
-    bash tasks/finetune/tune_llama2_7b_ptd.sh 
+    bash examples/llama2/tune_llama2_7b_ptd.sh 
    ```
 
 ### Performance
@@ -253,7 +253,7 @@ The performance of LLaMA2-7B in **Ascend NPU** and **Reference**:
 
 
 ## Inference-7B
-Config llama2-7B inference script: tasks/inference/generate_llama2_7b_ptd.sh
+Config llama2-7B inference script: examples/llama2/generate_llama2_7b_ptd.sh
 ```bash
 # modify the script according to your own ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -262,16 +262,16 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 TOKENIZER_PATH=./llama2-7b-hf/  #tokenizer path
 CHECKPOINT=./llama2-7b-tp8pp1  #model path
 ```
-Config llama2-7B lora inference script: tasks/inference/generate_llama2_7b_lora_ptd.sh
+Config llama2-7B lora inference script: examples/llama2/generate_llama2_7b_lora_ptd.sh
 ```bash
 # modify lora model path
 CHECKPOINT_LORA="your lora model directory path"
 ```
-Launch llama2-7B inference script: tasks/inference/generate_llama2_7b_ptd.sh
+Launch llama2-7B inference script: examples/llama2/generate_llama2_7b_ptd.sh
 ```bash
 bash examples/llama2/generate_llama2_7b_ptd.sh
 ```
-Launch llama2-7B lora inference script: tasks/inference/generate_llama2_7b_lora_ptd.sh
+Launch llama2-7B lora inference script: examples/llama2/generate_llama2_7b_lora_ptd.sh
 ```bash
 bash examples/llama2/generate_llama2_7b_lora_ptd.sh
 ```
@@ -280,7 +280,7 @@ Some inference samples are as follows:
 
 ## Evaluation-7B
 We use MMLU benchmark to evaluate our model. Benchmark Download [here](https://huggingface.co/datasets/cais/mmlu). 
-Config llama2-7B evaluation script: tasks/evaluation/evaluate_llama2_7B_ptd.sh
+Config llama2-7B evaluation script: examples/llama2/evaluate_llama2_7B_ptd.sh
 
 ```bash
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -295,7 +295,7 @@ TASK="mmlu"
 Launch llama2-7B evaluation script:
 
 ```bash
-bash tasks/evaluation/evaluate_llama2_7B_ptd.sh
+bash examples/llama2/evaluate_llama2_7B_ptd.sh
 ```
 
 Evaluation results
@@ -425,7 +425,7 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
     # convert weights
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
         --loader llama2_hf \
         --saver megatron \
         --target-tensor-parallel-size 8 \
@@ -441,7 +441,7 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
     cd ModelLink/
     # Modify the ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
         --loader megatron \
         --saver megatron \
         --save-model-type save_huggingface_llama \
@@ -539,10 +539,10 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
    ```
    
    
-   Launch LLAMA2-13B lora fine tune script: tasks/finetune/tune_llama2_13b_ptd.sh
+   Launch LLAMA2-13B lora fine tune script: examples/llama2/tune_llama2_13b_ptd.sh
    
    ```shell
-    bash tasks/finetune/tune_llama2_13b_ptd.sh 
+    bash examples/llama2/tune_llama2_13b_ptd.sh 
    ```
 
 ### Performance
@@ -571,7 +571,7 @@ CHECKPOINT=./llama2-13b-tp8-pp1/
 TOKENIZER_PATH=./llama2-13b-hf/
 ```
 
-Config Llama2-13B lora inference script: tasks/inference/generate_llama2_13b_lora_ptd.sh
+Config Llama2-13B lora inference script: examples/llama2/generate_llama2_13b_lora_ptd.sh
 
 ```bash
 # modify lora model directory path
@@ -580,11 +580,11 @@ CHECKPOINT_LORA="your lora model directory path"
 
 Launch Llama2-13B inference script.
 ```shell
-bash ./tasks/inference/generate_llama2_13b_ptd.sh
+bash examples/llama2/generate_llama2_13b_ptd.sh
 ```
 Launch Llama2-13B lora inference script.
 ```shell
-bash ./tasks/inference/generate_llama2_13b_lora_ptd.sh
+bash examples/llama2/generate_llama2_13b_lora_ptd.sh
 ```
 Some inference samples are as follows:
 ![llama2-13B-generate.png](../../sources/images/llama2/llama2-13B-generate.png)
@@ -601,7 +601,7 @@ We use boolq benchmark to evaluate our model. Benchmark Download [here](https://
 ```
 
 ```shell
-bash tasks/evaluation/evaluate_llama2_13B_ptd.sh
+bash examples/llama2/evaluate_llama2_13B_ptd.sh
 ```
 
 <table>
@@ -742,7 +742,7 @@ pip install -r requirements.txt
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
     # convert to megatron weights
-    python tools/checkpoint/util.py \
+    python tools/checkpoint/convert_ckpt.py \
     --model-type GPT \
     --loader llama2_hf \
     --saver megatron \
@@ -758,7 +758,7 @@ pip install -r requirements.txt
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
     # convert to megatron weights
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
      --loader llama2_hf \
      --saver megatron \
      --target-tensor-parallel-size 8 \
@@ -775,7 +775,7 @@ pip install -r requirements.txt
     cd ModelLink/
     # Modify the ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
         --loader megatron \
         --saver megatron \
         --save-model-type save_huggingface_llama \
@@ -789,7 +789,7 @@ pip install -r requirements.txt
     cd ModelLink/
     # Modify the ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    python tools/checkpoint/util.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
         --loader megatron \
         --saver megatron \
         --save-model-type save_huggingface_llama \
@@ -931,16 +931,16 @@ pip install -r requirements.txt
        --lora-load ${LORA_CHECKPOINT} \
    ```
    
-   Launch LLAMA2-34B lora fine tune script: tasks/finetune/tune_llama2_34b_ptd.sh
+   Launch LLAMA2-34B lora fine tune script: examples/llama2/tune_llama2_34b_ptd.sh
    
    ```shell
-    bash tasks/finetune/tune_llama2_34b_ptd.sh 
+    bash examples/llama2/tune_llama2_34b_ptd.sh 
    ```
    
-   Launch LLAMA2-70B lora fine tune script: tasks/finetune/tune_llama2_70b_ptd.sh
+   Launch LLAMA2-70B lora fine tune script: examples/llama2/tune_llama2_70b_ptd.sh
    
    ```shell
-    bash tasks/finetune/tune_llama2_70b_ptd.sh 
+    bash examples/llama2/tune_llama2_70b_ptd.sh 
    ```
 
 ### Performance-2
@@ -965,9 +965,9 @@ Models could generate with 8 NPUs, for example:
 
 Config inference script:
 
-LLaMA2-34B:`tasks/inference/generate_llama2_34B_ptd.sh`.
+LLaMA2-34B:`examples/llama2/generate_llama2_34B_ptd.sh`.
 
-LLaMA2-70B:`tasks/inference/generate_llama2_70b_ptd.sh`.
+LLaMA2-70B:`examples/llama2/generate_llama2_70b_ptd.sh`.
 
 ```shell
 # Modify checkpoint path and vocabfile path.
@@ -983,19 +983,19 @@ CHECKPOINT_LORA="your lora model directory path"
 
 Launch LLaMA2-34B inference:
 ```shell
-bash ./tasks/inference/generate_llama2_34B_ptd.sh
+bash ./examples/llama2/generate_llama2_34B_ptd.sh
 ```
 Launch LLaMA2-34B lora inference:
 ```shell
-bash ./tasks/inference/generate_llama2_34b_lora_ptd.sh
+bash ./examples/llama2/generate_llama2_34b_lora_ptd.sh
 ```
 Launch LLaMA2-70B inference:
 ```shell
-bash ./tasks/llama2/generate_llama2_70b_ptd.sh
+bash ./examples/llama2/generate_llama2_70b_ptd.sh
 ```
 Launch LLaMA2-70B lora inference:
 ```shell
-bash ./tasks/llama2/generate_llama2_70b_lora_ptd.sh
+bash ./examples/llama2/generate_llama2_70b_lora_ptd.sh
 ```
 
 Some inference samples of LLaMA2-34B are as follows:
@@ -1012,9 +1012,9 @@ Download dev part[here](https://storage.googleapis.com/boolq/dev.jsonl) and put 
 
 Config evaluation script:
 
-LLaMA2-34B:`tasks/evaluation/evaluate_llama2_34B_ptd.sh`.
+LLaMA2-34B:`examples/llama2/evaluate_llama2_34B_ptd.sh`.
 
-LLaMA2-70B:`tasks/evaluation/evaluate_llama2_70B_ptd.sh`.
+LLaMA2-70B:`examples/llama2/evaluate_llama2_70B_ptd.sh`.
 
 ```shell
 # Modify checkpoint path and vocabfile path.
@@ -1024,11 +1024,11 @@ TOKENIZER_PATH=<tokenizer-path>
 
 Launch LLaMA2-34B evaluation:
 ```shell
-bash tasks/evaluation/evaluate_llama2_34B_ptd.sh
+bash examples/llama2/evaluate_llama2_34B_ptd.sh
 ```
 Launch LLaMA2-70B evaluation:
 ```shell
-bash tasks/evaluation/evaluate_llama2_70B_ptd.sh
+bash examples/llama2/evaluate_llama2_70B_ptd.sh
 ```
 
 Evaluation results with BoolQ dataset:

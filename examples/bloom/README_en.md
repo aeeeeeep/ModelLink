@@ -73,7 +73,7 @@ HuggingFace weights --> Megatron weights
 ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 
 ```shell
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                 --loader loader_bloom_hf \
                                 --saver saver_megatron \
                                 --target-tensor-parallel-size 8 \
@@ -89,7 +89,7 @@ Any Megatron weights with parallel slicing strategy --> Any Megatron weights wit
 cd ModelLink/
 # Modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -160,7 +160,7 @@ The performance of Bloom-7B in **Ascend NPU** and **Reference**:
 
 
 ## Inference Bloom-7B
-Config Bloom-7B inference script: tasks/inference/generate_bloom_7b_ptd.sh
+Config Bloom-7B inference script: examples/bloom/generate_bloom_7b_ptd.sh
 ```bash
 # modify the script according to your own ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -169,16 +169,16 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 CHECKPOINT="your model save ckpt path"
 TOKENIZER_PATH="your tokenizer path"
 ```
-Launch Bloom-7B inference script: tasks/inference/generate_bloom_7b_ptd.sh
+Launch Bloom-7B inference script: examples/bloom/generate_bloom_7b_ptd.sh
 ```bash
-bash tasks/inference/generate_bloom_7b_ptd.sh
+bash examples/bloom/generate_bloom_7b_ptd.sh
 ```
 Some inference samples are as follows:
 
 ![Inference](../../sources/images/bloom/bloom7b-generate.png)
 
 ## Evaluation Bloom-7B
-Config Bloom-7B evaluation script: tasks/evaluation/evaluate_bloom_7B_ptd.sh
+Config Bloom-7B evaluation script: examples/bloom/evaluate_bloom_7B_ptd.sh
 
 ```bash
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -193,7 +193,7 @@ TASK="your task"
 Launch Bloom-7B evaluation script:
 
 ```bash
-bash tasks/evaluation/evaluate_bloom_7B_ptd.sh
+bash examples/bloom/evaluate_bloom_7B_ptd.sh
 ```
 
 Evaluation results
@@ -274,7 +274,7 @@ HuggingFace weights --> Megatron weights
 ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 
 ```shell
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                 --loader loader_bloom_hf \
                                 --saver saver_megatron \
                                 --target-tensor-parallel-size 8 \
@@ -291,7 +291,7 @@ Any Megatron weights with parallel slicing strategy --> Any Megatron weights wit
 cd ModelLink/
 # Modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -361,7 +361,7 @@ The performance of Bloom-176B in **Ascend NPU** and **Reference**:
 
 
 ## Inference Bloom 176B
-Config Bloom-176B inference script: tasks/inference/generate_bloom_176b_ptd.sh
+Config Bloom-176B inference script: examples/bloom/generate_bloom_176b_ptd.sh
 ```bash
 # modify the script according to your own ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -370,18 +370,19 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 CHECKPOINT="your model save ckpt path"
 TOKENIZER_PATH="your tokenizer path"
 ```
-Launch Bloom-176B inference script: tasks/inference/generate_bloom_176b_ptd.sh
+Launch Bloom-176B inference script: examples/bloom/generate_bloom_176b_ptd.sh
+
 Bloom-176b needs 5 machines to inference, so you need to convert a new model, set
 tp=8, pp=5
 ```bash
-bash tasks/inference/generate_bloom_176b_ptd.sh
+bash examples/bloom/generate_bloom_176b_ptd.sh
 ```
 Some inference samples are as follows:
 
 ![Inference](../../sources/images/bloom/bloom176b-generate.png)
 
 ## Evaluation Bloom 176B
-Config Bloom-176B evaluation script: tasks/evaluation/evaluate_bloom_176B_ptd.sh
+Config Bloom-176B evaluation script: examples/bloom/evaluate_bloom_176B_ptd.sh
 
 ```bash
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -396,7 +397,7 @@ TASK="your task"
 Launch Bloom-176B evaluation script:
 
 ```bash
-bash tasks/evaluation/evaluate_bloom_176B_ptd.sh
+bash examples/bloom/evaluate_bloom_176B_ptd.sh
 ```
 
 Evaluation results

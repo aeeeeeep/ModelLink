@@ -95,7 +95,7 @@ LLaMA-7B
 ```shell
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 mkdir model_weights
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader llama2_hf \
     --saver megatron \
     --target-tensor-parallel-size 1 \
@@ -109,7 +109,7 @@ LLaMA-13B
 ```shell
 # Single machine with 8p
 mkdir model_weights
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader llama2_hf \
     --saver megatron \
     --target-tensor-parallel-size 1 \
@@ -127,7 +127,7 @@ LLaMA-7B
 cd ModelLink/
 # Modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -142,7 +142,7 @@ LLaMA-13B
 cd ModelLink/
 # Modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -300,13 +300,13 @@ Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the f
 
 LLaMA-7B
 ```shell
-bash tasks/finetune/tune_llama_7b_ptd.sh
+bash examples/llama/tune_llama_7b_ptd.sh
 ```
 
 LLaMA-13B
 ```shell
 # 8p
-bash tasks/finetune/tune_llama_13b_ptd.sh 
+bash examples/llama/tune_llama_13b_ptd.sh 
 ```
 
 
@@ -330,7 +330,7 @@ The performance of LLaMA-7B/13B in **Ascend NPU** and **Reference**:
 We support ModelLink Inference for text generation with LLaMA-7B and LLaMA-13B.
 Inference different from pre-training, such as we need to Load pre-training checkpoint and the length of the output samples:
 
-Config LLaMA-7B inference script `tasks/inference/generate_llama_7b_ptd.sh` and LLaMA-13B inference script `tasks/inference/generate_llama_13b_ptd.sh`.
+Config LLaMA-7B inference script `examples/llama/generate_llama_7b_ptd.sh` and LLaMA-13B inference script `examples/llama/generate_llama_13b_ptd.sh`.
 
 ```shell
 # modify the model weight path and tokenizer path
@@ -340,12 +340,12 @@ TOKENIZER_PATH=<tokenizer-path>
 
 LLaMA-7B:
 ```shell
-bash ./tasks/inference/generate_llama_7b_ptd.sh
+bash ./examples/llama/generate_llama_7b_ptd.sh
 ```
 
 LLaMA-13B:
 ```shell
-bash ./tasks/inference/generate_llama_13b_ptd.sh
+bash ./examples/llama/generate_llama_13b_ptd.sh
 ```
 
 Some inference samples are as follows:
@@ -363,7 +363,7 @@ LLaMA-13B:
 
 We use boolq benchmark to evaluate our model. Benchmark Download [here](https://huggingface.co/datasets/boolq).
 
-Config LLaMA-7B evaluation script `tasks/evaluation/evaluate_llama_7B_ptd.sh` and LLaMA-13B evaluation script `tasks/evaluation/evaluate_llama_13B_ptd.sh`:
+Config LLaMA-7B evaluation script `examples/llama/evaluate_llama_7B_ptd.sh` and LLaMA-13B evaluation script `examples/llama/evaluate_llama_13B_ptd.sh`:
 
 Modify checkpoint path, vocab path, dataset path and task:
 
@@ -386,8 +386,8 @@ Change the max new tokens:
 
 Start evaluation:
 ```shell
-bash tasks/evaluation/evaluate_llama_7B_ptd.sh
-bash tasks/evaluation/evaluate_llama_13B_ptd.sh
+bash examples/llama/evaluate_llama_7B_ptd.sh
+bash examples/llama/evaluate_llama_13B_ptd.sh
 ```
 
 The evaluation performance of LLaMA-7B/13B in **Ascend NPU**:
@@ -486,7 +486,7 @@ llama-33B
 ```shell
 mkdir model_weights
 
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                 --loader llama2_hf \
                                 --saver megatron \
                                 --target-tensor-parallel-size 4 \
@@ -499,7 +499,7 @@ python tools/checkpoint/util.py --model-type GPT \
 llama-65B
 ```shell
 mkdir model_weights
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                 --loader llama2_hf \
                                 --saver megatron \
                                 --target-tensor-parallel-size 8 \
@@ -516,7 +516,7 @@ LLaMA-33B
 cd ModelLink/
 # Modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -531,7 +531,7 @@ LLaMA-65B
 cd ModelLink/
 # Modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -696,12 +696,12 @@ Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the f
 
 Launch llama-33B pre-training script : ModelLink/examples/llama/tune_llama_33B_ptd_32p.sh
 ```bash
-bash tasks/finetune/tune_llama_33B_ptd_32p.sh
+bash examples/llama/tune_llama_33B_ptd_32p.sh
 ```
 
 Launch llama-65B pre-training script : ModelLink/examples/llama/tune_llama_65b_ptd.sh
 ```bash
-bash tasks/finetune/tune_llama_65b_ptd.sh
+bash examples/llama/tune_llama_65b_ptd.sh
 ```
 Config llama-33B/65B pre-training script for multinode (Launch llama-65B pre-training script on each machine):
 
@@ -732,9 +732,9 @@ The performance of the NPUs in **Ascend** and Reference:
 We support ModelLink Inference for text generation with LLaMA-33B and LLaMA-65B.
 Inference different from pre-training, such as we need to Load pre-training checkpoint and the length of the output samples:
 
-Config LLaMA-33B inference script `tasks/inference/generate_llama_33b_ptd.sh`.
+Config LLaMA-33B inference script `examples/llama/generate_llama_33b_ptd.sh`.
 
-Config LLaMA-65B inference script `tasks/inference/generate_llama_65b_ptd.sh`.
+Config LLaMA-65B inference script `examples/llama/generate_llama_65b_ptd.sh`.
 
 ```shell
 # modify the model weight path and tokenizer path
@@ -744,11 +744,11 @@ TOKENIZER_PATH=<tokenizer-path>
 
 LLaMA-33B:
 ```shell
-bash ./tasks/inference/generate_llama_33b_ptd.sh
+bash ./examples/llama/generate_llama_33b_ptd.sh
 ```
 LLaMA-65B:
 ```shell
-bash ./tasks/inference/generate_llama_65b_ptd.sh
+bash ./examples/llama/generate_llama_65b_ptd.sh
 ```
 
 Some inference samples are as follows:
@@ -766,9 +766,9 @@ LLaMA-65B:
 
 We use Boolq benchmark to evaluate our model. Benchmark Download [here](https://huggingface.co/datasets/boolq).
 
-Config LLaMA-33B evaluation script: tasks/evaluation/evaluate_llama_33B_ptd.sh
+Config LLaMA-33B evaluation script: examples/llama/evaluate_llama_33B_ptd.sh
 
-Config LLaMA-65B evaluation script: tasks/evaluation/evaluate_llama_65B_ptd.sh
+Config LLaMA-65B evaluation script: examples/llama/evaluate_llama_65B_ptd.sh
 
 Modify checkpoint path, vocab path, dataset path and task:
 
@@ -786,9 +786,9 @@ Change the max new tokens:
 ```shell
 # start evaluation
 # evaluate llama-33B
-bash tasks/evaluation/evaluate_llama_33B_ptd.sh
+bash examples/llama/evaluate_llama_33B_ptd.sh
 # evaluate llama-65B
-bash tasks/evaluation/evaluate_llama_65B_ptd.sh
+bash examples/llama/evaluate_llama_65B_ptd.sh
 ```
 
 The evaluation performance of LLaMA-7B/13B in **Ascend NPU**:

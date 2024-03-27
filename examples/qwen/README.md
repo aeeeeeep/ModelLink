@@ -118,7 +118,7 @@ Qwen-7B 训练的硬件配置:
    # 修改 ascend-toolkit 路径
    source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
-   python tools/checkpoint/util.py --model-type GPT \
+   python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                    --loader qwen_hf \
                                    --saver megatron \
                                    --target-tensor-parallel-size 8 \
@@ -135,7 +135,7 @@ Qwen-7B 训练的硬件配置:
    cd ModelLink/
    # 请按照您的真实环境修改 set_env.sh 路径
    source /usr/local/Ascend/ascend-toolkit/set_env.sh
-   python tools/checkpoint/util.py --model-type GPT \
+   python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                    --loader megatron \
                                    --saver megatron \
                                    --save-model-type save_huggingface_qwen \
@@ -203,7 +203,7 @@ Qwen-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 ## 推理
 
-配置 qwen-7b 推理脚本：tasks/inference/generate_qwen_7b_ptd.sh
+配置 qwen-7b 推理脚本：examples/qwen/generate_qwen_7b_ptd.sh
 
 ```bash
 # ascend-toolkit 路径
@@ -216,7 +216,7 @@ TOKENIZER_PATH="your tokenizer directory path"
 
 启动qwen-7b推理脚本
 ```bash
-bash tasks/inference/generate_qwen_7b_ptd.sh
+bash examples/qwen/generate_qwen_7b_ptd.sh
 ```
 
 推理示例如下：
@@ -227,7 +227,7 @@ bash tasks/inference/generate_qwen_7b_ptd.sh
 
 使用[CEval数据集](https://huggingface.co/datasets/ceval/ceval-exam)和[MMLU数据集](https://huggingface.co/datasets/cais/mmlu)评估模型.
 
-配置qwen-7b评估脚本: tasks/evaluation/evaluate_qwen_7b_ptd.sh
+配置qwen-7b评估脚本: examples/qwen/evaluate_qwen_7b_ptd.sh
 
 ```bash
 # ascend-toolkit 路径
@@ -245,7 +245,7 @@ TASK="mmlu"  # ceval任务配置为 "ceval"
 启动评估
 
 ```bash
-bash tasks/evaluation/evaluate_qwen_7b_ptd.sh
+bash examples/qwen/evaluate_qwen_7b_ptd.sh
 ```
 
 | 数据集 | 总学科数 | 总问题数 |                                     参考准确率                                     | NPU准确率 |
@@ -348,7 +348,7 @@ Qwen-14B 训练的硬件配置:
    # 修改 ascend-toolkit 路径
    source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
-   python tools/checkpoint/util.py --model-type GPT \
+   python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                    --loader qwen_hf \
                                    --saver megatron \
                                    --target-tensor-parallel-size 8 \
@@ -363,7 +363,7 @@ Qwen-14B 训练的硬件配置:
    cd ModelLink/
    # 请按照您的真实环境修改 set_env.sh 路径
    source /usr/local/Ascend/ascend-toolkit/set_env.sh
-   python tools/checkpoint/util.py --model-type GPT \
+   python tools/checkpoint/convert_ckpt.py --model-type GPT \
       --loader megatron \
       --saver megatron \
       --save-model-type save_huggingface_qwen \
@@ -430,7 +430,7 @@ Qwen-14B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 ## 推理
 
-配置 qwen-14b 推理脚本：tasks/inference/generate_qwen_14b_ptd.sh
+配置 qwen-14b 推理脚本：examples/qwen/generate_qwen_14b_ptd.sh
 
 ```bash
 # ascend-toolkit 路径
@@ -443,7 +443,7 @@ TOKENIZER_PATH=./qwen-14b-hf
 
 启动qwen-14b推理脚本
 ```bash
-bash tasks/inference/generate_qwen_14b_ptd.sh
+bash examples/qwen/generate_qwen_14b_ptd.sh
 ```
 
 推理示例如下：
@@ -454,7 +454,7 @@ bash tasks/inference/generate_qwen_14b_ptd.sh
 
 使用[CEval数据集](https://huggingface.co/datasets/ceval/ceval-exam)和[MMLU数据集](https://huggingface.co/datasets/cais/mmlu)评估模型.
 
-配置qwen-14b评估脚本: tasks/evaluation/evaluate_qwen_14b_ptd.sh
+配置qwen-14b评估脚本: examples/qwen/evaluate_qwen_14b_ptd.sh
 
 ```bash
 # ascend-toolkit 路径
@@ -471,7 +471,7 @@ TASK="mmlu"  # ceval任务配置为 "ceval"
 启动评估
 
 ```bash
-bash tasks/evaluation/evaluate_qwen_14b_ptd.sh
+bash examples/qwen/evaluate_qwen_14b_ptd.sh
 ```
 
 | 数据集 | 总学科数 | 总问题数 |                    参考准确率                     | NPU准确率 |
@@ -557,7 +557,7 @@ Qwen-72B 训练的硬件配置:
    # 修改 ascend-toolkit 路径
    source /usr/local/Ascend/ascend-toolkit/set_env.sh
       
-   python tools/checkpoint/util.py --model-type GPT \
+   python tools/checkpoint/convert_ckpt.py --model-type GPT \
                                    --loader qwen_hf \
                                    --saver megatron \
                                    --target-tensor-parallel-size 8 \
@@ -573,7 +573,7 @@ Qwen-72B 训练的硬件配置:
    cd ModelLink/
    # 请按照您的真实环境修改 set_env.sh 路径
    source /usr/local/Ascend/ascend-toolkit/set_env.sh
-   python tools/checkpoint/util.py --model-type GPT \
+   python tools/checkpoint/convert_ckpt.py --model-type GPT \
       --loader megatron \
       --saver megatron \
       --save-model-type save_huggingface_qwen \
@@ -650,7 +650,7 @@ Qwen-72B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 ## 推理
 
-配置 qwen-72b 推理脚本：tasks/inference/generate_qwen_72b_ptd.sh
+配置 qwen-72b 推理脚本：examples/qwen/generate_qwen_72b_ptd.sh
 
 ```bash
 # ascend-toolkit 路径
@@ -663,7 +663,7 @@ TOKENIZER_PATH=./qwen-72b-hf
 
 启动qwen-72b推理脚本
 ```bash
-bash tasks/inference/generate_qwen_72b_ptd.sh
+bash examples/qwen/generate_qwen_72b_ptd.sh
 ```
 
 推理示例如下：
@@ -674,7 +674,7 @@ bash tasks/inference/generate_qwen_72b_ptd.sh
 
 使用[CEval数据集](https://huggingface.co/datasets/ceval/ceval-exam)和[MMLU数据集](https://huggingface.co/datasets/cais/mmlu)评估模型.
 
-配置qwen-72b评估脚本: tasks/evaluation/evaluate_qwen_72b_ptd.sh
+配置qwen-72b评估脚本: examples/qwen/evaluate_qwen_72b_ptd.sh
 
 ```bash
 # ascend-toolkit 路径
@@ -692,7 +692,7 @@ TASK="mmlu"  # ceval任务配置为 "ceval"
 启动评估
 
 ```bash
-bash tasks/evaluation/evaluate_qwen_72b_ptd.sh
+bash examples/qwen/evaluate_qwen_72b_ptd.sh
 ```
 
 | 数据集 | 总学科数 | 总问题数 |                    参考准确率                     | NPU准确率 |

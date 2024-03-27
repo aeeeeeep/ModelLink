@@ -104,7 +104,7 @@ mkdir baichuan2-7B-mt
 # modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
    
-python tools/checkpoint/util.py \
+python tools/checkpoint/convert_ckpt.py \
     --model-type GPT \
     --loader llama2_hf \
     --saver megatron \
@@ -121,7 +121,7 @@ Any Megatron weights with parallel slicing strategy --> Any Megatron weights wit
 cd ModelLink/
 # Modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -190,7 +190,7 @@ The performance of Baichuan2-7B in **Ascend NPU** and **Reference**:
 
 
 ## Inference
-Config baichuan2-7B inference script: tasks/inference/generate_baichuan2_7b_ptd.sh
+Config baichuan2-7B inference script: examples/baichuan2/generate_baichuan2_7b_ptd.sh
 ```bash
 # modify the script according to your own ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -199,9 +199,9 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 CHECKPOINT="your model directory path"
 TOKENIZER_PATH="your tokenizer directory path"
 ```
-Launch baichuan2-7B inference script: tasks/inference/generate_baichuan2_7b_ptd.sh
+Launch baichuan2-7B inference script: examples/baichuan2/generate_baichuan2_7b_ptd.sh
 ```bash
-bash tasks/inference/generate_baichuan2_7b_ptd.sh
+bash examples/baichuan2/generate_baichuan2_7b_ptd.sh
 ```
 Some inference samples are as follows:
 ![Inference](../../sources/images/baichuan2/baichuan2_7B_inference.png)
@@ -220,7 +220,7 @@ TASK="boolq"
 ```
 
 ```shell
-bash ./tasks/evaluation/evaluate_baichuan2_13B_ptd.sh
+bash ./examples/baichuan2/evaluate_baichuan2_13B_ptd.sh
 ```
 
 <table>
@@ -324,7 +324,7 @@ mkdir baichuan2-13B-mt
 # modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
    
-python tools/checkpoint/util.py \
+python tools/checkpoint/convert_ckpt.py \
     --model-type GPT \
     --loader llama2_hf \
     --saver megatron \
@@ -342,7 +342,7 @@ Any Megatron weights with parallel slicing strategy --> Any Megatron weights wit
 cd ModelLink/
 # Modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -405,7 +405,7 @@ The performance of the Baichuan2-13B in **Ascend NPU** and **Reference**:
 
 
 ## Inference
-Config baichuan2-13B inference script: tasks/inference/generate_baichuan2_13b_ptd.sh
+Config baichuan2-13B inference script: examples/baichuan2/generate_baichuan2_13b_ptd.sh
 ```bash
 # modify the script according to your own ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -414,9 +414,9 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 CHECKPOINT="your model directory path"
 TOKENIZER_PATH="your tokenizer directory path"
 ```
-Launch baichuan2-13B inference script: tasks/inference/generate_baichuan2_13b_ptd.sh
+Launch baichuan2-13B inference script: examples/baichuan2/generate_baichuan2_13b_ptd.sh
 ```bash
-bash tasks/inference/generate_baichuan2_13b_ptd.sh
+bash examples/baichuan2/generate_baichuan2_13b_ptd.sh
 ```
 Some inference samples are as follows:
 ![Inference](../../sources/images/baichuan2/baichuan2_13B_inference.png)
@@ -435,7 +435,7 @@ TASK="boolq"
 ```
 
 ```shell
-bash ./tasks/evaluation/evaluate_baichuan2_13B_ptd.sh
+bash ./examples/baichuan2/evaluate_baichuan2_13B_ptd.sh
 ```
 
 <table>

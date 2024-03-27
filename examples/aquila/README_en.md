@@ -97,7 +97,7 @@ mkdir model_weights
 # please modify the path to set_env.sh based on your environment.
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-python tools/checkpoint/util.py \
+python tools/checkpoint/convert_ckpt.py \
     --model-type GPT \
     --load-dir ./HF_Aquila7B_downloaded \
     --save-dir ./model_weights/aquila \
@@ -113,7 +113,7 @@ Any Megatron weights with parallel slicing strategy --> Any Megatron weights wit
 cd ModelLink/
 # Modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -166,7 +166,7 @@ The performance of Aquila-7B in Ascend NPU and reference device:
 
 We support AscendSpeed Inference for text generation with Aquila 7B model.
 
-Inference is different from pre-training because it requires loading the pre-trained model weights. Therefore, we need to complete the aforementioned model weight conversion task first, then configure the Aquila-7B Inference shell script `tasks/inference/generate_aquila_7b_ptd.sh`. "CKPT_LOAD_DIR" must point to the converted weights directory, and "TOKENIZER_PATH" must point to the directory which contains Aquila vocabulary files -- in our example, it is "./HF_Aquila7B_downloaded". In your operation, please fill in correct value based on your actual scenario.
+Inference is different from pre-training because it requires loading the pre-trained model weights. Therefore, we need to complete the aforementioned model weight conversion task first, then configure the Aquila-7B Inference shell script `examples/aquila/generate_aquila_7b_ptd.sh`. "CKPT_LOAD_DIR" must point to the converted weights directory, and "TOKENIZER_PATH" must point to the directory which contains Aquila vocabulary files -- in our example, it is "./HF_Aquila7B_downloaded". In your operation, please fill in correct value based on your actual scenario.
 
 ```shell
 # please change to actual values
@@ -176,7 +176,7 @@ TOKENIZER_PATH="./HF_Aquila7B_downloaded/"
 
 Start Aquila-7B Inference:
 ```shell
-bash ./tasks/inference/generate_aquila_7b_ptd.sh
+bash ./examples/aquila/generate_aquila_7b_ptd.sh
 ```
 
 Sample results of Aquila-7B Inference:
@@ -190,7 +190,7 @@ We use BoolQ benchmark to evaluate our model. You can [go to the BoolQ Benchmark
 
 Evaluation task is similar to inference task too，it also requires loading the pre-trained model weights. Please note that the model structure parameters used in converting weights should be consistent with those used in running the evaluation task.
 
-After weight conversion is complete, we configure the Aquila-7B evaluation script `tasks/evaluation/evaluate_aquila_7b_ptd.sh`. We need to correctly specify the path to load weights, the path to tokenizer and vocab, and so on (the following example is for reference only)
+After weight conversion is complete, we configure the Aquila-7B evaluation script `examples/aquila/evaluate_aquila_7b_ptd.sh`. We need to correctly specify the path to load weights, the path to tokenizer and vocab, and so on (the following example is for reference only)
 
 ```shell
     CKPT_LOAD_DIR="./model_weights/aquila/"
@@ -201,7 +201,7 @@ After weight conversion is complete, we configure the Aquila-7B evaluation scrip
 
 Start evaluation task
 ```shell
-bash ./tasks/evaluation/evaluate_aquila_7b_ptd.sh
+bash ./examples/aquila/evaluate_aquila_7b_ptd.sh
 ```
 
 Sample Aquila-7B performance running in **Ascend NPU**:

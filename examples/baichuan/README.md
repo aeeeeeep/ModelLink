@@ -22,7 +22,6 @@
     - [脚本](#脚本)
     - [性能](#性能)
         - [吞吐](#吞吐)
-  - [Lora微调](#Lora微调)
   - [推理](#推理)
   - [评估](#评估)
 
@@ -103,7 +102,7 @@ mkdir baichuan-7B-mt
 # 修改 ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
    
-python tools/checkpoint/util.py \
+python tools/checkpoint/convert_ckpt.py \
     --model-type GPT \
     --loader llama2_hf \
     --saver megatron \
@@ -120,7 +119,7 @@ python tools/checkpoint/util.py \
 cd ModelLink/
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -188,7 +187,7 @@ Baichuan-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 ## 推理
 
-首先需要配置baichuan-7B的推理脚本: tasks/inference/generate_baichuan_7b_ptd.sh
+首先需要配置baichuan-7B的推理脚本: examples/baichuan/generate_baichuan_7b_ptd.sh
 
 ```bash
 # 根据您自己的 ascend-toolkit 路径，执行set_env.sh
@@ -202,7 +201,7 @@ TOKENIZER_PATH="your tokenizer directory path"
 然后可直接启动generate_baichuan_7b_ptd.sh
 
 ```bash
-bash tasks/inference/generate_baichuan_7b_ptd.sh
+bash examples/baichuan/generate_baichuan_7b_ptd.sh
 ```
 
 推理的示例如下:
@@ -224,7 +223,7 @@ TASK="boolq"
 
 
 ```shell
-bash ./tasks/evaluation/evaluate_baichuan_7B_ptd.sh
+bash ./examples/baichuan/evaluate_baichuan_7B_ptd.sh
 ```
 
 <table>
@@ -337,7 +336,7 @@ mkdir baichuan-13B-mt
 # 修改 ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
    
-python tools/checkpoint/util.py \
+python tools/checkpoint/convert_ckpt.py \
     --model-type GPT \
     --loader llama2_hf \
     --saver megatron \
@@ -355,7 +354,7 @@ python tools/checkpoint/util.py \
 cd ModelLink/
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/util.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -422,7 +421,7 @@ Baichuan-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
 
 ## 推理
 
-配置baichuan-13B的推理脚本: tasks/inference/generate_baichuan_13b_ptd.sh
+配置baichuan-13B的推理脚本: examples/baichuan/generate_baichuan_13b_ptd.sh
 
 ```bash
 # 根据您自己的 ascend-toolkit 路径，执行set_env.sh
@@ -436,7 +435,7 @@ TOKENIZER_PATH="your tokenizer directory path"
 然后可直接启动generate_baichuan_13b_ptd.sh
 
 ```bash
-bash tasks/inference/generate_baichuan_13b_ptd.sh
+bash examples/baichuan/generate_baichuan_13b_ptd.sh
 ```
 
 推理的示例如下:
@@ -457,7 +456,7 @@ TASK="boolq"
 
 
 ```shell
-bash ./tasks/evaluation/evaluate_baichuan_13B_ptd.sh
+bash ./examples/baichuan/evaluate_baichuan_13B_ptd.sh
 ```
 
 <table>
