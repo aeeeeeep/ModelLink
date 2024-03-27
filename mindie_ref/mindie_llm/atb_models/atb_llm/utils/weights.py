@@ -278,7 +278,6 @@ class Weights:
             else:
                 logger.error("Let's make that generic when needed")
                 raise AssertionError
-            return tensor
         else:
             if dim == 0:
                 tensor = slice_[start:]
@@ -296,7 +295,9 @@ class Weights:
             tensor_zeros = torch.zeros(size=(dim0, dim1), dtype=tensor.dtype, device=tensor.device)
             tensor_zeros[:tensor.shape[0], :tensor.shape[1]] = tensor
             tensor = tensor_zeros
-            return tensor
+        if tensor.dtype not in [torch.int8, torch.int32, torch.int64]:
+            tensor = tensor.to(dtype=self.dtype)
+        return tensor
 
     def get_sharded(self, tensor_name: str, dim: int, gqa_size: int = 1):
         slice_ = self._get_slice(tensor_name)
