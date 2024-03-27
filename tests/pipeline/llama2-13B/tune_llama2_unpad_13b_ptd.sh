@@ -47,7 +47,7 @@ GPT_ARGS="
     --tokenizer-not-use-fast \
     --seq-length 4096 \
     --max-position-embeddings 4096 \
-    --micro-batch-size 4 \
+    --micro-batch-size 2 \
     --global-batch-size 16 \
     --make-vocab-size-divisible-by 1 \
     --lr 1e-6 \
