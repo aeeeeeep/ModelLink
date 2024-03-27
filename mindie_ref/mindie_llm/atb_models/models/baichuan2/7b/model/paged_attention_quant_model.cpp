@@ -192,15 +192,7 @@ int64_t PagedAttentionQuantModel::BuildGraph()
     // idx: 2, shape: [batchSize * seqLen, hiddenSizePerAttentionHead]
     int INTERNEL_TENSOR_SIN_EMB = internelTensorIdx++;
     // idx: [3, 3 + numHiddenLayers), shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
-    // int INTERNEL_TENSOR_LAYER_OUT_BASE = internelTensorIdx++;
-    int INTERNEL_TENSOR_LAYER_ATTENTION_RESIDUAL_ADD_OUT_BASE = internelTensorIdx++;
-    internelTensorIdx = internelTensorIdx + param_.numHiddenLayers - 1;
-    // idx: [3 + numHiddenLayers, 3 + 2 * numHiddenLayers), shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
-    int INTERNEL_TENSOR_LAYER_MLP_OUT_BASE = internelTensorIdx++;
-    internelTensorIdx = internelTensorIdx + param_.numHiddenLayers - 1;
-    // idx: 4 + 2 * numHiddenLayers, shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
-    int INTERNEL_TENSOR_FINAL_NORM_OUT = internelTensorIdx++;
-    int INTERNEL_TENSOR_FINAL_RESIDUAL_ADD_OUT = internelTensorIdx++;
+    int INTERNEL_TENSOR_RESIDUAL_ADD_OUT = internelTensorIdx++;
 
     // set size
     const int weightTensorSize = WEIGHT_COUNT_WORD_EMBEDDINGNODE + WEIGHT_COUNT_PER_LAYER * param_.numHiddenLayers +
@@ -244,7 +236,7 @@ int64_t PagedAttentionQuantModel::BuildGraph()
     peGatherNode.outTensors = { &graph_.internalTensors.at(INTERNEL_TENSOR_COS_EMB),
         &graph_.internalTensors.at(INTERNEL_TENSOR_SIN_EMB) };
 
-    atb::Tensor *firstInTensor = &graph_.inTensors.at(IN_TENSOR_PLACE_HOLDER);
+    atb::Tensor *firstInTensor = &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES);
     atb::Tensor *secondInTensor = &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES);
     ATB_LOG(INFO) << "Begin build layer";
     for (int layerId = 0; layerId < param_.numHiddenLayers; ++layerId) {
@@ -301,8 +293,8 @@ int64_t PagedAttentionQuantModel::BuildGraph()
         layerNode.inTensors.at(inTensorId++) = &graph_.inTensors.at(IN_TENSOR_SLOTS);
 
         layerNode.outTensors = {
-            &graph_.internalTensors.at(INTERNEL_TENSOR_LAYER_ATTENTION_RESIDUAL_ADD_OUT_BASE + layerId),
-            &graph_.internalTensors.at(INTERNEL_TENSOR_LAYER_MLP_OUT_BASE + layerId),
+            &graph_.internalTensors.at(INTERNEL_TENSOR_RESIDUAL_ADD_OUT),
+            &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES),
         };
 
         firstInTensor = layerNode.outTensors.at(0);
@@ -332,8 +324,8 @@ int64_t PagedAttentionQuantModel::BuildGraph()
     };
     addNormNode.outTensors = {
         // shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
-        &graph_.internalTensors.at(INTERNEL_TENSOR_FINAL_NORM_OUT),
-        &graph_.internalTensors.at(INTERNEL_TENSOR_FINAL_RESIDUAL_ADD_OUT)
+        &graph_.internalTensors.at(INTERNEL_TENSOR_RESIDUAL_ADD_OUT),
+        &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)
     };
 
     auto &lmHeadNode = graph_.nodes.at(nodeId++);
@@ -352,7 +344,7 @@ int64_t PagedAttentionQuantModel::BuildGraph()
     LmHead(lmHeadParam, &op);
     lmHeadNode.operation.reset(op);
     const int finalLinearWeightTensorId = graph_.weightTensors.size() - WEIGHT_COUNT_LM_HEAD;
-    lmHeadNode.inTensors = { &graph_.internalTensors.at(INTERNEL_TENSOR_FINAL_NORM_OUT),
+    lmHeadNode.inTensors = { &graph_.internalTensors.at(INTERNEL_TENSOR_RESIDUAL_ADD_OUT),
         // shape: [vocabSizePerRank, hiddenSize]
         &graph_.weightTensors.at(finalLinearWeightTensorId),
         // LmHead未接入量化，量化权重使用placeholder代替
