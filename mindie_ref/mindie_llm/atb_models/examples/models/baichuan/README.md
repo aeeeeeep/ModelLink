@@ -35,7 +35,7 @@ Paged Attention 场景下需要.safetensors 格式的权重，如果没有，参
 python convert_w8a8_quant_weights.py
 ```
 
-- 将原权重文件夹下所有json文件拷贝到新的量化权重文件下
+- 将原权重文件夹下所有文件（除权重文件*。bin）拷贝到新的量化权重文件下
 - `${weight_path}/config.json`文件中需设置`dtype`和`quantize`类型来标识量化类型和精度
 - 若`dtype`和`quantize`字段不存在，需新增
 
