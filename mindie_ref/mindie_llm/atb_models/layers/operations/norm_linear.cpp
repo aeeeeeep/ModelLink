@@ -48,7 +48,7 @@ atb::Status NormLinear(const NormLinearParam<NormParamType> &param, atb::Operati
     atb::GraphParam opGraph;
     opGraph.inTensorNum = IN_TENSOR_COUNT;
     opGraph.outTensorNum = OUT_TENSOR_COUNT;
-    opGraph.internalTensorNum = INTERMEDIATE_TENSOR_COUNT;
+    opGraph.internalTensorNum = param.nextResidualAddIn == NORM_OUT ? 0 : INTERMEDIATE_TENSOR_COUNT;
     opGraph.nodes.resize(NODE_COUNT);
     opGraph.name = "NormLinear";
 
