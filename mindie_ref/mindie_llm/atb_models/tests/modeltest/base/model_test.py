@@ -177,6 +177,15 @@ class ModelTest:
     def get_chip_num(self):
         return 1
 
+    def set_fa_tokenizer_params(self):
+        self.tokenizer_params = {
+            'revision': None,
+            'use_fast': True,
+            'padding_side': 'left',
+            'truncation_side': 'left',
+            'trust_remote_code': True
+        }
+
     def get_model(self, hardware_type, model_type, data_type):
         pass
 
@@ -482,21 +491,17 @@ class ModelTest:
             self.logger.info(str(self.rank) + f'pa_runner: {self.pa_runner}')
             self.pa_runner.warm_up()
         else:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.weight_dir, use_fast=False, padding_side="left", truncation_side="left", trust_remote_code=True)
-            if "qwen" in self.model_name:
-                self.tokenizer.pad_token_id = self.tokenizer.eod_id
-                self.tokenizer.bos_token_id = self.tokenizer.eod_id
-                self.tokenizer.eos_token_id = self.tokenizer.eod_id
+            self.tokenizer_params = {}
+            self.set_fa_tokenizer_params()
+            self.tokenizer = self.get_fa_tokenizer(**self.tokenizer_params)
             if "starcoder" in self.model_name:
                 self.tokenizer.pad_token = "[PAD]"
             if "llama" in self.model_name:
                 self.tokenizer.pad_token_id = 0
-
-            
             if "chatglm6b" in self.model_name:
-                self.model = AutoModel.from_pretrained(self.weight_dir, device_map="auto", torch_dtype="auto", trust_remote_code=True)
+                self.model = AutoModel.from_pretrained(self.weight_dir, device_map="auto", torch_dtype=dtype_map[self.data_type], trust_remote_code=True)
             else:
-                self.model = AutoModelForCausalLM.from_pretrained(self.weight_dir, device_map="auto", torch_dtype="auto", trust_remote_code=True)
+                self.model = AutoModelForCausalLM.from_pretrained(self.weight_dir, device_map="auto", torch_dtype=dtype_map[self.data_type], trust_remote_code=True)
             self.device = self.model.device
 
         if self.test_mode == "simplified":
@@ -613,8 +618,7 @@ class ModelTest:
                     texts = batch["inputs_pretokenized"]
                     queries = [build_prompt(query) for query in texts]
                     if self.model_type == "fa":
-                        inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
-                                                max_length=2048).to(0)
+                        inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True).to(0)
                         outputs = self.model.generate(**inputs, do_sample=False, max_new_tokens=512)
                         intermediate_outputs = []
                         for idx in range(len(outputs)):
@@ -624,7 +628,7 @@ class ModelTest:
                         answer_texts = [text + intermediate + "\n" + extraction_prompt for text, intermediate in
                                         zip(texts, intermediate_outputs)]
                         input_tokens = [build_prompt(answer_text) for answer_text in answer_texts]
-                        inputs = self.tokenizer(input_tokens, padding=True, return_tensors="pt", truncation=True, max_length=2048).to(0)
+                        inputs = self.tokenizer(input_tokens, padding=True, return_tensors="pt", truncation=True).to(0)
                         outputs = self.model(**inputs)
                         logits = outputs.logits[:, -1, :]
                         logits = logits[:, choice_tokens]
@@ -727,7 +731,7 @@ class ModelTest:
                 prompts = [prpt.encode().decode(encoding="utf8") for prpt in prompt]
 
                 if self.model_type == "fa":
-                    inputs = self.tokenizer(prompts, padding=True, return_tensors="pt", truncation=True, max_length=2048).to(0)
+                    inputs = self.tokenizer(prompts, padding=True, return_tensors="pt", truncation=True).to(0)
                     if "chatglm6b" in self.model_name:
                         outputs = self.model.generate(**inputs, do_sample=False, max_new_tokens=20)
                     else:
@@ -1105,8 +1109,7 @@ class ModelTest:
                     passages = batch["passage"]
                     queries = [build_prompt(title, query, passage) for title, query, passage in zip(titles, texts, passages)]
                     if self.model_type == "fa":
-                        inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
-                                                max_length=2048).to(0)
+                        inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True).to(0)
                         outputs = self.model(**inputs)
                         logits = outputs.logits[:, -1, :]
                         logits_softmax = F.log_softmax(logits.float(), dim=-1)
@@ -1184,8 +1187,7 @@ class ModelTest:
                     task_ids = [task_id.split('/')[1] for task_id in batch["task_id"]]
                     queries = [prompt.strip() for prompt in batch["prompt"]]
                     if self.model_type == "fa":
-                        inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True,
-                                                max_length=2048).to(0)
+                        inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True).to(0)
                         tokenizer_out_ids = inputs.input_ids.to(0)
                         attention_mask = inputs.attention_mask.to(0)
                         outputs = self.model.generate(inputs=tokenizer_out_ids, attention_mask=attention_mask,
@@ -1489,6 +1491,9 @@ class ModelTest:
             self.logger.info(f"user gpu:{self.rank}")
             torch.cuda.set_device(self.rank)
         self.logger.info("Device Set Success!")
+    
+    def get_fa_tokenizer(self, **kwargs):
+        return AutoTokenizer.from_pretrained(self.weight_dir, **kwargs)
 
     def __npu_adapt(self):
         if self.is_format_nz:

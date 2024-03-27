@@ -7,15 +7,15 @@
 # 特性矩阵
 - 此矩阵罗列了各LLaMa模型支持的特性
 
-| 模型及参数量 | 800I A2 Tensor Parallelism | 300I DUO Tensor Parallelism | FP16 | BF16 | Flash Attention | Paged Attention | W8A8量化 | W8A16量化 | KV cache量化 | 稀疏量化 | MOE量化 | MindIE | TGI |
+| 模型及参数量 | 800I A2 Tensor Parallelism | 300I DUO Tensor Parallelism | FP16 | BF16 | Flash Attention | Paged Attention | W8A8量化 | W8A16量化 | KV cache量化 | 稀疏量化 | MOE | MindIE | TGI |
 |-------------|-------------------------|-------------------------|------|------|-----------------|-----------------|---------|---------|--------------|----------|--------|--------|-----|
-| LLaMa-7B    | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 否       | 否       | 否           | 否       | 否     | 是     | 否  |
-| LLaMa-13B   | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 否       | 否       | 否           | 否       | 否     | 是     | 否  |
-| LLaMa-33B   | 支持world size 4,8       | 否                      | 是   | 是   | 是              | 是              | 否       | 否       | 否           | 否       | 否     | 否     | 否  |
-| LLaMa-65B   | 支持world size 8         | 否                      | 是   | 是   | 是              | 是              | 否       | 是       | 否           | 否       | 否     | 是     | 否  |
-| LLaMa2-7B   | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 是       | 否       | 否           | 否       | 否     | 是     | 否  |
-| LLaMa2-13B  | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 是       | 否       | 否           | 否       | 否     | 是     | 否  |
-| LLaMa2-70B  | 支持world size 8         | 否                      | 是   | 是   | 是              | 是              | 是       | 是      | 否       | 否       | 否     | 是     | 否  |
+| LLaMa-7B    | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 否       | 否       | 否           | 否       | 是     | 是     | 否  |
+| LLaMa-13B   | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 否       | 否       | 否           | 否       | 是     | 是     | 否  |
+| LLaMa-33B   | 支持world size 4,8       | 否                      | 是   | 是   | 是              | 是              | 否       | 否       | 否           | 否       | 是     | 否     | 否  |
+| LLaMa-65B   | 支持world size 8         | 否                      | 是   | 是   | 是              | 是              | 否       | 是       | 否           | 否       | 是     | 是     | 否  |
+| LLaMa2-7B   | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 是       | 否       | 否           | 否       | 是     | 是     | 否  |
+| LLaMa2-13B  | 支持world size 1,2,4,8   | 支持world size 2,4      | 是   | 是   | 是              | 是              | 是       | 否       | 否           | 否       | 是     | 是     | 否  |
+| LLaMa2-70B  | 支持world size 8         | 否                      | 是   | 是   | 是              | 是              | 是       | 是       | 否           | 否       | 是     | 是     | 否  |
 
 - 此模型仓已适配的模型版本
   - [LLaMa系列](https://github.com/facebookresearch/llama/tree/llama_v1)
@@ -88,7 +88,7 @@
     ```shell
     python examples/models/llama/convert_w8a16_quant_weights.py --fp16_model_path /home/weights/llama2-70b --w8a16_model_path /home/weights/llama2-70b_w8a16
     ```
-  - 推荐使用transformers 4.36.2版本进行权重转换，transformers 4.36.2版本会大大加快权重生成的速度，但执行模型推理时transformers的版本仍需为4.30.2
+  - 需使用transformers 4.36.2版本进行权重转换，但执行模型推理时transformers的版本仍需为4.30.2
     ```shell
     # 卸载
     pip uninstall transformers
