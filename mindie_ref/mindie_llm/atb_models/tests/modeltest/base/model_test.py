@@ -253,16 +253,10 @@ class ModelTest:
             if self.dataset_name not in self.dataset_list:
                 self.logger.info(f"{self.model_name} not support {self.dataset_name}, please check")
         if self.test_mode != "performance":
-            folder_path = f"{self.data_dir}/{self.hardware_type}/{self.dataset_name}/batch{self.batch_size}"
-            if os.path.exists(folder_path):
-                try:
-                    shutil.rmtree(folder_path)
-                except Exception as e:
-                    self.logger.error(f"Error deleting folder {folder_path}: {e}")
-            os.makedirs(folder_path, exist_ok=True)
-            if not os.path.exists(folder_path):
-                self.logger.error(f"folder {folder_path} create fail")
-                raise RuntimeError(f"folder {folder_path} create fail")
+            data_folder_path = f"{self.data_dir}/{self.hardware_type}/{self.dataset_name}/batch{self.batch_size}"
+            log_folder_path = f"{self.log_dir}/{self.hardware_type}/{self.dataset_name}/batch{self.batch_size}"
+            self.__create_folder(data_folder_path)
+            self.__create_folder(log_folder_path)
             os.environ['LCCL_DETERMINISTIC'] = "1"
             os.environ['HCCL_DETERMINISTIC'] = "1"
         os.environ['core_type'] = self.core_type
@@ -508,6 +502,15 @@ class ModelTest:
             self.dataset_path = os.path.join(self.script_path, "../dataset/simplified", self.dataset_name + ".jsonl")
             self.__run_simplified_dataset()
         elif self.test_mode == "full":
+            self.csv_debug = {
+                'key': [],
+                'queries': [],
+                'input_token_ids': [],
+                'output_token_ids': [],
+                'test_result': [],
+                'golden_result': [],
+                'pass': []
+            }
             self.dataset_path = os.path.join(self.script_path, "../dataset/full", self.dataset_name)
             if self.dataset_name == 'CEval':
                 if self.model_name in CEval_0_shot:
@@ -526,15 +529,6 @@ class ModelTest:
                 self.__run_full_dataset_boolq()
             elif self.dataset_name == 'HumanEval':
                 self.__run_full_dataset_humaneval()
-            self.csv_debug = {
-                'key': [],
-                'queries': [],
-                'input_token_ids': [],
-                'output_token_ids': [],
-                'test_result': [],
-                'golden_result': [],
-                'pass': []
-            }
         else:
             self.logger.error(self.test_mode + " not support")
             raise RuntimeError(f"{self.test_mode} not support")
@@ -1132,6 +1126,8 @@ class ModelTest:
                         logits_softmax = F.log_softmax(logits.float(), dim=-1)
                         
                     else:
+                        for i in range(self.batch_size):
+                            self.csv_debug['input_token_ids'].append('None')
                         logits_save_folder = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}")
                         os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "1"
                         os.environ['ATB_LLM_LOGITS_SAVE_FOLDER'] = logits_save_folder
@@ -1513,6 +1509,17 @@ class ModelTest:
     
     def get_fa_tokenizer(self, **kwargs):
         return AutoTokenizer.from_pretrained(self.weight_dir, **kwargs)
+
+    def __create_folder(self, folder_path):
+         if os.path.exists(folder_path):
+            try:
+                shutil.rmtree(folder_path)
+            except Exception as e:
+                self.logger.error(f"Error deleting folder {folder_path}: {e}")
+        os.makedirs(folder_path, exist_ok=True)
+        if not os.path.exists(folder_path):
+            self.logger.error(f"folder {folder_path} create fail")
+            raise RuntimeError(f"folder {folder_path} create fail")
 
     def __npu_adapt(self):
         if self.is_format_nz:
