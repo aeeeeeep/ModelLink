@@ -25,6 +25,11 @@
 
 namespace atb_speed {
 namespace llama_parallel {
+enum PositionEmbeddingType : uint32_t {
+    ROPE = 0,
+    AILIBI,
+}
+
 struct DecoderLayerParam {
     bool isFA = true;
     bool isPrefill = false;
@@ -37,6 +42,7 @@ struct DecoderLayerParam {
     int numAttentionHeadsPerRank = 0;
     int hiddenSizePerAttentionHead = 0;
     int numKeyValueHeadsPerRank = 0;
+    PositionEmbeddingType positionEmbeddingType = ROPE;
     atb_speed::common::TensorParallelInfo tensorParallelInfo;
     std::vector<int> seqLen;
     std::vector<int> tokenOffset;

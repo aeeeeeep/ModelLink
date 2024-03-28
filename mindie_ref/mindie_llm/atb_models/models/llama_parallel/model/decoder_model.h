@@ -81,6 +81,7 @@ public:
         int worldSize = 1;
         std::string backend = "hccl";
         std::string rankTableFile = "";
+        std::string positionEmbeddingType = "ROPE";
         std::vector<int> tokenOffset = {};
         std::vector<int> seqLen = {};
         std::vector<std::vector<int>> packQuantType = {};
