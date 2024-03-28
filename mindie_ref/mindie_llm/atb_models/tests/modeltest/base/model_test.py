@@ -1511,7 +1511,7 @@ class ModelTest:
         return AutoTokenizer.from_pretrained(self.weight_dir, **kwargs)
 
     def __create_folder(self, folder_path):
-         if os.path.exists(folder_path):
+        if os.path.exists(folder_path):
             try:
                 shutil.rmtree(folder_path)
             except Exception as e:
