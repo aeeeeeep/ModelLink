@@ -37,6 +37,9 @@ class EnvVar:
     logits_save_enable = os.getenv("ATB_LLM_LOGITS_SAVE_ENABLE", "0") == "1"
     logits_save_folder = os.getenv("ATB_LLM_LOGITS_SAVE_FOLDER", './')
 
+    tokens_save_enable = os.getenv("ATB_LLM_TOKENS_SAVE_ENABLE", "0") == "1"
+    tokens_save_folder = os.getenv("ATB_LLM_TOKENS_SAVE_FOLDER", './')
+
     def __post_init__(self):
         logger.info(self.dict())
 
@@ -46,6 +49,8 @@ class EnvVar:
     def update(self):
         self.logits_save_enable = os.getenv("ATB_LLM_LOGITS_SAVE_ENABLE", "0") == "1"
         self.logits_save_folder = os.getenv("ATB_LLM_LOGITS_SAVE_FOLDER", './')
+        self.tokens_save_enable = os.getenv("ATB_LLM_TOKENS_SAVE_ENABLE", "0") == "1"
+        self.tokens_save_folder = os.getenv("ATB_LLM_TOKENS_SAVE_FOLDER", './')
 
 
 ENV = EnvVar()

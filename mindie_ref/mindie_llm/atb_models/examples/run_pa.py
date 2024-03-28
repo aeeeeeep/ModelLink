@@ -211,6 +211,10 @@ class PARunner:
             e2e_time = e2e_end - e2e_start
 
         generate_text_list, token_num_list = decode_token(req_list, self.tokenizer)
+        if ENV.tokens_save_enable:
+            if rank == 0: 
+                logits_save_filename = "logits_" + str(len(batch.req_list[0].out_token_list)) + ".pth"
+                torch.save(logits.cpu(), os.path.join(ENV.logits_save_folder, logits_save_filename))
         print_log(self.rank, logger.info, "---------------end inference---------------")
         return generate_text_list, token_num_list, e2e_time
 
