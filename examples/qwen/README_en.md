@@ -43,41 +43,43 @@ Here's a hardware summary of pre-training  Qwen-7B:
 ### Script
 
 1. Clone the repository to your local server:
+
     ```shell
-    git clone https://gitee.com/ascend/ModelLink.git 
+    git clone https://gitee.com/ascend/ModelLink.git
     cd ModelLink
     mkdir logs
+    mkdir model_from_hf
+    mkdir dataset
+    mkdir ckpt
     ```
-
 2. Build environment
-   
+
     ```bash
     # python3.8
     conda create -n test python=3.8
     conda activate test
-    
+
     # install torch and torch_npu
     pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-    
+
     # install AscendSpeed
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
     pip install -r requirements.txt
     pip install -e .
     cd ..
-   
+
     # install other packages
     pip install -r requirements.txt
     ```
-
 3. Prepare pretrained weights and tokenizer
-    Download the Qwen-7B checkpoint from [here](https://huggingface.co/Qwen/Qwen-7B/tree/main) 
-    
+   Download the Qwen-7B checkpoint from [here](https://huggingface.co/Qwen/Qwen-7B/tree/main)
+
    ```bash
-   mkdir -p qwen-7b-hf
-   cd qwen-7b-hf
+   mkdir ./model_from_hf/Qwen-7B/
+   cd ./model_from_hf/Qwen-7B/
    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/cache_autogptq_cuda_256.cpp
    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/cache_autogptq_cuda_kernel_256.cu
    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/config.json
@@ -98,18 +100,19 @@ Here's a hardware summary of pre-training  Qwen-7B:
    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/qwen_generation_utils.py
    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/tokenization_qwen.py
    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/tokenizer_config.json
+   cd ../../
    ```
+
    Modify line 39 in the modelling_qwen.py file, changing:
+
    ```python
    SUPPORT_FP16 = SUPPORT_CUDA and torch.cuda.get_device_capability(0)[0] >= 7
    ```
+
    to：
+
    ```python
    SUPPORT_FP16 = True
-   ```
-   Then execute the following command:
-   ```bash
-   cd ..
    ```
 4. Weights convert
 
@@ -119,69 +122,72 @@ Here's a hardware summary of pre-training  Qwen-7B:
     ```bash
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    
-    python tools/checkpoint/convert_ckpt.py --model-type GPT \
-                                    --loader qwen_hf \
-                                    --saver megatron \
-                                    --target-tensor-parallel-size 8 \
-                                    --load-dir ./qwen-7b-hf \
-                                    --save-dir {your megatron ckpt save path} \
-                                    --tokenizer-model ./qwen-7b-hf/qwen.tiktoken \
-                                    --add-qkv-bias
+
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader qwen_hf \
+        --saver megatron \
+        --target-tensor-parallel-size 8 \
+        --load-dir ./model_from_hf/Qwen-7B/ \
+        --save-dir ./model_weights/Qwen-7B-v0.1-tp8-pp1/ \
+        --tokenizer-model ./model_from_hf/Qwen-7B/qwen.tiktoken \
+        --add-qkv-bias
     ```
-   
+
    Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
     ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+
     ```shell
-    cd ModelLink/
     # Modify the ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    python tools/checkpoint/convert_ckpt.py --model-type GPT \
-                                    --loader megatron \
-                                    --saver megatron \
-                                    --save-model-type save_huggingface_llama \
-                                    --load-dir {your model ckpt save path} \
-                                    --target-tensor-parallel-size 1 \
-                                    --target-pipeline-parallel-size 1 \
-                                    --add-qkv-bias \
-                                    --save-dir ./qwen-7b-hf   # Fill in the original HF model path here, new weights will be saved in ./qwen-7b-hf/mg2hg
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_qwen \
+        --load-dir ./model_weights/Qwen-7B-v0.1-tp8-pp1/ \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --add-qkv-bias \
+        --save-dir ./model_from_hf/Qwen-7B/   # Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Qwen-7B/mg2hg
     ```
 5. Prepare dataset
 
-	Download the Qwen-7B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
-	```shell
+    Download the Qwen-7B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+
+    ```shell
     # download datasets
-    mkdir dataset_qwen-7b
-    cd ./dataset_qwen-7b
+    cd ./dataset
     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
     cd ..
-	
-	# process datasets                              
+
+    # process datasets  
     python ./tools/preprocess_data.py \
-        --input ./dataset_qwen-7b/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-        --tokenizer-name-or-path ./qwen-7b-hf \
-        --output-prefix ./dataset_qwen-7b/alpaca \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/Qwen-7B/ \
+        --output-prefix ./dataset/Qwen-7B_alpaca \
         --tokenizer-type PretrainedFromHF \
         --seq-length 8192 \
         --workers 4 \
         --log-interval 1000
-	```
+    ```
 6. pre-training
 
-	Config Qwen-7B pre-training script: examples/qwen/pretrain_qwen_7b_ptd.sh 
+   Config Qwen-7B pre-training script: examples/qwen/pretrain_qwen_7b_ptd.sh
+
    ```shell
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-    
+
     # modify config according to your own actual situation
-    CKPT_SAVE_DIR="your model ckpt save path"
-    TOKENIZER_MODEL="./qwen-7b-hf/"  #tokenizer path
-    DATA_PATH="./dataset_qwen-7b/alpaca_text_document"  #processed dataset
-    CKPT_LOAD_DIR="your megatron ckpt save path"
+    CKPT_SAVE_DIR="./ckpt/"
+    TOKENIZER_MODEL="./model_from_hf/Qwen-7B/"  #tokenizer path
+    DATA_PATH="./dataset/Qwen-7B_alpaca_text_document"  #processed dataset
+    CKPT_LOAD_DIR="./model_weights/Qwen-7B-v0.1-tp8-pp1/"
    ```
 
-    Config Qwen-7B pre-training script: examples/qwen/pretrain_qwen_7b_ptd.sh 
-   
+   Config Qwen-7B pre-training script: examples/qwen/pretrain_qwen_7b_ptd.sh
+
    ```shell
     bash examples/qwen/pretrain_qwen_7b_ptd.sh 
    ```
@@ -199,6 +205,7 @@ The performance of Qwen-7B in **Ascend NPU** and **Reference**:
 | Reference | Qwen-7B |             2867             |
 
 ## Inference
+
 Config qwen-7b inference script: examples/qwen/generate_qwen_7b_ptd.sh
 
 ```bash
@@ -206,11 +213,12 @@ Config qwen-7b inference script: examples/qwen/generate_qwen_7b_ptd.sh
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
  
 # modify script model path and tokenizer path
-CHECKPOINT="your model directory path"
-TOKENIZER_PATH="your tokenizer directory path"
+CHECKPOINT="./model_weights/Qwen-7B-v0.1-tp8-pp1/"
+TOKENIZER_PATH="./model_from_hf/Qwen-7B/"
 ```
 
 Launch qwen-7b inference script: examples/qwen/generate_qwen_7b_ptd.sh
+
 ```bash
 bash examples/qwen/generate_qwen_7b_ptd.sh
 ```
@@ -220,9 +228,9 @@ bash examples/qwen/generate_qwen_7b_ptd.sh
 Some inference samples are as follows:
 ![Inference](../../sources/images/qwen/qwen_7b_inference.png)
 
-
 ## Evaluation
-We use the [CEval benchmark](https://huggingface.co/datasets/ceval/ceval-exam) and [MMLU benchmark](https://huggingface.co/datasets/cais/mmlu) to evaluate our model. 
+
+We use the [CEval benchmark](https://huggingface.co/datasets/ceval/ceval-exam) and [MMLU benchmark](https://huggingface.co/datasets/cais/mmlu) to evaluate our model.
 
 Config qwen-7b evaluation script: examples/qwen/evaluate_qwen_7b_ptd.sh
 
@@ -231,8 +239,8 @@ Config qwen-7b evaluation script: examples/qwen/evaluate_qwen_7b_ptd.sh
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # Modify the model parameter path and vocabulary path
-TOKENIZER_PATH=./qwen-7b-hf  # vocabulary path
-CHECKPOINT="your model directory path"  # parameter path
+TOKENIZER_PATH="./model_from_hf/Qwen-7B/"  # vocabulary path
+CHECKPOINT="./model_weights/Qwen-7B-v0.1-tp8-pp1/"  # parameter path
 
 # Configure the task type and dataset path
 DATA_PATH="./mmlu/data/test/"  # "./ceval/val/" for ceval task
@@ -250,55 +258,56 @@ bash examples/qwen/evaluate_qwen_7b_ptd.sh
 | CEval | 52 | 1346 | 63.5 | 62.5 |
 | MMLU | 57 | 14042 | 58.2 | 58.1 |
 
-
 # Qwen-14B
 
 ## Training
 
 Here's a hardware summary of pre-training  Qwen-14B:
 
-| Hardware |                      Value                      |
-| :------: | :---------------------------------------------: |
-|   NPU    |               8 x Ascend NPUs                   |
+| Hardware |      Value      |
+| :------: | :-------------: |
+|   NPU   | 8 x Ascend NPUs |
 
 ### Script
 
 1. Clone the repository to your local server:
+
     ```shell
-    git clone https://gitee.com/ascend/ModelLink.git 
+    git clone https://gitee.com/ascend/ModelLink.git
     cd ModelLink
     mkdir logs
+    mkdir model_from_hf
+    mkdir dataset
+    mkdir ckpt
     ```
-
 2. Build environment
-   
+
     ```bash
     # python3.8
     conda create -n test python=3.8
     conda activate test
-    
+
     # install torch and torch_npu
     pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-    
+
     # install AscendSpeed
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
     pip install -r requirements.txt
     pip install -e .
     cd ..
-   
+
     # install other packages
     pip install -r requirements.txt
     ```
-
 3. Prepare pretrained weights and tokenizer
-    Download the Qwen-14B checkpoint from [here](https://huggingface.co/Qwen/Qwen-14B/tree/main) 
-    
+   Download the Qwen-14B checkpoint from [here](https://huggingface.co/Qwen/Qwen-14B/tree/main)
+
    ```bash
-   mkdir -p qwen-14b-hf
-   cd qwen-14b-hf
+   mkdir ./model_from_hf/Qwen-14B/
+   cd ./model_from_hf/Qwen-14B/
    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/cache_autogptq_cuda_256.cpp
    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/cache_autogptq_cuda_kernel_256.cu
    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/config.json
@@ -326,18 +335,19 @@ Here's a hardware summary of pre-training  Qwen-14B:
    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/qwen_generation_utils.py
    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/tokenization_qwen.py
    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/tokenizer_config.json
+   cd../../
    ```
+
    Modify line 39 in the modelling_qwen.py file, changing:
+
    ```python
    SUPPORT_FP16 = SUPPORT_CUDA and torch.cuda.get_device_capability(0)[0] >= 7
    ```
+
    to：
+
    ```python
    SUPPORT_FP16 = True
-   ```
-   Then execute the following command:
-   ```bash
-   cd ..
    ```
 4. Weights convert
 
@@ -347,68 +357,72 @@ Here's a hardware summary of pre-training  Qwen-14B:
     ```bash
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    
-    python tools/checkpoint/convert_ckpt.py --model-type GPT \
-                                    --loader qwen_hf \
-                                    --saver megatron \
-                                    --target-tensor-parallel-size 8 \
-                                    --load-dir ./qwen-14b-hf \
-                                    --save-dir {your megatron ckpt save path} \
-                                    --tokenizer-model ./qwen-14b-hf/qwen.tiktoken \
-                                    --add-qkv-bias
+
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader qwen_hf \
+        --saver megatron \
+        --target-tensor-parallel-size 8 \
+        --load-dir ./model_from_hf/Qwen-14B/ \
+        --save-dir ./model_weights/Qwen-14B-v0.1-tp8-pp1/ \
+        --tokenizer-model ./model_from_hf/Qwen-14B/qwen.tiktoken \
+        --add-qkv-bias
     ```
-    Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
-    ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+
+   Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+   ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+
     ```shell
-    cd ModelLink/
     # Modify the ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    python tools/checkpoint/convert_ckpt.py --model-type GPT \
-                                    --loader megatron \
-                                    --saver megatron \
-                                    --save-model-type save_huggingface_llama \
-                                    --load-dir {your model ckpt save path} \
-                                    --target-tensor-parallel-size 1 \
-                                    --target-pipeline-parallel-size 1 \
-                                    --add-qkv-bias \
-                                    --save-dir ./qwen-14b-hf   # Fill in the original HF model path here, new weights will be saved in ./qwen-14b-hf/mg2hg
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_qwen \
+        --load-dir ./model_weights/Qwen-14B-v0.1-tp8-pp1/ \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --add-qkv-bias \
+        --save-dir ./model_from_hf/Qwen-14B/   # Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Qwen-14B/mg2hg
     ```
 5. Prepare dataset
 
-	Download the Qwen-14B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
-	```shell
+    Download the Qwen-14B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+
+    ```shell
     # download datasets
-    mkdir dataset_qwen-14b
-    cd ./dataset_qwen-14b
+    cd ./dataset
     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
     cd ..
-	
-	# process datasets                              
+
+    # process datasets  
     python ./tools/preprocess_data.py \
-        --input ./dataset_qwen-14b/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-        --tokenizer-name-or-path ./qwen-14b-hf \
-        --output-prefix ./dataset_qwen-14b/alpaca \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/Qwen-14B/ \
+        --output-prefix ./dataset/Qwen-14B_alpaca \
         --tokenizer-type PretrainedFromHF \
         --seq-length 2048 \
         --workers 4 \
         --log-interval 1000
-	```
+   ```
 6. pre-training
 
-	Config Qwen-14B pre-training script: examples/qwen/pretrain_qwen_14b_ptd.sh 
+   Config Qwen-14B pre-training script: examples/qwen/pretrain_qwen_14b_ptd.sh
+
    ```shell
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-    
+
     # modify config according to your own actual situation
-    CKPT_SAVE_DIR="your model ckpt save path"
-    TOKENIZER_MODEL="./qwen-14b-hf/"  #tokenizer path
-    DATA_PATH="./dataset_qwen-14b/alpaca_text_document"  #processed dataset
-    CKPT_LOAD_DIR="your megatron ckpt save path"
+    CKPT_SAVE_DIR="./ckpt/"
+    TOKENIZER_MODEL="./model_from_hf/Qwen-14B/"  #tokenizer path
+    DATA_PATH="./dataset/Qwen-14B_alpaca_text_document"  #processed dataset
+    CKPT_LOAD_DIR="./model_weights/Qwen-14B-v0.1-tp8-pp1/"
    ```
 
-	Launch Qwen-14B pre-training script: examples/qwen/pretrain_qwen_14b_ptd.sh
-   
+   Launch Qwen-14B pre-training script: examples/qwen/pretrain_qwen_14b_ptd.sh
+
    ```shell
     bash examples/qwen/pretrain_qwen_14b_ptd.sh 
    ```
@@ -433,11 +447,12 @@ Config qwen-14b inference script: examples/qwen/generate_qwen_14b_ptd.sh
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
  
 # modify script model path and tokenizer path
-CHECKPOINT="your model directory path"
-TOKENIZER_PATH=./qwen-14b-hf
+CHECKPOINT="./model_weights/Qwen-14B-v0.1-tp8-pp1/"
+TOKENIZER_PATH="./model_from_hf/Qwen-14B/"
 ```
 
 Launch qwen-14b inference script: examples/qwen/generate_qwen_14b_ptd.sh
+
 ```bash
 bash examples/qwen/generate_qwen_7b_ptd.sh
 ```
@@ -457,8 +472,8 @@ Config qwen-14b evaluation script: examples/qwen/evaluate_qwen_14b_ptd.sh
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # Modify the model parameter path and vocabulary path
-TOKENIZER_PATH=./qwen-14b-hf  # vocabulary path
-CHECKPOINT="your model directory path"  # parameter path
+TOKENIZER_PATH="./model_from_hf/Qwen-14B/"  # vocabulary path
+CHECKPOINT="./model_weights/Qwen-14B-v0.1-tp8-pp1/"  # parameter path
 
 # Configure the task type and dataset path
 DATA_PATH="./mmlu/data/test/"  # "./ceval/val/" for ceval task
@@ -475,6 +490,7 @@ bash examples/qwen/evaluate_qwen_14b_ptd.sh
 |:---:|:---:|:---:|:---:|:---:|
 | CEval | 52 | 1346 | 72.1 | 71.1 |
 | MMLU | 57 | 14042 | 66.3 | 66.1 |
+
 # Qwen-72B
 
 ## Training
@@ -489,41 +505,43 @@ Here's a hardware summary of pre-training  Qwen-72B:
 ### Script
 
 1. Clone the repository to your local server:
+
     ```shell
-    git clone https://gitee.com/ascend/ModelLink.git 
+    git clone https://gitee.com/ascend/ModelLink.git
     cd ModelLink
     mkdir logs
+    mkdir model_from_hf
+    mkdir dataset
+    mkdir ckpt
     ```
-
 2. Build environment
-   
+
     ```bash
     # python3.8
     conda create -n test python=3.8
     conda activate test
-    
+
     # install torch and torch_npu
     pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-    
+
     # install AscendSpeed
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
     pip install -r requirements.txt
     pip install -e .
     cd ..
-   
+
     # install other packages
     pip install -r requirements.txt
     ```
-
 3. Prepare pretrained weights and tokenizer
-    Download the Qwen-72B checkpoint from [here](https://huggingface.co/Qwen/Qwen-72B/tree/main) 
-    
+   Download the Qwen-72B checkpoint from [here](https://huggingface.co/Qwen/Qwen-72B/tree/main)
+
    ```bash
-   mkdir -p qwen-72b-hf
-   cd qwen-72b-hf
+   mkdir ./model_from_hf/Qwen-72B/
+   cd ./model_from_hf/Qwen-72B/
    wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/cache_autogptq_cuda_256.cpp
    wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/cache_autogptq_cuda_kernel_256.cu
    wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/config.json
@@ -532,18 +550,19 @@ Here's a hardware summary of pre-training  Qwen-72B:
    wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/generation_config.json
    wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/model-00001-of-000082.safetensors
    ...
+   cd ../../
    ```
+
    Modify line 39 in the modelling_qwen.py file, changing:
+
    ```python
    SUPPORT_FP16 = SUPPORT_CUDA and torch.cuda.get_device_capability(0)[0] >= 7
    ```
+
    to：
+
    ```python
    SUPPORT_FP16 = True
-   ```
-   Then execute the following command:
-   ```bash
-   cd ..
    ```
 4. Weights convert
 
@@ -553,83 +572,86 @@ Here's a hardware summary of pre-training  Qwen-72B:
     ```bash
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    
-    python tools/checkpoint/convert_ckpt.py --model-type GPT \
-                                    --loader qwen_hf \
-                                    --saver megatron \
-                                    --target-tensor-parallel-size 8 \
-                                    --load-dir ./qwen-72b-hf \
-                                    --save-dir {your megatron ckpt save path} \
-                                    --tokenizer-model ./qwen-72b-hf/qwen.tiktoken \
-                                    --add-qkv-bias
+
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader qwen_hf \
+        --saver megatron \
+        --target-tensor-parallel-size 8 \
+        --load-dir ./model_from_hf/Qwen-72B/ \
+        --save-dir ./model_weights/Qwen-72B-v0.1-tp8-pp1/ \
+        --tokenizer-model ./model_from_hf/Qwen-72B/qwen.tiktoken \
+        --add-qkv-bias
     ```
-   
+
     Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
     ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+
     ```shell
-    cd ModelLink/
     # Modify the ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    python tools/checkpoint/convert_ckpt.py --model-type GPT \
-                                    --loader megatron \
-                                    --saver megatron \
-                                    --save-model-type save_huggingface_llama \
-                                    --load-dir {your model ckpt save path} \
-                                    --target-tensor-parallel-size 1 \
-                                    --target-pipeline-parallel-size 1 \
-                                    --add-qkv-bias \
-                                    --save-dir ./qwen-72b-hf    # Fill in the original HF model path here, new weights will be saved in ./qwen-72b-hf/mg2hg
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_qwen \
+        --load-dir ./model_weights/Qwen-72B-v0.1-tp8-pp1/ \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --add-qkv-bias \
+        --save-dir ./model_from_hf/Qwen-72B/    # Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Qwen-72B/mg2hg
     ```
-
 5. Prepare dataset
 
-	Download the Qwen-72B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)    
-	```shell
+    Download the Qwen-72B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+
+    ```shell
     # download datasets
-    mkdir dataset_qwen-72b
-    cd ./dataset_qwen-72b
+    cd ./dataset
     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
     cd ..
-	
-    # process datasets                              
+
+
+    # process datasets  
     python ./tools/preprocess_data.py \
-    --input ../dataset_qwen-72b/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ../qwen-72b-hf \
-    --output-prefix ../dataset_qwen-72b/alpaca \
-    --tokenizer-type PretrainedFromHF \
-    --seq-length 8192 \
-    --workers 4 \
-    --log-interval 1000
-	```
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/Qwen-72B/ \
+        --output-prefix ./dataset/Qwen-72B_alpaca \
+        --tokenizer-type PretrainedFromHF \
+        --seq-length 8192 \
+        --workers 4 \
+        --log-interval 1000
+    ```
 6. pre-training
 
-	Config Qwen-72B pre-training script: examples/qwen/pretrain_qwen_72b_ptd.sh 
-   ```shell
-    # modify the script according to your own ascend-toolkit path
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-    
-    # modify config according to your own actual situation
-    CKPT_SAVE_DIR="your model ckpt save path"
-    TOKENIZER_MODEL="./qwen-72b-hf/"  #tokenizer path
-    DATA_PATH="./dataset_qwen-72b/alpaca_text_document"  #processed dataset
-    CKPT_LOAD_DIR="your megatron ckpt save path"
-   ```
-   
+    Config Qwen-72B pre-training script: examples/qwen/pretrain_qwen_72b_ptd.sh
+
+    ```shell
+        # modify the script according to your own ascend-toolkit path
+        source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+        # modify config according to your own actual situation
+        CKPT_SAVE_DIR="./ckpt/"
+        TOKENIZER_MODEL="./model_from_hf/Qwen-72B/"  #tokenizer path
+        DATA_PATH="./dataset/Qwen-72B_alpaca_text_document"  #processed dataset
+        CKPT_LOAD_DIR="./model_weights/Qwen-72B-v0.1-tp8-pp1/"
+    ```
+
     To use a 32K sequence, turn on the re-computation feature and change the value of seq-length to 32768. The parameter configuration is as follows:
-   ```shell
-   --seq-length 32768 \
 
-    --recompute-granularity full \
-    --recompute-method block \
-    --recompute-num-layers 2 \
-   ```
+    ```shell
+    --seq-length 32768 \
+        --recompute-granularity full \
+        --recompute-method block \
+        --recompute-num-layers 2 \
+    ```
 
-	Launch Qwen-72B pre-training script: examples/qwen/pretrain_qwen_72b_ptd.sh
-   
-   ```shell
-    bash examples/qwen/pretrain_qwen_72b_ptd.sh 
-   ```
-   **Note**: If using multi machine training, it is necessary to set up multi machine data sharing, and non primary nodes can read the primary node data through data sharing. Alternatively, directly copy the data generated by the master node to non master nodes.
+    Launch Qwen-72B pre-training script: examples/qwen/pretrain_qwen_72b_ptd.sh
+
+    ```shell
+        bash examples/qwen/pretrain_qwen_72b_ptd.sh 
+    ```
+    **Note**: If using multi machine training, it is necessary to set up multi machine data sharing, and non primary nodes can read the primary node data through data sharing. Alternatively, directly copy the data generated by the master node to non master nodes.
 
 ### Performance
 
@@ -644,6 +666,7 @@ The performance of Qwen-72B in **Ascend NPU** and **Reference**:
 
 
 ## Inference
+
 Config qwen-72b inference script: examples/qwen/generate_qwen_72b_ptd.sh
 
 ```bash
@@ -651,11 +674,12 @@ Config qwen-72b inference script: examples/qwen/generate_qwen_72b_ptd.sh
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
  
 # modify script model path and tokenizer path
-CHECKPOINT="your model directory path"
-TOKENIZER_PATH=./qwen-72b-hf
+CHECKPOINT="./model_weights/Qwen-72B-v0.1-tp8-pp1/"
+TOKENIZER_PATH="./model_from_hf/Qwen-72B/"
 ```
 
 Launch qwen-72b inference script: examples/qwen/generate_qwen_72b_ptd.sh
+
 ```bash
 bash examples/qwen/generate_qwen_72b_ptd.sh
 ```
@@ -663,8 +687,8 @@ bash examples/qwen/generate_qwen_72b_ptd.sh
 Some inference samples are as follows:
 ![Inference](../../sources/images/qwen/qwen_72b_inference.png)
 
-
 ## Evaluation
+
 We use the [CEval benchmark](https://huggingface.co/datasets/ceval/ceval-exam) and [MMLU benchmark](https://huggingface.co/datasets/cais/mmlu) to evaluate our model. 
 
 Config qwen-72b evaluation script: examples/qwen/evaluate_qwen_72b_ptd.sh
@@ -674,8 +698,8 @@ Config qwen-72b evaluation script: examples/qwen/evaluate_qwen_72b_ptd.sh
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # Modify the model parameter path and vocabulary path
-TOKENIZER_PATH=./qwen-72b-hf  # vocabulary path
-CHECKPOINT="your model directory path"  # parameter path
+TOKENIZER_PATH="./model_from_hf/Qwen-72B/"  # vocabulary path
+CHECKPOINT="./model_weights/Qwen-72B-v0.1-tp8-pp1/"  # parameter path
 
 # Configure the task type and dataset path
 DATA_PATH="./mmlu/data/test/"  # "./ceval/val/" for ceval task

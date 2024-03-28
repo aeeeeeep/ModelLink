@@ -35,10 +35,13 @@ Here's a hardware summary of pre-training InternLM-7B:
 ### Script
 
 1. Clone the repository to your local server:
+
 ```shell
-git clone https://gitee.com/ascend/ModelLink.git 
-cd ModeLlink 
+git clone https://gitee.com/ascend/ModelLink.git
+cd ModelLink
 mkdir logs
+mkdir model_from_hf
+mkdir dataset
 mkdir ckpt
 ```
 
@@ -68,23 +71,21 @@ cd ..
 pip install -r requirements.txt 
 ```
 
-
 3. Download the Internlm-7B tokenizer model and file from [here](https://huggingface.co/internlm/internlm-7b/tree/main) 
 
 ```shell
-#!/bin/bash
-mkdir -p dataset/internlm
-cd ./dataset/internlm
+mkdir ./model_from_hf/internlm-7b/
+cd ./model_from_hf/internlm-7b/
 wget https://huggingface.co/internlm/internlm-7b/resolve/main/config.json
 wget https://huggingface.co/internlm/internlm-7b/resolve/main/generation_config.json
 wget https://huggingface.co/internlm/internlm-7b/resolve/main/special_tokens_map.json
 wget https://huggingface.co/internlm/internlm-7b/resolve/main/tokenization_internlm.py
 wget https://huggingface.co/internlm/internlm-7b/resolve/main/tokenizer.model
 wget https://huggingface.co/internlm/internlm-7b/resolve/main/tokenizer_config.json
-cd ../..
+cd ../../
 ```
 
-4. Prepare dataset. Download the Internlm-7B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
+4. Prepare dataset. Download the Internlm-7B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
 ```shell
 cd dataset/
@@ -97,8 +98,8 @@ cd ..
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ./dataset/internlm \
-    --output-prefix ./dataset/alpaca \
+    --tokenizer-name-or-path ./model_from_hf/internlm-7b/ \
+    --output-prefix ./dataset/internlm-7b_alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF  \
@@ -109,47 +110,40 @@ python ./tools/preprocess_data.py \
 
 5. Weights convert
 
-Download the Internlm-7B checkpoint from [here](https://huggingface.co/internlm/internlm-7b/tree/main) 
-```shell
-mkdir model_from_hf
-cd ./model_from_hf
-# you must install git-lfs
-git clone https://huggingface.co/internlm/internlm-7b
-cd ..
-```
-
 In order to adapt to the internlm-7B model, the following script is used to convert the model pre-training weights.
 ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
+
 ```shell
-mkdir model_weights
-python tools/checkpoint/convert_ckpt.py --model-type GPT \
-                                --loader llama2_hf \
-                                --saver megatron \
-                                --target-tensor-parallel-size 8 \
-                                --target-pipeline-parallel-size 1 \
-                                --load-dir ./model_from_hf/internlm-7b/ \
-                                --save-dir ./model_weights \
-                                --tokenizer-model ./intern-7b-hf/tokenizer.model \
-                                --add-qkv-bias \
-                                --add-dense-bias
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
+    --loader llama2_hf \
+    --saver megatron \
+    --target-tensor-parallel-size 8 \
+    --target-pipeline-parallel-size 1 \
+    --load-dir ./model_from_hf/internlm-7b/ \
+    --save-dir ./model_weights/internlm-7b-v0.1-tp8-pp1/ \
+    --tokenizer-model ./model_from_hf/internlm-7b/tokenizer.model \
+    --add-qkv-bias \
+    --add-dense-bias
 ```
 
 Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
 ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+
 ```shell
-cd ModelLink/
 # Modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/convert_ckpt.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ../HF_internlm7B-v0.1-pt8-pp1 \
+    --load-dir ./model_weights/internlm-7b-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --add-qkv-bias \
     --add-dense-bias \
-    --save-dir ../HF_internlm7B_downloaded    # <-- Fill in the original HF model path here, new weights will be saved in ../HF_internlm7B_downloaded/mg2hg
+    --save-dir ./model_from_hf/internlm-7b/    # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/internlm-7b/mg2hg
 ```
 
 6. Config Internlm-7B pre-training script.
@@ -158,10 +152,10 @@ python tools/checkpoint/convert_ckpt.py --model-type GPT \
 # modify the script according to your own  ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # modify script orign dataset path according to your own dataset path
-CKPT_SAVE_DIR="your model ckpt save path"
-CKPT_LOAD_DIR="your init model load path"
+CKPT_SAVE_DIR="./ckpt/"
+CKPT_LOAD_DIR="./model_weights/internlm-7b-v0.1-tp8-pp1/"
 TOKENIZER_PATH="./model_from_hf/internlm-7b/tokenizer.model"  #tokenizer path
-DATA_PATH="./dataset/alpaca/alpaca_text_document"  #processed dataset
+DATA_PATH="./dataset/internlm-7b_alpaca_text_document" #processed dataset
 ```
 
 7. Launch Internlm-7B pre-training script.
@@ -184,8 +178,10 @@ The performance of Internlm-7B in **Ascend NPU** and **Reference**:
 
 
 #### Inference
-Inference script</a>：
+
+Inference script`</a>`：
 examples/intern/generate_lnternlm_7b_ptd.sh
+
 ```
 bash ./examples/intern/generate_lnternlm_7b_ptd.sh
 ```
@@ -194,13 +190,15 @@ Inference case:
 ![Internlm-7b-inference](../../sources/images/intern/intern_7B_inference.png)
 
 #### Evaluation
+
 Evaluating the model using the MMLU dataset. dataset [download](https://huggingface.co/datasets/cais/mmlu)
 
-Evaluation script</a>:
-examples/intern/evaluate_internlm_7B_ptd.sh 
+Evaluation script: examples/intern/evaluate_internlm_7B_ptd.sh
+
 ```
 bash  examples/intern/evaluate_internlm_7B_ptd.sh
 ```
+
 The evaluation performance of LLaMA-7B/13B in **Ascend NPU**:
 
 | Task    | Model     | NPU  | Benchmark |
@@ -220,10 +218,13 @@ Here's a hardware summary of pre-training InternLM-65B:
 ### Script
 
 1. Clone the repository to your local server:
+
 ```shell
-git clone https://gitee.com/ascend/ModelLink.git 
-cd ModeLlink 
+git clone https://gitee.com/ascend/ModelLink.git
+cd ModelLink
 mkdir logs
+mkdir model_from_hf
+mkdir dataset
 mkdir ckpt
 ```
 
@@ -256,16 +257,15 @@ pip install -r requirements.txt
 3. Download tokenizer model and file from [here](https://huggingface.co/internlm/internlm-7b/tree/main) 
 
 ```shell
-#!/bin/bash
-mkdir -p dataset/internlm
-cd ./dataset/internlm
+mkdir ./model_from_hf/internlm-65b/
+cd ./model_from_hf/internlm-65b/
 wget https://huggingface.co/internlm/internlm-7b/resolve/main/config.json
 wget https://huggingface.co/internlm/internlm-7b/resolve/main/generation_config.json
 wget https://huggingface.co/internlm/internlm-7b/resolve/main/special_tokens_map.json
 wget https://huggingface.co/internlm/internlm-7b/resolve/main/tokenization_internlm.py
 wget https://huggingface.co/internlm/internlm-7b/resolve/main/tokenizer.model
 wget https://huggingface.co/internlm/internlm-7b/resolve/main/tokenizer_config.json
-cd ../..
+cd ../../
 ```
 
 4. Prepare dataset. Download the Internlm-65B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
@@ -281,8 +281,8 @@ cd ..
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ./dataset/internlm \
-    --output-prefix ./dataset/alpaca \
+    --tokenizer-name-or-path ./model_from_hf/internlm-65b/ \
+    --output-prefix ./dataset/internlm-65b_alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF  \
@@ -297,9 +297,9 @@ python ./tools/preprocess_data.py \
 # modify the script according to your own  ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # modify script orign dataset path according to your own dataset path
-TOKENIZER_PATH=./dataset/internlm  #tokenizer path
-DATA=./dataset/alpaca_text_document  #processed dataset
-CHECKPOINT=./model_weights/
+CKPT_SAVE_DIR="./ckpt/"
+TOKENIZER_PATH="./model_from_hf/internlm-65b/"  #tokenizer path
+DATA_PATH="./dataset/internlm-65b_alpaca_text_document"  #processed dataset
 ```
 
 6. Launch Internlm-65B pre-training script.

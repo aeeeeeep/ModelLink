@@ -39,9 +39,14 @@ Recommended hardware configuration for inference:
 
 1. Clone the code repository to the local server
 
-   ```shell
+    ```shell
     git clone https://gitee.com/ascend/ModelLink.git
-   ```
+    cd ModelLink
+    mkdir logs
+    mkdir model_from_hf
+    mkdir dataset
+    mkdir ckpt
+    ```
 2. Set up the environment
 
    ```bash
@@ -66,17 +71,20 @@ Recommended hardware configuration for inference:
     pip3 install -e .
     cd ..
    ```
-3. Download the pre-trained weights and vocabulary for Mixtral-8x7B from [here](https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/tree/main). (It is recommended to only download weights in safetensors format) 
-    
+3. Download the pre-trained weights and vocabulary for Mixtral-8x7B from [here](https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/tree/main). (It is recommended to only download weights in safetensors format)
+
     ```shell
-     #!/bin/bash
-     git lfs install
-     git clone https://huggingface.co/mistralai/Mixtral-8x7B-v0.1
+    #!/bin/bash
+    cd ./model_from_hf/
+    git lfs install
+    git clone https://huggingface.co/mistralai/Mixtral-8x7B-v0.1
+    mv Mixtral-8x7B-v0.1 Mixtral-8x7B
+    cd ..
     ```
 
-   Convert weights from Huggingface format to Megatron format
-   ```bash
-    cd ModelLink
+    Convert weights from Huggingface format to Megatron format
+
+    ```bash
     # Modify the ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
@@ -91,7 +99,6 @@ Recommended hardware configuration for inference:
         --target-pipeline-parallel-size 8 \
         --target-expert-parallel-size 2 \
         --params-dtype bf16 
-    cd ..
    ```
 
 ## Data-Processing
@@ -101,23 +108,22 @@ Recommended hardware configuration for inference:
 Download [Alpaca-GPT4 Chinese dataset](https://huggingface.co/datasets/silk-road/alpaca-data-gpt4-chinese/tree/main)
 
 ```shell
-mkdir dataset
 cd ./dataset
 
-# If wget is not accessible, you can manually download
+# wget不通的话也可手动自行下载
 wget https://huggingface.co/datasets/silk-road/alpaca-data-gpt4-chinese/blob/main/Alpaca_data_gpt4_zh.jsonl
 
-cd ../ModelLink
+cd ..
 ```
 
-
 2. Data preprocessing
-```shell                          
+
+```shell
 python ./tools/preprocess_data.py \
-    --input ../dataset/Alpaca_data_gpt4_zh.jsonl \
-    --output-prefix ../dataset/alpaca \
+    --input ./dataset/Alpaca_data_gpt4_zh.jsonl \
+    --output-prefix ./dataset/Mixtral-8x7B_alpaca \
     --tokenizer-type PretrainedFromHF \
-    --tokenizer-name-or-path ../Mixtral-8x7B-v0.1 \
+    --tokenizer-name-or-path ./model_from_hf/Mixtral-8x7B/ \
     --append-eod \
     --tokenizer-not-use-fast \
     --handler-name GeneralInstructionHandler \
@@ -125,24 +131,26 @@ python ./tools/preprocess_data.py \
 ```
 
 ## Model-Conversion
+
 1. HuggingFace weights --> Megatron weights with any parallel slicing strategy
-***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
+    ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
     ```bash
     # Modify the ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
     # HF to tp1-pp8-ep2
-    python tools/checkpoint/convert_ckpt.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
         --loader mixtral_hf \
         --saver mixtral \
-        --load-dir ../Mixtral-8x7B-v0.1 \
-        --save-dir {your megatron ckpt save path} \
-        --tokenizer-model ../Mixtral-8x7B-v0.1/tokenizer.model \
+        --load-dir ./model_from_hf/Mixtral-8x7B/ \
+        --save-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep2/ \
+        --tokenizer-model ./model_from_hf/Mixtral-8x7B/tokenizer.model \
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 8 \
         --target-expert-parallel-size 2 \
         --params-dtype bf16 
-    ```
+   ```
 2. Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
 ***(This scenario is generally used to reconfigure the sliced model weights, such as training on a dual-node 16-card EP2-PP8 strategy, and then wanting to infer on a single-node 8-card TP8)***
     ```bash
@@ -150,13 +158,14 @@ python ./tools/preprocess_data.py \
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
     # tp1-pp8-ep2 to tp1-pp8-ep1
-    python tools/checkpoint/convert_ckpt.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
         --loader mixtral_mg \
         --saver mixtral \
-        --load-dir ../Mixtral-8x7B-v0.1-ep2-pp8 \
-        --save-dir {your megatron ckpt save path} \
-        --target-tensor-parallel-size 8 \
-        --target-pipeline-parallel-size 1 \
+        --load-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep2/ \
+        --save-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep1/ \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 8 \
         --target-expert-parallel-size 1 
     ```
 3. Any Megatron weights with parallel slicing strategy --> HuggingFace weights
@@ -166,27 +175,30 @@ python ./tools/preprocess_data.py \
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
     # tp1-pp8-ep2 to HF
-    python tools/checkpoint/convert_ckpt.py --model-type GPT \
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
         --loader mixtral_mg \
         --saver mixtral \
         --save-model-type huggingface \
-        --load-dir ../Mixtral-8x7B-v0.1-ep2-pp8 \
-        --save-dir ../Mixtral-8x7B-v0.1 \    # <-- Fill in the original HF model path here, new weights will be saved in ../Mixtral-8x7B-v0.1/mg2hg
+        --load-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep2/ \
+        --save-dir ./model_from_hf/Mixtral-8x7B/ \    # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Mixtral-8x7B/mg2hg
     ```
 
 ## Model-Training
+
 Configure Mixtral-8x7B pre-training script: ***examples/mixtral/pretrain_mixtral_8x7b_ptd.sh***
 
 1. Pre-training
+
     ```shell
 
     # Set the ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
     # Configure according to the actual vocabulary, dataset, and model parameter save path
-    DATA_PATH="your data path"
-    TOKENIZER_MODEL="your tokenizer path"
-    CKPT_SAVE_DIR="your model save ckpt path"
+    DATA_PATH="./dataset/Mixtral-8x7B_alpaca_text_document"
+    TOKENIZER_MODEL="./model_from_hf/Mixtral-8x7B/"
+    CKPT_SAVE_DIR="./ckpt/"
 
     # Configure distributed parameters according to the actual distributed cluster
     GPUS_PER_NODE=8
@@ -219,6 +231,7 @@ Configure Mixtral-8x7B pre-training script: ***examples/mixtral/pretrain_mixtral
    
 2. Supervised Fine-Tuning
     The configuration script for fine-tuning is basically the same as the pre-training script pretrain_mixtral_8x7b_ptd.sh. The difference lies in whether to load the model and use the instruction fine-tuning dataset
+
     ```shell
     # Enable fine-tuning dataset switch
     --is-instruction-dataset
@@ -249,8 +262,8 @@ First, configure the inference script: ***examples/mixtral/generate_mixtral_8x7b
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 # Modify the model weight path and tokenizer path
-CHECKPOINT="your model ckpt path"
-TOKENIZER_MODEL="your tokenizer path"
+CHECKPOINT="./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep1/"
+TOKENIZER_MODEL="./model_from_hf/Mixtral-8x7B/"
 
 # Modify according to the actual loaded model weight the parallel configuration
 MASTER_ADDR=localhost
@@ -279,7 +292,7 @@ An example of inference is as follows:
 
 ## Model-Evaluation
 
-Evaluate the model using the MMLU dataset. Dataset download path [here](https://huggingface.co/datasets/cais/mmlu). 
+Evaluate the model using the MMLU dataset. Dataset download path [here](https://huggingface.co/datasets/cais/mmlu).
 Configure the evaluation script: ***examples/mixtral/evaluate_mixtral_8x7b_ptd.sh***
 
 ```bash
@@ -287,8 +300,8 @@ Configure the evaluation script: ***examples/mixtral/evaluate_mixtral_8x7b_ptd.s
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 # Modify the model parameter path and tokenizer path
-TOKENIZER_PATH=../Mixtral-8x7B-v0.1/                                 #tokenizer path
-CHECKPOINT=../Mixtral-8x7B-v0.1-tp8pp1                               #model path
+TOKENIZER_PATH="./model_from_hf/Mixtral-8x7B/"                                           #tokenizer path
+CHECKPOINT="./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep1"                                         #model path
 
 # Configure tasks and dataset paths
 DATA_PATH="./mmlu/data/test/"
