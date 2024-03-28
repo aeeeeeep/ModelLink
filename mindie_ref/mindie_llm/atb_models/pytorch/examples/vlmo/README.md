@@ -68,15 +68,14 @@ pip install torch*_aarch64.whl
 | sympy            | 1.11.1 |
 | scipy            | 1.11.3 |
 | attrs            | 23.1.0 |
-| psutil           | 5.9.6  |
 | sentencepiece    | 0.1.99 |
 | pytorch_lightning| 1.5.5  |
-| Pillow| 8.3.1 |
+| Pillow| 10.2.0 |
 | tqdm |4.53.0|
 | ipdb |0.13.7|
 | einops| 0.3.0|
 | pyarrow |14.0.1|
-| sacred |0.8.2|
+| sacred |0.8.5|
 | pandas |2.2.0|
 | timm |0.4.12|
 | torchmetrics| 0.7.3|
@@ -84,7 +83,7 @@ pip install torch*_aarch64.whl
 | numpy |1.26.4|
 | scipy |1.12.0|
 | opencv-python |4.9.0.80|
-| opencv-python-headless| 4.5.3.56|
+| opencv-python-headless| 4.9.0.80|
 | psutil |5.9.8|
 | torchvision |0.16.2|
 如torchvision版本安装失败，则说明需要从Huawei源下载，需要将pip源修改为华为源http://cmc-cd-mirror.rnd.huawei.com/pypi/simple/
@@ -207,14 +206,14 @@ cp cut_model_and_run.sh ${model_path}/unilm/vlmo/
 修改 `<Finetuned_VLMo_WEIGHT>`  为 `${model_download_path}`；修改 `<CONFIG_NAME>` 为 task_finetune_vqa_base_image480
 
 打开 `${model_path}`/unilm/vlmo/run_ascend_vqa.py \
-修改 `VQA_ARROW_DIR`  路径为 '`${data_download_path}`/vqa_arrow' ；修改 `<BERT_VOCAB>` 为 '`${model_download_path}`/vocab.txt'
+修改 `VQA_ARROW_DIR`  路径为 '`${data_download_path}`/arrow' ；修改 `<BERT_VOCAB>` 为 '`${model_download_path}`/vocab.txt'
 修改 DEVICE_ID 后的值可选择在哪张卡上运行
 
 ##### 修改双芯推理配置
-打开 `${model_path}/unilm/vlmo/cut_model_and_run.sh` 修改input_path为`${model_download_path}`
-打开`${model_path}/unilm/vlmo/vlmo/modules/config.py` 在device处可以选择所用芯片，请输入两个芯片的编号。
+打开 `${model_path}/unilm/vlmo/cut_model_and_run.sh` 修改input_path为`${model_download_path}`;修改 `CONFIG_NAME` 后的值为 task_finetune_vqa_base_image480
 打开 `${model_path}/unilm/vlmo/cut_ascend_vqa.py` \
-修改 `VQA_ARROW_DIR`  路径为 '`${data_download_path}`/vqa_arrow' ；修改 `<BERT_VOCAB>` 为 '`${model_download_path}`/vocab.txt'。
+修改 `VQA_ARROW_DIR`  路径为 '`${data_download_path}`/arrow' ；修改 `<BERT_VOCAB>` 为 '`${model_download_path}`/vocab.txt'。
+修改 DEVICE_ID 后的值可选择在哪张卡上运行
  
 # CPU高性能模式
 
