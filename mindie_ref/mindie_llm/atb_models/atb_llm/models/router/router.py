@@ -13,6 +13,7 @@ from ..llama.modeling_llama import LlamaConfig
 from ..deepseek.flash_causal_deepseek import DeepseekConfig
 from ..mixtral.flash_causal_mixtral import MixtralConfig
 from ..qwen.modeling_qwen import QwenConfig
+from ..qwen2.modeling_qwen2 import Qwen2Config
 from ..starcoder.flash_causal_starcoder import StarcoderConfig
 from ..telechat.config import TelechatConfig
 from ..gpt_neox.config import GPTNeoXConfig
@@ -83,7 +84,8 @@ class BaseRouter:
     def get_config_cls(self):
         model_file_dir_name = f"atb_llm.models.{self.model_type}."
         if self.model_version:
-            model_file_dir_name = model_file_dir_name + f"{self.model_version}."
+            model_file_dir_name = model_file_dir_name + \
+                f"{self.model_version}."
         config_file_name = 'config'
         module_path = f"{model_file_dir_name}{config_file_name}"
         module = importlib.import_module(module_path)
@@ -96,7 +98,8 @@ class BaseRouter:
         """
         model_file_dir_name = f"atb_llm.models.{self.model_type}."
         if self.model_version:
-            model_file_dir_name = model_file_dir_name + f"{self.model_version}."
+            model_file_dir_name = model_file_dir_name + \
+                f"{self.model_version}."
         model_file_name = 'flash_causal' if self.is_flash_causal_lm else 'causal'
         module_path = f"{model_file_dir_name}{model_file_name}_{self.model_type}"
         module = importlib.import_module(module_path)
@@ -126,7 +129,7 @@ class LlamaRouter(BaseRouter):
         if self.max_position_embeddings:
             config.max_position_embeddings = self.max_position_embeddings
         return config
-    
+
     def get_tokenizer(self):
         if self.config_dict['num_hidden_layers'] in [60]:
             # LLaMa 33B use_fast需要使用False
@@ -149,8 +152,8 @@ class TelechatRouter(BaseRouter):
     @property
     def config(self):
         config = TelechatConfig.from_pretrained(self.model_name_or_path,
-                                             revision=self.revision,
-                                             trust_remote_code=self.trust_remote_code)
+                                                revision=self.revision,
+                                                trust_remote_code=self.trust_remote_code)
         if self.max_position_embeddings:
             config.max_position_embeddings = self.max_position_embeddings
         return config
@@ -166,11 +169,12 @@ class TelechatRouter(BaseRouter):
 class DeepseekRouter(BaseRouter):
     @property
     def config(self):
-        config = DeepseekConfig.from_pretrained(self.model_name_or_path, torch_dtype=torch.float16)
+        config = DeepseekConfig.from_pretrained(
+            self.model_name_or_path, torch_dtype=torch.float16)
         if self.max_position_embeddings:
             config.max_position_embeddings = self.max_position_embeddings
         return config
-    
+
     def get_tokenizer(self):
         return AutoTokenizer.from_pretrained(
             self.model_name_or_path,
@@ -178,17 +182,18 @@ class DeepseekRouter(BaseRouter):
             trust_remote_code=True,
             use_fast=False
         )
-    
+
 
 @dataclass
 class MixtralRouter(BaseRouter):
     @property
     def config(self):
-        config = MixtralConfig.from_pretrained(self.model_name_or_path, torch_dtype=torch.float16)
+        config = MixtralConfig.from_pretrained(
+            self.model_name_or_path, torch_dtype=torch.float16)
         if self.max_position_embeddings:
             config.max_position_embeddings = self.max_position_embeddings
         return config
-    
+
     def get_tokenizer(self):
         return AutoTokenizer.from_pretrained(
             self.model_name_or_path,
@@ -196,7 +201,7 @@ class MixtralRouter(BaseRouter):
             trust_remote_code=True,
             use_fast=False
         )
-    
+
 
 @dataclass
 class StarcoderRouter(BaseRouter):
@@ -284,6 +289,26 @@ class QwenRouter(BaseRouter):
     @property
     def config(self):
         return QwenConfig.from_pretrained(
+            self.model_name_or_path,
+            revision=self.revision,
+            trust_remote_code=self.trust_remote_code
+        )
+
+    def get_tokenizer(self):
+        return AutoTokenizer.from_pretrained(
+            self.model_name_or_path,
+            pad_token='<|extra_0|>',
+            eos_token='<|endoftext|>',
+            padding_side='left',
+            trust_remote_code=True
+        )
+
+
+@dataclass
+class Qwen2Router(BaseRouter):
+    @property
+    def config(self):
+        return Qwen2Config.from_pretrained(
             self.model_name_or_path,
             revision=self.revision,
             trust_remote_code=self.trust_remote_code
@@ -394,7 +419,7 @@ class BloomRouter(BaseRouter):
             self.model_name_or_path,
             revision=self.revision,
             trust_remote_code=self.trust_remote_code
-            )
+        )
         if self.max_position_embeddings:
             config.seq_length = self.max_position_embeddings
         return config
