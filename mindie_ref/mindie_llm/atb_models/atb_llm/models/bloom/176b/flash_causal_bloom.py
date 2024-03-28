@@ -451,34 +451,29 @@ class FlashBloomForCausalLM(BloomPreTrainedModel):
         return float_weight_dict, list(set(float_layers))
 
     def load_model_w8a16(self, config):
-        if self.tp_world_size > 1 or os.path.exists(os.path.join(config.model_path, "part_model")):
-            model_path = os.path.join(config.model_path, "part_model", str(self.tp_rank))
+        if self.world_size > 1:
+            model_path = os.path.join(config.model_path, "part_model", str(self.rank))
         else:
             model_path = config.model_path
-        weight_list = ['quant_weight', 'weight_scale']
         
-        weight_kwargs = {}
-        for weight_name in weight_list:
-            weight_kwargs[weight_name + '_dict'] = np.load(os.path.join(model_path, weight_name + '.npy'), allow_pickle=True).item()
-
-        for weight_name, weight_values in weight_kwargs.items():
-            setattr(self, weight_name, weight_values)
-
-        float_weight_dict = torch.load(os.path.join(model_path, "/float_layers_weights.pt"))
-
-        import copy
-        if config.quant_mode == 2:
-            self.bias_dict = dict()
-            _keys_ = copy.deepcopy(list(float_weight_dict.keys()))
-            for _k_ in _keys_:
-                if "bias" in _k_:
-                    self.bias_dict[_k_] = float_weight_dict[_k_]
-        float_layers = []
-        weights_keys = float_weight_dict.keys()
-        return float_weight_dict, list(set(float_layers))
+        safetensors_filenames = [name for name in os.listdir(model_path) if name.endswith(".safetensors")]
+        if safetensors_filenames:
+            quant_model_weight_name = safetensors_filenames[0]
+        else:
+            raise FileNotFoundError(f"The specified .safetensors weights file was not found.")
         
+        quant_model_weight_path = os.path.join(model_path, quant_model_weight_name)
+        tensors = dict()
+        with safe_open(quant_model_weight_path, framework="pt", device="cpu") as f:
+            model_layer_names = f.keys()
+            for i in tqdm.tqdm(range(len(model_layer_names))):
+                layer_name = model_layer_names[i]
+                tensors[layer_name] = f.get_tensor(layer_name)
+        return tensors, list()
+
+
     def _init_weights_mine(self):
-        prefix = '' if self.tp_world_size == 1 and self.is_float else 'transformer.'
+        prefix = '' if self.world_size == 1 and self.is_float else 'transformer.'
         if self.quant_mode == 2:
             prefix = 'transformer.'
         weights = [
@@ -518,49 +513,51 @@ class FlashBloomForCausalLM(BloomPreTrainedModel):
                 dense_name = f"transformer.h.{layer_num}.self_attention.dense"
                 dense_h_to_4h_name = f"transformer.h.{layer_num}.mlp.dense_h_to_4h"
                 dense_4h_to_h_name = f"transformer.h.{layer_num}.mlp.dense_4h_to_h"
+                PLACE_HOLDER = torch.zeros(1, 1, dtype=torch.float16).npu()
 
                 weights_t = [
-                    self.model_weights[f'{prefix}h.{layer_num}.input_layernorm.weight'].to(torch.float16).npu(),  # transformer.h.0.input_layernorm.weight
-                    self.model_weights[f'{prefix}h.{layer_num}.input_layernorm.bias'].to(torch.float16).npu(),    # transformer.h.0.input_layernorm.bias
+                    self.model_weights[f'{prefix}h.{layer_num}.input_layernorm.weight'].to(torch.float16).npu(),
+                    self.model_weights[f'{prefix}h.{layer_num}.input_layernorm.bias'].to(torch.float16).npu(),
 
-                    self.quant_weight_dict[query_key_value_name].t().contiguous().to(torch.int8).npu(),        # transformer.h.0.self_attention.query_key_value.weight
-                    self.bias_dict[query_key_value_name + ".bias"].to(torch.float16).t().contiguous().npu(),                     # transformer.h.0.self_attention.query_key_value.bias
-                    self.weight_scale_dict[query_key_value_name].to(torch.float16).t().contiguous().npu(),                       # weight_scale of query_key_value.weight
-                    torch.zeros(self.weight_scale_dict[query_key_value_name].t().shape, dtype=torch.float16).npu(),
-                    torch.zeros((1, 1), dtype=torch.float16).npu(),
-                    torch.zeros((1, 1), dtype=torch.float16).npu(),
-
-                    self.quant_weight_dict[dense_name].t().contiguous().to(torch.int8).npu(),                  # transformer.h.0.self_attention.dense.weight
-                    self.bias_dict[dense_name + ".bias"].to(torch.float16).t().contiguous().npu() / 8,                               # transformer.h.0.self_attention.dense.bias
-                    self.weight_scale_dict[dense_name].to(torch.float16).t().contiguous().npu(),                                 # weight_scale of dense.weight
-                    torch.zeros(self.weight_scale_dict[dense_name].t().shape, dtype=torch.float16).npu(),
-                    torch.zeros((1, 1), dtype=torch.float16).npu(),
-                    torch.zeros((1, 1), dtype=torch.float16).npu(),
+                    self.model_weights[f"{query_key_value_name}.weight"].t().contiguous().to(torch.int8).npu(),
+                    self.model_weights[f"{query_key_value_name}.bias"].to(torch.float16).t().contiguous().npu(),
+                    self.model_weights[f"{query_key_value_name}.weight_scale"].to(torch.float16).t().contiguous().npu(),
+                    self.model_weights[f"{query_key_value_name}.weight_offset"].to(torch.float16).t().contiguous().npu(),
+                    PLACE_HOLDER, PLACE_HOLDER,
+                    
+                    self.model_weights[f"{dense_name}.weight"].t().contiguous().to(torch.int8).npu(),
+                    self.model_weights[f"{dense_name}.bias"].to(torch.float16).t().contiguous().npu() / 8,
+                    self.model_weights[f"{dense_name}.weight_scale"].to(torch.float16).t().contiguous().npu(),
+                    self.model_weights[f"{dense_name}.weight_offset"].to(torch.float16).t().contiguous().npu(),
+                    PLACE_HOLDER, PLACE_HOLDER,
 
                     self.model_weights[f'{prefix}h.{layer_num}.post_attention_layernorm.weight'].to(torch.float16).npu(),
                     self.model_weights[f'{prefix}h.{layer_num}.post_attention_layernorm.bias'].to(torch.float16).npu(),
 
-                    self.quant_weight_dict[dense_h_to_4h_name].t().contiguous().to(torch.int8).npu(),          # transformer.h.0.mlp.dense_h_to_4h.weight
-                    self.bias_dict[dense_h_to_4h_name + ".bias"].to(torch.float16).to(torch.float16).t().contiguous().npu(),                       # transformer.h.0.mlp.dense_h_to_4h.bias
-                    self.weight_scale_dict[dense_h_to_4h_name].to(torch.float16).to(torch.float16).t().contiguous().npu(),                         # weight_scale of dense_h_to_4h.weight
-                    torch.zeros(self.weight_scale_dict[dense_h_to_4h_name].t().shape, dtype=torch.float16).npu(),
-                    torch.zeros((1, 1), dtype=torch.float16).npu(),
-                    torch.zeros((1, 1), dtype=torch.float16).npu(),
+                    self.model_weights[f"{dense_h_to_4h_name}.weight"].t().contiguous().to(torch.int8).npu(),
+                    self.model_weights[f"{dense_h_to_4h_name}.bias"].to(torch.float16).to(torch.float16).t().contiguous().npu(),
+                    self.model_weights[f"{dense_h_to_4h_name}.weight_scale"].to(torch.float16).to(torch.float16).t().contiguous().npu(),
+                    self.model_weights[f"{dense_h_to_4h_name}.weight_offset"].to(torch.float16).t().contiguous().npu(),
+                    PLACE_HOLDER, PLACE_HOLDER,
  
-                    self.quant_weight_dict[dense_4h_to_h_name].t().contiguous().to(torch.int8).npu(),           # transformer.h.0.mlp.dense_4h_to_h.weight
-                    self.bias_dict[dense_4h_to_h_name + ".bias"].to(torch.float16).t().contiguous().npu() / 8,                        # transformer.h.0.mlp.dense_4h_to_h.bias
-                    self.weight_scale_dict[dense_4h_to_h_name].to(torch.float16).t().contiguous().npu(),                          # weight_scale of dense_4h_to_h.weight
-                    torch.zeros(self.weight_scale_dict[dense_4h_to_h_name].t().shape, dtype=torch.float16).npu(),
-                    torch.zeros((1, 1), dtype=torch.float16).npu(),
-                    torch.zeros((1, 1), dtype=torch.float16).npu()
+                    self.model_weights[f"{dense_4h_to_h_name}.weight"].t().contiguous().to(torch.int8).npu(),
+                    self.model_weights[f"{dense_4h_to_h_name}.bias"].to(torch.float16).t().contiguous().npu() / 8,
+                    self.model_weights[f"{dense_4h_to_h_name}.weight_scale"].to(torch.float16).t().contiguous().npu(),
+                    self.model_weights[f"{dense_4h_to_h_name}.weight_offset"].to(torch.float16).t().contiguous().npu(),
+                    PLACE_HOLDER, PLACE_HOLDER
                 ]
                 weights.extend(weights_t)
 
         weights.append(self.model_weights[f'{prefix}ln_f.weight'].to(torch.float16).npu())
         weights.append(self.model_weights[f'{prefix}ln_f.bias'].to(torch.float16).npu())
-        # cut weights
         weights.append(self.model_weights[f'{prefix}word_embeddings.weight'].to(torch.float16).npu())
+
+        if self.rank == 0:
+            for tmp_tensor in weights:
+                log_rank_0(f"{tmp_tensor.shape}, {tmp_tensor.dtype}")
+                
         return weights
+
 
     def _prepare_attn_mask(
         self, attention_mask: torch.Tensor, input_shape: Tuple[int, int], past_key_values_length: int
@@ -751,6 +748,5 @@ class FlashBloomForCausalLM(BloomPreTrainedModel):
         ]
 
         acl_model_out = model.execute(acl_inputs, self.acl_param_encoder)
-        # print("====================", acl_model_out)
         
         return acl_model_out[1]
