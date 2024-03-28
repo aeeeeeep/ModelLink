@@ -28,7 +28,7 @@ namespace llama_parallel {
 enum PositionEmbeddingType : uint32_t {
     ROPE = 0,
     AILIBI,
-}
+};
 
 struct DecoderLayerParam {
     bool isFA = true;
