@@ -51,7 +51,8 @@ enum Chatglm6BLayerDecoderFlashAttentionTensorId {
     INTERMEDIATE_SELFRESIDUALOUT_ID,
     INTERMEDIATE_SELFADDOUT_ID,
     INTERMEDIATE_SELFNORMOUT_ID,
-    INTERMEDIATE_FFNOUT,
+    INTERMEDIATE_FFNOUT_ID,
+    INTERMEDIATE_FFNACTIVATIONOUT_ID,
     INTERMEDIATE_FFNLINEAROUT_ID,
     INTERMEDIATE_FFNRESIDUALOUT_ID,
 
@@ -71,8 +72,8 @@ enum Chatglm6BLayerDecoderFlashAttentionTensorId {
 
 static const uint64_t IN_TENSOR_COUNT = 22;
 static const uint64_t OUT_TENSOR_COUNT = 1;
-static const uint64_t INTERMEDIATE_TENSOR_COUNT = 25;
-static const uint64_t NODE_COUNT = 22;
+static const uint64_t INTERMEDIATE_TENSOR_COUNT = 26;
+static const uint64_t NODE_COUNT = 23;
 
 void Squeeze1(const atb::Dims &oldShape, atb::Dims &newShape)
 {
@@ -133,6 +134,7 @@ atb::Status CreateGlm6BLayerDecoderFlashAttentionOperation(const Glm6BLayerDecod
     auto &selfAddNode = opGraph.nodes.at(nodeId++);
     auto &selfNormNode = opGraph.nodes.at(nodeId++);
     auto &ffnNode = opGraph.nodes.at(nodeId++);
+    auto &ffnActivationNode = opGraph.nodes.at(nodeId++);
     auto &ffnLinearNode = opGraph.nodes.at(nodeId++);
     auto &ffnResidualNode = opGraph.nodes.at(nodeId++);
     auto &ffnAddNode = opGraph.nodes.at(nodeId++);
@@ -304,11 +306,16 @@ atb::Status CreateGlm6BLayerDecoderFlashAttentionOperation(const Glm6BLayerDecod
     atb::infer::LinearParam ffnParam;
     CREATE_OPERATION(ffnParam, &ffnNode.operation);
     ffnNode.inTensorIds = {INTERMEDIATE_SELFNORMOUT_ID, IN_FFNLINEARWEIGHT_ID, IN_FFNLINEARBIAS_ID};
-    ffnNode.outTensorIds = {INTERMEDIATE_FFNOUT};
+    ffnNode.outTensorIds = {INTERMEDIATE_FFNOUT_ID};
+
+    atb::infer::ActivationParam ffnActivationParam;
+    CREATE_OPERATION(ffnActivationParam, &ffnActivationNode.operation);
+    ffnNode.inTensorIds = {INTERMEDIATE_FFNOUT_ID};
+    ffnNode.outTensorIds = {INTERMEDIATE_FFNACTIVATIONOUT_ID};
 
     atb::infer::LinearParam ffnLinearParam;
     CREATE_OPERATION(ffnLinearParam, &ffnLinearNode.operation);
-    ffnLinearNode.inTensorIds = {INTERMEDIATE_FFNOUT, IN_FFNOUTLINEARWEIGHT_ID, IN_FFNOUTLINEARBIAS_ID};
+    ffnLinearNode.inTensorIds = {INTERMEDIATE_FFNACTIVATIONOUT_ID, IN_FFNOUTLINEARWEIGHT_ID, IN_FFNOUTLINEARBIAS_ID};
     ffnLinearNode.outTensorIds = {INTERMEDIATE_FFNLINEAROUT_ID};
 
     atb::infer::ElewiseParam ffnResidualParam;
