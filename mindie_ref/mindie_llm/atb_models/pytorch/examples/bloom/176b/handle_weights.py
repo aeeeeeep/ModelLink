@@ -143,9 +143,24 @@ def cut_model_quant(args_quant):
     print(f"[+] The tokenizer has been saved successfully.")
 
     config = AutoConfig.from_pretrained(args_quant.input_path)
-    quant_model_weight_path = os.path.join(args_quant.input_path, "quant_model_weight.safetensors")
-
-    with open(os.path.join(args_quant.input_path, "quant_model_description.json"), "r") as f:
+    
+    safetensors_filenames = [name for name in os.listdir(args_quant.input_path) if name.endswith(".safetensors")]
+    if safetensors_filenames:
+        quant_model_weight_name = safetensors_filenames[0]
+    else:
+        raise FileNotFoundError("The specified '*.safetensors' file was not found.")
+    
+    quant_model_weight_path = os.path.join(args_quant.input_path, quant_model_weight_name)
+    
+    tmp_json_names = ("quant_model_description.json", "quant_model_description_w8a16.json")
+    if os.path.exists(os.path.join(args_quant.input_path, tmp_json_names[0])):
+        quant_model_description_name = os.path.join(args_quant.input_path, tmp_json_names[0])
+    elif os.path.exists(os.path.join(args_quant.input_path, tmp_json_names[1])):
+        quant_model_description_name = os.path.join(args_quant.input_path, tmp_json_names[1])
+    else:
+        raise FileNotFoundError("The specified 'quant_model_description*.json' file was not found.")
+    
+    with open(quant_model_description_name, "r") as f:
         quant_model_description = json.load(f)
 
     model_layer_names = list(quant_model_description.keys())

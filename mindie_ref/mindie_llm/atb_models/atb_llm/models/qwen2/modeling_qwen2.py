@@ -39,7 +39,7 @@ from atb_llm.utils.layers import (
     reshape_and_cache
 )
 
-from atb_llm.utils.quantize.pack_type import PackType, calc_linear_pack_type
+from atb_llm.utils.quantize.pack_type import PackType, calc_linear_pack_typetize.w8a8 import calc_linear_pack_type
 from atb_llm.utils.log import logger
 
 

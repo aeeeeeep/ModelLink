@@ -330,7 +330,13 @@ class BloomCommonForCausalLM(BloomPreTrainedModel):
         else:
             model_path = config.model_path
 
-        quant_model_weight_path = os.path.join(model_path, "quant_model_weight.safetensors")
+        safetensors_filenames = [name for name in os.listdir(model_path) if name.endswith(".safetensors")]
+        if safetensors_filenames:
+            quant_model_weight_name = safetensors_filenames[0]
+        else:
+            raise FileNotFoundError(f"The specified .safetensors weights file was not found.")
+        
+        quant_model_weight_path = os.path.join(model_path, quant_model_weight_name)
         tensors = dict()
         with safe_open(quant_model_weight_path, framework="pt", device="cpu") as f:
             model_layer_names = f.keys()
