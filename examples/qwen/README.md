@@ -628,7 +628,7 @@ Qwen-72B 训练的硬件配置:
 
     --recompute-granularity full \
     --recompute-method block \
-    --recompute-num-layers 2 \
+    --recompute-num-layers 80 \
    ```
 
    启动 Qwen-72B 预训练脚本: examples/qwen/pretrain_qwen_72b_ptd.sh
