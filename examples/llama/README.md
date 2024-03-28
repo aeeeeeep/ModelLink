@@ -221,6 +221,8 @@ SAVE_CHECKPOINT_PATH="your model ckpt save path"
 
 5.3 启动 LLaMA-7B/13B 预训练脚本
 
+**注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+
 LLaMA-7B
 ```shell
 bash examples/llama/pretrain_llama_7b_ptd.sh
@@ -617,6 +619,8 @@ SAVE_CHECKPOINT_PATH="your model ckpt save path"
 ```
 
 5.3 启动预训练脚本:
+
+**注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
 
 启动 llama-33B 预训练脚本 : ./examples/llama/pretrain_llama_33B_ptd_32p.sh
 ```bash

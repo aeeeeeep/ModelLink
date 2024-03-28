@@ -171,6 +171,8 @@ DATA_PATH="./dataset/alpaca/alpaca_text_document" #数据集路径
 bash examples/intern/pretrain_internlm_7b_ptd.sh 
 ```
 
+**注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+
 
 ### 性能
 
@@ -309,6 +311,7 @@ DATA_PATH="your data path" #数据集路径
 bash examples/intern/pretrain_internlm_65b_ptd.sh 
 ```
 
+**注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
 
 ### 性能
 
