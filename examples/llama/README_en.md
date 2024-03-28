@@ -5,7 +5,6 @@
         <b>English</b>
 </p>
 
-
 - [LLaMA-7B/13B](#llama-7b13b)
   - [Training](#training)
     - [Script](#script)
@@ -37,11 +36,14 @@ Here's a hardware summary of pre-training LLaMA-7B/13B:
 ### Script
 
 1. Clone the repository to your local server:
+
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
 cd ModelLink
 mkdir logs
-cd ..
+mkdir model_from_hf
+mkdir dataset
+mkdir ckpt
 ```
 
 2. Build environment
@@ -68,9 +70,9 @@ pip install -r requirements.txt
 
 3. Download the LLaMA-7B/13B tokenizer model file and checkpoint.
 
-Download the LLaMA-7B checkpoint from [here](https://huggingface.co/ruibin-wang/llama-7b-hf/tree/main) 
+Download the LLaMA-7B checkpoint from [here](https://huggingface.co/ruibin-wang/llama-7b-hf/tree/main)
+
 ```shell
-  mkdir model_from_hf
   cd ./model_from_hf
   # you must install git-lfs
   git clone https://huggingface.co/ruibin-wang/llama-7b-hf
@@ -78,8 +80,8 @@ Download the LLaMA-7B checkpoint from [here](https://huggingface.co/ruibin-wang/
 ```
 
 Download the LLaMA-13B checkpoint from [here](https://huggingface.co/ruibin-wang/llama-13b-hf/tree/main) 
+
 ```shell
-  mkdir model_from_hf
   cd ./model_from_hf
   # you must install git-lfs
   git clone https://huggingface.co/ruibin-wang/llama-13b-hf
@@ -92,30 +94,33 @@ In order to adapt to the LLaMA-7B/13B model, the following script is used to con
 ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 
 LLaMA-7B
+
 ```shell
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-mkdir model_weights
-python tools/checkpoint/convert_ckpt.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
     --loader llama2_hf \
     --saver megatron \
-    --target-tensor-parallel-size 1 \
-    --target-pipeline-parallel-size 8 \
+    --target-tensor-parallel-size 8 \
+    --target-pipeline-parallel-size 1 \
     --load-dir ./model_from_hf/llama-7b-hf/ \
-    --save-dir ./model_weights/llama-7b-tp1-pp8/ \
+    --save-dir ./model_weights/llama-7b-hf-v0.1-tp8-pp1/ \
     --tokenizer-model ./model_from_hf/llama-7b-hf/tokenizer.model
 ```
 
 LLaMA-13B
+
 ```shell
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # Single machine with 8p
-mkdir model_weights
-python tools/checkpoint/convert_ckpt.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
     --loader llama2_hf \
     --saver megatron \
-    --target-tensor-parallel-size 1 \
-    --target-pipeline-parallel-size 8 \
+    --target-tensor-parallel-size 8 \
+    --target-pipeline-parallel-size 1 \
     --load-dir ./model_from_hf/llama-13b-hf/ \
-    --save-dir ./model_weights/llama-13b-tp1-pp8/ \
+    --save-dir ./model_weights/llama-13b-hf-v0.1-tp8-pp1/ \
     --tokenizer-model ./model_from_hf/llama-13b-hf/tokenizer.model
 ```
 
@@ -123,33 +128,35 @@ Any Megatron weights with parallel slicing strategy --> Any Megatron weights wit
 ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
 
 LLaMA-7B
+
 ```shell
-cd ModelLink/
 # Modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/convert_ckpt.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ../llama7B-v0.1-pt8-pp1 \
+    --load-dir ./model_weights/llama-7b-hf-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ../llama7B_downloaded  # <-- Fill in the original HF model path here, new weights will be saved in ../llama7B_downloaded/mg2hg
+    --save-dir ./model_from_hf/llama-7b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-7b-hf/mg2hg
 ```
 
 LLaMA-13B
+
 ```shell
-cd ModelLink/
 # Modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/convert_ckpt.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ../llama13B-v0.1-pt8-pp1 \
+    --load-dir ./model_weights/llama-13b-hf-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ../llama13B_downloaded  # <-- Fill in the original HF model path here, new weights will be saved in ../llama13B_downloaded/mg2hg
+    --save-dir ./model_from_hf/llama-13b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-13b-hf/mg2hg
 ```
 
 Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
@@ -167,24 +174,26 @@ cd ..
 Preprocess dataset
 
 LLaMA-7B
+
 ```shell
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ./model_from_hf/llama-7b-hf \
-    --output-prefix ./dataset/llama \
+    --tokenizer-name-or-path ./model_from_hf/llama-7b-hf/ \
+    --output-prefix ./dataset/llama-7b-hf_alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF  
 ```
 
 LLaMA-13B
+
 ```shell
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ./model_from_hf/llama-13b-hf \
-    --output-prefix ./dataset/llama \
+    --tokenizer-name-or-path ./model_from_hf/llama-13b-hf/ \
+    --output-prefix ./dataset/llama-7b-hf_alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF  
@@ -193,25 +202,27 @@ python ./tools/preprocess_data.py \
 5.2 Config LLaMA-7B/13B pre-training script.
 
 LLaMA-7B
+
 ```shell
 # modify the script according to your own  ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # modify script orign dataset path according to your own dataset path
-TOKENIZER_MODEL=./model_from_hf/llama-7b-hf/tokenizer.model 
-DATA_PATH=./dataset/llama_text_document  #processed dataset
-LOAD_CHECKPOINT_PATH="your init model load path"
-SAVE_CHECKPOINT_PATH="your model ckpt save path"
+TOKENIZER_MODEL="./model_from_hf/llama-7b-hf/tokenizer.model"
+DATA_PATH="./dataset/llama_alpaca_text_document"  #processed dataset
+LOAD_CHECKPOINT_PATH="./model_weights/llama-7b-hf-v0.1-tp8-pp1"
+SAVE_CHECKPOINT_PATH="./ckpt/"
 ```
 
 LLaMA-13B
+
 ```shell
 # modify the script according to your own  ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # modify script orign dataset path according to your own dataset path
-TOKENIZER_MODEL=./model_from_hf/llama-13b-hf/tokenizer.model 
-DATA_PATH=./dataset/llama_text_document  #processed dataset
-LOAD_CHECKPOINT_PATH="your init model load path"
-SAVE_CHECKPOINT_PATH="your model ckpt save path"
+TOKENIZER_MODEL="./model_from_hf/llama-13b-hf/tokenizer.model"  
+DATA_PATH="./dataset/llama-13b-hf_alpaca_text_document"  #processed dataset
+LOAD_CHECKPOINT_PATH="./model_weights/llama-13b-hf-v0.1-tp8-pp1"
+SAVE_CHECKPOINT_PATH="./ckpt/"
 ```
 
 5.3 Launch LLaMA-7B/13B pre-training script.
@@ -219,16 +230,17 @@ SAVE_CHECKPOINT_PATH="your model ckpt save path"
 **Note**: If using multi machine training, it is necessary to set up multi machine data sharing, and non primary nodes can read the primary node data through data sharing. Alternatively, directly copy the data generated by the master node to non master nodes.
 
 LLaMA-7B
+
 ```shell
 bash examples/llama/pretrain_llama_7b_ptd.sh
 ```
 
 LLaMA-13B
+
 ```shell
 # 8p
 bash examples/llama/pretrain_llama_13b_ptd.sh 
 ```
-
 
 6. Pretrain
 
@@ -236,7 +248,8 @@ bash examples/llama/pretrain_llama_13b_ptd.sh
 Download the LLaMA-7B/13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
 
 ```shell
-cd dataset/
+mkdir finetune_dataset
+cd ./finetune_dataset
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
 ```
@@ -244,12 +257,12 @@ cd ..
 Preprocess instruction dataset
 
 LLaMA-7B
+
 ```shell
-source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 python ./tools/preprocess_data.py \
-  --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-  --tokenizer-name-or-path ./model_from_hf/llama-7b-hf \
-  --output-prefix ./finetune_dataset/alpaca \
+  --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+  --tokenizer-name-or-path ./model_from_hf/llama-7b-hf/ \
+  --output-prefix ./finetune_dataset/llama-7b-hf_alpaca \
   --workers 4 \
   --log-interval 1000 \
   --tokenizer-type PretrainedFromHF \
@@ -258,12 +271,12 @@ python ./tools/preprocess_data.py \
 ```
 
 LLaMA-13B
+
 ```shell
-source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 python ./tools/preprocess_data.py \
-  --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-  --tokenizer-name-or-path ./model_from_hf/llama-13b-hf \ 
-  --output-prefix ./finetune_dataset/alpaca \
+  --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+  --tokenizer-name-or-path ./model_from_hf/llama-13b-hf/ \ 
+  --output-prefix ./finetune_dataset/llama-13b-hf_alpaca \
   --workers 4 \
   --log-interval 1000 \
   --tokenizer-type PretrainedFromHF \
@@ -274,43 +287,47 @@ python ./tools/preprocess_data.py \
 6.2 Config LLaMA-7B/13B fine-tune script.
 
 LLaMA-7B
+
 ```shell
 # modify the script according to your own  ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # modify script orign dataset path according to your own dataset path
-TOKENIZER_MODEL=./model_from_hf/llama-7b-hf/  #tokenizer path
-DATA_PATH=./finetune_dataset/alpaca  #processed dataset
+TOKENIZER_PATH="./model_from_hf/llama-7b-hf/"  #tokenizer path
+DATA_PATH="./finetune_dataset/llama-7b-hf_text_document"  #processed dataset
+LORA_CHECKPOINT="your lora weight"
+LOAD_CHECKPOINT_PATH="./model_weights/llama-13b-hf-v0.1-tp8-pp1"
+SAVE_CHECKPOINT_PATH="./ckpt/"
+```
+
+LLaMA-13B
+
+```shell
+# modify the script according to your own  ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+# modify script orign dataset path according to your own dataset path
+TOKENIZER_PATH="./model_from_hf/llama-13b-hf/"  #tokenizer path
+DATA_PATH="./finetune_dataset/llama-13b-hf_text_document"  #processed dataset
 LORA_CHECKPOINT="your lora weight"
 LOAD_CHECKPOINT_PATH="your init model load path"
 SAVE_CHECKPOINT_PATH="your model ckpt save path"
 ```
 
-LLaMA-13B
-```shell
-# modify the script according to your own  ascend-toolkit path
-source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-# modify script orign dataset path according to your own dataset path
-TOKENIZER_MODEL=./model_from_hf/llama-13b-hf/  #tokenizer path
-DATA_PATH=./finetune_dataset/alpaca  #processed dataset
-LORA_CHECKPOINT="your lora weight"
-LOAD_CHECKPOINT_PATH="your init model load path"
-SAVE_CHECKPOINT_PATH="your model ckpt save path"
-```
 Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
 
 6.3 Launch LLaMA-7B/13B fine-tune script.
 
 LLaMA-7B
+
 ```shell
 bash examples/llama/tune_llama_7b_ptd.sh
 ```
 
 LLaMA-13B
+
 ```shell
 # 8p
 bash examples/llama/tune_llama_13b_ptd.sh 
 ```
-
 
 ### Performance
 
@@ -341,11 +358,13 @@ TOKENIZER_PATH=<tokenizer-path>
 ```
 
 LLaMA-7B:
+
 ```shell
 bash ./examples/llama/generate_llama_7b_ptd.sh
 ```
 
 LLaMA-13B:
+
 ```shell
 bash ./examples/llama/generate_llama_13b_ptd.sh
 ```
@@ -359,7 +378,6 @@ LLaMA-7B:
 LLaMA-13B:
 
 ![llama-13B_generate.png](../../sources/images/llama/llama-13B_generate.png)
-
 
 ## Evaluation with Numerous Benchmarks
 
@@ -375,7 +393,9 @@ TOKENIZER_PATH=<tokenizer-path>
 DATA_PATH="./boolq/data/test/"
 TASK="boolq"
 ```
+
 Change the max new tokens:
+
 ```shell
 --max-new-tokens 1 
 ```
@@ -387,6 +407,7 @@ Change the max new tokens:
 ```
 
 Start evaluation:
+
 ```shell
 bash examples/llama/evaluate_llama_7B_ptd.sh
 bash examples/llama/evaluate_llama_13B_ptd.sh
@@ -417,20 +438,25 @@ Here's a hardware summary of training llama:
 | :------: |:----------------:|
 |   NPU    | 32 x Ascend NPUs |
 
-
 ### Datasets
+
 The model was trained using alpaca datasets.
 
 ### Script
+
 1. Clone the repository to your local server
+
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
 cd ModelLink
 mkdir logs
+mkdir model_from_hf
+mkdir dataset
 mkdir ckpt
 ```
 
 2. Install ModelLink requirement environment.
+
 ```bash
 # python3.8
 conda create -n test python=3.8
@@ -456,9 +482,9 @@ pip install -r requirements.txt
 3. Download tokenizer model file and checkpoint
 
 llama-33B checkpoint
+
 ```shell
-mkdir tokenizer
-cd ./tokenizer
+cd ./model_from_hf/
 
 # make sure you have git-lfs installed (https://git-lfs.com)
 git lfs install
@@ -468,8 +494,8 @@ cd ..
 ```
 
 llama-65B checkpoint
+
 ```shell
-mkdir model_from_hf
 cd ./model_from_hf
 
 # make sure you have git-lfs installed (https://git-lfs.com)
@@ -485,62 +511,65 @@ In order to adapt to llama-33B/65B model, the following script is used to conver
 ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 
 llama-33B
-```shell
-mkdir model_weights
 
-python tools/checkpoint/convert_ckpt.py --model-type GPT \
-                                --loader llama2_hf \
-                                --saver megatron \
-                                --target-tensor-parallel-size 4 \
-                                --target-pipeline-parallel-size 4 \
-                                --load-dir ./model_from_hf/llama-33b-hf \
-                                --save-dir ./model_weights/llama-33b \
-                                --tokenizer-model ./model_from_hf/llama-33b-hf/tokenizer.model
+```shell
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
+    --loader llama2_hf \
+    --saver megatron \
+    --target-tensor-parallel-size 4 \
+    --target-pipeline-parallel-size 4 \
+    --load-dir ./model_from_hf/llama-33b-hf/ \
+    --save-dir ./model_weights/llama-33b-hf-v0.1-tp4-pp4/ \
+    --tokenizer-model ./model_from_hf/llama-33b-hf/tokenizer.model
 ```
 
 llama-65B
+
 ```shell
-mkdir model_weights
-python tools/checkpoint/convert_ckpt.py --model-type GPT \
-                                --loader llama2_hf \
-                                --saver megatron \
-                                --target-tensor-parallel-size 8 \
-                                --target-pipeline-parallel-size 4 \
-                                --load-dir ./model_from_hf/llama-65b-hf \
-                                --save-dir ./model_weights/llama-65b-tp8-pp4 \
-                                --tokenizer-model ./model_from_hf/llama-65b-hf/tokenizer.model
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
+    --loader llama2_hf \
+    --saver megatron \
+    --target-tensor-parallel-size 8 \
+    --target-pipeline-parallel-size 4 \
+    --load-dir ./model_from_hf/llama-65b-hf/ \
+    --save-dir ./model_weights/llama-65b-hf-v0.1-tp8-pp4/ \
+    --tokenizer-model ./model_from_hf/llama-65b-hf/tokenizer.model
 ```
 
 Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
 ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
 LLaMA-33B
+
 ```shell
-cd ModelLink/
 # Modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/convert_ckpt.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ../llama33B-v0.1-pt8-pp1 \
+    --load-dir /model_weights/llama-33b-hf-v0.1-tp4-pp4/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ../llama33B_downloaded  # <-- Fill in the original HF model path here, new weights will be saved in ../llama33B_downloaded/mg2hg
+    --save-dir  ./model_from_hf/llama-33b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-33b-hf/mg2hg
 ```
 
 LLaMA-65B
+
 ```shell
-cd ModelLink/
 # Modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/convert_ckpt.py --model-type GPT \
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ../llama13B-v0.1-pt8-pp1 \
+    --load-dir /model_weights/llama-65b-hf-v0.1-tp8-pp4/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ../llama65B_downloaded  # <-- Fill in the original HF model path here, new weights will be saved in ../llama65B_downloaded/mg2hg
+    --save-dir ./model_from_hf/llama-65b-hf/   # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-65b-hf/mg2hg
 ```
 
 Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
@@ -548,30 +577,32 @@ Weight conversion is suitable for pre-training, fine-tuning, inference and evalu
 5. Pretrain
 
 5.1 Prepare pretrain dataset
+
 ```shell
-# for llama, dowload alpaca dataset, like
-wget http://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json
+cd dataset/
+wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+cd ..
 ```
 
 LLaMA-33B
+
 ```shell
-mkdir dataset
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/llama-33b-hf \
-    --output-prefix ./dataset/llama \
+    --output-prefix ./dataset/llama-33b-hf_alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF 
 ```
 
 LLaMA-65B
+
 ```shell
-mkdir dataset
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/llama-65b-hf \
-    --output-prefix ./dataset/llama \
+    --output-prefix ./dataset/llama-65b-hf_alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF 
@@ -580,27 +611,29 @@ python ./tools/preprocess_data.py \
 5.2 Config llama-33B/65B pre-training script :
 
 Config llama-33B pre-training script `./examples/llama/pretrain_llama_33B_ptd_32p.sh`:
+
 ```bash
 # modify the script according to your own conda and ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # modify script orign dataset path according to your own dataset path
-TOKENIZER_MODEL=./tokenizer/llama-33b-hf/tokenizer.model
-DATA_PATH=./dataset/llama_text_document 
-LOAD_CHECKPOINT_PATH="your init model load path"
-SAVE_CHECKPOINT_PATH="your model ckpt save path"
+TOKENIZER_MODEL="./model_from_hf/llama-33b-hf/tokenizer.model"
+DATA_PATH="./dataset/llama-33b-hf_alpaca_text_document"
+LOAD_CHECKPOINT_PATH="./model_weights/llama-33b-hf-v0.1-tp4-pp4/"
+SAVE_CHECKPOINT_PATH="./ckpt/"
 ```
 
 Config llama-65B pre-training script `./examples/llama/pretrain_llama_65b_ptd.sh`:
+
 ```bash
 # modify the script according to your own conda and ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # modify script orign dataset path according to your own dataset path
 TOKENIZER_MODEL=./model_from_hf/llama-65b-hf/tokenizer.model
-DATA_PATH=./dataset/llama_text_document 
-LOAD_CHECKPOINT_PATH="your init model load path"
-SAVE_CHECKPOINT_PATH="your model ckpt save path"
+DATA_PATH="./dataset/llama-65b-hf_alpaca_text_document"
+LOAD_CHECKPOINT_PATH="./model_weights/llama-65b-hf-v0.1-tp8-pp4/"
+SAVE_CHECKPOINT_PATH="./ckpt/"
 ```
 
 5.3 Launch  pre-training script:
@@ -608,14 +641,17 @@ SAVE_CHECKPOINT_PATH="your model ckpt save path"
 **Note**: If using multi machine training, it is necessary to set up multi machine data sharing, and non primary nodes can read the primary node data through data sharing. Alternatively, directly copy the data generated by the master node to non master nodes.
 
 Launch llama-33B pre-training script : ModelLink/examples/llama/pretrain_llama_33B_ptd_32p.sh
+
 ```bash
 bash examples/llama/pretrain_llama_33B_ptd_32p.sh
 ```
 
 Launch llama-65B pre-training script : ModelLink/examples/llama/pretrain_llama_65b_ptd.sh
+
 ```bash
 bash examples/llama/pretrain_llama_65b_ptd.sh
 ```
+
 Config llama-33B/65B pre-training script for multinode (Launch llama-65B pre-training script on each machine):
 
 ```shell
@@ -624,6 +660,7 @@ MASTER_PORT=6001
 NNODES=4
 NODE_RANK=0
 ```
+
 The Training log will look like these:
 
 ```Shell
@@ -635,18 +672,21 @@ time (ms)
 6. Finetune
 
 6.1 Prepare fine-tune dataset
+
 ```shell
-# for llama, dowload alpaca dataset, like
-wget http://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json
+mkdir finetune_dataset
+cd ./finetune_dataset
+wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+cd ..
 ```
 
 LLaMA-33B
+
 ```shell
-mkdir dataset
 python ./tools/preprocess_data.py \
   --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-  --tokenizer-name-or-path ./model_from_hf/llama-33b-hf \
-  --output-prefix ./finetune_dataset/alpaca \
+  --tokenizer-name-or-path ./model_from_hf/llama-33b-hf/ \ 
+  --output-prefix ./finetune_dataset/llama-33b-hf_alpaca \
   --workers 4 \
   --log-interval 1000 \
   --tokenizer-type PretrainedFromHF \
@@ -655,12 +695,12 @@ python ./tools/preprocess_data.py \
 ```
 
 LLaMA-65B
+
 ```shell
-mkdir dataset
 python ./tools/preprocess_data.py \
   --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-  --tokenizer-name-or-path ./model_from_hf/llama-65b-hf \
-  --output-prefix ./finetune_dataset/alpaca \
+  --tokenizer-name-or-path ./model_from_hf/llama-65b-hf/  \
+  --output-prefix ./finetune_dataset/llama-65b-hf_alpaca \
   --workers 4 \
   --log-interval 1000 \
   --tokenizer-type PretrainedFromHF \
@@ -670,43 +710,49 @@ python ./tools/preprocess_data.py \
 
 6.2 Config llama-33B/65B fine-tune script :
 Config llama-33B fine-tune script `./examples/llama/tune_llama_33B_ptd_32p.sh`:
+
 ```bash
 # modify the script according to your own conda and ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # modify script orign dataset path according to your own dataset path
-TOKENIZER_MODEL=./model_from_hf/llama-33b-hf/  #tokenizer path
-DATA_PATH=./finetune_dataset/alpaca  #processed dataset
+TOKENIZER_PATH="./model_from_hf/llama-33b-hf/"  #tokenizer path
+DATA_PATH="./finetune_dataset/llama-33b-hf_alpaca_text_document"  #processed dataset
 LORA_CHECKPOINT="your lora weight"
-LOAD_CHECKPOINT_PATH="your init model load path"
-SAVE_CHECKPOINT_PATH="your model ckpt save path"
+LOAD_CHECKPOINT_PATH="./model_weights/llama-33b-hf-v0.1-tp4-pp4/"
+SAVE_CHECKPOINT_PATH="./ckpt/"
 ```
 
 Config llama-65B fine-tune script `./examples/llama/tune_llama_65b_ptd.sh`:
+
 ```bash
 # modify the script according to your own conda and ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # modify script orign dataset path according to your own dataset path
-TOKENIZER_MODEL=./model_from_hf/llama-65b-hf/  #tokenizer path
-DATA_PATH=./finetune_dataset/alpaca  #processed dataset
+TOKENIZER_PATH="./model_from_hf/llama-65b-hf/"  #tokenizer path
+DATA_PATH="./finetune_dataset/llama-65b-hf_alpaca_text_document"  #processed dataset
 LORA_CHECKPOINT="your lora weight"
-LOAD_CHECKPOINT_PATH="your init model load path"
-SAVE_CHECKPOINT_PATH="your model ckpt save path"
+LOAD_CHECKPOINT_PATH="./model_weights/llama-65b-hf-v0.1-tp8-pp4/"
+SAVE_CHECKPOINT_PATH="./ckpt/"
 ```
+
 Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
 
 6.3 Launch fine-tune script:
 
 Launch llama-33B pre-training script : ModelLink/examples/llama/tune_llama_33B_ptd_32p.sh
+
 ```bash
 bash examples/llama/tune_llama_33B_ptd_32p.sh
 ```
 
 Launch llama-65B pre-training script : ModelLink/examples/llama/tune_llama_65b_ptd.sh
+
 ```bash
 bash examples/llama/tune_llama_65b_ptd.sh
 ```
+
 Config llama-33B/65B pre-training script for multinode (Launch llama-65B pre-training script on each machine):
 
 ```shell
@@ -747,10 +793,13 @@ TOKENIZER_PATH=<tokenizer-path>
 ```
 
 LLaMA-33B:
+
 ```shell
 bash ./examples/llama/generate_llama_33b_ptd.sh
 ```
+
 LLaMA-65B:
+
 ```shell
 bash ./examples/llama/generate_llama_65b_ptd.sh
 ```
@@ -764,7 +813,6 @@ LLaMA-33B:
 LLaMA-65B:
 
 ![llama-65B_generate.png](../../sources/images/llama/llama-65B_generate.png)
-
 
 ## Evaluation with Numerous Benchmarks
 
@@ -782,7 +830,9 @@ TOKENIZER_PATH=<tokenizer-path>
 DATA_PATH="./boolq/data/test/"
 TASK="boolq"
 ```
+
 Change the max new tokens:
+
 ```shell
 --max-new-tokens 1 
 ```

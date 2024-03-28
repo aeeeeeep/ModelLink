@@ -33,14 +33,16 @@ Here's a hardware summary of pre-training Baichuan2-7B:
 | :------: | :---------------------------------------------: |
 |   NPU    |               8 x Ascend NPUs                   |
 
-
 ### Script
 
 1. Clone the repository to your local server:
+
 ```shell
-git clone https://gitee.com/ascend/ModelLink.git 
-cd ModelLink 
+git clone https://gitee.com/ascend/ModelLink.git
+cd ModelLink
 mkdir logs
+mkdir model_from_hf
+mkdir dataset
 mkdir ckpt
 ```
 
@@ -70,15 +72,12 @@ cd ..
 pip install -r requirements.txt 
 ```
 
-
 3. Prepare pretrained weights
 Download the Baichuan2-7B checkpoint from [here](https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/tree/main)
 
-
-
 ```shell
-mkdir baichuan2-7B-hf
-cd ./baichuan2-7B-hf
+mkdir ./model_from_hf/Baichuan2-7B/
+cd ./model_from_hf/Baichuan2-7B/
 wget https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/resolve/main/config.json
 wget https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/resolve/main/configuration_baichuan.py
 wget https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/resolve/main/generation_utils.py
@@ -91,16 +90,15 @@ wget https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/resolve/main/special_
 wget https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/resolve/main/tokenization_baichuan.py
 wget https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/resolve/main/tokenizer.model
 wget https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/resolve/main/tokenizer_config.json
-cd ..
+cd ../../
 ```
 
 4. Weights convert
 
 In order to adapt to the baichuan2-7B model, the following script is used to convert the model pre-training weights.
 ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
-```shell
-mkdir baichuan2-7B-mt
 
+```shell
 # modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
    
@@ -109,29 +107,29 @@ python tools/checkpoint/convert_ckpt.py \
     --loader llama2_hf \
     --saver megatron \
     --target-tensor-parallel-size 8 \
-    --load-dir ./baichuan2-7B-hf \
-    --save-dir ./baichuan2-7B-mt \
-    --tokenizer-model ./baichuan2-7B-hf/tokenizer.model \
+    --load-dir ./model_from_hf/Baichuan2-7B/ \
+    --save-dir ./model_weights/Baichuan2-7B-v0.1-tp8-pp1/ \
+    --tokenizer-model ./model_from_hf/Baichuan2-7B/tokenizer.model \
     --params-dtype bf16 \
-    --w-pack True  
+    --w-pack True   
 ```
+
 Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
 ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+
 ```shell
-cd ModelLink/
 # Modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ../Baichuan2-7B-v0.1-pt8-pp1 \
+    --load-dir ./model_weights/Baichuan2-7B-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --w-pack True \
-    --save-dir ../Baichuan2-7B_downloaded   # <-- Fill in the original HF model path here, new weights will be saved in ../Baichuan2-7B_downloaded/mg2hg
+    --save-dir ./model_from_hf/Baichuan2-7B/   # <-- Fill in the original HF model path here, new weights will be saved in ../Baichuan2-7B_downloaded/mg2hg
 ```
-
 
 5. Prepare dataset
 
@@ -139,37 +137,34 @@ Download the Baichuan2-7B-Base datasets from [here](https://huggingface.co/datas
 
 ```shell
 # download datasets
-mkdir dataset-baichuan2-7B
-cd ./dataset-baichuan2-7B
+cd ./dataset/
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
 
-# process datasets                              
+# process datasets                    
 python ./tools/preprocess_data.py \
---input ./dataset-baichuan2-7B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
---tokenizer-name-or-path ./baichuan2-7B-hf \
---output-prefix ./dataset-baichuan2-7B/alpaca \
---workers 4 \
---log-interval 1000 \
---tokenizer-type PretrainedFromHF
+    --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+    --tokenizer-name-or-path ./model_from_hf/Baichuan2-7B/ \
+    --output-prefix ./dataset/Baichuan2-7B_alpaca \
+    --workers 4 \
+    --log-interval 1000 \
+    --tokenizer-type PretrainedFromHF
 ```
 
-
-6. Config Baichuan2-7B pre-training script : examples/baichuan2/pretrain_baichuan2_ptd_7B.sh 
+6. Config Baichuan2-7B pre-training script : examples/baichuan2/pretrain_baichuan2_ptd_7B.sh
 
 ```shell
 # modify the script according to your own  ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 # modify script orign dataset path according to your own dataset path
-CKPT_SAVE_DIR="./ckpt"
-DATA_PATH="./dataset-baichuan2-7B/alpaca_text_document"
-TOKENIZER_MODEL="./baichuan2-7B-hf/tokenizer.model"
-CKPT_LOAD_DIR="./baichuan2-7B-mt"
+CKPT_SAVE_DIR="./ckpt/"
+DATA_PATH="./dataset/Baichuan2-7B_alpaca_text_document"
+TOKENIZER_MODEL="./model_from_hf/Baichuan2-7B/tokenizer.model"
+CKPT_LOAD_DIR="./model_weights/Baichuan2-7B-v0.1-tp8-pp1/"
 ```
 
- 
-7. Launch Baichuan2-7B  pre-training script: examples/baichuan2/pretrain_baichuan2_ptd_7B.sh 
+7. Launch Baichuan2-7B  pre-training script: examples/baichuan2/pretrain_baichuan2_ptd_7B.sh
 
 ```shell
 bash examples/baichuan2/pretrain_baichuan2_ptd_7B.sh 
@@ -190,24 +185,29 @@ The performance of Baichuan2-7B in **Ascend NPU** and **Reference**:
 
 
 ## Inference
+
 Config baichuan2-7B inference script: examples/baichuan2/generate_baichuan2_7b_ptd.sh
+
 ```bash
 # modify the script according to your own ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
  
 # modify script model path and tokenizer path
-CHECKPOINT="your model directory path"
-TOKENIZER_PATH="your tokenizer directory path"
+CHECKPOINT="./model_weights/Baichuan2-7B-v0.1-tp8-pp1/"
+TOKENIZER_PATH="./model_from_hf/Baichuan2-7B/"
 ```
+
 Launch baichuan2-7B inference script: examples/baichuan2/generate_baichuan2_7b_ptd.sh
+
 ```bash
 bash examples/baichuan2/generate_baichuan2_7b_ptd.sh
 ```
+
 Some inference samples are as follows:
 ![Inference](../../sources/images/baichuan2/baichuan2_7B_inference.png)
 
-
 ## Evaluation
+
 We use the boolq benchmark to evaluate our model. Benchmark [Download](https://huggingface.co/datasets/boolq).
 
 ```shell
@@ -257,11 +257,15 @@ Here's a hardware summary of pre-training Baichuan2-13B:
 
 
 ### Script
+
 1. Clone the repository to your local server:
+
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
-cd ModelLink 
+cd ModelLink
 mkdir logs
+mkdir model_from_hf
+mkdir dataset
 mkdir ckpt
 ```
 
@@ -293,11 +297,11 @@ pip install -r requirements.txt
 
 3. Prepare pretrained weights
 
-
 Download the Baichuan2-13B checkpoint from [here](https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/tree/main) 
+
 ```shell
-mkdir baichuan2-13B-hf
-cd ./baichuan2-13B-hf
+mkdir ./model_from_hf/Baichuan2-13B/
+cd ./model_from_hf/Baichuan2-13B/
 wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/config.json
 wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/configuration_baichuan.py
 wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/generation_utils.py
@@ -311,16 +315,15 @@ wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/special
 wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/tokenization_baichuan.py
 wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/tokenizer_config.json
 wget https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/resolve/main/tokenizer.model
-cd ..
+cd ../../
 ```
 
 4. Weights convert
 
 In order to adapt to the baichuan2-13B model, the following script is used to convert the model pre-training weights.
 ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
-```shell
-mkdir baichuan2-13B-mt
 
+```shell
 # modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
    
@@ -329,44 +332,42 @@ python tools/checkpoint/convert_ckpt.py \
     --loader llama2_hf \
     --saver megatron \
     --target-tensor-parallel-size 8 \
-    --load-dir ./baichuan2-13B-hf \
-    --save-dir ./baichuan2-13B-mt \
-    --tokenizer-model ./baichuan2-13B-hf/tokenizer.model \
+    --load-dir ./model_from_hf/Baichuan2-13B/ \
+    --save-dir ./model_weights/Baichuan2-13B-v0.1-tp8-pp1/ \
+    --tokenizer-model ./model_from_hf/Baichuan2-13B/tokenizer.model \
     --params-dtype bf16 \
     --w-pack True  
 ```
 
 Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
 ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+
 ```shell
-cd ModelLink/
-# Modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ../Baichuan2-13B-v0.1-pt8-pp1 \
+    --load-dir ./model_weights/Baichuan2-13B-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --w-pack True \
-    --save-dir ../Baichuan2-13B_downloaded   # <-- Fill in the original HF model path here, new weights will be saved in ../Baichuan2-13B_downloaded/mg2hg
+    --save-dir ./model_from_hf/Baichuan2-13B/     # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Baichuan2-13B/mg2hg
 ```
 
 5. Prepare dataset
 
-Download the Baichuan2-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
+Download the Baichuan2-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
 ```shell
-mkdir dataset-baichuan2-13B
-cd ./dataset-baichuan2-13B
+cd dataset/
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
 
 python ./tools/preprocess_data.py \
-    --input ./dataset-baichuan2-13B/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ./baichuan2-13B-hf \
-    --output-prefix ./dataset-baichuan2-13B/alpaca \
+    --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+    --tokenizer-name-or-path ./model_from_hf/Baichuan2-13B/ \
+    --output-prefix ./dataset/Baichuan2-13B_alpaca \
     --workers 4 \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF 
@@ -379,11 +380,12 @@ python ./tools/preprocess_data.py \
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 # modify script orign dataset path according to your own dataset path
-CKPT_SAVE_DIR="./ckpt"
-DATA_PATH="./dataset-baichuan2-13B/alpaca_text_document"
-TOKENIZER_MODEL="./baichuan2-13b-hf/tokenizer.model"
-CKPT_LOAD_DIR="./baichuan2-13b-mt" 
+CKPT_SAVE_DIR="./ckpt/"
+DATA_PATH="./dataset/Baichuan2-13B_alpaca_text_document"
+TOKENIZER_MODEL="./model_from_hf/Baichuan2-13B/tokenizer.model"
+CKPT_LOAD_DIR="./model_weights/Baichuan2-13B-v0.1-tp8-pp1/" 
 ```
+
 7. Launch Baichuan2-13B pre-training script: examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
 
 ```bash
@@ -405,24 +407,29 @@ The performance of the Baichuan2-13B in **Ascend NPU** and **Reference**:
 
 
 ## Inference
+
 Config baichuan2-13B inference script: examples/baichuan2/generate_baichuan2_13b_ptd.sh
+
 ```bash
 # modify the script according to your own ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
  
 # modify script model path and tokenizer path
-CHECKPOINT="your model directory path"
-TOKENIZER_PATH="your tokenizer directory path"
+CHECKPOINT="./model_weights/Baichuan2-13B-v0.1-tp8-pp1/"
+TOKENIZER_PATH="./model_from_hf/Baichuan2-13B/"
 ```
+
 Launch baichuan2-13B inference script: examples/baichuan2/generate_baichuan2_13b_ptd.sh
+
 ```bash
 bash examples/baichuan2/generate_baichuan2_13b_ptd.sh
 ```
+
 Some inference samples are as follows:
 ![Inference](../../sources/images/baichuan2/baichuan2_13B_inference.png)
 
-
 ## Evaluation
+
 We use the boolq benchmark to evaluate our model. Benchmark [Download](https://huggingface.co/datasets/boolq).
 
 ```shell
