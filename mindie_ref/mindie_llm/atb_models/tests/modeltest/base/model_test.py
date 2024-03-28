@@ -1124,7 +1124,8 @@ class ModelTest:
 
                     if self.model_type == "fa":
                         inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True)
-                        self.csv_debug['input_token_ids'].append(inputs[i]) for i in range(self.batch_size)
+                        for i in range(self.batch_size):
+                            self.csv_debug['input_token_ids'].append(inputs[i])
                         inputs = inputs.to(0)
                         outputs = self.model(**inputs)
                         logits = outputs.logits[:, -1, :]
@@ -1141,7 +1142,8 @@ class ModelTest:
                             logits_softmax = F.log_softmax(logits.float(), dim=-1)
                     
                     if is_result:
-                        self.csv_debug['output_token_ids'].append(logits_softmax[i][0]) for i in range(self.batch_size)
+                        for i in range(self.batch_size):
+                            self.csv_debug['output_token_ids'].append(logits_softmax[i][0])
                         logits_softmax = logits_softmax[:, choice_tokens]
                         for idx, ans in enumerate(batch['answer']):
                             choice = (logits_softmax[idx, 0] > logits_softmax[idx, 1]).cpu()
