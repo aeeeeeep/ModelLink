@@ -12,7 +12,13 @@ class LlamaModelTest(model_test.ModelTest):
         with open(config_path, 'r') as f:
             self.config_data = json.load(f)
             if "max_sequence_length" in self.config_data:
-                model_name = "llama_65b"
+                if "num_hidden_layers" in self.config_data:
+                    if self.config_data["num_hidden_layers"] == 32:
+                        model_name = "llama_7b"
+                    elif self.config_data["num_hidden_layers"] == 40:
+                        model_name = "llama_13b"
+                    elif self.config_data["num_hidden_layers"] == 80:
+                        model_name = "llama_65b"
             elif "num_hidden_layers" in self.config_data:
                 if self.config_data["num_hidden_layers"] == 32:
                     model_name = "llama2_7b"
