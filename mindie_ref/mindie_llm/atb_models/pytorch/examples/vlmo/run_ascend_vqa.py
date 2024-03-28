@@ -7,7 +7,7 @@ from transformers import BertTokenizer
 import torch
 import torch_npu
 from vlmo.config import ex
-from vlmo.modules.vlmo_module_cut import VLMo
+from vlmo.modules.vlmo_module import VLMo
 from vlmo.datasets import VQAv2Dataset
 import numpy as np
 
