@@ -39,8 +39,7 @@ from atb_llm.utils.layers import (
     reshape_and_cache
 )
 
-from atb_llm.utils.quantize.pack_type import PackType
-from atb_llm.utils.quantize.w8a8 import calc_linear_pack_type
+from atb_llm.utils.quantize.pack_type import PackType, calc_linear_pack_typetize.w8a8 import calc_linear_pack_type
 from atb_llm.utils.log import logger
 
 
@@ -95,7 +94,6 @@ class Qwen2Config(PretrainedConfig):
             tie_word_embeddings=tie_word_embeddings,
             **kwargs,
         )
-
 
 
 class QwenRMSNorm(nn.Module):
@@ -174,7 +172,8 @@ class QwenMLP(nn.Module):
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{layer_prefix}.post_attention_layernorm'
         if weights.quantize == 'w8a8':
-            self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
+            self.pack_type = calc_linear_pack_type(
+                weights, linear_names, norm_name)
         elif weights.quantize == 'w8a16':
             self.pack_type = PackType.ALL_W8A16
         elif weights.quantize == "smooth_quant":
@@ -183,7 +182,8 @@ class QwenMLP(nn.Module):
             self.pack_type = PackType.ALL_FP
         self.w2_w1 = load_column_multi(
             config,
-            prefixes=[f"{prefix}.gate_proj", f"{prefix}.up_proj"],  # gate_up_proj
+            prefixes=[f"{prefix}.gate_proj",
+                      f"{prefix}.up_proj"],  # gate_up_proj
             weights=weights,
             head_size=1,
         )
@@ -194,7 +194,8 @@ class QwenMLP(nn.Module):
             bias=False,
         )
         self.intermediate_size = (
-                (config.intermediate_size + weights.process_group.size() - 1) // weights.process_group.size()
+            (config.intermediate_size + weights.process_group.size() -
+             1) // weights.process_group.size()
         )
 
     def forward(self, hidden_states):
@@ -221,19 +222,21 @@ class FlashQwenAttention(torch.nn.Module):
         self.softmax_scale = self.head_size ** -0.5
 
         # can support self.num_heads % weights.process_group.size() != 0
-        
-        linear_names = [f"{prefix}.q_proj", f"{prefix}.k_proj", f"{prefix}.v_proj"]
+
+        linear_names = [f"{prefix}.q_proj",
+                        f"{prefix}.k_proj", f"{prefix}.v_proj"]
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{layer_prefix}.ln_1'
         if weights.quantize == 'w8a8':
-            self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name)
+            self.pack_type = calc_linear_pack_type(
+                weights, linear_names, norm_name)
         elif weights.quantize == 'w8a16':
             self.pack_type = PackType.ALL_W8A16
         elif weights.quantize == "smooth_quant":
             self.pack_type = PackType.ALL_W8A8
         else:
             self.pack_type = PackType.ALL_FP
-        
+
         # self.c_attn = TensorParallelColumnLinear.load_qkv(
         #     config,
         #     prefix=f"{prefix}.c_attn",
@@ -251,7 +254,8 @@ class FlashQwenAttention(torch.nn.Module):
 
         self.c_attn = TensorParallelColumnLinear.load_multi(
             config,
-            prefixes=[f"{prefix}.q_proj", f"{prefix}.k_proj", f"{prefix}.v_proj"],
+            prefixes=[f"{prefix}.q_proj",
+                      f"{prefix}.k_proj", f"{prefix}.v_proj"],
             weights=weights,
             bias=True,
             dim=0
@@ -333,7 +337,8 @@ class FlashQwenLayer(nn.Module):
         self.attn = FlashQwenAttention(
             prefix=f"{prefix}.self_attn", config=config, weights=weights
         )
-        self.mlp = QwenMLP(prefix=f"{prefix}.mlp", config=config, weights=weights)
+        self.mlp = QwenMLP(prefix=f"{prefix}.mlp",
+                           config=config, weights=weights)
         if self.attn.pack_type in [PackType.ALL_FP, PackType.ALL_W8A16]:
             self.ln_1 = QwenRMSNorm(
                 prefix=f"{prefix}.input_layernorm", weights=weights, eps=config.rms_norm_eps
