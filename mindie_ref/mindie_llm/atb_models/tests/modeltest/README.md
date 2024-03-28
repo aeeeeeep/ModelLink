@@ -14,7 +14,7 @@ ModelTest为大模型的性能和精度提供测试功能。
 
 PA模型支持：
 
-1. Llama (Llama-65B, Llama2-7B, Llama2-13B, Llama2-70B)
+1. Llama (Llama-7B, Llama-13B, Llama-65B, Llama2-7B, Llama2-13B, Llama2-70B)
 2. Starcoder-15.5B
 3. Chatglm2-6b
 4. CodegeeX2-6b
