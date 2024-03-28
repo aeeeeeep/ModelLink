@@ -49,7 +49,7 @@ void *Utils::GetCurrentStream()
 int64_t Utils::GetTensorNpuFormat(const at::Tensor &tensor)
 {
 #ifdef TORCH_HIGHER_THAN_PTA6
-    return at_npu::native::get_npu_format(tensor);
+    return at_npu::native::get_npu_format(tensor, false);
 #else
     return at_npu::native::NPUNativeFunctions::get_npu_format(tensor);
 #endif
