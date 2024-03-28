@@ -61,6 +61,8 @@ class LlamaConfig(PretrainedConfig):
             eos_token_id=2,
             pretraining_tp=1,
             tie_word_embeddings=False,
+            pe_type="ROPE",
+            alibi_bias_max=8.0,
             rope_scaling=None,
             **kwargs,
     ):
@@ -81,6 +83,8 @@ class LlamaConfig(PretrainedConfig):
         self.rms_norm_eps = rms_norm_eps
         self.pretraining_tp = pretraining_tp
         self.use_cache = use_cache
+        self.pe_type = pe_type
+        self.alibi_bias_max = alibi_bias_max
         self.rope_scaling = rope_scaling
 
         super().__init__(

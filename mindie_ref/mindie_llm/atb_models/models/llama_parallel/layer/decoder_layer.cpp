@@ -62,8 +62,14 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
     attenRmsNormQuantParam.normParam.quantType = atb::infer::QUANT_INT8;
     fusionAttentionParam.normQuantParamType = attenRmsNormQuantParam;
     // rope param
-    fusionAttentionParam.rotaryType = atb_speed::common::RotaryType::ALL_ROTARY;
-    fusionAttentionParam.ropeParam.rotaryCoeff = 2;
+    if (param.positionEmbeddingType == ROPE) {
+        fusionAttentionParam.rotaryType = atb_speed::common::RotaryType::ALL_ROTARY;
+        fusionAttentionParam.ropeParam.rotaryCoeff = 2;
+        fusionAttentionParam.selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
+    } else if (param.positionEmbeddingType == AILIBI) {
+        fusionAttentionParam.rotaryType = atb_speed::common::RotaryType::NO_ROTARY;
+        fusionAttentionParam.selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_ALIBI;
+    }
     // self attention param
     fusionAttentionParam.isFA = param.isFA;
     fusionAttentionParam.isPrefill = param.isPrefill;
@@ -78,7 +84,6 @@ atb::Status DecoderLayer(const DecoderLayerParam &param, atb::Operation **operat
         fusionAttentionParam.selfAttentionParam.isTriuMask = param.isPrefill ? 1 : 0;
         fusionAttentionParam.selfAttentionParam.calcType = atb::infer::SelfAttentionParam::CalcType::PA_ENCODER;
     }
-    fusionAttentionParam.selfAttentionParam.maskType = atb::infer::SelfAttentionParam::MaskType::MASK_TYPE_NORM;
     fusionAttentionParam.pageAttentionParam.headNum = param.numAttentionHeadsPerRank;
     fusionAttentionParam.pageAttentionParam.kvHeadNum = param.numKeyValueHeadsPerRank;
     fusionAttentionParam.pageAttentionParam.qkScale = 1.0 / sqrt(param.hiddenSizePerAttentionHead);
