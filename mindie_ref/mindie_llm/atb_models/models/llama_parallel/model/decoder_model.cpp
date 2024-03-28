@@ -33,7 +33,7 @@ const int WEIGHT_COUNT_POST_NORM = 1;
 const int WEIGHT_COUNT_LM_HEAD = 1;
 
 // Operation count
-const int OPERATION_COUNT_BEFORE_LAYER = 2;  // Word Embedding + Positional Embedding
+int OPERATION_COUNT_BEFORE_LAYER = 0;  // Word Embedding + Positional Embedding
 const int OPERATION_COUNT_AFTER_LAYER = 2;  // RmsNorm + LmHead
 
 void DecoderModel::Param::FromString(const std::string &param)
@@ -57,6 +57,9 @@ void DecoderModel::Param::FromString(const std::string &param)
     if (paramJson.contains("rankTableFile")) {
         rankTableFile = paramJson["rankTableFile"].get<std::string>();
     }
+    if (paramJson.contains("positionEmbeddingType")) {
+        positionEmbeddingType = paramJson["positionEmbeddingType"].get<std::string>();
+    }
     for (auto item : paramJson["tokenOffset"]) {
         tokenOffset.push_back(item.get<int>());
     }
@@ -78,7 +81,8 @@ void DecoderModel::Param::FromString(const std::string &param)
                   << ", numHiddenLayers:" << numHiddenLayers
                   << ", numKeyValueHeadsPerRank:" << numKeyValueHeadsPerRank
                   << ", rank:" << rank << ", worldSize:" << worldSize << ", backend:" << backend
-                  << ", tokenOffset:" << tokenOffset << ", seqLen:" << seqLen << ", rankTableFile" << rankTableFile;
+                  << ", tokenOffset:" << tokenOffset << ", seqLen:" << seqLen << ", rankTableFile" << rankTableFile
+                  << "positionEmbeddingType" << positionEmbeddingType;
 }
 
 DecoderModel::DecoderModel(const std::string &param) : Model("DecoderModel", param)
@@ -136,10 +140,14 @@ int64_t DecoderModel::BuildGraph()
     int internelTensorIdx = 0;
     // idx: 0, shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
     int INTERNEL_TENSOR_HIDDEN_STATES = internelTensorIdx++;
-    // idx: 1, shape: [batchSize * seqLen, hiddenSizePerAttentionHead]
-    int INTERNEL_TENSOR_COS_EMB = internelTensorIdx++;
-    // idx: 2, shape: [batchSize * seqLen, hiddenSizePerAttentionHead]
-    int INTERNEL_TENSOR_SIN_EMB = internelTensorIdx++;
+    int INTERNEL_TENSOR_COS_EMB = 0;
+    int INTERNEL_TENSOR_SIN_EMB = 0;
+    if (param_.positionEmbeddingType == "ROPE") {
+        // idx: 1, shape: [batchSize * seqLen, hiddenSizePerAttentionHead]
+        INTERNEL_TENSOR_COS_EMB = internelTensorIdx++;
+        // idx: 2, shape: [batchSize * seqLen, hiddenSizePerAttentionHead]
+        INTERNEL_TENSOR_SIN_EMB = internelTensorIdx++;
+    }
     // idx: [3, 3 + numHiddenLayers), shape: FA: [batchSize, seqLen, hiddenSize] PA: [seqLen, hiddenSize]
     int INTERNEL_TENSOR_LAYER_OUT_BASE = internelTensorIdx++;
     internelTensorIdx = internelTensorIdx + param_.numHiddenLayers - 1;
@@ -159,7 +167,13 @@ int64_t DecoderModel::BuildGraph()
     graph_.kCacheTensors.resize(param_.numHiddenLayers);
     graph_.vCacheTensors.resize(param_.numHiddenLayers);
 
-    const int nodeSize = param_.numHiddenLayers + OPERATION_COUNT_BEFORE_LAYER + OPERATION_COUNT_AFTER_LAYER;
+    int nodeSize = 0;
+    if (param_.positionEmbeddingType == "ALIBI") {
+        OPERATION_COUNT_BEFORE_LAYER = 1;
+    } else if (param_.positionEmbeddingType == "ROPE") {
+        OPERATION_COUNT_BEFORE_LAYER = 2;
+    }
+    nodeSize = param_.numHiddenLayers + OPERATION_COUNT_BEFORE_LAYER + OPERATION_COUNT_AFTER_LAYER;
     graph_.nodes.resize(nodeSize);
 
     ATB_LOG(INFO) << "DecoderModel build graph begin";
@@ -180,18 +194,20 @@ int64_t DecoderModel::BuildGraph()
     };
     wordEmbeddingNode.outTensors = {&graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES)};
 
-    auto &peGatherNode = graph_.nodes.at(nodeId++);
-    atb_speed::common::PositionalEmbeddingGather(&op);
-    peGatherNode.operation.reset(op);
-    peGatherNode.inTensors = {
-        &graph_.inTensors.at(IN_TENSOR_POSITION_IDS),
-        &graph_.inTensors.at(IN_TENSOR_COS_TABLE),
-        &graph_.inTensors.at(IN_TENSOR_SIN_TABLE),
-    };
-    peGatherNode.outTensors = {
-        &graph_.internalTensors.at(INTERNEL_TENSOR_COS_EMB),
-        &graph_.internalTensors.at(INTERNEL_TENSOR_SIN_EMB)
-    };
+    if (param_.positionEmbeddingType == "ROPE") {
+        auto &peGatherNode = graph_.nodes.at(nodeId++);
+        atb_speed::common::PositionalEmbeddingGather(&op);
+        peGatherNode.operation.reset(op);
+        peGatherNode.inTensors = {
+            &graph_.inTensors.at(IN_TENSOR_POSITION_IDS),
+            &graph_.inTensors.at(IN_TENSOR_COS_TABLE),
+            &graph_.inTensors.at(IN_TENSOR_SIN_TABLE),
+        };
+        peGatherNode.outTensors = {
+            &graph_.internalTensors.at(INTERNEL_TENSOR_COS_EMB),
+            &graph_.internalTensors.at(INTERNEL_TENSOR_SIN_EMB)
+        };
+    }
 
     atb::Tensor *firstInTensor = &graph_.internalTensors.at(INTERNEL_TENSOR_HIDDEN_STATES);
     for (int layerId = 0; layerId < param_.numHiddenLayers; ++layerId) {
@@ -209,6 +225,11 @@ int64_t DecoderModel::BuildGraph()
         layerParam.hiddenSizePerAttentionHead = param_.hiddenSizePerAttentionHead;
         layerParam.numKeyValueHeadsPerRank = param_.numKeyValueHeadsPerRank;
         layerParam.tensorParallelInfo = {param_.rank, param_.worldSize, param_.backend, param_.rankTableFile};
+        if (param_.positionEmbeddingType == "ROPE") {
+            layerParam.positionEmbeddingType = atb_speed::llama_parallel::ROPE;
+        } else if (param_.positionEmbeddingType == "ALIBI") {
+            layerParam.positionEmbeddingType = atb_speed::llama_parallel::AILIBI;
+        }
         atb_speed::llama_parallel::DecoderLayer(layerParam, &op);
 
         layerNode.operation.reset(op);
@@ -307,7 +328,8 @@ atb::Status DecoderModel::BindParamHostTensor(uint32_t nodeId)
     ATB_LOG(INFO) << "BindParamHostTensor";
     ATB_LOG(INFO) << "nodeId = " << nodeId;
 
-    if (nodeId < OPERATION_COUNT_BEFORE_LAYER || nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.numHiddenLayers)) {
+    if (nodeId < static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER) ||
+        nodeId >= static_cast<uint32_t>(OPERATION_COUNT_BEFORE_LAYER + param_.numHiddenLayers)) {
         return atb::NO_ERROR;
     }
 

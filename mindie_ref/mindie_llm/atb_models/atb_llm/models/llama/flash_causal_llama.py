@@ -7,6 +7,7 @@ from typing import Optional, List, Tuple
 import torch
 import torch_npu
 
+from atb_llm.utils.log import logger
 from .modeling_llama import FlashLlamaModel, LlamaConfig
 from ..base.flash_causal_lm import FlashForCausalLM
 from ...utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
@@ -38,6 +39,12 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
             self.transdata_operation = torch.classes.OperationTorch.OperationTorch("TransdataOperation")
             self.transdata_param = json.dumps({})
             self.transdata_operation.set_param(self.transdata_param)
+            self.positionEmbeddingType = config.pe_type
+            self.alibi_bias_max = config.alibi_bias_max
+            self.atten_mask_cpu = None
+            if self.positionEmbeddingType != "ROPE" and self.positionEmbeddingType != "ALIBI":
+                logger.error("error: only support petype: ROPE and ALIBI, check your config.json: pe_type")
+                raise AsserError(f'petype: {self.positionEmbeddingType} not supported')
 
     def init_position_rotary_embedding(self,
                                        position_ids: torch.Tensor,
@@ -174,7 +181,8 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                 "rank": self.tp_rank,
                 "worldSize": self.tp_world_size,
                 "backend": "hccl" if self.soc_info.need_nz or rank_table_file else "lccl",
-                "rankTableFile": rank_table_file
+                "rankTableFile": rank_table_file,
+                "positionEmbeddingType": self.positionEmbeddingType,
             }
             encoder_param = {**coder_param, "isPrefill": True, "supportLcoc": False if self.soc_info.need_nz else True}
             decoder_param = {**coder_param, "isPrefill": False, "supportLcoc": False}
@@ -232,6 +240,34 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
             self.acl_encoder_operation.set_weight(weights)
             self.acl_decoder_operation.set_weight(weights)
 
+    def _get_interleave(self, n, alibi_bias_max=8.0):
+        def _get_interleave_power_of_2(n, alibi_bias_max):
+            if n == 0:
+                return 0
+            start = (0.5 ** (alibi_bias_max / n))
+            ratio = start
+            return [start * ratio ** i for i in range(n)]
+        
+        if math.log2(n).is_integer():
+            return _get_interleave_power_of_2(n, alibi_bias_max)
+        else:
+            closest_power_of_2 = 2 ** math.floor(math.log2(n))
+            return _get_interleave_power_of_2(closest_power_of_2, alibi_bias_max) + \
+                _get_interleave_power_of_2(2 * closest_power_of_2)[0::2][:n - closest_power_of_2]
+    
+    def _fill_with_neg_inf(self, t):
+        return t.float().fill_(float("-inf")).type_as(t)
+
+    def _gen_alibi_mask(self, n_head, max_pos, alibi_bias_max=8.0):
+        slopes = torch.Tensor(self._get_interleave(n_head, alibi_bias_max))
+        alibi = slopes.unsqueeze(1).unsqueeze(1) * torch.arange(max_pos).unsqueeze(0).unsqueeze(0).expand(n_head, -1, -1)
+        alibi = alibi.view(n_head, 1, max_pos)
+        alibi_mask = torch.triu(
+            self._fill_with_neg_inf(torch.zeros([max_pos, max_pos])), 1
+        )
+        alibi_mask = alibi_mask.unsqueeze(0) + alibi
+        return alibi_mask
+
     def prepare_inputs_for_ascend(self, input_ids: torch.Tensor,
                                   position_ids: torch.Tensor,
                                   is_prefill: bool,
@@ -245,11 +281,19 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
             self.rotary_embedding.update_cos_sin_cache_total(self.dtype,
                                                              self.device,
                                                              self.max_position_embeddings)
-            self.cos_embed = self.rotary_embedding.get_cos_cached_total()
-            self.sin_embed = self.rotary_embedding.get_sin_cached_total()
             if is_prefill:
-                atten_mask = self.attn_mask.get_attn_mask(self.max_base_len, kv_cache[0][0].dtype,
-                                                          kv_cache[0][0].device)
+                if self.positionEmbeddingType == "ROPE":
+                    atten_mask = self.attn_mask.get_attn_mask(self.max_base_len, self.dtype,
+                                                            self.device)
+                    self.cos_embed = self.rotary_embedding.get_cos_cached_total()
+                    self.sin_embed = self.rotary_embedding.get_sin_cached_total()
+                elif self.positionEmbeddingType == "ALIBI":
+                    self.cos_embed = self.placeholder
+                    self.sin_embed = self.placeholder
+                    if self.atten_mask_cpu is None:
+                        self.atten_mask_cpu = self._gen_alibi_mask(self.num_attention_heads, self.max_position_embeddings, self.alibi_bias_max).to(self.dtype)
+                    atten_mask = self.atten_mask_cpu[:, :, :128].npu()
+
                 if self.soc_info.need_nz:
                     atten_mask = self.transdata_operation.execute([atten_mask])[0]
                 if lm_head_indices is None:
@@ -275,11 +319,15 @@ class FlashLlamaForCausalLM(FlashForCausalLM):
                 self.acl_param = json.dumps({
                     "seqLen": input_lengths.tolist()
                 })
+                if self.positionEmbeddingType == "ROPE":
+                    atten_mask = self.attn_mask_fake
+                elif self.positionEmbeddingType == "ALIBI":
+                    atten_mask = self.atten_mask_cpu[:, position_ids.tolist(), None, :].npu()
                 self.acl_decoder_operation_inputs[0] = input_ids
                 self.acl_decoder_operation_inputs[1] = position_ids.to(torch.int64)
                 self.acl_decoder_operation_inputs[2] = self.cos_embed
                 self.acl_decoder_operation_inputs[3] = self.sin_embed
-                self.acl_decoder_operation_inputs[4] = self.attn_mask_fake
+                self.acl_decoder_operation_inputs[4] = atten_mask
                 self.acl_decoder_operation_inputs[5] = block_tables.to(torch.int32)
                 self.acl_decoder_operation_inputs[6] = slots.to(torch.int32)
                 self.acl_decoder_operation_inputs[7] = self.placeholder
