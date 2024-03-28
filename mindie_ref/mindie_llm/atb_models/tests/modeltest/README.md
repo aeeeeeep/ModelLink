@@ -4,7 +4,7 @@ ModelTest为大模型的性能和精度提供测试功能。
 
 目前支持：
 
-1. NPU，PA场景，float16
+1. NPU，PA场景，性能/精度测试，float16
 2. GPU，FA场景，精度测试，float16
 
 功能：
@@ -16,13 +16,15 @@ PA模型支持：
 
 1. Llama (Llama-65B, Llama2-7B, Llama2-13B, Llama2-70B)
 2. Starcoder-15.5B
-3. Chatglm2-6b
-4. CodegeeX2-6b
+3. Chatglm2-6B
+4. CodegeeX2-6B
 5. Baichuan2 (Baichuan2-7B, Baichuan2-13B)
 6. Qwen (Qwen-14B, Qwen-72B)
 7. Aquila (Aquila-7B)
 8. Deepseek (Deepseek16B)
 9. Mixtral (Mixtral8 * 7B)
+10. Bloom-7B
+11. Baichuan1 (Baichuan1-7B, Baichuan1-13B)
 
 # 使用说明
 
@@ -63,14 +65,17 @@ bash run.sh fa [full_CEval|full_MMLU|full_BoolQ|full_HumanEval] [batch_size] [mo
 2. model_name:
     Llama-65B, Llama2-7B, Llama2-13B, Llama2-70B: llama
     Starcoder-15.5B: starcoder
-    Chatglm2-6b: chatglm2_6b
-    CodegeeX2-6b: codegeex2_6b
-    Baichuan2-7b: baichuan2_7b
-    Baichuan2-13b: baichuan2_13b
+    Chatglm2-6B: chatglm2_6b
+    CodegeeX2-6B: codegeex2_6b
+    Baichuan2-7B: baichuan2_7b
+    Baichuan2-13B: baichuan2_13b
     Qwen-14b, Qwen-72b: qwen
     Aquila-7B: aquila_7b
     Deepseek16B: deepseek
     Mixtral8 * 7B: mixtral
+    Bloom-7B: bloom_7b
+    Baichuan1-7B: baichuan2_7b
+    Baichuan1-13B: baichuan2_13b
 3. 当model_name为llama时，须指定use_refactor为True或者False（统一使用True）
 4. weight_dir: 权重路径
 5. chip_num: 使用的卡数
