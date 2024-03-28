@@ -1107,18 +1107,19 @@ class ModelTest:
                 sum = len(dataset)
                 dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size)
                 for idx, batch in enumerate(tqdm(dataloader)):
+                    q_num = self.batch_size if (i + 1) * self.batch_size <= sum else sum - i * self.batch_size
                     titles = batch["title"]
                     texts = batch["question"]
                     passages = batch["passage"]
                     queries = [build_prompt(title, query, passage) for title, query, passage in zip(titles, texts, passages)]
                     if is_result:
-                        for i in range(self.batch_size):
-                            self.csv_debug['key'].append(i)
+                        for i in range(q_num):
+                            self.csv_debug['key'].append(idx * self.batch_size + i)
                             self.csv_debug['queries'].append(queries[i])
 
                     if self.model_type == "fa":
                         inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True)
-                        for i in range(self.batch_size):
+                        for i in range(q_num):
                             self.csv_debug['input_token_ids'].append(inputs[i])
                         inputs = inputs.to(0)
                         outputs = self.model(**inputs)
@@ -1138,15 +1139,15 @@ class ModelTest:
                             logits_softmax = F.log_softmax(logits.float(), dim=-1)
                     
                     if is_result:
-                        for i in range(self.batch_size):
+                        for i in range(q_num):
                             self.csv_debug['output_token_ids'].append(logits_softmax[i][0])
                         logits_softmax = logits_softmax[:, choice_tokens]
                         for idx, ans in enumerate(batch['answer']):
                             choice = (logits_softmax[idx, 0] > logits_softmax[idx, 1]).cpu()
                             acc = choice == ans
-                            self.csv_debug['golden_result'].append(ans)
-                            self.csv_debug['test_result'].append(choice)
-                            self.csv_debug['pass'].append(str(acc))
+                            self.csv_debug['golden_result'].append(ans.item())
+                            self.csv_debug['test_result'].append(choice.item())
+                            self.csv_debug['pass'].append(acc.item())
                             if acc:
                                 correct += 1
 
@@ -1541,6 +1542,7 @@ class ModelTest:
                                    result_name)
         df = pd.DataFrame(self.csv_debug)
         df.to_csv(debug_info_path, index=False)
+        self.logger.info(f"{self.dataset_name} debug info saved to: {debug_info_path}")
 
     def __save_result(self, result):
         def align_columns(df):
