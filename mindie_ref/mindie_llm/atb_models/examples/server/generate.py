@@ -5,13 +5,14 @@ import torch
 from atb_llm.utils.env import ENV
 from atb_llm.utils.log import logger, print_log
 from .batch import Batch
+from ..logits_processor import sample_search
 
 
 def next_token_chooser(logits: torch.Tensor):
     return torch.argmax(logits, dim=-1)
 
 
-def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length, rank, ignore_eos):
+def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length, rank, ignore_eos, test_param, do_sample):
     input_ids = batch.batch_input_ids.npu()
     position_ids = batch.batch_position_ids.npu()
     is_prefill = batch.cu_seqlen_prefill is not None
@@ -46,7 +47,12 @@ def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length
         if rank == 0: 
             logits_save_filename = "logits_" + str(len(batch.req_list[0].out_token_list)) + ".pth"
             torch.save(logits.cpu(), os.path.join(ENV.logits_save_folder, logits_save_filename))
-    next_token = next_token_chooser(logits)
+    if do_sample:
+        next_token = next_token_chooser(logits)
+        next_token = sample_search(test_param, logits)
+    else:
+        next_token = next_token_chooser(logits)
+
     next_token_list = next_token.tolist()
 
     for i, req in enumerate(batch.req_list):
@@ -69,7 +75,7 @@ def generate_token(model, tokenizer, cache_manager, batch: Batch, max_out_length
 
 def generate_req(req_list, model, tokenizer,
                  max_batch_size, max_prefill_tokens, max_out_length, cache_manager,
-                 rank, ignore_eos):
+                 rank, ignore_eos, test_param, do_sample):
     req_num = len(req_list)
     print_log(rank, logger.info, f"------total req num: {req_num}, infer start--------")
 
@@ -120,14 +126,14 @@ def generate_req(req_list, model, tokenizer,
                     torch.npu.synchronize()
                     prefill_start = time.time()
                     req_finished = generate_token(model, tokenizer, cache_manager, batch, max_out_length, rank,
-                                                  ignore_eos)
+                                                  ignore_eos, test_param, do_sample)
                     torch.npu.synchronize()
                     prefill_end = time.time()
                     prefill_time = prefill_end - prefill_start
                     prefill_benchmark_timelist.append(prefill_time)
                 else:
                     req_finished = generate_token(model, tokenizer, cache_manager, batch, max_out_length, rank,
-                                                  ignore_eos)
+                                                  ignore_eos, test_param, do_sample)
 
                 if req_finished != (prefill_batch_size - batch.batch_num):
                     logger.error("batch filter error")
@@ -154,14 +160,14 @@ def generate_req(req_list, model, tokenizer,
                 torch.npu.synchronize()
                 decode_start = time.time()
                 req_finished = generate_token(model, tokenizer, cache_manager, generate_batches[0], max_out_length,
-                                              rank, ignore_eos)
+                                              rank, ignore_eos, test_param, do_sample)
                 torch.npu.synchronize()                              
                 decode_end = time.time()
                 decode_time = decode_end - decode_start
                 decoder_benchmark_timelist.append(decode_time)
             else:
                 req_finished = generate_token(model, tokenizer, cache_manager, generate_batches[0], max_out_length,
-                                              rank, ignore_eos)
+                                              rank, ignore_eos, test_param, do_sample)
 
             if req_finished != (generate_batch_size - generate_batches[0].batch_num):
                 logger.error(f"batch filter error")

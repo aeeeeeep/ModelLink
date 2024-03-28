@@ -155,3 +155,17 @@
   # 使用多卡运行Paged Attention，设置模型权重路径，设置输出长度为2048个token，使用归一后代码
   torchrun --nproc_per_node 2 --master_port 20038 -m examples.run_pa --model_path ${weight_path} --max_output_length 2048 --use_refactor True
   ```
+
+### topktopp调用方法和意义
+  - 在pa_runner.infer中设置do_sample=True启用sample search, 否则使用greedy search
+- `--top_k`
+  - 进行sample search每一次选择前top_k个tokens作为基数再进行采样，取值为大于0的整数
+- `--top_p`
+  - 进行sample search每一次选择softmax后累计和大于top_p的tokens作为基数再进行采样，取值为0-1的浮点数
+- `--temperature`
+  - 温度调节，temperature值越大，采样基数tokens得分越平均，结果越随机；temperature值越小，采样基数tokens得分越陡峭，结果越集中。默认取值为1
+- `--min_tokens_to_keep`
+  -  进行topktopp运算后最小保留tokens个数
+- `--random_seed：`
+  - 随机种子，数值影响采样结果
+  

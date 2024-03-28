@@ -7,10 +7,12 @@ import time
 
 import torch
 import torch_npu
+import random
 from atb_llm.runner import ModelRunner
 from atb_llm.utils.cpu_binding import NpuHbmInfo
 from atb_llm.utils.env import ENV
 from atb_llm.utils.log import logger, print_log
+from examples.logits_processor import next_token_param
 from examples.server.cache import CacheConfig, ModelConfig, CacheManager
 from examples.server.generate import decode_token, generate_req
 from examples.server.request import request_from_text, request_from_token
@@ -123,7 +125,7 @@ class PARunner:
         print_log(self.rank, logger.info, f'warmup_memory(GB): {self.warm_up_memory / (1024 ** 3): .2f}')
         print_log(self.rank, logger.info, "---------------end warm_up---------------")
 
-    def infer(self, input_texts, batch_size, max_output_length, ignore_eos, input_ids=None):
+    def infer(self, input_texts, batch_size, max_output_length, ignore_eos, test_param, input_ids=None, do_sample=False):
         print_log(self.rank, logger.info, "---------------begin inference---------------")
         if input_ids:
             if len(input_ids) == 1:
@@ -166,14 +168,14 @@ class PARunner:
         if ENV.benchmark_enable:
             req_list_dummy = copy.deepcopy(req_list)
             generate_req(req_list_dummy, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                         2, self.cache_manager, self.rank, ignore_eos)
+                         2, self.cache_manager, self.rank, ignore_eos, test_param, do_sample)
 
         if not ENV.profiling_enable:
             print_log(self.rank, logger.debug, "no profiling")
             torch.npu.synchronize()
             e2e_start = time.time()
             generate_req(req_list, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                         max_output_length, self.cache_manager, self.rank, ignore_eos)
+                         max_output_length, self.cache_manager, self.rank, ignore_eos, test_param, do_sample)
             _, _ = decode_token(req_list, self.tokenizer)
             torch.npu.synchronize()
             e2e_end = time.time()
@@ -205,7 +207,7 @@ class PARunner:
                 with_modules=False,
                 experimental_config=experimental_config) as prof:
                 generate_req(req_list, self.model, self.tokenizer, self.max_batch_size, self.max_prefill_tokens,
-                             max_output_length, self.cache_manager, self.rank, ignore_eos)
+                             max_output_length, self.cache_manager, self.rank, ignore_eos, test_param, do_sample)
             torch.npu.synchronize()
             e2e_end = time.time()
             e2e_time = e2e_end - e2e_start
@@ -253,9 +255,11 @@ def parse_arguments():
                         type=int,
                         help="Use beam search if num_beams >1",
                         default=1)
+    parser.add_argument('--random_seed', type=int, default=random.randint(1,100))
     parser.add_argument('--temperature', type=float, default=1.0)
-    parser.add_argument('--top_k', type=int, default=1)
-    parser.add_argument('--top_p', type=float, default=0.0)
+    parser.add_argument('--top_k', type=int, default=5)
+    parser.add_argument('--top_p', type=float, default=0.9)
+    parser.add_argument('--min_tokens_to_keep', type=int, default=2)
     parser.add_argument('--length_penalty', type=float, default=1.0)
     parser.add_argument('--repetition_penalty', type=float, default=1.0)
     parser.add_argument('--presence_penalty', type=float, default=0.0)
@@ -280,11 +284,12 @@ if __name__ == '__main__':
     }
 
     pa_runner = PARunner(**input_dict)
+    test_param = next_token_param(args.random_seed, args.temperature, args.top_k, args.top_p, args.min_tokens_to_keep)
     print_log(rank, logger.info, f'pa_runner: {pa_runner}')
     pa_runner.warm_up()
 
     generate_texts, token_nums, _ = pa_runner.infer(args.input_texts, args.max_batch_size, args.max_output_length,
-                                                    args.ignore_eos, args.input_ids)
+                                                    args.ignore_eos, test_param, args.input_ids, do_sample=True)
 
     for i, generate_text in enumerate(generate_texts):
         length = len(args.input_ids) if args.input_ids else len(args.input_texts)
