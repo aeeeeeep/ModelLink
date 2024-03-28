@@ -70,7 +70,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     </tr>
     <tr>
       <td> 13B </td>
-      <td> <a href="tasks/finetune/tune_baichuan_ptd_13B.sh">lora</a> </td>
+      <td> -- </td>
       <td> <a href="tasks/inference/generate_baichuan_13b_ptd.sh">对话</a> </td>
       <td> <a href="tasks/evaluation/evaluate_baichuan_13B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
@@ -293,7 +293,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td>13B</td>
       <td> 1x8</td>
-      <td> BF16 </td>
+      <td> FP16 </td>
       <td> 1346 </td>
       <td> 872 </td>
       <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_13B.sh">训练</a> </td>
