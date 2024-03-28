@@ -526,6 +526,15 @@ class ModelTest:
                 self.__run_full_dataset_boolq()
             elif self.dataset_name == 'HumanEval':
                 self.__run_full_dataset_humaneval()
+            self.csv_debug = {
+                'key': [],
+                'queries': [],
+                'input_token_ids': [],
+                'output_token_ids': [],
+                'test_result': [],
+                'golden_result': [],
+                'pass': []
+            }
         else:
             self.logger.error(self.test_mode + " not support")
             raise RuntimeError(f"{self.test_mode} not support")
@@ -1103,23 +1112,24 @@ class ModelTest:
                 correct = 0
                 sum = len(dataset)
                 dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size)
-                for batch in tqdm(dataloader):
+                for idx, batch in enumerate(tqdm(dataloader)):
                     titles = batch["title"]
                     texts = batch["question"]
                     passages = batch["passage"]
                     queries = [build_prompt(title, query, passage) for title, query, passage in zip(titles, texts, passages)]
+                    if is_result:
+                        for i in range(self.batch_size):
+                            self.csv_debug['key'].append(i)
+                            self.csv_debug['queries'].append(queries[i])
+
                     if self.model_type == "fa":
-                        inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True).to(0)
+                        inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True)
+                        self.csv_debug['input_token_ids'].append(inputs[i]) for i in range(self.batch_size)
+                        inputs = inputs.to(0)
                         outputs = self.model(**inputs)
                         logits = outputs.logits[:, -1, :]
                         logits_softmax = F.log_softmax(logits.float(), dim=-1)
-                        logits_softmax = logits_softmax[:, choice_tokens]
-                        if is_result:
-                            for idx, ans in enumerate(batch['answer']):
-                                choice = (logits_softmax[idx, 0] > logits_softmax[idx, 1]).cpu()
-                                acc = choice == ans
-                                if acc:
-                                    correct += 1
+                        
                     else:
                         logits_save_folder = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}")
                         os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "1"
@@ -1129,12 +1139,18 @@ class ModelTest:
                         if is_result:
                             logits = torch.load(os.path.join(logits_save_folder, 'logits_0.pth'))
                             logits_softmax = F.log_softmax(logits.float(), dim=-1)
-                            logits_softmax = logits_softmax[:, choice_tokens]
-                            for idx, ans in enumerate(batch['answer']):
-                                choice = (logits_softmax[idx, 0] > logits_softmax[idx, 1]).cpu()
-                                acc = choice == ans
-                                if acc:
-                                    correct += 1
+                    
+                    if is_result:
+                        self.csv_debug['output_token_ids'].append(logits_softmax[i][0]) for i in range(self.batch_size)
+                        logits_softmax = logits_softmax[:, choice_tokens]
+                        for idx, ans in enumerate(batch['answer']):
+                            choice = (logits_softmax[idx, 0] > logits_softmax[idx, 1]).cpu()
+                            acc = choice == ans
+                            self.csv_debug['golden_result'].append(ans)
+                            self.csv_debug['test_result'].append(choice)
+                            self.csv_debug['pass'].append(str(acc))
+                            if acc:
+                                correct += 1
 
                 if is_result:
                     filename = os.path.basename(entry)
@@ -1147,6 +1163,7 @@ class ModelTest:
                 total = ["total", correct_total / sum_total, correct_total, sum_total]
                 result_total.insert(0, total)
         if is_result:
+            self.__save_debug()
             self.__save_result(result_total)
 
     def __run_full_dataset_humaneval(self):
@@ -1505,6 +1522,16 @@ class ModelTest:
             self.logger.info(f"current soc: {self.soc_version}({self.device_type}), cast NZ")
         else:
             self.logger.info(f"current soc: {self.soc_version}({self.device_type}), not cast NZ")
+
+    def __save_debug(self):
+        if self.quantize:
+            result_name = "_".join([self.model_type, self.data_type, self.quantize, "batch" + str(self.batch_size), self.test_mode, self.dataset_name]) + '_debug_info.csv'
+        else:
+            result_name = "_".join([self.model_type, self.data_type, "batch" + str(self.batch_size), self.test_mode, self.dataset_name]) + '_debug_info.csv'
+        debug_info_path = os.path.join(self.log_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}",
+                                   result_name)
+        df = pd.DataFrame(self.csv_debug)
+        df.to_csv(debug_info_path, index=False)
 
     def __save_result(self, result):
         def align_columns(df):
