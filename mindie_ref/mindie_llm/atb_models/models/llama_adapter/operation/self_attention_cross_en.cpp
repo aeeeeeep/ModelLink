@@ -103,8 +103,8 @@ atb::Status SelfAttentionCrossEn(const SelfAttentionCrossParam &param, atb::Oper
     permuteKNode.inTensorIds = { OUT_PRESENT_KEY };
     permuteKNode.outTensorIds = { INTERNAL_PK };
 
-    atb::infer::MatmulParam matmulParam = { false, false };
-    CREATE_OPERATION(matmulParam, &bmmQKNode.operation);
+    atb::infer::LinearParam linearParam = { false, false, false };
+    CREATE_OPERATION(linearParam, &bmmQKNode.operation);
     bmmQKNode.inTensorIds = { INTERNAL_PQ, INTERNAL_PK };
     bmmQKNode.outTensorIds = { INTERNAL_BMM_QK_OUT };
     bmmQKNode.inTensorReshapeFuncs = { &BmmReshape1Func, &BmmReshape1Func };
@@ -147,7 +147,7 @@ atb::Status SelfAttentionCrossEn(const SelfAttentionCrossParam &param, atb::Oper
     castOutNode.inTensorIds = { INTERNAL_ATTENTION_PROBS_F32 };
     castOutNode.outTensorIds = { INTERNAL_ATTENTION_PROBS };
 
-    CREATE_OPERATION(matmulParam, &bmmVNode.operation);
+    CREATE_OPERATION(linearParam, &bmmVNode.operation);
     bmmVNode.inTensorIds = { INTERNAL_ATTENTION_PROBS, INTERNAL_PV };
     bmmVNode.outTensorIds = { INTERNAL_BMM_V_OUT };
     bmmVNode.inTensorReshapeFuncs = { &BmmReshape1Func, &BmmReshape1Func };
