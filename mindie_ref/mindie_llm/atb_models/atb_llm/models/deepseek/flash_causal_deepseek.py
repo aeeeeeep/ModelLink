@@ -6,10 +6,9 @@ from typing import Optional, List, Tuple
 
 import torch
 
-from ..base.flash_causal_lm import FlashDeepseekModel,FlashForCausalLM
-from .modeling_deepseek import DeepseekConfig
+from ..base.flash_causal_lm import FlashForCausalLM
+from .modeling_deepseek import DeepseekConfig, FlashDeepseekModel
 from atb_llm.utils.layers import (
-    TensorParallelRowLinear,
     TensorEmbedding,
     load_column_multi,
 )
@@ -101,7 +100,7 @@ class FlashDeepseekForCausalLM(FlashForCausalLM):
             if i == 0:
                 # add shared experts weights
                 for layer_name in mlp_layer_names:
-                    weights_t.append(weights_layer[f'{layer_name}.weight'])
+                    weights_t.append(weights_layer[f'{layer_name}.weight'].npu())
                 # add gate weights
                 weights_t.append(self.placeholder)
 
@@ -114,7 +113,7 @@ class FlashDeepseekForCausalLM(FlashForCausalLM):
                     weights_t.append(weights_layer[f'{layer_name}.weight'].npu())
 
                 # add gate weights
-                weights_t.append(weights_layer["mlp.gate.weight"])
+                weights_t.append(weights_layer["mlp.gate.weight"].npu())
 
                 # add common experts
                 COMMON_EXPERTS_NUM = 64
