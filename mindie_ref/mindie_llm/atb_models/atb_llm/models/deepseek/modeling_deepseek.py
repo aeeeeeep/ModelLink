@@ -162,48 +162,18 @@ class DeepseekMLP(nn.Module):
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{layer_prefix}.post_attention_layernorm'
         self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name, pack_name)
-        no_refactor_no_pack = not config.use_refactor and config.num_attention_heads != config.num_key_value_heads
-        if no_refactor_no_pack:
-            self.gate_proj = TensorParallelColumnLinear.load(
+        
+        if self.pack_type in [PackType.ALL_FP, PackType.ALL_W8A8, PackType.ALL_W8A8_ANTI, PackType.ALL_W8A16]:
+            self.gate_up_proj = load_column_multi(
                 config,
-                prefix=f"{prefix}.gate_proj",
+                prefixes=[f"{prefix}.gate_proj", f"{prefix}.up_proj"],
                 weights=weights,
-                bias=False,
+                head_size=1,
             )
-            self.up_proj = TensorParallelColumnLinear.load(
-                config,
-                prefix=f"{prefix}.up_proj",
-                weights=weights,
-                bias=False,
-            )
+        elif self.pack_type == PackType.ALL_W8A8SC:
+            pass
         else:
-            if self.pack_type in [PackType.ALL_FP, PackType.ALL_W8A8, PackType.ALL_W8A8_ANTI, PackType.ALL_W8A16]:
-                self.gate_up_proj = load_column_multi(
-                    config,
-                    prefixes=[f"{prefix}.gate_proj", f"{prefix}.up_proj"],
-                    weights=weights,
-                    head_size=1,
-                )
-            elif self.pack_type == PackType.ALL_W8A8SC:
-                self.gate_up_proj = TensorParallelColumnLinear.load(
-                    config,
-                    prefix=f"{prefix}.gate_up_proj",
-                    weights=weights,
-                    bias=False,
-                )
-            else:
-                self.gate_proj = TensorParallelColumnLinear.load(
-                    config,
-                    prefix=f"{prefix}.gate_proj",
-                    weights=weights,
-                    bias=False,
-                )
-                self.up_proj = TensorParallelColumnLinear.load(
-                    config,
-                    prefix=f"{prefix}.up_proj",
-                    weights=weights,
-                    bias=False,
-                )
+            pass
         self.down_proj = TensorParallelRowLinear.load(
             config,
             prefix=f"{prefix}.down_proj",
@@ -260,60 +230,18 @@ class FlashDeepseekAttention(torch.nn.Module):
         layer_prefix = '.'.join(prefix.split('.')[:-1])
         norm_name = f'{layer_prefix}.input_layernorm'
         self.pack_type = calc_linear_pack_type(weights, linear_names, norm_name, pack_name)
-        no_refactor_no_pack = not config.use_refactor and config.num_attention_heads != config.num_key_value_heads
-        if no_refactor_no_pack:
-            self.q_proj = TensorParallelColumnLinear.load(
+        
+        if self.pack_type in [PackType.ALL_FP, PackType.ALL_W8A8, PackType.ALL_W8A8_ANTI, PackType.ALL_W8A16]:
+            self.query_key_value = load_column_multi(
                 config,
-                prefix=f"{prefix}.q_proj",
+                prefixes=[f"{prefix}.q_proj", f"{prefix}.k_proj", f"{prefix}.v_proj"],
                 weights=weights,
-                bias=False,
+                head_size=self.head_size
             )
-            self.k_proj = TensorParallelColumnLinear.load(
-                config,
-                prefix=f"{prefix}.k_proj",
-                weights=weights,
-                bias=False,
-            )
-            self.v_proj = TensorParallelColumnLinear.load(
-                config,
-                prefix=f"{prefix}.v_proj",
-                weights=weights,
-                bias=False,
-            )
+        elif self.pack_type == PackType.ALL_W8A8SC:
+            pass
         else:
-            if self.pack_type in [PackType.ALL_FP, PackType.ALL_W8A8, PackType.ALL_W8A8_ANTI, PackType.ALL_W8A16]:
-                self.query_key_value = load_column_multi(
-                    config,
-                    prefixes=[f"{prefix}.q_proj", f"{prefix}.k_proj", f"{prefix}.v_proj"],
-                    weights=weights,
-                    head_size=self.head_size
-                )
-            elif self.pack_type == PackType.ALL_W8A8SC:
-                self.query_key_value = TensorParallelColumnLinear.load(
-                    config,
-                    prefix=f"{prefix}.query_key_value",
-                    weights=weights,
-                    bias=False,
-                )
-            else:
-                self.q_proj = TensorParallelColumnLinear.load(
-                    config,
-                    prefix=f"{prefix}.q_proj",
-                    weights=weights,
-                    bias=False,
-                )
-                self.k_proj = TensorParallelColumnLinear.load(
-                    config,
-                    prefix=f"{prefix}.k_proj",
-                    weights=weights,
-                    bias=False,
-                )
-                self.v_proj = TensorParallelColumnLinear.load(
-                    config,
-                    prefix=f"{prefix}.v_proj",
-                    weights=weights,
-                    bias=False,
-                )
+            pass
         self.o_proj = TensorParallelRowLinear.load(
             config,
             prefix=f"{prefix}.o_proj",
@@ -512,7 +440,19 @@ class FlashDeepseekModel(torch.nn.Module):
         hidden_states, _ = self.norm(hidden_states, residual)
 
         return hidden_states
-
+class DeepseekEp(nn.Module):
+    """
+    for experts parallel.
+    """
+    def __init__(self, prefix, config, weights):
+        super().__init__()
+        expert_gate_proj = weights.get_tensor(f"{prefix}.gate_proj.weight")
+        self.expert_gate_proj = nn.Parameter(expert_gate_proj)
+        expert_up_proj = weights.get_tensor(f"{prefix}.up_proj.weight")
+        self.expert_up_proj = nn.Parameter(expert_up_proj)
+        expert_down_proj = weights.get_tensor(f"{prefix}.down_proj.weight")
+        self.expert_down_proj = nn.Parameter(expert_down_proj)
+        
 class DeepseekMoE(nn.Module):
     """
     A mixed expert module containing shared experts.
@@ -520,11 +460,26 @@ class DeepseekMoE(nn.Module):
  
     def __init__(self, prefix, config, weights):
         super().__init__()
+        process_group = weights.process_group
+        self.tp_rank = process_group.rank()
+        self.tp_world_size = process_group.size()
+        self.tp = False
+        self.expert_parallel_degree = 1 if self.tp else self.tp_world_size
+        expert_per_rank = config.n_routed_experts / self.expert_parallel_degree
+
         self.config = config
         self.num_experts_per_tok = config.num_experts_per_tok
         expert_prefix = f"{prefix}.experts"
-        self.experts = nn.ModuleList([DeepseekMLP(prefix=f"{expert_prefix}.{i}", config=config, weights = weights,
-            intermediate_size=config.moe_intermediate_size) for i in range(config.n_routed_experts)])
+        if self.tp:
+            self.experts = nn.ModuleList([DeepseekMLP(prefix=f"{expert_prefix}.{i}", config=config, weights = weights,
+                intermediate_size=config.moe_intermediate_size) for i in range(config.n_routed_experts)])
+        else:
+            self.experts = nn.ModuleList()
+            for j in range(config.n_routed_experts):
+                if j < expert_per_rank:
+                    exprt_id = int(j + self.tp_rank * expert_per_rank)
+                    self.experts.append(DeepseekEp(prefix=f"{expert_prefix}.{exprt_id}", config=config, weights=weights))
+
         gate_prefix = f"{prefix}.gate"
         self.gate = MoEGate(prefix=gate_prefix, config=config, weights = weights)
         if config.n_shared_experts is not None:
@@ -583,7 +538,6 @@ class MoEGate(nn.Module):
         self.gating_dim = config.hidden_size
         weight = weights.get_tensor(f"{prefix}.weight")
         self.weight = nn.Parameter(weight)
-        self.weight = nn.Parameter(torch.empty((self.n_routed_experts, self.gating_dim)))
         self.reset_parameters()
  
     def reset_parameters(self) -> None:

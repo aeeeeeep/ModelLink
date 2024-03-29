@@ -21,7 +21,6 @@ class FlashDeepseekForCausalLM(FlashForCausalLM):
         # self.init_ascend_operations
         super().__init__(config, weights)
         self.model = FlashDeepseekModel(config, weights)
-        self.weights = weights
         self.config = config
         self.lm_head = load_column_multi(
             config,
@@ -73,37 +72,31 @@ class FlashDeepseekForCausalLM(FlashForCausalLM):
 
     def init_ascend_weight(self):
         # add embedding
-        weights = [self.model.state_dict()["model.embed_tokens.weight"]]
+        weights = [self.model.state_dict()["embed_tokens.weight"].npu()]
 
         IN_INPUT_NORM_PLACEHOLDER_NUM = 3
         IN_QKV_PLACEHOLDER_NUM = 17
         IN_ATTENTION_OUT_PLACEHOLDER = 5
 
-        attn_layer_names = ['self_attn.q_proj', 'self_attn.k_proj', 'self_attn.v_proj']
-        mlp_layer_names = ['mlp.gate_proj', 'mlp.up_proj', 'mlp.down_proj']
-        shared_experts_layer_names = ['mlp.shared_experts.gate_proj', 'mlp.shared_experts.up_proj', 'mlp.shared_experts.down_proj']
+        mlp_layer_names = ['mlp.gate_up_proj.linear', 'mlp.down_proj.linear']
+        shared_experts_layer_names = ['mlp.shared_experts.gate_up_proj.linear', 'mlp.shared_experts.down_proj.linear']
 
         for i in range(self.num_layers):
             weights_t = []
             weights_layer = self.model.layer[i].state_dict()
 
             # add input layernorm weights
-            weights_t.append(weights_layer["input_layernorm.weight"])
-            for k in range(IN_INPUT_NORM_PLACEHOLDER_NUM):
-                weights_t.append(self.placeholder)
+            weights_t.append(weights_layer["input_layernorm.weight"].npu())
+            weights_t.extend([self.placeholder] * IN_INPUT_NORM_PLACEHOLDER_NUM)
 
-            for layer_name in attn_layer_names:
-                weights_t.append(weights_layer[f'{layer_name}.weight"'])
+            weights_t.append(weights_layer["self_attn.query_key_value.linear.weight"].npu())
+            weights_t.extend([self.placeholder] * IN_QKV_PLACEHOLDER_NUM)
 
-            for k in range(IN_QKV_PLACEHOLDER_NUM):
-                weights_t.append(self.placeholder)
-
-            weights_t.append(weights_layer["self_attn.o_proj.weight"])
-            for k in range(IN_ATTENTION_OUT_PLACEHOLDER):
-                weights_t.append(self.placeholder)
+            weights_t.append(weights_layer["self_attn.o_proj.linear.weight"].npu())
+            weights_t.extend([self.placeholder] * IN_ATTENTION_OUT_PLACEHOLDER)
 
             # add post norm weights
-            weights_t.append(weights_layer["post_attention_layernorm.weight"])
+            weights_t.append(weights_layer["post_attention_layernorm.weight"].npu())
 
             if i == 0:
                 # add shared experts weights
@@ -114,13 +107,11 @@ class FlashDeepseekForCausalLM(FlashForCausalLM):
 
                 # add common experts
                 COMMON_EXPERTS_NUM = 64
-                for j in range(COMMON_EXPERTS_NUM):
-                    weights_t.append(self.placeholder)
-                    weights_t.append(self.placeholder)
+                weights_t.extend([self.placeholder] * 2 * COMMON_EXPERTS_NUM)
             else:
                 # add shared experts weights
                 for layer_name in shared_experts_layer_names:
-                    weights_t.append(weights_layer[f'{layer_name}.weight'])
+                    weights_t.append(weights_layer[f'{layer_name}.weight'].npu())
 
                 # add gate weights
                 weights_t.append(weights_layer["mlp.gate.weight"])
@@ -129,9 +120,8 @@ class FlashDeepseekForCausalLM(FlashForCausalLM):
                 COMMON_EXPERTS_NUM = 64
                 if self.tp:
                     for j in range(COMMON_EXPERTS_NUM):
-                        weights_t.append(weights_layer[f"mlp.experts.{j}.gate_proj.weight"])
-                        weights_t.append(weights_layer[f"mlp.experts.{j}.up_proj.weight"])
-                        weights_t.append(weights_layer[f"mlp.experts.{j}.down_proj.weight"])
+                        weights_t.append(weights_layer[f"mlp.experts.{j}.gate_up_proj.weight"].npu())
+                        weights_t.append(weights_layer[f"mlp.experts.{j}.down_proj.weight"].npu())
                 else:
                     if self.expert_parallel_degree == 0:
                         raise ValueError(
@@ -142,18 +132,16 @@ class FlashDeepseekForCausalLM(FlashForCausalLM):
                     for j in range(COMMON_EXPERTS_NUM):
                         if j < expert_per_rank:
                             exprt_id = int(j + self.tp_rank * expert_per_rank)                            
-                            weights_t.append(torch.cat([weights_layer[f"mlp.experts.{exprt_id}.gate_proj.weight"],
-                                                        weights_layer[f"mlp.experts.{exprt_id}.up_proj.weight"]]).npu())
-                            weights_t.append(weights_layer[f"mlp.experts.{exprt_id}.down_proj.weight"])
+                            weights_t.append(torch.cat([weights_layer[f"mlp.experts.{j}.expert_gate_proj"],
+                                                        weights_layer[f"mlp.experts.{j}.expert_up_proj"]]).npu())
+                            weights_t.append(weights_layer[f"mlp.experts.{j}.expert_down_proj"].npu())
                         else:   
-                            weights_t.append(self.placeholder)
-                            weights_t.append(self.placeholder)
-
+                            weights_t.extend([self.placeholder] * 2)
             # add layer weights
             weights.extend(weights_t)
 
-        weights.append(self.model.state_dict()["model.norm.weight"])
-        weights.append(self.model.state_dict()["lm_head.weight"])
+        weights.append(self.model.state_dict()["norm.weight"].npu())
+        weights.append(self.state_dict()["lm_head.linear.weight"].npu())
 
         coder_param = {
             "rmsNormEps": self.config.rms_norm_eps,
