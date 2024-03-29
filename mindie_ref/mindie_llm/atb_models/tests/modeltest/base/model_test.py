@@ -1138,9 +1138,9 @@ class ModelTest:
                         os.environ['ATB_LLM_TOKEN_IDS_SAVE_ENABLE'] = "0"
                         if is_result:
                             for i in range(q_num):
-                                input_token_ids = torch.load(os.path.join(token_ids_save_folder, 'input_ids.pth'))
+                                input_token_ids = torch.load(os.path.join(token_ids_save_folder, f'input_ids_{i}.pth'))
                                 self.csv_debug['input_token_ids'].append(input_token_ids.tolist())
-                                with open(os.path.join(token_ids_save_folder, "output_ids.txt"), 'r') as f:
+                                with open(os.path.join(token_ids_save_folder, f"output_ids_{i}.txt"), 'r') as f:
                                     output_token_ids = list(map(int, f.read().split()))
                                 self.csv_debug['output_token_ids'].append(output_token_ids)
                             logits = torch.load(os.path.join(logits_save_folder, 'logits_0.pth'))
