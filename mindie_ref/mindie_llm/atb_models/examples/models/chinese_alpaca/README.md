@@ -1,16 +1,15 @@
 # README
 
-[Yi系列模型](https://huggingface.co/01-ai) 是由 01.AI 从头开始训练的新一代开源大型语言模型。[Yi系列模型](https://huggingface.co/01-ai) 以双语语言模型为目标，在 3T 多语种语料库上进行训练，已成为全球最强大的 LLM 之一，在语言理解、常识推理、阅读理解等方面展示出良好的前景。
+[Chinese-LLaMA-Alpaca](https://github.com/ymcui/Chinese-LLaMA-Alpaca) 项目开源了中文LLaMA模型和指令精调的Alpaca大模型，以进一步促进大模型在中文NLP社区的开放研究。这些模型在原版LLaMA的基础上扩充了中文词表并使用了中文数据进行二次预训练，进一步提升了中文基础语义理解能力。同时，中文Alpaca模型进一步使用了中文指令数据进行精调，显著提升了模型对指令的理解和执行能力。
 
-- 此代码仓中实现了一套基于NPU硬件的Yi系列模型。配合加速库使用，旨在NPU上获得极致的推理性能。
+- 此代码仓中实现了一套基于NPU硬件的Chinese-LLaMA-Alpaca系列模型。配合加速库使用，旨在NPU上获得极致的推理性能。
 
 # 特性矩阵
-- 此矩阵罗列了各Yi模型支持的特性
+- 此矩阵罗列了各Chinese-LLaMA-Alpaca模型支持的特性
 
 | 模型及参数量 | 800I A2 Tensor Parallelism | 300I DUO Tensor Parallelism | FP16 | BF16 | Flash Attention | Paged Attention | W8A8量化 | W8A16量化 | KV cache量化 | 稀疏量化 | MOE量化 | MindIE | TGI |
 |-------------|-------------------------|-------------------------|------|------|-----------------|-----------------|---------|---------|--------------|----------|--------|--------|-----|
-| Yi-6B-200K    | 支持world size 1,2,4,8   | 否     | 是   | 是   | 否              | 是              | 否       | 否       | 否           | 否       | 否     | 否     | 否  |
-| Yi-34B    | 支持world size 1,2,4,8   | 否     | 是   | 是   | 否              | 是              | 否       | 否       | 否           | 否       | 否     | 否     | 否  |
+| Chinese-Alpaca-13B    | 支持world size 1,2,4,8   | 支持world size 1,2,4     | 是   | 否   | 否              | 是              | 否       | 否       | 否           | 否       | 否     | 否     | 否  |
 
 # 使用说明
 
@@ -19,14 +18,18 @@
 |--------|--------------------------------------------------|
 | working_dir | 加速库及模型库下载后放置的目录                  |
 | llm_path | 模型仓所在路径；若使用编译好的包，则路径为`${working_dir}/`；若使用gitee下载的代码，则路径为`${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models`    |
-| script_path | 脚本所在路径；Yi-6B-200K和Yi-34B的工作脚本所在路径为`${llm_path}/examples/models/yi`                            |
+| script_path | 脚本所在路径；Chinese-Alpaca-13B的工作脚本所在路径为`${llm_path}/examples/models/chinese_alpaca`                            |
 | weight_path | 模型权重路径                            |
 
 ## 权重
 **权重下载**
 
-- [Yi-6B-200K](https://huggingface.co/01-ai/Yi-6B-200K)
-- [Yi-34B](https://huggingface.co/01-ai/Yi-34B)
+- lora权重: [Chinese-Alpaca-Lora-13B](https://pan.baidu.com/s/1wYoSF58SnU9k0Lndd5VEYg?pwd=mm8i)
+- 原模型权重: [LLaMA-13B](https://huggingface.co/huggyllama/llama-13b)
+> 下载后务必检查压缩包中模型文件的SHA256是否一致，请查看[SHA256.md](https://github.com/ymcui/Chinese-LLaMA-Alpaca/blob/main/SHA256.md)
+
+**lora权重合并**
+- 合并lora权重和原模型权重，请参考[合并教程](https://github.com/ymcui/Chinese-LLaMA-Alpaca/wiki/%E6%89%8B%E5%8A%A8%E6%A8%A1%E5%9E%8B%E5%90%88%E5%B9%B6%E4%B8%8E%E8%BD%AC%E6%8D%A2#%E5%A4%9Alora%E6%9D%83%E9%87%8D%E5%90%88%E5%B9%B6%E9%80%82%E7%94%A8%E4%BA%8Echinese-alpaca-plus)
 
 **权重转换**
 > 若权重中不包含safetensors格式，则执行权重转换步骤，否则跳过
@@ -39,7 +42,7 @@
 
 ### 对话测试
 
-**运行Paged Attention BF16**
+**运行Paged Attention FP16**
 - 运行启动脚本
   - 将`${llm_path}`加入`PYTHONPATH`搜索目录
     ```shell
@@ -75,22 +78,13 @@
     export ATB_CONTEXT_WORKSPACE_SIZE=0
     ```
 
-**运行Paged Attention FP16**
-- 运行启动脚本
-  - 与“运行Paged Attention BF16”的启动方式相同
-- 环境变量说明
-  - 参见“运行Paged Attention BF16”中的环境变量说明
-- 相比于BF16，运行FP16时需修改${weight_path}/config.json中的`torch_dtype`字段，将此字段对应的值修改为`float16`
-
 ## 精度测试
 - 参考[此README文件](../../../tests/modeltest/README.md)
   - 示例
     ```shell
     cd ${llm_path}/tests/modeltest
     export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
-    export MAX_MEMORY_GB=29
-    bash run.sh pa_bf16 full_CEval 1 llama True ${Yi-6B-200K权重路径} 8
-    bash run.sh pa_bf16 full_CEval 1 llama True ${Yi-34B权重路径} 8
+    bash run.sh pa_fp16 full_CEval 1 llama True ${Chinese-Alpaca-13B权重路径} 8
     ```
 
 ## 性能测试
@@ -99,10 +93,7 @@
     ```shell
     cd ${llm_path}/tests/modeltest
     export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
-    export MAX_MEMORY_GB=29
-    export ATB_LLM_BENCHMARK_ENABLE=1
-    bash run.sh pa_bf16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${Yi-6B-200K权重路径} 8
-    bash run.sh pa_bf16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${Yi-34B权重路径} 8
+    bash run.sh pa_fp16 performance [[2048,2048],[1024,1024],[512,512],[256,256]] 1 llama True ${Chinese-Alpaca-13B权重路径} 8
     ```
 
 ## FAQ
