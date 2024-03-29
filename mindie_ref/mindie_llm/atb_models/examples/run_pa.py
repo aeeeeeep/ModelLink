@@ -211,6 +211,15 @@ class PARunner:
             e2e_time = e2e_end - e2e_start
 
         generate_text_list, token_num_list = decode_token(req_list, self.tokenizer)
+        if ENV.token_ids_save_enable:
+            import os
+            if self.local_rank == 0: 
+                for i in range(len(req_list)):
+                    input_ids_save_filename = f"input_ids_{i}.pth"
+                    output_ids_save_filename = f"output_ids_{i}.txt"
+                    torch.save(req_list[i].input_ids.cpu(), os.path.join(ENV.token_ids_save_folder, input_ids_save_filename))
+                    with open(os.path.join(ENV.token_ids_save_folder, output_ids_save_filename), 'w') as f:
+                        f.write(' '.join(map(str, req_list[i].out_token_list)))
         print_log(self.rank, logger.info, "---------------end inference---------------")
         return generate_text_list, token_num_list, e2e_time
 

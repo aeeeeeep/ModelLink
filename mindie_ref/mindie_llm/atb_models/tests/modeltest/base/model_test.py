@@ -124,7 +124,7 @@ dtype_map = {"bf16": torch.bfloat16, "fp16": torch.float16}
 core_map = {"NPU": "npu", "GPU": "cuda"}
 prompt_map = {"GSM8K": "", "TruthfulQA": QA_PRIMER}
 question_num = {"GSM8K": 11, "TruthfulQA": 12}
-CEval_0_shot = {"chatglm6b"}
+CEval_0_shot = {""}
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -253,16 +253,10 @@ class ModelTest:
             if self.dataset_name not in self.dataset_list:
                 self.logger.info(f"{self.model_name} not support {self.dataset_name}, please check")
         if self.test_mode != "performance":
-            folder_path = f"{self.data_dir}/{self.hardware_type}/{self.dataset_name}/batch{self.batch_size}"
-            if os.path.exists(folder_path):
-                try:
-                    shutil.rmtree(folder_path)
-                except Exception as e:
-                    self.logger.error(f"Error deleting folder {folder_path}: {e}")
-            os.makedirs(folder_path, exist_ok=True)
-            if not os.path.exists(folder_path):
-                self.logger.error(f"folder {folder_path} create fail")
-                raise RuntimeError(f"folder {folder_path} create fail")
+            data_folder_path = f"{self.data_dir}/{self.hardware_type}/{self.dataset_name}/batch{self.batch_size}"
+            log_folder_path = f"{self.log_dir}/{self.hardware_type}/{self.dataset_name}/batch{self.batch_size}"
+            self.__create_folder(data_folder_path)
+            self.__create_folder(log_folder_path)
             os.environ['LCCL_DETERMINISTIC'] = "1"
             os.environ['HCCL_DETERMINISTIC'] = "1"
         os.environ['core_type'] = self.core_type
@@ -508,6 +502,15 @@ class ModelTest:
             self.dataset_path = os.path.join(self.script_path, "../dataset/simplified", self.dataset_name + ".jsonl")
             self.__run_simplified_dataset()
         elif self.test_mode == "full":
+            self.csv_debug = {
+                'key': [],
+                'queries': [],
+                'input_token_ids': [],
+                'output_token_ids': [],
+                'test_result': [],
+                'golden_result': [],
+                'pass': []
+            }
             self.dataset_path = os.path.join(self.script_path, "../dataset/full", self.dataset_name)
             if self.dataset_name == 'CEval':
                 if self.model_name in CEval_0_shot:
@@ -1103,38 +1106,56 @@ class ModelTest:
                 correct = 0
                 sum = len(dataset)
                 dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size)
-                for batch in tqdm(dataloader):
+                for idx, batch in enumerate(tqdm(dataloader)):
+                    q_num = self.batch_size if (idx + 1) * self.batch_size <= sum else sum - idx * self.batch_size
                     titles = batch["title"]
                     texts = batch["question"]
                     passages = batch["passage"]
                     queries = [build_prompt(title, query, passage) for title, query, passage in zip(titles, texts, passages)]
+                    if is_result:
+                        for i in range(q_num):
+                            self.csv_debug['key'].append(idx * self.batch_size + i)
+                            self.csv_debug['queries'].append(queries[i])
+
                     if self.model_type == "fa":
-                        inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True).to(0)
+                        inputs = self.tokenizer(queries, padding=True, return_tensors="pt", truncation=True)
+                        for i in range(q_num):
+                            self.csv_debug['input_token_ids'].append(inputs[i])
+                        inputs = inputs.to(0)
                         outputs = self.model(**inputs)
                         logits = outputs.logits[:, -1, :]
                         logits_softmax = F.log_softmax(logits.float(), dim=-1)
-                        logits_softmax = logits_softmax[:, choice_tokens]
-                        if is_result:
-                            for idx, ans in enumerate(batch['answer']):
-                                choice = (logits_softmax[idx, 0] > logits_softmax[idx, 1]).cpu()
-                                acc = choice == ans
-                                if acc:
-                                    correct += 1
+                        
                     else:
                         logits_save_folder = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}")
+                        token_ids_save_folder = os.path.join(self.log_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}")
                         os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "1"
                         os.environ['ATB_LLM_LOGITS_SAVE_FOLDER'] = logits_save_folder
+                        os.environ['ATB_LLM_TOKEN_IDS_SAVE_ENABLE'] = "1"
+                        os.environ['ATB_LLM_TOKEN_IDS_SAVE_FOLDER'] = token_ids_save_folder
                         _, _, _ = self.pa_runner.infer(queries, self.batch_size, 1, False)
                         os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "0"
+                        os.environ['ATB_LLM_TOKEN_IDS_SAVE_ENABLE'] = "0"
                         if is_result:
+                            for i in range(q_num):
+                                input_token_ids = torch.load(os.path.join(token_ids_save_folder, f'input_ids_{i}.pth'))
+                                self.csv_debug['input_token_ids'].append(input_token_ids.tolist())
+                                with open(os.path.join(token_ids_save_folder, f"output_ids_{i}.txt"), 'r') as f:
+                                    output_token_ids = list(map(int, f.read().split()))
+                                self.csv_debug['output_token_ids'].append(output_token_ids)
                             logits = torch.load(os.path.join(logits_save_folder, 'logits_0.pth'))
                             logits_softmax = F.log_softmax(logits.float(), dim=-1)
-                            logits_softmax = logits_softmax[:, choice_tokens]
-                            for idx, ans in enumerate(batch['answer']):
-                                choice = (logits_softmax[idx, 0] > logits_softmax[idx, 1]).cpu()
-                                acc = choice == ans
-                                if acc:
-                                    correct += 1
+                    
+                    if is_result:
+                        logits_softmax = logits_softmax[:, choice_tokens]
+                        for idx, ans in enumerate(batch['answer']):
+                            choice = (logits_softmax[idx, 0] > logits_softmax[idx, 1]).cpu()
+                            acc = choice == ans
+                            self.csv_debug['golden_result'].append(ans.item())
+                            self.csv_debug['test_result'].append(choice.item())
+                            self.csv_debug['pass'].append(acc.item())
+                            if acc:
+                                correct += 1
 
                 if is_result:
                     filename = os.path.basename(entry)
@@ -1147,6 +1168,7 @@ class ModelTest:
                 total = ["total", correct_total / sum_total, correct_total, sum_total]
                 result_total.insert(0, total)
         if is_result:
+            self.__save_debug()
             self.__save_result(result_total)
 
     def __run_full_dataset_humaneval(self):
@@ -1495,6 +1517,17 @@ class ModelTest:
     def get_fa_tokenizer(self, **kwargs):
         return AutoTokenizer.from_pretrained(self.weight_dir, **kwargs)
 
+    def __create_folder(self, folder_path):
+        if os.path.exists(folder_path):
+            try:
+                shutil.rmtree(folder_path)
+            except Exception as e:
+                self.logger.error(f"Error deleting folder {folder_path}: {e}")
+        os.makedirs(folder_path, exist_ok=True)
+        if not os.path.exists(folder_path):
+            self.logger.error(f"folder {folder_path} create fail")
+            raise RuntimeError(f"folder {folder_path} create fail")
+
     def __npu_adapt(self):
         if self.is_format_nz:
             for name, module in self.model.named_modules():
@@ -1505,6 +1538,17 @@ class ModelTest:
             self.logger.info(f"current soc: {self.soc_version}({self.device_type}), cast NZ")
         else:
             self.logger.info(f"current soc: {self.soc_version}({self.device_type}), not cast NZ")
+
+    def __save_debug(self):
+        if self.quantize:
+            result_name = "_".join([self.model_type, self.data_type, self.quantize, "batch" + str(self.batch_size), self.test_mode, self.dataset_name]) + '_debug_info.csv'
+        else:
+            result_name = "_".join([self.model_type, self.data_type, "batch" + str(self.batch_size), self.test_mode, self.dataset_name]) + '_debug_info.csv'
+        debug_info_path = os.path.join(self.log_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}",
+                                   result_name)
+        df = pd.DataFrame(self.csv_debug)
+        df.to_csv(debug_info_path, index=False)
+        self.logger.info(f"{self.dataset_name} debug info saved to: {debug_info_path}")
 
     def __save_result(self, result):
         def align_columns(df):
