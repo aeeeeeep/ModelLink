@@ -17,7 +17,7 @@
 | 变量名  | 含义                                             |
 |--------|--------------------------------------------------|
 | working_dir | 加速库及模型库下载后放置的目录                  |
-| llm_path | 模型仓所在路径。若使用编译好的包，则路径为`${working_dir}/ModelLink/`；若使用gitee下载的代码，则路径为`${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models`    |
+| llm_path | 模型仓所在路径；若使用编译好的包，则路径为`${working_dir}/`；若使用gitee下载的代码，则路径为`${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models`    |
 | script_path | 脚本所在路径；Chinese-Alpaca-13B的工作脚本所在路径为`${llm_path}/examples/models/chinese_alpaca`                            |
 | weight_path | 模型权重路径                            |
 
@@ -32,7 +32,8 @@
 - 合并lora权重和原模型权重，请参考[合并教程](https://github.com/ymcui/Chinese-LLaMA-Alpaca/wiki/%E6%89%8B%E5%8A%A8%E6%A8%A1%E5%9E%8B%E5%90%88%E5%B9%B6%E4%B8%8E%E8%BD%AC%E6%8D%A2#%E5%A4%9Alora%E6%9D%83%E9%87%8D%E5%90%88%E5%B9%B6%E9%80%82%E7%94%A8%E4%BA%8Echinese-alpaca-plus)
 
 **权重转换**
-- 转换为safetensor格式的权重文件，参考[此README文件](../../README.md)
+> 若权重中不包含safetensors格式，则执行权重转换步骤，否则跳过
+- 参考[此README文件](../../README.md)
 
 **基础环境变量**
 - 参考[此README文件](../../../README.md)

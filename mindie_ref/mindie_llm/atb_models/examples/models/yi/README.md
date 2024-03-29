@@ -18,7 +18,7 @@
 | 变量名  | 含义                                             |
 |--------|--------------------------------------------------|
 | working_dir | 加速库及模型库下载后放置的目录                  |
-| llm_path | 模型仓所在路径。若使用编译好的包，则路径为`${working_dir}/ModelLink/`；若使用gitee下载的代码，则路径为`${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models`    |
+| llm_path | 模型仓所在路径；若使用编译好的包，则路径为`${working_dir}/`；若使用gitee下载的代码，则路径为`${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models`    |
 | script_path | 脚本所在路径；Yi-6B-200K和Yi-34B的工作脚本所在路径为`${llm_path}/examples/models/yi`                            |
 | weight_path | 模型权重路径                            |
 
@@ -29,6 +29,7 @@
 - [Yi-34B](https://huggingface.co/01-ai/Yi-34B)
 
 **权重转换**
+> 若权重中不包含safetensors格式，则执行权重转换步骤，否则跳过
 - 参考[此README文件](../../README.md)
 
 **基础环境变量**
