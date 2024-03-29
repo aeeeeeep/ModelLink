@@ -212,6 +212,7 @@ class PARunner:
 
         generate_text_list, token_num_list = decode_token(req_list, self.tokenizer)
         if ENV.token_ids_save_enable:
+            import os
             if self.local_rank == 0: 
                 for i in range(len(req_list)):
                     input_ids_save_filename = f"input_ids_{i}.pth"
