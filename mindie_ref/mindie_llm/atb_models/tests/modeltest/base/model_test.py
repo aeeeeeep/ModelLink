@@ -1147,8 +1147,6 @@ class ModelTest:
                             logits_softmax = F.log_softmax(logits.float(), dim=-1)
                     
                     if is_result:
-                        for i in range(q_num):
-                            self.csv_debug['output_token_ids'].append(logits_softmax[i][0])
                         logits_softmax = logits_softmax[:, choice_tokens]
                         for idx, ans in enumerate(batch['answer']):
                             choice = (logits_softmax[idx, 0] > logits_softmax[idx, 1]).cpu()
