@@ -19,7 +19,7 @@
 |--------|--------------------------------------------------|
 | working_dir | 加速库及模型库下载后放置的目录                  |
 | llm_path | 模型仓所在路径；若使用编译好的包，则路径为`${working_dir}/`；若使用gitee下载的代码，则路径为`${working_dir}/ModelLink/mindie_ref/mindie_llm/atb_models`    |
-| script_path | 脚本所在路径；CodeLlama-13B的工作脚本所在路径为`${llm_path}/examples/models/llama`                            |
+| script_path | 脚本所在路径；CodeLlama-13B的工作脚本所在路径为`${llm_path}/examples/models/codellama`                            |
 | weight_path | 模型权重路径                            |
 
 ## 权重
