@@ -1107,7 +1107,7 @@ class ModelTest:
                 sum = len(dataset)
                 dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size)
                 for idx, batch in enumerate(tqdm(dataloader)):
-                    q_num = self.batch_size if (i + 1) * self.batch_size <= sum else sum - i * self.batch_size
+                    q_num = self.batch_size if (idx + 1) * self.batch_size <= sum else sum - idx * self.batch_size
                     titles = batch["title"]
                     texts = batch["question"]
                     passages = batch["passage"]
@@ -1127,14 +1127,22 @@ class ModelTest:
                         logits_softmax = F.log_softmax(logits.float(), dim=-1)
                         
                     else:
-                        for i in range(self.batch_size):
-                            self.csv_debug['input_token_ids'].append('None')
                         logits_save_folder = os.path.join(self.data_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}")
+                        token_ids_save_folder = os.path.join(self.log_dir, self.hardware_type, self.dataset_name, f"batch{self.batch_size}")
                         os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "1"
                         os.environ['ATB_LLM_LOGITS_SAVE_FOLDER'] = logits_save_folder
+                        os.environ['ATB_LLM_TOKEN_IDS_SAVE_ENABLE'] = "1"
+                        os.environ['ATB_LLM_TOKEN_IDS_SAVE_FOLDER'] = token_ids_save_folder
                         _, _, _ = self.pa_runner.infer(queries, self.batch_size, 1, False)
                         os.environ['ATB_LLM_LOGITS_SAVE_ENABLE'] = "0"
+                        os.environ['ATB_LLM_TOKEN_IDS_SAVE_ENABLE'] = "0"
                         if is_result:
+                            for i in range(q_num):
+                                input_token_ids = torch.load(os.path.join(token_ids_save_folder, 'input_ids.pth'))
+                                self.csv_debug['input_token_ids'].append(input_token_ids.tolist())
+                                with open(os.path.join(token_ids_save_folder, "output_ids.pth"), 'r'):
+                                    output_token_ids = list(map(int, f.read().split()))
+                                self.csv_debug['output_token_ids'].append(output_token_ids)
                             logits = torch.load(os.path.join(logits_save_folder, 'logits_0.pth'))
                             logits_softmax = F.log_softmax(logits.float(), dim=-1)
                     
