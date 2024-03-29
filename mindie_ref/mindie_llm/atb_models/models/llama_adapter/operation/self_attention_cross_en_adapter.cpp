@@ -134,8 +134,8 @@ atb::Status SelfAttentionCrossEnAdapter(const SelfAttentionCrossParam &param, at
     permuteAdapterKNode.inTensorIds = { IN_ADAPTERK };
     permuteAdapterKNode.outTensorIds = { INTERNAL_PAK };
 
-    atb::infer::MatmulParam matmulParam = { false, false };
-    CREATE_OPERATION(matmulParam, &bmmQKNode.operation);
+    atb::infer::LinearParam linearParam = { false, false, false };
+    CREATE_OPERATION(linearParam, &bmmQKNode.operation);
     bmmQKNode.inTensorIds = { INTERNAL_PQ, INTERNAL_PK };
     bmmQKNode.outTensorIds = { INTERNAL_BMM_QK_OUT };
     bmmQKNode.inTensorReshapeFuncs = { &BmmReshapeFunc, &BmmReshapeFunc };
@@ -178,13 +178,13 @@ atb::Status SelfAttentionCrossEnAdapter(const SelfAttentionCrossParam &param, at
     castOutNode.inTensorIds = { INTERNAL_ATTENTION_PROBS_F32 };
     castOutNode.outTensorIds = { INTERNAL_ATTENTION_PROBS };
 
-    CREATE_OPERATION(matmulParam, &bmmVNode.operation);
+    CREATE_OPERATION(linearParam, &bmmVNode.operation);
     bmmVNode.inTensorIds = { INTERNAL_ATTENTION_PROBS, INTERNAL_PV };
     bmmVNode.outTensorIds = { INTERNAL_BMM_V_OUT };
     bmmVNode.inTensorReshapeFuncs = { &BmmReshapeFunc, &BmmReshapeFunc };
 
-    atb::infer::MatmulParam matmul2Param = { false, false };
-    CREATE_OPERATION(matmul2Param, &bmmAQKNode.operation);
+    atb::infer::LinearParam linearParam = { false, false, false };
+    CREATE_OPERATION(linearParam, &bmmAQKNode.operation);
     bmmAQKNode.inTensorIds = { INTERNAL_PQ, INTERNAL_PAK };
     bmmAQKNode.outTensorIds = { INTERNAL_BMM_AQK_OUT };
     bmmAQKNode.inTensorReshapeFuncs.resize(bmmAQKNode.inTensorIds.size());
@@ -225,7 +225,7 @@ atb::Status SelfAttentionCrossEnAdapter(const SelfAttentionCrossParam &param, at
         newShape.dims[3] = oldShape.dims[2];
     };
 
-    CREATE_OPERATION(matmulParam, &bmmASVNode.operation);
+    CREATE_OPERATION(linearParam, &bmmASVNode.operation);
     bmmASVNode.inTensorIds = { INTERNAL_AQK_SCORES, INTERNAL_PAV };
     bmmASVNode.outTensorIds = { INTERNAL_BMM_ASV_OUT };
     bmmASVNode.inTensorReshapeFuncs = { &BmmReshapeFunc, &BmmReshapeFunc };
