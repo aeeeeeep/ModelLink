@@ -212,7 +212,7 @@ class PARunner:
 
         generate_text_list, token_num_list = decode_token(req_list, self.tokenizer)
         if ENV.token_ids_save_enable:
-            if rank == 0: 
+            if self.local_rank == 0: 
                 input_ids_save_filename = "input_ids.pth"
                 output_ids_save_filename = "output_ids.txt"
                 torch.save(batch.req_list[0].input_ids.cpu(), os.path.join(ENV.token_ids_save_folder, input_ids_save_filename))
