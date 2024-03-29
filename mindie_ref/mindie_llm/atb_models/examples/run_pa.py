@@ -215,9 +215,9 @@ class PARunner:
             if self.local_rank == 0: 
                 input_ids_save_filename = "input_ids.pth"
                 output_ids_save_filename = "output_ids.txt"
-                torch.save(batch.req_list[0].input_ids.cpu(), os.path.join(ENV.token_ids_save_folder, input_ids_save_filename))
+                torch.save(req_list[0].input_ids.cpu(), os.path.join(ENV.token_ids_save_folder, input_ids_save_filename))
                 with open(os.path.join(ENV.token_ids_save_folder, output_ids_save_filename), 'w') as f:
-                        f.write(' '.join(map(str, batch.req_list[0].out_token_list)))
+                        f.write(' '.join(map(str, req_list[0].out_token_list)))
         print_log(self.rank, logger.info, "---------------end inference---------------")
         return generate_text_list, token_num_list, e2e_time
 
