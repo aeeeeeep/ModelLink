@@ -1140,7 +1140,7 @@ class ModelTest:
                             for i in range(q_num):
                                 input_token_ids = torch.load(os.path.join(token_ids_save_folder, 'input_ids.pth'))
                                 self.csv_debug['input_token_ids'].append(input_token_ids.tolist())
-                                with open(os.path.join(token_ids_save_folder, "output_ids.txt"), 'r'):
+                                with open(os.path.join(token_ids_save_folder, "output_ids.txt"), 'r') as f:
                                     output_token_ids = list(map(int, f.read().split()))
                                 self.csv_debug['output_token_ids'].append(output_token_ids)
                             logits = torch.load(os.path.join(logits_save_folder, 'logits_0.pth'))
