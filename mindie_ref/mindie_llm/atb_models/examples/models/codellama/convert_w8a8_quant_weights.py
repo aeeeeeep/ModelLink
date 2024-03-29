@@ -20,7 +20,6 @@ def get_calib_dataset(_tokenizer, _calib_list):
     calib_dataset = []
     for calib_data in _calib_list:
         inputs = _tokenizer([calib_data], return_tensors='pt').to('cpu')
-        print(inputs)
         calib_dataset.append([inputs.data['input_ids'], None, inputs.data['attention_mask']])
     return calib_dataset
 
