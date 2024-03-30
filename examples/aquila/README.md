@@ -62,7 +62,7 @@ pip install -r requirements.txt
 
 3. 使用浏览器下载 [Aquila-7B模型的配置，tokenizer，和预训练权重](https://huggingface.co/BAAI/Aquila-7B/tree/main)
 
-保存在 ModelLink/HF_Aquila7B_downloaded/ 目录。
+保存在 ModelLink/model_from_hf/Aquila-7B/ 目录。
 
 4. 数据预处理
 
@@ -79,10 +79,11 @@ cd ..
 ```shell
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
+mkdir ./dataset/Aquila-7B/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/Aquila-7B/ \
-    --output-prefix ./dataset/Aquila-7B_alpaca \
+    --output-prefix ./dataset/Aquila-7B/alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF
@@ -119,7 +120,7 @@ python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --load-dir ./model_weights/Aquila-7B-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/Aquila-7B/     # <-- 需要填入原始HF模型路径，新权重会存于.model_from_hf/Aquila-7B/mg2hg
+    --save-dir ./model_from_hf/Aquila-7B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Aquila-7B/mg2hg/
 ```
 
 6. 配置 Aquila-7B 预训练脚本
@@ -129,9 +130,9 @@ python tools/checkpoint/convert_ckpt.py --model-type GPT \
 ```shell
 # 根据实际情况配置词表、数据集、模型参数保存路径
 TOKENIZER_PATH="./model_from_hf/Aquila-7B/"  #tokenizer 路径
-DATA_PATH="./dataset/Aquila-7B_alpaca_text_document"  #数据集 路径
+DATA_PATH="./dataset/Aquila-7B/alpaca_text_document"  #数据集 路径
 CKPT_LOAD_DIR="./model_weights/Aquila-7B-v0.1-tp8-pp1/"
-CKPT_SAVE_DIR="./ckpt/"
+CKPT_SAVE_DIR="./ckpt/Aquila-7B/"
 # 如果不需要保存权重，就不需要设置CKPT_SAVE_DIR, 并且启动脚本里应不使用 `--save` 参数
 # 如果需要保存权重，则需要设置CKPT_SAVE_DIR, 并且启动脚本里应使用 `--save $CKPT_SAVE_DIR` 进行类似配置。
 

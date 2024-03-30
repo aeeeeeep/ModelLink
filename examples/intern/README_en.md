@@ -96,10 +96,11 @@ cd ..
 ```shell
 #!/bin/bash
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+mkdir ./dataset/internlm-7b/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/internlm-7b/ \
-    --output-prefix ./dataset/internlm-7b_alpaca \
+    --output-prefix ./dataset/internlm-7b/alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF  \
@@ -143,7 +144,7 @@ python tools/checkpoint/convert_ckpt.py \
     --target-pipeline-parallel-size 1 \
     --add-qkv-bias \
     --add-dense-bias \
-    --save-dir ./model_from_hf/internlm-7b/    # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/internlm-7b/mg2hg
+    --save-dir ./model_from_hf/internlm-7b/    # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/internlm-7b/mg2hg/
 ```
 
 6. Config Internlm-7B pre-training script.
@@ -152,10 +153,10 @@ python tools/checkpoint/convert_ckpt.py \
 # modify the script according to your own  ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # modify script orign dataset path according to your own dataset path
-CKPT_SAVE_DIR="./ckpt/"
+CKPT_SAVE_DIR="./ckpt/internlm-7b/"
 CKPT_LOAD_DIR="./model_weights/internlm-7b-v0.1-tp8-pp1/"
 TOKENIZER_PATH="./model_from_hf/internlm-7b/tokenizer.model"  #tokenizer path
-DATA_PATH="./dataset/internlm-7b_alpaca_text_document" #processed dataset
+DATA_PATH="./dataset/internlm-7b/alpaca_text_document" #processed dataset
 ```
 
 7. Launch Internlm-7B pre-training script.
@@ -279,10 +280,11 @@ cd ..
 ```shell
 #!/bin/bash
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+mkdir ./dataset/internlm-65b/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/internlm-65b/ \
-    --output-prefix ./dataset/internlm-65b_alpaca \
+    --output-prefix ./dataset/internlm-65b/alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF  \
@@ -297,9 +299,9 @@ python ./tools/preprocess_data.py \
 # modify the script according to your own  ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # modify script orign dataset path according to your own dataset path
-CKPT_SAVE_DIR="./ckpt/"
+CKPT_SAVE_DIR="./ckpt/internlm-65b/"
 TOKENIZER_PATH="./model_from_hf/internlm-65b/"  #tokenizer path
-DATA_PATH="./dataset/internlm-65b_alpaca_text_document"  #processed dataset
+DATA_PATH="./dataset/internlm-65b/alpaca_text_document"  #processed dataset
 ```
 
 6. Launch Internlm-65B pre-training script.

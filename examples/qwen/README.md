@@ -149,7 +149,7 @@ Qwen-7B 训练的硬件配置:
        --target-tensor-parallel-size 1 \
        --target-pipeline-parallel-size 1 \
        --add-qkv-bias \
-       --save-dir ./model_from_hf/Qwen-7B/     # 需要填入原始HF模型路径，新权重会存于./model_from_hf/Qwen-7B/mg2hg
+       --save-dir ./model_from_hf/Qwen-7B/     # 需要填入原始HF模型路径，新权重会存于./model_from_hf/Qwen-7B/mg2hg/
    ```
 5. 准备数据集
 
@@ -162,10 +162,11 @@ Qwen-7B 训练的硬件配置:
    cd ..
 
    # 处理数据   
+   mkdir ./dataset/Qwen-7B/
    python ./tools/preprocess_data.py \
        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
        --tokenizer-name-or-path ./model_from_hf/Qwen-7B/ \
-       --output-prefix ./dataset/Qwen-7B_alpaca \
+       --output-prefix ./dataset/Qwen-7B/alpaca \
        --tokenizer-type PretrainedFromHF \
        --seq-length 8192 \
        --workers 4 \
@@ -179,9 +180,9 @@ Qwen-7B 训练的硬件配置:
    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
    # 根据实际情况配置词表、数据集、模型参数保存路径
-   CKPT_SAVE_DIR="./ckpt/"
+   CKPT_SAVE_DIR="./ckpt/Qwen-7B/"
    TOKENIZER_MODEL="./model_from_hf/Qwen-7B/"  #词表路径
-   DATA_PATH="./dataset/Qwen-7B_alpaca_text_document"  #数据集路径
+   DATA_PATH="./dataset/Qwen-7B/alpaca_text_document"  #数据集路径
    CKPT_LOAD_DIR="./model_weights/Qwen-7B-v0.1-tp8-pp1/"
    ```
 
@@ -381,7 +382,7 @@ Qwen-14B 训练的硬件配置:
        --target-tensor-parallel-size 1 \
        --target-pipeline-parallel-size 1 \
        --add-qkv-bias \
-       --save-dir ./model_from_hf/Qwen-14B/     # 需要填入原始HF模型路径，新权重会存于./model_from_hf/Qwen-14B/mg2hg
+       --save-dir ./model_from_hf/Qwen-14B/     # 需要填入原始HF模型路径，新权重会存于./model_from_hf/Qwen-14B/mg2hg/
    ```
 5. 准备数据集
 
@@ -394,10 +395,11 @@ Qwen-14B 训练的硬件配置:
     cd ..
 
     # 处理数据   
+    mkdir ./dataset/Qwen-14B/
     python ./tools/preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen-14B/ \
-        --output-prefix ./dataset/Qwen-14B_alpaca \
+        --output-prefix ./dataset/Qwen-14B/alpaca \
         --tokenizer-type PretrainedFromHF \
         --seq-length 2048 \
         --workers 4 \
@@ -412,9 +414,9 @@ Qwen-14B 训练的硬件配置:
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
     # 根据实际情况配置词表、数据集、模型参数保存路径
-    CKPT_SAVE_DIR="./ckpt/"
+    CKPT_SAVE_DIR="./ckpt/Qwen-14B/"
     TOKENIZER_MODEL="./model_from_hf/Qwen-14B/"  #词表路径
-    DATA_PATH="./dataset/Qwen-14B_alpaca_text_document"  #数据集路径
+    DATA_PATH="./dataset/Qwen-14B/alpaca_text_document"  #数据集路径
     CKPT_LOAD_DIR="./model_weights/Qwen-14B-v0.1-tp8-pp1/"
    ```
 
@@ -593,7 +595,7 @@ Qwen-72B 训练的硬件配置:
        --target-tensor-parallel-size 1 \
        --target-pipeline-parallel-size 1 \
        --add-qkv-bias \
-       --save-dir ./model_from_hf/Qwen-72B/     # 需要填入原始HF模型路径，新权重会存于./model_from_hf/Qwen-72B/mg2hg
+       --save-dir ./model_from_hf/Qwen-72B/     # 需要填入原始HF模型路径，新权重会存于./model_from_hf/Qwen-72B/mg2hg/
    ```
 5. 准备数据集
 
@@ -606,10 +608,11 @@ Qwen-72B 训练的硬件配置:
     cd ..
 
     # 处理数据   
+    mkdir ./dataset/Qwen-72B/
     python ./tools/preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen-72B/ \
-        --output-prefix ./dataset/Qwen-72B_alpaca \
+        --output-prefix ./dataset/Qwen-72B/alpaca \
         --tokenizer-type PretrainedFromHF \
         --seq-length 8192 \
         --workers 4 \
@@ -624,9 +627,9 @@ Qwen-72B 训练的硬件配置:
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
     # 根据实际情况配置词表、数据集、模型参数保存路径
-    CKPT_SAVE_DIR="./ckpt/"
+    CKPT_SAVE_DIR="./ckpt/Qwen-72B/"
     TOKENIZER_MODEL="./model_from_hf/Qwen-72B/"  #词表路径
-    DATA_PATH="./dataset/Qwen-72B_alpaca_text_document"  #数据集路径
+    DATA_PATH="./dataset/Qwen-72B/alpaca_text_document"  #数据集路径
     CKPT_LOAD_DIR="./model_weights/Qwen-72B-v0.1-tp8-pp1/"
    ```
 

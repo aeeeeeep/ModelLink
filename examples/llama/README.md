@@ -145,7 +145,7 @@ python tools/checkpoint/convert_ckpt.py \
     --load-dir ./model_weights/llama-7b-hf-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama-7b-hf/  # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-7b-hf/mg2hg
+    --save-dir ./model_from_hf/llama-7b-hf/  # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-7b-hf/mg2hg/
 ```
 
 LLaMA-13B
@@ -161,7 +161,7 @@ python tools/checkpoint/convert_ckpt.py \
     --load-dir ./model_weights/llama-13b-hf-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama-13b-hf/  # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-13b-hf/mg2hg
+    --save-dir ./model_from_hf/llama-13b-hf/  # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-13b-hf/mg2hg/
 ```
 
 权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
@@ -184,10 +184,11 @@ LLaMA-7B
 
 ```shell
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+mkdir ./dataset/llama-7b-hf/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/llama-7b-hf/ \
-    --output-prefix ./dataset/llama-7b-hf_alpaca \
+    --output-prefix ./dataset/llama-7b-hf/alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF  
@@ -197,10 +198,11 @@ LLaMA-13B
 
 ```shell
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+mkdir ./dataset/llama-7b-hf/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/llama-13b-hf/ \
-    --output-prefix ./dataset/llama-7b-hf_alpaca \
+    --output-prefix ./dataset/llama-7b-hf/alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF  
@@ -215,9 +217,9 @@ LLaMA-7B
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # 根据实际情况配置词表、数据集、模型参数保存路径
 TOKENIZER_MODEL="./model_from_hf/llama-7b-hf/tokenizer.model"
-DATA_PATH="./dataset/llama_alpaca_text_document"  #数据集 路径
+DATA_PATH="./dataset/llama/alpaca_text_document"  #数据集 路径
 LOAD_CHECKPOINT_PATH="./model_weights/llama-7b-hf-v0.1-tp8-pp1"
-SAVE_CHECKPOINT_PATH="./ckpt/"
+SAVE_CHECKPOINT_PATH="./ckpt/llama-7b-hf/"
 ```
 
 LLaMA-13B
@@ -227,9 +229,9 @@ LLaMA-13B
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # 根据实际情况配置词表、数据集、模型参数保存路径
 TOKENIZER_MODEL="./model_from_hf/llama-13b-hf/tokenizer.model" 
-DATA_PATH="./dataset/llama-13b-hf_alpaca_text_document"  #数据集 路径
+DATA_PATH="./dataset/llama-13b-hf/alpaca_text_document"  #数据集 路径
 LOAD_CHECKPOINT_PATH="./model_weights/llama-13b-hf-v0.1-tp8-pp1"
-SAVE_CHECKPOINT_PATH="./ckpt/"
+SAVE_CHECKPOINT_PATH="./ckpt/llama-13b-hf/"
 ```
 
 5.3 启动 LLaMA-7B/13B 预训练脚本
@@ -267,10 +269,11 @@ cd ..
 LLaMA-7B
 
 ```shell
+mkdir ./finetune_dataset/llama-7b-hf/
 python ./tools/preprocess_data.py \
   --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
   --tokenizer-name-or-path ./model_from_hf/llama-7b-hf/ \
-  --output-prefix ./finetune_dataset/llama-7b-hf_alpaca \
+  --output-prefix ./finetune_dataset/llama-7b-hf/alpaca \
   --workers 4 \
   --log-interval 1000 \
   --tokenizer-type PretrainedFromHF \
@@ -281,10 +284,11 @@ python ./tools/preprocess_data.py \
 LLaMA-13B
 
 ```shell
+mkdir ./finetune_dataset/llama-13b-hf/
 python ./tools/preprocess_data.py \
   --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
   --tokenizer-name-or-path ./model_from_hf/llama-13b-hf/ \ 
-  --output-prefix ./finetune_dataset/llama-13b-hf_alpaca \
+  --output-prefix ./finetune_dataset/llama-13b-hf/alpaca \
   --workers 4 \
   --log-interval 1000 \
   --tokenizer-type PretrainedFromHF \
@@ -304,7 +308,7 @@ TOKENIZER_PATH="./model_from_hf/llama-7b-hf/"  #tokenizer 路径
 DATA_PATH="./finetune_dataset/llama-7b-hf_text_document"  #数据集 路径
 LORA_CHECKPOINT="your lora weight"
 LOAD_CHECKPOINT_PATH="./model_weights/llama-13b-hf-v0.1-tp8-pp1"
-SAVE_CHECKPOINT_PATH="./ckpt/"
+SAVE_CHECKPOINT_PATH="./ckpt/llama-7b-hf/"
 ```
 
 LLaMA-13B
@@ -571,7 +575,7 @@ python tools/checkpoint/convert_ckpt.py \
     --load-dir /model_weights/llama-33b-hf-v0.1-tp4-pp4/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir  ./model_from_hf/llama-33b-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-33b-hf/mg2hg
+    --save-dir  ./model_from_hf/llama-33b-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-33b-hf/mg2hg/
 ```
 
 llama-65B
@@ -587,7 +591,7 @@ python tools/checkpoint/convert_ckpt.py \
     --load-dir /model_weights/llama-65b-hf-v0.1-tp8-pp4/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama-65b-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-65b-hf/mg2hg
+    --save-dir ./model_from_hf/llama-65b-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-65b-hf/mg2hg/
 ```
 
 权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
@@ -607,10 +611,11 @@ cd ..
 LLaMA-33B
 
 ```shell
+mkdir ./dataset/llama-33b-hf/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/llama-33b-hf \
-    --output-prefix ./dataset/llama-33b-hf_alpaca \
+    --output-prefix ./dataset/llama-33b-hf/alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF 
@@ -619,10 +624,11 @@ python ./tools/preprocess_data.py \
 LLaMA-65B
 
 ```shell
+mkdir ./dataset/llama-65b-hf/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/llama-65b-hf \
-    --output-prefix ./dataset/llama-65b-hf_alpaca \
+    --output-prefix ./dataset/llama-65b-hf/alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF 
@@ -638,9 +644,9 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 配置词表和数据路径等
 TOKENIZER_MODEL="./model_from_hf/llama-33b-hf/tokenizer.model"
-DATA_PATH="./dataset/llama-33b-hf_alpaca_text_document"
+DATA_PATH="./dataset/llama-33b-hf/alpaca_text_document"
 LOAD_CHECKPOINT_PATH="./model_weights/llama-33b-hf-v0.1-tp4-pp4/"
-SAVE_CHECKPOINT_PATH="./ckpt/"
+SAVE_CHECKPOINT_PATH="./ckpt/llama-33b-hf/"
 ```
 
 LLaMA-65B
@@ -651,9 +657,9 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 配置词表和数据路径等
 TOKENIZER_MODEL=./model_from_hf/llama-65b-hf/tokenizer.model
-DATA_PATH="./dataset/llama-65b-hf_alpaca_text_document"
+DATA_PATH="./dataset/llama-65b-hf/alpaca_text_document"
 LOAD_CHECKPOINT_PATH="./model_weights/llama-65b-hf-v0.1-tp8-pp4/"
-SAVE_CHECKPOINT_PATH="./ckpt/"
+SAVE_CHECKPOINT_PATH="./ckpt/llama-65b-hf/"
 ```
 
 5.3 启动预训练脚本:
@@ -708,10 +714,11 @@ cd ..
 LLaMA-33B
 
 ```shell
+mkdir ./finetune_dataset/llama-33b-hf/
 python ./tools/preprocess_data.py \
   --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
   --tokenizer-name-or-path ./model_from_hf/llama-33b-hf/ \ 
-  --output-prefix ./finetune_dataset/llama-33b-hf_alpaca \
+  --output-prefix ./finetune_dataset/llama-33b-hf/alpaca \
   --workers 4 \
   --log-interval 1000 \
   --tokenizer-type PretrainedFromHF \
@@ -722,10 +729,11 @@ python ./tools/preprocess_data.py \
 LLaMA-65B
 
 ```shell
+mkdir ./finetune_dataset/llama-65b-hf/
 python ./tools/preprocess_data.py \
   --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
   --tokenizer-name-or-path ./model_from_hf/llama-65b-hf/  \
-  --output-prefix ./finetune_dataset/llama-65b-hf_alpaca \
+  --output-prefix ./finetune_dataset/llama-65b-hf/alpaca \
   --workers 4 \
   --log-interval 1000 \
   --tokenizer-type PretrainedFromHF \
@@ -745,7 +753,7 @@ TOKENIZER_PATH="./model_from_hf/llama-33b-hf/"  #tokenizer 路径
 DATA_PATH="./finetune_dataset/llama-33b-hf_alpaca_text_document"  #数据集 路径
 LORA_CHECKPOINT="your lora weight"
 LOAD_CHECKPOINT_PATH="./model_weights/llama-33b-hf-v0.1-tp4-pp4/"
-SAVE_CHECKPOINT_PATH="./ckpt/"
+SAVE_CHECKPOINT_PATH="./ckpt/llama-33b-hf/"
 ```
 
 LLaMA-65B
@@ -758,7 +766,7 @@ TOKENIZER_PATH="./model_from_hf/llama-65b-hf/"  #tokenizer 路径
 DATA_PATH="./finetune_dataset/llama-65b-hf_alpaca_text_document"  #数据集 路径
 LORA_CHECKPOINT="your lora weight"
 LOAD_CHECKPOINT_PATH="./model_weights/llama-65b-hf-v0.1-tp8-pp4/"
-SAVE_CHECKPOINT_PATH="./ckpt/"
+SAVE_CHECKPOINT_PATH="./ckpt/llama-65b-hf/"
 ```
 
 增加微调参数--finetune，使微调从第一步开始。

@@ -95,10 +95,11 @@ cd ..
 ```shell
 #!/bin/bash
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+mkdir ./dataset/internlm-7b/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/internlm-7b/ \
-    --output-prefix ./dataset/internlm-7b_alpaca \
+    --output-prefix ./dataset/internlm-7b/alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF  \
@@ -142,7 +143,7 @@ python tools/checkpoint/convert_ckpt.py \
     --target-pipeline-parallel-size 1 \
     --add-qkv-bias \
     --add-dense-bias \
-    --save-dir ./model_from_hf/internlm-7b/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/internlm-7b/mg2hg
+    --save-dir ./model_from_hf/internlm-7b/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/internlm-7b/mg2hg/
 ```
 
 6. 配置 Internlm-7B 预训练脚本
@@ -151,10 +152,10 @@ python tools/checkpoint/convert_ckpt.py \
 # 修改 ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # 修改数据集，词表，权重等路径
-CKPT_SAVE_DIR="./ckpt/"
+CKPT_SAVE_DIR="./ckpt/internlm-7b/"
 CKPT_LOAD_DIR="./model_weights/internlm-7b-v0.1-tp8-pp1/"
 TOKENIZER_PATH="./model_from_hf/internlm-7b/tokenizer.model" #词表路径
-DATA_PATH="./dataset/internlm-7b_alpaca_text_document" #数据集路径
+DATA_PATH="./dataset/internlm-7b/alpaca_text_document" #数据集路径
 ```
 
 7. 启动 Internlm-7B 预训练脚本
@@ -279,10 +280,11 @@ cd ..
 ```shell
 #!/bin/bash
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+mkdir ./dataset/internlm-65b/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/internlm-65b/ \
-    --output-prefix ./dataset/internlm-65b_alpaca \
+    --output-prefix ./dataset/internlm-65b/alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF  \
@@ -297,9 +299,9 @@ python ./tools/preprocess_data.py \
 # 修改 ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # 修改数据集，词表，权重等路径
-CKPT_SAVE_DIR="./ckpt/"
+CKPT_SAVE_DIR="./ckpt/internlm-65b/"
 TOKENIZER_PATH="./model_from_hf/internlm-65b/" #词表路径
-DATA_PATH="./dataset/internlm-65b_alpaca_text_document" #数据集路径
+DATA_PATH="./dataset/internlm-65b/alpaca_text_document" #数据集路径
 ```
 
 6. 启动 Internlm-65B 预训练脚本

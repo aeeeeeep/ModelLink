@@ -104,7 +104,7 @@ python tools/checkpoint/convert_ckpt.py \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --embed-layernorm \
-    --save-dir ./model_from_hf/Bloom-7B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Bloom-7B/mg2hg
+    --save-dir ./model_from_hf/Bloom-7B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Bloom-7B/mg2hg/
 ```
 
 5. 准备数据集
@@ -117,11 +117,12 @@ cd dataset/
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
 
-# 处理数据                     
+# 处理数据         
+mkdir ./dataset/Bloom-7B/
 python ./tools/preprocess_data.py \
   --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
   --tokenizer-name-or-path ./model_from_hf/Bloom-7B/ \
-  --output-prefix ./dataset/Bloom-7B_alpaca \
+  --output-prefix ./dataset/Bloom-7B/alpaca \
   --workers 4 \
   --log-interval 1000 \
   --tokenizer-type PretrainedFromHF
@@ -133,8 +134,8 @@ python ./tools/preprocess_data.py \
 # 修改 ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-CKPT_SAVE_DIR="./ckpt/"
-DATA_PATH="./dataset/Bloom-7B_alpaca_text_document"
+CKPT_SAVE_DIR="./ckpt/Bloom-7B/"
+DATA_PATH="./dataset/Bloom-7B/alpaca_text_document"
 TOKENIZER_PATH="./model_from_hf/Bloom-7B/"
 CKPT_LOAD_DIR="./model_weights/Bloom-7B-v0.1-tp8-pp1/"
 ```
@@ -311,7 +312,7 @@ python tools/checkpoint/convert_ckpt.py \
     --target-pipeline-parallel-size 1 \
     --embed-layernorm \
     --params-dtype bf16 \
-    --save-dir ./model_from_hf/Bloom-176B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Bloom-176B/mg2hg
+    --save-dir ./model_from_hf/Bloom-176B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Bloom-176B/mg2hg/
 ```
 
 5. 准备数据集
@@ -324,11 +325,12 @@ cd dataset/
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
 
-# 处理数据               
+# 处理数据        
+mkdir ./dataset/Bloom-176B/
 python ./tools/preprocess_data.py \
   --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
   --tokenizer-name-or-path ./model_from_hf/Bloom-176B/ \
-  --output-prefix ./dataset/Bloom-176B_alpaca \
+  --output-prefix ./dataset/Bloom-176B/alpaca \
   --workers 4 \
   --log-interval 1000 \
   --tokenizer-type PretrainedFromHF
@@ -345,7 +347,7 @@ NODE_RANK=0
 
 # 修改数据集路径和词表路径
 TOKENIZER_NAME_OR_PATH=./model_from_hf/Bloom-176B/
-DATA_PATH=./dataset/Bloom-176B_alpaca_text_document
+DATA_PATH=./dataset/Bloom-176B/alpaca_text_document
 ```
 
 7. 启动 Bloom-176B 预训练脚本: examples/bloom/pretrain_bloom_176b.sh

@@ -129,7 +129,7 @@ python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --w-pack True \
-    --save-dir ./model_from_hf/Baichuan2-7B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Baichuan2-7B/mg2hg
+    --save-dir ./model_from_hf/Baichuan2-7B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Baichuan2-7B/mg2hg/
 ```
 
 5. 准备数据集
@@ -142,11 +142,12 @@ cd ./dataset/
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
 
-# 准备数据集                      
+# 准备数据集       
+mkdir ./dataset/Baichuan2-7B/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/Baichuan2-7B/ \
-    --output-prefix ./dataset/Baichuan2-7B_alpaca \
+    --output-prefix ./dataset/Baichuan2-7B/alpaca \
     --workers 4 \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF
@@ -159,8 +160,8 @@ python ./tools/preprocess_data.py \
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 # 修改数据集，权重，词表等路径
-CKPT_SAVE_DIR="./ckpt/"
-DATA_PATH="./dataset/Baichuan2-7B_alpaca_text_document"
+CKPT_SAVE_DIR="./ckpt/Baichuan2-7B/"
+DATA_PATH="./dataset/Baichuan2-7B/alpaca_text_document"
 TOKENIZER_MODEL="./model_from_hf/Baichuan2-7B/tokenizer.model"
 CKPT_LOAD_DIR="./model_weights/Baichuan2-7B-v0.1-tp8-pp1/"
 ```
@@ -353,7 +354,7 @@ python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --w-pack True \
-    --save-dir ./model_from_hf/Baichuan2-13B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Baichuan2-13B/mg2hg
+    --save-dir ./model_from_hf/Baichuan2-13B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Baichuan2-13B/mg2hg/
 ```
 
 5. 准备数据集
@@ -365,10 +366,11 @@ cd dataset/
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
 
+mkdir ./dataset/Baichuan2-13B/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/Baichuan2-13B/ \
-    --output-prefix ./dataset/Baichuan2-13B_alpaca \
+    --output-prefix ./dataset/Baichuan2-13B/alpaca \
     --workers 4 \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF 
@@ -381,8 +383,8 @@ python ./tools/preprocess_data.py \
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 # 修改词表，数据集, 权重等路径等路径
-CKPT_SAVE_DIR="./ckpt/"
-DATA_PATH="./dataset/Baichuan2-13B_alpaca_text_document"
+CKPT_SAVE_DIR="./ckpt/Baichuan2-13B/"
+DATA_PATH="./dataset/Baichuan2-13B/alpaca_text_document"
 TOKENIZER_MODEL="./model_from_hf/Baichuan2-13B/tokenizer.model"
 CKPT_LOAD_DIR="./model_weights/Baichuan2-13B-v0.1-tp8-pp1/" 
 ```
