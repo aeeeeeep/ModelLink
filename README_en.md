@@ -30,6 +30,7 @@ Current ModelLink supported features for large model usage:
 * [Inference: human-machine dialogue](#jump16)
 * [Evaluation with numerous benchmarks](#jump17)
 * [Utilizing Acceleration Features (Acceleration Algorithms + Fusion Operators)](#jump18)
+* [Profiling data based on Ascend chips](#jump19)
 
 More novel and useful features are developing for LLMs training on Ascend ...
 
@@ -292,7 +293,7 @@ The current repository uses Megatron commitId [bcce6f54](https://github.com/NVID
       <td>13B</td>
       <td> 1x8</td>
       <td> BF16 </td>
-      <td> 1346 </td>
+      <td> 1533 </td>
       <td> 872 </td>
       <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_13B.sh">train</a> </td>
     </tr>
@@ -957,6 +958,24 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     ... \
     ...
 ```
+
+
+## <span id="jump19"> Analyze profiling data based on Ascend chips 
+Modellink supports analyze profiling data based on Ascend chips, which is useful for modelling:
+
+```bash
+--profile                        # enable profiling
+--profile-step-start  5          # the start step
+--profile-step-end 6             # the end step
+--profile-ranks 0 1 2 3 4        # ranks for profiling
+--profile-level level2           # level0, 1, 2 for data profiling
+--profile-with-cpu               # profiling cpu information
+--profile-with-stack             # profile stack information
+--profile-with-memory            # profile memory information
+--profile-record-shapes          # profile shape information
+--profile-save-path ./profile_dir    # path to save data
+```
+
 
 ## Acknowledgments
 

@@ -402,9 +402,9 @@ bash examples/baichuan2/pretrain_baichuan2_ptd_13B.sh
 The performance of the Baichuan2-13B in **Ascend NPU** and **Reference**:
 
 | Device |     Model     | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | 
-|:----:|:-------------------------:|:----:|:------------------:|:----------------------------:|:---------------:|
-| NPUs | Baichuan2-13B |1000 |1.83|             1346             | 4.35 |
-|  Reference  | Baichuan2-13B |-|-|             872              |- |
+|:----:|:-------------------------:|:----:|:-----------------------------:|:----------------------------:|:-------------------------:|
+| NPUs | Baichuan2-13B |1000 |               -               |             1533             |             -             |
+|  Reference  | Baichuan2-13B |-|               -               |             872              |             -             |
 
 
 

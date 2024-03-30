@@ -43,6 +43,22 @@ def process_args(parser):
     parser = _add_data_args(parser)
     parser = _add_moe_args(parser)
     parser = _add_num_layer_allocation(parser)
+    parser = _add_profile_args(parser)
+    return parser
+
+
+def _add_profile_args(parser):
+    group = parser.add_argument_group(title='profiler')
+
+    group.add_argument('--profile-level', type=str, default='level0',
+                       choices=['level0', 'level1', 'level2'], help='profiling level0, level1, level2')
+    group.add_argument('--profile-with-stack', action='store_true', help='profiling with stack info')
+    group.add_argument('--profile-with-memory', action='store_true', help='profiling with memory info')
+    group.add_argument('--profile-record-shapes', action='store_true', help='profiling with shape info')
+    group.add_argument('--profile-with-cpu', action='store_true', help='profiling with cpu info')
+    group.add_argument('--profile-save-path', type=str, default='./profile_dir',
+                       help='path to save profiling files')
+
     return parser
 
 
