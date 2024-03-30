@@ -140,7 +140,7 @@ python tools/checkpoint/convert_ckpt.py \
     --load-dir ./model_weights/llama-7b-hf-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama-7b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-7b-hf/mg2hg
+    --save-dir ./model_from_hf/llama-7b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-7b-hf/mg2hg/
 ```
 
 LLaMA-13B
@@ -156,7 +156,7 @@ python tools/checkpoint/convert_ckpt.py \
     --load-dir ./model_weights/llama-13b-hf-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama-13b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-13b-hf/mg2hg
+    --save-dir ./model_from_hf/llama-13b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-13b-hf/mg2hg/
 ```
 
 Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
@@ -177,10 +177,11 @@ LLaMA-7B
 
 ```shell
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+mkdir ./dataset/llama-7b-hf/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/llama-7b-hf/ \
-    --output-prefix ./dataset/llama-7b-hf_alpaca \
+    --output-prefix ./dataset/llama-7b-hf/alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF  
@@ -190,10 +191,11 @@ LLaMA-13B
 
 ```shell
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+mkdir ./dataset/llama-7b-hf/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/llama-13b-hf/ \
-    --output-prefix ./dataset/llama-7b-hf_alpaca \
+    --output-prefix ./dataset/llama-7b-hf/alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF  
@@ -208,9 +210,9 @@ LLaMA-7B
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # modify script orign dataset path according to your own dataset path
 TOKENIZER_MODEL="./model_from_hf/llama-7b-hf/tokenizer.model"
-DATA_PATH="./dataset/llama_alpaca_text_document"  #processed dataset
+DATA_PATH="./dataset/llama/alpaca_text_document"  #processed dataset
 LOAD_CHECKPOINT_PATH="./model_weights/llama-7b-hf-v0.1-tp8-pp1"
-SAVE_CHECKPOINT_PATH="./ckpt/"
+SAVE_CHECKPOINT_PATH="./ckpt/llama-7b-hf/"
 ```
 
 LLaMA-13B
@@ -220,9 +222,9 @@ LLaMA-13B
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # modify script orign dataset path according to your own dataset path
 TOKENIZER_MODEL="./model_from_hf/llama-13b-hf/tokenizer.model"  
-DATA_PATH="./dataset/llama-13b-hf_alpaca_text_document"  #processed dataset
+DATA_PATH="./dataset/llama-13b-hf/alpaca_text_document"  #processed dataset
 LOAD_CHECKPOINT_PATH="./model_weights/llama-13b-hf-v0.1-tp8-pp1"
-SAVE_CHECKPOINT_PATH="./ckpt/"
+SAVE_CHECKPOINT_PATH="./ckpt/llama-13b-hf/"
 ```
 
 5.3 Launch LLaMA-7B/13B pre-training script.
@@ -259,10 +261,11 @@ Preprocess instruction dataset
 LLaMA-7B
 
 ```shell
+mkdir ./finetune_dataset/llama-7b-hf/
 python ./tools/preprocess_data.py \
   --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
   --tokenizer-name-or-path ./model_from_hf/llama-7b-hf/ \
-  --output-prefix ./finetune_dataset/llama-7b-hf_alpaca \
+  --output-prefix ./finetune_dataset/llama-7b-hf/alpaca \
   --workers 4 \
   --log-interval 1000 \
   --tokenizer-type PretrainedFromHF \
@@ -273,10 +276,11 @@ python ./tools/preprocess_data.py \
 LLaMA-13B
 
 ```shell
+mkdir ./finetune_dataset/llama-13b-hf/
 python ./tools/preprocess_data.py \
   --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
   --tokenizer-name-or-path ./model_from_hf/llama-13b-hf/ \ 
-  --output-prefix ./finetune_dataset/llama-13b-hf_alpaca \
+  --output-prefix ./finetune_dataset/llama-13b-hf/alpaca \
   --workers 4 \
   --log-interval 1000 \
   --tokenizer-type PretrainedFromHF \
@@ -296,7 +300,7 @@ TOKENIZER_PATH="./model_from_hf/llama-7b-hf/"  #tokenizer path
 DATA_PATH="./finetune_dataset/llama-7b-hf_text_document"  #processed dataset
 LORA_CHECKPOINT="your lora weight"
 LOAD_CHECKPOINT_PATH="./model_weights/llama-13b-hf-v0.1-tp8-pp1"
-SAVE_CHECKPOINT_PATH="./ckpt/"
+SAVE_CHECKPOINT_PATH="./ckpt/llama-7b-hf/"
 ```
 
 LLaMA-13B
@@ -553,7 +557,7 @@ python tools/checkpoint/convert_ckpt.py \
     --load-dir /model_weights/llama-33b-hf-v0.1-tp4-pp4/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir  ./model_from_hf/llama-33b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-33b-hf/mg2hg
+    --save-dir  ./model_from_hf/llama-33b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-33b-hf/mg2hg/
 ```
 
 LLaMA-65B
@@ -569,7 +573,7 @@ python tools/checkpoint/convert_ckpt.py \
     --load-dir /model_weights/llama-65b-hf-v0.1-tp8-pp4/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama-65b-hf/   # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-65b-hf/mg2hg
+    --save-dir ./model_from_hf/llama-65b-hf/   # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-65b-hf/mg2hg/
 ```
 
 Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
@@ -587,10 +591,11 @@ cd ..
 LLaMA-33B
 
 ```shell
+mkdir ./dataset/llama-33b-hf/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/llama-33b-hf \
-    --output-prefix ./dataset/llama-33b-hf_alpaca \
+    --output-prefix ./dataset/llama-33b-hf/alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF 
@@ -599,10 +604,11 @@ python ./tools/preprocess_data.py \
 LLaMA-65B
 
 ```shell
+mkdir ./dataset/llama-65b-hf/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/llama-65b-hf \
-    --output-prefix ./dataset/llama-65b-hf_alpaca \
+    --output-prefix ./dataset/llama-65b-hf/alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF 
@@ -618,9 +624,9 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # modify script orign dataset path according to your own dataset path
 TOKENIZER_MODEL="./model_from_hf/llama-33b-hf/tokenizer.model"
-DATA_PATH="./dataset/llama-33b-hf_alpaca_text_document"
+DATA_PATH="./dataset/llama-33b-hf/alpaca_text_document"
 LOAD_CHECKPOINT_PATH="./model_weights/llama-33b-hf-v0.1-tp4-pp4/"
-SAVE_CHECKPOINT_PATH="./ckpt/"
+SAVE_CHECKPOINT_PATH="./ckpt/llama-33b-hf/"
 ```
 
 Config llama-65B pre-training script `./examples/llama/pretrain_llama_65b_ptd.sh`:
@@ -631,9 +637,9 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # modify script orign dataset path according to your own dataset path
 TOKENIZER_MODEL=./model_from_hf/llama-65b-hf/tokenizer.model
-DATA_PATH="./dataset/llama-65b-hf_alpaca_text_document"
+DATA_PATH="./dataset/llama-65b-hf/alpaca_text_document"
 LOAD_CHECKPOINT_PATH="./model_weights/llama-65b-hf-v0.1-tp8-pp4/"
-SAVE_CHECKPOINT_PATH="./ckpt/"
+SAVE_CHECKPOINT_PATH="./ckpt/llama-65b-hf/"
 ```
 
 5.3 Launch  pre-training script:
@@ -683,10 +689,11 @@ cd ..
 LLaMA-33B
 
 ```shell
+mkdir ./finetune_dataset/llama-33b-hf/
 python ./tools/preprocess_data.py \
   --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
   --tokenizer-name-or-path ./model_from_hf/llama-33b-hf/ \ 
-  --output-prefix ./finetune_dataset/llama-33b-hf_alpaca \
+  --output-prefix ./finetune_dataset/llama-33b-hf/alpaca \
   --workers 4 \
   --log-interval 1000 \
   --tokenizer-type PretrainedFromHF \
@@ -697,10 +704,11 @@ python ./tools/preprocess_data.py \
 LLaMA-65B
 
 ```shell
+mkdir ./finetune_dataset/llama-65b-hf/
 python ./tools/preprocess_data.py \
   --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
   --tokenizer-name-or-path ./model_from_hf/llama-65b-hf/  \
-  --output-prefix ./finetune_dataset/llama-65b-hf_alpaca \
+  --output-prefix ./finetune_dataset/llama-65b-hf/alpaca \
   --workers 4 \
   --log-interval 1000 \
   --tokenizer-type PretrainedFromHF \
@@ -720,7 +728,7 @@ TOKENIZER_PATH="./model_from_hf/llama-33b-hf/"  #tokenizer path
 DATA_PATH="./finetune_dataset/llama-33b-hf_alpaca_text_document"  #processed dataset
 LORA_CHECKPOINT="your lora weight"
 LOAD_CHECKPOINT_PATH="./model_weights/llama-33b-hf-v0.1-tp4-pp4/"
-SAVE_CHECKPOINT_PATH="./ckpt/"
+SAVE_CHECKPOINT_PATH="./ckpt/llama-33b-hf/"
 ```
 
 Config llama-65B fine-tune script `./examples/llama/tune_llama_65b_ptd.sh`:
@@ -734,7 +742,7 @@ TOKENIZER_PATH="./model_from_hf/llama-65b-hf/"  #tokenizer path
 DATA_PATH="./finetune_dataset/llama-65b-hf_alpaca_text_document"  #processed dataset
 LORA_CHECKPOINT="your lora weight"
 LOAD_CHECKPOINT_PATH="./model_weights/llama-65b-hf-v0.1-tp8-pp4/"
-SAVE_CHECKPOINT_PATH="./ckpt/"
+SAVE_CHECKPOINT_PATH="./ckpt/llama-65b-hf/"
 ```
 
 Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.

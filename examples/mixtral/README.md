@@ -96,8 +96,7 @@
         --tokenizer-model ../Mixtral-8x7B-v0.1/tokenizer.model \
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 8 \
-        --target-expert-parallel-size 2 \
-        --params-dtype bf16 
+        --target-expert-parallel-size 2 
    ```
 
 ## 数据处理
@@ -118,9 +117,10 @@ cd ..
 2. 数据前处理
 
 ```shell
+mkdir ./dataset/Mixtral-8x7B/
 python ./tools/preprocess_data.py \
     --input ./dataset/Alpaca_data_gpt4_zh.jsonl \
-    --output-prefix ./dataset/Mixtral-8x7B_alpaca \
+    --output-prefix ./dataset/Mixtral-8x7B/alpaca \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ./model_from_hf/Mixtral-8x7B/ \
     --append-eod \
@@ -147,8 +147,7 @@ python ./tools/preprocess_data.py \
         --tokenizer-model ./model_from_hf/Mixtral-8x7B/tokenizer.model \
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 8 \
-        --target-expert-parallel-size 2 \
-        --params-dtype bf16 
+        --target-expert-parallel-size 2 
    ```
 2. 任意并行切分策略的Megatron权重 --> 任意并行切分策略的Megatron权重
     ***（该场景一般用于重新配置切分后模型的权重，比如在双机16卡 EP2-PP8策略下训练完了，想在单机8卡 TP8上进行推理）***
@@ -180,7 +179,7 @@ python ./tools/preprocess_data.py \
         --saver mixtral \
         --save-model-type huggingface \
         --load-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep2/ \
-        --save-dir ./model_from_hf/Mixtral-8x7B/ \    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Mixtral-8x7B/mg2hg
+        --save-dir ./model_from_hf/Mixtral-8x7B/ \    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Mixtral-8x7B/mg2hg/
     ```
 
 ## 模型训练
@@ -194,9 +193,9 @@ python ./tools/preprocess_data.py \
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
     # 根据实际情况配置词表、数据集、模型参数保存路径
-    DATA_PATH="./dataset/Mixtral-8x7B_alpaca_text_document"
+    DATA_PATH="./dataset/Mixtral-8x7B/alpaca_text_document"
     TOKENIZER_MODEL="./model_from_hf/Mixtral-8x7B/"
-    CKPT_SAVE_DIR="./ckpt/"
+    CKPT_SAVE_DIR="./ckpt/Mixtral-8x7B/"
 
     # 根据分布式集群实际情况配置分布式参数
     GPUS_PER_NODE=8

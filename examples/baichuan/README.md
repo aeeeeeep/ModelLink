@@ -129,7 +129,7 @@ python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --w-pack True \
-    --save-dir ./model_from_hf/Baichuan-7B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Baichuan-7B/mg2hg
+    --save-dir ./model_from_hf/Baichuan-7B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Baichuan-7B/mg2hg/
 ```
 
 5. 准备数据集
@@ -142,11 +142,12 @@ cd ./dataset
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
 
-# 处理数据                        
+# 处理数据              
+mkdir ./dataset/Baichuan-7B/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/Baichuan-7B/ \
-    --output-prefix ./dataset/Baichuan-7B_alpaca \
+    --output-prefix ./dataset/Baichuan-7B/alpaca \
     --workers 4 \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF
@@ -158,8 +159,8 @@ python ./tools/preprocess_data.py \
 # 修改 ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-CKPT_SAVE_DIR="./ckpt/"
-DATA_PATH="./dataset/baichuan-7B_alpaca_text_document"
+CKPT_SAVE_DIR="./ckpt/Baichuan-7B/"
+DATA_PATH="./dataset/Baichuan-7B/alpaca_text_document"
 TOKENIZER_MODEL="./model_from_hf/Baichuan-7B/tokenizer.model"
 CKPT_LOAD_DIR="./model_weights/Baichuan-7B-v0.1-tp8-pp1/"
 ```
@@ -186,7 +187,7 @@ Baichuan-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 ## 推理
 
-首先需要配置baichuan-7B的推理脚本: examples/baichuan/generate_baichuan_7b_ptd.sh
+首先需要配置Baichuan-7B的推理脚本: examples/baichuan/generate_baichuan_7b_ptd.sh
 
 ```bash
 # 根据您自己的 ascend-toolkit 路径，执行set_env.sh
@@ -359,7 +360,7 @@ python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --w-pack True \
-    --save-dir ./model_from_hf/Baichuan-13B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Baichuan-13B/mg2hg
+    --save-dir ./model_from_hf/Baichuan-13B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Baichuan-13B/mg2hg/
 ```
 
 5. 准备数据集
@@ -371,10 +372,11 @@ cd dataset/
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
 
+mkdir ./dataset/Baichuan-13B/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/Baichuan-13B/ \
-    --output-prefix ./dataset/Baichuan-13B_alpaca \
+    --output-prefix ./dataset/Baichuan-13B/alpaca \
     --workers 4 \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF 
@@ -386,8 +388,8 @@ python ./tools/preprocess_data.py \
 # 修改 ascend-toolkit 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-CKPT_SAVE_DIR="./ckpt/"
-DATA_PATH="./dataset/Baichuan-13B_alpaca_text_document"
+CKPT_SAVE_DIR="./ckpt/Baichuan-13B/"
+DATA_PATH="./dataset/Baichuan-13B/alpaca_text_document"
 TOKENIZER_MODEL="./model_from_hf/Baichuan-13B/tokenizer.model"
 CKPT_LOAD_DIR="./model_weights/Baichuan-13B-Base-v0.1-tp8-pp1/" 
 ```

@@ -97,8 +97,7 @@ Recommended hardware configuration for inference:
         --tokenizer-model ../Mixtral-8x7B-v0.1/tokenizer.model \
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 8 \
-        --target-expert-parallel-size 2 \
-        --params-dtype bf16 
+        --target-expert-parallel-size 2
    ```
 
 ## Data-Processing
@@ -119,9 +118,10 @@ cd ..
 2. Data preprocessing
 
 ```shell
+mkdir ./dataset/Mixtral-8x7B/
 python ./tools/preprocess_data.py \
     --input ./dataset/Alpaca_data_gpt4_zh.jsonl \
-    --output-prefix ./dataset/Mixtral-8x7B_alpaca \
+    --output-prefix ./dataset/Mixtral-8x7B/alpaca \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ./model_from_hf/Mixtral-8x7B/ \
     --append-eod \
@@ -148,8 +148,7 @@ python ./tools/preprocess_data.py \
         --tokenizer-model ./model_from_hf/Mixtral-8x7B/tokenizer.model \
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 8 \
-        --target-expert-parallel-size 2 \
-        --params-dtype bf16 
+        --target-expert-parallel-size 2
    ```
 2. Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
 ***(This scenario is generally used to reconfigure the sliced model weights, such as training on a dual-node 16-card EP2-PP8 strategy, and then wanting to infer on a single-node 8-card TP8)***
@@ -181,7 +180,7 @@ python ./tools/preprocess_data.py \
         --saver mixtral \
         --save-model-type huggingface \
         --load-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep2/ \
-        --save-dir ./model_from_hf/Mixtral-8x7B/ \    # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Mixtral-8x7B/mg2hg
+        --save-dir ./model_from_hf/Mixtral-8x7B/ \    # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Mixtral-8x7B/mg2hg/
     ```
 
 ## Model-Training
@@ -196,9 +195,9 @@ Configure Mixtral-8x7B pre-training script: ***examples/mixtral/pretrain_mixtral
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
     # Configure according to the actual vocabulary, dataset, and model parameter save path
-    DATA_PATH="./dataset/Mixtral-8x7B_alpaca_text_document"
+    DATA_PATH="./dataset/Mixtral-8x7B/alpaca_text_document"
     TOKENIZER_MODEL="./model_from_hf/Mixtral-8x7B/"
-    CKPT_SAVE_DIR="./ckpt/"
+    CKPT_SAVE_DIR="./ckpt/Mixtral-8x7B/"
 
     # Configure distributed parameters according to the actual distributed cluster
     GPUS_PER_NODE=8

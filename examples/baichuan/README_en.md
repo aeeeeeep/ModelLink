@@ -96,7 +96,7 @@ cd ../../
 
 4. Weights convert
 
-In order to adapt to the baichuan-7B model, the following script is used to convert the model pre-training weights.
+In order to adapt to the Baichuan-7B model, the following script is used to convert the model pre-training weights.
 ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 
 ```shell
@@ -129,7 +129,7 @@ python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --w-pack True \
-    --save-dir ./model_from_hf/Baichuan-7B/   # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Baichuan-7B/mg2hg
+    --save-dir ./model_from_hf/Baichuan-7B/   # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Baichuan-7B/mg2hg/
 ```
 
 5. Prepare dataset
@@ -142,11 +142,12 @@ cd ./dataset
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
 
-# process datasets                    
+# process datasets          
+mkdir ./dataset/Baichuan-7B/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/Baichuan-7B/ \
-    --output-prefix ./dataset/Baichuan-7B_alpaca \
+    --output-prefix ./dataset/Baichuan-7B/alpaca \
     --workers 4 \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF
@@ -158,8 +159,8 @@ python ./tools/preprocess_data.py \
 # modify the script according to your own  ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-CKPT_SAVE_DIR="./ckpt/"
-DATA_PATH="./dataset/baichuan-7B_alpaca_text_document"
+CKPT_SAVE_DIR="./ckpt/Baichuan-7B/"
+DATA_PATH="./dataset/Baichuan-7B/alpaca_text_document"
 TOKENIZER_MODEL="./model_from_hf/Baichuan-7B/tokenizer.model"
 CKPT_LOAD_DIR="./model_weights/Baichuan-7B-v0.1-tp8-pp1/"
 ```
@@ -186,7 +187,7 @@ The performance of Baichuan-7B in **Ascend NPU** and **Reference**:
 
 ## Inference
 
-Config baichuan-7B inference script: examples/baichuan/generate_baichuan_7b_ptd.sh
+Config Baichuan-7B inference script: examples/baichuan/generate_baichuan_7b_ptd.sh
 
 ```bash
 # modify the script according to your own ascend-toolkit path
@@ -197,7 +198,7 @@ CHECKPOINT="./model_weights/Baichuan-7B-v0.1-tp8-pp1/"
 TOKENIZER_PATH="./model_from_hf/Baichuan-7B/"
 ```
 
-Launch baichuan-7B inference script: examples/baichuan/generate_baichuan_7b_ptd.sh
+Launch Baichuan-7B inference script: examples/baichuan/generate_baichuan_7b_ptd.sh
 
 ```bash
 bash examples/baichuan/generate_baichuan_7b_ptd.sh
@@ -364,21 +365,22 @@ python tools/checkpoint/convert_ckpt.py --model-type GPT \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --w-pack True \
-    --save-dir ./model_from_hf/Baichuan-13B/   # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Baichuan-13B/mg2hg
+    --save-dir ./model_from_hf/Baichuan-13B/   # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Baichuan-13B/mg2hg/
 ```
 
 5. Prepare dataset
 Download the Baichuan-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
 
-```python
+```shell
 cd ./dataset/
 wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
 cd ..
 
+mkdir ./dataset/Baichuan-13B/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/Baichuan-13B/ \
-    --output-prefix ./dataset/Baichuan-13B_alpaca \
+    --output-prefix ./dataset/Baichuan-13B/alpaca \
     --workers 4 \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF 
@@ -390,8 +392,8 @@ python ./tools/preprocess_data.py \
 # modify the script according to your own  ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-CKPT_SAVE_DIR="./ckpt/"
-DATA_PATH="./dataset/Baichuan-13B_alpaca_text_document"
+CKPT_SAVE_DIR="./ckpt/Baichuan-13B/"
+DATA_PATH="./dataset/Baichuan-13B/alpaca_text_document"
 TOKENIZER_MODEL="./model_from_hf/Baichuan-13B/tokenizer.model"
 CKPT_LOAD_DIR="./model_weights/Baichuan-13B-Base-v0.1-tp8-pp1/" 
 ```

@@ -149,7 +149,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 1 \
         --add-qkv-bias \
-        --save-dir ./model_from_hf/Qwen-7B/   # Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Qwen-7B/mg2hg
+        --save-dir ./model_from_hf/Qwen-7B/   # Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Qwen-7B/mg2hg/
     ```
 5. Prepare dataset
 
@@ -162,10 +162,11 @@ Here's a hardware summary of pre-training  Qwen-7B:
     cd ..
 
     # process datasets  
+    mkdir ./dataset/Qwen-7B/
     python ./tools/preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen-7B/ \
-        --output-prefix ./dataset/Qwen-7B_alpaca \
+        --output-prefix ./dataset/Qwen-7B/alpaca \
         --tokenizer-type PretrainedFromHF \
         --seq-length 8192 \
         --workers 4 \
@@ -180,9 +181,9 @@ Here's a hardware summary of pre-training  Qwen-7B:
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
     # modify config according to your own actual situation
-    CKPT_SAVE_DIR="./ckpt/"
+    CKPT_SAVE_DIR="./ckpt/Qwen-7B/"
     TOKENIZER_MODEL="./model_from_hf/Qwen-7B/"  #tokenizer path
-    DATA_PATH="./dataset/Qwen-7B_alpaca_text_document"  #processed dataset
+    DATA_PATH="./dataset/Qwen-7B/alpaca_text_document"  #processed dataset
     CKPT_LOAD_DIR="./model_weights/Qwen-7B-v0.1-tp8-pp1/"
    ```
 
@@ -384,7 +385,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 1 \
         --add-qkv-bias \
-        --save-dir ./model_from_hf/Qwen-14B/   # Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Qwen-14B/mg2hg
+        --save-dir ./model_from_hf/Qwen-14B/   # Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Qwen-14B/mg2hg/
     ```
 5. Prepare dataset
 
@@ -397,10 +398,11 @@ Here's a hardware summary of pre-training  Qwen-14B:
     cd ..
 
     # process datasets  
+    mkdir ./dataset/Qwen-14B/
     python ./tools/preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen-14B/ \
-        --output-prefix ./dataset/Qwen-14B_alpaca \
+        --output-prefix ./dataset/Qwen-14B/alpaca \
         --tokenizer-type PretrainedFromHF \
         --seq-length 2048 \
         --workers 4 \
@@ -415,9 +417,9 @@ Here's a hardware summary of pre-training  Qwen-14B:
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
     # modify config according to your own actual situation
-    CKPT_SAVE_DIR="./ckpt/"
+    CKPT_SAVE_DIR="./ckpt/Qwen-14B/"
     TOKENIZER_MODEL="./model_from_hf/Qwen-14B/"  #tokenizer path
-    DATA_PATH="./dataset/Qwen-14B_alpaca_text_document"  #processed dataset
+    DATA_PATH="./dataset/Qwen-14B/alpaca_text_document"  #processed dataset
     CKPT_LOAD_DIR="./model_weights/Qwen-14B-v0.1-tp8-pp1/"
    ```
 
@@ -599,7 +601,7 @@ Here's a hardware summary of pre-training  Qwen-72B:
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 1 \
         --add-qkv-bias \
-        --save-dir ./model_from_hf/Qwen-72B/    # Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Qwen-72B/mg2hg
+        --save-dir ./model_from_hf/Qwen-72B/    # Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Qwen-72B/mg2hg/
     ```
 5. Prepare dataset
 
@@ -613,10 +615,11 @@ Here's a hardware summary of pre-training  Qwen-72B:
 
 
     # process datasets  
+    mkdir ./dataset/Qwen-72B/
     python ./tools/preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen-72B/ \
-        --output-prefix ./dataset/Qwen-72B_alpaca \
+        --output-prefix ./dataset/Qwen-72B/alpaca \
         --tokenizer-type PretrainedFromHF \
         --seq-length 8192 \
         --workers 4 \
@@ -631,9 +634,9 @@ Here's a hardware summary of pre-training  Qwen-72B:
         source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
         # modify config according to your own actual situation
-        CKPT_SAVE_DIR="./ckpt/"
+        CKPT_SAVE_DIR="./ckpt/Qwen-72B/"
         TOKENIZER_MODEL="./model_from_hf/Qwen-72B/"  #tokenizer path
-        DATA_PATH="./dataset/Qwen-72B_alpaca_text_document"  #processed dataset
+        DATA_PATH="./dataset/Qwen-72B/alpaca_text_document"  #processed dataset
         CKPT_LOAD_DIR="./model_weights/Qwen-72B-v0.1-tp8-pp1/"
     ```
 

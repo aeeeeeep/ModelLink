@@ -125,8 +125,8 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
         --target-tensor-parallel-size 8 \
         --target-pipeline-parallel-size 1 \
         --load-dir ./model_from_hf/llama-2-7b-hf/ \
-        --save-dir ./model_weights/llama-2-7b-hf-v0.=1-tp8-pp1/ \
-        --tokenizer-model ./model_from_hf/ llama-2-7b-hf/tokenizer.model
+        --save-dir ./model_weights/llama-2-7b-hf-v0.1-tp8-pp1/ \
+        --tokenizer-model ./model_from_hf/llama-2-7b-hf/tokenizer.model
     ```
 
     Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
@@ -142,7 +142,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
         --load-dir ./model_weights/llama-2-7b-hf-v0.1-tp8-pp1/ \
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 1 \
-        --save-dir ./model_from_hf/llama-2-7b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-2-7b-hf/mg2hg
+        --save-dir ./model_from_hf/llama-2-7b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-2-7b-hf/mg2hg/
     ```
 
     Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
@@ -159,10 +159,11 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     cd ..
 
     # process datasets  
+    mkdir ./dataset/llama-2-7b-hf/
     python ./tools/preprocess_data.py \
       --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
       --tokenizer-name-or-path ./model_from_hf/llama-2-7b-hf/ \
-      --output-prefix ./dataset/llama-2-7b-hf_alpaca \
+      --output-prefix ./dataset/llama-2-7b-hf/alpaca \
       --workers 4 \
       --log-interval 1000 \
       --tokenizer-type PretrainedFromHF
@@ -176,9 +177,9 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
       source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
       # modify config according to your own actual situation
-      CKPT_SAVE_DIR="./ckpt/"
+      CKPT_SAVE_DIR="./ckpt/llama-2-7b-hf/"
       TOKENIZER_PATH="./model_from_hf/llama-2-7b-hf/tokenizer.model"  #tokenizer path
-      DATA_PATH="./dataset/llama-2-7b-hf_alpaca_text_document"  #processed dataset
+      DATA_PATH="./dataset/llama-2-7b-hf/alpaca_text_document"  #processed dataset
     ```
 
     Multi-machine training requires the addition of parameter --overlap-grad-reduce
@@ -202,10 +203,11 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     cd ..
 
     # process datasets  
+    mkdir ./finetune_dataset/llama-2-7b-hf/
     python ./tools/preprocess_data.py \
       --input ./dataset/ train-00000-of-00001-a09b74b3ef9c3b56.parquet \
       --tokenizer-name-or-path ./model_from_hf/llama-2-7b-hf/ \
-      --output-prefix ./finetune_dataset/llama-2-7b-hf_alpaca \
+      --output-prefix ./finetune_dataset/llama-2-7b-hf/alpaca \
       --workers 4 \
       --log-interval 1000 \
       --tokenizer-type PretrainedFromHF \
@@ -221,7 +223,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
    ```bash
    DATA_PATH="./finetune_dataset/llama-2-7b-hf_alpaca"
    TOKENIZER_PATH="./model_from_hf/llama-2-7b-hf/"
-   CKPT_PATH="./ckpt/"
+   CKPT_PATH="./ckpt/llama-2-7b-hf/"
    --load ${CKPT_PATH} \
    --finetune \
    --is-instruction-dataset \
@@ -486,7 +488,7 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
         --load-dir ./model_weights/Llama-2-13b-hf-v0.1-tp8-pp1/ \
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 1 \
-        --save-dir ./model_from_hf/Llama-2-13b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Llama-2-13b-hf/mg2hg
+        --save-dir ./model_from_hf/Llama-2-13b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Llama-2-13b-hf/mg2hg/
    ```
 5. pre-training
 
@@ -501,10 +503,11 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
    cd ..
 
    # process datasets  
+   mkdir ./dataset/Llama-2-13b-hf/
    python ./tools/preprocess_data.py \
        --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
        --tokenizer-name-or-path ./model_from_hf/Llama-2-13b-hf/ \
-       --output-prefix ./dataset/Llama-2-13b-hf_alpaca \
+       --output-prefix ./dataset/Llama-2-13b-hf/alpaca \
        --workers 4 \
        --log-interval 1000 \
        --tokenizer-type PretrainedFromHF
@@ -519,9 +522,9 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
 
     # modify config according to your own actual situation
     LOAD_CHECKPOINT_PATH="./model_weights/Llama-2-13b-hf-v0.1-tp8-pp1/"
-    SAVE_CHECKPOINT_PATH="./ckpt/"
+    SAVE_CHECKPOINT_PATH="./ckpt/Llama-2-13b-hf/"
     TOKENIZER_PATH="./model_from_hf/Llama-2-13b-hf/"  #tokenizer path
-    DATA_PATH="./dataset/Llama-2-13b-hf_alpaca_text_document"  #processed dataset
+    DATA_PATH="./dataset/Llama-2-13b-hf/alpaca_text_document"  #processed dataset
    ```
 
    Multi-machine training requires the addition of parameter --overlap-grad-reduce
@@ -545,10 +548,11 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
    cd ..
 
    # process datasets  
+   mkdir ./finetune_dataset/llama-2-13b-hf/
    python ./tools/preprocess_data.py \
      --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
      --tokenizer-name-or-path ./model_from_hf/llama-2-13b-hf \
-     --output-prefix ./finetune_dataset/llama-2-13b-hf_alpaca \
+     --output-prefix ./finetune_dataset/llama-2-13b-hf/alpaca \
      --workers 4 \
      --log-interval 1000 \
      --tokenizer-type PretrainedFromHF \
@@ -843,7 +847,7 @@ pip install -r requirements.txt
         --load-dir ./model_weights/llama2-70b-hf-v0.1-tp8-pp4/ \
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 1 \
-        --save-dir ./model_from_hf/llama2-70b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama2-70b-hf/mg2hg
+        --save-dir ./model_from_hf/llama2-70b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama2-70b-hf/mg2hg/
     ```
 
     * The following converts llama-2-34b model weight.
@@ -859,7 +863,7 @@ pip install -r requirements.txt
         --load-dir ./model_weights/codellama-34b-hf-v0.1-tp8-pp4/ \
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 1 \
-        --save-dir ./model_from_hf/codellama-34b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/codellama-34b-hf/mg2hg
+        --save-dir ./model_from_hf/codellama-34b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/codellama-34b-hf/mg2hg/
     ```
 
     Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
@@ -880,10 +884,11 @@ pip install -r requirements.txt
     cd ..
 
     # process datasets  
+    mkdir ./dataset/llama2-70b-hf/
     python ./tools/preprocess_data.py \
     --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/llama2-70b-hf/ \
-    --output-prefix ./dataset/llama2-70b-hf_alpaca \
+    --output-prefix ./dataset/llama2-70b-hf/alpaca \
     --workers 4 \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF
@@ -920,7 +925,7 @@ pip install -r requirements.txt
 
     # modify script orign dataset path according to your own dataset path
     TOKENIZER_PATH="./model_from_hf/llama2-70b-hf/"  #tokenizer path
-    DATA_PATH="./dataset/llama2-70b-hf_alpaca_text_document"  #processed dataset
+    DATA_PATH="./dataset/llama2-70b-hf/alpaca_text_document"  #processed dataset
     ```
 
     LLaMA2-70B: examples/llama2/pretrain_llama2_70b_ptd.sh
@@ -931,7 +936,7 @@ pip install -r requirements.txt
 
     # modify script orign dataset path according to your own dataset path
     TOKENIZER_PATH="./model_from_hf/llama2-70b-hf/"  #tokenizer path
-    DATA_PATH="./dataset/llama2-70b-hf_alpaca_text_document"  #processed dataset
+    DATA_PATH="./dataset/llama2-70b-hf/alpaca_text_document"  #processed dataset
     ```
 
     Launch pre-training script
@@ -961,10 +966,11 @@ pip install -r requirements.txt
   cd ..
 
   # process datasets  
+  mkdir ./finetune_dataset/llama2-70b-hf/
   python ./tools/preprocess_data.py \
       --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
       --tokenizer-name-or-path ./model_from_hf/llama2-70b-hf/ \
-      --output-prefix ./finetune_dataset/llama2-70b-hf_alpaca \
+      --output-prefix ./finetune_dataset/llama2-70b-hf/alpaca \
       --workers 4 \
       --log-interval 1000 \
       --tokenizer-type PretrainedFromHF \
