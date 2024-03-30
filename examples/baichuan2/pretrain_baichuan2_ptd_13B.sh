@@ -40,8 +40,8 @@ GPT_ARGS="
     --seq-length 4096 \
     --disable-bias-linear \
     --max-position-embeddings 4096 \
-    --micro-batch-size 1 \
-    --global-batch-size 8 \
+    --micro-batch-size 2 \
+    --global-batch-size 128 \
     --untie-embeddings-and-output-weights \
     --no-gradient-accumulation-fusion \
     --make-vocab-size-divisible-by 32 \

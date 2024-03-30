@@ -28,7 +28,7 @@ from .core import (vocab_embedding_wrapper, initialize_model_parallel_decorator,
 from .data import build_pretraining_data_loader
 from .tokenizer import build_tokenizer
 from .arguments import parse_args_decorator
-from .training import get_model_wrapper
+from .training import get_model_wrapper, train
 from .utils import ALL_MODULE_WRAPPER_CLASSNAMES
 from .checkpointing import _load_base_checkpoint_wrapper, load_checkpoint_wrapper
 from .initialize import _compile_dependencies
@@ -46,6 +46,7 @@ def exe_adaptor():
     import megatron.training
     megatron.training.get_model = get_model_wrapper(megatron.training.get_model)
     megatron.training.build_pretraining_data_loader = build_pretraining_data_loader
+    megatron.training.train = train
 
     megatron.model.GPTModel = GPTModel
     megatron.model.transformer.SwitchMLP = SwitchMLP
