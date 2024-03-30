@@ -120,8 +120,8 @@ class FlashDeepseekForCausalLM(FlashForCausalLM):
                 COMMON_EXPERTS_NUM = 64
                 if self.tp:
                     for j in range(COMMON_EXPERTS_NUM):
-                        weight_wrapper.weights.append(layer_dict[f"mlp.experts.{j}.gate_up_proj.weight"])
-                        weight_wrapper.weights.append(layer_dict[f"mlp.experts.{j}.down_proj.weight"])
+                        weight_wrapper.weights.append(layer_dict[f"mlp.experts.{j}.gate_up_proj.linear.weight"])
+                        weight_wrapper.weights.append(layer_dict[f"mlp.experts.{j}.down_proj.linear.weight"])
                 else:
                     if self.expert_parallel_degree == 0:
                         raise ValueError(

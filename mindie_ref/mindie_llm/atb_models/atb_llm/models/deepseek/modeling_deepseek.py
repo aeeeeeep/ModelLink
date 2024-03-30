@@ -72,6 +72,7 @@ class DeepseekConfig(PretrainedConfig):
             attention_bias=False,
             attention_dropout=0.0,
             world_size=8,
+            tp = False,
             **kwargs,
     ):
         self.vocab_size = vocab_size
@@ -105,6 +106,7 @@ class DeepseekConfig(PretrainedConfig):
         self.world_size = world_size
         self.attention_bias = attention_bias
         self.attention_dropout = attention_dropout
+        self.tp = tp
 
         super().__init__(
             pad_token_id=pad_token_id,
@@ -538,11 +540,6 @@ class MoEGate(nn.Module):
         self.gating_dim = config.hidden_size
         weight = weights.get_tensor(f"{prefix}.weight")
         self.weight = nn.Parameter(weight)
-        self.reset_parameters()
- 
-    def reset_parameters(self) -> None:
-        import torch.nn.init as init
-        init.kaiming_uniform_(self.weight, a=math.sqrt(5))
  
     def forward(self, hidden_states):
         bsz, seq_len, h = hidden_states.shape
