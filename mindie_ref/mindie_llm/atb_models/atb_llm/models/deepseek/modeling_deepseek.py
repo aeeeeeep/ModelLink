@@ -463,7 +463,7 @@ class DeepseekMoE(nn.Module):
         process_group = weights.process_group
         self.tp_rank = process_group.rank()
         self.tp_world_size = process_group.size()
-        self.tp = False
+        self.tp = config.tp if config.tp else False
         self.expert_parallel_degree = 1 if self.tp else self.tp_world_size
         expert_per_rank = config.n_routed_experts / self.expert_parallel_degree
 
