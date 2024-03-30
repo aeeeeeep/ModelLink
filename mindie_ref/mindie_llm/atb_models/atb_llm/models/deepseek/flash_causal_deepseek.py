@@ -7,9 +7,9 @@ from typing import Optional, List, Tuple
 import torch
 
 from ..base.flash_causal_lm import FlashForCausalLM
-from .modeling_deepseek import DeepseekConfig
+from .modeling_deepseek import DeepseekConfig, FlashDeepseekModel
+from ...utils.data.weight_wrapper import AttnModuleNames, MlpModuleNames, WeightWrapper
 from atb_llm.utils.layers import (
-    TensorParallelRowLinear,
     TensorEmbedding,
     load_column_multi,
 )
@@ -20,7 +20,7 @@ class FlashDeepseekForCausalLM(FlashForCausalLM):
         # called the:
         # self.init_ascend_operations
         super().__init__(config, weights)
-        self.weights = weights
+        self.model = FlashDeepseekModel(config, weights)
         self.config = config
         self.lm_head = load_column_multi(
             config,
@@ -49,7 +49,7 @@ class FlashDeepseekForCausalLM(FlashForCausalLM):
         self.final_hidden_states = []
         self.one_hot_one = torch.ones(1, dtype=torch.int32, device="npu")
         self.one_hot_zero = torch.zeros(1, dtype=torch.int32, device="npu")
-        self.tp = False
+        self.tp = config.tp if config.tp else False
         if self.tp:
             self.expert_parallel_degree = 1
             self.maskStartIdx = 0
@@ -69,117 +69,59 @@ class FlashDeepseekForCausalLM(FlashForCausalLM):
         self.acl_encoder_operation = torch.classes.ModelTorch.ModelTorch("deepseekDense_DecoderModel")
         self.acl_decoder_operation = torch.classes.ModelTorch.ModelTorch("deepseekDense_DecoderModel")
 
-
-    def init_ascend_weight(self):
-        # add embedding
-        weights = [self.weights.get_tensor("model.embed_tokens.weight").npu()]
-
-        IN_INPUT_NORM_PLACEHOLDER_NUM = 3
-        IN_QKV_PLACEHOLDER_NUM = 17
-        IN_ATTENTION_OUT_PLACEHOLDER = 5
-
+    def get_weights(self):
+        attn_module_names = AttnModuleNames(
+            norm_name='input_layernorm',
+            pack_name='self_attn.query_key_value',
+            q_name='self_attn.q_proj',
+            k_name='self_attn.k_proj',
+            v_name='self_attn.v_proj',
+            o_name='self_attn.o_proj'
+        )
+        mlp_module_names = MlpModuleNames(
+            norm_name='post_attention_layernorm',
+            pack_name='mlp.gate_up_proj',
+            gate_name='mlp.gate_proj',
+            up_name='mlp.up_proj',
+            down_name='mlp.down_proj'
+        )
+        weight_wrapper = WeightWrapper(self.soc_info, self.tp_rank, attn_module_names, mlp_module_names)
+        weight_wrapper.register_embedding(self.model.state_dict(), 'embed_tokens')
         for i in range(self.num_layers):
-            weights_t = []
-
-            # add input layernorm weights
-            weights_t.append(self.weights.get_tensor(f'model.layers.{i}.input_layernorm.weight').npu())
-            for k in range(IN_INPUT_NORM_PLACEHOLDER_NUM):
-                weights_t.append(self.placeholder)
-
-            # add attention weights
-            query_key_value = load_column_multi(
-                self.config,
-                prefixes=[f"model.layers.{i}.self_attn.q_proj",
-                          f"model.layers.{i}.self_attn.k_proj",
-                          f"model.layers.{i}.self_attn.v_proj"],
-                weights=self.weights,
-                head_size=self.config.hidden_size // self.config.num_attention_heads
-            ).npu()
-            weights_t.append(query_key_value.linear.weight)
-
-            for k in range(IN_QKV_PLACEHOLDER_NUM):
-                weights_t.append(self.placeholder)
-
-            o_proj = TensorParallelRowLinear.load(
-                self.config,
-                prefix=f"model.layers.{i}.self_attn.o_proj",
-                weights=self.weights,
-                bias=False,
-            ).npu()
-            weights_t.append(o_proj.linear.weight)
-            for k in range(IN_ATTENTION_OUT_PLACEHOLDER):
-                weights_t.append(self.placeholder)
-
+            layer = self.model.layers[i]
+            layer_dict = layer.state_dict()
+            weight_wrapper.layer_linear_type.clear()
+            # add input layernorm and self attn weights
+            weight_wrapper.register_layer_attn(layer_dict, layer.self_attn.pack_type, self.quantize, attn_module_names)
             # add post norm weights
-            weights_t.append(self.weights.get_tensor(f'model.layers.{i}.post_attention_layernorm.weight').npu())
+            weight_wrapper.weights.append(layer_dict["post_attention_layernorm.weight"])
 
             if i == 0:
                 # add shared experts weights
-                gate_up = load_column_multi(
-                    self.config,
-                    prefixes=[f"model.layers.{i}.mlp.gate_proj",
-                              f"model.layers.{i}.mlp.up_proj"],
-                    weights=self.weights,
-                    head_size=1
-                ).npu()
-                weights_t.append(gate_up.linear.weight)
-
-                down_proj = TensorParallelRowLinear.load(
-                    self.config,
-                    prefix=f"model.layers.{i}.mlp.down_proj",
-                    weights=self.weights,
-                    bias=False,
-                ).npu()
-                weights_t.append(down_proj.linear.weight)
+                mlp_layer_names = ['mlp.gate_up_proj.linear', 'mlp.down_proj.linear']
+                for layer_name in mlp_layer_names:
+                    weight_wrapper.weights.append(layer_dict[f'{layer_name}.weight'])
                 # add gate weights
-                weights_t.append(self.placeholder)
+                weight_wrapper.weights.append(self.placeholder)
 
                 # add common experts
                 COMMON_EXPERTS_NUM = 64
-                for j in range(COMMON_EXPERTS_NUM):
-                    weights_t.append(self.placeholder)
-                    weights_t.append(self.placeholder)
+                weight_wrapper.weights.extend([self.placeholder] * 2 * COMMON_EXPERTS_NUM)
             else:
                 # add shared experts weights
-                shared_gate_up = load_column_multi(
-                    self.config,
-                    prefixes=[f"model.layers.{i}.mlp.shared_experts.gate_proj",
-                              f"model.layers.{i}.mlp.shared_experts.up_proj"],
-                    weights=self.weights,
-                    head_size=1
-                ).npu()
-                weights_t.append(shared_gate_up.linear.weight)
+                shared_experts_layer_names = ['mlp.shared_experts.gate_up_proj.linear', 'mlp.shared_experts.down_proj.linear']
+                for layer_name in shared_experts_layer_names:
+                    weight_wrapper.weights.append(layer_dict[f'{layer_name}.weight'])
 
-                shared_down_proj = TensorParallelRowLinear.load(
-                    self.config,
-                    prefix=f"model.layers.{i}.mlp.shared_experts.down_proj",
-                    weights=self.weights,
-                    bias=False,
-                ).npu()
-                weights_t.append(shared_down_proj.linear.weight)
                 # add gate weights
-                weights_t.append(self.weights.get_tensor(f"model.layers.{i}.mlp.gate.weight").npu())
+                weight_wrapper.weights.append(layer_dict["mlp.gate.weight"])
 
                 # add common experts
                 COMMON_EXPERTS_NUM = 64
                 if self.tp:
                     for j in range(COMMON_EXPERTS_NUM):
-                        experts_gate_up = load_column_multi(
-                            self.config,
-                            prefixes=[f"model.layers.{i}.mlp.experts.{j}.gate_proj",
-                                    f"model.layers.{i}.mlp.experts.{j}.up_proj"],
-                            weights=self.weights,
-                            head_size=1
-                        ).npu()
-                        weights_t.append(experts_gate_up.linear.weight)
-
-                        experts_down_proj = TensorParallelRowLinear.load(
-                            self.config,
-                            prefix=f"model.layers.{i}.mlp.experts.{j}.down_proj",
-                            weights=self.weights,
-                            bias=False,
-                        ).npu()
-                        weights_t.append(experts_down_proj.linear.weight)
+                        weight_wrapper.weights.append(layer_dict[f"mlp.experts.{j}.gate_up_proj.linear.weight"])
+                        weight_wrapper.weights.append(layer_dict[f"mlp.experts.{j}.down_proj.linear.weight"])
                 else:
                     if self.expert_parallel_degree == 0:
                         raise ValueError(
@@ -189,20 +131,23 @@ class FlashDeepseekForCausalLM(FlashForCausalLM):
                         expert_per_rank = COMMON_EXPERTS_NUM / self.expert_parallel_degree
                     for j in range(COMMON_EXPERTS_NUM):
                         if j < expert_per_rank:
-                            exprt_id = int(j + self.tp_rank * expert_per_rank)
-                            weights_t.append(torch.cat([self.weights.get_tensor(f"model.layers.{i}.mlp.experts.{exprt_id}.gate_proj.weight"),
-                                                        self.weights.get_tensor(f"model.layers.{i}.mlp.experts.{exprt_id}.up_proj.weight")]).npu())
-
-                            weights_t.append(self.weights.get_tensor(f"model.layers.{i}.mlp.experts.{exprt_id}.down_proj.weight").npu())
+                            exprt_id = int(j + self.tp_rank * expert_per_rank)                            
+                            weight_wrapper.weights.append(torch.cat([layer_dict[f"mlp.experts.{j}.expert_gate_proj"],
+                                                        layer_dict[f"mlp.experts.{j}.expert_up_proj"]]))
+                            weight_wrapper.weights.append(layer_dict[f"mlp.experts.{j}.expert_down_proj"])
                         else:   
-                            weights_t.append(self.placeholder)
-                            weights_t.append(self.placeholder)
+                            weight_wrapper.weights.extend([self.placeholder] * 2)
+            if self.soc_info.need_nz:
+                del layer.self_attn
+                del layer.post_attention_layernorm
+                del layer.mlp
+        weight_wrapper.register_model_norm(self.model.state_dict(), 'norm')
+        weight_wrapper.register_model_lmhead(self.state_dict(), 'lm_head')
+        return weight_wrapper.weights
 
-            # add layer weights
-            weights.extend(weights_t)
-
-        weights.append(self.weights.get_tensor("model.norm.weight").npu())
-        weights.append(self.weights.get_tensor("lm_head.weight").npu())
+    def init_ascend_weight(self):
+        # add embedding
+        self.ascend_weight = self.get_weights()
 
         coder_param = {
             "rmsNormEps": self.config.rms_norm_eps,
@@ -230,9 +175,8 @@ class FlashDeepseekForCausalLM(FlashForCausalLM):
         self.acl_encoder_operation.set_param(json.dumps({**encoder_param}))
         self.acl_decoder_operation.set_param(json.dumps({**decoder_param}))
         # self.init_params()
-        self.ascend_weight = weights
-        self.acl_encoder_operation.set_weight(weights)
-        self.acl_decoder_operation.set_weight(weights)
+        self.acl_encoder_operation.set_weight(self.ascend_weight)
+        self.acl_decoder_operation.set_weight(self.ascend_weight)
 
     # called by super().forward()
     def prepare_inputs_for_ascend(self, input_ids: torch.Tensor,
