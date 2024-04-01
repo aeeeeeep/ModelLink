@@ -71,6 +71,24 @@ def initialize_model_parallel_decorator(initialize_model_parallel):
                     start_rank + j, end_rank, context_parallel_size * tensor_model_parallel_size
                 )
                 all_data_parallel_group_ranks.append(list(ranks))
+                group = torch.distributed.new_group(
+                    ranks, pg_options=megatron.core.parallel_state.get_nccl_options('dp', nccl_comm_cfgs)
+                )
+                group_gloo = torch.distributed.new_group(ranks, backend="gloo")
+                if rank in ranks:
+                    megatron.core.parallel_state._DATA_PARALLEL_GROUP = group
+                    megatron.core.parallel_state._DATA_PARALLEL_GROUP_GLOO = group_gloo
+                    megatron.core.parallel_state._DATA_PARALLEL_GLOBAL_RANKS = ranks
+            for j in range(tensor_model_parallel_size):
+                ranks_with_cp = range(start_rank + j, end_rank, tensor_model_parallel_size)
+                group_with_cp = torch.distributed.new_group(
+                    ranks_with_cp, pg_options=megatron.core.parallel_state.get_nccl_options('dp_cp', nccl_comm_cfgs)
+                )
+                group_with_cp_gloo = torch.distributed.new_group(ranks_with_cp, backend="gloo")
+                if rank in ranks_with_cp:
+                    megatron.core.parallel_state._DATA_PARALLEL_GROUP_WITH_CP = group_with_cp
+                    megatron.core.parallel_state._DATA_PARALLEL_GROUP_WITH_CP_GLOO = group_with_cp_gloo
+                    megatron.core.parallel_state._DATA_PARALLEL_GLOBAL_RANKS_WITH_CP = ranks_with_cp
 
         # Build expert parallel groups
         global _EXPERT_PARALLEL_GROUP
