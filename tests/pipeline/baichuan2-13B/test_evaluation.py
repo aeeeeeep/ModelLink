@@ -10,7 +10,7 @@ from ascendspeed import megatron_adaptor
 import modellink
 from megatron.model import GPTModel
 from tests.pipeline.common import DistributedTest
-from tasks.evaluation.evaluation_llama import add_text_generate_args
+from modellink.tasks.evaluation.utils import add_text_generate_args
 
 
 class TestEvaluation(DistributedTest):
@@ -40,7 +40,7 @@ class TestEvaluation(DistributedTest):
 
     def test_boolq_evaluation(self):
         self.init(config=ParamConfig)
-        from tasks.evaluation.evaluation_llama import model_provider
+        from evaluation import model_provider
         model = GPTModel.from_pretrained(
             model_provider=model_provider,
             pretrained_model_name_or_path=self.args.load

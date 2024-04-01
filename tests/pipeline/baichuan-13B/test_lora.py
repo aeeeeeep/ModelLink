@@ -10,7 +10,6 @@ from megatron.core.enums import ModelType
 from megatron.core.utils import get_model_config
 from megatron.training import setup_model_and_optimizer, build_train_valid_test_data_iterators
 from tests.pipeline.common import DistributedTest
-from tasks.inference.infer_base import add_text_generate_args
 
 
 class TestLora(DistributedTest):

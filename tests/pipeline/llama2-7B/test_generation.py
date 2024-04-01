@@ -9,7 +9,7 @@ from utils import ParamConfig, assert_judge
 import modellink
 
 from megatron.model import GPTModel
-from tasks.inference.infer_base import add_text_generate_args
+from modellink.tasks.inference.text_generation.infer_base import add_text_generate_args
 
 
 class TestGeneration(DistributedTest):
@@ -46,7 +46,7 @@ class TestGeneration(DistributedTest):
         and compare with expected for `greedy search`.
         """
         self.init(config=ParamConfig)
-        from tasks.inference.inference_llama import model_provider
+        from inference import model_provider
         model = GPTModel.from_pretrained(
             model_provider=model_provider,
             pretrained_model_name_or_path=self.args.load
@@ -86,7 +86,7 @@ class TestGeneration(DistributedTest):
         and compare with expected for `beam search`.
         """
         self.init(config=ParamConfig)
-        from tasks.inference.inference_llama import model_provider
+        from inference import model_provider
         model = GPTModel.from_pretrained(
             model_provider=model_provider,
             pretrained_model_name_or_path=self.args.load

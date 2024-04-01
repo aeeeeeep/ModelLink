@@ -12,7 +12,7 @@ from common import DistributedTest
 from utils import ParamConfig, assert_judge
 import modellink
 from megatron.model import GPTModel
-from tasks.evaluation.evaluation_llama import add_text_generate_args
+from modellink.tasks.evaluation.utils import add_text_generate_args
 
 
 class TestEvaluation(DistributedTest):
@@ -43,7 +43,7 @@ class TestEvaluation(DistributedTest):
 
     def test_boolq_evaluation(self):
         self.init(config=ParamConfig)
-        from tasks.inference.inference_llama import model_provider
+        from evaluation import model_provider
         model = GPTModel.from_pretrained(
             model_provider=model_provider,
             pretrained_model_name_or_path=self.args.load
@@ -106,8 +106,8 @@ class TestEvaluation(DistributedTest):
         
     def test_mmlu_evaluation(self):
         self.init(config=ParamConfig)
-        from tasks.evaluation.evaluation_llama import model_provider
-        from tasks.evaluation.eval_impl.template import MMLU_TEMPLATE_DIR
+        from evaluation import model_provider
+        from modellink.tasks.evaluation.eval_impl.template import MMLU_TEMPLATE_DIR
         model = GPTModel.from_pretrained(
             model_provider=model_provider,
             pretrained_name_or_path=self.args.load
