@@ -82,24 +82,6 @@ Recommended hardware configuration for inference:
     cd ..
     ```
 
-    Convert weights from Huggingface format to Megatron format
-
-    ```bash
-    # Modify the ascend-toolkit path
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh
-
-    # Convert weight format
-    python tools/checkpoint/convert_ckpt.py --model-type GPT \
-        --loader mixtral_hf \
-        --saver mixtral \
-        --load-dir ../Mixtral-8x7B-v0.1 \
-        --save-dir {your megatron ckpt save path} \
-        --tokenizer-model ../Mixtral-8x7B-v0.1/tokenizer.model \
-        --target-tensor-parallel-size 1 \
-        --target-pipeline-parallel-size 8 \
-        --target-expert-parallel-size 2
-   ```
-
 ## Data-Processing
 
 1. Prepare dataset
@@ -180,7 +162,7 @@ python ./tools/preprocess_data.py \
         --saver mixtral \
         --save-model-type huggingface \
         --load-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep2/ \
-        --save-dir ./model_from_hf/Mixtral-8x7B/ \    # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Mixtral-8x7B/mg2hg/
+        --save-dir ./model_from_hf/Mixtral-8x7B/    # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Mixtral-8x7B/mg2hg/
     ```
 
 ## Model-Training
@@ -195,7 +177,7 @@ Configure Mixtral-8x7B pre-training script: ***examples/mixtral/pretrain_mixtral
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
     # Configure according to the actual vocabulary, dataset, and model parameter save path
-    DATA_PATH="./dataset/Mixtral-8x7B/alpaca_text_document"
+    DATA_PATH="./dataset/Mixtral-8x7B/alpaca"
     TOKENIZER_MODEL="./model_from_hf/Mixtral-8x7B/"
     CKPT_SAVE_DIR="./ckpt/Mixtral-8x7B/"
 

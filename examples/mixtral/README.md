@@ -81,24 +81,6 @@
    cd ..
    ```
 
-   将权重从 Huggingface 格式转化为 Megatron 格式
-
-   ```bash
-    # 修改 ascend-toolkit 路径
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh
-
-    # 权重格式转换
-    python tools/checkpoint/convert_ckpt.py --model-type GPT \
-        --loader mixtral_hf \
-        --saver mixtral \
-        --load-dir ../Mixtral-8x7B-v0.1 \
-        --save-dir {your megatron ckpt save path} \
-        --tokenizer-model ../Mixtral-8x7B-v0.1/tokenizer.model \
-        --target-tensor-parallel-size 1 \
-        --target-pipeline-parallel-size 8 \
-        --target-expert-parallel-size 2 
-   ```
-
 ## 数据处理
 
 1. 准备数据集
@@ -179,7 +161,7 @@ python ./tools/preprocess_data.py \
         --saver mixtral \
         --save-model-type huggingface \
         --load-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep2/ \
-        --save-dir ./model_from_hf/Mixtral-8x7B/ \    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Mixtral-8x7B/mg2hg/
+        --save-dir ./model_from_hf/Mixtral-8x7B/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Mixtral-8x7B/mg2hg/
     ```
 
 ## 模型训练
@@ -193,7 +175,7 @@ python ./tools/preprocess_data.py \
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
     # 根据实际情况配置词表、数据集、模型参数保存路径
-    DATA_PATH="./dataset/Mixtral-8x7B/alpaca_text_document"
+    DATA_PATH="./dataset/Mixtral-8x7B/alpaca"
     TOKENIZER_MODEL="./model_from_hf/Mixtral-8x7B/"
     CKPT_SAVE_DIR="./ckpt/Mixtral-8x7B/"
 
