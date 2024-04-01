@@ -221,6 +221,11 @@ python tools/checkpoint/convert_ckpt.py \
    --tokenizer-not-use-fast \
    ```
 
+   全参微调提供新的unpad方案，减少计算冗余加速训练
+   (1) 不开启--use-flash-attn和--sequence-parallel
+   (2) 加入--use-unpad
+   (3) 仅支持fp16
+
    6.3 Lora微调
    Lora微调的脚本配置是在全参微调脚本基础上加上lora参数，如下所示:
 
@@ -562,6 +567,11 @@ python tools/checkpoint/convert_ckpt.py \
    --tokenizer-name-or-path ${TOKENIZER_PATH} \
    --tokenizer-not-use-fast \
    ```
+
+   全参微调提供新的unpad方案，减少计算冗余加速训练
+   (1) 不开启--use-flash-attn和--sequence-parallel
+   (2) 加入--use-unpad
+   (3) 仅支持fp16
 
    6.3 Lora微调
    Lora微调的脚本配置是在全参微调脚本基础上加上lora参数，如下所示:
