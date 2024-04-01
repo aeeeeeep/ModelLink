@@ -76,7 +76,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
-      <td rowspan="2"> <a href="examples/baichuan/README.md">Baichuan2</a> </td>
+      <td rowspan="2"> <a href="examples/baichuan2/README.md">Baichuan2</a> </td>
       <td> 7B </td>
       <td> -- </td>
       <td> <a href="tasks/inference/generate_baichuan2_7b_ptd.sh">inference</a> </td>
