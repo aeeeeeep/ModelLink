@@ -5,7 +5,6 @@ import subprocess
 from pathlib import Path
 import torch
 
-from ascendspeed import megatron_adaptor
 from utils import judge_expression
 import modellink
 from tests.pipeline.common import DistributedTest

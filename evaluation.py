@@ -20,7 +20,6 @@ import time
 import logging
 from torch import distributed as dist
 from transformers import AutoTokenizer
-import ascendspeed.megatron_adaptor
 import modellink
 from megatron.initialize import initialize_megatron
 from megatron import get_args

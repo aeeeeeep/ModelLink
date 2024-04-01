@@ -6,10 +6,7 @@ from functools import partial
 from typing import Union
 
 import torch
-import torch_npu
 from torch import Tensor
-from ascendspeed import megatron_adaptor
-from torch_npu.contrib import transfer_to_npu
 import modellink
 from megatron import get_args
 from megatron import print_rank_0

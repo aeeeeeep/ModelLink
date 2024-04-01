@@ -930,7 +930,7 @@ ModelLink支持张量并行、流水线并行、序列并行、重计算、分�
 |           DDP allreduce 掩盖           |  --overlap-grad-reduce   |
 |           Flash attention            |        --use-flash-attn        |
 |            Fused rmsnorm             |      --use-fused-rmsnorm       |
-|             Fused swiglu             |            --swiglu            |
+|             Fused swiglu             |            --use-fused-swiglu            |
 | Fused rotary <br/>position embedding |   --use-fused-rotary-pos-emb   |
 
 
@@ -946,7 +946,7 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     --use-distributed-optimizer \
     --use-flash-attn \
     --use-fused-rmsnorm \
-    --swiglu \
+    --use-fused-swiglu \
     --overlap-grad-reduce \
     --use-fused-rotary-pos-emb \
     ... \

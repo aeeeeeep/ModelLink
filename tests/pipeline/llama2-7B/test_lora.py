@@ -2,7 +2,6 @@ import sys
 import os
 import torch
 
-from ascendspeed import megatron_adaptor
 from common import DistributedTest
 from utils import ParamConfig, assert_judge
 import modellink

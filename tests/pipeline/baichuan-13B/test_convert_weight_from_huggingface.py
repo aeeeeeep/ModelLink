@@ -7,7 +7,6 @@ from pathlib import Path
 import torch
 from utils import ParamConfig
 
-from ascendspeed import megatron_adaptor
 import modellink
 
 

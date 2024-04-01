@@ -4,7 +4,6 @@ import os
 import glob
 
 from utils import ParamConfig
-from ascendspeed import megatron_adaptor
 import modellink
 
 from modellink.tokenizer import build_tokenizer

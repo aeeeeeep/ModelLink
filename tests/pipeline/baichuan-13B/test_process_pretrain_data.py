@@ -4,7 +4,6 @@ import os
 import glob
 import torch_npu
 from utils import ParamConfig
-from ascendspeed import megatron_adaptor
 import modellink
 from modellink.tokenizer import build_tokenizer
 from modellink.tokenizer.tokenizer import _AutoTokenizer

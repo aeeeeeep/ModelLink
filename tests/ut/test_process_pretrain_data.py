@@ -3,7 +3,6 @@ import sys
 import os
 import math
 
-from ascendspeed import megatron_adaptor
 from utils import judge_expression
 import modellink
 

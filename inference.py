@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ascendspeed import megatron_adaptor
 
 import modellink
 from megatron import get_args
