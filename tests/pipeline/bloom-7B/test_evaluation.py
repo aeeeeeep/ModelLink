@@ -12,7 +12,7 @@ from common import DistributedTest
 from utils import ParamConfig, assert_judge
 import modellink
 from megatron.model import GPTModel
-from tasks.evaluation.evaluation_llama import add_text_generate_args
+from modellink.tasks.evaluation.utils import add_text_generate_args
 
 
 class TestEvaluation(DistributedTest):
@@ -35,8 +35,8 @@ class TestEvaluation(DistributedTest):
 
     def test_mmlu_evaluation(self):
         self.init()
-        from tasks.evaluation.evaluation_llama import model_provider
-        from tasks.evaluation.eval_impl.template import MMLU_TEMPLATE_DIR
+        from evaluation import model_provider
+        from modellink.tasks.evaluation.eval_impl.template import MMLU_TEMPLATE_DIR
         model = GPTModel.from_pretrained(
             model_provider=model_provider,
             pretrained_name_or_path=self.args.load
@@ -65,7 +65,6 @@ class TestEvaluation(DistributedTest):
             data_df = pd.read_csv(file_path, names=['question', 'A', 'B', 'C', 'D', 'answer'])
             subject_name = file[0: -9]
             subject = subject_name.replace("_", " ")
-            subject_result = {}
             acc_n = 0
             data_df_test = data_df.iloc[0:15]
             for index, row in data_df_test.iterrows():
