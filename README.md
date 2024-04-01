@@ -74,7 +74,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
     </tr>
     <tr>
-      <td rowspan="2"> <a href="examples/baichuan/README.md">Baichuan2</a> </td>
+      <td rowspan="2"> <a href="examples/baichuan2/README.md">Baichuan2</a> </td>
       <td> 7B </td>
       <td> -- </td>
       <td> <a href="examples/baichuan2/generate_baichuan2_7b_ptd.sh">对话</a> </td>
