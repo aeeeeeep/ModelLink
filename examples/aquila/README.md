@@ -24,11 +24,14 @@ Aquila-7B 训练的硬件配置如下:
 
 ### 脚本
 
-1. 克隆git仓库到个人服务器并切换到modellink分支
+1. 克隆仓库到本地服务器
+
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git
 cd ModelLink
 mkdir logs
+mkdir model_from_hf
+mkdir dataset
 mkdir ckpt
 ```
 
@@ -57,11 +60,9 @@ cd ModelLink/
 pip install -r requirements.txt
 ```
 
-
 3. 使用浏览器下载 [Aquila-7B模型的配置，tokenizer，和预训练权重](https://huggingface.co/BAAI/Aquila-7B/tree/main)
 
-保存在 ModelLink/HF_Aquila7B_downloaded/ 目录。
-
+保存在 ModelLink/model_from_hf/Aquila-7B/ 目录。
 
 4. 数据预处理
 
@@ -78,11 +79,11 @@ cd ..
 ```shell
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-cd ModelLink/
+mkdir ./dataset/Aquila-7B/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ./HF_Aquila7B_downloaded \
-    --output-prefix ./dataset/aquila \
+    --tokenizer-name-or-path ./model_from_hf/Aquila-7B/ \
+    --output-prefix ./dataset/Aquila-7B/alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF
@@ -94,45 +95,44 @@ python ./tools/preprocess_data.py \
 ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
 ```shell
-cd ModelLink/
-mkdir model_weights
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 python tools/checkpoint/util.py \
     --model-type GPT \
-    --load-dir ./HF_Aquila7B_downloaded \
-    --save-dir ./model_weights/aquila \
+    --load-dir ./model_from_hf/Aquila-7B/ \
+    --save-dir ./model_weights/Aquila-7B-v0.1-tp8-pp1/ \
     --loader llama2_hf \
     --saver megatron \
     --target-tensor-parallel-size 8 \
-    --tokenizer-model ./HF_Aquila7B_downloaded/tokenizer.json
+    --tokenizer-model ./model_from_hf/Aquila-7B/tokenizer.json
 ```
 
 任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
 ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+
 ```shell
-cd ModelLink/
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 python tools/checkpoint/util.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ../HF_Aquila7B-v0.1-pt8-pp1 \
+    --load-dir ./model_weights/Aquila-7B-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ../HF_Aquila7B_downloaded     # <-- 需要填入原始HF模型路径，新权重会存于../HF_Aquila7B_downloaded/mg2hg
+    --save-dir ./model_from_hf/Aquila-7B/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Aquila-7B/mg2hg/
 ```
 
 6. 配置 Aquila-7B 预训练脚本
 
 需要在预训练脚本中配置相关参数
+
 ```shell
-# 修改数据集路径，权重路径，词表路径等
-TOKENIZER_PATH=./HF_Aquila7B_downloaded  #tokenizer 路径
-DATA_PATH=./dataset/aquila_text_document  #数据集 路径
-CKPT_LOAD_DIR=./model_weights/aquila
-CKPT_SAVE_DIR=./ckpt
+# 根据实际情况配置词表、数据集、模型参数保存路径
+TOKENIZER_PATH="./model_from_hf/Aquila-7B/"  #tokenizer 路径
+DATA_PATH="./dataset/Aquila-7B/alpaca_text_document"  #数据集 路径
+CKPT_LOAD_DIR="./model_weights/Aquila-7B-v0.1-tp8-pp1/"
+CKPT_SAVE_DIR="./ckpt/Aquila-7B/"
 # 如果不需要保存权重，就不需要设置CKPT_SAVE_DIR, 并且启动脚本里应不使用 `--save` 参数
 # 如果需要保存权重，则需要设置CKPT_SAVE_DIR, 并且启动脚本里应使用 `--save $CKPT_SAVE_DIR` 进行类似配置。
 
@@ -144,12 +144,14 @@ CKPT_SAVE_DIR=./ckpt
 7. 启动 Aquila-7B 预训练脚本
 
 运行预训练脚本前，需先执行set_env.sh脚本以便设置环境参数，或者也可将其放入预训练脚本中执行。
+
 ```shell
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 ```
 
 按以下方式启动Aquila-7B预训练：
+
 ```shell
 bash examples/aquila/pretrain_aquila_7b_ptd.sh
 ```
@@ -159,6 +161,7 @@ bash examples/aquila/pretrain_aquila_7b_ptd.sh
 ### 性能
 
 #### 吞吐
+
 Aquila-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 | 设备 | 硬件           | 模型       | 迭代数| token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) |
@@ -178,11 +181,12 @@ Aquila-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 ```shell
 # 请按实际情况修改模型权重路径和分词器路径
-CKPT_LOAD_DIR="./model_weights/aquila/"
-TOKENIZER_PATH="./HF_Aquila7B_downloaded/"
+CKPT_LOAD_DIR="./model_weights/Aquila-7B-v0.1-tp8-pp1/"
+TOKENIZER_PATH="./model_from_hf/Aquila-7B/"
 ```
 
 启动Aquila-7B推理:
+
 ```shell
 bash ./tasks/inference/generate_aquila_7b_ptd.sh
 ```
@@ -193,7 +197,6 @@ Aquila-7B:
 
 ![aquila-7B_generate.png](../../sources/images/aquila/aquila_7B_generate_ptd_0205.png)
 
-
 ## 评估
 
 我们使用 BoolQ benchmark 来评估我们的模型。在[Benchmark下载页面](https://github.com/google-research-datasets/boolean-questions)找到[数据集](https://storage.cloud.google.com/boolq/dev.jsonl)下载后保存。例如，保存在ModelLink/boolq/test目录下。
@@ -203,13 +206,14 @@ Aquila-7B:
 权重转换完成后，我们配置Aquila-7B评估脚本 `tasks/evaluation/evaluate_aquila_7b_ptd.sh`，需要正确指定加载权重的路径，词表路径，评估数据的路径，以及评估任务的名字等(下面样例仅供参考)：
 
 ```shell
-CKPT_LOAD_DIR="./model_weights/aquila/"
-TOKENIZER_PATH="./HF_Aquila7B_downloaded/"
+CKPT_LOAD_DIR="./model_weights/Aquila-7B-v0.1-tp8-pp1/"
+TOKENIZER_PATH="./model_from_hf/Aquila-7B/"
 EVAL_DATA_PATH="./boolq/test"
 TASK="boolq"
 ```
 
 启动Aquila-7B评估
+
 ```shell
 bash tasks/evaluation/evaluate_aquila_7b_ptd.sh
 ```
