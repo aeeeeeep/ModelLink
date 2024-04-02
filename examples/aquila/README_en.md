@@ -1,4 +1,5 @@
 # Aquila-7B
+
 <p align="left">
         <b><a href="README.md">简体中文</a></b> |
         <b>English</b> 
@@ -11,26 +12,28 @@
     - [Performance](#performance)
       - [Machine performance](#machine-performance)
   - [Inference](#inference)
-  - [Evaluation](#evaluation-with-benchmark)
+  - [Evaluation with Benchmark](#evaluation-with-benchmark)
 
 ## Training
 
 Here's a hardware summary of pre-training Aquila-7B:
 
-| Hardware | Device |      Value       |
-|:--------:|:------:|:----------------:|
-|   NPU    |  A+K   | 8 x Ascend NPUs  |
+| Hardware | Device |      Value      |
+| :------: | :----: | :-------------: |
+|   NPU   |  A+K  | 8 x Ascend NPUs |
 
 ### Script
 
 1. Clone the repository to your local server and switch to modellink branch:
+
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git
 cd ModelLink
 mkdir logs
+mkdir model_from_hf
+mkdir dataset
 mkdir ckpt
 ```
-
 
 2. Build conda environment
 
@@ -53,16 +56,13 @@ cd ModelLink/
 pip install -r requirements.txt
 ```
 
-
 3. Download the Aquila-7B model, config, and tokenizer from [here](https://huggingface.co/BAAI/Aquila-7B/tree/main)
 
 save to ModelLink/HF_Aquila7B_downloaded/ directory.
 
-
 4. Prepare dataset.
 
 step1: Download the datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet), save to ModelLink/dataset/ directory.
-
 
 ```shell
 cd dataset/
@@ -70,17 +70,15 @@ wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00
 cd ..
 ```
 
-
 step2: use Aquila-7B specified tokenizer to pre-process data:
-
 
 ```shell
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-cd ModelLink/
+mkdir ./dataset/Aquila-7B/
 python ./tools/preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ./HF_Aquila7B_downloaded \
-    --output-prefix ./dataset/aquila \
+    --tokenizer-name-or-path ./model_from_hf/Aquila-7B/ \
+    --output-prefix ./dataset/Aquila-7B/alpaca \
     --workers 4 \
     --log-interval 1000  \
     --tokenizer-type PretrainedFromHF
@@ -92,48 +90,47 @@ HuggingFace weights --> Megatron weights
 ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 
 ```shell
-cd ModelLink
-mkdir model_weights
 # please modify the path to set_env.sh based on your environment.
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 python tools/checkpoint/util.py \
     --model-type GPT \
-    --load-dir ./HF_Aquila7B_downloaded \
-    --save-dir ./model_weights/aquila \
+    --load-dir ./model_from_hf/Aquila-7B/ \
+    --save-dir ./model_weights/Aquila-7B-v0.1-tp8-pp1/ \
     --loader llama2_hf \
     --saver megatron \
     --target-tensor-parallel-size 8 \
-    --tokenizer-model ./HF_Aquila7B_downloaded/tokenizer.json
+    --tokenizer-model ./model_from_hf/Aquila-7B/tokenizer.json
 ```
 
 Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
 ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+
 ```shell
-cd ModelLink/
 # Modify the ascend-toolkit path
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 python tools/checkpoint/util.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ../HF_Aquila7B-v0.1-pt8-pp1 \
+    --load-dir ./model_weights/Aquila-7B-v0.1-tp8-pp1/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ../HF_Aquila7B_downloaded   # <-- Fill in the original HF model path here, new weights will be saved in ../HF_Aquila7B_downloaded/mg2hg
+    --save-dir ./model_from_hf/Aquila-7B/   # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Aquila-7B/mg2hg/
 ```
-
 
 6. Config Aquila-7B pre-training script.
 
-Config the environment variables in aquila pretrain script 
+Config the environment variables in aquila pretrain script
+
 ```shell
 # set dataset path, CKPT load path for loading weights, and the tokenizer path
-TOKENIZER_PATH=./HF_Aquila7B_downloaded  #tokenizer path
-DATA_PATH=./dataset/aquila_text_document  #processed dataset
-CKPT_LOAD_DIR=./model_weights/aquila   # pointing to the converted model weights
-CKPT_SAVE_DIR=./ckpt                   # pointing to the path to save checkpoints
+TOKENIZER_PATH="./model_from_hf/Aquila-7B/"  #tokenizer path
+DATA_PATH="./dataset/Aquila-7B/alpaca_text_document"  #processed dataset
+CKPT_LOAD_DIR="./model_weights/Aquila-7B-v0.1-tp8-pp1/"   # pointing to the converted model weights
+CKPT_SAVE_DIR="./ckpt/Aquila-7B/"                   # pointing to the path to save checkpoints
 ```
+
 *Note that if you do not load weights for pre-training, you can ignore CKPT_LOAD_DIR, and remove the `--load` parameter from the training script, and vice versa*
 *If you do not want to save weights during pre-training, you can ignore CKPT_SAVE_DIR, and remove the `--save $CKPT_SAVE_DIR` parameter from the training script, and vice versa*
 *When you want to save checkpoint and load it in future pre-training, just follow the above "save" and "load" suggestions.*
@@ -148,6 +145,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 ```
 
 Start pre-training Aquila-7B model:
+
 ```shell
 bash examples/aquila/pretrain_aquila_7b_ptd.sh
 ```
@@ -155,15 +153,15 @@ bash examples/aquila/pretrain_aquila_7b_ptd.sh
 **Note**: If using multi machine training, it is necessary to set up multi machine data sharing, and non primary nodes can read the primary node data through data sharing. Alternatively, directly copy the data generated by the master node to non master nodes.
 
 ### Performance
+
 #### Machine performance
+
 The performance of Aquila-7B in Ascend NPU and reference device:
 
-| Device | Hardware           | Model       | Iterations | throughput rate (tokens/p/s) | single iteration step time (s/step) |
-|------|---------------|------------|------|------------------------|----------------------|
-| NPU  | 910b 1node*8p | Aquila-7B  | 1000 | 2849                  | 5.75                  |
-| Reference  |              | Aquila-7B  | 1000 | 2874                   |    5.70               |
-
-
+| Device    | Hardware      | Model     | Iterations | throughput rate (tokens/p/s) | single iteration step time (s/step) |
+| --------- | ------------- | --------- | ---------- | ---------------------------- | ----------------------------------- |
+| NPU       | 910b 1node*8p | Aquila-7B | 1000       | 2849                         | 5.75                                |
+| Reference |               | Aquila-7B | 1000       | 2874                         | 5.70                                |
 
 ## Inference
 
@@ -173,11 +171,12 @@ Inference is different from pre-training because it requires loading the pre-tra
 
 ```shell
 # please change to actual values
-CKPT_LOAD_DIR="./model_weights/aquila/"
-TOKENIZER_PATH="./HF_Aquila7B_downloaded/"
+CKPT_LOAD_DIR="./model_weights/Aquila-7B-v0.1-tp8-pp1/"
+TOKENIZER_PATH="./model_from_hf/Aquila-7B/"
 ```
 
 Start Aquila-7B Inference:
+
 ```shell
 bash ./tasks/inference/generate_aquila_7b_ptd.sh
 ```
@@ -185,7 +184,6 @@ bash ./tasks/inference/generate_aquila_7b_ptd.sh
 Sample results of Aquila-7B Inference:
 
 ![aquila-7B_generate.png](../../sources/images/aquila/aquila_7B_generate.png)
-
 
 ## Evaluation with Benchmark
 
@@ -196,19 +194,20 @@ Evaluation task is similar to inference task too，it also requires loading the 
 After weight conversion is complete, we configure the Aquila-7B evaluation script `tasks/evaluation/evaluate_aquila_7b_ptd.sh`. We need to correctly specify the path to load weights, the path to tokenizer and vocab, and so on (the following example is for reference only)
 
 ```shell
-    CKPT_LOAD_DIR="./model_weights/aquila/"
-    TOKENIZER_PATH="./HF_Aquila7B_downloaded/"
-    EVAL_DATA_PATH="./boolq/test"
-    TASK="boolq"
+CKPT_LOAD_DIR="./model_weights/Aquila-7B-v0.1-tp8-pp1/"
+TOKENIZER_PATH="./model_from_hf/Aquila-7B/"
+EVAL_DATA_PATH="./boolq/test"
+TASK="boolq"
 ```
 
 Start evaluation task
+
 ```shell
 bash ./tasks/evaluation/evaluate_aquila_7b_ptd.sh
 ```
 
 Sample Aquila-7B performance running in **Ascend NPU**:
 
-| Task                                                                   | Model     | NPU | Benchmark |
-|------------------------------------------------------------------------|------------|------|------|
-| [BoolQ](https://github.com/google-research-datasets/boolean-questions) | Aquila-7B  | 77.3% |     |
+| Task                                                                   | Model     | NPU   | Benchmark |
+| ---------------------------------------------------------------------- | --------- | ----- | --------- |
+| [BoolQ](https://github.com/google-research-datasets/boolean-questions) | Aquila-7B | 77.3% |           |
