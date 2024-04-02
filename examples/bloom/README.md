@@ -20,7 +20,7 @@ Bloom-7B 训练的硬件配置如下：
 
 ### 脚本
 
-1. 拷贝仓库到你的个人服务器：
+1. 克隆仓库到本地服务器：
 
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git
@@ -227,7 +227,7 @@ Bloom-176B 训练的硬件配置:
 
 ## 脚本
 
-1. 将仓库拉取到个人服务器
+1. 克隆仓库到本地服务器
 
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git

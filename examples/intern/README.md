@@ -33,7 +33,7 @@ InternLM-7B 训练的硬件配置如下:
 
 ### 脚本
 
-1. 拷贝仓库到本地服务器
+1. 克隆仓库到本地服务器
 
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git
@@ -218,7 +218,7 @@ InternLM-65B 训练的硬件配置如下:
 
 ### 脚本
 
-1. 拷贝仓库到本地服务器
+1. 克隆仓库到本地服务器
 
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git

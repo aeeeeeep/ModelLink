@@ -6,29 +6,29 @@
 
 #  Contents
 
-- [LLaMA2-7B](#contents)
-  - [Training](#pre-training)
-  - [Script](#script)
-  - [Performance](#performance)
-    - [Machine performance](#machine-performance)
-  - [Inference](#Inference-7B)
-  - [Evaluation](#Evaluation-7B)
-
-- [LLaMA2-13B](#contents)
-  - [Training](#pre-training)
+- [LLaMA](#llama)
+- [Contents](#contents)
+- [LLAMA2-7B](#llama2-7b)
+  - [Training](#training)
     - [Script](#script)
     - [Performance](#performance)
       - [Machine performance](#machine-performance)
-    - [Inference](#Inference)
-    - [Evaluation](#Evaluation)
-
-- [LLaMA2-34B/70B](#LLaMA2-34b/70b)
-  - [Training](#training-2)
-    - [Script](#script-2)
-    - [Performance](#performance-2)
-      - [Machine performance](#machine-performance-2)
-  - [Inference](#inference-2)
-  - [Evaluation](#Evaluation-2)
+  - [Inference-7B](#inference-7b)
+  - [Evaluation-7B](#evaluation-7b)
+- [LLaMA2-13B](#llama2-13b)
+  - [Training](#training-1)
+    - [Script](#script-1)
+    - [Performance](#performance-1)
+      - [Machine performance](#machine-performance-1)
+  - [Inference](#inference)
+  - [Evaluation](#evaluation)
+- [LLaMA2-34B/70B](#llama2-34b70b)
+  - [Training-2](#training-2)
+    - [Script-2](#script-2)
+    - [Performance-2](#performance-2)
+      - [Machine performance-2](#machine-performance-2)
+  - [Inference-2](#inference-2)
+  - [Evaluation-2](#evaluation-2)
 
 # LLAMA2-7B
 
@@ -505,7 +505,7 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
    # process datasets  
    mkdir ./dataset/Llama-2-13b-hf/
    python ./tools/preprocess_data.py \
-       --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+       --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
        --tokenizer-name-or-path ./model_from_hf/Llama-2-13b-hf/ \
        --output-prefix ./dataset/Llama-2-13b-hf/alpaca \
        --workers 4 \
@@ -548,11 +548,11 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
    cd ..
 
    # process datasets  
-   mkdir ./finetune_dataset/llama-2-13b-hf/
+   mkdir ./finetune_dataset/Llama-2-13b-hf/
    python ./tools/preprocess_data.py \
-     --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-     --tokenizer-name-or-path ./model_from_hf/llama-2-13b-hf \
-     --output-prefix ./finetune_dataset/llama-2-13b-hf/alpaca \
+     --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+     --tokenizer-name-or-path ./model_from_hf/Llama-2-13b-hf \
+     --output-prefix ./finetune_dataset/Llama-2-13b-hf/alpaca \
      --workers 4 \
      --log-interval 1000 \
      --tokenizer-type PretrainedFromHF \
@@ -567,7 +567,7 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
 
    ```bash
    DATA_PATH="./finetune_dataset/llama-2-13b-hf_alpaca"
-   TOKENIZER_PATH="./model_from_hf/llama-2-13b-hf"
+   TOKENIZER_PATH="./model_from_hf/Llama-2-13b-hf"
    CKPT_PATH="./ckpt"
    --load ${CKPT_PATH} \
    --finetune \
@@ -886,7 +886,7 @@ pip install -r requirements.txt
     # process datasets  
     mkdir ./dataset/llama2-70b-hf/
     python ./tools/preprocess_data.py \
-    --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+    --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/llama2-70b-hf/ \
     --output-prefix ./dataset/llama2-70b-hf/alpaca \
     --workers 4 \

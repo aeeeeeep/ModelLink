@@ -24,7 +24,7 @@ Aquila-7B 训练的硬件配置如下:
 
 ### 脚本
 
-1. 克隆git仓库到个人服务器并切换到modellink分支
+1. 克隆仓库到本地服务器并切换到modellink分支
 
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git

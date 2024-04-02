@@ -7,30 +7,29 @@
 
 # 目录
 
-- [LLAMA2-7B](#LLAMA2-7B)
-
+- [LLaMA2](#llama2)
+- [目录](#目录)
+- [LLAMA2-7B](#llama2-7b)
   - [训练](#训练)
-  - [脚本](#脚本)
-  - [性能](#性能)
-    - [吞吐](#吞吐)
-  - [推理](#推理-7B)
-  - [评估](#评估-7B)
-- [LLaMA2-13B](#LLaMA2-13B)
-
-  - [训练](#训练)
-  - [脚本](#脚本)
-  - [性能](#性能)
-    - [吞吐](#吞吐)
+    - [脚本](#脚本)
+    - [性能](#性能)
+      - [吞吐](#吞吐)
+  - [推理-7B](#推理-7b)
+  - [评估-7B](#评估-7b)
+- [LLaMA2-13B](#llama2-13b)
+  - [训练](#训练-1)
+    - [脚本](#脚本-1)
+    - [性能](#性能-1)
+      - [吞吐](#吞吐-1)
   - [推理](#推理)
   - [评估](#评估)
-- [LLaMA2-34B/70B](#LLaMA2-34B/70B)
-
-  - [训练](#训练-2)
-    - [脚本](#脚本-2)
-    - [性能](#性能-2)
-      - [吞吐](#吞吐-2)
-  - [推理](#推理-2)
-  - [评估](#评估-2)
+- [LLaMA2-34B/70B](#llama2-34b70b)
+  - [训练-2](#训练-2)
+    - [脚本-2](#脚本-2)
+    - [性能-2](#性能-2)
+      - [吞吐-2](#吞吐-2)
+  - [推理-2](#推理-2)
+  - [评估-2](#评估-2)
 
 # LLAMA2-7B
 
@@ -44,7 +43,7 @@ LLAMA2-7B 训练的硬件配置:
 
 ### 脚本
 
-1. 拷贝代码仓到本地服务器
+1. 克隆仓库到本地服务器
 
    ```shell
    git clone https://gitee.com/ascend/ModelLink.git 
@@ -191,7 +190,7 @@ python tools/checkpoint/convert_ckpt.py \
    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
    cd ..
 
-   # 处理微调数据集    
+   # 处理微调数据集  
    mkdir ./finetune_dataset/llama-2-7b-hf/
    python ./tools/preprocess_data.py \
      --input ./dataset/ train-00000-of-00001-a09b74b3ef9c3b56.parquet \
@@ -391,7 +390,7 @@ LLaMA2-13B 训练的硬件配置:
 
 ### 脚本
 
-1. 拷贝代码仓到本地服务器
+1. 克隆仓库到本地服务器
 
    ```shell
    git clone https://gitee.com/ascend/ModelLink.git 
@@ -486,10 +485,10 @@ python tools/checkpoint/convert_ckpt.py \
      wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
      cd ..
 
-     # 处理数据      
+     # 处理数据    
      mkdir ./dataset/Llama-2-13b-hf/
      python ./tools/preprocess_data.py \
-       --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+       --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
        --tokenizer-name-or-path ./model_from_hf/Llama-2-13b-hf/ \
        --output-prefix ./dataset/Llama-2-13b-hf/alpaca \
        --workers 4 \
@@ -534,11 +533,11 @@ python tools/checkpoint/convert_ckpt.py \
    cd ..
 
    # 处理微调数据集
-   mkdir ./finetune_dataset/llama-2-13b-hf/
+   mkdir ./finetune_dataset/Llama-2-13b-hf/
    python ./tools/preprocess_data.py \
-     --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-     --tokenizer-name-or-path ./model_from_hf/llama-2-13b-hf \
-     --output-prefix ./finetune_dataset/llama-2-13b-hf/alpaca \
+     --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+     --tokenizer-name-or-path ./model_from_hf/Llama-2-13b-hf \
+     --output-prefix ./finetune_dataset/Llama-2-13b-hf/alpaca \
      --workers 4 \
      --log-interval 1000 \
      --tokenizer-type PretrainedFromHF \
@@ -552,9 +551,9 @@ python tools/checkpoint/convert_ckpt.py \
    增加微调参数--finetune，增加预训练权重加载参数--load，使微调从第一步开始。修改tokenizer参数，去掉--tokenizer-type Llama2Tokenizer 和--tokenizer-model ${TOKENIZER_MODEL}，更改为以下参数：
 
    ```bash
-   DATA_PATH="./finetune_dataset/llama-2-13b-hf_alpaca"
-   TOKENIZER_PATH="./model_from_hf/llama-2-13b-hf"
-   CKPT_PATH="./ckpt"
+   DATA_PATH="./finetune_dataset/Llama-2-13b-hf/alpaca"
+   TOKENIZER_PATH="./model_from_hf/Llama-2-13b-hf"
+   CKPT_PATH="./ckpt/Llama-2-13b-hf/"
    --load ${CKPT_PATH} \
    --finetune \
    --is-instruction-dataset \
@@ -678,7 +677,7 @@ LLaMA2-34B/70B 训练的硬件配置:
 
 ### 脚本-2
 
-1. 拷贝仓库到本地服务器:
+1. 克隆仓库到本地服务器:
 
    ```shell
    git clone https://gitee.com/ascend/ModelLink.git 
@@ -874,7 +873,7 @@ python tools/checkpoint/convert_ckpt.py \
    # 处理数据集  
    mkdir ./dataset/llama2-70b-hf/
    python ./tools/preprocess_data.py \
-   --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+   --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
    --tokenizer-name-or-path ./model_from_hf/llama2-70b-hf/ \
    --output-prefix ./dataset/llama2-70b-hf/alpaca \
    --workers 4 \
