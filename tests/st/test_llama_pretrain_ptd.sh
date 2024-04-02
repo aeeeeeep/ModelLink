@@ -73,3 +73,4 @@ python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS \
       --eval-iters 1
 
 rm -rf $CHECKPOINT_PATH
+exit $?

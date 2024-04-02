@@ -6,11 +6,15 @@ from pathlib import Path
 import torch
 
 from ascendspeed import megatron_adaptor
+from utils import judge_expression
 import modellink
+from tests.pipeline.common import DistributedTest
 
 
-class TestConvertCkptFromHuggingface(unittest.TestCase):
-    def setUp(self):
+class TestConvertCkptFromHuggingface(DistributedTest):
+    world_size = 1
+
+    def setup_method(self):
         # configure params, the index starts from 1
         sys.argv = [
             sys.argv[0],
@@ -31,8 +35,8 @@ class TestConvertCkptFromHuggingface(unittest.TestCase):
         for file_name in os.listdir(sys.argv[10]):
             if file_name.endswith(".bin"):
                 bin_file += 1
-        self.assertEqual(bin_file, 2)
-        self.assertTrue(os.path.exists(os.path.join(sys.argv[10], "pytorch_model.bin.index.json")))
+        judge_expression(bin_file == 2)
+        judge_expression(os.path.exists(os.path.join(sys.argv[10], "pytorch_model.bin.index.json")))
     
     def test_convert_weights_form_huggingface(self):
         """
@@ -49,22 +53,18 @@ class TestConvertCkptFromHuggingface(unittest.TestCase):
         weight_common_content = weight_content['model']['language_model'] # extract commmon content
 
         # embedding, encoder, output_layer is three out layers.
-        self.assertEqual(len(os.listdir(output_dir)), int(sys.argv[8]))
-        self.assertEqual(weight_common_content['embedding']['word_embeddings']['weight'].size(), torch.Size([4000, 4096]))
-        self.assertEqual(weight_common_content['encoder']['final_norm.weight'].size(), torch.Size([4096]))
+        judge_expression(len(os.listdir(output_dir)) == int(sys.argv[8]))
+        judge_expression(weight_common_content['embedding']['word_embeddings']['weight'].size() == torch.Size([4000, 4096]))
+        judge_expression(weight_common_content['encoder']['final_norm.weight'].size() == torch.Size([4096]))
 
         # encoder has a common final_norm and each one has folliowing six layers
         weight_common_content['encoder'].pop('final_norm.weight')
-        self.assertEqual(len(weight_common_content['encoder']) / 6, 32)
-        self.assertEqual(weight_common_content['encoder']['layers.0.self_attention.query_key_value.weight'].size(), torch.Size([1536, 4096]))
-        self.assertEqual(weight_common_content['encoder']['layers.0.self_attention.dense.weight'].size(), torch.Size([4096, 512]))
-        self.assertEqual(weight_common_content['encoder']['layers.0.mlp.dense_h_to_4h.weight'].size(), torch.Size([2752, 4096]))
-        self.assertEqual(weight_common_content['encoder']['layers.0.mlp.dense_4h_to_h.weight'].size(), torch.Size([4096, 1376]))
-        self.assertEqual(weight_common_content['encoder']['layers.0.input_norm.weight'].size(), torch.Size([4096]))
-        self.assertEqual(weight_common_content['encoder']['layers.0.post_attention_norm.weight'].size(), torch.Size([4096]))
+        judge_expression(len(weight_common_content['encoder']) / 6 == 32)
+        judge_expression(weight_common_content['encoder']['layers.0.self_attention.query_key_value.weight'].size() == torch.Size([1536, 4096]))
+        judge_expression(weight_common_content['encoder']['layers.0.self_attention.dense.weight'].size() == torch.Size([4096, 512]))
+        judge_expression(weight_common_content['encoder']['layers.0.mlp.dense_h_to_4h.weight'].size() == torch.Size([2752, 4096]))
+        judge_expression(weight_common_content['encoder']['layers.0.mlp.dense_4h_to_h.weight'].size() == torch.Size([4096, 1376]))
+        judge_expression(weight_common_content['encoder']['layers.0.input_norm.weight'].size() == torch.Size([4096]))
+        judge_expression(weight_common_content['encoder']['layers.0.post_attention_norm.weight'].size() == torch.Size([4096]))
 
-        self.assertEqual(weight_common_content['output_layer']['weight'].size(), torch.Size([4000, 4096]))
-
-
-if __name__ == "__main__":
-    unittest.main()
+        judge_expression(weight_common_content['output_layer']['weight'].size() == torch.Size([4000, 4096]))

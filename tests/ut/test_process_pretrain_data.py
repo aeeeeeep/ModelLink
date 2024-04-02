@@ -1,8 +1,10 @@
 import unittest
 import sys
 import os
+import math
 
 from ascendspeed import megatron_adaptor
+from utils import judge_expression
 import modellink
 
 from modellink.tokenizer import build_tokenizer
@@ -10,10 +12,13 @@ from modellink.tokenizer.tokenizer import _AutoTokenizer
 from modellink.data.data_handler import GeneralPretrainHandler
 from modellink.data.data_handler import build_dataset, get_dataset_handler
 from tools.preprocess_data import get_args, build_splitter
+from tests.pipeline.common import DistributedTest
 
 
-class TestProcessPretrainData(unittest.TestCase):
-    def setUp(self):
+class TestProcessPretrainData(DistributedTest):
+    world_size = 1
+
+    def setup_method(self):
         sys.argv = [
             sys.argv[0],
             "--input", "/home/dataset/ci_engineering/train-00000-of-00001-a09b74b3ef9c3b56.parquet",
@@ -39,11 +44,11 @@ class TestProcessPretrainData(unittest.TestCase):
             the eos append
             ...(If missed something else, welcome to add)
         """
-        self.assertIsInstance(self.tokenizer, _AutoTokenizer)
-        self.assertEqual(self.tokenizer.vocab_size, 32000)
-        self.assertEqual(self.tokenizer.tokenize('bug'), [1, 6494])
-        self.assertEqual(self.tokenizer.detokenize(23961), 'Ukraine')
-        self.assertEqual(self.tokenizer.detokenize(self.tokenizer.eos), '</s>')
+        judge_expression(isinstance(self.tokenizer, _AutoTokenizer))
+        judge_expression(self.tokenizer.vocab_size == 32000)
+        judge_expression(self.tokenizer.tokenize('bug') == [1, 6494])
+        judge_expression(self.tokenizer.detokenize(23961) == 'Ukraine')
+        judge_expression(self.tokenizer.detokenize(self.tokenizer.eos) == '</s>')
     
     def test_build_splitter(self):
         """
@@ -55,16 +60,16 @@ class TestProcessPretrainData(unittest.TestCase):
         """
         Test the raw_dataset, need to test number of columns and rows
         """
-        self.assertEqual(len(self.raw_dataset.__getitem__("instruction")), 52002)
-        self.assertEqual(len(self.raw_dataset.__getitem__("input")), 52002)
-        self.assertEqual(len(self.raw_dataset.__getitem__("output")), 52002)
-        self.assertEqual(len(self.raw_dataset.__getitem__("text")), 52002)
+        judge_expression(len(self.raw_dataset.__getitem__("instruction")) == 52002)
+        judge_expression(len(self.raw_dataset.__getitem__("input")) == 52002)
+        judge_expression(len(self.raw_dataset.__getitem__("output")) == 52002)
+        judge_expression(len(self.raw_dataset.__getitem__("text")) == 52002)
     
     def test_get_dataset_handler(self):
         """
         Test if get the right data handler for pretrain
         """
-        self.assertIsInstance(self.handler, GeneralPretrainHandler)
+        judge_expression(isinstance(self.handler, GeneralPretrainHandler))
     
     def test_serialize_to_disk(self):
         """
@@ -83,10 +88,6 @@ class TestProcessPretrainData(unittest.TestCase):
                 if file_path.endswith(".idx"):
                     idx_file += 1
                 total_size += os.path.getsize(file_path)
-        self.assertEqual(bin_file, 1)
-        self.assertEqual(idx_file, 1)
-        self.assertAlmostEqual((total_size / (1024 * 1024)), 13 * 2, delta=1)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        judge_expression(bin_file == 1)
+        judge_expression(idx_file == 1)
+        judge_expression(math.isclose(total_size / (1024 * 1024), 13 * 2, abs_tol=1))
