@@ -66,5 +66,5 @@ torchrun $DISTRIBUTED_ARGS inference.py \
     $GPT_ARGS \
     $MOE_ARGS \
     --distributed-backend nccl \
-    --inference_prompt_type 'mixtral' \
+    --inference-prompt-type llama \
     | tee logs/generate_mixtral.log

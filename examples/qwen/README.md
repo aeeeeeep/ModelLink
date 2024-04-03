@@ -43,7 +43,7 @@ Qwen-7B 训练的硬件配置:
 
 ### 脚本
 
-1. 拷贝代码仓到本地服务器
+1. 克隆仓库到本地服务器
 
    ```shell
    git clone https://gitee.com/ascend/ModelLink.git
@@ -269,7 +269,7 @@ Qwen-14B 训练的硬件配置:
 
 ### 脚本
 
-1. 拷贝代码仓到本地服务器
+1. 克隆仓库到本地服务器
 
    ```shell
    git clone https://gitee.com/ascend/ModelLink.git
@@ -501,7 +501,7 @@ Qwen-72B 训练的硬件配置:
 
 ### 脚本
 
-1. 拷贝代码仓到本地服务器
+1. 克隆仓库到本地服务器
 
    ```shell
    git clone https://gitee.com/ascend/ModelLink.git
