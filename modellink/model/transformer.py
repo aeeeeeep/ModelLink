@@ -118,7 +118,7 @@ def parallel_transformer_init(self, config,
                  drop_path_rate=0.0):
     args = get_args()
     super(ParallelTransformer, self).__init__()
-    if args.use_unpad:
+    if hasattr(args, "use_unpad") and args.use_unpad:
         self.use_unpad = args.use_unpad
         from ascendspeed.ops.unpad_gen_attention_mask import UnpadGenAttentionMask
         from ascendspeed.ops.unpad_seqlen import UnpadSeqLen
