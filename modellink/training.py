@@ -30,6 +30,7 @@ from megatron import get_timers
 from megatron import update_num_microbatches
 from megatron import get_signal_handler
 from megatron import get_tensorboard_writer
+from megatron import get_wandb_writer
 from megatron.core import mpu, tensor_parallel
 from megatron.initialize import write_args_to_tensorboard
 from megatron.arguments import core_transformer_config_from_args

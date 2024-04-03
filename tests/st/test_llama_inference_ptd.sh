@@ -46,3 +46,4 @@ python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS ${basepath}/inference.py
        --no-masked-softmax-fusion \
        --no-gradient-accumulation-fusion \
        --load $CHECKPOINT_PATH
+exit $?
