@@ -70,6 +70,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     # install AscendSpeed
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
+    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip install -r requirements.txt 
     pip3 install -e .
     cd ..
@@ -428,6 +429,7 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
     # install AscendSpeed
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
+    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip install -r requirements.txt 
     pip3 install -e .
     cd ..
@@ -753,6 +755,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # install AscendSpeed
 git clone https://gitee.com/ascend/AscendSpeed.git
 cd AscendSpeed
+git checkout 224ae35e8fc96778f957029d1371ddb623452a50
 pip install -r requirements.txt 
 pip3 install -e .
 cd ..

@@ -60,6 +60,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # 安装加速库
 git clone https://gitee.com/ascend/AscendSpeed.git
 cd AscendSpeed
+git checkout 224ae35e8fc96778f957029d1371ddb623452a50
 pip install -r requirements.txt
 pip3 install -e .
 cd ..
@@ -139,7 +140,6 @@ LLaMA-7B
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 python tools/checkpoint/util.py \
->>>>>>> e8ae798... !1186 统一权重路径和README样式
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
@@ -495,6 +495,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # 安装加速库
 git clone https://gitee.com/ascend/AscendSpeed.git
 cd AscendSpeed
+git checkout 224ae35e8fc96778f957029d1371ddb623452a50
 pip install -r requirements.txt 
 pip3 install -e .
 cd ..
