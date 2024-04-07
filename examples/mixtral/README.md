@@ -67,6 +67,7 @@
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
+    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip3 install -e .
     cd ..
    ```
