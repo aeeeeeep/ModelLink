@@ -23,7 +23,6 @@ _TRAIN_START_TIME = time.time()
 
 import torch
 import torch_npu
-from peft import LoraConfig, get_peft_model
 
 from megatron import get_args
 from megatron import get_timers
@@ -39,6 +38,7 @@ from megatron.training import (
     training_log, evaluate_and_print_results,
     save_checkpoint_and_time, print_datetime
 )
+import megatron.utils
 from megatron.utils import check_adlr_autoresume_termination
 from megatron.core.distributed import DistributedDataParallel as DDP
 from megatron.core.distributed import finalize_model_grads
@@ -53,6 +53,7 @@ def get_model_wrapper(fn):
         args = get_args()
 
         if is_enable_lora():
+            from peft import LoraConfig, get_peft_model, PeftModel, LoraModel
             config = core_transformer_config_from_args(args)
             lora_config = LoraConfig(
                 r=args.lora_r,
@@ -67,6 +68,10 @@ def get_model_wrapper(fn):
             for model_item in model:
                 model_item = get_peft_model(model_item, lora_config)
                 model_item.print_trainable_parameters()
+            
+            megatron.utils.ALL_MODULE_WRAPPER_CLASSNAMES = tuple(
+                list(megatron.utils.ALL_MODULE_WRAPPER_CLASSNAMES) + [PeftModel, LoraModel]
+            )
 
         return model
     return wrapper

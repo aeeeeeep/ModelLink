@@ -29,14 +29,12 @@ from .data import build_pretraining_data_loader
 from .tokenizer import build_tokenizer
 from .arguments import parse_args_decorator
 from .training import get_model_wrapper, train
-from .utils import ALL_MODULE_WRAPPER_CLASSNAMES
 from .checkpointing import _load_base_checkpoint_wrapper, load_checkpoint_wrapper
 from .initialize import _compile_dependencies
 
 
 def exe_adaptor():
     import megatron
-    megatron.utils.ALL_MODULE_WRAPPER_CLASSNAMES = ALL_MODULE_WRAPPER_CLASSNAMES
     megatron.initialize.parse_args = parse_args_decorator(megatron.initialize.parse_args)
     megatron.initialize._compile_dependencies = _compile_dependencies
     megatron.arguments.parse_args = parse_args_decorator(megatron.arguments.parse_args)
