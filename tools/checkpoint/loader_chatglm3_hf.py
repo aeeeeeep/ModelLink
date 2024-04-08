@@ -49,6 +49,7 @@ def add_arguments(parser):
                     help='Set weight dtype',
                     default='fp16')
 
+
 def verify_transformers_version():
     major, minor, patch = map(int, transformers.__version__.split('.'))
     if major < 4 or minor < 31:
