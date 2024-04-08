@@ -149,9 +149,7 @@ def set_attn_state(args, layer, hf_layer):
 
     attn.dense.weight.data.copy_(hf_attn.dense.weight)
 
-        
-
-
+    
 def set_mlp_state(args, layer, hf_layer):
     '''Set MLP params.'''
 
