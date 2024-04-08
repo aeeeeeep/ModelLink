@@ -83,12 +83,11 @@ ChatGLM3-6B 训练的硬件配置:
      wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model.bin.index.json
      wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/quantization.py
      wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/tokenization_chatglm.py
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/tokenizer.model[README.md](..%2F..%2F..%2F..%2F%CC%E1%BD%BB%B1%B8%B7%DD%B4%FA%C2%EB%2Fchatglm3%2FREADME.md)
+     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/tokenizer.model
      wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/tokenizer_config.json
      cd ../../
    ```
 4. 权重转换
-[README_en.md](..%2F..%2F..%2F..%2F%CC%E1%BD%BB%B1%B8%B7%DD%B4%FA%C2%EB%2Fchatglm3%2FREADME_en.md)
    4.1 将权重从 huggingface 格式转化为 megatron 格式
    ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
