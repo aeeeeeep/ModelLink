@@ -13,11 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from peft import PeftModel, LoraModel
 from megatron import get_args
 
 
 def get_lora_model_classes():
+    from peft import PeftModel, LoraModel
     return PeftModel, LoraModel
 
 

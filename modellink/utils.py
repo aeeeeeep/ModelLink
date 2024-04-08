@@ -19,16 +19,11 @@ import stat
 
 import torch
 
-from peft import PeftModel, LoraModel
 import megatron
-from megatron.core import DistributedDataParallel as DDP
-from megatron.model import Float16Module
 
 
 WRITE_FILE_DEFAULT_FLAGS = os.O_WRONLY | os.O_CREAT
 WRITE_FILE_DEFAULT_MODES = stat.S_IWUSR | stat.S_IRUSR
-
-ALL_MODULE_WRAPPER_CLASSNAMES = (DDP, Float16Module, PeftModel, LoraModel)
 
 
 def parse_args():
