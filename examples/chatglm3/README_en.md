@@ -105,7 +105,8 @@ Here's a hardware summary of pre-training  ChatGLM3-6B:
         --target-pipeline-parallel-size 2 \
         --load-dir ./model_from_hf/chatglm3-6b-hf/ \
         --save-dir ./model_weights/chatglm3-6b-tp2-pp2/ \
-        --tokenizer-model ./model_from_hf/chatglm3-6b-hf/tokenizer.model
+        --tokenizer-model ./model_from_hf/chatglm3-6b-hf/tokenizer.model \
+        --add-qkv-bias
    ```
 
     Note: The --target-tensor-parallel-size of chatglm3 is related to the multi_query_attention configuration in the config.json, and the multi_query_attention set here is 2.
