@@ -38,7 +38,7 @@ from megatron.training import (
     training_log, evaluate_and_print_results,
     save_checkpoint_and_time, print_datetime
 )
-from megatron.utils
+import megatron.utils
 from megatron.utils import check_adlr_autoresume_termination
 from megatron.core.distributed import DistributedDataParallel as DDP
 from megatron.core.distributed import finalize_model_grads
