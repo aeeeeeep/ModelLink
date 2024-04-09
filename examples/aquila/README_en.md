@@ -28,6 +28,11 @@ Here's a hardware summary of pre-training Aquila-7B:
 
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git
+git clone https://github.com/NVIDIA/Megatron-LM.git
+cd Megatron-LM
+git checkout -f bcce6f
+cp -r megatron ../ModelLink/
+cd ..
 cd ModelLink
 mkdir logs
 mkdir model_from_hf
@@ -45,14 +50,18 @@ conda activate test
 pip install torch==2.1.0
 pip install torch_npu-2.1.0.postxxxx-cp38-cp38-xxxx_aarch64.whl
 pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-# use git to clone the AscendSpeed source code, enter the directory, source the set_env.sh file based on your host settings(you may need to change the path), then install ascendspeed package by source code
+
+# source the set_env.sh file based on your host settings(you may need to change the path)
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+# use git to clone the AscendSpeed source code, enter the directory, then install ascendspeed package by source code
 git clone https://gitee.com/ascend/AscendSpeed.git
 cd AscendSpeed/
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-pip install -e ./
+git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+pip install -r requirements.txt
+pip install -e .
+cd ..
 
-# enter the ModelLink/ directory and install other packages
-cd ModelLink/
+# install other packages
 pip install -r requirements.txt
 ```
 

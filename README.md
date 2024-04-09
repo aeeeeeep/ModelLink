@@ -236,9 +236,8 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
 |           torch           |               2.1.0                |
 |         torch_npu         |              release v5.0.0               |
 
-当前仓库使用的megatron commitId为[bcce6f54](https://github.com/NVIDIA/Megatron-LM/tree/bcce6f54e075e3c3374ea67adefe54f3f2da2b07)
 
-【基于最新版本我们实测的性能情况统计如下】
+【基于现版本megatron我们实测的性能情况统计如下】
 
 <table>
   <thead>

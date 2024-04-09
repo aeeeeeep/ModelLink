@@ -46,6 +46,11 @@ Here's a hardware summary of pre-training  Qwen-7B:
 
     ```shell
     git clone https://gitee.com/ascend/ModelLink.git
+    git clone https://github.com/NVIDIA/Megatron-LM.git
+    cd Megatron-LM
+    git checkout -f bcce6f
+    cp -r megatron ../ModelLink/
+    cd ..
     cd ModelLink
     mkdir logs
     mkdir model_from_hf
@@ -67,6 +72,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
     # install AscendSpeed
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
+    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip install -r requirements.txt
     pip install -e .
     cd ..
@@ -275,6 +281,11 @@ Here's a hardware summary of pre-training  Qwen-14B:
 
     ```shell
     git clone https://gitee.com/ascend/ModelLink.git
+    git clone https://github.com/NVIDIA/Megatron-LM.git
+    cd Megatron-LM
+    git checkout -f bcce6f
+    cp -r megatron ../ModelLink/
+    cd ..
     cd ModelLink
     mkdir logs
     mkdir model_from_hf
@@ -296,6 +307,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
     # install AscendSpeed
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
+    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip install -r requirements.txt
     pip install -e .
     cd ..
@@ -510,6 +522,11 @@ Here's a hardware summary of pre-training  Qwen-72B:
 
     ```shell
     git clone https://gitee.com/ascend/ModelLink.git
+    git clone https://github.com/NVIDIA/Megatron-LM.git
+    cd Megatron-LM
+    git checkout -f bcce6f
+    cp -r megatron ../ModelLink/
+    cd ..
     cd ModelLink
     mkdir logs
     mkdir model_from_hf
@@ -531,6 +548,7 @@ Here's a hardware summary of pre-training  Qwen-72B:
     # install AscendSpeed
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
+    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip install -r requirements.txt
     pip install -e .
     cd ..

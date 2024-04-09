@@ -28,6 +28,11 @@ Aquila-7B 训练的硬件配置如下:
 
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git
+git clone https://github.com/NVIDIA/Megatron-LM.git
+cd Megatron-LM
+git checkout -f bcce6f
+cp -r megatron ../ModelLink/
+cd ..
 cd ModelLink
 mkdir logs
 mkdir model_from_hf
@@ -48,15 +53,17 @@ pip install torch_npu-2.1.0.postxxxx-cp38-cp38-xxxx_aarch64.whl
 # 通过PTA上提供的安装包，以whl文件方式安装apex
 pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 
-# 拉取AscendSpeed源代码，进入AscendSpeed目录，source相应的CANN环境文件，然后源码方式安装ascendspeed加速包
-git clone https://gitee.com/ascend/AscendSpeed.git
-cd AscendSpeed/
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-pip install -e ./
+# 拉取AscendSpeed源代码，进入AscendSpeed目录，然后源码方式安装ascendspeed加速包
+git clone https://gitee.com/ascend/AscendSpeed.git
+cd AscendSpeed/
+git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+pip install -r requirements.txt
+pip install -e .
+cd ..
 
-# 进入ModelLink主目录，安装其余依赖包
-cd ModelLink/
+# 安装其余依赖包
 pip install -r requirements.txt
 ```
 
