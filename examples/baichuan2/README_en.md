@@ -39,6 +39,11 @@ Here's a hardware summary of pre-training Baichuan2-7B:
 
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git
+git clone https://github.com/NVIDIA/Megatron-LM.git
+cd Megatron-LM
+git checkout -f bcce6f
+cp -r megatron ../ModelLink/
+cd ..
 cd ModelLink
 mkdir logs
 mkdir model_from_hf
@@ -64,6 +69,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # install AscendSpeed
 git clone https://gitee.com/ascend/AscendSpeed.git
 cd AscendSpeed
+git checkout 224ae35e8fc96778f957029d1371ddb623452a50
 pip install -r requirements.txt 
 pip3 install -e .
 cd ..
@@ -263,6 +269,11 @@ Here's a hardware summary of pre-training Baichuan2-13B:
 
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
+git clone https://github.com/NVIDIA/Megatron-LM.git
+cd Megatron-LM
+git checkout -f bcce6f
+cp -r megatron ../ModelLink/
+cd ..
 cd ModelLink
 mkdir logs
 mkdir model_from_hf
@@ -288,6 +299,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # install AscendSpeed
 git clone https://gitee.com/ascend/AscendSpeed.git
 cd AscendSpeed
+git checkout 224ae35e8fc96778f957029d1371ddb623452a50
 pip install -r requirements.txt 
 pip3 install -e .
 cd ..

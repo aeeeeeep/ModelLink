@@ -237,9 +237,8 @@ For the supported models listed above, we provide training scripts and readme in
 |           torch           |               2.1.0                |
 |         torch_npu         |              release v5.0.0               |
 
-The current repository uses Megatron commitId [bcce6f54](https://github.com/NVIDIA/Megatron-LM/tree/bcce6f54e075e3c3374ea67adefe54f3f2da2b07)
 
-【Based on the latest version, the performance statistics from our testing are as follows】
+【Based on the current version of megatron, the performance statistics from our testing are as follows】
 
 <table>
   <thead>
