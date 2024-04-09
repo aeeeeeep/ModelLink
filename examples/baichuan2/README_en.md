@@ -39,6 +39,11 @@ Here's a hardware summary of pre-training Baichuan2-7B:
 
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git
+git clone https://github.com/NVIDIA/Megatron-LM.git
+cd Megatron-LM
+git checkout -f bcce6f
+cp -r megatron ../ModelLink/
+cd ..
 cd ModelLink
 mkdir logs
 mkdir model_from_hf
@@ -261,6 +266,11 @@ Here's a hardware summary of pre-training Baichuan2-13B:
 
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git 
+git clone https://github.com/NVIDIA/Megatron-LM.git
+cd Megatron-LM
+git checkout -f bcce6f
+cp -r megatron ../ModelLink/
+cd ..
 cd ModelLink
 mkdir logs
 mkdir model_from_hf
