@@ -137,4 +137,9 @@ def _add_network_size_args(parser):
                        default=False,
                        help='set padded vocab size'
                        )
+    group.add_argument('--use-partial-rope',
+                       action='store_true',
+                       help='use partial rope in ChatGLM3.'
+                       )
+    
     return parser

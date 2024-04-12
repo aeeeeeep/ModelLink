@@ -18,13 +18,14 @@ from .model import (
     GPTModel, parallel_transformer_init, seq_length_wrapper,
     norm_wrapper, SwitchMLP, state_dict_for_save_checkpoint_wrapper,
     core_attention_wrapper, core_attention_forward, FlashSelfAttention,
-    ParallelAttention_wrapper
+    ParallelAttention_wrapper, TransformerLanguageModel__init__
 )
 from .core import (vocab_embedding_wrapper, initialize_model_parallel_decorator,
                    destroy_model_parallel_decorator, get_expert_parallel_group,
                    get_expert_parallel_rank, get_expert_model_parallel_rank,
                    get_expert_parallel_world_size, get_expert_model_parallel_world_size,
-                   set_expert_model_parallel_rank, set_expert_model_parallel_world_size)
+                   set_expert_model_parallel_rank, set_expert_model_parallel_world_size,
+                   RotaryEmbedding_forward, apply_rotary_pos_emb)
 from .data import build_pretraining_data_loader
 from .tokenizer import build_tokenizer
 from .arguments import parse_args_decorator
@@ -54,6 +55,7 @@ def exe_adaptor():
         megatron.model.transformer.ParallelTransformer.state_dict_for_save_checkpoint)
     megatron.model.language_model.TransformerLanguageModel.forward = (seq_length_wrapper(
         megatron.model.language_model.TransformerLanguageModel.forward))
+    megatron.model.language_model.TransformerLanguageModel.__init__ = TransformerLanguageModel__init__
 
     megatron.model.transformer.ParallelAttention.__init__ = ParallelAttention_wrapper(
         megatron.model.transformer.ParallelAttention.__init__)
@@ -66,6 +68,9 @@ def exe_adaptor():
         megatron.core.tensor_parallel.layers.VocabParallelEmbedding.forward)
     megatron.core.tensor_parallel.layers.VocabParallelEmbedding.__init__ = norm_wrapper(
         megatron.core.tensor_parallel.layers.VocabParallelEmbedding.__init__)
+    megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.forward = RotaryEmbedding_forward
+    megatron.core.transformer.attention.apply_rotary_pos_emb = apply_rotary_pos_emb
+    megatron.model.transformer.apply_rotary_pos_emb = apply_rotary_pos_emb
 
     set_moe_attr()
     megatron.core.parallel_state.initialize_model_parallel = initialize_model_parallel_decorator(
