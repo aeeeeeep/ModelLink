@@ -101,7 +101,7 @@ def _add_moe_args(parser):
                        help='Scaling coefficient for the z-loss: a starting value of 1e-3 is recommended.')
     group.add_argument('--moe-train-capacity-factor', type=float, default=1.0,
                        help='The capacity of the MoE expert at training time')
-    group.add_argument('--noisy_gate_policy', type=str, default=None,
+    group.add_argument('--noisy-gate-policy', type=str, default=None,
                        help="noisy gate policy, valid options are 'Jitter', 'RSample' or 'None'.")
     return parser
 
