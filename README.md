@@ -291,8 +291,8 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>13B</td>
       <td> 1x8</td>
       <td> BF16 </td>
-      <td> 1533 </td>
-      <td> 872 </td>
+      <td> 1550 </td>
+      <td> 2062 </td>
       <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_13B.sh">训练</a> </td>
     </tr>
     <tr>
