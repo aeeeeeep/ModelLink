@@ -240,7 +240,7 @@ def save_huggingface_qwen(args, model, model_args):
     hf_model.save_pretrained(save_dir)
 
 
-def vocab_padding(margs, orig_tensor, _vocab_size_with_padding):
+def vocab_padding(md, margs, orig_tensor, _vocab_size_with_padding):
     # figure out what our padded vocab size is
     orig_vocab_size = orig_tensor.shape[0]
     margs.padded_vocab_size = _vocab_size_with_padding(md.true_vocab_size, margs)
@@ -456,7 +456,7 @@ def save_model_checkpoint(queue, args):
 
     # Deal with padding
     if md.true_vocab_size is not None:
-        full_word_embed = vocab_padding(margs, orig_word_embed, _vocab_size_with_padding)
+        full_word_embed = vocab_padding(md, margs, orig_word_embed, _vocab_size_with_padding)
     else:
         print("Original vocab size not specified, leaving embedding table as-is. "
               "If you've changed the tensor parallel size this could cause problems.")
@@ -584,7 +584,7 @@ def save_model_checkpoint(queue, args):
                     exit(1)
                 
                 if md.true_vocab_size is not None:
-                    weight = vocab_padding(margs, msg.pop("weight"), _vocab_size_with_padding)
+                    weight = vocab_padding(md, margs, msg.pop("weight"), _vocab_size_with_padding)
                 else:
                     weight = msg.pop("weight")
                 output_layer_weight = torch.chunk(weight, args.target_tensor_parallel_size, dim=0)    
