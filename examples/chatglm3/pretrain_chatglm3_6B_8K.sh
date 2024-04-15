@@ -1,5 +1,5 @@
 #!/bin/bash
-
+export WITHOUT_JIT_COMPILE=1
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 export NPU_ASD_ENABLE=0
 
@@ -44,6 +44,7 @@ GPT_ARGS="
     --disable-bias-linear \
     --add-qkv-bias \
     --position-embedding-type rope \
+    --use-partial-rope \
     --normalization RMSNorm \
     --use-fused-rmsnorm \
     --swiglu \

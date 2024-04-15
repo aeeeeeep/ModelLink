@@ -240,6 +240,30 @@ def save_huggingface_qwen(args, model, model_args):
     hf_model.save_pretrained(save_dir)
 
 
+def vocab_padding(md, margs, orig_tensor, _vocab_size_with_padding):
+    # figure out what our padded vocab size is
+    orig_vocab_size = orig_tensor.shape[0]
+    margs.padded_vocab_size = _vocab_size_with_padding(md.true_vocab_size, margs)
+
+    # Cut out extra padding we don't need
+    if orig_vocab_size > margs.padded_vocab_size:
+        full_word_embed = orig_tensor[0:margs.padded_vocab_size, :]
+
+    # Expanding embedding to larger size by replicating final entry
+    elif orig_vocab_size < margs.padded_vocab_size:
+        padding_size = margs.padded_vocab_size - orig_vocab_size
+
+        full_word_embed = torch.cat((
+            orig_tensor,
+            orig_tensor[-1].unsqueeze(0).expand(padding_size, -1)))
+
+    # Same size!
+    else:
+        full_word_embed = orig_tensor
+
+    return full_word_embed
+
+
 def save_model_checkpoint(queue, args):
 
     # Search in directory above this
@@ -334,7 +358,6 @@ def save_model_checkpoint(queue, args):
                 '--save-interval', '1',
                 '--save', args.save_dir
                 ]
-
     if md.make_vocab_size_divisible_by is not None:
         sys.argv.extend(['--make-vocab-size-divisible-by', str(md.make_vocab_size_divisible_by)])
     if md.params_dtype == torch.float16:
@@ -351,8 +374,8 @@ def save_model_checkpoint(queue, args):
         sys.argv.append('--bert-no-binary-head')
 
     margs = parse_args()
+    margs.make_vocab_size_divisible_by = 1
     margs.w_pack = args.w_pack
-
 
     if hasattr(md, 'checkpoint_args'):
         # These are arguments that we are either changing, or cause problems for validation if they are set
@@ -369,7 +392,7 @@ def save_model_checkpoint(queue, args):
                         'encoder_num_layers', 'encoder_seq_length',
                         'distribute_saved_activations',
                         'train_iters', 'lr_decay_iters', 'lr_warmup_iters', 'lr_warmup_fraction',
-                        'start_weight_decay', 'end_weight_decay']
+                        'start_weight_decay', 'end_weight_decay', 'make_vocab_size_divisible_by']
 
 
         for arg, value in vars(md.checkpoint_args).items():
@@ -433,25 +456,7 @@ def save_model_checkpoint(queue, args):
 
     # Deal with padding
     if md.true_vocab_size is not None:
-        # figure out what our padded vocab size is
-        orig_vocab_size = orig_word_embed.shape[0]
-        margs.padded_vocab_size = _vocab_size_with_padding(md.true_vocab_size, margs)
-
-        # Cut out extra padding we don't need
-        if orig_vocab_size > margs.padded_vocab_size:
-            full_word_embed = orig_word_embed[0:margs.padded_vocab_size, :]
-
-        # Expanding embedding to larger size by replicating final entry
-        elif orig_vocab_size < margs.padded_vocab_size:
-            padding_size = margs.padded_vocab_size - orig_vocab_size
-
-            full_word_embed = torch.cat((
-                orig_word_embed,
-                orig_word_embed[-1].unsqueeze(0).expand(padding_size, -1)))
-
-        # Same size!
-        else:
-            full_word_embed = orig_word_embed
+        full_word_embed = vocab_padding(md, margs, orig_word_embed, _vocab_size_with_padding)
     else:
         print("Original vocab size not specified, leaving embedding table as-is. "
               "If you've changed the tensor parallel size this could cause problems.")
@@ -577,12 +582,17 @@ def save_model_checkpoint(queue, args):
                 if not hasattr(models[0].language_model, 'output_layer'):
                     print("ERROR: got an output layer, but model does not have one")
                     exit(1)
-                output_layer_weight = torch.chunk(msg.pop("weight"), args.target_tensor_parallel_size, dim=0)
+                
+                if md.true_vocab_size is not None:
+                    weight = vocab_padding(md, margs, msg.pop("weight"), _vocab_size_with_padding)
+                else:
+                    weight = msg.pop("weight")
+                output_layer_weight = torch.chunk(weight, args.target_tensor_parallel_size, dim=0)    
+
                 for tp_rank in range(args.target_tensor_parallel_size):
                     models[tp_rank].language_model.output_layer.weight.data.copy_(output_layer_weight[tp_rank])
                 del output_layer_weight
                 check_message(msg)
-
             msg = queue_get()
             if msg != "done" and msg["name"] == "pooler":
                 if not hasattr(models[0].language_model, 'pooler'):
