@@ -171,7 +171,7 @@ python tools/checkpoint/convert_ckpt.py \
 
     # 根据实际情况配置词表、数据集、模型参数保存路径
     CKPT_SAVE_DIR="./ckpt/llama-2-7b-hf/"
-    TOKENIZER_PATH="./model_from_hf/llama-2-7b-hf/tokenizer.model"  #词表路径
+    TOKENIZER_MODEL="./model_from_hf/llama-2-7b-hf/tokenizer.model"  #词表路径
     DATA_PATH="./dataset/llama-2-7b-hf/alpaca_text_document"  #数据集路径
    ```
 
@@ -199,7 +199,7 @@ python tools/checkpoint/convert_ckpt.py \
    # 处理微调数据集  
    mkdir ./finetune_dataset/llama-2-7b-hf/
    python ./tools/preprocess_data.py \
-     --input ./dataset/ train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
      --tokenizer-name-or-path ./model_from_hf/llama-2-7b-hf/ \
      --output-prefix ./finetune_dataset/llama-2-7b-hf/alpaca \
      --workers 4 \
@@ -215,7 +215,7 @@ python tools/checkpoint/convert_ckpt.py \
    增加微调参数--finetune，增加预训练权重加载参数--load，使微调从第一步开始。修改tokenizer参数，去掉--tokenizer-type Llama2Tokenizer 和--tokenizer-model ${TOKENIZER_MODEL}，更改为以下参数：
 
    ```bash
-   DATA_PATH="./finetune_dataset/llama-2-7b-hf_alpaca"
+   DATA_PATH="./finetune_dataset/llama-2-7b-hf/alpaca"
    TOKENIZER_PATH="./model_from_hf/llama-2-7b-hf/"
    CKPT_PATH="./ckpt/llama-2-7b-hf/"
    --load ${CKPT_PATH} \
@@ -518,7 +518,7 @@ python tools/checkpoint/convert_ckpt.py \
     # 根据实际情况配置词表、数据集、模型参数加载和保存路径
     LOAD_CHECKPOINT_PATH="./model_weights/Llama-2-13b-hf-v0.1-tp8-pp1/"
     SAVE_CHECKPOINT_PATH="./ckpt/Llama-2-13b-hf/"
-    TOKENIZER_PATH="./model_from_hf/Llama-2-13b-hf/"  #词表路径
+    TOKENIZER_MODEL="./model_from_hf/Llama-2-13b-hf/tokenizer.model"  #词表路径
     DATA_PATH="./dataset/Llama-2-13b-hf/alpaca_text_document"  #数据集路径
 ```
 
@@ -929,7 +929,7 @@ python tools/checkpoint/convert_ckpt.py \
    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
    # 配置相关路径
-   TOKENIZER_PATH="./model_from_hf/llama2-70b-hf/"  #词表路径
+   TOKENIZER_MODEL="./model_from_hf/llama2-70b-hf/tokenizer.model"  #词表路径
    DATA_PATH="./dataset/llama2-70b-hf/moss_text_document"  #数据集路径
    ```
 
@@ -940,7 +940,7 @@ python tools/checkpoint/convert_ckpt.py \
    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
    # 配置相关路径
-   TOKENIZER_PATH="./model_from_hf/llama2-70b-hf/"  #词表路径
+   TOKENIZER_MODEL="./model_from_hf/llama2-70b-hf/"  #词表路径
    DATA_PATH="./dataset/llama2-70b-hf/moss_text_document"  #数据集路径
    ```
 
@@ -990,7 +990,7 @@ python tools/checkpoint/convert_ckpt.py \
    增加微调参数--finetune，增加预训练权重加载参数--load，使微调从第一步开始。修改tokenizer参数，去掉--tokenizer-type Llama2Tokenizer 和--tokenizer-model ${TOKENIZER_MODEL}，更改为以下参数：
 
    ```bash
-   DATA_PATH="./finetune_dataset/llama2-70b-hf_alpaca_text_document"
+   DATA_PATH="./finetune_dataset/llama2-70b-hf/alpaca"
    TOKENIZER_PATH="/model_from_hf/llama2-70b-hf/" #词表路径
    CKPT_PATH="./ckpt"
    --load ${CKPT_PATH} \

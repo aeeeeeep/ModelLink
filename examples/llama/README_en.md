@@ -107,10 +107,10 @@ python tools/checkpoint/convert_ckpt.py \
     --model-type GPT \
     --loader llama2_hf \
     --saver megatron \
-    --target-tensor-parallel-size 8 \
-    --target-pipeline-parallel-size 1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 8 \
     --load-dir ./model_from_hf/llama-7b-hf/ \
-    --save-dir ./model_weights/llama-7b-hf-v0.1-tp8-pp1/ \
+    --save-dir ./model_weights/llama-7b-hf-v0.1-tp1-pp8/ \
     --tokenizer-model ./model_from_hf/llama-7b-hf/tokenizer.model
 ```
 
@@ -123,10 +123,10 @@ python tools/checkpoint/convert_ckpt.py \
     --model-type GPT \
     --loader llama2_hf \
     --saver megatron \
-    --target-tensor-parallel-size 8 \
-    --target-pipeline-parallel-size 1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 8 \
     --load-dir ./model_from_hf/llama-13b-hf/ \
-    --save-dir ./model_weights/llama-13b-hf-v0.1-tp8-pp1/ \
+    --save-dir ./model_weights/llama-13b-hf-v0.1-tp1-pp8/ \
     --tokenizer-model ./model_from_hf/llama-13b-hf/tokenizer.model
 ```
 
@@ -143,7 +143,7 @@ python tools/checkpoint/convert_ckpt.py \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ./model_weights/llama-7b-hf-v0.1-tp8-pp1/ \
+    --load-dir ./model_weights/llama-7b-hf-v0.1-tp1-pp8/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --save-dir ./model_from_hf/llama-7b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-7b-hf/mg2hg/
@@ -159,7 +159,7 @@ python tools/checkpoint/convert_ckpt.py \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ./model_weights/llama-13b-hf-v0.1-tp8-pp1/ \
+    --load-dir ./model_weights/llama-13b-hf-v0.1-tp1-pp8/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --save-dir ./model_from_hf/llama-13b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-13b-hf/mg2hg/
@@ -217,7 +217,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # modify script orign dataset path according to your own dataset path
 TOKENIZER_MODEL="./model_from_hf/llama-7b-hf/tokenizer.model"
 DATA_PATH="./dataset/llama/alpaca_text_document"  #processed dataset
-LOAD_CHECKPOINT_PATH="./model_weights/llama-7b-hf-v0.1-tp8-pp1"
+LOAD_CHECKPOINT_PATH="./model_weights/llama-7b-hf-v0.1-tp1-pp8"
 SAVE_CHECKPOINT_PATH="./ckpt/llama-7b-hf/"
 ```
 
@@ -229,7 +229,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # modify script orign dataset path according to your own dataset path
 TOKENIZER_MODEL="./model_from_hf/llama-13b-hf/tokenizer.model"  
 DATA_PATH="./dataset/llama-13b-hf/alpaca_text_document"  #processed dataset
-LOAD_CHECKPOINT_PATH="./model_weights/llama-13b-hf-v0.1-tp8-pp1"
+LOAD_CHECKPOINT_PATH="./model_weights/llama-13b-hf-v0.1-tp1-pp8"
 SAVE_CHECKPOINT_PATH="./ckpt/llama-13b-hf/"
 ```
 
@@ -303,9 +303,9 @@ LLaMA-7B
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # modify script orign dataset path according to your own dataset path
 TOKENIZER_PATH="./model_from_hf/llama-7b-hf/"  #tokenizer path
-DATA_PATH="./finetune_dataset/llama-7b-hf_text_document"  #processed dataset
+DATA_PATH="./finetune_dataset/llama-7b-hf/alpaca"  #processed dataset
 LORA_CHECKPOINT="your lora weight"
-LOAD_CHECKPOINT_PATH="./model_weights/llama-13b-hf-v0.1-tp8-pp1"
+LOAD_CHECKPOINT_PATH="./model_weights/llama-13b-hf-v0.1-tp1-pp8"
 SAVE_CHECKPOINT_PATH="./ckpt/llama-7b-hf/"
 ```
 
@@ -316,7 +316,7 @@ LLaMA-13B
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # modify script orign dataset path according to your own dataset path
 TOKENIZER_PATH="./model_from_hf/llama-13b-hf/"  #tokenizer path
-DATA_PATH="./finetune_dataset/llama-13b-hf_text_document"  #processed dataset
+DATA_PATH="./finetune_dataset/llama-13b-hf/alpaca"  #processed dataset
 LORA_CHECKPOINT="your lora weight"
 LOAD_CHECKPOINT_PATH="your init model load path"
 SAVE_CHECKPOINT_PATH="your model ckpt save path"
@@ -737,7 +737,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # modify script orign dataset path according to your own dataset path
 TOKENIZER_PATH="./model_from_hf/llama-33b-hf/"  #tokenizer path
-DATA_PATH="./finetune_dataset/llama-33b-hf_alpaca_text_document"  #processed dataset
+DATA_PATH="./finetune_dataset/llama-33b-hf/alpaca"  #processed dataset
 LORA_CHECKPOINT="your lora weight"
 LOAD_CHECKPOINT_PATH="./model_weights/llama-33b-hf-v0.1-tp4-pp4/"
 SAVE_CHECKPOINT_PATH="./ckpt/llama-33b-hf/"
@@ -751,7 +751,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # modify script orign dataset path according to your own dataset path
 TOKENIZER_PATH="./model_from_hf/llama-65b-hf/"  #tokenizer path
-DATA_PATH="./finetune_dataset/llama-65b-hf_alpaca_text_document"  #processed dataset
+DATA_PATH="./finetune_dataset/llama-65b-hf/alpaca"  #processed dataset
 LORA_CHECKPOINT="your lora weight"
 LOAD_CHECKPOINT_PATH="./model_weights/llama-65b-hf-v0.1-tp8-pp4/"
 SAVE_CHECKPOINT_PATH="./ckpt/llama-65b-hf/"

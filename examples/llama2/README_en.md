@@ -184,7 +184,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
 
       # modify config according to your own actual situation
       CKPT_SAVE_DIR="./ckpt/llama-2-7b-hf/"
-      TOKENIZER_PATH="./model_from_hf/llama-2-7b-hf/tokenizer.model"  #tokenizer path
+      TOKENIZER_MODEL="./model_from_hf/llama-2-7b-hf/tokenizer.model"  #tokenizer path
       DATA_PATH="./dataset/llama-2-7b-hf/alpaca_text_document"  #processed dataset
     ```
 
@@ -211,7 +211,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     # process datasets  
     mkdir ./finetune_dataset/llama-2-7b-hf/
     python ./tools/preprocess_data.py \
-      --input ./dataset/ train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+      --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
       --tokenizer-name-or-path ./model_from_hf/llama-2-7b-hf/ \
       --output-prefix ./finetune_dataset/llama-2-7b-hf/alpaca \
       --workers 4 \
@@ -227,7 +227,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
    Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
 
    ```bash
-   DATA_PATH="./finetune_dataset/llama-2-7b-hf_alpaca"
+   DATA_PATH="./finetune_dataset/llama-2-7b-hf/alpaca"
    TOKENIZER_PATH="./model_from_hf/llama-2-7b-hf/"
    CKPT_PATH="./ckpt/llama-2-7b-hf/"
    --load ${CKPT_PATH} \
@@ -535,7 +535,7 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
     # modify config according to your own actual situation
     LOAD_CHECKPOINT_PATH="./model_weights/Llama-2-13b-hf-v0.1-tp8-pp1/"
     SAVE_CHECKPOINT_PATH="./ckpt/Llama-2-13b-hf/"
-    TOKENIZER_PATH="./model_from_hf/Llama-2-13b-hf/"  #tokenizer path
+    TOKENIZER_MODEL="./model_from_hf/Llama-2-13b-hf/tokenizer.model"  #tokenizer path
     DATA_PATH="./dataset/Llama-2-13b-hf/alpaca_text_document"  #processed dataset
    ```
 
@@ -578,7 +578,7 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
    Add the fine-tuning parameter `--finetune` and add pretrained-weight load parameter `--load`, so that fine-tuning starts from the first step.
 
    ```bash
-   DATA_PATH="./finetune_dataset/llama-2-13b-hf_alpaca"
+   DATA_PATH="./finetune_dataset/Llama-2-13b-hf/alpaca"
    TOKENIZER_PATH="./model_from_hf/Llama-2-13b-hf"
    CKPT_PATH="./ckpt"
    --load ${CKPT_PATH} \
@@ -942,7 +942,7 @@ pip install -r requirements.txt
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
     # modify script orign dataset path according to your own dataset path
-    TOKENIZER_PATH="./model_from_hf/llama2-70b-hf/"  #tokenizer path
+    TOKENIZER_MODEL="./model_from_hf/llama2-70b-hf/tokenizer.model"  #tokenizer path
     DATA_PATH="./dataset/llama2-70b-hf/alpaca_text_document"  #processed dataset
     ```
 
@@ -953,7 +953,7 @@ pip install -r requirements.txt
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
     # modify script orign dataset path according to your own dataset path
-    TOKENIZER_PATH="./model_from_hf/llama2-70b-hf/"  #tokenizer path
+    TOKENIZER_MODEL="./model_from_hf/llama2-70b-hf/"  #tokenizer path
     DATA_PATH="./dataset/llama2-70b-hf/alpaca_text_document"  #processed dataset
     ```
 
@@ -1002,7 +1002,7 @@ pip install -r requirements.txt
    Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
 
    ```bash
-   DATA_PATH="./finetune_dataset/llama2-70b-hf_alpaca_text_document"
+   DATA_PATH="./finetune_dataset/llama2-70b-hf/alpaca"
    TOKENIZER_PATH="/model_from_hf/llama2-70b-hf/"
    CKPT_PATH="./ckpt"
    --load ${CKPT_PATH} \
