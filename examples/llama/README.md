@@ -109,8 +109,8 @@ python tools/checkpoint/util.py \
     --model-type GPT \
     --loader llama2_hf \
     --saver megatron \
-    --target-tensor-parallel-size 8 \
-    --target-pipeline-parallel-size 1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 8 \
     --load-dir ./model_from_hf/llama-7b-hf/ \
     --save-dir ./model_weights/llama-7b-hf-v0.1-tp8-pp1/ \
     --tokenizer-model ./model_from_hf/llama-7b-hf/tokenizer.model
@@ -129,8 +129,8 @@ python tools/checkpoint/util.py \
     --model-type GPT \
     --loader llama2_hf \
     --saver megatron \
-    --target-tensor-parallel-size 8 \
-    --target-pipeline-parallel-size 1 \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 8 \
     --load-dir ./model_from_hf/llama-13b-hf/ \
     --save-dir ./model_weights/llama-13b-hf-v0.1-tp8-pp1/ \
     --tokenizer-model ./model_from_hf/llama-13b-hf/tokenizer.model
@@ -311,7 +311,7 @@ LLaMA-7B
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # 根据实际情况配置词表、数据集、模型参数保存路径
 TOKENIZER_PATH="./model_from_hf/llama-7b-hf/"  #tokenizer 路径
-DATA_PATH="./finetune_dataset/llama-7b-hf_text_document"  #数据集 路径
+DATA_PATH="./finetune_dataset/llama-7b-hf/alpaca"  #数据集 路径
 LORA_CHECKPOINT="your lora weight"
 LOAD_CHECKPOINT_PATH="./model_weights/llama-13b-hf-v0.1-tp8-pp1"
 SAVE_CHECKPOINT_PATH="./ckpt/llama-7b-hf/"
@@ -324,7 +324,7 @@ LLaMA-13B
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # 根据实际情况配置词表、数据集、模型参数保存路径
 TOKENIZER_PATH="./model_from_hf/llama-13b-hf/"  #tokenizer 路径
-DATA_PATH="./finetune_dataset/llama-13b-hf_text_document"  #数据集 路径
+DATA_PATH="./finetune_dataset/llama-13b-hf/alpaca"  #数据集 路径
 LORA_CHECKPOINT="your lora weight"
 LOAD_CHECKPOINT_PATH="your init model load path"
 SAVE_CHECKPOINT_PATH="your model ckpt save path"
@@ -763,7 +763,7 @@ LLaMA-33B
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # 根据实际情况配置词表、数据集、模型参数保存路径
 TOKENIZER_PATH="./model_from_hf/llama-33b-hf/"  #tokenizer 路径
-DATA_PATH="./finetune_dataset/llama-33b-hf_alpaca_text_document"  #数据集 路径
+DATA_PATH="./finetune_dataset/llama-33b-hf/alpaca"  #数据集 路径
 LORA_CHECKPOINT="your lora weight"
 LOAD_CHECKPOINT_PATH="./model_weights/llama-33b-hf-v0.1-tp4-pp4/"
 SAVE_CHECKPOINT_PATH="./ckpt/llama-33b-hf/"
@@ -776,7 +776,7 @@ LLaMA-65B
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # 根据实际情况配置词表、数据集、模型参数保存路径
 TOKENIZER_PATH="./model_from_hf/llama-65b-hf/"  #tokenizer 路径
-DATA_PATH="./finetune_dataset/llama-65b-hf_alpaca_text_document"  #数据集 路径
+DATA_PATH="./finetune_dataset/llama-65b-hf/alpaca"  #数据集 路径
 LORA_CHECKPOINT="your lora weight"
 LOAD_CHECKPOINT_PATH="./model_weights/llama-65b-hf-v0.1-tp8-pp4/"
 SAVE_CHECKPOINT_PATH="./ckpt/llama-65b-hf/"
