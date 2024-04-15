@@ -24,6 +24,11 @@ Bloom-7B 训练的硬件配置如下：
 
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git
+git clone https://github.com/NVIDIA/Megatron-LM.git
+cd Megatron-LM
+git checkout -f bcce6f
+cp -r megatron ../ModelLink/
+cd ..
 cd ModelLink
 mkdir logs
 mkdir model_from_hf
@@ -231,6 +236,11 @@ Bloom-176B 训练的硬件配置:
 
 ```shell
 git clone https://gitee.com/ascend/ModelLink.git
+git clone https://github.com/NVIDIA/Megatron-LM.git
+cd Megatron-LM
+git checkout -f bcce6f
+cp -r megatron ../ModelLink/
+cd ..
 cd ModelLink
 mkdir logs
 mkdir model_from_hf
