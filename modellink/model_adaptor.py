@@ -18,7 +18,8 @@ from .model import (
     GPTModel, parallel_transformer_init, seq_length_wrapper,
     norm_wrapper, SwitchMLP, state_dict_for_save_checkpoint_wrapper,
     core_attention_wrapper, core_attention_forward, FlashSelfAttention,
-    ParallelAttention_wrapper, TransformerLanguageModel__init__
+    ParallelAttention_wrapper, TransformerLanguageModel__init__,
+    ParallelAttentionForward
 )
 from .core import (vocab_embedding_wrapper, initialize_model_parallel_decorator,
                    destroy_model_parallel_decorator, get_expert_parallel_group,
@@ -59,6 +60,7 @@ def exe_adaptor():
 
     megatron.model.transformer.ParallelAttention.__init__ = ParallelAttention_wrapper(
         megatron.model.transformer.ParallelAttention.__init__)
+    megatron.model.transformer.ParallelAttention.forward = ParallelAttentionForward
     megatron.model.transformer.CoreAttention.__init__ = core_attention_wrapper(
         megatron.model.transformer.CoreAttention.__init__)
     megatron.model.transformer.CoreAttention.forward = core_attention_forward
