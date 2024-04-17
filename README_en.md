@@ -292,8 +292,8 @@ For the supported models listed above, we provide training scripts and readme in
       <td>13B</td>
       <td> 1x8</td>
       <td> BF16 </td>
-      <td> 1533 </td>
-      <td> 872 </td>
+      <td> 1550 </td>
+      <td> 2062 </td>
       <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_13B.sh">train</a> </td>
     </tr>
     <tr>

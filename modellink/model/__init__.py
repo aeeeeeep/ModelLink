@@ -17,7 +17,7 @@ from .gpt_model import GPTModel
 from .transformer import (
     parallel_transformer_init, state_dict_for_save_checkpoint_wrapper,
     core_attention_wrapper, FlashSelfAttention, core_attention_forward,
-    ParallelAttention_wrapper
+    ParallelAttention_wrapper, ParallelAttentionForward
 )
 from .language_model import seq_length_wrapper, TransformerLanguageModel__init__
 from .fused_layer_norm import norm_wrapper
