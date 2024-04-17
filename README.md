@@ -369,16 +369,16 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>7B</td>
       <td>1x8</td>
       <td>BF16 </td>
-      <td> 2884 </td>
-      <td> 2884 </td>
+      <td> 4200 </td>
+      <td> 3850 </td>
       <td> <a href="examples/llama2/pretrain_llama2_7b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
       <td>13B</td>
       <td>1x8</td>
       <td>BF16 </td>
-      <td> 1550 </td>
-      <td> 1750 </td>
+      <td> 1990 </td>
+      <td> 1920 </td>
       <td> <a href="examples/llama2/pretrain_llama2_13B_ptd_8p.sh">训练</a> </td>
     </tr>
     <tr>
