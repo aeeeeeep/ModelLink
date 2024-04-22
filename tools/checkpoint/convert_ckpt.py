@@ -20,7 +20,6 @@ import os
 import sys
 from functools import wraps
 import torch.multiprocessing as mp
-from ascendspeed import megatron_adaptor
 import modellink
 
 

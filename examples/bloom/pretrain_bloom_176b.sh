@@ -50,7 +50,6 @@ GPT_ARGS="
     --lr 1.2e-4 \
     --train-iters 5000 \
     --init-method-std 0.0048 \
-    --optimize-recomp-communication-level 2 \
     --hidden-dropout 0.0 \
     --position-embedding-type alibi \
     --normalization LayerNorm \

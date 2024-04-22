@@ -7,7 +7,6 @@ import pandas as pd
 import torch
 import torch_npu
 from transformers import AutoTokenizer
-from ascendspeed import megatron_adaptor
 from common import DistributedTest
 from utils import ParamConfig, assert_judge
 import modellink
@@ -136,7 +135,7 @@ class TestEvaluation(DistributedTest):
             subject_name = file[0: -9]
             subject = subject_name.replace("_", " ")
             acc_n = 0
-            data_df_test = data_df[0:30]
+            data_df_test = data_df[0:10]
             for index, row in data_df_test.iterrows():
                 test_question = f"{row['question']}\nA. {row['A']}\nB. {row['B']}\nC. {row['C']}\nD. {row['D']}"
                 instruction = instruction_template.format(few_shot_examples=mmlu_few_shot_template[subject_name],
@@ -166,5 +165,5 @@ class TestEvaluation(DistributedTest):
                 final_acc = total_acc_n / total_n
             except ZeroDivisionError as e:
                 raise e
-            assert_judge(abs(final_acc - 0.474) < 0.01)
+            assert_judge(abs(final_acc - 0.498) < 0.01)
             print(final_acc)

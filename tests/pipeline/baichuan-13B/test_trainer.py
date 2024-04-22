@@ -3,7 +3,6 @@ import os
 import torch
 import torch_npu
 from utils import ParamConfig, assert_judge
-from ascendspeed import megatron_adaptor
 import modellink
 from megatron.core.enums import ModelType
 from megatron.core.utils import get_model_config

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from functools import wraps
+import argparse
 
 
 def extra_args_provider_decorator(extra_args_provider):
@@ -44,6 +45,11 @@ def process_args(parser):
     parser = _add_moe_args(parser)
     parser = _add_num_layer_allocation(parser)
     parser = _add_profile_args(parser)
+    parser = _add_network_args(parser)
+    parser = _add_training_args(parser)
+    parser = _add_distributed_args(parser)
+    parser = _add_algorithm_args(parser)
+    parser = _add_alibi_args(parser)
     return parser
 
 
@@ -114,6 +120,21 @@ def _add_data_args(parser):
                        help="Kwargs of the huggingface tokenizer.")
     group.add_argument('--tokenizer-padding-side', type=str, default='right',
             help="tokenizer padding side")
+    group.add_argument('--tokenizer-type', type=str,
+                       default=None,
+                       choices=['BertWordPieceLowerCase',
+                                'BertWordPieceCase',
+                                'GPT2BPETokenizer',
+                                'SentencePieceTokenizer',
+                                'GPTSentencePieceTokenizer',
+                                'Llama2Tokenizer',
+                                'PretrainedFromHF',
+                                'NullTokenizer'],
+                       help='What type of tokenizer to use.')
+    group.add_argument("--tokenizer-name-or-path", type=str, default=None,
+                       help="Name or path of the huggingface tokenizer.")
+    group.add_argument("--tokenizer-not-use-fast", action='store_false',
+                       help="HuggingFace tokenizer not use the fast version.")
 
     return parser
 
@@ -142,4 +163,74 @@ def _add_network_size_args(parser):
                        help='use partial rope in ChatGLM3.'
                        )
     
+    group.add_argument("--use-fused-rmsnorm", action='store_true',
+                       help="Use fused rmsnorm.")
+    group.add_argument("--use-fused-swiglu", action='store_true',
+                       help="Use fused swiglu.")
+    group.add_argument("--use-fused-rotary-pos-emb", action='store_true',
+                       help="Use fused rotary-pos-emb.")
+    return parser
+
+
+def _add_algorithm_args(parser):
+    group = parser.add_argument_group(title='algorithm')
+    group.add_argument('--rotary-base', type=float, help='rotary-base.')
+
+    return parser
+
+
+def _add_network_args(parser):
+    group = parser.add_argument_group(title='network')
+
+    group.add_argument("--add-qkv-bias", action="store_true", default=False,
+                       help='Configuration for the qkv bias.')
+    group.add_argument("--add-dense-bias", action="store_true", default=False,
+                       help='Configuration for the dense bias.')
+    group.add_argument("--skip-bias-add", action="store_false", default=True,
+                       help='Configuration for the skip bias.')
+    return parser
+
+
+def _add_training_args(parser):
+    group = parser.add_argument_group(title='training')
+    group.add_argument('--pre-tockens', type=int, default=65536,
+                       help='pre-tockens is used by Flash attention')
+    group.add_argument('--next-tockens', type=int, default=0,
+                       help='next-tockens is used by Flash attention')
+    group.add_argument('--shape-order', type=str, default='SBH',
+                       choices=['SBH', 'BSH', 'BSND'],
+                       help='input shape order used by Flash attention')
+    return parser
+
+
+def _add_distributed_args(parser):
+    group = parser.add_argument_group(title='distributed')
+
+    group.add_argument('--local-rank', type=int, default=None,
+                       help='Local rank passed from distributed launcher for torch2.x.')
+    return parser
+
+
+def add_parser_argument_choices_value(parser, argument_name, value):
+    if parser._actions:
+        for action in parser._actions:
+            if isinstance(action, argparse._ArgumentGroup):
+                add_parser_argument_choices_value(action, argument_name)
+            elif isinstance(action, argparse.Action) and argument_name in action.option_strings:
+                action.choices.append(value)
+
+
+def _add_alibi_args(parser):
+    add_parser_argument_choices_value(parser, "--position-embedding-type", 'alibi')
+
+    group = parser.add_argument_group(title='alibi')
+    group.add_argument('--square-alibi-mask',
+                       action='store_true',
+                       default=False,
+                       help='attention mask of alibi is squared')
+    group.add_argument('--fill-neg-inf',
+                       action='store_true',
+                       default=False,
+                       help='fill alibi with negative inf')
+
     return parser

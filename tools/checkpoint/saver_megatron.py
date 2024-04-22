@@ -274,7 +274,6 @@ def save_model_checkpoint(queue, args):
     if args.megatron_path is not None:
         sys.path.insert(0, args.megatron_path)
 
-    from ascendspeed import megatron_adaptor
     from megatron.arguments import validate_args
     from modellink.utils import parse_args
     from megatron.checkpointing import save_checkpoint

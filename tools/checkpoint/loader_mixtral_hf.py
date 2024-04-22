@@ -197,7 +197,6 @@ def _load_checkpoint(queue, args):
     if args.megatron_path is not None:
         sys.path.insert(0, args.megatron_path)
     try:
-        from ascendspeed import megatron_adaptor
         import modellink
         from megatron.arguments import validate_args
         from modellink.utils import parse_args
