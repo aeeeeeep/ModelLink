@@ -27,7 +27,6 @@ from megatron.core import tensor_parallel
 from megatron.core import parallel_state
 from megatron.core.enums import ModelType
 from megatron.core.tensor_parallel import get_cuda_rng_tracker
-from megatron.core.models.common.embeddings.rotary_pos_embedding import apply_rotary_pos_emb
 from megatron.core.parallel_state import get_tensor_model_parallel_group
 
 from megatron.model.enums import AttnMaskType, LayerType, AttnType
@@ -37,6 +36,7 @@ from megatron.model.transformer import (
 )
 from megatron.model.utils import get_norm
 
+from modellink.core.models.common.embeddings.rotary_pos_embedding import apply_rotary_pos_emb
 from modellink.error_utils import ensure_valid
 from modellink.model.alibi import Alibi, _build_alibi_tensor, _get_inverted_mask
 from ..tasks.finetune.lora.utils import is_enable_lora

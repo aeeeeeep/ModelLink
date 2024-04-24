@@ -31,6 +31,7 @@ def mock_megatron_dependencies():
 
 def mock_transformer_engine():
     sys.modules['transformer_engine'] = types.ModuleType('transformer_engine')
+    sys.modules['transformer_engine'].__spec__ = 'te'
     setattr(sys.modules['transformer_engine'], 'pytorch', torch.nn)
     setattr(sys.modules['transformer_engine'].pytorch, 'LayerNormLinear', torch.nn.Module)
     setattr(sys.modules['transformer_engine'].pytorch, 'DotProductAttention', torch.nn.Module)
