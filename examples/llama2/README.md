@@ -297,7 +297,7 @@ bash tasks/inference/generate_llama2_7b_lora_ptd.sh
 ## 评估-7B
 
 使用 MMLU数据集评估模型. 数据集下载路径 [这里](https://huggingface.co/datasets/cais/mmlu).
-配置llama2-7B 评估脚本: examples/llama2/evaluate_llama2_7B_ptd.sh
+配置llama2-7B 评估脚本: tasks/evaluation/evaluate_llama2_7B_ptd.sh
 
 ```bash
 # ascend-toolkit 路径
