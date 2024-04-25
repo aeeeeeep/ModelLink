@@ -42,6 +42,7 @@ from ..data import build_pretraining_data_loader
 from ..tokenizer import build_tokenizer
 from ..arguments import parse_args_decorator
 from ..checkpointing import _load_base_checkpoint_wrapper, load_checkpoint_wrapper
+from ..initialize import initialize_megatron
 
 
 def exec_patch():
@@ -99,7 +100,7 @@ def patch_tensor_parallel():
     megatron.core.tensor_parallel.random._set_cuda_rng_state = _set_cuda_rng_state  # default_generators need replace after set_device
     megatron.core.tensor_parallel.cross_entropy._VocabParallelCrossEntropy.forward = _VocabParallelCrossEntropyForward # change masked_target for better performance
     megatron.core.tensor_parallel.layers.VocabParallelEmbedding.forward = vocab_embedding_wrapper(
-        megatron.core.tensor_parallel.layers.VocabParallelEmbedding.forward)
+        VocabParallelEmbeddingForward)
     megatron.core.tensor_parallel.layers.VocabParallelEmbedding.__init__ = norm_wrapper(
         megatron.core.tensor_parallel.layers.VocabParallelEmbedding.__init__)
 
@@ -169,6 +170,7 @@ def patch_initialize():
     megatron.initialize._compile_dependencies = _compile_dependencies  # remove cuda kernel compile
     megatron.initialize.set_jit_fusion_options = set_jit_fusion_options  # remove cuda jit nvfuser
     megatron.initialize.parse_args = parse_args_decorator(megatron.initialize.parse_args)
+    megatron.initialize.initialize_megatron = initialize_megatron
 
 
 def patch_training():

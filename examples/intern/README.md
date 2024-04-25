@@ -312,7 +312,7 @@ python ./tools/preprocess_data.py \
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # 修改数据集，词表，权重等路径
 CKPT_SAVE_DIR="./ckpt/internlm-65b/"
-TOKENIZER_PATH="./model_from_hf/internlm-65b/" #词表路径
+TOKENIZER_PATH="./model_from_hf/internlm-65b/tokenizer.model" #词表路径
 DATA_PATH="./dataset/internlm-65b/alpaca_text_document" #数据集路径
 ```
 
