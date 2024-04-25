@@ -177,6 +177,21 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td>  <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
     </tr>
     <tr>
+      <td rowspan="2"><a href="examples/llama3/README.md">LLaMA3</a></td>
+      <td>8B</td>
+      <td> -- </td>
+      <td> <a href="examples/llama3/generate_llama3_8b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/llama3/evaluate_llama3_8b_ptd.sh">evaluation</a>  </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+    </tr>
+    <tr>
+      <td>70B</td>
+      <td> -- </td>
+      <td> <a href="examples/llama3/generate_llama3_70b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/llama3/evaluate_llama3_70b_ptd.sh">evaluation</a> </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
+    </tr>
+    <tr>
       <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
       <td>7B</td>
       <td> -- </td>
@@ -397,6 +412,23 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 350 </td>
       <td> 339 </td>
       <td> <a href="examples/llama2/pretrain_llama2_70b_ptd.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="2"><a href="examples/llama3/README.md">LLaMA3</a></td>
+      <td>8B</td>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 2275 </td>
+      <td> 2570 </td>
+      <td> <a href="examples/llama3/pretrain_llama3_8b_ptd.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td>70B</td>
+      <td>8x8</td>
+      <td>BF16 </td>
+      <td> 283 </td>
+      <td> -- </td>
+      <td> <a href="examples/llama3/pretrain_llama3_70b_ptd.sh">train</a> </td>
     </tr>
     <tr>
       <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
