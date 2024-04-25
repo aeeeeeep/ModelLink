@@ -307,7 +307,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td>13B</td>
       <td> 1x8</td>
       <td> BF16 </td>
-      <td> 1550 </td>
+      <td> 1668 </td>
       <td> 2062 </td>
       <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_13B.sh">train</a> </td>
     </tr>
@@ -966,16 +966,21 @@ ModelLink supports various acceleration algorithms such as tensor parallelism, p
 |          Sequence Parallel           |      --sequence-parallel       |
 |            Recomputation             |    --recompute-granularity     |
 |        Distributed Optimizer         |  --use-distributed-optimizer   |
-|        overlap DDP allreduce         |  --overlap-grad-reduce   |
+|        overlap DDP allreduce         |     --overlap-grad-reduce      |
+|        overlap DDP allgather         |     --overlap-param-gather     |
 |           Flash attention            |        --use-flash-attn        |
 |            Fused rmsnorm             |      --use-fused-rmsnorm       |
-|             Fused swiglu             |            --use-fused-swiglu            |
+|             Fused swiglu             |       --use-fused-swiglu       |
+|                 mc2                  |     --use-mc2                  |
 | Fused rotary <br/>position embedding |   --use-fused-rotary-pos-emb   |
+
+
 
 ```bash
 torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
+    --num-layer-list 1,2,2,2,1 \
     --sequence-parallel \
     --recompute-granularity full \
     --recompute-method block \
@@ -984,8 +989,10 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     --use-flash-attn \
     --use-fused-rmsnorm \
     --use-fused-swiglu \
-    --use-fused-rotary-pos-emb \
     --overlap-grad-reduce \
+    --overlap-param-gather \
+    --use-fused-rotary-pos-emb \
+    --use-mc2 \
     ... \
     ...
 ```

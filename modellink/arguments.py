@@ -169,6 +169,8 @@ def _add_network_size_args(parser):
                        help="Use fused swiglu.")
     group.add_argument("--use-fused-rotary-pos-emb", action='store_true',
                        help="Use fused rotary-pos-emb.")
+    group.add_argument("--use-mc2", action='store_true',
+                       help="Use mc2 for compute-comm overlap in tp.")
     return parser
 
 

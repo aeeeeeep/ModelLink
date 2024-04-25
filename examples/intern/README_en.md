@@ -312,7 +312,7 @@ python ./tools/preprocess_data.py \
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 # modify script orign dataset path according to your own dataset path
 CKPT_SAVE_DIR="./ckpt/internlm-65b/"
-TOKENIZER_PATH="./model_from_hf/internlm-65b/"  #tokenizer path
+TOKENIZER_PATH="./model_from_hf/internlm-65b/tokenizer.model"  #tokenizer path
 DATA_PATH="./dataset/internlm-65b/alpaca_text_document"  #processed dataset
 ```
 

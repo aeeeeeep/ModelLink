@@ -415,7 +415,7 @@ The performance of the Baichuan2-13B in **Ascend NPU** and **Reference**:
 
 | Device |     Model     | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | 
 |:----:|:-------------------------:|:----:|:-----------------------------:|:----------------------------:|:-------------------------:|
-| NPUs | Baichuan2-13B |1000 |               -               |             1550             |             -             |
+| NPUs | Baichuan2-13B |1000 |               -               |             1668             |             -             |
 |  Reference  | Baichuan2-13B |-|               -               |             2062             |             -             |
 
 

@@ -306,7 +306,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>13B</td>
       <td> 1x8</td>
       <td> BF16 </td>
-      <td> 1550 </td>
+      <td> 1668 </td>
       <td> 2062 </td>
       <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_13B.sh">训练</a> </td>
     </tr>
@@ -959,10 +959,12 @@ ModelLink支持张量并行、流水线并行、序列并行、重计算、分�
 |                 序列并行                 |      --sequence-parallel       |
 |                 重计算                  |    --recompute-granularity     |
 |                分布式优化器                |  --use-distributed-optimizer   |
-|           DDP allreduce 掩盖           |  --overlap-grad-reduce   |
+|           DDP allreduce 掩盖           |     --overlap-grad-reduce      |
+|           DDP allgather 掩盖           |     --overlap-param-gather      |
 |           Flash attention            |        --use-flash-attn        |
 |            Fused rmsnorm             |      --use-fused-rmsnorm       |
-|             Fused swiglu             |            --use-fused-swiglu            |
+|             Fused swiglu             |       --use-fused-swiglu       |
+|                 mc2                  |           --use-mc2            |
 | Fused rotary <br/>position embedding |   --use-fused-rotary-pos-emb   |
 
 
@@ -980,7 +982,9 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     --use-fused-rmsnorm \
     --use-fused-swiglu \
     --overlap-grad-reduce \
+    --overlap-param-gather \
     --use-fused-rotary-pos-emb \
+    --use-mc2 \
     ... \
     ...
 ```

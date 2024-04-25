@@ -57,6 +57,8 @@ GPT_ARGS="
     --normalization RMSNorm \
     --use-fused-rmsnorm \
     --use-flash-attn \
+    --use-fused-swiglu \
+    --use-mc2 \
     --swiglu \
     --no-masked-softmax-fusion \
     --attention-softmax-in-fp32 \
@@ -72,7 +74,7 @@ GPT_ARGS="
     --adam-eps 1.0e-8 \
     --no-load-optim \
     --no-load-rng \
-    --fp16
+    --bf16
 "
 
 DATA_ARGS="
