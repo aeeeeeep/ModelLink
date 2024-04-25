@@ -162,7 +162,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # modify script orign dataset path according to your own dataset path
 CKPT_SAVE_DIR="./ckpt/internlm-7b/"
 CKPT_LOAD_DIR="./model_weights/internlm-7b-v0.1-tp8-pp1/"
-TOKENIZER_PATH="./model_from_hf/internlm-7b/tokenizer.model"  #tokenizer path
+TOKENIZER_PATH="./model_from_hf/internlm-7b"  #tokenizer path
 DATA_PATH="./dataset/internlm-7b/alpaca_text_document" #processed dataset
 ```
 
