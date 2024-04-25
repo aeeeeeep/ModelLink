@@ -347,12 +347,12 @@ bash tasks/finetune/tune_llama_13b_ptd.sh
 
 The performance of LLaMA-7B/13B in **Ascend NPU** and **Reference**:
 
-| Device    | Hardware  | Model     | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
-|-----------|-----------|-----------|------------------|-------------------------------|------------------------------|---------------------------|-------------------------------------|
-| NPUs      | 910 1*8p  | LLaMA-7B  | 2048             | 1.75                          | 3600                         | 18.2                      | 159.9                               |
-| Reference | -         | LLaMA-7B  | 2048             | 1.85                          | 3804                         | 18.5                      | 161.5                               |
-| NPUs      | 910 1*8p  | LLaMA-13B | 2048             | 0.92                         | 1895                         | 17.2                     | 200.57                              |
-| Reference | -         | LLaMA-13B | 2048             | 0.96                          | 2012                         | 16.6                     | 213.29                              |
+| Device    | Hardware  | Model     | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) |
+|-----------|-----------|-----------|------------------|-------------------------------|------------------------------|---------------------------|
+| NPUs      | 910 1*8p  | LLaMA-7B  | 2048             | 1.75                          | 3600                         | 18.2                      |
+| Reference | -         | LLaMA-7B  | 2048             | 1.85                          | 3804                         | 18.5                      |
+| NPUs      | 910 1*8p  | LLaMA-13B | 2048             | 0.92                         | 1895                         | 17.2                     |
+| Reference | -         | LLaMA-13B | 2048             | 0.96                          | 2012                         | 16.6                     |
 
 
 
@@ -686,7 +686,7 @@ The Training log will look like these:
 
 ```Shell
  iteration  11/50000 | consumed samples: 5632 | consumed tokens:  11534336 | elapsed time per iteration (ms):  52728.1 | learning rate:    1.499E-05 | gloabl batch size:  512 | lm loss:  1.376514E+01 | loss scale:  65536.0 | grad norm:    459.628 | actual seqlen:  2048 | number of skipped
-iterations: 0 | number of nan iterations:   0 | samples per second: 9.710 | TFLOPs: 167.52 |
+iterations: 0 | number of nan iterations:   0 | samples per second: 9.710 |
 time (ms)
 ```
 

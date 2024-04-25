@@ -161,7 +161,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # 修改数据集，词表，权重等路径
 CKPT_SAVE_DIR="./ckpt/internlm-7b/"
 CKPT_LOAD_DIR="./model_weights/internlm-7b-v0.1-tp8-pp1/"
-TOKENIZER_PATH="./model_from_hf/internlm-7b/tokenizer.model" #词表路径
+TOKENIZER_PATH="./model_from_hf/internlm-7b" #词表路径
 DATA_PATH="./dataset/internlm-7b/alpaca_text_document" #数据集路径
 ```
 
