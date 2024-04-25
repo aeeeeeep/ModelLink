@@ -230,14 +230,14 @@ For the supported models listed above, we provide training scripts and readme in
 
 【Please note the corresponding environment versions for model usage, as follows】
 
-|           Software            | [Version](https://www.hiascend.com/zh/) |
+|           软件            | [版本](https://www.hiascend.com/zh/) |
 | :-----------------------: |:----------------------------------:|
 |          Python           |                3.8                 |
-|          driver           |              Ascend HDK 23.0.0              |
-|         firmware          |              Ascend HDK 23.0.0              |
-|           CANN            |              CANN 7.0.0              |
+|          driver           |              Ascend HDK 24.1.RC1              |
+|         firmware          |              Ascend HDK 24.1.RC1              |
+|           CANN            |              CANN 8.0.RC1              |
 |           torch           |               2.1.0                |
-|         torch_npu         |              release v5.0.0               |
+|         torch_npu         |              release v6.0.RC1               |
 
 The current repository uses Megatron commitId [bcce6f54](https://github.com/NVIDIA/Megatron-LM/tree/bcce6f54e075e3c3374ea67adefe54f3f2da2b07)
 
