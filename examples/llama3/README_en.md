@@ -183,6 +183,7 @@ Here's a hardware summary of pre-training  LLAMA3-8B:
       CKPT_SAVE_DIR="./ckpt/llama-3-8b-hf/"
       TOKENIZER_MODEL="./model_from_hf/llama-3-8b-hf/"  #tokenizer path
       DATA_PATH="./dataset/llama-3-8b-hf/alpaca_text_document"  #processed dataset
+      CKPT_LOAD_DIR="./model_weights/llama-3-8b-hf-v0.1-tp8-pp1/" #weight path
     ```
 
     Multi-machine training requires the addition of parameter --overlap-grad-reduce
@@ -202,8 +203,8 @@ The performance of LLaMA3-8B in **Ascend NPU** and **Reference**:
 
 | Device      | Model         | total Iterations     | throughput rate (tokens/s/p) | 
 | :------:    | :-----------: |:-------------------: | :-------------------------:  | 
-| NPUs        | LLaMA3-8B     | 1000                 | 2275                         |
-| Reference   | LLaMA3-8B     | 1000                 | 2570                         |
+| NPUs        | LLaMA3-8B     | 1000                 | 2483                         |
+| Reference   | LLaMA3-8B     | 1000                 | 2674                         |
 
 
 
@@ -218,7 +219,6 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # modify script model path and tokenizer path
 CHECKPOINT="./model_weights/llama-3-8b-hf-v0.1-tp8-pp1"
 TOKENIZER_PATH="./model_from_hf/llama-3-8b-hf/"
-TOKENIZER_MODEL="./model_from_hf/llama-3-8b-hf/tokenizer.json"
 ```
 
 Launch llama3-8B inference script: examples/llama3/generate_llama3_8b_ptd.sh
@@ -415,6 +415,7 @@ Here's a hardware summary of pre-training  LLAMA3-70B:
       CKPT_SAVE_DIR="./ckpt/llama-3-70b-hf/"
       TOKENIZER_MODEL="./model_from_hf/llama-3-70b-hf/"  #tokenizer path
       DATA_PATH="./dataset/llama-3-70b-hf/alpaca_text_document"  #processed dataset
+      CKPT_LOAD_DIR="./model_weights/llama-3-70b-hf-v0.1-tp8-pp8/" #weight path
     ```
 
     Multi-machine training requires the addition of parameter --overlap-grad-reduce
@@ -450,7 +451,6 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # modify script model path and tokenizer path
 CHECKPOINT="./model_weights/llama-3-70b-hf-v0.1-tp8-pp1"
 TOKENIZER_PATH="./model_from_hf/llama-3-70b-hf/"
-TOKENIZER_MODEL="./model_from_hf/llama-3-70b-hf/tokenizer.json"
 ```
 
 Launch llama3-70B inference script: examples/llama3/generate_llama3_70b_ptd.sh

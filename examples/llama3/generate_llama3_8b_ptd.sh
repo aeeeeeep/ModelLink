@@ -24,7 +24,6 @@ DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $
 torchrun $DISTRIBUTED_ARGS inference.py \
        --tensor-model-parallel-size 8  \
        --pipeline-model-parallel-size 1  \
-       --use-flash-attn \
        --use-fused-swiglu \
        --use-rotary-position-embeddings \
        --use-fused-rotary-pos-emb \
