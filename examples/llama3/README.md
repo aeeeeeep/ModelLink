@@ -158,6 +158,7 @@ python tools/checkpoint/convert_ckpt.py \
    ```
 
    5.2 预训练
+   配置llama3-8B 预训练脚本: examples/llama3/pretrain_llama3_8b_ptd.sh
 
    ```shell
     # 设置 ascend-toolkit 路径
@@ -167,6 +168,7 @@ python tools/checkpoint/convert_ckpt.py \
     CKPT_SAVE_DIR="./ckpt/llama-3-8b-hf/"
     TOKENIZER_MODEL="./model_from_hf/llama-3-8b-hf/"  #词表路径
     DATA_PATH="./dataset/llama-3-8b-hf/alpaca_text_document"  #数据集路径
+    CKPT_LOAD_DIR="./model_weights/llama-3-8b-hf-v0.1-tp8-pp1/" #权重路径
    ```
 
    多机运行增加参数--overlap-grad-reduce
@@ -187,8 +189,8 @@ LLaMA3-8B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 | 设备 |   模型   | 迭代数 | tokens吞吐 (tokens/s/p) |
 | :--: | :-------: | :----: | :---------------------: |
-| NPUs | LLaMA3-8B |  1000  |        2275          |
-| 参考 | LLaMA3-8B |  1000  |        2570          |
+| NPUs | LLaMA3-8B |  1000  |        2483         |
+| 参考 | LLaMA3-8B |  1000  |        2674          |
 ## 推理-8B
 
 配置llama3-8B 推理脚本: examples/llama3/generate_llama3_8b_ptd.sh
@@ -200,7 +202,6 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # 修改模型权重路径和词表路径
 CHECKPOINT="./model_weights/llama-3-8b-hf-v0.1-tp8-pp1"
 TOKENIZER_PATH="./model_from_hf/llama-3-8b-hf/"
-TOKENIZER_MODEL="./model_from_hf/llama-3-8b-hf/tokenizer.json"
 ```
 
 启动llama3-8B 推理脚本
@@ -213,7 +214,7 @@ bash examples/llama3/generate_llama3_8b_ptd.sh
 ## 评估-8B
 
 使用 MMLU数据集评估模型. 数据集下载路径 [这里](https://huggingface.co/datasets/cais/mmlu).
-配置llama3-8B 评估脚本: examples/llama3/evaluate_llama3_8B_ptd.sh
+配置llama3-8B 评估脚本: examples/llama3/evaluate_llama3_8b_ptd.sh
 
 ```bash
 # ascend-toolkit 路径
@@ -230,7 +231,7 @@ TASK="mmlu"
 启动评估
 
 ```bash
-bash examples/llama3/evaluate_llama3_8B_ptd.sh
+bash examples/llama3/evaluate_llama3_8b_ptd.sh
 ```
 
 评估结果如下
@@ -375,7 +376,7 @@ python tools/checkpoint/convert_ckpt.py \
    ```
 
    5.2 预训练
-
+   配置llama3-70B 预训练脚本: examples/llama3/pretrain_llama3_70b_ptd.sh
    ```shell
     # 设置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -384,6 +385,7 @@ python tools/checkpoint/convert_ckpt.py \
     CKPT_SAVE_DIR="./ckpt/llama-3-70b-hf/"
     TOKENIZER_MODEL="./model_from_hf/llama-3-70b-hf/"  #词表路径
     DATA_PATH="./dataset/llama-3-70b-hf/alpaca_text_document"  #数据集路径
+    CKPT_LOAD_DIR="./model_weights/llama-3-70b-hf-v0.1-tp8-pp8/" #权重路径
    ```
 
    多机运行增加参数--overlap-grad-reduce
@@ -417,7 +419,6 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # 修改模型权重路径和词表路径
 CHECKPOINT="./model_weights/llama-3-70b-hf-v0.1-tp8-pp1"
 TOKENIZER_PATH="./model_from_hf/llama-3-70b-hf/"
-TOKENIZER_MODEL="./model_from_hf/llama-3-70b-hf/tokenizer.json"
 ```
 
 启动llama3-70B 推理脚本
@@ -429,7 +430,7 @@ bash examples/llama3/generate_llama3_70b_ptd.sh
 ## 评估-70B
 
 使用 MMLU数据集评估模型. 数据集下载路径 [这里](https://huggingface.co/datasets/cais/mmlu).
-配置llama3-70B 评估脚本: examples/llama3/evaluate_llama3_70B_ptd.sh
+配置llama3-70B 评估脚本: examples/llama3/evaluate_llama3_70b_ptd.sh
 
 ```bash
 # ascend-toolkit 路径
@@ -446,7 +447,7 @@ TASK="mmlu"
 启动评估
 
 ```bash
-bash examples/llama3/evaluate_llama3_70B_ptd.sh
+bash examples/llama3/evaluate_llama3_70b_ptd.sh
 ```
 
 评估结果如下

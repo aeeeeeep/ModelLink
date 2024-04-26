@@ -418,8 +418,8 @@ For the supported models listed above, we provide training scripts and readme in
       <td>8B</td>
       <td>1x8</td>
       <td>BF16 </td>
-      <td> 2275 </td>
-      <td> 2570 </td>
+      <td> 2483 </td>
+      <td> 2674 </td>
       <td> <a href="examples/llama3/pretrain_llama3_8b_ptd.sh">train</a> </td>
     </tr>
     <tr>
