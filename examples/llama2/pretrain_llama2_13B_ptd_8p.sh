@@ -1,5 +1,4 @@
 #!/bin/bash
-
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 export NPU_ASD_ENABLE=0
 
@@ -37,8 +36,8 @@ GPT_ARGS="
     --tokenizer-model ${TOKENIZER_MODEL} \
     --seq-length 4096 \
     --max-position-embeddings 4096 \
-    --micro-batch-size 2 \
-    --global-batch-size 16 \
+    --micro-batch-size 4 \
+    --global-batch-size 512 \
     --make-vocab-size-divisible-by 1 \
     --lr 1e-6 \
     --train-iters 5000 \
@@ -66,6 +65,9 @@ GPT_ARGS="
     --load ${CKPT_LOAD_DIR}  \
     --no-load-optim \
     --no-load-rng \
+    --use-fused-swiglu \
+    --use-fused-rotary-pos-emb \
+    --use-mc2 \
     --bf16
 "
 

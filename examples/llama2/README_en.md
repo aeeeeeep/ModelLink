@@ -128,8 +128,8 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
         --model-type GPT \
         --loader llama2_hf \
         --saver megatron \
-        --target-tensor-parallel-size 8 \
-        --target-pipeline-parallel-size 1 \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 2 \
         --load-dir ./model_from_hf/llama-2-7b-hf/ \
         --save-dir ./model_weights/llama-2-7b-hf-v0.1-tp8-pp1/ \
         --tokenizer-model ./model_from_hf/llama-2-7b-hf/tokenizer.model
@@ -274,8 +274,8 @@ The performance of LLaMA2-7B in **Ascend NPU** and **Reference**:
 
 | Device | Model       | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
 | :------: | :-----------: | :----------------: | :-----------------------------: | :----------------------------: | :-------------------------: | :-----------------------------------: |
-| NPUs   | LLaMA2-7B | 1024             | 5.19                      | 2730                      | 3.08                   | 122.39                         |
-| Reference   | LLaMA2-7B | 1024             | 5.63                      | 2884                       | 2.84                   | 131.96                         |
+| NPUs   | LLaMA2-7B | 1024             | 1.03                      | 4241                      | 30.9                  | 122.39                         |
+| Reference   | LLaMA2-7B | 1024             | 0.939                      | 3850                       | 34.06                   | 131.96                         |
 
 
 
@@ -618,8 +618,8 @@ The performance of LLaMA2-13B in **Ascend NPU** and **Reference**:
 
 |  Device  |   Model   | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
 | :-------: | :--------: | :--------------: | :---------------------------: | :--------------------------: | :-----------------------: | :---------------------------------: |
-|   NPUs   | LLaMA2-13B |       5000       |             3.027             |             1550             |           5.285           |               133.77               |
-| Reference | LLaMA2-13B |        --        |              --              |             1750             |            --            |                 --                 |
+|   NPUs   | LLaMA2-13B |       5000       |             --             |             1990             |           65.870           |               133.77               |
+| Reference | LLaMA2-13B |        --        |              --              |             1920             |            68.267            |                 --                 |
 
 ## Inference
 

@@ -14,8 +14,8 @@ CKPT_SAVE_DIR="your model save ckpt path"
 DATA_PATH="your data path"
 TOKENIZER_MODEL="your tokenizer path"
 CKPT_LOAD_DIR="your model ckpt path"
-TP=8
-PP=1
+TP=1
+PP=2
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $GPUS_PER_NODE \
@@ -37,8 +37,8 @@ GPT_ARGS="
     --tokenizer-model ${TOKENIZER_MODEL} \
     --seq-length 4096 \
     --max-position-embeddings 4096 \
-    --micro-batch-size 4 \
-    --global-batch-size 16 \
+    --micro-batch-size 1 \
+    --global-batch-size 256 \
     --make-vocab-size-divisible-by 1 \
     --lr 1.25e-6 \
     --train-iters 5000 \
@@ -65,6 +65,11 @@ GPT_ARGS="
     --no-gradient-accumulation-fusion \
     --no-load-optim \
     --no-load-rng \
+    --use-distributed-optimizer \
+    --use-fused-swiglu \
+    --use-fused-rotary-pos-emb \
+    --overlap-grad-reduce \
+    --overlap-param-gather \
     --bf16
 "
 

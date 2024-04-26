@@ -115,8 +115,8 @@ LLAMA2-7B 训练的硬件配置:
         --model-type GPT \
         --loader llama2_hf \
         --saver megatron \
-        --target-tensor-parallel-size 8 \
-        --target-pipeline-parallel-size 1 \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 2 \
         --load-dir ./model_from_hf/llama-2-7b-hf/ \
         --save-dir ./model_weights/llama-2-7b-hf-v0.1-tp8-pp1/ \
         --tokenizer-model ./model_from_hf/llama-2-7b-hf/tokenizer.model
@@ -253,10 +253,10 @@ python tools/checkpoint/convert_ckpt.py \
 
 LLaMA2-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
-| 设备 |   模型   | 迭代数 | 样本吞吐 (samples/step) | tokens吞吐 (tokens/s/p) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
+| 设备 |   模型   | 迭代数 | 样本吞吐 (samples/p/s) | tokens吞吐 (tokens/s/p) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
 | :--: | :-------: | :----: | :---------------------: | :---------------------: | :-------------------: | :-------------------: |
-| NPUs | LLaMA2-7B |  1024  |          5.63          |          2730          |         2.84         |        131.96        |
-| 参考 | LLaMA2-7B |  1024  |          5.63          |          2884          |         2.84         |        131.96        |
+| NPUs | LLaMA2-7B |  1024  |       1.03             |          4241          |         30.9         |        131.96        |
+| 参考 | LLaMA2-7B |  1024  |          0.939          |          3850          |         34.06         |        131.96        |
 
 ## 推理-7B
 
@@ -603,8 +603,8 @@ LLaMA2-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 | 设备 |    模型    | 迭代数 | 样本吞吐 (samples/p/s) | tokens吞吐 (tokens/s/p) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
 | :--: | :--------: | :----: | :--------------------: | :---------------------: | :-------------------: | :-------------------: |
-| NPUs | LLaMA2-13B |  5000  |         3.027         |          1550          |         5.285         |        133.77        |
-| 参考 | LLaMA2-13B |   --   |           --           |          1750          |          --          |          --          |
+| NPUs | LLaMA2-13B |  5000  |         --         |          1990          |         131.71         |        --        |
+| 参考 | LLaMA2-13B |   --   |          --            |          1920          |          --          |          --          |
 
 ## 推理
 
