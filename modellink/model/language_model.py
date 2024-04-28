@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright (c) 2024, HUAWEI CORPORATION.  All rights reserved.
+# Copyright (c) 2024, HUAWEI CORPORATION and Nvidia Megatron-LM Team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ def seq_length_wrapper(fn):
     return wrapper
 
 
-def transformer_language_model_init(self,
+def TransformerLanguageModel__init__(self,
                  config,
                  encoder_attn_mask_type,
                  num_tokentypes=0,
@@ -43,7 +43,7 @@ def transformer_language_model_init(self,
                  pre_process=True,
                  post_process=True):
     args = get_args()
-    
+
     if args.untie_embeddings_and_output_weights:
         assert not add_decoder
     super(TransformerLanguageModel, self).__init__(share_embeddings_and_output_weights=not args.untie_embeddings_and_output_weights)
@@ -139,3 +139,97 @@ def transformer_language_model_init(self,
                 init_method=self.init_method,
                 bias=False) # Setting bias to False always to keep it consistent with embedding tying that also does not have a bias.
             self._output_layer_key = 'output_layer'
+
+
+def TransformerLanguageModelForward(self, enc_input_ids, enc_position_ids, enc_attn_mask,
+                dec_input_ids=None, dec_position_ids=None, dec_attn_mask=None,
+                retriever_input_ids=None,
+                retriever_position_ids=None,
+                retriever_attn_mask=None,
+                enc_dec_attn_mask=None, tokentype_ids=None,
+                inference_params=None,
+                pooling_sequence_index=0,
+                enc_hidden_states=None, output_enc_hidden=False,
+                past_key_values=None, use_cache=False):
+    self.seq_length = get_args().seq_length
+
+    # Encoder embedding.
+    if self.pre_process:
+        encoder_input = self.embedding(enc_input_ids, enc_position_ids,
+                                       tokentype_ids=tokentype_ids)
+    else:
+        encoder_input = None
+
+    # Retriever embedding.
+    if self.add_retriever and self.pre_process:
+        retriever_input = self.embedding(retriever_input_ids,
+                                         retriever_position_ids,
+                                         tokentype_ids=tokentype_ids)
+    else:
+        retriever_input = None
+
+    # Rotary positional embeddings
+    rotary_pos_emb = None
+    if self.use_rotary_position_embeddings:
+        if inference_params is not None:
+            rotary_pos_emb = \
+                self.rotary_pos_emb(inference_params.max_sequence_length)
+        else:
+            rotary_pos_emb = self.rotary_pos_emb(self.seq_length)
+
+    # Run encoder.
+    if enc_hidden_states is None:
+        if self.encoder is not None:
+            encoder_output = self.encoder(
+                encoder_input,
+                enc_attn_mask,
+                retriever_input=retriever_input,
+                retriever_attn_mask=retriever_attn_mask,
+                inference_params=inference_params,
+                rotary_pos_emb=rotary_pos_emb,
+                past_key_values=past_key_values,  # Add past_key_values and use_cache for inference
+                use_cache=use_cache)
+            if use_cache:
+                encoder_output, past_key_values = encoder_output
+        else:
+            encoder_output = self.encoder_hidden_state
+    else:
+        encoder_output = enc_hidden_states.to(encoder_input.dtype)
+
+    if self.post_process:
+        if self.add_pooler:
+            pooled_output = self.pooler(encoder_output,
+                                        pooling_sequence_index)
+
+    # output_enc_hidden refers to when we just need the encoder's
+    # output. For example, it is helpful to compute
+    # similarity between two sequences by average pooling
+    if not self.add_decoder or output_enc_hidden:
+        # Handle output within past_key_values
+        if use_cache:
+            encoder_output = encoder_output, past_key_values
+        if self.add_pooler and self.post_process:
+            return encoder_output, pooled_output
+        else:
+            return encoder_output
+
+    # Decoder embedding.
+    if self.pre_process:
+        decoder_input = self.embedding(dec_input_ids,
+                                       dec_position_ids)
+    else:
+        decoder_input = None
+
+    # Run decoder.
+    decoder_output = self.decoder(
+        decoder_input,
+        dec_attn_mask,
+        encoder_output=encoder_output,
+        enc_dec_attn_mask=enc_dec_attn_mask,
+        inference_params=inference_params,
+        rotary_pos_emb=rotary_pos_emb)
+
+    if self.add_pooler and self.post_process:
+        return decoder_output, encoder_output, pooled_output
+    else:
+        return decoder_output, encoder_output

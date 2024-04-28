@@ -27,8 +27,9 @@ from ..model import (
     GPTModel, parallel_transformer_init, seq_length_wrapper,
     norm_wrapper, SwitchMLP, state_dict_for_save_checkpoint_wrapper,
     core_attention_wrapper, core_attention_forward, FlashSelfAttention,
-    ParallelAttention_wrapper, transformer_language_model_init,
-    ParallelAttentionForward, parallel_transformer_forward, parallel_mlp_init_wrapper,
+    ParallelAttention_wrapper, TransformerLanguageModel__init__,
+    ParallelAttentionForward, ParallelTransformerForward, parallel_mlp_init_wrapper,
+    TransformerLanguageModelForward, ParallelTransformerLayerForward,
     rms_norm_init_wrapper, rms_norm_forward
 )
 from ..core import (vocab_embedding_wrapper, initialize_model_parallel_decorator,
@@ -151,10 +152,11 @@ def patch_model():
         megatron.legacy.model.transformer.ParallelMLP.__init__) # fused swiglu
     megatron.legacy.model.transformer.SwitchMLP = SwitchMLP
     megatron.legacy.model.transformer.ParallelTransformer.__init__ = parallel_transformer_init
-    megatron.legacy.model.transformer.ParallelTransformer.forward = parallel_transformer_forward
+    megatron.legacy.model.transformer.ParallelTransformer.forward = ParallelTransformerForward
     megatron.legacy.model.transformer.ParallelTransformer.state_dict_for_save_checkpoint \
         = state_dict_for_save_checkpoint_wrapper(
         megatron.legacy.model.transformer.ParallelTransformer.state_dict_for_save_checkpoint)
+    megatron.legacy.model.transformer.ParallelTransformerLayer.forward = ParallelTransformerLayerForward
     megatron.legacy.model.transformer.ParallelAttention.__init__ = ParallelAttention_wrapper(
         megatron.legacy.model.transformer.ParallelAttention.__init__)
     megatron.legacy.model.transformer.ParallelAttention.forward = ParallelAttentionForward
@@ -169,8 +171,8 @@ def patch_model():
 
     # patch language model
     megatron.legacy.model.language_model.TransformerLanguageModel.forward = (seq_length_wrapper(
-        megatron.legacy.model.language_model.TransformerLanguageModel.forward))
-    megatron.legacy.model.language_model.TransformerLanguageModel.__init__ = transformer_language_model_init
+        TransformerLanguageModelForward))
+    megatron.legacy.model.language_model.TransformerLanguageModel.__init__ = TransformerLanguageModel__init__
 
 
 

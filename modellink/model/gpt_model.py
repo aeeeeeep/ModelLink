@@ -1,4 +1,5 @@
 # coding=utf-8
+# Copyright (c) 2023 Alibaba PAI and Nvidia Megatron-LM Team.
 # Copyright (c) 2024, HUAWEI CORPORATION.  All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,23 +60,32 @@ class GPTModel(MegatronModule, MegatronModuleForCausalLM):
                 retriever_input_ids=None,
                 retriever_position_ids=None,
                 retriever_attn_mask=None,
-                labels=None, tokentype_ids=None, inference_params=None):
+                labels=None, tokentype_ids=None, inference_params=None,
+                past_key_values=None, use_cache=False):
 
         lm_output = self.language_model(
             input_ids,
             position_ids,
             attention_mask,
+            past_key_values=past_key_values,
+            use_cache=use_cache,
             retriever_input_ids=retriever_input_ids,
             retriever_position_ids=retriever_position_ids,
             retriever_attn_mask=retriever_attn_mask,
             inference_params=inference_params)
 
+        if use_cache:
+            lm_output, past_key_values = lm_output
+
         if self.post_process:
-            return post_language_model_processing(
+            lm_output = post_language_model_processing(
                 lm_output, labels,
                 self.language_model.output_layer.weight if self.untie_embeddings_and_output_weights else self.shared_embedding_or_output_weight(),
                 self.parallel_output,
                 self.fp16_lm_cross_entropy)
+
+        if use_cache:
+            return lm_output, past_key_values
         else:
             return lm_output
 

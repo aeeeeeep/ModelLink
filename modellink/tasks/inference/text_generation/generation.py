@@ -123,8 +123,25 @@ def forward_loop(args, **kwargs):
     tokens = kwargs.pop("tokens")
     context_length = None
 
+    args = get_args()
+
+    past_key_values = None
     for context_length in range(prompt_length, final_sequence_length):
-        logits = forward_step(tokens, position_ids, attention_mask)
+        if args.use_kv_cache:
+            if context_length == prompt_length:
+                logits, past_key_values = forward_step(
+                    tokens[:, :context_length],
+                    position_ids[:, :context_length],
+                    attention_mask[:, :, :context_length, :context_length],
+                    past_key_values=None)
+            else:
+                logits, past_key_values = forward_step(
+                    tokens[:, context_length - 1:context_length],
+                    position_ids[:, context_length - 1:context_length],
+                    attention_mask[:, :, context_length - 1:context_length, :context_length],
+                    past_key_values=past_key_values)
+        else:
+            logits = forward_step(tokens, position_ids, attention_mask)
 
         if parallel_state.is_pipeline_last_stage():
             vocab_size = logits.size(2)
@@ -138,17 +155,18 @@ def forward_loop(args, **kwargs):
                                                                                     stop_token=stop_token,
                                                                                     vocab_size=vocab_size)
 
-            done, scores, tokens = _beam_search_process(beam_hyp=beam_hyp,
-                                                        beam_size=beam_size,
-                                                        best_beam_ids=best_beam_ids,
-                                                        best_scores=best_scores,
-                                                        best_words=best_words,
-                                                        context_length=context_length,
-                                                        done=done,
-                                                        prompt_length=prompt_length,
-                                                        scores=scores,
-                                                        stop_token=stop_token,
-                                                        tokens=tokens)
+            done, scores, tokens, past_key_values = _beam_search_process(beam_hyp=beam_hyp,
+                                                                         beam_size=beam_size,
+                                                                         best_beam_ids=best_beam_ids,
+                                                                         best_scores=best_scores,
+                                                                         best_words=best_words,
+                                                                         context_length=context_length,
+                                                                         done=done,
+                                                                         prompt_length=prompt_length,
+                                                                         scores=scores,
+                                                                         stop_token=stop_token,
+                                                                         tokens=tokens,
+                                                                         past_key_values=past_key_values)
 
         done = broadcast_from_last_pipeline_stage(1, torch.uint8, done)
         if done:
@@ -219,6 +237,9 @@ def _beam_search_process(**kwargs):
     scores = kwargs.pop("scores")
     stop_token = kwargs.pop("stop_token")
     tokens = kwargs.pop("tokens")
+    past_key_values = kwargs.pop("past_key_values")
+
+    args = get_args()
 
     next_beams = []
     for beam_token_rank, (token_id, beam_score, beam_id) in enumerate(
@@ -245,10 +266,12 @@ def _beam_search_process(**kwargs):
         done = torch.ones(1, dtype=torch.uint8, device=torch.cuda.current_device())
     best_batches = tokens.new([item[2] for item in next_beams])
     tokens = tokens[best_batches, :]
+    if args.use_kv_cache:
+        past_key_values = [[item[:, best_batches, :, :] for item in past_kv] for past_kv in past_key_values]
     tokens[:, context_length] = tokens.new([item[0] for item in next_beams])
     scores = scores.new([item[1] for item in next_beams]).unsqueeze(1)
 
-    return done, scores, tokens
+    return done, scores, tokens, past_key_values
 
 
 def _beam_candidates_with_sampling(args, **kwargs):
@@ -260,10 +283,16 @@ def _beam_candidates_with_sampling(args, **kwargs):
     vocab_size = kwargs.pop("vocab_size")
     stop_token = kwargs.pop("stop_token")
 
+    args = get_args()
+
+    if args.use_kv_cache:
+        index = -1
+    else:
+        index = context_length - 1
     try:
-        logits = logits[:, context_length - 1, :] / args.text_generation_config["temperature"]
+        logits = logits[:, index, :] / args.text_generation_config["temperature"]
     except ZeroDivisionError:
-        logits = logits[:, context_length - 1, :] * 10000
+        logits = logits[:, index, :] * 10000
 
     if args.text_generation_config["top_k"] > 1 and (0.0 < args.text_generation_config["top_p"] <= 1.0):
         logits = top_k_logits(logits,

@@ -18,9 +18,9 @@ from .transformer import (
     parallel_transformer_init, state_dict_for_save_checkpoint_wrapper,
     core_attention_wrapper, FlashSelfAttention, core_attention_forward,
     ParallelAttention_wrapper, ParallelAttentionForward,
-    parallel_transformer_forward, parallel_mlp_init_wrapper
+    ParallelTransformerForward, ParallelTransformerLayerForward, parallel_mlp_init_wrapper
 )
-from .language_model import seq_length_wrapper, transformer_language_model_init
+from .language_model import seq_length_wrapper, TransformerLanguageModel__init__, TransformerLanguageModelForward
 from .fused_layer_norm import norm_wrapper
 from .moe import SwitchMLP
 from .rms_norm import rms_norm_init_wrapper, rms_norm_forward

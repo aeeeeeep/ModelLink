@@ -31,9 +31,12 @@ from megatron.core import parallel_state
 from megatron.core.enums import ModelType
 from megatron.core.tensor_parallel import get_cuda_rng_tracker
 from megatron.core.parallel_state import get_tensor_model_parallel_group
+from megatron.core.models.common.embeddings.rotary_pos_embedding import apply_rotary_pos_emb
 
 from megatron.legacy.model.enums import AttnMaskType, LayerType, AttnType
-from megatron.legacy.model.transformer import _get_layer_type
+from megatron.legacy.model.transformer import (
+    _get_layer_type, bias_dropout_add_fused_train, bias_dropout_add_fused_inference, get_bias_dropout_add
+)
 from megatron.legacy.model.transformer import (
     ParallelTransformer, ParallelTransformerLayer, NoopTransformerLayer, ParallelMLP
 )
@@ -666,7 +669,7 @@ def core_attention_forward(self, query_layer, key_layer, value_layer, attention_
 
 def ParallelAttentionForward(self, hidden_states, attention_mask,
                 encoder_output=None, inference_params=None,
-                rotary_pos_emb=None):
+                rotary_pos_emb=None, past_key_value=None, use_cache=False):
     # hidden_states: [sq, b, h]
 
     # =================================================
@@ -815,12 +818,25 @@ def ParallelAttentionForward(self, hidden_states, attention_mask,
     # apply relative positional encoding (rotary embedding)
     if rotary_pos_emb is not None:
         q_pos_emb, k_pos_emb = rotary_pos_emb
+        if past_key_value is not None:
+            q_pos_emb = q_pos_emb[past_key_value[0].shape[0]:past_key_value[0].shape[0] + 1]
+            k_pos_emb = k_pos_emb[past_key_value[0].shape[0]:past_key_value[0].shape[0] + 1]
+        else:
+            q_pos_emb = q_pos_emb[:key_layer.shape[0]]
+            k_pos_emb = k_pos_emb[:key_layer.shape[0]]
         query_layer = apply_rotary_pos_emb(query_layer, q_pos_emb)
         key_layer = apply_rotary_pos_emb(key_layer, k_pos_emb)
         # TODO, can apply positional embedding to value_layer so it has
         # absolute positional embedding.
         # otherwise, only relative positional embedding takes effect
         # value_layer = apply_rotary_pos_emb(value_layer, k_pos_emb)
+
+    if past_key_value is not None:
+        key_layer = torch.cat([past_key_value[0], key_layer], dim=0)
+        value_layer = torch.cat([past_key_value[1], value_layer], dim=0)
+
+    if use_cache:
+        past_key_value = (key_layer, value_layer)
 
     if not self.use_flash_attn:
         if self.checkpoint_core_attention:
@@ -843,17 +859,20 @@ def ParallelAttentionForward(self, hidden_states, attention_mask,
 
     output, bias = self.dense(context_layer)
 
-    return output, bias
+    if use_cache:
+        return output, bias, past_key_value
+    else:
+        return output, bias
 
 
-def parallel_transformer_forward(
-        self, hidden_states, attention_mask,
-        encoder_output=None, enc_dec_attn_mask=None,
-        retriever_input=None,
-        retriever_output=None,
-        retriever_attn_mask=None,
-        inference_params=None,
-        rotary_pos_emb=None):
+def ParallelTransformerForward(self, hidden_states, attention_mask,
+                               encoder_output=None, enc_dec_attn_mask=None,
+                               retriever_input=None,
+                               retriever_output=None,
+                               retriever_attn_mask=None,
+                               inference_params=None,
+                               rotary_pos_emb=None,
+                               past_key_values=None, use_cache=False):
     # hidden_states: [s, b, h]
 
     # Checks.
@@ -936,21 +955,38 @@ def parallel_transformer_forward(
                     forward_kwargs['retriever_output'] = retriever_output
                     forward_kwargs['retriever_attn_mask'] = retriever_attn_mask
 
+                if use_cache and past_key_values is None:
+                    past_key_values = [None for _ in range(self.num_layers)]
+
                 for index in range(self.num_layers):
                     layer = self._get_layer(index)
-
+                    # Add past_key_values and use_cache for inference
+                    if use_cache:
+                        past_key_value = past_key_values[index]
+                    else:
+                        past_key_value = None
                     hidden_states = layer(
                         hidden_states,
                         attention_mask,
+                        past_key_value=past_key_value,
+                        use_cache=use_cache,
                         **forward_kwargs)
 
                     # First Retro decoder layer returns both hidden_states
                     # and retriever_output. Make retriever_output available
                     # to subsequence Retro layers.
                     if isinstance(hidden_states, tuple):
-                        assert len(hidden_states) == 2
-                        hidden_states, retriever_output = hidden_states
-                        forward_kwargs["retriever_output"] = retriever_output
+                        assert len(hidden_states) == 3 or len(hidden_states) == 2
+                        if use_cache:
+                            if len(hidden_states) == 3:
+                                hidden_states, past_key_value, retriever_output = hidden_states
+                                forward_kwargs["retriever_output"] = retriever_output
+                            else:
+                                hidden_states, past_key_value = hidden_states
+                            past_key_values[index] = past_key_value
+                        else:
+                            hidden_states, retriever_output = hidden_states
+                            forward_kwargs["retriever_output"] = retriever_output
 
             # Skip counter update for eval and activation checkpointing
             if torch.is_grad_enabled() and self.training:
@@ -959,8 +995,11 @@ def parallel_transformer_forward(
     # Final layer norm.
     if self.post_process and self.post_norm:
         hidden_states = self.final_norm(hidden_states)
-
-    return hidden_states
+    # Handle output within past_key_values
+    if use_cache:
+        return hidden_states, past_key_values
+    else:
+        return hidden_states
 
 
 def parallel_mlp_init_wrapper(fn):
@@ -1017,3 +1056,115 @@ def parallel_mlp_init_wrapper(fn):
         )
 
     return wrapper
+
+
+def ParallelTransformerLayerForward(self, hidden_states, attention_mask,
+                                   encoder_output=None, enc_dec_attn_mask=None,
+                                   retriever_input=None,
+                                   retriever_output=None,
+                                   retriever_attn_mask=None,
+                                   inference_params=None,
+                                   rotary_pos_emb=None,
+                                   past_key_value=None, use_cache=False):
+    # hidden_states: [s, b, h]
+
+    # Layer norm at the beginning of the transformer layer.
+    norm_output = self.input_norm(hidden_states)
+
+    # Self attention.
+    # Add past_key_values and use_cache for inference
+    if use_cache:
+        attention_output, attention_bias, past_key_value = \
+            self.self_attention(
+                norm_output,
+                attention_mask,
+                inference_params=inference_params,
+                rotary_pos_emb=rotary_pos_emb,
+                past_key_value=past_key_value,
+                use_cache=use_cache)
+    else:
+        attention_output, attention_bias = \
+            self.self_attention(
+                norm_output,
+                attention_mask,
+                inference_params=inference_params,
+                rotary_pos_emb=rotary_pos_emb)
+
+    # Residual connection.
+    if self.apply_residual_connection_post_norm:
+        residual = norm_output
+    else:
+        residual = hidden_states
+
+    if self.drop_path is None:
+        # jit scripting for a nn.module (with dropout) is not
+        # trigerring the fusion kernel. For now, we use two
+        # different nn.functional routines to account for varying
+        # dropout semantics during training and inference phases.
+        if self.bias_dropout_fusion:
+            if self.training:
+                bias_dropout_add_func = bias_dropout_add_fused_train
+            else:
+                bias_dropout_add_func = bias_dropout_add_fused_inference
+        else:
+            bias_dropout_add_func = get_bias_dropout_add(self.training)
+
+        if attention_bias is not None:
+            attention_bias = attention_bias.expand_as(residual)
+        with self.bias_dropout_add_exec_handler():
+            norm_input = bias_dropout_add_func(
+                attention_output,
+                attention_bias,
+                residual,
+                self.hidden_dropout)
+    else:
+        out = torch.nn.functional.dropout(attention_output + attention_bias,
+                                          p=self.hidden_dropout,
+                                          training=self.training)
+        norm_input = residual + self.drop_path(out)
+
+    # Layer norm post the self attention.
+    norm_output = self.post_attention_norm(norm_input)
+
+    # MLP.
+    mlp_output, mlp_bias = self.mlp(norm_output)
+
+    # Second residual connection.
+    if self.apply_residual_connection_post_norm:
+        residual = norm_output
+    else:
+        residual = norm_input
+
+    if self.drop_path is None:
+        if mlp_bias is not None:
+            mlp_bias = mlp_bias.expand_as(residual)
+        with self.bias_dropout_add_exec_handler():
+            output = bias_dropout_add_func(
+                mlp_output,
+                mlp_bias,
+                residual,
+                self.hidden_dropout)
+
+        # Jit compiled function creates 'view' tensor. This tensor
+        # potentially gets saved in the MPU checkpoint function context,
+        # which rejects view tensors. While making a viewless tensor here
+        # won't result in memory savings (like the data loader, or
+        # p2p_communication), it serves to document the origin of this
+        # 'view' tensor.
+        output = core.utils.make_viewless_tensor(inp=output,
+                                                 requires_grad=output.requires_grad,
+                                                 keep_graph=True)
+
+    else:
+        if mlp_bias is not None:
+            mlp_output = mlp_output + mlp_bias
+        out = torch.nn.functional.dropout(mlp_output,
+                                          p=self.hidden_dropout,
+                                          training=self.training)
+        output = residual + self.drop_path(out)
+
+    # Handle output within past_key_values
+    if use_cache:
+        return output, past_key_value
+    else:
+        return output

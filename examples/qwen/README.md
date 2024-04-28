@@ -224,10 +224,14 @@ CHECKPOINT="./model_weights/Qwen-7B-v0.1-tp8-pp1/"
 TOKENIZER_PATH="./model_from_hf/Qwen-7B/"
 ```
 
-启动qwen-7b推理脚本
-
+启动qwen-7b推理脚本或启动qwen-7b增量推理脚本
+1. 启动qwen-7b推理脚本
 ```bash
 bash examples/qwen/generate_qwen_7b_ptd.sh
+```
+2. 启动qwen-7b增量推理脚本
+```bash
+bash examples/qwen/generate_qwen_7b_ptd_kvcache.sh
 ```
 
 推理示例如下：
