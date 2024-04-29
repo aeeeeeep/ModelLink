@@ -227,7 +227,44 @@ Launch llama3-8B inference script: examples/llama3/generate_llama3_8b_ptd.sh
 bash examples/llama3/generate_llama3_8b_ptd.sh
 ```
 
-**When want to chat with Llama3，please download Instruct/Chat weights，and convert to Megatron weights. Then lanch the chat script: examples/llama3/generate_llama3_8b_chat_ptd.sh**
+**When want to chat with Llama3，please download Instruct/Chat weights，and convert to Megatron weights. Then launch the chat script: examples/llama3/generate_llama3_8b_chat_ptd.sh**
+
+Download the LLAMA3-8B-Instruct weight from [here](https://huggingface.co/unsloth/llama-3-8b-Instruct)
+
+Chat example：
+```
+You >> 你好
+ModelLink:
+你好！我是你的中文语言模型，很高兴和你交流！有什么想聊的题目或问题，请随时问我！
+
+You >> 介绍一下llama3
+
+ModelLink:
+LLaMA 3 is a large-scale language model developed by Meta AI, a leading artificial intelligence research organization. It's a significant upgrade to the previous LLaMA models, offering improved performance and capabilities.
+
+Here are some key features and facts about LLaMA 3:
+
+Scale: LLaMA 3 is a massive model, consisting of 13.5 billion parameters, making it one of the largest language models in the world.
+Architecture: It's based on the Transformer architecture, which is a type of neural network designed specifically for natural language processing tasks.
+Training data: LLaMA 3 was trained on a massive dataset of text from the internet, including books, articles, and websites. This training data allows the model to learn about various topics, styles, and language patterns.
+Language understanding: LLaMA 3 is capable of understanding natural language, including nuances, idioms, and figurative language. It can also recognize and generate text in multiple languages.
+Conversational capabilities: The model can engage in conversations, answering questions, and responding to prompts. It can also generate text based on a given topic or theme.
+Creative writing: LLaMA
+You >> 能用中文回答吗
+
+ModelLink:
+
+LLaMA 3 是 Meta AI 开发的一种大规模语言模型，是之前 LLama 模型的升级版本，提供了改进的性能和能力。
+
+以下是 LLama 3 的一些关键特点和事实：
+
+规模：LLaMA 3 是一个庞大的模型，具有 13.5 亿参数，世界上最大的语言模型之一。
+架构：它基于 Transformer 架构，这是一种专门为自然语言处理任务设计的神经网络。
+训练数据：LLaMA 3 在互联网上的大量文本数据上进行了训练，包括书籍、文章和网站。这使得模型能够学习各种主题、风格和语言模式。
+语言理解：LLaMA 3 能够理解自然语言，包括 nuance、idiom 和 figurative language。它也能识别和生成多种语言的文本。
+对话能力：模型能够参与对话，回答问题和响应提示。它也能基于给定的主题或主题生成文本。
+创作写作：LLa
+```
 
 
 ## Evaluation-8B

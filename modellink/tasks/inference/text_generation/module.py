@@ -277,7 +277,7 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
                 args.model[0],
                 context_tokens,
                 beam_size=self.num_beams,
-                stop_token=args.eos_id,
+                stop_token=[args.eos_id] + stop_ids,
                 num_return_gen=self.num_return_sequences,
                 length_penalty=self.length_penalty
             )

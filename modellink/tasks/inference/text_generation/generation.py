@@ -14,6 +14,7 @@
 # limitations under the License.
 
 """Generation utilities."""
+from typing import List
 
 import torch
 import torch.nn.functional as F
@@ -30,6 +31,8 @@ from .communication import broadcast_from_last_pipeline_stage
 def beam_search(model, tokens, **kwargs):
     beam_size = kwargs.pop("beam_size", 1)
     stop_token = kwargs.pop("stop_token", 0)
+    if not isinstance(stop_token, List):
+        stop_token = [stop_token]
     num_return_gen = kwargs.pop("num_return_gen", 1)
     length_penalty = kwargs.pop("length_penalty", 1.0)
     args = get_args()
@@ -221,7 +224,7 @@ def _beam_search_process(**kwargs):
     for beam_token_rank, (token_id, beam_score, beam_id) in enumerate(
             zip(best_words, best_scores, best_beam_ids)
     ):
-        if token_id.item() == stop_token:
+        if token_id.item() in stop_token:
             # if beam_token does not belong to top num_beams tokens, it should not be added
             is_beam_token_worse_than_top_num_beams = beam_token_rank >= beam_size
             if is_beam_token_worse_than_top_num_beams:
