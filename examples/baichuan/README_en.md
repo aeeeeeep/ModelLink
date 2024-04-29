@@ -40,143 +40,143 @@ Here's a hardware summary of pre-training Baichuan-7B:
 
 1. Clone the repository to your local server:
 
-```shell
-git clone https://gitee.com/ascend/ModelLink.git 
-git clone https://github.com/NVIDIA/Megatron-LM.git
-cd Megatron-LM
-git checkout -f bcce6f
-cp -r megatron ../ModelLink/
-cd ..
-cd ModelLink
-mkdir logs
-mkdir model_from_hf
-mkdir dataset
-mkdir ckpt
-```
+    ```shell
+    git clone https://gitee.com/ascend/ModelLink.git 
+    git clone https://github.com/NVIDIA/Megatron-LM.git
+    cd Megatron-LM
+    git checkout -f bcce6f
+    cp -r megatron ../ModelLink/
+    cd ..
+    cd ModelLink
+    mkdir logs
+    mkdir model_from_hf
+    mkdir dataset
+    mkdir ckpt
+    ```
 
 2. Build environment
 
-```bash
-# python3.8
-conda create -n test python=3.8
-conda activate test
+    ```bash
+    # python3.8
+    conda create -n test python=3.8
+    conda activate test
 
-# install torch and torch_npu 
-pip install torch-2.1.0-cp38-cp38m-linux_aarch64.whl
-pip install torch_npu-2.1.0.XXX-cp38-cp38m-linux_aarch64.whl
-pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+    # install torch and torch_npu 
+    pip install torch-2.1.0-cp38-cp38m-linux_aarch64.whl
+    pip install torch_npu-2.1.0.XXX-cp38-cp38m-linux_aarch64.whl
+    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 
-# modify the path according to your own  ascend-toolkit path
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    # modify the path according to your own  ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-# install AscendSpeed
-git clone https://gitee.com/ascend/AscendSpeed.git
-cd AscendSpeed
-git checkout 224ae35e8fc96778f957029d1371ddb623452a50
-pip install -r requirements.txt 
-pip3 install -e .
-cd ..
+    # install AscendSpeed
+    git clone https://gitee.com/ascend/AscendSpeed.git
+    cd AscendSpeed
+    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+    pip install -r requirements.txt 
+    pip3 install -e .
+    cd ..
 
-# install other packages
-pip install -r requirements.txt 
-```
+    # install other packages
+    pip install -r requirements.txt 
+    ```
 
 3. Prepare pretrained weights
-Download the Baichuan-7B checkpoint from [here](https://huggingface.co/baichuan-inc/Baichuan-7B/tree/main) 
+    Download the Baichuan-7B checkpoint from [here](https://huggingface.co/baichuan-inc/Baichuan-7B/tree/main) 
 
-```shell
-mkdir ./model_from_hf/Baichuan-7B/
-cd ./model_from_hf/Baichuan-7B/
-wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/config.json
-wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/configuration_baichuan.py
-wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/generation_config.json
-wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/handler.py
-wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/modeling_baichuan.py
-wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/pytorch_model.bin
-wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/special_tokens_map.json
-wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/tokenization_baichuan.py
-wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/tokenizer.model
-wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/tokenizer_config.json
-cd ../../
-```
+    ```shell
+    mkdir ./model_from_hf/Baichuan-7B/
+    cd ./model_from_hf/Baichuan-7B/
+    wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/config.json
+    wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/configuration_baichuan.py
+    wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/generation_config.json
+    wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/handler.py
+    wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/modeling_baichuan.py
+    wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/pytorch_model.bin
+    wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/special_tokens_map.json
+    wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/tokenization_baichuan.py
+    wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/tokenizer.model
+    wget https://huggingface.co/baichuan-inc/Baichuan-7B/resolve/main/tokenizer_config.json
+    cd ../../
+    ```
 
 4. Weights convert
 
-In order to adapt to the Baichuan-7B model, the following script is used to convert the model pre-training weights.
-***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
+    In order to adapt to the Baichuan-7B model, the following script is used to convert the model pre-training weights.
+    ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 
-```shell
-# modify the ascend-toolkit path
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-   
-python tools/checkpoint/convert_ckpt.py \
-    --model-type GPT \
-    --loader llama2_hf \
-    --saver megatron \
-    --target-tensor-parallel-size 8 \
-    --target-pipeline-parallel-size 1 \
-    --load-dir ./model_from_hf/Baichuan-7B/ \
-    --save-dir ./model_weights/Baichuan-7B-v0.1-tp8-pp1/ \
-    --tokenizer-model ./model_from_hf/Baichuan-7B/tokenizer.model \
-    --w-pack True  
-```
+    ```shell
+    # modify the ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
-***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader llama2_hf \
+        --saver megatron \
+        --target-tensor-parallel-size 8 \
+        --target-pipeline-parallel-size 1 \
+        --load-dir ./model_from_hf/Baichuan-7B/ \
+        --save-dir ./model_weights/Baichuan-7B-v0.1-tp8-pp1/ \
+        --tokenizer-model ./model_from_hf/Baichuan-7B/tokenizer.model \
+        --w-pack True  
+    ```
 
-```shell
-# Modify the ascend-toolkit path
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/convert_ckpt.py --model-type GPT \
-    --loader megatron \
-    --saver megatron \
-    --save-model-type save_huggingface_llama \
-    --load-dir ./model_weights/Baichuan-7B-v0.1-tp8-pp1/ \
-    --target-tensor-parallel-size 1 \
-    --target-pipeline-parallel-size 1 \
-    --w-pack True \
-    --save-dir ./model_from_hf/Baichuan-7B/   # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Baichuan-7B/mg2hg/
-```
+    Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+    ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+
+    ```shell
+    # Modify the ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_llama \
+        --load-dir ./model_weights/Baichuan-7B-v0.1-tp8-pp1/ \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --w-pack True \
+        --save-dir ./model_from_hf/Baichuan-7B/   # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Baichuan-7B/mg2hg/
+    ```
 
 5. Prepare dataset
 
-Download the Baichuan-7B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
+    Download the Baichuan-7B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
 
-```shell
-# download datasets
-cd ./dataset
-wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-cd ..
+    ```shell
+    # download datasets
+    cd ./dataset
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
 
-# process datasets          
-mkdir ./dataset/Baichuan-7B/
-python ./tools/preprocess_data.py \
-    --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ./model_from_hf/Baichuan-7B/ \
-    --output-prefix ./dataset/Baichuan-7B/alpaca \
-    --workers 4 \
-    --log-interval 1000 \
-    --tokenizer-type PretrainedFromHF
-```
+    # process datasets          
+    mkdir ./dataset/Baichuan-7B/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/Baichuan-7B/ \
+        --output-prefix ./dataset/Baichuan-7B/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF
+    ```
 
 6. Config Baichuan-7B pre-training script : examples/baichuan/pretrain_baichuan_ptd_7B.sh
 
-```shell
-# modify the script according to your own  ascend-toolkit path
-source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    ```shell
+    # modify the script according to your own  ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-CKPT_SAVE_DIR="./ckpt/Baichuan-7B/"
-DATA_PATH="./dataset/Baichuan-7B/alpaca_text_document"
-TOKENIZER_MODEL="./model_from_hf/Baichuan-7B/tokenizer.model"
-CKPT_LOAD_DIR="./model_weights/Baichuan-7B-v0.1-tp8-pp1/"
-```
+    CKPT_SAVE_DIR="./ckpt/Baichuan-7B/"
+    DATA_PATH="./dataset/Baichuan-7B/alpaca_text_document"
+    TOKENIZER_MODEL="./model_from_hf/Baichuan-7B/tokenizer.model"
+    CKPT_LOAD_DIR="./model_weights/Baichuan-7B-v0.1-tp8-pp1/"
+    ```
 
 7. Launch Baichuan-7B  pre-training script: examples/baichuan/pretrain_baichuan_ptd_7B.sh
 
-```shell
-bash examples/baichuan/pretrain_baichuan_ptd_7B.sh 
-```
-**Note**: If using multi machine training, it is necessary to set up multi machine data sharing, and non primary nodes can read the primary node data through data sharing. Alternatively, directly copy the data generated by the master node to non master nodes.
+    ```shell
+    bash examples/baichuan/pretrain_baichuan_ptd_7B.sh 
+    ```
+    **Note**: If using multi machine training, it is necessary to set up multi machine data sharing, and non primary nodes can read the primary node data through data sharing. Alternatively, directly copy the data generated by the master node to non master nodes.
 
 
 ### Performance
@@ -268,154 +268,154 @@ Here's a hardware summary of pre-training Baichuan-13B:
 
 1. Clone the repository to your local server:
 
-```shell
-git clone https://gitee.com/ascend/ModelLink.git 
-git clone https://github.com/NVIDIA/Megatron-LM.git
-cd Megatron-LM
-git checkout -f bcce6f
-cp -r megatron ../ModelLink/
-cd ..
-cd ModelLink
-mkdir logs
-mkdir model_from_hf
-mkdir dataset
-mkdir ckpt
-```
+    ```shell
+    git clone https://gitee.com/ascend/ModelLink.git 
+    git clone https://github.com/NVIDIA/Megatron-LM.git
+    cd Megatron-LM
+    git checkout -f bcce6f
+    cp -r megatron ../ModelLink/
+    cd ..
+    cd ModelLink
+    mkdir logs
+    mkdir model_from_hf
+    mkdir dataset
+    mkdir ckpt
+    ```
 
 2. Build environment
 
-```bash
-# python3.8
-conda create -n test python=3.8
-conda activate test
+    ```bash
+    # python3.8
+    conda create -n test python=3.8
+    conda activate test
 
-# install torch and torch_npu
-pip install torch-2.1.0-cp38-cp38m-linux_aarch64.whl
-pip install torch_npu-2.1.0.XXX-cp38-cp38m-linux_aarch64.whl
-pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+    # install torch and torch_npu
+    pip install torch-2.1.0-cp38-cp38m-linux_aarch64.whl
+    pip install torch_npu-2.1.0.XXX-cp38-cp38m-linux_aarch64.whl
+    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 
-# modify the path according to your own  ascend-toolkit path
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    # modify the path according to your own  ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-#install Ascendspeed
-git clone https://gitee.com/ascend/AscendSpeed.git
-cd AscendSpeed
-git checkout 224ae35e8fc96778f957029d1371ddb623452a50
-pip install -r requirements.txt 
-pip3 install -e .
-cd ..
+    #install Ascendspeed
+    git clone https://gitee.com/ascend/AscendSpeed.git
+    cd AscendSpeed
+    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+    pip install -r requirements.txt 
+    pip3 install -e .
+    cd ..
 
-# install other packages
-pip install -r requirements.txt 
-```
+    # install other packages
+    pip install -r requirements.txt 
+    ```
 
-**Note:** If the error message "'AttributeError: 'BaichuanTokenizer' object has no attribute'sp_model'" is displayed during the script execution, run the following command to rectify the error:
+    **Note:** If the error message "'AttributeError: 'BaichuanTokenizer' object has no attribute'sp_model'" is displayed during the script execution, run the following command to rectify the error:
 
-```shell
-pip install transformers==4.32.0 --force
-```
+    ```shell
+    pip install transformers==4.32.0 --force
+    ```
 
 3. Prepare pretrained weights
 
 
-Download the Baichuan-13B checkpoint from [here](https://huggingface.co/baichuan-inc/Baichuan-13B-Base/tree/main) 
+    Download the Baichuan-13B checkpoint from [here](https://huggingface.co/baichuan-inc/Baichuan-13B-Base/tree/main) 
 
-```shell
-mkdir ./model_from_hf/Baichuan-13B/
-cd ./model_from_hf/Baichuan-13B/
-wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/config.json
-wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/configuration_baichuan.py
-wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/generation_config.json
-wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/modeling_baichuan.py
-wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/pytorch_model-00001-of-00003.bin
-wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/pytorch_model-00002-of-00003.bin
-wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/pytorch_model-00003-of-00003.bin
-wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/pytorch_model.bin.index.json
-wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/quantizer.py
-wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/special_tokens_map.json
-wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/tokenization_baichuan.py
-wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/tokenizer_config.json
-wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/tokenizer.model
-cd ../../
-```
+    ```shell
+    mkdir ./model_from_hf/Baichuan-13B/
+    cd ./model_from_hf/Baichuan-13B/
+    wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/config.json
+    wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/configuration_baichuan.py
+    wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/generation_config.json
+    wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/modeling_baichuan.py
+    wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/pytorch_model-00001-of-00003.bin
+    wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/pytorch_model-00002-of-00003.bin
+    wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/pytorch_model-00003-of-00003.bin
+    wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/pytorch_model.bin.index.json
+    wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/quantizer.py
+    wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/special_tokens_map.json
+    wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/tokenization_baichuan.py
+    wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/tokenizer_config.json
+    wget https://huggingface.co/baichuan-inc/Baichuan-13B-Base/resolve/main/tokenizer.model
+    cd ../../
+    ```
 
 4. Weights convert
 
-In order to adapt to the baichuan-13B model, the following script is used to convert the model pre-training weights.
+    In order to adapt to the baichuan-13B model, the following script is used to convert the model pre-training weights.
 
-***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
+    ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 
-```shell
-mkdir baichuan-13B-mt
+    ```shell
+    mkdir baichuan-13B-mt
 
-# modify the ascend-toolkit path
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-   
-python tools/checkpoint/convert_ckpt.py \
-    --model-type GPT \
-    --loader llama2_hf \
-    --saver megatron \
-    --target-tensor-parallel-size 8 \
-    --load-dir ./model_from_hf/Baichuan-13B/ \
-    --save-dir ./model_weights/Baichuan-13B-Base-v0.1-tp8-pp1/ \
-    --tokenizer-model ./model_from_hf/Baichuan-13B/tokenizer.model \
-    --params-dtype bf16 \
-    --w-pack True  
-```
+    # modify the ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader llama2_hf \
+        --saver megatron \
+        --target-tensor-parallel-size 8 \
+        --load-dir ./model_from_hf/Baichuan-13B/ \
+        --save-dir ./model_weights/Baichuan-13B-Base-v0.1-tp8-pp1/ \
+        --tokenizer-model ./model_from_hf/Baichuan-13B/tokenizer.model \
+        --params-dtype bf16 \
+        --w-pack True  
+    ```
 
-Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
-***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+    Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+    ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
 
-```shell
-# Modify the ascend-toolkit path
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/convert_ckpt.py --model-type GPT \
-    --loader megatron \
-    --saver megatron \
-    --save-model-type save_huggingface_llama \
-    --load-dir ./model_weights/Baichuan-13B-Base-v0.1-tp8-pp1/ \
-    --target-tensor-parallel-size 1 \
-    --target-pipeline-parallel-size 1 \
-    --w-pack True \
-    --save-dir ./model_from_hf/Baichuan-13B/   # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Baichuan-13B/mg2hg/
-```
+    ```shell
+    # Modify the ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_llama \
+        --load-dir ./model_weights/Baichuan-13B-Base-v0.1-tp8-pp1/ \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --w-pack True \
+        --save-dir ./model_from_hf/Baichuan-13B/   # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Baichuan-13B/mg2hg/
+    ```
 
 5. Prepare dataset
-Download the Baichuan-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
+    Download the Baichuan-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
 
-```shell
-cd ./dataset/
-wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-cd ..
+    ```shell
+    cd ./dataset/
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
 
-mkdir ./dataset/Baichuan-13B/
-python ./tools/preprocess_data.py \
-    --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ./model_from_hf/Baichuan-13B/ \
-    --output-prefix ./dataset/Baichuan-13B/alpaca \
-    --workers 4 \
-    --log-interval 1000 \
-    --tokenizer-type PretrainedFromHF 
-```
+    mkdir ./dataset/Baichuan-13B/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/Baichuan-13B/ \
+        --output-prefix ./dataset/Baichuan-13B/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF 
+    ```
 
 6. Config Baichuan-13B pre-training script(Baichuan-13B does not support Flash Attention): examples/baichuan/pretrain_baichuan_ptd_13B.sh
 
-```shell
-# modify the script according to your own  ascend-toolkit path
-source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    ```shell
+    # modify the script according to your own  ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-CKPT_SAVE_DIR="./ckpt/Baichuan-13B/"
-DATA_PATH="./dataset/Baichuan-13B/alpaca_text_document"
-TOKENIZER_MODEL="./model_from_hf/Baichuan-13B/tokenizer.model"
-CKPT_LOAD_DIR="./model_weights/Baichuan-13B-Base-v0.1-tp8-pp1/" 
-```
+    CKPT_SAVE_DIR="./ckpt/Baichuan-13B/"
+    DATA_PATH="./dataset/Baichuan-13B/alpaca_text_document"
+    TOKENIZER_MODEL="./model_from_hf/Baichuan-13B/tokenizer.model"
+    CKPT_LOAD_DIR="./model_weights/Baichuan-13B-Base-v0.1-tp8-pp1/" 
+    ```
 
 7. Launch Baichuan-13B pre-training script: examples/baichuan/pretrain_baichuan_ptd_13B.sh
 
-```bash
-bash examples/baichuan/pretrain_baichuan_ptd_13B.sh
-```
-**Note**: If using multi machine training, it is necessary to set up multi machine data sharing, and non primary nodes can read the primary node data through data sharing. Alternatively, directly copy the data generated by the master node to non master nodes.
+    ```bash
+    bash examples/baichuan/pretrain_baichuan_ptd_13B.sh
+    ```
+    **Note**: If using multi machine training, it is necessary to set up multi machine data sharing, and non primary nodes can read the primary node data through data sharing. Alternatively, directly copy the data generated by the master node to non master nodes.
 
 ### Performance
 
