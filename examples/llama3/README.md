@@ -97,7 +97,7 @@ LLAMA3-8B 训练的硬件配置:
    ```
 4. 权重转换
 
-   4.1 将权重从 huggingface 格式转化为 magatron 格式
+   4.1 将权重从 huggingface 格式转化为 megatron 格式
    ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
    ```bash
@@ -119,19 +119,19 @@ LLAMA3-8B 训练的硬件配置:
    4.2 任意并行切分策略的 Megatron 权重 格式转化为 HuggingFace权重
    ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
 
-```shell
-# 请按照您的真实环境修改 set_env.sh 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/convert_ckpt.py \
-    --model-type GPT \
-    --loader megatron \
-    --saver megatron \
-    --save-model-type save_huggingface_llama \
-    --load-dir ./model_weights/llama-3-8b-hf-v0.1-tp8-pp1/ \
-    --target-tensor-parallel-size 1 \
-    --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama-3-8b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-3-8b-hf/mg2hg/
-```
+   ```shell
+    # 请按照您的真实环境修改 set_env.sh 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/convert_ckpt.py \
+       --model-type GPT \
+       --loader megatron \
+       --saver megatron \
+       --save-model-type save_huggingface_llama \
+       --load-dir ./model_weights/llama-3-8b-hf-v0.1-tp8-pp1/ \
+       --target-tensor-parallel-size 1 \
+       --target-pipeline-parallel-size 1 \
+       --save-dir ./model_from_hf/llama-3-8b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-3-8b-hf/mg2hg/
+   ```
 
    权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数 `target-tensor-parallel-size`和 `target-pipeline-parallel-size`。
 
@@ -210,6 +210,8 @@ TOKENIZER_PATH="./model_from_hf/llama-3-8b-hf/"
 bash examples/llama3/generate_llama3_8b_ptd.sh
 ```
 
+**如果想要使用大模型聊天功能，请下载对应的Instruct/Chat权重，并转换为Megatron格式，配置相关路径，
+启动聊天脚本: examples/llama3/generate_llama3_8b_chat_ptd.sh**
 
 ## 评估-8B
 
@@ -315,7 +317,7 @@ LLAMA3-70B 训练的硬件配置:
    ```
 4. 权重转换
 
-   4.1 将权重从 huggingface 格式转化为 magatron 格式
+   4.1 将权重从 huggingface 格式转化为 megatron 格式
    ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
    ```bash
@@ -337,19 +339,19 @@ LLAMA3-70B 训练的硬件配置:
    4.2 任意并行切分策略的 Megatron 权重 格式转化为 HuggingFace权重
    ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
 
-```shell
-# 请按照您的真实环境修改 set_env.sh 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/convert_ckpt.py \
-    --model-type GPT \
-    --loader megatron \
-    --saver megatron \
-    --save-model-type save_huggingface_llama \
-    --load-dir ./model_weights/llama-3-70b-hf-v0.1-tp8-pp8/ \
-    --target-tensor-parallel-size 1 \
-    --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama-3-70b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-3-70b-hf/mg2hg/
-```
+   ```shell
+    # 请按照您的真实环境修改 set_env.sh 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/convert_ckpt.py \
+       --model-type GPT \
+       --loader megatron \
+       --saver megatron \
+       --save-model-type save_huggingface_llama \
+       --load-dir ./model_weights/llama-3-70b-hf-v0.1-tp8-pp8/ \
+       --target-tensor-parallel-size 1 \
+       --target-pipeline-parallel-size 1 \
+       --save-dir ./model_from_hf/llama-3-70b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-3-70b-hf/mg2hg/
+   ```
 
    权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数 `target-tensor-parallel-size`和 `target-pipeline-parallel-size`。
 

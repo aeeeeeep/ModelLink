@@ -256,7 +256,10 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         # whether to use customizing tokenizer
         # =======================================
         self._init_tokenizer(args)
-
+        stop_ids = []
+        if hasattr(args, "add_eos_token") and args.add_eos_token:
+            stop_ids = [self.tokenizer.convert_tokens_to_ids(token)
+                        for token in args.add_eos_token]
         # =======================================
         # Tokenize the prompts and broadcasting,
         # so you don't need to pass the prompt on
@@ -281,7 +284,8 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         else:
             token_stream = self.greedy_search_or_sampling(
                 args.model[0],
-                context_tokens
+                context_tokens,
+                stop_ids=stop_ids,
             )
 
         # =======================================

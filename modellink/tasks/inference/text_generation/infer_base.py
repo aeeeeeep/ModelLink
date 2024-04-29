@@ -38,6 +38,10 @@ def add_text_generate_args(parser):
     group.add_argument("--max-new-tokens", type=int, default=128, help='Size of the output generated text.')
     group.add_argument('--inference-prompt-type', type=str, default='llama',
             help="choose the prompt type for inference")
+    group.add_argument('--hf-chat-template', action='store_true', default=False,
+                        help="Using Huggingface chat template")    
+    group.add_argument('--add-eos-token', nargs='+', type=str, default=[],
+                        help="Use additional eos tokens")                          
     return parser
 
 
@@ -249,6 +253,10 @@ def task_chat(args, model, tokenizer=None, system_template="", dialog_template="
     output, prompt, instruction = "", "", ""
     input_template, response_template = "\n\nYou >> ", "\nModelLink:\n"
     command_clear = ["clear"]
+    messages = []
+    if args.hf_chat_template:
+        from megatron import get_tokenizer
+        tokenizer = get_tokenizer().tokenizer
     while True:
         terminate_runs = torch.zeros(1, dtype=torch.int64, device=torch.cuda.current_device())
 
@@ -268,6 +276,7 @@ def task_chat(args, model, tokenizer=None, system_template="", dialog_template="
             if prompt.strip() in ["clear", "new"]:
                 subprocess.call(command_clear)
                 histories = []
+                messages = []
                 continue
 
             if not prompt.strip():
@@ -276,6 +285,15 @@ def task_chat(args, model, tokenizer=None, system_template="", dialog_template="
             histories.append((prompt, None))
             instruction = get_context(histories)
             histories.pop()
+            messages.append(
+                {"role": "user", "content": prompt}
+            )
+            if args.hf_chat_template:
+                instruction = tokenizer.apply_chat_template(
+                    messages,
+                    tokenizer=False,
+                    add_generation_prompt=True
+                )
 
         dist.all_reduce(terminate_runs)
         dist.barrier()
@@ -304,3 +322,6 @@ def task_chat(args, model, tokenizer=None, system_template="", dialog_template="
                 prev = curr
 
         histories.append((prompt, output))
+        messages.append(
+            {"role": "assistant", "content": output}
+        )

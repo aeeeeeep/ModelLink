@@ -227,6 +227,8 @@ Launch llama3-8B inference script: examples/llama3/generate_llama3_8b_ptd.sh
 bash examples/llama3/generate_llama3_8b_ptd.sh
 ```
 
+**When want to chat with Llama3，please download Instruct/Chat weights，and convert to Megatron weights. Then lanch the chat script: examples/llama3/generate_llama3_8b_chat_ptd.sh**
+
 
 ## Evaluation-8B
 

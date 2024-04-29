@@ -422,7 +422,7 @@ class FlashSelfAttention(torch.nn.Module):
 
         batch_size, seq_length, head_num, head_dim = q.shape[1], q.shape[0], q.shape[2], q.shape[3]
 
-        if not hasattr(self, 'attention_mask'):
+        if not hasattr(self, 'attention_mask') or self.attention_mask.shape[0] != seq_length:
             self.attention_mask = torch.triu(torch.ones(seq_length, seq_length), 1).bool().npu()
 
         q, k, v = [rearrange(x, 's b h d -> s b (h d)') for x in [q, k, v]]
