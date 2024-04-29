@@ -54,11 +54,12 @@ GPT_ARGS="
     --no-masked-softmax-fusion \
     --attention-softmax-in-fp32 \
     --min-lr 1.0e-7 \
-    --weight-decay 1e-2 \
+    --weight-decay 0.1 \
     --clip-grad 1.0 \
     --adam-beta1 0.9 \
     --initial-loss-scale 4096.0 \
-    --adam-beta2 0.999 \
+    --adam-beta2 0.95 \
+    --adam-eps 1e-5 \
     --no-gradient-accumulation-fusion \
     --load ${CKPT_LOAD_DIR}  \
     --no-load-optim \
