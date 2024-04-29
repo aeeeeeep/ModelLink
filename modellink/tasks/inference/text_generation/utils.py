@@ -132,7 +132,7 @@ def top_k_logits(logits, top_k=0, top_p=0.0, filter_value=-float('Inf')):
     return logits
 
 
-def greedy_search_or_sampling(model, context_tokens, model_latencies=None, single_token_latency=None):
+def greedy_search_or_sampling(model, context_tokens, model_latencies=None, single_token_latency=None, stop_ids=None):
     args = get_args()
     model_latencies = [] if model_latencies is None else model_latencies
 
@@ -144,6 +144,7 @@ def greedy_search_or_sampling(model, context_tokens, model_latencies=None, singl
         model,
         context_tokens_tensor,
         context_length_tensor,
+        stop_ids=stop_ids,
         model_latencies=model_latencies
     )
 
@@ -228,7 +229,10 @@ def _unwrap_and_set_input_tensor(args, input_tensor, model):
         unwrapped_model.set_input_tensor(input_tensor)
 
 
-def sample_sequence_batch(model, context_tokens, context_lengths, type_ids=None, model_latencies=None):
+def sample_sequence_batch(model, context_tokens, context_lengths, **kwargs):
+    type_ids = kwargs.pop("type_ids", None)
+    model_latencies = kwargs.pop("model_latencies", None)
+    stop_ids = kwargs.pop("stop_ids", None)
     model_latencies = [] if model_latencies is None else model_latencies
     args = get_args()
     tokenizer = get_tokenizer()
@@ -272,7 +276,7 @@ def sample_sequence_batch(model, context_tokens, context_lengths, type_ids=None,
 
             output_log_probs = _get_log_probs(args, context_length, log_probs_seq, next_log_probs, (group, src))
 
-            done = _is_done(is_done, prev, started, tokenizer)
+            done = _is_done(is_done, prev, started, tokenizer, stop_ids=stop_ids)
 
             yield tokens, max_length, output_log_probs
 
@@ -282,10 +286,14 @@ def sample_sequence_batch(model, context_tokens, context_lengths, type_ids=None,
                 break
 
 
-def _is_done(is_done, prev, started, tokenizer):
+def _is_done(is_done, prev, started, tokenizer, stop_ids=None):
     if parallel_state.is_pipeline_last_stage():
         done_token = (prev == tokenizer.eos_token_id).byte() & started.byte()
         is_done = is_done | done_token
+        if stop_ids:
+            for stop_id in stop_ids:
+                done_token = (prev == stop_id).byte() & started.byte()
+                is_done = is_done | done_token
         done = torch.all(is_done)
 
         if parallel_state.get_pipeline_model_parallel_world_size() > 1:

@@ -97,7 +97,7 @@ LLAMA3-8B 训练的硬件配置:
    ```
 4. 权重转换
 
-   4.1 将权重从 huggingface 格式转化为 magatron 格式
+   4.1 将权重从 huggingface 格式转化为 megatron 格式
    ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
    ```bash
@@ -119,19 +119,19 @@ LLAMA3-8B 训练的硬件配置:
    4.2 任意并行切分策略的 Megatron 权重 格式转化为 HuggingFace权重
    ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
 
-```shell
-# 请按照您的真实环境修改 set_env.sh 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/convert_ckpt.py \
-    --model-type GPT \
-    --loader megatron \
-    --saver megatron \
-    --save-model-type save_huggingface_llama \
-    --load-dir ./model_weights/llama-3-8b-hf-v0.1-tp8-pp1/ \
-    --target-tensor-parallel-size 1 \
-    --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama-3-8b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-3-8b-hf/mg2hg/
-```
+   ```shell
+    # 请按照您的真实环境修改 set_env.sh 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/convert_ckpt.py \
+       --model-type GPT \
+       --loader megatron \
+       --saver megatron \
+       --save-model-type save_huggingface_llama \
+       --load-dir ./model_weights/llama-3-8b-hf-v0.1-tp8-pp1/ \
+       --target-tensor-parallel-size 1 \
+       --target-pipeline-parallel-size 1 \
+       --save-dir ./model_from_hf/llama-3-8b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-3-8b-hf/mg2hg/
+   ```
 
    权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数 `target-tensor-parallel-size`和 `target-pipeline-parallel-size`。
 
@@ -210,6 +210,45 @@ TOKENIZER_PATH="./model_from_hf/llama-3-8b-hf/"
 bash examples/llama3/generate_llama3_8b_ptd.sh
 ```
 
+**如果想要使用大模型聊天功能，请下载对应的Instruct/Chat权重，并转换为Megatron格式，配置相关路径，
+启动聊天脚本: examples/llama3/generate_llama3_8b_chat_ptd.sh**
+
+LLAMA3-8B-Instruct 权重[下载](https://huggingface.co/unsloth/llama-3-8b-Instruct)
+
+聊天示例如下：
+```
+You >> 你好
+ModelLink:
+你好！我是你的中文语言模型，很高兴和你交流！有什么想聊的题目或问题，请随时问我！
+
+You >> 介绍一下llama3
+
+ModelLink:
+LLaMA 3 is a large-scale language model developed by Meta AI, a leading artificial intelligence research organization. It's a significant upgrade to the previous LLaMA models, offering improved performance and capabilities.
+
+Here are some key features and facts about LLaMA 3:
+
+Scale: LLaMA 3 is a massive model, consisting of 13.5 billion parameters, making it one of the largest language models in the world.
+Architecture: It's based on the Transformer architecture, which is a type of neural network designed specifically for natural language processing tasks.
+Training data: LLaMA 3 was trained on a massive dataset of text from the internet, including books, articles, and websites. This training data allows the model to learn about various topics, styles, and language patterns.
+Language understanding: LLaMA 3 is capable of understanding natural language, including nuances, idioms, and figurative language. It can also recognize and generate text in multiple languages.
+Conversational capabilities: The model can engage in conversations, answering questions, and responding to prompts. It can also generate text based on a given topic or theme.
+Creative writing: LLaMA
+You >> 能用中文回答吗
+
+ModelLink:
+
+LLaMA 3 是 Meta AI 开发的一种大规模语言模型，是之前 LLama 模型的升级版本，提供了改进的性能和能力。
+
+以下是 LLama 3 的一些关键特点和事实：
+
+规模：LLaMA 3 是一个庞大的模型，具有 13.5 亿参数，世界上最大的语言模型之一。
+架构：它基于 Transformer 架构，这是一种专门为自然语言处理任务设计的神经网络。
+训练数据：LLaMA 3 在互联网上的大量文本数据上进行了训练，包括书籍、文章和网站。这使得模型能够学习各种主题、风格和语言模式。
+语言理解：LLaMA 3 能够理解自然语言，包括 nuance、idiom 和 figurative language。它也能识别和生成多种语言的文本。
+对话能力：模型能够参与对话，回答问题和响应提示。它也能基于给定的主题或主题生成文本。
+创作写作：LLa
+```
 
 ## 评估-8B
 
@@ -315,7 +354,7 @@ LLAMA3-70B 训练的硬件配置:
    ```
 4. 权重转换
 
-   4.1 将权重从 huggingface 格式转化为 magatron 格式
+   4.1 将权重从 huggingface 格式转化为 megatron 格式
    ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
    ```bash
@@ -337,19 +376,19 @@ LLAMA3-70B 训练的硬件配置:
    4.2 任意并行切分策略的 Megatron 权重 格式转化为 HuggingFace权重
    ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
 
-```shell
-# 请按照您的真实环境修改 set_env.sh 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/convert_ckpt.py \
-    --model-type GPT \
-    --loader megatron \
-    --saver megatron \
-    --save-model-type save_huggingface_llama \
-    --load-dir ./model_weights/llama-3-70b-hf-v0.1-tp8-pp8/ \
-    --target-tensor-parallel-size 1 \
-    --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama-3-70b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-3-70b-hf/mg2hg/
-```
+   ```shell
+    # 请按照您的真实环境修改 set_env.sh 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/convert_ckpt.py \
+       --model-type GPT \
+       --loader megatron \
+       --saver megatron \
+       --save-model-type save_huggingface_llama \
+       --load-dir ./model_weights/llama-3-70b-hf-v0.1-tp8-pp8/ \
+       --target-tensor-parallel-size 1 \
+       --target-pipeline-parallel-size 1 \
+       --save-dir ./model_from_hf/llama-3-70b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-3-70b-hf/mg2hg/
+   ```
 
    权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数 `target-tensor-parallel-size`和 `target-pipeline-parallel-size`。
 
