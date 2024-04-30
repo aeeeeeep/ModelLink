@@ -26,139 +26,140 @@ Here's a hardware summary of pre-training Aquila-7B:
 
 1. Clone the repository to your local server and switch to modellink branch:
 
-```shell
-git clone https://gitee.com/ascend/ModelLink.git
-git clone https://github.com/NVIDIA/Megatron-LM.git
-cd Megatron-LM
-git checkout -f bcce6f
-cp -r megatron ../ModelLink/
-cd ..
-cd ModelLink
-mkdir logs
-mkdir model_from_hf
-mkdir dataset
-mkdir ckpt
-```
+    ```shell
+    git clone https://gitee.com/ascend/ModelLink.git
+    git clone https://github.com/NVIDIA/Megatron-LM.git
+    cd Megatron-LM
+    git checkout -f bcce6f
+    cp -r megatron ../ModelLink/
+    cd ..
+    cd ModelLink
+    mkdir logs
+    mkdir model_from_hf
+    mkdir dataset
+    mkdir ckpt
+    ```
 
 2. Build conda environment
 
-```bash
-# python3.8
-conda create -n test python=3.8
-conda activate test
-# install torch, torch_npu and apex
-pip install torch==2.1.0
-pip install torch_npu-2.1.0.postxxxx-cp38-cp38-xxxx_aarch64.whl
-pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+    ```bash
+    # python3.8
+    conda create -n test python=3.8
+    conda activate test
+    # install torch, torch_npu and apex
+    pip install torch==2.1.0
+    pip install torch_npu-2.1.0.postxxxx-cp38-cp38-xxxx_aarch64.whl
+    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 
-# source the set_env.sh file based on your host settings(you may need to change the path)
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-# use git to clone the AscendSpeed source code, enter the directory, then install ascendspeed package by source code
-git clone https://gitee.com/ascend/AscendSpeed.git
-cd AscendSpeed/
-git checkout 224ae35e8fc96778f957029d1371ddb623452a50
-pip install -r requirements.txt
-pip install -e .
-cd ..
+    # source the set_env.sh file based on your host settings(you may need to change the path)
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    # use git to clone the AscendSpeed source code, enter the directory, then install ascendspeed package by source code
+    git clone https://gitee.com/ascend/AscendSpeed.git
+    cd AscendSpeed/
+    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+    pip install -r requirements.txt
+    pip install -e .
+    cd ..
 
-# install other packages
-pip install -r requirements.txt
-```
+    # install other packages
+    pip install -r requirements.txt
+    ```
 
 3. Download the Aquila-7B model, config, and tokenizer from [here](https://huggingface.co/BAAI/Aquila-7B/tree/main)
 
-save to ModelLink/model_from_hf/Aquila7B/ directory.
+    save to ModelLink/model_from_hf/Aquila7B/ directory.
 
-1. Prepare dataset.
 
-step1: Download the datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet), save to ModelLink/dataset/ directory.
+    Prepare dataset.
 
-```shell
-cd dataset/
-wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-cd ..
-```
+    step1: Download the datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet), save to ModelLink/dataset/ directory.
 
-step2: use Aquila-7B specified tokenizer to pre-process data:
+    ```shell
+    cd dataset/
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
+    ```
 
-```shell
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-mkdir ./dataset/Aquila-7B/
-python ./tools/preprocess_data.py \
-    --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ./model_from_hf/Aquila-7B/ \
-    --output-prefix ./dataset/Aquila-7B/alpaca \
-    --workers 4 \
-    --log-interval 1000  \
-    --tokenizer-type PretrainedFromHF
-```
+    step2: use Aquila-7B specified tokenizer to pre-process data:
 
-5. Weights convert
+    ```shell
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    mkdir ./dataset/Aquila-7B/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/Aquila-7B/ \
+        --output-prefix ./dataset/Aquila-7B/alpaca \
+        --workers 4 \
+        --log-interval 1000  \
+        --tokenizer-type PretrainedFromHF
+    ```
 
-HuggingFace weights --> Megatron weights
-***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
+4. Weights convert
 
-```shell
-# please modify the path to set_env.sh based on your environment.
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/convert_ckpt.py \
-    --model-type GPT \
-    --load-dir ./model_from_hf/Aquila-7B/ \
-    --save-dir ./model_weights/Aquila-7B-v0.1-tp8-pp1/ \
-    --loader llama2_hf \
-    --saver megatron \
-    --target-tensor-parallel-size 8 \
-    --tokenizer-model ./model_from_hf/Aquila-7B/tokenizer.json
-```
+    HuggingFace weights --> Megatron weights
+    ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 
-Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
-***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+    ```shell
+    # please modify the path to set_env.sh based on your environment.
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --load-dir ./model_from_hf/Aquila-7B/ \
+        --save-dir ./model_weights/Aquila-7B-v0.1-tp8-pp1/ \
+        --loader llama2_hf \
+        --saver megatron \
+        --target-tensor-parallel-size 8 \
+        --tokenizer-model ./model_from_hf/Aquila-7B/tokenizer.json
+    ```
 
-```shell
-# Modify the ascend-toolkit path
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/convert_ckpt.py --model-type GPT \
-    --loader megatron \
-    --saver megatron \
-    --save-model-type save_huggingface_llama \
-    --load-dir ./model_weights/Aquila-7B-v0.1-tp8-pp1/ \
-    --target-tensor-parallel-size 1 \
-    --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/Aquila-7B/   # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Aquila-7B/mg2hg/
-```
+    Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+    ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
 
-6. Config Aquila-7B pre-training script.
+    ```shell
+    # Modify the ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/convert_ckpt.py --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_llama \
+        --load-dir ./model_weights/Aquila-7B-v0.1-tp8-pp1/ \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --save-dir ./model_from_hf/Aquila-7B/   # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Aquila-7B/mg2hg/
+    ```
 
-Config the environment variables in aquila pretrain script
+5. Config Aquila-7B pre-training script.
 
-```shell
-# set dataset path, CKPT load path for loading weights, and the tokenizer path
-TOKENIZER_PATH="./model_from_hf/Aquila-7B/"  #tokenizer path
-DATA_PATH="./dataset/Aquila-7B/alpaca_text_document"  #processed dataset
-CKPT_LOAD_DIR="./model_weights/Aquila-7B-v0.1-tp8-pp1/"   # pointing to the converted model weights
-CKPT_SAVE_DIR="./ckpt/Aquila-7B/"                   # pointing to the path to save checkpoints
-```
+    Config the environment variables in aquila pretrain script
 
-*Note that if you do not load weights for pre-training, you can ignore CKPT_LOAD_DIR, and remove the `--load` parameter from the training script, and vice versa*
-*If you do not want to save weights during pre-training, you can ignore CKPT_SAVE_DIR, and remove the `--save $CKPT_SAVE_DIR` parameter from the training script, and vice versa*
-*When you want to save checkpoint and load it in future pre-training, just follow the above "save" and "load" suggestions.*
+    ```shell
+    # set dataset path, CKPT load path for loading weights, and the tokenizer path
+    TOKENIZER_PATH="./model_from_hf/Aquila-7B/"  #tokenizer path
+    DATA_PATH="./dataset/Aquila-7B/alpaca_text_document"  #processed dataset
+    CKPT_LOAD_DIR="./model_weights/Aquila-7B-v0.1-tp8-pp1/"   # pointing to the converted model weights
+    CKPT_SAVE_DIR="./ckpt/Aquila-7B/"                   # pointing to the path to save checkpoints
+    ```
 
-7. Launch Aquila-7B pre-training script.
+    *Note that if you do not load weights for pre-training, you can ignore CKPT_LOAD_DIR, and remove the `--load` parameter from the training script, and vice versa*
+    *If you do not want to save weights during pre-training, you can ignore CKPT_SAVE_DIR, and remove the `--save $CKPT_SAVE_DIR` parameter from the training script, and vice versa*
+    *When you want to save checkpoint and load it in future pre-training, just follow the above "save" and "load" suggestions.*
 
-Before running the pre-training script, please execute the set_env.sh script first to setup environment variables. Alternatively, you can do this inside aquila pre-training script.
+6. Launch Aquila-7B pre-training script.
 
-```shell
-# you may need to change the path
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-```
+    Before running the pre-training script, please execute the set_env.sh script first to setup environment variables. Alternatively, you can do this inside aquila pre-training script.
 
-Start pre-training Aquila-7B model:
+    ```shell
+    # you may need to change the path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    ```
 
-```shell
-bash examples/aquila/pretrain_aquila_7b_ptd.sh
-```
+    Start pre-training Aquila-7B model:
 
-**Note**: If using multi machine training, it is necessary to set up multi machine data sharing, and non primary nodes can read the primary node data through data sharing. Alternatively, directly copy the data generated by the master node to non master nodes.
+    ```shell
+    bash examples/aquila/pretrain_aquila_7b_ptd.sh
+    ```
+
+    **Note**: If using multi machine training, it is necessary to set up multi machine data sharing, and non primary nodes can read the primary node data through data sharing. Alternatively, directly copy the data generated by the master node to non master nodes.
 
 ### Performance
 
