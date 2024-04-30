@@ -38,314 +38,314 @@ LLaMA-7B/13B 训练的硬件配置如下:
 
 1. 克隆仓库到本地服务器
 
-   ```shell
-   git clone https://gitee.com/ascend/ModelLink.git 
-   git clone https://github.com/NVIDIA/Megatron-LM.git
-   cd Megatron-LM
-   git checkout -f bcce6f
-   cp -r megatron ../ModelLink/
-   cd ..
-   cd ModelLink
-   mkdir logs
-   mkdir model_from_hf
-   mkdir dataset
-   mkdir ckpt
-   ```
+    ```shell
+    git clone https://gitee.com/ascend/ModelLink.git 
+    git clone https://github.com/NVIDIA/Megatron-LM.git
+    cd Megatron-LM
+    git checkout -f bcce6f
+    cp -r megatron ../ModelLink/
+    cd ..
+    cd ModelLink
+    mkdir logs
+    mkdir model_from_hf
+    mkdir dataset
+    mkdir ckpt
+    ```
 2. 搭建环境
 
-```bash
-# python3.8
-conda create -n test python=3.8
-conda activate test
-# 安装 torch 和 torch_npu
-pip install torch-2.1.0-cp38-cp38m-linux_aarch64.whl
-pip install torch_npu-2.1.0.post5_XXXXXX-cp38-cp38m-linux_aarch64.whl
-# 修改 ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-# 安装加速库
-git clone https://gitee.com/ascend/AscendSpeed.git
-cd AscendSpeed
-git checkout 224ae35e8fc96778f957029d1371ddb623452a50
-pip install -r requirements.txt
-pip3 install -e .
-cd ..
+    ```bash
+    # python3.8
+    conda create -n test python=3.8
+    conda activate test
+    # 安装 torch 和 torch_npu
+    pip install torch-2.1.0-cp38-cp38m-linux_aarch64.whl
+    pip install torch_npu-2.1.0.post5_XXXXXX-cp38-cp38m-linux_aarch64.whl
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    # 安装加速库
+    git clone https://gitee.com/ascend/AscendSpeed.git
+    cd AscendSpeed
+    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+    pip install -r requirements.txt
+    pip3 install -e .
+    cd ..
 
-# 安装其余依赖库
-pip install -r requirements.txt 
-```
+    # 安装其余依赖库
+    pip install -r requirements.txt 
+    ```
 
 3. 下载 LLaMA-7B [权重和词表](https://huggingface.co/ruibin-wang/llama-7b-hf/tree/main) 或 LLaMA-13B [权重和词表](https://huggingface.co/ruibin-wang/llama-13b-hf/tree/main)
 
-```shell
-cd ./model_from_hf
-# 需要安装 git-lfs: git lfs install
-git clone https://huggingface.co/ruibin-wang/llama-7b-hf
-cd ..
-```
+    ```shell
+    cd ./model_from_hf
+    # 需要安装 git-lfs: git lfs install
+    git clone https://huggingface.co/ruibin-wang/llama-7b-hf
+    cd ..
+    ```
 
-or
+    or
 
-```shell
-cd ./model_from_hf
-# 需要安装 git-lfs: git lfs install
-git clone https://huggingface.co/ruibin-wang/llama-13b-hf
-cd ..
-```
+    ```shell
+    cd ./model_from_hf
+    # 需要安装 git-lfs: git lfs install
+    git clone https://huggingface.co/ruibin-wang/llama-13b-hf
+    cd ..
+    ```
 
-4.权重转换
+4. 权重转换
 
-4.1 将模型权重文件从 huggingface 格式转化为 megatron 格式
-***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
+    4.1 将模型权重文件从 huggingface 格式转化为 megatron 格式
+    ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
-LLaMA-7B
+    LLaMA-7B
 
-```shell
-# 修改 ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    ```shell
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-# 权重格式转换
-python tools/checkpoint/convert_ckpt.py \
-    --model-type GPT \
-    --loader llama2_hf \
-    --saver megatron \
-    --target-tensor-parallel-size 1 \
-    --target-pipeline-parallel-size 8 \
-    --load-dir ./model_from_hf/llama-7b-hf/ \
-    --save-dir ./model_weights/llama-7b-hf-v0.1-tp1-pp8/ \
-    --tokenizer-model ./model_from_hf/llama-7b-hf/tokenizer.model
-```
+    # 权重格式转换
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader llama2_hf \
+        --saver megatron \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 8 \
+        --load-dir ./model_from_hf/llama-7b-hf/ \
+        --save-dir ./model_weights/llama-7b-hf-v0.1-tp1-pp8/ \
+        --tokenizer-model ./model_from_hf/llama-7b-hf/tokenizer.model
+    ```
 
-LLaMA-13B
+    LLaMA-13B
 
-```shell
-# 修改 ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    ```shell
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-# 权重格式转换
-# 单机8卡
-mkdir model_weights
-python tools/checkpoint/convert_ckpt.py \
-    --model-type GPT \
-    --loader llama2_hf \
-    --saver megatron \
-    --target-tensor-parallel-size 1 \
-    --target-pipeline-parallel-size 8 \
-    --load-dir ./model_from_hf/llama-13b-hf/ \
-    --save-dir ./model_weights/llama-13b-hf-v0.1-tp1-pp8/ \
-    --tokenizer-model ./model_from_hf/llama-13b-hf/tokenizer.model
-```
+    # 权重格式转换
+    # 单机8卡
+    mkdir model_weights
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader llama2_hf \
+        --saver megatron \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 8 \
+        --load-dir ./model_from_hf/llama-13b-hf/ \
+        --save-dir ./model_weights/llama-13b-hf-v0.1-tp1-pp8/ \
+        --tokenizer-model ./model_from_hf/llama-13b-hf/tokenizer.model
+    ```
 
-4.2 将模型权重文件从 megatron 格式转化为 huggingface 格式
-***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+    4.2 将模型权重文件从 megatron 格式转化为 huggingface 格式
+    ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
 
-LLaMA-7B
+    LLaMA-7B
 
-```shell
-# 请按照您的真实环境修改 set_env.sh 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/convert_ckpt.py \
-    --model-type GPT \
-    --loader megatron \
-    --saver megatron \
-    --save-model-type save_huggingface_llama \
-    --load-dir ./model_weights/llama-7b-hf-v0.1-tp1-pp8/ \
-    --target-tensor-parallel-size 1 \
-    --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama-7b-hf/  # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-7b-hf/mg2hg/
-```
+    ```shell
+    # 请按照您的真实环境修改 set_env.sh 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_llama \
+        --load-dir ./model_weights/llama-7b-hf-v0.1-tp1-pp8/ \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --save-dir ./model_from_hf/llama-7b-hf/  # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-7b-hf/mg2hg/
+    ```
 
-LLaMA-13B
+    LLaMA-13B
 
-```shell
-# 请按照您的真实环境修改 set_env.sh 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/convert_ckpt.py \
-    --model-type GPT \
-    --loader megatron \
-    --saver megatron \
-    --save-model-type save_huggingface_llama \
-    --load-dir ./model_weights/llama-13b-hf-v0.1-tp1-pp8/ \
-    --target-tensor-parallel-size 1 \
-    --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama-13b-hf/  # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-13b-hf/mg2hg/
-```
+    ```shell
+    # 请按照您的真实环境修改 set_env.sh 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_llama \
+        --load-dir ./model_weights/llama-13b-hf-v0.1-tp1-pp8/ \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --save-dir ./model_from_hf/llama-13b-hf/  # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-13b-hf/mg2hg/
+    ```
 
-权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
+    权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
 
 5. 预训练
 
-5.1 准备预训练数据集
+    5.1 准备预训练数据集
 
-下载 LLaMA-7B/13B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
+    下载 LLaMA-7B/13B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet) 
 
-```shell
-cd dataset/
-wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-cd ..
-```
+    ```shell
+    cd dataset/
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
+    ```
 
-处理数据集
+    处理数据集
 
-LLaMA-7B
+    LLaMA-7B
 
-```shell
-source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-mkdir ./dataset/llama-7b-hf/
-python ./tools/preprocess_data.py \
-    --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ./model_from_hf/llama-7b-hf/ \
-    --output-prefix ./dataset/llama-7b-hf/alpaca \
-    --workers 4 \
-    --log-interval 1000  \
-    --tokenizer-type PretrainedFromHF  
-```
+    ```shell
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    mkdir ./dataset/llama-7b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/llama-7b-hf/ \
+        --output-prefix ./dataset/llama-7b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000  \
+        --tokenizer-type PretrainedFromHF  
+    ```
 
-LLaMA-13B
+    LLaMA-13B
 
-```shell
-source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-mkdir ./dataset/llama-7b-hf/
-python ./tools/preprocess_data.py \
-    --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ./model_from_hf/llama-13b-hf/ \
-    --output-prefix ./dataset/llama-7b-hf/alpaca \
-    --workers 4 \
-    --log-interval 1000  \
-    --tokenizer-type PretrainedFromHF  
-```
+    ```shell
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    mkdir ./dataset/llama-7b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/llama-13b-hf/ \
+        --output-prefix ./dataset/llama-7b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000  \
+        --tokenizer-type PretrainedFromHF  
+    ```
 
-5.2 配置 LLaMA-7B/13B 预训练脚本
+    5.2 配置 LLaMA-7B/13B 预训练脚本
 
-LLaMA-7B
+    LLaMA-7B
 
-```shell
-# 设置 ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-# 根据实际情况配置词表、数据集、模型参数保存路径
-TOKENIZER_MODEL="./model_from_hf/llama-7b-hf/tokenizer.model"
-DATA_PATH="./dataset/llama/alpaca_text_document"  #数据集 路径
-LOAD_CHECKPOINT_PATH="./model_weights/llama-7b-hf-v0.1-tp1-pp8"
-SAVE_CHECKPOINT_PATH="./ckpt/llama-7b-hf/"
-```
+    ```shell
+    # 设置 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    # 根据实际情况配置词表、数据集、模型参数保存路径
+    TOKENIZER_MODEL="./model_from_hf/llama-7b-hf/tokenizer.model"
+    DATA_PATH="./dataset/llama/alpaca_text_document"  #数据集 路径
+    LOAD_CHECKPOINT_PATH="./model_weights/llama-7b-hf-v0.1-tp1-pp8"
+    SAVE_CHECKPOINT_PATH="./ckpt/llama-7b-hf/"
+    ```
 
-LLaMA-13B
+    LLaMA-13B
 
-```shell
-# 设置 ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-# 根据实际情况配置词表、数据集、模型参数保存路径
-TOKENIZER_MODEL="./model_from_hf/llama-13b-hf/tokenizer.model" 
-DATA_PATH="./dataset/llama-13b-hf/alpaca_text_document"  #数据集 路径
-LOAD_CHECKPOINT_PATH="./model_weights/llama-13b-hf-v0.1-tp1-pp8"
-SAVE_CHECKPOINT_PATH="./ckpt/llama-13b-hf/"
-```
+    ```shell
+    # 设置 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    # 根据实际情况配置词表、数据集、模型参数保存路径
+    TOKENIZER_MODEL="./model_from_hf/llama-13b-hf/tokenizer.model" 
+    DATA_PATH="./dataset/llama-13b-hf/alpaca_text_document"  #数据集 路径
+    LOAD_CHECKPOINT_PATH="./model_weights/llama-13b-hf-v0.1-tp1-pp8"
+    SAVE_CHECKPOINT_PATH="./ckpt/llama-13b-hf/"
+    ```
 
-5.3 启动 LLaMA-7B/13B 预训练脚本
+    5.3 启动 LLaMA-7B/13B 预训练脚本
 
-**注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+    **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
 
-LLaMA-7B
+    LLaMA-7B
 
-```shell
-bash examples/llama/pretrain_llama_7b_ptd.sh
-```
+    ```shell
+    bash examples/llama/pretrain_llama_7b_ptd.sh
+    ```
 
-LLaMA-13B
+    LLaMA-13B
 
-```shell
-# 单机8卡
-bash examples/llama/pretrain_llama_13b_ptd.sh 
-```
+    ```shell
+    # 单机8卡
+    bash examples/llama/pretrain_llama_13b_ptd.sh 
+    ```
 
 6. 微调
 
-6.1 准备微调数据集
+    6.1 准备微调数据集
 
-下载 LLaMA-7B/13B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+    下载 LLaMA-7B/13B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
-```shell
-mkdir finetune_dataset
-cd ./finetune_dataset
-wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-cd ..
-```
+    ```shell
+    mkdir finetune_dataset
+    cd ./finetune_dataset
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
+    ```
 
-处理指令数据集
+    处理指令数据集
 
-LLaMA-7B
+    LLaMA-7B
 
-```shell
-mkdir ./finetune_dataset/llama-7b-hf/
-python ./tools/preprocess_data.py \
-  --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-  --tokenizer-name-or-path ./model_from_hf/llama-7b-hf/ \
-  --output-prefix ./finetune_dataset/llama-7b-hf/alpaca \
-  --workers 4 \
-  --log-interval 1000 \
-  --tokenizer-type PretrainedFromHF \
-  --handler-name GeneralInstructionHandler \
-  --append-eod
-```
+    ```shell
+    mkdir ./finetune_dataset/llama-7b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/llama-7b-hf/ \
+        --output-prefix ./finetune_dataset/llama-7b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF \
+        --handler-name GeneralInstructionHandler \
+        --append-eod
+    ```
 
-LLaMA-13B
+    LLaMA-13B
 
-```shell
-mkdir ./finetune_dataset/llama-13b-hf/
-python ./tools/preprocess_data.py \
-  --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-  --tokenizer-name-or-path ./model_from_hf/llama-13b-hf/ \ 
-  --output-prefix ./finetune_dataset/llama-13b-hf/alpaca \
-  --workers 4 \
-  --log-interval 1000 \
-  --tokenizer-type PretrainedFromHF \
-  --handler-name GeneralInstructionHandler \
-  --append-eod
-```
+    ```shell
+    mkdir ./finetune_dataset/llama-13b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/llama-13b-hf/ \ 
+        --output-prefix ./finetune_dataset/llama-13b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF \
+        --handler-name GeneralInstructionHandler \
+        --append-eod
+    ```
 
-6.2 配置 LLaMA-7B/13B 微调脚本
+    6.2 配置 LLaMA-7B/13B 微调脚本
 
-LLaMA-7B
+    LLaMA-7B
 
-```shell
-# 设置 ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-# 根据实际情况配置词表、数据集、模型参数保存路径
-TOKENIZER_PATH="./model_from_hf/llama-7b-hf/"  #tokenizer 路径
-DATA_PATH="./finetune_dataset/llama-7b-hf/alpaca"  #数据集 路径
-LORA_CHECKPOINT="your lora weight"
-LOAD_CHECKPOINT_PATH="./model_weights/llama-13b-hf-v0.1-tp1-pp8"
-SAVE_CHECKPOINT_PATH="./ckpt/llama-7b-hf/"
-```
+    ```shell
+    # 设置 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    # 根据实际情况配置词表、数据集、模型参数保存路径
+    TOKENIZER_PATH="./model_from_hf/llama-7b-hf/"  #tokenizer 路径
+    DATA_PATH="./finetune_dataset/llama-7b-hf/alpaca"  #数据集 路径
+    LORA_CHECKPOINT="your lora weight"
+    LOAD_CHECKPOINT_PATH="./model_weights/llama-13b-hf-v0.1-tp1-pp8"
+    SAVE_CHECKPOINT_PATH="./ckpt/llama-7b-hf/"
+    ```
 
-LLaMA-13B
+    LLaMA-13B
 
-```shell
-# 设置 ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-# 根据实际情况配置词表、数据集、模型参数保存路径
-TOKENIZER_PATH="./model_from_hf/llama-13b-hf/"  #tokenizer 路径
-DATA_PATH="./finetune_dataset/llama-13b-hf/alpaca"  #数据集 路径
-LORA_CHECKPOINT="your lora weight"
-LOAD_CHECKPOINT_PATH="your init model load path"
-SAVE_CHECKPOINT_PATH="your model ckpt save path"
-```
+    ```shell
+    # 设置 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    # 根据实际情况配置词表、数据集、模型参数保存路径
+    TOKENIZER_PATH="./model_from_hf/llama-13b-hf/"  #tokenizer 路径
+    DATA_PATH="./finetune_dataset/llama-13b-hf/alpaca"  #数据集 路径
+    LORA_CHECKPOINT="your lora weight"
+    LOAD_CHECKPOINT_PATH="your init model load path"
+    SAVE_CHECKPOINT_PATH="your model ckpt save path"
+    ```
 
-增加微调参数--finetune，使微调从第一步开始。
+    增加微调参数--finetune，使微调从第一步开始。
 
-6.3 启动 LLaMA-7B/13B 微调脚本
+    6.3 启动 LLaMA-7B/13B 微调脚本
 
-LLaMA-7B
+    LLaMA-7B
 
-```shell
-bash examples/llama/tune_llama_7b_ptd.sh
-```
+    ```shell
+    bash examples/llama/tune_llama_7b_ptd.sh
+    ```
 
-LLaMA-13B
+    LLaMA-13B
 
-```shell
-# 单机8卡
-bash examples/llama/tune_llama_13b_ptd.sh 
-```
+    ```shell
+    # 单机8卡
+    bash examples/llama/tune_llama_13b_ptd.sh 
+    ```
 
 ### 性能
 
@@ -474,329 +474,329 @@ LLaMA-33B/65B 训练的硬件配置:
 
 1. 克隆仓库到本地服务器
 
-   ```shell
-   git clone https://gitee.com/ascend/ModelLink.git 
-   git clone https://github.com/NVIDIA/Megatron-LM.git
-   cd Megatron-LM
-   git checkout -f bcce6f
-   cp -r megatron ../ModelLink/
-   cd .. 
-   cd ModelLink
-   mkdir logs
-   mkdir model_from_hf
-   mkdir dataset
-   mkdir ckpt
-   ```
+    ```shell
+    git clone https://gitee.com/ascend/ModelLink.git 
+    git clone https://github.com/NVIDIA/Megatron-LM.git
+    cd Megatron-LM
+    git checkout -f bcce6f
+    cp -r megatron ../ModelLink/
+    cd .. 
+    cd ModelLink
+    mkdir logs
+    mkdir model_from_hf
+    mkdir dataset
+    mkdir ckpt
+    ```
 2. 搭建环境
 
-```shell
-# python3.8
-conda create -n test python=3.8
-conda activate test
+    ```shell
+    # python3.8
+    conda create -n test python=3.8
+    conda activate test
 
-# 安装 torch 和 torch_npu
-# ARM
-wget https://download.pytorch.org/whl/torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
-pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
-pip install torch_npu-2.1.0.post4_XXXXXX-cp38-cp38m-manylinux2014_aarch64.whl
-# 修改 ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    # 安装 torch 和 torch_npu
+    # ARM
+    wget https://download.pytorch.org/whl/torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+    pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+    pip install torch_npu-2.1.0.post4_XXXXXX-cp38-cp38m-manylinux2014_aarch64.whl
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-# 安装加速库
-git clone https://gitee.com/ascend/AscendSpeed.git
-cd AscendSpeed
-git checkout 224ae35e8fc96778f957029d1371ddb623452a50
-pip install -r requirements.txt 
-pip3 install -e .
-cd ..
+    # 安装加速库
+    git clone https://gitee.com/ascend/AscendSpeed.git
+    cd AscendSpeed
+    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+    pip install -r requirements.txt 
+    pip3 install -e .
+    cd ..
 
-# 安装其余依赖库
-pip install -r requirements.txt 
-```
+    # 安装其余依赖库
+    pip install -r requirements.txt 
+    ```
 
 3. 下载权重和词表
 
-llama-33B 权重
+    llama-33B 权重
 
-```shell
-cd ./model_from_hf/
+    ```shell
+    cd ./model_from_hf/
 
-# 需要安装 git-lfs: git lfs install
-git clone https://huggingface.co/pinkmanlove/llama-33b-hf
-cd ..
-# 将 tokenizer_config.json 中的 "LLaMATokenizer" 修改为 "LLaMTokenizer" （这是hf的一个bug）
-```
+    # 需要安装 git-lfs: git lfs install
+    git clone https://huggingface.co/pinkmanlove/llama-33b-hf
+    cd ..
+    # 将 tokenizer_config.json 中的 "LLaMATokenizer" 修改为 "LLaMTokenizer" （这是hf的一个bug）
+    ```
 
-llama-65B 权重
+    llama-65B 权重
 
-```shell
-cd ./model_from_hf/
+    ```shell
+    cd ./model_from_hf/
 
-# 需要安装 git-lfs: git lfs install
-git clone https://huggingface.co/pinkmanlove/llama-65b-hf
-cd ..
-# 将 tokenizer_config.json 中的 "LLaMATokenizer" 修改为 "LLaMTokenizer" （这是hf的一个bug）
-```
+    # 需要安装 git-lfs: git lfs install
+    git clone https://huggingface.co/pinkmanlove/llama-65b-hf
+    cd ..
+    # 将 tokenizer_config.json 中的 "LLaMATokenizer" 修改为 "LLaMTokenizer" （这是hf的一个bug）
+    ```
 
 4. 权重转换
 
-4.1 预训练权重从 huggingface 格式转换为 megatron 格式
-***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
+    4.1 预训练权重从 huggingface 格式转换为 megatron 格式
+    ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
-llama-33B
+    llama-33B
 
-```shell
-python tools/checkpoint/convert_ckpt.py \
-    --model-type GPT \
-    --loader llama2_hf \
-    --saver megatron \
-    --target-tensor-parallel-size 4 \
-    --target-pipeline-parallel-size 4 \
-    --load-dir ./model_from_hf/llama-33b-hf/ \
-    --save-dir ./model_weights/llama-33b-hf-v0.1-tp4-pp4/ \
-    --tokenizer-model ./model_from_hf/llama-33b-hf/tokenizer.model
-```
+    ```shell
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader llama2_hf \
+        --saver megatron \
+        --target-tensor-parallel-size 4 \
+        --target-pipeline-parallel-size 4 \
+        --load-dir ./model_from_hf/llama-33b-hf/ \
+        --save-dir ./model_weights/llama-33b-hf-v0.1-tp4-pp4/ \
+        --tokenizer-model ./model_from_hf/llama-33b-hf/tokenizer.model
+    ```
 
-llama-65B
+    llama-65B
 
-```shell
-python tools/checkpoint/convert_ckpt.py \
-    --model-type GPT \
-    --loader llama2_hf \
-    --saver megatron \
-    --target-tensor-parallel-size 8 \
-    --target-pipeline-parallel-size 4 \
-    --load-dir ./model_from_hf/llama-65b-hf/ \
-    --save-dir ./model_weights/llama-65b-hf-v0.1-tp8-pp4/ \
-    --tokenizer-model ./model_from_hf/llama-65b-hf/tokenizer.model
-```
+    ```shell
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader llama2_hf \
+        --saver megatron \
+        --target-tensor-parallel-size 8 \
+        --target-pipeline-parallel-size 4 \
+        --load-dir ./model_from_hf/llama-65b-hf/ \
+        --save-dir ./model_weights/llama-65b-hf-v0.1-tp8-pp4/ \
+        --tokenizer-model ./model_from_hf/llama-65b-hf/tokenizer.model
+    ```
 
-4.2 预训练权重从 megatron 格式转换为 huggingface 格式
-***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+    4.2 预训练权重从 megatron 格式转换为 huggingface 格式
+    ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
 
-llama-33B
+    llama-33B
 
-```shell
-# 请按照您的真实环境修改 set_env.sh 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/convert_ckpt.py \
-    --model-type GPT \
-    --loader megatron \
-    --saver megatron \
-    --save-model-type save_huggingface_llama \
-    --load-dir /model_weights/llama-33b-hf-v0.1-tp4-pp4/ \
-    --target-tensor-parallel-size 1 \
-    --target-pipeline-parallel-size 1 \
-    --save-dir  ./model_from_hf/llama-33b-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-33b-hf/mg2hg/
-```
+    ```shell
+    # 请按照您的真实环境修改 set_env.sh 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_llama \
+        --load-dir /model_weights/llama-33b-hf-v0.1-tp4-pp4/ \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --save-dir  ./model_from_hf/llama-33b-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-33b-hf/mg2hg/
+    ```
 
-llama-65B
+    llama-65B
 
-```shell
-# 请按照您的真实环境修改 set_env.sh 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python tools/checkpoint/convert_ckpt.py \
-    --model-type GPT \
-    --loader megatron \
-    --saver megatron \
-    --save-model-type save_huggingface_llama \
-    --load-dir /model_weights/llama-65b-hf-v0.1-tp8-pp4/ \
-    --target-tensor-parallel-size 1 \
-    --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama-65b-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-65b-hf/mg2hg/
-```
+    ```shell
+    # 请按照您的真实环境修改 set_env.sh 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_llama \
+        --load-dir /model_weights/llama-65b-hf-v0.1-tp8-pp4/ \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --save-dir ./model_from_hf/llama-65b-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-65b-hf/mg2hg/
+    ```
 
-权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
+    权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
 
 5. 预训练
 
-5.1 准备预训练数据集
+    5.1 准备预训练数据集
 
-```shell
-cd dataset/
-wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-cd ..
-```
+    ```shell
+    cd dataset/
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
+    ```
 
-处理数据集
+    处理数据集
 
-LLaMA-33B
+    LLaMA-33B
 
-```shell
-mkdir ./dataset/llama-33b-hf/
-python ./tools/preprocess_data.py \
-    --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ./model_from_hf/llama-33b-hf \
-    --output-prefix ./dataset/llama-33b-hf/alpaca \
-    --workers 4 \
-    --log-interval 1000  \
-    --tokenizer-type PretrainedFromHF 
-```
+    ```shell
+    mkdir ./dataset/llama-33b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/llama-33b-hf \
+        --output-prefix ./dataset/llama-33b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000  \
+        --tokenizer-type PretrainedFromHF 
+    ```
 
-LLaMA-65B
+    LLaMA-65B
 
-```shell
-mkdir ./dataset/llama-65b-hf/
-python ./tools/preprocess_data.py \
-    --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ./model_from_hf/llama-65b-hf \
-    --output-prefix ./dataset/llama-65b-hf/alpaca \
-    --workers 4 \
-    --log-interval 1000  \
-    --tokenizer-type PretrainedFromHF 
-```
+    ```shell
+    mkdir ./dataset/llama-65b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/llama-65b-hf \
+        --output-prefix ./dataset/llama-65b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000  \
+        --tokenizer-type PretrainedFromHF 
+    ```
 
-5.2 配置 LLaMA-33B/65B 预训练脚本
+    5.2 配置 LLaMA-33B/65B 预训练脚本
 
-LLaMA-33B
+    LLaMA-33B
 
-```bash
-# 修改 ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    ```bash
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-# 配置词表和数据路径等
-TOKENIZER_MODEL="./model_from_hf/llama-33b-hf/tokenizer.model"
-DATA_PATH="./dataset/llama-33b-hf/alpaca_text_document"
-LOAD_CHECKPOINT_PATH="./model_weights/llama-33b-hf-v0.1-tp4-pp4/"
-SAVE_CHECKPOINT_PATH="./ckpt/llama-33b-hf/"
-```
+    # 配置词表和数据路径等
+    TOKENIZER_MODEL="./model_from_hf/llama-33b-hf/tokenizer.model"
+    DATA_PATH="./dataset/llama-33b-hf/alpaca_text_document"
+    LOAD_CHECKPOINT_PATH="./model_weights/llama-33b-hf-v0.1-tp4-pp4/"
+    SAVE_CHECKPOINT_PATH="./ckpt/llama-33b-hf/"
+    ```
 
-LLaMA-65B
+    LLaMA-65B
 
-```bash
-# 修改 ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    ```bash
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-# 配置词表和数据路径等
-TOKENIZER_MODEL=./model_from_hf/llama-65b-hf/tokenizer.model
-DATA_PATH="./dataset/llama-65b-hf/alpaca_text_document"
-LOAD_CHECKPOINT_PATH="./model_weights/llama-65b-hf-v0.1-tp8-pp4/"
-SAVE_CHECKPOINT_PATH="./ckpt/llama-65b-hf/"
-```
+    # 配置词表和数据路径等
+    TOKENIZER_MODEL=./model_from_hf/llama-65b-hf/tokenizer.model
+    DATA_PATH="./dataset/llama-65b-hf/alpaca_text_document"
+    LOAD_CHECKPOINT_PATH="./model_weights/llama-65b-hf-v0.1-tp8-pp4/"
+    SAVE_CHECKPOINT_PATH="./ckpt/llama-65b-hf/"
+    ```
 
-5.3 启动预训练脚本:
+    5.3 启动预训练脚本:
 
-**注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+    **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
 
-启动 llama-33B 预训练脚本 : ./examples/llama/pretrain_llama_33B_ptd_32p.sh
+    启动 llama-33B 预训练脚本 : ./examples/llama/pretrain_llama_33B_ptd_32p.sh
 
-```bash
-bash examples/llama/pretrain_llama_33B_ptd_32p.sh
-```
+    ```bash
+    bash examples/llama/pretrain_llama_33B_ptd_32p.sh
+    ```
 
-启动 llama-65B 预训练脚本 : ./examples/llama/pretrain_llama_65b_ptd.sh
+    启动 llama-65B 预训练脚本 : ./examples/llama/pretrain_llama_65b_ptd.sh
 
-```bash
-# 四机32卡
-bash examples/llama/pretrain_llama_65b_ptd.sh
-```
+    ```bash
+    # 四机32卡
+    bash examples/llama/pretrain_llama_65b_ptd.sh
+    ```
 
-为多节点配置 llama-33B/65B 预训练脚本 (在集群的每个节点上启动脚本):
+    为多节点配置 llama-33B/65B 预训练脚本 (在集群的每个节点上启动脚本):
 
-```shell
-MASTER_ADDR=localhost
-MASTER_PORT=6001
-NNODES=4
-NODE_RANK=0
-```
+    ```shell
+    MASTER_ADDR=localhost
+    MASTER_PORT=6001
+    NNODES=4
+    NODE_RANK=0
+    ```
 
-训练log如下:
+    训练log如下:
 
-```Shell
- iteration  11/50000 | consumed samples: 5632 | consumed tokens:  11534336 | elapsed time per iteration (ms):  52728.1 | learning rate:    1.499E-05 | gloabl batch size:  512 | lm loss:  1.376514E+01 | loss scale:  65536.0 | grad norm:    459.628 | actual seqlen:  2048 | number of skipped
-iterations: 0 | number of nan iterations:   0 | samples per second: 9.710 | TFLOPs: 167.52 |
-time (ms)
-```
+    ```Shell
+    iteration  11/50000 | consumed samples: 5632 | consumed tokens:  11534336 | elapsed time per iteration (ms):  52728.1 | learning rate:    1.499E-05 | gloabl batch size:  512 | lm loss:  1.376514E+01 | loss scale:  65536.0 | grad norm:    459.628 | actual seqlen:  2048 | number of skipped
+    iterations: 0 | number of nan iterations:   0 | samples per second: 9.710 | TFLOPs: 167.52 |
+    time (ms)
+    ```
 
 6. 微调
 
-6.1 准备微调数据集
+    6.1 准备微调数据集
 
-下载数据集
+    下载数据集
 
-```shell
-mkdir finetune_dataset
-cd ./finetune_dataset
-wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-cd ..
-```
+    ```shell
+    mkdir finetune_dataset
+    cd ./finetune_dataset
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
+    ```
 
-处理指令数据集
+    处理指令数据集
 
-LLaMA-33B
+    LLaMA-33B
 
-```shell
-mkdir ./finetune_dataset/llama-33b-hf/
-python ./tools/preprocess_data.py \
-  --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-  --tokenizer-name-or-path ./model_from_hf/llama-33b-hf/ \ 
-  --output-prefix ./finetune_dataset/llama-33b-hf/alpaca \
-  --workers 4 \
-  --log-interval 1000 \
-  --tokenizer-type PretrainedFromHF \
-  --handler-name GeneralInstructionHandler \
-  --append-eod
-```
+    ```shell
+    mkdir ./finetune_dataset/llama-33b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/llama-33b-hf/ \ 
+        --output-prefix ./finetune_dataset/llama-33b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF \
+        --handler-name GeneralInstructionHandler \
+        --append-eod
+    ```
 
-LLaMA-65B
+    LLaMA-65B
 
-```shell
-mkdir ./finetune_dataset/llama-65b-hf/
-python ./tools/preprocess_data.py \
-  --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-  --tokenizer-name-or-path ./model_from_hf/llama-65b-hf/  \
-  --output-prefix ./finetune_dataset/llama-65b-hf/alpaca \
-  --workers 4 \
-  --log-interval 1000 \
-  --tokenizer-type PretrainedFromHF \
-  --handler-name GeneralInstructionHandler \
-  --append-eod
-```
+    ```shell
+    mkdir ./finetune_dataset/llama-65b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/llama-65b-hf/  \
+        --output-prefix ./finetune_dataset/llama-65b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF \
+        --handler-name GeneralInstructionHandler \
+        --append-eod
+    ```
 
-6.2 配置 LLaMA-33B/65B 微调脚本
+    6.2 配置 LLaMA-33B/65B 微调脚本
 
-LLaMA-33B
+    LLaMA-33B
 
-```shell
-# 设置 ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-# 根据实际情况配置词表、数据集、模型参数保存路径
-TOKENIZER_PATH="./model_from_hf/llama-33b-hf/"  #tokenizer 路径
-DATA_PATH="./finetune_dataset/llama-33b-hf/alpaca"  #数据集 路径
-LORA_CHECKPOINT="your lora weight"
-LOAD_CHECKPOINT_PATH="./model_weights/llama-33b-hf-v0.1-tp4-pp4/"
-SAVE_CHECKPOINT_PATH="./ckpt/llama-33b-hf/"
-```
+    ```shell
+    # 设置 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    # 根据实际情况配置词表、数据集、模型参数保存路径
+    TOKENIZER_PATH="./model_from_hf/llama-33b-hf/"  #tokenizer 路径
+    DATA_PATH="./finetune_dataset/llama-33b-hf/alpaca"  #数据集 路径
+    LORA_CHECKPOINT="your lora weight"
+    LOAD_CHECKPOINT_PATH="./model_weights/llama-33b-hf-v0.1-tp4-pp4/"
+    SAVE_CHECKPOINT_PATH="./ckpt/llama-33b-hf/"
+    ```
 
-LLaMA-65B
+    LLaMA-65B
 
-```shell
-# 设置 ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-# 根据实际情况配置词表、数据集、模型参数保存路径
-TOKENIZER_PATH="./model_from_hf/llama-65b-hf/"  #tokenizer 路径
-DATA_PATH="./finetune_dataset/llama-65b-hf/alpaca"  #数据集 路径
-LORA_CHECKPOINT="your lora weight"
-LOAD_CHECKPOINT_PATH="./model_weights/llama-65b-hf-v0.1-tp8-pp4/"
-SAVE_CHECKPOINT_PATH="./ckpt/llama-65b-hf/"
-```
+    ```shell
+    # 设置 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    # 根据实际情况配置词表、数据集、模型参数保存路径
+    TOKENIZER_PATH="./model_from_hf/llama-65b-hf/"  #tokenizer 路径
+    DATA_PATH="./finetune_dataset/llama-65b-hf/alpaca"  #数据集 路径
+    LORA_CHECKPOINT="your lora weight"
+    LOAD_CHECKPOINT_PATH="./model_weights/llama-65b-hf-v0.1-tp8-pp4/"
+    SAVE_CHECKPOINT_PATH="./ckpt/llama-65b-hf/"
+    ```
 
-增加微调参数--finetune，使微调从第一步开始。
+    增加微调参数--finetune，使微调从第一步开始。
 
-6.3 启动 LLaMA-33B/65B 微调脚本
+    6.3 启动 LLaMA-33B/65B 微调脚本
 
-LLaMA-33B
+    LLaMA-33B
 
-```shell
-bash examples/llama/tune_llama_33b_ptd.sh
-```
+    ```shell
+    bash examples/llama/tune_llama_33b_ptd.sh
+    ```
 
-LLaMA-65B
+    LLaMA-65B
 
-```shell
-# 双机16卡
-bash examples/llama/tune_llama_65b_ptd.sh 
-```
+    ```shell
+    # 双机16卡
+    bash examples/llama/tune_llama_65b_ptd.sh 
+    ```
 
 ### 性能
 
