@@ -38,208 +38,208 @@
 
 1. 克隆仓库到本地服务器
 
-```shell
-git clone https://gitee.com/ascend/ModelLink.git
-git clone https://github.com/NVIDIA/Megatron-LM.git
-cd Megatron-LM
-git checkout -f bcce6f
-cp -r megatron ../ModelLink/
-cd ..
-cd ModelLink
-mkdir logs
-mkdir model_from_hf
-mkdir dataset
-mkdir ckpt
-```
+    ```shell
+    git clone https://gitee.com/ascend/ModelLink.git
+    git clone https://github.com/NVIDIA/Megatron-LM.git
+    cd Megatron-LM
+    git checkout -f bcce6f
+    cp -r megatron ../ModelLink/
+    cd ..
+    cd ModelLink
+    mkdir logs
+    mkdir model_from_hf
+    mkdir dataset
+    mkdir ckpt
+    ```
 
 2. 搭建环境
 
-```bash
-# python3.8
-conda create -n test python=3.8
-conda activate test
+    ```bash
+    # python3.8
+    conda create -n test python=3.8
+    conda activate test
 
-# 安装 torch 和 torch_npu
-pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
-pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
-pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+    # 安装 torch 和 torch_npu
+    pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+    pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
+    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 
-# 修改 ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-# 安装加速库
-git clone https://gitee.com/ascend/AscendSpeed.git
-cd AscendSpeed
-git checkout 224ae35e8fc96778f957029d1371ddb623452a50
-pip install -r requirements.txt 
-pip3 install -e .
-cd ..
+    # 安装加速库
+    git clone https://gitee.com/ascend/AscendSpeed.git
+    cd AscendSpeed
+    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+    pip install -r requirements.txt 
+    pip3 install -e .
+    cd ..
 
-# 安装其余依赖库
-pip install -r requirements.txt 
-```
+    # 安装其余依赖库
+    pip install -r requirements.txt 
+    ```
 
 3. 下载 Mixtral-8x7B 的 [预训练权重和词表](https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/tree/main)（*建议仅下载使用safetensors格式的权重*）
 
-```shell
-#!/bin/bash
-cd ./model_from_hf/
-git lfs install
-git clone https://huggingface.co/mistralai/Mixtral-8x7B-v0.1
-mv Mixtral-8x7B-v0.1 Mixtral-8x7B
-cd ..
-```
+    ```shell
+    #!/bin/bash
+    cd ./model_from_hf/
+    git lfs install
+    git clone https://huggingface.co/mistralai/Mixtral-8x7B-v0.1
+    mv Mixtral-8x7B-v0.1 Mixtral-8x7B
+    cd ..
+    ```
 
 4. 权重转换
-   HuggingFace权重 --> 任意并行切分策略的Megatron权重
-   ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
+    HuggingFace权重 --> 任意并行切分策略的Megatron权重
+    ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
-```bash
-# 修改 ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    ```bash
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-# HF 转 tp1-pp8-ep2
-python tools/checkpoint/convert_ckpt.py \
-    --model-type GPT \
-    --loader mixtral_hf \
-    --saver mixtral \
-    --load-dir ./model_from_hf/Mixtral-8x7B/ \
-    --save-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep2/ \
-    --tokenizer-model ./model_from_hf/Mixtral-8x7B/tokenizer.model \
-    --target-tensor-parallel-size 1 \
-    --target-pipeline-parallel-size 8 \
-    --target-expert-parallel-size 2 
-```
+    # HF 转 tp1-pp8-ep2
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader mixtral_hf \
+        --saver mixtral \
+        --load-dir ./model_from_hf/Mixtral-8x7B/ \
+        --save-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep2/ \
+        --tokenizer-model ./model_from_hf/Mixtral-8x7B/tokenizer.model \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 8 \
+        --target-expert-parallel-size 2 
+    ```
 
-任意并行切分策略的Megatron权重 --> 任意并行切分策略的Megatron权重
-***（该场景一般用于重新配置切分后模型的权重，比如在双机16卡 EP2-PP8策略下训练完了，想在单机8卡 TP8上进行推理）***
+    任意并行切分策略的Megatron权重 --> 任意并行切分策略的Megatron权重
+    ***（该场景一般用于重新配置切分后模型的权重，比如在双机16卡 EP2-PP8策略下训练完了，想在单机8卡 TP8上进行推理）***
 
-```bash
-# 修改 ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    ```bash
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-# tp1-pp8-ep2 转 tp1-pp8-ep1
-python tools/checkpoint/convert_ckpt.py \
-    --model-type GPT \
-    --loader mixtral_mg \
-    --saver mixtral \
-    --load-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep2/ \
-    --save-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep1/ \
-    --target-tensor-parallel-size 1 \
-    --target-pipeline-parallel-size 8 \
-    --target-expert-parallel-size 1 
-```
+    # tp1-pp8-ep2 转 tp1-pp8-ep1
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader mixtral_mg \
+        --saver mixtral \
+        --load-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep2/ \
+        --save-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep1/ \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 8 \
+        --target-expert-parallel-size 1 
+    ```
 
-任意并行切分策略的Megatron权重 --> HuggingFace权重
-***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+    任意并行切分策略的Megatron权重 --> HuggingFace权重
+    ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
 
-```bash
-# 修改 ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    ```bash
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-# tp1-pp8-ep2 转 HF
-python tools/checkpoint/convert_ckpt.py \
-    --model-type GPT \
-    --loader mixtral_mg \
-    --saver mixtral \
-    --save-model-type huggingface \
-    --load-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep2/ \
-    --save-dir ./model_from_hf/Mixtral-8x7B/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Mixtral-8x7B/mg2hg/
-```
+    # tp1-pp8-ep2 转 HF
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader mixtral_mg \
+        --saver mixtral \
+        --save-model-type huggingface \
+        --load-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep2/ \
+        --save-dir ./model_from_hf/Mixtral-8x7B/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Mixtral-8x7B/mg2hg/
+    ```
 
 ## 模型训练
 
-准备数据集
+1. 准备数据集
 
-下载 Mixtral-8x7B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+    下载 Mixtral-8x7B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
-```shell
-# 下载数据
-cd ./dataset
-wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-cd ..
-# 处理数据   
-mkdir ./dataset/Mixtral-8x7B/
-python ./tools/preprocess_data.py \
-    --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-    --tokenizer-name-or-path ./model_from_hf/Mixtral-8x7B/ \
-    --output-prefix ./dataset/Mixtral-8x7B/alpaca \
-    --workers 4 \
-    --log-interval 1000 \
-    --tokenizer-type PretrainedFromHF
-```
+    ```shell
+    # 下载数据
+    cd ./dataset
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
+    # 处理数据   
+    mkdir ./dataset/Mixtral-8x7B/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/Mixtral-8x7B/ \
+        --output-prefix ./dataset/Mixtral-8x7B/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF
+    ```
 
-配置 Mixtral-8x7B 预训练脚本：***examples/mixtral/pretrain_mixtral_8x7b_ptd.sh***
+    配置 Mixtral-8x7B 预训练脚本：***examples/mixtral/pretrain_mixtral_8x7b_ptd.sh***
 
-```shell
-# 设置 ascend-toolkit 路径
-source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    ```shell
+    # 设置 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-# 根据实际情况配置词表、数据集、模型参数保存路径
-DATA_PATH="./dataset/Mixtral-8x7B/alpaca_text_document"
-TOKENIZER_MODEL="./model_from_hf/Mixtral-8x7B/"
-CKPT_SAVE_DIR="./ckpt/Mixtral-8x7B/"
+    # 根据实际情况配置词表、数据集、模型参数保存路径
+    DATA_PATH="./dataset/Mixtral-8x7B/alpaca_text_document"
+    TOKENIZER_MODEL="./model_from_hf/Mixtral-8x7B/"
+    CKPT_SAVE_DIR="./ckpt/Mixtral-8x7B/"
 
-# 根据分布式集群实际情况配置分布式参数
-GPUS_PER_NODE=8
-MASTER_ADDR="your master node IP"
-MASTER_PORT=6000
-NNODES=2
-NODE_RANK="current node id"
-WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
+    # 根据分布式集群实际情况配置分布式参数
+    GPUS_PER_NODE=8
+    MASTER_ADDR="your master node IP"
+    MASTER_PORT=6000
+    NNODES=2
+    NODE_RANK="current node id"
+    WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 
-# 训练并行策略
-TP=1
-PP=8
-EP=2
-```
+    # 训练并行策略
+    TP=1
+    PP=8
+    EP=2
+    ```
 
-启动 Mixtral-8x7B 预训练脚本: ***examples/pretrain_mixtral_8x7b_ptd.sh***
+    启动 Mixtral-8x7B 预训练脚本: ***examples/pretrain_mixtral_8x7b_ptd.sh***
 
-```shell
-bash examples/mixtral/pretrain_mixtral_8x7b_ptd.sh
-```
+    ```shell
+    bash examples/mixtral/pretrain_mixtral_8x7b_ptd.sh
+    ```
 
-**注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+    **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
 
-微调
+2. 微调
 
-下载微调数据集 [这里](https://huggingface.co/datasets/silk-road/alpaca-data-gpt4-chinese/blob/main/Alpaca_data_gpt4_zh.jsonl)
+    下载微调数据集 [这里](https://huggingface.co/datasets/silk-road/alpaca-data-gpt4-chinese/blob/main/Alpaca_data_gpt4_zh.jsonl)
 
-```shell
-# 下载数据集
-mkdir finetune_dataset
-cd ./finetune_dataset
-wget https://huggingface.co/datasets/silk-road/alpaca-data-gpt4-chinese/blob/main/Alpaca_data_gpt4_zh.jsonl
-cd ..
+    ```shell
+    # 下载数据集
+    mkdir finetune_dataset
+    cd ./finetune_dataset
+    wget https://huggingface.co/datasets/silk-road/alpaca-data-gpt4-chinese/blob/main/Alpaca_data_gpt4_zh.jsonl
+    cd ..
 
-# 处理微调数据集  
-mkdir ./finetune_dataset/Mixtral-8x7B/
-python ./tools/preprocess_data.py \
-    --input ./finetune_dataset/Alpaca_data_gpt4_zh.jsonl \
-    --output-prefix ./finetune_dataset/Mixtral-8x7B/alpaca \
-    --tokenizer-type PretrainedFromHF \
-    --tokenizer-name-or-path ./model_from_hf/Mixtral-8x7B/ \
-    --append-eod \
-    --tokenizer-not-use-fast \
-    --handler-name GeneralInstructionHandler \
-    --workers 4
-```
+    # 处理微调数据集  
+    mkdir ./finetune_dataset/Mixtral-8x7B/
+    python ./tools/preprocess_data.py \
+        --input ./finetune_dataset/Alpaca_data_gpt4_zh.jsonl \
+        --output-prefix ./finetune_dataset/Mixtral-8x7B/alpaca \
+        --tokenizer-type PretrainedFromHF \
+        --tokenizer-name-or-path ./model_from_hf/Mixtral-8x7B/ \
+        --append-eod \
+        --tokenizer-not-use-fast \
+        --handler-name GeneralInstructionHandler \
+        --workers 4
+    ```
 
 
-指令微调
+3. 指令微调
 
-微调的配置脚本基本和预训练脚本一致. *区别是数据集，以及增加训练参数--is-instruction-dataset
+    微调的配置脚本基本和预训练脚本一致. *区别是数据集，以及增加训练参数--is-instruction-dataset
 
-增加微调参数--finetune，增加预训练权重加载参数--load，使微调从第一步开始：
+    增加微调参数--finetune，增加预训练权重加载参数--load，使微调从第一步开始：
 
-```bash
-DATA_PATH="./finetune_dataset/Mixtral-8x7B/alpaca"
-CKPT_PATH="./ckpt/Mixtral-8x7B/"
---load ${CKPT_PATH} \
---finetune \
---is-instruction-dataset
-```
+    ```bash
+    DATA_PATH="./finetune_dataset/Mixtral-8x7B/alpaca"
+    CKPT_PATH="./ckpt/Mixtral-8x7B/"
+        --load ${CKPT_PATH} \
+        --finetune \
+        --is-instruction-dataset
+    ```
 
 ## 模型性能
 

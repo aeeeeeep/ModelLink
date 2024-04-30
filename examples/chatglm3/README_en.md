@@ -72,33 +72,33 @@ Here's a hardware summary of pre-training  ChatGLM3-6B:
 3. Prepare pretrained weights and tokenizer
     Download the ChatGLM3-6B checkpoint from [here](https://huggingface.co/THUDM/chatglm3-6b/tree/main)
 
-   ```shell
-     #!/bin/bash
-     mkdir ./model_from_hf/chatglm3_6b_hf/
-     cd ./model_from_hf/chatglm3_6b_hf/
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/config.json
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/configuration_chatglm.py
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/modeling_chatglm.py
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00001-of-00007.bin
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00002-of-00007.bin
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00003-of-00007.bin
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00004-of-00007.bin
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00005-of-00007.bin
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00006-of-00007.bin
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00007-of-00007.bin
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model.bin.index.json
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/quantization.py
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/tokenization_chatglm.py
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/tokenizer.model
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/tokenizer_config.json
-     cd ../../
-   ```
+    ```shell
+    #!/bin/bash
+    mkdir ./model_from_hf/chatglm3_6b_hf/
+    cd ./model_from_hf/chatglm3_6b_hf/
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/config.json
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/configuration_chatglm.py
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/modeling_chatglm.py
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00001-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00002-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00003-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00004-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00005-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00006-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00007-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model.bin.index.json
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/quantization.py
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/tokenization_chatglm.py
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/tokenizer.model
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/tokenizer_config.json
+    cd ../../
+    ```
 4. weight conversion in ptd mode
 
-   4.1 Convert weights from HuggingFace format to Megatron format 
-   ***（This scenario is generally used to enable the open-source HuggingFace model to be trained on Megatron）***
+    4.1 Convert weights from HuggingFace format to Megatron format 
+    ***（This scenario is generally used to enable the open-source HuggingFace model to be trained on Megatron）***
 
-   ```bash
+    ```bash
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
@@ -113,37 +113,37 @@ Here's a hardware summary of pre-training  ChatGLM3-6B:
         --save-dir ./model_weights/chatglm3_6b_tp2pp2/ \
         --tokenizer-model ./model_from_hf/chatglm3_6b_hf/tokenizer.model \
         --add-qkv-bias
-   ```
+    ```
 
     Note: The --target-tensor-parallel-size of chatglm3 is related to the multi_query_attention configuration in the config.json, and the multi_query_attention set here is 2.
 
 5. pre-training
 
-   5.1 Prepare dataset
+    5.1 Prepare dataset 
 
-   Download the ChatGLM3-6B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+    Download the ChatGLM3-6B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
-   ```shell
-   # download datasets
-   cd ./dataset
-   wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-   cd ..
+    ```shell
+    # download datasets
+    cd ./dataset
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
 
-   # process datasets  
-   mkdir ./dataset/chatglm3_6b_hf/
-   python ./tools/preprocess_data.py \
-     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-     --tokenizer-name-or-path ./model_from_hf/chatglm3_6b_hf/ \
-     --output-prefix ./dataset/chatglm3_6b_hf/alpaca \
-     --workers 4 \
-     --log-interval 1000 \
-     --tokenizer-type PretrainedFromHF
-   ```
+    # process datasets  
+    mkdir ./dataset/chatglm3_6b_hf/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/chatglm3_6b_hf/ \
+        --output-prefix ./dataset/chatglm3_6b_hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF
+    ```
 
-   5.2 pre-training using ptd mode
-   Config ChatGLM3-6B pre-training script: examples/chatglm3/pretrain_chatglm3_6B_8K.sh
+    5.2 pre-training using ptd mode
+    Config ChatGLM3-6B pre-training script: examples/chatglm3/pretrain_chatglm3_6B_8K.sh
 
-   ```shell
+    ```shell
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
@@ -152,16 +152,16 @@ Here's a hardware summary of pre-training  ChatGLM3-6B:
     SAVE_CHECKPOINT_PATH="./ckpt/chatglm3_6b_hf/"
     TOKENIZER_PATH="./model_from_hf/chatglm3_6b_hf/"  #tokenizer path
     DATA_PATH="./dataset/chatglm3_6b_hf/alpaca_text_document"  #processed dataset
-   ```
+    ```
 
-   Multi-machine training requires the addition of parameter --overlap-grad-reduce
+    Multi-machine training requires the addition of parameter --overlap-grad-reduce
 
-   Launch ChatGLM3-6B  pre-training script: examples/chatglm3/pretrain_chatglm3_6B_8K.sh
+    Launch ChatGLM3-6B  pre-training script: examples/chatglm3/pretrain_chatglm3_6B_8K.sh
 
-   ```shell
-      bash examples/chatglm3/pretrain_chatglm3_6B_8K.sh
-   ```
-   **Note**: If using multi machine training, it is necessary to set up multi machine data sharing, and non primary nodes can read the primary node data through data sharing. Alternatively, directly copy the data generated by the master node to non master nodes.
+    ```shell
+    bash examples/chatglm3/pretrain_chatglm3_6B_8K.sh
+    ```
+    **Note**: If using multi machine training, it is necessary to set up multi machine data sharing, and non primary nodes can read the primary node data through data sharing. Alternatively, directly copy the data generated by the master node to non master nodes.
 
 ### Performance
 
