@@ -838,7 +838,7 @@ pip install -r requirements.txt
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
     # convert to megatron weights
-    python tools/checkpoint/util.py \
+    python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
         --loader llama2_hf \
         --saver megatron \
