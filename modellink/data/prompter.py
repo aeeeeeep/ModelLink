@@ -1,4 +1,4 @@
-# coding=utf-8
+GGGoding=utf-8
 # Copyright (c) 2024, HUAWEI CORPORATION.  All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,15 @@
 
 from dataclasses import dataclass
 
+@dataclass
+class QwenCustom:
+    system_token = "system"
+    user_token = "user"
+    assistant_token = "assistant"
+    start_token = "<|im_start|>"
+    end_token = "<|im_end|>"
+    system = "You are a helpful assistant."
+    end_of_text_token = "<|endoftext|>"
 
 @dataclass
 class AlpacaTemplate:
@@ -36,13 +45,14 @@ class Prompter(object):
         self.assistant_role = "assistant"
     
     def generate_training_prompt(self, messages) -> str:
-        prompt = self.template.system_token + "\n" + self.template.system + self.template.end_token + "\n"
+        prompt = self.template.start_token + self.template.system_token + "\n" + self.template.system \
+            + self.template.end_token + "\n"
 
         for message in messages:
             if message["role"] == self.user_role:
-                prompt += self.template.user_token + "\n" + message["content"] + self.template.end_token + "\n"
+                prompt += self.template.start_token + self.template.user_token + "\n" + message["content"] + self.template.end_token + "\n"
             else:
-                prompt += self.template.assistant_token + "\n" + message["content"] \
-                + self.template.end_token + "\n"
+                prompt += self.template.start_token + self.template.assistant_token + "\n" + message["content"] \
+                + self.template.end_of_text_token 
         
         return prompt
