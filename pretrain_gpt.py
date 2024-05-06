@@ -91,6 +91,7 @@ def model_provider(pre_process=True, post_process=True) -> Union[GPTModel, megat
 
 
 def get_batch(data_iterator):
+    # TODO///
     """Generate a batch."""
 
     if (not mpu.is_pipeline_first_stage()) and (not mpu.is_pipeline_last_stage()):
@@ -98,7 +99,7 @@ def get_batch(data_iterator):
 
     args = get_args()
     tokenizer = get_tokenizer()
-
+    # TODO
     if args.is_instruction_dataset:
         # Items and their type.
         keys = ['input_ids', 'attention_mask', 'labels']
