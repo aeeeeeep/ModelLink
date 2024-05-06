@@ -1,4 +1,4 @@
-# coding=utf-8
+///oding=utf-8
 # Copyright (c) 2024, HUAWEI CORPORATION.  All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +26,7 @@ import numpy as np
 from datasets import load_dataset
 
 from megatron.core.datasets import indexed_dataset
-from modellink.data.prompter import Prompter, AlpacaTemplate
+from modellink.data.prompter import Prompter, QwenCustom, AlpacaTemplate
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -191,7 +191,7 @@ class GeneralInstructionHandler(BaseDatasetHandler):
     """
     def __init__(self, args, raw_datasets, tokenizer, splitter):
         super().__init__(args, raw_datasets, tokenizer, splitter)
-        self.prompter = Prompter(AlpacaTemplate())
+        self.prompter = Prompter(QwenCustom())
         self.train_on_inputs = False
         self.args.json_keys = ["input_ids", "attention_mask", "labels"]
         # use 'packed' string to mark that this is a packed dataset
@@ -201,7 +201,8 @@ class GeneralInstructionHandler(BaseDatasetHandler):
 
     @property
     def _instruction_key(self) -> str:
-        return "instruction"
+        #return "instruction"
+       return "query"
 
     @property
     def _input_key(self) -> str:
@@ -209,7 +210,8 @@ class GeneralInstructionHandler(BaseDatasetHandler):
 
     @property
     def _output_key(self) -> str:
-        return "output"
+        #return "output"
+       return "completion"
 
     @property
     def _human_prefix(self) -> str:
@@ -232,7 +234,8 @@ class GeneralInstructionHandler(BaseDatasetHandler):
             messages = [
                 dict(
                     role=self.prompter.user_role,
-                    content=sample[self._instruction_key] + "\n" + sample[self._input_key]),
+                    #content=sample[self._instruction_key] + "\n" + sample[self._input_key]),
+                    content=sample[self._instruction_key]),
                 dict(role=self.prompter.assistant_role, content=sample[self._output_key])
             ]
             return messages
@@ -256,7 +259,10 @@ class GeneralInstructionHandler(BaseDatasetHandler):
     def _filter(self, sample):
         messages = self._format_msg(sample)
         full_prompt = self.prompter.generate_training_prompt(messages)
+        #print("*******************prompt: ", full_prompt)
         tokenized_full_prompt = self._tokenize(full_prompt)
+        #print("****************tokenized: ", tokenized_full_prompt)
+     # TODO  check 267-277
 
         if self.args.append_eod:
             tokenized_full_prompt["input_ids"].append(self.tokenizer.eod)
@@ -269,10 +275,12 @@ class GeneralInstructionHandler(BaseDatasetHandler):
             tokenized_user_prompt = self._tokenize(user_prompt)
             user_prompt_len = len(tokenized_user_prompt["input_ids"])
             tokenized_full_prompt["labels"][:user_prompt_len] = [self.ignored_label] * user_prompt_len
+            
 
-        for key in self.args.json_keys:
-            tokenized_full_prompt[key] = [tokenized_full_prompt[key]]
+     #   for key in self.args.json_keys:
+     #       tokenized_full_prompt[key] = [tokenized_full_prompt[key]]
 
+        #print("****************tokenized: ", tokenized_full_prompt)
         return tokenized_full_prompt
 
 
