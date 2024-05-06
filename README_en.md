@@ -214,6 +214,14 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
     <tr>
+      <td rowspan="1"><a href="examples/yi/README_en.md">Yi</a></td>
+      <td>34B</td>
+      <td> -- </td>
+      <td> <a href="examples/yi/generate_yi_34b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/yi/evaluate_yi_34b_ptd.sh">evaluation</a> </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+    </tr>
+    <tr>
       <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
       <td>8x7B</td>
       <td> -- </td>
@@ -265,6 +273,7 @@ For the supported models listed above, we provide training scripts and readme in
       <th>Performance </th>
       <th>Reference Performance </th>
       <th>Scripts</th>
+      <th>Contributor</th>
     </tr>
   </thead>
   <tbody>
@@ -276,6 +285,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 2849 </td>
       <td> 2874 </td>
       <td> <a href="examples/aquila/pretrain_aquila_7b_ptd.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/baichuan/README.md">Baichuan</a></td>
@@ -285,6 +295,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 2685 </td>
       <td> 2036 </td>
       <td> <a href="examples/baichuan/pretrain_baichuan_ptd_7B.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
     </tr>
     <tr>
       <td>13B</td>
@@ -293,6 +304,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 1213 </td>
       <td> 862 </td>
       <td> <a href="examples/baichuan/pretrain_baichuan_ptd_13B.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/baichuan2/README.md">Baichuan2</a></td>
@@ -302,6 +314,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 2664 </td>
       <td> 3969 </td>
       <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_7B.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
     </tr>
     <tr>
       <td>13B</td>
@@ -310,6 +323,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 1668 </td>
       <td> 2062 </td>
       <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_13B.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
@@ -319,6 +333,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 2034 </td>
       <td> 2525 </td>
       <td> <a href="examples/bloom/pretrain_bloom_ptd_7B.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
     </tr>
     <tr>
       <td >176B</td>
@@ -327,6 +342,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 100 </td>
       <td> 107 </td>
       <td> <a href="examples/bloom/pretrain_bloom_176b.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>
@@ -336,6 +352,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 2776 </td>
       <td> 2854 </td>
       <td> <a href="examples/intern/pretrain_internlm_7b_ptd.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
     </tr>
     <tr>
       <td >65B</td>
@@ -344,6 +361,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 341 </td>
       <td> 414 </td>
       <td> <a href="examples/intern/pretrain_internlm_65b_ptd.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
     </tr>
     <tr>
       <td rowspan="5"><a href="examples/llama/README.md">LLaMA</a></td>
@@ -353,6 +371,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 3600 </td>
       <td> 3804 </td>
       <td> <a href="examples/llama/pretrain_llama_7b_ptd.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
     </tr>
     <tr>
       <td>13B</td>
@@ -361,6 +380,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 1895 </td>
       <td> 2012 </td>
       <td> <a href="examples/llama/pretrain_llama_13b_ptd.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
     </tr>
     <tr>
         <td>33B</td>
@@ -369,6 +389,7 @@ For the supported models listed above, we provide training scripts and readme in
         <td>621</td>
         <td>776</td>
         <td><a href="examples/llama/pretrain_llama_33B_ptd_32p.sh">train</a> </td>
+        <td> 【Model contributed by Ascend】 </td>
     </tr>
     <tr>
       <td rowspan="2">65B</td>
@@ -379,6 +400,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 348 </td>
       <td> 426 </td>
       <td> <a href="examples/llama/pretrain_llama_65b_ptd.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</a></td>
@@ -388,6 +410,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 4200 </td>
       <td> 3850 </td>
       <td> <a href="examples/llama2/pretrain_llama2_7b_ptd.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
     </tr>
     <tr>
       <td>13B</td>
@@ -396,6 +419,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 1990 </td>
       <td> 1920 </td>
       <td> <a href="examples/llama2/pretrain_llama2_13B_ptd_8p.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
     </tr>
     <tr>
       <td>34B</td>
@@ -404,6 +428,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 690 </td>
       <td> 796 </td>
       <td> <a href="examples/llama2/pretrain_llama2_34B_ptd_16p.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
     </tr>
     <tr>
       <td>70B</td>
@@ -412,6 +437,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 350 </td>
       <td> 339 </td>
       <td> <a href="examples/llama2/pretrain_llama2_70b_ptd.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/llama3/README.md">LLaMA3</a></td>
@@ -421,6 +447,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 2483 </td>
       <td> 2674 </td>
       <td> <a href="examples/llama3/pretrain_llama3_8b_ptd.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
     </tr>
     <tr>
       <td>70B</td>
@@ -438,6 +465,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 2499 </td>
       <td> 2867 </td>
       <td> <a href="examples/qwen/pretrain_qwen_7b_ptd.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
     </tr>
     <tr>
       <td>14B</td>
@@ -446,6 +474,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 1560 </td>
       <td> 1578 </td>
       <td> <a href="examples/qwen/pretrain_qwen_14b_ptd.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
     </tr>
     <tr>
       <td>72B</td>
@@ -454,6 +483,17 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 285 </td>
       <td> 345 </td>
       <td> <a href="examples/qwen/pretrain_qwen_72b_ptd.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/yi/README_en.md">Yi</a></td>
+      <td>34B</td>
+      <td>2x8</td>
+      <td>BF16 </td>
+      <td> 809 </td>
+      <td> 730 </td>
+      <td> <a href="examples/yi/pretrain_yi_34b_ptd_16p.sh">train</a> </td>
+      <td> 【Model contributed by Community】 </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
@@ -463,6 +503,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 1054 </td>
       <td> 1139 </td>
       <td> <a href="examples/mixtral/pretrain_mixtral_8x7b_ptd.sh">train</a> </td>
+      <td> 【Model contributed by Ascend】 </td>
     </tr>
   </tbody>
 </table>

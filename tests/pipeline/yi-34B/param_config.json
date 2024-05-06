@@ -1,0 +1,69 @@
+{
+    "CONVERT_CKPT_PARAM": [
+        "--model-type", "GPT",
+        "--loader", "llama2_hf",
+        "--saver", "megatron",
+        "--load-dir", "/home/dataset/yi-34B-hf",
+        "--save-dir", "/home/dataset/yi-34B-mt-t8p1",
+        "--target-tensor-parallel-size", "8",
+        "--target-pipeline-parallel-size", "1",
+        "--tokenizer-model", "None"
+    ],
+
+    "NETWORK_SIZE": [
+        "--num-layers", "60",
+        "--hidden-size", "7168",
+        "--ffn-hidden-size", "20480",
+        "--num-attention-heads", "56",
+        "--max-position-embeddings", "4096",
+        "--position-embedding-type", "rope",
+        "--make-vocab-size-divisible-by", "1",
+        "--normalization", "RMSNorm",
+        "--swiglu",
+        "--untie-embeddings-and-output-weights",
+        "--load", "/home/dataset/yi-34B-mt-t8p1"
+    ],
+
+    "TOKENIZER_PARAM": [
+        "--tokenizer-type", "PretrainedFromHF",
+        "--tokenizer-name-or-path", "/home/dataset/yi-34B-hf"
+    ],
+
+    "DISTRIBUTED_PARAM": [
+        "--tensor-model-parallel-size", "8",
+        "--pipeline-model-parallel-size", "1"
+    ],
+
+    "INFERENCE_PARAM": [
+        "--max-new-tokens", "256",
+        "--tokenizer-not-use-fast",
+        "--exit-on-missing-checkpoint",
+        "--attention-softmax-in-fp32"
+    ],
+
+    "EVALUATION_PARAM": [
+        "--tokenizer-not-use-fast",
+        "--task-data-path", "/home/dataset/eval_dataset/mmlu/test",
+        "--task", "mmlu",
+        "--max-new-tokens", "1",
+        "--exit-on-missing-checkpoint"
+    ],
+
+    "AUXILIARY_PARAM": [
+        "--micro-batch-size", "1",
+        "--global-batch-size", "16",
+        "--no-masked-softmax-fusion",
+        "--disable-bias-linear",
+        "--no-gradient-accumulation-fusion",
+        "--bf16",
+        "--seed", "42",
+        "--use-fused-rmsnorm",
+        "--group-query-attention",
+        "--no-load-optim",
+        "--no-load-rng",
+        "--seq-length", "4096",
+        "--num-query-groups", "8",
+        "--vocab-size", "64000",
+        "--rotary-base", "5000000"
+    ]
+}
