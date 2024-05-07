@@ -72,7 +72,7 @@ class MixtralParallelMLPBM(torch.nn.Module):
 class SwitchMLP(MegatronModule):
     def __init__(self, config, layer_number=None):
         from megatron.model.transformer import ParallelMLP
-        from ascendspeed.components.moe.moe import MoE
+        from ascendspeed.moe.moe import MoE
         from megatron.core.parallel_state import get_expert_parallel_group
 
         super().__init__()
