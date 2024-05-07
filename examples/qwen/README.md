@@ -1,4 +1,4 @@
-# Qwen
+# Qwen  $\color{black}{\bf\tiny{【昇腾贡献模型】}}$
 
 <p align="left">
         <b>简体中文</b> |
