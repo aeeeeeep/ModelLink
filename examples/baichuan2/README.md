@@ -1,4 +1,4 @@
-# BaiChuan2
+# BaiChuan2  $\color{black}{\bf\tiny{【昇腾贡献模型】}}$
 <p align="left">
         <b>简体中文</b> |
         <b><a href="README_en.md">English</a> </b> 
