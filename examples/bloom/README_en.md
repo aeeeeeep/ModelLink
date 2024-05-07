@@ -1,4 +1,4 @@
-# Bloom
+# Bloom  $\color{black}{\rm\tiny{【Model}}$ $\color{black}{\rm\tiny{contributed}}$ $\color{black}{\rm\tiny{by}}$ $\color{black}{\rm\tiny{Ascend】}}$ 
 
 <p align="left">
         <b><a href="README.md">简体中文</a></b> |

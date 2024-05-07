@@ -1,4 +1,4 @@
-# Aquila-7B
+# Aquila-7B  $\color{black}{\bf\tiny{【昇腾贡献模型】}}$
 <p align="left">
         <b>简体中文</b> |
         <b><a href="https://gitee.com/ascend/ModelLink/blob/modellink/examples/bloom/README_en.md">English</a> </b> 
