@@ -422,8 +422,25 @@ class FlashSelfAttention(torch.nn.Module):
 
         batch_size, seq_length, head_num, head_dim = q.shape[1], q.shape[0], q.shape[2], q.shape[3]
 
+        use_sliding_windows = (
+            getattr(args, "sliding_window", None) is not None
+            and seq_length > args.sliding_window
+            and not self.alibi
+        )
+
+        if use_sliding_windows:
+            pse = None
+            sparse_mode = 4
+            self.pre_tockens = args.sliding_window
+        else:
+            sparse_mode = 0
+
         if not hasattr(self, 'attention_mask') or self.attention_mask.shape[0] != seq_length:
-            self.attention_mask = torch.triu(torch.ones(seq_length, seq_length), 1).bool().npu()
+            if use_sliding_windows:
+                self.attention_mask = torch.triu(torch.ones(2048, 2048), 1).bool().npu()
+            else:
+                self.attention_mask = torch.triu(torch.ones(seq_length, seq_length), 1).bool().npu()
+
 
         q, k, v = [rearrange(x, 's b h d -> s b (h d)') for x in [q, k, v]]
 
@@ -463,6 +480,7 @@ class FlashSelfAttention(torch.nn.Module):
         output = torch_npu.npu_fusion_attention( \
             q, k, v, head_num, args.shape_order, \
             pse=pse, \
+            sparse_mode=sparse_mode, \
             padding_mask=None, \
             atten_mask=self.attention_mask, \
             scale=scale, \

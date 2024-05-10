@@ -221,6 +221,15 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/mixtral/evaluate_mixtral_8x7b_ptd.sh">评估 </a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
     </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/mistral/README.md">Mistral</a></td>
+      <td>7B</td>
+      <td> -- </td>
+      <td> <a href="examples/mistral/generate_mistral_7b_ptd.sh">对话 </a> </td>
+      <td> <a href="examples/mistral/evaluate_mistral_7b_ptd.sh">评估 </a>  </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+      <td>【昇腾贡献模型】</td>
+    </tr>
   </tbody>
 </table>
 
@@ -461,6 +470,15 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>BF16 </td>
       <td> 1054 </td>
       <td> 1139 </td>
+      <td> <a href="examples/mixtral/pretrain_mixtral_8x7b_ptd.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/mistral/README.md">Mistral</a></td>
+      <td>7B</td>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 2379 </td>
+      <td> 2734 </td>
       <td> <a href="examples/mixtral/pretrain_mixtral_8x7b_ptd.sh">训练</a> </td>
     </tr>
   </tbody>

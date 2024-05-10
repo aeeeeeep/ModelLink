@@ -171,6 +171,8 @@ def _add_network_size_args(parser):
                        help="Use fused rotary-pos-emb.")
     group.add_argument("--use-mc2", action='store_true',
                        help="Use mc2 for compute-comm overlap in tp.")
+    group.add_argument('--sliding-window', type=int, default=None,
+                       help='Window size when use sliding window attention.')
     return parser
 
 
@@ -242,3 +244,13 @@ def _add_alibi_args(parser):
                        help='fill alibi with negative inf')
 
     return parser
+
+
+def validate_args_decorator(validate_args):
+    @wraps(validate_args)
+    def wrapper(args, defaults):
+        if args.position_embedding_type == 'alibi' and args.sliding_window is not None:
+            raise AssertionError('Sliding Window Attention is forbidden when use alibi.')
+        return args
+
+    return wrapper

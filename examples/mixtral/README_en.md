@@ -249,7 +249,7 @@ CKPT_PATH="./ckpt/Mixtral-8x7B/"
 Comparison of Mixtral-8x7B performance on 2 nodes and 16 chips with ep2 pp8:
 **(When there are enough nodes, the larger the ep, the higher the throughput. This is not the optimal performance here, just for reference)**
 
-|  Device  |    Model    | Iterations | Sample Throughput (samples/step) | Tokens Throughput (tokens/s/p) | Single Step Iteration Time (s/step) |
+|  Device  |    Model    | Iterations | Sample Throughput (samples/s) | Tokens Throughput (tokens/s/p) | Single Step Iteration Time (s/step) |
 | :-------: | :----------: | :--------: | :------------------------------: | :----------------------------: | :---------------------------------: |
 |   NPUs   | Mixtral-8x7B |    1000    |               3.13               |            1053.63            |                31.13                |
 | Reference | Mixtral-8x7B |    1000    |               4.45               |             1139.3             |                28.76                |

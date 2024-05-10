@@ -40,7 +40,7 @@ from ..core import (vocab_embedding_wrapper, initialize_model_parallel_decorator
                    RotaryEmbedding_forward, apply_rotary_pos_emb)
 from ..data import build_pretraining_data_loader
 from ..tokenizer import build_tokenizer
-from ..arguments import parse_args_decorator
+from ..arguments import parse_args_decorator, validate_args_decorator
 from ..checkpointing import _load_base_checkpoint_wrapper, load_checkpoint_wrapper
 from ..initialize import initialize_megatron
 
@@ -183,6 +183,7 @@ def patch_training():
 
 def patch_miscellaneous():
     megatron.arguments.parse_args = parse_args_decorator(megatron.arguments.parse_args)
+    megatron.arguments.validate_args = validate_args_decorator(megatron.arguments.validate_args)
     megatron.global_vars.build_tokenizer = build_tokenizer
     megatron.checkpointing._load_base_checkpoint = _load_base_checkpoint_wrapper(
         megatron.checkpointing._load_base_checkpoint)
