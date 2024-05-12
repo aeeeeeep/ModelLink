@@ -180,6 +180,46 @@ LLAMA3-8B 训练的硬件配置:
     ```
 
     **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+6. 微调
+
+    6.1 准备微调数据集
+    
+    下载微调数据集 [这里](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+
+    ```shell
+    # 下载数据集
+    mkdir finetune_dataset
+    cd ./finetune_dataset
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
+
+    # 处理微调数据集  
+    mkdir ./finetune_dataset/llama-3-8b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/llama-3-8b-hf/ \
+        --output-prefix ./finetune_dataset/llama-3-8b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF \
+        --handler-name GeneralInstructionHandler \
+        --append-eod
+    ```
+
+    6.2 全参微调
+    
+    全参微调的配置脚本基本和预训练脚本一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
+    增加微调参数--finetune，增加预训练权重加载参数--load，使微调从第一步开始。更改为以下参数：
+
+    ```bash
+    DATA_PATH="./finetune_dataset/llama-3-8b-hf/alpaca"
+    TOKENIZER_PATH="./model_from_hf/llama-3-8b-hf/"
+    CKPT_PATH="./ckpt/llama-3-8b-hf/"
+        --load ${CKPT_PATH} \
+        --finetune \
+        --is-instruction-dataset \
+        --tokenizer-not-use-fast \
+    ```
 
 ### 性能
 
@@ -436,6 +476,47 @@ LLAMA3-70B 训练的硬件配置:
     ```
 
     **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+
+6. 微调
+
+    6.1 准备微调数据集
+    
+    下载微调数据集 [这里](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+
+    ```shell
+    # 下载数据集
+    mkdir finetune_dataset
+    cd ./finetune_dataset
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
+
+    # 处理微调数据集  
+    mkdir ./finetune_dataset/llama-3-70b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/llama-3-70b-hf/ \
+        --output-prefix ./finetune_dataset/llama-3-70b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF \
+        --handler-name GeneralInstructionHandler \
+        --append-eod
+    ```
+
+    6.2 全参微调
+    
+    全参微调的配置脚本基本和预训练脚本一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
+    增加微调参数--finetune，增加预训练权重加载参数--load，使微调从第一步开始。更改为以下参数：
+
+    ```bash
+    DATA_PATH="./finetune_dataset/llama-3-70b-hf/alpaca"
+    TOKENIZER_PATH="./model_from_hf/llama-3-70b-hf/"
+    CKPT_PATH="./ckpt/llama-3-70b-hf/"
+        --load ${CKPT_PATH} \
+        --finetune \
+        --is-instruction-dataset \
+        --tokenizer-not-use-fast \
+    ```
 
 ### 性能
 
