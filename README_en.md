@@ -478,7 +478,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td>7B</td>
       <td>1x8</td>
       <td>BF16 </td>
-      <td> 2379 </td>
+      <td> 2806 </td>
       <td> 2734 </td>
       <td> <a href="examples/mistral/pretrain_mistral_7b_ptd.sh">训练</a> </td>
     </tr>
