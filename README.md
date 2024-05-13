@@ -477,7 +477,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>7B</td>
       <td>1x8</td>
       <td>BF16 </td>
-      <td> 2379 </td>
+      <td> 2806 </td>
       <td> 2734 </td>
       <td> <a href="examples/mixtral/pretrain_mixtral_8x7b_ptd.sh">训练</a> </td>
     </tr>
