@@ -248,7 +248,8 @@ def _add_alibi_args(parser):
 
 def validate_args_decorator(validate_args):
     @wraps(validate_args)
-    def wrapper(args, defaults):
+    def wrapper(args, defaults={}):
+        validate_args(args, defaults)
         if args.position_embedding_type == 'alibi' and args.sliding_window is not None:
             raise AssertionError('Sliding Window Attention is forbidden when use alibi.')
         return args
