@@ -119,6 +119,8 @@
 
     # tp8-pp1 转 HF
     python tools/checkpoint/convert_ckpt.py \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
         --model-type GPT \
         --loader megatron \
         --saver megatron \
