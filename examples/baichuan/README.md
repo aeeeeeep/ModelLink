@@ -176,7 +176,7 @@ Baichuan-7B 训练的硬件配置如下：
     ```shell
     bash examples/baichuan/pretrain_baichuan_ptd_7B.sh 
     ```
-    **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+    **注意**：如果使用多机训练，且没有设置数据共享，需要在训练脚启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
 ### 性能
 
@@ -345,7 +345,7 @@ Baichuan-13B 训练的硬件配置如下:
     ```shell
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-   
+      
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
         --loader llama2_hf \
@@ -411,7 +411,7 @@ Baichuan-13B 训练的硬件配置如下:
     ```bash
     bash examples/baichuan/pretrain_baichuan_ptd_13B.sh
     ```
-    **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+    **注意**：如果使用多机训练，且没有设置数据共享，需要在训练脚启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
 ### 性能
 

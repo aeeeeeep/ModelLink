@@ -64,12 +64,12 @@ Qwen-7B 训练的硬件配置:
     # python3.8
     conda create -n test python=3.8
     conda activate test
-
+    
     # 安装 torch 和 torch_npu
     pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-
+    
     # 安装加速库
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
@@ -77,7 +77,7 @@ Qwen-7B 训练的硬件配置:
     pip install -r requirements.txt
     pip install -e .
     cd ..
-
+    
     # 安装其余依赖库
     pip install -r requirements.txt
     ```
@@ -128,7 +128,7 @@ Qwen-7B 训练的硬件配置:
     ```shell
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-
+    
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
         --loader qwen_hf \
@@ -166,7 +166,7 @@ Qwen-7B 训练的硬件配置:
     cd ./dataset
     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
     cd ..
-
+    
     # 处理数据   
     mkdir ./dataset/Qwen-7B/
     python ./tools/preprocess_data.py \
@@ -184,7 +184,7 @@ Qwen-7B 训练的硬件配置:
     ```shell
     # 设置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-
+    
     # 根据实际情况配置词表、数据集、模型参数保存路径
     CKPT_SAVE_DIR="./ckpt/Qwen-7B/"
     TOKENIZER_MODEL="./model_from_hf/Qwen-7B/"  #词表路径
@@ -197,7 +197,7 @@ Qwen-7B 训练的硬件配置:
     ```shell
     bash examples/qwen/pretrain_qwen_7b_ptd.sh
     ```
-    **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+    **注意**：如果使用多机训练，且没有设置数据共享，需要在训练脚启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
 ### 性能
 
@@ -296,12 +296,12 @@ Qwen-14B 训练的硬件配置:
     # python3.8
     conda create -n test python=3.8
     conda activate test
-
+    
     # 安装 torch 和 torch_npu
     pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-
+    
     # 安装加速库
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
@@ -309,7 +309,7 @@ Qwen-14B 训练的硬件配置:
     pip install -r requirements.txt
     pip install -e .
     cd ..
-
+    
     # 安装其余依赖库
     pip install -r requirements.txt
     ```
@@ -367,7 +367,7 @@ Qwen-14B 训练的硬件配置:
     ```bash
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-
+    
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
         --loader qwen_hf \
@@ -405,7 +405,7 @@ Qwen-14B 训练的硬件配置:
     cd ./dataset
     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
     cd ..
-
+    
     # 处理数据   
     mkdir ./dataset/Qwen-14B/
     python ./tools/preprocess_data.py \
@@ -424,7 +424,7 @@ Qwen-14B 训练的硬件配置:
     ```shell
     # 设置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-
+    
     # 根据实际情况配置词表、数据集、模型参数保存路径
     CKPT_SAVE_DIR="./ckpt/Qwen-14B/"
     TOKENIZER_MODEL="./model_from_hf/Qwen-14B/"  #词表路径
@@ -437,7 +437,7 @@ Qwen-14B 训练的硬件配置:
     ```shell
     bash examples/qwen/pretrain_qwen_14b_ptd.sh
     ```
-    **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+    **注意**：如果使用多机训练，且没有设置数据共享，需要在训练脚启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 ### 性能
 
 #### 吞吐
@@ -534,12 +534,12 @@ Qwen-72B 训练的硬件配置:
     # python3.8
     conda create -n test python=3.8
     conda activate test
-
+    
     # 安装 torch 和 torch_npu
     pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-
+    
     # 安装加速库
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
@@ -547,7 +547,7 @@ Qwen-72B 训练的硬件配置:
     pip install -r requirements.txt
     pip install -e .
     cd ..
-
+    
     # 安装其余依赖库
     pip install -r requirements.txt
     ```
@@ -586,7 +586,7 @@ Qwen-72B 训练的硬件配置:
     ```bash
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-
+    
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
         --loader qwen_hf \
@@ -624,7 +624,7 @@ Qwen-72B 训练的硬件配置:
     cd ./dataset
     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
     cd ..
-
+    
     # 处理数据   
     mkdir ./dataset/Qwen-72B/
     python ./tools/preprocess_data.py \
@@ -643,7 +643,7 @@ Qwen-72B 训练的硬件配置:
     ```shell
     # 设置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-
+    
     # 根据实际情况配置词表、数据集、模型参数保存路径
     CKPT_SAVE_DIR="./ckpt/Qwen-72B/"
     TOKENIZER_MODEL="./model_from_hf/Qwen-72B/"  #词表路径
@@ -655,7 +655,7 @@ Qwen-72B 训练的硬件配置:
 
     ```shell
         --seq-length 32768 \
-
+    
         --recompute-granularity full \
         --recompute-method block \
         --recompute-num-layers 2 \
@@ -666,7 +666,7 @@ Qwen-72B 训练的硬件配置:
     ```shell
     bash examples/qwen/pretrain_qwen_72b_ptd.sh
     ```
-    **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+    **注意**：如果使用多机训练，且没有设置数据共享，需要在训练脚启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 ### 性能
 
 #### 吞吐

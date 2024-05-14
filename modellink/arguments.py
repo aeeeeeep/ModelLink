@@ -50,6 +50,7 @@ def process_args(parser):
     parser = _add_distributed_args(parser)
     parser = _add_algorithm_args(parser)
     parser = _add_alibi_args(parser)
+    parser = _add_dataset_args(parser)
     return parser
 
 
@@ -241,4 +242,14 @@ def _add_alibi_args(parser):
                        default=False,
                        help='fill alibi with negative inf')
 
+    return parser
+
+
+def _add_dataset_args(parser):
+    group = parser.add_argument_group(title='dataset_args')
+    group.add_argument('--no-shared-storage',
+                       action='store_true',
+                       default=False,
+                       help='if no shared storage, set it'
+                       )
     return parser

@@ -52,7 +52,7 @@ Aquila-7B 训练的硬件配置如下:
     pip install torch_npu-2.1.0.postxxxx-cp38-cp38-xxxx_aarch64.whl
     # 通过PTA上提供的安装包，以whl文件方式安装apex
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-
+    
     # 请按照您的真实环境修改 set_env.sh 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     # 拉取AscendSpeed源代码，进入AscendSpeed目录，然后源码方式安装ascendspeed加速包
@@ -62,7 +62,7 @@ Aquila-7B 训练的硬件配置如下:
     pip install -r requirements.txt
     pip install -e .
     cd ..
-
+    
     # 安装其余依赖包
     pip install -r requirements.txt
     ```
@@ -142,11 +142,13 @@ Aquila-7B 训练的硬件配置如下:
     CKPT_SAVE_DIR="./ckpt/Aquila-7B/"
     # 如果不需要保存权重，就不需要设置CKPT_SAVE_DIR, 并且启动脚本里应不使用 `--save` 参数
     # 如果需要保存权重，则需要设置CKPT_SAVE_DIR, 并且启动脚本里应使用 `--save $CKPT_SAVE_DIR` 进行类似配置。
-
+    
     # 如果不需要加载权重，就不需要设置CKPT_LOAD_DIR, 并且启动脚本里应不使用 `--load` 参数
     # 如果需要加载权重，则需要设置CKPT_LOAD_DIR, 并且启动脚本里应使用 `--load $CKPT_LOAD_DIR` 进行类似配置。
     # 进行断点续训时，应先按以上save的场景配置，待完成ckpt保存后，再修改相应参数，按以上load的场景加载已保存的ckpt。
     ```
+
+    **注意**：如果使用多机训练，且没有设置数据共享，需要在训练脚启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
 7. 启动 Aquila-7B 预训练脚本
 
@@ -162,7 +164,6 @@ Aquila-7B 训练的硬件配置如下:
     ```shell
     bash examples/aquila/pretrain_aquila_7b_ptd.sh
     ```
-    **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
 
 ### 性能
 
