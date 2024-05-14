@@ -61,6 +61,15 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
+      <td rowspan="1"><a href="examples/aquila2/README_en.md">Aquila2</a></td>
+      <td> 7B </td>
+      <td> -- </td>
+      <td> <a href="examples/aquila2/generate_aquila2_7b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/aquila2/evaluate_aquila2_7b_ptd.sh">evaluation</a> </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td>【Model contributed by Community】</td>
+    </tr>
+    <tr>
       <td rowspan="2"> <a href="examples/baichuan/README.md">Baichuan</a> </td>
       <td> 7B </td>
       <td> -- </td>
@@ -318,6 +327,15 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 2849 </td>
       <td> 2874 </td>
       <td> <a href="examples/aquila/pretrain_aquila_7b_ptd.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/aquila2/README_en.md">Aquila2</a></td>
+      <td>7B</td>
+      <td> 1x8</td>
+      <td> FP16 </td>
+      <td> 3323 </td>
+      <td> 2673 </td>
+      <td> <a href="examples/aquila2/pretrain_aquila2_7b_ptd.sh">train</a> </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/baichuan/README.md">Baichuan</a></td>
