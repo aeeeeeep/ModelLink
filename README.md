@@ -112,6 +112,15 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
+      <td rowspan="1"> <a href="examples/codellama/README.md">CodeLlama</a> </td>
+      <td> 34B </td>
+      <td> -- </td>
+      <td> <a href="examples/codellama/generate_codellama_34b_ptd.sh">对话</a> </td>
+      <td> <a href="examples/codellama/evaluate_codellama_34b_ptd.sh">评估</a> </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td>【社区贡献模型】</td>
+    </tr>
+    <tr>
       <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>
       <td>7B</td>
       <td> -- </td>
@@ -359,6 +368,15 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> 100 </td>
       <td> 107 </td>
       <td> <a href="examples/bloom/pretrain_bloom_176b.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/codellama/README.md">CodeLlama</a></td>
+      <td>34B</td>
+      <td> 2x8</td>
+      <td> BF16 </td>
+      <td> 837 </td>
+      <td> 762 </td>
+      <td> <a href="examples/codellama/pretrain_codellama_34b_ptd_16p.sh">训练</a> </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>

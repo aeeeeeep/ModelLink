@@ -78,11 +78,13 @@ def extract_answer_code(answer, task: dict):
 
 
 class HumanEval(DatasetEval):
-    def __init__(self, test_dir,
-                 instruction_template="The definition and function description of the python function are as follows. "
-                                      "Please complete the implementation of the python function.\n{prompt}"):
+    def __init__(self, test_dir, instruction_template=None):
         self.test_dir = test_dir
-        self.instruction_template = instruction_template
+        if instruction_template:
+            self.instruction_template = instruction_template
+        else:
+            self.instruction_template = "The definition and function description of the python function are as follows. " \
+                                        "Please complete the implementation of the python function.\n{prompt}"
 
     def read_problems(self) -> Dict[str, Dict]:
         return {task["task_id"]: task for task in self.stream_jsonl(self.test_dir)}
