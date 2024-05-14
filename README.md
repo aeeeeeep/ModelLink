@@ -61,6 +61,15 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
+      <td rowspan="1"><a href="examples/aquila2/README.md">Aquila2</a></td>
+      <td>7B</td>
+      <td> -- </td>
+      <td> <a href="examples/aquila2/generate_aquila2_7b_ptd.sh">对话</a> </td>
+      <td> <a href="examples/aquila2/evaluate_aquila2_7b_ptd.sh">评估</a> </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td>【社区贡献模型】</td>
+    </tr>
+    <tr>
       <td rowspan="2"> <a href="examples/baichuan/README.md">Baichuan</a> </td>
       <td> 7B </td>
       <td> -- </td>
@@ -319,6 +328,15 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/aquila/pretrain_aquila_7b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
+      <td rowspan="1"><a href="examples/aquila2/README.md">Aquila2</a></td>
+      <td>7B</td>
+      <td> 1x8</td>
+      <td> FP16 </td>
+      <td> 3323 </td>
+      <td> 2673 </td>
+      <td> <a href="examples/aquila2/pretrain_aquila2_7b_ptd.sh">训练</a> </td>
+    </tr>
+    <tr>
       <td rowspan="2"><a href="examples/baichuan/README.md">Baichuan</a></td>
       <td>7B</td>
       <td> 1x8</td>
@@ -553,7 +571,7 @@ python tools/preprocess_data.py --input train-00000-of-00001-a09b74b3ef9c3b56.pa
 ```
 输出将是两个文件，在本例中名为alpaca_packed_input_ids_document.bin和alpaca_packed_input_ids_document.idx，后面的训练中指定--data-path的是完整路径和新文件名，但不带文件扩展名。使用--tokenizer-type指定模型对应的数据预处理方法，使用--tokenizer-name-or-path指定tokenizer模型路径，通常是与开源项目中的预训练权重一起下载，--handler-name指定数据集的指令数据构造方法。
 
-#### <span id="jump11"> 制作预训练数据集
+#### <span id="jump11"> 制作预训练数据集
 
 ##### wikipedia 数据集
 
@@ -607,7 +625,7 @@ python tools/preprocess_data.py --input WORKSPACE/train-00000-of-00001-a09b74b3e
 ```
 
 
-#### <span id="jump12"> 制作指令微调数据集
+#### <span id="jump12"> 制作指令微调数据集
 ##### alpaca 数据集
 ```bash
 # 数据集：wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
@@ -629,7 +647,7 @@ python tools/preprocess_data.py --input WORKSPACE/alpaca/train-00000-of-00001-a0
 请注意，使用 `--handler-name GeneralInstructionHandler` 标志的指令数据集，在处理时会从 `modellink/data/data_handler.py` 中选择 `GeneralInstructionHandler` 类来制作prompt。如果你处理的是 alpaca 格式风格的数据集，即包含 `instruction`, `input` 和 `output` 列的数据集，可以直接使用 `--handler-name GeneralInstructionHandler` 标志。
 此外，`BelleMultiTurnInstructionHandler` 可以被用于处理 [belle](https://huggingface.co/datasets/BelleGroup/multiturn_chat_0.8M) 格式的数据集，`MOSSInstructionHandler` 可以被用于处理 [MOSS](https://huggingface.co/datasets/fnlp/moss-003-sft-data) 格式的数据集，`LeetcodePythonInstructionHandler` 可以被用于处理 [Leetcode](https://huggingface.co/datasets/mhhmm/leetcode-solutions-python) 风格的数据集
 
-### <span id="jump13"> 预训练 </span>
+### <span id="jump13"> 预训练 </span>
 ```shell
  # 配置LLaMA-7B 预训练脚本: pretrain_llama_7b.sh
  # 根据实际情况配置词表、数据集、模型参数保存路径
@@ -642,7 +660,7 @@ python tools/preprocess_data.py --input WORKSPACE/alpaca/train-00000-of-00001-a0
  bash examples/llama2/pretrain_llama_7b_ptd.sh
 ```
 
-### <span id="jump14"> 全参微调 </span>
+### <span id="jump14"> 全参微调 </span>
 ```shell
  # 在预训练脚本的基础上，给出预训练权重路径，数据集使用指令数据集路径，使能微调开关--finetune
  LOAD_CHECKPOINT_PATH="your init model weight load path"
@@ -656,7 +674,7 @@ python tools/preprocess_data.py --input WORKSPACE/alpaca/train-00000-of-00001-a0
 ```
 
 
-### <span id="jump15"> 低参微调 </span>
+### <span id="jump15"> 低参微调 </span>
 #### Lora
 
 当前 ModelLink基于 peft 仓库支持对大模型的 Lora 微调功能：
@@ -706,7 +724,7 @@ ModelLink:
 - Take medications regularly.
 ```
 
-### <span id="jump16"> 推理（ 人机对话） </span>
+### <span id="jump16"> 推理（ 人机对话） </span>
 当前，我们支持使用如下策略训练的模型进行推理:
 当前，我们支持使用如下并行策略训练的模型进行推理:
 - 仅仅使用 PTD 策略训练的模型
@@ -838,7 +856,7 @@ pretrained_model_name_or_path(`str`, *optional*, defaults to None):
     ```
     <img src="sources/images/beam_search_sampling.png">
 
-### <span id="jump17"> 评估基线数据集（Benchmark）</span>
+### <span id="jump17"> 评估基线数据集（Benchmark）</span>
 
 
 
