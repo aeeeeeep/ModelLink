@@ -172,9 +172,9 @@ Aquila2-7B 训练的硬件配置如下:
     cd ..
 
     # 处理微调数据集  
-    mkdir -p ./finetune_dataset/Aquila2-7B/
+    mkdir ./finetune_dataset/Aquila2-7B/
     python ./tools/preprocess_data.py \
-        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Aquila2-7B/ \
         --output-prefix ./finetune_dataset/Aquila2-7B/alpaca \
         --workers 4 \
@@ -215,7 +215,7 @@ Aquila2-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 推理与预训练不同，我们必须加载预训练权重，请注意：在转换权重时使用的模型结构参数，和运行评估任务时使用的模型结构参数，应保持一致。
 
-权重转换完成后，我们配置Aquila2-7B推理脚本`example/aquila2/generate_aquila2_7b_ptd.sh`，需要正确指定加载权重的路径，词表路径等（下面样例仅供参考）
+权重转换完成后，我们配置Aquila2-7B推理脚本`examples/aquila2/generate_aquila2_7b_ptd.sh`，需要正确指定加载权重的路径，词表路径等（下面样例仅供参考）
 
 ```shell
 # 请按实际情况修改模型权重路径和分词器路径

@@ -196,7 +196,7 @@ LLAMA3-8B 训练的硬件配置:
     # 处理微调数据集  
     mkdir ./finetune_dataset/llama-3-8b-hf/
     python ./tools/preprocess_data.py \
-        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-3-8b-hf/ \
         --output-prefix ./finetune_dataset/llama-3-8b-hf/alpaca \
         --workers 4 \
@@ -493,7 +493,7 @@ LLAMA3-70B 训练的硬件配置:
     # 处理微调数据集  
     mkdir ./finetune_dataset/llama-3-70b-hf/
     python ./tools/preprocess_data.py \
-        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-3-70b-hf/ \
         --output-prefix ./finetune_dataset/llama-3-70b-hf/alpaca \
         --workers 4 \
