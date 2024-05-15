@@ -211,7 +211,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     # process datasets  
     mkdir ./finetune_dataset/llama-2-7b-hf/
     python ./tools/preprocess_data.py \
-        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-2-7b-hf/ \
         --output-prefix ./finetune_dataset/llama-2-7b-hf/alpaca \
         --workers 4 \
@@ -986,7 +986,7 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
     # process datasets  
     mkdir ./finetune_dataset/llama2-70b-hf/
     python ./tools/preprocess_data.py \
-        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama2-70b-hf/ \
         --output-prefix ./finetune_dataset/llama2-70b-hf/alpaca \
         --workers 4 \
