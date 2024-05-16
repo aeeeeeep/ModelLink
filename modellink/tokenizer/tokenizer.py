@@ -16,8 +16,9 @@
 """Megatron tokenizers. just using huggingface implementation."""
 
 from transformers import AutoTokenizer
-from megatron.tokenizer import build_tokenizer as megatron_build_tokenizer
-from megatron.tokenizer.tokenizer import AbstractTokenizer, _vocab_size_with_padding
+from megatron.training.tokenizer import build_tokenizer as megatron_build_tokenizer
+from megatron.training.tokenizer.tokenizer import _vocab_size_with_padding
+from megatron.core.datasets.megatron_tokenizer import MegatronTokenizer
 
 
 def build_tokenizer(args):
@@ -79,8 +80,12 @@ class TokenizerAdaptor:
     def eod(self):
         return self.tokenizer.eod
 
+    @property
+    def unique_identifiers(self):
+        return self.tokenizer.unique_identifiers
 
-class _AutoTokenizer(AbstractTokenizer):
+
+class _AutoTokenizer(MegatronTokenizer):
     """AutoTokenizer for Hf Pretrained model loading."""
 
     def __init__(self, tokenizer_name_or_path, vocab_extra_ids, model_max_length, use_fast, **kwargs):

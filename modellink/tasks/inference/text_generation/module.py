@@ -22,7 +22,7 @@ import torch
 from torch import distributed as dist
 from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
 
-from megatron import get_args, global_vars
+from megatron.training import get_args, global_vars
 from megatron.core import parallel_state
 
 
@@ -165,7 +165,7 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
 
     def __init__(self, *args, **kwargs):
         super(MegatronModuleForCausalLM, self).__init__()
-        from megatron import get_tokenizer
+        from megatron.training import get_tokenizer
         from .utils import greedy_search_or_sampling
         from .generation import beam_search
         from .communication import broadcast_float_list
@@ -208,10 +208,10 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
             **kwargs
     ) -> MegatronModuleForCausalLMABC:
         from megatron.training import get_model
-        from megatron.checkpointing import load_checkpoint
+        from megatron.training.checkpointing import load_checkpoint
         from megatron.core.distributed import DistributedDataParallel as LocalDDP
-        from megatron.model import Float16Module as MegatronFloat16Module
-        from megatron.utils import unwrap_model
+        from megatron.legacy.model import Float16Module as MegatronFloat16Module
+        from megatron.training.utils import unwrap_model
 
         args = get_args()
 
@@ -224,7 +224,8 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
             args.load = pretrained_model_name_or_path
 
         if args.load:
-            load_checkpoint(args.model, None, None)
+            strict = False if args.lora_load else True
+            load_checkpoint(args.model, None, None, 'load', strict)
 
         unwrap_classes = (torchDDP, LocalDDP, MegatronFloat16Module)
 

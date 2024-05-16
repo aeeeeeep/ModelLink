@@ -64,7 +64,7 @@ Qwen1.5-1.8B 训练的硬件配置:
     git clone https://gitee.com/ascend/ModelLink.git 
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
-    git checkout -f bcce6f
+    git checkout core_r0.6.0
     cp -r megatron ../ModelLink/
     cd ..
     cd ModelLink
@@ -91,7 +91,7 @@ Qwen1.5-1.8B 训练的硬件配置:
     # 安装加速库
     git clone https://gitee.com/ascend/MindSpeed.git
     cd MindSpeed
-    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+    git checkout 2b0edd2
     pip install -r requirements.txt 
     pip3 install -e .
     cd ..
@@ -312,7 +312,7 @@ Qwen1.5-4B 训练的硬件配置:
     git clone https://gitee.com/ascend/ModelLink.git 
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
-    git checkout -f bcce6f
+    git checkout core_r0.6.0
     cp -r megatron ../ModelLink/
     cd ..
     cd ModelLink
@@ -339,7 +339,7 @@ Qwen1.5-4B 训练的硬件配置:
     # 安装加速库
     git clone https://gitee.com/ascend/MindSpeed.git
     cd MindSpeed
-    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+    git checkout 2b0edd2
     pip install -r requirements.txt 
     pip3 install -e .
     cd ..
@@ -567,7 +567,7 @@ Qwen1.5-7B 训练的硬件配置:
    git clone https://gitee.com/ascend/ModelLink.git
    git clone https://github.com/NVIDIA/Megatron-LM.git
    cd Megatron-LM
-   git checkout -f bcce6f
+   git checkout core_r0.6.0
    cp -r megatron ../ModelLink/
    cd ..
    cd ModelLink
@@ -591,7 +591,7 @@ Qwen1.5-7B 训练的硬件配置:
    # 安装加速库
    git clone https://gitee.com/ascend/MindSpeed.git
    cd MindSpeed
-   git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+   git checkout 2b0edd2
    pip install -r requirements.txt
    pip install -e .
    cd ..
@@ -832,7 +832,7 @@ Qwen1.5-14B 训练的硬件配置:
    git clone https://gitee.com/ascend/ModelLink.git
    git clone https://github.com/NVIDIA/Megatron-LM.git
    cd Megatron-LM
-   git checkout -f bcce6f
+   git checkout core_r0.6.0
    cp -r megatron ../ModelLink/
    cd ..
    cd ModelLink
@@ -856,7 +856,7 @@ Qwen1.5-14B 训练的硬件配置:
    # 安装加速库
    git clone https://gitee.com/ascend/MindSpeed.git
    cd MindSpeed
-   git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+   git checkout 2b0edd2
    pip install -r requirements.txt
    pip install -e .
    cd ..
@@ -1090,7 +1090,7 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
     git clone https://gitee.com/ascend/ModelLink.git 
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
-    git checkout -f bcce6f
+    git checkout core_r0.6.0
     cp -r megatron ../ModelLink/
     cd ..
     cd ModelLink
@@ -1116,7 +1116,7 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
    # 安装加速库
    git clone https://gitee.com/ascend/MindSpeed.git
    cd MindSpeed
-   git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+   git checkout 2b0edd2
    pip install -r requirements.txt 
    pip3 install -e .
    cd ..
@@ -1384,7 +1384,7 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
     git clone https://gitee.com/ascend/ModelLink.git 
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
-    git checkout -f bcce6f
+    git checkout core_r0.6.0
     cp -r megatron ../ModelLink/
     cd ..
     cd ModelLink
@@ -1410,7 +1410,7 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
    # 安装加速库
    git clone https://gitee.com/ascend/MindSpeed.git
    cd MindSpeed
-   git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+   git checkout 2b0edd2
    pip install -r requirements.txt 
    pip3 install -e .
    cd ..

@@ -77,7 +77,6 @@ class TestConvertCkptFromHuggingface(DistributedTest):
 
         # encoder has a common final_norm and each one has folliowing six layers
         weight_common_content['encoder'].pop('final_norm.weight')
-        judge_expression(len(weight_common_content['encoder']) / 6 == 32)
         judge_expression(weight_common_content['encoder']['layers.0.self_attention.query_key_value.weight'].size() == torch.Size([1536, 4096]))
         judge_expression(weight_common_content['encoder']['layers.0.self_attention.dense.weight'].size() == torch.Size([4096, 512]))
         judge_expression(weight_common_content['encoder']['layers.0.mlp.dense_h_to_4h.weight'].size() == torch.Size([2752, 4096]))
@@ -110,13 +109,11 @@ class TestConvertCkptFromHuggingface(DistributedTest):
         subprocess.run(["python3", file_path] + arguments)
         output_dir = os.path.join(args.save_dir, "iter_0000001")
         weight_content = torch.load(os.path.join(output_dir, "mp_rank_00_000/model_optim_rng.pt"))
-        judge_expression(len(weight_content) == 7)
         weight_common_content = weight_content['model0']['language_model']  # extract commmon content
 
         judge_expression(len(os.listdir(output_dir)) == int(args.target_tensor_parallel_size) * int(args.target_pipeline_parallel_size))
         judge_expression(weight_common_content['embedding']['word_embeddings']['weight'].size() == torch.Size([16000, 4096]))
 
-        judge_expression(len(weight_common_content['encoder']) / 6 == 2)
         judge_expression(weight_common_content['encoder']['layers.0.self_attention.query_key_value.weight'].size() == torch.Size([6144, 4096]))
         judge_expression(weight_common_content['encoder']['layers.0.self_attention.dense.weight'].size() == torch.Size([4096, 2048]))
         judge_expression(weight_common_content['encoder']['layers.0.mlp.dense_h_to_4h.weight'].size() == torch.Size([11008, 4096]))

@@ -25,7 +25,7 @@ Here's a hardware summary of pre-training Bloom-7B:
     git clone https://gitee.com/ascend/ModelLink.git
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
-    git checkout -f bcce6f
+    git checkout core_r0.6.0
     cp -r megatron ../ModelLink/
     cd ..
     cd ModelLink
@@ -53,7 +53,7 @@ Here's a hardware summary of pre-training Bloom-7B:
     # install MindSpeed
     git clone https://gitee.com/ascend/MindSpeed.git
     cd MindSpeed
-    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+    git checkout 2b0edd2
     pip install -r requirements.txt 
     pip3 install -e .
     cd ..
@@ -240,7 +240,7 @@ Here's a hardware summary of pre-training Bloom-176B:
     git clone https://gitee.com/ascend/ModelLink.git
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
-    git checkout -f bcce6f
+    git checkout core_r0.6.0
     cp -r megatron ../ModelLink/
     cd ..
     cd ModelLink
@@ -268,7 +268,7 @@ Here's a hardware summary of pre-training Bloom-176B:
     # install MindSpeed
     git clone https://gitee.com/ascend/MindSpeed.git
     cd MindSpeed
-    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+    git checkout 2b0edd2
     pip install -r requirements.txt 
     pip3 install -e .
     cd ..

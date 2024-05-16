@@ -22,13 +22,13 @@ import torch.nn.functional as F
 from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
 
 
-from megatron import get_args
-from megatron import get_tokenizer
+from megatron.training import get_args
+from megatron.training import get_tokenizer
 from megatron.core import parallel_state
-from megatron.utils import get_ltor_masks_and_position_ids, unwrap_model
+from megatron.training.utils import get_ltor_masks_and_position_ids, unwrap_model
 from megatron.core.pipeline_parallel.p2p_communication import recv_forward, send_forward
 from megatron.core.distributed import DistributedDataParallel as LocalDDP
-from megatron.model import Float16Module
+from megatron.legacy.model import Float16Module
 from megatron.core.utils import get_model_config
 
 

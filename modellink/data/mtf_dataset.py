@@ -21,7 +21,7 @@ import re
 import numpy as np
 import torch
 
-from megatron.core.datasets.indexed_dataset import MMapIndexedDataset
+from megatron.core.datasets.indexed_dataset import IndexedDataset
 from modellink.error_utils import ensure_valid
 
 
@@ -71,5 +71,5 @@ def get_packed_indexed_dataset(data_prefix: str):
         all_field.add(fields.group(1))
     packed_dataset = dict()
     for field in all_field:
-        packed_dataset[field] = MMapIndexedDataset(f"{data_prefix}_packed_{field}_document")
+        packed_dataset[field] = IndexedDataset(f"{data_prefix}_packed_{field}_document")
     return packed_dataset

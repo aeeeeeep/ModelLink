@@ -3,8 +3,8 @@ from functools import wraps
 import torch
 import torch_npu
 from torch import nn
-from megatron.model.rms_norm import RMSNorm
-from megatron import get_args
+from megatron.legacy.model.rms_norm import RMSNorm
+from megatron.training import get_args
 
 
 def rms_norm_init_wrapper(fn):

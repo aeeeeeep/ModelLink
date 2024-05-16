@@ -4,7 +4,7 @@ import torch
 import torch_npu
 from utils import ParamConfig, assert_judge
 import modellink
-from megatron.model import GPTModel
+from megatron.legacy.model import GPTModel
 from megatron.core.enums import ModelType
 from megatron.core.utils import get_model_config
 from megatron.training import setup_model_and_optimizer, build_train_valid_test_data_iterators
@@ -18,12 +18,12 @@ class TestLora(DistributedTest):
         sys.argv = [sys.argv[0]] + config.network_size + config.tokenizer_param \
                    + config.auxiliary_param + config.lora_param + config.regularization \
                    + config.learning_rate_param + config.training_aux + config.distributed_param
-        from megatron.initialize import initialize_megatron
+        from megatron.training.initialize import initialize_megatron
         os.environ.update({"CUDA_DEVICE_MAX_CONNECTIONS": "1"})
         initialize_megatron(extra_args_provider=None,
                             args_defaults={'no_load_rng': True,
                                            'no_load_optim': True})
-        from megatron import get_args
+        from megatron.training import get_args
         self.args = get_args()
 
     def test_megatron_lora_module(self):
@@ -60,7 +60,7 @@ class TestLora(DistributedTest):
         torch.npu.set_compile_mode(jit_compile=True)
         from pretrain_gpt import model_provider, forward_step
         from pretrain_gpt import train_valid_test_datasets_provider
-        from megatron.global_vars import update_num_microbatches, get_num_microbatches, get_timers
+        from megatron.training.global_vars import update_num_microbatches, get_num_microbatches, get_timers
         from megatron.training import train_step, training_log, save_checkpoint_and_time
         from megatron.core import mpu
         model, optimizer, lr_scheduler = setup_model_and_optimizer(

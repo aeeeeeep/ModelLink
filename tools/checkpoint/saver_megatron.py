@@ -276,13 +276,13 @@ def save_model_checkpoint(queue, args):
     if args.megatron_path is not None:
         sys.path.insert(0, args.megatron_path)
 
-    from megatron.arguments import validate_args
+    from megatron.training.arguments import validate_args
     from modellink.utils import parse_args
-    from megatron.checkpointing import save_checkpoint
-    from megatron.global_vars import set_global_variables, get_args
+    from megatron.training.checkpointing import save_checkpoint
+    from megatron.training.global_vars import set_global_variables, get_args
     from megatron.core.enums import ModelType
-    from megatron.tokenizer.tokenizer import _vocab_size_with_padding
-    from megatron import fused_kernels
+    from megatron.training.tokenizer.tokenizer import _vocab_size_with_padding
+    from megatron.legacy import fused_kernels
     from megatron.core import mpu
 
     def queue_get(name=None):
@@ -686,9 +686,9 @@ def save_model_checkpoint(queue, args):
                             model.language_model.pre_process = False
                             del model.language_model.embedding
                         vp_models.append(model)
-                    save_checkpoint(md.iteration, vp_models, None, None)
+                    save_checkpoint(md.iteration, vp_models, None, None, 0)
                 else:
-                    save_checkpoint(md.iteration, [models[tp_rank]], None, None)
+                    save_checkpoint(md.iteration, [models[tp_rank]], None, None, 0)
             elif args.save_model_type == 'huggingface_bloom':
                 save_huggingface(args, models[tp_rank])
             elif args.save_model_type == "save_huggingface_llama":

@@ -6,7 +6,7 @@ import torch_npu
 from common import DistributedTest
 from utils import ParamConfig, assert_judge
 import modellink
-from megatron.model import GPTModel
+from megatron.legacy.model import GPTModel
 from modellink.tasks.inference.text_generation.infer_base import add_text_generate_args
 
 
@@ -19,12 +19,12 @@ class TestGeneration(DistributedTest):
         """
         sys.argv = [sys.argv[0]] + config.distributed_param + config.network_size + \
                    config.inference_param + config.inference_aux + config.auxiliary_param
-        from megatron.initialize import initialize_megatron
+        from megatron.training.initialize import initialize_megatron
         os.environ.update({"CUDA_DEVICE_MAX_CONNECTIONS": "1"})
         initialize_megatron(extra_args_provider=add_text_generate_args,
                             args_defaults={'no_load_rng': True,
                                            'no_load_optim': True})
-        from megatron import get_args
+        from megatron.training import get_args
         self.args = get_args()
 
     def test_greedy_search(self):

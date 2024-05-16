@@ -90,6 +90,7 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
+    --jit-compile \
     --save ${CKPT_SAVE_DIR} \
     | tee logs/train_internlm_65B.log
 
