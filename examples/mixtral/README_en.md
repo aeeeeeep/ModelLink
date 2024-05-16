@@ -24,9 +24,9 @@
 
 Minimum hardware requirements for training:
 
-| Hardware |  Configuration  |
-| :------: | :--------------: |
-|   NPU   | 16 x Ascend NPUs |
+| Hardware |  Configuration   |
+| :------: |:----------------:|
+|   NPU   | 32 x Ascend NPUs |
 
 Recommended hardware configuration for inference:
 
@@ -99,17 +99,17 @@ Recommended hardware configuration for inference:
     # Modify the ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-    # HF to tp1-pp8-ep2
+    # HF to tp8-pp4-ep1
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
         --loader mixtral_hf \
         --saver mixtral \
         --load-dir ./model_from_hf/Mixtral-8x7B/ \
-        --save-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep2/ \
+        --save-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-tp8-pp4/ \
         --tokenizer-model ./model_from_hf/Mixtral-8x7B/tokenizer.model \
-        --target-tensor-parallel-size 1 \
-        --target-pipeline-parallel-size 8 \
-        --target-expert-parallel-size 2
+        --target-tensor-parallel-size 8 \
+        --target-pipeline-parallel-size 4 \
+        --target-expert-parallel-size 1
     ```
 
     Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
@@ -119,15 +119,15 @@ Recommended hardware configuration for inference:
     # Modify the ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-    # tp1-pp8-ep2 to tp1-pp8-ep1
+    # tp8-pp4-ep1 to tp8-pp1-ep1
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
         --loader mixtral_mg \
         --saver mixtral \
-        --load-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep2/ \
-        --save-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep1/ \
-        --target-tensor-parallel-size 1 \
-        --target-pipeline-parallel-size 8 \
+        --load-dir ./model_weights/Mixtral-8x7B-v0.1-tp8-pp4-ep1/ \
+        --save-dir ./model_weights/Mixtral-8x7B-v0.1-tp8-pp1-ep1/ \
+        --target-tensor-parallel-size 8 \
+        --target-pipeline-parallel-size 1 \
         --target-expert-parallel-size 1 
     ```
 
@@ -138,13 +138,13 @@ Recommended hardware configuration for inference:
     # Modify the ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-    # tp1-pp8-ep2 to HF
+    # tp8-pp4-ep1 to HF
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
         --loader mixtral_mg \
         --saver mixtral \
         --save-model-type huggingface \
-        --load-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep2/ \
+        --load-dir ./model_weights/Mixtral-8x7B-v0.1-tp8-pp4-ep1/ \
         --save-dir ./model_from_hf/Mixtral-8x7B/    # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/Mixtral-8x7B/mg2hg/
     ```
 
@@ -185,14 +185,14 @@ Recommended hardware configuration for inference:
     GPUS_PER_NODE=8
     MASTER_ADDR="your master node IP"
     MASTER_PORT=6000
-    NNODES=2
+    NNODES=4
     NODE_RANK="current node id"
     WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 
     # Training parallel strategy
-    TP=1
-    PP=8
-    EP=2
+    TP=8
+    PP=4
+    EP=1
     ```
 
     Start Mixtral-8x7B pre-training script: ***examples/pretrain_mixtral_8x7b_ptd.sh***
@@ -246,13 +246,12 @@ Recommended hardware configuration for inference:
 
 ### Throughput
 
-Comparison of Mixtral-8x7B performance on 2 nodes and 16 chips with ep2 pp8:
-**(When there are enough nodes, the larger the ep, the higher the throughput. This is not the optimal performance here, just for reference)**
+Comparison of Mixtral-8x7B performance on 4 nodes and 32 chips with tp8 pp4:
 
 |  Device  |    Model    | Iterations | Sample Throughput (samples/step) | Tokens Throughput (tokens/s/p) | Single Step Iteration Time (s/step) |
-| :-------: | :----------: | :--------: | :------------------------------: | :----------------------------: | :---------------------------------: |
-|   NPUs   | Mixtral-8x7B |    1000    |               3.13               |            1053.63            |                31.13                |
-| Reference | Mixtral-8x7B |    1000    |               4.45               |             1139.3             |                28.76                |
+| :-------: | :----------: | :--------: |:--------------------------------:|:------------------------------:|:-----------------------------------:|
+|   NPUs   | Mixtral-8x7B |    1000    |               0.47               |              487               |                16.81                |
+| Reference | Mixtral-8x7B |    1000    |               0.59               |              610               |                13.41                |
 
 ## Model-Inference
 
@@ -263,7 +262,7 @@ First, configure the inference script: ***examples/mixtral/generate_mixtral_8x7b
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 # Modify the model weight path and tokenizer path
-CHECKPOINT="./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep1/"
+CHECKPOINT="./model_weights/Mixtral-8x7B-v0.1-tp8-pp1-ep1/"
 TOKENIZER_MODEL="./model_from_hf/Mixtral-8x7B/"
 
 # Modify according to the actual loaded model weight the parallel configuration
@@ -302,7 +301,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # Modify the model parameter path and tokenizer path
 TOKENIZER_PATH="./model_from_hf/Mixtral-8x7B/"                                           #tokenizer path
-CHECKPOINT="./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep1"                                         #model path
+CHECKPOINT="./model_weights/Mixtral-8x7B-v0.1-tp8-pp1-ep1"                                         #model path
 
 # Configure tasks and dataset paths
 DATA_PATH="./mmlu/data/test/"

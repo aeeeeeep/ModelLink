@@ -24,9 +24,9 @@
 
 训练的最低硬件配置:
 
-| 硬件 |       配置       |
-| :--: | :--------------: |
-| NPU | 16 x Ascend NPUs |
+| 硬件 |        配置        |
+| :--: |:----------------:|
+| NPU | 32 x Ascend NPUs |
 
 推理的推荐硬件配置:
 
@@ -98,35 +98,35 @@
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-    # HF 转 tp1-pp8-ep2
+    # HF 转 tp8-pp4-ep1
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
         --loader mixtral_hf \
         --saver mixtral \
         --load-dir ./model_from_hf/Mixtral-8x7B/ \
-        --save-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep2/ \
+        --save-dir ./model_weights/Mixtral-8x7B-v0.1-tp8-pp4-ep1/ \
         --tokenizer-model ./model_from_hf/Mixtral-8x7B/tokenizer.model \
-        --target-tensor-parallel-size 1 \
-        --target-pipeline-parallel-size 8 \
-        --target-expert-parallel-size 2 
+        --target-tensor-parallel-size 8 \
+        --target-pipeline-parallel-size 4 \
+        --target-expert-parallel-size 1 
     ```
 
     任意并行切分策略的Megatron权重 --> 任意并行切分策略的Megatron权重
-    ***（该场景一般用于重新配置切分后模型的权重，比如在双机16卡 EP2-PP8策略下训练完了，想在单机8卡 TP8上进行推理）***
+    ***（该场景一般用于重新配置切分后模型的权重，比如在四机32卡 TP8-PP4策略下训练完了，想在单机8卡 TP8上进行推理）***
 
     ```bash
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-    # tp1-pp8-ep2 转 tp1-pp8-ep1
+    # tp8-pp4-ep1 转 tp8-pp1-ep1
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
         --loader mixtral_mg \
         --saver mixtral \
-        --load-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep2/ \
-        --save-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep1/ \
-        --target-tensor-parallel-size 1 \
-        --target-pipeline-parallel-size 8 \
+        --load-dir ./model_weights/Mixtral-8x7B-v0.1-tp8-pp4-ep1/ \
+        --save-dir ./model_weights/Mixtral-8x7B-v0.1-tp8-pp1-ep1/ \
+        --target-tensor-parallel-size 8 \
+        --target-pipeline-parallel-size 1 \
         --target-expert-parallel-size 1 
     ```
 
@@ -137,13 +137,13 @@
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-    # tp1-pp8-ep2 转 HF
+    # tp8-pp4-ep1 转 HF
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
         --loader mixtral_mg \
         --saver mixtral \
         --save-model-type huggingface \
-        --load-dir ./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep2/ \
+        --load-dir ./model_weights/Mixtral-8x7B-v0.1-tp8-pp4-ep1/ \
         --save-dir ./model_from_hf/Mixtral-8x7B/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/Mixtral-8x7B/mg2hg/
     ```
 
@@ -184,14 +184,14 @@
     GPUS_PER_NODE=8
     MASTER_ADDR="your master node IP"
     MASTER_PORT=6000
-    NNODES=2
+    NNODES=4
     NODE_RANK="current node id"
     WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 
     # 训练并行策略
-    TP=1
-    PP=8
-    EP=2
+    TP=8
+    PP=4
+    EP=1
     ```
 
     启动 Mixtral-8x7B 预训练脚本: ***examples/pretrain_mixtral_8x7b_ptd.sh***
@@ -245,13 +245,12 @@
 
 ### 吞吐
 
-Mixtral-8x7B 在双机16卡上(ep2 pp8) **昇腾芯片** 和 **参考芯片** 上的性能对比：
-*(当节点够多的情况下，ep越大吞吐越大，这里并非为最佳性能，仅供参考)*
+Mixtral-8x7B 在四机32卡上(tp8 pp4) **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 | 设备 |     模型     | 迭代数 | 样本吞吐 (samples/step) | tokens吞吐 (tokens/s/p) | 单步迭代时间 (s/step) |
-| :--: | :----------: | :----: | :---------------------: | :---------------------: | :-------------------: |
-| NPUs | Mixtral-8x7B |  1000  |          4.11          |         1053.6         |         31.13         |
-| 参考 | Mixtral-8x7B |  1000  |          4.45          |         1139.3         |         28.76         |
+| :--: | :----------: | :----: |:-------------------:|:---------------------:|:---------------:|
+| NPUs | Mixtral-8x7B |  1000  |        0.47         |          487          |      16.81      |
+| 参考 | Mixtral-8x7B |  1000  |        0.59         |          610          |      13.41      |
 
 ## 模型推理
 
@@ -301,7 +300,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 修改模型参数路径和词表路径
 TOKENIZER_PATH="./model_from_hf/Mixtral-8x7B/"                    #词表路径
-CHECKPOINT="./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep1"        #模型路径
+CHECKPOINT="./model_weights/Mixtral-8x7B-v0.1-tp8-pp1-ep1"        #模型路径
 # 配置任务和数据集路径
 DATA_PATH="./mmlu/test/"
 TASK="mmlu"
