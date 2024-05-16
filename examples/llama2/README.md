@@ -64,15 +64,15 @@ LLAMA2-7B 训练的硬件配置:
     # python3.8
     conda create -n test python=3.8
     conda activate test
-
+    
     # 安装 torch 和 torch_npu
     pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-
+    
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-
+    
     # 安装加速库
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
@@ -80,7 +80,7 @@ LLAMA2-7B 训练的硬件配置:
     pip install -r requirements.txt 
     pip3 install -e .
     cd ..
-
+    
     # 安装其余依赖库
     pip install -r requirements.txt 
     ```
@@ -168,7 +168,7 @@ LLAMA2-7B 训练的硬件配置:
     ```shell
     # 设置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-
+    
     # 根据实际情况配置词表、数据集、模型参数保存路径
     CKPT_SAVE_DIR="./ckpt/llama-2-7b-hf/"
     TOKENIZER_MODEL="./model_from_hf/llama-2-7b-hf/tokenizer.model"  #词表路径
@@ -183,7 +183,7 @@ LLAMA2-7B 训练的硬件配置:
     bash examples/llama2/pretrain_llama2_7b_ptd.sh
     ```
 
-    **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+    **注意**：如果使用多机训练，且没有设置数据共享，需要在训练脚启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 6. 微调
 
     6.1 准备微调数据集
@@ -195,7 +195,7 @@ LLAMA2-7B 训练的硬件配置:
     cd ./finetune_dataset
     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
     cd ..
-
+    
     # 处理微调数据集  
     mkdir ./finetune_dataset/llama-2-7b-hf/
     python ./tools/preprocess_data.py \
@@ -417,15 +417,15 @@ LLaMA2-13B 训练的硬件配置:
    # python3.8
    conda create -n test python=3.8
    conda activate test
-
+   
    # 安装 torch 和 torch_npu
    pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
    pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-
+   
    # 修改 ascend-toolkit 路径
    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-
+   
    # 安装加速库
    git clone https://gitee.com/ascend/AscendSpeed.git
    cd AscendSpeed
@@ -433,7 +433,7 @@ LLaMA2-13B 训练的硬件配置:
    pip install -r requirements.txt 
    pip3 install -e .
    cd ..
-
+   
    # 安装其余依赖库
    pip install -r requirements.txt 
    ```
@@ -530,7 +530,7 @@ LLaMA2-13B 训练的硬件配置:
     bash examples/llama2/pretrain_llama2_13B_ptd_8p.sh
     ```
 
-   **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+   **注意**：如果使用多机训练，且没有设置数据共享，需要在训练脚启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
 6. 微调
 
@@ -543,7 +543,7 @@ LLaMA2-13B 训练的硬件配置:
     cd ./finetune_dataset
     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
     cd ..
-
+    
     # 处理微调数据集
     mkdir ./finetune_dataset/Llama-2-13b-hf/
     python ./tools/preprocess_data.py \
@@ -909,7 +909,7 @@ LLaMA2-34B/70B 训练的硬件配置:
         wget https://huggingface.co/datasets/fnlp/moss-003-sft-data/resolve/main/moss-003-sft-no-tools.jsonl.zip --no-check-certificate
         unzip moss-003-sft-no-tools.jsonl.zip
         cd ..
-
+        
         # 处理数据集  
         python tools/preprocess_data.py \
             --input ./dataset/moss-003-sft-no-tools.jsonl \
@@ -927,7 +927,7 @@ LLaMA2-34B/70B 训练的硬件配置:
     ```shell
     # 配置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-
+    
     # 配置相关路径
     TOKENIZER_MODEL="./model_from_hf/llama2-70b-hf/tokenizer.model"  #词表路径
     DATA_PATH="./dataset/llama2-70b-hf/moss_text_document"  #数据集路径
@@ -938,7 +938,7 @@ LLaMA2-34B/70B 训练的硬件配置:
     ```shell
     # 配置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-
+    
     # 配置相关路径
     TOKENIZER_MODEL="./model_from_hf/llama2-70b-hf/tokenizer.model"  #词表路径
     DATA_PATH="./dataset/llama2-70b-hf/moss_text_document"  #数据集路径
@@ -958,7 +958,7 @@ LLaMA2-34B/70B 训练的硬件配置:
     bash examples/llama2/pretrain_llama2_70b_ptd.sh
     ```
 
-    **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+    **注意**：如果使用多机训练，且没有设置数据共享，需要在训练脚启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 6. 微调
 
     6.1 准备微调数据集
@@ -970,7 +970,7 @@ LLaMA2-34B/70B 训练的硬件配置:
     cd ./finetune_dataset
     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
     cd ..
-
+    
     # 处理微调数据集  
     mkdir ./finetune_dataset/llama2-70b-hf/
     python ./tools/preprocess_data.py \

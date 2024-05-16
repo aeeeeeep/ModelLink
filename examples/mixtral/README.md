@@ -97,7 +97,7 @@
     ```bash
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-
+    
     # HF 转 tp1-pp8-ep2
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
@@ -117,7 +117,7 @@
     ```bash
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-
+    
     # tp1-pp8-ep2 转 tp1-pp8-ep1
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
@@ -136,7 +136,7 @@
     ```bash
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-
+    
     # tp1-pp8-ep2 转 HF
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
@@ -200,7 +200,7 @@
     bash examples/mixtral/pretrain_mixtral_8x7b_ptd.sh
     ```
 
-    **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+    **注意**：如果使用多机训练，且没有设置数据共享，需要在训练脚启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
 2. 微调
 
@@ -212,7 +212,7 @@
     cd ./finetune_dataset
     wget https://huggingface.co/datasets/silk-road/alpaca-data-gpt4-chinese/blob/main/Alpaca_data_gpt4_zh.jsonl
     cd ..
-
+    
     # 处理微调数据集  
     mkdir ./finetune_dataset/Mixtral-8x7B/
     python ./tools/preprocess_data.py \

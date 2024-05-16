@@ -50,27 +50,27 @@ Yi-34B 训练的硬件配置如下:
     # 1).python3.8
     conda create -n test python=3.8
     conda activate test
-
+    
     # 2).安装 torch 和 torch_npu 
     pip install torch-2.2.0-cp38-cp38m-linux_aarch64.whl
     pip install torch_npu-2.2.0.XXX-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-
+    
     # 3).修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-
+    
     # 4).安装加速库
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
     git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip install -r requirements.txt
-
+    
     pip3 install -e .
     cd ..
-
+    
     # 5).安装其余依赖库
     pip install -r requirements.txt 
-
+    
     ```
 
 
@@ -154,7 +154,7 @@ Yi-34B 训练的硬件配置如下:
         --workers 4 \
         --log-interval 1000 \
         --tokenizer-type PretrainedFromHF 
-    ```   
+    ```
     5.2 预训练
     
     配置 Yi-34B 训练脚本: examples/yi/pretrain_yi_34b_ptd_16p.sh
@@ -173,7 +173,7 @@ Yi-34B 训练的硬件配置如下:
     ```bash
     bash examples/yi/pretrain_yi_34b_ptd_16p.sh
     ```
-    **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+    **注意**：如果使用多机训练，且没有设置数据共享，需要在训练脚启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
 6. 微调
 
@@ -187,7 +187,7 @@ Yi-34B 训练的硬件配置如下:
     cd ./finetune_dataset
     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
     cd ..
-
+    
     # 处理微调数据集  
     mkdir ./finetune_dataset/Yi-34B/
     python ./tools/preprocess_data.py \
