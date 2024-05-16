@@ -75,14 +75,14 @@ GPT_ARGS="
 
 DATA_ARGS="
     --data-path $DATA_PATH \
-    --split 100,0,0
+    --split 949,50,1
 "
 
 OUTPUT_ARGS="
     --log-interval 1 \
     --save-interval 10000 \
     --eval-interval 1000 \
-    --eval-iters 0 \
+    --eval-iters 10 \
 "
 
 torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
