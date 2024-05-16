@@ -33,7 +33,6 @@ python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS \
       --num-attention-heads 32 \
       --tokenizer-type Llama2Tokenizer \
       --tokenizer-model $TOKENIZER_MODEL \
-      --sliding-window 2048 \
       --seq-length 4096 \
       --max-position-embeddings 4096 \
       --micro-batch-size 1 \
