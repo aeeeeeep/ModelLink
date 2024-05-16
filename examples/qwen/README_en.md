@@ -63,12 +63,12 @@ Here's a hardware summary of pre-training  Qwen-7B:
     # python3.8
     conda create -n test python=3.8
     conda activate test
-
+    
     # install torch and torch_npu
     pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-
+    
     # install AscendSpeed
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
@@ -76,59 +76,59 @@ Here's a hardware summary of pre-training  Qwen-7B:
     pip install -r requirements.txt
     pip install -e .
     cd ..
-
+    
     # install other packages
     pip install -r requirements.txt
     ```
 3. Prepare pretrained weights and tokenizer
-   Download the Qwen-7B checkpoint from [here](https://huggingface.co/Qwen/Qwen-7B/tree/main)
+    Download the Qwen-7B checkpoint from [here](https://huggingface.co/Qwen/Qwen-7B/tree/main)
 
-   ```bash
-   mkdir ./model_from_hf/Qwen-7B/
-   cd ./model_from_hf/Qwen-7B/
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/cache_autogptq_cuda_256.cpp
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/cache_autogptq_cuda_kernel_256.cu
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/config.json
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/configuration_qwen.py
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/cpp_kernels.py
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/generation_config.json
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00001-of-00008.safetensors
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00002-of-00008.safetensors
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00003-of-00008.safetensors
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00004-of-00008.safetensors
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00005-of-00008.safetensors
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00006-of-00008.safetensors
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00007-of-00008.safetensors
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00008-of-00008.safetensors
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model.safetensors.index.json
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/modeling_qwen.py
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/qwen.tiktoken
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/qwen_generation_utils.py
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/tokenization_qwen.py
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/tokenizer_config.json
-   cd ../../
-   ```
+    ```bash
+    mkdir ./model_from_hf/Qwen-7B/
+    cd ./model_from_hf/Qwen-7B/
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/cache_autogptq_cuda_256.cpp
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/cache_autogptq_cuda_kernel_256.cu
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/config.json
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/configuration_qwen.py
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/cpp_kernels.py
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/generation_config.json
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00001-of-00008.safetensors
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00002-of-00008.safetensors
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00003-of-00008.safetensors
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00004-of-00008.safetensors
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00005-of-00008.safetensors
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00006-of-00008.safetensors
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00007-of-00008.safetensors
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00008-of-00008.safetensors
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model.safetensors.index.json
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/modeling_qwen.py
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/qwen.tiktoken
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/qwen_generation_utils.py
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/tokenization_qwen.py
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/tokenizer_config.json
+    cd ../../
+    ```
 
-   Modify line 39 in the modelling_qwen.py file, changing:
+    Modify line 39 in the modelling_qwen.py file, changing:
 
-   ```python
-   SUPPORT_FP16 = SUPPORT_CUDA and torch.cuda.get_device_capability(0)[0] >= 7
-   ```
+    ```python
+    SUPPORT_FP16 = SUPPORT_CUDA and torch.cuda.get_device_capability(0)[0] >= 7
+    ```
 
-   to：
+    to：
 
-   ```python
-   SUPPORT_FP16 = True
-   ```
+    ```python
+    SUPPORT_FP16 = True
+    ```
 4. Weights convert
 
-   Convert weights from huggingface format to megatron format
-   ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
+    Convert weights from huggingface format to megatron format
+    ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
 
     ```bash
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-
+    
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
         --loader qwen_hf \
@@ -140,7 +140,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
         --add-qkv-bias
     ```
 
-   Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+    Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
     ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
 
     ```shell
@@ -166,7 +166,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
     cd ./dataset
     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
     cd ..
-
+    
     # process datasets  
     mkdir ./dataset/Qwen-7B/
     python ./tools/preprocess_data.py \
@@ -180,25 +180,25 @@ Here's a hardware summary of pre-training  Qwen-7B:
     ```
 6. pre-training
 
-   Config Qwen-7B pre-training script: examples/qwen/pretrain_qwen_7b_ptd.sh
+    Config Qwen-7B pre-training script: examples/qwen/pretrain_qwen_7b_ptd.sh
 
-   ```shell
+    ```shell
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-
+    
     # modify config according to your own actual situation
     CKPT_SAVE_DIR="./ckpt/Qwen-7B/"
     TOKENIZER_MODEL="./model_from_hf/Qwen-7B/"  #tokenizer path
     DATA_PATH="./dataset/Qwen-7B/alpaca_text_document"  #processed dataset
     CKPT_LOAD_DIR="./model_weights/Qwen-7B-v0.1-tp8-pp1/"
-   ```
+    ```
 
-   Config Qwen-7B pre-training script: examples/qwen/pretrain_qwen_7b_ptd.sh
+    Config Qwen-7B pre-training script: examples/qwen/pretrain_qwen_7b_ptd.sh
 
-   ```shell
+    ```shell
     bash examples/qwen/pretrain_qwen_7b_ptd.sh 
-   ```
-    **Note**: If using multi machine training, it is necessary to set up multi machine data sharing, and non primary nodes can read the primary node data through data sharing. Alternatively, directly copy the data generated by the master node to non master nodes.
+    ```
+    **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
 
 ### Performance
 
@@ -298,12 +298,12 @@ Here's a hardware summary of pre-training  Qwen-14B:
     # python3.8
     conda create -n test python=3.8
     conda activate test
-
+    
     # install torch and torch_npu
     pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-
+    
     # install AscendSpeed
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
@@ -311,7 +311,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
     pip install -r requirements.txt
     pip install -e .
     cd ..
-
+    
     # install other packages
     pip install -r requirements.txt
     ```
@@ -370,7 +370,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
     ```bash
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-
+   
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
         --loader qwen_hf \
@@ -408,7 +408,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
     cd ./dataset
     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
     cd ..
-
+   
     # process datasets  
     mkdir ./dataset/Qwen-14B/
     python ./tools/preprocess_data.py \
@@ -427,7 +427,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
    ```shell
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-
+   
     # modify config according to your own actual situation
     CKPT_SAVE_DIR="./ckpt/Qwen-14B/"
     TOKENIZER_MODEL="./model_from_hf/Qwen-14B/"  #tokenizer path
@@ -440,7 +440,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
    ```shell
     bash examples/qwen/pretrain_qwen_14b_ptd.sh 
    ```
-    **Note**: If using multi machine training, it is necessary to set up multi machine data sharing, and non primary nodes can read the primary node data through data sharing. Alternatively, directly copy the data generated by the master node to non master nodes.
+    **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
 ### Performance
 
 #### Machine performance
@@ -539,12 +539,12 @@ Here's a hardware summary of pre-training  Qwen-72B:
     # python3.8
     conda create -n test python=3.8
     conda activate test
-
+    
     # install torch and torch_npu
     pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-
+    
     # install AscendSpeed
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
@@ -552,7 +552,7 @@ Here's a hardware summary of pre-training  Qwen-72B:
     pip install -r requirements.txt
     pip install -e .
     cd ..
-
+    
     # install other packages
     pip install -r requirements.txt
     ```
@@ -592,7 +592,7 @@ Here's a hardware summary of pre-training  Qwen-72B:
     ```bash
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-
+   
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
         --loader qwen_hf \
@@ -648,20 +648,20 @@ Here's a hardware summary of pre-training  Qwen-72B:
     Config Qwen-72B pre-training script: examples/qwen/pretrain_qwen_72b_ptd.sh
 
     ```shell
-        # modify the script according to your own ascend-toolkit path
-        source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-
-        # modify config according to your own actual situation
-        CKPT_SAVE_DIR="./ckpt/Qwen-72B/"
-        TOKENIZER_MODEL="./model_from_hf/Qwen-72B/"  #tokenizer path
-        DATA_PATH="./dataset/Qwen-72B/alpaca_text_document"  #processed dataset
-        CKPT_LOAD_DIR="./model_weights/Qwen-72B-v0.1-tp8-pp1/"
+    # modify the script according to your own ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    
+    # modify config according to your own actual situation
+    CKPT_SAVE_DIR="./ckpt/Qwen-72B/"
+    TOKENIZER_MODEL="./model_from_hf/Qwen-72B/"  #tokenizer path
+    DATA_PATH="./dataset/Qwen-72B/alpaca_text_document"  #processed dataset
+    CKPT_LOAD_DIR="./model_weights/Qwen-72B-v0.1-tp8-pp1/"
     ```
 
     To use a 32K sequence, turn on the re-computation feature and change the value of seq-length to 32768. The parameter configuration is as follows:
 
     ```shell
-    --seq-length 32768 \
+        --seq-length 32768 \
         --recompute-granularity full \
         --recompute-method block \
         --recompute-num-layers 2 \
@@ -670,9 +670,9 @@ Here's a hardware summary of pre-training  Qwen-72B:
     Launch Qwen-72B pre-training script: examples/qwen/pretrain_qwen_72b_ptd.sh
 
     ```shell
-        bash examples/qwen/pretrain_qwen_72b_ptd.sh 
+    bash examples/qwen/pretrain_qwen_72b_ptd.sh 
     ```
-    **Note**: If using multi machine training, it is necessary to set up multi machine data sharing, and non primary nodes can read the primary node data through data sharing. Alternatively, directly copy the data generated by the master node to non master nodes.
+    **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
 
 ### Performance
 

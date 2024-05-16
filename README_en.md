@@ -47,6 +47,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <th>Inference</th>
       <th>Evaluation</th>
       <th>Dataset Support</th>
+      <th>Contributor</th>
     </tr>
   </thead>
   <tbody>
@@ -57,6 +58,16 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/aquila/generate_aquila_7b_ptd.sh">inference</a> </td>
       <td> <a href="examples/aquila/evaluate_aquila_7b_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td>【Model contributed by Ascend】</td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/aquila2/README_en.md">Aquila2</a></td>
+      <td> 7B </td>
+      <td> -- </td>
+      <td> <a href="examples/aquila2/generate_aquila2_7b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/aquila2/evaluate_aquila2_7b_ptd.sh">evaluation</a> </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td>【Model contributed by Community】</td>
     </tr>
     <tr>
       <td rowspan="2"> <a href="examples/baichuan/README.md">Baichuan</a> </td>
@@ -65,6 +76,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/baichuan/generate_baichuan_7b_ptd.sh">inference</a> </td>
       <td> <a href="examples/baichuan/evaluate_baichuan_7B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
       <td> 13B </td>
@@ -72,6 +84,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/baichuan/generate_baichuan_13b_ptd.sh">inference</a> </td>
       <td> <a href="examples/baichuan/evaluate_baichuan_13B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
       <td rowspan="2"> <a href="examples/baichuan2/README.md">Baichuan2</a> </td>
@@ -80,6 +93,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/baichuan2/generate_baichuan2_7b_ptd.sh">inference</a> </td>
       <td> <a href="examples/baichuan2/evaluate_baichuan2_7B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
       <td> 13B </td>
@@ -87,6 +101,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/baichuan2/generate_baichuan2_13b_ptd.sh">inference</a> </td>
       <td> <a href="examples/baichuan2/evaluate_baichuan2_13B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
@@ -95,6 +110,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/bloom/generate_bloom_7b_ptd.sh">inference</a> </td>
       <td> <a href="examples/baichuan/evaluate_bloom_7B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+      <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
       <td> 176B </td>
@@ -102,6 +118,16 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/bloom/generate_bloom_176b_ptd.sh">inference</a> </td>
       <td> <a href="examples/bloom/evaluate_bloom_176b_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
+      <td>【Model contributed by Ascend】</td>
+    </tr>
+    <tr>
+      <td rowspan="1"> <a href="examples/codellama/README.md">CodeLlama</a> </td>
+      <td> 34B </td>
+      <td> -- </td>
+      <td> <a href="examples/codellama/generate_codellama_34b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/codellama/evaluate_codellama_34b_ptd.sh">evaluation</a> </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td>【Model contributed by Community】</td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>
@@ -110,6 +136,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/intern/generate_lnternlm_7b_ptd.sh">inference</a> </td>
       <td> <a href="examples/intern/evaluate_internlm_7B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
       <td>65B</td>
@@ -117,6 +144,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> -- </td>
       <td> -- </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama/README.md">LLaMA</a></td>
@@ -125,6 +153,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/llama/generate_llama_7b_ptd.sh">inference</a> </td>
       <td> <a href="examples/llama/evaluate_llama_7B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
       <td>13B</td>
@@ -132,6 +161,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/llama/generate_llama_13b_ptd.sh">inference</a> </td>
       <td> <a href="examples/llama/evaluate_llama_13B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
       <td>33B</td>
@@ -139,6 +169,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/llama/generate_llama_33b_ptd.sh">inference</a> </td>
       <td> <a href="examples/llama/evaluate_llama_33B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
       <td > 65B </td>
@@ -146,6 +177,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/llama/generate_llama_65b_ptd.sh">inference</a> </td>
       <td> <a href="examples/llama/evaluate_llama_65B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
+      <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</a></td>
@@ -154,6 +186,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/llama2/generate_llama2_7b_ptd.sh">inference</a> </td>
       <td> <a href="examples/llama2/evaluate_llama2_7B_ptd.sh">evaluation</a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+      <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
       <td>13B</td>
@@ -161,6 +194,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/llama2/generate_llama2_13b_ptd.sh">inference</a> </td>
       <td> <a href="examples/llama2/evaluate_llama2_13B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
+      <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
       <td> 34B </td>
@@ -168,6 +202,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/llama2/generate_llama2_34B_ptd.sh">inference</a> </td>
       <td> <a href="examples/llama2/evaluate_llama2_34B_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
+      <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
       <td > 70B </td>
@@ -175,6 +210,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/llama2/generate_llama2_70b_ptd.sh">inference</a> </td>
       <td> <a href="examples/llama2/evaluate_llama2_70B_ptd.sh">evaluation</a> </td>
       <td>  <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
+      <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/llama3/README.md">LLaMA3</a></td>
@@ -183,6 +219,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/llama3/generate_llama3_8b_ptd.sh">inference</a> </td>
       <td> <a href="examples/llama3/evaluate_llama3_8b_ptd.sh">evaluation</a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+      <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
       <td>70B</td>
@@ -190,6 +227,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/llama3/generate_llama3_70b_ptd.sh">inference</a> </td>
       <td> <a href="examples/llama3/evaluate_llama3_70b_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
+      <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
       <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
@@ -198,6 +236,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/qwen/generate_qwen_7b_ptd.sh">inference</a></td>
       <td> <a href="examples/qwen/evaluate_qwen_7b_ptd.sh">evaluation</a></td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+      <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
       <td>14B</td>
@@ -205,6 +244,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/qwen/generate_qwen_14b_ptd.sh">inference</a> </td>
       <td> <a href="examples/qwen/evaluate_qwen_14b_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+      <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
       <td>72B</td>
@@ -212,6 +252,16 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/qwen/generate_qwen_72b_ptd.sh">inference</a> </td>
       <td> <a href="examples/qwen/evaluate_qwen_72b_ptd.sh">evaluation</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+      <td>【Model contributed by Ascend】</td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/yi/README_en.md">Yi</a></td>
+      <td>34B</td>
+      <td> -- </td>
+      <td> <a href="examples/yi/generate_yi_34b_ptd.sh">inference</a> </td>
+      <td> <a href="examples/yi/evaluate_yi_34b_ptd.sh">evaluation</a> </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+      <td>【Model contributed by Community】</td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
@@ -220,6 +270,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/mixtral/generate_mixtral_8x7b_ptd.sh">inference</a> </td>
       <td> <a href="examples/mixtral/evaluate_mixtral_8x7b_ptd.sh">evaluation</a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+      <td>【Model contributed by Ascend】</td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/mistral/README.md">Mistral</a></td>
@@ -287,6 +338,15 @@ For the supported models listed above, we provide training scripts and readme in
       <td> <a href="examples/aquila/pretrain_aquila_7b_ptd.sh">train</a> </td>
     </tr>
     <tr>
+      <td rowspan="1"><a href="examples/aquila2/README_en.md">Aquila2</a></td>
+      <td>7B</td>
+      <td> 1x8</td>
+      <td> FP16 </td>
+      <td> 3323 </td>
+      <td> 2673 </td>
+      <td> <a href="examples/aquila2/pretrain_aquila2_7b_ptd.sh">train</a> </td>
+    </tr>
+    <tr>
       <td rowspan="2"><a href="examples/baichuan/README.md">Baichuan</a></td>
       <td>7B</td>
       <td> 1x8</td>
@@ -336,6 +396,15 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 100 </td>
       <td> 107 </td>
       <td> <a href="examples/bloom/pretrain_bloom_176b.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/codellama/README.md">CodeLlama</a></td>
+      <td>34B</td>
+      <td> 2x8</td>
+      <td> BF16 </td>
+      <td> 837 </td>
+      <td> 762 </td>
+      <td> <a href="examples/codellama/pretrain_codellama_34b_ptd_16p.sh">train</a> </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>
@@ -463,6 +532,15 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 285 </td>
       <td> 345 </td>
       <td> <a href="examples/qwen/pretrain_qwen_72b_ptd.sh">train</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/yi/README_en.md">Yi</a></td>
+      <td>34B</td>
+      <td>2x8</td>
+      <td>BF16 </td>
+      <td> 809 </td>
+      <td> 730 </td>
+      <td> <a href="examples/yi/pretrain_yi_34b_ptd_16p.sh">train</a> </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>

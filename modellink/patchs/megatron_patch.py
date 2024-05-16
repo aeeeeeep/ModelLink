@@ -37,7 +37,8 @@ from ..core import (vocab_embedding_wrapper, initialize_model_parallel_decorator
                    get_expert_parallel_rank, get_expert_model_parallel_rank,
                    get_expert_parallel_world_size, get_expert_model_parallel_world_size,
                    set_expert_model_parallel_rank, set_expert_model_parallel_world_size,
-                   RotaryEmbedding_forward, apply_rotary_pos_emb)
+                   RotaryEmbedding_forward, apply_rotary_pos_emb,
+                   _build_generic_dataset, _build_document_sample_shuffle_indices)
 from ..data import build_pretraining_data_loader
 from ..tokenizer import build_tokenizer
 from ..arguments import parse_args_decorator, validate_args_decorator
@@ -57,6 +58,7 @@ def patch_megatron_core():
     patch_pipeline_parallel()
     patch_tensor_parallel()
     patch_parallel_state()
+    patch_datasets()
 
 
 def patch_megatron_noncore():
@@ -186,4 +188,11 @@ def patch_miscellaneous():
     megatron.arguments.validate_args = validate_args_decorator(megatron.arguments.validate_args)
     megatron.global_vars.build_tokenizer = build_tokenizer
     megatron.checkpointing._load_base_checkpoint = _load_base_checkpoint_wrapper(
-        megatron.checkpointing._load_base_checkpoint)
+        megatron.checkpointing._load_base_checkpoint)   
+
+
+def patch_datasets():
+    from megatron.core.datasets.blended_megatron_dataset_builder import BlendedMegatronDatasetBuilder
+    from megatron.core.datasets.gpt_dataset import GPTDataset
+    GPTDataset._build_document_sample_shuffle_indices = _build_document_sample_shuffle_indices
+    BlendedMegatronDatasetBuilder._build_generic_dataset = _build_generic_dataset

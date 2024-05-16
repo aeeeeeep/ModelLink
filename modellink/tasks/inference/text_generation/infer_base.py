@@ -291,7 +291,7 @@ def task_chat(args, model, tokenizer=None, system_template="", dialog_template="
             if args.hf_chat_template:
                 instruction = tokenizer.apply_chat_template(
                     messages,
-                    tokenizer=False,
+                    tokenize=False,
                     add_generation_prompt=True
                 )
 

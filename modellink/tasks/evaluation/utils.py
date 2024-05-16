@@ -34,4 +34,6 @@ def add_text_generate_args(parser):
     group.add_argument("--max-new-tokens", type=int, default=128,
                        help='Size of the output generated text.')
     group.add_argument("--task", nargs='*', default=[], help='Choose one task from mmlu, boolq and gsm8k')
+    group.add_argument("--instruction-template", type=str, default="",
+                       help="Instruction template for the evaluation task.")
     return parser

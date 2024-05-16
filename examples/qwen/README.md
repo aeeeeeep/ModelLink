@@ -45,159 +45,159 @@ Qwen-7B 训练的硬件配置:
 
 1. 克隆仓库到本地服务器
 
-   ```shell
-   git clone https://gitee.com/ascend/ModelLink.git
-   git clone https://github.com/NVIDIA/Megatron-LM.git
-   cd Megatron-LM
-   git checkout -f bcce6f
-   cp -r megatron ../ModelLink/
-   cd ..
-   cd ModelLink
-   mkdir logs
-   mkdir model_from_hf
-   mkdir dataset
-   mkdir ckpt
-   ```
+    ```shell
+    git clone https://gitee.com/ascend/ModelLink.git
+    git clone https://github.com/NVIDIA/Megatron-LM.git
+    cd Megatron-LM
+    git checkout -f bcce6f
+    cp -r megatron ../ModelLink/
+    cd ..
+    cd ModelLink
+    mkdir logs
+    mkdir model_from_hf
+    mkdir dataset
+    mkdir ckpt
+    ```
 2. 搭建环境
 
-   ```bash
-   # python3.8
-   conda create -n test python=3.8
-   conda activate test
-
-   # 安装 torch 和 torch_npu
-   pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
-   pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
-   pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-
-   # 安装加速库
-   git clone https://gitee.com/ascend/AscendSpeed.git
-   cd AscendSpeed
-   git checkout 224ae35e8fc96778f957029d1371ddb623452a50
-   pip install -r requirements.txt
-   pip install -e .
-   cd ..
-
-   # 安装其余依赖库
-   pip install -r requirements.txt
-   ```
+    ```bash
+    # python3.8
+    conda create -n test python=3.8
+    conda activate test
+    
+    # 安装 torch 和 torch_npu
+    pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+    pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
+    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+    
+    # 安装加速库
+    git clone https://gitee.com/ascend/AscendSpeed.git
+    cd AscendSpeed
+    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+    pip install -r requirements.txt
+    pip install -e .
+    cd ..
+    
+    # 安装其余依赖库
+    pip install -r requirements.txt
+    ```
 3. 下载 Qwen-7B 的 [预训练权重和词表](https://huggingface.co/Qwen/Qwen-7B/tree/main)
 
-   ```bash
-   mkdir ./model_from_hf/Qwen-7B/
-   cd ./model_from_hf/Qwen-7B/
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/cache_autogptq_cuda_256.cpp
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/cache_autogptq_cuda_kernel_256.cu
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/config.json
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/configuration_qwen.py
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/cpp_kernels.py
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/generation_config.json
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00001-of-00008.safetensors
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00002-of-00008.safetensors
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00003-of-00008.safetensors
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00004-of-00008.safetensors
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00005-of-00008.safetensors
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00006-of-00008.safetensors
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00007-of-00008.safetensors
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00008-of-00008.safetensors
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model.safetensors.index.json
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/modeling_qwen.py
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/qwen.tiktoken
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/qwen_generation_utils.py
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/tokenization_qwen.py
-   wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/tokenizer_config.json
-   cd ../../
-   ```
+    ```bash
+    mkdir ./model_from_hf/Qwen-7B/
+    cd ./model_from_hf/Qwen-7B/
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/cache_autogptq_cuda_256.cpp
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/cache_autogptq_cuda_kernel_256.cu
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/config.json
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/configuration_qwen.py
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/cpp_kernels.py
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/generation_config.json
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00001-of-00008.safetensors
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00002-of-00008.safetensors
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00003-of-00008.safetensors
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00004-of-00008.safetensors
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00005-of-00008.safetensors
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00006-of-00008.safetensors
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00007-of-00008.safetensors
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model-00008-of-00008.safetensors
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/model.safetensors.index.json
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/modeling_qwen.py
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/qwen.tiktoken
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/qwen_generation_utils.py
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/tokenization_qwen.py
+    wget https://huggingface.co/Qwen/Qwen-7B/resolve/main/tokenizer_config.json
+    cd ../../
+    ```
 
-   修改modelling_qwen.py文件第39行，将：
+    修改modelling_qwen.py文件第39行，将：
 
-   ```python
-   SUPPORT_FP16 = SUPPORT_CUDA and torch.cuda.get_device_capability(0)[0] >= 7
-   ```
+    ```python
+    SUPPORT_FP16 = SUPPORT_CUDA and torch.cuda.get_device_capability(0)[0] >= 7
+    ```
 
-   修改为：
+    修改为：
 
-   ```python
-   SUPPORT_FP16 = True
-   ```
+    ```python
+    SUPPORT_FP16 = True
+    ```
 4. 权重转换
 
-   将权重从 huggingface 格式转化为 megatron 格式
-   ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
+    将权重从 huggingface 格式转化为 megatron 格式
+    ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
-   ```shell
-   # 修改 ascend-toolkit 路径
-   source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    ```shell
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader qwen_hf \
+        --saver megatron \
+        --target-tensor-parallel-size 8 \
+        --load-dir ./model_from_hf/Qwen-7B/ \
+        --save-dir ./model_weights/Qwen-7B-v0.1-tp8-pp1/ \
+        --tokenizer-model ./model_from_hf/Qwen-7B/qwen.tiktoken \
+        --add-qkv-bias
+    ```
 
-   python tools/checkpoint/convert_ckpt.py \
-       --model-type GPT \
-       --loader qwen_hf \
-       --saver megatron \
-       --target-tensor-parallel-size 8 \
-       --load-dir ./model_from_hf/Qwen-7B/ \
-       --save-dir ./model_weights/Qwen-7B-v0.1-tp8-pp1/ \
-       --tokenizer-model ./model_from_hf/Qwen-7B/qwen.tiktoken \
-       --add-qkv-bias
-   ```
+    任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
+    ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
 
-   任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
-   ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
-
-   ```bash
-   # 请按照您的真实环境修改 set_env.sh 路径
-   source /usr/local/Ascend/ascend-toolkit/set_env.sh
-   python tools/checkpoint/convert_ckpt.py \
-       --model-type GPT \
-       --loader megatron \
-       --saver megatron \
-       --save-model-type save_huggingface_qwen \
-       --load-dir ./model_weights/Qwen-7B-v0.1-tp8-pp1/ \
-       --target-tensor-parallel-size 1 \
-       --target-pipeline-parallel-size 1 \
-       --add-qkv-bias \
-       --save-dir ./model_from_hf/Qwen-7B/     # 需要填入原始HF模型路径，新权重会存于./model_from_hf/Qwen-7B/mg2hg/
-   ```
+    ```bash
+    # 请按照您的真实环境修改 set_env.sh 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_qwen \
+        --load-dir ./model_weights/Qwen-7B-v0.1-tp8-pp1/ \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --add-qkv-bias \
+        --save-dir ./model_from_hf/Qwen-7B/     # 需要填入原始HF模型路径，新权重会存于./model_from_hf/Qwen-7B/mg2hg/
+    ```
 5. 准备数据集
 
-   下载 Qwen-7B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+    下载 Qwen-7B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
-   ```shell
-   # 下载数据
-   cd ./dataset
-   wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-   cd ..
-
-   # 处理数据   
-   mkdir ./dataset/Qwen-7B/
-   python ./tools/preprocess_data.py \
-       --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-       --tokenizer-name-or-path ./model_from_hf/Qwen-7B/ \
-       --output-prefix ./dataset/Qwen-7B/alpaca \
-       --tokenizer-type PretrainedFromHF \
-       --seq-length 8192 \
-       --workers 4 \
-       --log-interval 1000
-   ```
+    ```shell
+    # 下载数据
+    cd ./dataset
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
+    
+    # 处理数据   
+    mkdir ./dataset/Qwen-7B/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/Qwen-7B/ \
+        --output-prefix ./dataset/Qwen-7B/alpaca \
+        --tokenizer-type PretrainedFromHF \
+        --seq-length 8192 \
+        --workers 4 \
+        --log-interval 1000
+    ```
 6. 预训练
-   配置Qwen-7B 预训练脚本: examples/qwen/pretrain_qwen_7b_ptd.sh
+    配置Qwen-7B 预训练脚本: examples/qwen/pretrain_qwen_7b_ptd.sh
 
-   ```shell
-   # 设置 ascend-toolkit 路径
-   source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    ```shell
+    # 设置 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    
+    # 根据实际情况配置词表、数据集、模型参数保存路径
+    CKPT_SAVE_DIR="./ckpt/Qwen-7B/"
+    TOKENIZER_MODEL="./model_from_hf/Qwen-7B/"  #词表路径
+    DATA_PATH="./dataset/Qwen-7B/alpaca_text_document"  #数据集路径
+    CKPT_LOAD_DIR="./model_weights/Qwen-7B-v0.1-tp8-pp1/"
+    ```
 
-   # 根据实际情况配置词表、数据集、模型参数保存路径
-   CKPT_SAVE_DIR="./ckpt/Qwen-7B/"
-   TOKENIZER_MODEL="./model_from_hf/Qwen-7B/"  #词表路径
-   DATA_PATH="./dataset/Qwen-7B/alpaca_text_document"  #数据集路径
-   CKPT_LOAD_DIR="./model_weights/Qwen-7B-v0.1-tp8-pp1/"
-   ```
+    启动 Qwen-7B 预训练脚本: examples/qwen/pretrain_qwen_7b_ptd.sh
 
-   启动 Qwen-7B 预训练脚本: examples/qwen/pretrain_qwen_7b_ptd.sh
-
-   ```shell
+    ```shell
     bash examples/qwen/pretrain_qwen_7b_ptd.sh
-   ```
-    **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+    ```
+    **注意**：如果使用多机训练，且没有设置数据共享，需要在训练脚启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
 ### 性能
 
@@ -277,135 +277,135 @@ Qwen-14B 训练的硬件配置:
 
 1. 克隆仓库到本地服务器
 
-   ```shell
-   git clone https://gitee.com/ascend/ModelLink.git
-   git clone https://github.com/NVIDIA/Megatron-LM.git
-   cd Megatron-LM
-   git checkout -f bcce6f
-   cp -r megatron ../ModelLink/
-   cd ..
-   cd ModelLink
-   mkdir logs
-   mkdir model_from_hf
-   mkdir dataset
-   mkdir ckpt
-   ```
+    ```shell
+    git clone https://gitee.com/ascend/ModelLink.git
+    git clone https://github.com/NVIDIA/Megatron-LM.git
+    cd Megatron-LM
+    git checkout -f bcce6f
+    cp -r megatron ../ModelLink/
+    cd ..
+    cd ModelLink
+    mkdir logs
+    mkdir model_from_hf
+    mkdir dataset
+    mkdir ckpt
+    ```
 2. 搭建环境
 
-   ```bash
-   # python3.8
-   conda create -n test python=3.8
-   conda activate test
-
-   # 安装 torch 和 torch_npu
-   pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
-   pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
-   pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-
-   # 安装加速库
-   git clone https://gitee.com/ascend/AscendSpeed.git
-   cd AscendSpeed
-   git checkout 224ae35e8fc96778f957029d1371ddb623452a50
-   pip install -r requirements.txt
-   pip install -e .
-   cd ..
-
-   # 安装其余依赖库
-   pip install -r requirements.txt
-   ```
+    ```bash
+    # python3.8
+    conda create -n test python=3.8
+    conda activate test
+    
+    # 安装 torch 和 torch_npu
+    pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+    pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
+    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+    
+    # 安装加速库
+    git clone https://gitee.com/ascend/AscendSpeed.git
+    cd AscendSpeed
+    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+    pip install -r requirements.txt
+    pip install -e .
+    cd ..
+    
+    # 安装其余依赖库
+    pip install -r requirements.txt
+    ```
 3. 下载 Qwen-14B 的 [预训练权重和词表](https://huggingface.co/Qwen/Qwen-14B/tree/main)
 
-   ```bash
-   mkdir ./model_from_hf/Qwen-14B/
-   cd ./model_from_hf/Qwen-14B/
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/cache_autogptq_cuda_256.cpp
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/cache_autogptq_cuda_kernel_256.cu
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/config.json
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/configuration_qwen.py
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/cpp_kernels.py
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/generation_config.json
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00001-of-00015.safetensors
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00002-of-00015.safetensors
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00003-of-00015.safetensors
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00004-of-00015.safetensors
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00005-of-00015.safetensors
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00006-of-00015.safetensors
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00007-of-00015.safetensors
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00008-of-00015.safetensors
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00009-of-00015.safetensors
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00010-of-00015.safetensors
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00011-of-00015.safetensors
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00012-of-00015.safetensors
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00013-of-00015.safetensors
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00014-of-00015.safetensors
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00015-of-00015.safetensors
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model.safetensors.index.json
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/modeling_qwen.py
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/qwen.tiktoken
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/qwen_generation_utils.py
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/tokenization_qwen.py
-   wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/tokenizer_config.json
-   cd../../
-   ```
+    ```bash
+    mkdir ./model_from_hf/Qwen-14B/
+    cd ./model_from_hf/Qwen-14B/
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/cache_autogptq_cuda_256.cpp
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/cache_autogptq_cuda_kernel_256.cu
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/config.json
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/configuration_qwen.py
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/cpp_kernels.py
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/generation_config.json
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00001-of-00015.safetensors
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00002-of-00015.safetensors
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00003-of-00015.safetensors
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00004-of-00015.safetensors
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00005-of-00015.safetensors
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00006-of-00015.safetensors
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00007-of-00015.safetensors
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00008-of-00015.safetensors
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00009-of-00015.safetensors
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00010-of-00015.safetensors
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00011-of-00015.safetensors
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00012-of-00015.safetensors
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00013-of-00015.safetensors
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00014-of-00015.safetensors
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model-00015-of-00015.safetensors
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/model.safetensors.index.json
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/modeling_qwen.py
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/qwen.tiktoken
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/qwen_generation_utils.py
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/tokenization_qwen.py
+    wget https://huggingface.co/Qwen/Qwen-14B/resolve/main/tokenizer_config.json
+    cd../../
+    ```
 
-   修改modelling_qwen.py文件第39行，将：
+    修改modelling_qwen.py文件第39行，将：
 
-   ```python
-   SUPPORT_FP16 = SUPPORT_CUDA and torch.cuda.get_device_capability(0)[0] >= 7
-   ```
+    ```python
+    SUPPORT_FP16 = SUPPORT_CUDA and torch.cuda.get_device_capability(0)[0] >= 7
+    ```
 
-   修改为：
+    修改为：
 
-   ```python
-   SUPPORT_FP16 = True
-   ```
+    ```python
+    SUPPORT_FP16 = True
+    ```
 4. 权重转换
 
-   将权重从 huggingface 格式转化为 megatron 格式
-   ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
+    将权重从 huggingface 格式转化为 megatron 格式
+    ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
-   ```bash
-   # 修改 ascend-toolkit 路径
-   source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    ```bash
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader qwen_hf \
+        --saver megatron \
+        --target-tensor-parallel-size 8 \
+        --load-dir ./model_from_hf/Qwen-14B/ \
+        --save-dir ./model_weights/Qwen-14B-v0.1-tp8-pp1/ \
+        --tokenizer-model ./model_from_hf/Qwen-14B/qwen.tiktoken \
+        --add-qkv-bias
+    ```
 
-   python tools/checkpoint/convert_ckpt.py \
-       --model-type GPT \
-       --loader qwen_hf \
-       --saver megatron \
-       --target-tensor-parallel-size 8 \
-       --load-dir ./model_from_hf/Qwen-14B/ \
-       --save-dir ./model_weights/Qwen-14B-v0.1-tp8-pp1/ \
-       --tokenizer-model ./model_from_hf/Qwen-14B/qwen.tiktoken \
-       --add-qkv-bias
-   ```
+    任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
+    ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
 
-   任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
-   ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
-
-   ```shell
-   # 请按照您的真实环境修改 set_env.sh 路径
-   source /usr/local/Ascend/ascend-toolkit/set_env.sh
-   python tools/checkpoint/convert_ckpt.py \
-       --model-type GPT \
-       --loader megatron \
-       --saver megatron \
-       --save-model-type save_huggingface_qwen \
-       --load-dir ./model_weights/Qwen-14B-v0.1-tp8-pp1/ \
-       --target-tensor-parallel-size 1 \
-       --target-pipeline-parallel-size 1 \
-       --add-qkv-bias \
-       --save-dir ./model_from_hf/Qwen-14B/     # 需要填入原始HF模型路径，新权重会存于./model_from_hf/Qwen-14B/mg2hg/
-   ```
+    ```shell
+    # 请按照您的真实环境修改 set_env.sh 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_qwen \
+        --load-dir ./model_weights/Qwen-14B-v0.1-tp8-pp1/ \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --add-qkv-bias \
+        --save-dir ./model_from_hf/Qwen-14B/     # 需要填入原始HF模型路径，新权重会存于./model_from_hf/Qwen-14B/mg2hg/
+    ```
 5. 准备数据集
 
-   下载 Qwen-14B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+    下载 Qwen-14B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
-   ```shell
+    ```shell
     # 下载数据
     cd ./dataset
     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
     cd ..
-
+    
     # 处理数据   
     mkdir ./dataset/Qwen-14B/
     python ./tools/preprocess_data.py \
@@ -416,28 +416,28 @@ Qwen-14B 训练的硬件配置:
         --seq-length 2048 \
         --workers 4 \
         --log-interval 1000
-   ```
+    ```
 6. 预训练
 
-   配置Qwen-14B 预训练脚本: examples/qwen/pretrain_qwen_14b_ptd.sh
+    配置Qwen-14B 预训练脚本: examples/qwen/pretrain_qwen_14b_ptd.sh
 
-   ```shell
+    ```shell
     # 设置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-
+    
     # 根据实际情况配置词表、数据集、模型参数保存路径
     CKPT_SAVE_DIR="./ckpt/Qwen-14B/"
     TOKENIZER_MODEL="./model_from_hf/Qwen-14B/"  #词表路径
     DATA_PATH="./dataset/Qwen-14B/alpaca_text_document"  #数据集路径
     CKPT_LOAD_DIR="./model_weights/Qwen-14B-v0.1-tp8-pp1/"
-   ```
+    ```
 
-   启动 Qwen-14B 预训练脚本: examples/qwen/pretrain_qwen_14b_ptd.sh
+    启动 Qwen-14B 预训练脚本: examples/qwen/pretrain_qwen_14b_ptd.sh
 
-   ```shell
+    ```shell
     bash examples/qwen/pretrain_qwen_14b_ptd.sh
-   ```
-    **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+    ```
+    **注意**：如果使用多机训练，且没有设置数据共享，需要在训练脚启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 ### 性能
 
 #### 吞吐
@@ -515,116 +515,116 @@ Qwen-72B 训练的硬件配置:
 
 1. 克隆仓库到本地服务器
 
-   ```shell
-   git clone https://gitee.com/ascend/ModelLink.git
-   git clone https://github.com/NVIDIA/Megatron-LM.git
-   cd Megatron-LM
-   git checkout -f bcce6f
-   cp -r megatron ../ModelLink/
-   cd ..
-   cd ModelLink
-   mkdir logs
-   mkdir model_from_hf
-   mkdir dataset
-   mkdir ckpt
-   ```
+    ```shell
+    git clone https://gitee.com/ascend/ModelLink.git
+    git clone https://github.com/NVIDIA/Megatron-LM.git
+    cd Megatron-LM
+    git checkout -f bcce6f
+    cp -r megatron ../ModelLink/
+    cd ..
+    cd ModelLink
+    mkdir logs
+    mkdir model_from_hf
+    mkdir dataset
+    mkdir ckpt
+    ```
 2. 搭建环境
 
-   ```bash
-   # python3.8
-   conda create -n test python=3.8
-   conda activate test
-
-   # 安装 torch 和 torch_npu
-   pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
-   pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
-   pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-
-   # 安装加速库
-   git clone https://gitee.com/ascend/AscendSpeed.git
-   cd AscendSpeed
-   git checkout 224ae35e8fc96778f957029d1371ddb623452a50
-   pip install -r requirements.txt
-   pip install -e .
-   cd ..
-
-   # 安装其余依赖库
-   pip install -r requirements.txt
-   ```
+    ```bash
+    # python3.8
+    conda create -n test python=3.8
+    conda activate test
+    
+    # 安装 torch 和 torch_npu
+    pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+    pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
+    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+    
+    # 安装加速库
+    git clone https://gitee.com/ascend/AscendSpeed.git
+    cd AscendSpeed
+    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+    pip install -r requirements.txt
+    pip install -e .
+    cd ..
+    
+    # 安装其余依赖库
+    pip install -r requirements.txt
+    ```
 3. 下载 Qwen-72B 的 [预训练权重和词表](https://huggingface.co/Qwen/Qwen-72B/tree/main)
 
-   ```bash
-   mkdir ./model_from_hf/Qwen-72B/
-   cd ./model_from_hf/Qwen-72B/
-   wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/cache_autogptq_cuda_256.cpp
-   wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/cache_autogptq_cuda_kernel_256.cu
-   wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/config.json
-   wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/configuration_qwen.py
-   wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/cpp_kernels.py
-   wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/generation_config.json
-   wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/model-00001-of-000082.safetensors
-   ...
-   cd ../../
-   ```
+    ```bash
+    mkdir ./model_from_hf/Qwen-72B/
+    cd ./model_from_hf/Qwen-72B/
+    wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/cache_autogptq_cuda_256.cpp
+    wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/cache_autogptq_cuda_kernel_256.cu
+    wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/config.json
+    wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/configuration_qwen.py
+    wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/cpp_kernels.py
+    wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/generation_config.json
+    wget https://huggingface.co/Qwen/Qwen-72B/resolve/main/model-00001-of-000082.safetensors
+    ...
+    cd ../../
+    ```
 
-   修改modelling_qwen.py文件第39行，将：
+    修改modelling_qwen.py文件第39行，将：
 
-   ```python
-   SUPPORT_FP16 = SUPPORT_CUDA and torch.cuda.get_device_capability(0)[0] >= 7
-   ```
+    ```python
+    SUPPORT_FP16 = SUPPORT_CUDA and torch.cuda.get_device_capability(0)[0] >= 7
+    ```
 
-   修改为：
+    修改为：
 
-   ```python
-   SUPPORT_FP16 = True
-   ```
+    ```python
+    SUPPORT_FP16 = True
+    ```
 4. 权重转换
 
-   将权重从 huggingface 格式转化为 megatron 格式
-   ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
+    将权重从 huggingface 格式转化为 megatron 格式
+    ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
-   ```bash
-   # 修改 ascend-toolkit 路径
-   source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    ```bash
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader qwen_hf \
+        --saver megatron \
+        --target-tensor-parallel-size 8 \
+        --load-dir ./model_from_hf/Qwen-72B/ \
+        --save-dir ./model_weights/Qwen-72B-v0.1-tp8-pp1/ \
+        --tokenizer-model ./model_from_hf/Qwen-72B/qwen.tiktoken \
+        --add-qkv-bias
+    ```
 
-   python tools/checkpoint/convert_ckpt.py \
-       --model-type GPT \
-       --loader qwen_hf \
-       --saver megatron \
-       --target-tensor-parallel-size 8 \
-       --load-dir ./model_from_hf/Qwen-72B/ \
-       --save-dir ./model_weights/Qwen-72B-v0.1-tp8-pp1/ \
-       --tokenizer-model ./model_from_hf/Qwen-72B/qwen.tiktoken \
-       --add-qkv-bias
-   ```
+    任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
+    ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
 
-   任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
-   ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
-
-   ```shell
-   # 请按照您的真实环境修改 set_env.sh 路径
-   source /usr/local/Ascend/ascend-toolkit/set_env.sh
-   python tools/checkpoint/convert_ckpt.py \
-       --model-type GPT \
-       --loader megatron \
-       --saver megatron \
-       --save-model-type save_huggingface_qwen \
-       --load-dir ./model_weights/Qwen-72B-v0.1-tp8-pp1/ \
-       --target-tensor-parallel-size 1 \
-       --target-pipeline-parallel-size 1 \
-       --add-qkv-bias \
-       --save-dir ./model_from_hf/Qwen-72B/     # 需要填入原始HF模型路径，新权重会存于./model_from_hf/Qwen-72B/mg2hg/
-   ```
+    ```shell
+    # 请按照您的真实环境修改 set_env.sh 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_qwen \
+        --load-dir ./model_weights/Qwen-72B-v0.1-tp8-pp1/ \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --add-qkv-bias \
+        --save-dir ./model_from_hf/Qwen-72B/     # 需要填入原始HF模型路径，新权重会存于./model_from_hf/Qwen-72B/mg2hg/
+    ```
 5. 准备数据集
 
-   下载 Qwen-72B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+    下载 Qwen-72B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
-   ```shell
+    ```shell
     # 下载数据
     cd ./dataset
     wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
     cd ..
-
+    
     # 处理数据   
     mkdir ./dataset/Qwen-72B/
     python ./tools/preprocess_data.py \
@@ -635,38 +635,38 @@ Qwen-72B 训练的硬件配置:
         --seq-length 8192 \
         --workers 4 \
         --log-interval 1000
-   ```
+    ```
 6. 预训练
 
-   配置Qwen-72B 预训练脚本: examples/qwen/pretrain_qwen_72b_ptd.sh
+    配置Qwen-72B 预训练脚本: examples/qwen/pretrain_qwen_72b_ptd.sh
 
-   ```shell
+    ```shell
     # 设置 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-
+    
     # 根据实际情况配置词表、数据集、模型参数保存路径
     CKPT_SAVE_DIR="./ckpt/Qwen-72B/"
     TOKENIZER_MODEL="./model_from_hf/Qwen-72B/"  #词表路径
     DATA_PATH="./dataset/Qwen-72B/alpaca_text_document"  #数据集路径
     CKPT_LOAD_DIR="./model_weights/Qwen-72B-v0.1-tp8-pp1/"
-   ```
+    ```
 
-   若使用32k长序列，需要开启重计算特性并修改seq-length参数值为32768，参数配置如下：
+    若使用32k长序列，需要开启重计算特性并修改seq-length参数值为32768，参数配置如下：
 
-   ```shell
-   --seq-length 32768 \
+    ```shell
+        --seq-length 32768 \
+    
+        --recompute-granularity full \
+        --recompute-method block \
+        --recompute-num-layers 2 \
+    ```
 
-    --recompute-granularity full \
-    --recompute-method block \
-    --recompute-num-layers 2 \
-   ```
+    启动 Qwen-72B 预训练脚本: examples/qwen/pretrain_qwen_72b_ptd.sh
 
-   启动 Qwen-72B 预训练脚本: examples/qwen/pretrain_qwen_72b_ptd.sh
-
-   ```shell
+    ```shell
     bash examples/qwen/pretrain_qwen_72b_ptd.sh
-   ```
-    **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+    ```
+    **注意**：如果使用多机训练，且没有设置数据共享，需要在训练脚启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 ### 性能
 
 #### 吞吐

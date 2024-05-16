@@ -170,7 +170,7 @@ def human_eval(eval_args, agent):
             data_path = path
     try:
         if data_path:
-            human_eval_exam = HumanEval(test_dir=data_path)
+            human_eval_exam = HumanEval(test_dir=data_path, instruction_template=eval_args.instruction_template)
             answer, score_df = human_eval_exam.eval(chat=agent)
             logger.info(score_df)
     except Exception as e:

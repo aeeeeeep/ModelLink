@@ -23,6 +23,7 @@ import megatron
 _EXPERT_PARALLEL_GROUP = None
 _MPU_EXPERT_MODEL_PARALLEL_RANK = None
 _MPU_EXPERT_MODEL_PARALLEL_WORLD_SIZE = None
+_PIPELINE_MODEL_PARALLEL_NODE_INFO = None
 
 
 def initialize_model_parallel_decorator(initialize_model_parallel):
@@ -115,6 +116,22 @@ def initialize_model_parallel_decorator(initialize_model_parallel):
         print_rank_0(f"all ep groups {all_ep_groups}")
         print_rank_0(f"all dp groups {all_data_parallel_group_ranks}")
 
+        gpus_per_node = torch.cuda.device_count()
+        
+        # 0: Start of the pipeline_model_parallel_group
+        # 2: End of the pipeline_model_parallel_group
+        # 1: Other
+        global _PIPELINE_MODEL_PARALLEL_NODE_INFO
+        _PIPELINE_MODEL_PARALLEL_NODE_INFO = [1] * gpus_per_node
+        node_id = rank // gpus_per_node
+        for i in range(num_pipeline_model_parallel_groups):
+            ranks = range(i, world_size, num_pipeline_model_parallel_groups)
+            # When on the same node
+            if ranks[0] // gpus_per_node == node_id:
+                _PIPELINE_MODEL_PARALLEL_NODE_INFO[ranks[0] % gpus_per_node] = 0
+            if ranks[-1] // gpus_per_node == node_id:
+                _PIPELINE_MODEL_PARALLEL_NODE_INFO[ranks[-1] % gpus_per_node] = 2
+
     return wrapper
 
 
@@ -199,3 +216,7 @@ def destroy_model_parallel_decorator(destroy_model_parallel):
         _MPU_EXPERT_MODEL_PARALLEL_WORLD_SIZE = None
 
     return wrapper
+
+
+def get_pipeline_model_parallel_node_info():
+    return _PIPELINE_MODEL_PARALLEL_NODE_INFO

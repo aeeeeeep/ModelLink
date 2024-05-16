@@ -82,4 +82,4 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $GPT_ARGS \
     $DATA_ARGS \
     $OUTPUT_ARGS \
-    --distributed-backend nccl 2>&1 | tee new_baichuan13B.log
+    --distributed-backend nccl 2>&1 | tee /home/dataset/new_baichuan-13B.log

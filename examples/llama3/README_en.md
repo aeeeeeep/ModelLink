@@ -1,4 +1,4 @@
-# LLaMA
+# LLaMA3
 <p align="left">
         <b><a href="README.md">简体中文</a></b> |
         <b>English</b> 
@@ -6,7 +6,7 @@
 
 #  Contents
 
-- [LLaMA](#llama)
+- [LLaMA3](#llama)
 - [Contents](#contents)
 - [LLAMA3-8B](#llama3-8b)
   - [Training](#training)
@@ -15,8 +15,6 @@
       - [Machine performance](#machine-performance)
   - [Inference-8B](#inference-8b)
   - [Evaluation-8B](#evaluation-8b)
-
-  - [LLaMA](#llama)
 - [Contents](#contents)
 - [LLAMA3-70B](#llama3-70b)
   - [Training](#training)
@@ -59,15 +57,15 @@ Here's a hardware summary of pre-training  LLAMA3-8B:
     # python3.8
     conda create -n test python=3.8
     conda activate test
-
+    
     # install torch and torch_npu
     pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-
+    
     # modify ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-
+    
     # install AscendSpeed
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
@@ -75,7 +73,7 @@ Here's a hardware summary of pre-training  LLAMA3-8B:
     pip install -r requirements.txt 
     pip3 install -e .
     cd ..
-
+    
     # install other packages
     pip install -r requirements.txt 
     ```
@@ -87,7 +85,7 @@ Here's a hardware summary of pre-training  LLAMA3-8B:
     zero_sd_list = self._get_all_zero_checkpoints(load_dir, tag)
     if zero_sd_list is None:
         return False
-
+    
     # modified
     zero_sd_list = self._get_all_zero_checkpoints(load_dir, tag)
     if zero_sd_list is None or len(zero_sd_list) == 0:
@@ -97,29 +95,29 @@ Here's a hardware summary of pre-training  LLAMA3-8B:
     Download the LLAMA3-8B checkpoint from [here](https://huggingface.co/unsloth/llama-3-8B/tree/main)
 
     ```shell
-      #!/bin/bash
-      mkdir ./model_from_hf/llama-3-8b-hf/
-      cd ./model_from_hf/llama-3-8b-hf/
-      wget https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/config.json
-      wget https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/generation_config.json
-      wget https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/model-00001-of-00004.safetensors
-      wget https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/model-00002-of-00004.safetensors
-      wget https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/model-00003-of-00004.safetensors
-      wget https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/model-00004-of-00004.safetensors
-      wget https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/model.safetensors.index.json
-      wget https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/special_tokens_map.json
-      wget https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/tokenizer.json
-      wget https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/tokenizer_config.json
-      cd ../../
+    #!/bin/bash
+    mkdir ./model_from_hf/llama-3-8b-hf/
+    cd ./model_from_hf/llama-3-8b-hf/
+    wget https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/config.json
+    wget https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/generation_config.json
+    wget https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/model-00001-of-00004.safetensors
+    wget https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/model-00002-of-00004.safetensors
+    wget https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/model-00003-of-00004.safetensors
+    wget https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/model-00004-of-00004.safetensors
+    wget https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/model.safetensors.index.json
+    wget https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/special_tokens_map.json
+    wget https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/tokenizer.json
+    wget https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/tokenizer_config.json
+    cd ../../
     ```
 4. weight conversion in ptd mode
 
-   *Note that if you want to use the weight from huggingface, please run the weight conversion script first. The following uses llama-3-8b model weight conversion in ptd as an example.*
+    *Note that if you want to use the weight from huggingface, please run the weight conversion script first. The following uses llama-3-8b model weight conversion in ptd as an example.*
 
-   ```bash
+    ```bash
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-
+    
     # convert to ptd weights
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
@@ -164,26 +162,26 @@ Here's a hardware summary of pre-training  LLAMA3-8B:
     # process datasets  
     mkdir ./dataset/llama-3-8b-hf/
     python ./tools/preprocess_data.py \
-      --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-      --tokenizer-name-or-path ./model_from_hf/llama-3-8b-hf/ \
-      --output-prefix ./dataset/llama-3-8b-hf/alpaca \
-      --workers 4 \
-      --log-interval 1000 \
-      --tokenizer-type PretrainedFromHF
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/llama-3-8b-hf/ \
+        --output-prefix ./dataset/llama-3-8b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF
     ```
 
     5.2 pre-training using ptd mode
     Config LLAMA3-8B pre-training script: examples/llama3/pretrain_llama3_8b_ptd.sh
 
     ```shell
-      # modify the script according to your own ascend-toolkit path
-      source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    # modify the script according to your own ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-      # modify config according to your own actual situation
-      CKPT_SAVE_DIR="./ckpt/llama-3-8b-hf/"
-      TOKENIZER_MODEL="./model_from_hf/llama-3-8b-hf/"  #tokenizer path
-      DATA_PATH="./dataset/llama-3-8b-hf/alpaca_text_document"  #processed dataset
-      CKPT_LOAD_DIR="./model_weights/llama-3-8b-hf-v0.1-tp8-pp1/" #weight path
+    # modify config according to your own actual situation
+    CKPT_SAVE_DIR="./ckpt/llama-3-8b-hf/"
+    TOKENIZER_MODEL="./model_from_hf/llama-3-8b-hf/"  #tokenizer path
+    DATA_PATH="./dataset/llama-3-8b-hf/alpaca_text_document"  #processed dataset
+    CKPT_LOAD_DIR="./model_weights/llama-3-8b-hf-v0.1-tp8-pp1/" #weight path
     ```
 
     Multi-machine training requires the addition of parameter --overlap-grad-reduce
@@ -191,9 +189,50 @@ Here's a hardware summary of pre-training  LLAMA3-8B:
     Launch LLAMA3-8B  pre-training script: examples/llama3/pretrain_llama3_8b_ptd.sh
 
     ```shell
-      bash examples/llama3/pretrain_llama3_8b_ptd.sh 
+    bash examples/llama3/pretrain_llama3_8b_ptd.sh 
     ```
-    **Note**: If using multi machine training, it is necessary to set up multi machine data sharing, and non primary nodes can read the primary node data through data sharing. Alternatively, directly copy the data generated by the master node to non master nodes.
+    **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
+
+6. fine-tuning
+
+    6.1 Prepare fine-tuning dataset
+    
+    Download the LLAMA3-8B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+
+    ```shell
+    # download datasets
+    mkdir finetune_dataset
+    cd ./finetune_dataset
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
+    
+    # process datasets  
+    mkdir ./finetune_dataset/llama-3-8b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/llama-3-8b-hf/ \
+        --output-prefix ./finetune_dataset/llama-3-8b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF \
+        --handler-name GeneralInstructionHandler \
+        --append-eod
+    ```
+
+    6.2 Full Parameters Fine-Tuning
+    
+    The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama3_8b_ptd.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
+    Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
+
+    ```bash
+    DATA_PATH="./finetune_dataset/llama-3-8b-hf/alpaca"
+    TOKENIZER_PATH="./model_from_hf/llama-3-8b-hf/"
+    CKPT_PATH="./ckpt/llama-3-8b-hf/"
+        --load ${CKPT_PATH} \
+        --finetune \
+        --is-instruction-dataset \
+        --tokenizer-not-use-fast \
+    ```
 
 ### Performance
 
@@ -328,15 +367,15 @@ Here's a hardware summary of pre-training  LLAMA3-70B:
     # python3.8
     conda create -n test python=3.8
     conda activate test
-
+    
     # install torch and torch_npu
     pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-
+    
     # modify ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-
+    
     # install AscendSpeed
     git clone https://gitee.com/ascend/AscendSpeed.git
     cd AscendSpeed
@@ -344,7 +383,7 @@ Here's a hardware summary of pre-training  LLAMA3-70B:
     pip install -r requirements.txt 
     pip3 install -e .
     cd ..
-
+    
     # install other packages
     pip install -r requirements.txt 
     ```
@@ -356,7 +395,7 @@ Here's a hardware summary of pre-training  LLAMA3-70B:
     zero_sd_list = self._get_all_zero_checkpoints(load_dir, tag)
     if zero_sd_list is None:
         return False
-
+    
     # modified
     zero_sd_list = self._get_all_zero_checkpoints(load_dir, tag)
     if zero_sd_list is None or len(zero_sd_list) == 0:
@@ -366,31 +405,31 @@ Here's a hardware summary of pre-training  LLAMA3-70B:
     Download the LLAMA3-70B checkpoint from [here](https://huggingface.co/v2ray/Llama-3-70B/tree/main)
 
     ```shell
-      #!/bin/bash
-      mkdir ./model_from_hf/llama-3-70b-hf/
-      cd ./model_from_hf/llama-3-70b-hf/
-      wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/config.json
-      wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/generation_config.json
-      wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model-00001-of-00030.safetensors
-      wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model-00002-of-00030.safetensors
-      wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model-00003-of-00030.safetensors
-      wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model-00004-of-00030.safetensors
-      ...
-      wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model-00030-of-00030.safetensors
-      wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model.safetensors.index.json
-      wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/special_tokens_map.json
-      wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/tokenizer.json
-      wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/tokenizer_config.json
-      cd ../../
+    #!/bin/bash
+    mkdir ./model_from_hf/llama-3-70b-hf/
+    cd ./model_from_hf/llama-3-70b-hf/
+    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/config.json
+    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/generation_config.json
+    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model-00001-of-00030.safetensors
+    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model-00002-of-00030.safetensors
+    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model-00003-of-00030.safetensors
+    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model-00004-of-00030.safetensors
+    ...
+    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model-00030-of-00030.safetensors
+    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model.safetensors.index.json
+    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/special_tokens_map.json
+    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/tokenizer.json
+    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/tokenizer_config.json
+    cd ../../
     ```
 4. weight conversion in ptd mode
 
-   *Note that if you want to use the weight from huggingface, please run the weight conversion script first. The following uses llama-3-70b model weight conversion in ptd as an example.*
+    *Note that if you want to use the weight from huggingface, please run the weight conversion script first. The following uses llama-3-70b model weight conversion in ptd as an example.*
 
-   ```bash
+    ```bash
     # modify the script according to your own ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-
+    
     # convert to ptd weights
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
@@ -435,26 +474,26 @@ Here's a hardware summary of pre-training  LLAMA3-70B:
     # process datasets  
     mkdir ./dataset/llama-3-70b-hf/
     python ./tools/preprocess_data.py \
-      --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-      --tokenizer-name-or-path ./model_from_hf/llama-3-70b-hf/ \
-      --output-prefix ./dataset/llama-3-70b-hf/alpaca \
-      --workers 4 \
-      --log-interval 1000 \
-      --tokenizer-type PretrainedFromHF
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/llama-3-70b-hf/ \
+        --output-prefix ./dataset/llama-3-70b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF
     ```
 
     5.2 pre-training using ptd mode
     Config LLAMA3-70B pre-training script: examples/llama3/pretrain_llama3_70b_ptd.sh
 
     ```shell
-      # modify the script according to your own ascend-toolkit path
-      source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    # modify the script according to your own ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-      # modify config according to your own actual situation
-      CKPT_SAVE_DIR="./ckpt/llama-3-70b-hf/"
-      TOKENIZER_MODEL="./model_from_hf/llama-3-70b-hf/"  #tokenizer path
-      DATA_PATH="./dataset/llama-3-70b-hf/alpaca_text_document"  #processed dataset
-      CKPT_LOAD_DIR="./model_weights/llama-3-70b-hf-v0.1-tp8-pp8/" #weight path
+    # modify config according to your own actual situation
+    CKPT_SAVE_DIR="./ckpt/llama-3-70b-hf/"
+    TOKENIZER_MODEL="./model_from_hf/llama-3-70b-hf/"  #tokenizer path
+    DATA_PATH="./dataset/llama-3-70b-hf/alpaca_text_document"  #processed dataset
+    CKPT_LOAD_DIR="./model_weights/llama-3-70b-hf-v0.1-tp8-pp8/" #weight path
     ```
 
     Multi-machine training requires the addition of parameter --overlap-grad-reduce
@@ -462,9 +501,50 @@ Here's a hardware summary of pre-training  LLAMA3-70B:
     Launch LLAMA3-70B  pre-training script: examples/llama3/pretrain_llama3_70b_ptd.sh
 
     ```shell
-      bash examples/llama3/pretrain_llama3_70b_ptd.sh 
+    bash examples/llama3/pretrain_llama3_70b_ptd.sh 
     ```
-    **Note**: If using multi machine training, it is necessary to set up multi machine data sharing, and non primary nodes can read the primary node data through data sharing. Alternatively, directly copy the data generated by the master node to non master nodes.
+    **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
+
+6. fine-tuning
+
+    6.1 Prepare fine-tuning dataset
+    
+    Download the LLAMA3-70B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+
+    ```shell
+    # download datasets
+    mkdir finetune_dataset
+    cd ./finetune_dataset
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
+    
+    # process datasets  
+    mkdir ./finetune_dataset/llama-3-70b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/llama-3-70b-hf/ \
+        --output-prefix ./finetune_dataset/llama-3-70b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF \
+        --handler-name GeneralInstructionHandler \
+        --append-eod
+    ```
+
+    6.2 Full Parameters Fine-Tuning
+    
+    The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_llama3_70b_ptd.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
+    Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
+
+    ```bash
+    DATA_PATH="./finetune_dataset/llama-3-70b-hf/alpaca"
+    TOKENIZER_PATH="/model_from_hf/llama-3-70b-hf/"
+    CKPT_PATH="./ckpt"
+        --load ${CKPT_PATH} \
+        --finetune \
+        --is-instruction-dataset \
+        --tokenizer-not-use-fast \
+    ```
 
 ### Performance
 

@@ -1,0 +1,59 @@
+{
+    "NETWORK_SIZE": [
+        "--num-layers", "32",
+        "--hidden-size", "4096",
+        "--ffn-hidden-size", "11008",
+        "--num-attention-heads", "32",
+        "--position-embedding-type", "rope",
+        "--make-vocab-size-divisible-by", "1",
+        "--max-position-embeddings", "2048",
+        "--normalization", "RMSNorm",
+        "--swiglu",
+        "--untie-embeddings-and-output-weights",
+        "--load", "/home/dataset/Aquila2-7B-tp8-pp1/"
+    ],
+
+    "TOKENIZER_PARAM": [
+        "--tokenizer-type", "PretrainedFromHF",
+        "--tokenizer-name-or-path", "/home/dataset/Aquila2-7B-hf"
+    ],
+
+    "INFERENCE_PARAM": [
+        "--max-new-tokens", "512",
+        "--tokenizer-not-use-fast",
+        "--exit-on-missing-checkpoint"
+    ],
+
+    "EVALUATION_PARAM": [
+        "--tokenizer-not-use-fast",
+        "--task-data-path", "/home/dataset/eval_dataset/boolq/test",
+        "--task", "boolq",
+        "--max-new-tokens", "1"
+    ],
+
+    "DISTRIBUTED_PARAM": [
+        "--tensor-model-parallel-size", "8",
+        "--pipeline-model-parallel-size", "1"
+    ],
+
+    "AUXILIARY_PARAM": [
+        "--micro-batch-size", "8",
+        "--global-batch-size", "64",
+        "--disable-bias-linear",
+        "--no-gradient-accumulation-fusion",
+        "--attention-softmax-in-fp32",
+        "--no-load-optim",
+        "--no-load-rng",
+        "--seq-length", "2048"
+    ],
+	
+    "CONVERT_WEIGHT_PARAM": [
+        "--model-type", "GPT",
+        "--load-dir", "/home/dataset/Aquila2-7B-hf",
+        "--save-dir", "/home/dataset/Aquila2-7B-tp8-pp1",
+        "--loader", "llama2_hf",
+        "--saver", "megatron",
+        "--target-tensor-parallel-size", "8",
+        "--tokenizer-model", "/home/dataset/Aquila2-7B-hf/tokenizer.json"
+    ]
+}

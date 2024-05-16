@@ -31,77 +31,77 @@ ChatGLM3-6B 训练的硬件配置:
 
 1. 克隆仓库到本地服务器
 
-   ```shell
-   git clone https://gitee.com/ascend/ModelLink.git
-   git clone https://github.com/NVIDIA/Megatron-LM.git
-   cd Megatron-LM
-   git checkout -f bcce6f
-   cp -r megatron ../ModelLink/
-   cd .. 
-   cd ModelLink
-   mkdir logs
-   mkdir model_from_hf
-   mkdir dataset
-   mkdir ckpt
-   ```
+    ```shell
+    git clone https://gitee.com/ascend/ModelLink.git
+    git clone https://github.com/NVIDIA/Megatron-LM.git
+    cd Megatron-LM
+    git checkout -f bcce6f
+    cp -r megatron ../ModelLink/
+    cd .. 
+    cd ModelLink
+    mkdir logs
+    mkdir model_from_hf
+    mkdir dataset
+    mkdir ckpt
+    ```
 2. 搭建环境
 
-   ```bash
-   # python3.8
-   conda create -n test python=3.8
-   conda activate test
-
-   # 安装 torch 和 torch_npu
-   pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
-   pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
-   pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-
-   # 修改 ascend-toolkit 路径
-   source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-
-   # 安装加速库
-   git clone https://gitee.com/ascend/AscendSpeed.git
-   cd AscendSpeed
-   git checkout 224ae35e8fc96778f957029d1371ddb623452a50
-   pip install -r requirements.txt 
-   pip3 install -e .
-   cd ..
-
-   # 安装其余依赖库
-   pip install -r requirements.txt 
-   ```
+    ```bash
+    # python3.8
+    conda create -n test python=3.8
+    conda activate test
+    
+    # 安装 torch 和 torch_npu
+    pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+    pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
+    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+    
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    
+    # 安装加速库
+    git clone https://gitee.com/ascend/AscendSpeed.git
+    cd AscendSpeed
+    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+    pip install -r requirements.txt 
+    pip3 install -e .
+    cd ..
+    
+    # 安装其余依赖库
+    pip install -r requirements.txt 
+    ```
 3. 下载 ChatGLM3-6B 的 [预训练权重和词表](https://huggingface.co/THUDM/chatglm3-6b/tree/main)
 
-   ```shell
-     #!/bin/bash
-     mkdir ./model_from_hf/chatglm3_6b_hf/
-     cd ./model_from_hf/chatglm3_6b_hf/
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/config.json
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/configuration_chatglm.py
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/modeling_chatglm.py
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00001-of-00007.bin
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00002-of-00007.bin
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00003-of-00007.bin
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00004-of-00007.bin
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00005-of-00007.bin
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00006-of-00007.bin
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00007-of-00007.bin
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model.bin.index.json
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/quantization.py
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/tokenization_chatglm.py
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/tokenizer.model
-     wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/tokenizer_config.json
-     cd ../../
-   ```
+    ```shell
+    #!/bin/bash
+    mkdir ./model_from_hf/chatglm3_6b_hf/
+    cd ./model_from_hf/chatglm3_6b_hf/
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/config.json
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/configuration_chatglm.py
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/modeling_chatglm.py
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00001-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00002-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00003-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00004-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00005-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00006-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00007-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model.bin.index.json
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/quantization.py
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/tokenization_chatglm.py
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/tokenizer.model
+    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/tokenizer_config.json
+    cd ../../
+    ```
 4. 权重转换
 
-   4.1 将权重从 huggingface 格式转化为 megatron 格式
-   ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
+    4.1 将权重从 huggingface 格式转化为 megatron 格式
+    ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
-   ```bash
+    ```bash
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-
+    
     # 权重格式转换
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
@@ -113,9 +113,9 @@ ChatGLM3-6B 训练的硬件配置:
         --save-dir ./model_weights/chatglm3_6b_tp2pp2/ \
         --tokenizer-model ./model_from_hf/chatglm3_6b_hf/tokenizer.model \
         --add-qkv-bias
-   ```
+    ```
 
-   注意：chatglm3的--target-tensor-parallel-size跟config.json中的multi_query_attention配置有关，这里multi_query_attention设置的是2。
+    注意：chatglm3的--target-tensor-parallel-size跟config.json中的multi_query_attention配置有关，这里multi_query_attention设置的是2。
 
 
 5. 预训练
@@ -125,45 +125,45 @@ ChatGLM3-6B 训练的硬件配置:
     下载 ChatGLM3-6B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
     ```shell
-         # 下载数据
-         cd ./dataset
-         wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
-         cd ..
+    # 下载数据
+    cd ./dataset
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
     
-         # 处理数据    
-         mkdir ./dataset/chatglm3_6b_hf/
-         python ./tools/preprocess_data.py \
-           --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
-           --tokenizer-name-or-path ./model_from_hf/chatglm3_6b_hf/ \
-           --output-prefix ./dataset/chatglm3_6b_hf/alpaca \
-           --workers 4 \
-           --log-interval 1000 \
-           --tokenizer-type PretrainedFromHF
+    # 处理数据    
+    mkdir ./dataset/chatglm3_6b_hf/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/chatglm3_6b_hf/ \
+        --output-prefix ./dataset/chatglm3_6b_hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF
     ```
 
-   5.2 用ptd模式预训练
-   配置ChatGLM3-6B PTD 预训练脚本: examples/chatglm3/pretrain_chatglm3_6B_8K.sh
+    5.2 用ptd模式预训练
+    配置ChatGLM3-6B PTD 预训练脚本: examples/chatglm3/pretrain_chatglm3_6B_8K.sh
 
     ```shell
-        # 设置 ascend-toolkit 路径
-        source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+    # 设置 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     
-        # 根据实际情况配置词表、数据集、模型参数加载和保存路径
-        LOAD_CHECKPOINT_PATH="./model_weights/chatglm3_6b_tp2pp2/"
-        SAVE_CHECKPOINT_PATH="./ckpt/chatglm3_6b_hf/"
-        TOKENIZER_PATH="./model_from_hf/chatglm3_6b_hf/"  #词表路径
-        DATA_PATH="./dataset/chatglm3_6b_hf/alpaca_text_document"  #数据集路径
+    # 根据实际情况配置词表、数据集、模型参数加载和保存路径
+    LOAD_CHECKPOINT_PATH="./model_weights/chatglm3_6b_tp2pp2/"
+    SAVE_CHECKPOINT_PATH="./ckpt/chatglm3_6b_hf/"
+    TOKENIZER_PATH="./model_from_hf/chatglm3_6b_hf/"  #词表路径
+    DATA_PATH="./dataset/chatglm3_6b_hf/alpaca_text_document"  #数据集路径
     ```
 
-   多机运行增加参数--overlap-grad-reduce
+    多机运行增加参数--overlap-grad-reduce
 
-   启动 ChatGLM3-6B PTD预训练脚本: examples/chatglm3/pretrain_chatglm3_6B_8K.sh
+    启动 ChatGLM3-6B PTD预训练脚本: examples/chatglm3/pretrain_chatglm3_6B_8K.sh
 
     ```shell
-      bash examples/chatglm3/pretrain_chatglm3_6B_8K.sh
+    bash examples/chatglm3/pretrain_chatglm3_6B_8K.sh
     ```
 
-   **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+    **注意**：如果使用多机训练，且没有设置数据共享，需要在训练脚启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
 ### 性能
 

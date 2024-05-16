@@ -1,4 +1,4 @@
-<p align="center"> <img src="sources/images/logo.png" height="90px" width="400px"> </p>
+  <p align="center"> <img src="sources/images/logo.png" height="90px" width="400px"> </p>
 
 <p align="center">
     <a href="https://gitee.com/ascend/AscendSpeed/blob/master/LICENSE">
@@ -47,6 +47,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <th>推理</th>
       <th>评估</th>
       <th>数据集</th>
+      <th>贡献方</th>
     </tr>
   </thead>
   <tbody>
@@ -57,6 +58,16 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/aquila/generate_aquila_7b_ptd.sh">对话</a> </td>
       <td> <a href="examples/aquila/evaluate_aquila_7b_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td> 【昇腾贡献模型】 </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/aquila2/README.md">Aquila2</a></td>
+      <td>7B</td>
+      <td> -- </td>
+      <td> <a href="examples/aquila2/generate_aquila2_7b_ptd.sh">对话</a> </td>
+      <td> <a href="examples/aquila2/evaluate_aquila2_7b_ptd.sh">评估</a> </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td>【社区贡献模型】</td>
     </tr>
     <tr>
       <td rowspan="2"> <a href="examples/baichuan/README.md">Baichuan</a> </td>
@@ -65,6 +76,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/baichuan/generate_baichuan_7b_ptd.sh">对话</a> </td>
       <td> <a href="examples/baichuan/evaluate_baichuan_7B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
       <td> 13B </td>
@@ -72,6 +84,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/baichuan/generate_baichuan_13b_ptd.sh">对话</a> </td>
       <td> <a href="examples/baichuan/evaluate_baichuan_13B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
       <td rowspan="2"> <a href="examples/baichuan2/README.md">Baichuan2</a> </td>
@@ -80,6 +93,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/baichuan2/generate_baichuan2_7b_ptd.sh">对话</a> </td>
       <td> <a href="examples/baichuan2/evaluate_baichuan2_7B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
       <td> 13B </td>
@@ -87,6 +101,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/baichuan2/generate_baichuan2_13b_ptd.sh">对话</a> </td>
       <td> <a href="examples/baichuan2/evaluate_baichuan2_13B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
@@ -95,6 +110,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/bloom/generate_bloom_7b_ptd.sh">对话</a> </td>
       <td> <a href="examples/bloom/evaluate_bloom_7B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+      <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
       <td> 176B </td>
@@ -102,6 +118,16 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/bloom/generate_bloom_176b_ptd.sh">对话</a> </td>
       <td> <a href="examples/bloom/evaluate_bloom_176b_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
+      <td> 【昇腾贡献模型】 </td>
+    </tr>
+    <tr>
+      <td rowspan="1"> <a href="examples/codellama/README.md">CodeLlama</a> </td>
+      <td> 34B </td>
+      <td> -- </td>
+      <td> <a href="examples/codellama/generate_codellama_34b_ptd.sh">对话</a> </td>
+      <td> <a href="examples/codellama/evaluate_codellama_34b_ptd.sh">评估</a> </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td>【社区贡献模型】</td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>
@@ -110,6 +136,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/intern/generate_lnternlm_7b_ptd.sh">对话</a> </td>
       <td> <a href="examples/intern/evaluate_internlm_7B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
       <td>65B</td>
@@ -117,6 +144,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> -- </td>
       <td> -- </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama/README.md">LLaMA</a></td>
@@ -125,6 +153,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/llama/generate_llama_7b_ptd.sh">对话 </a> </td>
       <td> <a href="examples/llama/evaluate_llama_7B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
       <td>13B</td>
@@ -132,6 +161,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/llama/generate_llama_13b_ptd.sh">对话 </a> </td>
       <td> <a href="examples/llama/evaluate_llama_13B_ptd.sh">评估</a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
       <td>33B</td>
@@ -139,6 +169,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/llama/generate_llama_33b_ptd.sh">对话 </a> </td>
       <td> <a href="examples/llama/evaluate_llama_33B_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a> </td>
+      <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
       <td > 65B </td>
@@ -146,6 +177,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/llama/generate_llama_65b_ptd.sh">对话 </a> </td>
       <td> <a href="examples/llama/evaluate_llama_65B_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
+      <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</a></td>
@@ -154,6 +186,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/llama2/generate_llama2_7b_ptd.sh">对话 </a> </td>
       <td> <a href="examples/llama2/evaluate_llama2_7B_ptd.sh">评估 </a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+      <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
       <td>13B</td>
@@ -161,6 +194,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/llama2/generate_llama2_13b_ptd.sh">对话 </a> </td>
       <td> <a href="examples/llama2/evaluate_llama2_13B_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
+      <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
       <td> 34B </td>
@@ -168,6 +202,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/llama2/generate_llama2_34B_ptd.sh">对话 </a> </td>
       <td> <a href="examples/llama2/evaluate_llama2_34B_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
+      <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
       <td > 70B </td>
@@ -175,6 +210,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/llama2/generate_llama2_70b_ptd.sh">对话 </a> </td>
       <td> <a href="examples/llama2/evaluate_llama2_70B_ptd.sh">评估 </a> </td>
       <td>  <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
+      <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/llama3/README.md">LLaMA3</a></td>
@@ -183,6 +219,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/llama3/generate_llama3_8b_ptd.sh">对话 </a> </td>
       <td> <a href="examples/llama3/evaluate_llama3_8b_ptd.sh">评估 </a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+      <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
       <td>70B</td>
@@ -190,6 +227,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/llama3/generate_llama3_70b_ptd.sh">对话 </a> </td>
       <td> <a href="examples/llama3/evaluate_llama3_70b_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json</a>  </td>
+      <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
       <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
@@ -198,6 +236,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/qwen/generate_qwen_7b_ptd.sh">对话 </a></td>
       <td> <a href="examples/qwen/evaluate_qwen_7b_ptd.sh">评估 </a></td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+      <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
       <td>14B</td>
@@ -205,6 +244,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/qwen/generate_qwen_14b_ptd.sh">对话 </a> </td>
       <td> <a href="examples/qwen/evaluate_qwen_14b_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+      <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
       <td>72B</td>
@@ -212,6 +252,16 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/qwen/generate_qwen_72b_ptd.sh">对话 </a> </td>
       <td> <a href="examples/qwen/evaluate_qwen_72b_ptd.sh">评估 </a> </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+      <td> 【昇腾贡献模型】 </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/yi/README.md">Yi</a></td>
+      <td>34B</td>
+      <td> -- </td>
+      <td> <a href="examples/yi/generate_yi_34b_ptd.sh">对话 </a> </td>
+      <td> <a href="examples/yi/evaluate_yi_34b_ptd.sh">评估 </a> </td>
+      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+      <td> 【社区贡献模型】 </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
@@ -220,6 +270,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/mixtral/generate_mixtral_8x7b_ptd.sh">对话 </a> </td>
       <td> <a href="examples/mixtral/evaluate_mixtral_8x7b_ptd.sh">评估 </a>  </td>
       <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
+      <td> 【昇腾贡献模型】 </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/mistral/README.md">Mistral</a></td>
@@ -286,6 +337,15 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/aquila/pretrain_aquila_7b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
+      <td rowspan="1"><a href="examples/aquila2/README.md">Aquila2</a></td>
+      <td>7B</td>
+      <td> 1x8</td>
+      <td> FP16 </td>
+      <td> 3323 </td>
+      <td> 2673 </td>
+      <td> <a href="examples/aquila2/pretrain_aquila2_7b_ptd.sh">训练</a> </td>
+    </tr>
+    <tr>
       <td rowspan="2"><a href="examples/baichuan/README.md">Baichuan</a></td>
       <td>7B</td>
       <td> 1x8</td>
@@ -335,6 +395,15 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> 100 </td>
       <td> 107 </td>
       <td> <a href="examples/bloom/pretrain_bloom_176b.sh">训练</a> </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/codellama/README.md">CodeLlama</a></td>
+      <td>34B</td>
+      <td> 2x8</td>
+      <td> BF16 </td>
+      <td> 837 </td>
+      <td> 762 </td>
+      <td> <a href="examples/codellama/pretrain_codellama_34b_ptd_16p.sh">训练</a> </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>
@@ -464,6 +533,15 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/qwen/pretrain_qwen_72b_ptd.sh">训练</a> </td>
     </tr>
     <tr>
+      <td rowspan="1"><a href="examples/yi/README.md">Yi</a></td>
+      <td>34B</td>
+      <td>2x8</td>
+      <td>BF16 </td>
+      <td> 809 </td>
+      <td> 730 </td>
+      <td> <a href="examples/yi/pretrain_yi_34b_ptd_16p.sh">训练</a> </td>
+    </tr>
+    <tr>
       <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
       <td>8x7B</td>
       <td>2x8</td>
@@ -511,7 +589,7 @@ python tools/preprocess_data.py --input train-00000-of-00001-a09b74b3ef9c3b56.pa
 ```
 输出将是两个文件，在本例中名为alpaca_packed_input_ids_document.bin和alpaca_packed_input_ids_document.idx，后面的训练中指定--data-path的是完整路径和新文件名，但不带文件扩展名。使用--tokenizer-type指定模型对应的数据预处理方法，使用--tokenizer-name-or-path指定tokenizer模型路径，通常是与开源项目中的预训练权重一起下载，--handler-name指定数据集的指令数据构造方法。
 
-#### <span id="jump11"> 制作预训练数据集
+#### <span id="jump11"> 制作预训练数据集
 
 ##### wikipedia 数据集
 
@@ -565,7 +643,7 @@ python tools/preprocess_data.py --input WORKSPACE/train-00000-of-00001-a09b74b3e
 ```
 
 
-#### <span id="jump12"> 制作指令微调数据集
+#### <span id="jump12"> 制作指令微调数据集
 ##### alpaca 数据集
 ```bash
 # 数据集：wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
@@ -587,7 +665,7 @@ python tools/preprocess_data.py --input WORKSPACE/alpaca/train-00000-of-00001-a0
 请注意，使用 `--handler-name GeneralInstructionHandler` 标志的指令数据集，在处理时会从 `modellink/data/data_handler.py` 中选择 `GeneralInstructionHandler` 类来制作prompt。如果你处理的是 alpaca 格式风格的数据集，即包含 `instruction`, `input` 和 `output` 列的数据集，可以直接使用 `--handler-name GeneralInstructionHandler` 标志。
 此外，`BelleMultiTurnInstructionHandler` 可以被用于处理 [belle](https://huggingface.co/datasets/BelleGroup/multiturn_chat_0.8M) 格式的数据集，`MOSSInstructionHandler` 可以被用于处理 [MOSS](https://huggingface.co/datasets/fnlp/moss-003-sft-data) 格式的数据集，`LeetcodePythonInstructionHandler` 可以被用于处理 [Leetcode](https://huggingface.co/datasets/mhhmm/leetcode-solutions-python) 风格的数据集
 
-### <span id="jump13"> 预训练 </span>
+### <span id="jump13"> 预训练 </span>
 ```shell
  # 配置LLaMA-7B 预训练脚本: pretrain_llama_7b.sh
  # 根据实际情况配置词表、数据集、模型参数保存路径
@@ -600,7 +678,7 @@ python tools/preprocess_data.py --input WORKSPACE/alpaca/train-00000-of-00001-a0
  bash examples/llama2/pretrain_llama_7b_ptd.sh
 ```
 
-### <span id="jump14"> 全参微调 </span>
+### <span id="jump14"> 全参微调 </span>
 ```shell
  # 在预训练脚本的基础上，给出预训练权重路径，数据集使用指令数据集路径，使能微调开关--finetune
  LOAD_CHECKPOINT_PATH="your init model weight load path"
@@ -614,7 +692,7 @@ python tools/preprocess_data.py --input WORKSPACE/alpaca/train-00000-of-00001-a0
 ```
 
 
-### <span id="jump15"> 低参微调 </span>
+### <span id="jump15"> 低参微调 </span>
 #### Lora
 
 当前 ModelLink基于 peft 仓库支持对大模型的 Lora 微调功能：
@@ -664,7 +742,7 @@ ModelLink:
 - Take medications regularly.
 ```
 
-### <span id="jump16"> 推理（ 人机对话） </span>
+### <span id="jump16"> 推理（ 人机对话） </span>
 当前，我们支持使用如下策略训练的模型进行推理:
 当前，我们支持使用如下并行策略训练的模型进行推理:
 - 仅仅使用 PTD 策略训练的模型
@@ -796,7 +874,7 @@ pretrained_model_name_or_path(`str`, *optional*, defaults to None):
     ```
     <img src="sources/images/beam_search_sampling.png">
 
-### <span id="jump17"> 评估基线数据集（Benchmark）</span>
+### <span id="jump17"> 评估基线数据集（Benchmark）</span>
 
 
 
