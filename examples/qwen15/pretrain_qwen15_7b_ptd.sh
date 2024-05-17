@@ -58,6 +58,10 @@ GPT_ARGS="
     --use-fused-rmsnorm \
     --swiglu \
     --use-flash-attn \
+    --use-fused-rotary-pos-emb \
+    --use-rotary-position-embeddings \
+    --use-fused-swiglu \
+    --use-mc2 \
     --no-masked-softmax-fusion \
     --attention-softmax-in-fp32 \
     --min-lr 1.25e-7 \
