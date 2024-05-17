@@ -330,11 +330,13 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td rowspan="1"><a href="examples/mistral/README.md">Mistral</a></td>
       <td>7B</td>
+      <td> <a href="examples/mistral/pretrain_mistral_7b_ptd.sh"> pretrain </a> </td>
+      <td> <a href="examples/mistral/generate_mistral_7b_ptd.sh"> generate </a> </td>
       <td> -- </td>
-      <td> <a href="examples/mistral/generate_mistral_7b_ptd.sh">对话 </a> </td>
-      <td> <a href="examples/mistral/evaluate_mistral_7b_ptd.sh">评估 </a>  </td>
-      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
-      <td>【昇腾贡献模型】</td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/mistral/evaluate_mistral_7b_ptd.sh"> eval </a> </td>
+      <td>【昇腾贡献】</td>
     </tr>
   </tbody>
 </table>
@@ -577,8 +579,8 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>8x7B</td>
       <td>2x8</td>
       <td>BF16 </td>
-      <td> 1054 </td>
-      <td> 1139 </td>
+      <td> 487 </td>
+      <td> 610 </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/mistral/README.md">Mistral</a></td>
@@ -587,7 +589,6 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>BF16 </td>
       <td> 2806 </td>
       <td> 2734 </td>
-      <td> <a href="examples/mixtral/pretrain_mixtral_8x7b_ptd.sh">训练</a> </td>
     </tr>
   </tbody>
 </table>
