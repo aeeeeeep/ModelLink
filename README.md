@@ -337,6 +337,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> -- </td>
       <td> <a href="examples/mistral/evaluate_mistral_7b_ptd.sh"> eval </a> </td>
       <td>【昇腾贡献】</td>
+    <tr>
       <td rowspan="1"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
       <td>7B</td>
       <td> <a href="examples/qwen15/pretrain_qwen15_7b_ptd.sh"> pretrain </a> </td>
