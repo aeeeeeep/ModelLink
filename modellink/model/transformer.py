@@ -1,4 +1,5 @@
 # coding=utf-8
+# Copyright (c) 2023 Alibaba PAI and Nvidia Megatron-LM Team.
 # Copyright (c) 2024, HUAWEI CORPORATION.  All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,7 +41,6 @@ from modellink.core.models.common.embeddings.rotary_pos_embedding import apply_r
 from modellink.error_utils import ensure_valid
 from modellink.model.alibi import Alibi, _build_alibi_tensor, _get_inverted_mask
 from ..tasks.finetune.lora.utils import is_enable_lora
-
 
 try:
     from einops import rearrange
@@ -403,6 +403,7 @@ class FlashSelfAttention(torch.nn.Module):
         self.apply_query_key_layer_scaling = args.apply_query_key_layer_scaling
         self.layer_number = layer_number
         self.fill_neg_inf = args.fill_neg_inf
+        self.FA_SPARSE_ATTN_MASK_LEN = 2048
 
         self.beta = 1.0
         if self.apply_query_key_layer_scaling:
@@ -422,8 +423,26 @@ class FlashSelfAttention(torch.nn.Module):
 
         batch_size, seq_length, head_num, head_dim = q.shape[1], q.shape[0], q.shape[2], q.shape[3]
 
+        use_sliding_windows = (
+            getattr(args, "sliding_window", None) is not None
+            and seq_length > args.sliding_window
+            and not self.alibi
+        )
+
+        if use_sliding_windows:
+            pse = None
+            sparse_mode = 4
+            self.pre_tockens = args.sliding_window
+        else:
+            sparse_mode = 0
+
         if not hasattr(self, 'attention_mask') or self.attention_mask.shape[0] != seq_length:
-            self.attention_mask = torch.triu(torch.ones(seq_length, seq_length), 1).bool().npu()
+            if use_sliding_windows:
+                self.attention_mask = torch.triu(
+                    torch.ones(self.FA_SPARSE_ATTN_MASK_LEN, self.FA_SPARSE_ATTN_MASK_LEN), 1).bool().npu()
+            else:
+                self.attention_mask = torch.triu(torch.ones(seq_length, seq_length), 1).bool().npu()
+
 
         q, k, v = [rearrange(x, 's b h d -> s b (h d)') for x in [q, k, v]]
 
@@ -463,6 +482,7 @@ class FlashSelfAttention(torch.nn.Module):
         output = torch_npu.npu_fusion_attention( \
             q, k, v, head_num, args.shape_order, \
             pse=pse, \
+            sparse_mode=sparse_mode, \
             padding_mask=None, \
             atten_mask=self.attention_mask, \
             scale=scale, \

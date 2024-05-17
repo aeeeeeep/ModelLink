@@ -82,7 +82,7 @@ class LLMChat(Chat):
         self.args = llm_args
 
     def chat(self, instruction, history):
-        instruction_temp = [template.format(instruction=ins) for ins in instruction]
+        instruction_temp = [tokenizer.apply_chat_template([{"role": "user", "content": ins}]) for ins in instruction]
         result = model.generate(
             instruction_temp,
             do_sample=False,
@@ -93,7 +93,7 @@ class LLMChat(Chat):
         return get_result(result), dist.get_rank()
 
     def beam_search_chat(self, instruction, history):
-        instruction_temp = template.format(instruction=instruction)
+        instruction_temp = tokenizer.apply_chat_template([{"role": "user", "content": instruction}])
         result = model.generate(
             instruction_temp,
             do_sample=False,
@@ -216,7 +216,7 @@ if __name__ == "__main__":
     )
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name_or_path, trust_remote_code=True)
     max_new_tokens = args.max_new_tokens
-    template = "{instruction}"
+
     if 'mmlu' in args.task:
         a = time.time()
         mmlu(args, LLMChat(args))

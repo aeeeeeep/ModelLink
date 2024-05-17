@@ -328,6 +328,16 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> 【昇腾贡献】 </td>
     </tr>
     <tr>
+      <td rowspan="1"><a href="examples/mistral/README.md">Mistral</a></td>
+      <td>7B</td>
+      <td> <a href="examples/mistral/pretrain_mistral_7b_ptd.sh"> pretrain </a> </td>
+      <td> <a href="examples/mistral/generate_mistral_7b_ptd.sh"> generate </a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/mistral/evaluate_mistral_7b_ptd.sh"> eval </a> </td>
+      <td>【昇腾贡献】</td>
+    <tr>
       <td rowspan="1"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
       <td>7B</td>
       <td> <a href="examples/qwen15/pretrain_qwen15_7b_ptd.sh"> pretrain </a> </td>
@@ -579,8 +589,16 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>8x7B</td>
       <td>2x8</td>
       <td>BF16 </td>
-      <td> 1054 </td>
-      <td> 1139 </td>
+      <td> 487 </td>
+      <td> 610 </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/mistral/README.md">Mistral</a></td>
+      <td>7B</td>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 2806 </td>
+      <td> 2734 </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
@@ -613,6 +631,7 @@ ModelLink支持张量并行、流水线并行、序列并行、重计算、分�
 |             Fused swiglu             |       --use-fused-swiglu       |
 |                 mc2                  |           --use-mc2            |
 | Fused rotary <br/>position embedding |   --use-fused-rotary-pos-emb   |
+|        Sliding Window Attention      |        --sliding-window        |
 
 
 ```bash
@@ -632,6 +651,7 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     --overlap-param-gather \
     --use-fused-rotary-pos-emb \
     --use-mc2 \
+    --sliding-window 4096 \
     ... \
     ...
 ```

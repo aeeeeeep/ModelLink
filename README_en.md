@@ -327,6 +327,16 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> 【Ascend】 </td>
     </tr>
     <tr>
+      <td rowspan="1"><a href="examples/mistral/README.md">Mistral</a></td>
+      <td>7B</td>
+      <td> <a href="examples/mistral/pretrain_mistral_7b_ptd.sh"> pretrain </a> </td>
+      <td> <a href="examples/mistral/generate_mistral_7b_ptd.sh"> generate </a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/mistral/evaluate_mistral_7b_ptd.sh"> eval </a>  </td>
+      <td>【Ascend】</td>
+    <tr>
       <td rowspan="1"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
       <td>7B</td>
       <td> <a href="examples/qwen15/pretrain_qwen15_7b_ptd.sh"> pretrain </a> </td>
@@ -578,8 +588,16 @@ For the supported models listed above, we provide training scripts and readme in
       <td>8x7B</td>
       <td>2x8</td>
       <td>BF16 </td>
-      <td> 1054 </td>
-      <td> 1139 </td>
+      <td> 487 </td>
+      <td> 610 </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/mistral/README.md">Mistral</a></td>
+      <td>7B</td>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 2806 </td>
+      <td> 2734 </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
@@ -613,6 +631,7 @@ ModelLink supports various acceleration algorithms such as tensor parallelism, p
 |             Fused swiglu             |       --use-fused-swiglu       |
 |                 mc2                  |     --use-mc2                  |
 | Fused rotary <br/>position embedding |   --use-fused-rotary-pos-emb   |
+|        Sliding Window Attention      |        --sliding-window        |
 
 
 
@@ -633,6 +652,7 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     --overlap-param-gather \
     --use-fused-rotary-pos-emb \
     --use-mc2 \
+    --sliding-window 4096 \
     ... \
     ...
 ```
