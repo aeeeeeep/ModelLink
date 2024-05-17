@@ -327,6 +327,17 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/mixtral/evaluate_mixtral_8x7b_ptd.sh"> eval </a>  </td>
       <td> 【昇腾贡献】 </td>
     </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+      <td>7B</td>
+      <td> <a href="examples/qwen15/pretrain_qwen15_7b_ptd.sh"> pretrain </a> </td>
+      <td> <a href="examples/qwen15/generate_qwen15_7b_ptd.sh"> generate </a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/qwen15/evaluate_qwen15_7b_ptd.sh"> eval </a> </td>
+      <td> 【社区贡献】 </td>
+    </tr>
   </tbody>
 </table>
 
@@ -570,6 +581,14 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>BF16 </td>
       <td> 1054 </td>
       <td> 1139 </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+      <td> 7B </td>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td> 2548 </td>
+      <td> 2578 </td>
     </tr>
   </tbody>
 </table>
