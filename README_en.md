@@ -336,6 +336,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> -- </td>
       <td> <a href="examples/mistral/evaluate_mistral_7b_ptd.sh"> eval </a>  </td>
       <td>【Ascend】</td>
+    <tr>
       <td rowspan="1"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
       <td>7B</td>
       <td> <a href="examples/qwen15/pretrain_qwen15_7b_ptd.sh"> pretrain </a> </td>
@@ -630,6 +631,7 @@ ModelLink supports various acceleration algorithms such as tensor parallelism, p
 |             Fused swiglu             |       --use-fused-swiglu       |
 |                 mc2                  |     --use-mc2                  |
 | Fused rotary <br/>position embedding |   --use-fused-rotary-pos-emb   |
+|        Sliding Window Attention      |        --sliding-window        |
 
 
 
@@ -650,6 +652,7 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     --overlap-param-gather \
     --use-fused-rotary-pos-emb \
     --use-mc2 \
+    --sliding-window 4096 \
     ... \
     ...
 ```
