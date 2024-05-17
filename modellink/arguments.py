@@ -193,6 +193,12 @@ def _add_network_args(parser):
                        help='Configuration for the dense bias.')
     group.add_argument("--skip-bias-add", action="store_false", default=True,
                        help='Configuration for the skip bias.')
+    group.add_argument('--add-rmsnorm-offset', action='store_true', default=False,
+                       help='RMSNorm unit offset.')
+    group.add_argument('--geglu', action='store_true', default=False,
+                       help='Geglu activate function.')
+    group.add_argument('--input-embeds-norm', action='store_true', default=False,
+                       help='input normalization.')
     return parser
 
 

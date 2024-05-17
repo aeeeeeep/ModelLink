@@ -18,8 +18,6 @@ from ascendspeed.core.fusions.fused_layer_norm import FusedLayerNormAffineFuncti
 from ascendspeed.core.fusions.fused_softmax import is_kernel_available, ScaledUpperTriangMaskedSoftmax, ScaledMaskedSoftmax, \
         ScaledSoftmax, forward_fused_softmax
 from ascendspeed.core.fusions.rotary_pos_embedding import RotaryEmbedding_wrapper
-from ascendspeed.core.fusions.rms_norm import rms_norm_init, rms_norm_forward
-from ascendspeed.core.fusions.transformer import parallel_mlp_init
 from ascendspeed.core.pipeline_parallel.p2p_communication import _batched_p2p_ops
 from ascendspeed.core.tensor_parallel.random import _set_cuda_rng_state
 from ascendspeed.core.tensor_parallel.cross_entropy import _VocabParallelCrossEntropyForward
@@ -30,7 +28,8 @@ from ..model import (
     norm_wrapper, SwitchMLP, state_dict_for_save_checkpoint_wrapper,
     core_attention_wrapper, core_attention_forward, FlashSelfAttention,
     ParallelAttention_wrapper, TransformerLanguageModel__init__,
-    ParallelAttentionForward
+    ParallelAttentionForward, parallel_transformer_forward, parallel_mlp_init_wrapper,
+    rms_norm_init_wrapper, rms_norm_forward
 )
 from ..core import (vocab_embedding_wrapper, initialize_model_parallel_decorator,
                    destroy_model_parallel_decorator, get_expert_parallel_group,
@@ -138,14 +137,17 @@ def patch_model():
 
 
     # patch_rms_norm
-    megatron.model.rms_norm.RMSNorm.__init__ = rms_norm_init # use fused_rmsnorm
+    megatron.model.rms_norm.RMSNorm.__init__ = rms_norm_init_wrapper(
+        megatron.model.rms_norm.RMSNorm.__init__)
     megatron.model.rms_norm.RMSNorm.forward = rms_norm_forward # use fused_rmsnorm
 
 
     # patch_transformer
-    megatron.model.transformer.ParallelMLP.__init__ = parallel_mlp_init # fused swiglu
+    megatron.model.transformer.ParallelMLP.__init__ = parallel_mlp_init_wrapper(
+        megatron.model.transformer.ParallelMLP.__init__)  # fused swiglu
     megatron.model.transformer.SwitchMLP = SwitchMLP
     megatron.model.transformer.ParallelTransformer.__init__ = parallel_transformer_init
+    megatron.model.transformer.ParallelTransformer.forward = parallel_transformer_forward
     megatron.model.transformer.ParallelTransformer.state_dict_for_save_checkpoint \
         = state_dict_for_save_checkpoint_wrapper(
         megatron.model.transformer.ParallelTransformer.state_dict_for_save_checkpoint)

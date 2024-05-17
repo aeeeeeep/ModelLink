@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from contextlib import nullcontext
 from functools import wraps
 
 import math
@@ -33,7 +34,7 @@ from megatron.core.parallel_state import get_tensor_model_parallel_group
 from megatron.model.enums import AttnMaskType, LayerType, AttnType
 from megatron.model.transformer import _get_layer_type
 from megatron.model.transformer import (
-    ParallelTransformer, ParallelTransformerLayer, NoopTransformerLayer
+    ParallelTransformer, ParallelTransformerLayer, NoopTransformerLayer, ParallelMLP
 )
 from megatron.model.utils import get_norm
 
@@ -125,6 +126,8 @@ def parallel_transformer_init(self, config,
     super(ParallelTransformer, self).__init__()
     args = get_args()
 
+    self.hidden_size = args.hidden_size
+    self.input_embeds_norm = args.input_embeds_norm
     self.layer_type = layer_type
     self.model_type = model_type
     self.bf16 = config.bf16
@@ -838,3 +841,171 @@ def ParallelAttentionForward(self, hidden_states, attention_mask,
     output, bias = self.dense(context_layer)
 
     return output, bias
+
+
+def parallel_transformer_forward(
+        self, hidden_states, attention_mask,
+        encoder_output=None, enc_dec_attn_mask=None,
+        retriever_input=None,
+        retriever_output=None,
+        retriever_attn_mask=None,
+        inference_params=None,
+        rotary_pos_emb=None):
+    # hidden_states: [s, b, h]
+
+    # Checks.
+    if inference_params:
+        assert self.recompute_granularity is None, \
+            'inference does not work with activation checkpointing'
+
+    if not self.pre_process:
+        # See set_input_tensor()
+        hidden_states = self.input_tensor
+
+    # Viewless tensor.
+    # - We only need to create a viewless tensor in the case of micro batch
+    #   size (mbs) == 1, since in this case, 'hidden_states.transpose()'
+    #   above creates a view tensor, and '.contiguous()' is a pass-through.
+    #   For mbs >= 2, '.contiguous()' creates a new tensor, eliminating
+    #   the need to make it viewless.
+    #
+    #   However, we don't explicitly check mbs == 1 here because
+    #   make_viewless_tensor() has negligible overhead when its input
+    #   is already viewless.
+    #
+    # - For the 'else' case above, calling make_viewless_tensor() here is
+    #   likely redundant, since p2p_communication.py (likely originator)
+    #   already creates viewless tensors. That said, make_viewless_tensor()
+    #   is called here to be future-proof and corner-case-proof.
+    if self.input_embeds_norm and self.pre_process:
+        hidden_states = hidden_states * (self.hidden_size ** 0.5)
+
+    hidden_states = core.utils.make_viewless_tensor(
+        hidden_states,
+        requires_grad=True,
+        keep_graph=True,
+    )
+
+    # RNG context.
+    if self.sequence_parallel:
+        rng_context = tensor_parallel.get_cuda_rng_tracker().fork()
+    else:
+        rng_context = nullcontext()
+
+    # Forward layers.
+    with rng_context:
+        # The fp8_autocast context manager is a no-op when enabled=True
+        # The if...else serves to short circuit name resolution for fp8_autocast
+        with transformer_engine.pytorch.fp8_autocast(
+                enabled=self.use_fp8,
+                fp8_recipe=self.fp8_recipe,
+                fp8_group=self.fp8_group
+        ) if self.use_fp8 else nullcontext():
+            # Determine if the current iteration is first microbatch
+            if self.num_microbatches_in_previous_step != get_num_microbatches():
+                self.microbatch_count = 0  # Reset count on new batch size rampup interval
+            self.num_microbatches_in_previous_step = get_num_microbatches()
+            is_first_microbatch = self.microbatch_count % get_num_microbatches() == 0
+
+            # Forward pass.
+            if self.recompute_granularity == 'full':
+                hidden_states = self._checkpointed_forward(hidden_states,
+                                                           attention_mask,
+                                                           encoder_output,
+                                                           enc_dec_attn_mask,
+                                                           rotary_pos_emb,
+                                                           is_first_microbatch)
+            else:
+                forward_kwargs = {
+                    'encoder_output': encoder_output,
+                    'enc_dec_attn_mask': enc_dec_attn_mask,
+                    'inference_params': inference_params,
+                }
+
+                if self.transformer_impl == 'transformer_engine':
+                    forward_kwargs['is_first_microbatch'] = is_first_microbatch
+                    forward_kwargs['checkpoint_core_attention'] = self.checkpoint_core_attention
+                    if self.transformer_engine_v_0_10:
+                        forward_kwargs['rotary_pos_emb'] = rotary_pos_emb
+                else:
+                    forward_kwargs['rotary_pos_emb'] = rotary_pos_emb
+                    forward_kwargs['retriever_input'] = retriever_input
+                    forward_kwargs['retriever_output'] = retriever_output
+                    forward_kwargs['retriever_attn_mask'] = retriever_attn_mask
+
+                for index in range(self.num_layers):
+                    layer = self._get_layer(index)
+
+                    hidden_states = layer(
+                        hidden_states,
+                        attention_mask,
+                        **forward_kwargs)
+
+                    # First Retro decoder layer returns both hidden_states
+                    # and retriever_output. Make retriever_output available
+                    # to subsequence Retro layers.
+                    if isinstance(hidden_states, tuple):
+                        assert len(hidden_states) == 2
+                        hidden_states, retriever_output = hidden_states
+                        forward_kwargs["retriever_output"] = retriever_output
+
+            # Skip counter update for eval and activation checkpointing
+            if torch.is_grad_enabled() and self.training:
+                self.microbatch_count += 1
+
+    # Final layer norm.
+    if self.post_process and self.post_norm:
+        hidden_states = self.final_norm(hidden_states)
+
+    return hidden_states
+
+
+def parallel_mlp_init_wrapper(fn):
+    @wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        fn(self, *args, **kwargs)
+        self.layer_number = None
+        _args = get_args()
+        if _args.swiglu and _args.use_fused_swiglu:
+            self.activation_func = fused_swiglu
+
+        # 适配geglu激活函数
+        config = args[0]
+        if _args.geglu:
+            config.activation_func = F.gelu
+            config.gated_linear_unit = True
+            config.bias_gelu_fusion = False
+
+            def geglu(x):
+                x = torch.chunk(x, 2, dim=-1)
+                return F.gelu(x[0]) * x[1]
+            self.activation_func = geglu
+
+        ffn_hidden_size = config.ffn_hidden_size
+        if config.gated_linear_unit:
+            ffn_hidden_size *= 2
+
+        is_expert = kwargs.get("is_expert", False)
+        self.dense_h_to_4h = tensor_parallel.ColumnParallelLinear(
+            config.hidden_size,
+            ffn_hidden_size,
+            config=config,
+            init_method=config.init_method,
+            bias=self.add_bias,
+            gather_output=False,
+            skip_bias_add=True,
+            is_expert=is_expert,
+        )
+
+        self.dense_4h_to_h = tensor_parallel.RowParallelLinear(
+            config.ffn_hidden_size,
+            config.hidden_size,
+            config=config,
+            init_method=config.output_layer_init_method,
+            bias=self.add_bias,
+            skip_bias_add=True,
+            input_is_parallel=True,
+            is_expert=is_expert,
+        )
+
+    return wrapper
