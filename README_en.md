@@ -329,11 +329,13 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     <tr>
       <td rowspan="1"><a href="examples/mistral/README.md">Mistral</a></td>
       <td>7B</td>
+      <td> <a href="examples/mistral/pretrain_mistral_7b_ptd.sh"> pretrain </a> </td>
+      <td> <a href="examples/mistral/generate_mistral_7b_ptd.sh"> generate </a> </td>
       <td> -- </td>
-      <td> <a href="examples/mistral/generate_mistral_7b_ptd.sh">inference </a> </td>
-      <td> <a href="examples/mistral/evaluate_mistral_7b_ptd.sh">evaluation </a>  </td>
-      <td> <a href="https://github.com/tatsu-lab/stanford_alpaca/blob/main/alpaca_data.json">alpaca_data.json </a> </td>
-      <td>【Model contributed by Ascend】</td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/mistral/evaluate_mistral_7b_ptd.sh"> eval </a>  </td>
+      <td>【Ascend】</td>
     </tr>
   </tbody>
 </table>
@@ -576,8 +578,16 @@ For the supported models listed above, we provide training scripts and readme in
       <td>8x7B</td>
       <td>2x8</td>
       <td>BF16 </td>
-      <td> 1054 </td>
-      <td> 1139 </td>
+      <td> 487 </td>
+      <td> 610 </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/mistral/README.md">Mistral</a></td>
+      <td>7B</td>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 2806 </td>
+      <td> 2734 </td>
     </tr>
   </tbody>
 </table>
