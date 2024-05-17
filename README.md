@@ -613,6 +613,7 @@ ModelLink支持张量并行、流水线并行、序列并行、重计算、分�
 |             Fused swiglu             |       --use-fused-swiglu       |
 |                 mc2                  |           --use-mc2            |
 | Fused rotary <br/>position embedding |   --use-fused-rotary-pos-emb   |
+|        Sliding Window Attention      |        --sliding-window        |
 
 
 ```bash
@@ -632,6 +633,7 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     --overlap-param-gather \
     --use-fused-rotary-pos-emb \
     --use-mc2 \
+    --sliding-window 4096 \
     ... \
     ...
 ```
