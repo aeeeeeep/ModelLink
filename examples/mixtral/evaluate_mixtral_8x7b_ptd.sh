@@ -41,7 +41,7 @@ GPT_ARGS="
     --num-query-groups 8 \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
-    --seq-length 4096 \
+    --seq-length 32768 \
     --max-position-embeddings 32768 \
     --micro-batch-size 1 \
     --make-vocab-size-divisible-by 1 \
