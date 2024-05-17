@@ -42,7 +42,6 @@ from modellink.error_utils import ensure_valid
 from modellink.model.alibi import Alibi, _build_alibi_tensor, _get_inverted_mask
 from ..tasks.finetune.lora.utils import is_enable_lora
 
-
 try:
     from einops import rearrange
 except ImportError:
@@ -404,6 +403,7 @@ class FlashSelfAttention(torch.nn.Module):
         self.apply_query_key_layer_scaling = args.apply_query_key_layer_scaling
         self.layer_number = layer_number
         self.fill_neg_inf = args.fill_neg_inf
+        self.FA_SPARSE_ATTN_MASK_LEN = 2048
 
         self.beta = 1.0
         if self.apply_query_key_layer_scaling:
@@ -438,7 +438,8 @@ class FlashSelfAttention(torch.nn.Module):
 
         if not hasattr(self, 'attention_mask') or self.attention_mask.shape[0] != seq_length:
             if use_sliding_windows:
-                self.attention_mask = torch.triu(torch.ones(2048, 2048), 1).bool().npu()
+                self.attention_mask = torch.triu(
+                    torch.ones(self.FA_SPARSE_ATTN_MASK_LEN, self.FA_SPARSE_ATTN_MASK_LEN), 1).bool().npu()
             else:
                 self.attention_mask = torch.triu(torch.ones(seq_length, seq_length), 1).bool().npu()
 
