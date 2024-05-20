@@ -8,9 +8,8 @@ import torch
 import torch_npu
 from common import DistributedTest
 from utils import ParamConfig, assert_judge
-from megatron.model import GPTModel
-
 import modellink
+from megatron.model import GPTModel
 from modellink.tasks.inference.text_generation.infer_base import add_text_generate_args
 
 
