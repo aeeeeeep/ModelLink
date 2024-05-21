@@ -84,7 +84,7 @@ OUTPUT_ARGS="
     --log-interval 1 \
     --save-interval 1000 \
     --eval-interval 1000 \
-    --eval-iters 0 \
+    --eval-iters 0
 "
 
 torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \

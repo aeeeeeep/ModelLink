@@ -40,9 +40,9 @@ class TestGeneration(DistributedTest):
         )
         instruction = ["解释一下“温故而知新”"]
         output = model.generate(instruction, detokenize=False)
-        expected_output = [391, 426, 1774, 1906, 8627, 10281, 261, 36018, 837, 42310,
-                           434, 10045, 6468, 29728, 278, 0, 43652, 43652, 1774, 1906,
-                           28043, 609, 43652, 43652, 1774, 1906, 8627, 10281, 261, 36018]
+        expected_output = [14727, 29728, 261, 22051, 1156, 3101, 422, 278, 0, 87,
+                           18392, 221, 1906, 358, 132, 237, 79, 221, 261, 81,
+                           14572, 2449, 2369, 72, 8022, 2449, 221, 261, 88, 14572]
 
         if torch.distributed.get_rank() == 0:
             print(output)

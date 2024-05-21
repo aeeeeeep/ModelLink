@@ -206,8 +206,8 @@ Aquila2-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 | 设备 | 硬件           | 模型       | 迭代数| token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) |
 |------|---------------|------------|------|------------------------|----------------------|
-| NPU  | 910b 1node*8p | Aquila2-7B  | 2000 | 3323                  | 4.93                  | 
-| 参考  |              | Aquila2-7B  | 2000 | 2673                  |    6.13               | 
+| NPU  | 910b 1node*8p | Aquila2-7B  | 5000 | 3323                  | 4.93                  | 
+| 参考  |              | Aquila2-7B  | 5000 | 2673                  |    6.13               | 
 
 ## 推理
 
@@ -260,4 +260,4 @@ Aquila2-7B在**Ascend NPU**中的评测表现：
 
 | 任务                                                                   | 模型       | 昇腾值|社区值|
 |------------------------------------------------------------------------|------------|--------|------|
-| [BoolQ](https://github.com/google-research-datasets/boolean-questions) | Aquila2-7B  | 77.3% | 77.6% |
+| [BoolQ](https://github.com/google-research-datasets/boolean-questions) | Aquila2-7B  | 77.8% | 77.6% |

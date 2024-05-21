@@ -56,4 +56,4 @@ torchrun $DISTRIBUTED_ARGS inference.py \
     --load $CKPT_LOAD_DIR \
     --tokenizer-not-use-fast \
     --no-gradient-accumulation-fusion \
-    --bf16 | tee logs/generate_aquila_7b_ptd.log
+    | tee logs/generate_aquila2_7b_ptd.log
