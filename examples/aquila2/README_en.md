@@ -257,4 +257,4 @@ Sample Aquila2-7B performance running in **Ascend NPU**:
 
 | Task                                                                   | Model     | NPU   | Benchmark |
 | ---------------------------------------------------------------------- | --------- | ----- | --------- |
-| [BoolQ](https://github.com/google-research-datasets/boolean-questions) | Aquila2-7B | 77.3% |  77.6%   |
+| [BoolQ](https://github.com/google-research-datasets/boolean-questions) | Aquila2-7B | 77.8% |  77.6%   |

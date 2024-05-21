@@ -60,4 +60,5 @@ torchrun $DISTRIBUTED_ARGS evaluation.py \
     --load $CKPT_LOAD_DIR \
     --tokenizer-not-use-fast \
     --no-gradient-accumulation-fusion \
-    --fp16 | tee logs/eval_aquila_7b_${TASK}_ptd.log
+    --fp16 \
+    | tee logs/eval_aquila2_7b_${TASK}_ptd.log

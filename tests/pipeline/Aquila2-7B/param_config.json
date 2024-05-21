@@ -39,6 +39,7 @@
     "AUXILIARY_PARAM": [
         "--micro-batch-size", "8",
         "--global-batch-size", "64",
+        "--no-masked-softmax-fusion",
         "--disable-bias-linear",
         "--no-gradient-accumulation-fusion",
         "--attention-softmax-in-fp32",
