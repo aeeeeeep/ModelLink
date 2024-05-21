@@ -126,6 +126,10 @@ if __name__ == '__main__':
 
     tokenizer = model.tokenizer
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+    # set pad_token for llama2
+    if hasattr(tokenizer, "vocab"):
+        if "<pad>" in tokenizer.vocab:
+            tokenizer.pad_token = "<pad>"
 
     model.load_weights()
 
