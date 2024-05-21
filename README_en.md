@@ -347,6 +347,17 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/qwen15/evaluate_qwen15_7b_ptd.sh"> eval </a> </td>
       <td> 【Community】 </td>
     </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/gemma/README.md">Gemma</a></td>
+      <td>7B</td>
+      <td> <a href="examples/gemma/pretrain_gemma_7b_ptd.sh"> pretrain </a> </td>
+      <td> <a href="examples/gemma/generate_gemma_7b_ptd.sh"> generate </a></td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/gemma/evaluate_gemma_7b_ptd.sh">eval </a></td>
+      <td> 【Ascend】 </td>
+    </tr>
   </tbody>
 </table>
 
@@ -606,6 +617,14 @@ For the supported models listed above, we provide training scripts and readme in
       <td> BF16 </td>
       <td> 2548 </td>
       <td> 2578 </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/gemma/README.md">Gemma</a></td>
+      <td>7B</td>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 2938 </td>
+      <td> 2607 </td>
     </tr>
   </tbody>
 </table>
