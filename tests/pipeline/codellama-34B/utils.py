@@ -13,7 +13,6 @@ class ParamConfig:
         tokenizer_param,
         distributed_param,
         inference_param,
-        evaluation_param,
         and other auxiliary_param.
     """
     base_dir = Path(__file__).absolute().parent
@@ -26,7 +25,6 @@ class ParamConfig:
     tokenizer_param = config_file["TOKENIZER_PARAM"]
     distributed_param = config_file["DISTRIBUTED_PARAM"]
     inference_param = config_file["INFERENCE_PARAM"]
-    evaluation_param = config_file["EVALUATION_PARAM"]
     auxiliary_param = config_file["AUXILIARY_PARAM"]
 
 

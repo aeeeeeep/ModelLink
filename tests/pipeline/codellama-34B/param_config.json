@@ -41,14 +41,6 @@
         "--attention-softmax-in-fp32"
     ],
 
-    "EVALUATION_PARAM": [
-        "--tokenizer-not-use-fast",
-        "--task-data-path", "/home/dataset/eval_dataset/human_eval/",
-        "--task", "human_eval",
-        "--max-new-tokens", "1024",
-        "--exit-on-missing-checkpoint"
-    ],
-
     "AUXILIARY_PARAM": [
         "--micro-batch-size", "1",
         "--global-batch-size", "16",
