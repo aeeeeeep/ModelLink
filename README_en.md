@@ -453,8 +453,8 @@ The current repository uses Megatron commitId [bcce6f54](https://github.com/NVID
       <td>8x7B</td>
       <td>2x8</td>
       <td>BF16 </td>
-      <td> 1054 </td>
-      <td> 1139 </td>
+      <td> 487 </td>
+      <td> 610 </td>
       <td> <a href="examples/mixtral/pretrain_mixtral_8x7b_ptd.sh">train</a> </td>
     </tr>
   </tbody>
