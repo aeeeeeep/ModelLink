@@ -966,8 +966,13 @@ def parallel_mlp_init_wrapper(fn):
         fn(self, *args, **kwargs)
         self.layer_number = None
         _args = get_args()
-        if _args.swiglu and _args.use_fused_swiglu:
-            self.activation_func = fused_swiglu
+        if _args.swiglu:
+            def swiglu(x):
+                if _args.use_fused_swiglu:
+                    return torch_npu.npu_swiglu(x, dim=-1)
+                x = torch.chunk(x, 2, dim=-1)
+                return F.silu(x[0]) * x[1]
+            self.activation_func = swiglu
 
         # 适配geglu激活函数
         config = args[0]
