@@ -1,12 +1,12 @@
 #!/bin/bash
-
+export ASCEND_LAUNCH_BLOCKING=1
 export WITHOUT_JIT_COMPILE=1
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 GPUS_PER_NODE=8
 MASTER_ADDR="your master node IP"
 MASTER_PORT=6000
-NNODES=2
+NNODES=4
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 
@@ -26,9 +26,9 @@ CKPT_SAVE_DIR="your model save ckpt path"
 CKPT_LOAD_DIR="your model ckpt path"
 
 
-TP=1
-PP=8
-EP=2
+TP=8
+PP=4
+EP=1
 NUM_LAYERS=32
 
 MOE_ARGS="
@@ -56,13 +56,13 @@ GPT_ARGS="
     --num-query-groups 8 \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_MODEL} \
-    --seq-length 4096 \
+    --seq-length 32768 \
     --max-position-embeddings 32768 \
     --micro-batch-size 1 \
-    --global-batch-size 128 \
+    --global-batch-size 8 \
     --make-vocab-size-divisible-by 1 \
     --lr 1.25e-6 \
-    --train-iters 1000 \
+    --train-iters 2000 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
     --disable-bias-linear \
