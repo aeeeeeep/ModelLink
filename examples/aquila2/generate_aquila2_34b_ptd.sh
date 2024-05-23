@@ -2,13 +2,12 @@
 
 # See README, please remember to source the set_env.sh file in CLI, or here
 # source /path/to/your/ascend-toolkit/set_env.sh
+export TOKENIZERS_PARALLELISM=false
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 # please fill these path configurations
 CKPT_LOAD_DIR="your checkpoint load dir"
 TOKENIZER_PATH="your tokenizer path"
-EVAL_DATA_PATH="your eval data dir"
-TASK="your task name"
 
 # Change for multinode config
 TP=8
@@ -26,20 +25,20 @@ DISTRIBUTED_ARGS="
     --node_rank $NODE_RANK \
     --master_addr $MASTER_ADDR \
     --master_port $MASTER_PORT
-    "
+"
 
-# Different task needs different max_new_tokens value, please follow the instruction in readme.
-torchrun $DISTRIBUTED_ARGS evaluation.py \
+torchrun $DISTRIBUTED_ARGS inference.py \
     --attention-softmax-in-fp32 \
+    --bf16 \
     --disable-bias-linear \
     --exit-on-missing-checkpoint \
-    --ffn-hidden-size 11008 \
-    --fp16 \
-    --hidden-size 4096 \
+    --ffn-hidden-size 24576 \
+    --group-query-attention \
+    --hidden-size 6144 \
     --load $CKPT_LOAD_DIR \
     --make-vocab-size-divisible-by 1 \
-    --max-new-tokens 1 \
-    --max-position-embeddings 2048 \
+    --max-new-tokens 512 \
+    --max-position-embeddings 4096 \
     --micro-batch-size 1 \
     --no-gradient-accumulation-fusion \
     --no-load-optim \
@@ -47,18 +46,17 @@ torchrun $DISTRIBUTED_ARGS evaluation.py \
     --no-masked-softmax-fusion \
     --norm-epsilon 1e-5 \
     --normalization RMSNorm \
-    --num-attention-heads 32 \
-    --num-layers 32 \
-    --pipeline-model-parallel-size ${PP} \
+    --num-attention-heads 48 \
+    --num-layers 60 \
+    --num-query-groups 8 \
+    --pipeline-model-parallel-size $PP \
     --position-embedding-type rope \
-    --seq-length 2048 \
+    --seq-length 4096 \
     --swiglu \
-    --task $TASK\
-    --task-data-path $EVAL_DATA_PATH \
-    --tensor-model-parallel-size ${TP} \
+    --tensor-model-parallel-size $TP \
     --tokenizer-name-or-path $TOKENIZER_PATH \
     --tokenizer-not-use-fast \
     --tokenizer-type PretrainedFromHF \
     --untie-embeddings-and-output-weights \
     --use-fused-rmsnorm \
-    | tee logs/eval_aquila2_7b_${TASK}_ptd.log
+    | tee logs/generate_aquila2_34b_ptd.log

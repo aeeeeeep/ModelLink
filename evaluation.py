@@ -80,9 +80,10 @@ def get_result(result):
 class LLMChat(Chat):
     def __init__(self, llm_args):
         self.args = llm_args
+        self.template = "{instruction}"
 
     def chat(self, instruction, history):
-        instruction_temp = [tokenizer.apply_chat_template([{"role": "user", "content": ins}]) for ins in instruction]
+        instruction_temp = [self.template.format(instruction=ins) if tokenizer.chat_template is None else tokenizer.apply_chat_template([{"role": "user", "content": ins}]) for ins in instruction]
         result = model.generate(
             instruction_temp,
             do_sample=False,
@@ -93,7 +94,7 @@ class LLMChat(Chat):
         return get_result(result), dist.get_rank()
 
     def beam_search_chat(self, instruction, history):
-        instruction_temp = tokenizer.apply_chat_template([{"role": "user", "content": instruction}])
+        instruction_temp = self.template.format(instruction=instruction) if tokenizer.chat_template is None else tokenizer.apply_chat_template([{"role": "user", "content": instruction}])
         result = model.generate(
             instruction_temp,
             do_sample=False,
