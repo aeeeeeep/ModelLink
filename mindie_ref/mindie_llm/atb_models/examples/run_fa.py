@@ -99,7 +99,7 @@ def infer(model, tokenizer, input_text, batch_size, max_input_length, max_output
         except ZeroDivisionError as e:
             raise ZeroDivisionError from e
         logger.info(
-            f"Prefill time: {prefill_time}ms, Decode average time: {decode_average_time}ms, E2E time: {e2e_time}ms")
+            f"Prefill time: {prefill_time}s, Decode average time: {decode_average_time}s, E2E time: {e2e_time}s")
 
 
 if __name__ == '__main__':
