@@ -2,7 +2,7 @@ import time
 import torch
 
 import megatron
-from megatron import get_args
+from megatron import get_args, print_rank_0
 from megatron.core import mpu
 from megatron.arguments import validate_args
 from megatron.checkpointing import load_args_from_checkpoint
@@ -15,6 +15,7 @@ from megatron.initialize import (
 from modellink.arguments import parse_args_decorator
 from modellink.core.tensor_parallel.ascend_turbo.initialize import initialize_cfg_from_args
 from modellink.error_utils import ensure_valid
+from modellink.utils import seed_all
 
 
 def _compile_dependencies():
@@ -63,6 +64,11 @@ def initialize_megatron(
     # set global args, build tokenizer, and set adlr-autoresume,
     # tensorboard-writer, and timers.
     set_global_variables(args)
+
+    # add deterministic computing function
+    if args.use_deter_comp:
+        seed_all(args.seed)
+        print_rank_0("deterministic computing is applied for npu.")
 
     # torch.distributed initialization
     def finish_mpu_init():

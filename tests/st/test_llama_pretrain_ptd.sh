@@ -70,6 +70,7 @@ python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS \
       --save-interval 5 \
       --save $CHECKPOINT_PATH \
       --eval-interval 1000 \
+      --use-deter-comp \
       --eval-iters 1
 
 rm -rf $CHECKPOINT_PATH

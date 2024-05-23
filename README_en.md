@@ -31,7 +31,8 @@ Current ModelLink supported features for large model usage:
 * [Evaluation with numerous benchmarks](#jump17)
 * [Utilizing Acceleration Features (Acceleration Algorithms + Fusion Operators)](#jump18)
 * [Profiling data based on Ascend chips](#jump19)
-* [convert ckpt between huggingface and megatron](#jump19)
+* [Convert ckpt between huggingface and megatron](#jump19)
+* [Enbale deterministic computing function for Ascend](#jump21)
 
 More novel and useful features are developing for LLMs training on Ascend ...
 
@@ -667,7 +668,7 @@ ModelLink supports various acceleration algorithms such as tensor parallelism, p
 |             Fused swiglu             |       --use-fused-swiglu       |
 |                 mc2                  |     --use-mc2                  |
 | Fused rotary <br/>position embedding |   --use-fused-rotary-pos-emb   |
-|        Sliding Window Attention      |        --sliding-window        |
+|       Sliding window attention       |        --sliding-window        |
 
 
 
@@ -708,6 +709,17 @@ Modellink supports analyze profiling data based on Ascend chips, which is useful
 --profile-with-memory            # profile memory information
 --profile-record-shapes          # profile shape information
 --profile-save-path ./profile_dir    # path to save data
+```
+
+## <span id="jump21"> Enable deterministic computing based on Ascend chips 
+
+- add choice in script
+```shell
+--use-deter-comp
+```
+- add environment variable
+```shell
+export HCCL_DETERMINISITIC=True
 ```
 
 

@@ -16,8 +16,11 @@
 """General utilities."""
 import os
 import stat
+import random
 
 import torch
+import torch_npu
+import numpy as np
 
 import megatron
 
@@ -56,3 +59,14 @@ def get_tune_attention_mask(attention_mask_1d, reset_attention_mask=True):
     attention_mask = attention_mask.masked_fill((attention_mask_1d < 0.5).view(-1, 1, 1, seq_length), value=0)
     attention_mask = (attention_mask < 0.5)
     return attention_mask
+
+
+def seed_all(seed=1234):
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.use_deterministic_algorithms(True)
+
+    torch_npu.npu.manual_seed_all(seed)
+    torch_npu.npu.manual_seed(seed)
