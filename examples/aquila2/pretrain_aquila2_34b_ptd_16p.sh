@@ -14,11 +14,11 @@ TOKENIZER_PATH="your tokenizer path"
 
 # Change for multinode config
 TP=8
-PP=1
+PP=2
 NPUS_PER_NODE=8
 MASTER_ADDR=localhost
 MASTER_PORT=6000
-NNODES=1
+NNODES=2
 NODE_RANK=0
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
@@ -27,7 +27,7 @@ DISTRIBUTED_ARGS="
     --nnodes $NNODES \
     --node_rank $NODE_RANK \
     --master_addr $MASTER_ADDR \
-    --master_port $MASTER_PORT 
+    --master_port $MASTER_PORT
 "
 
 GPT_ARGS="
@@ -35,21 +35,22 @@ GPT_ARGS="
     --adam-beta2 0.95 \
     --attention-dropout 0.0 \
     --attention-softmax-in-fp32 \
+    --bf16 \
     --clip-grad 1.0 \
     --disable-bias-linear \
-    --ffn-hidden-size 11008 \
-    --fp16 \
-    --global-batch-size 64 \
+    --ffn-hidden-size 24576 \
+    --global-batch-size 1024 \
+    --group-query-attention \
     --hidden-dropout 0.0 \
-    --hidden-size 4096 \
+    --hidden-size 6144 \
     --init-method-std 0.01 \
-    --initial-loss-scale 65536 \
-    --lr 1.0e-7 \
+    --initial-loss-scale 524288.0 \
+    --lr 8.0e-8 \
     --lr-decay-style cosine \
     --lr-warmup-fraction 0.01 \
     --make-vocab-size-divisible-by 1 \
-    --max-position-embeddings 2048 \
-    --micro-batch-size 8 \
+    --max-position-embeddings 4096 \
+    --micro-batch-size 2 \
     --min-lr 1.0e-8 \
     --no-gradient-accumulation-fusion \
     --no-load-optim \
@@ -57,11 +58,12 @@ GPT_ARGS="
     --no-masked-softmax-fusion \
     --norm-epsilon 1e-5 \
     --normalization RMSNorm \
-    --num-attention-heads 32 \
-    --num-layers 32 \
+    --num-attention-heads 48 \
+    --num-layers 60 \
+    --num-query-groups 8 \
     --pipeline-model-parallel-size ${PP} \
     --position-embedding-type rope \
-    --seq-length 2048 \
+    --seq-length 4096 \
     --sequence-parallel \
     --swiglu \
     --tensor-model-parallel-size ${TP} \
@@ -72,7 +74,7 @@ GPT_ARGS="
     --use-flash-attn \
     --use-fused-rmsnorm \
     --use-mc2 \
-    --weight-decay 1e-1 \
+    --weight-decay 1e-2 \
 "
 
 DATA_ARGS="
@@ -93,4 +95,4 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
     --load $CKPT_LOAD_DIR \
-    | tee logs/train_aquila2_7b_ptd.log
+    | tee logs/train_aquila2_34b_ptd.log

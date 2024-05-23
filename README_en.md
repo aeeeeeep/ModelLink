@@ -66,7 +66,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> 【Ascend】 </td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/aquila2/README.md">Aquila2</a></td>
+      <td rowspan="2"><a href="examples/aquila2/README.md">Aquila2</a></td>
       <td>7B</td>
       <td> <a href="examples/aquila2/pretrain_aquila2_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/aquila2/generate_aquila2_7b_ptd.sh">generate</a> </td>
@@ -74,6 +74,16 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/aquila2/evaluate_aquila2_7b_ptd.sh">eval</a> </td>
+      <td>【Community】</td>
+    </tr>
+    <tr>
+      <td>34B</td>
+      <td> <a href="examples/aquila2/pretrain_aquila2_34b_ptd_16p.sh"> pretrain </a> </td>
+      <td> <a href="examples/aquila2/generate_aquila2_34b_ptd.sh">generate</a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/aquila2/evaluate_aquila2_34b_ptd.sh">eval</a> </td>
       <td>【Community】</td>
     </tr>
     <tr>
@@ -425,12 +435,19 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 2874 </td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/aquila2/README_en.md">Aquila2</a></td>
+      <td rowspan="2"><a href="examples/aquila2/README_en.md">Aquila2</a></td>
       <td>7B</td>
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 3323 </td>
       <td> 2673 </td>
+    </tr>
+    <tr>
+      <td>34B</td>
+      <td> 2x8</td>
+      <td> BF16 </td>
+      <td> 854 </td>
+      <td> 732 </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/baichuan/README.md">Baichuan</a></td>

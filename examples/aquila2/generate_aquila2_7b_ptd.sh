@@ -28,32 +28,32 @@ DISTRIBUTED_ARGS="
     "
 
 torchrun $DISTRIBUTED_ARGS inference.py \
-    --tensor-model-parallel-size ${TP} \
-    --pipeline-model-parallel-size ${PP} \
-    --num-layers 32 \
-    --hidden-size 4096 \
+    --attention-softmax-in-fp32 \
+    --disable-bias-linear \
+    --exit-on-missing-checkpoint \
     --ffn-hidden-size 11008 \
-    --num-attention-heads 32 \
-    --tokenizer-name-or-path $TOKENIZER_PATH \
-    --tokenizer-type PretrainedFromHF \
-    --seq-length 2048 \
+    --hidden-size 4096 \
+    --load $CKPT_LOAD_DIR \
+    --make-vocab-size-divisible-by 1 \
+    --max-new-tokens 512 \
     --max-position-embeddings 2048 \
     --micro-batch-size 1 \
-    --norm-epsilon 1e-5 \
-    --make-vocab-size-divisible-by 1 \
-    --untie-embeddings-and-output-weights \
-    --disable-bias-linear \
-    --position-embedding-type rope \
-    --normalization RMSNorm \
-    --use-fused-rmsnorm \
-    --swiglu \
-    --no-masked-softmax-fusion \
-    --attention-softmax-in-fp32 \
+    --no-gradient-accumulation-fusion \
     --no-load-optim \
     --no-load-rng \
-    --exit-on-missing-checkpoint \
-    --max-new-tokens 512 \
-    --load $CKPT_LOAD_DIR \
+    --no-masked-softmax-fusion \
+    --norm-epsilon 1e-5 \
+    --normalization RMSNorm \
+    --num-attention-heads 32 \
+    --num-layers 32 \
+    --pipeline-model-parallel-size ${PP} \
+    --position-embedding-type rope \
+    --seq-length 2048 \
+    --swiglu \
+    --tensor-model-parallel-size ${TP} \
+    --tokenizer-name-or-path $TOKENIZER_PATH \
     --tokenizer-not-use-fast \
-    --no-gradient-accumulation-fusion \
+    --tokenizer-type PretrainedFromHF \
+    --untie-embeddings-and-output-weights \
+    --use-fused-rmsnorm \
     | tee logs/generate_aquila2_7b_ptd.log
