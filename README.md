@@ -359,11 +359,21 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/mistral/evaluate_mistral_7b_ptd.sh"> eval </a> </td>
       <td>【昇腾贡献】</td>
     <tr>
-      <td rowspan="1"><a href="examples/gemma/README.md">Gemma</a></td>
+      <td rowspan="2"><a href="examples/gemma/README.md">Gemma</a></td>
+      <td>2B</td>
+      <td> <a href="examples/gemma/pretrain_gemma_2b_ptd.sh"> pretrain </a> </td>
+      <td> <a href="examples/gemma/generate_gemma_2b_ptd.sh"> generate </a></td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/gemma/evaluate_gemma_2b_ptd.sh">eval </a></td>
+      <td> 【昇腾贡献】 </td>
+    </tr>
+    <tr>
       <td>7B</td>
       <td> <a href="examples/gemma/pretrain_gemma_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/gemma/generate_gemma_7b_ptd.sh"> generate </a></td>
-      <td> -- </td>
+      <td > <a href="examples/gemma/tune_gemma_7b_ptd.sh">lora</a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/gemma/evaluate_gemma_7b_ptd.sh">eval </a></td>
@@ -637,7 +647,14 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> 2734 </td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/gemma/README.md">Gemma</a></td>
+      <td rowspan="2"><a href="examples/gemma/README.md">Gemma</a></td>
+      <td>2B</td>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 6821 </td>
+      <td> 7602 </td>
+    </tr>
+    <tr>
       <td>7B</td>
       <td>1x8</td>
       <td>BF16 </td>
