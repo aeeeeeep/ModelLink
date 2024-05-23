@@ -217,6 +217,10 @@ def _add_training_args(parser):
     group.add_argument('--shape-order', type=str, default='SBH',
                        choices=['SBH', 'BSH', 'BSND'],
                        help='input shape order used by Flash attention')
+    group.add_argument('--use-deter-comp',
+                       action='store_true',
+                       default=False,
+                       help='enable deterministic computing for npu')
     return parser
 
 

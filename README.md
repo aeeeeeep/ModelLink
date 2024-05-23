@@ -33,6 +33,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
 * [加速算法/融合算子/并行策略](#jump18)
 * [基于昇腾芯片采集Profiling数据](#jump19)
 * [Huggingface与Megatron-LM权重转换](#jump20)
+* [基于昇腾芯片的确定性计算功能](#jump21)
 
 强化学习等特性持续研发中....
 
@@ -667,7 +668,7 @@ ModelLink支持张量并行、流水线并行、序列并行、重计算、分�
 |             Fused swiglu             |       --use-fused-swiglu       |
 |                 mc2                  |           --use-mc2            |
 | Fused rotary <br/>position embedding |   --use-fused-rotary-pos-emb   |
-|        Sliding Window Attention      |        --sliding-window        |
+|       Sliding window attention       |        --sliding-window        |
 
 
 ```bash
@@ -709,6 +710,18 @@ Modellink支持基于昇腾芯片采集profiling数据，以提供对模型运�
 --profile-with-memory            # 是否采集内存，加入参数采集
 --profile-record-shapes          # 是否采集计算shape，加入参数采集
 --profile-save-path ./profile_dir    # profiling数据采集保存路径
+```
+
+## <span id="jump21"> 基于昇腾芯片的确定性计算功能
+昇腾芯片默认采用了不确定计算加速模型训练，有时为了重复实验与对比实验需要确定性的计算结果，ModelLink使能确定性计算的开关如下：
+
+- 启动命令中加入开关
+```shell
+--use-deter-comp
+```
+- 环境变量中加入开关
+```shell
+export HCCL_DETERMINISITIC=True
 ```
 
 ## 致谢
