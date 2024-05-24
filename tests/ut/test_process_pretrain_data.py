@@ -1,16 +1,15 @@
-import unittest
 import sys
 import os
 import math
 
 from utils import judge_expression
-import modellink
 
 from modellink.tokenizer import build_tokenizer
 from modellink.tokenizer.tokenizer import _AutoTokenizer
-from modellink.data.data_handler import GeneralPretrainHandler
-from modellink.data.data_handler import build_dataset, get_dataset_handler
-from tools.preprocess_data import get_args, build_splitter
+from modellink.tasks.preprocess.data_handler import GeneralPretrainHandler
+from modellink.tasks.preprocess.data_handler import build_dataset, get_dataset_handler
+from modellink.tasks.preprocess.utils import build_splitter
+from preprocess_data import get_args
 from tests.pipeline.common import DistributedTest
 
 

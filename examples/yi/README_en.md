@@ -149,7 +149,7 @@ Here's a hardware summary of pre-training Yi-34B:
    
     # process datasets          
     mkdir ./dataset/Yi-34B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Yi-34B/ \
         --output-prefix ./dataset/Yi-34B/alpaca \
@@ -181,11 +181,8 @@ Here's a hardware summary of pre-training Yi-34B:
 6. fine-tuning
 
     6.1 Prepare fine-tuning dataset
-
     Download the fine-tuning datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
-
-
-    ```shell
+    ```bash
     # download datasets
     mkdir finetune_dataset
     cd ./finetune_dataset
@@ -194,7 +191,7 @@ Here's a hardware summary of pre-training Yi-34B:
     
     # process datasets  
     mkdir ./finetune_dataset/Yi-34B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
       --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
       --tokenizer-name-or-path ./model_from_hf/Yi-34B/ \
       --output-prefix ./finetune_dataset/Yi-34B/alpaca \
@@ -204,14 +201,14 @@ Here's a hardware summary of pre-training Yi-34B:
       --handler-name GeneralInstructionHandler \
       --append-eod
     ```
-    
+
     6.2 Full Parameters Fine-Tuning yi_34B
     
     The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_yi_34b_ptd_16p.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
     
     Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step.
     
-    ```bash
+    ```shell
     CKPT_SAVE_DIR="./ckpt/Yi-34B/"
     DATA_PATH="./finetune_dataset/Yi-34B/alpaca"
     TOKENIZER_PATH="./model_from_hf/Yi-34B/"

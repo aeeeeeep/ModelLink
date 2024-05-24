@@ -131,7 +131,7 @@ Aquila2-7B 训练的硬件配置如下:
 
     # 处理数据   
     mkdir ./dataset/Aquila2-7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Aquila2-7B/ \
         --output-prefix ./dataset/Aquila2-7B/alpaca \
@@ -181,7 +181,7 @@ Aquila2-7B 训练的硬件配置如下:
 
     # 处理微调数据集  
     mkdir ./finetune_dataset/Aquila2-7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Aquila2-7B/ \
         --output-prefix ./finetune_dataset/Aquila2-7B/alpaca \
@@ -382,7 +382,7 @@ Aquila2-34B 训练的硬件配置如下:
 
     # 处理数据   
     mkdir ./dataset/Aquila2-34B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Aquila2-34B/ \
         --output-prefix ./dataset/Aquila2-34B/alpaca \
@@ -432,7 +432,7 @@ Aquila2-34B 训练的硬件配置如下:
 
     # 处理微调数据集  
     mkdir ./finetune_dataset/Aquila2-34B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Aquila2-34B/ \
         --output-prefix ./finetune_dataset/Aquila2-34B/alpaca \
