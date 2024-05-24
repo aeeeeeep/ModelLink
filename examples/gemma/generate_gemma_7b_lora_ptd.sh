@@ -7,6 +7,7 @@ export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 # please fill these path configurations
 CHECKPOINT="your model directory path"
+CHECKPOINT_LORA="your lora model directory path"
 TOKENIZER_PATH="your tokenizer directory path"
 
 # Change for multinode config
@@ -54,4 +55,9 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --vocab-size 256000 \
        --bf16 \
        --seed 42 \
+       --lora-load ${CHECKPOINT_LORA} \
+       --lora-r 16 \
+       --lora-alpha 32 \
+       --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
+       --inference-prompt-type 'alpaca' \
        | tee logs/generate_gemma_7b.log

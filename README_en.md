@@ -369,11 +369,21 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/mistral/evaluate_mistral_7b_ptd.sh"> eval </a>  </td>
       <td>【Ascend】</td>
     <tr>
-      <td rowspan="1"><a href="examples/gemma/README.md">Gemma</a></td>
+      <td rowspan="2"><a href="examples/gemma/README.md">Gemma</a></td>
+      <td>2B</td>
+      <td> <a href="examples/gemma/pretrain_gemma_2b_ptd.sh"> pretrain </a> </td>
+      <td> <a href="examples/gemma/generate_gemma_2b_ptd.sh"> generate </a></td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/gemma/evaluate_gemma_2b_ptd.sh">eval </a></td>
+      <td> 【Ascend】 </td>
+    </tr>
+    <tr>
       <td>7B</td>
       <td> <a href="examples/gemma/pretrain_gemma_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/gemma/generate_gemma_7b_ptd.sh"> generate </a></td>
-      <td> -- </td>
+      <td > <a href="examples/gemma/tune_gemma_7b_ptd.sh">lora</a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/gemma/evaluate_gemma_7b_ptd.sh">eval </a></td>
@@ -654,7 +664,14 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 2734 </td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/gemma/README.md">Gemma</a></td>
+      <td rowspan="2"><a href="examples/gemma/README.md">Gemma</a></td>
+      <td>2B</td>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 6821 </td>
+      <td> 7602 </td>
+    </tr>
+    <tr>
       <td>7B</td>
       <td>1x8</td>
       <td>BF16 </td>
