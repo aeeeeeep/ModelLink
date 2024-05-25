@@ -46,9 +46,10 @@ GPT_ARGS="
     --attention-softmax-in-fp32 \
     --apply-query-key-layer-scaling \
     --lr 1.2e-4 \
-    --train-iters 200 \
+    --train-iters 2000 \
     --init-method-std 0.0048 \
     --hidden-dropout 0.0 \
+    --attention-dropout 0.0 \
     --position-embedding-type alibi \
     --normalization LayerNorm \
     --min-lr 6e-6 \
