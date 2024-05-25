@@ -420,7 +420,7 @@ class FlashSelfAttention(torch.nn.Module):
         """Implements the multihead softmax attention.
         Arguments
         ---------
-            q, k, v: The tensor containing the query, key, and value. (B, S, H, D)
+            q, k, v: The tensor containing the query, key, and value. (S, B, H, D)
         """
         args = get_args()
 

@@ -389,6 +389,17 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/gemma/evaluate_gemma_7b_ptd.sh">eval </a></td>
       <td> 【Ascend】 </td>
     </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/gpt3/README.md">GPT3</a></td>
+      <td>175B</td>
+      <td> <a href="examples/gpt3/pretrain_gpt3_175B_ptd.sh"> pretrain </a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> 【Community】 </td>
+    </tr>
   </tbody>
 </table>
 
@@ -677,6 +688,14 @@ For the supported models listed above, we provide training scripts and readme in
       <td>BF16 </td>
       <td> 2938 </td>
       <td> 2607 </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/gpt3/README.md">GPT3</a></td>
+      <td>175B</td>
+      <td> 16x8 </td>
+      <td> FP16 </td>
+      <td> 153 </td>
+      <td> -- </td>
     </tr>
   </tbody>
 </table>

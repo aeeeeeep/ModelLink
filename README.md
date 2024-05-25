@@ -390,6 +390,17 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> <a href="examples/gemma/evaluate_gemma_7b_ptd.sh">eval </a></td>
       <td> 【昇腾贡献】 </td>
     </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/gpt3/README.md">GPT3</a></td>
+      <td>175B</td>
+      <td> <a href="examples/gpt3/pretrain_gpt3_175B_ptd.sh"> pretrain </a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> 【社区贡献】 </td>
+    </tr>
   </tbody>
 </table>
 
@@ -678,6 +689,14 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>BF16 </td>
       <td> 2938 </td>
       <td> 2607 </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/gpt3/README.md">GPT3</a></td>
+      <td>175B</td>
+      <td> 16x8 </td>
+      <td> FP16 </td>
+      <td> 153 </td>
+      <td> -- </td>
     </tr>
   </tbody>
 </table>
