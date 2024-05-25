@@ -272,7 +272,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> -- </td>
       <td> <a href="examples/llama3/generate_llama3_8b_chat_ptd.sh"> chat </a> </td>
       <td> <a href="examples/llama3/evaluate_llama3_8b_ptd.sh"> eval </a>  </td>
-      <td> 【Community】 </td>
+      <td> 【Ascend】 </td>
     </tr>
     <tr>
       <td>70B</td>
@@ -282,7 +282,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/llama3/evaluate_llama3_70b_ptd.sh"> eval </a> </td>
-      <td> 【Community】 </td>
+      <td> 【Ascend】 </td>
     </tr>
     <tr>
       <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
@@ -600,7 +600,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td>8x8</td>
       <td>BF16 </td>
       <td> 283 </td>
-      <td> -- </td>
+      <td> 355 </td>
     </tr>
     <tr>
       <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>

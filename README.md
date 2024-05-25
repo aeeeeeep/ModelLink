@@ -273,7 +273,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> -- </td>
       <td> <a href="examples/llama3/generate_llama3_8b_chat_ptd.sh"> chat </a> </td>
       <td> <a href="examples/llama3/evaluate_llama3_8b_ptd.sh"> eval </a>  </td>
-      <td> 【社区贡献】 </td>
+      <td> 【昇腾贡献】 </td>
     </tr>
     <tr>
       <td>70B</td>
@@ -283,7 +283,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/llama3/evaluate_llama3_70b_ptd.sh"> eval </a> </td>
-      <td> 【社区贡献】 </td>
+      <td> 【昇腾贡献】 </td>
     </tr>
     <tr>
       <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
@@ -601,7 +601,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td>8x8</td>
       <td>BF16 </td>
       <td> 283 </td>
-      <td> -- </td>
+      <td> 355 </td>
     </tr>
     <tr>
       <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>

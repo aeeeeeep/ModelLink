@@ -1,4 +1,4 @@
-# LLaMA3
+# LLaMA3  $\color{black}{\rm\tiny{【model}}$ $\color{black}{\rm\tiny{contributed}}$ $\color{black}{\rm\tiny{by}}$ $\color{black}{\rm\tiny{Ascend】}}$
 <p align="left">
         <b><a href="README.md">简体中文</a></b> |
         <b>English</b> 
@@ -555,7 +555,7 @@ The performance of LLaMA3-70B in **Ascend NPU** and **Reference**:
 | Device      | Model         | total Iterations     | throughput rate (tokens/s/p) | 
 | :------:    | :-----------: |:-------------------: | :-------------------------:  | 
 | NPUs        | LLaMA3-70B     | 1000                 | 283                         |
-| Reference   | LLaMA3-70B     | -                    | -                           |
+| Reference   | LLaMA3-70B     | -                    | 355                           |
 
 
 
