@@ -1,4 +1,4 @@
-# LLaMA3
+# LLaMA3  $\color{black}{\bf\tiny{【昇腾贡献模型】}}$
 
 <p align="left">
         <b>简体中文</b> |
@@ -527,7 +527,7 @@ LLaMA3-70B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 | 设备 |   模型   | 迭代数 | tokens吞吐 (tokens/s/p) |
 | :--: | :-------: | :----: | :---------------------: |
 | NPUs | LLaMA3-70B |  1000  |        283          |
-| 参考 | LLaMA3-70B |  -  |        -          |
+| 参考 | LLaMA3-70B |  -  |        355          |
 ## 推理-70B
 
 配置llama3-70B 推理脚本: examples/llama3/generate_llama3_70b_ptd.sh
