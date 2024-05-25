@@ -99,6 +99,31 @@ def add_data_args(parser):
                        help='Split documents into sentences.')
     group.add_argument('--keep-newlines', action='store_true',
                        help='Keep newlines between sentences when splitting.')
+    # LlamaFactory
+    group.add_argument('--template', type=str, default="",
+                       help='Which template to use for constructing prompts in training and inference.')
+    group.add_argument('--split', type=str, default="train",
+                       help='Which dataset split to use for training and evaluation.')
+    group.add_argument("--interleave-probs", default=None,
+                       help="Probabilities to sample data from datasets. Use commas to separate multiple datasets.")
+    group.add_argument('--mix-strategy', type=str,
+                       default='concat',
+                       choices=['concat',
+                                'interleave_under',
+                                'interleave_over'],
+                       help='Strategy to use in dataset mixing (concat/interleave) (undersampling/oversampling).')
+    group.add_argument("--dataset-dir", default=None,
+                       help="Path to the folder containing the datasets.")
+    group.add_argument("--overwrite-cache", action='store_true',
+                       help="Overwrite the cached training and evaluation sets.")
+    group.add_argument("--cache-dir", default=None,
+                       help="Where to store the pre-trained models downloaded from huggingface.co or modelscope.cn.")
+    group.add_argument("--max_samples", default=None,
+                       help="For debugging purposes, truncate the number of examples for each dataset.")
+    group.add_argument("--ms-hub-token", default=None,
+                       help="Auth token to log in with ModelScope Hub.")
+    group.add_argument("--hf-hub-token", default=None,
+                       help="Auth token to log in with Hugging Face Hub.")
 
 
 def add_tokenizer_args(parser):
