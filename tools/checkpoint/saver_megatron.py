@@ -19,7 +19,7 @@ from collections.abc import Mapping
 import concurrent.futures
 import os
 import sys
-
+import copy
 import torch
 import torch_npu
 
@@ -41,6 +41,8 @@ def add_arguments(parser):
     group.add_argument("--w-pack", type=bool,
                        help='True is w_pack weight for llm',
                        default=False)
+    group.add_argument('--num-layers-per-virtual-pipeline-stage', type=int, default=None,
+                       help='Number of layers per virtual pipeline stage')
 
 
 def save_huggingface(args, model):
@@ -483,6 +485,10 @@ def save_model_checkpoint(queue, args):
     # Transformer layers
     #-------------------
     total_layer_num = 0
+    lst = []
+    if args.num_layers_per_virtual_pipeline_stage:
+        while queue.qsize() > 3:
+            lst.append(queue.get())
     for pp_rank in range(args.target_pipeline_parallel_size):
         # For later pipeline parallel ranks, make the new models
         if pp_rank > 0:
@@ -490,74 +496,88 @@ def save_model_checkpoint(queue, args):
             post_process = pp_rank == args.target_pipeline_parallel_size - 1
             models = get_models(args.target_tensor_parallel_size, md.params_dtype, False, post_process)
 
-        for layer in range(len(models[0].language_model.encoder.layers)):
-            msg = queue_get(f"transformer layer {total_layer_num}")
-
-            # duplicated tensors
-            input_norm_weight = msg.pop("input norm weight")
-            if md.norm_has_bias:
-                input_norm_bias = msg.pop("input norm bias")
-            post_norm_weight = msg.pop("post norm weight")
-            if md.norm_has_bias:
-                post_norm_bias = msg.pop("post norm bias")
-            if md.linear_bias:
-                dense_bias = msg.pop("dense bias")
-                mlp_l1_bias = msg.pop("mlp l1 bias")
-
-            if args.add_qkv_bias:
-                qkv_bias = torch.chunk(msg.pop("qkv bias"), args.target_tensor_parallel_size, dim=0)
-            if args.add_dense_bias:
-                dense_bias = msg.pop("dense bias")
-
-            qkv_org = msg.pop("qkv weight")
-            qkv_weight = torch.chunk(qkv_org, args.target_tensor_parallel_size, dim=0)
-
-            # Split up the parallel tensors
-            dense_weight = torch.chunk(msg.pop("dense weight"), args.target_tensor_parallel_size, dim=1)
-            mlp_l1_weight = torch.chunk(msg.pop("mlp l1 weight"), args.target_tensor_parallel_size, dim=1)
-
-            # Special handling for swiglu
-            if md.swiglu:
-                mlp_l0_weight_W = torch.chunk(msg.pop("mlp l0 weight W"), args.target_tensor_parallel_size, dim=0)
-                mlp_l0_weight_V = torch.chunk(msg.pop("mlp l0 weight V"), args.target_tensor_parallel_size, dim=0)
-                mlp_l0_weight = [torch.cat(weights, dim=0) for weights in zip(mlp_l0_weight_W, mlp_l0_weight_V)]
-            else:
-                mlp_l0_weight = torch.chunk(msg.pop("mlp l0 weight"), args.target_tensor_parallel_size, dim=0)
-
-            if md.linear_bias:
-                qkv_bias = torch.chunk(msg.pop("qkv bias"), args.target_tensor_parallel_size, dim=0)
-                if md.swiglu:
-                    mlp_l0_bias_W = torch.chunk(msg.pop("mlp l0 bias W"), args.target_tensor_parallel_size, dim=0)
-                    mlp_l0_bias_V = torch.chunk(msg.pop("mlp l0 bias V"), args.target_tensor_parallel_size, dim=0)
-                    mlp_l0_bias = [torch.cat(bias, dim=0) for bias in zip(mlp_l0_bias_W, mlp_l0_bias_V)]
+        if args.num_layers_per_virtual_pipeline_stage:
+            vp_size = margs.num_layers // args.target_pipeline_parallel_size // args.num_layers_per_virtual_pipeline_stage
+        else:
+            vp_size = 1
+        for vpp_rank in range(vp_size):
+            for layer in range(len(models[0].language_model.encoder.layers) // vp_size):
+                if args.num_layers_per_virtual_pipeline_stage:
+                    # vpp model的layer间执行顺序与pp model不同，这里需要计算索引按实际执行顺序排列layer
+                    total_layer_num = args.target_pipeline_parallel_size * vpp_rank * args.num_layers_per_virtual_pipeline_stage + pp_rank * args.num_layers_per_virtual_pipeline_stage + layer
+                    msg = lst[total_layer_num]
                 else:
-                    mlp_l0_bias = torch.chunk(msg.pop("mlp l0 bias"), args.target_tensor_parallel_size, dim=0)
+                    msg = queue_get(f"transformer layer {total_layer_num}")
 
-            # Save them to the model
-            for tp_rank in range(args.target_tensor_parallel_size):
-                l = models[tp_rank].language_model.encoder.layers[layer]
-                l.input_norm.weight.data.copy_(input_norm_weight)
+                # duplicated tensors
+                input_norm_weight = msg.pop("input norm weight")
                 if md.norm_has_bias:
-                    l.input_norm.bias.data.copy_(input_norm_bias)
-                l.self_attention.query_key_value.weight.data.copy_(qkv_weight[tp_rank])
-                l.self_attention.dense.weight.data.copy_(dense_weight[tp_rank])
-                l.post_attention_norm.weight.data.copy_(post_norm_weight)
+                    input_norm_bias = msg.pop("input norm bias")
+                post_norm_weight = msg.pop("post norm weight")
                 if md.norm_has_bias:
-                    l.post_attention_norm.bias.data.copy_(post_norm_bias)
-                l.mlp.dense_h_to_4h.weight.data.copy_(mlp_l0_weight[tp_rank])
-                l.mlp.dense_4h_to_h.weight.data.copy_(mlp_l1_weight[tp_rank])
+                    post_norm_bias = msg.pop("post norm bias")
                 if md.linear_bias:
-                    l.self_attention.query_key_value.bias.data.copy_(qkv_bias[tp_rank])
-                    l.self_attention.dense.bias.data.copy_(dense_bias)
-                    l.mlp.dense_h_to_4h.bias.data.copy_(mlp_l0_bias[tp_rank])
-                    l.mlp.dense_4h_to_h.bias.data.copy_(mlp_l1_bias)
-                if args.add_qkv_bias:
-                    l.self_attention.query_key_value.bias.data.copy_(qkv_bias[tp_rank])
-                if args.add_dense_bias:
-                    l.self_attention.dense.bias.data.copy_(dense_bias)
+                    dense_bias = msg.pop("dense bias")
+                    mlp_l1_bias = msg.pop("mlp l1 bias")
 
-            total_layer_num = total_layer_num + 1
-            check_message(msg)
+                if args.add_qkv_bias:
+                    qkv_bias = torch.chunk(msg.pop("qkv bias"), args.target_tensor_parallel_size, dim=0)
+                if args.add_dense_bias:
+                    dense_bias = msg.pop("dense bias")
+
+                qkv_org = msg.pop("qkv weight")
+                qkv_weight = torch.chunk(qkv_org, args.target_tensor_parallel_size, dim=0)
+
+                # Split up the parallel tensors
+                dense_weight = torch.chunk(msg.pop("dense weight"), args.target_tensor_parallel_size, dim=1)
+                mlp_l1_weight = torch.chunk(msg.pop("mlp l1 weight"), args.target_tensor_parallel_size, dim=1)
+
+                # Special handling for swiglu
+                if md.swiglu:
+                    mlp_l0_weight_W = torch.chunk(msg.pop("mlp l0 weight W"), args.target_tensor_parallel_size, dim=0)
+                    mlp_l0_weight_V = torch.chunk(msg.pop("mlp l0 weight V"), args.target_tensor_parallel_size, dim=0)
+                    mlp_l0_weight = [torch.cat(weights, dim=0) for weights in zip(mlp_l0_weight_W, mlp_l0_weight_V)]
+                else:
+                    mlp_l0_weight = torch.chunk(msg.pop("mlp l0 weight"), args.target_tensor_parallel_size, dim=0)
+
+                if md.linear_bias:
+                    qkv_bias = torch.chunk(msg.pop("qkv bias"), args.target_tensor_parallel_size, dim=0)
+                    if md.swiglu:
+                        mlp_l0_bias_W = torch.chunk(msg.pop("mlp l0 bias W"), args.target_tensor_parallel_size, dim=0)
+                        mlp_l0_bias_V = torch.chunk(msg.pop("mlp l0 bias V"), args.target_tensor_parallel_size, dim=0)
+                        mlp_l0_bias = [torch.cat(bias, dim=0) for bias in zip(mlp_l0_bias_W, mlp_l0_bias_V)]
+                    else:
+                        mlp_l0_bias = torch.chunk(msg.pop("mlp l0 bias"), args.target_tensor_parallel_size, dim=0)
+
+                # Save them to the model
+                for tp_rank in range(args.target_tensor_parallel_size):
+                    if args.num_layers_per_virtual_pipeline_stage:
+                        l = models[tp_rank].language_model.encoder.layers[
+                            vpp_rank * args.num_layers_per_virtual_pipeline_stage + layer]
+                    else:
+                        l = models[tp_rank].language_model.encoder.layers[layer]
+                    l.input_norm.weight.data.copy_(input_norm_weight)
+                    if md.norm_has_bias:
+                        l.input_norm.bias.data.copy_(input_norm_bias)
+                    l.self_attention.query_key_value.weight.data.copy_(qkv_weight[tp_rank])
+                    l.self_attention.dense.weight.data.copy_(dense_weight[tp_rank])
+                    l.post_attention_norm.weight.data.copy_(post_norm_weight)
+                    if md.norm_has_bias:
+                        l.post_attention_norm.bias.data.copy_(post_norm_bias)
+                    l.mlp.dense_h_to_4h.weight.data.copy_(mlp_l0_weight[tp_rank])
+                    l.mlp.dense_4h_to_h.weight.data.copy_(mlp_l1_weight[tp_rank])
+                    if md.linear_bias:
+                        l.self_attention.query_key_value.bias.data.copy_(qkv_bias[tp_rank])
+                        l.self_attention.dense.bias.data.copy_(dense_bias)
+                        l.mlp.dense_h_to_4h.bias.data.copy_(mlp_l0_bias[tp_rank])
+                        l.mlp.dense_4h_to_h.bias.data.copy_(mlp_l1_bias)
+                    if args.add_qkv_bias:
+                        l.self_attention.query_key_value.bias.data.copy_(qkv_bias[tp_rank])
+                    if args.add_dense_bias:
+                        l.self_attention.dense.bias.data.copy_(dense_bias)
+
+                total_layer_num = total_layer_num + 1
+                check_message(msg)
 
         if post_process:
             msg = queue_get("final norm")
@@ -646,7 +666,29 @@ def save_model_checkpoint(queue, args):
         for tp_rank in range(args.target_tensor_parallel_size):
             mpu.set_tensor_model_parallel_rank(tp_rank)
             if args.save_model_type == 'megatron':
-                save_checkpoint(md.iteration, [models[tp_rank]], None, None)
+                # 将pp拆分成多个vpp,通过复制和删除选取每个vpp对应的层数
+                if args.num_layers_per_virtual_pipeline_stage:
+                    vp_models = []
+                    layers = margs.num_layers // args.target_pipeline_parallel_size
+                    for vp_rank in range(vp_size):
+                        model = copy.deepcopy(models[tp_rank])
+                        left = vp_rank * args.num_layers_per_virtual_pipeline_stage
+                        right = (vp_rank + 1) * args.num_layers_per_virtual_pipeline_stage
+                        for i in range(layers - 1, -1, -1):
+                            if i >= right or i < left:
+                                del model.language_model.encoder.layers[i]
+                        if right < layers and pp_rank == args.target_pipeline_parallel_size - 1:
+                            del model.language_model.encoder.final_norm
+                            if getattr(model.language_model, "output_layer", None):
+                                model.language_model.post_process = False
+                                del model.language_model.output_layer
+                        if pp_rank == 0 and vp_rank > 0:
+                            model.language_model.pre_process = False
+                            del model.language_model.embedding
+                        vp_models.append(model)
+                    save_checkpoint(md.iteration, vp_models, None, None)
+                else:
+                    save_checkpoint(md.iteration, [models[tp_rank]], None, None)
             elif args.save_model_type == 'huggingface_bloom':
                 save_huggingface(args, models[tp_rank])
             elif args.save_model_type == "save_huggingface_llama":
