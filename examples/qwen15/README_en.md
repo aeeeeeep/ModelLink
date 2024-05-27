@@ -6,6 +6,13 @@
 
 #  Contents
 
+- [Qwen1.5-4B](#Qwen1.5-4B)
+  - [Training](#training)
+    - [Script](#script)
+    - [Performance](#performance)
+      - [Machine performance](#machine-performance)
+  - [Inference-4B](#inference-4b)
+  - [Evaluation-4B](#evaluation-4b)
 - [Qwen1.5-7B](#qwen15-7b)
   - [Training](#training)
   - [Script](#script)
@@ -13,7 +20,6 @@
     - [Machine performance](#machine-performance)
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
-
 - [Qwen1.5-14B](#qwen15-14b)
   - [Training](#training)
   - [Script](#script)
@@ -22,6 +28,254 @@
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
 
+# Qwen1.5-4B
+
+## Training
+Here's a hardware summary of pre-training  Qwen-4B:
+
+| Hardware |                      Value                      |
+| :------: | :---------------------------------------------: |
+|   NPU    |               8 x Ascend NPUs                   |
+### Script
+
+1. Clone the repository to your local server
+
+    ```shell
+    git clone https://gitee.com/ascend/ModelLink.git 
+    git clone https://github.com/NVIDIA/Megatron-LM.git
+    cd Megatron-LM
+    git checkout -f bcce6f
+    cp -r megatron ../ModelLink/
+    cd ..
+    cd ModelLink
+    mkdir logs
+    mkdir model_from_hf
+    mkdir dataset
+    mkdir ckpt
+    ```
+2. Build environment
+
+    ```bash
+    # python3.8
+    conda create -n test python=3.8
+    conda activate test
+
+    # install torch 和 torch_npu
+    pip install torch-2.2.0-cp38-cp38m-manylinux2014_aarch64.whl
+    pip install torch_npu-2.2.0*-cp38-cp38m-linux_aarch64.whl
+    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+
+    # modify ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+    # install AscendSpeed
+    git clone https://gitee.com/ascend/AscendSpeed.git
+    cd AscendSpeed
+    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+    pip install -r requirements.txt 
+    pip3 install -e .
+    cd ..
+
+    # install other packages
+    pip install -r requirements.txt 
+    ```
+3. Download Qwen1.5-4B [pretrained weights and tokenizer](https://huggingface.co/Qwen/Qwen1.5-4B/tree/main)
+
+    ```shell
+    #!/bin/bash
+    mkdir ./model_from_hf/qwen15-4b-hf/
+    cd ./model_from_hf/qwen15-4b-hf/
+    wget https://huggingface.co/Qwen/Qwen1.5-4B/resolve/main/config.json
+    wget https://huggingface.co/Qwen/Qwen1.5-4B/resolve/main/generation_config.json
+    wget https://huggingface.co/Qwen/Qwen1.5-4B/resolve/main/merges.txt
+    wget https://huggingface.co/Qwen/Qwen1.5-4B/resolve/main/model-00001-of-00002.safetensors
+    wget https://huggingface.co/Qwen/Qwen1.5-4B/resolve/main/model-00002-of-00002.safetensors
+    wget https://huggingface.co/Qwen/Qwen1.5-4B/resolve/main/model.safetensors.index.json
+    wget https://huggingface.co/Qwen/Qwen1.5-4B/resolve/main/tokenizer.json
+    wget https://huggingface.co/Qwen/Qwen1.5-4B/resolve/main/tokenizer_config.json
+    wget https://huggingface.co/Qwen/Qwen1.5-4B/resolve/main/vocab.json
+    cd ../../
+    ```
+4. weight conversion in ptd mode
+
+    4.1 Convert weights from huggingface format to megatron format
+    ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
+
+    ```bash
+    # modify the script according to your own ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+    # convert to ptd weights
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader llama2_hf \
+        --saver megatron \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 2 \
+        --params-dtype bf16 \
+        --add-qkv-bias \
+        --load-dir ./model_from_hf/qwen15-4b-hf/ \
+        --save-dir ./model_weights/qwen15-4b-hf-v0.1-tp1-pp2/ \
+        --tokenizer-model ./model_from_hf/qwen15-4b-hf/tokenizer.model
+    ```
+
+    4.2 Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+    ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+
+    ```shell
+    # Modify the ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_llama \
+        --load-dir ./ckpt/ \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --add-qkv-bias \
+        --save-dir ./model_from_hf/qwen15-4b-hf/     # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/qwen15-4b-hf/mg2hg/
+    ```
+
+5. pre-training
+
+    5.1 prepare dataset
+
+    Download the Qwen1.5-4B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+
+    ```shell
+    # download datasets
+    cd ./dataset
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
+    # process datasets   
+    mkdir ./dataset/qwen15-4b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/qwen15-4b-hf/ \
+        --output-prefix ./dataset/qwen15-4b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF
+    ```
+
+    5.2 pre-training
+
+    ```shell
+    # modify the script according to your own ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+    # modify config according to your own actual situation
+    CKPT_SAVE_DIR="./ckpt/qwen15-4b-hf/"
+    TOKENIZER_MODEL="./model_from_hf/qwen15-4b-hf/tokenizer.model"  #tokenizer path
+    DATA_PATH="./dataset/qwen15-4b-hf/alpaca_text_document"  #processed dataset
+    CKPT_LOAD_DIR="./model_weights/qwen15-4b-hf-v0.1-tp1-pp2"
+    ```
+
+
+     Config Qwen1.5-4B pre-training script: examples/qwen15/pretrain_qwen15_4b_ptd.sh
+
+6. fine-tuning
+
+    6.1 Prepare fine-tuning dataset
+    Download the Qwen1.5-4B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+
+    ```shell
+    # download datasets
+    mkdir finetune_dataset
+    cd ./finetune_dataset
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
+
+    # process datasets   
+    mkdir ./finetune_dataset/qwen15-4b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/qwen15-4b-hf/ \
+        --output-prefix ./finetune_dataset/qwen15-4b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF \
+        --handler-name GeneralInstructionHandler \
+        --append-eod
+    ```
+
+    6.2 Full Parameters Fine-Tuning
+   The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_qwen15_4b_ptd.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
+
+    Add the fine-tuning parameter '--finetune' so that fine-tuning starts from the first step.
+
+    ```bash
+    DATA_PATH="./finetune_dataset/qwen15-4b-hf/alpaca"
+    TOKENIZER_PATH="./model_from_hf/qwen15-4b-hf/"
+    CKPT_PATH="./model_weights/qwen15-4b-hf-v0.1-tp1-pp2/"
+        --load ${CKPT_PATH} \
+        --finetune \
+        --is-instruction-dataset \
+        --tokenizer-type PretrainedFromHF \
+        --tokenizer-name-or-path ${TOKENIZER_PATH} \
+        --tokenizer-not-use-fast \
+    ```
+### Performance
+
+#### Machine performance
+
+The performance of Qwen1.5-4B in **Ascend NPU** and **Reference**:
+
+| Device | Model       | total Iterations  | throughput rate (tokens/s/p) |
+| :--: | :-------: | :----: | :---------------------: |
+| NPUs | Qwen1.5-4B |  1000  |        5033         |
+| Reference | Qwen1.5-4B |  1000  |        5328          |
+
+## Inference-4B
+
+Config Qwen1.5-4B inference script: examples/qwen1.5/generate_qwen1.5_4b_ptd.sh
+
+```bash
+# modify the script according to your own ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+ 
+# modify script model path and tokenizer path
+CHECKPOINT="./model_weights/qwen15-4b-hf-v0.1-tp1-pp2"
+TOKENIZER_PATH="./model_from_hf/qwen15-4b-hf/"
+```
+
+Config Qwen1.5-4B inference script
+
+```bash
+bash examples/qwen1.5/generate_qwen1.5_4b_ptd.sh
+```
+
+Some inference samples are as follows:
+![Inference](../../sources/images/qwen15/qwen1.5_4b_inference.png)
+
+## Evaluation-4B
+
+We use MMLU benchmark to evaluate our model. Benchmark Download [here](https://huggingface.co/datasets/cais/mmlu).
+Config Qwen1.5-4B evaluation script: examples/qwen15/evaluate_qwen15_4b_ptd.sh
+
+```bash
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+# modify script model path and tokenizer path
+TOKENIZER_PATH="./model_from_hf/qwen15-4b-hf/"  #tokenizer path
+CHECKPOINT="./model_weights/qwen15-4b-hf-v0.1-tp1-pp2"  #model path
+# configure task and data path
+DATA_PATH="./mmlu/data/test/"
+TASK="mmlu"
+```
+
+Launch evaluation script:
+
+```bash
+bash examples/qwen15/evaluate_qwen15_4b_ptd.sh
+```
+
+Evaluation results
+
+| dataset | subject_num | question_num | reference_acc |NPU acc |
+| :----: | :------: | :------: | :--------: | :-------: |
+|  MMLU  |    57    |  14042  |   0.561   |  0.550  |
 # Qwen1.5-7B
 
 ## Training
@@ -114,7 +368,7 @@ Here's a hardware summary of pre-training  Qwen1.5-7B:
         --save-dir ./model_weights/Qwen1.5-7B-v0.1-tp8-pp1/ \
         --tokenizer-model ./model_from_hf/Qwen1.5-7B/tokenizer.json \
         --add-qkv-bias \
-        --param-dtype bf16 
+        --params-dtype bf16 
     ```
 
    Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
@@ -385,7 +639,7 @@ Here's a hardware summary of pre-training  Qwen1.5-14B:
         --save-dir ./model_weights/Qwen1.5-14B-v0.1-tp8-pp1/ \
         --tokenizer-model ./model_from_hf/Qwen1.5-14B/tokenizer.json \
         --add-qkv-bias \
-        --param-dtype bf16 
+        --params-dtype bf16 
     ```
 
    Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
