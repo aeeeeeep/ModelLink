@@ -26,6 +26,15 @@ class AlpacaTemplate:
              "Write a response that appropriately completes the request. " \
              "Please note that you need to think through your response logically and step by step."
 
+@dataclass
+class LfAlpacaTemplate:
+    system_token = ""
+    user_token = "Instruction:"
+    assistant_token = "Response:"
+    end_token = ""
+    system = "Below is an instruction that describes a task, paired with an input that provides further context. " \
+             "Write a response that appropriately completes the request. " \
+             "Please note that you need to think through your response logically and step by step."
 
 class Prompter(object):
 

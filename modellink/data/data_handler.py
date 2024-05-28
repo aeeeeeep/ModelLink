@@ -22,11 +22,17 @@ import logging
 from typing import List
 
 import torch
+import inspect
 import numpy as np
+from functools import partial
 from datasets import load_dataset
 
 from megatron.core.datasets import indexed_dataset
-from modellink.data.prompter import Prompter, AlpacaTemplate
+from modellink.data.prompter import Prompter, AlpacaTemplate, LfAlpacaTemplate
+from modellink.data.templates import get_templates, Role, get_template_and_fix_tokenizer
+from modellink.data.parser import DatasetAttr
+from typing import Any, Dict, List, Optional
+from datasets import concatenate_datasets, interleave_datasets, Features
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -34,6 +40,15 @@ logger = logging.getLogger(__name__)
 __all__ = ["get_dataset_handler", "build_dataset"]
 
 DEFAULT_CACHE_DIR = "~/tmp"
+DATA_CONFIG = "dataset_info.json"
+FILEEXT2TYPE = {
+    "arrow": "arrow",
+    "csv": "csv",
+    "json": "json",
+    "jsonl": "json",
+    "parquet": "parquet",
+    "txt": "text",
+}
 
 
 class BaseDatasetHandler(object):
@@ -183,7 +198,175 @@ class AlpacaPretrainHandler(GeneralPretrainHandler):
         sample[key] = doc_ids
         sample[key] = list(map(lambda x: x['input_ids'], sample[key]))
         return sample
+
+def _add_or_replace_eos_token(tokenizer: "PreTrainedTokenizer", eos_token: str) -> None:
+    is_added = tokenizer.eos_token_id is None
+    num_added_tokens = tokenizer.add_special_tokens({"eos_token": eos_token})
+
+    if is_added:
+        logger.info("Add eos token: {}".format(tokenizer.eos_token))
+    else:
+        logger.info("Replace eos token: {}".format(tokenizer.eos_token))
+
+    if num_added_tokens > 0:
+        logger.warning("New tokens have been added, make sure `resize_vocab` is True.")
+
+# LlamaFactory通用格式
+class LlamaFactoryInstructionHandler(BaseDatasetHandler):
+    """
+    a Llama-factory Alpaca instruction dataset handler
+    """
+    def __init__(self, args, raw_datasets, tokenizer, splitter):
+        super().__init__(args, raw_datasets, tokenizer, splitter)
+        # self.prompter is unused in LlamaFactoryInstructionHandler
+        self.prompter = Prompter(LfAlpacaTemplate())
+        self.train_on_inputs = False
+        self.args.json_keys = ["input_ids", "attention_mask", "labels"]
+        # use 'packed' string to mark that this is a packed dataset
+        self.args.output_prefix = self.args.output_prefix + "_packed"
+        self.ignored_label = -100
+        self.is_multi_turn = self._is_muti_turn()
+        self.dataset_attr = get_dataset_list(args)
+        self.llama_factory_template = get_template_and_fix_tokenizer(tokenizer.tokenizer, args.template)
+
+
+    @property
+    def _instruction_key(self) -> str:
+        return "instruction"
+
+    @property
+    def _input_key(self) -> str:
+        return "input"
+
+    @property
+    def _output_key(self) -> str:
+        return "output"
+
+    @property
+    def _history_key(self)-> str:
+        return "history"
+
+    @property
+    def _system(self)-> str:
+        return "system"
+
+    @property
+    def _human_prefix(self) -> str:
+        return "Human:"
+
+    @property
+    def _assistant_prefix(self) -> str:
+        return "Assistant:"
     
+    def _is_muti_turn(self) -> bool:
+        try:
+            is_multi_turn = True if isinstance(self._history_key, str) else False
+        except NotImplementedError:
+            is_multi_turn = False
+        return is_multi_turn
+
+    def _format_msg(self, sample):
+        return sample
+
+    # ### convert_alpaca
+    # def _format_msg(self, sample):
+    #     """format sample info"""
+    #     outputs = {"prompt": [], "response": [], "system": [], "tools": []}
+    #     prompt = []
+        
+    #     if self._history_key in sample.keys() and isinstance(sample[self._history_key], dict):
+    #         for old_prompt, old_response in sample[self._history_key]:
+    #             prompt.append({"role": Role.USER.value, "content": old_prompt})
+    #             prompt.append({"role": Role.ASSISTANT.value, "content": old_response})
+
+    #     content = []
+    #     if self._instruction_key and sample[self._instruction_key]:
+    #         content.append(sample[self._instruction_key])
+
+    #     if self._input_key and sample[self._input_key]:
+    #         content.append(sample[self._input_key])
+
+    #     prompt.append({"role": Role.USER.value, "content": "\n".join(content)})
+
+    #     if self._output_key and isinstance(sample[self._output_key], list):
+    #         response = [
+    #             {"role": Role.ASSISTANT.value, "content": content} for content in examples[self._output_key]
+    #         ]
+    #     elif self._output_key and isinstance(sample[self._output_key], str):
+    #         response = [{"role": Role.ASSISTANT.value, "content": sample[self._output_key]}]
+    #     else:
+    #         response = []
+
+    #     outputs["prompt"]=prompt
+    #     outputs["response"]=response
+    #     outputs["system"].append(sample[self._system] if self._system in sample.keys() and self._system else "")
+    #     outputs["tools"].append("")
+    #     return outputs
+
+    def _tokenize_prompt(
+        self,
+        example: Dict[str, List[Any]],
+        template: "Template",
+        tokenizer: "PreTrainedTokenizer",
+) -> Dict[str, List[List[int]]]:
+        model_inputs = {"input_ids": [], "attention_mask": [], "labels": []}
+        input_ids, labels = [], []
+        # if len(example["prompt"]) % 2 != 1 or len(example["response"]) != 1:
+        #     return model_inputs
+        # example["prompt"]):[{'role': 'user', 'content': 'Summarize the given news article in one sentence.\nIn the latest budget announcement, the Chancellor has promised to introduce a new employment allowance to help employees of small businesses.'}, {'role': 'assistant', 'content': 'The government has announced an employment allowance to help employees of small businesses in their most recent budget announcement.'}]
+        if len(example["prompt"]) % 2 != 1 or len(example["response"]) != 1:
+            # this message is unvalid
+            messages = [{'role': 'user', 'content': ''}, {'role': 'assistant', 'content': ''}]
+        else:
+            messages = example["prompt"] + example["response"]
+
+        for source_ids, target_ids in self.llama_factory_template.encode_multiturn(
+            tokenizer, messages, example["system"][0], example["tools"][0]
+        ):
+            ### todo train_on_inputs这个参数作用是什么
+            if self.train_on_inputs: 
+                source_mask = source_ids
+            elif len(input_ids) != 0 and template.efficient_eos:
+                source_mask = [tokenizer.eos_token_id] + [self.ignored_label] * (len(source_ids) - 1)
+            else:
+                source_mask = [self.ignored_label] * len(source_ids)
+
+            input_ids += source_ids + target_ids
+            labels += source_mask + target_ids
+
+        if template.efficient_eos:
+            input_ids += [tokenizer.eos_token_id]
+            labels += [tokenizer.eos_token_id]
+
+        total_length = len(input_ids)
+        # block_size = 8
+        # # we drop the small remainder, and if the total_length < block_size, we exclude this batch
+        # total_length = (total_length // block_size) * block_size
+        # # split by chunks of cutoff_len
+        # for i in range(0, total_length, block_size):
+        #     if not all(label == self.ignored_label for label in labels[i : i + block_size]):
+        #         model_inputs["input_ids"].append(input_ids[i : i + block_size])
+        #         model_inputs["attention_mask"].append([1] * block_size)
+        #         model_inputs["labels"].append(labels[i : i + block_size])
+        model_inputs["input_ids"] = input_ids
+        # "input_ids[0] // input_ids[0]"" is to ensure that the dtype of attention_mask is consistent with the input_ids
+        ### Todo if input_ids[0] == 0,it will raise exception. have better method?
+        model_inputs["attention_mask"] = [input_ids[0] // input_ids[0]] * total_length # todo
+        model_inputs["labels"] = labels
+        return model_inputs
+
+    def _filter(self, sample):
+        messages = self._format_msg(sample)
+        tokenized_full_prompt = self._tokenize_prompt(messages, self.llama_factory_template, self.tokenizer.tokenizer)
+
+        if self.args.append_eod:
+            tokenized_full_prompt["input_ids"].append(self.tokenizer.eod)
+            tokenized_full_prompt["attention_mask"].append(1)
+            tokenized_full_prompt["labels"].append(self.tokenizer.eod)
+
+        for key in self.args.json_keys:
+            tokenized_full_prompt[key] = [tokenized_full_prompt[key]]
+        return tokenized_full_prompt
 
 class GeneralInstructionHandler(BaseDatasetHandler):
     """
@@ -272,7 +455,8 @@ class GeneralInstructionHandler(BaseDatasetHandler):
 
         for key in self.args.json_keys:
             tokenized_full_prompt[key] = [tokenized_full_prompt[key]]
-
+        print("tokenized_full_prompt")
+        print(tokenized_full_prompt)
         return tokenized_full_prompt
 
 
@@ -461,21 +645,346 @@ def _has_py_script(input_name):
     return has_py_script
 
 
+
+def use_modelscope() -> bool:
+    return bool(int(os.environ.get("USE_MODELSCOPE_HUB", "0")))
+
+def get_dataset_list(data_args) -> List["DatasetAttr"]:
+    """Map multiple dataset attributes to List["DatasetAttr"]
+    through parameters and the data.json mapping file."""
+    if data_args.input is not None:
+        dataset_names = [ds.split("/")[-1].strip() for ds in data_args.input.split(",")]
+    else:
+        dataset_names = []
+
+    if data_args.dataset_dir == "ONLINE":
+        dataset_info = None
+    else:
+        try:
+            with open(os.path.join(data_args.dataset_dir, DATA_CONFIG), "r") as f:
+                dataset_info = json.load(f)
+        except Exception as err:
+            if len(dataset_names) != 0:
+                raise ValueError(
+                    "Cannot open {} due to {}.".format(os.path.join(data_args.dataset_dir, DATA_CONFIG), str(err))
+                )
+            dataset_info = None
+    ### Multiple Dataset Interleaving Probability
+    if data_args.interleave_probs is not None:
+        data_args.interleave_probs = [float(prob.strip()) for prob in data_args.interleave_probs.split(",")]
+
+    dataset_list: List[DatasetAttr] = []
+    for name in dataset_names:
+        if dataset_info is None:
+            load_from = "ms_hub" if use_modelscope() else "hf_hub"
+            dataset_attr = DatasetAttr(load_from, dataset_name=name)
+            dataset_list.append(dataset_attr)
+            continue
+
+        if name not in dataset_info:
+            raise ValueError("Undefined dataset {} in {}.".format(name, DATA_CONFIG))
+
+        has_hf_url = "hf_hub_url" in dataset_info[name]
+        has_ms_url = "ms_hub_url" in dataset_info[name]
+
+        if has_hf_url or has_ms_url:
+            if (use_modelscope() and has_ms_url) or (not has_hf_url):
+                dataset_attr = DatasetAttr("ms_hub", dataset_name=dataset_info[name]["ms_hub_url"])
+            else:
+                dataset_attr = DatasetAttr("hf_hub", dataset_name=dataset_info[name]["hf_hub_url"])
+        elif "script_url" in dataset_info[name]:
+            dataset_attr = DatasetAttr("script", dataset_name=dataset_info[name]["script_url"])
+        else:
+            dataset_attr = DatasetAttr("file", dataset_name=dataset_info[name]["file_name"])
+
+        dataset_attr.set_attr("subset", dataset_info[name])
+        dataset_attr.set_attr("folder", dataset_info[name])
+        dataset_attr.set_attr("ranking", dataset_info[name], default=False)
+        dataset_attr.set_attr("formatting", dataset_info[name], default="alpaca")
+
+        if "columns" in dataset_info[name]:
+            column_names = ["system", "images"]
+            if dataset_attr.formatting == "alpaca":
+                column_names.extend(["prompt", "query", "response", "history"])
+            else:
+                column_names.extend(["messages", "tools"])
+
+            for column_name in column_names:
+                dataset_attr.set_attr(column_name, dataset_info[name]["columns"])
+
+        if dataset_attr.formatting == "sharegpt" and "tags" in dataset_info[name]:
+            tag_names = (
+                "role_tag",
+                "content_tag",
+                "user_tag",
+                "assistant_tag",
+                "observation_tag",
+                "function_tag",
+                "system_tag",
+            )
+            for tag in tag_names:
+                dataset_attr.set_attr(tag, dataset_info[name]["tags"])
+
+        dataset_list.append(dataset_attr)
+
+    return dataset_list
+
+def convert_alpaca(sample: Dict[str, List[Any]], dataset_attr: "DatasetAttr", data_args: "DataArguments"):
+    """format sample info
+    {
+      "instruction": "我还想知道中国古代的五代十国时期和欧洲的中世纪有什么异同点？",
+      "input": "",
+      "output": "中国的五代十国时期和欧洲的中世纪大体上是同时期的历史时期，但它们有许多重要的异同点。",
+      "history": [
+       [
+        "回答的非常好",
+        "感谢你的认可！还有什么需要我帮助的吗？"
+       ]
+      ]
+     }
+    ---->>>>
+    {
+        'prompt': [{'role': 'user', 'content': '回答的非常好'}, 
+                {'role': 'assistant', 'content': '感谢你的认可！还有什么需要我帮助的吗？'}, 
+                {'role': 'user', 'content': '我还想知道中国古代的五代十国时期和欧洲的中世纪有什么异同点？'}], 
+        'response': [{'role': 'assistant', 'content': '中国的五代十国时期和欧洲的中世纪大体上是同时期的历史时期，但它们有许多重要的异同点。'}], 
+        'system': [''], 
+        'tools': ['']
+    }
+     """
+    outputs = {"prompt": [], "response": [], "system": [], "tools": []}
+    prompt = []
+    
+    if dataset_attr.history and isinstance(sample[dataset_attr.history], dict):
+        for old_prompt, old_response in sample[dataset_attr.history]:
+            prompt.append({"role": Role.USER.value, "content": old_prompt})
+            prompt.append({"role": Role.ASSISTANT.value, "content": old_response})
+
+    content = []
+    if dataset_attr.prompt and sample[dataset_attr.prompt]:
+        content.append(sample[dataset_attr.prompt])
+
+    if dataset_attr.query and sample[dataset_attr.query]:
+        content.append(sample[dataset_attr.query])
+
+    prompt.append({"role": Role.USER.value, "content": "\n".join(content)})
+
+    if dataset_attr.response and isinstance(sample[dataset_attr.response], list):
+        response = [
+            {"role": Role.ASSISTANT.value, "content": content} for content in sample[dataset_attr.response]
+        ]
+    elif dataset_attr.response and isinstance(sample[dataset_attr.response], str):
+        response = [{"role": Role.ASSISTANT.value, "content": sample[dataset_attr.response]}]
+    else:
+        response = []
+
+    outputs["prompt"]=prompt
+    outputs["response"]=response
+    outputs["system"].append(sample[dataset_attr.system] if dataset_attr.system else "")
+    outputs["tools"].append("")
+    return outputs
+
+
+# todo 待开发
+def convert_sharegpt(
+    examples: Dict[str, List[Any]], dataset_attr: "DatasetAttr", data_args: "DataArguments"
+) -> Dict[str, List[Any]]:
+    outputs = {"prompt": [], "response": [], "system": [], "tools": []}
+
+    return outputs
+
+
+def align_dataset(dataset, dataset_attr, data_args):
+    r"""
+    Aligned dataset:
+        prompt: [{"role": "user", "content": "..."}] * (2T - 1)
+        response: [{"role": "assistant", "content": "..."}]
+        system: "..."
+        tools: "...",
+        images: [],
+    """
+    if dataset_attr.formatting == "alpaca":
+        convert_func = partial(convert_alpaca, dataset_attr=dataset_attr, data_args=data_args)
+    else:
+        convert_func = partial(convert_sharegpt, dataset_attr=dataset_attr, data_args=data_args)
+    column_names = list(next(iter(dataset)).keys())
+    # features = Features.from_dict(
+    #     {
+    #         "prompt": [
+    #             {"role": {"dtype": "string", "_type": "Value"}, "content": {"dtype": "string", "_type": "Value"}}
+    #         ],
+    #         "response": [
+    #             {"role": {"dtype": "string", "_type": "Value"}, "content": {"dtype": "string", "_type": "Value"}}
+    #         ],
+    #         "system": [{"dtype": "string", "_type": "Value"}],
+    #         "tools": [{"dtype": "string", "_type": "Value"}],
+    #     }
+    # )
+    kwargs = {}
+    if not data_args.streaming:
+        kwargs = dict(
+            num_proc=data_args.workers,
+            load_from_cache_file=(not data_args.overwrite_cache),
+            desc="Converting format of dataset",
+        )
+
+    return dataset.map(
+        convert_func,
+        remove_columns=column_names,
+        **kwargs,
+    )
+
+def load_single_dataset(dataset_attr, data_args):
+    """loading single dataset by huggingface/modelscope/script/local file"""
+    logger.info("Loading dataset {}...".format(dataset_attr))
+    data_path, data_name, data_dir, data_files = None, None, None, None
+    if dataset_attr.load_from in ["hf_hub", "ms_hub"]:
+        data_path = dataset_attr.dataset_name
+        data_name = dataset_attr.subset
+        data_dir = dataset_attr.folder
+
+    elif dataset_attr.load_from == "script":
+        data_path = os.path.join(data_args.dataset_dir, dataset_attr.dataset_name)
+        data_name = dataset_attr.subset
+        data_dir = dataset_attr.folder
+
+    elif dataset_attr.load_from == "file":
+        data_files = []
+        local_path = os.path.join(data_args.dataset_dir, dataset_attr.dataset_name)
+        if os.path.isdir(local_path):  # is directory
+            for file_name in os.listdir(local_path):
+                data_files.append(os.path.join(local_path, file_name))
+                if data_path is None:
+                    data_path = FILEEXT2TYPE.get(file_name.split(".")[-1], None)
+                elif data_path != FILEEXT2TYPE.get(file_name.split(".")[-1], None):
+                    raise ValueError("File types should be identical.")
+        elif os.path.isfile(local_path):  # is file
+            data_files.append(local_path)
+            data_path = FILEEXT2TYPE.get(local_path.split(".")[-1], None)
+        else:
+            raise ValueError("File not found.")
+
+        if data_path is None:
+            raise ValueError("File extension must be txt, csv, json or jsonl.")
+    else:
+        raise NotImplementedError
+
+    if dataset_attr.load_from == "ms_hub":
+        try:
+            from modelscope import MsDataset
+            from modelscope.utils.config_ds import MS_DATASETS_CACHE
+
+            cache_dir = data_args.cache_dir or MS_DATASETS_CACHE
+            dataset = MsDataset.load(
+                dataset_name=data_path,
+                subset_name=data_name,
+                data_dir=data_dir,
+                data_files=data_files,
+                split=data_args.split,
+                cache_dir=cache_dir,
+                token=data_args.ms_hub_token,
+                use_streaming=(data_args.streaming and (dataset_attr.load_from != "file")),
+            )
+            if isinstance(dataset, MsDataset):
+                dataset = dataset.to_hf_dataset()
+        except ImportError:
+            raise ImportError("Please install modelscope via `pip install modelscope -U`")
+    else:
+        if "trust_remote_code" in inspect.signature(load_dataset).parameters:  # for datasets==2.16.0
+            kwargs = {"trust_remote_code": True}
+        else:
+            kwargs = {}
+        cache_dir = data_args.cache_dir or DEFAULT_CACHE_DIR
+        dataset = load_dataset(
+            path=data_path,
+            name=data_name,
+            data_dir=data_dir,
+            data_files=data_files,
+            split=data_args.split,
+            cache_dir=cache_dir,
+            token=data_args.hf_hub_token,
+            streaming=(data_args.streaming and (dataset_attr.load_from != "file")),
+            **kwargs,
+        )
+
+    # if data_args.streaming and (dataset_attr.load_from == "file"):  # faster than specifying streaming=True
+    #     dataset = dataset.to_iterable_dataset()  # TODO: add num shards parameter
+
+    if data_args.max_samples is not None:  # truncate dataset
+        num_samples = min(data_args.max_samples, len(dataset))
+        dataset = dataset.select(range(num_samples))
+
+    return align_dataset(dataset, dataset_attr, data_args)
+
+def merge_dataset(all_datasets, data_args):
+    """Merging multiple Datasets by mix_strategy"""
+    if len(all_datasets) == 1:
+        return all_datasets[0]
+    elif data_args.mix_strategy == "concat":
+        if data_args.streaming:
+            logger.warning("The samples between different datasets will not be mixed in streaming mode.")
+        return concatenate_datasets(all_datasets)
+    elif data_args.mix_strategy.startswith("interleave"):
+        if not data_args.streaming:
+            logger.warning("We recommend using `mix_strategy=concat` in non-streaming mode.")
+        return interleave_datasets(
+            datasets=all_datasets,
+            probabilities=data_args.interleave_probs,
+            seed=data_args.seed,
+            stopping_strategy="first_exhausted" if data_args.mix_strategy.endswith("under") else "all_exhausted",
+        )
+    else:
+        raise ValueError("Unknown mixing strategy.")
+
 def build_dataset(args):
     """loading dataset by huggingface"""
-    if args.handler_name == "MOSSInstructionHandler" or args.handler_name == "MOSSMultiTurnHandler":
-        # for MOSS, streaming is needed.
-        args.streaming = True
-    if args.hf_datasets_params:
-        with open(args.hf_datasets_params, 'r') as fin:
-            param_dict = json.load(fin)
-        return load_dataset(**param_dict)
-    cache_dir = DEFAULT_CACHE_DIR
-    split_flag = "train"
-    load_from_local = os.path.exists(args.input)
-    if load_from_local:
-        if _has_py_script(args.input):
-            logger.info("loading data from a local python script")
+    raw_datasets = None
+    if (args.handler_name == "LlamaFactoryInstructionHandler"):
+        all_datasets = []
+        for dataset_attr in get_dataset_list(args):
+            all_datasets.append(load_single_dataset(dataset_attr, args))
+        raw_datasets = merge_dataset(all_datasets, args)
+    else:
+        if args.handler_name == "MOSSInstructionHandler" or args.handler_name == "MOSSMultiTurnHandler":
+            # for MOSS, streaming is needed.
+            args.streaming = True
+        if args.hf_datasets_params:
+            with open(args.hf_datasets_params, 'r') as fin:
+                param_dict = json.load(fin)
+            return load_dataset(**param_dict)
+        cache_dir = DEFAULT_CACHE_DIR
+        split_flag = "train"
+        load_from_local = os.path.exists(args.input)
+        if load_from_local:
+            if _has_py_script(args.input):
+                logger.info("loading data from a local python script")
+                raw_datasets = load_dataset(
+                    args.input,
+                    split=split_flag,
+                    num_proc=None if args.streaming else args.workers,
+                    cache_dir=cache_dir,
+                    streaming=args.streaming
+                )
+            else:
+                data_files = [args.input] if os.path.isfile(args.input) else \
+                    glob.glob(os.path.join(args.input, '*'))
+                ext, data_format = _get_data_format(data_files)
+                filtered_data_files = list(filter(lambda x: x.split('.')[-1] == ext, data_files))
+                if filtered_data_files:
+                    logger.info("loading data from local file, format: %s," 
+                                " file num: %s", data_format, len(data_files))
+                    raw_datasets = load_dataset(
+                        data_format,
+                        split=split_flag,
+                        data_files=filtered_data_files,
+                        num_proc=None if args.streaming else args.workers,
+                        cache_dir=cache_dir,
+                        streaming=args.streaming
+                    )
+                else:
+                    raise Exception("unknown local data!")
+        else:
+            logger.info("loading data from remote huggingface")
             raw_datasets = load_dataset(
                 args.input,
                 split=split_flag,
@@ -483,31 +992,7 @@ def build_dataset(args):
                 cache_dir=cache_dir,
                 streaming=args.streaming
             )
-        else:
-            data_files = [args.input] if os.path.isfile(args.input) else \
-                glob.glob(os.path.join(args.input, '*'))
-            ext, data_format = _get_data_format(data_files)
-            filtered_data_files = list(filter(lambda x: x.split('.')[-1] == ext, data_files))
-            if filtered_data_files:
-                logger.info("loading data from local file, format: %s," 
-                            " file num: %s", data_format, len(data_files))
-                raw_datasets = load_dataset(
-                    data_format,
-                    split=split_flag,
-                    data_files=filtered_data_files,
-                    num_proc=None if args.streaming else args.workers,
-                    cache_dir=cache_dir,
-                    streaming=args.streaming
-                )
-            else:
-                raise Exception("unknown local data!")
-    else:
-        logger.info("loading data from remote huggingface")
-        raw_datasets = load_dataset(
-            args.input,
-            split=split_flag,
-            num_proc=None if args.streaming else args.workers,
-            cache_dir=cache_dir,
-            streaming=args.streaming
-        )
+        if raw_datasets == None:
+            raise Exception("unknown data!")
+
     return raw_datasets
