@@ -603,10 +603,10 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     </tr>
     <tr>
       <td>70B</td>
-      <td>8x8</td>
+      <td>4x8</td>
       <td>BF16 </td>
-      <td> 350 </td>
-      <td> 339 </td>
+      <td> 420 </td>
+      <td> 430 </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/llama3/README.md">LLaMA3</td>

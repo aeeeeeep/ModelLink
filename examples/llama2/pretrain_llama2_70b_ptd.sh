@@ -1,11 +1,12 @@
 #!/bin/bash
 export NPU_ASD_ENABLE=0
 export CUDA_DEVICE_MAX_CONNECTIONS=1
+export WITHOUT_JIT_COMPILE=1
 
 GPUS_PER_NODE=8
 MASTER_ADDR=localhost
 MASTER_PORT=6000
-NNODES=8
+NNODES=4
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
@@ -14,7 +15,7 @@ DATA_PATH="your data path"
 TOKENIZER_MODEL="your tokenizer path"
 CKPT_LOAD_DIR="your model ckpt path"
 TP=8
-PP=8
+PP=4
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $GPUS_PER_NODE \
@@ -36,7 +37,7 @@ GPT_ARGS="
     --tokenizer-model ${TOKENIZER_MODEL} \
     --seq-length 4096 \
     --max-position-embeddings 4096 \
-    --micro-batch-size 2 \
+    --micro-batch-size 1 \
     --global-batch-size 1024  \
     --make-vocab-size-divisible-by 1 \
     --lr 1.0e-6 \
@@ -68,7 +69,11 @@ GPT_ARGS="
     --group-query-attention \
     --num-query-groups 8 \
     --lr-warmup-fraction 0.01 \
-    --bf16
+    --bf16 \
+    --use-fused-swiglu \
+    --use-fused-rotary-pos-emb \
+    --num-layers-per-virtual-pipeline-stage 5 \
+    --use-mc2 \
 "
 
 DATA_ARGS="

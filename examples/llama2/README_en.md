@@ -700,7 +700,7 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
 | Model | Hardware |      Value      |
 | :---: | :------: | :--------------: |
 |  34B  |   NPU   | 16 x Ascend NPUs |
-|  70B  |   NPU   | 64 x Ascend NPUs |
+|  70B  |   NPU   | 32 x Ascend NPUs |
 
 ### Script-2
 
@@ -825,8 +825,9 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
         --saver megatron \
         --target-tensor-parallel-size 8 \
         --target-pipeline-parallel-size 4 \
+        --num-layers-per-virtual-pipeline-stage 5 \
         --load-dir ./model_from_hf/llama2-70b-hf/ \
-        --save-dir ./model_weights/llama2-70b-hf-v0.1-tp8-pp4/ \
+        --save-dir ./model_weights/llama2-70b-hf-v0.1-tp8-pp4-vpp5/ \
         --tokenizer-model ./model_from_hf/llama2-70b-hf/tokenizer.model \
         --params-dtype bf16  
     ```
@@ -862,9 +863,10 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
             --loader megatron \
             --saver megatron \
             --save-model-type save_huggingface_llama \
-            --load-dir ./model_weights/llama2-70b-hf-v0.1-tp8-pp4/ \
+            --load-dir ./model_weights/llama2-70b-hf-v0.1-tp8-pp4-vpp5/ \
             --target-tensor-parallel-size 1 \
             --target-pipeline-parallel-size 1 \
+            --num-layers-per-virtual-pipeline-stage 5 \
             --save-dir ./model_from_hf/llama2-70b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama2-70b-hf/mg2hg/
         ```
 
@@ -1057,8 +1059,8 @@ The performance of LLaMA2-34B/70B in **Ascend NPU** and **Reference**
 |:---------------:|:----------:|:---------------------:|
 |      NPUs       | LLaMA2-34B |          690          |
 |    Reference    | LLaMA2-34B |          796          |
-|      NPUs       | LLaMA2-70B |          350          |
-|    Reference    | LLaMA2-70B |          339          |
+|      NPUs       | LLaMA2-70B |          420          |
+|    Reference    | LLaMA2-70B |          430          |
 
 
 

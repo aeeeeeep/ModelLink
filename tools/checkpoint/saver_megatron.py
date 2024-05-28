@@ -486,7 +486,7 @@ def save_model_checkpoint(queue, args):
     #-------------------
     total_layer_num = 0
     lst = []
-    if args.num_layers_per_virtual_pipeline_stage:
+    if args.num_layers_per_virtual_pipeline_stage and args.save_model_type == 'megatron':
         while queue.qsize() > 3:
             lst.append(queue.get())
     for pp_rank in range(args.target_pipeline_parallel_size):
@@ -496,13 +496,13 @@ def save_model_checkpoint(queue, args):
             post_process = pp_rank == args.target_pipeline_parallel_size - 1
             models = get_models(args.target_tensor_parallel_size, md.params_dtype, False, post_process)
 
-        if args.num_layers_per_virtual_pipeline_stage:
+        if args.num_layers_per_virtual_pipeline_stage and args.save_model_type == 'megatron':
             vp_size = margs.num_layers // args.target_pipeline_parallel_size // args.num_layers_per_virtual_pipeline_stage
         else:
             vp_size = 1
         for vpp_rank in range(vp_size):
             for layer in range(len(models[0].language_model.encoder.layers) // vp_size):
-                if args.num_layers_per_virtual_pipeline_stage:
+                if args.num_layers_per_virtual_pipeline_stage and args.save_model_type == 'megatron':
                     # vpp model的layer间执行顺序与pp model不同，这里需要计算索引按实际执行顺序排列layer
                     total_layer_num = args.target_pipeline_parallel_size * vpp_rank * args.num_layers_per_virtual_pipeline_stage + pp_rank * args.num_layers_per_virtual_pipeline_stage + layer
                     msg = lst[total_layer_num]
@@ -551,7 +551,7 @@ def save_model_checkpoint(queue, args):
 
                 # Save them to the model
                 for tp_rank in range(args.target_tensor_parallel_size):
-                    if args.num_layers_per_virtual_pipeline_stage:
+                    if args.num_layers_per_virtual_pipeline_stage and args.save_model_type == 'megatron':
                         l = models[tp_rank].language_model.encoder.layers[
                             vpp_rank * args.num_layers_per_virtual_pipeline_stage + layer]
                     else:
