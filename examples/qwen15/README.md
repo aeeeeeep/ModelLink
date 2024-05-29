@@ -250,7 +250,7 @@ bash examples/qwen15/generate_qwen15_4b_ptd.sh
 
 推理示例如下：
 
-![Inference](../../sources/images/qwen15/qwen1.5_4b_inference.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/qwen15/qwen1.5_4b_inference.png)
 
 ## 评估-4B
 
@@ -521,7 +521,7 @@ bash examples/qwen15/generate_qwen15_7b_ptd.sh
 
 推理示例如下：
 
-![Inference](../../sources/images/qwen15/qwen1.5_7b_inference.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/qwen15/qwen1.5_7b_inference.png)
 
 ## 评估
 
@@ -791,7 +791,7 @@ bash examples/qwen15/generate_qwen15_14b_ptd.sh
 
 推理示例如下：
 
-![Inference](../../sources/images/qwen15/qwen1.5_14b_inference.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/qwen15/qwen1.5_14b_inference.png)
 
 ## 评估
 

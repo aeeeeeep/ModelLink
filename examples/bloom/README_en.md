@@ -186,7 +186,7 @@ bash examples/bloom/generate_bloom_7b_ptd.sh
 
 Some inference samples are as follows:
 
-![Inference](../../sources/images/bloom/bloom7b-generate.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/bloom/bloom7b-generate.png)
 
 ## Evaluation Bloom-7B
 
@@ -409,7 +409,7 @@ bash examples/bloom/generate_bloom_176b_ptd.sh
 
 Some inference samples are as follows:
 
-![Inference](../../sources/images/bloom/bloom176b-generate.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/bloom/bloom176b-generate.png)
 
 ## Evaluation Bloom 176B
 

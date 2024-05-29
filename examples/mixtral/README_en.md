@@ -288,7 +288,7 @@ bash examples/mixtral/generate_mixtral_8x7b_ptd.sh
 ```
 
 An example of inference is as follows:
-![Inference](../../sources/images/mixtral/generate_demo.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/mixtral/generate_demo.png)
 
 ## Model-Evaluation
 

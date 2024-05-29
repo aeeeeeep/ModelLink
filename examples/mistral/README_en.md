@@ -268,7 +268,7 @@ bash examples/mistral/generate_mistral_7b_ptd.sh
 ```
 
 An example of inference is as follows:
-![Inference](../../sources/images/mistral/generate_demo.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/mistral/generate_demo.png)
 
 ## Model-Evaluation
 

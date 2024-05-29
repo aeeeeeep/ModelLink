@@ -185,7 +185,7 @@ bash examples/bloom/generate_bloom_7b_ptd.sh
 
 推理示例如下：
 
-![Inference](../../sources/images/bloom/bloom7b-generate.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/bloom/bloom7b-generate.png)
 
 ## Bloom-7B评测
 
@@ -403,7 +403,7 @@ bash examples/bloom/generate_bloom_176b_ptd.sh
 
 推理示例如下：
 
-![Inference](../../sources/images/bloom/bloom176b-generate.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/bloom/bloom176b-generate.png)
 
 ## 评估
 

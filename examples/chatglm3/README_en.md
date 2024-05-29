@@ -76,21 +76,21 @@ Here's a hardware summary of pre-training  ChatGLM3-6B:
     #!/bin/bash
     mkdir ./model_from_hf/chatglm3_6b_hf/
     cd ./model_from_hf/chatglm3_6b_hf/
-    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/config.json
-    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/configuration_chatglm.py
-    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/modeling_chatglm.py
-    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00001-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00002-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00003-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00004-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00005-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00006-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model-00007-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/pytorch_model.bin.index.json
-    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/quantization.py
-    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/tokenization_chatglm.py
-    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/tokenizer.model
-    wget https://huggingface.co/THUDM/chatglm3-6b/blob/main/tokenizer_config.json
+    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/config.json
+    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/configuration_chatglm.py
+    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/modeling_chatglm.py
+    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00001-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00002-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00003-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00004-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00005-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00006-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00007-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model.bin.index.json
+    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/quantization.py
+    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/tokenization_chatglm.py
+    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/tokenizer.model
+    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/tokenizer_config.json
     cd ../../
     ```
 4. weight conversion in ptd mode
@@ -194,7 +194,7 @@ bash ./examples/chatglm3/generate_chatglm3_6B.sh
 ```
 
 Some inference samples are as follows:
-![ChatGLM3-6B-generate.png](../../sources/images/chatglm3/ChatGLM3-6B-generate.png)
+![ChatGLM3-6B-generate.png](https://gitee.com/ascend/ModelLink/raw/master/sources/images/chatglm3/ChatGLM3-6B-generate.png)
 
 ## Evaluation
 

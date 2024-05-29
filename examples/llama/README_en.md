@@ -383,11 +383,11 @@ Some inference samples are as follows:
 
 LLaMA-7B:
 
-![llama-7B_generate.png](../../sources/images/llama/llama-7B_generate.png)
+![llama-7B_generate.png](https://gitee.com/ascend/ModelLink/raw/master/sources/images/llama/llama-7B_generate.png)
 
 LLaMA-13B:
 
-![llama-13B_generate.png](../../sources/images/llama/llama-13B_generate.png)
+![llama-13B_generate.png](https://gitee.com/ascend/ModelLink/raw/master/sources/images/llama/llama-13B_generate.png)
 
 ## Evaluation with Numerous Benchmarks
 
@@ -828,11 +828,11 @@ Some inference samples are as follows:
 
 LLaMA-33B:
 
-![llama-13B_generate.png](../../sources/images/llama/llama33B_generate.png)
+![llama-13B_generate.png](https://gitee.com/ascend/ModelLink/raw/master/sources/images/llama/llama33B_generate.png)
 
 LLaMA-65B:
 
-![llama-65B_generate.png](../../sources/images/llama/llama-65B_generate.png)
+![llama-65B_generate.png](https://gitee.com/ascend/ModelLink/raw/master/sources/images/llama/llama-65B_generate.png)
 
 ## Evaluation with Numerous Benchmarks
 

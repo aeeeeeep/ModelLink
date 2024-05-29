@@ -34,7 +34,7 @@ GPT_ARGS="
     --sequence-parallel \
     --num-layers 40 \
     --hidden-size 5120 \
-    --ffn-hidden-size 13686 \
+    --ffn-hidden-size 13696 \
     --num-attention-heads 40 \
     --load ${CKPT_LOAD_DIR} \
     --finetune \

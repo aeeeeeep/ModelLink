@@ -202,7 +202,7 @@ bash examples/aquila/generate_aquila_7b_ptd.sh
 
 Aquila-7B:
 
-![aquila-7B_generate.png](../../sources/images/aquila/aquila_7B_generate_ptd_0205.png)
+![aquila-7B_generate.png](https://gitee.com/ascend/ModelLink/raw/master/sources/images/aquila/aquila_7B_generate_ptd_0205.png)
 
 ## 评估
 

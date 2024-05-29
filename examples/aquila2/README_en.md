@@ -238,7 +238,7 @@ bash ./examples/aquila2/generate_aquila2_7b_ptd.sh
 
 Sample results of Aquila2-7B Inference:
 
-![Inference](../../sources/images/aquila2/aquila2-7b-generate.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/aquila2/aquila2-7b-generate.png)
 
 <h2 id="7b-evaluation">Evaluation</h2>
 
@@ -484,7 +484,7 @@ bash ./examples/aquila2/generate_aquila2_34b_ptd.sh
 
 Sample results of Aquila2-34B Inference:
 
-![Inference](../../sources/images/aquila2/aquila2-34b-generate.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/aquila2/aquila2-34b-generate.png)
 
 <h2 id="34b-evaluation">Evaluation</h2>
 

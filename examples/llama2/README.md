@@ -103,7 +103,7 @@ LLAMA2-7B 训练的硬件配置:
     ```
 4. 权重转换
 
-    4.1 将权重从 huggingface 格式转化为 magatron 格式
+    4.1 将权重从 huggingface 格式转化为 megatron 格式
     ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
     ```bash
@@ -292,7 +292,7 @@ bash examples/llama2/generate_llama2_7b_lora_ptd.sh
 ```
 
 推理的示例如下:
-![Inference](../../sources/images/llama2/llama2-7B-generate.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/llama2/llama2-7B-generate.png)
 
 ## 评估-7B
 
@@ -447,7 +447,7 @@ LLaMA2-13B 训练的硬件配置:
    ```
 4. 权重转换
 
-   4.1 将权重从 huggingface 格式转化为 magatron 格式
+   4.1 将权重从 huggingface 格式转化为 megatron 格式
    ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
 
     ```bash
@@ -639,7 +639,7 @@ bash ./examples/llama2/generate_llama2_13b_lora_ptd.sh
 ```
 
 推理结果示例如下:
-![llama2-13B-generate.png](../../sources/images/llama2/llama2-13B-generate.png)
+![llama2-13B-generate.png](https://gitee.com/ascend/ModelLink/raw/master/sources/images/llama2/llama2-13B-generate.png)
 
 ## 评估
 
@@ -738,28 +738,28 @@ LLaMA2-34B/70B 训练的硬件配置:
     ```shell
     mkdir ./model_from_hf/llama2-70b-hf/
     cd ./model_from_hf/llama2-70b-hf/
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/config.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/generation_config.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00001-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00002-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00003-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00004-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00005-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00006-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00007-of-00015.bin   
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00008-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00009-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00010-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00011-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00012-of-00015.bin   
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00013-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00014-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00015-of-00015.bin   
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model.bin.index.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/special_tokens_map.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer.model
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer_config.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/config.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/generation_config.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00001-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00002-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00003-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00004-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00005-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00006-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00007-of-00015.bin   
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00008-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00009-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00010-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00011-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00012-of-00015.bin   
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00013-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00014-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00015-of-00015.bin   
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model.bin.index.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/special_tokens_map.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/tokenizer.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/tokenizer.model
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/tokenizer_config.json
     cd ../../
     ```
 
@@ -788,10 +788,10 @@ LLaMA2-34B/70B 训练的硬件配置:
     ```bash
     mkdir ./model_from_hf/llama2-70b-hf/
     cd ./model_from_hf/llama2-70b-hf/
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/special_tokens_map.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer.model
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer_config.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/special_tokens_map.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/tokenizer.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/tokenizer.model
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/tokenizer_config.json
     cd ../../
     ```
 4. 权重转换
@@ -1096,10 +1096,10 @@ bash ./examples/llama2/generate_llama2_70b_lora_ptd.sh
 
 LLaMA2-34B推理样例:
 
-![llama2-34B-generate](../../sources/images/llama2/llama2-34B-generate.png)
+![llama2-34B-generate](https://gitee.com/ascend/ModelLink/raw/master/sources/images/llama2/llama2-34B-generate.png)
 
 LLaMA2-70B推理样例：
-![llama2-70B_generate.png](../../sources/images/llama2/llama2-70B-generate.png)
+![llama2-70B_generate.png](https://gitee.com/ascend/ModelLink/raw/master/sources/images/llama2/llama2-70B-generate.png)
 
 ## 评估-2
 

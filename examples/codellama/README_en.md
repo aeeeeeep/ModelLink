@@ -258,7 +258,7 @@ bash examples/codellama/generate_codellama_34b_ptd.sh
 
 Some inference samples are as follows:
 
-![Inference](../../sources/images/codellama/codellama-34b-generate.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/codellama/codellama-34b-generate.png)
 
 ## Evaluation
 

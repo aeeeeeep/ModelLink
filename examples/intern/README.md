@@ -192,7 +192,7 @@ bash ./examples/intern/generate_internlm_7b_ptd.sh
 ```
 
 推理举例：
-![Internlm-7b-inference](../../sources/images/intern/intern_7B_inference.png)
+![Internlm-7b-inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/intern/intern_7B_inference.png)
 
 #### 评估
 
