@@ -7,6 +7,13 @@
 
 # 目录
 
+- [Qwen1.5-4B](#Qwen1.5-4B)
+  - [训练](#训练)
+    - [脚本](#脚本)
+    - [性能](#性能)
+      - [吞吐](#吞吐)
+  - [推理-4B](#推理-4b)
+  - [评估-4B](#评估-4b)
 - [Qwen1.5-7B](#qwen15-7b)
 	- [训练](#训练)
 	- [脚本](#脚本)
@@ -14,7 +21,6 @@
 		- [吞吐](#吞吐)
 	- [推理](#推理)
 	- [评估](#评估)
-
 - [Qwen1.5-14B](#qwen15-14b)
 	- [训练](#训练)
 	- [脚本](#脚本)
@@ -22,6 +28,259 @@
 		- [吞吐](#吞吐)
 	- [推理](#推理)
 	- [评估](#评估)
+
+# Qwen1.5-4B
+
+## 训练
+Qwen1.5-4B 训练的硬件配置:
+
+| 硬件  |       配置        |
+|:---:|:---------------:|
+| NPU | 8 x Ascend NPUs |
+### 脚本
+
+1. 克隆仓库到本地服务器
+
+    ```shell
+    git clone https://gitee.com/ascend/ModelLink.git 
+    git clone https://github.com/NVIDIA/Megatron-LM.git
+    cd Megatron-LM
+    git checkout -f bcce6f
+    cp -r megatron ../ModelLink/
+    cd ..
+    cd ModelLink
+    mkdir logs
+    mkdir model_from_hf
+    mkdir dataset
+    mkdir ckpt
+    ```
+2. 搭建环境
+
+    ```bash
+    # python3.8
+    conda create -n test python=3.8
+    conda activate test
+
+    # 安装 torch 和 torch_npu
+    pip install torch-2.2.0-cp38-cp38m-manylinux2014_aarch64.whl
+    pip install torch_npu-2.2.0*-cp38-cp38m-linux_aarch64.whl
+    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+    # 安装加速库
+    git clone https://gitee.com/ascend/AscendSpeed.git
+    cd AscendSpeed
+    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+    pip install -r requirements.txt 
+    pip3 install -e .
+    cd ..
+
+    # 安装其余依赖库
+    pip install -r requirements.txt 
+    ```
+3. 下载 Qwen1.5-4B 的 [预训练权重和词表](https://huggingface.co/Qwen/Qwen1.5-4B/tree/main)
+
+    ```shell
+    #!/bin/bash
+    mkdir ./model_from_hf/qwen15-4b-hf/
+    cd ./model_from_hf/qwen15-4b-hf/
+    wget https://huggingface.co/Qwen/Qwen1.5-4B/resolve/main/config.json
+    wget https://huggingface.co/Qwen/Qwen1.5-4B/resolve/main/generation_config.json
+    wget https://huggingface.co/Qwen/Qwen1.5-4B/resolve/main/merges.txt
+    wget https://huggingface.co/Qwen/Qwen1.5-4B/resolve/main/model-00001-of-00002.safetensors
+    wget https://huggingface.co/Qwen/Qwen1.5-4B/resolve/main/model-00002-of-00002.safetensors
+    wget https://huggingface.co/Qwen/Qwen1.5-4B/resolve/main/model.safetensors.index.json
+    wget https://huggingface.co/Qwen/Qwen1.5-4B/resolve/main/tokenizer.json
+    wget https://huggingface.co/Qwen/Qwen1.5-4B/resolve/main/tokenizer_config.json
+    wget https://huggingface.co/Qwen/Qwen1.5-4B/resolve/main/vocab.json
+    cd ../../
+    ```
+4. 权重转换
+
+    4.1 将权重从 huggingface 格式转化为 magatron 格式
+    ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
+
+    ```bash
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+    # 权重格式转换
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader llama2_hf \
+        --saver megatron \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 2 \
+        --params-dtype bf16 \
+        --add-qkv-bias \
+        --load-dir ./model_from_hf/qwen15-4b-hf/ \
+        --save-dir ./model_weights/qwen15-4b-hf-v0.1-tp1-pp2/ \
+        --tokenizer-model ./model_from_hf/qwen15-4b-hf/tokenizer.model
+    ```
+
+    4.2 任意并行切分策略的 Megatron 权重 格式转化为 HuggingFace权重
+    ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+
+    ```shell
+    # 请按照您的真实环境修改 set_env.sh 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_llama \
+        --load-dir ./ckpt/ \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --add-qkv-bias \
+        --save-dir ./model_from_hf/qwen15-4b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/qwen15-4b-hf/mg2hg/
+    ```
+
+    权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数 `target-tensor-parallel-size`和 `target-pipeline-parallel-size`。
+5. 预训练
+
+    5.1 准备数据集
+
+    下载 Qwen1.5-4B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+
+    ```shell
+    # 下载数据
+    cd ./dataset
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
+    # 处理数据   
+    mkdir ./dataset/qwen15-4b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/qwen15-4b-hf/ \
+        --output-prefix ./dataset/qwen15-4b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF
+    ```
+
+    5.2 预训练
+
+    ```shell
+    # 设置 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+    # 根据实际情况配置词表、数据集、模型参数保存路径
+    CKPT_SAVE_DIR="./ckpt/qwen15-4b-hf/"
+    TOKENIZER_MODEL="./model_from_hf/qwen15-4b-hf/tokenizer.model"  #词表路径
+    DATA_PATH="./dataset/qwen15-4b-hf/alpaca_text_document"  #数据集路径
+    CKPT_LOAD_DIR="./model_weights/qwen15-4b-hf-v0.1-tp1-pp2"
+    ```
+
+
+    启动 Qwen1.5-4B 预训练脚本: examples/qwen15/pretrain_qwen15_4b_ptd.sh
+
+6. 微调
+
+    6.1 准备微调数据集
+    下载微调数据集 [这里](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+
+    ```shell
+    # 下载数据集
+    mkdir finetune_dataset
+    cd ./finetune_dataset
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
+
+    # 处理微调数据集  
+    mkdir ./finetune_dataset/qwen15-4b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/qwen15-4b-hf/ \
+        --output-prefix ./finetune_dataset/qwen15-4b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF \
+        --handler-name GeneralInstructionHandler \
+        --append-eod
+    ```
+
+    6.2 全参微调
+    全参微调的配置脚本基本和预训练脚本一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
+
+    增加微调参数--finetune，参数如下：
+
+    ```bash
+    DATA_PATH="./finetune_dataset/qwen15-4b-hf/alpaca"
+    TOKENIZER_PATH="./model_from_hf/qwen15-4b-hf/"
+    CKPT_PATH="./model_weights/qwen15-4b-hf-v0.1-tp1-pp2/"
+        --load ${CKPT_PATH} \
+        --finetune \
+        --is-instruction-dataset \
+        --tokenizer-type PretrainedFromHF \
+        --tokenizer-name-or-path ${TOKENIZER_PATH} \
+        --tokenizer-not-use-fast \
+    ```
+### 性能
+
+#### 吞吐
+
+Qwen1.5-4B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
+
+| 设备 |   模型   | 迭代数 | tokens吞吐 (tokens/s/p) |
+| :--: | :-------: | :----: | :---------------------: |
+| NPUs | Qwen1.5-4B |  1000  |        5033         |
+| 参考 | Qwen1.5-4B |  1000  |        5328          |
+
+## 推理-4B
+
+配置Qwen1.5-4B 推理脚本: examples/qwen1.5/generate_qwen1.5_4b_ptd.sh
+
+```bash
+# 根据您自己的 ascend-toolkit 路径，执行set_env.sh
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+ 
+# 修改模型权重路径和词表路径
+CHECKPOINT="./model_weights/qwen15-4b-hf-v0.1-tp1-pp2"
+TOKENIZER_PATH="./model_from_hf/qwen15-4b-hf/"
+```
+
+启动Qwen1.5-4B 推理脚本
+
+```bash
+bash examples/qwen15/generate_qwen15_4b_ptd.sh
+```
+
+推理示例如下：
+
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/qwen15/qwen1.5_4b_inference.png)
+
+## 评估-4B
+
+使用 MMLU数据集评估模型. 数据集下载路径 [这里](https://huggingface.co/datasets/cais/mmlu).
+配置Qwen1.5-4B 评估脚本: examples/qwen1.5/evaluate_qwen1.5_4b_ptd.sh
+
+```bash
+# ascend-toolkit 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+# 修改模型参数路径和词表路径
+TOKENIZER_PATH="./model_from_hf/qwen15-4b-hf/"  #词表路径
+CHECKPOINT="./model_weights/qwen15-4b-hf-v0.1-tp1-pp2"  #模型路径
+# 配置任务和数据集路径
+DATA_PATH="./mmlu/data/test/"
+TASK="mmlu"
+```
+
+启动评估
+
+```bash
+bash examples/qwen15/evaluate_qwen15_4b_ptd.sh
+```
+
+评估结果如下
+
+| 数据集 | 总学科数 | 总问题数 | 参考准确率 | NPU准确率 |
+| :----: | :------: | :------: | :--------: | :-------: |
+|  MMLU  |    57    |  14042  |   0.561   |  0.550  |
+
 
 # Qwen1.5-7B
 
@@ -113,7 +372,7 @@ Qwen1.5-7B 训练的硬件配置:
        --save-dir ./model_weights/DA-v0.1-tp8-pp1/ \
        --tokenizer-model ./model_from_hf/Qwen1.5-7B/tokenizer.json \
        --add-qkv-bias \
-       --param-dtype bf16 
+       --params-dtype bf16 
    ```
 
    任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
@@ -262,7 +521,7 @@ bash examples/qwen15/generate_qwen15_7b_ptd.sh
 
 推理示例如下：
 
-![Inference](../../sources/images/qwen15/qwen1.5_7b_inference.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/qwen15/qwen1.5_7b_inference.png)
 
 ## 评估
 
@@ -383,7 +642,7 @@ Qwen1.5-14B 训练的硬件配置:
        --save-dir ./model_weights/Qwen1.5-14B-v0.1-tp8-pp1/ \
        --tokenizer-model ./model_from_hf/Qwen1.5-14B/tokenizer.json \
        --add-qkv-bias \
-       --param-dtype bf16 
+       --params-dtype bf16 
    ```
 
    任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
@@ -532,7 +791,7 @@ bash examples/qwen15/generate_qwen15_14b_ptd.sh
 
 推理示例如下：
 
-![Inference](../../sources/images/qwen15/qwen1.5_14b_inference.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/qwen15/qwen1.5_14b_inference.png)
 
 ## 评估
 

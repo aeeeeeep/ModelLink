@@ -268,7 +268,7 @@ bash examples/mistral/generate_mistral_7b_ptd.sh
 ```
 
 推理的示例如下:
-![Inference](../../sources/images/mistral/generate_demo.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/mistral/generate_demo.png)
 
 ## 模型评估
 

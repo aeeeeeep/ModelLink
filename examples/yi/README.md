@@ -254,7 +254,7 @@ bash examples/yi/generate_yi_34b_ptd.sh
 ```
 推理的示例如下:
 
-![Inference](../../sources/images/yi/yi-34b-generate.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/yi/yi-34b-generate.png)
 
 ## 评估
 

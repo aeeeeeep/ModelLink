@@ -192,7 +192,7 @@ bash ./examples/aquila/generate_aquila_7b_ptd.sh
 
 Sample results of Aquila-7B Inference:
 
-![aquila-7B_generate.png](../../sources/images/aquila/aquila_7B_generate.png)
+![aquila-7B_generate.png](https://gitee.com/ascend/ModelLink/raw/master/sources/images/aquila/aquila_7B_generate.png)
 
 ## Evaluation with Benchmark
 

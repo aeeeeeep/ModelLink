@@ -530,7 +530,7 @@ bash examples/gemma/generate_gemma_7b_lora_ptd.sh
 ```
 
 Lora推理的示例如下:
-![Inference](../../sources/images/gemma/gemma-7b-lora-inference.jpg)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/gemma/gemma-7b-lora-inference.jpg)
 
 ## 评估
 

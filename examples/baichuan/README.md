@@ -212,7 +212,7 @@ bash examples/baichuan/generate_baichuan_7b_ptd.sh
 
 推理的示例如下:
 
-![Inference](../../sources/images/baichuan/baichuan_7B_inference.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/baichuan/baichuan_7B_inference.png)
 
 ## 评估
 
@@ -447,7 +447,7 @@ bash examples/baichuan/generate_baichuan_13b_ptd.sh
 ```
 
 推理的示例如下:
-![Inference](../../sources/images/baichuan/baichuan_13B_inference.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/baichuan/baichuan_13B_inference.png)
 
 ## 评估
 

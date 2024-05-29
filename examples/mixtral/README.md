@@ -287,7 +287,7 @@ bash examples/mixtral/generate_mixtral_8x7b_ptd.sh
 ```
 
 推理的示例如下:
-![Inference](../../sources/images/mixtral/generate_demo.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/mixtral/generate_demo.png)
 
 ## 模型评估
 

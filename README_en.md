@@ -272,7 +272,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> -- </td>
       <td> <a href="examples/llama3/generate_llama3_8b_chat_ptd.sh"> chat </a> </td>
       <td> <a href="examples/llama3/evaluate_llama3_8b_ptd.sh"> eval </a>  </td>
-      <td> 【Community】 </td>
+      <td> 【Ascend】 </td>
     </tr>
     <tr>
       <td>70B</td>
@@ -282,7 +282,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/llama3/evaluate_llama3_70b_ptd.sh"> eval </a> </td>
-      <td> 【Community】 </td>
+      <td> 【Ascend】 </td>
     </tr>
     <tr>
       <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
@@ -316,7 +316,17 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> 【Ascend】 </td>
     </tr>
     <tr>
-      <td rowspan="2"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+       <td rowspan="3"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+      <td>4B</td>
+      <td> <a href="examples/qwen15/pretrain_qwen15_4b_ptd.sh"> pretrain </a> </td>
+      <td> <a href="examples/qwen15/generate_qwen15_4b_ptd.sh"> generate </a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/qwen15/evaluate_qwen15_4b_ptd.sh"> eval </a> </td>
+      <td rowspan="1"> 【Community】 </td>
+    </tr>
+    <tr>
       <td>7B</td>
       <td> <a href="examples/qwen15/pretrain_qwen15_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen15/generate_qwen15_7b_ptd.sh"> generate </a> </td>
@@ -388,6 +398,17 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> -- </td>
       <td> <a href="examples/gemma/evaluate_gemma_7b_ptd.sh">eval </a></td>
       <td> 【Ascend】 </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/gpt3/README.md">GPT3</a></td>
+      <td>175B</td>
+      <td> <a href="examples/gpt3/pretrain_gpt3_175B_ptd.sh"> pretrain </a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> 【Community】 </td>
     </tr>
   </tbody>
 </table>
@@ -582,10 +603,10 @@ For the supported models listed above, we provide training scripts and readme in
     </tr>
     <tr>
       <td>70B</td>
-      <td>8x8</td>
+      <td>4x8</td>
       <td>BF16 </td>
-      <td> 350 </td>
-      <td> 339 </td>
+      <td> 420 </td>
+      <td> 430 </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/llama3/README.md">LLaMA3</a></td>
@@ -600,7 +621,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td>8x8</td>
       <td>BF16 </td>
       <td> 283 </td>
-      <td> -- </td>
+      <td> 355 </td>
     </tr>
     <tr>
       <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
@@ -625,7 +646,13 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 345 </td>
     </tr>
     <tr>
-      <td rowspan="2"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+      <td rowspan="3"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+      <td> 4B </td>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td>  5033 </td>
+      <td> 5328 </td>
+      </tr>
       <td> 7B </td>
       <td> 1x8 </td>
       <td> BF16 </td>
@@ -677,6 +704,14 @@ For the supported models listed above, we provide training scripts and readme in
       <td>BF16 </td>
       <td> 2938 </td>
       <td> 2607 </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/gpt3/README.md">GPT3</a></td>
+      <td>175B</td>
+      <td> 16x8 </td>
+      <td> FP16 </td>
+      <td> 153 </td>
+      <td> -- </td>
     </tr>
   </tbody>
 </table>

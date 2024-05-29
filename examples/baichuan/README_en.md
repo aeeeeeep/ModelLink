@@ -212,7 +212,7 @@ bash examples/baichuan/generate_baichuan_7b_ptd.sh
 
 Some inference samples are as follows:
 
-![Inference](../../sources/images/baichuan/baichuan_7B_inference.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/baichuan/baichuan_7B_inference.png)
 
 ## Evaluation
 
@@ -450,7 +450,7 @@ bash examples/baichuan/generate_baichuan_13b_ptd.sh
 ```
 
 Some inference samples are as follows:
-![Inference](../../sources/images/baichuan/baichuan_13B_inference.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/baichuan/baichuan_13B_inference.png)
 
 ## Evaluation
 

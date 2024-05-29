@@ -131,7 +131,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 2 \
         --load-dir ./model_from_hf/llama-2-7b-hf/ \
-        --save-dir ./model_weights/llama-2-7b-hf-v0.1-tp8-pp1/ \
+        --save-dir ./model_weights/llama-2-7b-hf-v0.1-tp1-pp2/ \
         --tokenizer-model ./model_from_hf/llama-2-7b-hf/tokenizer.model
     ```
 
@@ -145,7 +145,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
         --loader megatron \
         --saver megatron \
         --save-model-type save_huggingface_llama \
-        --load-dir ./model_weights/llama-2-7b-hf-v0.1-tp8-pp1/ \
+        --load-dir ./model_weights/llama-2-7b-hf-v0.1-tp1-pp2/ \
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 1 \
         --save-dir ./model_from_hf/llama-2-7b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-2-7b-hf/mg2hg/
@@ -313,7 +313,7 @@ bash examples/llama2/generate_llama2_7b_lora_ptd.sh
 ```
 
 Some inference samples are as follows:
-![Inference](../../sources/images/llama2/llama2-7B-generate.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/llama2/llama2-7B-generate.png)
 
 ## Evaluation-7B
 
@@ -654,7 +654,7 @@ bash examples/llama2/generate_llama2_13b_lora_ptd.sh
 ```
 
 Some inference samples are as follows:
-![llama2-13B-generate.png](../../sources/images/llama2/llama2-13B-generate.png)
+![llama2-13B-generate.png](https://gitee.com/ascend/ModelLink/raw/master/sources/images/llama2/llama2-13B-generate.png)
 
 ## Evaluation
 
@@ -700,7 +700,7 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
 | Model | Hardware |      Value      |
 | :---: | :------: | :--------------: |
 |  34B  |   NPU   | 16 x Ascend NPUs |
-|  70B  |   NPU   | 64 x Ascend NPUs |
+|  70B  |   NPU   | 32 x Ascend NPUs |
 
 ### Script-2
 
@@ -753,28 +753,28 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
     ```shell
     mkdir ./model_from_hf/llama2-70b-hf/
     cd ./model_from_hf/llama2-70b-hf/
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/config.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/generation_config.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00001-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00002-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00003-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00004-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00005-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00006-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00007-of-00015.bin   
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00008-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00009-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00010-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00011-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00012-of-00015.bin   
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00013-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00014-of-00015.bin
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model-00015-of-00015.bin   
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/pytorch_model.bin.index.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/special_tokens_map.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer.model
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer_config.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/config.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/generation_config.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00001-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00002-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00003-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00004-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00005-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00006-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00007-of-00015.bin   
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00008-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00009-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00010-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00011-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00012-of-00015.bin   
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00013-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00014-of-00015.bin
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model-00015-of-00015.bin   
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/pytorch_model.bin.index.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/special_tokens_map.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/tokenizer.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/tokenizer.model
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/tokenizer_config.json
     cd ../../
     ```
 
@@ -803,10 +803,10 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
     ```bash
     mkdir ./model_from_hf/llama2-70b-hf/
     cd ./model_from_hf/llama2-70b-hf/
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/special_tokens_map.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer.json
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer.model
-    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/blob/main/tokenizer_config.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/special_tokens_map.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/tokenizer.json
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/tokenizer.model
+    wget https://huggingface.co/meta-llama/Llama-2-70b-hf/resolve/main/tokenizer_config.json
     cd ../../
     ```
 4. Weights convert
@@ -825,8 +825,9 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
         --saver megatron \
         --target-tensor-parallel-size 8 \
         --target-pipeline-parallel-size 4 \
+        --num-layers-per-virtual-pipeline-stage 5 \
         --load-dir ./model_from_hf/llama2-70b-hf/ \
-        --save-dir ./model_weights/llama2-70b-hf-v0.1-tp8-pp4/ \
+        --save-dir ./model_weights/llama2-70b-hf-v0.1-tp8-pp4-vpp5/ \
         --tokenizer-model ./model_from_hf/llama2-70b-hf/tokenizer.model \
         --params-dtype bf16  
     ```
@@ -862,9 +863,10 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
             --loader megatron \
             --saver megatron \
             --save-model-type save_huggingface_llama \
-            --load-dir ./model_weights/llama2-70b-hf-v0.1-tp8-pp4/ \
+            --load-dir ./model_weights/llama2-70b-hf-v0.1-tp8-pp4-vpp5/ \
             --target-tensor-parallel-size 1 \
             --target-pipeline-parallel-size 1 \
+            --num-layers-per-virtual-pipeline-stage 5 \
             --save-dir ./model_from_hf/llama2-70b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama2-70b-hf/mg2hg/
         ```
 
@@ -1057,8 +1059,8 @@ The performance of LLaMA2-34B/70B in **Ascend NPU** and **Reference**
 |:---------------:|:----------:|:---------------------:|
 |      NPUs       | LLaMA2-34B |          690          |
 |    Reference    | LLaMA2-34B |          796          |
-|      NPUs       | LLaMA2-70B |          350          |
-|    Reference    | LLaMA2-70B |          339          |
+|      NPUs       | LLaMA2-70B |          420          |
+|    Reference    | LLaMA2-70B |          430          |
 
 
 
@@ -1112,10 +1114,10 @@ bash ./examples/llama2/generate_llama2_70b_lora_ptd.sh
 
 Some inference samples of LLaMA2-34B are as follows:
 
-![llama2-34B-generate](../../sources/images/llama2/llama2-34B-generate.png)
+![llama2-34B-generate](https://gitee.com/ascend/ModelLink/raw/master/sources/images/llama2/llama2-34B-generate.png)
 
 Some inference samples of LLaMA2-70B are as follows:
-![llama2-70B_generate.png](../../sources/images/llama2/llama2-70B-generate.png)
+![llama2-70B_generate.png](https://gitee.com/ascend/ModelLink/raw/master/sources/images/llama2/llama2-70B-generate.png)
 
 ## Evaluation-2
 

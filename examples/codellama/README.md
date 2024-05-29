@@ -256,7 +256,7 @@ bash examples/codellama/generate_codellama_34b_ptd.sh
 
 推理的示例如下:
 
-![Inference](../../sources/images/codellama/codellama-34b-generate.png)
+![Inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/codellama/codellama-34b-generate.png)
 
 ## 评估
 

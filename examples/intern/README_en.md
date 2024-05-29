@@ -194,7 +194,7 @@ bash ./examples/intern/generate_lnternlm_7b_ptd.sh
 ```
 
 Inference case:
-![Internlm-7b-inference](../../sources/images/intern/intern_7B_inference.png)
+![Internlm-7b-inference](https://gitee.com/ascend/ModelLink/raw/master/sources/images/intern/intern_7B_inference.png)
 
 #### Evaluation
 

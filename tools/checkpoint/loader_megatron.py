@@ -30,6 +30,8 @@ def add_arguments(parser):
     parser.add_argument('--params-dtype', type=str,
                        help='Set weight dtype', default='fp16',
     )
+    parser.add_argument('--num-layers-per-virtual-pipeline-stage', type=int, default=None,
+                        help='Number of layers per virtual pipeline stage')
 
 def _load_checkpoint(queue, args):
 
@@ -74,6 +76,7 @@ def _load_checkpoint(queue, args):
     margs, checkpoint_args = load_args_from_checkpoint(margs)
     margs.add_qkv_bias = args.add_qkv_bias
     margs.add_dense_bias = args.add_dense_bias
+    margs.num_layers_per_virtual_pipeline_stage = args.num_layers_per_virtual_pipeline_stage
     if args.add_dense_bias:
         margs.skip_bias_add = False
     if args.params_dtype == 'bf16':
