@@ -43,6 +43,7 @@ from ..tokenizer import build_tokenizer
 from ..arguments import parse_args_decorator, validate_args_decorator
 from ..checkpointing import _load_base_checkpoint_wrapper, load_checkpoint_wrapper
 from ..initialize import initialize_megatron
+from ..log_handler import emit
 
 
 def exec_patch():
@@ -65,6 +66,7 @@ def patch_megatron_noncore():
     patch_model()
     patch_initialize()
     patch_training()
+    patch_log_handler()
 
 
 def patch_fusions():
@@ -198,3 +200,8 @@ def patch_datasets():
     from megatron.core.datasets.gpt_dataset import GPTDataset
     GPTDataset._build_document_sample_shuffle_indices = _build_document_sample_shuffle_indices
     BlendedMegatronDatasetBuilder._build_generic_dataset = _build_generic_dataset
+
+
+def patch_log_handler():
+    from megatron.log_handler import CustomHandler
+    CustomHandler.emit = emit

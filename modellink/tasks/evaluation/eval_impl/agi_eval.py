@@ -15,8 +15,11 @@
 import os
 import logging
 import json
+import re
 import pandas as pd
 import tqdm
+
+from torch import distributed as dist
 from .template import AGIEVAL_TEMPLATE_DIR
 from ..eval_api.dataset_eval import DatasetEval
 from ..eval_api.chat import Chat
@@ -32,6 +35,9 @@ class AGIEvalExam(DatasetEval):
         self.test_dir = test_dir
         self.instruction_template = instruction_template
         self.batch_size = batch_size
+        self.rank = dist.get_rank()
+        self.file_pbar = None
+        self.task_pbar = None
 
     def eval(self, chat: Chat) -> (dict, pd.DataFrame):
         answer_result = {}
@@ -40,20 +46,35 @@ class AGIEvalExam(DatasetEval):
         score_datas = []
         sample_n = 0
         rank = None
+        
         with open(AGIEVAL_TEMPLATE_DIR, encoding='utf-8') as f:
             AGI_few_shot_template = json.load(f)
-        for file in tqdm.tqdm(os.listdir(self.test_dir)):
+
+        if self.rank == 0:
+            self.file_pbar = tqdm.tqdm(total=len(os.listdir(self.test_dir)), desc="total")
+
+        for file in os.listdir(self.test_dir):
             file_path = os.path.join(self.test_dir, file)
             with open(file_path, encoding='utf-8') as f:
                 agi_question_list = []
                 for line in f.readlines():
                     agi_question_list.append(json.loads(line))
-            subject_name = file[0: -6]
+            subject_name = re.sub(r'(?:_test|_val|_dev)?\.\w+$', "", file)
             subject_result = {}
             sample_n += len(agi_question_list)
             acc_n = 0
             instructions = []
             corrects = []
+
+            if subject_name not in AGI_few_shot_template:
+                logging.error(f"missing '{subject_name}' instruction_template in {AGIEVAL_TEMPLATE_DIR}")
+                if self.file_pbar is not None:
+                    self.file_pbar.update()
+                continue
+
+            if self.rank == 0:
+                self.task_pbar = tqdm.tqdm(total=len(agi_question_list), desc=file, leave=False)
+
             for idx, item in enumerate(agi_question_list):
                 if item['passage']:
                     question = item['passage'] + '\n' + item['question']
@@ -100,6 +121,9 @@ class AGIEvalExam(DatasetEval):
                     instructions = []
                     corrects = []
 
+                if self.task_pbar is not None:
+                    self.task_pbar.update()
+
             if rank == 0:
                 logger.info("%s acc = %d/%d=%e", subject_name, acc_n, len(agi_question_list),
                             check_divisible_by_zero(acc_n, len(agi_question_list)))
@@ -108,6 +132,13 @@ class AGIEvalExam(DatasetEval):
                 answer_result[subject_name] = subject_result
                 score_datas.append(
                     [subject_name, len(agi_question_list), check_divisible_by_zero(acc_n, len(agi_question_list))])
+        
+            if self.task_pbar is not None:
+                self.task_pbar.close()
+
+            if self.file_pbar is not None:
+                self.file_pbar.update()        
+        
         if rank == 0:
             logger.info("AGIEval acc = %d/%d=%e", total_acc_n, total_n, check_divisible_by_zero(total_acc_n, total_n))
             score_datas.append(["total", total_n, check_divisible_by_zero(total_acc_n, total_n)])

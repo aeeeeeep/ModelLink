@@ -21,7 +21,9 @@ import sys
 import subprocess
 from typing import Iterable, Dict
 import pandas as pd
+import tqdm
 
+from torch import distributed as dist
 from .template import CODE_TEST_LOG_DIR
 from ..eval_api.dataset_eval import DatasetEval
 from ..eval_api.chat import Chat
@@ -85,6 +87,9 @@ class HumanEval(DatasetEval):
         else:
             self.instruction_template = "The definition and function description of the python function are as follows. " \
                                         "Please complete the implementation of the python function.\n{prompt}"
+        self.rank = dist.get_rank()
+        self.file_pbar = None
+        self.task_pbar = None
 
     def read_problems(self) -> Dict[str, Dict]:
         return {task["task_id"]: task for task in self.stream_jsonl(self.test_dir)}
@@ -93,6 +98,10 @@ class HumanEval(DatasetEval):
         """
         Parses each jsonl line and yields it as a dictionary
         """
+
+        if self.rank == 0:
+            self.file_pbar = tqdm.tqdm(total=len(os.listdir(self.test_dir)), desc="total")
+
         for file in os.listdir(test_dir):
             test_code_path = os.path.join(self.test_dir, file)
             with open(test_code_path, 'r') as fp:
@@ -100,11 +109,18 @@ class HumanEval(DatasetEval):
                     if any(not x.isspace() for x in line):
                         yield json.loads(line)
 
+            if self.file_pbar is not None:
+                self.file_pbar.update()
+
     def eval(self, chat: Chat) -> (dict, pd.DataFrame):
         problems = self.read_problems()
         success_n = 0
         rank = None
         answer_result = {}
+
+        if self.rank == 0:
+            self.task_pbar = tqdm.tqdm(total=len(problems), leave=False)
+
         for idx, (task_id, task) in enumerate(problems.items()):
             instruction = self.instruction_template.format(prompt=task['prompt'])
             chat_result, rank = chat.beam_search_chat(instruction=instruction, history=[])
@@ -132,6 +148,13 @@ class HumanEval(DatasetEval):
                     logger.info("%s failed. %s", task_id, e)
             finally:
                 pass
+
+            if self.task_pbar is not None:
+                self.task_pbar.update()
+
+        if self.task_pbar is not None:
+            self.task_pbar.close()        
+
         if rank == 0:
             logger.info("acc = %s", {check_divisible_by_zero(success_n, len(problems))})
         return answer_result, None
