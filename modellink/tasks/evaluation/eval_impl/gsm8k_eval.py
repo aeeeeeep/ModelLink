@@ -20,6 +20,7 @@ import json
 import pandas as pd
 import tqdm
 
+from torch import distributed as dist
 from .template import GSM8K_TEMPLATE_DIR
 from ..eval_api.dataset_eval import DatasetEval
 from ..eval_api.chat import Chat
@@ -36,6 +37,9 @@ class Gsm8kEval(DatasetEval):
         self.instruction_template = instruction_template
         self.output_template = output_template
         self.batch_size = batch_size
+        self.rank = dist.get_rank()
+        self.file_pbar = None
+        self.task_pbar = None
 
     def eval(self, chat: Chat) -> (dict, pd.DataFrame):
         final_result = {}
@@ -43,9 +47,14 @@ class Gsm8kEval(DatasetEval):
         total_acc_n = 0
         total_n = 0
         rank = None
+        
         with open(GSM8K_TEMPLATE_DIR, encoding='utf-8') as f:
             gsm8k_few_shot_template = json.load(f)
-        for file in tqdm.tqdm(os.listdir(self.test_dir)):
+
+        if self.rank == 0:
+            self.file_pbar = tqdm.tqdm(total=len(os.listdir(self.test_dir)), desc="total")
+
+        for file in os.listdir(self.test_dir):
             file_path = os.path.join(self.test_dir, file)
             with open(file_path, encoding='utf-8') as f:
                 gsm8k_list = []
@@ -55,6 +64,10 @@ class Gsm8kEval(DatasetEval):
             acc_n = 0
             instructions = []
             answers = []
+
+            if self.rank == 0:
+                self.task_pbar = tqdm.tqdm(total=len(gsm8k_list), desc=file, leave=False)
+
             for index, item in enumerate(gsm8k_list):
                 instruction = self.instruction_template.format(fewshot_template=gsm8k_few_shot_template['few_shot'],
                                                                question=item['question'])
@@ -88,11 +101,21 @@ class Gsm8kEval(DatasetEval):
                     instructions = []
                     answers = []
 
+                if self.task_pbar is not None:
+                    self.task_pbar.update()
+
             if rank == 0:
                 total_n += len(gsm8k_list)
                 total_acc_n += acc_n
                 final_result['Gsm8k_dataset'] = subject_result
                 score_datas.append(['Gsm8k_dataset', len(gsm8k_list), acc_n / len(gsm8k_list)])
+
+            if self.task_pbar is not None:
+                self.task_pbar.close()
+
+            if self.file_pbar is not None:
+                self.file_pbar.update()        
+
         if rank == 0:
             logger.info(f"gsm8k acc = {total_acc_n}/{total_n}={check_divisible_by_zero(total_acc_n, total_n)}")
             score_datas.append(["total", total_n, total_acc_n / total_n])

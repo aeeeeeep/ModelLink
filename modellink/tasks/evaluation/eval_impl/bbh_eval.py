@@ -15,9 +15,11 @@
 import os
 import logging
 import json
+import re
 import pandas as pd
 import tqdm
 
+from torch import distributed as dist
 from .template import BBH_TEMPLATE_DIR
 from ..eval_api.dataset_eval import DatasetEval
 from ..eval_api.chat import Chat
@@ -32,6 +34,9 @@ class BBHEval(DatasetEval):
         self.test_dir = test_dir
         self.instruction_template = instruction_template
         self.batch_size = batch_size
+        self.rank = dist.get_rank()
+        self.file_pbar = None
+        self.task_pbar = None
 
     def eval(self, chat: Chat) -> (dict, pd.DataFrame):
         answer_result = {}
@@ -40,24 +45,39 @@ class BBHEval(DatasetEval):
         score_datas = []
         sample_n = 0
         rank = None
+
         with open(BBH_TEMPLATE_DIR, encoding='utf-8') as f:
             bbh_template = json.load(f)
-        for file in tqdm.tqdm(os.listdir(self.test_dir)):
+
+        if self.rank == 0:
+            self.file_pbar = tqdm.tqdm(total=len(os.listdir(self.test_dir)), desc="total")
+
+        for file in os.listdir(self.test_dir):
             file_path = os.path.join(self.test_dir, file)
             with open(file_path, encoding='utf-8') as f:
                 bbh_dataset = json.load(f)
-            subject_name = file[0: -5]
+            subject_name = re.sub(r'(?:_test|_val|_dev)?\.\w+$', "", file)
             subject_result = {}
             sample_n += len(bbh_dataset['examples'])
             acc_n = 0
             sorted_dataset = sorted(bbh_dataset['examples'], key=lambda x: len(x['input']))
             instructions = []
             targets = []
+
+            if subject_name not in bbh_template:
+                logging.error(f"missing '{subject_name}' instruction_template in {BBH_TEMPLATE_DIR}")
+                if self.file_pbar is not None:
+                    self.file_pbar.update()
+                continue
+
+            if self.rank == 0:
+                self.task_pbar = tqdm.tqdm(total=len(sorted_dataset), desc=file, leave=False)
+
             for idx, item in enumerate(sorted_dataset):
                 instruction = self.instruction_template.format(fewshot_template=bbh_template[subject_name],
                                                                question=item['input'])
                 instructions.append(instruction)
-                targets.append(item['target'])
+                targets.append(item['target'].lstrip('(').rstrip(')'))
 
                 if len(instructions) == self.batch_size or len(bbh_dataset['examples']) == idx + 1:
                     chat_results, rank = chat.chat(instruction=instructions, history=[])
@@ -76,6 +96,9 @@ class BBHEval(DatasetEval):
                     instructions = []
                     targets = []
 
+                if self.task_pbar is not None:
+                    self.task_pbar.update()
+
             if rank == 0:
                 logging.info(f"{subject_name} acc = {acc_n}/{len(bbh_dataset['examples'])}="
                              f"{check_divisible_by_zero(acc_n, len(bbh_dataset['examples']))}")
@@ -84,6 +107,13 @@ class BBHEval(DatasetEval):
                 answer_result[subject_name] = subject_result
                 score_datas.append([subject_name, len(bbh_dataset['examples']),
                                     check_divisible_by_zero(acc_n, len(bbh_dataset['examples']))])
+
+            if self.task_pbar is not None:
+                self.task_pbar.close()
+
+            if self.file_pbar is not None:
+                self.file_pbar.update()        
+
         if rank == 0:
             logger.info(f"bbh acc = {total_acc_n}/{total_n}={check_divisible_by_zero(total_acc_n, total_n)}")
             score_datas.append(["total", total_n, check_divisible_by_zero(total_acc_n, total_n)])

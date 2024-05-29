@@ -15,9 +15,11 @@
 import os
 import logging
 import json
+import re
 import pandas as pd
 import tqdm
 
+from torch import distributed as dist
 from .template import CEVAL_TEMPLATE_DIR
 from ..eval_api.dataset_eval import DatasetEval
 from ..eval_api.chat import Chat
@@ -33,6 +35,9 @@ class CEvalExam(DatasetEval):
         self.test_dir = test_dir
         self.instruction_template = instruction_template
         self.batch_size = batch_size
+        self.rank = dist.get_rank()
+        self.file_pbar = None
+        self.task_pbar = None
 
     def eval(self, chat: Chat) -> (dict, pd.DataFrame):
         answer_result = {}
@@ -41,17 +46,32 @@ class CEvalExam(DatasetEval):
         score_datas = []
         sample_n = 0
         rank = None
+
         with open(CEVAL_TEMPLATE_DIR, encoding='utf-8') as f:
             ceval_few_shot_template = json.load(f)
-        for file in tqdm.tqdm(os.listdir(self.test_dir)):
+
+        if self.rank == 0:
+            self.file_pbar = tqdm.tqdm(total=len(os.listdir(self.test_dir)), desc="total")
+
+        for file in os.listdir(self.test_dir):
             file_path = os.path.join(self.test_dir, file)
             data_df = pd.read_csv(file_path)
-            subject_name = file[0: -8]
+            subject_name = re.sub(r'(?:_test|_val|_dev)?\.\w+$', "", file)
             subject_result = {}
             sample_n += len(data_df)
             acc_n = 0
             instructions = []
             answers = []
+
+            if subject_name not in ceval_few_shot_template:
+                logging.error(f"missing '{subject_name}' instruction_template in {CEVAL_TEMPLATE_DIR}")
+                if self.file_pbar is not None:
+                    self.file_pbar.update()
+                continue
+
+            if self.rank == 0:
+                self.task_pbar = tqdm.tqdm(total=len(data_df), desc=file, leave=False)
+
             for idx, row in data_df.iterrows():
                 test_question = f"{row['question']}\nA. {row['A']}\nB. {row['B']}\nC. {row['C']}\nD. {row['D']}"
                 instruction = self.instruction_template.format(fewshot_template=ceval_few_shot_template[subject_name],
@@ -76,11 +96,21 @@ class CEvalExam(DatasetEval):
                     instructions = []
                     answers = []
 
+                if self.task_pbar is not None:
+                    self.task_pbar.update()
+
             if rank == 0:
                 total_n += len(data_df)
                 total_acc_n += acc_n
                 answer_result[subject_name] = subject_result
                 score_datas.append([subject_name, len(data_df), acc_n / len(data_df)])
+
+            if self.task_pbar is not None:
+                self.task_pbar.close()
+
+            if self.file_pbar is not None:
+                self.file_pbar.update()        
+
         if rank == 0:
             logger.info(f"ceval acc = {total_acc_n}/{total_n}={check_divisible_by_zero(total_acc_n, total_n)}")
             score_datas.append(["total", total_n, total_acc_n / total_n])

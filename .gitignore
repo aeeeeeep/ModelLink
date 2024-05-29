@@ -142,3 +142,12 @@ cython_debug/
 
 # pycharm stuff
 .idea
+
+# megatron core
+/megatron/
+
+# User stuff
+/kernel*/
+/logs/
+/model_from_hf/
+/model_weights/

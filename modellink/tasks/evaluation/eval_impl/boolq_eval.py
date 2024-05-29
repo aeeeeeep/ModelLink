@@ -19,6 +19,7 @@ import json
 import pandas as pd
 import tqdm
 
+from torch import distributed as dist
 from ..eval_api.dataset_eval import DatasetEval
 from ..eval_api.chat import Chat
 from ....error_utils import check_divisible_by_zero
@@ -33,6 +34,9 @@ class BoolqEval(DatasetEval):
         self.test_dir = test_dir
         self.instruction_template = instruction_template
         self.batch_size = batch_size
+        self.rank = dist.get_rank()
+        self.file_pbar = None
+        self.task_pbar = None
 
     def eval(self, chat: Chat) -> (dict, pd.DataFrame):
         answer_result = {}
@@ -40,7 +44,11 @@ class BoolqEval(DatasetEval):
         total_acc_n = 0
         total_n = 0
         rank = None
-        for file in tqdm.tqdm(os.listdir(self.test_dir)):
+
+        if self.rank == 0:
+            self.file_pbar = tqdm.tqdm(total=len(os.listdir(self.test_dir)), desc="total")
+
+        for file in os.listdir(self.test_dir):
             file_path = os.path.join(self.test_dir, file)
             with open(file_path, encoding='utf-8') as f:
                 boolq_question_list = []
@@ -50,6 +58,10 @@ class BoolqEval(DatasetEval):
             acc_n = 0
             instructions = []
             targets = []
+
+            if self.rank == 0:
+                self.task_pbar = tqdm.tqdm(total=len(boolq_question_list), desc=file, leave=False)
+
             for index, item in enumerate(boolq_question_list):
                 instruction = self.instruction_template.format(passage=item['passage'], question=item['question'])
                 instructions.append(instruction)
@@ -74,11 +86,21 @@ class BoolqEval(DatasetEval):
                     instructions = []
                     targets = []
 
+                if self.task_pbar is not None:
+                    self.task_pbar.update()
+
             if rank == 0:
                 total_n += len(boolq_question_list)
                 total_acc_n += acc_n
                 answer_result['Boolq_dataset'] = subject_result
                 score_datas.append(['Boolq_dataset', len(boolq_question_list), acc_n / len(boolq_question_list)])
+
+            if self.task_pbar is not None:
+                self.task_pbar.close()
+
+            if self.file_pbar is not None:
+                self.file_pbar.update()
+
         if rank == 0:
             logger.info(f"boolq acc = {total_acc_n}/{total_n}={check_divisible_by_zero(total_acc_n, total_n)}")
             score_datas.append(["total", total_n, total_acc_n / total_n])
