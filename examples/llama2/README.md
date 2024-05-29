@@ -768,8 +768,8 @@ LLaMA2-34B/70B 训练的硬件配置:
     CodeLlama-34B 的权重下载[here](https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/tree/main).
 
     ```bash
-    mkdir ./model_from_hf/codellama-34b-hf/
-    cd ./model_from_hf/codellama-34b-hf/
+    mkdir ./model_from_hf/llama-2-34b-hf/
+    cd ./model_from_hf/llama-2-34b-hf/
     wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/config.json
     wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/generation_config.json
     wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/pytorch_model-00001-of-00007.bin
@@ -830,10 +830,10 @@ LLaMA2-34B/70B 训练的硬件配置:
         --loader llama2_hf \
         --saver megatron \
         --target-tensor-parallel-size 8 \
-        --target-pipeline-parallel-size 4 \
-        --load-dir ./model_from_hf/codellama-34b-hf/ \
-        --save-dir ./model_weights/codellama-34b-hf/ \
-        --tokenizer-model ./model_from_hf/llama2-70b-hf/tokenizer.model \
+        --target-pipeline-parallel-size 2 \
+        --load-dir ./model_from_hf/llama-2-34b-hf/ \
+        --save-dir ./model_weights/llama-2-34b-hf/ \
+        --tokenizer-model ./model_from_hf/llama-2-34b-hf/tokenizer.model \
         --params-dtype bf16
     ```
 
@@ -866,10 +866,10 @@ LLaMA2-34B/70B 训练的硬件配置:
         --loader megatron \
         --saver megatron \
         --save-model-type save_huggingface_llama \
-        --load-dir ./model_weights/codellama-34b-hf-v0.1-tp8-pp4/ \
+        --load-dir ./model_weights/llama-2-34b-hf-v0.1-tp8-pp2/ \
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 1 \
-        --save-dir ./model_from_hf/codellama-34b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/codellama-34b-hf/mg2hg/
+        --save-dir ./model_from_hf/llama-2-34b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-2-34b-hf/mg2hg/
     ```
 
     权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和 `target-pipeline-parallel-size`。
@@ -931,8 +931,8 @@ LLaMA2-34B/70B 训练的硬件配置:
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     
     # 配置相关路径
-    TOKENIZER_MODEL="./model_from_hf/llama2-70b-hf/tokenizer.model"  #词表路径
-    DATA_PATH="./dataset/llama2-70b-hf/moss_text_document"  #数据集路径
+    TOKENIZER_MODEL="./model_from_hf/llama2-34b-hf/tokenizer.model"  #词表路径
+    DATA_PATH="./dataset/llama2-34b-hf/moss_text_document"  #数据集路径
     ```
 
     LLaMA2-70B: examples/llama2/pretrain_llama2_70b_ptd.sh
@@ -1038,7 +1038,7 @@ LLaMA2-34B/70B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比
 
 | 设备 |    模型    | token吞吐率 (tokens/s/p) |
 | :--: | :--------: | :----------------------: |
-| NPUs | LLaMA2-34B |           690           |
+| NPUs | LLaMA2-34B |           749           |
 | 参考 | LLaMA2-34B |           796           |
 | NPUs | LLaMA2-70B |           420           |
 | 参考 | LLaMA2-70B |           430           |

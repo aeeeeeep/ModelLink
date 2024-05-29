@@ -783,8 +783,8 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
     CodeLlama-34b weights can be downloaded from [here](https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/tree/main),
 
     ```bash
-    mkdir ./model_from_hf/codellama-34b-hf/
-    cd ./model_from_hf/codellama-34b-hf/
+    mkdir ./model_from_hf/llama-2-34b-hf/
+    cd ./model_from_hf/llama-2-34b-hf/
     wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/config.json
     wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/generation_config.json
     wget https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/resolve/main/pytorch_model-00001-of-00007.bin
@@ -844,10 +844,10 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
         --loader llama2_hf \
         --saver megatron \
         --target-tensor-parallel-size 8 \
-        --target-pipeline-parallel-size 4 \
-        --load-dir ./model_from_hf/codellama-34b-hf/ \
-        --save-dir ./model_weights/codellama-34b-hf/ \
-        --tokenizer-model ./model_from_hf/llama2-70b-hf/tokenizer.model \
+        --target-pipeline-parallel-size 2 \
+        --load-dir ./model_from_hf/llama-2-34b-hf/ \
+        --save-dir ./model_weights/llama-2-34b-hf/ \
+        --tokenizer-model ./model_from_hf/llama-2-34b-hf/tokenizer.model \
         --params-dtype bf16  
     ```
 
@@ -880,10 +880,10 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
             --loader megatron \
             --saver megatron \
             --save-model-type save_huggingface_llama \
-            --load-dir ./model_weights/codellama-34b-hf-v0.1-tp8-pp4/ \
+            --load-dir ./model_weights/llama-2-34b-hf-v0.1-tp8-pp2/ \
             --target-tensor-parallel-size 1 \
             --target-pipeline-parallel-size 1 \
-            --save-dir ./model_from_hf/codellama-34b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/codellama-34b-hf/mg2hg/
+            --save-dir ./model_from_hf/llama-2-34b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-2-34b-hf/mg2hg/
         ```
 
     Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
@@ -944,8 +944,8 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     
     # modify script orign dataset path according to your own dataset path
-    TOKENIZER_MODEL="./model_from_hf/llama2-70b-hf/tokenizer.model"  #tokenizer path
-    DATA_PATH="./dataset/llama2-70b-hf/alpaca_text_document"  #processed dataset
+    TOKENIZER_MODEL="./model_from_hf/llama2-34b-hf/tokenizer.model"  #tokenizer path
+    DATA_PATH="./dataset/llama2-34b-hf/alpaca_text_document"  #processed dataset
     ```
 
     LLaMA2-70B: examples/llama2/pretrain_llama2_70b_ptd.sh
@@ -1057,7 +1057,7 @@ The performance of LLaMA2-34B/70B in **Ascend NPU** and **Reference**
 
 |     Device      |     Model     |  throughput (tokens/s/p) |  
 |:---------------:|:----------:|:---------------------:|
-|      NPUs       | LLaMA2-34B |          690          |
+|      NPUs       | LLaMA2-34B |          749          |
 |    Reference    | LLaMA2-34B |          796          |
 |      NPUs       | LLaMA2-70B |          420          |
 |    Reference    | LLaMA2-70B |          430          |
