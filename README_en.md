@@ -598,7 +598,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td>34B</td>
       <td>2x8</td>
       <td>BF16 </td>
-      <td> 690 </td>
+      <td> 749 </td>
       <td> 796 </td>
     </tr>
     <tr>
