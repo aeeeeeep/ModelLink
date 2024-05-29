@@ -2,6 +2,7 @@
 
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 export NPU_ASD_ENABLE=0
+export WITHOUT_JIT_COMPILE=1
 
 NPUS_PER_NODE=8
 MASTER_ADDR=localhost
@@ -68,7 +69,10 @@ GPT_ARGS="
     --load ${CKPT_LOAD_DIR}  \
     --no-load-optim \
     --no-load-rng \
-    --bf16
+    --bf16 \
+    --use-fused-swiglu \
+    --use-fused-rotary-pos-emb \
+    --use-mc2 \
 "
 
 DATA_ARGS="
