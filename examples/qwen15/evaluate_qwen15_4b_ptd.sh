@@ -53,4 +53,6 @@ torchrun $DISTRIBUTED_ARGS evaluation.py   \
        --make-vocab-size-divisible-by 1 \
        --seed 42 \
        --rotary-base 5000000 \
-       --padded-vocab-size 151936 | tee ./logs/eval_qwen15_4b_${TASK}.log
+       --padded-vocab-size 151936 \
+       --no-chat-template \
+       | tee ./logs/eval_qwen15_4b_${TASK}.log

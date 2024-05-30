@@ -375,7 +375,7 @@ Qwen1.5-7B 训练的硬件配置:
        --target-pipeline-parallel-size 1 \
        --make-vocab-size-divisible-by 16 \
        --load-dir ./model_from_hf/Qwen1.5-7B/ \
-       --save-dir ./model_weights/DA-v0.1-tp8-pp1/ \
+       --save-dir ./model_weights/Qwen1.5-7B-v0.1-tp8-pp1/ \
        --tokenizer-model ./model_from_hf/Qwen1.5-7B/tokenizer.json \
        --add-qkv-bias \
        --params-dtype bf16 
