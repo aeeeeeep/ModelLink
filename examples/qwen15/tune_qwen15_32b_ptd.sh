@@ -1,25 +1,25 @@
-
 #!/bin/bash
 
 export CUDA_DEVICE_MAX_CONNECTIONS=1
+export HCCL_CONNECT_TIMEOUT=1800
 export NPU_ASD_ENABLE=0
+export WITHOUT_JIT_COMPILE=1
 
-NPUS_PER_NODE=8
-# Change for multinode config
 MASTER_ADDR=localhost
-MASTER_PORT=6005
+NPU_PRE_NODE=8
+MASTER_PORT=6000
 NNODES=1
 NODE_RANK=0
-WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
+WORLD_SIZE=$(($NPU_PRE_NODE*$NNODES))
 
-
+# please fill these path configurations
+CKPT_LOAD_DIR="your model ckpt path"
 CKPT_SAVE_DIR="your model save ckpt path"
 DATA_PATH="your data path"
 TOKENIZER_PATH="your tokenizer path"
-CKPT_LOAD_DIR="your model ckpt path"
 
-TP=1
-PP=2
+TP=8
+PP=1
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $NPUS_PER_NODE \
@@ -33,20 +33,20 @@ GPT_ARGS="
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --sequence-parallel \
-    --num-layers 40 \
-    --hidden-size 2560 \
-    --ffn-hidden-size 6912 \
-    --num-attention-heads 20 \
+    --num-layers 64 \
+    --hidden-size 5120 \
+    --ffn-hidden-size 27392 \
+    --num-attention-heads 40 \
     --tokenizer-type PretrainedFromHF \
-    --load ${CKPT_LOAD_DIR} \
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
+    --load ${CKPT_LOAD_DIR} \
     --seq-length 8192 \
     --max-position-embeddings 32768 \
     --micro-batch-size 1 \
     --global-batch-size 64 \
     --make-vocab-size-divisible-by 1 \
     --lr 1.25e-6 \
-    --train-iters 2000 \
+    --train-iters 5000 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
     --disable-bias-linear \
@@ -57,7 +57,6 @@ GPT_ARGS="
     --normalization RMSNorm \
     --swiglu \
     --use-flash-attn \
-    --use-distributed-optimizer \
     --use-fused-rmsnorm \
     --use-fused-rotary-pos-emb \
     --use-rotary-position-embeddings \
@@ -74,10 +73,18 @@ GPT_ARGS="
     --add-qkv-bias \
     --initial-loss-scale 4096 \
     --no-gradient-accumulation-fusion \
+    --finetune \
+    --is-instruction-dataset \
+    --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
+    --lora-r 16 \
+    --lora-alpha 32 \
     --no-load-optim \
     --no-load-rng \
-    --padded-vocab-size 151936 \
-    --bf16
+    --bf16 \
+    --group-query-attention \
+    --num-query-group 8 \
+    --rotary-base 1000000 \
+    --padded-vocab-size 152064
 "
 
 DATA_ARGS="
@@ -87,8 +94,8 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 2000 \
-    --eval-interval 2000 \
+    --save-interval 5000 \
+    --eval-interval 5000 \
     --eval-iters 0 \
 "
 
@@ -98,5 +105,4 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
     --save ${CKPT_SAVE_DIR} \
-    | tee logs/train_qwen15_4b.log
-
+    | tee logs/tune_qwen15_32b.log

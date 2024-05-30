@@ -317,7 +317,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> 【昇腾贡献】 </td>
     </tr>
     <tr>
-      <td rowspan="3"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+      <td rowspan="4"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
       <td>4B</td>
       <td> <a href="examples/qwen15/pretrain_qwen15_4b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen15/generate_qwen15_4b_ptd.sh"> generate </a> </td>
@@ -335,7 +335,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> -- </td>
       <td> <a href="examples/qwen15/evaluate_qwen15_7b_ptd.sh"> eval </a> </td>
       <td rowspan="1"> 【社区贡献】 </td>
-    </tr>
+    <tr>
       <td>14B</td>
       <td> <a href="examples/qwen15/pretrain_qwen15_14b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen15/generate_qwen15_14b_ptd.sh"> generate </a> </td>
@@ -344,6 +344,16 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> -- </td>
       <td> <a href="examples/qwen15/evaluate_qwen15_14b_ptd.sh"> eval </a> </td>
       <td rowspan="1"> 【社区贡献】 </td>
+    <tr>
+      <td>32B</td>
+      <td> <a href="examples/qwen15/pretrain_qwen15_32b_ptd.sh"> pretrain </a> </td>
+      <td> <a href="examples/qwen15/generate_qwen15_32b_ptd.sh"> generate </a> </td>
+      <td> <a href="examples/qwen15/tune_qwen15_32b_ptd.sh"> lora </a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/qwen15/evaluate_qwen15_32b_ptd.sh"> eval </a> </td>
+      <td rowspan="1"> 【社区贡献】 </td>
+    </tr>
     <tr>
     </tr>
     <tr>
@@ -645,26 +655,32 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> 285 </td>
       <td> 345 </td>
     </tr>
-    <tr>
-      <td rowspan="3"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+    </tr>
+       <tr>
+      <td rowspan="4"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
       <td> 4B </td>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 5033 </td>
       <td> 5328 </td>
-      </tr>
+      <tr>
       <td> 7B </td>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 2862 </td>
       <td> 2621 </td>
-      </tr>
       <tr>
       <td> 14B </td>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 1717 </td>
       <td> 1702 </td>
+      <tr>
+      <td> 32B </td>
+      <td> 4x8 </td>
+      <td> BF16 </td>
+      <td> 751 </td>
+      <td> 708 </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/yi/README.md">Yi</a></td>
