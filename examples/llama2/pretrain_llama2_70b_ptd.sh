@@ -69,6 +69,7 @@ GPT_ARGS="
     --num-query-groups 8 \
     --lr-warmup-fraction 0.01 \
     --bf16
+    --num-layers-per-virtual-pipeline-stage 5 \
 "
 
 DATA_ARGS="
