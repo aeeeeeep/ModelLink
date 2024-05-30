@@ -15,7 +15,7 @@ WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 CKPT_LOAD_DIR="your model ckpt path"
 CKPT_SAVE_DIR="your model save ckpt path"
 DATA_PATH="your data path"
-TOKENIZER_MODEL="your tokenizer path"
+TOKENIZER_PATH="your tokenizer path"
 
 TP=4
 PP=2
@@ -38,7 +38,7 @@ GPT_ARGS="
     --num-attention-heads 40 \
     --load ${CKPT_LOAD_DIR} \
     --tokenizer-type PretrainedFromHF \
-    --tokenizer-name-or-path ${TOKENIZER_MODEL} \
+    --tokenizer-name-or-path ${TOKENIZER_PATH} \
     --seq-length 8192 \
     --max-position-embeddings 32768 \
     --micro-batch-size 1 \
