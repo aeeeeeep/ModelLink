@@ -446,11 +446,11 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
 |           软件            | [版本](https://www.hiascend.com/zh/) |
 | :-----------------------: |:----------------------------------:|
 |          Python           |                3.8                 |
-|          driver           |         Ascend HDK 23.0.0          |
-|         firmware          |         Ascend HDK 23.0.0          |
-|           CANN            |             CANN 7.0.0             |
+|          driver           |         Ascend HDK 24.1.RC1          |
+|         firmware          |         Ascend HDK 24.1.RC1          |
+|           CANN            |             CANN 8.0.RC1             |
 |           torch           |            2.1.0、2.2.0             |
-|         torch_npu         |           release v5.0.0           |
+|         torch_npu         |           6.0.RC1           |
 
 
 【基于现版本我们实测的性能情况统计如下】

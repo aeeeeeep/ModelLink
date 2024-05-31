@@ -442,13 +442,13 @@ For the supported models listed above, we provide training scripts and readme in
 【Please note the corresponding environment versions for model usage, as follows】
 
 |           Software            | [Version](https://www.hiascend.com/zh/) |
-| :-----------------------: |:---------------------------------------:|
-|          Python           |                   3.8                   |
-|          driver           |            Ascend HDK 23.0.0            |
-|         firmware          |            Ascend HDK 23.0.0            |
-|           CANN            |               CANN 7.0.0                |
-|           torch           |               2.1.0、2.2.0               |
-|         torch_npu         |             release v5.0.0              |
+| :-----------------------: |:----------------------------------:|
+|          Python           |                3.8                 |
+|          driver           |         Ascend HDK 24.1.RC1          |
+|         firmware          |         Ascend HDK 24.1.RC1          |
+|           CANN            |             CANN 8.0.RC1             |
+|           torch           |            2.1.0、2.2.0             |
+|         torch_npu         |           6.0.RC1           |
 
 
 【Based on the current version of megatron, the performance statistics from our testing are as follows】
