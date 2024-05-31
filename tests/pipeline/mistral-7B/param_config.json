@@ -73,7 +73,7 @@
         "--attention-softmax-in-fp32",
         "--no-load-optim",
         "--no-load-rng",
-        "--seq-length", "32768"
+        "--seq-length", "8192"
     ],
 
     "TRAINING_AUX": [
