@@ -56,9 +56,9 @@ pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-# 拉取AscendSpeed源代码，进入AscendSpeed目录，然后源码方式安装ascendspeed加速包
-git clone https://gitee.com/ascend/AscendSpeed.git
-cd AscendSpeed/
+# 拉取MindSpeed源代码，进入MindSpeed目录，然后源码方式安装mindspeed加速包
+git clone https://gitee.com/ascend/MindSpeed.git
+cd MindSpeed/
 git checkout 224ae35e8fc96778f957029d1371ddb623452a50
 pip install -r requirements.txt
 pip install -e .
