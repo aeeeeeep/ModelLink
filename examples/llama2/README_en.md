@@ -151,6 +151,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
         --save-dir ./model_from_hf/llama-2-7b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-2-7b-hf/mg2hg/
     ```
 
+    If you need combine Lora weight to huggingface weight, please add --lora-dir {lora weight path} \
     Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
 5. pre-training
 
@@ -886,6 +887,7 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
             --save-dir ./model_from_hf/llama-2-34b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-2-34b-hf/mg2hg/
         ```
 
+    If you need combine Lora weight to huggingface weight, please add --lora-dir {lora weight path} \
     Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
 5. pre-training
 
