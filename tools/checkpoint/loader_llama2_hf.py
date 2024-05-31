@@ -31,7 +31,7 @@ def add_arguments(parser):
                        help='original size of vocab, if specified will trim padding from embedding table.')
     group.add_argument('--vocab-file', type=str, default=None,
                        help='Path to the vocab file. If specified will use this to get vocab size and '
-                            'trim padding from the embedding table.')
+                       'trim padding from the embedding table.')
     group.add_argument('--tokenizer-model', required=True,
                        help='Sentencepiece tokenizer model.')
     group.add_argument('--megatron-path', type=str, default=None,
@@ -40,18 +40,17 @@ def add_arguments(parser):
                        help='True is w_pack weight for llm',
                        default=False)
     parser.add_argument('--add-qkv-bias', action='store_true',
-                        help='Add bias for attention qkv',
-                        default=False)
+                    help='Add bias for attention qkv',
+                    default=False)
     parser.add_argument('--add-dense-bias', action='store_true',
-                        help='Add bias for attention dense',
-                        default=False)
+                    help='Add bias for attention dense',
+                    default=False)
+    parser.add_argument('--untie-embeddings-and-output-weights', action='store_true',
+                       help='Untie embeddings and output weights', default=False,
+    )
     parser.add_argument('--params-dtype', type=str,
-                        help='Set weight dtype',
-                        default='fp16')
-    group.add_argument('--make-vocab-size-divisible-by', type=int, default=1,
-                       help='Pad the vocab size to be divisible by this value.'
-                       'This is added for computational efficieny reasons.')
-
+                    help='Set weight dtype',
+                    default='fp16')
 
 def verify_transformers_version():
     major, minor, patch = map(int, transformers.__version__.split('.'))
@@ -60,6 +59,7 @@ def verify_transformers_version():
 
 
 def load_args_from_checkpoint(args):
+
     # Read Llama args.
     llama_args_path = os.path.join(args.load, "config.json")
     with open(llama_args_path) as f:
@@ -73,14 +73,14 @@ def load_args_from_checkpoint(args):
     args.num_layers = llama_args["num_hidden_layers"]
     args.global_batch_size = 1024
     args.norm_epsilon = llama_args["rms_norm_eps"]
-    args.iteration = 1  # '0', 'release' don't work
+    args.iteration = 0 # '0', 'release' don't work
     args.add_position_embedding = True
     args.use_rotary_position_embeddings = True
     args.swiglu = True
     args.tokenizer_type = "Llama2Tokenizer"
     args.normalization = "RMSNorm"
     args.add_bias_linear = False
-    args.untie_embeddings_and_output_weights = True
+    # args.untie_embeddings_and_output_weights = False # TODO， 此处逻辑失效，通过命令行参数进行控制
     args.vocab_size = llama_args["vocab_size"]
     args.padded_vocab_size = llama_args["vocab_size"]
     args.llama = llama_args
@@ -105,7 +105,8 @@ def set_preprocess_state(args, model, hf_model):
 def set_postprocess_state(args, model, hf_model):
     '''Set output layer & norm params.'''
     model.language_model.encoder.final_norm.weight.data.copy_(hf_model.model.norm.weight)
-    model.language_model.output_layer.weight.data.copy_(hf_model.lm_head.weight)
+    if args.untie_embeddings_and_output_weights:
+        model.language_model.output_layer.weight.data.copy_(hf_model.lm_head.weight)
 
 
 def set_attn_state(args, layer, hf_layer):
@@ -118,7 +119,7 @@ def set_attn_state(args, layer, hf_layer):
     # Reshape loaded weights.
     nh = args.num_attention_heads
     ng = (args.num_query_groups if args.group_query_attention \
-              else args.num_attention_heads)
+        else args.num_attention_heads)
     dim = args.kv_channels
     if not nh % ng == 0:
         raise ValueError("nh % ng should equal 0")
@@ -127,29 +128,31 @@ def set_attn_state(args, layer, hf_layer):
         w_pack = hf_attn.W_pack.weight
         wq, wk, wv = w_pack.chunk(3, dim=0)
         attn.query_key_value.weight.data.copy_(torch.cat([
-            wq.reshape((ng, dim * nh // ng, -1)),
-            wk.reshape((ng, dim, -1)),
-            wv.reshape((ng, dim, -1)),
-        ], dim=1).reshape((-1, args.hidden_size)))
+                wq.reshape((ng, dim * nh // ng, -1)),
+                wk.reshape((ng, dim, -1)),
+                wv.reshape((ng, dim, -1)),
+            ], dim=1).reshape((-1, args.hidden_size)))
 
     else:
         attn.query_key_value.weight.data.copy_(torch.cat([
-            hf_attn.q_proj.weight.reshape((ng, dim * nh // ng, -1)),
-            hf_attn.k_proj.weight.reshape((ng, dim, -1)),
-            hf_attn.v_proj.weight.reshape((ng, dim, -1)),
-        ], dim=1).reshape((-1, args.hidden_size)))
-
+                hf_attn.q_proj.weight.reshape((ng, dim * nh // ng, -1)),
+                hf_attn.k_proj.weight.reshape((ng, dim, -1)),
+                hf_attn.v_proj.weight.reshape((ng, dim, -1)),
+            ], dim=1).reshape((-1, args.hidden_size)))
+           
     if args.add_qkv_bias:
         attn.query_key_value.bias.data.copy_(torch.cat([
             hf_attn.q_proj.bias.reshape((ng, dim * nh // ng)),
             hf_attn.k_proj.bias.reshape((ng, dim)),
             hf_attn.v_proj.bias.reshape((ng, dim)),
         ], dim=1).reshape((-1)))
-
+        
     if args.add_dense_bias:
         attn.dense.bias.data.copy_(hf_attn.o_proj.bias)
 
     attn.dense.weight.data.copy_(hf_attn.o_proj.weight)
+
+        
 
 
 def set_mlp_state(args, layer, hf_layer):
@@ -199,6 +202,7 @@ def load_checkpoint_to_model(args):
 
 
 def _load_checkpoint(queue, args):
+
     # Llama-2 requires HF transformers >=4.31.0.
     verify_transformers_version()
 
@@ -210,8 +214,8 @@ def _load_checkpoint(queue, args):
     if args.megatron_path is not None:
         sys.path.insert(0, args.megatron_path)
 
-    from megatron.arguments import validate_args
-    from modellink.utils import parse_args
+    from ascendspeed import megatron_adaptor
+    from megatron.arguments import parse_args, validate_args
     from megatron.global_vars import set_args, set_global_variables
     from megatron.model import module
     from megatron.core import mpu
@@ -233,13 +237,15 @@ def _load_checkpoint(queue, args):
                 '--no-initialization',
                 '--load', args.load_dir
                 ]
+    if args.untie_embeddings_and_output_weights:
+        sys.argv.append('--untie-embeddings-and-output-weights')
 
     margs = parse_args()
+    setattr(margs, "embed_layernorm", False)
     margs.w_pack = args.w_pack
     margs.add_qkv_bias = args.add_qkv_bias
     margs.add_dense_bias = args.add_dense_bias
     margs.tokenizer_model = args.tokenizer_model
-    margs.make_vocab_size_divisible_by = args.make_vocab_size_divisible_by
     if args.params_dtype == 'bf16':
         margs.bf16 = True
     elif args.params_dtype == 'fp16':
@@ -318,8 +324,8 @@ def _load_checkpoint(queue, args):
     md.swiglu = margs.swiglu
     md.previous_tensor_parallel_size = margs.tensor_model_parallel_size
     md.previous_pipeline_parallel_size = margs.pipeline_model_parallel_size
-    md.true_vocab_size = margs.vocab_size  # skips padding in saver
-    md.make_vocab_size_divisible_by = margs.make_vocab_size_divisible_by
+    md.true_vocab_size = margs.padded_vocab_size
+    md.make_vocab_size_divisible_by = 128
     md.checkpoint_args = margs
     md.consumed_train_samples = 0
     md.consumed_valid_samples = 0
@@ -438,4 +444,5 @@ def load_checkpoint(queue, args):
     except:
         queue.put("exit")
         raise
+
 

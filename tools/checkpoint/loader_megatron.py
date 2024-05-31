@@ -33,6 +33,152 @@ def add_arguments(parser):
     parser.add_argument('--num-layers-per-virtual-pipeline-stage', type=int, default=None,
                         help='Number of layers per virtual pipeline stage')
 
+
+def get_checkpoint_name(checkpoints_path,
+                        pipeline_parallel=None,
+                        tensor_rank=None, pipeline_rank=None,
+                        expert_parallel=None, expert_rank=None):
+    """Determine the directory name for this rank's checkpoint."""
+    from megatron.core import mpu
+
+    # Use both the tensor and pipeline MP rank.
+    if pipeline_parallel is None:
+        pipeline_parallel = (mpu.get_pipeline_model_parallel_world_size() > 1)
+    if tensor_rank is None:
+        tensor_rank = mpu.get_tensor_model_parallel_rank()
+    if pipeline_rank is None:
+        pipeline_rank = mpu.get_pipeline_model_parallel_rank()
+    if expert_parallel is None:
+        expert_parallel = (mpu.get_expert_model_parallel_world_size() > 1)
+    if expert_rank is None:
+        expert_rank = mpu.get_expert_model_parallel_rank()
+
+    # Use both the tensor and pipeline MP rank. If using the distributed
+    # optimizer, then the optimizer's path must additionally include the
+    # data parallel rank.
+    if not pipeline_parallel:
+        common_path = os.path.join(checkpoints_path,
+                            f'mp_rank_{tensor_rank:02d}')
+    else:
+        common_path = os.path.join(checkpoints_path,
+                f'mp_rank_{tensor_rank:02d}_{pipeline_rank:03d}')
+
+    if expert_parallel:
+        common_path = common_path + f'_{expert_rank:03d}'
+
+    return os.path.join(common_path, "model_optim_rng.pt")
+
+def _load_base_checkpoint(load_dir):
+    
+    checkpoint_name = get_checkpoint_name(load_dir)
+    try:
+        state_dict = torch.load(checkpoint_name, map_location='cpu')
+    except BaseException as e:
+        print('Could not load the checkpoint!')
+        print(e)
+        sys.exit()
+    return state_dict
+    
+def load_args_from_checkpoint(args, load_arg='load'):
+    """Set required arguments from the checkpoint specified in the
+    arguments.
+
+    Will overwrite arguments that have a non-None default value, but
+    will leave any arguments that default to None as set.
+
+    Returns the same args NameSpace with the new values added/updated.
+
+    If no checkpoint is specified in args, or if the checkpoint is
+    there but invalid, the arguments will not be modified
+
+    """
+    
+    load_dir = getattr(args, load_arg)
+
+    if load_dir is None:
+        print('No load directory specified, using provided arguments.')
+        return args
+
+    state_dict = torch.load(os.path.join(load_dir,"mp_rank_00","model_optim_rng.pt"), map_location='cpu')
+
+    # Args.
+    if not state_dict:
+        print('Checkpoint not found to provide arguments, using provided arguments.')
+        return args
+
+    if 'args' not in state_dict:
+        print('Checkpoint provided does not have arguments saved, using provided arguments.')
+        return args
+
+    checkpoint_args = state_dict['args']
+    checkpoint_version = state_dict.get('checkpoint_version', 0)
+    args.iteration = state_dict['iteration']
+
+    # One-off conversion for foundation models
+    if hasattr(checkpoint_args, 'disable_bias_linear'):
+        setattr(checkpoint_args, 'add_bias_linear', not getattr(checkpoint_args, 'disable_bias_linear'))
+
+    def _set_arg(arg_name, old_arg_name=None, force=False):
+        if not force and getattr(args, arg_name, None) is not None:
+            return
+
+        if old_arg_name is not None:
+            checkpoint_value = getattr(checkpoint_args, old_arg_name, None)
+        else:
+            checkpoint_value = getattr(checkpoint_args, arg_name, None)
+
+        if checkpoint_value is not None:
+            print(f"Setting {arg_name} to {checkpoint_value} from checkpoint")
+            setattr(args, arg_name, checkpoint_value)
+        else:
+            print(f"Checkpoint did not provide arguments {arg_name}")
+
+    _set_arg('num_layers')
+    _set_arg('hidden_size')
+    _set_arg('ffn_hidden_size')
+    _set_arg('seq_length')
+    _set_arg('num_attention_heads')
+    _set_arg('num_query_groups', force=True)
+    _set_arg('group_query_attention', force=True)
+    _set_arg('kv_channels')
+    _set_arg('max_position_embeddings')
+    _set_arg('position_embedding_type', force=True)
+    _set_arg('add_position_embedding', force=True)
+    _set_arg('use_rotary_position_embeddings', force=True)
+    _set_arg('rotary_percent', force=True)
+    _set_arg('add_bias_linear', force=True)
+    _set_arg('swiglu', force=True)
+    _set_arg('untie_embeddings_and_output_weights', force=True)
+    _set_arg('apply_layernorm_1p', force=True)
+    _set_arg('normalization', force=True)
+    _set_arg('tokenizer_type')
+    _set_arg('padded_vocab_size')
+    if checkpoint_version < 3.0:
+        _set_arg('tensor_model_parallel_size',
+                 'model_parallel_size')
+    else:
+        _set_arg('tensor_model_parallel_size', force=True)
+        _set_arg('pipeline_model_parallel_size', force=True)
+        _set_arg('virtual_pipeline_model_parallel_size', force=True)
+        _set_arg('num_layers_per_virtual_pipeline_stage')
+    return args, checkpoint_args
+
+def load_checkpoint_mg(model, args, load_arg='load', strict=True):
+    from megatron.utils import unwrap_model
+    from megatron.core import mpu
+    
+    model = unwrap_model(model)
+    load_dir = getattr(args, load_arg)
+    state_dict = _load_base_checkpoint(load_dir)
+
+    # Model.
+    if len(model) == 1:
+        model[0].load_state_dict(state_dict['model'], strict=strict)
+    else:
+        for i in range(len(model)):
+            mpu.set_virtual_pipeline_model_parallel_rank(i)
+            model[i].load_state_dict(state_dict['model%d' % i], strict=strict)
+            
 def _load_checkpoint(queue, args):
 
     # Search in directory above this
@@ -43,11 +189,11 @@ def _load_checkpoint(queue, args):
         sys.path.insert(0, args.megatron_path)
 
     try:
-        from modellink.utils import parse_args
-        from megatron.arguments import validate_args
+        from ascendspeed import megatron_adaptor
+        from megatron.arguments import parse_args, validate_args
         from megatron.global_vars import set_args, set_global_variables
-        from megatron.checkpointing import load_args_from_checkpoint
-        from megatron.checkpointing import load_checkpoint as load_checkpoint_mg
+        # from megatron.checkpointing import load_args_from_checkpoint
+        # from megatron.checkpointing import load_checkpoint as load_checkpoint_mg
         from megatron.model import module
         from megatron.core import mpu
         from megatron.core.enums import ModelType
@@ -72,6 +218,7 @@ def _load_checkpoint(queue, args):
                 ]
 
     margs = parse_args()
+    setattr(margs, 'embed_layernorm', False)
     margs.embed_layernorm = args.embed_layernorm
     margs, checkpoint_args = load_args_from_checkpoint(margs)
     margs.add_qkv_bias = args.add_qkv_bias
@@ -160,7 +307,7 @@ def _load_checkpoint(queue, args):
                 model_ = [model_provider(pre_process, post_process).to(dtype)]
             margs.consumed_train_samples = 0
             margs.consumed_valid_samples = 0
-            load_checkpoint_mg(model_, None, None)
+            load_checkpoint_mg(model_, margs)
 
             if consumed_train_samples is not None:
                 if margs.consumed_train_samples != consumed_train_samples:
@@ -383,3 +530,4 @@ def load_checkpoint(queue, args):
     except:
         queue.put("exit")
         raise
+

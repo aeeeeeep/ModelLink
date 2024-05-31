@@ -38,6 +38,11 @@ def add_arguments(parser):
                        'in the input checkpoint if provided by the loader, otherwise to 1')
     group.add_argument('--save-model-type', type=str, default='megatron',
                        help='Save model type')
+    parser.add_argument('--save-template-dir', type=str,
+                        help='Template Directory of HF model')
+    group.add_argument('--save-embeddings-as-head', action='store_true',
+                       help='Tie embeddings and output weights in saving hf weights', default=False,
+    )
     group.add_argument("--w-pack", type=bool,
                        help='True is w_pack weight for llm',
                        default=False)
@@ -50,7 +55,7 @@ def save_huggingface(args, model):
     from transformers import BloomForCausalLM
 
     # Load Huggingface model.
-    hf_model = BloomForCausalLM.from_pretrained(args.save_dir, device_map="cpu", torch_dtype="auto")
+    hf_model = BloomForCausalLM.from_pretrained(args.save_template_dir, device_map="cpu", torch_dtype="auto")
 
     for name_param_h, name_param_m in zip(hf_model.named_parameters(), model.named_parameters()):
         name_param_h[1].data.copy_(name_param_m[1])
@@ -60,12 +65,14 @@ def save_huggingface(args, model):
     hf_model.save_pretrained(save_dir)
 
 
-def save_huggingface_llama(args, model, model_args):
+def save_huggingface_llama(args, model, model_args, pp_rank=0):
     '''Set model params.'''
     from transformers import AutoModelForCausalLM
 
     # Load Huggingface model.
-    hf_model = AutoModelForCausalLM.from_pretrained(args.save_dir, device_map="cpu", trust_remote_code=True, torch_dtype="auto")
+    hf_model = AutoModelForCausalLM.from_pretrained(args.save_template_dir, device_map="cpu", trust_remote_code=True, torch_dtype="auto")
+    # 解邦hf模板中的embedding与lm_head权重张量
+    hf_model.lm_head.weight = torch.nn.Parameter(hf_model.lm_head.weight.clone())
     hf2mg_map = {}
     for name_param_m in model.named_parameters():
         layer_num = name_param_m[0].split(".")[3] if len(name_param_m[0].split(".")) > 3 else name_param_m[0].split(".")[1]
@@ -75,9 +82,16 @@ def save_huggingface_llama(args, model, model_args):
             if model_args.checkpoint_args.group_query_attention
             else model_args.num_attention_heads
         )
+        if model_args.output_layer:
+            save_embeddings_as_head = False
+        else:
+            save_embeddings_as_head = True
         repeats = nh // ng
         if name_param_m[0] == "language_model.embedding.word_embeddings.weight":
             hf2mg_map["model.embed_tokens.weight"] = name_param_m[1]
+            if save_embeddings_as_head:
+                print("Will save embeddings as head in llama converting")
+                hf2mg_map[f"lm_head.weight"] = name_param_m[1].clone()
             continue
         if name_param_m[0] == f"language_model.encoder.layers.{layer_num}.post_attention_norm.weight":
             hf2mg_map[f"model.layers.{layer_num}.post_attention_layernorm.weight"] = name_param_m[1]
@@ -138,16 +152,21 @@ def save_huggingface_llama(args, model, model_args):
         if name_param_m[0] == "language_model.encoder.final_norm.weight":
             hf2mg_map[f"model.norm.weight"] = name_param_m[1]
             continue
-        if name_param_m[0] == "language_model.output_layer.weight":
+        if not save_embeddings_as_head and name_param_m[0] == "language_model.output_layer.weight":
             hf2mg_map[f"lm_head.weight"] = name_param_m[1]
             continue
     for name_param_h in hf_model.named_parameters():
         if name_param_h[0] in hf2mg_map.keys():
+            hf_shape = name_param_h[1].shape
+            mg_shape = hf2mg_map[name_param_h[0]].shape
+            if hf_shape != mg_shape:
+                print(f'!!! The shape of {name_param_h[0]} layer in megatron {mg_shape} is not equal to hf {hf_shape}. The excess parts will be sliced')
+                hf2mg_map[name_param_h[0]] = hf2mg_map[name_param_h[0]][:hf_shape[0], ...]
             name_param_h[1].data.copy_(hf2mg_map[name_param_h[0]])
 
-    save_dir = os.path.join(args.save_dir, 'mg2hg')
+    save_dir = os.path.join(args.save_dir, f'PP{pp_rank}')
     print(f'save weight to {save_dir}')
-    hf_model.save_pretrained(save_dir)
+    hf_model.save_pretrained(save_dir, safe_serialization=False, max_shard_size="10GB")
 
 
 def save_huggingface_qwen(args, model, model_args):
@@ -158,7 +177,7 @@ def save_huggingface_qwen(args, model, model_args):
     # Load Huggingface model.
     with init_empty_weights():
         hf_model = AutoModelForCausalLM.from_pretrained(
-            args.save_dir, device_map="cpu", trust_remote_code=True, torch_dtype="auto"
+            args.save_template_dir, device_map="cpu", trust_remote_code=True, torch_dtype="auto"
         )
     hf2mg_map = {}
     for name_param_m in model.named_parameters():
@@ -242,30 +261,6 @@ def save_huggingface_qwen(args, model, model_args):
     hf_model.save_pretrained(save_dir)
 
 
-def vocab_padding(md, margs, orig_tensor, _vocab_size_with_padding):
-    # figure out what our padded vocab size is
-    orig_vocab_size = orig_tensor.shape[0]
-    margs.padded_vocab_size = _vocab_size_with_padding(md.true_vocab_size, margs)
-
-    # Cut out extra padding we don't need
-    if orig_vocab_size > margs.padded_vocab_size:
-        full_word_embed = orig_tensor[0:margs.padded_vocab_size, :]
-
-    # Expanding embedding to larger size by replicating final entry
-    elif orig_vocab_size < margs.padded_vocab_size:
-        padding_size = margs.padded_vocab_size - orig_vocab_size
-
-        full_word_embed = torch.cat((
-            orig_tensor,
-            orig_tensor[-1].unsqueeze(0).expand(padding_size, -1)))
-
-    # Same size!
-    else:
-        full_word_embed = orig_tensor
-
-    return full_word_embed
-
-
 def save_model_checkpoint(queue, args):
 
     # Search in directory above this
@@ -276,8 +271,8 @@ def save_model_checkpoint(queue, args):
     if args.megatron_path is not None:
         sys.path.insert(0, args.megatron_path)
 
-    from megatron.arguments import validate_args
-    from modellink.utils import parse_args
+    from ascendspeed import megatron_adaptor
+    from megatron.arguments import (parse_args, validate_args)
     from megatron.checkpointing import save_checkpoint
     from megatron.global_vars import set_global_variables, get_args
     from megatron.core.enums import ModelType
@@ -359,6 +354,7 @@ def save_model_checkpoint(queue, args):
                 '--save-interval', '1',
                 '--save', args.save_dir
                 ]
+
     if md.make_vocab_size_divisible_by is not None:
         sys.argv.extend(['--make-vocab-size-divisible-by', str(md.make_vocab_size_divisible_by)])
     if md.params_dtype == torch.float16:
@@ -375,8 +371,8 @@ def save_model_checkpoint(queue, args):
         sys.argv.append('--bert-no-binary-head')
 
     margs = parse_args()
-    margs.make_vocab_size_divisible_by = 1
     margs.w_pack = args.w_pack
+
 
     if hasattr(md, 'checkpoint_args'):
         # These are arguments that we are either changing, or cause problems for validation if they are set
@@ -393,7 +389,7 @@ def save_model_checkpoint(queue, args):
                         'encoder_num_layers', 'encoder_seq_length',
                         'distribute_saved_activations',
                         'train_iters', 'lr_decay_iters', 'lr_warmup_iters', 'lr_warmup_fraction',
-                        'start_weight_decay', 'end_weight_decay', 'make_vocab_size_divisible_by']
+                        'start_weight_decay', 'end_weight_decay']
 
 
         for arg, value in vars(md.checkpoint_args).items():
@@ -431,6 +427,8 @@ def save_model_checkpoint(queue, args):
     else:
         raise Exception(f'unrecognized model type: {args.model_type}')
 
+    setattr(margs, 'embed_layernorm', md.embed_layernorm)
+
     def get_models(count, dtype, pre_process, post_process):
         models = [model_provider(pre_process, post_process).to(dtype) for _ in range(count)]
         return models
@@ -457,7 +455,25 @@ def save_model_checkpoint(queue, args):
 
     # Deal with padding
     if md.true_vocab_size is not None:
-        full_word_embed = vocab_padding(md, margs, orig_word_embed, _vocab_size_with_padding)
+        # figure out what our padded vocab size is
+        orig_vocab_size = orig_word_embed.shape[0]
+        margs.padded_vocab_size = _vocab_size_with_padding(md.true_vocab_size, margs)
+
+        # Cut out extra padding we don't need
+        if orig_vocab_size > margs.padded_vocab_size:
+            full_word_embed = orig_word_embed[0:margs.padded_vocab_size, :]
+
+        # Expanding embedding to larger size by replicating final entry
+        elif orig_vocab_size < margs.padded_vocab_size:
+            padding_size = margs.padded_vocab_size - orig_vocab_size
+
+            full_word_embed = torch.cat((
+                orig_word_embed,
+                orig_word_embed[-1].unsqueeze(0).expand(padding_size, -1)))
+
+        # Same size!
+        else:
+            full_word_embed = orig_word_embed
     else:
         print("Original vocab size not specified, leaving embedding table as-is. "
               "If you've changed the tensor parallel size this could cause problems.")
@@ -601,17 +617,37 @@ def save_model_checkpoint(queue, args):
                 if not hasattr(models[0].language_model, 'output_layer'):
                     print("ERROR: got an output layer, but model does not have one")
                     exit(1)
-                
+                # Deal with padding
+                orig_output_layer = msg.pop("weight")
                 if md.true_vocab_size is not None:
-                    weight = vocab_padding(md, margs, msg.pop("weight"), _vocab_size_with_padding)
-                else:
-                    weight = msg.pop("weight")
-                output_layer_weight = torch.chunk(weight, args.target_tensor_parallel_size, dim=0)    
+                    # figure out what our padded vocab size is
+                    orig_vocab_size = orig_output_layer.shape[0]
+                    margs.padded_vocab_size = _vocab_size_with_padding(md.true_vocab_size, margs)
 
+                    # Cut out extra padding we don't need
+                    if orig_vocab_size > margs.padded_vocab_size:
+                        full_output_layer = orig_output_layer[0:margs.padded_vocab_size, :]
+
+                    # Expanding embedding to larger size by replicating final entry
+                    elif orig_vocab_size < margs.padded_vocab_size:
+                        padding_size = margs.padded_vocab_size - orig_vocab_size
+                        full_output_layer = torch.cat((
+                            orig_output_layer,
+                            orig_output_layer[-1].unsqueeze(0).expand(padding_size, -1)))
+                    # Same size!
+                    else:
+                        full_output_layer = orig_output_layer
+                else:
+                    print("Original vocab size not specified, leaving embedding table as-is. "
+                        "If you've changed the tensor parallel size this could cause problems.")
+                    margs.padded_vocab_size = orig_output_layer.shape[0]
+                    full_output_layer = orig_output_layer
+                output_layer_weight = torch.chunk(full_output_layer, args.target_tensor_parallel_size, dim=0)
                 for tp_rank in range(args.target_tensor_parallel_size):
                     models[tp_rank].language_model.output_layer.weight.data.copy_(output_layer_weight[tp_rank])
                 del output_layer_weight
                 check_message(msg)
+
             msg = queue_get()
             if msg != "done" and msg["name"] == "pooler":
                 if not hasattr(models[0].language_model, 'pooler'):
@@ -692,8 +728,9 @@ def save_model_checkpoint(queue, args):
             elif args.save_model_type == 'huggingface_bloom':
                 save_huggingface(args, models[tp_rank])
             elif args.save_model_type == "save_huggingface_llama":
-                save_huggingface_llama(args, models[tp_rank], md)
+                save_huggingface_llama(args, models[tp_rank], md, pp_rank)
             elif args.save_model_type == "save_huggingface_qwen":
                 save_huggingface_qwen(args, models[tp_rank], md)
 
     print("Done!")
+
