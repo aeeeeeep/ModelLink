@@ -14,6 +14,10 @@
 # limitations under the License.
 
 import logging
+import sys
+
+from .log_handler import StdoutOnlyRank0
+sys.stdout = StdoutOnlyRank0()
 
 try:
     import torch_npu
