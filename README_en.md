@@ -316,7 +316,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> 【Ascend】 </td>
     </tr>
   <tr>
-       <td rowspan="4"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+       <td rowspan="5"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
       <td>4B</td>
       <td> <a href="examples/qwen15/pretrain_qwen15_4b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen15/generate_qwen15_4b_ptd.sh"> generate </a> </td>
@@ -352,7 +352,15 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> -- </td>
       <td> <a href="examples/qwen15/evaluate_qwen15_32b_ptd.sh"> eval </a> </td>
       <td rowspan="1"> 【Community】 </td>
-    </tr>
+    <tr>
+      <td>72B</td>
+      <td> <a href="examples/qwen15/pretrain_qwen15_72b_ptd.sh"> pretrain </a> </td>
+      <td> <a href="examples/qwen15/generate_qwen15_72b_ptd.sh"> generate </a> </td>
+      <td> <a href="examples/qwen15/tune_qwen15_72b_ptd.sh"> lora </a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/qwen15/evaluate_qwen15_72b_ptd.sh"> eval </a> </td>
+      <td rowspan="1"> 【Ascend】 </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/yi/README.md">Yi</a></td>
@@ -654,7 +662,7 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 345 </td>
     </tr>
    <tr>
-      <td rowspan="4"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+      <td rowspan="5"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
       <td> 4B </td>
       <td> 1x8 </td>
       <td> BF16 </td>
@@ -678,6 +686,12 @@ For the supported models listed above, we provide training scripts and readme in
       <td> BF16 </td>
       <td> 751 </td>
       <td> 708 </td>
+      <tr>
+      <td> 72B </td>
+      <td> 8x8 </td>
+      <td> BF16 </td>
+      <td> 301 </td>
+      <td> 317 </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/yi/README_en.md">Yi</a></td>
