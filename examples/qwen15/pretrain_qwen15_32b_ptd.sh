@@ -6,11 +6,11 @@ export NPU_ASD_ENABLE=0
 export WITHOUT_JIT_COMPILE=1
 
 MASTER_ADDR=localhost
-NPU_PER_NODE=8
+NPUS_PER_NODE=8
 MASTER_PORT=6000
 NNODES=4
 NODE_RANK=0
-WORLD_SIZE=$(($NPU_PER_NODE*$NNODES))
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
 # please fill these path configurations
 CKPT_LOAD_DIR="your model ckpt path"
@@ -77,7 +77,7 @@ GPT_ARGS="
     --no-load-rng \
     --bf16 \
     --group-query-attention \
-    --num-query-group 8 \
+    --num-query-groups 8 \
     --rotary-base 1000000 \
     --padded-vocab-size 152064 \
     --num-layers-per-virtual-pipeline-stage 2
