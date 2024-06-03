@@ -1,10 +1,10 @@
 <p align="center"> <img src="sources/images/logo.png" height="90px" width="400px"> </p>
 
 <p align="center">
-    <a href="https://gitee.com/ascend/AscendSpeed/blob/master/LICENSE">
+    <a href="https://gitee.com/ascend/MindSpeed/blob/master/LICENSE">
         <img alt="GitHub" src="https://img.shields.io/github/license/huggingface/transformers.svg?color=blue">
     </a>
-    <a href="https://gitee.com/ascend/AscendSpeed">
+    <a href="https://gitee.com/ascend/MindSpeed">
         <img alt="Documentation" src="https://img.shields.io/website/http/huggingface.co/docs/transformers/index.svg?down_color=red&down_message=offline&up_message=online">
     </a>
     <a>

@@ -53,9 +53,9 @@ Here's a hardware summary of pre-training Aquila-7B:
 
     # source the set_env.sh file based on your host settings(you may need to change the path)
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    # use git to clone the AscendSpeed source code, enter the directory, then install ascendspeed package by source code
-    git clone https://gitee.com/ascend/AscendSpeed.git
-    cd AscendSpeed/
+    # use git to clone the MindSpeed source code, enter the directory, then install mindspeed package by source code
+    git clone https://gitee.com/ascend/MindSpeed.git
+    cd MindSpeed/
     git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip install -r requirements.txt
     pip install -e .
@@ -174,7 +174,7 @@ The performance of Aquila-7B in Ascend NPU and reference device:
 
 ## Inference
 
-We support AscendSpeed Inference for text generation with Aquila 7B model.
+We support MindSpeed Inference for text generation with Aquila 7B model.
 
 Inference is different from pre-training because it requires loading the pre-trained model weights. Therefore, we need to complete the aforementioned model weight conversion task first, then configure the Aquila-7B Inference shell script `examples/aquila/generate_aquila_7b_ptd.sh`. "CKPT_LOAD_DIR" must point to the converted weights directory, and "TOKENIZER_PATH" must point to the directory which contains Aquila vocabulary files -- in our example, it is "./model_from_hf/Aquila-7B/". In your operation, please fill in correct value based on your actual scenario.
 
