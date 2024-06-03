@@ -184,6 +184,7 @@ Here's a hardware summary of pre-training  Gemma-2B:
     cd ..
 
     # process datasets  
+    mkdir ./finetune_dataset/Gemma-2B/  
     python tools/preprocess_data.py \
         --input ./finetune_dataset/moss-003-sft-no-tools.jsonl \
         --output-prefix ./finetune_dataset/Gemma-2B/moss \
@@ -432,6 +433,7 @@ Here's a hardware summary of pre-training  Gemma-7B:
     cd ..
 
     # process datasets  
+    mkdir ./finetune_dataset/Gemma-7B/  
     python tools/preprocess_data.py \
         --input ./finetune_dataset/moss-003-sft-no-tools.jsonl \
         --output-prefix ./finetune_dataset/Gemma-7B/moss \
