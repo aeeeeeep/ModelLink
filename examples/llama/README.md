@@ -63,8 +63,8 @@ LLaMA-7B/13B 训练的硬件配置如下:
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     # 安装加速库
-    git clone https://gitee.com/ascend/AscendSpeed.git
-    cd AscendSpeed
+    git clone https://gitee.com/ascend/MindSpeed.git
+    cd MindSpeed
     git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip install -r requirements.txt
     pip3 install -e .
@@ -504,8 +504,8 @@ LLaMA-33B/65B 训练的硬件配置:
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
     # 安装加速库
-    git clone https://gitee.com/ascend/AscendSpeed.git
-    cd AscendSpeed
+    git clone https://gitee.com/ascend/MindSpeed.git
+    cd MindSpeed
     git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip install -r requirements.txt 
     pip3 install -e .
