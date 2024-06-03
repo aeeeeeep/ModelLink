@@ -1,3 +1,7 @@
+# coding=utf-8
+# Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2024, Huawei Technologies Co., Ltd. All rights reserved.
+
 from functools import wraps
 
 import torch
@@ -51,19 +55,21 @@ def apply_rotary_pos_emb(t, freqs):
     if args.use_partial_rope:
         sq, b, np, hn = t.size(0), t.size(1), t.size(2), t.size(3)
         rot_dim = freqs.shape[-2] * 2
-        t, x_pass = t[..., :rot_dim], t[..., rot_dim:]
+        t, t_pass = t[..., :rot_dim], t[..., rot_dim:]
         freqs = freqs[:sq].to(t.dtype)
         xshaped = t.reshape(sq, -1, np, rot_dim // 2, 2)
         freqs = freqs.view(sq, -1, 1, xshaped.size(3), 2)
-        x_out2 = torch.stack(
+        x_shape1, x_shape2 = torch.chunk(xshaped, 2, dim=-1)
+        freqs1, freqs2 = torch.chunk(freqs, 2, dim=-1)
+        t = torch.stack(
             [
-                xshaped[..., 0] * freqs[..., 0] - xshaped[..., 1] * freqs[..., 1],
-                xshaped[..., 1] * freqs[..., 0] + xshaped[..., 0] * freqs[..., 1],
+                x_shape1 * freqs1 - x_shape2 * freqs2,
+                x_shape2 * freqs1 + x_shape1 * freqs2,
             ],
             -1,
         )
-        x_out2 = x_out2.flatten(3)
-        return torch.cat((x_out2, x_pass), dim=-1)
+        t = t.flatten(3)
+        return torch.cat((t, t_pass), dim=-1)
 
     if args.use_fused_rotary_pos_emb:
         cos = torch.cos(freqs)

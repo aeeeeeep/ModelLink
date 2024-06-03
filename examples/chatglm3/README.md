@@ -64,7 +64,7 @@ ChatGLM3-6B 训练的硬件配置:
     cd AscendSpeed
     git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip install -r requirements.txt 
-    pip3 install -e .
+    pip install -e .
     cd ..
     
     # 安装其余依赖库
@@ -107,10 +107,10 @@ ChatGLM3-6B 训练的硬件配置:
         --model-type GPT \
         --loader chatglm3_hf \
         --saver megatron \
-        --target-tensor-parallel-size 2 \
+        --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 2 \
         --load-dir ./model_from_hf/chatglm3_6b_hf/ \
-        --save-dir ./model_weights/chatglm3_6b_tp2pp2/ \
+        --save-dir ./model_weights/chatglm3_6b_tp1pp2/ \
         --tokenizer-model ./model_from_hf/chatglm3_6b_hf/tokenizer.model \
         --add-qkv-bias
     ```
@@ -149,7 +149,7 @@ ChatGLM3-6B 训练的硬件配置:
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     
     # 根据实际情况配置词表、数据集、模型参数加载和保存路径
-    LOAD_CHECKPOINT_PATH="./model_weights/chatglm3_6b_tp2pp2/"
+    LOAD_CHECKPOINT_PATH="./model_weights/chatglm3_6b_tp1pp2/"
     SAVE_CHECKPOINT_PATH="./ckpt/chatglm3_6b_hf/"
     TOKENIZER_PATH="./model_from_hf/chatglm3_6b_hf/"  #词表路径
     DATA_PATH="./dataset/chatglm3_6b_hf/alpaca_text_document"  #数据集路径
@@ -173,8 +173,8 @@ ChatGLM3-6B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 | 设备 |    模型    | tokens吞吐 (tokens/s/p) | 
 | :--: | :--------: |:---------------------:| 
-| NPUs | ChatGLM3-6B |        2228.5         |  
-| 参考 | ChatGLM3-6B |        3645.3         |  
+| NPUs | ChatGLM3-6B |        4297         |  
+| 参考 | ChatGLM3-6B |        4269         |  
 
 ## 推理
 
@@ -185,7 +185,7 @@ ChatGLM3-6B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 ```shell
 # 修改模型权重路径以及词表路径
-CHECKPOINT="./model_weights/chatglm3_6b_tp2pp2/"
+CHECKPOINT="./model_weights/chatglm3_6b_tp1pp2/"
 TOKENIZER_PATH="./model_from_hf/chatglm3_6b_hf/"
 ```
 
