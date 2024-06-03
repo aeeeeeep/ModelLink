@@ -55,4 +55,6 @@ torchrun $DISTRIBUTED_ARGS evaluation.py \
        --bf16 \
        --group-query-attention \
        --num-query-group 8 \
-       --seed 42 | tee logs/eval_qwen15_32b${TASK}.log
+       --seed 42 \
+       --no-chat-template \
+       | tee logs/eval_qwen15_32b${TASK}.log

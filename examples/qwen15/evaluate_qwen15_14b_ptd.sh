@@ -65,4 +65,5 @@ torchrun $DISTRIBUTED_ARGS evaluation.py \
        --attention-softmax-in-fp32 \
        --seed 42 \
        --bf16 \
+       --no-chat-template \
        | tee logs/eval_qwen15_14b_${TASK}.log
