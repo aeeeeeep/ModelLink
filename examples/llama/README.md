@@ -192,7 +192,7 @@ LLaMA-7B/13B 训练的硬件配置如下:
     ```shell
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     mkdir ./dataset/llama-7b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-7b-hf/ \
         --output-prefix ./dataset/llama-7b-hf/alpaca \
@@ -206,7 +206,7 @@ LLaMA-7B/13B 训练的硬件配置如下:
     ```shell
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     mkdir ./dataset/llama-7b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-13b-hf/ \
         --output-prefix ./dataset/llama-7b-hf/alpaca \
@@ -277,7 +277,7 @@ LLaMA-7B/13B 训练的硬件配置如下:
 
     ```shell
     mkdir ./finetune_dataset/llama-7b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-7b-hf/ \
         --output-prefix ./finetune_dataset/llama-7b-hf/alpaca \
@@ -292,7 +292,7 @@ LLaMA-7B/13B 训练的硬件配置如下:
 
     ```shell
     mkdir ./finetune_dataset/llama-13b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-13b-hf/ \ 
         --output-prefix ./finetune_dataset/llama-13b-hf/alpaca \
@@ -625,7 +625,7 @@ LLaMA-33B/65B 训练的硬件配置:
 
     ```shell
     mkdir ./dataset/llama-33b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-33b-hf \
         --output-prefix ./dataset/llama-33b-hf/alpaca \
@@ -638,7 +638,7 @@ LLaMA-33B/65B 训练的硬件配置:
 
     ```shell
     mkdir ./dataset/llama-65b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-65b-hf \
         --output-prefix ./dataset/llama-65b-hf/alpaca \
@@ -728,7 +728,7 @@ LLaMA-33B/65B 训练的硬件配置:
 
     ```shell
     mkdir ./finetune_dataset/llama-33b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-33b-hf/ \ 
         --output-prefix ./finetune_dataset/llama-33b-hf/alpaca \
@@ -743,7 +743,7 @@ LLaMA-33B/65B 训练的硬件配置:
 
     ```shell
     mkdir ./finetune_dataset/llama-65b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-65b-hf/  \
         --output-prefix ./finetune_dataset/llama-65b-hf/alpaca \

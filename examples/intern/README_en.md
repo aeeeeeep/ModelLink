@@ -103,7 +103,7 @@ Here's a hardware summary of pre-training InternLM-7B:
     #!/bin/bash
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     mkdir ./dataset/internlm-7b/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/internlm-7b/ \
         --output-prefix ./dataset/internlm-7b/alpaca \
@@ -293,7 +293,7 @@ Here's a hardware summary of pre-training InternLM-65B:
     #!/bin/bash
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     mkdir ./dataset/internlm-65b/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/internlm-65b/ \
         --output-prefix ./dataset/internlm-65b/alpaca \

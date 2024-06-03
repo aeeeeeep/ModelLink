@@ -414,7 +414,7 @@ Here's a hardware summary of pre-training  Qwen1.5-7B:
 
    # process datasets
    mkdir ./dataset/Qwen1.5-7B/
-   python ./tools/preprocess_data.py \
+   python ./preprocess_data.py \
        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
        --tokenizer-name-or-path ./model_from_hf/Qwen1.5-7B \
        --output-prefix ./dataset/Qwen1.5-7B/alpaca \
@@ -457,7 +457,7 @@ Here's a hardware summary of pre-training  Qwen1.5-7B:
 
    # process datasets   
    mkdir ./finetune_dataset/Qwen1.5-7B/
-   python ./tools/preprocess_data.py \
+   python ./preprocess_data.py \
        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
        --tokenizer-name-or-path ./model_from_hf/Qwen1.5-7B/ \
        --output-prefix ./finetune_dataset/Qwen1.5-7B/alpaca \
@@ -675,7 +675,7 @@ Here's a hardware summary of pre-training  Qwen1.5-14B:
 
    # process datasets
    mkdir ./dataset/Qwen1.5-14B/
-   python ./tools/preprocess_data.py \
+   python ./preprocess_data.py \
        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
        --tokenizer-name-or-path ./model_from_hf/Qwen1.5-14B \
        --output-prefix ./dataset/Qwen1.5-14B/alpaca \
@@ -718,7 +718,7 @@ Here's a hardware summary of pre-training  Qwen1.5-14B:
 
    # process datasets   
    mkdir ./finetune_dataset/Qwen1.5-14B/
-   python ./tools/preprocess_data.py \
+   python ./preprocess_data.py \
        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
        --tokenizer-name-or-path ./model_from_hf/Qwen1.5-14B/ \
        --output-prefix ./finetune_dataset/Qwen1.5-14B/alpaca \

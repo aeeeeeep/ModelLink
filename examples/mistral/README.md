@@ -142,7 +142,7 @@ wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00
 cd ..
 # 处理数据   
 mkdir ./dataset/Mistral-7B/
-python ./tools/preprocess_data.py \
+python ./preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/Mistral-7B-Instruct-v0.2/ \
     --output-prefix ./dataset/Mistral-7B/alpaca \
@@ -198,7 +198,7 @@ cd ..
 
 # 处理微调数据集  
 mkdir ./finetune_dataset/Mistral-7B/
-python ./tools/preprocess_data.py \
+python ./preprocess_data.py \
     --input ./finetune_dataset/Alpaca_data_gpt4_zh.jsonl \
     --output-prefix ./finetune_dataset/Mistral-7B/alpaca \
     --tokenizer-type PretrainedFromHF \

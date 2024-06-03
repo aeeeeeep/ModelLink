@@ -26,7 +26,7 @@ import numpy as np
 from datasets import load_dataset
 
 from megatron.core.datasets import indexed_dataset
-from modellink.data.prompter import Prompter, AlpacaTemplate
+from modellink.tasks.preprocess.prompter import Prompter, AlpacaTemplate
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
