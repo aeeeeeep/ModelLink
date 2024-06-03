@@ -182,6 +182,7 @@ Gemma-2B 训练的硬件配置:
     cd ..
 
     # 处理数据集  
+    mkdir ./finetune_dataset/Gemma-2B/
     python tools/preprocess_data.py \
         --input ./finetune_dataset/moss-003-sft-no-tools.jsonl \
         --output-prefix ./finetune_dataset/Gemma-2B/moss \
@@ -430,6 +431,7 @@ Gemma-7B 训练的硬件配置:
     cd ..
 
     # 处理数据集  
+    mkdir ./finetune_dataset/Gemma-7B/
     python tools/preprocess_data.py \
         --input ./finetune_dataset/moss-003-sft-no-tools.jsonl \
         --output-prefix ./finetune_dataset/Gemma-7B/moss \
