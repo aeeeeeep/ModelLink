@@ -1,16 +1,15 @@
 #!/bin/bash
 
 export CUDA_DEVICE_MAX_CONNECTIONS=1
-export HCCL_CONNECT_TIMEOUT=1800
 export NPU_ASD_ENABLE=0
 export WITHOUT_JIT_COMPILE=1
 
 MASTER_ADDR=localhost
-NPUS_PRE_NODE=8
 MASTER_PORT=6000
-NNODES=2
+NNODES=1
 NODE_RANK=0
-WORLD_SIZE=$(($NPUS_PRE_NODE*$NNODES))
+NPUS_PER_NODE=8
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
 # please fill these path configurations
 CKPT_LOAD_DIR="your model ckpt path"
@@ -18,7 +17,7 @@ CKPT_SAVE_DIR="your model save ckpt path"
 DATA_PATH="your data path"
 TOKENIZER_PATH="your tokenizer path"
 
-TP=8
+TP=4
 PP=2
 
 DISTRIBUTED_ARGS="
@@ -33,18 +32,22 @@ GPT_ARGS="
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --sequence-parallel \
-    --num-layers 80 \
-    --hidden-size 8192 \
-    --ffn-hidden-size 24576 \
-    --num-attention-heads 64 \
+    --num-layers 40 \
+    --hidden-size 5120 \
+    --ffn-hidden-size 13686 \
+    --num-attention-heads 40 \
+    --load ${CKPT_LOAD_DIR} \
+    --finetune \
+    --is-instruction-dataset \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
-    --load ${CKPT_LOAD_DIR} \
     --seq-length 8192 \
     --max-position-embeddings 32768 \
     --micro-batch-size 1 \
-    --global-batch-size 64 \
-    --make-vocab-size-divisible-by 1 \
+    --global-batch-size 256 \
+    --make-vocab-size-divisible-by 16 \
+    --padded-vocab-size 152064 \
+    --rotary-base 1000000 \
     --lr 1.25e-6 \
     --train-iters 5000 \
     --lr-decay-style cosine \
@@ -55,9 +58,9 @@ GPT_ARGS="
     --hidden-dropout 0.0 \
     --position-embedding-type rope \
     --normalization RMSNorm \
+    --use-fused-rmsnorm \
     --swiglu \
     --use-flash-attn \
-    --use-fused-rmsnorm \
     --use-fused-rotary-pos-emb \
     --use-rotary-position-embeddings \
     --use-fused-swiglu \
@@ -73,16 +76,10 @@ GPT_ARGS="
     --add-qkv-bias \
     --initial-loss-scale 4096 \
     --no-gradient-accumulation-fusion \
-    --finetune \
-    --is-instruction-dataset \
-    --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
-    --lora-r 16 \
-    --lora-alpha 32 \
     --no-load-optim \
     --no-load-rng \
-    --bf16 \
-    --rotary-base 1000000 \
-    --padded-vocab-size 152064
+    --seed 42 \
+    --bf16
 "
 
 DATA_ARGS="
@@ -103,4 +100,4 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
     --save ${CKPT_SAVE_DIR} \
-    | tee logs/tune_qwen15_72b.log
+    | tee logs/finetune_qwen15_14b.log
