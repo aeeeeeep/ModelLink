@@ -34,7 +34,7 @@ python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS \
       --kv-channels 256 \
       --tokenizer-type PretrainedFromHF \
       --tokenizer-name-or-path $TOKENIZER_MODEL \
-      --seq-length 8192 \
+      --seq-length 1024 \
       --max-position-embeddings 8192 \
       --micro-batch-size 1 \
       --global-batch-size 16 \
