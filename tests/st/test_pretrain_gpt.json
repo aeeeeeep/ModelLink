@@ -1,0 +1,24 @@
+{
+    "test_pretrain": [
+        {
+            "param": {
+                "tensor-model-parallel-size": 2,
+                "pipeline-model-parallel-size": 2,
+                "micro-batch-size": 1,
+                "tokenizer-type": "Llama2Tokenizer",
+                "tokenizer-model": "tests/test_data/tokenizers/llama2_hf_tokenizer/tokenizer.model",
+                "num-layers": 2,
+                "hidden-size": 1024,
+                "num-attention-heads": 8,
+                "seq-length": 1024,
+                "bf16": true,
+                "split": "100,0,0",
+                "max-position-embeddings": 1024,
+                "lr": 1.25e-6,
+                "train-iters": 3,
+                "save-interval": 10000,
+                "data-path": "tests/test_data/datasets/llama_mmap/pretrain_mmap_dataset/pretrain_text_document"
+            }
+        }
+    ]
+}

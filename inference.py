@@ -34,7 +34,7 @@ def model_provider(pre_process=True, post_process=True):
     return init_model
 
 
-if __name__ == "__main__":
+def main():
     initialize_megatron(extra_args_provider=add_text_generate_args,
                         args_defaults={'no_load_rng': True,
                                        'no_load_optim': True})
@@ -60,3 +60,7 @@ if __name__ == "__main__":
         dialog_template = "[INST] {instruction} [/INST] "
 
     task_factory(args, model, system_template=system_template, dialog_template=dialog_template)
+
+
+if __name__ == "__main__":
+    main()
