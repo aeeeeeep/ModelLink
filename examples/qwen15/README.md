@@ -133,7 +133,7 @@ Qwen1.5-1.8B 训练的硬件配置:
         --params-dtype bf16 \
         --add-qkv-bias \
         --load-dir ./model_from_hf/qwen15-1.8b-hf/ \
-        --save-dir ./model_weights/qwen15-1.8b-hf-v0.1-tp1-pp2/ \
+        --save-dir ./model_weights/qwen15-1.8b-hf-v0.1-tp1-pp1/ \
         --tokenizer-model ./model_from_hf/qwen15-1.8b-hf/tokenizer.json
     ```
 
