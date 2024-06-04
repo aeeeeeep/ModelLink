@@ -1,10 +1,17 @@
+# Qwen1.5 $\color{black}{\rm\tiny{【Model}}$ $\color{black}{\rm\tiny{contributed}}$ $\color{black}{\rm\tiny{by}}$ $\color{black}{\rm\tiny{community】}}$
 <p align="left">
         <b><a href="README.md">简体中文</a></b> |
         <b>English</b> 
 </p>
 
 #  Contents
-
+- [Qwen1.5-1.8B](#Qwen1.5-1.8b)
+  - [Training-1.8B](#training-1.8b)
+    - [Script-1.8B](#script-1.8b)
+    - [Performance-1.8B](#performance-1.8b)
+      - [Machine performance 1.8B](#machine-performance-1.8b)
+  - [Inference-1.8B](#inference-1.8b)
+  - [Evaluation-1.8B](#evaluation-1.8b)
 - [Qwen1.5-4B](#Qwen1.5-4b)
   - [Training-4B](#training-4b)
     - [Script-4B](#script-4b)
@@ -40,10 +47,253 @@
       - [Machine performance 72B](#machine-performance-72b)
   - [Inference-72B](#Inference-72b)
   - [Evaluation-72B](#Evaluation-72b)
+# Qwen1.5-1.8B
 
+## Training-1.8B
+Here's a hardware summary of pre-training  Qwen-1.8B:
+
+| Hardware |                      Value                      |
+| :------: | :---------------------------------------------: |
+|   NPU    |               8 x Ascend NPUs                   |
+### Script
+
+1. Clone the repository to your local server
+
+    ```shell
+    git clone https://gitee.com/ascend/ModelLink.git 
+    git clone https://github.com/NVIDIA/Megatron-LM.git
+    cd Megatron-LM
+    git checkout -f bcce6f
+    cp -r megatron ../ModelLink/
+    cd ..
+    cd ModelLink
+    mkdir logs
+    mkdir model_from_hf
+    mkdir dataset
+    mkdir ckpt
+    ```
+2. Build environment
+
+    ```bash
+    # python3.8
+    conda create -n test python=3.8
+    conda activate test
+
+    # install torch 和 torch_npu
+    pip install torch-2.2.0-cp38-cp38m-manylinux2014_aarch64.whl
+    pip install torch_npu-2.2.0*-cp38-cp38m-linux_aarch64.whl
+    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+
+    # modify ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+    # install MindSpeed
+    git clone https://gitee.com/ascend/MindSpeed.git
+    cd MindSpeed
+    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
+    pip install -r requirements.txt 
+    pip3 install -e .
+    cd ..
+
+    # install other packages
+    pip install -r requirements.txt 
+    ```
+3. Download Qwen1.5-1.8B [pretrained weights and tokenizer](https://huggingface.co/Qwen/Qwen1.5-1.8B/tree/main)
+
+    ```shell
+    #!/bin/bash
+    mkdir ./model_from_hf/qwen15-4b-hf/
+    cd ./model_from_hf/qwen15-4b-hf/
+    wget https://huggingface.co/Qwen/Qwen1.5-1.8B/resolve/main/config.json
+    wget https://huggingface.co/Qwen/Qwen1.5-1.8B/resolve/main/generation_config.json
+    wget https://huggingface.co/Qwen/Qwen1.5-1.8B/resolve/main/merges.txt
+    wget https://huggingface.co/Qwen/Qwen1.5-1.8B/resolve/main/model.safetensors
+    wget https://huggingface.co/Qwen/Qwen1.5-1.8B/resolve/main/tokenizer.json
+    wget https://huggingface.co/Qwen/Qwen1.5-1.8B/resolve/main/tokenizer_config.json
+    wget https://huggingface.co/Qwen/Qwen1.5-1.8B/resolve/main/vocab.json
+    cd ../../
+    ```
+4. weight conversion in ptd mode
+
+    4.1 Convert weights from huggingface format to megatron format
+    ***(This scenario is generally used to train open-source HuggingFace models on Megatron)***
+
+    ```bash
+    # modify the script according to your own ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+    # convert to ptd weights
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader llama2_hf \
+        --saver megatron \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --params-dtype bf16 \
+        --add-qkv-bias \
+        --load-dir ./model_from_hf/qwen15-1.8b-hf/ \
+        --save-dir ./model_weights/qwen15-1.8b-hf-v0.1-tp1-pp1/ \
+        --tokenizer-model ./model_from_hf/qwen15-1.8b-hf/tokenizer.json
+    ```
+
+    4.2 Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+    ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
+
+    ```shell
+    # Modify the ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_llama \
+        --load-dir ./ckpt/ \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --add-qkv-bias \
+        --save-dir ./model_from_hf/qwen15-1.8b-hf/     # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/qwen15-1.8b-hf/mg2hg/
+    ```
+
+5. pre-training
+
+    5.1 prepare dataset
+
+    Download the Qwen1.5-1.8B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+
+    ```shell
+    # download datasets
+    cd ./dataset
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
+    # process datasets   
+    mkdir ./dataset/qwen15-1.8b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/qwen15-1.8b-hf/ \
+        --output-prefix ./dataset/qwen15-1.8b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF
+    ```
+
+    5.2 pre-training
+
+    ```shell
+    # modify the script according to your own ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+    # modify config according to your own actual situation
+    CKPT_SAVE_DIR="./ckpt/qwen15-1.8b-hf/"
+    TOKENIZER_PATH="./model_from_hf/qwen15-1.8b-hf"  #tokenizer path
+    DATA_PATH="./dataset/qwen15-1.8b-hf/alpaca_text_document"  #processed dataset
+    CKPT_LOAD_DIR="./model_weights/qwen15-1.8b-hf-v0.1-tp1-pp1"
+    ```
+    Config Qwen1.5-1.8B pre-training script: examples/qwen15/pretrain_qwen15_1point8b_ptd.sh
+
+6. fine-tuning
+
+    6.1 Prepare fine-tuning dataset
+    Download the Qwen1.5-1.8B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+
+    ```shell
+    # download datasets
+    mkdir finetune_dataset
+    cd ./finetune_dataset
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
+
+    # process datasets   
+    mkdir ./finetune_dataset/qwen15-1.8b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/qwen15-1.8b-hf/ \
+        --output-prefix ./finetune_dataset/qwen15-1.8b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF \
+        --handler-name GeneralInstructionHandler \
+        --append-eod
+    ```
+
+    6.2 Full Parameters Fine-Tuning
+   The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_qwen15_4b_ptd.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
+
+    Add the fine-tuning parameter '--finetune' so that fine-tuning starts from the first step.
+
+    ```bash
+    DATA_PATH="./finetune_dataset/qwen15-1.8b-hf/alpaca"
+    TOKENIZER_PATH="./model_from_hf/qwen15-1.8b-hf/"
+    CKPT_PATH="./model_weights/qwen15-1.8b-hf-v0.1-tp1-pp1/"
+        --load ${CKPT_PATH} \
+        --finetune \
+        --is-instruction-dataset \
+        --tokenizer-type PretrainedFromHF \
+        --tokenizer-name-or-path ${TOKENIZER_PATH} \
+        --tokenizer-not-use-fast \
+    ```
+### Performance-1.8B
+
+#### Machine performance
+
+The performance of Qwen1.5-1.8B in **Ascend NPU** and **Reference**:
+
+| Device |    Model     | total Iterations | throughput rate (tokens/s/p) |
+| :--: |:------------:|:----------------:|:----------------------------:|
+| NPUs | Qwen1.5-1.8B |       2000       |            13029             |
+| Reference | Qwen1.5-1.8B |       2000       |            12181             |
+
+## Inference-1.8B
+
+Config Qwen1.5-1.8B inference script: examples/qwen1.5/generate_qwen1.5_1point8b_ptd.sh
+
+```bash
+# modify the script according to your own ascend-toolkit path
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+ 
+# modify script model path and tokenizer path
+CHECKPOINT="./model_weights/qwen15-1.8b-hf-v0.1-tp1-pp1"
+TOKENIZER_PATH="./model_from_hf/qwen15-1.8b-hf/"
+```
+
+Config Qwen1.5-1.8B inference script
+
+```bash
+bash examples/qwen1.5/generate_qwen1.5_1point8b_ptd.sh
+```
+
+Some inference samples are as follows:
+![Inference](../../sources/images/qwen15/qwen15_1point8b_inference.png)
+
+## Evaluation-1.8B
+
+We use MMLU benchmark to evaluate our model. Benchmark Download [here](https://huggingface.co/datasets/cais/mmlu).
+Config Qwen1.5-1.8B evaluation script: examples/qwen15/evaluate_qwen15_1point8b_ptd.sh
+
+```bash
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+# modify script model path and tokenizer path
+TOKENIZER_PATH="./model_from_hf/qwen15-1.8b-hf/"  #tokenizer path
+CHECKPOINT="./model_weights/qwen15-1.8b-hf-v0.1-tp1-pp1"  #model path
+# configure task and data path
+DATA_PATH="./mmlu/data/test/"
+TASK="mmlu"
+```
+
+Launch evaluation script:
+
+```bash
+bash examples/qwen15/evaluate_qwen15_1point8b_ptd.sh
+```
+
+Evaluation results
+
+| dataset | subject_num | question_num |                     reference_acc                      | NPU acc |
+| :----: | :------: | :------: |:------------------------------------------------------:|:-------:|
+|  MMLU  |    57    |  14042  |   [0.468](https://qwenlm.github.io/zh/blog/qwen1.5)    |  0。462  |
 # Qwen1.5-4B
 
-## Training
+## Training-4B
 Here's a hardware summary of pre-training  Qwen-4B:
 
 | Hardware |                      Value                      |
@@ -229,7 +479,7 @@ Here's a hardware summary of pre-training  Qwen-4B:
         --tokenizer-name-or-path ${TOKENIZER_PATH} \
         --tokenizer-not-use-fast \
     ```
-### Performance
+### Performance-4B
 
 #### Machine performance
 
@@ -288,7 +538,7 @@ Evaluation results
 
 | dataset | subject_num | question_num | reference_acc |NPU acc |
 | :----: | :------: | :------: | :--------: | :-------: |
-|  MMLU  |    57    |  14042  |   0.561   |  0.550  |
+|  MMLU  |    57    |  14042  |   [0.561](https://qwenlm.github.io/zh/blog/qwen1.5)   |  0.550  |
 # Qwen1.5-7B
 
 ## Training
@@ -1139,9 +1389,9 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
    # modify ascend-toolkit path
    source /usr/local/Ascend/ascend-toolkit/set_env.sh
    
-   # install AscendSpeed
-   git clone https://gitee.com/ascend/AscendSpeed.git
-   cd AscendSpeed
+   # install MindSpeed
+   git clone https://gitee.com/ascend/MindSpeed.git
+   cd MindSpeed
    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
    pip install -r requirements.txt 
    pip3 install -e .

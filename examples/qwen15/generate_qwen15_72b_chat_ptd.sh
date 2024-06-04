@@ -43,7 +43,7 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --disable-bias-linear \
        --add-qkv-bias \
        --tokenizer-type PretrainedFromHF \
-       --tokenizer-name-path ${TOKENIZER_PATH} \
+       --tokenizer-name-or-path ${TOKENIZER_PATH} \
        --load ${CHECKPOINT} \
        --normalization RMSNorm \
        --position-embedding-type rope \
