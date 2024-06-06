@@ -62,9 +62,9 @@ Here's a hardware summary of pre-training LLaMA-7B/13B:
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     # modify the path according to your own  ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    # install ascendspeed
-    git clone https://gitee.com/ascend/AscendSpeed.git
-    cd AscendSpeed
+    # install mindspeed
+    git clone https://gitee.com/ascend/MindSpeed.git
+    cd MindSpeed
     git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip install -r requirements.txt
     pip3 install -e .
@@ -165,6 +165,7 @@ Here's a hardware summary of pre-training LLaMA-7B/13B:
         --save-dir ./model_from_hf/llama-13b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-13b-hf/mg2hg/
     ```
 
+    If you need combine Lora weight to huggingface weight, please add --lora-dir {lora weight path} \
     Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
 5. Pretrain
 
@@ -483,9 +484,9 @@ The model was trained using alpaca datasets.
     # modify the path according to your own  ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-    # install AscendSpeed
-    git clone https://gitee.com/ascend/AscendSpeed.git
-    cd AscendSpeed
+    # install MindSpeed
+    git clone https://gitee.com/ascend/MindSpeed.git
+    cd MindSpeed
     git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip install -r requirements.txt 
     pip3 install -e .
@@ -588,6 +589,7 @@ The model was trained using alpaca datasets.
         --save-dir ./model_from_hf/llama-65b-hf/   # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-65b-hf/mg2hg/
     ```
 
+    If you need combine Lora weight to huggingface weight, please add --lora-dir {lora weight path} \
     Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
 
 5. Pretrain

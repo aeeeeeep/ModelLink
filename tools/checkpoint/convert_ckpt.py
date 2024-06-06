@@ -63,6 +63,8 @@ def main():
                         help='Module name to save checkpoint, shdoul be on python path')
     parser.add_argument('--load-dir', type=str, required=True,
                         help='Directory to load model checkpoint from')
+    parser.add_argument('--lora-dir', type=str,
+                        help='Directory to lora model checkpoint from')                
     parser.add_argument('--save-dir', type=str, required=True,
                         help='Directory to save model checkpoint to')
     parser.add_argument('--max-queue-size', type=int, default=50,

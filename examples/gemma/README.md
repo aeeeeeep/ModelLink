@@ -63,8 +63,8 @@ Gemma-2B 训练的硬件配置:
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 
     # 安装加速库
-    git clone https://gitee.com/ascend/AscendSpeed.git
-    cd AscendSpeed
+    git clone https://gitee.com/ascend/MindSpeed.git
+    cd MindSpeed
     git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip install -r requirements.txt
     pip install -e .
@@ -182,6 +182,7 @@ Gemma-2B 训练的硬件配置:
     cd ..
 
     # 处理数据集  
+    mkdir ./finetune_dataset/Gemma-2B/
     python tools/preprocess_data.py \
         --input ./finetune_dataset/moss-003-sft-no-tools.jsonl \
         --output-prefix ./finetune_dataset/Gemma-2B/moss \
@@ -309,8 +310,8 @@ Gemma-7B 训练的硬件配置:
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 
     # 安装加速库
-    git clone https://gitee.com/ascend/AscendSpeed.git
-    cd AscendSpeed
+    git clone https://gitee.com/ascend/MindSpeed.git
+    cd MindSpeed
     git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip install -r requirements.txt
     pip install -e .
@@ -430,6 +431,7 @@ Gemma-7B 训练的硬件配置:
     cd ..
 
     # 处理数据集  
+    mkdir ./finetune_dataset/Gemma-7B/
     python tools/preprocess_data.py \
         --input ./finetune_dataset/moss-003-sft-no-tools.jsonl \
         --output-prefix ./finetune_dataset/Gemma-7B/moss \

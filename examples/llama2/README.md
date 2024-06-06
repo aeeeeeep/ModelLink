@@ -74,8 +74,8 @@ LLAMA2-7B 训练的硬件配置:
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     
     # 安装加速库
-    git clone https://gitee.com/ascend/AscendSpeed.git
-    cd AscendSpeed
+    git clone https://gitee.com/ascend/MindSpeed.git
+    cd MindSpeed
     git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip install -r requirements.txt 
     pip3 install -e .
@@ -138,7 +138,7 @@ LLAMA2-7B 训练的硬件配置:
         --target-pipeline-parallel-size 1 \
         --save-dir ./model_from_hf/llama-2-7b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-2-7b-hf/mg2hg/
     ```
-
+    若需将Lora微调权重一并合并到HuggingFace权重，需添加 --lora-dir {lora微调权重路径} 参数进行转换。\
     权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数 `target-tensor-parallel-size`和 `target-pipeline-parallel-size`。
 
 5. 预训练
@@ -427,8 +427,8 @@ LLaMA2-13B 训练的硬件配置:
    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
    
    # 安装加速库
-   git clone https://gitee.com/ascend/AscendSpeed.git
-   cd AscendSpeed
+   git clone https://gitee.com/ascend/MindSpeed.git
+   cd MindSpeed
    git checkout 224ae35e8fc96778f957029d1371ddb623452a50
    pip install -r requirements.txt 
    pip3 install -e .
@@ -518,7 +518,7 @@ LLaMA2-13B 训练的硬件配置:
     # 根据实际情况配置词表、数据集、模型参数加载和保存路径
     LOAD_CHECKPOINT_PATH="./model_weights/Llama-2-13b-hf-v0.1-tp8-pp1/"
     SAVE_CHECKPOINT_PATH="./ckpt/Llama-2-13b-hf/"
-    TOKENIZER_MODEL="./model_from_hf/Llama-2-13b-hf/"  #词表路径
+    TOKENIZER_MODEL="./model_from_hf/Llama-2-13b-hf/tokenizer.model"  #词表路径
     DATA_PATH="./dataset/Llama-2-13b-hf/alpaca_text_document"  #数据集路径
     ```
 
@@ -720,8 +720,8 @@ LLaMA2-34B/70B 训练的硬件配置:
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
     # 安装加速库
-    git clone https://gitee.com/ascend/AscendSpeed.git
-    cd AscendSpeed
+    git clone https://gitee.com/ascend/MindSpeed.git
+    cd MindSpeed
     git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip install -r requirements.txt 
     pip3 install -e .
@@ -871,7 +871,7 @@ LLaMA2-34B/70B 训练的硬件配置:
         --target-pipeline-parallel-size 1 \
         --save-dir ./model_from_hf/llama-2-34b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-2-34b-hf/mg2hg/
     ```
-
+    若需将Lora微调权重一并合并到HuggingFace权重，需添加 --lora-dir {lora微调权重路径} 参数进行转换。\
     权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和 `target-pipeline-parallel-size`。
 
 5. 预训练

@@ -38,7 +38,7 @@ MOE_ARGS="
     --moe-router-load-balancing-type aux_loss \
     --moe-aux-loss-coeff 0.01 \
     --moe-train-capacity-factor 1.1 \
-    --noisy_gate_policy RSample
+    --noisy-gate-policy RSample
 "
 
 GPT_ARGS="

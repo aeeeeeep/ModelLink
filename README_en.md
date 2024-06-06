@@ -1,10 +1,10 @@
 <p align="center"> <img src="sources/images/logo.png" height="90px" width="400px"> </p>
 
 <p align="center">
-    <a href="https://gitee.com/ascend/AscendSpeed/blob/master/LICENSE">
+    <a href="https://gitee.com/ascend/MindSpeed/blob/master/LICENSE">
         <img alt="GitHub" src="https://img.shields.io/github/license/huggingface/transformers.svg?color=blue">
     </a>
-    <a href="https://gitee.com/ascend/AscendSpeed">
+    <a href="https://gitee.com/ascend/MindSpeed">
         <img alt="Documentation" src="https://img.shields.io/website/http/huggingface.co/docs/transformers/index.svg?down_color=red&down_message=offline&up_message=online">
     </a>
     <a>
@@ -315,8 +315,17 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/qwen/evaluate_qwen_72b_ptd.sh"> eval </a> </td>
       <td> 【Ascend】 </td>
     </tr>
+  <tr>
+       <td rowspan="6"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+      <td>1.8B</td>
+      <td> <a href="examples/qwen15/pretrain_qwen15_1point8b_ptd.sh"> pretrain </a> </td>
+      <td> <a href="examples/qwen15/generate_qwen15_1point8b_ptd.sh"> generate </a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/qwen15/evaluate_qwen15_1point8b_ptd.sh"> eval </a> </td>
+      <td rowspan="1"> 【Community】 </td>
     <tr>
-       <td rowspan="3"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
       <td>4B</td>
       <td> <a href="examples/qwen15/pretrain_qwen15_4b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen15/generate_qwen15_4b_ptd.sh"> generate </a> </td>
@@ -325,7 +334,6 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> -- </td>
       <td> <a href="examples/qwen15/evaluate_qwen15_4b_ptd.sh"> eval </a> </td>
       <td rowspan="1"> 【Community】 </td>
-    </tr>
     <tr>
       <td>7B</td>
       <td> <a href="examples/qwen15/pretrain_qwen15_7b_ptd.sh"> pretrain </a> </td>
@@ -335,7 +343,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> -- </td>
       <td> <a href="examples/qwen15/evaluate_qwen15_7b_ptd.sh"> eval </a> </td>
       <td rowspan="1"> 【Community】 </td>
-    </tr>
+    <tr>
       <td>14B</td>
       <td> <a href="examples/qwen15/pretrain_qwen15_14b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen15/generate_qwen15_14b_ptd.sh"> generate </a> </td>
@@ -345,6 +353,23 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/qwen15/evaluate_qwen15_14b_ptd.sh"> eval </a> </td>
       <td rowspan="1"> 【Community】 </td>
     <tr>
+      <td>32B</td>
+      <td> <a href="examples/qwen15/pretrain_qwen15_32b_ptd.sh"> pretrain </a> </td>
+      <td> <a href="examples/qwen15/generate_qwen15_32b_ptd.sh"> generate </a> </td>
+      <td> <a href="examples/qwen15/tune_qwen15_32b_ptd.sh"> lora </a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/qwen15/evaluate_qwen15_32b_ptd.sh"> eval </a> </td>
+      <td rowspan="1"> 【Community】 </td>
+    <tr>
+      <td>72B</td>
+      <td> <a href="examples/qwen15/pretrain_qwen15_72b_ptd.sh"> pretrain </a> </td>
+      <td> <a href="examples/qwen15/generate_qwen15_72b_ptd.sh"> generate </a> </td>
+      <td> <a href="examples/qwen15/tune_qwen15_72b_ptd.sh"> lora </a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/qwen15/evaluate_qwen15_72b_ptd.sh"> eval </a> </td>
+      <td rowspan="1"> 【Ascend】 </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/yi/README.md">Yi</a></td>
@@ -434,13 +459,13 @@ For the supported models listed above, we provide training scripts and readme in
 【Please note the corresponding environment versions for model usage, as follows】
 
 |           Software            | [Version](https://www.hiascend.com/zh/) |
-| :-----------------------: |:---------------------------------------:|
-|          Python           |                   3.8                   |
-|          driver           |            Ascend HDK 23.0.0            |
-|         firmware          |            Ascend HDK 23.0.0            |
-|           CANN            |               CANN 7.0.0                |
-|           torch           |               2.1.0、2.2.0               |
-|         torch_npu         |             release v5.0.0              |
+| :-----------------------: |:----------------------------------:|
+|          Python           |                3.8                 |
+|          driver           |         Ascend HDK 24.1.RC1          |
+|         firmware          |         Ascend HDK 24.1.RC1          |
+|           CANN            |             CANN 8.0.RC1             |
+|           torch           |            2.1.0、2.2.0             |
+|         torch_npu         |           6.0.RC1           |
 
 
 【Based on the current version of megatron, the performance statistics from our testing are as follows】
@@ -645,8 +670,14 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 285 </td>
       <td> 345 </td>
     </tr>
-    <tr>
-      <td rowspan="3"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+   <tr>
+      <td rowspan="6"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+      <td> 1.8B </td>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td> 13029 </td>
+      <td> 12181 </td>
+      <tr>
       <td> 4B </td>
       <td> 1x8 </td>
       <td> BF16 </td>
@@ -658,13 +689,24 @@ For the supported models listed above, we provide training scripts and readme in
       <td> BF16 </td>
       <td>  2862 </td>
       <td> 2621 </td>
-      </tr>
       <tr>
       <td> 14B </td>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 1717 </td>
       <td> 1702 </td>
+      <tr>
+      <td> 32B </td>
+      <td> 4x8 </td>
+      <td> BF16 </td>
+      <td> 751 </td>
+      <td> 708 </td>
+      <tr>
+      <td> 72B </td>
+      <td> 8x8 </td>
+      <td> BF16 </td>
+      <td> 301 </td>
+      <td> 317 </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/yi/README_en.md">Yi</a></td>

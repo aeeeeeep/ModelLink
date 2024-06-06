@@ -46,7 +46,7 @@ def _load_checkpoint(queue, args):
         from modellink.utils import parse_args
         from megatron.arguments import validate_args
         from megatron.global_vars import set_args, set_global_variables
-        from megatron.checkpointing import load_args_from_checkpoint
+        from megatron.checkpointing import load_args_from_checkpoint, _load_base_checkpoint
         from megatron.checkpointing import load_checkpoint as load_checkpoint_mg
         from megatron.model import module
         from megatron.core import mpu
@@ -236,6 +236,34 @@ def _load_checkpoint(queue, args):
     # Get first pipe stage
     mpu.set_pipeline_model_parallel_rank(0)
     all_models = [get_models(tp_size, md.params_dtype)]
+    lora_target_modules = []
+    lora_rate = None
+    if args.lora_dir is not None:
+        sys.argv = ['script.py',
+                '--no-masked-softmax-fusion',
+                '--no-bias-gelu-fusion',
+                '--no-bias-dropout-fusion',
+                '--no-async-tensor-model-parallel-allreduce',
+                '--use-cpu-initialization',
+                '--micro-batch-size', '1',
+                '--no-load-optim',
+                '--no-load-rng',
+                '--no-save-optim',
+                '--no-save-rng',
+                '--no-initialization',
+                '--load', args.lora_dir
+                ]
+        margs_lora = parse_args()
+
+        margs_lora, checkpoint_args_lora = load_args_from_checkpoint(margs_lora)
+        lora_target_modules = checkpoint_args_lora.lora_target_modules
+        if checkpoint_args_lora.lora_r is not None and checkpoint_args_lora.lora_r != 0:
+            lora_rate = checkpoint_args_lora.lora_alpha / checkpoint_args_lora.lora_r
+        else:
+            raise ZeroDivisionError
+        print("lora_rate ", lora_rate)
+        print("lora_target_modules ", lora_target_modules)
+
     models = all_models[0][0]
 
     md.consumed_train_samples = consumed_train_samples
@@ -261,6 +289,7 @@ def _load_checkpoint(queue, args):
     queue_put("embeddings", message)
 
     total_layer_num = 0
+    state_dict_lora_list = []
     for vp_rank in range(vp_size):
         mpu.set_virtual_pipeline_model_parallel_rank(vp_rank)
         for pp_rank in range(pp_size):
@@ -287,38 +316,54 @@ def _load_checkpoint(queue, args):
                     message["dense bias"] = layer.self_attention.dense.bias.data
 
                 # Grab all parallel tensors for this layer
-                qkv_weight = []
+
                 qkv_bias = []
-                dense_weight = []
-                mlp_l0_weight = []
                 mlp_l0_bias = []
-                mlp_l1_weight = []
+                support_target = ['query_key_value', 'dense', 'dense_h_to_4h', 'dense_4h_to_h']
+                weight_support_lora_list = [[], [], [], []]
+                support_target_key = ['self_attention.query_key_value', 'self_attention.dense', 'mlp.dense_h_to_4h', 'mlp.dense_4h_to_h']
+                
                 for tp_rank, model in enumerate(models):
+                    if len(state_dict_lora_list) <= tp_rank:
+                        # lora
+                        if args.lora_dir is not None:
+                            mpu.set_tensor_model_parallel_rank(tp_rank)
+                            state_dict_lora, _, _ = _load_base_checkpoint(args.lora_dir, rank0=False)
+                            state_dict_lora_list.append(state_dict_lora["model"]["language_model"]["encoder"])
+                    
                     layer = model.language_model.encoder.layers[layer_num]
-                    qkv_weight.append(layer.self_attention.query_key_value.weight.data)
-                    dense_weight.append(layer.self_attention.dense.weight.data)
-                    mlp_l0_weight.append(layer.mlp.dense_h_to_4h.weight.data)
-                    mlp_l1_weight.append(layer.mlp.dense_4h_to_h.weight.data)
+                    support_target_base = [layer.self_attention.query_key_value.weight.data, layer.self_attention.dense.weight.data, 
+                                        layer.mlp.dense_h_to_4h.weight.data, layer.mlp.dense_4h_to_h.weight.data]
                     if md.linear_bias:
                         qkv_bias.append(layer.self_attention.query_key_value.bias.data)
                         mlp_l0_bias.append(layer.mlp.dense_h_to_4h.bias.data)
                     if args.add_qkv_bias:
                         qkv_bias.append(layer.self_attention.query_key_value.bias.data)
+                    
+                    
+                    for ind, item in enumerate(support_target):
+                        if item in lora_target_modules:
+                            loraB = state_dict_lora_list[tp_rank]["layers." + str(layer_num) + "." + support_target_key[ind] + ".lora_B.default.weight"]
+                            loraA = state_dict_lora_list[tp_rank]["layers." + str(layer_num) + "." + support_target_key[ind] + ".lora_A.default.weight"]
+                            tmp = loraB.float() @ loraA.float() * lora_rate + support_target_base[ind]
+                            weight_support_lora_list[ind].append(tmp.to(dtype=torch.float16))
+                        else:
+                            weight_support_lora_list[ind].append(support_target_base[ind])
 
                 # Handle gated linear units
                 if md.swiglu:
                     # concat all the first halves ('W's) and all the second halves ('V's)
                     for tp_rank in range(tp_size):
-                        mlp_l0_weight[tp_rank] = torch.chunk(mlp_l0_weight[tp_rank], 2, dim=0)
-                    message["mlp l0 weight W"] = torch.cat([w[0] for w in mlp_l0_weight], dim=0)
-                    message["mlp l0 weight V"] = torch.cat([w[1] for w in mlp_l0_weight], dim=0)
+                        weight_support_lora_list[2][tp_rank] = torch.chunk(weight_support_lora_list[2][tp_rank], 2, dim=0)
+                    message["mlp l0 weight W"] = torch.cat([w[0] for w in weight_support_lora_list[2]], dim=0)
+                    message["mlp l0 weight V"] = torch.cat([w[1] for w in weight_support_lora_list[2]], dim=0)
                 else:
-                    message["mlp l0 weight"] = torch.cat(mlp_l0_weight, dim=0)
+                    message["mlp l0 weight"] = torch.cat(weight_support_lora_list[2], dim=0)
 
                 # simple concat of the rest
-                message["qkv weight"] = torch.cat(qkv_weight, dim=0)
-                message["dense weight"] = torch.cat(dense_weight, dim=1)
-                message["mlp l1 weight"] = torch.cat(mlp_l1_weight, dim=1)
+                message["qkv weight"] = torch.cat(weight_support_lora_list[0], dim=0)
+                message["dense weight"] = torch.cat(weight_support_lora_list[1], dim=1)
+                message["mlp l1 weight"] = torch.cat(weight_support_lora_list[3], dim=1)
                 if md.linear_bias:
                     message["qkv bias"] = torch.cat(qkv_bias, dim=0)
                     if md.swiglu:

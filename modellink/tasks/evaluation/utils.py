@@ -36,4 +36,6 @@ def add_text_generate_args(parser):
     group.add_argument("--task", nargs='*', default=[], help='Choose one task from mmlu, boolq and gsm8k')
     group.add_argument("--instruction-template", type=str, default="",
                        help="Instruction template for the evaluation task.")
+    group.add_argument("--no-chat-template", action="store_true", default=False,
+                       help="Disable Huggingface chat template")
     return parser

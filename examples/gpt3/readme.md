@@ -57,9 +57,9 @@ GPT3-175B 训练的硬件配置:
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
-    # 安装 AscendSpeed
-    git clone https://gitee.com/ascend/AscendSpeed.git
-    cd AscendSpeed
+    # 安装 MindSpeed
+    git clone https://gitee.com/ascend/MindSpeed.git
+    cd MindSpeed
     git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip install -r requirements.txt 
     pip3 install -e .

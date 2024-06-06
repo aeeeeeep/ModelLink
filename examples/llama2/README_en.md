@@ -72,9 +72,9 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     # modify ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     
-    # install AscendSpeed
-    git clone https://gitee.com/ascend/AscendSpeed.git
-    cd AscendSpeed
+    # install MindSpeed
+    git clone https://gitee.com/ascend/MindSpeed.git
+    cd MindSpeed
     git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip install -r requirements.txt 
     pip3 install -e .
@@ -151,6 +151,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
         --save-dir ./model_from_hf/llama-2-7b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-2-7b-hf/mg2hg/
     ```
 
+    If you need combine Lora weight to huggingface weight, please add --lora-dir {lora weight path} \
     Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
 5. pre-training
 
@@ -445,9 +446,9 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
     # modify ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     
-    # install AscendSpeed
-    git clone https://gitee.com/ascend/AscendSpeed.git
-    cd AscendSpeed
+    # install MindSpeed
+    git clone https://gitee.com/ascend/MindSpeed.git
+    cd MindSpeed
     git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip install -r requirements.txt 
     pip3 install -e .
@@ -661,11 +662,11 @@ Some inference samples are as follows:
 We use boolq benchmark to evaluate our model. Benchmark Download [here](https://huggingface.co/datasets/boolq).
 
 ```shell
-    # modify the model weight path and tokenizer path
-    CHECKPOINT="./model_weights/Llama-2-13b-hf-v0.1-tp8-pp1/"
-    TOKENIZER_PATH="./model_from_hf/Llama-2-13b-hf/"
+# modify the model weight path and tokenizer path
+CHECKPOINT="./model_weights/Llama-2-13b-hf-v0.1-tp8-pp1/"
+TOKENIZER_PATH="./model_from_hf/Llama-2-13b-hf/"
 ```
-
+Launch LLaMA2-13B evaluation:
 ```shell
 bash examples/llama2/evaluate_llama2_13B_ptd.sh
 ```
@@ -735,9 +736,9 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
     # modify the path according to your own  ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-    # install AscendSpeed
-    git clone https://gitee.com/ascend/AscendSpeed.git
-    cd AscendSpeed
+    # install MindSpeed
+    git clone https://gitee.com/ascend/MindSpeed.git
+    cd MindSpeed
     git checkout 224ae35e8fc96778f957029d1371ddb623452a50
     pip install -r requirements.txt 
     pip3 install -e .
@@ -886,6 +887,7 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
             --save-dir ./model_from_hf/llama-2-34b-hf/  # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/llama-2-34b-hf/mg2hg/
         ```
 
+    If you need combine Lora weight to huggingface weight, please add --lora-dir {lora weight path} \
     Weight conversion is suitable for pre-training, fine-tuning, inference and evaluation. Adjust the parameters `target-tensor-parallel-size` and `target-pipeline-parallel-size` according to different tasks.
 5. pre-training
 
