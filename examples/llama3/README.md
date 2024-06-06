@@ -83,16 +83,16 @@ LLAMA3-8B 训练的硬件配置:
     #!/bin/bash
     mkdir ./model_from_hf/llama-3-8b-hf/
     cd ./model_from_hf/llama-3-8b-hf/
-    wget https://huggingface.co/unsloth/llama-3-8B/blob/main/config.json
-    wget https://huggingface.co/unsloth/llama-3-8B/blob/main/generation_config.json
-    wget https://huggingface.co/unsloth/llama-3-8B/blob/main/model-00001-of-00004.safetensors
-    wget https://huggingface.co/unsloth/llama-3-8B/blob/main/model-00002-of-00004.safetensors
-    wget https://huggingface.co/unsloth/llama-3-8B/blob/main/model-00003-of-00004.safetensors
-    wget https://huggingface.co/unsloth/llama-3-8B/blob/main/model-00004-of-00004.safetensors
-    wget https://huggingface.co/unsloth/llama-3-8B/blob/main/model.safetensors.index.json
-    wget https://huggingface.co/unsloth/llama-3-8B/blob/main/special_tokens_map.json
-    wget https://huggingface.co/unsloth/llama-3-8B/blob/main/tokenizer.json
-    wget https://huggingface.co/unsloth/llama-3-8B/blob/main/tokenizer_config.json
+    wget https://huggingface.co/unsloth/llama-3-8B/raw/main/config.json
+    wget https://huggingface.co/unsloth/llama-3-8B/raw/main/generation_config.json
+    wget https://huggingface.co/unsloth/llama-3-8B/raw/main/model-00001-of-00004.safetensors
+    wget https://huggingface.co/unsloth/llama-3-8B/raw/main/model-00002-of-00004.safetensors
+    wget https://huggingface.co/unsloth/llama-3-8B/raw/main/model-00003-of-00004.safetensors
+    wget https://huggingface.co/unsloth/llama-3-8B/raw/main/model-00004-of-00004.safetensors
+    wget https://huggingface.co/unsloth/llama-3-8B/raw/main/model.safetensors.index.json
+    wget https://huggingface.co/unsloth/llama-3-8B/raw/main/special_tokens_map.json
+    wget https://huggingface.co/unsloth/llama-3-8B/raw/main/tokenizer.json
+    wget https://huggingface.co/unsloth/llama-3-8B/raw/main/tokenizer_config.json
     cd ../../
     ```
 4. 权重转换
@@ -378,18 +378,18 @@ LLAMA3-70B 训练的硬件配置:
     #!/bin/bash
     mkdir ./model_from_hf/llama-3-70b-hf/
     cd ./model_from_hf/llama-3-70b-hf/
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/config.json
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/generation_config.json
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model-00001-of-00030.safetensors
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model-00002-of-00030.safetensors
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model-00003-of-00030.safetensors
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model-00004-of-00030.safetensors
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/config.json
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/generation_config.json
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/model-00001-of-00030.safetensors
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/model-00002-of-00030.safetensors
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/model-00003-of-00030.safetensors
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/model-00004-of-00030.safetensors
     ...
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model-00030-of-00030.safetensors
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model.safetensors.index.json
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/special_tokens_map.json
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/tokenizer.json
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/tokenizer_config.json
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/model-00030-of-00030.safetensors
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/model.safetensors.index.json
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/special_tokens_map.json
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/tokenizer.json
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/tokenizer_config.json
     cd ../../
     ```
 4. 权重转换

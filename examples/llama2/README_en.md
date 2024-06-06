@@ -662,11 +662,11 @@ Some inference samples are as follows:
 We use boolq benchmark to evaluate our model. Benchmark Download [here](https://huggingface.co/datasets/boolq).
 
 ```shell
-    # modify the model weight path and tokenizer path
-    CHECKPOINT="./model_weights/Llama-2-13b-hf-v0.1-tp8-pp1/"
-    TOKENIZER_PATH="./model_from_hf/Llama-2-13b-hf/"
+# modify the model weight path and tokenizer path
+CHECKPOINT="./model_weights/Llama-2-13b-hf-v0.1-tp8-pp1/"
+TOKENIZER_PATH="./model_from_hf/Llama-2-13b-hf/"
 ```
-
+Launch LLaMA2-13B evaluation:
 ```shell
 bash examples/llama2/evaluate_llama2_13B_ptd.sh
 ```
