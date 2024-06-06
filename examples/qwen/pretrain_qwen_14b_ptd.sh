@@ -15,6 +15,11 @@ DATA_PATH="your data path"
 TOKENIZER_MODEL="your tokenizer path"
 CKPT_LOAD_DIR="your model load ckpt path"
 
+export CKPT_SAVE_DIR="/data00/14b-nl2sql-finetune"
+export TOKENIZER_MODEL="/data00/14b"
+export DATA_PATH="/data00/dataset/nl2sql_preprocess_0428_full/nl2sql"
+export CKPT_LOAD_DIR="/data00/14b-megatron"
+
 TP=8
 PP=1
 
@@ -35,15 +40,17 @@ GPT_ARGS="
     --ffn-hidden-size 13696 \
     --num-attention-heads 40 \
     --tokenizer-type PretrainedFromHF \
+    --finetune \
+    --is-instruction-dataset \
     --load ${CKPT_LOAD_DIR} \
     --tokenizer-name-or-path ${TOKENIZER_MODEL} \
-    --seq-length 2048 \
+    --seq-length 4096 \
     --max-position-embeddings 8192 \
     --micro-batch-size 4 \
-    --global-batch-size 64 \
+    --global-batch-size 32 \
     --make-vocab-size-divisible-by 32 \
-    --lr 1.25e-6 \
-    --train-iters 1000 \
+    --lr 1e-5 \
+    --train-iters 5000 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
     --disable-bias-linear \
@@ -73,21 +80,21 @@ GPT_ARGS="
 
 DATA_ARGS="
     --data-path $DATA_PATH \
-    --split 100,0,0
+    --split "90,10,0"
 "
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 10000 \
+    --save-interval 1250 \
     --eval-interval 10000 \
-    --eval-iters 0 \
+    --eval-iters 1 \
 "
 
 torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $GPT_ARGS \
     $DATA_ARGS \
     $OUTPUT_ARGS \
-    --tokenizer-kwargs 'eos_token' '<|endoftext|>' 'pad_token' '<|extra_0|>' \
+    --tokenizer-kwargs 'eos_token' '<|endoftext|>' 'pad_token' '<|endoftext|>' \
     --distributed-backend nccl \
     --save ${CKPT_SAVE_DIR} \
-    | tee logs/train_qwen_14b.log
+    | tee logs/finetune_train_qwen_14b.log
