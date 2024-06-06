@@ -461,14 +461,14 @@ For the supported models listed above, we provide training scripts and readme in
 |           Software            | [Version](https://www.hiascend.com/zh/) |
 | :-----------------------: |:----------------------------------:|
 |          Python           |                3.8                 |
-|          driver           |         Ascend HDK 24.1.RC1          |
-|         firmware          |         Ascend HDK 24.1.RC1          |
-|           CANN            |             CANN 8.0.RC1             |
+|          driver           |         under development version          |
+|         firmware          |         under development version          |
+|           CANN            |             under development version             |
 |           torch           |            2.1.0、2.2.0             |
-|         torch_npu         |           6.0.RC1           |
+|         torch_npu         |           under development version           |
 
 
-【Based on the current version of megatron, the performance statistics from our testing are as follows】
+【Based on the current version of megatron, the performance statistics from our testing are as follows (Hardware info：Atlas 900 A2 PODc)】
 
 <table>
   <thead>
