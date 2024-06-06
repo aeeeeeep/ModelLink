@@ -167,10 +167,10 @@ Here's a hardware summary of pre-training Aquila-7B:
 
 The performance of Aquila-7B in Ascend NPU and reference device:
 
-| Device    | Hardware      | Model     | Iterations | throughput rate (tokens/p/s) | single iteration step time (s/step) |
-| --------- | ------------- | --------- | ---------- | ---------------------------- | ----------------------------------- |
-| NPU       | 910b 1node*8p | Aquila-7B | 1000       | 2849                         | 5.75                                |
-| Reference |               | Aquila-7B | 1000       | 2874                         | 5.70                                |
+| Device    | Model     | Iterations | throughput rate (tokens/p/s) | single iteration step time (s/step) |
+| --------- | --------- | ---------- | ---------------------------- | ----------------------------------- |
+| NPU       | Aquila-7B | 1000       | 2849                         | 5.75                                |
+| Reference | Aquila-7B | 1000       | 2874                         | 5.70                                |
 
 ## Inference
 

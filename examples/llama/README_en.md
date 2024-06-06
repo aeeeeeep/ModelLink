@@ -346,12 +346,12 @@ Here's a hardware summary of pre-training LLaMA-7B/13B:
 
 The performance of LLaMA-7B/13B in **Ascend NPU** and **Reference**:
 
-| Device    | Hardware  | Model     | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
-|-----------|-----------|-----------|------------------|-------------------------------|------------------------------|---------------------------|-------------------------------------|
-| NPUs      | 910 1*8p  | LLaMA-7B  | 2048             | 1.75                          | 3600                         | 18.2                      | 159.9                               |
-| Reference | -         | LLaMA-7B  | 2048             | 1.85                          | 3804                         | 18.5                      | 161.5                               |
-| NPUs      | 910 1*8p  | LLaMA-13B | 2048             | 0.92                         | 1895                         | 17.2                     | 200.57                              |
-| Reference | -         | LLaMA-13B | 2048             | 0.96                          | 2012                         | 16.6                     | 213.29                              |
+| Device    | Model     | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
+|-----------|-----------|------------------|-------------------------------|------------------------------|---------------------------|-------------------------------------|
+| NPUs      | LLaMA-7B  | 2048             | 1.75                          | 3600                         | 18.2                      | 159.9                               |
+| Reference | LLaMA-7B  | 2048             | 1.85                          | 3804                         | 18.5                      | 161.5                               |
+| NPUs      | LLaMA-13B | 2048             | 0.92                         | 1895                         | 17.2                     | 200.57                              |
+| Reference | LLaMA-13B | 2048             | 0.96                          | 2012                         | 16.6                     | 213.29                              |
 
 
 
