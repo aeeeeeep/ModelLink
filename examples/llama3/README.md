@@ -83,16 +83,16 @@ LLAMA3-8B 训练的硬件配置:
     #!/bin/bash
     mkdir ./model_from_hf/llama-3-8b-hf/
     cd ./model_from_hf/llama-3-8b-hf/
-    wget https://huggingface.co/unsloth/llama-3-8B/blob/main/config.json
-    wget https://huggingface.co/unsloth/llama-3-8B/blob/main/generation_config.json
-    wget https://huggingface.co/unsloth/llama-3-8B/blob/main/model-00001-of-00004.safetensors
-    wget https://huggingface.co/unsloth/llama-3-8B/blob/main/model-00002-of-00004.safetensors
-    wget https://huggingface.co/unsloth/llama-3-8B/blob/main/model-00003-of-00004.safetensors
-    wget https://huggingface.co/unsloth/llama-3-8B/blob/main/model-00004-of-00004.safetensors
-    wget https://huggingface.co/unsloth/llama-3-8B/blob/main/model.safetensors.index.json
-    wget https://huggingface.co/unsloth/llama-3-8B/blob/main/special_tokens_map.json
-    wget https://huggingface.co/unsloth/llama-3-8B/blob/main/tokenizer.json
-    wget https://huggingface.co/unsloth/llama-3-8B/blob/main/tokenizer_config.json
+    wget https://huggingface.co/unsloth/llama-3-8B/raw/main/config.json
+    wget https://huggingface.co/unsloth/llama-3-8B/raw/main/generation_config.json
+    wget https://huggingface.co/unsloth/llama-3-8B/raw/main/model-00001-of-00004.safetensors
+    wget https://huggingface.co/unsloth/llama-3-8B/raw/main/model-00002-of-00004.safetensors
+    wget https://huggingface.co/unsloth/llama-3-8B/raw/main/model-00003-of-00004.safetensors
+    wget https://huggingface.co/unsloth/llama-3-8B/raw/main/model-00004-of-00004.safetensors
+    wget https://huggingface.co/unsloth/llama-3-8B/raw/main/model.safetensors.index.json
+    wget https://huggingface.co/unsloth/llama-3-8B/raw/main/special_tokens_map.json
+    wget https://huggingface.co/unsloth/llama-3-8B/raw/main/tokenizer.json
+    wget https://huggingface.co/unsloth/llama-3-8B/raw/main/tokenizer_config.json
     cd ../../
     ```
 4. 权重转换
@@ -144,7 +144,7 @@ LLAMA3-8B 训练的硬件配置:
     ```shell
     # 下载数据
     cd ./dataset
-    wget https://huggingface.co/datasets/tatsu-lab/alpaca/blob/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
     cd ..
     # 处理数据   
     mkdir ./dataset/llama-3-8b-hf/
@@ -378,18 +378,18 @@ LLAMA3-70B 训练的硬件配置:
     #!/bin/bash
     mkdir ./model_from_hf/llama-3-70b-hf/
     cd ./model_from_hf/llama-3-70b-hf/
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/config.json
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/generation_config.json
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model-00001-of-00030.safetensors
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model-00002-of-00030.safetensors
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model-00003-of-00030.safetensors
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model-00004-of-00030.safetensors
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/config.json
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/generation_config.json
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/model-00001-of-00030.safetensors
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/model-00002-of-00030.safetensors
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/model-00003-of-00030.safetensors
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/model-00004-of-00030.safetensors
     ...
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model-00030-of-00030.safetensors
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/model.safetensors.index.json
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/special_tokens_map.json
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/tokenizer.json
-    wget https://huggingface.co/v2ray/Llama-3-70B/blob/main/tokenizer_config.json
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/model-00030-of-00030.safetensors
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/model.safetensors.index.json
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/special_tokens_map.json
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/tokenizer.json
+    wget https://huggingface.co/v2ray/Llama-3-70B/raw/main/tokenizer_config.json
     cd ../../
     ```
 4. 权重转换
@@ -436,12 +436,12 @@ LLAMA3-70B 训练的硬件配置:
 
     5.1 准备数据集
 
-    下载 LLaMA3-70B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/blob/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+    下载 LLaMA3-70B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
     ```shell
     # 下载数据
     cd ./dataset
-    wget https://huggingface.co/datasets/tatsu-lab/alpaca/blob/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
     cd ..
     # 处理数据   
     mkdir ./dataset/llama-3-70b-hf/

@@ -518,7 +518,7 @@ LLaMA2-13B 训练的硬件配置:
     # 根据实际情况配置词表、数据集、模型参数加载和保存路径
     LOAD_CHECKPOINT_PATH="./model_weights/Llama-2-13b-hf-v0.1-tp8-pp1/"
     SAVE_CHECKPOINT_PATH="./ckpt/Llama-2-13b-hf/"
-    TOKENIZER_MODEL="./model_from_hf/Llama-2-13b-hf/"  #词表路径
+    TOKENIZER_MODEL="./model_from_hf/Llama-2-13b-hf/tokenizer.model"  #词表路径
     DATA_PATH="./dataset/Llama-2-13b-hf/alpaca_text_document"  #数据集路径
     ```
 
