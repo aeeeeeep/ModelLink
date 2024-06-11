@@ -6,16 +6,16 @@ from typing import Any, Optional, Type, Union
 
 import torch
 
-from megatron import get_args
+from megatron.training import get_args
 from megatron.core.datasets.blended_dataset import BlendedDataset
-from megatron.core.datasets.indexed_dataset import MMapIndexedDataset
+from megatron.core.datasets.indexed_dataset import IndexedDataset
 from megatron.core.datasets.megatron_dataset import MegatronDataset
 
 from ..parallel_state import get_pipeline_model_parallel_node_info
 
 logger = logging.getLogger(__name__)
 
-DistributedDataset = Union[BlendedDataset, MegatronDataset, MMapIndexedDataset]
+DistributedDataset = Union[BlendedDataset, MegatronDataset, IndexedDataset]
 
 
 def need_to_build_dataset():

@@ -30,7 +30,7 @@ WRITE_FILE_DEFAULT_MODES = stat.S_IWUSR | stat.S_IRUSR
 
 
 def parse_args():
-    return megatron.arguments.parse_args()
+    return megatron.training.arguments.parse_args()
 
 
 def is_rank_0():

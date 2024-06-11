@@ -15,11 +15,12 @@
 
 import sys
 import types
+import importlib
 from functools import wraps
 import torch
 import apex
-from ascendspeed.optimizer.adamw import AdamW
-from ascendspeed.core.fusions.fused_layer_norm import fused_layer_norm_affine
+from mindspeed.optimizer.adamw import AdamW
+from mindspeed.core.fusions.fused_layer_norm import fused_layer_norm_affine
 
 
 def mock_megatron_dependencies():
@@ -30,6 +31,16 @@ def mock_megatron_dependencies():
 
 
 def mock_transformer_engine():
+    def version_wrapper(fn):
+        @wraps(fn)
+        def wrapper(name, *args, **kwargs):
+            if name == 'transformer-engine':
+                return '0.0'
+            res = fn(name, *args, **kwargs)
+            return res
+
+        return wrapper
+    importlib.metadata.version = version_wrapper(importlib.metadata.version)
     sys.modules['transformer_engine'] = types.ModuleType('transformer_engine')
     sys.modules['transformer_engine'].__spec__ = 'te'
     setattr(sys.modules['transformer_engine'], 'pytorch', torch.nn)

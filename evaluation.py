@@ -21,10 +21,10 @@ import logging
 from torch import distributed as dist
 from transformers import AutoTokenizer
 import modellink
-from megatron.initialize import initialize_megatron
-from megatron import get_args
-from megatron.model import GPTModel
-from megatron.arguments import core_transformer_config_from_args
+from megatron.training.initialize import initialize_megatron
+from megatron.training import get_args
+from megatron.legacy.model import GPTModel
+from megatron.training.arguments import core_transformer_config_from_args
 
 from modellink.tasks.evaluation.utils import add_text_generate_args
 from modellink.tasks.evaluation.eval_api.chat import Chat

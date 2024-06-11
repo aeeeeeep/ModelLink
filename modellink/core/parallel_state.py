@@ -37,8 +37,9 @@ def initialize_model_parallel_decorator(initialize_model_parallel):
             context_parallel_size: int = 1,
             expert_model_parallel_size: int = 1,
             nccl_communicator_config_path: Optional[str] = None,
+            distributed_timeout_minutes: int = 30,
     ):
-        from megatron.utils import print_rank_0
+        from megatron.training.utils import print_rank_0
 
         initialize_model_parallel(
             tensor_model_parallel_size,
@@ -49,6 +50,7 @@ def initialize_model_parallel_decorator(initialize_model_parallel):
             context_parallel_size,
             expert_model_parallel_size,
             nccl_communicator_config_path,
+            distributed_timeout_minutes,
         )
 
         rank = torch.distributed.get_rank()

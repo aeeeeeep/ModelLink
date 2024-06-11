@@ -20,9 +20,9 @@ import torch
 
 from transformers import DataCollatorForSeq2Seq
 
-from megatron import get_args, get_tokenizer
+from megatron.training import get_args, get_tokenizer
 from megatron.core import parallel_state
-from megatron.data.data_samplers import MegatronPretrainingSampler, MegatronPretrainingRandomSampler
+from megatron.legacy.data.data_samplers import MegatronPretrainingSampler, MegatronPretrainingRandomSampler
 from modellink.error_utils import check_divisible, ensure_valid
 
 

@@ -2,9 +2,9 @@ from functools import wraps
 
 import torch
 import torch_npu
-from megatron import get_args
+from megatron.training import get_args
 from megatron.core import parallel_state
-from megatron.core.models.common.embeddings.rotary_pos_embedding import _rotate_half
+from megatron.core.models.common.embeddings.rotary_pos_embedding import _rotate_half, get_pos_emb_on_this_cp_rank
 
 
 def RotaryEmbedding_forward(self, max_seq_len: int, offset: int = 0):
@@ -44,7 +44,7 @@ def RotaryEmbedding_forward(self, max_seq_len: int, offset: int = 0):
     return emb
 
 
-def apply_rotary_pos_emb(t, freqs):
+def apply_rotary_pos_emb(t, freqs, rotary_interleaved = False):
     args = get_args()
 
     # use partial rope in ChatGLM3
@@ -74,6 +74,6 @@ def apply_rotary_pos_emb(t, freqs):
     t, t_pass = t[..., :rot_dim], t[..., rot_dim:]
     cos_ = torch.cos(freqs).to(t.dtype)
     sin_ = torch.sin(freqs).to(t.dtype)
-    t = (t * cos_) + (_rotate_half(t) * sin_)
+    t = (t * cos_) + (_rotate_half(t, rotary_interleaved) * sin_)
     return torch.cat((t, t_pass), dim=-1)
     

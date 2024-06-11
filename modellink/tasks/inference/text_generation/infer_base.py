@@ -255,7 +255,7 @@ def task_chat(args, model, tokenizer=None, system_template="", dialog_template="
     command_clear = ["clear"]
     messages = []
     if args.hf_chat_template:
-        from megatron import get_tokenizer
+        from megatron.training import get_tokenizer
         tokenizer = get_tokenizer().tokenizer
     while True:
         terminate_runs = torch.zeros(1, dtype=torch.int64, device=torch.cuda.current_device())

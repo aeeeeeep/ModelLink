@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from megatron import get_args
+from megatron.training import get_args
 
 
 def get_lora_model_classes():

@@ -9,9 +9,7 @@ import numpy
 import torch
 
 from megatron.core.datasets.utils import log_single_rank
-from megatron.core.datasets.gpt_dataset import (_get_num_tokens_per_epoch,
-                                                _get_num_epochs,
-                                                _build_document_index,
+from megatron.core.datasets.gpt_dataset import (_build_document_index,
                                                 _build_shuffle_index
                                                 )
 from .blended_megatron_dataset_builder import need_to_build_dataset
@@ -40,13 +38,11 @@ def _build_document_sample_shuffle_indices(
     Returns:
         Tuple[numpy.ndarray, numpy.ndarray]: The document index, the sample index, and the
         shuffle index
-
-    TODO: Explain the 80% threshold
     """
-    path_to_cache = getattr(self.config, "path_to_cache")
+    path_to_cache = self.config.path_to_cache
     if path_to_cache is None:
         path_to_cache = os.path.join(
-            self.indexed_dataset.path_prefix, "cache", f"{type(self).__name__}_indices"
+            self.dataset.path_prefix, "cache", f"{type(self).__name__}_indices"
         )
 
     get_path_to = lambda suffix: os.path.join(
@@ -68,11 +64,6 @@ def _build_document_sample_shuffle_indices(
         )
     )
 
-    num_tokens_per_epoch = _get_num_tokens_per_epoch(self.indexed_dataset, self.indexed_indices)
-
-    sequence_length = getattr(self.config, "sequence_length")
-
-    num_epochs = _get_num_epochs(num_tokens_per_epoch, sequence_length, self.num_samples)
 
     # When the rank on the first or last stage of the pipeline_model_parallel_group,
     # it need to build dataset
@@ -82,6 +73,10 @@ def _build_document_sample_shuffle_indices(
             logging.INFO,
             f"Build and save the {type(self).__name__} {self.index_split.name} indices",
         )
+
+        sequence_length = self.config.sequence_length
+        num_tokens_per_epoch = self._get_num_tokens_per_epoch()
+        num_epochs = self._get_num_epochs(num_tokens_per_epoch)
 
         if num_epochs == 1:
             separate_final_epoch = False
@@ -135,7 +130,7 @@ def _build_document_sample_shuffle_indices(
         )
         t_beg = time.time()
         document_index = _build_document_index(
-            self.indexed_indices, num_epochs, numpy_random_state, separate_final_epoch
+            self.indices, num_epochs, numpy_random_state, separate_final_epoch
         )
         numpy.save(path_to_document_index, document_index, allow_pickle=True)
         t_end = time.time()
@@ -151,9 +146,9 @@ def _build_document_sample_shuffle_indices(
         from megatron.core.datasets import helpers
 
         assert document_index.dtype == numpy.int32
-        assert self.indexed_dataset.sequence_lengths.dtype == numpy.int32
+        assert self.dataset.sequence_lengths.dtype == numpy.int32
         sample_index = helpers.build_sample_idx(
-            self.indexed_dataset.sequence_lengths,
+            self.dataset.sequence_lengths,
             document_index,
             sequence_length,
             num_epochs,
@@ -181,6 +176,13 @@ def _build_document_sample_shuffle_indices(
         numpy.save(path_to_shuffle_index, shuffle_index, allow_pickle=True)
         t_end = time.time()
         log_single_rank(logger, logging.DEBUG, f"\t> time elapsed: {t_end - t_beg:4f} seconds")
+
+        log_single_rank(
+            logger, logging.INFO, f"> total number of samples: {sample_index.shape[0] - 1}"
+        )
+        log_single_rank(logger, logging.INFO, f"> total number of epochs: {num_epochs}")
+
+        return document_index, sample_index, shuffle_index
 
     log_single_rank(
        logger, logging.INFO, f"Load the {type(self).__name__} {self.index_split.name} indices"
@@ -219,7 +221,6 @@ def _build_document_sample_shuffle_indices(
     log_single_rank(
         logger, logging.INFO, f"> total number of samples: {sample_index.shape[0] - 1}"
     )
-    log_single_rank(logger, logging.INFO, f"> total number of epochs: {num_epochs}")
 
     return document_index, sample_index, shuffle_index
 
