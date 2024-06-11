@@ -15,10 +15,10 @@
 
 from functools import wraps
 
-from megatron import get_args
-from megatron.model.enums import AttnMaskType
-from megatron.model.language_model import TransformerLanguageModel, Embedding
-from megatron.model.transformer import ParallelTransformer
+from megatron.training import get_args
+from megatron.legacy.model.enums import AttnMaskType
+from megatron.legacy.model.language_model import TransformerLanguageModel, Embedding
+from megatron.legacy.model.transformer import ParallelTransformer
 from megatron.core.models.common.embeddings.rotary_pos_embedding import RotaryEmbedding
 from megatron.core import tensor_parallel
 

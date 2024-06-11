@@ -110,6 +110,9 @@ def _add_moe_args(parser):
                        help='The capacity of the MoE expert at training time')
     group.add_argument('--noisy-gate-policy', type=str, default=None,
                        help="noisy gate policy, valid options are 'Jitter', 'RSample' or 'None'.")
+    group.add_argument('--enable-token-rearrange-opt', action='store_true',
+                       help="Use this flag to enable token rearrange optimize")
+                       
     return parser
 
 
@@ -210,6 +213,10 @@ def _add_training_args(parser):
                        help='Disable fusing gradient accumulation to weight '
                             'gradient computation of linear layers',
                        dest='gradient_accumulation_fusion')
+    # transformer-impl保持local
+    group.add_argument('--transformer-impl', default='local',
+                       choices=['local', 'transformer_engine'],
+                       help='Which Transformer implementation to use.')
     group.add_argument('--pre-tockens', type=int, default=65536,
                        help='pre-tockens is used by Flash attention')
     group.add_argument('--next-tockens', type=int, default=0,
@@ -221,6 +228,8 @@ def _add_training_args(parser):
                        action='store_true',
                        default=False,
                        help='enable deterministic computing for npu')
+    group.add_argument('--jit-compile', action='store_true', default=False,
+                       help='Setting jit compile mode to True')
     return parser
 
 

@@ -79,7 +79,7 @@ class BaseDatasetHandler(object):
             output_bin_files[key] = f"{self.args.output_prefix}_{key}_{level}.bin"
             output_idx_files[key] = f"{self.args.output_prefix}_{key}_{level}.idx"
             # vocab_size=None : use int32 dtype for -100 will be used in labels
-            builders[key] = indexed_dataset.MMapIndexedDatasetBuilder(output_bin_files[key])
+            builders[key] = indexed_dataset.IndexedDatasetBuilder(output_bin_files[key])
         startup_end = time.time()
         proc_start = time.time()
         total_bytes_processed = 0

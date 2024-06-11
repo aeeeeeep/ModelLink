@@ -87,5 +87,6 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
+    --jit-compile \
     --load $CKPT_LOAD_DIR \
     | tee logs/train_aquila_7b_ptd.log

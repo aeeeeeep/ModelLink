@@ -5,7 +5,6 @@ import subprocess
 from pathlib import Path
 import numpy as np
 import torch
-from ascendspeed import megatron_adaptor
 from transformers import AutoModelForCausalLM
 from utils import judge_expression
 import modellink

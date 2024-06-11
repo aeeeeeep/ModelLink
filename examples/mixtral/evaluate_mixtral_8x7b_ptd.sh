@@ -30,6 +30,7 @@ DISTRIBUTED_ARGS="
 GPT_ARGS="
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
+    --sequence-parallel \
     --task $TASK \
     --task-data-path $DATA_PATH \
     --max-new-tokens 1 \

@@ -21,11 +21,11 @@ import logging
 import numpy as np
 import torch
 
-from megatron import print_rank_0, get_args
+from megatron.training import print_rank_0, get_args
+from megatron.core import parallel_state
+from megatron.legacy.data.dataset_utils import get_train_valid_test_split_
 from modellink.utils import is_rank_0
 from modellink.tokenizer import build_tokenizer
-from megatron.core import parallel_state
-from megatron.data.dataset_utils import get_train_valid_test_split_
 from modellink.data.mtf_dataset import MTFDataset, get_packed_indexed_dataset
 from modellink.error_utils import check_equal
 

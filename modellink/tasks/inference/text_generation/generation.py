@@ -19,7 +19,7 @@ from typing import List
 import torch
 import torch.nn.functional as F
 
-from megatron import get_args
+from megatron.training import get_args
 from megatron.core import parallel_state
 
 from .utils import pad_batch, top_k_logits
