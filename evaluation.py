@@ -117,8 +117,7 @@ def mmlu(eval_args, agent):
         if data_path:
             mmlu_eval = MmluEval(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = mmlu_eval.eval(chat=agent)
-            if rank == 0:
-                logger.info('\n{}'.format(score_df))
+            logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
 
@@ -132,8 +131,7 @@ def gsm8k(eval_args, agent):
         if data_path:
             gsm8k_eval = Gsm8kEval(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = gsm8k_eval.eval(chat=agent)
-            if rank == 0:
-                logger.info('\n{}'.format(score_df))
+            logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
 
@@ -147,8 +145,7 @@ def boolq(eval_args, agent):
         if data_path:
             boolq_eval = BoolqEval(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = boolq_eval.eval(chat=agent)
-            if rank == 0:
-                logger.info('\n{}'.format(score_df))
+            logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
 
@@ -162,8 +159,7 @@ def ceval(eval_args, agent):
         if data_path:
             ceval_exam = CEvalExam(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = ceval_exam.eval(chat=agent)
-            if rank == 0:
-                logger.info('\n{}'.format(score_df))
+            logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
 
@@ -177,8 +173,7 @@ def human_eval(eval_args, agent):
         if data_path:
             human_eval_exam = HumanEval(test_dir=data_path, instruction_template=eval_args.instruction_template)
             answer, score_df = human_eval_exam.eval(chat=agent)
-            if rank == 0:
-                logger.info('\n{}'.format(score_df))
+            logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
 
@@ -192,8 +187,7 @@ def agi_eval(eval_args, agent):
         if data_path:
             agieval_exam = AGIEvalExam(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = agieval_exam.eval(chat=agent)
-            if rank == 0:
-                logger.info('\n{}'.format(score_df))
+            logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
 
@@ -207,8 +201,7 @@ def bbh_eval(eval_args, agent):
         if data_path:
             bbh = BBHEval(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = bbh.eval(chat=agent)
-            if rank == 0:
-                logger.info('\n{}'.format(score_df))
+            logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
 
@@ -224,40 +217,32 @@ if __name__ == "__main__":
     )
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name_or_path, trust_remote_code=True)
     max_new_tokens = args.max_new_tokens
-    rank = dist.get_rank()
 
     if 'mmlu' in args.task:
         a = time.time()
         mmlu(args, LLMChat(args))
-        if rank == 0:
-            logger.info(f'MMLU Running Time:, {time.time() - a}')
+        logger.info(f'MMLU Running Time:, {time.time() - a}')
     if 'gsm8k' in args.task:
         a = time.time()
         gsm8k(args, LLMChat(args))
-        if rank == 0:
-            logger.info(f'GSM8k Running Time: {time.time() - a}')
+        logger.info(f'GSM8k Running Time: {time.time() - a}')
     if 'boolq' in args.task:
         a = time.time()
         boolq(args, LLMChat(args))
-        if rank == 0:
-            logger.info(f'Boolq Running Time: {time.time() - a}')
+        logger.info(f'Boolq Running Time: {time.time() - a}')
     if 'ceval' in args.task:
         a = time.time()
         ceval(args, LLMChat(args))
-        if rank == 0:
-            logger.info(f'Ceval Running Time: {time.time() - a}')
+        logger.info(f'Ceval Running Time: {time.time() - a}')
     if 'bbh' in args.task:
         a = time.time()
         bbh_eval(args, LLMChat(args))
-        if rank == 0:
-            logger.info(f'bbh Running Time: {time.time() - a}')
+        logger.info(f'bbh Running Time: {time.time() - a}')
     if 'agieval' in args.task:
         a = time.time()
         agi_eval(args, LLMChat(args))
-        if rank == 0:
-            logger.info(f'agi_eval Running Time: {time.time() - a}')
+        logger.info(f'agi_eval Running Time: {time.time() - a}')
     if 'human_eval' in args.task:
         a = time.time()
         human_eval(args, LLMChat(args))
-        if rank == 0:
-            logger.info(f'Human_eval Running Time: {time.time() - a}')
+        logger.info(f'Human_eval Running Time: {time.time() - a}')
