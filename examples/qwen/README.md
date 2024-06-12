@@ -70,6 +70,12 @@ Qwen-7B 训练的硬件配置:
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
     
+    #相关的包下载地址
+    驱动和固件 https://www.hiascend.com/document/detail/zh/canncommercial/70RC1/envdeployment/instg/instg_0019.html
+    pytorch https://www.hiascend.com/document/detail/zh/canncommercial/70RC1/envdeployment/instg/instg_0084.html
+    APEX https://www.hiascend.com/document/detail/zh/canncommercial/70RC1/envdeployment/instg/instg_0087.html
+    PTA(相关的CANN里面有对应的链接) https://gitee.com/ascend/pytorch/releases
+    
     # 安装加速库
     git clone https://gitee.com/ascend/MindSpeed.git
     cd MindSpeed
