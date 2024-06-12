@@ -74,7 +74,6 @@ GPT_ARGS="
     --use-fused-rotary-pos-emb \
     --use-distributed-optimizer \
     --overlap-grad-reduce \
-    --overlap-param-gather \
     --bf16
 "
 
