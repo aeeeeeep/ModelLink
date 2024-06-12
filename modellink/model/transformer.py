@@ -23,7 +23,8 @@ import torch
 import torch_npu
 import torch.nn.functional as F
 
-from megatron import get_timers, get_args, get_retro_args, core, get_num_microbatches
+from megatron.training import get_timers, get_args, get_num_microbatches
+from megatron import core
 from megatron.core import mpu
 from megatron.core import tensor_parallel
 from megatron.core import parallel_state
@@ -31,12 +32,12 @@ from megatron.core.enums import ModelType
 from megatron.core.tensor_parallel import get_cuda_rng_tracker
 from megatron.core.parallel_state import get_tensor_model_parallel_group
 
-from megatron.model.enums import AttnMaskType, LayerType, AttnType
-from megatron.model.transformer import _get_layer_type
-from megatron.model.transformer import (
+from megatron.legacy.model.enums import AttnMaskType, LayerType, AttnType
+from megatron.legacy.model.transformer import _get_layer_type
+from megatron.legacy.model.transformer import (
     ParallelTransformer, ParallelTransformerLayer, NoopTransformerLayer, ParallelMLP
 )
-from megatron.model.utils import get_norm
+from megatron.legacy.model.utils import get_norm
 
 from modellink.core.models.common.embeddings.rotary_pos_embedding import apply_rotary_pos_emb
 from modellink.error_utils import ensure_valid

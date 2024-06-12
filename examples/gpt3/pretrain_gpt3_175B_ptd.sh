@@ -84,5 +84,6 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $GPT_ARGS \
     $DATA_ARGS \
     $OUTPUT_ARGS \
+    --jit-compile \
     --distributed-backend nccl 2>&1 
     | tee ./logs/pretrain_gpt3_175B.log

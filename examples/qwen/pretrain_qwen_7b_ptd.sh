@@ -89,5 +89,6 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $OUTPUT_ARGS \
     --tokenizer-kwargs 'eos_token' '<|endoftext|>' 'pad_token' '<|extra_0|>' \
     --distributed-backend nccl \
+    --jit-compile \
     --save ${CKPT_SAVE_DIR} \
     | tee logs/train_qwen_7b.log

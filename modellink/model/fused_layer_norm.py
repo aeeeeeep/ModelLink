@@ -15,9 +15,9 @@
 
 from functools import wraps
 
-from megatron.model.fused_layer_norm import MixedFusedLayerNorm
+from megatron.legacy.model.fused_layer_norm import MixedFusedLayerNorm
 from megatron.core import parallel_state
-from megatron import get_args
+from megatron.training import get_args
 
 
 def norm_wrapper(fn):

@@ -1,15 +1,17 @@
 import time
 import torch
-
+import torch_npu
 import megatron
-from megatron import get_args, print_rank_0
 from megatron.core import mpu
-from megatron.arguments import validate_args
-from megatron.checkpointing import load_args_from_checkpoint
-from megatron.global_vars import set_global_variables
-from megatron.initialize import (
+from megatron.training import get_args, print_rank_0
+from megatron.training.arguments import validate_args
+from megatron.training.yaml_arguments import validate_yaml
+from megatron.training.checkpointing import load_args_from_checkpoint
+from megatron.training.global_vars import set_global_variables
+from megatron.training.initialize import (
     _initialize_distributed, _set_random_seed,
-    _init_autoresume, _initialize_tp_communicators
+    _init_autoresume, _initialize_tp_communicators,
+    _warmup_jit_function
 )
 
 from modellink.arguments import parse_args_decorator
@@ -51,7 +53,7 @@ def initialize_megatron(
         ensure_valid(torch.cuda.is_available(), "Megatron requires CUDA.")
 
     # Parse arguments
-    parse_args = parse_args_decorator(megatron.arguments.parse_args)
+    parse_args = parse_args_decorator(megatron.training.arguments.parse_args)
     args = parse_args(extra_args_provider, ignore_unknown_args)
 
     if args.use_checkpoint_args or args_defaults.get("use_checkpoint_args", False):
@@ -59,7 +61,11 @@ def initialize_megatron(
                      "--use-checkpoints-args requires --load argument")
         load_args_from_checkpoint(args)
 
-    validate_args(args, args_defaults)
+    if args.yaml_cfg is not None:
+        args = validate_yaml(args, args_defaults)
+    else:
+        validate_args(args, args_defaults)
+
 
     # set global args, build tokenizer, and set adlr-autoresume,
     # tensorboard-writer, and timers.
@@ -111,3 +117,19 @@ def initialize_megatron(
 
         # No continuation function
         return None
+
+
+def set_jit_fusion_options():
+    """Set PyTorch JIT layer fusion options."""
+    # flags required to enable jit fusion kernels
+    torch._C._jit_set_profiling_executor(True)
+    torch._C._jit_set_profiling_mode(True)
+    torch._C._jit_override_can_fuse_on_cpu(False)
+    torch._C._jit_override_can_fuse_on_gpu(False)
+    torch._C._jit_set_texpr_fuser_enabled(False)
+    torch._C._debug_set_autodiff_subgraph_inlining(False)
+
+    _warmup_jit_function()
+    args = get_args()
+    if args.jit_compile:
+        torch_npu.npu.set_compile_mode(jit_compile=True)

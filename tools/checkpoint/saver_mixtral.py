@@ -132,13 +132,13 @@ def save_model_checkpoint(queue, args):
 
     try:
         import modellink
-        from megatron.arguments import validate_args
+        from megatron.training.arguments import validate_args
         from modellink.utils import parse_args
-        from megatron.checkpointing import save_checkpoint
-        from megatron.global_vars import set_global_variables, get_args
+        from megatron.training.checkpointing import save_checkpoint
+        from megatron.training.global_vars import set_global_variables, get_args
         from megatron.core.enums import ModelType
-        from megatron.tokenizer.tokenizer import _vocab_size_with_padding
-        from megatron import fused_kernels
+        from megatron.training.tokenizer.tokenizer import _vocab_size_with_padding
+        from megatron.legacy import fused_kernels
         from megatron.core import mpu
     except ModuleNotFoundError as e:
         logging.info("Unable to import Megatron, please specify the path to Megatron using --megatron-path.")
@@ -568,7 +568,7 @@ def save_model_checkpoint(queue, args):
                 mpu.set_expert_model_parallel_rank(ep_rank)
 
                 if args.save_model_type == 'megatron':
-                    save_checkpoint(md.iteration, [models[ep_rank][tp_rank]], None, None)
+                    save_checkpoint(md.iteration, [models[ep_rank][tp_rank]], None, None, 0)
                 elif args.save_model_type == 'huggingface':
                     save_huggingface(args, margs, models[ep_rank][tp_rank])
 

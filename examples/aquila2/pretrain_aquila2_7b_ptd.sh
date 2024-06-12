@@ -4,7 +4,6 @@
 # source /path/to/your/ascend-toolkit/set_env.sh
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 export NPU_ASD_ENABLE=0
-export WITHOUT_JIT_COMPILE=1
 
 # please fill these path configurations
 CKPT_SAVE_DIR="your checkpoint save dir"
