@@ -69,6 +69,12 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
     
+    #packages
+    driver and firmware https://www.hiascend.com/document/detail/zh/canncommercial/70RC1/envdeployment/instg/instg_0019.html
+    pytorch https://www.hiascend.com/document/detail/zh/canncommercial/70RC1/envdeployment/instg/instg_0084.html
+    APEX https://www.hiascend.com/document/detail/zh/canncommercial/70RC1/envdeployment/instg/instg_0087.html
+    PTA(CANN and torch_npu) https://gitee.com/ascend/pytorch/releases
+    
     # modify ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     
