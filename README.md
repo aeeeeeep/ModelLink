@@ -776,7 +776,6 @@ ModelLink支持张量并行、流水线并行、序列并行、重计算、分�
 |                 重计算                  |    --recompute-granularity     |
 |                分布式优化器                |  --use-distributed-optimizer   |
 |           DDP allreduce 掩盖           |     --overlap-grad-reduce      |
-|           DDP allgather 掩盖           |     --overlap-param-gather      |
 |           Flash attention            |        --use-flash-attn        |
 |            Fused rmsnorm             |      --use-fused-rmsnorm       |
 |             Fused swiglu             |       --use-fused-swiglu       |
@@ -799,7 +798,6 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     --use-fused-rmsnorm \
     --use-fused-swiglu \
     --overlap-grad-reduce \
-    --overlap-param-gather \
     --use-fused-rotary-pos-emb \
     --use-mc2 \
     --sliding-window 4096 \

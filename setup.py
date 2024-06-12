@@ -80,9 +80,7 @@ except Exception:
 setuptools.setup(
     package_data={'modellink':['modellink/data/Makefile']},
     name=__package_name__,
-    # Versions should comply with PEP440.  For a discussion on single-sourcing
-    # the version across setup.py and the project code, see
-    # https://packaging.python.org/en/latest/single_source_version.html
+    # Versions should comply with PEP440.
     version=__version__,
     description=__description__,
     long_description=long_description,

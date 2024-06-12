@@ -773,7 +773,6 @@ ModelLink supports various acceleration algorithms such as tensor parallelism, p
 |            Recomputation             |    --recompute-granularity     |
 |        Distributed Optimizer         |  --use-distributed-optimizer   |
 |        overlap DDP allreduce         |     --overlap-grad-reduce      |
-|        overlap DDP allgather         |     --overlap-param-gather     |
 |           Flash attention            |        --use-flash-attn        |
 |            Fused rmsnorm             |      --use-fused-rmsnorm       |
 |             Fused swiglu             |       --use-fused-swiglu       |
@@ -797,7 +796,6 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     --use-fused-rmsnorm \
     --use-fused-swiglu \
     --overlap-grad-reduce \
-    --overlap-param-gather \
     --use-fused-rotary-pos-emb \
     --use-mc2 \
     --sliding-window 4096 \
