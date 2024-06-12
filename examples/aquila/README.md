@@ -52,6 +52,12 @@ Aquila-7B 训练的硬件配置如下:
     pip install torch_npu-2.1.0.postxxxx-cp38-cp38-xxxx_aarch64.whl
     # 通过PTA上提供的安装包，以whl文件方式安装apex
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+
+    #相关的包下载地址
+    驱动和固件 https://www.hiascend.com/document/detail/zh/canncommercial/70RC1/envdeployment/instg/instg_0019.html
+    pytorch https://www.hiascend.com/document/detail/zh/canncommercial/70RC1/envdeployment/instg/instg_0084.html
+    APEX https://www.hiascend.com/document/detail/zh/canncommercial/70RC1/envdeployment/instg/instg_0087.html
+    PTA(相关的CANN里面有对应的链接) https://gitee.com/ascend/pytorch/releases
     
     # 请按照您的真实环境修改 set_env.sh 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
