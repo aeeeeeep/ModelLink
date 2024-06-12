@@ -11,11 +11,9 @@ from modellink.tokenizer.tokenizer import _AutoTokenizer
 from modellink.data.data_handler import GeneralPretrainHandler
 from modellink.data.data_handler import build_dataset, get_dataset_handler
 from tools.preprocess_data import get_args, build_splitter
-from tests.pipeline.common import DistributedTest
 
 
-class TestProcessPretrainData(DistributedTest):
-    world_size = 1
+class TestProcessPretrainData:
 
     def setup_method(self):
         sys.argv = [

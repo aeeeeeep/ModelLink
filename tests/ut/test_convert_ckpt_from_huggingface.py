@@ -7,7 +7,6 @@ import torch
 
 from utils import judge_expression
 import modellink
-from tests.pipeline.common import DistributedTest
 
 
 class CovertCkptFromHuggingfaceArgs:
@@ -32,8 +31,7 @@ class CovertVppCkptFromHuggingfaceArgs:
     num_layers_per_virtual_pipeline_stage = "2"
 
 
-class TestConvertCkptFromHuggingface(DistributedTest):
-    world_size = 1
+class TestConvertCkptFromHuggingface:
 
     def test_file_exsit(self):
         args = CovertCkptFromHuggingfaceArgs()

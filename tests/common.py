@@ -9,6 +9,7 @@ import os
 import time
 import inspect
 import socket
+import json
 from abc import ABC, abstractmethod
 
 import torch
@@ -339,3 +340,10 @@ class DistributedTest(DistributedExec):
         # DistributedTest subclasses may have multiple test methods
         func_name = request.function.__name__
         return getattr(self, func_name)
+
+
+def create_testconfig(path: str):
+    with open(path) as f:
+        raw_data = json.load(f)
+    
+    return {k: [tuple(s.values()) if len(s) > 1 else tuple(s.values())[0] for s in v] for k, v in raw_data.items()}

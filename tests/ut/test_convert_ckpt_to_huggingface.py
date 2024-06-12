@@ -8,7 +8,6 @@ import torch
 from transformers import AutoModelForCausalLM
 from utils import judge_expression
 import modellink
-from tests.pipeline.common import DistributedTest
 
 
 class CovertCkptToHuggingfaceArgs:
@@ -20,7 +19,7 @@ class CovertCkptToHuggingfaceArgs:
     load_dir = "/home/dataset/ci_engineering/llama2-7B-tp8-pp1"
 
 
-class TestConvertCkptFromHuggingface(DistributedTest):
+class TestConvertCkptFromHuggingface:
 
     def test_combine_lora_weights_to_huggingface(self):
         """
