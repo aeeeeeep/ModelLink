@@ -69,7 +69,6 @@ GPT_ARGS="
     --use-fused-swiglu \
     --use-fused-rotary-pos-emb \
     --overlap-grad-reduce \
-    --overlap-param-gather \
     --bf16
 "
 

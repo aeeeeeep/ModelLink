@@ -78,7 +78,6 @@ GPT_ARGS="
     --no-load-rng \
     --use-distributed-optimizer \
     --overlap-grad-reduce \
-    --overlap-param-gather \
     --load ${CKPT_LOAD_DIR} \
     --save ${CKPT_SAVE_DIR} \
     --bf16
