@@ -151,6 +151,17 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> 【昇腾贡献】 </td>
     </tr>
     <tr>
+      <td rowspan="1"> <a href="examples/chatglm3/README.md">ChatGLM3</a> </td>
+      <td> 6B </td>
+      <td> <a href="examples/chatglm3/pretrain_chatglm3_6B_8K.sh"> pretrain </a> </td>
+      <td> <a href="examples/chatglm3/generate_chatglm3_6B.sh">generate</a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/chatglm3/evaluate_chatglm3_6B.sh">eval</a> </td>
+      <td>【社区贡献】</td>
+    </tr>
+    <tr>
       <td rowspan="1"> <a href="examples/codellama/README.md">CodeLlama</a> </td>
       <td> 34B </td>
       <td> <a href="examples/codellama/pretrain_codellama_34b_ptd_16p.sh"> pretrain </a> </td>
@@ -552,6 +563,14 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> BF16 </td>
       <td> 100 </td>
       <td> 107 </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/chatglm3/README.md">ChatGLM3</a></td>
+      <td>6B</td>
+      <td> 1x8</td>
+      <td> FP16 </td>
+      <td> 4297 </td>
+      <td> 4267 </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/codellama/README.md">CodeLlama</a></td>

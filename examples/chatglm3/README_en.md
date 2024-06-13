@@ -63,7 +63,7 @@ Here's a hardware summary of pre-training  ChatGLM3-6B:
     cd MindSpeed
     git checkout 2b0edd2
     pip install -r requirements.txt 
-    pip3 install -e .
+    pip install -e .
     cd ..
     
     # install other packages
@@ -107,10 +107,10 @@ Here's a hardware summary of pre-training  ChatGLM3-6B:
         --model-type GPT \
         --loader chatglm3_hf \
         --saver megatron \
-        --target-tensor-parallel-size 2 \
+        --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 2 \
         --load-dir ./model_from_hf/chatglm3_6b_hf/ \
-        --save-dir ./model_weights/chatglm3_6b_tp2pp2/ \
+        --save-dir ./model_weights/chatglm3_6b_tp1pp2/ \
         --tokenizer-model ./model_from_hf/chatglm3_6b_hf/tokenizer.model \
         --add-qkv-bias
     ```
@@ -148,7 +148,7 @@ Here's a hardware summary of pre-training  ChatGLM3-6B:
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     
     # modify config according to your own actual situation
-    LOAD_CHECKPOINT_PATH="./model_weights/chatglm3_6b_tp2pp2/"
+    LOAD_CHECKPOINT_PATH="./model_weights/chatglm3_6b_tp1pp2/"
     SAVE_CHECKPOINT_PATH="./ckpt/chatglm3_6b_hf/"
     TOKENIZER_PATH="./model_from_hf/chatglm3_6b_hf/"  #tokenizer path
     DATA_PATH="./dataset/chatglm3_6b_hf/alpaca_text_document"  #processed dataset
@@ -171,8 +171,8 @@ The performance of ChatGLM3-6B in **Ascend NPU** and **Reference**:
 
 | 设备 |    模型    | tokens吞吐 (tokens/s/p) | 
 | :--: | :--------: |:---------------------:| 
-| NPUs | ChatGLM3-6B |        2228.5         |  
-| 参考 | ChatGLM3-6B |        3645.3         |  
+| NPUs | ChatGLM3-6B |        4297        |  
+| 参考 | ChatGLM3-6B |        4269         | 
 
 ## Inference
 
@@ -183,7 +183,7 @@ Config ChatGLM3-6B inference script: examples/chatglm3/generate_chatglm3_6B.sh
 
 ```shell
 # modify the model weight path and tokenizer path
-CHECKPOINT="./model_weights/chatglm3_6b_tp2pp2/"
+CHECKPOINT="./model_weights/chatglm3_6b_tp1pp2/"
 TOKENIZER_PATH="./model_from_hf/chatglm3_6b_hf/"
 ```
 

@@ -13,7 +13,7 @@ CKPT_SAVE_DIR="your model save ckpt path"
 DATA_PATH="your data path"
 TOKENIZER_PATH="your tokenizer path"
 CKPT_LOAD_DIR="your model ckpt path"
-TP=2
+TP=1
 PP=2
 
 DISTRIBUTED_ARGS="
@@ -34,7 +34,7 @@ GPT_ARGS="
     --num-attention-heads 32 \
     --seq-length 8192 \
     --micro-batch-size 1 \
-    --global-batch-size 64 \
+    --global-batch-size 128 \
     --max-position-embeddings 32768 \
     --padded-vocab-size 65024 \
     --make-vocab-size-divisible-by 1 \
@@ -47,12 +47,14 @@ GPT_ARGS="
     --normalization RMSNorm \
     --use-fused-rmsnorm \
     --swiglu \
+    --use-fused-swiglu \
     --use-flash-attn \
     --use-distributed-optimizer \
+    --use-mc2 \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
     --lr 1e-6 \
-    --train-iters 5000 \
+    --train-iters 2000 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
     --attention-dropout 0.0 \
@@ -81,7 +83,7 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 5000 \
+    --save-interval 2000 \
     --eval-interval 1000 \
     --eval-iters 10 \
 "
@@ -92,4 +94,4 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS pretrain_gpt.py \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
     --save $CKPT_SAVE_DIR \
-    | tee logs/train_chatglm3_6B.log
+    | tee logs/train_chatglm3_6B_8K.log

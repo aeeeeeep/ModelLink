@@ -150,6 +150,17 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> 【Ascend】 </td>
     </tr>
     <tr>
+      <td rowspan="1"> <a href="examples/chatglm3/README.md">ChatGLM3</a> </td>
+      <td> 6B </td>
+      <td> <a href="examples/chatglm3/pretrain_chatglm3_6B_8K.sh"> pretrain </a> </td>
+      <td> <a href="examples/chatglm3/generate_chatglm3_6B.sh">generate</a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/chatglm3/evaluate_chatglm3_6B.sh">eval</a> </td>
+      <td>【Community】</td>
+    </tr>
+    <tr>
       <td rowspan="1"> <a href="examples/codellama/README.md">CodeLlama</a> </td>
       <td> 34B </td>
       <td> <a href="examples/codellama/pretrain_codellama_34b_ptd_16p.sh"> pretrain </a> </td>
@@ -549,6 +560,14 @@ For the supported models listed above, we provide training scripts and readme in
       <td> BF16 </td>
       <td> 100 </td>
       <td> 107 </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/chatglm3/README.md">ChatGLM3</a></td>
+      <td>6B</td>
+      <td> 1x8</td>
+      <td> FP16 </td>
+      <td> 4297 </td>
+      <td> 4267 </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/codellama/README.md">CodeLlama</a></td>
