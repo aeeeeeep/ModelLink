@@ -1,0 +1,57 @@
+{
+    "NETWORK_SIZE": [
+        "--num-layers", "32",
+        "--hidden-size", "4096",
+        "--ffn-hidden-size", "11008",
+        "--num-attention-heads", "32",
+        "--max-position-embeddings", "32768",
+        "--position-embedding-type", "rope",
+        "--make-vocab-size-divisible-by", "16",
+        "--normalization", "RMSNorm",
+        "--swiglu",
+        "--untie-embeddings-and-output-weights",
+        "--add-qkv-bias"
+    ],
+
+    "TOKENIZER_PARAM": [
+        "--tokenizer-type", "PretrainedFromHF",
+        "--tokenizer-name-or-path", "/home/dataset/qwen-7b-hf/"
+    ],
+
+    "DISTRIBUTED_PARAM": [
+        "--tensor-model-parallel-size", "1",
+        "--pipeline-model-parallel-size", "1"
+    ],
+
+    "AUXILIARY_PARAM": [
+        "--micro-batch-size", "2",
+        "--global-batch-size", "64",
+        "--no-masked-softmax-fusion",
+        "--disable-bias-linear",
+        "--no-gradient-accumulation-fusion",
+        "--bf16",
+        "--seed", "42",
+        "--use-fused-rmsnorm",
+        "--no-load-optim",
+        "--no-load-rng",
+        "--seq-length", "8192",
+        "--padded-vocab-size", "151936",
+        "--attention-softmax-in-fp32"
+    ],
+
+    "OUTPUT_PARAM": [
+        "--log-interval", "1",
+        "--save-interval", "10000",
+        "--eval-interval", "1000",
+        "--eval-iters", "1000"
+    ],
+
+    "INSTRUCTION_PARAM": [
+        "--finetune",
+        "--is-instruction-dataset",
+        "--data-path", "/home/dataset/tune-dataset-qwen-7B/alpaca",
+        "--split", "90,5,5",
+        "--train-iters", "5000"
+    ]
+
+}

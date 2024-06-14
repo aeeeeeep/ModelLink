@@ -133,7 +133,7 @@ class DecoderPackedMTFDataset(torch.utils.data.Dataset):
         self.pad_token = pad_token
         self.seq_length = seq_length
 
-        self.shuffle_index = _build_index_mappings(name=name, data_prefix=data_prefix, nb_documents=len(documents), mtf_dataset=self.mtf_dataset, num_samples=num_samples, seq_length=seq_length, seed=seed)
+        self.shuffle_index = _build_index_mappings(name=name, data_prefix=data_prefix, start_index=documents[0], nb_documents=len(documents), mtf_dataset=self.mtf_dataset, num_samples=num_samples, seq_length=seq_length, seed=seed)
 
     def __len__(self):
         return len(self.shuffle_index)
@@ -157,6 +157,7 @@ class DecoderPackedMTFDataset(torch.utils.data.Dataset):
 def _build_index_mappings(
     name,
     data_prefix,
+    start_index,
     nb_documents,
     mtf_dataset,
     num_samples: int,
@@ -190,7 +191,7 @@ def _build_index_mappings(
             epoch = 0
             shuffle_idx = []
             while len(shuffle_idx) <= num_samples:
-                new_document_ids = _build_shuffle_idx(nb_documents=nb_documents, np_rng=np_rng)
+                new_document_ids = _build_shuffle_idx(nb_documents=nb_documents, start_index=start_index, np_rng=np_rng)
                 # Generate a shuffling of the entire dataset
                 shuffle_idx.extend(new_document_ids.tolist())
                 epoch += 1
@@ -220,11 +221,12 @@ def _build_index_mappings(
     return shuffle_idx
 
 
-def _build_shuffle_idx(nb_documents: int, np_rng):
+def _build_shuffle_idx(nb_documents: int, start_index, np_rng):
     """Build the range [0, dataset_size) and shuffle."""
     dtype_ = np.int64
+    stop = start_index + nb_documents
 
-    result = np.arange(start=0, stop=nb_documents, step=1, dtype=dtype_)
+    result = np.arange(start=start_index, stop=stop, step=1, dtype=dtype_)
 
     # in-place shuffling
     np_rng.shuffle(result)
