@@ -54,7 +54,7 @@ def model_provider(pre_process=True, post_process=True):
     return init_model
 
 
-def get_result(result):
+def get_result(result, tokenizer):
     if result:
         final_results = []
         if isinstance(result[0], list):
@@ -78,16 +78,18 @@ def get_result(result):
 
 
 class LLMChat(Chat):
-    def __init__(self, llm_args):
+    def __init__(self, llm_args, model, tokenizer):
         self.args = llm_args
+        self.model = model
+        self.tokenizer = tokenizer
         self.template = "{instruction}"
 
     def chat(self, instruction, history):
-        instruction_temp = [self.template.format(instruction=ins) if (tokenizer.chat_template is None or args.no_chat_template) else tokenizer.apply_chat_template([{"role": "user", "content": ins}]) for ins in instruction]
-        result = model.generate(
+        instruction_temp = [self.template.format(instruction=ins) if (self.tokenizer.chat_template is None or args.no_chat_template) else self.tokenizer.apply_chat_template([{"role": "user", "content": ins}]) for ins in instruction]
+        result = self.model.generate(
             instruction_temp,
             do_sample=False,
-            max_new_tokens=max_new_tokens,
+            max_new_tokens=self.args.max_new_tokens,
             stream=False,
             return_output_log_probs=True
         )
@@ -213,7 +215,7 @@ def bbh_eval(eval_args, agent):
         logger.info(e)
 
 
-if __name__ == "__main__":
+def main():
     initialize_megatron(extra_args_provider=add_text_generate_args,
                         args_defaults={'no_load_rng': True,
                                        'no_load_optim': True})
@@ -223,41 +225,44 @@ if __name__ == "__main__":
         pretrained_model_name_or_path=args.load
     )
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name_or_path, trust_remote_code=True)
-    max_new_tokens = args.max_new_tokens
-    rank = dist.get_rank()
 
+    rank = dist.get_rank()
     if 'mmlu' in args.task:
         a = time.time()
-        mmlu(args, LLMChat(args))
+        mmlu(args, LLMChat(args, model, tokenizer))
         if rank == 0:
             logger.info(f'MMLU Running Time:, {time.time() - a}')
     if 'gsm8k' in args.task:
         a = time.time()
-        gsm8k(args, LLMChat(args))
+        gsm8k(args, LLMChat(args, model, tokenizer))
         if rank == 0:
             logger.info(f'GSM8k Running Time: {time.time() - a}')
     if 'boolq' in args.task:
         a = time.time()
-        boolq(args, LLMChat(args))
+        boolq(args, LLMChat(args, model, tokenizer))
         if rank == 0:
             logger.info(f'Boolq Running Time: {time.time() - a}')
     if 'ceval' in args.task:
         a = time.time()
-        ceval(args, LLMChat(args))
+        ceval(args, LLMChat(args, model, tokenizer))
         if rank == 0:
             logger.info(f'Ceval Running Time: {time.time() - a}')
     if 'bbh' in args.task:
         a = time.time()
-        bbh_eval(args, LLMChat(args))
+        bbh_eval(args, LLMChat(args, model, tokenizer))
         if rank == 0:
             logger.info(f'bbh Running Time: {time.time() - a}')
     if 'agieval' in args.task:
         a = time.time()
-        agi_eval(args, LLMChat(args))
+        agi_eval(args, LLMChat(args, model, tokenizer))
         if rank == 0:
             logger.info(f'agi_eval Running Time: {time.time() - a}')
     if 'human_eval' in args.task:
         a = time.time()
-        human_eval(args, LLMChat(args))
+        human_eval(args, LLMChat(args, model, tokenizer))
         if rank == 0:
             logger.info(f'Human_eval Running Time: {time.time() - a}')
+
+
+if __name__ == "__main__":
+    main()

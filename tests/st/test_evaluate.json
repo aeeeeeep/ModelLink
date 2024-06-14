@@ -1,0 +1,27 @@
+{
+    "test_evaluate": [
+        {
+            "param": {
+                "tensor-model-parallel-size": 2,
+                "pipeline-model-parallel-size": 2,
+                "micro-batch-size": 1,
+                "tokenizer-type": "PretrainedFromHF",
+                "tokenizer-name-or-path": "tests/test_data/tokenizers/llama2_hf_tokenizer/",
+                "num-layers": 2,
+                "hidden-size": 1024,
+                "num-attention-heads": 8,
+                "seq-length": 1024,
+                "bf16": true,
+                "max-position-embeddings": 1024,
+                "max-new-tokens": 1,
+                "load": "tests/test_data/ckpts/llama_tp2pp2",
+                "task": "mmlu",
+                "task-data-path": "tests/test_data/datasets/evaluate_data/mmlu",
+                "no-load-optim": true,
+                "no-load-rng": true,
+                "exit-on-missing-checkpoint": true
+            }
+        }
+    ]
+}
+

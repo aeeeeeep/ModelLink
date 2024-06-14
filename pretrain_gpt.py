@@ -243,7 +243,7 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
     return train_ds, valid_ds, test_ds
 
 
-if __name__ == "__main__":
+def main():
     # Temporary for transition to core datasets
     train_valid_test_datasets_provider.is_distributed = True
 
@@ -251,3 +251,7 @@ if __name__ == "__main__":
              model_provider,
              ModelType.encoder_or_decoder,
              forward_step)
+
+
+if __name__ == "__main__":
+    main()
