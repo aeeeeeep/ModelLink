@@ -14,13 +14,15 @@
 # limitations under the License.
 
 from functools import wraps
+from megatron.training import get_args
 
 
 def vocab_embedding_wrapper(fn):
     @wraps(fn)
     def wrapper(self, *args, **kwargs):
+        args_ = get_args()
         output = fn(self, *args, **kwargs)
         if hasattr(self, 'norm'):
             output = self.norm(output)
-        return output
+        return output * args_.embedding_multiplier_scale
     return wrapper

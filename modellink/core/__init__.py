@@ -20,7 +20,6 @@ from .parallel_state import (initialize_model_parallel_decorator, destroy_model_
                              get_expert_parallel_rank, get_expert_parallel_world_size,
                              set_expert_model_parallel_world_size, set_expert_model_parallel_rank)
 from .models.common.embeddings.rotary_pos_embedding import RotaryEmbedding_forward, apply_rotary_pos_emb
-from .models.common.embeddings.language_model_embedding import language_model_embedding_forward
 from .datasets.blended_megatron_dataset_builder import _build_generic_dataset
 from .datasets.gpt_dataset import _build_document_sample_shuffle_indices
 from .transformer.moe.router import topk_router_forward, topk_router_routing

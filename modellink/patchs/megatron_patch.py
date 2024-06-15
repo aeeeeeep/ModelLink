@@ -38,7 +38,7 @@ from ..core import (vocab_embedding_wrapper, initialize_model_parallel_decorator
                    set_expert_model_parallel_rank, set_expert_model_parallel_world_size,
                    RotaryEmbedding_forward, apply_rotary_pos_emb,
                    _build_generic_dataset, _build_document_sample_shuffle_indices,
-                    language_model_embedding_forward, topk_router_forward, topk_router_routing,
+                    topk_router_forward, topk_router_routing,
                     TransformerLayerSubmodules, transformer_layer_init_wrapper, transformer_layer_forward,
                     gpt_model_forward)
 from ..core.pipeline_parallel.p2p_communication import _batched_p2p_ops
@@ -92,7 +92,6 @@ def patch_core_models():
     megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.__init__ = rotary_embedding_init_wrapper(
         megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.__init__) # use torch_npu npu_ratary_mul
     megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.forward = RotaryEmbedding_forward
-    megatron.core.models.common.embeddings.language_model_embedding.LanguageModelEmbedding.forward = language_model_embedding_forward
     megatron.core.transformer.moe.router.TopKRouter.routing = topk_router_routing
     megatron.core.transformer.moe.router.TopKRouter.forward = topk_router_forward
     megatron.core.transformer.transformer_layer.TransformerLayerSubmodules = TransformerLayerSubmodules
