@@ -317,7 +317,16 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> 【昇腾贡献】 </td>
     </tr>
     <tr>
-      <td rowspan="6"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+      <td rowspan="7"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+      <td>0.5B</td>
+      <td> <a href="examples/qwen15/pretrain_qwen15_0point5b_ptd.sh"> pretrain </a> </td>
+      <td> <a href="examples/qwen15/generate_qwen15_0point5b_ptd.sh"> generate </a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/qwen15/evaluate_qwen15_0point5b_ptd.sh"> eval </a> </td>
+      <td rowspan="1"> 【社区贡献】 </td>
+    <tr>
       <td>1.8B</td>
       <td> <a href="examples/qwen15/pretrain_qwen15_1point8b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen15/generate_qwen15_1point8b_ptd.sh"> generate </a> </td>
@@ -675,7 +684,13 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     </tr>
     </tr>
        <tr>
-      <td rowspan="6"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+      <td rowspan="7"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+      <td> 0.5B </td>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td> 22834 </td>
+      <td> 25306 </td>
+      <tr>
       <td> 1.8B </td>
       <td> 1x8 </td>
       <td> BF16 </td>
