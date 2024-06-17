@@ -36,8 +36,7 @@ def _build_document_sample_shuffle_indices(
         -- A random permutation of index range of the sample index
 
     Returns:
-        Tuple[numpy.ndarray, numpy.ndarray]: The document index, the sample index, and the
-        shuffle index
+        Tuple[numpy.ndarray, numpy.ndarray]: The document index, the sample index, and the shuffle index
     """
     path_to_cache = self.config.path_to_cache
     if path_to_cache is None:
@@ -64,10 +63,10 @@ def _build_document_sample_shuffle_indices(
         )
     )
 
+    if not cache_hit and (
+        not torch.distributed.is_initialized() or need_to_build_dataset()
+    ):
 
-    # When the rank on the first or last stage of the pipeline_model_parallel_group,
-    # it need to build dataset
-    if not cache_hit and need_to_build_dataset():
         log_single_rank(
             logger,
             logging.INFO,
@@ -114,7 +113,7 @@ def _build_document_sample_shuffle_indices(
             logger, logging.DEBUG, f"> separate_final_epoch: {separate_final_epoch}"
         )
 
-        numpy_random_state = numpy.random.RandomState(getattr(self.config, "random_seed"))
+        numpy_random_state = numpy.random.RandomState(self.config.random_seed)
 
         os.makedirs(path_to_cache, exist_ok=True)
 
@@ -185,7 +184,7 @@ def _build_document_sample_shuffle_indices(
         return document_index, sample_index, shuffle_index
 
     log_single_rank(
-       logger, logging.INFO, f"Load the {type(self).__name__} {self.index_split.name} indices"
+        logger, logging.INFO, f"Load the {type(self).__name__} {self.index_split.name} indices"
     )
 
     log_single_rank(

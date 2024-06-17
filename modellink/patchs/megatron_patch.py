@@ -37,7 +37,7 @@ from ..core import (vocab_embedding_wrapper, initialize_model_parallel_decorator
                    get_expert_parallel_world_size, get_expert_model_parallel_world_size,
                    set_expert_model_parallel_rank, set_expert_model_parallel_world_size,
                    RotaryEmbedding_forward, apply_rotary_pos_emb,
-                   _build_generic_dataset, _build_document_sample_shuffle_indices)
+                   build_generic_dataset, _build_document_sample_shuffle_indices)
 from ..core.pipeline_parallel.p2p_communication import _batched_p2p_ops
 from ..data import build_pretraining_data_loader
 from ..tokenizer import build_tokenizer
@@ -199,7 +199,7 @@ def patch_datasets():
     from megatron.core.datasets.blended_megatron_dataset_builder import BlendedMegatronDatasetBuilder
     from megatron.core.datasets.gpt_dataset import GPTDataset
     GPTDataset._build_document_sample_shuffle_indices = _build_document_sample_shuffle_indices
-    BlendedMegatronDatasetBuilder._build_generic_dataset = _build_generic_dataset
+    BlendedMegatronDatasetBuilder._build_generic_dataset = build_generic_dataset
 
 
 def patch_log_handler():
