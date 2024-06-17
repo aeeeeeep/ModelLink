@@ -112,6 +112,12 @@ def _add_moe_args(parser):
                        help="noisy gate policy, valid options are 'Jitter', 'RSample' or 'None'.")
     group.add_argument('--enable-token-rearrange-opt', action='store_true',
                        help="Use this flag to enable token rearrange optimize")
+    group.add_argument('--embedding-multiplier-scale', type=float, default=1.0,
+                       help='adapter grok1 embedding.')
+    group.add_argument('--input-jitter', action='store_false', help='Add noise to the input tensor.')
+    group.add_argument('--post-norm', action='store_true', help='post norm after attention or mlp.')
+    group.add_argument('--max-attn-val', type=float, default=None, help='max attn val.')
+    group.add_argument('--output-multiplier-scale', type=float, default=None, help='Add scale for logits output.')
                        
     return parser
 

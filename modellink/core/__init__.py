@@ -22,3 +22,6 @@ from .parallel_state import (initialize_model_parallel_decorator, destroy_model_
 from .models.common.embeddings.rotary_pos_embedding import RotaryEmbedding_forward, apply_rotary_pos_emb
 from .datasets.blended_megatron_dataset_builder import _build_generic_dataset
 from .datasets.gpt_dataset import _build_document_sample_shuffle_indices
+from .transformer.moe.router import topk_router_forward, topk_router_routing
+from .transformer.transformer_layer import TransformerLayerSubmodules, transformer_layer_init_wrapper, transformer_layer_forward
+from .models.gpt.gpt_model import gpt_model_forward
