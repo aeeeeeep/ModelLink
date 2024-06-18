@@ -54,4 +54,5 @@ torchrun $DISTRIBUTED_ARGS evaluation.py \
        --max-new-tokens 1 \
        --bf16 \
        --no-chat-template \
-       --seed 42 | tee logs/eval_qwen15_72b_${TASK}.log
+       --seed 42 \
+       | tee logs/eval_qwen15_72b_${TASK}.log
