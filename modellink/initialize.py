@@ -14,7 +14,7 @@ from megatron.training.initialize import (
     _warmup_jit_function
 )
 
-from modellink.arguments import parse_args_decorator
+from modellink.arguments import parse_args_decorator, validate_args_decorator
 from modellink.core.tensor_parallel.ascend_turbo.initialize import initialize_cfg_from_args
 from modellink.error_utils import ensure_valid
 from modellink.utils import seed_all
@@ -64,8 +64,8 @@ def initialize_megatron(
     if args.yaml_cfg is not None:
         args = validate_yaml(args, args_defaults)
     else:
+        validate_args = validate_args_decorator(megatron.training.arguments.validate_args)
         validate_args(args, args_defaults)
-
 
     # set global args, build tokenizer, and set adlr-autoresume,
     # tensorboard-writer, and timers.

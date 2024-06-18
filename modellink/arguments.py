@@ -274,6 +274,8 @@ def validate_args_decorator(validate_args):
         validate_args(args, defaults)
         if args.position_embedding_type == 'alibi' and args.sliding_window is not None:
             raise AssertionError('Sliding Window Attention is forbidden when use alibi.')
+        if args.tokenizer_padding_side == 'left' and args.position_embedding_type == 'alibi':
+            raise AssertionError('Alibi is not support tokenizer-padding-side left now.')
         return args
 
     return wrapper

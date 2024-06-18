@@ -118,7 +118,7 @@ def get_batch(data_iterator):
         # ignored label -100
         loss_mask = torch.where(labels == -100, 0, 1)
 
-        attention_mask = get_tune_attention_mask(attention_mask_1d, args.reset_attention_mask)
+        attention_mask = get_tune_attention_mask(attention_mask_1d, args.reset_attention_mask, args.tokenizer_padding_side)
 
         return tokens, labels, loss_mask, attention_mask, None
 
