@@ -3,7 +3,7 @@
 # The number of parameters is not aligned
 export  LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib:/root/miniconda3/lib:$LD_LIBRARY_PATH
 export HCCL_CONNECT_TIMEOUT=1800
-export COMBINED_ENBLE=1
+export COMBINED_ENABLE=1
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 # Change for multinode config
@@ -32,7 +32,7 @@ torchrun $DISTRIBUTED_ARGS evaluation.py \
        --hidden-size 5120 \
        --num-attention-heads 40 \
        --ffn-hidden-size 27392 \
-       --max-position-embeddings 32768 \
+       --max-position-embeddings 8192 \
        --seq-length 8192 \
        --padded-vocab-size 152064 \
        --rotary-base 1000000 \
@@ -46,7 +46,7 @@ torchrun $DISTRIBUTED_ARGS evaluation.py \
        --tokenizer-name-or-path ${TOKENIZER_PATH} \
        --load ${CHECKPOINT} \
        --normalization RMSNorm \
-       --position-embeddings-type rope \
+       --position-embedding-type rope \
        --exit-on-missing-checkpoint \
        --no-load-rng \
        --no-load-optim \
@@ -54,7 +54,6 @@ torchrun $DISTRIBUTED_ARGS evaluation.py \
        --max-new-tokens 1 \
        --bf16 \
        --group-query-attention \
-       --num-query-group 8 \
-       --seed 42 \
+       --num-query-groups 8 \
        --no-chat-template \
-       | tee logs/eval_qwen15_32b${TASK}.log
+       --seed 42 | tee logs/eval_qwen15_32b_${TASK}.log

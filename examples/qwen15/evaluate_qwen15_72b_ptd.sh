@@ -3,41 +3,40 @@
 # The number of parameters is not aligned
 export  LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib:/root/miniconda3/lib:$LD_LIBRARY_PATH
 export HCCL_CONNECT_TIMEOUT=1800
-export COMBINED_ENBLE=1
+export COMBINED_ENABLE=1
 export CUDA_DEVICE_MAX_CONNECTIONS=1
-
-# please fill these path configurations
-
-CHECKPOINT="your model directory path"
-CHECKPOINT_LORA="your lora model directory path"
-TOKENIZER_PATH="your tokenizer path"
 
 # Change for multinode config
 MASTER_ADDR=localhost
 NPU_PER_NODE=8
-MASTER_PORT=6000
+MASTER_PORT=6001
 NNODES=1
 NODE_RANK=0
+
 WORLD_SIZE=$(($NPU_PER_NODE*$NNODES))
 
-DISTRIBUTED_ARGS="--nproc_per_node $NPU_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK \
-                 --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
+DISTRIBUTED_ARGS="--nproc_per_node $NPU_PER_NODE  --nnodes $NNODES --node_rank $NODE_RANK \
+                  --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 
-torchrun $DISTRIBUTED_ARGS inference.py \
+CHECKPOINT="your model directory path"
+TOKENIZER_PATH="your tokenizer path"
+DATA_PATH="./mmlu/data/test"
+TASK="mmlu"
+
+torchrun $DISTRIBUTED_ARGS evaluation.py \
+       --task-data-path $DATA_PATH \
+       --task $TASK \
        --tensor-model-parallel-size 8 \
        --pipeline-model-parallel-size 1 \
        --num-layers 64 \
-       --hidden-size 5120 \
-       --num-attention-heads 40 \
-       --ffn-hidden-size 27392 \
+       --hidden-size 8192 \
+       --num-attention-heads 64 \
+       --ffn-hidden-size 24576 \
        --max-position-embeddings 8192 \
        --seq-length 8192 \
        --padded-vocab-size 152064 \
        --rotary-base 1000000 \
        --make-vocab-size-divisible-by 1 \
-       --attention-softmax-in-fp32 \
-       --no-load-optim \
-       --no-load-rng \
        --untie-embeddings-and-output-weights \
        --micro-batch-size 1 \
        --swiglu \
@@ -46,20 +45,13 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --tokenizer-type PretrainedFromHF \
        --tokenizer-name-or-path ${TOKENIZER_PATH} \
        --load ${CHECKPOINT} \
-       --hidden-dropout 0 \
-       --attention-dropout 0 \
-       --lora-lora ${CHECKPOINT_LORA} \
-       --lora-r 16 \
-       --lora-alpha 32 \
-       --inference-prompt-type 'alpaca' \
        --normalization RMSNorm \
-       --group-query-attention \
-       --hidden-dropout 0 \
-       --attention-dropout 0 \
-       --num-query-groups 8 \
        --position-embedding-type rope \
-       --norm-epsilon 1e-6 \
+       --exit-on-missing-checkpoint \
+       --no-load-rng \
+       --no-load-optim \
        --tokenizer-not-use-fast \
-       --max-new-tokens 256 \
+       --max-new-tokens 1 \
        --bf16 \
-       --seed 42 | tee logs/generate_qwen15_32b_lora_chat.log
+       --no-chat-template \
+       --seed 42 | tee logs/eval_qwen15_72b_${TASK}.log

@@ -29,7 +29,7 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --hidden-size 5120 \
        --num-attention-heads 40 \
        --ffn-hidden-size 27392 \
-       --max-position-embeddings 32768 \
+       --max-position-embeddings 8192 \
        --seq-length 8192 \
        --padded-vocab-size 152064 \
        --rotary-base 1000000 \
@@ -51,7 +51,7 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --hidden-dropout 0 \
        --attention-dropout 0 \
        --group-query-attention \
-       --num-query-group 8 \
+       --num-query-groups 8 \
        --tokenizer-not-use-fast \
        --max-new-tokens 256 \
        --bf16 \

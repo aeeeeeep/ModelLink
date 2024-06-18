@@ -39,7 +39,7 @@ GPT_ARGS="
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
     --seq-length 8192 \
-    --max-position-embeddings 32768 \
+    --max-position-embeddings 8192 \
     --micro-batch-size 1 \
     --global-batch-size 256 \
     --make-vocab-size-divisible-by 1 \
