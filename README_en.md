@@ -43,7 +43,8 @@ Current ModelLink supports pre-training and fine-tuning for the following models
   <thead>
     <tr>
       <th>Model</th>
-      <th>Scale</th>
+      <th>Parameters</th>
+      <th>Sequence length</th>
       <th>Pretrain</th>
       <th>Inference</th>
       <th>LoRA</th>
@@ -57,6 +58,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     <tr>
       <td rowspan="1"> <a href="examples/aquila/README.md">Aquila</a> </td>
       <td> 7B </td>
+      <td> 2048 </td>
       <td> <a href="examples/aquila/pretrain_aquila_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/aquila/generate_aquila_7b_ptd.sh"> generate </a> </td>
       <td> -- </td>
@@ -68,6 +70,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     <tr>
       <td rowspan="2"><a href="examples/aquila2/README.md">Aquila2</a></td>
       <td>7B</td>
+      <td> 2048 </td>
       <td> <a href="examples/aquila2/pretrain_aquila2_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/aquila2/generate_aquila2_7b_ptd.sh">generate</a> </td>
       <td> -- </td>
@@ -78,6 +81,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     </tr>
     <tr>
       <td>34B</td>
+      <td> 4096 </td>
       <td> <a href="examples/aquila2/pretrain_aquila2_34b_ptd_16p.sh"> pretrain </a> </td>
       <td> <a href="examples/aquila2/generate_aquila2_34b_ptd.sh">generate</a> </td>
       <td> -- </td>
@@ -89,6 +93,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     <tr>
       <td rowspan="2"> <a href="examples/baichuan/README.md">Baichuan</a> </td>
       <td> 7B </td>
+      <td> 4096 </td>
       <td> <a href="examples/baichuan/pretrain_baichuan_ptd_7B.sh"> pretrain </a> </td>
       <td> <a href="examples/baichuan/generate_baichuan_7b_ptd.sh">generate</a> </td>
       <td> -- </td>
@@ -99,6 +104,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     </tr>
     <tr>
       <td> 13B </td>
+      <td> 4096 </td>
       <td> <a href="examples/baichuan/pretrain_baichuan_ptd_13B.sh"> pretrain </a> </td>
       <td> <a href="examples/baichuan/generate_baichuan_13b_ptd.sh">generate</a> </td>
       <td> -- </td>
@@ -110,6 +116,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     <tr>
       <td rowspan="2"> <a href="examples/baichuan2/README.md">Baichuan2</a> </td>
       <td> 7B </td>
+      <td> 4096 </td>
       <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_7B.sh"> pretrain </a> </td>
       <td> <a href="examples/baichuan2/generate_baichuan2_7b_ptd.sh">generate</a> </td>
       <td> -- </td>
@@ -120,6 +127,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     </tr>
     <tr>
       <td> 13B </td>
+      <td> 4096 </td>
       <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_13B.sh"> pretrain </a> </td>
       <td> <a href="examples/baichuan2/generate_baichuan2_13b_ptd.sh">generate</a> </td>
       <td> -- </td>
@@ -131,6 +139,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     <tr>
       <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
       <td> 7B1 </td>
+      <td> 2048 </td>
       <td> <a href="examples/bloom/pretrain_bloom_ptd_7B.sh"> pretrain </a> </td>
       <td> <a href="examples/bloom/generate_bloom_7b_ptd.sh">generate</a> </td>
       <td> -- </td>
@@ -141,6 +150,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     </tr>
     <tr>
       <td> 176B </td>
+      <td> 2048 </td>
       <td> <a href="examples/bloom/pretrain_bloom_176b.sh"> pretrain </a> </td>
       <td> <a href="examples/bloom/generate_bloom_176b_ptd.sh">generate</a> </td>
       <td> -- </td>
@@ -149,9 +159,22 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> <a href="examples/bloom/evaluate_bloom_176b_ptd.sh">eval</a> </td>
       <td> 【Ascend】 </td>
     </tr>
+        <tr>
+      <td rowspan="1"> <a href="examples/chatglm3/README.md">ChatGLM3</a> </td>
+      <td> 6B </td>
+      <td> 8192 </td>
+      <td> <a href="examples/chatglm3/pretrain_chatglm3_6B_8K.sh"> pretrain </a> </td>
+      <td> <a href="examples/chatglm3/generate_chatglm3_6B.sh">generate</a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/chatglm3/evaluate_chatglm3_6B.sh">eval</a> </td>
+      <td>【Community】</td>
+    </tr>
     <tr>
       <td rowspan="1"> <a href="examples/codellama/README.md">CodeLlama</a> </td>
       <td> 34B </td>
+      <td> 4096 </td>
       <td> <a href="examples/codellama/pretrain_codellama_34b_ptd_16p.sh"> pretrain </a> </td>
       <td> <a href="examples/codellama/generate_codellama_34b_ptd.sh">generate</a> </td>
       <td> -- </td>
@@ -163,6 +186,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     <tr>
       <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>
       <td>7B</td>
+      <td> 2048 </td>
       <td> <a href="examples/intern/pretrain_internlm_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/intern/generate_internlm_7b_ptd.sh">generate</a> </td>
       <td> -- </td>
@@ -173,6 +197,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     </tr>
     <tr>
       <td>65B</td>
+      <td> 2048 </td>
       <td> <a href="examples/intern/pretrain_internlm_65b_ptd.sh"> pretrain </a> </td>
       <td> -- </td>
       <td> -- </td>
@@ -184,6 +209,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     <tr>
       <td rowspan="4"><a href="examples/llama/README.md">LLaMA</a></td>
       <td>7B</td>
+      <td> 2048 </td>
       <td> <a href="examples/llama/pretrain_llama_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/llama/generate_llama_7b_ptd.sh"> generate </a> </td>
       <td> <a href="examples/llama/tune_llama_7b_ptd.sh">lora</a> </td>
@@ -194,6 +220,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     </tr>
     <tr>
       <td>13B</td>
+      <td> 2048 </td>
       <td> <a href="examples/llama/pretrain_llama_13b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/llama/generate_llama_13b_ptd.sh">generate </a> </td>
       <td> <a href="examples/llama/tune_llama_13b_ptd.sh">lora</a> </td>
@@ -204,6 +231,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     </tr>
     <tr>
       <td>33B</td>
+      <td> 2048 </td>
       <td> <a href="examples/llama/pretrain_llama_33B_ptd_32p.sh"> pretrain </a> </td>
       <td> <a href="examples/llama/generate_llama_33b_ptd.sh">generate </a> </td>
       <td> <a href="examples/llama/tune_llama_33b_ptd.sh">lora</a> </td>
@@ -214,6 +242,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     </tr>
     <tr>
       <td > 65B </td>
+      <td> 2048 </td>
       <td> <a href="examples/llama/pretrain_llama_65b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/llama/generate_llama_65b_ptd.sh"> generate </a> </td>
       <td > <a href="examples/llama/tune_llama_65b_ptd.sh">lora</a> </td>
@@ -225,6 +254,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     <tr>
       <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</a></td>
       <td>7B</td>
+      <td> 4096 </td>
       <td> <a href="examples/llama2/pretrain_llama2_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/llama2/generate_llama2_7b_ptd.sh">generate </a> </td>
       <td> <a href="examples/llama2/tune_llama2_7b_ptd.sh">lora </a> </td>
@@ -235,6 +265,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     </tr>
     <tr>
       <td>13B</td>
+      <td> 4096 </td>
       <td> <a href="examples/llama2/pretrain_llama2_13B_ptd_8p.sh"> pretrain </a> </td>
       <td> <a href="examples/llama2/generate_llama2_13b_ptd.sh">generate </a> </td>
       <td> <a href="examples/llama2/tune_llama2_13b_ptd.sh">lora </a> </td>      
@@ -245,6 +276,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     </tr>
     <tr>
       <td> 34B </td>
+      <td> 4096 </td>
       <td> <a href="examples/llama2/pretrain_llama2_34B_ptd_16p.sh"> pretrain </a> </td>
       <td> <a href="examples/llama2/generate_llama2_34B_ptd.sh"> generate </a> </td>
       <td> <a href="examples/llama2/tune_llama2_34b_ptd.sh">lora </a> </td>
@@ -255,6 +287,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     </tr>
     <tr>
       <td > 70B </td>
+      <td> 4096 </td>
       <td> <a href="examples/llama2/pretrain_llama2_70b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/llama2/generate_llama2_70b_ptd.sh"> generate </a> </td>
       <td > <a href="examples/llama2/tune_llama2_70b_ptd.sh">lora</a> </td>
@@ -266,6 +299,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     <tr>
       <td rowspan="2"><a href="examples/llama3/README.md">LLaMA3</a></td>
       <td>8B</td>
+      <td> 8192 </td>
       <td> <a href="examples/llama3/pretrain_llama3_8b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/llama3/generate_llama3_8b_ptd.sh"> generate </a> </td>
       <td> -- </td>
@@ -276,6 +310,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     </tr>
     <tr>
       <td>70B</td>
+      <td> 8192 </td>
       <td> <a href="examples/llama3/pretrain_llama3_70b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/llama3/generate_llama3_70b_ptd.sh"> generate </a> </td>
       <td> -- </td>
@@ -287,6 +322,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     <tr>
       <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
       <td>7B</td>
+      <td> 8192 </td>
       <td> <a href="examples/qwen/pretrain_qwen_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen/generate_qwen_7b_ptd.sh"> generate </a></td>
       <td> -- </td>
@@ -297,6 +333,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     </tr>
     <tr>
       <td>14B</td>
+      <td> 2048 </td>
       <td> <a href="examples/qwen/pretrain_qwen_14b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen/generate_qwen_14b_ptd.sh">generate </a> </td>
       <td> -- </td>
@@ -307,6 +344,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     </tr>
     <tr>
       <td>72B</td>
+      <td> 8192 </td>
       <td> <a href="examples/qwen/pretrain_qwen_72b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen/generate_qwen_72b_ptd.sh"> generate </a> </td>
       <td> -- </td>
@@ -327,6 +365,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td rowspan="1"> 【Community】 </td>
     <tr>
       <td>1.8B</td>
+      <td> 8192 </td>
       <td> <a href="examples/qwen15/pretrain_qwen15_1point8b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen15/generate_qwen15_1point8b_ptd.sh"> generate </a> </td>
       <td> -- </td>
@@ -336,6 +375,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td rowspan="1"> 【Community】 </td>
     <tr>
       <td>4B</td>
+      <td> 8192 </td>
       <td> <a href="examples/qwen15/pretrain_qwen15_4b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen15/generate_qwen15_4b_ptd.sh"> generate </a> </td>
       <td> -- </td>
@@ -345,6 +385,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td rowspan="1"> 【Community】 </td>
     <tr>
       <td>7B</td>
+      <td> 8192 </td>
       <td> <a href="examples/qwen15/pretrain_qwen15_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen15/generate_qwen15_7b_ptd.sh"> generate </a> </td>
       <td> -- </td>
@@ -354,6 +395,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td rowspan="1"> 【Community】 </td>
     <tr>
       <td>14B</td>
+      <td> 8192 </td>
       <td> <a href="examples/qwen15/pretrain_qwen15_14b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen15/generate_qwen15_14b_ptd.sh"> generate </a> </td>
       <td> -- </td>
@@ -363,6 +405,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td rowspan="1"> 【Community】 </td>
     <tr>
       <td>32B</td>
+      <td> 8192 </td>
       <td> <a href="examples/qwen15/pretrain_qwen15_32b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen15/generate_qwen15_32b_ptd.sh"> generate </a> </td>
       <td> <a href="examples/qwen15/tune_qwen15_32b_ptd.sh"> lora </a> </td>
@@ -372,6 +415,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td rowspan="1"> 【Community】 </td>
     <tr>
       <td>72B</td>
+      <td> 8192 </td>
       <td> <a href="examples/qwen15/pretrain_qwen15_72b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen15/generate_qwen15_72b_ptd.sh"> generate </a> </td>
       <td> <a href="examples/qwen15/tune_qwen15_72b_ptd.sh"> lora </a> </td>
@@ -383,6 +427,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     <tr>
       <td rowspan="1"><a href="examples/yi/README.md">Yi</a></td>
       <td>34B</td>
+      <td> 4096 </td>
       <td> <a href="examples/yi/pretrain_yi_34b_ptd_16p.sh"> pretrain </a> </td>
       <td> <a href="examples/yi/generate_yi_34b_ptd.sh"> generate </a> </td>
       <td> -- </td>
@@ -394,6 +439,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     <tr>
       <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
       <td>8x7B</td>
+      <td> 32768 </td>
       <td> <a href="examples/mixtral/pretrain_mixtral_8x7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/mixtral/generate_mixtral_8x7b_ptd.sh"> generate </a> </td>
       <td> -- </td>
@@ -405,6 +451,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     <tr>
       <td rowspan="1"><a href="examples/mistral/README.md">Mistral</a></td>
       <td>7B</td>
+      <td> 32768 </td>
       <td> <a href="examples/mistral/pretrain_mistral_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/mistral/generate_mistral_7b_ptd.sh"> generate </a> </td>
       <td> -- </td>
@@ -415,6 +462,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     <tr>
       <td rowspan="2"><a href="examples/gemma/README.md">Gemma</a></td>
       <td>2B</td>
+      <td> 8192 </td>
       <td> <a href="examples/gemma/pretrain_gemma_2b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/gemma/generate_gemma_2b_ptd.sh"> generate </a></td>
       <td> -- </td>
@@ -425,6 +473,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     </tr>
     <tr>
       <td>7B</td>
+      <td> 8192 </td>
       <td> <a href="examples/gemma/pretrain_gemma_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/gemma/generate_gemma_7b_ptd.sh"> generate </a></td>
       <td > <a href="examples/gemma/tune_gemma_7b_ptd.sh">lora</a> </td>
@@ -436,6 +485,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     <tr>
       <td rowspan="1"><a href="examples/gpt3/README.md">GPT3</a></td>
       <td>175B</td>
+      <td> 2048 </td>
       <td> <a href="examples/gpt3/pretrain_gpt3_175B_ptd.sh"> pretrain </a> </td>
       <td> -- </td>
       <td> -- </td>
@@ -484,6 +534,7 @@ For the supported models listed above, we provide training scripts and readme in
     <tr>
       <th>Model</th>
       <th>Parameters</th>
+      <th>Sequence length</th>
       <th>Cluster Scale</th>
       <th>Precision Mode</th>
       <th>Performance </th>
@@ -494,6 +545,7 @@ For the supported models listed above, we provide training scripts and readme in
     <tr>
       <td rowspan="1"><a href="examples/aquila/README.md">Aquila</a></td>
       <td>7B</td>
+      <td>2048</td>
       <td> 1x8</td>
       <td> BF16 </td>
       <td> 2849 </td>
@@ -502,6 +554,7 @@ For the supported models listed above, we provide training scripts and readme in
     <tr>
       <td rowspan="2"><a href="examples/aquila2/README_en.md">Aquila2</a></td>
       <td>7B</td>
+      <td>2048</td>
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 3323 </td>
@@ -509,6 +562,7 @@ For the supported models listed above, we provide training scripts and readme in
     </tr>
     <tr>
       <td>34B</td>
+      <td>4096</td>
       <td> 2x8</td>
       <td> BF16 </td>
       <td> 854 </td>
@@ -517,6 +571,7 @@ For the supported models listed above, we provide training scripts and readme in
     <tr>
       <td rowspan="2"><a href="examples/baichuan/README.md">Baichuan</a></td>
       <td>7B</td>
+      <td>4096</td>
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 2685 </td>
@@ -524,6 +579,7 @@ For the supported models listed above, we provide training scripts and readme in
     </tr>
     <tr>
       <td>13B</td>
+      <td>4096</td>
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 1213 </td>
@@ -532,6 +588,7 @@ For the supported models listed above, we provide training scripts and readme in
     <tr>
       <td rowspan="2"><a href="examples/baichuan2/README.md">Baichuan2</a></td>
       <td>7B</td>
+      <td>4096</td>
       <td> 1x8</td>
       <td> BF16 </td>
       <td> 2664 </td>
@@ -539,6 +596,7 @@ For the supported models listed above, we provide training scripts and readme in
     </tr>
     <tr>
       <td>13B</td>
+      <td>4096</td>
       <td> 1x8</td>
       <td> BF16 </td>
       <td> 1668 </td>
@@ -547,6 +605,7 @@ For the supported models listed above, we provide training scripts and readme in
     <tr>
       <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
       <td>7B1</td>
+      <td>2048</td>
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 2034 </td>
@@ -554,14 +613,25 @@ For the supported models listed above, we provide training scripts and readme in
     </tr>
     <tr>
       <td >176B</td>
+      <td>2048</td>
       <td >12x8</td>
       <td> BF16 </td>
       <td> 100 </td>
       <td> 107 </td>
     </tr>
     <tr>
+      <td rowspan="1"><a href="examples/chatglm3/README.md">ChatGLM3</a></td>
+      <td>6B</td>
+      <td>8192</td>
+      <td> 1x8</td>
+      <td> FP16 </td>
+      <td> 4297 </td>
+      <td> 4267 </td>
+    </tr>
+    <tr>
       <td rowspan="1"><a href="examples/codellama/README.md">CodeLlama</a></td>
       <td>34B</td>
+      <td>4096</td>
       <td> 2x8</td>
       <td> BF16 </td>
       <td> 837 </td>
@@ -570,6 +640,7 @@ For the supported models listed above, we provide training scripts and readme in
     <tr>
       <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>
       <td>7B</td>
+      <td>2048</td>
       <td>1x8</td>
       <td>BF16</td>
       <td> 2776 </td>
@@ -577,6 +648,7 @@ For the supported models listed above, we provide training scripts and readme in
     </tr>
     <tr>
       <td >65B</td>
+      <td>2048</td>
       <td >4x8</td>
       <td> BF16 </td>
       <td> 341 </td>
@@ -585,6 +657,7 @@ For the supported models listed above, we provide training scripts and readme in
     <tr>
       <td rowspan="5"><a href="examples/llama/README.md">LLaMA</a></td>
       <td>7B</td>
+      <td>2048</td>
       <td>1x8</td>
       <td>FP16</td>
       <td> 3600 </td>
@@ -592,6 +665,7 @@ For the supported models listed above, we provide training scripts and readme in
     </tr>
     <tr>
       <td>13B</td>
+      <td>2048</td>
       <td>1x8</td>
       <td>FP16</td>
       <td> 1895 </td>
@@ -599,6 +673,7 @@ For the supported models listed above, we provide training scripts and readme in
     </tr>
     <tr>
         <td>33B</td>
+        <td>2048</td>
         <td>4x8</td>
         <td>FP16</td>
         <td>621</td>
@@ -606,6 +681,7 @@ For the supported models listed above, we provide training scripts and readme in
     </tr>
     <tr>
       <td rowspan="2">65B</td>
+      <td rowspan="2">2048</td>
       <td rowspan="2">4x8</td>
     </tr>
     <tr>
@@ -616,6 +692,7 @@ For the supported models listed above, we provide training scripts and readme in
     <tr>
       <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</a></td>
       <td>7B</td>
+      <td>4096</td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 4200 </td>
@@ -623,6 +700,7 @@ For the supported models listed above, we provide training scripts and readme in
     </tr>
     <tr>
       <td>13B</td>
+      <td>4096</td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 1990 </td>
@@ -630,6 +708,7 @@ For the supported models listed above, we provide training scripts and readme in
     </tr>
     <tr>
       <td>34B</td>
+      <td>4096</td>
       <td>2x8</td>
       <td>BF16 </td>
       <td> 749 </td>
@@ -637,6 +716,7 @@ For the supported models listed above, we provide training scripts and readme in
     </tr>
     <tr>
       <td>70B</td>
+      <td>4096</td>
       <td>4x8</td>
       <td>BF16 </td>
       <td> 420 </td>
@@ -645,6 +725,7 @@ For the supported models listed above, we provide training scripts and readme in
     <tr>
       <td rowspan="2"><a href="examples/llama3/README.md">LLaMA3</a></td>
       <td>8B</td>
+      <td>8192</td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2483 </td>
@@ -652,6 +733,7 @@ For the supported models listed above, we provide training scripts and readme in
     </tr>
     <tr>
       <td>70B</td>
+      <td>8192</td>
       <td>8x8</td>
       <td>BF16 </td>
       <td> 283 </td>
@@ -660,6 +742,7 @@ For the supported models listed above, we provide training scripts and readme in
     <tr>
       <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
       <td>7B</td>
+      <td>8192</td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2499 </td>
@@ -667,6 +750,7 @@ For the supported models listed above, we provide training scripts and readme in
     </tr>
     <tr>
       <td>14B</td>
+      <td>2048</td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 1560 </td>
@@ -674,6 +758,7 @@ For the supported models listed above, we provide training scripts and readme in
     </tr>
     <tr>
       <td>72B</td>
+      <td>8192</td>
       <td>16x8</td>
       <td>BF16 </td>
       <td> 285 </td>
@@ -688,36 +773,42 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 25306 </td>
       <tr>
       <td> 1.8B </td>
+      <td>8192</td>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 13029 </td>
       <td> 12181 </td>
       <tr>
       <td> 4B </td>
+      <td>8192</td>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td>  5033 </td>
       <td> 5328 </td>
       </tr>
       <td> 7B </td>
+      <td>8192</td>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td>  2862 </td>
       <td> 2621 </td>
       <tr>
       <td> 14B </td>
+      <td>8192</td>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 1717 </td>
       <td> 1702 </td>
       <tr>
       <td> 32B </td>
+      <td>8192</td>
       <td> 4x8 </td>
       <td> BF16 </td>
       <td> 751 </td>
       <td> 708 </td>
       <tr>
       <td> 72B </td>
+      <td>8192</td>
       <td> 8x8 </td>
       <td> BF16 </td>
       <td> 301 </td>
@@ -726,6 +817,7 @@ For the supported models listed above, we provide training scripts and readme in
     <tr>
       <td rowspan="1"><a href="examples/yi/README_en.md">Yi</a></td>
       <td>34B</td>
+      <td>4096</td>
       <td>2x8</td>
       <td>BF16 </td>
       <td> 809 </td>
@@ -734,6 +826,7 @@ For the supported models listed above, we provide training scripts and readme in
     <tr>
       <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
       <td>8x7B</td>
+      <td>32768</td>
       <td>2x8</td>
       <td>BF16 </td>
       <td> 487 </td>
@@ -742,6 +835,7 @@ For the supported models listed above, we provide training scripts and readme in
     <tr>
       <td rowspan="1"><a href="examples/mistral/README.md">Mistral</a></td>
       <td>7B</td>
+      <td>32768</td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2806 </td>
@@ -750,6 +844,7 @@ For the supported models listed above, we provide training scripts and readme in
     <tr>
       <td rowspan="2"><a href="examples/gemma/README.md">Gemma</a></td>
       <td>2B</td>
+      <td>8192</td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 6821 </td>
@@ -757,6 +852,7 @@ For the supported models listed above, we provide training scripts and readme in
     </tr>
     <tr>
       <td>7B</td>
+      <td>8192</td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2938 </td>
@@ -765,6 +861,7 @@ For the supported models listed above, we provide training scripts and readme in
     <tr>
       <td rowspan="1"><a href="examples/gpt3/README.md">GPT3</a></td>
       <td>175B</td>
+      <td>2048</td>
       <td> 16x8 </td>
       <td> FP16 </td>
       <td> 153 </td>
