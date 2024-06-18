@@ -27,7 +27,7 @@ from ..model import (
     GPTModel, parallel_transformer_init, seq_length_wrapper,
     norm_wrapper, SwitchMLP, state_dict_for_save_checkpoint_wrapper,
     core_attention_wrapper, core_attention_forward, FlashSelfAttention,
-    ParallelAttention_wrapper, TransformerLanguageModel__init__,
+    ParallelAttention_wrapper, transformer_language_model_init,
     ParallelAttentionForward, parallel_transformer_forward, parallel_mlp_init_wrapper,
     rms_norm_init_wrapper, rms_norm_forward
 )
@@ -169,7 +169,7 @@ def patch_model():
     # patch language model
     megatron.legacy.model.language_model.TransformerLanguageModel.forward = (seq_length_wrapper(
         megatron.legacy.model.language_model.TransformerLanguageModel.forward))
-    megatron.legacy.model.language_model.TransformerLanguageModel.__init__ = TransformerLanguageModel__init__
+    megatron.legacy.model.language_model.TransformerLanguageModel.__init__ = transformer_language_model_init
 
 
 

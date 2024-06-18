@@ -120,9 +120,7 @@ def save_huggingface_llama(args, model, model_args):
             hf2mg_map[f"model.layers.{layer_num}.self_attn.v_proj.bias"] = vw
             continue
         if name_param_m[0] == f"language_model.encoder.layers.{layer_num}.self_attention.dense.bias":
-            hf2mg_map[f"model.layers.{layer_num}.self_attn.dense.bias"] = name_param_m[
-                1
-            ]
+            hf2mg_map[f"model.layers.{layer_num}.self_attn.dense.bias"] = name_param_m[1]
             continue
         if name_param_m[0] == f"language_model.encoder.layers.{layer_num}.self_attention.dense.weight":
             hf2mg_map[f"model.layers.{layer_num}.self_attn.o_proj.weight"] = name_param_m[1]
@@ -239,6 +237,84 @@ def save_huggingface_qwen(args, model, model_args):
 
     save_dir = os.path.join(args.save_dir, "mg2hg")
     print(f"save weight to {save_dir}")
+    hf_model.save_pretrained(save_dir)
+
+
+
+def save_huggingface_chatglm3(args, model, model_args):
+    '''Set model params.'''
+    from transformers import AutoModelForCausalLM
+
+    # Load Huggingface model.
+    hf_model = AutoModelForCausalLM.from_pretrained(args.save_dir, device_map="cpu", trust_remote_code=True, torch_dtype="auto")
+    hf2mg_map = {}
+    for name_param_m in model.named_parameters():
+        layer_num = name_param_m[0].split(".")[3] if len(name_param_m[0].split(".")) > 3 else name_param_m[0].split(".")[1]
+        nh = model_args.num_attention_heads
+        ng = (
+            model_args.checkpoint_args.num_query_groups
+            if model_args.checkpoint_args.group_query_attention
+            else model_args.num_attention_heads
+        )
+        repeats = nh // ng
+        if name_param_m[0] == "language_model.embedding.word_embeddings.weight":
+            hf2mg_map["transformer.embedding.word_embeddings.weight"] = name_param_m[1]
+            continue
+        if name_param_m[0] == f"language_model.encoder.layers.{layer_num}.input_norm.weight":
+            hf2mg_map[f"model.layers.{layer_num}.input_layernorm.weight"] = name_param_m[1]
+            continue
+        # query_key_value weight
+        if name_param_m[0] == f"language_model.encoder.layers.{layer_num}.self_attention.query_key_value.weight":
+            qkv_weight = name_param_m[1].reshape(
+                ng,
+                repeats + 2,
+                name_param_m[1].shape[0] // ng // (repeats + 2),
+                name_param_m[1].shape[1],
+            )
+            w = qkv_weight.shape[-1]
+            qw = qkv_weight[:, :repeats, ...].reshape(-1, w)
+            kw = qkv_weight[:, repeats : repeats + 1, ...].reshape(-1, w)
+            vw = qkv_weight[:, repeats + 1 :, ...].reshape(-1, w)
+            qkv = torch.cat((qw, kw, vw), dim=0)
+            hf2mg_map[f"transformer.encoder.layers.{layer_num}.self_attention.query_key_value.weight"] = qkv
+            continue
+        # query_key_value bias
+        if name_param_m[0] == f"language_model.encoder.layers.{layer_num}.self_attention.query_key_value.bias":
+            bias_weight = name_param_m[1].reshape(
+                ng, repeats + 2, name_param_m[1].shape[0] // ng // (repeats + 2)
+            )
+            w = bias_weight.shape[-1]
+            qw = bias_weight[:, :repeats, ...].reshape(-1)
+            kw = bias_weight[:, repeats : repeats + 1, ...].reshape(-1)
+            vw = bias_weight[:, repeats + 1 :, ...].reshape(-1)
+            hf2mg_map[f"transformer.encoder.layers.{layer_num}.self_attention.query_key_value.bias"] = torch.cat(
+                [qw, kw, vw], dim=0
+            )
+            continue
+        if name_param_m[0] == f"language_model.encoder.layers.{layer_num}.self_attention.dense.weight":
+            hf2mg_map[f"transformer.encoder.layers.{layer_num}.self_attention.dense.weight"] = name_param_m[1]
+            continue
+        if name_param_m[0] == f"language_model.encoder.layers.{layer_num}.post_attention_norm.weight":
+            hf2mg_map[f"transformer.encoder.layers.{layer_num}.post_attention_layernorm.weight"] = name_param_m[1]
+            continue
+        if name_param_m[0] == f"language_model.encoder.layers.{layer_num}.mlp.dense_h_to_4h.weight":
+            hf2mg_map[f"transformer.encoder.layers.{layer_num}.mlp.dense_h_to_4h.weight"] = name_param_m[1]
+            continue
+        if name_param_m[0] == f"language_model.encoder.layers.{layer_num}.mlp.dense_4h_to_h.weight":
+            hf2mg_map[f"transformer.encoder.layers.{layer_num}.mlp.dense_4h_to_h.weight"] = name_param_m[1]
+            continue
+        if name_param_m[0] == "language_model.encoder.final_norm.weight":
+            hf2mg_map[f"transformer.encoder.final_layernorm.weight"] = name_param_m[1]
+            continue
+        if name_param_m[0] == "language_model.output_layer.weight":
+            hf2mg_map[f"transformer.output_layer.weight"] = name_param_m[1]
+            continue
+    for name_param_h in hf_model.named_parameters():
+        if name_param_h[0] in hf2mg_map.keys():
+            name_param_h[1].data.copy_(hf2mg_map[name_param_h[0]])
+
+    save_dir = os.path.join(args.save_dir, 'mg2hg')
+    print(f'save weight to {save_dir}')
     hf_model.save_pretrained(save_dir)
 
 
@@ -695,5 +771,7 @@ def save_model_checkpoint(queue, args):
                 save_huggingface_llama(args, models[tp_rank], md)
             elif args.save_model_type == "save_huggingface_qwen":
                 save_huggingface_qwen(args, models[tp_rank], md)
+            elif args.save_model_type == "save_huggingface_chatglm3":
+                save_huggingface_chatglm3(args, models[tp_rank], md)
 
     print("Done!")

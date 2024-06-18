@@ -63,7 +63,7 @@ Here's a hardware summary of pre-training  ChatGLM3-6B:
     cd MindSpeed
     git checkout 2b0edd2
     pip install -r requirements.txt 
-    pip3 install -e .
+    pip install -e .
     cd ..
     
     # install other packages
@@ -107,15 +107,32 @@ Here's a hardware summary of pre-training  ChatGLM3-6B:
         --model-type GPT \
         --loader chatglm3_hf \
         --saver megatron \
-        --target-tensor-parallel-size 2 \
+        --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 2 \
         --load-dir ./model_from_hf/chatglm3_6b_hf/ \
-        --save-dir ./model_weights/chatglm3_6b_tp2pp2/ \
+        --save-dir ./model_weights/chatglm3_6b_tp1pp2/ \
         --tokenizer-model ./model_from_hf/chatglm3_6b_hf/tokenizer.model \
         --add-qkv-bias
     ```
 
     Note: The --target-tensor-parallel-size of chatglm3 is related to the multi_query_attention configuration in the config.json, and the multi_query_attention set here is 2.
+
+    4.2 Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
+
+    ```shell
+    # Modify the ascend-toolkit path
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_chatglm3 \
+        --load-dir ./model_weights/chatglm3_6b_tp1pp2/ \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --add-qkv-bias \
+        --save-dir ./model_from_hf/chatglm3_6b_hf/     # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/chatglm3_6b_hf/mg2hg/
+    ```
 
 5. pre-training
 
@@ -148,7 +165,7 @@ Here's a hardware summary of pre-training  ChatGLM3-6B:
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     
     # modify config according to your own actual situation
-    LOAD_CHECKPOINT_PATH="./model_weights/chatglm3_6b_tp2pp2/"
+    LOAD_CHECKPOINT_PATH="./model_weights/chatglm3_6b_tp1pp2/"
     SAVE_CHECKPOINT_PATH="./ckpt/chatglm3_6b_hf/"
     TOKENIZER_PATH="./model_from_hf/chatglm3_6b_hf/"  #tokenizer path
     DATA_PATH="./dataset/chatglm3_6b_hf/alpaca_text_document"  #processed dataset
@@ -163,16 +180,64 @@ Here's a hardware summary of pre-training  ChatGLM3-6B:
     ```
     **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
 
+6. fine-tuning
+
+    6.1 Prepare fine-tuning dataset
+    Download the alpaca datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+
+    ```shell
+    # download datasets
+    mkdir finetune_dataset
+    cd ./finetune_dataset
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
+    
+    # process datasets  
+    mkdir ./finetune_dataset/chatglm3-6b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/chatglm3_6b_hf/ \
+        --output-prefix ./finetune_dataset/chatglm3-6b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF \
+        --handler-name GeneralInstructionHandler \
+        --append-eod
+    ```
+
+    6.2 Full Parameters Fine-Tuning
+    The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_chatglm3_6B_8K.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
+
+    Add the fine-tuning parameter `--finetune` so that fine-tuning starts from the first step. Use --tokenizer-padding-side left. 
+
+    ```bash
+    DATA_PATH="./finetune_dataset/chatglm3-6b-hf/alpaca"
+    TOKENIZER_PATH="./model_from_hf/chatglm3-6b-hf/"
+    CKPT_LOAD_DIR="./model_weights/chatglm3_6b_tp1pp2/"
+        --load ${CKPT_LOAD_DIR} \
+        --finetune \
+        --is-instruction-dataset \
+        --tokenizer-padding-side left \
+        --tokenizer-type PretrainedFromHF \
+        --tokenizer-not-use-fast \
+    ```
+
+    Launch ChatGLM3-6B finetune script: examples/chatglm3/tune_chatglm3_6B_8K.sh
+
+    ```shell
+    bash examples/chatglm3/tune_chatglm3_6B_8K.sh
+    ```
+
 ### Performance
 
 #### Machine performance
 
 The performance of ChatGLM3-6B in **Ascend NPU** and **Reference**:
 
-| 设备 |    模型    | tokens吞吐 (tokens/s/p) | 
-| :--: | :--------: |:---------------------:| 
-| NPUs | ChatGLM3-6B |        2228.5         |  
-| 参考 | ChatGLM3-6B |        3645.3         |  
+|  Device   |  Model  | sequence length | throughput rate (tokens/s/p) | 
+| :--: | :--------: | :--------:|:---------------------:| 
+| NPUs | ChatGLM3-6B | 8192 |       4297        |  
+| Reference | ChatGLM3-6B |  8192 |      4269         |  
 
 ## Inference
 
@@ -183,7 +248,7 @@ Config ChatGLM3-6B inference script: examples/chatglm3/generate_chatglm3_6B.sh
 
 ```shell
 # modify the model weight path and tokenizer path
-CHECKPOINT="./model_weights/chatglm3_6b_tp2pp2/"
+CHECKPOINT="./model_weights/chatglm3_6b_tp1pp2/"
 TOKENIZER_PATH="./model_from_hf/chatglm3_6b_hf/"
 ```
 

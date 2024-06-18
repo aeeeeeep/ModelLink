@@ -48,10 +48,13 @@ GPT_ARGS="
     --use-fused-rmsnorm \
     --swiglu \
     --use-fused-swiglu \
-    --use-flash-attn \
     --use-distributed-optimizer \
     --use-mc2 \
+    --finetune \
+    --is-instruction-dataset \
+    --tokenizer-padding-side left \
     --tokenizer-type PretrainedFromHF \
+    --tokenizer-not-use-fast \
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
     --lr 1e-6 \
     --train-iters 2000 \
@@ -66,6 +69,7 @@ GPT_ARGS="
     --weight-decay 1e-1 \
     --lr-warmup-fraction 0.01 \
     --clip-grad 1.0 \
+    --use-flash-attn \
     --adam-beta1 0.9 \
     --initial-loss-scale 4096 \
     --adam-beta2 0.95 \
@@ -87,11 +91,10 @@ OUTPUT_ARGS="
     --eval-interval 1000 \
     --eval-iters 10 \
 "
-
 python -m torch.distributed.launch $DISTRIBUTED_ARGS pretrain_gpt.py \
     $GPT_ARGS \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
     --save $CKPT_SAVE_DIR \
-    | tee logs/train_chatglm3_6B_8K.log
+    | tee logs/tune_chatglm3_6B_8K.log
