@@ -207,6 +207,11 @@ def _add_network_args(parser):
 
 def _add_training_args(parser):
     group = parser.add_argument_group(title='training')
+    # 预训练create_attention_mask_in_dataloader保持常闭
+    group.add_argument('--no-create-attention-mask-in-dataloader', 
+                       action='store_false', default=False,
+                       help='If set, do not create attention_masks in dataloader.',
+                       dest='create_attention_mask_in_dataloader')
     # gradient_accumulation_fusion保持常闭
     group.add_argument('--no-gradient-accumulation-fusion',
                        action='store_false', default=False,
