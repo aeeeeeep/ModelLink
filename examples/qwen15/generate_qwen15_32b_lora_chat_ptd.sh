@@ -48,7 +48,7 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --load ${CHECKPOINT} \
        --hidden-dropout 0 \
        --attention-dropout 0 \
-       --lora-lora ${CHECKPOINT_LORA} \
+       --lora-load ${CHECKPOINT_LORA} \
        --lora-r 16 \
        --lora-alpha 32 \
        --inference-prompt-type 'alpaca' \
