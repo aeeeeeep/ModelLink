@@ -46,16 +46,16 @@ def is_rank_0():
         return True
 
 
-def get_tune_attention_mask(attention_mask_1d, position_embedding_type, reset_attention_mask=True, tokenizer_padding_side="right"):
+def get_tune_attention_mask(attention_mask_1d):
     micro_batch_size, seq_length = attention_mask_1d.size()
-    if reset_attention_mask:
+    if args.reset_attention_mask:
         att_mask_batch = micro_batch_size
     else:
         att_mask_batch = 1
 
     attention_mask = None
 
-    if tokenizer_padding_side == "left":
+    if args.tokenizer_padding_side == "left":
         attention_mask = torch.tril(torch.ones(seq_length, seq_length, device=attention_mask_1d.device, dtype=torch.bool)).view(1, 1, seq_length, seq_length)
         attention_mask_tran = attention_mask_1d.view(seq_length, 1, -1)
         attention_mask = attention_mask.masked_fill((attention_mask_tran < 0.5).view(-1, 1, 1, seq_length), value=0)

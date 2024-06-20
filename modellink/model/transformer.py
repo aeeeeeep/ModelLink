@@ -445,11 +445,10 @@ class FlashSelfAttention(torch.nn.Module):
                 self.attention_mask = torch.triu(
                     torch.ones(self.FA_SPARSE_ATTN_MASK_LEN, self.FA_SPARSE_ATTN_MASK_LEN), 1).bool().npu()
             else:
-                if args.position_embedding_type == "alibi":
-                    self.attention_mask = torch.triu(torch.ones(seq_length, seq_length), 1).bool().npu()
-                else:
+                if attention_mask is not None:
                     self.attention_mask = attention_mask
-
+                else:
+                    self.attention_mask = torch.triu(torch.ones(seq_length, seq_length), 1).bool().npu()
 
         q, k, v = [rearrange(x, 's b h d -> s b (h d)') for x in [q, k, v]]
 
