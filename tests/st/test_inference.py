@@ -22,7 +22,7 @@ from tests.st.utils import build_args
 
 
 class TestInference(DistributedTest):
-    world_size = 4
+    world_size = 8
     test_config = create_testconfig(Path(__file__).with_suffix(".json"))
 
 
