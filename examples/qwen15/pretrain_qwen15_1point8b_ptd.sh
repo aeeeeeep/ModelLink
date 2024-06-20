@@ -57,11 +57,13 @@ GPT_ARGS="
     --normalization RMSNorm \
     --use-fused-rmsnorm \
     --swiglu \
+    --use-distributed-optimizer \
     --use-flash-attn \
     --use-fused-rotary-pos-emb \
     --use-rotary-position-embeddings \
     --use-fused-swiglu \
     --use-mc2 \
+    --overlap-grad-reduce \
     --no-masked-softmax-fusion \
     --attention-softmax-in-fp32 \
     --min-lr 1.25e-7 \
@@ -96,6 +98,5 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
-    --jit-compile \
     --save ${CKPT_SAVE_DIR} \
     | tee logs/train_qwen15_1point8b.log

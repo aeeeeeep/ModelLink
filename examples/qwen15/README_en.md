@@ -86,6 +86,8 @@ Here's a hardware summary of pre-training  Qwen-0.5B:
     conda create -n test python=3.8
     conda activate test
 
+   # install  packages
+    pip install -r requirements.txt 
     # install torch 和 torch_npu
     pip install torch-2.2.0-cp38-cp38m-manylinux2014_aarch64.whl
     pip install torch_npu-2.2.0*-cp38-cp38m-linux_aarch64.whl
@@ -101,9 +103,6 @@ Here's a hardware summary of pre-training  Qwen-0.5B:
     pip install -r requirements.txt 
     pip3 install -e .
     cd ..
-
-    # install other packages
-    pip install -r requirements.txt 
     ```
 3. Download Qwen1.5-0.5B [pretrained weights and tokenizer](https://huggingface.co/Qwen/Qwen1.5-1.8B/tree/main)
 
@@ -330,6 +329,9 @@ Here's a hardware summary of pre-training  Qwen-1.8B:
     conda create -n test python=3.8
     conda activate test
 
+    # install packages
+    pip install -r requirements.txt 
+   
     # install torch 和 torch_npu
     pip install torch-2.2.0-cp38-cp38m-manylinux2014_aarch64.whl
     pip install torch_npu-2.2.0*-cp38-cp38m-linux_aarch64.whl
@@ -345,9 +347,6 @@ Here's a hardware summary of pre-training  Qwen-1.8B:
     pip install -r requirements.txt 
     pip3 install -e .
     cd ..
-
-    # install other packages
-    pip install -r requirements.txt 
     ```
 3. Download Qwen1.5-1.8B [pretrained weights and tokenizer](https://huggingface.co/Qwen/Qwen1.5-1.8B/tree/main)
 
@@ -574,6 +573,9 @@ Here's a hardware summary of pre-training  Qwen-4B:
     conda create -n test python=3.8
     conda activate test
 
+    # install other packages
+    pip install -r requirements.txt 
+   
     # install torch 和 torch_npu
     pip install torch-2.2.0-cp38-cp38m-manylinux2014_aarch64.whl
     pip install torch_npu-2.2.0*-cp38-cp38m-linux_aarch64.whl
@@ -589,9 +591,6 @@ Here's a hardware summary of pre-training  Qwen-4B:
     pip install -r requirements.txt 
     pip3 install -e .
     cd ..
-
-    # install other packages
-    pip install -r requirements.txt 
     ```
 3. Download Qwen1.5-4B [pretrained weights and tokenizer](https://huggingface.co/Qwen/Qwen1.5-4B/tree/main)
 
@@ -787,9 +786,9 @@ bash examples/qwen15/evaluate_qwen15_4b_ptd.sh
 
 Evaluation results
 
-| dataset | subject_num | question_num | reference_acc |NPU acc |
-| :----: | :------: | :------: | :--------: | :-------: |
-|  MMLU  |    57    |  14042  |   [0.561](https://qwenlm.github.io/zh/blog/qwen1.5)   |  0.550  |
+| dataset | subject_num | question_num |                    reference_acc                     |NPU acc |
+| :----: | :------: | :------: |:----------------------------------------------------:| :-------: |
+|  MMLU  |    57    |  14042  |  [0.561](https://qwenlm.github.io/zh/blog/qwen1.5)   |  0.550  |
 # Qwen1.5-7B
 
 ## Training
@@ -824,6 +823,9 @@ Here's a hardware summary of pre-training  Qwen1.5-7B:
     conda create -n test python=3.8
     conda activate test
 
+    # install other packages
+    pip install -r requirements.txt
+   
     # install torch and torch_npu
     pip install torch-2.2.0-cp38-cp38m-manylinux2014_aarch64.whl
     pip install torch_npu-2.2.0*-cp38-cp38m-linux_aarch64.whl
@@ -836,9 +838,6 @@ Here's a hardware summary of pre-training  Qwen1.5-7B:
     pip install -r requirements.txt
     pip install -e .
     cd ..
-
-    # install other packages
-    pip install -r requirements.txt
     ```
 3. Prepare pretrained weights and tokenizer
    Download the Qwen1.5-7B checkpoint from [here](https://huggingface.co/Qwen/Qwen1.5-7B/tree/main)
@@ -894,7 +893,7 @@ Here's a hardware summary of pre-training  Qwen1.5-7B:
         --model-type GPT \
         --loader megatron \
         --saver megatron \
-        --save-model-type save_huggingface_qwen \
+        --save-model-type save_huggingface_llama \
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 1 \
         --add-qkv-bias \
@@ -1155,7 +1154,7 @@ Here's a hardware summary of pre-training  Qwen1.5-14B:
         --model-type GPT \
         --loader megatron \
         --saver megatron \
-        --save-model-type save_huggingface_qwen \
+        --save-model-type save_huggingface_llama \
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 1 \
         --add-qkv-bias \
@@ -1344,6 +1343,9 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
    conda create -n test python=3.8
    conda activate test
 
+   # install other packages
+   pip install -r requirements.txt
+   
    # install torch and torch_npu
    pip install torch-2.2.0-cp38-cp38m-manylinux2014_aarch64.whl
    pip install torch_npu-2.2.0*-cp38-cp38m-linux_aarch64.whl
@@ -1359,9 +1361,6 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
    pip install -r requirements.txt 
    pip3 install -e .
    cd ..
-
-   # install other packages
-   pip install -r requirements.txt
    ```
 3. Prepare pretrained weights and tokenizer
 
@@ -1418,6 +1417,7 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
        --tokenizer-model ./model_from_hf/Qwen1.5-32B/tokenizer.json \
        --add-qkv-bias
    ```
+   **Note**: The --num-layers-per-virtual-pipeline-stage parameter only works if --target-pipeline-parallel-size > 2, if target-pipeline-parallel-size does not satisfy the >2 condition, remove it from the script --num-layers-per-virtual-pipeline-stage parameter in the script.
 
    4.2 Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
     ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
@@ -1451,11 +1451,11 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
      wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
      cd ..
      # process datasets   
-     mkdir ./dataset/qwen-1.5-32b-hf/
+     mkdir ./dataset/qwen-1.5-32B-hf/
      python ./tools/preprocess_data.py \
          --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
          --tokenizer-name-or-path ./model_from_hf/Qwen1.5-32B/ \
-         --output-prefix ./dataset/qwen-1.5-32b-hf/alpaca \
+         --output-prefix ./dataset/qwen-1.5-32B-hf/alpaca \
          --workers 4 \
          --log-interval 1000 \
          --tokenizer-type PretrainedFromHF
@@ -1477,11 +1477,12 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
     ```shell
      bash examples/qwen15/pretrain_qwen15_32b_ptd.sh
     ```
-    **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
-
+    **Note**: 
+    + If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
+    + The --num-layers-per-virtual-pipeline-stage parameter only works if --target-pipeline-parallel-size > 2, if target-pipeline-parallel-size does not satisfy the >2 condition, remove it from the script --num-layers-per-virtual-pipeline-stage parameter in the script.
 6. fine-tuning
     6.1 Prepare fine-tuning dataset
-    Download the LLAMA2-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+    Download the Qwen1.5-32B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
     ```shell
     # download datasets
@@ -1521,6 +1522,7 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
     6.3 Lora Fine-Tuning
     The Lora fine-tuning script is configured by adding the following lora parameters based on the full-parameter finetune script:
     ```bash
+   CKPT_SAVE_DIR="./ckpt/Qwen1.5-32B-lora-tp8-pp1/"
         --lora-target-modules query_key_value dense proj dense_4h_to_h \
         --lora-r 16 \
         --lora-alpha 32 \
@@ -1563,7 +1565,7 @@ Config Qwen1.5-72B lora script: examples/qwen15/generate_qwen15_32b_lora_ptd.sh
 
 ```bash
 # modify lora model directory path
-CHECKPOINT_LORA="your lora model directory path"
+CHECKPOINT_LORA="./ckpt/Qwen1.5-32B-lora-tp8-pp1/"
 ```
 Launch Qwen1.5-32B inference
 
@@ -1572,7 +1574,7 @@ bash ./examples/qwen15/generate_qwen15_32b_lora_chat_ptd.sh
 ```
 
 Some inference samples of Qwen1.5-32B after lora are as follows：
-![Inference](../../../../qwen1.5/ModelLink/sources/images/qwen15/qwen15_32b_lora_inference.png)
+![Inference](../../sources/images/qwen15/qwen15_32b_lora_inference.png)
 
 ## Evaluation
 
@@ -1632,6 +1634,9 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
    conda create -n test python=3.8
    conda activate test
 
+   # install other packages
+   pip install -r requirements.txt
+   
    # install torch and torch_npu
    pip install torch-2.2.0-cp38-cp38m-manylinux2014_aarch64.whl
    pip install torch_npu-2.2.0*-cp38-cp38m-linux_aarch64.whl
@@ -1647,9 +1652,6 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
    pip install -r requirements.txt 
    pip3 install -e .
    cd ..
-
-   # install other packages
-   pip install -r requirements.txt
    ```
 3. Prepare pretrained weights and tokenizer
 
@@ -1695,7 +1697,8 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
        --tokenizer-model ./model_from_hf/Qwen1.5-72B/tokenizer.json \
        --add-qkv-bias
    ```
-
+   **Note**: The --num-layers-per-virtual-pipeline-stage parameter only works if --target-pipeline-parallel-size > 2, if target-pipeline-parallel-size does not satisfy the >2 condition, remove it from the script --num-layers-per-virtual-pipeline-stage parameter in the script.
+   
    4.2 Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
     ***(This scenario is generally used to convert the trained megatron model back to the HuggingFace format)***
 
@@ -1728,11 +1731,11 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
      wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
      cd ..
      # process datasets   
-     mkdir ./dataset/qwen-1.5-72b-hf/
+     mkdir ./dataset/Qwen-1.5-72B-hf/
      python ./tools/preprocess_data.py \
          --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
          --tokenizer-name-or-path ./model_from_hf/Qwen1.5-72B/ \
-         --output-prefix ./dataset/qwen-1.5-72b-hf/alpaca \
+         --output-prefix ./dataset/Qwen-1.5-72B-hf/alpaca \
          --workers 4 \
          --log-interval 1000 \
          --tokenizer-type PretrainedFromHF
@@ -1754,12 +1757,14 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
     ```shell
      bash examples/qwen15/pretrain_qwen15_72b_ptd.sh
     ```
-    **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
+    **Note**: 
+    + If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
+    + The --num-layers-per-virtual-pipeline-stage parameter only works if --target-pipeline-parallel-size > 2, if target-pipeline-parallel-size does not satisfy the >2 condition, remove it from the script --num-layers-per-virtual-pipeline-stage parameter in the script.
 
 6. fine-tuning
 
     6.1 Prepare fine-tuning dataset
-    Download the LLAMA2-13B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+    Download the Qwen1.5-72B datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
 
     ```shell
     # download datasets
@@ -1799,6 +1804,7 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
     6.3 Lora Fine-Tuning
     The Lora fine-tuning script is configured by adding the following lora parameters based on the full-parameter finetune script:
     ```bash
+   CKPT_SAVE_DIR="./ckpt/Qwen1.5-72B-lora-tp8-pp2/"
         --lora-target-modules query_key_value dense proj dense_4h_to_h \
         --lora-r 16 \
         --lora-alpha 32 \
@@ -1835,13 +1841,13 @@ bash examples/qwen15/generate_qwen15_72b_ptd.sh
 ```
 Some inference samples of Qwen1.5-72B are as follows：
 
-![Inference](../../sources/images/qwen15/qwen15_32b_inference.png)
+![Inference](../../sources/images/qwen15/qwen15_72b_inference.png)
 
 Config Qwen1.5-72B lora script: examples/qwen15/generate_qwen15_72b_lora_ptd.sh
 
 ```bash
 # modify lora model directory path
-CHECKPOINT_LORA="your lora model directory path"
+CHECKPOINT_LORA="./ckpt/Qwen1.5-72B-lora-tp8-pp2/"
 ```
 Launch Qwen1.5-72B inference
 
@@ -1850,7 +1856,7 @@ bash ./examples/qwen15/generate_qwen15_72b_lora_chat_ptd.sh
 ```
 
 Some inference samples of Qwen1.5-72B after lora are as follows：
-![Inference](../../../../qwen1.5/ModelLink/sources/images/qwen15/qwen15_32b_lora_inference.png)
+![Inference](../../sources/images/qwen15/qwen15_72b_lora_inference.png)
 
 ## Evaluation
 

@@ -11,7 +11,7 @@ MASTER_ADDR=localhost
 MASTER_PORT=6001
 NNODES=1
 NODE_RANK=0
-NPUS_PER_NODE=8
+NPUS_PER_NODE=1
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
 # please fill these path configurations
@@ -20,7 +20,7 @@ TOKENIZER_PATH="your tokenizer path"
 DATA_PATH="your data path"
 TASK="mmlu"
 
-TP=8
+TP=1
 PP=1
 
 DISTRIBUTED_ARGS="
@@ -39,7 +39,7 @@ torchrun $DISTRIBUTED_ARGS evaluation.py \
        --pipeline-model-parallel-size ${PP} \
        --seq-length 8192 \
        --max-new-tokens 1 \
-       --max-position-embeddings 32768 \
+       --max-position-embeddings 8192 \
        --num-layers 24  \
        --hidden-size 2048  \
        --ffn-hidden-size 5504 \
@@ -65,4 +65,5 @@ torchrun $DISTRIBUTED_ARGS evaluation.py \
        --attention-softmax-in-fp32 \
        --seed 42 \
        --bf16 \
+       --no-chat-template \
        | tee logs/eval_qwen15_1point8b_${TASK}.log

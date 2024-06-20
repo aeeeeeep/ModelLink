@@ -28,7 +28,7 @@ torchrun $DISTRIBUTED_ARGS evaluation.py   \
        --task ${TASK}\
        --seq-length 8192 \
        --max-new-tokens 1 \
-       --max-position-embeddings 32768 \
+       --max-position-embeddings 8192 \
        --tensor-model-parallel-size 1  \
        --pipeline-model-parallel-size 2  \
        --num-layers 40  \
@@ -53,6 +53,5 @@ torchrun $DISTRIBUTED_ARGS evaluation.py   \
        --make-vocab-size-divisible-by 1 \
        --seed 42 \
        --rotary-base 5000000 \
-       --padded-vocab-size 151936 \
        --no-chat-template \
-       | tee ./logs/eval_qwen15_4b_${TASK}.log
+       --padded-vocab-size 151936 | tee ./logs/eval_qwen15_4b_${TASK}.log

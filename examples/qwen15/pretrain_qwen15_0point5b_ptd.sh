@@ -96,6 +96,5 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
-    --jit-compile \
     --save ${CKPT_SAVE_DIR} \
     | tee logs/train_qwen15_0point5b.log

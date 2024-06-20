@@ -15,10 +15,10 @@ MASTER_ADDR=localhost
 MASTER_PORT=6010
 NNODES=1
 NODE_RANK=0
-NPUS_PER_NODE=8
+NPUS_PER_NODE=1
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
-TP=8
+TP=1
 PP=1
 
 DISTRIBUTED_ARGS="
@@ -35,8 +35,8 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --num-layers 24 \
        --hidden-size 2048  \
        --num-attention-heads 16  \
-       --ffn-hidden-size 11008 \
-       --max-position-embeddings 32768 \
+       --ffn-hidden-size 5504 \
+       --max-position-embeddings 8192 \
        --seq-length 8192 \
        --make-vocab-size-divisible-by 1 \
        --padded-vocab-size 151936 \

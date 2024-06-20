@@ -30,7 +30,7 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --hidden-size 5120 \
        --num-attention-heads 40 \
        --ffn-hidden-size 27392 \
-       --max-position-embeddings 32768 \
+       --max-position-embeddings 8192 \
        --seq-length 8192 \
        --padded-vocab-size 152064 \
        --rotary-base 1000000 \
@@ -48,7 +48,7 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --load ${CHECKPOINT} \
        --hidden-dropout 0 \
        --attention-dropout 0 \
-       --lora-lora ${CHECKPOINT_LORA} \
+       --lora-load ${CHECKPOINT_LORA} \
        --lora-r 16 \
        --lora-alpha 32 \
        --inference-prompt-type 'alpaca' \
@@ -56,7 +56,7 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --group-query-attention \
        --hidden-dropout 0 \
        --attention-dropout 0 \
-       --num-query-group 8 \
+       --num-query-groups 8 \
        --position-embedding-type rope \
        --norm-epsilon 1e-6 \
        --tokenizer-not-use-fast \

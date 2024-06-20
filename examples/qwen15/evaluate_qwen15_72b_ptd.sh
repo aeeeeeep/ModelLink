@@ -29,9 +29,9 @@ torchrun $DISTRIBUTED_ARGS evaluation.py \
        --tensor-model-parallel-size 8 \
        --pipeline-model-parallel-size 1 \
        --num-layers 64 \
-       --hidden-size 5120 \
-       --num-attention-heads 40 \
-       --ffn-hidden-size 27392 \
+       --hidden-size 8192 \
+       --num-attention-heads 64 \
+       --ffn-hidden-size 24576 \
        --max-position-embeddings 8192 \
        --seq-length 8192 \
        --padded-vocab-size 152064 \
@@ -53,8 +53,6 @@ torchrun $DISTRIBUTED_ARGS evaluation.py \
        --tokenizer-not-use-fast \
        --max-new-tokens 1 \
        --bf16 \
-       --group-query-attention \
-       --num-query-groups 8 \
        --no-chat-template \
        --seed 42 \
-       | tee logs/eval_qwen15_32b_${TASK}.log
+       | tee logs/eval_qwen15_72b_${TASK}.log
