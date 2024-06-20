@@ -5,10 +5,10 @@ import torch
 
 from common import DistributedTest
 from utils import ParamConfig, assert_judge
-import modellink
 from megatron.core.enums import ModelType
 from megatron.core.utils import get_model_config
-from megatron.training import setup_model_and_optimizer, build_train_valid_test_data_iterators
+from megatron.training.training import setup_model_and_optimizer, build_train_valid_test_data_iterators
+import modellink
 
 
 class TestTraining(DistributedTest):

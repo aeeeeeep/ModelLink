@@ -3,12 +3,12 @@ import os
 import torch
 import torch_npu
 from utils import ParamConfig, assert_judge
-import modellink
 from megatron.legacy.model import GPTModel
 from megatron.core.enums import ModelType
 from megatron.core.utils import get_model_config
-from megatron.training import setup_model_and_optimizer, build_train_valid_test_data_iterators
+from megatron.training.training import setup_model_and_optimizer, build_train_valid_test_data_iterators
 from tests.pipeline.common import DistributedTest
+import modellink
 
 
 class TestLora(DistributedTest):
