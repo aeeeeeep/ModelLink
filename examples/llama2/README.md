@@ -54,6 +54,7 @@ LLAMA2-7B 训练的硬件配置:
    cp -r megatron ../ModelLink/
    cd ..
    cd ModelLink
+   git checkout 1.0.0
    mkdir logs
    mkdir model_from_hf
    mkdir dataset
@@ -183,7 +184,7 @@ python tools/checkpoint/util.py
    ```shell
     bash examples/llama2/pretrain_llama2_7b_ptd.sh
    ```
-   **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+   **注意**：如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 6. 微调
 
    6.1 准备微调数据集
@@ -406,6 +407,7 @@ LLaMA2-13B 训练的硬件配置:
    cp -r megatron ../ModelLink/
    cd ..
    cd ModelLink 
+   git checkout 1.0.0
    mkdir logs
    mkdir model_from_hf
    mkdir dataset
@@ -530,7 +532,7 @@ python tools/checkpoint/util.py \
     bash examples/llama2/pretrain_llama2_13B_ptd_8p.sh
 ```
 
-   **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+   **注意**：如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 6. 微调
 
    6.1 准备微调数据集
@@ -696,6 +698,7 @@ LLaMA2-34B/70B 训练的硬件配置:
    cp -r megatron ../ModelLink/
    cd ..
    cd ModelLink
+   git checkout 1.0.0
    mkdir logs
    mkdir model_from_hf
    mkdir dataset
@@ -957,7 +960,7 @@ python tools/checkpoint/util.py \
    bash examples/llama2/pretrain_llama2_70b_ptd.sh
    ```
 
-   **注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+   **注意**：如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 6. 微调
 
    6.1 准备微调数据集

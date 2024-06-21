@@ -43,6 +43,7 @@ def process_args(parser):
     parser = _add_data_args(parser)
     parser = _add_moe_args(parser)
     parser = _add_num_layer_allocation(parser)
+    parser = _add_dataset_args(parser)
     return parser
 
 
@@ -120,5 +121,15 @@ def _add_network_size_args(parser):
                        action='store_true',
                        default=False,
                        help='set padded vocab size'
+                       )
+    return parser
+
+
+def _add_dataset_args(parser):
+    group = parser.add_argument_group(title='dataset_args')
+    group.add_argument('--no-shared-storage',
+                       action='store_true',
+                       default=False,
+                       help='if no shared storage, set it'
                        )
     return parser

@@ -24,7 +24,8 @@ from .core import (vocab_embedding_wrapper, initialize_model_parallel_decorator,
                    destroy_model_parallel_decorator, get_expert_parallel_group,
                    get_expert_parallel_rank, get_expert_model_parallel_rank,
                    get_expert_parallel_world_size, get_expert_model_parallel_world_size,
-                   set_expert_model_parallel_rank, set_expert_model_parallel_world_size)
+                   set_expert_model_parallel_rank, set_expert_model_parallel_world_size,
+                   _build_generic_dataset, _build_document_sample_shuffle_indices)
 from .data import build_pretraining_data_loader
 from .tokenizer import build_tokenizer
 from .arguments import parse_args_decorator
@@ -79,6 +80,11 @@ def exe_adaptor():
         megatron.checkpointing._load_base_checkpoint)
     megatron.training.load_checkpoint = load_checkpoint_wrapper(
         megatron.checkpointing.load_checkpoint)
+    
+    from megatron.core.datasets.blended_megatron_dataset_builder import BlendedMegatronDatasetBuilder
+    from megatron.core.datasets.gpt_dataset import GPTDataset
+    GPTDataset._build_document_sample_shuffle_indices = _build_document_sample_shuffle_indices
+    BlendedMegatronDatasetBuilder._build_generic_dataset = _build_generic_dataset
 
 
 def set_moe_attr():

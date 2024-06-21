@@ -159,3 +159,15 @@ class IsNotValidError(Exception):
 def ensure_valid(expression, error_message=None):
     if not expression:
         raise IsNotValidError(error_message)
+
+
+class GPTDatasetSampleIndexError(Exception):
+    def __init__(self, error_message):
+        super().__init__()
+        self._error_message = error_message
+
+    def __repr__(self):
+        if self._error_message:
+            return self._error_message
+        else:
+            return "Bad sample index."

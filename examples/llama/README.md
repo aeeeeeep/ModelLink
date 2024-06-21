@@ -46,6 +46,7 @@ LLaMA-7B/13B 训练的硬件配置如下:
    cp -r megatron ../ModelLink/
    cd ..
    cd ModelLink
+   git checkout 1.0.0
    mkdir logs
    mkdir model_from_hf
    mkdir dataset
@@ -242,7 +243,7 @@ SAVE_CHECKPOINT_PATH="./ckpt/llama-13b-hf/"
 
 5.3 启动 LLaMA-7B/13B 预训练脚本
 
-**注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+**注意**：如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
 LLaMA-7B
 
@@ -482,6 +483,7 @@ LLaMA-33B/65B 训练的硬件配置:
    cp -r megatron ../ModelLink/
    cd ..
    cd ModelLink
+   git checkout 1.0.0
    mkdir logs
    mkdir model_from_hf
    mkdir dataset
@@ -677,7 +679,7 @@ SAVE_CHECKPOINT_PATH="./ckpt/llama-65b-hf/"
 
 5.3 启动预训练脚本:
 
-**注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+**注意**：如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
 启动 llama-33B 预训练脚本 : ./examples/llama/pretrain_llama_33B_ptd_32p.sh
 

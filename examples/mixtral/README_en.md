@@ -46,6 +46,7 @@ Recommended hardware configuration for inference:
     cp -r megatron ../ModelLink/
     cd ..
     cd ModelLink
+	git checkout 1.0.0
     mkdir logs
     mkdir model_from_hf
     mkdir dataset
@@ -201,7 +202,7 @@ Recommended hardware configuration for inference:
     bash examples/mixtral/pretrain_mixtral_8x7b_ptd.sh
     ```
 
-    **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to copy the generated data from the first node to others.
+    **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
 
 2. Fine-Tuning
 
