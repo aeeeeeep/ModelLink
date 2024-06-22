@@ -48,7 +48,7 @@ def RotaryEmbedding_forward(self, max_seq_len: int, offset: int = 0):
     return emb
 
 
-def apply_rotary_pos_emb(t, freqs, rotary_interleaved = False):
+def apply_rotary_pos_emb(t, freqs, rotary_interleaved = False, **kwargs):
     args = get_args()
 
     # use partial rope in ChatGLM3
