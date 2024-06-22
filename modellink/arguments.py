@@ -274,7 +274,9 @@ def validate_args_decorator(validate_args):
             defaults = {}
 
         args.create_attention_mask_in_dataloader = False
-        if (args.reset_attention_mask == True or args.reset_position_ids == True or args.tokenizer_padding_side == "left"):
+        reset_data = args.reset_attention_mask == True or args.reset_position_ids == True
+        alibi_without_FA = args.position_embedding_type == 'alibi' and not args.use_flash_attn
+        if (reset_data or alibi_without_FA or args.tokenizer_padding_side == "left"):
             args.create_attention_mask_in_dataloader = True
         print_rank_0("create-attention-mask-in-dataloader is {}".format(args.create_attention_mask_in_dataloader))
 
