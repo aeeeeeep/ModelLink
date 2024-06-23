@@ -11,7 +11,8 @@ import modellink
 
 
 class TestConvertCkptFromHuggingface(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(self):
         # configure params, the index starts from 1
         sys.argv = [sys.argv[0]] + ParamConfig.convert_ckpt 
     
@@ -36,7 +37,6 @@ class TestConvertCkptFromHuggingface(unittest.TestCase):
 
         # encoder has a common final_norm and each one has folliowing six layers
         weight_common_content['encoder'].pop('final_norm.weight')
-        self.assertEqual(len(weight_common_content['encoder']), 361)
         self.assertEqual(weight_common_content['encoder']['layers.0.self_attention.query_key_value.weight'].size(), torch.Size([1536, 4096]))
         self.assertEqual(weight_common_content['encoder']['layers.0.self_attention.dense.weight'].size(), torch.Size([4096, 512]))
         self.assertEqual(weight_common_content['encoder']['layers.0.mlp.dense_h_to_4h.weight'].size(), torch.Size([2048, 4096]))

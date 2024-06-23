@@ -37,7 +37,7 @@
         "--tokenizer-type", "PretrainedFromHF",
         "--tokenizer-name-or-path", "/home/dataset/mistral-7B",
         "--load", "/home/dataset/mistral-7B-tp8-pp1",
-        "--save", "/home/dataset/save-weight-mistral-7B",
+        "--save", "/autotest/dataset/save-weight-mistral-7B",
         "--data-path", "/home/dataset/pretrain-dataset-mistral-7B/alpaca_text_document",
         "--train-iters", "15"
     ],

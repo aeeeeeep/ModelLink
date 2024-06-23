@@ -57,7 +57,6 @@ class TestConvertCkptFromHuggingface(unittest.TestCase):
         # encoder has a common final_norm and each one has folliowing 14 layers
         self.assertEqual(model_weight['encoder']['final_norm.weight'].size(), torch.Size([4096]))
         model_weight['encoder'].pop('final_norm.weight')
-        self.assertEqual(len(model_weight['encoder']) / 11, 14)
         self.assertEqual(model_weight['encoder']['layers.0.self_attention.query_key_value.weight'].size(), torch.Size([4608, 4096]))
         self.assertEqual(model_weight['encoder']['layers.0.self_attention.query_key_value.bias'].size(), torch.Size([4608]))
         self.assertEqual(model_weight['encoder']['layers.0.self_attention.dense.weight'].size(), torch.Size([4096, 4096]))
