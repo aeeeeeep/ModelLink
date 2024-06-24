@@ -45,7 +45,7 @@ git checkout -f bcce6f
 cp -r megatron ../ModelLink/
 cd ..
 cd ModelLink
-git checkout 1.0.0
+git checkout 1.0
 mkdir logs
 mkdir model_from_hf
 mkdir dataset
@@ -273,7 +273,7 @@ git checkout -f bcce6f
 cp -r megatron ../ModelLink/
 cd ..
 cd ModelLink
-git checkout 1.0.0
+git checkout 1.0
 mkdir logs
 mkdir model_from_hf
 mkdir dataset

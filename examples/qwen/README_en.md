@@ -52,7 +52,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
     cp -r megatron ../ModelLink/
     cd ..
     cd ModelLink
-	git checkout 1.0.0
+	git checkout 1.0
     mkdir logs
     mkdir model_from_hf
     mkdir dataset
@@ -284,7 +284,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
     cp -r megatron ../ModelLink/
     cd ..
     cd ModelLink
-	git checkout 1.0.0
+	git checkout 1.0
     mkdir logs
     mkdir model_from_hf
     mkdir dataset
@@ -525,7 +525,7 @@ Here's a hardware summary of pre-training  Qwen-72B:
     cp -r megatron ../ModelLink/
     cd ..
     cd ModelLink
-	git checkout 1.0.0
+	git checkout 1.0
     mkdir logs
     mkdir model_from_hf
     mkdir dataset
