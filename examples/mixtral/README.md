@@ -46,6 +46,7 @@
     cp -r megatron ../ModelLink/
     cd ..
     cd ModelLink
+	git checkout 1.0.0
     mkdir logs
     mkdir model_from_hf
     mkdir dataset
@@ -200,7 +201,7 @@
     bash examples/mixtral/pretrain_mixtral_8x7b_ptd.sh
     ```
 
-    **注意**：如果使用多机训练，且没有设置数据共享，需要在各节点同步首节点数据。
+    **注意**：如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
 2. 微调
 

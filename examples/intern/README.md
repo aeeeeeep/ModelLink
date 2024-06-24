@@ -43,6 +43,7 @@ git checkout -f bcce6f
 cp -r megatron ../ModelLink/
 cd ..
 cd ModelLink
+git checkout 1.0.0
 mkdir logs
 mkdir model_from_hf
 mkdir dataset
@@ -171,7 +172,7 @@ DATA_PATH="./dataset/internlm-7b/alpaca_text_document" #数据集路径
 bash examples/intern/pretrain_internlm_7b_ptd.sh 
 ```
 
-**注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+**注意**：如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
 
 ### 性能
@@ -235,6 +236,7 @@ git checkout -f bcce6f
 cp -r megatron ../ModelLink/
 cd ..
 cd ModelLink
+git checkout 1.0.0
 mkdir logs
 mkdir model_from_hf
 mkdir dataset
@@ -323,7 +325,7 @@ DATA_PATH="./dataset/internlm-65b/alpaca_text_document" #数据集路径
 bash examples/intern/pretrain_internlm_65b_ptd.sh 
 ```
 
-**注意**：如果使用多机训练，需要设置多机数据共享，非主节点通过数据共享读取主节点数据。或者，直接将主节点生成的数据复制到非主节点。
+**注意**：如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
 ### 性能
 
