@@ -76,9 +76,9 @@ def model_provider_func_wrapper(model_provider_func):
                 megatron_core="megatron.core",
             )
 
-            model_item = get_peft_model(model, lora_config)
-            model_item.print_trainable_parameters()
-            for module in model_item.modules():
+            model = get_peft_model(model, lora_config)
+            model.print_trainable_parameters()
+            for module in model.modules():
                 # LoRA Linear Layer need all reduce
                 if isinstance(module, torch.nn.Linear):
                     setattr(module.weight, 'sequence_parallel', config.sequence_parallel)
