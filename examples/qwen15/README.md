@@ -1422,7 +1422,8 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
        --load-dir ./model_from_hf/Qwen1.5-32B/ \
        --save-dir ./model_weights/Qwen1.5-32B-v0.1-tp8-pp4-vpp2/ \
        --tokenizer-model ./model_from_hf/Qwen1.5-32B/tokenizer.json \
-       --add-qkv-bias
+       --add-qkv-bias \
+       --max-queue-size 70
    ```
    **注意**: --num-layers-per-virtual-pipeline-stage参数只有在--target-pipeline-parallel-size > 2时才会生效，如果target-pipeline-parallel-size不满足>2的条件，请在脚本中删除--num-layers-per-virtual-pipeline-stage参数
 
@@ -1456,11 +1457,11 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
      wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
      cd ..
      # 处理数据   
-     mkdir ./dataset/qwen-1.5-32B-hf/
+     mkdir ./dataset/qwen1.5-32B-hf/
      python ./tools/preprocess_data.py \
          --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
          --tokenizer-name-or-path ./model_from_hf/Qwen1.5-32B/ \
-         --output-prefix ./dataset/qwen-1.5-32B-hf/alpaca \
+         --output-prefix ./dataset/qwen1.5-32B-hf/alpaca \
          --workers 4 \
          --log-interval 1000 \
          --tokenizer-type PretrainedFromHF
@@ -1706,7 +1707,8 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
        --load-dir ./model_from_hf/Qwen1.5-72B/ \
        --save-dir ./model_weights/Qwen1.5-72B-v0.1-tp8-pp8-vpp2/ \
        --tokenizer-model ./model_from_hf/Qwen1.5-72B/tokenizer.json \
-       --add-qkv-bias
+       --add-qkv-bias \
+       --max-queue-size 90
    ```
     **注意**： --num-layers-per-virtual-pipeline-stage参数只有在--target-pipeline-parallel-size > 2时才会生效，如果target-pipeline-parallel-size不满足>2的条件，请在脚本中删除--num-layers-per-virtual-pipeline-stage参数
 
@@ -1741,11 +1743,11 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
      wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
      cd ..
      # 处理数据   
-     mkdir ./dataset/Qwen-1.5-72B-hf/
+     mkdir ./dataset/Qwen1.5-72B-hf/
      python ./tools/preprocess_data.py \
          --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
          --tokenizer-name-or-path ./model_from_hf/Qwen1.5-72B/ \
-         --output-prefix ./dataset/Qwen-1.5-72B-hf/alpaca \
+         --output-prefix ./dataset/Qwen1.5-72B-hf/alpaca \
          --workers 4 \
          --log-interval 1000 \
          --tokenizer-type PretrainedFromHF
