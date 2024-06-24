@@ -52,7 +52,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     cp -r megatron ../ModelLink/
     cd ..
     cd ModelLink
-	git checkout 1.0.0
+	git checkout 1.0
     mkdir logs
     mkdir model_from_hf
     mkdir dataset
@@ -417,7 +417,7 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
     cp -r megatron ../ModelLink/
     cd ..
     cd ModelLink
-    git checkout 1.0.0	
+    git checkout 1.0
     mkdir logs
     mkdir model_from_hf
     mkdir dataset
@@ -748,7 +748,7 @@ git checkout -f bcce6f
 cp -r megatron ../ModelLink/
 cd ..
 cd ModelLink
-git checkout 1.0.0
+git checkout 1.0
 mkdir logs
 mkdir model_from_hf
 mkdir dataset

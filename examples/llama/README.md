@@ -46,7 +46,7 @@ LLaMA-7B/13B 训练的硬件配置如下:
    cp -r megatron ../ModelLink/
    cd ..
    cd ModelLink
-   git checkout 1.0.0
+   git checkout 1.0
    mkdir logs
    mkdir model_from_hf
    mkdir dataset
@@ -483,7 +483,7 @@ LLaMA-33B/65B 训练的硬件配置:
    cp -r megatron ../ModelLink/
    cd ..
    cd ModelLink
-   git checkout 1.0.0
+   git checkout 1.0
    mkdir logs
    mkdir model_from_hf
    mkdir dataset
