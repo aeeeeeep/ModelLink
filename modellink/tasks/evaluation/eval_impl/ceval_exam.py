@@ -115,7 +115,6 @@ class CEvalExam(DatasetEval):
             logger.info(f"ceval acc = {total_acc_n}/{total_n}={check_divisible_by_zero(total_acc_n, total_n)}")
             score_datas.append(["total", total_n, total_acc_n / total_n])
         score_df = pd.DataFrame(columns=['subject', 'question_n', 'acc'], data=score_datas)
-        logger.info(score_df)
         return answer_result, score_df
 
     def top_k_eval(self, ) -> (dict, pd.DataFrame):
