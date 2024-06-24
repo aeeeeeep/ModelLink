@@ -163,9 +163,9 @@ def _add_network_size_args(parser):
                        default=False,
                        help='set padded vocab size'
                        )
-    group.add_argument('--use-partial-rope',
+    group.add_argument('--use-glm-rope',
                        action='store_true',
-                       help='use partial rope in ChatGLM3.'
+                       help='use custom rope in ChatGLM3.'
                        )
     
     group.add_argument("--use-fused-rmsnorm", action='store_true',

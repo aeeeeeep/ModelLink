@@ -29,9 +29,9 @@ class TestRotaryPosEmbedding:
     @pytest.fixture
     def mock_dependency(self, request, monkeypatch):
         monkeypatch.setattr(modellink.core.models.common.embeddings.rotary_pos_embedding, "get_args",
-                            lambda : SimpleNamespace(use_partial_rope = request.getfixturevalue("chatglm")))
+                            lambda : SimpleNamespace(use_glm_rope=request.getfixturevalue("chatglm")))
         monkeypatch.setattr(mindspeed.core.fusions.rotary_pos_embedding, "get_args",
-                            lambda : SimpleNamespace(rotary_base = request.getfixturevalue("rotary_base")))
+                            lambda : SimpleNamespace(rotary_base=request.getfixturevalue("rotary_base")))
 
     @pytest.mark.parametrize("rotary_param, chatglm, rotary_base, seq, expected", test_config["test_rotary_pos_embedding"])
 

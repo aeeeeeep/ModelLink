@@ -43,7 +43,8 @@ GPT_ARGS="
     --disable-bias-linear \
     --add-qkv-bias \
     --position-embedding-type rope \
-    --use-partial-rope \
+    --use-glm-rope \
+    --rotary-percent 0.5 \
     --normalization RMSNorm \
     --use-fused-rmsnorm \
     --swiglu \

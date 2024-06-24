@@ -27,8 +27,8 @@ from ..model import (
     GPTModel, parallel_transformer_init, seq_length_wrapper,
     norm_wrapper, SwitchMLP, state_dict_for_save_checkpoint_wrapper,
     core_attention_wrapper, core_attention_forward, FlashSelfAttention,
-    ParallelAttention_wrapper, transformer_language_model_init,
-    ParallelAttentionForward, parallel_transformer_forward, parallel_mlp_init_wrapper,
+    ParallelAttention_wrapper, ParallelAttentionForward, 
+    parallel_transformer_forward, parallel_mlp_init_wrapper,
     rms_norm_init_wrapper, rms_norm_forward
 )
 from ..core import (vocab_embedding_wrapper, initialize_model_parallel_decorator,
@@ -36,7 +36,7 @@ from ..core import (vocab_embedding_wrapper, initialize_model_parallel_decorator
                    get_expert_parallel_rank, get_expert_model_parallel_rank,
                    get_expert_parallel_world_size, get_expert_model_parallel_world_size,
                    set_expert_model_parallel_rank, set_expert_model_parallel_world_size,
-                   RotaryEmbedding_forward, apply_rotary_pos_emb,
+                   rotary_embedding_forward, apply_rotary_pos_emb,
                    build_generic_dataset, _build_document_sample_shuffle_indices)
 from ..core.pipeline_parallel.p2p_communication import _batched_p2p_ops
 from ..data import build_pretraining_data_loader
@@ -88,7 +88,7 @@ def patch_fusions():
 def patch_core_models():
     megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.__init__ = rotary_embedding_init_wrapper(
         megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.__init__) # use torch_npu npu_ratary_mul
-    megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.forward = RotaryEmbedding_forward
+    megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.forward = rotary_embedding_forward
 
 
 def patch_core_transformers():
@@ -169,8 +169,6 @@ def patch_model():
     # patch language model
     megatron.legacy.model.language_model.TransformerLanguageModel.forward = (seq_length_wrapper(
         megatron.legacy.model.language_model.TransformerLanguageModel.forward))
-    megatron.legacy.model.language_model.TransformerLanguageModel.__init__ = transformer_language_model_init
-
 
 
 def patch_initialize():
