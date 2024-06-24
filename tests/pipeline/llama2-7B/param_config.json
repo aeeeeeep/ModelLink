@@ -48,7 +48,7 @@
     "TRAINING_PARAM": [
         "--tokenizer-type", "Llama2Tokenizer",
         "--tokenizer-model", "/home/dataset/llama2-7B/tokenizer.model",
-        "--save", "/home/dataset/save-weight-llama2-7B",
+        "--save", "/autotest/dataset/save-weight-llama2-7B",
         "--data-path", "/home/dataset/pretrain-dataset-llama2-7B/alpaca_text_document",
         "--train-iters", "15"
     ],

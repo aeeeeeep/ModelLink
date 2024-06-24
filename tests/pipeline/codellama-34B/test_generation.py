@@ -2,7 +2,7 @@ import sys
 import os
 import torch
 import torch_npu
-from common import DistributedTest
+from tests.common import DistributedTest
 from utils import ParamConfig, assert_judge
 import modellink
 from megatron.legacy.model import GPTModel
