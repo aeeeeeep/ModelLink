@@ -98,7 +98,7 @@
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
-    # HF 转 tp1-pp8-ep2
+    # HF 转 tp8-pp4-ep1
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
         --loader mixtral_hf \
@@ -137,7 +137,7 @@
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
-    # tp1-pp8-ep2 转 HF
+    # tp8-pp4-ep1 转 HF
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
         --loader mixtral_mg \
@@ -261,7 +261,7 @@ Mixtral-8x7B 在四机32卡上(tp8 pp4) **昇腾芯片** 和 **参考芯片** �
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 # 修改模型权重路径和词表路径
-CHECKPOINT="./model_weights/Mixtral-8x7B-v0.1-tp1-pp8-ep1/"
+CHECKPOINT="./model_weights/Mixtral-8x7B-v0.1-tp8-pp1-ep1/"
 TOKENIZER_MODEL="./model_from_hf/Mixtral-8x7B/"
 
 # 根据实际加载的模型权重修改并行配置

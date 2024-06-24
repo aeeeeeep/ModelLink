@@ -2,7 +2,6 @@
 
 # The number of parameters is not aligned
 export CUDA_DEVICE_MAX_CONNECTIONS=1
-export TOKENIZERS_PARALLELISM=false
 
 export HCCL_CONNECT_TIMEOUT=1200
 

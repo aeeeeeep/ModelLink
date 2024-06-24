@@ -2,7 +2,6 @@
 
 # See README, please remember to source the set_env.sh file in CLI, or here
 # source /path/to/your/ascend-toolkit/set_env.sh
-export TOKENIZERS_PARALLELISM=false
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 # please fill these path configurations
