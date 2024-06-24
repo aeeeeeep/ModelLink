@@ -13,7 +13,8 @@ from tools.preprocess_data import get_args, build_splitter
 
 
 class TestProcessPretrainData(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(self):
         # configure params, the index starts from 1
         sys.argv = [sys.argv[0]] + ParamConfig.tokenizer_param + ParamConfig.process_data_input_path \
                    + ParamConfig.process_pretrain_data_param

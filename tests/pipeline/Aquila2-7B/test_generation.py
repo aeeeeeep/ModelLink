@@ -6,7 +6,7 @@ from utils import ParamConfig, assert_judge
 import modellink
 from megatron.legacy.model import GPTModel
 from modellink.tasks.inference.text_generation.infer_base import add_text_generate_args
-from tests.pipeline.common import DistributedTest
+from tests.common import DistributedTest
 
 
 class TestGeneration(DistributedTest):
