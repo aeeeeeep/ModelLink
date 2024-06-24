@@ -23,6 +23,7 @@ import torch_npu
 import numpy as np
 
 import megatron
+from megatron.training import get_args
 
 
 WRITE_FILE_DEFAULT_FLAGS = os.O_WRONLY | os.O_CREAT
@@ -47,6 +48,7 @@ def is_rank_0():
 
 
 def get_tune_attention_mask(attention_mask_1d):
+    args = get_args()
     micro_batch_size, seq_length = attention_mask_1d.size()
     if args.reset_attention_mask:
         att_mask_batch = micro_batch_size
