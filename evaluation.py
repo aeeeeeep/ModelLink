@@ -85,7 +85,7 @@ class LLMChat(Chat):
         self.template = "{instruction}"
 
     def chat(self, instruction, history):
-        instruction_temp = [self.template.format(instruction=ins) if (self.tokenizer.chat_template is None or args.no_chat_template) else self.tokenizer.apply_chat_template([{"role": "user", "content": ins}]) for ins in instruction]
+        instruction_temp = [self.template.format(instruction=ins) if (self.tokenizer.chat_template is None or self.args.no_chat_template) else self.tokenizer.apply_chat_template([{"role": "user", "content": ins}]) for ins in instruction]
         result = self.model.generate(
             instruction_temp,
             do_sample=False,
@@ -93,14 +93,14 @@ class LLMChat(Chat):
             stream=False,
             return_output_log_probs=True
         )
-        return get_result(result), dist.get_rank()
+        return get_result(result, self.tokenizer), dist.get_rank()
 
     def beam_search_chat(self, instruction, history):
-        instruction_temp = self.template.format(instruction=instruction) if (tokenizer.chat_template is None or args.no_chat_template) else tokenizer.apply_chat_template([{"role": "user", "content": instruction}])
-        result = model.generate(
+        instruction_temp = self.template.format(instruction=instruction) if (self.tokenizer.chat_template is None or self.args.no_chat_template) else self.tokenizer.apply_chat_template([{"role": "user", "content": instruction}])
+        result = self.model.generate(
             instruction_temp,
             do_sample=False,
-            max_new_tokens=max_new_tokens,
+            max_new_tokens=self.args.max_new_tokens,
             stream=False,
             num_beams=4,
             top_k=50,
@@ -119,7 +119,7 @@ def mmlu(eval_args, agent):
         if data_path:
             mmlu_eval = MmluEval(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = mmlu_eval.eval(chat=agent)
-            if rank == 0:
+            if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
@@ -134,7 +134,7 @@ def gsm8k(eval_args, agent):
         if data_path:
             gsm8k_eval = Gsm8kEval(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = gsm8k_eval.eval(chat=agent)
-            if rank == 0:
+            if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
@@ -149,7 +149,7 @@ def boolq(eval_args, agent):
         if data_path:
             boolq_eval = BoolqEval(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = boolq_eval.eval(chat=agent)
-            if rank == 0:
+            if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
@@ -164,7 +164,7 @@ def ceval(eval_args, agent):
         if data_path:
             ceval_exam = CEvalExam(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = ceval_exam.eval(chat=agent)
-            if rank == 0:
+            if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
@@ -179,7 +179,7 @@ def human_eval(eval_args, agent):
         if data_path:
             human_eval_exam = HumanEval(test_dir=data_path, instruction_template=eval_args.instruction_template)
             answer, score_df = human_eval_exam.eval(chat=agent)
-            if rank == 0:
+            if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
@@ -194,7 +194,7 @@ def agi_eval(eval_args, agent):
         if data_path:
             agieval_exam = AGIEvalExam(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = agieval_exam.eval(chat=agent)
-            if rank == 0:
+            if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
@@ -209,7 +209,7 @@ def bbh_eval(eval_args, agent):
         if data_path:
             bbh = BBHEval(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = bbh.eval(chat=agent)
-            if rank == 0:
+            if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
@@ -266,3 +266,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
