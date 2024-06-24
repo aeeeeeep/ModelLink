@@ -4,7 +4,6 @@
 export HCCL_CONNECT_TIMEOUT=1200
 export COMBINED_ENABLE=1
 export CUDA_DEVICE_MAX_CONNECTIONS=1
-export TOKENIZERS_PARALLELISM=false
 
 # please fill these path configurations
 CHECKPOINT="your model ckpt path"

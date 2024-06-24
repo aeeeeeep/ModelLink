@@ -99,7 +99,7 @@ Recommended hardware configuration for inference:
     # Modify the ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
-    # HF to tp1-pp8-ep2
+    # HF to tp8-pp4-ep1
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
         --loader mixtral_hf \
@@ -113,13 +113,13 @@ Recommended hardware configuration for inference:
     ```
 
     Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
-    ***(This scenario is generally used to reconfigure the sliced model weights, such as training on a dual-node 16-card EP2-PP8 strategy, and then wanting to infer on a single-node 8-card TP8)***
+    ***(This scenario is generally used to reconfigure the sliced model weights, such as training on a four-node 32-card TP8-PP4 strategy, and then wanting to infer on a single-node 8-card TP8)***
 
     ```bash
     # Modify the ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
-    # tp1-pp8-ep2 to tp1-pp8-ep1
+    # tp8-pp4-ep1 to tp8-pp1-ep1
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
         --loader mixtral_mg \
@@ -138,7 +138,7 @@ Recommended hardware configuration for inference:
     # Modify the ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     
-    # tp1-pp8-ep2 to HF
+    # tp8-pp4-ep1 to HF
     python tools/checkpoint/convert_ckpt.py \
         --model-type GPT \
         --loader mixtral_mg \
