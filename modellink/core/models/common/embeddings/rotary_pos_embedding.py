@@ -1,6 +1,17 @@
 # coding=utf-8
-# Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
-# Copyright (c) 2024, Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (c) 2024, HUAWEI CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from functools import wraps
 
@@ -11,7 +22,7 @@ from megatron.core import parallel_state
 from megatron.core.models.common.embeddings.rotary_pos_embedding import _rotate_half, get_pos_emb_on_this_cp_rank
 
 
-def RotaryEmbedding_forward(self, max_seq_len: int, offset: int = 0):
+def rotary_embedding_forward(self, max_seq_len: int, offset: int = 0):
     """Forward pass of RoPE embedding.
 
     Args:
@@ -22,8 +33,8 @@ def RotaryEmbedding_forward(self, max_seq_len: int, offset: int = 0):
         Tensor: Embeddings after applying RoPE.
     """
     seq = (
-        torch.arange(max_seq_len, device=self.inv_freq.device, dtype=self.inv_freq.dtype)
-        + offset
+            torch.arange(max_seq_len, device=self.inv_freq.device, dtype=self.inv_freq.dtype)
+            + offset
     )
 
     if self.seq_len_interpolation_factor is not None:
@@ -48,7 +59,7 @@ def RotaryEmbedding_forward(self, max_seq_len: int, offset: int = 0):
     return emb
 
 
-def apply_rotary_pos_emb(t, freqs, rotary_interleaved = False):
+def apply_rotary_pos_emb(t, freqs, rotary_interleaved=False):
     args = get_args()
 
     # use partial rope in ChatGLM3
@@ -82,4 +93,4 @@ def apply_rotary_pos_emb(t, freqs, rotary_interleaved = False):
     sin_ = torch.sin(freqs).to(t.dtype)
     t = (t * cos_) + (_rotate_half(t, rotary_interleaved) * sin_)
     return torch.cat((t, t_pass), dim=-1)
-    
+
