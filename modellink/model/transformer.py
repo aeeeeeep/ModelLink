@@ -341,7 +341,7 @@ def parallel_transformer_init(self, config,
         self.final_norm = get_norm(config)
 
 
-def ParallelAttention_wrapper(fn):
+def parallel_attention_wrapper(fn):
     @wraps(fn)
     def wrapper(self, *args, **kwargs):
         fn(self, *args, **kwargs)
@@ -664,7 +664,7 @@ def core_attention_forward(self, query_layer, key_layer, value_layer, attention_
     return context_layer
 
 
-def ParallelAttentionForward(self, hidden_states, attention_mask,
+def parallel_attention_forward(self, hidden_states, attention_mask,
                 encoder_output=None, inference_params=None,
                 rotary_pos_emb=None):
     # hidden_states: [sq, b, h]

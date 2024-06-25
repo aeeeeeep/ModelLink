@@ -487,10 +487,21 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> 【昇腾】 </td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/gpt3/README.md">GPT3</a></td>
+      <td rowspan="2"><a href="examples/gpt3/README.md">GPT3</a></td>
       <td>175B</td>
       <td> 2K </td>
       <td> <a href="examples/gpt3/pretrain_gpt3_175B_ptd.sh"> pretrain </a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> 【社区】 </td>
+    </tr>
+    <tr>
+      <td>15B</td>
+      <td> 2K </td>
+      <td> <a href="examples/gpt3/pretrain_gpt3_15B_ptd.sh"> pretrain </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
@@ -511,7 +522,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
 |  generate_xxx.sh  |  推理脚本  |
 |  xxxx_chat_xx.sh  |  对话脚本  |
 | evaluation_xxx.sh |  评估脚本  |
-
+|    sft_xxx.sh     | SFT脚本  |
 
 ---
 
@@ -539,10 +550,10 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <th>模型</th>
       <th>参数</th>
       <th>序列</th>
-      <th>集群规模</th>
-      <th>精度模式</th>
+      <th>集群</th>
+      <th>模式</th>
       <th>性能 </th>
-      <th>参考性能 </th>
+      <th>参考 </th>
     </tr>
   </thead>
   <tbody>
@@ -865,13 +876,21 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> 2607 </td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/gpt3/README.md">GPT3</a></td>
+      <td rowspan="2"><a href="examples/gpt3/README.md">GPT3</a></td>
       <td>175B</td>
       <td> 2K </td>
       <td> 16x8 </td>
       <td> FP16 </td>
       <td> 153 </td>
       <td> -- </td>
+    </tr>
+    <tr>
+      <td>15B</td>
+      <td> 2K </td>
+      <td> 1x8 </td>
+      <td> FP16 </td>
+      <td> 1890 </td>
+      <td> 1840 </td>
     </tr>
   </tbody>
 </table>
