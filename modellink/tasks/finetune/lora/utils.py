@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from megatron.training import get_args
-
+import re
 
 def get_lora_model_classes():
     from peft import PeftModel, LoraModel
@@ -39,13 +39,18 @@ def merge_dicts(dict1, dict2):
 
 
 def modify_keys_with_dict(dictionary, words_to_replace, exclude_words):
+    args = get_args()
+    layers_to_transform = list(map(str, args.lora_layers_to_transform))
+    target_modules = args.lora_target_modules
+
     modified_dict = {}
     for key, value in dictionary.items():
         key_str = str(key)
-        matched_word = next((word for word, replacement in words_to_replace.items() if word in key_str), None)
+        matched_word = next((word for word in words_to_replace if word in key_str), None)
         if (matched_word and
                 not any(exclude_word in key_str for exclude_word in exclude_words) and
-                key_str != matched_word):
+                key_str != matched_word and
+                _lora_affected_layer(key_str, target_modules, layers_to_transform)):
             # Check if a word to replace is present in the key and none of the exclude_words are present
             new_key = key_str.replace(matched_word, words_to_replace[matched_word])
             if isinstance(value, dict):
@@ -58,3 +63,14 @@ def modify_keys_with_dict(dictionary, words_to_replace, exclude_words):
             else:
                 modified_dict[key] = value
     return modified_dict
+
+def _lora_affected_layer(key, target_modules: List[str], layers_to_transform: List[int]) -> bool:
+    if not layers_to_transform:
+        return True
+    layers_with_lora_pattern = '|'.join(target_modules)
+    layer_indicies_for_lora_pattern = '|'.join(layers_to_transform)
+    lora_adapter_name_pattern = re.compile(
+        rf'^.*\.({layer_indicies_for_lora_pattern})\..*\.({layers_with_lora_pattern}).*$'
+    )
+    match = lora_adapter_name_pattern.match(key)
+    return bool(match)

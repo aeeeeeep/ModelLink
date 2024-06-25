@@ -74,6 +74,7 @@ def model_provider_func_wrapper(model_provider_func):
                 bias="none",
                 megatron_config=config,
                 megatron_core="megatron.core",
+                layers_to_transform=args.lora_layers_to_transform or None
             )
 
             model = get_peft_model(model, lora_config)
