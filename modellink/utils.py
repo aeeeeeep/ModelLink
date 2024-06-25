@@ -20,10 +20,11 @@ import random
 
 import torch
 import torch_npu
+from torch import distributed as dist
 import numpy as np
+from tqdm import tqdm
 
 import megatron
-from megatron.training import get_args
 
 
 WRITE_FILE_DEFAULT_FLAGS = os.O_WRONLY | os.O_CREAT
@@ -48,7 +49,6 @@ def is_rank_0():
 
 
 def get_tune_attention_mask(attention_mask_1d):
-    args = get_args()
     micro_batch_size, seq_length = attention_mask_1d.size()
     if args.reset_attention_mask:
         att_mask_batch = micro_batch_size
@@ -79,3 +79,18 @@ def seed_all(seed=1234):
 
     torch_npu.npu.manual_seed_all(seed)
     torch_npu.npu.manual_seed(seed)
+
+
+def emit(self, record):
+    try:
+        rank = dist.get_rank()
+    except Exception:
+        rank = -1 # 如果获取rank失败，则设置为一个不合法的rank
+
+    if rank == 0 or rank == -1:
+        try:
+            msg = self.format(record)
+            tqdm.write(msg)
+            self.flush()
+        except Exception:
+            self.handleError(record)

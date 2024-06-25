@@ -38,6 +38,15 @@ def parse_args_decorator(parse_args):
     return wrapper
 
 
+def add_parser_argument_choices_value(parser, argument_name, value):
+    if parser._actions:
+        for action in parser._actions:
+            if isinstance(action, argparse._ArgumentGroup):
+                add_parser_argument_choices_value(action, argument_name)
+            elif isinstance(action, argparse.Action) and argument_name in action.option_strings:
+                action.choices.append(value)
+
+
 def process_args(parser):
     parser.conflict_handler = 'resolve'
     parser = _add_network_size_args(parser)
@@ -68,6 +77,29 @@ def _add_profile_args(parser):
                        help='path to save profiling files')
 
     return parser
+
+
+def validate_args_decorator(validate_args):
+    @wraps(validate_args)
+    def wrapper(args, defaults=None):
+        if defaults is None:
+            defaults = {}
+
+        args.create_attention_mask_in_dataloader = False
+        reset_data = args.reset_attention_mask == True or args.reset_position_ids == True
+        alibi_without_FA = args.position_embedding_type == 'alibi' and not args.use_flash_attn
+        if (reset_data or alibi_without_FA or args.tokenizer_padding_side == "left"):
+            args.create_attention_mask_in_dataloader = True
+        print_rank_0("create-attention-mask-in-dataloader is {}".format(args.create_attention_mask_in_dataloader))
+
+        validate_args(args, defaults)
+        if args.position_embedding_type == 'alibi' and args.sliding_window is not None:
+            raise AssertionError('Sliding Window Attention is forbidden when use alibi.')
+        if args.tokenizer_padding_side == 'left' and args.position_embedding_type == 'alibi':
+            raise AssertionError('Alibi is not support tokenizer-padding-side left now.')
+        return args
+
+    return wrapper
 
 
 def _add_lora_args(parser):
@@ -113,7 +145,7 @@ def _add_moe_args(parser):
                        help="noisy gate policy, valid options are 'Jitter', 'RSample' or 'None'.")
     group.add_argument('--enable-token-rearrange-opt', action='store_true',
                        help="Use this flag to enable token rearrange optimize")
-                       
+
     return parser
 
 
@@ -124,7 +156,7 @@ def _add_data_args(parser):
     group.add_argument("--tokenizer-kwargs", type=str, nargs='+', default=None,
                        help="Kwargs of the huggingface tokenizer.")
     group.add_argument('--tokenizer-padding-side', type=str, default='right',
-            help="tokenizer padding side")
+                       help="tokenizer padding side")
     group.add_argument('--tokenizer-type', type=str,
                        default=None,
                        choices=['BertWordPieceLowerCase',
@@ -148,7 +180,7 @@ def _add_num_layer_allocation(parser):
     group = parser.add_argument_group(title='num_layer_allocation')
     group.add_argument('--num-layer-list',
                        type=str, help='a list of number of layers, '
-                                'seperated by comma; e.g., 4,4,4,4')
+                                      'seperated by comma; e.g., 4,4,4,4')
     return parser
 
 
@@ -167,7 +199,7 @@ def _add_network_size_args(parser):
                        action='store_true',
                        help='use partial rope in ChatGLM3.'
                        )
-    
+
     group.add_argument("--use-fused-rmsnorm", action='store_true',
                        help="Use fused rmsnorm.")
     group.add_argument("--use-fused-swiglu", action='store_true',
@@ -242,15 +274,6 @@ def _add_distributed_args(parser):
     return parser
 
 
-def add_parser_argument_choices_value(parser, argument_name, value):
-    if parser._actions:
-        for action in parser._actions:
-            if isinstance(action, argparse._ArgumentGroup):
-                add_parser_argument_choices_value(action, argument_name)
-            elif isinstance(action, argparse.Action) and argument_name in action.option_strings:
-                action.choices.append(value)
-
-
 def _add_alibi_args(parser):
     add_parser_argument_choices_value(parser, "--position-embedding-type", 'alibi')
 
@@ -267,27 +290,6 @@ def _add_alibi_args(parser):
     return parser
 
 
-def validate_args_decorator(validate_args):
-    @wraps(validate_args)
-    def wrapper(args, defaults=None):
-        if defaults is None:
-            defaults = {}
-
-        args.create_attention_mask_in_dataloader = False
-        reset_data = args.reset_attention_mask == True or args.reset_position_ids == True
-        alibi_without_FA = args.position_embedding_type == 'alibi' and not args.use_flash_attn
-        if (reset_data or alibi_without_FA or args.tokenizer_padding_side == "left"):
-            args.create_attention_mask_in_dataloader = True
-        print_rank_0("create-attention-mask-in-dataloader is {}".format(args.create_attention_mask_in_dataloader))
-
-        validate_args(args, defaults)
-        if args.position_embedding_type == 'alibi' and args.sliding_window is not None:
-            raise AssertionError('Sliding Window Attention is forbidden when use alibi.')
-        if args.tokenizer_padding_side == 'left' and args.position_embedding_type == 'alibi':
-            raise AssertionError('Alibi is not support tokenizer-padding-side left now.')
-        return args
-
-    return wrapper
 def _add_dataset_args(parser):
     group = parser.add_argument_group(title='dataset_args')
     group.add_argument('--no-shared-storage',

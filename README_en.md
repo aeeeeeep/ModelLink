@@ -44,7 +44,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
     <tr>
       <th>Model</th>
       <th>Parameters</th>
-      <th>Sequence length</th>
+      <th>Sequence</th>
       <th>Pretrain</th>
       <th>Inference</th>
       <th>LoRA</th>
@@ -484,10 +484,21 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> 【Ascend】 </td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/gpt3/README.md">GPT3</a></td>
+      <td rowspan="2"><a href="examples/gpt3/README.md">GPT3</a></td>
       <td>175B</td>
       <td> 2K </td>
       <td> <a href="examples/gpt3/pretrain_gpt3_175B_ptd.sh"> pretrain </a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> 【Community】 </td>
+    </tr>
+    <tr>
+      <td>15B</td>
+      <td> 2K </td>
+      <td> <a href="examples/gpt3/pretrain_gpt3_15B_ptd.sh"> pretrain </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
@@ -507,7 +518,7 @@ Current ModelLink supports pre-training and fine-tuning for the following models
 |  generate_xxx.sh  |  Inference Script   |
 |  xxx_chat_xxx.sh  |     Chat Script     |
 | evaluation_xxx.sh |  Evaluation Script  |
-
+|    sft_xxx.sh     |     SFT Script      |
 ---
 
 # Model Usage Guide and Version Notes
@@ -535,11 +546,11 @@ For the supported models listed above, we provide training scripts and readme in
     <tr>
       <th>Model</th>
       <th>Parameters</th>
-      <th>Sequence length</th>
-      <th>Cluster Scale</th>
-      <th>Precision Mode</th>
+      <th>Sequence</th>
+      <th>Cluster</th>
+      <th>Mode</th>
       <th>Performance </th>
-      <th>Reference Performance </th>
+      <th>Reference </th>
     </tr>
   </thead>
   <tbody>
@@ -861,13 +872,21 @@ For the supported models listed above, we provide training scripts and readme in
       <td> 2607 </td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/gpt3/README.md">GPT3</a></td>
+      <td rowspan="2"><a href="examples/gpt3/README.md">GPT3</a></td>
       <td>175B</td>
       <td> 2K </td>
       <td> 16x8 </td>
       <td> FP16 </td>
       <td> 153 </td>
       <td> -- </td>
+    </tr>
+    <tr>
+      <td>15B</td>
+      <td> 2K </td>
+      <td> 1x8 </td>
+      <td> FP16 </td>
+      <td> 1890 </td>
+      <td> 1840 </td>
     </tr>
   </tbody>
 </table>
