@@ -15,6 +15,9 @@ NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
 CHECKPOINT_PATH=/home/dataset/ci_engineering/ckpt
+
+rm -rf $CHECKPOINT_PATH
+
 mkdir $CHECKPOINT_PATH
 DATA_PATH=/home/dataset/ci_engineering/pretrain_dataset_gemma/alpaca_text_document
 TOKENIZER_MODEL=/home/dataset/ci_engineering/gemma-7b-hf/
@@ -74,5 +77,4 @@ python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS \
       --eval-interval 1000 \
       --eval-iters 1
 
-rm -rf $CHECKPOINT_PATH
 exit $?
