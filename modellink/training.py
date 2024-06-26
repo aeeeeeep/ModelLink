@@ -64,7 +64,7 @@ def model_provider_func_wrapper(model_provider_func):
         args = get_args()
 
         if is_enable_lora():
-            from peft import LoraConfig, LoraModel, PeftModel, get_peft_model
+            from peft import LoraConfig, get_peft_model, PeftModel, LoraModel
             config = core_transformer_config_from_args(args)
             lora_config = LoraConfig(
                 r=args.lora_r,
