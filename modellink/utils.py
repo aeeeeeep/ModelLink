@@ -18,6 +18,8 @@ import os
 import stat
 import random
 
+from functools import wraps
+
 import torch
 import torch_npu
 import numpy as np
@@ -79,3 +81,12 @@ def seed_all(seed=1234):
 
     torch_npu.npu.manual_seed_all(seed)
     torch_npu.npu.manual_seed(seed)
+
+
+def unwrap_model_wrapper(fn):
+    @wraps(fn)
+    def wrapper(model, module_instances=None):
+        if not module_instances:
+            module_instances = megatron.training.utils.ALL_MODULE_WRAPPER_CLASSNAMES
+        return fn(model, module_instances)
+    return wrapper
