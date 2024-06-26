@@ -512,7 +512,7 @@ TOKENIZER_PATH="./model_from_hf/qwen15-1.8b-hf/"
 启动Qwen1.5-1.8B 推理脚本
 
 ```bash
-bash examples/qwen15/generate_qwen15_1point8_ptd.sh
+bash examples/qwen15/generate_qwen15_1point8b_ptd.sh
 ```
 
 推理示例如下：
@@ -1858,7 +1858,7 @@ TOKENIZER_PATH="./model_from_hf/Qwen1.5-72B/"
 启动qwen1.5-72b推理脚本
 
 ```bash
-bash examples/qwen15/generate_qwen15_72b_chat_ptd.sh
+bash examples/qwen15/generate_qwen15_72b_ptd.sh
 ```
 
 推理示例如下：

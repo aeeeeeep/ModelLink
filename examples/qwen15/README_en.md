@@ -508,7 +508,7 @@ TOKENIZER_PATH="./model_from_hf/qwen15-1.8b-hf/"
 Config Qwen1.5-1.8B inference script
 
 ```bash
-bash examples/qwen15/generate_qwen15_1point8_ptd.sh
+bash examples/qwen15/generate_qwen15_1point8b_ptd.sh
 ```
 
 Some inference samples are as follows:
@@ -1839,7 +1839,7 @@ TOKENIZER_PATH="./model_from_hf/Qwen1.5-72B/"
 Launch qwen1.5-72b inference script: examples/qwen15/generate_qwen15_72b_chat_ptd.sh
 
 ```bash
-bash examples/qwen15/generate_qwen15_72b_chat_ptd.sh
+bash examples/qwen15/generate_qwen15_72b_ptd.sh
 ```
 Some inference samples of Qwen1.5-72B are as follows：
 
