@@ -200,7 +200,7 @@ def patch_datasets():
     from megatron.core.datasets.blended_megatron_dataset_builder import BlendedMegatronDatasetBuilder
     from megatron.core.datasets.gpt_dataset import GPTDataset
     GPTDataset._build_document_sample_shuffle_indices = _build_document_sample_shuffle_indices
-    BlendedMegatronDatasetBuilder._build_generic_dataset = build_generic_dataset
+    BlendedMegatronDatasetBuilder.build_generic_dataset = build_generic_dataset
 
 
 def patch_log_handler():
