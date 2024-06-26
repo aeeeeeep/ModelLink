@@ -15,40 +15,43 @@
 
 import gc
 import sys
-import time
 from functools import wraps
 
+import time
 # The earliest we can measure the start time.
 _TRAIN_START_TIME = time.time()
 
-import megatron.training.utils
 import torch
 import torch_npu
+
+from megatron.training import get_args
+from megatron.training import get_timers
+from megatron.training import update_num_microbatches
+from megatron.training import get_signal_handler
+from megatron.training import get_tensorboard_writer
+from megatron.training import get_wandb_writer
 from megatron.core import mpu, tensor_parallel
+from megatron.core.utils import get_model_config
+from megatron.core.enums import ModelType
+from megatron.training.checkpointing import save_checkpoint
+from megatron.training.initialize import initialize_megatron
+from megatron.training.initialize import write_args_to_tensorboard
+from megatron.training.arguments import core_transformer_config_from_args
+from megatron.training.training import (
+    train_step, get_num_microbatches, calc_params_l2_norm,
+    training_log, evaluate_and_print_results,
+    save_checkpoint_and_time, print_datetime,
+    num_floating_point_operations, get_one_logger,
+    append_to_progress_log, setup_model_and_optimizer,
+    build_train_valid_test_data_iterators
+)
+import megatron.training.utils
+from megatron.training.utils import (
+    check_adlr_autoresume_termination,
+    print_rank_0
+)
 from megatron.core.distributed import DistributedDataParallel as DDP
 from megatron.core.distributed import finalize_model_grads
-from megatron.core.enums import ModelType
-from megatron.core.utils import get_model_config
-from megatron.training import (get_args, get_signal_handler,
-                               get_tensorboard_writer, get_timers,
-                               get_wandb_writer, update_num_microbatches)
-from megatron.training.arguments import core_transformer_config_from_args
-from megatron.training.checkpointing import save_checkpoint
-from megatron.training.initialize import (initialize_megatron,
-                                          write_args_to_tensorboard)
-from megatron.training.training import (append_to_progress_log,
-                                        build_train_valid_test_data_iterators,
-                                        calc_params_l2_norm,
-                                        evaluate_and_print_results,
-                                        get_num_microbatches, get_one_logger,
-                                        num_floating_point_operations,
-                                        print_datetime,
-                                        save_checkpoint_and_time,
-                                        setup_model_and_optimizer, train_step,
-                                        training_log)
-from megatron.training.utils import (check_adlr_autoresume_termination,
-                                     print_rank_0)
-
 from modellink.initialize import set_jit_fusion_options
 
 from .tasks.finetune.lora.utils import is_enable_lora
