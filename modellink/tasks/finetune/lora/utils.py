@@ -13,14 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
 import re
+from typing import List
 
 from megatron.training import get_args
 
 
 def get_lora_model_classes():
-    from peft import PeftModel, LoraModel
+    from peft import LoraModel, PeftModel
     return PeftModel, LoraModel
 
 
@@ -49,23 +49,23 @@ def modify_keys_with_dict(dictionary, words_to_replace, exclude_words):
     modified_dict = {}
     for key, value in dictionary.items():
         key_str = str(key)
-        matched_word = next((word for word in words_to_replace if word in key_str), None)
-        if (matched_word and
-                not any(exclude_word in key_str for exclude_word in exclude_words) and
-                key_str != matched_word and
-                _lora_affected_layer(key_str, target_modules, layers_to_transform)):
+        
+        word_to_replace = next((word for word in words_to_replace if word in key_str), None)
+        is_excluded = any(exclude_word in key_str for exclude_word in exclude_words)
+
+        if (
+            (word_to_replace and word_to_replace != key_str) 
+            and not is_excluded 
+            and _lora_affected_layer(key_str, target_modules, layers_to_transform)
+        ):
             # Check if a word to replace is present in the key and none of the exclude_words are present
-            new_key = key_str.replace(matched_word, words_to_replace[matched_word])
-            if isinstance(value, dict):
-                modified_dict[new_key] = modify_keys_with_dict(value, words_to_replace, exclude_words)
-            else:
-                modified_dict[new_key] = value
+            key_str = key_str.replace(word_to_replace, words_to_replace[word_to_replace])
+        if isinstance(value, dict):
+            modified_dict[key_str] = modify_keys_with_dict(value, words_to_replace, exclude_words)
         else:
-            if isinstance(value, dict):
-                modified_dict[key] = modify_keys_with_dict(value, words_to_replace, exclude_words)
-            else:
-                modified_dict[key] = value
+            modified_dict[key_str] = value
     return modified_dict
+
 
 def _lora_affected_layer(key, target_modules: List[str], layers_to_transform: List[int]) -> bool:
     if not layers_to_transform:
