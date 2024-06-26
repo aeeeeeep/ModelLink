@@ -94,7 +94,7 @@ def model_provider_func_wrapper(model_provider_func):
 def get_unwrap_model_wrapper(original_unwrap_model, original_module_instances):
     @wraps(original_unwrap_model)
     def wrapper(model, module_instances=original_module_instances):
-        from peft import LoraModel, PeftModel
+        from peft import PeftModel
         model = original_unwrap_model(model, module_instances)
         
         return_list = True
@@ -104,7 +104,7 @@ def get_unwrap_model_wrapper(original_unwrap_model, original_module_instances):
         unwrapped_model = []
 
         for model_module in model:
-            while isinstance(model_module, (PeftModel, LoraModel)):
+            while isinstance(model_module, PeftModel):
                 if hasattr(model_module, 'base_model'):
                     model_module = model_module.get_base_model()
             
