@@ -193,6 +193,15 @@ def patch_miscellaneous():
     megatron.training.global_vars.build_tokenizer = build_tokenizer
     megatron.training.checkpointing._load_base_checkpoint = _load_base_checkpoint_wrapper(
         megatron.training.checkpointing._load_base_checkpoint)
+    patch_unwrap_model()
+
+
+def patch_unwrap_model():
+    from ..training import get_unwrap_model_wrapper
+    
+    megatron.training.checkpointing.unwrap_model = get_unwrap_model_wrapper(
+        megatron.training.utils.unwrap_model, megatron.training.checkpointing.ALL_MODULE_WRAPPER_CLASSNAMES
+    )
 
 
 def patch_datasets():

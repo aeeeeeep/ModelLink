@@ -88,10 +88,35 @@ def model_provider_func_wrapper(model_provider_func):
                         delattr(param, 'sequence_parallel')
             
             megatron.training.utils.ALL_MODULE_WRAPPER_CLASSNAMES = tuple(
-                list(megatron.training.utils.ALL_MODULE_WRAPPER_CLASSNAMES) + [PeftModel, LoraModel]
+                (*megatron.training.utils.ALL_MODULE_WRAPPER_CLASSNAMES, PeftModel, LoraModel)
             )
-
         return model
+    return wrapper
+
+
+def get_unwrap_model_wrapper(original_unwrap_model, original_module_instances):
+    @wraps(original_unwrap_model)
+    def wrapper(model, module_instances=original_module_instances):
+        from peft import PeftModel, LoraModel
+        model = original_unwrap_model(model, module_instances)
+        
+        return_list = True
+        if not isinstance(model, list):
+            model = [model]
+            return_list = False
+        unwrapped_model = []
+
+        for model_module in model:
+            while isinstance(model_module, (PeftModel, LoraModel)):
+                if hasattr(model_module, 'base_model'):
+                    model_module = model_module.base_model
+                elif hasattr(model_module, 'model'):
+                    model_module = model_module.model
+            
+            unwrapped_model.append(model_module)
+        if not return_list:
+            return unwrapped_model[0]
+        return unwrapped_model
     return wrapper
 
 
