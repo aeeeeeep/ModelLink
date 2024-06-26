@@ -60,6 +60,7 @@ def patch_megatron_core():
     patch_tensor_parallel()
     patch_parallel_state()
     patch_datasets()
+    patch_utils()
 
 
 def patch_megatron_noncore():
@@ -205,3 +206,9 @@ def patch_datasets():
 def patch_log_handler():
     from megatron.training.log_handler import CustomHandler
     CustomHandler.emit = emit
+
+
+def patch_utils():
+    from ..utils import unwrap_model_wrapper
+    megatron.training.checkpointing.unwrap_model = unwrap_model_wrapper(megatron.training.checkpointing.unwrap_model)
+    megatron.training.training.unwrap_model = unwrap_model_wrapper(megatron.training.training.unwrap_model)
