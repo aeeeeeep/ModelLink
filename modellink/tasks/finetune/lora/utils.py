@@ -20,7 +20,7 @@ from megatron.training import get_args
 
 
 def get_lora_model_classes():
-    from peft import LoraModel, PeftModel
+    from peft import PeftModel, LoraModel
     return PeftModel, LoraModel
 
 
