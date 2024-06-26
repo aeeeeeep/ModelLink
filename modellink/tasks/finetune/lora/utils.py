@@ -50,16 +50,21 @@ def modify_keys_with_dict(dictionary, words_to_replace, exclude_words):
     for key, value in dictionary.items():
         key_str = str(key)
         
+        # Check if a word to replace is present in the key
         word_to_replace = next((word for word in words_to_replace if word in key_str), None)
+        should_be_replace = word_to_replace and word_to_replace != key_str
+
+        # Check if a word none of the exclude_words are present
         is_excluded = any(exclude_word in key_str for exclude_word in exclude_words)
 
         if (
-            (word_to_replace and word_to_replace != key_str) 
-            and not is_excluded 
+            should_be_replace
+            and not is_excluded
+            # If the layers is not affected by LoRA - it mustn't be modified in the state dict
             and _lora_affected_layer(key_str, target_modules, layers_to_transform)
         ):
-            # Check if a word to replace is present in the key and none of the exclude_words are present
             key_str = key_str.replace(word_to_replace, words_to_replace[word_to_replace])
+
         if isinstance(value, dict):
             modified_dict[key_str] = modify_keys_with_dict(value, words_to_replace, exclude_words)
         else:
