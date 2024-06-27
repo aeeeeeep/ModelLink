@@ -1844,7 +1844,7 @@ Qwen1.5-72B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 ## 推理-72B
 
-配置 qwen1.5-72b 推理脚本：examples/qwen15/generate_qwen15_72b_chat_ptd.sh
+配置 qwen1.5-72b 推理脚本：examples/qwen15/generate_qwen15_72b_ptd.sh
 
 ```bash
 # ascend-toolkit 路径

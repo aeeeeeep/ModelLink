@@ -1562,7 +1562,7 @@ Some inference samples of Qwen1.5-32B are as follows：
 
 ![Inference](../../sources/images/qwen15/qwen15_32b_inference.png)
 
-Config Qwen1.5-72B lora script: examples/qwen15/generate_qwen15_32b_lora_ptd.sh
+Config Qwen1.5-72B lora script: examples/qwen15/generate_qwen15_32b_lora_chat_ptd.sh
 
 ```bash
 # modify lora model directory path
@@ -1825,7 +1825,7 @@ The performance of Qwen1.5-72B in **Ascend NPU** and **Reference**:
 
 ## Inference
 
-Config qwen1.5-72b inference script:examples/qwen15/generate_qwen15_72b_chat_ptd.sh
+Config qwen1.5-72b inference script:examples/qwen15/generate_qwen15_72b_ptd.sh
 
 ```bash
 # ascend-toolkit path
@@ -1836,7 +1836,7 @@ CHECKPOINT="./model_weights/Qwen1.5-72B-v0.1-tp8-pp1/"
 TOKENIZER_PATH="./model_from_hf/Qwen1.5-72B/"
 ```
 
-Launch qwen1.5-72b inference script: examples/qwen15/generate_qwen15_72b_chat_ptd.sh
+Launch qwen1.5-72b inference script: examples/qwen15/generate_qwen15_72b_ptd.sh
 
 ```bash
 bash examples/qwen15/generate_qwen15_72b_ptd.sh
@@ -1845,7 +1845,7 @@ Some inference samples of Qwen1.5-72B are as follows：
 
 ![Inference](../../sources/images/qwen15/qwen15_72b_inference.png)
 
-Config Qwen1.5-72B lora script: examples/qwen15/generate_qwen15_72b_lora_ptd.sh
+Config Qwen1.5-72B lora script: examples/qwen15/generate_qwen15_72b_lora_chat_ptd.sh
 
 ```bash
 # modify lora model directory path
