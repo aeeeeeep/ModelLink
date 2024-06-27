@@ -78,6 +78,7 @@ def model_provider_func_wrapper(model_provider_func):
             )
 
             model = get_peft_model(model, lora_config)
+            model.add_module('module', model.get_base_model())
             model.print_trainable_parameters()
             for module in model.modules():
                 # LoRA Linear Layer need all reduce

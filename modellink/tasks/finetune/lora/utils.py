@@ -43,13 +43,13 @@ def merge_dicts(dict1, dict2):
 
 def modify_keys_with_dict(dictionary, words_to_replace, exclude_words):
     args = get_args()
+
     layers_to_transform = list(map(str, args.lora_layers_to_transform))
     target_modules = args.lora_target_modules
 
     modified_dict = {}
     for key, value in dictionary.items():
         key_str = str(key)
-        
         # Check if a word to replace is present in the key
         word_to_replace = next((word for word in words_to_replace if word in key_str), None)
         should_be_replaced = word_to_replace and word_to_replace != key_str
@@ -73,12 +73,10 @@ def modify_keys_with_dict(dictionary, words_to_replace, exclude_words):
 
 
 def _lora_affected_layer(key, target_modules: List[str], layers_to_transform: List[int]) -> bool:
-    if not layers_to_transform:
-        return True
     layers_with_lora_pattern = '|'.join(target_modules)
-    layer_indicies_for_lora_pattern = '|'.join(layers_to_transform)
+    layer_indices_for_lora_pattern = '|'.join(layers_to_transform)
     lora_adapter_name_pattern = re.compile(
-        rf'^.*\.({layer_indicies_for_lora_pattern})\..*\.({layers_with_lora_pattern}).*$'
+        rf'^.*\.({layer_indices_for_lora_pattern})\..*\.({layers_with_lora_pattern}).*$'
     )
     match = lora_adapter_name_pattern.match(key)
     return bool(match)
