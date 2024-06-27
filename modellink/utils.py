@@ -51,6 +51,8 @@ def is_rank_0():
 
 
 def get_tune_attention_mask(attention_mask_1d):
+    args = get_args()
+    
     micro_batch_size, seq_length = attention_mask_1d.size()
     if args.reset_attention_mask:
         att_mask_batch = micro_batch_size
