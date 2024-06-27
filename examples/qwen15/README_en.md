@@ -494,7 +494,7 @@ The performance of Qwen1.5-1.8B in **Ascend NPU** and **Reference**:
 
 ## Inference-1.8B
 
-Config Qwen1.5-1.8B inference script: examples/qwen1.5/generate_qwen15_1point8b_ptd.sh
+Config Qwen1.5-1.8B inference script: examples/qwen15/generate_qwen15_1point8b_ptd.sh
 
 ```bash
 # modify the script according to your own ascend-toolkit path
@@ -508,7 +508,7 @@ TOKENIZER_PATH="./model_from_hf/qwen15-1.8b-hf/"
 Config Qwen1.5-1.8B inference script
 
 ```bash
-bash examples/qwen1.5/generate_qwen1.5_1point8b_ptd.sh
+bash examples/qwen15/generate_qwen15_1point8b_ptd.sh
 ```
 
 Some inference samples are as follows:
@@ -1562,7 +1562,7 @@ Some inference samples of Qwen1.5-32B are as follows：
 
 ![Inference](../../sources/images/qwen15/qwen15_32b_inference.png)
 
-Config Qwen1.5-72B lora script: examples/qwen15/generate_qwen15_32b_lora_ptd.sh
+Config Qwen1.5-72B lora script: examples/qwen15/generate_qwen15_32b_lora_chat_ptd.sh
 
 ```bash
 # modify lora model directory path
@@ -1778,7 +1778,7 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
     # process datasets  
     mkdir ./finetune_dataset/qwen-1.5-72b-hf/
     python ./tools/preprocess_data.py \
-        --input ./dataset/ train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen1.5-72B/ \
         --output-prefix ./finetune_dataset/qwen-1.5-72b-hf/alpaca \
         --workers 4 \
@@ -1825,7 +1825,7 @@ The performance of Qwen1.5-72B in **Ascend NPU** and **Reference**:
 
 ## Inference
 
-Config qwen1.5-72b inference script:examples/qwen15/generate_qwen15_72b_chat_ptd.sh
+Config qwen1.5-72b inference script:examples/qwen15/generate_qwen15_72b_ptd.sh
 
 ```bash
 # ascend-toolkit path
@@ -1833,7 +1833,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # modify script model path and tokenizer path
 CHECKPOINT="./model_weights/Qwen1.5-72B-v0.1-tp8-pp1/"
-TOKENIZER_PATH="/model_from_hf/Qwen1.5-72B/"
+TOKENIZER_PATH="./model_from_hf/Qwen1.5-72B/"
 ```
 
 Launch qwen1.5-72b inference script: examples/qwen15/generate_qwen15_72b_ptd.sh
@@ -1845,7 +1845,7 @@ Some inference samples of Qwen1.5-72B are as follows：
 
 ![Inference](../../sources/images/qwen15/qwen15_72b_inference.png)
 
-Config Qwen1.5-72B lora script: examples/qwen15/generate_qwen15_72b_lora_ptd.sh
+Config Qwen1.5-72B lora script: examples/qwen15/generate_qwen15_72b_lora_chat_ptd.sh
 
 ```bash
 # modify lora model directory path

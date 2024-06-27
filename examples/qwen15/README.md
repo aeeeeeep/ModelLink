@@ -252,7 +252,7 @@ Qwen1.5-0.5B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 ## 推理-0.5B
 
-配置Qwen1.5-0.5B 推理脚本: examples/qwen15/generate_qwen1.5_0point5b_ptd.sh
+配置Qwen1.5-0.5B 推理脚本: examples/qwen15/generate_qwen15_0point5b_ptd.sh
 
 ```bash
 # 根据您自己的 ascend-toolkit 路径，执行set_env.sh
@@ -498,7 +498,7 @@ Qwen1.5-1.8B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 ## 推理-1.8B
 
-配置Qwen1.5-1.8B 推理脚本: examples/qwen15/generate_qwen1.5_1point8b_ptd.sh
+配置Qwen1.5-1.8B 推理脚本: examples/qwen15/generate_qwen15_1point8b_ptd.sh
 
 ```bash
 # 根据您自己的 ascend-toolkit 路径，执行set_env.sh
@@ -522,7 +522,7 @@ bash examples/qwen15/generate_qwen15_1point8b_ptd.sh
 ## 评估-1.8B
 
 使用 MMLU数据集评估模型. 数据集下载路径 [这里](https://huggingface.co/datasets/cais/mmlu).
-配置Qwen1.5-1.8B 评估脚本: examples/qwen15/evaluate_qwen1.5_1point8b_ptd.sh
+配置Qwen1.5-1.8B 评估脚本: examples/qwen15/evaluate_qwen15_1point8b_ptd.sh
 
 ```bash
 # ascend-toolkit 路径
@@ -1787,7 +1787,7 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
     # 处理微调数据集  
     mkdir ./finetune_dataset/qwen-1.5-72b-hf/
     python ./tools/preprocess_data.py \
-        --input ./dataset/ train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen1.5-72B/ \
         --output-prefix ./finetune_dataset/qwen-1.5-72b-hf/alpaca \
         --workers 4 \
@@ -1844,7 +1844,7 @@ Qwen1.5-72B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 ## 推理-72B
 
-配置 qwen1.5-72b 推理脚本：examples/qwen15/generate_qwen15_72b_chat_ptd.sh
+配置 qwen1.5-72b 推理脚本：examples/qwen15/generate_qwen15_72b_ptd.sh
 
 ```bash
 # ascend-toolkit 路径
@@ -1852,7 +1852,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 修改模型权重路径和词表路径
 CHECKPOINT="./model_weights/Qwen1.5-72B-v0.1-tp8-pp1/"
-TOKENIZER_PATH="/model_from_hf/Qwen1.5-72B/"
+TOKENIZER_PATH="./model_from_hf/Qwen1.5-72B/"
 ```
 
 启动qwen1.5-72b推理脚本
