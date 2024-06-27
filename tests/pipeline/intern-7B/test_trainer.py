@@ -4,9 +4,9 @@ import subprocess
 import torch
 from tests.common import DistributedTest
 from utils import ParamConfig, assert_judge
+import modellink
 from megatron.core.enums import ModelType
 from megatron.core.utils import get_model_config
-import modellink
 from megatron.training.training import setup_model_and_optimizer, build_train_valid_test_data_iterators, num_floating_point_operations
 
 
