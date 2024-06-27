@@ -9,10 +9,10 @@ import numpy as np
 import torch
 from common import DistributedTest
 from utils import ParamConfig, assert_judge
+import modellink
 from megatron.legacy.data.dataset_utils import get_train_valid_test_split_
 from megatron.training.initialize import initialize_megatron
 from megatron.training import get_args
-import modellink
 from modellink.data.mtf_dataset import get_packed_indexed_dataset, MTFDataset
 from modellink.data.decoder_packed_mtf_dataset import DecoderPackedMTFDataset, _build_shuffle_idx
 
@@ -49,10 +49,10 @@ class TestInstruction(DistributedTest):
 
         # Filename of the index mappings.
         _filename = data_prefix
-        _filename.join('_{}_indexmap'.format(name))
-        _filename.join('_{}ns'.format(num_samples))
-        _filename.join('_{}s'.format(seed))
-        shuffle_idx_filename = _filename.join('_decoder_packed_shuffle_idx.npy')
+        _filename += '_{}_indexmap'.format(name)
+        _filename += '_{}ns'.format(num_samples)
+        _filename += '_{}s'.format(seed)
+        shuffle_idx_filename = _filename + '_decoder_packed_shuffle_idx.npy'
         if os.path.isfile(shuffle_idx_filename):
             os.remove(shuffle_idx_filename)
         # Build the indexed mapping if not exist.

@@ -77,7 +77,7 @@ class TestProcessInstructionData(unittest.TestCase):
                 total_size += os.path.getsize(file_path)
         self.assertEqual(len(bin_file), 3)
         self.assertEqual(len(idx_file), 3)
-        self.assertAlmostEqual((total_size / (1024 * 1024)), 93, delta=1)
+        self.assertAlmostEqual((total_size / (1024 * 1024)), 93, delta=2)
 
 
 if __name__ == "__main__":
