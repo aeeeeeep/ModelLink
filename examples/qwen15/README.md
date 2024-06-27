@@ -1787,7 +1787,7 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
     # 处理微调数据集  
     mkdir ./finetune_dataset/qwen-1.5-72b-hf/
     python ./tools/preprocess_data.py \
-        --input ./finetune_dataset/ train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen1.5-72B/ \
         --output-prefix ./finetune_dataset/qwen-1.5-72b-hf/alpaca \
         --workers 4 \
