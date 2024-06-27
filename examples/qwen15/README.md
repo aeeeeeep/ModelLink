@@ -498,7 +498,7 @@ Qwen1.5-1.8B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 ## 推理-1.8B
 
-配置Qwen1.5-1.8B 推理脚本: examples/qwen15/generate_qwen15_1point8_ptd.sh
+配置Qwen1.5-1.8B 推理脚本: examples/qwen15/generate_qwen15_1point8b_ptd.sh
 
 ```bash
 # 根据您自己的 ascend-toolkit 路径，执行set_env.sh

@@ -494,7 +494,7 @@ The performance of Qwen1.5-1.8B in **Ascend NPU** and **Reference**:
 
 ## Inference-1.8B
 
-Config Qwen1.5-1.8B inference script: examples/qwen15/generate_qwen15_1point8_ptd.sh
+Config Qwen1.5-1.8B inference script: examples/qwen15/generate_qwen15_1point8b_ptd.sh
 
 ```bash
 # modify the script according to your own ascend-toolkit path
