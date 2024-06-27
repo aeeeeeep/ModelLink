@@ -15,6 +15,9 @@ NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
 CHECKPOINT_PATH=/home/dataset/ci_engineering/ckpt
+
+rm -rf $CHECKPOINT_PATH
+
 mkdir $CHECKPOINT_PATH
 DATA_PATH=/home/dataset/ci_engineering/pretrain_dataset/alpaca_text_document
 TOKENIZER_MODEL=/home/dataset/ci_engineering/llama-2-7b-hf/tokenizer.model
@@ -73,5 +76,4 @@ python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS \
       --use-deter-comp \
       --eval-iters 1
 
-rm -rf $CHECKPOINT_PATH
 exit $?

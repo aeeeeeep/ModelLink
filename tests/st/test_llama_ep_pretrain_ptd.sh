@@ -18,6 +18,10 @@ WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 CKPT_LOAD_DIR=/home/dataset/ci_engineering/llama2-7B-tp2-pp4-vpp4
 CKPT_SAVE_DIR=/home/dataset/ci_engineering/ckpt
 LOG_DIR=/home/dataset/ci_engineering/logs
+
+rm -rf $CKPT_SAVE_DIR
+rm -rf $LOG_DIR
+
 mkdir $CKPT_SAVE_DIR
 mkdir $LOG_DIR
 DATA_PATH=/home/dataset/ci_engineering/pretrain_dataset/alpaca_text_document
@@ -87,6 +91,4 @@ python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS \
       --num-layers-per-virtual-pipeline-stage 2 \
       --fp16 | tee $LOG_DIR/test_loss.log
 
-rm -rf $CKPT_SAVE_DIR
-rm -rf $LOG_DIR
 exit $?

@@ -62,6 +62,7 @@ def patch_megatron_core():
     patch_tensor_parallel()
     patch_parallel_state()
     patch_datasets()
+    patch_utils()
 
 
 def patch_megatron_noncore():
@@ -195,9 +196,15 @@ def patch_datasets():
     from megatron.core.datasets.blended_megatron_dataset_builder import BlendedMegatronDatasetBuilder
     from megatron.core.datasets.gpt_dataset import GPTDataset
     GPTDataset._build_document_sample_shuffle_indices = _build_document_sample_shuffle_indices
-    BlendedMegatronDatasetBuilder._build_generic_dataset = build_generic_dataset
+    BlendedMegatronDatasetBuilder.build_generic_dataset = build_generic_dataset
 
 
 def patch_log_handler():
     from megatron.training.log_handler import CustomHandler
     CustomHandler.emit = emit
+
+
+def patch_utils():
+    from ..utils import unwrap_model_wrapper
+    megatron.training.checkpointing.unwrap_model = unwrap_model_wrapper(megatron.training.checkpointing.unwrap_model)
+    megatron.training.training.unwrap_model = unwrap_model_wrapper(megatron.training.training.unwrap_model)

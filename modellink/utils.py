@@ -18,6 +18,8 @@ import os
 import stat
 import random
 
+from functools import wraps
+
 import torch
 import torch_npu
 from torch import distributed as dist
@@ -94,3 +96,12 @@ def emit(self, record):
             self.flush()
         except Exception:
             self.handleError(record)
+
+
+def unwrap_model_wrapper(fn):
+    @wraps(fn)
+    def wrapper(model, module_instances=None):
+        if not module_instances:
+            module_instances = megatron.training.utils.ALL_MODULE_WRAPPER_CLASSNAMES
+        return fn(model, module_instances)
+    return wrapper
