@@ -349,6 +349,7 @@ Aquila2-34B 训练的硬件配置如下:
         --tokenizer-model ./model_from_hf/Aquila2-34B/tokenizer.json \
         --params-dtype bf16
     ```
+    如果为单机8卡推理或者评估任务，将`--target-pipeline-parallel-size`值设为`1`，将`--save-dir`值中的`pp2`改为`pp1`.
 
     任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
     ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
