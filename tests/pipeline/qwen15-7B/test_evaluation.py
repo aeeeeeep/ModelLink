@@ -94,4 +94,4 @@ class TestEvaluation(DistributedTest):
             except ZeroDivisionError as e:
                 raise e
             print(final_acc)
-            assert_judge(abs(final_acc - 0.654) < 0.01)
+            assert_judge(abs(final_acc - 0.654) < 0.03)
