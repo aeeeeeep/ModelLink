@@ -35,7 +35,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
                                              os.path.pardir)))
 
 from modellink.tokenizer import build_tokenizer
-from modellink.data.data_handler import build_dataset, get_dataset_handler
+from modellink.tasks.preprocess.data_handler import build_dataset, get_dataset_handler
 
 
 logging.basicConfig(level=logging.INFO)

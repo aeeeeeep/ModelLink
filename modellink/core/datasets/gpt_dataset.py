@@ -1,4 +1,17 @@
-# Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+# coding=utf-8
+# Copyright (c) 2024, HUAWEI CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import logging
 import os
@@ -18,12 +31,11 @@ from .blended_megatron_dataset_builder import need_to_build_dataset
 logger = logging.getLogger(__name__)
 
 
-
 def _build_document_sample_shuffle_indices(
-    self,
+        self,
 ) -> Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     """Build the document index, the sample index, and the shuffle index
-    
+
     The document index:
         -- 1-D
         -- An ordered array of document ids
@@ -65,7 +77,7 @@ def _build_document_sample_shuffle_indices(
     )
 
     if not cache_hit and (
-        not torch.distributed.is_initialized() or need_to_build_dataset()
+            not torch.distributed.is_initialized() or need_to_build_dataset()
     ):
 
         log_single_rank(
@@ -83,8 +95,8 @@ def _build_document_sample_shuffle_indices(
         else:
             # Get the number of samples for the last epoch
             num_samples_sans_final_epoch = (
-                (num_epochs - 1) * num_tokens_per_epoch - 1
-            ) // sequence_length
+                                                   (num_epochs - 1) * num_tokens_per_epoch - 1
+                                           ) // sequence_length
             num_samples_from_final_epoch = self.num_samples - num_samples_sans_final_epoch
             num_samples_per_epoch = (num_tokens_per_epoch - 1) // sequence_length
 
@@ -154,11 +166,11 @@ def _build_document_sample_shuffle_indices(
             num_epochs,
             num_tokens_per_epoch,
         )
-        
+
         if any(sample_index[:, 0] < 0):
             _url = "https://gitee.com/ascend/ModelLink/wikis/megatron%20data%20helpers%E5%8F%AF%E8%83%BD%E5%BC%95%E5%85%A5%E7%9A%84%E9%97%AE%E9%A2%98"
             raise GPTDatasetSampleIndexError(f"Bad sample index. Visit {_url} for more information")
-        
+
         numpy.save(path_to_sample_index, sample_index, allow_pickle=True)
         t_end = time.time()
         log_single_rank(logger, logging.DEBUG, f"\t> time elapsed: {t_end - t_beg:4f} seconds")
@@ -210,11 +222,11 @@ def _build_document_sample_shuffle_indices(
     )
     t_beg = time.time()
     sample_index = numpy.load(path_to_sample_index, allow_pickle=True, mmap_mode='r')
-    
+
     if any(sample_index[:, 0] < 0):
         _url = "https://gitee.com/ascend/ModelLink/wikis/megatron%20data%20helpers%E5%8F%AF%E8%83%BD%E5%BC%95%E5%85%A5%E7%9A%84%E9%97%AE%E9%A2%98"
         raise GPTDatasetSampleIndexError(f"Bad sample index. Visit {_url} for more information")
-    
+
     t_end = time.time()
     log_single_rank(logger, logging.DEBUG, f"\t> time elapsed: {t_end - t_beg:4f} seconds")
 
