@@ -417,7 +417,7 @@ class FlashSelfAttention(torch.nn.Module):
         if args.position_embedding_type == 'alibi':
             self.get_alibi()
 
-    def forward(self, q, k, v, pse=None):
+    def forward(self, q, k, v, attention_mask, pse=None):
         """Implements the multihead softmax attention.
         Arguments
         ---------
@@ -445,8 +445,10 @@ class FlashSelfAttention(torch.nn.Module):
                 self.attention_mask = torch.triu(
                     torch.ones(self.FA_SPARSE_ATTN_MASK_LEN, self.FA_SPARSE_ATTN_MASK_LEN), 1).bool().npu()
             else:
-                self.attention_mask = torch.triu(torch.ones(seq_length, seq_length), 1).bool().npu()
-
+                if attention_mask is not None:
+                    self.attention_mask = attention_mask
+                else:
+                    self.attention_mask = torch.triu(torch.ones(seq_length, seq_length), 1).bool().npu()
 
         q, k, v = [rearrange(x, 's b h d -> s b (h d)') for x in [q, k, v]]
 
@@ -831,9 +833,9 @@ def ParallelAttentionForward(self, hidden_states, attention_mask,
         q, k, v = query_layer, key_layer, value_layer
         if not self.sequence_parallel:
             with tensor_parallel.get_cuda_rng_tracker().fork():
-                context_layer = self.core_attention_flash(q, k, v)
+                context_layer = self.core_attention_flash(q, k, v, attention_mask)
         else:
-            context_layer = self.core_attention_flash(q, k, v)
+            context_layer = self.core_attention_flash(q, k, v, attention_mask)
 
     # =================
     # Output. [sq, b, h]

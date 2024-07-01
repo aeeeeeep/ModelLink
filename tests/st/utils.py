@@ -22,9 +22,10 @@ def build_args(request, monkeypatch):
     params = request.getfixturevalue("params")
     argv = [sys.argv[0]]
     for k, v in params.items():
-        if type(v) != bool:
+        if v is None:
             argv.append(f'--{k}')
-            argv.append(str(v))
-        elif v:
-            argv.append(f'--{k}')
+        elif isinstance(v, list):
+            argv.extend([f'--{k}'] + [str(value) for value in v])
+        else:
+            argv.extend([f'--{k}', str(v)])
     monkeypatch.setattr(sys, 'argv', argv)

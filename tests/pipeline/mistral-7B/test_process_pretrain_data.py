@@ -14,9 +14,10 @@ from tools.preprocess_data import get_args, build_splitter
 
 
 class TestProcessPretrainData(unittest.TestCase):
-    def setUp(self, config=ParamConfig):
+    @classmethod
+    def setUpClass(self):
         # configure params, the index starts from 1
-        self.config = config
+        self.config = ParamConfig
         sys.argv = [sys.argv[0]] + self.config.pretrain_data_param
         self.args = get_args()
         self.tokenizer = build_tokenizer(self.args)

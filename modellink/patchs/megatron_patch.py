@@ -27,7 +27,7 @@ from ..model import (
     GPTModel, parallel_transformer_init, seq_length_wrapper,
     norm_wrapper, SwitchMLP, state_dict_for_save_checkpoint_wrapper,
     core_attention_wrapper, core_attention_forward, FlashSelfAttention,
-    ParallelAttention_wrapper, TransformerLanguageModel__init__,
+    ParallelAttention_wrapper, transformer_language_model_init,
     ParallelAttentionForward, parallel_transformer_forward, parallel_mlp_init_wrapper,
     rms_norm_init_wrapper, rms_norm_forward
 )
@@ -37,7 +37,7 @@ from ..core import (vocab_embedding_wrapper, initialize_model_parallel_decorator
                    get_expert_parallel_world_size, get_expert_model_parallel_world_size,
                    set_expert_model_parallel_rank, set_expert_model_parallel_world_size,
                    RotaryEmbedding_forward, apply_rotary_pos_emb,
-                   _build_generic_dataset, _build_document_sample_shuffle_indices)
+                   build_generic_dataset, _build_document_sample_shuffle_indices)
 from ..core.pipeline_parallel.p2p_communication import _batched_p2p_ops
 from ..data import build_pretraining_data_loader
 from ..tokenizer import build_tokenizer
@@ -60,6 +60,7 @@ def patch_megatron_core():
     patch_tensor_parallel()
     patch_parallel_state()
     patch_datasets()
+    patch_utils()
 
 
 def patch_megatron_noncore():
@@ -169,7 +170,7 @@ def patch_model():
     # patch language model
     megatron.legacy.model.language_model.TransformerLanguageModel.forward = (seq_length_wrapper(
         megatron.legacy.model.language_model.TransformerLanguageModel.forward))
-    megatron.legacy.model.language_model.TransformerLanguageModel.__init__ = TransformerLanguageModel__init__
+    megatron.legacy.model.language_model.TransformerLanguageModel.__init__ = transformer_language_model_init
 
 
 
@@ -199,9 +200,15 @@ def patch_datasets():
     from megatron.core.datasets.blended_megatron_dataset_builder import BlendedMegatronDatasetBuilder
     from megatron.core.datasets.gpt_dataset import GPTDataset
     GPTDataset._build_document_sample_shuffle_indices = _build_document_sample_shuffle_indices
-    BlendedMegatronDatasetBuilder._build_generic_dataset = _build_generic_dataset
+    BlendedMegatronDatasetBuilder.build_generic_dataset = build_generic_dataset
 
 
 def patch_log_handler():
     from megatron.training.log_handler import CustomHandler
     CustomHandler.emit = emit
+
+
+def patch_utils():
+    from ..utils import unwrap_model_wrapper
+    megatron.training.checkpointing.unwrap_model = unwrap_model_wrapper(megatron.training.checkpointing.unwrap_model)
+    megatron.training.training.unwrap_model = unwrap_model_wrapper(megatron.training.training.unwrap_model)

@@ -14,7 +14,9 @@ from tools.preprocess_data import get_args, build_splitter
 
 
 class TestProcessPretrainData(unittest.TestCase):
-    def setUp(self, config=ParamConfig):
+    @classmethod
+    def setUpClass(self):
+        config = ParamConfig
         sys.argv = [sys.argv[0]] + config.process_pretrain_data
         self.config = config.process_pretrain_data
         self.args = get_args()

@@ -15,7 +15,7 @@ from tools.preprocess_data import get_args, build_splitter
 
 class TestProcessInstructionData:
 
-    def setup_method(self):
+    def setup_class(self):
         sys.argv = [
             sys.argv[0],
             "--input", "/home/dataset/ci_engineering/train-00000-of-00001-a09b74b3ef9c3b56.parquet",

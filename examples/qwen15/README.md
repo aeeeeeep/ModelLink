@@ -6,6 +6,13 @@
 </p>
 
 # 目录
+- [Qwen1.5-0.5B](#Qwen1.5-0.5b)
+  - [训练-0.5B](#训练-0.5b)
+    - [脚本-0.5B](#脚本-0.5b)
+    - [性能-0.5B](#性能-0.5b)
+       - [吞吐-0.5B](#吞吐-0.5b)
+  - [推理-0.5B](#推理-0.5b)
+  - [评估-0.5B](#评估-0.5b)
 - [Qwen1.5-1.8B](#Qwen1.5-1.8b)
   - [训练-1.8B](#训练-1.8b)
     - [脚本-1.8B](#脚本-1.8b)
@@ -48,6 +55,252 @@
         - [吞吐-72B](#吞吐-72b)
     - [推理-72B](#推理-72b)
     - [评估-72B](#评估-72b)
+# Qwen1.5-0.5B
+
+## 训练-0.5B
+Qwen1.5-0.5B 训练的硬件配置:
+
+| 硬件  |       配置        |
+|:---:|:---------------:|
+| NPU | 8 x Ascend NPUs |
+### 脚本-0.5B
+
+1. 克隆仓库到本地服务器
+
+    ```shell
+    git clone https://gitee.com/ascend/ModelLink.git 
+    git clone https://github.com/NVIDIA/Megatron-LM.git
+    cd Megatron-LM
+    git checkout core_r0.6.0
+    cp -r megatron ../ModelLink/
+    cd ..
+    cd ModelLink
+    mkdir logs
+    mkdir model_from_hf
+    mkdir dataset
+    mkdir ckpt
+    ```
+2. 搭建环境
+
+    ```bash
+    # python3.8
+    conda create -n test python=3.8
+    conda activate test
+   
+    # 安装依赖库
+    pip install -r requirements.txt 
+    # 安装 torch 和 torch_npu
+    pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+    pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
+    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+    # 安装加速库
+    git clone https://gitee.com/ascend/MindSpeed.git
+    cd MindSpeed
+    git checkout 2b0edd2
+    pip install -r requirements.txt 
+    pip3 install -e .
+    cd ..
+
+    ```
+3. 下载 Qwen1.5-0.5B 的 [预训练权重和词表](https://huggingface.co/Qwen/Qwen1.5-0.5B/tree/main)
+
+    ```shell
+    #!/bin/bash
+    mkdir ./model_from_hf/qwen15-0.5b-hf/
+    cd ./model_from_hf/qwen15-0.5b-hf/
+    wget https://huggingface.co/Qwen/Qwen1.5-0.5B/resolve/main/config.json
+    wget https://huggingface.co/Qwen/Qwen1.5-0.5B/resolve/main/generation_config.json
+    wget https://huggingface.co/Qwen/Qwen1.5-0.5B/resolve/main/merges.txt
+    wget https://huggingface.co/Qwen/Qwen1.5-0.5B/resolve/main/model.safetensors
+    wget https://huggingface.co/Qwen/Qwen1.5-0.5B/resolve/main/tokenizer.json
+    wget https://huggingface.co/Qwen/Qwen1.5-0.5B/resolve/main/tokenizer_config.json
+    wget https://huggingface.co/Qwen/Qwen1.5-0.5B/resolve/main/vocab.json
+    cd ../../
+    ```
+4. 权重转换
+
+    4.1 将权重从 huggingface 格式转化为 magatron 格式
+    ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
+
+    ```bash
+    # 修改 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+    # 权重格式转换
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader llama2_hf \
+        --saver megatron \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --add-qkv-bias \
+        --load-dir ./model_from_hf/qwen15-0.5b-hf/ \
+        --save-dir ./model_weights/qwen15-0.5b-hf-v0.1-tp1-pp1/ \
+        --tokenizer-model ./model_from_hf/qwen15-0.5b-hf/tokenizer.json
+    ```
+
+    4.2 任意并行切分策略的 Megatron 权重 格式转化为 HuggingFace权重
+    ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
+
+    ```shell
+    # 请按照您的真实环境修改 set_env.sh 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh
+    python tools/checkpoint/convert_ckpt.py \
+        --model-type GPT \
+        --loader megatron \
+        --saver megatron \
+        --save-model-type save_huggingface_llama \
+        --load-dir ./ckpt/ \
+        --target-tensor-parallel-size 1 \
+        --target-pipeline-parallel-size 1 \
+        --add-qkv-bias \
+        --save-dir ./model_from_hf/qwen15-0.5b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/qwen15-0.5b-hf/mg2hg/
+    ```
+
+    权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数 `target-tensor-parallel-size`和 `target-pipeline-parallel-size`。
+5. 预训练
+
+    5.1 准备数据集
+
+    下载 Qwen1.5-0.5B [数据集](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+
+    ```shell
+    # 下载数据
+    cd ./dataset
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
+    # 处理数据   
+    mkdir ./dataset/qwen15-0.5b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/qwen15-0.5b-hf/ \
+        --output-prefix ./dataset/qwen15-0.5b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF
+    ```
+
+    5.2 预训练
+
+    ```shell
+    # 设置 ascend-toolkit 路径
+    source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+    # 根据实际情况配置词表、数据集、模型参数保存路径
+    CKPT_SAVE_DIR="./ckpt/qwen15-0.5b-hf/"
+    TOKENIZER_PATH="./model_from_hf/qwen15-0.5b-hf"  #词表路径
+    DATA_PATH="./dataset/qwen15-0.5b-hf/alpaca_text_document"  #数据集路径
+    CKPT_LOAD_DIR="./model_weights/qwen15-0.5b-hf-v0.1-tp1-pp1"
+    ```
+    启动 Qwen1.5-0.5B 预训练脚本: examples/qwen15/pretrain_qwen15_0point5b_ptd.sh
+
+6. 微调
+
+    6.1 准备微调数据集
+    下载微调数据集 [这里](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
+
+    ```shell
+    # 下载数据集
+    mkdir finetune_dataset
+    cd ./finetune_dataset
+    wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+    cd ..
+
+    # 处理微调数据集  
+    mkdir ./finetune_dataset/qwen15-0.5b-hf/
+    python ./tools/preprocess_data.py \
+        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --tokenizer-name-or-path ./model_from_hf/qwen15-0.5b-hf/ \
+        --output-prefix ./finetune_dataset/qwen15-0.5b-hf/alpaca \
+        --workers 4 \
+        --log-interval 1000 \
+        --tokenizer-type PretrainedFromHF \
+        --handler-name GeneralInstructionHandler \
+        --append-eod
+    ```
+
+    6.2 全参微调
+    全参微调的配置脚本基本和预训练脚本一致. *区别是数据集，以及增加训练参数--is-instruction-dataset*
+
+    增加微调参数--finetune，参数如下：
+
+    ```bash
+    DATA_PATH="./finetune_dataset/qwen15-0.5b-hf/alpaca"
+    TOKENIZER_PATH="./model_from_hf/qwen15-0.5b-hf/"
+    CKPT_PATH="./model_weights/qwen15-0.5b-hf-v0.1-tp1-pp1/"
+        --load ${CKPT_PATH} \
+        --finetune \
+        --is-instruction-dataset \
+        --tokenizer-type PretrainedFromHF \
+        --tokenizer-name-or-path ${TOKENIZER_PATH} \
+        --tokenizer-not-use-fast \
+    ```
+### 性能-0.5B
+
+#### 吞吐-0.5B
+
+Qwen1.5-0.5B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
+
+| 设备 |      模型      | 迭代数  | tokens吞吐 (tokens/s/p) |
+| :--: |:------------:|:----:|:---------------------:|
+| NPUs | Qwen1.5-0.5B | 2000 |         22834         |
+| 参考 | Qwen1.5-0.5B | 2000 |         25306         |
+
+## 推理-0.5B
+
+配置Qwen1.5-0.5B 推理脚本: examples/qwen15/generate_qwen15_0point5b_ptd.sh
+
+```bash
+# 根据您自己的 ascend-toolkit 路径，执行set_env.sh
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+ 
+# 修改模型权重路径和词表路径
+CHECKPOINT="./model_weights/qwen15-0.5b-hf-v0.1-tp1-pp1"
+TOKENIZER_PATH="./model_from_hf/qwen15-0.5b-hf/"
+```
+
+启动Qwen1.5-0.5B 推理脚本
+
+```bash
+bash examples/qwen15/generate_qwen15_0point5b_ptd.sh
+```
+
+推理示例如下：
+
+![Inference](../../sources/images/qwen15/qwen15_0point5b_inference.png)
+
+## 评估-0.5B
+
+使用 MMLU数据集评估模型. 数据集下载路径 [这里](https://huggingface.co/datasets/cais/mmlu).
+配置Qwen1.5-0.5B 评估脚本: examples/qwen15/evaluate_qwen1.5_0point5b_ptd.sh
+
+```bash
+# ascend-toolkit 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh 
+
+# 修改模型参数路径和词表路径
+TOKENIZER_PATH="./model_from_hf/qwen15-0.5b-hf/"  #词表路径
+CHECKPOINT="./model_weights/qwen15-0.5b-hf-v0.1-tp1-pp1"  #模型路径
+# 配置任务和数据集路径
+DATA_PATH="./mmlu/data/test/"
+TASK="mmlu"
+```
+
+启动评估
+
+```bash
+bash examples/qwen15/evaluate_qwen15_0point5b_ptd.sh
+```
+
+评估结果如下
+
+| 数据集 | 总学科数 | 总问题数 | 参考准确率 | NPU准确率 |
+| :----: | :------: | :------: |:-----:|:------:|
+|  MMLU  |    57    |  14042  | 0.318 | 0.318  |
 # Qwen1.5-1.8B
 
 ## 训练-1.8B
@@ -79,10 +332,11 @@ Qwen1.5-1.8B 训练的硬件配置:
     # python3.8
     conda create -n test python=3.8
     conda activate test
-
+    # 安装依赖库
+    pip install -r requirements.txt 
     # 安装 torch 和 torch_npu
-    pip install torch-2.2.0-cp38-cp38m-manylinux2014_aarch64.whl
-    pip install torch_npu-2.2.0*-cp38-cp38m-linux_aarch64.whl
+    pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+    pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 
     # 修改 ascend-toolkit 路径
@@ -96,8 +350,6 @@ Qwen1.5-1.8B 训练的硬件配置:
     pip3 install -e .
     cd ..
 
-    # 安装其余依赖库
-    pip install -r requirements.txt 
     ```
 3. 下载 Qwen1.5-1.8B 的 [预训练权重和词表](https://huggingface.co/Qwen/Qwen1.5-1.8B/tree/main)
 
@@ -246,7 +498,7 @@ Qwen1.5-1.8B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 ## 推理-1.8B
 
-配置Qwen1.5-1.8B 推理脚本: examples/qwen15/generate_qwen1.5_1point8b_ptd.sh
+配置Qwen1.5-1.8B 推理脚本: examples/qwen15/generate_qwen15_1point8b_ptd.sh
 
 ```bash
 # 根据您自己的 ascend-toolkit 路径，执行set_env.sh
@@ -260,7 +512,7 @@ TOKENIZER_PATH="./model_from_hf/qwen15-1.8b-hf/"
 启动Qwen1.5-1.8B 推理脚本
 
 ```bash
-bash examples/qwen15/generate_qwen15_1.8b_ptd.sh
+bash examples/qwen15/generate_qwen15_1point8b_ptd.sh
 ```
 
 推理示例如下：
@@ -270,7 +522,7 @@ bash examples/qwen15/generate_qwen15_1.8b_ptd.sh
 ## 评估-1.8B
 
 使用 MMLU数据集评估模型. 数据集下载路径 [这里](https://huggingface.co/datasets/cais/mmlu).
-配置Qwen1.5-1.8B 评估脚本: examples/qwen15/evaluate_qwen1.5_1point8b_ptd.sh
+配置Qwen1.5-1.8B 评估脚本: examples/qwen15/evaluate_qwen15_1point8b_ptd.sh
 
 ```bash
 # ascend-toolkit 路径
@@ -327,10 +579,11 @@ Qwen1.5-4B 训练的硬件配置:
     # python3.8
     conda create -n test python=3.8
     conda activate test
-
+    # 安装依赖库
+    pip install -r requirements.txt
     # 安装 torch 和 torch_npu
-    pip install torch-2.2.0-cp38-cp38m-manylinux2014_aarch64.whl
-    pip install torch_npu-2.2.0*-cp38-cp38m-linux_aarch64.whl
+    pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+    pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 
     # 修改 ascend-toolkit 路径
@@ -343,9 +596,6 @@ Qwen1.5-4B 训练的硬件配置:
     pip install -r requirements.txt 
     pip3 install -e .
     cd ..
-
-    # 安装其余依赖库
-    pip install -r requirements.txt 
     ```
 3. 下载 Qwen1.5-4B 的 [预训练权重和词表](https://huggingface.co/Qwen/Qwen1.5-4B/tree/main)
 
@@ -440,8 +690,6 @@ Qwen1.5-4B 训练的硬件配置:
     DATA_PATH="./dataset/qwen15-4b-hf/alpaca_text_document"  #数据集路径
     CKPT_LOAD_DIR="./model_weights/qwen15-4b-hf-v0.1-tp1-pp2"
     ```
-
-
     启动 Qwen1.5-4B 预训练脚本: examples/qwen15/pretrain_qwen15_4b_ptd.sh
 
 6. 微调
@@ -498,7 +746,7 @@ Qwen1.5-4B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
 
 ## 推理-4B
 
-配置Qwen1.5-4B 推理脚本: examples/qwen1.5/generate_qwen1.5_4b_ptd.sh
+配置Qwen1.5-4B 推理脚本: examples/qwen15/generate_qwen15_4b_ptd.sh
 
 ```bash
 # 根据您自己的 ascend-toolkit 路径，执行set_env.sh
@@ -522,7 +770,7 @@ bash examples/qwen15/generate_qwen15_4b_ptd.sh
 ## 评估-4B
 
 使用 MMLU数据集评估模型. 数据集下载路径 [这里](https://huggingface.co/datasets/cais/mmlu).
-配置Qwen1.5-4B 评估脚本: examples/qwen1.5/evaluate_qwen1.5_4b_ptd.sh
+配置Qwen1.5-4B 评估脚本: examples/qwen15/evaluate_qwen15_4b_ptd.sh
 
 ```bash
 # ascend-toolkit 路径
@@ -544,9 +792,9 @@ bash examples/qwen15/evaluate_qwen15_4b_ptd.sh
 
 评估结果如下
 
-| 数据集 | 总学科数 | 总问题数 |  参考准确率  | NPU准确率 |
-| :----: | :------: | :------: |:-------:| :-------: |
-|  MMLU  |    57    |  14042  | 0.561(https://qwenlm.github.io/zh/blog/qwen1.5/) |  0.550  |
+| 数据集 | 总学科数 | 总问题数 |                       参考准确率                       | NPU准确率 |
+| :----: | :------: | :------: |:-------------------------------------------------:| :-------: |
+|  MMLU  |    57    |  14042  | [0.561](https://qwenlm.github.io/zh/blog/qwen1.5) |  0.550  |
 
 
 # Qwen1.5-7B
@@ -582,10 +830,13 @@ Qwen1.5-7B 训练的硬件配置:
    # python3.8
    conda create -n test python=3.8
    conda activate test
-
+   
+   # 安装其余依赖库
+   pip install -r requirements.txt
+   
    # 安装 torch 和 torch_npu
-   pip install torch-2.2.0-cp38-cp38m-manylinux2014_aarch64.whl
-   pip install torch_npu-2.2.0*-cp38-cp38m-linux_aarch64.whl
+   pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+   pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 
    # 安装加速库
@@ -595,9 +846,6 @@ Qwen1.5-7B 训练的硬件配置:
    pip install -r requirements.txt
    pip install -e .
    cd ..
-
-   # 安装其余依赖库
-   pip install -r requirements.txt
    ```
 3. 下载 Qwen1.5-7B 的 [预训练权重和词表](https://huggingface.co/Qwen/Qwen1.5-7B/tree/main)
 
@@ -651,7 +899,7 @@ Qwen1.5-7B 训练的硬件配置:
        --model-type GPT \
        --loader megatron \
        --saver megatron \
-       --save-model-type save_huggingface_qwen \
+       --save-model-type save_huggingface_llama \
        --target-tensor-parallel-size 1 \
        --target-pipeline-parallel-size 1 \
        --add-qkv-bias \
@@ -809,9 +1057,9 @@ TASK="mmlu"  # ceval任务配置为 "ceval"
 bash examples/qwen15/evaluate_qwen15_7b_ptd.sh
 ```
 
-|  数据集  | 总学科数 | 总问题数  |                          参考准确率                          | NPU准确率 |
-|:-----:|:----:|:-----:|:-------------------------------------------------------:|:------:|
-| MMLU  |  57  | 14042 |    [61.0](https://qwenlm.github.io/zh/blog/qwen1.5)     |  60.3  |
+|  数据集  | 总学科数 | 总问题数  |                        参考准确率                         | NPU准确率 |
+|:-----:|:----:|:-----:|:----------------------------------------------------:|:------:|
+| MMLU  |  57  | 14042 |   [61.0](https://qwenlm.github.io/zh/blog/qwen1.5)   | 0.603  |
 
 
 # Qwen1.5-14B
@@ -848,9 +1096,12 @@ Qwen1.5-14B 训练的硬件配置:
    conda create -n test python=3.8
    conda activate test
 
+   # 安装依赖库
+   pip install -r requirements.txt
+   
    # 安装 torch 和 torch_npu
-   pip install torch-2.2.0-cp38-cp38m-manylinux2014_aarch64.whl
-   pip install torch_npu-2.2.0*-cp38-cp38m-linux_aarch64.whl
+   pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+   pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 
    # 安装加速库
@@ -860,9 +1111,6 @@ Qwen1.5-14B 训练的硬件配置:
    pip install -r requirements.txt
    pip install -e .
    cd ..
-
-   # 安装其余依赖库
-   pip install -r requirements.txt
    ```
 3. 下载 Qwen1.5-14B 的 [预训练权重和词表](https://huggingface.co/Qwen/Qwen1.5-14B/tree/main)
 
@@ -914,7 +1162,7 @@ Qwen1.5-14B 训练的硬件配置:
        --model-type GPT \
        --loader megatron \
        --saver megatron \
-       --save-model-type save_huggingface_qwen \
+       --save-model-type save_huggingface_llama \
        --target-tensor-parallel-size 1 \
        --target-pipeline-parallel-size 1 \
        --add-qkv-bias \
@@ -1106,9 +1354,11 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
    conda create -n test python=3.8
    conda activate test
 
+    # 安装依赖库
+   pip install -r requirements.txt
    # 安装 torch 和 torch_npu
-   pip install torch-2.2.0-cp38-cp38m-manylinux2014_aarch64.whl
-   pip install torch_npu-2.2.0*-cp38-cp38m-linux_aarch64.whl
+   pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+   pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
    # 修改 ascend-toolkit 路径
    source /usr/local/Ascend/ascend-toolkit/set_env.sh
@@ -1121,10 +1371,8 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
    pip3 install -e .
    cd ..
 
-   # 安装其余依赖库
-   pip install -r requirements.txt
    ```
-   **注意**：transformers版本要4.37.0以上
+   
 3. 下载 Qwen1.5-32B 的 [预训练权重和词表](https://huggingface.co/Qwen/Qwen1.5-32B/tree/main)
    ```bash
    mkdir ./model_from_hf/Qwen1.5-32B/
@@ -1174,8 +1422,10 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
        --load-dir ./model_from_hf/Qwen1.5-32B/ \
        --save-dir ./model_weights/Qwen1.5-32B-v0.1-tp8-pp4-vpp2/ \
        --tokenizer-model ./model_from_hf/Qwen1.5-32B/tokenizer.json \
-       --add-qkv-bias
+       --add-qkv-bias \
+       --max-queue-size 70
    ```
+   **注意**: --num-layers-per-virtual-pipeline-stage参数只有在--target-pipeline-parallel-size > 2时才会生效，如果target-pipeline-parallel-size不满足>2的条件，请在脚本中删除--num-layers-per-virtual-pipeline-stage参数
 
    4.2 任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
    ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
@@ -1197,7 +1447,6 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
        --save-dir ./model_from_hf/Qwen1.5-32B/     # 需要填入原始HF模型路径，新权重会存于./model_from_hf/Qwen1.5-32B/mg2hg/
    ```
    权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数 `target-tensor-parallel-size`和 `target-pipeline-parallel-size`。
-
 5. 预训练
 
     5.1 准备数据集
@@ -1208,11 +1457,11 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
      wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
      cd ..
      # 处理数据   
-     mkdir ./dataset/qwen-1.5-32b-hf/
+     mkdir ./dataset/qwen1.5-32B-hf/
      python ./tools/preprocess_data.py \
          --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
          --tokenizer-name-or-path ./model_from_hf/Qwen1.5-32B/ \
-         --output-prefix ./dataset/qwen-1.5-32b-hf/alpaca \
+         --output-prefix ./dataset/qwen1.5-32B-hf/alpaca \
          --workers 4 \
          --log-interval 1000 \
          --tokenizer-type PretrainedFromHF
@@ -1225,8 +1474,8 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
      # 根据实际情况配置词表、数据集、模型参数保存路径
      CKPT_SAVE_DIR="./ckpt/Qwen1.5-32B/"
      TOKENIZER_PATH="./model_from_hf/Qwen1.5-32B/"  #词表路径
-     DATA_PATH="./dataset/Qwen1.5-32B-hf/alpaca_text_document"  #数据集路径
-     CKPT_LOAD_DIR="./model_weights/Qwen1.5-32B-v0.1-tp8-pp4-vpp2/"
+     DATA_PATH="./dataset/qwen1.5-32B-hf/alpaca_text_document"  #数据集路径
+     CKPT_LOAD_DIR="./model_weights/qwen1.5-32B-v0.1-tp8-pp4-vpp2/"
     ```
    
     启动 Qwen1.5-32B 预训练脚本: examples/qwen15/pretrain_qwen15_32b_ptd.sh
@@ -1234,8 +1483,9 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
     ```shell
      bash examples/qwen15/pretrain_qwen15_32b_ptd.sh
     ```
-    **注意**：如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
-
+    **注意**：
+    + 如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
+    + --num-layers-per-virtual-pipeline-stage参数只有在--target-pipeline-parallel-size > 2时才会生效，如果target-pipeline-parallel-size不满足>2的条件，请在脚本中删除--num-layers-per-virtual-pipeline-stage参数
 6. 微调
     6.1 准备微调数据集
     下载微调数据集 [这里](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
@@ -1250,7 +1500,7 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
     # 处理微调数据集  
     mkdir ./finetune_dataset/qwen-1.5-32b-hf/
     python ./tools/preprocess_data.py \
-        --input ./dataset/ train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --input ./finetune_dataset/ train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen1.5-32B/ \
         --output-prefix ./finetune_dataset/qwen-1.5-32b-hf/alpaca \
         --workers 4 \
@@ -1279,6 +1529,7 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
 
     Lora微调的脚本配置是在全参微调脚本基础上加上lora参数，如下所示:
     ```bash
+   CKPT_SAVE_DIR="./ckpt/Qwen1.5-32B-lora-tp8-pp1/"
         --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
         --lora-r 16 \
         --lora-alpha 32 \
@@ -1331,7 +1582,7 @@ bash examples/qwen15/generate_qwen15_32b_ptd.sh
 
 ```bash
 # 修改lora权重路径
-CHECKPOINT_LORA="your lora model directory path"
+CHECKPOINT_LORA="./ckpt/Qwen1.5-32B-lora-tp8-pp1/"
 ```
 Qwen1.5-32B启动lora推理:
 
@@ -1399,10 +1650,13 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
    # python3.8
    conda create -n test python=3.8
    conda activate test
-
+   
+   # 安装依赖库
+   pip install -r requirements.txt
+   
    # 安装 torch 和 torch_npu
-   pip install torch-2.2.0-cp38-cp38m-manylinux2014_aarch64.whl
-   pip install torch_npu-2.2.0*-cp38-cp38m-linux_aarch64.whl
+   pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl
+   pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
    # 修改 ascend-toolkit 路径
    source /usr/local/Ascend/ascend-toolkit/set_env.sh
@@ -1414,9 +1668,6 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
    pip install -r requirements.txt 
    pip3 install -e .
    cd ..
-
-   # 安装其余依赖库
-   pip install -r requirements.txt
    ```
 3. 下载 Qwen1.5-72B 的 [预训练权重和词表](https://huggingface.co/Qwen/Qwen1.5-72B/tree/main)
    ```bash
@@ -1456,8 +1707,10 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
        --load-dir ./model_from_hf/Qwen1.5-72B/ \
        --save-dir ./model_weights/Qwen1.5-72B-v0.1-tp8-pp8-vpp2/ \
        --tokenizer-model ./model_from_hf/Qwen1.5-72B/tokenizer.json \
-       --add-qkv-bias
+       --add-qkv-bias \
+       --max-queue-size 90
    ```
+    **注意**： --num-layers-per-virtual-pipeline-stage参数只有在--target-pipeline-parallel-size > 2时才会生效，如果target-pipeline-parallel-size不满足>2的条件，请在脚本中删除--num-layers-per-virtual-pipeline-stage参数
 
    4.2 任意并行切分策略的Megatron权重 格式转化为 HuggingFace权重
    ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
@@ -1490,11 +1743,11 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
      wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
      cd ..
      # 处理数据   
-     mkdir ./dataset/qwen-1.5-72b-hf/
+     mkdir ./dataset/Qwen1.5-72B-hf/
      python ./tools/preprocess_data.py \
          --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
          --tokenizer-name-or-path ./model_from_hf/Qwen1.5-72B/ \
-         --output-prefix ./dataset/qwen-1.5-72b-hf/alpaca \
+         --output-prefix ./dataset/Qwen1.5-72B-hf/alpaca \
          --workers 4 \
          --log-interval 1000 \
          --tokenizer-type PretrainedFromHF
@@ -1516,8 +1769,9 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
     ```shell
      bash examples/qwen15/pretrain_qwen15_72b_ptd.sh
     ```
-    **注意**：如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
-
+    **注意**：
+    + 如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
+    + --num-layers-per-virtual-pipeline-stage参数只有在--target-pipeline-parallel-size > 2时才会生效，如果target-pipeline-parallel-size不满足>2的条件，请在脚本中删除--num-layers-per-virtual-pipeline-stage参数
 6. 微调
 
     6.1 准备微调数据集
@@ -1533,7 +1787,7 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
     # 处理微调数据集  
     mkdir ./finetune_dataset/qwen-1.5-72b-hf/
     python ./tools/preprocess_data.py \
-        --input ./dataset/ train-00000-of-00001-a09b74b3ef9c3b56.parquet \
+        --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen1.5-72B/ \
         --output-prefix ./finetune_dataset/qwen-1.5-72b-hf/alpaca \
         --workers 4 \
@@ -1562,6 +1816,7 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
 
     Lora微调的脚本配置是在全参微调脚本基础上加上lora参数，如下所示:
     ```bash
+   CKPT_SAVE_DIR="./ckpt/Qwen1.5-72B-lora-tp8-pp2/"
         --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
         --lora-r 16 \
         --lora-alpha 32 \
@@ -1597,7 +1852,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 修改模型权重路径和词表路径
 CHECKPOINT="./model_weights/Qwen1.5-72B-v0.1-tp8-pp1/"
-TOKENIZER_PATH="/model_from_hf/Qwen1.5-72B/"
+TOKENIZER_PATH="./model_from_hf/Qwen1.5-72B/"
 ```
 
 启动qwen1.5-72b推理脚本
@@ -1614,7 +1869,7 @@ bash examples/qwen15/generate_qwen15_72b_ptd.sh
 
 ```bash
 # 修改lora权重路径
-CHECKPOINT_LORA="your lora model directory path"
+CHECKPOINT_LORA="./ckpt/Qwen1.5-72B-lora-tp8-pp2/"
 ```
 Qwen1.5-72B启动lora推理:
 

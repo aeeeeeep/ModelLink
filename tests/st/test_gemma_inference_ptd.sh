@@ -1,5 +1,4 @@
 #!/bin/bash
-export TOKENIZERS_PARALLELISM=false
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 MASTER_ADDR=localhost

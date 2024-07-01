@@ -32,6 +32,7 @@ from megatron.training import get_tensorboard_writer
 from megatron.training import get_wandb_writer
 from megatron.core import mpu, tensor_parallel
 from megatron.core.utils import get_model_config
+from megatron.core.enums import ModelType
 from megatron.training.checkpointing import save_checkpoint
 from megatron.training.initialize import initialize_megatron
 from megatron.training.initialize import write_args_to_tensorboard
@@ -56,10 +57,10 @@ from modellink.initialize import set_jit_fusion_options
 from .tasks.finetune.lora.utils import is_enable_lora
 
 
-def get_model_wrapper(fn):
-    @wraps(fn)
+def model_provider_func_wrapper(model_provider_func):
+    @wraps(model_provider_func)
     def wrapper(*args, **kwargs):
-        model = fn(*args, **kwargs)
+        model = model_provider_func(*args, **kwargs)
         args = get_args()
 
         if is_enable_lora():
@@ -75,14 +76,31 @@ def get_model_wrapper(fn):
                 megatron_core="megatron.core",
             )
 
-            for model_item in model:
-                model_item = get_peft_model(model_item, lora_config)
-                model_item.print_trainable_parameters()
+            model = get_peft_model(model, lora_config)
+            model.add_module('module', model.get_base_model())
+            model.print_trainable_parameters()
+            for module in model.modules():
+                # LoRA Linear Layer need all reduce
+                if isinstance(module, torch.nn.Linear):
+                    setattr(module.weight, 'sequence_parallel', config.sequence_parallel)
+                # Other layers if is frozen, do not need all reduce.
+                for param in module.parameters():
+                    if not param.requires_grad and hasattr(param, 'sequence_parallel'):
+                        delattr(param, 'sequence_parallel')
             
             megatron.training.utils.ALL_MODULE_WRAPPER_CLASSNAMES = tuple(
                 list(megatron.training.utils.ALL_MODULE_WRAPPER_CLASSNAMES) + [PeftModel, LoraModel]
             )
 
+        return model
+    return wrapper
+
+
+def get_model_wrapper(fn):
+    @wraps(fn)
+    def wrapper(model_provider_func, model_type=ModelType.encoder_or_decoder, wrap_with_ddp=True):
+        model_provider_func = model_provider_func_wrapper(model_provider_func)
+        model = fn(model_provider_func, model_type, wrap_with_ddp)
         return model
     return wrapper
 

@@ -212,6 +212,8 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         from megatron.core.distributed import DistributedDataParallel as LocalDDP
         from megatron.legacy.model import Float16Module as MegatronFloat16Module
         from megatron.training.utils import unwrap_model
+        from modellink.training import model_provider_func_wrapper
+        model_provider = model_provider_func_wrapper(model_provider)
 
         args = get_args()
 

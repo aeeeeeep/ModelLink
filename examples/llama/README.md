@@ -170,7 +170,6 @@ LLaMA-7B/13B 训练的硬件配置如下:
         --save-dir ./model_from_hf/llama-13b-hf/  # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-13b-hf/mg2hg/
     ```
 
-    若需将Lora微调权重一并合并到HuggingFace权重，需添加 --lora-dir {lora微调权重路径} 参数进行转换。\
     权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
 
 5. 预训练
@@ -606,7 +605,6 @@ LLaMA-33B/65B 训练的硬件配置:
         --target-pipeline-parallel-size 1 \
         --save-dir ./model_from_hf/llama-65b-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-65b-hf/mg2hg/
     ```
-    若需将Lora微调权重一并合并到HuggingFace权重，需添加 --lora-dir {lora微调权重路径} 参数进行转换。\
     权重转换适用于预训练、微调、推理和评估，根据任务不同调整参数`target-tensor-parallel-size`和`target-pipeline-parallel-size`。
 
 5. 预训练

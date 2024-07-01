@@ -70,9 +70,9 @@
     "TRAINING_PARAM": [
         "--tokenizer-type", "Llama2Tokenizer",
         "--tokenizer-model", "/home/dataset/baichuan-13B-hf/tokenizer.model",
-        "--save", "/home/dataset/save-weight-baichuan-13B",
+        "--save", "/autotest/dataset/save-weight-baichuan-13B",
         "--data-path", "/home/dataset/pretrain-dataset-baichuan-13B/alpaca_text_document",
-        "--train-iters", "15"
+        "--train-iters", "10"
     ],
 
     "REGULARIZATION": [

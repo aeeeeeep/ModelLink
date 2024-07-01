@@ -39,7 +39,7 @@ torchrun $DISTRIBUTED_ARGS evaluation.py \
        --pipeline-model-parallel-size ${PP} \
        --seq-length 8192 \
        --max-new-tokens 1 \
-       --max-position-embeddings 32768 \
+       --max-position-embeddings 8192 \
        --num-layers 32  \
        --hidden-size 4096  \
        --ffn-hidden-size 11008 \

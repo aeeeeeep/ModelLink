@@ -32,7 +32,7 @@ def seq_length_wrapper(fn):
     return wrapper
 
 
-def TransformerLanguageModel__init__(self,
+def transformer_language_model_init(self,
                  config,
                  encoder_attn_mask_type,
                  num_tokentypes=0,

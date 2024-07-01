@@ -18,11 +18,14 @@ import os
 import stat
 import random
 
+from functools import wraps
+
 import torch
 import torch_npu
 import numpy as np
 
 import megatron
+from megatron.training import get_args
 
 
 WRITE_FILE_DEFAULT_FLAGS = os.O_WRONLY | os.O_CREAT
@@ -46,16 +49,24 @@ def is_rank_0():
         return True
 
 
-def get_tune_attention_mask(attention_mask_1d, reset_attention_mask=True):
+def get_tune_attention_mask(attention_mask_1d):
+    args = get_args()
     micro_batch_size, seq_length = attention_mask_1d.size()
-    if reset_attention_mask:
+    if args.reset_attention_mask:
         att_mask_batch = micro_batch_size
     else:
         att_mask_batch = 1
 
-    attention_mask = torch.tril(torch.ones(
-        (att_mask_batch, seq_length, seq_length), device=attention_mask_1d.device)).view(
-        att_mask_batch, 1, seq_length, seq_length)
+    attention_mask = None
+
+    if args.tokenizer_padding_side == "left":
+        attention_mask = torch.tril(torch.ones(seq_length, seq_length, device=attention_mask_1d.device, dtype=torch.bool)).view(1, 1, seq_length, seq_length)
+        attention_mask_tran = attention_mask_1d.view(seq_length, 1, -1)
+        attention_mask = attention_mask.masked_fill((attention_mask_tran < 0.5).view(-1, 1, 1, seq_length), value=0)
+    else:
+        attention_mask = torch.tril(torch.ones(
+            (att_mask_batch, seq_length, seq_length), device=attention_mask_1d.device)).view(
+            att_mask_batch, 1, seq_length, seq_length)
     attention_mask = attention_mask.masked_fill((attention_mask_1d < 0.5).view(-1, 1, 1, seq_length), value=0)
     attention_mask = (attention_mask < 0.5)
     return attention_mask
@@ -70,3 +81,12 @@ def seed_all(seed=1234):
 
     torch_npu.npu.manual_seed_all(seed)
     torch_npu.npu.manual_seed(seed)
+
+
+def unwrap_model_wrapper(fn):
+    @wraps(fn)
+    def wrapper(model, module_instances=None):
+        if not module_instances:
+            module_instances = megatron.training.utils.ALL_MODULE_WRAPPER_CLASSNAMES
+        return fn(model, module_instances)
+    return wrapper

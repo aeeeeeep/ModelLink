@@ -15,6 +15,7 @@
 
 from functools import wraps
 import argparse
+from megatron.training import print_rank_0
 
 
 def extra_args_provider_decorator(extra_args_provider):
@@ -271,9 +272,19 @@ def validate_args_decorator(validate_args):
     def wrapper(args, defaults=None):
         if defaults is None:
             defaults = {}
+
+        args.create_attention_mask_in_dataloader = False
+        reset_data = args.reset_attention_mask == True or args.reset_position_ids == True
+        alibi_without_FA = args.position_embedding_type == 'alibi' and not args.use_flash_attn
+        if (reset_data or alibi_without_FA or args.tokenizer_padding_side == "left"):
+            args.create_attention_mask_in_dataloader = True
+        print_rank_0("create-attention-mask-in-dataloader is {}".format(args.create_attention_mask_in_dataloader))
+
         validate_args(args, defaults)
         if args.position_embedding_type == 'alibi' and args.sliding_window is not None:
             raise AssertionError('Sliding Window Attention is forbidden when use alibi.')
+        if args.tokenizer_padding_side == 'left' and args.position_embedding_type == 'alibi':
+            raise AssertionError('Alibi is not support tokenizer-padding-side left now.')
         return args
 
     return wrapper

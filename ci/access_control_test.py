@@ -44,13 +44,16 @@ class ST_Test:
             test_dir, st_dir, "test_gemma_inference_ptd.sh")
         llama_vpp_pretrain_shell_file = os.path.join(
             test_dir, st_dir, "test_llama_vpp_pretrain_ptd.sh")
+        llama_instruction_shell_file = os.path.join(
+            test_dir, st_dir, "test_llama_instruction_ptd.sh")
 
         self.st_file_list = [
             llama_pretrain_shell_file,
             llama_inference_shell_file,
             gemma_pretrain_shell_file,
             gemma_inference_shell_file,
-            llama_vpp_pretrain_shell_file
+            llama_vpp_pretrain_shell_file,
+            llama_instruction_shell_file
         ]
 
     def run_st(self):

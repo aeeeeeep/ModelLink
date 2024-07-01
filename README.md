@@ -45,6 +45,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <th>模型</th>
       <th>参数</th>
+      <th>序列</th>
       <th>预训练</th>
       <th>推理</th>
       <th>LoRA</th>
@@ -58,385 +59,444 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td rowspan="1"> <a href="examples/aquila/README.md">Aquila</a> </td>
       <td> 7B </td>
+      <td> 2K </td>
       <td> <a href="examples/aquila/pretrain_aquila_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/aquila/generate_aquila_7b_ptd.sh"> generate </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/aquila/evaluate_aquila_7b_ptd.sh">eval</a> </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/aquila2/README.md">Aquila2</a></td>
       <td>7B</td>
+      <td> 2K </td>
       <td> <a href="examples/aquila2/pretrain_aquila2_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/aquila2/generate_aquila2_7b_ptd.sh">generate</a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/aquila2/evaluate_aquila2_7b_ptd.sh">eval</a> </td>
-      <td>【社区贡献】</td>
+      <td>【社区】</td>
     </tr>
     <tr>
       <td>34B</td>
+      <td> 4K </td>
       <td> <a href="examples/aquila2/pretrain_aquila2_34b_ptd_16p.sh"> pretrain </a> </td>
       <td> <a href="examples/aquila2/generate_aquila2_34b_ptd.sh">generate</a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/aquila2/evaluate_aquila2_34b_ptd.sh">eval</a> </td>
-      <td>【社区贡献】</td>
+      <td>【社区】</td>
     </tr>
     <tr>
       <td rowspan="2"> <a href="examples/baichuan/README.md">Baichuan</a> </td>
       <td> 7B </td>
+      <td> 4K </td>
       <td> <a href="examples/baichuan/pretrain_baichuan_ptd_7B.sh"> pretrain </a> </td>
       <td> <a href="examples/baichuan/generate_baichuan_7b_ptd.sh">generate</a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/baichuan/evaluate_baichuan_7B_ptd.sh">eval</a> </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td> 13B </td>
+      <td> 4K </td>
       <td> <a href="examples/baichuan/pretrain_baichuan_ptd_13B.sh"> pretrain </a> </td>
       <td> <a href="examples/baichuan/generate_baichuan_13b_ptd.sh">generate</a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/baichuan/evaluate_baichuan_13B_ptd.sh"> eval </a> </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td rowspan="2"> <a href="examples/baichuan2/README.md">Baichuan2</a> </td>
       <td> 7B </td>
+      <td> 4K </td>
       <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_7B.sh"> pretrain </a> </td>
       <td> <a href="examples/baichuan2/generate_baichuan2_7b_ptd.sh">generate</a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/baichuan2/evaluate_baichuan2_7B_ptd.sh">eval</a> </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td> 13B </td>
+      <td> 4K </td>
       <td> <a href="examples/baichuan2/pretrain_baichuan2_ptd_13B.sh"> pretrain </a> </td>
       <td> <a href="examples/baichuan2/generate_baichuan2_13b_ptd.sh">generate</a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/baichuan2/evaluate_baichuan2_13B_ptd.sh">eval</a> </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
       <td> 7B1 </td>
+      <td> 2K </td>
       <td> <a href="examples/bloom/pretrain_bloom_ptd_7B.sh"> pretrain </a> </td>
       <td> <a href="examples/bloom/generate_bloom_7b_ptd.sh">generate</a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/bloom/evaluate_bloom_7B_ptd.sh">eval</a> </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td> 176B </td>
+      <td> 2K </td>
       <td> <a href="examples/bloom/pretrain_bloom_176b.sh"> pretrain </a> </td>
       <td> <a href="examples/bloom/generate_bloom_176b_ptd.sh">generate</a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/bloom/evaluate_bloom_176b_ptd.sh">eval</a> </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
+    </tr>
+    <tr>
+      <td rowspan="1"> <a href="examples/chatglm3/README.md">ChatGLM3</a> </td>
+      <td> 6B </td>
+      <td> 8K </td>
+      <td> <a href="examples/chatglm3/pretrain_chatglm3_6B_8K.sh"> pretrain </a> </td>
+      <td> <a href="examples/chatglm3/generate_chatglm3_6B.sh">generate</a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/chatglm3/evaluate_chatglm3_6B.sh">eval</a> </td>
+      <td>【社区】</td>
     </tr>
     <tr>
       <td rowspan="1"> <a href="examples/codellama/README.md">CodeLlama</a> </td>
       <td> 34B </td>
+      <td> 4K </td>
       <td> <a href="examples/codellama/pretrain_codellama_34b_ptd_16p.sh"> pretrain </a> </td>
       <td> <a href="examples/codellama/generate_codellama_34b_ptd.sh">generate</a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/codellama/evaluate_codellama_34b_ptd.sh">eval</a> </td>
-      <td>【社区贡献】</td>
+      <td>【社区】</td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>
       <td>7B</td>
+      <td> 2K </td>
       <td> <a href="examples/intern/pretrain_internlm_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/intern/generate_internlm_7b_ptd.sh">generate</a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/intern/evaluate_internlm_7B_ptd.sh">eval</a> </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td>65B</td>
+      <td> 2K </td>
       <td> <a href="examples/intern/pretrain_internlm_65b_ptd.sh"> pretrain </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama/README.md">LLaMA</a></td>
       <td>7B</td>
+      <td> 2K </td>
       <td> <a href="examples/llama/pretrain_llama_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/llama/generate_llama_7b_ptd.sh"> generate </a> </td>
       <td> <a href="examples/llama/tune_llama_7b_ptd.sh">lora</a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/llama/evaluate_llama_7B_ptd.sh"> eval </a> </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td>13B</td>
+      <td> 2K </td>
       <td> <a href="examples/llama/pretrain_llama_13b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/llama/generate_llama_13b_ptd.sh">generate </a> </td>
       <td> <a href="examples/llama/tune_llama_13b_ptd.sh">lora</a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/llama/evaluate_llama_13B_ptd.sh">eval</a> </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td>33B</td>
+      <td> 2K </td>
       <td> <a href="examples/llama/pretrain_llama_33B_ptd_32p.sh"> pretrain </a> </td>
       <td> <a href="examples/llama/generate_llama_33b_ptd.sh">generate </a> </td>
       <td> <a href="examples/llama/tune_llama_33b_ptd.sh">lora</a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/llama/evaluate_llama_33B_ptd.sh">eval </a> </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td > 65B </td>
+      <td> 2K </td>
       <td> <a href="examples/llama/pretrain_llama_65b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/llama/generate_llama_65b_ptd.sh"> generate </a> </td>
       <td > <a href="examples/llama/tune_llama_65b_ptd.sh">lora</a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/llama/evaluate_llama_65B_ptd.sh">eval </a> </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</a></td>
       <td>7B</td>
+      <td> 4K </td>
       <td> <a href="examples/llama2/pretrain_llama2_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/llama2/generate_llama2_7b_ptd.sh">generate </a> </td>
       <td> <a href="examples/llama2/tune_llama2_7b_ptd.sh">lora </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/llama2/evaluate_llama2_7B_ptd.sh">eval </a>  </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td>13B</td>
+      <td> 4K </td>
       <td> <a href="examples/llama2/pretrain_llama2_13B_ptd_8p.sh"> pretrain </a> </td>
       <td> <a href="examples/llama2/generate_llama2_13b_ptd.sh">generate </a> </td>
       <td> <a href="examples/llama2/tune_llama2_13b_ptd.sh">lora </a> </td>      
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/llama2/evaluate_llama2_13B_ptd.sh">eval </a> </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td> 34B </td>
+      <td> 4K </td>
       <td> <a href="examples/llama2/pretrain_llama2_34B_ptd_16p.sh"> pretrain </a> </td>
       <td> <a href="examples/llama2/generate_llama2_34B_ptd.sh"> generate </a> </td>
       <td> <a href="examples/llama2/tune_llama2_34b_ptd.sh">lora </a> </td>
       <td > -- </td>
       <td > -- </td>
       <td> <a href="examples/llama2/evaluate_llama2_34B_ptd.sh">eval </a> </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td > 70B </td>
+      <td> 4K </td>
       <td> <a href="examples/llama2/pretrain_llama2_70b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/llama2/generate_llama2_70b_ptd.sh"> generate </a> </td>
       <td > <a href="examples/llama2/tune_llama2_70b_ptd.sh">lora</a> </td>
       <td > -- </td>
       <td > -- </td>
       <td> <a href="examples/llama2/evaluate_llama2_70B_ptd.sh">eval </a> </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td rowspan="2"><a href="examples/llama3/README.md">LLaMA3</a></td>
       <td>8B</td>
+      <td> 8K </td>
       <td> <a href="examples/llama3/pretrain_llama3_8b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/llama3/generate_llama3_8b_ptd.sh"> generate </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/llama3/generate_llama3_8b_chat_ptd.sh"> chat </a> </td>
       <td> <a href="examples/llama3/evaluate_llama3_8b_ptd.sh"> eval </a>  </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td>70B</td>
+      <td> 8K </td>
       <td> <a href="examples/llama3/pretrain_llama3_70b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/llama3/generate_llama3_70b_ptd.sh"> generate </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/llama3/evaluate_llama3_70b_ptd.sh"> eval </a> </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
       <td>7B</td>
+      <td> 8K </td>
       <td> <a href="examples/qwen/pretrain_qwen_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen/generate_qwen_7b_ptd.sh"> generate </a></td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/qwen/evaluate_qwen_7b_ptd.sh">eval </a></td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td>14B</td>
+      <td> 2K </td>
       <td> <a href="examples/qwen/pretrain_qwen_14b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen/generate_qwen_14b_ptd.sh">generate </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/qwen/evaluate_qwen_14b_ptd.sh"> eval </a> </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td>72B</td>
+      <td> 8K </td>
       <td> <a href="examples/qwen/pretrain_qwen_72b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen/generate_qwen_72b_ptd.sh"> generate </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/qwen/evaluate_qwen_72b_ptd.sh"> eval </a> </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
-      <td rowspan="6"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+      <td rowspan="7"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+      <td>0.5B</td>
+      <td> 8K </td>
+      <td> <a href="examples/qwen15/pretrain_qwen15_0point5b_ptd.sh"> pretrain </a> </td>
+      <td> <a href="examples/qwen15/generate_qwen15_0point5b_ptd.sh"> generate </a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> <a href="examples/qwen15/evaluate_qwen15_0point5b_ptd.sh"> eval </a> </td>
+      <td rowspan="1"> 【社区】 </td>
+    <tr>
       <td>1.8B</td>
+      <td> 8K </td>
       <td> <a href="examples/qwen15/pretrain_qwen15_1point8b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen15/generate_qwen15_1point8b_ptd.sh"> generate </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/qwen15/evaluate_qwen15_1point8b_ptd.sh"> eval </a> </td>
-      <td rowspan="1"> 【社区贡献】 </td>
+      <td rowspan="1"> 【社区】 </td>
     <tr>
       <td>4B</td>
+      <td> 8K </td>
       <td> <a href="examples/qwen15/pretrain_qwen15_4b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen15/generate_qwen15_4b_ptd.sh"> generate </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/qwen15/evaluate_qwen15_4b_ptd.sh"> eval </a> </td>
-      <td rowspan="1"> 【社区贡献】 </td>
+      <td rowspan="1"> 【社区】 </td>
     <tr>
       <td>7B</td>
+      <td> 8K </td>
       <td> <a href="examples/qwen15/pretrain_qwen15_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen15/generate_qwen15_7b_ptd.sh"> generate </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/qwen15/evaluate_qwen15_7b_ptd.sh"> eval </a> </td>
-      <td rowspan="1"> 【社区贡献】 </td>
+      <td rowspan="1"> 【社区】 </td>
     <tr>
       <td>14B</td>
+      <td> 8K </td>
       <td> <a href="examples/qwen15/pretrain_qwen15_14b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen15/generate_qwen15_14b_ptd.sh"> generate </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/qwen15/evaluate_qwen15_14b_ptd.sh"> eval </a> </td>
-      <td rowspan="1"> 【社区贡献】 </td>
+      <td rowspan="1"> 【社区】 </td>
     <tr>
       <td>32B</td>
+      <td> 8K </td>
       <td> <a href="examples/qwen15/pretrain_qwen15_32b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen15/generate_qwen15_32b_ptd.sh"> generate </a> </td>
       <td> <a href="examples/qwen15/tune_qwen15_32b_ptd.sh"> lora </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/qwen15/evaluate_qwen15_32b_ptd.sh"> eval </a> </td>
-      <td rowspan="1"> 【社区贡献】 </td>
+      <td rowspan="1"> 【社区】 </td>
     <tr>
       <td>72B</td>
+      <td> 8K </td>
       <td> <a href="examples/qwen15/pretrain_qwen15_72b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/qwen15/generate_qwen15_72b_ptd.sh"> generate </a> </td>
       <td> <a href="examples/qwen15/tune_qwen15_72b_ptd.sh"> lora </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/qwen15/evaluate_qwen15_72b_ptd.sh"> eval </a> </td>
-      <td rowspan="1"> 【昇腾贡献】 </td>
+      <td rowspan="1"> 【昇腾】 </td>
     </tr>
     <tr>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/yi/README.md">Yi</a></td>
       <td>34B</td>
+      <td> 4K </td>
       <td> <a href="examples/yi/pretrain_yi_34b_ptd_16p.sh"> pretrain </a> </td>
       <td> <a href="examples/yi/generate_yi_34b_ptd.sh"> generate </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/yi/evaluate_yi_34b_ptd.sh"> eval </a> </td>
-      <td> 【社区贡献】 </td>
+      <td> 【社区】 </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
       <td>8x7B</td>
+      <td> 32K </td>
       <td> <a href="examples/mixtral/pretrain_mixtral_8x7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/mixtral/generate_mixtral_8x7b_ptd.sh"> generate </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/mixtral/evaluate_mixtral_8x7b_ptd.sh"> eval </a>  </td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/mistral/README.md">Mistral</a></td>
       <td>7B</td>
+      <td> 32K </td>
       <td> <a href="examples/mistral/pretrain_mistral_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/mistral/generate_mistral_7b_ptd.sh"> generate </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/mistral/evaluate_mistral_7b_ptd.sh"> eval </a> </td>
-      <td>【昇腾贡献】</td>
+      <td>【昇腾】</td>
     <tr>
       <td rowspan="2"><a href="examples/gemma/README.md">Gemma</a></td>
       <td>2B</td>
+      <td> 8K </td>
       <td> <a href="examples/gemma/pretrain_gemma_2b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/gemma/generate_gemma_2b_ptd.sh"> generate </a></td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/gemma/evaluate_gemma_2b_ptd.sh">eval </a></td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td>7B</td>
+      <td> 8K </td>
       <td> <a href="examples/gemma/pretrain_gemma_7b_ptd.sh"> pretrain </a> </td>
       <td> <a href="examples/gemma/generate_gemma_7b_ptd.sh"> generate </a></td>
       <td > <a href="examples/gemma/tune_gemma_7b_ptd.sh">lora</a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> <a href="examples/gemma/evaluate_gemma_7b_ptd.sh">eval </a></td>
-      <td> 【昇腾贡献】 </td>
+      <td> 【昇腾】 </td>
     </tr>
     <tr>
       <td rowspan="1"><a href="examples/gpt3/README.md">GPT3</a></td>
       <td>175B</td>
+      <td> 2K </td>
       <td> <a href="examples/gpt3/pretrain_gpt3_175B_ptd.sh"> pretrain </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
-      <td> 【社区贡献】 </td>
+      <td> 【社区】 </td>
     </tr>
   </tbody>
 </table>
@@ -478,6 +538,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <th>模型</th>
       <th>参数</th>
+      <th>序列</th>
       <th>集群规模</th>
       <th>精度模式</th>
       <th>性能 </th>
@@ -488,6 +549,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td rowspan="1"><a href="examples/aquila/README.md">Aquila</a></td>
       <td>7B</td>
+      <td>2K</td>
       <td> 1x8</td>
       <td> BF16 </td>
       <td> 2849 </td>
@@ -496,6 +558,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td rowspan="2"><a href="examples/aquila2/README.md">Aquila2</a></td>
       <td>7B</td>
+      <td>2K</td>
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 3323 </td>
@@ -503,6 +566,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     </tr>
     <tr>
       <td>34B</td>
+      <td>4K</td>
       <td> 2x8</td>
       <td> BF16 </td>
       <td> 854 </td>
@@ -511,6 +575,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td rowspan="2"><a href="examples/baichuan/README.md">Baichuan</a></td>
       <td>7B</td>
+      <td>4K</td>
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 2685 </td>
@@ -518,6 +583,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     </tr>
     <tr>
       <td>13B</td>
+      <td>4K</td>
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 1213 </td>
@@ -526,6 +592,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td rowspan="2"><a href="examples/baichuan2/README.md">Baichuan2</a></td>
       <td>7B</td>
+      <td>4K</td>
       <td> 1x8</td>
       <td> BF16 </td>
       <td> 2664 </td>
@@ -533,6 +600,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     </tr>
     <tr>
       <td>13B</td>
+      <td>4K</td>
       <td> 1x8</td>
       <td> BF16 </td>
       <td> 1668 </td>
@@ -541,21 +609,33 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
       <td>7B1</td>
+      <td>2K</td>
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 2034 </td>
       <td> 2525 </td>
     </tr>
     <tr>
-      <td >176B</td>
+      <td>176B</td>
+      <td>2K</td>
       <td >12x8</td>
       <td> BF16 </td>
       <td> 100 </td>
       <td> 107 </td>
     </tr>
     <tr>
+      <td rowspan="1"><a href="examples/chatglm3/README.md">ChatGLM3</a></td>
+      <td>6B</td>
+      <td> 8K </td>
+      <td> 1x8</td>
+      <td> FP16 </td>
+      <td> 4297 </td>
+      <td> 4267 </td>
+    </tr>
+    <tr>
       <td rowspan="1"><a href="examples/codellama/README.md">CodeLlama</a></td>
       <td>34B</td>
+      <td>4K</td>
       <td> 2x8</td>
       <td> BF16 </td>
       <td> 837 </td>
@@ -564,6 +644,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>
       <td>7B</td>
+      <td>2K</td>
       <td>1x8</td>
       <td>BF16</td>
       <td> 2776 </td>
@@ -571,6 +652,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     </tr>
     <tr>
       <td >65B</td>
+      <td>2K</td>
       <td >4x8</td>
       <td> BF16 </td>
       <td> 341 </td>
@@ -579,6 +661,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td rowspan="5"><a href="examples/llama/README.md">LLaMA</td>
       <td>7B</td>
+      <td>2K</td>
       <td>1x8</td>
       <td>FP16</td>
       <td> 3600 </td>
@@ -586,6 +669,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     </tr>
     <tr>
       <td>13B</td>
+      <td>2K</td>
       <td>1x8</td>
       <td>FP16</td>
       <td> 1895 </td>
@@ -593,6 +677,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     </tr>
     <tr>
         <td>33B</td>
+        <td>2K</td>
         <td>4x8</td>
         <td>FP16</td>
         <td>621</td>
@@ -600,6 +685,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     </tr>
     <tr>
       <td rowspan="2">65B</td>
+      <td rowspan="2">2K</td>
       <td rowspan="2">4x8</td>
     </tr>
     <tr>
@@ -610,6 +696,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</td>
       <td>7B</td>
+      <td>4K</td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 4200 </td>
@@ -617,6 +704,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     </tr>
     <tr>
       <td>13B</td>
+      <td>4K</td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 1990 </td>
@@ -624,6 +712,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     </tr>
     <tr>
       <td>34B</td>
+      <td>4K</td>
       <td>2x8</td>
       <td>BF16 </td>
       <td> 749 </td>
@@ -631,6 +720,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     </tr>
     <tr>
       <td>70B</td>
+      <td>4K</td>
       <td>4x8</td>
       <td>BF16 </td>
       <td> 420 </td>
@@ -639,6 +729,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td rowspan="2"><a href="examples/llama3/README.md">LLaMA3</td>
       <td>8B</td>
+      <td> 8K </td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2483 </td>
@@ -646,6 +737,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     </tr>
     <tr>
       <td>70B</td>
+      <td> 8K </td>
       <td>8x8</td>
       <td>BF16 </td>
       <td> 283 </td>
@@ -654,6 +746,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
       <td>7B</td>
+      <td> 8K </td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2499 </td>
@@ -661,6 +754,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     </tr>
     <tr>
       <td>14B</td>
+      <td>2K</td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 1560 </td>
@@ -668,6 +762,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     </tr>
     <tr>
       <td>72B</td>
+      <td> 8K </td>
       <td>16x8</td>
       <td>BF16 </td>
       <td> 285 </td>
@@ -675,38 +770,51 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     </tr>
     </tr>
        <tr>
-      <td rowspan="6"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+      <td rowspan="7"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
+      <td> 0.5B </td>
+      <td> 8K </td>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td> 22834 </td>
+      <td> 25306 </td>
+      <tr>
       <td> 1.8B </td>
+      <td> 8K </td>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 13029 </td>
       <td> 12181 </td>
       <tr>
       <td> 4B </td>
+      <td> 8K </td>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 5033 </td>
       <td> 5328 </td>
       <tr>
       <td> 7B </td>
+      <td> 8K </td>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 2862 </td>
       <td> 2621 </td>
       <tr>
       <td> 14B </td>
+      <td> 8K </td>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 1717 </td>
       <td> 1702 </td>
       <tr>
       <td> 32B </td>
+      <td> 8K </td>
       <td> 4x8 </td>
       <td> BF16 </td>
       <td> 751 </td>
       <td> 708 </td>
       <tr>
       <td> 72B </td>
+      <td> 8K </td>
       <td> 8x8 </td>
       <td> BF16 </td>
       <td> 301 </td>
@@ -715,6 +823,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td rowspan="1"><a href="examples/yi/README.md">Yi</a></td>
       <td>34B</td>
+      <td> 4K</td>
       <td>2x8</td>
       <td>BF16 </td>
       <td> 809 </td>
@@ -723,6 +832,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
       <td>8x7B</td>
+      <td> 32K</td>
       <td>2x8</td>
       <td>BF16 </td>
       <td> 487 </td>
@@ -731,6 +841,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td rowspan="1"><a href="examples/mistral/README.md">Mistral</a></td>
       <td>7B</td>
+      <td> 32K</td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2806 </td>
@@ -739,6 +850,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td rowspan="2"><a href="examples/gemma/README.md">Gemma</a></td>
       <td>2B</td>
+      <td> 8K </td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 6821 </td>
@@ -746,6 +858,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     </tr>
     <tr>
       <td>7B</td>
+      <td> 8K </td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2938 </td>
@@ -754,6 +867,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
     <tr>
       <td rowspan="1"><a href="examples/gpt3/README.md">GPT3</a></td>
       <td>175B</td>
+      <td> 2K </td>
       <td> 16x8 </td>
       <td> FP16 </td>
       <td> 153 </td>

@@ -1,7 +1,6 @@
 #!/bin/bash
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 export HCCL_CONNECT_TIMEOUT=1200
-export NPU_ASD_ENABLE=0
 
 GPUS_PER_NODE=8
 MASTER_ADDR=localhost
@@ -45,15 +44,16 @@ GPT_ARGS="
     --make-vocab-size-divisible-by 1 \
     --attention-softmax-in-fp32 \
     --apply-query-key-layer-scaling \
-    --lr 1.2e-4 \
+    --lr 1.2e-6 \
     --train-iters 2000 \
     --init-method-std 0.0048 \
     --hidden-dropout 0.0 \
     --attention-dropout 0.0 \
     --position-embedding-type alibi \
     --normalization LayerNorm \
-    --min-lr 6e-6 \
-    --lr-decay-iters 200 \
+    --min-lr 1e-8 \
+    --lr-decay-iters 430000 \
+    --lr-decay-style cosine \
     --weight-decay 1e-1 \
     --clip-grad 1.0 \
     --adam-beta1 0.9 \

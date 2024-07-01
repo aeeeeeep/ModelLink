@@ -39,13 +39,14 @@ def merge_dicts(dict1, dict2):
 
 
 def modify_keys_with_dict(dictionary, words_to_replace, exclude_words):
+    args = get_args()
     modified_dict = {}
     for key, value in dictionary.items():
         key_str = str(key)
         matched_word = next((word for word, replacement in words_to_replace.items() if word in key_str), None)
-        if (matched_word and
-                not any(exclude_word in key_str for exclude_word in exclude_words) and
-                key_str != matched_word):
+        is_target_module = any('.' + target_module + '.' in key_str for target_module in args.lora_target_modules)
+        not_exclude_word = not any(exclude_word in key_str for exclude_word in exclude_words)
+        if all([matched_word, not_exclude_word, key_str != matched_word, is_target_module]):
             # Check if a word to replace is present in the key and none of the exclude_words are present
             new_key = key_str.replace(matched_word, words_to_replace[matched_word])
             if isinstance(value, dict):
