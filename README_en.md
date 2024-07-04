@@ -521,11 +521,11 @@ For the supported models listed above, we provide training scripts and readme in
 |           Software            | [Version](https://www.hiascend.com/zh/) |
 | :-----------------------: |:----------------------------------:|
 |          Python           |                3.8                 |
-|          driver           |         under development version          |
-|         firmware          |         under development version          |
-|           CANN            |             under development version             |
+|          driver           |         RC2          |
+|         firmware          |         RC2          |
+|           CANN            |         RC2          |
 |           torch           |            2.1.0、2.2.0             |
-|         torch_npu         |           under development version           |
+|         torch_npu         |         RC2          |
 
 
 【Based on the current version of megatron, the performance statistics from our testing are as follows (Hardware info：Atlas 900 A2 PODc)】
@@ -942,7 +942,7 @@ Modellink supports analyze profiling data based on Ascend chips, which is useful
 ```
 - add environment variable
 ```shell
-export HCCL_DETERMINISITIC=True
+export HCCL_DETERMINISTIC=True
 ```
 
 

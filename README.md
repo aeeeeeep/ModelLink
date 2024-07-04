@@ -524,11 +524,11 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
 |           软件            | [版本](https://www.hiascend.com/zh/) |
 | :-----------------------: |:----------------------------------:|
 |          Python           |                3.8                 |
-|          driver           |         在研版本          |
-|         firmware          |         在研版本          |
-|           CANN            |             在研版本             |
+|          driver           |         RC2          |
+|         firmware          |         RC2          |
+|           CANN            |         RC2             |
 |           torch           |            2.1.0、2.2.0             |
-|         torch_npu         |           在研版本           |
+|         torch_npu         |         RC2           |
 
 
 【基于现版本我们实测的性能情况统计如下（硬件信息：Atlas 900 A2 PODc）】
@@ -947,7 +947,7 @@ Modellink支持基于昇腾芯片采集profiling数据，以提供对模型运�
 ```
 - 环境变量中加入开关
 ```shell
-export HCCL_DETERMINISITIC=True
+export HCCL_DETERMINISTIC=True
 ```
 
 ## 致谢
