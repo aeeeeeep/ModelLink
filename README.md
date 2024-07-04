@@ -947,7 +947,7 @@ Modellink支持基于昇腾芯片采集profiling数据，以提供对模型运�
 ```
 - 环境变量中加入开关
 ```shell
-export HCCL_DETERMINISITIC=True
+export HCCL_DETERMINISTIC=True
 ```
 
 ## 致谢

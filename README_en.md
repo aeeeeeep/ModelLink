@@ -942,7 +942,7 @@ Modellink supports analyze profiling data based on Ascend chips, which is useful
 ```
 - add environment variable
 ```shell
-export HCCL_DETERMINISITIC=True
+export HCCL_DETERMINISTIC=True
 ```
 
 
