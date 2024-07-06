@@ -52,6 +52,7 @@ def process_args(parser):
     parser = _add_algorithm_args(parser)
     parser = _add_alibi_args(parser)
     parser = _add_dataset_args(parser)
+    parser = _add_high_availability_args(parser)
     return parser
 
 
@@ -267,6 +268,20 @@ def _add_alibi_args(parser):
     return parser
 
 
+def _add_high_availability_args(parser):
+    group = parser.add_argument_group(title='high_availability')
+
+    group.add_argument('--enable-high-availability',
+                       action='store_true',
+                       help='switch of the high availability feature')
+
+    group.add_argument('--enable-optimizer-state-local-copy',
+                       action='store_true',
+                       help='high availability feature, enable parameter state local copy of distributed optimizer')
+
+    return parser
+
+
 def validate_args_decorator(validate_args):
     @wraps(validate_args)
     def wrapper(args, defaults=None):
@@ -285,6 +300,9 @@ def validate_args_decorator(validate_args):
             raise AssertionError('Sliding Window Attention is forbidden when use alibi.')
         if args.tokenizer_padding_side == 'left' and args.position_embedding_type == 'alibi':
             raise AssertionError('Alibi is not support tokenizer-padding-side left now.')
+        if args.enable_optimizer_state_local_copy and not args.enable_high_availability:
+            raise AssertionError('switch of the high availability feature is unenabled.')
+
         return args
 
     return wrapper
