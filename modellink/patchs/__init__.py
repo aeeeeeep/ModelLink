@@ -17,5 +17,5 @@ from .megatron_mock import mock_megatron_dependencies, patch_npu_apex_torch
 mock_megatron_dependencies()
 patch_npu_apex_torch()
 
-from .megatron_patch import exec_patch
-exec_patch()
+from .megatron_patch import exec_adaptation
+exec_adaptation()
