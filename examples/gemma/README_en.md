@@ -120,7 +120,7 @@ Here's a hardware summary of pre-training  Gemma-2B:
         --model-type GPT \
         --loader megatron \
         --saver megatron \
-        --save-model-type save_huggingface_gemma \
+        --save-model-type save_huggingface_llama \
         --load-dir ./model_weights/Gemma-2B-v0.1-tp1-pp2/ \
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 1 \
@@ -369,7 +369,7 @@ Here's a hardware summary of pre-training  Gemma-7B:
         --model-type GPT \
         --loader megatron \
         --saver megatron \
-        --save-model-type save_huggingface_gemma \
+        --save-model-type save_huggingface_llama \
         --load-dir ./model_weights/Gemma-7B-v0.1-tp8-pp1/ \
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 1 \
