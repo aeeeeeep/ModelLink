@@ -282,30 +282,6 @@ def _add_high_availability_args(parser):
     return parser
 
 
-def validate_args_decorator(validate_args):
-    @wraps(validate_args)
-    def wrapper(args, defaults=None):
-        if defaults is None:
-            defaults = {}
-
-        args.create_attention_mask_in_dataloader = False
-        reset_data = args.reset_attention_mask == True or args.reset_position_ids == True
-        alibi_without_FA = args.position_embedding_type == 'alibi' and not args.use_flash_attn
-        if (reset_data or alibi_without_FA or args.tokenizer_padding_side == "left"):
-            args.create_attention_mask_in_dataloader = True
-        print_rank_0("create-attention-mask-in-dataloader is {}".format(args.create_attention_mask_in_dataloader))
-
-        validate_args(args, defaults)
-        if args.position_embedding_type == 'alibi' and args.sliding_window is not None:
-            raise AssertionError('Sliding Window Attention is forbidden when use alibi.')
-        if args.tokenizer_padding_side == 'left' and args.position_embedding_type == 'alibi':
-            raise AssertionError('Alibi is not support tokenizer-padding-side left now.')
-        if args.enable_optimizer_state_local_copy and not args.enable_high_availability:
-            raise AssertionError('switch of the high availability feature is unenabled.')
-
-        return args
-
-    return wrapper
 def _add_dataset_args(parser):
     group = parser.add_argument_group(title='dataset_args')
     group.add_argument('--no-shared-storage',
@@ -314,3 +290,42 @@ def _add_dataset_args(parser):
                        help='if no shared storage, set it'
                        )
     return parser
+
+
+def _validate_create_attention_mask_in_dataloader(args):
+    args.create_attention_mask_in_dataloader = False
+    reset_data = args.reset_attention_mask or args.reset_position_ids
+    alibi_without_flash_attn = args.position_embedding_type == 'alibi' and not args.use_flash_attn
+    if (reset_data or alibi_without_flash_attn or args.tokenizer_padding_side == "left"):
+        args.create_attention_mask_in_dataloader = True
+    print_rank_0("create-attention-mask-in-dataloader is {}".format(args.create_attention_mask_in_dataloader))
+
+
+def _validate_position_embedding(args):
+    """
+    validate position embedding arguments.
+    """
+    if args.use_partial_rope and args.use_fused_rotary_pos_emb:
+        raise AssertionError('Fused rotary embedding is not supported in partial rope.')
+    if args.position_embedding_type == 'alibi' and args.sliding_window is not None:
+        raise AssertionError('Sliding Window Attention is forbidden when use alibi.')
+    if args.tokenizer_padding_side == 'left' and args.position_embedding_type == 'alibi':
+        raise AssertionError('Alibi is not support tokenizer-padding-side left now.')
+
+
+def validate_args_decorator(validate_args):
+    @wraps(validate_args)
+    def wrapper(args, defaults=None):
+        if defaults is None:
+            defaults = {}
+
+        _validate_create_attention_mask_in_dataloader(args)
+        validate_args(args, defaults)
+        _validate_position_embedding(args)
+        if args.enable_optimizer_state_local_copy and not args.enable_high_availability:
+            raise AssertionError('switch of the high availability feature is unsupported.')
+
+        return args
+
+    return wrapper
+
