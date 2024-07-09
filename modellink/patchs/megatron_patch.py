@@ -24,7 +24,6 @@ from mindspeed.core.tensor_parallel.random import _set_cuda_rng_state
 from mindspeed.core.tensor_parallel.cross_entropy import vocab_parallel_cross_entropy_forward
 from mindspeed.core.tensor_parallel.layers import vocab_parallel_embedding_forward
 from mindspeed.initialize import _compile_dependencies
-from mindspeed.patch_utils import MindSpeedPatchesManager as PatchesManager
 
 from ..model import (
     GPTModel, parallel_transformer_init, seq_length_wrapper,
@@ -101,6 +100,7 @@ def patch_core_transformers():
     from ..core import apply_rotary_pos_emb_bshd_wrapper
     megatron.core.models.common.embeddings.rotary_pos_embedding.apply_rotary_pos_emb_bshd = \
         apply_rotary_pos_emb_bshd_wrapper(megatron.core.models.common.embeddings.rotary_pos_embedding.apply_rotary_pos_emb_bshd)
+
 
 
 def patch_pipeline_parallel():

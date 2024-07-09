@@ -51,7 +51,7 @@ def RotaryEmbedding_forward(self, max_seq_len: int, offset: int = 0):
 
 def _process_partial_rope(freqs, t):
     """
-    Do partial rope embedding for ChatGLM3
+    Do partial rope embedding for ChatGLM3.
     """
     sq, b, np, hn = t.size(0), t.size(1), t.size(2), t.size(3)
     rot_dim = freqs.shape[-2] * 2
@@ -73,6 +73,10 @@ def _process_partial_rope(freqs, t):
 
 
 def apply_rotary_pos_emb(t, freqs, rotary_interleaved=False):
+    """
+    For legacy rotary pos embedding.
+    """
+
     args = get_args()
     if args.use_partial_rope:
         return _process_partial_rope(freqs, t)
@@ -92,7 +96,7 @@ def apply_rotary_pos_emb(t, freqs, rotary_interleaved=False):
 
 def apply_rotary_pos_emb_bshd_wrapper(fn):
     """
-    For mcore rotary pos embedding.
+    For megatron-LM core rotary pos embedding.
     """
     @wraps(fn)
     def wrapper(t: Tensor, freqs: Tensor, rotary_interleaved: bool = False) -> Tensor:
