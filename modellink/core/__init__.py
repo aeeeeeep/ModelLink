@@ -19,7 +19,8 @@ from .parallel_state import (initialize_model_parallel_decorator, destroy_model_
                              get_expert_model_parallel_world_size, get_expert_parallel_group,
                              get_expert_parallel_rank, get_expert_parallel_world_size,
                              set_expert_model_parallel_world_size, set_expert_model_parallel_rank)
-from .models.common.embeddings.rotary_pos_embedding import RotaryEmbedding_forward, apply_rotary_pos_emb
+from .models.common.embeddings.rotary_pos_embedding import (RotaryEmbedding_forward,
+                                                            apply_rotary_pos_emb_bshd_wrapper, apply_rotary_pos_emb)
 from .datasets.blended_megatron_dataset_builder import build_generic_dataset
 from .datasets.gpt_dataset import _build_document_sample_shuffle_indices
 from .distributed.param_and_grad_buffer import start_grad_sync_wrapper
