@@ -49,28 +49,33 @@ def RotaryEmbedding_forward(self, max_seq_len: int, offset: int = 0):
     return emb
 
 
-def apply_rotary_pos_emb(t, freqs, rotary_interleaved = False):
-    args = get_args()
+def _process_partial_rope(freqs, t):
+    """
+    Do partial rope embedding for ChatGLM3
+    """
+    sq, b, np, hn = t.size(0), t.size(1), t.size(2), t.size(3)
+    rot_dim = freqs.shape[-2] * 2
+    t, t_pass = t[..., :rot_dim], t[..., rot_dim:]
+    freqs = freqs[:sq].to(t.dtype)
+    xshaped = t.reshape(sq, -1, np, rot_dim // 2, 2)
+    freqs = freqs.view(sq, -1, 1, xshaped.size(3), 2)
+    x_shape1, x_shape2 = torch.chunk(xshaped, 2, dim=-1)
+    freqs1, freqs2 = torch.chunk(freqs, 2, dim=-1)
+    t = torch.stack(
+        [
+            x_shape1 * freqs1 - x_shape2 * freqs2,
+            x_shape2 * freqs1 + x_shape1 * freqs2,
+        ],
+        -1,
+    )
+    t = t.flatten(3)
+    return torch.cat((t, t_pass), dim=-1)
 
-    # use partial rope in ChatGLM3
+
+def apply_rotary_pos_emb(t, freqs, rotary_interleaved=False):
+    args = get_args()
     if args.use_partial_rope:
-        sq, b, np, hn = t.size(0), t.size(1), t.size(2), t.size(3)
-        rot_dim = freqs.shape[-2] * 2
-        t, t_pass = t[..., :rot_dim], t[..., rot_dim:]
-        freqs = freqs[:sq].to(t.dtype)
-        xshaped = t.reshape(sq, -1, np, rot_dim // 2, 2)
-        freqs = freqs.view(sq, -1, 1, xshaped.size(3), 2)
-        x_shape1, x_shape2 = torch.chunk(xshaped, 2, dim=-1)
-        freqs1, freqs2 = torch.chunk(freqs, 2, dim=-1)
-        t = torch.stack(
-            [
-                x_shape1 * freqs1 - x_shape2 * freqs2,
-                x_shape2 * freqs1 + x_shape1 * freqs2,
-            ],
-            -1,
-        )
-        t = t.flatten(3)
-        return torch.cat((t, t_pass), dim=-1)
+        return _process_partial_rope(freqs, t)
 
     if args.use_fused_rotary_pos_emb:
         cos = torch.cos(freqs)
