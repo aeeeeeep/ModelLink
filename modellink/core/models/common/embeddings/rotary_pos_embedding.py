@@ -5,6 +5,7 @@
 from functools import wraps
 
 import torch
+from torch import Tensor
 import torch_npu
 from megatron.training import get_args
 from megatron.core import parallel_state
@@ -82,4 +83,26 @@ def apply_rotary_pos_emb(t, freqs, rotary_interleaved = False):
     sin_ = torch.sin(freqs).to(t.dtype)
     t = (t * cos_) + (_rotate_half(t, rotary_interleaved) * sin_)
     return torch.cat((t, t_pass), dim=-1)
-    
+
+
+def apply_rotary_pos_emb_bshd_wrapper(fn):
+    """
+    For mcore rotary pos embedding.
+    """
+    @wraps(fn)
+    def wrapper(t: Tensor, freqs: Tensor, rotary_interleaved: bool = False) -> Tensor:
+        args = get_args()
+        if args.use_partial_rope:
+            return _process_partial_rope(freqs, t)
+
+        if args.use_fused_rotary_pos_emb:
+            rot_dim = freqs.shape[-1]
+            t, t_pass = t[..., :rot_dim], t[..., rot_dim:]
+            # Move to npu device to speed up rotary mul.
+            cos_ = torch.cos(freqs).to(t.dtype)
+            sin_ = torch.sin(freqs).to(t.dtype)
+            t = torch_npu.npu_rotary_mul(t, cos_, sin_).to(t.dtype)
+            return torch.cat((t, t_pass), dim=-1)
+        return fn(t, freqs, rotary_interleaved)
+
+    return wrapper
