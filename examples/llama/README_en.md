@@ -39,6 +39,9 @@ Here's a hardware summary of pre-training LLaMA-7B/13B:
 
     ```shell
     git clone https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink
+    git checkout 1.1
+    cd ..
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
     git checkout core_r0.6.0
@@ -458,6 +461,9 @@ The model was trained using alpaca datasets.
 
     ```shell
     git clone https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink
+    git checkout 1.1
+    cd ..
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
     git checkout core_r0.6.0

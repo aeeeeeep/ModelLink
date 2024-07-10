@@ -1,4 +1,4 @@
-# LLaMA
+# LLaMA2
 <p align="left">
         <b><a href="README.md">简体中文</a></b> |
         <b>English</b> 
@@ -6,7 +6,7 @@
 
 #  Contents
 
-- [LLaMA](#llama)
+- [LLaMA2](#llama2)
 - [Contents](#contents)
 - [LLAMA2-7B](#llama2-7b)
   - [Training](#training)
@@ -46,6 +46,9 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
 
     ```shell
     git clone https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink
+    git checkout 1.1
+    cd ..
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
     git checkout core_r0.6.0
@@ -419,6 +422,9 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
 
     ```shell
     git clone https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink
+    git checkout 1.1
+    cd ..
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
     git checkout core_r0.6.0
@@ -709,6 +715,9 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
 
     ```shell
     git clone https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink
+    git checkout 1.1
+    cd ..
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
     git checkout core_r0.6.0
