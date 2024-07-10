@@ -73,7 +73,10 @@ def modify_keys_with_dict(dictionary, words_to_replace, exclude_words):
 
 
 def _lora_affected_layer(key, target_modules: List[str], layers_to_transform: List[int]) -> bool:
-    layers_with_lora_pattern = '|'.join(target_modules)
+    if not layers_to_transform:
+        layers_with_lora_pattern = r'\d+'
+    else:
+        layers_with_lora_pattern = '|'.join(target_modules)
     layer_indices_for_lora_pattern = '|'.join(layers_to_transform)
     lora_adapter_name_pattern = re.compile(
         rf'^.*\.({layer_indices_for_lora_pattern})\..*\.({layers_with_lora_pattern}).*$'
