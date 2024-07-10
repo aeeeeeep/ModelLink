@@ -43,7 +43,8 @@ torchrun $DISTRIBUTED_ARGS evaluation.py   \
        --padded-vocab-size 65024 \
        --make-vocab-size-divisible-by 1 \
        --position-embedding-type rope \
-       --use-partial-rope \
+       --use-glm-rope \
+       --rotary-percent 0.5 \
        --load $CHECKPOINT \
        --normalization RMSNorm \
        --tokenizer-type PretrainedFromHF  \

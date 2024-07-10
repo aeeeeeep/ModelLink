@@ -35,7 +35,8 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --make-vocab-size-divisible-by 1 \
        --max-position-embeddings 32768 \
        --position-embedding-type rope \
-       --use-partial-rope \
+       --use-glm-rope \
+       --rotary-percent 0.5 \
        --disable-bias-linear \
        --add-qkv-bias \
        --swiglu \

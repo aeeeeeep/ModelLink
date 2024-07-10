@@ -11,7 +11,7 @@ from megatron.core import parallel_state
 from megatron.core.models.common.embeddings.rotary_pos_embedding import _rotate_half, get_pos_emb_on_this_cp_rank
 
 
-def RotaryEmbedding_forward(self, max_seq_len: int, offset: int = 0):
+def rotary_embedding_forward(self, max_seq_len: int, offset: int = 0):
     """Forward pass of RoPE embedding.
 
     Args:
@@ -34,7 +34,7 @@ def RotaryEmbedding_forward(self, max_seq_len: int, offset: int = 0):
     #  2 * dim in dimension size
 
     args = get_args()
-    if args.use_partial_rope:
+    if args.use_glm_rope:
         emb = torch.stack([torch.cos(freqs), torch.sin(freqs)], dim=-1)
         if freqs.dtype in (torch.float16, torch.bfloat16, torch.int8):
             emb = emb.bfloat16() if dtype == torch.bfloat16 else emb.half()
@@ -52,7 +52,7 @@ def apply_rotary_pos_emb(t, freqs, rotary_interleaved = False):
     args = get_args()
 
     # use partial rope in ChatGLM3
-    if args.use_partial_rope:
+    if args.use_glm_rope:
         sq, b, np, hn = t.size(0), t.size(1), t.size(2), t.size(3)
         rot_dim = freqs.shape[-2] * 2
         t, t_pass = t[..., :rot_dim], t[..., rot_dim:]
