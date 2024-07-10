@@ -16,7 +16,7 @@
         <b>English</b>
 </p>
 
-ModelLink provides end-to-end solutions for large language models on Ascend chips, including models, algorithms and tasks.
+ModelLink aims to provide end-to-end large language model solutions for Huawei Ascend chips, including models, algorithms, and downstream tasks.
 
 ## ModelLink Solution Overview
 
