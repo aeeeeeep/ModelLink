@@ -16,7 +16,7 @@
         <b>English</b>
 </p>
 
-ModelLink provides end-to-end solutions for large language models on Ascend chips, including models, algorithms and tasks.
+ModelLink aims to provide end-to-end large language model solutions for Huawei Ascend chips, including models, algorithms, and downstream tasks.
 
 ## ModelLink Solution Overview
 
@@ -521,11 +521,11 @@ For the supported models listed above, we provide training scripts and readme in
 |           Software            | [Version](https://www.hiascend.com/zh/) |
 | :-----------------------: |:----------------------------------:|
 |          Python           |                3.8                 |
-|          driver           |         RC2          |
-|         firmware          |         RC2          |
-|           CANN            |         RC2          |
+|          driver           |         24.0.RC2          |
+|         firmware          |         24.0.RC2          |
+|           CANN            |             24.0.RC2             |
 |           torch           |            2.1.0、2.2.0             |
-|         torch_npu         |         RC2          |
+|         torch_npu         |           24.0.RC2           |
 
 
 【Based on the current version of megatron, the performance statistics from our testing are as follows (Hardware info：Atlas 900 A2 PODc)】

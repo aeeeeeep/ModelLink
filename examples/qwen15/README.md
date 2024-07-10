@@ -69,6 +69,9 @@ Qwen1.5-0.5B 训练的硬件配置:
 
     ```shell
     git clone https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink
+    git checkout 1.1
+    cd ..
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
     git checkout core_r0.6.0
@@ -315,6 +318,9 @@ Qwen1.5-1.8B 训练的硬件配置:
 
     ```shell
     git clone https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink
+    git checkout 1.1
+    cd ..
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
     git checkout core_r0.6.0
@@ -562,6 +568,9 @@ Qwen1.5-4B 训练的硬件配置:
 
     ```shell
     git clone https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink
+    git checkout 1.1
+    cd ..
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
     git checkout core_r0.6.0
@@ -813,6 +822,9 @@ Qwen1.5-7B 训练的硬件配置:
 
    ```shell
    git clone https://gitee.com/ascend/ModelLink.git
+   cd ModelLink
+   git checkout 1.1
+   cd ..
    git clone https://github.com/NVIDIA/Megatron-LM.git
    cd Megatron-LM
    git checkout core_r0.6.0
@@ -1078,6 +1090,9 @@ Qwen1.5-14B 训练的硬件配置:
 
    ```shell
    git clone https://gitee.com/ascend/ModelLink.git
+   cd ModelLink
+   git checkout 1.1
+   cd ..
    git clone https://github.com/NVIDIA/Megatron-LM.git
    cd Megatron-LM
    git checkout core_r0.6.0
@@ -1336,6 +1351,9 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
 1. 克隆仓库到本地服务器
    ```shell
     git clone https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink
+    git checkout 1.1
+    cd ..
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
     git checkout core_r0.6.0
@@ -1633,6 +1651,9 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
 1. 克隆仓库到本地服务器
    ```shell
     git clone https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink
+    git checkout 1.1
+    cd ..
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
     git checkout core_r0.6.0

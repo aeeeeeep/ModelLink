@@ -68,6 +68,9 @@ Here's a hardware summary of pre-training  Qwen-0.5B:
 
     ```shell
     git clone https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink
+    git checkout 1.1
+    cd ..
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
     git checkout core_r0.6.0
@@ -311,6 +314,9 @@ Here's a hardware summary of pre-training  Qwen-1.8B:
 
     ```shell
     git clone https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink
+    git checkout 1.1
+    cd ..
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
     git checkout core_r0.6.0
@@ -555,6 +561,9 @@ Here's a hardware summary of pre-training  Qwen-4B:
 
     ```shell
     git clone https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink
+    git checkout 1.1
+    cd ..
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
     git checkout core_r0.6.0
@@ -805,6 +814,9 @@ Here's a hardware summary of pre-training  Qwen1.5-7B:
 
     ```shell
     git clone https://gitee.com/ascend/ModelLink.git
+    cd ModelLink
+    git checkout 1.1
+    cd ..
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
     git checkout core_r0.6.0
@@ -1068,6 +1080,9 @@ Here's a hardware summary of pre-training  Qwen1.5-14B:
 
     ```shell
     git clone https://gitee.com/ascend/ModelLink.git
+    cd ModelLink
+    git checkout 1.1
+    cd ..
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
     git checkout core_r0.6.0
@@ -1325,6 +1340,9 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
 1. Clone the repository to your local server:
    ```shell
     git clone https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink
+    git checkout 1.1
+    cd ..
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
     git checkout core_r0.6.0
@@ -1617,6 +1635,9 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
 1. Clone the repository to your local server:
    ```shell
     git clone https://gitee.com/ascend/ModelLink.git 
+    cd ModelLink
+    git checkout 1.1
+    cd ..
     git clone https://github.com/NVIDIA/Megatron-LM.git
     cd Megatron-LM
     git checkout core_r0.6.0
