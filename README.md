@@ -17,7 +17,7 @@
         <b><a href="README_en.md">English</a> </b>
 </p>
 
-ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) 上的大语言模型提供端到端的解决方案, 包含模型，算法，以及下游任务。
+ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) 上提供端到端的大语言模型方案, 包含模型，算法，以及下游任务。
 
 ## ModelLink解决方案概览
 
@@ -524,11 +524,11 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
 |           软件            | [版本](https://www.hiascend.com/zh/) |
 | :-----------------------: |:----------------------------------:|
 |          Python           |                3.8                 |
-|          driver           |         在研版本          |
-|         firmware          |         在研版本          |
-|           CANN            |             在研版本             |
+|          driver           |         24.0.RC2          |
+|         firmware          |         24.0.RC2          |
+|           CANN            |             24.0.RC2             |
 |           torch           |            2.1.0、2.2.0             |
-|         torch_npu         |           在研版本           |
+|         torch_npu         |           24.0.RC2           |
 
 
 【基于现版本我们实测的性能情况统计如下（硬件信息：Atlas 900 A2 PODc）】
