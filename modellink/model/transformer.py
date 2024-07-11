@@ -99,6 +99,8 @@ def _get_num_layers(args, model_type, is_decoder=False):
                 num_layers = args.decoder_num_layers // num_ranks_in_decoder
         else:
             ensure_valid(args.num_layers == args.encoder_num_layers)
+            if not args.num_layer_list:
+                ensure_valid(args.num_layers % args.transformer_pipeline_model_parallel_size == 0)
             # When a standalone embedding stage is used, all transformer layers
             # are divided among pipeline rank >= 1, while on pipeline rank 0,
             # ranks either contain the input embedding layer (virtual pp rank 0),

@@ -121,6 +121,11 @@ LLAMA2-7B 训练的硬件配置:
         --save-dir ./model_weights/llama-2-7b-hf-v0.1-tp8-pp1/ \
         --tokenizer-model ./model_from_hf/llama-2-7b-hf/tokenizer.model
     ```
+   
+    权重转换中加入如下参数，可以实现非均匀切分
+    ```bash
+    --num-layer-list 6,8,8,10 \
+    ```
 
     4.2 任意并行切分策略的 Megatron 权重 格式转化为 HuggingFace权重
     ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
@@ -245,6 +250,14 @@ LLAMA2-7B 训练的硬件配置:
 
     ```shell
     bash examples/llama2/tune_llama2_7b_ptd.sh
+    ```
+
+    在 4.2 的权重转换命令中，加入如下参数可以将训练的 lora 权重与base进行融合。
+    ```bash
+    --lora-load ${CHECKPOINT_LORA}  \
+    --lora-r 16 \
+    --lora-alpha 32 \
+    --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
     ```
 
 ### 性能

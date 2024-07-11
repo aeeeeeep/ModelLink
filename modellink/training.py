@@ -64,7 +64,14 @@ def model_provider_func_wrapper(model_provider_func):
         args = get_args()
 
         if is_enable_lora():
+            import peft
+            from packaging import version
             from peft import LoraConfig, get_peft_model, PeftModel, LoraModel
+            if version.parse(peft.__version__) <= version.parse('0.11.1'):
+                setattr(peft.tuners.lora.LoraLayer, 'merge', peft.tuners.lora.Linear.merge)
+                setattr(peft.tuners.lora.LoraLayer, 'unmerge', peft.tuners.lora.Linear.unmerge)
+                setattr(peft.tuners.lora.LoraLayer, 'get_delta_weight', peft.tuners.lora.Linear.get_delta_weight)
+
             config = core_transformer_config_from_args(args)
             lora_config = LoraConfig(
                 r=args.lora_r,
