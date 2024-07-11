@@ -22,7 +22,6 @@ from mindspeed.core.fusions.fused_softmax import (is_kernel_available, ScaledUpp
 from mindspeed.model.transformer import parallel_mlp_init_wrapper
 from mindspeed.core.tensor_parallel.random import _set_cuda_rng_state
 from mindspeed.core.tensor_parallel.cross_entropy import vocab_parallel_cross_entropy_forward
-from mindspeed.core.tensor_parallel.layers import vocab_parallel_embedding_forward
 from mindspeed.initialize import _compile_dependencies
 
 from ..model import (
@@ -48,11 +47,13 @@ from ..arguments import parse_args_decorator, validate_args_decorator
 from ..checkpointing import _load_base_checkpoint_wrapper, load_checkpoint_wrapper
 from ..initialize import initialize_megatron
 from ..log_handler import emit
+from ..patch_utils import PatchesManager
 
 
 def exec_adaptation():
     patch_megatron_core()
     patch_megatron_noncore()
+    PatchesManager.apply_patches()
 
 
 def patch_megatron_core():
@@ -77,44 +78,49 @@ def patch_megatron_noncore():
 
 def patch_fusions():
     # patch_core_fused_layer_norm
-    megatron.core.fusions.fused_layer_norm.FusedLayerNormAffineFunction = FusedLayerNormAffineFunction  # use torch-npu fused layer norm
-    megatron.core.fusions.fused_layer_norm.FastLayerNormFN = FastLayerNormFN  # use torch-npu fused layer norm
+    core_fused_layer_norm = "megatron.core.fusions.fused_layer_norm."
+    PatchesManager.register_patch(core_fused_layer_norm + "FusedLayerNormAffineFunction", FusedLayerNormAffineFunction)
+    # use torch-npu fused layer norm
+    PatchesManager.register_patch(core_fused_layer_norm + "megatron.core.fusions.fused_layer_norm.FastLayerNormFN", FastLayerNormFN)
 
     # patch_core_fused_softmax
-    megatron.core.fusions.fused_softmax.ScaledUpperTriangMaskedSoftmax = ScaledUpperTriangMaskedSoftmax  # use torch-npu npu_scaled_masked_softmax
-    megatron.core.fusions.fused_softmax.ScaledMaskedSoftmax = ScaledMaskedSoftmax  # use torch-npu npu_scaled_masked_softmax
-    megatron.core.fusions.fused_softmax.ScaledSoftmax = ScaledSoftmax  # use torch-npu npu_scaled_masked_softmax
-    megatron.core.fusions.fused_softmax.FusedScaleMaskSoftmax.is_kernel_available = is_kernel_available  # replace kernel check
-    megatron.core.fusions.fused_softmax.FusedScaleMaskSoftmax.forward_fused_softmax = forward_fused_softmax
+    core_fused_softmax = "megatron.core.fusions.fused_softmax."
+    PatchesManager.register_patch(core_fused_softmax + "ScaledUpperTriangMaskedSoftmax", ScaledUpperTriangMaskedSoftmax)
+    PatchesManager.register_patch(core_fused_softmax + "ScaledMaskedSoftmax", ScaledMaskedSoftmax)
+    PatchesManager.register_patch(core_fused_softmax + "ScaledSoftmax", ScaledSoftmax)
+    PatchesManager.register_patch(core_fused_softmax + "FusedScaleMaskSoftmax.is_kernel_available", is_kernel_available)
+    PatchesManager.register_patch(core_fused_softmax + "FusedScaleMaskSoftmax.forward_fused_softmax", forward_fused_softmax)
 
 
 def patch_core_models():
     from mindspeed.core.fusions.rotary_pos_embedding import rotary_embedding_init_wrapper
     from ..core import RotaryEmbedding_forward
-    megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.forward = RotaryEmbedding_forward
-    megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.__init__ = \
-        rotary_embedding_init_wrapper(megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.__init__)
+    rotary_embedding_path = "megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding"
+    PatchesManager.register_patch(rotary_embedding_path + ".forward", RotaryEmbedding_forward)
+    PatchesManager.register_patch(rotary_embedding_path +".__init__", rotary_embedding_init_wrapper)
 
 
 def patch_core_transformers():
     from ..core import apply_rotary_pos_emb_bshd_wrapper
-    megatron.core.models.common.embeddings.rotary_pos_embedding.apply_rotary_pos_emb_bshd = \
-        apply_rotary_pos_emb_bshd_wrapper(megatron.core.models.common.embeddings.rotary_pos_embedding.apply_rotary_pos_emb_bshd)
-
+    PatchesManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.apply_rotary_pos_emb_bshd', apply_rotary_pos_emb_bshd_wrapper)
 
 
 def patch_pipeline_parallel():
     from megatron.core import pipeline_parallel
-    pipeline_parallel.p2p_communication._batched_p2p_ops = _batched_p2p_ops  # send recv bug
+    # To solve send recv bug
+    PatchesManager.register_patch('pipeline_parallel.p2p_communication._batched_p2p_ops', _batched_p2p_ops)
 
 
 def patch_tensor_parallel():
-    megatron.core.tensor_parallel.random._set_cuda_rng_state = _set_cuda_rng_state  # default_generators need replace after set_device
-    megatron.core.tensor_parallel.cross_entropy._VocabParallelCrossEntropy.forward = vocab_parallel_cross_entropy_forward  # change masked_target for better performance
+    from ..core import (vocab_embedding_wrapper)
+    from mindspeed.core.tensor_parallel.layers import vocab_parallel_embedding_forward
+    # default_generators need replace after set_device
+    PatchesManager.register_patch('megatron.core.tensor_parallel.random._set_cuda_rng_state', _set_cuda_rng_state)
+    # change masked_target for better performance
+    PatchesManager.register_patch('megatron.core.tensor_parallel.cross_entropy._VocabParallelCrossEntropy.forward', vocab_parallel_cross_entropy_forward)
     megatron.core.tensor_parallel.layers.VocabParallelEmbedding.forward = vocab_embedding_wrapper(
         vocab_parallel_embedding_forward)
-    megatron.core.tensor_parallel.layers.VocabParallelEmbedding.__init__ = norm_wrapper(
-        megatron.core.tensor_parallel.layers.VocabParallelEmbedding.__init__)
+    PatchesManager.register_patch('megatron.core.tensor_parallel.layers.VocabParallelEmbedding.__init__', norm_wrapper)
 
 
 def patch_parallel_state():
@@ -125,10 +131,8 @@ def patch_parallel_state():
     setattr(megatron.core.parallel_state, "get_expert_model_parallel_world_size", get_expert_model_parallel_world_size)
     setattr(megatron.core.parallel_state, "set_expert_model_parallel_rank", set_expert_model_parallel_rank)
     setattr(megatron.core.parallel_state, "set_expert_model_parallel_world_size", set_expert_model_parallel_world_size)
-    megatron.core.parallel_state.initialize_model_parallel = initialize_model_parallel_decorator(
-        megatron.core.parallel_state.initialize_model_parallel)
-    megatron.core.parallel_state.destroy_model_parallel = destroy_model_parallel_decorator(
-        megatron.core.parallel_state.destroy_model_parallel)
+    PatchesManager.register_patch('megatron.core.parallel_state.initialize_model_parallel', initialize_model_parallel_decorator)
+    PatchesManager.register_patch('megatron.core.parallel_state.destroy_model_parallel', destroy_model_parallel_decorator)
 
 
 def patch_model():
