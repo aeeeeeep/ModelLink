@@ -48,7 +48,7 @@ def RotaryEmbedding_forward(self, max_seq_len: int, offset: int = 0):
     return emb
 
 
-def apply_rotary_pos_emb(t, freqs, rotary_interleaved = False):
+def apply_rotary_pos_emb(t, freqs, rotary_interleaved=False, **kwargs):
     args = get_args()
 
     # use partial rope in ChatGLM3
@@ -71,15 +71,13 @@ def apply_rotary_pos_emb(t, freqs, rotary_interleaved = False):
         t = t.flatten(3)
         return torch.cat((t, t_pass), dim=-1)
 
-    if args.use_fused_rotary_pos_emb:
-        cos = torch.cos(freqs)
-        sin = torch.sin(freqs)
-        return torch_npu.npu_rotary_mul(t, cos, sin).to(t.dtype)
-
     rot_dim = freqs.shape[-1]
     t, t_pass = t[..., :rot_dim], t[..., rot_dim:]
-    cos_ = torch.cos(freqs).to(t.dtype)
-    sin_ = torch.sin(freqs).to(t.dtype)
-    t = (t * cos_) + (_rotate_half(t, rotary_interleaved) * sin_)
-    return torch.cat((t, t_pass), dim=-1)
+    cos = torch.cos(freqs).to(t.dtype)
+    sin = torch.sin(freqs).to(t.dtype)    
+    if args.use_fused_rotary_pos_emb:
+        return torch_npu.npu_rotary_mul(t, cos, sin).to(t.dtype)
+    else:    
+        t = (t * cos_) + (_rotate_half(t, rotary_interleaved) * sin_)
+        return torch.cat((t, t_pass), dim=-1)
     

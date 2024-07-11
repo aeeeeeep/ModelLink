@@ -35,7 +35,6 @@ class ColumnSeqParallelLinear(torch.autograd.Function):
 
         else:
             hcomm_info = group.get_hccl_comm_name(rank)
-
         x = input_.reshape(input_.shape[0] * input_.shape[1], input_.shape[2])
 
         world_size = ascend_turbo_cfg.get_world_size()

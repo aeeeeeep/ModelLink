@@ -43,6 +43,7 @@ def process_args(parser):
     parser = _add_network_size_args(parser)
     parser = _add_lora_args(parser)
     parser = _add_data_args(parser)
+    parser = _add_coc_args(parser)
     parser = _add_moe_args(parser)
     parser = _add_num_layer_allocation(parser)
     parser = _add_profile_args(parser)
@@ -90,12 +91,20 @@ def _add_lora_args(parser):
     return parser
 
 
+def _add_coc_args(parser):
+    group = parser.add_argument_group(title='coc')
+    # ascend mc2 arguments
+    group.add_argument("--use-mc2", action='store_true',
+                       help="Use mc2 for compute-comm overlap in tp.")
+    return parser
+
+
 def _add_moe_args(parser):
     group = parser.add_argument_group(title='moe')
     group.add_argument('--moe-router-topk', type=int, default=2,
                        help='Number of experts to route to for each token. The default is 2.')
     group.add_argument('--moe-router-load-balancing-type', type=str,
-                       choices=['aux_loss', ],
+                       choices=['aux_loss', 'grok1_none'],
                        default='aux_loss',
                        help='Determines the load balancing strategy for the router. "aux_loss" corresponds '
                             'to the load balancing loss used in GShard and SwitchTransformer, "sinkhorn" corresponds '
@@ -105,7 +114,7 @@ def _add_moe_args(parser):
                        help='Use experts in every "expert-interval" layers')
     group.add_argument('--moe-aux-loss-coeff', type=float, default=0.0,
                        help='Scaling coefficient for the aux loss: a starting value of 1e-2 is recommended.')
-    group.add_argument('--moe-z-loss-coeff', type=float, default=0.0,
+    group.add_argument('--moe-z-loss-coeff', type=float, default=None,
                        help='Scaling coefficient for the z-loss: a starting value of 1e-3 is recommended.')
     group.add_argument('--moe-train-capacity-factor', type=float, default=1.0,
                        help='The capacity of the MoE expert at training time')
@@ -113,6 +122,18 @@ def _add_moe_args(parser):
                        help="noisy gate policy, valid options are 'Jitter', 'RSample' or 'None'.")
     group.add_argument('--enable-token-rearrange-opt', action='store_true',
                        help="Use this flag to enable token rearrange optimize")
+    group.add_argument('--embedding-multiplier-scale', type=float, default=1.0,
+                       help='adapter grok1 embedding.')
+    group.add_argument('--input-jitter', action='store_true', help='Add noise to the input tensor.')
+    group.add_argument('--post-norm', action='store_true', help='post norm after attention or mlp.')
+    group.add_argument('--max-attn-val', type=float, default=None, help='max attn val.')
+    group.add_argument('--output-multiplier-scale', type=float, default=None, help='Add scale for logits output.')
+    group.add_argument("--moe-permutation-async-comm", action='store_true',
+                       help="overlap moe permutation 3 all gather communications")
+    group.add_argument("--moe-adaptive-recompute-activation", action='store_true',
+                       help="MoE adaptive recompute, avoiding memory imbalance in the early stage.")
+    group.add_argument('--moe-adaptive-recompute-activation-scale', type=float, default=2.0,
+                       help='MoE adaptive recompute threshold factor.')
                        
     return parser
 
@@ -174,8 +195,6 @@ def _add_network_size_args(parser):
                        help="Use fused swiglu.")
     group.add_argument("--use-fused-rotary-pos-emb", action='store_true',
                        help="Use fused rotary-pos-emb.")
-    group.add_argument("--use-mc2", action='store_true',
-                       help="Use mc2 for compute-comm overlap in tp.")
     group.add_argument('--sliding-window', type=int, default=None,
                        help='Window size when use sliding window attention.')
     return parser
@@ -184,6 +203,8 @@ def _add_network_size_args(parser):
 def _add_algorithm_args(parser):
     group = parser.add_argument_group(title='algorithm')
     group.add_argument('--rotary-base', type=float, help='rotary-base.')
+    group.add_argument('--optimize-recomp-communication-level', type=int, default=0,
+                       help='The algorithm optimize the level of tp communication in the recompute stage.')    
 
     return parser
 
@@ -231,6 +252,22 @@ def _add_training_args(parser):
                        help='enable deterministic computing for npu')
     group.add_argument('--jit-compile', action='store_true', default=False,
                        help='Setting jit compile mode to True')
+    # cp参数
+    group.add_argument("--context-parallel-algo", type=str, default='megatron_cp_algo',
+                       choices=['ulysses_cp_algo', 'megatron_cp_algo', 'hybrid_cp_algo'],
+                       help='context parallel algorithm') 
+    group.add_argument('--ulysses-degree-in-cp', type=int, default=None)
+    group.add_argument('--cp-attention-mask-type', type=str, default='causal',
+                       choices=['causal', 'general'], help='context parallel attention mask type')
+    group.add_argument('--use-cp-send-recv-overlap', action='store_true',
+                       help='use this flag to enable cp send-recv-overlap.')
+    group.add_argument('--use-laser-attn', action='store_true',
+                       help='use this flag to enable laser attention')  
+
+    group.add_argument('--use-fusion-attn-v2', action='store_true', default=False,
+                       help='use fusion_attention ops version 2')    
+    group.add_argument('--sparse-mode', type=int, default=0,
+                       help='To improve performance in different modes of attention mask')                                                                                     
     return parser
 
 
@@ -263,7 +300,14 @@ def _add_alibi_args(parser):
                        action='store_true',
                        default=False,
                        help='fill alibi with negative inf')
+    group.add_argument('--alibi-fusion-attn-type',
+                    type=int,
+                    help='alibi pse type, support for 0,2,3')
 
+    group.add_argument('--alibi-diagonal-opposite',
+                       action='store_true',
+                       default=False,
+                       help='make alibi diagonal opposite')
     return parser
 
 
