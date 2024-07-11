@@ -22,3 +22,8 @@ from .parallel_state import (initialize_model_parallel_decorator, destroy_model_
 from .models.common.embeddings.rotary_pos_embedding import RotaryEmbedding_forward, apply_rotary_pos_emb
 from .datasets.blended_megatron_dataset_builder import build_generic_dataset
 from .datasets.gpt_dataset import _build_document_sample_shuffle_indices
+from .distributed.param_and_grad_buffer import start_grad_sync_wrapper
+from .distributed.distributed_data_parallel import distributed_data_parallel_init_wrapper
+from .optimizer import get_megatron_optimizer_wrapper
+from .optimizer.clip_grads import clip_grad_norm_fp32_wrapper
+from .optimizer.distrib_optimizer import distributed_optimizer_init_wrapper

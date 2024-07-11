@@ -33,6 +33,7 @@ Current ModelLink supported features for large model usage:
 * [Profiling data based on Ascend chips](#jump19)
 * [Convert ckpt between huggingface and megatron](#jump19)
 * [Enbale deterministic computing function for Ascend](#jump21)
+* [Enable high availability features based on Ascend chips ](#jump22)
 
 More novel and useful features are developing for LLMs training on Ascend ...
 
@@ -943,6 +944,28 @@ Modellink supports analyze profiling data based on Ascend chips, which is useful
 - add environment variable
 ```shell
 export HCCL_DETERMINISTIC=True
+```
+
+
+## <span id="jump22"> Enable high availability features based on Ascend chips 
+The motivation for the distributed optimizer is to save memory by distributing the optimizer state evenly across data parallel ranks.Based on this idea,a scheme is designed to divide the data parallel ranks into two replica data parallel ranks.The replica optimizer distributes the optimizer state evenly across replica data parallel ranks,so that the optimizer state is backed up. The following functions can be implemented based on the Huawei-developed HA framework:
+1. During the training, the last checkpoint can be saved in the fault scenario, ensuring zero loss of the training result.
+2. During the training, UCE fault detection of the HBM is supported, and online repair is completed to achieve step-level recomputation.
+
+When the HA feature is enabled, the static memory used by the replica optimizer increases., the theoretical number of bytes per parameter is (where 'd' is the data parallel size):：
+
+|                                  | Non-distributed optim | Distributed optim | Replica optim |
+|----------------------------------| ------ | ------ |---------------|
+| fp16/bf16 param, fp16/bf16 grads | 20 | 4 + 16/d | 4 + 32/d       |
+| fp16/bf16 param, fp32 grads      | 18 | 6 + 12/d | Supporting      |
+| fp32 param, fp32 grads           | 16 | 8 + 8/d  | Supporting      |
+
+
+- add choice in script，and install Huawei-developed HA framework:mindio_ttp.whl
+- mindio_ttp related description:https://www.hiascend.com/document/detail/zh/mindx-dl/60rc1/mindio/mindiottp
+```shell
+--enable-high-availability           #enable high availability feature
+--enable-optimizer-state-local-copy  #enable the function of saving the last step optimizer state. Memory will increase further. It can be disabled by default.
 ```
 
 

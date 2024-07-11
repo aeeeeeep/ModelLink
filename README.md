@@ -34,6 +34,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
 * [基于昇腾芯片采集Profiling数据](#jump19)
 * [Huggingface与Megatron-LM权重转换](#jump20)
 * [基于昇腾芯片的确定性计算功能](#jump21)
+* [基于昇腾芯片的高可用特性](#jump22)
 
 强化学习等特性持续研发中....
 
@@ -949,6 +950,29 @@ Modellink支持基于昇腾芯片采集profiling数据，以提供对模型运�
 ```shell
 export HCCL_DETERMINISTIC=True
 ```
+
+
+## <span id="jump22"> 基于昇腾芯片的高可用特性
+分布式优化器的思想是通过将优化器状态均匀地分布在数据并行组中来节省内存。基于该思想，设计了将数据并行组切分成两个副本数据并行组的方案，副本优化器将优化器状态均匀分布在副本数据并行组，实现优化器状态均有备份。结合华为自研的高可用框架，可实现以下功能：
+1. 训练过程中，支持故障场景保存临终checkpoint，训练结果0损失。
+2. 训练过程中，支持HBM的UCE故障检测，并完成在线修复，达到Step级重计算。
+
+开启高可用特性时，副本优化器使用的静态内存有所增加，每个参数的理论字节数为（其中“d”是数据并行大小）：
+
+|                                  | Non-distributed optim | Distributed optim | Replica optim |
+|----------------------------------| ------ | ------ |---------------|
+| fp16/bf16 param, fp16/bf16 grads | 20 | 4 + 16/d | 4 + 32/d       |
+| fp16/bf16 param, fp32 grads      | 18 | 6 + 12/d | Supporting      |
+| fp32 param, fp32 grads           | 16 | 8 + 8/d  | Supporting      |
+
+
+- 启动命令中加入开关，并安装华为自研高可用框架mindio_ttp.whl
+- mindio_ttp相关说明：https://www.hiascend.com/document/detail/zh/mindx-dl/60rc1/mindio/mindiottp
+```shell
+--enable-high-availability           #使能高可用特性的总开关
+--enable-optimizer-state-local-copy  #使能保存上一步优化器状态，内存会进一步增加，默认可关闭
+```
+
 
 ## 致谢
 

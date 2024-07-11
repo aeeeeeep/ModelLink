@@ -37,7 +37,9 @@ from ..core import (vocab_embedding_wrapper, initialize_model_parallel_decorator
                    get_expert_parallel_world_size, get_expert_model_parallel_world_size,
                    set_expert_model_parallel_rank, set_expert_model_parallel_world_size,
                    RotaryEmbedding_forward, apply_rotary_pos_emb,
-                   build_generic_dataset, _build_document_sample_shuffle_indices)
+                   build_generic_dataset, _build_document_sample_shuffle_indices,
+                   start_grad_sync_wrapper, distributed_data_parallel_init_wrapper,
+                   get_megatron_optimizer_wrapper, clip_grad_norm_fp32_wrapper, distributed_optimizer_init_wrapper)
 from ..core.pipeline_parallel.p2p_communication import _batched_p2p_ops
 from ..data import build_pretraining_data_loader
 from ..tokenizer import build_tokenizer
@@ -69,6 +71,7 @@ def patch_megatron_noncore():
     patch_initialize()
     patch_training()
     patch_log_handler()
+    patch_high_availability_feature()
 
 
 def patch_fusions():
@@ -212,3 +215,19 @@ def patch_utils():
     from ..utils import unwrap_model_wrapper
     megatron.training.checkpointing.unwrap_model = unwrap_model_wrapper(megatron.training.checkpointing.unwrap_model)
     megatron.training.training.unwrap_model = unwrap_model_wrapper(megatron.training.training.unwrap_model)
+
+
+def patch_high_availability_feature():
+    from ..training import setup_model_and_optimizer_wrapper
+    megatron.core.distributed.distributed_data_parallel.DistributedDataParallel.__init__ = distributed_data_parallel_init_wrapper(
+        megatron.core.distributed.distributed_data_parallel.DistributedDataParallel.__init__)
+    megatron.core.distributed.param_and_grad_buffer.Bucket.start_grad_sync = start_grad_sync_wrapper(
+        megatron.core.distributed.param_and_grad_buffer.Bucket.start_grad_sync)
+    megatron.training.training.get_megatron_optimizer = get_megatron_optimizer_wrapper(
+        megatron.training.training.get_megatron_optimizer)
+    megatron.core.optimizer.optimizer.clip_grad_norm_fp32 = clip_grad_norm_fp32_wrapper(
+        megatron.core.optimizer.optimizer.clip_grad_norm_fp32)
+    megatron.core.optimizer.distrib_optimizer.DistributedOptimizer.__init__ = distributed_optimizer_init_wrapper(
+        megatron.core.optimizer.distrib_optimizer.DistributedOptimizer.__init__)
+    megatron.training.training.setup_model_and_optimizer = setup_model_and_optimizer_wrapper(
+        megatron.training.training.setup_model_and_optimizer)
