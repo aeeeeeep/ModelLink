@@ -43,6 +43,8 @@ def add_arguments(parser):
                        default=False)
     group.add_argument('--num-layers-per-virtual-pipeline-stage', type=int, default=None,
                        help='Number of layers per virtual pipeline stage')
+    group.add_argument('--num-layer-list',
+                       type=str, help='a list of number of layers, seperated by comma; e.g., 4,4,4,4')
 
 
 def save_huggingface(args, model):
@@ -453,6 +455,7 @@ def save_model_checkpoint(queue, args):
     margs = parse_args()
     margs.make_vocab_size_divisible_by = 1
     margs.w_pack = args.w_pack
+    margs.num_layer_list = args.num_layer_list
 
     if hasattr(md, 'checkpoint_args'):
         # These are arguments that we are either changing, or cause problems for validation if they are set
@@ -469,7 +472,8 @@ def save_model_checkpoint(queue, args):
                         'encoder_num_layers', 'encoder_seq_length',
                         'distribute_saved_activations',
                         'train_iters', 'lr_decay_iters', 'lr_warmup_iters', 'lr_warmup_fraction',
-                        'start_weight_decay', 'end_weight_decay', 'make_vocab_size_divisible_by']
+                        'start_weight_decay', 'end_weight_decay', 'make_vocab_size_divisible_by',
+                        'num_layer_list', 'lora_target_modules']
 
 
         for arg, value in vars(md.checkpoint_args).items():
