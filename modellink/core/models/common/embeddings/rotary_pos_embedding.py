@@ -5,7 +5,6 @@
 from functools import wraps
 
 import torch
-from torch import Tensor
 import torch_npu
 from megatron.training import get_args
 from megatron.core import parallel_state
@@ -49,69 +48,36 @@ def RotaryEmbedding_forward(self, max_seq_len: int, offset: int = 0):
     return emb
 
 
-def _process_partial_rope(freqs, t):
-    """
-    Do partial rope embedding for ChatGLM3.
-    """
-    sq, b, np, hn = t.size(0), t.size(1), t.size(2), t.size(3)
-    rot_dim = freqs.shape[-2] * 2
-    t, t_pass = t[..., :rot_dim], t[..., rot_dim:]
-    freqs = freqs[:sq].to(t.dtype)
-    xshaped = t.reshape(sq, -1, np, rot_dim // 2, 2)
-    freqs = freqs.view(sq, -1, 1, xshaped.size(3), 2)
-    x_shape1, x_shape2 = torch.chunk(xshaped, 2, dim=-1)
-    freqs1, freqs2 = torch.chunk(freqs, 2, dim=-1)
-    t = torch.stack(
-        [
-            x_shape1 * freqs1 - x_shape2 * freqs2,
-            x_shape2 * freqs1 + x_shape1 * freqs2,
-        ],
-        -1,
-    )
-    t = t.flatten(3)
-    return torch.cat((t, t_pass), dim=-1)
-
-
-def apply_rotary_pos_emb(t, freqs, rotary_interleaved=False):
-    """
-    For legacy rotary pos embedding.
-    """
-
+def apply_rotary_pos_emb(t, freqs, rotary_interleaved=False, **kwargs):
     args = get_args()
-    if args.use_partial_rope:
-        return _process_partial_rope(freqs, t)
 
-    if args.use_fused_rotary_pos_emb:
-        cos = torch.cos(freqs)
-        sin = torch.sin(freqs)
-        return torch_npu.npu_rotary_mul(t, cos, sin).to(t.dtype)
+    # use partial rope in ChatGLM3
+    if args.use_partial_rope:
+        sq, b, np, hn = t.size(0), t.size(1), t.size(2), t.size(3)
+        rot_dim = freqs.shape[-2] * 2
+        t, t_pass = t[..., :rot_dim], t[..., rot_dim:]
+        freqs = freqs[:sq].to(t.dtype)
+        xshaped = t.reshape(sq, -1, np, rot_dim // 2, 2)
+        freqs = freqs.view(sq, -1, 1, xshaped.size(3), 2)
+        x_shape1, x_shape2 = torch.chunk(xshaped, 2, dim=-1)
+        freqs1, freqs2 = torch.chunk(freqs, 2, dim=-1)
+        t = torch.stack(
+            [
+                x_shape1 * freqs1 - x_shape2 * freqs2,
+                x_shape2 * freqs1 + x_shape1 * freqs2,
+            ],
+            -1,
+        )
+        t = t.flatten(3)
+        return torch.cat((t, t_pass), dim=-1)
 
     rot_dim = freqs.shape[-1]
     t, t_pass = t[..., :rot_dim], t[..., rot_dim:]
-    cos_ = torch.cos(freqs).to(t.dtype)
-    sin_ = torch.sin(freqs).to(t.dtype)
-    t = (t * cos_) + (_rotate_half(t, rotary_interleaved) * sin_)
-    return torch.cat((t, t_pass), dim=-1)
-
-
-def apply_rotary_pos_emb_bshd_wrapper(fn):
-    """
-    For megatron-LM core rotary pos embedding.
-    """
-    @wraps(fn)
-    def wrapper(t: Tensor, freqs: Tensor, rotary_interleaved: bool = False) -> Tensor:
-        args = get_args()
-        if args.use_partial_rope:
-            return _process_partial_rope(freqs, t)
-
-        if args.use_fused_rotary_pos_emb:
-            rot_dim = freqs.shape[-1]
-            t, t_pass = t[..., :rot_dim], t[..., rot_dim:]
-            # Move to npu device to speed up rotary mul.
-            cos_ = torch.cos(freqs).to(t.dtype)
-            sin_ = torch.sin(freqs).to(t.dtype)
-            t = torch_npu.npu_rotary_mul(t, cos_, sin_).to(t.dtype)
-            return torch.cat((t, t_pass), dim=-1)
-        return fn(t, freqs, rotary_interleaved)
-
-    return wrapper
+    cos = torch.cos(freqs).to(t.dtype)
+    sin = torch.sin(freqs).to(t.dtype)    
+    if args.use_fused_rotary_pos_emb:
+        return torch_npu.npu_rotary_mul(t, cos, sin).to(t.dtype)
+    else:    
+        t = (t * cos_) + (_rotate_half(t, rotary_interleaved) * sin_)
+        return torch.cat((t, t_pass), dim=-1)
+    
