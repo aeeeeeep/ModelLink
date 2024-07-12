@@ -13,17 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from functools import wraps
-
-from megatron.training import get_args
+import torch
 
 
-def vocab_embedding_wrapper(fn):
-    @wraps(fn)
-    def wrapper(self, *args, **kwargs):
-        output = fn(self, *args, **kwargs)
-        args_ = get_args()
-        if hasattr(self, 'norm'):
-            output = self.norm(output)
-        return output * args_.embedding_multiplier_scale
-    return wrapper
+def z_loss_func(logits, z_loss_coeff):
+    """Encourages the router's logits to remain small to enhance stability.
+    Please refer to the ST-MoE paper for details.
+    adapter for logsumexp() to support bfloat16
+
+    Args:
+        logits (torch.Tensor): The logits of the router.
+
+    Returns:
+        torch.Tensor: The logits after applying the z-loss.
+    """
+
+    z_loss = torch.mean(torch.square(torch.logsumexp(logits.to(torch.float), dim=-1).to(logits.dtype))) * z_loss_coeff
+    return z_loss

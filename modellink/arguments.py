@@ -96,11 +96,12 @@ def _add_moe_args(parser):
     group.add_argument('--moe-router-topk', type=int, default=2,
                        help='Number of experts to route to for each token. The default is 2.')
     group.add_argument('--moe-router-load-balancing-type', type=str,
-                       choices=['aux_loss', ],
+                       choices=['aux_loss'],
                        default='aux_loss',
                        help='Determines the load balancing strategy for the router. "aux_loss" corresponds '
                             'to the load balancing loss used in GShard and SwitchTransformer, "sinkhorn" corresponds '
-                            'to the balancing algorithm used in S-BASE, and "None" implies no load balancing. '
+                            'to the balancing algorithm used in S-BASE, "softmax_topk" implies no load balancing and '
+                            'softmax before topk ,and "None" implies no load balancing. '
                             'The default is "aux_loss".')
     group.add_argument('--expert-interval', type=int, default=1,
                        help='Use experts in every "expert-interval" layers')
@@ -114,6 +115,13 @@ def _add_moe_args(parser):
                        help="noisy gate policy, valid options are 'Jitter', 'RSample' or 'None'.")
     group.add_argument('--enable-token-rearrange-opt', action='store_true',
                        help="Use this flag to enable token rearrange optimize")
+    group.add_argument('--embedding-multiplier-scale', type=float, default=1.0,
+                       help='add scale for embedding.')
+    group.add_argument('--input-jitter', action='store_false', help='Add noise to the input tensor.')
+    group.add_argument('--post-norm', action='store_true', help='post norm after attention or mlp.')
+    group.add_argument('--output-multiplier-scale', type=float, default=None, help='Add scale for logits output.')
+    group.add_argument("--moe-permutation-async-comm", action='store_true',
+                       help="overlap moe permutation 3 all gather communications")
                        
     return parser
 
