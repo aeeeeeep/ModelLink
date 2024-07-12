@@ -1,5 +1,4 @@
 # coding=utf-8
-# Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
 # Copyright (c) 2024, HUAWEI CORPORATION.  All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,7 +42,8 @@ from megatron.training.training import (
     training_log, evaluate_and_print_results,
     save_checkpoint_and_time, print_datetime,
     num_floating_point_operations, get_one_logger,
-    append_to_progress_log, build_train_valid_test_data_iterators
+    append_to_progress_log, setup_model_and_optimizer,
+    build_train_valid_test_data_iterators
 )
 import megatron.training.utils
 from megatron.training.utils import (
@@ -141,65 +141,6 @@ def get_profiler():
     return prof
 
 
-def setup_model_and_optimizer_wrapper(fn):
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        model, optimizer, opt_param_scheduler = fn(*args, **kwargs)
-        argument = get_args()
-        if argument.enable_high_availability and hasattr(optimizer, "set_current_step"):
-            optimizer.set_current_step(argument.iteration)
-        return model, optimizer, opt_param_scheduler
-
-    return wrapper
-
-
-def build_train_args(*input_args):
-    args, timers, train_valid_test_dataset_provider, model_provider, model_type, forward_step_func, process_non_loss_data_func = input_args
-
-    from megatron.training.training import setup_model_and_optimizer
-    # Model, optimizer, and learning rate.
-    timers('model-and-optimizer-setup', log_level=0).start(barrier=True)
-    model, optimizer, opt_param_scheduler = setup_model_and_optimizer(
-        model_provider, model_type)
-
-    timers('model-and-optimizer-setup').stop()
-    print_datetime('after model, optimizer, and learning rate '
-                   'scheduler are built')
-    config = get_model_config(model[0])
-
-    # Data stuff.
-    timers('train/valid/test-data-iterators-setup', log_level=0).start(
-        barrier=True)
-    if args.virtual_pipeline_model_parallel_size is not None:
-        train_data_iterator = []
-        valid_data_iterator = []
-        test_data_iterator = []
-        for i in range(len(model)):
-            mpu.set_virtual_pipeline_model_parallel_rank(i)
-            iterators = build_train_valid_test_data_iterators(
-                train_valid_test_dataset_provider)
-            train_data_iterator.append(iterators[0])
-            valid_data_iterator.append(iterators[1])
-            test_data_iterator.append(iterators[2])
-    else:
-        train_data_iterator, valid_data_iterator, test_data_iterator \
-            = build_train_valid_test_data_iterators(
-            train_valid_test_dataset_provider)
-    timers('train/valid/test-data-iterators-setup').stop()
-    print_datetime('after dataloaders are built')
-
-    # Print setup timing.
-    print_rank_0('done with setup ...')
-    timers.log(['model-and-optimizer-setup',
-                'train/valid/test-data-iterators-setup'], barrier=True)
-
-    train_args = [forward_step_func,
-                  model, optimizer, opt_param_scheduler,
-                  train_data_iterator, valid_data_iterator, process_non_loss_data_func, config]
-    test_data_iterator_list = [test_data_iterator]
-    return train_args, test_data_iterator_list
-
-
 def pretrain(train_valid_test_dataset_provider,
              model_provider,
              model_type,
@@ -272,9 +213,41 @@ def pretrain(train_valid_test_dataset_provider,
             'train_iterations_warmup': 5
         })
 
-    train_args, test_data_iterator_list = build_train_args(args, timers, train_valid_test_dataset_provider,
-                                                           model_provider,
-                                                           model_type, forward_step_func, process_non_loss_data_func)
+    # Model, optimizer, and learning rate.
+    timers('model-and-optimizer-setup', log_level=0).start(barrier=True)
+    model, optimizer, opt_param_scheduler = setup_model_and_optimizer(
+        model_provider, model_type)
+
+    timers('model-and-optimizer-setup').stop()
+    print_datetime('after model, optimizer, and learning rate '
+                   'scheduler are built')
+    config = get_model_config(model[0])
+
+    # Data stuff.
+    timers('train/valid/test-data-iterators-setup', log_level=0).start(
+        barrier=True)
+    if args.virtual_pipeline_model_parallel_size is not None:
+        train_data_iterator = []
+        valid_data_iterator = []
+        test_data_iterator = []
+        for i in range(len(model)):
+            mpu.set_virtual_pipeline_model_parallel_rank(i)
+            iterators = build_train_valid_test_data_iterators(
+                train_valid_test_dataset_provider)
+            train_data_iterator.append(iterators[0])
+            valid_data_iterator.append(iterators[1])
+            test_data_iterator.append(iterators[2])
+    else:
+        train_data_iterator, valid_data_iterator, test_data_iterator \
+            = build_train_valid_test_data_iterators(
+                train_valid_test_dataset_provider)
+    timers('train/valid/test-data-iterators-setup').stop()
+    print_datetime('after dataloaders are built')
+
+    # Print setup timing.
+    print_rank_0('done with setup ...')
+    timers.log(['model-and-optimizer-setup',
+                'train/valid/test-data-iterators-setup'], barrier=True)
 
     if not args.skip_train:
         print_rank_0('training ...')
@@ -286,18 +259,11 @@ def pretrain(train_valid_test_dataset_provider,
 
         iteration = 0
         if args.do_train and args.train_iters > 0:
-            if args.enable_high_availability:
-                try:
-                    from mindio_ttp.adaptor import ttp_init_controller_processor, ttp_train
-                except ModuleNotFoundError:
-                    sys.exit("The mindio_ttp package is not installed. Exiting.")
-                ttp_init_controller_processor(train_valid_test_dataset_provider, model_provider, model_type)
-                iteration, num_floating_point_operations_so_far = ttp_train(train_args, test_data_iterator_list)
-            else:
-                iteration, num_floating_point_operations_so_far = train(*train_args)
-
-            test_data_iterator = test_data_iterator_list[0]
-            forward_step_func, model, optimizer, opt_param_scheduler, train_data_iterator, valid_data_iterator, process_non_loss_data_func, config = train_args
+            iteration, num_floating_point_operations_so_far = train(
+                forward_step_func,
+                model, optimizer, opt_param_scheduler,
+                train_data_iterator, valid_data_iterator,
+                process_non_loss_data_func, config)
 
         print_datetime('after training is done')
 
@@ -360,7 +326,7 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
     # Setup some training config params
     config.grad_scale_func = optimizer.scale_loss
     config.timers = timers
-    if isinstance(model[0], DDP) and args.overlap_grad_reduce and config.no_sync_func is None:
+    if isinstance(model[0], DDP) and args.overlap_grad_reduce:
         assert config.no_sync_func is None, \
             ('When overlap_grad_reduce is True, config.no_sync_func must be None; '
              'a custom no_sync_func is not supported when overlapping grad-reduce')
@@ -451,16 +417,6 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
                      get_num_microbatches()
         args.consumed_train_samples += batch_size
         num_floating_point_operations_so_far += num_floating_point_operations(args, batch_size)
-
-        if args.enable_high_availability:
-            try:
-                from mindio_ttp.framework_ttp import ttp_set_ckpt_args
-            except ModuleNotFoundError:
-                sys.exit("The mindio_ttp package is not installed. Exiting.")
-            args.num_floating_point_operations_so_far = num_floating_point_operations_so_far
-            ttp_set_ckpt_args(
-                [iteration, model, optimizer, opt_param_scheduler, args.num_floating_point_operations_so_far])
-            args.iteration = iteration
 
         # Logging.
         loss_scale = optimizer.get_loss_scale().item()
