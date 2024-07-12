@@ -14,7 +14,6 @@
 # limitations under the License.
 """Expert parallel groups."""
 
-import sys
 from functools import wraps
 from typing import Optional
 
@@ -134,20 +133,6 @@ def initialize_model_parallel_decorator(initialize_model_parallel):
                 _PIPELINE_MODEL_PARALLEL_NODE_INFO[ranks[0] % gpus_per_node] = 0
             if ranks[-1] // gpus_per_node == node_id:
                 _PIPELINE_MODEL_PARALLEL_NODE_INFO[ranks[-1] % gpus_per_node] = 2
-
-        args = megatron.training.get_args()
-        if args.enable_high_availability:
-            try:
-                from mindio_ttp.adaptor import ttp_initialize_replica_dp_group
-            except ModuleNotFoundError:
-                sys.exit("The mindio_ttp package is not installed. Exiting.")
-            ttp_initialize_replica_dp_group(
-                pipeline_model_parallel_size,
-                tensor_model_parallel_size,
-                context_parallel_size,
-                expert_model_parallel_size,
-                world_size
-            )
 
     return wrapper
 
