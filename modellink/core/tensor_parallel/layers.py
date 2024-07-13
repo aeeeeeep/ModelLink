@@ -25,5 +25,5 @@ def vocab_embedding_wrapper(fn):
         args_ = get_args()
         if hasattr(self, 'norm'):
             output = self.norm(output)
-        return output * args_.embedding_multiplier_scale
+        return output * args_.embedding_multiplier_scale if args_.embedding_multiplier_scale else output
     return wrapper
