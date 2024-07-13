@@ -499,6 +499,18 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> -- </td>
       <td> 【社区】 </td>
     </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/grok1/README.md">Grok1</a></td>
+      <td>40B</td>
+      <td> 8K </td>
+      <td> <a href="examples/grok1/pretrain_grok1_40b_ptd.sh"> pretrain </a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> 【昇腾】 </td>
+    </tr>
   </tbody>
 </table>
 
@@ -873,6 +885,15 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> FP16 </td>
       <td> 153 </td>
       <td> -- </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/grok1/README.md">Grok1</a></td>
+      <td>40B</td>
+      <td> 8K </td>
+      <td> 2x8 </td>
+      <td> BFP16 </td>
+      <td> 1646 </td>
+      <td> 2057 </td>
     </tr>
   </tbody>
 </table>

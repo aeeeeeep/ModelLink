@@ -12,18 +12,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from functools import wraps
-
-from megatron.training import get_args
-
-
-def vocab_embedding_wrapper(fn):
-    @wraps(fn)
-    def wrapper(self, *args, **kwargs):
-        output = fn(self, *args, **kwargs)
-        args_ = get_args()
-        if hasattr(self, 'norm'):
-            output = self.norm(output)
-        return output * args_.embedding_multiplier_scale if args_.embedding_multiplier_scale else output
-    return wrapper
