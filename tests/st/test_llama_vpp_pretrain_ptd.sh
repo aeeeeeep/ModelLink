@@ -74,7 +74,7 @@ python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS \
       --log-interval 1 \
       --save-interval 10000 \
       --eval-interval 1000 \
-      --eval-iters 10 \
+      --eval-iters 1 \
       --distributed-backend nccl \
       --load $CKPT_LOAD_DIR \
       --save $CKPT_SAVE_DIR \
