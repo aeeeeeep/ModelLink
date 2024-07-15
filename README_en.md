@@ -521,8 +521,8 @@ For the supported models listed above, we provide training scripts and readme in
 |           Software            | [Version](https://www.hiascend.com/zh/) |
 | :-----------------------: |:----------------------------------:|
 |          Python           |                3.8                 |
-|          driver           |         Ascend HDK 24.0.RC2          |
-|         firmware          |         Ascend HDK 24.0.RC2          |
+|          driver           |         Ascend HDK 24.1.RC2          |
+|         firmware          |         Ascend HDK 24.1.RC2          |
 |           CANN            |             CANN 8.0.RC2             |
 |           torch           |             2.1.0、2.2.0             |
 |         torch_npu         |           release v6.0.RC2           |
