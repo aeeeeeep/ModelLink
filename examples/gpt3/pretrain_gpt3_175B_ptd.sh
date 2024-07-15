@@ -3,7 +3,7 @@
 # Runs the "175B" parameter model in full layers.
 export COMBINED_ENABLE=1
 export CUDA_DEVICE_MAX_CONNECTIONS=1
-export AZUREML_EXPERIMENT_ID=0
+export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
 
 GPUS_PER_NODE=8
 # Change for multinode config
