@@ -56,6 +56,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --no-gradient-accumulation-fusion \
        --exit-on-missing-checkpoint \
        --lora-load ${CHECKPOINT_LORA}  \
+       --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
        --lora-r 16 \
        --lora-alpha 32 \
        --make-vocab-size-divisible-by 1 \
