@@ -3,7 +3,6 @@
 
 export LD_LIBRARY_PATH=/usr/local:/usr/local/lib:/usr/local/lib:/root/miniconda3/lib:$LD_LIBRARY_PATH
 export CUDA_DEVICE_MAX_CONNECTIONS=1
-export WITHOUT_JIT_COMPILE=1
 export HCCL_CONNECT_TIMEOUT=1200
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 GPUS_PER_NODE=8
@@ -51,7 +50,7 @@ python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS \
       --attention-dropout 0.0 \
       --init-method-std 0.01 \
       --hidden-dropout 0.0 \
-      --position-embedding-type rope \
+      --position-embedding-type alibi \
       --normalization RMSNorm \
       --swiglu \
       --no-masked-softmax-fusion \
@@ -70,7 +69,7 @@ python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS \
       --fp16 \
       --finetune \
       --is-instruction-dataset \
-      --position-embedding-type alibi \
+      --variable-seq-lengths \
       --square-alibi-mask \
       --distributed-backend nccl \
       --data-path $DATA_PATH \

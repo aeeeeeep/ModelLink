@@ -90,3 +90,34 @@ def unwrap_model_wrapper(fn):
             module_instances = megatron.training.utils.ALL_MODULE_WRAPPER_CLASSNAMES
         return fn(model, module_instances)
     return wrapper
+
+
+def get_finetune_data_on_this_tp_rank(data_iterator):
+    args = get_args()
+    ds = next(data_iterator)
+    tokens = ds.get('input_ids').long().cuda(non_blocking=True)
+    attention_mask = None
+
+    def _broadcast(item):
+        if item is not None:
+            torch.distributed.broadcast(item, mpu.get_tensor_model_parallel_src_rank(), group=mpu.get_tensor_model_parallel_group())
+
+    if mpu.get_tensor_model_parallel_rank() == 0:
+        via_length = torch.LongTensor([tokens.shape[1]]).cuda(non_blocking=True)
+        _broadcast(via_length)
+        _broadcast(tokens)
+        if args.position_embedding_type == "alibi":
+            attention_mask_1d = ds.get('attention_mask').long().cuda(non_blocking=True)
+            _broadcast(attention_mask_1d)
+            attention_mask = get_tune_attention_mask(attention_mask_1d)
+    else:
+        via_length = torch.empty((1), dtype=torch.int64, device=torch.cuda.current_device())
+        _broadcast(via_length)
+        tokens = torch.empty((args.micro_batch_size, via_length), dtype=torch.int64, device=torch.cuda.current_device())
+        _broadcast(tokens)
+        if args.position_embedding_type == "alibi":
+            attention_mask_1d = torch.empty((args.micro_batch_size, via_length), dtype=torch.int64, device=torch.cuda.current_device())
+            _broadcast(attention_mask_1d)
+            attention_mask = get_tune_attention_mask(attention_mask_1d)
+
+    return tokens, attention_mask
