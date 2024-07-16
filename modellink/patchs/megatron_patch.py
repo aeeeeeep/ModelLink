@@ -26,7 +26,7 @@ from mindspeed.core.tensor_parallel.layers import vocab_parallel_embedding_forwa
 from mindspeed.initialize import _compile_dependencies
 
 from ..model import (
-    GPTModel, parallel_transformer_init, seq_length_wrapper,
+    GPTModel, parallel_transformer_init, transformer_language_model_forward_wrapper,
     norm_wrapper, SwitchMLP, state_dict_for_save_checkpoint_wrapper,
     core_attention_wrapper, core_attention_forward, FlashSelfAttention,
     ParallelAttention_wrapper, transformer_language_model_init,
@@ -44,7 +44,7 @@ from ..core import (vocab_embedding_wrapper, initialize_model_parallel_decorator
 from ..core.pipeline_parallel.p2p_communication import _batched_p2p_ops
 from ..data import build_pretraining_data_loader
 from ..tokenizer import build_tokenizer
-from ..arguments import parse_args_decorator, validate_args_decorator
+from ..arguments import parse_args_decorator, validate_args
 from ..checkpointing import _load_base_checkpoint_wrapper, load_checkpoint_wrapper
 from ..initialize import initialize_megatron
 from ..log_handler import emit
@@ -170,7 +170,7 @@ def patch_model():
     megatron.legacy.model.GPTModel = GPTModel
 
     # patch language model
-    megatron.legacy.model.language_model.TransformerLanguageModel.forward = (seq_length_wrapper(
+    megatron.legacy.model.language_model.TransformerLanguageModel.forward = (transformer_language_model_forward_wrapper(
         megatron.legacy.model.language_model.TransformerLanguageModel.forward))
     megatron.legacy.model.language_model.TransformerLanguageModel.__init__ = transformer_language_model_init
 
@@ -192,7 +192,7 @@ def patch_training():
 
 def patch_miscellaneous():
     megatron.training.arguments.parse_args = parse_args_decorator(megatron.training.arguments.parse_args)
-    megatron.training.arguments.validate_args = validate_args_decorator(megatron.training.arguments.validate_args)
+    megatron.training.arguments.validate_args = validate_args
     megatron.training.global_vars.build_tokenizer = build_tokenizer
     megatron.training.checkpointing._load_base_checkpoint = _load_base_checkpoint_wrapper(
         megatron.training.checkpointing._load_base_checkpoint)

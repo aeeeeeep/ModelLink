@@ -415,7 +415,7 @@ class FlashSelfAttention(torch.nn.Module):
 
         self.alibi = None
         if args.position_embedding_type == 'alibi':
-            self.get_alibi()
+            self.get_alibi(args.seq_length)
 
     def forward(self, q, k, v, attention_mask, pse=None):
         """Implements the multihead softmax attention.
@@ -471,12 +471,9 @@ class FlashSelfAttention(torch.nn.Module):
                     'FlashAttention with Alibi requires for SBH shape_order, but is {}.'.format(args.shape_order))
 
             self.alibi.output_size = size_record
-            self.get_alibi()
+            self.get_alibi(seq_length)
             if self.fill_neg_inf:
-                _alibi = self.alibi.alibi[:, :seq_length, :seq_length]
-                self.attention_mask = \
-                    self.attention_mask.unsqueeze(0).unsqueeze(0).repeat(batch_size, 1, 1, 1)[:batch_size, :, :, :]
-                self.alibi.matmul_result = _get_inverted_mask(self.attention_mask, _alibi).view(-1, seq_length, seq_length)
+                self.alibi_fill_neg_inf(seq_length, batch_size)
             else:
                 self.alibi.matmul_result = self.alibi.alibi[:, :, :seq_length].repeat(batch_size, 1, 1)
 
@@ -500,10 +497,23 @@ class FlashSelfAttention(torch.nn.Module):
 
         return output
 
-    def get_alibi(self):
+
+    def alibi_fill_neg_inf(self, seq_length, batch_size):
+        _alibi = self.alibi.alibi[:, :seq_length, :seq_length]
+        # (b, 1, s, s)
+        if(len(self.attention_mask.size()) == 4):
+            self.attention_mask = \
+                self.attention_mask[:batch_size, :, :, :]
+        else:
+            self.attention_mask = \
+                self.attention_mask.unsqueeze(0).unsqueeze(0).repeat(batch_size, 1, 1, 1)[:batch_size, :, :, :]
+        self.alibi.matmul_result = _get_inverted_mask(self.attention_mask, _alibi).view(-1, seq_length, seq_length)
+
+
+    def get_alibi(self, seq_length):
         args = get_args()
         self.alibi = Alibi()
-        alibi = _build_alibi_tensor(args.seq_length,
+        alibi = _build_alibi_tensor(seq_length,
                                     args.num_attention_heads,
                                     args.square_alibi_mask,
                                     args.fill_neg_inf,
@@ -578,7 +588,7 @@ def core_attention_forward(self, query_layer, key_layer, value_layer, attention_
             args = get_args()
 
             self.alibi.output_size = output_size
-            alibi = _build_alibi_tensor(args.seq_length,
+            alibi = _build_alibi_tensor(query_layer.size(0),
                                         args.num_attention_heads,
                                         args.square_alibi_mask,
                                         args.fill_neg_inf
@@ -589,11 +599,18 @@ def core_attention_forward(self, query_layer, key_layer, value_layer, attention_
                 alibi = alibi.to(torch.bfloat16)
             self.alibi.alibi = alibi
 
-            if self.fill_neg_inf:
+            def core_attention_fill_neg_inf(output_size, attention_mask):
                 _alibi = self.alibi.alibi[:, :output_size[3], :output_size[3]]
-                attention_mask = attention_mask.repeat(output_size[0], 1, 1, 1)[:output_size[0], :, :, :]
+                # (b, 1, s, s)
+                if attention_mask.size() == 4:
+                    attention_mask = attention_mask.unsqueeze(1)[:output_size[0], :, :, :]
+                else:
+                    attention_mask = attention_mask.repeat(output_size[0], 1, 1, 1)[:output_size[0], :, :, :]
                 self.alibi.matmul_result = _get_inverted_mask(attention_mask, _alibi).view(-1, output_size[2],
-                                                                                           output_size[2]).contiguous()
+                                                                                                output_size[2]).contiguous()
+
+            if self.fill_neg_inf:
+                core_attention_fill_neg_inf(output_size, attention_mask)
             else:
                 self.alibi.matmul_result = self.alibi.alibi[:, :, :output_size[3]].repeat(output_size[0], 1, 1)
 
