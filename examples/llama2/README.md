@@ -122,7 +122,7 @@ LLAMA2-7B 训练的硬件配置:
         --tokenizer-model ./model_from_hf/llama-2-7b-hf/tokenizer.model
     ```
    
-    权重转换中加入如下参数，可以实现非均匀切分
+    权重转换中加入如下参数，实现非均匀切分
     ```bash
     --num-layer-list 6,8,8,10 \
     ```

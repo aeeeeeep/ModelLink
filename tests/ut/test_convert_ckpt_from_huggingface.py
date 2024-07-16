@@ -6,6 +6,7 @@ from pathlib import Path
 import torch
 
 from utils import judge_expression
+from utils import weight_compare
 import modellink
 
 
@@ -44,6 +45,18 @@ class CovertDynamicCkptFromHuggingfaceArgs:
     num_layer_list = '6,8,8,10'
 
 
+class CovertMCoreCkptFromHuggingfaceArgs:
+    model_type = "GPT"
+    loader = "hf_mcore"
+    saver = "mg_mcore"
+    target_tensor_parallel_size = "2"
+    target_pipeline_parallel_size = "4"
+    load_dir = "/home/dataset/ci_engineering/llama-2-7b-hf/"
+    save_dir = "/home/dataset/ci_engineering/llama-2-7b-mg-tp2-pp4-mcore-test/"
+    base_dir = "/home/dataset/ci_engineering/llama-2-7b-mg-tp2-pp4-mcore/"
+    tokenizer_model = "/home/dataset/ci_engineering/llama-2-7b-hf/tokenizer.model"
+
+
 class TestConvertCkptFromHuggingface:
 
     def test_file_exsit(self):
@@ -58,8 +71,31 @@ class TestConvertCkptFromHuggingface:
         judge_expression(bin_file == 2)
         judge_expression(os.path.exists(os.path.join(args.load_dir, "pytorch_model.bin.index.json")))
 
+    def test_convert_mcore_weights_form_huggingface(self):
+        args = CovertMCoreCkptFromHuggingfaceArgs()
+        """
+        Test whether the weight to be converted as we want in `--save-dir`. We will check the model layer name, 
+        including embedding, final_norm, output and encoder. In the encoder, there will be some different layers 
+        to compose the unique transformer layer and all these layer stack to compose the entity of the model.
+        """
+        base_dir = Path(__file__).absolute().parent.parent.parent
+        file_path = os.path.join(base_dir, "tools/checkpoint/convert_ckpt.py")
+        arguments = [
+            "--model-type", args.model_type,
+            "--loader", args.loader,
+            "--saver", args.saver,
+            "--target-tensor-parallel-size", args.target_tensor_parallel_size,
+            "--target-pipeline-parallel-size", args.target_pipeline_parallel_size,
+            "--load-dir", args.load_dir,
+            "--save-dir", args.save_dir,
+            "--tokenizer-model", args.tokenizer_model,
+            "--use-mcore-models",
+            "--model-type-hf", "llama2"
+        ]
+        subprocess.run(["python3", file_path] + arguments)
+        judge_expression(weight_compare(args.base_dir, args.save_dir))
+
     def test_convert_dynamic_weights_form_huggingface(self):
-        from utils import weight_compare
         args = CovertDynamicCkptFromHuggingfaceArgs()
         """
         Test whether the weight to be converted as we want in `--save-dir`. We will check the model layer name, 
