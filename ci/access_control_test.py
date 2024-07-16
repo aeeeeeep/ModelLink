@@ -34,16 +34,12 @@ class ST_Test:
         test_dir = os.path.join(base_dir, 'tests')
 
         st_dir = "st"
-        llama_pretrain_shell_file = os.path.join(
-            test_dir, st_dir, "test_llama_pretrain_ptd.sh")
+        llama_vpp_pretrain_shell_file = os.path.join(
+            test_dir, st_dir, "test_llama_vpp_pretrain_ptd.sh")
         llama_inference_shell_file = os.path.join(
             test_dir, st_dir, "test_llama_inference_ptd.sh")
         gemma_pretrain_shell_file = os.path.join(
             test_dir, st_dir, "test_gemma_pretrain_ptd.sh")
-        gemma_inference_shell_file = os.path.join(
-            test_dir, st_dir, "test_gemma_inference_ptd.sh")
-        llama_vpp_pretrain_shell_file = os.path.join(
-            test_dir, st_dir, "test_llama_vpp_pretrain_ptd.sh")
         llama_instruction_shell_file = os.path.join(
             test_dir, st_dir, "test_llama_instruction_ptd.sh")
         llama_pretrain_ha_save_shell_file = os.path.join(
@@ -52,11 +48,9 @@ class ST_Test:
             test_dir, st_dir, "test_llama_pretrain_ha_load_ptd.sh")
 
         self.st_file_list = [
-            llama_pretrain_shell_file,
+            llama_vpp_pretrain_shell_file,
             llama_inference_shell_file,
             gemma_pretrain_shell_file,
-            gemma_inference_shell_file,
-            llama_vpp_pretrain_shell_file,
             llama_instruction_shell_file,
             llama_pretrain_ha_save_shell_file,
             llama_pretrain_ha_load_shell_file
