@@ -280,6 +280,8 @@ def validate_args_decorator(validate_args):
             args.create_attention_mask_in_dataloader = True
         print_rank_0("create-attention-mask-in-dataloader is {}".format(args.create_attention_mask_in_dataloader))
 
+        args.use_mc2 = False
+
         validate_args(args, defaults)
         if args.position_embedding_type == 'alibi' and args.sliding_window is not None:
             raise AssertionError('Sliding Window Attention is forbidden when use alibi.')
@@ -288,6 +290,8 @@ def validate_args_decorator(validate_args):
         return args
 
     return wrapper
+
+
 def _add_dataset_args(parser):
     group = parser.add_argument_group(title='dataset_args')
     group.add_argument('--no-shared-storage',
