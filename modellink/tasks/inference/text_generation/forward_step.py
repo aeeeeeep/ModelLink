@@ -87,7 +87,7 @@ class ForwardStep:
         self.pipelining_batch_x_seqlen = args.inference_batch_times_seqlen_threshold
         self.micro_batch_size = args.micro_batch_size
 
-    def __call__(self, tokens, position_ids, attention_mask):
+    def __call__(self, tokens, position_ids, attention_mask, past_key_values=None):
         """Invocation of the forward methods. Note that self.inference_params
         is being modified by the forward step."""
         # Pipelining case.
@@ -95,14 +95,16 @@ class ForwardStep:
             return _with_pipelining_forward_step(self.model,
                                                  (tokens,
                                                   position_ids,
-                                                  attention_mask),
+                                                  attention_mask,
+                                                  past_key_values),
                                                  self.inference_params,
                                                  self.micro_batch_size)
         else:
             return _no_pipelining_forward_step(self.model,
                                                (tokens,
                                                 position_ids,
-                                                attention_mask),
+                                                attention_mask,
+                                                past_key_values),
                                                self.inference_params)
 
 
@@ -129,13 +131,17 @@ def _allocate_recv_buffer(batch_size, sequence_length):
 def _no_pipelining_forward_step(model, inputs, inference_params):
     """If recv_buffer is none, we will allocate one on the fly."""
     # Run a simple forward pass.
-    tokens, position_ids, attention_mask = inputs
+    args = get_args()
+    tokens, position_ids, attention_mask, past_key_values = inputs
     output_tensor = _forward_step_helper(model,
                                          tokens,
                                          position_ids=position_ids,
                                          attention_mask=attention_mask,
                                          tokentype_ids=None,
-                                         inference_params=inference_params)
+                                         inference_params=inference_params,
+                                         past_key_values=past_key_values)
+    if args.use_kv_cache:
+        output_tensor, past_key_values = output_tensor
     # Update the sequence length offset.
     inference_params.sequence_len_offset += tokens.size(1)
 
@@ -143,12 +149,16 @@ def _no_pipelining_forward_step(model, inputs, inference_params):
     if parallel_state.is_pipeline_last_stage():
         logits = output_tensor
 
-    return logits
+    if args.use_kv_cache:
+        return logits, past_key_values
+    else:
+        return logits
 
 
 def _with_pipelining_forward_step(model, inputs, inference_params, micro_batch_size):
     """No interleaving is supported."""
-    tokens, position_ids, attention_mask = inputs
+    args = get_args()
+    tokens, position_ids, attention_mask, past_key_values = inputs
     sequence_length = tokens.size(1)
     batch_size = tokens.size(0)
 
@@ -179,7 +189,10 @@ def _with_pipelining_forward_step(model, inputs, inference_params, micro_batch_s
                                       position_ids=position_ids2use,
                                       attention_mask=attention_mask,
                                       tokentype_ids=None,
-                                      inference_params=inference_params)
+                                      inference_params=inference_params,
+                                      past_key_values=past_key_values)
+        if args.use_kv_cache:
+            output, past_key_values = output
 
         # Adjust the batch size offset to account for the micro-batch.
         inference_params.batch_size_offset += this_micro_batch_size
@@ -194,4 +207,7 @@ def _with_pipelining_forward_step(model, inputs, inference_params, micro_batch_s
     # and reset the batch size offset
     inference_params.batch_size_offset = 0
 
-    return logits
+    if args.use_kv_cache:
+        return logits, past_key_values
+    else:
+        return logits

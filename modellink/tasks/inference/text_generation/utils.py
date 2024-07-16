@@ -164,15 +164,10 @@ def switch(val1, val2, boolean):
     return (1 - boolean) * val1 + boolean * val2
 
 
-def forward_step(model, tokens, **kwargs):
+def forward_step(model, tokens, position_ids, attention_mask, tokentype_ids,
+                 model_latencies=None, inference_params=None, past_key_values=None):
     # Hidden size changes when not using recompute, need to tell p2p_communicate
     # functions the correct size
-
-    position_ids = kwargs.pop("position_ids")
-    attention_mask = kwargs.pop("attention_mask")
-    tokentype_ids = kwargs.pop("tokentype_ids")
-    model_latencies = kwargs.pop("model_latencies", None)
-
     model_latencies = [] if model_latencies is None else model_latencies
 
     torch.cuda.synchronize()
@@ -191,27 +186,35 @@ def forward_step(model, tokens, **kwargs):
         input_ids=tokens,
         position_ids=position_ids,
         attention_mask=attention_mask,
-        tokentype_ids=tokentype_ids
+        tokentype_ids=tokentype_ids,
+        past_key_values=past_key_values,
+        use_cache=args.use_kv_cache
     )
 
-    output_tensor = _check_forward_output(output_tensor)
+    output_tensor, past_key_values = _check_forward_output(output_tensor)
     send_forward(output_tensor, config)
 
     args.seq_length = orig_seq_length
     torch.cuda.synchronize()
     model_latencies.append(time.time() - t0)
 
-    return output_tensor
+    if args.use_kv_cache:
+        return output_tensor, past_key_values
+    else:
+        return output_tensor
 
 
 def _check_forward_output(output_tensor):
+    past_key_values = None
     if isinstance(output_tensor, (list, tuple)):
         if output_tensor[0] is not None:
+            if len(output_tensor) >= 2:
+                past_key_values = output_tensor[1]
             output_tensor = output_tensor[0]
         else:
             raise ValueError("Please make sure that the output of the model is 'Tensor' or '[Tensor, ...]'")
 
-    return output_tensor
+    return output_tensor, past_key_values
 
 
 def _unwrap_and_set_input_tensor(args, input_tensor, model):
@@ -241,26 +244,32 @@ def sample_sequence_batch(model, context_tokens, context_lengths, **kwargs):
         max_length = args.max_length_ori
         context_length = context_lengths.min().item()
         is_done = torch.zeros([batch_size]).byte().to(torch.cuda.current_device())
+        past_key_values = None
 
         while context_length < max_length:
-            if args.text_generation_config['recompute']:
-                logits = _recompute_forward(model,
-                                            attention_mask=attention_mask,
-                                            context_length=context_length,
-                                            position_ids=position_ids,
-                                            tokens=tokens,
-                                            type_ids=type_ids)
+            if args.use_kv_cache:
+                if counter == 0:
+                    input_attention_mask = attention_mask[:, :, :context_length, :context_length]
+                    input_position_ids = position_ids[:, :context_length]
+                    input_tokens = tokens[:, :context_length]
+                else:
+                    input_attention_mask = attention_mask[:, :, context_length - 1:context_length, :context_length]
+                    input_position_ids = position_ids[:, context_length - 1:context_length]
+                    input_tokens = tokens[:, context_length - 1:context_length]
             else:
-                logits = _disable_recompute_forward(model,
-                                                    attention_mask=attention_mask,
-                                                    batch_size=batch_size,
-                                                    context_length=context_length,
-                                                    counter=counter,
-                                                    layer_past=layer_past,
-                                                    model_latencies=model_latencies,
-                                                    position_ids=position_ids,
-                                                    tokens=tokens,
-                                                    type_ids=type_ids)
+                input_attention_mask, input_position_ids, input_tokens = attention_mask, position_ids, tokens
+
+            logits = _recompute_forward(
+                model,
+                attention_mask=input_attention_mask,
+                context_length=context_length,
+                position_ids=input_position_ids,
+                tokens=input_tokens,
+                type_ids=type_ids,
+                past_key_values=past_key_values)
+
+            if args.use_kv_cache:
+                logits, past_key_values = logits
 
             group, next_log_probs, prev, src, started, vocab_size = _sample_and_synchronize(
                 args, batch_size, (context_length, context_lengths), logits, tokens
@@ -427,20 +436,30 @@ def _disable_recompute_forward(model, **kwargs):
 
 def _recompute_forward(model, **kwargs):
     attention_mask = kwargs.pop("attention_mask")
+    past_key_values = kwargs.pop("past_key_values", None)
     context_length = kwargs.pop("context_length")
     position_ids = kwargs.pop("position_ids")
     tokens = kwargs.pop("tokens")
     type_ids = kwargs.pop("type_ids")
     logits = None
 
+    args = get_args()
     output = forward_step(model,
                           tokens,
                           position_ids=position_ids,
                           attention_mask=attention_mask,
+                          past_key_values=past_key_values,
                           tokentype_ids=type_ids)
+    if args.use_kv_cache:
+        output, past_key_values = output
+        context_length = 0
 
     if parallel_state.is_pipeline_last_stage():
         if output is None:
             raise ValueError("In pipeline_last_stage group, the forward output should not be None")
         logits = output[:, context_length - 1, :]
-    return logits
+
+    if args.use_kv_cache:
+        return logits, past_key_values
+    else:
+        return logits
