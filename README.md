@@ -919,6 +919,14 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     ...
 ```
 
+```bash
+注意：
+如果需要开启 mc2，需保证:
+1. 配套环境版本如本仓首页所述;
+2. 将 modellink\arguments.py 中 validate_args_decorator 函数中的第283行进行注释
+   #args.use_mc2 = False
+```
+
 ---
 
 ## <span id="jump19"> 基于昇腾芯片采集Profiling数据
