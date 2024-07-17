@@ -22,32 +22,31 @@ import numpy as np
 import torch
 import torch_npu
 import torch.nn.functional as F
+from einops import rearrange
 
-from megatron.training import get_timers, get_args, get_num_microbatches
+from megatron.training import get_args, get_num_microbatches
 from megatron import core
-from megatron.core import mpu
 from megatron.core import tensor_parallel
 from megatron.core import parallel_state
 from megatron.core.enums import ModelType
-from megatron.core.tensor_parallel import get_cuda_rng_tracker
-from megatron.core.parallel_state import get_tensor_model_parallel_group
 
 from megatron.legacy.model.enums import AttnMaskType, LayerType, AttnType
 from megatron.legacy.model.transformer import _get_layer_type
 from megatron.legacy.model.transformer import (
-    ParallelTransformer, ParallelTransformerLayer, NoopTransformerLayer, ParallelMLP
+    ParallelTransformer, ParallelTransformerLayer, NoopTransformerLayer
 )
 from megatron.legacy.model.utils import get_norm
+from megatron.core import mpu
+from mindspeed.core.context_parallel.ring_context_parallel import ringattn_context_parallel
+from mindspeed.core.parallel_state import (get_context_parallel_group_for_hybrid_ring,
+                                           get_context_parallel_for_hybrid_ring_world_size,
+                                           get_context_parallel_for_hybrid_ring_rank,
+                                           get_context_parallel_for_hybrid_ring_global_ranks)
 
-from modellink.core.models.common.embeddings.rotary_pos_embedding import apply_rotary_pos_emb
-from modellink.error_utils import ensure_valid
-from modellink.model.alibi import Alibi, _build_alibi_tensor, _get_inverted_mask
+from ..core.models.common.embeddings.rotary_pos_embedding import apply_rotary_pos_emb
+from ..error_utils import ensure_valid
+from ..model.alibi import Alibi, _build_alibi_tensor, _get_inverted_mask
 from ..tasks.finetune.lora.utils import is_enable_lora
-
-try:
-    from einops import rearrange
-except ImportError:
-    rearrange = None
 
 
 def state_dict_for_save_checkpoint(state_dict):
@@ -384,6 +383,34 @@ def ParallelAttention_wrapper(fn):
     return wrapper
 
 
+def do_context_parallel(q, k, v, head_num, softmax_scale, attn_mask, dropout_p=0.):
+    args = get_args()
+    in_hybrid_mode = get_context_parallel_group_for_hybrid_ring(check_initialized=False) is not None
+    if in_hybrid_mode:
+        cp_group = get_context_parallel_group_for_hybrid_ring()
+        cp_size = get_context_parallel_for_hybrid_ring_world_size()
+        rank = get_context_parallel_for_hybrid_ring_rank()
+        cp_global_ranks = get_context_parallel_for_hybrid_ring_global_ranks()
+    else:
+        cp_group = mpu.get_context_parallel_group()
+        cp_size = mpu.get_context_parallel_world_size()
+        rank = mpu.get_context_parallel_rank()
+        cp_global_ranks = mpu.get_context_parallel_global_ranks()
+
+    cp_para = dict()
+
+    cp_para['causal'] = args.cp_attention_mask_type == 'causal'
+    cp_para['cp_group'] = cp_group
+    cp_para['cp_size'] = cp_size
+    cp_para['rank'] = rank
+    cp_para['cp_global_ranks'] = cp_global_ranks
+    cp_para['cp_group_for_send_recv_overlap'] = mpu.get_context_parallel_group_for_send_recv_overlap() \
+        if args.use_cp_send_recv_overlap else None
+
+    output = ringattn_context_parallel(q, k, v, head_num, cp_para, softmax_scale, attn_mask, dropout_p)
+    return output
+
+
 class FlashSelfAttention(torch.nn.Module):
     """ Ascend Flash Attention, support Alibi
     Implement the scaled dot product attention with softmax.
@@ -409,7 +436,6 @@ class FlashSelfAttention(torch.nn.Module):
         self.apply_query_key_layer_scaling = args.apply_query_key_layer_scaling
         self.layer_number = layer_number
         self.fill_neg_inf = args.fill_neg_inf
-        self.FA_SPARSE_ATTN_MASK_LEN = 2048
 
         self.beta = 1.0
         if self.apply_query_key_layer_scaling:
@@ -527,7 +553,6 @@ class FlashSelfAttention(torch.nn.Module):
         self.alibi.alibi = alibi
 
 
-
 def core_attention_wrapper(fn):
     @wraps(fn)
     def wrapper(self, *arg, **kwargs):
@@ -546,10 +571,8 @@ def core_attention_wrapper(fn):
                                         args.square_alibi_mask,
                                         args.fill_neg_inf
                                         ).to(torch.cuda.current_device())
-            if args.params_dtype == torch.float16:
-                alibi = alibi.to(torch.float16)
-            elif args.params_dtype == torch.bfloat16:
-                alibi = alibi.to(torch.bfloat16)
+            if args.params_dtype in [torch.float16, torch.bfloat16]:
+                alibi = alibi.to(args.params_dtype)
             self.alibi.alibi = alibi
         else:
             self.alibi = None
