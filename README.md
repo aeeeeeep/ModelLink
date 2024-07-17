@@ -500,10 +500,10 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> 【社区】 </td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/grok1/README.md">Grok1</a></td>
+      <td rowspan="1"><a href="examples/README.md">Grok1</a></td>
       <td>40B</td>
       <td> 8K </td>
-      <td> <a href="examples/grok1/pretrain_grok1_40b_ptd.sh"> pretrain </a> </td>
+      <td> <a href="examples/mcore/grok1/pretrain_grok1_40b_ptd.sh"> pretrain </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
@@ -887,7 +887,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> -- </td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/grok1/README.md">Grok1</a></td>
+      <td rowspan="1"><a href="examples/README.md">Grok1</a></td>
       <td>40B</td>
       <td> 8K </td>
       <td> 2x8 </td>
