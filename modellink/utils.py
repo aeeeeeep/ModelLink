@@ -72,6 +72,34 @@ def get_tune_attention_mask(attention_mask_1d):
     return attention_mask
 
 
+def print_args_wrapper(fn):
+    """
+    Add switch for controlling when to print arguments.
+    """
+    @wraps(fn)
+    def wrapper(title, args, after_validate=False):
+        if after_validate:
+            fn(title, args)
+
+    return wrapper
+
+
+def print_args(title, args):
+    """
+    Provide a public func for printing arguments.
+    """
+    if args.rank == 0:
+        print(f'------------------------ {title} ------------------------', flush=True)
+        str_list = []
+        for arg in vars(args):
+            dots = '.' * (48 - len(arg))
+            str_list.append('  {} {} {}'.format(arg, dots, getattr(args, arg)))
+        for arg in sorted(str_list, key=lambda x: x.lower()):
+            print(arg, flush=True)
+        print(f'-------------------- end of {title} ---------------------',
+              flush=True)
+
+
 def seed_all(seed=1234):
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
