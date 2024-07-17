@@ -496,6 +496,18 @@ Current ModelLink supports pre-training and fine-tuning for the following models
       <td> -- </td>
       <td> 【Community】 </td>
     </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/grok1/README.md">Grok1</a></td>
+      <td>40B</td>
+      <td> 8K </td>
+      <td> <a href="examples/grok1/pretrain_grok1_40b_ptd.sh"> pretrain </a> </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td> 【Ascend】 </td>
+    </tr>
   </tbody>
 </table>
 
@@ -869,6 +881,15 @@ For the supported models listed above, we provide training scripts and readme in
       <td> FP16 </td>
       <td> 153 </td>
       <td> -- </td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="examples/grok1/README.md">Grok1</a></td>
+      <td>40B</td>
+      <td> 8K </td>
+      <td> 2x8 </td>
+      <td> BFP16 </td>
+      <td> 1646 </td>
+      <td> 2057 </td>
     </tr>
   </tbody>
 </table>

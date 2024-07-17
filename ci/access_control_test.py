@@ -52,12 +52,12 @@ class ST_Test:
             test_dir, st_dir, "test_llama_pretrain_ha_load_ptd.sh")
 
         self.st_file_list = [
+            llama_instruction_shell_file,
             llama_pretrain_shell_file,
             llama_inference_shell_file,
             gemma_pretrain_shell_file,
             gemma_inference_shell_file,
             llama_vpp_pretrain_shell_file,
-            llama_instruction_shell_file,
             llama_pretrain_ha_save_shell_file,
             llama_pretrain_ha_load_shell_file
         ]
@@ -85,7 +85,7 @@ class ST_Test:
 
 
 if __name__ == "__main__":
-    ut = UT_Test()
-    ut.run_ut()
     st = ST_Test()
     st.run_st()
+    ut = UT_Test()
+    ut.run_ut()

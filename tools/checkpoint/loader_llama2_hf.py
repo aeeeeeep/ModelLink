@@ -80,7 +80,7 @@ def load_args_from_checkpoint(args):
     args.tokenizer_type = "Llama2Tokenizer"
     args.normalization = "RMSNorm"
     args.add_bias_linear = False
-    args.untie_embeddings_and_output_weights = True
+    args.untie_embeddings_and_output_weights = not llama_args.get("tie_word_embeddings", False)
     args.vocab_size = llama_args["vocab_size"]
     args.padded_vocab_size = llama_args["vocab_size"]
     args.llama = llama_args
@@ -105,7 +105,8 @@ def set_preprocess_state(args, model, hf_model):
 def set_postprocess_state(args, model, hf_model):
     '''Set output layer & norm params.'''
     model.language_model.encoder.final_norm.weight.data.copy_(hf_model.model.norm.weight)
-    model.language_model.output_layer.weight.data.copy_(hf_model.lm_head.weight)
+    if args.untie_embeddings_and_output_weights:
+        model.language_model.output_layer.weight.data.copy_(hf_model.lm_head.weight)
 
 
 def set_attn_state(args, layer, hf_layer):

@@ -13,14 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .gpt_model import GPTModel
-from .transformer import (
-    parallel_transformer_init, state_dict_for_save_checkpoint_wrapper,
-    core_attention_wrapper, FlashSelfAttention, core_attention_forward,
-    ParallelAttention_wrapper, ParallelAttentionForward,
-    parallel_transformer_forward, parallel_mlp_init_wrapper
-)
-from .language_model import transformer_language_model_forward_wrapper, transformer_language_model_init
-from .fused_layer_norm import norm_wrapper
-from .moe import SwitchMLP
-from .rms_norm import rms_norm_init_wrapper, rms_norm_forward
+import torch
+
+
+def z_loss_func(logits, z_loss_coeff):
+    """Encourages the router's logits to remain small to enhance stability.
+    Please refer to the ST-MoE paper for details.
+    adapter for logsumexp() to support bfloat16
+
+    Args:
+        logits (torch.Tensor): The logits of the router.
+
+    Returns:
+        torch.Tensor: The logits after applying the z-loss.
+    """
+
+    z_loss = torch.mean(torch.square(torch.logsumexp(logits.to(torch.float), dim=-1).to(logits.dtype))) * z_loss_coeff
+    return z_loss

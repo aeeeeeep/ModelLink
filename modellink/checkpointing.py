@@ -47,8 +47,7 @@ def _load_base_checkpoint_wrapper(fn):
 def load_checkpoint_wrapper(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        args_ = get_args()
-        if is_enable_lora() and (not args_.lora_load or not os.path.exists(args_.lora_load)):
+        if is_enable_lora():
             strict = False
             kwargs['strict'] = strict
 

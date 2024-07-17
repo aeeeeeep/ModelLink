@@ -134,6 +134,11 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
         --save-dir ./model_weights/llama-2-7b-hf-v0.1-tp1-pp2/ \
         --tokenizer-model ./model_from_hf/llama-2-7b-hf/tokenizer.model
     ```
+   
+    Adding the following parameters in weight conversion can achieve non-uniform segmentation
+    ```bash
+    --num-layer-list 6,8,8,10 \
+    ```
 
     Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
 
@@ -264,6 +269,14 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
 
     ```shell
     bash examples/llama2/tune_llama2_7b_ptd.sh 
+    ```
+
+    In the weight conversion command of 4.2, adding the following parameters can fuse the trained lora weights with the base.
+    ```bash
+    --lora-load ${CHECKPOINT_LORA}  \
+    --lora-r 16 \
+    --lora-alpha 32 \
+    --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
     ```
 
 ### Performance
