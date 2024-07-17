@@ -14,7 +14,7 @@ from megatron.training.initialize import (
     _warmup_jit_function
 )
 
-from modellink.arguments import parse_args_decorator, validate_args
+from modellink.arguments import parse_args_decorator
 from modellink.core.tensor_parallel.ascend_turbo.initialize import initialize_cfg_from_args
 from modellink.error_utils import ensure_valid
 from modellink.utils import seed_all
