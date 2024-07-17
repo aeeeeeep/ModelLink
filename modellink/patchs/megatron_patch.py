@@ -55,7 +55,7 @@ from ..core import (vocab_embedding_wrapper, initialize_model_parallel_decorator
 from ..core.pipeline_parallel.p2p_communication import _batched_p2p_ops
 from ..data import build_pretraining_data_loader
 from ..tokenizer import build_tokenizer
-from ..arguments import parse_args_decorator, validate_args
+from ..arguments import parse_args_decorator
 from ..checkpointing import _load_base_checkpoint_wrapper, load_checkpoint_wrapper
 from ..initialize import initialize_megatron
 from ..log_handler import emit
@@ -237,8 +237,12 @@ def patch_training():
 
 
 def patch_miscellaneous():
+    from modellink.utils import print_args_wrapper
+    from modellink.arguments import validate_args_decorator
     megatron.training.arguments.parse_args = parse_args_decorator(megatron.training.arguments.parse_args)
-    megatron.training.arguments.validate_args = validate_args
+    megatron.training.arguments.validate_args = validate_args_decorator(megatron.training.arguments.validate_args)
+    # After validating arguments, do arguments printing.
+    megatron.training.arguments._print_args = print_args_wrapper(megatron.training.arguments._print_args)
     megatron.training.global_vars.build_tokenizer = build_tokenizer
     megatron.training.checkpointing._load_base_checkpoint = _load_base_checkpoint_wrapper(
         megatron.training.checkpointing._load_base_checkpoint)
