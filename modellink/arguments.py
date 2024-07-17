@@ -196,6 +196,8 @@ def _add_network_size_args(parser):
 def _add_algorithm_args(parser):
     group = parser.add_argument_group(title='algorithm')
     group.add_argument('--rotary-base', type=float, help='rotary-base.')
+    group.add_argument('--optimize-recomp-communication-level', type=int, default=0,
+                       help='The algorithm optimize the level of tp communication in the recompute stage.')    
 
     return parser
 
@@ -243,6 +245,22 @@ def _add_training_args(parser):
                        help='enable deterministic computing for npu')
     group.add_argument('--jit-compile', action='store_true', default=False,
                        help='Setting jit compile mode to True')
+    # cp参数
+    group.add_argument("--context-parallel-algo", type=str, default='megatron_cp_algo',
+                       choices=['ulysses_cp_algo', 'megatron_cp_algo', 'hybrid_cp_algo'],
+                       help='context parallel algorithm') 
+    group.add_argument('--ulysses-degree-in-cp', type=int, default=None)
+    group.add_argument('--cp-attention-mask-type', type=str, default='causal',
+                       choices=['causal', 'general'], help='context parallel attention mask type')
+    group.add_argument('--use-cp-send-recv-overlap', action='store_true',
+                       help='use this flag to enable cp send-recv-overlap.')
+    group.add_argument('--use-laser-attn', action='store_true',
+                       help='use this flag to enable laser attention')  
+
+    group.add_argument('--use-fusion-attn-v2', action='store_true', default=False,
+                       help='use fusion_attention ops version 2')    
+    group.add_argument('--sparse-mode', type=int, default=0,
+                       help='To improve performance in different modes of attention mask')                                                                                     
     return parser
 
 
@@ -275,6 +293,9 @@ def _add_alibi_args(parser):
                        action='store_true',
                        default=False,
                        help='fill alibi with negative inf')
+    group.add_argument('--alibi-fusion-attn-type',
+                        type=int,
+                        help='alibi pse type, support for 0,2,3')
 
     return parser
 
@@ -300,6 +321,7 @@ def _add_dataset_args(parser):
                        default=False,
                        help='if no shared storage, set it'
                        )
+    
     return parser
 
 
