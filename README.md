@@ -901,23 +901,127 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
 ---
 
 ## <span id="jump18"> 加速算法与融合算子
-ModelLink支持张量并行、流水线并行、序列并行、重计算、分布式优化器等多种加速算法和融合算子，下表为各种加速特性对应的使能开关：
 
-|                 加速特性                 |              使能参数              |
-|:------------------------------------:|:------------------------------:|
-|                 张量并行                 |  --tensor-model-parallel-size  |
-|                流水线并行                 | --pipeline-model-parallel-size |
-|               流水并行动态划分               |        --num-layer-list        |
-|                 序列并行                 |      --sequence-parallel       |
-|                 重计算                  |    --recompute-granularity     |
-|                分布式优化器                |  --use-distributed-optimizer   |
-|           DDP allreduce 掩盖           |     --overlap-grad-reduce      |
-|           Flash attention            |        --use-flash-attn        |
-|            Fused rmsnorm             |      --use-fused-rmsnorm       |
-|             Fused swiglu             |       --use-fused-swiglu       |
-|                 mc2                  |           --use-mc2            |
-| Fused rotary <br/>position embedding |   --use-fused-rotary-pos-emb   |
-|       Sliding window attention       |        --sliding-window        |
+ModelLink支持张量并行、流水线并行、context并行、序列并行、重计算、分布式优化器等多种加速算法和融合算子，下表为各种加速特性对应的使能开关：
+
+<table><thead>
+  <tr>
+    <th>使用场景</th>
+    <th>特性名称</th>
+    <th>具体参数</th>
+    <th>Mcore支持</th>
+    <th>legacy支持</th>
+  </tr></thead>
+<tbody>
+  <tr>
+    <td rowspan="5">PTD并行</td>
+    <td>张量并行</td>
+    <td>--tensor-model-parallel-size</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>流水线并行</td>
+    <td>--pipeline-model-parallel-size</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>流水线并行动态划分</td>
+    <td>--num-layer-list</td>
+    <td>No</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>序列并行</td>
+    <td>--sequence-parallel</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>分布式优化器</td>
+    <td>--use-distributed-optimizer</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td rowspan="3">长序列并行</td>
+    <td>长序列并行</td>
+    <td>--context-parallel-size</td>
+    <td>Yes</td>
+    <td>No</td>
+  </tr>
+  <tr>
+    <td>多并行方案</td>
+    <td>--context-parallel-algo</td>
+    <td>Yes</td>
+    <td>No</td>
+  </tr>
+  <tr>
+    <td>send/recv掩盖加速</td>
+    <td>--cp-send-recv-overlap</td>
+    <td>Yes</td>
+    <td>No</td>
+  </tr>
+  <tr>
+    <td>内存</td>
+    <td>重计算</td>
+    <td>--recompute-granularity</td>
+    <td></td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td rowspan="5">融合算子</td>
+    <td>Flash attention</td>
+    <td>--use-flash-attn</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>Fused rmsnorm</td>
+    <td>--use-fused-rmsnorm</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>Fused swiglu</td>
+    <td>--use-fused-swiglu</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>Fused rotary position embedding</td>
+    <td>--use-fused-rotary-pos-emb</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>Sliding window attention</td>
+    <td>--sliding-window</td>
+    <td>Yes</td>
+    <td>Yes&nbsp;&nbsp;&nbsp;</td>
+  </tr>
+  <tr>
+    <td rowspan="3">通信</td>
+    <td>梯度reduce通算掩盖</td>
+    <td>--overlap-grad-reduce</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>权重all-gather通算掩盖</td>
+    <td>   --overlap-param-gather   </td>
+    <td>Yes</td>
+    <td>No</td>
+  </tr>
+  <tr>
+    <td>MC2</td>
+    <td>--use-mc2</td>
+    <td>No</td>
+    <td>Yes</td>
+  </tr>
+</tbody></table>
+
 
 
 ```bash
@@ -940,6 +1044,10 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     ... \
     ...
 ```
+注意：
+MC2特性在一般场景会有一定性能提升（5%左右）， 如果需要开启 mc2，需保证:
+1. 配套环境版本如本仓首页所述;
+2. 将 modellink\arguments.py 中 validate_args_decorator 函数中的`args.use_mc2 = False`进行注释
 
 ---
 
