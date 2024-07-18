@@ -25,7 +25,6 @@ from mindspeed.core.fusions.fused_softmax import (is_kernel_available, ScaledUpp
 from mindspeed.model.transformer import parallel_mlp_init_wrapper
 from mindspeed.core.tensor_parallel.random import _set_cuda_rng_state
 from mindspeed.core.tensor_parallel.cross_entropy import vocab_parallel_cross_entropy_forward
-from mindspeed.core.tensor_parallel.layers import vocab_parallel_embedding_forward
 from mindspeed.core.transformer.custom_layers.transformer_engine import PTNorm
 from mindspeed.core.transformer.moe.router import aux_loss_load_balancing
 from mindspeed.core.transformer.moe.token_dispatcher import token_permutation, token_unpermutation
@@ -60,7 +59,7 @@ from ..checkpointing import _load_base_checkpoint_wrapper, load_checkpoint_wrapp
 from ..initialize import initialize_megatron
 from ..log_handler import emit
 from ..arguments import process_args
-from ..patch_utils import PatchManager
+from ..patchs.patch_utils import PatchManager
 
 _ARGS = None
 
