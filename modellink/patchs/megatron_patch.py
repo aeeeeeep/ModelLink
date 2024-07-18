@@ -25,7 +25,6 @@ from mindspeed.core.fusions.fused_softmax import (is_kernel_available, ScaledUpp
 from mindspeed.model.transformer import parallel_mlp_init_wrapper
 from mindspeed.core.tensor_parallel.random import _set_cuda_rng_state
 from mindspeed.core.tensor_parallel.cross_entropy import vocab_parallel_cross_entropy_forward
-from mindspeed.core.tensor_parallel.layers import vocab_parallel_embedding_forward
 from mindspeed.core.transformer.custom_layers.transformer_engine import PTNorm
 from mindspeed.core.transformer.moe.router import aux_loss_load_balancing
 from mindspeed.core.transformer.moe.token_dispatcher import token_permutation, token_unpermutation
@@ -55,12 +54,12 @@ from ..core import (vocab_embedding_wrapper, initialize_model_parallel_decorator
 from ..core.pipeline_parallel.p2p_communication import _batched_p2p_ops
 from ..data import build_pretraining_data_loader
 from ..tokenizer import build_tokenizer
-from ..arguments import parse_args_decorator, validate_args
+from ..arguments import parse_args_decorator
 from ..checkpointing import _load_base_checkpoint_wrapper, load_checkpoint_wrapper
 from ..initialize import initialize_megatron
 from ..log_handler import emit
 from ..arguments import process_args
-from ..patch_utils import PatchManager
+from ..patchs.patch_utils import PatchManager
 
 _ARGS = None
 
@@ -228,8 +227,12 @@ def patch_training():
 
 
 def patch_miscellaneous():
+    from modellink.utils import print_args_wrapper
+    from modellink.arguments import validate_args_decorator
     PatchManager.register_patch('megatron.training.arguments.parse_args', parse_args_decorator)
-    PatchManager.register_patch('megatron.training.arguments.validate_args', validate_args)
+    PatchManager.register_patch('megatron.training.arguments.validate_args', validate_args_decorator)
+    # After validating arguments, do arguments printing.
+    PatchManager.register_patch('megatron.training.arguments._print_args', print_args_wrapper)
     PatchManager.register_patch('megatron.training.global_vars.build_tokenizer', build_tokenizer)
     PatchManager.register_patch('megatron.training.checkpointing._load_base_checkpoint', _load_base_checkpoint_wrapper)
 
