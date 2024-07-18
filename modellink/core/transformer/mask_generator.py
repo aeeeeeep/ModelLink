@@ -36,8 +36,10 @@ def set_attention_mask(attn_mask):
 
 
 def get_attention_mask(mode=None):
-    """Generate mask and cache it to boost mask generation.
-    Variable sequence length is unsupported."""
+    """
+    Generate mask and cache it to boost mask generation.
+    Variable sequence length is unsupported.
+    """
     global _MASK_CACHE
     # set params of FA
     args = get_args()

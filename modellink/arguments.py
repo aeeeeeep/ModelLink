@@ -84,7 +84,7 @@ def _add_cp_args(parser):
                        choices=['causal', 'full'], help='context parallel attention mask type')
     group.add_argument('--use-cp-send-recv-overlap', action='store_true',
                        help='use it to enable cp send-recv-overlap.')
-    group.add_argument('--kv-head-repeat-before-uly-alltoall', action='store_true',
+    group.add_argument('--kv-head-repeat-before-uly-alltoall', action='store_true', default=True,
                        help='use it to expand key and value for ulysses when GQA/MQA is used.')
     return parser
 
@@ -385,7 +385,7 @@ def _validate_create_attention_mask_in_dataloader(args):
     alibi_without_flash_attn = args.position_embedding_type == 'alibi' and not args.use_flash_attn
     if reset_data or alibi_without_flash_attn or args.tokenizer_padding_side == "left":
         args.create_attention_mask_in_dataloader = True
-    print_rank_0(f"[INFO] Setting args.create_attention_mask_in_dataloader to {args.create_attention_mask_in_dataloader}"
+    print_rank_0(f"[INFO] Setting args.create_attention_mask_in_dataloader to {args.create_attention_mask_in_dataloader} "
                  f"since reset_data={reset_data} or alibi_without_flash_attn={alibi_without_flash_attn} or "
                  f"args.tokenizer_padding_side={args.tokenizer_padding_side}")
 
@@ -418,11 +418,11 @@ def validate_args_decorator(megatron_validate_args):
     def wrapper(args, defaults=None):
         if defaults is None:
             defaults = {}
-
         variable_seq_lengths = args.variable_seq_lengths
         megatron_validate_args(args, defaults)
         args.variable_seq_lengths = variable_seq_lengths
 
+        _validate_cp_args(args)
         _validate_create_attention_mask_in_dataloader(args)
         _validate_instruction_finetune(args)
         _validate_position_embedding(args)

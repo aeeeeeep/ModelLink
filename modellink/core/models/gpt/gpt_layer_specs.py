@@ -15,8 +15,8 @@
 
 from functools import wraps
 
-from mindspeed.core.transformer.custom_layers.transformer_engine import PTNorm
 from megatron.training import get_args
+from modellink.core.transformer.custom_layers.transformer_engine import PTNorm
 
 
 def get_gpt_layer_local_spec_wrapper(fn):

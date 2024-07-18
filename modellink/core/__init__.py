@@ -33,3 +33,4 @@ from .distributed.distributed_data_parallel import distributed_data_parallel_ini
 from .optimizer import get_megatron_optimizer_wrapper
 from .optimizer.clip_grads import clip_grad_norm_fp32_wrapper
 from .optimizer.distrib_optimizer import distributed_optimizer_init_wrapper
+from .transformer.custom_layers.transformer_engine import PTNorm
