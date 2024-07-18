@@ -26,6 +26,7 @@ import numpy as np
 
 import megatron
 from megatron.training import get_args
+from megatron.core import mpu
 
 
 WRITE_FILE_DEFAULT_FLAGS = os.O_WRONLY | os.O_CREAT

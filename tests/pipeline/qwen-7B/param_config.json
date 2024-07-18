@@ -43,7 +43,7 @@
         "--log-interval", "1",
         "--save-interval", "10000",
         "--eval-interval", "1000",
-        "--eval-iters", "1000"
+        "--eval-iters", "5"
     ],
 
     "INSTRUCTION_PARAM": [
@@ -51,7 +51,56 @@
         "--is-instruction-dataset",
         "--data-path", "/home/dataset/tune-dataset-qwen-7B/alpaca",
         "--split", "90,5,5",
-        "--train-iters", "5000"
-    ]
+        "--train-iters", "5"
+    ], 
 
+
+    "PROCESS_INSTRUCTION_DATA": [
+        "--input", "train-00000-of-00001-a09b74b3ef9c3b56, alpaca_zh, sharegpt1, sharegpt2",
+        "--tokenizer-type", "PretrainedFromHF",
+        "--handler-name", "LlamaFactoryInstructionHandler",
+        "--output-prefix", "/home/dataset/tune-dataset-qwen-7B/lfhandler_tune_dataset/alpaca",
+        "--tokenizer-name-or-path", "/home/dataset/qwen-7b-hf/",
+        "--workers", "4",
+        "--log-interval", "1000",
+        "--append-eod", 
+        "--lla-fact-ins-template", "qwen", 
+        "--dataset-dir", "/home/dataset/tune-dataset-qwen-7B/lfhandler_tune_dataset/dataset/",
+        "--overwrite-cache"
+    ],
+
+
+    "PROCESS_INSTRUCTION_DATA_MIX1": [
+        "--input", "train-00000-of-00001-a09b74b3ef9c3b56, alpaca_zh, sharegpt1, sharegpt2",
+        "--tokenizer-type", "PretrainedFromHF",
+        "--handler-name", "LlamaFactoryInstructionHandler",
+        "--output-prefix", "/home/dataset/tune-dataset-qwen-7B/lfhandler_tune_dataset/alpaca",
+        "--tokenizer-name-or-path", "/home/dataset/qwen-7b-hf/",
+        "--workers", "4",
+        "--log-interval", "1000",
+        "--append-eod", 
+        "--lla-fact-ins-template", "qwen", 
+        "--dataset-dir", "/home/dataset/tune-dataset-qwen-7B/lfhandler_tune_dataset/dataset/",
+        "--overwrite-cache",
+        "--interleave-probs", "0.1, 0.2, 0.3, 0.4",
+        "--mix-strategy", "interleave_under",
+        "--max-samples", "10"
+    ],
+
+    "PROCESS_INSTRUCTION_DATA_MIX2": [
+        "--input", "train-00000-of-00001-a09b74b3ef9c3b56, alpaca_zh, sharegpt1, sharegpt2",
+        "--tokenizer-type", "PretrainedFromHF",
+        "--handler-name", "LlamaFactoryInstructionHandler",
+        "--output-prefix", "/home/dataset/tune-dataset-qwen-7B/lfhandler_tune_dataset/alpaca",
+        "--tokenizer-name-or-path", "/home/dataset/qwen-7b-hf/",
+        "--workers", "4",
+        "--log-interval", "1000",
+        "--append-eod", 
+        "--lla-fact-ins-template", "qwen", 
+        "--dataset-dir", "/home/dataset/tune-dataset-qwen-7B/lfhandler_tune_dataset/dataset/",
+        "--overwrite-cache",
+        "--interleave-probs", "0.1, 0.2, 0.3, 0.4",
+        "--mix-strategy", "interleave_over",
+        "--max-samples", "10"
+    ]
 }
