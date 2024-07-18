@@ -4,9 +4,8 @@
 import math
 from functools import wraps
 
-import torch
-import torch_npu
 from torch import Tensor
+import torch_npu
 from megatron.training import get_args
 from modellink.model.transformer import do_context_parallel, get_attention_mask
 
@@ -31,7 +30,6 @@ def dot_product_attention_init_wrapper(fn):
 def dot_product_attention_forward_wrapper(fn):
     @wraps(fn)
     def wrapper(self, query, key, value, attention_mask, attn_mask_type, packed_seq_params):
-        attention_mask = get_attention_mask()
         if get_args().use_flash_attn:
             return dot_product_attention_forward(self, query, key, value, attention_mask, attn_mask_type,
                                                  packed_seq_params)
@@ -70,6 +68,11 @@ def dot_product_attention_forward(
         return do_context_parallel(
             query, key, value, head_num=n_head, softmax_scale=scale, attn_mask=attention_mask)
     else:
+        use_sliding_windows = args.sliding_window is not None and seq_length > args.sliding_window
+
+        if use_sliding_windows:
+            args.pre_tockens = args.sliding_window
+
         return torch_npu.npu_fusion_attention(
             query, key, value, n_head, 'SBH',
             pse=None,
