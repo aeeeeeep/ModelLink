@@ -47,6 +47,8 @@ from ..core.models.common.embeddings.rotary_pos_embedding import apply_rotary_po
 from ..error_utils import ensure_valid
 from ..model.alibi import Alibi, _build_alibi_tensor, _get_inverted_mask
 from ..tasks.finetune.lora.utils import is_enable_lora
+from ..core.transformer import get_attention_mask, MUST_COMPRESS
+
 
 
 def state_dict_for_save_checkpoint(state_dict):
@@ -453,37 +455,12 @@ class FlashSelfAttention(torch.nn.Module):
         """
         args = get_args()
 
-        batch_size, seq_length, head_num, head_dim = q.shape[1], q.shape[0], q.shape[2], q.shape[3]
-
-        use_sliding_windows = (
-            getattr(args, "sliding_window", None) is not None
-            and seq_length > args.sliding_window
-            and not self.alibi
-        )
-
-        if use_sliding_windows:
-            pse = None
-            sparse_mode = 4
-            self.pre_tockens = args.sliding_window
-        else:
-            sparse_mode = 0
-
-        if not hasattr(self, 'attention_mask') or self.attention_mask.shape[0] != seq_length:
-            if use_sliding_windows:
-                self.attention_mask = torch.triu(
-                    torch.ones(self.FA_SPARSE_ATTN_MASK_LEN, self.FA_SPARSE_ATTN_MASK_LEN), 1).bool().npu()
-            else:
-                if attention_mask is not None:
-                    self.attention_mask = attention_mask
-                else:
-                    self.attention_mask = torch.triu(torch.ones(seq_length, seq_length), 1).bool().npu()
-
+        seq_length, batch_size, head_num, head_dim = q.shape[0], q.shape[1], q.shape[2], q.shape[3]
         q, k, v = [rearrange(x, 's b h d -> s b (h d)') for x in [q, k, v]]
 
         try:
             if not hasattr(self, 'num_factor'):
                 self.norm_factor = math.sqrt(head_dim)
-
             if self.apply_query_key_layer_scaling:
                 coeff = self.layer_number
                 self.norm_factor *= coeff
@@ -492,36 +469,62 @@ class FlashSelfAttention(torch.nn.Module):
         except Exception as e:
             raise ValueError('Invalid head_dim: {}'.format(head_dim)) from e
 
-        size_record = q.shape
-        if self.alibi is not None and (self.alibi.output_size != size_record) and pse is None:
-            if args.shape_order != 'SBH':
-                raise ValueError(
-                    'FlashAttention with Alibi requires for SBH shape_order, but is {}.'.format(args.shape_order))
+        if args.context_parallel_size > 1 and args.context_parallel_algo in ['megatron_cp_algo', 'hybrid_cp_algo']:
+            attention_mask = get_attention_mask()
+            output = do_context_parallel(q, k, v, head_num=head_num, softmax_scale=scale,
+                                         attn_mask=attention_mask, dropout_p=self.dropout_p)
+        else:
+            use_sliding_windows = (
+                getattr(args, "sliding_window", None) is not None
+                and seq_length > args.sliding_window
+                and not self.alibi
+            )
 
-            self.alibi.output_size = size_record
-            self.get_alibi(seq_length)
-            if self.fill_neg_inf:
-                self.alibi_fill_neg_inf(seq_length, batch_size)
+            if use_sliding_windows:
+                pse = None
+                sparse_mode = 4
+                self.pre_tockens = args.sliding_window
             else:
-                self.alibi.matmul_result = self.alibi.alibi[:, :, :seq_length].repeat(batch_size, 1, 1)
+                sparse_mode = 0
+            if not hasattr(self, 'attention_mask') or self.attention_mask.shape[0] != seq_length:
+                if use_sliding_windows:
+                    self.attention_mask = get_attention_mask(mode=MUST_COMPRESS)
+                else:
+                    if attention_mask is not None:
+                        self.attention_mask = attention_mask
+                    else:
+                        self.attention_mask = torch.triu(torch.ones(seq_length, seq_length), 1).bool().npu()
 
-        if self.alibi and pse is None:
-            pse = self.alibi.matmul_result.reshape(batch_size, head_num, seq_length,
-                                                   seq_length) * self.beta * self.norm_factor
-            self.pre_tockens = seq_length
+            size_record = q.shape
+            if self.alibi and self.alibi.output_size != size_record and pse is None:
+                if args.shape_order != 'SBH':
+                    raise ValueError(
+                        'FlashAttention with Alibi requires for SBH shape_order, but is {}.'.format(args.shape_order))
 
-        output = torch_npu.npu_fusion_attention( \
-            q, k, v, head_num, args.shape_order, \
-            pse=pse, \
-            sparse_mode=sparse_mode, \
-            padding_mask=None, \
-            atten_mask=self.attention_mask, \
-            scale=scale, \
-            pre_tockens=self.pre_tockens, \
-            next_tockens=self.next_tockens, \
-            keep_prob=1 - self.dropout_p, \
-            inner_precise=0
-        )[0]
+                self.alibi.output_size = size_record
+                self.get_alibi(seq_length)
+                if self.fill_neg_inf:
+                    self.alibi_fill_neg_inf(seq_length, batch_size)
+                else:
+                    self.alibi.matmul_result = self.alibi.alibi[:, :, :seq_length].repeat(batch_size, 1, 1)
+
+            if self.alibi and pse is None:
+                pse = self.alibi.matmul_result.reshape(batch_size, head_num, seq_length,
+                                                       seq_length) * self.beta * self.norm_factor
+                self.pre_tockens = seq_length
+
+            output = torch_npu.npu_fusion_attention( \
+                q, k, v, head_num, args.shape_order, \
+                pse=pse, \
+                sparse_mode=sparse_mode, \
+                padding_mask=None, \
+                atten_mask=self.attention_mask, \
+                scale=scale, \
+                pre_tockens=self.pre_tockens, \
+                next_tockens=self.next_tockens, \
+                keep_prob=1 - self.dropout_p, \
+                inner_precise=0
+            )[0]
 
         return output
 
