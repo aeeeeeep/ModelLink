@@ -31,6 +31,9 @@ class ParamConfig:
     auxiliary_param = config_file["AUXILIARY_PARAM"]
     instruction_param = config_file["INSTRUCTION_PARAM"]
     output_param = config_file["OUTPUT_PARAM"]
+    instruction_data_param = config_file["PROCESS_INSTRUCTION_DATA"]
+    instruction_data_mix_param1 = config_file["PROCESS_INSTRUCTION_DATA_MIX1"]
+    instruction_data_mix_param2 = config_file["PROCESS_INSTRUCTION_DATA_MIX2"]
 
 
 def assert_judge(expression):
