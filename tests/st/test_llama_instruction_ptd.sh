@@ -14,13 +14,13 @@ NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
-CHECKPOINT_PATH=/home/dataset/ci_engineering/ckpt
+CHECKPOINT_PATH=/data/ckpt
 
 rm -rf $CHECKPOINT_PATH
 
 mkdir $CHECKPOINT_PATH
-DATA_PATH=/home/dataset/ci_engineering/tune_dataset/alpaca
-TOKENIZER_PATH=/home/dataset/ci_engineering/llama-2-7b-hf/
+DATA_PATH=/data/tune_dataset/alpaca
+TOKENIZER_PATH=/data/llama-2-7b-hf/
 
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 basepath=$(cd `dirname $0`; cd ../../; pwd)
