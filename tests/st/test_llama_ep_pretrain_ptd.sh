@@ -15,17 +15,17 @@ NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
-CKPT_LOAD_DIR=/home/dataset/ci_engineering/llama2-7B-tp2-pp4-vpp4
-CKPT_SAVE_DIR=/home/dataset/ci_engineering/ckpt
-LOG_DIR=/home/dataset/ci_engineering/logs
+CKPT_LOAD_DIR=/data/llama2-7B-tp2-pp4-vpp4
+CKPT_SAVE_DIR=/data/ckpt
+LOG_DIR=/data/logs
 
 rm -rf $CKPT_SAVE_DIR
 rm -rf $LOG_DIR
 
 mkdir $CKPT_SAVE_DIR
 mkdir $LOG_DIR
-DATA_PATH=/home/dataset/ci_engineering/pretrain_dataset/alpaca_text_document
-TOKENIZER_MODEL=/home/dataset/ci_engineering/llama-2-7b-hf/tokenizer.model
+DATA_PATH=/data/pretrain_dataset/alpaca_text_document
+TOKENIZER_MODEL=/data/llama-2-7b-hf/tokenizer.model
 
 MOE_ARGS=(
     --num-experts 4

@@ -14,9 +14,9 @@ class CovertCkptToHuggingfaceArgs:
     model_type = "GPT"
     loader = "megatron"
     saver = "megatron"
-    save_dir = "/home/dataset/ci_engineering/llama-2-7b-hf"
-    lora_dir = "/home/dataset/ci_engineering/llama2-7B-lora-ckpt"
-    load_dir = "/home/dataset/ci_engineering/llama2-7B-tp8-pp1"
+    save_dir = "/data/llama-2-7b-hf"
+    lora_dir = "/data/llama2-7B-lora-ckpt"
+    load_dir = "/data/llama2-7B-tp8-pp1"
 
 
 class TestConvertCkptFromHuggingface:
@@ -47,7 +47,7 @@ class TestConvertCkptFromHuggingface:
             "--save-dir", args.save_dir
         ]
         
-        subprocess.run(["python3", file_path] + arguments)
+        subprocess.run(["python", file_path] + arguments)
         
         output_dir = os.path.join(args.save_dir, "mg2hg")
         
