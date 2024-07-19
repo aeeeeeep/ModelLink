@@ -14,8 +14,8 @@ DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE \
                   --master_addr $MASTER_ADDR \
                   --master_port $MASTER_PORT"
 
-VOCAB_FILE=/home/dataset/ci_engineering/llama-2-7b-hf
-CHECKPOINT_PATH=/home/dataset/ci_engineering/llama2-7B-tp8-pp1
+VOCAB_FILE=/data/llama-2-7b-hf
+CHECKPOINT_PATH=/data/llama2-7B-tp8-pp1
 basepath=$(cd `dirname $0`; cd ../../; pwd)
 echo $basepath
 export PYTHONPATH=${basepath}:$PYTHONPATH

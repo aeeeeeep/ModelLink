@@ -14,9 +14,9 @@ class CovertCkptFromHuggingfaceArgs:
     loader = "llama2_hf"
     saver = "megatron"
     target_tensor_parallel_size = "8"
-    load_dir = "/home/dataset/ci_engineering/llama-2-7b-hf"
-    save_dir = "/home/dataset/ci_engineering/llama2-7B-tp8-pp1"
-    tokenizer_model = "/home/dataset/ci_engineering/llama-2-7b-hf/tokenizer.model"
+    load_dir = "/data/llama-2-7b-hf"
+    save_dir = "/data/llama2-7B-tp8-pp1"
+    tokenizer_model = "/data/llama-2-7b-hf/tokenizer.model"
 
 
 class CovertVppCkptFromHuggingfaceArgs:
@@ -25,9 +25,9 @@ class CovertVppCkptFromHuggingfaceArgs:
     saver = "megatron"
     target_tensor_parallel_size = "2"
     target_pipeline_parallel_size = "4"
-    load_dir = "/home/dataset/ci_engineering/llama-2-7b-hf"
-    save_dir = "/home/dataset/ci_engineering/llama2-7B-tp2-pp4-vpp4"
-    tokenizer_model = "/home/dataset/ci_engineering/llama-2-7b-hf/tokenizer.model"
+    load_dir = "/data/llama-2-7b-hf"
+    save_dir = "/data/llama2-7B-tp2-pp4-vpp4"
+    tokenizer_model = "/data/llama-2-7b-hf/tokenizer.model"
     num_layers_per_virtual_pipeline_stage = "2"
 
 
@@ -37,10 +37,10 @@ class CovertDynamicCkptFromHuggingfaceArgs:
     saver = "megatron"
     target_tensor_parallel_size = "2"
     target_pipeline_parallel_size = "4"
-    load_dir = "/home/dataset/ci_engineering/llama-2-7b-hf/"
-    save_dir = "/home/dataset/ci_engineering/llama-2-7b-mg-tp2-pp4-dynamic-test/"
-    base_dir = "/home/dataset/ci_engineering/llama-2-7b-mg-tp2-pp4-dynamic-base/"
-    tokenizer_model = "/home/dataset/ci_engineering/llama-2-7b-hf/tokenizer.model"
+    load_dir = "/data/llama-2-7b-hf/"
+    save_dir = "/data/llama-2-7b-mg-tp2-pp4-dynamic-test/"
+    base_dir = "/data/llama-2-7b-mg-tp2-pp4-dynamic-base/"
+    tokenizer_model = "/data/llama-2-7b-hf/tokenizer.model"
     num_layer_list = '6,8,8,10'
 
 
@@ -79,7 +79,7 @@ class TestConvertCkptFromHuggingface:
             "--save-dir", args.save_dir,
             "--tokenizer-model", args.tokenizer_model
         ]
-        subprocess.run(["python3", file_path] + arguments)
+        subprocess.run(["python", file_path] + arguments)
         judge_expression(weight_compare(args.base_dir, args.save_dir))
 
     def test_convert_weights_form_huggingface(self):
@@ -100,7 +100,7 @@ class TestConvertCkptFromHuggingface:
             "--save-dir", args.save_dir,
             "--tokenizer-model", args.tokenizer_model
         ]
-        subprocess.run(["python3", file_path] + arguments)
+        subprocess.run(["python", file_path] + arguments)
         output_dir = os.path.join(args.save_dir, "iter_0000001")
         weight_content = torch.load(os.path.join(output_dir, "mp_rank_00/model_optim_rng.pt"))
         weight_common_content = weight_content['model']['language_model'] # extract commmon content
@@ -141,7 +141,7 @@ class TestConvertCkptFromHuggingface:
             "--tokenizer-model", args.tokenizer_model,
             "--num-layers-per-virtual-pipeline-stage", args.num_layers_per_virtual_pipeline_stage
         ]
-        subprocess.run(["python3", file_path] + arguments)
+        subprocess.run(["python", file_path] + arguments)
         output_dir = os.path.join(args.save_dir, "iter_0000001")
         weight_content = torch.load(os.path.join(output_dir, "mp_rank_00_000/model_optim_rng.pt"))
         weight_common_content = weight_content['model0']['language_model']  # extract commmon content
