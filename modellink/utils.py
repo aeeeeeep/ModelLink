@@ -51,6 +51,12 @@ def is_rank_0():
         return True
 
 
+def print_rank0_by_args(args, message):
+    """Before initialization of distributed, we only print on rank 0."""
+    if args.rank == 0:
+        print(message, flush=True)
+
+
 def get_tune_attention_mask(attention_mask_1d):
     args = get_args()
     micro_batch_size, seq_length = attention_mask_1d.size()
