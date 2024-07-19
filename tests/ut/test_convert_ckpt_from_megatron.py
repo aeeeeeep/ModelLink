@@ -13,8 +13,8 @@ class CovertCkptFromMegatronArgs:
     loader = "megatron"
     saver = "megatron"
     target_tensor_parallel_size = "1"
-    save_dir = "/home/dataset/ci_engineering/llama2-7B-tp1-pp1"
-    load_dir = "/home/dataset/ci_engineering/llama2-7B-tp8-pp1"
+    save_dir = "/data/llama2-7B-tp1-pp1"
+    load_dir = "/data/llama2-7B-tp8-pp1"
 
 
 class TestConvertCkptFromMegatron:
@@ -35,7 +35,7 @@ class TestConvertCkptFromMegatron:
             "--save-dir", args.save_dir
         ]
 
-        subprocess.run(["python3", file_path] + arguments)
+        subprocess.run(["python", file_path] + arguments)
 
         output_dir = os.path.join(args.save_dir, "iter_0000001")
         weight_content = torch.load(os.path.join(output_dir, "mp_rank_00/model_optim_rng.pt"))
