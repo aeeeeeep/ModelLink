@@ -17,15 +17,10 @@
 import os
 import stat
 import random
-import logging
-from typing import Any, List
-
 from functools import wraps
-
 import torch
 import torch_npu
 import numpy as np
-
 import megatron
 from megatron.training import get_args
 from megatron.core import mpu
