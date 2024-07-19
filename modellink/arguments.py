@@ -138,6 +138,9 @@ def _validate_cp_args(args):
                     2 * args.context_parallel_size) == 0, f"sequence length must be divisible by 2 * context_parallel_size in hybrid cp"
         _check_attention_head(args, args.ulysses_degree_in_cp)
 
+    if args.sliding_window:
+        raise AssertionError("sliding window is not supported in context parallel.")
+
 
 def _validate_tocken(args):
     """To avoid invalid tocken configration."""
