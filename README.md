@@ -910,7 +910,7 @@ ModelLink支持张量并行、流水线并行、context并行、序列并行、�
     <th>特性名称</th>
     <th>具体参数</th>
     <th>Mcore支持</th>
-    <th>legacy支持</th>
+    <th>Legacy支持</th>
   </tr></thead>
 <tbody>
   <tr>
@@ -964,13 +964,6 @@ ModelLink支持张量并行、流水线并行、context并行、序列并行、�
     <td>No</td>
   </tr>
   <tr>
-    <td>内存</td>
-    <td>重计算</td>
-    <td>--recompute-granularity</td>
-    <td>No</td>
-    <td>Yes</td>
-  </tr>
-  <tr>
     <td rowspan="5">融合算子</td>
     <td>Flash attention</td>
     <td>--use-flash-attn</td>
@@ -999,7 +992,7 @@ ModelLink支持张量并行、流水线并行、context并行、序列并行、�
     <td>Sliding window attention</td>
     <td>--sliding-window</td>
     <td>Yes</td>
-    <td>Yes&nbsp;&nbsp;&nbsp;</td>
+    <td>Yes</td>
   </tr>
   <tr>
     <td rowspan="3">通信</td>
@@ -1010,7 +1003,7 @@ ModelLink支持张量并行、流水线并行、context并行、序列并行、�
   </tr>
   <tr>
     <td>权重all-gather通算掩盖</td>
-    <td>   --overlap-param-gather   </td>
+    <td>--overlap-param-gather</td>
     <td>Yes</td>
     <td>No</td>
   </tr>
@@ -1026,13 +1019,14 @@ ModelLink支持张量并行、流水线并行、context并行、序列并行、�
 
 ```bash
 torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
+    --use-mcore-models \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
-    --num-layer-list 1,2,2,2,1 \
+    --num-layer-list 5,6,6,6,6,5 \
+    --context-parallel-size ${CP} \
+    --context-parallel-algo ${CP_ALGO} \
+    --ulysses-degree-in-cp 2 \
     --sequence-parallel \
-    --recompute-granularity full \
-    --recompute-method block \
-    --recompute-num-layers 72 \
     --use-distributed-optimizer \
     --use-flash-attn \
     --use-fused-rmsnorm \
@@ -1040,14 +1034,9 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     --overlap-grad-reduce \
     --use-fused-rotary-pos-emb \
     --use-mc2 \
-    --sliding-window 4096 \
     ... \
     ...
 ```
-注意：
-MC2特性在一般场景会有一定性能提升（5%左右）， 如果需要开启 mc2，需保证:
-1. 配套环境版本如本仓首页所述;
-2. 将 modellink\arguments.py 中 validate_args_decorator 函数中的`args.use_mc2 = False`进行注释
 
 ---
 
