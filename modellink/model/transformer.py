@@ -37,11 +37,7 @@ from megatron.legacy.model.transformer import (
 )
 from megatron.legacy.model.utils import get_norm
 from megatron.core import mpu
-from mindspeed.core.context_parallel.ring_context_parallel import ringattn_context_parallel
-from mindspeed.core.parallel_state import (get_context_parallel_group_for_hybrid_ring,
-                                           get_context_parallel_for_hybrid_ring_world_size,
-                                           get_context_parallel_for_hybrid_ring_rank,
-                                           get_context_parallel_for_hybrid_ring_global_ranks)
+
 
 from ..core.models.common.embeddings.rotary_pos_embedding import apply_rotary_pos_emb
 from ..error_utils import ensure_valid
@@ -385,34 +381,6 @@ def ParallelAttention_wrapper(fn):
     return wrapper
 
 
-def do_context_parallel(q, k, v, head_num, softmax_scale, attn_mask, dropout_p=0.):
-    args = get_args()
-    in_hybrid_mode = get_context_parallel_group_for_hybrid_ring(check_initialized=False) is not None
-    if in_hybrid_mode:
-        cp_group = get_context_parallel_group_for_hybrid_ring()
-        cp_size = get_context_parallel_for_hybrid_ring_world_size()
-        rank = get_context_parallel_for_hybrid_ring_rank()
-        cp_global_ranks = get_context_parallel_for_hybrid_ring_global_ranks()
-    else:
-        cp_group = mpu.get_context_parallel_group()
-        cp_size = mpu.get_context_parallel_world_size()
-        rank = mpu.get_context_parallel_rank()
-        cp_global_ranks = mpu.get_context_parallel_global_ranks()
-
-    cp_para = dict()
-
-    cp_para['causal'] = args.cp_attention_mask_type == 'causal'
-    cp_para['cp_group'] = cp_group
-    cp_para['cp_size'] = cp_size
-    cp_para['rank'] = rank
-    cp_para['cp_global_ranks'] = cp_global_ranks
-    cp_para['cp_group_for_send_recv_overlap'] = mpu.get_context_parallel_group_for_send_recv_overlap() \
-        if args.use_cp_send_recv_overlap else None
-
-    output = ringattn_context_parallel(q, k, v, head_num, cp_para, softmax_scale, attn_mask, dropout_p)
-    return output
-
-
 class FlashSelfAttention(torch.nn.Module):
     """ Ascend Flash Attention, support Alibi
     Implement the scaled dot product attention with softmax.
@@ -455,12 +423,36 @@ class FlashSelfAttention(torch.nn.Module):
         """
         args = get_args()
 
-        seq_length, batch_size, head_num, head_dim = q.shape[0], q.shape[1], q.shape[2], q.shape[3]
+        batch_size, seq_length, head_num, head_dim = q.shape[1], q.shape[0], q.shape[2], q.shape[3]
+
+        use_sliding_windows = (
+                getattr(args, "sliding_window", None) is not None
+                and seq_length > args.sliding_window
+                and not self.alibi
+        )
+
+        if use_sliding_windows:
+            pse = None
+            sparse_mode = 4
+            self.pre_tockens = args.sliding_window
+        else:
+            sparse_mode = 0
+
+        if not hasattr(self, 'attention_mask') or self.attention_mask.shape[0] != seq_length:
+            if use_sliding_windows:
+                self.attention_mask = get_attention_mask(mode=MUST_COMPRESS)
+            else:
+                if attention_mask is not None:
+                    self.attention_mask = attention_mask
+                else:
+                    self.attention_mask = torch.triu(torch.ones(seq_length, seq_length), 1).bool().npu()
+
         q, k, v = [rearrange(x, 's b h d -> s b (h d)') for x in [q, k, v]]
 
         try:
             if not hasattr(self, 'num_factor'):
                 self.norm_factor = math.sqrt(head_dim)
+
             if self.apply_query_key_layer_scaling:
                 coeff = self.layer_number
                 self.norm_factor *= coeff
@@ -469,62 +461,36 @@ class FlashSelfAttention(torch.nn.Module):
         except Exception as e:
             raise ValueError('Invalid head_dim: {}'.format(head_dim)) from e
 
-        if args.context_parallel_size > 1 and args.context_parallel_algo in ['megatron_cp_algo', 'hybrid_cp_algo']:
-            attention_mask = get_attention_mask()
-            output = do_context_parallel(q, k, v, head_num=head_num, softmax_scale=scale,
-                                         attn_mask=attention_mask, dropout_p=self.dropout_p)
-        else:
-            use_sliding_windows = (
-                getattr(args, "sliding_window", None) is not None
-                and seq_length > args.sliding_window
-                and not self.alibi
-            )
+        size_record = q.shape
+        if self.alibi is not None and (self.alibi.output_size != size_record) and pse is None:
+            if args.shape_order != 'SBH':
+                raise ValueError(
+                    'FlashAttention with Alibi requires for SBH shape_order, but is {}.'.format(args.shape_order))
 
-            if use_sliding_windows:
-                pse = None
-                sparse_mode = 4
-                self.pre_tockens = args.sliding_window
+            self.alibi.output_size = size_record
+            self.get_alibi(seq_length)
+            if self.fill_neg_inf:
+                self.alibi_fill_neg_inf(seq_length, batch_size)
             else:
-                sparse_mode = 0
-            if not hasattr(self, 'attention_mask') or self.attention_mask.shape[0] != seq_length:
-                if use_sliding_windows:
-                    self.attention_mask = get_attention_mask(mode=MUST_COMPRESS)
-                else:
-                    if attention_mask is not None:
-                        self.attention_mask = attention_mask
-                    else:
-                        self.attention_mask = torch.triu(torch.ones(seq_length, seq_length), 1).bool().npu()
+                self.alibi.matmul_result = self.alibi.alibi[:, :, :seq_length].repeat(batch_size, 1, 1)
 
-            size_record = q.shape
-            if self.alibi and self.alibi.output_size != size_record and pse is None:
-                if args.shape_order != 'SBH':
-                    raise ValueError(
-                        'FlashAttention with Alibi requires for SBH shape_order, but is {}.'.format(args.shape_order))
+        if self.alibi and pse is None:
+            pse = self.alibi.matmul_result.reshape(batch_size, head_num, seq_length,
+                                                   seq_length) * self.beta * self.norm_factor
+            self.pre_tockens = seq_length
 
-                self.alibi.output_size = size_record
-                self.get_alibi(seq_length)
-                if self.fill_neg_inf:
-                    self.alibi_fill_neg_inf(seq_length, batch_size)
-                else:
-                    self.alibi.matmul_result = self.alibi.alibi[:, :, :seq_length].repeat(batch_size, 1, 1)
-
-            if self.alibi and pse is None:
-                pse = self.alibi.matmul_result.reshape(batch_size, head_num, seq_length,
-                                                       seq_length) * self.beta * self.norm_factor
-                self.pre_tockens = seq_length
-
-            output = torch_npu.npu_fusion_attention( \
-                q, k, v, head_num, args.shape_order, \
-                pse=pse, \
-                sparse_mode=sparse_mode, \
-                padding_mask=None, \
-                atten_mask=self.attention_mask, \
-                scale=scale, \
-                pre_tockens=self.pre_tockens, \
-                next_tockens=self.next_tockens, \
-                keep_prob=1 - self.dropout_p, \
-                inner_precise=0
-            )[0]
+        output = torch_npu.npu_fusion_attention( \
+            q, k, v, head_num, args.shape_order, \
+            pse=pse, \
+            sparse_mode=sparse_mode, \
+            padding_mask=None, \
+            atten_mask=self.attention_mask, \
+            scale=scale, \
+            pre_tockens=self.pre_tockens, \
+            next_tockens=self.next_tockens, \
+            keep_prob=1 - self.dropout_p, \
+            inner_precise=0
+        )[0]
 
         return output
 

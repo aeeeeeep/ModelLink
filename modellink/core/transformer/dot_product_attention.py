@@ -7,12 +7,46 @@ from functools import wraps
 from torch import Tensor
 import torch_npu
 from megatron.training import get_args
-from modellink.model.transformer import do_context_parallel, get_attention_mask
+from megatron.core import mpu
+from mindspeed.core.context_parallel.ring_context_parallel import ringattn_context_parallel
+from mindspeed.core.parallel_state import (get_context_parallel_group_for_hybrid_ring,
+                                           get_context_parallel_for_hybrid_ring_world_size,
+                                           get_context_parallel_for_hybrid_ring_rank,
+                                           get_context_parallel_for_hybrid_ring_global_ranks)
+from modellink.model.transformer import get_attention_mask
 
 try:
     from einops import rearrange
 except ImportError:
     rearrange = None
+
+
+def do_ring_context_parallel(q, k, v, head_num, softmax_scale, attn_mask, dropout_p=0.):
+    args = get_args()
+    in_hybrid_mode = get_context_parallel_group_for_hybrid_ring(check_initialized=False) is not None
+    if in_hybrid_mode:
+        cp_group = get_context_parallel_group_for_hybrid_ring()
+        cp_size = get_context_parallel_for_hybrid_ring_world_size()
+        rank = get_context_parallel_for_hybrid_ring_rank()
+        cp_global_ranks = get_context_parallel_for_hybrid_ring_global_ranks()
+    else:
+        cp_group = mpu.get_context_parallel_group()
+        cp_size = mpu.get_context_parallel_world_size()
+        rank = mpu.get_context_parallel_rank()
+        cp_global_ranks = mpu.get_context_parallel_global_ranks()
+
+    cp_para = dict()
+
+    cp_para['causal'] = args.cp_attention_mask_type == 'causal'
+    cp_para['cp_group'] = cp_group
+    cp_para['cp_size'] = cp_size
+    cp_para['rank'] = rank
+    cp_para['cp_global_ranks'] = cp_global_ranks
+    cp_para['cp_group_for_send_recv_overlap'] = mpu.get_context_parallel_group_for_send_recv_overlap() \
+        if args.use_cp_send_recv_overlap else None
+
+    output = ringattn_context_parallel(q, k, v, head_num, cp_para, softmax_scale, attn_mask, dropout_p)
+    return output
 
 
 def dot_product_attention_init_wrapper(fn):
@@ -65,7 +99,7 @@ def dot_product_attention_forward(
         attention_mask = get_attention_mask()
 
     if args.context_parallel_size > 1 and args.context_parallel_algo in ['megatron_cp_algo', 'hybrid_cp_algo']:
-        return do_context_parallel(
+        return do_ring_context_parallel(
             query, key, value, head_num=n_head, softmax_scale=scale, attn_mask=attention_mask)
     else:
         use_sliding_windows = args.sliding_window is not None and seq_length > args.sliding_window
