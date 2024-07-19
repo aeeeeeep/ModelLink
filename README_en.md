@@ -925,7 +925,7 @@ ModelLink supports various acceleration algorithms such as tensor parallelism, p
   <tr>
     <td>Dynamic division for PP</td>
     <td>--num-layer-list</td>
-    <td>No</td>
+    <td>Yes</td>
     <td>Yes</td>
   </tr>
   <tr>
@@ -963,7 +963,7 @@ ModelLink supports various acceleration algorithms such as tensor parallelism, p
     <td>Memory Optimization</td>
     <td>Re-computation</td>
     <td>--recompute-granularity</td>
-    <td>Yes</td>
+    <td>No</td>
     <td>Yes</td>
   </tr>
   <tr>

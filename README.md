@@ -929,7 +929,7 @@ ModelLink支持张量并行、流水线并行、context并行、序列并行、�
   <tr>
     <td>流水线并行动态划分</td>
     <td>--num-layer-list</td>
-    <td>No</td>
+    <td>Yes</td>
     <td>Yes</td>
   </tr>
   <tr>
@@ -967,7 +967,7 @@ ModelLink支持张量并行、流水线并行、context并行、序列并行、�
     <td>内存</td>
     <td>重计算</td>
     <td>--recompute-granularity</td>
-    <td></td>
+    <td>No</td>
     <td>Yes</td>
   </tr>
   <tr>
