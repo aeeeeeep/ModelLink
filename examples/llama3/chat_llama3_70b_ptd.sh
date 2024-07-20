@@ -19,6 +19,11 @@ DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $
 torchrun $DISTRIBUTED_ARGS inference.py \
        --tensor-model-parallel-size 8  \
        --pipeline-model-parallel-size 1  \
+       --task chat \
+       --hf-chat-template \
+       --add-eos-token '<|eot_id|>' \
+       --top-p 0.9 \
+       --temperature 1 \
        --use-fused-swiglu \
        --use-rotary-position-embeddings \
        --use-fused-rotary-pos-emb \
@@ -52,5 +57,5 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --use-flash-attn \
        --bf16 \
        --seed 42 \
-       | tee logs/generate_llama3_70b.log
+       | tee logs/chat_llama3_70b.log
 

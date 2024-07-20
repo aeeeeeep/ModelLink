@@ -41,7 +41,9 @@ def add_text_generate_args(parser):
     group.add_argument('--hf-chat-template', action='store_true', default=False,
                         help="Using Huggingface chat template")    
     group.add_argument('--add-eos-token', nargs='+', type=str, default=[],
-                        help="Use additional eos tokens")                          
+                        help="Use additional eos tokens")
+    group.add_argument('--use-kv-cache', action="store_true", default=False,
+                       help="Use kv cache to accelerate inference")                                     
     return parser
 
 

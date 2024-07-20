@@ -38,4 +38,6 @@ def add_text_generate_args(parser):
                        help="Instruction template for the evaluation task.")
     group.add_argument("--no-chat-template", action="store_true", default=False,
                        help="Disable Huggingface chat template")
+    group.add_argument('--use-kv-cache', action="store_true", default=False,
+                       help="Use kv cache to accelerate inference")                   
     return parser
