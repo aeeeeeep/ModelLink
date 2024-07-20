@@ -500,10 +500,10 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> 【社区】 </td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/grok1/README.md">Grok1</a></td>
+      <td rowspan="1"><a href="examples/README.md">Grok1</a></td>
       <td>40B</td>
       <td> 8K </td>
-      <td> <a href="examples/grok1/pretrain_grok1_40b_ptd.sh"> pretrain </a> </td>
+      <td> <a href="examples/mcore/grok1/pretrain_grok1_40b_ptd.sh"> pretrain </a> </td>
       <td> -- </td>
       <td> -- </td>
       <td> -- </td>
@@ -887,7 +887,7 @@ ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaiz
       <td> -- </td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/grok1/README.md">Grok1</a></td>
+      <td rowspan="1"><a href="examples/README.md">Grok1</a></td>
       <td>40B</td>
       <td> 8K </td>
       <td> 2x8 </td>
@@ -1037,7 +1037,13 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     ... \
     ...
 ```
-
+```bash
+注意：
+如果需要开启 mc2，需保证:
+1. 配套环境版本如本仓首页所述;
+2. 将 modellink\arguments.py 中 validate_args_decorator 函数中的第431行进行注释
+   #args.use_mc2 = False
+```
 ---
 
 ## <span id="jump19"> 基于昇腾芯片采集Profiling数据

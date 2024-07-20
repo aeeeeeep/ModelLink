@@ -428,6 +428,8 @@ def validate_args_decorator(megatron_validate_args):
         megatron_validate_args(args, defaults)
         args.variable_seq_lengths = variable_seq_lengths
 
+        args.use_mc2 = False
+
         _validate_cp_args(args)
         _validate_create_attention_mask_in_dataloader(args)
         _validate_instruction_finetune(args)
