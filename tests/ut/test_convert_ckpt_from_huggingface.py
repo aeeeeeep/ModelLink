@@ -51,9 +51,9 @@ class CovertMCoreCkptFromHuggingfaceArgs:
     saver = "mg_mcore"
     target_tensor_parallel_size = "2"
     target_pipeline_parallel_size = "4"
-    load_dir = "/home/dataset/ci_engineering/llama-2-7b-hf/"
-    save_dir = "/home/dataset/ci_engineering/llama-2-7b-mg-tp2-pp4-mcore-test/"
-    base_dir = "/home/dataset/ci_engineering/llama-2-7b-mg-tp2-pp4-mcore/"
+    load_dir = "/data/llama-2-7b-hf/"
+    save_dir = "/data/llama-2-7b-mg-tp2-pp4-mcore-test/"
+    base_dir = "/data/llama-2-7b-mg-tp2-pp4-mcore/"
     tokenizer_model = "/home/dataset/ci_engineering/llama-2-7b-hf/tokenizer.model"
 
 
