@@ -16,6 +16,7 @@
 
 import gc
 import sys
+import json
 from functools import wraps
 
 import time
@@ -111,6 +112,17 @@ def get_model_wrapper(fn):
     return wrapper
 
 
+def is_profile_enabled():
+    args = get_args()
+    if not args.profile:
+        return False
+    if args.profile_ranks == [-1]:
+        return True
+    if torch.distributed.get_rank() in args.profile_ranks:
+        return True
+    return False
+
+
 def get_profiler():
     args = get_args()
 
@@ -144,6 +156,16 @@ def get_profiler():
         on_trace_ready=torch_npu.profiler.tensorboard_trace_handler(args.profile_save_path),
         experimental_config=experimental_config)
 
+    prof.add_metadata_json('distributed_args', json.dumps({
+        'tensor_model_parallel_size': args.tensor_model_parallel_size,
+        'pipeline_model_parallel_size': args.pipeline_model_parallel_size,
+        'data_parallel_size': args.data_parallel_size,
+        'context_parallel_size': args.context_parallel_size,
+        'expert_model_parallel_size': args.expert_model_parallel_size,
+        'sequence_parallel': args.sequence_parallel,
+        'rank': args.rank,
+        'world_size': args.world_size
+    }))
     return prof
 
 
@@ -422,7 +444,7 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
                 'validation_iterations_time_msecs_avg': validation_iterations_time_msecs_avg
             })
 
-    if args.profile and (torch.distributed.get_rank() in args.profile_ranks):
+    if is_profile_enabled():
         prof = get_profiler()
         prof.start()
 
@@ -574,10 +596,10 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
             if args.manual_gc_interval != 0 and iteration % args.manual_gc_interval == 0:
                 gc.collect()
 
-        if args.profile and (torch.distributed.get_rank() in args.profile_ranks):
+        if is_profile_enabled():
             prof.step()
 
-    if args.profile and (torch.distributed.get_rank() in args.profile_ranks):
+    if is_profile_enabled():
         prof.stop()
     
     track_e2e_metrics()
