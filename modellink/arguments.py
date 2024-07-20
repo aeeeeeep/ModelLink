@@ -117,7 +117,7 @@ def _validate_cp_args(args):
     args.use_flash_attn = True
     print_rank_0(f"[INFO] Setting args.use_flash_attn={args.use_flash_attn} since context parallel is enabled.")
     if not args.use_mcore_models:
-        print_rank_0(f"[INFO] Context parallel is only supported in Mcore.")
+        raise AssertionError(f"Context parallel is only supported in Mcore.")
 
     if args.context_parallel_algo == 'ulysses_cp_algo':
         assert args.seq_length % args.context_parallel_size == 0, f"sequence length must be divisible by context_parallel_size"

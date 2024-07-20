@@ -24,7 +24,7 @@ def _do_generate_atten_mask(should_compress: bool = True,
         mask2 = torch.triu(torch.ones([seq_length, seq_length], device=current_device), diagonal=next_tockens + 1)
         return (mask1 + mask2).bool().npu()
     else:
-        raise ValueError(f"failed to build attention mask for seq_length={seq_length}, pre_tockens={pre_tockens}. next_tockens={next_tockens}.")
+        raise ValueError(f"failed to build attention mask for seq_length={seq_length}, pre_tockens={pre_tockens}, next_tockens={next_tockens}.")
 
 
 def set_attention_mask(attn_mask):
