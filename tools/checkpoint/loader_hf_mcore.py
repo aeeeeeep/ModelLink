@@ -221,7 +221,7 @@ def _load_checkpoint(queue, args):
     args_hf = model_hf.get_args()
 
     model_mg = get_megatron_model(args_cmd=args)
-    model_mg.initialize_megatron_args(args, args_hf, queue)
+    model_mg.initialize_megatron_args(args_hf, queue)
 
     model_mg.set_tensor_model_parallel_world_size(model_mg.args.tensor_model_parallel_size)
     model_mg.set_pipeline_model_parallel_world_size(model_mg.args.pipeline_model_parallel_size)

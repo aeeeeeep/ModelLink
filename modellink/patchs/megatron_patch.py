@@ -40,7 +40,7 @@ from ..core import (vocab_embedding_wrapper, initialize_model_parallel_decorator
                    build_generic_dataset, _build_document_sample_shuffle_indices,
                    topk_router_forward, topk_router_routing, z_loss_func,
                    TransformerLayerSubmodules, transformer_layer_init_wrapper,
-                   transformer_layer_forward, gpt_model_forward,
+                   transformer_layer_forward, gpt_model_forward, get_num_layers_to_build_wrapper,
                    start_grad_sync_wrapper, distributed_data_parallel_init_wrapper,
                    clip_grad_norm_fp32_wrapper, distributed_optimizer_init_wrapper)
 from ..core.pipeline_parallel.p2p_communication import _batched_p2p_ops
@@ -163,6 +163,8 @@ def patch_core_transformers():
     PatchManager.register_patch('megatron.core.transformer.transformer_layer.TransformerLayer.__init__', transformer_layer_init_wrapper)
     PatchManager.register_patch('megatron.core.transformer.transformer_layer.TransformerLayer.forward', transformer_layer_forward)
     PatchManager.register_patch('megatron.core.transformer.moe.router.z_loss_func', z_loss_func)
+    PatchManager.register_patch('megatron.core.transformer.transformer_block.get_num_layers_to_build',
+                                get_num_layers_to_build_wrapper)
 
 
 def patch_pipeline_parallel():

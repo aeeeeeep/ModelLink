@@ -3,6 +3,7 @@ import os
 import sys
 import re
 import json
+from types import SimpleNamespace
 from tqdm import tqdm
 import torch
 from transformers import AutoModelForCausalLM
@@ -134,7 +135,10 @@ class ModelBase(abc.ABC):
     def get_args(self):
         return self.args
 
-    def get_metadate(self):
+    def get_args_cmd(self):
+        return self.args_cmd
+
+    def get_metadata(self):
         return self.md
 
     def get_modules_count(self):
@@ -149,12 +153,11 @@ class HuggingfaceModel(ModelBase):
     def __init__(self, args_cmd):
         self.model_cfg = self.read_model_cfg()
         super(HuggingfaceModel, self).__init__(args_cmd)
+        self.initialize_args()
         self.layers_self_attention_linear_qkv_caches = {"layer_idx": -1, "weight": None, "bias": None}
 
-    def get_args(self):
+    def initialize_args(self):
         # Read huggingface args.
-        if self.args is not None:
-            return self.args
         llama_args_path = os.path.join(self.args_cmd.load_dir, "config.json")
         with open(llama_args_path) as f:
             self.args = json.load(f)
@@ -174,15 +177,19 @@ class HuggingfaceModel(ModelBase):
         ):
             self.args['group_query_attention'] = True
 
-        return self.args
+        self.args['untie_embeddings_and_output_weights'] = not self.args.get("tie_word_embeddings", False)
+        self.args = SimpleNamespace(**self.args)
+        self.args.add_qkv_bias = self.args_cmd.add_qkv_bias
+        self.args.add_dense_bias = self.args_cmd.add_dense_bias
 
     def get_modules_from_pretrained(self, device_map="cpu", trust_remote_code=True):
         # Load Huggingface model.
+        if self.args_cmd.save_model_type == "huggingface":
+            load_dir = self.args_cmd.save_dir
+        else:
+            load_dir = self.args_cmd.load_dir
         self.module = [
-            AutoModelForCausalLM.from_pretrained(
-                self.args_cmd.load_dir,
-                device_map=device_map,
-                trust_remote_code=trust_remote_code)
+            AutoModelForCausalLM.from_pretrained(load_dir, device_map=device_map, trust_remote_code=trust_remote_code)
         ]
 
     def get_module_mapping(self):
@@ -193,11 +200,10 @@ class HuggingfaceModel(ModelBase):
             return
         self.layers_self_attention_linear_qkv_caches["layer_idx"] = layer_idx
         # Reshape loaded weights.
-        nh = self.args['num_attention_heads']
-        ng = (self.args['num_key_value_heads'] if self.args['group_query_attention'] \
-                  else self.args['num_attention_heads'])
+        nh = self.args.num_attention_heads
+        ng = (self.args.num_key_value_heads if self.args.group_query_attention else self.args.num_attention_heads)
         # dim = self.args['kv_channels']
-        dim = self.args['hidden_size'] // self.args['num_key_value_heads']
+        dim = self.args.hidden_size // self.args.num_key_value_heads
         if not nh % ng == 0:
             raise ValueError("nh % ng should equal 0")
 
@@ -206,7 +212,7 @@ class HuggingfaceModel(ModelBase):
                 qkv[0].weight.reshape((ng, dim * nh // ng, -1)),
                 qkv[1].weight.reshape((ng, dim, -1)),
                 qkv[2].weight.reshape((ng, dim, -1)),
-            ], dim=1).reshape((-1, self.args['hidden_size']))
+            ], dim=1).reshape((-1, self.args.hidden_size))
 
         def qkv_concatenate_bias(qkv):
             return torch.cat([
@@ -215,7 +221,7 @@ class HuggingfaceModel(ModelBase):
                 qkv[2].bias.reshape((ng, dim)),
             ], dim=1).reshape((-1))
 
-        qkv_type = self.args["qkv_type"]
+        qkv_type = self.args.qkv_type
         if qkv_type == "unpack":
             q_proj = self.get_layers_self_attention_linear_q_proj_module(layer_idx=layer_idx)
             k_proj = self.get_layers_self_attention_linear_k_proj_module(layer_idx=layer_idx)
@@ -277,11 +283,11 @@ class MegatronModel(ModelBase):
         super(MegatronModel, self).__init__(args_cmd)
         self.md = md
 
-    def initialize_megatron_args(self, args, hf_args=None, queue=None):
+    def initialize_megatron_args(self, hf_args=None, queue=None):
         sys.argv = self.get_sys_argv()
         self.args = parse_args()
 
-        self.update_megatron_args_from_user_config(args)  # saver里面是否都需要这个，要验证
+        self.update_megatron_args_from_cmd_config()  # saver里面是否都需要这个，要验证
         self.update_megatron_args_from_huggingface_config(hf_args)  # loader走, saver不走
 
         # Arguments do sanity checks on the world size, but we don't care,
@@ -301,19 +307,17 @@ class MegatronModel(ModelBase):
     def update_megatron_args_from_loader_margs(self):
         if self.md and hasattr(self.md, 'checkpoint_args'):
             # These are arguments that we are either changing, or cause problems for validation if they are set
-            args_to_keep = ['tensor_model_parallel_size', 'pipeline_model_parallel_size', 'world_size', 'params_dtype',
-                            'num_layers_per_virtual_pipeline_stage', 'virtual_pipeline_model_parallel_size',
-                            'masked_softmax_fusion', 'bias_gelu_fusion', 'bias_dropout_fusion',
-                            'sequence_parallel', 'async_tensor_model_parallel_allreduce',
-                            'no_load_optim', 'no_load_rng', 'no_save_optim', 'no_save_rng',
-                            'vocab_file', 'tokenizer_model',
-                            'save_interval', 'save',
-                            'perform_initialization', 'use_cpu_initialization',
-                            'recompute_granularity', 'recompute_num_layers', 'recompute_method',
-                            'encoder_num_layers', 'encoder_seq_length',
-                            'distribute_saved_activations',
-                            'train_iters', 'lr_decay_iters', 'lr_warmup_iters', 'lr_warmup_fraction',
-                            'start_weight_decay', 'end_weight_decay', 'make_vocab_size_divisible_by']
+            args_to_keep = [
+                'tensor_model_parallel_size', 'pipeline_model_parallel_size', 'world_size', 'params_dtype',
+                'num_layers_per_virtual_pipeline_stage', 'virtual_pipeline_model_parallel_size',
+                'bias_gelu_fusion', 'bias_dropout_fusion', 'sequence_parallel', 'async_tensor_model_parallel_allreduce',
+                'no_load_optim', 'no_load_rng', 'no_save_optim', 'no_save_rng', 'vocab_file', 'tokenizer_model',
+                'save_interval', 'save', 'perform_initialization', 'use_cpu_initialization', 'recompute_granularity',
+                'recompute_num_layers', 'recompute_method', 'encoder_num_layers', 'encoder_seq_length',
+                'distribute_saved_activations', 'train_iters', 'lr_decay_iters', 'lr_warmup_iters',
+                'lr_warmup_fraction', 'start_weight_decay', 'end_weight_decay', 'make_vocab_size_divisible_by',
+                'masked_softmax_fusion', 'num_layer_list',
+            ]
 
             for arg, value in vars(self.md.checkpoint_args).items():
                 if arg in args_to_keep:
@@ -337,49 +341,54 @@ class MegatronModel(ModelBase):
     def update_megatron_args_from_huggingface_config(self, hf_args):
         if hf_args is None:
             return
-        self.args.seq_length = hf_args["max_position_embeddings"]
-        self.args.max_position_embeddings = hf_args["max_position_embeddings"]
-        self.args.hidden_size = hf_args["hidden_size"]
-        self.args.num_attention_heads = hf_args["num_attention_heads"]
-        self.args.num_layers = hf_args["num_layers"]
+        self.args.seq_length = hf_args.max_position_embeddings
+        self.args.max_position_embeddings = hf_args.max_position_embeddings
+        self.args.hidden_size = hf_args.hidden_size
+        self.args.num_attention_heads = hf_args.num_attention_heads
+        self.args.num_layers = hf_args.num_layers
         self.args.global_batch_size = 1024
-        self.args.norm_epsilon = hf_args["norm_epsilon"]
+        self.args.norm_epsilon = hf_args.norm_epsilon
         self.args.iteration = 1  # '0', 'release' don't work
-        self.args.add_position_embedding = hf_args["add_position_embedding"]
-        self.args.use_rotary_position_embeddings = hf_args["use_rotary_position_embeddings"]
-        self.args.swiglu = hf_args["swiglu"]
-        self.args.tokenizer_type = hf_args["tokenizer_type"]
-        self.args.normalization = hf_args["normalization"]
-        self.args.add_bias_linear = hf_args["add_bias_linear"]
-        self.args.untie_embeddings_and_output_weights = not hf_args.get("tie_word_embeddings", False)
-        self.args.vocab_size = hf_args["vocab_size"]
-        self.args.padded_vocab_size = hf_args["vocab_size"]
+        self.args.add_position_embedding = hf_args.add_position_embedding
+        self.args.use_rotary_position_embeddings = hf_args.use_rotary_position_embeddings
+        self.args.swiglu = hf_args.swiglu
+        self.args.tokenizer_type = hf_args.tokenizer_type
+        self.args.normalization = hf_args.normalization
+        self.args.add_bias_linear = hf_args.add_bias_linear
+        self.args.untie_embeddings_and_output_weights = not hf_args.tie_word_embeddings
+        self.args.vocab_size = hf_args.vocab_size
+        self.args.padded_vocab_size = hf_args.vocab_size
         self.args.llama = hf_args
-        self.args.ffn_hidden_size = hf_args["intermediate_size"]
-        self.args.gradient_accumulation_fusion = hf_args["gradient_accumulation_fusion"]
+        self.args.ffn_hidden_size = hf_args.intermediate_size
+        self.args.gradient_accumulation_fusion = hf_args.gradient_accumulation_fusion
         if self.args.add_dense_bias:
             self.args.skip_bias_add = False
 
-        if "num_key_value_heads" in hf_args \
-                and hf_args["num_attention_heads"] != hf_args["num_key_value_heads"] \
-                and hf_args["num_key_value_heads"] != 1:
+        if (
+                hasattr(hf_args, "num_key_value_heads") and
+                hf_args.num_attention_heads != hf_args.num_key_value_heads and
+                hf_args.num_key_value_heads != 1
+        ):
             self.args.group_query_attention = True
-            self.args.num_query_groups = hf_args["num_key_value_heads"]
+            self.args.num_query_groups = hf_args.num_key_value_heads
 
-    def update_megatron_args_from_user_config(self, args):
-        self.args.w_pack = args.w_pack
-        self.args.add_qkv_bias = args.add_qkv_bias
-        self.args.add_dense_bias = args.add_dense_bias
-        self.args.tokenizer_model = args.tokenizer_model
-        self.args.make_vocab_size_divisible_by = args.make_vocab_size_divisible_by
-        if args.params_dtype == 'bf16':
+    def update_megatron_args_from_cmd_config(self):
+        self.args.w_pack = self.args_cmd.w_pack
+        self.args.add_qkv_bias = self.args_cmd.add_qkv_bias
+        self.args.add_dense_bias = self.args_cmd.add_dense_bias
+        self.args.tokenizer_model = self.args_cmd.tokenizer_model
+        self.args.make_vocab_size_divisible_by = self.args_cmd.make_vocab_size_divisible_by
+        if self.args_cmd.params_dtype == 'bf16':
             self.args.bf16 = True
-        elif args.params_dtype == 'fp16':
+        elif self.args_cmd.params_dtype == 'fp16':
             self.args.fp16 = True
 
         # Determine how to make our models.
-        if not args.model_type == 'GPT':
+        if not self.args_cmd.model_type == 'GPT':
             raise ValueError("Llama-2 is a GPT model.")
+
+        if self.md and self.args_cmd.num_layer_list:
+            self.args.num_layer_list = self.args_cmd.num_layer_list
 
     def set_megatron_parallel_state(self):
         self.set_tensor_model_parallel_world_size(self.args.tensor_model_parallel_size)

@@ -16,6 +16,7 @@
 
 import os
 import sys
+import time
 import copy
 import torch
 from megatron.training.checkpointing import save_checkpoint
@@ -36,7 +37,7 @@ def add_arguments(parser):
                        help='Target tensor model parallel size, default to the pipeline parall size '
                             'in the input checkpoint if provided by the loader, otherwise to 1')
     group.add_argument('--save-model-type', type=str, default='megatron',
-                       help='Save model type')
+                       choices=['megatron'], help='Save model type')
     group.add_argument("--w-pack", type=bool,
                        help='True is w_pack weight for llm',
                        default=False)
@@ -105,7 +106,7 @@ def reset_cmd_args_from_md(args, md):
 
 
 def set_model_preprocess(model, embeddings_msg, check_message):
-    md = model.get_metadate()
+    md = model.get_metadata()
     margs = model.get_args()
     pos_embed = None
     if md.position_embedding_type == 'learned_absolute':
@@ -137,6 +138,8 @@ def set_model_preprocess(model, embeddings_msg, check_message):
         else:
             if hasattr(model.get_embedding_module(), 'position_embeddings'):
                 raise ValueError("model should have position_embeddings")
+
+    return out_word_embed
 
 
 def save_model_checkpoint(queue, args):
@@ -182,7 +185,7 @@ def save_model_checkpoint(queue, args):
 
     # We want all arguments to come from us
     model_mg = get_megatron_model(args_cmd=args, md=md)
-    model_mg.initialize_megatron_args(args, queue=queue)
+    model_mg.initialize_megatron_args(queue=queue)
 
     # Make models for first pipeline stage and fill in embeddings
     mpu.set_pipeline_model_parallel_rank(0)
@@ -191,7 +194,7 @@ def save_model_checkpoint(queue, args):
 
     # Embeddings
     embeddings_msg = queue_get("embeddings")
-    set_model_preprocess(model_mg, embeddings_msg, check_message)
+    out_word_embed = set_model_preprocess(model_mg, embeddings_msg, check_message)
 
     margs = model_mg.get_args()
 
@@ -200,7 +203,12 @@ def save_model_checkpoint(queue, args):
     total_layer_num = 0
     lst = []
     if args.num_layers_per_virtual_pipeline_stage and args.save_model_type == 'megatron':
-        while queue.qsize() > 3:
+        times = 3
+        while queue.qsize() > 3 or times >= 0:
+            if times >= 0:
+                time.sleep(1)
+                times -= 1
+                continue
             lst.append(queue.get())
     for pp_rank in range(args.target_pipeline_parallel_size):
         # For later pipeline parallel ranks, make the new models
@@ -307,7 +315,7 @@ def save_model_checkpoint(queue, args):
                     model_mg.set_final_layernorm_bias(tp_rank=tp_rank, data=final_norm_bias)
                 if pp_rank != 0 and not md.output_layer:
                     # Copy word embeddings to final pipeline rank
-                    model_mg.set_output_layer_weight(tp_rank=tp_rank, data=model.set_embedding_word_embeddings_weight(tp_rank=tp_rank))
+                    model_mg.set_output_layer_weight(tp_rank=tp_rank, data=out_word_embed[tp_rank])
             del final_norm_weight
             if md.norm_has_bias:
                 del final_norm_bias
