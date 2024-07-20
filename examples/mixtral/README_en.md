@@ -13,8 +13,6 @@
   - [Hardware-Requirements](#hardware-requirements)
   - [Preparation](#preparation)
   - [Model-Training](#model-training)
-  - [Model-Performance](#model-performance)
-    - [Throughput](#throughput)
   - [Model-Inference](#model-inference)
   - [Model-Evaluation](#model-evaluation)
 
@@ -242,16 +240,7 @@ Recommended hardware configuration for inference:
         --is-instruction-dataset
     ```
 
-## Model-Performance
 
-### Throughput
-
-Comparison of Mixtral-8x7B performance on 4 nodes and 32 chips with tp8 pp4:
-
-|  Device  |    Model    | Iterations | Sample Throughput (samples/step) | Tokens Throughput (tokens/s/p) | Single Step Iteration Time (s/step) |
-| :-------: | :----------: | :--------: |:--------------------------------:|:------------------------------:|:-----------------------------------:|
-|   NPUs   | Mixtral-8x7B |    1000    |               0.47               |              487               |                16.81                |
-| Reference | Mixtral-8x7B |    1000    |               0.59               |              610               |                13.41                |
 
 ## Model-Inference
 

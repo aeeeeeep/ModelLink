@@ -11,16 +11,12 @@
 - [LLAMA3-8B](#llama3-8b)
   - [Training](#training)
     - [Script](#script)
-    - [Performance](#performance)
-      - [Machine performance](#machine-performance)
   - [Inference-8B](#inference-8b)
   - [Evaluation-8B](#evaluation-8b)
 - [Contents](#contents)
 - [LLAMA3-70B](#llama3-70b)
   - [Training](#training)
     - [Script](#script)
-    - [Performance](#performance)
-      - [Machine performance](#machine-performance)
   - [Inference-70B](#inference-70b)
   - [Evaluation-70B](#evaluation-70b)
 
@@ -233,17 +229,6 @@ Here's a hardware summary of pre-training  LLAMA3-8B:
         --is-instruction-dataset \
         --tokenizer-not-use-fast \
     ```
-
-### Performance
-
-#### Machine performance
-
-The performance of LLaMA3-8B in **Ascend NPU** and **Reference**:
-
-| Device      | Model         | total Iterations     | throughput rate (tokens/s/p) | 
-| :------:    | :-----------: |:-------------------: | :-------------------------:  | 
-| NPUs        | LLaMA3-8B     | 1000                 | 2483                         |
-| Reference   | LLaMA3-8B     | 1000                 | 2674                         |
 
 
 
@@ -546,16 +531,6 @@ Here's a hardware summary of pre-training  LLAMA3-70B:
         --tokenizer-not-use-fast \
     ```
 
-### Performance
-
-#### Machine performance
-
-The performance of LLaMA3-70B in **Ascend NPU** and **Reference**:
-
-| Device      | Model         | total Iterations     | throughput rate (tokens/s/p) | 
-| :------:    | :-----------: |:-------------------: | :-------------------------:  | 
-| NPUs        | LLaMA3-70B     | 1000                 | 283                         |
-| Reference   | LLaMA3-70B     | -                    | 355                           |
 
 
 

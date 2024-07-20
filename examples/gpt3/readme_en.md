@@ -12,8 +12,6 @@
 - [GPT3-175B](#GPT3-175B)
   - [Training-175B](#training)
     - [Script](#script)
-    - [Perforfance](#performance)
-      - [Machine performance](#machine-performance)
 
 # GPT3-175B
 
@@ -123,14 +121,4 @@ Here is a hardware summary of pre-trianing GPT3-175B:
     ```shell
     bash examples/gpt3/pretrain_gpt3_175B_ptd.sh
     ```
-
-### Performance
-
-#### Machine performance
-
-The performance of GPT3-175B in **Ascend NPU**：
-
-| device |    model    | tokens capacity (tokens/s/p) | 
-| :--: | :--------: |:---------------------:| 
-| NPUs | GPT3-175B |        153.1         |
 
