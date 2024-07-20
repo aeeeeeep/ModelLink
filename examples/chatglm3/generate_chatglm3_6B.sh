@@ -33,7 +33,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --num-attention-heads 32  \
        --padded-vocab-size 65024 \
        --make-vocab-size-divisible-by 1 \
-       --max-position-embeddings 32768 \
+       --max-position-embeddings 8192 \
        --position-embedding-type rope \
        --use-partial-rope \
        --disable-bias-linear \

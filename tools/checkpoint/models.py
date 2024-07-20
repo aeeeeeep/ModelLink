@@ -159,8 +159,8 @@ class HuggingfaceModel(ModelBase):
         with open(llama_args_path) as f:
             self.args = json.load(f)
 
-        config_key_mapping = self.model_cfg.get(self.args_cmd.model_type_hg).get('config_hf_key_mapping')
-        config_value = self.model_cfg.get(self.args_cmd.model_type_hg).get('config_set_value')
+        config_key_mapping = self.model_cfg.get(self.args_cmd.model_type_hf).get('config_hf_key_mapping')
+        config_value = self.model_cfg.get(self.args_cmd.model_type_hf).get('config_set_value')
         for key_target in config_key_mapping:
             key_hf = config_key_mapping[key_target]
             self.args[key_target] = self.args[key_hf]
@@ -186,7 +186,7 @@ class HuggingfaceModel(ModelBase):
         ]
 
     def get_module_mapping(self):
-        self.module_mapping = self.model_cfg.get(self.args_cmd.model_type_hg).get('model_hf_key_mapping')
+        self.module_mapping = self.model_cfg.get(self.args_cmd.model_type_hf).get('model_hf_key_mapping')
 
     def _get_layers_self_attention_linear_qkv_module(self, layer_idx=0):
         if self.layers_self_attention_linear_qkv_caches["layer_idx"] == layer_idx:

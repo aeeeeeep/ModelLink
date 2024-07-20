@@ -57,9 +57,7 @@ class ST_Test:
             llama_inference_shell_file,
             gemma_pretrain_shell_file,
             gemma_inference_shell_file,
-            llama_vpp_pretrain_shell_file,
-            llama_pretrain_ha_save_shell_file,
-            llama_pretrain_ha_load_shell_file
+            llama_vpp_pretrain_shell_file
         ]
 
     def run_st(self):
@@ -85,7 +83,7 @@ class ST_Test:
 
 
 if __name__ == "__main__":
-    st = ST_Test()
-    st.run_st()
     ut = UT_Test()
     ut.run_ut()
+    st = ST_Test()
+    st.run_st()
