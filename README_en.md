@@ -898,24 +898,125 @@ For the supported models listed above, we provide training scripts and readme in
 
 
 ### <span id="jump18">Acceleration Features
-ModelLink supports various acceleration algorithms such as tensor parallelism, pipeline parallelism, sequence parallelism, recomputation, distributed optimizer, and more. The table below shows the enable switches corresponding to each acceleration feature:
+ModelLink supports various acceleration algorithms such as tensor parallelism, pipeline parallelism, context parallelism, sequence parallelism, recomputation, distributed optimizer, and more. The table below shows the enable switches corresponding to each acceleration feature:
 
-|         Acceleration Feature         |        Enable Parameter        |
-|:------------------------------------:|:------------------------------:|
-|           Tensor Parallel            |  --tensor-model-parallel-size  |
-|          Pipeline Parallel           | --pipeline-model-parallel-size |
-|       Dynamic division for PP        |        --num-layer-list        |
-|          Sequence Parallel           |      --sequence-parallel       |
-|            Recomputation             |    --recompute-granularity     |
-|        Distributed Optimizer         |  --use-distributed-optimizer   |
-|        overlap DDP allreduce         |     --overlap-grad-reduce      |
-|           Flash attention            |        --use-flash-attn        |
-|            Fused rmsnorm             |      --use-fused-rmsnorm       |
-|             Fused swiglu             |       --use-fused-swiglu       |
-|                 mc2                  |     --use-mc2                  |
-| Fused rotary <br/>position embedding |   --use-fused-rotary-pos-emb   |
-|       Sliding window attention       |        --sliding-window        |
-
+<table><thead>
+  <tr>
+    <th>Scenario</th>
+    <th>Features</th>
+    <th>Arguments</th>
+    <th>Mcore Support</th>
+    <th>Legacy Support</th>
+  </tr></thead>
+<tbody>
+  <tr>
+    <td rowspan="5">PTD Parallel</td>
+    <td>Tensor Parallel</td>
+    <td>--tensor-model-parallel-size</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>Pipeline Parallel</td>
+    <td>--pipeline-model-parallel-size</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>Dynamic division for PP</td>
+    <td>--num-layer-list</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>Sequence Parallel</td>
+    <td>--sequence-parallel</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>Distributed Optimizer</td>
+    <td>--use-distributed-optimizer</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td rowspan="3">Context Parallel</td>
+    <td>Context Parallel</td>
+    <td>--context-parallel-size</td>
+    <td>Yes</td>
+    <td>No</td>
+  </tr>
+  <tr>
+    <td>Various Cp Algorithm</td>
+    <td>--context-parallel-algo</td>
+    <td>Yes</td>
+    <td>No</td>
+  </tr>
+  <tr>
+    <td>Send/Recv Overlap</td>
+    <td>--cp-send-recv-overlap</td>
+    <td>Yes</td>
+    <td>No</td>
+  </tr>
+  <tr>
+    <td>Memory Optimization</td>
+    <td>Re-computation</td>
+    <td>--recompute-granularity</td>
+    <td>No</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td rowspan="5">Fused Kernel</td>
+    <td>Flash Attention</td>
+    <td>--use-flash-attn</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>Fused Rmsnorm</td>
+    <td>--use-fused-rmsnorm</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>Fused Swiglu</td>
+    <td>--use-fused-swiglu</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>Fused Rotary Position Embedding</td>
+    <td>--use-fused-rotary-pos-emb</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>Sliding Window Attention</td>
+    <td>--sliding-window</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td rowspan="3">Communication</td>
+    <td>Overlap Grad Reduce</td>
+    <td>--overlap-grad-reduce</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>Overlap Param Gather</td>
+    <td>--overlap-param-gather</td>
+    <td>Yes</td>
+    <td>No</td>
+  </tr>
+  <tr>
+    <td>MC2</td>
+    <td>--use-mc2</td>
+    <td>No</td>
+    <td>Yes</td>
+  </tr>
+</tbody></table>
 
 
 ```bash

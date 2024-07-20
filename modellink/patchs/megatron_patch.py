@@ -15,17 +15,14 @@
 import argparse
 
 import megatron
-from megatron.core.tensor_parallel import ColumnParallelLinear, RowParallelLinear
 import megatron.core.models.gpt.gpt_layer_specs
 from mindspeed.core.fusions.fused_layer_norm import (FusedLayerNormAffineFunction, FastLayerNormFN,
                                                      fused_layer_norm_affine)
 from mindspeed.core.fusions.fused_softmax import (is_kernel_available, ScaledUpperTriangMaskedSoftmax,
                                                   ScaledMaskedSoftmax, ScaledSoftmax, forward_fused_softmax)
-
-from mindspeed.model.transformer import parallel_mlp_init_wrapper
 from mindspeed.core.tensor_parallel.random import _set_cuda_rng_state
 from mindspeed.core.tensor_parallel.cross_entropy import vocab_parallel_cross_entropy_forward
-from mindspeed.core.transformer.custom_layers.transformer_engine import PTNorm
+from mindspeed.core.tensor_parallel.layers import vocab_parallel_embedding_forward
 from mindspeed.core.transformer.moe.router import aux_loss_load_balancing
 from mindspeed.core.transformer.moe.token_dispatcher import token_permutation, token_unpermutation
 from mindspeed.initialize import _compile_dependencies
@@ -40,15 +37,10 @@ from ..model import (
     rms_norm_init_wrapper, rms_norm_forward
 )
 from ..core import (vocab_embedding_wrapper, initialize_model_parallel_decorator,
-                   destroy_model_parallel_decorator, get_expert_parallel_group,
-                   get_expert_parallel_rank, get_expert_model_parallel_rank,
-                   get_expert_parallel_world_size, get_expert_model_parallel_world_size,
-                   set_expert_model_parallel_rank, set_expert_model_parallel_world_size,
                    build_generic_dataset, _build_document_sample_shuffle_indices,
                    topk_router_forward, topk_router_routing, z_loss_func,
                    TransformerLayerSubmodules, transformer_layer_init_wrapper,
                    transformer_layer_forward, gpt_model_forward,
-                   get_gpt_layer_local_spec_wrapper,
                    start_grad_sync_wrapper, distributed_data_parallel_init_wrapper,
                    clip_grad_norm_fp32_wrapper, distributed_optimizer_init_wrapper)
 from ..core.pipeline_parallel.p2p_communication import _batched_p2p_ops
@@ -117,13 +109,39 @@ def patch_fusions():
 
 
 def patch_core_models(args):
+    from megatron.core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec
+    from megatron.core.tensor_parallel import ColumnParallelLinear, RowParallelLinear
+    from mindspeed.core.models.common.embeddings.rotary_pos_embedding import get_pos_emb_on_this_cp_rank
     from mindspeed.core.fusions.rotary_pos_embedding import rotary_embedding_init_wrapper
-    from ..core import RotaryEmbedding_forward
+    from ..utils import get_batch_on_this_cp_rank
+    from ..core import RotaryEmbedding_forward, apply_rotary_pos_emb_bshd_wrapper
+    from ..core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec_wrapper
+    from ..core.transformer.dot_product_attention import dot_product_attention_init_wrapper, \
+        dot_product_attention_forward_wrapper
+    from ..core.transformer.attention import attention_init_wrapper, attention_forward
+
+    # Embedding
+    PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.get_pos_emb_on_this_cp_rank', get_pos_emb_on_this_cp_rank)
+    # rotary support for Megatron-LM core 0.6.0
+    PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.apply_rotary_pos_emb_bshd', apply_rotary_pos_emb_bshd_wrapper)
     PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.forward', RotaryEmbedding_forward)
-    PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.__init__',
-        rotary_embedding_init_wrapper)
-    PatchManager.register_patch('megatron.core.models.gpt.gpt_model.GPTModel.forward', gpt_model_forward)
+    PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.__init__', rotary_embedding_init_wrapper)
+
+    # Attention
+    PatchManager.register_patch('megatron.core.transformer.attention.Attention.forward', attention_forward)
+    PatchManager.register_patch('megatron.core.transformer.attention.Attention.__init__', attention_init_wrapper)
+    PatchManager.register_patch('megatron.core.transformer.dot_product_attention.DotProductAttention.__init__', dot_product_attention_init_wrapper)
+    PatchManager.register_patch('megatron.core.transformer.dot_product_attention.DotProductAttention.forward', dot_product_attention_forward_wrapper)
+
+    # Layer Definition
+    # For NPU, we use local-mcore-structrue in te layer.
+    PatchManager.register_patch('megatron.core.models.gpt.gpt_layer_specs.get_gpt_layer_with_transformer_engine_spec', get_gpt_layer_local_spec)
     PatchManager.register_patch('megatron.core.models.gpt.gpt_layer_specs.get_gpt_layer_local_spec', get_gpt_layer_local_spec_wrapper)
+
+    PatchManager.register_patch('megatron.training.utils.get_batch_on_this_cp_rank', get_batch_on_this_cp_rank)
+    PatchManager.register_patch('megatron.core.models.gpt.gpt_model.GPTModel.forward', gpt_model_forward)
+
+    # moe
     if args.moe_permutation_async_comm:
         PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAllGatherTokenDispatcher.token_permutation', token_permutation)
         PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAllGatherTokenDispatcher.token_unpermutation', token_unpermutation)
@@ -135,7 +153,7 @@ def patch_core_models(args):
 
 
 def patch_core_transformers():
-    from ..core import apply_rotary_pos_emb_bshd_wrapper
+    from ..core import apply_rotary_pos_emb_bshd_wrapper, PTNorm
     PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.apply_rotary_pos_emb_bshd',
         apply_rotary_pos_emb_bshd_wrapper)
     PatchManager.register_patch('megatron.core.transformer.transformer_block.TENorm', PTNorm)
@@ -162,7 +180,14 @@ def patch_tensor_parallel():
 
 
 def patch_parallel_state():
-    # set parallel_state attributions which is not existed before.
+    from ..core import (get_expert_parallel_rank, get_expert_parallel_world_size, get_expert_parallel_group, \
+                        get_expert_model_parallel_rank, get_expert_model_parallel_world_size,
+                        set_expert_model_parallel_rank, \
+                        set_expert_model_parallel_world_size, destroy_model_parallel_decorator)
+    from mindspeed.core.parallel_state import (initialize_model_parallel, destroy_model_parallel_wrapper, \
+                                               get_context_parallel_group_for_send_recv_overlap)
+
+    # add methods for megatron.core.parallel_state
     setattr(megatron.core.parallel_state, "get_expert_parallel_group", get_expert_parallel_group)
     setattr(megatron.core.parallel_state, "get_expert_parallel_rank", get_expert_parallel_rank)
     setattr(megatron.core.parallel_state, "get_expert_model_parallel_rank", get_expert_model_parallel_rank)
@@ -170,8 +195,18 @@ def patch_parallel_state():
     setattr(megatron.core.parallel_state, "get_expert_model_parallel_world_size", get_expert_model_parallel_world_size)
     setattr(megatron.core.parallel_state, "set_expert_model_parallel_rank", set_expert_model_parallel_rank)
     setattr(megatron.core.parallel_state, "set_expert_model_parallel_world_size", set_expert_model_parallel_world_size)
+
+    # Bugfix for Megatron-LM core 0.6.0, to be removed for next version.
+    PatchManager.register_patch('megatron.core.parallel_state.initialize_model_parallel', initialize_model_parallel)
     PatchManager.register_patch('megatron.core.parallel_state.initialize_model_parallel', initialize_model_parallel_decorator)
+
+    # For MoE
     PatchManager.register_patch('megatron.core.parallel_state.destroy_model_parallel', destroy_model_parallel_decorator)
+
+    # For cp parallel state destroy
+    PatchManager.register_patch('megatron.core.parallel_state.destroy_model_parallel', destroy_model_parallel_wrapper)
+    PatchManager.register_patch('megatron.core.parallel_state.get_context_parallel_group_for_send_recv_overlap', get_context_parallel_group_for_send_recv_overlap)
+    PatchManager.register_patch('megatron.core.mpu', megatron.core.parallel_state)
 
 
 def patch_model():

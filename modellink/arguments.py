@@ -55,6 +55,8 @@ def process_args(parser):
     parser = _add_alibi_args(parser)
     parser = _add_dataset_args(parser)
     parser = _add_high_availability_args(parser)
+    parser = _add_cp_args(parser)
+
     return parser
 
 
@@ -71,6 +73,84 @@ def _add_profile_args(parser):
                        help='path to save profiling files')
 
     return parser
+
+
+def _add_cp_args(parser):
+    group = parser.add_argument_group(title='cp parallel')
+    group.add_argument('--context-parallel-algo', type=str, default='ulysses_cp_algo',
+                       choices=['ulysses_cp_algo', 'megatron_cp_algo', 'hybrid_cp_algo'], help='context parallel algorithm')
+    group.add_argument('--ulysses-degree-in-cp', type=int, default=None)
+    group.add_argument('--cp-attention-mask-type', type=str, default='causal',
+                       choices=['causal', 'full'], help='context parallel attention mask type')
+    group.add_argument('--use-cp-send-recv-overlap', action='store_true',
+                       help='use it to enable cp send-recv-overlap.')
+    group.add_argument('--kv-head-repeat-before-uly-alltoall', action='store_true', default=True,
+                       help='use it to expand key and value for ulysses when GQA/MQA is used.')
+    return parser
+
+
+def _validate_cp_args(args):
+    def _check_attention_head(args, uly_size):
+        """
+        check GQA & ulysses
+        """
+        head, remainder = divmod(args.num_attention_heads, uly_size * args.tensor_model_parallel_size)
+        assert head >= 1 and remainder == 0, f"num_attention_heads must be divisible by ulysses_size * tensor_model_parallel_size"
+        if args.group_query_attention and args.num_query_groups >= 1:
+            head_split_by_tp, remainder = divmod(args.num_query_groups, args.tensor_model_parallel_size)
+            assert head_split_by_tp >= 1 and remainder == 0, f"num_query_groups must be divisible by tensor_model_parallel_size"
+
+            if not args.kv_head_repeat_before_uly_alltoall:
+                head_split_by_tp_cp, remainder = divmod(head_split_by_tp, uly_size)
+                if not (head_split_by_tp_cp >= 1 and remainder == 0):
+                    raise AssertionError(
+                        'num_query_groups must be divisible by ulysses_size * tensor_model_parallel_size.\n'
+                        'Solution 1. adjust the ulysses_size\n'
+                        'Solution 2. You can enable --kv-head-repeat-before-uly-alltoall to roll on.\n'
+                        'However, performance would be affected since it would increase communication volume \n'
+                        'for ulysses alltoall as well as memory usage.')
+
+    if args.context_parallel_size <= 1:
+        return
+
+    # In context parallel we use FA
+    args.use_flash_attn = True
+    print_rank_0(f"[INFO] Setting args.use_flash_attn={args.use_flash_attn} since context parallel is enabled.")
+    if not args.use_mcore_models:
+        raise AssertionError(f"Context parallel is only supported in Mcore.")
+
+    if args.context_parallel_algo == 'ulysses_cp_algo':
+        assert args.seq_length % args.context_parallel_size == 0, f"sequence length must be divisible by context_parallel_size"
+        head, remainder = divmod(args.num_attention_heads,
+                                 args.context_parallel_size * args.tensor_model_parallel_size)
+        assert head >= 1 and remainder == 0, f"num_attention_heads must be divisible by context_parallel_size * tensor_model_parallel_size"
+    if args.context_parallel_algo == 'megatron_cp_algo':
+        assert args.seq_length % (
+                    2 * args.context_parallel_size) == 0, f"sequence length must be divisible by 2 * context_parallel_size"
+        _check_attention_head(args, args.context_parallel_size)
+
+    if args.context_parallel_algo == 'hybrid_cp_algo':
+        assert args.ulysses_degree_in_cp is not None, "--ulysses-degree-in-cp must be specified in hybrid_cp_algo"
+        ring_degree, remainder = divmod(args.context_parallel_size, args.ulysses_degree_in_cp)
+        assert ring_degree > 1 and remainder == 0, "--ulysses-degree-in-cp must be devisible by --context-parallel-size"
+
+        head, remainder = divmod(args.num_attention_heads,
+                                 args.ulysses_degree_in_cp * args.tensor_model_parallel_size)
+        assert head >= 1 and remainder == 0, f"num_attention_heads must be divisible by ulysse-degree-in-cp * tensor_model_parallel_size in hybrid cp"
+        assert args.seq_length % (
+                    2 * args.context_parallel_size) == 0, f"sequence length must be divisible by 2 * context_parallel_size in hybrid cp"
+        _check_attention_head(args, args.ulysses_degree_in_cp)
+
+    if args.sliding_window:
+        raise AssertionError("sliding window is not supported in context parallel.")
+
+
+def _validate_tocken(args):
+    """To avoid invalid tocken configration."""
+    if args.pre_tocken > args.seq_length:
+        print_rank_0(f"[INFO] pre_tocken={args.pre_tocken} would be adjusted to {args.seq_length} for better performance.")
+    if args.next_tocken > args.seq_length:
+        print_rank_0(f"[INFO] next_tocken={args.next_tocken} would be adjusted to {args.seq_length} for better performance.")
 
 
 def _add_lora_args(parser):
@@ -233,6 +313,8 @@ def _add_training_args(parser):
                        help='pre-tockens is used by Flash attention')
     group.add_argument('--next-tockens', type=int, default=0,
                        help='next-tockens is used by Flash attention')
+    group.add_argument('--sparse-mode', type=int, default=0,
+                       help='different modes of flash attention mask')
     group.add_argument('--shape-order', type=str, default='SBH',
                        choices=['SBH', 'BSH', 'BSND'],
                        help='input shape order used by Flash attention')
@@ -242,6 +324,7 @@ def _add_training_args(parser):
                        help='enable deterministic computing for npu')
     group.add_argument('--jit-compile', action='store_true', default=False,
                        help='Setting jit compile mode to True')
+
     return parser
 
 
@@ -308,7 +391,7 @@ def _validate_create_attention_mask_in_dataloader(args):
     alibi_without_flash_attn = args.position_embedding_type == 'alibi' and not args.use_flash_attn
     if reset_data or alibi_without_flash_attn or args.tokenizer_padding_side == "left":
         args.create_attention_mask_in_dataloader = True
-    print_rank_0(f"[INFO] Setting args.create_attention_mask_in_dataloader to {args.create_attention_mask_in_dataloader}"
+    print_rank_0(f"[INFO] Setting args.create_attention_mask_in_dataloader to {args.create_attention_mask_in_dataloader} "
                  f"since reset_data={reset_data} or alibi_without_flash_attn={alibi_without_flash_attn} or "
                  f"args.tokenizer_padding_side={args.tokenizer_padding_side}")
 
@@ -341,11 +424,11 @@ def validate_args_decorator(megatron_validate_args):
     def wrapper(args, defaults=None):
         if defaults is None:
             defaults = {}
-
         variable_seq_lengths = args.variable_seq_lengths
         megatron_validate_args(args, defaults)
         args.variable_seq_lengths = variable_seq_lengths
 
+        _validate_cp_args(args)
         _validate_create_attention_mask_in_dataloader(args)
         _validate_instruction_finetune(args)
         _validate_position_embedding(args)
