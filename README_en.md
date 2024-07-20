@@ -1039,7 +1039,13 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     ... \
     ...
 ```
-
+```bash
+Note:
+To enable mc2, ensure the following:
+1. The environment version matches the description on the repository homepage;
+2. Comment out line 431 in the validate_args_decorator function within modellink\arguments.py:
+   #args.use_mc2 = False
+```
 
 ## <span id="jump19"> Analyze profiling data based on Ascend chips 
 Modellink supports analyze profiling data based on Ascend chips, which is useful for modelling:
