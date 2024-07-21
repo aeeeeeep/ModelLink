@@ -118,9 +118,7 @@ class TestRingAttention(DistributedTest):
         Test RingAttention in context parallel.
     """
     world_size = 8
-    _device_name = torch_npu.npu.get_device_name(0)[:10]
 
-    @pytest.mark.skipif(_device_name != 'Ascend910B', reason='device type is not supported, skip this UT!')
     @pytest.mark.parametrize("cp_args", [(True, True), (False, False)])
     def test_ringattn_context_parallel_seq8192_bs2_bf16(self, cp_args):
         run_ringattn_cp(self.world_size, 2, 8192, torch.bfloat16, cp_args)

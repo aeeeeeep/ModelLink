@@ -136,9 +136,7 @@ class TestUlyssesAttention(DistributedTest):
     Test UlyssesContextAttention in context parallel.
     """
     world_size = 8
-    _device_name = torch_npu.npu.get_device_name(0)[:10]
 
-    @pytest.mark.skipif(_device_name != 'Ascend910B', reason='device type is not supported, skip this UT!')
     def test_ulysses_context_parallel_seq8192_bs2_bf16(self):
         args = parse_args(None, True)
         set_args(args)

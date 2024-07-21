@@ -155,9 +155,7 @@ class TestHybridAttnCP(DistributedTest):
     [(mcore, casual_attention), (mcore, full attention)]
     """
     world_size = 8
-    _device_name = torch_npu.npu.get_device_name(0)[:10]
 
-    @pytest.mark.skipif(_device_name != 'Ascend910B', reason='device type is not supported, skip this UT!')
     @pytest.mark.parametrize("cp_args", [(True, True, True), (True, True, False)])
     def test_hybrid_context_parallel_seq8192_bs2_bf16(self, cp_args):
         run_hybridattn_cp((2, 8192, torch.bfloat16), self.world_size, 2, cp_args)
