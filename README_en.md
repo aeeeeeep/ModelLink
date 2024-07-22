@@ -18,10 +18,9 @@
 
 ModelLink aims to provide end-to-end large language model solutions for Huawei Ascend chips, including models, algorithms, and downstream tasks.
 
-## ModelLink Solution Overview
-
 ---
 
+## ModelLink Solution Overview
 
 ### Supported features
 Current ModelLink supported features for large model usage:
@@ -36,6 +35,29 @@ Current ModelLink supported features for large model usage:
 * [Enable high availability features based on Ascend chips ](#jump22)
 
 More novel and useful features are developing for LLMs training on Ascend ...
+
+---
+
+
+## ModelLink Maintenance Policies
+
+ModelLink release has the following five maintenance phases:
+
+| **Status**        | **Duration** | **Description**                                                                                                                |
+|-------------------|--------------|--------------------------------------------------------------------------------------------------------------------------------|
+| Planning          | 1-3 months   | Plan features.                                                                                                                 |
+| Development       | 3 months     | Develop features.                                                                                                              |
+| Maintained        | 6-12 months | Allow the incorporation of all resolved issues and release the version, Different versions of ModelLink adopt varying support policies. The maintenance periods for Regular Releases and Long-Term Support versions are 6 months and 12 months, respectively. |
+| Unmaintained      | 0-3 months   | Allow the incorporation of all resolved issues. No dedicated maintenance personnel are available. No version will be released. |
+| End Of Life (EOL) | N/A          | Do not accept any modification to a branch.                                                                                    |
+
+
+ The Released Version Maintenance Policy for ModelLink is as follows:
+
+| **ModelLink** |  **Maintenance Policies** | **Status** | **Launch Date** | **Subsequent Status**             | **EOL Date**     |
+|---------------|--------------------|--------------|-----------------|-----------------------------------|-----------|
+| 1.0           |  Regular Release  | Maintained   | 2024/03/30      | Unmaintained 2024/09/30 estimated |           |
+| 1.1           |  Regular Release  | Maintained   | 2024/06/30      | Unmaintained 2024/12/30 estimated |           |
 
 ---
 
@@ -58,7 +80,7 @@ More novel and useful features are developing for LLMs training on Ascend ...
 
 For the supported following models, we provide training scripts and readme instructions in the examples folder, which contain detailed processes for model training, inference, and evaluation.
 
-The following is the measured performance after turning on the mc2 acceleration feature, which is only supported in the version above 24RC2, the repository code level is closed by default, if you want to use, please refer to the "Acceleration Features" chapter on the home page.
+The following is the measured performance after turning on the mc2 acceleration feature, which is only supported in the version above 24RC2, the repository code level is closed by default, if you want to use, please refer to the `Acceleration Features` chapter on the home page.
 
 <table>
   <thead>
@@ -453,7 +475,7 @@ The following is the measured performance after turning on the mc2 acceleration 
 ---
 
 
-### <span id="jump18">Acceleration Features
+## Acceleration Features
 ModelLink supports various acceleration algorithms such as tensor parallelism, pipeline parallelism, context parallelism, sequence parallelism, recomputation, distributed optimizer, and more. The table below shows the enable switches corresponding to each acceleration feature:
 
 <table><thead>
@@ -605,7 +627,7 @@ To enable mc2, ensure the following:
 
 ---
 
-## <span id="jump19"> Analyze profiling data based on Ascend chips 
+## Analyze profiling data based on Ascend chips 
 Modellink supports analyze profiling data based on Ascend chips, which is useful for modelling:
 
 ```bash
@@ -621,7 +643,7 @@ Modellink supports analyze profiling data based on Ascend chips, which is useful
 --profile-save-path ./profile_dir    # path to save data
 ```
 
-## <span id="jump21"> Enable deterministic computing based on Ascend chips 
+## Enable deterministic computing based on Ascend chips 
 
 - add choice in script
 ```shell
@@ -635,7 +657,7 @@ export HCCL_DETERMINISTIC=True
 ---
 
 
-## <span id="jump22"> Enable high availability features based on Ascend chips 
+## Enable high availability features based on Ascend chips 
 The motivation for the distributed optimizer is to save memory by distributing the optimizer state evenly across data parallel ranks.Based on this idea,a scheme is designed to divide the data parallel ranks into two replica data parallel ranks.The replica optimizer distributes the optimizer state evenly across replica data parallel ranks,so that the optimizer state is backed up. The following functions can be implemented based on the Huawei-developed HA framework:
 1. During the training, the last checkpoint can be saved in the fault scenario, ensuring zero loss of the training result.
 2. During the training, UCE fault detection of the HBM is supported, and online repair is completed to achieve step-level recomputation.
