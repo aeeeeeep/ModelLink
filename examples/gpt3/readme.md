@@ -12,8 +12,6 @@
 - [GPT3-175B](#GPT3-175B)
   - [训练-175B](#训练)
     - [脚本](#脚本)
-    - [性能](#性能)
-      - [吞吐](#吞吐)
 
 # GPT3-175B
 
@@ -106,7 +104,7 @@ GPT3-175B 训练的硬件配置:
     ```
 
     3.2 用 ptd 模式进行预训练
-    配置 GPT3-175B PTD 预训练脚本: examples/gpt3/pretrain_gpt3_175B.sh
+    配置 GPT3-175B PTD 预训练脚本: examples/gpt3/pretrain_gpt3_175B_ptd.sh
 
     ```shell
     # 请根据真实情况配置 ascend-toolkit 路径
@@ -118,19 +116,9 @@ GPT3-175B 训练的硬件配置:
     DATA_PATH="./dataset/gpt_text_sentence"     # 数据路径
     ```
 
-   拉起 GPT3-175B PTD 预训练脚本: examples/gpt3/pretrain_gpt3_175B.sh
+   拉起 GPT3-175B PTD 预训练脚本: examples/gpt3/pretrain_gpt3_175B_ptd.sh
 
     ```shell
-    bash examples/gpt3/pretrain_gpt3_175B.sh
+    bash examples/gpt3/pretrain_gpt3_175B_ptd.sh
     ```
-
-### 性能
-
-#### 吞吐
-
-GPT3-175B 在 **昇腾芯片**上的性能数据：
-
-| 设备 |    模型    | tokens吞吐 (tokens/s/p) | 
-| :--: | :--------: |:---------------------:| 
-| NPUs | GPT3-175B |        153.1         |
 

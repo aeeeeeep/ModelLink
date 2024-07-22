@@ -35,7 +35,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
                                              os.path.pardir)))
 
 from modellink.tokenizer import build_tokenizer
-from modellink.data.data_handler import build_dataset, get_dataset_handler
+from modellink.tasks.preprocess.data_handler import build_dataset, get_dataset_handler
 
 
 logging.basicConfig(level=logging.INFO)
@@ -99,6 +99,30 @@ def add_data_args(parser):
                        help='Split documents into sentences.')
     group.add_argument('--keep-newlines', action='store_true',
                        help='Keep newlines between sentences when splitting.')
+    # LlamaFactory
+    group.add_argument('--lla-fact-ins-template', type=str, default=None,
+                       choices=['chatglm2', 'chatglm3', 'chatglm3_system', 'chatml', 'chatml_de', 'default', 'empty', 'qwen'],
+                       help='Which template to use for constructing prompts in training.'
+                            'ex: "qwen"')
+    group.add_argument("--interleave-probs", default=None,
+                       help='Probabilities to sample data from datasets. Use commas to separate multiple datasets. '
+                            'probabilities should sum to 1. ex: "0.1, 0.2, 0.3, 0.4"')
+    group.add_argument('--mix-strategy', type=str,
+                       default='concat',
+                       choices=['concat',
+                                'interleave_under',
+                                'interleave_over'],
+                       help='Strategy to use in dataset mixing (concat/interleave) (undersampling/oversampling).')
+    group.add_argument("--dataset-dir", default=None,
+                       help="Path to the folder containing the datasets.")
+    group.add_argument("--overwrite-cache", action='store_true',
+                       help="Overwrite the cached training and evaluation sets.")
+    group.add_argument("--max-samples", type=int, default=None,
+                       help="For debugging purposes, truncate the number of examples for each dataset.")
+    group.add_argument("--seed", type=int, default=1234,
+                       help="Random seed to be used with data mix.")
+    group.add_argument("--cache-dir", type=str, default="~/tmp",
+                       help="Where to store the cache of dataset from local.")
 
 
 def add_tokenizer_args(parser):
@@ -166,8 +190,14 @@ def get_args():
     return args
 
 
+def validate_args(args):
+    if args.lla_fact_ins_template is not None and args.handler_name != "LlamaFactoryInstructionHandler":
+        raise AssertionError('If specify lla-fact-ins-template, handler name must be "LlamaFactoryInstructionHandler".')
+
+
 def main():
     args = get_args()
+    validate_args(args)
 
     tokenizer = build_tokenizer(args)
     splitter = build_splitter(args)

@@ -10,16 +10,12 @@
 - [Baichuan2-7B](#contents)
   - [Training](#pre-training)
     - [Script](#script)
-    - [Performance](#performance)
-        - [Machine performance](#machine-performance)
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
   
 - [Baichuan2-13B](#contents)
   - [Training](#pre-training)
     - [Script](#script)
-    - [Performance](#performance)
-        - [Machine performance](#machine-performance)
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
 
@@ -178,16 +174,6 @@ Here's a hardware summary of pre-training Baichuan2-7B:
     ```
     **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
 
-### Performance
-
-#### Machine performance
-
-The performance of Baichuan2-7B in **Ascend NPU** and **Reference**:
-
-| Device | Model       | total Iterations | throughput rate (samples/s) | throughput rate (tokens/s/p) | single-step time (s/step) | 
-|:----:|:---------:|:----:|:---------------------:|:---------------:|:----------------:|
-| NPUs | Baichuan2-7B | 1000 | 5.2 | 2664 | 12.3| 
-|  Reference  | Baichuan2-7B | 1000 | -- |  3969 | --   | 
 
 
 
@@ -407,16 +393,6 @@ Here's a hardware summary of pre-training Baichuan2-13B:
     ```
     **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
 
-### Performance
-
-#### Machine performance
-
-The performance of the Baichuan2-13B in **Ascend NPU** and **Reference**:
-
-| Device |     Model     | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | 
-|:----:|:-------------------------:|:----:|:-----------------------------:|:----------------------------:|:-------------------------:|
-| NPUs | Baichuan2-13B |1000 |               -               |             1668             |             -             |
-|  Reference  | Baichuan2-13B |-|               -               |             2062             |             -             |
 
 
 

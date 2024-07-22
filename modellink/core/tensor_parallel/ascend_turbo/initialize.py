@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from megatron.training import get_args
 from megatron.core.tensor_parallel.layers import ColumnParallelLinear, RowParallelLinear
 from megatron.core.parallel_state import (
     get_tensor_model_parallel_group,
@@ -23,14 +23,27 @@ from .ascend_turbo_cfg import ascend_turbo_cfg
 from .mc2_linears_seq_parallel import ColumnSeqParallelLinear, RowSeqParallelLinear
 
 
-def column_parallel_forward(self, input_):
+def column_parallel_forward(self, input_, weight=None):
+    if weight is None:
+        if self.weight is None:
+            raise RuntimeError(
+                "weight was not supplied to ColumnParallelLinear forward pass"
+                "and skip_weight_param_allocation is True."
+            )
+        weight = self.weight
+    else:
+        # Check the weight passed in is the correct shape
+        expected_shape = (self.output_size_per_partition, self.input_size)
+        if weight.shape != expected_shape:
+            raise RuntimeError(
+                f"supplied weight's shape is {tuple(weight.shape)},"
+                f"not {expected_shape} as expected"
+            )
+
     bias = self.bias if not self.skip_bias_add else None
 
     output = ColumnSeqParallelLinear.apply(
-        input_,
-        self.weight,
-        bias,
-        ascend_turbo_cfg.get_group()
+        input_, weight, bias, ascend_turbo_cfg.get_group()
     )
 
     output_bias = self.bias if self.skip_bias_add else None
@@ -54,13 +67,16 @@ def row_parallel_forward(self, input_):
     return output, output_bias
 
 
+
 def initialize_cfg_from_framework():
     ascend_turbo_cfg.set_group(get_tensor_model_parallel_group)
     ascend_turbo_cfg.set_world_size(get_tensor_model_parallel_world_size)
 
     ascend_turbo_cfg.set_column_parallel_linear(ColumnParallelLinear)
     ascend_turbo_cfg.set_row_parallel_linear(RowParallelLinear)
-    ascend_turbo_cfg.parallel_linear_plugin(column_parallel_forward, row_parallel_forward)
+    ascend_turbo_cfg.parallel_linear_plugin(
+        column_parallel_forward, row_parallel_forward
+    )
 
 
 def initialize_cfg_from_args(args):

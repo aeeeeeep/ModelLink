@@ -34,7 +34,6 @@ class TestRotaryPosEmbedding:
                             lambda : SimpleNamespace(rotary_base = request.getfixturevalue("rotary_base")))
 
     @pytest.mark.parametrize("rotary_param, chatglm, rotary_base, seq, expected", test_config["test_rotary_pos_embedding"])
-
     def test_rotary_pos_embedding(self, mock_dependency, rotary_param, chatglm, rotary_base, seq, expected):
         rotary = RotaryEmbedding(**rotary_param)
         assert(torch.allclose(rotary.forward(seq).cpu(), torch.Tensor(expected)))

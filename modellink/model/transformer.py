@@ -22,32 +22,29 @@ import numpy as np
 import torch
 import torch_npu
 import torch.nn.functional as F
+from einops import rearrange
 
-from megatron.training import get_timers, get_args, get_num_microbatches
+from megatron.training import get_args, get_num_microbatches
 from megatron import core
-from megatron.core import mpu
 from megatron.core import tensor_parallel
 from megatron.core import parallel_state
 from megatron.core.enums import ModelType
-from megatron.core.tensor_parallel import get_cuda_rng_tracker
-from megatron.core.parallel_state import get_tensor_model_parallel_group
 
 from megatron.legacy.model.enums import AttnMaskType, LayerType, AttnType
 from megatron.legacy.model.transformer import _get_layer_type
 from megatron.legacy.model.transformer import (
-    ParallelTransformer, ParallelTransformerLayer, NoopTransformerLayer, ParallelMLP
+    ParallelTransformer, ParallelTransformerLayer, NoopTransformerLayer
 )
 from megatron.legacy.model.utils import get_norm
+from megatron.core import mpu
 
-from modellink.core.models.common.embeddings.rotary_pos_embedding import apply_rotary_pos_emb
-from modellink.error_utils import ensure_valid
-from modellink.model.alibi import Alibi, _build_alibi_tensor, _get_inverted_mask
+
+from ..core.models.common.embeddings.rotary_pos_embedding import apply_rotary_pos_emb
+from ..error_utils import ensure_valid
+from ..model.alibi import Alibi, _build_alibi_tensor, _get_inverted_mask
 from ..tasks.finetune.lora.utils import is_enable_lora
+from ..core.transformer import get_attention_mask, MUST_COMPRESS
 
-try:
-    from einops import rearrange
-except ImportError:
-    rearrange = None
 
 
 def state_dict_for_save_checkpoint(state_dict):
@@ -409,7 +406,6 @@ class FlashSelfAttention(torch.nn.Module):
         self.apply_query_key_layer_scaling = args.apply_query_key_layer_scaling
         self.layer_number = layer_number
         self.fill_neg_inf = args.fill_neg_inf
-        self.FA_SPARSE_ATTN_MASK_LEN = 2048
 
         self.beta = 1.0
         if self.apply_query_key_layer_scaling:
@@ -430,9 +426,9 @@ class FlashSelfAttention(torch.nn.Module):
         batch_size, seq_length, head_num, head_dim = q.shape[1], q.shape[0], q.shape[2], q.shape[3]
 
         use_sliding_windows = (
-            getattr(args, "sliding_window", None) is not None
-            and seq_length > args.sliding_window
-            and not self.alibi
+                getattr(args, "sliding_window", None) is not None
+                and seq_length > args.sliding_window
+                and not self.alibi
         )
 
         if use_sliding_windows:
@@ -444,8 +440,7 @@ class FlashSelfAttention(torch.nn.Module):
 
         if not hasattr(self, 'attention_mask') or self.attention_mask.shape[0] != seq_length:
             if use_sliding_windows:
-                self.attention_mask = torch.triu(
-                    torch.ones(self.FA_SPARSE_ATTN_MASK_LEN, self.FA_SPARSE_ATTN_MASK_LEN), 1).bool().npu()
+                self.attention_mask = get_attention_mask(mode=MUST_COMPRESS)
             else:
                 if attention_mask is not None:
                     self.attention_mask = attention_mask
@@ -527,7 +522,6 @@ class FlashSelfAttention(torch.nn.Module):
         self.alibi.alibi = alibi
 
 
-
 def core_attention_wrapper(fn):
     @wraps(fn)
     def wrapper(self, *arg, **kwargs):
@@ -546,10 +540,8 @@ def core_attention_wrapper(fn):
                                         args.square_alibi_mask,
                                         args.fill_neg_inf
                                         ).to(torch.cuda.current_device())
-            if args.params_dtype == torch.float16:
-                alibi = alibi.to(torch.float16)
-            elif args.params_dtype == torch.bfloat16:
-                alibi = alibi.to(torch.bfloat16)
+            if args.params_dtype in [torch.float16, torch.bfloat16]:
+                alibi = alibi.to(args.params_dtype)
             self.alibi.alibi = alibi
         else:
             self.alibi = None

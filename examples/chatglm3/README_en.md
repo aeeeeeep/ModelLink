@@ -11,8 +11,6 @@
 - [ChatGLM3-6B](#ChatGLM3-6b)
   - [Training-6B](#training)
     - [Script](#script)
-    - [Performance](#performance)
-      - [Machine performance](#machine-performance)
   - [Inference-6B](#inference-6b)
   - [Evaluation-6B](#evaluation-6b)
 
@@ -76,21 +74,21 @@ Here's a hardware summary of pre-training  ChatGLM3-6B:
     #!/bin/bash
     mkdir ./model_from_hf/chatglm3_6b_hf/
     cd ./model_from_hf/chatglm3_6b_hf/
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/config.json
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/configuration_chatglm.py
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/modeling_chatglm.py
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00001-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00002-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00003-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00004-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00005-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00006-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00007-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model.bin.index.json
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/quantization.py
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/tokenization_chatglm.py
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/tokenizer.model
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/tokenizer_config.json
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/config.json
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/configuration_chatglm.py
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/modeling_chatglm.py
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/pytorch_model-00001-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/pytorch_model-00002-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/pytorch_model-00003-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/pytorch_model-00004-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/pytorch_model-00005-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/pytorch_model-00006-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/pytorch_model-00007-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/pytorch_model.bin.index.json
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/quantization.py
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/tokenization_chatglm.py
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/tokenizer.model
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/tokenizer_config.json
     cd ../../
     ```
 4. weight conversion in ptd mode
@@ -212,7 +210,7 @@ Here's a hardware summary of pre-training  ChatGLM3-6B:
 
     ```bash
     DATA_PATH="./finetune_dataset/chatglm3-6b-hf/alpaca"
-    TOKENIZER_PATH="./model_from_hf/chatglm3-6b-hf/"
+    TOKENIZER_PATH="./model_from_hf/chatglm3_6b_hf/"
     CKPT_LOAD_DIR="./model_weights/chatglm3_6b_tp1pp2/"
         --load ${CKPT_LOAD_DIR} \
         --finetune \
@@ -227,17 +225,7 @@ Here's a hardware summary of pre-training  ChatGLM3-6B:
     ```shell
     bash examples/chatglm3/tune_chatglm3_6B_8K.sh
     ```
-
-### Performance
-
-#### Machine performance
-
-The performance of ChatGLM3-6B in **Ascend NPU** and **Reference**:
-
-|  Device   |  Model  | sequence length | throughput rate (tokens/s/p) | 
-| :--: | :--------: | :--------:|:---------------------:| 
-| NPUs | ChatGLM3-6B | 8192 |       4297        |  
-| Reference | ChatGLM3-6B |  8192 |      4269         |  
+ 
 
 ## Inference
 

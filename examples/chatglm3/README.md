@@ -12,8 +12,6 @@
 - [ChatGLM3-6B](#ChatGLM3-6B)
   - [训练-6B](#训练)
     - [脚本](#脚本)
-    - [性能](#性能)
-      - [吞吐](#吞吐)
   - [推理-6B](#推理-6B)
   - [评估-6B](#评估-6B)
 
@@ -76,21 +74,21 @@ ChatGLM3-6B 训练的硬件配置:
     #!/bin/bash
     mkdir ./model_from_hf/chatglm3_6b_hf/
     cd ./model_from_hf/chatglm3_6b_hf/
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/config.json
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/configuration_chatglm.py
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/modeling_chatglm.py
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00001-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00002-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00003-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00004-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00005-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00006-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model-00007-of-00007.bin
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/pytorch_model.bin.index.json
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/quantization.py
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/tokenization_chatglm.py
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/tokenizer.model
-    wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/tokenizer_config.json
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/config.json
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/configuration_chatglm.py
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/modeling_chatglm.py
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/pytorch_model-00001-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/pytorch_model-00002-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/pytorch_model-00003-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/pytorch_model-00004-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/pytorch_model-00005-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/pytorch_model-00006-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/pytorch_model-00007-of-00007.bin
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/pytorch_model.bin.index.json
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/quantization.py
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/tokenization_chatglm.py
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/tokenizer.model
+    wget https://huggingface.co/THUDM/chatglm3-6b-base/resolve/main/tokenizer_config.json
     cd ../../
     ```
 4. 权重转换
@@ -110,7 +108,7 @@ ChatGLM3-6B 训练的硬件配置:
         --target-tensor-parallel-size 1 \
         --target-pipeline-parallel-size 2 \
         --load-dir ./model_from_hf/chatglm3_6b_hf/ \
-        --save-dir ./model_weights/chatglm3_6b_tp1pp2/
+        --save-dir ./model_weights/chatglm3_6b_tp1pp2/ \
         --tokenizer-model ./model_from_hf/chatglm3_6b_hf/tokenizer.model \
         --add-qkv-bias
     ```
@@ -214,7 +212,7 @@ ChatGLM3-6B 训练的硬件配置:
 
     ```bash
     DATA_PATH="./finetune_dataset/chatglm3-6b-hf/alpaca"
-    TOKENIZER_PATH="./model_from_hf/chatglm3-6b-hf/"
+    TOKENIZER_PATH="./model_from_hf/chatglm3_6b_hf/"
     CKPT_LOAD_DIR="./model_weights/chatglm3_6b_tp1pp2/"
         --load ${CKPT_LOAD_DIR} \
         --finetune \
@@ -229,16 +227,6 @@ ChatGLM3-6B 训练的硬件配置:
     bash examples/chatglm3/tune_chatglm3_6B_8K.sh
     ```
 
-### 性能
-
-#### 吞吐
-
-ChatGLM3-6B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-| 设备 |    模型    |  序列长度 |tokens吞吐 (tokens/s/p) | 
-| :--: | :--------: |:---------------------:| 
-| NPUs | ChatGLM3-6B |  8192 |       4297         |  
-| 参考 | ChatGLM3-6B |  8192 |       4269         |  
 
 ## 推理
 

@@ -53,8 +53,7 @@ from megatron.training.utils import (
 from megatron.core.distributed import DistributedDataParallel as DDP
 from megatron.core.distributed import finalize_model_grads
 from modellink.initialize import set_jit_fusion_options
-
-from .tasks.finetune.lora.utils import is_enable_lora
+from modellink.tasks.finetune.lora.utils import is_enable_lora
 
 
 def model_provider_func_wrapper(model_provider_func):
@@ -426,7 +425,6 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
     if args.profile and (torch.distributed.get_rank() in args.profile_ranks):
         prof = get_profiler()
         prof.start()
-
 
     while iteration < args.train_iters:
 

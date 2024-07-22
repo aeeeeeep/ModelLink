@@ -34,7 +34,7 @@ GPT_ARGS="
     --seq-length 8192 \
     --micro-batch-size 1 \
     --global-batch-size 128 \
-    --max-position-embeddings 32768 \
+    --max-position-embeddings 8192 \
     --padded-vocab-size 65024 \
     --make-vocab-size-divisible-by 1 \
     --group-query-attention \
