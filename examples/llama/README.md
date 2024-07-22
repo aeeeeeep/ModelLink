@@ -8,8 +8,6 @@
 - [LLaMA-7B/13B](#llama-7b13b)
   - [训练](#训练)
     - [脚本](#脚本)
-    - [性能](#性能)
-      - [吞吐](#吞吐)
     - [推理](#推理)
       - [脚本](#脚本)
     - [使用基线数据集进行评估](#使用基线数据集进行评估)
@@ -17,8 +15,6 @@
   - [训练](#训练)
     - [数据集](#数据集)
     - [脚本](#脚本)
-    - [性能](#性能)
-      - [吞吐](#吞吐)
     - [推理](#推理)
       - [脚本](#脚本)
     - [使用基线数据集进行评估](#使用基线数据集进行评估)
@@ -349,19 +345,6 @@ LLaMA-7B/13B 训练的硬件配置如下:
     # 单机8卡
     bash examples/llama/tune_llama_13b_ptd.sh 
     ```
-
-### 性能
-
-#### 吞吐
-
-LLaMA-7B/13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-| 设备   | 模型        | 迭代数  | 样本吞吐 (samples/p/s) | token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 浮点计算数 (TFLOPs/s) |
-|------|-----------|------|--------------------|----------------------|-----------------|------------------|
-| NPUs | LLaMA-7B  | 2048 | 1.75               | 3600                 | 18.2            | 159.9            |
-| 参考 | LLaMA-7B  | 2048 | 1.85               | 3804                 | 18.5            | 161.5            |
-| NPUs | LLaMA-13B | 2048 | 0.92               | 1895                 | 17.2            | 200.57           |
-| 参考 | LLaMA-13B | 2048 | 0.96               | 2012                 | 16.65           | 213.29           |
 
 
 
@@ -705,13 +688,6 @@ LLaMA-33B/65B 训练的硬件配置:
     NODE_RANK=0
     ```
 
-    训练log如下:
-
-    ```Shell
-    iteration  11/50000 | consumed samples: 5632 | consumed tokens:  11534336 | elapsed time per iteration (ms):  52728.1 | learning rate:    1.499E-05 | gloabl batch size:  512 | lm loss:  1.376514E+01 | loss scale:  65536.0 | grad norm:    459.628 | actual seqlen:  2048 | number of skipped
-    iterations: 0 | number of nan iterations:   0 | samples per second: 9.710 | TFLOPs: 167.52 |
-    time (ms)
-    ```
 
 6. 微调
 
@@ -802,19 +778,6 @@ LLaMA-33B/65B 训练的硬件配置:
     # 双机16卡
     bash examples/llama/tune_llama_65b_ptd.sh 
     ```
-
-### 性能
-
-#### 吞吐
-
-LLaMA-33B/65B在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
-
-|  设备  |    模型     | tokens吞吐 (tokens/s/p) |
-|:----:|:---------:|:---------------------:|
-|  参考  | llama-33B |          776          |
-| NPUs | llama-33B |          621          |
-|  参考  | llama-65B |          426          |
-| NPUs | llama-65B |          348          |
 
 
 

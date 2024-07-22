@@ -10,8 +10,6 @@
 - [Yi-34B](#yi-34b)
   - [Training](#training)
     - [Script](#script)
-    - [Performance](#performance)
-      - [Machine performance](#machine-performance)
   - [Inference](#inference)
   - [Evaluation](#evaluation)
 
@@ -225,18 +223,7 @@ Here's a hardware summary of pre-training Yi-34B:
       --tokenizer-type PretrainedFromHF \
       --tokenizer-name-or-path ${TOKENIZER_PATH} \
       --tokenizer-not-use-fast \
-    ```
-
-### Performance
-
-#### Machine performance
-
-The performance of Yi-34B in **Ascend NPU** and **Reference**:
-
-| Device | Model       | total Iterations | throughput rate (samples/s) | throughput rate (tokens/s/p) | single-step time (s/step) | 
-|:----:|:---------:|:----:|:---------------------:|:---------------:|:----------------:|
-| NPUs |  Yi-34B | - | 3.16| 809| 324 |      
-|  Reference  | Yi-34B | - |  2.85  | 732 | 359 |    
+    ``` 
 
 
 ## Inference

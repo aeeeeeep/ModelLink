@@ -11,16 +11,12 @@
 - [Internlm-7B](#internlm-7b)
   - [Training](#training)
     - [Script](#script)
-    - [Performance](#performance)
-      - [Machine performance](#machine-performance)
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
 - [Contents](#contents)
 - [Internlm-65B](#internlm-65b)
   - [Training](#training)
     - [Script](#script)
-    - [Performance](#performance)
-      - [Machine performance](#machine-performance)
 
 # InternLM-7B
 
@@ -175,16 +171,6 @@ Here's a hardware summary of pre-training InternLM-7B:
     ```
     **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
 
-### Performance
-
-#### Machine performance
-
-The performance of Internlm-7B in **Ascend NPU** and **Reference**:
-
-| Device | Model       | total Iterations | throughput rate (samples/s) | throughput rate (tokens/s/p) | single-step time (s/step) | 
-|----|-------------|------|--------------------|----------------------|-----------------|
-| NPUs | Internlm-7B | 1000 | 10.85            | 2776                 | 5.90            | 
-| benchmarks | Internlm-7B | 1000 | 11.14               | 2854                 |  5.74         | 
 
 
 #### Inference
@@ -209,7 +195,7 @@ Evaluation script: examples/intern/evaluate_internlm_7B_ptd.sh
 bash  examples/intern/evaluate_internlm_7B_ptd.sh
 ```
 
-The evaluation performance of LLaMA-7B/13B in **Ascend NPU**:
+The evaluation performance of Internlm-7B in **Ascend NPU**:
 
 | Task    | Model     | NPU  | Benchmark |
 |-----------------------------------------------------|-----------|------|------|
@@ -329,13 +315,3 @@ Here's a hardware summary of pre-training InternLM-65B:
     ```
     **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
 
-### Performance
-
-#### Machine performance
-
-The performance of Internlm-65B in **Ascend NPU** and **Reference**:
-
-| Device | Model       | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | 
-|----|-------------|------|--------------------|----------------------|-----------------|
-| NPUs | Internlm-65B |  |          5.33 |             341   |   48       | 
-| Reference | Internlm-65B | - | -              | 414                 | -            | 
