@@ -28,10 +28,11 @@ from .transformer.moe.moe_utils import z_loss_func
 from .transformer.transformer_layer import TransformerLayerSubmodules, transformer_layer_init_wrapper, transformer_layer_forward
 from .transformer.transformer_block import get_num_layers_to_build_wrapper
 from .models.gpt.gpt_model import gpt_model_forward
-from .models.gpt.gpt_layer_specs import get_gpt_layer_local_spec_wrapper
+from .models.gpt.gpt_layer_specs import get_gpt_layer_local_spec_wrapper, build_layers_wrapper
 from .distributed.param_and_grad_buffer import start_grad_sync_wrapper
 from .distributed.distributed_data_parallel import distributed_data_parallel_init_wrapper
 from .optimizer import get_megatron_optimizer_wrapper
 from .optimizer.clip_grads import clip_grad_norm_fp32_wrapper
 from .optimizer.distrib_optimizer import distributed_optimizer_init_wrapper
 from .transformer.custom_layers.transformer_engine import PTNorm
+from .transformer.custom_layers.token_dispatcher import allgather_token_permutation, allgather_token_unpermutation
