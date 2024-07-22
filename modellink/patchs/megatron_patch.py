@@ -20,13 +20,12 @@ from mindspeed.core.fusions.fused_layer_norm import (FusedLayerNormAffineFunctio
                                                      fused_layer_norm_affine)
 from mindspeed.core.fusions.fused_softmax import (is_kernel_available, ScaledUpperTriangMaskedSoftmax,
                                                   ScaledMaskedSoftmax, ScaledSoftmax, forward_fused_softmax)
+from mindspeed.core.fusions.fused_bias_swiglu import SwiGLUFunction, BiasSwiGLUFunction
 from mindspeed.core.tensor_parallel.random import _set_cuda_rng_state
 from mindspeed.core.tensor_parallel.cross_entropy import vocab_parallel_cross_entropy_forward
 from mindspeed.core.tensor_parallel.layers import vocab_parallel_embedding_forward
 from mindspeed.core.transformer.moe.router import aux_loss_load_balancing
-from mindspeed.core.transformer.moe.token_dispatcher import token_permutation, token_unpermutation
 from mindspeed.initialize import _compile_dependencies
-from mindspeed.core.models.gpt.gpt_layer_specs import get_mlp_module_spec_wrapper
 
 from ..model import (
     GPTModel, parallel_transformer_init, transformer_language_model_forward_wrapper,
@@ -106,6 +105,8 @@ def patch_fusions():
     PatchManager.register_patch('megatron.core.fusions.fused_softmax.ScaledSoftmax', ScaledSoftmax)  # use torch-npu npu_scaled_masked_softmax
     PatchManager.register_patch('megatron.core.fusions.fused_softmax.FusedScaleMaskSoftmax.is_kernel_available', is_kernel_available)  # replace kernel check
     PatchManager.register_patch('megatron.core.fusions.fused_softmax.FusedScaleMaskSoftmax.forward_fused_softmax', forward_fused_softmax)
+    PatchManager.register_patch('megatron.core.fusions.fused_bias_swiglu.SwiGLUFunction', SwiGLUFunction)
+    PatchManager.register_patch('megatron.core.fusions.fused_bias_swiglu.BiasSwiGLUFunction', BiasSwiGLUFunction)
 
 
 def patch_core_models(args):
@@ -114,7 +115,8 @@ def patch_core_models(args):
     from mindspeed.core.models.common.embeddings.rotary_pos_embedding import get_pos_emb_on_this_cp_rank
     from mindspeed.core.fusions.rotary_pos_embedding import rotary_embedding_init_wrapper
     from ..utils import get_batch_on_this_cp_rank
-    from ..core import RotaryEmbedding_forward, apply_rotary_pos_emb_bshd_wrapper
+    from ..core import (RotaryEmbedding_forward, apply_rotary_pos_emb_bshd_wrapper, 
+                        build_layers_wrapper, allgather_token_permutation, allgather_token_unpermutation)
     from ..core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec_wrapper
     from ..core.transformer.dot_product_attention import dot_product_attention_init_wrapper, \
         dot_product_attention_forward_wrapper
@@ -132,6 +134,8 @@ def patch_core_models(args):
     PatchManager.register_patch('megatron.core.transformer.attention.Attention.__init__', attention_init_wrapper)
     PatchManager.register_patch('megatron.core.transformer.dot_product_attention.DotProductAttention.__init__', dot_product_attention_init_wrapper)
     PatchManager.register_patch('megatron.core.transformer.dot_product_attention.DotProductAttention.forward', dot_product_attention_forward_wrapper)
+    PatchManager.register_patch('megatron.core.transformer.custom_layers.transformer_engine.TEDotProductAttention.__init__', dot_product_attention_init_wrapper)
+    PatchManager.register_patch('megatron.core.transformer.custom_layers.transformer_engine.TEDotProductAttention.forward', dot_product_attention_forward_wrapper)
 
     # Layer Definition
     # For NPU, we use local-mcore-structrue in te layer.
@@ -143,12 +147,14 @@ def patch_core_models(args):
 
     # moe
     if args.moe_permutation_async_comm:
-        PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAllGatherTokenDispatcher.token_permutation', token_permutation)
-        PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAllGatherTokenDispatcher.token_unpermutation', token_unpermutation)
+        PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAllGatherTokenDispatcher.token_permutation', allgather_token_permutation)
+        PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAllGatherTokenDispatcher.token_unpermutation', allgather_token_unpermutation)
         PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.aux_loss_load_balancing', aux_loss_load_balancing)
+
     if args.use_mc2:
-        megatron.core.models.gpt.gpt_layer_specs._get_mlp_module_spec = get_mlp_module_spec_wrapper(
-            megatron.core.models.gpt.gpt_layer_specs._get_mlp_module_spec, ColumnParallelLinear.forward,
+        # MoE MLP not use mc2 linear
+        from megatron.core.transformer.transformer_block import TransformerBlock
+        TransformerBlock._build_layers = build_layers_wrapper(TransformerBlock._build_layers, ColumnParallelLinear.forward,
             RowParallelLinear.forward)
 
 
@@ -182,21 +188,9 @@ def patch_tensor_parallel():
 
 
 def patch_parallel_state():
-    from ..core import (get_expert_parallel_rank, get_expert_parallel_world_size, get_expert_parallel_group, \
-                        get_expert_model_parallel_rank, get_expert_model_parallel_world_size,
-                        set_expert_model_parallel_rank, \
-                        set_expert_model_parallel_world_size, destroy_model_parallel_decorator)
+    from ..core import destroy_model_parallel_decorator
     from mindspeed.core.parallel_state import (initialize_model_parallel, destroy_model_parallel_wrapper, \
                                                get_context_parallel_group_for_send_recv_overlap)
-
-    # add methods for megatron.core.parallel_state
-    setattr(megatron.core.parallel_state, "get_expert_parallel_group", get_expert_parallel_group)
-    setattr(megatron.core.parallel_state, "get_expert_parallel_rank", get_expert_parallel_rank)
-    setattr(megatron.core.parallel_state, "get_expert_model_parallel_rank", get_expert_model_parallel_rank)
-    setattr(megatron.core.parallel_state, "get_expert_parallel_world_size", get_expert_parallel_world_size)
-    setattr(megatron.core.parallel_state, "get_expert_model_parallel_world_size", get_expert_model_parallel_world_size)
-    setattr(megatron.core.parallel_state, "set_expert_model_parallel_rank", set_expert_model_parallel_rank)
-    setattr(megatron.core.parallel_state, "set_expert_model_parallel_world_size", set_expert_model_parallel_world_size)
 
     # Bugfix for Megatron-LM core 0.6.0, to be removed for next version.
     PatchManager.register_patch('megatron.core.parallel_state.initialize_model_parallel', initialize_model_parallel)

@@ -411,7 +411,7 @@ ModelLink已发布版本维护策略：
       <td>【社区】</td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
+      <td rowspan="1"><a href="examples/README.md">Mixtral</a></td>
       <td>8x7B</td>
       <td> 32K</td>
       <td>2x8</td>
@@ -538,6 +538,19 @@ ModelLink支持张量并行、流水线并行、context并行、序列并行、�
     <td>No</td>
   </tr>
   <tr>
+    <td rowspan="2">MOE并行</td>
+    <td>MOE并行</td>
+    <td>--expert-model-parallel-size</td>
+    <td>Yes</td>
+    <td>No</td>
+  </tr>
+  <tr>
+    <td>MOE重排通信优化</td>
+    <td>--moe-permutation-async-comm</td>
+    <td>Yes</td>
+    <td>No</td>
+  </tr>
+  <tr>
     <td rowspan="5">融合算子</td>
     <td>Flash attention</td>
     <td>--use-flash-attn</td>
@@ -584,7 +597,7 @@ ModelLink支持张量并行、流水线并行、context并行、序列并行、�
   <tr>
     <td>MC2</td>
     <td>--use-mc2</td>
-    <td>No</td>
+    <td>Yes</td>
     <td>Yes</td>
   </tr>
 </tbody></table>

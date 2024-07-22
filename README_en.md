@@ -411,13 +411,13 @@ The following is the measured performance after turning on the mc2 acceleration 
       <td>【Community】</td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/mixtral/README.md">Mixtral</a></td>
+      <td rowspan="1"><a href="examples/README.md">Mixtral</a></td>
       <td>8x7B</td>
       <td> 32K </td>
-      <td>2x8</td>
+      <td>8x8</td>
       <td>BF16 </td>
-      <td> 487 </td>
-      <td> 610 </td>
+      <td> 702 </td>
+      <td> 837 </td>
       <td>【Ascend】</td>
     </tr>
     <tr>
@@ -460,7 +460,7 @@ The following is the measured performance after turning on the mc2 acceleration 
       <td>【Community】</td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/grok1/README.md">Grok1</a></td>
+      <td rowspan="1"><a href="examples/README.md">Grok1</a></td>
       <td>40B</td>
       <td> 8K </td>
       <td> 2x8 </td>
@@ -538,6 +538,19 @@ ModelLink supports various acceleration algorithms such as tensor parallelism, p
     <td>No</td>
   </tr>
   <tr>
+    <td rowspan="2">MOE Parallel</td>
+    <td>MOE Parallel</td>
+    <td>--expert-model-parallel-size</td>
+    <td>Yes</td>
+    <td>No</td>
+  </tr>
+  <tr>
+    <td>MOE permutation communication optimization</td>
+    <td>--moe-permutation-async-comm</td>
+    <td>Yes</td>
+    <td>No</td>
+  </tr>
+  <tr>
     <td>Memory Optimization</td>
     <td>Re-computation</td>
     <td>--recompute-granularity</td>
@@ -591,7 +604,7 @@ ModelLink supports various acceleration algorithms such as tensor parallelism, p
   <tr>
     <td>MC2</td>
     <td>--use-mc2</td>
-    <td>No</td>
+    <td>Yes</td>
     <td>Yes</td>
   </tr>
 </tbody></table>
