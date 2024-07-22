@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+from typing import List
+
 from megatron.training import get_args
 
 
@@ -40,22 +43,43 @@ def merge_dicts(dict1, dict2):
 
 def modify_keys_with_dict(dictionary, words_to_replace, exclude_words):
     args = get_args()
+
+    layers_to_transform = list(map(str, args.lora_layers_to_transform))
+    target_modules = args.lora_target_modules
+
     modified_dict = {}
     for key, value in dictionary.items():
         key_str = str(key)
-        matched_word = next((word for word, replacement in words_to_replace.items() if word in key_str), None)
-        is_target_module = any('.' + target_module + '.' in key_str for target_module in args.lora_target_modules)
-        not_exclude_word = not any(exclude_word in key_str for exclude_word in exclude_words)
-        if all([matched_word, not_exclude_word, key_str != matched_word, is_target_module]):
-            # Check if a word to replace is present in the key and none of the exclude_words are present
-            new_key = key_str.replace(matched_word, words_to_replace[matched_word])
-            if isinstance(value, dict):
-                modified_dict[new_key] = modify_keys_with_dict(value, words_to_replace, exclude_words)
-            else:
-                modified_dict[new_key] = value
+        # Check if a word to replace is present in the key
+        word_to_replace = next((word for word in words_to_replace if word in key_str), None)
+        should_be_replaced = word_to_replace and word_to_replace != key_str
+
+        # Check if a word none of the exclude_words are present
+        is_excluded = any(exclude_word in key_str for exclude_word in exclude_words)
+
+        if (
+            should_be_replaced
+            and not is_excluded
+            # If the layers is not affected by LoRA - it mustn't be modified in the state dict
+            and _lora_affected_layer(key_str, target_modules, layers_to_transform)
+        ):
+            key_str = key_str.replace(word_to_replace, words_to_replace[word_to_replace])
+
+        if isinstance(value, dict):
+            modified_dict[key_str] = modify_keys_with_dict(value, words_to_replace, exclude_words)
         else:
-            if isinstance(value, dict):
-                modified_dict[key] = modify_keys_with_dict(value, words_to_replace, exclude_words)
-            else:
-                modified_dict[key] = value
+            modified_dict[key_str] = value
     return modified_dict
+
+
+def _lora_affected_layer(key, target_modules: List[str], layers_to_transform: List[int]) -> bool:
+    if not layers_to_transform:
+        layers_with_lora_pattern = r'\d+'
+    else:
+        layers_with_lora_pattern = '|'.join(target_modules)
+    layer_indices_for_lora_pattern = '|'.join(layers_to_transform)
+    lora_adapter_name_pattern = re.compile(
+        rf'^.*\.({layer_indices_for_lora_pattern})\..*\.({layers_with_lora_pattern}).*$'
+    )
+    match = lora_adapter_name_pattern.match(key)
+    return bool(match)
