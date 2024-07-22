@@ -11,16 +11,12 @@
 - [Baichuan-7B](#contents)
   - [Training](#pre-training)
     - [Script](#script)
-    - [Performance](#performance)
-        - [Machine performance](#machine-performance)
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
 
 - [Baichuan-13B](#contents)
   - [Training](#pre-training)
     - [Script](#script)
-    - [Performance](#performance)
-        - [Machine performance](#machine-performance)
   - [Lora](#Lora)
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
@@ -181,17 +177,6 @@ Here's a hardware summary of pre-training Baichuan-7B:
     ```
     **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
 
-
-### Performance
-
-#### Machine performance
-
-The performance of Baichuan-7B in **Ascend NPU** and **Reference**:
-
-| Device | Model       | total Iterations | throughput rate (samples/s) | throughput rate (tokens/s/p) | single-step time (s/step) | 
-|:----:|:---------:|:----:|:---------------------:|:---------------:|:----------------:|
-| NPUs | Baichuan-7B | 1000 |  5.24 | 2685 | 6.1| 
-|  Reference  | Baichuan-7B | - | - |  2036 | - | 
 
 
 ## Inference
@@ -422,17 +407,7 @@ Here's a hardware summary of pre-training Baichuan-13B:
     bash examples/baichuan/pretrain_baichuan_ptd_13B.sh
     ```
     **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
-
-### Performance
-
-#### Machine performance
-
-The performance of the Baichuan-13B in **Ascend NPU** and **Reference**:
-
-| Device |    Model     | total Iterations | throughput rate (samples/s) | throughput rate (tokens/s/p) | single-step time (s/step) | 
-|:----:|:------------:|:----:|:------------------:|:--------------------:|:---------------:|
-| NPUs | Baichuan-13B | 1000 | 2.37 | 1213| 13.5 |    
-|  Reference | Baichuan-13B |  - |  -   | 862  |  -   |    
+   
 
 
 

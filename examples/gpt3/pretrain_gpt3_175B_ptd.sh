@@ -38,6 +38,7 @@ GPT_ARGS="
     --num-attention-heads 96 \
     --seq-length 2048 \
     --max-position-embeddings 2048 \
+    --tokenizer-type GPT2BPETokenizer \
     --transformer-impl local \
     --micro-batch-size 2 \
     --global-batch-size 1024 \

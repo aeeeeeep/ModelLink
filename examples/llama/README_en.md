@@ -8,8 +8,6 @@
 - [LLaMA-7B/13B](#llama-7b13b)
   - [Training](#training)
     - [Script](#script)
-    - [Performance](#performance)
-      - [Machine performance](#machine-performance)
   - [Inference](#Inference)
     - [Script](#script)
   - [Evaluation with Numerous Benchmarks](#Evaluation-with-Numerous-Benchmarks)
@@ -17,8 +15,6 @@
   - [Training](#pre-training)
     - [Datasets](#datasets)
     - [Script](#script-1)
-    - [Performance](#performance-1)
-      - [Machine performance](#machine-performance-1)
   - [Inference](#Inference)
     - [Script](#script)
   - [Evaluation with Numerous Benchmarks](#Evaluation-with-Numerous-Benchmarks)
@@ -341,19 +337,6 @@ Here's a hardware summary of pre-training LLaMA-7B/13B:
     # 8p
     bash examples/llama/tune_llama_13b_ptd.sh 
     ```
-
-### Performance
-
-#### Machine performance
-
-The performance of LLaMA-7B/13B in **Ascend NPU** and **Reference**:
-
-| Device    | Model     | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
-|-----------|-----------|------------------|-------------------------------|------------------------------|---------------------------|-------------------------------------|
-| NPUs      | LLaMA-7B  | 2048             | 1.75                          | 3600                         | 18.2                      | 159.9                               |
-| Reference | LLaMA-7B  | 2048             | 1.85                          | 3804                         | 18.5                      | 161.5                               |
-| NPUs      | LLaMA-13B | 2048             | 0.92                         | 1895                         | 17.2                     | 200.57                              |
-| Reference | LLaMA-13B | 2048             | 0.96                          | 2012                         | 16.6                     | 213.29                              |
 
 
 
@@ -685,14 +668,6 @@ The model was trained using alpaca datasets.
     NODE_RANK=0
     ```
 
-    The Training log will look like these:
-
-    ```Shell
-    iteration  11/50000 | consumed samples: 5632 | consumed tokens:  11534336 | elapsed time per iteration (ms):  52728.1 | learning rate:    1.499E-05 | gloabl batch size:  512 | lm loss:  1.376514E+01 | loss scale:  65536.0 | grad norm:    459.628 | actual seqlen:  2048 | number of skipped
-    iterations: 0 | number of nan iterations:   0 | samples per second: 9.710 | TFLOPs: 167.52 |
-    time (ms)
-    ```
-
 6. Finetune
 
     6.1 Prepare fine-tune dataset
@@ -788,19 +763,6 @@ The model was trained using alpaca datasets.
     NODE_RANK=0
     ```
 
-### Performance
-
-#### Machine performance
-
-The performance of the NPUs in **Ascend** and Reference:
-
-|  Device   |   Model   | throughput rate (tokens/s/p) |
-|:---------:|:---------:|:----------------------------:|
-| Reference | llama-33B |             776              |
-|   NPUs    | llama-33B |             621              |
-| Reference | llama-65B |             426              |
-|   NPUs    | llama-65B |             348              |
-
 
 
 ## Inference
@@ -871,7 +833,7 @@ bash examples/llama/evaluate_llama_33B_ptd.sh
 bash examples/llama/evaluate_llama_65B_ptd.sh
 ```
 
-The evaluation performance of LLaMA-7B/13B in **Ascend NPU**:
+The evaluation performance of LLaMA-33B/65B in **Ascend NPU**:
 
 | Task                                           | Model     | NPU  | Benchmark |
 |------------------------------------------------|-----------|------|-----------|

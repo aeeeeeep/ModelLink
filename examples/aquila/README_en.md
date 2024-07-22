@@ -9,8 +9,6 @@
 - [Aquila-7B](#aquila-7b)
   - [Training](#training)
     - [Script](#script)
-    - [Performance](#performance)
-      - [Machine performance](#machine-performance)
   - [Inference](#inference)
   - [Evaluation with Benchmark](#evaluation-with-benchmark)
 
@@ -164,16 +162,7 @@ Here's a hardware summary of pre-training Aquila-7B:
 
     **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
 
-### Performance
 
-#### Machine performance
-
-The performance of Aquila-7B in Ascend NPU and reference device:
-
-| Device    | Model     | Iterations | throughput rate (tokens/p/s) | single iteration step time (s/step) |
-| --------- | --------- | ---------- | ---------------------------- | ----------------------------------- |
-| NPU       | Aquila-7B | 1000       | 2849                         | 5.75                                |
-| Reference | Aquila-7B | 1000       | 2874                         | 5.70                                |
 
 ## Inference
 

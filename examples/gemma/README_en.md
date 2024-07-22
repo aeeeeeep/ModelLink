@@ -8,17 +8,13 @@
 
 - [Gemma-2B](#Gemma-2B)
   - [Training](#training)
-  - [Script](#script)
-  - [Performance](#performance)
-    - [Machine performance](#machine-performance)
+    - [Script](#script)
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
 
 - [Gemma-7B](#Gemma-7B)
   - [Training](#training)
-  - [Script](#script)
-  - [Performance](#performance)
-    - [Machine performance](#machine-performance)
+    - [Script](#script)
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
 
@@ -213,16 +209,6 @@ Here's a hardware summary of pre-training  Gemma-2B:
         --tokenizer-not-use-fast \
     ```
 
-### Performance
-
-#### Machine performance
-
-The performance of Gemma-2B in **Ascend NPU** and **Reference**:
-
-|  Device   |  Model   | throughput rate (tokens/s/p) |
-|:---------:|:--------:|:----------------------------:|
-|   NPUs    | Gemma-2B |             6821             |
-| Reference | Gemma-2B |             7602             |
 
 ## Inference
 
@@ -494,16 +480,6 @@ Here's a hardware summary of pre-training  Gemma-7B:
     bash examples/gemma/tune_gemma_7b_ptd.sh 
     ```
 
-### Performance
-
-#### Machine performance
-
-The performance of Gemma-7B in **Ascend NPU** and **Reference**:
-
-|  Device   |  Model  | throughput rate (tokens/s/p) |
-|:---------:|:-------:|:----------------------------:|
-|   NPUs    | Gemma-7B |             2938             |
-| Reference | Gemma-7B |             2607             |
 
 ## Inference
 
