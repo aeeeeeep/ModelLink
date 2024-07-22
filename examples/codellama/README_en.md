@@ -11,8 +11,6 @@
 - [CodeLlama-34B](#codellama-34b)
   - [Training](#training)
     - [Script](#script)
-    - [Performance](#performance)
-      - [Machine performance](#machine-performance)
   - [Inference](#inference)
   - [Evaluation](#evaluation)
 
@@ -228,16 +226,6 @@ Here's a hardware summary of pre-training CodeLlama-34B:
         --padded-vocab-size 32000 \
     ```
 
-### Performance
-
-#### Machine performance
-
-The performance of CodeLlama-34B in **Ascend NPU** and **Reference**:
-
-| Device | Model       | total Iterations | throughput rate (samples/s) | throughput rate (tokens/s/p) | single-step time (s/step) | 
-|:----:|:---------:|:----:|:---------------------:|:---------------:|:----------------:|
-| NPUs | CodeLlama-34B | - | 3.27 | 837 | 313 |
-|  Reference  | CodeLlama-34B | - |  2.97   | 762 | 344 | 
 
 
 ## Inference

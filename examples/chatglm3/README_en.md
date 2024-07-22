@@ -11,8 +11,6 @@
 - [ChatGLM3-6B](#ChatGLM3-6b)
   - [Training-6B](#training)
     - [Script](#script)
-    - [Performance](#performance)
-      - [Machine performance](#machine-performance)
   - [Inference-6B](#inference-6b)
   - [Evaluation-6B](#evaluation-6b)
 
@@ -231,16 +229,6 @@ Here's a hardware summary of pre-training  ChatGLM3-6B:
     bash examples/chatglm3/tune_chatglm3_6B_8K.sh
     ```
 
-### Performance
-
-#### Machine performance
-
-The performance of ChatGLM3-6B in **Ascend NPU** and **Reference**:
-
-|  Device   |  Model  | sequence length | throughput rate (tokens/s/p) | 
-| :--: | :--------: | :--------:|:---------------------:| 
-| NPUs | ChatGLM3-6B | 8192 |       4297        |  
-| Reference | ChatGLM3-6B |  8192 |      4269         |  
 
 ## Inference
 

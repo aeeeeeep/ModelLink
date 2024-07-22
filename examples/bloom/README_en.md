@@ -155,17 +155,6 @@ Here's a hardware summary of pre-training Bloom-7B:
     **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
 
 
-### Performance
-
-#### Machine performance
-
-The performance of Bloom-7B in **Ascend NPU** and **Reference**:
-
-| Device | Model       | total Iterations | throughput rate (samples/s) | throughput rate (tokens/s/p) | single-step time (s/step) | 
-|:----:|:---------:|:----:|:---------------------:|:---------------:|:----------------:|
-| NPUs | Bloom 7b | 1000 | 7.95 | 2034 | 64.55
-|  Reference  | Bloom 7B | 1000 | 9.894 |  2525 | 19.40 
-
 
 
 ## Inference Bloom-7B
@@ -379,16 +368,6 @@ Here's a hardware summary of pre-training Bloom-176B:
     ```
     **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
 
-## Performance
-
-### Machine Performance
-
-The performance of Bloom-176B in **Ascend NPU** and **Reference**:
-
-| Devices   | Model      | total iterations | throughput rate (tokens/s/p) |
-| --------- | ---------- | ---------------- | ---------------------------- |
-| NPUs      | Bloom-176B | 1000             | 100                         |
-| Reference | Bloom-176B | NA               | 107                          |
 
 
 ## Inference Bloom 176B
