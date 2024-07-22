@@ -17,7 +17,7 @@ import os
 from functools import wraps
 import argparse
 import torch
-from megatron.training import print_rank_0
+from modellink.utils import print_rank0_by_args
 
 
 def extra_args_provider_decorator(extra_args_provider):
@@ -115,7 +115,7 @@ def _validate_cp_args(args):
 
     # In context parallel we use FA
     args.use_flash_attn = True
-    print_rank_0(f"[INFO] Setting args.use_flash_attn={args.use_flash_attn} since context parallel is enabled.")
+    print_rank0_by_args(args, f"[INFO] Setting args.use_flash_attn={args.use_flash_attn} since context parallel is enabled.")
     if not args.use_mcore_models:
         raise AssertionError(f"Context parallel is only supported in Mcore.")
 
@@ -148,9 +148,9 @@ def _validate_cp_args(args):
 def _validate_tocken(args):
     """To avoid invalid tocken configration."""
     if args.pre_tocken > args.seq_length:
-        print_rank_0(f"[INFO] pre_tocken={args.pre_tocken} would be adjusted to {args.seq_length} for better performance.")
+        print_rank0_by_args(args, f"[INFO] pre_tocken={args.pre_tocken} would be adjusted to {args.seq_length} for better performance.")
     if args.next_tocken > args.seq_length:
-        print_rank_0(f"[INFO] next_tocken={args.next_tocken} would be adjusted to {args.seq_length} for better performance.")
+        print_rank0_by_args(args, f"[INFO] next_tocken={args.next_tocken} would be adjusted to {args.seq_length} for better performance.")
 
 
 def _add_lora_args(parser):
@@ -391,7 +391,7 @@ def _validate_create_attention_mask_in_dataloader(args):
     alibi_without_flash_attn = args.position_embedding_type == 'alibi' and not args.use_flash_attn
     if reset_data or alibi_without_flash_attn or args.tokenizer_padding_side == "left":
         args.create_attention_mask_in_dataloader = True
-    print_rank_0(f"[INFO] Setting args.create_attention_mask_in_dataloader to {args.create_attention_mask_in_dataloader} "
+    print_rank0_by_args(args, f"[INFO] Setting args.create_attention_mask_in_dataloader to {args.create_attention_mask_in_dataloader} "
                  f"since reset_data={reset_data} or alibi_without_flash_attn={alibi_without_flash_attn} or "
                  f"args.tokenizer_padding_side={args.tokenizer_padding_side}")
 
