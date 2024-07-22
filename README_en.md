@@ -36,6 +36,29 @@ More novel and useful features are developing for LLMs training on Ascend ...
 
 ---
 
+
+## ModelLink Maintenance Policies
+
+ModelLink release has the following five maintenance phases:
+
+| **Status**        | **Duration** | **Description**                                                                                                                |
+|-------------------|--------------|--------------------------------------------------------------------------------------------------------------------------------|
+| Planning          | 1-3 months   | Plan features.                                                                                                                 |
+| Development       | 3 months     | Develop features.                                                                                                              |
+| Maintained        | 6-12 months | Allow the incorporation of all resolved issues and release the version, Different versions of ModelLink adopt varying support policies. The maintenance periods for Regular Releases and Long-Term Support versions are 6 months and 12 months, respectively. |
+| Unmaintained      | 0-3 months   | Allow the incorporation of all resolved issues. No dedicated maintenance personnel are available. No version will be released. |
+| End Of Life (EOL) | N/A          | Do not accept any modification to a branch.                                                                                    |
+
+
+ The Released Version Maintenance Policy for ModelLink is as follows:
+
+| **ModelLink** |  **Maintenance Policies** | **Status** | **Launch Date** | **Subsequent Status**             | **EOL Date**     |
+|---------------|--------------------|--------------|-----------------|-----------------------------------|-----------|
+| 1.0           |  Regular Release  | Maintained   | 2024/03/30      | Unmaintained 2024/09/30 estimated |           |
+| 1.1           |  Regular Release  | Maintained   | 2024/06/30      | Unmaintained 2024/12/30 estimated |           |
+
+---
+
 ## Supporing version and models
 
 【Please note the corresponding environment versions for model usage, as follows】
@@ -54,7 +77,7 @@ More novel and useful features are developing for LLMs training on Ascend ...
 
 For the following supported models, we provide training scripts and readme instructions in the examples folder, which contain detailed processes for model training, inference, and evaluation.
 
-The following is the measured performance after turning on the mc2 acceleration feature, which is only supported in the version above 24RC2, the warehouse code level is closed by default, if you want to use, please refer to the "acceleration features" chapter on the home page
+The following is the measured performance after turning on the mc2 acceleration feature, which is only supported in the version above 24RC2, the warehouse code level is closed by default, if you want to use, please refer to the `Acceleration Features` chapter on the home page
 
 <table>
   <thead>
@@ -439,7 +462,7 @@ The following is the measured performance after turning on the mc2 acceleration 
 ---
 
 
-## <span id="jump18">Acceleration Features
+## Acceleration Features
 ModelLink supports various acceleration algorithms such as tensor parallelism, pipeline parallelism, sequence parallelism, recomputation, distributed optimizer, and more. The table below shows the enable switches corresponding to each acceleration feature:
 
 |         Acceleration Feature         |        Enable Parameter        |
@@ -492,7 +515,7 @@ To enable mc2, ensure the following:
 ---
 
 
-## <span id="jump19"> Analyze profiling data based on Ascend chips 
+## Analyze profiling data based on Ascend chips 
 Modellink supports analyze profiling data based on Ascend chips, which is useful for modelling:
 
 ```bash
@@ -510,7 +533,7 @@ Modellink supports analyze profiling data based on Ascend chips, which is useful
 
 ---
 
-## <span id="jump21"> Enable deterministic computing based on Ascend chips 
+## Enable deterministic computing based on Ascend chips 
 
 - add choice in script
 ```shell
