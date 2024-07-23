@@ -28,11 +28,11 @@ DISTRIBUTED_ARGS="
     --nnodes $NNODES \
     --node_rank $NODE_RANK \
     --master_addr $MASTER_ADDR \
-    --master_port $MASTER_PORT
+    --master_port $MASTER_PORT \
 "
 
 GPT_ARGS="
-    --use-mcore-models
+    --use-mcore-models \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --sequence-parallel \
@@ -86,12 +86,12 @@ GPT_ARGS="
     --no-load-optim \
     --no-load-rng \
     --fp16 \
-    --kv-head-repeat-before-uly-alltoall
+    --kv-head-repeat-before-uly-alltoall \
 "
 
 DATA_ARGS="
     --data-path $DATA_PATH \
-    --split 949,50,1
+    --split 949,50,1 \
 "
 
 OUTPUT_ARGS="

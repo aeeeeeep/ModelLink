@@ -32,7 +32,7 @@ DISTRIBUTED_ARGS="
 "
 
 GPT_ARGS="
-    --use-mcore-models
+    --use-mcore-models \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --sequence-parallel \
@@ -89,13 +89,12 @@ GPT_ARGS="
     --fp16 \
     --num-workers 1 \
     --kv-head-repeat-before-uly-alltoall \
-    --no-shared-storage
-
+    --no-shared-storage \
 "
 
 DATA_ARGS="
     --data-path $DATA_PATH \
-    --split 949,50,1
+    --split 949,50,1 \
 "
 OUTPUT_ARGS="
     --log-interval 1 \
