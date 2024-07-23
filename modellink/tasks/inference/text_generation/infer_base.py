@@ -41,7 +41,7 @@ def add_text_generate_args(parser):
     group.add_argument('--hf-chat-template', action='store_true', default=False,
                         help="Using Huggingface chat template")    
     group.add_argument('--add-eos-token', nargs='+', type=str, default=[],
-                        help="Use additional eos tokens")                          
+                        help="Use additional eos tokens")
     return parser
 
 
@@ -282,18 +282,27 @@ def task_chat(args, model, tokenizer=None, system_template="", dialog_template="
             if not prompt.strip():
                 continue
 
-            histories.append((prompt, None))
-            instruction = get_context(histories)
-            histories.pop()
-            messages.append(
-                {"role": "user", "content": prompt}
-            )
-            if args.hf_chat_template:
-                instruction = tokenizer.apply_chat_template(
-                    messages,
-                    tokenize=False,
-                    add_generation_prompt=True
+            # not use llamafactory template,keep old process
+            if args.lla_fact_ins_template is None:
+                histories.append((prompt, None))
+                instruction = get_context(histories)
+                histories.pop()
+                messages.append(
+                    {"role": "user", "content": prompt}
                 )
+                if args.hf_chat_template:
+                    instruction = tokenizer.apply_chat_template(
+                        messages,
+                        tokenize=False,
+                        add_generation_prompt=True
+                    )
+            else:
+                # use llamafactory template, We need to build the intermediate format ourselves 
+                messages.append({"role": "user", "content": prompt})
+                instruction = messages
+                # Handle conversation history, there can be a better solution
+                if len(messages) >= 4:
+                    messages = messages[2:]
 
         dist.all_reduce(terminate_runs)
         dist.barrier()
@@ -320,8 +329,11 @@ def task_chat(args, model, tokenizer=None, system_template="", dialog_template="
                 curr = output.replace("�", "")
                 print_flush(prev, curr)
                 prev = curr
-
-        histories.append((prompt, output))
-        messages.append(
-            {"role": "assistant", "content": output}
-        )
+        # old propress
+        if args.lla_fact_ins_template is None:
+            histories.append((prompt, output))
+            messages.append(
+                {"role": "assistant", "content": output}
+            )
+        else:
+            messages.append({"role": "assistant", "content": output})

@@ -85,7 +85,12 @@ class LLMChat(Chat):
         self.template = "{instruction}"
 
     def chat(self, instruction, history):
-        instruction_temp = [self.template.format(instruction=ins) if (self.tokenizer.chat_template is None or self.args.no_chat_template) else self.tokenizer.apply_chat_template([{"role": "user", "content": ins}]) for ins in instruction]
+        instruction_temp = None
+        if self.args.lla_fact_inst_template is None:
+            instruction_temp = [self.template.format(instruction=ins) if (self.tokenizer.chat_template is None or self.args.no_chat_template) else self.tokenizer.apply_chat_template([{"role": "user", "content": ins}]) for ins in instruction]
+        else:
+            instruction_temp = instruction
+
         result = self.model.generate(
             instruction_temp,
             do_sample=False,
@@ -96,7 +101,12 @@ class LLMChat(Chat):
         return get_result(result, self.tokenizer), dist.get_rank()
 
     def beam_search_chat(self, instruction, history):
-        instruction_temp = self.template.format(instruction=instruction) if (self.tokenizer.chat_template is None or self.args.no_chat_template) else self.tokenizer.apply_chat_template([{"role": "user", "content": instruction}])
+        instruction_temp = None
+        if self.args.lla_fact_inst_template is None:
+            instruction_temp = self.template.format(instruction=instruction) if (self.tokenizer.chat_template is None or self.args.no_chat_template) else self.tokenizer.apply_chat_template([{"role": "user", "content": instruction}])
+        else:
+            instruction_temp = instruction
+
         result = self.model.generate(
             instruction_temp,
             do_sample=False,
@@ -112,21 +122,27 @@ class LLMChat(Chat):
 
 def mmlu(eval_args, agent):
     data_path = None
+    answer = None 
+    score_df = None
     for path in eval_args.task_data_path:
         if 'mmlu' in path:
             data_path = path
     try:
         if data_path:
-            mmlu_eval = MmluEval(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
+            mmlu_eval = MmluEval(test_dir=data_path, eval_args=eval_args)
             answer, score_df = mmlu_eval.eval(chat=agent)
             if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
 
+    return answer, score_df
+
 
 def gsm8k(eval_args, agent):
     data_path = None
+    answer = None 
+    score_df = None
     for path in eval_args.task_data_path:
         if 'gsm8k' in path:
             data_path = path
@@ -139,39 +155,54 @@ def gsm8k(eval_args, agent):
     except Exception as e:
         logger.info(e)
 
+    return answer, score_df
+
 
 def boolq(eval_args, agent):
     data_path = None
+    answer = None 
+    score_df = None
+
     for path in eval_args.task_data_path:
         if 'boolq' in path:
             data_path = path
     try:
         if data_path:
-            boolq_eval = BoolqEval(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
+            boolq_eval = BoolqEval(test_dir=data_path, eval_args=eval_args)
             answer, score_df = boolq_eval.eval(chat=agent)
             if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
 
+    return answer, score_df
+
 
 def ceval(eval_args, agent):
     data_path = None
+    answer = None 
+    score_df = None
+
     for path in eval_args.task_data_path:
         if 'ceval' in path:
             data_path = path
     try:
         if data_path:
-            ceval_exam = CEvalExam(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
+            ceval_exam = CEvalExam(test_dir=data_path, eval_args=eval_args)
             answer, score_df = ceval_exam.eval(chat=agent)
             if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
 
+    return answer, score_df
+
 
 def human_eval(eval_args, agent):
     data_path = None
+    answer = None 
+    score_df = None
+
     for path in eval_args.task_data_path:
         if 'human_eval' in path:
             data_path = path
@@ -184,9 +215,14 @@ def human_eval(eval_args, agent):
     except Exception as e:
         logger.info(e)
 
+    return answer, score_df
+
 
 def agi_eval(eval_args, agent):
     data_path = None
+    answer = None 
+    score_df = None
+
     for path in eval_args.task_data_path:
         if 'agieval' in path:
             data_path = path
@@ -199,9 +235,14 @@ def agi_eval(eval_args, agent):
     except Exception as e:
         logger.info(e)
 
+    return answer, score_df
+
 
 def bbh_eval(eval_args, agent):
     data_path = None
+    answer = None 
+    score_df = None
+
     for path in eval_args.task_data_path:
         if 'bbh' in path:
             data_path = path
@@ -213,6 +254,8 @@ def bbh_eval(eval_args, agent):
                 logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
+
+    return answer, score_df
 
 
 def main():

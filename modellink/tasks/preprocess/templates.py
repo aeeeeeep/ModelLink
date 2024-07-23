@@ -270,16 +270,21 @@ def get_templates() -> Dict[str, Template]:
     return templates
 
 
-def get_template_and_fix_tokenizer(
-    tokenizer: "PreTrainedTokenizer",
-    name: Optional[str] = None,
-):
+def get_template_by_name(name):
     if name is None:
         template = templates["empty"]  # placeholder
     else:
         template = get_templates().get(name, None)
         if template is None:
             raise ValueError("Template {} does not exist.".format(name))
+    return template
+
+
+def fix_tokenizer_by_template_name(
+    tokenizer: "PreTrainedTokenizer",
+    name: Optional[str] = None,
+):
+    template = get_template_by_name(name)
 
     stop_words = template.stop_words
     if template.replace_eos:

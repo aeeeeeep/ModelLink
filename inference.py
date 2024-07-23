@@ -59,6 +59,10 @@ def main():
         system_template = "<s>"
         dialog_template = "[INST] {instruction} [/INST] "
 
+    if args.lla_fact_ins_template is not None:
+        system_template = ""
+        dialog_template = "{instruction}"
+
     task_factory(args, model, system_template=system_template, dialog_template=dialog_template)
 
 
