@@ -656,7 +656,7 @@ Modellink supports analyze profiling data based on Ascend chips, which is useful
 --profile                        # enable profiling
 --profile-step-start  5          # the start step
 --profile-step-end 6             # the end step
---profile-ranks 0 1 2 3 4        # ranks for profiling
+--profile-ranks 0 1 2 3 4        # ranks for profiling.The default value of -1 means to profile all ranks
 --profile-level level2           # level0, 1, 2 for data profiling
 --profile-with-cpu               # profiling cpu information
 --profile-with-stack             # profile stack information
