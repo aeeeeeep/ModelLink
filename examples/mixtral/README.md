@@ -158,7 +158,7 @@
     cd ..
     # 处理数据   
     mkdir ./dataset/Mixtral-8x7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Mixtral-8x7B/ \
         --output-prefix ./dataset/Mixtral-8x7B/alpaca \
@@ -213,7 +213,7 @@
     
     # 处理微调数据集  
     mkdir ./finetune_dataset/Mixtral-8x7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/Alpaca_data_gpt4_zh.jsonl \
         --output-prefix ./finetune_dataset/Mixtral-8x7B/alpaca \
         --tokenizer-type PretrainedFromHF \

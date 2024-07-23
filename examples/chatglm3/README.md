@@ -147,7 +147,7 @@ ChatGLM3-6B 训练的硬件配置:
     
     # 处理数据    
     mkdir ./dataset/chatglm3_6b_hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/chatglm3_6b_hf/ \
         --output-prefix ./dataset/chatglm3_6b_hf/alpaca \
@@ -194,7 +194,7 @@ ChatGLM3-6B 训练的硬件配置:
     
     # 处理微调数据集  
     mkdir ./finetune_dataset/chatglm3-6b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/chatglm3_6b_hf/ \
         --output-prefix ./finetune_dataset/chatglm3-6b-hf/alpaca \

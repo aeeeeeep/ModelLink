@@ -87,11 +87,11 @@ The following is the measured performance after turning on the mc2 acceleration 
     <tr>
       <th>Model</th>
       <th>Parameters</th>
-      <th>Sequence length</th>
-      <th>Cluster Scale</th>
-      <th>Precision Mode</th>
+      <th>Sequence</th>
+      <th>Cluster</th>
+      <th>Mode</th>
       <th>Performance </th>
-      <th>Reference Performance </th>
+      <th>Reference</th>
       <th>Contributor </th>
     </tr>
   </thead>
@@ -450,13 +450,22 @@ The following is the measured performance after turning on the mc2 acceleration 
       <td>【Ascend】</td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/gpt3/README.md">GPT3</a></td>
+      <td rowspan="2"><a href="examples/gpt3/README.md">GPT3</a></td>
       <td>175B</td>
       <td> 2K </td>
       <td> 16x8 </td>
       <td> FP16 </td>
       <td> 153 </td>
       <td> -- </td>
+      <td>【Community】</td>
+    </tr>
+    <tr>
+      <td>15B</td>
+      <td> 2K </td>
+      <td> 1x8 </td>
+      <td> FP16 </td>
+      <td> 1890 </td>
+      <td> 1840 </td>
       <td>【Community】</td>
     </tr>
     <tr>
@@ -707,4 +716,4 @@ We appreciate every PR from community, and welcome to contribute to ModelLink.
 
 ## Appendix
 
-- Safety Statement: [Safety Statement](https://gitee.com/ascend/ModelLink/wikis/%E5%AE%89%E5%85%A8%E5%A3%B0%E6%98%8E)
+- Safety Statement: [Safety Statement](https://gitee.com/ascend/ModelLink/wikis/%E5%AE%89%E5%85%A8%E7%9B%B8%E5%85%B3/%E5%AE%89%E5%85%A8%E5%A3%B0%E6%98%8E)

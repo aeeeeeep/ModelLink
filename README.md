@@ -87,10 +87,10 @@ ModelLink已发布版本维护策略：
       <th>模型</th>
       <th>参数</th>
       <th>序列</th>
-      <th>集群规模</th>
-      <th>精度模式</th>
+      <th>集群</th>
+      <th>模式</th>
       <th>性能</th>
-      <th>参考性能</th>
+      <th>参考</th>
       <th>贡献方</th>
     </tr>
   </thead>
@@ -450,13 +450,22 @@ ModelLink已发布版本维护策略：
       <td>【昇腾】</td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/gpt3/README.md">GPT3</a></td>
+      <td rowspan="2"><a href="examples/gpt3/README.md">GPT3</a></td>
       <td>175B</td>
       <td> 2K </td>
       <td> 16x8 </td>
       <td> FP16 </td>
       <td> 153 </td>
       <td> -- </td>
+      <td>【社区】</td>
+    </tr>
+    <tr>
+      <td>15B</td>
+      <td> 2K </td>
+      <td> 1x8 </td>
+      <td> FP16 </td>
+      <td> 1890 </td>
+      <td> 1840 </td>
       <td>【社区】</td>
     </tr>
     <tr>
@@ -706,4 +715,4 @@ ModelLink由华为公司的下列部门联合贡献 ：
 
 ## 安全声明
 
-[ModelLink安全声明](https://gitee.com/ascend/ModelLink/wikis/%E5%AE%89%E5%85%A8%E5%A3%B0%E6%98%8E)
+[ModelLink安全声明](https://gitee.com/ascend/ModelLink/wikis/%E5%AE%89%E5%85%A8%E7%9B%B8%E5%85%B3/%E5%AE%89%E5%85%A8%E5%A3%B0%E6%98%8E)

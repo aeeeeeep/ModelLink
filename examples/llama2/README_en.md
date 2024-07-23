@@ -165,7 +165,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     
     # process datasets  
     mkdir ./dataset/llama-2-7b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-2-7b-hf/ \
         --output-prefix ./dataset/llama-2-7b-hf/alpaca \
@@ -209,7 +209,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     
     # process datasets  
     mkdir ./finetune_dataset/llama-2-7b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-2-7b-hf/ \
         --output-prefix ./finetune_dataset/llama-2-7b-hf/alpaca \
@@ -513,7 +513,7 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
     
     # process datasets  
     mkdir ./dataset/Llama-2-13b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Llama-2-13b-hf/ \
         --output-prefix ./dataset/Llama-2-13b-hf/alpaca \
@@ -558,7 +558,7 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
     
     # process datasets  
     mkdir ./finetune_dataset/Llama-2-13b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Llama-2-13b-hf \
         --output-prefix ./finetune_dataset/Llama-2-13b-hf/alpaca \
@@ -893,7 +893,7 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
 
         # process datasets  
         mkdir ./dataset/llama2-70b-hf/
-        python ./tools/preprocess_data.py \
+        python ./preprocess_data.py \
             --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
             --tokenizer-name-or-path ./model_from_hf/llama2-70b-hf/ \
             --output-prefix ./dataset/llama2-70b-hf/alpaca \
@@ -914,7 +914,7 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
         cd ..
         
         # process datasets  
-        python tools/preprocess_data.py \
+        python ./preprocess_data.py \
             --input ./dataset/moss-003-sft-no-tools.jsonl \
             --output-prefix ./dataset/llama2-70b-hf_moss \
             --tokenizer-type PretrainedFromHF \
@@ -975,7 +975,7 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
     
     # process datasets  
     mkdir ./finetune_dataset/llama2-70b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama2-70b-hf/ \
         --output-prefix ./finetune_dataset/llama2-70b-hf/alpaca \

@@ -161,7 +161,7 @@ Qwen1.5-0.5B 训练的硬件配置:
     cd ..
     # 处理数据   
     mkdir ./dataset/qwen15-0.5b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/qwen15-0.5b-hf/ \
         --output-prefix ./dataset/qwen15-0.5b-hf/alpaca \
@@ -198,7 +198,7 @@ Qwen1.5-0.5B 训练的硬件配置:
 
     # 处理微调数据集  
     mkdir ./finetune_dataset/qwen15-0.5b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/qwen15-0.5b-hf/ \
         --output-prefix ./finetune_dataset/qwen15-0.5b-hf/alpaca \
@@ -398,7 +398,7 @@ Qwen1.5-1.8B 训练的硬件配置:
     cd ..
     # 处理数据   
     mkdir ./dataset/qwen15-1.8b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/qwen15-1.8b-hf/ \
         --output-prefix ./dataset/qwen15-1.8b-hf/alpaca \
@@ -435,7 +435,7 @@ Qwen1.5-1.8B 训练的硬件配置:
 
     # 处理微调数据集  
     mkdir ./finetune_dataset/qwen15-1.8b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/qwen15-1.8b-hf/ \
         --output-prefix ./finetune_dataset/qwen15-1.8b-hf/alpaca \
@@ -637,7 +637,7 @@ Qwen1.5-4B 训练的硬件配置:
     cd ..
     # 处理数据   
     mkdir ./dataset/qwen15-4b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/qwen15-4b-hf/ \
         --output-prefix ./dataset/qwen15-4b-hf/alpaca \
@@ -674,7 +674,7 @@ Qwen1.5-4B 训练的硬件配置:
 
     # 处理微调数据集  
     mkdir ./finetune_dataset/qwen15-4b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/qwen15-4b-hf/ \
         --output-prefix ./finetune_dataset/qwen15-4b-hf/alpaca \
@@ -880,7 +880,7 @@ Qwen1.5-7B 训练的硬件配置:
    
    # 处理数据   
    mkdir ./dataset/Qwen1.5-7B/
-   python ./tools/preprocess_data.py \
+   python ./preprocess_data.py \
        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
        --tokenizer-name-or-path ./model_from_hf/Qwen1.5-7B \
        --output-prefix ./dataset/Qwen1.5-7B/alpaca \
@@ -926,7 +926,7 @@ Qwen1.5-7B 训练的硬件配置:
    
    # 处理微调数据集  
    mkdir ./finetune_dataset/Qwen1.5-7B/
-   python ./tools/preprocess_data.py \
+   python ./preprocess_data.py \
        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
        --tokenizer-name-or-path ./model_from_hf/Qwen1.5-7B/ \
        --output-prefix ./finetune_dataset/Qwen1.5-7B/alpaca \
@@ -1132,7 +1132,7 @@ Qwen1.5-14B 训练的硬件配置:
    
    # 处理数据   
    mkdir ./dataset/Qwen1.5-14B/
-   python ./tools/preprocess_data.py \
+   python ./preprocess_data.py \
        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
        --tokenizer-name-or-path ./model_from_hf/Qwen1.5-14B \
        --output-prefix ./dataset/Qwen1.5-14B/alpaca \
@@ -1178,7 +1178,7 @@ Qwen1.5-14B 训练的硬件配置:
    
    # 处理微调数据集  
    mkdir ./finetune_dataset/Qwen1.5-14B/
-   python ./tools/preprocess_data.py \
+   python ./preprocess_data.py \
        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
        --tokenizer-name-or-path ./model_from_hf/Qwen1.5-14B/ \
        --output-prefix ./finetune_dataset/Qwen1.5-14B/alpaca \
@@ -1395,7 +1395,7 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
      cd ..
      # 处理数据   
      mkdir ./dataset/qwen1.5-32B-hf/
-     python ./tools/preprocess_data.py \
+     python ./preprocess_data.py \
          --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
          --tokenizer-name-or-path ./model_from_hf/Qwen1.5-32B/ \
          --output-prefix ./dataset/qwen1.5-32B-hf/alpaca \
@@ -1436,7 +1436,7 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
 
     # 处理微调数据集  
     mkdir ./finetune_dataset/qwen-1.5-32b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/ train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen1.5-32B/ \
         --output-prefix ./finetune_dataset/qwen-1.5-32b-hf/alpaca \
@@ -1671,7 +1671,7 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
      cd ..
      # 处理数据   
      mkdir ./dataset/Qwen1.5-72B-hf/
-     python ./tools/preprocess_data.py \
+     python ./preprocess_data.py \
          --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
          --tokenizer-name-or-path ./model_from_hf/Qwen1.5-72B/ \
          --output-prefix ./dataset/Qwen1.5-72B-hf/alpaca \
@@ -1713,7 +1713,7 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
 
     # 处理微调数据集  
     mkdir ./finetune_dataset/qwen-1.5-72b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen1.5-72B/ \
         --output-prefix ./finetune_dataset/qwen-1.5-72b-hf/alpaca \

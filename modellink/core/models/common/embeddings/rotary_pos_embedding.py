@@ -12,7 +12,7 @@ from megatron.core import parallel_state
 from megatron.core.models.common.embeddings.rotary_pos_embedding import _rotate_half, get_pos_emb_on_this_cp_rank
 
 
-def RotaryEmbedding_forward(self, max_seq_len: int, offset: int = 0):
+def rotary_embedding_forward(self, max_seq_len: int, offset: int = 0):
     """Forward pass of RoPE embedding.
 
     Args:
