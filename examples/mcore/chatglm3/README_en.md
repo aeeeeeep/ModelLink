@@ -93,47 +93,9 @@ Here's a hardware summary of pre-training  ChatGLM3-6B:
     wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/tokenizer_config.json
     cd ../../
     ```
-4. weight conversion in ptd mode
+4. weight conversion in ptd mode < Not supported yet >
 
-    4.1 Convert weights from HuggingFace format to Megatron format 
-    ***（This scenario is generally used to enable the open-source HuggingFace model to be trained on Megatron）***
-
-    ```bash
-    # modify the script according to your own ascend-toolkit path
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh
-
-    # convert to ptd weights
-    python tools/checkpoint/convert_ckpt.py \
-        --model-type GPT \
-        --loader chatglm3_hf \
-        --saver megatron \
-        --target-tensor-parallel-size 1 \
-        --target-pipeline-parallel-size 1 \
-        --load-dir ./model_from_hf/chatglm3_6b_hf/ \
-        --save-dir ./model_weights/chatglm3_6b_tp1pp2/ \
-        --tokenizer-model ./model_from_hf/chatglm3_6b_hf/tokenizer.model \
-        --add-qkv-bias
-    ```
-
-    Note: The --target-tensor-parallel-size of chatglm3 is related to the multi_query_attention configuration in the config.json, and the multi_query_attention set here is 2.
-
-    4.2 Any Megatron weights with parallel slicing strategy --> Any Megatron weights with parallel slicing strategy
-
-    ```shell
-    # Modify the ascend-toolkit path
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    python tools/checkpoint/convert_ckpt.py \
-        --model-type GPT \
-        --loader megatron \
-        --saver megatron \
-        --save-model-type save_huggingface_chatglm3 \
-        --load-dir ./model_weights/chatglm3_6b_tp1pp2/ \
-        --target-tensor-parallel-size 1 \
-        --target-pipeline-parallel-size 1 \
-        --add-qkv-bias \
-        --save-dir ./model_from_hf/chatglm3_6b_hf/     # <-- Fill in the original HF model path here, new weights will be saved in ./model_from_hf/chatglm3_6b_hf/mg2hg/
-    ```
-
+   
 5. pre-training
 
     5.1 Prepare dataset 

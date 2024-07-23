@@ -92,48 +92,9 @@ ChatGLM3-6B 训练的硬件配置:
     wget https://huggingface.co/THUDM/chatglm3-6b/resolve/main/tokenizer_config.json
     cd ../../
     ```
-4. 权重转换
+4. 权重转换<暂不支持>
 
-    4.1 将权重从 huggingface 格式转化为 megatron 格式
-    ***（该场景一般用于使能开源的HuggingFace模型在Megatron上进行训练）***
-
-    ```bash
-    # 修改 ascend-toolkit 路径
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    
-    # 权重格式转换
-    python tools/checkpoint/convert_ckpt.py \
-        --model-type GPT \
-        --loader chatglm3_hf \
-        --saver megatron \
-        --target-tensor-parallel-size 1 \
-        --target-pipeline-parallel-size 1 \
-        --load-dir ./model_from_hf/chatglm3_6b_hf/ \
-        --save-dir ./model_weights/chatglm3_6b_tp1pp2/
-        --tokenizer-model ./model_from_hf/chatglm3_6b_hf/tokenizer.model \
-        --add-qkv-bias
-    ```
-
-    注意：chatglm3的--target-tensor-parallel-size跟config.json中的multi_query_attention配置有关，这里multi_query_attention设置的是2。
-
-    4.2 任意并行切分策略的 Megatron 权重 格式转化为 HuggingFace权重
-    ***（该场景一般用于将训练好的megatron模型重新转回HuggingFace格式）***
-
-    ```shell
-    # 请按照您的真实环境修改 set_env.sh 路径
-    source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    python tools/checkpoint/convert_ckpt.py \
-        --model-type GPT \
-        --loader megatron \
-        --saver megatron \
-        --save-model-type save_huggingface_chatglm3 \
-        --load-dir ./model_weights/chatglm3_6b_tp1pp2/ \
-        --target-tensor-parallel-size 1 \
-        --target-pipeline-parallel-size 1 \
-        --add-qkv-bias \
-        --save-dir ./model_from_hf/chatglm3_6b_hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/chatglm3_6b_hf/mg2hg/
-    ```
-
+   
 5. 预训练
 
     5.1 准备数据集
