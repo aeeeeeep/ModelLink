@@ -92,7 +92,7 @@ Here is a hardware summary of pre-trianing GPT3-175B:
     cd ..
 
     # process formal dataset
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/ \
         --output-prefix ./dataset/gpt_text_sentence \
         --tokenizer-type GPT2BPETokenizer \

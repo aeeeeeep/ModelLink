@@ -152,7 +152,7 @@ LLAMA2-7B 训练的硬件配置:
     cd ..
     # 处理数据   
     mkdir ./dataset/llama-2-7b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-2-7b-hf/ \
         --output-prefix ./dataset/llama-2-7b-hf/alpaca \
@@ -197,7 +197,7 @@ LLAMA2-7B 训练的硬件配置:
     
     # 处理微调数据集  
     mkdir ./finetune_dataset/llama-2-7b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-2-7b-hf/ \
         --output-prefix ./finetune_dataset/llama-2-7b-hf/alpaca \
@@ -496,7 +496,7 @@ LLaMA2-13B 训练的硬件配置:
 
     # 处理数据    
     mkdir ./dataset/Llama-2-13b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Llama-2-13b-hf/ \
         --output-prefix ./dataset/Llama-2-13b-hf/alpaca \
@@ -543,7 +543,7 @@ LLaMA2-13B 训练的硬件配置:
     
     # 处理微调数据集
     mkdir ./finetune_dataset/Llama-2-13b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Llama-2-13b-hf \
         --output-prefix ./finetune_dataset/Llama-2-13b-hf/alpaca \
@@ -878,7 +878,7 @@ LLaMA2-34B/70B 训练的硬件配置:
 
         # 处理数据集  
         mkdir ./dataset/llama2-70b-hf/
-        python ./tools/preprocess_data.py \
+        python ./preprocess_data.py \
             --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
             --tokenizer-name-or-path ./model_from_hf/llama2-70b-hf/ \
             --output-prefix ./dataset/llama2-70b-hf/alpaca \
@@ -899,7 +899,7 @@ LLaMA2-34B/70B 训练的硬件配置:
         cd ..
         
         # 处理数据集  
-        python tools/preprocess_data.py \
+        python ./preprocess_data.py \
             --input ./dataset/moss-003-sft-no-tools.jsonl \
             --output-prefix ./dataset/llama2-70b-hf/moss \
             --tokenizer-type PretrainedFromHF \
@@ -961,7 +961,7 @@ LLaMA2-34B/70B 训练的硬件配置:
     
     # 处理微调数据集  
     mkdir ./finetune_dataset/llama2-70b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama2-70b-hf/ \
         --output-prefix ./finetune_dataset/llama2-70b-hf/alpaca \

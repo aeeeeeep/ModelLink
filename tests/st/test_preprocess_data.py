@@ -18,8 +18,7 @@ import sys
 from pathlib import Path
 import itertools
 import pytest
-from tools.preprocess_data import main
-from tests.st.utils import build_args
+from preprocess_data import main
 from tests.common import create_testconfig
 
 

@@ -20,10 +20,12 @@ import random
 from functools import wraps
 import torch
 import torch_npu
+from torch import distributed as dist
 import numpy as np
 import megatron
 from megatron.training import get_args
 from megatron.core import mpu
+from tqdm import tqdm
 from mindspeed.core.parallel_state import (get_context_parallel_for_hybrid_ulysses_world_size,
                                              get_context_parallel_for_hybrid_ulysses_rank,
                                              get_context_parallel_for_hybrid_ring_world_size,
@@ -118,6 +120,21 @@ def seed_all(seed=1234):
 
     torch_npu.npu.manual_seed_all(seed)
     torch_npu.npu.manual_seed(seed)
+
+
+def emit(self, record):
+    try:
+        rank = dist.get_rank()
+    except Exception:
+        rank = -1 # 如果获取rank失败，则设置为一个不合法的rank
+
+    if rank == 0 or rank == -1:
+        try:
+            msg = self.format(record)
+            tqdm.write(msg)
+            self.flush()
+        except Exception:
+            self.handleError(record)
 
 
 def unwrap_model_wrapper(fn):

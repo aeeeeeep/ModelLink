@@ -145,7 +145,7 @@ Yi-34B 训练的硬件配置如下:
     cd ..
 
     mkdir ./dataset/Yi-34B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Yi-34B/ \
         --output-prefix ./dataset/Yi-34B/alpaca \
@@ -188,7 +188,7 @@ Yi-34B 训练的硬件配置如下:
     
     # 处理微调数据集  
     mkdir ./finetune_dataset/Yi-34B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
       --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
       --tokenizer-name-or-path ./model_from_hf/Yi-34B/ \
       --output-prefix ./finetune_dataset/Yi-34B/alpaca \

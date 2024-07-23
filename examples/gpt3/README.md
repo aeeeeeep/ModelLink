@@ -92,7 +92,7 @@ GPT3-175B 训练的硬件配置:
     cd ..
 
     # 处理成训练数据
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/ \
         --output-prefix ./dataset/gpt_text_sentence \
         --tokenizer-type GPT2BPETokenizer \

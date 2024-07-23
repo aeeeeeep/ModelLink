@@ -148,7 +148,7 @@ Here's a hardware summary of pre-training CodeLlama-34B:
 
     # process datasets          
     mkdir ./dataset/CodeLlama-34B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/CodeLlama-34B/ \
         --output-prefix ./dataset/CodeLlama-34B/alpaca \
@@ -193,7 +193,7 @@ Here's a hardware summary of pre-training CodeLlama-34B:
 
     # process datasets  
     mkdir ./finetune_dataset/CodeLlama-34B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/CodeLlama-34B/ \
         --output-prefix ./finetune_dataset/CodeLlama-34B/alpaca \

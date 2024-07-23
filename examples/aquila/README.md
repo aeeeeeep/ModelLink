@@ -85,7 +85,7 @@ Aquila-7B 训练的硬件配置如下:
     # 请按照您的真实环境修改 set_env.sh 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     mkdir ./dataset/Aquila-7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Aquila-7B/ \
         --output-prefix ./dataset/Aquila-7B/alpaca \

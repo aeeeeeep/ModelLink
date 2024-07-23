@@ -146,7 +146,7 @@ Here's a hardware summary of pre-training Baichuan-7B:
 
     # process datasets          
     mkdir ./dataset/Baichuan-7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Baichuan-7B/ \
         --output-prefix ./dataset/Baichuan-7B/alpaca \
@@ -375,7 +375,7 @@ Here's a hardware summary of pre-training Baichuan-13B:
     cd ..
     
     mkdir ./dataset/Baichuan-13B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Baichuan-13B/ \
         --output-prefix ./dataset/Baichuan-13B/alpaca \

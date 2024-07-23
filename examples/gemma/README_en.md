@@ -134,7 +134,7 @@ Here's a hardware summary of pre-training  Gemma-2B:
 
     # process datasets  
     mkdir ./dataset/Gemma-2B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/wikipedia-cn-20230720-filtered.json \
         --output-prefix ./dataset/Gemma-2B/wikipedia_cn \
         --tokenizer-type PretrainedFromHF \
@@ -181,7 +181,7 @@ Here's a hardware summary of pre-training  Gemma-2B:
 
     # process datasets  
     mkdir ./finetune_dataset/Gemma-2B/  
-    python tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/moss-003-sft-no-tools.jsonl \
         --output-prefix ./finetune_dataset/Gemma-2B/moss \
         --tokenizer-type PretrainedFromHF \
@@ -373,7 +373,7 @@ Here's a hardware summary of pre-training  Gemma-7B:
 
     # process datasets  
     mkdir ./dataset/Gemma-7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/wikipedia-cn-20230720-filtered.json \
         --output-prefix ./dataset/Gemma-7B/wikipedia_cn \
         --tokenizer-type PretrainedFromHF \
@@ -420,7 +420,7 @@ Here's a hardware summary of pre-training  Gemma-7B:
 
     # process datasets  
     mkdir ./finetune_dataset/Gemma-7B/  
-    python tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/moss-003-sft-no-tools.jsonl \
         --output-prefix ./finetune_dataset/Gemma-7B/moss \
         --tokenizer-type PretrainedFromHF \

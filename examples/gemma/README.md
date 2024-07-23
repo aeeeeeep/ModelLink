@@ -133,7 +133,7 @@ Gemma-2B 训练的硬件配置:
 
     # 处理数据
     mkdir ./dataset/Gemma-2B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/wikipedia-cn-20230720-filtered.json \
         --output-prefix ./dataset/Gemma-2B/wikipedia_cn \
         --tokenizer-type PretrainedFromHF \
@@ -179,7 +179,7 @@ Gemma-2B 训练的硬件配置:
 
     # 处理数据集  
     mkdir ./finetune_dataset/Gemma-2B/
-    python tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/moss-003-sft-no-tools.jsonl \
         --output-prefix ./finetune_dataset/Gemma-2B/moss \
         --tokenizer-type PretrainedFromHF \
@@ -372,7 +372,7 @@ Gemma-7B 训练的硬件配置:
 
     # 处理数据
     mkdir ./dataset/Gemma-7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/wikipedia-cn-20230720-filtered.json \
         --output-prefix ./dataset/Gemma-7B/wikipedia_cn \
         --tokenizer-type PretrainedFromHF \
@@ -418,7 +418,7 @@ Gemma-7B 训练的硬件配置:
 
     # 处理数据集  
     mkdir ./finetune_dataset/Gemma-7B/
-    python tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/moss-003-sft-no-tools.jsonl \
         --output-prefix ./finetune_dataset/Gemma-7B/moss \
         --tokenizer-type PretrainedFromHF \

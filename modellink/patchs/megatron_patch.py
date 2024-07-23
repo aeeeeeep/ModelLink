@@ -48,7 +48,7 @@ from ..tokenizer import build_tokenizer
 from ..arguments import parse_args_decorator
 from ..checkpointing import _load_base_checkpoint_wrapper, load_checkpoint_wrapper
 from ..initialize import initialize_megatron
-from ..log_handler import emit
+from ..utils import emit
 from ..arguments import process_args
 from ..patchs.patch_utils import PatchManager
 
@@ -115,7 +115,7 @@ def patch_core_models(args):
     from mindspeed.core.models.common.embeddings.rotary_pos_embedding import get_pos_emb_on_this_cp_rank
     from mindspeed.core.fusions.rotary_pos_embedding import rotary_embedding_init_wrapper
     from ..utils import get_batch_on_this_cp_rank
-    from ..core import (RotaryEmbedding_forward, apply_rotary_pos_emb_bshd_wrapper, 
+    from ..core import (rotary_embedding_forward, apply_rotary_pos_emb_bshd_wrapper,
                         build_layers_wrapper, allgather_token_permutation, allgather_token_unpermutation)
     from ..core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec_wrapper
     from ..core.transformer.dot_product_attention import dot_product_attention_init_wrapper, \
@@ -126,7 +126,7 @@ def patch_core_models(args):
     PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.get_pos_emb_on_this_cp_rank', get_pos_emb_on_this_cp_rank)
     # rotary support for Megatron-LM core 0.6.0
     PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.apply_rotary_pos_emb_bshd', apply_rotary_pos_emb_bshd_wrapper)
-    PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.forward', RotaryEmbedding_forward)
+    PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.forward', rotary_embedding_forward)
     PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.__init__', rotary_embedding_init_wrapper)
 
     # Attention
