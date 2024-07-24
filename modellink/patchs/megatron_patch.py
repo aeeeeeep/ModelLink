@@ -23,7 +23,6 @@ from mindspeed.core.fusions.fused_softmax import (is_kernel_available, ScaledUpp
 from mindspeed.core.fusions.fused_bias_swiglu import SwiGLUFunction, BiasSwiGLUFunction
 from mindspeed.core.tensor_parallel.random import _set_cuda_rng_state
 from mindspeed.core.tensor_parallel.cross_entropy import vocab_parallel_cross_entropy_forward
-from mindspeed.core.tensor_parallel.layers import vocab_parallel_embedding_forward
 from mindspeed.core.transformer.moe.router import aux_loss_load_balancing
 from mindspeed.initialize import _compile_dependencies
 
@@ -179,10 +178,13 @@ def patch_pipeline_parallel():
 
 
 def patch_tensor_parallel():
+    from mindspeed.core.tensor_parallel.layers import vocab_parallel_embedding_forward
+
     # default_generators need replace after set_device
     PatchManager.register_patch('megatron.core.tensor_parallel.random._set_cuda_rng_state', _set_cuda_rng_state)
     # change masked_target for better performance
     PatchManager.register_patch('megatron.core.tensor_parallel.cross_entropy._VocabParallelCrossEntropy.forward', vocab_parallel_cross_entropy_forward)
+    PatchManager.register_patch('megatron.core.tensor_parallel.layers.VocabParallelEmbedding.forward', vocab_parallel_embedding_forward)
     PatchManager.register_patch('megatron.core.tensor_parallel.layers.VocabParallelEmbedding.forward', vocab_embedding_wrapper)
     PatchManager.register_patch('megatron.core.tensor_parallel.layers.VocabParallelEmbedding.__init__', norm_wrapper)
 
