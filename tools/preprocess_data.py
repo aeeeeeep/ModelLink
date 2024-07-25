@@ -100,10 +100,10 @@ def add_data_args(parser):
     group.add_argument('--keep-newlines', action='store_true',
                        help='Keep newlines between sentences when splitting.')
     # LlamaFactory
-    group.add_argument('--lla-fact-ins-template', type=str, default=None,
-                       choices=['chatglm2', 'chatglm3', 'chatglm3_system', 'chatml', 'chatml_de', 'default', 'empty', 'qwen'],
+    group.add_argument('--prompt-type', type=str, default=None,
+                       choices=['default', 'empty', 'chatglm2', 'chatglm3', 'chatglm3_system', 'chatml', 'chatml_de', 'qwen', 'llama3', 'mistral', 'mixtral'],
                        help='Which template to use for constructing prompts in training.'
-                            'ex: "qwen"')
+                            'e.g., "qwen"')
     group.add_argument("--interleave-probs", default=None,
                        help='Probabilities to sample data from datasets. Use commas to separate multiple datasets. '
                             'probabilities should sum to 1. ex: "0.1, 0.2, 0.3, 0.4"')
@@ -191,8 +191,8 @@ def get_args():
 
 
 def validate_args(args):
-    if args.lla_fact_ins_template is not None and args.handler_name != "LlamaFactoryInstructionHandler":
-        raise AssertionError('If specify lla-fact-ins-template, handler name must be "LlamaFactoryInstructionHandler".')
+    if args.prompt_type is not None and args.handler_name != "LlamaFactoryInstructionHandler":
+        raise AssertionError('If specify prompt-type, handler name must be "LlamaFactoryInstructionHandler".')
 
 
 def main():

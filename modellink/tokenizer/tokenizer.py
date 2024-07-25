@@ -56,8 +56,8 @@ def build_tokenizer(args):
     else:
         tokenizer = TokenizerAdaptor(megatron_build_tokenizer(args))
 
-    if hasattr(args, "lla_fact_ins_template") and args.lla_fact_ins_template is not None:
-        fix_tokenizer_by_template_name(tokenizer.tokenizer, args.lla_fact_ins_template.strip())
+    if hasattr(args, "prompt_type") and args.prompt_type is not None:
+        fix_tokenizer_by_template_name(tokenizer.tokenizer, args.prompt_type.strip())
 
     return tokenizer
 

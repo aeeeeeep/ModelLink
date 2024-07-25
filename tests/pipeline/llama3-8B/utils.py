@@ -29,6 +29,9 @@ class ParamConfig:
     evaluation_param = config_file["EVALUATION_PARAM"]
     auxiliary_param = config_file["AUXILIARY_PARAM"]
 
+    inference_hf_chat_param = config_file["INFERENCE_HF_CHAT_PARAM"]
+    inference_prompt_chat_param = config_file["INFERENCE_PROMPT_CHAT_PARAM"]
+
 
 def assert_judge(expression):
     if not expression:

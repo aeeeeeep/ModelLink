@@ -86,7 +86,7 @@ class LLMChat(Chat):
 
     def chat(self, instruction, history):
         instruction_temp = None
-        if self.args.lla_fact_inst_template is None:
+        if self.args.prompt_type is None:
             instruction_temp = [self.template.format(instruction=ins) if (self.tokenizer.chat_template is None or self.args.no_chat_template) else self.tokenizer.apply_chat_template([{"role": "user", "content": ins}]) for ins in instruction]
         else:
             instruction_temp = instruction
@@ -102,7 +102,7 @@ class LLMChat(Chat):
 
     def beam_search_chat(self, instruction, history):
         instruction_temp = None
-        if self.args.lla_fact_inst_template is None:
+        if self.args.prompt_type is None:
             instruction_temp = self.template.format(instruction=instruction) if (self.tokenizer.chat_template is None or self.args.no_chat_template) else self.tokenizer.apply_chat_template([{"role": "user", "content": instruction}])
         else:
             instruction_temp = instruction

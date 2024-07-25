@@ -46,24 +46,7 @@ def main():
         pretrained_model_name_or_path=args.load
     )
 
-    system_template = ""
-    dialog_template = "{instruction}"
-
-    if args.inference_prompt_type == 'alpaca':
-        system_template = "Below is an instruction that describes a task, paired with an input that provides further " \
-                          "context. Write a response that appropriately completes the request. " \
-                          "Please note that you need to think through your response logically and step by step.\n\n"
-        dialog_template = "### Instruction:\n{instruction}\n\n### Response:"
-
-    elif args.inference_prompt_type == 'mixtral':
-        system_template = "<s>"
-        dialog_template = "[INST] {instruction} [/INST] "
-
-    if args.lla_fact_ins_template is not None:
-        system_template = ""
-        dialog_template = "{instruction}"
-
-    task_factory(args, model, system_template=system_template, dialog_template=dialog_template)
+    task_factory(args, model)
 
 
 if __name__ == "__main__":

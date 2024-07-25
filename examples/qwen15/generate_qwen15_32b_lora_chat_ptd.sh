@@ -52,7 +52,7 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
        --lora-r 16 \
        --lora-alpha 32 \
-       --inference-prompt-type 'alpaca' \
+       --prompt-type 'alpaca' \
        --normalization RMSNorm \
        --group-query-attention \
        --hidden-dropout 0 \

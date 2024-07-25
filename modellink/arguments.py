@@ -324,10 +324,10 @@ def _add_training_args(parser):
                        help='enable deterministic computing for npu')
     group.add_argument('--jit-compile', action='store_true', default=False,
                        help='Setting jit compile mode to True')
-    group.add_argument('--lla-fact-ins-template', type=str, default=None,
-                       choices=['chatglm2', 'chatglm3', 'chatglm3_system', 'chatml', 'chatml_de', 'default', 'empty', 'qwen'],
-                       help='Which template to use for constructing prompts in training.'
-                            'ex: "qwen"')
+    group.add_argument('--prompt-type', type=str, default=None,
+                       choices=['default', 'empty', 'chatglm2', 'chatglm3', 'chatglm3_system', 'chatml', 'chatml_de', 'qwen', 'llama3', 'mistral', 'mixtral'],
+                       help='Which template to use for constructing prompts in training/inference/evaluation.'
+                            'e.g., "qwen"')
 
     return parser
 

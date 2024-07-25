@@ -43,8 +43,8 @@ class MmluEval(DatasetEval):
         self.file_pbar = None
         self.task_pbar = None
         self.eval_template = None
-        if eval_args.lla_fact_inst_template is not None:
-            self.lla_fact_inst_template = eval_args.lla_fact_inst_template.strip()
+        if eval_args.prompt_type is not None:
+            self.prompt_type = eval_args.prompt_type.strip()
             self.eval_template = get_eval_template(eval_args.eval_language)
         self.max_eval_samples = eval_args.max_eval_samples
 
@@ -89,7 +89,7 @@ class MmluEval(DatasetEval):
 
             for idx, row in data_df.iterrows():
                 instruction = None
-                if self.lla_fact_inst_template is not None:
+                if self.prompt_type is not None:
                     train_dir = os.path.dirname(self.test_dir) + "/dev/"
                     train_file_path = os.path.join(train_dir, subject_name + "_dev.csv")
                     train_data_df = pd.read_csv(train_file_path, names=['question', 'A', 'B', 'C', 'D', 'answer'])

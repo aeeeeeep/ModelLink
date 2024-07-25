@@ -189,8 +189,8 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         self.beam_search_in_sampling = beam_search
         self.broadcast_float_list = broadcast_float_list
         self.template = None
-        if hasattr(args, "lla_fact_ins_template") and args.lla_fact_ins_template is not None:
-            self.template = get_template_by_name(args.lla_fact_ins_template.strip())
+        if hasattr(args, "prompt_type") and args.prompt_type is not None:
+            self.template = get_template_by_name(args.prompt_type.strip())
 
     @staticmethod
     def _ids_check(ids, tokenizer):
@@ -278,7 +278,7 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
 
         stop_token = [args.eos_id] + stop_ids
 
-        if hasattr(args, "lla_fact_ins_template") and args.lla_fact_ins_template is not None:
+        if hasattr(args, "prompt_type") and args.prompt_type is not None:
             # stop_ids=[self.tokenizer.eos_token_id]
             stop_ids = stop_ids + [self.tokenizer.convert_tokens_to_ids(token) for token in self.template.stop_words] + \
                        [self.tokenizer.eos_token_id]
@@ -433,7 +433,14 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
                                      dtype=torch.int64,
                                      device=torch.device(torch.cuda.current_device()))
         if input_ids is not None and len(input_ids) > 0:
-            if self.template is None:
+            args = get_args()
+            if args.hf_chat_template:
+                context_tokens = [self.tokenizer.apply_chat_template(
+                    input_ids,
+                    tokenize=True,
+                    add_generation_prompt=True
+                )]
+            elif self.template is None:
                 context_tokens = self._encode_no_template(input_ids)
             else:
                 context_tokens = self._encode_by_template(input_ids)
