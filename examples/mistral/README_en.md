@@ -247,7 +247,7 @@ PP=1
 
 # Note
 This model used in this document is an L1 model that requires instruction compliance training and needs to be used with templates. The basic operations are the same as above, only the startup entry has changed:
---inference-prompt-type mixtral
+--prompt-type mixtral
 ```
 
 Then you can start it directly

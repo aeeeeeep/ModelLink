@@ -20,7 +20,8 @@ import pandas as pd
 import tqdm
 
 from torch import distributed as dist
-from .template import CEVAL_TEMPLATE_DIR
+from .template import CEVAL_TEMPLATE_DIR, get_eval_template
+
 from ..eval_api.dataset_eval import DatasetEval
 from ..eval_api.chat import Chat
 from ....error_utils import check_divisible_by_zero
@@ -30,14 +31,19 @@ logger = logging.getLogger(__name__)
 
 
 class CEvalExam(DatasetEval):
-    def __init__(self, test_dir, batch_size,
+    def __init__(self, test_dir, eval_args,
                  instruction_template="{fewshot_template}\n\n问：{question}\n答："):
         self.test_dir = test_dir
         self.instruction_template = instruction_template
-        self.batch_size = batch_size
+        self.batch_size = eval_args.evaluation_batch_size
         self.rank = dist.get_rank()
         self.file_pbar = None
         self.task_pbar = None
+        self.eval_template = None
+        if eval_args.prompt_type is not None:
+            self.prompt_type = eval_args.prompt_type.strip()
+            self.eval_template = get_eval_template(eval_args.eval_language)
+        self.max_eval_samples = eval_args.max_eval_samples
 
     def eval(self, chat: Chat) -> (dict, pd.DataFrame):
         answer_result = {}
@@ -63,6 +69,14 @@ class CEvalExam(DatasetEval):
             instructions = []
             answers = []
 
+            if self.max_eval_samples is not None:
+                origin_len = len(data_df)
+                data_df = (
+                    data_df.sample(min(self.max_eval_samples, origin_len))
+                )
+
+                logger.info("%s length from %s to %s !!!", subject_name, str(origin_len), str(len(data_df)))
+
             if subject_name not in ceval_few_shot_template:
                 logging.error(f"missing '{subject_name}' instruction_template in {CEVAL_TEMPLATE_DIR}")
                 if self.file_pbar is not None:
@@ -73,8 +87,23 @@ class CEvalExam(DatasetEval):
                 self.task_pbar = tqdm.tqdm(total=len(data_df), desc=file, leave=False)
 
             for idx, row in data_df.iterrows():
-                test_question = f"{row['question']}\nA. {row['A']}\nB. {row['B']}\nC. {row['C']}\nD. {row['D']}"
-                instruction = self.instruction_template.format(fewshot_template=ceval_few_shot_template[subject_name],
+                instruction = None
+                # 5-shot
+                if self.prompt_type is not None:
+                    train_dir = os.path.dirname(self.test_dir) + "/dev/"
+                    train_file_path = os.path.join(train_dir, subject_name + "_dev.csv")
+                    train_data_df = pd.read_csv(train_file_path, encoding="utf-8")
+                    support_set = (
+                        train_data_df.sample(min(5, len(train_data_df)))
+                    )
+                    instruction = self.eval_template.format_example(
+                        target_data=row,
+                        support_set=support_set,
+                        subject_name=subject_name,
+                    )
+                else:
+                    test_question = f"{row['question']}\nA. {row['A']}\nB. {row['B']}\nC. {row['C']}\nD. {row['D']}"
+                    instruction = self.instruction_template.format(fewshot_template=ceval_few_shot_template[subject_name],
                                                                question=test_question)
                 instructions.append(instruction)
                 answers.append(row['answer'])

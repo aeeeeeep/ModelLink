@@ -41,6 +41,14 @@
         "--attention-softmax-in-fp32"
     ],
 
+    "INFERENCE_HF_CHAT_PARAM": [
+        "--hf-chat-template"
+    ],
+
+    "INFERENCE_PROMPT_CHAT_PARAM": [
+        "--prompt-type", "llama3"
+    ],
+
     "EVALUATION_PARAM": [
         "--tokenizer-not-use-fast",
         "--task-data-path", "/home/dataset/eval_dataset/mmlu/test",

@@ -13,9 +13,79 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
+from modellink.tasks.preprocess.templates import Role
+
+
 GSM8K_TEMPLATE_DIR = 'modellink/tasks/evaluation/eval_impl/fewshot_template/gsm8k_3shot_template.json'
 MMLU_TEMPLATE_DIR = 'modellink/tasks/evaluation/eval_impl/fewshot_template/mmlu_5shot_template.json'
 CEVAL_TEMPLATE_DIR = 'modellink/tasks/evaluation/eval_impl/fewshot_template/ceval_5shot_template.json'
 AGIEVAL_TEMPLATE_DIR = 'modellink/tasks/evaluation/eval_impl/fewshot_template/AGI_fewshot.json'
 BBH_TEMPLATE_DIR = 'modellink/tasks/evaluation/eval_impl/fewshot_template/bbh_template.json'
 CODE_TEST_LOG_DIR = 'modellink/tasks/evaluation/codecheck_log'
+
+CHOICES = ["A", "B", "C", "D"]
+
+
+@dataclass
+class EvalTemplate:
+    system: str
+    choice: str
+    answer: str
+    prefix: str
+
+    def _parse_example(self, example):
+        """
+        input: a dict with keys {"question", "A", "B", "C", "D", "answer"}
+        output: a tuple of (prompt, response)
+        """
+        candidates = [self.choice.format(choice=ch, content=example[ch]) for ch in CHOICES if ch in example]
+        return "".join([example["question"]] + candidates + [self.answer]), example["answer"]
+
+    def format_example(
+        self, target_data, support_set, subject_name
+    ):
+        """
+        Converts dataset examples to messages.
+        """
+        messages = []
+        for idx, row in support_set.iterrows():
+            prompt, response = self._parse_example(row)
+            messages.append({"role": Role.USER.value, "content": prompt})
+            messages.append({"role": Role.ASSISTANT.value, "content": response})
+
+        prompt, response = self._parse_example(target_data)
+        messages.append({"role": Role.USER.value, "content": prompt})
+        messages[0]["content"] = self.system.format(subject=subject_name) + messages[0]["content"]
+        return messages
+
+
+eval_templates = {}
+
+
+def get_eval_template(name: str) -> "EvalTemplate":
+    eval_template = eval_templates.get(name, None)
+    assert eval_template is not None, "Template {} does not exist.".format(name)
+    return eval_template
+
+
+def _register_eval_template(name: str, system: str, choice: str, answer: str, prefix: str) -> None:
+    eval_templates[name] = EvalTemplate(system=system, choice=choice, answer=answer, prefix=prefix)
+
+
+_register_eval_template(
+    name="en",
+    system="The following are multiple choice questions (with answers) about {subject}.\n\n",
+    choice="\n{choice}. {content}",
+    answer="\nAnswer: ",
+    prefix=" ",
+)
+
+
+_register_eval_template(
+    name="zh",
+    system="以下是中国关于{subject}考试的单项选择题，请选出其中的正确答案。\n\n",
+    choice="\n{choice}. {content}",
+    answer="\n答案：",
+    prefix=" ",
+)

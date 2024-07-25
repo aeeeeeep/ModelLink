@@ -38,4 +38,8 @@ def add_text_generate_args(parser):
                        help="Instruction template for the evaluation task.")
     group.add_argument("--no-chat-template", action="store_true", default=False,
                        help="Disable Huggingface chat template")
+    group.add_argument('--eval-language', type=str, default='en',
+                        choices=['en', 'zh'], help="Language used by evaluation")
+    group.add_argument('--max-eval-samples', type=int, default=None,
+                        help="Max sample each dataset, for debug")
     return parser

@@ -246,8 +246,8 @@ TP=8
 PP=1
 
 # 注意
-该模型为指令遵从度训练后需要配合模板使用，基本操作同上，仅inference-prompt-type有变化
---inference-prompt-type mixtral
+该模型为指令遵从度训练后需要配合模板使用，基本操作同上，仅prompt-type有变化
+--prompt-type mixtral
 ```
 
 然后可直接启动

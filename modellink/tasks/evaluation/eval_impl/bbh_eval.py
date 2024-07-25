@@ -29,11 +29,11 @@ logger = logging.getLogger(__name__)
 
 
 class BBHEval(DatasetEval):
-    def __init__(self, test_dir, batch_size,
+    def __init__(self, test_dir, eval_args,
                  instruction_template="{fewshot_template}Q: {question}\nA:"):
         self.test_dir = test_dir
         self.instruction_template = instruction_template
-        self.batch_size = batch_size
+        self.batch_size = eval_args.evaluation_batch_size
         self.rank = dist.get_rank()
         self.file_pbar = None
         self.task_pbar = None

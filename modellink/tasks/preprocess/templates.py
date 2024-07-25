@@ -88,6 +88,7 @@ class Template:
     format_observation: "Formatter"
     format_tools: "Formatter"
     format_separator: "Formatter"
+    format_prefix: "Formatter"
     default_system: str
     stop_words: List[str]
     efficient_eos: bool
@@ -142,16 +143,18 @@ class Template:
     ) -> Sequence[Tuple[List[int], List[int]]]:
         r"""
         Encodes formatted inputs to pairs of token ids.
-        Turn 0: system + query        resp
+        Turn 0: prefix + system + query        resp
         Turn t: sep + query           resp
         """
         system = system or self.default_system
         encoded_messages = []
         for i, message in enumerate(messages):
             elements = []
-            if i == 0 and (system or tools or self.force_system):
-                tool_text = self.format_tools.apply(content=tools)[0] if tools else ""
-                elements += self.format_system.apply(content=(system + tool_text))
+            if i == 0:
+                elements += self.format_prefix.apply()
+                if system or tools:
+                    tool_text = self.format_tools.apply(content=tools)[0] if tools else ""
+                    elements += self.format_system.apply(content=(system + tool_text))
             elif i > 0 and i % 2 == 0:
                 elements += self.format_separator.apply()
 
@@ -241,9 +244,11 @@ class Llama2Template(Template):
         for i, message in enumerate(messages):
             elements = []
             system_text = ""
-            if i == 0 and (system or tools or self.force_system):
-                tool_text = self.format_tools.apply(content=tools)[0] if tools else ""
-                system_text = self.format_system.apply(content=(system + tool_text))[0]
+            if i == 0:
+                elements += self.format_prefix.apply()
+                if system or tools:
+                    tool_text = self.format_tools.apply(content=tools)[0] if tools else ""
+                    system_text = self.format_system.apply(content=(system + tool_text))[0]
             elif i > 0 and i % 2 == 0:
                 elements += self.format_separator.apply()
 
@@ -270,16 +275,21 @@ def get_templates() -> Dict[str, Template]:
     return templates
 
 
-def get_template_and_fix_tokenizer(
-    tokenizer: "PreTrainedTokenizer",
-    name: Optional[str] = None,
-):
+def get_model_template(name):
     if name is None:
         template = templates["empty"]  # placeholder
     else:
         template = get_templates().get(name, None)
         if template is None:
             raise ValueError("Template {} does not exist.".format(name))
+    return template
+
+
+def fix_tokenizer_by_template_name(
+    tokenizer: "PreTrainedTokenizer",
+    name: Optional[str] = None,
+):
+    template = get_model_template(name)
 
     stop_words = template.stop_words
     if template.replace_eos:
@@ -321,6 +331,7 @@ def _register_template(
     format_observation: Optional["Formatter"] = None,
     format_tools: Optional["Formatter"] = None,
     format_separator: Optional["Formatter"] = None,
+    format_prefix: Optional["Formatter"] = None,
     default_system: str = "",
     stop_words: List[str] = [],
     efficient_eos: bool = False,
@@ -360,6 +371,7 @@ def _register_template(
     default_function_formatter = FunctionFormatter(slots=["Action: {{name}}\nAction Input: {{arguments}}"] + eos_slots)
     default_tool_formatter = ToolFormatter(tool_format="default")
     default_separator_formatter = EmptyFormatter()
+    default_prefix_formatter = EmptyFormatter()
     templates[name] = template_class(
         format_user=format_user or default_user_formatter,
         format_assistant=format_assistant or default_assistant_formatter,
@@ -368,6 +380,7 @@ def _register_template(
         format_observation=format_observation or format_user or default_user_formatter,
         format_tools=format_tools or default_tool_formatter,
         format_separator=format_separator or default_separator_formatter,
+        format_prefix=format_prefix or default_prefix_formatter,
         default_system=default_system,
         stop_words=stop_words,
         efficient_eos=efficient_eos,
@@ -418,6 +431,10 @@ def _convert_slots_to_jinja(slots: "SLOTS", tokenizer: "PreTrainedTokenizer", pl
 def _get_jinja_template(template: "Template", tokenizer: "PreTrainedTokenizer") -> str:
     jinja_template = ""
 
+    prefix = _convert_slots_to_jinja(template.format_prefix.apply(), tokenizer)
+    if prefix:
+        jinja_template += "{{ " + prefix + " }}"
+
     if template.default_system:
         jinja_template += "{% set system_message = '" + _jinja_escape(template.default_system) + "' %}"
 
@@ -455,7 +472,7 @@ def _get_jinja_template(template: "Template", tokenizer: "PreTrainedTokenizer") 
 _register_template(
     name="chatglm2",
     format_user=StringFormatter(slots=["[Round {{idx}}]\n\n问：{{content}}\n\n答："]),
-    format_system=StringFormatter(slots=[{"token": "[gMASK]"}, {"token": "sop"}, "{{content}}"]),
+    format_prefix=EmptyFormatter(slots=[{"token": "[gMASK]"}, {"token": "sop"}]),
     format_separator=EmptyFormatter(slots=["\n\n"]),
     efficient_eos=True,
     force_system=True,
@@ -466,15 +483,16 @@ _register_template(
     name="chatglm3",
     format_user=StringFormatter(slots=[{"token": "<|user|>"}, "\n", "{{content}}", {"token": "<|assistant|>"}]),
     format_assistant=StringFormatter(slots=["\n", "{{content}}"]),
-    format_system=StringFormatter(slots=[{"token": "[gMASK]"}, {"token": "sop"}, "{{content}}"]),
-    format_function=FunctionFormatter(slots=["{{name}}\n{{arguments}}"]),
+    format_system=StringFormatter(slots=[{"token": "<|system|>"}, "\n", "{{content}}"]),
     format_observation=StringFormatter(
         slots=[{"token": "<|observation|>"}, "\n", "{{content}}", {"token": "<|assistant|>"}]
     ),
+    format_tools=ToolFormatter(tool_format="glm4"),
+    format_prefix=EmptyFormatter(slots=[{"token": "[gMASK]"}, {"token": "sop"}]),
     stop_words=["<|user|>", "<|observation|>"],
     efficient_eos=True,
-    force_system=True,
 )
+
 
 
 _register_template(
@@ -544,4 +562,55 @@ _register_template(
     default_system="You are a helpful assistant.",
     stop_words=["<|im_end|>"],
     replace_eos=True,
+)
+
+
+_register_template(
+    name="llama3",
+    format_user=StringFormatter(
+        slots=[
+            (
+                "<|start_header_id|>user<|end_header_id|>\n\n{{content}}<|eot_id|>"
+                "<|start_header_id|>assistant<|end_header_id|>\n\n"
+            )
+        ]
+    ),
+    format_system=StringFormatter(slots=["<|start_header_id|>system<|end_header_id|>\n\n{{content}}<|eot_id|>"]),
+    format_observation=StringFormatter(
+        slots=[
+            (
+                "<|start_header_id|>tool<|end_header_id|>\n\n{{content}}<|eot_id|>"
+                "<|start_header_id|>assistant<|end_header_id|>\n\n"
+            )
+        ]
+    ),
+    format_prefix=EmptyFormatter(slots=[{"bos_token"}]),
+    stop_words=["<|eot_id|>"],
+    replace_eos=True,
+)
+
+
+_register_template(
+    name="mistral",
+    format_user=StringFormatter(slots=["[INST] {{content}} [/INST]"]),
+    format_prefix=EmptyFormatter(slots=[{"bos_token"}]),
+)
+
+
+_register_template(
+    name="mixtral",
+    format_user=StringFormatter(slots=["[INST] {{content}} [/INST]"]),
+    format_prefix=EmptyFormatter(slots=[{"bos_token"}]),
+)
+
+
+_register_template(
+    name="gemma",
+    format_user=StringFormatter(slots=["<start_of_turn>user\n{{content}}<end_of_turn>\n<start_of_turn>model\n"]),
+    format_observation=StringFormatter(
+        slots=["<start_of_turn>tool\n{{content}}<end_of_turn>\n<start_of_turn>model\n"]
+    ),
+    format_separator=EmptyFormatter(slots=["<end_of_turn>\n"]),
+    format_prefix=EmptyFormatter(slots=[{"bos_token"}]),
+    efficient_eos=True,
 )

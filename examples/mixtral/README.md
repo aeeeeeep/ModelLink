@@ -265,8 +265,8 @@ PP=1
 # 注意
 该文档中使用的Mixtral-8x7B-v0.1模型为L0模型，只有续写能力，推理不带任何模板并且容易出现重复或回答不停止的情况。
 
-如若想要有较好的人机对话能力，请使用Mixtral-8x7B-Instruct-v0.1模型，该模型为指令遵从度训练后需要配合模板使用，基本操作同上，仅inference-prompt-type有变化：
---inference-prompt-type mixtral
+如若想要有较好的人机对话能力，请使用Mixtral-8x7B-Instruct-v0.1模型，该模型为指令遵从度训练后需要配合模板使用，基本操作同上，仅prompt-type有变化：
+--prompt-type mixtral
 ```
 
 然后可直接启动
