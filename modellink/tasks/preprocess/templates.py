@@ -275,7 +275,7 @@ def get_templates() -> Dict[str, Template]:
     return templates
 
 
-def get_template_by_name(name):
+def get_model_template(name):
     if name is None:
         template = templates["empty"]  # placeholder
     else:
@@ -289,7 +289,7 @@ def fix_tokenizer_by_template_name(
     tokenizer: "PreTrainedTokenizer",
     name: Optional[str] = None,
 ):
-    template = get_template_by_name(name)
+    template = get_model_template(name)
 
     stop_words = template.stop_words
     if template.replace_eos:
@@ -601,4 +601,16 @@ _register_template(
     name="mixtral",
     format_user=StringFormatter(slots=["[INST] {{content}} [/INST]"]),
     format_prefix=EmptyFormatter(slots=[{"bos_token"}]),
+)
+
+
+_register_template(
+    name="gemma",
+    format_user=StringFormatter(slots=["<start_of_turn>user\n{{content}}<end_of_turn>\n<start_of_turn>model\n"]),
+    format_observation=StringFormatter(
+        slots=["<start_of_turn>tool\n{{content}}<end_of_turn>\n<start_of_turn>model\n"]
+    ),
+    format_separator=EmptyFormatter(slots=["<end_of_turn>\n"]),
+    format_prefix=EmptyFormatter(slots=[{"bos_token"}]),
+    efficient_eos=True,
 )

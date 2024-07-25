@@ -325,7 +325,7 @@ def _add_training_args(parser):
     group.add_argument('--jit-compile', action='store_true', default=False,
                        help='Setting jit compile mode to True')
     group.add_argument('--prompt-type', type=str, default=None,
-                       choices=['default', 'empty', 'chatglm2', 'chatglm3', 'chatglm3_system', 'chatml', 'chatml_de', 'qwen', 'llama3', 'mistral', 'mixtral'],
+                       choices=['default', 'empty', 'chatglm2', 'chatglm3', 'chatglm3_system', 'chatml', 'chatml_de', 'qwen', 'llama3', 'mistral', 'mixtral', 'gemma'],
                        help='Which template to use for constructing prompts in training/inference/evaluation.'
                             'e.g., "qwen"')
 
@@ -423,6 +423,11 @@ def _validate_instruction_finetune(args):
             raise AssertionError('Context parallelism is forbidden when use variable seq lengths.')
 
 
+def _validate_inference_args(args):
+    if args.prompt_type is not None and hasattr(args, "hf_chat_template") and args.hf_chat_template:
+        raise AssertionError('Prompt-type is forbidden when use huggingface chat template.')
+
+
 def validate_args_decorator(megatron_validate_args):
     @wraps(megatron_validate_args)
     def wrapper(args, defaults=None):
@@ -439,6 +444,7 @@ def validate_args_decorator(megatron_validate_args):
         _validate_instruction_finetune(args)
         _validate_position_embedding(args)
         _validate_high_availability(args)
+        _validate_inference_args(args)
 
         from modellink.utils import print_args
         print_args('ModelLink Arguments', args)

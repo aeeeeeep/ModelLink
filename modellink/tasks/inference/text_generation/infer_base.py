@@ -37,7 +37,7 @@ def add_text_generate_args(parser):
     group.add_argument("--max-length", type=int, default=256, help='Total length of text.')
     group.add_argument("--max-new-tokens", type=int, default=128, help='Size of the output generated text.')
     group.add_argument('--hf-chat-template', action='store_true', default=False,
-                        help="Using Huggingface chat template")    
+                        help="Using Huggingface chat template")
     group.add_argument('--add-eos-token', nargs='+', type=str, default=[],
                         help="Use additional eos tokens")
     return parser
@@ -276,7 +276,7 @@ def task_chat(args, model):
     histories_template = []
     instruction = None
     prompt = ""
-    input_template= "\n\nYou >> "
+    input_template = "\n\nYou >> "
     command_clear = ["clear"]
 
     while True:

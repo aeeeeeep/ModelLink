@@ -35,7 +35,7 @@ class EvalTemplate:
     prefix: str
 
     def _parse_example(self, example):
-        r"""
+        """
         input: a dict with keys {"question", "A", "B", "C", "D", "answer"}
         output: a tuple of (prompt, response)
         """
@@ -45,7 +45,7 @@ class EvalTemplate:
     def format_example(
         self, target_data, support_set, subject_name
     ):
-        r"""
+        """
         Converts dataset examples to messages.
         """
         messages = []

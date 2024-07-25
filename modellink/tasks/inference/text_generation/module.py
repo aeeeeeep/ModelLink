@@ -24,7 +24,7 @@ from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
 from megatron.training import get_args, global_vars
 from megatron.core import parallel_state
 
-from modellink.tasks.preprocess.templates import Template, get_template_by_name
+from modellink.tasks.preprocess.templates import Template, get_model_template
 
 
 class MegatronModuleForCausalLMABC(torch.nn.Module, abc.ABC):
@@ -190,7 +190,7 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         self.broadcast_float_list = broadcast_float_list
         self.template = None
         if hasattr(args, "prompt_type") and args.prompt_type is not None:
-            self.template = get_template_by_name(args.prompt_type.strip())
+            self.template = get_model_template(args.prompt_type.strip())
 
     @staticmethod
     def _ids_check(ids, tokenizer):
@@ -279,7 +279,6 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         stop_token = [args.eos_id] + stop_ids
 
         if hasattr(args, "prompt_type") and args.prompt_type is not None:
-            # stop_ids=[self.tokenizer.eos_token_id]
             stop_ids = stop_ids + [self.tokenizer.convert_tokens_to_ids(token) for token in self.template.stop_words] + \
                        [self.tokenizer.eos_token_id]
 
@@ -435,6 +434,9 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         if input_ids is not None and len(input_ids) > 0:
             args = get_args()
             if args.hf_chat_template:
+                if not hasattr(self.tokenizer, "apply_chat_template"):
+                    raise AssertionError('The tokenizer has no Huggingface chat template, Please use chat model.')
+
                 context_tokens = [self.tokenizer.apply_chat_template(
                     input_ids,
                     tokenize=True,

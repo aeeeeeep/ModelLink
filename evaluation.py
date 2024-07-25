@@ -148,7 +148,7 @@ def gsm8k(eval_args, agent):
             data_path = path
     try:
         if data_path:
-            gsm8k_eval = Gsm8kEval(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
+            gsm8k_eval = Gsm8kEval(test_dir=data_path, eval_args=eval_args)
             answer, score_df = gsm8k_eval.eval(chat=agent)
             if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))
@@ -208,7 +208,7 @@ def human_eval(eval_args, agent):
             data_path = path
     try:
         if data_path:
-            human_eval_exam = HumanEval(test_dir=data_path, instruction_template=eval_args.instruction_template)
+            human_eval_exam = HumanEval(test_dir=data_path, eval_args=eval_args)
             answer, score_df = human_eval_exam.eval(chat=agent)
             if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))
@@ -228,7 +228,7 @@ def agi_eval(eval_args, agent):
             data_path = path
     try:
         if data_path:
-            agieval_exam = AGIEvalExam(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
+            agieval_exam = AGIEvalExam(test_dir=data_path, eval_args=eval_args)
             answer, score_df = agieval_exam.eval(chat=agent)
             if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))
@@ -248,7 +248,7 @@ def bbh_eval(eval_args, agent):
             data_path = path
     try:
         if data_path:
-            bbh = BBHEval(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
+            bbh = BBHEval(test_dir=data_path, eval_args=eval_args)
             answer, score_df = bbh.eval(chat=agent)
             if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))

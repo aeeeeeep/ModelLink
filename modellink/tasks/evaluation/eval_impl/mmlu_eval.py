@@ -107,7 +107,6 @@ class MmluEval(DatasetEval):
                                                                 subject=subject,
                                                                 question=test_question)
                 instructions.append(instruction)
-                # messages.append({"role": "assistant", "content": ins})
                 corrects.append(row['answer'])
 
                 if len(instructions) == self.batch_size or len(data_df) == idx + 1:
@@ -131,7 +130,6 @@ class MmluEval(DatasetEval):
                                             match_flag = True
                                             break
                                         except Exception as e:
-                                            # output_template templates are similar, in order to prevent printing multiple times
                                             if template_idx == len(self.output_template) - 1:
                                                 logger.info(e)
                                             continue
