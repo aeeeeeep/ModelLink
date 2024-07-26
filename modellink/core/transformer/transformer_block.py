@@ -45,7 +45,6 @@ def _transformer_block_build_layers(self):
     use_te = args.transformer_impl == "transformer_engine"
 
     def build_layer(layer_spec, layer_number):
-        # TODO：补充first_k_dense_replace和moe_layer_freq的参数校验
         if (
                 args.num_experts
                 and args.first_k_dense_replace is not None

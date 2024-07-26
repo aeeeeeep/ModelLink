@@ -36,16 +36,10 @@ def rotary_embedding_forward(self, max_seq_len: int, offset: int = 0):
             seq *= 1 / self.seq_len_interpolation_factor
     elif args.rope_scaling_type == "yarn":
         scaling_factor = args.rope_scaling_factor
-        dim = args.qk_rope_head_dim
-        freq_extra = 1.0 / (
-                args.rotary_base
-                ** (torch.arange(0, dim, 2, dtype=torch.float32, device=self.inv_freq.device) / dim)
-        )
-        freq_inter = 1.0 / (
-                scaling_factor
-                * args.rotary_base
-                ** (torch.arange(0, dim, 2, dtype=torch.float32, device=self.inv_freq.device) / dim)
-        )
+        dim = args.qk_rope_head_dim if args.multi_head_latent_attention else (args.hidden_size // args.num_attention_heads)
+        rotary_ratio = args.rotary_base ** (torch.arange(0, dim, 2, dtype=torch.float32, device=self.inv_freq.device) / dim)
+        freq_extra = 1.0 / rotary_ratio
+        freq_inter = 1.0 / (scaling_factor * rotary_ratio)
         low, high = yarn_find_correction_range(
             args.rope_scaling_beta_fast,
             args.rope_scaling_beta_slow,
@@ -128,43 +122,28 @@ def apply_rotary_pos_emb(t, freqs, rotary_interleaved=False):
 
 
 def apply_rotary_pos_emb_bshd(t: Tensor, freqs: Tensor, rotary_interleaved: bool = False) -> Tensor:
-
     args = get_args()
+    if args.use_partial_rope:
+        return _process_partial_rope(freqs, t)
+
     _mscale = 1
     if args.rope_scaling_type == "yarn":
         _mscale = float(
             yarn_get_mscale(args.rope_scaling_factor, args.rope_scaling_mscale)
             / yarn_get_mscale(args.rope_scaling_factor, args.rope_scaling_mscale_all_dim)
         )
+    
     rot_dim = freqs.shape[-1]
     t, t_pass = t[..., :rot_dim], t[..., rot_dim:]
     cos_ = (torch.cos(freqs) * _mscale).to(t.dtype)
     sin_ = (torch.sin(freqs) * _mscale).to(t.dtype)
-    t = (t * cos_) + (_rotate_half(t, rotary_interleaved) * sin_)
+    
+    if args.use_fused_rotary_pos_emb:
+        t = torch_npu.npu_rotary_mul(t, cos_, sin_).to(t.dtype)
+    else:
+        t = (t * cos_) + (_rotate_half(t, rotary_interleaved) * sin_)
+    
     return torch.cat((t, t_pass), dim=-1)
-
-
-def apply_rotary_pos_emb_bshd_wrapper(fn):
-    """
-    For megatron-LM core rotary pos embedding.
-    """
-    @wraps(fn)
-    def wrapper(t: Tensor, freqs: Tensor, rotary_interleaved: bool = False) -> Tensor:
-        args = get_args()
-        if args.use_partial_rope:
-            return _process_partial_rope(freqs, t)
-
-        if args.use_fused_rotary_pos_emb:
-            rot_dim = freqs.shape[-1]
-            t, t_pass = t[..., :rot_dim], t[..., rot_dim:]
-            # Move to npu device to speed up rotary mul.
-            cos_ = torch.cos(freqs).to(t.dtype)
-            sin_ = torch.sin(freqs).to(t.dtype)
-            t = torch_npu.npu_rotary_mul(t, cos_, sin_).to(t.dtype)
-            return torch.cat((t, t_pass), dim=-1)
-        return fn(t, freqs, rotary_interleaved)
-
-    return wrapper
 
 
 def yarn_find_correction_dim(

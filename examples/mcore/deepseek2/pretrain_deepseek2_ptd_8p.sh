@@ -37,8 +37,8 @@ MLA_ARGS="
 "
 
 MOE_ARGS="
-    --use-deepseek-moe \
     --moe-permutation-async-comm \
+    --moe-token-dispather-type allgather \
     --first-k-dense-replace 1 \
     --moe-layer-freq 1 \
     --n-shared-experts 2 \
@@ -46,7 +46,6 @@ MOE_ARGS="
     --moe-router-topk 6 \
     --moe-intermediate-size 1536 \
     --moe-router-load-balancing-type group_limited_greedy \
-    --n-group 8 \
     --topk-group 3 \
     --moe-aux-loss-coeff 0.001 \
     --routed-scaling-factor 16.0 \
@@ -124,8 +123,8 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 20000 \
-    --eval-interval 20000 \
+    --save-interval 2000 \
+    --eval-interval 2000 \
     --eval-iters 0 \
     --no-save-optim \
     --no-save-rng

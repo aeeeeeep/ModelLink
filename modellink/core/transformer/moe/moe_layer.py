@@ -11,7 +11,6 @@ from megatron.core.transformer.mlp import MLPSubmodules, MLP
 from megatron.core.transformer.moe.experts import GroupedMLP, SequentialMLP
 from megatron.core.transformer.moe.moe_utils import save_to_aux_losses_tracker
 from megatron.training import get_args
-from megatron.core import parallel_state, tensor_parallel
 
 
 def moe_layer_init_wrapper(init_func):
@@ -30,8 +29,9 @@ def moe_layer_init_wrapper(init_func):
             self.experts = SequentialMLP(self.num_local_experts, self.config, self.submodules)
 
         if global_args.n_shared_experts:
-            self.config.ffn_hidden_size = global_args.n_shared_experts * self.config.ffn_hidden_size
-            self.shared_experts = MLP(self.config, MLPSubmodules(linear_fc1=ColumnParallelLinear,
+            config = deepcopy(self.config)
+            config.ffn_hidden_size = global_args.n_shared_experts * self.config.ffn_hidden_size
+            self.shared_experts = MLP(config, MLPSubmodules(linear_fc1=ColumnParallelLinear,
                                                                  linear_fc2=RowParallelLinear,))
 
     return moe_layer_init
