@@ -56,6 +56,44 @@ def process_args(parser):
     parser = _add_dataset_args(parser)
     parser = _add_high_availability_args(parser)
     parser = _add_cp_args(parser)
+    parser = _add_deepseek_args(parser)
+
+    return parser
+
+
+def _add_deepseek_args(parser):
+    group = parser.add_argument_group(title='deepseek')
+    # MLA and YaRN rope
+    group.add_argument('--multi-head-latent-attention', action='store_true', default=False,
+                       help='use Multi-head Latent Attention(MLA)')
+    group.add_argument('--q-lora-rank', type=int, default=None, help='the lora rank of q')
+    group.add_argument('--kv-lora-rank', type=int, default=None, help='the lora rank of k and v')
+    group.add_argument('--v-head-dim', type=int, default=None, help='the head dim of v')
+    group.add_argument('--qk-rope-head-dim', type=int, default=None, help='qk head dim for rope')
+    group.add_argument('--qk-nope-head-dim', type=int, default=None, help='qk head dim for only self-attn')
+    group.add_argument('--rope-scaling-type', type=str, default=None, choices=['yarn', ],
+                       help='set the rope scaling type, only support "yarn" type now')
+    group.add_argument('--rope-scaling-beta-fast', type=int, default=None, help='yarn rope: rope beta fast')
+    group.add_argument('--rope-scaling-beta-slow', type=int, default=None, help='yarn rope: rope beta slow')
+    group.add_argument('--rope-scaling-factor', type=int, default=None, help='yarn rope: rope factor')
+    group.add_argument('--rope-scaling-mscale', type=float, default=None, help='yarn rope: rope mscale')
+    group.add_argument('--rope-scaling-mscale-all-dim', type=float, default=None, help='yarn rope: rope mscale all dim')
+    group.add_argument('--rope-scaling-original-max-position-embeddings', type=int, default=None,
+                       help='yarn rope: rope original max position embeddings')
+    # DeepSeekMoE
+    group.add_argument('--use-deepseek-moe', action='store_true', default=False,
+                       help='use DeepSeekMoE')
+    group.add_argument('--moe-intermediate-size', type=int, default=None, help='ffn hidden size of MoE layer')
+    group.add_argument('--n-shared-experts', type=int, default=None, help='the number of shared experts')
+    group.add_argument('--n-group', type=int, default=None,
+                       help='divide experts into n groups in group_limited_greedy_topK method')
+    group.add_argument('--topk-group', type=int, default=None,
+                       help='choose topK group experts in group_limited_greedy_topK method')
+    group.add_argument('--routed-scaling-factor', type=float, default=None, help='the routed scaling factor')
+    group.add_argument('--norm-topk-prob', action='store_true', default=False, help='normalize the topk weight')
+    group.add_argument('--seq-aux', action='store_true', default=False, help='compute aux loss in seq_aux')
+    group.add_argument('--first-k-dense-replace', type=int, default=None, help='set first k layer as dense layer')
+    group.add_argument('--moe-layer-freq', type=int, default=None, help='set the occurrence frequency of the moe layer')
 
     return parser
 
@@ -179,12 +217,13 @@ def _add_moe_args(parser):
     group.add_argument('--moe-router-topk', type=int, default=2,
                        help='Number of experts to route to for each token. The default is 2.')
     group.add_argument('--moe-router-load-balancing-type', type=str,
-                       choices=['aux_loss'],
+                       choices=['aux_loss', "group_limited_greedy"],
                        default='aux_loss',
                        help='Determines the load balancing strategy for the router. "aux_loss" corresponds '
                             'to the load balancing loss used in GShard and SwitchTransformer, "sinkhorn" corresponds '
                             'to the balancing algorithm used in S-BASE, "softmax_topk" implies no load balancing and '
-                            'softmax before topk ,and "None" implies no load balancing. '
+                            'softmax before topk , "None" implies no load balancing, and "group_limited_greedy" corresponds '
+                            'to the Device-Limited Routing method in DeepSeekV2.'
                             'The default is "aux_loss".')
     group.add_argument('--expert-interval', type=int, default=1,
                        help='Use experts in every "expert-interval" layers')

@@ -156,6 +156,20 @@ def patch_core_models(args):
         TransformerBlock._build_layers = build_layers_wrapper(TransformerBlock._build_layers, ColumnParallelLinear.forward,
             RowParallelLinear.forward)
 
+    # MLA & DeepSeekMoE
+    if args.multi_head_latent_attention:
+        from ..core.transformer.attention import self_attention_init_wrapper, MLASelfAttentionSubmodules
+        from ..core.models.common.embeddings.rotary_pos_embedding import apply_rotary_pos_emb_bshd
+        PatchManager.register_patch('megatron.core.transformer.attention.SelfAttention.__init__', self_attention_init_wrapper)
+        PatchManager.register_patch('megatron.core.transformer.attention.SelfAttentionSubmodules', MLASelfAttentionSubmodules)
+        PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.apply_rotary_pos_emb_bshd', apply_rotary_pos_emb_bshd)
+
+    if args.use_deepseek_moe:
+        from ..core.transformer.moe.moe_layer import moe_layer_init_wrapper, moe_layer_forward
+        from ..core.transformer.transformer_block import _transformer_block_build_layers
+        PatchManager.register_patch('megatron.core.transformer.moe.moe_layer.MoELayer.__init__', moe_layer_init_wrapper)
+        PatchManager.register_patch('megatron.core.transformer.moe.moe_layer.MoELayer.forward', moe_layer_forward)
+        PatchManager.register_patch('megatron.core.transformer.transformer_block.TransformerBlock._build_layers', _transformer_block_build_layers)
 
 def patch_core_transformers():
     from ..core import apply_rotary_pos_emb_bshd_wrapper, PTNorm
