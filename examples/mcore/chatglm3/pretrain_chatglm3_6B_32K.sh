@@ -1,14 +1,12 @@
 #!/bin/bash
-# export WITHOUT_JIT_COMPILE=1
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 NPUS_PER_NODE=8
-MASTER_ADDR=localhost
+MASTER_ADDR=<local_rank>
 MASTER_PORT=6001
 NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$((NPUS_PER_NODE*$NNODES))
-
 
 CKPT_SAVE_DIR="your model save ckpt path"
 DATA_PATH="your data path"
@@ -22,18 +20,18 @@ MBS=1
 GBS=32
 SEQ_LEN=32768
 CP_ALGO=ulysses_cp_algo
-#CP_ALGO=megatron_cp_algo
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $NPUS_PER_NODE \
     --nnodes $NNODES \
     --node_rank $NODE_RANK \
     --master_addr $MASTER_ADDR \
-    --master_port $MASTER_PORT
+    --master_port $MASTER_PORT \
 "
 
 GPT_ARGS="
-    --use-mcore-models
+    --use-mcore-models \
+    --transformer-impl local \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --sequence-parallel \
@@ -44,7 +42,6 @@ GPT_ARGS="
     --seq-length ${SEQ_LEN} \
     --micro-batch-size ${MBS} \
     --global-batch-size ${GBS} \
-    --transformer-impl local \
     --context-parallel-algo ${CP_ALGO} \
     --context-parallel-size ${CP} \
     --max-position-embeddings 65536 \
@@ -83,24 +80,21 @@ GPT_ARGS="
     --initial-loss-scale 4096 \
     --adam-beta2 0.95 \
     --no-gradient-accumulation-fusion \
+    --load ${CKPT_LOAD_DIR}  \
     --no-load-optim \
     --no-load-rng \
     --fp16 \
     --kv-head-repeat-before-uly-alltoall \
-    --use-cp-send-recv-overlap \
-    --overlap-grad-reduce \
-    --overlap-param-gather \
 "
 
 DATA_ARGS="
     --data-path $DATA_PATH \
-    --split 949,50,1
+    --split 949,50,1 \
 "
-
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 10000 \
+    --save-interval 2000 \
     --eval-interval 1000 \
     --eval-iters 10 \
 "
@@ -111,5 +105,5 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS pretrain_gpt.py \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
     --save $CKPT_SAVE_DIR \
-    | tee logs/train_chatglm3_6B_32K.log
+    | tee logs/train_mcore_chatglm3_6B_32K.log
 
